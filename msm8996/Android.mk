@@ -1,8 +1,11 @@
-display-hals := libcopybit liblight libmemtrack libqservice libqdutils
+display-hals := libcopybit libmemtrack libqservice libqdutils
 ifneq ($(TARGET_USES_GRALLOC1), true)
     display-hals += libgralloc
 else
     display-hals += libgralloc1
+endif
+ifneq ($(TARGET_PROVIDES_LIBLIGHT),true)
+    display-hals += liblight
 endif
 
 display-hals += hdmi_cec
