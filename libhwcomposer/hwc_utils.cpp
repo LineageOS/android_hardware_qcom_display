@@ -654,7 +654,6 @@ void setListStats(hwc_context_t *ctx,
     ctx->listStats[dpy].preMultipliedAlpha = false;
     ctx->listStats[dpy].planeAlpha = false;
     ctx->listStats[dpy].yuvCount = 0;
-    ctx->listStats[dpy].extOnlyLayerIndex = -1;
     ctx->listStats[dpy].isDisplayAnimating = false;
     ctx->listStats[dpy].secureUI = false;
     optimizeLayerRects(ctx, list, dpy);
@@ -697,10 +696,6 @@ void setListStats(hwc_context_t *ctx,
         if(!ctx->listStats[dpy].needsAlphaScale)
             ctx->listStats[dpy].needsAlphaScale =
                     isAlphaScaled(ctx, layer, dpy);
-
-        if(UNLIKELY(isExtOnly(hnd))){
-            ctx->listStats[dpy].extOnlyLayerIndex = i;
-        }
     }
 
     if (ctx->listStats[dpy].yuvCount == 0 ) {
