@@ -108,12 +108,6 @@ bool FBUpdateLowRes::configure(hwc_context_t *ctx, hwc_display_contents_1 *list,
     bool ret = false;
     hwc_layer_1_t *layer = &list->hwLayers[list->numHwLayers - 1];
     if (LIKELY(ctx->mOverlay)) {
-        int extOnlyLayerIndex = ctx->listStats[mDpy].extOnlyLayerIndex;
-        // ext only layer present..
-        if(extOnlyLayerIndex != -1) {
-            layer = &list->hwLayers[extOnlyLayerIndex];
-            layer->compositionType = HWC_OVERLAY;
-        }
         overlay::Overlay& ov = *(ctx->mOverlay);
 
         ovutils::Whf info(mAlignedFBWidth,
@@ -157,8 +151,7 @@ bool FBUpdateLowRes::configure(hwc_context_t *ctx, hwc_display_contents_1 *list,
             displayFrame = sourceCrop;
         } else if((!mDpy ||
                    (mDpy && !extOrient
-                   && !ctx->dpyAttr[mDpy].mDownScaleMode))
-                   && (extOnlyLayerIndex == -1)) {
+                   && !ctx->dpyAttr[mDpy].mDownScaleMode))) {
                 getNonWormholeRegion(list, sourceCrop);
                 displayFrame = sourceCrop;
         }
@@ -253,12 +246,6 @@ bool FBUpdateHighRes::configure(hwc_context_t *ctx,
     bool ret = false;
     hwc_layer_1_t *layer = &list->hwLayers[list->numHwLayers - 1];
     if (LIKELY(ctx->mOverlay)) {
-        int extOnlyLayerIndex = ctx->listStats[mDpy].extOnlyLayerIndex;
-        // ext only layer present..
-        if(extOnlyLayerIndex != -1) {
-            layer = &list->hwLayers[extOnlyLayerIndex];
-            layer->compositionType = HWC_OVERLAY;
-        }
         overlay::Overlay& ov = *(ctx->mOverlay);
 
         ovutils::Whf info(mAlignedFBWidth,
@@ -315,9 +302,6 @@ bool FBUpdateHighRes::configure(hwc_context_t *ctx,
         // sourceCrop during animation on external display.
         if(ctx->listStats[mDpy].isDisplayAnimating && mDpy) {
             sourceCrop = layer->displayFrame;
-            displayFrame = sourceCrop;
-        } else if(extOnlyLayerIndex == -1) {
-            getNonWormholeRegion(list, sourceCrop);
             displayFrame = sourceCrop;
         }
         ovutils::Dim dcropL(sourceCrop.left, sourceCrop.top,

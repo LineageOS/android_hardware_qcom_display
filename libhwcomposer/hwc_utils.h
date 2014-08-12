@@ -101,7 +101,6 @@ struct ListStats {
     //Video specific
     int yuvCount;
     int yuvIndices[MAX_NUM_APP_LAYERS];
-    int extOnlyLayerIndex;
     bool needsAlphaScale;
     bool preMultipliedAlpha;
     bool planeAlpha;
@@ -307,11 +306,6 @@ static inline bool isProtectedBuffer(const private_handle_t* hnd) {
 // Returns true if the buffer is non contiguous
 static inline bool isNonContigBuffer(const private_handle_t* hnd) {
     return (hnd && (private_handle_t::PRIV_FLAGS_NONCONTIGUOUS_MEM & hnd->flags));
-}
-
-//Return true if buffer is for external display only
-static inline bool isExtOnly(const private_handle_t* hnd) {
-    return (hnd && (hnd->flags & private_handle_t::PRIV_FLAGS_EXTERNAL_ONLY));
 }
 
 static inline int getWidth(const private_handle_t* hnd) {
