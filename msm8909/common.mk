@@ -56,7 +56,7 @@ endif
 ifneq ($(call is-platform-sdk-version-at-least,18),true)
     common_flags += -DANDROID_JELLYBEAN_MR1=1
 endif
-ifeq ($(call is-vendor-board-platform,QCOM),true)
+#ifeq ($(call is-vendor-board-platform,QCOM),true)
 # This check is to pick the kernel headers from the right location.
 # If the macro above is defined, we make the assumption that we have the kernel
 # available in the build tree.
@@ -64,6 +64,6 @@ ifeq ($(call is-vendor-board-platform,QCOM),true)
 # failing which, they are picked from bionic.
     common_deps += $(BOARD_KERNEL_HEADER_DEPENDENCIES)
     kernel_includes += $(BOARD_KERNEL_HEADER_DIR)
-endif
+#endif
 
 common_clang_flags := true
