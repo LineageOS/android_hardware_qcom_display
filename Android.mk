@@ -1,3 +1,5 @@
+ifeq ($(call my-dir)/$(TARGET_BOARD_PLATFORM),$(call project-path-for,qcom-display))
+
 LOCAL_PATH := $(call my-dir)
 # TODO:  Find a better way to separate build configs for ADP vs non-ADP devices
 ifneq ($(TARGET_BOARD_AUTO),true)
@@ -16,6 +18,8 @@ else ifneq ($(filter msm8909,$(TARGET_BOARD_PLATFORM)),)
   endif
 else ifneq ($(wildcard $(LOCAL_PATH)/$(TARGET_BOARD_PLATFORM)),)
   include $(call all-named-subdir-makefiles,$(TARGET_BOARD_PLATFORM))
+endif
+
 endif
 
 endif
