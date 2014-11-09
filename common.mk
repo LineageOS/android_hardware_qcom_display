@@ -1,12 +1,12 @@
 #Common headers
-common_includes := hardware/qcom/display/libgralloc
-common_includes += hardware/qcom/display/liboverlay
-common_includes += hardware/qcom/display/libcopybit
-common_includes += hardware/qcom/display/libqdutils
-common_includes += hardware/qcom/display/libhwcomposer
-common_includes += hardware/qcom/display/libexternal
-common_includes += hardware/qcom/display/libqservice
-common_includes += hardware/qcom/display/libvirtual
+common_includes := $(call project-path-for,qcom-display)/libgralloc
+common_includes += $(call project-path-for,qcom-display)/liboverlay
+common_includes += $(call project-path-for,qcom-display)/libcopybit
+common_includes += $(call project-path-for,qcom-display)/libqdutils
+common_includes += $(call project-path-for,qcom-display)/libhwcomposer
+common_includes += $(call project-path-for,qcom-display)/libexternal
+common_includes += $(call project-path-for,qcom-display)/libqservice
+common_includes += $(call project-path-for,qcom-display)/libvirtual
 common_includes += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 
 ifeq ($(TARGET_USES_POST_PROCESSING),true)
