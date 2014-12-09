@@ -309,11 +309,6 @@ static inline bool isNonContigBuffer(const private_handle_t* hnd) {
     return (hnd && (private_handle_t::PRIV_FLAGS_NONCONTIGUOUS_MEM & hnd->flags));
 }
 
-//Return true if buffer is marked locked
-static inline bool isBufferLocked(const private_handle_t* hnd) {
-    return (hnd && (private_handle_t::PRIV_FLAGS_HWC_LOCK & hnd->flags));
-}
-
 //Return true if buffer is for external display only
 static inline bool isExtOnly(const private_handle_t* hnd) {
     return (hnd && (hnd->flags & private_handle_t::PRIV_FLAGS_EXTERNAL_ONLY));
