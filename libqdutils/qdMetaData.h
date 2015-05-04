@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -90,6 +90,7 @@ struct MetaData_t {
     struct IGCData_t igcData;
     struct Sharp2Data_t Sharp2Data;
     int64_t timestamp;
+    ColorSpace_t colorSpace;
     int32_t vfmDataBitMap;
     struct VfmData_t vfmData[MAX_VFM_DATA_COUNT];
     uint32_t refreshrate;
@@ -106,6 +107,7 @@ typedef enum {
     UPDATE_BUFFER_GEOMETRY = 0x0080,
     PP_PARAM_VFM_DATA   = 0x0100,
     UPDATE_REFRESH_RATE = 0x0200,
+    UPDATE_COLOR_SPACE  = 0x0400,
 } DispParamType;
 
 int setMetaData(private_handle_t *handle, DispParamType paramType, void *param);
