@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "df140735_a844a3b8",
+        "filename": "Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 10,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2015-07-23T04:09:45Z",
+      "side": 1,
+      "message": "msm8660 is in QCOM_BOARD_PLATFORMS, so the below change is unnecessary",
+      "range": {
+        "startLine": 10,
+        "startChar": 19,
+        "endLine": 10,
+        "endChar": 39
+      },
+      "revId": "8968d25ae673f0d122c79e769eb1d22cbbc22d30",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
