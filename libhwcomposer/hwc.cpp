@@ -100,6 +100,18 @@ static void hwc_registerProcs(struct hwc_composer_device_1* dev,
     init_vsync_thread(ctx);
 }
 
+static bool validDisplay(int disp) {
+    switch(disp) {
+        case HWC_DISPLAY_PRIMARY:
+        case HWC_DISPLAY_EXTERNAL:
+        case HWC_DISPLAY_VIRTUAL:
+            return true;
+            break;
+        default:
+            return false;
+    }
+}
+
 //Helper
 static void reset(hwc_context_t *ctx, int numDisplays,
                   hwc_display_contents_1_t** displays) {
@@ -299,6 +311,10 @@ static int hwc_eventControl(struct hwc_composer_device_1* dev, int dpy,
         return -EINVAL;
     }
 
+    if(!validDisplay(dpy)) {
+        return -EINVAL;
+    }
+
     switch(event) {
         case HWC_EVENT_VSYNC:
             if (ctx->vstate.enable == enable)
@@ -338,6 +354,10 @@ static int hwc_setPowerMode(struct hwc_composer_device_1* dev, int dpy,
      * of Google API's.
      */
     dpy = getDpyforExternalDisplay(ctx,dpy);
+
+    if(!validDisplay(dpy)) {
+        return -EINVAL;
+    }
 
     ALOGD_IF(POWER_MODE_DEBUG, "%s: Setting mode %d on display: %d",
             __FUNCTION__, mode, dpy);
@@ -710,6 +730,11 @@ int hwc_getDisplayConfigs(struct hwc_composer_device_1* dev, int disp,
     int ret = 0;
     hwc_context_t* ctx = (hwc_context_t*)(dev);
     disp = getDpyforExternalDisplay(ctx, disp);
+    Locker::Autolock _l(ctx->mDrawLock);
+
+    if(!validDisplay(disp)) {
+        return -EINVAL;
+    }
 
     //Currently we allow only 1 config, reported as config id # 0
     //This config is passed in to getDisplayAttributes. Ignored for now.
@@ -741,6 +766,12 @@ int hwc_getDisplayAttributes(struct hwc_composer_device_1* dev, int disp,
 
     hwc_context_t* ctx = (hwc_context_t*)(dev);
     disp = getDpyforExternalDisplay(ctx, disp);
+    Locker::Autolock _l(ctx->mDrawLock);
+
+    if(!validDisplay(disp)) {
+        return -EINVAL;
+    }
+
     //If hotpluggable displays(i.e, HDMI, WFD) are inactive return error
     if( (disp != HWC_DISPLAY_PRIMARY) && !ctx->dpyAttr[disp].connected) {
         return -1;
@@ -818,13 +849,25 @@ void hwc_dump(struct hwc_composer_device_1* dev, char *buff, int buff_len)
     strlcpy(buff, aBuf.string(), buff_len);
 }
 
-int hwc_getActiveConfig(struct hwc_composer_device_1* /*dev*/, int /*disp*/) {
+int hwc_getActiveConfig(struct hwc_composer_device_1* dev, int disp) {
+    hwc_context_t* ctx = (hwc_context_t*)(dev);
+    Locker::Autolock _l(ctx->mDrawLock);
+    if(!validDisplay(disp)) {
+        return -EINVAL;
+    }
+
     //Supports only the default config (0th index) for now
     return 0;
 }
 
-int hwc_setActiveConfig(struct hwc_composer_device_1* /*dev*/, int /*disp*/,
+int hwc_setActiveConfig(struct hwc_composer_device_1* dev, int disp,
         int index) {
+    hwc_context_t* ctx = (hwc_context_t*)(dev);
+    Locker::Autolock _l(ctx->mDrawLock);
+    if(!validDisplay(disp)) {
+        return -EINVAL;
+    }
+
     //Supports only the default config (0th index) for now
     return (index == 0) ? index : -EINVAL;
 }
