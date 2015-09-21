@@ -17,7 +17,8 @@ LOCAL_CLANG                   := true
 
 LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware libhardware_legacy \
                                  libutils libcutils libsync libqdutils libdl \
-                                 libpowermanager libsdmutils libc++ liblog
+                                 libpowermanager libsdmutils libc++ liblog \
+                                 libbfqio_vendor
 
 ifneq ($(TARGET_USES_GRALLOC1), true)
     LOCAL_SHARED_LIBRARIES += libmemalloc
