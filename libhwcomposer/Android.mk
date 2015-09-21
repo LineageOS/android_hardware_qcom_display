@@ -19,7 +19,8 @@ endif
 LOCAL_SHARED_LIBRARIES        := $(common_libs) libEGL liboverlay \
                                  libhdmi libqdutils libhardware_legacy \
                                  libdl libmemalloc libqservice libsync \
-                                 libbinder libmedia libdisplayconfig
+                                 libbinder libmedia libdisplayconfig \
+                                 libbfqio_vendor
 
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdhwcomposer\" -Wno-absolute-value \
                                  -Wno-float-conversion -Wno-unused-parameter
