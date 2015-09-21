@@ -15,7 +15,7 @@ LOCAL_CFLAGS                  := $(common_flags) -Wno-missing-field-initializers
 LOCAL_CLANG                   := true
 
 LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware libhardware_legacy \
-                                 libutils libcutils libsync libmemalloc libqdutils libdl \
+                                 libutils libcutils_lineage libsync libmemalloc libqdutils libdl \
                                  libpowermanager libsdmutils libgpu_tonemapper  libc++ liblog \
                                  libdrmutils libui
 
