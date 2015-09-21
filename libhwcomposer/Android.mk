@@ -12,7 +12,8 @@ LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes) \
 LOCAL_SHARED_LIBRARIES        := $(common_libs) libEGL liboverlay \
                                  libexternal libqdutils libhardware_legacy \
                                  libdl libmemalloc libqservice libsync \
-                                 libbinder libmedia libvirtual libskia
+                                 libbinder libmedia libvirtual libskia \
+                                 libbfqio_vendor
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdhwcomposer\"
 ifeq ($(GET_DISPLAY_SECURE_STATUS_FROM_HWC),true)
     LOCAL_CFLAGS += -DGET_DISPLAY_SECURE_STATUS_FROM_HWC
