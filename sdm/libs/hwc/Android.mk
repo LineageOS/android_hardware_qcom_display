@@ -21,7 +21,7 @@ endif
 
 LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware libhardware_legacy \
                                  libutils libcutils libsync libmemalloc libqdutils libdl \
-                                 libpowermanager libsdmutils
+                                 libpowermanager libsdmutils libbfqio_vendor
 
 LOCAL_SRC_FILES               := hwc_session.cpp \
                                  hwc_display.cpp \
