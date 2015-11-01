@@ -1079,7 +1079,7 @@ bool isRotationDoable(hwc_context_t *ctx, private_handle_t *hnd) {
     // Rotate layers, if it is YUV type or rendered by CPU and not
     // for the MDP versions below MDP5
     if((isCPURendered(hnd) && isRotatorSupportedFormat(hnd) &&
-        !ctx->mMDP.version < qdutils::MDSS_V5)
+        !(ctx->mMDP.version < qdutils::MDSS_V5))
                    || isYuvBuffer(hnd)) {
         return true;
     }
@@ -2299,8 +2299,7 @@ void setGPUHint(hwc_context_t* ctx, hwc_display_contents_1_t* list) {
             EGLint attr_list[] = {EGL_GPU_HINT_1,
                                   EGL_GPU_LEVEL_3,
                                   EGL_NONE };
-            if((gpuHint->mCurrGPUPerfMode != EGL_GPU_LEVEL_3) &&
-                !((*(ctx->mpfn_eglGpuPerfHintQCOM))(gpuHint->mEGLDisplay,
+            if (!((*(ctx->mpfn_eglGpuPerfHintQCOM))(gpuHint->mEGLDisplay,
                                     gpuHint->mEGLContext, attr_list))) {
                 ALOGW("eglGpuPerfHintQCOM failed for Built in display");
             } else {
@@ -2592,7 +2591,6 @@ void handle_offline(hwc_context_t* ctx, int dpy) {
 bool loadEglLib(hwc_context_t* ctx) {
     bool success = false;
 #ifdef QTI_BSP
-    const char* error;
     dlerror();
 
     ctx->mEglLib = dlopen("libEGL_adreno.so", RTLD_NOW);

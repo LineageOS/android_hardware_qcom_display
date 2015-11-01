@@ -90,7 +90,7 @@ class Overlay;
 class OvFD;
 
 /* helper function to open by using fbnum */
-bool open(OvFD& fd, uint32_t fbnum, const char* const dev,
+bool open(OvFD& fd, int fbnum, const char* const dev,
     int flags = O_RDWR);
 
 namespace utils {
@@ -791,10 +791,10 @@ private:
 
 //-------------------Inlines--------------------------
 
-inline bool open(OvFD& fd, uint32_t fbnum, const char* const dev, int flags)
+inline bool open(OvFD& fd, int fbnum, const char* const dev, int flags)
 {
     char dev_name[64] = {0};
-    snprintf(dev_name, sizeof(dev_name), dev, fbnum);
+    snprintf(dev_name, sizeof(dev_name), dev, (uint32_t) fbnum);
     return fd.open(dev_name, flags);
 }
 

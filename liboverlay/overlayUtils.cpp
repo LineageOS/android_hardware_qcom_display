@@ -439,7 +439,7 @@ void getDump(char *buf, size_t len, const char *prefix,
     snprintf(str_src, 256,
             "%s w=%d h=%d format=%d %s\n",
             prefix, ov.width, ov.height, ov.format,
-            overlay::utils::getFormatString(ov.format));
+            overlay::utils::getFormatString((int) ov.format));
     strlcat(buf, str_src, len);
 }
 

@@ -33,7 +33,9 @@ MdpRot::~MdpRot() { close(); }
 
 bool MdpRot::enabled() const { return mRotImgInfo.enable; }
 
-void MdpRot::setRotations(uint32_t r) { mRotImgInfo.rotations = r; }
+void MdpRot::setRotations(uint32_t r) {
+    mRotImgInfo.rotations = (unsigned char) r;
+}
 
 int MdpRot::getDstMemId() const {
     return mRotDataInfo.dst.memory_id;

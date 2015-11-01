@@ -1521,7 +1521,7 @@ bool MDPComp::resourceCheck(hwc_context_t* ctx,
         return false;
     }
     // Init rotCount to number of rotate sessions used by other displays
-    int rotCount = ctx->mRotMgr->getNumActiveSessions();
+    uint32_t rotCount = ctx->mRotMgr->getNumActiveSessions();
     // Count the number of rotator sessions required for current display
     for (int index = 0; index < mCurrentFrame.layerCount; index++) {
         if(!mCurrentFrame.isFBComposed[index]) {
@@ -1699,7 +1699,7 @@ bool MDPComp::allocSplitVGPipesfor4k2k(hwc_context_t *ctx, int index) {
 }
 //=============MDPCompNonSplit==================================================
 
-void MDPCompNonSplit::adjustForSourceSplit(hwc_context_t *ctx,
+void MDPCompNonSplit::adjustForSourceSplit(hwc_context_t * /*ctx*/,
         hwc_display_contents_1_t* list) {
     //If 4k2k Yuv layer split is possible,  and if
     //fbz is above 4k2k layer, increment fb zorder by 1
