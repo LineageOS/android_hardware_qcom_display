@@ -1199,7 +1199,7 @@ bool isRotationDoable(hwc_context_t *ctx, private_handle_t *hnd) {
     // Rotate layers, if it is not secure display buffer and not
     // for the MDP versions below MDP5
     if((!isSecureDisplayBuffer(hnd) && isRotatorSupportedFormat(hnd) &&
-        !ctx->mMDP.version < qdutils::MDSS_V5)
+        !(ctx->mMDP.version < qdutils::MDSS_V5))
                    || isYuvBuffer(hnd)) {
         return true;
     }
@@ -2458,8 +2458,7 @@ void setGPUHint(hwc_context_t* ctx, hwc_display_contents_1_t* list) {
             EGLint attr_list[] = {EGL_GPU_HINT_1,
                                   EGL_GPU_LEVEL_3,
                                   EGL_NONE };
-            if((gpuHint->mCurrGPUPerfMode != EGL_GPU_LEVEL_3) &&
-                !eglGpuPerfHintQCOM(gpuHint->mEGLDisplay,
+            if (!((*(ctx->mpfn_eglGpuPerfHintQCOM))(gpuHint->mEGLDisplay,
                                     gpuHint->mEGLContext, attr_list)) {
                 ALOGW("eglGpuPerfHintQCOM failed for Built in display");
             } else {
