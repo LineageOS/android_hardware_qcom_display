@@ -905,27 +905,6 @@ static int get(struct copybit_device_t *dev, int name)
     return value;
 }
 
-static int is_alpha(int cformat)
-{
-    int alpha = 0;
-    switch (cformat & 0xFF) {
-        case C2D_COLOR_FORMAT_8888_ARGB:
-        case C2D_COLOR_FORMAT_8888_RGBA:
-        case C2D_COLOR_FORMAT_5551_RGBA:
-        case C2D_COLOR_FORMAT_4444_ARGB:
-            alpha = 1;
-            break;
-        default:
-            alpha = 0;
-            break;
-    }
-
-    if(alpha && (cformat&C2D_FORMAT_DISABLE_ALPHA))
-        alpha = 0;
-
-    return alpha;
-}
-
 /* Function to check if we need a temporary buffer for the blit.
  * This would happen if the requested destination stride and the
  * C2D stride do not match. We ignore RGB buffers, since their
