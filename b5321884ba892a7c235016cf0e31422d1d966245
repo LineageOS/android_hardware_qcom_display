@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1f2f7f8d_37f8e6c2",
+        "filename": "libhwcomposer/hwc.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 819,
+      "author": {
+        "id": 13049
+      },
+      "writtenOn": "2015-11-07T16:24:22Z",
+      "side": 0,
+      "message": "isn\u0027t uint32_ requried ?",
+      "range": {
+        "startLine": 819,
+        "startChar": 49,
+        "endLine": 819,
+        "endChar": 50
+      },
+      "revId": "b5321884ba892a7c235016cf0e31422d1d966245",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
