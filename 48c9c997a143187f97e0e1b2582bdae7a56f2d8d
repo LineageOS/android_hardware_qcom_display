@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ff82abbf_11ccf687",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-11-24T23:31:34Z",
+      "side": 1,
+      "message": "You might want to specify copybit specifically here.",
+      "revId": "48c9c997a143187f97e0e1b2582bdae7a56f2d8d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ff82abbf_f1ce3282",
+        "filename": "libcopybit/copybit.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 84,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-11-24T23:31:34Z",
+      "side": 1,
+      "message": "Fix your indentation.",
+      "revId": "48c9c997a143187f97e0e1b2582bdae7a56f2d8d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
