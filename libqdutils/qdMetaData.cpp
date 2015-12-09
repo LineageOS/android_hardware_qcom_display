@@ -87,6 +87,9 @@ int setMetaDataVa(MetaData_t *data, DispParamType paramType,
 
     data->operation |= paramType;
     switch (paramType) {
+        case BLUR_LAYER:
+          data->blurLayer = *((int32_t *)param);
+          break;
         case PP_PARAM_INTERLACED:
             data->interlaced = *((int32_t *)param);
             break;
