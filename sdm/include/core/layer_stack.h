@@ -172,6 +172,9 @@ struct LayerFlags {
 
       uint32_t single_buffer : 1;  //!< This flag shall be set by client to indicate that the layer
                                    //!< uses only a single buffer that will not be swapped out
+
+      uint32_t blur : 1;      //!< This flag shall be set by client to indicate that the layer
+                              //!< must be blurred.
     };
 
     uint32_t flags = 0;       //!< For initialization purpose only.
@@ -252,6 +255,8 @@ struct LayerStackFlags {
                                            // This applies only to primary displays currently
 
       uint32_t hdr_present : 1;  //!< Set if stack has HDR content
+
+      uint32_t blur_present : 1;      //!< Set if stack has layer which needs blur
     };
 
     uint32_t flags = 0;               //!< For initialization purpose only.

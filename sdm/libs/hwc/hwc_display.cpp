@@ -901,9 +901,10 @@ bool HWCDisplay::IsLayerUpdating(hwc_display_contents_1_t *content_list, const L
   // Layer should be considered updating if
   //   a) layer is in single buffer mode, or
   //   b) valid dirty_regions(android specific hint for updating status), or
-  //   c) layer stack geometry has changed
+  //   c) layer stack geometry has changed, or
+  //   d) layer is being blurred
   return (layer->flags.single_buffer || IsSurfaceUpdated(layer->dirty_regions) ||
-         (layer_stack_.flags.geometry_changed));
+         (layer_stack_.flags.geometry_changed) || layer->flags.blur);
 }
 
 bool HWCDisplay::IsNonIntegralSourceCrop(const hwc_frect_t &source) {
@@ -1345,6 +1346,7 @@ DisplayError HWCDisplay::SetMetaData(const private_handle_t *pvt_handle, Layer *
     layer_stack_.flags.single_buffered_layer_present |= meta_data->isSingleBufferMode;
   }
 
+<<<<<<< HEAD
   if (meta_data->operation & S3D_FORMAT) {
     std::map<int, LayerBufferS3DFormat>::iterator it =
         s3d_format_hwc_to_sdm_.find(INT32(meta_data->s3dFormat));
@@ -1353,6 +1355,11 @@ DisplayError HWCDisplay::SetMetaData(const private_handle_t *pvt_handle, Layer *
     } else {
       DLOGW("Invalid S3D format %d", meta_data->s3dFormat);
     }
+=======
+  if (meta_data->operation & BLUR_LAYER) {
+    layer->flags.blur = meta_data->blurLayer;
+    layer_stack_.flags.blur_present |= meta_data->blurLayer;
+>>>>>>> display: Add support for Blur Layer
   }
 
   return kErrorNone;

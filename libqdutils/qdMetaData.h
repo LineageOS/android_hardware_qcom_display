@@ -138,13 +138,15 @@ struct MetaData_t {
      * [1] : Bottom field, if it is interlaced.
      */
     struct UBWCStats ubwcCRStats[2];
+    /* The layer needs blur effect */
+    uint32_t blurLayer;
 };
 
 enum DispParamType {
     SET_VT_TIMESTAMP         = 0x0001,
     COLOR_METADATA           = 0x0002,
     PP_PARAM_INTERLACED      = 0x0004,
-    UNUSED2                  = 0x0008,
+    BLUR_LAYER               = 0x0008,
     UNUSED3                  = 0x0010,
     UNUSED4                  = 0x0020,
     SET_UBWC_CR_STATS_INFO   = 0x0040,
