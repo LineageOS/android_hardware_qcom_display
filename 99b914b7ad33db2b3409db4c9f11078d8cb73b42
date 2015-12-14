@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1f9dbf25_fe791d2f",
+        "filename": "libgralloc/alloc_controller.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 182,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-12-14T07:34:58Z",
+      "side": 1,
+      "message": "It would probably be better to correct the value of aligned_w, rather than add an opt-in ifdef.\nI\u0027m assuming LINK_adreno_get_gpu_pixel_alignment may not be present in your adreno libs, so this is resulting in alignment falling back to a value of 32, instead of the 16 it used to be.\n\nTry:\n\nif (LINK_adreno_get_gpu_pixel_alignment) {\n\n    alignment \u003d LINK_adreno_get_gpu_pixel_alignment();\n\n} else {\n\n    alignment \u003d 16;\n\n}",
+      "revId": "99b914b7ad33db2b3409db4c9f11078d8cb73b42",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
