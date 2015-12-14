@@ -16,6 +16,24 @@
       "revId": "99b914b7ad33db2b3409db4c9f11078d8cb73b42",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1f9dbf25_5edcd117",
+        "filename": "libgralloc/alloc_controller.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 182,
+      "author": {
+        "id": 3671
+      },
+      "writtenOn": "2015-12-14T09:48:25Z",
+      "side": 1,
+      "message": "this works on my device (v410)",
+      "parentUuid": "1f9dbf25_fe791d2f",
+      "revId": "99b914b7ad33db2b3409db4c9f11078d8cb73b42",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
