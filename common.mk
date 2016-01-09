@@ -53,7 +53,6 @@ kernel_includes :=
 ifeq ($(TARGET_USES_QCOM_BSP),true)
 # Enable QCOM Display features
     common_flags += -DQTI_BSP
-    common_includes += vendor/qcom/opensource/display-frameworks/include
 endif
 
 common_flags += -isystem $(TARGET_OUT_HEADERS)/qcom/display
