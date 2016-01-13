@@ -34,6 +34,24 @@
       "revId": "6c26e9de41dbc794efec6c7d38bdcd65135f6e6d",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1fcbff3d_9ae5713b",
+        "filename": "libgralloc/alloc_controller.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 104,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-01-13T01:22:37Z",
+      "side": 1,
+      "message": "Hm, might be worthwhile to rename this flag to match what this code is doing then. I saw the flag name and assumed you\u0027d directly want to force an alignment value, rather than remove a symbol.",
+      "parentUuid": "1fcbff3d_7aed2524",
+      "revId": "6c26e9de41dbc794efec6c7d38bdcd65135f6e6d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
