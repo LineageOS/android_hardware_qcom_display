@@ -16,6 +16,24 @@
       "revId": "6c26e9de41dbc794efec6c7d38bdcd65135f6e6d",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1fcbff3d_7aed2524",
+        "filename": "libgralloc/alloc_controller.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 104,
+      "author": {
+        "id": 13897
+      },
+      "writtenOn": "2016-01-13T01:18:44Z",
+      "side": 1,
+      "message": "I did it like this because in this way devices using old blobs that don\u0027t export get_gpu_pixel_alignment() don\u0027t require TARGET_USE_COMPAT_GRALLOC_ALIGN to work correctly, but I can restore the original patchset if you think that\u0027s the best way.",
+      "parentUuid": "1fcbff3d_9ab7b13b",
+      "revId": "6c26e9de41dbc794efec6c7d38bdcd65135f6e6d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
