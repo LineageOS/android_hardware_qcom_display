@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2015, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -29,6 +29,7 @@
 #include <core/core_interface.h>
 #include <qdMetaData.h>
 #include <private/color_params.h>
+#include <map>
 
 namespace sdm {
 
@@ -148,7 +149,7 @@ class HWCDisplay : public DisplayEventHandler {
   DisplayError SetMetaData(const private_handle_t *pvt_handle, Layer *layer);
   bool NeedsFrameBufferRefresh(hwc_display_contents_1_t *content_list);
   void CacheLayerStackInfo(hwc_display_contents_1_t *content_list);
-  bool IsLayerUpdating(const hwc_layer_1_t &hwc_layer, const LayerCache &layer_cache);
+  bool IsLayerUpdating(hwc_display_contents_1_t *content_list, int layer_index);
   bool SingleLayerUpdating(uint32_t app_layer_count);
   uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate);
 
@@ -189,6 +190,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool solid_fill_enable_ = false;
   uint32_t solid_fill_color_ = 0;
   LayerRect display_rect_;
+  std::map<int, LayerBufferS3DFormat> s3d_format_hwc_to_sdm_;
 
  private:
   bool IsFrameBufferScaled();

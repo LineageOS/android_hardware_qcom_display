@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2015, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -36,13 +36,15 @@
 #include <utils/debug.h>
 #include <sync/sync.h>
 #include <cutils/properties.h>
+#include <map>
+#include <utility>
 
 #include "hwc_display.h"
 #include "hwc_debugger.h"
 #include "blit_engine_c2d.h"
 
 #ifdef QTI_BSP
-#include <exhwcomposer_defs.h>
+#include <hardware/display_defs.h>
 #endif
 
 #define __CLASS__ "HWCDisplay"
@@ -111,6 +113,14 @@ int HWCDisplay::Init() {
 
   display_intf_->GetRefreshRateRange(&min_refresh_rate_, &max_refresh_rate_);
   current_refresh_rate_ = max_refresh_rate_;
+
+  s3d_format_hwc_to_sdm_.insert(std::pair<int, LayerBufferS3DFormat>(HAL_NO_3D, kS3dFormatNone));
+  s3d_format_hwc_to_sdm_.insert(std::pair<int, LayerBufferS3DFormat>(HAL_3D_SIDE_BY_SIDE_L_R,
+                                kS3dFormatLeftRight));
+  s3d_format_hwc_to_sdm_.insert(std::pair<int, LayerBufferS3DFormat>(HAL_3D_SIDE_BY_SIDE_R_L,
+                                kS3dFormatRightLeft));
+  s3d_format_hwc_to_sdm_.insert(std::pair<int, LayerBufferS3DFormat>(HAL_3D_TOP_BOTTOM,
+                                kS3dFormatTopBottom));
 
   return 0;
 }
@@ -562,8 +572,7 @@ int HWCDisplay::PrePrepareLayerStack(hwc_display_contents_1_t *content_list) {
     layer.flags.updating = true;
 
     if (num_hw_layers <= kMaxLayerCount) {
-      LayerCache layer_cache = layer_stack_cache_.layer_cache[i];
-      layer.flags.updating = IsLayerUpdating(hwc_layer, layer_cache);
+      layer.flags.updating = IsLayerUpdating(content_list, i);
     }
 #ifdef QTI_BSP
     if (hwc_layer.flags & HWC_SCREENSHOT_ANIMATOR_LAYER) {
@@ -583,6 +592,8 @@ int HWCDisplay::PrePrepareLayerStack(hwc_display_contents_1_t *content_list) {
     } else {
       layer.frame_rate = current_refresh_rate_;
     }
+
+    layer.input_buffer->buffer_id = reinterpret_cast<uint64_t>(hwc_layer.handle);
   }
 
   // Prepare the Blit Target
@@ -609,6 +620,10 @@ int HWCDisplay::PrepareLayerStack(hwc_display_contents_1_t *content_list) {
   }
 
   size_t num_hw_layers = content_list->numHwLayers;
+  if (num_hw_layers <= 1) {
+    flush_ = true;
+    return 0;
+  }
 
   if (!skip_prepare_) {
     DisplayError error = display_intf_->Prepare(&layer_stack_);
@@ -810,9 +825,13 @@ bool HWCDisplay::NeedsFrameBufferRefresh(hwc_display_contents_1_t *content_list)
   }
 
   for (uint32_t i = 0; i < layer_count; i++) {
-    hwc_layer_1_t &hwc_layer = content_list->hwLayers[i];
     Layer &layer = layer_stack_.layers[i];
     LayerCache &layer_cache = layer_stack_cache_.layer_cache[i];
+
+    // need FB refresh for s3d case
+    if (layer.input_buffer->s3d_format != kS3dFormatNone) {
+        return true;
+    }
 
     if (layer.composition == kCompositionGPUTarget) {
       continue;
@@ -822,7 +841,7 @@ bool HWCDisplay::NeedsFrameBufferRefresh(hwc_display_contents_1_t *content_list)
       return true;
     }
 
-    if ((layer.composition == kCompositionGPU) && IsLayerUpdating(hwc_layer, layer_cache)) {
+    if ((layer.composition == kCompositionGPU) && IsLayerUpdating(content_list, i)) {
       return true;
     }
   }
@@ -830,16 +849,24 @@ bool HWCDisplay::NeedsFrameBufferRefresh(hwc_display_contents_1_t *content_list)
   return false;
 }
 
-bool HWCDisplay::IsLayerUpdating(const hwc_layer_1_t &hwc_layer, const LayerCache &layer_cache) {
+bool HWCDisplay::IsLayerUpdating(hwc_display_contents_1_t *content_list, int layer_index) {
+  hwc_layer_1_t &hwc_layer = content_list->hwLayers[layer_index];
+  LayerCache &layer_cache = layer_stack_cache_.layer_cache[layer_index];
+
   const private_handle_t *pvt_handle = static_cast<const private_handle_t *>(hwc_layer.handle);
   const MetaData_t *meta_data = pvt_handle ?
     reinterpret_cast<MetaData_t *>(pvt_handle->base_metadata) : NULL;
 
-  // If a layer is in single buffer mode, it should be considered as updating always
+  // Layer should be considered updating if
+  //   a) layer is in single buffer mode, or
+  //   b) layer handle has changed, or
+  //   c) layer plane alpha has changed, or
+  //   d) layer stack geometry has changed
   return ((meta_data && (meta_data->operation & SET_SINGLE_BUFFER_MODE) &&
-            meta_data->isSingleBufferMode) ||
+              meta_data->isSingleBufferMode) ||
           (layer_cache.handle != hwc_layer.handle) ||
-          (layer_cache.plane_alpha != hwc_layer.planeAlpha));
+          (layer_cache.plane_alpha != hwc_layer.planeAlpha) ||
+          (content_list->flags & HWC_GEOMETRY_CHANGED));
 }
 
 void HWCDisplay::CacheLayerStackInfo(hwc_display_contents_1_t *content_list) {
@@ -1350,6 +1377,16 @@ DisplayError HWCDisplay::SetMetaData(const private_handle_t *pvt_handle, Layer *
     // Graphics can set this operation on all types of layers including FB and set the actual value
     // to 0. To protect against SET operations of 0 value, we need to do a logical OR.
     layer_stack_.flags.single_buffered_layer_present |= meta_data->isSingleBufferMode;
+  }
+
+  if (meta_data->operation & S3D_FORMAT) {
+    std::map<int, LayerBufferS3DFormat>::iterator it =
+                      s3d_format_hwc_to_sdm_.find(meta_data->s3dFormat);
+    if (it != s3d_format_hwc_to_sdm_.end()) {
+      layer->input_buffer->s3d_format = it->second;
+    } else {
+      DLOGW("Invalid S3D format %d", meta_data->s3dFormat);
+    }
   }
 
   return kErrorNone;
