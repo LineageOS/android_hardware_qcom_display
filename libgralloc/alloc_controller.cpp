@@ -182,14 +182,20 @@ void AdrenoMemInfo::getAlignedWidthAndHeight(int width, int height, int format,
             }
         }
     } else {
+#ifdef USE_16BYTE_GRALLOC_ALIGN
+        int alignment = 16;
+#else
         int alignment = 32;
+#endif
         switch (format)
         {
             case HAL_PIXEL_FORMAT_YCrCb_420_SP:
             case HAL_PIXEL_FORMAT_YCbCr_420_SP:
+#ifndef USE_16BYTE_GRALLOC_ALIGN
                 if (LINK_adreno_get_gpu_pixel_alignment) {
                     alignment = LINK_adreno_get_gpu_pixel_alignment();
                 }
+#endif
                 aligned_w = ALIGN(width, alignment);
                 break;
             case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
