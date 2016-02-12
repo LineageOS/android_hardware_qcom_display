@@ -65,6 +65,7 @@ void Overlay::configBegin() {
 
 void Overlay::configDone() {
     const int TMP_STR_BUF_SIZE = 32;
+    mWaitForCommitFinish = false;
     if(PipeBook::pipeUsageUnchanged()) return;
 
     for(int i = 0; i < PipeBook::NUM_PIPES; i++) {
@@ -78,6 +79,11 @@ void Overlay::configDone() {
                 strlcat(mDumpStr, str, DUMP_STR_MAX);
             }
             mPipeBook[i].destroy();
+            // Need to wait for commit to finish when unset layers.
+            // Otherwise, kernel resources may not released yet for next set.
+            if (!mWaitForCommitFinish) {
+                mWaitForCommitFinish = true;
+            }
         }
     }
     dump();
@@ -384,6 +390,7 @@ void Overlay::PipeBook::destroy() {
 
 Overlay* Overlay::sInstance = 0;
 int Overlay::sDpyFbMap[DPY_MAX] = {0, -1,-1};
+bool Overlay::mWaitForCommitFinish = false;
 int Overlay::PipeBook::NUM_PIPES = 0;
 int Overlay::PipeBook::sPipeUsageBitmap = 0;
 int Overlay::PipeBook::sLastUsageBitmap = 0;
