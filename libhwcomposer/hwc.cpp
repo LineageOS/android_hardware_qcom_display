@@ -567,7 +567,8 @@ static int hwc_set_primary(hwc_context_t *ctx, hwc_display_contents_1_t* list) {
             }
         }
 
-        if(!Overlay::displayCommit(ctx->dpyAttr[dpy].fd)) {
+        if(!Overlay::displayCommit(ctx->dpyAttr[dpy].fd,
+            ctx->mOverlay->waitForCommitFinish())) {
             ALOGE("%s: display commit fail for %d dpy!", __FUNCTION__, dpy);
             ret = -1;
         }
@@ -620,7 +621,8 @@ static int hwc_set_external(hwc_context_t *ctx,
             }
         }
 
-        if(!Overlay::displayCommit(ctx->dpyAttr[dpy].fd)) {
+        if(!Overlay::displayCommit(ctx->dpyAttr[dpy].fd,
+            ctx->mOverlay->waitForCommitFinish())) {
             ALOGE("%s: display commit fail for %d dpy!", __FUNCTION__, dpy);
             ret = -1;
         }
@@ -670,7 +672,8 @@ static int hwc_set_virtual(hwc_context_t *ctx,
             }
         }
 
-        if(!Overlay::displayCommit(ctx->dpyAttr[dpy].fd)) {
+        if(!Overlay::displayCommit(ctx->dpyAttr[dpy].fd,
+            ctx->mOverlay->waitForCommitFinish())) {
             ALOGE("%s: display commit fail for %d dpy!", __FUNCTION__, dpy);
             ret = -1;
         }
