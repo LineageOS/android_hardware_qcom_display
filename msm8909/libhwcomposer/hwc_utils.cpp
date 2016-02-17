@@ -43,6 +43,7 @@
 #include "comptype.h"
 #include "hwc_virtual.h"
 #include "qd_utils.h"
+#include "hwc_qdcm.h"
 #include <sys/sysinfo.h>
 #include <dlfcn.h>
 
@@ -51,15 +52,11 @@ using namespace qService;
 using namespace android;
 using namespace overlay;
 using namespace overlay::utils;
+using namespace qQdcm;
 namespace ovutils = overlay::utils;
 
-#ifdef QCOM_BSP
-#ifdef __cplusplus
-extern "C" {
-#endif
+#ifdef QTI_BSP
 
-EGLAPI EGLBoolean eglGpuPerfHintQCOM(EGLDisplay dpy, EGLContext ctx,
-                                           EGLint *attrib_list);
 #define EGL_GPU_HINT_1        0x32D0
 #define EGL_GPU_HINT_2        0x32D1
 
@@ -70,12 +67,9 @@ EGLAPI EGLBoolean eglGpuPerfHintQCOM(EGLDisplay dpy, EGLContext ctx,
 #define EGL_GPU_LEVEL_4       0x4
 #define EGL_GPU_LEVEL_5       0x5
 
-#ifdef __cplusplus
-}
-#endif
 #endif
 
-#define PROP_DEFAULT_APPBUFFER  "ro.sf.default_app_buffer"
+#define PROP_DEFAULT_APPBUFFER  "hw.sf.app_buff_count"
 #define MAX_RAM_SIZE  512*1024*1024
 #define qHD_WIDTH 540
 
@@ -85,9 +79,35 @@ namespace qhwc {
 // Std refresh rates for digital videos- 24p, 30p, 48p and 60p
 uint32_t stdRefreshRates[] = { 30, 24, 48, 60 };
 
+static uint32_t getFBformat(fb_var_screeninfo vinfo) {
+    uint32_t fbformat = HAL_PIXEL_FORMAT_RGBA_8888;
+
+#ifdef GET_FRAMEBUFFER_FORMAT_FROM_HWC
+    // Here, we are adding the formats that are supported by both GPU and MDP.
+    // The formats that fall in this category are RGBA_8888, RGB_565, RGB_888
+    switch(vinfo.bits_per_pixel) {
+        case 16:
+            fbformat = HAL_PIXEL_FORMAT_RGB_565;
+            break;
+        case 24:
+            if ((vinfo.transp.offset == 0) && (vinfo.transp.length == 0))
+                fbformat = HAL_PIXEL_FORMAT_RGB_888;
+            break;
+        case 32:
+            if ((vinfo.red.offset == 0) && (vinfo.green.offset == 8) &&
+                    (vinfo.blue.offset == 16) && (vinfo.transp.offset == 24))
+                fbformat = HAL_PIXEL_FORMAT_RGBA_8888;
+            break;
+        default:
+            fbformat = HAL_PIXEL_FORMAT_RGBA_8888;
+    }
+#endif
+    return fbformat;
+}
+
 bool isValidResolution(hwc_context_t *ctx, uint32_t xres, uint32_t yres)
 {
-    return !((xres > qdutils::MDPVersion::getInstance().getMaxPipeWidth() &&
+    return !((xres > qdutils::MDPVersion::getInstance().getMaxMixerWidth() &&
                 !isDisplaySplit(ctx, HWC_DISPLAY_PRIMARY)) ||
             (xres < MIN_DISPLAY_XRES || yres < MIN_DISPLAY_YRES));
 }
@@ -124,15 +144,19 @@ void changeResolution(hwc_context_t *ctx, int xres_orig, int yres_orig,
 // Initialize hdmi display attributes based on
 // hdmi display class state
 void updateDisplayInfo(hwc_context_t* ctx, int dpy) {
+    struct fb_var_screeninfo info;
+
+    if (ioctl(ctx->mHDMIDisplay->getFd(), FBIOGET_VSCREENINFO, &info) == -1) {
+        ALOGE("%s:Error in ioctl FBIOGET_VSCREENINFO: %s",
+                __FUNCTION__, strerror(errno));
+    }
+
+    ctx->dpyAttr[dpy].fbformat = getFBformat(info);
     ctx->dpyAttr[dpy].fd = ctx->mHDMIDisplay->getFd();
     ctx->dpyAttr[dpy].xres = ctx->mHDMIDisplay->getWidth();
     ctx->dpyAttr[dpy].yres = ctx->mHDMIDisplay->getHeight();
     ctx->dpyAttr[dpy].mMDPScalingMode = ctx->mHDMIDisplay->getMDPScalingMode();
     ctx->dpyAttr[dpy].vsync_period = ctx->mHDMIDisplay->getVsyncPeriod();
-    //FIXME: for now assume HDMI as secure
-    //Will need to read the HDCP status from the driver
-    //and update this accordingly
-    ctx->dpyAttr[dpy].secure = true;
     ctx->mViewFrame[dpy].left = 0;
     ctx->mViewFrame[dpy].top = 0;
     ctx->mViewFrame[dpy].right = ctx->dpyAttr[dpy].xres;
@@ -229,9 +253,9 @@ static int openFramebufferDevice(hwc_context_t *ctx)
     ctx->dpyAttr[HWC_DISPLAY_PRIMARY].ydpi = ydpi;
     ctx->dpyAttr[HWC_DISPLAY_PRIMARY].refreshRate = (uint32_t)fps;
     ctx->dpyAttr[HWC_DISPLAY_PRIMARY].dynRefreshRate = (uint32_t)fps;
-    ctx->dpyAttr[HWC_DISPLAY_PRIMARY].secure = true;
     ctx->dpyAttr[HWC_DISPLAY_PRIMARY].vsync_period =
             (uint32_t)(1000000000l / fps);
+    ctx->dpyAttr[HWC_DISPLAY_PRIMARY].fbformat = getFBformat(info);
 
     //To change resolution of primary display
     changeResolution(ctx, info.xres, info.yres, info.width, info.height);
@@ -261,7 +285,7 @@ static void changeDefaultAppBufferCount() {
     }
     if ((ramSize && ramSize < MAX_RAM_SIZE) &&
          (sInfo.xres &&  sInfo.xres <= qHD_WIDTH )) {
-                  property_set(PROP_DEFAULT_APPBUFFER, "2");
+                  property_set(PROP_DEFAULT_APPBUFFER, "3");
     }
 }
 
@@ -302,7 +326,6 @@ void initContext(hwc_context_t *ctx)
     ctx->mMDP.panel = qdutils::MDPVersion::getInstance().getPanelType();
     ctx->mOverlay = overlay::Overlay::getInstance();
     ctx->mRotMgr = RotMgr::getInstance();
-    ctx->mBWCEnabled = qdutils::MDPVersion::getInstance().supportsBWC();
 
     //default_app_buffer for ferrum
     if (ctx->mMDP.version ==  qdutils::MDP_V3_0_5) {
@@ -391,19 +414,25 @@ void initContext(hwc_context_t *ctx)
     ctx->enableABC  = atoi(value) ? true : false;
 
     // Initializing boot anim completed check to false
-    ctx->mDefaultModeApplied = false;
-
-    ctx->mCoolColorTemperatureEnabled = false;
+    ctx->mBootAnimCompleted = false;
 
     // Initialize gpu perfomance hint related parameters
-    property_get("sys.hwc.gpu_perf_mode", value, "0");
-#ifdef QCOM_BSP
-    ctx->mGPUHintInfo.mGpuPerfModeEnable = atoi(value)? true : false;
-
+#ifdef QTI_BSP
+    ctx->mEglLib = NULL;
+    ctx->mpfn_eglGpuPerfHintQCOM = NULL;
+    ctx->mpfn_eglGetCurrentDisplay = NULL;
+    ctx->mpfn_eglGetCurrentContext = NULL;
+    ctx->mGPUHintInfo.mGpuPerfModeEnable = false;
     ctx->mGPUHintInfo.mEGLDisplay = NULL;
     ctx->mGPUHintInfo.mEGLContext = NULL;
     ctx->mGPUHintInfo.mCompositionState = COMPOSITION_STATE_MDP;
     ctx->mGPUHintInfo.mCurrGPUPerfMode = EGL_GPU_LEVEL_0;
+    if(property_get("sys.hwc.gpu_perf_mode", value, "0") > 0) {
+        int val = atoi(value);
+        if(val > 0 && loadEglLib(ctx)) {
+            ctx->mGPUHintInfo.mGpuPerfModeEnable = true;
+        }
+    }
 #endif
     // Read the system property to determine if windowboxing feature is enabled.
     ctx->mWindowboxFeature = false;
@@ -419,15 +448,19 @@ void initContext(hwc_context_t *ctx)
     }
 
     memset(&(ctx->mPtorInfo), 0, sizeof(ctx->mPtorInfo));
-    ctx->mHPDEnabled = false;
-    ctx->mColorMode = new ColorMode();
-    ctx->mColorMode->init();
+
+    //init qdcm service related context.
+    qdcmInitContext(ctx);
+
     ALOGI("Initializing Qualcomm Hardware Composer");
     ALOGI("MDP version: %d", ctx->mMDP.version);
 }
 
 void closeContext(hwc_context_t *ctx)
 {
+    //close qdcm service related context.
+    qdcmCloseContext(ctx);
+
     if(ctx->mOverlay) {
         delete ctx->mOverlay;
         ctx->mOverlay = NULL;
@@ -476,14 +509,48 @@ void closeContext(hwc_context_t *ctx)
         ctx->mAD = NULL;
     }
 
-    if(ctx->mColorMode) {
-        ctx->mColorMode->destroy();
-        delete ctx->mColorMode;
-        ctx->mColorMode = NULL;
+#ifdef QTI_BSP
+    ctx->mpfn_eglGpuPerfHintQCOM = NULL;
+    ctx->mpfn_eglGetCurrentDisplay = NULL;
+    ctx->mpfn_eglGetCurrentContext = NULL;
+    if(ctx->mEglLib) {
+        dlclose(ctx->mEglLib);
+        ctx->mEglLib = NULL;
     }
+#endif
 }
 
-//Helper to roundoff the refreshrates
+uint32_t getRefreshRate(hwc_context_t* ctx, uint32_t requestedRefreshRate) {
+
+    qdutils::MDPVersion& mdpHw = qdutils::MDPVersion::getInstance();
+    int dpy = HWC_DISPLAY_PRIMARY;
+    uint32_t defaultRefreshRate = ctx->dpyAttr[dpy].refreshRate;
+    uint32_t rate = defaultRefreshRate;
+
+    if(!requestedRefreshRate)
+        return defaultRefreshRate;
+
+    uint32_t maxNumIterations =
+            (uint32_t)ceil(
+                    (float)mdpHw.getMaxFpsSupported()/
+                    (float)requestedRefreshRate);
+
+    for(uint32_t i = 1; i <= maxNumIterations; i++) {
+        rate = i * roundOff(requestedRefreshRate);
+        if(rate < mdpHw.getMinFpsSupported()) {
+            continue;
+        } else if((rate >= mdpHw.getMinFpsSupported() &&
+                   rate <= mdpHw.getMaxFpsSupported())) {
+            break;
+        } else {
+            rate = defaultRefreshRate;
+            break;
+        }
+    }
+    return rate;
+}
+
+//Helper to roundoff the refreshrates to the std refresh-rates
 uint32_t roundOff(uint32_t refreshRate) {
     int count =  (int) (sizeof(stdRefreshRates)/sizeof(stdRefreshRates[0]));
     uint32_t rate = refreshRate;
@@ -506,7 +573,7 @@ void setRefreshRate(hwc_context_t* ctx, int dpy, uint32_t refreshRate) {
     const int fbNum = Overlay::getFbForDpy(dpy);
     char sysfsPath[qdutils::MAX_SYSFS_FILE_PATH];
     snprintf (sysfsPath, sizeof(sysfsPath),
-            "/sys/devices/virtual/graphics/fb%d/dynamic_fps", fbNum);
+            "/sys/class/graphics/fb%d/dynamic_fps", fbNum);
 
     int fd = open(sysfsPath, O_WRONLY);
     if(fd >= 0) {
@@ -881,9 +948,6 @@ bool needsScaling(hwc_layer_1_t const* layer) {
     src_w = sourceCrop.right - sourceCrop.left;
     src_h = sourceCrop.bottom - sourceCrop.top;
 
-    if(layer->transform & HWC_TRANSFORM_ROT_90)
-        swap(src_w, src_h);
-
     if(((src_w != dst_w) || (src_h != dst_h)))
         return true;
 
@@ -966,6 +1030,16 @@ bool isAlphaPresent(hwc_layer_1_t const* layer) {
     return false;
 }
 
+bool isAlphaPresentinFB(hwc_context_t *ctx, int dpy) {
+    switch(ctx->dpyAttr[dpy].fbformat) {
+        case HAL_PIXEL_FORMAT_RGBA_8888:
+        case HAL_PIXEL_FORMAT_BGRA_8888:
+            return true;
+        default : return false;
+    }
+    return false;
+}
+
 static void trimLayer(hwc_context_t *ctx, const int& dpy, const int& transform,
         hwc_rect_t& crop, hwc_rect_t& dst) {
     int hw_w = ctx->dpyAttr[dpy].xres;
@@ -1026,7 +1100,7 @@ void setListStats(hwc_context_t *ctx,
         hwc_layer_1_t const* layer = &list->hwLayers[i];
         private_handle_t *hnd = (private_handle_t *)layer->handle;
 
-#ifdef QCOM_BSP
+#ifdef QTI_BSP
         // Window boxing feature is applicable obly for external display, So
         // enable mAIVVideoMode only for external display
         if(ctx->mWindowboxFeature && dpy && isAIVVideoLayer(layer)) {
@@ -1077,21 +1151,18 @@ void setListStats(hwc_context_t *ctx,
 
 #ifdef DYNAMIC_FPS
         if (!dpy && mdpHw.isDynFpsSupported() && ctx->mUseMetaDataRefreshRate){
-            //dyn fps: get refreshrate from metadata
-            //Support multiple refresh rates if they are same
-            //else set to  default
+            /* Dyn fps: get refreshrate from metadata */
             MetaData_t *mdata = hnd ? (MetaData_t *)hnd->base_metadata : NULL;
             if (mdata && (mdata->operation & UPDATE_REFRESH_RATE)) {
                 // Valid refreshRate in metadata and within the range
-                uint32_t rate = roundOff(mdata->refreshrate);
-                if((rate >= mdpHw.getMinFpsSupported() &&
-                                rate <= mdpHw.getMaxFpsSupported())) {
-                    if (!refreshRate) {
-                        refreshRate = rate;
-                    } else if(refreshRate != rate) {
-                        // multiple refreshrate requests, set to default
-                        refreshRate = ctx->dpyAttr[dpy].refreshRate;
-                    }
+                uint32_t rate = getRefreshRate(ctx, mdata->refreshrate);
+                if (!refreshRate) {
+                    refreshRate = rate;
+                } else if(refreshRate != rate) {
+                    /* Support multiple refresh rates if they are same
+                     * else set to default.
+                     */
+                    refreshRate = ctx->dpyAttr[dpy].refreshRate;
                 }
             }
         }
@@ -1179,26 +1250,22 @@ bool isSecureModePolicy(int mdpVersion) {
 bool isRotatorSupportedFormat(private_handle_t *hnd) {
     // Following rotator src formats are supported by mdp driver
     // TODO: Add more formats in future, if mdp driver adds support
-    if(hnd != NULL) {
-        switch(hnd->format) {
-            case HAL_PIXEL_FORMAT_RGBA_8888:
-            case HAL_PIXEL_FORMAT_RGBA_5551:
-            case HAL_PIXEL_FORMAT_RGBA_4444:
-            case HAL_PIXEL_FORMAT_RGB_565:
-            case HAL_PIXEL_FORMAT_RGB_888:
-            case HAL_PIXEL_FORMAT_BGRA_8888:
-                return true;
-            default:
-                return false;
-        }
+    switch(hnd->format) {
+        case HAL_PIXEL_FORMAT_RGBA_8888:
+        case HAL_PIXEL_FORMAT_RGB_565:
+        case HAL_PIXEL_FORMAT_RGB_888:
+        case HAL_PIXEL_FORMAT_BGRA_8888:
+            return true;
+        default:
+            return false;
     }
     return false;
 }
 
 bool isRotationDoable(hwc_context_t *ctx, private_handle_t *hnd) {
-    // Rotate layers, if it is not secure display buffer and not
+    // Rotate layers, if it is YUV type or rendered by CPU and not
     // for the MDP versions below MDP5
-    if((!isSecureDisplayBuffer(hnd) && isRotatorSupportedFormat(hnd) &&
+    if((isCPURendered(hnd) && isRotatorSupportedFormat(hnd) &&
         !ctx->mMDP.version < qdutils::MDSS_V5)
                    || isYuvBuffer(hnd)) {
         return true;
@@ -1324,9 +1391,34 @@ bool operator ==(const hwc_rect_t& lhs, const hwc_rect_t& rhs) {
 }
 
 bool layerUpdating(const hwc_layer_1_t* layer) {
+     hwc_region_t surfDamage = layer->surfaceDamage;
+     return ((surfDamage.numRects == 0) ||
+              isValidRect(layer->surfaceDamage.rects[0]));
+}
+
+hwc_rect_t calculateDirtyRect(const hwc_layer_1_t* layer,
+                                       hwc_rect_t& scissor) {
     hwc_region_t surfDamage = layer->surfaceDamage;
-    return ((surfDamage.numRects == 0) ||
-            isValidRect(layer->surfaceDamage.rects[0]));
+    hwc_rect_t src = integerizeSourceCrop(layer->sourceCropf);
+    hwc_rect_t dst = layer->displayFrame;
+    int x_off = dst.left - src.left;
+    int y_off = dst.top - src.top;
+    hwc_rect dirtyRect = (hwc_rect){0, 0, 0, 0};
+    hwc_rect_t updatingRect = dst;
+
+    if (surfDamage.numRects == 0) {
+      // full layer updating, dirty rect is full frame
+        dirtyRect = getIntersection(layer->displayFrame, scissor);
+    } else {
+        for(uint32_t i = 0; i < surfDamage.numRects; i++) {
+            updatingRect = moveRect(surfDamage.rects[i], x_off, y_off);
+            hwc_rect_t intersect = getIntersection(updatingRect, scissor);
+            if(isValidRect(intersect)) {
+               dirtyRect = getUnion(intersect, dirtyRect);
+            }
+        }
+     }
+     return dirtyRect;
 }
 
 hwc_rect_t moveRect(const hwc_rect_t& rect, const int& x_off, const int& y_off)
@@ -1439,11 +1531,6 @@ void optimizeLayerRects(const hwc_display_contents_1_t *list) {
                      layer->sourceCropf.top = (float)bottomCrop.top;
                      layer->sourceCropf.right = (float)bottomCrop.right;
                      layer->sourceCropf.bottom = (float)bottomCrop.bottom;
-#ifdef QCOM_BSP
-                     //Update layer dirtyRect
-                     layer->dirtyRect = getIntersection(bottomCrop,
-                                            layer->dirtyRect);
-#endif
                   }
                }
                j--;
@@ -1627,7 +1714,7 @@ int hwc_sync(hwc_context_t *ctx, hwc_display_contents_1_t* list, int dpy,
 
     for(uint32_t i = 0; i < list->numHwLayers; i++) {
         if(list->hwLayers[i].compositionType == HWC_OVERLAY ||
-#ifdef QCOM_BSP
+#ifdef QTI_BSP
            list->hwLayers[i].compositionType == HWC_BLIT ||
 #endif
            list->hwLayers[i].compositionType == HWC_FRAMEBUFFER_TARGET) {
@@ -1639,7 +1726,7 @@ int hwc_sync(hwc_context_t *ctx, hwc_display_contents_1_t* list, int dpy,
                 // if animation is in progress.
                 list->hwLayers[i].releaseFenceFd = -1;
             } else if(list->hwLayers[i].releaseFenceFd < 0 ) {
-#ifdef QCOM_BSP
+#ifdef QTI_BSP
                 //If rotator has not already populated this field
                 // & if it's a not VPU layer
 
@@ -1707,13 +1794,6 @@ void setMdpFlags(hwc_context_t *ctx, hwc_layer_1_t *layer,
     if(isSecureBuffer(hnd)) {
         ovutils::setMdpFlags(mdpFlags,
                 ovutils::OV_MDP_SECURE_OVERLAY_SESSION);
-        ovutils::setMdpFlags(mdpFlags,
-                ovutils::OV_MDP_SMP_FORCE_ALLOC);
-    }
-
-    if(isProtectedBuffer(hnd)) {
-        ovutils::setMdpFlags(mdpFlags,
-                ovutils::OV_MDP_SMP_FORCE_ALLOC);
     }
 
     if(isSecureDisplayBuffer(hnd)) {
@@ -1811,7 +1891,7 @@ int configColorLayer(hwc_context_t *ctx, hwc_layer_1_t *layer,
     int dst_w = dst.right - dst.left;
     int dst_h = dst.bottom - dst.top;
     uint32_t color = layer->transform;
-    Whf whf(w, h, getMdpFormat(HAL_PIXEL_FORMAT_RGBA_8888));
+    Whf whf(w, h, getMdpFormat(HAL_PIXEL_FORMAT_RGBA_8888), 0);
 
     ovutils::setMdpFlags(mdpFlags, ovutils::OV_MDP_SOLID_FILL);
     if (layer->blending == HWC_BLENDING_PREMULT)
@@ -1878,7 +1958,7 @@ int getRotDownscale(hwc_context_t *ctx, const hwc_layer_1_t *layer) {
     bool isInterlaced = metadata && (metadata->operation & PP_PARAM_INTERLACED)
                 && metadata->interlaced;
     int transform = layer->transform;
-    uint32_t format = ovutils::getMdpFormat(hnd->format, hnd->flags);
+    uint32_t format = ovutils::getMdpFormat(hnd->format, isTileRendered(hnd));
 
     if(isYuvBuffer(hnd)) {
         if(ctx->mMDP.version >= qdutils::MDP_V4_2 &&
@@ -1988,7 +2068,7 @@ int configureNonSplit(hwc_context_t *ctx, hwc_layer_1_t *layer,
     int transform = layer->transform;
     eTransform orient = static_cast<eTransform>(transform);
     int rotFlags = ovutils::ROT_FLAGS_NONE;
-    uint32_t format = ovutils::getMdpFormat(hnd->format, hnd->flags);
+    uint32_t format = ovutils::getMdpFormat(hnd->format, isTileRendered(hnd));
     Whf whf(getWidth(hnd), getHeight(hnd), format, (uint32_t)hnd->size);
 
     // Handle R/B swap
@@ -2011,8 +2091,9 @@ int configureNonSplit(hwc_context_t *ctx, hwc_layer_1_t *layer,
         *rot = ctx->mRotMgr->getNext();
         if(*rot == NULL) return -1;
         ctx->mLayerRotMap[dpy]->add(layer, *rot);
-        BwcPM::setBwc(ctx, dpy, hnd, crop, dst, transform, downscale,
-                mdpFlags);
+        // BWC is not tested for other formats So enable it only for YUV format
+        if(!dpy && isYuvBuffer(hnd))
+            BwcPM::setBwc(crop, dst, transform, downscale, mdpFlags);
         //Configure rotator for pre-rotation
         if(configRotator(*rot, whf, crop, mdpFlags, orient, downscale) < 0) {
             ALOGE("%s: configRotator failed!", __FUNCTION__);
@@ -2084,7 +2165,7 @@ int configureSplit(hwc_context_t *ctx, hwc_layer_1_t *layer,
     int transform = layer->transform;
     eTransform orient = static_cast<eTransform>(transform);
     int rotFlags = ROT_FLAGS_NONE;
-    uint32_t format = ovutils::getMdpFormat(hnd->format, hnd->flags);
+    uint32_t format = ovutils::getMdpFormat(hnd->format, isTileRendered(hnd));
     Whf whf(getWidth(hnd), getHeight(hnd), format, (uint32_t)hnd->size);
 
     // Handle R/B swap
@@ -2257,6 +2338,9 @@ int configureSourceSplit(hwc_context_t *ctx, hwc_layer_1_t *layer,
         (*rot) = ctx->mRotMgr->getNext();
         if((*rot) == NULL) return -1;
         ctx->mLayerRotMap[dpy]->add(layer, *rot);
+        // BWC is not tested for other formats So enable it only for YUV format
+        if(!dpy && isYuvBuffer(hnd))
+            BwcPM::setBwc(crop, dst, transform, downscale, mdpFlagsL);
         //Configure rotator for pre-rotation
         if(configRotator(*rot, whf, crop, mdpFlagsL, orient, downscale) < 0) {
             ALOGE("%s: configRotator failed!", __FUNCTION__);
@@ -2370,7 +2454,7 @@ int getLeftSplit(hwc_context_t *ctx, const int& dpy) {
 
 bool isDisplaySplit(hwc_context_t* ctx, int dpy) {
     qdutils::MDPVersion& mdpHw = qdutils::MDPVersion::getInstance();
-    if(ctx->dpyAttr[dpy].xres > mdpHw.getMaxPipeWidth()) {
+    if(ctx->dpyAttr[dpy].xres > mdpHw.getMaxMixerWidth()) {
         return true;
     }
     //For testing we could split primary via device tree values
@@ -2429,22 +2513,22 @@ bool isGLESComp(hwc_context_t *ctx,
 }
 
 void setGPUHint(hwc_context_t* ctx, hwc_display_contents_1_t* list) {
+#ifdef QTI_BSP
     struct gpu_hint_info *gpuHint = &ctx->mGPUHintInfo;
     if(!gpuHint->mGpuPerfModeEnable || !ctx || !list)
         return;
 
-#ifdef QCOM_BSP
     /* Set the GPU hint flag to high for MIXED/GPU composition only for
        first frame after MDP -> GPU/MIXED mode transition. Set the GPU
        hint to default if the previous composition is GPU or current GPU
        composition is due to idle fallback */
     if(!gpuHint->mEGLDisplay || !gpuHint->mEGLContext) {
-        gpuHint->mEGLDisplay = eglGetCurrentDisplay();
+        gpuHint->mEGLDisplay = (*(ctx->mpfn_eglGetCurrentDisplay))();
         if(!gpuHint->mEGLDisplay) {
             ALOGW("%s Warning: EGL current display is NULL", __FUNCTION__);
             return;
         }
-        gpuHint->mEGLContext = eglGetCurrentContext();
+        gpuHint->mEGLContext = (*(ctx->mpfn_eglGetCurrentContext))();
         if(!gpuHint->mEGLContext) {
             ALOGW("%s Warning: EGL current context is NULL", __FUNCTION__);
             return;
@@ -2457,8 +2541,8 @@ void setGPUHint(hwc_context_t* ctx, hwc_display_contents_1_t* list) {
                                   EGL_GPU_LEVEL_3,
                                   EGL_NONE };
             if((gpuHint->mCurrGPUPerfMode != EGL_GPU_LEVEL_3) &&
-                !eglGpuPerfHintQCOM(gpuHint->mEGLDisplay,
-                                    gpuHint->mEGLContext, attr_list)) {
+                !((*(ctx->mpfn_eglGpuPerfHintQCOM))(gpuHint->mEGLDisplay,
+                                    gpuHint->mEGLContext, attr_list))) {
                 ALOGW("eglGpuPerfHintQCOM failed for Built in display");
             } else {
                 gpuHint->mCurrGPUPerfMode = EGL_GPU_LEVEL_3;
@@ -2469,8 +2553,8 @@ void setGPUHint(hwc_context_t* ctx, hwc_display_contents_1_t* list) {
                                   EGL_GPU_LEVEL_0,
                                   EGL_NONE };
             if((gpuHint->mCurrGPUPerfMode != EGL_GPU_LEVEL_0) &&
-                !eglGpuPerfHintQCOM(gpuHint->mEGLDisplay,
-                                    gpuHint->mEGLContext, attr_list)) {
+                !((*(ctx->mpfn_eglGpuPerfHintQCOM))(gpuHint->mEGLDisplay,
+                                    gpuHint->mEGLContext, attr_list))) {
                 ALOGW("eglGpuPerfHintQCOM failed for Built in display");
             } else {
                 gpuHint->mCurrGPUPerfMode = EGL_GPU_LEVEL_0;
@@ -2485,8 +2569,8 @@ void setGPUHint(hwc_context_t* ctx, hwc_display_contents_1_t* list) {
                               EGL_GPU_LEVEL_0,
                               EGL_NONE };
         if((gpuHint->mCurrGPUPerfMode != EGL_GPU_LEVEL_0) &&
-                !eglGpuPerfHintQCOM(gpuHint->mEGLDisplay,
-                                    gpuHint->mEGLContext, attr_list)) {
+                !((*(ctx->mpfn_eglGpuPerfHintQCOM))(gpuHint->mEGLDisplay,
+                                    gpuHint->mEGLContext, attr_list))) {
             ALOGW("eglGpuPerfHintQCOM failed for Built in display");
         } else {
             gpuHint->mCurrGPUPerfMode = EGL_GPU_LEVEL_0;
@@ -2510,46 +2594,33 @@ bool isPeripheral(const hwc_rect_t& rect1, const hwc_rect_t& rect2) {
     return (eqBounds == 3);
 }
 
-void applyDefaultMode(hwc_context_t *ctx) {
+void processBootAnimCompleted(hwc_context_t *ctx) {
     char value[PROPERTY_VALUE_MAX];
-    int boot_finished = 0;
-    static int ret = ctx->mColorMode->applyDefaultMode();
-    if(!ret) {
-        ctx->mDefaultModeApplied = true;
-        return;
+    int ret = -1;
+
+    // Applying default mode after bootanimation is finished
+    property_get("init.svc.bootanim", value, "running");
+
+    if (!strncmp(value,"stopped",strlen("stopped"))) {
+        ctx->mBootAnimCompleted = true;
+
+        //one-shot action check if bootanimation completed then apply
+        //default display mode.
+        qdcmApplyDefaultAfterBootAnimationDone(ctx);
     }
-
-    // Reading property set on boot finish in SF
-    property_get("service.bootanim.exit", value, "0");
-    boot_finished = atoi(value);
-    if (!boot_finished)
-        return;
-
-    ret = ctx->mColorMode->applyDefaultMode();
-    if (ret)
-        ALOGD("%s: Not able to apply default mode", __FUNCTION__);
-    ctx->mDefaultModeApplied = true;
 }
 
-void BwcPM::setBwc(const hwc_context_t *ctx, const int& dpy,
-        const private_handle_t *hnd,
-        const hwc_rect_t& crop, const hwc_rect_t& dst,
+void BwcPM::setBwc(const hwc_rect_t& crop, const hwc_rect_t& dst,
         const int& transform,const int& downscale,
         ovutils::eMdpFlags& mdpFlags) {
-    //Target doesnt support Bwc
-    qdutils::MDPVersion& mdpHw = qdutils::MDPVersion::getInstance();
-    if(not mdpHw.supportsBWC()) {
-        return;
-    }
-    //Disabled at runtime
-    if(not ctx->mBWCEnabled) return;
     //BWC not supported with rot-downscale
     if(downscale) return;
-    //Not enabled for secondary displays
-    if(dpy) return;
-    //Not enabled for non-video buffers
-    if(not isYuvBuffer(hnd)) return;
 
+    //Target doesnt support Bwc
+    qdutils::MDPVersion& mdpHw = qdutils::MDPVersion::getInstance();
+    if(!mdpHw.supportsBWC()) {
+        return;
+    }
     int src_w = crop.right - crop.left;
     int src_h = crop.bottom - crop.top;
     int dst_w = dst.right - dst.left;
@@ -2558,11 +2629,7 @@ void BwcPM::setBwc(const hwc_context_t *ctx, const int& dpy,
         swap(src_w, src_h);
     }
     //src width > MAX mixer supported dim
-    if(src_w > (int) qdutils::MDPVersion::getInstance().getMaxPipeWidth()) {
-        return;
-    }
-    //H/w requirement for BWC only. Pipe can still support 4096
-    if(src_h > 4092) {
+    if(src_w > (int) qdutils::MDPVersion::getInstance().getMaxMixerWidth()) {
         return;
     }
     //Decimation necessary, cannot use BWC. H/W requirement.
@@ -2573,6 +2640,10 @@ void BwcPM::setBwc(const hwc_context_t *ctx, const int& dpy,
                 vertDeci);
         if(horzDeci || vertDeci) return;
     }
+    //Property
+    char value[PROPERTY_VALUE_MAX];
+    property_get("debug.disable.bwc", value, "0");
+     if(atoi(value)) return;
 
     ovutils::setMdpFlags(mdpFlags, ovutils::OV_MDSS_MDP_BWC_EN);
 }
@@ -2621,40 +2692,10 @@ void LayerRotMap::setReleaseFd(const int& fence) {
     }
 }
 
-hwc_rect expandROIFromMidPoint(hwc_rect roi, hwc_rect fullFrame) {
-    int lRoiWidth = 0, rRoiWidth = 0;
-    int half_frame_width = fullFrame.right/2;
-
-    hwc_rect lFrame = fullFrame;
-    hwc_rect rFrame = fullFrame;
-    lFrame.right = (lFrame.right - lFrame.left)/2;
-    rFrame.left = lFrame.right;
-
-    hwc_rect lRoi = getIntersection(roi, lFrame);
-    hwc_rect rRoi = getIntersection(roi, rFrame);
-
-    lRoiWidth = lRoi.right - lRoi.left;
-    rRoiWidth = rRoi.right - rRoi.left;
-
-    if(lRoiWidth && rRoiWidth) {
-        if(lRoiWidth < rRoiWidth)
-            roi.left = half_frame_width - rRoiWidth;
-        else
-            roi.right = half_frame_width + lRoiWidth;
-    }
-    return roi;
-}
-
 void resetROI(hwc_context_t *ctx, const int dpy) {
     const int fbXRes = (int)ctx->dpyAttr[dpy].xres;
     const int fbYRes = (int)ctx->dpyAttr[dpy].yres;
-
-    /* When source split is enabled, both the panels are calibrated
-     * in a single coordinate system. So only one ROI is generated
-     * for the whole panel extending equally from the midpoint and
-     * populated for the left side. */
-    if(!qdutils::MDPVersion::getInstance().isSrcSplit() &&
-            isDisplaySplit(ctx, dpy)) {
+    if(isDisplaySplit(ctx, dpy)) {
         const int lSplit = getLeftSplit(ctx, dpy);
         ctx->listStats[dpy].lRoi = (struct hwc_rect){0, 0, lSplit, fbYRes};
         ctx->listStats[dpy].rRoi = (struct hwc_rect){lSplit, 0, fbXRes, fbYRes};
@@ -2680,28 +2721,18 @@ hwc_rect_t getSanitizeROI(struct hwc_rect roi, hwc_rect boundary)
 
    /* Align to minimum width recommended by the panel */
    if((t_roi.right - t_roi.left) < MIN_WIDTH) {
-       if(MIN_WIDTH == boundary.right - boundary.left) {
-           t_roi.left = 0;
-           t_roi.right = MIN_WIDTH;
-       } else {
-           if((t_roi.left + MIN_WIDTH) > boundary.right)
-               t_roi.left = t_roi.right - MIN_WIDTH;
-           else
-               t_roi.right = t_roi.left + MIN_WIDTH;
-       }
+       if((t_roi.left + MIN_WIDTH) > boundary.right)
+           t_roi.left = t_roi.right - MIN_WIDTH;
+       else
+           t_roi.right = t_roi.left + MIN_WIDTH;
    }
 
   /* Align to minimum height recommended by the panel */
    if((t_roi.bottom - t_roi.top) < MIN_HEIGHT) {
-       if(MIN_HEIGHT == boundary.bottom - boundary.top) {
-           t_roi.top = 0;
-           t_roi.bottom = MIN_HEIGHT;
-       } else {
-           if((t_roi.top + MIN_HEIGHT) > boundary.bottom)
-               t_roi.top = t_roi.bottom - MIN_HEIGHT;
-           else
-               t_roi.bottom = t_roi.top + MIN_HEIGHT;
-       }
+       if((t_roi.top + MIN_HEIGHT) > boundary.bottom)
+           t_roi.top = t_roi.bottom - MIN_HEIGHT;
+       else
+           t_roi.bottom = t_roi.top + MIN_HEIGHT;
    }
 
    /* Align left and width to meet panel restrictions */
@@ -2722,6 +2753,7 @@ hwc_rect_t getSanitizeROI(struct hwc_rect roi, hwc_rect boundary)
        }
    }
 
+
    /* Align top and height to meet panel restrictions */
    if(TOP_ALIGN)
        t_roi.top = t_roi.top - (t_roi.top % TOP_ALIGN);
@@ -2739,6 +2771,7 @@ hwc_rect_t getSanitizeROI(struct hwc_rect roi, hwc_rect boundary)
                t_roi.top = t_roi.top - (t_roi.top % TOP_ALIGN);
        }
    }
+
 
    return t_roi;
 }
@@ -2806,12 +2839,6 @@ void clearPipeResources(hwc_context_t* ctx, int dpy) {
 // Handles online events when HDMI is the primary display. In particular,
 // online events for hdmi connected before AND after boot up and HWC init.
 void handle_online(hwc_context_t* ctx, int dpy) {
-    //On 8994 due to hardware limitations, we disable bwc completely when HDMI
-    //intf is active
-    if(qdutils::MDPVersion::getInstance().is8994() and
-            qdutils::MDPVersion::getInstance().supportsBWC()) {
-        ctx->mBWCEnabled = false;
-    }
     // Close the current fd if it was opened earlier on when HWC
     // was initialized.
     if (ctx->dpyAttr[dpy].fd >= 0) {
@@ -2842,112 +2869,34 @@ void handle_offline(hwc_context_t* ctx, int dpy) {
     resetDisplayInfo(ctx, dpy);
     ctx->dpyAttr[dpy].connected = false;
     ctx->dpyAttr[dpy].isActive = false;
-    //On 8994 due to hardware limitations, we enable bwc only when HDMI
-    //intf is inactive
-    if(qdutils::MDPVersion::getInstance().is8994() and
-            qdutils::MDPVersion::getInstance().supportsBWC()) {
-        ctx->mBWCEnabled = true;
-    }
 }
 
-void ColorMode::init() {
-    //Map symbols from libmm-qdcm and get list of modes
-    mModeHandle = dlopen("libmm-qdcm.so", RTLD_NOW);
-    if (mModeHandle) {
-        *(void **)& fnApplyDefaultMode = dlsym(mModeHandle, "applyDefaults");
-        *(void **)& fnApplyModeById = dlsym(mModeHandle, "applyModeById");
-        *(void **)& fnGetNumModes = dlsym(mModeHandle, "getNumDisplayModes");
-        *(void **)& fnGetModeList = dlsym(mModeHandle, "getDisplayModeIdList");
-        *(void **)& fnSetDefaultMode = dlsym(mModeHandle, "setDefaultMode");
-    } else {
-        ALOGW("Unable to load libmm-qdcm");
-    }
+bool loadEglLib(hwc_context_t* ctx) {
+    bool success = false;
+#ifdef QTI_BSP
+    const char* error;
+    dlerror();
 
-    if(fnGetNumModes) {
-        mNumModes = fnGetNumModes(HWC_DISPLAY_PRIMARY);
-        if(mNumModes > MAX_NUM_COLOR_MODES) {
-            ALOGE("Number of modes is above the limit: %d", mNumModes);
-            mNumModes = 0;
-            return;
+    ctx->mEglLib = dlopen("libEGL_adreno.so", RTLD_NOW);
+    if(ctx->mEglLib) {
+        *(void **)&(ctx->mpfn_eglGpuPerfHintQCOM) = dlsym(ctx->mEglLib, "eglGpuPerfHintQCOM");
+        *(void **)&(ctx->mpfn_eglGetCurrentDisplay) = dlsym(ctx->mEglLib,"eglGetCurrentDisplay");
+        *(void **)&(ctx->mpfn_eglGetCurrentContext) = dlsym(ctx->mEglLib,"eglGetCurrentContext");
+        if (!ctx->mpfn_eglGpuPerfHintQCOM ||
+            !ctx->mpfn_eglGetCurrentDisplay ||
+            !ctx->mpfn_eglGetCurrentContext) {
+            ALOGE("Failed to load symbols from libEGL");
+            dlclose(ctx->mEglLib);
+            ctx->mEglLib = NULL;
+            return false;
         }
-        if(fnGetModeList) {
-            fnGetModeList(mModeList, &mCurMode, HWC_DISPLAY_PRIMARY);
-            mCurModeIndex = getIndexForMode(mCurMode);
-            ALOGI("ColorMode: current mode: %d current mode index: %d number of modes: %d",
-                    mCurMode, mCurModeIndex, mNumModes);
-        }
-    }
-}
-
-//Legacy API
-int ColorMode::applyDefaultMode() {
-    if(fnApplyDefaultMode) {
-        return fnApplyDefaultMode(HWC_DISPLAY_PRIMARY);
+        success = true;
+        ALOGI("Successfully Loaded GPUPerfHint APIs");
     } else {
-        return -EINVAL;
+        ALOGE("Couldn't load libEGL: %s", dlerror());
     }
-}
-
-int ColorMode::applyModeByID(int modeID) {
-    if(fnApplyModeById) {
-        int ret = fnApplyModeById(modeID, HWC_DISPLAY_PRIMARY);
-        if (!ret)
-            ret = setDefaultMode(modeID);
-        return ret;
-    } else {
-        return -EINVAL;
-    }
-}
-
-//This API is called from setActiveConfig
-//The value here must be set as default
-int ColorMode::applyModeByIndex(int index) {
-    int ret = 0;
-    int mode  = getModeForIndex(index);
-    if(mode < 0) {
-        ALOGE("Invalid mode for index: %d", index);
-        return -EINVAL;
-    }
-    ALOGD("%s: Applying mode index: %d modeID: %d", __FUNCTION__, index, mode);
-    ret = applyModeByID(mode);
-    if(!ret) {
-        mCurModeIndex = index;
-        setDefaultMode(mode);
-    }
-    return ret;
-}
-
-int ColorMode::setDefaultMode(int modeID) {
-    if(fnSetDefaultMode) {
-        ALOGD("Setting default color mode to %d", modeID);
-        return fnSetDefaultMode(modeID, HWC_DISPLAY_PRIMARY);
-    } else {
-        return -EINVAL;
-    }
-}
-
-int ColorMode::getModeForIndex(int index) {
-    if(index < mNumModes) {
-        return mModeList[index];
-    } else {
-        return -EINVAL;
-    }
-}
-
-int ColorMode::getIndexForMode(int mode) {
-    if(mModeList) {
-        for(int32_t i = 0; i < mNumModes; i++)
-            if(mModeList[i] == mode)
-                return i;
-    }
-    return -EINVAL;
-}
-
-void ColorMode::destroy() {
-    if(mModeHandle) {
-        dlclose(mModeHandle);
-        mModeHandle = NULL;
-    }
+#endif
+    return success;
 }
 
 };//namespace qhwc
