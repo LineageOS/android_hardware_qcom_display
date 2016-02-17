@@ -144,6 +144,7 @@ int AdrenoMemInfo::getStride(int width, int format)
                 break;
             case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
             case HAL_PIXEL_FORMAT_YCbCr_420_SP:
+            case HAL_PIXEL_FORMAT_NV12:
             case HAL_PIXEL_FORMAT_YCrCb_420_SP:
             case HAL_PIXEL_FORMAT_YV12:
             case HAL_PIXEL_FORMAT_YCbCr_422_SP:
@@ -328,14 +329,14 @@ size_t getBufferSizeAndDimensions(int width, int height, int format,
             // but the pitch in bytes is unchanged
             // The GPU needs 4K alignment, but the video decoder needs 8K
             alignedw = ALIGN(alignedw, 128);
-            size  = ALIGN( alignedw * alignedh, 8192);
-            size += ALIGN( alignedw * ALIGN(height/2, 32), 8192);
+            size  = ALIGN(alignedw * alignedh, 8192);
+            size += ALIGN(alignedw * ALIGN(height/2, 32), 8192);
             break;
         case HAL_PIXEL_FORMAT_NV12:
             alignedw = ALIGN(width, 16);
             alignedh = height;
-            size  = ALIGN( ALIGN(width, 128) * ALIGN(height, 32), 8192);
-            size += ALIGN( ALIGN(width, 128) * ALIGN(height/2, 32), 8192);
+            size  = ALIGN(ALIGN(width, 128) * ALIGN(height, 32), 8192);
+            size += ALIGN(ALIGN(width, 128) * ALIGN(height/2, 32), 8192);
             break;
         case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
         case HAL_PIXEL_FORMAT_YV12:
@@ -407,13 +408,14 @@ int getYUVPlaneInfo(private_handle_t* hnd, struct android_ycbcr* ycbcr)
     switch (hnd->format) {
         //Semiplanar
         case HAL_PIXEL_FORMAT_YCbCr_420_SP:
+        case HAL_PIXEL_FORMAT_NV12:
         case HAL_PIXEL_FORMAT_YCbCr_422_SP:
         case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
         case HAL_PIXEL_FORMAT_NV12_ENCODEABLE: //Same as YCbCr_420_SP_VENUS
             ystride = cstride = hnd->width;
             ycbcr->y  = (void*)hnd->base;
             ycbcr->cb = (void*)(hnd->base + ystride * hnd->height);
-           ycbcr->cr = (void*)(hnd->base + ystride * hnd->height + 1);
+            ycbcr->cr = (void*)(hnd->base + ystride * hnd->height + 1);
             ycbcr->ystride = ystride;
             ycbcr->cstride = cstride;
             ycbcr->chroma_step = 2;
@@ -446,16 +448,6 @@ int getYUVPlaneInfo(private_handle_t* hnd, struct android_ycbcr* ycbcr)
             ycbcr->chroma_step = 1;
 
         break;
-        // YCbCr_420_SP
-        case HAL_PIXEL_FORMAT_NV12:
-            ystride = ALIGN(hnd->width, 16);
-            ycbcr->y  = (void*)hnd->base;
-            ycbcr->cb = (void*)(hnd->base + ystride * hnd->height);
-            ycbcr->cr = (void*)(hnd->base + ystride * hnd->height + 1);
-            ycbcr->ystride = ystride;
-            ycbcr->cstride = ystride;
-            ycbcr->chroma_step = 2;
-            break;
         //Unsupported formats
         case HAL_PIXEL_FORMAT_YCbCr_422_I:
         case HAL_PIXEL_FORMAT_YCrCb_422_I:
