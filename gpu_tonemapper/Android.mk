@@ -1,12 +1,13 @@
 LOCAL_PATH := $(call my-dir)
 include $(LOCAL_PATH)/../common.mk
-include $(CLEAR_VARS)
 
+include $(CLEAR_VARS)
 LOCAL_COPY_HEADERS_TO     := $(common_header_export_path)
 LOCAL_COPY_HEADERS        := TonemapFactory.h Tonemapper.h
-LOCAL_SHARED_LIBRARIES    := libEGL libGLESv2 libui libutils liblog
 include $(BUILD_COPY_HEADERS)
 
+include $(CLEAR_VARS)
+LOCAL_SHARED_LIBRARIES    := libEGL libGLESv2 libui libutils liblog
 LOCAL_MODULE              := libgpu_tonemapper
 LOCAL_MODULE_TAGS         := optional
 LOCAL_C_INCLUDES          := $(TARGET_OUT_HEADERS)/qcom/display/
