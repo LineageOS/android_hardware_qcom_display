@@ -271,7 +271,7 @@ void MDPComp::timeout_handler(void *udata) {
             uint32_t refreshRate = mdpHw.getMinFpsSupported();
             readRefreshRate(ctx, dpy);
             if((refreshRate != ctx->dpyAttr[dpy].dynRefreshRate) &&
-               ctx->dpyAttr[dpy].isActive) {
+               (ctx->listStats[dpy].yuvCount == 0) && ctx->dpyAttr[dpy].isActive) {
                 setRefreshRate(ctx, dpy, refreshRate);
                 if(!Overlay::displayCommit(ctx->dpyAttr[dpy].fd)) {
                     ALOGE("%s: displayCommit failed for %d when setting dynfps",
