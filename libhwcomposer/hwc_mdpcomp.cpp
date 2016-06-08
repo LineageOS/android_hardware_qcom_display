@@ -905,7 +905,11 @@ int MDPComp::prepare(hwc_context_t *ctx, hwc_display_contents_1_t* list) {
     if (opaqueSurfaceLayerID) {
         //Need to set all layers below it to Overlay
         for (int i = 0; i < opaqueSurfaceLayerID; i++) {
+            hwc_layer_1_t* layer = &(list->hwLayers[i]);
             mCurrentFrame.isFBComposed[i] = false;
+            /* Need to clear HWC_SKIP_LAYER flag for all layers under the
+             * opaque layer, which may composite alpha for dim purpose */
+            layer->flags &= ~HWC_SKIP_LAYER;
         }
         setMDPCompLayerFlags(ctx, list);
         ALOGD_IF(isDebug(), "%s: Found Opaque Surface for display=%d, layer=%d",
@@ -1140,17 +1144,17 @@ bool MDPCompLowRes::draw(hwc_context_t *ctx, hwc_display_contents_1_t* list) {
     {
         if(mCurrentFrame.isFBComposed[i]) continue;
 
-        hwc_layer_1_t *layer = &list->hwLayers[i];
-        private_handle_t *hnd = (private_handle_t *)layer->handle;
-        if(!hnd) {
-            ALOGE("%s handle null", __FUNCTION__);
-            return false;
-        }
-
         if (i < opaqueSurfaceLayerID) {
             //Skip the layer which is lower than then opaque surface layer.
             ALOGD_IF(isDebug(), "%s,%d: Display=%d, Skip layer=%d under opaque"\
             " layer=%d", __FUNCTION__, __LINE__, mDpy, i, opaqueSurfaceLayerID);
+            continue;
+        }
+
+        hwc_layer_1_t *layer = &list->hwLayers[i];
+        private_handle_t *hnd = (private_handle_t *)layer->handle;
+        if(!hnd) {
+            ALOGD_IF(isDebug(), "%s handle null", __FUNCTION__);
             continue;
         }
 
