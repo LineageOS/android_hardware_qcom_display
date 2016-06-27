@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -49,55 +49,28 @@
 
 namespace sdm {
 
-DisplayError HWEventsInterface::Create(int fb_num, HWEventHandler *event_handler,
-                                       std::vector<const char *> *event_list,
-                                       HWEventsInterface **intf) {
-  DisplayError error = kErrorNone;
-  HWEvents *hw_events = NULL;
-
-  hw_events = new HWEvents();
-  error = hw_events->Init(fb_num, event_handler, event_list);
-  if (error != kErrorNone) {
-    delete hw_events;
-  } else {
-    *intf = hw_events;
-  }
-
-  return error;
-}
-
-DisplayError HWEventsInterface::Destroy(HWEventsInterface *intf) {
-  HWEvents *hw_events = static_cast<HWEvents *>(intf);
-
-  if (hw_events) {
-    hw_events->Deinit();
-    delete hw_events;
-  }
-
-  return kErrorNone;
-}
-
 pollfd HWEvents::InitializePollFd(HWEventData *event_data) {
   char node_path[kMaxStringLength] = {0};
   char data[kMaxStringLength] = {0};
   pollfd poll_fd = {0};
   poll_fd.fd = -1;
 
-  if (!strncmp(event_data->event_name, "thread_exit", strlen("thread_exit"))) {
+  if (event_data->event_type == HWEvent::EXIT) {
     // Create an eventfd to be used to unblock the poll system call when
     // a thread is exiting.
     poll_fd.fd = Sys::eventfd_(0, 0);
     poll_fd.events |= POLLIN;
     exit_fd_ = poll_fd.fd;
   } else {
-    snprintf(node_path, sizeof(node_path), "%s%d/%s", fb_path_, fb_num_, event_data->event_name);
+    snprintf(node_path, sizeof(node_path), "%s%d/%s", fb_path_, fb_num_,
+             map_event_to_node_[event_data->event_type]);
     poll_fd.fd = Sys::open_(node_path, O_RDONLY);
     poll_fd.events |= POLLPRI | POLLERR;
   }
 
   if (poll_fd.fd < 0) {
-    DLOGW("open failed for display=%d event=%s, error=%s", fb_num_, event_data->event_name,
-          strerror(errno));
+    DLOGW("open failed for display=%d event=%s, error=%s", fb_num_,
+          map_event_to_node_[event_data->event_type], strerror(errno));
     return poll_fd;
   }
 
@@ -107,49 +80,58 @@ pollfd HWEvents::InitializePollFd(HWEventData *event_data) {
   return poll_fd;
 }
 
-DisplayError HWEvents::SetEventParser(const char *event_name, HWEventData *event_data) {
+DisplayError HWEvents::SetEventParser(HWEvent event_type, HWEventData *event_data) {
   DisplayError error = kErrorNone;
-
-  if (!strncmp(event_name, "vsync_event", strlen("vsync_event"))) {
-    event_data->event_parser = &HWEvents::HandleVSync;
-  } else if (!strncmp(event_name, "show_blank_event", strlen("show_blank_event"))) {
-    event_data->event_parser = &HWEvents::HandleBlank;
-  } else if (!strncmp(event_name, "idle_notify", strlen("idle_notify"))) {
-    event_data->event_parser = &HWEvents::HandleIdleTimeout;
-  } else if (!strncmp(event_name, "msm_fb_thermal_level", strlen("msm_fb_thermal_level"))) {
-    event_data->event_parser = &HWEvents::HandleThermal;
-  } else if (!strncmp(event_name, "cec/rd_msg", strlen("cec/rd_msg"))) {
-    event_data->event_parser = &HWEvents::HandleCECMessage;
-  } else if (!strncmp(event_name, "thread_exit", strlen("thread_exit"))) {
-    event_data->event_parser = &HWEvents::HandleThreadExit;
-  } else {
-    error = kErrorParameters;
+  switch (event_type) {
+    case HWEvent::VSYNC:
+      event_data->event_parser = &HWEvents::HandleVSync;
+      break;
+    case HWEvent::IDLE_NOTIFY:
+      event_data->event_parser = &HWEvents::HandleIdleTimeout;
+      break;
+    case HWEvent::CEC_READ_MESSAGE:
+      event_data->event_parser = &HWEvents::HandleCECMessage;
+      break;
+    case HWEvent::EXIT:
+      event_data->event_parser = &HWEvents::HandleThreadExit;
+      break;
+    case HWEvent::SHOW_BLANK_EVENT:
+      event_data->event_parser = &HWEvents::HandleBlank;
+      break;
+    case HWEvent::THERMAL_LEVEL:
+      event_data->event_parser = &HWEvents::HandleThermal;
+      break;
+    default:
+      error = kErrorParameters;
+      break;
   }
 
   return error;
 }
 
 void HWEvents::PopulateHWEventData() {
-  for (uint32_t i = 0; i < event_list_->size(); i++) {
-    const char *event_name = event_list_->at(i);
+  for (uint32_t i = 0; i < event_list_.size(); i++) {
     HWEventData event_data;
-    event_data.event_name = event_name;
-    SetEventParser(event_name, &event_data);
+    event_data.event_type = event_list_[i];
+    SetEventParser(event_list_[i], &event_data);
     poll_fds_[i] = InitializePollFd(&event_data);
     event_data_list_.push_back(event_data);
   }
 }
 
 DisplayError HWEvents::Init(int fb_num, HWEventHandler *event_handler,
-                            vector<const char *> *event_list) {
+                            const vector<HWEvent> &event_list) {
   if (!event_handler)
     return kErrorParameters;
 
   event_handler_ = event_handler;
   fb_num_ = fb_num;
   event_list_ = event_list;
-  poll_fds_.resize(event_list_->size());
+  poll_fds_.resize(event_list_.size());
   event_thread_name_ += " - " + std::to_string(fb_num_);
+  map_event_to_node_ = {{HWEvent::VSYNC, "vsync_event"}, {HWEvent::EXIT, "thread_exit"},
+    {HWEvent::IDLE_NOTIFY, "idle_notify"}, {HWEvent::SHOW_BLANK_EVENT, "show_blank_event"},
+    {HWEvent::CEC_READ_MESSAGE, "cec/rd_msg"}, {HWEvent::THERMAL_LEVEL, "msm_fb_thermal_level"}};
 
   PopulateHWEventData();
 
@@ -173,7 +155,7 @@ DisplayError HWEvents::Deinit() {
 
   pthread_join(event_thread_, NULL);
 
-  for (uint32_t i = 0; i < event_list_->size(); i++) {
+  for (uint32_t i = 0; i < event_list_.size(); i++) {
     Sys::close_(poll_fds_[i].fd);
     poll_fds_[i].fd = -1;
   }
@@ -196,17 +178,17 @@ void* HWEvents::DisplayEventHandler() {
   setpriority(PRIO_PROCESS, 0, kThreadPriorityUrgent);
 
   while (!exit_threads_) {
-    int error = Sys::poll_(poll_fds_.data(), UINT32(event_list_->size()), -1);
+    int error = Sys::poll_(poll_fds_.data(), UINT32(event_list_.size()), -1);
 
     if (error <= 0) {
       DLOGW("poll failed. error = %s", strerror(errno));
       continue;
     }
 
-    for (uint32_t event = 0; event < event_list_->size(); event++) {
+    for (uint32_t event = 0; event < event_list_.size(); event++) {
       pollfd &poll_fd = poll_fds_[event];
 
-      if (!strncmp(event_list_->at(event), "thread_exit", strlen("thread_exit"))) {
+      if (event_list_.at(event) == HWEvent::EXIT) {
         if ((poll_fd.revents & POLLIN) && (Sys::read_(poll_fd.fd, data, kMaxStringLength) > 0)) {
           (this->*(event_data_list_[event]).event_parser)(data);
         }
@@ -253,4 +235,3 @@ void HWEvents::HandleCECMessage(char *data) {
 }
 
 }  // namespace sdm
-

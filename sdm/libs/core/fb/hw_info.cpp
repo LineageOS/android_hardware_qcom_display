@@ -86,27 +86,6 @@ int HWInfo::ParseString(const char *input, char *tokens[], const uint32_t max_to
   return 0;
 }
 
-DisplayError HWInfoInterface::Create(HWInfoInterface **intf) {
-  DisplayError error = kErrorNone;
-  HWInfo *hw_info = NULL;
-
-  hw_info = new HWInfo();
-  if (!hw_info) {
-    error = kErrorMemory;
-  } else {
-    *intf = hw_info;
-  }
-
-  return error;
-}
-
-DisplayError HWInfoInterface::Destroy(HWInfoInterface *intf) {
-  HWInfo *hw_info = static_cast<HWInfo *>(intf);
-  delete hw_info;
-
-  return kErrorNone;
-}
-
 DisplayError HWInfo::GetDynamicBWLimits(HWResourceInfo *hw_resource) {
   Sys::fstream fs(kBWModeBitmap, fstream::in);
   if (!fs.is_open()) {

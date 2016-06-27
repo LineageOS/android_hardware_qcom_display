@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -212,7 +212,6 @@ class HWCDisplay : public DisplayEventHandler {
     return kErrorNotSupported;
   }
   LayerBufferFormat GetSDMFormat(const int32_t &source, const int flags);
-  const char *GetHALPixelFormatString(int format);
   const char *GetDisplayString();
   void MarkLayersForGPUBypass(void);
   void MarkLayersForClientComposition(void);

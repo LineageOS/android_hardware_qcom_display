@@ -11,6 +11,9 @@ c_sources = core_interface.cpp \
             resource_default.cpp \
             dump_impl.cpp \
             color_manager.cpp \
+            hw_interface.cpp \
+            hw_info_interface.cpp \
+            hw_events_interface.cpp \
             fb/hw_info.cpp \
             fb/hw_device.cpp \
             fb/hw_primary.cpp \

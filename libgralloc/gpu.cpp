@@ -20,15 +20,215 @@
 #include <fcntl.h>
 #include <cutils/properties.h>
 #include <sys/mman.h>
+#include <linux/msm_ion.h>
+#ifdef COMPILE_DRM
+#include <drm/drm_fourcc.h>
+#include <drm_master.h>
+#endif
+#include <qdMetaData.h>
+#include <qd_utils.h>
+
+#include <algorithm>
 
 #include "gr.h"
 #include "gpu.h"
 #include "memalloc.h"
 #include "alloc_controller.h"
-#include <qdMetaData.h>
-#include <linux/msm_ion.h>
+
+#ifdef COMPILE_DRM
+#ifndef DRM_FORMAT_MOD_QCOM_COMPRESSED
+#define DRM_FORMAT_MOD_QCOM_COMPRESSED fourcc_mod_code(QCOM, 1)
+#endif
+#endif
 
 using namespace gralloc;
+
+#ifdef COMPILE_DRM
+using namespace drm_utils;
+
+static int getPlaneStrideOffset(private_handle_t *hnd, uint32_t *stride,
+        uint32_t *offset, uint32_t *num_planes) {
+    struct android_ycbcr yuvInfo = {};
+    *num_planes = 1;
+
+    switch (hnd->format) {
+        case HAL_PIXEL_FORMAT_RGB_565:
+        case HAL_PIXEL_FORMAT_BGR_565:
+        case HAL_PIXEL_FORMAT_RGBA_5551:
+        case HAL_PIXEL_FORMAT_RGBA_4444:
+            stride[0] = hnd->width * 2;
+            break;
+        case HAL_PIXEL_FORMAT_RGB_888:
+            stride[0] = hnd->width * 3;
+            break;
+        case HAL_PIXEL_FORMAT_RGBA_8888:
+        case HAL_PIXEL_FORMAT_BGRA_8888:
+        case HAL_PIXEL_FORMAT_RGBX_8888:
+        case HAL_PIXEL_FORMAT_BGRX_8888:
+        case HAL_PIXEL_FORMAT_RGBA_1010102:
+        case HAL_PIXEL_FORMAT_ARGB_2101010:
+        case HAL_PIXEL_FORMAT_RGBX_1010102:
+        case HAL_PIXEL_FORMAT_XRGB_2101010:
+        case HAL_PIXEL_FORMAT_BGRA_1010102:
+        case HAL_PIXEL_FORMAT_ABGR_2101010:
+        case HAL_PIXEL_FORMAT_BGRX_1010102:
+        case HAL_PIXEL_FORMAT_XBGR_2101010:
+            stride[0] = hnd->width * 4;
+            break;
+    }
+
+    // Format is RGB
+    if (stride[0]) {
+        return 0;
+    }
+
+    (*num_planes)++;
+    int ret = getYUVPlaneInfo(hnd, &yuvInfo);
+    if (ret < 0) {
+        ALOGE("%s failed", __FUNCTION__);
+        return ret;
+    }
+
+    stride[0] = static_cast<uint32_t>(yuvInfo.ystride);
+    offset[0] = static_cast<uint32_t>(
+                    reinterpret_cast<uint64_t>(yuvInfo.y) - hnd->base);
+    stride[1] = static_cast<uint32_t>(yuvInfo.cstride);
+    switch (hnd->format) {
+        case HAL_PIXEL_FORMAT_YCbCr_420_SP:
+        case HAL_PIXEL_FORMAT_YCbCr_422_SP:
+        case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
+        case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
+        case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
+        case HAL_PIXEL_FORMAT_YCbCr_420_P010:
+        case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
+            offset[1] = static_cast<uint32_t>(
+                    reinterpret_cast<uint64_t>(yuvInfo.cb) - hnd->base);
+            break;
+        case HAL_PIXEL_FORMAT_YCrCb_420_SP:
+        case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
+        case HAL_PIXEL_FORMAT_YCrCb_422_SP:
+            offset[1] = static_cast<uint32_t>(
+                    reinterpret_cast<uint64_t>(yuvInfo.cr) - hnd->base);
+            break;
+        case HAL_PIXEL_FORMAT_YV12:
+            offset[1] = static_cast<uint32_t>(
+                    reinterpret_cast<uint64_t>(yuvInfo.cr) - hnd->base);
+            stride[2] = static_cast<uint32_t>(yuvInfo.cstride);
+            offset[2] = static_cast<uint32_t>(
+                    reinterpret_cast<uint64_t>(yuvInfo.cb) - hnd->base);
+            (*num_planes)++;
+            break;
+        default:
+            ALOGW("%s: Unsupported format %s", __FUNCTION__,
+                    qdutils::GetHALPixelFormatString(hnd->format));
+    }
+
+    if (hnd->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED) {
+        std::fill(offset, offset + 4, 0);
+    }
+
+    return 0;
+}
+
+static void getDRMFormat(int hal_format, int flags, uint32_t *drm_format,
+        uint64_t *drm_format_modifier) {
+
+    if (flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED) {
+        *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED;
+    }
+
+    switch (hal_format) {
+        case HAL_PIXEL_FORMAT_RGBA_8888:
+            *drm_format = DRM_FORMAT_RGBA8888;
+            break;
+        case HAL_PIXEL_FORMAT_RGBA_5551:
+            *drm_format = DRM_FORMAT_RGBA5551;
+            break;
+        case HAL_PIXEL_FORMAT_RGBA_4444:
+            *drm_format = DRM_FORMAT_RGBA4444;
+            break;
+        case HAL_PIXEL_FORMAT_BGRA_8888:
+            *drm_format = DRM_FORMAT_BGRA8888;
+            break;
+        case HAL_PIXEL_FORMAT_RGBX_8888:
+            *drm_format = DRM_FORMAT_RGBX8888;
+            break;
+        case HAL_PIXEL_FORMAT_BGRX_8888:
+            *drm_format = DRM_FORMAT_BGRX8888;
+            break;
+        case HAL_PIXEL_FORMAT_RGB_888:
+            *drm_format = DRM_FORMAT_RGB888;
+            break;
+        case HAL_PIXEL_FORMAT_RGB_565:
+            *drm_format = DRM_FORMAT_RGB565;
+            break;
+        case HAL_PIXEL_FORMAT_BGR_565:
+            *drm_format = DRM_FORMAT_BGR565;
+            break;
+        case HAL_PIXEL_FORMAT_RGBA_1010102:
+            *drm_format = DRM_FORMAT_RGBA1010102;
+            break;
+        case HAL_PIXEL_FORMAT_ARGB_2101010:
+            *drm_format = DRM_FORMAT_ARGB2101010;
+            break;
+        case HAL_PIXEL_FORMAT_RGBX_1010102:
+            *drm_format = DRM_FORMAT_RGBX1010102;
+            break;
+        case HAL_PIXEL_FORMAT_XRGB_2101010:
+            *drm_format = DRM_FORMAT_XRGB2101010;
+            break;
+        case HAL_PIXEL_FORMAT_BGRA_1010102:
+            *drm_format = DRM_FORMAT_BGRA1010102;
+            break;
+        case HAL_PIXEL_FORMAT_ABGR_2101010:
+            *drm_format = DRM_FORMAT_ABGR2101010;
+            break;
+        case HAL_PIXEL_FORMAT_BGRX_1010102:
+            *drm_format = DRM_FORMAT_BGRX1010102;
+            break;
+        case HAL_PIXEL_FORMAT_XBGR_2101010:
+            *drm_format = DRM_FORMAT_XBGR2101010;
+            break;
+        case HAL_PIXEL_FORMAT_YCbCr_420_SP:
+            *drm_format = DRM_FORMAT_NV12;
+            break;
+        case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
+        case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
+            *drm_format = DRM_FORMAT_NV12;
+            break;
+        case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
+            *drm_format = DRM_FORMAT_NV12;
+            *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED;
+            break;
+        case HAL_PIXEL_FORMAT_YCrCb_420_SP:
+            *drm_format = DRM_FORMAT_NV21;
+            break;
+        case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
+            *drm_format = DRM_FORMAT_NV21;
+            break;
+        case HAL_PIXEL_FORMAT_YCbCr_420_P010:
+            // TODO *drm_format = DRM_FORMAT_P010;
+            break;
+        case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
+            // TODO *drm_format = DRM_FORMAT_P010;
+            // *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED |
+            //        DRM_FORMAT_MOD_QCOM_TIGHT;
+            break;
+        case HAL_PIXEL_FORMAT_YCbCr_422_SP:
+            *drm_format = DRM_FORMAT_NV16;
+            break;
+        case HAL_PIXEL_FORMAT_YCrCb_422_SP:
+            *drm_format = DRM_FORMAT_NV61;
+            break;
+        case HAL_PIXEL_FORMAT_YV12:
+            *drm_format = DRM_FORMAT_YVU420;
+            break;
+        default:
+            ALOGW("%s: Unsupported format %s", __FUNCTION__,
+                    qdutils::GetHALPixelFormatString(hal_format));
+    }
+}
+#endif
 
 gpu_context_t::gpu_context_t(const private_module_t* module,
                              IAllocController* alloc_ctrl ) :
@@ -169,11 +369,46 @@ int gpu_context_t::gralloc_alloc_buffer(unsigned int size, int usage,
         ColorSpace_t colorSpace = ITU_R_601;
         setMetaData(hnd, UPDATE_COLOR_SPACE, (void*) &colorSpace);
 
+#ifdef COMPILE_DRM
+        if (qdutils::getDriverType() == qdutils::DriverType::DRM &&
+                usage & GRALLOC_USAGE_HW_COMPOSER) {
+            DRMBuffer buf = {};
+            int ret = getPlaneStrideOffset(hnd, buf.stride, buf.offset,
+                    &buf.num_planes);
+            if (ret < 0) {
+                ALOGE("%s failed", __FUNCTION__);
+                return ret;
+            }
+
+            buf.fd = hnd->fd;
+            buf.width = hnd->width;
+            buf.height = hnd->height;
+            getDRMFormat(hnd->format, flags, &buf.drm_format,
+                    &buf.drm_format_modifier);
+
+            DRMMaster *master = nullptr;
+            ret = DRMMaster::GetInstance(&master);
+            if (ret < 0) {
+                ALOGE("%s Failed to acquire DRMMaster instance", __FUNCTION__);
+                return ret;
+            }
+
+            ret = master->CreateFbId(buf, &hnd->gem_handle, &hnd->fb_id);
+            if (ret < 0) {
+                ALOGE("%s: CreateFbId failed. width %d, height %d, " \
+                        "format: %s, stride %u, error %d", __FUNCTION__,
+                        buf.width, buf.height,
+                        qdutils::GetHALPixelFormatString(hnd->format),
+                        buf.stride[0], errno);
+                return ret;
+            }
+        }
+#endif
+
         *pHandle = hnd;
     }
 
     ALOGE_IF(err, "gralloc failed err=%s", strerror(-err));
-
     return err;
 }
 
@@ -369,6 +604,23 @@ int gpu_context_t::free_impl(private_handle_t const* hnd) {
         if (err)
             return err;
     }
+
+#ifdef COMPILE_DRM
+    if (hnd->fb_id) {
+        DRMMaster *master = nullptr;
+        int ret = DRMMaster::GetInstance(&master);
+        if (ret < 0) {
+            ALOGE("%s Failed to acquire DRMMaster instance", __FUNCTION__);
+            return ret;
+        }
+        ret = master->RemoveFbId(hnd->gem_handle, hnd->fb_id);
+        if (ret < 0) {
+            ALOGE("%s: Removing fb_id %d failed with error %d", __FUNCTION__,
+                    hnd->fb_id, errno);
+        }
+    }
+#endif
+
     delete hnd;
     return 0;
 }
