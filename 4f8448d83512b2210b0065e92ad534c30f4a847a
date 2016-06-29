@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "3fa7e38b_5e94d5e8",
+        "filename": "sdm/libs/hwc/hwc_display.cpp",
+        "patchSetId": 2
+      },
+      "lineNbr": 581,
+      "author": {
+        "id": 10094
+      },
+      "writtenOn": "2016-06-29T17:49:04Z",
+      "side": 1,
+      "message": "Should this be QTI_BSP now?",
+      "revId": "4f8448d83512b2210b0065e92ad534c30f4a847a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
