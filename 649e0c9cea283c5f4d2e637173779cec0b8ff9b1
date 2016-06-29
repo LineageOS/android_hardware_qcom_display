@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "3fa7e38b_996267d8",
+        "filename": "sdm/libs/hwc/hwc_display.cpp",
+        "patchSetId": 3
+      },
+      "lineNbr": 54,
+      "author": {
+        "id": 10094
+      },
+      "writtenOn": "2016-06-29T19:08:15Z",
+      "side": 1,
+      "message": "This should actually all be removed.  The issue it was added for has been fixed upstream (by the correct include above).",
+      "range": {
+        "startLine": 52,
+        "startChar": 0,
+        "endLine": 54,
+        "endChar": 6
+      },
+      "revId": "649e0c9cea283c5f4d2e637173779cec0b8ff9b1",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
