@@ -27,43 +27,37 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef __DRM_LOGGER_H__
-#define __DRM_LOGGER_H__
+#ifndef __DRM_LIB_LOADER_H__
+#define __DRM_LIB_LOADER_H__
 
-#include <utility>
+#include <drm_interface.h>
+#include <mutex>
 
 namespace drm_utils {
 
-class DRMLogger {
+class DRMLibLoader {
  public:
-  virtual ~DRMLogger() {}
-  virtual void Error(const char *format, ...) = 0;
-  virtual void Warning(const char *format, ...) = 0;
-  virtual void Info(const char *format, ...) = 0;
-  virtual void Debug(const char *format, ...) = 0;
+  ~DRMLibLoader() {}
+  bool IsLoaded() { return is_loaded_; }
+  sde_drm::GetDRMManager FuncGetDRMManager() { return func_get_drm_manager_; }
+  sde_drm::DestroyDRMManager FuncDestroyDRMManager() { return func_destroy_drm_manager_; }
 
-  static void Set(DRMLogger *logger) { s_instance = logger; }
-  static DRMLogger *Get() { return s_instance; }
+  static DRMLibLoader *GetInstance();
 
  private:
-  static DRMLogger *s_instance;
+  DRMLibLoader();
+  bool Open(const char *lib_name);
+  bool Sym(const char *func_name, void **func_ptr);
+
+  void *lib_ = {};
+  sde_drm::GetDRMManager func_get_drm_manager_ = {};
+  sde_drm::DestroyDRMManager func_destroy_drm_manager_ = {};
+  bool is_loaded_ = false;
+
+  static DRMLibLoader *s_instance;  // Singleton instance
+  static std::mutex s_lock;
 };
-
-#define DRM_LOG(method, format, ...)                            \
-  if (drm_utils::DRMLogger::Get()) {                            \
-    drm_utils::DRMLogger::Get()->method(format, ##__VA_ARGS__); \
-  }
-
-#define DRM_LOG_CONTEXT(method, format, ...) \
-  DRM_LOG(method, __CLASS__ "::%s: " format, __FUNCTION__, ##__VA_ARGS__);
-
-#define DRM_LOGE(format, ...) DRM_LOG_CONTEXT(Error, format, ##__VA_ARGS__)
-#define DRM_LOGW(format, ...) DRM_LOG_CONTEXT(Warning, format, ##__VA_ARGS__)
-#define DRM_LOGI(format, ...) DRM_LOG_CONTEXT(Info, format, ##__VA_ARGS__)
-#define DRM_LOGD_IF(pred, format, ...) \
-  if (pred)                            \
-  DRM_LOG_CONTEXT(Debug, format, ##__VA_ARGS__)
 
 }  // namespace drm_utils
 
-#endif  // __DRM_LOGGER_H__
+#endif  // __DRM_LIB_LOADER_H__

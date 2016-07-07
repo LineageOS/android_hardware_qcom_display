@@ -29,22 +29,23 @@
 
 #define __STDC_FORMAT_MACROS
 
-#include <stdio.h>
 #include <ctype.h>
-#include <math.h>
+#include <drm_lib_loader.h>
+#include <drm_master.h>
+#include <drm_res_mgr.h>
 #include <fcntl.h>
-#include <unistd.h>
-#include <string.h>
 #include <inttypes.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/ioctl.h>
 #include <linux/fb.h>
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include <utils/constants.h>
 #include <utils/debug.h>
 #include <utils/sys.h>
-#include <drm_master.h>
-#include <drm_res_mgr.h>
 
 #include <algorithm>
 #include <string>
@@ -61,57 +62,103 @@ using std::to_string;
 using std::fstream;
 using drm_utils::DRMMaster;
 using drm_utils::DRMResMgr;
-using drm_utils::DRMLogger;
+using drm_utils::DRMLibLoader;
+using sde_drm::GetDRMManager;
+using sde_drm::DestroyDRMManager;
+using sde_drm::DRMDisplayType;
+using sde_drm::DRMDisplayToken;
+using sde_drm::DRMConnectorInfo;
+using sde_drm::DRMRect;
+using sde_drm::DRMBlendType;
+using sde_drm::DRMOps;
+using sde_drm::DRMTopology;
 
 namespace sdm {
 
-class DRMLoggerDAL : public DRMLogger {
- public:
-#define PRIV_LOG(suffix) { \
-  char buf[1024]; \
-  va_list list; \
-  va_start(list, str); \
-  vsnprintf(buf, sizeof(buf), str, list); \
-  va_end(list); \
-  DLOG##suffix("%s", buf); \
-}
-  void Error(const char *str, ...) {
-    PRIV_LOG(E);
-  }
-  void Info(const char *str, ...) {
-    PRIV_LOG(I);
-  }
-  void Debug(const char *str, ...) {
-    PRIV_LOG(D);
-  }
-};
-
 HWDeviceDRM::HWDeviceDRM(BufferSyncHandler *buffer_sync_handler, HWInfoInterface *hw_info_intf)
-  : hw_info_intf_(hw_info_intf), buffer_sync_handler_(buffer_sync_handler) {
-  DRMLogger::Set(new DRMLoggerDAL());
+    : hw_info_intf_(hw_info_intf), buffer_sync_handler_(buffer_sync_handler) {
+  device_type_ = kDevicePrimary;
+  device_name_ = "Peripheral Display";
+  hw_info_intf_ = hw_info_intf;
 }
 
 DisplayError HWDeviceDRM::Init() {
-  // Populate Panel Info (Used for Partial Update)
-  PopulateHWPanelInfo();
-  // Populate HW Capabilities
-  hw_resource_ = HWResourceInfo();
-  hw_info_intf_->GetHWResourceInfo(&hw_resource_);
+  default_mode_ = (DRMLibLoader::GetInstance()->IsLoaded() == false);
 
-  DRMResMgr *res_mgr = nullptr;
-  int ret = DRMResMgr::GetInstance(&res_mgr);
-  if (ret < 0) {
-    DLOGE("Failed to acquire DRMResMgr instance");
-    return kErrorResources;
+  if (!default_mode_) {
+    DRMMaster *drm_master = {};
+    int dev_fd = -1;
+    DRMMaster::GetInstance(&drm_master);
+    drm_master->GetHandle(&dev_fd);
+    DRMLibLoader::GetInstance()->FuncGetDRMManager()(dev_fd, &drm_mgr_intf_);
+    if (drm_mgr_intf_->RegisterDisplay(DRMDisplayType::PERIPHERAL, &token_)) {
+      DLOGE("RegisterDisplay failed");
+      return kErrorResources;
+    }
+
+    drm_mgr_intf_->CreateAtomicReq(token_, &drm_atomic_intf_);
+    drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
+    InitializeConfigs();
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode_);
+#ifdef USE_SPECULATIVE_FENCES
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_OUTPUT_FENCE_OFFSET, token_.crtc_id, 1);
+#endif
+    // TODO(user): Enable this and remove the one in SetupAtomic() onces underruns are fixed
+    // drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
+    // Commit to setup pipeline with mode, which then tells us the topology etc
+    if (drm_atomic_intf_->Commit(true /* synchronous */)) {
+      DLOGE("Setting up CRTC %d, Connector %d for %s failed", token_.crtc_id, token_.conn_id,
+            device_name_);
+      return kErrorResources;
+    }
+
+    // Reload connector info for updated info after 1st commit
+    drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
+    DLOGI("Setup CRTC %d, Connector %d for %s", token_.crtc_id, token_.conn_id, device_name_);
   }
 
-  // TODO(user): check if default mode enabled
-  drmModeModeInfo mode;
-  res_mgr->GetMode(&mode);
+  PopulateDisplayAttributes();
+  PopulateHWPanelInfo();
+  UpdateMixerAttributes();
+  hw_info_intf_->GetHWResourceInfo(&hw_resource_);
 
+  return kErrorNone;
+}
+
+DisplayError HWDeviceDRM::Deinit() {
+  drm_mgr_intf_->DestroyAtomicReq(drm_atomic_intf_);
+  drm_atomic_intf_ = {};
+  drm_mgr_intf_->UnregisterDisplay(token_);
+  return kErrorNone;
+}
+
+void HWDeviceDRM::InitializeConfigs() {
+  // TODO(user): Update modes
+  current_mode_ = connector_info_.modes[0];
+}
+
+DisplayError HWDeviceDRM::PopulateDisplayAttributes() {
+  drmModeModeInfo mode = {};
   uint32_t mm_width = 0;
   uint32_t mm_height = 0;
-  res_mgr->GetDisplayDimInMM(&mm_width, &mm_height);
+  DRMTopology topology = DRMTopology::SINGLE_LM;
+
+  if (default_mode_) {
+    DRMResMgr *res_mgr = nullptr;
+    int ret = DRMResMgr::GetInstance(&res_mgr);
+    if (ret < 0) {
+      DLOGE("Failed to acquire DRMResMgr instance");
+      return kErrorResources;
+    }
+
+    res_mgr->GetMode(&mode);
+    res_mgr->GetDisplayDimInMM(&mm_width, &mm_height);
+  } else {
+    mode = current_mode_;
+    mm_width = connector_info_.mmWidth;
+    mm_height = connector_info_.mmHeight;
+    topology = connector_info_.topology;
+  }
 
   display_attributes_.x_pixels = mode.hdisplay;
   display_attributes_.y_pixels = mode.vdisplay;
@@ -135,19 +182,126 @@ DisplayError HWDeviceDRM::Init() {
 
   display_attributes_.h_total = mode.htotal;
   uint32_t h_blanking = mode.htotal - mode.hdisplay;
-  display_attributes_.is_device_split = true;
+  display_attributes_.is_device_split =
+      (topology == DRMTopology::DUAL_LM || topology == DRMTopology::DUAL_LM_MERGE);
   display_attributes_.h_total += display_attributes_.is_device_split ? h_blanking : 0;
 
-  display_attributes_.x_dpi =
-      (FLOAT(mode.hdisplay) * 25.4f) / FLOAT(mm_width);
-  display_attributes_.y_dpi =
-      (FLOAT(mode.vdisplay) * 25.4f) / FLOAT(mm_height);
+  display_attributes_.x_dpi = (FLOAT(mode.hdisplay) * 25.4f) / FLOAT(mm_width);
+  display_attributes_.y_dpi = (FLOAT(mode.vdisplay) * 25.4f) / FLOAT(mm_height);
 
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::Deinit() {
-  return kErrorNone;
+void HWDeviceDRM::PopulateHWPanelInfo() {
+  hw_panel_info_ = {};
+
+  snprintf(hw_panel_info_.panel_name, sizeof(hw_panel_info_.panel_name), "%s",
+           connector_info_.panel_name.c_str());
+  hw_panel_info_.split_info.left_split = display_attributes_.x_pixels;
+  if (display_attributes_.is_device_split) {
+    hw_panel_info_.split_info.left_split = hw_panel_info_.split_info.right_split =
+        display_attributes_.x_pixels / 2;
+  }
+
+  hw_panel_info_.partial_update = 0;
+  hw_panel_info_.left_align = 0;
+  hw_panel_info_.width_align = 0;
+  hw_panel_info_.top_align = 0;
+  hw_panel_info_.height_align = 0;
+  hw_panel_info_.min_roi_width = 0;
+  hw_panel_info_.min_roi_height = 0;
+  hw_panel_info_.needs_roi_merge = 0;
+  hw_panel_info_.dynamic_fps = connector_info_.dynamic_fps;
+  hw_panel_info_.min_fps = 60;
+  hw_panel_info_.max_fps = 60;
+  hw_panel_info_.is_primary_panel = connector_info_.is_primary;
+  hw_panel_info_.is_pluggable = 0;
+
+  if (!default_mode_) {
+    hw_panel_info_.needs_roi_merge = (connector_info_.topology == DRMTopology::DUAL_LM_MERGE);
+  }
+
+  GetHWDisplayPortAndMode();
+  GetHWPanelMaxBrightness();
+
+  DLOGI("%s, Panel Interface = %s, Panel Mode = %s, Is Primary = %d", device_name_,
+        interface_str_.c_str(), hw_panel_info_.mode == kModeVideo ? "Video" : "Command",
+        hw_panel_info_.is_primary_panel);
+  DLOGI("Partial Update = %d, Dynamic FPS = %d", hw_panel_info_.partial_update,
+        hw_panel_info_.dynamic_fps);
+  DLOGI("Align: left = %d, width = %d, top = %d, height = %d", hw_panel_info_.left_align,
+        hw_panel_info_.width_align, hw_panel_info_.top_align, hw_panel_info_.height_align);
+  DLOGI("ROI: min_width = %d, min_height = %d, need_merge = %d", hw_panel_info_.min_roi_width,
+        hw_panel_info_.min_roi_height, hw_panel_info_.needs_roi_merge);
+  DLOGI("FPS: min = %d, max =%d", hw_panel_info_.min_fps, hw_panel_info_.max_fps);
+  DLOGI("Left Split = %d, Right Split = %d", hw_panel_info_.split_info.left_split,
+        hw_panel_info_.split_info.right_split);
+}
+
+void HWDeviceDRM::GetHWDisplayPortAndMode() {
+  hw_panel_info_.port = kPortDefault;
+  hw_panel_info_.mode =
+      (connector_info_.panel_mode == sde_drm::DRMPanelMode::VIDEO) ? kModeVideo : kModeCommand;
+
+  if (default_mode_) {
+    return;
+  }
+
+  switch (connector_info_.type) {
+    case DRM_MODE_CONNECTOR_DSI:
+      hw_panel_info_.port = kPortDSI;
+      interface_str_ = "DSI";
+      break;
+    case DRM_MODE_CONNECTOR_LVDS:
+      hw_panel_info_.port = kPortLVDS;
+      interface_str_ = "LVDS";
+      break;
+    case DRM_MODE_CONNECTOR_eDP:
+      hw_panel_info_.port = kPortEDP;
+      interface_str_ = "EDP";
+      break;
+    case DRM_MODE_CONNECTOR_TV:
+    case DRM_MODE_CONNECTOR_HDMIA:
+    case DRM_MODE_CONNECTOR_HDMIB:
+      hw_panel_info_.port = kPortDTV;
+      interface_str_ = "HDMI";
+      break;
+    case DRM_MODE_CONNECTOR_VIRTUAL:
+      hw_panel_info_.port = kPortWriteBack;
+      interface_str_ = "Virtual";
+      break;
+    case DRM_MODE_CONNECTOR_DisplayPort:
+      // TODO(user): Add when available
+      interface_str_ = "DisplayPort";
+      break;
+  }
+
+  return;
+}
+
+void HWDeviceDRM::GetHWPanelMaxBrightness() {
+  char brightness[kMaxStringLength] = {0};
+  char kMaxBrightnessNode[64] = {0};
+
+  snprintf(kMaxBrightnessNode, sizeof(kMaxBrightnessNode), "%s",
+           "/sys/class/leds/lcd-backlight/max_brightness");
+
+  hw_panel_info_.panel_max_brightness = 255;
+  int fd = Sys::open_(kMaxBrightnessNode, O_RDONLY);
+  if (fd < 0) {
+    DLOGW("Failed to open max brightness node = %s, error = %s", kMaxBrightnessNode,
+          strerror(errno));
+    return;
+  }
+
+  if (Sys::pread_(fd, brightness, sizeof(brightness), 0) > 0) {
+    hw_panel_info_.panel_max_brightness = atoi(brightness);
+    DLOGI("Max brightness level = %d", hw_panel_info_.panel_max_brightness);
+  } else {
+    DLOGW("Failed to read max brightness level. error = %s", strerror(errno));
+  }
+
+  Sys::close_(fd);
 }
 
 DisplayError HWDeviceDRM::GetActiveConfig(uint32_t *active_config) {
@@ -204,12 +358,98 @@ DisplayError HWDeviceDRM::Standby() {
   return kErrorNone;
 }
 
+void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
+  if (default_mode_) {
+    return;
+  }
+
+  HWLayersInfo &hw_layer_info = hw_layers->info;
+  uint32_t hw_layer_count = UINT32(hw_layer_info.hw_layers.size());
+
+  for (uint32_t i = 0; i < hw_layer_count; i++) {
+    Layer &layer = hw_layer_info.hw_layers.at(i);
+    LayerBuffer &input_buffer = layer.input_buffer;
+    HWPipeInfo *left_pipe = &hw_layers->config[i].left_pipe;
+    HWPipeInfo *right_pipe = &hw_layers->config[i].right_pipe;
+
+    // TODO(user): Add support for solid fill
+    if (layer.flags.solid_fill) {
+      continue;
+    }
+
+    for (uint32_t count = 0; count < 2; count++) {
+      HWPipeInfo *pipe_info = (count == 0) ? left_pipe : right_pipe;
+      if (pipe_info->valid) {
+        uint32_t pipe_id = pipe_info->pipe_id;
+        if (input_buffer.fb_id == 0) {
+          // We set these to 0 to clear any previous cycle's state from another buffer.
+          // Unfortunately this layer will be skipped from validation because it's dimensions are
+          // tied to fb_id which is not available yet.
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_FB_ID, pipe_id, 0);
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_CRTC, pipe_id, 0);
+          continue;
+        }
+        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ALPHA, pipe_id, layer.plane_alpha);
+        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ZORDER, pipe_id, pipe_info->z_order);
+        DRMBlendType blending = {};
+        SetBlending(layer.blending, &blending);
+        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_BLEND_TYPE, pipe_id, blending);
+        DRMRect src = {};
+        SetRect(pipe_info->src_roi, &src);
+        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_SRC_RECT, pipe_id, src);
+        DRMRect dst = {};
+        SetRect(pipe_info->dst_roi, &dst);
+        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_DST_RECT, pipe_id, dst);
+        uint32_t rot_bit_mask = 0;
+        if (layer.transform.flip_horizontal) {
+          rot_bit_mask |= 1 << DRM_REFLECT_X;
+        }
+        if (layer.transform.flip_vertical) {
+          rot_bit_mask |= 1 << DRM_REFLECT_Y;
+        }
+
+        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_H_DECIMATION, pipe_id,
+                                  pipe_info->horizontal_decimation);
+        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_V_DECIMATION, pipe_id,
+                                  pipe_info->vertical_decimation);
+        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ROTATION, pipe_id, rot_bit_mask);
+        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_FB_ID, pipe_id, input_buffer.fb_id);
+        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_CRTC, pipe_id, token_.crtc_id);
+        if (!validate && input_buffer.acquire_fence_fd >= 0) {
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_INPUT_FENCE, pipe_id,
+                                    input_buffer.acquire_fence_fd);
+        }
+      }
+    }
+
+    // TODO(user): Remove this and enable the one in Init() onces underruns are fixed
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
+  }
+}
+
 DisplayError HWDeviceDRM::Validate(HWLayers *hw_layers) {
   DTRACE_SCOPED();
+  SetupAtomic(hw_layers, true /* validate */);
+
+  int ret = drm_atomic_intf_->Validate();
+  if (ret) {
+    DLOGE("%s failed with error %d", __FUNCTION__, ret);
+    return kErrorHardware;
+  }
+
   return kErrorNone;
 }
 
 DisplayError HWDeviceDRM::Commit(HWLayers *hw_layers) {
+  DTRACE_SCOPED();
+  if (default_mode_) {
+    return DefaultCommit(hw_layers);
+  }
+
+  return AtomicCommit(hw_layers);
+}
+
+DisplayError HWDeviceDRM::DefaultCommit(HWLayers *hw_layers) {
   DTRACE_SCOPED();
 
   HWLayersInfo &hw_layer_info = hw_layers->info;
@@ -258,126 +498,67 @@ DisplayError HWDeviceDRM::Commit(HWLayers *hw_layers) {
   return kErrorNone;
 }
 
+DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
+  DTRACE_SCOPED();
+  SetupAtomic(hw_layers, false /* validate */);
+
+  int ret = drm_atomic_intf_->Commit(false /* synchronous */);
+  if (ret) {
+    DLOGE("%s failed with error %d", __FUNCTION__, ret);
+    return kErrorHardware;
+  }
+
+  int release_fence = -1;
+  int retire_fence = -1;
+
+  drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence);
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence);
+
+  HWLayersInfo &hw_layer_info = hw_layers->info;
+  LayerStack *stack = hw_layer_info.stack;
+  stack->retire_fence_fd = retire_fence;
+
+  for (Layer &layer : hw_layer_info.hw_layers) {
+    layer.input_buffer.release_fence_fd = Sys::dup_(release_fence);
+  }
+
+  hw_layer_info.sync_handle = release_fence;
+
+  return kErrorNone;
+}
+
 DisplayError HWDeviceDRM::Flush() {
   return kErrorNone;
 }
 
-void HWDeviceDRM::PopulateHWPanelInfo() {
-  hw_panel_info_ = HWPanelInfo();
-  GetHWPanelInfoByNode(0 /* Primary */, &hw_panel_info_);
-  DLOGI("Device type = %d, Display Port = %d, Display Mode = %d, Device Node = %d, Is Primary = %d",
-        device_type_, hw_panel_info_.port, hw_panel_info_.mode, 0 /* primary */,
-        hw_panel_info_.is_primary_panel);
-  DLOGI("Partial Update = %d, Dynamic FPS = %d",
-        hw_panel_info_.partial_update, hw_panel_info_.dynamic_fps);
-  DLOGI("Align: left = %d, width = %d, top = %d, height = %d",
-        hw_panel_info_.left_align, hw_panel_info_.width_align,
-        hw_panel_info_.top_align, hw_panel_info_.height_align);
-  DLOGI("ROI: min_width = %d, min_height = %d, need_merge = %d",
-        hw_panel_info_.min_roi_width, hw_panel_info_.min_roi_height,
-        hw_panel_info_.needs_roi_merge);
-  DLOGI("FPS: min = %d, max =%d", hw_panel_info_.min_fps, hw_panel_info_.max_fps);
-  DLOGI("Left Split = %d, Right Split = %d", hw_panel_info_.split_info.left_split,
-        hw_panel_info_.split_info.right_split);
-}
-
-void HWDeviceDRM::GetHWPanelNameByNode(int device_node, HWPanelInfo *panel_info) {
-  snprintf(panel_info->panel_name, sizeof(panel_info->panel_name), "%s",
-           "Dual SHARP video mode dsi panel");
-}
-
-void HWDeviceDRM::GetHWPanelInfoByNode(int device_node, HWPanelInfo *panel_info) {
-  panel_info->partial_update = 0;
-  panel_info->left_align = 0;
-  panel_info->width_align = 0;
-  panel_info->top_align = 0;
-  panel_info->height_align = 0;
-  panel_info->min_roi_width = 0;
-  panel_info->min_roi_height = 0;
-  panel_info->needs_roi_merge = 0;
-  panel_info->dynamic_fps = 0;
-  panel_info->min_fps = 60;
-  panel_info->max_fps = 60;
-  panel_info->is_primary_panel = 1;
-  panel_info->is_pluggable = 0;
-
-  GetHWDisplayPortAndMode(device_node, panel_info);
-  GetSplitInfo(device_node, panel_info);
-  GetHWPanelNameByNode(device_node, panel_info);
-  GetHWPanelMaxBrightnessFromNode(panel_info);
-}
-
-void HWDeviceDRM::GetHWDisplayPortAndMode(int device_node, HWPanelInfo *panel_info) {
-  DisplayPort *port = &panel_info->port;
-  HWDisplayMode *mode = &panel_info->mode;
-
-  *port = kPortDefault;
-  *mode = kModeDefault;
-
-  string line = "mipi dsi video panel";
-
-  if ((strncmp(line.c_str(), "mipi dsi cmd panel", strlen("mipi dsi cmd panel")) == 0)) {
-    *port = kPortDSI;
-    *mode = kModeCommand;
-  } else if ((strncmp(line.c_str(), "mipi dsi video panel", strlen("mipi dsi video panel")) == 0)) {
-    *port = kPortDSI;
-    *mode = kModeVideo;
-  } else if ((strncmp(line.c_str(), "lvds panel", strlen("lvds panel")) == 0)) {
-    *port = kPortLVDS;
-    *mode = kModeVideo;
-  } else if ((strncmp(line.c_str(), "edp panel", strlen("edp panel")) == 0)) {
-    *port = kPortEDP;
-    *mode = kModeVideo;
-  } else if ((strncmp(line.c_str(), "dtv panel", strlen("dtv panel")) == 0)) {
-    *port = kPortDTV;
-    *mode = kModeVideo;
-  } else if ((strncmp(line.c_str(), "writeback panel", strlen("writeback panel")) == 0)) {
-    *port = kPortWriteBack;
-    *mode = kModeCommand;
-  }
-
-  return;
-}
-
-void HWDeviceDRM::GetSplitInfo(int device_node, HWPanelInfo *panel_info) {
-  if (display_attributes_.is_device_split) {
-    panel_info->split_info.left_split = panel_info->split_info.right_split =
-      display_attributes_.x_pixels / 2;
+void HWDeviceDRM::SetBlending(const LayerBlending &source, DRMBlendType *target) {
+  switch (source) {
+    case kBlendingPremultiplied:
+      *target = DRMBlendType::PREMULTIPLIED;
+      break;
+    case kBlendingOpaque:
+      *target = DRMBlendType::OPAQUE;
+      break;
+    case kBlendingCoverage:
+      *target = DRMBlendType::COVERAGE;
+      break;
+    default:
+      *target = DRMBlendType::UNDEFINED;
   }
 }
 
-void HWDeviceDRM::GetHWPanelMaxBrightnessFromNode(HWPanelInfo *panel_info) {
-  char brightness[kMaxStringLength] = { 0 };
-  char kMaxBrightnessNode[64] = { 0 };
-
-  snprintf(kMaxBrightnessNode, sizeof(kMaxBrightnessNode), "%s",
-           "/sys/class/leds/lcd-backlight/max_brightness");
-
-  panel_info->panel_max_brightness = 0;
-  int fd = Sys::open_(kMaxBrightnessNode, O_RDONLY);
-  if (fd < 0) {
-    DLOGW("Failed to open max brightness node = %s, error = %s", kMaxBrightnessNode,
-          strerror(errno));
-    return;
-  }
-
-  if (Sys::pread_(fd, brightness, sizeof(brightness), 0) > 0) {
-    panel_info->panel_max_brightness = atoi(brightness);
-    DLOGI("Max brightness level = %d", panel_info->panel_max_brightness);
-  } else {
-    DLOGW("Failed to read max brightness level. error = %s", strerror(errno));
-  }
-  Sys::close_(fd);
-
-  panel_info->panel_max_brightness = 255;
+void HWDeviceDRM::SetRect(const LayerRect &source, DRMRect *target) {
+  target->left = UINT32(source.left);
+  target->top = UINT32(source.top);
+  target->right = UINT32(source.right);
+  target->bottom = UINT32(source.bottom);
 }
 
 bool HWDeviceDRM::EnableHotPlugDetection(int enable) {
   return true;
 }
 
-void HWDeviceDRM::ResetDisplayParams() {
-}
+void HWDeviceDRM::ResetDisplayParams() {}
 
 DisplayError HWDeviceDRM::SetCursorPosition(HWLayers *hw_layers, int x, int y) {
   DTRACE_SCOPED();
@@ -396,8 +577,7 @@ DisplayError HWDeviceDRM::SetVSyncState(bool enable) {
   return kErrorNone;
 }
 
-void HWDeviceDRM::SetIdleTimeoutMs(uint32_t timeout_ms) {
-}
+void HWDeviceDRM::SetIdleTimeoutMs(uint32_t timeout_ms) {}
 
 DisplayError HWDeviceDRM::SetDisplayMode(const HWDisplayMode hw_display_mode) {
   return kErrorNotSupported;
@@ -465,7 +645,7 @@ DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attr
 
   float mixer_aspect_ratio = FLOAT(mixer_attributes.width) / FLOAT(mixer_attributes.height);
   float display_aspect_ratio =
-    FLOAT(display_attributes_.x_pixels) / FLOAT(display_attributes_.y_pixels);
+      FLOAT(display_attributes_.x_pixels) / FLOAT(display_attributes_.y_pixels);
 
   if (display_aspect_ratio != mixer_aspect_ratio) {
     DLOGW("Aspect ratio mismatch! input: res %dx%d display: res %dx%d", mixer_attributes.width,
@@ -477,8 +657,10 @@ DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attr
   float scale_y = FLOAT(display_attributes_.y_pixels) / FLOAT(mixer_attributes.height);
   float max_scale_up = hw_resource_.hw_dest_scalar_info.max_scale_up;
   if (scale_x > max_scale_up || scale_y > max_scale_up) {
-    DLOGW("Up scaling ratio exceeds for destination scalar upscale limit scale_x %f scale_y %f " \
-          "max_scale_up %f", scale_x, scale_y, max_scale_up);
+    DLOGW(
+        "Up scaling ratio exceeds for destination scalar upscale limit scale_x %f scale_y %f "
+        "max_scale_up %f",
+        scale_x, scale_y, max_scale_up);
     return kErrorNotSupported;
   }
 
@@ -500,11 +682,20 @@ DisplayError HWDeviceDRM::GetMixerAttributes(HWMixerAttributes *mixer_attributes
 
   mixer_attributes_.width = display_attributes_.x_pixels;
   mixer_attributes_.height = display_attributes_.y_pixels;
-  mixer_attributes_.split_left = display_attributes_.is_device_split ?
-      hw_panel_info_.split_info.left_split : mixer_attributes_.width;
+  mixer_attributes_.split_left = display_attributes_.is_device_split
+                                     ? hw_panel_info_.split_info.left_split
+                                     : mixer_attributes_.width;
   *mixer_attributes = mixer_attributes_;
 
   return kErrorNone;
+}
+
+void HWDeviceDRM::UpdateMixerAttributes() {
+  mixer_attributes_.width = display_attributes_.x_pixels;
+  mixer_attributes_.height = display_attributes_.y_pixels;
+  mixer_attributes_.split_left = display_attributes_.is_device_split
+                                     ? hw_panel_info_.split_info.left_split
+                                     : mixer_attributes_.width;
 }
 
 }  // namespace sdm

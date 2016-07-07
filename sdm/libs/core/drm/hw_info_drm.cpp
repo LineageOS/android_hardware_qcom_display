@@ -27,21 +27,24 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <string.h>
+#include <dlfcn.h>
+#include <drm/drm_fourcc.h>
+#include <drm_lib_loader.h>
+#include <drm_master.h>
+#include <drm_res_mgr.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <fcntl.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <utils/constants.h>
 #include <utils/debug.h>
 #include <utils/sys.h>
-#include <dlfcn.h>
-#include <drm/drm_fourcc.h>
 
 #include <algorithm>
-#include <iostream>
 #include <fstream>
+#include <iostream>
 #include <map>
 #include <memory>
 #include <string>
@@ -52,6 +55,15 @@
 
 #define __CLASS__ "HWInfoDRM"
 
+using drm_utils::DRMMaster;
+using drm_utils::DRMResMgr;
+using drm_utils::DRMLogger;
+using drm_utils::DRMLibLoader;
+using sde_drm::GetDRMManager;
+using sde_drm::DRMPlanesInfo;
+using sde_drm::DRMCrtcInfo;
+using sde_drm::DRMPlaneType;
+
 using std::vector;
 using std::map;
 using std::string;
@@ -60,22 +72,40 @@ using std::to_string;
 
 namespace sdm {
 
-int HWInfoDRM::ParseString(const char *input, char *tokens[], const uint32_t max_token,
-                        const char *delim, uint32_t *count) {
-  char *tmp_token = NULL;
-  char *temp_ptr;
-  uint32_t index = 0;
-  if (!input) {
-    return -1;
-  }
-  tmp_token = strtok_r(const_cast<char *>(input), delim, &temp_ptr);
-  while (tmp_token && index < max_token) {
-    tokens[index++] = tmp_token;
-    tmp_token = strtok_r(NULL, delim, &temp_ptr);
-  }
-  *count = index;
+class DRMLoggerImpl : public DRMLogger {
+ public:
+#define PRINTLOG(method, format, buf)        \
+  va_list list;                              \
+  va_start(list, format);                    \
+  vsnprintf(buf, sizeof(buf), format, list); \
+  va_end(list);                              \
+  Debug::Get()->method(kTagNone, "%s", buf);
 
-  return 0;
+  void Error(const char *format, ...) { PRINTLOG(Error, format, buf_); }
+  void Warning(const char *format, ...) { PRINTLOG(Warning, format, buf_); }
+  void Info(const char *format, ...) { PRINTLOG(Info, format, buf_); }
+  void Debug(const char *format, ...) { PRINTLOG(Debug, format, buf_); }
+
+ private:
+  char buf_[1024] = {};
+};
+
+HWResourceInfo *HWInfoDRM::hw_resource_ = nullptr;
+
+HWInfoDRM::HWInfoDRM() {
+  DRMLogger::Set(new DRMLoggerImpl());
+  default_mode_ = (DRMLibLoader::GetInstance()->IsLoaded() == false);
+  if (!default_mode_) {
+    DRMMaster *drm_master = {};
+    int dev_fd = -1;
+    DRMMaster::GetInstance(&drm_master);
+    if (!drm_master) {
+      DLOGE("Failed to acquire DRMMaster instance");
+      return;
+    }
+    drm_master->GetHandle(&dev_fd);
+    DRMLibLoader::GetInstance()->FuncGetDRMManager()(dev_fd, &drm_mgr_intf_);
+  }
 }
 
 DisplayError HWInfoDRM::GetDynamicBWLimits(HWResourceInfo *hw_resource) {
@@ -89,17 +119,19 @@ DisplayError HWInfoDRM::GetDynamicBWLimits(HWResourceInfo *hw_resource) {
 }
 
 DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
-  InitSupportedFormatMap(hw_resource);
-  hw_resource->hw_version = kHWMdssVersion5;
-  hw_resource->hw_revision = 268894210;  // HW Rev, v1/v2
-  hw_resource->num_blending_stages = 7;
-  hw_resource->max_scale_down = 4;
-  hw_resource->max_scale_up = 20;
-  hw_resource->max_bandwidth_low = 9600000;
-  hw_resource->max_bandwidth_high = 9600000;
-  hw_resource->max_mixer_width = 2560;
+  if (hw_resource_) {
+    *hw_resource = *hw_resource_;
+    return kErrorNone;
+  }
+
+  hw_resource->num_blending_stages = 1;
   hw_resource->max_pipe_width = 2560;
   hw_resource->max_cursor_size = 128;
+  hw_resource->max_scale_down = 1;
+  hw_resource->max_scale_up = 1;
+  hw_resource->has_decimation = false;
+  hw_resource->max_bandwidth_low = 9600000;
+  hw_resource->max_bandwidth_high = 9600000;
   hw_resource->max_pipe_bw = 4500000;
   hw_resource->max_sde_clk = 412500000;
   hw_resource->clk_fudge_factor = FLOAT(105) / FLOAT(100);
@@ -110,35 +142,30 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
   hw_resource->extra_fudge_factor = 2;
   hw_resource->amortizable_threshold = 0;
   hw_resource->system_overhead_lines = 0;
-  hw_resource->writeback_index = 2;
   hw_resource->hw_dest_scalar_info.count = 0;
   hw_resource->hw_dest_scalar_info.max_scale_up = 0;
   hw_resource->hw_dest_scalar_info.max_input_width = 0;
   hw_resource->hw_dest_scalar_info.max_output_width = 0;
-  hw_resource->has_bwc = false;
-  hw_resource->has_ubwc = true;
-  hw_resource->has_decimation = true;
-  hw_resource->has_macrotile = true;
   hw_resource->is_src_split = true;
-  hw_resource->has_non_scalar_rgb = false;
   hw_resource->perf_calc = false;
   hw_resource->has_dyn_bw_support = false;
-  hw_resource->separate_rotator = true;
   hw_resource->has_qseed3 = false;
   hw_resource->has_concurrent_writeback = false;
-  hw_resource->num_vig_pipe = 0;
-  hw_resource->num_dma_pipe = 0;
-  hw_resource->num_cursor_pipe = 0;
-  uint32_t pipe_count = 2;
-  for (uint32_t i = 0; i < pipe_count; i++) {
-    HWPipeCaps pipe_caps;
-    pipe_caps.type = kPipeTypeUnused;
-    pipe_caps.type = kPipeTypeRGB;
-    hw_resource->num_rgb_pipe++;
-    pipe_caps.id = UINT32(0x8 << i);
-    pipe_caps.max_rects = 1;
-    hw_resource->hw_pipes.push_back(pipe_caps);
-  }
+
+  // TODO(user): Deprecate
+  hw_resource->hw_version = kHWMdssVersion5;
+  hw_resource->hw_revision = 0;
+  hw_resource->max_mixer_width = 0;
+  hw_resource->writeback_index = 0;
+  hw_resource->has_bwc = false;
+  hw_resource->has_ubwc = true;
+  hw_resource->has_macrotile = true;
+  hw_resource->separate_rotator = true;
+  hw_resource->has_non_scalar_rgb = false;
+
+  GetSystemInfo(hw_resource);
+  GetHWPlanesInfo(hw_resource);
+  GetWBInfo(hw_resource);
 
   // Disable destination scalar count to 0 if extension library is not present
   DynLib extension_lib;
@@ -146,31 +173,30 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
     hw_resource->hw_dest_scalar_info.count = 0;
   }
 
-  DLOGI("SDE Version = %d, SDE Revision = %x, RGB = %d, VIG = %d, DMA = %d, Cursor = %d",
-        hw_resource->hw_version, hw_resource->hw_revision, hw_resource->num_rgb_pipe,
-        hw_resource->num_vig_pipe, hw_resource->num_dma_pipe, hw_resource->num_cursor_pipe);
-  DLOGI("Upscale Ratio = %d, Downscale Ratio = %d, Blending Stages = %d", hw_resource->max_scale_up,
-        hw_resource->max_scale_down, hw_resource->num_blending_stages);
-  DLOGI("SourceSplit = %d QSEED3 = %d", hw_resource->is_src_split, hw_resource->has_qseed3);
-  DLOGI("BWC = %d, UBWC = %d, Decimation = %d, Tile Format = %d Concurrent Writeback = %d",
-        hw_resource->has_bwc, hw_resource->has_ubwc, hw_resource->has_decimation,
-        hw_resource->has_macrotile, hw_resource->has_concurrent_writeback);
-  DLOGI("MaxLowBw = %" PRIu64 " , MaxHighBw = % " PRIu64 "", hw_resource->max_bandwidth_low,
-        hw_resource->max_bandwidth_high);
-  DLOGI("MaxPipeBw = %" PRIu64 " KBps, MaxSDEClock = % " PRIu64 " Hz, ClockFudgeFactor = %f",
-        hw_resource->max_pipe_bw, hw_resource->max_sde_clk, hw_resource->clk_fudge_factor);
-  DLOGI("Prefill factors: Tiled_NV12 = %d, Tiled = %d, Linear = %d, Scale = %d, Fudge_factor = %d",
-        hw_resource->macrotile_nv12_factor, hw_resource->macrotile_factor,
-        hw_resource->linear_factor, hw_resource->scale_factor, hw_resource->extra_fudge_factor);
+  DLOGI("Max plane width = %d", hw_resource->max_pipe_width);
+  DLOGI("Max cursor width = %d", hw_resource->max_cursor_size);
+  DLOGI("Max plane upscale = %d", hw_resource->max_scale_up);
+  DLOGI("Max plane downscale = %d", hw_resource->max_scale_down);
+  DLOGI("Has Decimation = %d", hw_resource->has_decimation);
+  DLOGI("Max Blending Stages = %d", hw_resource->num_blending_stages);
+  DLOGI("Has Source Split = %d", hw_resource->is_src_split);
+  DLOGI("Has QSEED3 = %d", hw_resource->has_qseed3);
+  DLOGI("Has UBWC = %d", hw_resource->has_ubwc);
+  DLOGI("Has Concurrent Writeback = %d", hw_resource->has_concurrent_writeback);
+  DLOGI("Max Low Bw = %" PRIu64 "", hw_resource->max_bandwidth_low);
+  DLOGI("Max High Bw = % " PRIu64 "", hw_resource->max_bandwidth_high);
+  DLOGI("Max Pipe Bw = %" PRIu64 " KBps", hw_resource->max_pipe_bw);
+  DLOGI("MaxSDEClock = % " PRIu64 " Hz", hw_resource->max_sde_clk);
+  DLOGI("Clock Fudge Factor = %f", hw_resource->clk_fudge_factor);
+  DLOGI("Prefill factors:");
+  DLOGI("\tTiled_NV12 = %d", hw_resource->macrotile_nv12_factor);
+  DLOGI("\tTiled = %d", hw_resource->macrotile_factor);
+  DLOGI("\tLinear = %d", hw_resource->linear_factor);
+  DLOGI("\tScale = %d", hw_resource->scale_factor);
+  DLOGI("\tFudge_factor = %d", hw_resource->extra_fudge_factor);
 
   if (hw_resource->separate_rotator || hw_resource->num_dma_pipe) {
     GetHWRotatorInfo(hw_resource);
-  }
-
-  // If the driver doesn't spell out the wb index, assume it to be the number of rotators,
-  // based on legacy implementation.
-  if (hw_resource->writeback_index == kHWBlockMax) {
-    hw_resource->writeback_index = hw_resource->hw_rot_info.num_rotator;
   }
 
   if (hw_resource->has_dyn_bw_support) {
@@ -182,13 +208,128 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
 
     DLOGI("Has Support for multiple bw limits shown below");
     for (int index = 0; index < kBwModeMax; index++) {
-      DLOGI("Mode-index=%d  total_bw_limit=%d and pipe_bw_limit=%d",
-            index, hw_resource->dyn_bw_info.total_bw_limit[index],
+      DLOGI("Mode-index=%d  total_bw_limit=%d and pipe_bw_limit=%d", index,
+            hw_resource->dyn_bw_info.total_bw_limit[index],
             hw_resource->dyn_bw_info.pipe_bw_limit[index]);
     }
   }
 
+  if (!hw_resource_) {
+    hw_resource_ = new HWResourceInfo();
+    *hw_resource_ = *hw_resource;
+  }
+
   return kErrorNone;
+}
+
+void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
+  DRMCrtcInfo info;
+  drm_mgr_intf_->GetCrtcInfo(0 /* system_info */, &info);
+  hw_resource->is_src_split = info.has_src_split;
+  hw_resource->has_qseed3 = (info.qseed_version == sde_drm::QSEEDVersion::V3);
+  hw_resource->num_blending_stages = info.max_blend_stages;
+}
+
+void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
+  DRMPlanesInfo info;
+  drm_mgr_intf_->GetPlanesInfo(&info);
+  for (auto &pipe_obj : info.planes) {
+    HWPipeCaps pipe_caps;
+    string name = {};
+    switch (pipe_obj.second) {
+      case DRMPlaneType::RGB:
+        pipe_caps.type = kPipeTypeRGB;
+        hw_resource->num_rgb_pipe++;
+        name = "RGB";
+        break;
+      case DRMPlaneType::VIG:
+        pipe_caps.type = kPipeTypeVIG;
+        hw_resource->num_vig_pipe++;
+        name = "VIG";
+        break;
+      case DRMPlaneType::DMA:
+        pipe_caps.type = kPipeTypeDMA;
+        hw_resource->num_dma_pipe++;
+        name = "DMA";
+        break;
+      case DRMPlaneType::CURSOR:
+        pipe_caps.type = kPipeTypeCursor;
+        hw_resource->num_cursor_pipe++;
+        name = "CURSOR";
+        break;
+      default:
+        break;
+    }
+    pipe_caps.id = pipe_obj.first;
+    pipe_caps.max_rects = 1;
+    DLOGI("%s Pipe : Id %d", name.c_str(), pipe_obj.first);
+    hw_resource->hw_pipes.push_back(std::move(pipe_caps));
+  }
+
+  for (auto &pipe_type : info.types) {
+    vector<LayerBufferFormat> supported_sdm_formats = {};
+    for (auto &fmts : pipe_type.second.formats_supported) {
+      GetSDMFormat(fmts.first, fmts.second, &supported_sdm_formats);
+    }
+
+    HWSubBlockType sub_blk_type = kHWSubBlockMax;
+    switch (pipe_type.first) {
+      case DRMPlaneType::RGB:
+        sub_blk_type = kHWRGBPipe;
+        // These properties are per plane but modeled in SDM as system-wide.
+        hw_resource->max_pipe_width = pipe_type.second.max_linewidth;
+        hw_resource->max_scale_down = pipe_type.second.max_downscale;
+        hw_resource->max_scale_up = pipe_type.second.max_upscale;
+        hw_resource->has_decimation =
+            pipe_type.second.max_horizontal_deci > 1 && pipe_type.second.max_vertical_deci > 1;
+        break;
+      case DRMPlaneType::VIG:
+        sub_blk_type = kHWVIGPipe;
+        // These properties are per plane but modeled in SDM as system-wide.
+        hw_resource->max_pipe_width = pipe_type.second.max_linewidth;
+        hw_resource->max_scale_down = pipe_type.second.max_downscale;
+        hw_resource->max_scale_up = pipe_type.second.max_upscale;
+        hw_resource->has_decimation =
+            pipe_type.second.max_horizontal_deci > 1 && pipe_type.second.max_vertical_deci > 1;
+        break;
+      case DRMPlaneType::DMA:
+        sub_blk_type = kHWDMAPipe;
+        break;
+      case DRMPlaneType::CURSOR:
+        sub_blk_type = kHWCursorPipe;
+        hw_resource->max_cursor_size = pipe_type.second.max_linewidth;
+        break;
+      default:
+        break;
+    }
+
+    if (sub_blk_type != kHWSubBlockMax) {
+      hw_resource->supported_formats_map.erase(sub_blk_type);
+      hw_resource->supported_formats_map.insert(make_pair(sub_blk_type, supported_sdm_formats));
+    }
+  }
+}
+
+void HWInfoDRM::GetWBInfo(HWResourceInfo *hw_resource) {
+  HWSubBlockType sub_blk_type = kHWWBIntfOutput;
+  vector<LayerBufferFormat> supported_sdm_formats = {};
+  sde_drm::DRMDisplayToken token;
+
+  // Fake register
+  if (drm_mgr_intf_->RegisterDisplay(sde_drm::DRMDisplayType::VIRTUAL, &token)) {
+    return;
+  }
+
+  sde_drm::DRMConnectorInfo connector_info;
+  drm_mgr_intf_->GetConnectorInfo(token.conn_id, &connector_info);
+  for (auto &fmts : connector_info.formats_supported) {
+    GetSDMFormat(fmts.first, fmts.second, &supported_sdm_formats);
+  }
+
+  hw_resource->supported_formats_map.erase(sub_blk_type);
+  hw_resource->supported_formats_map.insert(make_pair(sub_blk_type, supported_sdm_formats));
+
+  drm_mgr_intf_->UnregisterDisplay(token);
 }
 
 DisplayError HWInfoDRM::GetHWRotatorInfo(HWResourceInfo *hw_resource) {
@@ -203,14 +344,13 @@ DisplayError HWInfoDRM::GetHWRotatorInfo(HWResourceInfo *hw_resource) {
     }
 
     string line;
-    if (Sys::getline_(fs, line) &&
-        (!strncmp(line.c_str(), "sde_rotator", strlen("sde_rotator")))) {
-       hw_resource->hw_rot_info.device_path = string("/dev/video" + to_string(i));
-       hw_resource->hw_rot_info.num_rotator++;
-       hw_resource->hw_rot_info.type = HWRotatorInfo::ROT_TYPE_V4L2;
-       hw_resource->hw_rot_info.has_downscale = true;
-       // We support only 1 rotator
-       found = true;
+    if (Sys::getline_(fs, line) && (!strncmp(line.c_str(), "sde_rotator", strlen("sde_rotator")))) {
+      hw_resource->hw_rot_info.device_path = string("/dev/video" + to_string(i));
+      hw_resource->hw_rot_info.num_rotator++;
+      hw_resource->hw_rot_info.type = HWRotatorInfo::ROT_TYPE_V4L2;
+      hw_resource->hw_rot_info.has_downscale = true;
+      // We support only 1 rotator
+      found = true;
     }
   }
 
@@ -220,31 +360,95 @@ DisplayError HWInfoDRM::GetHWRotatorInfo(HWResourceInfo *hw_resource) {
   return kErrorNone;
 }
 
-LayerBufferFormat HWInfoDRM::GetSDMFormat(uint32_t drm_format, uint32_t drm_format_modifier) {
+void HWInfoDRM::GetSDMFormat(uint32_t drm_format, uint64_t drm_format_modifier,
+                             vector<LayerBufferFormat> *sdm_formats) {
+  vector<LayerBufferFormat> &fmts(*sdm_formats);
   switch (drm_format) {
-    case DRM_FORMAT_RGBA8888: return kFormatRGBA8888;
-    default: return kFormatInvalid;
+    case DRM_FORMAT_ARGB8888:
+      fmts.push_back(kFormatARGB8888);
+      break;
+    case DRM_FORMAT_RGBA8888:
+      fmts.push_back(drm_format_modifier ? kFormatRGBA8888Ubwc : kFormatRGBA8888);
+      break;
+    case DRM_FORMAT_BGRA8888:
+      fmts.push_back(kFormatBGRA8888);
+      break;
+    case DRM_FORMAT_XRGB8888:
+      fmts.push_back(kFormatXRGB8888);
+      break;
+    case DRM_FORMAT_RGBX8888:
+      fmts.push_back(drm_format_modifier ? kFormatRGBX8888Ubwc : kFormatRGBX8888);
+      break;
+    case DRM_FORMAT_BGRX8888:
+      fmts.push_back(kFormatBGRX8888);
+      break;
+    case DRM_FORMAT_RGBA5551:
+      fmts.push_back(kFormatRGBA5551);
+      break;
+    case DRM_FORMAT_RGBA4444:
+      fmts.push_back(kFormatRGBA4444);
+      break;
+    case DRM_FORMAT_RGB888:
+      fmts.push_back(kFormatRGB888);
+      break;
+    case DRM_FORMAT_BGR888:
+      fmts.push_back(kFormatBGR888);
+      break;
+    case DRM_FORMAT_RGB565:
+      fmts.push_back(drm_format_modifier ? kFormatBGR565Ubwc : kFormatBGR565);
+      break;
+    case DRM_FORMAT_BGR565:
+      fmts.push_back(kFormatBGR565);
+      break;
+    case DRM_FORMAT_RGBA1010102:
+      fmts.push_back(drm_format_modifier ? kFormatRGBA1010102Ubwc : kFormatRGBA1010102);
+      break;
+    case DRM_FORMAT_ARGB2101010:
+      fmts.push_back(kFormatARGB2101010);
+      break;
+    case DRM_FORMAT_RGBX1010102:
+      fmts.push_back(drm_format_modifier ? kFormatRGBX1010102Ubwc : kFormatRGBX1010102);
+      break;
+    case DRM_FORMAT_XRGB2101010:
+      fmts.push_back(kFormatXRGB2101010);
+      break;
+    case DRM_FORMAT_BGRA1010102:
+      fmts.push_back(kFormatBGRA1010102);
+      break;
+    case DRM_FORMAT_ABGR2101010:
+      fmts.push_back(kFormatABGR2101010);
+      break;
+    case DRM_FORMAT_BGRX1010102:
+      fmts.push_back(kFormatBGRX1010102);
+      break;
+    case DRM_FORMAT_XBGR2101010:
+      fmts.push_back(kFormatXBGR2101010);
+      break;
+    /* case DRM_FORMAT_P010:
+         fmts.push_back(drm_format_modifier == (DRM_FORMAT_MOD_QCOM_COMPRESSED |
+       DRM_FORMAT_MOD_QCOM_TIGHT) ?
+         kFormatYCbCr420TP10Ubwc : kFormatYCbCr420P010; */
+    case DRM_FORMAT_YVU420:
+      fmts.push_back(kFormatYCrCb420PlanarStride16);
+      break;
+    case DRM_FORMAT_NV12:
+      if (drm_format_modifier) {
+        fmts.push_back(kFormatYCbCr420SPVenusUbwc);
+      } else {
+        fmts.push_back(kFormatYCbCr420SemiPlanarVenus);
+        fmts.push_back(kFormatYCbCr420SemiPlanar);
+      }
+      break;
+    case DRM_FORMAT_NV21:
+      fmts.push_back(kFormatYCrCb420SemiPlanarVenus);
+      fmts.push_back(kFormatYCrCb420SemiPlanar);
+      break;
+    case DRM_FORMAT_NV16:
+      fmts.push_back(kFormatYCbCr422H2V1SemiPlanar);
+      break;
+    default:
+      break;
   }
-}
-
-void HWInfoDRM::InitSupportedFormatMap(HWResourceInfo *hw_resource) {
-  hw_resource->supported_formats_map.clear();
-
-  for (int sub_blk_type = INT(kHWVIGPipe); sub_blk_type < INT(kHWSubBlockMax); sub_blk_type++) {
-    PopulateSupportedFormatMap((HWSubBlockType)sub_blk_type, hw_resource);
-  }
-}
-
-void HWInfoDRM::PopulateSupportedFormatMap(HWSubBlockType sub_blk_type,
-                                           HWResourceInfo *hw_resource) {
-  vector <LayerBufferFormat> supported_sdm_formats;
-  LayerBufferFormat sdm_format = kFormatRGBA8888;  // GetSDMFormat(INT(mdp_format));
-  if (sdm_format != kFormatInvalid) {
-    supported_sdm_formats.push_back(sdm_format);
-  }
-
-  hw_resource->supported_formats_map.erase(sub_blk_type);
-  hw_resource->supported_formats_map.insert(make_pair(sub_blk_type, supported_sdm_formats));
 }
 
 DisplayError HWInfoDRM::GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_disp_info) {

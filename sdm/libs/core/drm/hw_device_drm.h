@@ -30,15 +30,17 @@
 #ifndef __HW_DEVICE_DRM_H__
 #define __HW_DEVICE_DRM_H__
 
+#include <drm_interface.h>
 #include <errno.h>
 #include <pthread.h>
 #include <xf86drmMode.h>
+#include <string>
 #include <vector>
 
 #include "hw_interface.h"
 
-#define IOCTL_LOGE(ioctl, type) DLOGE("ioctl %s, device = %d errno = %d, desc = %s", #ioctl, \
-                                      type, errno, strerror(errno))
+#define IOCTL_LOGE(ioctl, type) \
+  DLOGE("ioctl %s, device = %d errno = %d, desc = %s", #ioctl, type, errno, strerror(errno))
 
 namespace sdm {
 class HWInfoInterface;
@@ -96,29 +98,38 @@ class HWDeviceDRM : public HWInterface {
   static const int kNumPhysicalDisplays = 2;
 
   DisplayError SetFormat(const LayerBufferFormat &source, uint32_t *target);
-  DisplayError SetStride(HWDeviceType device_type, LayerBufferFormat format,
-                         uint32_t width, uint32_t *target);
+  DisplayError SetStride(HWDeviceType device_type, LayerBufferFormat format, uint32_t width,
+                         uint32_t *target);
+  DisplayError PopulateDisplayAttributes();
   void PopulateHWPanelInfo();
-  void GetHWPanelInfoByNode(int device_node, HWPanelInfo *panel_info);
-  void GetHWPanelNameByNode(int device_node, HWPanelInfo *panel_info);
-  void GetHWDisplayPortAndMode(int device_node, HWPanelInfo *panel_info);
-  void GetSplitInfo(int device_node, HWPanelInfo *panel_info);
-  void GetHWPanelMaxBrightnessFromNode(HWPanelInfo *panel_info);
-  int ParseLine(const char *input, char *tokens[], const uint32_t max_token, uint32_t *count);
-  int ParseLine(const char *input, const char *delim, char *tokens[],
-                const uint32_t max_token, uint32_t *count);
+  void GetHWDisplayPortAndMode();
+  void GetHWPanelMaxBrightness();
   void ResetDisplayParams();
   bool EnableHotPlugDetection(int enable);
+  void UpdateMixerAttributes();
+  void InitializeConfigs();
+  void SetBlending(const LayerBlending &source, sde_drm::DRMBlendType *target);
+  void SetRect(const LayerRect &source, sde_drm::DRMRect *target);
+  DisplayError DefaultCommit(HWLayers *hw_layers);
+  DisplayError AtomicCommit(HWLayers *hw_layers);
+  void SetupAtomic(HWLayers *hw_layers, bool validate);
 
-  HWResourceInfo hw_resource_;
-  HWPanelInfo hw_panel_info_;
-  HWInfoInterface *hw_info_intf_;
-  BufferSyncHandler *buffer_sync_handler_;
-  HWDeviceType device_type_;
-  const char *device_name_;
+  HWResourceInfo hw_resource_ = {};
+  HWPanelInfo hw_panel_info_ = {};
+  HWInfoInterface *hw_info_intf_ = {};
+  BufferSyncHandler *buffer_sync_handler_ = {};
+  HWDeviceType device_type_ = {};
+  const char *device_name_ = {};
   bool synchronous_commit_ = false;
   HWDisplayAttributes display_attributes_ = {};
   HWMixerAttributes mixer_attributes_ = {};
+  sde_drm::DRMManagerInterface *drm_mgr_intf_ = {};
+  sde_drm::DRMAtomicReqInterface *drm_atomic_intf_ = {};
+  sde_drm::DRMDisplayToken token_ = {};
+  drmModeModeInfo current_mode_ = {};
+  bool default_mode_ = false;
+  sde_drm::DRMConnectorInfo connector_info_ = {};
+  std::string interface_str_ = "DSI";
 };
 
 }  // namespace sdm

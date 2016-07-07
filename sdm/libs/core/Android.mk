@@ -7,6 +7,9 @@ LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes) $(common_header_export_path)
 LOCAL_CFLAGS                  := -Wno-unused-parameter -DLOG_TAG=\"SDM\" \
                                  $(common_flags)
+ifeq ($(use_hwc2),false)
+  LOCAL_CFLAGS += -DUSE_SPECULATIVE_FENCES
+endif
 LOCAL_HW_INTF_PATH_1          := fb
 LOCAL_SHARED_LIBRARIES        := libdl libsdmutils
 

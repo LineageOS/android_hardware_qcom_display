@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -177,9 +177,7 @@ void Strategy::GenerateROI() {
   float layer_mixer_width = mixer_attributes_.width;
   float layer_mixer_height = mixer_attributes_.height;
 
-  if (!hw_resource_info_.is_src_split &&
-     ((layer_mixer_width > hw_resource_info_.max_mixer_width) ||
-     ((hw_panel_info_.is_primary_panel) && hw_panel_info_.split_info.right_split))) {
+  if (!hw_resource_info_.is_src_split && display_attributes_.is_device_split) {
     split_display = true;
   }
 

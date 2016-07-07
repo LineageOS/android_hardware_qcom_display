@@ -30,10 +30,12 @@
 #ifndef __HW_INFO_DRM_H__
 #define __HW_INFO_DRM_H__
 
-#include <core/sdm_types.h>
 #include <core/core_interface.h>
+#include <core/sdm_types.h>
+#include <drm_interface.h>
 #include <private/hw_info_types.h>
 #include <bitset>
+#include <vector>
 
 #include "hw_info_interface.h"
 
@@ -41,26 +43,26 @@ namespace sdm {
 
 class HWInfoDRM: public HWInfoInterface {
  public:
+  HWInfoDRM();
   virtual DisplayError GetHWResourceInfo(HWResourceInfo *hw_resource);
   virtual DisplayError GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_disp_info);
 
  private:
-  virtual DisplayError GetHWRotatorInfo(HWResourceInfo *hw_resource);
+  DisplayError GetHWRotatorInfo(HWResourceInfo *hw_resource);
+  void GetSystemInfo(HWResourceInfo *hw_resource);
+  void GetHWPlanesInfo(HWResourceInfo *hw_resource);
+  void GetWBInfo(HWResourceInfo *hw_resource);
+  DisplayError GetDynamicBWLimits(HWResourceInfo *hw_resource);
+  void GetSDMFormat(uint32_t drm_format, uint64_t drm_format_modifier,
+                    std::vector<LayerBufferFormat> *sdm_formats);
+
+  sde_drm::DRMManagerInterface *drm_mgr_intf_ = {};
+  bool default_mode_ = false;
 
   // TODO(user): Read Mdss version from the driver
   static const int kHWMdssVersion5 = 500;  // MDSS_V5
   static const int kMaxStringLength = 1024;
-  // MDP Capabilities are replicated across all frame buffer devices.
-  // However, we rely on reading the capabalities from fbO since this
-  // is guaranteed to be available.
-  static const int kHWCapabilitiesNode = 0;
-
-  static int ParseString(const char *input, char *tokens[], const uint32_t max_token,
-                         const char *delim, uint32_t *count);
-  DisplayError GetDynamicBWLimits(HWResourceInfo *hw_resource);
-  LayerBufferFormat GetSDMFormat(uint32_t drm_format, uint32_t drm_format_modifier);
-  void InitSupportedFormatMap(HWResourceInfo *hw_resource);
-  void PopulateSupportedFormatMap(HWSubBlockType sub_blk_type, HWResourceInfo *hw_resource);
+  static HWResourceInfo *hw_resource_;
 };
 
 }  // namespace sdm

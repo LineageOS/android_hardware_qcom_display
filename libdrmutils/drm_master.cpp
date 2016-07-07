@@ -27,13 +27,13 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <drm/drm_fourcc.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
-#include <drm/drm_fourcc.h>
 
 #include <algorithm>
 #include <iterator>
@@ -74,7 +74,7 @@ int DRMMaster::GetInstance(DRMMaster **master) {
 int DRMMaster::Init() {
   dev_fd_ = drmOpen("msm_drm", nullptr);
   if (dev_fd_ < 0) {
-    DRM_LOGE("%s::%s: drmOpen failed with error %d", __CLASS__, __FUNCTION__, dev_fd_);
+    DRM_LOGE("drmOpen failed with error %d", dev_fd_);
     return -ENODEV;
   }
 
@@ -89,7 +89,7 @@ DRMMaster::~DRMMaster() {
 int DRMMaster::CreateFbId(const DRMBuffer &drm_buffer, uint32_t *gem_handle, uint32_t *fb_id) {
   int ret = drmPrimeFDToHandle(dev_fd_, drm_buffer.fd, gem_handle);
   if (ret) {
-    DRM_LOGE("%s::%s: drmPrimeFDToHandle failed with error %d", __CLASS__, __FUNCTION__, ret);
+    DRM_LOGE("drmPrimeFDToHandle failed with error %d", ret);
     return ret;
   }
 
@@ -106,7 +106,7 @@ int DRMMaster::CreateFbId(const DRMBuffer &drm_buffer, uint32_t *gem_handle, uin
   ret = drmModeAddFB3(dev_fd_, drm_buffer.width, drm_buffer.height, drm_buffer.drm_format,
                       gem_handles, pitches, offsets, modifier, fb_id, DRM_MODE_FB_MODIFIERS);
   if (ret) {
-    DRM_LOGE("%s::%s: drmModeAddFB3 failed with error %d", __CLASS__, __FUNCTION__, ret);
+    DRM_LOGE("drmModeAddFB3 failed with error %d", ret);
     struct drm_gem_close gem_close = {};
     gem_close.handle = *gem_handle;
     int ret1 = drmIoctl(dev_fd_, DRM_IOCTL_GEM_CLOSE, &gem_close);
@@ -121,7 +121,7 @@ int DRMMaster::CreateFbId(const DRMBuffer &drm_buffer, uint32_t *gem_handle, uin
 int DRMMaster::RemoveFbId(uint32_t gem_handle, uint32_t fb_id) {
   int ret = drmModeRmFB(dev_fd_, fb_id);
   if (ret) {
-    DRM_LOGE("%s::%s: drmModeRmFB failed with error %d", __CLASS__, __FUNCTION__, ret);
+    DRM_LOGE("drmModeRmFB failed with error %d", ret);
   }
 
   struct drm_gem_close gem_close = {};

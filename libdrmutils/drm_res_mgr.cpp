@@ -49,7 +49,7 @@ static bool GetConnector(int dev_fd, drmModeRes *res, drmModeConnector **connect
     if (conn && conn->connector_type == DRM_MODE_CONNECTOR_DSI && conn->count_modes &&
         conn->connection == DRM_MODE_CONNECTED) {
       *connector = conn;
-      DRM_LOGI("drm_utils::%s found connector %d", __FUNCTION__, conn->connector_id);
+      DRM_LOGI("Found connector %d", conn->connector_id);
       return true;
     }
   }
@@ -62,7 +62,7 @@ static bool GetEncoder(int dev_fd, drmModeConnector *conn, drmModeEncoder **enco
     drmModeEncoder *enc = drmModeGetEncoder(dev_fd, conn->encoders[i]);
     if (enc && enc->encoder_type == DRM_MODE_ENCODER_DSI) {
       *encoder = enc;
-      DRM_LOGI("drm_utils::%s found encoder %d", __FUNCTION__, enc->encoder_id);
+      DRM_LOGI("Found encoder %d", enc->encoder_id);
       return true;
     }
   }
@@ -75,7 +75,7 @@ static bool GetCrtc(int dev_fd, drmModeRes *res, drmModeEncoder *enc, drmModeCrt
       drmModeCrtc *c = drmModeGetCrtc(dev_fd, res->crtcs[i]);
       if (c) {
         *crtc = c;
-        DRM_LOGI("drm_utils::%s found crtc %d", __FUNCTION__, c->crtc_id);
+        DRM_LOGI("Found crtc %d", c->crtc_id);
         return true;
       }
     }
@@ -83,6 +83,8 @@ static bool GetCrtc(int dev_fd, drmModeRes *res, drmModeEncoder *enc, drmModeCrt
 
   return false;
 }
+
+#define __CLASS__ "DRMResMgr"
 
 int DRMResMgr::GetInstance(DRMResMgr **res_mgr) {
   lock_guard<mutex> obj(s_lock);
@@ -112,26 +114,26 @@ int DRMResMgr::Init() {
   master->GetHandle(&dev_fd);
   drmModeRes *res = drmModeGetResources(dev_fd);
   if (res == nullptr) {
-    DRM_LOGE("%s::%s: drmModeGetResources failed", __CLASS__, __FUNCTION__);
+    DRM_LOGE("drmModeGetResources failed");
     return -ENODEV;
   }
 
   drmModeConnector *conn = nullptr;
   if (!GetConnector(dev_fd, res, &conn)) {
-    DRM_LOGE("%s::%s: Failed to find a connector", __CLASS__, __FUNCTION__);
+    DRM_LOGE("Failed to find a connector");
     return -ENODEV;
   }
 
   drmModeEncoder *enc = nullptr;
   if (!GetEncoder(dev_fd, conn, &enc)) {
-    DRM_LOGE("%s::%s: Failed to find an encoder", __CLASS__, __FUNCTION__);
+    DRM_LOGE("Failed to find an encoder");
     drmModeFreeConnector(conn);
     return -ENODEV;
   }
 
   drmModeCrtc *crtc = nullptr;
   if (!GetCrtc(dev_fd, res, enc, &crtc)) {
-    DRM_LOGE("%s::%s: Failed to find a crtc", __CLASS__, __FUNCTION__);
+    DRM_LOGE("Failed to find a crtc");
     drmModeFreeEncoder(enc);
     drmModeFreeConnector(conn);
     drmModeFreeResources(res);

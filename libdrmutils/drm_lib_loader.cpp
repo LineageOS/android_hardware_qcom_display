@@ -27,43 +27,51 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef __DRM_LOGGER_H__
-#define __DRM_LOGGER_H__
+#include <dlfcn.h>
 
-#include <utility>
+#include "drm_lib_loader.h"
+
+#define __CLASS__ "DRMLibLoader"
+
+using std::mutex;
+using std::lock_guard;
 
 namespace drm_utils {
 
-class DRMLogger {
- public:
-  virtual ~DRMLogger() {}
-  virtual void Error(const char *format, ...) = 0;
-  virtual void Warning(const char *format, ...) = 0;
-  virtual void Info(const char *format, ...) = 0;
-  virtual void Debug(const char *format, ...) = 0;
+DRMLibLoader *DRMLibLoader::s_instance = nullptr;
+mutex DRMLibLoader::s_lock;
 
-  static void Set(DRMLogger *logger) { s_instance = logger; }
-  static DRMLogger *Get() { return s_instance; }
+DRMLibLoader *DRMLibLoader::GetInstance() {
+  lock_guard<mutex> obj(s_lock);
 
- private:
-  static DRMLogger *s_instance;
-};
-
-#define DRM_LOG(method, format, ...)                            \
-  if (drm_utils::DRMLogger::Get()) {                            \
-    drm_utils::DRMLogger::Get()->method(format, ##__VA_ARGS__); \
+  if (!s_instance) {
+    s_instance = new DRMLibLoader();
   }
 
-#define DRM_LOG_CONTEXT(method, format, ...) \
-  DRM_LOG(method, __CLASS__ "::%s: " format, __FUNCTION__, ##__VA_ARGS__);
+  return s_instance;
+}
 
-#define DRM_LOGE(format, ...) DRM_LOG_CONTEXT(Error, format, ##__VA_ARGS__)
-#define DRM_LOGW(format, ...) DRM_LOG_CONTEXT(Warning, format, ##__VA_ARGS__)
-#define DRM_LOGI(format, ...) DRM_LOG_CONTEXT(Info, format, ##__VA_ARGS__)
-#define DRM_LOGD_IF(pred, format, ...) \
-  if (pred)                            \
-  DRM_LOG_CONTEXT(Debug, format, ##__VA_ARGS__)
+DRMLibLoader::DRMLibLoader() {
+  if (Open("libsdedrm.so")) {
+    if (Sym("GetDRMManager", reinterpret_cast<void **>(&func_get_drm_manager_)) &&
+        Sym("DestroyDRMManager", reinterpret_cast<void **>(&func_destroy_drm_manager_))) {
+      is_loaded_ = true;
+    }
+  }
+}
+
+bool DRMLibLoader::Open(const char *lib_name) {
+  lib_ = ::dlopen(lib_name, RTLD_NOW);
+
+  return (lib_ != nullptr);
+}
+
+bool DRMLibLoader::Sym(const char *func_name, void **func_ptr) {
+  if (lib_) {
+    *func_ptr = ::dlsym(lib_, func_name);
+  }
+
+  return (*func_ptr != nullptr);
+}
 
 }  // namespace drm_utils
-
-#endif  // __DRM_LOGGER_H__
