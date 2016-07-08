@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "3fa7e38b_abed7b26",
+        "filename": "libhwcomposer/hwc_mdpcomp.cpp",
+        "patchSetId": 2
+      },
+      "lineNbr": 1070,
+      "author": {
+        "id": 68
+      },
+      "writtenOn": "2016-07-08T08:09:48Z",
+      "side": 1,
+      "message": "You\u0027ll want to initialize it with the number of layers to prevent resizes.",
+      "revId": "e82f1011bfae1410589d56055e1724bffa7a539c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
