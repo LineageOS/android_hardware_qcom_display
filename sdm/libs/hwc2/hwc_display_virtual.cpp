@@ -174,6 +174,7 @@ HWC2::Error HWCDisplayVirtual::SetOutputBuffer(buffer_handle_t buf, int32_t rele
   output_buffer_->acquire_fence_fd = dup(release_fence);
 
   if (output_handle) {
+    output_handle_ = output_handle;
     output_buffer_->buffer_id = reinterpret_cast<uint64_t>(output_handle);
     int output_handle_format = output_handle->format;
 
