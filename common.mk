@@ -1,9 +1,14 @@
 #Common headers
 display_top := $(call my-dir)
 
+#Common C flags
+common_flags := -DDEBUG_CALC_FPS -Wno-missing-field-initializers
+common_flags += -Wconversion -Wall -Werror
+
 use_hwc2 := false
 ifeq ($(TARGET_USES_HWC2), true)
     use_hwc2 := true
+    common_flags += -DVIDEO_MODE_DEFER_RETIRE_FENCE
 endif
 
 common_includes := $(display_top)/libqdutils
@@ -16,9 +21,6 @@ common_header_export_path := qcom/display
 #Common libraries external to display HAL
 common_libs := liblog libutils libcutils libhardware
 
-#Common C flags
-common_flags := -DDEBUG_CALC_FPS -Wno-missing-field-initializers
-common_flags += -Wconversion -Wall -Werror
 ifneq ($(TARGET_USES_GRALLOC1), true)
     common_flags += -isystem $(display_top)/libgralloc
 else
