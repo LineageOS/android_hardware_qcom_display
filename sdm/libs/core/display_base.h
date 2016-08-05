@@ -113,12 +113,14 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   virtual bool IsPrimaryDisplay();
 
  protected:
+  DisplayError BuildLayerStackStats(LayerStack *layer_stack);
+  virtual DisplayError ValidateGPUTargetParams();
+
   // DumpImpl method
   void AppendDump(char *buffer, uint32_t length);
 
   bool IsRotationRequired(HWLayers *hw_layers);
   const char *GetName(const LayerComposition &composition);
-  DisplayError ValidateGPUTarget(LayerStack *layer_stack);
   DisplayError ReconfigureDisplay();
   bool NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *new_mixer_width,
                                  uint32_t *new_mixer_height);

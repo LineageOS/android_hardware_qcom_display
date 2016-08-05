@@ -62,6 +62,11 @@ class DisplayVirtual : public DisplayBase {
   virtual DisplayError SetDetailEnhancerData(const DisplayDetailEnhancerData &de_data) {
     return kErrorNotSupported;
   }
+  virtual DisplayError ValidateGPUTargetParams() {
+    // TODO(user): Validate GPU target for virtual display when query display attributes
+    // on virtual display is functional.
+    return kErrorNone;
+  }
 };
 
 }  // namespace sdm
