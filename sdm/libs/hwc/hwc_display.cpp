@@ -572,6 +572,19 @@ int HWCDisplay::PrePrepareLayerStack(hwc_display_contents_1_t *content_list) {
   return 0;
 }
 
+void HWCDisplay::SetLayerS3DMode(const LayerBufferS3DFormat &source, uint32_t *target) {
+#ifdef QTI_BSP
+    switch (source) {
+    case kS3dFormatNone: *target = HWC_S3DMODE_NONE; break;
+    case kS3dFormatLeftRight: *target = HWC_S3DMODE_LR; break;
+    case kS3dFormatRightLeft: *target = HWC_S3DMODE_RL; break;
+    case kS3dFormatTopBottom: *target = HWC_S3DMODE_TB; break;
+    case kS3dFormatFramePacking: *target = HWC_S3DMODE_FP; break;
+    default: *target = HWC_S3DMODE_MAX; break;
+    }
+#endif
+}
+
 int HWCDisplay::PrepareLayerStack(hwc_display_contents_1_t *content_list) {
   if (shutdown_pending_) {
     return 0;
@@ -607,12 +620,26 @@ int HWCDisplay::PrepareLayerStack(hwc_display_contents_1_t *content_list) {
     hwc_layer_1_t &hwc_layer = content_list->hwLayers[i];
     Layer *layer = layer_stack_.layers.at(i);
     LayerComposition composition = layer->composition;
+    private_handle_t* pvt_handle  = static_cast<private_handle_t*>
+      (const_cast<native_handle_t*>(hwc_layer.handle));
+    MetaData_t *meta_data = pvt_handle ?
+      reinterpret_cast<MetaData_t *>(pvt_handle->base_metadata) : NULL;
 
     if ((composition == kCompositionSDE) || (composition == kCompositionHybrid) ||
         (composition == kCompositionBlit)) {
       hwc_layer.hints |= HWC_HINT_CLEAR_FB;
     }
     SetComposition(composition, &hwc_layer.compositionType);
+
+    if (meta_data != NULL) {
+      if (composition == kCompositionGPUS3D) {
+        // Align HWC and client's dispaly ID in case of HDMI as primary
+        meta_data->s3dComp.displayId =
+          display_intf_->IsPrimaryDisplay() ? HWC_DISPLAY_PRIMARY: id_;
+        SetLayerS3DMode(layer->input_buffer->s3d_format,
+            &meta_data->s3dComp.s3dMode);
+      }
+    }
   }
 
   return 0;
@@ -776,6 +803,7 @@ void HWCDisplay::SetComposition(const LayerComposition &source, int32_t *target)
   switch (source) {
   case kCompositionGPUTarget:   *target = HWC_FRAMEBUFFER_TARGET; break;
   case kCompositionGPU:         *target = HWC_FRAMEBUFFER;        break;
+  case kCompositionGPUS3D:      *target = HWC_FRAMEBUFFER;        break;
   case kCompositionHWCursor:    *target = HWC_CURSOR_OVERLAY;     break;
   default:                      *target = HWC_OVERLAY;            break;
   }

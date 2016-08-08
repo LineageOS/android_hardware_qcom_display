@@ -110,6 +110,7 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   virtual DisplayError GetFrameBufferConfig(DisplayConfigVariableInfo *variable_info);
   virtual DisplayError SetDetailEnhancerData(const DisplayDetailEnhancerData &de_data);
   virtual DisplayError GetDisplayPort(DisplayPort *port);
+  virtual bool IsPrimaryDisplay();
 
  protected:
   // DumpImpl method

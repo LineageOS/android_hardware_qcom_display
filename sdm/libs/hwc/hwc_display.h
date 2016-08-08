@@ -160,6 +160,7 @@ class HWCDisplay : public DisplayEventHandler {
   inline void SetComposition(const LayerComposition &source, int32_t *target);
   inline void SetBlending(const int32_t &source, LayerBlending *target);
   int SetFormat(const int32_t &source, const int flags, LayerBufferFormat *target);
+  void SetLayerS3DMode(const LayerBufferS3DFormat &source, uint32_t *target);
   LayerBufferFormat GetSDMFormat(const int32_t &source, const int flags);
   const char *GetHALPixelFormatString(int format);
   const char *GetDisplayString();
