@@ -263,7 +263,7 @@ struct private_handle_t : public native_handle {
                 h->numInts != sNumInts() || h->numFds != sNumFds ||
                 hnd->magic != sMagic)
             {
-                ALOGD("Invalid gralloc handle (at %p): "
+                ALOGE("Invalid gralloc handle (at %p): "
                       "ver(%d/%zu) ints(%d/%d) fds(%d/%d)"
                       "magic(%c%c%c%c/%c%c%c%c)",
                       h,
