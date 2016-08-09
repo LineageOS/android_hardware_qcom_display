@@ -365,6 +365,7 @@ int gralloc_perform(struct gralloc_module_t const* module,
                 private_handle_t* hnd =  va_arg(args, private_handle_t*);
                 int *stride = va_arg(args, int *);
                 if (private_handle_t::validate(hnd)) {
+                    va_end(args);
                     return res;
                 }
                 MetaData_t *metadata = (MetaData_t *)hnd->base_metadata;
@@ -382,6 +383,7 @@ int gralloc_perform(struct gralloc_module_t const* module,
                 int *stride = va_arg(args, int *);
                 int *height = va_arg(args, int *);
                 if (private_handle_t::validate(hnd)) {
+                    va_end(args);
                     return res;
                 }
                 MetaData_t *metadata = (MetaData_t *)hnd->base_metadata;
@@ -416,6 +418,7 @@ int gralloc_perform(struct gralloc_module_t const* module,
                 private_handle_t* hnd =  va_arg(args, private_handle_t*);
                 int *color_space = va_arg(args, int *);
                 if (private_handle_t::validate(hnd)) {
+                    va_end(args);
                     return res;
                 }
                 MetaData_t *metadata = (MetaData_t *)hnd->base_metadata;

@@ -248,7 +248,9 @@ struct private_handle_t : public native_handle {
             numFds = sNumFds;
         }
         ~private_handle_t() {
+            base_metadata = 0;
             magic = 0;
+            fd_metadata = 0;
         }
 
         bool usesPhysicallyContiguousMemory() {
