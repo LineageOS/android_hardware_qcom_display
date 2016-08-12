@@ -207,6 +207,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool secure_display_active_ = false;
   bool skip_prepare_ = false;
   bool solid_fill_enable_ = false;
+  bool disable_animation_ = false;
   uint32_t solid_fill_color_ = 0;
   LayerRect display_rect_;
   std::map<int, LayerBufferS3DFormat> s3d_format_hwc_to_sdm_;

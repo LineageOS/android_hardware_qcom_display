@@ -109,6 +109,8 @@ int HWCDisplay::Init() {
   s3d_format_hwc_to_sdm_.insert(std::pair<int, LayerBufferS3DFormat>(HAL_3D_TOP_BOTTOM,
                                 kS3dFormatTopBottom));
 
+  disable_animation_ = Debug::IsExtAnimDisabled();
+
   return 0;
 }
 
@@ -737,9 +739,11 @@ int HWCDisplay::PostCommitLayerStack(hwc_display_contents_1_t *content_list) {
       // framebuffer layer throughout animation and do not allow framework to do eglswapbuffer on
       // framebuffer target. So graphics doesn't close the release fence fd of framebuffer target,
       // Hence close the release fencefd of framebuffer target here.
-      if (layer->composition == kCompositionGPUTarget && animating_) {
-        close(hwc_layer.releaseFenceFd);
-        hwc_layer.releaseFenceFd = -1;
+      if (disable_animation_) {
+        if (layer->composition == kCompositionGPUTarget && animating_) {
+          close(hwc_layer.releaseFenceFd);
+          hwc_layer.releaseFenceFd = -1;
+        }
       }
     }
 
