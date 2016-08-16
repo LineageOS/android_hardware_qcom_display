@@ -516,7 +516,8 @@ DisplayError HWInfo::GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_dis
     return kErrorHardware;
   }
 
-  if (!strncmp(line.c_str(), "dtv panel", strlen("dtv panel"))) {
+  if (!strncmp(line.c_str(), "dtv panel", strlen("dtv panel")) ||
+      !strncmp(line.c_str(), "dp panel", strlen("dp panel"))) {
     hw_disp_info->type = kHDMI;
     DLOGI("First display is HDMI");
   } else {
