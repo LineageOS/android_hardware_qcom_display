@@ -49,9 +49,13 @@ namespace sdm {
 class HWInfoInterface;
 
 class HWDevice : public HWInterface {
+ public:
+  virtual ~HWDevice() {}
+  virtual DisplayError Init();
+  virtual DisplayError Deinit();
+
  protected:
   explicit HWDevice(BufferSyncHandler *buffer_sync_handler);
-  virtual ~HWDevice() {}
 
   // From HWInterface
   virtual DisplayError GetActiveConfig(uint32_t *active_config);
@@ -89,10 +93,6 @@ class HWDevice : public HWInterface {
   virtual DisplayError SetMixerAttributes(const HWMixerAttributes &mixer_attributes);
   virtual DisplayError GetMixerAttributes(HWMixerAttributes *mixer_attributes);
 
-  // For HWDevice derivatives
-  virtual DisplayError Init();
-  virtual DisplayError Deinit();
-
   enum {
     kHWEventVSync,
     kHWEventBlank,
@@ -115,7 +115,7 @@ class HWDevice : public HWInterface {
   void PopulateHWPanelInfo();
   void GetHWPanelInfoByNode(int device_node, HWPanelInfo *panel_info);
   void GetHWPanelNameByNode(int device_node, HWPanelInfo *panel_info);
-  void GetHWDisplayPortAndMode(int device_node, HWDisplayPort *port, HWDisplayMode *mode);
+  void GetHWDisplayPortAndMode(int device_node, HWPanelInfo *panel_info);
   void GetSplitInfo(int device_node, HWPanelInfo *panel_info);
   void GetHWPanelMaxBrightnessFromNode(HWPanelInfo *panel_info);
   int ParseLine(const char *input, char *tokens[], const uint32_t max_token, uint32_t *count);

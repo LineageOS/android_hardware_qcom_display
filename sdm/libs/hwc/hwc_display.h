@@ -117,6 +117,7 @@ class HWCDisplay : public DisplayEventHandler {
                            PPPendingParams *pending_action);
   int GetVisibleDisplayRect(hwc_rect_t* rect);
   DisplayClass GetDisplayClass();
+  int GetDisplayPort(DisplayPort *port);
 
  protected:
   enum DisplayStatus {
@@ -169,7 +170,7 @@ class HWCDisplay : public DisplayEventHandler {
   DisplayError SetMetaData(const private_handle_t *pvt_handle, Layer *layer);
   bool NeedsFrameBufferRefresh(hwc_display_contents_1_t *content_list);
   bool IsLayerUpdating(hwc_display_contents_1_t *content_list, const Layer *layer);
-  bool SingleLayerUpdating(uint32_t app_layer_count);
+  uint32_t GetUpdatingLayersCount(uint32_t app_layer_count);
   bool SingleVideoLayerUpdating(uint32_t app_layer_count);
   bool IsSurfaceUpdated(const std::vector<LayerRect> &dirty_regions);
 

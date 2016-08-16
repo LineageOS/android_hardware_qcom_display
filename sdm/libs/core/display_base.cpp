@@ -130,8 +130,8 @@ DisplayError DisplayBase::Deinit() {
   }
 
   comp_manager_->UnregisterDisplay(display_comp_ctx_);
-
   HWEventsInterface::Destroy(hw_events_intf_);
+  HWInterface::Destroy(hw_intf_);
 
   return kErrorNone;
 }
@@ -219,8 +219,6 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
     disable_pu_one_frame_ = false;
   }
 
-  // Clean hw layers for reuse.
-  hw_layers_ = HWLayers();
   hw_layers_.info.stack = layer_stack;
   hw_layers_.output_compression = 1.0f;
 
@@ -1034,6 +1032,18 @@ DisplayError DisplayBase::SetDetailEnhancerData(const DisplayDetailEnhancerData 
   }
 
   DisablePartialUpdateOneFrame();
+
+  return kErrorNone;
+}
+
+DisplayError DisplayBase::GetDisplayPort(DisplayPort *port) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+
+  if (!port) {
+    return kErrorParameters;
+  }
+
+  *port = hw_panel_info_.port;
 
   return kErrorNone;
 }
