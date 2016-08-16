@@ -100,6 +100,9 @@ class HWDevice : public HWInterface {
 
   static const int kMaxStringLength = 1024;
   static const int kNumPhysicalDisplays = 2;
+  // This indicates the number of fb devices created in the driver for all interfaces. Any addition
+  // of new fb devices should be added here.
+  static const int kFBNodeMax = 4;
 
   void DumpLayerCommit(const mdp_layer_commit &layer_commit);
   DisplayError SetFormat(const LayerBufferFormat &source, uint32_t *target);
@@ -127,6 +130,7 @@ class HWDevice : public HWInterface {
 
   bool EnableHotPlugDetection(int enable);
   ssize_t SysFsWrite(const char* file_node, const char* value, ssize_t length);
+  bool IsFBNodeConnected(int fb_node);
 
   HWResourceInfo hw_resource_;
   HWPanelInfo hw_panel_info_;
