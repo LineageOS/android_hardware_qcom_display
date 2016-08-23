@@ -595,6 +595,12 @@ class DisplayInterface {
   */
   virtual DisplayError GetDisplayPort(DisplayPort *port) = 0;
 
+  /*! @brief Method to query whether it is Primrary device.
+
+    @return \link Bool \endlink
+  */
+  virtual bool IsPrimaryDisplay() = 0;
+
  protected:
   virtual ~DisplayInterface() { }
 };

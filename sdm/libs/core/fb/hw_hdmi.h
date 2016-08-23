@@ -98,8 +98,9 @@ class HWHDMI : public HWDevice {
   bool ReadResolutionFile(char *config_buffer);
   bool IsResolutionFilePresent();
   void SetSourceProductInformation(const char *node, const char *name);
-  DisplayError GetDisplayS3DSupport(uint32_t num_modes,
+  DisplayError GetDisplayS3DSupport(uint32_t index,
                                     HWDisplayAttributes *attrib);
+  DisplayError GetPanelS3DMode();
   bool IsSupportedS3DMode(HWS3DMode s3d_mode);
   void UpdateMixerAttributes();
 
@@ -113,7 +114,7 @@ class HWHDMI : public HWDevice {
   uint32_t active_config_index_;
   std::map<HWS3DMode, msm_hdmi_s3d_mode> s3d_mode_sdm_to_mdp_;
   vector<HWS3DMode> supported_s3d_modes_;
-  int active_mdp_s3d_mode_ = HDMI_S3D_NONE;
+  msm_hdmi_s3d_mode active_mdp_s3d_mode_ = HDMI_S3D_NONE;
   uint32_t frame_rate_ = 0;
 };
 
