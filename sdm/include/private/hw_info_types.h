@@ -418,6 +418,8 @@ struct HWLayerConfig {
 
 struct HWLayersInfo {
   LayerStack *stack = NULL;        // Input layer stack. Set by the caller.
+  uint32_t app_layer_count = 0;    // Total number of app layers. Must not be 0.
+  uint32_t gpu_target_index = 0;   // GPU target layer index. 0 if not present.
 
   uint32_t index[kMaxSDELayers];   // Indexes of the layers from the layer stack which need to be
                                    // programmed on hardware.
