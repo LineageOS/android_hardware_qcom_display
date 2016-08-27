@@ -151,6 +151,18 @@ int AdrenoMemInfo::isMacroTilingSupportedByGPU()
 }
 
 
+void AdrenoMemInfo::getUnalignedWidthAndHeight(const private_handle_t *hnd, int& unaligned_w,
+                                               int& unaligned_h) {
+    MetaData_t *metadata = (MetaData_t *)hnd->base_metadata;
+    if(metadata && metadata->operation & UPDATE_BUFFER_GEOMETRY) {
+        unaligned_w = metadata->bufferDim.sliceWidth;
+        unaligned_h = metadata->bufferDim.sliceHeight;
+    } else {
+        unaligned_w = hnd->unaligned_width;
+        unaligned_h = hnd->unaligned_height;
+    }
+}
+
 bool isUncompressedRgbFormat(int format)
 {
     bool is_rgb_format = false;
@@ -663,7 +675,6 @@ unsigned int getBufferSizeAndDimensions(int width, int height, int format,
     return size;
 }
 
-
 void getBufferAttributes(int width, int height, int format, int usage,
         int& alignedw, int &alignedh, int& tiled, unsigned int& size)
 {
@@ -810,7 +821,7 @@ int alloc_buffer(private_handle_t **pHnd, int w, int h, int format, int usage)
 
     private_handle_t* hnd = new private_handle_t(data.fd, data.size,
                                                  data.allocType, 0, format,
-                                                 alignedw, alignedh);
+                                                 alignedw, alignedh, -1, 0, 0, w, h);
     hnd->base = (uint64_t) data.base;
     hnd->offset = data.offset;
     hnd->gpuaddr = 0;

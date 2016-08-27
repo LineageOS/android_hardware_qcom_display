@@ -132,6 +132,15 @@ class AdrenoMemInfo : public android::Singleton <AdrenoMemInfo>
                             int tileEnabled, int& alignedw, int &alignedh);
 
     /*
+     * Function to compute unaligned width and unaligned height based on
+     * private handle
+     *
+     * @return unaligned width, unaligned height
+     */
+    void getUnalignedWidthAndHeight(const private_handle_t *hnd, int& unaligned_w,
+                            int& unaligned_h);
+
+    /*
      * Function to return whether GPU support MacroTile feature
      *
      * @return >0 : supported
