@@ -200,9 +200,10 @@ int HWCSession::Close(hw_device_t *device) {
 
 void HWCSession::GetCapabilities(struct hwc2_device *device, uint32_t *outCount,
                                  int32_t *outCapabilities) {
-  if (outCapabilities == NULL) {
-    *outCount = 0;
+  if (outCapabilities != nullptr && *outCount >= 1) {
+    outCapabilities[0] = HWC2_CAPABILITY_SKIP_CLIENT_COLOR_TRANSFORM;
   }
+  *outCount = 1;
 }
 
 template <typename PFN, typename T>
@@ -234,9 +235,13 @@ int32_t HWCSession::CreateVirtualDisplay(hwc2_device_t *device, uint32_t width, 
 
   HWCSession *hwc_session = static_cast<HWCSession *>(device);
   auto status = hwc_session->CreateVirtualDisplayObject(width, height, format);
-  if (status == HWC2::Error::None)
+  if (status == HWC2::Error::None) {
     *out_display_id = HWC_DISPLAY_VIRTUAL;
-  DLOGI("Created virtual display id:% " PRIu64 " with res: %dx%d", *out_display_id, width, height);
+    DLOGI("Created virtual display id:% " PRIu64 " with res: %dx%d",
+          *out_display_id, width, height);
+  } else {
+    DLOGE("Failed to create virtual display: %s", to_string(status).c_str());
+  }
   return INT32(status);
 }
 
@@ -257,6 +262,7 @@ int32_t HWCSession::DestroyVirtualDisplay(hwc2_device_t *device, hwc2_display_t 
 
   if (hwc_session->hwc_display_[display]) {
     HWCDisplayVirtual::Destroy(hwc_session->hwc_display_[display]);
+    hwc_session->hwc_display_[display] = nullptr;
     return HWC2_ERROR_NONE;
   } else {
     return HWC2_ERROR_BAD_DISPLAY;
