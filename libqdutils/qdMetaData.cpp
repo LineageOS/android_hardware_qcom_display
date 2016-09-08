@@ -92,6 +92,9 @@ int setMetaData(private_handle_t *handle, DispParamType paramType,
         case SET_S3D_COMP:
             data->s3dComp = *((S3DGpuComp_t *)param);
             break;
+        case SET_VT_TIMESTAMP:
+            data->vtTimeStamp = *((uint64_t *)param);
+            break;
         default:
             ALOGE("Unknown paramType %d", paramType);
             break;
@@ -189,6 +192,9 @@ int getMetaData(private_handle_t *handle, DispFetchParamType paramType,
             break;
         case GET_S3D_COMP:
             *((S3DGpuComp_t *)param) = data->s3dComp;
+            break;
+        case GET_VT_TIMESTAMP:
+            *((uint64_t *)param) = data->vtTimeStamp;
             break;
         default:
             ALOGE("Unknown paramType %d", paramType);
