@@ -501,7 +501,12 @@ DisplayError HWDevice::Commit(HWLayers *hw_layers) {
   }
 
   stack->retire_fence_fd = mdp_commit.retire_fence;
-
+#ifdef VIDEO_MODE_DEFER_RETIRE_FENCE
+  if (hw_panel_info_.mode == kModeVideo) {
+    stack->retire_fence_fd = stored_retire_fence;
+    stored_retire_fence =  mdp_commit.retire_fence;
+  }
+#endif
   // MDP returns only one release fence for the entire layer stack. Duplicate this fence into all
   // layers being composed by MDP.
 
