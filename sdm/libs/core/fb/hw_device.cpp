@@ -501,7 +501,12 @@ DisplayError HWDevice::Commit(HWLayers *hw_layers) {
   }
 
   stack->retire_fence_fd = mdp_commit.retire_fence;
-
+#ifdef VIDEO_MODE_DEFER_RETIRE_FENCE
+  if (hw_panel_info_.mode == kModeVideo) {
+    stack->retire_fence_fd = stored_retire_fence;
+    stored_retire_fence =  mdp_commit.retire_fence;
+  }
+#endif
   // MDP returns only one release fence for the entire layer stack. Duplicate this fence into all
   // layers being composed by MDP.
 
@@ -737,7 +742,7 @@ void HWDevice::SetMDPFlags(const Layer *layer, const bool &is_rotator_used,
 }
 
 int HWDevice::GetFBNodeIndex(HWDeviceType device_type) {
-  for (int i = 0; i <= kDeviceVirtual; i++) {
+  for (int i = 0; i < kFBNodeMax; i++) {
     HWPanelInfo panel_info;
     GetHWPanelInfoByNode(i, &panel_info);
     switch (device_type) {
@@ -748,7 +753,9 @@ int HWDevice::GetFBNodeIndex(HWDeviceType device_type) {
       break;
     case kDeviceHDMI:
       if (panel_info.is_pluggable == true) {
-        return i;
+        if (IsFBNodeConnected(i)) {
+          return i;
+        }
       }
       break;
     case kDeviceVirtual:
@@ -990,17 +997,20 @@ int HWDevice::ParseLine(const char *input, const char *delim, char *tokens[],
 
 bool HWDevice::EnableHotPlugDetection(int enable) {
   char hpdpath[kMaxStringLength];
-  int hdmi_node_index = GetFBNodeIndex(kDeviceHDMI);
-  if (hdmi_node_index < 0) {
-    return false;
-  }
-
-  snprintf(hpdpath , sizeof(hpdpath), "%s%d/hpd", fb_path_, hdmi_node_index);
-
   char value = enable ? '1' : '0';
-  ssize_t length = SysFsWrite(hpdpath, &value, sizeof(value));
-  if (length <= 0) {
-    return false;
+
+  // Enable HPD for all pluggable devices.
+  for (int i = 0; i < kFBNodeMax; i++) {
+    HWPanelInfo panel_info;
+    GetHWPanelInfoByNode(i, &panel_info);
+    if (panel_info.is_pluggable == true) {
+      snprintf(hpdpath , sizeof(hpdpath), "%s%d/hpd", fb_path_, i);
+
+      ssize_t length = SysFsWrite(hpdpath, &value, sizeof(value));
+      if (length <= 0) {
+        return false;
+      }
+    }
   }
 
   return true;
@@ -1163,6 +1173,23 @@ ssize_t HWDevice::SysFsWrite(const char* file_node, const char* value, ssize_t l
   Sys::close_(fd);
 
   return len;
+}
+
+bool HWDevice::IsFBNodeConnected(int fb_node) {
+  string file_name = fb_path_ + to_string(fb_node) + "/connected";
+
+  Sys::fstream fs(file_name, fstream::in);
+  if (!fs.is_open()) {
+    DLOGW("File not found %s", file_name.c_str());
+    return false;
+  }
+
+  string line;
+  if (!Sys::getline_(fs, line)) {
+    return false;
+  }
+
+  return atoi(line.c_str());
 }
 
 DisplayError HWDevice::SetS3DMode(HWS3DMode s3d_mode) {
