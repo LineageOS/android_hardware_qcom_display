@@ -39,9 +39,6 @@ endif
 
 common_flags += -D__STDC_FORMAT_MACROS
 
-common_deps  :=
-kernel_includes :=
-
 # Executed only on QCOM BSPs
 ifeq ($(TARGET_USES_QCOM_BSP),true)
 # Enable QCOM Display features
