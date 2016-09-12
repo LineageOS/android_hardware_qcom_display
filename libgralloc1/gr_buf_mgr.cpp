@@ -285,7 +285,8 @@ int BufferManager::GetDataAlignment(int format, gralloc1_producer_usage_t prod_u
   }
 
   if (prod_usage & GRALLOC1_PRODUCER_USAGE_PROTECTED) {
-    if (cons_usage & GRALLOC1_CONSUMER_USAGE_PRIVATE_SECURE_DISPLAY) {
+    if ((prod_usage & GRALLOC1_PRODUCER_USAGE_CAMERA) ||
+        (cons_usage & GRALLOC1_CONSUMER_USAGE_PRIVATE_SECURE_DISPLAY)) {
       // The alignment here reflects qsee mmu V7L/V8L requirement
       align = SZ_2M;
     } else {
