@@ -12,8 +12,9 @@ libmemalloc_la_CC = @CC@
 libmemalloc_la_SOURCES = $(cpp_sources)
 libmemalloc_la_CFLAGS = $(COMMON_CFLAGS) -DLOG_TAG=\"qdmemalloc\"
 libmemalloc_la_CPPFLAGS = $(AM_CPPFLAGS)
-libmemalloc_LDADD = -lhardware -lcutils -llog -lutils -ldl
 libmemalloc_la_LIBADD = ../libqdutils/libqdutils.la
+libmemalloc_la_LIBADD += -lhardware -lcutils -llog -lutils -ldl
+libmemalloc_la_LDFLAGS = -shared -avoid-version
 
 header_sources = gralloc_priv.h \
                  gr.h
@@ -31,7 +32,8 @@ libgralloc_la_CC = @CC@
 libgralloc_la_SOURCES = $(c_sources)
 libgralloc_la_CFLAGS = $(COMMON_CFLAGS) -DLOG_TAG=\"qdgralloc\"
 libgralloc_la_CPPFLAGS = $(AM_CPPFLAGS)
-libgralloc_LDADD = -lhardware -lcutils -llog -lutils
 libgralloc_la_LIBADD = ../libqdutils/libqdutils.la
 libgralloc_la_LIBADD += ../libqdutils/libqdMetaData.la
+libgralloc_la_LIBADD += -lhardware -lcutils -llog -lutils -lbinder
 libgralloc_la_LIBADD += libmemalloc.la
+libgralloc_la_LDFLAGS = -shared -avoid-version

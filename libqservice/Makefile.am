@@ -15,3 +15,4 @@ libqservice_la_SOURCES = $(cpp_sources)
 libqservice_la_CFLAGS = $(COMMON_CFLAGS) -DLOG_TAG=\"qdqservice\"
 libqservice_la_CPPFLAGS = $(AM_CPPFLAGS)
 libqservice_LDADD = -lhardware -lcutils -llog -lbinder
+libqservice_la_LDFLAGS = -shared -avoid-version
