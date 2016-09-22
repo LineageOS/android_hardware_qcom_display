@@ -25,6 +25,7 @@
 #include <hardware/gralloc.h>
 #include <pthread.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include <cutils/native_handle.h>
 #include <utils/Singleton.h>
@@ -35,7 +36,7 @@ struct private_module_t;
 struct private_handle_t;
 
 inline size_t roundUpToPageSize(size_t x) {
-    return (x + (PAGE_SIZE-1)) & ~(PAGE_SIZE-1);
+    return (x + (getpagesize()-1)) & ~(getpagesize()-1);
 }
 
 inline size_t ALIGN(size_t x, size_t align) {
