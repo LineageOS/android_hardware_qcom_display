@@ -783,7 +783,7 @@ int HDMIDisplay::getAttrForConfig(int config, uint32_t& xres,
 int HDMIDisplay::getDisplayConfigs(uint32_t* configs,
         size_t* numConfigs) const {
     if (*numConfigs <= 0) {
-        ALOGE("%s Invalid number of configs (%d)", __FUNCTION__, *numConfigs);
+        ALOGE("%s Invalid number of configs (%zu)", __FUNCTION__, *numConfigs);
         return -EINVAL;
     }
     *numConfigs = mModeCount;
