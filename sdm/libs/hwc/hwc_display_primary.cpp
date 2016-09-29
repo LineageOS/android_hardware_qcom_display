@@ -304,8 +304,15 @@ void HWCDisplayPrimary::SetSecureDisplay(bool secure_display_active) {
            secure_display_active);
     secure_display_active_ = secure_display_active;
     skip_prepare_ = true;
+
+    // Avoid flush for command mode panels
+    DisplayConfigFixedInfo display_config;
+    display_intf_->GetConfig(&display_config);
+    if (display_config.is_cmdmode) {
+      DLOGI("Avoid flush for command mode panel");
+      skip_prepare_ = false;
+    }
   }
-  return;
 }
 
 void HWCDisplayPrimary::ForceRefreshRate(uint32_t refresh_rate) {
