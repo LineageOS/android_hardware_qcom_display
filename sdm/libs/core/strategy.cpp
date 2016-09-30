@@ -130,17 +130,18 @@ DisplayError Strategy::GetNextStrategy(StrategyConstraints *constraints) {
   // Mark all application layers for GPU composition. Find GPU target buffer and store its index for
   // programming the hardware.
   LayerStack *layer_stack = hw_layers_info_->stack;
-  uint32_t &hw_layer_count = hw_layers_info_->count;
-  hw_layer_count = 0;
-
   for (uint32_t i = 0; i < hw_layers_info_->app_layer_count; i++) {
     layer_stack->layers.at(i)->composition = kCompositionGPU;
   }
 
-  Layer *gpu_target_layer = layer_stack->layers.at(hw_layers_info_->gpu_target_index);
-  hw_layers_info_->updated_src_rect[hw_layer_count] = gpu_target_layer->src_rect;
-  hw_layers_info_->updated_dst_rect[hw_layer_count] = gpu_target_layer->dst_rect;
-  hw_layers_info_->index[hw_layer_count++] = hw_layers_info_->gpu_target_index;
+  if (!extn_start_success_) {
+    hw_layers_info_->count = 0;
+    uint32_t &hw_layer_count = hw_layers_info_->count;
+    Layer *gpu_target_layer = layer_stack->layers.at(hw_layers_info_->gpu_target_index);
+    hw_layers_info_->updated_src_rect[hw_layer_count] = gpu_target_layer->src_rect;
+    hw_layers_info_->updated_dst_rect[hw_layer_count] = gpu_target_layer->dst_rect;
+    hw_layers_info_->index[hw_layer_count++] = hw_layers_info_->gpu_target_index;
+  }
 
   tried_default_ = true;
 
