@@ -41,11 +41,10 @@ namespace sdm {
 // TODO(user): Have a single structure handle carries all the interface pointers and variables.
 DisplayBase::DisplayBase(DisplayType display_type, DisplayEventHandler *event_handler,
                          HWDeviceType hw_device_type, BufferSyncHandler *buffer_sync_handler,
-                         CompManager *comp_manager, RotatorInterface *rotator_intf,
-                         HWInfoInterface *hw_info_intf)
+                         CompManager *comp_manager, HWInfoInterface *hw_info_intf)
   : display_type_(display_type), event_handler_(event_handler), hw_device_type_(hw_device_type),
     buffer_sync_handler_(buffer_sync_handler), comp_manager_(comp_manager),
-    rotator_intf_(rotator_intf), hw_info_intf_(hw_info_intf) {
+    hw_info_intf_(hw_info_intf) {
 }
 
 DisplayError DisplayBase::Init() {
@@ -90,13 +89,6 @@ DisplayError DisplayBase::Init() {
     goto CleanupOnError;
   }
 
-  if (rotator_intf_) {
-    error = rotator_intf_->RegisterDisplay(display_type_, &display_rotator_ctx_);
-    if (error != kErrorNone) {
-      goto CleanupOnError;
-    }
-  }
-
   if (hw_info_intf_) {
     HWResourceInfo hw_resource_info = HWResourceInfo();
     hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
@@ -126,9 +118,6 @@ CleanupOnError:
 
 DisplayError DisplayBase::Deinit() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-  if (rotator_intf_) {
-    rotator_intf_->UnregisterDisplay(display_rotator_ctx_);
-  }
 
   if (color_mgr_) {
     delete color_mgr_;
@@ -243,29 +232,15 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
       break;
     }
 
-    if (IsRotationRequired(&hw_layers_)) {
-      if (!rotator_intf_) {
-        continue;
-      }
-      error = rotator_intf_->Prepare(display_rotator_ctx_, &hw_layers_);
-    } else {
-      // Release all the previous rotator sessions.
-      if (rotator_intf_) {
-        error = rotator_intf_->Purge(display_rotator_ctx_);
-      }
-    }
-
+    error = hw_intf_->Validate(&hw_layers_);
     if (error == kErrorNone) {
-      error = hw_intf_->Validate(&hw_layers_);
-      if (error == kErrorNone) {
-        // Strategy is successful now, wait for Commit().
-        pending_commit_ = true;
-        break;
-      }
-      if (error == kErrorShutDown) {
-        comp_manager_->PostPrepare(display_comp_ctx_, &hw_layers_);
-        return error;
-      }
+      // Strategy is successful now, wait for Commit().
+      pending_commit_ = true;
+      break;
+    }
+    if (error == kErrorShutDown) {
+      comp_manager_->PostPrepare(display_comp_ctx_, &hw_layers_);
+      return error;
     }
   }
 
@@ -307,8 +282,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     }
   }
 
-  if (rotator_intf_ && IsRotationRequired(&hw_layers_)) {
-    error = rotator_intf_->Commit(display_rotator_ctx_, &hw_layers_);
+  if (comp_manager_->Commit(display_comp_ctx_, &hw_layers_)) {
     if (error != kErrorNone) {
       return error;
     }
@@ -325,13 +299,6 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
   error = hw_intf_->Commit(&hw_layers_);
   if (error != kErrorNone) {
     return error;
-  }
-
-  if (rotator_intf_ && IsRotationRequired(&hw_layers_)) {
-    error = rotator_intf_->PostCommit(display_rotator_ctx_, &hw_layers_);
-    if (error != kErrorNone) {
-      return error;
-    }
   }
 
   if (partial_update_control_) {
@@ -357,17 +324,7 @@ DisplayError DisplayBase::Flush() {
   hw_layers_.info.count = 0;
   error = hw_intf_->Flush();
   if (error == kErrorNone) {
-    // Release all the rotator sessions.
-    if (rotator_intf_) {
-      error = rotator_intf_->Purge(display_rotator_ctx_);
-      if (error != kErrorNone) {
-        DLOGE("Rotator purge failed for display %d", display_type_);
-        return error;
-      }
-    }
-
     comp_manager_->Purge(display_comp_ctx_);
-
     pending_commit_ = false;
   } else {
     DLOGW("Unable to flush display = %d", display_type_);
@@ -435,17 +392,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state) {
     hw_layers_.info.count = 0;
     error = hw_intf_->Flush();
     if (error == kErrorNone) {
-      // Release all the rotator sessions.
-      if (rotator_intf_) {
-        error = rotator_intf_->Purge(display_rotator_ctx_);
-        if (error != kErrorNone) {
-          DLOGE("Rotator purge failed for display %d", display_type_);
-          return error;
-        }
-      }
-
       comp_manager_->Purge(display_comp_ctx_);
-
       error = hw_intf_->PowerOff();
     }
     break;
@@ -658,21 +605,6 @@ void DisplayBase::AppendDump(char *buffer, uint32_t length) {
 
     DumpImpl::AppendString(buffer, length, newline);
   }
-}
-
-bool DisplayBase::IsRotationRequired(HWLayers *hw_layers) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
-  HWLayersInfo &layer_info = hw_layers->info;
-
-  for (uint32_t i = 0; i < layer_info.count; i++) {
-    HWRotatorSession *hw_rotator_session = &hw_layers->config[i].hw_rotator_session;
-
-    if (hw_rotator_session->hw_block_count) {
-      return true;
-    }
-  }
-
-  return false;
 }
 
 const char * DisplayBase::GetName(const LayerComposition &composition) {
