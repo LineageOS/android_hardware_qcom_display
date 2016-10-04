@@ -5,6 +5,10 @@ display_top := $(call my-dir)
 common_flags := -DDEBUG_CALC_FPS -Wno-missing-field-initializers
 common_flags += -Wconversion -Wall -Werror -std=c++11
 
+ifeq ($(call is-board-platform-in-list, msmcobalt msm8998), true)
+common_flags += -DUSE_COLOR_METADATA
+endif
+
 use_hwc2 := false
 ifeq ($(TARGET_USES_HWC2), true)
     use_hwc2 := true
@@ -17,6 +21,7 @@ ifneq ($(TARGET_IS_HEADLESS), true)
     common_includes += $(display_top)/libcopybit
 endif
 
+common_includes += $(display_top)/include
 common_includes += $(display_top)/sdm/include
 
 common_header_export_path := qcom/display
