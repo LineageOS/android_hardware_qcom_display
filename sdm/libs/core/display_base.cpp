@@ -912,6 +912,10 @@ DisplayError DisplayBase::ReconfigureMixer(uint32_t width, uint32_t height) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
 
+  if (!width || !height) {
+    return kErrorParameters;
+  }
+
   HWMixerAttributes mixer_attributes;
   mixer_attributes.width = width;
   mixer_attributes.height = height;
