@@ -452,6 +452,16 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state) {
 
   case kStateOn:
     error = hw_intf_->PowerOn();
+    if (error != kErrorNone) {
+      return error;
+    }
+
+    error = comp_manager_->ReconfigureDisplay(display_comp_ctx_, display_attributes_,
+                                              hw_panel_info_, mixer_attributes_, fb_config_);
+    if (error != kErrorNone) {
+      return error;
+    }
+
     active = true;
     break;
 
@@ -959,6 +969,8 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
   uint32_t max_layer_area = 0;
   uint32_t max_area_layer_index = 0;
   std::vector<Layer *> layers = layer_stack->layers;
+  uint32_t align_x = display_attributes_.is_device_split ? 4 : 2;
+  uint32_t align_y = 2;
 
   for (uint32_t i = 0; i < layer_count; i++) {
     Layer *layer = layers.at(i);
@@ -996,8 +1008,8 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
     // Align the width and height according to fb's aspect ratio
     layer_width = UINT32((FLOAT(fb_width) / FLOAT(fb_height)) * layer_height);
 
-    *new_mixer_width = layer_width;
-    *new_mixer_height = layer_height;
+    *new_mixer_width = FloorToMultipleOf(layer_width, align_x);
+    *new_mixer_height = FloorToMultipleOf(layer_height, align_y);
 
     return true;
   } else {
