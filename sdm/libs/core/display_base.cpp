@@ -953,6 +953,24 @@ DisplayError DisplayBase::ReconfigureMixer(uint32_t width, uint32_t height) {
   return ReconfigureDisplay();
 }
 
+bool DisplayBase::NeedsDownScale(const LayerRect &src_rect, const LayerRect &dst_rect,
+                                 bool needs_rotation) {
+  float src_width = FLOAT(src_rect.right - src_rect.left);
+  float src_height = FLOAT(src_rect.bottom - src_rect.top);
+  float dst_width = FLOAT(dst_rect.right - dst_rect.left);
+  float dst_height = FLOAT(dst_rect.bottom - dst_rect.top);
+
+  if (needs_rotation) {
+    std::swap(src_width, src_height);
+  }
+
+  if ((src_width > dst_width) || (src_height > dst_height)) {
+    return true;
+  }
+
+  return false;
+}
+
 bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *new_mixer_width,
                                             uint32_t *new_mixer_height) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
@@ -964,6 +982,8 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
   LayerRect fb_rect = (LayerRect) {0.0f, 0.0f, FLOAT(fb_width), FLOAT(fb_height)};
   uint32_t mixer_width = mixer_attributes_.width;
   uint32_t mixer_height = mixer_attributes_.height;
+  uint32_t display_width = display_attributes_.x_pixels;
+  uint32_t display_height = display_attributes_.y_pixels;
 
   RectOrientation fb_orientation = GetOrientation(fb_rect);
   uint32_t max_layer_area = 0;
@@ -974,11 +994,6 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
 
   for (uint32_t i = 0; i < layer_count; i++) {
     Layer *layer = layers.at(i);
-    LayerBuffer *layer_buffer = layer->input_buffer;
-
-    if (!layer_buffer->flags.video) {
-      continue;
-    }
 
     uint32_t layer_width = UINT32(layer->src_rect.right - layer->src_rect.left);
     uint32_t layer_height = UINT32(layer->src_rect.bottom - layer->src_rect.top);
@@ -990,14 +1005,17 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
     }
   }
 
+  // TODO(user): Mark layer which needs downscaling on GPU fallback as priority layer and use MDP
+  // for composition to avoid quality mismatch between GPU and MDP switch(idle timeout usecase).
   if (max_layer_area >= fb_area) {
     Layer *layer = layers.at(max_area_layer_index);
+    bool needs_rotation = (layer->transform.rotation == 90.0f);
 
     uint32_t layer_width = UINT32(layer->src_rect.right - layer->src_rect.left);
     uint32_t layer_height = UINT32(layer->src_rect.bottom - layer->src_rect.top);
-    LayerRect layer_rect = (LayerRect){0.0f, 0.0f, FLOAT(layer_width), FLOAT(layer_height)};
+    LayerRect layer_dst_rect = {};
 
-    RectOrientation layer_orientation = GetOrientation(layer_rect);
+    RectOrientation layer_orientation = GetOrientation(layer->src_rect);
     if (layer_orientation != kOrientationUnknown &&
         fb_orientation != kOrientationUnknown) {
       if (layer_orientation != fb_orientation) {
@@ -1006,10 +1024,17 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
     }
 
     // Align the width and height according to fb's aspect ratio
-    layer_width = UINT32((FLOAT(fb_width) / FLOAT(fb_height)) * layer_height);
-
-    *new_mixer_width = FloorToMultipleOf(layer_width, align_x);
+    *new_mixer_width = FloorToMultipleOf(UINT32((FLOAT(fb_width) / FLOAT(fb_height)) *
+                                         layer_height), align_x);
     *new_mixer_height = FloorToMultipleOf(layer_height, align_y);
+
+    LayerRect dst_domain = {0.0f, 0.0f, FLOAT(*new_mixer_width), FLOAT(*new_mixer_height)};
+
+    MapRect(fb_rect, dst_domain, layer->dst_rect, &layer_dst_rect);
+    if (NeedsDownScale(layer->src_rect, layer_dst_rect, needs_rotation)) {
+      *new_mixer_width = display_width;
+      *new_mixer_height = display_height;
+    }
 
     return true;
   } else {

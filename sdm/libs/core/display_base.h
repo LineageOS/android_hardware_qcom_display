@@ -125,6 +125,7 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   bool NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *new_mixer_width,
                                  uint32_t *new_mixer_height);
   DisplayError ReconfigureMixer(uint32_t width, uint32_t height);
+  bool NeedsDownScale(const LayerRect &src_rect, const LayerRect &dst_rect, bool needs_rotation);
 
   recursive_mutex recursive_mutex_;
   DisplayType display_type_;
