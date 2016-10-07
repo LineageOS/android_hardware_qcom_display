@@ -61,6 +61,24 @@ static void ApplyDeInterlaceAdjustment(Layer *layer) {
   }
 }
 
+// This weight function is needed because the color primaries are not sorted by gamut size
+static ColorPrimaries WidestPrimaries(ColorPrimaries p1, ColorPrimaries p2) {
+  int weight = 10;
+  int lp1 = p1, lp2 = p2;
+  // TODO(user) add weight to other wide gamut primaries
+  if (lp1 == ColorPrimaries_BT2020) {
+    lp1 *= weight;
+  }
+  if (lp1 == ColorPrimaries_BT2020) {
+    lp2 *= weight;
+  }
+  if (lp1 >= lp2) {
+    return p1;
+  } else {
+    return p2;
+  }
+}
+
 HWCColorMode::HWCColorMode(DisplayInterface *display_intf) : display_intf_(display_intf) {}
 
 HWC2::Error HWCColorMode::Init() {
@@ -331,10 +349,12 @@ HWC2::Error HWCDisplay::DestroyLayer(hwc2_layer_t layer_id) {
   return HWC2::Error::None;
 }
 
+
 void HWCDisplay::BuildLayerStack() {
   layer_stack_ = LayerStack();
   display_rect_ = LayerRect();
   metadata_refresh_rate_ = 0;
+  auto working_primaries = ColorPrimaries_BT709_5;
 
   // Add one layer for fb target
   // TODO(user): Add blit target layers
@@ -346,6 +366,14 @@ void HWCDisplay::BuildLayerStack() {
     } else if (hwc_layer->GetClientRequestedCompositionType() == HWC2::Composition::SolidColor) {
       layer->flags.solid_fill = true;
     }
+
+    if (!hwc_layer->SupportedDataspace()) {
+        layer->flags.skip = true;
+        DLOGW_IF(kTagStrategy, "Unsupported dataspace: 0x%x", hwc_layer->GetLayerDataspace());
+    }
+
+    working_primaries = WidestPrimaries(working_primaries,
+                                        layer->input_buffer.color_metadata.colorPrimaries);
 
     // set default composition as GPU for SDM
     layer->composition = kCompositionGPU;
@@ -425,6 +453,19 @@ void HWCDisplay::BuildLayerStack() {
 
     layer_stack_.layers.push_back(layer);
   }
+
+
+  for (auto hwc_layer : layer_set_) {
+    auto layer = hwc_layer->GetSDMLayer();
+    if (layer->input_buffer.color_metadata.colorPrimaries != working_primaries &&
+        !hwc_layer->SupportLocalConversion(working_primaries)) {
+      layer->flags.skip = true;
+    }
+    if (layer->flags.skip) {
+      layer_stack_.flags.skip_present = true;
+    }
+  }
+
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
   layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0);
   // Append client target to the layer stack
