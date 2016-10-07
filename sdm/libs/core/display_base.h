@@ -156,6 +156,8 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   HWDisplayAttributes display_attributes_ = {};
   HWMixerAttributes mixer_attributes_ = {};
   DisplayConfigVariableInfo fb_config_ = {};
+  uint32_t req_mixer_width_ = 0;
+  uint32_t req_mixer_height_ = 0;
 
  private:
   // Unused

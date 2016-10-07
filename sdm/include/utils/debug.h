@@ -77,6 +77,7 @@ class Debug {
   static bool IsUbwcTiledFrameBuffer();
   static bool IsAVRDisabled();
   static bool IsExtAnimDisabled();
+  static DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
   static bool GetProperty(const char *property_name, char *value);
   static bool SetProperty(const char *property_name, const char *value);
 
