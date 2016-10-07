@@ -1058,4 +1058,10 @@ bool DisplayBase::IsPrimaryDisplay() {
   return hw_panel_info_.is_primary_panel;
 }
 
+DisplayError DisplayBase::SetCompositionState(LayerComposition composition_type, bool enable) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+
+  return comp_manager_->SetCompositionState(display_comp_ctx_, composition_type, enable);
+}
+
 }  // namespace sdm

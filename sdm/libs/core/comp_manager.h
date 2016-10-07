@@ -45,8 +45,8 @@ class CompManager : public DumpImpl {
   DisplayError RegisterDisplay(DisplayType type, const HWDisplayAttributes &display_attributes,
                                const HWPanelInfo &hw_panel_info,
                                const HWMixerAttributes &mixer_attributes,
-                               const DisplayConfigVariableInfo &fb_config, Handle *res_mgr_hnd);
-  DisplayError UnregisterDisplay(Handle res_mgr_hnd);
+                               const DisplayConfigVariableInfo &fb_config, Handle *display_ctx);
+  DisplayError UnregisterDisplay(Handle display_ctx);
   DisplayError ReconfigureDisplay(Handle display_ctx, const HWDisplayAttributes &display_attributes,
                                   const HWPanelInfo &hw_panel_info,
                                   const HWMixerAttributes &mixer_attributes,
@@ -69,6 +69,8 @@ class CompManager : public DumpImpl {
   DisplayError SetMaxBandwidthMode(HWBwModes mode);
   DisplayError GetScaleLutConfig(HWScaleLutInfo *lut_info);
   DisplayError SetDetailEnhancerData(Handle display_ctx, const DisplayDetailEnhancerData &de_data);
+  DisplayError SetCompositionState(Handle display_ctx, LayerComposition composition_type,
+                                   bool enable);
 
   // DumpImpl method
   virtual void AppendDump(char *buffer, uint32_t length);

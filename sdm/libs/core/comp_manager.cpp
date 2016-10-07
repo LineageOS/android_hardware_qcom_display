@@ -128,11 +128,11 @@ DisplayError CompManager::RegisterDisplay(DisplayType type,
   return kErrorNone;
 }
 
-DisplayError CompManager::UnregisterDisplay(Handle comp_handle) {
+DisplayError CompManager::UnregisterDisplay(Handle display_ctx) {
   SCOPE_LOCK(locker_);
 
   DisplayCompositionContext *display_comp_ctx =
-                             reinterpret_cast<DisplayCompositionContext *>(comp_handle);
+                             reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
   if (!display_comp_ctx) {
     return kErrorParameters;
@@ -502,5 +502,14 @@ DisplayError CompManager::SetDetailEnhancerData(Handle display_ctx,
   return resource_intf_->SetDetailEnhancerData(display_comp_ctx->display_resource_ctx, de_data);
 }
 
-}  // namespace sdm
+DisplayError CompManager::SetCompositionState(Handle display_ctx,
+                                              LayerComposition composition_type, bool enable) {
+  SCOPE_LOCK(locker_);
 
+  DisplayCompositionContext *display_comp_ctx =
+                             reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+
+  return display_comp_ctx->strategy->SetCompositionState(composition_type, enable);
+}
+
+}  // namespace sdm

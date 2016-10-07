@@ -106,6 +106,7 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   virtual DisplayError SetDetailEnhancerData(const DisplayDetailEnhancerData &de_data);
   virtual DisplayError GetDisplayPort(DisplayPort *port);
   virtual bool IsPrimaryDisplay();
+  virtual DisplayError SetCompositionState(LayerComposition composition_type, bool enable);
 
  protected:
   DisplayError BuildLayerStackStats(LayerStack *layer_stack);
