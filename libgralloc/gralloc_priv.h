@@ -30,8 +30,8 @@
 
 #include <cutils/log.h>
 
-#define ROUND_UP_PAGESIZE(x) ( (((unsigned long)(x)) + PAGE_SIZE-1)  & \
-                               (~(PAGE_SIZE-1)) )
+#define ROUND_UP_PAGESIZE(x) (unsigned int)( ((x) + getpagesize()-1)  & \
+                                             (~(getpagesize()-1)) )
 
 /* Gralloc usage bits indicating the type of allocation that should be used */
 /* SYSTEM heap comes from kernel vmalloc (ION_SYSTEM_HEAP_ID)
