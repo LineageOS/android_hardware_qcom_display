@@ -89,10 +89,11 @@ class CompManager : public DumpImpl {
     uint32_t remaining_strategies = 0;
     bool idle_fallback = false;
     bool fallback_ = false;
-    uint32_t partial_update_enable = true;
     // Using primary panel flag of hw panel to configure Constraints. We do not need other hw
     // panel parameters for now.
     bool is_primary_panel = false;
+    bool valid_cursor = false;
+    PUConstraints pu_constraints = {};
   };
 
   Locker locker_;

@@ -75,7 +75,7 @@ DisplayError Strategy::Deinit() {
 }
 
 DisplayError Strategy::Start(HWLayersInfo *hw_layers_info, uint32_t *max_attempts,
-                             bool partial_update_enable) {
+                             const PUConstraints &pu_constraints) {
   DisplayError error = kErrorNone;
 
   hw_layers_info_ = hw_layers_info;
@@ -88,7 +88,7 @@ DisplayError Strategy::Start(HWLayersInfo *hw_layers_info, uint32_t *max_attempt
   }
 
   if (partial_update_intf_) {
-    partial_update_intf_->ControlPartialUpdate(partial_update_enable);
+    partial_update_intf_->Start(pu_constraints);
   }
   GenerateROI();
 
