@@ -15,9 +15,13 @@
  */
 
 #include <errno.h>
+<<<<<<< HEAD   (0760f5 Make hwc_vsync thread realtime)
 #include <stdlib.h>
 #include <string.h>
 #include <log/log.h>
+=======
+#include <utils/Log.h>
+>>>>>>> CHANGE (625728 memtrack: Make memtrack HAL compatible for HIDL passthrough )
 
 #include <hardware/memtrack.h>
 
@@ -45,6 +49,7 @@ int msm_memtrack_get_memory(const struct memtrack_module *module,
     return -EINVAL;
 }
 
+<<<<<<< HEAD   (0760f5 Make hwc_vsync thread realtime)
 static int memtrack_open(__attribute__((unused)) const hw_module_t* module, const char* name,
                     hw_device_t** device)
 {
@@ -60,6 +65,23 @@ static int memtrack_open(__attribute__((unused)) const hw_module_t* module, cons
             dev->common.tag = HARDWARE_DEVICE_TAG;
             dev->common.module_api_version = MEMTRACK_MODULE_API_VERSION_0_1;
             dev->common.hal_api_version = HARDWARE_HAL_API_VERSION;
+=======
+static int memtrack_open(const hw_module_t* module, const char* name,
+                    hw_device_t** device)
+{
+    ALOGD("%s: enter; name=%s", __FUNCTION__, name);
+    int retval = 0; /* 0 is ok; -1 is error */
+
+    if (strcmp(name, "memtrack") == 0) {
+        struct memtrack_module *dev = (struct memtrack_module *)calloc(1,
+                sizeof(struct memtrack_module));
+
+        if (dev) {
+            /* Common hw_device_t fields */
+            dev->common.tag = HARDWARE_DEVICE_TAG;
+            dev->common.module_api_version = MEMTRACK_MODULE_API_VERSION_0_1;
+            dev->common.module_api_version = HARDWARE_HAL_API_VERSION;
+>>>>>>> CHANGE (625728 memtrack: Make memtrack HAL compatible for HIDL passthrough )
 
             dev->init = msm_memtrack_init;
             dev->getMemory = msm_memtrack_get_memory;
