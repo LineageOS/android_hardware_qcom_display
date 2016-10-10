@@ -69,9 +69,9 @@ class ExtensionInterface {
   virtual DisplayError DestroyStrategyExtn(StrategyInterface *interface) = 0;
 
   virtual DisplayError CreateResourceExtn(const HWResourceInfo &hw_resource_info,
-                                          ResourceInterface **interface,
                                           BufferAllocator *buffer_allocator,
-                                          BufferSyncHandler *buffer_sync_handler) = 0;
+                                          BufferSyncHandler *buffer_sync_handler,
+                                          ResourceInterface **interface) = 0;
   virtual DisplayError DestroyResourceExtn(ResourceInterface *interface) = 0;
   virtual DisplayError CreateDppsControlExtn(DppsControlInterface **dpps_control_interface,
                                              SocketHandler *socket_handler) = 0;

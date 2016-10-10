@@ -49,8 +49,8 @@ DisplayError CompManager::Init(const HWResourceInfo &hw_res_info,
   DisplayError error = kErrorNone;
 
   if (extension_intf) {
-    error = extension_intf->CreateResourceExtn(hw_res_info, &resource_intf_, buffer_allocator,
-                                               buffer_sync_handler);
+    error = extension_intf->CreateResourceExtn(hw_res_info, buffer_allocator, buffer_sync_handler,
+                                               &resource_intf_);
     extension_intf->CreateDppsControlExtn(&dpps_ctrl_intf_, socket_handler);
   } else {
     error = ResourceDefault::CreateResourceDefault(hw_res_info, &resource_intf_);

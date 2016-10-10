@@ -916,6 +916,12 @@ HWC2::Error HWCDisplay::GetDisplayRequests(int32_t *out_display_requests,
       i++;
     }
   }
+
+  auto client_target_layer = client_target_->GetSDMLayer();
+  if (client_target_layer->request.flags.flip_buffer) {
+    *out_display_requests = INT32(HWC2::DisplayRequest::FlipClientTarget);
+  }
+
   return HWC2::Error::None;
 }
 
