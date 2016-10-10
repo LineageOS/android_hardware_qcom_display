@@ -77,10 +77,9 @@ DisplayError DisplayBase::Init() {
   error = comp_manager_->GetScaleLutConfig(&lut_info);
   if (error == kErrorNone) {
     error = hw_intf_->SetScaleLutConfig(&lut_info);
-  }
-
-  if (error != kErrorNone) {
-    goto CleanupOnError;
+    if (error != kErrorNone) {
+      goto CleanupOnError;
+    }
   }
 
   error = comp_manager_->RegisterDisplay(display_type_, display_attributes_, hw_panel_info_,
