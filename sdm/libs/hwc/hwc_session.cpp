@@ -275,6 +275,7 @@ int HWCSession::Prepare(hwc_composer_device_1 *device, size_t num_displays,
 
     if (hwc_session->need_invalidate_) {
       hwc_procs->invalidate(hwc_procs);
+      hwc_session->need_invalidate_ = false;
     }
 
     hwc_session->HandleSecureDisplaySession(displays);
