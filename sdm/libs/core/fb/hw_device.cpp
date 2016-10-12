@@ -799,8 +799,8 @@ void HWDevice::PopulateHWPanelInfo() {
   DLOGI("Device type = %d, Display Port = %d, Display Mode = %d, Device Node = %d, Is Primary = %d",
         device_type_, hw_panel_info_.port, hw_panel_info_.mode, fb_node_index_,
         hw_panel_info_.is_primary_panel);
-  DLOGI("Partial Update = %d, Dynamic FPS = %d",
-        hw_panel_info_.partial_update, hw_panel_info_.dynamic_fps);
+  DLOGI("Partial Update = %d, supported roi_count =%d, Dynamic FPS = %d",
+        hw_panel_info_.partial_update, hw_panel_info_.left_roi_count, hw_panel_info_.dynamic_fps);
   DLOGI("Align: left = %d, width = %d, top = %d, height = %d",
         hw_panel_info_.left_align, hw_panel_info_.width_align,
         hw_panel_info_.top_align, hw_panel_info_.height_align);
@@ -881,6 +881,9 @@ void HWDevice::GetHWPanelInfoByNode(int device_node, HWPanelInfo *panel_info) {
         panel_info->is_primary_panel = atoi(tokens[1]);
       } else if (!strncmp(tokens[0], "is_pluggable", strlen("is_pluggable"))) {
         panel_info->is_pluggable = atoi(tokens[1]);
+      } else if (!strncmp(tokens[0], "pu_roi_cnt", strlen("pu_roi_cnt"))) {
+        panel_info->left_roi_count = UINT32(atoi(tokens[1]));
+        panel_info->right_roi_count = UINT32(atoi(tokens[1]));
       }
     }
   }
