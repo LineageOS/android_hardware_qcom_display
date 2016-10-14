@@ -332,6 +332,8 @@ DisplayError HWPrimary::PowerOff() {
     return kErrorHardware;
   }
 
+  auto_refresh_ = false;
+
   return kErrorNone;
 }
 
