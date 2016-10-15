@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -415,7 +415,6 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state) {
     hw_layers_.info.hw_layers.clear();
     error = hw_intf_->Flush();
     if (error == kErrorNone) {
-      comp_manager_->Purge(display_comp_ctx_);
       error = hw_intf_->PowerOff();
     }
     break;
@@ -456,6 +455,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state) {
   if (error == kErrorNone) {
     active_ = active;
     state_ = state;
+    comp_manager_->SetDisplayState(display_comp_ctx_, state, display_type_);
   }
 
   return error;
