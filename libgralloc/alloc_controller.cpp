@@ -1108,6 +1108,7 @@ int getRgbDataAddress(private_handle_t* hnd, void** rgb_data)
         return err;
     }
 
+    // Ubwc buffers
     unsigned int meta_size = 0;
     switch (hnd->format) {
         case HAL_PIXEL_FORMAT_BGR_565:
@@ -1115,6 +1116,8 @@ int getRgbDataAddress(private_handle_t* hnd, void** rgb_data)
             break;
         case HAL_PIXEL_FORMAT_RGBA_8888:
         case HAL_PIXEL_FORMAT_RGBX_8888:
+        case HAL_PIXEL_FORMAT_RGBA_1010102:
+        case HAL_PIXEL_FORMAT_RGBX_1010102:
             meta_size = getRgbUBwcMetaBufferSize(hnd->width, hnd->height, 4);
             break;
         default:
