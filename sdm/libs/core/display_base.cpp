@@ -59,10 +59,16 @@ DisplayError DisplayBase::Init() {
   hw_intf_->GetDisplayAttributes(active_index, &display_attributes_);
   fb_config_ = display_attributes_;
 
-  error = hw_intf_->GetMixerAttributes(&mixer_attributes_);
+  error = Debug::GetMixerResolution(&mixer_attributes_.width, &mixer_attributes_.height);
   if (error != kErrorNone) {
-    return error;
+    error = hw_intf_->GetMixerAttributes(&mixer_attributes_);
+    if (error != kErrorNone) {
+      return error;
+    }
   }
+
+  req_mixer_width_ = mixer_attributes_.width;
+  req_mixer_height_ = mixer_attributes_.height;
 
   // Override x_pixels and y_pixels of frame buffer with mixer width and height
   fb_config_.x_pixels = mixer_attributes_.width;
@@ -446,6 +452,16 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state) {
 
   case kStateOn:
     error = hw_intf_->PowerOn();
+    if (error != kErrorNone) {
+      return error;
+    }
+
+    error = comp_manager_->ReconfigureDisplay(display_comp_ctx_, display_attributes_,
+                                              hw_panel_info_, mixer_attributes_, fb_config_);
+    if (error != kErrorNone) {
+      return error;
+    }
+
     active = true;
     break;
 
@@ -893,7 +909,16 @@ DisplayError DisplayBase::ReconfigureDisplay() {
 
 DisplayError DisplayBase::SetMixerResolution(uint32_t width, uint32_t height) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-  return ReconfigureMixer(width, height);
+
+  DisplayError error = ReconfigureMixer(width, height);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  req_mixer_width_ = width;
+  req_mixer_height_ = height;
+
+  return kErrorNone;
 }
 
 DisplayError DisplayBase::GetMixerResolution(uint32_t *width, uint32_t *height) {
@@ -911,6 +936,10 @@ DisplayError DisplayBase::GetMixerResolution(uint32_t *width, uint32_t *height) 
 DisplayError DisplayBase::ReconfigureMixer(uint32_t width, uint32_t height) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
+
+  if (!width || !height) {
+    return kErrorParameters;
+  }
 
   HWMixerAttributes mixer_attributes;
   mixer_attributes.width = width;
@@ -940,6 +969,8 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
   uint32_t max_layer_area = 0;
   uint32_t max_area_layer_index = 0;
   std::vector<Layer *> layers = layer_stack->layers;
+  uint32_t align_x = display_attributes_.is_device_split ? 4 : 2;
+  uint32_t align_y = 2;
 
   for (uint32_t i = 0; i < layer_count; i++) {
     Layer *layer = layers.at(i);
@@ -959,7 +990,7 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
     }
   }
 
-  if (max_layer_area > fb_area) {
+  if (max_layer_area >= fb_area) {
     Layer *layer = layers.at(max_area_layer_index);
 
     uint32_t layer_width = UINT32(layer->src_rect.right - layer->src_rect.left);
@@ -977,14 +1008,14 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
     // Align the width and height according to fb's aspect ratio
     layer_width = UINT32((FLOAT(fb_width) / FLOAT(fb_height)) * layer_height);
 
-    *new_mixer_width = layer_width;
-    *new_mixer_height = layer_height;
+    *new_mixer_width = FloorToMultipleOf(layer_width, align_x);
+    *new_mixer_height = FloorToMultipleOf(layer_height, align_y);
 
     return true;
   } else {
-    if (fb_width != mixer_width || fb_height != mixer_height) {
-      *new_mixer_width = fb_width;
-      *new_mixer_height = fb_height;
+    if (req_mixer_width_ != mixer_width || req_mixer_height_ != mixer_height) {
+      *new_mixer_width = req_mixer_width_;
+      *new_mixer_height = req_mixer_height_;
 
       return true;
     }

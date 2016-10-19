@@ -134,14 +134,6 @@ void HWScaleV2::SetHWScaleData(const HWScaleData &scale_data, uint32_t index,
     mdp_scale = &scale_data_v2_.at(index);
   } else {
     mdp_scale_data_v2 mdp_dest_scale;
-    mdp_destination_scaler_data *dest_scalar =
-      reinterpret_cast<mdp_destination_scaler_data *>(mdp_commit->dest_scaler);
-
-    dest_scalar[index].flags = MDP_DESTSCALER_ENABLE;
-
-    if (scale_data.enable.detail_enhance) {
-      dest_scalar[index].flags |= MDP_DESTSCALER_ENHANCER_UPDATE;
-    }
 
     dest_scale_data_v2_.insert(std::make_pair(index, mdp_dest_scale));
     mdp_scale = &dest_scale_data_v2_[index];
@@ -150,6 +142,17 @@ void HWScaleV2::SetHWScaleData(const HWScaleData &scale_data, uint32_t index,
   mdp_scale->enable = (scale_data.enable.scale ? ENABLE_SCALE : 0) |
                       (scale_data.enable.direction_detection ? ENABLE_DIRECTION_DETECTION : 0) |
                       (scale_data.enable.detail_enhance ? ENABLE_DETAIL_ENHANCE : 0);
+
+  if (sub_block_type == kHWDestinationScalar) {
+    mdp_destination_scaler_data *mdp_dest_scalar =
+      reinterpret_cast<mdp_destination_scaler_data *>(mdp_commit->dest_scaler);
+
+    mdp_dest_scalar[index].flags = mdp_scale->enable ? MDP_DESTSCALER_ENABLE : 0;
+
+    if (scale_data.enable.detail_enhance) {
+      mdp_dest_scalar[index].flags |= MDP_DESTSCALER_ENHANCER_UPDATE;
+    }
+  }
 
   for (int i = 0; i < MAX_PLANES; i++) {
     const HWPlane &plane = scale_data.plane[i];
