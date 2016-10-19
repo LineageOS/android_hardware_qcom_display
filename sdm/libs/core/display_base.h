@@ -125,6 +125,7 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   bool NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *new_mixer_width,
                                  uint32_t *new_mixer_height);
   DisplayError ReconfigureMixer(uint32_t width, uint32_t height);
+  bool NeedsDownScale(const LayerRect &src_rect, const LayerRect &dst_rect, bool needs_rotation);
 
   recursive_mutex recursive_mutex_;
   DisplayType display_type_;
@@ -156,6 +157,8 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   HWDisplayAttributes display_attributes_ = {};
   HWMixerAttributes mixer_attributes_ = {};
   DisplayConfigVariableInfo fb_config_ = {};
+  uint32_t req_mixer_width_ = 0;
+  uint32_t req_mixer_height_ = 0;
 
  private:
   // Unused
