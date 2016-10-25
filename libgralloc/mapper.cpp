@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
- * Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -397,8 +397,7 @@ int gralloc_perform(struct gralloc_module_t const* module,
                 int *alignedWidth = va_arg(args, int *);
                 int *alignedHeight = va_arg(args, int *);
                 int *tileEnabled = va_arg(args,int *);
-                *tileEnabled = isUBwcEnabled(format, usage) ||
-                               isMacroTileEnabled(format, usage);
+                *tileEnabled = isUBwcEnabled(format, usage);
                 AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(width,
                         height, format, usage, *alignedWidth, *alignedHeight);
                 res = 0;

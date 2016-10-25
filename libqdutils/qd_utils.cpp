@@ -27,6 +27,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <unistd.h>
 #include "qd_utils.h"
 
 namespace qdutils {
@@ -81,7 +82,31 @@ static int getExternalNode(const char *type) {
     return -1;
 }
 
-int querySDEInfo(HWQueryType type, int *value) {
+static int querySDEInfoDRM(HWQueryType type, int *value) {
+    char property[PROPERTY_VALUE_MAX] = {0};
+
+    // TODO(user): If future targets don't support WB UBWC, add separate
+    // properties in target specific system.prop and have clients like WFD
+    // directly rely on those.
+    switch(type) {
+    case HAS_UBWC:
+    case HAS_WB_UBWC:  // WFD stack still uses this
+        *value = 1;
+        property_get("debug.gralloc.gfx_ubwc_disable", property, "0");
+        if(!(strncmp(property, "1", PROPERTY_VALUE_MAX)) ||
+                !(strncmp(property, "true", PROPERTY_VALUE_MAX))) {
+            *value = 0;
+        }
+        break;
+    default:
+        ALOGE("Invalid query type %d", type);
+        return -EINVAL;
+    }
+
+    return 0;
+}
+
+static int querySDEInfoFB(HWQueryType type, int *value) {
     FILE *fileptr = NULL;
     const char *featureName;
     char stringBuffer[MAX_STRING_LENGTH];
@@ -90,9 +115,6 @@ int querySDEInfo(HWQueryType type, int *value) {
     char *tokens[maxCount] = { NULL };
 
     switch(type) {
-    case HAS_MACRO_TILE:
-        featureName = "tile_format";
-        break;
     case HAS_UBWC:
         featureName = "ubwc";
         break;
@@ -132,6 +154,18 @@ int querySDEInfo(HWQueryType type, int *value) {
     fclose(fileptr);
 
     return 0;
+}
+
+int querySDEInfo(HWQueryType type, int *value) {
+    if (!value) {
+        return -EINVAL;
+    }
+
+    if (getDriverType() ==  DriverType::DRM) {
+        return querySDEInfoDRM(type, value);
+    }
+
+    return querySDEInfoFB(type, value);
 }
 
 int getHDMINode(void) {
@@ -239,6 +273,12 @@ int getDPTestConfig(uint32_t *panelBpp, uint32_t *patternType) {
     fclose(configFile);
 
     return 0;
+}
+
+DriverType getDriverType() {
+    const char *fb_caps = "/sys/devices/virtual/graphics/fb0/mdp/caps";
+    // 0 - File exists
+    return access(fb_caps, F_OK) ? DriverType::DRM : DriverType::FB;
 }
 
 }; //namespace qdutils
