@@ -58,6 +58,7 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   virtual DisplayError GetDisplayState(DisplayState *state);
   virtual DisplayError GetNumVariableInfoConfigs(uint32_t *count);
   virtual DisplayError GetConfig(uint32_t index, DisplayConfigVariableInfo *variable_info);
+  virtual DisplayError GetConfig(DisplayConfigFixedInfo *variable_info);
   virtual DisplayError GetActiveConfig(uint32_t *index);
   virtual DisplayError GetVSyncState(bool *enabled);
   virtual DisplayError SetDisplayState(DisplayState state);
@@ -152,12 +153,6 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   DisplayConfigVariableInfo fb_config_ = {};
   uint32_t req_mixer_width_ = 0;
   uint32_t req_mixer_height_ = 0;
-
- private:
-  // Unused
-  virtual DisplayError GetConfig(DisplayConfigFixedInfo *variable_info) {
-    return kErrorNone;
-  }
 };
 
 }  // namespace sdm
