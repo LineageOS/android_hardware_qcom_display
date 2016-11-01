@@ -1290,7 +1290,7 @@ int HWCDisplay::GetVisibleDisplayRect(hwc_rect_t* visible_rect) {
   return 0;
 }
 
-void HWCDisplay::SetSecureDisplay(bool secure_display_active) {
+void HWCDisplay::SetSecureDisplay(bool secure_display_active, bool force_flush) {
   secure_display_active_ = secure_display_active;
   return;
 }
