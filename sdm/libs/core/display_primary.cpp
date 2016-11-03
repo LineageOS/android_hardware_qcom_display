@@ -127,6 +127,10 @@ DisplayError DisplayPrimary::Commit(LayerStack *layer_stack) {
     } else {
       hw_intf_->SetIdleTimeoutMs(0);
     }
+  } else if (switch_to_cmd_) {
+    uint32_t pending;
+    switch_to_cmd_ = false;
+    ControlPartialUpdate(true /* enable */, &pending);
   }
 
   return error;
@@ -191,7 +195,7 @@ DisplayError DisplayPrimary::SetDisplayMode(uint32_t mode) {
     ControlPartialUpdate(false /* enable */, &pending);
     hw_intf_->SetIdleTimeoutMs(idle_timeout_ms_);
   } else if (mode == kModeCommand) {
-    ControlPartialUpdate(true /* enable */, &pending);
+    switch_to_cmd_ = true;
     hw_intf_->SetIdleTimeoutMs(0);
   }
 
