@@ -375,9 +375,9 @@ DisplayError HWDevice::Validate(HWLayers *hw_layers) {
 
     DLOGV_IF(kTagDriverConfig, "************************ DestScalar[%d] **************************",
              dest_scalar_data->dest_scaler_ndx);
-    DLOGV_IF(kTagDriverConfig, "Mixer WxH %dx%d", dest_scalar_data->lm_width,
-             dest_scalar_data->lm_height);
-    DLOGI_IF(kTagDriverConfig, "*****************************************************************");
+    DLOGV_IF(kTagDriverConfig, "Mixer WxH %dx%d flags %x", dest_scalar_data->lm_width,
+             dest_scalar_data->lm_height, dest_scalar_data->flags);
+    DLOGV_IF(kTagDriverConfig, "*****************************************************************");
   }
   mdp_commit.dest_scaler_cnt = UINT32(hw_layer_info.dest_scale_info_map.size());
 
@@ -404,6 +404,12 @@ void HWDevice::DumpLayerCommit(const mdp_layer_commit &layer_commit) {
   DLOGI("mdp_commit: flags = %x, release fence = %x", mdp_commit.flags, mdp_commit.release_fence);
   DLOGI("left_roi: x = %d, y = %d, w = %d, h = %d", l_roi.x, l_roi.y, l_roi.w, l_roi.h);
   DLOGI("right_roi: x = %d, y = %d, w = %d, h = %d", r_roi.x, r_roi.y, r_roi.w, r_roi.h);
+  for (uint32_t i = 0; i < mdp_commit.dest_scaler_cnt; i++) {
+    mdp_destination_scaler_data *dest_scalar_data = &mdp_dest_scalar_data_[i];
+
+    DLOGI("Dest scalar index %d Mixer WxH %dx%d", dest_scalar_data->dest_scaler_ndx,
+          dest_scalar_data->lm_width, dest_scalar_data->lm_height);
+  }
   for (uint32_t i = 0; i < mdp_commit.input_layer_cnt; i++) {
     const mdp_input_layer &layer = mdp_layers[i];
     const mdp_rect &src_rect = layer.src_rect;
@@ -1260,9 +1266,9 @@ DisplayError HWDevice::SetMixerAttributes(const HWMixerAttributes &mixer_attribu
 
   if (mixer_attributes.width > display_attributes_.x_pixels ||
       mixer_attributes.height > display_attributes_.y_pixels) {
-    DLOGW("Input resolution exceeds display resolution! input: res %dx%d display: res %dx%d",
-          mixer_attributes.width, mixer_attributes.height, display_attributes_.x_pixels,
-          display_attributes_.y_pixels);
+    DLOGW_IF(kTagDriverConfig, "Input resolution exceeds display resolution! input: res %dx%d "\
+             "display: res %dx%d", mixer_attributes.width, mixer_attributes.height,
+             display_attributes_.x_pixels, display_attributes_.y_pixels);
     return kErrorNotSupported;
   }
 
@@ -1272,8 +1278,8 @@ DisplayError HWDevice::SetMixerAttributes(const HWMixerAttributes &mixer_attribu
   }
 
   if (mixer_attributes.width > max_input_width) {
-    DLOGW("Input width exceeds width limit! input_width %d width_limit %d", mixer_attributes.width,
-          max_input_width);
+    DLOGW_IF(kTagDriverConfig, "Input width exceeds width limit! input_width %d width_limit %d",
+             mixer_attributes.width, max_input_width);
     return kErrorNotSupported;
   }
 
@@ -1282,8 +1288,9 @@ DisplayError HWDevice::SetMixerAttributes(const HWMixerAttributes &mixer_attribu
     FLOAT(display_attributes_.x_pixels) / FLOAT(display_attributes_.y_pixels);
 
   if (display_aspect_ratio != mixer_aspect_ratio) {
-    DLOGW("Aspect ratio mismatch! input: res %dx%d display: res %dx%d", mixer_attributes.width,
-          mixer_attributes.height, display_attributes_.x_pixels, display_attributes_.y_pixels);
+    DLOGW_IF(kTagDriverConfig, "Aspect ratio mismatch! input: res %dx%d display: res %dx%d",
+             mixer_attributes.width, mixer_attributes.height, display_attributes_.x_pixels,
+             display_attributes_.y_pixels);
     return kErrorNotSupported;
   }
 
@@ -1291,8 +1298,8 @@ DisplayError HWDevice::SetMixerAttributes(const HWMixerAttributes &mixer_attribu
   float scale_y = FLOAT(display_attributes_.y_pixels) / FLOAT(mixer_attributes.height);
   float max_scale_up = hw_resource_.hw_dest_scalar_info.max_scale_up;
   if (scale_x > max_scale_up || scale_y > max_scale_up) {
-    DLOGW("Up scaling ratio exceeds for destination scalar upscale limit scale_x %f scale_y %f " \
-          "max_scale_up %f", scale_x, scale_y, max_scale_up);
+    DLOGW_IF(kTagDriverConfig, "Up scaling ratio exceeds for destination scalar upscale " \
+             "limit scale_x %f scale_y %f max_scale_up %f", scale_x, scale_y, max_scale_up);
     return kErrorNotSupported;
   }
 
