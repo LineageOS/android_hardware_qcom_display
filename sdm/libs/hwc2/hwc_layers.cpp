@@ -98,6 +98,9 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
   // TZ Protected Buffer - L1
   if (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER) {
     layer_buffer->flags.secure = true;
+    if (handle->flags & private_handle_t::PRIV_FLAGS_CAMERA_WRITE) {
+      layer_buffer->flags.secure_camera = true;
+    }
   }
   if (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_DISPLAY) {
     layer_buffer->flags.secure_display = true;

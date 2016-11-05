@@ -64,7 +64,11 @@ DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
   int height = INT(buffer_config.height);
   int format;
 
-  if (buffer_config.secure) {
+  if (buffer_config.secure_camera) {
+    alloc_flags = GRALLOC_USAGE_HW_CAMERA_WRITE;
+    alloc_flags |= (GRALLOC_USAGE_PROTECTED | GRALLOC_USAGE_HW_COMPOSER);
+    data.align = SZ_2M;
+  } else if (buffer_config.secure) {
     alloc_flags = INT(GRALLOC_USAGE_PRIVATE_MM_HEAP);
     alloc_flags |= INT(GRALLOC_USAGE_PROTECTED);
     data.align = SECURE_ALIGN;
@@ -166,7 +170,11 @@ uint32_t HWCBufferAllocator::GetBufferSize(BufferInfo *buffer_info) {
   int height = INT(buffer_config.height);
   int format;
 
-  if (buffer_config.secure) {
+  if (buffer_config.secure_camera) {
+    alloc_flags = GRALLOC_USAGE_HW_CAMERA_WRITE;
+    alloc_flags |= (GRALLOC_USAGE_PROTECTED | GRALLOC_USAGE_HW_COMPOSER);
+    align = SZ_2M;
+  } else if (buffer_config.secure) {
     alloc_flags = INT(GRALLOC_USAGE_PRIVATE_MM_HEAP);
     alloc_flags |= INT(GRALLOC_USAGE_PROTECTED);
     align = SECURE_ALIGN;
