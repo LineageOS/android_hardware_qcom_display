@@ -166,6 +166,13 @@
 #define HAL_IGC_NOT_SPECIFIED     0
 #define HAL_IGC_s_RGB             1
 
+/* Color Space: Values maps to ColorSpace_t in qdMetadata.h */
+#define HAL_CSC_ITU_R_601         0
+#define HAL_CSC_ITU_R_601_FR      1
+#define HAL_CSC_ITU_R_709         2
+#define HAL_CSC_ITU_R_2020        3
+#define HAL_CSC_ITU_R_2020_FR     4
+
 /* possible formats for 3D content*/
 enum {
     HAL_NO_3D                      = 0x0,
