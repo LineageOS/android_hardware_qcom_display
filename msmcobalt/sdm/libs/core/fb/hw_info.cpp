@@ -247,6 +247,8 @@ DisplayError HWInfo::GetHWResourceInfo(HWResourceInfo *hw_resource) {
             hw_resource->separate_rotator = true;
           } else if (!strncmp(tokens[i], "qseed3", strlen("qseed3"))) {
             hw_resource->has_qseed3 = true;
+          } else if (!strncmp(tokens[i], "has_ppp", strlen("has_ppp"))) {
+            hw_resource->has_ppp = true;
           } else if (!strncmp(tokens[i], "concurrent_writeback", strlen("concurrent_writeback"))) {
             hw_resource->has_concurrent_writeback = true;
           } else if (!strncmp(tokens[i], "avr", strlen("avr"))) {
