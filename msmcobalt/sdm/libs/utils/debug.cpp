@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <utils/debug.h>
 #include <utils/constants.h>
+#include <string>
 
 namespace sdm {
 
@@ -159,6 +160,22 @@ bool Debug::IsExtAnimDisabled() {
   debug_.debug_handler_->GetProperty("sys.disable_ext_animation", &value);
 
   return (value == 1);
+}
+
+DisplayError Debug::GetMixerResolution(uint32_t *width, uint32_t *height) {
+  char value[64];
+
+  DisplayError error = debug_.debug_handler_->GetProperty("sdm.mixer_resolution", value);
+  if (error !=kErrorNone) {
+    return error;
+  }
+
+  std::string str(value);
+
+  *width = UINT32(stoi(str));
+  *height = UINT32(stoi(str.substr(str.find('x') + 1)));
+
+  return kErrorNone;
 }
 
 bool Debug::GetProperty(const char* property_name, char* value) {
