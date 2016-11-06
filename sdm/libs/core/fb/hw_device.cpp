@@ -744,7 +744,9 @@ void HWDevice::SetMDPFlags(const Layer *layer, const bool &is_rotator_used,
     }
   }
 
-  if (input_buffer->flags.secure) {
+  if (input_buffer->flags.secure_camera) {
+    *mdp_flags |= MDP_LAYER_SECURE_CAMERA_SESSION;
+  } else if (input_buffer->flags.secure) {
     *mdp_flags |= MDP_LAYER_SECURE_SESSION;
   }
 

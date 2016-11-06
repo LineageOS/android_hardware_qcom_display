@@ -297,7 +297,7 @@ void HWCDisplayPrimary::ToggleCPUHint(bool set) {
   }
 }
 
-void HWCDisplayPrimary::SetSecureDisplay(bool secure_display_active) {
+void HWCDisplayPrimary::SetSecureDisplay(bool secure_display_active, bool force_flush) {
   if (secure_display_active_ != secure_display_active) {
     // Skip Prepare and call Flush for null commit
     DLOGI("SecureDisplay state changed from %d to %d Needs Flush!!", secure_display_active_,
@@ -305,10 +305,10 @@ void HWCDisplayPrimary::SetSecureDisplay(bool secure_display_active) {
     secure_display_active_ = secure_display_active;
     skip_prepare_ = true;
 
-    // Avoid flush for command mode panels
+    // Avoid flush for command mode panels when no external displays are connected
     DisplayConfigFixedInfo display_config;
     display_intf_->GetConfig(&display_config);
-    if (display_config.is_cmdmode) {
+    if ((display_config.is_cmdmode) && (force_flush == false)) {
       DLOGI("Avoid flush for command mode panel");
       skip_prepare_ = false;
     }

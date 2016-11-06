@@ -214,7 +214,7 @@ void HWCDisplayExternal::ApplyScanAdjustment(hwc_rect_t *display_frame) {
                           + y_offset;
 }
 
-void HWCDisplayExternal::SetSecureDisplay(bool secure_display_active) {
+void HWCDisplayExternal::SetSecureDisplay(bool secure_display_active, bool force_flush) {
   if (secure_display_active_ != secure_display_active) {
     secure_display_active_ = secure_display_active;
 
