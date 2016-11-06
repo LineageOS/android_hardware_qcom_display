@@ -26,6 +26,7 @@
 #include <utils/debug.h>
 
 #include "strategy.h"
+#include "utils/rect.h"
 
 #define __CLASS__ "Strategy"
 
@@ -130,17 +131,30 @@ DisplayError Strategy::GetNextStrategy(StrategyConstraints *constraints) {
   // Mark all application layers for GPU composition. Find GPU target buffer and store its index for
   // programming the hardware.
   LayerStack *layer_stack = hw_layers_info_->stack;
-  uint32_t &hw_layer_count = hw_layers_info_->count;
-  hw_layer_count = 0;
-
   for (uint32_t i = 0; i < hw_layers_info_->app_layer_count; i++) {
     layer_stack->layers.at(i)->composition = kCompositionGPU;
   }
 
-  Layer *gpu_target_layer = layer_stack->layers.at(hw_layers_info_->gpu_target_index);
-  hw_layers_info_->updated_src_rect[hw_layer_count] = gpu_target_layer->src_rect;
-  hw_layers_info_->updated_dst_rect[hw_layer_count] = gpu_target_layer->dst_rect;
-  hw_layers_info_->index[hw_layer_count++] = hw_layers_info_->gpu_target_index;
+  if (!extn_start_success_) {
+    // When mixer resolution and panel resolutions are same (1600x2560) and FB resolution is
+    // 1080x1920 FB_Target destination coordinates(mapped to FB resolution 1080x1920) need to
+    // be mapped to destination coordinates of mixer resolution(1600x2560).
+    hw_layers_info_->count = 0;
+    uint32_t &hw_layer_count = hw_layers_info_->count;
+    Layer *gpu_target_layer = layer_stack->layers.at(hw_layers_info_->gpu_target_index);
+    float layer_mixer_width = FLOAT(mixer_attributes_.width);
+    float layer_mixer_height = FLOAT(mixer_attributes_.height);
+    float fb_width = FLOAT(fb_config_.x_pixels);
+    float fb_height = FLOAT(fb_config_.y_pixels);
+    LayerRect src_domain = (LayerRect){0.0f, 0.0f, fb_width, fb_height};
+    LayerRect dst_domain = (LayerRect){0.0f, 0.0f, layer_mixer_width, layer_mixer_height};
+
+    hw_layers_info_->updated_src_rect[hw_layer_count] = gpu_target_layer->src_rect;
+    MapRect(src_domain, dst_domain, gpu_target_layer->dst_rect,
+            &hw_layers_info_->updated_dst_rect[hw_layer_count]);
+
+    hw_layers_info_->index[hw_layer_count++] = hw_layers_info_->gpu_target_index;
+  }
 
   tried_default_ = true;
 
@@ -179,9 +193,7 @@ DisplayError Strategy::Reconfigure(const HWPanelInfo &hw_panel_info,
                          const HWDisplayAttributes &display_attributes,
                          const HWMixerAttributes &mixer_attributes,
                          const DisplayConfigVariableInfo &fb_config) {
-  hw_panel_info_ = hw_panel_info;
-  display_attributes_ = display_attributes;
-  mixer_attributes_ = mixer_attributes;
+  DisplayError error = kErrorNone;
 
   if (!extension_intf_) {
     return kErrorNone;
@@ -194,12 +206,22 @@ DisplayError Strategy::Reconfigure(const HWPanelInfo &hw_panel_info,
     partial_update_intf_ = NULL;
   }
 
-  extension_intf_->CreatePartialUpdate(display_type_, hw_resource_info_, hw_panel_info_,
-                                       mixer_attributes_, display_attributes_,
+  extension_intf_->CreatePartialUpdate(display_type_, hw_resource_info_, hw_panel_info,
+                                       mixer_attributes, display_attributes,
                                        &partial_update_intf_);
 
-  return strategy_intf_->Reconfigure(hw_panel_info_.mode, hw_panel_info_.s3d_mode, mixer_attributes,
+  error = strategy_intf_->Reconfigure(hw_panel_info.mode, hw_panel_info.s3d_mode, mixer_attributes,
                                      fb_config);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  hw_panel_info_ = hw_panel_info;
+  display_attributes_ = display_attributes;
+  mixer_attributes_ = mixer_attributes;
+  fb_config_ = fb_config;
+
+  return kErrorNone;
 }
 
 }  // namespace sdm
