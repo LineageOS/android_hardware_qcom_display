@@ -191,6 +191,7 @@ DisplayError DisplayBase::ValidateGPUTargetParams() {
   LayerRect out_rect = gpu_target_layer->dst_rect;
 
   MapRect(src_domain, dst_domain, gpu_target_layer->dst_rect, &out_rect);
+  Normalize(1, 1, &out_rect);
 
   auto gpu_target_layer_dst_xpixels = out_rect.right - out_rect.left;
   auto gpu_target_layer_dst_ypixels = out_rect.bottom - out_rect.top;
