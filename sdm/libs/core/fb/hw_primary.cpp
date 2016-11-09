@@ -223,10 +223,11 @@ DisplayError HWPrimary::PopulateDisplayAttributes() {
     return kErrorHardware;
   }
 
-  // If driver doesn't return width/height information, default to 160 dpi
+  // If driver doesn't return width/height information, default to 320 dpi
   if (INT(var_screeninfo.width) <= 0 || INT(var_screeninfo.height) <= 0) {
-    var_screeninfo.width  = UINT32(((FLOAT(var_screeninfo.xres) * 25.4f)/160.0f) + 0.5f);
-    var_screeninfo.height = UINT32(((FLOAT(var_screeninfo.yres) * 25.4f)/160.0f) + 0.5f);
+    var_screeninfo.width  = UINT32(((FLOAT(var_screeninfo.xres) * 25.4f)/320.0f) + 0.5f);
+    var_screeninfo.height = UINT32(((FLOAT(var_screeninfo.yres) * 25.4f)/320.0f) + 0.5f);
+    DLOGW("Driver doesn't report panel physical width and height - defaulting to 320dpi");
   }
 
   display_attributes_.x_pixels = var_screeninfo.xres;
