@@ -137,6 +137,7 @@ DisplayError Strategy::GetNextStrategy(StrategyConstraints *constraints) {
   LayerStack *layer_stack = hw_layers_info_->stack;
   for (uint32_t i = 0; i < hw_layers_info_->app_layer_count; i++) {
     layer_stack->layers.at(i)->composition = kCompositionGPU;
+    layer_stack->layers.at(i)->request.flags.request_flags = 0;  // Reset layer request
   }
 
   if (!extn_start_success_) {
@@ -243,5 +244,14 @@ DisplayError Strategy::SetCompositionState(LayerComposition composition_type, bo
 
   return kErrorNone;
 }
+
+DisplayError Strategy::Purge() {
+  if (strategy_intf_) {
+    return strategy_intf_->Purge();
+  }
+
+  return kErrorNone;
+}
+
 
 }  // namespace sdm

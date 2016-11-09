@@ -104,6 +104,8 @@ DisplayError DisplayBase::Init() {
                                display_attributes_, hw_panel_info_);
   if (!color_mgr_) {
     DLOGW("Unable to create ColorManagerProxy for display = %d", display_type_);
+  } else if (InitializeColorModes() != kErrorNone) {
+    DLOGW("InitColorModes failed for display = %d", display_type_);
   }
 
   return kErrorNone;
@@ -118,6 +120,9 @@ CleanupOnError:
 
 DisplayError DisplayBase::Deinit() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
+
+  color_modes_.clear();
+  color_mode_map_.clear();
 
   if (color_mgr_) {
     delete color_mgr_;
@@ -213,6 +218,12 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
 
   error = BuildLayerStackStats(layer_stack);
   if (error != kErrorNone) {
+    return error;
+  }
+
+  error = HandleHDR(layer_stack);
+  if (error != kErrorNone) {
+    DLOGW("HandleHDR failed");
     return error;
   }
 
@@ -659,11 +670,6 @@ DisplayError DisplayBase::GetColorModeCount(uint32_t *mode_count) {
     return kErrorNotSupported;
   }
 
-  DisplayError error = color_mgr_->ColorMgrGetNumOfModes(&num_color_modes_);
-  if (error != kErrorNone || !num_color_modes_) {
-    return kErrorNotSupported;
-  }
-
   DLOGV_IF(kTagQDCM, "Number of modes from color manager = %d", num_color_modes_);
   *mode_count = num_color_modes_;
 
@@ -681,30 +687,6 @@ DisplayError DisplayBase::GetColorModes(uint32_t *mode_count,
     return kErrorNotSupported;
   }
 
-  if (!color_modes_.size()) {
-    color_modes_.resize(num_color_modes_);
-
-    DisplayError error = color_mgr_->ColorMgrGetModes(&num_color_modes_, color_modes_.data());
-    if (error != kErrorNone) {
-      DLOGE("Failed");
-      return error;
-    }
-
-    for (uint32_t i = 0; i < num_color_modes_; i++) {
-      DLOGV_IF(kTagQDCM, "Color Mode[%d]: Name = %s mode_id = %d", i, color_modes_[i].name,
-               color_modes_[i].id);
-      auto it = color_mode_map_.find(color_modes_[i].name);
-      if (it != color_mode_map_.end()) {
-        if (it->second->id < color_modes_[i].id) {
-          color_mode_map_.erase(it);
-          color_mode_map_.insert(std::make_pair(color_modes_[i].name, &color_modes_[i]));
-        }
-      } else {
-        color_mode_map_.insert(std::make_pair(color_modes_[i].name, &color_modes_[i]));
-      }
-    }
-  }
-
   for (uint32_t i = 0; i < num_color_modes_; i++) {
     DLOGV_IF(kTagQDCM, "Color Mode[%d]: Name = %s mode_id = %d", i, color_modes_[i].name,
              color_modes_[i].id);
@@ -720,6 +702,21 @@ DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
     return kErrorNotSupported;
   }
 
+  DisplayError error = kErrorNone;
+  // Set client requests when not in HDR Mode.
+  if (!hdr_playback_mode_) {
+    error = SetColorModeInternal(color_mode);
+    if (error != kErrorNone) {
+      return error;
+    }
+  }
+  // Store the new color mode request by client
+  current_color_mode_ = color_mode;
+
+  return error;
+}
+
+DisplayError DisplayBase::SetColorModeInternal(const std::string &color_mode) {
   DLOGV_IF(kTagQDCM, "Color Mode = %s", color_mode.c_str());
 
   ColorModeMap::iterator it = color_mode_map_.find(color_mode);
@@ -730,7 +727,7 @@ DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
 
   SDEDisplayMode *sde_display_mode = it->second;
 
-  DLOGD("Color Mode Name = %s corresponding mode_id = %d", sde_display_mode->name,
+  DLOGV_IF(kTagQDCM, "Color Mode Name = %s corresponding mode_id = %d", sde_display_mode->name,
            sde_display_mode->id);
   DisplayError error = kErrorNone;
   error = color_mgr_->ColorMgrSetMode(sde_display_mode->id);
@@ -1145,5 +1142,74 @@ void DisplayBase::PostCommitLayerParams(LayerStack *layer_stack) {
   return;
 }
 
+DisplayError DisplayBase::InitializeColorModes() {
+  if (!color_mgr_) {
+    return kErrorNotSupported;
+  }
+
+  DisplayError error = color_mgr_->ColorMgrGetNumOfModes(&num_color_modes_);
+  if (error != kErrorNone || !num_color_modes_) {
+    DLOGV_IF(kTagQDCM, "GetNumModes failed = %d count = %d", error, num_color_modes_);
+    return kErrorNotSupported;
+  }
+  DLOGI("Number of Color Modes = %d", num_color_modes_);
+
+  if (!color_modes_.size()) {
+    color_modes_.resize(num_color_modes_);
+
+    DisplayError error = color_mgr_->ColorMgrGetModes(&num_color_modes_, color_modes_.data());
+    if (error != kErrorNone) {
+      color_modes_.clear();
+      DLOGE("Failed");
+      return error;
+    }
+
+    for (uint32_t i = 0; i < num_color_modes_; i++) {
+      DLOGV_IF(kTagQDCM, "Color Mode[%d]: Name = %s mode_id = %d", i, color_modes_[i].name,
+               color_modes_[i].id);
+      auto it = color_mode_map_.find(color_modes_[i].name);
+      if (it != color_mode_map_.end()) {
+        if (it->second->id < color_modes_[i].id) {
+          color_mode_map_.erase(it);
+          color_mode_map_.insert(std::make_pair(color_modes_[i].name, &color_modes_[i]));
+        }
+      } else {
+        color_mode_map_.insert(std::make_pair(color_modes_[i].name, &color_modes_[i]));
+      }
+    }
+  }
+
+  return kErrorNone;
+}
+
+DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
+  DisplayError error = kErrorNone;
+
+  if (!color_mgr_) {
+    // TODO(user): Handle the case where color_mgr is not present
+    return kErrorNone;
+  }
+
+  if (!layer_stack->flags.hdr_present) {
+    //  HDR playback off - set prev mode
+    if (hdr_playback_mode_) {
+      hdr_playback_mode_ = false;
+      DLOGI("Setting color mode = %s", current_color_mode_.c_str());
+      error = SetColorModeInternal(current_color_mode_);
+    // TODO(user): Enable DPPS
+    }
+  } else {
+    // hdr is present
+    if (!hdr_playback_mode_ && !layer_stack->flags.animating) {
+      // hdr is starting
+      hdr_playback_mode_ = true;
+      DLOGI("Setting HDR color mode = %s", hdr_color_mode_.c_str());
+      error = SetColorModeInternal(hdr_color_mode_);
+    }
+    // TODO(user): Disable DPPS
+  }
+
+  return error;
+}
 
 }  // namespace sdm

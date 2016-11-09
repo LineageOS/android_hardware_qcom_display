@@ -41,9 +41,10 @@
 #include <utility>
 #include <vector>
 
-#include "hwc_display.h"
-#include "hwc_debugger.h"
 #include "blit_engine_c2d.h"
+#include "hwc_debugger.h"
+#include "hwc_display.h"
+#include "hwc_tonemapper.h"
 
 #ifdef QTI_BSP
 #include <hardware/display_defs.h>
@@ -98,6 +99,9 @@ int HWCDisplay::Init() {
     }
   }
 
+  tone_mapper_ = new HWCToneMapper();
+  tone_mapper_->Init();
+
   display_intf_->GetRefreshRateRange(&min_refresh_rate_, &max_refresh_rate_);
   current_refresh_rate_ = max_refresh_rate_;
 
@@ -126,6 +130,9 @@ int HWCDisplay::Deinit() {
     delete blit_engine_;
     blit_engine_ = NULL;
   }
+
+  delete tone_mapper_;
+  tone_mapper_ = NULL;
 
   return 0;
 }
@@ -172,6 +179,7 @@ int HWCDisplay::SetPowerMode(int mode) {
     // Do not flush until a buffer is successfully submitted again.
     flush_on_error = false;
     state = kStateOff;
+    tone_mapper_->Terminate();
     break;
 
   case HWC_POWER_MODE_NORMAL:
@@ -271,6 +279,10 @@ void HWCDisplay::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type
 
   if (blit_engine_) {
     blit_engine_->SetFrameDumpConfig(count);
+  }
+
+  if (tone_mapper_) {
+    tone_mapper_->SetFrameDumpConfig(count);
   }
 
   DLOGI("num_frame_dump %d, input_layer_dump_enable %d", dump_frame_count_, dump_input_layers_);
@@ -702,6 +714,15 @@ int HWCDisplay::CommitLayerStack(hwc_display_contents_1_t *content_list) {
       }
     }
 
+    if (layer_stack_.flags.hdr_present) {
+      status = tone_mapper_->HandleToneMap(content_list, &layer_stack_);
+      if (status != 0) {
+        DLOGE("Error handling HDR in ToneMapper");
+      }
+    } else {
+      tone_mapper_->Terminate();
+    }
+
     DisplayError error = kErrorUndefined;
     if (status == 0) {
       error = display_intf_->Commit(&layer_stack_);
@@ -736,6 +757,11 @@ int HWCDisplay::PostCommitLayerStack(hwc_display_contents_1_t *content_list) {
   // Do no call flush on errors, if a successful buffer is never submitted.
   if (flush_ && flush_on_error_) {
     display_intf_->Flush();
+  }
+
+
+  if (tone_mapper_ && tone_mapper_->IsActive()) {
+     tone_mapper_->PostCommit(&layer_stack_);
   }
 
   // Set the release fence fd to the blit engine
@@ -1280,6 +1306,13 @@ DisplayError HWCDisplay::SetMetaData(const private_handle_t *pvt_handle, Layer *
 
   if (SetCSC(meta_data, &layer_buffer.color_metadata) != kErrorNone) {
     return kErrorNotSupported;
+  }
+
+  if (layer_buffer.color_metadata.colorPrimaries == ColorPrimaries_BT2020 &&
+     (layer_buffer.color_metadata.transfer == Transfer_SMPTE_ST2084 ||
+      layer_buffer.color_metadata.transfer == Transfer_HLG)) {
+    layer_buffer.flags.hdr = true;
+    layer_stack_.flags.hdr_present = true;
   }
 
   if (meta_data->operation & SET_IGC) {

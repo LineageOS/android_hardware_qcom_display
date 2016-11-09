@@ -36,6 +36,7 @@
 namespace sdm {
 
 class BlitEngine;
+class HWCToneMapper;
 
 // Subclasses set this to their type. This has to be different from DisplayType.
 // This is to avoid RTTI and dynamic_cast
@@ -217,6 +218,7 @@ class HWCDisplay : public DisplayEventHandler {
   LayerRect display_rect_;
   std::map<int, LayerBufferS3DFormat> s3d_format_hwc_to_sdm_;
   bool animating_ = false;
+  HWCToneMapper *tone_mapper_ = NULL;
 
  private:
   void DumpInputBuffers(hwc_display_contents_1_t *content_list);

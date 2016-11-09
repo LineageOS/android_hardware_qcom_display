@@ -114,6 +114,7 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   virtual DisplayError ValidateGPUTargetParams();
   void CommitLayerParams(LayerStack *layer_stack);
   void PostCommitLayerParams(LayerStack *layer_stack);
+  DisplayError HandleHDR(LayerStack *layer_stack);
 
   // DumpImpl method
   void AppendDump(char *buffer, uint32_t length);
@@ -124,6 +125,8 @@ class DisplayBase : public DisplayInterface, DumpImpl {
                                  uint32_t *new_mixer_height);
   DisplayError ReconfigureMixer(uint32_t width, uint32_t height);
   bool NeedsDownScale(const LayerRect &src_rect, const LayerRect &dst_rect, bool needs_rotation);
+  DisplayError InitializeColorModes();
+  DisplayError SetColorModeInternal(const std::string &color_mode);
 
   recursive_mutex recursive_mutex_;
   DisplayType display_type_;
@@ -155,6 +158,9 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   DisplayConfigVariableInfo fb_config_ = {};
   uint32_t req_mixer_width_ = 0;
   uint32_t req_mixer_height_ = 0;
+  std::string current_color_mode_ = "hal_native";
+  std::string hdr_color_mode_ = "hal_hdr";
+  bool hdr_playback_mode_ = false;
 };
 
 }  // namespace sdm

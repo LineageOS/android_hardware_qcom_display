@@ -203,6 +203,9 @@ struct LayerBufferFlags {
       uint32_t secure_camera : 1;   //!< This flag shall be set by the client to indicate that the
                                     //!< buffer is associated with secure camera session. A secure
                                     //!< camera layer can co-exist with non-secure layer(s).
+
+      uint32_t hdr : 1;             //!< This flag shall be set by the client to indicate that the
+                                    //!< the content is HDR.
     };
 
     uint32_t flags = 0;             //!< For initialization purpose only.

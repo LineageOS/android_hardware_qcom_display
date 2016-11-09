@@ -53,6 +53,7 @@ class StrategyInterface {
                                    const HWMixerAttributes &mixer_attributes,
                                    const DisplayConfigVariableInfo &fb_config) = 0;
   virtual DisplayError SetCompositionState(LayerComposition composition_type, bool enable) = 0;
+  virtual DisplayError Purge() = 0;
 
  protected:
   virtual ~StrategyInterface() { }
