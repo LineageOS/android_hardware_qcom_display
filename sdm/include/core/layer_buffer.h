@@ -273,6 +273,13 @@ struct LayerBuffer {
                                 //!< Specifies the buffer id.
 };
 
+// This enum represents buffer layout types.
+enum BufferLayout {
+  kLinear,    //!< Linear data
+  kUBWC,      //!< UBWC aligned data
+  kTPTiled    //!< Tightly Packed data
+};
+
 }  // namespace sdm
 
 #endif  // __LAYER_BUFFER_H__

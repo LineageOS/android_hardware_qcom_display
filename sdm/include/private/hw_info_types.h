@@ -128,6 +128,7 @@ struct HWRotatorInfo {
   uint32_t num_rotator = 0;
   bool has_downscale = false;
   std::string device_path = "";
+  float min_downscale = 2.0f;
 
   void Reset() { *this = HWRotatorInfo(); }
 };
