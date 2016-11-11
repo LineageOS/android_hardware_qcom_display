@@ -17,6 +17,7 @@ endif
 
 common_includes := $(display_top)/libqdutils
 common_includes += $(display_top)/libqservice
+common_includes += $(display_top)/gpu_tonemapper
 ifneq ($(TARGET_IS_HEADLESS), true)
     common_includes += $(display_top)/libcopybit
 endif
