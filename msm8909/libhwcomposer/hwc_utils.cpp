@@ -555,7 +555,7 @@ uint32_t roundOff(uint32_t refreshRate) {
     int count =  (int) (sizeof(stdRefreshRates)/sizeof(stdRefreshRates[0]));
     uint32_t rate = refreshRate;
     for(int i=0; i< count; i++) {
-        if(abs(stdRefreshRates[i] - refreshRate) < 2) {
+        if(abs((int)(stdRefreshRates[i] - refreshRate)) < 2) {
             // Most likely used for video, the fps can fluctuate
             // Ex: b/w 29 and 30 for 30 fps clip
             rate = stdRefreshRates[i];
