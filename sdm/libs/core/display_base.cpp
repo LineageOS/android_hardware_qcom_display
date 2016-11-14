@@ -388,6 +388,13 @@ DisplayError DisplayBase::GetConfig(uint32_t index, DisplayConfigVariableInfo *v
   return kErrorNotSupported;
 }
 
+DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *variable_info) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  variable_info->is_cmdmode = (hw_panel_info_.mode == kModeCommand);
+
+  return kErrorNone;
+}
+
 DisplayError DisplayBase::GetActiveConfig(uint32_t *index) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   return hw_intf_->GetActiveConfig(index);
