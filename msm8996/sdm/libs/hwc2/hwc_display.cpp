@@ -154,7 +154,7 @@ HWC2::Error HWCColorMode::HandleColorModeTransform(android_color_mode_t mode,
   current_color_mode_ = mode;
   current_color_transform_ = hint;
   CopyColorTransformMatrix(matrix, color_matrix_);
-  DLOGI("Setting Color Mode = %d Transform Hint = %d Success", mode, hint);
+  DLOGV_IF(kTagQDCM, "Setting Color Mode = %d Transform Hint = %d Success", mode, hint);
 
   return HWC2::Error::None;
 }
