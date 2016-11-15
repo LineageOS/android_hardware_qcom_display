@@ -757,7 +757,7 @@ DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
 
   SDEDisplayMode *sde_display_mode = it->second;
 
-  DLOGD("Color Mode Name = %s corresponding mode_id = %d", sde_display_mode->name,
+  DLOGV_IF(kTagQDCM, "Color Mode Name = %s corresponding mode_id = %d", sde_display_mode->name,
            sde_display_mode->id);
   DisplayError error = kErrorNone;
   error = color_mgr_->ColorMgrSetMode(sde_display_mode->id);
