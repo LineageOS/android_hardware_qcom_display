@@ -398,7 +398,30 @@ int gralloc_perform(struct gralloc_module_t const* module,
                     return res;
                 }
                 MetaData_t *metadata = (MetaData_t *)hnd->base_metadata;
-                if(metadata && metadata->operation & UPDATE_COLOR_SPACE) {
+                if (!metadata) {
+                    break;
+#ifdef USE_COLOR_METADATA
+                } else if (metadata->operation & COLOR_METADATA) {
+                    ColorMetaData *colorMetadata = &metadata->color;
+                    res = 0;
+                    switch (colorMetadata->colorPrimaries) {
+                    case ColorPrimaries_BT709_5:
+                        *color_space = HAL_CSC_ITU_R_709;
+                        break;
+                    case ColorPrimaries_BT601_6_525:
+                        *color_space = ((colorMetadata->range) ?
+                                        HAL_CSC_ITU_R_601_FR : HAL_CSC_ITU_R_601);
+                        break;
+                    case ColorPrimaries_BT2020:
+                        *color_space = (colorMetadata->range) ?
+                            HAL_CSC_ITU_R_2020_FR : HAL_CSC_ITU_R_2020;
+                        break;
+                    default:
+                        res = -EINVAL;
+                        break;
+                    }
+#endif
+                } else if(metadata->operation & UPDATE_COLOR_SPACE) {
                     *color_space = metadata->colorSpace;
                     res = 0;
                 }
