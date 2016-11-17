@@ -122,7 +122,7 @@ class HWDevice : public HWInterface {
   int ParseLine(const char *input, const char *delim, char *tokens[],
                 const uint32_t max_token, uint32_t *count);
   void ResetDisplayParams();
-  void SetCSC(const LayerCSC source, mdp_color_space *color_space);
+  void SetCSC(const ColorMetaData &color_metadata, mdp_color_space *color_space);
   void SetIGC(const LayerBuffer *layer_buffer, uint32_t index);
 
   bool EnableHotPlugDetection(int enable);
