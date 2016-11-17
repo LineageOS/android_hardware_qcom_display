@@ -165,7 +165,7 @@ class HWCDisplay : public DisplayEventHandler {
   const char *GetDisplayString();
   void MarkLayersForGPUBypass(hwc_display_contents_1_t *content_list);
   virtual void ApplyScanAdjustment(hwc_rect_t *display_frame);
-  DisplayError SetCSC(ColorSpace_t source, LayerCSC *target);
+  DisplayError SetCSC(const MetaData_t *meta_data, ColorMetaData *color_metadata);
   DisplayError SetIGC(IGC_t source, LayerIGC *target);
   DisplayError SetMetaData(const private_handle_t *pvt_handle, Layer *layer);
   bool NeedsFrameBufferRefresh(hwc_display_contents_1_t *content_list);

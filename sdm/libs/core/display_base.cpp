@@ -557,9 +557,9 @@ void DisplayBase::AppendDump(char *buffer, uint32_t length) {
                            INT(r_roi.top), INT(r_roi.right), INT(r_roi.bottom));
   }
 
-  const char *header  = "\n| Idx |  Comp Type  |  Split | WB |  Pipe |    W x H    |          Format          |  Src Rect (L T R B) |  Dst Rect (L T R B) |  Z |    Flags   | Deci(HxV) | CS |";  //NOLINT
-  const char *newline = "\n|-----|-------------|--------|----|-------|-------------|--------------------------|---------------------|---------------------|----|------------|-----------|----|";  //NOLINT
-  const char *format  = "\n| %3s | %11s "     "| %6s " "| %2s | 0x%03x | %4d x %4d | %24s "                  "| %4d %4d %4d %4d "  "| %4d %4d %4d %4d "  "| %2s | %10s "   "| %9s | %2s |";  //NOLINT
+  const char *header  = "\n| Idx |  Comp Type  |  Split | WB |  Pipe |    W x H    |          Format          |  Src Rect (L T R B) |  Dst Rect (L T R B) |  Z |    Flags   | Deci(HxV) | CS | Range|";  //NOLINT
+  const char *newline = "\n|-----|-------------|--------|----|-------|-------------|--------------------------|---------------------|---------------------|----|------------|-----------|----|------|";  //NOLINT
+  const char *format  = "\n| %3s | %11s "     "| %6s " "| %2s | 0x%03x | %4d x %4d | %24s "                  "| %4d %4d %4d %4d "  "| %4d %4d %4d %4d "  "| %2s | %10s "   "| %9s | %2s | %2s |";  //NOLINT
 
   DumpImpl::AppendString(buffer, length, "\n");
   DumpImpl::AppendString(buffer, length, newline);
@@ -594,7 +594,7 @@ void DisplayBase::AppendDump(char *buffer, uint32_t length) {
                              input_buffer->height, buffer_format, INT(src_roi.left),
                              INT(src_roi.top), INT(src_roi.right), INT(src_roi.bottom),
                              INT(dst_roi.left), INT(dst_roi.top), INT(dst_roi.right),
-                             INT(dst_roi.bottom), "-", "-    ", "-    ", "-");
+                             INT(dst_roi.bottom), "-", "-    ", "-    ", "-", "-");
 
       // print the below only once per layer block, fill with spaces for rest.
       idx[0] = 0;
@@ -610,7 +610,8 @@ void DisplayBase::AppendDump(char *buffer, uint32_t length) {
       char decimation[16] = { 0 };
       char flags[16] = { 0 };
       char z_order[8] = { 0 };
-      char csc[8] = { 0 };
+      char color_primary[8] = { 0 };
+      char range[8] = { 0 };
 
       HWPipeInfo &pipe = (count == 0) ? layer_config.left_pipe : layer_config.right_pipe;
 
@@ -625,14 +626,16 @@ void DisplayBase::AppendDump(char *buffer, uint32_t length) {
       snprintf(flags, sizeof(flags), "0x%08x", layer->flags.flags);
       snprintf(decimation, sizeof(decimation), "%3d x %3d", pipe.horizontal_decimation,
                pipe.vertical_decimation);
-      snprintf(csc, sizeof(csc), "%d", layer->input_buffer->csc);
+      ColorMetaData &color_metadata = layer->input_buffer->color_metadata;
+      snprintf(color_primary, sizeof(color_primary), "%d", color_metadata.colorPrimaries);
+      snprintf(range, sizeof(range), "%d", color_metadata.range);
 
       DumpImpl::AppendString(buffer, length, format, idx, comp_type, comp_split[count],
                              "-", pipe.pipe_id, input_buffer->width, input_buffer->height,
                              buffer_format, INT(src_roi.left), INT(src_roi.top),
                              INT(src_roi.right), INT(src_roi.bottom), INT(dst_roi.left),
                              INT(dst_roi.top), INT(dst_roi.right), INT(dst_roi.bottom),
-                             z_order, flags, decimation, csc);
+                             z_order, flags, decimation, color_primary, range);
 
       // print the below only once per layer block, fill with spaces for rest.
       idx[0] = 0;
