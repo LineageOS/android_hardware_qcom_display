@@ -27,7 +27,6 @@
 
 #include <core/display_interface.h>
 #include <private/strategy_interface.h>
-#include <private/rotator_interface.h>
 #include <private/color_interface.h>
 
 #include <map>
@@ -45,15 +44,11 @@ namespace sdm {
 using std::recursive_mutex;
 using std::lock_guard;
 
-class RotatorCtrl;
-class HWInfoInterface;
-
 class DisplayBase : public DisplayInterface, DumpImpl {
  public:
   DisplayBase(DisplayType display_type, DisplayEventHandler *event_handler,
               HWDeviceType hw_device_type, BufferSyncHandler *buffer_sync_handler,
-              CompManager *comp_manager, RotatorInterface *rotator_intf,
-              HWInfoInterface *hw_info_intf);
+              CompManager *comp_manager, HWInfoInterface *hw_info_intf);
   virtual ~DisplayBase() { }
   virtual DisplayError Init();
   virtual DisplayError Deinit();
@@ -63,6 +58,7 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   virtual DisplayError GetDisplayState(DisplayState *state);
   virtual DisplayError GetNumVariableInfoConfigs(uint32_t *count);
   virtual DisplayError GetConfig(uint32_t index, DisplayConfigVariableInfo *variable_info);
+  virtual DisplayError GetConfig(DisplayConfigFixedInfo *variable_info);
   virtual DisplayError GetActiveConfig(uint32_t *index);
   virtual DisplayError GetVSyncState(bool *enabled);
   virtual DisplayError SetDisplayState(DisplayState state);
@@ -111,6 +107,7 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   virtual DisplayError SetDetailEnhancerData(const DisplayDetailEnhancerData &de_data);
   virtual DisplayError GetDisplayPort(DisplayPort *port);
   virtual bool IsPrimaryDisplay();
+  virtual DisplayError SetCompositionState(LayerComposition composition_type, bool enable);
 
  protected:
   DisplayError BuildLayerStackStats(LayerStack *layer_stack);
@@ -119,7 +116,6 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   // DumpImpl method
   void AppendDump(char *buffer, uint32_t length);
 
-  bool IsRotationRequired(HWLayers *hw_layers);
   const char *GetName(const LayerComposition &composition);
   DisplayError ReconfigureDisplay();
   bool NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *new_mixer_width,
@@ -135,12 +131,10 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   HWPanelInfo hw_panel_info_;
   BufferSyncHandler *buffer_sync_handler_ = NULL;
   CompManager *comp_manager_ = NULL;
-  RotatorInterface *rotator_intf_ = NULL;
   DisplayState state_ = kStateOff;
   bool active_ = false;
   Handle hw_device_ = 0;
   Handle display_comp_ctx_ = 0;
-  Handle display_rotator_ctx_ = 0;
   HWLayers hw_layers_;
   bool pending_commit_ = false;
   bool vsync_enable_ = false;
@@ -159,12 +153,6 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   DisplayConfigVariableInfo fb_config_ = {};
   uint32_t req_mixer_width_ = 0;
   uint32_t req_mixer_height_ = 0;
-
- private:
-  // Unused
-  virtual DisplayError GetConfig(DisplayConfigFixedInfo *variable_info) {
-    return kErrorNone;
-  }
 };
 
 }  // namespace sdm

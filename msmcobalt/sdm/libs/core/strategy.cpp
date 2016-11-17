@@ -82,6 +82,11 @@ DisplayError Strategy::Start(HWLayersInfo *hw_layers_info, uint32_t *max_attempt
   extn_start_success_ = false;
   tried_default_ = false;
 
+  if (!disable_gpu_comp_ && !hw_layers_info_->gpu_target_index) {
+    DLOGE("GPU composition is enabled and GPU target buffer not provided.");
+    return kErrorNotSupported;
+  }
+
   if (partial_update_intf_) {
     partial_update_intf_->ControlPartialUpdate(partial_update_enable);
   }
@@ -118,8 +123,8 @@ DisplayError Strategy::GetNextStrategy(StrategyConstraints *constraints) {
     }
   }
 
-  // Default composition is not possible if GPU composition is not supported.
-  if (!hw_layers_info_->gpu_target_index) {
+  // Do not fallback to GPU if GPU comp is disabled.
+  if (disable_gpu_comp_) {
     return kErrorNotSupported;
   }
 
@@ -220,6 +225,20 @@ DisplayError Strategy::Reconfigure(const HWPanelInfo &hw_panel_info,
   display_attributes_ = display_attributes;
   mixer_attributes_ = mixer_attributes;
   fb_config_ = fb_config;
+
+  return kErrorNone;
+}
+
+DisplayError Strategy::SetCompositionState(LayerComposition composition_type, bool enable) {
+  DLOGI("composition type = %d, enable = %d", composition_type, enable);
+
+  if (composition_type == kCompositionGPU) {
+    disable_gpu_comp_ = !enable;
+  }
+
+  if (strategy_intf_) {
+    return strategy_intf_->SetCompositionState(composition_type, enable);
+  }
 
   return kErrorNone;
 }
