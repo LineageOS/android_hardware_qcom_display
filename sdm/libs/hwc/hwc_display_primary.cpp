@@ -296,15 +296,33 @@ void HWCDisplayPrimary::ToggleCPUHint(bool set) {
   }
 }
 
-void HWCDisplayPrimary::SetSecureDisplay(bool secure_display_active) {
+void HWCDisplayPrimary::SetSecureDisplay(bool secure_display_active, bool force_flush) {
   if (secure_display_active_ != secure_display_active) {
     // Skip Prepare and call Flush for null commit
     DLOGI("SecureDisplay state changed from %d to %d Needs Flush!!", secure_display_active_,
            secure_display_active);
     secure_display_active_ = secure_display_active;
-    skip_prepare_ = true;
+    skip_prepare_cnt = 1;
+
+    // Issue two null commits for command mode panels when external displays are connected.
+    // Two null commits are required to handle non secure to secure transitions at 30fps.
+    // TODO(user): Need two null commits on video mode also to handle transition cases of
+    // primary at higher fps (ex60) and external at lower fps.
+
+    // Avoid flush for command mode panels when no external displays are connected.
+    // This is to avoid flicker/blink on primary during transitions.
+    DisplayConfigFixedInfo display_config;
+    display_intf_->GetConfig(&display_config);
+    if (display_config.is_cmdmode) {
+      if (force_flush) {
+        DLOGI("Issue two null commits for command mode panels");
+        skip_prepare_cnt = 2;
+      } else {
+        DLOGI("Avoid flush for command mode panel when no external displays are connected");
+        skip_prepare_cnt = 0;
+      }
+    }
   }
-  return;
 }
 
 void HWCDisplayPrimary::ForceRefreshRate(uint32_t refresh_rate) {
