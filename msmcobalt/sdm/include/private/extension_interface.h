@@ -31,7 +31,6 @@
 #include "partial_update_interface.h"
 #include "strategy_interface.h"
 #include "resource_interface.h"
-#include "rotator_interface.h"
 
 namespace sdm {
 
@@ -68,14 +67,9 @@ class ExtensionInterface {
 
   virtual DisplayError CreateResourceExtn(const HWResourceInfo &hw_resource_info,
                                           ResourceInterface **interface,
+                                          BufferAllocator *buffer_allocator,
                                           BufferSyncHandler *buffer_sync_handler) = 0;
   virtual DisplayError DestroyResourceExtn(ResourceInterface *interface) = 0;
-
-  virtual DisplayError CreateRotator(const HWRotatorInfo &hw_rot_info,
-                                     BufferAllocator *buffer_allocator,
-                                     BufferSyncHandler *buffer_sync_handler,
-                                     RotatorInterface **intf) = 0;
-  virtual DisplayError DestroyRotator(RotatorInterface *intf) = 0;
 
  protected:
   virtual ~ExtensionInterface() { }

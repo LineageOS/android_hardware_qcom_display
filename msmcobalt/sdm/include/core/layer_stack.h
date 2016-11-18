@@ -102,10 +102,10 @@ enum LayerComposition {
   /* === List of composition types set by Client === */
   /* These composition types represent target buffer layers onto which GPU or Blit will draw if SDM
      decide to have some or all layers drawn by respective composition engine.
-     If client does not provide a target buffer layer, SDM will assume that respective composition
-     engine is not available and will not mark any layer for such a composition. If SDM is unable
-     to handle layers without support of such a composition engine, Prepare() call will return
-     failure.
+     Client must provide a target buffer layer, if respective composition type is not disabled by
+     an explicit call to SetCompositionState() method. If a composition type is not disabled,
+     providing a target buffer layer is optional. If SDM is unable to handle layers without support
+     of such a composition engine, Prepare() call will return failure.
   */
   kCompositionGPUTarget,    //!< This layer will hold result of composition for layers marked for
                             //!< GPU composition.

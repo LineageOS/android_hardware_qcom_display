@@ -48,6 +48,7 @@ class Strategy {
                            const HWDisplayAttributes &hw_display_attributes,
                            const HWMixerAttributes &mixer_attributes,
                            const DisplayConfigVariableInfo &fb_config);
+  DisplayError SetCompositionState(LayerComposition composition_type, bool enable);
 
  private:
   void GenerateROI();
@@ -64,6 +65,7 @@ class Strategy {
   DisplayConfigVariableInfo fb_config_ = {};
   bool extn_start_success_ = false;
   bool tried_default_ = false;
+  bool disable_gpu_comp_ = false;
 };
 
 }  // namespace sdm

@@ -140,6 +140,7 @@ enum DisplayPort {
 struct DisplayConfigFixedInfo {
   bool underscan = false;   //!< If display support CE underscan.
   bool secure = false;      //!< If this display is capable of handling secure content.
+  bool is_cmdmode = false;  //!< If panel is command mode panel.
 };
 
 /*! @brief This structure defines configuration for variable properties of a display device.
@@ -597,9 +598,29 @@ class DisplayInterface {
 
   /*! @brief Method to query whether it is Primrary device.
 
-    @return \link Bool \endlink
+    @return true if this interface is primary.
   */
   virtual bool IsPrimaryDisplay() = 0;
+
+  /*! @brief Method to toggle composition types handling by SDM.
+
+    @details Client shall call this method to request SDM to enable/disable a specific type of
+    layer composition. If client disables a composition type, SDM will not handle any of the layer
+    composition using the disabled method in a draw cycle. On lack of resources to handle all
+    layers using other enabled composition methods, Prepare() will return an error.
+
+    Request to toggle composition type is applied from subsequent draw cycles.
+
+    Default state of all defined composition types is enabled.
+
+    @param[in] composition_type \link LayerComposition \endlink
+    @param[in] enable \link enable composition type \endlink
+
+    @return \link DisplayError \endlink
+
+    @sa Prepare
+  */
+  virtual DisplayError SetCompositionState(LayerComposition composition_type, bool enable) = 0;
 
  protected:
   virtual ~DisplayInterface() { }
