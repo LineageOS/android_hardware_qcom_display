@@ -210,7 +210,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool shutdown_pending_ = false;
   bool use_blit_comp_ = false;
   bool secure_display_active_ = false;
-  bool skip_prepare_ = false;
+  uint32_t skip_prepare_cnt = 0;
   bool solid_fill_enable_ = false;
   bool disable_animation_ = false;
   uint32_t solid_fill_color_ = 0;

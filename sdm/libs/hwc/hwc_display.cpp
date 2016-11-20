@@ -621,7 +621,7 @@ int HWCDisplay::PrepareLayerStack(hwc_display_contents_1_t *content_list) {
 
   size_t num_hw_layers = content_list->numHwLayers;
 
-  if (!skip_prepare_) {
+  if (!skip_prepare_cnt) {
     DisplayError error = display_intf_->Prepare(&layer_stack_);
     if (error != kErrorNone) {
       if (error == kErrorShutDown) {
@@ -639,7 +639,7 @@ int HWCDisplay::PrepareLayerStack(hwc_display_contents_1_t *content_list) {
   } else {
     // Skip is not set
     MarkLayersForGPUBypass(content_list);
-    skip_prepare_ = false;
+    skip_prepare_cnt = skip_prepare_cnt - 1;
     DLOGI("SecureDisplay %s, Skip Prepare/Commit and Flush", secure_display_active_ ? "Starting" :
           "Stopping");
     flush_ = true;
