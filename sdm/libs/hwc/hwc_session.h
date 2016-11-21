@@ -125,6 +125,8 @@ class HWCSession : hwc_composer_device_1_t, public qClient::BnQClient {
                                           android::Parcel *output_parcel);
   android::status_t SetMixerResolution(const android::Parcel *input_parcel);
   android::status_t SetDisplayPort(DisplayPort sdm_disp_port, int *hwc_disp_port);
+  android::status_t GetHdrCapabilities(const android::Parcel *input_parcel,
+                                       android::Parcel *output_parcel);
 
   static Locker locker_;
   CoreInterface *core_intf_ = NULL;
