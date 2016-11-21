@@ -373,6 +373,7 @@ int HWCSession::Set(hwc_composer_device_1 *device, size_t num_displays,
       int ret = hwc_session->color_mgr_->SolidFillLayersSet(displays, primary_display);
       if (ret)
         return 0;
+      hwc_session->color_mgr_->SetColorModeDetailEnhancer(primary_display);
     }
   }
 
