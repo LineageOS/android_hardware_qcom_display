@@ -76,6 +76,7 @@ class Debug {
   static bool IsScalarDisabled();
   static bool IsUbwcTiledFrameBuffer();
   static bool IsAVRDisabled();
+  static int GetExtMaxlayers();
   static bool GetProperty(const char *property_name, char *value);
   static bool SetProperty(const char *property_name, const char *value);
 

@@ -39,7 +39,7 @@ class HWCDisplayExternal : public HWCDisplay {
   static void Destroy(HWCDisplay *hwc_display);
   virtual int Prepare(hwc_display_contents_1_t *content_list);
   virtual int Commit(hwc_display_contents_1_t *content_list);
-  virtual void SetSecureDisplay(bool secure_display_active);
+  virtual void SetSecureDisplay(bool secure_display_active, bool force_flush);
   virtual int Perform(uint32_t operation, ...);
 
  protected:

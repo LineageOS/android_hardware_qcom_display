@@ -85,7 +85,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
   virtual int Perform(uint32_t operation, ...);
   virtual int SetCursorPosition(int x, int y);
-  virtual void SetSecureDisplay(bool secure_display_active);
+  virtual void SetSecureDisplay(bool secure_display_active, bool force_flush);
   virtual DisplayError SetMixerResolution(uint32_t width, uint32_t height);
   virtual DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
   virtual void GetPanelResolution(uint32_t *width, uint32_t *height);
@@ -204,7 +204,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool shutdown_pending_ = false;
   bool use_blit_comp_ = false;
   bool secure_display_active_ = false;
-  bool skip_prepare_ = false;
+  uint32_t skip_prepare_cnt = 0;
   bool solid_fill_enable_ = false;
   uint32_t solid_fill_color_ = 0;
   LayerRect display_rect_;
