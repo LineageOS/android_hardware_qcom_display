@@ -119,6 +119,7 @@ DisplayError CompManager::RegisterDisplay(DisplayType type,
   // resources for the added display is configured properly.
   if (!display_comp_ctx->is_primary_panel) {
     safe_mode_ = true;
+    max_sde_ext_layers_ = UINT32(Debug::GetExtMaxlayers());
   }
 
   DLOGV_IF(kTagCompManager, "registered display bit mask 0x%x, configured display bit mask 0x%x, " \
@@ -213,7 +214,7 @@ void CompManager::PrepareStrategyConstraints(Handle comp_handle, HWLayers *hw_la
 
   // Limit 2 layer SDE Comp if its not a Primary Display
   if (!display_comp_ctx->is_primary_panel) {
-    constraints->max_layers = 2;
+    constraints->max_layers = max_sde_ext_layers_;
   }
 
   // If a strategy fails after successfully allocating resources, then set safe mode
