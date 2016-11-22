@@ -1185,28 +1185,27 @@ DisplayError DisplayBase::InitializeColorModes() {
 DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
   DisplayError error = kErrorNone;
 
-  if (!color_mgr_) {
-    // TODO(user): Handle the case where color_mgr is not present
-    return kErrorNone;
-  }
-
   if (!layer_stack->flags.hdr_present) {
     //  HDR playback off - set prev mode
     if (hdr_playback_mode_) {
       hdr_playback_mode_ = false;
-      DLOGI("Setting color mode = %s", current_color_mode_.c_str());
-      error = SetColorModeInternal(current_color_mode_);
-    // TODO(user): Enable DPPS
+      if (color_mgr_) {
+        DLOGI("Setting color mode = %s", current_color_mode_.c_str());
+        error = SetColorModeInternal(current_color_mode_);
+      }
+      comp_manager_->ControlDpps(true);  // Enable Dpps
     }
   } else {
     // hdr is present
     if (!hdr_playback_mode_ && !layer_stack->flags.animating) {
       // hdr is starting
       hdr_playback_mode_ = true;
-      DLOGI("Setting HDR color mode = %s", hdr_color_mode_.c_str());
-      error = SetColorModeInternal(hdr_color_mode_);
+      if (color_mgr_) {
+        DLOGI("Setting HDR color mode = %s", hdr_color_mode_.c_str());
+        error = SetColorModeInternal(hdr_color_mode_);
+      }
+      comp_manager_->ControlDpps(false);  // Disable Dpps
     }
-    // TODO(user): Disable DPPS
   }
 
   return error;
