@@ -236,6 +236,8 @@ struct HWPanelInfo {
   char panel_name[256] = {0};         // Panel name
   HWS3DMode s3d_mode = kS3DModeNone;  // Panel's current s3d mode.
   int panel_max_brightness = 0;       // Max panel brightness
+  uint32_t left_roi_count = 1;        // Number if ROI supported on left panel
+  uint32_t right_roi_count = 1;       // Number if ROI supported on right panel
 
   bool operator !=(const HWPanelInfo &panel_info) {
     return ((port != panel_info.port) || (mode != panel_info.mode) ||
@@ -249,8 +251,9 @@ struct HWPanelInfo {
             (dfps_porch_mode != panel_info.dfps_porch_mode) ||
             (ping_pong_split != panel_info.ping_pong_split) ||
             (max_fps != panel_info.max_fps) || (is_primary_panel != panel_info.is_primary_panel) ||
-            (split_info != panel_info.split_info) ||
-            (s3d_mode != panel_info.s3d_mode));
+            (split_info != panel_info.split_info) || (s3d_mode != panel_info.s3d_mode) ||
+            (left_roi_count != panel_info.left_roi_count) ||
+            (right_roi_count != panel_info.right_roi_count));
   }
 
   bool operator ==(const HWPanelInfo &panel_info) {
@@ -431,13 +434,16 @@ struct HWLayersInfo {
   LayerRect updated_src_rect[kMaxSDELayers];  // Updated layer src rects in s3d mode
   LayerRect updated_dst_rect[kMaxSDELayers];  // Updated layer dst rects in s3d mode
   bool updating[kMaxSDELayers] = {0};  // Updated by strategy, considering plane_alpha+updating
+  uint32_t roi_index[kMaxSDELayers] = {0};  // Stores the ROI index where the layers are visible.
 
   uint32_t count = 0;              // Total number of layers which need to be set on hardware.
 
   int sync_handle = -1;
 
-  LayerRect left_partial_update;   // Left ROI.
-  LayerRect right_partial_update;  // Right ROI.
+  std::vector<LayerRect> left_frame_roi;   // Left ROI.
+  std::vector<LayerRect> right_frame_roi;  // Right ROI.
+
+  bool roi_split = false;          // Indicates separated left and right ROI
 
   bool use_hw_cursor = false;      // Indicates that HWCursor pipe needs to be used for cursor layer
   DestScaleInfoMap dest_scale_info_map = {};
