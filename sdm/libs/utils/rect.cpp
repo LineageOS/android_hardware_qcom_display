@@ -205,6 +205,10 @@ void MapRect(const LayerRect &src_domain, const LayerRect &dst_domain, const Lay
     return;
   }
 
+  int x_offset = INT(src_domain.left);
+  int y_offset = INT(src_domain.top);
+
+  LayerRect modified_in_rect = Reposition(in_rect, -x_offset, -y_offset);
   float src_domain_width = src_domain.right - src_domain.left;
   float src_domain_height = src_domain.bottom - src_domain.top;
   float dst_domain_width = dst_domain.right - dst_domain.left;
@@ -213,10 +217,10 @@ void MapRect(const LayerRect &src_domain, const LayerRect &dst_domain, const Lay
   float width_ratio = dst_domain_width / src_domain_width;
   float height_ratio = dst_domain_height / src_domain_height;
 
-  out_rect->left = dst_domain.left + (width_ratio * in_rect.left);
-  out_rect->top = dst_domain.top + (height_ratio * in_rect.top);
-  out_rect->right = dst_domain.left + (width_ratio * in_rect.right);
-  out_rect->bottom = dst_domain.top + (height_ratio * in_rect.bottom);
+  out_rect->left = dst_domain.left + (width_ratio * modified_in_rect.left);
+  out_rect->top = dst_domain.top + (height_ratio * modified_in_rect.top);
+  out_rect->right = dst_domain.left + (width_ratio * modified_in_rect.right);
+  out_rect->bottom = dst_domain.top + (height_ratio * modified_in_rect.bottom);
 }
 
 RectOrientation GetOrientation(const LayerRect &in_rect) {
