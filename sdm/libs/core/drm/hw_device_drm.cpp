@@ -126,10 +126,16 @@ DisplayError HWDeviceDRM::Init() {
   UpdateMixerAttributes();
   hw_info_intf_->GetHWResourceInfo(&hw_resource_);
 
+  // TODO(user): In future, remove has_qseed3 member, add version and pass version to constructor
+  if (hw_resource_.has_qseed3) {
+    hw_scale_ = new HWScaleDRM(HWScaleDRM::Version::V2);
+  }
+
   return kErrorNone;
 }
 
 DisplayError HWDeviceDRM::Deinit() {
+  delete hw_scale_;
   drm_mgr_intf_->DestroyAtomicReq(drm_atomic_intf_);
   drm_atomic_intf_ = {};
   drm_mgr_intf_->UnregisterDisplay(token_);
@@ -422,6 +428,15 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
         if (!validate && input_buffer->acquire_fence_fd >= 0) {
           drm_atomic_intf_->Perform(DRMOps::PLANE_SET_INPUT_FENCE, pipe_id,
                                     input_buffer->acquire_fence_fd);
+        }
+        if (hw_scale_) {
+          SDEScaler scaler_output = {};
+          hw_scale_->SetPlaneScaler(pipe_info->scale_data, &scaler_output);
+          // TODO(user): Remove qseed3 and add version check, then send appropriate scaler object
+          if (hw_resource_.has_qseed3) {
+            drm_atomic_intf_->Perform(DRMOps::PLANE_SET_SCALER_CONFIG, pipe_id,
+                                      reinterpret_cast<uint64_t>(&scaler_output.scaler_v2));
+          }
         }
       }
     }
@@ -719,6 +734,15 @@ DisplayError HWDeviceDRM::SetS3DMode(HWS3DMode s3d_mode) {
 }
 
 DisplayError HWDeviceDRM::SetScaleLutConfig(HWScaleLutInfo *lut_info) {
+  sde_drm::DRMScalerLUTInfo drm_lut_info = {};
+  drm_lut_info.cir_lut = lut_info->cir_lut;
+  drm_lut_info.dir_lut = lut_info->dir_lut;
+  drm_lut_info.sep_lut = lut_info->sep_lut;
+  drm_lut_info.cir_lut_size = lut_info->cir_lut_size;
+  drm_lut_info.dir_lut_size = lut_info->dir_lut_size;
+  drm_lut_info.sep_lut_size = lut_info->sep_lut_size;
+  drm_mgr_intf_->SetScalerLUT(drm_lut_info);
+
   return kErrorNone;
 }
 
