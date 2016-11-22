@@ -264,7 +264,7 @@ struct LayerRectArray {
   @sa LayerArray
 */
 struct Layer {
-  LayerBuffer *input_buffer = NULL;                //!< Pointer to the buffer to be composed.
+  LayerBuffer input_buffer = {};                   //!< Buffer to be composed.
                                                    //!< If this remains unchanged between two
                                                    //!< consecutive Prepare() calls and
                                                    //!< geometry_changed flag is not set for the

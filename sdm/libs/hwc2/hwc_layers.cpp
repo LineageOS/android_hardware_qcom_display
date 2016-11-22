@@ -66,7 +66,6 @@ DisplayError SetCSC(const MetaData_t *meta_data, ColorMetaData *color_metadata) 
 // Layer operations
 HWCLayer::HWCLayer(hwc2_display_t display_id) : id_(next_id_++), display_id_(display_id) {
   layer_ = new Layer();
-  layer_->input_buffer = new LayerBuffer();
   // Fences are deferred, so the first time this layer is presented, return -1
   // TODO(user): Verify that fences are properly obtained on suspend/resume
   release_fences_.push(-1);
@@ -80,9 +79,6 @@ HWCLayer::~HWCLayer() {
   }
   close(ion_fd_);
   if (layer_) {
-    if (layer_->input_buffer) {
-      delete (layer_->input_buffer);
-    }
     delete layer_;
   }
 }
@@ -109,7 +105,7 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
     ion_fd_ = dup(handle->fd);
   }
 
-  LayerBuffer *layer_buffer = layer_->input_buffer;
+  LayerBuffer *layer_buffer = &layer_->input_buffer;
   int aligned_width, aligned_height;
   int unaligned_width, unaligned_height;
 
@@ -186,7 +182,7 @@ HWC2::Error HWCLayer::SetLayerBlendMode(HWC2::BlendMode mode) {
 
 HWC2::Error HWCLayer::SetLayerColor(hwc_color_t color) {
   layer_->solid_fill_color = GetUint32Color(color);
-  layer_->input_buffer->format = kFormatARGB8888;
+  layer_->input_buffer.format = kFormatARGB8888;
   DLOGV_IF(kTagCompManager, "[%" PRIu64 "][%" PRIu64 "] Layer color set to %x", display_id_, id_,
            layer_->solid_fill_color);
   return HWC2::Error::None;
@@ -475,7 +471,7 @@ LayerBufferS3DFormat HWCLayer::GetS3DFormat(uint32_t s3d_format) {
 
 DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *layer) {
   const MetaData_t *meta_data = reinterpret_cast<MetaData_t *>(pvt_handle->base_metadata);
-  LayerBuffer *layer_buffer = layer->input_buffer;
+  LayerBuffer *layer_buffer = &layer->input_buffer;
 
   if (!meta_data) {
     return kErrorNone;
