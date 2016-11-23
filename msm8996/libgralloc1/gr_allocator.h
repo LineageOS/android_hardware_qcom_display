@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -36,6 +36,8 @@
 #define SECURE_ALIGN SZ_1M
 #endif
 
+#include <vector>
+
 #include "gralloc_priv.h"
 #include "gr_buf_descriptor.h"
 #include "gr_adreno_info.h"
@@ -48,17 +50,16 @@ class Allocator {
   Allocator();
   ~Allocator();
   bool Init();
-  int AllocateBuffer(const BufferDescriptor &descriptor, private_handle_t **pHnd);
   int MapBuffer(void **base, unsigned int size, unsigned int offset, int fd);
-  int FreeBuffer(void *base, unsigned int size, unsigned int offset, int fd);
-  int CleanBuffer(void *base, unsigned int size, unsigned int offset, int fd, int op);
+  int ImportBuffer(int fd);
+  int FreeBuffer(void *base, unsigned int size, unsigned int offset, int fd, int handle);
+  int CleanBuffer(void *base, unsigned int size, unsigned int offset, int handle, int op);
   int AllocateMem(AllocData *data, gralloc1_producer_usage_t prod_usage,
                   gralloc1_consumer_usage_t cons_usage);
-  bool IsMacroTileEnabled(int format, gralloc1_producer_usage_t prod_usage,
-                          gralloc1_consumer_usage_t cons_usage);
   // @return : index of the descriptor with maximum buffer size req
-  bool CheckForBufferSharing(uint32_t num_descriptors, const BufferDescriptor *descriptors,
-                             int *max_index);
+  bool CheckForBufferSharing(uint32_t num_descriptors,
+                             const std::vector<std::shared_ptr<BufferDescriptor>>& descriptors,
+                             ssize_t *max_index);
   int GetImplDefinedFormat(gralloc1_producer_usage_t prod_usage,
                            gralloc1_consumer_usage_t cons_usage, int format);
   unsigned int GetSize(const BufferDescriptor &d, unsigned int alignedw, unsigned int alignedh);
@@ -68,8 +69,6 @@ class Allocator {
                                   unsigned int *alignedw, unsigned int *alignedh);
   void GetAlignedWidthAndHeight(const BufferDescriptor &d, unsigned int *aligned_w,
                                 unsigned int *aligned_h);
-  void GetBufferAttributes(const BufferDescriptor &d, unsigned int *alignedw,
-                           unsigned int *alignedh, int *tiled, unsigned int *size);
   int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr *ycbcr);
   int GetRgbDataAddress(private_handle_t *hnd, void **rgb_data);
   bool UseUncached(gralloc1_producer_usage_t usage);
@@ -92,8 +91,6 @@ class Allocator {
   void GetIonHeapInfo(gralloc1_producer_usage_t prod_usage, gralloc1_consumer_usage_t cons_usage,
                       unsigned int *ion_heap_id, unsigned int *alloc_type, unsigned int *ion_flags);
 
-  bool gpu_support_macrotile = false;
-  bool display_support_macrotile = false;
   IonAlloc *ion_allocator_ = NULL;
   AdrenoMemInfo *adreno_helper_ = NULL;
 };

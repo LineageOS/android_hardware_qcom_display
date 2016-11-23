@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,13 +30,7 @@
 #ifndef __GR_ADRENO_INFO_H__
 #define __GR_ADRENO_INFO_H__
 
-#ifdef VENUS_COLOR_FORMAT
 #include <media/msm_media_info.h>
-#else
-#define VENUS_Y_STRIDE(args...) 0
-#define VENUS_Y_SCANLINES(args...) 0
-#define VENUS_BUFFER_SIZE(args...) 0
-#endif
 
 namespace gralloc1 {
 
@@ -112,14 +106,6 @@ class AdrenoMemInfo {
   uint32_t GetGpuPixelAlignment();
 
   /*
-   * Function to return whether GPU support MacroTile feature
-   *
-   * @return >0 : supported
-   *          0 : not supported
-   */
-  bool IsMacroTilingSupportedByGPU();
-
-  /*
    * Function to query whether GPU supports UBWC for given HAL format
    * @return > 0 : supported
    *           0 : not supported
@@ -139,7 +125,6 @@ class AdrenoMemInfo {
                                                        int tile_mode, int raster_mode,
                                                        int padding_threshold, int *aligned_w,
                                                        int *aligned_h) = NULL;
-  int (*LINK_adreno_isMacroTilingSupportedByGpu)(void) = NULL;
   void (*LINK_adreno_compute_compressedfmt_aligned_width_and_height)(
       int width, int height, int format, int tile_mode, int raster_mode, int padding_threshold,
       int *aligned_w, int *aligned_h, int *bpp) = NULL;
