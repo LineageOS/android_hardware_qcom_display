@@ -16,8 +16,12 @@ LOCAL_CFLAGS                  := -Wno-missing-field-initializers -Wno-unused-par
 LOCAL_CLANG                   := true
 
 LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware libhardware_legacy \
-                                 libutils libcutils libsync libmemalloc libqdutils libdl \
+                                 libutils libcutils libsync libqdutils libdl \
                                  libpowermanager libsdmutils libc++ liblog
+
+ifneq ($(TARGET_USES_GRALLOC1), true)
+    LOCAL_SHARED_LIBRARIES += libmemalloc
+endif
 
 LOCAL_SRC_FILES               := hwc_session.cpp \
                                  hwc_display.cpp \

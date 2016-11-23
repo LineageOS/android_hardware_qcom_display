@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution
  *
  * Copyright (C) 2008 The Android Open Source Project
@@ -24,50 +24,64 @@
 #include "gr_priv_handle.h"
 
 #define ROUND_UP_PAGESIZE(x) roundUpToPageSize(x)
-inline unsigned int roundUpToPageSize(unsigned int x) {
+inline int roundUpToPageSize(int x) {
     return (x + (getpagesize()-1)) & ~(getpagesize()-1);
 }
 
 /* Gralloc usage bits indicating the type of allocation that should be used */
 /* Refer gralloc1_producer_usage_t & gralloc1_consumer_usage-t in gralloc1.h */
 
-/* GRALLOC_USAGE_PRIVATE_0 is unused */
-
+/* Producer flags */
 /* Non linear, Universal Bandwidth Compression */
-#define GRALLOC1_PRODUCER_USAGE_PRIVATE_ALLOC_UBWC GRALLOC1_PRODUCER_USAGE_PRIVATE_1
-
-/* IOMMU heap comes from manually allocated pages, can be cached/uncached, is not secured */
-#define GRALLOC1_PRODUCER_USAGE_PRIVATE_IOMMU_HEAP GRALLOC1_PRODUCER_USAGE_PRIVATE_2
-
-/* MM heap is a carveout heap for video, can be secured */
-#define GRALLOC1_PRODUCER_USAGE_PRIVATE_MM_HEAP GRALLOC1_PRODUCER_USAGE_PRIVATE_3
-
-/* ADSP heap is a carveout heap, is not secured */
-#define GRALLOC1_PRODUCER_USAGE_PRIVATE_ADSP_HEAP GRALLOC1_PRODUCER_USAGE_PRIVATE_4
-
-/* CAMERA heap is a carveout heap for camera, is not secured */
-#define GRALLOC1_PRODUCER_USAGE_PRIVATE_CAMERA_HEAP GRALLOC1_PRODUCER_USAGE_PRIVATE_5
+#define GRALLOC1_PRODUCER_USAGE_PRIVATE_ALLOC_UBWC  GRALLOC1_PRODUCER_USAGE_PRIVATE_0
 
 /* Set this for allocating uncached memory (using O_DSYNC),
  * cannot be used with noncontiguous heaps */
-#define GRALLOC1_PRODUCER_USAGE_PRIVATE_UNCACHED GRALLOC1_PRODUCER_USAGE_PRIVATE_6
+#define GRALLOC1_PRODUCER_USAGE_PRIVATE_UNCACHED    GRALLOC1_PRODUCER_USAGE_PRIVATE_1
 
-#define GRALLOC1_PRODUCER_USAGE_PRIVATE_CAMERA_ZSL GRALLOC1_PRODUCER_USAGE_PRIVATE_7
+/* CAMERA heap is a carveout heap for camera, is not secured */
+#define GRALLOC1_PRODUCER_USAGE_PRIVATE_CAMERA_HEAP GRALLOC1_PRODUCER_USAGE_PRIVATE_2
 
-/* Buffer content should be displayed on a primary display only */
-#define GRALLOC1_CONSUMER_USAGE_PRIVATE_INTERNAL_ONLY GRALLOC1_CONSUMER_USAGE_PRIVATE_1
+/* ADSP heap is a carveout heap, is not secured */
+#define GRALLOC1_PRODUCER_USAGE_PRIVATE_ADSP_HEAP   GRALLOC1_PRODUCER_USAGE_PRIVATE_3
 
-/* Buffer content should be displayed on an external display only */
-#define GRALLOC1_CONSUMER_USAGE_PRIVATE_EXTERNAL_ONLY GRALLOC1_CONSUMER_USAGE_PRIVATE_2
+/* IOMMU heap comes from manually allocated pages, can be cached/uncached, is not secured */
+#define GRALLOC1_PRODUCER_USAGE_PRIVATE_IOMMU_HEAP  GRALLOC1_PRODUCER_USAGE_PRIVATE_4
 
+/* MM heap is a carveout heap for video, can be secured */
+#define GRALLOC1_PRODUCER_USAGE_PRIVATE_MM_HEAP     GRALLOC1_PRODUCER_USAGE_PRIVATE_5
+
+/* Use legacy ZSL definition until we know the correct usage on gralloc1 */
+#define GRALLOC1_PRODUCER_USAGE_PRIVATE_CAMERA_ZSL  GRALLOC_USAGE_HW_CAMERA_ZSL
+
+
+/* Consumer flags */
+/* TODO(user): Fix when producer and consumer flags are actually separated */
 /* This flag is set for WFD usecase */
-#define GRALLOC1_CONSUMER_USAGE_PRIVATE_WFD GRALLOC1_CONSUMER_USAGE_PRIVATE_3
+#define GRALLOC1_CONSUMER_USAGE_PRIVATE_WFD            0x00200000
 
 /* This flag is used for SECURE display usecase */
-#define GRALLOC1_CONSUMER_USAGE_PRIVATE_SECURE_DISPLAY GRALLOC1_CONSUMER_USAGE_PRIVATE_4
+#define GRALLOC1_CONSUMER_USAGE_PRIVATE_SECURE_DISPLAY 0x00800000
+
+/* Buffer content should be displayed on a primary display only */
+#define GRALLOC1_CONSUMER_USAGE_PRIVATE_INTERNAL_ONLY  0x04000000
+
+/* Buffer content should be displayed on an external display only */
+#define GRALLOC1_CONSUMER_USAGE_PRIVATE_EXTERNAL_ONLY  0x08000000
+
+
+/* Legacy gralloc0.x definitions */
+/* Some clients may still be using the old flags */
+#define GRALLOC_USAGE_PRIVATE_ALLOC_UBWC GRALLOC1_PRODUCER_USAGE_PRIVATE_ALLOC_UBWC
+#define GRALLOC_USAGE_PRIVATE_UNCACHED GRALLOC1_PRODUCER_USAGE_PRIVATE_UNCACHED
+#define GRALLOC_USAGE_PRIVATE_IOMMU_HEAP GRALLOC1_PRODUCER_USAGE_PRIVATE_IOMMU_HEAP
+#define GRALLOC_USAGE_PRIVATE_WFD GRALLOC1_CONSUMER_USAGE_PRIVATE_WFD
+#define GRALLOC_USAGE_PRIVATE_CAMERA_HEAP GRALLOC1_PRODUCER_USAGE_PRIVATE_CAMERA_HEAP
+#define GRALLOC_USAGE_PRIVATE_MM_HEAP 0x0
+
+
 
 // for PERFORM API :
-// TODO(user): Move it to enum if it's ookay for gfx
 #define GRALLOC_MODULE_PERFORM_CREATE_HANDLE_FROM_BUFFER 1
 #define GRALLOC_MODULE_PERFORM_GET_STRIDE 2
 #define GRALLOC_MODULE_PERFORM_GET_CUSTOM_STRIDE_FROM_HANDLE 3
@@ -81,6 +95,8 @@ inline unsigned int roundUpToPageSize(unsigned int x) {
 #define GRALLOC_MODULE_PERFORM_GET_IGC 11
 #define GRALLOC_MODULE_PERFORM_SET_IGC 12
 #define GRALLOC_MODULE_PERFORM_SET_SINGLE_BUFFER_MODE 13
+#define GRALLOC1_MODULE_PERFORM_GET_BUFFER_SIZE_AND_DIMENSIONS 14
+#define GRALLOC1_MODULE_PERFORM_ALLOCATE_BUFFER 15
 
 // OEM specific HAL formats
 #define HAL_PIXEL_FORMAT_RGBA_5551 6

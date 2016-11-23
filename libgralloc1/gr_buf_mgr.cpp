@@ -17,10 +17,8 @@
  * limitations under the License.
  */
 
-#include <drm/drm_fourcc.h>
-#include <drm_master.h>
-
 #include <utility>
+#include <vector>
 
 #include "qd_utils.h"
 #include "gr_priv_handle.h"
@@ -30,194 +28,9 @@
 #include "qdMetaData.h"
 
 namespace gralloc1 {
+std::atomic<gralloc1_buffer_descriptor_t> BufferDescriptor::next_id_(1);
 
-using namespace drm_utils;
-
-static int getPlaneStrideOffset(private_handle_t *hnd, uint32_t *stride,
-        uint32_t *offset, uint32_t *num_planes) {
-    struct android_ycbcr yuvInfo = {};
-    *num_planes = 1;
-
-    switch (hnd->format) {
-        case HAL_PIXEL_FORMAT_RGB_565:
-        case HAL_PIXEL_FORMAT_BGR_565:
-        case HAL_PIXEL_FORMAT_RGBA_5551:
-        case HAL_PIXEL_FORMAT_RGBA_4444:
-            stride[0] = hnd->width * 2;
-            break;
-        case HAL_PIXEL_FORMAT_RGB_888:
-            stride[0] = hnd->width * 3;
-            break;
-        case HAL_PIXEL_FORMAT_RGBA_8888:
-        case HAL_PIXEL_FORMAT_BGRA_8888:
-        case HAL_PIXEL_FORMAT_RGBX_8888:
-        case HAL_PIXEL_FORMAT_BGRX_8888:
-        case HAL_PIXEL_FORMAT_RGBA_1010102:
-        case HAL_PIXEL_FORMAT_ARGB_2101010:
-        case HAL_PIXEL_FORMAT_RGBX_1010102:
-        case HAL_PIXEL_FORMAT_XRGB_2101010:
-        case HAL_PIXEL_FORMAT_BGRA_1010102:
-        case HAL_PIXEL_FORMAT_ABGR_2101010:
-        case HAL_PIXEL_FORMAT_BGRX_1010102:
-        case HAL_PIXEL_FORMAT_XBGR_2101010:
-            stride[0] = hnd->width * 4;
-            break;
-    }
-
-    // Format is RGB
-    if (stride[0]) {
-        return 0;
-    }
-
-    (*num_planes)++;
-    int ret = getYUVPlaneInfo(hnd, &yuvInfo);
-    if (ret < 0) {
-        ALOGE("%s failed", __FUNCTION__);
-        return ret;
-    }
-
-    stride[0] = static_cast<uint32_t>(yuvInfo.ystride);
-    offset[0] = static_cast<uint32_t>(
-                    reinterpret_cast<uint64_t>(yuvInfo.y) - hnd->base);
-    stride[1] = static_cast<uint32_t>(yuvInfo.cstride);
-    switch (hnd->format) {
-        case HAL_PIXEL_FORMAT_YCbCr_420_SP:
-        case HAL_PIXEL_FORMAT_YCbCr_422_SP:
-        case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
-        case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
-        case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
-        case HAL_PIXEL_FORMAT_YCbCr_420_P010:
-        case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
-            offset[1] = static_cast<uint32_t>(
-                    reinterpret_cast<uint64_t>(yuvInfo.cb) - hnd->base);
-            break;
-        case HAL_PIXEL_FORMAT_YCrCb_420_SP:
-        case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
-        case HAL_PIXEL_FORMAT_YCrCb_422_SP:
-            offset[1] = static_cast<uint32_t>(
-                    reinterpret_cast<uint64_t>(yuvInfo.cr) - hnd->base);
-            break;
-        case HAL_PIXEL_FORMAT_YV12:
-            offset[1] = static_cast<uint32_t>(
-                    reinterpret_cast<uint64_t>(yuvInfo.cr) - hnd->base);
-            stride[2] = static_cast<uint32_t>(yuvInfo.cstride);
-            offset[2] = static_cast<uint32_t>(
-                    reinterpret_cast<uint64_t>(yuvInfo.cb) - hnd->base);
-            (*num_planes)++;
-            break;
-        default:
-            ALOGW("%s: Unsupported format %s", __FUNCTION__,
-                    qdutils::GetHALPixelFormatString(hnd->format));
-    }
-
-    if (hnd->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED) {
-        std::fill(offset, offset + 4, 0);
-    }
-
-    return 0;
-}
-
-static void getDRMFormat(int hal_format, int flags, uint32_t *drm_format,
-        uint64_t *drm_format_modifier) {
-
-    if (flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED) {
-        *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED;
-    }
-
-    switch (hal_format) {
-        case HAL_PIXEL_FORMAT_RGBA_8888:
-            *drm_format = DRM_FORMAT_RGBA8888;
-            break;
-        case HAL_PIXEL_FORMAT_RGBA_5551:
-            *drm_format = DRM_FORMAT_RGBA5551;
-            break;
-        case HAL_PIXEL_FORMAT_RGBA_4444:
-            *drm_format = DRM_FORMAT_RGBA4444;
-            break;
-        case HAL_PIXEL_FORMAT_BGRA_8888:
-            *drm_format = DRM_FORMAT_BGRA8888;
-            break;
-        case HAL_PIXEL_FORMAT_RGBX_8888:
-            *drm_format = DRM_FORMAT_RGBX8888;
-            break;
-        case HAL_PIXEL_FORMAT_BGRX_8888:
-            *drm_format = DRM_FORMAT_BGRX8888;
-            break;
-        case HAL_PIXEL_FORMAT_RGB_888:
-            *drm_format = DRM_FORMAT_RGB888;
-            break;
-        case HAL_PIXEL_FORMAT_RGB_565:
-            *drm_format = DRM_FORMAT_RGB565;
-            break;
-        case HAL_PIXEL_FORMAT_BGR_565:
-            *drm_format = DRM_FORMAT_BGR565;
-            break;
-        case HAL_PIXEL_FORMAT_RGBA_1010102:
-            *drm_format = DRM_FORMAT_RGBA1010102;
-            break;
-        case HAL_PIXEL_FORMAT_ARGB_2101010:
-            *drm_format = DRM_FORMAT_ARGB2101010;
-            break;
-        case HAL_PIXEL_FORMAT_RGBX_1010102:
-            *drm_format = DRM_FORMAT_RGBX1010102;
-            break;
-        case HAL_PIXEL_FORMAT_XRGB_2101010:
-            *drm_format = DRM_FORMAT_XRGB2101010;
-            break;
-        case HAL_PIXEL_FORMAT_BGRA_1010102:
-            *drm_format = DRM_FORMAT_BGRA1010102;
-            break;
-        case HAL_PIXEL_FORMAT_ABGR_2101010:
-            *drm_format = DRM_FORMAT_ABGR2101010;
-            break;
-        case HAL_PIXEL_FORMAT_BGRX_1010102:
-            *drm_format = DRM_FORMAT_BGRX1010102;
-            break;
-        case HAL_PIXEL_FORMAT_XBGR_2101010:
-            *drm_format = DRM_FORMAT_XBGR2101010;
-            break;
-        case HAL_PIXEL_FORMAT_YCbCr_420_SP:
-            *drm_format = DRM_FORMAT_NV12;
-            break;
-        case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
-        case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
-            *drm_format = DRM_FORMAT_NV12;
-            break;
-        case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
-            *drm_format = DRM_FORMAT_NV12;
-            *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED;
-            break;
-        case HAL_PIXEL_FORMAT_YCrCb_420_SP:
-            *drm_format = DRM_FORMAT_NV21;
-            break;
-        case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
-            *drm_format = DRM_FORMAT_NV21;
-            break;
-        case HAL_PIXEL_FORMAT_YCbCr_420_P010:
-            // TODO *drm_format = DRM_FORMAT_P010;
-            break;
-        case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
-            // TODO *drm_format = DRM_FORMAT_P010;
-            // *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED |
-            //        DRM_FORMAT_MOD_QCOM_TIGHT;
-            break;
-        case HAL_PIXEL_FORMAT_YCbCr_422_SP:
-            *drm_format = DRM_FORMAT_NV16;
-            break;
-        case HAL_PIXEL_FORMAT_YCrCb_422_SP:
-            *drm_format = DRM_FORMAT_NV61;
-            break;
-        case HAL_PIXEL_FORMAT_YV12:
-            *drm_format = DRM_FORMAT_YVU420;
-            break;
-        default:
-            ALOGW("%s: Unsupported format %s", __FUNCTION__,
-                    qdutils::GetHALPixelFormatString(hal_format));
-
-    }
-}
-
-BufferManager::BufferManager() {
+BufferManager::BufferManager() : next_id_(0) {
   char property[PROPERTY_VALUE_MAX];
 
   // Map framebuffer memory
@@ -235,6 +48,29 @@ BufferManager::BufferManager() {
   }
 
   handles_map_.clear();
+  allocator_ = new Allocator();
+  allocator_->Init();
+}
+
+
+gralloc1_error_t BufferManager::CreateBufferDescriptor(
+    gralloc1_buffer_descriptor_t *descriptor_id) {
+  std::lock_guard<std::mutex> lock(locker_);
+  auto descriptor = std::make_shared<BufferDescriptor>();
+  descriptors_map_.emplace(descriptor->GetId(), descriptor);
+  *descriptor_id = descriptor->GetId();
+  return GRALLOC1_ERROR_NONE;
+}
+
+gralloc1_error_t BufferManager::DestroyBufferDescriptor(
+    gralloc1_buffer_descriptor_t descriptor_id) {
+  std::lock_guard<std::mutex> lock(locker_);
+  const auto descriptor = descriptors_map_.find(descriptor_id);
+  if (descriptor == descriptors_map_.end()) {
+    return GRALLOC1_ERROR_BAD_DESCRIPTOR;
+  }
+  descriptors_map_.erase(descriptor);
+  return GRALLOC1_ERROR_NONE;
 }
 
 BufferManager::~BufferManager() {
@@ -243,14 +79,8 @@ BufferManager::~BufferManager() {
   }
 }
 
-bool BufferManager::Init() {
-  allocator_ = new Allocator();
-
-  return allocator_->Init();
-}
-
 gralloc1_error_t BufferManager::AllocateBuffers(uint32_t num_descriptors,
-                                                const BufferDescriptor *descriptors,
+                                                const gralloc1_buffer_descriptor_t *descriptor_ids,
                                                 buffer_handle_t *out_buffers) {
   bool shared = true;
   gralloc1_error_t status = GRALLOC1_ERROR_NONE;
@@ -259,10 +89,28 @@ gralloc1_error_t BufferManager::AllocateBuffers(uint32_t num_descriptors,
   // client can ask to test the allocation by passing NULL out_buffers
   bool test_allocate = !out_buffers;
 
+  // Validate descriptors
+  std::vector<std::shared_ptr<BufferDescriptor>> descriptors;
+  for (uint32_t i = 0; i < num_descriptors; i++) {
+    const auto map_descriptor = descriptors_map_.find(descriptor_ids[i]);
+    if (map_descriptor == descriptors_map_.end()) {
+      return GRALLOC1_ERROR_BAD_DESCRIPTOR;
+    } else {
+      descriptors.push_back(map_descriptor->second);
+    }
+  }
+
+  //  Resolve implementation defined formats
+  for (auto &descriptor : descriptors) {
+    descriptor->SetColorFormat(allocator_->GetImplDefinedFormat(descriptor->GetProducerUsage(),
+                                                                descriptor->GetConsumerUsage(),
+                                                                descriptor->GetFormat()));
+  }
+
   // Check if input descriptors can be supported AND
   // Find out if a single buffer can be shared for all the given input descriptors
   uint32_t i = 0;
-  int max_buf_index = -1;
+  ssize_t max_buf_index = -1;
   shared = allocator_->CheckForBufferSharing(num_descriptors, descriptors, &max_buf_index);
 
   if (test_allocate) {
@@ -272,7 +120,7 @@ gralloc1_error_t BufferManager::AllocateBuffers(uint32_t num_descriptors,
 
   if (shared && (max_buf_index >= 0)) {
     // Allocate one and duplicate/copy the handles for each descriptor
-    if (AllocateBuffer(descriptors[max_buf_index], &out_buffers[max_buf_index])) {
+    if (AllocateBuffer(*descriptors[UINT(max_buf_index)], &out_buffers[max_buf_index])) {
       return GRALLOC1_ERROR_NO_RESOURCES;
     }
 
@@ -281,20 +129,14 @@ gralloc1_error_t BufferManager::AllocateBuffers(uint32_t num_descriptors,
       // Current assumption is even MetaData memory would be same
       // Need to revisit if there is a need for own metadata memory
       if (i != UINT(max_buf_index)) {
-        CreateSharedHandle(out_buffers[max_buf_index], descriptors[i], &out_buffers[i]);
-
-        // since we just created handle out of existing handle add it to map
-        locker_.lock();
-        handles_map_.insert(std::pair<private_handle_t const *, int>(
-            reinterpret_cast<private_handle_t const *>(out_buffers[i]), 1));
-        locker_.unlock();
+        CreateSharedHandle(out_buffers[max_buf_index], *descriptors[i], &out_buffers[i]);
       }
     }
   } else {
     // Buffer sharing is not feasible.
-    // Allocate seperate buffer for each descriptor
+    // Allocate separate buffer for each descriptor
     for (i = 0; i < num_descriptors; i++) {
-      if (AllocateBuffer(descriptors[i], &out_buffers[i])) {
+      if (AllocateBuffer(*descriptors[i], &out_buffers[i])) {
         return GRALLOC1_ERROR_NO_RESOURCES;
       }
     }
@@ -322,46 +164,41 @@ void BufferManager::CreateSharedHandle(buffer_handle_t inbuffer, const BufferDes
   int buffer_type = GetBufferType(descriptor.GetFormat());
 
   // Duplicate the fds
-  private_handle_t *out_hnd = new private_handle_t(
-      dup(input->fd), input->size, flags, buffer_type, descriptor.GetFormat(), INT(alignedw),
-      INT(alignedh), dup(input->fd_metadata), input->offset_metadata, input->base_metadata,
-      descriptor.GetWidth(), descriptor.GetHeight(), descriptor.GetProducerUsage(),
-      descriptor.GetConsumerUsage());
-
   // TODO(user): Not sure what to do for fb_id. Use duped fd and new dimensions?
-
+  private_handle_t *out_hnd = new private_handle_t(dup(input->fd),
+                                                   dup(input->fd_metadata),
+                                                   flags,
+                                                   INT(alignedw),
+                                                   INT(alignedh),
+                                                   descriptor.GetWidth(),
+                                                   descriptor.GetHeight(),
+                                                   descriptor.GetFormat(),
+                                                   buffer_type,
+                                                   input->size,
+                                                   descriptor.GetProducerUsage(),
+                                                   descriptor.GetConsumerUsage());
+  out_hnd->id = ++next_id_;
+  // TODO(user): Base address of shared handle and ion handles
+  auto buffer = std::make_shared<Buffer>(out_hnd);
+  handles_map_.emplace(std::make_pair(out_hnd->id, buffer));
   *outbuffer = out_hnd;
 }
 
-gralloc1_error_t BufferManager::FreeBuffer(private_handle_t const *hnd) {
+gralloc1_error_t BufferManager::FreeBuffer(std::shared_ptr<Buffer> buf) {
+  auto hnd = buf->handle;
   if (allocator_->FreeBuffer(reinterpret_cast<void *>(hnd->base), hnd->size, hnd->offset,
-                             hnd->fd) != 0) {
+                             hnd->fd, buf->ion_handle_main) != 0) {
     return GRALLOC1_ERROR_BAD_HANDLE;
   }
 
   unsigned int meta_size = ALIGN((unsigned int)sizeof(MetaData_t), PAGE_SIZE);
   if (allocator_->FreeBuffer(reinterpret_cast<void *>(hnd->base_metadata), meta_size,
-                             hnd->offset_metadata, hnd->fd_metadata) != 0) {
+                             hnd->offset_metadata, hnd->fd_metadata, buf->ion_handle_meta) != 0) {
     return GRALLOC1_ERROR_BAD_HANDLE;
   }
 
-  // delete handle also
-  private_handle_t *handle = const_cast<private_handle_t *>(hnd);
-  if (handle->fb_id) {
-      int ret = DRMMaster::GetInstance(&master);
-      if (ret < 0) {
-          ALOGE("%s Failed to acquire DRMMaster instance", __FUNCTION__);
-          return ret;
-      }
-      ret = master->RemoveFbId(hnd->gem_handle, hnd->fb_id);
-      if (ret < 0) {
-          ALOGE("%s: Removing fb_id %d failed with error %d", __FUNCTION__,
-                  hnd->fb_id, errno);
-      }
-  }
-
-  delete handle;
-
+  // TODO(user): delete handle once framework bug around this is confirmed
+  // to be resolved
   return GRALLOC1_ERROR_NONE;
 }
 
@@ -385,44 +222,42 @@ gralloc1_error_t BufferManager::MapBuffer(private_handle_t const *handle) {
 }
 
 gralloc1_error_t BufferManager::RetainBuffer(private_handle_t const *hnd) {
-  locker_.lock();
+  std::lock_guard<std::mutex> lock(locker_);
 
   // find if this handle is already in map
-  auto it = handles_map_.find(hnd);
+  auto it = handles_map_.find(hnd->id);
   if (it != handles_map_.end()) {
     // It's already in map, Just increment refcnt
     // No need to mmap the memory.
-    it->second = it->second + 1;
+    auto buf = it->second;
+    buf->ref_count++;
   } else {
     // not present in the map. mmap and then add entry to map
     if (MapBuffer(hnd) == GRALLOC1_ERROR_NONE) {
-      handles_map_.insert(std::pair<private_handle_t const *, int>(hnd, 1));
+      auto buffer = std::make_shared<Buffer>(hnd);
+      handles_map_.emplace(std::make_pair(hnd->id, buffer));
     }
   }
 
-  locker_.unlock();
   return GRALLOC1_ERROR_NONE;
 }
 
 gralloc1_error_t BufferManager::ReleaseBuffer(private_handle_t const *hnd) {
-  locker_.lock();
-
+  std::lock_guard<std::mutex> lock(locker_);
   // find if this handle is already in map
-  auto it = handles_map_.find(hnd);
+  auto it = handles_map_.find(hnd->id);
   if (it == handles_map_.end()) {
     // Corrupt handle or map.
-    locker_.unlock();
+    ALOGE("Could not find handle");
     return GRALLOC1_ERROR_BAD_HANDLE;
   } else {
-    it->second = it->second - 1;
+    auto buf = it->second;
+    buf->ref_count--;
+    if (buf->ref_count == 0) {
+      handles_map_.erase(it);
+      FreeBuffer(buf);
+    }
   }
-
-  if (!it->second) {
-    handles_map_.erase(it);
-    FreeBuffer(hnd);
-  }
-
-  locker_.unlock();
   return GRALLOC1_ERROR_NONE;
 }
 
@@ -481,9 +316,9 @@ gralloc1_error_t BufferManager::UnlockBuffer(const private_handle_t *handle) {
   return status;
 }
 
-int BufferManager::GetDataAlignment(int format, gralloc1_producer_usage_t prod_usage,
+uint32_t BufferManager::GetDataAlignment(int format, gralloc1_producer_usage_t prod_usage,
                                     gralloc1_consumer_usage_t cons_usage) {
-  int align = getpagesize();
+  uint32_t align = UINT(getpagesize());
   if (format == HAL_PIXEL_FORMAT_YCbCr_420_SP_TILED) {
     align = 8192;
   }
@@ -566,94 +401,61 @@ int BufferManager::AllocateBuffer(unsigned int size, int aligned_w, int aligned_
                                   int unaligned_h, int format, int bufferType,
                                   gralloc1_producer_usage_t prod_usage,
                                   gralloc1_consumer_usage_t cons_usage, buffer_handle_t *handle) {
+  auto page_size = UINT(getpagesize());
   int err = 0;
   int flags = 0;
-  size = ALIGN(size, PAGE_SIZE);
   AllocData data;
-  data.align = (unsigned int)GetDataAlignment(format, prod_usage, cons_usage);
-  size = ALIGN(size, data.align);
-  data.size = size;
+  data.align = GetDataAlignment(format, prod_usage, cons_usage);
+  data.size = ALIGN(size, data.align);
   data.handle = (uintptr_t)handle;
-
-  // Allocate memory
   data.uncached = allocator_->UseUncached(prod_usage);
+
+  // Allocate buffer memory
   err = allocator_->AllocateMem(&data, prod_usage, cons_usage);
   if (err) {
     ALOGE("gralloc failed to allocate err=%s", strerror(-err));
-    *handle = 0;
     return err;
   }
 
-  // allocate memory for MetaData
+  // Allocate memory for MetaData
   AllocData e_data;
-  e_data.size = ALIGN((unsigned int)sizeof(MetaData_t), PAGE_SIZE);
+  e_data.size = ALIGN(UINT(sizeof(MetaData_t)), page_size);
   e_data.handle = data.handle;
-  e_data.align = (unsigned int)getpagesize();
-
-  ColorSpace_t colorSpace = ITU_R_601;
-  if (prod_usage & GRALLOC1_PRODUCER_USAGE_CAMERA) {
-    colorSpace = ITU_R_601_FR;
-  }
+  e_data.align = page_size;
 
   err =
       allocator_->AllocateMem(&e_data, GRALLOC1_PRODUCER_USAGE_NONE, GRALLOC1_CONSUMER_USAGE_NONE);
-  ALOGE_IF(err, "gralloc failed for e_daata error=%s", strerror(-err));
+  if (err) {
+    ALOGE("gralloc failed to allocate metadata error=%s", strerror(-err));
+    return err;
+  }
 
   flags = GetHandleFlags(format, prod_usage, cons_usage);
   flags |= data.alloc_type;
 
   // Create handle
-  uint64_t eBaseAddr = (uint64_t)(e_data.base) + e_data.offset;
-  private_handle_t *hnd = new private_handle_t(data.fd, size, flags, bufferType, format, aligned_w,
-                                               aligned_h, e_data.fd, e_data.offset, eBaseAddr,
-                                               unaligned_w, unaligned_h, prod_usage, cons_usage);
+  private_handle_t *hnd = new private_handle_t(data.fd,
+                                               e_data.fd,
+                                               flags,
+                                               aligned_w,
+                                               aligned_h,
+                                               unaligned_w,
+                                               unaligned_h,
+                                               format,
+                                               bufferType,
+                                               size,
+                                               prod_usage,
+                                               cons_usage);
 
-  hnd->offset = data.offset;
-  hnd->base = (uint64_t)(data.base) + data.offset;
-  hnd->gpuaddr = 0;
+  hnd->id = ++next_id_;
+  hnd->base = reinterpret_cast<uint64_t >(data.base);
+  hnd->base_metadata = reinterpret_cast<uint64_t >(e_data.base);
 
+  ColorSpace_t colorSpace = ITU_R_601;
   setMetaData(hnd, UPDATE_COLOR_SPACE, reinterpret_cast<void *>(&colorSpace));
-  if (qdutils::getDriverType() == qdutils::DriverType::DRM &&
-          cons_usage & GRALLOC_USAGE_HW_COMPOSER) {
-      DRMBuffer buf = {};
-      int ret = getPlaneStrideOffset(hnd, buf.stride, buf.offset,
-              &buf.num_planes);
-      if (ret < 0) {
-          ALOGE("%s failed", __FUNCTION__);
-          return ret;
-      }
-
-      buf.fd = hnd->fd;
-      buf.width = hnd->width;
-      buf.height = hnd->height;
-      getDRMFormat(hnd->format, flags, &buf.drm_format,
-              &buf.drm_format_modifier);
-
-      DRMMaster *master = nullptr;
-      ret = DRMMaster::GetInstance(&master);
-      if (ret < 0) {
-          ALOGE("%s Failed to acquire DRMMaster instance", __FUNCTION__);
-          return ret;
-      }
-
-      ret = master->CreateFbId(buf, &hnd->gem_handle, &hnd->fb_id);
-      if (ret < 0) {
-          ALOGE("%s: CreateFbId failed. width %d, height %d, " \
-                  "format: %s, stride %u, error %d", __FUNCTION__,
-                  buf.width, buf.height,
-                  qdutils::GetHALPixelFormatString(hnd->format),
-                  buf.stride[0], errno);
-          return ret;
-      }
-  }
-
   *handle = hnd;
-
-  // we have just allocated the buffer & mmapped. Add to map
-  locker_.lock();
-  handles_map_.insert(std::pair<private_handle_t const *, int>(hnd, 1));
-  locker_.unlock();
-
+  auto buffer = std::make_shared<Buffer>(hnd, data.ion_handle, e_data.ion_handle);
+  handles_map_.emplace(std::make_pair(hnd->id, buffer));
   return err;
 }
 
@@ -739,8 +541,8 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
         allocator_->GetAlignedWidthAndHeight(descriptor, &alignedw, &alignedh);
         hnd->unaligned_width = width;
         hnd->unaligned_height = height;
-        hnd->width = alignedw;
-        hnd->height = alignedh;
+        hnd->width = INT(alignedw);
+        hnd->height = INT(alignedh);
         hnd->format = format;
         *handle = reinterpret_cast<native_handle_t *>(hnd);
       }
@@ -889,11 +691,116 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
       }
     } break;
 
+    case GRALLOC1_MODULE_PERFORM_GET_BUFFER_SIZE_AND_DIMENSIONS: {
+      int width = va_arg(args, int);
+      int height = va_arg(args, int);
+      int format = va_arg(args, int);
+      uint64_t p_usage = va_arg(args, uint64_t);
+      uint64_t c_usage = va_arg(args, uint64_t);
+      gralloc1_producer_usage_t producer_usage = static_cast<gralloc1_producer_usage_t>(p_usage);
+      gralloc1_consumer_usage_t consumer_usage = static_cast<gralloc1_consumer_usage_t>(c_usage);
+      uint32_t *aligned_width = va_arg(args, uint32_t *);
+      uint32_t *aligned_height = va_arg(args, uint32_t *);
+      uint32_t *size = va_arg(args, uint32_t *);
+      auto descriptor = BufferDescriptor(width, height, format, producer_usage, consumer_usage);
+      allocator_->GetBufferSizeAndDimensions(descriptor, size, aligned_width, aligned_height);
+      // Align size
+      auto align = GetDataAlignment(format, producer_usage, consumer_usage);
+      *size = ALIGN(*size, align);
+    } break;
+
+      // TODO(user): Break out similar functionality, preferably moving to a common lib.
+
+    case GRALLOC1_MODULE_PERFORM_ALLOCATE_BUFFER: {
+      int width = va_arg(args, int);
+      int height = va_arg(args, int);
+      int format = va_arg(args, int);
+      uint64_t p_usage = va_arg(args, uint64_t);
+      uint64_t c_usage = va_arg(args, uint64_t);
+      buffer_handle_t *hnd = va_arg(args, buffer_handle_t*);
+      gralloc1_producer_usage_t producer_usage = static_cast<gralloc1_producer_usage_t>(p_usage);
+      gralloc1_consumer_usage_t consumer_usage = static_cast<gralloc1_consumer_usage_t>(c_usage);
+      BufferDescriptor descriptor(width, height, format, producer_usage, consumer_usage);
+      unsigned int size;
+      unsigned int alignedw, alignedh;
+      allocator_->GetBufferSizeAndDimensions(descriptor, &size, &alignedw, &alignedh);
+      AllocateBuffer(descriptor, hnd, size);
+    } break;
+
     default:
       break;
   }
-
   return GRALLOC1_ERROR_NONE;
 }
 
+static bool IsYuvFormat(const private_handle_t *hnd) {
+  switch (hnd->format) {
+    case HAL_PIXEL_FORMAT_YCbCr_420_SP:
+    case HAL_PIXEL_FORMAT_YCbCr_422_SP:
+    case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
+    case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:   // Same as YCbCr_420_SP_VENUS
+    case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
+    case HAL_PIXEL_FORMAT_YCrCb_420_SP:
+    case HAL_PIXEL_FORMAT_YCrCb_422_SP:
+    case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
+    case HAL_PIXEL_FORMAT_NV21_ZSL:
+    case HAL_PIXEL_FORMAT_RAW16:
+    case HAL_PIXEL_FORMAT_RAW10:
+    case HAL_PIXEL_FORMAT_YV12:
+      return true;
+    default:
+      return false;
+  }
+}
+
+gralloc1_error_t BufferManager::GetNumFlexPlanes(const private_handle_t *hnd,
+                                                 uint32_t *out_num_planes) {
+  if (!IsYuvFormat(hnd)) {
+    return GRALLOC1_ERROR_UNSUPPORTED;
+  } else {
+    *out_num_planes = 3;
+  }
+  return GRALLOC1_ERROR_NONE;
+}
+
+gralloc1_error_t BufferManager::GetFlexLayout(const private_handle_t *hnd,
+                                              struct android_flex_layout *layout) {
+  if (!IsYuvFormat(hnd)) {
+    return GRALLOC1_ERROR_UNSUPPORTED;
+  }
+
+  android_ycbcr ycbcr;
+  int err = allocator_->GetYUVPlaneInfo(hnd, &ycbcr);
+
+  if (err != 0) {
+    return GRALLOC1_ERROR_BAD_HANDLE;
+  }
+
+  layout->format = FLEX_FORMAT_YCbCr;
+  layout->num_planes = 3;
+
+  for (uint32_t i = 0; i < layout->num_planes; i++) {
+    layout->planes[i].bits_per_component = 8;
+    layout->planes[i].bits_used = 8;
+    layout->planes[i].h_increment = 1;
+    layout->planes[i].v_increment = 1;
+    layout->planes[i].h_subsampling = 2;
+    layout->planes[i].v_subsampling = 2;
+  }
+
+  layout->planes[0].top_left = static_cast<uint8_t *>(ycbcr.y);
+  layout->planes[0].component = FLEX_COMPONENT_Y;
+  layout->planes[0].v_increment = static_cast<int32_t>(ycbcr.ystride);
+
+  layout->planes[1].top_left = static_cast<uint8_t *>(ycbcr.cb);
+  layout->planes[1].component = FLEX_COMPONENT_Cb;
+  layout->planes[1].h_increment = static_cast<int32_t>(ycbcr.chroma_step);
+  layout->planes[1].v_increment = static_cast<int32_t>(ycbcr.cstride);
+
+  layout->planes[2].top_left = static_cast<uint8_t *>(ycbcr.cr);
+  layout->planes[2].component = FLEX_COMPONENT_Cr;
+  layout->planes[2].h_increment = static_cast<int32_t>(ycbcr.chroma_step);
+  layout->planes[2].v_increment = static_cast<int32_t>(ycbcr.cstride);
+  return GRALLOC1_ERROR_NONE;
+}
 }  //  namespace gralloc1
