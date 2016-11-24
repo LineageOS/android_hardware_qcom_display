@@ -314,7 +314,6 @@ void HwcDebug::dumpLayer(size_t layerIndex, hwc_layer_1_t hwLayers[])
     if (needDumpPng && hnd->base) {
         bool bResult = false;
         char dumpFilename[PATH_MAX];
-        SkBitmap *tempSkBmp = new SkBitmap();
         SkBitmap::Config tempSkBmpConfig = SkBitmap::kNo_Config;
         snprintf(dumpFilename, sizeof(dumpFilename),
             "%s/sfdump%03d.layer%zu.%s.png", mDumpDirPng,
@@ -335,10 +334,11 @@ void HwcDebug::dumpLayer(size_t layerIndex, hwc_layer_1_t hwLayers[])
                 break;
         }
         if (SkBitmap::kNo_Config != tempSkBmpConfig) {
-            tempSkBmp->setConfig(tempSkBmpConfig, getWidth(hnd), getHeight(hnd));
-            tempSkBmp->setPixels((void*)hnd->base);
-            bResult = SkImageEncoder::EncodeFile(dumpFilename,
-                                    *tempSkBmp, SkImageEncoder::kPNG_Type, 100);
+            SkImageInfo info = SkImageInfo::Make(getWidth(hnd), getHeight(hnd),
+                                                 tempSkBmpColor, kIgnore_SkAlphaType);
+            SkPixmap pixmap(info, (const void*)hnd->base, info.minRowBytes());
+            SkFILEWStream file(dumpFilename);
+            bResult = SkEncodeImage(&file, pixmap, SkEncodedImageFormat::kPNG, 100);
             ALOGI("Display[%s] Layer[%zu] %s Dump to %s: %s",
                 mDisplayName, layerIndex, dumpLogStrPng,
                 dumpFilename, bResult ? "Success" : "Fail");
@@ -347,7 +347,6 @@ void HwcDebug::dumpLayer(size_t layerIndex, hwc_layer_1_t hwLayers[])
                 " format %s for png encoder",
                 mDisplayName, layerIndex, dumpLogStrPng, pixFormatStr);
         }
-        delete tempSkBmp; // Calls SkBitmap::freePixels() internally.
     }
 #endif
     if (needDumpRaw && hnd->base) {

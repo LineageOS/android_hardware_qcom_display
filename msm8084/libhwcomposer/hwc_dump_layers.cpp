@@ -337,8 +337,8 @@ void HwcDebug::dumpLayer(size_t layerIndex, hwc_layer_1_t hwLayers[])
         if (SkBitmap::kNo_Config != tempSkBmpConfig) {
             tempSkBmp->setConfig(tempSkBmpConfig, getWidth(hnd), getHeight(hnd));
             tempSkBmp->setPixels((void*)hnd->base);
-            bResult = SkImageEncoder::EncodeFile(dumpFilename,
-                                    *tempSkBmp, SkImageEncoder::kPNG_Type, 100);
+            SkFILEWStream file(dumpFilename);
+            bResult = SkEncodeImage(&file, *tempSkBmp, SkEncodedImageFormat::kPNG, 100);
             ALOGI("Display[%s] Layer[%zu] %s Dump to %s: %s",
                 mDisplayName, layerIndex, dumpLogStrPng,
                 dumpFilename, bResult ? "Success" : "Fail");
