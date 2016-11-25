@@ -164,7 +164,7 @@ bool Debug::IsExtAnimDisabled() {
 }
 
 DisplayError Debug::GetMixerResolution(uint32_t *width, uint32_t *height) {
-  char value[64];
+  char value[64] = {};
 
   DisplayError error = debug_.debug_handler_->GetProperty("sdm.mixer_resolution", value);
   if (error !=kErrorNone) {

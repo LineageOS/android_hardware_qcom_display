@@ -65,6 +65,7 @@ class DisplayPrimary : public DisplayBase, HWEventHandler {
   std::vector<const char *> event_list_ = {"vsync_event", "show_blank_event", "idle_notify",
                                            "msm_fb_thermal_level", "thread_exit"};
   bool avr_prop_disabled_ = false;
+  bool switch_to_cmd_ = false;
 };
 
 }  // namespace sdm
