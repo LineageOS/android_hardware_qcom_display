@@ -393,8 +393,8 @@ DisplayError HWPrimary::Validate(HWLayers *hw_layers) {
   if (stack->output_buffer && hw_resource_.has_concurrent_writeback) {
     LayerBuffer *output_buffer = stack->output_buffer;
     mdp_out_layer_.writeback_ndx = hw_resource_.writeback_index;
-    mdp_out_layer_.buffer.width = output_buffer->width;
-    mdp_out_layer_.buffer.height = output_buffer->height;
+    mdp_out_layer_.buffer.width = output_buffer->unaligned_width;
+    mdp_out_layer_.buffer.height = output_buffer->unaligned_height;
     mdp_out_layer_.buffer.comp_ratio.denom = 1000;
     mdp_out_layer_.buffer.comp_ratio.numer = UINT32(hw_layers->output_compression * 1000);
     mdp_out_layer_.buffer.fence = -1;
