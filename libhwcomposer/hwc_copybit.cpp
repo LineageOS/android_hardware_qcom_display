@@ -252,7 +252,7 @@ bool CopyBit::prepareSwapRect(hwc_context_t *ctx,
            if(needsScaling(&list->hwLayers[k])||( hnd && isYuvBuffer(hnd)) ||
                    (list->hwLayers[k].transform & HAL_TRANSFORM_ROT_90)) {
                mFbCache.reset();
-               displayRect.bottom = 0;
+               displayRect.left = 0;
                displayRect.top = 0;
                displayRect.right = 0;
                displayRect.bottom = 0;
@@ -265,7 +265,7 @@ bool CopyBit::prepareSwapRect(hwc_context_t *ctx,
                                              NUM_RENDER_BUFFERS) {
               mFbCache.insertAndUpdateFbCache(dirtyRect, displayRect);
               canUseSwapRect =  0;
-              displayRect.bottom = 0;
+              displayRect.left = 0;
               displayRect.top = 0;
               displayRect.right = 0;
               displayRect.bottom = 0;
@@ -273,7 +273,7 @@ bool CopyBit::prepareSwapRect(hwc_context_t *ctx,
     } else {
        mFbCache.reset();
        canUseSwapRect =  0;
-       displayRect.bottom = 0;
+       displayRect.left = 0;
        displayRect.top = 0;
        displayRect.right = 0;
        displayRect.bottom = 0;
