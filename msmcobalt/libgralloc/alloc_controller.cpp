@@ -59,16 +59,24 @@
 #define ION_FLAG_ALLOW_NON_CONTIG 0
 #endif
 
+#ifndef ION_FLAG_CP_CAMERA_PREVIEW
+#define ION_FLAG_CP_CAMERA_PREVIEW 0
+#endif
+
 #ifdef MASTER_SIDE_CP
 #define CP_HEAP_ID ION_SECURE_HEAP_ID
 #define SD_HEAP_ID ION_SECURE_DISPLAY_HEAP_ID
 #define ION_CP_FLAGS (ION_SECURE | ION_FLAG_CP_PIXEL)
 #define ION_SD_FLAGS (ION_SECURE | ION_FLAG_CP_SEC_DISPLAY)
+#define ION_SC_FLAGS (ION_SECURE | ION_FLAG_CP_CAMERA)
+#define ION_SC_PREVIEW_FLAGS (ION_SECURE | ION_FLAG_CP_CAMERA_PREVIEW)
 #else // SLAVE_SIDE_CP
 #define CP_HEAP_ID ION_CP_MM_HEAP_ID
 #define SD_HEAP_ID CP_HEAP_ID
 #define ION_CP_FLAGS (ION_SECURE | ION_FLAG_ALLOW_NON_CONTIG)
 #define ION_SD_FLAGS ION_SECURE
+#define ION_SC_FLAGS ION_SECURE
+#define ION_SC_PREVIEW_FLAGS ION_SECURE
 #endif
 
 using namespace gralloc;
@@ -473,6 +481,9 @@ int IonController::allocate(alloc_data& data, int usage)
              * VM. Please add it to the define once available.
              */
             ionFlags |= ION_SD_FLAGS;
+        } else if (usage & GRALLOC_USAGE_HW_CAMERA_MASK) {
+            ionHeapId = ION_HEAP(SD_HEAP_ID);
+            ionFlags |= (usage & GRALLOC_USAGE_HW_COMPOSER) ? ION_SC_PREVIEW_FLAGS : ION_SC_FLAGS;
         } else {
             ionHeapId = ION_HEAP(CP_HEAP_ID);
             ionFlags |= ION_CP_FLAGS;
@@ -1108,6 +1119,7 @@ int getRgbDataAddress(private_handle_t* hnd, void** rgb_data)
         return err;
     }
 
+    // Ubwc buffers
     unsigned int meta_size = 0;
     switch (hnd->format) {
         case HAL_PIXEL_FORMAT_BGR_565:
@@ -1115,6 +1127,8 @@ int getRgbDataAddress(private_handle_t* hnd, void** rgb_data)
             break;
         case HAL_PIXEL_FORMAT_RGBA_8888:
         case HAL_PIXEL_FORMAT_RGBX_8888:
+        case HAL_PIXEL_FORMAT_RGBA_1010102:
+        case HAL_PIXEL_FORMAT_RGBX_1010102:
             meta_size = getRgbUBwcMetaBufferSize(hnd->width, hnd->height, 4);
             break;
         default:

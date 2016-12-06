@@ -98,6 +98,9 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
   // TZ Protected Buffer - L1
   if (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER) {
     layer_buffer->flags.secure = true;
+    if (handle->flags & private_handle_t::PRIV_FLAGS_CAMERA_WRITE) {
+      layer_buffer->flags.secure_camera = true;
+    }
   }
   if (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_DISPLAY) {
     layer_buffer->flags.secure_display = true;
@@ -107,6 +110,7 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
   layer_buffer->planes[0].offset = handle->offset;
   layer_buffer->planes[0].stride = UINT32(handle->width);
   layer_buffer->acquire_fence_fd = acquire_fence;
+  layer_buffer->size = handle->size;
   layer_buffer->buffer_id = reinterpret_cast<uint64_t>(handle);
 
   return HWC2::Error::None;

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2016, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -52,6 +52,8 @@ struct BufferConfig {
   bool secure = false;                        //!< Specifies buffer to be allocated from
                                               //!< secure region.
   bool cache = false;                         //!< Specifies whether the buffer needs to be cache.
+  bool secure_camera = false;                 //!< Specifies buffer to be allocated from specific
+                                              //!< secure heap and with a specific alignment.
 };
 
 /*! @brief Holds the information about the allocated buffer.

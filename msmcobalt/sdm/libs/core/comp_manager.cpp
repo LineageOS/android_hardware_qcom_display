@@ -221,6 +221,9 @@ void CompManager::PrepareStrategyConstraints(Handle comp_handle, HWLayers *hw_la
     constraints->safe_mode = true;
   }
 
+  // Set use_cursor constraint to Strategy
+  constraints->use_cursor = display_comp_ctx->valid_cursor;
+
   // Avoid idle fallback, if there is only one app layer.
   // TODO(user): App layer count will change for hybrid composition
   uint32_t app_layer_count = UINT32(hw_layers->info.stack->layers.size()) - 1;
@@ -228,18 +231,19 @@ void CompManager::PrepareStrategyConstraints(Handle comp_handle, HWLayers *hw_la
     // Handle the idle timeout by falling back
     constraints->safe_mode = true;
   }
-
-  if (SupportLayerAsCursor(comp_handle, hw_layers)) {
-    constraints->use_cursor = true;
-  }
 }
 
 void CompManager::PrePrepare(Handle display_ctx, HWLayers *hw_layers) {
   SCOPE_LOCK(locker_);
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+  display_comp_ctx->valid_cursor = SupportLayerAsCursor(display_comp_ctx, hw_layers);
+
+  // pu constraints
+  display_comp_ctx->pu_constraints.enable_cursor_pu = display_comp_ctx->valid_cursor;
+
   display_comp_ctx->strategy->Start(&hw_layers->info, &display_comp_ctx->max_strategies,
-                                    display_comp_ctx->partial_update_enable);
+                                    display_comp_ctx->pu_constraints);
   display_comp_ctx->remaining_strategies = display_comp_ctx->max_strategies;
 }
 
@@ -412,7 +416,7 @@ void CompManager::ControlPartialUpdate(Handle display_ctx, bool enable) {
 
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
-  display_comp_ctx->partial_update_enable = enable;
+  display_comp_ctx->pu_constraints.enable = enable;
 }
 
 void CompManager::AppendDump(char *buffer, uint32_t length) {
