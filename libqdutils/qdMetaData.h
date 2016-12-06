@@ -100,6 +100,7 @@ enum DispParamType {
     UPDATE_REFRESH_RATE = 0x0100,
     UPDATE_COLOR_SPACE = 0x0200,
     MAP_SECURE_BUFFER = 0x400,
+    COLOR_METADATA = 0x800,
 };
 
 enum DispFetchParamType {
@@ -108,6 +109,7 @@ enum DispFetchParamType {
     GET_REFRESH_RATE = 0x0100,
     GET_COLOR_SPACE = 0x0200,
     GET_MAP_SECURE_BUFFER = 0x400,
+    GET_COLOR_METADATA = 0x800,
 };
 
 struct private_handle_t;
