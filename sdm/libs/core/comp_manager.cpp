@@ -426,8 +426,8 @@ void CompManager::AppendDump(char *buffer, uint32_t length) {
 
 DisplayError CompManager::ValidateScaling(const LayerRect &crop, const LayerRect &dst,
                                           bool rotate90) {
-  return resource_intf_->ValidateScaling(crop, dst, rotate90, Debug::IsUbwcTiledFrameBuffer(),
-                                         true /* use_rotator_downscale */);
+  BufferLayout layout = Debug::IsUbwcTiledFrameBuffer() ? kUBWC : kLinear;
+  return resource_intf_->ValidateScaling(crop, dst, rotate90, layout, true);
 }
 
 DisplayError CompManager::ValidateCursorPosition(Handle display_ctx, HWLayers *hw_layers,
