@@ -30,6 +30,10 @@
 #ifndef _QDMETADATA_H
 #define _QDMETADATA_H
 
+#ifdef USE_COLOR_METADATA
+#include <color_metadata.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -86,6 +90,10 @@ struct MetaData_t {
       * for clients to set, and GPU will to read and know when to map the
       * SECURE_BUFFER(ION) */
     int32_t mapSecureBuffer;
+#ifdef USE_COLOR_METADATA
+   /* Color Aspects + HDR info */
+   ColorMetaData color;
+#endif
 };
 
 enum DispParamType {
