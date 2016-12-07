@@ -386,18 +386,20 @@ DisplayError HWInfo::GetMDSSRotatorInfo(HWResourceInfo *hw_resource) {
     }
   }
 
-  DLOGI("MDSS Rotator: Count = %d, Downscale = %d", hw_resource->hw_rot_info.num_rotator,
-        hw_resource->hw_rot_info.has_downscale);
+  DLOGI("MDSS Rotator: Count = %d, Downscale = %d, Min_downscale = %f",
+        hw_resource->hw_rot_info.num_rotator, hw_resource->hw_rot_info.has_downscale,
+        hw_resource->hw_rot_info.min_downscale);
 
   return kErrorNone;
 }
 
 DisplayError HWInfo::GetV4L2RotatorInfo(HWResourceInfo *hw_resource) {
+  string v4l2_path = "/sys/class/video4linux/video";
   const uint32_t kMaxV4L2Nodes = 64;
   bool found = false;
 
   for (uint32_t i = 0; (i < kMaxV4L2Nodes) && (false == found); i++) {
-    string path = "/sys/class/video4linux/video" + to_string(i) + "/name";
+    string path = v4l2_path + to_string(i) + "/name";
     Sys::fstream fs(path, fstream::in);
     if (!fs.is_open()) {
       continue;
@@ -410,13 +412,32 @@ DisplayError HWInfo::GetV4L2RotatorInfo(HWResourceInfo *hw_resource) {
        hw_resource->hw_rot_info.num_rotator++;
        hw_resource->hw_rot_info.type = HWRotatorInfo::ROT_TYPE_V4L2;
        hw_resource->hw_rot_info.has_downscale = true;
+
+       string caps_path = v4l2_path + to_string(i) + "/device/caps";
+       Sys::fstream caps_fs(caps_path, fstream::in);
+
+       if (caps_fs.is_open()) {
+         uint32_t token_count = 0;
+         const uint32_t max_count = 10;
+         char *tokens[max_count] = { NULL };
+         string caps;
+         while (Sys::getline_(caps_fs, caps)) {
+           if (!ParseString(caps.c_str(), tokens, max_count, ":, =\n", &token_count)) {
+             if (!strncmp(tokens[0], "min_downscale", strlen("min_downscale"))) {
+               hw_resource->hw_rot_info.min_downscale = FLOAT(atof(tokens[1]));
+             }
+           }
+         }
+       }
+
        // We support only 1 rotator
        found = true;
     }
   }
 
-  DLOGI("V4L2 Rotator: Count = %d, Downscale = %d", hw_resource->hw_rot_info.num_rotator,
-        hw_resource->hw_rot_info.has_downscale);
+  DLOGI("V4L2 Rotator: Count = %d, Downscale = %d, Min_downscale = %f",
+        hw_resource->hw_rot_info.num_rotator, hw_resource->hw_rot_info.has_downscale,
+        hw_resource->hw_rot_info.min_downscale);
 
   return kErrorNone;
 }

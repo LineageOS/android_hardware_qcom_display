@@ -558,8 +558,8 @@ DisplayError ResourceDefault::Config(DisplayResourceContext *display_resource_ct
     return error;
   }
 
-  bool ubwc_tiled = IsUBWCFormat(layer->input_buffer->format);
-  error = ValidateScaling(src_rect, dst_rect, false /*rotated90 */, ubwc_tiled,
+  BufferLayout layout = GetBufferLayout(layer->input_buffer->format);
+  error = ValidateScaling(src_rect, dst_rect, false /*rotated90 */, layout,
                           false /* use_rotator_downscale */);
   if (error != kErrorNone) {
     return error;
@@ -716,7 +716,7 @@ DisplayError ResourceDefault::ValidateDimensions(const LayerRect &crop, const La
   return kErrorNone;
 }
 
-DisplayError ResourceDefault::ValidatePipeParams(HWPipeInfo *pipe_info, bool ubwc_tiled) {
+DisplayError ResourceDefault::ValidatePipeParams(HWPipeInfo *pipe_info, LayerBufferFormat format) {
   DisplayError error = kErrorNone;
 
   const LayerRect &src_rect = pipe_info->src_roi;
@@ -727,7 +727,8 @@ DisplayError ResourceDefault::ValidatePipeParams(HWPipeInfo *pipe_info, bool ubw
     return error;
   }
 
-  error = ValidateScaling(src_rect, dst_rect, false /* rotated90 */, ubwc_tiled,
+  BufferLayout layout = GetBufferLayout(format);
+  error = ValidateScaling(src_rect, dst_rect, false /* rotated90 */, layout,
                           false /* use_rotator_downscale */);
   if (error != kErrorNone) {
     return error;
@@ -737,7 +738,7 @@ DisplayError ResourceDefault::ValidatePipeParams(HWPipeInfo *pipe_info, bool ubw
 }
 
 DisplayError ResourceDefault::ValidateScaling(const LayerRect &crop, const LayerRect &dst,
-                                              bool rotate90, bool ubwc_tiled,
+                                              bool rotate90, BufferLayout layout,
                                               bool use_rotator_downscale) {
   DisplayError error = kErrorNone;
 
@@ -749,7 +750,7 @@ DisplayError ResourceDefault::ValidateScaling(const LayerRect &crop, const Layer
     return error;
   }
 
-  error = ValidateDownScaling(scale_x, scale_y, ubwc_tiled);
+  error = ValidateDownScaling(scale_x, scale_y, (layout != kLinear));
   if (error != kErrorNone) {
     return error;
   }
@@ -884,8 +885,7 @@ DisplayError ResourceDefault::AlignPipeConfig(const Layer *layer, HWPipeInfo *le
     return kErrorNotSupported;
   }
 
-  bool ubwc_tiled = IsUBWCFormat(layer->input_buffer->format);
-  error = ValidatePipeParams(left_pipe, ubwc_tiled);
+  error = ValidatePipeParams(left_pipe, layer->input_buffer->format);
   if (error != kErrorNone) {
     goto PipeConfigExit;
   }
@@ -894,7 +894,7 @@ DisplayError ResourceDefault::AlignPipeConfig(const Layer *layer, HWPipeInfo *le
     // Make sure the  left and right ROI are conjunct
     right_pipe->src_roi.left = left_pipe->src_roi.right;
     right_pipe->dst_roi.left = left_pipe->dst_roi.right;
-    error = ValidatePipeParams(right_pipe, ubwc_tiled);
+    error = ValidatePipeParams(right_pipe, layer->input_buffer->format);
   }
 
 PipeConfigExit:
