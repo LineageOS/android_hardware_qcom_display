@@ -32,6 +32,7 @@
 #include <private/color_params.h>
 #include <map>
 #include <vector>
+#include <string>
 
 namespace sdm {
 
@@ -47,6 +48,21 @@ enum DisplayClass {
   DISPLAY_CLASS_NULL
 };
 
+class HWCColorMode {
+ public:
+  explicit HWCColorMode(DisplayInterface *display_intf) : display_intf_(display_intf) {}
+  ~HWCColorMode() {}
+  void Init();
+  void DeInit() {}
+  int SetColorMode(const std::string &color_mode);
+  const std::vector<std::string> &GetColorModes();
+
+ private:
+  int PopulateColorModes();
+  DisplayInterface *display_intf_ = NULL;
+  std::vector<std::string> color_modes_ = {};
+  std::string current_color_mode_ = {};
+};
 
 class HWCDisplay : public DisplayEventHandler {
  public:
@@ -219,6 +235,7 @@ class HWCDisplay : public DisplayEventHandler {
   std::map<int, LayerBufferS3DFormat> s3d_format_hwc_to_sdm_;
   bool animating_ = false;
   HWCToneMapper *tone_mapper_ = NULL;
+  HWCColorMode *color_mode_ = NULL;
 
  private:
   void DumpInputBuffers(hwc_display_contents_1_t *content_list);

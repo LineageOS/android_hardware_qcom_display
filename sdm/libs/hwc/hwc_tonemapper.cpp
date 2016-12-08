@@ -117,6 +117,14 @@ int HWCToneMapper::HandleToneMap(hwc_display_contents_1_t *content_list, LayerSt
       grid_entries = layer->lut_3d.gridEntries;
       grid_size = INT(layer->lut_3d.gridSize);
     }
+    // When the property sdm.disable_hdr_lut_gen is set, the lutEntries and gridEntries in
+    // the Lut3d will be NULL, clients needs to allocate the memory and set correct 3D Lut
+    //  for Tonemapping.
+    if (!layer->lut_3d.lutEntries || !layer->lut_3d.dim) {
+      // Atleast lutEntries must be valid for GPU Tonemapper.
+      DLOGE("Invalid Lut Entries or lut dimention = %d", layer->lut_3d.dim);
+      return -1;
+    }
     gpu_tone_mapper_ = TonemapperFactory_GetInstance(TONEMAP_INVERSE, layer->lut_3d.lutEntries,
                                                      layer->lut_3d.dim, grid_entries, grid_size);
     if (gpu_tone_mapper_ == NULL) {

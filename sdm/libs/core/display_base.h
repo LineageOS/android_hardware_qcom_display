@@ -161,6 +161,7 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   std::string current_color_mode_ = "hal_native";
   std::string hdr_color_mode_ = "hal_hdr";
   bool hdr_playback_mode_ = false;
+  int disable_hdr_lut_gen_ = 0;
 };
 
 }  // namespace sdm
