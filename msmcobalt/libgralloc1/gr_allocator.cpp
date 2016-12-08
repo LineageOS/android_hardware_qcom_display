@@ -48,16 +48,24 @@
 #define ION_FLAG_ALLOW_NON_CONTIG 0
 #endif
 
+#ifndef ION_FLAG_CP_CAMERA_PREVIEW
+#define ION_FLAG_CP_CAMERA_PREVIEW 0
+#endif
+
 #ifdef MASTER_SIDE_CP
 #define CP_HEAP_ID ION_SECURE_HEAP_ID
 #define SD_HEAP_ID ION_SECURE_DISPLAY_HEAP_ID
 #define ION_CP_FLAGS (ION_SECURE | ION_FLAG_CP_PIXEL)
 #define ION_SD_FLAGS (ION_SECURE | ION_FLAG_CP_SEC_DISPLAY)
+#define ION_SC_FLAGS (ION_SECURE | ION_FLAG_CP_CAMERA)
+#define ION_SC_PREVIEW_FLAGS (ION_SECURE | ION_FLAG_CP_CAMERA_PREVIEW)
 #else  // SLAVE_SIDE_CP
 #define CP_HEAP_ID ION_CP_MM_HEAP_ID
 #define SD_HEAP_ID CP_HEAP_ID
 #define ION_CP_FLAGS (ION_SECURE | ION_FLAG_ALLOW_NON_CONTIG)
 #define ION_SD_FLAGS ION_SECURE
+#define ION_SC_FLAGS ION_SECURE
+#define ION_SC_PREVIEW_FLAGS ION_SECURE
 #endif
 
 namespace gralloc1 {
@@ -599,6 +607,13 @@ void Allocator::GetIonHeapInfo(gralloc1_producer_usage_t prod_usage,
        * VM. Please add it to the define once available.
        */
       flags |= ION_SD_FLAGS;
+    } else if (prod_usage & GRALLOC1_PRODUCER_USAGE_CAMERA) {
+      heap_id = ION_HEAP(SD_HEAP_ID);
+      if (cons_usage & GRALLOC1_CONSUMER_USAGE_HWCOMPOSER) {
+        flags |= ION_SC_PREVIEW_FLAGS;
+      } else {
+        flags |= ION_SC_FLAGS;
+      }
     } else {
       heap_id = ION_HEAP(CP_HEAP_ID);
       flags |= ION_CP_FLAGS;

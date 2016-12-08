@@ -41,7 +41,7 @@ class Strategy {
   DisplayError Deinit();
 
   DisplayError Start(HWLayersInfo *hw_layers_info, uint32_t *max_attempts,
-                     bool partial_update_enable);
+                     const PUConstraints &pu_constraints);
   DisplayError GetNextStrategy(StrategyConstraints *constraints);
   DisplayError Stop();
   DisplayError Reconfigure(const HWPanelInfo &hw_panel_info,

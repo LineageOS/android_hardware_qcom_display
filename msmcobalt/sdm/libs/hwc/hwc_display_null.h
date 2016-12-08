@@ -74,7 +74,7 @@ class HWCDisplayNull : public HWCDisplay {
   virtual int OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) { return 0; }
   virtual int Perform(uint32_t operation, ...) { return 0; }
   virtual int SetCursorPosition(int x, int y) { return 0; }
-  virtual void SetSecureDisplay(bool secure_display_active) { return; }
+  virtual void SetSecureDisplay(bool secure_display_active, bool force_flush) { return; }
 
   // Display Configurations
   virtual int SetActiveDisplayConfig(int config) { return 0; }

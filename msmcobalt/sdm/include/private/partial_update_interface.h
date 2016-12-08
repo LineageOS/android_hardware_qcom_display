@@ -33,10 +33,17 @@
 
 namespace sdm {
 
+struct PUConstraints {
+  bool enable = true;             //!< If this is set, PU will be enabled or it will be disabled
+  bool enable_cursor_pu = false;  //!< If this is set, PU will consider cursor layer in the layer
+                                   //!< stack for cursor partial update
+};
+
 class PartialUpdateInterface {
  public:
+  virtual DisplayError Start(const PUConstraints &pu_constraints) = 0;
   virtual DisplayError GenerateROI(HWLayersInfo *hw_layers_info) = 0;
-  virtual void ControlPartialUpdate(bool enable) = 0;
+  virtual DisplayError Stop() = 0;
 
  protected:
   virtual ~PartialUpdateInterface() { }

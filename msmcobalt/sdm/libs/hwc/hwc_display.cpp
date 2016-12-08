@@ -371,6 +371,9 @@ int HWCDisplay::PrepareLayerParams(hwc_layer_1_t *hwc_layer, Layer* layer) {
     if (pvt_handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER) {
       layer_stack_.flags.secure_present = true;
       layer_buffer->flags.secure = true;
+      if (pvt_handle->flags & private_handle_t::PRIV_FLAGS_CAMERA_WRITE) {
+        layer_buffer->flags.secure_camera = true;
+      }
     }
     // Gralloc Usage Protected Buffer - L3 - which needs to be treated as Secure & avoid fallback
     if (pvt_handle->flags & private_handle_t::PRIV_FLAGS_PROTECTED_BUFFER) {
@@ -1328,7 +1331,7 @@ int HWCDisplay::GetVisibleDisplayRect(hwc_rect_t* visible_rect) {
   return 0;
 }
 
-void HWCDisplay::SetSecureDisplay(bool secure_display_active) {
+void HWCDisplay::SetSecureDisplay(bool secure_display_active, bool force_flush) {
   secure_display_active_ = secure_display_active;
   return;
 }
