@@ -5,7 +5,7 @@ display_top := $(call my-dir)
 common_flags := -DDEBUG_CALC_FPS -Wno-missing-field-initializers
 common_flags += -Wconversion -Wall -Werror -std=c++11
 
-ifeq ($(call is-board-platform-in-list, msmcobalt msm8998), true)
+ifeq ($(TARGET_USES_COLOR_METADATA), true)
 common_flags += -DUSE_COLOR_METADATA
 endif
 
