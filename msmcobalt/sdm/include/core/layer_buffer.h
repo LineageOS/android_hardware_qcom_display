@@ -208,6 +208,10 @@ struct LayerBufferFlags {
       uint32_t secure_display : 1;  //!< This flag shall be set by the client to indicate that the
                                     //!< secure display session is in progress. Secure display
                                     //!< session can not coexist with non-secure session.
+
+      uint32_t secure_camera : 1;   //!< This flag shall be set by the client to indicate that the
+                                    //!< buffer is associated with secure camera session. A secure
+                                    //!< camera layer can co-exist with non-secure layer(s).
     };
 
     uint32_t flags = 0;             //!< For initialization purpose only.

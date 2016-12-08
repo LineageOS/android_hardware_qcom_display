@@ -45,6 +45,10 @@
 #define MDP_LAYER_MULTIRECT_PARALLEL_MODE 0
 #endif
 
+#ifndef MDP_LAYER_SECURE_CAMERA_SESSION
+#define MDP_LAYER_SECURE_CAMERA_SESSION 0
+#endif
+
 namespace sdm {
 class HWInfoInterface;
 
