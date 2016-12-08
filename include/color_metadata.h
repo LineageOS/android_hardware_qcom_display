@@ -51,6 +51,7 @@ typedef enum ColorPrimaries {
   ColorPrimaries_SMPTE_ST428 = 10,  // SMPTE_240M
   ColorPrimaries_AdobeRGB    = 11,
   ColorPrimaries_DCIP3       = 12,
+  ColorPrimaries_EBU3213     = 22,
   ColorPrimaries_Max         = 0xff,
 } ColorPrimaries;
 
@@ -63,12 +64,17 @@ typedef enum GammaTransfer {
   Transfer_SMPTE_170M      = 6,  // BT.601-6 525 or 625
   Transfer_SMPTE_240M      = 7,  // SMPTE_240M
   Transfer_Linear          = 8,
-  Transfer_HLG             = 9,
+  Transfer_Log             = 9,
+  Transfer_Log_Sqrt        = 10,
   Transfer_XvYCC           = 11,  // IEC 61966-2-4
   Transfer_BT1361          = 12,  // Rec.ITU-R BT.1361 extended gamut
+  Transfer_sYCC            = 13,  // IEC 61966-2-1 sRGB or sYCC
+  Transfer_BT2020_2_1      = 14,  // Rec. ITU-R BT.2020-2 (same as the values 1, 6, and 15)
+  Transfer_BT2020_2_2      = 15,  // Rec. ITU-R BT.2020-2 (same as the values 1, 6, and 14)
   Transfer_SMPTE_ST2084    = 16,  // 2084
   // transfers unlikely to be required by Android
   Transfer_ST_428          = 17,  // SMPTE ST 428-1
+  Transfer_HLG             = 18,  // ARIB STD-B67
   Transfer_Max             = 0xff,
 } GammaTransfer;
 
@@ -76,13 +82,16 @@ typedef enum MatrixCoEfficients {
   MatrixCoEff_Identity           = 0,
   MatrixCoEff_BT709_5            = 1,
   /* Unspecified = 2, Reserved = 3 */
+  MatrixCoeff_FCC_73_682         = 4,
   MatrixCoEff_BT601_6_625        = 5,
   MatrixCoEff_BT601_6_525        = 6,
   MatrixCoEff_SMPTE240M          = 7,  // used with 601_525_Unadjusted
+  MatrixCoEff_YCgCo              = 8,
   MatrixCoEff_BT2020             = 9,
   MatrixCoEff_BT2020Constant     = 10,
   MatrixCoEff_BT601_6_Unadjusted = 11,  // Used with BT601_625(KR=0.222, KB=0.071)
   MatrixCoEff_DCIP3              = 12,
+  MatrixCoEff_Chroma_NonConstant = 13,
   MatrixCoEff_Max                = 0xff,
 } MatrixCoEfficients;
 
