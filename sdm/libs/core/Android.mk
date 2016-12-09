@@ -7,7 +7,7 @@ LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes) $(common_header_export_path)
 LOCAL_CFLAGS                  := -Wno-unused-parameter -DLOG_TAG=\"SDM\" $(common_flags)
 LOCAL_HW_INTF_PATH            := fb
-LOCAL_SHARED_LIBRARIES        := libdl libsdmutils
+LOCAL_SHARED_LIBRARIES        := libdl liblog libsdmutils
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps) $(kernel_deps)
 LOCAL_SRC_FILES               := core_interface.cpp \
                                  core_impl.cpp \
