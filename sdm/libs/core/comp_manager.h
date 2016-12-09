@@ -40,7 +40,8 @@ namespace sdm {
 class CompManager : public DumpImpl {
  public:
   DisplayError Init(const HWResourceInfo &hw_res_info_, ExtensionInterface *extension_intf,
-                    BufferAllocator *buffer_allocator, BufferSyncHandler *buffer_sync_handler);
+                    BufferAllocator *buffer_allocator, BufferSyncHandler *buffer_sync_handler,
+                    SocketHandler *socket_handler);
   DisplayError Deinit();
   DisplayError RegisterDisplay(DisplayType type, const HWDisplayAttributes &display_attributes,
                                const HWPanelInfo &hw_panel_info,

@@ -42,7 +42,8 @@ static bool NeedsScaledComposition(const DisplayConfigVariableInfo &fb_config,
 DisplayError CompManager::Init(const HWResourceInfo &hw_res_info,
                                ExtensionInterface *extension_intf,
                                BufferAllocator *buffer_allocator,
-                               BufferSyncHandler *buffer_sync_handler) {
+                               BufferSyncHandler *buffer_sync_handler,
+                               SocketHandler *socket_handler) {
   SCOPE_LOCK(locker_);
 
   DisplayError error = kErrorNone;
