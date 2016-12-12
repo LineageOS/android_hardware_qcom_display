@@ -33,6 +33,12 @@
 
 namespace sdm {
 
+static bool NeedsScaledComposition(const DisplayConfigVariableInfo &fb_config,
+                                   const HWMixerAttributes &mixer_attributes) {
+  return ((fb_config.x_pixels != mixer_attributes.width) ||
+          (fb_config.y_pixels != mixer_attributes.height));
+}
+
 DisplayError CompManager::Init(const HWResourceInfo &hw_res_info,
                                ExtensionInterface *extension_intf,
                                BufferAllocator *buffer_allocator,
@@ -122,6 +128,7 @@ DisplayError CompManager::RegisterDisplay(DisplayType type,
     max_sde_ext_layers_ = UINT32(Debug::GetExtMaxlayers());
   }
 
+  display_comp_ctx->scaled_composition = NeedsScaledComposition(fb_config, mixer_attributes);
   DLOGV_IF(kTagCompManager, "registered display bit mask 0x%x, configured display bit mask 0x%x, " \
            "display type %d", registered_displays_.to_ulong(), configured_displays_.to_ulong(),
            display_comp_ctx->display_type);
@@ -199,6 +206,8 @@ DisplayError CompManager::ReconfigureDisplay(Handle comp_handle,
       max_layers_ = kMaxSDELayers;
     }
   }
+
+  display_comp_ctx->scaled_composition = NeedsScaledComposition(fb_config, mixer_attributes);
 
   return error;
 }
@@ -447,7 +456,8 @@ bool CompManager::SupportLayerAsCursor(Handle comp_handle, HWLayers *hw_layers) 
   bool supported = false;
   int32_t gpu_index = -1;
 
-  if (!layer_stack->flags.cursor_present) {
+  // HW Cursor cannot be used, if Display configuration needs scaled composition.
+  if (display_comp_ctx->scaled_composition || !layer_stack->flags.cursor_present) {
     return supported;
   }
 

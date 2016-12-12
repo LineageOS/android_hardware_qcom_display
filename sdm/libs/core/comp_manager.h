@@ -94,6 +94,7 @@ class CompManager : public DumpImpl {
     bool is_primary_panel = false;
     bool valid_cursor = false;
     PUConstraints pu_constraints = {};
+    bool scaled_composition = false;
   };
 
   Locker locker_;
