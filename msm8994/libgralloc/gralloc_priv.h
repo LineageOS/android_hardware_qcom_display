@@ -231,6 +231,13 @@ struct private_handle_t : public native_handle {
         int     format;
         int     width;
         int     height;
+
+        int     original_width;
+        int     original_format;
+        int     producer_usage;
+        int     consumer_usage;
+        uint64_t backing_store __attribute__((aligned(8)));
+
         uint64_t base_metadata __attribute__((aligned(8)));
 
 #ifdef __cplusplus
@@ -248,6 +255,9 @@ struct private_handle_t : public native_handle {
             flags(flags), size(size), offset(0), bufferType(bufferType),
             base(0), offset_metadata(eOffset), gpuaddr(0),
             format(format), width(width), height(height),
+            original_width(0), original_format(0),
+            producer_usage(0), consumer_usage(0),
+            backing_store(0),
             base_metadata(eBase)
         {
             version = (int) sizeof(native_handle);

@@ -24,6 +24,8 @@
 #include <sys/ioctl.h>
 #include <cutils/properties.h>
 
+#include <gralloc1-adapter.h>
+
 #include "gr.h"
 #include "gpu.h"
 #include "memalloc.h"
@@ -69,7 +71,11 @@ struct private_module_t HAL_MODULE_INFO_SYM = {
     base: {
         common: {
             tag: HARDWARE_MODULE_TAG,
-            version_major: 1,
+#ifdef ADVERTISE_GRALLOC1
+            module_api_version: GRALLOC1_ADAPTER_MODULE_API_VERSION_1_0,
+#else
+            module_api_version: 1,
+#endif
             version_minor: 0,
             id: GRALLOC_HARDWARE_MODULE_ID,
             name: "Graphics Memory Allocator Module",
@@ -98,6 +104,13 @@ int gralloc_device_open(const hw_module_t* module, const char* name,
                         hw_device_t** device)
 {
     int status = -EINVAL;
+
+#ifdef ADVERTISE_GRALLOC1
+    if (!strcmp(name, GRALLOC_HARDWARE_MODULE_ID)) {
+        return gralloc1_adapter_device_open(module, name, device);
+    }
+#endif
+
     if (!strcmp(name, GRALLOC_HARDWARE_GPU0)) {
         const private_module_t* m = reinterpret_cast<const private_module_t*>(
             module);
