@@ -31,6 +31,7 @@
 #include <utils/debug.h>
 #include <utils/constants.h>
 #include <string>
+#include <algorithm>
 
 namespace sdm {
 
@@ -163,7 +164,7 @@ bool Debug::IsExtAnimDisabled() {
 }
 
 DisplayError Debug::GetMixerResolution(uint32_t *width, uint32_t *height) {
-  char value[64];
+  char value[64] = {};
 
   DisplayError error = debug_.debug_handler_->GetProperty("sdm.mixer_resolution", value);
   if (error !=kErrorNone) {
@@ -176,6 +177,13 @@ DisplayError Debug::GetMixerResolution(uint32_t *width, uint32_t *height) {
   *height = UINT32(stoi(str.substr(str.find('x') + 1)));
 
   return kErrorNone;
+}
+
+int Debug::GetExtMaxlayers() {
+  int max_external_layers = 0;
+  debug_.debug_handler_->GetProperty("sdm.max_external_layers", &max_external_layers);
+
+  return std::max(max_external_layers, 2);
 }
 
 bool Debug::GetProperty(const char* property_name, char* value) {

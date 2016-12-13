@@ -518,14 +518,17 @@ void DisplayBase::AppendDump(char *buffer, uint32_t length) {
   DumpImpl::AppendString(buffer, length, "\n");
 
   HWLayersInfo &layer_info = hw_layers_.info;
-  LayerRect &l_roi = layer_info.left_partial_update;
-  LayerRect &r_roi = layer_info.right_partial_update;
-  DumpImpl::AppendString(buffer, length, "\nROI(L T R B) : LEFT(%d %d %d %d)", INT(l_roi.left),
-                         INT(l_roi.top), INT(l_roi.right), INT(l_roi.bottom));
 
-  if (IsValid(r_roi)) {
-    DumpImpl::AppendString(buffer, length, ", RIGHT(%d %d %d %d)", INT(r_roi.left),
-                           INT(r_roi.top), INT(r_roi.right), INT(r_roi.bottom));
+  for (uint32_t i = 0; i < layer_info.left_frame_roi.size(); i++) {
+    LayerRect &l_roi = layer_info.left_frame_roi.at(i);
+    LayerRect &r_roi = layer_info.right_frame_roi.at(i);
+
+    DumpImpl::AppendString(buffer, length, "\nROI%d(L T R B) : LEFT(%d %d %d %d)", i,
+                           INT(l_roi.left), INT(l_roi.top), INT(l_roi.right), INT(l_roi.bottom));
+    if (IsValid(r_roi)) {
+      DumpImpl::AppendString(buffer, length, ", RIGHT(%d %d %d %d)", INT(r_roi.left),
+                             INT(r_roi.top), INT(r_roi.right), INT(r_roi.bottom));
+    }
   }
 
   const char *header  = "\n| Idx |  Comp Type  |  Split | WB |  Pipe |    W x H    |          Format          |  Src Rect (L T R B) |  Dst Rect (L T R B) |  Z |    Flags   | Deci(HxV) | CS |";  //NOLINT

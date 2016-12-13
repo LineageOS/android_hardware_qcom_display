@@ -386,6 +386,8 @@ void HWCDisplay::BuildLayerStack() {
       LayerBuffer *layer_buffer = layer->input_buffer;
       layer_buffer->width = UINT32(layer->dst_rect.right - layer->dst_rect.left);
       layer_buffer->height = UINT32(layer->dst_rect.bottom - layer->dst_rect.top);
+      layer_buffer->unaligned_width = layer_buffer->width;
+      layer_buffer->unaligned_height = layer_buffer->height;
       layer_buffer->acquire_fence_fd = -1;
       layer_buffer->release_fence_fd = -1;
       layer->src_rect.left = 0;
