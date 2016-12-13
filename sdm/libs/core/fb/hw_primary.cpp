@@ -65,6 +65,10 @@
 #define MDP_COMMIT_AVR_ONE_SHOT_MODE 0x10
 #endif
 
+#ifndef MDP_COMMIT_PARTIAL_UPDATE_DUAL_ROI
+#define MDP_COMMIT_PARTIAL_UPDATE_DUAL_ROI  0x20
+#endif
+
 namespace sdm {
 
 using std::string;
@@ -374,6 +378,7 @@ DisplayError HWPrimary::Validate(HWLayers *hw_layers) {
 
   // Update second roi information in right_roi
   if (hw_layer_info.left_frame_roi.size() == 2) {
+    mdp_commit.flags |= MDP_COMMIT_PARTIAL_UPDATE_DUAL_ROI;
     right_roi = hw_layer_info.left_frame_roi.at(1);
   }
 
