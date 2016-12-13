@@ -357,7 +357,7 @@ extern "C" int controlPartialUpdate(int dpy, int mode) {
         inParcel.writeInt32(mode);
         err = binder->dispatch(IQService::CONTROL_PARTIAL_UPDATE, &inParcel, &outParcel);
         if(err != 0) {
-            ALOGE("%s() failed with err %d", __FUNCTION__, err);
+            ALOGE_IF(getBinder(), "%s() failed with err %d", __FUNCTION__, err);
         } else {
             return outParcel.readInt32();
         }
