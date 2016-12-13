@@ -39,6 +39,7 @@
 #include <utils/sys.h>
 
 #include "hwc_buffer_sync_handler.h"
+#include "hwc_buffer_allocator.h"
 
 class Tonemapper;
 
@@ -58,7 +59,7 @@ class HWCToneMapper {
   void SetFrameDumpConfig(uint32_t count);
 
  private:
-  int AllocateIntermediateBuffers(uint32_t width, uint32_t height, uint32_t format, uint32_t usage);
+  int AllocateIntermediateBuffers(uint32_t width, uint32_t height, int32_t format, int32_t usage);
   void FreeIntermediateBuffers();
   void SetReleaseFence(int fence_fd);
   void CloseFd(int *fd);
@@ -72,6 +73,7 @@ class HWCToneMapper {
   int release_fence_fd_[kNumIntermediateBuffers];
 
   HWCBufferSyncHandler buffer_sync_handler_ = {};
+  HWCBufferAllocator buffer_allocator_ = {};
   Tonemapper *gpu_tone_mapper_ = NULL;
   uint32_t dump_frame_count_ = 0;
   uint32_t dump_frame_index_ = 0;
