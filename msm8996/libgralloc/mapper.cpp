@@ -35,6 +35,8 @@
 #include <hardware/hardware.h>
 #include <hardware/gralloc.h>
 
+#include <gralloc1-adapter.h>
+
 #include "gralloc_priv.h"
 #include "gr.h"
 #include "alloc_controller.h"
@@ -299,6 +301,68 @@ int gralloc_unlock(gralloc_module_t const* module,
 
 /*****************************************************************************/
 
+static bool isYUV(private_handle_t* hnd)
+{
+    bool is_yuv;
+
+    switch (hnd->format) {
+        //Semiplanar
+        case HAL_PIXEL_FORMAT_YCbCr_420_SP:
+        case HAL_PIXEL_FORMAT_YCbCr_422_SP:
+        case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
+        case HAL_PIXEL_FORMAT_NV12_ENCODEABLE: //Same as YCbCr_420_SP_VENUS
+        case HAL_PIXEL_FORMAT_YCrCb_420_SP:
+        case HAL_PIXEL_FORMAT_YCrCb_422_SP:
+        case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
+        case HAL_PIXEL_FORMAT_NV21_ZSL:
+        case HAL_PIXEL_FORMAT_RAW10:
+        case HAL_PIXEL_FORMAT_RAW16:
+        //Planar
+        case HAL_PIXEL_FORMAT_YV12:
+            is_yuv = true;
+        break;
+        //Unsupported formats
+        case HAL_PIXEL_FORMAT_YCbCr_422_I:
+        case HAL_PIXEL_FORMAT_YCrCb_422_I:
+        case HAL_PIXEL_FORMAT_YCbCr_420_SP_TILED:
+        default:
+            is_yuv = false;
+            break;
+    }
+
+    return is_yuv;
+}
+
+static void ycbcr_to_flexible_layout(const struct android_ycbcr* ycbcr,
+        struct android_flex_layout* layout)
+{
+    layout->format = FLEX_FORMAT_YCbCr;
+    layout->num_planes = 3;
+
+    for (uint32_t i = 0; i < layout->num_planes; i++) {
+        layout->planes[i].bits_per_component = 8;
+        layout->planes[i].bits_used = 8;
+        layout->planes[i].h_increment = 1;
+        layout->planes[i].v_increment = 1;
+        layout->planes[i].h_subsampling = 2;
+        layout->planes[i].v_subsampling = 2;
+    }
+
+    layout->planes[0].top_left = (uint8_t*)ycbcr->y;
+    layout->planes[0].component = FLEX_COMPONENT_Y;
+    layout->planes[0].v_increment = (int32_t)ycbcr->ystride;
+
+    layout->planes[1].top_left = (uint8_t*)ycbcr->cb;
+    layout->planes[1].component = FLEX_COMPONENT_Cb;
+    layout->planes[1].h_increment = (int32_t)ycbcr->chroma_step;
+    layout->planes[1].v_increment = (int32_t)ycbcr->cstride;
+
+    layout->planes[2].top_left = (uint8_t*)ycbcr->cr;
+    layout->planes[2].component = FLEX_COMPONENT_Cr;
+    layout->planes[2].h_increment = (int32_t)ycbcr->chroma_step;
+    layout->planes[2].v_increment = (int32_t)ycbcr->cstride;
+}
+
 int gralloc_perform(struct gralloc_module_t const* module,
                     int operation, ... )
 {
@@ -488,6 +552,106 @@ int gralloc_perform(struct gralloc_module_t const* module,
                     res = 0;
                 }
             } break;
+
+        case GRALLOC1_ADAPTER_PERFORM_GET_REAL_MODULE_API_VERSION_MINOR:
+            {
+                auto outMinorVersion = va_arg(args, int*);
+                *outMinorVersion = 1; // GRALLOC_MODULE_API_VERSION_0_1
+            } break;
+
+        case GRALLOC1_ADAPTER_PERFORM_SET_USAGES:
+            {
+                auto hnd =  va_arg(args, private_handle_t*);
+                auto producerUsage = va_arg(args, int);
+                auto consumerUsage = va_arg(args, int);
+                hnd->producer_usage = producerUsage;
+                hnd->consumer_usage = consumerUsage;
+            } break;
+
+        case GRALLOC1_ADAPTER_PERFORM_GET_DIMENSIONS:
+            {
+                auto hnd =  va_arg(args, private_handle_t*);
+                auto outWidth = va_arg(args, int*);
+                auto outHeight = va_arg(args, int*);
+                *outWidth = hnd->original_width;
+                *outHeight = hnd->height;
+            } break;
+
+        case GRALLOC1_ADAPTER_PERFORM_GET_FORMAT:
+            {
+                auto hnd =  va_arg(args, private_handle_t*);
+                auto outFormat = va_arg(args, int*);
+                *outFormat = hnd->original_format;
+            } break;
+
+        case GRALLOC1_ADAPTER_PERFORM_GET_PRODUCER_USAGE:
+            {
+                auto hnd =  va_arg(args, private_handle_t*);
+                auto outUsage = va_arg(args, int*);
+                *outUsage = hnd->producer_usage;
+            } break;
+
+        case GRALLOC1_ADAPTER_PERFORM_GET_CONSUMER_USAGE:
+            {
+                auto hnd =  va_arg(args, private_handle_t*);
+                auto outUsage = va_arg(args, int*);
+                *outUsage = hnd->consumer_usage;
+            } break;
+
+        case GRALLOC1_ADAPTER_PERFORM_GET_BACKING_STORE:
+            {
+                auto hnd =  va_arg(args, private_handle_t*);
+                auto outBackingStore = va_arg(args, uint64_t*);
+                *outBackingStore = hnd->backing_store;
+            } break;
+
+        case GRALLOC1_ADAPTER_PERFORM_GET_NUM_FLEX_PLANES:
+            {
+                auto hnd =  va_arg(args, private_handle_t*);
+                auto outNumFlexPlanes = va_arg(args, int*);
+
+                (void) hnd;
+                // for simpilicity
+                *outNumFlexPlanes = 4;
+            } break;
+
+        case GRALLOC1_ADAPTER_PERFORM_GET_STRIDE:
+            {
+                auto hnd =  va_arg(args, private_handle_t*);
+                auto outStride = va_arg(args, int*);
+                *outStride = hnd->width;
+            } break;
+
+        case GRALLOC1_ADAPTER_PERFORM_LOCK_FLEX:
+            {
+                auto hnd =  va_arg(args, private_handle_t*);
+                auto producerUsage = va_arg(args, int);
+                auto consumerUsage = va_arg(args, int);
+                auto left = va_arg(args, int);
+                auto top = va_arg(args, int);
+                auto width = va_arg(args, int);
+                auto height = va_arg(args, int);
+                auto outLayout = va_arg(args, android_flex_layout*);
+                // always -1
+                auto acquireFence = va_arg(args, int);
+                (void) acquireFence;
+
+                // TODO lock RGB as a flexible format
+                if (!isYUV(hnd)) {
+                    return -EINVAL;
+                }
+
+                struct android_ycbcr ycbcr;
+                res = gralloc_lock_ycbcr(module, hnd,
+                        producerUsage | consumerUsage,
+                        left, top, width, height, &ycbcr);
+                if (res != 0) {
+                    return res;
+                }
+
+                ycbcr_to_flexible_layout(&ycbcr, outLayout);
+            } break;
+
         default:
             break;
     }
