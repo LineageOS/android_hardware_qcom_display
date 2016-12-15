@@ -45,6 +45,7 @@
 #include <sync/sync.h>
 #include <profiler.h>
 #include <bitset>
+#include <vector>
 
 #include "hwc_buffer_allocator.h"
 #include "hwc_buffer_sync_handler.h"
@@ -274,6 +275,7 @@ int HWCSession::Prepare(hwc_composer_device_1 *device, size_t num_displays,
 
     if (hwc_session->need_invalidate_) {
       hwc_procs->invalidate(hwc_procs);
+      hwc_session->need_invalidate_ = false;
     }
 
     hwc_session->HandleSecureDisplaySession(displays);
@@ -775,6 +777,10 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
     status = SetMixerResolution(input_parcel);
     break;
 
+  case qService::IQService::GET_HDR_CAPABILITIES:
+    status = GetHdrCapabilities(input_parcel, output_parcel);
+    break;
+
   default:
     DLOGW("QService command = %d is not supported", command);
     return -EINVAL;
@@ -1179,6 +1185,24 @@ android::status_t HWCSession::SetMixerResolution(const android::Parcel *input_pa
     return -EINVAL;
   }
 
+  return 0;
+}
+
+android::status_t HWCSession::GetHdrCapabilities(const android::Parcel *input_parcel,
+                                                 android::Parcel *output_parcel) {
+  // TODO(akumarkr): Get values from display intf
+  // uint32_t dpy = UINT32(input_parcel->readInt32());
+  std::vector<int32_t> supported_hdr_types;
+  supported_hdr_types.push_back(HAL_HDR_HDR10);
+  float max_luminance = 500.0;
+  float max_average_luminance = 200.0;
+  float min_luminance = 0.5;
+  if (output_parcel != nullptr) {
+    output_parcel->writeInt32Vector(supported_hdr_types);
+    output_parcel->writeFloat(max_luminance);
+    output_parcel->writeFloat(max_average_luminance);
+    output_parcel->writeFloat(min_luminance);
+  }
   return 0;
 }
 

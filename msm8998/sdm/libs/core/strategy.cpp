@@ -46,9 +46,8 @@ DisplayError Strategy::Init() {
   DisplayError error = kErrorNone;
 
   if (extension_intf_) {
-    error = extension_intf_->CreateStrategyExtn(display_type_, hw_panel_info_.mode,
-                                                hw_panel_info_.s3d_mode, mixer_attributes_,
-                                                fb_config_, &strategy_intf_);
+    error = extension_intf_->CreateStrategyExtn(display_type_, hw_resource_info_, hw_panel_info_,
+                                                mixer_attributes_, fb_config_, &strategy_intf_);
     if (error != kErrorNone) {
       DLOGE("Failed to create strategy");
       return error;
@@ -182,15 +181,19 @@ void Strategy::GenerateROI() {
     split_display = true;
   }
 
+  hw_layers_info_->left_frame_roi = {};
+  hw_layers_info_->right_frame_roi = {};
+
   if (split_display) {
     float left_split = FLOAT(mixer_attributes_.split_left);
-    hw_layers_info_->left_partial_update = (LayerRect) {0.0f, 0.0f, left_split, layer_mixer_height};
-    hw_layers_info_->right_partial_update = (LayerRect) {left_split, 0.0f, layer_mixer_width,
-                                            layer_mixer_height};
+    hw_layers_info_->left_frame_roi.push_back(LayerRect(0.0f, 0.0f,
+                                left_split, layer_mixer_height));
+    hw_layers_info_->right_frame_roi.push_back(LayerRect(left_split,
+                                0.0f, layer_mixer_width, layer_mixer_height));
   } else {
-    hw_layers_info_->left_partial_update = (LayerRect) {0.0f, 0.0f, layer_mixer_width,
-                                           layer_mixer_height};
-    hw_layers_info_->right_partial_update = (LayerRect) {0.0f, 0.0f, 0.0f, 0.0f};
+    hw_layers_info_->left_frame_roi.push_back(LayerRect(0.0f, 0.0f,
+                                layer_mixer_width, layer_mixer_height));
+    hw_layers_info_->right_frame_roi.push_back(LayerRect(0.0f, 0.0f, 0.0f, 0.0f));
   }
 }
 
@@ -215,8 +218,8 @@ DisplayError Strategy::Reconfigure(const HWPanelInfo &hw_panel_info,
                                        mixer_attributes, display_attributes,
                                        &partial_update_intf_);
 
-  error = strategy_intf_->Reconfigure(hw_panel_info.mode, hw_panel_info.s3d_mode, mixer_attributes,
-                                     fb_config);
+  error = strategy_intf_->Reconfigure(hw_panel_info, hw_resource_info_, mixer_attributes,
+                                      fb_config);
   if (error != kErrorNone) {
     return error;
   }
