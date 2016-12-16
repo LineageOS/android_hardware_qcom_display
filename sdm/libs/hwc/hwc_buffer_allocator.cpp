@@ -255,4 +255,40 @@ int HWCBufferAllocator::SetBufferInfo(LayerBufferFormat format, int *target, int
   return 0;
 }
 
+DisplayError HWCBufferAllocator::GetAllocatedBufferInfo(const BufferConfig &buffer_config,
+                                 AllocatedBufferInfo *allocated_buffer_info) {
+  int width = INT(buffer_config.width);
+  int height = INT(buffer_config.height);
+  int alloc_flags = INT(GRALLOC_USAGE_PRIVATE_IOMMU_HEAP);
+
+  if (buffer_config.secure) {
+    alloc_flags = INT(GRALLOC_USAGE_PRIVATE_MM_HEAP);
+    alloc_flags |= INT(GRALLOC_USAGE_PROTECTED);
+  }
+
+  if (buffer_config.cache == false) {
+    // Allocate uncached buffers
+    alloc_flags |= GRALLOC_USAGE_PRIVATE_UNCACHED;
+  }
+
+  int format;
+  int error = SetBufferInfo(buffer_config.format, &format, &alloc_flags);
+  if (error) {
+    DLOGE("Failed: format = %d or width = %d height = %d", buffer_config.format, width, height);
+    return kErrorNotSupported;
+  }
+
+  int width_aligned = 0, height_aligned = 0;
+  uint32_t buffer_size = 0;
+  buffer_size = getBufferSizeAndDimensions(width, height, format, alloc_flags,
+                                           width_aligned, height_aligned);
+
+  allocated_buffer_info->stride = UINT32(width_aligned);
+  allocated_buffer_info->aligned_width = UINT32(width_aligned);
+  allocated_buffer_info->aligned_height = UINT32(height_aligned);
+  allocated_buffer_info->size = UINT32(buffer_size);
+
+  return kErrorNone;
+}
+
 }  // namespace sdm

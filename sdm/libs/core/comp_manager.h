@@ -108,6 +108,7 @@ class CompManager : public DumpImpl {
                                         // mode, where strategy manager chooses the best strategy
                                         // that uses optimal number of pipes for each display
   HWResourceInfo hw_res_info_;
+  BufferAllocator *buffer_allocator_ = NULL;
   ExtensionInterface *extension_intf_ = NULL;
   uint32_t max_layers_ = kMaxSDELayers;
   uint32_t max_sde_ext_layers_ = 0;

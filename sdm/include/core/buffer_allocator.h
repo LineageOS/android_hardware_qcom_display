@@ -60,6 +60,7 @@ struct BufferConfig {
 
   @sa BufferAllocator::AllocateBuffer
   @sa BufferAllocator::FreeBuffer
+  @sa BufferAllocator::GetAllocatedBufferInfo
 */
 struct AllocatedBufferInfo {
   int fd = -1;                   //!< Specifies the fd of the allocated buffer.
@@ -122,6 +123,20 @@ class BufferAllocator {
     @return \link unsigned int \endlink
   */
   virtual uint32_t GetBufferSize(BufferInfo *buffer_info) = 0;
+
+  /*! @brief Method to Get the AllocatedBufferInfo only.
+
+    @details This method populates the AllocatedBufferInfo as per the configuration in BufferInfo,
+    but fd will be invalid.
+
+    @param[in] buffer_info \link BufferInfo \endlink
+
+    @param[out] allocated_buffer_info \link AllocatedBufferInfo \endlink
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetAllocatedBufferInfo(const BufferConfig &buffer_config,
+                                              AllocatedBufferInfo *allocated_buffer_info) = 0;
 
  protected:
   virtual ~BufferAllocator() { }
