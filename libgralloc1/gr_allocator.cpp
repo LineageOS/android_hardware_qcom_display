@@ -307,6 +307,9 @@ unsigned int Allocator::GetSize(const BufferDescriptor &descriptor, unsigned int
     case HAL_PIXEL_FORMAT_YCrCb_420_SP:
       size = ALIGN((alignedw * alignedh) + (alignedw * alignedh) / 2 + 1, SIZE_4K);
       break;
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010:
+      size = ALIGN((alignedw * alignedh * 2) + (alignedw * alignedh) + 1, SIZE_4K);
+      break;
     case HAL_PIXEL_FORMAT_YCbCr_422_SP:
     case HAL_PIXEL_FORMAT_YCrCb_422_SP:
     case HAL_PIXEL_FORMAT_YCbCr_422_I:
@@ -862,6 +865,7 @@ void Allocator::GetAlignedWidthAndHeight(const BufferDescriptor &descriptor, uns
     case HAL_PIXEL_FORMAT_YCrCb_422_SP:
     case HAL_PIXEL_FORMAT_YCbCr_422_I:
     case HAL_PIXEL_FORMAT_YCrCb_422_I:
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010:
       aligned_w = ALIGN(width, 16);
       break;
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
