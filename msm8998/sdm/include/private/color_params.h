@@ -238,6 +238,7 @@ struct PPDETuningCfg {
 struct PPDETuningCfgData {
   uint32_t cfg_en = 0;
   PPDETuningCfg params;
+  bool cfg_pending = false;
 };
 
 struct SDEGamutCfg {

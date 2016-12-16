@@ -95,6 +95,11 @@ int setMetaData(private_handle_t *handle, DispParamType paramType,
         case SET_VT_TIMESTAMP:
             data->vtTimeStamp = *((uint64_t *)param);
             break;
+#ifdef USE_COLOR_METADATA
+        case COLOR_METADATA:
+            data->color = *((ColorMetaData *)param);
+#endif
+            break;
         default:
             ALOGE("Unknown paramType %d", paramType);
             break;
@@ -195,6 +200,11 @@ int getMetaData(private_handle_t *handle, DispFetchParamType paramType,
             break;
         case GET_VT_TIMESTAMP:
             *((uint64_t *)param) = data->vtTimeStamp;
+            break;
+#ifdef USE_COLOR_METADATA
+        case GET_COLOR_METADATA:
+            *((ColorMetaData *)param) = data->color;
+#endif
             break;
         default:
             ALOGE("Unknown paramType %d", paramType);

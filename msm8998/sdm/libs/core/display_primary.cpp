@@ -106,10 +106,17 @@ DisplayError DisplayPrimary::Prepare(LayerStack *layer_stack) {
 DisplayError DisplayPrimary::Commit(LayerStack *layer_stack) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
+  uint32_t app_layer_count = hw_layers_.info.app_layer_count;
 
   // Enabling auto refresh is async and needs to happen before commit ioctl
   if (hw_panel_info_.mode == kModeCommand) {
-    hw_intf_->SetAutoRefresh(layer_stack->flags.single_buffered_layer_present);
+    bool enable = (app_layer_count == 1) && layer_stack->flags.single_buffered_layer_present;
+    bool need_refresh = layer_stack->flags.single_buffered_layer_present && (app_layer_count > 1);
+
+    hw_intf_->SetAutoRefresh(enable);
+    if (need_refresh) {
+      event_handler_->Refresh();
+    }
   }
 
   bool set_idle_timeout = comp_manager_->CanSetIdleTimeout(display_comp_ctx_);
@@ -127,6 +134,10 @@ DisplayError DisplayPrimary::Commit(LayerStack *layer_stack) {
     } else {
       hw_intf_->SetIdleTimeoutMs(0);
     }
+  } else if (switch_to_cmd_) {
+    uint32_t pending;
+    switch_to_cmd_ = false;
+    ControlPartialUpdate(true /* enable */, &pending);
   }
 
   return error;
@@ -191,7 +202,7 @@ DisplayError DisplayPrimary::SetDisplayMode(uint32_t mode) {
     ControlPartialUpdate(false /* enable */, &pending);
     hw_intf_->SetIdleTimeoutMs(idle_timeout_ms_);
   } else if (mode == kModeCommand) {
-    ControlPartialUpdate(true /* enable */, &pending);
+    switch_to_cmd_ = true;
     hw_intf_->SetIdleTimeoutMs(0);
   }
 

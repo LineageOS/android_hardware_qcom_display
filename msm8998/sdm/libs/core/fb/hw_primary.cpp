@@ -363,18 +363,27 @@ DisplayError HWPrimary::Validate(HWLayers *hw_layers) {
 
   mdp_layer_commit_v1 &mdp_commit = mdp_disp_commit_.commit_v1;
 
-  LayerRect left_roi = hw_layer_info.left_partial_update;
-  LayerRect right_roi = hw_layer_info.right_partial_update;
+  LayerRect left_roi = hw_layer_info.left_frame_roi.at(0);
+  LayerRect right_roi = hw_layer_info.right_frame_roi.at(0);
+
   mdp_commit.left_roi.x = UINT32(left_roi.left);
   mdp_commit.left_roi.y = UINT32(left_roi.top);
   mdp_commit.left_roi.w = UINT32(left_roi.right - left_roi.left);
   mdp_commit.left_roi.h = UINT32(left_roi.bottom - left_roi.top);
 
+  // Update second roi information in right_roi
+  if (hw_layer_info.left_frame_roi.size() == 2) {
+    right_roi = hw_layer_info.left_frame_roi.at(1);
+  }
+
   // SDM treats ROI as one full coordinate system.
   // In case source split is disabled, However, Driver assumes Mixer to operate in
   // different co-ordinate system.
-  if (!hw_resource_.is_src_split && IsValid(right_roi)) {
-    mdp_commit.right_roi.x = UINT32(right_roi.left) - mixer_attributes_.split_left;
+  if (IsValid(right_roi)) {
+    mdp_commit.right_roi.x = UINT32(right_roi.left);
+    if (!hw_resource_.is_src_split) {
+      mdp_commit.right_roi.x = UINT32(right_roi.left) - mixer_attributes_.split_left;
+    }
     mdp_commit.right_roi.y = UINT32(right_roi.top);
     mdp_commit.right_roi.w = UINT32(right_roi.right - right_roi.left);
     mdp_commit.right_roi.h = UINT32(right_roi.bottom - right_roi.top);

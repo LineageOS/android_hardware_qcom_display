@@ -175,6 +175,7 @@ class HWCDisplay : public DisplayEventHandler {
   DisplayError SetMetaData(const private_handle_t *pvt_handle, Layer *layer);
   bool NeedsFrameBufferRefresh(hwc_display_contents_1_t *content_list);
   bool IsLayerUpdating(hwc_display_contents_1_t *content_list, const Layer *layer);
+  bool IsNonIntegralSourceCrop(const hwc_frect_t &source);
   uint32_t GetUpdatingLayersCount(uint32_t app_layer_count);
   bool SingleVideoLayerUpdating(uint32_t app_layer_count);
   bool IsSurfaceUpdated(const std::vector<LayerRect> &dirty_regions);
@@ -209,7 +210,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool shutdown_pending_ = false;
   bool use_blit_comp_ = false;
   bool secure_display_active_ = false;
-  bool skip_prepare_ = false;
+  uint32_t skip_prepare_cnt = 0;
   bool solid_fill_enable_ = false;
   bool disable_animation_ = false;
   uint32_t solid_fill_color_ = 0;
