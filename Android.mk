@@ -1,5 +1,15 @@
-ifeq ($(call my-dir)/$(TARGET_BOARD_PLATFORM),$(call project-path-for,qcom-display))
+MYDIR := $(call my-dir)
 
+ifneq ($(QCOM_HARDWARE_VARIANT),)
+    ifeq ($(MYDIR)/$(QCOM_HARDWARE_VARIANT),$(call project-path-for,qcom-display))
+        include $(call all-named-subdir-makefiles,$(QCOM_HARDWARE_VARIANT))
+    endif
+endif
+
+# leaved for compatibility purpose. When every board
+# will have switch to QCOM_HARDWARE_VARIANT this ifneq can be removed.
+
+ifeq ($(MYDIR)/$(TARGET_BOARD_PLATFORM),$(call project-path-for,qcom-display))
 # TODO:  Find a better way to separate build configs for ADP vs non-ADP devices
 ifneq ($(TARGET_BOARD_AUTO),true)
   ifneq ($(filter msm8084 msm8x84,$(TARGET_BOARD_PLATFORM)),)
