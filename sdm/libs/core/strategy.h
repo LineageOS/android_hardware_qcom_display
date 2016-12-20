@@ -49,6 +49,7 @@ class Strategy {
                            const HWMixerAttributes &mixer_attributes,
                            const DisplayConfigVariableInfo &fb_config);
   DisplayError SetCompositionState(LayerComposition composition_type, bool enable);
+  DisplayError Purge();
 
  private:
   void GenerateROI();

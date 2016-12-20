@@ -49,7 +49,7 @@ namespace sdm {
 
 static void ApplyDeInterlaceAdjustment(Layer *layer) {
   // De-interlacing adjustment
-  if (layer->input_buffer->flags.interlace) {
+  if (layer->input_buffer.flags.interlace) {
     float height = (layer->src_rect.bottom - layer->src_rect.top) / 2.0f;
     layer->src_rect.top = ROUND_UP_ALIGN_DOWN(layer->src_rect.top / 2.0f, 2);
     layer->src_rect.bottom = layer->src_rect.top + floorf(height);
@@ -341,14 +341,14 @@ void HWCDisplay::BuildLayerStack() {
     layer->composition = kCompositionGPU;
 
     if (swap_interval_zero_) {
-      if (layer->input_buffer->acquire_fence_fd >= 0) {
-        close(layer->input_buffer->acquire_fence_fd);
-        layer->input_buffer->acquire_fence_fd = -1;
+      if (layer->input_buffer.acquire_fence_fd >= 0) {
+        close(layer->input_buffer.acquire_fence_fd);
+        layer->input_buffer.acquire_fence_fd = -1;
       }
     }
 
     const private_handle_t *handle =
-        reinterpret_cast<const private_handle_t *>(layer->input_buffer->buffer_id);
+        reinterpret_cast<const private_handle_t *>(layer->input_buffer.buffer_id);
     if (handle) {
       if (handle->bufferType == BUFFER_TYPE_VIDEO) {
         layer_stack_.flags.video_present = true;
@@ -361,6 +361,13 @@ void HWCDisplay::BuildLayerStack() {
       if (handle->flags & private_handle_t::PRIV_FLAGS_PROTECTED_BUFFER) {
         layer_stack_.flags.secure_present = true;
       }
+    }
+
+    if (layer->color_metadata.colorPrimaries == ColorPrimaries_BT2020 &&
+       (layer->color_metadata.transfer == Transfer_SMPTE_ST2084 ||
+        layer->color_metadata.transfer == Transfer_HLG)) {
+      layer->flags.hdr = true;
+      layer_stack_.flags.hdr_present = true;
     }
 
     if (layer->flags.skip) {
@@ -383,7 +390,7 @@ void HWCDisplay::BuildLayerStack() {
     ApplyDeInterlaceAdjustment(layer);
     // SDM requires these details even for solid fill
     if (layer->flags.solid_fill) {
-      LayerBuffer *layer_buffer = layer->input_buffer;
+      LayerBuffer *layer_buffer = &layer->input_buffer;
       layer_buffer->width = UINT32(layer->dst_rect.right - layer->dst_rect.left);
       layer_buffer->height = UINT32(layer->dst_rect.bottom - layer->dst_rect.top);
       layer_buffer->unaligned_width = layer_buffer->width;
@@ -906,7 +913,7 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
 
   // TODO(user): No way to set the client target release fence on SF
   int32_t &client_target_release_fence =
-      client_target_->GetSDMLayer()->input_buffer->release_fence_fd;
+      client_target_->GetSDMLayer()->input_buffer.release_fence_fd;
   if (client_target_release_fence >= 0) {
     close(client_target_release_fence);
     client_target_release_fence = -1;
@@ -915,7 +922,7 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
   for (auto hwc_layer : layer_set_) {
     hwc_layer->ResetGeometryChanges();
     Layer *layer = hwc_layer->GetSDMLayer();
-    LayerBuffer *layer_buffer = layer->input_buffer;
+    LayerBuffer *layer_buffer = &layer->input_buffer;
 
     if (!flush_) {
       // If swapinterval property is set to 0 or for single buffer layers, do not update f/w
@@ -1120,8 +1127,8 @@ void HWCDisplay::DumpInputBuffers() {
   for (uint32_t i = 0; i < layer_stack_.layers.size(); i++) {
     auto layer = layer_stack_.layers.at(i);
     const private_handle_t *pvt_handle =
-        reinterpret_cast<const private_handle_t *>(layer->input_buffer->buffer_id);
-    auto acquire_fence_fd = layer->input_buffer->acquire_fence_fd;
+        reinterpret_cast<const private_handle_t *>(layer->input_buffer.buffer_id);
+    auto acquire_fence_fd = layer->input_buffer.acquire_fence_fd;
 
     if (acquire_fence_fd >= 0) {
       int error = sync_wait(acquire_fence_fd, 1000);
@@ -1325,11 +1332,11 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
 
   // TODO(user): How does the dirty region get set on the client target? File bug on Google
   client_target_layer->composition = kCompositionGPUTarget;
-  client_target_layer->input_buffer->format = GetSDMFormat(format, flags);
-  client_target_layer->input_buffer->width = UINT32(aligned_width);
-  client_target_layer->input_buffer->height = UINT32(aligned_height);
-  client_target_layer->input_buffer->unaligned_width = x_pixels;
-  client_target_layer->input_buffer->unaligned_height = y_pixels;
+  client_target_layer->input_buffer.format = GetSDMFormat(format, flags);
+  client_target_layer->input_buffer.width = UINT32(aligned_width);
+  client_target_layer->input_buffer.height = UINT32(aligned_height);
+  client_target_layer->input_buffer.unaligned_width = x_pixels;
+  client_target_layer->input_buffer.unaligned_height = y_pixels;
   client_target_layer->plane_alpha = 255;
 
   DLOGI("New framebuffer resolution (%dx%d)", fb_config.x_pixels, fb_config.y_pixels);
@@ -1476,12 +1483,11 @@ void HWCDisplay::SolidFillPrepare() {
     if (solid_fill_layer_ == NULL) {
       // Create a dummy layer here
       solid_fill_layer_ = new Layer();
-      solid_fill_layer_->input_buffer = new LayerBuffer();
     }
     uint32_t primary_width = 0, primary_height = 0;
     GetMixerResolution(&primary_width, &primary_height);
 
-    LayerBuffer *layer_buffer = solid_fill_layer_->input_buffer;
+    LayerBuffer *layer_buffer = &solid_fill_layer_->input_buffer;
     layer_buffer->width = primary_width;
     layer_buffer->height = primary_height;
     layer_buffer->unaligned_width = primary_width;
@@ -1506,9 +1512,6 @@ void HWCDisplay::SolidFillPrepare() {
     solid_fill_layer_->flags.solid_fill = true;
   } else {
     // delete the dummy layer
-    if (solid_fill_layer_) {
-      delete solid_fill_layer_->input_buffer;
-    }
     delete solid_fill_layer_;
     solid_fill_layer_ = NULL;
   }
@@ -1523,7 +1526,7 @@ void HWCDisplay::SolidFillPrepare() {
 
 void HWCDisplay::SolidFillCommit() {
   if (solid_fill_enable_ && solid_fill_layer_) {
-    LayerBuffer *layer_buffer = solid_fill_layer_->input_buffer;
+    LayerBuffer *layer_buffer = &solid_fill_layer_->input_buffer;
     if (layer_buffer->release_fence_fd > 0) {
       close(layer_buffer->release_fence_fd);
       layer_buffer->release_fence_fd = -1;
@@ -1627,13 +1630,13 @@ DisplayClass HWCDisplay::GetDisplayClass() {
 void HWCDisplay::CloseAcquireFds() {
   for (auto hwc_layer : layer_set_) {
     auto layer = hwc_layer->GetSDMLayer();
-    if (layer->input_buffer->acquire_fence_fd >= 0) {
-      close(layer->input_buffer->acquire_fence_fd);
-      layer->input_buffer->acquire_fence_fd = -1;
+    if (layer->input_buffer.acquire_fence_fd >= 0) {
+      close(layer->input_buffer.acquire_fence_fd);
+      layer->input_buffer.acquire_fence_fd = -1;
     }
   }
   int32_t &client_target_acquire_fence =
-      client_target_->GetSDMLayer()->input_buffer->acquire_fence_fd;
+      client_target_->GetSDMLayer()->input_buffer.acquire_fence_fd;
   if (client_target_acquire_fence >= 0) {
     close(client_target_acquire_fence);
     client_target_acquire_fence = -1;
@@ -1655,10 +1658,10 @@ std::string HWCDisplay::Dump() {
     os << "\tdevice(SDM) composition: " <<
           to_string(layer->GetDeviceSelectedCompositionType()).c_str() << std::endl;
     os << "\tplane_alpha: " << std::to_string(sdm_layer->plane_alpha).c_str() << std::endl;
-    os << "\tformat: " << GetFormatString(sdm_layer->input_buffer->format) << std::endl;
+    os << "\tformat: " << GetFormatString(sdm_layer->input_buffer.format) << std::endl;
     os << "\ttransform: rot: " << transform.rotation << " flip_h: " << transform.flip_horizontal <<
           " flip_v: "<< transform.flip_vertical << std::endl;
-    os << "\tbuffer_id: " << std::hex << "0x" << sdm_layer->input_buffer->buffer_id << std::dec
+    os << "\tbuffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec
        << std::endl;
   }
   return os.str();
