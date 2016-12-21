@@ -362,6 +362,9 @@ LayerBufferFormat HWCLayer::GetSDMFormat(const int32_t &source, const int flags)
       case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
         format = kFormatYCbCr420TP10Ubwc;
         break;
+      case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
+        format = kFormatYCbCr420P010Ubwc;
+        break;
       default:
         DLOGE("Unsupported format type for UBWC %d", source);
         return kFormatInvalid;
@@ -451,6 +454,9 @@ LayerBufferFormat HWCLayer::GetSDMFormat(const int32_t &source, const int flags)
       break;
     case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
       format = kFormatYCbCr420TP10Ubwc;
+      break;
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
+      format = kFormatYCbCr420P010Ubwc;
       break;
     default:
       DLOGW("Unsupported format type = %d", source);

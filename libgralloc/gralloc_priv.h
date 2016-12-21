@@ -121,6 +121,7 @@
 #define HAL_PIXEL_FORMAT_CbYCrY_422_I            0x120
 #define HAL_PIXEL_FORMAT_BGR_888                 0x121
 #define HAL_PIXEL_FORMAT_RAW8                    0x123
+#define HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC     0x124
 
 #define HAL_PIXEL_FORMAT_INTERLACE               0x180
 

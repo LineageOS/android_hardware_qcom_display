@@ -88,6 +88,10 @@
 #endif
 #endif
 
+#ifndef COLOR_FMT_P010_UBWC
+#define COLOR_FMT_P010_UBWC 9
+#endif
+
 using namespace gralloc;
 using namespace qdutils;
 using namespace android;
@@ -429,6 +433,9 @@ ADRENOPIXELFORMAT AdrenoMemInfo::getGpuPixelFormat(int hal_format)
             return ADRENO_PIXELFORMAT_NV12_EXT;
         case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
             return ADRENO_PIXELFORMAT_TP10;
+        case HAL_PIXEL_FORMAT_YCbCr_420_P010:
+        case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
+            return ADRENO_PIXELFORMAT_P010;
         case HAL_PIXEL_FORMAT_RGBA_1010102:
             return ADRENO_PIXELFORMAT_R10G10B10A2_UNORM;
         case HAL_PIXEL_FORMAT_RGBX_1010102:
@@ -812,7 +819,11 @@ int getYUVPlaneInfo(private_handle_t* hnd, struct android_ycbcr* ycbcr)
                                   COLOR_FMT_NV12_BPP10_UBWC, ycbcr);
             ycbcr->chroma_step = 3;
         break;
-
+        case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
+            getYuvUbwcSPPlaneInfo(hnd->base, width, height,
+                                  COLOR_FMT_P010_UBWC, ycbcr);
+            ycbcr->chroma_step = 4;
+        break;
         case HAL_PIXEL_FORMAT_YCrCb_420_SP:
         case HAL_PIXEL_FORMAT_YCrCb_422_SP:
         case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
@@ -922,6 +933,7 @@ static bool isUBwcFormat(int format)
     {
         case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
         case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
+        case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
             return true;
         default:
             return false;
@@ -993,6 +1005,11 @@ static void getYuvUBwcWidthHeight(int width, int height, int format,
             // The macro returns the stride which is 4/3 times the width, hence * 3/4
             aligned_w = (VENUS_Y_STRIDE(COLOR_FMT_NV12_BPP10_UBWC, width) * 3) / 4;
             aligned_h = VENUS_Y_SCANLINES(COLOR_FMT_NV12_BPP10_UBWC, height);
+            break;
+        case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
+            // The macro returns the stride which is 2 times the width, hence / 2
+            aligned_w = (VENUS_Y_STRIDE(COLOR_FMT_P010_UBWC, width) / 2);
+            aligned_h = VENUS_Y_SCANLINES(COLOR_FMT_P010_UBWC, height);
             break;
         default:
             ALOGE("%s: Unsupported pixel format: 0x%x", __FUNCTION__, format);
@@ -1075,6 +1092,9 @@ static unsigned int getUBwcSize(int width, int height, int format,
             break;
         case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
             size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12_BPP10_UBWC, width, height);
+            break;
+        case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
+            size = VENUS_BUFFER_SIZE(COLOR_FMT_P010_UBWC, width, height);
             break;
         default:
             ALOGE("%s: Unsupported pixel format: 0x%x", __FUNCTION__, format);
@@ -1181,6 +1201,7 @@ int getPlaneStrideOffset(private_handle_t *hnd, uint32_t *stride,
         case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
         case HAL_PIXEL_FORMAT_YCbCr_420_P010:
         case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
+        case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
             offset[1] = static_cast<uint32_t>(
                     reinterpret_cast<uint64_t>(yuvInfo.cb) - hnd->base);
             break;
@@ -1290,6 +1311,11 @@ void getDRMFormat(int hal_format, int flags, uint32_t *drm_format,
         case HAL_PIXEL_FORMAT_YCbCr_420_P010:
             *drm_format = DRM_FORMAT_NV12;
             *drm_format_modifier = DRM_FORMAT_MOD_QCOM_DX;
+            break;
+        case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
+            *drm_format = DRM_FORMAT_NV12;
+            *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED |
+               DRM_FORMAT_MOD_QCOM_DX;
             break;
         case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
             *drm_format = DRM_FORMAT_NV12;

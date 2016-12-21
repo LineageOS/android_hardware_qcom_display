@@ -246,6 +246,9 @@ int HWCBufferAllocator::SetBufferInfo(LayerBufferFormat format, int *target, int
     case kFormatYCbCr420TP10Ubwc:
       *target = HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC;
       break;
+    case kFormatYCbCr420P010Ubwc:
+      *target = HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC;
+      break;
     case kFormatRGBA8888Ubwc:
       *target = HAL_PIXEL_FORMAT_RGBA_8888;
       *flags |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
