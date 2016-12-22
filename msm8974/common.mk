@@ -29,6 +29,10 @@ ifeq ($(TARGET_FORCE_HWC_FOR_VIRTUAL_DISPLAYS), true)
     common_flags += -DFORCE_HWC_FOR_VIRTUAL_DISPLAYS
 endif
 
+ifeq ($(DISPLAY_DEBUG_SWAPINTERVAL),true)
+    common_flags += -DDEBUG_SWAPINTERVAL
+endif
+
 common_deps  :=
 kernel_includes :=
 

@@ -37,6 +37,10 @@ ifeq ($(TARGET_HAS_VSYNC_FAILURE_FALLBACK), true)
     common_flags += -DVSYNC_FAILURE_FALLBACK
 endif
 
+ifeq ($(DISPLAY_DEBUG_SWAPINTERVAL),true)
+    common_flags += -DDEBUG_SWAPINTERVAL
+endif
+
 common_deps  :=
 kernel_includes :=
 
