@@ -31,6 +31,10 @@ ifeq ($(call is-board-platform-in-list, msm8974 msm8226 msm8610 apq8084 \
     common_flags += -DMDSS_TARGET
 endif
 
+ifeq ($(DISPLAY_DEBUG_SWAPINTERVAL),true)
+    common_flags += -DDEBUG_SWAPINTERVAL
+endif
+
 common_deps  :=
 kernel_includes :=
 
