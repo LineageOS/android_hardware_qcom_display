@@ -65,6 +65,7 @@ struct fb_context_t {
 static int fb_setSwapInterval(struct framebuffer_device_t* dev,
                               int interval)
 {
+#ifdef DEBUG_SWAPINTERVAL
     //XXX: Get the value here and implement along with
     //single vsync in HWC
     char pval[PROPERTY_VALUE_MAX];
@@ -72,6 +73,7 @@ static int fb_setSwapInterval(struct framebuffer_device_t* dev,
     int property_interval = atoi(pval);
     if (property_interval >= 0)
         interval = property_interval;
+#endif
 
     private_module_t* m = reinterpret_cast<private_module_t*>(
         dev->common.module);
