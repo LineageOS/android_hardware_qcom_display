@@ -25,6 +25,10 @@ ifneq ($(filter msm8974 msm8x74 msm8610 apq8084,$(TARGET_BOARD_PLATFORM)),)
     common_flags += -DMDSS_TARGET
 endif
 
+ifeq ($(DISPLAY_DEBUG_SWAPINTERVAL),true)
+    common_flags += -DDEBUG_SWAPINTERVAL
+endif
+
 ifeq ($(TARGET_FORCE_HWC_FOR_VIRTUAL_DISPLAYS), true)
     common_flags += -DFORCE_HWC_FOR_VIRTUAL_DISPLAYS
 endif
