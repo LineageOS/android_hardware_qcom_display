@@ -77,6 +77,7 @@ class CompManager : public DumpImpl {
 
  private:
   static const int kMaxThermalLevel = 3;
+  static const int kSafeModeThreshold = 4;
 
   void PrepareStrategyConstraints(Handle display_ctx, HWLayers *hw_layers);
 
@@ -94,6 +95,7 @@ class CompManager : public DumpImpl {
     bool is_primary_panel = false;
     bool valid_cursor = false;
     PUConstraints pu_constraints = {};
+    bool scaled_composition = false;
   };
 
   Locker locker_;

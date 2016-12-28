@@ -57,8 +57,8 @@ class ResourceDefault : public ResourceInterface {
   virtual DisplayError PostCommit(Handle display_ctx, HWLayers *hw_layers);
   virtual void Purge(Handle display_ctx);
   virtual DisplayError SetMaxMixerStages(Handle display_ctx, uint32_t max_mixer_stages);
-  virtual DisplayError ValidateScaling(const LayerRect &crop, const LayerRect &dst,
-                                       bool rotate90, bool ubwc_tiled, bool use_rotator_downscale);
+  virtual DisplayError ValidateScaling(const LayerRect &crop, const LayerRect &dst, bool rotate90,
+                                       BufferLayout layout, bool use_rotator_downscale);
   DisplayError ValidateCursorConfig(Handle display_ctx, const Layer *layer, bool is_top);
   DisplayError ValidateCursorPosition(Handle display_ctx, HWLayers *hw_layers, int x, int y);
   DisplayError SetMaxBandwidthMode(HWBwModes mode);
@@ -121,7 +121,7 @@ class ResourceDefault : public ResourceInterface {
   bool CalculateCropRects(const LayerRect &scissor, LayerRect *crop, LayerRect *dst);
   DisplayError ValidateLayerParams(const Layer *layer);
   DisplayError ValidateDimensions(const LayerRect &crop, const LayerRect &dst);
-  DisplayError ValidatePipeParams(HWPipeInfo *pipe_info, bool ubwc_tiled);
+  DisplayError ValidatePipeParams(HWPipeInfo *pipe_info, LayerBufferFormat format);
   DisplayError ValidateDownScaling(float scale_x, float scale_y, bool ubwc_tiled);
   DisplayError ValidateUpScaling(float scale_x, float scale_y);
   DisplayError GetScaleFactor(const LayerRect &crop, const LayerRect &dst, float *scale_x,

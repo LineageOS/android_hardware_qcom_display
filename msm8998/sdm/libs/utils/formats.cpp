@@ -114,5 +114,14 @@ const char *GetFormatString(const LayerBufferFormat &format) {
   }
 }
 
+BufferLayout GetBufferLayout(LayerBufferFormat format) {
+  switch (format) {
+  case kFormatYCbCr420TP10Ubwc:
+    return kTPTiled;
+  default:
+    return (IsUBWCFormat(format) ? kUBWC : kLinear);
+  }
+}
+
 }  // namespace sdm
 

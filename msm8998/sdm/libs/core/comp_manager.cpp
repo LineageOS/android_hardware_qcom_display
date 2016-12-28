@@ -33,6 +33,12 @@
 
 namespace sdm {
 
+static bool NeedsScaledComposition(const DisplayConfigVariableInfo &fb_config,
+                                   const HWMixerAttributes &mixer_attributes) {
+  return ((fb_config.x_pixels != mixer_attributes.width) ||
+          (fb_config.y_pixels != mixer_attributes.height));
+}
+
 DisplayError CompManager::Init(const HWResourceInfo &hw_res_info,
                                ExtensionInterface *extension_intf,
                                BufferAllocator *buffer_allocator,
@@ -122,6 +128,7 @@ DisplayError CompManager::RegisterDisplay(DisplayType type,
     max_sde_ext_layers_ = UINT32(Debug::GetExtMaxlayers());
   }
 
+  display_comp_ctx->scaled_composition = NeedsScaledComposition(fb_config, mixer_attributes);
   DLOGV_IF(kTagCompManager, "registered display bit mask 0x%x, configured display bit mask 0x%x, " \
            "display type %d", registered_displays_.to_ulong(), configured_displays_.to_ulong(),
            display_comp_ctx->display_type);
@@ -200,6 +207,8 @@ DisplayError CompManager::ReconfigureDisplay(Handle comp_handle,
     }
   }
 
+  display_comp_ctx->scaled_composition = NeedsScaledComposition(fb_config, mixer_attributes);
+
   return error;
 }
 
@@ -212,9 +221,13 @@ void CompManager::PrepareStrategyConstraints(Handle comp_handle, HWLayers *hw_la
   constraints->use_cursor = false;
   constraints->max_layers = max_layers_;
 
-  // Limit 2 layer SDE Comp if its not a Primary Display
+  // Limit 2 layer SDE Comp if its not a Primary Display.
+  // Safe mode is the policy for External display on a low end device.
   if (!display_comp_ctx->is_primary_panel) {
+    bool low_end_hw = ((hw_res_info_.num_vig_pipe + hw_res_info_.num_rgb_pipe +
+                        hw_res_info_.num_dma_pipe) <= kSafeModeThreshold);
     constraints->max_layers = max_sde_ext_layers_;
+    constraints->safe_mode = (low_end_hw && !hw_res_info_.separate_rotator) ? true : safe_mode_;
   }
 
   // If a strategy fails after successfully allocating resources, then set safe mode
@@ -426,8 +439,8 @@ void CompManager::AppendDump(char *buffer, uint32_t length) {
 
 DisplayError CompManager::ValidateScaling(const LayerRect &crop, const LayerRect &dst,
                                           bool rotate90) {
-  return resource_intf_->ValidateScaling(crop, dst, rotate90, Debug::IsUbwcTiledFrameBuffer(),
-                                         true /* use_rotator_downscale */);
+  BufferLayout layout = Debug::IsUbwcTiledFrameBuffer() ? kUBWC : kLinear;
+  return resource_intf_->ValidateScaling(crop, dst, rotate90, layout, true);
 }
 
 DisplayError CompManager::ValidateCursorPosition(Handle display_ctx, HWLayers *hw_layers,
@@ -447,7 +460,8 @@ bool CompManager::SupportLayerAsCursor(Handle comp_handle, HWLayers *hw_layers) 
   bool supported = false;
   int32_t gpu_index = -1;
 
-  if (!layer_stack->flags.cursor_present) {
+  // HW Cursor cannot be used, if Display configuration needs scaled composition.
+  if (display_comp_ctx->scaled_composition || !layer_stack->flags.cursor_present) {
     return supported;
   }
 
