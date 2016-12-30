@@ -30,6 +30,10 @@
 #ifndef _QDMETADATA_H
 #define _QDMETADATA_H
 
+#ifdef USE_COLOR_METADATA
+#include <color_metadata.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -86,6 +90,10 @@ struct MetaData_t {
       * for clients to set, and GPU will to read and know when to map the
       * SECURE_BUFFER(ION) */
     int32_t mapSecureBuffer;
+#ifdef USE_COLOR_METADATA
+   /* Color Aspects + HDR info */
+   ColorMetaData color;
+#endif
 };
 
 enum DispParamType {
@@ -100,6 +108,7 @@ enum DispParamType {
     UPDATE_REFRESH_RATE = 0x0100,
     UPDATE_COLOR_SPACE = 0x0200,
     MAP_SECURE_BUFFER = 0x400,
+    COLOR_METADATA = 0x800,
 };
 
 enum DispFetchParamType {
@@ -108,6 +117,7 @@ enum DispFetchParamType {
     GET_REFRESH_RATE = 0x0100,
     GET_COLOR_SPACE = 0x0200,
     GET_MAP_SECURE_BUFFER = 0x400,
+    GET_COLOR_METADATA = 0x800,
 };
 
 struct private_handle_t;
