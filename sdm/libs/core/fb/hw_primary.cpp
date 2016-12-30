@@ -105,6 +105,8 @@ DisplayError HWPrimary::Init() {
   EnableHotPlugDetection(1);
   InitializeConfigs();
 
+  avr_prop_disabled_ = Debug::IsAVRDisabled();
+
   return error;
 }
 
@@ -296,6 +298,10 @@ DisplayError HWPrimary::SetDisplayAttributes(uint32_t index) {
 DisplayError HWPrimary::SetRefreshRate(uint32_t refresh_rate) {
   char node_path[kMaxStringLength] = {0};
 
+  if (hw_resource_.has_avr && !avr_prop_disabled_) {
+    return kErrorNotSupported;
+  }
+
   if (refresh_rate == display_attributes_.fps) {
     return kErrorNone;
   }
@@ -398,8 +404,8 @@ DisplayError HWPrimary::Validate(HWLayers *hw_layers) {
   if (stack->output_buffer && hw_resource_.has_concurrent_writeback) {
     LayerBuffer *output_buffer = stack->output_buffer;
     mdp_out_layer_.writeback_ndx = hw_resource_.writeback_index;
-    mdp_out_layer_.buffer.width = output_buffer->width;
-    mdp_out_layer_.buffer.height = output_buffer->height;
+    mdp_out_layer_.buffer.width = output_buffer->unaligned_width;
+    mdp_out_layer_.buffer.height = output_buffer->unaligned_height;
     mdp_out_layer_.buffer.comp_ratio.denom = 1000;
     mdp_out_layer_.buffer.comp_ratio.numer = UINT32(hw_layers->output_compression * 1000);
     mdp_out_layer_.buffer.fence = -1;

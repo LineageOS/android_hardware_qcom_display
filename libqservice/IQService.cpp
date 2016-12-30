@@ -93,7 +93,8 @@ status_t BnQService::onTransact(
             callerUid == AID_ROOT ||
             callerUid == AID_CAMERASERVER ||
             callerUid == AID_AUDIO ||
-            callerUid == AID_SYSTEM);
+            callerUid == AID_SYSTEM ||
+            callerUid == AID_MEDIA_CODEC);
 
     if (code == CONNECT_HWC_CLIENT) {
         CHECK_INTERFACE(IQService, data, reply);

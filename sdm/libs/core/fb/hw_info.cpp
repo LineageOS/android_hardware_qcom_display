@@ -423,7 +423,9 @@ DisplayError HWInfo::GetV4L2RotatorInfo(HWResourceInfo *hw_resource) {
          string caps;
          while (Sys::getline_(caps_fs, caps)) {
            if (!ParseString(caps.c_str(), tokens, max_count, ":, =\n", &token_count)) {
-             if (!strncmp(tokens[0], "min_downscale", strlen("min_downscale"))) {
+             if (!strncmp(tokens[0], "downscale_compression", strlen("downscale_compression"))) {
+               hw_resource->hw_rot_info.downscale_compression = UINT8(atoi(tokens[1]));
+             } else if (!strncmp(tokens[0], "min_downscale", strlen("min_downscale"))) {
                hw_resource->hw_rot_info.min_downscale = FLOAT(atof(tokens[1]));
              }
            }
@@ -435,9 +437,9 @@ DisplayError HWInfo::GetV4L2RotatorInfo(HWResourceInfo *hw_resource) {
     }
   }
 
-  DLOGI("V4L2 Rotator: Count = %d, Downscale = %d, Min_downscale = %f",
+  DLOGI("V4L2 Rotator: Count = %d, Downscale = %d, Min_downscale = %f, Downscale_compression = %d",
         hw_resource->hw_rot_info.num_rotator, hw_resource->hw_rot_info.has_downscale,
-        hw_resource->hw_rot_info.min_downscale);
+        hw_resource->hw_rot_info.min_downscale, hw_resource->hw_rot_info.downscale_compression);
 
   return kErrorNone;
 }

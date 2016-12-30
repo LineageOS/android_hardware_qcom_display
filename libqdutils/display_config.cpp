@@ -198,12 +198,12 @@ int getConfigCount(int /*dpy*/) {
     return numConfigs;
 }
 
-int getActiveConfig(int /*dpy*/) {
+int getActiveConfig(int dpy) {
     int configIndex = -1;
     sp<IQService> binder = getBinder();
     if(binder != NULL) {
         Parcel inParcel, outParcel;
-        inParcel.writeInt32(DISPLAY_PRIMARY);
+        inParcel.writeInt32(dpy);
         status_t err = binder->dispatch(IQService::GET_ACTIVE_CONFIG,
                 &inParcel, &outParcel);
         if(!err) {
@@ -236,13 +236,13 @@ int setActiveConfig(int configIndex, int /*dpy*/) {
     return err;
 }
 
-DisplayAttributes getDisplayAttributes(int configIndex, int /*dpy*/) {
+DisplayAttributes getDisplayAttributes(int configIndex, int dpy) {
     DisplayAttributes dpyattr = {};
     sp<IQService> binder = getBinder();
     if(binder != NULL) {
         Parcel inParcel, outParcel;
         inParcel.writeInt32(configIndex);
-        inParcel.writeInt32(DISPLAY_PRIMARY);
+        inParcel.writeInt32(dpy);
         status_t err = binder->dispatch(
                 IQService::GET_DISPLAY_ATTRIBUTES_FOR_CONFIG, &inParcel,
                 &outParcel);

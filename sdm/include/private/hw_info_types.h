@@ -129,6 +129,7 @@ struct HWRotatorInfo {
   bool has_downscale = false;
   std::string device_path = "";
   float min_downscale = 2.0f;
+  bool downscale_compression = false;
 
   void Reset() { *this = HWRotatorInfo(); }
 };
