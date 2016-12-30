@@ -147,6 +147,13 @@ bool Debug::IsUbwcTiledFrameBuffer() {
   return (ubwc_framebuffer == 1);
 }
 
+int Debug::GetExtMaxlayers() {
+    int max_external_layers = 0;
+    debug_.debug_handler_->GetProperty("sdm.max_external_layers", &max_external_layers);
+
+    return std::max(max_external_layers, 2);
+}
+
 bool Debug::IsAVRDisabled() {
   int value = 0;
   debug_.debug_handler_->GetProperty("sdm.debug.disable_avr", &value);

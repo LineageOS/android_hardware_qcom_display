@@ -140,6 +140,7 @@ enum DisplayPort {
 struct DisplayConfigFixedInfo {
   bool underscan = false;   //!< If display support CE underscan.
   bool secure = false;      //!< If this display is capable of handling secure content.
+  bool is_cmdmode = false;  //!< If panel is command mode panel.
 };
 
 /*! @brief This structure defines configuration for variable properties of a display device.

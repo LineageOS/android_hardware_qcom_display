@@ -185,6 +185,7 @@ int HWCSession::Init() {
     return -errno;
   }
 
+  connected_displays_[HWC_DISPLAY_PRIMARY] = 1;
   return 0;
 }
 
@@ -202,6 +203,7 @@ int HWCSession::Deinit() {
     DLOGE("Display core de-initialization failed. Error = %d", error);
   }
 
+  connected_displays_[HWC_DISPLAY_PRIMARY] = 0;
   return 0;
 }
 
@@ -273,6 +275,7 @@ int HWCSession::Prepare(hwc_composer_device_1 *device, size_t num_displays,
 
     if (hwc_session->need_invalidate_) {
       hwc_procs->invalidate(hwc_procs);
+      hwc_session->need_invalidate_ = false;
     }
 
     hwc_session->HandleSecureDisplaySession(displays);
@@ -637,16 +640,18 @@ int HWCSession::ConnectDisplay(int disp, hwc_display_contents_1_t *content_list)
   if (disp == HWC_DISPLAY_EXTERNAL) {
     status = HWCDisplayExternal::Create(core_intf_, &hwc_procs_, primary_width, primary_height,
                                         qservice_, false, &hwc_display_[disp]);
+    connected_displays_[HWC_DISPLAY_EXTERNAL] = 1;
   } else if (disp == HWC_DISPLAY_VIRTUAL) {
     status = HWCDisplayVirtual::Create(core_intf_, &hwc_procs_, primary_width, primary_height,
                                        content_list, &hwc_display_[disp]);
+    connected_displays_[HWC_DISPLAY_VIRTUAL] = 1;
   } else {
     DLOGE("Invalid display type");
     return -1;
   }
 
   if (!status) {
-    hwc_display_[disp]->SetSecureDisplay(secure_display_active_);
+    hwc_display_[disp]->SetSecureDisplay(secure_display_active_, true);
   }
 
   return status;
@@ -657,8 +662,10 @@ int HWCSession::DisconnectDisplay(int disp) {
 
   if (disp == HWC_DISPLAY_EXTERNAL) {
     HWCDisplayExternal::Destroy(hwc_display_[disp]);
+    connected_displays_[HWC_DISPLAY_EXTERNAL] = 0;
   } else if (disp == HWC_DISPLAY_VIRTUAL) {
     HWCDisplayVirtual::Destroy(hwc_display_[disp]);
+    connected_displays_[HWC_DISPLAY_VIRTUAL] = 0;
   } else {
     DLOGE("Invalid display type");
     return -1;
@@ -1578,9 +1585,18 @@ void HWCSession::HandleSecureDisplaySession(hwc_display_contents_1_t **displays)
     }
   }
 
+  // Force flush on primary during transitions(secure<->non secure)
+  // when external displays are connected.
+  bool force_flush = false;
+  if ((connected_displays_[HWC_DISPLAY_PRIMARY] == 1) &&
+     ((connected_displays_[HWC_DISPLAY_EXTERNAL] == 1) ||
+      (connected_displays_[HWC_DISPLAY_VIRTUAL] == 1))) {
+    force_flush = true;
+  }
+
   for (ssize_t dpy = static_cast<ssize_t>(HWC_NUM_DISPLAY_TYPES - 1); dpy >= 0; dpy--) {
     if (hwc_display_[dpy]) {
-      hwc_display_[dpy]->SetSecureDisplay(secure_display_active_);
+      hwc_display_[dpy]->SetSecureDisplay(secure_display_active_, force_flush);
     }
   }
 }
