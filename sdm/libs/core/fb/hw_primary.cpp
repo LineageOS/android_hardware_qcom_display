@@ -105,6 +105,8 @@ DisplayError HWPrimary::Init() {
   EnableHotPlugDetection(1);
   InitializeConfigs();
 
+  avr_prop_disabled_ = Debug::IsAVRDisabled();
+
   return error;
 }
 
@@ -295,6 +297,10 @@ DisplayError HWPrimary::SetDisplayAttributes(uint32_t index) {
 
 DisplayError HWPrimary::SetRefreshRate(uint32_t refresh_rate) {
   char node_path[kMaxStringLength] = {0};
+
+  if (hw_resource_.has_avr && !avr_prop_disabled_) {
+    return kErrorNotSupported;
+  }
 
   if (refresh_rate == display_attributes_.fps) {
     return kErrorNone;
