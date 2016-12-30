@@ -133,7 +133,7 @@ void HWScaleV2::SetHWScaleData(const HWScaleData &scale_data, uint32_t index,
     mdp_layer->flags |= MDP_LAYER_ENABLE_QSEED3_SCALE;
     mdp_scale = &scale_data_v2_.at(index);
   } else {
-    mdp_scale_data_v2 mdp_dest_scale;
+    mdp_scale_data_v2 mdp_dest_scale = {0};
 
     dest_scale_data_v2_.insert(std::make_pair(index, mdp_dest_scale));
     mdp_scale = &dest_scale_data_v2_[index];
