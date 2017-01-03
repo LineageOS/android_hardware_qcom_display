@@ -387,8 +387,11 @@ void HWCDisplay::BuildLayerStack() {
       LayerBuffer *layer_buffer = layer->input_buffer;
       uint32_t display_width = 0, display_height = 0;
       GetMixerResolution(&display_width, &display_height);
-      layer_buffer->width = display_width;
-      layer_buffer->height = display_height;
+      // FIXME: Setting display_width and display_height causes corrupt blur layers
+      if ((display_width == 0) && (display_height == 0)) {
+        layer_buffer->width = display_width;
+        layer_buffer->height = display_height;
+      }
       layer_buffer->acquire_fence_fd = -1;
       layer_buffer->release_fence_fd = -1;
       layer->src_rect = layer->dst_rect;
