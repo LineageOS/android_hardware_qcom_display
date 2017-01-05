@@ -28,6 +28,10 @@ endif
 common_flags += -DVENUS_COLOR_FORMAT
 common_flags += -DMDSS_TARGET
 
+ifeq ($(DISPLAY_DEBUG_SWAPINTERVAL),true)
+    common_flags += -DDEBUG_SWAPINTERVAL
+endif
+
 common_deps  :=
 kernel_includes :=
 
