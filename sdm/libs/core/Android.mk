@@ -42,7 +42,8 @@ LOCAL_COPY_HEADERS             = $(SDM_HEADER_PATH)/core/buffer_allocator.h \
                                  $(SDM_HEADER_PATH)/core/dump_interface.h \
                                  $(SDM_HEADER_PATH)/core/layer_buffer.h \
                                  $(SDM_HEADER_PATH)/core/layer_stack.h \
-                                 $(SDM_HEADER_PATH)/core/sdm_types.h
+                                 $(SDM_HEADER_PATH)/core/sdm_types.h \
+                                 $(SDM_HEADER_PATH)/core/socket_handler.h
 include $(BUILD_COPY_HEADERS)
 
 include $(CLEAR_VARS)

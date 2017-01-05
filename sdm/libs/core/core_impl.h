@@ -42,7 +42,8 @@ class CoreImpl : public CoreInterface {
  public:
   // This class implements display core interface revision 1.0.
   static const uint16_t kRevision = SET_REVISION(1, 0);
-  CoreImpl(BufferAllocator *buffer_allocator, BufferSyncHandler *buffer_sync_handler);
+  CoreImpl(BufferAllocator *buffer_allocator, BufferSyncHandler *buffer_sync_handler,
+           SocketHandler *socket_handler);
   virtual ~CoreImpl() { }
 
   // This method returns the interface revision for the current display core object.
@@ -69,6 +70,7 @@ class CoreImpl : public CoreInterface {
   ExtensionInterface *extension_intf_ = NULL;
   CreateExtensionInterface create_extension_intf_ = NULL;
   DestroyExtensionInterface destroy_extension_intf_ = NULL;
+  SocketHandler *socket_handler_ = NULL;
 };
 
 }  // namespace sdm
