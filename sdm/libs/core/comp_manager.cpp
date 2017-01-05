@@ -51,11 +51,15 @@ DisplayError CompManager::Init(const HWResourceInfo &hw_res_info,
   if (extension_intf) {
     error = extension_intf->CreateResourceExtn(hw_res_info, &resource_intf_, buffer_allocator,
                                                buffer_sync_handler);
+    extension_intf->CreateDppsControlExtn(&dpps_ctrl_intf_, socket_handler);
   } else {
     error = ResourceDefault::CreateResourceDefault(hw_res_info, &resource_intf_);
   }
 
   if (error != kErrorNone) {
+    if (extension_intf) {
+      extension_intf->DestroyDppsControlExtn(dpps_ctrl_intf_);
+    }
     return error;
   }
 
@@ -70,6 +74,7 @@ DisplayError CompManager::Deinit() {
 
   if (extension_intf_) {
     extension_intf_->DestroyResourceExtn(resource_intf_);
+    extension_intf_->DestroyDppsControlExtn(dpps_ctrl_intf_);
   } else {
     ResourceDefault::DestroyResourceDefault(resource_intf_);
   }
@@ -532,6 +537,14 @@ DisplayError CompManager::SetCompositionState(Handle display_ctx,
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
   return display_comp_ctx->strategy->SetCompositionState(composition_type, enable);
+}
+
+DisplayError CompManager::ControlDpps(bool enable) {
+  if (dpps_ctrl_intf_) {
+    return enable ? dpps_ctrl_intf_->On() : dpps_ctrl_intf_->Off();
+  }
+
+  return kErrorNone;
 }
 
 }  // namespace sdm

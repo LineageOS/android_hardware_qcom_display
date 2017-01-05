@@ -72,6 +72,7 @@ class CompManager : public DumpImpl {
   DisplayError SetDetailEnhancerData(Handle display_ctx, const DisplayDetailEnhancerData &de_data);
   DisplayError SetCompositionState(Handle display_ctx, LayerComposition composition_type,
                                    bool enable);
+  DisplayError ControlDpps(bool enable);
 
   // DumpImpl method
   virtual void AppendDump(char *buffer, uint32_t length);
@@ -110,6 +111,7 @@ class CompManager : public DumpImpl {
   ExtensionInterface *extension_intf_ = NULL;
   uint32_t max_layers_ = kMaxSDELayers;
   uint32_t max_sde_ext_layers_ = 0;
+  DppsControlInterface *dpps_ctrl_intf_ = NULL;
 };
 
 }  // namespace sdm

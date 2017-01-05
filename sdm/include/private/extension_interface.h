@@ -31,6 +31,7 @@
 #include "partial_update_interface.h"
 #include "strategy_interface.h"
 #include "resource_interface.h"
+#include "dpps_control_interface.h"
 
 namespace sdm {
 
@@ -70,6 +71,9 @@ class ExtensionInterface {
                                           BufferAllocator *buffer_allocator,
                                           BufferSyncHandler *buffer_sync_handler) = 0;
   virtual DisplayError DestroyResourceExtn(ResourceInterface *interface) = 0;
+  virtual DisplayError CreateDppsControlExtn(DppsControlInterface **dpps_control_interface,
+                                             SocketHandler *socket_handler) = 0;
+  virtual DisplayError DestroyDppsControlExtn(DppsControlInterface *interface) = 0;
 
  protected:
   virtual ~ExtensionInterface() { }

@@ -54,5 +54,6 @@ LOCAL_COPY_HEADERS             = $(SDM_HEADER_PATH)/private/color_interface.h \
                                  $(SDM_HEADER_PATH)/private/hw_info_types.h \
                                  $(SDM_HEADER_PATH)/private/partial_update_interface.h \
                                  $(SDM_HEADER_PATH)/private/resource_interface.h \
-                                 $(SDM_HEADER_PATH)/private/strategy_interface.h
+                                 $(SDM_HEADER_PATH)/private/strategy_interface.h \
+                                 $(SDM_HEADER_PATH)/private/dpps_control_interface.h
 include $(BUILD_COPY_HEADERS)
