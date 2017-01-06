@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -73,6 +73,13 @@ EGLImageBuffer::~EGLImageBuffer()
   if (framebufferID != 0) {
     GL(glDeleteFramebuffers(1, &framebufferID));
     framebufferID = 0;
+  }
+
+  // Delete the eglImage
+  if (eglImageID != 0)
+  {
+      eglDestroyImageKHR(eglGetCurrentDisplay(), eglImageID);
+      eglImageID = 0;
   }
 }
 
