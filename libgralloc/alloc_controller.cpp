@@ -275,6 +275,7 @@ void AdrenoMemInfo::getAlignedWidthAndHeight(int width, int height, int format,
             case HAL_PIXEL_FORMAT_YCrCb_422_SP:
             case HAL_PIXEL_FORMAT_YCbCr_422_I:
             case HAL_PIXEL_FORMAT_YCrCb_422_I:
+            case HAL_PIXEL_FORMAT_YCbCr_420_P010:
                 aligned_w = ALIGN(width, 16);
                 break;
             case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
@@ -630,6 +631,9 @@ unsigned int getSize(int format, int width, int height, int usage,
         case HAL_PIXEL_FORMAT_YCbCr_420_SP:
         case HAL_PIXEL_FORMAT_YCrCb_420_SP:
             size = ALIGN((alignedw*alignedh) + (alignedw* alignedh)/2 + 1, 4096);
+            break;
+        case HAL_PIXEL_FORMAT_YCbCr_420_P010:
+            size = ALIGN((alignedw * alignedh * 2) + (alignedw * alignedh) + 1, 4096);
             break;
         case HAL_PIXEL_FORMAT_YCbCr_422_SP:
         case HAL_PIXEL_FORMAT_YCrCb_422_SP:
