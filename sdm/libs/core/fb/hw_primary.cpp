@@ -388,7 +388,7 @@ DisplayError HWPrimary::Validate(HWLayers *hw_layers) {
     mdp_out_layer_.buffer.comp_ratio.numer = UINT32(hw_layers->output_compression * 1000);
     mdp_out_layer_.buffer.fence = -1;
 #ifdef OUT_LAYER_COLOR_SPACE
-    SetCSC(output_buffer->csc, &mdp_out_layer_.color_space);
+    SetCSC(output_buffer->color_metadata, &mdp_out_layer_.color_space);
 #endif
     SetFormat(output_buffer->format, &mdp_out_layer_.buffer.format);
     mdp_commit.flags |= MDP_COMMIT_CWB_EN;
