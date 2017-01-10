@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -108,16 +108,20 @@ void HWCDebugHandler::DebugQdcm(bool enable, int verbose_level) {
   }
 }
 
-void HWCDebugHandler::Error(DebugTag /*tag*/, const char *format, ...) {
-  va_list list;
-  va_start(list, format);
-  __android_log_vprint(ANDROID_LOG_ERROR, LOG_TAG, format, list);
+void HWCDebugHandler::Error(DebugTag tag, const char *format, ...) {
+  if (debug_flags_[tag]) {
+    va_list list;
+    va_start(list, format);
+    __android_log_vprint(ANDROID_LOG_ERROR, LOG_TAG, format, list);
+  }
 }
 
-void HWCDebugHandler::Warning(DebugTag /*tag*/, const char *format, ...) {
-  va_list list;
-  va_start(list, format);
-  __android_log_vprint(ANDROID_LOG_WARN, LOG_TAG, format, list);
+void HWCDebugHandler::Warning(DebugTag tag, const char *format, ...) {
+  if (debug_flags_[tag]) {
+    va_list list;
+    va_start(list, format);
+    __android_log_vprint(ANDROID_LOG_WARN, LOG_TAG, format, list);
+  }
 }
 
 void HWCDebugHandler::Info(DebugTag tag, const char *format, ...) {
