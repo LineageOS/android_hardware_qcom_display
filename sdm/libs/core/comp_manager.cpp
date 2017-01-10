@@ -382,6 +382,8 @@ void CompManager::Purge(Handle display_ctx) {
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
   resource_intf_->Purge(display_comp_ctx->display_resource_ctx);
+
+  display_comp_ctx->strategy->Purge();
 }
 
 void CompManager::ProcessIdleTimeout(Handle display_ctx) {

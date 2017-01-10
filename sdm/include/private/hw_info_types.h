@@ -129,6 +129,7 @@ struct HWRotatorInfo {
   bool has_downscale = false;
   std::string device_path = "";
   float min_downscale = 2.0f;
+  bool downscale_compression = false;
 
   void Reset() { *this = HWRotatorInfo(); }
 };
@@ -430,14 +431,11 @@ struct HWLayersInfo {
   uint32_t app_layer_count = 0;    // Total number of app layers. Must not be 0.
   uint32_t gpu_target_index = 0;   // GPU target layer index. 0 if not present.
 
+  std::vector<Layer> hw_layers = {};  // Layers which need to be programmed on the HW
+
   uint32_t index[kMaxSDELayers];   // Indexes of the layers from the layer stack which need to be
                                    // programmed on hardware.
-  LayerRect updated_src_rect[kMaxSDELayers];  // Updated layer src rects in s3d mode
-  LayerRect updated_dst_rect[kMaxSDELayers];  // Updated layer dst rects in s3d mode
-  bool updating[kMaxSDELayers] = {0};  // Updated by strategy, considering plane_alpha+updating
   uint32_t roi_index[kMaxSDELayers] = {0};  // Stores the ROI index where the layers are visible.
-
-  uint32_t count = 0;              // Total number of layers which need to be set on hardware.
 
   int sync_handle = -1;
 

@@ -36,6 +36,7 @@
 namespace sdm {
 
 class BlitEngine;
+class HWCToneMapper;
 
 // Subclasses set this to their type. This has to be different from DisplayType.
 // This is to avoid RTTI and dynamic_cast
@@ -170,7 +171,7 @@ class HWCDisplay : public DisplayEventHandler {
   const char *GetDisplayString();
   void MarkLayersForGPUBypass(hwc_display_contents_1_t *content_list);
   virtual void ApplyScanAdjustment(hwc_rect_t *display_frame);
-  DisplayError SetCSC(ColorSpace_t source, LayerCSC *target);
+  DisplayError SetCSC(const MetaData_t *meta_data, ColorMetaData *color_metadata);
   DisplayError SetIGC(IGC_t source, LayerIGC *target);
   DisplayError SetMetaData(const private_handle_t *pvt_handle, Layer *layer);
   bool NeedsFrameBufferRefresh(hwc_display_contents_1_t *content_list);
@@ -217,6 +218,7 @@ class HWCDisplay : public DisplayEventHandler {
   LayerRect display_rect_;
   std::map<int, LayerBufferS3DFormat> s3d_format_hwc_to_sdm_;
   bool animating_ = false;
+  HWCToneMapper *tone_mapper_ = NULL;
 
  private:
   void DumpInputBuffers(hwc_display_contents_1_t *content_list);

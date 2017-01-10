@@ -227,11 +227,11 @@ DisplayError HWDevice::Validate(HWLayers *hw_layers) {
   DisplayError error = kErrorNone;
 
   HWLayersInfo &hw_layer_info = hw_layers->info;
-  LayerStack *stack = hw_layer_info.stack;
+  uint32_t hw_layer_count = UINT32(hw_layer_info.hw_layers.size());
 
   DLOGV_IF(kTagDriverConfig, "************************** %s Validate Input ***********************",
            device_name_);
-  DLOGV_IF(kTagDriverConfig, "SDE layer count is %d", hw_layer_info.count);
+  DLOGV_IF(kTagDriverConfig, "SDE layer count is %d", hw_layer_count);
 
   mdp_layer_commit_v1 &mdp_commit = mdp_disp_commit_.commit_v1;
   uint32_t &mdp_layer_count = mdp_commit.input_layer_cnt;
@@ -241,55 +241,54 @@ DisplayError HWDevice::Validate(HWLayers *hw_layers) {
   DLOGI_IF(kTagDriverConfig, "right_roi: x = %d, y = %d, w = %d, h = %d", mdp_commit.right_roi.x,
     mdp_commit.right_roi.y, mdp_commit.right_roi.w, mdp_commit.right_roi.h);
 
-  for (uint32_t i = 0; i < hw_layer_info.count; i++) {
-    uint32_t layer_index = hw_layer_info.index[i];
-    Layer *layer = stack->layers.at(layer_index);
-    LayerBuffer *input_buffer = layer->input_buffer;
+  for (uint32_t i = 0; i < hw_layer_count; i++) {
+    const Layer &layer = hw_layer_info.hw_layers.at(i);
+    LayerBuffer input_buffer = layer.input_buffer;
     HWPipeInfo *left_pipe = &hw_layers->config[i].left_pipe;
     HWPipeInfo *right_pipe = &hw_layers->config[i].right_pipe;
     HWRotatorSession *hw_rotator_session = &hw_layers->config[i].hw_rotator_session;
     bool is_rotator_used = (hw_rotator_session->hw_block_count != 0);
-    bool is_cursor_pipe_used = (hw_layer_info.use_hw_cursor & layer->flags.cursor);
+    bool is_cursor_pipe_used = (hw_layer_info.use_hw_cursor & layer.flags.cursor);
 
     for (uint32_t count = 0; count < 2; count++) {
       HWPipeInfo *pipe_info = (count == 0) ? left_pipe : right_pipe;
       HWRotateInfo *hw_rotate_info = &hw_rotator_session->hw_rotate_info[count];
 
       if (hw_rotate_info->valid) {
-        input_buffer = &hw_rotator_session->output_buffer;
+        input_buffer = hw_rotator_session->output_buffer;
       }
 
       if (pipe_info->valid) {
         mdp_input_layer &mdp_layer = mdp_in_layers_[mdp_layer_count];
         mdp_layer_buffer &mdp_buffer = mdp_layer.buffer;
 
-        mdp_buffer.width = input_buffer->width;
-        mdp_buffer.height = input_buffer->height;
+        mdp_buffer.width = input_buffer.width;
+        mdp_buffer.height = input_buffer.height;
         mdp_buffer.comp_ratio.denom = 1000;
         mdp_buffer.comp_ratio.numer = UINT32(hw_layers->config[i].compression * 1000);
 
-        if (layer->flags.solid_fill) {
+        if (layer.flags.solid_fill) {
           mdp_buffer.format = MDP_ARGB_8888;
         } else {
-          error = SetFormat(input_buffer->format, &mdp_buffer.format);
+          error = SetFormat(input_buffer.format, &mdp_buffer.format);
           if (error != kErrorNone) {
             return error;
           }
         }
-        mdp_layer.alpha = layer->plane_alpha;
+        mdp_layer.alpha = layer.plane_alpha;
         mdp_layer.z_order = UINT16(pipe_info->z_order);
         mdp_layer.transp_mask = 0xffffffff;
-        SetBlending(layer->blending, &mdp_layer.blend_op);
+        SetBlending(layer.blending, &mdp_layer.blend_op);
         mdp_layer.pipe_ndx = pipe_info->pipe_id;
         mdp_layer.horz_deci = pipe_info->horizontal_decimation;
         mdp_layer.vert_deci = pipe_info->vertical_decimation;
 
         SetRect(pipe_info->src_roi, &mdp_layer.src_rect);
         SetRect(pipe_info->dst_roi, &mdp_layer.dst_rect);
-        SetMDPFlags(layer, is_rotator_used, is_cursor_pipe_used, &mdp_layer.flags);
-        SetCSC(layer->input_buffer->csc, &mdp_layer.color_space);
+        SetMDPFlags(&layer, is_rotator_used, is_cursor_pipe_used, &mdp_layer.flags);
+        SetCSC(layer.input_buffer.color_metadata, &mdp_layer.color_space);
         if (pipe_info->flags & kIGC) {
-          SetIGC(layer->input_buffer, mdp_layer_count);
+          SetIGC(&layer.input_buffer, mdp_layer_count);
         }
         if (pipe_info->flags & kMultiRect) {
           mdp_layer.flags |= MDP_LAYER_MULTIRECT_ENABLE;
@@ -297,7 +296,7 @@ DisplayError HWDevice::Validate(HWLayers *hw_layers) {
             mdp_layer.flags |= MDP_LAYER_MULTIRECT_PARALLEL_MODE;
           }
         }
-        mdp_layer.bg_color = layer->solid_fill_color;
+        mdp_layer.bg_color = layer.solid_fill_color;
 
         // HWScaleData to MDP driver
         hw_scale_->SetHWScaleData(pipe_info->scale_data, mdp_layer_count, &mdp_commit,
@@ -336,7 +335,7 @@ DisplayError HWDevice::Validate(HWLayers *hw_layers) {
     mdp_out_layer_.buffer.comp_ratio.denom = 1000;
     mdp_out_layer_.buffer.comp_ratio.numer = UINT32(hw_layers->output_compression * 1000);
 #ifdef OUT_LAYER_COLOR_SPACE
-    SetCSC(output_buffer->csc, &mdp_out_layer_.color_space);
+    SetCSC(output_buffer->color_metadata, &mdp_out_layer_.color_space);
 #endif
     SetFormat(output_buffer->format, &mdp_out_layer_.buffer.format);
 
@@ -427,18 +426,18 @@ DisplayError HWDevice::Commit(HWLayers *hw_layers) {
   DTRACE_SCOPED();
 
   HWLayersInfo &hw_layer_info = hw_layers->info;
-  LayerStack *stack = hw_layer_info.stack;
+  uint32_t hw_layer_count = UINT32(hw_layer_info.hw_layers.size());
 
   DLOGV_IF(kTagDriverConfig, "*************************** %s Commit Input ************************",
            device_name_);
-  DLOGV_IF(kTagDriverConfig, "SDE layer count is %d", hw_layer_info.count);
+  DLOGV_IF(kTagDriverConfig, "SDE layer count is %d", hw_layer_count);
 
   mdp_layer_commit_v1 &mdp_commit = mdp_disp_commit_.commit_v1;
   uint32_t mdp_layer_index = 0;
 
-  for (uint32_t i = 0; i < hw_layer_info.count; i++) {
-    uint32_t layer_index = hw_layer_info.index[i];
-    LayerBuffer *input_buffer = stack->layers.at(layer_index)->input_buffer;
+  for (uint32_t i = 0; i < hw_layer_count; i++) {
+    const Layer &layer = hw_layer_info.hw_layers.at(i);
+    LayerBuffer *input_buffer = const_cast<LayerBuffer *>(&layer.input_buffer);
     HWPipeInfo *left_pipe = &hw_layers->config[i].left_pipe;
     HWPipeInfo *right_pipe = &hw_layers->config[i].right_pipe;
     HWRotatorSession *hw_rotator_session = &hw_layers->config[i].hw_rotator_session;
@@ -521,6 +520,7 @@ DisplayError HWDevice::Commit(HWLayers *hw_layers) {
     return kErrorHardware;
   }
 
+  LayerStack *stack = hw_layer_info.stack;
   stack->retire_fence_fd = mdp_commit.retire_fence;
 #ifdef VIDEO_MODE_DEFER_RETIRE_FENCE
   if (hw_panel_info_.mode == kModeVideo) {
@@ -531,12 +531,9 @@ DisplayError HWDevice::Commit(HWLayers *hw_layers) {
   // MDP returns only one release fence for the entire layer stack. Duplicate this fence into all
   // layers being composed by MDP.
 
-  std::vector<uint32_t> fence_dup_flag;
-  fence_dup_flag.clear();
-
-  for (uint32_t i = 0; i < hw_layer_info.count; i++) {
-    uint32_t layer_index = hw_layer_info.index[i];
-    LayerBuffer *input_buffer = stack->layers.at(layer_index)->input_buffer;
+  for (uint32_t i = 0; i < hw_layer_count; i++) {
+    const Layer &layer = hw_layer_info.hw_layers.at(i);
+    LayerBuffer *input_buffer = const_cast<LayerBuffer *>(&layer.input_buffer);
     HWRotatorSession *hw_rotator_session = &hw_layers->config[i].hw_rotator_session;
 
     if (hw_rotator_session->hw_block_count) {
@@ -545,14 +542,8 @@ DisplayError HWDevice::Commit(HWLayers *hw_layers) {
       continue;
     }
 
-    // Make sure the release fence is duplicated only once for each buffer.
-    if (std::find(fence_dup_flag.begin(), fence_dup_flag.end(), layer_index) ==
-        fence_dup_flag.end()) {
-      input_buffer->release_fence_fd = Sys::dup_(mdp_commit.release_fence);
-      fence_dup_flag.push_back(layer_index);
-    }
+    input_buffer->release_fence_fd = Sys::dup_(mdp_commit.release_fence);
   }
-  fence_dup_flag.clear();
 
   hw_layer_info.sync_handle = Sys::dup_(mdp_commit.release_fence);
 
@@ -726,7 +717,7 @@ void HWDevice::SetRect(const LayerRect &source, mdp_rect *target) {
 
 void HWDevice::SetMDPFlags(const Layer *layer, const bool &is_rotator_used,
                            bool is_cursor_pipe_used, uint32_t *mdp_flags) {
-  const LayerBuffer *input_buffer = layer->input_buffer;
+  const LayerBuffer &input_buffer = layer->input_buffer;
 
   // Flips will be taken care by rotator, if layer uses rotator for downscale/rotation. So ignore
   // flip flags for MDP.
@@ -739,18 +730,18 @@ void HWDevice::SetMDPFlags(const Layer *layer, const bool &is_rotator_used,
       *mdp_flags |= MDP_LAYER_FLIP_LR;
     }
 
-    if (input_buffer->flags.interlace) {
+    if (input_buffer.flags.interlace) {
       *mdp_flags |= MDP_LAYER_DEINTERLACE;
     }
   }
 
-  if (input_buffer->flags.secure_camera) {
+  if (input_buffer.flags.secure_camera) {
     *mdp_flags |= MDP_LAYER_SECURE_CAMERA_SESSION;
-  } else if (input_buffer->flags.secure) {
+  } else if (input_buffer.flags.secure) {
     *mdp_flags |= MDP_LAYER_SECURE_SESSION;
   }
 
-  if (input_buffer->flags.secure_display) {
+  if (input_buffer.flags.secure_display) {
     *mdp_flags |= MDP_LAYER_SECURE_DISPLAY_SESSION;
   }
 
@@ -1070,11 +1061,24 @@ void HWDevice::ResetDisplayParams() {
   mdp_disp_commit_.commit_v1.dest_scaler = mdp_dest_scalar_data_.data();
 }
 
-void HWDevice::SetCSC(LayerCSC source, mdp_color_space *color_space) {
-  switch (source) {
-  case kCSCLimitedRange601:    *color_space = MDP_CSC_ITU_R_601;      break;
-  case kCSCFullRange601:       *color_space = MDP_CSC_ITU_R_601_FR;   break;
-  case kCSCLimitedRange709:    *color_space = MDP_CSC_ITU_R_709;      break;
+void HWDevice::SetCSC(const ColorMetaData &color_metadata, mdp_color_space *color_space) {
+  switch (color_metadata.colorPrimaries) {
+  case ColorPrimaries_BT601_6_525:
+  case ColorPrimaries_BT601_6_625:
+    *color_space = ((color_metadata.range == Range_Full) ? MDP_CSC_ITU_R_601_FR :
+                                                           MDP_CSC_ITU_R_601);
+    break;
+  case ColorPrimaries_BT709_5:
+    *color_space = MDP_CSC_ITU_R_709;
+    break;
+#if defined MDP_CSC_ITU_R_2020 && defined MDP_CSC_ITU_R_2020_FR
+  case ColorPrimaries_BT2020:
+    *color_space = static_cast<mdp_color_space>((color_metadata.range == Range_Full) ?
+                                                 MDP_CSC_ITU_R_2020_FR : MDP_CSC_ITU_R_2020);
+    break;
+#endif
+  default:
+    break;
   }
 }
 
@@ -1106,7 +1110,7 @@ DisplayError HWDevice::SetCursorPosition(HWLayers *hw_layers, int x, int y) {
   DTRACE_SCOPED();
 
   HWLayersInfo &hw_layer_info = hw_layers->info;
-  uint32_t count = hw_layer_info.count;
+  uint32_t count = UINT32(hw_layer_info.hw_layers.size());
   uint32_t cursor_index = count - 1;
   HWPipeInfo *left_pipe = &hw_layers->config[cursor_index].left_pipe;
 

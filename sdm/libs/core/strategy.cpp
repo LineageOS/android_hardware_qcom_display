@@ -137,14 +137,13 @@ DisplayError Strategy::GetNextStrategy(StrategyConstraints *constraints) {
   LayerStack *layer_stack = hw_layers_info_->stack;
   for (uint32_t i = 0; i < hw_layers_info_->app_layer_count; i++) {
     layer_stack->layers.at(i)->composition = kCompositionGPU;
+    layer_stack->layers.at(i)->request.flags.request_flags = 0;  // Reset layer request
   }
 
   if (!extn_start_success_) {
     // When mixer resolution and panel resolutions are same (1600x2560) and FB resolution is
     // 1080x1920 FB_Target destination coordinates(mapped to FB resolution 1080x1920) need to
     // be mapped to destination coordinates of mixer resolution(1600x2560).
-    hw_layers_info_->count = 0;
-    uint32_t &hw_layer_count = hw_layers_info_->count;
     Layer *gpu_target_layer = layer_stack->layers.at(hw_layers_info_->gpu_target_index);
     float layer_mixer_width = FLOAT(mixer_attributes_.width);
     float layer_mixer_height = FLOAT(mixer_attributes_.height);
@@ -153,11 +152,11 @@ DisplayError Strategy::GetNextStrategy(StrategyConstraints *constraints) {
     LayerRect src_domain = (LayerRect){0.0f, 0.0f, fb_width, fb_height};
     LayerRect dst_domain = (LayerRect){0.0f, 0.0f, layer_mixer_width, layer_mixer_height};
 
-    hw_layers_info_->updated_src_rect[hw_layer_count] = gpu_target_layer->src_rect;
-    MapRect(src_domain, dst_domain, gpu_target_layer->dst_rect,
-            &hw_layers_info_->updated_dst_rect[hw_layer_count]);
-
-    hw_layers_info_->index[hw_layer_count++] = hw_layers_info_->gpu_target_index;
+    Layer layer = *gpu_target_layer;
+    hw_layers_info_->index[0] = hw_layers_info_->gpu_target_index;
+    MapRect(src_domain, dst_domain, layer.dst_rect, &layer.dst_rect);
+    hw_layers_info_->hw_layers.clear();
+    hw_layers_info_->hw_layers.push_back(layer);
   }
 
   tried_default_ = true;
@@ -245,5 +244,14 @@ DisplayError Strategy::SetCompositionState(LayerComposition composition_type, bo
 
   return kErrorNone;
 }
+
+DisplayError Strategy::Purge() {
+  if (strategy_intf_) {
+    return strategy_intf_->Purge();
+  }
+
+  return kErrorNone;
+}
+
 
 }  // namespace sdm
