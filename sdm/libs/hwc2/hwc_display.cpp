@@ -860,6 +860,33 @@ HWC2::Error HWCDisplay::GetDisplayRequests(int32_t *out_display_requests,
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCDisplay::GetHdrCapabilities(uint32_t *out_num_types, int32_t *out_types,
+                                           float *out_max_luminance,
+                                           float *out_max_average_luminance,
+                                           float *out_min_luminance) {
+  DisplayConfigFixedInfo fixed_info = {};
+  display_intf_->GetConfig(&fixed_info);
+
+  if (out_types == nullptr) {
+    *out_num_types  = 0;
+    if (fixed_info.hdr_supported) {
+      // 1(now) - because we support only HDR10, change when HLG & DOLBY vision are supported
+      *out_num_types  = 1;
+    }
+  } else {
+    // Only HDR10 supported
+    out_types[0] = HAL_HDR_HDR10;
+    static const float kLuminanceFactor = 10000.0;
+    // luminance is expressed in the unit of 0.0001 cd/m2, convert it to 1cd/m2.
+    *out_max_luminance = FLOAT(fixed_info.max_luminance)/kLuminanceFactor;
+    *out_max_average_luminance = FLOAT(fixed_info.average_luminance)/kLuminanceFactor;
+    *out_min_luminance = FLOAT(fixed_info.min_luminance)/kLuminanceFactor;
+  }
+
+  return HWC2::Error::None;
+}
+
+
 HWC2::Error HWCDisplay::CommitLayerStack(void) {
   if (shutdown_pending_ || layer_set_.empty()) {
     return HWC2::Error::None;
