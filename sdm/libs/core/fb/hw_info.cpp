@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -150,6 +150,10 @@ DisplayError HWInfo::GetDynamicBWLimits(HWResourceInfo *hw_resource) {
 }
 
 DisplayError HWInfo::GetHWResourceInfo(HWResourceInfo *hw_resource) {
+  if (hw_resource_) {
+    *hw_resource = *hw_resource_;
+    return kErrorNone;
+  }
   string fb_path = "/sys/devices/virtual/graphics/fb"
                       + to_string(kHWCapabilitiesNode) + "/mdp/caps";
 
@@ -159,8 +163,10 @@ DisplayError HWInfo::GetHWResourceInfo(HWResourceInfo *hw_resource) {
     return kErrorHardware;
   }
 
-  InitSupportedFormatMap(hw_resource);
-  hw_resource->hw_version = kHWMdssVersion5;
+  hw_resource_ = new HWResourceInfo;
+
+  InitSupportedFormatMap(hw_resource_);
+  hw_resource_->hw_version = kHWMdssVersion5;
 
   uint32_t token_count = 0;
   const uint32_t max_count = 256;
@@ -170,91 +176,91 @@ DisplayError HWInfo::GetHWResourceInfo(HWResourceInfo *hw_resource) {
     // parse the line and update information accordingly
     if (!ParseString(line.c_str(), tokens, max_count, ":, =\n", &token_count)) {
       if (!strncmp(tokens[0], "hw_rev", strlen("hw_rev"))) {
-        hw_resource->hw_revision = UINT32(atoi(tokens[1]));  // HW Rev, v1/v2
+        hw_resource_->hw_revision = UINT32(atoi(tokens[1]));  // HW Rev, v1/v2
       } else if (!strncmp(tokens[0], "rot_input_fmts", strlen("rot_input_fmts"))) {
-        ParseFormats(&tokens[1], (token_count - 1), kHWRotatorInput, hw_resource);
+        ParseFormats(&tokens[1], (token_count - 1), kHWRotatorInput, hw_resource_);
       } else if (!strncmp(tokens[0], "rot_output_fmts", strlen("rot_output_fmts"))) {
-        ParseFormats(&tokens[1], (token_count - 1), kHWRotatorOutput, hw_resource);
+        ParseFormats(&tokens[1], (token_count - 1), kHWRotatorOutput, hw_resource_);
       } else if (!strncmp(tokens[0], "wb_output_fmts", strlen("wb_output_fmts"))) {
-        ParseFormats(&tokens[1], (token_count - 1), kHWWBIntfOutput, hw_resource);
+        ParseFormats(&tokens[1], (token_count - 1), kHWWBIntfOutput, hw_resource_);
       } else if (!strncmp(tokens[0], "blending_stages", strlen("blending_stages"))) {
-        hw_resource->num_blending_stages = UINT8(atoi(tokens[1]));
+        hw_resource_->num_blending_stages = UINT8(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "max_downscale_ratio", strlen("max_downscale_ratio"))) {
-        hw_resource->max_scale_down = UINT32(atoi(tokens[1]));
+        hw_resource_->max_scale_down = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "max_upscale_ratio", strlen("max_upscale_ratio"))) {
-        hw_resource->max_scale_up = UINT32(atoi(tokens[1]));
+        hw_resource_->max_scale_up = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "max_bandwidth_low", strlen("max_bandwidth_low"))) {
-        hw_resource->max_bandwidth_low = UINT64(atol(tokens[1]));
+        hw_resource_->max_bandwidth_low = UINT64(atol(tokens[1]));
       } else if (!strncmp(tokens[0], "max_bandwidth_high", strlen("max_bandwidth_high"))) {
-        hw_resource->max_bandwidth_high = UINT64(atol(tokens[1]));
+        hw_resource_->max_bandwidth_high = UINT64(atol(tokens[1]));
       } else if (!strncmp(tokens[0], "max_mixer_width", strlen("max_mixer_width"))) {
-        hw_resource->max_mixer_width = UINT32(atoi(tokens[1]));
+        hw_resource_->max_mixer_width = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "max_pipe_width", strlen("max_pipe_width"))) {
-        hw_resource->max_pipe_width = UINT32(atoi(tokens[1]));
+        hw_resource_->max_pipe_width = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "max_cursor_size", strlen("max_cursor_size"))) {
-        hw_resource->max_cursor_size = UINT32(atoi(tokens[1]));
+        hw_resource_->max_cursor_size = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "max_pipe_bw", strlen("max_pipe_bw"))) {
-        hw_resource->max_pipe_bw = UINT32(atoi(tokens[1]));
+        hw_resource_->max_pipe_bw = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "max_mdp_clk", strlen("max_mdp_clk"))) {
-        hw_resource->max_sde_clk = UINT32(atoi(tokens[1]));
+        hw_resource_->max_sde_clk = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "clk_fudge_factor", strlen("clk_fudge_factor"))) {
-        hw_resource->clk_fudge_factor = FLOAT(atoi(tokens[1])) / FLOAT(atoi(tokens[2]));
+        hw_resource_->clk_fudge_factor = FLOAT(atoi(tokens[1])) / FLOAT(atoi(tokens[2]));
       } else if (!strncmp(tokens[0], "fmt_mt_nv12_factor", strlen("fmt_mt_nv12_factor"))) {
-        hw_resource->macrotile_nv12_factor = UINT32(atoi(tokens[1]));
+        hw_resource_->macrotile_nv12_factor = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "fmt_mt_factor", strlen("fmt_mt_factor"))) {
-        hw_resource->macrotile_factor = UINT32(atoi(tokens[1]));
+        hw_resource_->macrotile_factor = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "fmt_linear_factor", strlen("fmt_linear_factor"))) {
-        hw_resource->linear_factor = UINT32(atoi(tokens[1]));
+        hw_resource_->linear_factor = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "scale_factor", strlen("scale_factor"))) {
-        hw_resource->scale_factor = UINT32(atoi(tokens[1]));
+        hw_resource_->scale_factor = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "xtra_ff_factor", strlen("xtra_ff_factor"))) {
-        hw_resource->extra_fudge_factor = UINT32(atoi(tokens[1]));
+        hw_resource_->extra_fudge_factor = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "amortizable_threshold", strlen("amortizable_threshold"))) {
-        hw_resource->amortizable_threshold = UINT32(atoi(tokens[1]));
+        hw_resource_->amortizable_threshold = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "system_overhead_lines", strlen("system_overhead_lines"))) {
-        hw_resource->system_overhead_lines = UINT32(atoi(tokens[1]));
+        hw_resource_->system_overhead_lines = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "wb_intf_index", strlen("wb_intf_index"))) {
-        hw_resource->writeback_index = UINT32(atoi(tokens[1]));
+        hw_resource_->writeback_index = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "dest_scaler_count", strlen("dest_scaler_count"))) {
-        hw_resource->hw_dest_scalar_info.count = UINT32(atoi(tokens[1]));
+        hw_resource_->hw_dest_scalar_info.count = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "max_dest_scale_up", strlen("max_dest_scale_up"))) {
-        hw_resource->hw_dest_scalar_info.max_scale_up = UINT32(atoi(tokens[1]));
+        hw_resource_->hw_dest_scalar_info.max_scale_up = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "max_dest_scaler_input_width",
                  strlen("max_dest_scaler_input_width"))) {
-        hw_resource->hw_dest_scalar_info.max_input_width = UINT32(atoi(tokens[1]));
+        hw_resource_->hw_dest_scalar_info.max_input_width = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "max_dest_scaler_output_width",
                  strlen("max_dest_scaler_output_width"))) {
-        hw_resource->hw_dest_scalar_info.max_output_width = UINT32(atoi(tokens[1]));
+        hw_resource_->hw_dest_scalar_info.max_output_width = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "features", strlen("features"))) {
         for (uint32_t i = 0; i < token_count; i++) {
           if (!strncmp(tokens[i], "bwc", strlen("bwc"))) {
-            hw_resource->has_bwc = true;
+            hw_resource_->has_bwc = true;
           } else if (!strncmp(tokens[i], "ubwc", strlen("ubwc"))) {
-            hw_resource->has_ubwc = true;
+            hw_resource_->has_ubwc = true;
           } else if (!strncmp(tokens[i], "decimation", strlen("decimation"))) {
-            hw_resource->has_decimation = true;
+            hw_resource_->has_decimation = true;
           } else if (!strncmp(tokens[i], "tile_format", strlen("tile_format"))) {
-            hw_resource->has_macrotile = true;
+            hw_resource_->has_macrotile = true;
           } else if (!strncmp(tokens[i], "src_split", strlen("src_split"))) {
-            hw_resource->is_src_split = true;
+            hw_resource_->is_src_split = true;
           } else if (!strncmp(tokens[i], "non_scalar_rgb", strlen("non_scalar_rgb"))) {
-            hw_resource->has_non_scalar_rgb = true;
+            hw_resource_->has_non_scalar_rgb = true;
           } else if (!strncmp(tokens[i], "perf_calc", strlen("perf_calc"))) {
-            hw_resource->perf_calc = true;
+            hw_resource_->perf_calc = true;
           } else if (!strncmp(tokens[i], "dynamic_bw_limit", strlen("dynamic_bw_limit"))) {
-            hw_resource->has_dyn_bw_support = true;
+            hw_resource_->has_dyn_bw_support = true;
           } else if (!strncmp(tokens[i], "separate_rotator", strlen("separate_rotator"))) {
-            hw_resource->separate_rotator = true;
+            hw_resource_->separate_rotator = true;
           } else if (!strncmp(tokens[i], "qseed3", strlen("qseed3"))) {
-            hw_resource->has_qseed3 = true;
+            hw_resource_->has_qseed3 = true;
           } else if (!strncmp(tokens[i], "has_ppp", strlen("has_ppp"))) {
-            hw_resource->has_ppp = true;
+            hw_resource_->has_ppp = true;
           } else if (!strncmp(tokens[i], "concurrent_writeback", strlen("concurrent_writeback"))) {
-            hw_resource->has_concurrent_writeback = true;
+            hw_resource_->has_concurrent_writeback = true;
           } else if (!strncmp(tokens[i], "avr", strlen("avr"))) {
-            hw_resource->has_avr = true;
+            hw_resource_->has_avr = true;
           } else if (!strncmp(tokens[i], "hdr", strlen("hdr"))) {
-            hw_resource->has_hdr = true;
+            hw_resource_->has_hdr = true;
           }
         }
       } else if (!strncmp(tokens[0], "pipe_count", strlen("pipe_count"))) {
@@ -268,16 +274,16 @@ DisplayError HWInfo::GetHWResourceInfo(HWResourceInfo *hw_resource) {
               if (!strncmp(tokens[j], "pipe_type", strlen("pipe_type"))) {
                 if (!strncmp(tokens[j+1], "vig", strlen("vig"))) {
                   pipe_caps.type = kPipeTypeVIG;
-                  hw_resource->num_vig_pipe++;
+                  hw_resource_->num_vig_pipe++;
                 } else if (!strncmp(tokens[j+1], "rgb", strlen("rgb"))) {
                   pipe_caps.type = kPipeTypeRGB;
-                  hw_resource->num_rgb_pipe++;
+                  hw_resource_->num_rgb_pipe++;
                 } else if (!strncmp(tokens[j+1], "dma", strlen("dma"))) {
                   pipe_caps.type = kPipeTypeDMA;
-                  hw_resource->num_dma_pipe++;
+                  hw_resource_->num_dma_pipe++;
                 } else if (!strncmp(tokens[j+1], "cursor", strlen("cursor"))) {
                   pipe_caps.type = kPipeTypeCursor;
-                  hw_resource->num_cursor_pipe++;
+                  hw_resource_->num_cursor_pipe++;
                 }
               } else if (!strncmp(tokens[j], "pipe_ndx", strlen("pipe_ndx"))) {
                 pipe_caps.id = UINT32(atoi(tokens[j+1]));
@@ -288,18 +294,18 @@ DisplayError HWInfo::GetHWResourceInfo(HWResourceInfo *hw_resource) {
                 uint32_t token_fmt_count = 0;
                 if (!ParseString(tokens[j+1], tokens_fmt, max_count, ",\n", &token_fmt_count)) {
                   if (pipe_caps.type == kPipeTypeVIG) {
-                    ParseFormats(tokens_fmt, token_fmt_count, kHWVIGPipe, hw_resource);
+                    ParseFormats(tokens_fmt, token_fmt_count, kHWVIGPipe, hw_resource_);
                   } else if (pipe_caps.type == kPipeTypeRGB) {
-                    ParseFormats(tokens_fmt, token_fmt_count, kHWRGBPipe, hw_resource);
+                    ParseFormats(tokens_fmt, token_fmt_count, kHWRGBPipe, hw_resource_);
                   } else if (pipe_caps.type == kPipeTypeDMA) {
-                    ParseFormats(tokens_fmt, token_fmt_count, kHWDMAPipe, hw_resource);
+                    ParseFormats(tokens_fmt, token_fmt_count, kHWDMAPipe, hw_resource_);
                   } else if (pipe_caps.type == kPipeTypeCursor) {
-                    ParseFormats(tokens_fmt, token_fmt_count, kHWCursorPipe, hw_resource);
+                    ParseFormats(tokens_fmt, token_fmt_count, kHWCursorPipe, hw_resource_);
                   }
                 }
               }
             }
-            hw_resource->hw_pipes.push_back(pipe_caps);
+            hw_resource_->hw_pipes.push_back(pipe_caps);
           }
         }
       }
@@ -309,38 +315,39 @@ DisplayError HWInfo::GetHWResourceInfo(HWResourceInfo *hw_resource) {
   // Disable destination scalar count to 0 if extension library is not present
   DynLib extension_lib;
   if (!extension_lib.Open("libsdmextension.so")) {
-    hw_resource->hw_dest_scalar_info.count = 0;
+    hw_resource_->hw_dest_scalar_info.count = 0;
   }
 
   DLOGI("SDE Version = %d, SDE Revision = %x, RGB = %d, VIG = %d, DMA = %d, Cursor = %d",
-        hw_resource->hw_version, hw_resource->hw_revision, hw_resource->num_rgb_pipe,
-        hw_resource->num_vig_pipe, hw_resource->num_dma_pipe, hw_resource->num_cursor_pipe);
-  DLOGI("Upscale Ratio = %d, Downscale Ratio = %d, Blending Stages = %d", hw_resource->max_scale_up,
-        hw_resource->max_scale_down, hw_resource->num_blending_stages);
-  DLOGI("SourceSplit = %d QSEED3 = %d", hw_resource->is_src_split, hw_resource->has_qseed3);
+        hw_resource_->hw_version, hw_resource_->hw_revision, hw_resource_->num_rgb_pipe,
+        hw_resource_->num_vig_pipe, hw_resource_->num_dma_pipe, hw_resource_->num_cursor_pipe);
+  DLOGI("Upscale Ratio = %d, Downscale Ratio = %d, Blending Stages = %d",
+        hw_resource_->max_scale_up, hw_resource_->max_scale_down,
+        hw_resource_->num_blending_stages);
+  DLOGI("SourceSplit = %d QSEED3 = %d", hw_resource_->is_src_split, hw_resource_->has_qseed3);
   DLOGI("BWC = %d, UBWC = %d, Decimation = %d, Tile Format = %d Concurrent Writeback = %d",
-        hw_resource->has_bwc, hw_resource->has_ubwc, hw_resource->has_decimation,
-        hw_resource->has_macrotile, hw_resource->has_concurrent_writeback);
-  DLOGI("MaxLowBw = %" PRIu64 " , MaxHighBw = % " PRIu64 "", hw_resource->max_bandwidth_low,
-        hw_resource->max_bandwidth_high);
+        hw_resource_->has_bwc, hw_resource_->has_ubwc, hw_resource_->has_decimation,
+        hw_resource_->has_macrotile, hw_resource_->has_concurrent_writeback);
+  DLOGI("MaxLowBw = %" PRIu64 " , MaxHighBw = % " PRIu64 "", hw_resource_->max_bandwidth_low,
+        hw_resource_->max_bandwidth_high);
   DLOGI("MaxPipeBw = %" PRIu64 " KBps, MaxSDEClock = % " PRIu64 " Hz, ClockFudgeFactor = %f",
-        hw_resource->max_pipe_bw, hw_resource->max_sde_clk, hw_resource->clk_fudge_factor);
+        hw_resource_->max_pipe_bw, hw_resource_->max_sde_clk, hw_resource_->clk_fudge_factor);
   DLOGI("Prefill factors: Tiled_NV12 = %d, Tiled = %d, Linear = %d, Scale = %d, Fudge_factor = %d",
-        hw_resource->macrotile_nv12_factor, hw_resource->macrotile_factor,
-        hw_resource->linear_factor, hw_resource->scale_factor, hw_resource->extra_fudge_factor);
+        hw_resource_->macrotile_nv12_factor, hw_resource_->macrotile_factor,
+        hw_resource_->linear_factor, hw_resource_->scale_factor, hw_resource_->extra_fudge_factor);
 
-  if (hw_resource->separate_rotator || hw_resource->num_dma_pipe) {
-    GetHWRotatorInfo(hw_resource);
+  if (hw_resource_->separate_rotator || hw_resource_->num_dma_pipe) {
+    GetHWRotatorInfo(hw_resource_);
   }
 
   // If the driver doesn't spell out the wb index, assume it to be the number of rotators,
   // based on legacy implementation.
-  if (hw_resource->writeback_index == kHWBlockMax) {
-    hw_resource->writeback_index = hw_resource->hw_rot_info.num_rotator;
+  if (hw_resource_->writeback_index == kHWBlockMax) {
+    hw_resource_->writeback_index = hw_resource_->hw_rot_info.num_rotator;
   }
 
-  if (hw_resource->has_dyn_bw_support) {
-    DisplayError ret = GetDynamicBWLimits(hw_resource);
+  if (hw_resource_->has_dyn_bw_support) {
+    DisplayError ret = GetDynamicBWLimits(hw_resource_);
     if (ret != kErrorNone) {
       DLOGE("Failed to read dynamic band width info");
       return ret;
@@ -349,10 +356,12 @@ DisplayError HWInfo::GetHWResourceInfo(HWResourceInfo *hw_resource) {
     DLOGI("Has Support for multiple bw limits shown below");
     for (int index = 0; index < kBwModeMax; index++) {
       DLOGI("Mode-index=%d  total_bw_limit=%d and pipe_bw_limit=%d",
-            index, hw_resource->dyn_bw_info.total_bw_limit[index],
-            hw_resource->dyn_bw_info.pipe_bw_limit[index]);
+            index, hw_resource_->dyn_bw_info.total_bw_limit[index],
+            hw_resource_->dyn_bw_info.pipe_bw_limit[index]);
     }
   }
+
+  *hw_resource = *hw_resource_;
 
   return kErrorNone;
 }
