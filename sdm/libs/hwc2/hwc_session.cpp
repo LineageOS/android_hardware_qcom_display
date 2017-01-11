@@ -574,6 +574,10 @@ int32_t HWCSession::ValidateDisplay(hwc2_device_t *device, hwc2_display_t displa
       if (hwc_session->need_invalidate_) {
         hwc_session->callbacks_.Refresh(display);
       }
+
+      if (hwc_session->color_mgr_) {
+        hwc_session->color_mgr_->SetColorModeDetailEnhancer(hwc_session->hwc_display_[display]);
+      }
     }
 
     status = hwc_session->hwc_display_[display]->Validate(out_num_types, out_num_requests);
