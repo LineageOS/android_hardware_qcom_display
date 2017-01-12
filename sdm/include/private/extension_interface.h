@@ -59,7 +59,8 @@ class ExtensionInterface {
                                            PartialUpdateInterface **interface) = 0;
   virtual DisplayError DestroyPartialUpdate(PartialUpdateInterface *interface) = 0;
 
-  virtual DisplayError CreateStrategyExtn(DisplayType type, const HWResourceInfo &hw_resource_info,
+  virtual DisplayError CreateStrategyExtn(DisplayType type, BufferAllocator *buffer_allocator,
+                                          const HWResourceInfo &hw_resource_info,
                                           const HWPanelInfo &hw_panel_info,
                                           const HWMixerAttributes &mixer_attributes,
                                           const DisplayConfigVariableInfo &fb_config,
