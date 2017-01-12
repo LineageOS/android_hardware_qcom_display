@@ -363,12 +363,14 @@ void HWCDisplay::BuildLayerStack() {
       }
     }
 
+#ifdef USE_COLOR_METADATA
     if (layer->color_metadata.colorPrimaries == ColorPrimaries_BT2020 &&
        (layer->color_metadata.transfer == Transfer_SMPTE_ST2084 ||
         layer->color_metadata.transfer == Transfer_HLG)) {
       layer->flags.hdr = true;
       layer_stack_.flags.hdr_present = true;
     }
+#endif
 
     if (layer->flags.skip) {
       layer_stack_.flags.skip_present = true;
