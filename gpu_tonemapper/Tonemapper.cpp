@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -32,6 +32,7 @@ Tonemapper::Tonemapper()
   tonemapTexture = 0;
   lutXformTexture = 0;
   programID = 0;
+  eglImageWrapper = new EGLImageWrapper();
 }
 
 //-----------------------------------------------------------------------------
@@ -41,6 +42,13 @@ Tonemapper::~Tonemapper()
   engine_deleteInputBuffer(tonemapTexture);
   engine_deleteInputBuffer(lutXformTexture);
   engine_deleteProgram(programID);
+
+  // clear EGLImage mappings
+  if (eglImageWrapper != 0) {
+    eglImageWrapper->destroy();
+    delete eglImageWrapper;
+    eglImageWrapper = 0;
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -95,8 +103,8 @@ int Tonemapper::blit(const void *dst, const void *src, int srcFenceFd)
   engine_bind();
 
   // create eglimages if required
-  EGLImageBuffer *dst_buffer = EGLImageWrapper::wrap(dst);
-  EGLImageBuffer *src_buffer = EGLImageWrapper::wrap(src);
+  EGLImageBuffer *dst_buffer = eglImageWrapper->wrap(dst);
+  EGLImageBuffer *src_buffer = eglImageWrapper->wrap(src);
 
   // bind the program
   engine_setProgram(programID);
