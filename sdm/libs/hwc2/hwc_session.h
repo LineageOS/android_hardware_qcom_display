@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -30,6 +30,7 @@
 #include "hwc_display_external.h"
 #include "hwc_display_virtual.h"
 #include "hwc_color_manager.h"
+#include "hwc_socket_handler.h"
 
 namespace sdm {
 
