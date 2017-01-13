@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -236,6 +236,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool animating_ = false;
   HWCToneMapper *tone_mapper_ = NULL;
   HWCColorMode *color_mode_ = NULL;
+  int disable_hdr_handling_ = 0;  // disables HDR handling.
 
  private:
   void DumpInputBuffers(hwc_display_contents_1_t *content_list);
