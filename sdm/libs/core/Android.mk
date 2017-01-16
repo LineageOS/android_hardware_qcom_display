@@ -19,6 +19,10 @@ ifneq ($(TARGET_IS_HEADLESS), true)
     LOCAL_HW_INTF_PATH_2      := drm
 endif
 
+ifeq ($(TARGET_USES_DRM_PP),true)
+    LOCAL_CFLAGS              += -DPP_DRM_ENABLE
+endif
+
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps) $(kernel_deps)
 LOCAL_SRC_FILES               := core_interface.cpp \
                                  core_impl.cpp \
@@ -46,7 +50,8 @@ LOCAL_SRC_FILES               := core_interface.cpp \
 ifneq ($(TARGET_IS_HEADLESS), true)
     LOCAL_SRC_FILES           += $(LOCAL_HW_INTF_PATH_2)/hw_info_drm.cpp \
                                  $(LOCAL_HW_INTF_PATH_2)/hw_device_drm.cpp \
-                                 $(LOCAL_HW_INTF_PATH_2)/hw_events_drm.cpp
+                                 $(LOCAL_HW_INTF_PATH_2)/hw_events_drm.cpp \
+                                 $(LOCAL_HW_INTF_PATH_2)/hw_color_manager_drm.cpp
 endif
 
 include $(BUILD_SHARED_LIBRARY)
