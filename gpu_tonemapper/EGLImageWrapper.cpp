@@ -41,8 +41,12 @@ EGLImageBuffer *EGLImageWrapper::wrap(const void *pvt_handle)
     }
 
     android::sp<android::GraphicBuffer> graphicBuffer =
-        new android::GraphicBuffer(src->width, src->height, src->format, flags,
-                                   src->width /*src->stride*/, native_handle, false);
+        new android::GraphicBuffer(src->width, src->height, src->format,
+#ifndef __NOUGAT__
+                                   1, // Layer count
+#endif
+                                   flags, src->width /*src->stride*/,
+                                   native_handle, false);
 
     result = new EGLImageBuffer(graphicBuffer);
 
