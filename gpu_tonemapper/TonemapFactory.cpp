@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -19,7 +19,6 @@
 
 #include "TonemapFactory.h"
 #include <utils/Log.h>
-#include "EGLImageWrapper.h"
 #include "Tonemapper.h"
 #include "engine.h"
 
@@ -41,8 +40,6 @@ Tonemapper *TonemapperFactory_GetInstance(int type, void *colorMap, int colorMap
 void TonemapperFactory_Destroy()
 //------------------------------------------
 {
-  // clear EGLImage mappings
-  EGLImageWrapper::destroy();
   // shutdown the engine
   engine_shutdown();
 }

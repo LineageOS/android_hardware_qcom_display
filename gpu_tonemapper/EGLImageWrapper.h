@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -24,11 +24,11 @@
 #include "EGLImageBuffer.h"
 
 class EGLImageWrapper {
-  static std::map<int, EGLImageBuffer *> eglImageBufferMap;
+  std::map<int, EGLImageBuffer *> eglImageBufferMap;
 
  public:
-  static EGLImageBuffer *wrap(const void *pvt_handle);
-  static void destroy();
+  EGLImageBuffer *wrap(const void *pvt_handle);
+  void destroy();
 };
 
 #endif  //__TONEMAPPER_EGLIMAGEWRAPPER_H__

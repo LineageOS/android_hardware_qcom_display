@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -23,11 +23,14 @@
 #define TONEMAP_FORWARD 0
 #define TONEMAP_INVERSE 1
 
+#include "EGLImageWrapper.h"
+
 class Tonemapper {
  private:
   unsigned int tonemapTexture;
   unsigned int lutXformTexture;
   unsigned int programID;
+  EGLImageWrapper* eglImageWrapper;
   Tonemapper();
 
  public:
