@@ -39,6 +39,7 @@ Tonemapper::Tonemapper()
 Tonemapper::~Tonemapper()
 //-----------------------------------------------------------------------------
 {
+  engine_bind();
   engine_deleteInputBuffer(tonemapTexture);
   engine_deleteInputBuffer(lutXformTexture);
   engine_deleteProgram(programID);
