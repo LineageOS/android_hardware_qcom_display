@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -21,8 +21,6 @@
 #include <cutils/native_handle.h>
 #include <gralloc_priv.h>
 #include <ui/GraphicBuffer.h>
-
-std::map<int, EGLImageBuffer *> EGLImageWrapper::eglImageBufferMap;
 
 //-----------------------------------------------------------------------------
 EGLImageBuffer *EGLImageWrapper::wrap(const void *pvt_handle)
