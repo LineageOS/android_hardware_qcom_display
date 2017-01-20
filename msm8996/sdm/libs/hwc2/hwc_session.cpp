@@ -143,7 +143,8 @@ int HWCSession::Deinit() {
     color_mgr_->DestroyColorManager();
   }
   uevent_thread_exit_ = true;
-  pthread_join(uevent_thread_, NULL);
+  DLOGD("Terminating uevent thread");
+  Sys::pthread_cancel_(uevent_thread_);
 
   DisplayError error = CoreInterface::DestroyCore();
   if (error != kErrorNone) {
