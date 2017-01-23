@@ -71,6 +71,13 @@ bool isUBwcEnabled(int format, int usage);
 // Function to check if the format is an RGB format
 bool isUncompressedRgbFormat(int format);
 
+#ifdef COMPILE_DRM
+int getPlaneStrideOffset(private_handle_t *hnd, uint32_t *stride,
+        uint32_t *offset, uint32_t *num_planes);
+
+void getDRMFormat(int hal_format, int flags, uint32_t *drm_format,
+        uint64_t *drm_format_modifier);
+#endif
 /*****************************************************************************/
 
 class Locker {
