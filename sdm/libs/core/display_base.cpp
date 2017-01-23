@@ -558,6 +558,12 @@ void DisplayBase::AppendDump(char *buffer, uint32_t length) {
     }
   }
 
+  LayerRect &fb_roi = layer_info.partial_fb_roi;
+  if (IsValid(fb_roi)) {
+    DumpImpl::AppendString(buffer, length, "\nPartial FB ROI(L T R B) : (%d %d %d %d)",
+                          INT(fb_roi.left), INT(fb_roi.top), INT(fb_roi.right), INT(fb_roi.bottom));
+  }
+
   const char *header  = "\n| Idx |  Comp Type  |  Split | WB |  Pipe  |    W x H    |          Format          |  Src Rect (L T R B) |  Dst Rect (L T R B) |  Z |    Flags   | Deci(HxV) | CS | Rng |";  //NOLINT
   const char *newline = "\n|-----|-------------|--------|----|--------|-------------|--------------------------|---------------------|---------------------|----|------------|-----------|----|-----|";  //NOLINT
   const char *format  = "\n| %3s | %11s "     "| %6s " "| %2s | 0x%04x | %4d x %4d | %24s "                  "| %4d %4d %4d %4d "  "| %4d %4d %4d %4d "  "| %2s | %10s "   "| %9s | %2s | %3s |";  //NOLINT
