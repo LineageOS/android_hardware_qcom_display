@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -37,44 +37,64 @@
 
 #include <core/layer_stack.h>
 #include <utils/sys.h>
-
+#include <vector>
 #include "hwc_buffer_sync_handler.h"
+#include "hwc_buffer_allocator.h"
 
 class Tonemapper;
 
 namespace sdm {
+
+struct ToneMapConfig {
+  int type = 0;
+  ColorPrimaries colorPrimaries = ColorPrimaries_Max;
+  GammaTransfer transfer = Transfer_Max;
+  LayerBufferFormat format = kFormatRGBA8888;
+  bool secure = false;
+};
+
+class ToneMapSession {
+ public:
+  ~ToneMapSession();
+  DisplayError AllocateIntermediateBuffers(int width, int height, int format, int usage);
+  void FreeIntermediateBuffers();
+  void UpdateBuffer(int acquire_fence, LayerBuffer *buffer);
+  void SetReleaseFence(int fd);
+  void SetToneMapConfig(Layer *layer);
+  bool IsSameToneMapConfig(Layer *layer);
+
+  static const uint8_t kNumIntermediateBuffers = 2;
+  Tonemapper *gpu_tone_mapper_ = NULL;
+  ToneMapConfig tone_map_config_ = {};
+  uint8_t current_buffer_index_ = 0;
+  private_handle_t *intermediate_buffer_[kNumIntermediateBuffers] = {NULL, NULL};
+  int release_fence_fd_[kNumIntermediateBuffers] = {-1, -1};
+  bool acquired_ = false;
+  int layer_index_ = -1;
+};
 
 class HWCToneMapper {
  public:
   HWCToneMapper() {}
   ~HWCToneMapper() {}
 
-  int Init();
-  void DeInit();
   int HandleToneMap(hwc_display_contents_1_t *content_list, LayerStack *layer_stack);
-  void Terminate();
+  bool IsActive() { return !tone_map_sessions_.empty(); }
   void PostCommit(LayerStack *layer_stack);
-  bool IsActive() { return active_; }
   void SetFrameDumpConfig(uint32_t count);
+  void Terminate();
 
  private:
-  int AllocateIntermediateBuffers(uint32_t width, uint32_t height, uint32_t format, uint32_t usage);
-  void FreeIntermediateBuffers();
-  void SetReleaseFence(int fence_fd);
-  void CloseFd(int *fd);
-  void DumpToneMapOutput(int *acquire_fence);
+  void ToneMap(hwc_layer_1_t *hwc_layer, Layer *layer, ToneMapSession *session);
+  DisplayError AcquireToneMapSession(Layer *layer, uint32_t *session_index);
+  void DumpToneMapOutput(ToneMapSession *session, int *acquire_fence);
 
-  static const uint32_t kNumIntermediateBuffers = 2;
-  bool active_ = false;
-
-  private_handle_t *intermediate_buffer_[kNumIntermediateBuffers] = {NULL, NULL};
-  uint32_t current_intermediate_buffer_index_ = 0;
-  int release_fence_fd_[kNumIntermediateBuffers];
-
+  std::vector<ToneMapSession*> tone_map_sessions_;
   HWCBufferSyncHandler buffer_sync_handler_ = {};
-  Tonemapper *gpu_tone_mapper_ = NULL;
+  HWCBufferAllocator buffer_allocator_ = {};
   uint32_t dump_frame_count_ = 0;
   uint32_t dump_frame_index_ = 0;
+  uint32_t fb_session_index_ = 0;
 };
 
 }  // namespace sdm

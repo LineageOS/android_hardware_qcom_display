@@ -31,7 +31,8 @@ LOCAL_SRC_FILES               := hwc_session.cpp \
                                  hwc_layers.cpp \
                                  hwc_callbacks.cpp \
                                  ../hwc/blit_engine_c2d.cpp \
-                                 ../hwc/cpuhint.cpp
+                                 ../hwc/cpuhint.cpp \
+                                 ../hwc/hwc_socket_handler.cpp
 
 include $(BUILD_SHARED_LIBRARY)
 endif

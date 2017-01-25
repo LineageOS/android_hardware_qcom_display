@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -40,6 +40,7 @@
 #include <map>
 #include <utility>
 #include <vector>
+#include <string>
 
 #include "blit_engine_c2d.h"
 #include "hwc_debugger.h"
@@ -61,6 +62,62 @@ static void ApplyDeInterlaceAdjustment(Layer *layer) {
     layer->src_rect.top = ROUND_UP_ALIGN_DOWN(layer->src_rect.top / 2.0f, 2);
     layer->src_rect.bottom = layer->src_rect.top + floorf(height);
   }
+}
+
+void HWCColorMode::Init() {
+  int ret = PopulateColorModes();
+  if (ret != 0) {
+    DLOGW("Failed!!");
+  }
+  return;
+}
+
+int HWCColorMode::SetColorMode(const std::string &color_mode) {
+  if (color_modes_.empty()) {
+    DLOGW("No Color Modes supported");
+    return -1;
+  }
+
+  std::vector<std::string>::iterator it = std::find(color_modes_.begin(), color_modes_.end(),
+                                                    color_mode);
+  if (it == color_modes_.end()) {
+    DLOGE("Invalid colorMode request: %s", color_mode.c_str());
+    return -1;
+  }
+
+  DisplayError error = display_intf_->SetColorMode(color_mode);
+  if (error != kErrorNone) {
+    DLOGE("Failed to set color_mode = %s", color_mode.c_str());
+    return -1;
+  }
+  current_color_mode_ = color_mode;
+
+  return 0;
+}
+
+const std::vector<std::string> &HWCColorMode::GetColorModes() {
+  return color_modes_;
+}
+
+int HWCColorMode::PopulateColorModes() {
+  uint32_t color_mode_count = 0;
+  DisplayError error = display_intf_->GetColorModeCount(&color_mode_count);
+  if (error != kErrorNone || (color_mode_count == 0)) {
+    return -1;
+  }
+
+  DLOGI("Color Mode count = %d", color_mode_count);
+
+  color_modes_.resize(color_mode_count);
+
+  // SDM returns modes which is string
+  error = display_intf_->GetColorModes(&color_mode_count, &color_modes_);
+  if (error != kErrorNone) {
+    DLOGE("GetColorModes Failed for count = %d", color_mode_count);
+    return -1;
+  }
+
+  return 0;
 }
 
 HWCDisplay::HWCDisplay(CoreInterface *core_intf, hwc_procs_t const **hwc_procs, DisplayType type,
@@ -100,7 +157,6 @@ int HWCDisplay::Init() {
   }
 
   tone_mapper_ = new HWCToneMapper();
-  tone_mapper_->Init();
 
   display_intf_->GetRefreshRateRange(&min_refresh_rate_, &max_refresh_rate_);
   current_refresh_rate_ = max_refresh_rate_;

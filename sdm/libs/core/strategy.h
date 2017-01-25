@@ -27,12 +27,14 @@
 
 #include <core/display_interface.h>
 #include <private/extension_interface.h>
+#include <core/buffer_allocator.h>
 
 namespace sdm {
 
 class Strategy {
  public:
-  Strategy(ExtensionInterface *extension_intf, DisplayType type,
+  Strategy(ExtensionInterface *extension_intf, BufferAllocator *buffer_allocator,
+           DisplayType type,
            const HWResourceInfo &hw_resource_info, const HWPanelInfo &hw_panel_info,
            const HWMixerAttributes &mixer_attributes, const HWDisplayAttributes &display_attributes,
            const DisplayConfigVariableInfo &fb_config);
@@ -67,6 +69,7 @@ class Strategy {
   bool extn_start_success_ = false;
   bool tried_default_ = false;
   bool disable_gpu_comp_ = false;
+  BufferAllocator *buffer_allocator_ = NULL;
 };
 
 }  // namespace sdm

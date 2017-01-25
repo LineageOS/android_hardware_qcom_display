@@ -205,8 +205,8 @@ struct LayerRequestFlags {
 struct LayerRequest {
   LayerRequestFlags flags;  // Flags associated with this request
   LayerBufferFormat format = kFormatRGBA8888;  // Requested format
-  uint32_t width = 0;
-  uint32_t height = 0;
+  uint32_t width = 0;  // Requested unaligned width.
+  uint32_t height = 0;  // Requested unalighed height
 };
 
 /*! @brief This structure defines flags associated with a layer stack. The 1-bit flag can be set to

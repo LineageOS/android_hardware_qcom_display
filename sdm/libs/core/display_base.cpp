@@ -108,6 +108,8 @@ DisplayError DisplayBase::Init() {
     DLOGW("InitColorModes failed for display = %d", display_type_);
   }
 
+  Debug::Get()->GetProperty("sdm.disable_hdr_lut_gen", &disable_hdr_lut_gen_);
+
   return kErrorNone;
 
 CleanupOnError:
@@ -1185,8 +1187,8 @@ DisplayError DisplayBase::InitializeColorModes() {
 DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
   DisplayError error = kErrorNone;
 
-  if (!color_mgr_) {
-    // TODO(user): Handle the case where color_mgr is not present
+  if (disable_hdr_lut_gen_) {
+    // Do not apply HDR Mode when hdr lut generation is disabled
     return kErrorNone;
   }
 
@@ -1194,19 +1196,23 @@ DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
     //  HDR playback off - set prev mode
     if (hdr_playback_mode_) {
       hdr_playback_mode_ = false;
-      DLOGI("Setting color mode = %s", current_color_mode_.c_str());
-      error = SetColorModeInternal(current_color_mode_);
-    // TODO(user): Enable DPPS
+      if (color_mgr_) {
+        DLOGI("Setting color mode = %s", current_color_mode_.c_str());
+        error = SetColorModeInternal(current_color_mode_);
+      }
+      comp_manager_->ControlDpps(true);  // Enable Dpps
     }
   } else {
     // hdr is present
     if (!hdr_playback_mode_ && !layer_stack->flags.animating) {
       // hdr is starting
       hdr_playback_mode_ = true;
-      DLOGI("Setting HDR color mode = %s", hdr_color_mode_.c_str());
-      error = SetColorModeInternal(hdr_color_mode_);
+      if (color_mgr_) {
+        DLOGI("Setting HDR color mode = %s", hdr_color_mode_.c_str());
+        error = SetColorModeInternal(hdr_color_mode_);
+      }
+      comp_manager_->ControlDpps(false);  // Disable Dpps
     }
-    // TODO(user): Disable DPPS
   }
 
   return error;

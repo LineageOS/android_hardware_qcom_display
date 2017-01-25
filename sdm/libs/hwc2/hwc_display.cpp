@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -361,13 +361,6 @@ void HWCDisplay::BuildLayerStack() {
       if (handle->flags & private_handle_t::PRIV_FLAGS_PROTECTED_BUFFER) {
         layer_stack_.flags.secure_present = true;
       }
-    }
-
-    if (layer->color_metadata.colorPrimaries == ColorPrimaries_BT2020 &&
-       (layer->color_metadata.transfer == Transfer_SMPTE_ST2084 ||
-        layer->color_metadata.transfer == Transfer_HLG)) {
-      layer->flags.hdr = true;
-      layer_stack_.flags.hdr_present = true;
     }
 
     if (layer->flags.skip) {

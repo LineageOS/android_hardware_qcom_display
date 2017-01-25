@@ -417,9 +417,8 @@ int HWCColorManager::SetFrameCapture(void *params, bool enable, HWCDisplay *hwc_
   return ret;
 }
 
-int HWCColorManager::SetDetailedEnhancer(void *params, HWCDisplay *hwc_display) {
-  SCOPE_LOCK(locker_);
-  DisplayError err = kErrorNone;
+int HWCColorManager::SetHWDetailedEnhancerConfig(void *params, HWCDisplay *hwc_display) {
+  int err = -1;
   DisplayDetailEnhancerData de_data;
 
   PPDETuningCfgData *de_tuning_cfg_data = reinterpret_cast<PPDETuningCfgData*>(params);
@@ -485,7 +484,31 @@ int HWCColorManager::SetDetailedEnhancer(void *params, HWCDisplay *hwc_display) 
     }
     de_tuning_cfg_data->cfg_pending = false;
   }
+  return err;
+}
 
+void HWCColorManager::SetColorModeDetailEnhancer(HWCDisplay *hwc_display) {
+  SCOPE_LOCK(locker_);
+  int err = -1;
+  PPPendingParams pending_action;
+  PPDisplayAPIPayload req_payload;
+
+  pending_action.action = kGetDetailedEnhancerData;
+  pending_action.params = NULL;
+
+  if (hwc_display) {
+    err = hwc_display->ColorSVCRequestRoute(req_payload, NULL, &pending_action);
+    if (!err && pending_action.action == kConfigureDetailedEnhancer) {
+      err = SetHWDetailedEnhancerConfig(pending_action.params, hwc_display);
+    }
+  }
+  return;
+}
+
+int HWCColorManager::SetDetailedEnhancer(void *params, HWCDisplay *hwc_display) {
+  SCOPE_LOCK(locker_);
+  int err = -1;
+  err = SetHWDetailedEnhancerConfig(params, hwc_display);
   return err;
 }
 

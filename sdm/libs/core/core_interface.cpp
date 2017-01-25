@@ -56,6 +56,15 @@ DisplayError CoreInterface::CreateCore(DebugHandler *debug_handler,
                                        BufferAllocator *buffer_allocator,
                                        BufferSyncHandler *buffer_sync_handler,
                                        CoreInterface **interface, uint32_t client_version) {
+  return CreateCore(debug_handler, buffer_allocator, buffer_sync_handler, NULL,
+                    interface, client_version);
+}
+
+DisplayError CoreInterface::CreateCore(DebugHandler *debug_handler,
+                                       BufferAllocator *buffer_allocator,
+                                       BufferSyncHandler *buffer_sync_handler,
+                                       SocketHandler *socket_handler,
+                                       CoreInterface **interface, uint32_t client_version) {
   SCOPE_LOCK(g_core.locker);
 
   if (!debug_handler || !buffer_allocator || !buffer_sync_handler || !interface) {
@@ -81,7 +90,7 @@ DisplayError CoreInterface::CreateCore(DebugHandler *debug_handler,
 
   // Create appropriate CoreImpl object based on client version.
   if (GET_REVISION(client_version) == CoreImpl::kRevision) {
-    core_impl = new CoreImpl(buffer_allocator, buffer_sync_handler);
+    core_impl = new CoreImpl(buffer_allocator, buffer_sync_handler, socket_handler);
   } else {
     return kErrorNotSupported;
   }

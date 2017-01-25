@@ -40,7 +40,8 @@ namespace sdm {
 class CompManager : public DumpImpl {
  public:
   DisplayError Init(const HWResourceInfo &hw_res_info_, ExtensionInterface *extension_intf,
-                    BufferAllocator *buffer_allocator, BufferSyncHandler *buffer_sync_handler);
+                    BufferAllocator *buffer_allocator, BufferSyncHandler *buffer_sync_handler,
+                    SocketHandler *socket_handler);
   DisplayError Deinit();
   DisplayError RegisterDisplay(DisplayType type, const HWDisplayAttributes &display_attributes,
                                const HWPanelInfo &hw_panel_info,
@@ -71,6 +72,7 @@ class CompManager : public DumpImpl {
   DisplayError SetDetailEnhancerData(Handle display_ctx, const DisplayDetailEnhancerData &de_data);
   DisplayError SetCompositionState(Handle display_ctx, LayerComposition composition_type,
                                    bool enable);
+  DisplayError ControlDpps(bool enable);
 
   // DumpImpl method
   virtual void AppendDump(char *buffer, uint32_t length);
@@ -106,9 +108,11 @@ class CompManager : public DumpImpl {
                                         // mode, where strategy manager chooses the best strategy
                                         // that uses optimal number of pipes for each display
   HWResourceInfo hw_res_info_;
+  BufferAllocator *buffer_allocator_ = NULL;
   ExtensionInterface *extension_intf_ = NULL;
   uint32_t max_layers_ = kMaxSDELayers;
   uint32_t max_sde_ext_layers_ = 0;
+  DppsControlInterface *dpps_ctrl_intf_ = NULL;
 };
 
 }  // namespace sdm

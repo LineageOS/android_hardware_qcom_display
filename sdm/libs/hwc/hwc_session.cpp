@@ -131,7 +131,8 @@ int HWCSession::Init() {
   }
 
   DisplayError error = CoreInterface::CreateCore(HWCDebugHandler::Get(), &buffer_allocator_,
-                                                 &buffer_sync_handler_, &core_intf_);
+                                                 &buffer_sync_handler_, &socket_handler_,
+                                                 &core_intf_);
   if (error != kErrorNone) {
     DLOGE("Display core initialization failed. Error = %d", error);
     return -EINVAL;
@@ -372,6 +373,7 @@ int HWCSession::Set(hwc_composer_device_1 *device, size_t num_displays,
       int ret = hwc_session->color_mgr_->SolidFillLayersSet(displays, primary_display);
       if (ret)
         return 0;
+      hwc_session->color_mgr_->SetColorModeDetailEnhancer(primary_display);
     }
   }
 
