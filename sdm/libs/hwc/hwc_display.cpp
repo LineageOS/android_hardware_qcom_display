@@ -1481,6 +1481,10 @@ int HWCDisplay::GetDisplayAttributesForConfig(int config,
   return display_intf_->GetConfig(UINT32(config), display_attributes) == kErrorNone ? 0 : -1;
 }
 
+int HWCDisplay::GetDisplayFixedConfig(DisplayConfigFixedInfo *fixed_info) {
+  return display_intf_->GetConfig(fixed_info) == kErrorNone ? 0 : -1;
+}
+
 // TODO(user): HWC needs to know updating for dyn_fps, cpu hint features,
 // once the features are moved to SDM, the two functions below can be removed.
 uint32_t HWCDisplay::GetUpdatingLayersCount(uint32_t app_layer_count) {
