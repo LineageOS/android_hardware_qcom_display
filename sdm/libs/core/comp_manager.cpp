@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -546,6 +546,31 @@ DisplayError CompManager::ControlDpps(bool enable) {
   }
 
   return kErrorNone;
+}
+
+bool CompManager::SetDisplayState(Handle display_ctx,
+                                  DisplayState state, DisplayType display_type) {
+  display_state_[display_type] = state;
+
+  switch (state) {
+  case kStateOff:
+    Purge(display_ctx);
+    configured_displays_.reset(display_type);
+    DLOGV_IF(kTagCompManager, "configured_displays_ = 0x%x", configured_displays_);
+    break;
+
+  case kStateOn:
+    if (registered_displays_.count() > 1) {
+      safe_mode_ = true;
+      DLOGV_IF(kTagCompManager, "safe_mode = %d", safe_mode_);
+    }
+    break;
+
+  default:
+    break;
+  }
+
+  return true;
 }
 
 }  // namespace sdm
