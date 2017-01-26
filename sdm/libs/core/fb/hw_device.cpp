@@ -899,6 +899,11 @@ void HWDevice::GetHWPanelInfoByNode(int device_node, HWPanelInfo *panel_info) {
         panel_info->primaries.blue[0] = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "blue_chromaticity_y", strlen("blue_chromaticity_y"))) {
         panel_info->primaries.blue[1] = UINT32(atoi(tokens[1]));
+      } else if (!strncmp(tokens[0], "panel_orientation", strlen("panel_orientation"))) {
+        int32_t panel_orient = atoi(tokens[1]);
+        panel_info->panel_orientation.flip_horizontal = ((panel_orient & MDP_FLIP_LR) > 0);
+        panel_info->panel_orientation.flip_vertical = ((panel_orient & MDP_FLIP_UD) > 0);
+        panel_info->panel_orientation.rotation = ((panel_orient & MDP_ROT_90) > 0);
       }
     }
   }
