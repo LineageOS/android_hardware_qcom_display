@@ -38,6 +38,8 @@ class HWVirtual : public HWDevice {
   }
   virtual DisplayError GetMixerAttributes(HWMixerAttributes *mixer_attributes);
   virtual DisplayError SetDisplayAttributes(const HWDisplayAttributes &display_attributes);
+  virtual DisplayError GetDisplayAttributes(uint32_t index,
+                                            HWDisplayAttributes *display_attributes);
 
  protected:
   virtual DisplayError Init();
