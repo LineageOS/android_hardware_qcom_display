@@ -1197,6 +1197,11 @@ DisplayError DisplayBase::InitializeColorModes() {
 DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
   DisplayError error = kErrorNone;
 
+  if (display_type_ != kPrimary) {
+    // Handling is needed for only primary displays
+    return kErrorNone;
+  }
+
   if (!layer_stack->flags.hdr_present) {
     //  HDR playback off - set prev mode
     if (hdr_playback_mode_) {
