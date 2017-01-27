@@ -73,6 +73,7 @@ using sde_drm::DRMConnectorInfo;
 using sde_drm::DRMPPFeatureInfo;
 using sde_drm::DRMRect;
 using sde_drm::DRMBlendType;
+using sde_drm::DRMSrcConfig;
 using sde_drm::DRMOps;
 using sde_drm::DRMTopology;
 
@@ -426,6 +427,9 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
                                   pipe_info->horizontal_decimation);
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_V_DECIMATION, pipe_id,
                                   pipe_info->vertical_decimation);
+        uint32_t config = 0;
+        SetSrcConfig(layer.input_buffer, &config);
+        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_SRC_CONFIG, pipe_id, config);;
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_FB_ID, pipe_id, input_buffer->fb_id);
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_CRTC, pipe_id, token_.crtc_id);
         if (!validate && input_buffer->acquire_fence_fd >= 0) {
@@ -563,6 +567,13 @@ void HWDeviceDRM::SetBlending(const LayerBlending &source, DRMBlendType *target)
       break;
     default:
       *target = DRMBlendType::UNDEFINED;
+  }
+}
+
+
+void HWDeviceDRM::SetSrcConfig(const LayerBuffer &input_buffer, uint32_t *config) {
+  if (input_buffer.flags.interlace) {
+    *config |= (0x01 << UINT32(DRMSrcConfig::DEINTERLACE));
   }
 }
 
