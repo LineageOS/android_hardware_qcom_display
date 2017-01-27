@@ -15,7 +15,7 @@ LOCAL_CLANG                   := true
 
 LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware libhardware_legacy \
                                  libutils libcutils libsync libmemalloc libqdutils libdl \
-                                 libpowermanager libsdmutils libgpu_tonemapper  libc++
+                                 libpowermanager libsdmutils libgpu_tonemapper  libc++ liblog
 
 LOCAL_SRC_FILES               := hwc_session.cpp \
                                  hwc_display.cpp \
@@ -30,7 +30,8 @@ LOCAL_SRC_FILES               := hwc_session.cpp \
                                  blit_engine_c2d.cpp \
                                  cpuhint.cpp \
                                  hwc_tonemapper.cpp \
-                                 hwc_socket_handler.cpp
+                                 hwc_socket_handler.cpp \
+                                 hwc_display_external_test.cpp
 
 include $(BUILD_SHARED_LIBRARY)
 endif

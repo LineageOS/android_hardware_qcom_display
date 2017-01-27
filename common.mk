@@ -24,6 +24,7 @@ endif
 
 common_includes += $(display_top)/include
 common_includes += $(display_top)/sdm/include
+common_includes += system/core/base/include
 
 common_header_export_path := qcom/display
 

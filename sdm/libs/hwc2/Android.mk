@@ -17,7 +17,7 @@ LOCAL_CLANG                   := true
 
 LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware libhardware_legacy \
                                  libutils libcutils libsync libmemalloc libqdutils libdl \
-                                 libpowermanager libsdmutils libc++
+                                 libpowermanager libsdmutils libc++ liblog
 
 LOCAL_SRC_FILES               := hwc_session.cpp \
                                  hwc_display.cpp \

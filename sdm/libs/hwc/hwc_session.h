@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -86,6 +86,8 @@ class HWCSession : hwc_composer_device_1_t, public qClient::BnQClient {
   int DisconnectDisplay(int disp);
   void HandleSecureDisplaySession(hwc_display_contents_1_t **displays);
   int GetVsyncPeriod(int disp);
+  int CreateExternalDisplay(int disp, uint32_t primary_width, uint32_t primary_height,
+                            bool use_primary_res);
 
   // QClient methods
   virtual android::status_t notifyCallback(uint32_t command, const android::Parcel *input_parcel,

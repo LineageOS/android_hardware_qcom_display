@@ -280,6 +280,7 @@ int gpu_context_t::alloc_impl(int w, int h, int format, int usage,
             grallocFormat = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC;
         else if(usage & GRALLOC_USAGE_HW_VIDEO_ENCODER) {
             if(MDPCapabilityInfo::getInstance().isWBUBWCSupportedByMDP() &&
+               !IAllocController::getInstance()->isDisableUBWCForEncoder() &&
                usage & GRALLOC_USAGE_HW_COMPOSER)
               grallocFormat = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC;
             else

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -67,6 +67,7 @@ class CompManager : public DumpImpl {
   DisplayError ValidateCursorPosition(Handle display_ctx, HWLayers *hw_layers, int x, int y);
   bool SupportLayerAsCursor(Handle display_ctx, HWLayers *hw_layers);
   bool CanSetIdleTimeout(Handle display_ctx);
+  bool SetDisplayState(Handle display_ctx, DisplayState state, DisplayType display_type);
   DisplayError SetMaxBandwidthMode(HWBwModes mode);
   DisplayError GetScaleLutConfig(HWScaleLutInfo *lut_info);
   DisplayError SetDetailEnhancerData(Handle display_ctx, const DisplayDetailEnhancerData &de_data);
@@ -104,6 +105,7 @@ class CompManager : public DumpImpl {
   ResourceInterface *resource_intf_ = NULL;
   std::bitset<kDisplayMax> registered_displays_;  // Bit mask of registered displays
   std::bitset<kDisplayMax> configured_displays_;  // Bit mask of sucessfully configured displays
+  uint32_t display_state_[kDisplayMax] = {};
   bool safe_mode_ = false;              // Flag to notify all displays to be in resource crunch
                                         // mode, where strategy manager chooses the best strategy
                                         // that uses optimal number of pipes for each display
