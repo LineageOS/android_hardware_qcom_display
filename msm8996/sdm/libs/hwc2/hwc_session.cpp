@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -28,8 +28,6 @@
 #include <sys/prctl.h>
 #include <binder/Parcel.h>
 #include <QService.h>
-#include <gr.h>
-#include <gralloc_priv.h>
 #include <display_config.h>
 #include <utils/debug.h>
 #include <sync/sync.h>

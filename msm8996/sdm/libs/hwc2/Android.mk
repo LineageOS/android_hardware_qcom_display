@@ -30,13 +30,17 @@ LOCAL_SRC_FILES               := hwc_session.cpp \
                                  hwc_display_external.cpp \
                                  hwc_display_virtual.cpp \
                                  ../hwc/hwc_debugger.cpp \
-                                 ../hwc/hwc_buffer_allocator.cpp \
                                  ../hwc/hwc_buffer_sync_handler.cpp \
                                  hwc_color_manager.cpp \
                                  hwc_layers.cpp \
                                  hwc_callbacks.cpp \
-                                 ../hwc/blit_engine_c2d.cpp \
                                  ../hwc/cpuhint.cpp
+
+ifneq ($(TARGET_USES_GRALLOC1), true)
+    LOCAL_SRC_FILES += ../hwc/hwc_buffer_allocator.cpp
+else
+    LOCAL_SRC_FILES += hwc_buffer_allocator.cpp
+endif
 
 include $(BUILD_SHARED_LIBRARY)
 endif

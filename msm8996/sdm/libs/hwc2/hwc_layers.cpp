@@ -18,7 +18,9 @@
  */
 
 #include "hwc_layers.h"
+#ifndef USE_GRALLOC1
 #include <gr.h>
+#endif
 #include <utils/debug.h>
 #include <cmath>
 
@@ -29,7 +31,8 @@ namespace sdm {
 std::atomic<hwc2_layer_t> HWCLayer::next_id_(1);
 
 // Layer operations
-HWCLayer::HWCLayer(hwc2_display_t display_id) : id_(next_id_++), display_id_(display_id) {
+HWCLayer::HWCLayer(hwc2_display_t display_id, HWCBufferAllocator *buf_allocator)
+  : id_(next_id_++), display_id_(display_id), buffer_allocator_(buf_allocator) {
   layer_ = new Layer();
   layer_->input_buffer = new LayerBuffer();
   // Fences are deferred, so the first time this layer is presented, return -1
@@ -75,6 +78,7 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
   }
 
   LayerBuffer *layer_buffer = layer_->input_buffer;
+
   layer_buffer->width = UINT32(handle->width);
   layer_buffer->height = UINT32(handle->height);
   layer_buffer->format = GetSDMFormat(handle->format, handle->flags);
@@ -82,7 +86,12 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
     return HWC2::Error::BadLayer;
   }
 
-  if (handle->bufferType == BUFFER_TYPE_VIDEO) {
+#ifdef USE_GRALLOC1
+  // TODO(user): Clean this up
+  if (handle->buffer_type == BUFFER_TYPE_VIDEO) {
+#else
+    if (handle->bufferType == BUFFER_TYPE_VIDEO) {
+#endif
     layer_buffer->flags.video = true;
   }
   // TZ Protected Buffer - L1
@@ -459,7 +468,11 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
   if (meta_data->operation & UPDATE_BUFFER_GEOMETRY) {
     int actual_width = pvt_handle->width;
     int actual_height = pvt_handle->height;
-    AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(pvt_handle, actual_width, actual_height);
+#ifdef USE_GRALLOC1
+    buffer_allocator_->GetCustomWidthAndHeight(pvt_handle, &actual_width, &actual_height);
+#else
+    AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(handle, aligned_width, aligned_height);
+#endif
     layer_buffer->width = UINT32(actual_width);
     layer_buffer->height = UINT32(actual_height);
   }
