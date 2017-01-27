@@ -46,7 +46,6 @@ Tonemapper::~Tonemapper()
 
   // clear EGLImage mappings
   if (eglImageWrapper != 0) {
-    eglImageWrapper->destroy();
     delete eglImageWrapper;
     eglImageWrapper = 0;
   }

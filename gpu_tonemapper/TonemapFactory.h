@@ -30,9 +30,6 @@ extern "C" {
 Tonemapper *TonemapperFactory_GetInstance(int type, void *colorMap, int colorMapSize,
                                           void *lutXform, int lutXformSize);
 
-// destroy tonemap session
-void TonemapperFactory_Destroy();
-
 #ifdef __cplusplus
 }
 #endif

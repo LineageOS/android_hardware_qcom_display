@@ -32,9 +32,3 @@ Tonemapper *TonemapperFactory_GetInstance(int type, void *colorMap, int colorMap
 
   return tonemapper;
 }
-
-//------------------------------------------
-void TonemapperFactory_Destroy()
-//------------------------------------------
-{
-}
