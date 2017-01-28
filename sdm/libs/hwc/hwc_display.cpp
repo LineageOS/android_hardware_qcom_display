@@ -1156,16 +1156,37 @@ void HWCDisplay::MarkLayersForGPUBypass(hwc_display_contents_1_t *content_list) 
 void HWCDisplay::ApplyScanAdjustment(hwc_rect_t *display_frame) {
 }
 
-DisplayError HWCDisplay::SetCSC(ColorSpace_t source, LayerCSC *target) {
-  switch (source) {
-  case ITU_R_601:       *target = kCSCLimitedRange601;   break;
-  case ITU_R_601_FR:    *target = kCSCFullRange601;      break;
-  case ITU_R_709:       *target = kCSCLimitedRange709;   break;
-  default:
-    DLOGE("Unsupported CSC: %d", source);
-    return kErrorNotSupported;
-  }
+DisplayError HWCDisplay::SetCSC(const MetaData_t *meta_data, ColorMetaData *color_metadata) {
+  if (meta_data->operation & COLOR_METADATA) {
+#ifdef USE_COLOR_METADATA
+    *color_metadata = meta_data->color;
+#endif
+  } else if (meta_data->operation & UPDATE_COLOR_SPACE) {
+    ColorSpace_t csc = meta_data->colorSpace;
+    color_metadata->range = Range_Limited;
 
+    if (csc == ITU_R_601_FR || csc == ITU_R_2020_FR) {
+      color_metadata->range = Range_Full;
+    }
+
+    switch (csc) {
+    case ITU_R_601:
+    case ITU_R_601_FR:
+      // display driver uses 601 irrespective of 525 or 625
+      color_metadata->colorPrimaries = ColorPrimaries_BT601_6_525;
+      break;
+    case ITU_R_709:
+      color_metadata->colorPrimaries = ColorPrimaries_BT709_5;
+      break;
+    case ITU_R_2020:
+    case ITU_R_2020_FR:
+      color_metadata->colorPrimaries = ColorPrimaries_BT2020;
+      break;
+    default:
+      DLOGE("Unsupported CSC: %d", csc);
+      return kErrorNotSupported;
+    }
+  }
   return kErrorNone;
 }
 
@@ -1189,10 +1210,8 @@ DisplayError HWCDisplay::SetMetaData(const private_handle_t *pvt_handle, Layer *
     return kErrorNone;
   }
 
-  if (meta_data->operation & UPDATE_COLOR_SPACE) {
-    if (SetCSC(meta_data->colorSpace, &layer_buffer->csc) != kErrorNone) {
+  if (SetCSC(meta_data, &layer_buffer->color_metadata) != kErrorNone) {
       return kErrorNotSupported;
-    }
   }
 
   if (meta_data->operation & SET_IGC) {

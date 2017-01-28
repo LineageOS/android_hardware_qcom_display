@@ -30,6 +30,10 @@
 #ifndef _QDMETADATA_H
 #define _QDMETADATA_H
 
+#ifdef USE_COLOR_METADATA
+#include <color_metadata.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -38,6 +42,8 @@ enum ColorSpace_t{
     ITU_R_601,
     ITU_R_601_FR,
     ITU_R_709,
+    ITU_R_2020,
+    ITU_R_2020_FR,
 };
 
 enum IGC_t {
@@ -81,11 +87,15 @@ struct MetaData_t {
     uint32_t isSingleBufferMode;
     /* Set by camera to program the VT Timestamp */
     uint64_t vtTimeStamp;
+#ifdef USE_COLOR_METADATA
+    /* Color Aspects + HDR info */
+    ColorMetaData color;
+#endif
 };
 
 enum DispParamType {
     SET_VT_TIMESTAMP         = 0x0001,
-    UNUSED1                  = 0x0002,
+    COLOR_METADATA           = 0x0002,
     PP_PARAM_INTERLACED      = 0x0004,
     UNUSED2                  = 0x0008,
     UNUSED3                  = 0x0010,
@@ -103,6 +113,7 @@ enum DispParamType {
 
 enum DispFetchParamType {
     GET_VT_TIMESTAMP         = 0x0001,
+    GET_COLOR_METADATA       = 0x0002,
     GET_PP_PARAM_INTERLACED  = 0x0004,
     GET_BUFFER_GEOMETRY      = 0x0080,
     GET_REFRESH_RATE         = 0x0100,

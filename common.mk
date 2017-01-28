@@ -1,6 +1,10 @@
 #Common headers
 display_top := $(call my-dir)
 
+ifeq ($(call is-board-platform-in-list, msm8996), true)
+common_flags := -DUSE_COLOR_METADATA
+endif
+
 use_hwc2 := false
 ifeq ($(TARGET_USES_HWC2), true)
     use_hwc2 := true
@@ -12,6 +16,7 @@ ifneq ($(TARGET_IS_HEADLESS), true)
     common_includes += $(display_top)/libcopybit
 endif
 
+common_includes += $(display_top)/include
 common_includes += $(display_top)/sdm/include
 
 common_header_export_path := qcom/display
@@ -26,7 +31,7 @@ else
 endif
 
 #Common C flags
-common_flags := -DDEBUG_CALC_FPS -Wno-missing-field-initializers
+common_flags += -DDEBUG_CALC_FPS -Wno-missing-field-initializers
 common_flags += -Wconversion -Wall -Werror -std=c++11
 ifneq ($(TARGET_USES_GRALLOC1), true)
     common_flags += -isystem $(display_top)/libgralloc
