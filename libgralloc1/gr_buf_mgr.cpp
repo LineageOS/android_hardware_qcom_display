@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
  * Not a Contribution
  *
  * Copyright (C) 2010 The Android Open Source Project
@@ -332,10 +332,6 @@ int BufferManager::GetHandleFlags(int format, gralloc1_producer_usage_t prod_usa
     flags |= private_handle_t::PRIV_FLAGS_SECURE_DISPLAY;
   }
 
-  if (allocator_->IsMacroTileEnabled(format, prod_usage, cons_usage)) {
-    flags |= private_handle_t::PRIV_FLAGS_TILE_RENDERED;
-  }
-
   if (allocator_->IsUBwcEnabled(format, prod_usage, cons_usage)) {
     flags |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
   }
@@ -573,8 +569,7 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
       int *tile_enabled = va_arg(args, int *);
       unsigned int alignedw, alignedh;
       BufferDescriptor descriptor(width, height, format, prod_usage, cons_usage);
-      *tile_enabled = allocator_->IsUBwcEnabled(format, prod_usage, cons_usage) ||
-                      allocator_->IsMacroTileEnabled(format, prod_usage, cons_usage);
+      *tile_enabled = allocator_->IsUBwcEnabled(format, prod_usage, cons_usage);
 
       allocator_->GetAlignedWidthAndHeight(descriptor, &alignedw, &alignedh);
       *aligned_width = INT(alignedw);

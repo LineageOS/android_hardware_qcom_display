@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -83,11 +83,6 @@ bool Allocator::Init() {
   if (!adreno_helper_->Init()) {
     return false;
   }
-
-  gpu_support_macrotile = adreno_helper_->IsMacroTilingSupportedByGPU();
-  int supports_macrotile = 0;
-  qdutils::querySDEInfo(qdutils::HAS_MACRO_TILE, &supports_macrotile);
-  display_support_macrotile = !!supports_macrotile;
 
   return true;
 }
@@ -221,34 +216,6 @@ bool Allocator::CheckForBufferSharing(uint32_t num_descriptors, const BufferDesc
   return true;
 }
 
-bool Allocator::IsMacroTileEnabled(int format, gralloc1_producer_usage_t prod_usage,
-                                   gralloc1_consumer_usage_t cons_usage) {
-  bool tile_enabled = false;
-
-  // Check whether GPU & MDSS supports MacroTiling feature
-  if (!adreno_helper_->IsMacroTilingSupportedByGPU() || !display_support_macrotile) {
-    return tile_enabled;
-  }
-
-  // check the format
-  switch (format) {
-    case HAL_PIXEL_FORMAT_RGBA_8888:
-    case HAL_PIXEL_FORMAT_RGBX_8888:
-    case HAL_PIXEL_FORMAT_BGRA_8888:
-    case HAL_PIXEL_FORMAT_RGB_565:
-    case HAL_PIXEL_FORMAT_BGR_565:
-      if (!CpuCanAccess(prod_usage, cons_usage)) {
-        // not touched by CPU
-        tile_enabled = true;
-      }
-      break;
-    default:
-      break;
-  }
-
-  return tile_enabled;
-}
-
 // helper function
 unsigned int Allocator::GetSize(const BufferDescriptor &descriptor, unsigned int alignedw,
                                 unsigned int alignedh) {
@@ -358,22 +325,6 @@ void Allocator::GetBufferSizeAndDimensions(const BufferDescriptor &descriptor, u
                                            unsigned int *alignedw, unsigned int *alignedh) {
   GetAlignedWidthAndHeight(descriptor, alignedw, alignedh);
 
-  *size = GetSize(descriptor, *alignedw, *alignedh);
-}
-
-void Allocator::GetBufferAttributes(const BufferDescriptor &descriptor, unsigned int *alignedw,
-                                    unsigned int *alignedh, int *tiled, unsigned int *size) {
-  int format = descriptor.GetFormat();
-  gralloc1_producer_usage_t prod_usage = descriptor.GetProducerUsage();
-  gralloc1_consumer_usage_t cons_usage = descriptor.GetConsumerUsage();
-
-  *tiled = false;
-  if (IsUBwcEnabled(format, prod_usage, cons_usage) ||
-      IsMacroTileEnabled(format, prod_usage, cons_usage)) {
-    *tiled = true;
-  }
-
-  GetAlignedWidthAndHeight(descriptor, alignedw, alignedh);
   *size = GetSize(descriptor, *alignedw, *alignedh);
 }
 
@@ -820,7 +771,7 @@ void Allocator::GetAlignedWidthAndHeight(const BufferDescriptor &descriptor, uns
 
   // Currently surface padding is only computed for RGB* surfaces.
   bool ubwc_enabled = IsUBwcEnabled(format, prod_usage, cons_usage);
-  int tile = ubwc_enabled || IsMacroTileEnabled(format, prod_usage, cons_usage);
+  int tile = ubwc_enabled;
 
   if (IsUncompressedRGBFormat(format)) {
     adreno_helper_->AlignUnCompressedRGB(width, height, format, tile, alignedw, alignedh);
