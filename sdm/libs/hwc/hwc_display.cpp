@@ -99,6 +99,24 @@ const std::vector<std::string> &HWCColorMode::GetColorModes() {
   return color_modes_;
 }
 
+int HWCColorMode::SetColorTransform(uint32_t matrix_count, const float *matrix) {
+  if (matrix_count > kColorTransformMatrixCount) {
+    DLOGE("Transform matrix count = %d, exceeds max = %d", matrix_count,
+          kColorTransformMatrixCount);
+    return -1;
+  }
+
+  double color_matrix[kColorTransformMatrixCount] = {0};
+  CopyColorTransformMatrix(matrix, color_matrix);
+  DisplayError error = display_intf_->SetColorTransform(matrix_count, color_matrix);
+  if (error != kErrorNone) {
+    DLOGE("Failed!");
+    return -1;
+  }
+
+  return 0;
+}
+
 int HWCColorMode::PopulateColorModes() {
   uint32_t color_mode_count = 0;
   DisplayError error = display_intf_->GetColorModeCount(&color_mode_count);

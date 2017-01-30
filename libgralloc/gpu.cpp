@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 The Android Open Source Project
- * Copyright (c) 2011-2014 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2014,2017 The Linux Foundation. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -132,10 +132,6 @@ int gpu_context_t::gralloc_alloc_buffer(unsigned int size, int usage,
 
         if(usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY) {
             flags |= private_handle_t::PRIV_FLAGS_SECURE_DISPLAY;
-        }
-
-        if(isMacroTileEnabled(format, usage)) {
-            flags |= private_handle_t::PRIV_FLAGS_TILE_RENDERED;
         }
 
         if (isUBwcEnabled(format, usage)) {

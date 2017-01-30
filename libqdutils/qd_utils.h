@@ -47,7 +47,6 @@
 namespace qdutils {
 
 enum HWQueryType {
-    HAS_MACRO_TILE = 0,
     HAS_UBWC = 1,
     HAS_WB_UBWC = 2
 };
@@ -64,6 +63,12 @@ int getEdidRawData(char *buffer);
 int getHDMINode(void);
 bool isDPConnected();
 int getDPTestConfig(uint32_t *panelBpp, uint32_t *patternType);
+
+enum class DriverType {
+    FB = 0,
+    DRM,
+};
+DriverType getDriverType();
 
 }; //namespace qdutils
 #endif
