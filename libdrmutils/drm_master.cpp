@@ -27,14 +27,16 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <drm/drm_fourcc.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
-
+// Intentionally included after xf86 headers so that they in-turn include libdrm version of drm.h
+// that doesn't use keyword "virtual" for a variable name. Not doing so leads to the kernel version
+// of drm.h being included causing compilation to fail
+#include <drm/msm_drm.h>
 #include <algorithm>
 #include <iterator>
 
@@ -119,18 +121,24 @@ int DRMMaster::CreateFbId(const DRMBuffer &drm_buffer, uint32_t *gem_handle, uin
 }
 
 int DRMMaster::RemoveFbId(uint32_t gem_handle, uint32_t fb_id) {
-  int ret = drmModeRmFB(dev_fd_, fb_id);
-  if (ret) {
-    DRM_LOGE("drmModeRmFB failed with error %d", ret);
-  }
-
   struct drm_gem_close gem_close = {};
   gem_close.handle = gem_handle;
-  ret = drmIoctl(dev_fd_, DRM_IOCTL_GEM_CLOSE, &gem_close);
+  int ret = drmIoctl(dev_fd_, DRM_IOCTL_GEM_CLOSE, &gem_close);
   if (ret) {
-    DRM_LOGE("drmIoctl::DRM_IOCTL_GEM_CLOSE failed with error %d", ret);
+    DRM_LOGE("drmIoctl::DRM_IOCTL_GEM_CLOSE failed with error %d", errno);
   }
 
+#ifdef DRM_IOCTL_MSM_RMFB2
+  ret = drmIoctl(dev_fd_, DRM_IOCTL_MSM_RMFB2, &fb_id);
+  if (ret) {
+    DRM_LOGE("drmIoctl::DRM_IOCTL_MSM_RMFB2 failed for fb_id %d with error %d", fb_id, errno);
+  }
+#else
+  ret = drmModeRmFB(dev_fd_, fb_id);
+  if (ret) {
+    DRM_LOGE("drmModeRmFB failed for fb_id %d with error %d", fb_id, ret);
+  }
+#endif
   return ret;
 }
 
