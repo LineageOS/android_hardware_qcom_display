@@ -32,7 +32,6 @@
 #include "qd_utils.h"
 #include "string.h"
 #include "overlay.h"
-#define __STDC_FORMAT_MACROS 1
 #include <inttypes.h>
 
 using namespace qdutils;
