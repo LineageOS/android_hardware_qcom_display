@@ -53,6 +53,8 @@ ifeq ($(call is-board-platform-in-list, $(MASTER_SIDE_CP_TARGET_LIST)), true)
     common_flags += -DMASTER_SIDE_CP
 endif
 
+common_flags += -D__STDC_FORMAT_MACROS
+
 common_deps  :=
 kernel_includes :=
 
