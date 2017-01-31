@@ -27,7 +27,6 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#define __STDC_FORMAT_MACROS
 #include <ctype.h>
 #include <math.h>
 #include <fcntl.h>
