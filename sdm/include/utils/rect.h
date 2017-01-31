@@ -60,6 +60,11 @@ namespace sdm {
   void TransformHV(const LayerRect &src_domain, const LayerRect &in_rect,
                    const LayerTransform &transform, LayerRect *out_rect);
   RectOrientation GetOrientation(const LayerRect &in_rect);
+  DisplayError GetCropAndDestination(const LayerRect &crop, const LayerRect &dst,
+                                     bool rotate90, float *crop_width, float *crop_height,
+                                     float *dst_width, float *dst_height);
+  DisplayError GetScaleFactor(const LayerRect &crop, const LayerRect &dst, bool rotate90,
+                              float *scale_x, float *scale_y);
 }  // namespace sdm
 
 #endif  // __RECT_H__

@@ -261,5 +261,47 @@ RectOrientation GetOrientation(const LayerRect &in_rect) {
   return kOrientationLandscape;
 }
 
+DisplayError GetCropAndDestination(const LayerRect &crop, const LayerRect &dst,
+                                   const bool rotated90, float *crop_width,
+                                   float *crop_height, float *dst_width,
+                                   float *dst_height) {
+  if (!IsValid(crop)) {
+    Log(kTagResources, "Invalid crop rect", crop);
+    return kErrorNotSupported;
+  }
+
+  if (!IsValid(dst)) {
+    Log(kTagResources, "Invalid dst rect", dst);
+    return kErrorNotSupported;
+  }
+
+  *crop_width = crop.right - crop.left;
+  *crop_height = crop.bottom - crop.top;
+  if (rotated90) {
+    std::swap(*crop_width, *crop_height);
+  }
+
+  *dst_width = dst.right - dst.left;
+  *dst_height = dst.bottom - dst.top;
+
+  return kErrorNone;
+}
+
+DisplayError GetScaleFactor(const LayerRect &crop, const LayerRect &dst,
+                            bool rotated90, float *scale_x, float *scale_y) {
+  float crop_width = 1.0f, crop_height = 1.0f, dst_width = 1.0f, dst_height = 1.0f;
+
+  DisplayError error = GetCropAndDestination(crop, dst, rotated90, &crop_width, &crop_height,
+                                             &dst_width, &dst_height);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  *scale_x = crop_width / dst_width;
+  *scale_y = crop_height / dst_height;
+
+  return kErrorNone;
+}
+
 }  // namespace sdm
 
