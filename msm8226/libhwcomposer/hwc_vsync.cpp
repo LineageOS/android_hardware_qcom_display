@@ -30,7 +30,6 @@
 #include "string.h"
 #include "external.h"
 #include "overlay.h"
-#define __STDC_FORMAT_MACROS 1
 #include <inttypes.h>
 
 namespace qhwc {
