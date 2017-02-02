@@ -446,6 +446,17 @@ struct HWLayerConfig {
   void Reset() { *this = HWLayerConfig(); }
 };
 
+struct HWHDRLayerInfo {
+  enum HDROperation {
+    kNoOp,   // No-op.
+    kSet,    // Sets the HDR MetaData - Start of HDR
+    kReset,  // resets the previously set HDR Metadata, End of HDR
+  };
+
+  int32_t layer_index = -1;
+  HDROperation operation = kNoOp;
+};
+
 struct HWLayersInfo {
   LayerStack *stack = NULL;        // Input layer stack. Set by the caller.
   uint32_t app_layer_count = 0;    // Total number of app layers. Must not be 0.
@@ -466,6 +477,7 @@ struct HWLayersInfo {
 
   bool use_hw_cursor = false;      // Indicates that HWCursor pipe needs to be used for cursor layer
   DestScaleInfoMap dest_scale_info_map = {};
+  HWHDRLayerInfo hdr_layer_info = {};
 };
 
 struct HWLayers {
