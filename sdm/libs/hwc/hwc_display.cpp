@@ -565,7 +565,7 @@ int HWCDisplay::PrePrepareLayerStack(hwc_display_contents_1_t *content_list) {
         bool secure = (pvt_handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER) ||
                 (pvt_handle->flags & private_handle_t::PRIV_FLAGS_PROTECTED_BUFFER) ||
                 (pvt_handle->flags & private_handle_t::PRIV_FLAGS_SECURE_DISPLAY);
-        if (NonIntegralSourceCrop && !secure) {
+        if (NonIntegralSourceCrop && (!secure && pvt_handle->bufferType != BUFFER_TYPE_VIDEO)) {
             layer->flags.skip = true;
         }
     }
