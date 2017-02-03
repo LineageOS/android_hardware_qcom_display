@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
- * Copyright (c) 2011 - 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011 - 2017, The Linux Foundation. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,15 +53,6 @@ unsigned int getBufferSizeAndDimensions(int width, int height, int format,
         int usage, int& alignedw, int &alignedh);
 unsigned int getBufferSizeAndDimensions(int width, int height, int format,
         int& alignedw, int &alignedh);
-
-
-// Attributes include aligned width, aligned height, tileEnabled and size of the buffer
-void getBufferAttributes(int width, int height, int format, int usage,
-                           int& alignedw, int &alignedh,
-                           int& tileEnabled, unsigned int &size);
-
-
-bool isMacroTileEnabled(int format, int usage);
 
 int decideBufferHandlingMechanism(int format, const char *compositionUsed,
                                   int hasBlitEngine, int *needConversion,
@@ -148,15 +139,6 @@ class AdrenoMemInfo : public android::Singleton <AdrenoMemInfo>
      */
     void getUnalignedWidthAndHeight(const private_handle_t *hnd, int& unaligned_w,
                             int& unaligned_h);
-
-    /*
-     * Function to return whether GPU support MacroTile feature
-     *
-     * @return >0 : supported
-     *          0 : not supported
-     */
-    int isMacroTilingSupportedByGPU();
-
     /*
      * Function to query whether GPU supports UBWC for given HAL format
      * @return > 0 : supported
@@ -190,8 +172,6 @@ class AdrenoMemInfo : public android::Singleton <AdrenoMemInfo>
                                                 int *aligned_w,
                                                 int *aligned_h);
 
-        int (*LINK_adreno_isMacroTilingSupportedByGpu) (void);
-
         void(*LINK_adreno_compute_compressedfmt_aligned_width_and_height)(
                                                 int width,
                                                 int height,
@@ -211,19 +191,11 @@ class AdrenoMemInfo : public android::Singleton <AdrenoMemInfo>
 
 class MDPCapabilityInfo : public android::Singleton <MDPCapabilityInfo>
 {
-    int isMacroTileSupported = 0;
     int isUBwcSupported = 0;
     int isWBUBWCSupported = 0;
 
     public:
         MDPCapabilityInfo();
-        /*
-        * Function to return whether MDP support MacroTile feature
-        *
-        * @return  1 : supported
-        *          0 : not supported
-        */
-        int isMacroTilingSupportedByMDP() { return isMacroTileSupported; }
         /*
         * Function to return whether MDP supports UBWC feature
         *

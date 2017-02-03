@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -191,6 +191,7 @@ DisplayError DisplayBase::ValidateGPUTargetParams() {
   LayerRect out_rect = gpu_target_layer->dst_rect;
 
   MapRect(src_domain, dst_domain, gpu_target_layer->dst_rect, &out_rect);
+  Normalize(1, 1, &out_rect);
 
   auto gpu_target_layer_dst_xpixels = out_rect.right - out_rect.left;
   auto gpu_target_layer_dst_ypixels = out_rect.bottom - out_rect.top;
@@ -375,9 +376,18 @@ DisplayError DisplayBase::GetConfig(uint32_t index, DisplayConfigVariableInfo *v
   return kErrorNotSupported;
 }
 
-DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *variable_info) {
+DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-  variable_info->is_cmdmode = (hw_panel_info_.mode == kModeCommand);
+  fixed_info->is_cmdmode = (hw_panel_info_.mode == kModeCommand);
+
+  HWResourceInfo hw_resource_info = HWResourceInfo();
+  hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
+  // hdr can be supported by display when target and panel supports HDR.
+  fixed_info->hdr_supported = (hw_resource_info.has_hdr && hw_panel_info_.hdr_enabled);
+  // Populate luminance values only if hdr will be supported on that display
+  fixed_info->max_luminance = fixed_info->hdr_supported ? hw_panel_info_.peak_luminance: 0;
+  fixed_info->average_luminance = fixed_info->hdr_supported ? hw_panel_info_.average_luminance : 0;
+  fixed_info->min_luminance = fixed_info->hdr_supported ?  hw_panel_info_.blackness_level: 0;
 
   return kErrorNone;
 }
@@ -415,7 +425,6 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state) {
     hw_layers_.info.hw_layers.clear();
     error = hw_intf_->Flush();
     if (error == kErrorNone) {
-      comp_manager_->Purge(display_comp_ctx_);
       error = hw_intf_->PowerOff();
     }
     break;
@@ -456,6 +465,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state) {
   if (error == kErrorNone) {
     active_ = active;
     state_ = state;
+    comp_manager_->SetDisplayState(display_comp_ctx_, state, display_type_);
   }
 
   return error;

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -41,6 +41,7 @@ namespace sdm {
 
 class HWInfo: public HWInfoInterface {
  public:
+  virtual ~HWInfo() { delete hw_resource_; }
   virtual DisplayError GetHWResourceInfo(HWResourceInfo *hw_resource);
   virtual DisplayError GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_disp_info);
 
@@ -71,6 +72,7 @@ class HWInfo: public HWInfoInterface {
                     HWResourceInfo *hw_resource);
   void PopulateSupportedFormatMap(const std::bitset<8> *format_supported, uint32_t format_count,
                                   HWSubBlockType sub_blk_type, HWResourceInfo *hw_resource);
+  HWResourceInfo *hw_resource_ = NULL;
 };
 
 }  // namespace sdm

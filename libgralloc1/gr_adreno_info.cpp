@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -47,8 +47,6 @@ bool AdrenoMemInfo::Init() {
         ::dlsym(libadreno_utils_, "compute_aligned_width_and_height");
     *reinterpret_cast<void **>(&LINK_adreno_compute_padding) =
         ::dlsym(libadreno_utils_, "compute_surface_padding");
-    *reinterpret_cast<void **>(&LINK_adreno_isMacroTilingSupportedByGpu) =
-        ::dlsym(libadreno_utils_, "isMacroTilingSupportedByGpu");
     *reinterpret_cast<void **>(&LINK_adreno_compute_compressedfmt_aligned_width_and_height) =
         ::dlsym(libadreno_utils_, "compute_compressedfmt_aligned_width_and_height");
     *reinterpret_cast<void **>(&LINK_adreno_isUBWCSupportedByGpu) =
@@ -82,14 +80,6 @@ AdrenoMemInfo::~AdrenoMemInfo() {
   if (libadreno_utils_) {
     ::dlclose(libadreno_utils_);
   }
-}
-
-bool AdrenoMemInfo::IsMacroTilingSupportedByGPU() {
-  if (LINK_adreno_isMacroTilingSupportedByGpu) {
-    return LINK_adreno_isMacroTilingSupportedByGpu();
-  }
-
-  return false;
 }
 
 void AdrenoMemInfo::AlignUnCompressedRGB(int width, int height, int format, int tile_enabled,

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -56,8 +56,16 @@ class HWCColorMode {
   void DeInit() {}
   int SetColorMode(const std::string &color_mode);
   const std::vector<std::string> &GetColorModes();
+  int SetColorTransform(uint32_t matrix_count, const float *matrix);
 
  private:
+  static const uint32_t kColorTransformMatrixCount = 16;
+  template <class T>
+  void CopyColorTransformMatrix(const T *input_matrix, double *output_matrix) {
+    for (uint32_t i = 0; i < kColorTransformMatrixCount; i++) {
+      output_matrix[i] = static_cast<double>(input_matrix[i]);
+    }
+  }
   int PopulateColorModes();
   DisplayInterface *display_intf_ = NULL;
   std::vector<std::string> color_modes_ = {};
@@ -129,6 +137,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int GetDisplayConfigCount(uint32_t *count);
   virtual int GetDisplayAttributesForConfig(int config,
                                             DisplayConfigVariableInfo *display_attributes);
+  virtual int GetDisplayFixedConfig(DisplayConfigFixedInfo *fixed_info);
 
   int SetPanelBrightness(int level);
   int GetPanelBrightness(int *level);
