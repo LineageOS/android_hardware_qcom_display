@@ -59,11 +59,13 @@ DisplayError DisplayBase::Init() {
   fb_config_ = display_attributes_;
 
   error = Debug::GetMixerResolution(&mixer_attributes_.width, &mixer_attributes_.height);
+  if (error == kErrorNone) {
+    hw_intf_->SetMixerAttributes(mixer_attributes_);
+  }
+
+  error = hw_intf_->GetMixerAttributes(&mixer_attributes_);
   if (error != kErrorNone) {
-    error = hw_intf_->GetMixerAttributes(&mixer_attributes_);
-    if (error != kErrorNone) {
-      return error;
-    }
+    return error;
   }
 
   // Override x_pixels and y_pixels of frame buffer with mixer width and height
