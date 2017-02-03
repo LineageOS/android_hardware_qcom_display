@@ -153,6 +153,11 @@ int HWCDisplay::Init() {
     return -EINVAL;
   }
 
+  HWCDebugHandler::Get()->GetProperty("sys.hwc_disable_hdr", &disable_hdr_handling_);
+  if (disable_hdr_handling_) {
+    DLOGI("HDR Handling disabled");
+  }
+
   int property_swap_interval = 1;
   HWCDebugHandler::Get()->GetProperty("debug.egl.swapinterval", &property_swap_interval);
   if (property_swap_interval == 0) {
@@ -1383,9 +1388,11 @@ DisplayError HWCDisplay::SetMetaData(const private_handle_t *pvt_handle, Layer *
     return kErrorNotSupported;
   }
 
-  if (layer_buffer.color_metadata.colorPrimaries == ColorPrimaries_BT2020 &&
-     (layer_buffer.color_metadata.transfer == Transfer_SMPTE_ST2084 ||
-      layer_buffer.color_metadata.transfer == Transfer_HLG)) {
+  bool hdr_layer = layer_buffer.color_metadata.colorPrimaries == ColorPrimaries_BT2020 &&
+                   (layer_buffer.color_metadata.transfer == Transfer_SMPTE_ST2084 ||
+                   layer_buffer.color_metadata.transfer == Transfer_HLG);
+  if (hdr_layer && !disable_hdr_handling_) {
+    // dont honor HDR when its handling is disabled
     layer_buffer.flags.hdr = true;
     layer_stack_.flags.hdr_present = true;
   }

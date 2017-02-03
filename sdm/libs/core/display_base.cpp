@@ -66,9 +66,6 @@ DisplayError DisplayBase::Init() {
     }
   }
 
-  req_mixer_width_ = mixer_attributes_.width;
-  req_mixer_height_ = mixer_attributes_.height;
-
   // Override x_pixels and y_pixels of frame buffer with mixer width and height
   fb_config_.x_pixels = mixer_attributes_.width;
   fb_config_.y_pixels = mixer_attributes_.height;
@@ -952,6 +949,13 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
   uint32_t align_x = display_attributes_.is_device_split ? 4 : 2;
   uint32_t align_y = 2;
 
+  if (req_mixer_width_ && req_mixer_height_) {
+    *new_mixer_width = req_mixer_width_;
+    *new_mixer_height = req_mixer_height_;
+
+    return (req_mixer_width_ != mixer_width || req_mixer_height_ != mixer_height);
+  }
+
   for (uint32_t i = 0; i < layer_count; i++) {
     Layer *layer = layers.at(i);
 
@@ -997,13 +1001,6 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
     }
 
     return true;
-  } else {
-    if (req_mixer_width_ != mixer_width || req_mixer_height_ != mixer_height) {
-      *new_mixer_width = req_mixer_width_;
-      *new_mixer_height = req_mixer_height_;
-
-      return true;
-    }
   }
 
   return false;
