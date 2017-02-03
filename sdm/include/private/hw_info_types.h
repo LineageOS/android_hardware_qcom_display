@@ -413,6 +413,7 @@ struct HWDestScaleInfo {
   uint32_t mixer_height = 0;
   bool scale_update = false;
   HWScaleData scale_data = {};
+  LayerRect panel_roi = {};
 };
 
 typedef std::map<uint32_t, HWDestScaleInfo *> DestScaleInfoMap;
