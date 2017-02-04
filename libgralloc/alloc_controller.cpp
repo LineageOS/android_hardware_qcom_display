@@ -30,24 +30,18 @@
 #include <cutils/log.h>
 #include <fcntl.h>
 #include <dlfcn.h>
+#include <media/msm_media_info.h>
+#include <qdMetaData.h>
+#include <utils/Singleton.h>
+#include <utils/Mutex.h>
+#include <algorithm>
+
 #include "gralloc_priv.h"
 #include "alloc_controller.h"
 #include "memalloc.h"
 #include "ionalloc.h"
 #include "gr.h"
 #include "qd_utils.h"
-#include <qdMetaData.h>
-#include <utils/Singleton.h>
-#include <utils/Mutex.h>
-#include <algorithm>
-
-#ifdef VENUS_COLOR_FORMAT
-#include <media/msm_media_info.h>
-#else
-#define VENUS_Y_STRIDE(args...) 0
-#define VENUS_Y_SCANLINES(args...) 0
-#define VENUS_BUFFER_SIZE(args...) 0
-#endif
 
 #define ASTC_BLOCK_SIZE 16
 
