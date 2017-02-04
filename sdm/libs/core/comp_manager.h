@@ -92,7 +92,7 @@ class CompManager : public DumpImpl {
     uint32_t max_strategies = 0;
     uint32_t remaining_strategies = 0;
     bool idle_fallback = false;
-    bool fallback_ = false;
+    bool thermal_fallback_ = false;
     // Using primary panel flag of hw panel to configure Constraints. We do not need other hw
     // panel parameters for now.
     bool is_primary_panel = false;
