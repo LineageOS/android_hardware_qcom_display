@@ -1,0 +1,1 @@
+../libcopybit/copybit_priv.h
