@@ -225,7 +225,6 @@ void HWCToneMapper::Terminate() {
       delete tone_map_sessions_.back();
       tone_map_sessions_.pop_back();
     }
-    TonemapperFactory_Destroy();
     fb_session_index_ = 0;
   }
 }

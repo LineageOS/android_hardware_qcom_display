@@ -27,19 +27,8 @@ Tonemapper *TonemapperFactory_GetInstance(int type, void *colorMap, int colorMap
                                           void *lutXform, int lutXformSize)
 //----------------------------------------------------------------------------------------------------------------------------------------------------------
 {
-  // initializes the engine - does nothing if already initialized
-  engine_initialize();
-
   // build the tonemapper
   Tonemapper *tonemapper = Tonemapper::build(type, colorMap, colorMapSize, lutXform, lutXformSize);
 
   return tonemapper;
-}
-
-//------------------------------------------
-void TonemapperFactory_Destroy()
-//------------------------------------------
-{
-  // shutdown the engine
-  engine_shutdown();
 }
