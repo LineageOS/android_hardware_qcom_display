@@ -161,7 +161,7 @@ unsigned int engine_load1DTexture(void *data, int sz, int format)
 void dumpShaderLog(int shader)
 //-----------------------------------------------------------------------------
 {
-  int success;
+  int success = 0;
   GLchar infoLog[512];
   GL(glGetShaderiv(shader, GL_COMPILE_STATUS, &success));
   if (!success) {
