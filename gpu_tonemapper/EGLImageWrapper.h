@@ -20,15 +20,28 @@
 #ifndef __TONEMAPPER_EGLIMAGEWRAPPER_H__
 #define __TONEMAPPER_EGLIMAGEWRAPPER_H__
 
-#include <map>
+#include <utils/LruCache.h>
 #include "EGLImageBuffer.h"
 
 class EGLImageWrapper {
-  std::map<int, EGLImageBuffer *> eglImageBufferMap;
+    private:
+        class DeleteEGLImageCallback : public android::OnEntryRemoved<int, EGLImageBuffer*>
+        {
+        private:
+          int ion_fd;
+        public:
+          DeleteEGLImageCallback(int ion_fd);
+          void operator()(int& ion_cookie, EGLImageBuffer*& eglImage);
+        };
 
- public:
-  EGLImageBuffer *wrap(const void *pvt_handle);
-  void destroy();
+        android::LruCache<int, EGLImageBuffer *>* eglImageBufferMap;
+        DeleteEGLImageCallback* callback;
+        int ion_fd;
+
+    public:
+        EGLImageWrapper();
+        ~EGLImageWrapper();
+        EGLImageBuffer* wrap(const void *pvt_handle);
 };
 
 #endif  //__TONEMAPPER_EGLIMAGEWRAPPER_H__

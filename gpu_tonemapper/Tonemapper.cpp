@@ -39,17 +39,18 @@ Tonemapper::Tonemapper()
 Tonemapper::~Tonemapper()
 //-----------------------------------------------------------------------------
 {
-  engine_bind();
+  engine_bind(engineContext);
   engine_deleteInputBuffer(tonemapTexture);
   engine_deleteInputBuffer(lutXformTexture);
   engine_deleteProgram(programID);
 
   // clear EGLImage mappings
   if (eglImageWrapper != 0) {
-    eglImageWrapper->destroy();
     delete eglImageWrapper;
     eglImageWrapper = 0;
   }
+
+  engine_shutdown(engineContext);
 }
 
 //-----------------------------------------------------------------------------
@@ -61,10 +62,14 @@ Tonemapper *Tonemapper::build(int type, void *colorMap, int colorMapSize, void *
       ALOGE("Invalid Color Map size = %d", colorMapSize);
       return NULL;
   }
-  engine_bind();
 
   // build new tonemapper
   Tonemapper *tonemapper = new Tonemapper();
+
+  tonemapper->engineContext = engine_initialize();
+
+  engine_bind(tonemapper->engineContext);
+
   // load the 3d lut
   tonemapper->tonemapTexture = engine_load3DTexture(colorMap, colorMapSize, 0);
   // load the non-uniform xform
@@ -101,7 +106,7 @@ int Tonemapper::blit(const void *dst, const void *src, int srcFenceFd)
 //-----------------------------------------------------------------------------
 {
   // make current
-  engine_bind();
+  engine_bind(engineContext);
 
   // create eglimages if required
   EGLImageBuffer *dst_buffer = eglImageWrapper->wrap(dst);

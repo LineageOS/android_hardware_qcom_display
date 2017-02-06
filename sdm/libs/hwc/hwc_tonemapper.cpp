@@ -140,11 +140,13 @@ int HWCToneMapper::HandleToneMap(hwc_display_contents_1_t *content_list, LayerSt
           // then SDM marks them for SDE Composition because the cached FB layer gets displayed.
           // GPU count will be 0 in this case. Try to use the existing tone-mapped frame buffer.
           // No ToneMap/Blit is required. Just update the buffer & acquire fence fd of FB layer.
-          ToneMapSession *fb_tone_map_session = tone_map_sessions_.at(fb_session_index_);
-          fb_tone_map_session->UpdateBuffer(-1 /* acquire_fence */, &layer->input_buffer);
-          fb_tone_map_session->layer_index_ = INT(i);
-          fb_tone_map_session->acquired_ = true;
-          return 0;
+          if (!tone_map_sessions_.empty()) {
+            ToneMapSession *fb_tone_map_session = tone_map_sessions_.at(fb_session_index_);
+            fb_tone_map_session->UpdateBuffer(-1 /* acquire_fence */, &layer->input_buffer);
+            fb_tone_map_session->layer_index_ = INT(i);
+            fb_tone_map_session->acquired_ = true;
+            return 0;
+          }
         }
         error = AcquireToneMapSession(layer, &session_index);
         fb_session_index_ = session_index;
@@ -223,7 +225,6 @@ void HWCToneMapper::Terminate() {
       delete tone_map_sessions_.back();
       tone_map_sessions_.pop_back();
     }
-    TonemapperFactory_Destroy();
     fb_session_index_ = 0;
   }
 }

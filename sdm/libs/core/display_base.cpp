@@ -712,8 +712,8 @@ DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
   }
 
   DisplayError error = kErrorNone;
-  // Set client requests when not in HDR Mode.
-  if (!hdr_playback_mode_) {
+  // Set client requests when not in HDR Mode or lut generation is disabled
+  if (disable_hdr_lut_gen_ || !hdr_playback_mode_) {
     error = SetColorModeInternal(color_mode);
     if (error != kErrorNone) {
       return error;
@@ -1194,8 +1194,8 @@ DisplayError DisplayBase::InitializeColorModes() {
 DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
   DisplayError error = kErrorNone;
 
-  if (disable_hdr_lut_gen_) {
-    // Do not apply HDR Mode when hdr lut generation is disabled
+  if (display_type_ != kPrimary) {
+    // Handling is needed for only primary displays
     return kErrorNone;
   }
 
@@ -1203,8 +1203,10 @@ DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
     //  HDR playback off - set prev mode
     if (hdr_playback_mode_) {
       hdr_playback_mode_ = false;
-      if (color_mgr_) {
+      if (color_mgr_ && !disable_hdr_lut_gen_) {
+        // Do not apply HDR Mode when hdr lut generation is disabled
         DLOGI("Setting color mode = %s", current_color_mode_.c_str());
+        //  HDR playback off - set prev mode
         error = SetColorModeInternal(current_color_mode_);
       }
       comp_manager_->ControlDpps(true);  // Enable Dpps
@@ -1214,7 +1216,7 @@ DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
     if (!hdr_playback_mode_ && !layer_stack->flags.animating) {
       // hdr is starting
       hdr_playback_mode_ = true;
-      if (color_mgr_) {
+      if (color_mgr_ && !disable_hdr_lut_gen_) {
         DLOGI("Setting HDR color mode = %s", hdr_color_mode_.c_str());
         error = SetColorModeInternal(hdr_color_mode_);
       }

@@ -21,21 +21,101 @@
 #include <cutils/native_handle.h>
 #include <gralloc_priv.h>
 #include <ui/GraphicBuffer.h>
+#include <fcntl.h>
+#include <linux/msm_ion.h>
 
 //-----------------------------------------------------------------------------
-EGLImageBuffer *EGLImageWrapper::wrap(const void *pvt_handle)
+void free_ion_cookie(int ion_fd, int cookie)
 //-----------------------------------------------------------------------------
 {
-  const private_handle_t *src = static_cast<const private_handle_t *>(pvt_handle);
+  if (ion_fd && !ioctl(ion_fd, ION_IOC_FREE, &cookie)) {
+  } else {
+      ALOGE("ION_IOC_FREE failed: ion_fd = %d, cookie = %d", ion_fd, cookie);
+  }
+}
 
-  EGLImageBuffer *result = 0;
-  std::map<int, EGLImageBuffer *>::iterator it = eglImageBufferMap.find(src->fd);
-  if (it == eglImageBufferMap.end()) {
+//-----------------------------------------------------------------------------
+int get_ion_cookie(int ion_fd, int fd)
+//-----------------------------------------------------------------------------
+{
+   int cookie = fd;
+
+   struct ion_fd_data fdData;
+   memset(&fdData, 0, sizeof(fdData));
+   fdData.fd = fd;
+
+   if (ion_fd && !ioctl(ion_fd, ION_IOC_IMPORT, &fdData)) {
+        cookie = fdData.handle;
+   } else {
+        ALOGE("ION_IOC_IMPORT failed: ion_fd = %d, fd = %d", ion_fd, fd);
+   }
+
+   return cookie;
+}
+
+//-----------------------------------------------------------------------------
+EGLImageWrapper::DeleteEGLImageCallback::DeleteEGLImageCallback(int fd)
+//-----------------------------------------------------------------------------
+{
+    ion_fd = fd;
+}
+
+//-----------------------------------------------------------------------------
+void EGLImageWrapper::DeleteEGLImageCallback::operator()(int& k, EGLImageBuffer*& eglImage)
+//-----------------------------------------------------------------------------
+{
+    free_ion_cookie(ion_fd,  k);
+    if( eglImage != 0 )
+    {
+        delete eglImage;
+    }
+}
+
+//-----------------------------------------------------------------------------
+EGLImageWrapper::EGLImageWrapper()
+//-----------------------------------------------------------------------------
+{
+    eglImageBufferMap = new android::LruCache<int, EGLImageBuffer*>(32);
+    ion_fd = open("/dev/ion", O_RDONLY);
+    callback = new DeleteEGLImageCallback(ion_fd);
+    eglImageBufferMap->setOnEntryRemovedListener(callback);
+}
+
+//-----------------------------------------------------------------------------
+EGLImageWrapper::~EGLImageWrapper()
+//-----------------------------------------------------------------------------
+{
+    if( eglImageBufferMap != 0 )
+    {
+        eglImageBufferMap->clear();
+        delete eglImageBufferMap;
+        eglImageBufferMap = 0;
+    }
+
+    if( callback != 0 )
+    {
+        delete callback;
+        callback = 0;
+    }
+
+    if( ion_fd > 0 )
+    {
+        close(ion_fd);
+    }
+    ion_fd = -1;
+}
+//-----------------------------------------------------------------------------
+static EGLImageBuffer* L_wrap(const private_handle_t *src)
+//-----------------------------------------------------------------------------
+{
+    EGLImageBuffer* result = 0;
+
     native_handle_t *native_handle = const_cast<private_handle_t *>(src);
 
     int flags = android::GraphicBuffer::USAGE_HW_TEXTURE |
                 android::GraphicBuffer::USAGE_SW_READ_NEVER |
                 android::GraphicBuffer::USAGE_SW_WRITE_NEVER;
+
     if (src->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER) {
       flags |= android::GraphicBuffer::USAGE_PROTECTED;
     }
@@ -50,21 +130,25 @@ EGLImageBuffer *EGLImageWrapper::wrap(const void *pvt_handle)
 
     result = new EGLImageBuffer(graphicBuffer);
 
-    eglImageBufferMap[src->fd] = result;
-  } else {
-    result = it->second;
-  }
-
-  return result;
+    return result;
 }
 
 //-----------------------------------------------------------------------------
-void EGLImageWrapper::destroy()
+EGLImageBuffer *EGLImageWrapper::wrap(const void *pvt_handle)
 //-----------------------------------------------------------------------------
 {
-  std::map<int, EGLImageBuffer *>::iterator it = eglImageBufferMap.begin();
-  for (; it != eglImageBufferMap.end(); it++) {
-    delete it->second;
-  }
-  eglImageBufferMap.clear();
+    const private_handle_t *src = static_cast<const private_handle_t *>(pvt_handle);
+
+    int ion_cookie = get_ion_cookie(ion_fd, src->fd);
+    EGLImageBuffer* eglImage = eglImageBufferMap->get(ion_cookie);
+    if( eglImage == 0 )
+    {
+        eglImage = L_wrap(src);
+        eglImageBufferMap->put(ion_cookie, eglImage);
+    }
+    else {
+        free_ion_cookie(ion_fd, ion_cookie);
+    }
+
+    return eglImage;
 }

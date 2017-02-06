@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -20,9 +20,9 @@
 #ifndef __TONEMAPPER_ENGINE_H__
 #define __TONEMAPPER_ENGINE_H__
 
-bool engine_initialize();
-void engine_bind();
-void engine_shutdown();
+void* engine_initialize();
+void engine_bind(void*);
+void engine_shutdown(void*);
 
 unsigned int engine_loadProgram(int, const char **, int, const char **);
 void engine_setProgram(int);

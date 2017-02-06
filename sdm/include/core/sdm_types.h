@@ -53,6 +53,7 @@ enum DisplayError {
   kErrorHardware,         //!< A hardware error has occured.
   kErrorTimeOut,          //!< The operation has timed out to prevent client from waiting forever.
   kErrorShutDown,         //!< Driver is processing shutdown sequence
+  kErrorPerfValidation,   //!< Bandwidth or Clock requirement validation failure.
 };
 
 /*! @brief This structure is defined for client and library compatibility check purpose only. This

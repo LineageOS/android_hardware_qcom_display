@@ -118,6 +118,8 @@
 #define HAL_PIXEL_FORMAT_BGRX_1010102            0x11C
 #define HAL_PIXEL_FORMAT_XBGR_2101010            0x11D
 #define HAL_PIXEL_FORMAT_YCbCr_420_P010          0x11F
+#define HAL_PIXEL_FORMAT_CbYCrY_422_I            0x120
+#define HAL_PIXEL_FORMAT_BGR_888                 0x121
 
 #define HAL_PIXEL_FORMAT_INTERLACE               0x180
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -24,37 +24,42 @@
 void checkGlError(const char *, int);
 void checkEglError(const char *, int);
 
-static EGLDisplay eglDisplay;
-static EGLContext eglContext;
-static EGLSurface eglSurface;
-
-static bool isEngineInitialized = false;
+class EngineContext {
+    public:
+    EGLDisplay eglDisplay;
+    EGLContext eglContext;
+    EGLSurface eglSurface;
+    EngineContext()
+    {
+        eglDisplay = EGL_NO_DISPLAY;
+        eglContext = EGL_NO_CONTEXT;
+        eglSurface = EGL_NO_SURFACE;
+    }
+};
 
 //-----------------------------------------------------------------------------
 // Make Current
-void engine_bind()
+void engine_bind(void* context)
 //-----------------------------------------------------------------------------
 {
-  EGL(eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext));
+  EngineContext* engineContext = (EngineContext*)(context);
+  EGL(eglMakeCurrent(engineContext->eglDisplay, engineContext->eglSurface, engineContext->eglSurface, engineContext->eglContext));
 }
 
 //-----------------------------------------------------------------------------
 // initialize GL
 //
-bool engine_initialize()
+void* engine_initialize()
 //-----------------------------------------------------------------------------
 {
-  if (isEngineInitialized)
-    return true;
-
-  EGLBoolean result = false;
+  EngineContext* engineContext = new EngineContext();
 
   // display
-  eglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+  engineContext->eglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
   EGL(eglBindAPI(EGL_OPENGL_ES_API));
 
   // initialize
-  EGL(eglInitialize(eglDisplay, 0, 0));
+  EGL(eglInitialize(engineContext->eglDisplay, 0, 0));
 
   // config
   EGLConfig eglConfig;
@@ -65,38 +70,36 @@ bool engine_initialize()
                                   EGL_ALPHA_SIZE,   8,
                                   EGL_NONE};
   int numConfig = 0;
-  EGL(eglChooseConfig(eglDisplay, eglConfigAttribList, &eglConfig, 1, &numConfig));
+  EGL(eglChooseConfig(engineContext->eglDisplay, eglConfigAttribList, &eglConfig, 1, &numConfig));
 
   // context
   EGLint eglContextAttribList[] = {EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE};
-  eglContext = eglCreateContext(eglDisplay, eglConfig, NULL, eglContextAttribList);
+  engineContext->eglContext = eglCreateContext(engineContext->eglDisplay, eglConfig, NULL, eglContextAttribList);
 
   // surface
   EGLint eglSurfaceAttribList[] = {EGL_WIDTH, 1, EGL_HEIGHT, 1, EGL_NONE, EGL_NONE};
-  eglSurface = eglCreatePbufferSurface(eglDisplay, eglConfig, eglSurfaceAttribList);
+  engineContext->eglSurface = eglCreatePbufferSurface(engineContext->eglDisplay, eglConfig, eglSurfaceAttribList);
 
-  result = (EGL_TRUE == eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext));
+  eglMakeCurrent(engineContext->eglDisplay, engineContext->eglSurface, engineContext->eglSurface, engineContext->eglContext);
 
-  isEngineInitialized = result;
+  ALOGI("In %s context = %p", __FUNCTION__, (void *)(engineContext->eglContext));
 
-  ALOGI("In %s result = %d context = %p", __FUNCTION__, result, (void *)eglContext);
-
-  return result;
+  return (void*)(engineContext);
 }
 
 //-----------------------------------------------------------------------------
 // Shutdown.
-void engine_shutdown()
+void engine_shutdown(void* context)
 //-----------------------------------------------------------------------------
 {
-  EGL(eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT));
-  EGL(eglDestroySurface(eglDisplay, eglSurface));
-  EGL(eglDestroyContext(eglDisplay, eglContext));
-  EGL(eglTerminate(eglDisplay));
-  eglDisplay = EGL_NO_DISPLAY;
-  eglContext = EGL_NO_CONTEXT;
-  eglSurface = EGL_NO_SURFACE;
-  isEngineInitialized = false;
+  EngineContext* engineContext = (EngineContext*)context;
+  EGL(eglMakeCurrent(engineContext->eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT));
+  EGL(eglDestroySurface(engineContext->eglDisplay, engineContext->eglSurface));
+  EGL(eglDestroyContext(engineContext->eglDisplay, engineContext->eglContext));
+  EGL(eglTerminate(engineContext->eglDisplay));
+  engineContext->eglDisplay = EGL_NO_DISPLAY;
+  engineContext->eglContext = EGL_NO_CONTEXT;
+  engineContext->eglSurface = EGL_NO_SURFACE;
 }
 
 //-----------------------------------------------------------------------------
@@ -158,7 +161,7 @@ unsigned int engine_load1DTexture(void *data, int sz, int format)
 void dumpShaderLog(int shader)
 //-----------------------------------------------------------------------------
 {
-  int success;
+  int success = 0;
   GLchar infoLog[512];
   GL(glGetShaderiv(shader, GL_COMPILE_STATUS, &success));
   if (!success) {
@@ -206,14 +209,14 @@ void WaitOnNativeFence(int fd)
   if (fd != -1) {
     EGLint attribs[] = {EGL_SYNC_NATIVE_FENCE_FD_ANDROID, fd, EGL_NONE};
 
-    EGLSyncKHR sync = eglCreateSyncKHR(eglDisplay, EGL_SYNC_NATIVE_FENCE_ANDROID, attribs);
+    EGLSyncKHR sync = eglCreateSyncKHR(eglGetCurrentDisplay(), EGL_SYNC_NATIVE_FENCE_ANDROID, attribs);
 
     if (sync == EGL_NO_SYNC_KHR) {
       ALOGE("%s - Failed to Create sync from source fd", __FUNCTION__);
     } else {
       // the gpu will wait for this sync - not this cpu thread.
-      EGL(eglWaitSyncKHR(eglDisplay, sync, 0));
-      EGL(eglDestroySyncKHR(eglDisplay, sync));
+      EGL(eglWaitSyncKHR(eglGetCurrentDisplay(), sync, 0));
+      EGL(eglDestroySyncKHR(eglGetCurrentDisplay(), sync));
     }
   }
 }
@@ -224,16 +227,16 @@ int CreateNativeFence()
 {
   int fd = -1;
 
-  EGLSyncKHR sync = eglCreateSyncKHR(eglDisplay, EGL_SYNC_NATIVE_FENCE_ANDROID, NULL);
+  EGLSyncKHR sync = eglCreateSyncKHR(eglGetCurrentDisplay(), EGL_SYNC_NATIVE_FENCE_ANDROID, NULL);
   GL(glFlush());
   if (sync == EGL_NO_SYNC_KHR) {
     ALOGE("%s - Failed to Create Native Fence sync", __FUNCTION__);
   } else {
-    fd = eglDupNativeFenceFDANDROID(eglDisplay, sync);
+    fd = eglDupNativeFenceFDANDROID(eglGetCurrentDisplay(), sync);
     if (fd == EGL_NO_NATIVE_FENCE_FD_ANDROID) {
       ALOGE("%s - Failed to dup sync", __FUNCTION__);
     }
-    EGL(eglDestroySyncKHR(eglDisplay, sync));
+    EGL(eglDestroySyncKHR(eglGetCurrentDisplay(), sync));
   }
 
   return fd;
