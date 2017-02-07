@@ -1,1 +1,0 @@
-../libqdutils/display_config.h
