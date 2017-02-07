@@ -1,1 +1,0 @@
-../libcopybit/copybit.h
