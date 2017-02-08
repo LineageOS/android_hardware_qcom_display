@@ -51,12 +51,27 @@ DRMLibLoader *DRMLibLoader::GetInstance() {
   return s_instance;
 }
 
+void DRMLibLoader::Destroy() {
+  lock_guard<mutex> obj(s_lock);
+  if (s_instance) {
+    delete s_instance;
+    s_instance = nullptr;
+  }
+}
+
 DRMLibLoader::DRMLibLoader() {
   if (Open("libsdedrm.so")) {
     if (Sym("GetDRMManager", reinterpret_cast<void **>(&func_get_drm_manager_)) &&
         Sym("DestroyDRMManager", reinterpret_cast<void **>(&func_destroy_drm_manager_))) {
       is_loaded_ = true;
     }
+  }
+}
+
+DRMLibLoader::~DRMLibLoader() {
+  if (lib_) {
+    ::dlclose(lib_);
+    lib_ = nullptr;
   }
 }
 

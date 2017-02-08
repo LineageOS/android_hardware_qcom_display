@@ -108,6 +108,16 @@ HWInfoDRM::HWInfoDRM() {
   }
 }
 
+HWInfoDRM::~HWInfoDRM() {
+  delete hw_resource_;
+  hw_resource_ = nullptr;
+
+  if (drm_mgr_intf_) {
+    DRMLibLoader::GetInstance()->FuncDestroyDRMManager()();
+    drm_mgr_intf_ = nullptr;
+  }
+}
+
 DisplayError HWInfoDRM::GetDynamicBWLimits(HWResourceInfo *hw_resource) {
   HWDynBwLimitInfo* bw_info = &hw_resource->dyn_bw_info;
   for (int index = 0; index < kBwModeMax; index++) {
