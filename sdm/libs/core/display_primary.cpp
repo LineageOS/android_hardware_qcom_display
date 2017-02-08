@@ -295,6 +295,11 @@ void DisplayPrimary::ThermalEvent(int64_t thermal_level) {
   comp_manager_->ProcessThermalEvent(display_comp_ctx_, thermal_level);
 }
 
+void DisplayPrimary::IdlePowerCollapse() {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  comp_manager_->ProcessIdlePowerCollapse(display_comp_ctx_);
+}
+
 DisplayError DisplayPrimary::GetPanelBrightness(int *level) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   return hw_intf_->GetPanelBrightness(level);

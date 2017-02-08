@@ -423,6 +423,18 @@ void CompManager::ProcessThermalEvent(Handle display_ctx, int64_t thermal_level)
   }
 }
 
+void CompManager::ProcessIdlePowerCollapse(Handle display_ctx) {
+  SCOPE_LOCK(locker_);
+
+  DisplayCompositionContext *display_comp_ctx =
+          reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+
+  if (display_comp_ctx) {
+    resource_intf_->Perform(ResourceInterface::kCmdResetScalarLUT,
+                            display_comp_ctx->display_resource_ctx);
+  }
+}
+
 DisplayError CompManager::SetMaxMixerStages(Handle display_ctx, uint32_t max_mixer_stages) {
   SCOPE_LOCK(locker_);
 
