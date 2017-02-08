@@ -59,6 +59,7 @@ class HWEventHandler {
   virtual void IdleTimeout() = 0;
   virtual void ThermalEvent(int64_t thermal_level) = 0;
   virtual void CECMessage(char *message) = 0;
+  virtual void IdlePowerCollapse() = 0;
 
  protected:
   virtual ~HWEventHandler() { }

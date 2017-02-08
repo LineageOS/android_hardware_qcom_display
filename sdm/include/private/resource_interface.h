@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -32,6 +32,11 @@ namespace sdm {
 
 class ResourceInterface {
  public:
+  enum ResourceCmd {
+    kCmdResetScalarLUT,
+    kCmdMax,
+  };
+
   virtual DisplayError RegisterDisplay(DisplayType type,
                                        const HWDisplayAttributes &display_attributes,
                                        const HWPanelInfo &hw_panel_info,
@@ -61,6 +66,7 @@ class ResourceInterface {
   virtual DisplayError GetScaleLutConfig(HWScaleLutInfo *lut_info) = 0;
   virtual DisplayError SetDetailEnhancerData(Handle display_ctx,
                                              const DisplayDetailEnhancerData &de_data) = 0;
+  virtual DisplayError Perform(int cmd, ...) = 0;
 
  protected:
   virtual ~ResourceInterface() { }
