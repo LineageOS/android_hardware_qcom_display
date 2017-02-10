@@ -30,6 +30,8 @@
 
 __BEGIN_DECLS
 
+#define MAX_DIMENSION       (4096)
+
 /**
  * The id of this module
  */
