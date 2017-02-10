@@ -37,12 +37,13 @@ namespace drm_utils {
 
 class DRMLibLoader {
  public:
-  ~DRMLibLoader() {}
+  ~DRMLibLoader();
   bool IsLoaded() { return is_loaded_; }
   sde_drm::GetDRMManager FuncGetDRMManager() { return func_get_drm_manager_; }
   sde_drm::DestroyDRMManager FuncDestroyDRMManager() { return func_destroy_drm_manager_; }
 
   static DRMLibLoader *GetInstance();
+  static void Destroy();
 
  private:
   DRMLibLoader();

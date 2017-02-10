@@ -298,7 +298,7 @@ class DRMManagerInterface;
 typedef int (*GetDRMManager)(int fd, DRMManagerInterface **intf);
 
 /* Destroy DRMManager instance */
-typedef int (*DestroyDRMManager)(DRMManagerInterface *intf);
+typedef int (*DestroyDRMManager)();
 
 /*
  * DRM Manager Interface - Any class which plans to implement helper function for vendor

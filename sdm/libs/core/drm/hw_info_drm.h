@@ -44,6 +44,7 @@ namespace sdm {
 class HWInfoDRM: public HWInfoInterface {
  public:
   HWInfoDRM();
+  virtual ~HWInfoDRM();
   virtual DisplayError GetHWResourceInfo(HWResourceInfo *hw_resource);
   virtual DisplayError GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_disp_info);
 
