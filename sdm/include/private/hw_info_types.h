@@ -469,7 +469,9 @@ struct HWLayersInfo {
                                         // be programmed on hardware.
   uint32_t roi_index[kMaxSDELayers] = {0};  // Stores the ROI index where the layers are visible.
 
-  int sync_handle = -1;
+  int sync_handle = -1;         // Release fence id for current draw cycle.
+  int set_idle_time_ms = -1;    // Set idle time to the new specified value.
+                                //    -1 indicates no change in idle time since last set value.
 
   std::vector<LayerRect> left_frame_roi = {};   // Left ROI.
   std::vector<LayerRect> right_frame_roi = {};  // Right ROI.

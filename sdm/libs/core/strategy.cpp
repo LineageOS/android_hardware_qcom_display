@@ -254,5 +254,12 @@ DisplayError Strategy::Purge() {
   return kErrorNone;
 }
 
+DisplayError Strategy::SetIdleTimeoutMs(uint32_t active_ms) {
+  if (strategy_intf_) {
+    return strategy_intf_->SetIdleTimeoutMs(active_ms);
+  }
+
+  return kErrorNotSupported;
+}
 
 }  // namespace sdm
