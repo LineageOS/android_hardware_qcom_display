@@ -397,6 +397,15 @@ void CompManager::Purge(Handle display_ctx) {
   display_comp_ctx->strategy->Purge();
 }
 
+DisplayError CompManager::SetIdleTimeoutMs(Handle display_ctx, uint32_t active_ms) {
+  SCOPE_LOCK(locker_);
+
+  DisplayCompositionContext *display_comp_ctx =
+                             reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+
+  return display_comp_ctx->strategy->SetIdleTimeoutMs(active_ms);
+}
+
 void CompManager::ProcessIdleTimeout(Handle display_ctx) {
   SCOPE_LOCK(locker_);
 
@@ -516,21 +525,6 @@ DisplayError CompManager::SetMaxBandwidthMode(HWBwModes mode) {
   }
 
   return resource_intf_->SetMaxBandwidthMode(mode);
-}
-
-bool CompManager::CanSetIdleTimeout(Handle display_ctx) {
-  DisplayCompositionContext *display_comp_ctx =
-                             reinterpret_cast<DisplayCompositionContext *>(display_ctx);
-
-  if (!display_comp_ctx) {
-    return false;
-  }
-
-  if (!display_comp_ctx->idle_fallback) {
-    return true;
-  }
-
-  return false;
 }
 
 DisplayError CompManager::GetScaleLutConfig(HWScaleLutInfo *lut_info) {
