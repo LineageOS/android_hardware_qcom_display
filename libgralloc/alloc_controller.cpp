@@ -30,24 +30,18 @@
 #include <cutils/log.h>
 #include <fcntl.h>
 #include <dlfcn.h>
+#include <media/msm_media_info.h>
+#include <qdMetaData.h>
+#include <utils/Singleton.h>
+#include <utils/Mutex.h>
+#include <algorithm>
+
 #include "gralloc_priv.h"
 #include "alloc_controller.h"
 #include "memalloc.h"
 #include "ionalloc.h"
 #include "gr.h"
 #include "qd_utils.h"
-#include <qdMetaData.h>
-#include <utils/Singleton.h>
-#include <utils/Mutex.h>
-#include <algorithm>
-
-#ifdef VENUS_COLOR_FORMAT
-#include <media/msm_media_info.h>
-#else
-#define VENUS_Y_STRIDE(args...) 0
-#define VENUS_Y_SCANLINES(args...) 0
-#define VENUS_BUFFER_SIZE(args...) 0
-#endif
 
 #define ASTC_BLOCK_SIZE 16
 
@@ -203,6 +197,7 @@ bool isUncompressedRgbFormat(int format)
         case HAL_PIXEL_FORMAT_R_8:
         case HAL_PIXEL_FORMAT_RG_88:
         case HAL_PIXEL_FORMAT_BGRX_8888:
+        case HAL_PIXEL_FORMAT_BGR_888:
         case HAL_PIXEL_FORMAT_RGBA_1010102:
         case HAL_PIXEL_FORMAT_ARGB_2101010:
         case HAL_PIXEL_FORMAT_RGBX_1010102:
@@ -262,6 +257,7 @@ void AdrenoMemInfo::getAlignedWidthAndHeight(int width, int height, int format,
             case HAL_PIXEL_FORMAT_YCbCr_422_I:
             case HAL_PIXEL_FORMAT_YCrCb_422_I:
             case HAL_PIXEL_FORMAT_YCbCr_420_P010:
+            case HAL_PIXEL_FORMAT_CbYCrY_422_I:
                 aligned_w = ALIGN(width, 16);
                 break;
             case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
@@ -593,6 +589,7 @@ unsigned int getSize(int format, int width, int height, int usage,
         case HAL_PIXEL_FORMAT_YCrCb_422_SP:
         case HAL_PIXEL_FORMAT_YCbCr_422_I:
         case HAL_PIXEL_FORMAT_YCrCb_422_I:
+        case HAL_PIXEL_FORMAT_CbYCrY_422_I:
             if(width & 1) {
                 ALOGE("width is odd for the YUV422_SP format");
                 return 0;
@@ -812,6 +809,16 @@ int getYUVPlaneInfo(private_handle_t* hnd, struct android_ycbcr* ycbcr)
             ycbcr->ystride = ystride;
             ycbcr->cstride = cstride;
             ycbcr->chroma_step = 1;
+        break;
+        case HAL_PIXEL_FORMAT_CbYCrY_422_I:
+            ystride = width * 2;
+            cstride = 0;
+            ycbcr->y  = (void*)hnd->base;
+            ycbcr->cr = NULL;
+            ycbcr->cb = NULL;
+            ycbcr->ystride = ystride;
+            ycbcr->cstride = 0;
+            ycbcr->chroma_step = 0;
         break;
         //Unsupported formats
         case HAL_PIXEL_FORMAT_YCbCr_422_I:

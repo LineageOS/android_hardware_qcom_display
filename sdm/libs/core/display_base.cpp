@@ -66,9 +66,6 @@ DisplayError DisplayBase::Init() {
     }
   }
 
-  req_mixer_width_ = mixer_attributes_.width;
-  req_mixer_height_ = mixer_attributes_.height;
-
   // Override x_pixels and y_pixels of frame buffer with mixer width and height
   fb_config_.x_pixels = mixer_attributes_.width;
   fb_config_.y_pixels = mixer_attributes_.height;
@@ -715,8 +712,8 @@ DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
   }
 
   DisplayError error = kErrorNone;
-  // Set client requests when not in HDR Mode.
-  if (!hdr_playback_mode_) {
+  // Set client requests when not in HDR Mode or lut generation is disabled
+  if (disable_hdr_lut_gen_ || !hdr_playback_mode_) {
     error = SetColorModeInternal(color_mode);
     if (error != kErrorNone) {
       return error;
@@ -952,6 +949,13 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
   uint32_t align_x = display_attributes_.is_device_split ? 4 : 2;
   uint32_t align_y = 2;
 
+  if (req_mixer_width_ && req_mixer_height_) {
+    *new_mixer_width = req_mixer_width_;
+    *new_mixer_height = req_mixer_height_;
+
+    return (req_mixer_width_ != mixer_width || req_mixer_height_ != mixer_height);
+  }
+
   for (uint32_t i = 0; i < layer_count; i++) {
     Layer *layer = layers.at(i);
 
@@ -997,13 +1001,6 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
     }
 
     return true;
-  } else {
-    if (req_mixer_width_ != mixer_width || req_mixer_height_ != mixer_height) {
-      *new_mixer_width = req_mixer_width_;
-      *new_mixer_height = req_mixer_height_;
-
-      return true;
-    }
   }
 
   return false;
@@ -1197,8 +1194,8 @@ DisplayError DisplayBase::InitializeColorModes() {
 DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
   DisplayError error = kErrorNone;
 
-  if (disable_hdr_lut_gen_) {
-    // Do not apply HDR Mode when hdr lut generation is disabled
+  if (display_type_ != kPrimary) {
+    // Handling is needed for only primary displays
     return kErrorNone;
   }
 
@@ -1206,8 +1203,10 @@ DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
     //  HDR playback off - set prev mode
     if (hdr_playback_mode_) {
       hdr_playback_mode_ = false;
-      if (color_mgr_) {
+      if (color_mgr_ && !disable_hdr_lut_gen_) {
+        // Do not apply HDR Mode when hdr lut generation is disabled
         DLOGI("Setting color mode = %s", current_color_mode_.c_str());
+        //  HDR playback off - set prev mode
         error = SetColorModeInternal(current_color_mode_);
       }
       comp_manager_->ControlDpps(true);  // Enable Dpps
@@ -1217,7 +1216,7 @@ DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
     if (!hdr_playback_mode_ && !layer_stack->flags.animating) {
       // hdr is starting
       hdr_playback_mode_ = true;
-      if (color_mgr_) {
+      if (color_mgr_ && !disable_hdr_lut_gen_) {
         DLOGI("Setting HDR color mode = %s", hdr_color_mode_.c_str());
         error = SetColorModeInternal(hdr_color_mode_);
       }

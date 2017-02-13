@@ -9,6 +9,14 @@ ifeq ($(TARGET_USES_COLOR_METADATA), true)
 common_flags += -DUSE_COLOR_METADATA
 endif
 
+CHECK_VERSION_LE = $(shell if [ $(1) -le $(2) ] ; then echo true ; else echo false ; fi)
+PLATFORM_SDK_NOUGAT = 25
+ifeq "REL" "$(PLATFORM_VERSION_CODENAME)"
+ifeq ($(call CHECK_VERSION_LE, $(PLATFORM_SDK_VERSION), $(PLATFORM_SDK_NOUGAT)), true)
+version_flag := -D__NOUGAT__
+endif
+endif
+
 use_hwc2 := false
 ifeq ($(TARGET_USES_HWC2), true)
     use_hwc2 := true
@@ -50,10 +58,6 @@ endif
 
 ifeq ($(ARCH_ARM_HAVE_NEON),true)
     common_flags += -D__ARM_HAVE_NEON
-endif
-
-ifeq ($(call is-board-platform-in-list, $(MSM_VIDC_TARGET_LIST)), true)
-    common_flags += -DVENUS_COLOR_FORMAT
 endif
 
 ifeq ($(call is-board-platform-in-list, $(MASTER_SIDE_CP_TARGET_LIST)), true)

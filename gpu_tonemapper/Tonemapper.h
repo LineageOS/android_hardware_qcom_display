@@ -24,9 +24,11 @@
 #define TONEMAP_INVERSE 1
 
 #include "EGLImageWrapper.h"
+#include "engine.h"
 
 class Tonemapper {
  private:
+  void* engineContext;
   unsigned int tonemapTexture;
   unsigned int lutXformTexture;
   unsigned int programID;

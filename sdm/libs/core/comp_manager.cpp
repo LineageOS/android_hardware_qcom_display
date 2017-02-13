@@ -245,12 +245,16 @@ void CompManager::PrepareStrategyConstraints(Handle comp_handle, HWLayers *hw_la
   // Set use_cursor constraint to Strategy
   constraints->use_cursor = display_comp_ctx->valid_cursor;
 
-  // Avoid idle fallback, if there is only one app layer.
   // TODO(user): App layer count will change for hybrid composition
   uint32_t app_layer_count = UINT32(hw_layers->info.stack->layers.size()) - 1;
-  if ((app_layer_count > 1 && display_comp_ctx->idle_fallback) || display_comp_ctx->fallback_) {
+  if (display_comp_ctx->idle_fallback || display_comp_ctx->thermal_fallback_) {
     // Handle the idle timeout by falling back
     constraints->safe_mode = true;
+  }
+
+  // Avoid safe mode, if there is only one app layer.
+  if (app_layer_count == 1) {
+     constraints->safe_mode = false;
   }
 }
 
@@ -413,9 +417,9 @@ void CompManager::ProcessThermalEvent(Handle display_ctx, int64_t thermal_level)
           reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
   if (thermal_level >= kMaxThermalLevel) {
-    display_comp_ctx->fallback_ = true;
+    display_comp_ctx->thermal_fallback_ = true;
   } else {
-    display_comp_ctx->fallback_ = false;
+    display_comp_ctx->thermal_fallback_ = false;
   }
 }
 
