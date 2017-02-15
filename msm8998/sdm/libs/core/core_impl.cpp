@@ -39,8 +39,10 @@
 namespace sdm {
 
 CoreImpl::CoreImpl(BufferAllocator *buffer_allocator,
-                   BufferSyncHandler *buffer_sync_handler)
-  : buffer_allocator_(buffer_allocator), buffer_sync_handler_(buffer_sync_handler) {
+                   BufferSyncHandler *buffer_sync_handler,
+                   SocketHandler *socket_handler)
+  : buffer_allocator_(buffer_allocator), buffer_sync_handler_(buffer_sync_handler),
+    socket_handler_(socket_handler) {
 }
 
 DisplayError CoreImpl::Init() {
@@ -76,7 +78,9 @@ DisplayError CoreImpl::Init() {
     goto CleanupOnError;
   }
 
-  error = comp_mgr_.Init(hw_resource_, extension_intf_, buffer_allocator_, buffer_sync_handler_);
+  error = comp_mgr_.Init(hw_resource_, extension_intf_, buffer_allocator_,
+                         buffer_sync_handler_, socket_handler_);
+
   if (error != kErrorNone) {
     goto CleanupOnError;
   }

@@ -95,7 +95,8 @@ int HWCSession::Init() {
   }
 
   DisplayError error = CoreInterface::CreateCore(HWCDebugHandler::Get(), &buffer_allocator_,
-                                                 &buffer_sync_handler_, &core_intf_);
+                                                 &buffer_sync_handler_, &socket_handler_,
+                                                 &core_intf_);
   if (error != kErrorNone) {
     DLOGE("Display core initialization failed. Error = %d", error);
     return -EINVAL;
@@ -572,6 +573,10 @@ int32_t HWCSession::ValidateDisplay(hwc2_device_t *device, hwc2_display_t displa
 
       if (hwc_session->need_invalidate_) {
         hwc_session->callbacks_.Refresh(display);
+      }
+
+      if (hwc_session->color_mgr_) {
+        hwc_session->color_mgr_->SetColorModeDetailEnhancer(hwc_session->hwc_display_[display]);
       }
     }
 

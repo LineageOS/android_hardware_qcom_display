@@ -100,8 +100,24 @@ int HWCDisplayPrimary::Init() {
     use_metadata_refresh_rate_ = false;
   }
 
-  return HWCDisplay::Init();
+  int status = HWCDisplay::Init();
+  if (status) {
+    return status;
+  }
+  color_mode_ = new HWCColorMode(display_intf_);
+  color_mode_->Init();
+
+  return status;
 }
+
+int HWCDisplayPrimary::Deinit() {
+  color_mode_->DeInit();
+  delete color_mode_;
+  color_mode_ = NULL;
+
+  return HWCDisplay::Deinit();
+}
+
 
 void HWCDisplayPrimary::ProcessBootAnimCompleted(hwc_display_contents_1_t *list) {
   uint32_t numBootUpLayers = 0;
@@ -190,7 +206,13 @@ int HWCDisplayPrimary::Prepare(hwc_display_contents_1_t *content_list) {
   }
 
   if (content_list->numHwLayers <= 1) {
-    flush_ = true;
+    DisplayConfigFixedInfo display_config;
+    display_intf_->GetConfig(&display_config);
+    if (display_config.is_cmdmode) {
+      DLOGI("Skipping null commit on cmd mode panel");
+    } else {
+      flush_ = true;
+    }
     return 0;
   }
 
@@ -204,6 +226,14 @@ int HWCDisplayPrimary::Prepare(hwc_display_contents_1_t *content_list) {
 
 int HWCDisplayPrimary::Commit(hwc_display_contents_1_t *content_list) {
   int status = 0;
+
+  DisplayConfigFixedInfo display_config;
+  display_intf_->GetConfig(&display_config);
+  if (content_list->numHwLayers <= 1 && display_config.is_cmdmode) {
+    DLOGI("Skipping null commit on cmd mode panel");
+    return 0;
+  }
+
   if (display_paused_) {
     if (content_list->outbufAcquireFenceFd >= 0) {
       // If we do not handle the frame set retireFenceFd to outbufAcquireFenceFd,

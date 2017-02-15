@@ -117,6 +117,8 @@ class HWCColorManager {
   int SetSolidFill(const void *params, bool enable, HWCDisplay *hwc_display);
   int SetFrameCapture(void *params, bool enable, HWCDisplay *hwc_display);
   int SetDetailedEnhancer(void *params, HWCDisplay *hwc_display);
+  void SetColorModeDetailEnhancer(HWCDisplay *hwc_display);
+  int SetHWDetailedEnhancerConfig(void *params, HWCDisplay *hwc_display);
 
  protected:
   int CreateSolidFillLayers(HWCDisplay *hwc_display);

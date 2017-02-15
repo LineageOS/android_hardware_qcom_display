@@ -4,7 +4,7 @@ include $(LOCAL_PATH)/../../../common.mk
 
 LOCAL_MODULE                  := libsdmcore
 LOCAL_MODULE_TAGS             := optional
-LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes)
+LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes) $(common_header_export_path)
 LOCAL_CFLAGS                  := -Wno-unused-parameter -DLOG_TAG=\"SDM\" $(common_flags)
 LOCAL_HW_INTF_PATH            := fb
 LOCAL_SHARED_LIBRARIES        := libdl libsdmutils
@@ -42,7 +42,8 @@ LOCAL_COPY_HEADERS             = $(SDM_HEADER_PATH)/core/buffer_allocator.h \
                                  $(SDM_HEADER_PATH)/core/dump_interface.h \
                                  $(SDM_HEADER_PATH)/core/layer_buffer.h \
                                  $(SDM_HEADER_PATH)/core/layer_stack.h \
-                                 $(SDM_HEADER_PATH)/core/sdm_types.h
+                                 $(SDM_HEADER_PATH)/core/sdm_types.h \
+                                 $(SDM_HEADER_PATH)/core/socket_handler.h
 include $(BUILD_COPY_HEADERS)
 
 include $(CLEAR_VARS)
@@ -53,5 +54,6 @@ LOCAL_COPY_HEADERS             = $(SDM_HEADER_PATH)/private/color_interface.h \
                                  $(SDM_HEADER_PATH)/private/hw_info_types.h \
                                  $(SDM_HEADER_PATH)/private/partial_update_interface.h \
                                  $(SDM_HEADER_PATH)/private/resource_interface.h \
-                                 $(SDM_HEADER_PATH)/private/strategy_interface.h
+                                 $(SDM_HEADER_PATH)/private/strategy_interface.h \
+                                 $(SDM_HEADER_PATH)/private/dpps_control_interface.h
 include $(BUILD_COPY_HEADERS)

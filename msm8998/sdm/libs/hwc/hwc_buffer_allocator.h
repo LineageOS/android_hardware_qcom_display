@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -49,14 +49,16 @@ class HWCBufferAllocator : public BufferAllocator {
   DisplayError AllocateBuffer(BufferInfo *buffer_info);
   DisplayError FreeBuffer(BufferInfo *buffer_info);
   uint32_t GetBufferSize(BufferInfo *buffer_info);
+  DisplayError GetAllocatedBufferInfo(const BufferConfig &buffer_config,
+                                      AllocatedBufferInfo *allocated_buffer_info);
+
+  int SetBufferInfo(LayerBufferFormat format, int *target, int *flags);
 
  private:
   struct MetaBufferInfo {
     int alloc_type;              //!< Specifies allocation type set by the buffer allocator.
     void *base_addr;             //!< Specifies the base address of the allocated output buffer.
   };
-
-  int SetBufferInfo(LayerBufferFormat format, int *target, int *flags);
 
   gralloc::IAllocController *alloc_controller_;
 };

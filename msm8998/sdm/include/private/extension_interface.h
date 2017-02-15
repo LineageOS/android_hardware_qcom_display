@@ -31,6 +31,7 @@
 #include "partial_update_interface.h"
 #include "strategy_interface.h"
 #include "resource_interface.h"
+#include "dpps_control_interface.h"
 
 namespace sdm {
 
@@ -58,7 +59,8 @@ class ExtensionInterface {
                                            PartialUpdateInterface **interface) = 0;
   virtual DisplayError DestroyPartialUpdate(PartialUpdateInterface *interface) = 0;
 
-  virtual DisplayError CreateStrategyExtn(DisplayType type, const HWResourceInfo &hw_resource_info,
+  virtual DisplayError CreateStrategyExtn(DisplayType type, BufferAllocator *buffer_allocator,
+                                          const HWResourceInfo &hw_resource_info,
                                           const HWPanelInfo &hw_panel_info,
                                           const HWMixerAttributes &mixer_attributes,
                                           const DisplayConfigVariableInfo &fb_config,
@@ -70,6 +72,9 @@ class ExtensionInterface {
                                           BufferAllocator *buffer_allocator,
                                           BufferSyncHandler *buffer_sync_handler) = 0;
   virtual DisplayError DestroyResourceExtn(ResourceInterface *interface) = 0;
+  virtual DisplayError CreateDppsControlExtn(DppsControlInterface **dpps_control_interface,
+                                             SocketHandler *socket_handler) = 0;
+  virtual DisplayError DestroyDppsControlExtn(DppsControlInterface *interface) = 0;
 
  protected:
   virtual ~ExtensionInterface() { }

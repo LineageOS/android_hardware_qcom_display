@@ -28,10 +28,44 @@ namespace sdm {
 
 std::atomic<hwc2_layer_t> HWCLayer::next_id_(1);
 
+DisplayError SetCSC(const MetaData_t *meta_data, ColorMetaData *color_metadata) {
+  if (meta_data->operation & COLOR_METADATA) {
+#ifdef USE_COLOR_METADATA
+    *color_metadata = meta_data->color;
+#endif
+  } else if (meta_data->operation & UPDATE_COLOR_SPACE) {
+    ColorSpace_t csc = meta_data->colorSpace;
+    color_metadata->range = Range_Limited;
+
+    if (csc == ITU_R_601_FR || csc == ITU_R_2020_FR) {
+      color_metadata->range = Range_Full;
+    }
+
+    switch (csc) {
+    case ITU_R_601:
+    case ITU_R_601_FR:
+      // video and display driver uses 601_525
+      color_metadata->colorPrimaries = ColorPrimaries_BT601_6_525;
+      break;
+    case ITU_R_709:
+      color_metadata->colorPrimaries = ColorPrimaries_BT709_5;
+      break;
+    case ITU_R_2020:
+    case ITU_R_2020_FR:
+        color_metadata->colorPrimaries = ColorPrimaries_BT2020;
+        break;
+    default:
+      DLOGE("Unsupported CSC: %d", csc);
+      return kErrorNotSupported;
+    }
+  }
+
+  return kErrorNone;
+}
+
 // Layer operations
 HWCLayer::HWCLayer(hwc2_display_t display_id) : id_(next_id_++), display_id_(display_id) {
   layer_ = new Layer();
-  layer_->input_buffer = new LayerBuffer();
   // Fences are deferred, so the first time this layer is presented, return -1
   // TODO(user): Verify that fences are properly obtained on suspend/resume
   release_fences_.push(-1);
@@ -45,9 +79,6 @@ HWCLayer::~HWCLayer() {
   }
   close(ion_fd_);
   if (layer_) {
-    if (layer_->input_buffer) {
-      delete (layer_->input_buffer);
-    }
     delete layer_;
   }
 }
@@ -74,7 +105,7 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
     ion_fd_ = dup(handle->fd);
   }
 
-  LayerBuffer *layer_buffer = layer_->input_buffer;
+  LayerBuffer *layer_buffer = &layer_->input_buffer;
   int aligned_width, aligned_height;
   int unaligned_width, unaligned_height;
 
@@ -151,7 +182,7 @@ HWC2::Error HWCLayer::SetLayerBlendMode(HWC2::BlendMode mode) {
 
 HWC2::Error HWCLayer::SetLayerColor(hwc_color_t color) {
   layer_->solid_fill_color = GetUint32Color(color);
-  layer_->input_buffer->format = kFormatARGB8888;
+  layer_->input_buffer.format = kFormatARGB8888;
   DLOGV_IF(kTagCompManager, "[%" PRIu64 "][%" PRIu64 "] Layer color set to %x", display_id_, id_,
            layer_->solid_fill_color);
   return HWC2::Error::None;
@@ -440,16 +471,14 @@ LayerBufferS3DFormat HWCLayer::GetS3DFormat(uint32_t s3d_format) {
 
 DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *layer) {
   const MetaData_t *meta_data = reinterpret_cast<MetaData_t *>(pvt_handle->base_metadata);
-  LayerBuffer *layer_buffer = layer->input_buffer;
+  LayerBuffer *layer_buffer = &layer->input_buffer;
 
   if (!meta_data) {
     return kErrorNone;
   }
 
-  if (meta_data->operation & UPDATE_COLOR_SPACE) {
-    if (SetCSC(meta_data->colorSpace, &layer_buffer->csc) != kErrorNone) {
-      return kErrorNotSupported;
-    }
+  if (sdm::SetCSC(meta_data, &layer_buffer->color_metadata) != kErrorNone) {
+    return kErrorNotSupported;
   }
 
   if (meta_data->operation & SET_IGC) {
@@ -472,25 +501,6 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
 
   if (meta_data->operation & S3D_FORMAT) {
     layer_buffer->s3d_format = GetS3DFormat(meta_data->s3dFormat);
-  }
-
-  return kErrorNone;
-}
-
-DisplayError HWCLayer::SetCSC(ColorSpace_t source, LayerCSC *target) {
-  switch (source) {
-    case ITU_R_601:
-      *target = kCSCLimitedRange601;
-      break;
-    case ITU_R_601_FR:
-      *target = kCSCFullRange601;
-      break;
-    case ITU_R_709:
-      *target = kCSCLimitedRange709;
-      break;
-    default:
-      DLOGE("Unsupported CSC: %d", source);
-      return kErrorNotSupported;
   }
 
   return kErrorNone;
