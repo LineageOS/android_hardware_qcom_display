@@ -95,29 +95,31 @@ int DRMMaster::CreateFbId(const DRMBuffer &drm_buffer, uint32_t *gem_handle, uin
     return ret;
   }
 
-  uint32_t gem_handles[4] = {0};
-  uint32_t pitches[4] = {0};
-  uint32_t offsets[4] = {0};
-  uint64_t modifier[4] = {0};
+  struct drm_mode_fb_cmd2 cmd2 {};
+  cmd2.width = drm_buffer.width;
+  cmd2.height = drm_buffer.height;
+  cmd2.pixel_format = drm_buffer.drm_format;
+  cmd2.flags = DRM_MODE_FB_MODIFIERS;
+  fill(begin(cmd2.handles), begin(cmd2.handles) + drm_buffer.num_planes, *gem_handle);
+  copy(begin(drm_buffer.stride), end(drm_buffer.stride), begin(cmd2.pitches));
+  copy(begin(drm_buffer.offset), end(drm_buffer.offset), begin(cmd2.offsets));
+  fill(begin(cmd2.modifier), begin(cmd2.modifier) + drm_buffer.num_planes,
+       drm_buffer.drm_format_modifier);
 
-  fill(begin(gem_handles), begin(gem_handles) + drm_buffer.num_planes, *gem_handle);
-  copy(begin(drm_buffer.stride), end(drm_buffer.stride), begin(pitches));
-  copy(begin(drm_buffer.offset), end(drm_buffer.offset), begin(offsets));
-  fill(begin(modifier), begin(modifier) + drm_buffer.num_planes, drm_buffer.drm_format_modifier);
-
-  ret = drmModeAddFB3(dev_fd_, drm_buffer.width, drm_buffer.height, drm_buffer.drm_format,
-                      gem_handles, pitches, offsets, modifier, fb_id, DRM_MODE_FB_MODIFIERS);
-  if (ret) {
-    DRM_LOGE("drmModeAddFB3 failed with error %d", ret);
+  if ((ret = drmIoctl(dev_fd_, DRM_IOCTL_MODE_ADDFB2, &cmd2))) {
+    DRM_LOGE("DRM_IOCTL_MODE_ADDFB2 failed with error %d", ret);
     struct drm_gem_close gem_close = {};
     gem_close.handle = *gem_handle;
     int ret1 = drmIoctl(dev_fd_, DRM_IOCTL_GEM_CLOSE, &gem_close);
     if (ret1) {
       DRM_LOGE("drmIoctl::DRM_IOCTL_GEM_CLOSE failed with error %d", ret1);
+      return ret1;
     }
+    return ret;
   }
 
-  return ret;
+  *fb_id = cmd2.fb_id;
+  return 0;
 }
 
 int DRMMaster::RemoveFbId(uint32_t gem_handle, uint32_t fb_id) {
