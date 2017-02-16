@@ -27,6 +27,8 @@
 
 #include "cb_utils.h"
 #include "cb_swap_rect.h"
+#include <ui/Region.h>
+
 /* get union of two rects into 3rd rect */
 void getUnion(hwc_rect_t& rect1,hwc_rect_t& rect2, hwc_rect_t& irect) {
 
