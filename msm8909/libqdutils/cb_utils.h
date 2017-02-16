@@ -29,7 +29,6 @@
 #ifndef CB_UTIL_H
 #define CB_UTIL_H
 
-#include <ui/Region.h>
 #include "hwc_utils.h"
 #include "copybit.h"
 
