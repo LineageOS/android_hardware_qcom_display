@@ -32,6 +32,7 @@
 #ifdef PP_DRM_ENABLE
 #include <drm/msm_drm_pp.h>
 #endif
+#include <utils/debug.h>
 #include "hw_color_manager_drm.h"
 
 using sde_drm::kFeaturePcc;
@@ -79,6 +80,10 @@ uint32_t HWColorManagerDrm::GetFeatureVersion(DRMPPFeatureInfo &feature) {
     case kFeatureDither:
       break;
     case kFeatureGamut:
+      if (feature.version == 1)
+        version = PPFeatureVersion::kSDEGamutV17;
+      else if (feature.version == 4)
+        version = PPFeatureVersion::kSDEGamutV4;
       break;
     case kFeaturePADither:
       break;
@@ -161,6 +166,71 @@ DisplayError HWColorManagerDrm::GetDrmDither(const PPFeatureInfo &in_data,
 DisplayError HWColorManagerDrm::GetDrmGamut(const PPFeatureInfo &in_data,
                                             DRMPPFeatureInfo *out_data) {
   DisplayError ret = kErrorNone;
+#ifdef PP_DRM_ENABLE
+  struct SDEGamutCfg *sde_gamut = NULL;
+  struct drm_msm_3d_gamut *mdp_gamut = NULL;
+  uint32_t size = 0;
+
+  if (!out_data) {
+    DLOGE("Invalid input parameter for gamut");
+    return kErrorParameters;
+  }
+  sde_gamut = (struct SDEGamutCfg *)in_data.GetConfigData();
+  out_data->id = kFeatureGamut;
+  out_data->type = sde_drm::kPropBlob;
+  out_data->version = in_data.feature_version_;
+  out_data->payload_size = sizeof(struct drm_msm_3d_gamut);
+  if (in_data.enable_flags_ & kOpsDisable) {
+    /* feature disable case */
+    out_data->payload = NULL;
+    return ret;
+  } else if (!(in_data.enable_flags_ & kOpsEnable)) {
+    out_data->payload = NULL;
+    return kErrorParameters;
+  }
+
+  mdp_gamut = new drm_msm_3d_gamut();
+  if (!mdp_gamut) {
+    DLOGE("Failed to allocate memory for gamut");
+    return kErrorMemory;
+  }
+
+  if (sde_gamut->map_en)
+    mdp_gamut->flags = GAMUT_3D_MAP_EN;
+  else
+    mdp_gamut->flags = 0;
+
+  switch (sde_gamut->mode) {
+    case SDEGamutCfgWrapper::GAMUT_FINE_MODE:
+      mdp_gamut->mode = GAMUT_3D_MODE_17;
+      size = GAMUT_3D_MODE17_TBL_SZ;
+      break;
+    case SDEGamutCfgWrapper::GAMUT_COARSE_MODE:
+      mdp_gamut->mode = GAMUT_3D_MODE_5;
+      size = GAMUT_3D_MODE5_TBL_SZ;
+      break;
+    case SDEGamutCfgWrapper::GAMUT_COARSE_MODE_13:
+      mdp_gamut->mode = GAMUT_3D_MODE_13;
+      size = GAMUT_3D_MODE13_TBL_SZ;
+      break;
+    default:
+      DLOGE("Invalid gamut mode %d", sde_gamut->mode);
+      free(mdp_gamut);
+      return kErrorParameters;
+  }
+
+  if (sde_gamut->map_en)
+    std::memcpy(mdp_gamut->scale_off, sde_gamut->scale_off_data,
+                sizeof(uint32_t) * GAMUT_3D_SCALE_OFF_SZ * GAMUT_3D_SCALE_OFF_TBL_NUM);
+
+  for (uint32_t row = 0; row < GAMUT_3D_TBL_NUM; row++) {
+    for (uint32_t col = 0; col < size; col++) {
+      mdp_gamut->col[row][col].c0 = sde_gamut->c0_data[row][col];
+      mdp_gamut->col[row][col].c2_c1 = sde_gamut->c1_c2_data[row][col];
+    }
+  }
+  out_data->payload = mdp_gamut;
+#endif
   return ret;
 }
 
