@@ -121,6 +121,13 @@ void engine_deleteProgram(unsigned int id)
 }
 
 //-----------------------------------------------------------------------------
+void engine_setData2f(int location, float* data)
+//-----------------------------------------------------------------------------
+{
+    GL(glUniform2f(location, data[0], data[1]));
+}
+
+//-----------------------------------------------------------------------------
 unsigned int engine_load3DTexture(void *colorMapData, int sz, int format)
 //-----------------------------------------------------------------------------
 {
