@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -27,45 +27,38 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <unistd.h>
-#include <math.h>
-#include <utils/sys.h>
-#include <utils/utils.h>
+#ifndef __DRM_LIB_LOADER_H__
+#define __DRM_LIB_LOADER_H__
 
-#include <algorithm>
+#include <drm_interface.h>
+#include <mutex>
 
-#define __CLASS__ "Utils"
+namespace drm_utils {
 
-namespace sdm {
+class DRMLibLoader {
+ public:
+  ~DRMLibLoader();
+  bool IsLoaded() { return is_loaded_; }
+  sde_drm::GetDRMManager FuncGetDRMManager() { return func_get_drm_manager_; }
+  sde_drm::DestroyDRMManager FuncDestroyDRMManager() { return func_destroy_drm_manager_; }
 
-float gcd(float a, float b) {
-  if (a < b) {
-    std::swap(a, b);
-  }
+  static DRMLibLoader *GetInstance();
+  static void Destroy();
 
-  while (b != 0) {
-    float tmp = b;
-    b = fmodf(a, b);
-    a = tmp;
-  }
+ private:
+  DRMLibLoader();
+  bool Open(const char *lib_name);
+  bool Sym(const char *func_name, void **func_ptr);
 
-  return a;
-}
+  void *lib_ = {};
+  sde_drm::GetDRMManager func_get_drm_manager_ = {};
+  sde_drm::DestroyDRMManager func_destroy_drm_manager_ = {};
+  bool is_loaded_ = false;
 
-float lcm(float a, float b) {
-  return (a * b) / gcd(a, b);
-}
+  static DRMLibLoader *s_instance;  // Singleton instance
+  static std::mutex s_lock;
+};
 
-void CloseFd(int *fd) {
-  if (*fd >= 0) {
-    Sys::close_(*fd);
-    *fd = -1;
-  }
-}
+}  // namespace drm_utils
 
-DriverType GetDriverType() {
-    const char *fb_caps = "/sys/devices/virtual/graphics/fb0/mdp/caps";
-    // 0 - File exists
-    return Sys::access_(fb_caps, F_OK) ? DriverType::DRM : DriverType::FB;
-}
-}  // namespace sdm
+#endif  // __DRM_LIB_LOADER_H__

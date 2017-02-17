@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -27,45 +27,43 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <unistd.h>
-#include <math.h>
-#include <utils/sys.h>
-#include <utils/utils.h>
+#ifndef __DRM_LOGGER_H__
+#define __DRM_LOGGER_H__
 
-#include <algorithm>
+#include <utility>
 
-#define __CLASS__ "Utils"
+namespace drm_utils {
 
-namespace sdm {
+class DRMLogger {
+ public:
+  virtual ~DRMLogger() {}
+  virtual void Error(const char *format, ...) = 0;
+  virtual void Warning(const char *format, ...) = 0;
+  virtual void Info(const char *format, ...) = 0;
+  virtual void Debug(const char *format, ...) = 0;
 
-float gcd(float a, float b) {
-  if (a < b) {
-    std::swap(a, b);
+  static void Set(DRMLogger *logger) { s_instance = logger; }
+  static DRMLogger *Get() { return s_instance; }
+
+ private:
+  static DRMLogger *s_instance;
+};
+
+#define DRM_LOG(method, format, ...)                            \
+  if (drm_utils::DRMLogger::Get()) {                            \
+    drm_utils::DRMLogger::Get()->method(format, ##__VA_ARGS__); \
   }
 
-  while (b != 0) {
-    float tmp = b;
-    b = fmodf(a, b);
-    a = tmp;
-  }
+#define DRM_LOG_CONTEXT(method, format, ...) \
+  DRM_LOG(method, __CLASS__ "::%s: " format, __FUNCTION__, ##__VA_ARGS__);
 
-  return a;
-}
+#define DRM_LOGE(format, ...) DRM_LOG_CONTEXT(Error, format, ##__VA_ARGS__)
+#define DRM_LOGW(format, ...) DRM_LOG_CONTEXT(Warning, format, ##__VA_ARGS__)
+#define DRM_LOGI(format, ...) DRM_LOG_CONTEXT(Info, format, ##__VA_ARGS__)
+#define DRM_LOGD_IF(pred, format, ...) \
+  if (pred)                            \
+  DRM_LOG_CONTEXT(Debug, format, ##__VA_ARGS__)
 
-float lcm(float a, float b) {
-  return (a * b) / gcd(a, b);
-}
+}  // namespace drm_utils
 
-void CloseFd(int *fd) {
-  if (*fd >= 0) {
-    Sys::close_(*fd);
-    *fd = -1;
-  }
-}
-
-DriverType GetDriverType() {
-    const char *fb_caps = "/sys/devices/virtual/graphics/fb0/mdp/caps";
-    // 0 - File exists
-    return Sys::access_(fb_caps, F_OK) ? DriverType::DRM : DriverType::FB;
-}
-}  // namespace sdm
+#endif  // __DRM_LOGGER_H__

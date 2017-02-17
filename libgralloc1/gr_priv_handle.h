@@ -84,6 +84,7 @@ struct private_handle_t : public native_handle_t {
 
   int stride;
   uint64_t base_metadata __attribute__((aligned(8)));
+  unsigned int fb_id;
 
   // added for gralloc1
   int unaligned_width;   // holds width client asked to allocate
@@ -117,7 +118,8 @@ struct private_handle_t : public native_handle_t {
         unaligned_width(width),
         unaligned_height(height),
         producer_usage(GRALLOC1_PRODUCER_USAGE_NONE),
-        consumer_usage(GRALLOC1_CONSUMER_USAGE_NONE) {
+        consumer_usage(GRALLOC1_CONSUMER_USAGE_NONE),
+        fb_id(0) {
     version = static_cast<int>(sizeof(native_handle));
     numInts = NumInts();
     numFds = kNumFds;

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -27,45 +27,46 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <unistd.h>
-#include <math.h>
-#include <utils/sys.h>
-#include <utils/utils.h>
+#ifndef __DRM_RES_MGR_H__
+#define __DRM_RES_MGR_H__
 
-#include <algorithm>
+#include <xf86drm.h>
+#include <xf86drmMode.h>
 
-#define __CLASS__ "Utils"
+#include <mutex>
 
-namespace sdm {
+namespace drm_utils {
 
-float gcd(float a, float b) {
-  if (a < b) {
-    std::swap(a, b);
+class DRMResMgr {
+ public:
+  /* Returns the default connector id for primary panel */
+  void GetConnectorId(uint32_t *id) { *id = conn_->connector_id; }
+  /* Returns the default crtc id for primary pipeline */
+  void GetCrtcId(uint32_t *id) { *id = crtc_->crtc_id; }
+  /* Returns the default mode currently used by the connector */
+  void GetMode(drmModeModeInfo *mode) { *mode = conn_->modes[0]; }
+  /* Returns the panel dimensions in mm */
+  void GetDisplayDimInMM(uint32_t *w, uint32_t *h) {
+    *w = conn_->mmWidth;
+    *h = conn_->mmHeight;
   }
 
-  while (b != 0) {
-    float tmp = b;
-    b = fmodf(a, b);
-    a = tmp;
-  }
+  /* Creates and initializes an instance of DRMResMgr. On success, returns a pointer to it, on
+   * failure returns -ENODEV */
+  static int GetInstance(DRMResMgr **res_mgr);
 
-  return a;
-}
+ private:
+  int Init();
 
-float lcm(float a, float b) {
-  return (a * b) / gcd(a, b);
-}
+  drmModeRes *res_ = nullptr;
+  drmModeConnector *conn_ = nullptr;
+  drmModeEncoder *enc_ = nullptr;
+  drmModeCrtc *crtc_ = nullptr;
 
-void CloseFd(int *fd) {
-  if (*fd >= 0) {
-    Sys::close_(*fd);
-    *fd = -1;
-  }
-}
+  static DRMResMgr *s_instance;
+  static std::mutex s_lock;
+};
 
-DriverType GetDriverType() {
-    const char *fb_caps = "/sys/devices/virtual/graphics/fb0/mdp/caps";
-    // 0 - File exists
-    return Sys::access_(fb_caps, F_OK) ? DriverType::DRM : DriverType::FB;
-}
-}  // namespace sdm
+}  // namespace drm_utils
+
+#endif  // __DRM_RES_MGR_H__

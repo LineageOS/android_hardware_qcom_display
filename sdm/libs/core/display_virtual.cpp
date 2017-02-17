@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -86,7 +86,6 @@ DisplayError DisplayVirtual::SetActiveConfig(DisplayConfigVariableInfo *variable
   DisplayError error = kErrorNone;
   HWDisplayAttributes display_attributes;
   HWMixerAttributes mixer_attributes;
-  DisplayConfigVariableInfo fb_config = *variable_info;
 
   display_attributes.x_pixels = variable_info->x_pixels;
   display_attributes.y_pixels = variable_info->y_pixels;
@@ -106,10 +105,6 @@ DisplayError DisplayVirtual::SetActiveConfig(DisplayConfigVariableInfo *variable
     return error;
   }
 
-  // Override x_pixels and y_pixels of frame buffer with mixer width and height
-  fb_config.x_pixels = mixer_attributes.width;
-  fb_config.y_pixels = mixer_attributes.height;
-
   // if display is already connected, unregister display from composition manager and register
   // the display with new configuration.
   if (display_comp_ctx_) {
@@ -117,14 +112,16 @@ DisplayError DisplayVirtual::SetActiveConfig(DisplayConfigVariableInfo *variable
   }
 
   error = comp_manager_->RegisterDisplay(display_type_, display_attributes, hw_panel_info_,
-                                         mixer_attributes, fb_config, &display_comp_ctx_);
+                                         mixer_attributes, fb_config_, &display_comp_ctx_);
   if (error != kErrorNone) {
     return error;
   }
 
   display_attributes_ = display_attributes;
   mixer_attributes_ = mixer_attributes;
-  fb_config_ = fb_config;
+
+  DLOGI("Virtual display resolution changed to[%dx%d]", display_attributes_.x_pixels,
+        display_attributes_.y_pixels);
 
   return kErrorNone;
 }

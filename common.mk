@@ -4,6 +4,9 @@ display_top := $(call my-dir)
 #Common C flags
 common_flags := -DDEBUG_CALC_FPS -Wno-missing-field-initializers
 common_flags += -Wconversion -Wall -Werror -std=c++11
+ifneq ($(TARGET_IS_HEADLESS), true)
+    common_flags += -DCOMPILE_DRM
+endif
 
 ifeq ($(TARGET_USES_COLOR_METADATA), true)
 common_flags += -DUSE_COLOR_METADATA
@@ -28,6 +31,7 @@ common_includes += $(display_top)/libqservice
 common_includes += $(display_top)/gpu_tonemapper
 ifneq ($(TARGET_IS_HEADLESS), true)
     common_includes += $(display_top)/libcopybit
+    common_includes += $(display_top)/libdrmutils
 endif
 
 common_includes += $(display_top)/include

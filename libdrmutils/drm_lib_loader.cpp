@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -27,45 +27,66 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <unistd.h>
-#include <math.h>
-#include <utils/sys.h>
-#include <utils/utils.h>
+#include <dlfcn.h>
 
-#include <algorithm>
+#include "drm_lib_loader.h"
 
-#define __CLASS__ "Utils"
+#define __CLASS__ "DRMLibLoader"
 
-namespace sdm {
+using std::mutex;
+using std::lock_guard;
 
-float gcd(float a, float b) {
-  if (a < b) {
-    std::swap(a, b);
+namespace drm_utils {
+
+DRMLibLoader *DRMLibLoader::s_instance = nullptr;
+mutex DRMLibLoader::s_lock;
+
+DRMLibLoader *DRMLibLoader::GetInstance() {
+  lock_guard<mutex> obj(s_lock);
+
+  if (!s_instance) {
+    s_instance = new DRMLibLoader();
   }
 
-  while (b != 0) {
-    float tmp = b;
-    b = fmodf(a, b);
-    a = tmp;
-  }
-
-  return a;
+  return s_instance;
 }
 
-float lcm(float a, float b) {
-  return (a * b) / gcd(a, b);
-}
-
-void CloseFd(int *fd) {
-  if (*fd >= 0) {
-    Sys::close_(*fd);
-    *fd = -1;
+void DRMLibLoader::Destroy() {
+  lock_guard<mutex> obj(s_lock);
+  if (s_instance) {
+    delete s_instance;
+    s_instance = nullptr;
   }
 }
 
-DriverType GetDriverType() {
-    const char *fb_caps = "/sys/devices/virtual/graphics/fb0/mdp/caps";
-    // 0 - File exists
-    return Sys::access_(fb_caps, F_OK) ? DriverType::DRM : DriverType::FB;
+DRMLibLoader::DRMLibLoader() {
+  if (Open("libsdedrm.so")) {
+    if (Sym("GetDRMManager", reinterpret_cast<void **>(&func_get_drm_manager_)) &&
+        Sym("DestroyDRMManager", reinterpret_cast<void **>(&func_destroy_drm_manager_))) {
+      is_loaded_ = true;
+    }
+  }
 }
-}  // namespace sdm
+
+DRMLibLoader::~DRMLibLoader() {
+  if (lib_) {
+    ::dlclose(lib_);
+    lib_ = nullptr;
+  }
+}
+
+bool DRMLibLoader::Open(const char *lib_name) {
+  lib_ = ::dlopen(lib_name, RTLD_NOW);
+
+  return (lib_ != nullptr);
+}
+
+bool DRMLibLoader::Sym(const char *func_name, void **func_ptr) {
+  if (lib_) {
+    *func_ptr = ::dlsym(lib_, func_name);
+  }
+
+  return (*func_ptr != nullptr);
+}
+
+}  // namespace drm_utils
