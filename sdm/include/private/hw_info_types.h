@@ -454,14 +454,15 @@ struct HWLayersInfo {
 
   std::vector<Layer> hw_layers = {};  // Layers which need to be programmed on the HW
 
-  uint32_t index[kMaxSDELayers];   // Indexes of the layers from the layer stack which need to be
-                                   // programmed on hardware.
+  uint32_t index[kMaxSDELayers] = {};   // Indexes of the layers from the layer stack which need to
+                                        // be programmed on hardware.
   uint32_t roi_index[kMaxSDELayers] = {0};  // Stores the ROI index where the layers are visible.
 
   int sync_handle = -1;
 
-  std::vector<LayerRect> left_frame_roi;   // Left ROI.
-  std::vector<LayerRect> right_frame_roi;  // Right ROI.
+  std::vector<LayerRect> left_frame_roi = {};   // Left ROI.
+  std::vector<LayerRect> right_frame_roi = {};  // Right ROI.
+  LayerRect partial_fb_roi = {};   // Damaged area in framebuffer.
 
   bool roi_split = false;          // Indicates separated left and right ROI
 
