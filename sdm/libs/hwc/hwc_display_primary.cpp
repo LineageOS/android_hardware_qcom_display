@@ -192,7 +192,9 @@ int HWCDisplayPrimary::Prepare(hwc_display_contents_1_t *content_list) {
   }
 
   uint32_t refresh_rate = GetOptimalRefreshRate(one_updating_layer);
-  if (current_refresh_rate_ != refresh_rate) {
+  // TODO(user): Need to read current refresh rate to avoid
+  // redundant calls to set refresh rate during idle fall back.
+  if ((current_refresh_rate_ != refresh_rate) || (handle_idle_timeout_)) {
     error = display_intf_->SetRefreshRate(refresh_rate);
   }
 
