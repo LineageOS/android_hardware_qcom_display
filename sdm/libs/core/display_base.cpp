@@ -59,11 +59,13 @@ DisplayError DisplayBase::Init() {
   fb_config_ = display_attributes_;
 
   error = Debug::GetMixerResolution(&mixer_attributes_.width, &mixer_attributes_.height);
+  if (error == kErrorNone) {
+    hw_intf_->SetMixerAttributes(mixer_attributes_);
+  }
+
+  error = hw_intf_->GetMixerAttributes(&mixer_attributes_);
   if (error != kErrorNone) {
-    error = hw_intf_->GetMixerAttributes(&mixer_attributes_);
-    if (error != kErrorNone) {
-      return error;
-    }
+    return error;
   }
 
   // Override x_pixels and y_pixels of frame buffer with mixer width and height
@@ -556,6 +558,12 @@ void DisplayBase::AppendDump(char *buffer, uint32_t length) {
       DumpImpl::AppendString(buffer, length, ", RIGHT(%d %d %d %d)", INT(r_roi.left),
                              INT(r_roi.top), INT(r_roi.right), INT(r_roi.bottom));
     }
+  }
+
+  LayerRect &fb_roi = layer_info.partial_fb_roi;
+  if (IsValid(fb_roi)) {
+    DumpImpl::AppendString(buffer, length, "\nPartial FB ROI(L T R B) : (%d %d %d %d)",
+                          INT(fb_roi.left), INT(fb_roi.top), INT(fb_roi.right), INT(fb_roi.bottom));
   }
 
   const char *header  = "\n| Idx |  Comp Type  |  Split | WB |  Pipe  |    W x H    |          Format          |  Src Rect (L T R B) |  Dst Rect (L T R B) |  Z |    Flags   | Deci(HxV) | CS | Rng |";  //NOLINT
