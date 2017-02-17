@@ -655,7 +655,6 @@ DisplayError HWDevice::SetStride(HWDeviceType device_type, LayerBufferFormat for
   case kFormatYCrCb420PlanarStride16:
   case kFormatYCbCr420SemiPlanar:
   case kFormatYCrCb420SemiPlanar:
-  case kFormatYCbCr420P010:
   case kFormatYCbCr420TP10Ubwc:
     *target = width;
     break;
@@ -665,6 +664,7 @@ DisplayError HWDevice::SetStride(HWDeviceType device_type, LayerBufferFormat for
   case kFormatYCrCb422H1V2SemiPlanar:
   case kFormatYCbCr422H2V1SemiPlanar:
   case kFormatYCbCr422H1V2SemiPlanar:
+  case kFormatYCbCr420P010:
   case kFormatRGBA5551:
   case kFormatRGBA4444:
     *target = width * 2;
