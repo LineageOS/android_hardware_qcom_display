@@ -36,6 +36,8 @@
 #define SECURE_ALIGN SZ_1M
 #endif
 
+#include <vector>
+
 #include "gralloc_priv.h"
 #include "gr_buf_descriptor.h"
 #include "gr_adreno_info.h"
@@ -48,15 +50,15 @@ class Allocator {
   Allocator();
   ~Allocator();
   bool Init();
-  int AllocateBuffer(const BufferDescriptor &descriptor, private_handle_t **pHnd);
   int MapBuffer(void **base, unsigned int size, unsigned int offset, int fd);
-  int FreeBuffer(void *base, unsigned int size, unsigned int offset, int fd);
+  int FreeBuffer(void *base, unsigned int size, unsigned int offset, int fd, int handle);
   int CleanBuffer(void *base, unsigned int size, unsigned int offset, int fd, int op);
   int AllocateMem(AllocData *data, gralloc1_producer_usage_t prod_usage,
                   gralloc1_consumer_usage_t cons_usage);
   // @return : index of the descriptor with maximum buffer size req
-  bool CheckForBufferSharing(uint32_t num_descriptors, const BufferDescriptor *descriptors,
-                             int *max_index);
+  bool CheckForBufferSharing(uint32_t num_descriptors,
+                             const std::vector<std::shared_ptr<BufferDescriptor>>& descriptors,
+                             ssize_t *max_index);
   int GetImplDefinedFormat(gralloc1_producer_usage_t prod_usage,
                            gralloc1_consumer_usage_t cons_usage, int format);
   unsigned int GetSize(const BufferDescriptor &d, unsigned int alignedw, unsigned int alignedh);

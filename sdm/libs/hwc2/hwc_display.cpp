@@ -19,8 +19,6 @@
 
 #include <cutils/properties.h>
 #include <errno.h>
-#include <gr.h>
-#include <gralloc_priv.h>
 #include <math.h>
 #include <sync/sync.h>
 #include <utils/constants.h>
@@ -39,6 +37,9 @@
 #include "hwc_display.h"
 #include "hwc_debugger.h"
 #include "blit_engine_c2d.h"
+#ifndef USE_GRALLOC1
+#include <gr.h>
+#endif
 
 #ifdef QTI_BSP
 #include <hardware/display_defs.h>
@@ -236,21 +237,14 @@ int HWCDisplay::Init() {
     swap_interval_zero_ = true;
   }
 
+  buffer_allocator_ = new HWCBufferAllocator();
 
-  client_target_ = new HWCLayer(id_);
+  client_target_ = new HWCLayer(id_, buffer_allocator_);
+
   int blit_enabled = 0;
   HWCDebugHandler::Get()->GetProperty("persist.hwc.blit.comp", &blit_enabled);
   if (needs_blit_ && blit_enabled) {
-    blit_engine_ = new BlitEngineC2d();
-    if (!blit_engine_) {
-      DLOGI("Create Blit Engine C2D failed");
-    } else {
-      if (blit_engine_->Init() < 0) {
-        DLOGI("Blit Engine Init failed, Blit Composition will not be used!!");
-        delete blit_engine_;
-        blit_engine_ = NULL;
-      }
-    }
+    // TODO(user): Add blit engine when needed
   }
 
   display_intf_->GetRefreshRateRange(&min_refresh_rate_, &max_refresh_rate_);
@@ -268,10 +262,9 @@ int HWCDisplay::Deinit() {
 
   delete client_target_;
 
-  if (blit_engine_) {
-    blit_engine_->DeInit();
-    delete blit_engine_;
-    blit_engine_ = NULL;
+  if (buffer_allocator_) {
+    delete buffer_allocator_;
+    buffer_allocator_ = NULL;
   }
 
   if (color_mode_) {
@@ -284,7 +277,7 @@ int HWCDisplay::Deinit() {
 
 // LayerStack operations
 HWC2::Error HWCDisplay::CreateLayer(hwc2_layer_t *out_layer_id) {
-  HWCLayer *layer = *layer_set_.emplace(new HWCLayer(id_));
+  HWCLayer *layer = *layer_set_.emplace(new HWCLayer(id_, buffer_allocator_));
   layer_map_.emplace(std::make_pair(layer->GetId(), layer));
   *out_layer_id = layer->GetId();
   geometry_changes_ |= GeometryChanges::kAdded;
@@ -351,7 +344,11 @@ void HWCDisplay::BuildLayerStack() {
     const private_handle_t *handle =
         reinterpret_cast<const private_handle_t *>(layer->input_buffer.buffer_id);
     if (handle) {
+#ifdef USE_GRALLOC1
+      if (handle->buffer_type == BUFFER_TYPE_VIDEO) {
+#else
       if (handle->bufferType == BUFFER_TYPE_VIDEO) {
+#endif
         layer_stack_.flags.video_present = true;
       }
       // TZ Protected Buffer - L1
@@ -687,10 +684,6 @@ void HWCDisplay::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type
   dump_frame_count_ = count;
   dump_frame_index_ = 0;
   dump_input_layers_ = ((bit_mask_layer_type & (1 << INPUT_LAYER_DUMP)) != 0);
-
-  if (blit_engine_) {
-    blit_engine_->SetFrameDumpConfig(count);
-  }
 
   DLOGI("num_frame_dump %d, input_layer_dump_enable %d", dump_frame_count_, dump_input_layers_);
 }
@@ -1264,7 +1257,7 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
 
   int aligned_width;
   int aligned_height;
-  int usage = GRALLOC_USAGE_HW_FB;
+  uint32_t usage = GRALLOC_USAGE_HW_FB;
   int format = HAL_PIXEL_FORMAT_RGBA_8888;
   int ubwc_enabled = 0;
   int flags = 0;
@@ -1273,8 +1266,14 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
     usage |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
     flags |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
   }
-  AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(INT(x_pixels), INT(y_pixels), format, usage,
-                                                        aligned_width, aligned_height);
+
+#ifdef USE_GRALLOC1
+  buffer_allocator_->GetAlignedWidthAndHeight(INT(x_pixels), INT(y_pixels), format, usage,
+                                              &aligned_width, &aligned_height);
+#else
+  AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(INT(x_pixels), INT(y_pixels), format,
+                                                        INT(usage), aligned_width, aligned_height);
+#endif
 
   // TODO(user): How does the dirty region get set on the client target? File bug on Google
   client_target_layer->composition = kCompositionGPUTarget;

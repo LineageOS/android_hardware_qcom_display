@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -31,7 +31,9 @@
 #include <utils/debug.h>
 #include <sync/sync.h>
 #include <stdarg.h>
+#ifndef USE_GRALLOC1
 #include <gr.h>
+#endif
 
 #include "hwc_display_virtual.h"
 #include "hwc_debugger.h"
@@ -189,18 +191,17 @@ HWC2::Error HWCDisplayVirtual::SetOutputBuffer(buffer_handle_t buf, int32_t rele
     }
 
     int aligned_width, aligned_height;
-    int unaligned_width, unaligned_height;
-
+#ifdef USE_GRALLOC1
+    buffer_allocator_->GetCustomWidthAndHeight(output_handle, &aligned_width, &aligned_height);
+#else
     AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(output_handle, aligned_width,
                                                           aligned_height);
-    AdrenoMemInfo::getInstance().getUnalignedWidthAndHeight(output_handle, unaligned_width,
-                                                            unaligned_height);
+#endif
 
     output_buffer_->width = UINT32(aligned_width);
     output_buffer_->height = UINT32(aligned_height);
-    output_buffer_->unaligned_width = UINT32(unaligned_width);
-    output_buffer_->unaligned_height = UINT32(unaligned_height);
-    // TODO(mkavm): Handle DRC and metadata changes
+    output_buffer_->unaligned_width = UINT32(output_handle->unaligned_width);
+    output_buffer_->unaligned_height = UINT32(output_handle->unaligned_height);
     output_buffer_->flags.secure = 0;
     output_buffer_->flags.video = 0;
 

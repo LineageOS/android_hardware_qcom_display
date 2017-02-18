@@ -18,7 +18,9 @@
  */
 
 #include "hwc_layers.h"
+#ifndef USE_GRALLOC1
 #include <gr.h>
+#endif
 #include <utils/debug.h>
 #include <cmath>
 
@@ -64,7 +66,8 @@ DisplayError SetCSC(const MetaData_t *meta_data, ColorMetaData *color_metadata) 
 }
 
 // Layer operations
-HWCLayer::HWCLayer(hwc2_display_t display_id) : id_(next_id_++), display_id_(display_id) {
+HWCLayer::HWCLayer(hwc2_display_t display_id, HWCBufferAllocator *buf_allocator)
+  : id_(next_id_++), display_id_(display_id), buffer_allocator_(buf_allocator) {
   layer_ = new Layer();
   // Fences are deferred, so the first time this layer is presented, return -1
   // TODO(user): Verify that fences are properly obtained on suspend/resume
@@ -107,23 +110,28 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
 
   LayerBuffer *layer_buffer = &layer_->input_buffer;
   int aligned_width, aligned_height;
-  int unaligned_width, unaligned_height;
-
+#ifdef USE_GRALLOC1
+  buffer_allocator_->GetCustomWidthAndHeight(handle, &aligned_width, &aligned_height);
+#else
   AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(handle, aligned_width, aligned_height);
-  AdrenoMemInfo::getInstance().getUnalignedWidthAndHeight(handle, unaligned_width,
-                                                          unaligned_height);
+#endif
 
   layer_buffer->width = UINT32(aligned_width);
   layer_buffer->height = UINT32(aligned_height);
-  layer_buffer->unaligned_width = UINT32(unaligned_width);
-  layer_buffer->unaligned_height = UINT32(unaligned_height);
+  layer_buffer->unaligned_width = UINT32(handle->unaligned_width);
+  layer_buffer->unaligned_height = UINT32(handle->unaligned_height);
 
   layer_buffer->format = GetSDMFormat(handle->format, handle->flags);
   if (SetMetaData(handle, layer_) != kErrorNone) {
     return HWC2::Error::BadLayer;
   }
 
-  if (handle->bufferType == BUFFER_TYPE_VIDEO) {
+#ifdef USE_GRALLOC1
+  // TODO(user): Clean this up
+  if (handle->buffer_type == BUFFER_TYPE_VIDEO) {
+#else
+    if (handle->bufferType == BUFFER_TYPE_VIDEO) {
+#endif
     layer_buffer->flags.video = true;
   }
   // TZ Protected Buffer - L1

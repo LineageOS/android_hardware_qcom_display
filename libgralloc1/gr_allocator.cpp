@@ -29,6 +29,7 @@
 
 #include <cutils/log.h>
 #include <algorithm>
+#include <vector>
 
 #include "gr_utils.h"
 #include "gr_allocator.h"
@@ -67,6 +68,9 @@
 #define ION_SC_FLAGS ION_SECURE
 #define ION_SC_PREVIEW_FLAGS ION_SECURE
 #endif
+
+using std::vector;
+using std::shared_ptr;
 
 namespace gralloc1 {
 
@@ -117,43 +121,6 @@ int Allocator::AllocateMem(AllocData *alloc_data, gralloc1_producer_usage_t prod
   return ret;
 }
 
-// Allocates buffer from width, height and format into a
-// private_handle_t. It is the responsibility of the caller
-// to free the buffer using the FreeBuffer function
-int Allocator::AllocateBuffer(const BufferDescriptor &descriptor, private_handle_t **pHnd) {
-  AllocData data;
-  unsigned int aligned_w, aligned_h;
-  data.base = 0;
-  data.fd = -1;
-  data.offset = 0;
-  data.align = (unsigned int)getpagesize();
-  int format = descriptor.GetFormat();
-  gralloc1_producer_usage_t prod_usage = descriptor.GetProducerUsage();
-  gralloc1_consumer_usage_t cons_usage = descriptor.GetConsumerUsage();
-  GetBufferSizeAndDimensions(descriptor, &data.size, &aligned_w, &aligned_h);
-
-  int err = AllocateMem(&data, prod_usage, cons_usage);
-  if (0 != err) {
-    ALOGE("%s: allocate failed", __FUNCTION__);
-    return -ENOMEM;
-  }
-
-  if (IsUBwcEnabled(format, prod_usage, cons_usage)) {
-    data.alloc_type |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
-  }
-
-  // Metadata is not allocated. would be empty
-  private_handle_t *hnd = new private_handle_t(
-      data.fd, data.size, INT(data.alloc_type), 0, INT(format), INT(aligned_w), INT(aligned_h), -1,
-      0, 0, descriptor.GetWidth(), descriptor.GetHeight(), prod_usage, cons_usage);
-  hnd->base = (uint64_t)data.base;
-  hnd->offset = data.offset;
-  hnd->gpuaddr = 0;
-  *pHnd = hnd;
-
-  return 0;
-}
-
 int Allocator::MapBuffer(void **base, unsigned int size, unsigned int offset, int fd) {
   if (ion_allocator_) {
     return ion_allocator_->MapBuffer(base, size, offset, fd);
@@ -162,9 +129,10 @@ int Allocator::MapBuffer(void **base, unsigned int size, unsigned int offset, in
   return -EINVAL;
 }
 
-int Allocator::FreeBuffer(void *base, unsigned int size, unsigned int offset, int fd) {
+int Allocator::FreeBuffer(void *base, unsigned int size, unsigned int offset, int fd,
+                          int handle) {
   if (ion_allocator_) {
-    return ion_allocator_->FreeBuffer(base, size, offset, fd);
+    return ion_allocator_->FreeBuffer(base, size, offset, fd, handle);
   }
 
   return -EINVAL;
@@ -178,8 +146,9 @@ int Allocator::CleanBuffer(void *base, unsigned int size, unsigned int offset, i
   return -EINVAL;
 }
 
-bool Allocator::CheckForBufferSharing(uint32_t num_descriptors, const BufferDescriptor *descriptors,
-                                      int *max_index) {
+bool Allocator::CheckForBufferSharing(uint32_t num_descriptors,
+                                      const vector<shared_ptr<BufferDescriptor>>& descriptors,
+                                      ssize_t *max_index) {
   unsigned int cur_heap_id = 0, prev_heap_id = 0;
   unsigned int cur_alloc_type = 0, prev_alloc_type = 0;
   unsigned int cur_ion_flags = 0, prev_ion_flags = 0;
@@ -190,8 +159,8 @@ bool Allocator::CheckForBufferSharing(uint32_t num_descriptors, const BufferDesc
   *max_index = -1;
   for (uint32_t i = 0; i < num_descriptors; i++) {
     // Check Cached vs non-cached and all the ION flags
-    cur_uncached = UseUncached(descriptors[i].GetProducerUsage());
-    GetIonHeapInfo(descriptors[i].GetProducerUsage(), descriptors[i].GetConsumerUsage(),
+    cur_uncached = UseUncached(descriptors[i]->GetProducerUsage());
+    GetIonHeapInfo(descriptors[i]->GetProducerUsage(), descriptors[i]->GetConsumerUsage(),
                    &cur_heap_id, &cur_alloc_type, &cur_ion_flags);
 
     if (i > 0 && (cur_heap_id != prev_heap_id || cur_alloc_type != prev_alloc_type ||
@@ -200,8 +169,8 @@ bool Allocator::CheckForBufferSharing(uint32_t num_descriptors, const BufferDesc
     }
 
     // For same format type, find the descriptor with bigger size
-    GetAlignedWidthAndHeight(descriptors[i], &alignedw, &alignedh);
-    unsigned int size = GetSize(descriptors[i], alignedw, alignedh);
+    GetAlignedWidthAndHeight(*descriptors[i], &alignedw, &alignedh);
+    unsigned int size = GetSize(*descriptors[i], alignedw, alignedh);
     if (max_size < size) {
       *max_index = INT(i);
       max_size = size;
@@ -552,7 +521,7 @@ void Allocator::GetIonHeapInfo(gralloc1_producer_usage_t prod_usage,
                                unsigned int *alloc_type, unsigned int *ion_flags) {
   unsigned int heap_id = 0;
   unsigned int type = 0;
-  int flags = 0;
+  unsigned int flags = 0;
   if (prod_usage & GRALLOC1_PRODUCER_USAGE_PROTECTED) {
     if (cons_usage & GRALLOC1_CONSUMER_USAGE_PRIVATE_SECURE_DISPLAY) {
       heap_id = ION_HEAP(SD_HEAP_ID);
@@ -597,7 +566,7 @@ void Allocator::GetIonHeapInfo(gralloc1_producer_usage_t prod_usage,
   }
 
   *alloc_type = type;
-  *ion_flags = (unsigned int)flags;
+  *ion_flags = flags;
   *ion_heap_id = heap_id;
 
   return;
