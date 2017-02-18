@@ -4,7 +4,8 @@ include $(CLEAR_VARS)
 
 LOCAL_COPY_HEADERS_TO     := $(common_header_export_path)
 LOCAL_COPY_HEADERS        := TonemapFactory.h Tonemapper.h
-LOCAL_SHARED_LIBRARIES    := libEGL libGLESv2 libui libutils libui liblog
+LOCAL_SHARED_LIBRARIES    := libEGL libGLESv2 libui libutils liblog
+LOCAL_EXPORT_SHARED_LIBRARY_HEADERS := libui
 include $(BUILD_COPY_HEADERS)
 
 LOCAL_MODULE              := libgpu_tonemapper
