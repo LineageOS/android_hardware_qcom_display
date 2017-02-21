@@ -1215,7 +1215,7 @@ android::status_t HWCSession::GetHdrCapabilities(const android::Parcel *input_pa
     return 0;
   }
 
-  std::vector<int32_t> supported_hdr_types = {};
+  std::vector<int32_t> supported_hdr_types;
   // Only HDR10 supported now, in future add other supported HDR formats(HLG, DolbyVision)
   supported_hdr_types.push_back(HAL_HDR_HDR10);
 
