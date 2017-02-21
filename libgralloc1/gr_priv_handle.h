@@ -175,7 +175,7 @@ struct private_handle_t : public native_handle_t {
 
   gralloc1_producer_usage_t GetProducerUsage() const { return producer_usage; }
 
-  int GetBackingstore() const { return fd; }
+  uint64_t GetBackingstore() const { return id; }
 };
 
 #endif  // __GR_PRIV_HANDLE_H__
