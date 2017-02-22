@@ -21,8 +21,15 @@ LOCAL_COPY_HEADERS            := copybit.h copybit_priv.h c2d2.h
 #Copy the headers regardless of whether copybit is built
 include $(BUILD_COPY_HEADERS)
 
+include $(CLEAR_VARS)
 ifneq ($(TARGET_USES_GRALLOC1), true)
 LOCAL_MODULE                  := copybit.$(TARGET_BOARD_PLATFORM)
+
+ifneq ($(TARGET_IS_HEADLESS), true)
+LOCAL_MODULE_PATH_32          := $(TARGET_OUT_VENDOR)/lib
+LOCAL_MODULE_PATH_64          := $(TARGET_OUT_VENDOR)/lib64
+endif
+
 LOCAL_MODULE_RELATIVE_PATH    := hw
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes)
