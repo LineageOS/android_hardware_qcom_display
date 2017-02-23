@@ -396,8 +396,17 @@ bool CopyBit::prepare(hwc_context_t *ctx, hwc_display_contents_1_t *list,
             hwc_layer_1_t *layer = (hwc_layer_1_t *) &list->hwLayers[i];
             if (layer->planeAlpha != 0xFF)
                 return true;
-            hwc_rect_t sourceCrop = integerizeSourceCrop(layer->sourceCropf);
 
+            private_handle_t *hnd = (private_handle_t *)layer->handle;
+            int src_img_width = getWidth(hnd);
+            int src_img_height = getHeight(hnd);
+            if (src_img_width > MAX_DIMENSION || src_img_height > MAX_DIMENSION) {
+                ALOGE ("%s : Invalid source dimensions w %d h %d", __FUNCTION__,
+                             src_img_width, src_img_height);
+                return false;
+            }
+
+            hwc_rect_t sourceCrop = integerizeSourceCrop(layer->sourceCropf);
             if (has90Transform(layer)) {
                 src_h = sourceCrop.right - sourceCrop.left;
                 src_w = sourceCrop.bottom - sourceCrop.top;
