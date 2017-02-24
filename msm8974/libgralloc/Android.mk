@@ -21,7 +21,8 @@ include $(CLEAR_VARS)
 LOCAL_CLANG_CFLAGS            += -Wno-gnu-designator
 
 LOCAL_MODULE                  := gralloc.$(TARGET_BOARD_PLATFORM)
-LOCAL_MODULE_PATH             := $(TARGET_OUT_SHARED_LIBRARIES)/hw
+LOCAL_MODULE_RELATIVE_PATH    := hw
+LOCAL_PROPRIETARY_MODULE      := true
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes)
 LOCAL_SHARED_LIBRARIES        := $(common_libs) libmemalloc
