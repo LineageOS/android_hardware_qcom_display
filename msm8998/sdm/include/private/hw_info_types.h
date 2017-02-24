@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -224,6 +224,12 @@ struct HWColorPrimaries {
   uint32_t blue[2] = {};              // Blue color primary
 };
 
+struct HWPanelOrientation {
+  bool rotation = false;
+  bool flip_horizontal = false;
+  bool flip_vertical = false;
+};
+
 struct HWPanelInfo {
   DisplayPort port = kPortDefault;    // Display port
   HWDisplayMode mode = kModeDefault;  // Display mode
@@ -253,6 +259,7 @@ struct HWPanelInfo {
   uint32_t average_luminance = 0;     // Panel's average luminance level
   uint32_t blackness_level = 0;       // Panel's blackness level
   HWColorPrimaries primaries = {};    // WRGB color primaries
+  HWPanelOrientation panel_orientation = {};  // Panel Orientation
 
   bool operator !=(const HWPanelInfo &panel_info) {
     return ((port != panel_info.port) || (mode != panel_info.mode) ||

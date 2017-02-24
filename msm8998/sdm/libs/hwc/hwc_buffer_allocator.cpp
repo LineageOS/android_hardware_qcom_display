@@ -211,6 +211,7 @@ int HWCBufferAllocator::SetBufferInfo(LayerBufferFormat format, int *target, int
   case kFormatYCrCb420SemiPlanar:       *target = HAL_PIXEL_FORMAT_YCrCb_420_SP;          break;
   case kFormatYCbCr420SemiPlanar:       *target = HAL_PIXEL_FORMAT_YCbCr_420_SP;          break;
   case kFormatYCbCr422H2V1Packed:       *target = HAL_PIXEL_FORMAT_YCbCr_422_I;           break;
+  case kFormatCbYCrY422H2V1Packed:      *target = HAL_PIXEL_FORMAT_CbYCrY_422_I;          break;
   case kFormatYCbCr422H2V1SemiPlanar:   *target = HAL_PIXEL_FORMAT_YCbCr_422_SP;          break;
   case kFormatYCbCr420SemiPlanarVenus:  *target = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS;    break;
   case kFormatYCrCb420SemiPlanarVenus:  *target = HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS;    break;

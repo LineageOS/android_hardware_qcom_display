@@ -284,6 +284,8 @@ void HWCDisplayExternal::PrepareDynamicRefreshRate(Layer *layer) {
       metadata_refresh_rate_ = current_refresh_rate_;
     }
     layer->frame_rate = current_refresh_rate_;
+  } else if (!layer->frame_rate) {
+    layer->frame_rate = current_refresh_rate_;
   }
 }
 

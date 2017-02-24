@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -65,9 +65,6 @@ DisplayError DisplayBase::Init() {
       return error;
     }
   }
-
-  req_mixer_width_ = mixer_attributes_.width;
-  req_mixer_height_ = mixer_attributes_.height;
 
   // Override x_pixels and y_pixels of frame buffer with mixer width and height
   fb_config_.x_pixels = mixer_attributes_.width;
@@ -191,6 +188,7 @@ DisplayError DisplayBase::ValidateGPUTargetParams() {
   LayerRect out_rect = gpu_target_layer->dst_rect;
 
   MapRect(src_domain, dst_domain, gpu_target_layer->dst_rect, &out_rect);
+  Normalize(1, 1, &out_rect);
 
   auto gpu_target_layer_dst_xpixels = out_rect.right - out_rect.left;
   auto gpu_target_layer_dst_ypixels = out_rect.bottom - out_rect.top;
@@ -375,9 +373,18 @@ DisplayError DisplayBase::GetConfig(uint32_t index, DisplayConfigVariableInfo *v
   return kErrorNotSupported;
 }
 
-DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *variable_info) {
+DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-  variable_info->is_cmdmode = (hw_panel_info_.mode == kModeCommand);
+  fixed_info->is_cmdmode = (hw_panel_info_.mode == kModeCommand);
+
+  HWResourceInfo hw_resource_info = HWResourceInfo();
+  hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
+  // hdr can be supported by display when target and panel supports HDR.
+  fixed_info->hdr_supported = (hw_resource_info.has_hdr && hw_panel_info_.hdr_enabled);
+  // Populate luminance values only if hdr will be supported on that display
+  fixed_info->max_luminance = fixed_info->hdr_supported ? hw_panel_info_.peak_luminance: 0;
+  fixed_info->average_luminance = fixed_info->hdr_supported ? hw_panel_info_.average_luminance : 0;
+  fixed_info->min_luminance = fixed_info->hdr_supported ?  hw_panel_info_.blackness_level: 0;
 
   return kErrorNone;
 }
@@ -415,7 +422,6 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state) {
     hw_layers_.info.hw_layers.clear();
     error = hw_intf_->Flush();
     if (error == kErrorNone) {
-      comp_manager_->Purge(display_comp_ctx_);
       error = hw_intf_->PowerOff();
     }
     break;
@@ -456,6 +462,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state) {
   if (error == kErrorNone) {
     active_ = active;
     state_ = state;
+    comp_manager_->SetDisplayState(display_comp_ctx_, state, display_type_);
   }
 
   return error;
@@ -705,8 +712,8 @@ DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
   }
 
   DisplayError error = kErrorNone;
-  // Set client requests when not in HDR Mode.
-  if (!hdr_playback_mode_) {
+  // Set client requests when not in HDR Mode or lut generation is disabled
+  if (disable_hdr_lut_gen_ || !hdr_playback_mode_) {
     error = SetColorModeInternal(color_mode);
     if (error != kErrorNone) {
       return error;
@@ -942,6 +949,13 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
   uint32_t align_x = display_attributes_.is_device_split ? 4 : 2;
   uint32_t align_y = 2;
 
+  if (req_mixer_width_ && req_mixer_height_) {
+    *new_mixer_width = req_mixer_width_;
+    *new_mixer_height = req_mixer_height_;
+
+    return (req_mixer_width_ != mixer_width || req_mixer_height_ != mixer_height);
+  }
+
   for (uint32_t i = 0; i < layer_count; i++) {
     Layer *layer = layers.at(i);
 
@@ -987,13 +1001,6 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
     }
 
     return true;
-  } else {
-    if (req_mixer_width_ != mixer_width || req_mixer_height_ != mixer_height) {
-      *new_mixer_width = req_mixer_width_;
-      *new_mixer_height = req_mixer_height_;
-
-      return true;
-    }
   }
 
   return false;
@@ -1187,8 +1194,8 @@ DisplayError DisplayBase::InitializeColorModes() {
 DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
   DisplayError error = kErrorNone;
 
-  if (disable_hdr_lut_gen_) {
-    // Do not apply HDR Mode when hdr lut generation is disabled
+  if (display_type_ != kPrimary) {
+    // Handling is needed for only primary displays
     return kErrorNone;
   }
 
@@ -1196,8 +1203,10 @@ DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
     //  HDR playback off - set prev mode
     if (hdr_playback_mode_) {
       hdr_playback_mode_ = false;
-      if (color_mgr_) {
+      if (color_mgr_ && !disable_hdr_lut_gen_) {
+        // Do not apply HDR Mode when hdr lut generation is disabled
         DLOGI("Setting color mode = %s", current_color_mode_.c_str());
+        //  HDR playback off - set prev mode
         error = SetColorModeInternal(current_color_mode_);
       }
       comp_manager_->ControlDpps(true);  // Enable Dpps
@@ -1207,7 +1216,7 @@ DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
     if (!hdr_playback_mode_ && !layer_stack->flags.animating) {
       // hdr is starting
       hdr_playback_mode_ = true;
-      if (color_mgr_) {
+      if (color_mgr_ && !disable_hdr_lut_gen_) {
         DLOGI("Setting HDR color mode = %s", hdr_color_mode_.c_str());
         error = SetColorModeInternal(hdr_color_mode_);
       }

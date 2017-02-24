@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -245,12 +245,16 @@ void CompManager::PrepareStrategyConstraints(Handle comp_handle, HWLayers *hw_la
   // Set use_cursor constraint to Strategy
   constraints->use_cursor = display_comp_ctx->valid_cursor;
 
-  // Avoid idle fallback, if there is only one app layer.
   // TODO(user): App layer count will change for hybrid composition
   uint32_t app_layer_count = UINT32(hw_layers->info.stack->layers.size()) - 1;
-  if ((app_layer_count > 1 && display_comp_ctx->idle_fallback) || display_comp_ctx->fallback_) {
+  if (display_comp_ctx->idle_fallback || display_comp_ctx->thermal_fallback_) {
     // Handle the idle timeout by falling back
     constraints->safe_mode = true;
+  }
+
+  // Avoid safe mode, if there is only one app layer.
+  if (app_layer_count == 1) {
+     constraints->safe_mode = false;
   }
 }
 
@@ -413,9 +417,9 @@ void CompManager::ProcessThermalEvent(Handle display_ctx, int64_t thermal_level)
           reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
   if (thermal_level >= kMaxThermalLevel) {
-    display_comp_ctx->fallback_ = true;
+    display_comp_ctx->thermal_fallback_ = true;
   } else {
-    display_comp_ctx->fallback_ = false;
+    display_comp_ctx->thermal_fallback_ = false;
   }
 }
 
@@ -546,6 +550,31 @@ DisplayError CompManager::ControlDpps(bool enable) {
   }
 
   return kErrorNone;
+}
+
+bool CompManager::SetDisplayState(Handle display_ctx,
+                                  DisplayState state, DisplayType display_type) {
+  display_state_[display_type] = state;
+
+  switch (state) {
+  case kStateOff:
+    Purge(display_ctx);
+    configured_displays_.reset(display_type);
+    DLOGV_IF(kTagCompManager, "configured_displays_ = 0x%x", configured_displays_);
+    break;
+
+  case kStateOn:
+    if (registered_displays_.count() > 1) {
+      safe_mode_ = true;
+      DLOGV_IF(kTagCompManager, "safe_mode = %d", safe_mode_);
+    }
+    break;
+
+  default:
+    break;
+  }
+
+  return true;
 }
 
 }  // namespace sdm

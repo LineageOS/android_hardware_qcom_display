@@ -24,6 +24,7 @@ endif
 
 common_includes += $(display_top)/include
 common_includes += $(display_top)/sdm/include
+common_includes += system/core/base/include
 
 common_header_export_path := qcom/display
 
@@ -45,10 +46,6 @@ endif
 
 ifeq ($(ARCH_ARM_HAVE_NEON),true)
     common_flags += -D__ARM_HAVE_NEON
-endif
-
-ifeq ($(call is-board-platform-in-list, $(MSM_VIDC_TARGET_LIST)), true)
-    common_flags += -DVENUS_COLOR_FORMAT
 endif
 
 ifeq ($(call is-board-platform-in-list, $(MASTER_SIDE_CP_TARGET_LIST)), true)

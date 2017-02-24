@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -611,6 +611,7 @@ DisplayError HWDevice::SetFormat(const LayerBufferFormat &source, uint32_t *targ
   case kFormatRGBX8888Ubwc:             *target = MDP_RGBX_8888_UBWC;    break;
   case kFormatBGR565Ubwc:               *target = MDP_RGB_565_UBWC;      break;
   case kFormatYCbCr420SPVenusUbwc:      *target = MDP_Y_CBCR_H2V2_UBWC;  break;
+  case kFormatCbYCrY422H2V1Packed:      *target = MDP_CBYCRY_H2V1;       break;
   case kFormatRGBA1010102:              *target = MDP_RGBA_1010102;      break;
   case kFormatARGB2101010:              *target = MDP_ARGB_2101010;      break;
   case kFormatRGBX1010102:              *target = MDP_RGBX_1010102;      break;
@@ -681,6 +682,7 @@ DisplayError HWDevice::SetStride(HWDeviceType device_type, LayerBufferFormat for
     *target = width;
     break;
   case kFormatYCbCr422H2V1Packed:
+  case kFormatCbYCrY422H2V1Packed:
   case kFormatYCrCb422H2V1SemiPlanar:
   case kFormatYCrCb422H1V2SemiPlanar:
   case kFormatYCbCr422H2V1SemiPlanar:
@@ -897,6 +899,11 @@ void HWDevice::GetHWPanelInfoByNode(int device_node, HWPanelInfo *panel_info) {
         panel_info->primaries.blue[0] = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "blue_chromaticity_y", strlen("blue_chromaticity_y"))) {
         panel_info->primaries.blue[1] = UINT32(atoi(tokens[1]));
+      } else if (!strncmp(tokens[0], "panel_orientation", strlen("panel_orientation"))) {
+        int32_t panel_orient = atoi(tokens[1]);
+        panel_info->panel_orientation.flip_horizontal = ((panel_orient & MDP_FLIP_LR) > 0);
+        panel_info->panel_orientation.flip_vertical = ((panel_orient & MDP_FLIP_UD) > 0);
+        panel_info->panel_orientation.rotation = ((panel_orient & MDP_ROT_90) > 0);
       }
     }
   }
@@ -1039,7 +1046,7 @@ int HWDevice::ParseLine(const char *input, const char *delim, char *tokens[],
 
 bool HWDevice::EnableHotPlugDetection(int enable) {
   char hpdpath[kMaxStringLength];
-  char value = enable ? '1' : '0';
+  const char *value = enable ? "1" : "0";
 
   // Enable HPD for all pluggable devices.
   for (int i = 0; i < kFBNodeMax; i++) {
@@ -1048,7 +1055,7 @@ bool HWDevice::EnableHotPlugDetection(int enable) {
     if (panel_info.is_pluggable == true) {
       snprintf(hpdpath , sizeof(hpdpath), "%s%d/hpd", fb_path_, i);
 
-      ssize_t length = SysFsWrite(hpdpath, &value, sizeof(value));
+      ssize_t length = SysFsWrite(hpdpath, value, 1);
       if (length <= 0) {
         return false;
       }

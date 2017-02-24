@@ -99,6 +99,24 @@ const std::vector<std::string> &HWCColorMode::GetColorModes() {
   return color_modes_;
 }
 
+int HWCColorMode::SetColorTransform(uint32_t matrix_count, const float *matrix) {
+  if (matrix_count > kColorTransformMatrixCount) {
+    DLOGE("Transform matrix count = %d, exceeds max = %d", matrix_count,
+          kColorTransformMatrixCount);
+    return -1;
+  }
+
+  double color_matrix[kColorTransformMatrixCount] = {0};
+  CopyColorTransformMatrix(matrix, color_matrix);
+  DisplayError error = display_intf_->SetColorTransform(matrix_count, color_matrix);
+  if (error != kErrorNone) {
+    DLOGE("Failed!");
+    return -1;
+  }
+
+  return 0;
+}
+
 int HWCColorMode::PopulateColorModes() {
   uint32_t color_mode_count = 0;
   DisplayError error = display_intf_->GetColorModeCount(&color_mode_count);
@@ -133,6 +151,11 @@ int HWCDisplay::Init() {
     DLOGE("Display create failed. Error = %d display_type %d event_handler %p disp_intf %p",
       error, type_, this, &display_intf_);
     return -EINVAL;
+  }
+
+  HWCDebugHandler::Get()->GetProperty("sys.hwc_disable_hdr", &disable_hdr_handling_);
+  if (disable_hdr_handling_) {
+    DLOGI("HDR Handling disabled");
   }
 
   int property_swap_interval = 1;
@@ -991,6 +1014,7 @@ LayerBufferFormat HWCDisplay::GetSDMFormat(const int32_t &source, const int flag
   case HAL_PIXEL_FORMAT_YCbCr_420_SP:             format = kFormatYCbCr420SemiPlanar;       break;
   case HAL_PIXEL_FORMAT_YCbCr_422_SP:             format = kFormatYCbCr422H2V1SemiPlanar;   break;
   case HAL_PIXEL_FORMAT_YCbCr_422_I:              format = kFormatYCbCr422H2V1Packed;       break;
+  case HAL_PIXEL_FORMAT_CbYCrY_422_I:             format = kFormatCbYCrY422H2V1Packed;      break;
   case HAL_PIXEL_FORMAT_RGBA_1010102:             format = kFormatRGBA1010102;              break;
   case HAL_PIXEL_FORMAT_ARGB_2101010:             format = kFormatARGB2101010;              break;
   case HAL_PIXEL_FORMAT_RGBX_1010102:             format = kFormatRGBX1010102;              break;
@@ -1365,9 +1389,11 @@ DisplayError HWCDisplay::SetMetaData(const private_handle_t *pvt_handle, Layer *
     return kErrorNotSupported;
   }
 
-  if (layer_buffer.color_metadata.colorPrimaries == ColorPrimaries_BT2020 &&
-     (layer_buffer.color_metadata.transfer == Transfer_SMPTE_ST2084 ||
-      layer_buffer.color_metadata.transfer == Transfer_HLG)) {
+  bool hdr_layer = layer_buffer.color_metadata.colorPrimaries == ColorPrimaries_BT2020 &&
+                   (layer_buffer.color_metadata.transfer == Transfer_SMPTE_ST2084 ||
+                   layer_buffer.color_metadata.transfer == Transfer_HLG);
+  if (hdr_layer && !disable_hdr_handling_) {
+    // dont honor HDR when its handling is disabled
     layer_buffer.flags.hdr = true;
     layer_stack_.flags.hdr_present = true;
   }
@@ -1479,6 +1505,10 @@ int HWCDisplay::GetDisplayConfigCount(uint32_t *count) {
 int HWCDisplay::GetDisplayAttributesForConfig(int config,
                                             DisplayConfigVariableInfo *display_attributes) {
   return display_intf_->GetConfig(UINT32(config), display_attributes) == kErrorNone ? 0 : -1;
+}
+
+int HWCDisplay::GetDisplayFixedConfig(DisplayConfigFixedInfo *fixed_info) {
+  return display_intf_->GetConfig(fixed_info) == kErrorNone ? 0 : -1;
 }
 
 // TODO(user): HWC needs to know updating for dyn_fps, cpu hint features,
