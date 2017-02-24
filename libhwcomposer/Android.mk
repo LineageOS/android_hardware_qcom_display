@@ -4,6 +4,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE                  := hwcomposer.$(TARGET_BOARD_PLATFORM)
 LOCAL_MODULE_RELATIVE_PATH    := hw
+LOCAL_PROPRIETARY_MODULE      := true
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes) \
                                  $(TOP)/external/skia/include/core \
