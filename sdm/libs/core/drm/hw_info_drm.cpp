@@ -54,6 +54,18 @@
 
 #include "hw_info_drm.h"
 
+#ifdef COMPILE_DRM
+#ifndef DRM_FORMAT_MOD_QCOM_COMPRESSED
+#define DRM_FORMAT_MOD_QCOM_COMPRESSED fourcc_mod_code(QCOM, 1)
+#endif
+#ifndef DRM_FORMAT_MOD_QCOM_DX
+#define DRM_FORMAT_MOD_QCOM_DX fourcc_mod_code(QCOM, 0x2)
+#endif
+#ifndef DRM_FORMAT_MOD_QCOM_TIGHT
+#define DRM_FORMAT_MOD_QCOM_TIGHT fourcc_mod_code(QCOM, 0x4)
+#endif
+#endif
+
 #define __CLASS__ "HWInfoDRM"
 
 using drm_utils::DRMMaster;
@@ -542,20 +554,24 @@ void HWInfoDRM::GetSDMFormat(uint32_t drm_format, uint64_t drm_format_modifier,
     case DRM_FORMAT_XBGR2101010:
       fmts.push_back(kFormatXBGR2101010);
       break;
-    /* case DRM_FORMAT_P010:
-         fmts.push_back(drm_format_modifier == (DRM_FORMAT_MOD_QCOM_COMPRESSED |
-       DRM_FORMAT_MOD_QCOM_TIGHT) ?
-         kFormatYCbCr420TP10Ubwc : kFormatYCbCr420P010; */
     case DRM_FORMAT_YVU420:
       fmts.push_back(kFormatYCrCb420PlanarStride16);
       break;
     case DRM_FORMAT_NV12:
-      if (drm_format_modifier) {
-        fmts.push_back(kFormatYCbCr420SPVenusUbwc);
+      if (drm_format_modifier == (DRM_FORMAT_MOD_QCOM_COMPRESSED |
+          DRM_FORMAT_MOD_QCOM_DX | DRM_FORMAT_MOD_QCOM_TIGHT)) {
+          fmts.push_back(kFormatYCbCr420TP10Ubwc);
+      } else if (drm_format_modifier == DRM_FORMAT_MOD_QCOM_COMPRESSED) {
+         fmts.push_back(kFormatYCbCr420SPVenusUbwc);
+      } else if (drm_format_modifier == DRM_FORMAT_MOD_QCOM_DX) {
+         fmts.push_back(kFormatYCbCr420P010);
       } else {
-        fmts.push_back(kFormatYCbCr420SemiPlanarVenus);
-        fmts.push_back(kFormatYCbCr420SemiPlanar);
+         fmts.push_back(kFormatYCbCr420SemiPlanarVenus);
+         fmts.push_back(kFormatYCbCr420SemiPlanar);
       }
+      // TODO(user):
+      // else if (drm_format_modifier == (DRM_FORMAT_MOD_QCOM_COMPRESSED | DRM_FORMAT_MOD_QCOM_DX))
+      //   fmts.push_back(kFormatYCbCr420P010Ubwc);
       break;
     case DRM_FORMAT_NV21:
       fmts.push_back(kFormatYCrCb420SemiPlanarVenus);
