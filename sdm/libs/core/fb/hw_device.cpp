@@ -61,46 +61,6 @@ using std::fstream;
 
 namespace sdm {
 
-DisplayError HWInterface::Create(DisplayType type, HWInfoInterface *hw_info_intf,
-                                        BufferSyncHandler *buffer_sync_handler,
-                                        HWInterface **intf) {
-  DisplayError error = kErrorNone;
-  HWDevice *hw = nullptr;
-
-  switch (type) {
-    case kPrimary:
-      hw = new HWPrimary(buffer_sync_handler, hw_info_intf);
-      break;
-    case kHDMI:
-      hw = new HWHDMI(buffer_sync_handler, hw_info_intf);
-      break;
-    case kVirtual:
-      hw = new HWVirtual(buffer_sync_handler, hw_info_intf);
-      break;
-    default:
-      DLOGE("Undefined display type");
-      return kErrorUndefined;
-  }
-
-  error = hw->Init();
-  if (error != kErrorNone) {
-    delete hw;
-    DLOGE("Init on HW Intf type %d failed", type);
-    return error;
-  }
-  *intf = hw;
-
-  return error;
-}
-
-DisplayError HWInterface::Destroy(HWInterface *intf) {
-  HWDevice *hw = static_cast<HWDevice *>(intf);
-  hw->Deinit();
-  delete hw;
-
-  return kErrorNone;
-}
-
 HWDevice::HWDevice(BufferSyncHandler *buffer_sync_handler)
   : fb_node_index_(-1), fb_path_("/sys/devices/virtual/graphics/fb"),
     buffer_sync_handler_(buffer_sync_handler), synchronous_commit_(false) {
@@ -367,6 +327,10 @@ DisplayError HWDevice::Validate(HWLayers *hw_layers) {
     dest_scalar_data->dest_scaler_ndx = i;
     dest_scalar_data->lm_width = dest_scale_info->mixer_width;
     dest_scalar_data->lm_height = dest_scale_info->mixer_height;
+#ifdef MDP_DESTSCALER_ROI_ENABLE
+    SetRect(dest_scale_info->panel_roi, &dest_scalar_data->panel_roi);
+    dest_scalar_data->flags |= MDP_DESTSCALER_ROI_ENABLE;
+#endif
     dest_scalar_data->scale = reinterpret_cast <uint64_t>
       (hw_scale_->GetScaleDataRef(index, kHWDestinationScalar));
 
@@ -376,6 +340,11 @@ DisplayError HWDevice::Validate(HWLayers *hw_layers) {
              dest_scalar_data->dest_scaler_ndx);
     DLOGV_IF(kTagDriverConfig, "Mixer WxH %dx%d flags %x", dest_scalar_data->lm_width,
              dest_scalar_data->lm_height, dest_scalar_data->flags);
+#ifdef MDP_DESTSCALER_ROI_ENABLE
+    DLOGV_IF(kTagDriverConfig, "Panel ROI [%d, %d, %d, %d]", dest_scalar_data->panel_roi.x,
+             dest_scalar_data->panel_roi.y, dest_scalar_data->panel_roi.w,
+             dest_scalar_data->panel_roi.h);
+#endif
     DLOGV_IF(kTagDriverConfig, "*****************************************************************");
   }
   mdp_commit.dest_scaler_cnt = UINT32(hw_layer_info.dest_scale_info_map.size());
@@ -405,9 +374,16 @@ void HWDevice::DumpLayerCommit(const mdp_layer_commit &layer_commit) {
   DLOGI("right_roi: x = %d, y = %d, w = %d, h = %d", r_roi.x, r_roi.y, r_roi.w, r_roi.h);
   for (uint32_t i = 0; i < mdp_commit.dest_scaler_cnt; i++) {
     mdp_destination_scaler_data *dest_scalar_data = &mdp_dest_scalar_data_[i];
+    mdp_scale_data_v2 *mdp_scale = reinterpret_cast<mdp_scale_data_v2 *>(dest_scalar_data->scale);
 
     DLOGI("Dest scalar index %d Mixer WxH %dx%d", dest_scalar_data->dest_scaler_ndx,
           dest_scalar_data->lm_width, dest_scalar_data->lm_height);
+#ifdef MDP_DESTSCALER_ROI_ENABLE
+    DLOGI("Panel ROI [%d, %d, %d, %d]", dest_scalar_data->panel_roi.x,
+           dest_scalar_data->panel_roi.y, dest_scalar_data->panel_roi.w,
+           dest_scalar_data->panel_roi.h);
+#endif
+    DLOGI("Dest scalar Dst WxH %dx%d", mdp_scale->dst_width, mdp_scale->dst_height);
   }
   for (uint32_t i = 0; i < mdp_commit.input_layer_cnt; i++) {
     const mdp_input_layer &layer = mdp_layers[i];
@@ -679,7 +655,6 @@ DisplayError HWDevice::SetStride(HWDeviceType device_type, LayerBufferFormat for
   case kFormatYCrCb420PlanarStride16:
   case kFormatYCbCr420SemiPlanar:
   case kFormatYCrCb420SemiPlanar:
-  case kFormatYCbCr420P010:
   case kFormatYCbCr420TP10Ubwc:
     *target = width;
     break;
@@ -689,6 +664,7 @@ DisplayError HWDevice::SetStride(HWDeviceType device_type, LayerBufferFormat for
   case kFormatYCrCb422H1V2SemiPlanar:
   case kFormatYCbCr422H2V1SemiPlanar:
   case kFormatYCbCr422H1V2SemiPlanar:
+  case kFormatYCbCr420P010:
   case kFormatRGBA5551:
   case kFormatRGBA4444:
     *target = width * 2;

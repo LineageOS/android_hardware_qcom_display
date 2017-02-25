@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -37,12 +37,13 @@
 namespace sdm {
 
 using std::vector;
+using std::map;
 
 class HWEvents : public HWEventsInterface {
  public:
-  DisplayError Init(int fb_num, HWEventHandler *event_handler,
-                    vector<const char *> *event_list);
-  DisplayError Deinit();
+  virtual DisplayError Init(int fb_num, HWEventHandler *event_handler,
+                            const vector<HWEvent> &event_list);
+  virtual DisplayError Deinit();
 
  private:
   static const int kMaxStringLength = 1024;
@@ -50,8 +51,8 @@ class HWEvents : public HWEventsInterface {
   typedef void (HWEvents::*EventParser)(char *);
 
   struct HWEventData {
-    const char* event_name = NULL;
-    EventParser event_parser = NULL;
+    HWEvent event_type {};
+    EventParser event_parser {};
   };
 
   static void* DisplayEventThread(void *context);
@@ -63,14 +64,15 @@ class HWEvents : public HWEventsInterface {
   void HandleCECMessage(char *data);
   void HandleThreadExit(char *data) { }
   void PopulateHWEventData();
-  DisplayError SetEventParser(const char *event_name, HWEventData *event_data);
+  DisplayError SetEventParser(HWEvent event_type, HWEventData *event_data);
   pollfd InitializePollFd(HWEventData *event_data);
 
-  HWEventHandler *event_handler_ = NULL;
-  vector<const char *> *event_list_ = NULL;
+  HWEventHandler *event_handler_ = {};
+  vector<HWEvent> event_list_ = {};
   vector<HWEventData> event_data_list_ = {};
-  vector<pollfd> poll_fds_;
-  pthread_t event_thread_;
+  vector<pollfd> poll_fds_ = {};
+  map<HWEvent, const char *> map_event_to_node_ = {};
+  pthread_t event_thread_ = {};
   std::string event_thread_name_ = "SDM_EventThread";
   bool exit_threads_ = false;
   const char* fb_path_ = "/sys/devices/virtual/graphics/fb";

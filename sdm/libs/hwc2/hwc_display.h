@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -32,6 +32,7 @@
 #include <utility>
 #include <vector>
 
+#include "hwc_buffer_allocator.h"
 #include "hwc_callbacks.h"
 #include "hwc_layers.h"
 
@@ -212,7 +213,6 @@ class HWCDisplay : public DisplayEventHandler {
     return kErrorNotSupported;
   }
   LayerBufferFormat GetSDMFormat(const int32_t &source, const int flags);
-  const char *GetHALPixelFormatString(int format);
   const char *GetDisplayString();
   void MarkLayersForGPUBypass(void);
   void MarkLayersForClientComposition(void);
@@ -230,6 +230,7 @@ class HWCDisplay : public DisplayEventHandler {
 
   CoreInterface *core_intf_ = nullptr;
   HWCCallbacks *callbacks_  = nullptr;
+  HWCBufferAllocator *buffer_allocator_ = NULL;
   DisplayType type_;
   hwc2_display_t id_;
   bool needs_blit_ = false;
@@ -270,7 +271,6 @@ class HWCDisplay : public DisplayEventHandler {
 
  private:
   void DumpInputBuffers(void);
-  BlitEngine *blit_engine_ = NULL;
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
   uint32_t geometry_changes_ = GeometryChanges::kNone;

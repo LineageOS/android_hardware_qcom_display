@@ -10,6 +10,9 @@ LOCAL_C_INCLUDES              := $(common_includes) \
                                  external/libcxx/include/
 
 LOCAL_SHARED_LIBRARIES        := $(common_libs) libqdMetaData libsync libqdutils
+ifneq ($(TARGET_IS_HEADLESS), true)
+LOCAL_SHARED_LIBRARIES        += libdrmutils
+endif
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdgralloc\" -Wall -std=c++11 -Werror
 LOCAL_CFLAGS                  += -isystem  $(kernel_includes)
 LOCAL_CLANG                   := true

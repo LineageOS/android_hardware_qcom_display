@@ -19,14 +19,13 @@
 
 #include <cutils/properties.h>
 #include <errno.h>
-#include <gr.h>
-#include <gralloc_priv.h>
 #include <math.h>
 #include <sync/sync.h>
 #include <utils/constants.h>
 #include <utils/debug.h>
 #include <utils/formats.h>
 #include <utils/rect.h>
+#include <qd_utils.h>
 
 #include <algorithm>
 #include <map>
@@ -38,6 +37,9 @@
 #include "hwc_display.h"
 #include "hwc_debugger.h"
 #include "blit_engine_c2d.h"
+#ifndef USE_GRALLOC1
+#include <gr.h>
+#endif
 
 #ifdef QTI_BSP
 #include <hardware/display_defs.h>
@@ -235,21 +237,14 @@ int HWCDisplay::Init() {
     swap_interval_zero_ = true;
   }
 
+  buffer_allocator_ = new HWCBufferAllocator();
 
-  client_target_ = new HWCLayer(id_);
+  client_target_ = new HWCLayer(id_, buffer_allocator_);
+
   int blit_enabled = 0;
   HWCDebugHandler::Get()->GetProperty("persist.hwc.blit.comp", &blit_enabled);
   if (needs_blit_ && blit_enabled) {
-    blit_engine_ = new BlitEngineC2d();
-    if (!blit_engine_) {
-      DLOGI("Create Blit Engine C2D failed");
-    } else {
-      if (blit_engine_->Init() < 0) {
-        DLOGI("Blit Engine Init failed, Blit Composition will not be used!!");
-        delete blit_engine_;
-        blit_engine_ = NULL;
-      }
-    }
+    // TODO(user): Add blit engine when needed
   }
 
   display_intf_->GetRefreshRateRange(&min_refresh_rate_, &max_refresh_rate_);
@@ -267,10 +262,9 @@ int HWCDisplay::Deinit() {
 
   delete client_target_;
 
-  if (blit_engine_) {
-    blit_engine_->DeInit();
-    delete blit_engine_;
-    blit_engine_ = NULL;
+  if (buffer_allocator_) {
+    delete buffer_allocator_;
+    buffer_allocator_ = NULL;
   }
 
   if (color_mode_) {
@@ -283,7 +277,7 @@ int HWCDisplay::Deinit() {
 
 // LayerStack operations
 HWC2::Error HWCDisplay::CreateLayer(hwc2_layer_t *out_layer_id) {
-  HWCLayer *layer = *layer_set_.emplace(new HWCLayer(id_));
+  HWCLayer *layer = *layer_set_.emplace(new HWCLayer(id_, buffer_allocator_));
   layer_map_.emplace(std::make_pair(layer->GetId(), layer));
   *out_layer_id = layer->GetId();
   geometry_changes_ |= GeometryChanges::kAdded;
@@ -350,7 +344,11 @@ void HWCDisplay::BuildLayerStack() {
     const private_handle_t *handle =
         reinterpret_cast<const private_handle_t *>(layer->input_buffer.buffer_id);
     if (handle) {
+#ifdef USE_GRALLOC1
+      if (handle->buffer_type == BUFFER_TYPE_VIDEO) {
+#else
       if (handle->bufferType == BUFFER_TYPE_VIDEO) {
+#endif
         layer_stack_.flags.video_present = true;
       }
       // TZ Protected Buffer - L1
@@ -686,10 +684,6 @@ void HWCDisplay::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type
   dump_frame_count_ = count;
   dump_frame_index_ = 0;
   dump_input_layers_ = ((bit_mask_layer_type & (1 << INPUT_LAYER_DUMP)) != 0);
-
-  if (blit_engine_) {
-    blit_engine_->SetFrameDumpConfig(count);
-  }
 
   DLOGI("num_frame_dump %d, input_layer_dump_enable %d", dump_frame_count_, dump_input_layers_);
 }
@@ -1164,7 +1158,7 @@ void HWCDisplay::DumpInputBuffers() {
 
       snprintf(dump_file_name, sizeof(dump_file_name), "%s/input_layer%d_%dx%d_%s_frame%d.raw",
                dir_path, i, pvt_handle->width, pvt_handle->height,
-               GetHALPixelFormatString(pvt_handle->format), dump_frame_index_);
+               qdutils::GetHALPixelFormatString(pvt_handle->format), dump_frame_index_);
 
       FILE *fp = fopen(dump_file_name, "w+");
       if (fp) {
@@ -1219,81 +1213,6 @@ void HWCDisplay::DumpOutputBuffer(const BufferInfo &buffer_info, void *base, int
   }
 }
 
-const char *HWCDisplay::GetHALPixelFormatString(int format) {
-  switch (format) {
-    case HAL_PIXEL_FORMAT_RGBA_8888:
-      return "RGBA_8888";
-    case HAL_PIXEL_FORMAT_RGBX_8888:
-      return "RGBX_8888";
-    case HAL_PIXEL_FORMAT_RGB_888:
-      return "RGB_888";
-    case HAL_PIXEL_FORMAT_RGB_565:
-      return "RGB_565";
-    case HAL_PIXEL_FORMAT_BGR_565:
-      return "BGR_565";
-    case HAL_PIXEL_FORMAT_BGRA_8888:
-      return "BGRA_8888";
-    case HAL_PIXEL_FORMAT_RGBA_5551:
-      return "RGBA_5551";
-    case HAL_PIXEL_FORMAT_RGBA_4444:
-      return "RGBA_4444";
-    case HAL_PIXEL_FORMAT_YV12:
-      return "YV12";
-    case HAL_PIXEL_FORMAT_YCbCr_422_SP:
-      return "YCbCr_422_SP_NV16";
-    case HAL_PIXEL_FORMAT_YCrCb_420_SP:
-      return "YCrCb_420_SP_NV21";
-    case HAL_PIXEL_FORMAT_YCbCr_422_I:
-      return "YCbCr_422_I_YUY2";
-    case HAL_PIXEL_FORMAT_YCrCb_422_I:
-      return "YCrCb_422_I_YVYU";
-    case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
-      return "NV12_ENCODEABLE";
-    case HAL_PIXEL_FORMAT_YCbCr_420_SP_TILED:
-      return "YCbCr_420_SP_TILED_TILE_4x2";
-    case HAL_PIXEL_FORMAT_YCbCr_420_SP:
-      return "YCbCr_420_SP";
-    case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
-      return "YCrCb_420_SP_ADRENO";
-    case HAL_PIXEL_FORMAT_YCrCb_422_SP:
-      return "YCrCb_422_SP";
-    case HAL_PIXEL_FORMAT_R_8:
-      return "R_8";
-    case HAL_PIXEL_FORMAT_RG_88:
-      return "RG_88";
-    case HAL_PIXEL_FORMAT_INTERLACE:
-      return "INTERLACE";
-    case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
-      return "YCbCr_420_SP_VENUS";
-    case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
-      return "YCrCb_420_SP_VENUS";
-    case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
-      return "YCbCr_420_SP_VENUS_UBWC";
-    case HAL_PIXEL_FORMAT_RGBA_1010102:
-      return "RGBA_1010102";
-    case HAL_PIXEL_FORMAT_ARGB_2101010:
-      return "ARGB_2101010";
-    case HAL_PIXEL_FORMAT_RGBX_1010102:
-      return "RGBX_1010102";
-    case HAL_PIXEL_FORMAT_XRGB_2101010:
-      return "XRGB_2101010";
-    case HAL_PIXEL_FORMAT_BGRA_1010102:
-      return "BGRA_1010102";
-    case HAL_PIXEL_FORMAT_ABGR_2101010:
-      return "ABGR_2101010";
-    case HAL_PIXEL_FORMAT_BGRX_1010102:
-      return "BGRX_1010102";
-    case HAL_PIXEL_FORMAT_XBGR_2101010:
-      return "XBGR_2101010";
-    case HAL_PIXEL_FORMAT_YCbCr_420_P010:
-      return "YCbCr_420_P010";
-    case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
-      return "YCbCr_420_TP10_UBWC";
-    default:
-      return "Unknown_format";
-  }
-}
-
 const char *HWCDisplay::GetDisplayString() {
   switch (type_) {
     case kPrimary:
@@ -1338,7 +1257,7 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
 
   int aligned_width;
   int aligned_height;
-  int usage = GRALLOC_USAGE_HW_FB;
+  uint32_t usage = GRALLOC_USAGE_HW_FB;
   int format = HAL_PIXEL_FORMAT_RGBA_8888;
   int ubwc_enabled = 0;
   int flags = 0;
@@ -1347,8 +1266,14 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
     usage |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
     flags |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
   }
-  AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(INT(x_pixels), INT(y_pixels), format, usage,
-                                                        aligned_width, aligned_height);
+
+#ifdef USE_GRALLOC1
+  buffer_allocator_->GetAlignedWidthAndHeight(INT(x_pixels), INT(y_pixels), format, usage,
+                                              &aligned_width, &aligned_height);
+#else
+  AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(INT(x_pixels), INT(y_pixels), format,
+                                                        INT(usage), aligned_width, aligned_height);
+#endif
 
   // TODO(user): How does the dirty region get set on the client target? File bug on Google
   client_target_layer->composition = kCompositionGPUTarget;

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -29,6 +29,7 @@
 
 #include "display_base.h"
 #include "dump_impl.h"
+#include "hw_events_interface.h"
 
 namespace sdm {
 
@@ -62,8 +63,8 @@ class DisplayPrimary : public DisplayBase, HWEventHandler {
   bool NeedsAVREnable();
 
   uint32_t idle_timeout_ms_ = 0;
-  std::vector<const char *> event_list_ = {"vsync_event", "show_blank_event", "idle_notify",
-                                           "msm_fb_thermal_level", "thread_exit"};
+  std::vector<HWEvent> event_list_ = { HWEvent::VSYNC, HWEvent::EXIT, HWEvent::IDLE_NOTIFY,
+      HWEvent::SHOW_BLANK_EVENT, HWEvent::THERMAL_LEVEL };
   bool avr_prop_disabled_ = false;
   bool switch_to_cmd_ = false;
 };

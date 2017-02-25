@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -30,6 +30,7 @@
 
 #include "display_base.h"
 #include "dump_impl.h"
+#include "hw_events_interface.h"
 
 namespace sdm {
 
@@ -61,11 +62,10 @@ class DisplayHDMI : public DisplayBase, HWEventHandler {
   bool underscan_supported_ = false;
   HWScanSupport scan_support_;
   std::map<LayerBufferS3DFormat, HWS3DMode> s3d_format_to_mode_;
-  std::vector<const char *> event_list_ = {"vsync_event", "idle_notify", "cec/rd_msg",
-                                           "thread_exit"};
+  std::vector<HWEvent> event_list_ = { HWEvent::VSYNC, HWEvent::IDLE_NOTIFY, HWEvent::EXIT,
+    HWEvent::CEC_READ_MESSAGE };
 };
 
 }  // namespace sdm
 
 #endif  // __DISPLAY_HDMI_H__
-

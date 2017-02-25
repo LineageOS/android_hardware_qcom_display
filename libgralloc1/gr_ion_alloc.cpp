@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -106,21 +106,26 @@ int IonAlloc::AllocBuffer(AllocData *data) {
 
   data->base = base;
   data->fd = fd_data.fd;
-  ioctl(ion_dev_fd_, INT(ION_IOC_FREE), &handle_data);
-  ALOGD_IF(DEBUG, "ion: Allocated buffer base:%p size:%zu fd:%d", data->base, ion_alloc_data.len,
-           data->fd);
+  data->ion_handle = handle_data.handle;
+  ALOGD_IF(DEBUG, "ion: Allocated buffer base:%p size:%zu fd:%d handle:0x%x", data->base,
+           ion_alloc_data.len, data->fd, data->ion_handle);
 
   return 0;
 }
 
-int IonAlloc::FreeBuffer(void *base, unsigned int size, unsigned int offset, int fd) {
+int IonAlloc::FreeBuffer(void *base, unsigned int size, unsigned int offset, int fd,
+                         int ion_handle) {
   ATRACE_CALL();
   int err = 0;
-  ALOGD_IF(DEBUG, "ion: Freeing buffer base:%p size:%u fd:%d", base, size, fd);
+  ALOGD_IF(DEBUG, "ion: Freeing buffer base:%p size:%u fd:%d handle:0x%x", base, size, fd,
+           ion_handle);
 
   if (base) {
     err = UnmapBuffer(base, size, offset);
   }
+  struct ion_handle_data handle_data;
+  handle_data.handle = ion_handle;
+  ioctl(ion_dev_fd_, INT(ION_IOC_FREE), &handle_data);
   close(fd);
 
   return err;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -29,6 +29,8 @@
 
 #include <cutils/log.h>
 #include <sync/sync.h>
+#include <sstream>
+#include <string>
 
 #include "gr_device_impl.h"
 #include "gr_buf_descriptor.h"
@@ -43,13 +45,11 @@ int gralloc_device_close(struct hw_device_t *device);
 
 static struct hw_module_methods_t gralloc_module_methods = {.open = gralloc_device_open};
 
-struct hw_module_t gralloc_module = {};
-
-struct private_module_t HAL_MODULE_INFO_SYM = {
-  .base = {
+struct gralloc_module_t HAL_MODULE_INFO_SYM = {
+  .common = {
     .tag = HARDWARE_MODULE_TAG,
-    .version_major = 1,
-    .version_minor = 0,
+    .module_api_version = GRALLOC_MODULE_API_VERSION_1_0,
+    .hal_api_version    = HARDWARE_HAL_API_VERSION,
     .id = GRALLOC_HARDWARE_MODULE_ID,
     .name = "Graphics Memory Module",
     .author = "Code Aurora Forum",
@@ -62,42 +62,34 @@ struct private_module_t HAL_MODULE_INFO_SYM = {
 int gralloc_device_open(const struct hw_module_t *module, const char *name, hw_device_t **device) {
   int status = -EINVAL;
   if (!strcmp(name, GRALLOC_HARDWARE_MODULE_ID)) {
-    const private_module_t *m = reinterpret_cast<const private_module_t *>(module);
-    gralloc1::GrallocImpl * /*gralloc1_device_t*/ dev = new gralloc1::GrallocImpl(m);
+    gralloc1::GrallocImpl * /*gralloc1_device_t*/ dev = gralloc1::GrallocImpl::GetInstance(module);
     *device = reinterpret_cast<hw_device_t *>(dev);
-
     if (dev->Init()) {
       status = 0;
     } else {
       ALOGE(" Error in opening gralloc1 device");
-      return status;
     }
   }
-
   return status;
 }
 
 namespace gralloc1 {
 
-GrallocImpl::GrallocImpl(const private_module_t *module) {
+GrallocImpl::GrallocImpl(const hw_module_t *module) {
   common.tag = HARDWARE_DEVICE_TAG;
-  common.version = 1;  // TODO(user): cross check version
-  common.module = const_cast<hw_module_t *>(&module->base);
+  common.version = GRALLOC_MODULE_API_VERSION_1_0;
+  common.module = const_cast<hw_module_t *>(module);
   common.close = CloseDevice;
   getFunction = GetFunction;
   getCapabilities = GetCapabilities;
 }
 
 bool GrallocImpl::Init() {
-  buf_mgr_ = new BufferManager();
-
-  return buf_mgr_->Init();
+  buf_mgr_ = BufferManager::GetInstance();
+  return true;
 }
 
 GrallocImpl::~GrallocImpl() {
-  if (buf_mgr_) {
-    delete buf_mgr_;
-  }
 }
 
 int GrallocImpl::CloseDevice(hw_device_t *device) {
@@ -127,6 +119,8 @@ gralloc1_function_pointer_t GrallocImpl::GetFunction(gralloc1_device_t *device, 
   }
 
   switch (function) {
+    case GRALLOC1_FUNCTION_DUMP:
+      return reinterpret_cast<gralloc1_function_pointer_t>(Dump);
     case GRALLOC1_FUNCTION_CREATE_DESCRIPTOR:
       return reinterpret_cast<gralloc1_function_pointer_t>(CreateBufferDescriptor);
     case GRALLOC1_FUNCTION_DESTROY_DESCRIPTOR:
@@ -157,17 +151,12 @@ gralloc1_function_pointer_t GrallocImpl::GetFunction(gralloc1_device_t *device, 
       return reinterpret_cast<gralloc1_function_pointer_t>(RetainBuffer);
     case GRALLOC1_FUNCTION_RELEASE:
       return reinterpret_cast<gralloc1_function_pointer_t>(ReleaseBuffer);
-    /*  TODO(user) :definition of flex plane is not known yet
-     *  Need to implement after clarification from Google.
-    * case GRALLOC1_FUNCTION_GET_NUM_FLEX_PLANES:
-      return reinterpret_cast<gralloc1_function_pointer_t> (; */
+    case GRALLOC1_FUNCTION_GET_NUM_FLEX_PLANES:
+      return reinterpret_cast<gralloc1_function_pointer_t>(GetNumFlexPlanes);
     case GRALLOC1_FUNCTION_LOCK:
       return reinterpret_cast<gralloc1_function_pointer_t>(LockBuffer);
-    /*  TODO(user) : LOCK_YCBCR changed to LOCK_FLEX but structure is not known yet.
-     *  Need to implement after clarification from Google.
-    case GRALLOC1_PFN_LOCK_FLEX:
-      return reinterpret_cast<gralloc1_function_pointer_t> (LockYCbCrBuffer;
-    */
+    case GRALLOC1_FUNCTION_LOCK_FLEX:
+      return reinterpret_cast<gralloc1_function_pointer_t>(LockFlex);
     case GRALLOC1_FUNCTION_UNLOCK:
       return reinterpret_cast<gralloc1_function_pointer_t>(UnlockBuffer);
     case GRALLOC1_FUNCTION_PERFORM:
@@ -180,11 +169,23 @@ gralloc1_function_pointer_t GrallocImpl::GetFunction(gralloc1_device_t *device, 
   return NULL;
 }
 
-gralloc1_error_t GrallocImpl::CheckDeviceAndDescriptor(gralloc1_device_t *device,
-                                                       gralloc1_buffer_descriptor_t descriptor) {
-  if (!device || !BUF_DESCRIPTOR(descriptor)->IsValid()) {
-    ALOGE("Gralloc Error : device=%p, descriptor=%p", (void *)device, (void *)descriptor);
+gralloc1_error_t GrallocImpl::Dump(gralloc1_device_t *device, uint32_t *out_size,
+                                   char *out_buffer) {
+  if (!device) {
+    ALOGE("Gralloc Error : device=%p", (void *)device);
     return GRALLOC1_ERROR_BAD_DESCRIPTOR;
+  }
+  if (out_buffer == nullptr) {
+    *out_size = 1024;
+  } else {
+    std::ostringstream os;
+    // TODO(user): implement in buffer manager
+    os << "-------------------------------" << std::endl;
+    os << "QTI gralloc dump:" << std::endl;
+    os << "-------------------------------" << std::endl;
+    auto copy_size = os.str().size() < *out_size ? os.str().size() : *out_size;
+    std::copy_n(out_buffer, copy_size, os.str().begin());
+    *out_size = static_cast<uint32_t>(copy_size);
   }
 
   return GRALLOC1_ERROR_NONE;
@@ -206,69 +207,66 @@ gralloc1_error_t GrallocImpl::CreateBufferDescriptor(gralloc1_device_t *device,
   if (!device) {
     return GRALLOC1_ERROR_BAD_DESCRIPTOR;
   }
-
-  BufferDescriptor *descriptor = new BufferDescriptor();
-  if (descriptor == NULL) {
-    return GRALLOC1_ERROR_NO_RESOURCES;
-  }
-
-  *out_descriptor = reinterpret_cast<gralloc1_buffer_descriptor_t>(descriptor);
-
-  return GRALLOC1_ERROR_NONE;
+  GrallocImpl const *dev = GRALLOC_IMPL(device);
+  return dev->buf_mgr_->CreateBufferDescriptor(out_descriptor);
 }
 
 gralloc1_error_t GrallocImpl::DestroyBufferDescriptor(gralloc1_device_t *device,
                                                       gralloc1_buffer_descriptor_t descriptor) {
-  gralloc1_error_t status = CheckDeviceAndDescriptor(device, descriptor);
-  if (status == GRALLOC1_ERROR_NONE) {
-    delete reinterpret_cast<BufferDescriptor *>(descriptor);
+  if (!device) {
+    return GRALLOC1_ERROR_BAD_DESCRIPTOR;
   }
-
-  return status;
+  GrallocImpl const *dev = GRALLOC_IMPL(device);
+  return dev->buf_mgr_->DestroyBufferDescriptor(descriptor);
 }
 
 gralloc1_error_t GrallocImpl::SetConsumerUsage(gralloc1_device_t *device,
                                                gralloc1_buffer_descriptor_t descriptor,
                                                gralloc1_consumer_usage_t usage) {
-  gralloc1_error_t status = CheckDeviceAndDescriptor(device, descriptor);
-  if (status == GRALLOC1_ERROR_NONE) {
-    BUF_DESCRIPTOR(descriptor)->SetConsumerUsage(usage);
+  if (!device) {
+    return GRALLOC1_ERROR_BAD_DESCRIPTOR;
+  } else {
+    GrallocImpl const *dev = GRALLOC_IMPL(device);
+    return dev->buf_mgr_->CallBufferDescriptorFunction(descriptor,
+                                                       &BufferDescriptor::SetConsumerUsage, usage);
   }
-
-  return status;
 }
 
 gralloc1_error_t GrallocImpl::SetBufferDimensions(gralloc1_device_t *device,
                                                   gralloc1_buffer_descriptor_t descriptor,
                                                   uint32_t width, uint32_t height) {
-  gralloc1_error_t status = CheckDeviceAndDescriptor(device, descriptor);
-  if (status == GRALLOC1_ERROR_NONE) {
-    BUF_DESCRIPTOR(descriptor)->SetDimensions(INT(width), INT(height));
+  if (!device) {
+    return GRALLOC1_ERROR_BAD_DESCRIPTOR;
+  } else {
+    GrallocImpl const *dev = GRALLOC_IMPL(device);
+    return dev->buf_mgr_->CallBufferDescriptorFunction(descriptor,
+                                                       &BufferDescriptor::SetDimensions,
+                                                       INT(width), INT(height));
   }
-
-  return status;
 }
 
 gralloc1_error_t GrallocImpl::SetColorFormat(gralloc1_device_t *device,
                                              gralloc1_buffer_descriptor_t descriptor,
                                              int32_t format) {
-  gralloc1_error_t status = CheckDeviceAndDescriptor(device, descriptor);
-  if (status == GRALLOC1_ERROR_NONE) {
-    BUF_DESCRIPTOR(descriptor)->SetColorFormat(format);
+  if (!device) {
+    return GRALLOC1_ERROR_BAD_DESCRIPTOR;
+  } else {
+    GrallocImpl const *dev = GRALLOC_IMPL(device);
+    return dev->buf_mgr_->CallBufferDescriptorFunction(descriptor,
+                                                       &BufferDescriptor::SetColorFormat, format);
   }
-
-  return status;
 }
 
 gralloc1_error_t GrallocImpl::SetProducerUsage(gralloc1_device_t *device,
                                                gralloc1_buffer_descriptor_t descriptor,
                                                gralloc1_producer_usage_t usage) {
-  gralloc1_error_t status = CheckDeviceAndDescriptor(device, descriptor);
-  if (status == GRALLOC1_ERROR_NONE) {
-    BUF_DESCRIPTOR(descriptor)->SetProducerUsage(usage);
+  if (!device) {
+    return GRALLOC1_ERROR_BAD_DESCRIPTOR;
+  } else {
+    GrallocImpl const *dev = GRALLOC_IMPL(device);
+    return dev->buf_mgr_->CallBufferDescriptorFunction(descriptor,
+                                                       &BufferDescriptor::SetProducerUsage, usage);
   }
-
-  return status;
 }
 
 gralloc1_error_t GrallocImpl::GetBackingStore(gralloc1_device_t *device, buffer_handle_t buffer,
@@ -336,16 +334,16 @@ gralloc1_error_t GrallocImpl::GetBufferStride(gralloc1_device_t *device, buffer_
   return status;
 }
 
-gralloc1_error_t GrallocImpl::AllocateBuffers(gralloc1_device_t *device, uint32_t num_dptors,
-                                              const gralloc1_buffer_descriptor_t *dptors,
-                                              buffer_handle_t *outBuffers) {
-  if (!num_dptors || !dptors) {
+gralloc1_error_t GrallocImpl::AllocateBuffers(gralloc1_device_t *device, uint32_t num_descriptors,
+                                              const gralloc1_buffer_descriptor_t *descriptors,
+                                              buffer_handle_t *out_buffers) {
+  if (!num_descriptors || !descriptors) {
     return GRALLOC1_ERROR_BAD_DESCRIPTOR;
   }
 
   GrallocImpl const *dev = GRALLOC_IMPL(device);
-  const BufferDescriptor *descriptors = reinterpret_cast<const BufferDescriptor *>(dptors);
-  gralloc1_error_t status = dev->buf_mgr_->AllocateBuffers(num_dptors, descriptors, outBuffers);
+  gralloc1_error_t status = dev->buf_mgr_->AllocateBuffers(num_descriptors, descriptors,
+                                                           out_buffers);
 
   return status;
 }
@@ -372,6 +370,17 @@ gralloc1_error_t GrallocImpl::ReleaseBuffer(gralloc1_device_t *device, buffer_ha
   return status;
 }
 
+gralloc1_error_t GrallocImpl::GetNumFlexPlanes(gralloc1_device_t *device, buffer_handle_t buffer,
+                                               uint32_t *out_num_planes) {
+  gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
+  if (status == GRALLOC1_ERROR_NONE) {
+    GrallocImpl const *dev = GRALLOC_IMPL(device);
+    const private_handle_t *hnd = PRIV_HANDLE_CONST(buffer);
+    status = dev->buf_mgr_->GetNumFlexPlanes(hnd, out_num_planes);
+  }
+  return status;
+}
+
 gralloc1_error_t GrallocImpl::LockBuffer(gralloc1_device_t *device, buffer_handle_t buffer,
                                          gralloc1_producer_usage_t prod_usage,
                                          gralloc1_consumer_usage_t cons_usage,
@@ -392,14 +401,16 @@ gralloc1_error_t GrallocImpl::LockBuffer(gralloc1_device_t *device, buffer_handl
   // Either producer usage or consumer usage must be *_USAGE_NONE
   if ((prod_usage != GRALLOC1_PRODUCER_USAGE_NONE) &&
       (cons_usage != GRALLOC1_CONSUMER_USAGE_NONE)) {
-    return GRALLOC1_ERROR_BAD_VALUE;
+    // Current gralloc1 clients do not satisfy this restriction.
+    // See b/33588773 for details
+    // return GRALLOC1_ERROR_BAD_VALUE;
   }
 
   // currently we ignore the region/rect client wants to lock
   if (region == NULL) {
     return GRALLOC1_ERROR_BAD_VALUE;
   }
-
+  // TODO(user): Need to check if buffer was allocated with the same flags
   status = dev->buf_mgr_->LockBuffer(hnd, prod_usage, cons_usage);
 
   *out_data = reinterpret_cast<void *>(hnd->base);
@@ -407,27 +418,24 @@ gralloc1_error_t GrallocImpl::LockBuffer(gralloc1_device_t *device, buffer_handl
   return status;
 }
 
-/*  TODO(user) : LOCK_YCBCR changed to LOCK_FLEX but structure definition is not known yet.
- *  Need to implement after clarification from Google.
-gralloc1_error_t GrallocImpl::LockYCbCrBuffer(gralloc1_device_t* device, buffer_handle_t buffer,
-    gralloc1_producer_usage_t prod_usage, gralloc1_consumer_usage_t cons_usage,
-    const gralloc1_rect_t* region, struct android_ycbcr* outYCbCr, int32_t* outAcquireFence) {
-  gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
-
-  if (status == GRALLOC1_ERROR_NONE) {
-    void **outData = 0;
-    status = LockBuffer(device, buffer, prod_usage, cons_usage, region, outData, outAcquireFence);
+gralloc1_error_t GrallocImpl::LockFlex(gralloc1_device_t *device, buffer_handle_t buffer,
+                                       gralloc1_producer_usage_t prod_usage,
+                                       gralloc1_consumer_usage_t cons_usage,
+                                       const gralloc1_rect_t *region,
+                                       struct android_flex_layout *out_flex_layout,
+                                       int32_t acquire_fence) {
+  void *out_data;
+  gralloc1_error_t status = GrallocImpl::LockBuffer(device, buffer, prod_usage, cons_usage, region,
+                                                    &out_data, acquire_fence);
+  if (status != GRALLOC1_ERROR_NONE) {
+    return status;
   }
 
-  if (status == GRALLOC1_ERROR_NONE) {
-    const private_handle_t *hnd = PRIV_HANDLE_CONST(buffer);
-    GrallocImpl const *dev = GRALLOC_IMPL(device);
-    dev->allocator_->GetYUVPlaneInfo(hnd, outYCbCr);
-  }
-
+  GrallocImpl const *dev = GRALLOC_IMPL(device);
+  const private_handle_t *hnd = PRIV_HANDLE_CONST(buffer);
+  dev->buf_mgr_->GetFlexLayout(hnd, out_flex_layout);
   return status;
 }
- */
 
 gralloc1_error_t GrallocImpl::UnlockBuffer(gralloc1_device_t *device, buffer_handle_t buffer,
                                            int32_t *release_fence) {

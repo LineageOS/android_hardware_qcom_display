@@ -413,6 +413,7 @@ struct HWDestScaleInfo {
   uint32_t mixer_height = 0;
   bool scale_update = false;
   HWScaleData scale_data = {};
+  LayerRect panel_roi = {};
 };
 
 typedef std::map<uint32_t, HWDestScaleInfo *> DestScaleInfoMap;
@@ -446,6 +447,17 @@ struct HWLayerConfig {
   void Reset() { *this = HWLayerConfig(); }
 };
 
+struct HWHDRLayerInfo {
+  enum HDROperation {
+    kNoOp,   // No-op.
+    kSet,    // Sets the HDR MetaData - Start of HDR
+    kReset,  // resets the previously set HDR Metadata, End of HDR
+  };
+
+  int32_t layer_index = -1;
+  HDROperation operation = kNoOp;
+};
+
 struct HWLayersInfo {
   LayerStack *stack = NULL;        // Input layer stack. Set by the caller.
   uint32_t app_layer_count = 0;    // Total number of app layers. Must not be 0.
@@ -453,19 +465,21 @@ struct HWLayersInfo {
 
   std::vector<Layer> hw_layers = {};  // Layers which need to be programmed on the HW
 
-  uint32_t index[kMaxSDELayers];   // Indexes of the layers from the layer stack which need to be
-                                   // programmed on hardware.
+  uint32_t index[kMaxSDELayers] = {};   // Indexes of the layers from the layer stack which need to
+                                        // be programmed on hardware.
   uint32_t roi_index[kMaxSDELayers] = {0};  // Stores the ROI index where the layers are visible.
 
   int sync_handle = -1;
 
-  std::vector<LayerRect> left_frame_roi;   // Left ROI.
-  std::vector<LayerRect> right_frame_roi;  // Right ROI.
+  std::vector<LayerRect> left_frame_roi = {};   // Left ROI.
+  std::vector<LayerRect> right_frame_roi = {};  // Right ROI.
+  LayerRect partial_fb_roi = {};   // Damaged area in framebuffer.
 
   bool roi_split = false;          // Indicates separated left and right ROI
 
   bool use_hw_cursor = false;      // Indicates that HWCursor pipe needs to be used for cursor layer
   DestScaleInfoMap dest_scale_info_map = {};
+  HWHDRLayerInfo hdr_layer_info = {};
 };
 
 struct HWLayers {
@@ -483,6 +497,7 @@ struct HWDisplayAttributes : DisplayConfigVariableInfo {
   uint32_t v_back_porch = 0;   //!< Vertical back porch of panel
   uint32_t v_pulse_width = 0;  //!< Vertical pulse width of panel
   uint32_t h_total = 0;        //!< Total width of panel (hActive + hFP + hBP + hPulseWidth)
+  uint32_t v_total = 0;        //!< Total height of panel (vActive + vFP + vBP + vPulseWidth)
   std::bitset<32> s3d_config;  //!< Stores the bit mask of S3D modes
 
   void Reset() { *this = HWDisplayAttributes(); }
@@ -498,6 +513,7 @@ struct HWDisplayAttributes : DisplayConfigVariableInfo {
             (v_front_porch != display_attributes.v_front_porch) ||
             (v_back_porch != display_attributes.v_back_porch) ||
             (v_pulse_width != display_attributes.v_pulse_width) ||
+            (h_total != display_attributes.h_total) ||
             (is_yuv != display_attributes.is_yuv));
   }
 
