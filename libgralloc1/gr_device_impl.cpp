@@ -100,16 +100,13 @@ int GrallocImpl::CloseDevice(hw_device_t *device) {
 }
 
 void GrallocImpl::GetCapabilities(struct gralloc1_device *device, uint32_t *out_count,
-                                  int32_t /*gralloc1_capability_t*/ *out_capabilities) {
-  if (!device) {
-    // Need to plan for adding more capabilities
-    if (out_capabilities == NULL) {
-      *out_count = 1;
-    } else {
-      *out_capabilities = GRALLOC1_CAPABILITY_TEST_ALLOCATE;
+                                  int32_t  /*gralloc1_capability_t*/ *out_capabilities) {
+  if (device != nullptr) {
+    if (out_capabilities != nullptr && *out_count > 0) {
+      out_capabilities[0] = GRALLOC1_CAPABILITY_TEST_ALLOCATE;
     }
+    *out_count = 1;
   }
-
   return;
 }
 
