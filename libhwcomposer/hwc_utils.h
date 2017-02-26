@@ -36,6 +36,9 @@
 #include <EGL/egl.h>
 #include <QService.h>
 
+#ifdef QTI_BSP
+#include <hardware/display_defs.h>
+#endif
 
 #define ALIGN_TO(x, align)     (((x) + ((align)-1)) & ~((align)-1))
 #define LIKELY( exp )       (__builtin_expect( (exp) != 0, true  ))
@@ -45,7 +48,6 @@
 #define MIN_DISPLAY_YRES 200
 #define HWC_WFDDISPSYNC_LOG 0
 #define STR(f) #f;
-
 
 //Fwrd decls
 struct hwc_context_t;
