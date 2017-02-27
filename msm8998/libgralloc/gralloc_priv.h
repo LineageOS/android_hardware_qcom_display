@@ -246,6 +246,12 @@ struct private_handle_t : public native_handle {
         int unaligned_width;   // holds width client asked to allocate
         int unaligned_height;  // holds height client asked to allocate
 
+        int original_width;
+        int original_format;
+        int producer_usage;
+        int consumer_usage;
+        uint64_t backing_store __attribute__((aligned(8)));
+
 #ifdef __cplusplus
         static const int sNumFds = 2;
         static inline int sNumInts() {
@@ -261,7 +267,10 @@ struct private_handle_t : public native_handle {
             base(0), offset_metadata(0), gpuaddr(0),
             format(format), width(width), height(height),
             base_metadata(0), unaligned_width(width),
-            unaligned_height(height)
+            unaligned_height(height),
+            original_width(0), original_format(0),
+            producer_usage(0), consumer_usage(0),
+            backing_store(0)
         {
             version = (int) sizeof(native_handle);
             numInts = sNumInts();
