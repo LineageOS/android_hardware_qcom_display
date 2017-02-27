@@ -57,7 +57,8 @@ namespace sdm {
                       bool flip_horizontal, LayerRect *out_rects);
   void MapRect(const LayerRect &src_domain, const LayerRect &dst_domain, const LayerRect &in_rect,
                LayerRect *out_rect);
-  void TransformHV(const LayerRect &src_domain, const LayerRect &in_rect, LayerRect *out_rect);
+  void TransformHV(const LayerRect &src_domain, const LayerRect &in_rect,
+                   const LayerTransform &transform, LayerRect *out_rect);
   RectOrientation GetOrientation(const LayerRect &in_rect);
 }  // namespace sdm
 
