@@ -211,7 +211,7 @@ int HWCDisplayPrimary::Prepare(hwc_display_contents_1_t *content_list) {
     DisplayConfigFixedInfo display_config;
     display_intf_->GetConfig(&display_config);
     if (display_config.is_cmdmode) {
-      DLOGI("Skipping null commit on cmd mode panel");
+      DLOGV("Skipping null commit on cmd mode panel");
     } else {
       flush_ = true;
     }
@@ -232,7 +232,7 @@ int HWCDisplayPrimary::Commit(hwc_display_contents_1_t *content_list) {
   DisplayConfigFixedInfo display_config;
   display_intf_->GetConfig(&display_config);
   if (content_list->numHwLayers <= 1 && display_config.is_cmdmode) {
-    DLOGI("Skipping null commit on cmd mode panel");
+    DLOGV("Skipping null commit on cmd mode panel");
     return 0;
   }
 
