@@ -74,6 +74,7 @@ class CompManager : public DumpImpl {
 
  private:
   static const int kMaxThermalLevel = 3;
+  static const int kSafeModeThreshold = 4;
 
   void PrepareStrategyConstraints(Handle display_ctx, HWLayers *hw_layers);
 
