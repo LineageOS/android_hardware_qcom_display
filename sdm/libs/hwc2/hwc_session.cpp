@@ -152,7 +152,10 @@ int HWCSession::Deinit() {
     color_mgr_->DestroyColorManager();
   }
   uevent_thread_exit_ = true;
-  pthread_join(uevent_thread_, NULL);
+  DLOGD("Terminating uevent thread");
+  // TODO(user): on restarting HWC in the same process, the uevent thread does not restart
+  // cleanly.
+  Sys::pthread_cancel_(uevent_thread_);
 
   DisplayError error = CoreInterface::DestroyCore();
   if (error != kErrorNone) {
