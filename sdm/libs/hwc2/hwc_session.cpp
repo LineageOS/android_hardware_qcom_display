@@ -32,6 +32,7 @@
 #include <utils/debug.h>
 #include <sync/sync.h>
 #include <profiler.h>
+#include <algorithm>
 #include <string>
 #include <bitset>
 
@@ -283,9 +284,10 @@ void HWCSession::Dump(hwc2_device_t *device, uint32_t *out_size, char *out_buffe
     return;
   }
   auto *hwc_session = static_cast<HWCSession *>(device);
+  const size_t max_dump_size = 8192;
 
   if (out_buffer == nullptr) {
-    *out_size = 8192;  // TODO(user): Adjust required dump size
+    *out_size = max_dump_size;
   } else {
     char sdm_dump[4096];
     DumpInterface::GetDump(sdm_dump, 4096);  // TODO(user): Fix this workaround
@@ -296,8 +298,8 @@ void HWCSession::Dump(hwc2_device_t *device, uint32_t *out_size, char *out_buffe
       }
     }
     s += sdm_dump;
-    s.copy(out_buffer, s.size(), 0);
-    *out_size = sizeof(out_buffer);
+    auto copied = s.copy(out_buffer, std::min(s.size(), max_dump_size), 0);
+    *out_size = UINT32(copied);
   }
 }
 
