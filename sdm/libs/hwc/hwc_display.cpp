@@ -437,6 +437,7 @@ int HWCDisplay::PrePrepareLayerStack(hwc_display_contents_1_t *content_list) {
   for (size_t i = 0; i < num_hw_layers; i++) {
     hwc_layer_1_t &hwc_layer = content_list->hwLayers[i];
 
+    const private_handle_t *pvt_handle = static_cast<const private_handle_t *>(hwc_layer.handle);
     Layer *layer = layer_stack_.layers.at(i);
     int ret = PrepareLayerParams(&content_list->hwLayers[i], layer);
 
@@ -454,6 +455,15 @@ int HWCDisplay::PrePrepareLayerStack(hwc_display_contents_1_t *content_list) {
     ApplyScanAdjustment(&scaled_display_frame);
 
     SetRect(scaled_display_frame, &layer->dst_rect);
+    if (pvt_handle) {
+        bool NonIntegralSourceCrop =  IsNonIntegralSourceCrop(hwc_layer.sourceCropf);
+        bool secure = (pvt_handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER) ||
+                (pvt_handle->flags & private_handle_t::PRIV_FLAGS_PROTECTED_BUFFER) ||
+                (pvt_handle->flags & private_handle_t::PRIV_FLAGS_SECURE_DISPLAY);
+        if (NonIntegralSourceCrop && !secure) {
+            layer->flags.skip = true;
+        }
+    }
     SetRect(hwc_layer.sourceCropf, &layer->src_rect);
     ApplyDeInterlaceAdjustment(layer);
 
@@ -749,6 +759,17 @@ bool HWCDisplay::IsLayerUpdating(hwc_display_contents_1_t *content_list, const L
   //   c) layer stack geometry has changed
   return (layer->flags.single_buffer || IsSurfaceUpdated(layer->dirty_regions) ||
          (layer_stack_.flags.geometry_changed));
+}
+
+bool HWCDisplay::IsNonIntegralSourceCrop(const hwc_frect_t &source) {
+     if ((source.left != roundf(source.left)) ||
+         (source.top != roundf(source.top)) ||
+         (source.right != roundf(source.right)) ||
+         (source.bottom != roundf(source.bottom))) {
+         return true;
+     } else {
+         return false;
+     }
 }
 
 void HWCDisplay::SetRect(const hwc_rect_t &source, LayerRect *target) {
