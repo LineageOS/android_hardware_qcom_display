@@ -2,7 +2,6 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE                  := libdrmutils
-LOCAL_PROPRIETARY_MODULE      := true
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := external/libdrm \
                                  $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
