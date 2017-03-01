@@ -272,7 +272,7 @@ DisplayError HWDevice::Validate(HWLayers *hw_layers) {
         SetRect(pipe_info->src_roi, &mdp_layer.src_rect);
         SetRect(pipe_info->dst_roi, &mdp_layer.dst_rect);
         SetMDPFlags(layer, is_rotator_used, is_cursor_pipe_used, &mdp_layer.flags);
-        SetCSC(layer->input_buffer->csc, &mdp_layer.color_space);
+        SetCSC(layer->input_buffer->color_metadata, &mdp_layer.color_space);
         if (pipe_info->flags & kIGC) {
           SetIGC(layer->input_buffer, mdp_layer_count);
         }
@@ -321,7 +321,7 @@ DisplayError HWDevice::Validate(HWLayers *hw_layers) {
     mdp_out_layer_.buffer.comp_ratio.denom = 1000;
     mdp_out_layer_.buffer.comp_ratio.numer = UINT32(hw_layers->output_compression * 1000);
 #ifdef OUT_LAYER_COLOR_SPACE
-    SetCSC(output_buffer->csc, &mdp_out_layer_.color_space);
+    SetCSC(output_buffer->color_metadata, &mdp_out_layer_.color_space);
 #endif
     SetFormat(output_buffer->format, &mdp_out_layer_.buffer.format);
 
@@ -1029,11 +1029,25 @@ void HWDevice::ResetDisplayParams() {
   mdp_disp_commit_.commit_v1.dest_scaler = mdp_dest_scalar_data_.data();
 }
 
-void HWDevice::SetCSC(LayerCSC source, mdp_color_space *color_space) {
-  switch (source) {
-  case kCSCLimitedRange601:    *color_space = MDP_CSC_ITU_R_601;      break;
-  case kCSCFullRange601:       *color_space = MDP_CSC_ITU_R_601_FR;   break;
-  case kCSCLimitedRange709:    *color_space = MDP_CSC_ITU_R_709;      break;
+void HWDevice::SetCSC(const ColorMetaData &color_metadata, mdp_color_space *color_space) {
+
+  switch (color_metadata.colorPrimaries) {
+  case ColorPrimaries_BT601_6_525:
+  case ColorPrimaries_BT601_6_625:
+    *color_space =
+      ((color_metadata.range == Range_Full) ? MDP_CSC_ITU_R_601_FR : MDP_CSC_ITU_R_601);
+    break;
+  case ColorPrimaries_BT709_5:
+    *color_space = MDP_CSC_ITU_R_709;
+    break;
+#if defined MDP_CSC_ITU_R_2020 && defined MDP_CSC_ITU_R_2020_FR
+  case ColorPrimaries_BT2020:
+    *color_space = static_cast<mdp_color_space>((color_metadata.range == Range_Full) ?
+                                                MDP_CSC_ITU_R_2020_FR : MDP_CSC_ITU_R_2020);
+    break;
+#endif
+  default:
+    break;
   }
 }
 
