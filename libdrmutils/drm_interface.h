@@ -154,6 +154,13 @@ enum struct DRMOps {
    */
   CRTC_SET_POST_PROC,
   /*
+   * Op: Sets CRTC ROIs.
+   * Arg: uint32_t - CRTC ID
+   *      uint32_t - number of ROIs
+   *      DRMRect * - Array of CRTC ROIs
+   */
+  CRTC_SET_ROI,
+  /*
    * Op: Returns retire fence for this commit. Should be called after Commit() on
    * DRMAtomicReqInterface.
    * Arg: uint32_t - Connector ID
@@ -178,6 +185,13 @@ enum struct DRMOps {
    *      uint32_t - Power Mode
    */
   CONNECTOR_SET_POWER_MODE,
+  /*
+   * Op: Sets panel ROIs.
+   * Arg: uint32_t - Connector ID
+   *      uint32_t - number of ROIs
+   *      DRMRect * - Array of Connector ROIs
+   */
+  CONNECTOR_SET_ROI,
 };
 
 enum struct DRMRotation {
@@ -298,6 +312,15 @@ struct DRMConnectorInfo {
   std::vector<std::pair<uint32_t, uint64_t>> formats_supported;
   // Valid only if type is DRM_MODE_CONNECTOR_VIRTUAL
   uint32_t max_linewidth;
+  // Valid only if mode is command
+  int num_roi;
+  int xstart;
+  int ystart;
+  int walign;
+  int halign;
+  int wmin;
+  int hmin;
+  bool roi_merge;
 };
 
 /* Identifier token for a display */
