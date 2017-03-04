@@ -117,6 +117,9 @@ HWInfoDRM::~HWInfoDRM() {
     DRMLibLoader::GetInstance()->FuncDestroyDRMManager()();
     drm_mgr_intf_ = nullptr;
   }
+
+  DRMLibLoader::Destroy();
+  DRMMaster::DestroyInstance();
 }
 
 DisplayError HWInfoDRM::GetDynamicBWLimits(HWResourceInfo *hw_resource) {
@@ -390,17 +393,13 @@ void HWInfoDRM::GetSDMFormat(uint32_t v4l2_format, LayerBufferFormat *sdm_format
 
 void HWInfoDRM::GetRotatorFormatsForType(int fd, uint32_t type,
                                          vector<LayerBufferFormat> *supported_formats) {
-  int ret = 0;
   struct v4l2_fmtdesc fmtdesc = {};
   fmtdesc.type = type;
-  while (!ret) {
-    ret = Sys::ioctl_(fd, static_cast<int>(VIDIOC_ENUM_FMT), &fmtdesc);
-    if (!ret) {
-      LayerBufferFormat sdm_format = kFormatInvalid;
-      GetSDMFormat(fmtdesc.pixelformat, &sdm_format);
-      if (sdm_format != kFormatInvalid) {
-        supported_formats->push_back(sdm_format);
-      }
+  while (!Sys::ioctl_(fd, static_cast<int>(VIDIOC_ENUM_FMT), &fmtdesc)) {
+    LayerBufferFormat sdm_format = kFormatInvalid;
+    GetSDMFormat(fmtdesc.pixelformat, &sdm_format);
+    if (sdm_format != kFormatInvalid) {
+      supported_formats->push_back(sdm_format);
     }
     fmtdesc.index++;
   }
@@ -432,9 +431,8 @@ DisplayError HWInfoDRM::GetRotatorSupportedFormats(uint32_t v4l2_index,
 
 DisplayError HWInfoDRM::GetHWRotatorInfo(HWResourceInfo *hw_resource) {
   const uint32_t kMaxV4L2Nodes = 64;
-  bool found = false;
 
-  for (uint32_t i = 0; (i < kMaxV4L2Nodes) && (false == found); i++) {
+  for (uint32_t i = 0; i < kMaxV4L2Nodes; i++) {
     string path = "/sys/class/video4linux/video" + to_string(i) + "/name";
     Sys::fstream fs(path, fstream::in);
     if (!fs.is_open()) {
@@ -447,9 +445,9 @@ DisplayError HWInfoDRM::GetHWRotatorInfo(HWResourceInfo *hw_resource) {
       hw_resource->hw_rot_info.num_rotator++;
       hw_resource->hw_rot_info.type = HWRotatorInfo::ROT_TYPE_V4L2;
       hw_resource->hw_rot_info.has_downscale = true;
-      // We support only 1 rotator
-      found = true;
       GetRotatorSupportedFormats(i, hw_resource);
+      // We support only 1 rotator
+      break;
     }
   }
 
