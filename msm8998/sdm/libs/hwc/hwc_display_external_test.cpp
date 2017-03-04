@@ -37,6 +37,7 @@
 #include <sstream>
 #include <string>
 #include <fstream>
+#include <sys/stat.h>
 
 #include "hwc_display_external_test.h"
 #include "hwc_debugger.h"
