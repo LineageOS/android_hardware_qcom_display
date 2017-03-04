@@ -17,6 +17,8 @@
  * limitations under the License.
  */
 
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <cutils/properties.h>
 #include <errno.h>
 #include <gr.h>
