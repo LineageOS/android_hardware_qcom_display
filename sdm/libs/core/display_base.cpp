@@ -156,8 +156,8 @@ DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
            hw_layers_info.gpu_target_index, display_type_);
 
   if (!hw_layers_info.app_layer_count) {
-    DLOGE("Layer count is zero");
-    return kErrorParameters;
+    DLOGW("Layer count is zero");
+    return kErrorNoAppLayers;
   }
 
   if (hw_layers_info.gpu_target_index) {
