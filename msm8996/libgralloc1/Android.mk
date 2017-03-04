@@ -1,6 +1,11 @@
 # Gralloc module
 LOCAL_PATH := $(call my-dir)
 include $(LOCAL_PATH)/../common.mk
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := gralloc_headers
+LOCAL_EXPORT_C_INCLUDE_DIRS   := $(LOCAL_PATH)
+include $(BUILD_HEADER_LIBRARY)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE                  := gralloc.$(TARGET_BOARD_PLATFORM)
@@ -20,6 +25,4 @@ LOCAL_SRC_FILES               := gr_utils.cpp \
                                  gr_allocator.cpp \
                                  gr_buf_mgr.cpp \
                                  gr_device_impl.cpp
-LOCAL_COPY_HEADERS_TO         := $(common_header_export_path)
-LOCAL_COPY_HEADERS            := gr_device_impl.h gralloc_priv.h gr_priv_handle.h
 include $(BUILD_SHARED_LIBRARY)
