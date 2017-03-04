@@ -195,6 +195,8 @@ DisplayError DisplayBase::ValidateGPUTarget(LayerStack *layer_stack) {
 
 DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
+  uint32_t app_layer_count = 0;
+  std::vector<Layer *>layers = layer_stack->layers;
   DisplayError error = kErrorNone;
 
   if (!active_) {
@@ -203,6 +205,16 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
 
   if (!layer_stack) {
     return kErrorParameters;
+  }
+
+  uint32_t layer_count = UINT32(layers.size());
+  while ((app_layer_count < layer_count) &&
+         (layers.at(app_layer_count)->composition != kCompositionGPUTarget)) {
+    app_layer_count++;
+  }
+
+  if (app_layer_count == 0) {
+   return kErrorNoAppLayers;
   }
 
   error = ValidateGPUTarget(layer_stack);
