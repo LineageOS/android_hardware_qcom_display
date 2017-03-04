@@ -4,7 +4,6 @@ include $(LOCAL_PATH)/../../../common.mk
 ifeq ($(use_hwc2),false)
 
 LOCAL_MODULE                  := hwcomposer.$(TARGET_BOARD_PLATFORM)
-LOCAL_PROPRIETARY_MODULE      := true
 LOCAL_MODULE_RELATIVE_PATH    := hw
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes)
@@ -16,7 +15,8 @@ LOCAL_CLANG                   := true
 
 LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware libhardware_legacy \
                                  libutils libcutils libsync libmemalloc libqdutils libdl \
-                                 libpowermanager libsdmutils libgpu_tonemapper  libc++ liblog
+                                 libpowermanager libsdmutils libgpu_tonemapper  libc++ liblog \
+                                 libdrmutils
 
 LOCAL_SRC_FILES               := hwc_session.cpp \
                                  hwc_display.cpp \
