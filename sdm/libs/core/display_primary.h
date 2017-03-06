@@ -58,13 +58,14 @@ class DisplayPrimary : public DisplayBase, HWEventHandler {
   virtual void IdleTimeout();
   virtual void ThermalEvent(int64_t thermal_level);
   virtual void CECMessage(char *message) { }
+  virtual void IdlePowerCollapse();
 
  private:
   bool NeedsAVREnable();
 
   uint32_t idle_timeout_ms_ = 0;
   std::vector<HWEvent> event_list_ = { HWEvent::VSYNC, HWEvent::EXIT, HWEvent::IDLE_NOTIFY,
-      HWEvent::SHOW_BLANK_EVENT, HWEvent::THERMAL_LEVEL };
+      HWEvent::SHOW_BLANK_EVENT, HWEvent::THERMAL_LEVEL, HWEvent::IDLE_POWER_COLLAPSE };
   bool avr_prop_disabled_ = false;
   bool switch_to_cmd_ = false;
 };
