@@ -28,6 +28,41 @@ namespace sdm {
 
 std::atomic<hwc2_layer_t> HWCLayer::next_id_(1);
 
+DisplayError SetCSC(const MetaData_t *meta_data, ColorMetaData *color_metadata) {
+  if (meta_data->operation & COLOR_METADATA) {
+#ifdef USE_COLOR_METADATA
+    *color_metadata = meta_data->color;
+#endif
+  } else if (meta_data->operation & UPDATE_COLOR_SPACE) {
+    ColorSpace_t csc = meta_data->colorSpace;
+    color_metadata->range = Range_Limited;
+
+    if (csc == ITU_R_601_FR || csc == ITU_R_2020_FR) {
+      color_metadata->range = Range_Full;
+    }
+
+    switch (csc) {
+    case ITU_R_601:
+    case ITU_R_601_FR:
+      // video and display driver uses 601_525
+      color_metadata->colorPrimaries = ColorPrimaries_BT601_6_525;
+      break;
+    case ITU_R_709:
+      color_metadata->colorPrimaries = ColorPrimaries_BT709_5;
+      break;
+    case ITU_R_2020:
+    case ITU_R_2020_FR:
+        color_metadata->colorPrimaries = ColorPrimaries_BT2020;
+        break;
+    default:
+      DLOGE("Unsupported CSC: %d", csc);
+      return kErrorNotSupported;
+    }
+  }
+
+  return kErrorNone;
+}
+
 // Layer operations
 HWCLayer::HWCLayer(hwc2_display_t display_id) : id_(next_id_++), display_id_(display_id) {
   layer_ = new Layer();
@@ -432,10 +467,8 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
     return kErrorNone;
   }
 
-  if (meta_data->operation & UPDATE_COLOR_SPACE) {
-    if (SetCSC(meta_data->colorSpace, &layer_buffer->csc) != kErrorNone) {
-      return kErrorNotSupported;
-    }
+  if (sdm::SetCSC(meta_data, &layer_buffer->color_metadata) != kErrorNone) {
+    return kErrorNotSupported;
   }
 
   if (meta_data->operation & SET_IGC) {
@@ -466,25 +499,6 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
 
   if (meta_data->operation & S3D_FORMAT) {
     layer_buffer->s3d_format = GetS3DFormat(meta_data->s3dFormat);
-  }
-
-  return kErrorNone;
-}
-
-DisplayError HWCLayer::SetCSC(ColorSpace_t source, LayerCSC *target) {
-  switch (source) {
-    case ITU_R_601:
-      *target = kCSCLimitedRange601;
-      break;
-    case ITU_R_601_FR:
-      *target = kCSCFullRange601;
-      break;
-    case ITU_R_709:
-      *target = kCSCLimitedRange709;
-      break;
-    default:
-      DLOGE("Unsupported CSC: %d", source);
-      return kErrorNotSupported;
   }
 
   return kErrorNone;
