@@ -16,9 +16,9 @@ LOCAL_PATH:= $(call my-dir)
 include $(LOCAL_PATH)/../common.mk
 
 include $(CLEAR_VARS)
-LOCAL_COPY_HEADERS_TO         := $(common_header_export_path)
-LOCAL_COPY_HEADERS            := copybit.h copybit_priv.h c2d2.h
-include $(BUILD_COPY_HEADERS)
+LOCAL_MODULE := copybit_headers
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)
+include $(BUILD_HEADER_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE                  := copybit.$(TARGET_BOARD_PLATFORM)
