@@ -582,7 +582,27 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
         return GRALLOC1_ERROR_BAD_HANDLE;
       }
       MetaData_t *metadata = reinterpret_cast<MetaData_t *>(hnd->base_metadata);
-      if (metadata && metadata->operation & UPDATE_COLOR_SPACE) {
+      if (!metadata) {
+        return GRALLOC1_ERROR_BAD_HANDLE;
+#ifdef USE_COLOR_METADATA
+      } else if (metadata->operation & COLOR_METADATA) {
+        ColorMetaData *colorMetadata = &metadata->color;
+        switch (colorMetadata->colorPrimaries) {
+        case ColorPrimaries_BT709_5:
+          *color_space = HAL_CSC_ITU_R_709;
+          break;
+        case ColorPrimaries_BT601_6_525:
+          *color_space = ((colorMetadata->range) ? HAL_CSC_ITU_R_601_FR : HAL_CSC_ITU_R_601);
+           break;
+        case ColorPrimaries_BT2020:
+          *color_space = (colorMetadata->range) ? HAL_CSC_ITU_R_2020_FR : HAL_CSC_ITU_R_2020;
+          break;
+        default:
+          ALOGE("Unknown Color Space = %d", colorMetadata->colorPrimaries);
+          break;
+        }
+#endif
+      } else if (metadata->operation & UPDATE_COLOR_SPACE) {
         *color_space = metadata->colorSpace;
       }
     } break;
