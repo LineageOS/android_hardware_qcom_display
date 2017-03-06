@@ -196,6 +196,11 @@ HWC2::Error HWCDisplayVirtual::SetOutputBuffer(buffer_handle_t buf, int32_t rele
     output_buffer_->flags.secure = 0;
     output_buffer_->flags.video = 0;
 
+    const MetaData_t *meta_data = reinterpret_cast<MetaData_t *>(output_handle->base_metadata);
+    if (meta_data && SetCSC(meta_data, &output_buffer_->color_metadata) != kErrorNone) {
+      return HWC2::Error::BadParameter;
+    }
+
     // TZ Protected Buffer - L1
     if (output_handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER) {
       output_buffer_->flags.secure = 1;
