@@ -84,6 +84,7 @@ DisplayError HWEventsDRM::InitializePollFd() {
       case HWEvent::CEC_READ_MESSAGE:
       case HWEvent::SHOW_BLANK_EVENT:
       case HWEvent::THERMAL_LEVEL:
+      case HWEvent::IDLE_POWER_COLLAPSE:
         break;
     }
   }
@@ -113,6 +114,9 @@ DisplayError HWEventsDRM::SetEventParser() {
         break;
       case HWEvent::THERMAL_LEVEL:
         event_data.event_parser = &HWEventsDRM::HandleThermal;
+        break;
+      case HWEvent::IDLE_POWER_COLLAPSE:
+        event_data.event_parser = &HWEventsDRM::HandleIdlePowerCollapse;
         break;
       default:
         error = kErrorParameters;
@@ -188,6 +192,7 @@ DisplayError HWEventsDRM::CloseFds() {
       case HWEvent::CEC_READ_MESSAGE:
       case HWEvent::SHOW_BLANK_EVENT:
       case HWEvent::THERMAL_LEVEL:
+      case HWEvent::IDLE_POWER_COLLAPSE:
         break;
       default:
         return kErrorNotSupported;
@@ -239,6 +244,7 @@ void *HWEventsDRM::DisplayEventHandler() {
         case HWEvent::CEC_READ_MESSAGE:
         case HWEvent::SHOW_BLANK_EVENT:
         case HWEvent::THERMAL_LEVEL:
+        case HWEvent::IDLE_POWER_COLLAPSE:
           if (poll_fd.fd >= 0 && (poll_fd.revents & POLLPRI) &&
               (Sys::pread_(poll_fd.fd, data, kMaxStringLength, 0) > 0)) {
             (this->*(event_data_list_[i]).event_parser)(data);
@@ -293,6 +299,10 @@ void HWEventsDRM::HandleIdleTimeout(char *data) {
 
 void HWEventsDRM::HandleCECMessage(char *data) {
   event_handler_->CECMessage(data);
+}
+
+void HWEventsDRM::HandleIdlePowerCollapse(char *data) {
+  event_handler_->IdlePowerCollapse();
 }
 
 }  // namespace sdm

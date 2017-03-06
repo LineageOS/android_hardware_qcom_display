@@ -218,6 +218,9 @@ unsigned int Allocator::GetSize(const BufferDescriptor &descriptor, unsigned int
     case HAL_PIXEL_FORMAT_RAW10:
       size = ALIGN(alignedw * alignedh, SIZE_4K);
       break;
+    case HAX_PIXEL_FORMAT_RAW8:
+      size = alignedw * alignedh * 1;
+      break;
 
     // adreno formats
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:  // NV21
@@ -402,6 +405,7 @@ int Allocator::GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr
     case HAL_PIXEL_FORMAT_NV21_ZSL:
     case HAL_PIXEL_FORMAT_RAW16:
     case HAL_PIXEL_FORMAT_RAW10:
+    case HAL_PIXEL_FORMAT_RAW8:
       GetYuvSPPlaneInfo(hnd->base, width, height, 1, ycbcr);
       std::swap(ycbcr->cb, ycbcr->cr);
       break;
@@ -776,6 +780,9 @@ void Allocator::GetAlignedWidthAndHeight(const BufferDescriptor &descriptor, uns
       break;
     case HAL_PIXEL_FORMAT_RAW10:
       aligned_w = ALIGN(width * 10 / 8, 16);
+      break;
+    case HAL_PIXEL_FORMAT_RAW8:
+      aligned_w = ALIGN(width, 8);
       break;
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_TILED:
       aligned_w = ALIGN(width, 128);
