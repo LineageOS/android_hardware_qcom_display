@@ -173,10 +173,18 @@ int gralloc_register_buffer(gralloc_module_t const* module,
     if (!module || private_handle_t::validate(handle) < 0)
         return -EINVAL;
 
-    int err =  gralloc_map(module, handle);
-    /* Do not fail register_buffer for secure buffers*/
-    if (err == -EACCES)
-        err = 0;
+    int err = 0;
+    private_handle_t* hnd = (private_handle_t*)handle;
+    if (!(hnd->flags & private_handle_t::PRIV_FLAGS_HW_TEXTURE)  &&
+        (hnd->flags & (private_handle_t::PRIV_FLAGS_CAMERA_READ |
+            private_handle_t::PRIV_FLAGS_CAMERA_WRITE))) {
+        return err;
+    } else {
+        err = gralloc_map(module, handle);
+        /* Do not fail register_buffer for secure buffers*/
+        if (err == -EACCES)
+            err = 0;
+    }
     return err;
 }
 
