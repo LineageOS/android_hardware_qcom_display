@@ -48,6 +48,7 @@ class BufferManager {
   gralloc1_error_t Perform(int operation, va_list args);
   gralloc1_error_t GetFlexLayout(const private_handle_t *hnd, struct android_flex_layout *layout);
   gralloc1_error_t GetNumFlexPlanes(const private_handle_t *hnd, uint32_t *out_num_planes);
+  gralloc1_error_t Dump(std::ostringstream *os);
 
   template <typename... Args>
   gralloc1_error_t CallBufferDescriptorFunction(gralloc1_buffer_descriptor_t descriptor_id,
