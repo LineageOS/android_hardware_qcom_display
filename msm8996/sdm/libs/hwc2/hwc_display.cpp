@@ -339,10 +339,6 @@ void HWCDisplay::BuildLayerStack() {
       layer->flags.solid_fill = true;
     }
 
-    if (!hwc_layer->SupportedDataspace()) {
-      layer->flags.skip = true;
-    }
-
     // set default composition as GPU for SDM
     layer->composition = kCompositionGPU;
 
