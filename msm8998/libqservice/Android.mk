@@ -3,6 +3,8 @@ include $(LOCAL_PATH)/../common.mk
 include $(CLEAR_VARS)
 
 LOCAL_MODULE                  := libqservice
+LOCAL_MODULE_PATH_32          := $(TARGET_OUT_VENDOR)/lib
+LOCAL_MODULE_PATH_64          := $(TARGET_OUT_VENDOR)/lib64
 LOCAL_MODULE_TAGS             := optional
 LOCAL_PROPRIETARY_MODULE      := true
 LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes)

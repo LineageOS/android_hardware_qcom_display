@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -86,7 +86,7 @@ DisplayError DisplayHDMI::Init() {
   s3d_format_to_mode_.insert(std::pair<LayerBufferS3DFormat, HWS3DMode>
                             (kS3dFormatFramePacking, kS3DModeFP));
 
-  error = HWEventsInterface::Create(INT(display_type_), this, &event_list_, &hw_events_intf_);
+  error = HWEventsInterface::Create(INT(display_type_), this, event_list_, &hw_events_intf_);
   if (error != kErrorNone) {
     DisplayBase::Deinit();
     HWInterface::Destroy(hw_intf_);

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
- * Copyright (c) 2011 - 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011 - 2017, The Linux Foundation. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -247,12 +247,8 @@ struct private_handle_t : public native_handle {
         uint64_t base_metadata __attribute__((aligned(8)));
         int unaligned_width;   // holds width client asked to allocate
         int unaligned_height;  // holds height client asked to allocate
-
-        int original_width;
-        int original_format;
-        int producer_usage;
-        int consumer_usage;
-        uint64_t backing_store __attribute__((aligned(8)));
+        unsigned int gem_handle;
+        unsigned int fb_id;
 
 #ifdef __cplusplus
         static const int sNumFds = 2;
@@ -269,10 +265,7 @@ struct private_handle_t : public native_handle {
             base(0), offset_metadata(0), gpuaddr(0),
             format(format), width(width), height(height),
             base_metadata(0), unaligned_width(width),
-            unaligned_height(height),
-            original_width(0), original_format(0),
-            producer_usage(0), consumer_usage(0),
-            backing_store(0)
+            unaligned_height(height), gem_handle(0), fb_id(0)
         {
             version = (int) sizeof(native_handle);
             numInts = sNumInts();

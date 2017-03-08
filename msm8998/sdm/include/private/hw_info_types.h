@@ -483,6 +483,7 @@ struct HWDisplayAttributes : DisplayConfigVariableInfo {
   uint32_t v_back_porch = 0;   //!< Vertical back porch of panel
   uint32_t v_pulse_width = 0;  //!< Vertical pulse width of panel
   uint32_t h_total = 0;        //!< Total width of panel (hActive + hFP + hBP + hPulseWidth)
+  uint32_t v_total = 0;        //!< Total height of panel (vActive + vFP + vBP + vPulseWidth)
   std::bitset<32> s3d_config;  //!< Stores the bit mask of S3D modes
 
   void Reset() { *this = HWDisplayAttributes(); }
@@ -498,6 +499,7 @@ struct HWDisplayAttributes : DisplayConfigVariableInfo {
             (v_front_porch != display_attributes.v_front_porch) ||
             (v_back_porch != display_attributes.v_back_porch) ||
             (v_pulse_width != display_attributes.v_pulse_width) ||
+            (h_total != display_attributes.h_total) ||
             (is_yuv != display_attributes.is_yuv));
   }
 

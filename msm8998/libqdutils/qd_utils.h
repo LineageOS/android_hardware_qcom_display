@@ -69,6 +69,7 @@ enum class DriverType {
     DRM,
 };
 DriverType getDriverType();
+const char *GetHALPixelFormatString(int format);
 
 }; //namespace qdutils
 #endif

@@ -3,12 +3,25 @@ include $(CLEAR_VARS)
 include $(LOCAL_PATH)/../../../common.mk
 
 LOCAL_MODULE                  := libsdmcore
+LOCAL_MODULE_PATH_32          := $(TARGET_OUT_VENDOR)/lib
+LOCAL_MODULE_PATH_64          := $(TARGET_OUT_VENDOR)/lib64
 LOCAL_MODULE_TAGS             := optional
 LOCAL_PROPRIETARY_MODULE      := true
 LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes) $(common_header_export_path)
-LOCAL_CFLAGS                  := -Wno-unused-parameter -DLOG_TAG=\"SDM\" $(common_flags)
-LOCAL_HW_INTF_PATH            := fb
+LOCAL_CFLAGS                  := -Wno-unused-parameter -DLOG_TAG=\"SDM\" \
+                                 $(common_flags)
+ifeq ($(use_hwc2),false)
+  LOCAL_CFLAGS += -DUSE_SPECULATIVE_FENCES
+endif
+LOCAL_HW_INTF_PATH_1          := fb
 LOCAL_SHARED_LIBRARIES        := libdl libsdmutils
+
+ifneq ($(TARGET_IS_HEADLESS), true)
+    LOCAL_CFLAGS              += -isystem external/libdrm
+    LOCAL_SHARED_LIBRARIES    += libdrm libdrmutils
+    LOCAL_HW_INTF_PATH_2      := drm
+endif
+
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps) $(kernel_deps)
 LOCAL_SRC_FILES               := core_interface.cpp \
                                  core_impl.cpp \
@@ -21,14 +34,23 @@ LOCAL_SRC_FILES               := core_interface.cpp \
                                  resource_default.cpp \
                                  dump_impl.cpp \
                                  color_manager.cpp \
-                                 $(LOCAL_HW_INTF_PATH)/hw_info.cpp \
-                                 $(LOCAL_HW_INTF_PATH)/hw_device.cpp \
-                                 $(LOCAL_HW_INTF_PATH)/hw_primary.cpp \
-                                 $(LOCAL_HW_INTF_PATH)/hw_hdmi.cpp \
-                                 $(LOCAL_HW_INTF_PATH)/hw_virtual.cpp \
-                                 $(LOCAL_HW_INTF_PATH)/hw_color_manager.cpp \
-                                 $(LOCAL_HW_INTF_PATH)/hw_scale.cpp \
-                                 $(LOCAL_HW_INTF_PATH)/hw_events.cpp
+                                 hw_events_interface.cpp \
+                                 hw_info_interface.cpp \
+                                 hw_interface.cpp \
+                                 $(LOCAL_HW_INTF_PATH_1)/hw_info.cpp \
+                                 $(LOCAL_HW_INTF_PATH_1)/hw_device.cpp \
+                                 $(LOCAL_HW_INTF_PATH_1)/hw_primary.cpp \
+                                 $(LOCAL_HW_INTF_PATH_1)/hw_hdmi.cpp \
+                                 $(LOCAL_HW_INTF_PATH_1)/hw_virtual.cpp \
+                                 $(LOCAL_HW_INTF_PATH_1)/hw_color_manager.cpp \
+                                 $(LOCAL_HW_INTF_PATH_1)/hw_scale.cpp \
+                                 $(LOCAL_HW_INTF_PATH_1)/hw_events.cpp
+
+ifneq ($(TARGET_IS_HEADLESS), true)
+    LOCAL_SRC_FILES           += $(LOCAL_HW_INTF_PATH_2)/hw_info_drm.cpp \
+                                 $(LOCAL_HW_INTF_PATH_2)/hw_device_drm.cpp \
+                                 $(LOCAL_HW_INTF_PATH_2)/hw_events_drm.cpp
+endif
 
 include $(BUILD_SHARED_LIBRARY)
 

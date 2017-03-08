@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -31,9 +31,11 @@
 #include <hardware/hwcomposer2.h>
 #undef HWC2_INCLUDE_STRINGIFICATION
 #undef HWC2_USE_CPP11
-#include <set>
 #include <map>
 #include <queue>
+#include <set>
+#include "core/buffer_allocator.h"
+#include "hwc_buffer_allocator.h"
 
 namespace sdm {
 
@@ -54,7 +56,7 @@ enum GeometryChanges {
 
 class HWCLayer {
  public:
-  explicit HWCLayer(hwc2_display_t display_id);
+  explicit HWCLayer(hwc2_display_t display_id, HWCBufferAllocator *buf_allocator);
   ~HWCLayer();
   uint32_t GetZ() const { return z_; }
   hwc2_layer_t GetId() const { return id_; }
@@ -89,6 +91,7 @@ class HWCLayer {
   static std::atomic<hwc2_layer_t> next_id_;
   std::queue<int32_t> release_fences_;
   int ion_fd_ = -1;
+  HWCBufferAllocator *buffer_allocator_ = NULL;
 
   // Composition requested by client(SF)
   HWC2::Composition client_requested_ = HWC2::Composition::Device;

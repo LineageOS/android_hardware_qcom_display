@@ -192,7 +192,6 @@ class HWCDisplay : public DisplayEventHandler {
   int SetFormat(const int32_t &source, const int flags, LayerBufferFormat *target);
   void SetLayerS3DMode(const LayerBufferS3DFormat &source, uint32_t *target);
   LayerBufferFormat GetSDMFormat(const int32_t &source, const int flags);
-  const char *GetHALPixelFormatString(int format);
   const char *GetDisplayString();
   void MarkLayersForGPUBypass(hwc_display_contents_1_t *content_list);
   virtual void ApplyScanAdjustment(hwc_rect_t *display_frame);

@@ -36,6 +36,13 @@ float gcd(float a, float b);
 float lcm(float a, float b);
 void CloseFd(int *fd);
 
+enum class DriverType {
+    FB = 0,
+    DRM,
+};
+
+DriverType GetDriverType();
+
 }  // namespace sdm
 
 #endif  // __UTILS_H__

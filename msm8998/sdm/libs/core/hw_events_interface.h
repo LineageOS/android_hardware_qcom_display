@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -32,10 +32,25 @@
 
 namespace sdm {
 
+class HWEventHandler;
+
+enum HWEvent {
+  VSYNC = 0,
+  EXIT,
+  IDLE_NOTIFY,
+  CEC_READ_MESSAGE,
+  SHOW_BLANK_EVENT,
+  THERMAL_LEVEL,
+};
+
 class HWEventsInterface {
  public:
-  static DisplayError Create(int fb_num, HWEventHandler *event_handler,
-                             std::vector<const char *> *event_list, HWEventsInterface **intf);
+  virtual DisplayError Init(int display_type, HWEventHandler *event_handler,
+                            const std::vector<HWEvent> &event_list) = 0;
+  virtual DisplayError Deinit() = 0;
+
+  static DisplayError Create(int display_type, HWEventHandler *event_handler,
+                             const std::vector<HWEvent> &event_list, HWEventsInterface **intf);
   static DisplayError Destroy(HWEventsInterface *intf);
 
  protected:

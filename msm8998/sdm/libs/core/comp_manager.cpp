@@ -489,8 +489,9 @@ bool CompManager::SupportLayerAsCursor(Handle comp_handle, HWLayers *hw_layers) 
     return supported;
   }
   Layer *cursor_layer = layer_stack->layers.at(UINT32(gpu_index) - 1);
-  if (cursor_layer->flags.cursor && resource_intf_->ValidateCursorConfig(display_resource_ctx,
-                                    cursor_layer, true) == kErrorNone) {
+  if (cursor_layer->flags.cursor && !cursor_layer->flags.skip &&
+      resource_intf_->ValidateCursorConfig(display_resource_ctx,
+                                           cursor_layer, true) == kErrorNone) {
     supported = true;
   }
 
