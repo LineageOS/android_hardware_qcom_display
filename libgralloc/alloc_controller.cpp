@@ -1241,55 +1241,55 @@ void getDRMFormat(int hal_format, int flags, uint32_t *drm_format,
 
     switch (hal_format) {
         case HAL_PIXEL_FORMAT_RGBA_8888:
-            *drm_format = DRM_FORMAT_RGBA8888;
+            *drm_format = DRM_FORMAT_ABGR8888;
             break;
         case HAL_PIXEL_FORMAT_RGBA_5551:
-            *drm_format = DRM_FORMAT_RGBA5551;
+            *drm_format = DRM_FORMAT_ABGR1555;
             break;
         case HAL_PIXEL_FORMAT_RGBA_4444:
-            *drm_format = DRM_FORMAT_RGBA4444;
+            *drm_format = DRM_FORMAT_ABGR4444;
             break;
         case HAL_PIXEL_FORMAT_BGRA_8888:
-            *drm_format = DRM_FORMAT_BGRA8888;
+            *drm_format = DRM_FORMAT_ARGB8888;
             break;
         case HAL_PIXEL_FORMAT_RGBX_8888:
-            *drm_format = DRM_FORMAT_RGBX8888;
+            *drm_format = DRM_FORMAT_XBGR8888;
             break;
         case HAL_PIXEL_FORMAT_BGRX_8888:
-            *drm_format = DRM_FORMAT_BGRX8888;
+            *drm_format = DRM_FORMAT_XRGB8888;
             break;
         case HAL_PIXEL_FORMAT_RGB_888:
-            *drm_format = DRM_FORMAT_RGB888;
+            *drm_format = DRM_FORMAT_BGR888;
             break;
         case HAL_PIXEL_FORMAT_RGB_565:
-            *drm_format = DRM_FORMAT_RGB565;
-            break;
-        case HAL_PIXEL_FORMAT_BGR_565:
             *drm_format = DRM_FORMAT_BGR565;
             break;
+        case HAL_PIXEL_FORMAT_BGR_565:
+            *drm_format = DRM_FORMAT_RGB565;
+            break;
         case HAL_PIXEL_FORMAT_RGBA_1010102:
-            *drm_format = DRM_FORMAT_RGBA1010102;
-            break;
-        case HAL_PIXEL_FORMAT_ARGB_2101010:
-            *drm_format = DRM_FORMAT_ARGB2101010;
-            break;
-        case HAL_PIXEL_FORMAT_RGBX_1010102:
-            *drm_format = DRM_FORMAT_RGBX1010102;
-            break;
-        case HAL_PIXEL_FORMAT_XRGB_2101010:
-            *drm_format = DRM_FORMAT_XRGB2101010;
-            break;
-        case HAL_PIXEL_FORMAT_BGRA_1010102:
-            *drm_format = DRM_FORMAT_BGRA1010102;
-            break;
-        case HAL_PIXEL_FORMAT_ABGR_2101010:
             *drm_format = DRM_FORMAT_ABGR2101010;
             break;
-        case HAL_PIXEL_FORMAT_BGRX_1010102:
+        case HAL_PIXEL_FORMAT_ARGB_2101010:
+            *drm_format = DRM_FORMAT_BGRA1010102;
+            break;
+        case HAL_PIXEL_FORMAT_RGBX_1010102:
+            *drm_format = DRM_FORMAT_XBGR2101010;
+            break;
+        case HAL_PIXEL_FORMAT_XRGB_2101010:
             *drm_format = DRM_FORMAT_BGRX1010102;
             break;
+        case HAL_PIXEL_FORMAT_BGRA_1010102:
+            *drm_format = DRM_FORMAT_ARGB2101010;
+            break;
+        case HAL_PIXEL_FORMAT_ABGR_2101010:
+            *drm_format = DRM_FORMAT_RGBA1010102;
+            break;
+        case HAL_PIXEL_FORMAT_BGRX_1010102:
+            *drm_format = DRM_FORMAT_XRGB2101010;
+            break;
         case HAL_PIXEL_FORMAT_XBGR_2101010:
-            *drm_format = DRM_FORMAT_XBGR2101010;
+            *drm_format = DRM_FORMAT_RGBX1010102;
             break;
         case HAL_PIXEL_FORMAT_YCbCr_420_SP:
             *drm_format = DRM_FORMAT_NV12;

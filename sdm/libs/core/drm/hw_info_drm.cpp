@@ -496,64 +496,64 @@ void HWInfoDRM::GetSDMFormat(uint32_t drm_format, uint64_t drm_format_modifier,
                              vector<LayerBufferFormat> *sdm_formats) {
   vector<LayerBufferFormat> &fmts(*sdm_formats);
   switch (drm_format) {
-    case DRM_FORMAT_ARGB8888:
+    case DRM_FORMAT_BGRA8888:
       fmts.push_back(kFormatARGB8888);
       break;
-    case DRM_FORMAT_RGBA8888:
+    case DRM_FORMAT_ABGR8888:
       fmts.push_back(drm_format_modifier ? kFormatRGBA8888Ubwc : kFormatRGBA8888);
       break;
-    case DRM_FORMAT_BGRA8888:
+    case DRM_FORMAT_ARGB8888:
       fmts.push_back(kFormatBGRA8888);
       break;
-    case DRM_FORMAT_XRGB8888:
+    case DRM_FORMAT_BGRX8888:
       fmts.push_back(kFormatXRGB8888);
       break;
-    case DRM_FORMAT_RGBX8888:
+    case DRM_FORMAT_XBGR8888:
       fmts.push_back(drm_format_modifier ? kFormatRGBX8888Ubwc : kFormatRGBX8888);
       break;
-    case DRM_FORMAT_BGRX8888:
+    case DRM_FORMAT_XRGB8888:
       fmts.push_back(kFormatBGRX8888);
       break;
-    case DRM_FORMAT_RGBA5551:
+    case DRM_FORMAT_ABGR1555:
       fmts.push_back(kFormatRGBA5551);
       break;
-    case DRM_FORMAT_RGBA4444:
+    case DRM_FORMAT_ABGR4444:
       fmts.push_back(kFormatRGBA4444);
       break;
-    case DRM_FORMAT_RGB888:
+    case DRM_FORMAT_BGR888:
       fmts.push_back(kFormatRGB888);
       break;
-    case DRM_FORMAT_BGR888:
+    case DRM_FORMAT_RGB888:
       fmts.push_back(kFormatBGR888);
       break;
-    case DRM_FORMAT_RGB565:
-      fmts.push_back(drm_format_modifier ? kFormatBGR565Ubwc : kFormatBGR565);
-      break;
     case DRM_FORMAT_BGR565:
+      fmts.push_back(drm_format_modifier ? kFormatBGR565Ubwc : kFormatRGB565);
+      break;
+    case DRM_FORMAT_RGB565:
       fmts.push_back(kFormatBGR565);
       break;
-    case DRM_FORMAT_RGBA1010102:
+    case DRM_FORMAT_ABGR2101010:
       fmts.push_back(drm_format_modifier ? kFormatRGBA1010102Ubwc : kFormatRGBA1010102);
       break;
-    case DRM_FORMAT_ARGB2101010:
+    case DRM_FORMAT_BGRA1010102:
       fmts.push_back(kFormatARGB2101010);
       break;
-    case DRM_FORMAT_RGBX1010102:
+    case DRM_FORMAT_XBGR2101010:
       fmts.push_back(drm_format_modifier ? kFormatRGBX1010102Ubwc : kFormatRGBX1010102);
       break;
-    case DRM_FORMAT_XRGB2101010:
+    case DRM_FORMAT_BGRX1010102:
       fmts.push_back(kFormatXRGB2101010);
       break;
-    case DRM_FORMAT_BGRA1010102:
+    case DRM_FORMAT_ARGB2101010:
       fmts.push_back(kFormatBGRA1010102);
       break;
-    case DRM_FORMAT_ABGR2101010:
+    case DRM_FORMAT_RGBA1010102:
       fmts.push_back(kFormatABGR2101010);
       break;
-    case DRM_FORMAT_BGRX1010102:
+    case DRM_FORMAT_XRGB2101010:
       fmts.push_back(kFormatBGRX1010102);
       break;
-    case DRM_FORMAT_XBGR2101010:
+    case DRM_FORMAT_RGBX1010102:
       fmts.push_back(kFormatXBGR2101010);
       break;
     case DRM_FORMAT_YVU420:
