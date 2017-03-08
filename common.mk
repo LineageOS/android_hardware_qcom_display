@@ -1,7 +1,7 @@
 #Common headers
 display_top := $(call my-dir)
 
-ifeq ($(TARGET_USES_COLOR_METADATA), true)
+ifeq ($(call is-board-platform-in-list, msm8996), true)
 common_flags := -DUSE_COLOR_METADATA
 endif
 
