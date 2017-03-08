@@ -63,7 +63,7 @@ void HWColorManagerDrm::FreeDrmFeatureData(DRMPPFeatureInfo *feature) {
     free(feature->payload);
 }
 
-uint32_t HWColorManagerDrm::GetFeatureVersion(DRMPPFeatureInfo &feature) {
+uint32_t HWColorManagerDrm::GetFeatureVersion(const DRMPPFeatureInfo &feature) {
   uint32_t version = PPFeatureVersion::kSDEPpVersionInvalid;
 
   switch (feature.id) {

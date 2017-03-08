@@ -43,7 +43,7 @@ class HWColorManagerDrm {
   static DisplayError (*GetDrmFeature[kMaxNumPPFeatures])(const PPFeatureInfo &in_data,
                                                           DRMPPFeatureInfo *out_data);
   static void FreeDrmFeatureData(DRMPPFeatureInfo *feature);
-  static uint32_t GetFeatureVersion(DRMPPFeatureInfo &feature);
+  static uint32_t GetFeatureVersion(const DRMPPFeatureInfo &feature);
   static DRMPPFeatureID ToDrmFeatureId(uint32_t id);
  protected:
   HWColorManagerDrm() {}
