@@ -8,6 +8,7 @@ LOCAL_MODULE_RELATIVE_PATH    := hw
 LOCAL_PROPRIETARY_MODULE      := true
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes)
+LOCAL_C_INCLUDES              += frameworks/native/libs/arect/include
 
 LOCAL_CFLAGS                  := -Wno-missing-field-initializers -Wno-unused-parameter \
                                  -std=c++11 -fcolor-diagnostics\

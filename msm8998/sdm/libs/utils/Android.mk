@@ -3,6 +3,8 @@ include $(CLEAR_VARS)
 include $(LOCAL_PATH)/../../../common.mk
 
 LOCAL_MODULE                  := libsdmutils
+LOCAL_MODULE_PATH_32          := $(TARGET_OUT_VENDOR)/lib
+LOCAL_MODULE_PATH_64          := $(TARGET_OUT_VENDOR)/lib64
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes)
 LOCAL_CFLAGS                  := -DLOG_TAG=\"SDM\" $(common_flags)

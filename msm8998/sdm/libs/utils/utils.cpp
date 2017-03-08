@@ -27,8 +27,11 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <utils/sys.h>
+#include <unistd.h>
 #include <math.h>
+#include <utils/sys.h>
+#include <utils/utils.h>
+
 #include <algorithm>
 
 #define __CLASS__ "Utils"
@@ -60,4 +63,9 @@ void CloseFd(int *fd) {
   }
 }
 
+DriverType GetDriverType() {
+    const char *fb_caps = "/sys/devices/virtual/graphics/fb0/mdp/caps";
+    // 0 - File exists
+    return Sys::access_(fb_caps, F_OK) ? DriverType::DRM : DriverType::FB;
+}
 }  // namespace sdm

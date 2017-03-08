@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -250,8 +250,8 @@ DisplayError HWPrimary::PopulateDisplayAttributes() {
       (FLOAT(var_screeninfo.yres) * 25.4f) / FLOAT(var_screeninfo.height);
   display_attributes_.fps = meta_data.data.panel_frame_rate;
   display_attributes_.vsync_period_ns = UINT32(1000000000L / display_attributes_.fps);
-  display_attributes_.is_device_split = (hw_panel_info_.split_info.left_split ||
-      (var_screeninfo.xres > hw_resource_.max_mixer_width)) ? true : false;
+  display_attributes_.is_device_split = (hw_panel_info_.split_info.right_split ||
+      (var_screeninfo.xres > hw_resource_.max_mixer_width));
   display_attributes_.h_total += (display_attributes_.is_device_split ||
     hw_panel_info_.ping_pong_split)? h_blanking : 0;
 

@@ -448,6 +448,10 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state) {
 
   case kStateDozeSuspend:
     error = hw_intf_->DozeSuspend();
+    if (display_type_ != kPrimary) {
+      active = true;
+    }
+
     break;
 
   case kStateStandby:
@@ -1102,6 +1106,7 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
     hw_layer.input_buffer.planes[0].stride = sdm_layer->input_buffer.planes[0].stride;
     hw_layer.input_buffer.size = sdm_layer->input_buffer.size;
     hw_layer.input_buffer.acquire_fence_fd = sdm_layer->input_buffer.acquire_fence_fd;
+    hw_layer.input_buffer.fb_id = sdm_layer->input_buffer.fb_id;
   }
 
   return;

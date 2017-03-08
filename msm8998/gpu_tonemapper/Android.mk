@@ -1,17 +1,19 @@
 LOCAL_PATH := $(call my-dir)
 include $(LOCAL_PATH)/../common.mk
-include $(CLEAR_VARS)
 
+include $(CLEAR_VARS)
 LOCAL_COPY_HEADERS_TO     := $(common_header_export_path)
 LOCAL_COPY_HEADERS        := TonemapFactory.h Tonemapper.h
-LOCAL_SHARED_LIBRARIES    := libEGL libGLESv2 libui libutils liblog
-LOCAL_EXPORT_SHARED_LIBRARY_HEADERS := libui
 include $(BUILD_COPY_HEADERS)
 
+include $(CLEAR_VARS)
 LOCAL_MODULE              := libgpu_tonemapper
 LOCAL_MODULE_TAGS         := optional
+LOCAL_PROPRIETARY_MODULE  := true
 LOCAL_C_INCLUDES          := $(TARGET_OUT_HEADERS)/qcom/display/
 LOCAL_C_INCLUDES          += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_C_INCLUDES          += frameworks/native/libs/arect/include
+LOCAL_SHARED_LIBRARIES    := libEGL libGLESv2 libui libutils liblog
 
 LOCAL_CFLAGS              := $(version_flag) -Wno-missing-field-initializers -Wall \
                              -Wno-unused-parameter -std=c++11 -DLOG_TAG=\"GPU_TONEMAPPER\"

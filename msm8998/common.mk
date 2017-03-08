@@ -4,6 +4,9 @@ display_top := $(call my-dir)
 #Common C flags
 common_flags := -DDEBUG_CALC_FPS -Wno-missing-field-initializers
 common_flags += -Wconversion -Wall -Werror -std=c++11
+ifneq ($(TARGET_IS_HEADLESS), true)
+    common_flags += -DCOMPILE_DRM
+endif
 
 ifeq ($(TARGET_USES_COLOR_METADATA), true)
 common_flags += -DUSE_COLOR_METADATA
@@ -20,6 +23,7 @@ common_includes += $(display_top)/libqservice
 common_includes += $(display_top)/gpu_tonemapper
 ifneq ($(TARGET_IS_HEADLESS), true)
     common_includes += $(display_top)/libcopybit
+    common_includes += $(display_top)/libdrmutils
 endif
 
 common_includes += $(display_top)/include
@@ -37,7 +41,12 @@ else
     LOCAL_CLANG := true
 endif
 
-common_flags += -isystem $(display_top)/libgralloc
+ifneq ($(TARGET_USES_GRALLOC1), true)
+    common_flags += -isystem $(display_top)/libgralloc
+else
+    common_flags += -isystem $(display_top)/libgralloc1
+    common_flags += -DUSE_GRALLOC1
+endif
 
 ifeq ($(TARGET_USES_POST_PROCESSING),true)
     common_flags     += -DUSES_POST_PROCESSING
@@ -51,8 +60,6 @@ endif
 ifeq ($(call is-board-platform-in-list, $(MASTER_SIDE_CP_TARGET_LIST)), true)
     common_flags += -DMASTER_SIDE_CP
 endif
-
-common_flags += -D__STDC_FORMAT_MACROS
 
 common_deps  :=
 kernel_includes :=
