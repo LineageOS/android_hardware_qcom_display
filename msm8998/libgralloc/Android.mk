@@ -39,6 +39,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE                  := libmemalloc
 LOCAL_MODULE_TAGS             := optional
+LOCAL_PROPRIETARY_MODULE      := true
 LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes)
 LOCAL_SHARED_LIBRARIES        := $(common_libs) libqdutils libdl
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdmemalloc\" -Wno-sign-conversion

@@ -8,6 +8,7 @@ include $(BUILD_COPY_HEADERS)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE              := libgpu_tonemapper
+LOCAL_PROPRIETARY_MODULE  := true
 LOCAL_MODULE_TAGS         := optional
 LOCAL_PROPRIETARY_MODULE  := true
 LOCAL_C_INCLUDES          := $(TARGET_OUT_HEADERS)/qcom/display/
