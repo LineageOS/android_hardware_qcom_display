@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -146,6 +146,7 @@ int clearMetaData(private_handle_t *handle, DispParamType paramType) {
 
 int getMetaData(private_handle_t *handle, DispFetchParamType paramType,
                                                     void *param) {
+    int ret = -1;
     if (!handle) {
         ALOGE("%s: Private handle is null!", __func__);
         return -1;
@@ -169,41 +170,77 @@ int getMetaData(private_handle_t *handle, DispFetchParamType paramType,
     MetaData_t *data = reinterpret_cast <MetaData_t *>(base);
     switch (paramType) {
         case GET_PP_PARAM_INTERLACED:
-            *((int32_t *)param) = data->interlaced;
+            if (data->operation & PP_PARAM_INTERLACED) {
+                *((int32_t *)param) = data->interlaced;
+                ret = 0;
+            }
             break;
         case GET_BUFFER_GEOMETRY:
-            *((BufferDim_t *)param) = data->bufferDim;
+            if (data->operation & UPDATE_BUFFER_GEOMETRY) {
+                *((BufferDim_t *)param) = data->bufferDim;
+                ret = 0;
+            }
             break;
         case GET_REFRESH_RATE:
-            *((float *)param) = data->refreshrate;
+            if (data->operation & UPDATE_REFRESH_RATE) {
+                *((float *)param) = data->refreshrate;
+                ret = 0;
+            }
             break;
         case GET_COLOR_SPACE:
-            *((ColorSpace_t *)param) = data->colorSpace;
+            if (data->operation & UPDATE_COLOR_SPACE) {
+                *((ColorSpace_t *)param) = data->colorSpace;
+                ret = 0;
+            }
             break;
         case GET_MAP_SECURE_BUFFER:
-            *((int32_t *)param) = data->mapSecureBuffer;
+            if (data->operation & MAP_SECURE_BUFFER) {
+                *((int32_t *)param) = data->mapSecureBuffer;
+                ret = 0;
+            }
             break;
         case GET_S3D_FORMAT:
-            *((uint32_t *)param) = data->s3dFormat;
+            if (data->operation & S3D_FORMAT) {
+                *((uint32_t *)param) = data->s3dFormat;
+                ret = 0;
+            }
             break;
         case GET_LINEAR_FORMAT:
-            *((uint32_t *)param) = data->linearFormat;
+            if (data->operation & LINEAR_FORMAT) {
+                *((uint32_t *)param) = data->linearFormat;
+                ret = 0;
+            }
             break;
         case GET_IGC:
-            *((IGC_t *)param) = data->igc;
+            if (data->operation & SET_IGC) {
+                *((IGC_t *)param) = data->igc;
+                ret = 0;
+            }
             break;
         case GET_SINGLE_BUFFER_MODE:
-            *((uint32_t *)param) = data->isSingleBufferMode ;
+            if (data->operation & SET_SINGLE_BUFFER_MODE) {
+                *((uint32_t *)param) = data->isSingleBufferMode;
+                ret = 0;
+            }
             break;
         case GET_S3D_COMP:
-            *((S3DGpuComp_t *)param) = data->s3dComp;
+            if (data->operation & SET_S3D_COMP) {
+                *((S3DGpuComp_t *)param) = data->s3dComp;
+                ret = 0;
+            }
             break;
         case GET_VT_TIMESTAMP:
-            *((uint64_t *)param) = data->vtTimeStamp;
+            if (data->operation & SET_VT_TIMESTAMP) {
+                *((uint64_t *)param) = data->vtTimeStamp;
+                ret = 0;
+            }
             break;
 #ifdef USE_COLOR_METADATA
         case GET_COLOR_METADATA:
-            *((ColorMetaData *)param) = data->color;
+            if (data->operation & COLOR_METADATA) {
+                *((ColorMetaData *)param) = data->color;
+                ret = 0;
+            }
 #endif
             break;
         default:
@@ -213,7 +250,7 @@ int getMetaData(private_handle_t *handle, DispFetchParamType paramType,
     if(munmap(base, size))
         ALOGE("%s: failed to unmap ptr %p, err %d", __func__, (void*)base,
                                                                         errno);
-    return 0;
+    return ret;
 }
 
 int copyMetaData(struct private_handle_t *src, struct private_handle_t *dst) {
