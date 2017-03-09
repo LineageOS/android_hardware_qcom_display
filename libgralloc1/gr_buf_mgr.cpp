@@ -17,6 +17,7 @@
  * limitations under the License.
  */
 
+#define DEBUG 0
 #include <iomanip>
 #include <utility>
 #include <vector>
@@ -225,6 +226,7 @@ gralloc1_error_t BufferManager::MapBuffer(private_handle_t const *handle) {
 
 gralloc1_error_t BufferManager::RetainBuffer(private_handle_t const *hnd) {
   std::lock_guard<std::mutex> lock(locker_);
+  ALOGD_IF(DEBUG, "Retain buffer handle:%p id: %" PRIu64, hnd, hnd->id);
 
   // find if this handle is already in map
   auto it = handles_map_.find(hnd);
@@ -246,6 +248,7 @@ gralloc1_error_t BufferManager::RetainBuffer(private_handle_t const *hnd) {
 
 gralloc1_error_t BufferManager::ReleaseBuffer(private_handle_t const *hnd) {
   std::lock_guard<std::mutex> lock(locker_);
+  ALOGD_IF(DEBUG, "Release buffer handle:%p id: %" PRIu64, hnd, hnd->id);
   // find if this handle is already in map
   auto it = handles_map_.find(hnd);
   if (it == handles_map_.end()) {
@@ -458,6 +461,10 @@ int BufferManager::AllocateBuffer(unsigned int size, int aligned_w, int aligned_
   *handle = hnd;
   auto buffer = std::make_shared<Buffer>(hnd, data.ion_handle, e_data.ion_handle);
   handles_map_.emplace(std::make_pair(hnd, buffer));
+  ALOGD_IF(DEBUG, "Allocated buffer handle: %p id: %" PRIu64, hnd, hnd->id);
+  if (DEBUG) {
+    private_handle_t::Dump(hnd);
+  }
   return err;
 }
 
