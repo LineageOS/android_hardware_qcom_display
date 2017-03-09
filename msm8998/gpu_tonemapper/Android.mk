@@ -9,6 +9,7 @@ LOCAL_EXPORT_SHARED_LIBRARY_HEADERS := libui
 include $(BUILD_COPY_HEADERS)
 
 LOCAL_MODULE              := libgpu_tonemapper
+LOCAL_PROPRIETARY_MODULE  := true
 LOCAL_MODULE_TAGS         := optional
 LOCAL_C_INCLUDES          := $(TARGET_OUT_HEADERS)/qcom/display/
 LOCAL_C_INCLUDES          += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
