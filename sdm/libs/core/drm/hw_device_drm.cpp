@@ -46,6 +46,7 @@
 #include <utils/constants.h>
 #include <utils/debug.h>
 #include <utils/sys.h>
+#include <private/color_params.h>
 
 #include <algorithm>
 #include <string>
@@ -54,6 +55,7 @@
 
 #include "hw_device_drm.h"
 #include "hw_info_interface.h"
+#include "hw_color_manager_drm.h"
 
 #define __CLASS__ "HWDeviceDRM"
 
@@ -68,6 +70,7 @@ using sde_drm::DestroyDRMManager;
 using sde_drm::DRMDisplayType;
 using sde_drm::DRMDisplayToken;
 using sde_drm::DRMConnectorInfo;
+using sde_drm::DRMPPFeatureInfo;
 using sde_drm::DRMRect;
 using sde_drm::DRMBlendType;
 using sde_drm::DRMOps;
@@ -585,11 +588,47 @@ DisplayError HWDeviceDRM::SetCursorPosition(HWLayers *hw_layers, int x, int y) {
 }
 
 DisplayError HWDeviceDRM::GetPPFeaturesVersion(PPFeatureVersion *vers) {
-  return kErrorNotSupported;
+  struct DRMPPFeatureInfo info = {};
+
+  for (uint32_t i = 0; i < kMaxNumPPFeatures; i++) {
+    memset(&info, 0, sizeof(struct DRMPPFeatureInfo));
+    info.id = HWColorManagerDrm::ToDrmFeatureId(i);
+    if (info.id >= sde_drm::kPPFeaturesMax)
+      continue;
+    // use crtc_id_ = 0 since PP features are same across all CRTCs
+    drm_mgr_intf_->GetCrtcPPInfo(0, info);
+    vers->version[i] = HWColorManagerDrm::GetFeatureVersion(info);
+  }
+  return kErrorNone;
 }
 
 DisplayError HWDeviceDRM::SetPPFeatures(PPFeaturesConfig *feature_list) {
-  return kErrorNotSupported;
+  int ret = 0;
+  PPFeatureInfo *feature = NULL;
+  DRMPPFeatureInfo kernel_params = {};
+
+  while (true) {
+    ret = feature_list->RetrieveNextFeature(&feature);
+    if (ret)
+      break;
+
+    if (feature) {
+      DLOGV_IF(kTagDriverConfig, "feature_id = %d", feature->feature_id_);
+      if (!HWColorManagerDrm::GetDrmFeature[feature->feature_id_]) {
+        DLOGE("GetDrmFeature is not valid for feature %d", feature->feature_id_);
+        continue;
+      }
+      ret = HWColorManagerDrm::GetDrmFeature[feature->feature_id_](*feature, &kernel_params);
+      if (!ret)
+        drm_atomic_intf_->Perform(DRMOps::CRTC_SET_POST_PROC, token_.crtc_id, &kernel_params);
+      HWColorManagerDrm::FreeDrmFeatureData(&kernel_params);
+    }
+  }
+
+  // Once all features were consumed, then destroy all feature instance from feature_list,
+  feature_list->Reset();
+
+  return kErrorNone;
 }
 
 DisplayError HWDeviceDRM::SetVSyncState(bool enable) {

@@ -430,10 +430,11 @@ DisplayError HWInfoDRM::GetRotatorSupportedFormats(uint32_t v4l2_index,
 }
 
 DisplayError HWInfoDRM::GetHWRotatorInfo(HWResourceInfo *hw_resource) {
+  string v4l2_path = "/sys/class/video4linux/video";
   const uint32_t kMaxV4L2Nodes = 64;
 
   for (uint32_t i = 0; i < kMaxV4L2Nodes; i++) {
-    string path = "/sys/class/video4linux/video" + to_string(i) + "/name";
+    string path = v4l2_path + to_string(i) + "/name";
     Sys::fstream fs(path, fstream::in);
     if (!fs.is_open()) {
       continue;
@@ -446,13 +447,33 @@ DisplayError HWInfoDRM::GetHWRotatorInfo(HWResourceInfo *hw_resource) {
       hw_resource->hw_rot_info.type = HWRotatorInfo::ROT_TYPE_V4L2;
       hw_resource->hw_rot_info.has_downscale = true;
       GetRotatorSupportedFormats(i, hw_resource);
+
+      string caps_path = v4l2_path + to_string(i) + "/device/caps";
+      Sys::fstream caps_fs(caps_path, fstream::in);
+
+      if (caps_fs.is_open()) {
+        string caps;
+        while (Sys::getline_(caps_fs, caps)) {
+          const string downscale_compression = "downscale_compression=";
+          const string min_downscale = "min_downscale=";
+          if (caps.find(downscale_compression) != string::npos) {
+            hw_resource->hw_rot_info.downscale_compression =
+              std::stoi(string(caps, downscale_compression.length()));
+          } else if (caps.find(min_downscale) != string::npos) {
+            hw_resource->hw_rot_info.min_downscale =
+              std::stof(string(caps, min_downscale.length()));
+          }
+        }
+      }
+
       // We support only 1 rotator
       break;
     }
   }
 
-  DLOGI("V4L2 Rotator: Count = %d, Downscale = %d", hw_resource->hw_rot_info.num_rotator,
-        hw_resource->hw_rot_info.has_downscale);
+  DLOGI("V4L2 Rotator: Count = %d, Downscale = %d, Min_downscale = %f, Downscale_compression = %d",
+        hw_resource->hw_rot_info.num_rotator, hw_resource->hw_rot_info.has_downscale,
+        hw_resource->hw_rot_info.min_downscale, hw_resource->hw_rot_info.downscale_compression);
 
   return kErrorNone;
 }
