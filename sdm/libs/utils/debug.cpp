@@ -163,6 +163,13 @@ bool Debug::IsExtAnimDisabled() {
   return (value == 1);
 }
 
+bool Debug::IsPartialSplitDisabled() {
+  int value = 0;
+  debug_.debug_handler_->GetProperty("sdm.debug.disable_partial_split", &value);
+
+  return (value == 1);
+}
+
 DisplayError Debug::GetMixerResolution(uint32_t *width, uint32_t *height) {
   char value[64] = {};
 
