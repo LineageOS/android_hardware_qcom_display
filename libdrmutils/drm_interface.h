@@ -39,6 +39,9 @@
 #include "xf86drmMode.h"
 
 namespace sde_drm {
+
+typedef std::map<std::pair<uint32_t, uint64_t>, float> CompRatioMap;
+
 /*
  * Drm Atomic Operation Codes
  */
@@ -140,6 +143,24 @@ enum struct DRMOps {
    *      1: speculative
    */
   CRTC_SET_OUTPUT_FENCE_OFFSET,
+  /*
+   * Op: Sets overall SDE core clock
+   * Arg: uint32_t - CRTC ID
+   *      uint32_t - core_clk
+   */
+  CRTC_SET_CORE_CLK,
+   /*
+   * Op: Sets overall SDE core average bandwidth
+   * Arg: uint32_t - CRTC ID
+   *      uint32_t - core_ab
+   */
+  CRTC_SET_CORE_AB,
+   /*
+   * Op: Sets overall SDE core instantaneous bandwidth
+   * Arg: uint32_t - CRTC ID
+   *      uint32_t - core_ib
+   */
+  CRTC_SET_CORE_IB,
   /*
    * Op: Returns release fence for this frame. Should be called after Commit() on
    * DRMAtomicReqInterface.
@@ -253,6 +274,21 @@ struct DRMCrtcInfo {
   uint32_t max_blend_stages;
   QSEEDVersion qseed_version;
   SmartDMARevision smart_dma_rev;
+  float ib_fudge_factor;
+  float clk_fudge_factor;
+  uint32_t dest_scale_prefill_lines;
+  uint32_t undersized_prefill_lines;
+  uint32_t macrotile_prefill_lines;
+  uint32_t nv12_prefill_lines;
+  uint32_t linear_prefill_lines;
+  uint32_t downscale_prefill_lines;
+  uint32_t extra_prefill_lines;
+  uint32_t amortized_threshold;
+  uint64_t max_bandwidth_low;
+  uint64_t max_bandwidth_high;
+  uint32_t max_sde_clk;
+  CompRatioMap comp_ratio_rt_map;
+  CompRatioMap comp_ratio_nrt_map;
 };
 
 enum struct DRMPlaneType {
@@ -277,6 +313,7 @@ struct DRMPlaneTypeInfo {
   uint32_t max_downscale;
   uint32_t max_horizontal_deci;
   uint32_t max_vertical_deci;
+  uint64_t max_pipe_bandwidth;
 };
 
 // All DRM Planes as map<Plane_id , plane_type_info> listed from highest to lowest priority
@@ -437,7 +474,7 @@ class DRMManagerInterface {
    * Will query post propcessing feature info of a CRTC.
    * [output]: DRMPPFeatureInfo: CRTC post processing feature info
    */
-   virtual void GetCrtcPPInfo(uint32_t crtc_id, DRMPPFeatureInfo &info) = 0;
+  virtual void GetCrtcPPInfo(uint32_t crtc_id, DRMPPFeatureInfo &info) = 0;
   /*
    * Register a logical display to receive a token.
    * Each display pipeline in DRM is identified by its CRTC and Connector(s).
