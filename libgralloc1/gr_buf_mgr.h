@@ -113,7 +113,10 @@ class BufferManager {
   bool ubwc_for_fb_ = false;
   Allocator *allocator_ = NULL;
   std::mutex locker_;
-  std::unordered_map<uint64_t, std::shared_ptr<Buffer>> handles_map_ = {};
+  // TODO(user): The private_handle_t is used as a key because the unique ID generated
+  // from next_id_ is not unique across processes. The correct way to resolve this would
+  // be to use the allocator over hwbinder
+  std::unordered_map<const private_handle_t*, std::shared_ptr<Buffer>> handles_map_ = {};
   std::unordered_map<gralloc1_buffer_descriptor_t,
                      std::shared_ptr<BufferDescriptor>> descriptors_map_ = {};
   std::atomic<uint64_t> next_id_;

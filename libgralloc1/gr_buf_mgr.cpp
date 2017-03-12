@@ -182,7 +182,7 @@ void BufferManager::CreateSharedHandle(buffer_handle_t inbuffer, const BufferDes
   out_hnd->id = ++next_id_;
   // TODO(user): Base address of shared handle and ion handles
   auto buffer = std::make_shared<Buffer>(out_hnd);
-  handles_map_.emplace(std::make_pair(out_hnd->id, buffer));
+  handles_map_.emplace(std::make_pair(out_hnd, buffer));
   *outbuffer = out_hnd;
 }
 
@@ -227,7 +227,7 @@ gralloc1_error_t BufferManager::RetainBuffer(private_handle_t const *hnd) {
   std::lock_guard<std::mutex> lock(locker_);
 
   // find if this handle is already in map
-  auto it = handles_map_.find(hnd->id);
+  auto it = handles_map_.find(hnd);
   if (it != handles_map_.end()) {
     // It's already in map, Just increment refcnt
     // No need to mmap the memory.
@@ -237,7 +237,7 @@ gralloc1_error_t BufferManager::RetainBuffer(private_handle_t const *hnd) {
     // not present in the map. mmap and then add entry to map
     if (MapBuffer(hnd) == GRALLOC1_ERROR_NONE) {
       auto buffer = std::make_shared<Buffer>(hnd);
-      handles_map_.emplace(std::make_pair(hnd->id, buffer));
+      handles_map_.emplace(std::make_pair(hnd, buffer));
     }
   }
 
@@ -247,7 +247,7 @@ gralloc1_error_t BufferManager::RetainBuffer(private_handle_t const *hnd) {
 gralloc1_error_t BufferManager::ReleaseBuffer(private_handle_t const *hnd) {
   std::lock_guard<std::mutex> lock(locker_);
   // find if this handle is already in map
-  auto it = handles_map_.find(hnd->id);
+  auto it = handles_map_.find(hnd);
   if (it == handles_map_.end()) {
     // Corrupt handle or map.
     ALOGE("Could not find handle");
@@ -457,7 +457,7 @@ int BufferManager::AllocateBuffer(unsigned int size, int aligned_w, int aligned_
   setMetaData(hnd, UPDATE_COLOR_SPACE, reinterpret_cast<void *>(&colorSpace));
   *handle = hnd;
   auto buffer = std::make_shared<Buffer>(hnd, data.ion_handle, e_data.ion_handle);
-  handles_map_.emplace(std::make_pair(hnd->id, buffer));
+  handles_map_.emplace(std::make_pair(hnd, buffer));
   return err;
 }
 
