@@ -134,6 +134,13 @@ int HWCSession::Init() {
     return -errno;
   }
 
+  struct rlimit fd_limit = {};
+  getrlimit(RLIMIT_NOFILE, &fd_limit);
+  fd_limit.rlim_cur = fd_limit.rlim_cur * 2;
+  auto err = setrlimit(RLIMIT_NOFILE, &fd_limit);
+  if (err) {
+    DLOGW("Unable to increase fd limit -  err:%d, %s", errno, strerror(errno));
+  }
   return 0;
 }
 
