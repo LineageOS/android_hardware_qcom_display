@@ -41,6 +41,7 @@ enum HWEvent {
   CEC_READ_MESSAGE,
   SHOW_BLANK_EVENT,
   THERMAL_LEVEL,
+  IDLE_POWER_COLLAPSE,
 };
 
 class HWEventsInterface {
