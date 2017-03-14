@@ -17,8 +17,10 @@
  * limitations under the License.
  */
 
+#include <iomanip>
 #include <utility>
 #include <vector>
+#include <sstream>
 
 #include "qd_utils.h"
 #include "gr_priv_handle.h"
@@ -801,6 +803,28 @@ gralloc1_error_t BufferManager::GetFlexLayout(const private_handle_t *hnd,
   layout->planes[2].component = FLEX_COMPONENT_Cr;
   layout->planes[2].h_increment = static_cast<int32_t>(ycbcr.chroma_step);
   layout->planes[2].v_increment = static_cast<int32_t>(ycbcr.cstride);
+  return GRALLOC1_ERROR_NONE;
+}
+
+gralloc1_error_t BufferManager::Dump(std::ostringstream *os) {
+  for (auto it : handles_map_) {
+    auto buf = it.second;
+    auto hnd = buf->handle;
+    *os << "handle id: " << std::setw(4) << hnd->id;
+    *os << " fd: "       << std::setw(3) << hnd->fd;
+    *os << " fd_meta: "  << std::setw(3) << hnd->fd_metadata;
+    *os << " wxh: "      << std::setw(4) << hnd->width <<" x " << std::setw(4) <<  hnd->height;
+    *os << " uwxuh: "    << std::setw(4) << hnd->unaligned_width << " x ";
+    *os << std::setw(4)  <<  hnd->unaligned_height;
+    *os << " size: "     << std::setw(9) << hnd->size;
+    *os << std::hex << std::setfill('0');
+    *os << " priv_flags: " << "0x" << std::setw(8) << hnd->flags;
+    *os << " prod_usage: " << "0x" << std::setw(8) << hnd->producer_usage;
+    *os << " cons_usage: " << "0x" << std::setw(8) << hnd->consumer_usage;
+    // TODO(user): get format string from qdutils
+    *os << " format: "     << "0x" << std::setw(8) << hnd->format;
+    *os << std::dec  << std::setfill(' ') << std::endl;
+  }
   return GRALLOC1_ERROR_NONE;
 }
 }  //  namespace gralloc1
