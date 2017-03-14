@@ -1377,6 +1377,16 @@ int HWCDisplay::GetPanelBrightness(int *level) {
   return display_intf_->GetPanelBrightness(level);
 }
 
+int HWCDisplay::CachePanelBrightness(int level) {
+  int ret = 0;
+  if (display_intf_)
+    ret = display_intf_->CachePanelBrightness(level);
+  else
+    ret = -EINVAL;
+
+  return ret;
+}
+
 int HWCDisplay::ToggleScreenUpdates(bool enable) {
   const hwc_procs_t *hwc_procs = *hwc_procs_;
   display_paused_ = enable ? false : true;
