@@ -119,6 +119,7 @@ struct HWDynBwLimitInfo {
 struct HWPipeCaps {
   PipeType type = kPipeTypeUnused;
   uint32_t id = 0;
+  uint32_t master_pipe_id = 0;
   uint32_t max_rects = 1;
 };
 
@@ -139,6 +140,11 @@ struct HWDestScalarInfo {
   uint32_t max_input_width = 0;
   uint32_t max_output_width = 0;
   uint32_t max_scale_up = 1;
+};
+
+enum SmartDMARevision {
+  V1,
+  V2,
 };
 
 struct HWResourceInfo {
@@ -191,7 +197,7 @@ struct HWResourceInfo {
   HWDestScalarInfo hw_dest_scalar_info;
   bool has_avr = false;
   bool has_hdr = false;
-
+  SmartDMARevision smart_dma_rev = SmartDMARevision::V1;
   void Reset() { *this = HWResourceInfo(); }
 };
 
