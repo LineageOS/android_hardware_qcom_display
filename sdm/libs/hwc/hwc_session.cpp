@@ -1358,6 +1358,16 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
                                             hwc_display_[HWC_DISPLAY_PRIMARY]);
       hwc_procs_->invalidate(hwc_procs_);
       break;
+    case kInvalidatingAndkSetPanelBrightness:
+      brightness_value = reinterpret_cast<int32_t*>(resp_payload.payload);
+      if (brightness_value == NULL) {
+        DLOGE("Brightness value is Null");
+        return -EINVAL;
+      }
+      if (HWC_DISPLAY_PRIMARY == display_id)
+        ret = hwc_display_[HWC_DISPLAY_PRIMARY]->CachePanelBrightness(*brightness_value);
+      hwc_procs_->invalidate(hwc_procs_);
+      break;
     case kNoAction:
       break;
     default:

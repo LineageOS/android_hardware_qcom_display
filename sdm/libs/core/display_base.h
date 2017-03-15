@@ -82,6 +82,9 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   virtual DisplayError SetPanelBrightness(int level) {
     return kErrorNotSupported;
   }
+  virtual DisplayError CachePanelBrightness(int level) {
+    return kErrorNotSupported;
+  }
   virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
     return kErrorNotSupported;
   }
