@@ -45,6 +45,11 @@ using sde_drm::kFeatureGamut;
 using sde_drm::kFeaturePADither;
 using sde_drm::kPPFeaturesMax;
 
+#ifdef PP_DRM_ENABLE
+static const uint32_t kPgcDataMask = 0x3FF;
+static const uint32_t kPgcShift = 16;
+#endif
+
 namespace sdm {
 
 DisplayError (*HWColorManagerDrm::GetDrmFeature[])(const PPFeatureInfo &, DRMPPFeatureInfo *) = {
@@ -72,6 +77,8 @@ uint32_t HWColorManagerDrm::GetFeatureVersion(const DRMPPFeatureInfo &feature) {
     case kFeatureIgc:
       break;
     case kFeaturePgc:
+      if (feature.version == 1)
+        version = PPFeatureVersion::kSDEPgcV17;
       break;
     case kFeatureMixerGc:
       break;
@@ -142,6 +149,50 @@ DisplayError HWColorManagerDrm::GetDrmIGC(const PPFeatureInfo &in_data,
 DisplayError HWColorManagerDrm::GetDrmPGC(const PPFeatureInfo &in_data,
                                           DRMPPFeatureInfo *out_data) {
   DisplayError ret = kErrorNone;
+#ifdef PP_DRM_ENABLE
+  struct SDEPgcLUTData *sde_pgc;
+  struct drm_msm_pgc_lut *mdp_pgc;
+
+  if (!out_data) {
+    DLOGE("Invalid input parameter for gamut");
+    return kErrorParameters;
+  }
+  sde_pgc = (struct SDEPgcLUTData *)in_data.GetConfigData();
+  out_data->id = kFeaturePgc;
+  out_data->type = sde_drm::kPropBlob;
+  out_data->version = in_data.feature_version_;
+  out_data->payload_size = sizeof(struct drm_msm_pgc_lut);
+
+  if (in_data.enable_flags_ & kOpsDisable) {
+    /* feature disable case */
+    out_data->payload = NULL;
+    return ret;
+  } else if (!(in_data.enable_flags_ & kOpsEnable)) {
+    out_data->payload = NULL;
+    return kErrorParameters;
+  }
+
+  mdp_pgc = new drm_msm_pgc_lut();
+  if (!mdp_pgc) {
+    DLOGE("Failed to allocate memory for pgc");
+    return kErrorMemory;
+  }
+
+  if (in_data.enable_flags_ & kOpsEnable)
+    mdp_pgc->flags = PGC_8B_ROUND;
+  else
+    mdp_pgc->flags = 0;
+
+  for (int i = 0, j = 0; i < PGC_TBL_LEN; i++, j += 2) {
+    mdp_pgc->c0[i] = (sde_pgc->c0_data[j] & kPgcDataMask) |
+        (sde_pgc->c0_data[j + 1] & kPgcDataMask) << kPgcShift;
+    mdp_pgc->c1[i] = (sde_pgc->c1_data[j] & kPgcDataMask) |
+        (sde_pgc->c1_data[j + 1] & kPgcDataMask) << kPgcShift;
+    mdp_pgc->c2[i] = (sde_pgc->c2_data[j] & kPgcDataMask) |
+        (sde_pgc->c2_data[j + 1] & kPgcDataMask) << kPgcShift;
+  }
+  out_data->payload = mdp_pgc;
+#endif
   return ret;
 }
 

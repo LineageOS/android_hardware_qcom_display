@@ -649,6 +649,10 @@ DisplayError HWDeviceDRM::SetPanelBrightness(int level) {
   return kErrorNotSupported;
 }
 
+DisplayError HWDeviceDRM::CachePanelBrightness(int level) {
+  return kErrorNotSupported;
+}
+
 DisplayError HWDeviceDRM::GetHWScanInfo(HWScanInfo *scan_info) {
   return kErrorNotSupported;
 }

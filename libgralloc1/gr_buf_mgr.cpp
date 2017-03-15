@@ -17,8 +17,11 @@
  * limitations under the License.
  */
 
+#define DEBUG 0
+#include <iomanip>
 #include <utility>
 #include <vector>
+#include <sstream>
 
 #include "qd_utils.h"
 #include "gr_priv_handle.h"
@@ -180,7 +183,7 @@ void BufferManager::CreateSharedHandle(buffer_handle_t inbuffer, const BufferDes
   out_hnd->id = ++next_id_;
   // TODO(user): Base address of shared handle and ion handles
   auto buffer = std::make_shared<Buffer>(out_hnd);
-  handles_map_.emplace(std::make_pair(out_hnd->id, buffer));
+  handles_map_.emplace(std::make_pair(out_hnd, buffer));
   *outbuffer = out_hnd;
 }
 
@@ -223,9 +226,10 @@ gralloc1_error_t BufferManager::MapBuffer(private_handle_t const *handle) {
 
 gralloc1_error_t BufferManager::RetainBuffer(private_handle_t const *hnd) {
   std::lock_guard<std::mutex> lock(locker_);
+  ALOGD_IF(DEBUG, "Retain buffer handle:%p id: %" PRIu64, hnd, hnd->id);
 
   // find if this handle is already in map
-  auto it = handles_map_.find(hnd->id);
+  auto it = handles_map_.find(hnd);
   if (it != handles_map_.end()) {
     // It's already in map, Just increment refcnt
     // No need to mmap the memory.
@@ -235,7 +239,7 @@ gralloc1_error_t BufferManager::RetainBuffer(private_handle_t const *hnd) {
     // not present in the map. mmap and then add entry to map
     if (MapBuffer(hnd) == GRALLOC1_ERROR_NONE) {
       auto buffer = std::make_shared<Buffer>(hnd);
-      handles_map_.emplace(std::make_pair(hnd->id, buffer));
+      handles_map_.emplace(std::make_pair(hnd, buffer));
     }
   }
 
@@ -244,8 +248,9 @@ gralloc1_error_t BufferManager::RetainBuffer(private_handle_t const *hnd) {
 
 gralloc1_error_t BufferManager::ReleaseBuffer(private_handle_t const *hnd) {
   std::lock_guard<std::mutex> lock(locker_);
+  ALOGD_IF(DEBUG, "Release buffer handle:%p id: %" PRIu64, hnd, hnd->id);
   // find if this handle is already in map
-  auto it = handles_map_.find(hnd->id);
+  auto it = handles_map_.find(hnd);
   if (it == handles_map_.end()) {
     // Corrupt handle or map.
     ALOGE("Could not find handle");
@@ -455,7 +460,11 @@ int BufferManager::AllocateBuffer(unsigned int size, int aligned_w, int aligned_
   setMetaData(hnd, UPDATE_COLOR_SPACE, reinterpret_cast<void *>(&colorSpace));
   *handle = hnd;
   auto buffer = std::make_shared<Buffer>(hnd, data.ion_handle, e_data.ion_handle);
-  handles_map_.emplace(std::make_pair(hnd->id, buffer));
+  handles_map_.emplace(std::make_pair(hnd, buffer));
+  ALOGD_IF(DEBUG, "Allocated buffer handle: %p id: %" PRIu64, hnd, hnd->id);
+  if (DEBUG) {
+    private_handle_t::Dump(hnd);
+  }
   return err;
 }
 
@@ -801,6 +810,28 @@ gralloc1_error_t BufferManager::GetFlexLayout(const private_handle_t *hnd,
   layout->planes[2].component = FLEX_COMPONENT_Cr;
   layout->planes[2].h_increment = static_cast<int32_t>(ycbcr.chroma_step);
   layout->planes[2].v_increment = static_cast<int32_t>(ycbcr.cstride);
+  return GRALLOC1_ERROR_NONE;
+}
+
+gralloc1_error_t BufferManager::Dump(std::ostringstream *os) {
+  for (auto it : handles_map_) {
+    auto buf = it.second;
+    auto hnd = buf->handle;
+    *os << "handle id: " << std::setw(4) << hnd->id;
+    *os << " fd: "       << std::setw(3) << hnd->fd;
+    *os << " fd_meta: "  << std::setw(3) << hnd->fd_metadata;
+    *os << " wxh: "      << std::setw(4) << hnd->width <<" x " << std::setw(4) <<  hnd->height;
+    *os << " uwxuh: "    << std::setw(4) << hnd->unaligned_width << " x ";
+    *os << std::setw(4)  <<  hnd->unaligned_height;
+    *os << " size: "     << std::setw(9) << hnd->size;
+    *os << std::hex << std::setfill('0');
+    *os << " priv_flags: " << "0x" << std::setw(8) << hnd->flags;
+    *os << " prod_usage: " << "0x" << std::setw(8) << hnd->producer_usage;
+    *os << " cons_usage: " << "0x" << std::setw(8) << hnd->consumer_usage;
+    // TODO(user): get format string from qdutils
+    *os << " format: "     << "0x" << std::setw(8) << hnd->format;
+    *os << std::dec  << std::setfill(' ') << std::endl;
+  }
   return GRALLOC1_ERROR_NONE;
 }
 }  //  namespace gralloc1
