@@ -66,8 +66,9 @@ class IonAlloc {
   int AllocBuffer(AllocData *data);
   int FreeBuffer(void *base, unsigned int size, unsigned int offset, int fd, int ion_handle);
   int MapBuffer(void **base, unsigned int size, unsigned int offset, int fd);
+  int ImportBuffer(int fd);
   int UnmapBuffer(void *base, unsigned int size, unsigned int offset);
-  int CleanBuffer(void *base, unsigned int size, unsigned int offset, int fd, int op);
+  int CleanBuffer(void *base, unsigned int size, unsigned int offset, int handle, int op);
 
  private:
   const char *kIonDevice = "/dev/ion";

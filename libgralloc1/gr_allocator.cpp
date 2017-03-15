@@ -129,6 +129,13 @@ int Allocator::MapBuffer(void **base, unsigned int size, unsigned int offset, in
   return -EINVAL;
 }
 
+int Allocator::ImportBuffer(int fd) {
+  if (ion_allocator_) {
+    return ion_allocator_->ImportBuffer(fd);
+  }
+  return -EINVAL;
+}
+
 int Allocator::FreeBuffer(void *base, unsigned int size, unsigned int offset, int fd,
                           int handle) {
   if (ion_allocator_) {
@@ -138,9 +145,9 @@ int Allocator::FreeBuffer(void *base, unsigned int size, unsigned int offset, in
   return -EINVAL;
 }
 
-int Allocator::CleanBuffer(void *base, unsigned int size, unsigned int offset, int fd, int op) {
+int Allocator::CleanBuffer(void *base, unsigned int size, unsigned int offset, int handle, int op) {
   if (ion_allocator_) {
-    return ion_allocator_->CleanBuffer(base, size, offset, fd, op);
+    return ion_allocator_->CleanBuffer(base, size, offset, handle, op);
   }
 
   return -EINVAL;
