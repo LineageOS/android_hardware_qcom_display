@@ -523,7 +523,7 @@ void Allocator::GetIonHeapInfo(gralloc1_producer_usage_t prod_usage,
                                unsigned int *alloc_type, unsigned int *ion_flags) {
   unsigned int heap_id = 0;
   unsigned int type = 0;
-  unsigned int flags = 0;
+  uint32_t flags = 0;
   if (prod_usage & GRALLOC1_PRODUCER_USAGE_PROTECTED) {
     if (cons_usage & GRALLOC1_CONSUMER_USAGE_PRIVATE_SECURE_DISPLAY) {
       heap_id = ION_HEAP(SD_HEAP_ID);
@@ -531,17 +531,17 @@ void Allocator::GetIonHeapInfo(gralloc1_producer_usage_t prod_usage,
        * There is currently no flag in ION for Secure Display
        * VM. Please add it to the define once available.
        */
-      flags |= ION_SD_FLAGS;
+      flags |= UINT(ION_SD_FLAGS);
     } else if (prod_usage & GRALLOC1_PRODUCER_USAGE_CAMERA) {
       heap_id = ION_HEAP(SD_HEAP_ID);
       if (cons_usage & GRALLOC1_CONSUMER_USAGE_HWCOMPOSER) {
-        flags |= ION_SC_PREVIEW_FLAGS;
+        flags |= UINT(ION_SC_PREVIEW_FLAGS);
       } else {
-        flags |= ION_SC_FLAGS;
+        flags |= UINT(ION_SC_FLAGS);
       }
     } else {
       heap_id = ION_HEAP(CP_HEAP_ID);
-      flags |= ION_CP_FLAGS;
+      flags |= UINT(ION_CP_FLAGS);
     }
   } else if (prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_MM_HEAP) {
     // MM Heap is exclusively a secure heap.
@@ -558,7 +558,7 @@ void Allocator::GetIonHeapInfo(gralloc1_producer_usage_t prod_usage,
     heap_id |= ION_HEAP(ION_ADSP_HEAP_ID);
   }
 
-  if (flags & ION_SECURE) {
+  if (flags & UINT(ION_SECURE)) {
     type |= private_handle_t::PRIV_FLAGS_SECURE_BUFFER;
   }
 
