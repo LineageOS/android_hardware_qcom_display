@@ -44,8 +44,8 @@ namespace gralloc1 {
 
 class GrallocImpl : public gralloc1_device_t {
  public:
-  ~GrallocImpl();
-  bool Init();
+  bool IsInitialized() const;
+
   static int CloseDevice(hw_device_t *device);
   static void GetCapabilities(struct gralloc1_device *device, uint32_t *out_count,
                               int32_t * /*gralloc1_capability_t*/ out_capabilities);
@@ -113,6 +113,9 @@ class GrallocImpl : public gralloc1_device_t {
   static gralloc1_error_t Gralloc1Perform(gralloc1_device_t *device, int operation, ...);
 
   explicit GrallocImpl(const hw_module_t *module);
+  ~GrallocImpl();
+  bool Init();
+  bool initialized_ = false;
   BufferManager *buf_mgr_ = NULL;
 };
 
