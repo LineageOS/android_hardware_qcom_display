@@ -31,9 +31,8 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <cutils/log.h>
+#include <cinttypes>
 #include <gralloc_priv.h>
-#define __STDC_FORMAT_MACROS 1
-#include <inttypes.h>
 #include "qdMetaData.h"
 
 int setMetaData(private_handle_t *handle, DispParamType paramType,
