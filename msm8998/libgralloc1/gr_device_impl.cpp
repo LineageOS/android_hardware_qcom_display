@@ -62,9 +62,11 @@ struct gralloc_module_t HAL_MODULE_INFO_SYM = {
 int gralloc_device_open(const struct hw_module_t *module, const char *name, hw_device_t **device) {
   int status = -EINVAL;
   if (!strcmp(name, GRALLOC_HARDWARE_MODULE_ID)) {
+    // Note that we return the same instance of GrallocImpl for all
+    // gralloc1_open calls.
     gralloc1::GrallocImpl * /*gralloc1_device_t*/ dev = gralloc1::GrallocImpl::GetInstance(module);
     *device = reinterpret_cast<hw_device_t *>(dev);
-    if (dev->Init()) {
+    if (dev->IsInitialized()) {
       status = 0;
     } else {
       ALOGE(" Error in opening gralloc1 device");
@@ -82,6 +84,8 @@ GrallocImpl::GrallocImpl(const hw_module_t *module) {
   common.close = CloseDevice;
   getFunction = GetFunction;
   getCapabilities = GetCapabilities;
+
+  initialized_ = Init();
 }
 
 bool GrallocImpl::Init() {
@@ -92,11 +96,14 @@ bool GrallocImpl::Init() {
 GrallocImpl::~GrallocImpl() {
 }
 
-int GrallocImpl::CloseDevice(hw_device_t *device) {
-  GrallocImpl *impl = reinterpret_cast<GrallocImpl *>(device);
-  delete impl;
-
+int GrallocImpl::CloseDevice(hw_device_t * /*device*/) {
+  // no-op as GrallocImpl is ever created once in
+  // gralloc1::GrallocImpl::GetInstance
   return 0;
+}
+
+bool GrallocImpl::IsInitialized() const {
+  return initialized_;
 }
 
 void GrallocImpl::GetCapabilities(struct gralloc1_device *device, uint32_t *out_count,
