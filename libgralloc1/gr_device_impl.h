@@ -44,8 +44,6 @@ namespace gralloc1 {
 
 class GrallocImpl : public gralloc1_device_t {
  public:
-  ~GrallocImpl();
-  bool Init();
   static int CloseDevice(hw_device_t *device);
   static void GetCapabilities(struct gralloc1_device *device, uint32_t *out_count,
                               int32_t * /*gralloc1_capability_t*/ out_capabilities);
@@ -54,7 +52,11 @@ class GrallocImpl : public gralloc1_device_t {
 
   static GrallocImpl* GetInstance(const struct hw_module_t *module) {
     static GrallocImpl *instance = new GrallocImpl(module);
-    return instance;
+    if (instance->IsInitialized()) {
+      return instance;
+    } else {
+      return nullptr;
+    }
   }
 
  private:
@@ -113,7 +115,12 @@ class GrallocImpl : public gralloc1_device_t {
   static gralloc1_error_t Gralloc1Perform(gralloc1_device_t *device, int operation, ...);
 
   explicit GrallocImpl(const hw_module_t *module);
+  ~GrallocImpl();
+  bool Init();
+  bool IsInitialized() const { return initalized_; }
+
   BufferManager *buf_mgr_ = NULL;
+  bool initalized_ = false;
 };
 
 }  // namespace gralloc1
