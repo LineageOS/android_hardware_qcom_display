@@ -245,12 +245,14 @@ void HWCDisplayExternalTest::DumpInputBuffer() {
   }
 
   if (buffer) {
-    std::stringstream dump_file_name(dir_path);
+    std::stringstream dump_file_name;
+    dump_file_name << dir_path;
     dump_file_name << "/input_layer_" << width << "x" << height << "_" << format_str << ".raw";
 
-    std::fstream fs(dump_file_name.str().c_str());
+    std::fstream fs;
+    fs.open(dump_file_name.str().c_str(), std::fstream::in | std::fstream::out | std::fstream::app);
     if (!fs.is_open()) {
-      DLOGI("File open failed", dump_file_name.str().c_str());
+      DLOGI("File open failed %s", dump_file_name.str().c_str());
       return;
     }
 
