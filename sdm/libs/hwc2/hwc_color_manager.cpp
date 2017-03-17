@@ -88,8 +88,8 @@ void HWCColorManager::MarshallStructIntoParcel(const PPDisplayAPIPayload &data,
     out_parcel->write(data.payload, data.size);
 }
 
-HWCColorManager *HWCColorManager::CreateColorManager() {
-  HWCColorManager *color_mgr = new HWCColorManager();
+HWCColorManager *HWCColorManager::CreateColorManager(HWCBufferAllocator * buffer_allocator) {
+  HWCColorManager *color_mgr = new HWCColorManager(buffer_allocator);
 
   if (color_mgr) {
     // Load display API interface library. And retrieve color API function tables.
@@ -133,6 +133,10 @@ HWCColorManager *HWCColorManager::CreateColorManager() {
   }
 
   return color_mgr;
+}
+
+HWCColorManager::HWCColorManager(HWCBufferAllocator *buffer_allocator) :
+    buffer_allocator_(buffer_allocator) {
 }
 
 HWCColorManager::~HWCColorManager() {
@@ -216,17 +220,9 @@ int HWCColorManager::SetFrameCapture(void *params, bool enable, HWCDisplay *hwc_
     buffer_info.alloc_buffer_info.stride = 0;
     buffer_info.alloc_buffer_info.size = 0;
 
-    buffer_allocator_ = new HWCBufferAllocator();
-    if (buffer_allocator_ == NULL) {
-      DLOGE("Memory allocation for buffer_allocator_ FAILED");
-      return -ENOMEM;
-    }
-
     ret = buffer_allocator_->AllocateBuffer(&buffer_info);
     if (ret != 0) {
       DLOGE("Buffer allocation failed. ret: %d", ret);
-      delete buffer_allocator_;
-      buffer_allocator_ = NULL;
       return -ENOMEM;
     } else {
       void *buffer = mmap(NULL, buffer_info.alloc_buffer_info.size, PROT_READ | PROT_WRITE,
@@ -236,8 +232,6 @@ int HWCColorManager::SetFrameCapture(void *params, bool enable, HWCDisplay *hwc_
         DLOGE("mmap failed. err = %d", errno);
         frame_capture_data->buffer = NULL;
         ret = buffer_allocator_->FreeBuffer(&buffer_info);
-        delete buffer_allocator_;
-        buffer_allocator_ = NULL;
         return -EFAULT;
       } else {
         frame_capture_data->buffer = reinterpret_cast<uint8_t *>(buffer);
@@ -263,8 +257,6 @@ int HWCColorManager::SetFrameCapture(void *params, bool enable, HWCDisplay *hwc_
         if (ret != 0) {
           DLOGE("FreeBuffer failed. ret = %d", ret);
         }
-        delete buffer_allocator_;
-        buffer_allocator_ = NULL;
       }
     } else {
       DLOGE("GetFrameCaptureStatus failed. ret = %d", ret);
