@@ -4,7 +4,8 @@ include $(LOCAL_PATH)/../../../common.mk
 
 LOCAL_MODULE                  := libsdmcore
 LOCAL_MODULE_TAGS             := optional
-LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes) $(common_header_export_path)
+LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes)
+LOCAL_HEADER_LIBRARIES        := display_headers
 LOCAL_CFLAGS                  := -Wno-unused-parameter -DLOG_TAG=\"SDM\" \
                                  $(common_flags)
 ifeq ($(use_hwc2),false)
