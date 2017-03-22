@@ -284,15 +284,12 @@ void HWDeviceDRM::GetHWDisplayPortAndMode() {
 
 void HWDeviceDRM::GetHWPanelMaxBrightness() {
   char brightness[kMaxStringLength] = {0};
-  char kMaxBrightnessNode[64] = {0};
-
-  snprintf(kMaxBrightnessNode, sizeof(kMaxBrightnessNode), "%s",
-           "/sys/class/leds/lcd-backlight/max_brightness");
+  string kMaxBrightnessNode = "/sys/class/backlight/panel0-backlight/max_brightness";
 
   hw_panel_info_.panel_max_brightness = 255;
-  int fd = Sys::open_(kMaxBrightnessNode, O_RDONLY);
+  int fd = Sys::open_(kMaxBrightnessNode.c_str(), O_RDONLY);
   if (fd < 0) {
-    DLOGW("Failed to open max brightness node = %s, error = %s", kMaxBrightnessNode,
+    DLOGW("Failed to open max brightness node = %s, error = %s", kMaxBrightnessNode.c_str(),
           strerror(errno));
     return;
   }
@@ -646,7 +643,57 @@ DisplayError HWDeviceDRM::SetRefreshRate(uint32_t refresh_rate) {
 }
 
 DisplayError HWDeviceDRM::SetPanelBrightness(int level) {
-  return kErrorNotSupported;
+  DisplayError err = kErrorNone;
+  char buffer[kMaxSysfsCommandLength] = {0};
+
+  DLOGV_IF(kTagDriverConfig, "Set brightness level to %d", level);
+  int fd = Sys::open_(kBrightnessNode, O_RDWR);
+  if (fd < 0) {
+    DLOGV_IF(kTagDriverConfig, "Failed to open node = %s, error = %s ", kBrightnessNode,
+             strerror(errno));
+    return kErrorFileDescriptor;
+  }
+
+  int32_t bytes = snprintf(buffer, kMaxSysfsCommandLength, "%d\n", level);
+  ssize_t ret = Sys::pwrite_(fd, buffer, static_cast<size_t>(bytes), 0);
+  if (ret <= 0) {
+    DLOGV_IF(kTagDriverConfig, "Failed to write to node = %s, error = %s ", kBrightnessNode,
+             strerror(errno));
+    err = kErrorHardware;
+  }
+
+  Sys::close_(fd);
+
+  return err;
+}
+
+DisplayError HWDeviceDRM::GetPanelBrightness(int *level) {
+  DisplayError err = kErrorNone;
+  char brightness[kMaxStringLength] = {0};
+
+  if (!level) {
+    DLOGV_IF(kTagDriverConfig, "Invalid input, null pointer.");
+    return kErrorParameters;
+  }
+
+  int fd = Sys::open_(kBrightnessNode, O_RDWR);
+  if (fd < 0) {
+    DLOGV_IF(kTagDriverConfig, "Failed to open brightness node = %s, error = %s", kBrightnessNode,
+             strerror(errno));
+    return kErrorFileDescriptor;
+  }
+
+  if (Sys::pread_(fd, brightness, sizeof(brightness), 0) > 0) {
+    *level = atoi(brightness);
+    DLOGV_IF(kTagDriverConfig, "Brightness level = %d", *level);
+  } else {
+    DLOGV_IF(kTagDriverConfig, "Failed to read panel brightness");
+    err = kErrorHardware;
+  }
+
+  Sys::close_(fd);
+
+  return err;
 }
 
 DisplayError HWDeviceDRM::CachePanelBrightness(int level) {
@@ -666,10 +713,6 @@ DisplayError HWDeviceDRM::GetMaxCEAFormat(uint32_t *max_cea_format) {
 }
 
 DisplayError HWDeviceDRM::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
-  return kErrorNotSupported;
-}
-
-DisplayError HWDeviceDRM::GetPanelBrightness(int *level) {
   return kErrorNotSupported;
 }
 

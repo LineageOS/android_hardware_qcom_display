@@ -391,6 +391,8 @@ void HWDevice::DumpLayerCommit(const mdp_layer_commit &layer_commit) {
     const mdp_rect &dst_rect = layer.dst_rect;
     DLOGI("layer = %d, pipe_ndx = %x, z = %d, flags = %x",
       i, layer.pipe_ndx, layer.z_order, layer.flags);
+    DLOGI("src_width = %d, src_height = %d, src_format = %d",
+      layer.buffer.width, layer.buffer.height, layer.buffer.format);
     DLOGI("src_rect: x = %d, y = %d, w = %d, h = %d",
       src_rect.x, src_rect.y, src_rect.w, src_rect.h);
     DLOGI("dst_rect: x = %d, y = %d, w = %d, h = %d",

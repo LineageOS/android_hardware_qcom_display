@@ -123,11 +123,13 @@ int IonAlloc::FreeBuffer(void *base, unsigned int size, unsigned int offset, int
   if (base) {
     err = UnmapBuffer(base, size, offset);
   }
-  struct ion_handle_data handle_data;
-  handle_data.handle = ion_handle;
-  ioctl(ion_dev_fd_, INT(ION_IOC_FREE), &handle_data);
-  close(fd);
 
+  if (ion_handle > 0) {
+    struct ion_handle_data handle_data;
+    handle_data.handle = ion_handle;
+    ioctl(ion_dev_fd_, INT(ION_IOC_FREE), &handle_data);
+  }
+  close(fd);
   return err;
 }
 
@@ -150,6 +152,18 @@ int IonAlloc::MapBuffer(void **base, unsigned int size, unsigned int offset, int
   return err;
 }
 
+int IonAlloc::ImportBuffer(int fd) {
+  struct ion_fd_data fd_data;
+  int err = 0;
+  fd_data.fd = fd;
+  if (ioctl(ion_dev_fd_, INT(ION_IOC_IMPORT), &fd_data)) {
+    err = -errno;
+    ALOGE("%s: ION_IOC_IMPORT failed with error - %s", __FUNCTION__, strerror(errno));
+    return err;
+  }
+  return fd_data.handle;
+}
+
 int IonAlloc::UnmapBuffer(void *base, unsigned int size, unsigned int /*offset*/) {
   ATRACE_CALL();
   ALOGD_IF(DEBUG, "ion: Unmapping buffer  base:%p size:%u", base, size);
@@ -163,23 +177,13 @@ int IonAlloc::UnmapBuffer(void *base, unsigned int size, unsigned int /*offset*/
   return err;
 }
 
-int IonAlloc::CleanBuffer(void *base, unsigned int size, unsigned int offset, int fd, int op) {
+int IonAlloc::CleanBuffer(void *base, unsigned int size, unsigned int offset, int handle, int op) {
   ATRACE_CALL();
   ATRACE_INT("operation id", op);
   struct ion_flush_data flush_data;
-  struct ion_fd_data fd_data;
-  struct ion_handle_data handle_data;
   int err = 0;
 
-  fd_data.fd = fd;
-  if (ioctl(ion_dev_fd_, INT(ION_IOC_IMPORT), &fd_data)) {
-    err = -errno;
-    ALOGE("%s: ION_IOC_IMPORT failed with error - %s", __FUNCTION__, strerror(errno));
-    return err;
-  }
-
-  handle_data.handle = fd_data.handle;
-  flush_data.handle = fd_data.handle;
+  flush_data.handle = handle;
   flush_data.vaddr = base;
   // offset and length are unsigned int
   flush_data.offset = offset;
@@ -202,11 +206,8 @@ int IonAlloc::CleanBuffer(void *base, unsigned int size, unsigned int offset, in
   if (ioctl(ion_dev_fd_, INT(ION_IOC_CUSTOM), &d)) {
     err = -errno;
     ALOGE("%s: ION_IOC_CLEAN_INV_CACHES failed with error - %s", __FUNCTION__, strerror(errno));
-    ioctl(ion_dev_fd_, INT(ION_IOC_FREE), &handle_data);
     return err;
   }
-
-  ioctl(ion_dev_fd_, INT(ION_IOC_FREE), &handle_data);
 
   return 0;
 }
