@@ -479,6 +479,7 @@ int Allocator::GetImplDefinedFormat(gralloc1_producer_usage_t prod_usage,
 bool Allocator::IsUBwcFormat(int format) {
   switch (format) {
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
+    case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
       return true;
     default:
       return false;
