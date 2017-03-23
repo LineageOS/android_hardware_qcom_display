@@ -177,7 +177,6 @@ int HWCSession::Open(const hw_module_t *module, const char *name, hw_device_t **
 
     int status = hwc_session->Init();
     if (status != 0) {
-      delete hwc_session;
       return status;
     }
 
@@ -199,7 +198,6 @@ int HWCSession::Close(hw_device_t *device) {
   HWCSession *hwc_session = static_cast<HWCSession *>(composer_device);
 
   hwc_session->Deinit();
-  delete hwc_session;
 
   return 0;
 }
