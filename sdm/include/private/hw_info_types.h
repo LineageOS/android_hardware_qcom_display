@@ -157,6 +157,7 @@ struct HWResourceInfo {
   uint32_t num_rgb_pipe = 0;
   uint32_t num_cursor_pipe = 0;
   uint32_t num_blending_stages = 0;
+  uint32_t num_solidfill_stages = 0;
   uint32_t num_control = 0;
   uint32_t num_mixer_to_disp = 0;
   uint32_t smp_total = 0;
@@ -460,11 +461,21 @@ struct HWPipeInfo {
   void Reset() { *this = HWPipeInfo(); }
 };
 
+struct HWSolidfillStage {
+  uint32_t z_order = kMaxSDELayers;
+  uint32_t color = 0;
+  LayerRect roi = {};
+  bool is_exclusion_rect = false;
+};
+
 struct HWLayerConfig {
   HWPipeInfo left_pipe;           // pipe for left side of output
   HWPipeInfo right_pipe;          // pipe for right side of output
   HWRotatorSession hw_rotator_session;
+  HWSolidfillStage hw_solidfill_stage;
+
   float compression = 1.0f;
+  bool use_solidfill_stage = false;
 
   void Reset() { *this = HWLayerConfig(); }
 };

@@ -230,6 +230,12 @@ enum struct DRMOps {
    */
   CRTC_SET_SECURITY_LEVEL,
   /*
+   * Op: sets solid fill stages
+   * Arg: uint32_t - CRTC ID
+   *      Vector of DRMSolidfillStage
+   */
+  CRTC_SET_SOLIDFILL_STAGES,
+  /*
    * Op: Returns retire fence for this commit. Should be called after Commit() on
    * DRMAtomicReqInterface.
    * Arg: uint32_t - Connector ID
@@ -321,6 +327,7 @@ enum struct SmartDMARevision {
 struct DRMCrtcInfo {
   bool has_src_split;
   uint32_t max_blend_stages;
+  uint32_t max_solidfill_stages;
   QSEEDVersion qseed_version;
   SmartDMARevision smart_dma_rev;
   float ib_fudge_factor;
@@ -469,6 +476,14 @@ enum struct DRMSecureMode {
 enum struct DRMSecurityLevel {
   SECURE_NON_SECURE,
   SECURE_ONLY,
+};
+
+struct DRMSolidfillStage {
+ DRMRect bounding_rect {};
+ bool is_exclusion_rect = false;
+ uint32_t color = 0xff000000; // in 8bit argb
+ uint32_t z_order = 0;
+ uint32_t plane_alpha = 0xff;
 };
 
 /* DRM Atomic Request Property Set.

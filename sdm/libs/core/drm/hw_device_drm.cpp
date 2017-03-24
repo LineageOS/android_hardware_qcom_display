@@ -668,6 +668,8 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
   HWQosData &qos_data = hw_layers->qos_data;
   DRMSecurityLevel crtc_security_level = DRMSecurityLevel::SECURE_NON_SECURE;
 
+  solid_fills_.clear();
+
   // TODO(user): Once destination scalar is enabled we can always send ROIs if driver allows
   if (hw_panel_info_.partial_update) {
     const int kNumMaxROIs = 4;
@@ -702,6 +704,11 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
     HWPipeInfo *left_pipe = &hw_layers->config[i].left_pipe;
     HWPipeInfo *right_pipe = &hw_layers->config[i].right_pipe;
     HWRotatorSession *hw_rotator_session = &hw_layers->config[i].hw_rotator_session;
+
+    if (hw_layers->config[i].use_solidfill_stage) {
+      AddSolidfillStage(hw_layers->config[i].hw_solidfill_stage, layer.plane_alpha);
+      continue;
+    }
 
     for (uint32_t count = 0; count < 2; count++) {
       HWPipeInfo *pipe_info = (count == 0) ? left_pipe : right_pipe;
@@ -769,6 +776,7 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
     }
   }
 
+  SetSolidfillStages();
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_CLK, token_.crtc_id, qos_data.clock_hz);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_AB, token_.crtc_id, qos_data.core_ab_bps);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_IB, token_.crtc_id, qos_data.core_ib_bps);
@@ -783,6 +791,28 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
            qos_data.clock_hz, qos_data.core_ab_bps, qos_data.core_ib_bps, qos_data.llcc_ab_bps,
            qos_data.llcc_ib_bps, qos_data.dram_ab_bps, qos_data.dram_ib_bps,
            qos_data.rot_clock_hz);
+}
+
+void HWDeviceDRM::AddSolidfillStage(const HWSolidfillStage &sf, uint32_t plane_alpha) {
+  sde_drm::DRMSolidfillStage solidfill;
+  solidfill.bounding_rect.left = UINT32(sf.roi.left);
+  solidfill.bounding_rect.top = UINT32(sf.roi.top);
+  solidfill.bounding_rect.right = UINT32(sf.roi.right);
+  solidfill.bounding_rect.bottom = UINT32(sf.roi.bottom);
+  solidfill.is_exclusion_rect  = sf.is_exclusion_rect;
+  solidfill.plane_alpha = plane_alpha;
+  solidfill.z_order = sf.z_order;
+  solidfill.color = sf.color;
+  solid_fills_.push_back(solidfill);
+  DLOGI_IF(kTagDriverConfig, "Add a solidfill stage at z_order:%d argb_color:%x plane_alpha:%x",
+           solidfill.z_order, solidfill.color, solidfill.plane_alpha);
+}
+
+void HWDeviceDRM::SetSolidfillStages() {
+  if (hw_resource_.num_solidfill_stages) {
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_SOLIDFILL_STAGES, token_.crtc_id,
+                              reinterpret_cast<uint64_t> (&solid_fills_));
+  }
 }
 
 DisplayError HWDeviceDRM::Validate(HWLayers *hw_layers) {

@@ -118,6 +118,8 @@ class HWDeviceDRM : public HWInterface {
   void ResetDisplayParams();
   bool EnableHotPlugDetection(int enable);
   void UpdateMixerAttributes();
+  void SetSolidfillStages();
+  void AddSolidfillStage(const HWSolidfillStage &sf, uint32_t plane_alpha);
   void SetBlending(const LayerBlending &source, sde_drm::DRMBlendType *target);
   void SetSrcConfig(const LayerBuffer &input_buffer, uint32_t *config);
   void SetRect(const LayerRect &source, sde_drm::DRMRect *target);
@@ -176,6 +178,7 @@ class HWDeviceDRM : public HWInterface {
   HWMixerAttributes mixer_attributes_ = {};
   std::string interface_str_ = "DSI";
   HWScaleDRM *hw_scale_ = {};
+  std::vector<sde_drm::DRMSolidfillStage> solid_fills_ {};
 };
 
 }  // namespace sdm

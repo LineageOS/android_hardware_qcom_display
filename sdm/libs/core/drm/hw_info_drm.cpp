@@ -254,6 +254,7 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   hw_resource->is_src_split = info.has_src_split;
   hw_resource->has_qseed3 = (info.qseed_version == sde_drm::QSEEDVersion::V3);
   hw_resource->num_blending_stages = info.max_blend_stages;
+  hw_resource->num_solidfill_stages = info.max_solidfill_stages;
   hw_resource->smart_dma_rev = (info.smart_dma_rev == sde_drm::SmartDMARevision::V2) ?
     SmartDMARevision::V2 : SmartDMARevision::V1;
   hw_resource->ib_fudge_factor = info.ib_fudge_factor;
