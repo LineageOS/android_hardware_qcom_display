@@ -216,14 +216,6 @@ static void GetDRMFormat(LayerBufferFormat format, uint32_t *drm_format,
 }
 
 void HWDeviceDRM::Registry::RegisterCurrent(HWLayers *hw_layers) {
-  DRMMaster *master = nullptr;
-  DRMMaster::GetInstance(&master);
-
-  if (!master) {
-    DLOGE("Failed to acquire DRM Master instance");
-    return;
-  }
-
   HWLayersInfo &hw_layer_info = hw_layers->info;
   uint32_t hw_layer_count = UINT32(hw_layer_info.hw_layers.size());
 
@@ -237,28 +229,41 @@ void HWDeviceDRM::Registry::RegisterCurrent(HWLayers *hw_layers) {
       input_buffer = &hw_rotator_session->output_buffer;
     }
 
-    int fd = input_buffer->planes[0].fd;
-    if (fd >= 0 && hashmap_[current_index_].find(fd) == hashmap_[current_index_].end()) {
-      AllocatedBufferInfo buf_info {};
-      DRMBuffer layout {};
-      buf_info.fd = layout.fd = fd;
-      buf_info.aligned_width = layout.width = input_buffer->width;
-      buf_info.aligned_height = layout.height = input_buffer->height;
-      buf_info.format = input_buffer->format;
-      GetDRMFormat(buf_info.format, &layout.drm_format, &layout.drm_format_modifier);
-      buffer_allocator_->GetBufferLayout(buf_info, layout.stride, layout.offset,
-                                         &layout.num_planes);
-      uint32_t fb_id = 0;
-      int ret = master->CreateFbId(layout, &fb_id);
-      if (ret < 0) {
-        DLOGE("CreateFbId failed. width %d, height %d, format: %s, stride %u, error %d",
-              layout.width, layout.height, GetFormatString(buf_info.format), layout.stride[0],
-              errno);
-      } else {
-        hashmap_[current_index_][fd] = fb_id;
-      }
+    MapBufferToFbId(input_buffer);
+  }
+}
+
+void HWDeviceDRM::Registry::MapBufferToFbId(LayerBuffer* buffer) {
+  int fd = buffer->planes[0].fd;
+  DRMMaster *master = nullptr;
+  DRMMaster::GetInstance(&master);
+
+  if (!master) {
+    DLOGE("Failed to acquire DRM Master instance");
+    return;
+  }
+
+  if (fd >= 0 && hashmap_[current_index_].find(fd) == hashmap_[current_index_].end()) {
+    AllocatedBufferInfo buf_info{};
+    DRMBuffer layout{};
+    buf_info.fd = layout.fd = fd;
+    buf_info.aligned_width = layout.width = buffer->width;
+    buf_info.aligned_height = layout.height = buffer->height;
+    buf_info.format = buffer->format;
+    GetDRMFormat(buf_info.format, &layout.drm_format, &layout.drm_format_modifier);
+    buffer_allocator_->GetBufferLayout(buf_info, layout.stride, layout.offset,
+        &layout.num_planes);
+    uint32_t fb_id = 0;
+    int ret = master->CreateFbId(layout, &fb_id);
+    if (ret < 0) {
+      DLOGE("CreateFbId failed. width %d, height %d, format: %s, stride %u, error %d",
+          layout.width, layout.height, GetFormatString(buf_info.format), layout.stride[0],
+          errno);
+    } else {
+      hashmap_[current_index_][fd] = fb_id;
     }
   }
+  return;
 }
 
 void HWDeviceDRM::Registry::UnregisterNext() {
@@ -300,6 +305,7 @@ HWDeviceDRM::HWDeviceDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator
     : hw_info_intf_(hw_info_intf), buffer_sync_handler_(buffer_sync_handler),
       registry_(buffer_allocator) {
   device_type_ = kDevicePrimary;
+  disp_type_ = DRMDisplayType::PERIPHERAL;
   device_name_ = "Peripheral Display";
   hw_info_intf_ = hw_info_intf;
 }
@@ -309,15 +315,13 @@ DisplayError HWDeviceDRM::Init() {
 
   if (!default_mode_) {
     DRMMaster *drm_master = {};
-    int dev_fd = -1;
     DRMMaster::GetInstance(&drm_master);
-    drm_master->GetHandle(&dev_fd);
-    DRMLibLoader::GetInstance()->FuncGetDRMManager()(dev_fd, &drm_mgr_intf_);
-    if (drm_mgr_intf_->RegisterDisplay(DRMDisplayType::PERIPHERAL, &token_)) {
-      DLOGE("RegisterDisplay failed");
+    drm_master->GetHandle(&dev_fd_);
+    DRMLibLoader::GetInstance()->FuncGetDRMManager()(dev_fd_, &drm_mgr_intf_);
+    if (drm_mgr_intf_->RegisterDisplay(disp_type_, &token_)) {
+      DLOGE("RegisterDisplay failed for display %d", disp_type_);
       return kErrorResources;
     }
-
     drm_mgr_intf_->CreateAtomicReq(token_, &drm_atomic_intf_);
     drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
     InitializeConfigs();
@@ -325,17 +329,18 @@ DisplayError HWDeviceDRM::Init() {
 
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
     // Commit to setup pipeline with mode, which then tells us the topology etc
-    if (drm_atomic_intf_->Commit(true /* synchronous */)) {
-      DLOGE("Setting up CRTC %d, Connector %d for %s failed", token_.crtc_id, token_.conn_id,
-            device_name_);
-      return kErrorResources;
+
+    if (!deferred_initialize_) {
+      if (drm_atomic_intf_->Commit(true /* synchronous */)) {
+        DRM_LOGI("Setting up CRTC %d, Connector %d for %s failed", token_.crtc_id,
+          token_.conn_id, device_name_);
+        return kErrorResources;
+      }
+      // Reload connector info for updated info after 1st commit
+
+      drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
     }
-
-    // Reload connector info for updated info after 1st commit
-    drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
-    DLOGI("Setup CRTC %d, Connector %d for %s", token_.crtc_id, token_.conn_id, device_name_);
   }
-
   PopulateDisplayAttributes();
   PopulateHWPanelInfo();
   UpdateMixerAttributes();
@@ -796,7 +801,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
 
   int ret = drm_atomic_intf_->Commit(false /* synchronous */);
   if (ret) {
-    DLOGE("%s failed with error %d", __FUNCTION__, ret);
+    DLOGE("%s failed with error %d crtc %d", __FUNCTION__, ret, token_.crtc_id);
     return kErrorHardware;
   }
 
@@ -872,7 +877,6 @@ DisplayError HWDeviceDRM::SetCursorPosition(HWLayers *hw_layers, int x, int y) {
 
 DisplayError HWDeviceDRM::GetPPFeaturesVersion(PPFeatureVersion *vers) {
   struct DRMPPFeatureInfo info = {};
-
   for (uint32_t i = 0; i < kMaxNumPPFeatures; i++) {
     memset(&info, 0, sizeof(struct DRMPPFeatureInfo));
     info.id = HWColorManagerDrm::ToDrmFeatureId(i);
