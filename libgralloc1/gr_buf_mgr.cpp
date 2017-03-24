@@ -189,6 +189,7 @@ void BufferManager::CreateSharedHandle(buffer_handle_t inbuffer, const BufferDes
 
 gralloc1_error_t BufferManager::FreeBuffer(std::shared_ptr<Buffer> buf) {
   auto hnd = buf->handle;
+  ALOGD_IF(DEBUG, "FreeBuffer handle:%p id: %" PRIu64, hnd, hnd->id);
   if (allocator_->FreeBuffer(reinterpret_cast<void *>(hnd->base), hnd->size, hnd->offset,
                              hnd->fd, buf->ion_handle_main) != 0) {
     return GRALLOC1_ERROR_BAD_HANDLE;
@@ -216,6 +217,7 @@ void BufferManager::RegisterHandle(const private_handle_t *hnd,
 }
 
 gralloc1_error_t BufferManager::ImportHandle(private_handle_t* hnd) {
+  ALOGD_IF(DEBUG, "Importing handle:%p id: %" PRIu64, hnd, hnd->id);
   int ion_handle = allocator_->ImportBuffer(hnd->fd);
   if (ion_handle < 0) {
     ALOGE("Failed to import ion buffer: hnd: %p, fd:%d, id:%" PRIu64, hnd, hnd->fd, hnd->id);
@@ -246,9 +248,11 @@ BufferManager::GetBufferFromHandle(const private_handle_t *hnd) {
 
 gralloc1_error_t BufferManager::MapBuffer(private_handle_t const *handle) {
   private_handle_t *hnd = const_cast<private_handle_t *>(handle);
+  ALOGD_IF(DEBUG, "Map buffer handle:%p id: %" PRIu64, hnd, hnd->id);
 
   hnd->base = 0;
   hnd->base_metadata = 0;
+
   if (allocator_->MapBuffer(reinterpret_cast<void **>(&hnd->base), hnd->size, hnd->offset,
                             hnd->fd) != 0) {
     return GRALLOC1_ERROR_BAD_HANDLE;
@@ -274,7 +278,10 @@ gralloc1_error_t BufferManager::RetainBuffer(private_handle_t const *hnd) {
     private_handle_t *handle = const_cast<private_handle_t *>(hnd);
     err = ImportHandle(handle);
     if (err == GRALLOC1_ERROR_NONE) {
-      // TODO(user): Do not map here, map should be in lock()
+      // TODO(user): See bug 35955598
+      if (hnd->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER) {
+        return GRALLOC1_ERROR_NONE;  // Don't map secure buffer
+      }
       err = MapBuffer(hnd);
     }
   }
@@ -303,6 +310,7 @@ gralloc1_error_t BufferManager::LockBuffer(const private_handle_t *hnd,
                                            gralloc1_consumer_usage_t cons_usage) {
   std::lock_guard<std::mutex> lock(locker_);
   gralloc1_error_t err = GRALLOC1_ERROR_NONE;
+  ALOGD_IF(DEBUG, "LockBuffer buffer handle:%p id: %" PRIu64, hnd, hnd->id);
 
   // If buffer is not meant for CPU return err
   if (!CpuCanAccess(prod_usage, cons_usage)) {
@@ -494,8 +502,8 @@ int BufferManager::AllocateBuffer(unsigned int size, int aligned_w, int aligned_
                                                cons_usage);
 
   hnd->id = ++next_id_;
-  hnd->base = reinterpret_cast<uint64_t >(data.base);
-  hnd->base_metadata = reinterpret_cast<uint64_t >(e_data.base);
+  hnd->base = 0;
+  hnd->base_metadata = 0;
 
   ColorSpace_t colorSpace = ITU_R_601;
   setMetaData(hnd, UPDATE_COLOR_SPACE, reinterpret_cast<void *>(&colorSpace));
@@ -614,9 +622,9 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
         return GRALLOC1_ERROR_BAD_HANDLE;
       }
 
-      MetaData_t *metadata = reinterpret_cast<MetaData_t *>(hnd->base_metadata);
-      if (metadata && metadata->operation & UPDATE_BUFFER_GEOMETRY) {
-        *stride = metadata->bufferDim.sliceWidth;
+      BufferDim_t buffer_dim;
+      if (getMetaData(hnd, GET_BUFFER_GEOMETRY, &buffer_dim) == 0) {
+        *stride = buffer_dim.sliceWidth;
       } else {
         *stride = hnd->width;
       }
@@ -631,10 +639,10 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
         return GRALLOC1_ERROR_BAD_HANDLE;
       }
 
-      MetaData_t *metadata = reinterpret_cast<MetaData_t *>(hnd->base_metadata);
-      if (metadata && metadata->operation & UPDATE_BUFFER_GEOMETRY) {
-        *stride = metadata->bufferDim.sliceWidth;
-        *height = metadata->bufferDim.sliceHeight;
+      BufferDim_t buffer_dim;
+      if (getMetaData(hnd, GET_BUFFER_GEOMETRY, &buffer_dim) == 0) {
+        *stride = buffer_dim.sliceWidth;
+        *height = buffer_dim.sliceHeight;
       } else {
         *stride = hnd->width;
         *height = hnd->height;
@@ -670,30 +678,30 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
       if (private_handle_t::validate(hnd) != 0) {
         return GRALLOC1_ERROR_BAD_HANDLE;
       }
-      MetaData_t *metadata = reinterpret_cast<MetaData_t *>(hnd->base_metadata);
-      if (!metadata) {
-        return GRALLOC1_ERROR_BAD_HANDLE;
+      *color_space = 0;
 #ifdef USE_COLOR_METADATA
-      } else if (metadata->operation & COLOR_METADATA) {
-        ColorMetaData *colorMetadata = &metadata->color;
-        switch (colorMetadata->colorPrimaries) {
-        case ColorPrimaries_BT709_5:
-          *color_space = HAL_CSC_ITU_R_709;
-          break;
-        case ColorPrimaries_BT601_6_525:
-          *color_space = ((colorMetadata->range) ? HAL_CSC_ITU_R_601_FR : HAL_CSC_ITU_R_601);
-           break;
-        case ColorPrimaries_BT2020:
-          *color_space = (colorMetadata->range) ? HAL_CSC_ITU_R_2020_FR : HAL_CSC_ITU_R_2020;
-          break;
-        default:
-          ALOGE("Unknown Color Space = %d", colorMetadata->colorPrimaries);
-          break;
+      ColorMetaData color_metadata;
+      if (getMetaData(hnd, GET_COLOR_METADATA, &color_metadata) == 0) {
+        switch (color_metadata.colorPrimaries) {
+          case ColorPrimaries_BT709_5:
+            *color_space = HAL_CSC_ITU_R_709;
+            break;
+          case ColorPrimaries_BT601_6_525:
+            *color_space = ((color_metadata.range) ? HAL_CSC_ITU_R_601_FR : HAL_CSC_ITU_R_601);
+            break;
+          case ColorPrimaries_BT2020:
+            *color_space = (color_metadata.range) ? HAL_CSC_ITU_R_2020_FR : HAL_CSC_ITU_R_2020;
+            break;
+          default:
+            ALOGE("Unknown Color Space = %d", color_metadata.colorPrimaries);
+            break;
         }
-#endif
-      } else if (metadata->operation & UPDATE_COLOR_SPACE) {
-        *color_space = metadata->colorSpace;
+        break;
       }
+      if (getMetaData(hnd, GET_COLOR_SPACE, &color_metadata) != 0) {
+          *color_space = 0;
+      }
+#endif
     } break;
     case GRALLOC_MODULE_PERFORM_GET_YUV_PLANE_INFO: {
       private_handle_t *hnd = va_arg(args, private_handle_t *);
@@ -712,10 +720,8 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
       if (private_handle_t::validate(hnd) != 0) {
         return GRALLOC1_ERROR_BAD_HANDLE;
       }
-      MetaData_t *metadata = reinterpret_cast<MetaData_t *>(hnd->base_metadata);
-      if (metadata && metadata->operation & MAP_SECURE_BUFFER) {
-        *map_secure_buffer = metadata->mapSecureBuffer;
-      } else {
+
+      if (getMetaData(hnd, GET_MAP_SECURE_BUFFER, map_secure_buffer) == 0) {
         *map_secure_buffer = 0;
       }
     } break;

@@ -71,7 +71,6 @@ int IonAlloc::AllocBuffer(AllocData *data) {
   struct ion_handle_data handle_data;
   struct ion_fd_data fd_data;
   struct ion_allocation_data ion_alloc_data;
-  void *base = NULL;
 
   ion_alloc_data.len = data->size;
   ion_alloc_data.align = data->align;
@@ -94,21 +93,10 @@ int IonAlloc::AllocBuffer(AllocData *data) {
     return err;
   }
 
-  if (!(INT(data->flags) & INT(ION_SECURE))) {
-    base = mmap(0, ion_alloc_data.len, PROT_READ | PROT_WRITE, MAP_SHARED, fd_data.fd, 0);
-    if (base == MAP_FAILED) {
-      err = -errno;
-      ALOGE("%s: Failed to map the allocated memory: %s", __FUNCTION__, strerror(errno));
-      ioctl(ion_dev_fd_, INT(ION_IOC_FREE), &handle_data);
-      return err;
-    }
-  }
-
-  data->base = base;
   data->fd = fd_data.fd;
   data->ion_handle = handle_data.handle;
-  ALOGD_IF(DEBUG, "ion: Allocated buffer base:%p size:%zu fd:%d handle:0x%x", data->base,
-           ion_alloc_data.len, data->fd, data->ion_handle);
+  ALOGD_IF(DEBUG, "ion: Allocated buffer size:%zu fd:%d handle:0x%x",
+          ion_alloc_data.len, data->fd, data->ion_handle);
 
   return 0;
 }
