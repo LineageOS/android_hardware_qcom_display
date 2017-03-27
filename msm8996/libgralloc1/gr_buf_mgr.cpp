@@ -469,6 +469,7 @@ int BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_han
   int format = descriptor.GetFormat();
   gralloc1_producer_usage_t prod_usage = descriptor.GetProducerUsage();
   gralloc1_consumer_usage_t cons_usage = descriptor.GetConsumerUsage();
+  uint32_t layer_count = descriptor.GetLayerCount();
 
   // Get implementation defined format
   int gralloc_format = allocator_->GetImplDefinedFormat(prod_usage, cons_usage, format);
@@ -478,6 +479,7 @@ int BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_han
   int buffer_type = GetBufferType(gralloc_format);
   allocator_->GetBufferSizeAndDimensions(descriptor, &size, &alignedw, &alignedh);
   size = (bufferSize >= size) ? bufferSize : size;
+  size = size * layer_count;
 
   int err = 0;
   int flags = 0;
@@ -528,6 +530,7 @@ int BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_han
   hnd->id = ++next_id_;
   hnd->base = 0;
   hnd->base_metadata = 0;
+  hnd->layer_count = layer_count;
 
   ColorSpace_t colorSpace = ITU_R_601;
   setMetaData(hnd, UPDATE_COLOR_SPACE, reinterpret_cast<void *>(&colorSpace));
