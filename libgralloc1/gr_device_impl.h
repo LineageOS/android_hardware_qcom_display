@@ -76,6 +76,9 @@ class GrallocImpl : public gralloc1_device_t {
                                               uint32_t width, uint32_t height);
   static gralloc1_error_t SetColorFormat(gralloc1_device_t *device,
                                          gralloc1_buffer_descriptor_t descriptor, int32_t format);
+  static gralloc1_error_t SetLayerCount(gralloc1_device_t *device,
+                                        gralloc1_buffer_descriptor_t descriptor,
+                                        uint32_t layer_count);
   static gralloc1_error_t SetProducerUsage(gralloc1_device_t *device,
                                            gralloc1_buffer_descriptor_t descriptor,
                                            gralloc1_producer_usage_t usage);
@@ -87,6 +90,8 @@ class GrallocImpl : public gralloc1_device_t {
                                               uint32_t *out_width, uint32_t *out_height);
   static gralloc1_error_t GetColorFormat(gralloc1_device_t *device, buffer_handle_t descriptor,
                                          int32_t *outFormat);
+  static gralloc1_error_t GetLayerCount(gralloc1_device_t *device, buffer_handle_t buffer,
+                                        uint32_t *out_layer_count);
   static gralloc1_error_t GetProducerUsage(gralloc1_device_t *device, buffer_handle_t buffer,
                                            gralloc1_producer_usage_t *out_usage);
   static gralloc1_error_t GetBufferStride(gralloc1_device_t *device, buffer_handle_t buffer,
