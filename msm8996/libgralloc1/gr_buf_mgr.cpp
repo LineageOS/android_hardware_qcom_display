@@ -451,17 +451,41 @@ int BufferManager::GetHandleFlags(int format, gralloc1_producer_usage_t prod_usa
   return flags;
 }
 
-int BufferManager::AllocateBuffer(unsigned int size, int aligned_w, int aligned_h, int unaligned_w,
-                                  int unaligned_h, int format, int bufferType,
-                                  gralloc1_producer_usage_t prod_usage,
-                                  gralloc1_consumer_usage_t cons_usage, buffer_handle_t *handle) {
-  auto page_size = UINT(getpagesize());
+int BufferManager::GetBufferType(int inputFormat) {
+  int buffer_type = BUFFER_TYPE_VIDEO;
+  if (IsUncompressedRGBFormat(inputFormat)) {
+    // RGB formats
+    buffer_type = BUFFER_TYPE_UI;
+  }
+
+  return buffer_type;
+}
+
+int BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_handle_t *handle,
+                                  unsigned int bufferSize) {
+  if (!handle)
+    return -EINVAL;
+
+  int format = descriptor.GetFormat();
+  gralloc1_producer_usage_t prod_usage = descriptor.GetProducerUsage();
+  gralloc1_consumer_usage_t cons_usage = descriptor.GetConsumerUsage();
+
+  // Get implementation defined format
+  int gralloc_format = allocator_->GetImplDefinedFormat(prod_usage, cons_usage, format);
+
+  unsigned int size;
+  unsigned int alignedw, alignedh;
+  int buffer_type = GetBufferType(gralloc_format);
+  allocator_->GetBufferSizeAndDimensions(descriptor, &size, &alignedw, &alignedh);
+  size = (bufferSize >= size) ? bufferSize : size;
+
   int err = 0;
   int flags = 0;
+  auto page_size = UINT(getpagesize());
   AllocData data;
   data.align = GetDataAlignment(format, prod_usage, cons_usage);
   data.size = ALIGN(size, data.align);
-  data.handle = (uintptr_t)handle;
+  data.handle = (uintptr_t) handle;
   data.uncached = allocator_->UseUncached(prod_usage);
 
   // Allocate buffer memory
@@ -491,12 +515,12 @@ int BufferManager::AllocateBuffer(unsigned int size, int aligned_w, int aligned_
   private_handle_t *hnd = new private_handle_t(data.fd,
                                                e_data.fd,
                                                flags,
-                                               aligned_w,
-                                               aligned_h,
-                                               unaligned_w,
-                                               unaligned_h,
+                                               INT(alignedw),
+                                               INT(alignedh),
+                                               descriptor.GetWidth(),
+                                               descriptor.GetHeight(),
                                                format,
-                                               bufferType,
+                                               buffer_type,
                                                size,
                                                prod_usage,
                                                cons_usage);
@@ -514,61 +538,6 @@ int BufferManager::AllocateBuffer(unsigned int size, int aligned_w, int aligned_
     private_handle_t::Dump(hnd);
   }
   return err;
-}
-
-int BufferManager::GetBufferType(int inputFormat) {
-  int buffer_type = BUFFER_TYPE_VIDEO;
-  if (IsUncompressedRGBFormat(inputFormat)) {
-    // RGB formats
-    buffer_type = BUFFER_TYPE_UI;
-  }
-
-  return buffer_type;
-}
-
-int BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_handle_t *handle,
-                                  unsigned int bufferSize) {
-  if (!handle)
-    return -EINVAL;
-
-  int format = descriptor.GetFormat();
-  gralloc1_producer_usage_t prod_usage = descriptor.GetProducerUsage();
-  gralloc1_consumer_usage_t cons_usage = descriptor.GetConsumerUsage();
-
-  // Get implementation defined format
-  int gralloc_format = allocator_->GetImplDefinedFormat(prod_usage, cons_usage, format);
-
-  bool use_fb_mem = false;
-  if ((cons_usage & GRALLOC1_CONSUMER_USAGE_CLIENT_TARGET) && map_fb_mem_) {
-    use_fb_mem = true;
-  }
-
-  if ((cons_usage & GRALLOC1_CONSUMER_USAGE_CLIENT_TARGET) && ubwc_for_fb_) {
-    prod_usage =
-        (gralloc1_producer_usage_t)(prod_usage | GRALLOC1_PRODUCER_USAGE_PRIVATE_ALLOC_UBWC);
-  }
-
-  unsigned int size;
-  unsigned int alignedw, alignedh;
-  int buffer_type = GetBufferType(gralloc_format);
-  allocator_->GetBufferSizeAndDimensions(descriptor, &size, &alignedw, &alignedh);
-
-  size = (bufferSize >= size) ? bufferSize : size;
-
-  int err = 0;
-  if (use_fb_mem) {
-    // TODO(user): TBD Framebuffer specific implementation in a seperate file/class
-  } else {
-    err = AllocateBuffer(size, INT(alignedw), INT(alignedh), descriptor.GetWidth(),
-                         descriptor.GetHeight(), format, buffer_type, descriptor.GetProducerUsage(),
-                         descriptor.GetConsumerUsage(), handle);
-  }
-
-  if (err < 0) {
-    return err;
-  }
-
-  return 0;
 }
 
 gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
