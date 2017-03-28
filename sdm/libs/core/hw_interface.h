@@ -59,6 +59,7 @@ class HWEventHandler {
   virtual void IdleTimeout() = 0;
   virtual void ThermalEvent(int64_t thermal_level) = 0;
   virtual void CECMessage(char *message) = 0;
+  virtual void IdlePowerCollapse() = 0;
 
  protected:
   virtual ~HWEventHandler() { }
@@ -95,6 +96,7 @@ class HWInterface {
   virtual DisplayError SetDisplayMode(const HWDisplayMode hw_display_mode) = 0;
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate) = 0;
   virtual DisplayError SetPanelBrightness(int level) = 0;
+  virtual DisplayError CachePanelBrightness(int level) = 0;
   virtual DisplayError GetHWScanInfo(HWScanInfo *scan_info) = 0;
   virtual DisplayError GetVideoFormat(uint32_t config_index, uint32_t *video_format) = 0;
   virtual DisplayError GetMaxCEAFormat(uint32_t *max_cea_format) = 0;

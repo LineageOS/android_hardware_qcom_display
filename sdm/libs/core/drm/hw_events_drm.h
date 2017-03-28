@@ -70,6 +70,7 @@ class HWEventsDRM : public HWEventsInterface {
   void HandleThreadExit(char *data) {}
   void HandleThermal(char *data) {}
   void HandleBlank(char *data) {}
+  void HandleIdlePowerCollapse(char *data);
   void PopulateHWEventData(const vector<HWEvent> &event_list);
   DisplayError SetEventParser();
   DisplayError InitializePollFd();

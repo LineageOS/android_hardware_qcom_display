@@ -391,6 +391,8 @@ void HWDevice::DumpLayerCommit(const mdp_layer_commit &layer_commit) {
     const mdp_rect &dst_rect = layer.dst_rect;
     DLOGI("layer = %d, pipe_ndx = %x, z = %d, flags = %x",
       i, layer.pipe_ndx, layer.z_order, layer.flags);
+    DLOGI("src_width = %d, src_height = %d, src_format = %d",
+      layer.buffer.width, layer.buffer.height, layer.buffer.format);
     DLOGI("src_rect: x = %d, y = %d, w = %d, h = %d",
       src_rect.x, src_rect.y, src_rect.w, src_rect.h);
     DLOGI("dst_rect: x = %d, y = %d, w = %d, h = %d",
@@ -485,6 +487,12 @@ DisplayError HWDevice::Commit(HWLayers *hw_layers) {
   if (synchronous_commit_) {
     mdp_commit.flags |= MDP_COMMIT_WAIT_FOR_FINISH;
   }
+  if (bl_update_commit && bl_level_update_commit >= 0) {
+#ifdef MDP_COMMIT_UPDATE_BRIGHTNESS
+    mdp_commit.bl_level = (uint32_t)bl_level_update_commit;
+    mdp_commit.flags |= MDP_COMMIT_UPDATE_BRIGHTNESS;
+#endif
+  }
   if (Sys::ioctl_(device_fd_, INT(MSMFB_ATOMIC_COMMIT), &mdp_disp_commit_) < 0) {
     if (errno == ESHUTDOWN) {
       DLOGI_IF(kTagDriverConfig, "Driver is processing shutdown sequence");
@@ -538,6 +546,9 @@ DisplayError HWDevice::Commit(HWLayers *hw_layers) {
     PopulateHWPanelInfo();
     synchronous_commit_ = false;
   }
+
+  if (bl_update_commit)
+    bl_update_commit = false;
 
   return kErrorNone;
 }
@@ -1177,6 +1188,10 @@ DisplayError HWDevice::SetRefreshRate(uint32_t refresh_rate) {
 }
 
 DisplayError HWDevice::SetPanelBrightness(int level) {
+  return kErrorNotSupported;
+}
+
+DisplayError HWDevice::CachePanelBrightness(int level) {
   return kErrorNotSupported;
 }
 
