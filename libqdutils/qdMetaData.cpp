@@ -35,28 +35,42 @@
 #include <gralloc_priv.h>
 #include "qdMetaData.h"
 
-int setMetaData(private_handle_t *handle, DispParamType paramType,
-                                                    void *param) {
+static int validateAndMap(private_handle_t* handle) {
     if (private_handle_t::validate(handle)) {
-        ALOGE("%s: Private handle is invalid! handle=%p", __func__, handle);
+        ALOGE("%s: Private handle is invalid - handle:%p", __func__, handle);
         return -1;
     }
     if (handle->fd_metadata == -1) {
-        ALOGE("%s: Bad fd for extra data!", __func__);
+        ALOGE("%s: Invalid metadata fd - handle:%p fd: %d",
+                __func__, handle, handle->fd_metadata);
         return -1;
     }
-    unsigned long size = ROUND_UP_PAGESIZE(sizeof(MetaData_t));
-    void *base = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED,
-        handle->fd_metadata, 0);
-    if (base == reinterpret_cast<void*>(MAP_FAILED)) {
-        ALOGE("%s: mmap() failed: error is %s!", __func__, strerror(errno));
-        return -1;
+
+    if (!handle->base_metadata) {
+        unsigned long size = ROUND_UP_PAGESIZE(sizeof(MetaData_t));
+        void *base = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED,
+                handle->fd_metadata, 0);
+        if (base == reinterpret_cast<void*>(MAP_FAILED)) {
+            ALOGE("%s: metadata mmap failed - handle:%p fd: %d err: %s",
+                __func__, handle, handle->fd_metadata, strerror(errno));
+
+            return -1;
+        }
+        handle->base_metadata = (uintptr_t) base;
     }
-    MetaData_t *data = reinterpret_cast <MetaData_t *>(base);
+    return 0;
+}
+
+int setMetaData(private_handle_t *handle, DispParamType paramType,
+                                                    void *param) {
+    auto err = validateAndMap(handle);
+    if (err != 0)
+        return err;
+
+    MetaData_t *data = reinterpret_cast <MetaData_t *>(handle->base_metadata);
     // If parameter is NULL reset the specific MetaData Key
     if (!param) {
        data->operation &= ~paramType;
-       return munmap(base, size);
     }
 
     data->operation |= paramType;
@@ -103,30 +117,15 @@ int setMetaData(private_handle_t *handle, DispParamType paramType,
             ALOGE("Unknown paramType %d", paramType);
             break;
     }
-    if(munmap(base, size))
-        ALOGE("%s: failed to unmap ptr %p, err %d", __func__, (void*)base,
-                                                                        errno);
     return 0;
 }
 
 int clearMetaData(private_handle_t *handle, DispParamType paramType) {
-    if (!handle) {
-        ALOGE("%s: Private handle is null!", __func__);
-        return -1;
-    }
-    if (handle->fd_metadata == -1) {
-        ALOGE("%s: Bad fd for extra data!", __func__);
-        return -1;
-    }
+    auto err = validateAndMap(handle);
+    if (err != 0)
+        return err;
 
-    unsigned long size = ROUND_UP_PAGESIZE(sizeof(MetaData_t));
-    void *base = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED,
-        handle->fd_metadata, 0);
-    if (base == reinterpret_cast<void*>(MAP_FAILED)) {
-        ALOGE("%s: mmap() failed: error is %s!", __func__, strerror(errno));
-        return -1;
-    }
-    MetaData_t *data = reinterpret_cast <MetaData_t *>(base);
+    MetaData_t *data = reinterpret_cast <MetaData_t *>(handle->base_metadata);
     data->operation &= ~paramType;
     switch (paramType) {
         case SET_S3D_COMP:
@@ -137,38 +136,18 @@ int clearMetaData(private_handle_t *handle, DispParamType paramType) {
             ALOGE("Unknown paramType %d", paramType);
             break;
     }
-    if(munmap(base, size))
-        ALOGE("%s: failed to unmap ptr %p, err %d", __func__, (void*)base,
-                                                                        errno);
     return 0;
 }
 
 int getMetaData(private_handle_t *handle, DispFetchParamType paramType,
                                                     void *param) {
-    int ret = -1;
-    if (private_handle_t::validate(handle)) {
-        ALOGE("%s: Private handle is invalid! handle=%p", __func__, handle);
-        return -1;
-    }
-    if (handle->fd_metadata == -1) {
-        ALOGE("%s: Bad fd for extra data!", __func__);
-        return -1;
-    }
-    if (!param) {
-        ALOGE("%s: input param is null!", __func__);
-        return -1;
-    }
-    unsigned long size = ROUND_UP_PAGESIZE(sizeof(MetaData_t));
-    // TODO: must be mmapped once and freed when the handle gets freed rather
-    // than mapping and un-mapping while getting each metadata field
-    void *base = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED,
-        handle->fd_metadata, 0);
-    if (base == reinterpret_cast<void*>(MAP_FAILED)) {
-        ALOGE("%s: mmap() failed: error is %s!", __func__, strerror(errno));
-        return -1;
-    }
+    int ret = validateAndMap(handle);
+    if (ret != 0)
+        return ret;
+    MetaData_t *data = reinterpret_cast <MetaData_t *>(handle->base_metadata);
+    // Make sure we send 0 only if the operation queried is present
+    ret = -EINVAL;
 
-    MetaData_t *data = reinterpret_cast <MetaData_t *>(base);
     switch (paramType) {
         case GET_PP_PARAM_INTERLACED:
             if (data->operation & PP_PARAM_INTERLACED) {
@@ -248,52 +227,21 @@ int getMetaData(private_handle_t *handle, DispFetchParamType paramType,
             ALOGE("Unknown paramType %d", paramType);
             break;
     }
-    if(munmap(base, size))
-        ALOGE("%s: failed to unmap ptr %p, err %d", __func__, (void*)base,
-                                                                        errno);
     return ret;
 }
 
 int copyMetaData(struct private_handle_t *src, struct private_handle_t *dst) {
-    if (!src || !dst) {
-        ALOGE("%s: Private handle is null!", __func__);
-        return -1;
-    }
-    if (src->fd_metadata == -1) {
-        ALOGE("%s: Bad fd for src extra data!", __func__);
-        return -1;
-    }
-    if (dst->fd_metadata == -1) {
-        ALOGE("%s: Bad fd for dst extra data!", __func__);
-        return -1;
-    }
+    auto err = validateAndMap(src);
+    if (err != 0)
+        return err;
+
+    err = validateAndMap(dst);
+    if (err != 0)
+        return err;
 
     unsigned long size = ROUND_UP_PAGESIZE(sizeof(MetaData_t));
-
-    void *base_src = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED,
-        src->fd_metadata, 0);
-    if (base_src == reinterpret_cast<void*>(MAP_FAILED)) {
-        ALOGE("%s: src mmap() failed: error is %s!", __func__, strerror(errno));
-        return -1;
-    }
-
-    void *base_dst = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED,
-        dst->fd_metadata, 0);
-    if (base_dst == reinterpret_cast<void*>(MAP_FAILED)) {
-        ALOGE("%s: dst mmap() failed: error is %s!", __func__, strerror(errno));
-        if(munmap(base_src, size))
-            ALOGE("%s: failed to unmap src ptr %p, err %d", __func__,
-                                             (void*)base_src, errno);
-        return -1;
-    }
-
-    memcpy(base_dst, base_src, size);
-
-    if(munmap(base_src, size))
-        ALOGE("%s: failed to unmap src ptr %p, err %d", __func__, (void*)base_src,
-                                                                        errno);
-    if(munmap(base_dst, size))
-        ALOGE("%s: failed to unmap src ptr %p, err %d", __func__, (void*)base_dst,
-                                                                        errno);
+    MetaData_t *src_data = reinterpret_cast <MetaData_t *>(src->base_metadata);
+    MetaData_t *dst_data = reinterpret_cast <MetaData_t *>(dst->base_metadata);
+    memcpy(src_data, dst_data, size);
     return 0;
 }
