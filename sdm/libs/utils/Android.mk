@@ -5,6 +5,7 @@ include $(LOCAL_PATH)/../../../common.mk
 LOCAL_MODULE                  := libsdmutils
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes)
+LOCAL_HEADER_LIBRARIES        := display_headers
 LOCAL_CFLAGS                  := -DLOG_TAG=\"SDM\" $(common_flags)
 LOCAL_SRC_FILES               := debug.cpp \
                                  rect.cpp \
