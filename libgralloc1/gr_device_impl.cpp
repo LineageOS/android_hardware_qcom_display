@@ -409,14 +409,26 @@ gralloc1_error_t GrallocImpl::GetNumFlexPlanes(gralloc1_device_t *device, buffer
   return status;
 }
 
+static inline void CloseFdIfValid(int fd) {
+  if (fd > 0) {
+    close(fd);
+  }
+}
+
 gralloc1_error_t GrallocImpl::LockBuffer(gralloc1_device_t *device, buffer_handle_t buffer,
                                          gralloc1_producer_usage_t prod_usage,
                                          gralloc1_consumer_usage_t cons_usage,
                                          const gralloc1_rect_t *region, void **out_data,
                                          int32_t acquire_fence) {
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
-  if (status == GRALLOC1_ERROR_NONE && (acquire_fence > 0)) {
+  if (status != GRALLOC1_ERROR_NONE) {
+    CloseFdIfValid(acquire_fence);
+    return status;
+  }
+
+  if (acquire_fence > 0) {
     int error = sync_wait(acquire_fence, 1000);
+    CloseFdIfValid(acquire_fence);
     if (error < 0) {
       ALOGE("%s: sync_wait timedout! error = %s", __FUNCTION__, strerror(errno));
       return GRALLOC1_ERROR_UNDEFINED;
