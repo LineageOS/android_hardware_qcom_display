@@ -21,6 +21,8 @@
 #include <errno.h>
 #include <math.h>
 #include <sync/sync.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <utils/constants.h>
 #include <utils/debug.h>
 #include <utils/formats.h>

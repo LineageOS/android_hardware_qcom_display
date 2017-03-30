@@ -80,6 +80,12 @@
 #ifndef DRM_FORMAT_MOD_QCOM_COMPRESSED
 #define DRM_FORMAT_MOD_QCOM_COMPRESSED fourcc_mod_code(QCOM, 1)
 #endif
+#ifndef DRM_FORMAT_MOD_QCOM_DX
+#define DRM_FORMAT_MOD_QCOM_DX fourcc_mod_code(QCOM, 0x2)
+#endif
+#ifndef DRM_FORMAT_MOD_QCOM_TIGHT
+#define DRM_FORMAT_MOD_QCOM_TIGHT fourcc_mod_code(QCOM, 0x4)
+#endif
 #endif
 
 using namespace gralloc;
@@ -1282,12 +1288,13 @@ void getDRMFormat(int hal_format, int flags, uint32_t *drm_format,
             *drm_format = DRM_FORMAT_NV21;
             break;
         case HAL_PIXEL_FORMAT_YCbCr_420_P010:
-            // TODO *drm_format = DRM_FORMAT_P010;
+            *drm_format = DRM_FORMAT_NV12;
+            *drm_format_modifier = DRM_FORMAT_MOD_QCOM_DX;
             break;
         case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
-            // TODO *drm_format = DRM_FORMAT_P010;
-            // *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED |
-            //        DRM_FORMAT_MOD_QCOM_TIGHT;
+            *drm_format = DRM_FORMAT_NV12;
+            *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED |
+               DRM_FORMAT_MOD_QCOM_DX | DRM_FORMAT_MOD_QCOM_TIGHT;
             break;
         case HAL_PIXEL_FORMAT_YCbCr_422_SP:
             *drm_format = DRM_FORMAT_NV16;

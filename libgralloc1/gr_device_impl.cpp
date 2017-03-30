@@ -65,10 +65,10 @@ int gralloc_device_open(const struct hw_module_t *module, const char *name, hw_d
   if (!strcmp(name, GRALLOC_HARDWARE_MODULE_ID)) {
     gralloc1::GrallocImpl * /*gralloc1_device_t*/ dev = gralloc1::GrallocImpl::GetInstance(module);
     *device = reinterpret_cast<hw_device_t *>(dev);
-    if (dev->Init()) {
+    if (dev) {
       status = 0;
     } else {
-      ALOGE(" Error in opening gralloc1 device");
+      ALOGE("Fatal error opening gralloc1 device");
     }
   }
   return status;
@@ -83,20 +83,20 @@ GrallocImpl::GrallocImpl(const hw_module_t *module) {
   common.close = CloseDevice;
   getFunction = GetFunction;
   getCapabilities = GetCapabilities;
+
+  initalized_ = Init();
 }
 
 bool GrallocImpl::Init() {
   buf_mgr_ = BufferManager::GetInstance();
-  return true;
+  return buf_mgr_ != nullptr;
 }
 
 GrallocImpl::~GrallocImpl() {
 }
 
-int GrallocImpl::CloseDevice(hw_device_t *device) {
-  GrallocImpl *impl = reinterpret_cast<GrallocImpl *>(device);
-  delete impl;
-
+int GrallocImpl::CloseDevice(hw_device_t *device __unused) {
+  // No-op since the gralloc device is a singleton
   return 0;
 }
 

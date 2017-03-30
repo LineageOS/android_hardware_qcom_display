@@ -223,6 +223,7 @@ unsigned int Allocator::GetSize(const BufferDescriptor &descriptor, unsigned int
       size = alignedw * alignedh * 2;
       break;
     case HAL_PIXEL_FORMAT_RAW10:
+    case HAL_PIXEL_FORMAT_RAW12:
       size = ALIGN(alignedw * alignedh, SIZE_4K);
       break;
     case HAL_PIXEL_FORMAT_RAW8:
@@ -454,7 +455,12 @@ int Allocator::GetImplDefinedFormat(gralloc1_producer_usage_t prod_usage,
     } else if (cons_usage & GRALLOC1_CONSUMER_USAGE_VIDEO_ENCODER) {
       gr_format = HAL_PIXEL_FORMAT_NV12_ENCODEABLE;  // NV12
     } else if (cons_usage & GRALLOC1_CONSUMER_USAGE_CAMERA) {
-      gr_format = HAL_PIXEL_FORMAT_YCrCb_420_SP;  // NV21
+      if (prod_usage & GRALLOC1_PRODUCER_USAGE_CAMERA) {
+        // Assumed ZSL if both producer and consumer camera flags set
+        gr_format = HAL_PIXEL_FORMAT_NV21_ZSL;  // NV21
+      } else {
+        gr_format = HAL_PIXEL_FORMAT_YCrCb_420_SP;  // NV21
+      }
     } else if (prod_usage & GRALLOC1_PRODUCER_USAGE_CAMERA) {
       if (format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
         gr_format = HAL_PIXEL_FORMAT_NV21_ZSL;  // NV21
@@ -478,6 +484,7 @@ int Allocator::GetImplDefinedFormat(gralloc1_producer_usage_t prod_usage,
 bool Allocator::IsUBwcFormat(int format) {
   switch (format) {
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
+    case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
       return true;
     default:
       return false;
@@ -782,6 +789,9 @@ void Allocator::GetAlignedWidthAndHeight(const BufferDescriptor &descriptor, uns
       break;
     case HAL_PIXEL_FORMAT_RAW16:
       aligned_w = ALIGN(width, 16);
+      break;
+    case HAL_PIXEL_FORMAT_RAW12:
+      aligned_w = ALIGN(width * 12 / 8, 8);
       break;
     case HAL_PIXEL_FORMAT_RAW10:
       aligned_w = ALIGN(width * 10 / 8, 8);
