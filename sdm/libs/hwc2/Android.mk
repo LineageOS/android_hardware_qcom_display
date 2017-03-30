@@ -23,8 +23,8 @@ LOCAL_CFLAGS                  := -Wno-missing-field-initializers -Wno-unused-par
 LOCAL_CLANG                   := true
 
 LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware libhardware_legacy \
-                                 libutils libcutils libsync libqdutils libdl \
-                                 libpowermanager libsdmutils libc++ liblog
+                                 libutils libcutils libsync libqdutils libqdMetaData libdl \
+                                 libpowermanager libsdmutils libc++ liblog libdrmutils
 
 ifneq ($(TARGET_USES_GRALLOC1), true)
     LOCAL_SHARED_LIBRARIES += libmemalloc
