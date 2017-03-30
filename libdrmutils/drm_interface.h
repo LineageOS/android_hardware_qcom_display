@@ -92,6 +92,12 @@ enum struct DRMOps {
    */
   PLANE_SET_V_DECIMATION,
   /*
+   * Op: Sets source config flags
+   * Arg: uint32_t - Plane ID
+   *      uint32_t - flags to enable or disable a specific op. E.g. deinterlacing
+   */
+  PLANE_SET_SRC_CONFIG,
+  /*
    * Op: Sets frame buffer ID for plane. Set together with CRTC.
    * Arg: uint32_t - Plane ID
    *      uint32_t - Framebuffer ID
@@ -167,6 +173,10 @@ enum struct DRMBlendType {
   OPAQUE = 1,
   PREMULTIPLIED = 2,
   COVERAGE = 3,
+};
+
+enum struct DRMSrcConfig {
+  DEINTERLACE = 0,
 };
 
 /* Display type to identify a suitable connector */
