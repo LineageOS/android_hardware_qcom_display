@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -35,6 +35,7 @@ typedef enum {
     ADRENO_PIXELFORMAT_B8G8R8A8_SRGB = 91,
     ADRENO_PIXELFORMAT_B8G8R8X8_SRGB = 93,
     ADRENO_PIXELFORMAT_NV12          = 103,
+    ADRENO_PIXELFORMAT_P010          = 104,
     ADRENO_PIXELFORMAT_YUY2          = 107,
     ADRENO_PIXELFORMAT_B4G4R4A4      = 115,
     ADRENO_PIXELFORMAT_NV12_EXT      = 506,  // NV12 with non-std alignment and offsets
@@ -54,5 +55,5 @@ typedef enum {
     ADRENO_PIXELFORMAT_NV21          = 619,
     ADRENO_PIXELFORMAT_Y8U8V8A8      = 620,  // YUV 4:4:4 packed (1 plane)
     ADRENO_PIXELFORMAT_Y8            = 625,  // Single 8-bit luma only channel YUV format
-    ADRENO_PIXELFORMAT_TP10          = 648,
+    ADRENO_PIXELFORMAT_TP10          = 654,  // YUV 4:2:0 planar 10 bits/comp (2 planes)
 } ADRENOPIXELFORMAT;
