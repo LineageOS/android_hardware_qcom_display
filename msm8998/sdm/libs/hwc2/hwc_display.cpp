@@ -189,6 +189,8 @@ void HWCColorMode::PopulateColorModes() {
       PopulateTransform(HAL_COLOR_MODE_ADOBE_RGB, mode_string);
     } else if (mode_string.find("hal_dci_p3") != std::string::npos) {
       PopulateTransform(HAL_COLOR_MODE_DCI_P3, mode_string);
+    }  else if (mode_string.find("hal_display_p3") != std::string::npos) {
+      PopulateTransform(HAL_COLOR_MODE_DISPLAY_P3, mode_string);
     }
   }
 }
