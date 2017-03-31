@@ -71,6 +71,8 @@ int setMetaData(private_handle_t *handle, DispParamType paramType,
     // If parameter is NULL reset the specific MetaData Key
     if (!param) {
        data->operation &= ~paramType;
+       // param unset
+       return 0;
     }
 
     data->operation |= paramType;
