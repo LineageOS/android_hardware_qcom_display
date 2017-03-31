@@ -35,6 +35,8 @@
 #include <utils/formats.h>
 #include <utils/rect.h>
 #include <utils/debug.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <sync/sync.h>
 #include <cutils/properties.h>
 #include <qd_utils.h>
