@@ -8,14 +8,13 @@ LOCAL_MODULE_RELATIVE_PATH    := hw
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes)
 
-LOCAL_CFLAGS                  := -Wno-missing-field-initializers -Wno-unused-parameter \
-                                 -std=c++11 -fcolor-diagnostics\
-                                 -DLOG_TAG=\"SDM\" $(common_flags)
+LOCAL_CFLAGS                  := $(common_flags) -Wno-missing-field-initializers -Wno-unused-parameter \
+                                 -std=c++11 -fcolor-diagnostics -Wno-sign-conversion -DLOG_TAG=\"SDM\"
 LOCAL_CLANG                   := true
 
 LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware libhardware_legacy \
                                  libutils libcutils libsync libmemalloc libqdutils libdl \
-                                 libpowermanager libsdmutils libgpu_tonemapper  libc++ liblog
+                                 libpowermanager libsdmutils libgpu_tonemapper  libc++ liblog libui
 
 LOCAL_SRC_FILES               := hwc_session.cpp \
                                  hwc_display.cpp \

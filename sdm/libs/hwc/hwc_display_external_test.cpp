@@ -29,6 +29,8 @@
 
 #include <cutils/properties.h>
 #include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <utils/constants.h>
 #include <utils/debug.h>
 #include <utils/formats.h>
