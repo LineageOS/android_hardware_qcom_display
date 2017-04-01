@@ -375,11 +375,6 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
     HWRotatorSession *hw_rotator_session = &hw_layers->config[i].hw_rotator_session;
     bool needs_rotation = false;
 
-    // TODO(user): Add support for solid fill
-    if (layer.flags.solid_fill) {
-      continue;
-    }
-
     for (uint32_t count = 0; count < 2; count++) {
       HWPipeInfo *pipe_info = (count == 0) ? left_pipe : right_pipe;
       HWRotateInfo *hw_rotate_info = &hw_rotator_session->hw_rotate_info[count];
@@ -389,16 +384,8 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
         needs_rotation = true;
       }
 
-      if (pipe_info->valid) {
+      if (pipe_info->valid && input_buffer->fb_id) {
         uint32_t pipe_id = pipe_info->pipe_id;
-        if (input_buffer->fb_id == 0) {
-          // We set these to 0 to clear any previous cycle's state from another buffer.
-          // Unfortunately this layer will be skipped from validation because it's dimensions are
-          // tied to fb_id which is not available yet.
-          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_FB_ID, pipe_id, 0);
-          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_CRTC, pipe_id, 0);
-          continue;
-        }
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ALPHA, pipe_id, layer.plane_alpha);
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ZORDER, pipe_id, pipe_info->z_order);
         DRMBlendType blending = {};

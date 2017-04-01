@@ -449,6 +449,7 @@ int HWCDisplay::PrepareLayerParams(hwc_layer_1_t *hwc_layer, Layer* layer) {
     layer_buffer.height = UINT32(aligned_height);
     layer_buffer.unaligned_width = UINT32(unaligned_width);
     layer_buffer.unaligned_height = UINT32(unaligned_height);
+    layer_buffer.fb_id = pvt_handle->fb_id;
 
     if (SetMetaData(pvt_handle, layer) != kErrorNone) {
       return -EINVAL;
