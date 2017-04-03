@@ -369,11 +369,13 @@ static int32_t GetDisplayType(hwc2_device_t *device, hwc2_display_t display, int
 }
 
 static int32_t GetDozeSupport(hwc2_device_t *device, hwc2_display_t display, int32_t *out_support) {
-  // TODO(user): Check if it is an HDMI as primary display and disable support for it
   if (display == HWC_DISPLAY_PRIMARY) {
     *out_support = 1;
   } else {
+    // TODO(user): Port over connect_display_ from HWC1
+    // Return no error for connected displays
     *out_support = 0;
+    return HWC2_ERROR_BAD_DISPLAY;
   }
   return HWC2_ERROR_NONE;
 }

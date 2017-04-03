@@ -573,6 +573,10 @@ HWC2::Error HWCDisplay::GetDisplayAttribute(hwc2_config_t config, HWC2::Attribut
     return HWC2::Error::BadDisplay;
   }
 
+  if (config != 0) {  // We only use config[0] - see TODO above
+      return HWC2::Error::BadConfig;
+  }
+
   switch (attribute) {
     case HWC2::Attribute::VsyncPeriod:
       *out_value = INT32(variable_config.vsync_period_ns);
@@ -591,6 +595,7 @@ HWC2::Error HWCDisplay::GetDisplayAttribute(hwc2_config_t config, HWC2::Attribut
       break;
     default:
       DLOGW("Spurious attribute type = %s", to_string(attribute).c_str());
+      *out_value = -1;
       return HWC2::Error::BadConfig;
   }
 
@@ -668,6 +673,9 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, int32_t acquire_
 }
 
 HWC2::Error HWCDisplay::SetActiveConfig(hwc2_config_t config) {
+  if (config != 0) {
+    return HWC2::Error::BadConfig;
+  }
   // We have only one config right now - do nothing
   return HWC2::Error::None;
 }
