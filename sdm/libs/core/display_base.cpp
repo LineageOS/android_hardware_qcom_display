@@ -121,17 +121,18 @@ CleanupOnError:
 }
 
 DisplayError DisplayBase::Deinit() {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  {  // Scope for lock
+    lock_guard<recursive_mutex> obj(recursive_mutex_);
+    color_modes_.clear();
+    color_mode_map_.clear();
 
-  color_modes_.clear();
-  color_mode_map_.clear();
+    if (color_mgr_) {
+      delete color_mgr_;
+      color_mgr_ = NULL;
+    }
 
-  if (color_mgr_) {
-    delete color_mgr_;
-    color_mgr_ = NULL;
+    comp_manager_->UnregisterDisplay(display_comp_ctx_);
   }
-
-  comp_manager_->UnregisterDisplay(display_comp_ctx_);
   HWEventsInterface::Destroy(hw_events_intf_);
   HWInterface::Destroy(hw_intf_);
 
