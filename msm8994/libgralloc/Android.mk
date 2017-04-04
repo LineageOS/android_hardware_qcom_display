@@ -36,7 +36,7 @@ LOCAL_COPY_HEADERS            := gralloc_priv.h gr.h
 LOCAL_STATIC_LIBRARIES        := libgralloc1-adapter
 LOCAL_SHARED_LIBRARIES        += libsync
 
-ifeq ($(TARGET_USES_GRALLOC1), true)
+ifeq ($(TARGET_USES_GRALLOC1_ADAPTER), true)
 LOCAL_CFLAGS += -DADVERTISE_GRALLOC1
 endif
 
