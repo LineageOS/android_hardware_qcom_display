@@ -31,7 +31,7 @@
 #include <string>
 #include <utility>
 #include <vector>
-
+#include <sys/stat.h>
 #include "hwc_buffer_allocator.h"
 #include "hwc_callbacks.h"
 #include "hwc_layers.h"

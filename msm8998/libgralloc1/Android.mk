@@ -8,6 +8,7 @@ LOCAL_MODULE_RELATIVE_PATH    := hw
 LOCAL_PROPRIETARY_MODULE      := true
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes) \
+                                 $(kernel_includes) \
                                  external/libcxx/include/
 
 LOCAL_SHARED_LIBRARIES        := $(common_libs) libqdMetaData libsync libqdutils
@@ -15,7 +16,6 @@ ifneq ($(TARGET_IS_HEADLESS), true)
 LOCAL_SHARED_LIBRARIES        += libdrmutils
 endif
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdgralloc\" -Wall -std=c++11 -Werror -Wno-sign-conversion
-LOCAL_CFLAGS                  += -isystem  $(kernel_includes)
 LOCAL_CLANG                   := true
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps) $(kernel_deps)
 LOCAL_SRC_FILES               := gr_utils.cpp \
