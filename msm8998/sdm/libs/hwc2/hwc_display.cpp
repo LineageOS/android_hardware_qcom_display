@@ -154,7 +154,7 @@ HWC2::Error HWCColorMode::HandleColorModeTransform(android_color_mode_t mode,
   current_color_mode_ = mode;
   current_color_transform_ = hint;
   CopyColorTransformMatrix(matrix, color_matrix_);
-  DLOGV_IF(kTagQDCM, "Setting Color Mode = %d Transform Hint = %d Success", mode, hint);
+  DLOGI("Setting Color Mode = %d Transform Hint = %d Success", mode, hint);
 
   return HWC2::Error::None;
 }
@@ -367,7 +367,6 @@ void HWCDisplay::BuildLayerStack() {
       layer_stack_.flags.skip_present = true;
     }
 
-
     if (hwc_layer->GetClientRequestedCompositionType() == HWC2::Composition::Cursor) {
       // Currently we support only one HWCursor & only at top most z-order
       if ((*layer_set_.rbegin())->GetId() == hwc_layer->GetId()) {
@@ -385,13 +384,16 @@ void HWCDisplay::BuildLayerStack() {
     // SDM requires these details even for solid fill
     if (layer->flags.solid_fill) {
       LayerBuffer *layer_buffer = layer->input_buffer;
-      uint32_t display_width = 0, display_height = 0;
-      GetMixerResolution(&display_width, &display_height);
-      layer_buffer->width = display_width;
-      layer_buffer->height = display_height;
+      layer_buffer->width = UINT32(layer->dst_rect.right - layer->dst_rect.left);
+      layer_buffer->height = UINT32(layer->dst_rect.bottom - layer->dst_rect.top);
+      layer_buffer->unaligned_width = layer_buffer->width;
+      layer_buffer->unaligned_height = layer_buffer->height;
       layer_buffer->acquire_fence_fd = -1;
       layer_buffer->release_fence_fd = -1;
-      layer->src_rect = layer->dst_rect;
+      layer->src_rect.left = 0;
+      layer->src_rect.top = 0;
+      layer->src_rect.right = layer_buffer->width;
+      layer->src_rect.bottom = layer_buffer->height;
     }
 
     if (layer->frame_rate > metadata_refresh_rate_) {
@@ -785,11 +787,10 @@ HWC2::Error HWCDisplay::AcceptDisplayChanges() {
   for (const auto& change : layer_changes_) {
     auto hwc_layer = layer_map_[change.first];
     auto composition = change.second;
-
-    if (hwc_layer == nullptr) {
-      DLOGW("Null layer: %" PRIu64, change.first);
-    } else {
+    if (hwc_layer != nullptr) {
       hwc_layer->UpdateClientCompositionType(composition);
+    } else {
+      DLOGW("Invalid layer: %" PRIu64, change.first);
     }
   }
   return HWC2::Error::None;
@@ -1327,6 +1328,8 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
   client_target_layer->input_buffer->format = GetSDMFormat(format, flags);
   client_target_layer->input_buffer->width = UINT32(aligned_width);
   client_target_layer->input_buffer->height = UINT32(aligned_height);
+  client_target_layer->input_buffer->unaligned_width = x_pixels;
+  client_target_layer->input_buffer->unaligned_height = y_pixels;
   client_target_layer->plane_alpha = 255;
 
   DLOGI("New framebuffer resolution (%dx%d)", fb_config.x_pixels, fb_config.y_pixels);
@@ -1481,6 +1484,8 @@ void HWCDisplay::SolidFillPrepare() {
     LayerBuffer *layer_buffer = solid_fill_layer_->input_buffer;
     layer_buffer->width = primary_width;
     layer_buffer->height = primary_height;
+    layer_buffer->unaligned_width = primary_width;
+    layer_buffer->unaligned_height = primary_height;
     layer_buffer->acquire_fence_fd = -1;
     layer_buffer->release_fence_fd = -1;
 

@@ -248,7 +248,9 @@ struct private_handle_t : public native_handle {
             numFds = sNumFds;
         }
         ~private_handle_t() {
+            base_metadata = 0;
             magic = 0;
+            fd_metadata = 0;
         }
 
         bool usesPhysicallyContiguousMemory() {
@@ -261,7 +263,7 @@ struct private_handle_t : public native_handle {
                 h->numInts != sNumInts() || h->numFds != sNumFds ||
                 hnd->magic != sMagic)
             {
-                ALOGD("Invalid gralloc handle (at %p): "
+                ALOGE("Invalid gralloc handle (at %p): "
                       "ver(%d/%zu) ints(%d/%d) fds(%d/%d)"
                       "magic(%c%c%c%c/%c%c%c%c)",
                       h,

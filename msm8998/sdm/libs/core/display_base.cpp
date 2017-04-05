@@ -41,11 +41,10 @@ namespace sdm {
 // TODO(user): Have a single structure handle carries all the interface pointers and variables.
 DisplayBase::DisplayBase(DisplayType display_type, DisplayEventHandler *event_handler,
                          HWDeviceType hw_device_type, BufferSyncHandler *buffer_sync_handler,
-                         CompManager *comp_manager, RotatorInterface *rotator_intf,
-                         HWInfoInterface *hw_info_intf)
+                         CompManager *comp_manager, HWInfoInterface *hw_info_intf)
   : display_type_(display_type), event_handler_(event_handler), hw_device_type_(hw_device_type),
     buffer_sync_handler_(buffer_sync_handler), comp_manager_(comp_manager),
-    rotator_intf_(rotator_intf), hw_info_intf_(hw_info_intf) {
+    hw_info_intf_(hw_info_intf) {
 }
 
 DisplayError DisplayBase::Init() {
@@ -59,10 +58,16 @@ DisplayError DisplayBase::Init() {
   hw_intf_->GetDisplayAttributes(active_index, &display_attributes_);
   fb_config_ = display_attributes_;
 
-  error = hw_intf_->GetMixerAttributes(&mixer_attributes_);
+  error = Debug::GetMixerResolution(&mixer_attributes_.width, &mixer_attributes_.height);
   if (error != kErrorNone) {
-    return error;
+    error = hw_intf_->GetMixerAttributes(&mixer_attributes_);
+    if (error != kErrorNone) {
+      return error;
+    }
   }
+
+  req_mixer_width_ = mixer_attributes_.width;
+  req_mixer_height_ = mixer_attributes_.height;
 
   // Override x_pixels and y_pixels of frame buffer with mixer width and height
   fb_config_.x_pixels = mixer_attributes_.width;
@@ -82,13 +87,6 @@ DisplayError DisplayBase::Init() {
                                          mixer_attributes_, fb_config_, &display_comp_ctx_);
   if (error != kErrorNone) {
     goto CleanupOnError;
-  }
-
-  if (rotator_intf_) {
-    error = rotator_intf_->RegisterDisplay(display_type_, &display_rotator_ctx_);
-    if (error != kErrorNone) {
-      goto CleanupOnError;
-    }
   }
 
   if (hw_info_intf_) {
@@ -120,9 +118,6 @@ CleanupOnError:
 
 DisplayError DisplayBase::Deinit() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-  if (rotator_intf_) {
-    rotator_intf_->UnregisterDisplay(display_rotator_ctx_);
-  }
 
   if (color_mgr_) {
     delete color_mgr_;
@@ -130,34 +125,45 @@ DisplayError DisplayBase::Deinit() {
   }
 
   comp_manager_->UnregisterDisplay(display_comp_ctx_);
-
   HWEventsInterface::Destroy(hw_events_intf_);
+  HWInterface::Destroy(hw_intf_);
 
   return kErrorNone;
 }
 
-DisplayError DisplayBase::ValidateGPUTarget(LayerStack *layer_stack) {
-  uint32_t i = 0;
-  std::vector<Layer *>layers = layer_stack->layers;
+DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
+  std::vector<Layer *> &layers = layer_stack->layers;
+  HWLayersInfo &hw_layers_info = hw_layers_.info;
 
-  // TODO(user): Remove this check once we have query display attributes on virtual display
-  if (display_type_ == kVirtual) {
-    return kErrorNone;
-  }
-  uint32_t layer_count = UINT32(layers.size());
-  while ((i < layer_count) && (layers.at(i)->composition != kCompositionGPUTarget)) {
-    i++;
+  hw_layers_info.stack = layer_stack;
+
+  for (auto &layer : layers) {
+    if (layer->composition == kCompositionGPUTarget) {
+      hw_layers_info.gpu_target_index = hw_layers_info.app_layer_count;
+      break;
+    }
+    hw_layers_info.app_layer_count++;
   }
 
-  if (i >= layer_count) {
-    DLOGE("Either layer count is zero or GPU target layer is not present");
+  DLOGV_IF(kTagNone, "LayerStack layer_count: %d, app_layer_count: %d, gpu_target_index: %d, "
+           "display type: %d", layers.size(), hw_layers_info.app_layer_count,
+           hw_layers_info.gpu_target_index, display_type_);
+
+  if (!hw_layers_info.app_layer_count) {
+    DLOGE("Layer count is zero");
     return kErrorParameters;
   }
 
-  uint32_t gpu_target_index = i;
+  if (hw_layers_info.gpu_target_index) {
+    return ValidateGPUTargetParams();
+  }
 
-  // Check GPU target layer
-  Layer *gpu_target_layer = layers.at(gpu_target_index);
+  return kErrorNone;
+}
+
+DisplayError DisplayBase::ValidateGPUTargetParams() {
+  HWLayersInfo &hw_layers_info = hw_layers_.info;
+  Layer *gpu_target_layer = hw_layers_info.stack->layers.at(hw_layers_info.gpu_target_index);
 
   if (!IsValid(gpu_target_layer->src_rect)) {
     DLOGE("Invalid src rect for GPU target layer");
@@ -177,16 +183,16 @@ DisplayError DisplayBase::ValidateGPUTarget(LayerStack *layer_stack) {
   LayerRect dst_domain = (LayerRect){0.0f, 0.0f, layer_mixer_width, layer_mixer_height};
   LayerRect out_rect = gpu_target_layer->dst_rect;
 
-  ScaleRect(src_domain, dst_domain, gpu_target_layer->dst_rect, &out_rect);
+  MapRect(src_domain, dst_domain, gpu_target_layer->dst_rect, &out_rect);
 
   auto gpu_target_layer_dst_xpixels = out_rect.right - out_rect.left;
   auto gpu_target_layer_dst_ypixels = out_rect.bottom - out_rect.top;
 
   if (gpu_target_layer_dst_xpixels > mixer_attributes_.width ||
     gpu_target_layer_dst_ypixels > mixer_attributes_.height) {
-    DLOGE("GPU target layer dst rect is not with in limits gpu wxh %fx%f mixer wxh %dx%d",
-    gpu_target_layer_dst_xpixels, gpu_target_layer_dst_ypixels, mixer_attributes_.width,
-    mixer_attributes_.height);
+    DLOGE("GPU target layer dst rect is not with in limits gpu wxh %fx%f, mixer wxh %dx%d",
+                  gpu_target_layer_dst_xpixels, gpu_target_layer_dst_ypixels,
+                  mixer_attributes_.width, mixer_attributes_.height);
     return kErrorParameters;
   }
 
@@ -205,7 +211,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
     return kErrorParameters;
   }
 
-  error = ValidateGPUTarget(layer_stack);
+  error = BuildLayerStackStats(layer_stack);
   if (error != kErrorNone) {
     return error;
   }
@@ -219,11 +225,6 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
     disable_pu_one_frame_ = false;
   }
 
-  // Clean hw layers for reuse.
-  hw_layers_ = HWLayers();
-  hw_layers_.info.stack = layer_stack;
-  hw_layers_.output_compression = 1.0f;
-
   comp_manager_->PrePrepare(display_comp_ctx_, &hw_layers_);
   while (true) {
     error = comp_manager_->Prepare(display_comp_ctx_, &hw_layers_);
@@ -231,29 +232,15 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
       break;
     }
 
-    if (IsRotationRequired(&hw_layers_)) {
-      if (!rotator_intf_) {
-        continue;
-      }
-      error = rotator_intf_->Prepare(display_rotator_ctx_, &hw_layers_);
-    } else {
-      // Release all the previous rotator sessions.
-      if (rotator_intf_) {
-        error = rotator_intf_->Purge(display_rotator_ctx_);
-      }
-    }
-
+    error = hw_intf_->Validate(&hw_layers_);
     if (error == kErrorNone) {
-      error = hw_intf_->Validate(&hw_layers_);
-      if (error == kErrorNone) {
-        // Strategy is successful now, wait for Commit().
-        pending_commit_ = true;
-        break;
-      }
-      if (error == kErrorShutDown) {
-        comp_manager_->PostPrepare(display_comp_ctx_, &hw_layers_);
-        return error;
-      }
+      // Strategy is successful now, wait for Commit().
+      pending_commit_ = true;
+      break;
+    }
+    if (error == kErrorShutDown) {
+      comp_manager_->PostPrepare(display_comp_ctx_, &hw_layers_);
+      return error;
     }
   }
 
@@ -295,8 +282,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     }
   }
 
-  if (rotator_intf_ && IsRotationRequired(&hw_layers_)) {
-    error = rotator_intf_->Commit(display_rotator_ctx_, &hw_layers_);
+  if (comp_manager_->Commit(display_comp_ctx_, &hw_layers_)) {
     if (error != kErrorNone) {
       return error;
     }
@@ -313,13 +299,6 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
   error = hw_intf_->Commit(&hw_layers_);
   if (error != kErrorNone) {
     return error;
-  }
-
-  if (rotator_intf_ && IsRotationRequired(&hw_layers_)) {
-    error = rotator_intf_->PostCommit(display_rotator_ctx_, &hw_layers_);
-    if (error != kErrorNone) {
-      return error;
-    }
   }
 
   if (partial_update_control_) {
@@ -345,17 +324,7 @@ DisplayError DisplayBase::Flush() {
   hw_layers_.info.count = 0;
   error = hw_intf_->Flush();
   if (error == kErrorNone) {
-    // Release all the rotator sessions.
-    if (rotator_intf_) {
-      error = rotator_intf_->Purge(display_rotator_ctx_);
-      if (error != kErrorNone) {
-        DLOGE("Rotator purge failed for display %d", display_type_);
-        return error;
-      }
-    }
-
     comp_manager_->Purge(display_comp_ctx_);
-
     pending_commit_ = false;
   } else {
     DLOGW("Unable to flush display = %d", display_type_);
@@ -388,6 +357,13 @@ DisplayError DisplayBase::GetConfig(uint32_t index, DisplayConfigVariableInfo *v
   }
 
   return kErrorNotSupported;
+}
+
+DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *variable_info) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  variable_info->is_cmdmode = (hw_panel_info_.mode == kModeCommand);
+
+  return kErrorNone;
 }
 
 DisplayError DisplayBase::GetActiveConfig(uint32_t *index) {
@@ -423,23 +399,23 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state) {
     hw_layers_.info.count = 0;
     error = hw_intf_->Flush();
     if (error == kErrorNone) {
-      // Release all the rotator sessions.
-      if (rotator_intf_) {
-        error = rotator_intf_->Purge(display_rotator_ctx_);
-        if (error != kErrorNone) {
-          DLOGE("Rotator purge failed for display %d", display_type_);
-          return error;
-        }
-      }
-
       comp_manager_->Purge(display_comp_ctx_);
-
       error = hw_intf_->PowerOff();
     }
     break;
 
   case kStateOn:
     error = hw_intf_->PowerOn();
+    if (error != kErrorNone) {
+      return error;
+    }
+
+    error = comp_manager_->ReconfigureDisplay(display_comp_ctx_, display_attributes_,
+                                              hw_panel_info_, mixer_attributes_, fb_config_);
+    if (error != kErrorNone) {
+      return error;
+    }
+
     active = true;
     break;
 
@@ -542,14 +518,17 @@ void DisplayBase::AppendDump(char *buffer, uint32_t length) {
   DumpImpl::AppendString(buffer, length, "\n");
 
   HWLayersInfo &layer_info = hw_layers_.info;
-  LayerRect &l_roi = layer_info.left_partial_update;
-  LayerRect &r_roi = layer_info.right_partial_update;
-  DumpImpl::AppendString(buffer, length, "\nROI(L T R B) : LEFT(%d %d %d %d)", INT(l_roi.left),
-                         INT(l_roi.top), INT(l_roi.right), INT(l_roi.bottom));
 
-  if (IsValid(r_roi)) {
-    DumpImpl::AppendString(buffer, length, ", RIGHT(%d %d %d %d)", INT(r_roi.left),
-                           INT(r_roi.top), INT(r_roi.right), INT(r_roi.bottom));
+  for (uint32_t i = 0; i < layer_info.left_frame_roi.size(); i++) {
+    LayerRect &l_roi = layer_info.left_frame_roi.at(i);
+    LayerRect &r_roi = layer_info.right_frame_roi.at(i);
+
+    DumpImpl::AppendString(buffer, length, "\nROI%d(L T R B) : LEFT(%d %d %d %d)", i,
+                           INT(l_roi.left), INT(l_roi.top), INT(l_roi.right), INT(l_roi.bottom));
+    if (IsValid(r_roi)) {
+      DumpImpl::AppendString(buffer, length, ", RIGHT(%d %d %d %d)", INT(r_roi.left),
+                             INT(r_roi.top), INT(r_roi.right), INT(r_roi.bottom));
+    }
   }
 
   const char *header  = "\n| Idx |  Comp Type  |  Split | WB |  Pipe |    W x H    |          Format          |  Src Rect (L T R B) |  Dst Rect (L T R B) |  Z |    Flags   | Deci(HxV) | CS |";  //NOLINT
@@ -636,21 +615,6 @@ void DisplayBase::AppendDump(char *buffer, uint32_t length) {
 
     DumpImpl::AppendString(buffer, length, newline);
   }
-}
-
-bool DisplayBase::IsRotationRequired(HWLayers *hw_layers) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
-  HWLayersInfo &layer_info = hw_layers->info;
-
-  for (uint32_t i = 0; i < layer_info.count; i++) {
-    HWRotatorSession *hw_rotator_session = &hw_layers->config[i].hw_rotator_session;
-
-    if (hw_rotator_session->hw_block_count) {
-      return true;
-    }
-  }
-
-  return false;
 }
 
 const char * DisplayBase::GetName(const LayerComposition &composition) {
@@ -757,7 +721,7 @@ DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
 
   SDEDisplayMode *sde_display_mode = it->second;
 
-  DLOGV_IF(kTagQDCM, "Color Mode Name = %s corresponding mode_id = %d", sde_display_mode->name,
+  DLOGD("Color Mode Name = %s corresponding mode_id = %d", sde_display_mode->name,
            sde_display_mode->id);
   DisplayError error = kErrorNone;
   error = color_mgr_->ColorMgrSetMode(sde_display_mode->id);
@@ -887,7 +851,16 @@ DisplayError DisplayBase::ReconfigureDisplay() {
 
 DisplayError DisplayBase::SetMixerResolution(uint32_t width, uint32_t height) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-  return ReconfigureMixer(width, height);
+
+  DisplayError error = ReconfigureMixer(width, height);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  req_mixer_width_ = width;
+  req_mixer_height_ = height;
+
+  return kErrorNone;
 }
 
 DisplayError DisplayBase::GetMixerResolution(uint32_t *width, uint32_t *height) {
@@ -906,6 +879,10 @@ DisplayError DisplayBase::ReconfigureMixer(uint32_t width, uint32_t height) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
 
+  if (!width || !height) {
+    return kErrorParameters;
+  }
+
   HWMixerAttributes mixer_attributes;
   mixer_attributes.width = width;
   mixer_attributes.height = height;
@@ -916,6 +893,24 @@ DisplayError DisplayBase::ReconfigureMixer(uint32_t width, uint32_t height) {
   }
 
   return ReconfigureDisplay();
+}
+
+bool DisplayBase::NeedsDownScale(const LayerRect &src_rect, const LayerRect &dst_rect,
+                                 bool needs_rotation) {
+  float src_width = FLOAT(src_rect.right - src_rect.left);
+  float src_height = FLOAT(src_rect.bottom - src_rect.top);
+  float dst_width = FLOAT(dst_rect.right - dst_rect.left);
+  float dst_height = FLOAT(dst_rect.bottom - dst_rect.top);
+
+  if (needs_rotation) {
+    std::swap(src_width, src_height);
+  }
+
+  if ((src_width > dst_width) || (src_height > dst_height)) {
+    return true;
+  }
+
+  return false;
 }
 
 bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *new_mixer_width,
@@ -929,19 +924,18 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
   LayerRect fb_rect = (LayerRect) {0.0f, 0.0f, FLOAT(fb_width), FLOAT(fb_height)};
   uint32_t mixer_width = mixer_attributes_.width;
   uint32_t mixer_height = mixer_attributes_.height;
+  uint32_t display_width = display_attributes_.x_pixels;
+  uint32_t display_height = display_attributes_.y_pixels;
 
   RectOrientation fb_orientation = GetOrientation(fb_rect);
   uint32_t max_layer_area = 0;
   uint32_t max_area_layer_index = 0;
   std::vector<Layer *> layers = layer_stack->layers;
+  uint32_t align_x = display_attributes_.is_device_split ? 4 : 2;
+  uint32_t align_y = 2;
 
   for (uint32_t i = 0; i < layer_count; i++) {
     Layer *layer = layers.at(i);
-    LayerBuffer *layer_buffer = layer->input_buffer;
-
-    if (!layer_buffer->flags.video) {
-      continue;
-    }
 
     uint32_t layer_width = UINT32(layer->src_rect.right - layer->src_rect.left);
     uint32_t layer_height = UINT32(layer->src_rect.bottom - layer->src_rect.top);
@@ -953,14 +947,17 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
     }
   }
 
-  if (max_layer_area > fb_area) {
+  // TODO(user): Mark layer which needs downscaling on GPU fallback as priority layer and use MDP
+  // for composition to avoid quality mismatch between GPU and MDP switch(idle timeout usecase).
+  if (max_layer_area >= fb_area) {
     Layer *layer = layers.at(max_area_layer_index);
+    bool needs_rotation = (layer->transform.rotation == 90.0f);
 
     uint32_t layer_width = UINT32(layer->src_rect.right - layer->src_rect.left);
     uint32_t layer_height = UINT32(layer->src_rect.bottom - layer->src_rect.top);
-    LayerRect layer_rect = (LayerRect){0.0f, 0.0f, FLOAT(layer_width), FLOAT(layer_height)};
+    LayerRect layer_dst_rect = {};
 
-    RectOrientation layer_orientation = GetOrientation(layer_rect);
+    RectOrientation layer_orientation = GetOrientation(layer->src_rect);
     if (layer_orientation != kOrientationUnknown &&
         fb_orientation != kOrientationUnknown) {
       if (layer_orientation != fb_orientation) {
@@ -969,16 +966,23 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
     }
 
     // Align the width and height according to fb's aspect ratio
-    layer_width = UINT32((FLOAT(fb_width) / FLOAT(fb_height)) * layer_height);
+    *new_mixer_width = FloorToMultipleOf(UINT32((FLOAT(fb_width) / FLOAT(fb_height)) *
+                                         layer_height), align_x);
+    *new_mixer_height = FloorToMultipleOf(layer_height, align_y);
 
-    *new_mixer_width = layer_width;
-    *new_mixer_height = layer_height;
+    LayerRect dst_domain = {0.0f, 0.0f, FLOAT(*new_mixer_width), FLOAT(*new_mixer_height)};
+
+    MapRect(fb_rect, dst_domain, layer->dst_rect, &layer_dst_rect);
+    if (NeedsDownScale(layer->src_rect, layer_dst_rect, needs_rotation)) {
+      *new_mixer_width = display_width;
+      *new_mixer_height = display_height;
+    }
 
     return true;
   } else {
-    if (fb_width != mixer_width || fb_height != mixer_height) {
-      *new_mixer_width = fb_width;
-      *new_mixer_height = fb_height;
+    if (req_mixer_width_ != mixer_width || req_mixer_height_ != mixer_height) {
+      *new_mixer_width = req_mixer_width_;
+      *new_mixer_height = req_mixer_height_;
 
       return true;
     }
@@ -1044,6 +1048,30 @@ DisplayError DisplayBase::SetDetailEnhancerData(const DisplayDetailEnhancerData 
   DisablePartialUpdateOneFrame();
 
   return kErrorNone;
+}
+
+DisplayError DisplayBase::GetDisplayPort(DisplayPort *port) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+
+  if (!port) {
+    return kErrorParameters;
+  }
+
+  *port = hw_panel_info_.port;
+
+  return kErrorNone;
+}
+
+bool DisplayBase::IsPrimaryDisplay() {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+
+  return hw_panel_info_.is_primary_panel;
+}
+
+DisplayError DisplayBase::SetCompositionState(LayerComposition composition_type, bool enable) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+
+  return comp_manager_->SetCompositionState(display_comp_ctx_, composition_type, enable);
 }
 
 }  // namespace sdm
