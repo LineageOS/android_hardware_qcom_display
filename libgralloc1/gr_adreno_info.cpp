@@ -182,6 +182,12 @@ ADRENOPIXELFORMAT AdrenoMemInfo::GetGpuPixelFormat(int hal_format) {
     case HAL_PIXEL_FORMAT_YCbCr_420_P010:
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
       return ADRENO_PIXELFORMAT_P010;
+    case HAL_PIXEL_FORMAT_RGBA_1010102:
+       return ADRENO_PIXELFORMAT_R10G10B10A2_UNORM;
+    case HAL_PIXEL_FORMAT_RGBX_1010102:
+       return ADRENO_PIXELFORMAT_R10G10B10X2_UNORM;
+    case HAL_PIXEL_FORMAT_ABGR_2101010:
+       return ADRENO_PIXELFORMAT_A2B10G10R10_UNORM;
     default:
       ALOGE("%s: No map for format: 0x%x", __FUNCTION__, hal_format);
       break;
