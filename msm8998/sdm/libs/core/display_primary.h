@@ -45,12 +45,13 @@ class DisplayPrimary : public DisplayBase, HWEventHandler {
   virtual DisplayError ControlPartialUpdate(bool enable, uint32_t *pending);
   virtual DisplayError DisablePartialUpdateOneFrame();
   virtual DisplayError SetDisplayState(DisplayState state);
-  virtual void SetIdleTimeoutMs(uint32_t timeout_ms);
+  virtual void SetIdleTimeoutMs(uint32_t active_ms);
   virtual DisplayError SetDisplayMode(uint32_t mode);
   virtual DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate, uint32_t *max_refresh_rate);
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate);
   virtual DisplayError SetPanelBrightness(int level);
   virtual DisplayError GetPanelBrightness(int *level);
+  virtual DisplayError CachePanelBrightness(int level);
 
   // Implement the HWEventHandlers
   virtual DisplayError VSync(int64_t timestamp);
@@ -58,13 +59,13 @@ class DisplayPrimary : public DisplayBase, HWEventHandler {
   virtual void IdleTimeout();
   virtual void ThermalEvent(int64_t thermal_level);
   virtual void CECMessage(char *message) { }
+  virtual void IdlePowerCollapse();
 
  private:
   bool NeedsAVREnable();
 
-  uint32_t idle_timeout_ms_ = 0;
   std::vector<HWEvent> event_list_ = { HWEvent::VSYNC, HWEvent::EXIT, HWEvent::IDLE_NOTIFY,
-      HWEvent::SHOW_BLANK_EVENT, HWEvent::THERMAL_LEVEL };
+      HWEvent::SHOW_BLANK_EVENT, HWEvent::THERMAL_LEVEL, HWEvent::IDLE_POWER_COLLAPSE };
   bool avr_prop_disabled_ = false;
   bool switch_to_cmd_ = false;
 };

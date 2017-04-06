@@ -302,10 +302,6 @@ DisplayError HWPrimary::SetRefreshRate(uint32_t refresh_rate) {
     return kErrorNotSupported;
   }
 
-  if (refresh_rate == display_attributes_.fps) {
-    return kErrorNone;
-  }
-
   snprintf(node_path, sizeof(node_path), "%s%d/dynamic_fps", fb_path_, fb_node_index_);
 
   int fd = Sys::open_(node_path, O_WRONLY);
@@ -571,6 +567,12 @@ DisplayError HWPrimary::GetPanelBrightness(int *level) {
   }
   Sys::close_(fd);
 
+  return kErrorNone;
+}
+
+DisplayError HWPrimary::CachePanelBrightness(int level) {
+  bl_level_update_commit = level;
+  bl_update_commit = true;
   return kErrorNone;
 }
 

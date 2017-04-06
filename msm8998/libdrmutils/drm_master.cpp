@@ -73,6 +73,12 @@ int DRMMaster::GetInstance(DRMMaster **master) {
   return 0;
 }
 
+void DRMMaster::DestroyInstance() {
+  lock_guard<mutex> obj(s_lock);
+  delete s_instance;
+  s_instance = nullptr;
+}
+
 int DRMMaster::Init() {
   dev_fd_ = drmOpen("msm_drm", nullptr);
   if (dev_fd_ < 0) {

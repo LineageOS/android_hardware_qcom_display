@@ -33,6 +33,7 @@
 #include <drm_master.h>
 #include <drm_res_mgr.h>
 #include <fcntl.h>
+#include <media/msm_sde_rotator.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -116,6 +117,9 @@ HWInfoDRM::~HWInfoDRM() {
     DRMLibLoader::GetInstance()->FuncDestroyDRMManager()();
     drm_mgr_intf_ = nullptr;
   }
+
+  DRMLibLoader::Destroy();
+  DRMMaster::DestroyInstance();
 }
 
 DisplayError HWInfoDRM::GetDynamicBWLimits(HWResourceInfo *hw_resource) {
@@ -342,12 +346,95 @@ void HWInfoDRM::GetWBInfo(HWResourceInfo *hw_resource) {
   drm_mgr_intf_->UnregisterDisplay(token);
 }
 
-DisplayError HWInfoDRM::GetHWRotatorInfo(HWResourceInfo *hw_resource) {
-  const uint32_t kMaxV4L2Nodes = 64;
-  bool found = false;
+void HWInfoDRM::GetSDMFormat(uint32_t v4l2_format, LayerBufferFormat *sdm_format) {
+  switch (v4l2_format) {
+    case SDE_PIX_FMT_ARGB_8888:         *sdm_format = kFormatARGB8888;                 break;
+    case SDE_PIX_FMT_RGBA_8888:         *sdm_format = kFormatRGBA8888;                 break;
+    case SDE_PIX_FMT_BGRA_8888:         *sdm_format = kFormatBGRA8888;                 break;
+    case SDE_PIX_FMT_RGBX_8888:         *sdm_format = kFormatRGBX8888;                 break;
+    case SDE_PIX_FMT_BGRX_8888:         *sdm_format = kFormatBGRX8888;                 break;
+    case SDE_PIX_FMT_RGBA_5551:         *sdm_format = kFormatRGBA5551;                 break;
+    case SDE_PIX_FMT_RGBA_4444:         *sdm_format = kFormatRGBA4444;                 break;
+    case SDE_PIX_FMT_RGB_888:           *sdm_format = kFormatRGB888;                   break;
+    case SDE_PIX_FMT_BGR_888:           *sdm_format = kFormatBGR888;                   break;
+    case SDE_PIX_FMT_RGB_565:           *sdm_format = kFormatRGB565;                   break;
+    case SDE_PIX_FMT_BGR_565:           *sdm_format = kFormatBGR565;                   break;
+    case SDE_PIX_FMT_Y_CB_CR_H2V2:      *sdm_format = kFormatYCbCr420Planar;           break;
+    case SDE_PIX_FMT_Y_CR_CB_H2V2:      *sdm_format = kFormatYCrCb420Planar;           break;
+    case SDE_PIX_FMT_Y_CR_CB_GH2V2:     *sdm_format = kFormatYCrCb420PlanarStride16;   break;
+    case SDE_PIX_FMT_Y_CBCR_H2V2:       *sdm_format = kFormatYCbCr420SemiPlanar;       break;
+    case SDE_PIX_FMT_Y_CRCB_H2V2:       *sdm_format = kFormatYCrCb420SemiPlanar;       break;
+    case SDE_PIX_FMT_Y_CBCR_H1V2:       *sdm_format = kFormatYCbCr422H1V2SemiPlanar;   break;
+    case SDE_PIX_FMT_Y_CRCB_H1V2:       *sdm_format = kFormatYCrCb422H1V2SemiPlanar;   break;
+    case SDE_PIX_FMT_Y_CBCR_H2V1:       *sdm_format = kFormatYCbCr422H2V1SemiPlanar;   break;
+    case SDE_PIX_FMT_Y_CRCB_H2V1:       *sdm_format = kFormatYCrCb422H2V1SemiPlanar;   break;
+    case SDE_PIX_FMT_YCBYCR_H2V1:       *sdm_format = kFormatYCbCr422H2V1Packed;       break;
+    case SDE_PIX_FMT_Y_CBCR_H2V2_VENUS: *sdm_format = kFormatYCbCr420SemiPlanarVenus;  break;
+    case SDE_PIX_FMT_Y_CRCB_H2V2_VENUS: *sdm_format = kFormatYCrCb420SemiPlanarVenus;  break;
+    case SDE_PIX_FMT_RGBA_8888_UBWC:    *sdm_format = kFormatRGBA8888Ubwc;             break;
+    case SDE_PIX_FMT_RGBX_8888_UBWC:    *sdm_format = kFormatRGBX8888Ubwc;             break;
+    case SDE_PIX_FMT_RGB_565_UBWC:      *sdm_format = kFormatBGR565Ubwc;               break;
+    case SDE_PIX_FMT_Y_CBCR_H2V2_UBWC:  *sdm_format = kFormatYCbCr420SPVenusUbwc;      break;
+    case SDE_PIX_FMT_RGBA_1010102:      *sdm_format = kFormatRGBA1010102;              break;
+    case SDE_PIX_FMT_ARGB_2101010:      *sdm_format = kFormatARGB2101010;              break;
+    case SDE_PIX_FMT_RGBX_1010102:      *sdm_format = kFormatRGBX1010102;              break;
+    case SDE_PIX_FMT_XRGB_2101010:      *sdm_format = kFormatXRGB2101010;              break;
+    case SDE_PIX_FMT_BGRA_1010102:      *sdm_format = kFormatBGRA1010102;              break;
+    case SDE_PIX_FMT_ABGR_2101010:      *sdm_format = kFormatABGR2101010;              break;
+    case SDE_PIX_FMT_BGRX_1010102:      *sdm_format = kFormatBGRX1010102;              break;
+    case SDE_PIX_FMT_XBGR_2101010:      *sdm_format = kFormatXBGR2101010;              break;
+    case SDE_PIX_FMT_RGBA_1010102_UBWC: *sdm_format = kFormatRGBA1010102Ubwc;          break;
+    case SDE_PIX_FMT_RGBX_1010102_UBWC: *sdm_format = kFormatRGBX1010102Ubwc;          break;
+    case SDE_PIX_FMT_Y_CBCR_H2V2_P010:  *sdm_format = kFormatYCbCr420P010;             break;
+    case SDE_PIX_FMT_Y_CBCR_H2V2_TP10_UBWC: *sdm_format = kFormatYCbCr420TP10Ubwc;     break;
+    default: *sdm_format = kFormatInvalid;
+  }
+}
 
-  for (uint32_t i = 0; (i < kMaxV4L2Nodes) && (false == found); i++) {
-    string path = "/sys/class/video4linux/video" + to_string(i) + "/name";
+void HWInfoDRM::GetRotatorFormatsForType(int fd, uint32_t type,
+                                         vector<LayerBufferFormat> *supported_formats) {
+  struct v4l2_fmtdesc fmtdesc = {};
+  fmtdesc.type = type;
+  while (!Sys::ioctl_(fd, static_cast<int>(VIDIOC_ENUM_FMT), &fmtdesc)) {
+    LayerBufferFormat sdm_format = kFormatInvalid;
+    GetSDMFormat(fmtdesc.pixelformat, &sdm_format);
+    if (sdm_format != kFormatInvalid) {
+      supported_formats->push_back(sdm_format);
+    }
+    fmtdesc.index++;
+  }
+}
+
+DisplayError HWInfoDRM::GetRotatorSupportedFormats(uint32_t v4l2_index,
+                                                   HWResourceInfo *hw_resource) {
+  string path = "/dev/video" + to_string(v4l2_index);
+  int fd = Sys::open_(path.c_str(), O_RDONLY);
+  if (fd < 0) {
+    DLOGE("Failed to open %s with error %d", path.c_str(), errno);
+    return kErrorNotSupported;
+  }
+
+  vector<LayerBufferFormat> supported_formats = {};
+  GetRotatorFormatsForType(fd, V4L2_BUF_TYPE_VIDEO_OUTPUT, &supported_formats);
+  hw_resource->supported_formats_map.erase(kHWRotatorInput);
+  hw_resource->supported_formats_map.insert(make_pair(kHWRotatorInput, supported_formats));
+
+  supported_formats = {};
+  GetRotatorFormatsForType(fd, V4L2_BUF_TYPE_VIDEO_CAPTURE, &supported_formats);
+  hw_resource->supported_formats_map.erase(kHWRotatorOutput);
+  hw_resource->supported_formats_map.insert(make_pair(kHWRotatorOutput, supported_formats));
+
+  Sys::close_(fd);
+
+  return kErrorNone;
+}
+
+DisplayError HWInfoDRM::GetHWRotatorInfo(HWResourceInfo *hw_resource) {
+  string v4l2_path = "/sys/class/video4linux/video";
+  const uint32_t kMaxV4L2Nodes = 64;
+
+  for (uint32_t i = 0; i < kMaxV4L2Nodes; i++) {
+    string path = v4l2_path + to_string(i) + "/name";
     Sys::fstream fs(path, fstream::in);
     if (!fs.is_open()) {
       continue;
@@ -359,13 +446,34 @@ DisplayError HWInfoDRM::GetHWRotatorInfo(HWResourceInfo *hw_resource) {
       hw_resource->hw_rot_info.num_rotator++;
       hw_resource->hw_rot_info.type = HWRotatorInfo::ROT_TYPE_V4L2;
       hw_resource->hw_rot_info.has_downscale = true;
+      GetRotatorSupportedFormats(i, hw_resource);
+
+      string caps_path = v4l2_path + to_string(i) + "/device/caps";
+      Sys::fstream caps_fs(caps_path, fstream::in);
+
+      if (caps_fs.is_open()) {
+        string caps;
+        while (Sys::getline_(caps_fs, caps)) {
+          const string downscale_compression = "downscale_compression=";
+          const string min_downscale = "min_downscale=";
+          if (caps.find(downscale_compression) != string::npos) {
+            hw_resource->hw_rot_info.downscale_compression =
+              std::stoi(string(caps, downscale_compression.length()));
+          } else if (caps.find(min_downscale) != string::npos) {
+            hw_resource->hw_rot_info.min_downscale =
+              std::stof(string(caps, min_downscale.length()));
+          }
+        }
+      }
+
       // We support only 1 rotator
-      found = true;
+      break;
     }
   }
 
-  DLOGI("V4L2 Rotator: Count = %d, Downscale = %d", hw_resource->hw_rot_info.num_rotator,
-        hw_resource->hw_rot_info.has_downscale);
+  DLOGI("V4L2 Rotator: Count = %d, Downscale = %d, Min_downscale = %f, Downscale_compression = %d",
+        hw_resource->hw_rot_info.num_rotator, hw_resource->hw_rot_info.has_downscale,
+        hw_resource->hw_rot_info.min_downscale, hw_resource->hw_rot_info.downscale_compression);
 
   return kErrorNone;
 }

@@ -31,7 +31,7 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <sys/stat.h>
+
 #include "hwc_buffer_allocator.h"
 #include "hwc_callbacks.h"
 #include "hwc_layers.h"
@@ -199,7 +199,8 @@ class HWCDisplay : public DisplayEventHandler {
   static const uint32_t kMaxLayerCount = 32;
 
   HWCDisplay(CoreInterface *core_intf, HWCCallbacks *callbacks, DisplayType type, hwc2_display_t id,
-             bool needs_blit, qService::QService *qservice, DisplayClass display_class);
+             bool needs_blit, qService::QService *qservice, DisplayClass display_class,
+             BufferAllocator *buffer_allocator);
 
   // DisplayEventHandler methods
   virtual DisplayError VSync(const DisplayEventVSync &vsync);

@@ -59,8 +59,6 @@ DisplayError DisplayPrimary::Init() {
     return error;
   }
 
-  idle_timeout_ms_ = Debug::GetIdleTimeoutMs();
-
   if (hw_panel_info_.mode == kModeCommand && Debug::IsVideoModeEnabled()) {
     error = hw_intf_->SetDisplayMode(kModeVideo);
     if (error != kErrorNone) {
@@ -91,16 +89,19 @@ DisplayError DisplayPrimary::Prepare(LayerStack *layer_stack) {
   bool needs_hv_flip = hw_panel_info_.panel_orientation.flip_horizontal &&
                           hw_panel_info_.panel_orientation.flip_vertical;
   LayerRect src_domain = {};
+  LayerTransform panel_transform = {};
   DisplayConfigVariableInfo variable_info = {};
 
   if (needs_hv_flip) {
     DisplayBase::GetFrameBufferConfig(&variable_info);
     src_domain.right = variable_info.x_pixels;
     src_domain.bottom = variable_info.y_pixels;
+    panel_transform.flip_horizontal = hw_panel_info_.panel_orientation.flip_horizontal;
+    panel_transform.flip_vertical = hw_panel_info_.panel_orientation.flip_vertical;
 
     for (Layer *layer : layer_stack->layers) {
       // Modify destination based on panel flip
-      TransformHV(src_domain, layer->dst_rect, &layer->dst_rect);
+      TransformHV(src_domain, layer->dst_rect, panel_transform, &layer->dst_rect);
 
       if (layer->flags.solid_fill) {
         continue;
@@ -142,8 +143,6 @@ DisplayError DisplayPrimary::Commit(LayerStack *layer_stack) {
     }
   }
 
-  bool set_idle_timeout = comp_manager_->CanSetIdleTimeout(display_comp_ctx_);
-
   error = DisplayBase::Commit(layer_stack);
   if (error != kErrorNone) {
     return error;
@@ -151,13 +150,12 @@ DisplayError DisplayPrimary::Commit(LayerStack *layer_stack) {
 
   DisplayBase::ReconfigureDisplay();
 
-  if (hw_panel_info_.mode == kModeVideo) {
-    if (set_idle_timeout && !layer_stack->flags.single_buffered_layer_present) {
-      hw_intf_->SetIdleTimeoutMs(idle_timeout_ms_);
-    } else {
-      hw_intf_->SetIdleTimeoutMs(0);
-    }
-  } else if (switch_to_cmd_) {
+  int idle_time_ms = hw_layers_.info.set_idle_time_ms;
+  if (idle_time_ms >= 0) {
+    hw_intf_->SetIdleTimeoutMs(UINT32(idle_time_ms));
+  }
+
+  if (switch_to_cmd_) {
     uint32_t pending;
     switch_to_cmd_ = false;
     ControlPartialUpdate(true /* enable */, &pending);
@@ -182,52 +180,58 @@ DisplayError DisplayPrimary::SetDisplayState(DisplayState state) {
   return kErrorNone;
 }
 
-void DisplayPrimary::SetIdleTimeoutMs(uint32_t timeout_ms) {
+void DisplayPrimary::SetIdleTimeoutMs(uint32_t active_ms) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
-  // Idle fallback feature is supported only for video mode panel.
-  if (hw_panel_info_.mode == kModeVideo) {
-    hw_intf_->SetIdleTimeoutMs(timeout_ms);
+  if (comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, active_ms) == kErrorNone) {
+    hw_intf_->SetIdleTimeoutMs(active_ms);
   }
-  idle_timeout_ms_ = timeout_ms;
 }
 
 DisplayError DisplayPrimary::SetDisplayMode(uint32_t mode) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
-  HWDisplayMode hw_display_mode = static_cast<HWDisplayMode>(mode);
-  uint32_t pending = 0;
 
-  if (!active_) {
-    DLOGW("Invalid display state = %d. Panel must be on.", state_);
-    return kErrorNotSupported;
+  // Limit scope of mutex to this block
+  {
+    lock_guard<recursive_mutex> obj(recursive_mutex_);
+    HWDisplayMode hw_display_mode = static_cast<HWDisplayMode>(mode);
+    uint32_t pending = 0;
+
+    if (!active_) {
+      DLOGW("Invalid display state = %d. Panel must be on.", state_);
+      return kErrorNotSupported;
+    }
+
+    if (hw_display_mode != kModeCommand && hw_display_mode != kModeVideo) {
+      DLOGW("Invalid panel mode parameters. Requested = %d", hw_display_mode);
+      return kErrorParameters;
+    }
+
+    if (hw_display_mode == hw_panel_info_.mode) {
+      DLOGW("Same display mode requested. Current = %d, Requested = %d", hw_panel_info_.mode,
+            hw_display_mode);
+      return kErrorNone;
+    }
+
+    error = hw_intf_->SetDisplayMode(hw_display_mode);
+    if (error != kErrorNone) {
+      DLOGW("Retaining current display mode. Current = %d, Requested = %d", hw_panel_info_.mode,
+            hw_display_mode);
+      return error;
+    }
+
+    if (mode == kModeVideo) {
+      ControlPartialUpdate(false /* enable */, &pending);
+    } else if (mode == kModeCommand) {
+      // Flush idle timeout value currently set.
+      hw_intf_->SetIdleTimeoutMs(0);
+      switch_to_cmd_ = true;
+    }
   }
 
-  if (hw_display_mode != kModeCommand && hw_display_mode != kModeVideo) {
-    DLOGW("Invalid panel mode parameters. Requested = %d", hw_display_mode);
-    return kErrorParameters;
-  }
-
-  if (hw_display_mode == hw_panel_info_.mode) {
-    DLOGW("Same display mode requested. Current = %d, Requested = %d", hw_panel_info_.mode,
-          hw_display_mode);
-    return kErrorNone;
-  }
-
-  error = hw_intf_->SetDisplayMode(hw_display_mode);
-  if (error != kErrorNone) {
-    DLOGW("Retaining current display mode. Current = %d, Requested = %d", hw_panel_info_.mode,
-          hw_display_mode);
-    return error;
-  }
-
-  if (mode == kModeVideo) {
-    ControlPartialUpdate(false /* enable */, &pending);
-    hw_intf_->SetIdleTimeoutMs(idle_timeout_ms_);
-  } else if (mode == kModeCommand) {
-    switch_to_cmd_ = true;
-    hw_intf_->SetIdleTimeoutMs(0);
-  }
+  // Request for a new draw cycle. New display mode will get applied on next draw cycle.
+  // New idle time will get configured as part of this.
+  event_handler_->Refresh();
 
   return error;
 }
@@ -235,6 +239,11 @@ DisplayError DisplayPrimary::SetDisplayMode(uint32_t mode) {
 DisplayError DisplayPrimary::SetPanelBrightness(int level) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   return hw_intf_->SetPanelBrightness(level);
+}
+
+DisplayError DisplayPrimary::CachePanelBrightness(int level) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  return hw_intf_->CachePanelBrightness(level);
 }
 
 DisplayError DisplayPrimary::GetRefreshRateRange(uint32_t *min_refresh_rate,
@@ -290,6 +299,11 @@ void DisplayPrimary::IdleTimeout() {
 void DisplayPrimary::ThermalEvent(int64_t thermal_level) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   comp_manager_->ProcessThermalEvent(display_comp_ctx_, thermal_level);
+}
+
+void DisplayPrimary::IdlePowerCollapse() {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  comp_manager_->ProcessIdlePowerCollapse(display_comp_ctx_);
 }
 
 DisplayError DisplayPrimary::GetPanelBrightness(int *level) {

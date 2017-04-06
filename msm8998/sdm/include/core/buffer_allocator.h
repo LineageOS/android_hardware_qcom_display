@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -68,6 +68,8 @@ struct AllocatedBufferInfo {
   uint32_t aligned_width = 0;    //!< Specifies aligned allocated buffer width in pixels.
   uint32_t aligned_height = 0;   //!< Specifies aligned allocated buffer height in pixels.
   uint32_t size = 0;             //!< Specifies the size of the allocated buffer.
+  uint32_t fb_id = 0;            // Registered id with the DRM driver
+  uint32_t gem_handle = 0;       // GEM driver handle for correspoding import of ION buffer
 };
 
 /*! @brief Holds the information about the input/output configuration of an output buffer.

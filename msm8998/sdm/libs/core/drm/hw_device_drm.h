@@ -77,6 +77,7 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError SetDisplayMode(const HWDisplayMode hw_display_mode);
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate);
   virtual DisplayError SetPanelBrightness(int level);
+  virtual DisplayError CachePanelBrightness(int level);
   virtual DisplayError GetHWScanInfo(HWScanInfo *scan_info);
   virtual DisplayError GetVideoFormat(uint32_t config_index, uint32_t *video_format);
   virtual DisplayError GetMaxCEAFormat(uint32_t *max_cea_format);
@@ -96,6 +97,7 @@ class HWDeviceDRM : public HWInterface {
 
   static const int kMaxStringLength = 1024;
   static const int kNumPhysicalDisplays = 2;
+  static const int kMaxSysfsCommandLength = 12;
 
   DisplayError SetFormat(const LayerBufferFormat &source, uint32_t *target);
   DisplayError SetStride(HWDeviceType device_type, LayerBufferFormat format, uint32_t width,
@@ -130,6 +132,7 @@ class HWDeviceDRM : public HWInterface {
   bool default_mode_ = false;
   sde_drm::DRMConnectorInfo connector_info_ = {};
   std::string interface_str_ = "DSI";
+  const char *kBrightnessNode = "/sys/class/backlight/panel0-backlight/brightness";
 };
 
 }  // namespace sdm

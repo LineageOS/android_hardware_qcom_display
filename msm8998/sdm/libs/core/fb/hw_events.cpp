@@ -101,6 +101,9 @@ DisplayError HWEvents::SetEventParser(HWEvent event_type, HWEventData *event_dat
     case HWEvent::THERMAL_LEVEL:
       event_data->event_parser = &HWEvents::HandleThermal;
       break;
+    case HWEvent::IDLE_POWER_COLLAPSE:
+      event_data->event_parser = &HWEvents::HandleIdlePowerCollapse;
+      break;
     default:
       error = kErrorParameters;
       break;
@@ -131,7 +134,8 @@ DisplayError HWEvents::Init(int fb_num, HWEventHandler *event_handler,
   event_thread_name_ += " - " + std::to_string(fb_num_);
   map_event_to_node_ = {{HWEvent::VSYNC, "vsync_event"}, {HWEvent::EXIT, "thread_exit"},
     {HWEvent::IDLE_NOTIFY, "idle_notify"}, {HWEvent::SHOW_BLANK_EVENT, "show_blank_event"},
-    {HWEvent::CEC_READ_MESSAGE, "cec/rd_msg"}, {HWEvent::THERMAL_LEVEL, "msm_fb_thermal_level"}};
+    {HWEvent::CEC_READ_MESSAGE, "cec/rd_msg"}, {HWEvent::THERMAL_LEVEL, "msm_fb_thermal_level"},
+    {HWEvent::IDLE_POWER_COLLAPSE, "idle_power_collapse"}};
 
   PopulateHWEventData();
 
@@ -232,6 +236,10 @@ void HWEvents::HandleThermal(char *data) {
 
 void HWEvents::HandleCECMessage(char *data) {
   event_handler_->CECMessage(data);
+}
+
+void HWEvents::HandleIdlePowerCollapse(char *data) {
+  event_handler_->IdlePowerCollapse();
 }
 
 }  // namespace sdm

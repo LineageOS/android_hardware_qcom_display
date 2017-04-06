@@ -129,6 +129,13 @@ int Allocator::MapBuffer(void **base, unsigned int size, unsigned int offset, in
   return -EINVAL;
 }
 
+int Allocator::ImportBuffer(int fd) {
+  if (ion_allocator_) {
+    return ion_allocator_->ImportBuffer(fd);
+  }
+  return -EINVAL;
+}
+
 int Allocator::FreeBuffer(void *base, unsigned int size, unsigned int offset, int fd,
                           int handle) {
   if (ion_allocator_) {
@@ -138,9 +145,9 @@ int Allocator::FreeBuffer(void *base, unsigned int size, unsigned int offset, in
   return -EINVAL;
 }
 
-int Allocator::CleanBuffer(void *base, unsigned int size, unsigned int offset, int fd, int op) {
+int Allocator::CleanBuffer(void *base, unsigned int size, unsigned int offset, int handle, int op) {
   if (ion_allocator_) {
-    return ion_allocator_->CleanBuffer(base, size, offset, fd, op);
+    return ion_allocator_->CleanBuffer(base, size, offset, handle, op);
   }
 
   return -EINVAL;
@@ -216,7 +223,11 @@ unsigned int Allocator::GetSize(const BufferDescriptor &descriptor, unsigned int
       size = alignedw * alignedh * 2;
       break;
     case HAL_PIXEL_FORMAT_RAW10:
+    case HAL_PIXEL_FORMAT_RAW12:
       size = ALIGN(alignedw * alignedh, SIZE_4K);
+      break;
+    case HAL_PIXEL_FORMAT_RAW8:
+      size = alignedw * alignedh * 1;
       break;
 
     // adreno formats
@@ -402,6 +413,7 @@ int Allocator::GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr
     case HAL_PIXEL_FORMAT_NV21_ZSL:
     case HAL_PIXEL_FORMAT_RAW16:
     case HAL_PIXEL_FORMAT_RAW10:
+    case HAL_PIXEL_FORMAT_RAW8:
       GetYuvSPPlaneInfo(hnd->base, width, height, 1, ycbcr);
       std::swap(ycbcr->cb, ycbcr->cr);
       break;
@@ -442,10 +454,13 @@ int Allocator::GetImplDefinedFormat(gralloc1_producer_usage_t prod_usage,
       gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC;
     } else if (cons_usage & GRALLOC1_CONSUMER_USAGE_VIDEO_ENCODER) {
       gr_format = HAL_PIXEL_FORMAT_NV12_ENCODEABLE;  // NV12
-    } else if (prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_CAMERA_ZSL) {
-      gr_format = HAL_PIXEL_FORMAT_NV21_ZSL;  // NV21 ZSL
     } else if (cons_usage & GRALLOC1_CONSUMER_USAGE_CAMERA) {
-      gr_format = HAL_PIXEL_FORMAT_YCrCb_420_SP;  // NV21
+      if (prod_usage & GRALLOC1_PRODUCER_USAGE_CAMERA) {
+        // Assumed ZSL if both producer and consumer camera flags set
+        gr_format = HAL_PIXEL_FORMAT_NV21_ZSL;  // NV21
+      } else {
+        gr_format = HAL_PIXEL_FORMAT_YCrCb_420_SP;  // NV21
+      }
     } else if (prod_usage & GRALLOC1_PRODUCER_USAGE_CAMERA) {
       if (format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
         gr_format = HAL_PIXEL_FORMAT_NV21_ZSL;  // NV21
@@ -469,6 +484,7 @@ int Allocator::GetImplDefinedFormat(gralloc1_producer_usage_t prod_usage,
 bool Allocator::IsUBwcFormat(int format) {
   switch (format) {
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
+    case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
       return true;
     default:
       return false;
@@ -521,7 +537,7 @@ void Allocator::GetIonHeapInfo(gralloc1_producer_usage_t prod_usage,
                                unsigned int *alloc_type, unsigned int *ion_flags) {
   unsigned int heap_id = 0;
   unsigned int type = 0;
-  unsigned int flags = 0;
+  uint32_t flags = 0;
   if (prod_usage & GRALLOC1_PRODUCER_USAGE_PROTECTED) {
     if (cons_usage & GRALLOC1_CONSUMER_USAGE_PRIVATE_SECURE_DISPLAY) {
       heap_id = ION_HEAP(SD_HEAP_ID);
@@ -529,17 +545,17 @@ void Allocator::GetIonHeapInfo(gralloc1_producer_usage_t prod_usage,
        * There is currently no flag in ION for Secure Display
        * VM. Please add it to the define once available.
        */
-      flags |= ION_SD_FLAGS;
+      flags |= UINT(ION_SD_FLAGS);
     } else if (prod_usage & GRALLOC1_PRODUCER_USAGE_CAMERA) {
       heap_id = ION_HEAP(SD_HEAP_ID);
       if (cons_usage & GRALLOC1_CONSUMER_USAGE_HWCOMPOSER) {
-        flags |= ION_SC_PREVIEW_FLAGS;
+        flags |= UINT(ION_SC_PREVIEW_FLAGS);
       } else {
-        flags |= ION_SC_FLAGS;
+        flags |= UINT(ION_SC_FLAGS);
       }
     } else {
       heap_id = ION_HEAP(CP_HEAP_ID);
-      flags |= ION_CP_FLAGS;
+      flags |= UINT(ION_CP_FLAGS);
     }
   } else if (prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_MM_HEAP) {
     // MM Heap is exclusively a secure heap.
@@ -556,7 +572,7 @@ void Allocator::GetIonHeapInfo(gralloc1_producer_usage_t prod_usage,
     heap_id |= ION_HEAP(ION_ADSP_HEAP_ID);
   }
 
-  if (flags & ION_SECURE) {
+  if (flags & UINT(ION_SECURE)) {
     type |= private_handle_t::PRIV_FLAGS_SECURE_BUFFER;
   }
 
@@ -774,8 +790,14 @@ void Allocator::GetAlignedWidthAndHeight(const BufferDescriptor &descriptor, uns
     case HAL_PIXEL_FORMAT_RAW16:
       aligned_w = ALIGN(width, 16);
       break;
+    case HAL_PIXEL_FORMAT_RAW12:
+      aligned_w = ALIGN(width * 12 / 8, 8);
+      break;
     case HAL_PIXEL_FORMAT_RAW10:
       aligned_w = ALIGN(width * 10 / 8, 8);
+      break;
+    case HAL_PIXEL_FORMAT_RAW8:
+      aligned_w = ALIGN(width, 8);
       break;
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_TILED:
       aligned_w = ALIGN(width, 128);

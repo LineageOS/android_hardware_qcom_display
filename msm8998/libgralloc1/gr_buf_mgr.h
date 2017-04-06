@@ -48,6 +48,7 @@ class BufferManager {
   gralloc1_error_t Perform(int operation, va_list args);
   gralloc1_error_t GetFlexLayout(const private_handle_t *hnd, struct android_flex_layout *layout);
   gralloc1_error_t GetNumFlexPlanes(const private_handle_t *hnd, uint32_t *out_num_planes);
+  gralloc1_error_t Dump(std::ostringstream *os);
 
   template <typename... Args>
   gralloc1_error_t CallBufferDescriptorFunction(gralloc1_buffer_descriptor_t descriptor_id,
@@ -74,16 +75,18 @@ class BufferManager {
   int GetBufferType(int format);
   int AllocateBuffer(const BufferDescriptor &descriptor, buffer_handle_t *handle,
                      unsigned int bufferSize = 0);
-  int AllocateBuffer(unsigned int size, int aligned_w, int aligned_h, int unaligned_w,
-                     int unaligned_h, int format, int bufferType,
-                     gralloc1_producer_usage_t prod_usage, gralloc1_consumer_usage_t cons_usage,
-                     buffer_handle_t *handle);
   uint32_t GetDataAlignment(int format, gralloc1_producer_usage_t prod_usage,
                        gralloc1_consumer_usage_t cons_usage);
   int GetHandleFlags(int format, gralloc1_producer_usage_t prod_usage,
                      gralloc1_consumer_usage_t cons_usage);
   void CreateSharedHandle(buffer_handle_t inbuffer, const BufferDescriptor &descriptor,
                           buffer_handle_t *out_buffer);
+
+  // Imports the ion fds into the current process. Returns an error for invalid handles
+  gralloc1_error_t ImportHandle(private_handle_t* hnd);
+
+  // Creates a Buffer from the valid private handle and adds it to the map
+  void RegisterHandle(const private_handle_t *hnd, int ion_handle, int ion_handle_meta);
 
   // Wrapper structure over private handle
   // Values associated with the private handle
@@ -105,8 +108,14 @@ class BufferManager {
         ion_handle_main(ih_main),
         ion_handle_meta(ih_meta) {
     }
+    void IncRef() { ++ref_count; }
+    bool DecRef() { return --ref_count == 0; }
   };
+
   gralloc1_error_t FreeBuffer(std::shared_ptr<Buffer> buf);
+
+  // Get the wrapper Buffer object from the handle, returns nullptr if handle is not found
+  std::shared_ptr<Buffer> GetBufferFromHandle(const private_handle_t *hnd);
 
   bool map_fb_mem_ = false;
   bool ubwc_for_fb_ = false;

@@ -27,65 +27,38 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef __HW_EVENTS_DRM_H__
-#define __HW_EVENTS_DRM_H__
+#ifndef __HW_COLOR_MANAGER_DRM_H__
+#define __HW_COLOR_MANAGER_DRM_H__
 
-#include <sys/poll.h>
-#include <map>
-#include <string>
-#include <utility>
-#include <vector>
+#include <drm_interface.h>
+#include <private/color_params.h>
 
-#include "hw_events_interface.h"
-#include "hw_interface.h"
+using sde_drm::DRMPPFeatureID;
+using sde_drm::DRMPPFeatureInfo;
 
 namespace sdm {
 
-using std::vector;
-
-class HWEventsDRM : public HWEventsInterface {
+class HWColorManagerDrm {
  public:
-  virtual DisplayError Init(int display_type, HWEventHandler *event_handler,
-                            const vector<HWEvent> &event_list);
-  virtual DisplayError Deinit();
+  static DisplayError (*GetDrmFeature[kMaxNumPPFeatures])(const PPFeatureInfo &in_data,
+                                                          DRMPPFeatureInfo *out_data);
+  static void FreeDrmFeatureData(DRMPPFeatureInfo *feature);
+  static uint32_t GetFeatureVersion(const DRMPPFeatureInfo &feature);
+  static DRMPPFeatureID ToDrmFeatureId(uint32_t id);
+ protected:
+  HWColorManagerDrm() {}
 
  private:
-  static const int kMaxStringLength = 1024;
-
-  typedef void (HWEventsDRM::*EventParser)(char *);
-
-  struct HWEventData {
-    HWEvent event_type {};
-    EventParser event_parser {};
-  };
-
-  static void *DisplayEventThread(void *context);
-  static void VSyncHandlerCallback(int fd, unsigned int sequence, unsigned int tv_sec,
-                                   unsigned int tv_usec, void *data);
-
-  void *DisplayEventHandler();
-  void HandleVSync(char *data);
-  void HandleIdleTimeout(char *data);
-  void HandleCECMessage(char *data);
-  void HandleThreadExit(char *data) {}
-  void HandleThermal(char *data) {}
-  void HandleBlank(char *data) {}
-  void HandleIdlePowerCollapse(char *data);
-  void PopulateHWEventData(const vector<HWEvent> &event_list);
-  DisplayError SetEventParser();
-  DisplayError InitializePollFd();
-  DisplayError CloseFds();
-  DisplayError RegisterVSync();
-
-  HWEventHandler *event_handler_{};
-  vector<HWEventData> event_data_list_{};
-  vector<pollfd> poll_fds_{};
-  pthread_t event_thread_{};
-  std::string event_thread_name_ = "SDM_EventThread";
-  bool exit_threads_ = false;
-  uint32_t vsync_index_ = 0;
+  static DisplayError GetDrmPCC(const PPFeatureInfo &in_data, DRMPPFeatureInfo *out_data);
+  static DisplayError GetDrmIGC(const PPFeatureInfo &in_data, DRMPPFeatureInfo *out_data);
+  static DisplayError GetDrmPGC(const PPFeatureInfo &in_data, DRMPPFeatureInfo *out_data);
+  static DisplayError GetDrmMixerGC(const PPFeatureInfo &in_data, DRMPPFeatureInfo *out_data);
+  static DisplayError GetDrmPAV2(const PPFeatureInfo &in_data, DRMPPFeatureInfo *out_data);
+  static DisplayError GetDrmDither(const PPFeatureInfo &in_data, DRMPPFeatureInfo *out_data);
+  static DisplayError GetDrmGamut(const PPFeatureInfo &in_data, DRMPPFeatureInfo *out_data);
+  static DisplayError GetDrmPADither(const PPFeatureInfo &in_data, DRMPPFeatureInfo *out_data);
 };
 
 }  // namespace sdm
 
-#endif  // __HW_EVENTS_DRM_H__
+#endif  // __HW_COLOR_MANAGER_DRM_H__

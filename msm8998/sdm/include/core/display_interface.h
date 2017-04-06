@@ -405,11 +405,11 @@ class DisplayInterface {
 
   /*! @brief Method to set idle timeout value. Idle fallback is disabled with timeout value 0.
 
-    @param[in] timeout value in milliseconds.
+    @param[in] active_ms value in milliseconds.
 
     @return \link void \endlink
   */
-  virtual void SetIdleTimeoutMs(uint32_t timeout_ms) = 0;
+  virtual void SetIdleTimeoutMs(uint32_t active_ms) = 0;
 
   /*! @brief Method to set maximum number of mixer stages for each display.
 
@@ -471,6 +471,14 @@ class DisplayInterface {
     @return \link DisplayError \endlink
   */
   virtual DisplayError SetPanelBrightness(int level) = 0;
+
+  /*! @brief Method to cache brightness of the primary display.
+
+    @param[in] level the new backlight level.
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError CachePanelBrightness(int level) = 0;
 
   /*! @brief Method to notify display about change in min HDCP encryption level.
 
