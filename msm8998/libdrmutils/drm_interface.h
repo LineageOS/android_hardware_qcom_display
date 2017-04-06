@@ -136,6 +136,12 @@ enum struct DRMOps {
    */
   CRTC_GET_RELEASE_FENCE,
   /*
+   * Op: Sets PP feature
+   * Arg: uint32_t - CRTC ID
+   *      DRMPPFeatureInfo * - PP feature data pointer
+   */
+  CRTC_SET_POST_PROC,
+  /*
    * Op: Returns retire fence for this commit. Should be called after Commit() on
    * DRMAtomicReqInterface.
    * Arg: uint32_t - Connector ID
@@ -262,6 +268,33 @@ struct DRMDisplayToken {
   uint32_t crtc_id;
 };
 
+enum DRMPPFeatureID {
+  kFeaturePcc,
+  kFeatureIgc,
+  kFeaturePgc,
+  kFeatureMixerGc,
+  kFeaturePaV2,
+  kFeatureDither,
+  kFeatureGamut,
+  kFeaturePADither,
+  kPPFeaturesMax,
+};
+
+enum DRMPPPropType {
+  kPropEnum,
+  kPropRange,
+  kPropBlob,
+  kPropTypeMax,
+};
+
+struct DRMPPFeatureInfo {
+  DRMPPFeatureID id;
+  DRMPPPropType type;
+  uint32_t version;
+  uint32_t payload_size;
+  void *payload;
+};
+
 /* DRM Atomic Request Property Set.
  *
  * Helper class to create and populate atomic properties of DRM components
@@ -330,6 +363,11 @@ class DRMManagerInterface {
    */
   virtual void GetConnectorInfo(uint32_t conn_id, DRMConnectorInfo *info) = 0;
 
+  /*
+   * Will query post propcessing feature info of a CRTC.
+   * [output]: DRMPPFeatureInfo: CRTC post processing feature info
+   */
+   virtual void GetCrtcPPInfo(uint32_t crtc_id, DRMPPFeatureInfo &info) = 0;
   /*
    * Register a logical display to receive a token.
    * Each display pipeline in DRM is identified by its CRTC and Connector(s).

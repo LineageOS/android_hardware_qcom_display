@@ -5,10 +5,12 @@ include $(LOCAL_PATH)/../../../common.mk
 ifeq ($(use_hwc2),true)
 
 LOCAL_MODULE                  := hwcomposer.$(TARGET_BOARD_PLATFORM)
+LOCAL_MODULE_PATH_32          := $(TARGET_OUT_VENDOR)/lib
+LOCAL_MODULE_PATH_64          := $(TARGET_OUT_VENDOR)/lib64
 LOCAL_MODULE_RELATIVE_PATH    := hw
-LOCAL_PROPRIETARY_MODULE      := true
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes)
+LOCAL_HEADER_LIBRARIES        := display_headers
 
 LOCAL_CFLAGS                  := -Wno-missing-field-initializers -Wno-unused-parameter \
                                  -std=c++11 -fcolor-diagnostics\

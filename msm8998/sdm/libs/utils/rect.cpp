@@ -223,18 +223,27 @@ void MapRect(const LayerRect &src_domain, const LayerRect &dst_domain, const Lay
   out_rect->bottom = dst_domain.top + (height_ratio * modified_in_rect.bottom);
 }
 
-void TransformHV(const LayerRect &src_domain, const LayerRect &in_rect, LayerRect *out_rect) {
+void TransformHV(const LayerRect &src_domain, const LayerRect &in_rect,
+                 const LayerTransform &transform, LayerRect *out_rect) {
   if (!IsValid(src_domain) || !IsValid(in_rect)) {
     return;
   }
 
   float in_width = in_rect.right - in_rect.left;
   float in_height = in_rect.bottom - in_rect.top;
+  float x_offset = in_rect.left - src_domain.left;
+  float y_offset = in_rect.top - src_domain.top;
+  *out_rect = in_rect;
 
-  out_rect->right = src_domain.right - in_rect.left;
-  out_rect->bottom = src_domain.bottom - in_rect.top;
-  out_rect->left = out_rect->right - in_width;
-  out_rect->top = out_rect->bottom - in_height;
+  if (transform.flip_horizontal) {
+    out_rect->right = src_domain.right - x_offset;
+    out_rect->left = out_rect->right - in_width;
+  }
+
+  if (transform.flip_vertical) {
+    out_rect->bottom = src_domain.bottom - y_offset;
+    out_rect->top = out_rect->bottom - in_height;
+  }
 }
 
 RectOrientation GetOrientation(const LayerRect &in_rect) {

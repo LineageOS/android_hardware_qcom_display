@@ -140,6 +140,12 @@ int HWCSession::Init() {
     return -EINVAL;
   }
 
+  if (pthread_create(&uevent_thread_, NULL, &HWCUeventThread, this) < 0) {
+    DLOGE("Failed to start = %s, error = %s", uevent_thread_name_, strerror(errno));
+    CoreInterface::DestroyCore();
+    return -errno;
+  }
+
   // Read which display is first, and create it and store it in primary slot
   HWDisplayInterfaceInfo hw_disp_info;
   error = core_intf_->GetFirstDisplayInterfaceType(&hw_disp_info);
@@ -171,6 +177,8 @@ int HWCSession::Init() {
 
   if (status) {
     CoreInterface::DestroyCore();
+    uevent_thread_exit_ = true;
+    pthread_join(uevent_thread_, NULL);
     return status;
   }
 
@@ -179,15 +187,14 @@ int HWCSession::Init() {
     DLOGW("Failed to load HWCColorManager.");
   }
 
-  if (pthread_create(&uevent_thread_, NULL, &HWCUeventThread, this) < 0) {
-    DLOGE("Failed to start = %s, error = %s", uevent_thread_name_, strerror(errno));
-    HWCDisplayPrimary::Destroy(hwc_display_[HWC_DISPLAY_PRIMARY]);
-    hwc_display_[HWC_DISPLAY_PRIMARY] = 0;
-    CoreInterface::DestroyCore();
-    return -errno;
-  }
-
   connected_displays_[HWC_DISPLAY_PRIMARY] = 1;
+  struct rlimit fd_limit = {};
+  getrlimit(RLIMIT_NOFILE, &fd_limit);
+  fd_limit.rlim_cur = fd_limit.rlim_cur * 2;
+  auto err = setrlimit(RLIMIT_NOFILE, &fd_limit);
+  if (err) {
+    DLOGW("Unable to increase fd limit -  err: %d, %s", errno, strerror(errno));
+  }
   return 0;
 }
 
@@ -1215,7 +1222,7 @@ android::status_t HWCSession::GetHdrCapabilities(const android::Parcel *input_pa
     return 0;
   }
 
-  std::vector<int32_t> supported_hdr_types = {};
+  std::vector<int32_t> supported_hdr_types;
   // Only HDR10 supported now, in future add other supported HDR formats(HLG, DolbyVision)
   supported_hdr_types.push_back(HAL_HDR_HDR10);
 
@@ -1349,6 +1356,16 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
     case kConfigureDetailedEnhancer:
       ret = color_mgr_->SetDetailedEnhancer(pending_action.params,
                                             hwc_display_[HWC_DISPLAY_PRIMARY]);
+      hwc_procs_->invalidate(hwc_procs_);
+      break;
+    case kInvalidatingAndkSetPanelBrightness:
+      brightness_value = reinterpret_cast<int32_t*>(resp_payload.payload);
+      if (brightness_value == NULL) {
+        DLOGE("Brightness value is Null");
+        return -EINVAL;
+      }
+      if (HWC_DISPLAY_PRIMARY == display_id)
+        ret = hwc_display_[HWC_DISPLAY_PRIMARY]->CachePanelBrightness(*brightness_value);
       hwc_procs_->invalidate(hwc_procs_);
       break;
     case kNoAction:

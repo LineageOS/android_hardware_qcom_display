@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -192,7 +192,9 @@ int HWCDisplayPrimary::Prepare(hwc_display_contents_1_t *content_list) {
   }
 
   uint32_t refresh_rate = GetOptimalRefreshRate(one_updating_layer);
-  if (current_refresh_rate_ != refresh_rate) {
+  // TODO(user): Need to read current refresh rate to avoid
+  // redundant calls to set refresh rate during idle fall back.
+  if ((current_refresh_rate_ != refresh_rate) || (handle_idle_timeout_)) {
     error = display_intf_->SetRefreshRate(refresh_rate);
   }
 
@@ -206,14 +208,7 @@ int HWCDisplayPrimary::Prepare(hwc_display_contents_1_t *content_list) {
   }
 
   if (content_list->numHwLayers <= 1) {
-    DisplayConfigFixedInfo display_config;
-    display_intf_->GetConfig(&display_config);
-    if (display_config.is_cmdmode) {
-      DLOGI("Skipping null commit on cmd mode panel");
-    } else {
-      flush_ = true;
-    }
-    return 0;
+    flush_ = true;
   }
 
   status = PrepareLayerStack(content_list);
@@ -230,7 +225,8 @@ int HWCDisplayPrimary::Commit(hwc_display_contents_1_t *content_list) {
   DisplayConfigFixedInfo display_config;
   display_intf_->GetConfig(&display_config);
   if (content_list->numHwLayers <= 1 && display_config.is_cmdmode) {
-    DLOGI("Skipping null commit on cmd mode panel");
+    DLOGV("Skipping null commit on cmd mode panel");
+    flush_ = false;
     return 0;
   }
 

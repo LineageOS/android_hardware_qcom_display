@@ -141,6 +141,7 @@ class HWCDisplay : public DisplayEventHandler {
 
   int SetPanelBrightness(int level);
   int GetPanelBrightness(int *level);
+  int CachePanelBrightness(int level);
   int ToggleScreenUpdates(bool enable);
   int ColorSVCRequestRoute(const PPDisplayAPIPayload &in_payload,
                            PPDisplayAPIPayload *out_payload,

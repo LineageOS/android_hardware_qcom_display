@@ -79,6 +79,7 @@ class DRMMaster {
    *   -ENODEV if device cannot be opened or initilization fails
    */
   static int GetInstance(DRMMaster **master);
+  static void DestroyInstance();
 
  private:
   DRMMaster() {}

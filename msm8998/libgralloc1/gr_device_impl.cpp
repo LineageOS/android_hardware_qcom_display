@@ -29,6 +29,7 @@
 
 #include <cutils/log.h>
 #include <sync/sync.h>
+#include <algorithm>
 #include <sstream>
 #include <string>
 
@@ -62,14 +63,12 @@ struct gralloc_module_t HAL_MODULE_INFO_SYM = {
 int gralloc_device_open(const struct hw_module_t *module, const char *name, hw_device_t **device) {
   int status = -EINVAL;
   if (!strcmp(name, GRALLOC_HARDWARE_MODULE_ID)) {
-    // Note that we return the same instance of GrallocImpl for all
-    // gralloc1_open calls.
     gralloc1::GrallocImpl * /*gralloc1_device_t*/ dev = gralloc1::GrallocImpl::GetInstance(module);
     *device = reinterpret_cast<hw_device_t *>(dev);
-    if (dev->IsInitialized()) {
+    if (dev) {
       status = 0;
     } else {
-      ALOGE(" Error in opening gralloc1 device");
+      ALOGE("Fatal error opening gralloc1 device");
     }
   }
   return status;
@@ -85,34 +84,30 @@ GrallocImpl::GrallocImpl(const hw_module_t *module) {
   getFunction = GetFunction;
   getCapabilities = GetCapabilities;
 
-  initialized_ = Init();
+  initalized_ = Init();
 }
 
 bool GrallocImpl::Init() {
   buf_mgr_ = BufferManager::GetInstance();
-  return true;
+  return buf_mgr_ != nullptr;
 }
 
 GrallocImpl::~GrallocImpl() {
 }
 
-int GrallocImpl::CloseDevice(hw_device_t * /*device*/) {
-  // no-op as GrallocImpl is ever created once in
-  // gralloc1::GrallocImpl::GetInstance
+int GrallocImpl::CloseDevice(hw_device_t *device __unused) {
+  // No-op since the gralloc device is a singleton
   return 0;
-}
-
-bool GrallocImpl::IsInitialized() const {
-  return initialized_;
 }
 
 void GrallocImpl::GetCapabilities(struct gralloc1_device *device, uint32_t *out_count,
                                   int32_t  /*gralloc1_capability_t*/ *out_capabilities) {
   if (device != nullptr) {
-    if (out_capabilities != nullptr && *out_count > 0) {
+    if (out_capabilities != nullptr && *out_count >= 2) {
       out_capabilities[0] = GRALLOC1_CAPABILITY_TEST_ALLOCATE;
+      out_capabilities[1] = GRALLOC1_CAPABILITY_LAYERED_BUFFERS;
     }
-    *out_count = 1;
+    *out_count = 2;
   }
   return;
 }
@@ -135,6 +130,8 @@ gralloc1_function_pointer_t GrallocImpl::GetFunction(gralloc1_device_t *device, 
       return reinterpret_cast<gralloc1_function_pointer_t>(SetBufferDimensions);
     case GRALLOC1_FUNCTION_SET_FORMAT:
       return reinterpret_cast<gralloc1_function_pointer_t>(SetColorFormat);
+    case GRALLOC1_FUNCTION_SET_LAYER_COUNT:
+      return reinterpret_cast<gralloc1_function_pointer_t>(SetLayerCount);
     case GRALLOC1_FUNCTION_SET_PRODUCER_USAGE:
       return reinterpret_cast<gralloc1_function_pointer_t>(SetProducerUsage);
     case GRALLOC1_FUNCTION_GET_BACKING_STORE:
@@ -145,6 +142,8 @@ gralloc1_function_pointer_t GrallocImpl::GetFunction(gralloc1_device_t *device, 
       return reinterpret_cast<gralloc1_function_pointer_t>(GetBufferDimensions);
     case GRALLOC1_FUNCTION_GET_FORMAT:
       return reinterpret_cast<gralloc1_function_pointer_t>(GetColorFormat);
+    case GRALLOC1_FUNCTION_GET_LAYER_COUNT:
+      return reinterpret_cast<gralloc1_function_pointer_t>(GetLayerCount);
     case GRALLOC1_FUNCTION_GET_PRODUCER_USAGE:
       return reinterpret_cast<gralloc1_function_pointer_t>(GetProducerUsage);
     case GRALLOC1_FUNCTION_GET_STRIDE:
@@ -179,17 +178,19 @@ gralloc1_error_t GrallocImpl::Dump(gralloc1_device_t *device, uint32_t *out_size
     ALOGE("Gralloc Error : device=%p", (void *)device);
     return GRALLOC1_ERROR_BAD_DESCRIPTOR;
   }
+  const size_t max_dump_size = 8192;
   if (out_buffer == nullptr) {
-    *out_size = 1024;
+    *out_size = max_dump_size;
   } else {
     std::ostringstream os;
-    // TODO(user): implement in buffer manager
     os << "-------------------------------" << std::endl;
     os << "QTI gralloc dump:" << std::endl;
     os << "-------------------------------" << std::endl;
-    auto copy_size = os.str().size() < *out_size ? os.str().size() : *out_size;
-    std::copy_n(out_buffer, copy_size, os.str().begin());
-    *out_size = static_cast<uint32_t>(copy_size);
+    GrallocImpl const *dev = GRALLOC_IMPL(device);
+    dev->buf_mgr_->Dump(&os);
+    os << "-------------------------------" << std::endl;
+    auto copied = os.str().copy(out_buffer, std::min(os.str().size(), max_dump_size), 0);
+    *out_size = UINT(copied);
   }
 
   return GRALLOC1_ERROR_NONE;
@@ -261,6 +262,19 @@ gralloc1_error_t GrallocImpl::SetColorFormat(gralloc1_device_t *device,
   }
 }
 
+gralloc1_error_t GrallocImpl::SetLayerCount(gralloc1_device_t *device,
+                                            gralloc1_buffer_descriptor_t descriptor,
+                                            uint32_t layer_count) {
+  if (!device) {
+    return GRALLOC1_ERROR_BAD_DESCRIPTOR;
+  } else {
+    GrallocImpl const *dev = GRALLOC_IMPL(device);
+    return dev->buf_mgr_->CallBufferDescriptorFunction(descriptor,
+                                                       &BufferDescriptor::SetLayerCount,
+                                                       layer_count);
+  }
+}
+
 gralloc1_error_t GrallocImpl::SetProducerUsage(gralloc1_device_t *device,
                                                gralloc1_buffer_descriptor_t descriptor,
                                                gralloc1_producer_usage_t usage) {
@@ -312,6 +326,16 @@ gralloc1_error_t GrallocImpl::GetColorFormat(gralloc1_device_t *device, buffer_h
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
   if (status == GRALLOC1_ERROR_NONE) {
     *outFormat = PRIV_HANDLE_CONST(buffer)->GetColorFormat();
+  }
+
+  return status;
+}
+
+gralloc1_error_t GrallocImpl::GetLayerCount(gralloc1_device_t *device, buffer_handle_t buffer,
+                                            uint32_t *outLayerCount) {
+  gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
+  if (status == GRALLOC1_ERROR_NONE) {
+    *outLayerCount = PRIV_HANDLE_CONST(buffer)->GetLayerCount();
   }
 
   return status;
@@ -385,14 +409,26 @@ gralloc1_error_t GrallocImpl::GetNumFlexPlanes(gralloc1_device_t *device, buffer
   return status;
 }
 
+static inline void CloseFdIfValid(int fd) {
+  if (fd > 0) {
+    close(fd);
+  }
+}
+
 gralloc1_error_t GrallocImpl::LockBuffer(gralloc1_device_t *device, buffer_handle_t buffer,
                                          gralloc1_producer_usage_t prod_usage,
                                          gralloc1_consumer_usage_t cons_usage,
                                          const gralloc1_rect_t *region, void **out_data,
                                          int32_t acquire_fence) {
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
-  if (status == GRALLOC1_ERROR_NONE && (acquire_fence > 0)) {
+  if (status != GRALLOC1_ERROR_NONE) {
+    CloseFdIfValid(acquire_fence);
+    return status;
+  }
+
+  if (acquire_fence > 0) {
     int error = sync_wait(acquire_fence, 1000);
+    CloseFdIfValid(acquire_fence);
     if (error < 0) {
       ALOGE("%s: sync_wait timedout! error = %s", __FUNCTION__, strerror(errno));
       return GRALLOC1_ERROR_UNDEFINED;

@@ -56,6 +56,10 @@ class HWInfoDRM: public HWInfoInterface {
   DisplayError GetDynamicBWLimits(HWResourceInfo *hw_resource);
   void GetSDMFormat(uint32_t drm_format, uint64_t drm_format_modifier,
                     std::vector<LayerBufferFormat> *sdm_formats);
+  void GetSDMFormat(uint32_t v4l2_format, LayerBufferFormat *sdm_format);
+  void GetRotatorFormatsForType(int fd, uint32_t type,
+                                std::vector<LayerBufferFormat> *supported_formats);
+  DisplayError GetRotatorSupportedFormats(uint32_t v4l2_index, HWResourceInfo *hw_resource);
 
   sde_drm::DRMManagerInterface *drm_mgr_intf_ = {};
   bool default_mode_ = false;
