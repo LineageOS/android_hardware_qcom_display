@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -34,6 +34,7 @@
 #include <stdarg.h>
 #include <sys/mman.h>
 
+#include <gr.h>
 #include "hwc_display_primary.h"
 #include "hwc_debugger.h"
 
@@ -99,8 +100,24 @@ int HWCDisplayPrimary::Init() {
     use_metadata_refresh_rate_ = false;
   }
 
-  return HWCDisplay::Init();
+  int status = HWCDisplay::Init();
+  if (status) {
+    return status;
+  }
+  color_mode_ = new HWCColorMode(display_intf_);
+  color_mode_->Init();
+
+  return status;
 }
+
+int HWCDisplayPrimary::Deinit() {
+  color_mode_->DeInit();
+  delete color_mode_;
+  color_mode_ = NULL;
+
+  return HWCDisplay::Deinit();
+}
+
 
 void HWCDisplayPrimary::ProcessBootAnimCompleted(hwc_display_contents_1_t *list) {
   uint32_t numBootUpLayers = 0;
@@ -175,7 +192,9 @@ int HWCDisplayPrimary::Prepare(hwc_display_contents_1_t *content_list) {
   }
 
   uint32_t refresh_rate = GetOptimalRefreshRate(one_updating_layer);
-  if (current_refresh_rate_ != refresh_rate) {
+  // TODO(user): Need to read current refresh rate to avoid
+  // redundant calls to set refresh rate during idle fall back.
+  if ((current_refresh_rate_ != refresh_rate) || (handle_idle_timeout_)) {
     error = display_intf_->SetRefreshRate(refresh_rate);
   }
 
@@ -190,7 +209,6 @@ int HWCDisplayPrimary::Prepare(hwc_display_contents_1_t *content_list) {
 
   if (content_list->numHwLayers <= 1) {
     flush_ = true;
-    return 0;
   }
 
   status = PrepareLayerStack(content_list);
@@ -203,6 +221,15 @@ int HWCDisplayPrimary::Prepare(hwc_display_contents_1_t *content_list) {
 
 int HWCDisplayPrimary::Commit(hwc_display_contents_1_t *content_list) {
   int status = 0;
+
+  DisplayConfigFixedInfo display_config;
+  display_intf_->GetConfig(&display_config);
+  if (content_list->numHwLayers <= 1 && display_config.is_cmdmode) {
+    DLOGV("Skipping null commit on cmd mode panel");
+    flush_ = false;
+    return 0;
+  }
+
   if (display_paused_) {
     if (content_list->outbufAcquireFenceFd >= 0) {
       // If we do not handle the frame set retireFenceFd to outbufAcquireFenceFd,
@@ -296,15 +323,33 @@ void HWCDisplayPrimary::ToggleCPUHint(bool set) {
   }
 }
 
-void HWCDisplayPrimary::SetSecureDisplay(bool secure_display_active) {
+void HWCDisplayPrimary::SetSecureDisplay(bool secure_display_active, bool force_flush) {
   if (secure_display_active_ != secure_display_active) {
     // Skip Prepare and call Flush for null commit
     DLOGI("SecureDisplay state changed from %d to %d Needs Flush!!", secure_display_active_,
            secure_display_active);
     secure_display_active_ = secure_display_active;
-    skip_prepare_ = true;
+    skip_prepare_cnt = 1;
+
+    // Issue two null commits for command mode panels when external displays are connected.
+    // Two null commits are required to handle non secure to secure transitions at 30fps.
+    // TODO(user): Need two null commits on video mode also to handle transition cases of
+    // primary at higher fps (ex60) and external at lower fps.
+
+    // Avoid flush for command mode panels when no external displays are connected.
+    // This is to avoid flicker/blink on primary during transitions.
+    DisplayConfigFixedInfo display_config;
+    display_intf_->GetConfig(&display_config);
+    if (display_config.is_cmdmode) {
+      if (force_flush) {
+        DLOGI("Issue two null commits for command mode panels");
+        skip_prepare_cnt = 2;
+      } else {
+        DLOGI("Avoid flush for command mode panel when no external displays are connected");
+        skip_prepare_cnt = 0;
+      }
+    }
   }
-  return;
 }
 
 void HWCDisplayPrimary::ForceRefreshRate(uint32_t refresh_rate) {
@@ -353,11 +398,16 @@ void HWCDisplayPrimary::SetIdleTimeoutMs(uint32_t timeout_ms) {
 }
 
 static void SetLayerBuffer(const BufferInfo& output_buffer_info, LayerBuffer *output_buffer) {
-  output_buffer->width = output_buffer_info.buffer_config.width;
-  output_buffer->height = output_buffer_info.buffer_config.height;
-  output_buffer->format = output_buffer_info.buffer_config.format;
-  output_buffer->planes[0].fd = output_buffer_info.alloc_buffer_info.fd;
-  output_buffer->planes[0].stride = output_buffer_info.alloc_buffer_info.stride;
+  const BufferConfig& buffer_config = output_buffer_info.buffer_config;
+  const AllocatedBufferInfo &alloc_buffer_info = output_buffer_info.alloc_buffer_info;
+
+  output_buffer->width = alloc_buffer_info.aligned_width;
+  output_buffer->height = alloc_buffer_info.aligned_height;
+  output_buffer->unaligned_width = buffer_config.width;
+  output_buffer->unaligned_height = buffer_config.height;
+  output_buffer->format = buffer_config.format;
+  output_buffer->planes[0].fd = alloc_buffer_info.fd;
+  output_buffer->planes[0].stride = alloc_buffer_info.stride;
 }
 
 void HWCDisplayPrimary::HandleFrameOutput() {

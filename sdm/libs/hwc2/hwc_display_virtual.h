@@ -38,7 +38,8 @@ namespace sdm {
 
 class HWCDisplayVirtual : public HWCDisplay {
  public:
-  static int Create(CoreInterface *core_intf, HWCCallbacks *callbacks, uint32_t width,
+  static int Create(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
+                    HWCCallbacks *callbacks, uint32_t width,
                     uint32_t height, int32_t *format, HWCDisplay **hwc_display);
   static void Destroy(HWCDisplay *hwc_display);
   virtual int Init();
@@ -49,7 +50,8 @@ class HWCDisplayVirtual : public HWCDisplay {
   HWC2::Error SetOutputBuffer(buffer_handle_t buf, int32_t release_fence);
 
  private:
-  HWCDisplayVirtual(CoreInterface *core_intf, HWCCallbacks *callbacks);
+  HWCDisplayVirtual(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
+                    HWCCallbacks *callbacks);
   int SetConfig(uint32_t width, uint32_t height);
 
   bool dump_output_layer_ = false;

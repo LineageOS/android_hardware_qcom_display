@@ -37,10 +37,11 @@ class HWCDisplayPrimary : public HWCDisplay {
                     HWCDisplay **hwc_display);
   static void Destroy(HWCDisplay *hwc_display);
   virtual int Init();
+  virtual int Deinit();
   virtual int Prepare(hwc_display_contents_1_t *content_list);
   virtual int Commit(hwc_display_contents_1_t *content_list);
   virtual int Perform(uint32_t operation, ...);
-  virtual void SetSecureDisplay(bool secure_display_active);
+  virtual void SetSecureDisplay(bool secure_display_active, bool force_flush);
   virtual DisplayError Refresh();
   virtual void SetIdleTimeoutMs(uint32_t timeout_ms);
   virtual void SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type);

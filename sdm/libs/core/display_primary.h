@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -29,6 +29,7 @@
 
 #include "display_base.h"
 #include "dump_impl.h"
+#include "hw_events_interface.h"
 
 namespace sdm {
 
@@ -37,20 +38,20 @@ class HWPrimaryInterface;
 class DisplayPrimary : public DisplayBase, HWEventHandler {
  public:
   DisplayPrimary(DisplayEventHandler *event_handler, HWInfoInterface *hw_info_intf,
-                 BufferSyncHandler *buffer_sync_handler, CompManager *comp_manager,
-                 RotatorInterface *rotator_intf);
+                 BufferSyncHandler *buffer_sync_handler, CompManager *comp_manager);
   virtual DisplayError Init();
   virtual DisplayError Prepare(LayerStack *layer_stack);
   virtual DisplayError Commit(LayerStack *layer_stack);
   virtual DisplayError ControlPartialUpdate(bool enable, uint32_t *pending);
   virtual DisplayError DisablePartialUpdateOneFrame();
   virtual DisplayError SetDisplayState(DisplayState state);
-  virtual void SetIdleTimeoutMs(uint32_t timeout_ms);
+  virtual void SetIdleTimeoutMs(uint32_t active_ms);
   virtual DisplayError SetDisplayMode(uint32_t mode);
   virtual DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate, uint32_t *max_refresh_rate);
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate);
   virtual DisplayError SetPanelBrightness(int level);
   virtual DisplayError GetPanelBrightness(int *level);
+  virtual DisplayError CachePanelBrightness(int level);
 
   // Implement the HWEventHandlers
   virtual DisplayError VSync(int64_t timestamp);
@@ -58,14 +59,15 @@ class DisplayPrimary : public DisplayBase, HWEventHandler {
   virtual void IdleTimeout();
   virtual void ThermalEvent(int64_t thermal_level);
   virtual void CECMessage(char *message) { }
+  virtual void IdlePowerCollapse();
 
  private:
   bool NeedsAVREnable();
 
-  uint32_t idle_timeout_ms_ = 0;
-  std::vector<const char *> event_list_ = {"vsync_event", "show_blank_event", "idle_notify",
-                                           "msm_fb_thermal_level", "thread_exit"};
+  std::vector<HWEvent> event_list_ = { HWEvent::VSYNC, HWEvent::EXIT, HWEvent::IDLE_NOTIFY,
+      HWEvent::SHOW_BLANK_EVENT, HWEvent::THERMAL_LEVEL, HWEvent::IDLE_POWER_COLLAPSE };
   bool avr_prop_disabled_ = false;
+  bool switch_to_cmd_ = false;
 };
 
 }  // namespace sdm

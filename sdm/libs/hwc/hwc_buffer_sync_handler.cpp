@@ -67,8 +67,8 @@ DisplayError HWCBufferSyncHandler::SyncMerge(int fd1, int fd2, int *merged_fd) {
   } else if (fd2 >= 0) {
     *merged_fd = sync_merge("SyncMerge", fd2, fd2);
   } else {
-    DLOGE("Invalid arguments passed");
-    return kErrorParameters;
+    *merged_fd = -1;
+    return kErrorNone;
   }
 
   if (*merged_fd == -1) {

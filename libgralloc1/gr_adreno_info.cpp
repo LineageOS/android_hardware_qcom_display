@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -47,8 +47,6 @@ bool AdrenoMemInfo::Init() {
         ::dlsym(libadreno_utils_, "compute_aligned_width_and_height");
     *reinterpret_cast<void **>(&LINK_adreno_compute_padding) =
         ::dlsym(libadreno_utils_, "compute_surface_padding");
-    *reinterpret_cast<void **>(&LINK_adreno_isMacroTilingSupportedByGpu) =
-        ::dlsym(libadreno_utils_, "isMacroTilingSupportedByGpu");
     *reinterpret_cast<void **>(&LINK_adreno_compute_compressedfmt_aligned_width_and_height) =
         ::dlsym(libadreno_utils_, "compute_compressedfmt_aligned_width_and_height");
     *reinterpret_cast<void **>(&LINK_adreno_isUBWCSupportedByGpu) =
@@ -82,14 +80,6 @@ AdrenoMemInfo::~AdrenoMemInfo() {
   if (libadreno_utils_) {
     ::dlclose(libadreno_utils_);
   }
-}
-
-bool AdrenoMemInfo::IsMacroTilingSupportedByGPU() {
-  if (LINK_adreno_isMacroTilingSupportedByGpu) {
-    return LINK_adreno_isMacroTilingSupportedByGpu();
-  }
-
-  return false;
 }
 
 void AdrenoMemInfo::AlignUnCompressedRGB(int width, int height, int format, int tile_enabled,
@@ -187,6 +177,11 @@ ADRENOPIXELFORMAT AdrenoMemInfo::GetGpuPixelFormat(int hal_format) {
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
       return ADRENO_PIXELFORMAT_NV12_EXT;
+    case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
+      return ADRENO_PIXELFORMAT_TP10;
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010:
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
+      return ADRENO_PIXELFORMAT_P010;
     default:
       ALOGE("%s: No map for format: 0x%x", __FUNCTION__, hal_format);
       break;

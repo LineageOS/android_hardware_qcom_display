@@ -105,18 +105,21 @@ class HWCQDCMModeManager {
 class HWCColorManager {
  public:
   static const int kNumSolidFillLayers = 2;
-  static HWCColorManager *CreateColorManager();
+  static HWCColorManager *CreateColorManager(HWCBufferAllocator *buffer_allocator);
   static int CreatePayloadFromParcel(const android::Parcel &in, uint32_t *disp_id,
                                      PPDisplayAPIPayload *sink);
   static void MarshallStructIntoParcel(const PPDisplayAPIPayload &data,
                                        android::Parcel *out_parcel);
 
+  explicit HWCColorManager(HWCBufferAllocator *buffer_allocator);
   ~HWCColorManager();
   void DestroyColorManager();
   int EnableQDCMMode(bool enable, HWCDisplay *hwc_display);
   int SetSolidFill(const void *params, bool enable, HWCDisplay *hwc_display);
   int SetFrameCapture(void *params, bool enable, HWCDisplay *hwc_display);
   int SetDetailedEnhancer(void *params, HWCDisplay *hwc_display);
+  void SetColorModeDetailEnhancer(HWCDisplay *hwc_display);
+  int SetHWDetailedEnhancerConfig(void *params, HWCDisplay *hwc_display);
 
  protected:
   int CreateSolidFillLayers(HWCDisplay *hwc_display);

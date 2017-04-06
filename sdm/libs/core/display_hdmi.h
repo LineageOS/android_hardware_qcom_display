@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -30,6 +30,7 @@
 
 #include "display_base.h"
 #include "dump_impl.h"
+#include "hw_events_interface.h"
 
 namespace sdm {
 
@@ -38,8 +39,7 @@ class HWHDMIInterface;
 class DisplayHDMI : public DisplayBase, HWEventHandler {
  public:
   DisplayHDMI(DisplayEventHandler *event_handler, HWInfoInterface *hw_info_intf,
-              BufferSyncHandler *buffer_sync_handler, CompManager *comp_manager,
-              RotatorInterface *rotator_intf);
+              BufferSyncHandler *buffer_sync_handler, CompManager *comp_manager);
   virtual DisplayError Init();
   virtual DisplayError Prepare(LayerStack *layer_stack);
   virtual DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate, uint32_t *max_refresh_rate);
@@ -53,6 +53,7 @@ class DisplayHDMI : public DisplayBase, HWEventHandler {
   virtual void IdleTimeout() { }
   virtual void ThermalEvent(int64_t thermal_level) { }
   virtual void CECMessage(char *message);
+  virtual void IdlePowerCollapse() { }
 
  private:
   uint32_t GetBestConfig(HWS3DMode s3d_mode);
@@ -62,11 +63,10 @@ class DisplayHDMI : public DisplayBase, HWEventHandler {
   bool underscan_supported_ = false;
   HWScanSupport scan_support_;
   std::map<LayerBufferS3DFormat, HWS3DMode> s3d_format_to_mode_;
-  std::vector<const char *> event_list_ = {"vsync_event", "idle_notify", "cec/rd_msg",
-                                           "thread_exit"};
+  std::vector<HWEvent> event_list_ = { HWEvent::VSYNC, HWEvent::IDLE_NOTIFY, HWEvent::EXIT,
+    HWEvent::CEC_READ_MESSAGE };
 };
 
 }  // namespace sdm
 
 #endif  // __DISPLAY_HDMI_H__
-

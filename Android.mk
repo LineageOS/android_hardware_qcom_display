@@ -1,9 +1,9 @@
 sdm-libs := sdm/libs
-display-hals := libqservice libqdutils $(sdm-libs)/utils $(sdm-libs)/core
+display-hals := include libqservice libqdutils $(sdm-libs)/utils $(sdm-libs)/core
 
 ifneq ($(TARGET_IS_HEADLESS), true)
     display-hals += libcopybit liblight libmemtrack hdmi_cec \
-                    $(sdm-libs)/hwc $(sdm-libs)/hwc2
+                    $(sdm-libs)/hwc $(sdm-libs)/hwc2 gpu_tonemapper libdrmutils
 endif
 
 ifneq ($(TARGET_USES_GRALLOC1), true)

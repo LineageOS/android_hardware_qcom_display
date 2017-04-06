@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -61,58 +61,34 @@ using std::fstream;
 
 namespace sdm {
 
-DisplayError HWInterface::Create(DisplayType type, HWInfoInterface *hw_info_intf,
-                                        BufferSyncHandler *buffer_sync_handler,
-                                        HWInterface **intf) {
-  DisplayError error = kErrorNone;
-  HWDevice *hw = nullptr;
-
-  switch (type) {
-    case kPrimary:
-      hw = new HWPrimary(buffer_sync_handler, hw_info_intf);
-      break;
-    case kHDMI:
-      hw = new HWHDMI(buffer_sync_handler, hw_info_intf);
-      break;
-    case kVirtual:
-      hw = new HWVirtual(buffer_sync_handler, hw_info_intf);
-      break;
-    default:
-      DLOGE("Undefined display type");
-      return kErrorUndefined;
-  }
-
-  error = hw->Init();
-  if (error != kErrorNone) {
-    delete hw;
-    DLOGE("Init on HW Intf type %d failed", type);
-    return error;
-  }
-  *intf = hw;
-
-  return error;
-}
-
-DisplayError HWInterface::Destroy(HWInterface *intf) {
-  HWDevice *hw = static_cast<HWDevice *>(intf);
-  hw->Deinit();
-  delete hw;
-
-  return kErrorNone;
-}
-
 HWDevice::HWDevice(BufferSyncHandler *buffer_sync_handler)
   : fb_node_index_(-1), fb_path_("/sys/devices/virtual/graphics/fb"),
     buffer_sync_handler_(buffer_sync_handler), synchronous_commit_(false) {
 }
 
 DisplayError HWDevice::Init() {
-  char device_name[64] = {0};
-
   // Read the fb node index
   fb_node_index_ = GetFBNodeIndex(device_type_);
   if (fb_node_index_ == -1) {
-    DLOGE("%s should be present", device_name_);
+    DLOGE("device type = %d should be present", device_type_);
+    return kErrorHardware;
+  }
+
+  const char *dev_name = NULL;
+  vector<string> dev_paths = {"/dev/graphics/fb", "/dev/fb"};
+  for (size_t i = 0; i < dev_paths.size(); i++) {
+    dev_paths[i] += to_string(fb_node_index_);
+    if (Sys::access_(dev_paths[i].c_str(), F_OK) >= 0) {
+      dev_name = dev_paths[i].c_str();
+      DLOGI("access(%s) successful", dev_name);
+      break;
+    }
+
+    DLOGI("access(%s), errno = %d, error = %s", dev_paths[i].c_str(), errno, strerror(errno));
+  }
+
+  if (!dev_name) {
+    DLOGE("access() failed for all possible paths");
     return kErrorHardware;
   }
 
@@ -122,10 +98,9 @@ DisplayError HWDevice::Init() {
   hw_resource_ = HWResourceInfo();
   hw_info_intf_->GetHWResourceInfo(&hw_resource_);
 
-  snprintf(device_name, sizeof(device_name), "%s%d", "/dev/graphics/fb", fb_node_index_);
-  device_fd_ = Sys::open_(device_name, O_RDWR);
+  device_fd_ = Sys::open_(dev_name, O_RDWR);
   if (device_fd_ < 0) {
-    DLOGE("open %s failed err = %d errstr = %s", device_name, errno,  strerror(errno));
+    DLOGE("open %s failed errno = %d, error = %s", dev_name, errno, strerror(errno));
     return kErrorResources;
   }
 
@@ -212,11 +187,11 @@ DisplayError HWDevice::Validate(HWLayers *hw_layers) {
   DisplayError error = kErrorNone;
 
   HWLayersInfo &hw_layer_info = hw_layers->info;
-  LayerStack *stack = hw_layer_info.stack;
+  uint32_t hw_layer_count = UINT32(hw_layer_info.hw_layers.size());
 
   DLOGV_IF(kTagDriverConfig, "************************** %s Validate Input ***********************",
            device_name_);
-  DLOGV_IF(kTagDriverConfig, "SDE layer count is %d", hw_layer_info.count);
+  DLOGV_IF(kTagDriverConfig, "SDE layer count is %d", hw_layer_count);
 
   mdp_layer_commit_v1 &mdp_commit = mdp_disp_commit_.commit_v1;
   uint32_t &mdp_layer_count = mdp_commit.input_layer_cnt;
@@ -226,55 +201,54 @@ DisplayError HWDevice::Validate(HWLayers *hw_layers) {
   DLOGI_IF(kTagDriverConfig, "right_roi: x = %d, y = %d, w = %d, h = %d", mdp_commit.right_roi.x,
     mdp_commit.right_roi.y, mdp_commit.right_roi.w, mdp_commit.right_roi.h);
 
-  for (uint32_t i = 0; i < hw_layer_info.count; i++) {
-    uint32_t layer_index = hw_layer_info.index[i];
-    Layer *layer = stack->layers.at(layer_index);
-    LayerBuffer *input_buffer = layer->input_buffer;
+  for (uint32_t i = 0; i < hw_layer_count; i++) {
+    const Layer &layer = hw_layer_info.hw_layers.at(i);
+    LayerBuffer input_buffer = layer.input_buffer;
     HWPipeInfo *left_pipe = &hw_layers->config[i].left_pipe;
     HWPipeInfo *right_pipe = &hw_layers->config[i].right_pipe;
     HWRotatorSession *hw_rotator_session = &hw_layers->config[i].hw_rotator_session;
     bool is_rotator_used = (hw_rotator_session->hw_block_count != 0);
-    bool is_cursor_pipe_used = (hw_layer_info.use_hw_cursor & layer->flags.cursor);
+    bool is_cursor_pipe_used = (hw_layer_info.use_hw_cursor & layer.flags.cursor);
 
     for (uint32_t count = 0; count < 2; count++) {
       HWPipeInfo *pipe_info = (count == 0) ? left_pipe : right_pipe;
       HWRotateInfo *hw_rotate_info = &hw_rotator_session->hw_rotate_info[count];
 
       if (hw_rotate_info->valid) {
-        input_buffer = &hw_rotator_session->output_buffer;
+        input_buffer = hw_rotator_session->output_buffer;
       }
 
       if (pipe_info->valid) {
         mdp_input_layer &mdp_layer = mdp_in_layers_[mdp_layer_count];
         mdp_layer_buffer &mdp_buffer = mdp_layer.buffer;
 
-        mdp_buffer.width = input_buffer->width;
-        mdp_buffer.height = input_buffer->height;
+        mdp_buffer.width = input_buffer.width;
+        mdp_buffer.height = input_buffer.height;
         mdp_buffer.comp_ratio.denom = 1000;
         mdp_buffer.comp_ratio.numer = UINT32(hw_layers->config[i].compression * 1000);
 
-        if (layer->flags.solid_fill) {
+        if (layer.flags.solid_fill) {
           mdp_buffer.format = MDP_ARGB_8888;
         } else {
-          error = SetFormat(input_buffer->format, &mdp_buffer.format);
+          error = SetFormat(input_buffer.format, &mdp_buffer.format);
           if (error != kErrorNone) {
             return error;
           }
         }
-        mdp_layer.alpha = layer->plane_alpha;
+        mdp_layer.alpha = layer.plane_alpha;
         mdp_layer.z_order = UINT16(pipe_info->z_order);
         mdp_layer.transp_mask = 0xffffffff;
-        SetBlending(layer->blending, &mdp_layer.blend_op);
+        SetBlending(layer.blending, &mdp_layer.blend_op);
         mdp_layer.pipe_ndx = pipe_info->pipe_id;
         mdp_layer.horz_deci = pipe_info->horizontal_decimation;
         mdp_layer.vert_deci = pipe_info->vertical_decimation;
 
         SetRect(pipe_info->src_roi, &mdp_layer.src_rect);
         SetRect(pipe_info->dst_roi, &mdp_layer.dst_rect);
-        SetMDPFlags(layer, is_rotator_used, is_cursor_pipe_used, &mdp_layer.flags);
-        SetCSC(layer->input_buffer->csc, &mdp_layer.color_space);
+        SetMDPFlags(&layer, is_rotator_used, is_cursor_pipe_used, &mdp_layer.flags);
+        SetCSC(layer.input_buffer.color_metadata, &mdp_layer.color_space);
         if (pipe_info->flags & kIGC) {
-          SetIGC(layer->input_buffer, mdp_layer_count);
+          SetIGC(&layer.input_buffer, mdp_layer_count);
         }
         if (pipe_info->flags & kMultiRect) {
           mdp_layer.flags |= MDP_LAYER_MULTIRECT_ENABLE;
@@ -282,7 +256,7 @@ DisplayError HWDevice::Validate(HWLayers *hw_layers) {
             mdp_layer.flags |= MDP_LAYER_MULTIRECT_PARALLEL_MODE;
           }
         }
-        mdp_layer.bg_color = layer->solid_fill_color;
+        mdp_layer.bg_color = layer.solid_fill_color;
 
         // HWScaleData to MDP driver
         hw_scale_->SetHWScaleData(pipe_info->scale_data, mdp_layer_count, &mdp_commit,
@@ -321,7 +295,7 @@ DisplayError HWDevice::Validate(HWLayers *hw_layers) {
     mdp_out_layer_.buffer.comp_ratio.denom = 1000;
     mdp_out_layer_.buffer.comp_ratio.numer = UINT32(hw_layers->output_compression * 1000);
 #ifdef OUT_LAYER_COLOR_SPACE
-    SetCSC(output_buffer->csc, &mdp_out_layer_.color_space);
+    SetCSC(output_buffer->color_metadata, &mdp_out_layer_.color_space);
 #endif
     SetFormat(output_buffer->format, &mdp_out_layer_.buffer.format);
 
@@ -353,6 +327,10 @@ DisplayError HWDevice::Validate(HWLayers *hw_layers) {
     dest_scalar_data->dest_scaler_ndx = i;
     dest_scalar_data->lm_width = dest_scale_info->mixer_width;
     dest_scalar_data->lm_height = dest_scale_info->mixer_height;
+#ifdef MDP_DESTSCALER_ROI_ENABLE
+    SetRect(dest_scale_info->panel_roi, &dest_scalar_data->panel_roi);
+    dest_scalar_data->flags |= MDP_DESTSCALER_ROI_ENABLE;
+#endif
     dest_scalar_data->scale = reinterpret_cast <uint64_t>
       (hw_scale_->GetScaleDataRef(index, kHWDestinationScalar));
 
@@ -360,9 +338,14 @@ DisplayError HWDevice::Validate(HWLayers *hw_layers) {
 
     DLOGV_IF(kTagDriverConfig, "************************ DestScalar[%d] **************************",
              dest_scalar_data->dest_scaler_ndx);
-    DLOGV_IF(kTagDriverConfig, "Mixer WxH %dx%d", dest_scalar_data->lm_width,
-             dest_scalar_data->lm_height);
-    DLOGI_IF(kTagDriverConfig, "*****************************************************************");
+    DLOGV_IF(kTagDriverConfig, "Mixer WxH %dx%d flags %x", dest_scalar_data->lm_width,
+             dest_scalar_data->lm_height, dest_scalar_data->flags);
+#ifdef MDP_DESTSCALER_ROI_ENABLE
+    DLOGV_IF(kTagDriverConfig, "Panel ROI [%d, %d, %d, %d]", dest_scalar_data->panel_roi.x,
+             dest_scalar_data->panel_roi.y, dest_scalar_data->panel_roi.w,
+             dest_scalar_data->panel_roi.h);
+#endif
+    DLOGV_IF(kTagDriverConfig, "*****************************************************************");
   }
   mdp_commit.dest_scaler_cnt = UINT32(hw_layer_info.dest_scale_info_map.size());
 
@@ -389,12 +372,27 @@ void HWDevice::DumpLayerCommit(const mdp_layer_commit &layer_commit) {
   DLOGI("mdp_commit: flags = %x, release fence = %x", mdp_commit.flags, mdp_commit.release_fence);
   DLOGI("left_roi: x = %d, y = %d, w = %d, h = %d", l_roi.x, l_roi.y, l_roi.w, l_roi.h);
   DLOGI("right_roi: x = %d, y = %d, w = %d, h = %d", r_roi.x, r_roi.y, r_roi.w, r_roi.h);
+  for (uint32_t i = 0; i < mdp_commit.dest_scaler_cnt; i++) {
+    mdp_destination_scaler_data *dest_scalar_data = &mdp_dest_scalar_data_[i];
+    mdp_scale_data_v2 *mdp_scale = reinterpret_cast<mdp_scale_data_v2 *>(dest_scalar_data->scale);
+
+    DLOGI("Dest scalar index %d Mixer WxH %dx%d", dest_scalar_data->dest_scaler_ndx,
+          dest_scalar_data->lm_width, dest_scalar_data->lm_height);
+#ifdef MDP_DESTSCALER_ROI_ENABLE
+    DLOGI("Panel ROI [%d, %d, %d, %d]", dest_scalar_data->panel_roi.x,
+           dest_scalar_data->panel_roi.y, dest_scalar_data->panel_roi.w,
+           dest_scalar_data->panel_roi.h);
+#endif
+    DLOGI("Dest scalar Dst WxH %dx%d", mdp_scale->dst_width, mdp_scale->dst_height);
+  }
   for (uint32_t i = 0; i < mdp_commit.input_layer_cnt; i++) {
     const mdp_input_layer &layer = mdp_layers[i];
     const mdp_rect &src_rect = layer.src_rect;
     const mdp_rect &dst_rect = layer.dst_rect;
     DLOGI("layer = %d, pipe_ndx = %x, z = %d, flags = %x",
       i, layer.pipe_ndx, layer.z_order, layer.flags);
+    DLOGI("src_width = %d, src_height = %d, src_format = %d",
+      layer.buffer.width, layer.buffer.height, layer.buffer.format);
     DLOGI("src_rect: x = %d, y = %d, w = %d, h = %d",
       src_rect.x, src_rect.y, src_rect.w, src_rect.h);
     DLOGI("dst_rect: x = %d, y = %d, w = %d, h = %d",
@@ -406,18 +404,18 @@ DisplayError HWDevice::Commit(HWLayers *hw_layers) {
   DTRACE_SCOPED();
 
   HWLayersInfo &hw_layer_info = hw_layers->info;
-  LayerStack *stack = hw_layer_info.stack;
+  uint32_t hw_layer_count = UINT32(hw_layer_info.hw_layers.size());
 
   DLOGV_IF(kTagDriverConfig, "*************************** %s Commit Input ************************",
            device_name_);
-  DLOGV_IF(kTagDriverConfig, "SDE layer count is %d", hw_layer_info.count);
+  DLOGV_IF(kTagDriverConfig, "SDE layer count is %d", hw_layer_count);
 
   mdp_layer_commit_v1 &mdp_commit = mdp_disp_commit_.commit_v1;
   uint32_t mdp_layer_index = 0;
 
-  for (uint32_t i = 0; i < hw_layer_info.count; i++) {
-    uint32_t layer_index = hw_layer_info.index[i];
-    LayerBuffer *input_buffer = stack->layers.at(layer_index)->input_buffer;
+  for (uint32_t i = 0; i < hw_layer_count; i++) {
+    const Layer &layer = hw_layer_info.hw_layers.at(i);
+    LayerBuffer *input_buffer = const_cast<LayerBuffer *>(&layer.input_buffer);
     HWPipeInfo *left_pipe = &hw_layers->config[i].left_pipe;
     HWPipeInfo *right_pipe = &hw_layers->config[i].right_pipe;
     HWRotatorSession *hw_rotator_session = &hw_layers->config[i].hw_rotator_session;
@@ -489,6 +487,12 @@ DisplayError HWDevice::Commit(HWLayers *hw_layers) {
   if (synchronous_commit_) {
     mdp_commit.flags |= MDP_COMMIT_WAIT_FOR_FINISH;
   }
+  if (bl_update_commit && bl_level_update_commit >= 0) {
+#ifdef MDP_COMMIT_UPDATE_BRIGHTNESS
+    mdp_commit.bl_level = (uint32_t)bl_level_update_commit;
+    mdp_commit.flags |= MDP_COMMIT_UPDATE_BRIGHTNESS;
+#endif
+  }
   if (Sys::ioctl_(device_fd_, INT(MSMFB_ATOMIC_COMMIT), &mdp_disp_commit_) < 0) {
     if (errno == ESHUTDOWN) {
       DLOGI_IF(kTagDriverConfig, "Driver is processing shutdown sequence");
@@ -500,17 +504,20 @@ DisplayError HWDevice::Commit(HWLayers *hw_layers) {
     return kErrorHardware;
   }
 
+  LayerStack *stack = hw_layer_info.stack;
   stack->retire_fence_fd = mdp_commit.retire_fence;
-
+#ifdef VIDEO_MODE_DEFER_RETIRE_FENCE
+  if (hw_panel_info_.mode == kModeVideo) {
+    stack->retire_fence_fd = stored_retire_fence;
+    stored_retire_fence =  mdp_commit.retire_fence;
+  }
+#endif
   // MDP returns only one release fence for the entire layer stack. Duplicate this fence into all
   // layers being composed by MDP.
 
-  std::vector<uint32_t> fence_dup_flag;
-  fence_dup_flag.clear();
-
-  for (uint32_t i = 0; i < hw_layer_info.count; i++) {
-    uint32_t layer_index = hw_layer_info.index[i];
-    LayerBuffer *input_buffer = stack->layers.at(layer_index)->input_buffer;
+  for (uint32_t i = 0; i < hw_layer_count; i++) {
+    const Layer &layer = hw_layer_info.hw_layers.at(i);
+    LayerBuffer *input_buffer = const_cast<LayerBuffer *>(&layer.input_buffer);
     HWRotatorSession *hw_rotator_session = &hw_layers->config[i].hw_rotator_session;
 
     if (hw_rotator_session->hw_block_count) {
@@ -519,14 +526,8 @@ DisplayError HWDevice::Commit(HWLayers *hw_layers) {
       continue;
     }
 
-    // Make sure the release fence is duplicated only once for each buffer.
-    if (std::find(fence_dup_flag.begin(), fence_dup_flag.end(), layer_index) ==
-        fence_dup_flag.end()) {
-      input_buffer->release_fence_fd = Sys::dup_(mdp_commit.release_fence);
-      fence_dup_flag.push_back(layer_index);
-    }
+    input_buffer->release_fence_fd = Sys::dup_(mdp_commit.release_fence);
   }
-  fence_dup_flag.clear();
 
   hw_layer_info.sync_handle = Sys::dup_(mdp_commit.release_fence);
 
@@ -545,6 +546,9 @@ DisplayError HWDevice::Commit(HWLayers *hw_layers) {
     PopulateHWPanelInfo();
     synchronous_commit_ = false;
   }
+
+  if (bl_update_commit)
+    bl_update_commit = false;
 
   return kErrorNone;
 }
@@ -596,6 +600,7 @@ DisplayError HWDevice::SetFormat(const LayerBufferFormat &source, uint32_t *targ
   case kFormatRGBX8888Ubwc:             *target = MDP_RGBX_8888_UBWC;    break;
   case kFormatBGR565Ubwc:               *target = MDP_RGB_565_UBWC;      break;
   case kFormatYCbCr420SPVenusUbwc:      *target = MDP_Y_CBCR_H2V2_UBWC;  break;
+  case kFormatCbYCrY422H2V1Packed:      *target = MDP_CBYCRY_H2V1;       break;
   case kFormatRGBA1010102:              *target = MDP_RGBA_1010102;      break;
   case kFormatARGB2101010:              *target = MDP_ARGB_2101010;      break;
   case kFormatRGBX1010102:              *target = MDP_RGBX_1010102;      break;
@@ -661,15 +666,16 @@ DisplayError HWDevice::SetStride(HWDeviceType device_type, LayerBufferFormat for
   case kFormatYCrCb420PlanarStride16:
   case kFormatYCbCr420SemiPlanar:
   case kFormatYCrCb420SemiPlanar:
-  case kFormatYCbCr420P010:
   case kFormatYCbCr420TP10Ubwc:
     *target = width;
     break;
   case kFormatYCbCr422H2V1Packed:
+  case kFormatCbYCrY422H2V1Packed:
   case kFormatYCrCb422H2V1SemiPlanar:
   case kFormatYCrCb422H1V2SemiPlanar:
   case kFormatYCbCr422H2V1SemiPlanar:
   case kFormatYCbCr422H1V2SemiPlanar:
+  case kFormatYCbCr420P010:
   case kFormatRGBA5551:
   case kFormatRGBA4444:
     *target = width * 2;
@@ -700,7 +706,7 @@ void HWDevice::SetRect(const LayerRect &source, mdp_rect *target) {
 
 void HWDevice::SetMDPFlags(const Layer *layer, const bool &is_rotator_used,
                            bool is_cursor_pipe_used, uint32_t *mdp_flags) {
-  const LayerBuffer *input_buffer = layer->input_buffer;
+  const LayerBuffer &input_buffer = layer->input_buffer;
 
   // Flips will be taken care by rotator, if layer uses rotator for downscale/rotation. So ignore
   // flip flags for MDP.
@@ -713,16 +719,18 @@ void HWDevice::SetMDPFlags(const Layer *layer, const bool &is_rotator_used,
       *mdp_flags |= MDP_LAYER_FLIP_LR;
     }
 
-    if (input_buffer->flags.interlace) {
+    if (input_buffer.flags.interlace) {
       *mdp_flags |= MDP_LAYER_DEINTERLACE;
     }
   }
 
-  if (input_buffer->flags.secure) {
+  if (input_buffer.flags.secure_camera) {
+    *mdp_flags |= MDP_LAYER_SECURE_CAMERA_SESSION;
+  } else if (input_buffer.flags.secure) {
     *mdp_flags |= MDP_LAYER_SECURE_SESSION;
   }
 
-  if (input_buffer->flags.secure_display) {
+  if (input_buffer.flags.secure_display) {
     *mdp_flags |= MDP_LAYER_SECURE_DISPLAY_SESSION;
   }
 
@@ -771,8 +779,8 @@ void HWDevice::PopulateHWPanelInfo() {
   DLOGI("Device type = %d, Display Port = %d, Display Mode = %d, Device Node = %d, Is Primary = %d",
         device_type_, hw_panel_info_.port, hw_panel_info_.mode, fb_node_index_,
         hw_panel_info_.is_primary_panel);
-  DLOGI("Partial Update = %d, Dynamic FPS = %d",
-        hw_panel_info_.partial_update, hw_panel_info_.dynamic_fps);
+  DLOGI("Partial Update = %d, supported roi_count =%d, Dynamic FPS = %d",
+        hw_panel_info_.partial_update, hw_panel_info_.left_roi_count, hw_panel_info_.dynamic_fps);
   DLOGI("Align: left = %d, width = %d, top = %d, height = %d",
         hw_panel_info_.left_align, hw_panel_info_.width_align,
         hw_panel_info_.top_align, hw_panel_info_.height_align);
@@ -780,6 +788,7 @@ void HWDevice::PopulateHWPanelInfo() {
         hw_panel_info_.min_roi_width, hw_panel_info_.min_roi_height,
         hw_panel_info_.needs_roi_merge);
   DLOGI("FPS: min = %d, max =%d", hw_panel_info_.min_fps, hw_panel_info_.max_fps);
+  DLOGI("Ping Pong Split = %d",  hw_panel_info_.ping_pong_split);
   DLOGI("Left Split = %d, Right Split = %d", hw_panel_info_.split_info.left_split,
         hw_panel_info_.split_info.right_split);
 }
@@ -842,6 +851,8 @@ void HWDevice::GetHWPanelInfoByNode(int device_node, HWPanelInfo *panel_info) {
         panel_info->dynamic_fps = atoi(tokens[1]);
       } else if (!strncmp(tokens[0], "dfps_porch_mode", strlen("dfps_porch_mode"))) {
         panel_info->dfps_porch_mode = atoi(tokens[1]);
+      } else if (!strncmp(tokens[0], "is_pingpong_split", strlen("is_pingpong_split"))) {
+        panel_info->ping_pong_split = atoi(tokens[1]);
       } else if (!strncmp(tokens[0], "min_fps", strlen("min_fps"))) {
         panel_info->min_fps = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "max_fps", strlen("max_fps"))) {
@@ -850,6 +861,38 @@ void HWDevice::GetHWPanelInfoByNode(int device_node, HWPanelInfo *panel_info) {
         panel_info->is_primary_panel = atoi(tokens[1]);
       } else if (!strncmp(tokens[0], "is_pluggable", strlen("is_pluggable"))) {
         panel_info->is_pluggable = atoi(tokens[1]);
+      } else if (!strncmp(tokens[0], "pu_roi_cnt", strlen("pu_roi_cnt"))) {
+        panel_info->left_roi_count = UINT32(atoi(tokens[1]));
+        panel_info->right_roi_count = UINT32(atoi(tokens[1]));
+      } else if (!strncmp(tokens[0], "is_hdr_enabled", strlen("is_hdr_enabled"))) {
+        panel_info->hdr_enabled = atoi(tokens[1]);
+      } else if (!strncmp(tokens[0], "peak_brightness", strlen("peak_brightness"))) {
+        panel_info->peak_luminance = UINT32(atoi(tokens[1]));
+      } else if (!strncmp(tokens[0], "average_brightness", strlen("average_brightness"))) {
+        panel_info->average_luminance = UINT32(atoi(tokens[1]));
+      } else if (!strncmp(tokens[0], "blackness_level", strlen("blackness_level"))) {
+        panel_info->blackness_level = UINT32(atoi(tokens[1]));
+      } else if (!strncmp(tokens[0], "white_chromaticity_x", strlen("white_chromaticity_x"))) {
+        panel_info->primaries.white_point[0] = UINT32(atoi(tokens[1]));
+      } else if (!strncmp(tokens[0], "white_chromaticity_y", strlen("white_chromaticity_y"))) {
+        panel_info->primaries.white_point[1] = UINT32(atoi(tokens[1]));
+      } else if (!strncmp(tokens[0], "red_chromaticity_x", strlen("red_chromaticity_x"))) {
+        panel_info->primaries.red[0] = UINT32(atoi(tokens[1]));
+      } else if (!strncmp(tokens[0], "red_chromaticity_y", strlen("red_chromaticity_y"))) {
+        panel_info->primaries.red[1] = UINT32(atoi(tokens[1]));
+      } else if (!strncmp(tokens[0], "green_chromaticity_x", strlen("green_chromaticity_x"))) {
+        panel_info->primaries.green[0] = UINT32(atoi(tokens[1]));
+      } else if (!strncmp(tokens[0], "green_chromaticity_y", strlen("green_chromaticity_y"))) {
+        panel_info->primaries.green[1] = UINT32(atoi(tokens[1]));
+      } else if (!strncmp(tokens[0], "blue_chromaticity_x", strlen("blue_chromaticity_x"))) {
+        panel_info->primaries.blue[0] = UINT32(atoi(tokens[1]));
+      } else if (!strncmp(tokens[0], "blue_chromaticity_y", strlen("blue_chromaticity_y"))) {
+        panel_info->primaries.blue[1] = UINT32(atoi(tokens[1]));
+      } else if (!strncmp(tokens[0], "panel_orientation", strlen("panel_orientation"))) {
+        int32_t panel_orient = atoi(tokens[1]);
+        panel_info->panel_orientation.flip_horizontal = ((panel_orient & MDP_FLIP_LR) > 0);
+        panel_info->panel_orientation.flip_vertical = ((panel_orient & MDP_FLIP_UD) > 0);
+        panel_info->panel_orientation.rotation = ((panel_orient & MDP_ROT_90) > 0);
       }
     }
   }
@@ -992,7 +1035,7 @@ int HWDevice::ParseLine(const char *input, const char *delim, char *tokens[],
 
 bool HWDevice::EnableHotPlugDetection(int enable) {
   char hpdpath[kMaxStringLength];
-  char value = enable ? '1' : '0';
+  const char *value = enable ? "1" : "0";
 
   // Enable HPD for all pluggable devices.
   for (int i = 0; i < kFBNodeMax; i++) {
@@ -1001,7 +1044,7 @@ bool HWDevice::EnableHotPlugDetection(int enable) {
     if (panel_info.is_pluggable == true) {
       snprintf(hpdpath , sizeof(hpdpath), "%s%d/hpd", fb_path_, i);
 
-      ssize_t length = SysFsWrite(hpdpath, &value, sizeof(value));
+      ssize_t length = SysFsWrite(hpdpath, value, 1);
       if (length <= 0) {
         return false;
       }
@@ -1036,11 +1079,24 @@ void HWDevice::ResetDisplayParams() {
   mdp_disp_commit_.commit_v1.dest_scaler = mdp_dest_scalar_data_.data();
 }
 
-void HWDevice::SetCSC(LayerCSC source, mdp_color_space *color_space) {
-  switch (source) {
-  case kCSCLimitedRange601:    *color_space = MDP_CSC_ITU_R_601;      break;
-  case kCSCFullRange601:       *color_space = MDP_CSC_ITU_R_601_FR;   break;
-  case kCSCLimitedRange709:    *color_space = MDP_CSC_ITU_R_709;      break;
+void HWDevice::SetCSC(const ColorMetaData &color_metadata, mdp_color_space *color_space) {
+  switch (color_metadata.colorPrimaries) {
+  case ColorPrimaries_BT601_6_525:
+  case ColorPrimaries_BT601_6_625:
+    *color_space = ((color_metadata.range == Range_Full) ? MDP_CSC_ITU_R_601_FR :
+                                                           MDP_CSC_ITU_R_601);
+    break;
+  case ColorPrimaries_BT709_5:
+    *color_space = MDP_CSC_ITU_R_709;
+    break;
+#if defined MDP_CSC_ITU_R_2020 && defined MDP_CSC_ITU_R_2020_FR
+  case ColorPrimaries_BT2020:
+    *color_space = static_cast<mdp_color_space>((color_metadata.range == Range_Full) ?
+                                                 MDP_CSC_ITU_R_2020_FR : MDP_CSC_ITU_R_2020);
+    break;
+#endif
+  default:
+    break;
   }
 }
 
@@ -1072,7 +1128,7 @@ DisplayError HWDevice::SetCursorPosition(HWLayers *hw_layers, int x, int y) {
   DTRACE_SCOPED();
 
   HWLayersInfo &hw_layer_info = hw_layers->info;
-  uint32_t count = hw_layer_info.count;
+  uint32_t count = UINT32(hw_layer_info.hw_layers.size());
   uint32_t cursor_index = count - 1;
   HWPipeInfo *left_pipe = &hw_layers->config[cursor_index].left_pipe;
 
@@ -1132,6 +1188,10 @@ DisplayError HWDevice::SetRefreshRate(uint32_t refresh_rate) {
 }
 
 DisplayError HWDevice::SetPanelBrightness(int level) {
+  return kErrorNotSupported;
+}
+
+DisplayError HWDevice::CachePanelBrightness(int level) {
   return kErrorNotSupported;
 }
 
@@ -1237,9 +1297,9 @@ DisplayError HWDevice::SetMixerAttributes(const HWMixerAttributes &mixer_attribu
 
   if (mixer_attributes.width > display_attributes_.x_pixels ||
       mixer_attributes.height > display_attributes_.y_pixels) {
-    DLOGW("Input resolution exceeds display resolution! input: res %dx%d display: res %dx%d",
-          mixer_attributes.width, mixer_attributes.height, display_attributes_.x_pixels,
-          display_attributes_.y_pixels);
+    DLOGW_IF(kTagDriverConfig, "Input resolution exceeds display resolution! input: res %dx%d "\
+             "display: res %dx%d", mixer_attributes.width, mixer_attributes.height,
+             display_attributes_.x_pixels, display_attributes_.y_pixels);
     return kErrorNotSupported;
   }
 
@@ -1249,8 +1309,8 @@ DisplayError HWDevice::SetMixerAttributes(const HWMixerAttributes &mixer_attribu
   }
 
   if (mixer_attributes.width > max_input_width) {
-    DLOGW("Input width exceeds width limit! input_width %d width_limit %d", mixer_attributes.width,
-          max_input_width);
+    DLOGW_IF(kTagDriverConfig, "Input width exceeds width limit! input_width %d width_limit %d",
+             mixer_attributes.width, max_input_width);
     return kErrorNotSupported;
   }
 
@@ -1259,8 +1319,9 @@ DisplayError HWDevice::SetMixerAttributes(const HWMixerAttributes &mixer_attribu
     FLOAT(display_attributes_.x_pixels) / FLOAT(display_attributes_.y_pixels);
 
   if (display_aspect_ratio != mixer_aspect_ratio) {
-    DLOGW("Aspect ratio mismatch! input: res %dx%d display: res %dx%d", mixer_attributes.width,
-          mixer_attributes.height, display_attributes_.x_pixels, display_attributes_.y_pixels);
+    DLOGW_IF(kTagDriverConfig, "Aspect ratio mismatch! input: res %dx%d display: res %dx%d",
+             mixer_attributes.width, mixer_attributes.height, display_attributes_.x_pixels,
+             display_attributes_.y_pixels);
     return kErrorNotSupported;
   }
 
@@ -1268,8 +1329,8 @@ DisplayError HWDevice::SetMixerAttributes(const HWMixerAttributes &mixer_attribu
   float scale_y = FLOAT(display_attributes_.y_pixels) / FLOAT(mixer_attributes.height);
   float max_scale_up = hw_resource_.hw_dest_scalar_info.max_scale_up;
   if (scale_x > max_scale_up || scale_y > max_scale_up) {
-    DLOGW("Up scaling ratio exceeds for destination scalar upscale limit scale_x %f scale_y %f " \
-          "max_scale_up %f", scale_x, scale_y, max_scale_up);
+    DLOGW_IF(kTagDriverConfig, "Up scaling ratio exceeds for destination scalar upscale " \
+             "limit scale_x %f scale_y %f max_scale_up %f", scale_x, scale_y, max_scale_up);
     return kErrorNotSupported;
   }
 

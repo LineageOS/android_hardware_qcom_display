@@ -52,6 +52,7 @@ bool IsUncompressedRGBFormat(int format) {
     case HAL_PIXEL_FORMAT_ABGR_2101010:
     case HAL_PIXEL_FORMAT_BGRX_1010102:
     case HAL_PIXEL_FORMAT_XBGR_2101010:
+    case HAL_PIXEL_FORMAT_RGBA_FP16:
       return true;
     default:
       break;
@@ -101,6 +102,9 @@ bool IsCompressedRGBFormat(int format) {
 uint32_t GetBppForUncompressedRGB(int format) {
   uint32_t bpp = 0;
   switch (format) {
+    case HAL_PIXEL_FORMAT_RGBA_FP16:
+      bpp = 8;
+      break;
     case HAL_PIXEL_FORMAT_RGBA_8888:
     case HAL_PIXEL_FORMAT_RGBX_8888:
     case HAL_PIXEL_FORMAT_BGRA_8888:

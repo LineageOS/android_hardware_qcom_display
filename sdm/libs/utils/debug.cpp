@@ -30,6 +30,8 @@
 #include <stdlib.h>
 #include <utils/debug.h>
 #include <utils/constants.h>
+#include <string>
+#include <algorithm>
 
 namespace sdm {
 
@@ -52,11 +54,15 @@ int Debug::GetHDMIResolution() {
   return value;
 }
 
-uint32_t Debug::GetIdleTimeoutMs() {
-  int value = IDLE_TIMEOUT_DEFAULT_MS;
-  debug_.debug_handler_->GetProperty("sdm.idle_time", &value);
+void Debug::GetIdleTimeoutMs(uint32_t *active_ms, uint32_t *inactive_ms) {
+  int active_val = IDLE_TIMEOUT_ACTIVE_MS;
+  int inactive_val = IDLE_TIMEOUT_INACTIVE_MS;
 
-  return UINT32(value);
+  debug_.debug_handler_->GetProperty("sdm.idle_time", &active_val);
+  debug_.debug_handler_->GetProperty("sdm.idle_time.inactive", &inactive_val);
+
+  *active_ms = UINT32(active_val);
+  *inactive_ms = UINT32(inactive_val);
 }
 
 int Debug::GetBootAnimLayerCount() {
@@ -99,9 +105,9 @@ int Debug::GetMaxPipesPerMixer(DisplayType display_type) {
   return value;
 }
 
-int Debug::GetMaxVideoUpscale() {
+int Debug::GetMaxUpscale() {
   int value = 0;
-  debug_.debug_handler_->GetProperty("sdm.video_max_upscale", &value);
+  debug_.debug_handler_->GetProperty("sdm.max_upscale", &value);
 
   return value;
 }
@@ -159,6 +165,36 @@ bool Debug::IsExtAnimDisabled() {
   debug_.debug_handler_->GetProperty("sys.disable_ext_animation", &value);
 
   return (value == 1);
+}
+
+bool Debug::IsPartialSplitDisabled() {
+  int value = 0;
+  debug_.debug_handler_->GetProperty("sdm.debug.disable_partial_split", &value);
+
+  return (value == 1);
+}
+
+DisplayError Debug::GetMixerResolution(uint32_t *width, uint32_t *height) {
+  char value[64] = {};
+
+  DisplayError error = debug_.debug_handler_->GetProperty("sdm.mixer_resolution", value);
+  if (error !=kErrorNone) {
+    return error;
+  }
+
+  std::string str(value);
+
+  *width = UINT32(stoi(str));
+  *height = UINT32(stoi(str.substr(str.find('x') + 1)));
+
+  return kErrorNone;
+}
+
+int Debug::GetExtMaxlayers() {
+  int max_external_layers = 0;
+  debug_.debug_handler_->GetProperty("sdm.max_external_layers", &max_external_layers);
+
+  return std::max(max_external_layers, 2);
 }
 
 bool Debug::GetProperty(const char* property_name, char* value) {

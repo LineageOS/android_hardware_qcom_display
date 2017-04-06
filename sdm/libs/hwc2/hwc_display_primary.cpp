@@ -88,7 +88,7 @@ void HWCDisplayPrimary::Destroy(HWCDisplay *hwc_display) {
 HWCDisplayPrimary::HWCDisplayPrimary(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
                                      HWCCallbacks *callbacks, qService::QService *qservice)
     : HWCDisplay(core_intf, callbacks, kPrimary, HWC_DISPLAY_PRIMARY, true, qservice,
-                 DISPLAY_CLASS_PRIMARY),
+                 DISPLAY_CLASS_PRIMARY, buffer_allocator),
       buffer_allocator_(buffer_allocator),
       cpu_hint_(NULL) {
 }
@@ -158,9 +158,6 @@ void HWCDisplayPrimary::ProcessBootAnimCompleted() {
 HWC2::Error HWCDisplayPrimary::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
   auto status = HWC2::Error::None;
   DisplayError error = kErrorNone;
-
-  if (!boot_animation_completed_)
-    ProcessBootAnimCompleted();
 
   if (display_paused_) {
     MarkLayersForGPUBypass();
@@ -406,11 +403,16 @@ void HWCDisplayPrimary::SetIdleTimeoutMs(uint32_t timeout_ms) {
 }
 
 static void SetLayerBuffer(const BufferInfo &output_buffer_info, LayerBuffer *output_buffer) {
-  output_buffer->width = output_buffer_info.buffer_config.width;
-  output_buffer->height = output_buffer_info.buffer_config.height;
-  output_buffer->format = output_buffer_info.buffer_config.format;
-  output_buffer->planes[0].fd = output_buffer_info.alloc_buffer_info.fd;
-  output_buffer->planes[0].stride = output_buffer_info.alloc_buffer_info.stride;
+  const BufferConfig& buffer_config = output_buffer_info.buffer_config;
+  const AllocatedBufferInfo &alloc_buffer_info = output_buffer_info.alloc_buffer_info;
+
+  output_buffer->width = alloc_buffer_info.aligned_width;
+  output_buffer->height = alloc_buffer_info.aligned_height;
+  output_buffer->unaligned_width = buffer_config.width;
+  output_buffer->unaligned_height = buffer_config.height;
+  output_buffer->format = buffer_config.format;
+  output_buffer->planes[0].fd = alloc_buffer_info.fd;
+  output_buffer->planes[0].stride = alloc_buffer_info.stride;
 }
 
 void HWCDisplayPrimary::HandleFrameOutput() {

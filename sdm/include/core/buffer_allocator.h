@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -52,17 +52,24 @@ struct BufferConfig {
   bool secure = false;                        //!< Specifies buffer to be allocated from
                                               //!< secure region.
   bool cache = false;                         //!< Specifies whether the buffer needs to be cache.
+  bool secure_camera = false;                 //!< Specifies buffer to be allocated from specific
+                                              //!< secure heap and with a specific alignment.
 };
 
 /*! @brief Holds the information about the allocated buffer.
 
   @sa BufferAllocator::AllocateBuffer
   @sa BufferAllocator::FreeBuffer
+  @sa BufferAllocator::GetAllocatedBufferInfo
 */
 struct AllocatedBufferInfo {
   int fd = -1;                   //!< Specifies the fd of the allocated buffer.
-  uint32_t stride = 0;           //!< Specifies aligned buffer width of the allocated buffer.
+  uint32_t stride = 0;           //!< Specifies allocated buffer stride in bytes.
+  uint32_t aligned_width = 0;    //!< Specifies aligned allocated buffer width in pixels.
+  uint32_t aligned_height = 0;   //!< Specifies aligned allocated buffer height in pixels.
   uint32_t size = 0;             //!< Specifies the size of the allocated buffer.
+  uint32_t fb_id = 0;            // Registered id with the DRM driver
+  uint32_t gem_handle = 0;       // GEM driver handle for correspoding import of ION buffer
 };
 
 /*! @brief Holds the information about the input/output configuration of an output buffer.
@@ -118,6 +125,20 @@ class BufferAllocator {
     @return \link unsigned int \endlink
   */
   virtual uint32_t GetBufferSize(BufferInfo *buffer_info) = 0;
+
+  /*! @brief Method to Get the AllocatedBufferInfo only.
+
+    @details This method populates the AllocatedBufferInfo as per the configuration in BufferInfo,
+    but fd will be invalid.
+
+    @param[in] buffer_info \link BufferInfo \endlink
+
+    @param[out] allocated_buffer_info \link AllocatedBufferInfo \endlink
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetAllocatedBufferInfo(const BufferConfig &buffer_config,
+                                              AllocatedBufferInfo *allocated_buffer_info) = 0;
 
  protected:
   virtual ~BufferAllocator() { }

@@ -51,10 +51,6 @@ DisplayError HWVirtual::Validate(HWLayers *hw_layers) {
 }
 
 DisplayError HWVirtual::GetMixerAttributes(HWMixerAttributes *mixer_attributes) {
-  if (!mixer_attributes) {
-    return kErrorParameters;
-  }
-
   mixer_attributes->width = display_attributes_.x_pixels;
   mixer_attributes->height = display_attributes_.y_pixels;
   mixer_attributes_.split_left = display_attributes_.is_device_split ?
@@ -76,6 +72,15 @@ DisplayError HWVirtual::SetDisplayAttributes(const HWDisplayAttributes &display_
 
   return kErrorNone;
 }
+
+DisplayError HWVirtual::GetDisplayAttributes(uint32_t index,
+                                             HWDisplayAttributes *display_attributes) {
+  display_attributes->fps = 60;
+  // TODO(user): Need to update WB fps
+
+  return kErrorNone;
+}
+
 
 }  // namespace sdm
 

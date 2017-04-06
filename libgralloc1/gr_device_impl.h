@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -44,18 +44,24 @@ namespace gralloc1 {
 
 class GrallocImpl : public gralloc1_device_t {
  public:
-  explicit GrallocImpl(const private_module_t *module);
-  ~GrallocImpl();
-  bool Init();
   static int CloseDevice(hw_device_t *device);
   static void GetCapabilities(struct gralloc1_device *device, uint32_t *out_count,
                               int32_t * /*gralloc1_capability_t*/ out_capabilities);
   static gralloc1_function_pointer_t GetFunction(
       struct gralloc1_device *device, int32_t /*gralloc1_function_descriptor_t*/ descriptor);
 
+  static GrallocImpl* GetInstance(const struct hw_module_t *module) {
+    static GrallocImpl *instance = new GrallocImpl(module);
+    if (instance->IsInitialized()) {
+      return instance;
+    } else {
+      return nullptr;
+    }
+  }
+
  private:
-  static inline gralloc1_error_t CheckDeviceAndDescriptor(gralloc1_device_t *device,
-                                                          gralloc1_buffer_descriptor_t descriptor);
+  static inline gralloc1_error_t Dump(gralloc1_device_t *device, uint32_t *out_size,
+                                      char *out_buffer);
   static inline gralloc1_error_t CheckDeviceAndHandle(gralloc1_device_t *device,
                                                       buffer_handle_t buffer);
   static gralloc1_error_t CreateBufferDescriptor(gralloc1_device_t *device,
@@ -70,6 +76,9 @@ class GrallocImpl : public gralloc1_device_t {
                                               uint32_t width, uint32_t height);
   static gralloc1_error_t SetColorFormat(gralloc1_device_t *device,
                                          gralloc1_buffer_descriptor_t descriptor, int32_t format);
+  static gralloc1_error_t SetLayerCount(gralloc1_device_t *device,
+                                        gralloc1_buffer_descriptor_t descriptor,
+                                        uint32_t layer_count);
   static gralloc1_error_t SetProducerUsage(gralloc1_device_t *device,
                                            gralloc1_buffer_descriptor_t descriptor,
                                            gralloc1_producer_usage_t usage);
@@ -81,6 +90,8 @@ class GrallocImpl : public gralloc1_device_t {
                                               uint32_t *out_width, uint32_t *out_height);
   static gralloc1_error_t GetColorFormat(gralloc1_device_t *device, buffer_handle_t descriptor,
                                          int32_t *outFormat);
+  static gralloc1_error_t GetLayerCount(gralloc1_device_t *device, buffer_handle_t buffer,
+                                        uint32_t *out_layer_count);
   static gralloc1_error_t GetProducerUsage(gralloc1_device_t *device, buffer_handle_t buffer,
                                            gralloc1_producer_usage_t *out_usage);
   static gralloc1_error_t GetBufferStride(gralloc1_device_t *device, buffer_handle_t buffer,
@@ -90,30 +101,31 @@ class GrallocImpl : public gralloc1_device_t {
                                           buffer_handle_t *out_buffers);
   static gralloc1_error_t RetainBuffer(gralloc1_device_t *device, buffer_handle_t buffer);
   static gralloc1_error_t ReleaseBuffer(gralloc1_device_t *device, buffer_handle_t buffer);
-  static gralloc1_error_t getNumFlexPlanes(gralloc1_device_t *device, buffer_handle_t buffer,
+  static gralloc1_error_t GetNumFlexPlanes(gralloc1_device_t *device, buffer_handle_t buffer,
                                            uint32_t *out_num_planes);
   static gralloc1_error_t LockBuffer(gralloc1_device_t *device, buffer_handle_t buffer,
                                      gralloc1_producer_usage_t prod_usage,
                                      gralloc1_consumer_usage_t cons_usage,
-                                     const gralloc1_rect_t *access_region, void **out_data,
+                                     const gralloc1_rect_t *region, void **out_data,
                                      int32_t acquire_fence);
   static gralloc1_error_t LockFlex(gralloc1_device_t *device, buffer_handle_t buffer,
                                    gralloc1_producer_usage_t prod_usage,
                                    gralloc1_consumer_usage_t cons_usage,
-                                   const gralloc1_rect_t *access_region,
+                                   const gralloc1_rect_t *region,
                                    struct android_flex_layout *out_flex_layout,
-                                   int32_t acquireFence);
-  /*  TODO(user) : LOCK_YCBCR changed to LOCK_FLEX but structure is not known yet.
-   *  Need to implement after clarification from Google.
-  static gralloc1_error_t LockYCbCrBuffer(gralloc1_device_t* device, buffer_handle_t buffer,
-      gralloc1_producer_usage_t producerUsage, gralloc1_consumer_usage_t consumerUsage,
-      const gralloc1_rect_t* Region, struct android_ycbcr* outYCbCr, int32_t* outAcquireFence);
-   */
+                                   int32_t acquire_fence);
+
   static gralloc1_error_t UnlockBuffer(gralloc1_device_t *device, buffer_handle_t buffer,
                                        int32_t *release_fence);
   static gralloc1_error_t Gralloc1Perform(gralloc1_device_t *device, int operation, ...);
 
+  explicit GrallocImpl(const hw_module_t *module);
+  ~GrallocImpl();
+  bool Init();
+  bool IsInitialized() const { return initalized_; }
+
   BufferManager *buf_mgr_ = NULL;
+  bool initalized_ = false;
 };
 
 }  // namespace gralloc1

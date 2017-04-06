@@ -55,6 +55,7 @@ class HWPrimary : public HWDevice {
   virtual DisplayError SetDisplayMode(const HWDisplayMode hw_display_mode);
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate);
   virtual DisplayError SetPanelBrightness(int level);
+  virtual DisplayError CachePanelBrightness(int level);
   virtual DisplayError GetPPFeaturesVersion(PPFeatureVersion *vers);
   virtual DisplayError SetPPFeatures(PPFeaturesConfig *feature_list);
   virtual DisplayError GetPanelBrightness(int *level);
@@ -85,6 +86,7 @@ class HWPrimary : public HWDevice {
   const char *kBrightnessNode = "/sys/class/leds/lcd-backlight/brightness";
   const char *kAutoRefreshNode = "/sys/devices/virtual/graphics/fb0/msm_cmd_autorefresh_en";
   bool auto_refresh_ = false;
+  bool avr_prop_disabled_ = false;
 };
 
 }  // namespace sdm

@@ -45,6 +45,10 @@
 #define MDP_LAYER_MULTIRECT_PARALLEL_MODE 0
 #endif
 
+#ifndef MDP_LAYER_SECURE_CAMERA_SESSION
+#define MDP_LAYER_SECURE_CAMERA_SESSION 0
+#endif
+
 namespace sdm {
 class HWInfoInterface;
 
@@ -81,6 +85,7 @@ class HWDevice : public HWInterface {
   virtual DisplayError SetDisplayMode(const HWDisplayMode hw_display_mode);
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate);
   virtual DisplayError SetPanelBrightness(int level);
+  virtual DisplayError CachePanelBrightness(int level);
   virtual DisplayError GetHWScanInfo(HWScanInfo *scan_info);
   virtual DisplayError GetVideoFormat(uint32_t config_index, uint32_t *video_format);
   virtual DisplayError GetMaxCEAFormat(uint32_t *max_cea_format);
@@ -125,7 +130,7 @@ class HWDevice : public HWInterface {
   int ParseLine(const char *input, const char *delim, char *tokens[],
                 const uint32_t max_token, uint32_t *count);
   void ResetDisplayParams();
-  void SetCSC(const LayerCSC source, mdp_color_space *color_space);
+  void SetCSC(const ColorMetaData &color_metadata, mdp_color_space *color_space);
   void SetIGC(const LayerBuffer *layer_buffer, uint32_t index);
 
   bool EnableHotPlugDetection(int enable);
@@ -139,6 +144,7 @@ class HWDevice : public HWInterface {
   const char *fb_path_;
   BufferSyncHandler *buffer_sync_handler_;
   int device_fd_;
+  int stored_retire_fence = -1;
   HWDeviceType device_type_;
   mdp_layer_commit mdp_disp_commit_;
   mdp_input_layer mdp_in_layers_[kMaxSDELayers * 2];   // split panel (left + right)
@@ -151,6 +157,8 @@ class HWDevice : public HWInterface {
   HWDisplayAttributes display_attributes_ = {};
   HWMixerAttributes mixer_attributes_ = {};
   std::vector<mdp_destination_scaler_data> mdp_dest_scalar_data_;
+  int bl_level_update_commit = -1;
+  bool bl_update_commit = false;
 };
 
 }  // namespace sdm

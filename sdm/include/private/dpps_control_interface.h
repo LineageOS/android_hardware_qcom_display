@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -22,31 +22,19 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef __ROTATOR_INTERFACE_H__
-#define __ROTATOR_INTERFACE_H__
-
-#include <core/display_interface.h>
-#include <core/buffer_allocator.h>
-#include <core/buffer_sync_handler.h>
-
-#include "hw_info_types.h"
+#ifndef __DPPS_CONTROL_INTERFACE_H__
+#define __DPPS_CONTROL_INTERFACE_H__
 
 namespace sdm {
 
-class RotatorInterface {
+class DppsControlInterface {
  public:
-  virtual DisplayError RegisterDisplay(DisplayType type, Handle *display_ctx) = 0;
-  virtual void UnregisterDisplay(Handle display_ctx) = 0;
-  virtual DisplayError Prepare(Handle display_ctx, HWLayers *hw_layers) = 0;
-  virtual DisplayError Commit(Handle display_ctx, HWLayers *hw_layers) = 0;
-  virtual DisplayError PostCommit(Handle display_ctx, HWLayers *hw_layers) = 0;
-  virtual DisplayError Purge(Handle display_ctx) = 0;
-
- protected:
-  virtual ~RotatorInterface() { }
+  virtual ~DppsControlInterface() { }
+  virtual DisplayError On() = 0;
+  virtual DisplayError Off() = 0;
 };
 
 }  // namespace sdm
 
-#endif  // __ROTATOR_INTERFACE_H__
+#endif  // __DPPS_CONTROL_INTERFACE_H__
 

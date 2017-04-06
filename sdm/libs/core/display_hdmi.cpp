@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -37,10 +37,9 @@
 namespace sdm {
 
 DisplayHDMI::DisplayHDMI(DisplayEventHandler *event_handler, HWInfoInterface *hw_info_intf,
-                         BufferSyncHandler *buffer_sync_handler, CompManager *comp_manager,
-                         RotatorInterface *rotator_intf)
+                         BufferSyncHandler *buffer_sync_handler, CompManager *comp_manager)
   : DisplayBase(kHDMI, event_handler, kDeviceHDMI, buffer_sync_handler, comp_manager,
-                rotator_intf, hw_info_intf) {
+                hw_info_intf) {
 }
 
 DisplayError DisplayHDMI::Init() {
@@ -87,7 +86,7 @@ DisplayError DisplayHDMI::Init() {
   s3d_format_to_mode_.insert(std::pair<LayerBufferS3DFormat, HWS3DMode>
                             (kS3dFormatFramePacking, kS3DModeFP));
 
-  error = HWEventsInterface::Create(INT(display_type_), this, &event_list_, &hw_events_intf_);
+  error = HWEventsInterface::Create(INT(display_type_), this, event_list_, &hw_events_intf_);
   if (error != kErrorNone) {
     DisplayBase::Deinit();
     HWInterface::Destroy(hw_intf_);
@@ -260,9 +259,9 @@ void DisplayHDMI::SetS3DMode(LayerStack *layer_stack) {
   // 2. Layer stack containing only one secure layer along with one s3d layer
   for (uint32_t i = 0; i < layer_count; i++) {
     Layer *layer = layer_stack->layers.at(i);
-    LayerBuffer *layer_buffer = layer->input_buffer;
+    LayerBuffer &layer_buffer = layer->input_buffer;
 
-    if (layer_buffer->s3d_format != kS3dFormatNone) {
+    if (layer_buffer.s3d_format != kS3dFormatNone) {
       s3d_layer_count++;
       if (s3d_layer_count > 1 || layer->flags.skip) {
         s3d_mode = kS3DModeNone;
@@ -270,11 +269,11 @@ void DisplayHDMI::SetS3DMode(LayerStack *layer_stack) {
       }
 
       std::map<LayerBufferS3DFormat, HWS3DMode>::iterator it =
-                s3d_format_to_mode_.find(layer_buffer->s3d_format);
+                s3d_format_to_mode_.find(layer_buffer.s3d_format);
       if (it != s3d_format_to_mode_.end()) {
         s3d_mode = it->second;
       }
-    } else if (layer_buffer->flags.secure && layer_count > 2) {
+    } else if (layer_buffer.flags.secure && layer_count > 2) {
         s3d_mode = kS3DModeNone;
         break;
     }

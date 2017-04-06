@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -65,6 +65,10 @@
 #define MDP_COMMIT_AVR_ONE_SHOT_MODE 0x10
 #endif
 
+#ifndef MDP_COMMIT_PARTIAL_UPDATE_DUAL_ROI
+#define MDP_COMMIT_PARTIAL_UPDATE_DUAL_ROI  0x20
+#endif
+
 namespace sdm {
 
 using std::string;
@@ -100,6 +104,8 @@ DisplayError HWPrimary::Init() {
   EnableHotPlugDetection(0);
   EnableHotPlugDetection(1);
   InitializeConfigs();
+
+  avr_prop_disabled_ = Debug::IsAVRDisabled();
 
   return error;
 }
@@ -223,10 +229,11 @@ DisplayError HWPrimary::PopulateDisplayAttributes() {
     return kErrorHardware;
   }
 
-  // If driver doesn't return width/height information, default to 160 dpi
+  // If driver doesn't return width/height information, default to 320 dpi
   if (INT(var_screeninfo.width) <= 0 || INT(var_screeninfo.height) <= 0) {
-    var_screeninfo.width  = UINT32(((FLOAT(var_screeninfo.xres) * 25.4f)/160.0f) + 0.5f);
-    var_screeninfo.height = UINT32(((FLOAT(var_screeninfo.yres) * 25.4f)/160.0f) + 0.5f);
+    var_screeninfo.width  = UINT32(((FLOAT(var_screeninfo.xres) * 25.4f)/320.0f) + 0.5f);
+    var_screeninfo.height = UINT32(((FLOAT(var_screeninfo.yres) * 25.4f)/320.0f) + 0.5f);
+    DLOGW("Driver doesn't report panel physical width and height - defaulting to 320dpi");
   }
 
   display_attributes_.x_pixels = var_screeninfo.xres;
@@ -243,9 +250,10 @@ DisplayError HWPrimary::PopulateDisplayAttributes() {
       (FLOAT(var_screeninfo.yres) * 25.4f) / FLOAT(var_screeninfo.height);
   display_attributes_.fps = meta_data.data.panel_frame_rate;
   display_attributes_.vsync_period_ns = UINT32(1000000000L / display_attributes_.fps);
-  display_attributes_.is_device_split = (hw_panel_info_.split_info.left_split ||
-      (var_screeninfo.xres > hw_resource_.max_mixer_width)) ? true : false;
-  display_attributes_.h_total += display_attributes_.is_device_split ? h_blanking : 0;
+  display_attributes_.is_device_split = (hw_panel_info_.split_info.right_split ||
+      (var_screeninfo.xres > hw_resource_.max_mixer_width));
+  display_attributes_.h_total += (display_attributes_.is_device_split ||
+    hw_panel_info_.ping_pong_split)? h_blanking : 0;
 
   return kErrorNone;
 }
@@ -290,8 +298,8 @@ DisplayError HWPrimary::SetDisplayAttributes(uint32_t index) {
 DisplayError HWPrimary::SetRefreshRate(uint32_t refresh_rate) {
   char node_path[kMaxStringLength] = {0};
 
-  if (refresh_rate == display_attributes_.fps) {
-    return kErrorNone;
+  if (hw_resource_.has_avr && !avr_prop_disabled_) {
+    return kErrorNotSupported;
   }
 
   snprintf(node_path, sizeof(node_path), "%s%d/dynamic_fps", fb_path_, fb_node_index_);
@@ -331,6 +339,8 @@ DisplayError HWPrimary::PowerOff() {
     return kErrorHardware;
   }
 
+  auto_refresh_ = false;
+
   return kErrorNone;
 }
 
@@ -360,18 +370,28 @@ DisplayError HWPrimary::Validate(HWLayers *hw_layers) {
 
   mdp_layer_commit_v1 &mdp_commit = mdp_disp_commit_.commit_v1;
 
-  LayerRect left_roi = hw_layer_info.left_partial_update;
-  LayerRect right_roi = hw_layer_info.right_partial_update;
+  LayerRect left_roi = hw_layer_info.left_frame_roi.at(0);
+  LayerRect right_roi = hw_layer_info.right_frame_roi.at(0);
+
   mdp_commit.left_roi.x = UINT32(left_roi.left);
   mdp_commit.left_roi.y = UINT32(left_roi.top);
   mdp_commit.left_roi.w = UINT32(left_roi.right - left_roi.left);
   mdp_commit.left_roi.h = UINT32(left_roi.bottom - left_roi.top);
 
+  // Update second roi information in right_roi
+  if (hw_layer_info.left_frame_roi.size() == 2) {
+    mdp_commit.flags |= MDP_COMMIT_PARTIAL_UPDATE_DUAL_ROI;
+    right_roi = hw_layer_info.left_frame_roi.at(1);
+  }
+
   // SDM treats ROI as one full coordinate system.
   // In case source split is disabled, However, Driver assumes Mixer to operate in
   // different co-ordinate system.
-  if (!hw_resource_.is_src_split && IsValid(right_roi)) {
-    mdp_commit.right_roi.x = UINT32(right_roi.left) - mixer_attributes_.split_left;
+  if (IsValid(right_roi)) {
+    mdp_commit.right_roi.x = UINT32(right_roi.left);
+    if (!hw_resource_.is_src_split) {
+      mdp_commit.right_roi.x = UINT32(right_roi.left) - mixer_attributes_.split_left;
+    }
     mdp_commit.right_roi.y = UINT32(right_roi.top);
     mdp_commit.right_roi.w = UINT32(right_roi.right - right_roi.left);
     mdp_commit.right_roi.h = UINT32(right_roi.bottom - right_roi.top);
@@ -380,13 +400,13 @@ DisplayError HWPrimary::Validate(HWLayers *hw_layers) {
   if (stack->output_buffer && hw_resource_.has_concurrent_writeback) {
     LayerBuffer *output_buffer = stack->output_buffer;
     mdp_out_layer_.writeback_ndx = hw_resource_.writeback_index;
-    mdp_out_layer_.buffer.width = output_buffer->width;
-    mdp_out_layer_.buffer.height = output_buffer->height;
+    mdp_out_layer_.buffer.width = output_buffer->unaligned_width;
+    mdp_out_layer_.buffer.height = output_buffer->unaligned_height;
     mdp_out_layer_.buffer.comp_ratio.denom = 1000;
     mdp_out_layer_.buffer.comp_ratio.numer = UINT32(hw_layers->output_compression * 1000);
     mdp_out_layer_.buffer.fence = -1;
 #ifdef OUT_LAYER_COLOR_SPACE
-    SetCSC(output_buffer->csc, &mdp_out_layer_.color_space);
+    SetCSC(output_buffer->color_metadata, &mdp_out_layer_.color_space);
 #endif
     SetFormat(output_buffer->format, &mdp_out_layer_.buffer.format);
     mdp_commit.flags |= MDP_COMMIT_CWB_EN;
@@ -547,6 +567,12 @@ DisplayError HWPrimary::GetPanelBrightness(int *level) {
   }
   Sys::close_(fd);
 
+  return kErrorNone;
+}
+
+DisplayError HWPrimary::CachePanelBrightness(int level) {
+  bl_level_update_commit = level;
+  bl_update_commit = true;
   return kErrorNone;
 }
 

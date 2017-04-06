@@ -214,7 +214,7 @@ void HWCDisplayExternal::ApplyScanAdjustment(hwc_rect_t *display_frame) {
                           + y_offset;
 }
 
-void HWCDisplayExternal::SetSecureDisplay(bool secure_display_active) {
+void HWCDisplayExternal::SetSecureDisplay(bool secure_display_active, bool force_flush) {
   if (secure_display_active_ != secure_display_active) {
     secure_display_active_ = secure_display_active;
 
@@ -277,12 +277,14 @@ uint32_t HWCDisplayExternal::RoundToStandardFPS(float fps) {
 }
 
 void HWCDisplayExternal::PrepareDynamicRefreshRate(Layer *layer) {
-  if (layer->input_buffer->flags.video) {
+  if (layer->input_buffer.flags.video) {
     if (layer->frame_rate != 0) {
       metadata_refresh_rate_ = SanitizeRefreshRate(layer->frame_rate);
     } else {
       metadata_refresh_rate_ = current_refresh_rate_;
     }
+    layer->frame_rate = current_refresh_rate_;
+  } else if (!layer->frame_rate) {
     layer->frame_rate = current_refresh_rate_;
   }
 }

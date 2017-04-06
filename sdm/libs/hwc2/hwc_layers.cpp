@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -17,8 +17,13 @@
  * limitations under the License.
  */
 
+#include <stdint.h>
+#include <qdMetaData.h>
+
 #include "hwc_layers.h"
+#ifndef USE_GRALLOC1
 #include <gr.h>
+#endif
 #include <utils/debug.h>
 #include <cmath>
 
@@ -28,10 +33,45 @@ namespace sdm {
 
 std::atomic<hwc2_layer_t> HWCLayer::next_id_(1);
 
+DisplayError SetCSC(const private_handle_t *pvt_handle, ColorMetaData *color_metadata) {
+  if (getMetaData(const_cast<private_handle_t *>(pvt_handle), GET_COLOR_METADATA,
+                  color_metadata) != 0) {
+    ColorSpace_t csc = ITU_R_601;
+    if (getMetaData(const_cast<private_handle_t *>(pvt_handle),  GET_COLOR_SPACE,
+                    &csc) == 0) {
+      if (csc == ITU_R_601_FR || csc == ITU_R_2020_FR) {
+        color_metadata->range = Range_Full;
+      }
+
+      switch (csc) {
+      case ITU_R_601:
+      case ITU_R_601_FR:
+        // video and display driver uses 601_525
+        color_metadata->colorPrimaries = ColorPrimaries_BT601_6_525;
+        break;
+      case ITU_R_709:
+        color_metadata->colorPrimaries = ColorPrimaries_BT709_5;
+        break;
+      case ITU_R_2020:
+      case ITU_R_2020_FR:
+        color_metadata->colorPrimaries = ColorPrimaries_BT2020;
+        break;
+      default:
+        DLOGE("Unsupported CSC: %d", csc);
+        return kErrorNotSupported;
+      }
+    } else {
+      return kErrorNotSupported;
+    }
+  }
+
+  return kErrorNone;
+}
+
 // Layer operations
-HWCLayer::HWCLayer(hwc2_display_t display_id) : id_(next_id_++), display_id_(display_id) {
+HWCLayer::HWCLayer(hwc2_display_t display_id, HWCBufferAllocator *buf_allocator)
+  : id_(next_id_++), display_id_(display_id), buffer_allocator_(buf_allocator) {
   layer_ = new Layer();
-  layer_->input_buffer = new LayerBuffer();
   // Fences are deferred, so the first time this layer is presented, return -1
   // TODO(user): Verify that fences are properly obtained on suspend/resume
   release_fences_.push(-1);
@@ -43,11 +83,8 @@ HWCLayer::~HWCLayer() {
     close(release_fences_.front());
     release_fences_.pop();
   }
-
+  close(ion_fd_);
   if (layer_) {
-    if (layer_->input_buffer) {
-      delete (layer_->input_buffer);
-    }
     delete layer_;
   }
 }
@@ -64,30 +101,60 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
   }
 
   const private_handle_t *handle = static_cast<const private_handle_t *>(buffer);
-  LayerBuffer *layer_buffer = layer_->input_buffer;
-  layer_buffer->width = UINT32(handle->width);
-  layer_buffer->height = UINT32(handle->height);
+
+  // Validate and dup ion fd from surfaceflinger
+  // This works around bug 30281222
+  if (handle->fd < 0) {
+    return HWC2::Error::BadParameter;
+  } else {
+    close(ion_fd_);
+    ion_fd_ = dup(handle->fd);
+  }
+
+  LayerBuffer *layer_buffer = &layer_->input_buffer;
+  int aligned_width, aligned_height;
+#ifdef USE_GRALLOC1
+  buffer_allocator_->GetCustomWidthAndHeight(handle, &aligned_width, &aligned_height);
+#else
+  AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(handle, aligned_width, aligned_height);
+#endif
+
+  layer_buffer->width = UINT32(aligned_width);
+  layer_buffer->height = UINT32(aligned_height);
+  layer_buffer->unaligned_width = UINT32(handle->unaligned_width);
+  layer_buffer->unaligned_height = UINT32(handle->unaligned_height);
+
   layer_buffer->format = GetSDMFormat(handle->format, handle->flags);
-  if (SetMetaData(handle, layer_) != kErrorNone) {
+  if (SetMetaData(const_cast<private_handle_t *>(handle), layer_) != kErrorNone) {
     return HWC2::Error::BadLayer;
   }
 
-  if (handle->bufferType == BUFFER_TYPE_VIDEO) {
+#ifdef USE_GRALLOC1
+  // TODO(user): Clean this up
+  if (handle->buffer_type == BUFFER_TYPE_VIDEO) {
+#else
+    if (handle->bufferType == BUFFER_TYPE_VIDEO) {
+#endif
     layer_buffer->flags.video = true;
   }
   // TZ Protected Buffer - L1
   if (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER) {
     layer_buffer->flags.secure = true;
+    if (handle->flags & private_handle_t::PRIV_FLAGS_CAMERA_WRITE) {
+      layer_buffer->flags.secure_camera = true;
+    }
   }
   if (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_DISPLAY) {
     layer_buffer->flags.secure_display = true;
   }
 
-  layer_buffer->planes[0].fd = handle->fd;
+  layer_buffer->planes[0].fd = ion_fd_;
   layer_buffer->planes[0].offset = handle->offset;
   layer_buffer->planes[0].stride = UINT32(handle->width);
   layer_buffer->acquire_fence_fd = acquire_fence;
+  layer_buffer->size = handle->size;
   layer_buffer->buffer_id = reinterpret_cast<uint64_t>(handle);
+  layer_buffer->fb_id = handle->fb_id;
 
   return HWC2::Error::None;
 }
@@ -127,25 +194,21 @@ HWC2::Error HWCLayer::SetLayerBlendMode(HWC2::BlendMode mode) {
 
 HWC2::Error HWCLayer::SetLayerColor(hwc_color_t color) {
   layer_->solid_fill_color = GetUint32Color(color);
-  layer_->input_buffer->format = kFormatARGB8888;
-  DLOGD("Layer color set to: %u", layer_->solid_fill_color);
-  DLOGD("[%" PRIu64 "][%" PRIu64 "] Layer color set to %u  %" PRIu64, display_id_, id_,
-        layer_->solid_fill_color);
+  layer_->input_buffer.format = kFormatARGB8888;
+  DLOGV_IF(kTagCompManager, "[%" PRIu64 "][%" PRIu64 "] Layer color set to %x", display_id_, id_,
+           layer_->solid_fill_color);
   return HWC2::Error::None;
 }
 
 HWC2::Error HWCLayer::SetLayerCompositionType(HWC2::Composition type) {
-  layer_->flags = {};   // Reset earlier flags
   client_requested_ = type;
   switch (type) {
     case HWC2::Composition::Client:
-      layer_->flags.skip = true;
       break;
     case HWC2::Composition::Device:
       // We try and default to this in SDM
       break;
     case HWC2::Composition::SolidColor:
-      layer_->flags.solid_fill = true;
       break;
     case HWC2::Composition::Cursor:
       break;
@@ -277,7 +340,7 @@ uint32_t HWCLayer::GetUint32Color(const hwc_color_t &source) {
   uint32_t r = UINT32(source.r) << 16;
   uint32_t g = UINT32(source.g) << 8;
   uint32_t b = UINT32(source.b);
-  uint32_t color = a & r & g & b;
+  uint32_t color = a | r | g | b;
   return color;
 }
 
@@ -298,6 +361,12 @@ LayerBufferFormat HWCLayer::GetSDMFormat(const int32_t &source, const int flags)
       case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
       case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
         format = kFormatYCbCr420SPVenusUbwc;
+        break;
+      case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
+        format = kFormatYCbCr420TP10Ubwc;
+        break;
+      case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
+        format = kFormatYCbCr420P010Ubwc;
         break;
       default:
         DLOGE("Unsupported format type for UBWC %d", source);
@@ -389,6 +458,9 @@ LayerBufferFormat HWCLayer::GetSDMFormat(const int32_t &source, const int flags)
     case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
       format = kFormatYCbCr420TP10Ubwc;
       break;
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
+      format = kFormatYCbCr420P010Ubwc;
+      break;
     default:
       DLOGW("Unsupported format type = %d", source);
       return kFormatInvalid;
@@ -419,66 +491,37 @@ LayerBufferS3DFormat HWCLayer::GetS3DFormat(uint32_t s3d_format) {
 }
 
 DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *layer) {
-  const MetaData_t *meta_data = reinterpret_cast<MetaData_t *>(pvt_handle->base_metadata);
-  LayerBuffer *layer_buffer = layer->input_buffer;
-
-  if (!meta_data) {
-    return kErrorNone;
+  LayerBuffer *layer_buffer = &layer->input_buffer;
+  if (sdm::SetCSC(pvt_handle, &layer_buffer->color_metadata) != kErrorNone) {
+    return kErrorNotSupported;
   }
 
-  if (meta_data->operation & UPDATE_COLOR_SPACE) {
-    if (SetCSC(meta_data->colorSpace, &layer_buffer->csc) != kErrorNone) {
+  private_handle_t *handle = const_cast<private_handle_t *>(pvt_handle);
+  IGC_t igc = {};
+  if (getMetaData(handle, GET_IGC, &igc) == 0) {
+    if (SetIGC(igc, &layer_buffer->igc) != kErrorNone) {
       return kErrorNotSupported;
     }
   }
 
-  if (meta_data->operation & SET_IGC) {
-    if (SetIGC(meta_data->igc, &layer_buffer->igc) != kErrorNone) {
-      return kErrorNotSupported;
-    }
+  uint32_t fps = 0;
+  if (getMetaData(handle, GET_REFRESH_RATE  , &fps) == 0) {
+    layer->frame_rate = RoundToStandardFPS(fps);
   }
 
-  if (meta_data->operation & UPDATE_REFRESH_RATE) {
-    layer->frame_rate = RoundToStandardFPS(meta_data->refreshrate);
+  int32_t interlaced = 0;
+  if (getMetaData(handle, GET_PP_PARAM_INTERLACED, &interlaced) == 0) {
+    layer_buffer->flags.interlace = interlaced ? true : false;
   }
 
-  if ((meta_data->operation & PP_PARAM_INTERLACED) && meta_data->interlaced) {
-    layer_buffer->flags.interlace = true;
+  uint32_t linear_format = 0;
+  if (getMetaData(handle, GET_LINEAR_FORMAT, &linear_format) == 0) {
+    layer_buffer->format = GetSDMFormat(INT32(linear_format), 0);
   }
 
-  if (meta_data->operation & LINEAR_FORMAT) {
-    layer_buffer->format = GetSDMFormat(INT32(meta_data->linearFormat), 0);
-  }
-
-  if (meta_data->operation & UPDATE_BUFFER_GEOMETRY) {
-    int actual_width = pvt_handle->width;
-    int actual_height = pvt_handle->height;
-    AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(pvt_handle, actual_width, actual_height);
-    layer_buffer->width = UINT32(actual_width);
-    layer_buffer->height = UINT32(actual_height);
-  }
-
-  if (meta_data->operation & S3D_FORMAT) {
-    layer_buffer->s3d_format = GetS3DFormat(meta_data->s3dFormat);
-  }
-
-  return kErrorNone;
-}
-
-DisplayError HWCLayer::SetCSC(ColorSpace_t source, LayerCSC *target) {
-  switch (source) {
-    case ITU_R_601:
-      *target = kCSCLimitedRange601;
-      break;
-    case ITU_R_601_FR:
-      *target = kCSCFullRange601;
-      break;
-    case ITU_R_709:
-      *target = kCSCLimitedRange709;
-      break;
-    default:
-      DLOGE("Unsupported CSC: %d", source);
-      return kErrorNotSupported;
+  uint32_t s3d = 0;
+  if (getMetaData(handle, GET_S3D_FORMAT, &s3d) == 0) {
+    layer_buffer->s3d_format = GetS3DFormat(s3d);
   }
 
   return kErrorNone;

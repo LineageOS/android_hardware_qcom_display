@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -30,6 +30,7 @@
 #include "hwc_display_external.h"
 #include "hwc_display_virtual.h"
 #include "hwc_color_manager.h"
+#include "hwc_socket_handler.h"
 
 namespace sdm {
 
@@ -82,6 +83,7 @@ class HWCSession : hwc2_device_t, public qClient::BnQClient {
 
   // HWC2 Functions that require a concrete implementation in hwc session
   // and hence need to be member functions
+  static int32_t AcceptDisplayChanges(hwc2_device_t *device, hwc2_display_t display);
   static int32_t CreateLayer(hwc2_device_t *device, hwc2_display_t display,
                              hwc2_layer_t *out_layer_id);
   static int32_t CreateVirtualDisplay(hwc2_device_t *device, uint32_t width, uint32_t height,
@@ -175,7 +177,7 @@ class HWCSession : hwc2_device_t, public qClient::BnQClient {
   pthread_t uevent_thread_;
   bool uevent_thread_exit_ = false;
   const char *uevent_thread_name_ = "HWC_UeventThread";
-  HWCBufferAllocator buffer_allocator_;
+  HWCBufferAllocator *buffer_allocator_;
   HWCBufferSyncHandler buffer_sync_handler_;
   HWCColorManager *color_mgr_ = NULL;
   bool reset_panel_ = false;
@@ -185,6 +187,7 @@ class HWCSession : hwc2_device_t, public qClient::BnQClient {
   bool need_invalidate_ = false;
   int bw_mode_release_fd_ = -1;
   qService::QService *qservice_ = NULL;
+  HWCSocketHandler socket_handler_;
 };
 
 }  // namespace sdm

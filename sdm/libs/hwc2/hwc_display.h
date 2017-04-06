@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -32,6 +32,7 @@
 #include <utility>
 #include <vector>
 
+#include "hwc_buffer_allocator.h"
 #include "hwc_callbacks.h"
 #include "hwc_layers.h"
 
@@ -181,6 +182,10 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error GetReleaseFences(uint32_t *out_num_elements, hwc2_layer_t *out_layers,
                                        int32_t *out_fences);
   virtual HWC2::Error Present(int32_t *out_retire_fence) = 0;
+  virtual HWC2::Error GetHdrCapabilities(uint32_t *out_num_types, int32_t* out_types,
+                                         float* out_max_luminance,
+                                         float* out_max_average_luminance,
+                                         float* out_min_luminance);
 
  protected:
   enum DisplayStatus {
@@ -194,7 +199,8 @@ class HWCDisplay : public DisplayEventHandler {
   static const uint32_t kMaxLayerCount = 32;
 
   HWCDisplay(CoreInterface *core_intf, HWCCallbacks *callbacks, DisplayType type, hwc2_display_t id,
-             bool needs_blit, qService::QService *qservice, DisplayClass display_class);
+             bool needs_blit, qService::QService *qservice, DisplayClass display_class,
+             BufferAllocator *buffer_allocator);
 
   // DisplayEventHandler methods
   virtual DisplayError VSync(const DisplayEventVSync &vsync);
@@ -208,7 +214,6 @@ class HWCDisplay : public DisplayEventHandler {
     return kErrorNotSupported;
   }
   LayerBufferFormat GetSDMFormat(const int32_t &source, const int flags);
-  const char *GetHALPixelFormatString(int format);
   const char *GetDisplayString();
   void MarkLayersForGPUBypass(void);
   void MarkLayersForClientComposition(void);
@@ -226,6 +231,7 @@ class HWCDisplay : public DisplayEventHandler {
 
   CoreInterface *core_intf_ = nullptr;
   HWCCallbacks *callbacks_  = nullptr;
+  HWCBufferAllocator *buffer_allocator_ = NULL;
   DisplayType type_;
   hwc2_display_t id_;
   bool needs_blit_ = false;
@@ -263,11 +269,9 @@ class HWCDisplay : public DisplayEventHandler {
   bool validated_ = false;
   bool color_tranform_failed_ = false;
   HWCColorMode *color_mode_ = NULL;
-  int32_t stored_retire_fence_ = -1;
 
  private:
   void DumpInputBuffers(void);
-  BlitEngine *blit_engine_ = NULL;
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
   uint32_t geometry_changes_ = GeometryChanges::kNone;
