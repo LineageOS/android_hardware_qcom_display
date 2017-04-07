@@ -23,14 +23,16 @@ LOCAL_CFLAGS                  := -Wno-missing-field-initializers -Wno-unused-par
 LOCAL_CLANG                   := true
 
 LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware libhardware_legacy \
-                                 libutils libcutils libsync libqdutils libqdMetaData libdl \
-                                 libsdmutils libc++ liblog libgrallocutils
+                                 libutils libcutils libsync libqdutils libqdMetaData libdl libdrmutils \
+                                 libsdmutils libc++ liblog libgrallocutils libdl \
+                                 vendor.display.config@1.0 libhidlbase libhidltransport
 
 ifneq ($(TARGET_USES_GRALLOC1), true)
     LOCAL_SHARED_LIBRARIES += libmemalloc
 endif
 
 LOCAL_SRC_FILES               := hwc_session.cpp \
+                                 hwc_session_services.cpp \
                                  hwc_display.cpp \
                                  hwc_display_primary.cpp \
                                  hwc_display_external.cpp \
