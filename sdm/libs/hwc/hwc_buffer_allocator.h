@@ -51,7 +51,9 @@ class HWCBufferAllocator : public BufferAllocator {
   uint32_t GetBufferSize(BufferInfo *buffer_info);
   DisplayError GetAllocatedBufferInfo(const BufferConfig &buffer_config,
                                       AllocatedBufferInfo *allocated_buffer_info);
-
+  DisplayError GetBufferLayout(const AllocatedBufferInfo &buf_info,
+                               uint32_t stride[4], uint32_t offset[4],
+                               uint32_t *num_planes);
   int SetBufferInfo(LayerBufferFormat format, int *target, int *flags);
 
  private:

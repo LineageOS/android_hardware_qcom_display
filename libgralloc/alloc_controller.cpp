@@ -27,9 +27,6 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef COMPILE_DRM
-#include <drm/drm_fourcc.h>
-#endif
 #include <cutils/log.h>
 #include <fcntl.h>
 #include <dlfcn.h>
@@ -74,18 +71,6 @@
 #define ION_SD_FLAGS ION_SECURE
 #define ION_SC_FLAGS ION_SECURE
 #define ION_SC_PREVIEW_FLAGS ION_SECURE
-#endif
-
-#ifdef COMPILE_DRM
-#ifndef DRM_FORMAT_MOD_QCOM_COMPRESSED
-#define DRM_FORMAT_MOD_QCOM_COMPRESSED fourcc_mod_code(QCOM, 1)
-#endif
-#ifndef DRM_FORMAT_MOD_QCOM_DX
-#define DRM_FORMAT_MOD_QCOM_DX fourcc_mod_code(QCOM, 0x2)
-#endif
-#ifndef DRM_FORMAT_MOD_QCOM_TIGHT
-#define DRM_FORMAT_MOD_QCOM_TIGHT fourcc_mod_code(QCOM, 0x4)
-#endif
 #endif
 
 #ifndef COLOR_FMT_P010_UBWC
@@ -1140,9 +1125,8 @@ int getRgbDataAddress(private_handle_t* hnd, void** rgb_data)
     return err;
 }
 
-#ifdef COMPILE_DRM
-int getPlaneStrideOffset(private_handle_t *hnd, uint32_t *stride,
-        uint32_t *offset, uint32_t *num_planes) {
+int getBufferLayout(private_handle_t *hnd, uint32_t stride[4],
+        uint32_t offset[4], uint32_t *num_planes) {
     if (!hnd || !stride || !offset || !num_planes) {
         return -EINVAL;
     }
@@ -1231,110 +1215,3 @@ int getPlaneStrideOffset(private_handle_t *hnd, uint32_t *stride,
 
     return 0;
 }
-
-void getDRMFormat(int hal_format, int flags, uint32_t *drm_format,
-        uint64_t *drm_format_modifier) {
-
-    if (flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED) {
-        *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED;
-    }
-
-    switch (hal_format) {
-        case HAL_PIXEL_FORMAT_RGBA_8888:
-            *drm_format = DRM_FORMAT_ABGR8888;
-            break;
-        case HAL_PIXEL_FORMAT_RGBA_5551:
-            *drm_format = DRM_FORMAT_ABGR1555;
-            break;
-        case HAL_PIXEL_FORMAT_RGBA_4444:
-            *drm_format = DRM_FORMAT_ABGR4444;
-            break;
-        case HAL_PIXEL_FORMAT_BGRA_8888:
-            *drm_format = DRM_FORMAT_ARGB8888;
-            break;
-        case HAL_PIXEL_FORMAT_RGBX_8888:
-            *drm_format = DRM_FORMAT_XBGR8888;
-            break;
-        case HAL_PIXEL_FORMAT_BGRX_8888:
-            *drm_format = DRM_FORMAT_XRGB8888;
-            break;
-        case HAL_PIXEL_FORMAT_RGB_888:
-            *drm_format = DRM_FORMAT_BGR888;
-            break;
-        case HAL_PIXEL_FORMAT_RGB_565:
-            *drm_format = DRM_FORMAT_BGR565;
-            break;
-        case HAL_PIXEL_FORMAT_BGR_565:
-            *drm_format = DRM_FORMAT_RGB565;
-            break;
-        case HAL_PIXEL_FORMAT_RGBA_1010102:
-            *drm_format = DRM_FORMAT_ABGR2101010;
-            break;
-        case HAL_PIXEL_FORMAT_ARGB_2101010:
-            *drm_format = DRM_FORMAT_BGRA1010102;
-            break;
-        case HAL_PIXEL_FORMAT_RGBX_1010102:
-            *drm_format = DRM_FORMAT_XBGR2101010;
-            break;
-        case HAL_PIXEL_FORMAT_XRGB_2101010:
-            *drm_format = DRM_FORMAT_BGRX1010102;
-            break;
-        case HAL_PIXEL_FORMAT_BGRA_1010102:
-            *drm_format = DRM_FORMAT_ARGB2101010;
-            break;
-        case HAL_PIXEL_FORMAT_ABGR_2101010:
-            *drm_format = DRM_FORMAT_RGBA1010102;
-            break;
-        case HAL_PIXEL_FORMAT_BGRX_1010102:
-            *drm_format = DRM_FORMAT_XRGB2101010;
-            break;
-        case HAL_PIXEL_FORMAT_XBGR_2101010:
-            *drm_format = DRM_FORMAT_RGBX1010102;
-            break;
-        case HAL_PIXEL_FORMAT_YCbCr_420_SP:
-            *drm_format = DRM_FORMAT_NV12;
-            break;
-        case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
-        case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
-            *drm_format = DRM_FORMAT_NV12;
-            break;
-        case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
-            *drm_format = DRM_FORMAT_NV12;
-            *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED;
-            break;
-        case HAL_PIXEL_FORMAT_YCrCb_420_SP:
-            *drm_format = DRM_FORMAT_NV21;
-            break;
-        case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
-            *drm_format = DRM_FORMAT_NV21;
-            break;
-        case HAL_PIXEL_FORMAT_YCbCr_420_P010:
-            *drm_format = DRM_FORMAT_NV12;
-            *drm_format_modifier = DRM_FORMAT_MOD_QCOM_DX;
-            break;
-        case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
-            *drm_format = DRM_FORMAT_NV12;
-            *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED |
-               DRM_FORMAT_MOD_QCOM_DX;
-            break;
-        case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
-            *drm_format = DRM_FORMAT_NV12;
-            *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED |
-               DRM_FORMAT_MOD_QCOM_DX | DRM_FORMAT_MOD_QCOM_TIGHT;
-            break;
-        case HAL_PIXEL_FORMAT_YCbCr_422_SP:
-            *drm_format = DRM_FORMAT_NV16;
-            break;
-        case HAL_PIXEL_FORMAT_YCrCb_422_SP:
-            *drm_format = DRM_FORMAT_NV61;
-            break;
-        case HAL_PIXEL_FORMAT_YV12:
-            *drm_format = DRM_FORMAT_YVU420;
-            break;
-        default:
-            ALOGW("%s: Unsupported format %s", __FUNCTION__,
-                    qdutils::GetHALPixelFormatString(hal_format));
-    }
-}
-#endif
-

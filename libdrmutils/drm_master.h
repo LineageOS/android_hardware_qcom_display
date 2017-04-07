@@ -58,14 +58,14 @@ class DRMMaster {
    * Returns:
    *   ioctl error code
    */
-  int CreateFbId(const DRMBuffer &drm_buffer, uint32_t *gem_handle, uint32_t *fb_id);
+  int CreateFbId(const DRMBuffer &drm_buffer, uint32_t *fb_id);
   /* Removes the fb_id from DRM
    * Input:
    *   fb_id: DRM FB to be removed
    * Returns:
    *   ioctl error code
    */
-  int RemoveFbId(uint32_t gem_handle, uint32_t fb_id);
+  int RemoveFbId(uint32_t fb_id);
   /* Poplulates master DRM fd
    * Input:
    *   fd: Pointer to store master fd into
