@@ -498,6 +498,8 @@ bool Allocator::IsUBwcSupported(int format) {
     case HAL_PIXEL_FORMAT_RGBX_8888:
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
+    case HAL_PIXEL_FORMAT_RGBA_1010102:
+    case HAL_PIXEL_FORMAT_RGBX_1010102:
       return true;
     default:
       break;
@@ -733,6 +735,8 @@ int Allocator::GetRgbDataAddress(private_handle_t *hnd, void **rgb_data) {
     case HAL_PIXEL_FORMAT_BGR_565:
     case HAL_PIXEL_FORMAT_RGBA_8888:
     case HAL_PIXEL_FORMAT_RGBX_8888:
+    case HAL_PIXEL_FORMAT_RGBA_1010102:
+    case HAL_PIXEL_FORMAT_RGBX_1010102:
       meta_size = GetRgbUBwcMetaBufferSize(hnd->width, hnd->height, bpp);
       break;
     default:
