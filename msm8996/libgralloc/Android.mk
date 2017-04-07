@@ -29,7 +29,7 @@ LOCAL_PROPRIETARY_MODULE      := true
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes)
 LOCAL_SHARED_LIBRARIES        := $(common_libs) libmemalloc libqdMetaData
-LOCAL_SHARED_LIBRARIES        += libqdutils libGLESv1_CM
+LOCAL_SHARED_LIBRARIES        += libGLESv1_CM
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdgralloc\" -Wno-sign-conversion
 LOCAL_CLANG                   := true
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps) $(kernel_deps)
