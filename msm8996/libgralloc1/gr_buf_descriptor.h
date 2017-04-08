@@ -65,6 +65,8 @@ class BufferDescriptor {
 
   void SetColorFormat(int format) { format_ = format; }
 
+  void SetLayerCount(uint32_t layer_count) { layer_count_ = layer_count; }
+
   gralloc1_consumer_usage_t GetConsumerUsage() const { return consumer_usage_; }
 
   gralloc1_producer_usage_t GetProducerUsage() const { return producer_usage_; }
@@ -75,12 +77,15 @@ class BufferDescriptor {
 
   int GetFormat() const { return format_; }
 
+  uint32_t GetLayerCount() const { return layer_count_; }
+
   gralloc1_buffer_descriptor_t GetId() const { return id_; }
 
  private:
   int width_ = -1;
   int height_ = -1;
   int format_ = -1;
+  uint32_t layer_count_ = 1;
   gralloc1_producer_usage_t producer_usage_ = GRALLOC1_PRODUCER_USAGE_NONE;
   gralloc1_consumer_usage_t consumer_usage_ = GRALLOC1_CONSUMER_USAGE_NONE;
   const gralloc1_buffer_descriptor_t id_;
