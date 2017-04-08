@@ -103,10 +103,11 @@ int GrallocImpl::CloseDevice(hw_device_t *device __unused) {
 void GrallocImpl::GetCapabilities(struct gralloc1_device *device, uint32_t *out_count,
                                   int32_t  /*gralloc1_capability_t*/ *out_capabilities) {
   if (device != nullptr) {
-    if (out_capabilities != nullptr && *out_count > 0) {
+    if (out_capabilities != nullptr && *out_count >= 2) {
       out_capabilities[0] = GRALLOC1_CAPABILITY_TEST_ALLOCATE;
+      out_capabilities[1] = GRALLOC1_CAPABILITY_LAYERED_BUFFERS;
     }
-    *out_count = 1;
+    *out_count = 2;
   }
   return;
 }
@@ -129,6 +130,8 @@ gralloc1_function_pointer_t GrallocImpl::GetFunction(gralloc1_device_t *device, 
       return reinterpret_cast<gralloc1_function_pointer_t>(SetBufferDimensions);
     case GRALLOC1_FUNCTION_SET_FORMAT:
       return reinterpret_cast<gralloc1_function_pointer_t>(SetColorFormat);
+    case GRALLOC1_FUNCTION_SET_LAYER_COUNT:
+      return reinterpret_cast<gralloc1_function_pointer_t>(SetLayerCount);
     case GRALLOC1_FUNCTION_SET_PRODUCER_USAGE:
       return reinterpret_cast<gralloc1_function_pointer_t>(SetProducerUsage);
     case GRALLOC1_FUNCTION_GET_BACKING_STORE:
@@ -139,6 +142,8 @@ gralloc1_function_pointer_t GrallocImpl::GetFunction(gralloc1_device_t *device, 
       return reinterpret_cast<gralloc1_function_pointer_t>(GetBufferDimensions);
     case GRALLOC1_FUNCTION_GET_FORMAT:
       return reinterpret_cast<gralloc1_function_pointer_t>(GetColorFormat);
+    case GRALLOC1_FUNCTION_GET_LAYER_COUNT:
+      return reinterpret_cast<gralloc1_function_pointer_t>(GetLayerCount);
     case GRALLOC1_FUNCTION_GET_PRODUCER_USAGE:
       return reinterpret_cast<gralloc1_function_pointer_t>(GetProducerUsage);
     case GRALLOC1_FUNCTION_GET_STRIDE:
@@ -257,6 +262,19 @@ gralloc1_error_t GrallocImpl::SetColorFormat(gralloc1_device_t *device,
   }
 }
 
+gralloc1_error_t GrallocImpl::SetLayerCount(gralloc1_device_t *device,
+                                            gralloc1_buffer_descriptor_t descriptor,
+                                            uint32_t layer_count) {
+  if (!device) {
+    return GRALLOC1_ERROR_BAD_DESCRIPTOR;
+  } else {
+    GrallocImpl const *dev = GRALLOC_IMPL(device);
+    return dev->buf_mgr_->CallBufferDescriptorFunction(descriptor,
+                                                       &BufferDescriptor::SetLayerCount,
+                                                       layer_count);
+  }
+}
+
 gralloc1_error_t GrallocImpl::SetProducerUsage(gralloc1_device_t *device,
                                                gralloc1_buffer_descriptor_t descriptor,
                                                gralloc1_producer_usage_t usage) {
@@ -308,6 +326,16 @@ gralloc1_error_t GrallocImpl::GetColorFormat(gralloc1_device_t *device, buffer_h
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
   if (status == GRALLOC1_ERROR_NONE) {
     *outFormat = PRIV_HANDLE_CONST(buffer)->GetColorFormat();
+  }
+
+  return status;
+}
+
+gralloc1_error_t GrallocImpl::GetLayerCount(gralloc1_device_t *device, buffer_handle_t buffer,
+                                            uint32_t *outLayerCount) {
+  gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
+  if (status == GRALLOC1_ERROR_NONE) {
+    *outLayerCount = PRIV_HANDLE_CONST(buffer)->GetLayerCount();
   }
 
   return status;
