@@ -17,6 +17,9 @@
  * limitations under the License.
  */
 
+#include <stdint.h>
+#include <qdMetaData.h>
+
 #include "hwc_layers.h"
 #ifndef USE_GRALLOC1
 #include <gr.h>
@@ -30,34 +33,34 @@ namespace sdm {
 
 std::atomic<hwc2_layer_t> HWCLayer::next_id_(1);
 
-DisplayError SetCSC(const MetaData_t *meta_data, ColorMetaData *color_metadata) {
-  if (meta_data->operation & COLOR_METADATA) {
-#ifdef USE_COLOR_METADATA
-    *color_metadata = meta_data->color;
-#endif
-  } else if (meta_data->operation & UPDATE_COLOR_SPACE) {
-    ColorSpace_t csc = meta_data->colorSpace;
-    color_metadata->range = Range_Limited;
+DisplayError SetCSC(const private_handle_t *pvt_handle, ColorMetaData *color_metadata) {
+  if (getMetaData(const_cast<private_handle_t *>(pvt_handle), GET_COLOR_METADATA,
+                  color_metadata) != 0) {
+    ColorSpace_t csc = ITU_R_601;
+    if (getMetaData(const_cast<private_handle_t *>(pvt_handle),  GET_COLOR_SPACE,
+                    &csc) == 0) {
+      if (csc == ITU_R_601_FR || csc == ITU_R_2020_FR) {
+        color_metadata->range = Range_Full;
+      }
 
-    if (csc == ITU_R_601_FR || csc == ITU_R_2020_FR) {
-      color_metadata->range = Range_Full;
-    }
-
-    switch (csc) {
-    case ITU_R_601:
-    case ITU_R_601_FR:
-      // video and display driver uses 601_525
-      color_metadata->colorPrimaries = ColorPrimaries_BT601_6_525;
-      break;
-    case ITU_R_709:
-      color_metadata->colorPrimaries = ColorPrimaries_BT709_5;
-      break;
-    case ITU_R_2020:
-    case ITU_R_2020_FR:
+      switch (csc) {
+      case ITU_R_601:
+      case ITU_R_601_FR:
+        // video and display driver uses 601_525
+        color_metadata->colorPrimaries = ColorPrimaries_BT601_6_525;
+        break;
+      case ITU_R_709:
+        color_metadata->colorPrimaries = ColorPrimaries_BT709_5;
+        break;
+      case ITU_R_2020:
+      case ITU_R_2020_FR:
         color_metadata->colorPrimaries = ColorPrimaries_BT2020;
         break;
-    default:
-      DLOGE("Unsupported CSC: %d", csc);
+      default:
+        DLOGE("Unsupported CSC: %d", csc);
+        return kErrorNotSupported;
+      }
+    } else {
       return kErrorNotSupported;
     }
   }
@@ -122,7 +125,7 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
   layer_buffer->unaligned_height = UINT32(handle->unaligned_height);
 
   layer_buffer->format = GetSDMFormat(handle->format, handle->flags);
-  if (SetMetaData(handle, layer_) != kErrorNone) {
+  if (SetMetaData(const_cast<private_handle_t *>(handle), layer_) != kErrorNone) {
     return HWC2::Error::BadLayer;
   }
 
@@ -362,6 +365,9 @@ LayerBufferFormat HWCLayer::GetSDMFormat(const int32_t &source, const int flags)
       case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
         format = kFormatYCbCr420TP10Ubwc;
         break;
+      case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
+        format = kFormatYCbCr420P010Ubwc;
+        break;
       default:
         DLOGE("Unsupported format type for UBWC %d", source);
         return kFormatInvalid;
@@ -452,6 +458,9 @@ LayerBufferFormat HWCLayer::GetSDMFormat(const int32_t &source, const int flags)
     case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
       format = kFormatYCbCr420TP10Ubwc;
       break;
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
+      format = kFormatYCbCr420P010Ubwc;
+      break;
     default:
       DLOGW("Unsupported format type = %d", source);
       return kFormatInvalid;
@@ -482,37 +491,37 @@ LayerBufferS3DFormat HWCLayer::GetS3DFormat(uint32_t s3d_format) {
 }
 
 DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *layer) {
-  const MetaData_t *meta_data = reinterpret_cast<MetaData_t *>(pvt_handle->base_metadata);
   LayerBuffer *layer_buffer = &layer->input_buffer;
-
-  if (!meta_data) {
-    return kErrorNone;
-  }
-
-  if (sdm::SetCSC(meta_data, &layer_buffer->color_metadata) != kErrorNone) {
+  if (sdm::SetCSC(pvt_handle, &layer_buffer->color_metadata) != kErrorNone) {
     return kErrorNotSupported;
   }
 
-  if (meta_data->operation & SET_IGC) {
-    if (SetIGC(meta_data->igc, &layer_buffer->igc) != kErrorNone) {
+  private_handle_t *handle = const_cast<private_handle_t *>(pvt_handle);
+  IGC_t igc = {};
+  if (getMetaData(handle, GET_IGC, &igc) == 0) {
+    if (SetIGC(igc, &layer_buffer->igc) != kErrorNone) {
       return kErrorNotSupported;
     }
   }
 
-  if (meta_data->operation & UPDATE_REFRESH_RATE) {
-    layer->frame_rate = RoundToStandardFPS(meta_data->refreshrate);
+  uint32_t fps = 0;
+  if (getMetaData(handle, GET_REFRESH_RATE  , &fps) == 0) {
+    layer->frame_rate = RoundToStandardFPS(fps);
   }
 
-  if ((meta_data->operation & PP_PARAM_INTERLACED) && meta_data->interlaced) {
-    layer_buffer->flags.interlace = true;
+  int32_t interlaced = 0;
+  if (getMetaData(handle, GET_PP_PARAM_INTERLACED, &interlaced) == 0) {
+    layer_buffer->flags.interlace = interlaced ? true : false;
   }
 
-  if (meta_data->operation & LINEAR_FORMAT) {
-    layer_buffer->format = GetSDMFormat(INT32(meta_data->linearFormat), 0);
+  uint32_t linear_format = 0;
+  if (getMetaData(handle, GET_LINEAR_FORMAT, &linear_format) == 0) {
+    layer_buffer->format = GetSDMFormat(INT32(linear_format), 0);
   }
 
-  if (meta_data->operation & S3D_FORMAT) {
-    layer_buffer->s3d_format = GetS3DFormat(meta_data->s3dFormat);
+  uint32_t s3d = 0;
+  if (getMetaData(handle, GET_S3D_FORMAT, &s3d) == 0) {
+    layer_buffer->s3d_format = GetS3DFormat(s3d);
   }
 
   return kErrorNone;

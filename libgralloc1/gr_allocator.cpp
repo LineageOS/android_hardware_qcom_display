@@ -69,6 +69,10 @@
 #define ION_SC_PREVIEW_FLAGS ION_SECURE
 #endif
 
+#ifndef COLOR_FMT_P010_UBWC
+#define COLOR_FMT_P010_UBWC 9
+#endif
+
 using std::vector;
 using std::shared_ptr;
 
@@ -406,6 +410,11 @@ int Allocator::GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr
       ycbcr->chroma_step = 3;
       break;
 
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
+      GetYuvUbwcSPPlaneInfo(hnd->base, width, height, COLOR_FMT_P010_UBWC, ycbcr);
+      ycbcr->chroma_step = 4;
+      break;
+
     case HAL_PIXEL_FORMAT_YCrCb_420_SP:
     case HAL_PIXEL_FORMAT_YCrCb_422_SP:
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
@@ -485,6 +494,7 @@ bool Allocator::IsUBwcFormat(int format) {
   switch (format) {
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
     case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
       return true;
     default:
       return false;
@@ -499,6 +509,8 @@ bool Allocator::IsUBwcSupported(int format) {
     case HAL_PIXEL_FORMAT_RGBX_8888:
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
+    case HAL_PIXEL_FORMAT_RGBA_1010102:
+    case HAL_PIXEL_FORMAT_RGBX_1010102:
       return true;
     default:
       break;
@@ -629,6 +641,11 @@ void Allocator::GetYuvUBwcWidthAndHeight(int width, int height, int format, unsi
       *aligned_w = (VENUS_Y_STRIDE(COLOR_FMT_NV12_BPP10_UBWC, width) * 3) / 4;
       *aligned_h = VENUS_Y_SCANLINES(COLOR_FMT_NV12_BPP10_UBWC, height);
       break;
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
+      // The macro returns the stride which is 2 times the width, hence / 2
+      *aligned_w = (VENUS_Y_STRIDE(COLOR_FMT_P010_UBWC, width) / 2);
+      *aligned_h = VENUS_Y_SCANLINES(COLOR_FMT_P010_UBWC, height);
+      break;
     default:
       ALOGE("%s: Unsupported pixel format: 0x%x", __FUNCTION__, format);
       *aligned_w = 0;
@@ -706,6 +723,9 @@ unsigned int Allocator::GetUBwcSize(int width, int height, int format, unsigned 
     case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
       size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12_BPP10_UBWC, width, height);
       break;
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
+      size = VENUS_BUFFER_SIZE(COLOR_FMT_P010_UBWC, width, height);
+      break;
     default:
       ALOGE("%s: Unsupported pixel format: 0x%x", __FUNCTION__, format);
       break;
@@ -734,6 +754,8 @@ int Allocator::GetRgbDataAddress(private_handle_t *hnd, void **rgb_data) {
     case HAL_PIXEL_FORMAT_BGR_565:
     case HAL_PIXEL_FORMAT_RGBA_8888:
     case HAL_PIXEL_FORMAT_RGBX_8888:
+    case HAL_PIXEL_FORMAT_RGBA_1010102:
+    case HAL_PIXEL_FORMAT_RGBX_1010102:
       meta_size = GetRgbUBwcMetaBufferSize(hnd->width, hnd->height, bpp);
       break;
     default:

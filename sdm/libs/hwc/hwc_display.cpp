@@ -35,6 +35,8 @@
 #include <utils/formats.h>
 #include <utils/rect.h>
 #include <utils/debug.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <sync/sync.h>
 #include <cutils/properties.h>
 #include <qd_utils.h>
@@ -447,6 +449,7 @@ int HWCDisplay::PrepareLayerParams(hwc_layer_1_t *hwc_layer, Layer* layer) {
     layer_buffer.height = UINT32(aligned_height);
     layer_buffer.unaligned_width = UINT32(unaligned_width);
     layer_buffer.unaligned_height = UINT32(unaligned_height);
+    layer_buffer.fb_id = pvt_handle->fb_id;
 
     if (SetMetaData(pvt_handle, layer) != kErrorNone) {
       return -EINVAL;
@@ -990,6 +993,7 @@ LayerBufferFormat HWCDisplay::GetSDMFormat(const int32_t &source, const int flag
     case HAL_PIXEL_FORMAT_RGBA_1010102:        format = kFormatRGBA1010102Ubwc;         break;
     case HAL_PIXEL_FORMAT_RGBX_1010102:        format = kFormatRGBX1010102Ubwc;         break;
     case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC: format = kFormatYCbCr420TP10Ubwc;        break;
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC: format = kFormatYCbCr420P010Ubwc;        break;
     default:
       DLOGE("Unsupported format type for UBWC %d", source);
       return kFormatInvalid;
@@ -1027,6 +1031,7 @@ LayerBufferFormat HWCDisplay::GetSDMFormat(const int32_t &source, const int flag
   case HAL_PIXEL_FORMAT_XBGR_2101010:             format = kFormatXBGR2101010;              break;
   case HAL_PIXEL_FORMAT_YCbCr_420_P010:           format = kFormatYCbCr420P010;             break;
   case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:      format = kFormatYCbCr420TP10Ubwc;         break;
+  case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:      format = kFormatYCbCr420P010Ubwc;         break;
   default:
     DLOGW("Unsupported format type = %d", source);
     return kFormatInvalid;
