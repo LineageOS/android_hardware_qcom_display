@@ -359,15 +359,16 @@ int Allocator::GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr
   unsigned int ystride, cstride;
 
   memset(ycbcr->reserved, 0, sizeof(ycbcr->reserved));
-  MetaData_t *metadata = reinterpret_cast<MetaData_t *>(hnd->base_metadata);
 
   // Check if UBWC buffer has been rendered in linear format.
-  if (metadata && (metadata->operation & LINEAR_FORMAT)) {
-    format = INT(metadata->linearFormat);
+  int linear_format = 0;
+  if (getMetaData(const_cast<private_handle_t*>(hnd), GET_LINEAR_FORMAT, &linear_format) == 0) {
+    format = linear_format;
   }
 
   // Check metadata if the geometry has been updated.
-  if (metadata && metadata->operation & UPDATE_BUFFER_GEOMETRY) {
+  BufferDim_t  buffer_dim = {};
+  if (getMetaData(const_cast<private_handle_t*>(hnd), GET_BUFFER_GEOMETRY, &buffer_dim) == 0) {
     int usage = 0;
 
     if (hnd->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED) {
@@ -375,7 +376,7 @@ int Allocator::GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr
     }
 
     BufferDescriptor descriptor =
-        BufferDescriptor(metadata->bufferDim.sliceWidth, metadata->bufferDim.sliceHeight, format,
+        BufferDescriptor(buffer_dim.sliceWidth, buffer_dim.sliceHeight, format,
                          prod_usage, cons_usage);
     GetAlignedWidthAndHeight(descriptor, &width, &height);
   }
