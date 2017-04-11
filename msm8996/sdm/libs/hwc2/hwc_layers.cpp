@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -16,6 +16,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+#include <stdint.h>
+#include <qdMetaData.h>
 
 #include "hwc_layers.h"
 #ifndef USE_GRALLOC1
@@ -436,51 +439,56 @@ LayerBufferS3DFormat HWCLayer::GetS3DFormat(uint32_t s3d_format) {
 }
 
 DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *layer) {
-  const MetaData_t *meta_data = reinterpret_cast<MetaData_t *>(pvt_handle->base_metadata);
   LayerBuffer *layer_buffer = layer->input_buffer;
+  private_handle_t *handle = const_cast<private_handle_t *>(pvt_handle);
 
-  if (!meta_data) {
-    return kErrorNone;
-  }
-
-  if (meta_data->operation & UPDATE_COLOR_SPACE) {
-    if (SetCSC(meta_data->colorSpace, &layer_buffer->csc) != kErrorNone) {
-      return kErrorNotSupported;
-    }
-  }
-
-  if (meta_data->operation & SET_IGC) {
-    if (SetIGC(meta_data->igc, &layer_buffer->igc) != kErrorNone) {
-      return kErrorNotSupported;
-    }
-  }
-
-  if (meta_data->operation & UPDATE_REFRESH_RATE) {
-    layer->frame_rate = RoundToStandardFPS(meta_data->refreshrate);
-  }
-
-  if ((meta_data->operation & PP_PARAM_INTERLACED) && meta_data->interlaced) {
-    layer_buffer->flags.interlace = true;
-  }
-
-  if (meta_data->operation & LINEAR_FORMAT) {
-    layer_buffer->format = GetSDMFormat(INT32(meta_data->linearFormat), 0);
-  }
-
-  if (meta_data->operation & UPDATE_BUFFER_GEOMETRY) {
-    int actual_width = pvt_handle->width;
-    int actual_height = pvt_handle->height;
+  BufferDim_t  buffer_dim = {};
+  buffer_dim.sliceWidth = pvt_handle->width;
+  buffer_dim.sliceHeight = pvt_handle->height;
+  if (getMetaData(handle, GET_BUFFER_GEOMETRY, &buffer_dim) == 0) {
 #ifdef USE_GRALLOC1
-    buffer_allocator_->GetCustomWidthAndHeight(pvt_handle, &actual_width, &actual_height);
+    buffer_allocator_->GetCustomWidthAndHeight(pvt_handle, &buffer_dim.sliceWidth,
+                                               &buffer_dim.sliceHeight);
 #else
-    AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(handle, aligned_width, aligned_height);
+    AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(handle, &buffer_dim.sliceWidth,
+                                                          &buffer_dim.sliceHeight);
 #endif
-    layer_buffer->width = UINT32(actual_width);
-    layer_buffer->height = UINT32(actual_height);
+    layer_buffer->width = UINT32(buffer_dim.sliceWidth);
+    layer_buffer->height = UINT32(buffer_dim.sliceHeight);
   }
 
-  if (meta_data->operation & S3D_FORMAT) {
-    layer_buffer->s3d_format = GetS3DFormat(meta_data->s3dFormat);
+  ColorSpace_t csc = ITU_R_601;
+  if (getMetaData(const_cast<private_handle_t *>(pvt_handle), GET_COLOR_SPACE, &csc) == 0) {
+    if (SetCSC(csc, &layer_buffer->csc) != kErrorNone) {
+      return kErrorNotSupported;
+    }
+  }
+
+  IGC_t igc = {};
+  if (getMetaData(handle, GET_IGC, &igc) == 0) {
+    if (SetIGC(igc, &layer_buffer->igc) != kErrorNone) {
+      return kErrorNotSupported;
+    }
+  }
+
+  uint32_t fps = 0;
+  if (getMetaData(handle, GET_REFRESH_RATE, &fps) == 0) {
+    layer->frame_rate = RoundToStandardFPS(fps);
+  }
+
+  int32_t interlaced = 0;
+  if (getMetaData(handle, GET_PP_PARAM_INTERLACED, &interlaced) == 0) {
+    layer_buffer->flags.interlace = interlaced ? true : false;
+  }
+
+  uint32_t linear_format = 0;
+  if (getMetaData(handle, GET_LINEAR_FORMAT, &linear_format) == 0) {
+    layer_buffer->format = GetSDMFormat(INT32(linear_format), 0);
+  }
+
+  uint32_t s3d = 0;
+  if (getMetaData(handle, GET_S3D_FORMAT, &s3d) == 0) {
+    layer_buffer->s3d_format = GetS3DFormat(s3d);
   }
 
   return kErrorNone;
