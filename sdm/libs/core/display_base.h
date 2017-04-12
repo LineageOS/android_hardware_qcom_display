@@ -131,6 +131,10 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   bool NeedsDownScale(const LayerRect &src_rect, const LayerRect &dst_rect, bool needs_rotation);
   DisplayError InitializeColorModes();
   DisplayError SetColorModeInternal(const std::string &color_mode);
+  DisplayError GetValueOfModeAttribute(const AttrVal &attr, const std::string &type,
+                                       std::string *value);
+  DisplayError GetHdrColorMode(std::string *color_mode, bool *found_hdr);
+  bool IsSupportColorModeAttribute(const std::string &color_mode);
 
   recursive_mutex recursive_mutex_;
   DisplayType display_type_;
@@ -158,13 +162,14 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   std::vector<SDEDisplayMode> color_modes_;
   typedef std::map<std::string, SDEDisplayMode *> ColorModeMap;
   ColorModeMap color_mode_map_ = {};
+  typedef std::map<std::string, AttrVal> ColorModeAttrMap;
+  ColorModeAttrMap color_mode_attr_map_ = {};
   HWDisplayAttributes display_attributes_ = {};
   HWMixerAttributes mixer_attributes_ = {};
   DisplayConfigVariableInfo fb_config_ = {};
   uint32_t req_mixer_width_ = 0;
   uint32_t req_mixer_height_ = 0;
   std::string current_color_mode_ = "hal_native";
-  std::string hdr_color_mode_ = "hal_hdr";
   bool hdr_playback_mode_ = false;
   int disable_hdr_lut_gen_ = 0;
 };
