@@ -216,7 +216,7 @@ void HWCColorMode::PopulateTransform(const android_color_mode_t &mode,
 
 HWCDisplay::HWCDisplay(CoreInterface *core_intf, HWCCallbacks *callbacks, DisplayType type,
                        hwc2_display_t id, bool needs_blit, qService::QService *qservice,
-                       DisplayClass display_class)
+                       DisplayClass display_class, BufferAllocator *buffer_allocator)
     : core_intf_(core_intf),
       callbacks_(callbacks),
       type_(type),
@@ -224,6 +224,7 @@ HWCDisplay::HWCDisplay(CoreInterface *core_intf, HWCCallbacks *callbacks, Displa
       needs_blit_(needs_blit),
       qservice_(qservice),
       display_class_(display_class) {
+  buffer_allocator_ = static_cast<HWCBufferAllocator *>(buffer_allocator);
 }
 
 int HWCDisplay::Init() {
@@ -239,8 +240,6 @@ int HWCDisplay::Init() {
   if (property_swap_interval == 0) {
     swap_interval_zero_ = true;
   }
-
-  buffer_allocator_ = new HWCBufferAllocator();
 
   client_target_ = new HWCLayer(id_, buffer_allocator_);
 
@@ -264,11 +263,6 @@ int HWCDisplay::Deinit() {
   }
 
   delete client_target_;
-
-  if (buffer_allocator_) {
-    delete buffer_allocator_;
-    buffer_allocator_ = NULL;
-  }
 
   if (color_mode_) {
     color_mode_->DeInit();

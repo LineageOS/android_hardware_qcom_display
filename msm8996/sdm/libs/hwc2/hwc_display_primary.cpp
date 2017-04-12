@@ -88,7 +88,7 @@ void HWCDisplayPrimary::Destroy(HWCDisplay *hwc_display) {
 HWCDisplayPrimary::HWCDisplayPrimary(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
                                      HWCCallbacks *callbacks, qService::QService *qservice)
     : HWCDisplay(core_intf, callbacks, kPrimary, HWC_DISPLAY_PRIMARY, true, qservice,
-                 DISPLAY_CLASS_PRIMARY),
+                 DISPLAY_CLASS_PRIMARY, buffer_allocator),
       buffer_allocator_(buffer_allocator),
       cpu_hint_(NULL) {
 }
