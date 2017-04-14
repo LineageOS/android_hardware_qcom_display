@@ -116,6 +116,12 @@ enum struct DRMOps {
    */
   PLANE_SET_INPUT_FENCE,
   /*
+   * Op: Sets scaler config on this plane.
+   * Arg: uint32_t - Plane ID
+   *      uint64_t - Address of the scaler config object (version based)
+   */
+  PLANE_SET_SCALER_CONFIG,
+  /*
    * Op: Activate or deactivate a CRTC
    * Arg: uint32_t - CRTC ID
    *      uint32_t - 1 to enable, 0 to disable
@@ -305,6 +311,15 @@ struct DRMPPFeatureInfo {
   void *payload;
 };
 
+struct DRMScalerLUTInfo {
+  uint32_t dir_lut_size = 0;
+  uint32_t cir_lut_size = 0;
+  uint32_t sep_lut_size = 0;
+  uint64_t dir_lut = 0;
+  uint64_t cir_lut = 0;
+  uint64_t sep_lut = 0;
+};
+
 /* DRM Atomic Request Property Set.
  *
  * Helper class to create and populate atomic properties of DRM components
@@ -413,6 +428,13 @@ class DRMManagerInterface {
    * [return]: Error code if the API fails, 0 on success.
    */
   virtual int DestroyAtomicReq(DRMAtomicReqInterface *intf) = 0;
+  /*
+   * Sets the global scaler LUT
+   * [input]: LUT Info
+   * [return]: Error code if the API fails, 0 on success.
+   */
+  virtual int SetScalerLUT(const DRMScalerLUTInfo &lut_info) = 0;
 };
+
 }  // namespace sde_drm
 #endif  // __DRM_INTERFACE_H__

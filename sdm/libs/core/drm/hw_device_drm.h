@@ -38,6 +38,7 @@
 #include <vector>
 
 #include "hw_interface.h"
+#include "hw_scale_drm.h"
 
 #define IOCTL_LOGE(ioctl, type) \
   DLOGE("ioctl %s, device = %d errno = %d, desc = %s", #ioctl, type, errno, strerror(errno))
@@ -134,6 +135,7 @@ class HWDeviceDRM : public HWInterface {
   sde_drm::DRMConnectorInfo connector_info_ = {};
   std::string interface_str_ = "DSI";
   const char *kBrightnessNode = "/sys/class/backlight/panel0-backlight/brightness";
+  HWScaleDRM *hw_scale_ = {};
 };
 
 }  // namespace sdm
