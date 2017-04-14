@@ -177,14 +177,25 @@ enum DispFetchParamType {
 
 struct private_handle_t;
 int setMetaData(struct private_handle_t *handle, enum DispParamType paramType,
-        void *param);
+                void *param);
+int setMetaDataVa(struct MetaData_t* data, enum DispParamType paramType,
+                  void *param);
 
-int getMetaData(struct private_handle_t *handle, enum DispFetchParamType paramType,
-        void *param);
+int getMetaData(struct private_handle_t *handle,
+                enum DispFetchParamType paramType,
+                void *param);
+int getMetaDataVa(struct MetaData_t* data, enum DispFetchParamType paramType,
+                  void *param);
 
 int copyMetaData(struct private_handle_t *src, struct private_handle_t *dst);
+int copyMetaDataVaToHandle(struct MetaData_t *src, struct private_handle_t *dst);
+int copyMetaDataHandleToVa(struct private_handle_t* src, struct MetaData_t *dst);
+int copyMetaDataVaToVa(struct MetaData_t *src, struct MetaData_t *dst);
 
 int clearMetaData(struct private_handle_t *handle, enum DispParamType paramType);
+int clearMetaDataVa(struct MetaData_t *data, enum DispParamType paramType);
+
+unsigned long getMetaDataSize();
 
 #ifdef __cplusplus
 }
