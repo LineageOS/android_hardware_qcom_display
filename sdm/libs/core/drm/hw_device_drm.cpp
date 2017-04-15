@@ -48,6 +48,7 @@
 #include <utils/debug.h>
 #include <utils/formats.h>
 #include <utils/sys.h>
+#include <drm/sde_drm.h>
 #include <private/color_params.h>
 
 #include <algorithm>
@@ -92,6 +93,7 @@ using sde_drm::DRMBlendType;
 using sde_drm::DRMSrcConfig;
 using sde_drm::DRMOps;
 using sde_drm::DRMTopology;
+using sde_drm::DRMPowerMode;
 
 namespace sdm {
 
@@ -321,8 +323,7 @@ DisplayError HWDeviceDRM::Init() {
     InitializeConfigs();
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode_);
 
-    // TODO(user): Enable this and remove the one in SetupAtomic() onces underruns are fixed
-    // drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
     // Commit to setup pipeline with mode, which then tells us the topology etc
     if (drm_atomic_intf_->Commit(true /* synchronous */)) {
       DLOGE("Setting up CRTC %d, Connector %d for %s failed", token_.crtc_id, token_.conn_id,
@@ -561,18 +562,30 @@ DisplayError HWDeviceDRM::GetConfigIndex(uint32_t mode, uint32_t *index) {
 
 DisplayError HWDeviceDRM::PowerOn() {
   DTRACE_SCOPED();
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
   return kErrorNone;
 }
 
 DisplayError HWDeviceDRM::PowerOff() {
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::OFF);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
+  int ret = drm_atomic_intf_->Commit(false /* synchronous */);
+  if (ret) {
+    DLOGE("%s failed with error %d", __FUNCTION__, ret);
+    return kErrorHardware;
+  }
   return kErrorNone;
 }
 
 DisplayError HWDeviceDRM::Doze() {
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::DOZE);
   return kErrorNone;
 }
 
 DisplayError HWDeviceDRM::DozeSuspend() {
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id,
+                            DRMPowerMode::DOZE_SUSPEND);
   return kErrorNone;
 }
 
@@ -656,9 +669,6 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
         }
       }
     }
-
-    // TODO(user): Remove this and enable the one in Init() onces underruns are fixed
-    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   }
 }
 
