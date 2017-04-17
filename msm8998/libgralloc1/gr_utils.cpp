@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -109,6 +109,14 @@ uint32_t GetBppForUncompressedRGB(int format) {
     case HAL_PIXEL_FORMAT_RGBX_8888:
     case HAL_PIXEL_FORMAT_BGRA_8888:
     case HAL_PIXEL_FORMAT_BGRX_8888:
+    case HAL_PIXEL_FORMAT_RGBA_1010102:
+    case HAL_PIXEL_FORMAT_ARGB_2101010:
+    case HAL_PIXEL_FORMAT_RGBX_1010102:
+    case HAL_PIXEL_FORMAT_XRGB_2101010:
+    case HAL_PIXEL_FORMAT_BGRA_1010102:
+    case HAL_PIXEL_FORMAT_ABGR_2101010:
+    case HAL_PIXEL_FORMAT_BGRX_1010102:
+    case HAL_PIXEL_FORMAT_XBGR_2101010:
       bpp = 4;
       break;
     case HAL_PIXEL_FORMAT_RGB_888:
@@ -121,7 +129,7 @@ uint32_t GetBppForUncompressedRGB(int format) {
       bpp = 2;
       break;
     default:
-      ALOGE("Error : %s New format request", __FUNCTION__);
+      ALOGE("Error : %s New format request = 0x%x", __FUNCTION__, format);
       break;
   }
 
