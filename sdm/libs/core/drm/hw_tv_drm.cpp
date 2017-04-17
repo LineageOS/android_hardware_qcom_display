@@ -61,7 +61,7 @@ namespace sdm {
 
 HWTVDRM::HWTVDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
                      HWInfoInterface *hw_info_intf)
-  : HWDeviceDRM(buffer_sync_handler, buffer_allocator, hw_info_intf), active_config_index_(0) {
+  : HWDeviceDRM(buffer_sync_handler, buffer_allocator, hw_info_intf) {
   disp_type_ = DRMDisplayType::TV;
   device_name_ = "TV Display Device";
 }
@@ -96,34 +96,12 @@ DisplayError HWTVDRM::Init() {
     hw_scale_ = new HWScaleDRM(HWScaleDRM::Version::V2);
   }
 
-  if (error != kErrorNone) {
-    return error;
-  }
-
   return error;
 }
-
-DisplayError HWTVDRM::GetNumDisplayAttributes(uint32_t *count) {
-  *count = UINT32(connector_info_.modes.size());
-  if (*count <= 0) {
-    return kErrorHardware;
-  }
-
-  return kErrorNone;
-}
-
-DisplayError HWTVDRM::GetActiveConfig(uint32_t *active_config_index) {
-  *active_config_index = active_config_index_;
-  return kErrorNone;
-}
-
 DisplayError HWTVDRM::SetDisplayAttributes(uint32_t index) {
   if (index >= connector_info_.modes.size()) {
     return kErrorNotSupported;
   }
-
-  active_config_index_ = index;
-  current_mode_ = connector_info_.modes[index];
 
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &connector_info_.modes[index]);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
@@ -139,8 +117,8 @@ DisplayError HWTVDRM::SetDisplayAttributes(uint32_t index) {
   drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
   DLOGI("Setup CRTC %d, Connector %d for %s", token_.crtc_id, token_.conn_id, device_name_);
 
-  frame_rate_ = display_attributes_.fps;
-  PopulateDisplayAttributes();
+  current_mode_index_ = index;
+  PopulateDisplayAttributes(index);
   PopulateHWPanelInfo();
   UpdateMixerAttributes();
 

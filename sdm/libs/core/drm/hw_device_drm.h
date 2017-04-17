@@ -112,7 +112,7 @@ class HWDeviceDRM : public HWInterface {
   DisplayError SetFormat(const LayerBufferFormat &source, uint32_t *target);
   DisplayError SetStride(HWDeviceType device_type, LayerBufferFormat format, uint32_t width,
                          uint32_t *target);
-  DisplayError PopulateDisplayAttributes();
+  DisplayError PopulateDisplayAttributes(uint32_t index);
   void PopulateHWPanelInfo();
   void GetHWDisplayPortAndMode();
   void GetHWPanelMaxBrightness();
@@ -130,6 +130,8 @@ class HWDeviceDRM : public HWInterface {
   void SetupAtomic(HWLayers *hw_layers, bool validate);
   void SetSecureConfig(const LayerBuffer &input_buffer, sde_drm::DRMSecureMode *fb_secure_mode,
                        sde_drm::DRMSecurityLevel *security_level);
+  bool IsResolutionSwitchEnabled() const { return resolution_switch_enabled_; }
+  void UpdatePanelSplitInfo();
 
   class Registry {
    public:
@@ -167,19 +169,19 @@ class HWDeviceDRM : public HWInterface {
   sde_drm::DRMDisplayToken token_ = {};
   HWResourceInfo hw_resource_ = {};
   HWPanelInfo hw_panel_info_ = {};
-  HWDeviceType device_type_ = {};
   HWScaleDRM *hw_scale_ = {};
   sde_drm::DRMManagerInterface *drm_mgr_intf_ = {};
   sde_drm::DRMAtomicReqInterface *drm_atomic_intf_ = {};
+  std::vector<HWDisplayAttributes> display_attributes_ = {};
+  uint32_t current_mode_index_ = 0;
   sde_drm::DRMConnectorInfo connector_info_ = {};
-  drmModeModeInfo current_mode_ = {};
-  HWDisplayAttributes display_attributes_ = {};
 
  private:
   bool synchronous_commit_ = false;
   HWMixerAttributes mixer_attributes_ = {};
   std::string interface_str_ = "DSI";
   std::vector<sde_drm::DRMSolidfillStage> solid_fills_ {};
+  bool resolution_switch_enabled_ = false;
 };
 
 }  // namespace sdm
