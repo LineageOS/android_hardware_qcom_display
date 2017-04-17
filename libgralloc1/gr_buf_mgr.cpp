@@ -18,6 +18,7 @@
  */
 
 #define DEBUG 0
+
 #include <iomanip>
 #include <utility>
 #include <vector>
@@ -32,6 +33,11 @@
 
 namespace gralloc1 {
 std::atomic<gralloc1_buffer_descriptor_t> BufferDescriptor::next_id_(1);
+
+static BufferInfo GetBufferInfo(const BufferDescriptor &descriptor) {
+  return BufferInfo(descriptor.GetWidth(), descriptor.GetHeight(), descriptor.GetFormat(),
+                    descriptor.GetProducerUsage(), descriptor.GetConsumerUsage());
+}
 
 BufferManager::BufferManager() : next_id_(0) {
   char property[PROPERTY_VALUE_MAX];
@@ -160,7 +166,9 @@ void BufferManager::CreateSharedHandle(buffer_handle_t inbuffer, const BufferDes
 
   // Get Buffer attributes or dimension
   unsigned int alignedw = 0, alignedh = 0;
-  allocator_->GetAlignedWidthAndHeight(descriptor, &alignedw, &alignedh);
+  BufferInfo info = GetBufferInfo(descriptor);
+
+  GetAlignedWidthAndHeight(info, &alignedw, &alignedh);
 
   // create new handle from input reference handle and given descriptor
   int flags = GetHandleFlags(descriptor.GetFormat(), descriptor.GetProducerUsage(),
@@ -425,7 +433,7 @@ int BufferManager::GetHandleFlags(int format, gralloc1_producer_usage_t prod_usa
     flags |= private_handle_t::PRIV_FLAGS_SECURE_DISPLAY;
   }
 
-  if (allocator_->IsUBwcEnabled(format, prod_usage, cons_usage)) {
+  if (IsUBwcEnabled(format, prod_usage, cons_usage)) {
     flags |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
   }
 
@@ -477,7 +485,8 @@ int BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_han
   unsigned int size;
   unsigned int alignedw, alignedh;
   int buffer_type = GetBufferType(gralloc_format);
-  allocator_->GetBufferSizeAndDimensions(descriptor, &size, &alignedw, &alignedh);
+  BufferInfo info = GetBufferInfo(descriptor);
+  GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh);
   size = (bufferSize >= size) ? bufferSize : size;
   size = size * layer_count;
 
@@ -566,8 +575,8 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
         hnd->offset = offset;
         hnd->base = uint64_t(base) + offset;
         hnd->gpuaddr = 0;
-        BufferDescriptor descriptor(width, height, format);
-        allocator_->GetAlignedWidthAndHeight(descriptor, &alignedw, &alignedh);
+        BufferInfo info(width, height, format);
+        GetAlignedWidthAndHeight(info, &alignedw, &alignedh);
         hnd->unaligned_width = width;
         hnd->unaligned_height = height;
         hnd->width = INT(alignedw);
@@ -582,8 +591,8 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
       int format = va_arg(args, int);
       int *stride = va_arg(args, int *);
       unsigned int alignedw = 0, alignedh = 0;
-      BufferDescriptor descriptor(width, width, format);
-      allocator_->GetAlignedWidthAndHeight(descriptor, &alignedw, &alignedh);
+      BufferInfo info(width, width, format);
+      GetAlignedWidthAndHeight(info, &alignedw, &alignedh);
       *stride = INT(alignedw);
     } break;
 
@@ -636,10 +645,9 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
       int *aligned_height = va_arg(args, int *);
       int *tile_enabled = va_arg(args, int *);
       unsigned int alignedw, alignedh;
-      BufferDescriptor descriptor(width, height, format, prod_usage, cons_usage);
-      *tile_enabled = allocator_->IsUBwcEnabled(format, prod_usage, cons_usage);
-
-      allocator_->GetAlignedWidthAndHeight(descriptor, &alignedw, &alignedh);
+      BufferInfo info(width, height, format, prod_usage, cons_usage);
+      *tile_enabled = IsUBwcEnabled(format, prod_usage, cons_usage);
+      GetAlignedWidthAndHeight(info, &alignedw, &alignedh);
       *aligned_width = INT(alignedw);
       *aligned_height = INT(alignedh);
     } break;
@@ -681,7 +689,7 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
       if (private_handle_t::validate(hnd) != 0) {
         return GRALLOC1_ERROR_BAD_HANDLE;
       }
-      if (allocator_->GetYUVPlaneInfo(hnd, ycbcr)) {
+      if (GetYUVPlaneInfo(hnd, ycbcr)) {
         return GRALLOC1_ERROR_UNDEFINED;
       }
     } break;
@@ -713,7 +721,7 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
       if (private_handle_t::validate(hnd) != 0) {
         return GRALLOC1_ERROR_BAD_HANDLE;
       }
-      if (allocator_->GetRgbDataAddress(hnd, rgb_data)) {
+      if (GetRgbDataAddress(hnd, rgb_data)) {
         return GRALLOC1_ERROR_UNDEFINED;
       }
     } break;
@@ -729,8 +737,8 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
       uint32_t *aligned_width = va_arg(args, uint32_t *);
       uint32_t *aligned_height = va_arg(args, uint32_t *);
       uint32_t *size = va_arg(args, uint32_t *);
-      auto descriptor = BufferDescriptor(width, height, format, producer_usage, consumer_usage);
-      allocator_->GetBufferSizeAndDimensions(descriptor, size, aligned_width, aligned_height);
+      auto info = BufferInfo(width, height, format, producer_usage, consumer_usage);
+      GetBufferSizeAndDimensions(info, size, aligned_width, aligned_height);
       // Align size
       auto align = GetDataAlignment(format, producer_usage, consumer_usage);
       *size = ALIGN(*size, align);
@@ -750,7 +758,7 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
       BufferDescriptor descriptor(width, height, format, producer_usage, consumer_usage);
       unsigned int size;
       unsigned int alignedw, alignedh;
-      allocator_->GetBufferSizeAndDimensions(descriptor, &size, &alignedw, &alignedh);
+      GetBufferSizeAndDimensions(GetBufferInfo(descriptor), &size, &alignedw, &alignedh);
       AllocateBuffer(descriptor, hnd, size);
     } break;
 
@@ -798,7 +806,7 @@ gralloc1_error_t BufferManager::GetFlexLayout(const private_handle_t *hnd,
   }
 
   android_ycbcr ycbcr;
-  int err = allocator_->GetYUVPlaneInfo(hnd, &ycbcr);
+  int err = GetYUVPlaneInfo(hnd, &ycbcr);
 
   if (err != 0) {
     return GRALLOC1_ERROR_BAD_HANDLE;

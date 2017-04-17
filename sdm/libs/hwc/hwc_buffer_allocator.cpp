@@ -34,16 +34,11 @@
 #include <utils/constants.h>
 #include <utils/debug.h>
 #include <core/buffer_allocator.h>
-#include <drm_master.h>
-#include <qd_utils.h>
 
 #include "hwc_debugger.h"
 #include "hwc_buffer_allocator.h"
 
 #define __CLASS__ "HWCBufferAllocator"
-
-using drm_utils::DRMMaster;
-using drm_utils::DRMBuffer;
 
 namespace sdm {
 
@@ -123,49 +118,6 @@ DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
 
   buffer_info->private_data = meta_buffer_info;
 
-  if (qdutils::getDriverType() == qdutils::DriverType::DRM) {
-    private_handle_t handle(-1, 0, 0, 0, 0, 0, 0);
-    // Setup only the required stuff, skip rest
-    handle.base = reinterpret_cast<uint64_t>(data.base);
-    handle.format = format;
-    handle.width = aligned_width;
-    handle.height = aligned_height;
-    if (alloc_flags & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC) {
-      handle.flags = private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
-    }
-    private_handle_t *hnd = &handle;
-    DRMBuffer buf = {};
-    int ret = getPlaneStrideOffset(hnd, buf.stride, buf.offset,
-                                   &buf.num_planes);
-    if (ret < 0) {
-      DLOGE("getPlaneStrideOffset failed");
-      return kErrorParameters;
-    }
-
-    buf.fd = data.fd;
-    buf.width = UINT32(hnd->width);
-    buf.height = UINT32(hnd->height);
-    getDRMFormat(hnd->format, hnd->flags, &buf.drm_format,
-                 &buf.drm_format_modifier);
-
-    DRMMaster *master = nullptr;
-    ret = DRMMaster::GetInstance(&master);
-    if (ret < 0) {
-      DLOGE("Failed to acquire DRMMaster instance");
-      return kErrorParameters;
-    }
-
-    ret = master->CreateFbId(buf, &alloc_buffer_info->gem_handle, &alloc_buffer_info->fb_id);
-    if (ret < 0) {
-      DLOGE("CreateFbId failed. width %d, height %d, " \
-            "format: %s, stride %u, error %d",
-            buf.width, buf.height,
-            qdutils::GetHALPixelFormatString(hnd->format),
-            buf.stride[0], errno);
-      return kErrorParameters;
-    }
-  }
-
   return kErrorNone;
 }
 
@@ -201,25 +153,6 @@ DisplayError HWCBufferAllocator::FreeBuffer(BufferInfo *buffer_info) {
 
     delete meta_buffer_info;
     meta_buffer_info = NULL;
-
-    if (alloc_buffer_info->fb_id) {
-      DRMMaster *master = nullptr;
-      int ret = DRMMaster::GetInstance(&master);
-      if (ret < 0) {
-        DLOGE("Failed to acquire DRMMaster instance");
-        return kErrorParameters;
-      }
-
-      ret = master->RemoveFbId(alloc_buffer_info->gem_handle, alloc_buffer_info->fb_id);
-      if (ret < 0) {
-        DLOGE("Removing fb_id %d failed with error %d",
-              alloc_buffer_info->fb_id, errno);
-        return kErrorParameters;
-      }
-
-      alloc_buffer_info->fb_id = 0;
-      alloc_buffer_info->gem_handle = 0;
-    }
   }
 
   return kErrorNone;
@@ -364,6 +297,32 @@ DisplayError HWCBufferAllocator::GetAllocatedBufferInfo(const BufferConfig &buff
   allocated_buffer_info->aligned_width = UINT32(width_aligned);
   allocated_buffer_info->aligned_height = UINT32(height_aligned);
   allocated_buffer_info->size = UINT32(buffer_size);
+  allocated_buffer_info->format = buffer_config.format;
+
+  return kErrorNone;
+}
+
+DisplayError HWCBufferAllocator::GetBufferLayout(const AllocatedBufferInfo &buf_info,
+                                                 uint32_t stride[4], uint32_t offset[4],
+                                                 uint32_t *num_planes) {
+  private_handle_t hnd(-1, 0, 0, 0, 0, 0, 0);
+  int format = HAL_PIXEL_FORMAT_RGBA_8888;
+  int flags = 0;
+
+  SetBufferInfo(buf_info.format, &format, &flags);
+  // Setup only the required stuff, skip rest
+  hnd.format = format;
+  hnd.width = buf_info.aligned_width;
+  hnd.height = buf_info.aligned_height;
+  if (flags & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC) {
+    hnd.flags = private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
+  }
+
+  int ret = getBufferLayout(&hnd, stride, offset, num_planes);
+  if (ret < 0) {
+    DLOGE("getBufferLayout failed");
+    return kErrorParameters;
+  }
 
   return kErrorNone;
 }

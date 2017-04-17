@@ -54,7 +54,6 @@
 
 #include "hw_info_drm.h"
 
-#ifdef COMPILE_DRM
 #ifndef DRM_FORMAT_MOD_QCOM_COMPRESSED
 #define DRM_FORMAT_MOD_QCOM_COMPRESSED fourcc_mod_code(QCOM, 1)
 #endif
@@ -63,7 +62,6 @@
 #endif
 #ifndef DRM_FORMAT_MOD_QCOM_TIGHT
 #define DRM_FORMAT_MOD_QCOM_TIGHT fourcc_mod_code(QCOM, 0x4)
-#endif
 #endif
 
 #define __CLASS__ "HWInfoDRM"

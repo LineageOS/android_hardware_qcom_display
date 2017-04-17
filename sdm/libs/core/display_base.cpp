@@ -41,10 +41,11 @@ namespace sdm {
 // TODO(user): Have a single structure handle carries all the interface pointers and variables.
 DisplayBase::DisplayBase(DisplayType display_type, DisplayEventHandler *event_handler,
                          HWDeviceType hw_device_type, BufferSyncHandler *buffer_sync_handler,
-                         CompManager *comp_manager, HWInfoInterface *hw_info_intf)
+                         BufferAllocator *buffer_allocator, CompManager *comp_manager,
+                         HWInfoInterface *hw_info_intf)
   : display_type_(display_type), event_handler_(event_handler), hw_device_type_(hw_device_type),
-    buffer_sync_handler_(buffer_sync_handler), comp_manager_(comp_manager),
-    hw_info_intf_(hw_info_intf) {
+    buffer_sync_handler_(buffer_sync_handler), buffer_allocator_(buffer_allocator),
+    comp_manager_(comp_manager), hw_info_intf_(hw_info_intf) {
 }
 
 DisplayError DisplayBase::Init() {
@@ -1114,7 +1115,6 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
     hw_layer.input_buffer.planes[0].stride = sdm_layer->input_buffer.planes[0].stride;
     hw_layer.input_buffer.size = sdm_layer->input_buffer.size;
     hw_layer.input_buffer.acquire_fence_fd = sdm_layer->input_buffer.acquire_fence_fd;
-    hw_layer.input_buffer.fb_id = sdm_layer->input_buffer.fb_id;
   }
 
   return;

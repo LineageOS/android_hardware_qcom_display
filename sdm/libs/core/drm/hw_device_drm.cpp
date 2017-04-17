@@ -30,6 +30,7 @@
 #define __STDC_FORMAT_MACROS
 
 #include <ctype.h>
+#include <drm/drm_fourcc.h>
 #include <drm_lib_loader.h>
 #include <drm_master.h>
 #include <drm_res_mgr.h>
@@ -45,11 +46,13 @@
 #include <unistd.h>
 #include <utils/constants.h>
 #include <utils/debug.h>
+#include <utils/formats.h>
 #include <utils/sys.h>
 #include <private/color_params.h>
 
 #include <algorithm>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -59,12 +62,24 @@
 
 #define __CLASS__ "HWDeviceDRM"
 
+#ifndef DRM_FORMAT_MOD_QCOM_COMPRESSED
+#define DRM_FORMAT_MOD_QCOM_COMPRESSED fourcc_mod_code(QCOM, 1)
+#endif
+#ifndef DRM_FORMAT_MOD_QCOM_DX
+#define DRM_FORMAT_MOD_QCOM_DX fourcc_mod_code(QCOM, 0x2)
+#endif
+#ifndef DRM_FORMAT_MOD_QCOM_TIGHT
+#define DRM_FORMAT_MOD_QCOM_TIGHT fourcc_mod_code(QCOM, 0x4)
+#endif
+
 using std::string;
 using std::to_string;
 using std::fstream;
+using std::unordered_map;
 using drm_utils::DRMMaster;
 using drm_utils::DRMResMgr;
 using drm_utils::DRMLibLoader;
+using drm_utils::DRMBuffer;
 using sde_drm::GetDRMManager;
 using sde_drm::DestroyDRMManager;
 using sde_drm::DRMDisplayType;
@@ -79,8 +94,208 @@ using sde_drm::DRMTopology;
 
 namespace sdm {
 
-HWDeviceDRM::HWDeviceDRM(BufferSyncHandler *buffer_sync_handler, HWInfoInterface *hw_info_intf)
-    : hw_info_intf_(hw_info_intf), buffer_sync_handler_(buffer_sync_handler) {
+static void GetDRMFormat(LayerBufferFormat format, uint32_t *drm_format,
+                         uint64_t *drm_format_modifier) {
+  switch (format) {
+    case kFormatRGBA8888:
+      *drm_format = DRM_FORMAT_ABGR8888;
+      break;
+    case kFormatRGBA8888Ubwc:
+      *drm_format = DRM_FORMAT_ABGR8888;
+      *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED;
+      break;
+    case kFormatRGBA5551:
+      *drm_format = DRM_FORMAT_ABGR1555;
+      break;
+    case kFormatRGBA4444:
+      *drm_format = DRM_FORMAT_ABGR4444;
+      break;
+    case kFormatBGRA8888:
+      *drm_format = DRM_FORMAT_ARGB8888;
+      break;
+    case kFormatRGBX8888:
+      *drm_format = DRM_FORMAT_XBGR8888;
+      break;
+    case kFormatRGBX8888Ubwc:
+      *drm_format = DRM_FORMAT_XBGR8888;
+      *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED;
+      break;
+    case kFormatBGRX8888:
+      *drm_format = DRM_FORMAT_XRGB8888;
+      break;
+    case kFormatRGB888:
+      *drm_format = DRM_FORMAT_BGR888;
+      break;
+    case kFormatRGB565:
+      *drm_format = DRM_FORMAT_BGR565;
+      break;
+    case kFormatBGR565:
+      *drm_format = DRM_FORMAT_RGB565;
+      break;
+    case kFormatBGR565Ubwc:
+      *drm_format = DRM_FORMAT_BGR565;
+      *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED;
+      break;
+    case kFormatRGBA1010102:
+      *drm_format = DRM_FORMAT_ABGR2101010;
+      break;
+    case kFormatRGBA1010102Ubwc:
+      *drm_format = DRM_FORMAT_ABGR2101010;
+      *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED;
+      break;
+    case kFormatARGB2101010:
+      *drm_format = DRM_FORMAT_BGRA1010102;
+      break;
+    case kFormatRGBX1010102:
+      *drm_format = DRM_FORMAT_XBGR2101010;
+      break;
+    case kFormatRGBX1010102Ubwc:
+      *drm_format = DRM_FORMAT_XBGR2101010;
+      *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED;
+      break;
+    case kFormatXRGB2101010:
+      *drm_format = DRM_FORMAT_BGRX1010102;
+      break;
+    case kFormatBGRA1010102:
+      *drm_format = DRM_FORMAT_ARGB2101010;
+      break;
+    case kFormatABGR2101010:
+      *drm_format = DRM_FORMAT_RGBA1010102;
+      break;
+    case kFormatBGRX1010102:
+      *drm_format = DRM_FORMAT_XRGB2101010;
+      break;
+    case kFormatXBGR2101010:
+      *drm_format = DRM_FORMAT_RGBX1010102;
+      break;
+    case kFormatYCbCr420SemiPlanar:
+      *drm_format = DRM_FORMAT_NV12;
+      break;
+    case kFormatYCbCr420SemiPlanarVenus:
+      *drm_format = DRM_FORMAT_NV12;
+      break;
+    case kFormatYCbCr420SPVenusUbwc:
+      *drm_format = DRM_FORMAT_NV12;
+      *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED;
+      break;
+    case kFormatYCrCb420SemiPlanar:
+      *drm_format = DRM_FORMAT_NV21;
+      break;
+    case kFormatYCrCb420SemiPlanarVenus:
+      *drm_format = DRM_FORMAT_NV21;
+      break;
+    case kFormatYCbCr420P010:
+      *drm_format = DRM_FORMAT_NV12;
+      *drm_format_modifier = DRM_FORMAT_MOD_QCOM_DX;
+      break;
+    case kFormatYCbCr420P010Ubwc:
+      *drm_format = DRM_FORMAT_NV12;
+      *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED |
+        DRM_FORMAT_MOD_QCOM_DX;
+      break;
+    case kFormatYCbCr420TP10Ubwc:
+      *drm_format = DRM_FORMAT_NV12;
+      *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED |
+        DRM_FORMAT_MOD_QCOM_DX | DRM_FORMAT_MOD_QCOM_TIGHT;
+      break;
+    case kFormatYCbCr422H2V1SemiPlanar:
+      *drm_format = DRM_FORMAT_NV16;
+      break;
+    case kFormatYCrCb422H2V1SemiPlanar:
+      *drm_format = DRM_FORMAT_NV61;
+      break;
+    case kFormatYCrCb420PlanarStride16:
+      *drm_format = DRM_FORMAT_YVU420;
+      break;
+    default:
+      DLOGW("Unsupported format %s", GetFormatString(format));
+  }
+}
+
+void HWDeviceDRM::Registry::RegisterCurrent(HWLayers *hw_layers) {
+  DRMMaster *master = nullptr;
+  DRMMaster::GetInstance(&master);
+
+  if (!master) {
+    DLOGE("Failed to acquire DRM Master instance");
+    return;
+  }
+
+  HWLayersInfo &hw_layer_info = hw_layers->info;
+  uint32_t hw_layer_count = UINT32(hw_layer_info.hw_layers.size());
+
+  for (uint32_t i = 0; i < hw_layer_count; i++) {
+    Layer &layer = hw_layer_info.hw_layers.at(i);
+    LayerBuffer *input_buffer = &layer.input_buffer;
+    HWRotatorSession *hw_rotator_session = &hw_layers->config[i].hw_rotator_session;
+    HWRotateInfo *hw_rotate_info = &hw_rotator_session->hw_rotate_info[0];
+
+    if (hw_rotate_info->valid) {
+      input_buffer = &hw_rotator_session->output_buffer;
+    }
+
+    int fd = input_buffer->planes[0].fd;
+    if (fd >= 0 && hashmap_[current_index_].find(fd) == hashmap_[current_index_].end()) {
+      AllocatedBufferInfo buf_info {};
+      DRMBuffer layout {};
+      buf_info.fd = layout.fd = fd;
+      buf_info.aligned_width = layout.width = input_buffer->width;
+      buf_info.aligned_height = layout.height = input_buffer->height;
+      buf_info.format = input_buffer->format;
+      GetDRMFormat(buf_info.format, &layout.drm_format, &layout.drm_format_modifier);
+      buffer_allocator_->GetBufferLayout(buf_info, layout.stride, layout.offset,
+                                         &layout.num_planes);
+      uint32_t fb_id = 0;
+      int ret = master->CreateFbId(layout, &fb_id);
+      if (ret < 0) {
+        DLOGE("CreateFbId failed. width %d, height %d, format: %s, stride %u, error %d",
+              layout.width, layout.height, GetFormatString(buf_info.format), layout.stride[0],
+              errno);
+      } else {
+        hashmap_[current_index_][fd] = fb_id;
+      }
+    }
+  }
+}
+
+void HWDeviceDRM::Registry::UnregisterNext() {
+  DRMMaster *master = nullptr;
+  DRMMaster::GetInstance(&master);
+
+  if (!master) {
+    DLOGE("Failed to acquire DRM Master instance");
+    return;
+  }
+
+  current_index_ = (current_index_ + 1) % kCycleDelay;
+  auto &curr_map = hashmap_[current_index_];
+  for (auto &pair : curr_map) {
+    uint32_t fb_id = pair.second;
+    int ret = master->RemoveFbId(fb_id);
+    if (ret < 0) {
+      DLOGE("Removing fb_id %d failed with error %d", fb_id, errno);
+    }
+  }
+
+  curr_map.clear();
+}
+
+void HWDeviceDRM::Registry::Clear() {
+  for (int i = 0; i < kCycleDelay; i++) {
+    UnregisterNext();
+  }
+  current_index_ = 0;
+}
+
+uint32_t HWDeviceDRM::Registry::GetFbId(int fd) {
+  auto it = hashmap_[current_index_].find(fd);
+  return (it == hashmap_[current_index_].end()) ? 0 : it->second;
+}
+
+HWDeviceDRM::HWDeviceDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
+                         HWInfoInterface *hw_info_intf)
+    : hw_info_intf_(hw_info_intf), buffer_sync_handler_(buffer_sync_handler),
+      registry_(buffer_allocator) {
   device_type_ = kDevicePrimary;
   device_name_ = "Peripheral Display";
   hw_info_intf_ = hw_info_intf;
@@ -126,10 +341,17 @@ DisplayError HWDeviceDRM::Init() {
   UpdateMixerAttributes();
   hw_info_intf_->GetHWResourceInfo(&hw_resource_);
 
+  // TODO(user): In future, remove has_qseed3 member, add version and pass version to constructor
+  if (hw_resource_.has_qseed3) {
+    hw_scale_ = new HWScaleDRM(HWScaleDRM::Version::V2);
+  }
+
   return kErrorNone;
 }
 
 DisplayError HWDeviceDRM::Deinit() {
+  delete hw_scale_;
+  registry_.Clear();
   drm_mgr_intf_->DestroyAtomicReq(drm_atomic_intf_);
   drm_atomic_intf_ = {};
   drm_mgr_intf_->UnregisterDisplay(token_);
@@ -384,7 +606,8 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
         needs_rotation = true;
       }
 
-      if (pipe_info->valid && input_buffer->fb_id) {
+      uint32_t fb_id = registry_.GetFbId(input_buffer->planes[0].fd);
+      if (pipe_info->valid && fb_id) {
         uint32_t pipe_id = pipe_info->pipe_id;
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ALPHA, pipe_id, layer.plane_alpha);
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ZORDER, pipe_id, pipe_info->z_order);
@@ -417,11 +640,20 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
         uint32_t config = 0;
         SetSrcConfig(layer.input_buffer, &config);
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_SRC_CONFIG, pipe_id, config);;
-        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_FB_ID, pipe_id, input_buffer->fb_id);
+        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_FB_ID, pipe_id, fb_id);
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_CRTC, pipe_id, token_.crtc_id);
         if (!validate && input_buffer->acquire_fence_fd >= 0) {
           drm_atomic_intf_->Perform(DRMOps::PLANE_SET_INPUT_FENCE, pipe_id,
                                     input_buffer->acquire_fence_fd);
+        }
+        if (hw_scale_) {
+          SDEScaler scaler_output = {};
+          hw_scale_->SetPlaneScaler(pipe_info->scale_data, &scaler_output);
+          // TODO(user): Remove qseed3 and add version check, then send appropriate scaler object
+          if (hw_resource_.has_qseed3) {
+            drm_atomic_intf_->Perform(DRMOps::PLANE_SET_SCALER_CONFIG, pipe_id,
+                                      reinterpret_cast<uint64_t>(&scaler_output.scaler_v2));
+          }
         }
       }
     }
@@ -433,6 +665,8 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
 
 DisplayError HWDeviceDRM::Validate(HWLayers *hw_layers) {
   DTRACE_SCOPED();
+
+  registry_.RegisterCurrent(hw_layers);
   SetupAtomic(hw_layers, true /* validate */);
 
   int ret = drm_atomic_intf_->Validate();
@@ -446,11 +680,19 @@ DisplayError HWDeviceDRM::Validate(HWLayers *hw_layers) {
 
 DisplayError HWDeviceDRM::Commit(HWLayers *hw_layers) {
   DTRACE_SCOPED();
+
+  DisplayError err = kErrorNone;
+  registry_.RegisterCurrent(hw_layers);
+
   if (default_mode_) {
-    return DefaultCommit(hw_layers);
+    err = DefaultCommit(hw_layers);
+  } else {
+    err = AtomicCommit(hw_layers);
   }
 
-  return AtomicCommit(hw_layers);
+  registry_.UnregisterNext();
+
+  return err;
 }
 
 DisplayError HWDeviceDRM::DefaultCommit(HWLayers *hw_layers) {
@@ -490,12 +732,12 @@ DisplayError HWDeviceDRM::DefaultCommit(HWLayers *hw_layers) {
   drmModeModeInfo mode;
   res_mgr->GetMode(&mode);
 
-  LayerBuffer &input_buffer = hw_layer_info.hw_layers.at(0).input_buffer;
-  ret = drmModeSetCrtc(dev_fd, crtc_id, input_buffer.fb_id, 0 /* x */, 0 /* y */, &connector_id,
+  uint32_t fb_id = registry_.GetFbId(hw_layer_info.hw_layers.at(0).input_buffer.planes[0].fd);
+  ret = drmModeSetCrtc(dev_fd, crtc_id, fb_id, 0 /* x */, 0 /* y */, &connector_id,
                        1 /* num_connectors */, &mode);
   if (ret < 0) {
     DLOGE("drmModeSetCrtc failed dev fd %d, fb_id %d, crtc id %d, connector id %d, %s", dev_fd,
-          input_buffer.fb_id, crtc_id, connector_id, strerror(errno));
+          fb_id, crtc_id, connector_id, strerror(errno));
     return kErrorHardware;
   }
 
@@ -719,6 +961,15 @@ DisplayError HWDeviceDRM::SetS3DMode(HWS3DMode s3d_mode) {
 }
 
 DisplayError HWDeviceDRM::SetScaleLutConfig(HWScaleLutInfo *lut_info) {
+  sde_drm::DRMScalerLUTInfo drm_lut_info = {};
+  drm_lut_info.cir_lut = lut_info->cir_lut;
+  drm_lut_info.dir_lut = lut_info->dir_lut;
+  drm_lut_info.sep_lut = lut_info->sep_lut;
+  drm_lut_info.cir_lut_size = lut_info->cir_lut_size;
+  drm_lut_info.dir_lut_size = lut_info->dir_lut_size;
+  drm_lut_info.sep_lut_size = lut_info->sep_lut_size;
+  drm_mgr_intf_->SetScalerLUT(drm_lut_info);
+
   return kErrorNone;
 }
 

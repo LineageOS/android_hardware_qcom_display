@@ -30,14 +30,31 @@
 #include <cutils/log.h>
 #include <cutils/properties.h>
 #include <dlfcn.h>
+#include <mutex>
 
 #include "gralloc_priv.h"
 #include "gr_adreno_info.h"
 #include "gr_utils.h"
 
+using std::lock_guard;
+using std::mutex;
+
 namespace gralloc1 {
 
-AdrenoMemInfo::AdrenoMemInfo() {
+AdrenoMemInfo *AdrenoMemInfo::s_instance = nullptr;
+
+AdrenoMemInfo *AdrenoMemInfo::GetInstance() {
+  static mutex s_lock;
+  lock_guard<mutex> obj(s_lock);
+  if (!s_instance) {
+    s_instance = new AdrenoMemInfo();
+    if (!s_instance->Init()) {
+      delete s_instance;
+      s_instance = nullptr;
+    }
+  }
+
+  return s_instance;
 }
 
 bool AdrenoMemInfo::Init() {
