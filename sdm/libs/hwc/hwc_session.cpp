@@ -465,6 +465,8 @@ bool HWCSession::IsDisplayYUV(int disp) {
 }
 
 int HWCSession::EventControl(hwc_composer_device_1 *device, int disp, int event, int enable) {
+  SCOPE_LOCK(locker_);
+
   if (!device) {
     return -EINVAL;
   }
