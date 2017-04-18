@@ -64,35 +64,65 @@ enum LayerBlending {
   @sa Layer
 */
 enum LayerComposition {
+  /* ==== List of composition types set by SDM === */
+  /* These composition types represent SDM composition decision for the layers which need to
+     be blended. Composition types are set during Prepare() by SDM.
+     Client can set default composition type to any of the below before calling into Prepare(),
+     however client's input value is ignored and does not play any role in composition decision.
+  */
   kCompositionGPU,          //!< This layer will be drawn onto the target buffer by GPU. Display
-                            //!< device will mark the layer for GPU composition if it can not handle
-                            //!< it completely.
+                            //!< device will mark the layer for GPU composition if it can not
+                            //!< handle composition for it.
+                            //!< This composition type is used only if GPUTarget layer is provided
+                            //!< in a composition cycle.
 
-  kCompositionSDE,          //!< This layer will be handled by SDE. It must not be composed by GPU.
+  kCompositionGPUS3D,       //!< This layer will be drawn onto the target buffer in s3d mode by GPU.
+                            //!< Display device will mark the layer for GPU composition if it can
+                            //!< not handle composition for it.
+                            //!< This composition type is used only if GPUTarget layer is provided
+                            //!< in a composition cycle.
 
-  kCompositionHWCursor,     //!< This layer will be handled by SDE using HWCursor. It must not be
-                            //!< composed by GPU
+  kCompositionSDE,          //!< This layer will be composed by SDE. It must not be composed by
+                            //!< GPU or Blit.
 
-  kCompositionHybrid,       //!< This layer will be drawn by a blit engine and SDE together. Display
-                            //!< device will split the layer, update the blit rectangle that
-                            //!< need to be composed by a blit engine and update original source
-                            //!< rectangle that will be composed by SDE.
+  kCompositionHWCursor,     //!< This layer will be composed by SDE using HW Cursor. It must not be
+                            //!< composed by GPU or Blit.
 
-  kCompositionBlit,         //!< This layer will be composed using Blit Engine
+  kCompositionHybrid,       //!< This layer will be drawn by a blit engine and SDE together.
+                            //!< Display device will split the layer, update the blit rectangle
+                            //!< that need to be composed by a blit engine and update original
+                            //!< source rectangle that will be composed by SDE.
+                            //!< This composition type is used only if GPUTarget and BlitTarget
+                            //!< layers are provided in a composition cycle.
 
+  kCompositionBlit,         //!< This layer will be composed using Blit Engine.
+                            //!< This composition type is used only if BlitTarget layer is provided
+                            //!< in a composition cycle.
+
+  /* === List of composition types set by Client === */
+  /* These composition types represent target buffer layers onto which GPU or Blit will draw if SDM
+     decide to have some or all layers drawn by respective composition engine.
+     Client must provide a target buffer layer, if respective composition type is not disabled by
+     an explicit call to SetCompositionState() method. If a composition type is not disabled,
+     providing a target buffer layer is optional. If SDM is unable to handle layers without support
+     of such a composition engine, Prepare() call will return failure.
+  */
   kCompositionGPUTarget,    //!< This layer will hold result of composition for layers marked for
                             //!< GPU composition.
-                            //!< If display device does not set any layer for SDE composition then
-                            //!< this would be ignored during Commit().
+                            //!< If display device does not set any layer for GPU composition then
+                            //!< this layer would be ignored. Else, this layer will be composed
+                            //!< with other layers marked for SDE composition by SDE.
                             //!< Only one layer shall be marked as target buffer by the caller.
-                            //!< GPU target layer shall be after application layers in layer stack.
+                            //!< GPU target layer shall be placed after all application layers
+                            //!< in the layer stack.
 
   kCompositionBlitTarget,   //!< This layer will hold result of composition for blit rectangles
                             //!< from the layers marked for hybrid composition. Nth blit rectangle
                             //!< in a layer shall be composed onto Nth blit target.
                             //!< If display device does not set any layer for hybrid composition
-                            //!< then this would be ignored during Commit().
-                            //!< Blit target layers shall be after GPU target layer in layer stack.
+                            //!< then this would be ignored.
+                            //!< Blit target layers shall be placed after GPUTarget in the layer
+                            //!< stack.
 };
 
 /*! @brief This structure defines rotation and flip values for a display layer.
@@ -149,6 +179,36 @@ struct LayerFlags {
   };
 };
 
+/*! @brief This structure defines flags associated with the layer requests. The 1-bit flag can be
+    set to ON(1) or OFF(0).
+
+  @sa Layer
+*/
+struct LayerRequestFlags {
+  union {
+    struct {
+      uint32_t tone_map : 1;  //!< This flag will be set by SDM when the layer needs tone map
+      uint32_t secure: 1;  //!< This flag will be set by SDM when the layer must be secure
+    };
+    uint32_t request_flags = 0;  //!< For initialization purpose only.
+                                 //!< Shall not be refered directly.
+  };
+};
+
+/*! @brief This structure defines LayerRequest.
+   Includes width/height/format of the LayerRequest.
+
+   SDM shall set the properties of LayerRequest to be used by the client
+
+  @sa LayerRequest
+*/
+struct LayerRequest {
+  LayerRequestFlags flags;  // Flags associated with this request
+  LayerBufferFormat format = kFormatRGBA8888;  // Requested format
+  uint32_t width = 0;  // Requested unaligned width.
+  uint32_t height = 0;  // Requested unalighed height
+};
+
 /*! @brief This structure defines flags associated with a layer stack. The 1-bit flag can be set to
   ON(1) or OFF(0).
 
@@ -189,6 +249,8 @@ struct LayerStackFlags {
 
       uint32_t post_processed_output : 1;  // If output_buffer should contain post processed output
                                            // This applies only to primary displays currently
+
+      uint32_t hdr_present : 1;  //!< Set if stack has HDR content
     };
 
     uint32_t flags = 0;               //!< For initialization purpose only.
@@ -234,7 +296,7 @@ struct LayerRectArray {
   @sa LayerArray
 */
 struct Layer {
-  LayerBuffer *input_buffer = NULL;                //!< Pointer to the buffer to be composed.
+  LayerBuffer input_buffer = {};                   //!< Buffer to be composed.
                                                    //!< If this remains unchanged between two
                                                    //!< consecutive Prepare() calls and
                                                    //!< geometry_changed flag is not set for the
@@ -292,6 +354,11 @@ struct Layer {
                                                    //!< no content is associated with the layer.
 
   LayerFlags flags;                                //!< Flags associated with this layer.
+
+  LayerRequest request = {};                       //!< o/p - request on this Layer by SDM.
+
+  Lut3d lut_3d = {};                               //!< o/p - Populated by SDM when tone mapping is
+                                                   //!< needed on this layer.
 };
 
 /*! @brief This structure defines a layer stack that contains layers which need to be composed and

@@ -30,6 +30,10 @@
 #ifndef _QDMETADATA_H
 #define _QDMETADATA_H
 
+#ifdef USE_COLOR_METADATA
+#include <color_metadata.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -38,6 +42,8 @@ enum ColorSpace_t{
     ITU_R_601,
     ITU_R_601_FR,
     ITU_R_709,
+    ITU_R_2020,
+    ITU_R_2020_FR,
 };
 
 enum IGC_t {
@@ -55,6 +61,11 @@ struct HSICData_t {
 struct BufferDim_t {
     int32_t sliceWidth;
     int32_t sliceHeight;
+};
+
+struct S3DGpuComp_t {
+    int32_t displayId; /* on which display S3D is composed by client */
+    uint32_t s3dMode; /* the S3D format of this layer to be accessed by client */
 };
 
 struct MetaData_t {
@@ -79,36 +90,49 @@ struct MetaData_t {
     /* Set by graphics to indicate that this buffer will be written to but not
      * swapped out */
     uint32_t isSingleBufferMode;
+    /* Indicate GPU to draw S3D layer on dedicate display device */
+    struct S3DGpuComp_t s3dComp;
+
+    /* Set by camera to program the VT Timestamp */
+    uint64_t vtTimeStamp;
+#ifdef USE_COLOR_METADATA
+    /* Color Aspects + HDR info */
+    ColorMetaData color;
+#endif
 };
 
 enum DispParamType {
-    UNUSED0             = 0x0001,
-    UNUSED1             = 0x0002,
-    PP_PARAM_INTERLACED = 0x0004,
-    UNUSED2             = 0x0008,
-    UNUSED3             = 0x0010,
-    UNUSED4             = 0x0020,
-    UNUSED5             = 0x0040,
-    UPDATE_BUFFER_GEOMETRY = 0x0080,
-    UPDATE_REFRESH_RATE = 0x0100,
-    UPDATE_COLOR_SPACE = 0x0200,
-    MAP_SECURE_BUFFER = 0x400,
-    S3D_FORMAT = 0x800,
-    LINEAR_FORMAT = 0x1000,
-    SET_IGC = 0x2000,
-    SET_SINGLE_BUFFER_MODE = 0x4000,
+    SET_VT_TIMESTAMP         = 0x0001,
+    COLOR_METADATA           = 0x0002,
+    PP_PARAM_INTERLACED      = 0x0004,
+    UNUSED2                  = 0x0008,
+    UNUSED3                  = 0x0010,
+    UNUSED4                  = 0x0020,
+    UNUSED5                  = 0x0040,
+    UPDATE_BUFFER_GEOMETRY   = 0x0080,
+    UPDATE_REFRESH_RATE      = 0x0100,
+    UPDATE_COLOR_SPACE       = 0x0200,
+    MAP_SECURE_BUFFER        = 0x0400,
+    S3D_FORMAT               = 0x0800,
+    LINEAR_FORMAT            = 0x1000,
+    SET_IGC                  = 0x2000,
+    SET_SINGLE_BUFFER_MODE   = 0x4000,
+    SET_S3D_COMP             = 0x8000,
 };
 
 enum DispFetchParamType {
-    GET_PP_PARAM_INTERLACED = 0x0004,
-    GET_BUFFER_GEOMETRY = 0x0080,
-    GET_REFRESH_RATE = 0x0100,
-    GET_COLOR_SPACE = 0x0200,
-    GET_MAP_SECURE_BUFFER = 0x400,
-    GET_S3D_FORMAT = 0x800,
-    GET_LINEAR_FORMAT = 0x1000,
-    GET_IGC = 0x2000,
-    GET_SINGLE_BUFFER_MODE = 0x4000,
+    GET_VT_TIMESTAMP         = 0x0001,
+    GET_COLOR_METADATA       = 0x0002,
+    GET_PP_PARAM_INTERLACED  = 0x0004,
+    GET_BUFFER_GEOMETRY      = 0x0080,
+    GET_REFRESH_RATE         = 0x0100,
+    GET_COLOR_SPACE          = 0x0200,
+    GET_MAP_SECURE_BUFFER    = 0x0400,
+    GET_S3D_FORMAT           = 0x0800,
+    GET_LINEAR_FORMAT        = 0x1000,
+    GET_IGC                  = 0x2000,
+    GET_SINGLE_BUFFER_MODE   = 0x4000,
+    GET_S3D_COMP             = 0x8000,
 };
 
 struct private_handle_t;
@@ -119,6 +143,9 @@ int getMetaData(struct private_handle_t *handle, enum DispFetchParamType paramTy
         void *param);
 
 int copyMetaData(struct private_handle_t *src, struct private_handle_t *dst);
+
+int clearMetaData(struct private_handle_t *handle, enum DispParamType paramType);
+
 #ifdef __cplusplus
 }
 #endif

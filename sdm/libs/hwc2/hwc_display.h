@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -32,6 +32,7 @@
 #include <utility>
 #include <vector>
 
+#include "hwc_buffer_allocator.h"
 #include "hwc_callbacks.h"
 #include "hwc_layers.h"
 
@@ -55,17 +56,17 @@ class HWCColorMode {
   HWC2::Error Init();
   HWC2::Error DeInit();
   uint32_t GetColorModeCount();
-  HWC2::Error GetColorModes(uint32_t *out_num_modes, int32_t /*android_color_mode_t*/ *out_modes);
-  HWC2::Error SetColorMode(int32_t /*android_color_mode_t*/ mode);
+  HWC2::Error GetColorModes(uint32_t *out_num_modes, android_color_mode_t *out_modes);
+  HWC2::Error SetColorMode(android_color_mode_t mode);
   HWC2::Error SetColorTransform(const float *matrix, android_color_transform_t hint);
 
  private:
   static const uint32_t kColorTransformMatrixCount = 16;
 
-  HWC2::Error HandleColorModeTransform(int32_t /*android_color_mode_t*/ mode,
+  HWC2::Error HandleColorModeTransform(android_color_mode_t mode,
                                        android_color_transform_t hint, const double *matrix);
   void PopulateColorModes();
-  void PopulateTransform(const int32_t &mode, const std::string &color_mode);
+  void PopulateTransform(const android_color_mode_t &mode, const std::string &color_mode);
   template <class T>
   void CopyColorTransformMatrix(const T *input_matrix, double *output_matrix) {
     for (uint32_t i = 0; i < kColorTransformMatrixCount; i++) {
@@ -74,11 +75,10 @@ class HWCColorMode {
   }
 
   DisplayInterface *display_intf_ = NULL;
-  int32_t current_color_mode_ = 0;  // android_color_mode_t
+  android_color_mode_t current_color_mode_ = HAL_COLOR_MODE_NATIVE;
   android_color_transform_t current_color_transform_ = HAL_COLOR_TRANSFORM_IDENTITY;
   typedef std::map<android_color_transform_t, std::string> TransformMap;
-  // TODO(user): change int32_t to android_color_mode_t when defined
-  std::map<int32_t, TransformMap> color_mode_transform_map_ = {};
+  std::map<android_color_mode_t, TransformMap> color_mode_transform_map_ = {};
   double color_matrix_[kColorTransformMatrixCount] = {0};
 };
 
@@ -119,6 +119,10 @@ class HWCDisplay : public DisplayEventHandler {
   // 0 : Success.
   virtual int GetFrameCaptureStatus() { return -EAGAIN; }
 
+  virtual DisplayError SetDetailEnhancerConfig(const DisplayDetailEnhancerData &de_data) {
+    return kErrorNotSupported;
+  }
+
   // Display Configurations
   virtual int SetActiveDisplayConfig(int config);
   virtual int GetActiveDisplayConfig(uint32_t *config);
@@ -131,9 +135,12 @@ class HWCDisplay : public DisplayEventHandler {
   int ToggleScreenUpdates(bool enable);
   int ColorSVCRequestRoute(const PPDisplayAPIPayload &in_payload, PPDisplayAPIPayload *out_payload,
                            PPPendingParams *pending_action);
+  void SolidFillPrepare();
+  void SolidFillCommit();
   DisplayClass GetDisplayClass();
   int GetVisibleDisplayRect(hwc_rect_t *rect);
   void BuildLayerStack(void);
+  void BuildSolidFillStack(void);
   HWCLayer *GetHWCLayer(hwc2_layer_t layer);
 
   // HWC2 APIs
@@ -142,13 +149,13 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error SetActiveConfig(hwc2_config_t config);
   virtual HWC2::Error SetClientTarget(buffer_handle_t target, int32_t acquire_fence,
                                       int32_t dataspace, hwc_region_t damage);
-  virtual HWC2::Error SetColorMode(int32_t /*android_color_mode_t*/ mode) {
+  virtual HWC2::Error SetColorMode(android_color_mode_t mode) {
     return HWC2::Error::Unsupported;
   }
   virtual HWC2::Error SetColorTransform(const float *matrix, android_color_transform_t hint) {
     return HWC2::Error::Unsupported;
   }
-  virtual HWC2::Error HandleColorModeTransform(int32_t /*android_color_mode_t*/ mode,
+  virtual HWC2::Error HandleColorModeTransform(android_color_mode_t mode,
                                                android_color_transform_t hint,
                                                const double *matrix) {
     return HWC2::Error::Unsupported;
@@ -158,7 +165,7 @@ class HWCDisplay : public DisplayEventHandler {
                                           int32_t *out_value);
   virtual HWC2::Error GetClientTargetSupport(uint32_t width, uint32_t height, int32_t format,
                                              int32_t dataspace);
-  virtual HWC2::Error GetColorModes(uint32_t *outNumModes, int32_t *outModes);
+  virtual HWC2::Error GetColorModes(uint32_t *outNumModes, android_color_mode_t *outModes);
   virtual HWC2::Error GetChangedCompositionTypes(uint32_t *out_num_elements,
                                                  hwc2_layer_t *out_layers, int32_t *out_types);
   virtual HWC2::Error GetDisplayRequests(int32_t *out_display_requests, uint32_t *out_num_elements,
@@ -175,6 +182,10 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error GetReleaseFences(uint32_t *out_num_elements, hwc2_layer_t *out_layers,
                                        int32_t *out_fences);
   virtual HWC2::Error Present(int32_t *out_retire_fence) = 0;
+  virtual HWC2::Error GetHdrCapabilities(uint32_t *out_num_types, int32_t* out_types,
+                                         float* out_max_luminance,
+                                         float* out_max_average_luminance,
+                                         float* out_min_luminance);
 
  protected:
   enum DisplayStatus {
@@ -188,7 +199,8 @@ class HWCDisplay : public DisplayEventHandler {
   static const uint32_t kMaxLayerCount = 32;
 
   HWCDisplay(CoreInterface *core_intf, HWCCallbacks *callbacks, DisplayType type, hwc2_display_t id,
-             bool needs_blit, qService::QService *qservice, DisplayClass display_class);
+             bool needs_blit, qService::QService *qservice, DisplayClass display_class,
+             BufferAllocator *buffer_allocator);
 
   // DisplayEventHandler methods
   virtual DisplayError VSync(const DisplayEventVSync &vsync);
@@ -202,7 +214,6 @@ class HWCDisplay : public DisplayEventHandler {
     return kErrorNotSupported;
   }
   LayerBufferFormat GetSDMFormat(const int32_t &source, const int flags);
-  const char *GetHALPixelFormatString(int format);
   const char *GetDisplayString();
   void MarkLayersForGPUBypass(void);
   void MarkLayersForClientComposition(void);
@@ -220,6 +231,7 @@ class HWCDisplay : public DisplayEventHandler {
 
   CoreInterface *core_intf_ = nullptr;
   HWCCallbacks *callbacks_  = nullptr;
+  HWCBufferAllocator *buffer_allocator_ = NULL;
   DisplayType type_;
   hwc2_display_t id_;
   bool needs_blit_ = false;
@@ -250,16 +262,16 @@ class HWCDisplay : public DisplayEventHandler {
   bool secure_display_active_ = false;
   bool skip_prepare_ = false;
   bool solid_fill_enable_ = false;
+  Layer *solid_fill_layer_ = NULL;
+  LayerRect solid_fill_rect_ = {};
   uint32_t solid_fill_color_ = 0;
   LayerRect display_rect_;
   bool validated_ = false;
   bool color_tranform_failed_ = false;
   HWCColorMode *color_mode_ = NULL;
-  int32_t stored_retire_fence_ = -1;
 
  private:
   void DumpInputBuffers(void);
-  BlitEngine *blit_engine_ = NULL;
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
   uint32_t geometry_changes_ = GeometryChanges::kNone;

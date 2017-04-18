@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,18 +32,18 @@
 
 #include <hardware/gralloc1.h>
 
-#define BUF_DESCRIPTOR(exp) reinterpret_cast<BufferDescriptor *>(exp)
-
+namespace gralloc1 {
 class BufferDescriptor {
  public:
-  BufferDescriptor() {}
+  BufferDescriptor() : id_(next_id_++) {}
 
   BufferDescriptor(int w, int h, int f)
       : width_(w),
         height_(h),
         format_(f),
         producer_usage_(GRALLOC1_PRODUCER_USAGE_NONE),
-        consumer_usage_(GRALLOC1_CONSUMER_USAGE_NONE) {}
+        consumer_usage_(GRALLOC1_CONSUMER_USAGE_NONE),
+        id_(next_id_++) {}
 
   BufferDescriptor(int w, int h, int f, gralloc1_producer_usage_t prod_usage,
                    gralloc1_consumer_usage_t cons_usage)
@@ -51,9 +51,8 @@ class BufferDescriptor {
         height_(h),
         format_(f),
         producer_usage_(prod_usage),
-        consumer_usage_(cons_usage) {}
-
-  bool IsValid() { return (magic == kMagic); }
+        consumer_usage_(cons_usage),
+        id_(next_id_++) {}
 
   void SetConsumerUsage(gralloc1_consumer_usage_t usage) { consumer_usage_ = usage; }
 
@@ -66,6 +65,8 @@ class BufferDescriptor {
 
   void SetColorFormat(int format) { format_ = format; }
 
+  void SetLayerCount(uint32_t layer_count) { layer_count_ = layer_count; }
+
   gralloc1_consumer_usage_t GetConsumerUsage() const { return consumer_usage_; }
 
   gralloc1_producer_usage_t GetProducerUsage() const { return producer_usage_; }
@@ -76,15 +77,19 @@ class BufferDescriptor {
 
   int GetFormat() const { return format_; }
 
- private:
-  static const int kMagic = 'gr1d';
+  uint32_t GetLayerCount() const { return layer_count_; }
 
-  int magic = kMagic;
+  gralloc1_buffer_descriptor_t GetId() const { return id_; }
+
+ private:
   int width_ = -1;
   int height_ = -1;
   int format_ = -1;
+  uint32_t layer_count_ = 1;
   gralloc1_producer_usage_t producer_usage_ = GRALLOC1_PRODUCER_USAGE_NONE;
   gralloc1_consumer_usage_t consumer_usage_ = GRALLOC1_CONSUMER_USAGE_NONE;
+  const gralloc1_buffer_descriptor_t id_;
+  static std::atomic<gralloc1_buffer_descriptor_t> next_id_;
 };
-
+};  // namespace gralloc1
 #endif  // __GR_BUF_DESCRIPTOR_H__

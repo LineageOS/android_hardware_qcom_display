@@ -36,10 +36,12 @@ namespace sdm {
 
 class HWCDisplayExternal : public HWCDisplay {
  public:
-  static int Create(CoreInterface *core_intf, HWCCallbacks *callbacks, uint32_t primary_width,
+  static int Create(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
+                    HWCCallbacks *callbacks, uint32_t primary_width,
                     uint32_t primary_height, qService::QService *qservice, bool use_primary_res,
                     HWCDisplay **hwc_display);
-  static int Create(CoreInterface *core_intf, HWCCallbacks *callbacks, qService::QService *qservice,
+  static int Create(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
+                    HWCCallbacks *callbacks, qService::QService *qservice,
                     HWCDisplay **hwc_display);
   static void Destroy(HWCDisplay *hwc_display);
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests);
@@ -47,8 +49,8 @@ class HWCDisplayExternal : public HWCDisplay {
   virtual void SetSecureDisplay(bool secure_display_active);
 
  private:
-  HWCDisplayExternal(CoreInterface *core_intf, HWCCallbacks *callbacks,
-                     qService::QService *qservice);
+  HWCDisplayExternal(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
+                     HWCCallbacks *callbacks, qService::QService *qservice);
   void ApplyScanAdjustment(hwc_rect_t *display_frame);
   static void GetDownscaleResolution(uint32_t primary_width, uint32_t primary_height,
                                      uint32_t *virtual_width, uint32_t *virtual_height);

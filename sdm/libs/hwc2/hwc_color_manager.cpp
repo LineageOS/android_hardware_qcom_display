@@ -53,8 +53,8 @@
 namespace sdm {
 
 uint32_t HWCColorManager::Get8BitsARGBColorValue(const PPColorFillParams &params) {
-  uint32_t argb_color = ((params.color.r << 16) & 0xff0000) | ((params.color.g) & 0xff) |
-                        ((params.color.b << 8) & 0xff00);
+  uint32_t argb_color = ((params.color.r << 16) & 0xff0000) | ((params.color.g << 8) & 0xff00) |
+                        ((params.color.b) & 0xff);
   return argb_color;
 }
 
@@ -88,8 +88,8 @@ void HWCColorManager::MarshallStructIntoParcel(const PPDisplayAPIPayload &data,
     out_parcel->write(data.payload, data.size);
 }
 
-HWCColorManager *HWCColorManager::CreateColorManager() {
-  HWCColorManager *color_mgr = new HWCColorManager();
+HWCColorManager *HWCColorManager::CreateColorManager(HWCBufferAllocator * buffer_allocator) {
+  HWCColorManager *color_mgr = new HWCColorManager(buffer_allocator);
 
   if (color_mgr) {
     // Load display API interface library. And retrieve color API function tables.
@@ -135,6 +135,10 @@ HWCColorManager *HWCColorManager::CreateColorManager() {
   return color_mgr;
 }
 
+HWCColorManager::HWCColorManager(HWCBufferAllocator *buffer_allocator) :
+    buffer_allocator_(buffer_allocator) {
+}
+
 HWCColorManager::~HWCColorManager() {
 }
 
@@ -166,158 +170,8 @@ int HWCColorManager::EnableQDCMMode(bool enable, HWCDisplay *hwc_display) {
   return ret;
 }
 
-bool HWCColorManager::SolidFillLayersPrepare(hwc_display_contents_1_t **displays,
-                                             HWCDisplay *hwc_display) {
-  SCOPE_LOCK(locker_);
-
-  // Query HWCColorManager if QDCM tool requesting SOLID_FILL mode.
-  uint32_t solid_fill_color = Get8BitsARGBColorValue(solid_fill_params_);
-  hwc_display_contents_1_t *layer_list = displays[HWC_DISPLAY_PRIMARY];
-
-  if (solid_fill_enable_ && solid_fill_layers_ && layer_list) {
-    // 1. shallow copy HWC_FRAMEBUFFER_TARGET layer info solid fill layer list.
-    solid_fill_layers_->hwLayers[1] = layer_list->hwLayers[layer_list->numHwLayers - 1];
-
-    // 2. continue the prepare<> on solid_fill_layers.
-    hwc_display->Perform(HWCDisplayPrimary::SET_QDCM_SOLID_FILL_INFO, solid_fill_color);
-    // TODO(user): Remove the display_contents generated here and
-    // use the solid fill layer support in HWC2 to set this up
-    // hwc_display->Prepare(solid_fill_layers_);  // RECT info included.
-
-    // 3. Set HWC_OVERLAY to all SF layers before returning to framework.
-    for (size_t i = 0; i < (layer_list->numHwLayers - 1); i++) {
-      hwc_layer_1_t *layer = &layer_list->hwLayers[i];
-      layer->compositionType = HWC_OVERLAY;
-    }
-
-    return true;
-  } else if (!solid_fill_enable_) {
-    hwc_display->Perform(HWCDisplayPrimary::UNSET_QDCM_SOLID_FILL_INFO, 0);
-  }
-
-  return false;
-}
-
-bool HWCColorManager::SolidFillLayersSet(hwc_display_contents_1_t **displays,
-                                         HWCDisplay *hwc_display) {
-  // Query HWCColorManager if QDCM tool requesting SOLID_FILL mode.
-  SCOPE_LOCK(locker_);
-  hwc_display_contents_1_t *layer_list = displays[HWC_DISPLAY_PRIMARY];
-  if (solid_fill_enable_ && solid_fill_layers_ && layer_list) {
-    // TODO(user): Present solid fill
-    // hwc_display->Commit(solid_fill_layers_);
-
-    // SurfaceFlinger layer stack is dropped in solid fill case and replaced with local layer stack
-    // Close acquire fence fds associated with SF layer stack
-    // Close release/retire fence fds returned along with local layer stack
-    for (size_t i = 0; i < (layer_list->numHwLayers - 1); i++) {
-      int &fence_fd = layer_list->hwLayers[i].acquireFenceFd;
-      if (fence_fd >= 0) {
-        close(fence_fd);
-        fence_fd = -1;
-      }
-    }
-
-    for (size_t i = 0; i < (solid_fill_layers_->numHwLayers - 1); i++) {
-      int &fence_fd = solid_fill_layers_->hwLayers[i].releaseFenceFd;
-      if (fence_fd >= 0) {
-        close(fence_fd);
-        fence_fd = -1;
-      }
-    }
-    if (solid_fill_layers_->retireFenceFd >= 0) {
-      close(solid_fill_layers_->retireFenceFd);
-      solid_fill_layers_->retireFenceFd = -1;
-    }
-
-    return true;
-  }
-
-  return false;
-}
-
-int HWCColorManager::CreateSolidFillLayers(HWCDisplay *hwc_display) {
-  int ret = 0;
-
-  if (!solid_fill_layers_) {
-    uint32_t size = sizeof(hwc_display_contents_1) + kNumSolidFillLayers * sizeof(hwc_layer_1_t);
-    uint32_t primary_width = 0;
-    uint32_t primary_height = 0;
-
-    hwc_display->GetMixerResolution(&primary_width, &primary_height);
-    uint8_t *buf = new uint8_t[size]();
-    // handle for solid fill layer with fd = -1.
-    private_handle_t *handle = new private_handle_t(-1, 0, private_handle_t::PRIV_FLAGS_FRAMEBUFFER,
-                                                    BUFFER_TYPE_UI, HAL_PIXEL_FORMAT_RGBA_8888,
-                                                    INT32(primary_width), INT32(primary_height));
-
-    if (!buf || !handle) {
-      DLOGE("Failed to allocate memory.");
-      if (buf)
-        delete[] buf;
-      if (handle)
-        delete handle;
-
-      return -ENOMEM;
-    }
-
-    solid_fill_layers_ = reinterpret_cast<hwc_display_contents_1 *>(buf);
-    hwc_layer_1_t &layer = solid_fill_layers_->hwLayers[0];
-    layer.handle = handle;
-  }
-
-  solid_fill_layers_->flags = HWC_GEOMETRY_CHANGED;
-  solid_fill_layers_->numHwLayers = kNumSolidFillLayers;
-  solid_fill_layers_->retireFenceFd = -1;
-  solid_fill_layers_->outbuf = NULL;
-  solid_fill_layers_->outbufAcquireFenceFd = -1;
-
-  hwc_layer_1_t &layer = solid_fill_layers_->hwLayers[0];
-  hwc_rect_t solid_fill_rect = {
-      INT(solid_fill_params_.rect.x), INT(solid_fill_params_.rect.y),
-      solid_fill_params_.rect.x + INT(solid_fill_params_.rect.width),
-      solid_fill_params_.rect.y + INT(solid_fill_params_.rect.height),
-  };
-
-  layer.compositionType = HWC_FRAMEBUFFER;
-  layer.blending = HWC_BLENDING_PREMULT;
-  layer.sourceCropf.left = solid_fill_params_.rect.x;
-  layer.sourceCropf.top = solid_fill_params_.rect.y;
-  layer.sourceCropf.right = UINT32(solid_fill_params_.rect.x) + solid_fill_params_.rect.width;
-  layer.sourceCropf.bottom = UINT32(solid_fill_params_.rect.y) + solid_fill_params_.rect.height;
-  layer.acquireFenceFd = -1;
-  layer.releaseFenceFd = -1;
-  layer.flags = 0;
-  layer.transform = 0;
-  layer.hints = 0;
-  layer.planeAlpha = 0xff;
-  layer.displayFrame = solid_fill_rect;
-  layer.visibleRegionScreen.numRects = 1;
-  layer.visibleRegionScreen.rects = &layer.displayFrame;
-  layer.surfaceDamage.numRects = 0;
-
-  return ret;
-}
-
-void HWCColorManager::DestroySolidFillLayers() {
-  if (solid_fill_layers_) {
-    hwc_layer_1_t &layer = solid_fill_layers_->hwLayers[0];
-    uint8_t *buf = reinterpret_cast<uint8_t *>(solid_fill_layers_);
-    private_handle_t const *hnd = reinterpret_cast<private_handle_t const *>(layer.handle);
-
-    if (hnd)
-      delete hnd;
-
-    if (buf)
-      delete[] buf;
-
-    solid_fill_layers_ = NULL;
-  }
-}
-
 int HWCColorManager::SetSolidFill(const void *params, bool enable, HWCDisplay *hwc_display) {
   SCOPE_LOCK(locker_);
-  int ret = 0;
 
   if (params) {
     solid_fill_params_ = *reinterpret_cast<const PPColorFillParams *>(params);
@@ -325,15 +179,21 @@ int HWCColorManager::SetSolidFill(const void *params, bool enable, HWCDisplay *h
     solid_fill_params_ = PPColorFillParams();
   }
 
+  uint32_t solid_fill_color = Get8BitsARGBColorValue(solid_fill_params_);
   if (enable) {
-    // will create solid fill layers for rendering if not present.
-    ret = CreateSolidFillLayers(hwc_display);
-  } else {
-    DestroySolidFillLayers();
-  }
-  solid_fill_enable_ = enable;
+    LayerRect solid_fill_rect = {
+      FLOAT(solid_fill_params_.rect.x), FLOAT(solid_fill_params_.rect.y),
+      FLOAT(solid_fill_params_.rect.x) + FLOAT(solid_fill_params_.rect.width),
+      FLOAT(solid_fill_params_.rect.y) + FLOAT(solid_fill_params_.rect.height),
+    };
 
-  return ret;
+    hwc_display->Perform(HWCDisplayPrimary::SET_QDCM_SOLID_FILL_INFO, solid_fill_color);
+    hwc_display->Perform(HWCDisplayPrimary::SET_QDCM_SOLID_FILL_RECT, &solid_fill_rect);
+  } else {
+    hwc_display->Perform(HWCDisplayPrimary::UNSET_QDCM_SOLID_FILL_INFO, 0);
+  }
+
+  return 0;
 }
 
 int HWCColorManager::SetFrameCapture(void *params, bool enable, HWCDisplay *hwc_display) {
@@ -344,14 +204,12 @@ int HWCColorManager::SetFrameCapture(void *params, bool enable, HWCDisplay *hwc_
 
   if (enable) {
     std::memset(&buffer_info, 0x00, sizeof(buffer_info));
-    hwc_display->GetFrameBufferResolution(&buffer_info.buffer_config.width,
-                                          &buffer_info.buffer_config.height);
+    hwc_display->GetPanelResolution(&buffer_info.buffer_config.width,
+                                    &buffer_info.buffer_config.height);
     if (frame_capture_data->input_params.out_pix_format == PP_PIXEL_FORMAT_RGB_888) {
       buffer_info.buffer_config.format = kFormatRGB888;
     } else if (frame_capture_data->input_params.out_pix_format == PP_PIXEL_FORMAT_RGB_2101010) {
-      // TODO(user): Complete the implementation
-      DLOGE("RGB 10-bit format NOT supported");
-      return -EFAULT;
+      buffer_info.buffer_config.format = kFormatRGBA1010102;
     } else {
       DLOGE("Pixel-format: %d NOT support.", frame_capture_data->input_params.out_pix_format);
       return -EFAULT;
@@ -362,17 +220,9 @@ int HWCColorManager::SetFrameCapture(void *params, bool enable, HWCDisplay *hwc_
     buffer_info.alloc_buffer_info.stride = 0;
     buffer_info.alloc_buffer_info.size = 0;
 
-    buffer_allocator_ = new HWCBufferAllocator();
-    if (buffer_allocator_ == NULL) {
-      DLOGE("Memory allocation for buffer_allocator_ FAILED");
-      return -ENOMEM;
-    }
-
     ret = buffer_allocator_->AllocateBuffer(&buffer_info);
     if (ret != 0) {
       DLOGE("Buffer allocation failed. ret: %d", ret);
-      delete[] buffer_allocator_;
-      buffer_allocator_ = NULL;
       return -ENOMEM;
     } else {
       void *buffer = mmap(NULL, buffer_info.alloc_buffer_info.size, PROT_READ | PROT_WRITE,
@@ -382,33 +232,132 @@ int HWCColorManager::SetFrameCapture(void *params, bool enable, HWCDisplay *hwc_
         DLOGE("mmap failed. err = %d", errno);
         frame_capture_data->buffer = NULL;
         ret = buffer_allocator_->FreeBuffer(&buffer_info);
-        delete[] buffer_allocator_;
-        buffer_allocator_ = NULL;
         return -EFAULT;
       } else {
         frame_capture_data->buffer = reinterpret_cast<uint8_t *>(buffer);
-        frame_capture_data->buffer_stride = buffer_info.alloc_buffer_info.stride;
+        frame_capture_data->buffer_stride = buffer_info.buffer_config.width;
         frame_capture_data->buffer_size = buffer_info.alloc_buffer_info.size;
       }
-      // TODO(user): Call HWC interface to provide the buffer and rectangle information
+      ret = hwc_display->FrameCaptureAsync(buffer_info, 1);
+      if (ret < 0) {
+        DLOGE("FrameCaptureAsync failed. ret = %d", ret);
+      }
     }
   } else {
-    if (frame_capture_data->buffer != NULL) {
-      if (munmap(frame_capture_data->buffer, buffer_info.alloc_buffer_info.size) != 0) {
-        DLOGE("munmap failed. err = %d", errno);
+    ret = hwc_display->GetFrameCaptureStatus();
+    if (!ret) {
+      if (frame_capture_data->buffer != NULL) {
+        if (munmap(frame_capture_data->buffer, buffer_info.alloc_buffer_info.size) != 0) {
+          DLOGE("munmap failed. err = %d", errno);
+        }
       }
-    }
-    if (buffer_allocator_ != NULL) {
-      std::memset(frame_capture_data, 0x00, sizeof(PPFrameCaptureData));
-      ret = buffer_allocator_->FreeBuffer(&buffer_info);
-      if (ret != 0) {
-        DLOGE("FreeBuffer failed. ret = %d", ret);
+      if (buffer_allocator_ != NULL) {
+        std::memset(frame_capture_data, 0x00, sizeof(PPFrameCaptureData));
+        ret = buffer_allocator_->FreeBuffer(&buffer_info);
+        if (ret != 0) {
+          DLOGE("FreeBuffer failed. ret = %d", ret);
+        }
       }
-      delete[] buffer_allocator_;
-      buffer_allocator_ = NULL;
+    } else {
+      DLOGE("GetFrameCaptureStatus failed. ret = %d", ret);
     }
   }
   return ret;
+}
+
+int HWCColorManager::SetHWDetailedEnhancerConfig(void *params, HWCDisplay *hwc_display) {
+  int err = -1;
+  DisplayDetailEnhancerData de_data;
+
+  PPDETuningCfgData *de_tuning_cfg_data = reinterpret_cast<PPDETuningCfgData*>(params);
+  if (de_tuning_cfg_data->cfg_pending == true) {
+    if (!de_tuning_cfg_data->cfg_en) {
+      de_data.override_flags = kOverrideDEEnable;
+      de_data.enable = 0;
+    } else {
+      de_data.override_flags = kOverrideDEEnable;
+      de_data.enable = 1;
+
+      if (de_tuning_cfg_data->params.flags & kDeTuningFlagSharpFactor) {
+        de_data.override_flags |= kOverrideDESharpen1;
+        de_data.sharp_factor = de_tuning_cfg_data->params.sharp_factor;
+      }
+
+      if (de_tuning_cfg_data->params.flags & kDeTuningFlagClip) {
+        de_data.override_flags |= kOverrideDEClip;
+        de_data.clip = de_tuning_cfg_data->params.clip;
+      }
+
+      if (de_tuning_cfg_data->params.flags & kDeTuningFlagThrQuiet) {
+        de_data.override_flags |= kOverrideDEThrQuiet;
+        de_data.thr_quiet = de_tuning_cfg_data->params.thr_quiet;
+      }
+
+      if (de_tuning_cfg_data->params.flags & kDeTuningFlagThrDieout) {
+        de_data.override_flags |= kOverrideDEThrDieout;
+        de_data.thr_dieout = de_tuning_cfg_data->params.thr_dieout;
+      }
+
+      if (de_tuning_cfg_data->params.flags & kDeTuningFlagThrLow) {
+        de_data.override_flags |= kOverrideDEThrLow;
+        de_data.thr_low = de_tuning_cfg_data->params.thr_low;
+      }
+
+      if (de_tuning_cfg_data->params.flags & kDeTuningFlagThrHigh) {
+        de_data.override_flags |= kOverrideDEThrHigh;
+        de_data.thr_high = de_tuning_cfg_data->params.thr_high;
+      }
+
+      if (de_tuning_cfg_data->params.flags & kDeTuningFlagContentQualLevel) {
+        switch (de_tuning_cfg_data->params.quality) {
+          case kDeContentQualLow:
+            de_data.quality_level = kContentQualityLow;
+            break;
+          case kDeContentQualMedium:
+            de_data.quality_level = kContentQualityMedium;
+            break;
+          case kDeContentQualHigh:
+            de_data.quality_level = kContentQualityHigh;
+            break;
+          case kDeContentQualUnknown:
+          default:
+            de_data.quality_level = kContentQualityUnknown;
+            break;
+        }
+      }
+    }
+    err = hwc_display->SetDetailEnhancerConfig(de_data);
+    if (err) {
+      DLOGW("SetDetailEnhancerConfig failed. err = %d", err);
+    }
+    de_tuning_cfg_data->cfg_pending = false;
+  }
+  return err;
+}
+
+void HWCColorManager::SetColorModeDetailEnhancer(HWCDisplay *hwc_display) {
+  SCOPE_LOCK(locker_);
+  int err = -1;
+  PPPendingParams pending_action;
+  PPDisplayAPIPayload req_payload;
+
+  pending_action.action = kGetDetailedEnhancerData;
+  pending_action.params = NULL;
+
+  if (hwc_display) {
+    err = hwc_display->ColorSVCRequestRoute(req_payload, NULL, &pending_action);
+    if (!err && pending_action.action == kConfigureDetailedEnhancer) {
+      err = SetHWDetailedEnhancerConfig(pending_action.params, hwc_display);
+    }
+  }
+  return;
+}
+
+int HWCColorManager::SetDetailedEnhancer(void *params, HWCDisplay *hwc_display) {
+  SCOPE_LOCK(locker_);
+  int err = -1;
+  err = SetHWDetailedEnhancerConfig(params, hwc_display);
+  return err;
 }
 
 const HWCQDCMModeManager::ActiveFeatureCMD HWCQDCMModeManager::kActiveFeatureCMD[] = {

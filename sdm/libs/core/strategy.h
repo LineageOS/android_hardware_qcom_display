@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -27,12 +27,14 @@
 
 #include <core/display_interface.h>
 #include <private/extension_interface.h>
+#include <core/buffer_allocator.h>
 
 namespace sdm {
 
 class Strategy {
  public:
-  Strategy(ExtensionInterface *extension_intf, DisplayType type,
+  Strategy(ExtensionInterface *extension_intf, BufferAllocator *buffer_allocator,
+           DisplayType type,
            const HWResourceInfo &hw_resource_info, const HWPanelInfo &hw_panel_info,
            const HWMixerAttributes &mixer_attributes, const HWDisplayAttributes &display_attributes,
            const DisplayConfigVariableInfo &fb_config);
@@ -41,13 +43,16 @@ class Strategy {
   DisplayError Deinit();
 
   DisplayError Start(HWLayersInfo *hw_layers_info, uint32_t *max_attempts,
-                     bool partial_update_enable);
+                     const PUConstraints &pu_constraints);
   DisplayError GetNextStrategy(StrategyConstraints *constraints);
   DisplayError Stop();
   DisplayError Reconfigure(const HWPanelInfo &hw_panel_info,
                            const HWDisplayAttributes &hw_display_attributes,
                            const HWMixerAttributes &mixer_attributes,
                            const DisplayConfigVariableInfo &fb_config);
+  DisplayError SetCompositionState(LayerComposition composition_type, bool enable);
+  DisplayError Purge();
+  DisplayError SetIdleTimeoutMs(uint32_t active_ms);
 
  private:
   void GenerateROI();
@@ -62,9 +67,10 @@ class Strategy {
   HWMixerAttributes mixer_attributes_ = {};
   HWDisplayAttributes display_attributes_ = {};
   DisplayConfigVariableInfo fb_config_ = {};
-  uint32_t fb_layer_index_ = 0;
   bool extn_start_success_ = false;
   bool tried_default_ = false;
+  bool disable_gpu_comp_ = false;
+  BufferAllocator *buffer_allocator_ = NULL;
 };
 
 }  // namespace sdm

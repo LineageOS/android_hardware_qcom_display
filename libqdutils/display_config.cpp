@@ -78,7 +78,7 @@ int getDisplayAttributes(int dpy, DisplayAttributes_t& dpyattr) {
         dpyattr.yres = outParcel.readInt32();
         dpyattr.xdpi = outParcel.readFloat();
         dpyattr.ydpi = outParcel.readFloat();
-        dpyattr.panel_type = (char) outParcel.readInt32();
+        dpyattr.panel_type = outParcel.readInt32();
     } else {
         ALOGE("%s() failed with err %d", __FUNCTION__, err);
     }
@@ -198,12 +198,12 @@ int getConfigCount(int /*dpy*/) {
     return numConfigs;
 }
 
-int getActiveConfig(int /*dpy*/) {
+int getActiveConfig(int dpy) {
     int configIndex = -1;
     sp<IQService> binder = getBinder();
     if(binder != NULL) {
         Parcel inParcel, outParcel;
-        inParcel.writeInt32(DISPLAY_PRIMARY);
+        inParcel.writeInt32(dpy);
         status_t err = binder->dispatch(IQService::GET_ACTIVE_CONFIG,
                 &inParcel, &outParcel);
         if(!err) {
@@ -236,13 +236,13 @@ int setActiveConfig(int configIndex, int /*dpy*/) {
     return err;
 }
 
-DisplayAttributes getDisplayAttributes(int configIndex, int /*dpy*/) {
-    DisplayAttributes dpyattr;
+DisplayAttributes getDisplayAttributes(int configIndex, int dpy) {
+    DisplayAttributes dpyattr = {};
     sp<IQService> binder = getBinder();
     if(binder != NULL) {
         Parcel inParcel, outParcel;
         inParcel.writeInt32(configIndex);
-        inParcel.writeInt32(DISPLAY_PRIMARY);
+        inParcel.writeInt32(dpy);
         status_t err = binder->dispatch(
                 IQService::GET_DISPLAY_ATTRIBUTES_FOR_CONFIG, &inParcel,
                 &outParcel);
@@ -252,7 +252,7 @@ DisplayAttributes getDisplayAttributes(int configIndex, int /*dpy*/) {
             dpyattr.yres = outParcel.readInt32();
             dpyattr.xdpi = outParcel.readFloat();
             dpyattr.ydpi = outParcel.readFloat();
-            dpyattr.panel_type = (char) outParcel.readInt32();
+            dpyattr.panel_type = outParcel.readInt32();
             dpyattr.is_yuv = outParcel.readInt32();
             ALOGI("%s() Received attrs for index %d: xres %d, yres %d",
                     __FUNCTION__, configIndex, dpyattr.xres, dpyattr.yres);
@@ -357,7 +357,7 @@ extern "C" int controlPartialUpdate(int dpy, int mode) {
         inParcel.writeInt32(mode);
         err = binder->dispatch(IQService::CONTROL_PARTIAL_UPDATE, &inParcel, &outParcel);
         if(err != 0) {
-            ALOGE("%s() failed with err %d", __FUNCTION__, err);
+            ALOGE_IF(getBinder(), "%s() failed with err %d", __FUNCTION__, err);
         } else {
             return outParcel.readInt32();
         }

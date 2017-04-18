@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -30,6 +30,7 @@
 #include "hwc_display_external.h"
 #include "hwc_display_virtual.h"
 #include "hwc_color_manager.h"
+#include "hwc_socket_handler.h"
 
 namespace sdm {
 
@@ -82,6 +83,7 @@ class HWCSession : hwc2_device_t, public qClient::BnQClient {
 
   // HWC2 Functions that require a concrete implementation in hwc session
   // and hence need to be member functions
+  static int32_t AcceptDisplayChanges(hwc2_device_t *device, hwc2_display_t display);
   static int32_t CreateLayer(hwc2_device_t *device, hwc2_display_t display,
                              hwc2_layer_t *out_layer_id);
   static int32_t CreateVirtualDisplay(hwc2_device_t *device, uint32_t width, uint32_t height,
@@ -102,7 +104,7 @@ class HWCSession : hwc2_device_t, public qClient::BnQClient {
   static int32_t ValidateDisplay(hwc2_device_t *device, hwc2_display_t display,
                                  uint32_t *out_num_types, uint32_t *out_num_requests);
   static int32_t SetColorMode(hwc2_device_t *device, hwc2_display_t display,
-                              int32_t /*android_color_mode_t*/ mode);
+                              int32_t /*android_color_mode_t*/ int_mode);
   static int32_t SetColorTransform(hwc2_device_t *device, hwc2_display_t display,
                                    const float *matrix, int32_t /*android_color_transform_t*/ hint);
 
@@ -166,6 +168,8 @@ class HWCSession : hwc2_device_t, public qClient::BnQClient {
                                            android::Parcel *output_parcel);
   android::status_t SetMixerResolution(const android::Parcel *input_parcel);
 
+  android::status_t SetColorModeOverride(const android::Parcel *input_parcel);
+
   static Locker locker_;
   CoreInterface *core_intf_ = NULL;
   HWCDisplay *hwc_display_[HWC_NUM_DISPLAY_TYPES] = {NULL};
@@ -173,8 +177,8 @@ class HWCSession : hwc2_device_t, public qClient::BnQClient {
   pthread_t uevent_thread_;
   bool uevent_thread_exit_ = false;
   const char *uevent_thread_name_ = "HWC_UeventThread";
-  HWCBufferAllocator *buffer_allocator_ = NULL;
-  HWCBufferSyncHandler *buffer_sync_handler_ = NULL;
+  HWCBufferAllocator *buffer_allocator_;
+  HWCBufferSyncHandler buffer_sync_handler_;
   HWCColorManager *color_mgr_ = NULL;
   bool reset_panel_ = false;
   bool secure_display_active_ = false;
@@ -183,6 +187,7 @@ class HWCSession : hwc2_device_t, public qClient::BnQClient {
   bool need_invalidate_ = false;
   int bw_mode_release_fd_ = -1;
   qService::QService *qservice_ = NULL;
+  HWCSocketHandler socket_handler_;
 };
 
 }  // namespace sdm

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -118,6 +118,20 @@ enum ContentQuality {
   kContentQualityMax,
 };
 
+/*! @brief This enum represents the display port.
+
+  @sa DisplayInterface::GetDisplayPort
+*/
+enum DisplayPort {
+  kPortDefault,
+  kPortDSI,        // Display is connected to DSI port.
+  kPortDTV,        // Display is connected to DTV port
+  kPortWriteBack,  // Display is connected to writeback port
+  kPortLVDS,       // Display is connected to LVDS port
+  kPortEDP,        // Display is connected to EDP port
+  kPortDP,         // Display is connected to DP port.
+};
+
 /*! @brief This structure defines configuration for fixed properties of a display device.
 
   @sa DisplayInterface::GetConfig
@@ -126,6 +140,11 @@ enum ContentQuality {
 struct DisplayConfigFixedInfo {
   bool underscan = false;   //!< If display support CE underscan.
   bool secure = false;      //!< If this display is capable of handling secure content.
+  bool is_cmdmode = false;  //!< If panel is command mode panel.
+  bool hdr_supported = false;  //!< if HDR is enabled
+  uint32_t max_luminance = 0;  //!< From Panel's peak luminance
+  uint32_t average_luminance = 0;  //!< From Panel's average luminance
+  uint32_t min_luminance = 0;  //!< From Panel's blackness level
 };
 
 /*! @brief This structure defines configuration for variable properties of a display device.
@@ -386,11 +405,11 @@ class DisplayInterface {
 
   /*! @brief Method to set idle timeout value. Idle fallback is disabled with timeout value 0.
 
-    @param[in] timeout value in milliseconds.
+    @param[in] active_ms value in milliseconds.
 
     @return \link void \endlink
   */
-  virtual void SetIdleTimeoutMs(uint32_t timeout_ms) = 0;
+  virtual void SetIdleTimeoutMs(uint32_t active_ms) = 0;
 
   /*! @brief Method to set maximum number of mixer stages for each display.
 
@@ -452,6 +471,14 @@ class DisplayInterface {
     @return \link DisplayError \endlink
   */
   virtual DisplayError SetPanelBrightness(int level) = 0;
+
+  /*! @brief Method to cache brightness of the primary display.
+
+    @param[in] level the new backlight level.
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError CachePanelBrightness(int level) = 0;
 
   /*! @brief Method to notify display about change in min HDCP encryption level.
 
@@ -572,6 +599,40 @@ class DisplayInterface {
     @return \link DisplayError \endlink
   */
   virtual DisplayError SetDetailEnhancerData(const DisplayDetailEnhancerData &de_data) = 0;
+
+  /*! @brief Method to get display port information.
+
+    @param[out] port \link DisplayPort \endlink
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetDisplayPort(DisplayPort *port) = 0;
+
+  /*! @brief Method to query whether it is Primrary device.
+
+    @return true if this interface is primary.
+  */
+  virtual bool IsPrimaryDisplay() = 0;
+
+  /*! @brief Method to toggle composition types handling by SDM.
+
+    @details Client shall call this method to request SDM to enable/disable a specific type of
+    layer composition. If client disables a composition type, SDM will not handle any of the layer
+    composition using the disabled method in a draw cycle. On lack of resources to handle all
+    layers using other enabled composition methods, Prepare() will return an error.
+
+    Request to toggle composition type is applied from subsequent draw cycles.
+
+    Default state of all defined composition types is enabled.
+
+    @param[in] composition_type \link LayerComposition \endlink
+    @param[in] enable \link enable composition type \endlink
+
+    @return \link DisplayError \endlink
+
+    @sa Prepare
+  */
+  virtual DisplayError SetCompositionState(LayerComposition composition_type, bool enable) = 0;
 
  protected:
   virtual ~DisplayInterface() { }

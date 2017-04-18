@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2016, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015-2017, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -50,8 +50,31 @@ enum PendingAction {
   kSetPanelBrightness = BITMAP(5),
   kEnableFrameCapture = BITMAP(6),
   kDisableFrameCapture = BITMAP(7),
+  kConfigureDetailedEnhancer = BITMAP(8),
+  kInvalidatingAndkSetPanelBrightness = BITMAP(9),
+  kGetDetailedEnhancerData = BITMAP(21),
   kNoAction = BITMAP(31),
 };
+
+static const uint32_t kOpsEnable = BITMAP(0);
+static const uint32_t kOpsRead = BITMAP(1);
+static const uint32_t kOpsWrite = BITMAP(2);
+static const uint32_t kOpsDisable = BITMAP(3);
+
+static const uint32_t kOpsGc8BitRoundEnable = BITMAP(4);
+
+static const uint32_t kPaHueEnable = BITMAP(4);
+static const uint32_t kPaSatEnable = BITMAP(5);
+static const uint32_t kPaValEnable = BITMAP(6);
+static const uint32_t kPaContEnable = BITMAP(7);
+
+static const uint32_t kPaSixZoneEnable = BITMAP(8);
+static const uint32_t kPaSkinEnable = BITMAP(9);
+static const uint32_t kPaSkyEnable = BITMAP(10);
+static const uint32_t kPaFoliageEnable = BITMAP(11);
+
+static const uint32_t kLeftSplitMode = BITMAP(28);   // 0x10000000
+static const uint32_t kRightSplitMode = BITMAP(29);  // 0x20000000
 
 // ENUM to identify different Postprocessing feature block to program.
 // Note: For each new entry added here, also need update hw_interface::GetPPFeaturesVersion<>
@@ -96,14 +119,17 @@ struct PPColorFillParams {
 
 struct PPFeatureVersion {
   // SDE ASIC versioning its PP block at each specific feature level.
+  static const uint32_t kSDEPpVersionInvalid = 0;
   static const uint32_t kSDEIgcV17 = 1;
   static const uint32_t kSDEPgcV17 = 5;
   static const uint32_t kSDEDitherV17 = 7;
   static const uint32_t kSDEGamutV17 = 9;
   static const uint32_t kSDEPaV17 = 11;
   static const uint32_t kSDEPccV17 = 13;
-  static const uint32_t kSDEPADitherV17 = 15;
-  static const uint32_t kSDELegacyPP = 17;
+  static const uint32_t kSDELegacyPP = 15;
+  static const uint32_t kSDEPADitherV17 = 16;
+  static const uint32_t kSDEIgcV30 = 17;
+  static const uint32_t kSDEGamutV4 = 18;
 
   uint32_t version[kMaxNumPPFeatures];
   PPFeatureVersion() { memset(version, 0, sizeof(version)); }
@@ -143,16 +169,16 @@ struct PPDisplayAPIPayload {
     return ret;
   }
 
-  DisplayError CreatePayloadBytes(uint8_t *output, uint32_t size_in_bytes) {
+  DisplayError CreatePayloadBytes(uint32_t size_in_bytes, uint8_t **output) {
     DisplayError ret = kErrorNone;
 
     payload = new uint8_t[size_in_bytes]();
     if (!payload) {
       ret = kErrorMemory;
-      output = NULL;
+      *output = NULL;
     } else {
       this->size = size_in_bytes;
-      output = payload;
+      *output = payload;
       own_payload = true;
     }
     return ret;
@@ -196,6 +222,47 @@ struct PPFrameCaptureData {
   uint8_t *buffer;
   uint32_t buffer_stride;
   uint32_t buffer_size;
+};
+
+static const uint32_t kDeTuningFlagSharpFactor = 0x01;
+static const uint32_t kDeTuningFlagClip = 0x02;
+static const uint32_t kDeTuningFlagThrQuiet = 0x04;
+static const uint32_t kDeTuningFlagThrDieout = 0x08;
+static const uint32_t kDeTuningFlagThrLow = 0x10;
+static const uint32_t kDeTuningFlagThrHigh = 0x20;
+static const uint32_t kDeTuningFlagContentQualLevel = 0x40;
+
+typedef enum {
+  kDeContentQualUnknown,
+  kDeContentQualLow,
+  kDeContentQualMedium,
+  kDeContentQualHigh,
+  kDeContentQualMax,
+} PPDEContentQualLevel;
+
+typedef enum {
+  kDeContentTypeUnknown,
+  kDeContentTypeVideo,
+  kDeContentTypeGraphics,
+  kDeContentTypeMax,
+} PPDEContentType;
+
+struct PPDETuningCfg {
+  uint32_t flags = 0;
+  int32_t sharp_factor = 0;
+  uint16_t thr_quiet = 0;
+  uint16_t thr_dieout = 0;
+  uint16_t thr_low = 0;
+  uint16_t thr_high = 0;
+  uint16_t clip = 0;
+  PPDEContentQualLevel quality = kDeContentQualUnknown;
+  PPDEContentType content_type = kDeContentTypeUnknown;
+};
+
+struct PPDETuningCfgData {
+  uint32_t cfg_en = 0;
+  PPDETuningCfg params;
+  bool cfg_pending = false;
 };
 
 struct SDEGamutCfg {
@@ -246,7 +313,7 @@ struct SDEDitherCfg {
 };
 
 struct SDEPADitherData {
-  uint32_t data_flags;
+  uint64_t data_flags;
   uint32_t matrix_size;
   uint64_t matrix_data_addr;
   uint32_t strength;
@@ -307,6 +374,15 @@ struct SDEIgcLUTData {
   uint32_t *c2_data = NULL;
 };
 
+struct SDEIgcV30LUTData {
+  static const int kMaxIgcLUTEntries = 256;
+  uint32_t table_fmt = 0;
+  uint32_t len = 0;
+  uint64_t c0_c1_data = 0;
+  uint64_t c2_data = 0;
+  uint32_t strength = 0;
+};
+
 struct SDEPgcLUTData {
   static const int kPgcLUTEntries = 1024;
   uint32_t len = 0;
@@ -329,6 +405,7 @@ class SDEGamutCfgWrapper : private SDEGamutCfg {
   enum GamutMode {
     GAMUT_FINE_MODE = 0x01,
     GAMUT_COARSE_MODE,
+    GAMUT_COARSE_MODE_13,
   };
 
   // This factory method will be used by libsdm-color.so data producer to be populated with
@@ -374,6 +451,22 @@ class SDEIgcLUTWrapper : private SDEIgcLUTData {
 
  private:
   SDEIgcLUTWrapper() {}
+  uint32_t *buffer_ = NULL;
+};
+
+class SDEIgcV30LUTWrapper : private SDEIgcV30LUTData {
+ public:
+  static SDEIgcV30LUTWrapper *Init(uint32_t arg __attribute__((__unused__)));
+  ~SDEIgcV30LUTWrapper() {
+    if (buffer_)
+      delete[] buffer_;
+  }
+  inline SDEIgcV30LUTData *GetConfig(void) { return this; }
+
+ private:
+  SDEIgcV30LUTWrapper(const SDEIgcV30LUTWrapper& src) { /* do not create copies */ }
+  SDEIgcV30LUTWrapper& operator=(const SDEIgcV30LUTWrapper&) { return *this; }
+  SDEIgcV30LUTWrapper() {}
   uint32_t *buffer_ = NULL;
 };
 
@@ -466,6 +559,7 @@ class PPFeaturesConfig {
 
   inline Locker &GetLocker(void) { return locker_; }
   inline PPFrameCaptureData *GetFrameCaptureData(void) { return &frame_capture_data; }
+  inline PPDETuningCfgData *GetDETuningCfgData(void) { return &de_tuning_data_; }
   // Once all features are consumed, destroy/release all TFeatureInfo<T> on the list,
   // then clear dirty_ flag and return the lock to the TFeatureInfo<T> producer.
   void Reset();
@@ -482,6 +576,7 @@ class PPFeaturesConfig {
   PPFeatureInfo *feature_[kMaxNumPPFeatures];  // reference to TFeatureInfo<T>.
   uint32_t next_idx_ = 0;
   PPFrameCaptureData frame_capture_data;
+  PPDETuningCfgData de_tuning_data_;
 };
 
 }  // namespace sdm

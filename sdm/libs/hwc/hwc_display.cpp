@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -35,15 +35,20 @@
 #include <utils/formats.h>
 #include <utils/rect.h>
 #include <utils/debug.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <sync/sync.h>
 #include <cutils/properties.h>
+#include <qd_utils.h>
 #include <map>
 #include <utility>
 #include <vector>
+#include <string>
 
-#include "hwc_display.h"
-#include "hwc_debugger.h"
 #include "blit_engine_c2d.h"
+#include "hwc_debugger.h"
+#include "hwc_display.h"
+#include "hwc_tonemapper.h"
 
 #ifdef QTI_BSP
 #include <hardware/display_defs.h>
@@ -55,11 +60,85 @@ namespace sdm {
 
 static void ApplyDeInterlaceAdjustment(Layer *layer) {
   // De-interlacing adjustment
-  if (layer->input_buffer->flags.interlace) {
+  if (layer->input_buffer.flags.interlace) {
     float height = (layer->src_rect.bottom - layer->src_rect.top) / 2.0f;
     layer->src_rect.top = ROUND_UP_ALIGN_DOWN(layer->src_rect.top / 2.0f, 2);
     layer->src_rect.bottom = layer->src_rect.top + floorf(height);
   }
+}
+
+void HWCColorMode::Init() {
+  int ret = PopulateColorModes();
+  if (ret != 0) {
+    DLOGW("Failed!!");
+  }
+  return;
+}
+
+int HWCColorMode::SetColorMode(const std::string &color_mode) {
+  if (color_modes_.empty()) {
+    DLOGW("No Color Modes supported");
+    return -1;
+  }
+
+  std::vector<std::string>::iterator it = std::find(color_modes_.begin(), color_modes_.end(),
+                                                    color_mode);
+  if (it == color_modes_.end()) {
+    DLOGE("Invalid colorMode request: %s", color_mode.c_str());
+    return -1;
+  }
+
+  DisplayError error = display_intf_->SetColorMode(color_mode);
+  if (error != kErrorNone) {
+    DLOGE("Failed to set color_mode = %s", color_mode.c_str());
+    return -1;
+  }
+  current_color_mode_ = color_mode;
+
+  return 0;
+}
+
+const std::vector<std::string> &HWCColorMode::GetColorModes() {
+  return color_modes_;
+}
+
+int HWCColorMode::SetColorTransform(uint32_t matrix_count, const float *matrix) {
+  if (matrix_count > kColorTransformMatrixCount) {
+    DLOGE("Transform matrix count = %d, exceeds max = %d", matrix_count,
+          kColorTransformMatrixCount);
+    return -1;
+  }
+
+  double color_matrix[kColorTransformMatrixCount] = {0};
+  CopyColorTransformMatrix(matrix, color_matrix);
+  DisplayError error = display_intf_->SetColorTransform(matrix_count, color_matrix);
+  if (error != kErrorNone) {
+    DLOGE("Failed!");
+    return -1;
+  }
+
+  return 0;
+}
+
+int HWCColorMode::PopulateColorModes() {
+  uint32_t color_mode_count = 0;
+  DisplayError error = display_intf_->GetColorModeCount(&color_mode_count);
+  if (error != kErrorNone || (color_mode_count == 0)) {
+    return -1;
+  }
+
+  DLOGI("Color Mode count = %d", color_mode_count);
+
+  color_modes_.resize(color_mode_count);
+
+  // SDM returns modes which is string
+  error = display_intf_->GetColorModes(&color_mode_count, &color_modes_);
+  if (error != kErrorNone) {
+    DLOGE("GetColorModes Failed for count = %d", color_mode_count);
+    return -1;
+  }
+
+  return 0;
 }
 
 HWCDisplay::HWCDisplay(CoreInterface *core_intf, hwc_procs_t const **hwc_procs, DisplayType type,
@@ -75,6 +154,11 @@ int HWCDisplay::Init() {
     DLOGE("Display create failed. Error = %d display_type %d event_handler %p disp_intf %p",
       error, type_, this, &display_intf_);
     return -EINVAL;
+  }
+
+  HWCDebugHandler::Get()->GetProperty("sys.hwc_disable_hdr", &disable_hdr_handling_);
+  if (disable_hdr_handling_) {
+    DLOGI("HDR Handling disabled");
   }
 
   int property_swap_interval = 1;
@@ -98,6 +182,8 @@ int HWCDisplay::Init() {
     }
   }
 
+  tone_mapper_ = new HWCToneMapper();
+
   display_intf_->GetRefreshRateRange(&min_refresh_rate_, &max_refresh_rate_);
   current_refresh_rate_ = max_refresh_rate_;
 
@@ -108,6 +194,8 @@ int HWCDisplay::Init() {
                                 kS3dFormatRightLeft));
   s3d_format_hwc_to_sdm_.insert(std::pair<int, LayerBufferS3DFormat>(HAL_3D_TOP_BOTTOM,
                                 kS3dFormatTopBottom));
+
+  disable_animation_ = Debug::IsExtAnimDisabled();
 
   return 0;
 }
@@ -124,6 +212,9 @@ int HWCDisplay::Deinit() {
     delete blit_engine_;
     blit_engine_ = NULL;
   }
+
+  delete tone_mapper_;
+  tone_mapper_ = NULL;
 
   return 0;
 }
@@ -170,6 +261,7 @@ int HWCDisplay::SetPowerMode(int mode) {
     // Do not flush until a buffer is successfully submitted again.
     flush_on_error = false;
     state = kStateOff;
+    tone_mapper_->Terminate();
     break;
 
   case HWC_POWER_MODE_NORMAL:
@@ -271,6 +363,10 @@ void HWCDisplay::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type
     blit_engine_->SetFrameDumpConfig(count);
   }
 
+  if (tone_mapper_) {
+    tone_mapper_->SetFrameDumpConfig(count);
+  }
+
   DLOGI("num_frame_dump %d, input_layer_dump_enable %d", dump_frame_count_, dump_input_layers_);
 }
 
@@ -321,8 +417,6 @@ int HWCDisplay::AllocateLayerStack(hwc_display_contents_1_t *content_list) {
 
   for (size_t i = 0; i < num_hw_layers + blit_target_count; i++) {
     Layer *layer = new Layer();
-    LayerBuffer *layer_buffer = new LayerBuffer();
-    layer->input_buffer = layer_buffer;
     layer_stack_.layers.push_back(layer);
   }
 
@@ -331,7 +425,6 @@ int HWCDisplay::AllocateLayerStack(hwc_display_contents_1_t *content_list) {
 
 void HWCDisplay::FreeLayerStack() {
   for (Layer *layer : layer_stack_.layers) {
-    delete layer->input_buffer;
     delete layer;
   }
   layer_stack_ = {};
@@ -340,12 +433,23 @@ void HWCDisplay::FreeLayerStack() {
 int HWCDisplay::PrepareLayerParams(hwc_layer_1_t *hwc_layer, Layer* layer) {
   const private_handle_t *pvt_handle = static_cast<const private_handle_t *>(hwc_layer->handle);
 
-  LayerBuffer *layer_buffer = layer->input_buffer;
+  LayerBuffer &layer_buffer = layer->input_buffer;
 
   if (pvt_handle) {
-    layer_buffer->format = GetSDMFormat(pvt_handle->format, pvt_handle->flags);
-    layer_buffer->width = UINT32(pvt_handle->width);
-    layer_buffer->height = UINT32(pvt_handle->height);
+    layer_buffer.format = GetSDMFormat(pvt_handle->format, pvt_handle->flags);
+    int aligned_width, aligned_height;
+    int unaligned_width, unaligned_height;
+
+    AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(pvt_handle, aligned_width,
+                                                          aligned_height);
+    AdrenoMemInfo::getInstance().getUnalignedWidthAndHeight(pvt_handle, unaligned_width,
+                                                            unaligned_height);
+
+    layer_buffer.width = UINT32(aligned_width);
+    layer_buffer.height = UINT32(aligned_height);
+    layer_buffer.unaligned_width = UINT32(unaligned_width);
+    layer_buffer.unaligned_height = UINT32(unaligned_height);
+    layer_buffer.fb_id = pvt_handle->fb_id;
 
     if (SetMetaData(pvt_handle, layer) != kErrorNone) {
       return -EINVAL;
@@ -353,19 +457,22 @@ int HWCDisplay::PrepareLayerParams(hwc_layer_1_t *hwc_layer, Layer* layer) {
 
     if (pvt_handle->bufferType == BUFFER_TYPE_VIDEO) {
       layer_stack_.flags.video_present = true;
-      layer_buffer->flags.video = true;
+      layer_buffer.flags.video = true;
     }
     // TZ Protected Buffer - L1
     if (pvt_handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER) {
       layer_stack_.flags.secure_present = true;
-      layer_buffer->flags.secure = true;
+      layer_buffer.flags.secure = true;
+      if (pvt_handle->flags & private_handle_t::PRIV_FLAGS_CAMERA_WRITE) {
+        layer_buffer.flags.secure_camera = true;
+      }
     }
     // Gralloc Usage Protected Buffer - L3 - which needs to be treated as Secure & avoid fallback
     if (pvt_handle->flags & private_handle_t::PRIV_FLAGS_PROTECTED_BUFFER) {
       layer_stack_.flags.secure_present = true;
     }
     if (pvt_handle->flags & private_handle_t::PRIV_FLAGS_SECURE_DISPLAY) {
-      layer_buffer->flags.secure_display = true;
+      layer_buffer.flags.secure_display = true;
     }
 
     // check if this is special solid_fill layer without input_buffer.
@@ -394,9 +501,11 @@ int HWCDisplay::PrepareLayerParams(hwc_layer_1_t *hwc_layer, Layer* layer) {
 
       AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(INT(x_pixels), INT(y_pixels), format,
                                                             usage, aligned_width, aligned_height);
-      layer_buffer->width = UINT32(aligned_width);
-      layer_buffer->height = UINT32(aligned_height);
-      layer_buffer->format = GetSDMFormat(format, flags);
+      layer_buffer.width = UINT32(aligned_width);
+      layer_buffer.height = UINT32(aligned_height);
+      layer_buffer.unaligned_width = x_pixels;
+      layer_buffer.unaligned_height = y_pixels;
+      layer_buffer.format = GetSDMFormat(format, flags);
     }
   }
 
@@ -405,13 +514,14 @@ int HWCDisplay::PrepareLayerParams(hwc_layer_1_t *hwc_layer, Layer* layer) {
 
 void HWCDisplay::CommitLayerParams(hwc_layer_1_t *hwc_layer, Layer *layer) {
   const private_handle_t *pvt_handle = static_cast<const private_handle_t *>(hwc_layer->handle);
-  LayerBuffer *layer_buffer = layer->input_buffer;
+  LayerBuffer &layer_buffer = layer->input_buffer;
 
   if (pvt_handle) {
-    layer_buffer->planes[0].fd = pvt_handle->fd;
-    layer_buffer->planes[0].offset = pvt_handle->offset;
-    layer_buffer->planes[0].stride = UINT32(pvt_handle->width);
-    layer_buffer->size = pvt_handle->size;
+    layer_buffer.planes[0].fd = pvt_handle->fd;
+    layer_buffer.planes[0].offset = pvt_handle->offset;
+    layer_buffer.planes[0].stride = UINT32(pvt_handle->width);
+    layer_buffer.size = pvt_handle->size;
+    layer_buffer.fb_id = pvt_handle->fb_id;
   }
 
   // if swapinterval property is set to 0 then close and reset the acquireFd
@@ -419,7 +529,7 @@ void HWCDisplay::CommitLayerParams(hwc_layer_1_t *hwc_layer, Layer *layer) {
     close(hwc_layer->acquireFenceFd);
     hwc_layer->acquireFenceFd = -1;
   }
-  layer_buffer->acquire_fence_fd = hwc_layer->acquireFenceFd;
+  layer_buffer.acquire_fence_fd = hwc_layer->acquireFenceFd;
 }
 
 int HWCDisplay::PrePrepareLayerStack(hwc_display_contents_1_t *content_list) {
@@ -437,6 +547,7 @@ int HWCDisplay::PrePrepareLayerStack(hwc_display_contents_1_t *content_list) {
   for (size_t i = 0; i < num_hw_layers; i++) {
     hwc_layer_1_t &hwc_layer = content_list->hwLayers[i];
 
+    const private_handle_t *pvt_handle = static_cast<const private_handle_t *>(hwc_layer.handle);
     Layer *layer = layer_stack_.layers.at(i);
     int ret = PrepareLayerParams(&content_list->hwLayers[i], layer);
 
@@ -454,6 +565,15 @@ int HWCDisplay::PrePrepareLayerStack(hwc_display_contents_1_t *content_list) {
     ApplyScanAdjustment(&scaled_display_frame);
 
     SetRect(scaled_display_frame, &layer->dst_rect);
+    if (pvt_handle) {
+        bool NonIntegralSourceCrop =  IsNonIntegralSourceCrop(hwc_layer.sourceCropf);
+        bool secure = (pvt_handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER) ||
+                (pvt_handle->flags & private_handle_t::PRIV_FLAGS_PROTECTED_BUFFER) ||
+                (pvt_handle->flags & private_handle_t::PRIV_FLAGS_SECURE_DISPLAY);
+        if (NonIntegralSourceCrop && (!secure && pvt_handle->bufferType != BUFFER_TYPE_VIDEO)) {
+            layer->flags.skip = true;
+        }
+    }
     SetRect(hwc_layer.sourceCropf, &layer->src_rect);
     ApplyDeInterlaceAdjustment(layer);
 
@@ -486,16 +606,24 @@ int HWCDisplay::PrePrepareLayerStack(hwc_display_contents_1_t *content_list) {
 
     // For dim layers, SurfaceFlinger
     //    - converts planeAlpha to per pixel alpha,
-    //    - sets RGB color to 000,
+    //    - sets appropriate RGB color,
     //    - sets planeAlpha to 0xff,
     //    - blending to Premultiplied.
     // This can be achieved at hardware by
-    //    - solid fill ARGB to 0xff000000,
+    //    - solid fill ARGB to appropriate value,
     //    - incoming planeAlpha,
     //    - blending to Coverage.
     if (hwc_layer.flags & kDimLayer) {
-      layer->input_buffer->format = kFormatARGB8888;
+      layer->input_buffer.format = kFormatARGB8888;
       layer->solid_fill_color = 0xff000000;
+#ifdef QTI_BSP
+      // Get ARGB color from HWC Dim Layer color
+      uint32_t a = UINT32(hwc_layer.color.a) << 24;
+      uint32_t r = UINT32(hwc_layer.color.r) << 16;
+      uint32_t g = UINT32(hwc_layer.color.g) << 8;
+      uint32_t b = UINT32(hwc_layer.color.b);
+      layer->solid_fill_color = a | r | g | b;
+#endif
       SetBlending(HWC_BLENDING_COVERAGE, &layer->blending);
     } else {
       SetBlending(hwc_layer.blending, &layer->blending);
@@ -509,13 +637,15 @@ int HWCDisplay::PrePrepareLayerStack(hwc_display_contents_1_t *content_list) {
     // TODO(user): Remove below block.
     // For solid fill, only dest rect need to be specified.
     if (layer->flags.solid_fill) {
-      LayerBuffer *input_buffer = layer->input_buffer;
-      input_buffer->width = UINT32(layer->dst_rect.right - layer->dst_rect.left);
-      input_buffer->height = UINT32(layer->dst_rect.bottom - layer->dst_rect.top);
+      LayerBuffer &input_buffer = layer->input_buffer;
+      input_buffer.width = UINT32(layer->dst_rect.right - layer->dst_rect.left);
+      input_buffer.height = UINT32(layer->dst_rect.bottom - layer->dst_rect.top);
+      input_buffer.unaligned_width = input_buffer.width;
+      input_buffer.unaligned_height = input_buffer.height;
       layer->src_rect.left = 0;
       layer->src_rect.top = 0;
-      layer->src_rect.right = input_buffer->width;
-      layer->src_rect.bottom = input_buffer->height;
+      layer->src_rect.right = input_buffer.width;
+      layer->src_rect.bottom = input_buffer.height;
     }
 
     layer->plane_alpha = hwc_layer.planeAlpha;
@@ -540,7 +670,7 @@ int HWCDisplay::PrePrepareLayerStack(hwc_display_contents_1_t *content_list) {
 
     PrepareDynamicRefreshRate(layer);
 
-    layer->input_buffer->buffer_id = reinterpret_cast<uint64_t>(hwc_layer.handle);
+    layer->input_buffer.buffer_id = reinterpret_cast<uint64_t>(hwc_layer.handle);
   }
 
   // Prepare the Blit Target
@@ -564,6 +694,19 @@ int HWCDisplay::PrePrepareLayerStack(hwc_display_contents_1_t *content_list) {
   return 0;
 }
 
+void HWCDisplay::SetLayerS3DMode(const LayerBufferS3DFormat &source, uint32_t *target) {
+#ifdef QTI_BSP
+    switch (source) {
+    case kS3dFormatNone: *target = HWC_S3DMODE_NONE; break;
+    case kS3dFormatLeftRight: *target = HWC_S3DMODE_LR; break;
+    case kS3dFormatRightLeft: *target = HWC_S3DMODE_RL; break;
+    case kS3dFormatTopBottom: *target = HWC_S3DMODE_TB; break;
+    case kS3dFormatFramePacking: *target = HWC_S3DMODE_FP; break;
+    default: *target = HWC_S3DMODE_MAX; break;
+    }
+#endif
+}
+
 int HWCDisplay::PrepareLayerStack(hwc_display_contents_1_t *content_list) {
   if (shutdown_pending_) {
     return 0;
@@ -571,24 +714,25 @@ int HWCDisplay::PrepareLayerStack(hwc_display_contents_1_t *content_list) {
 
   size_t num_hw_layers = content_list->numHwLayers;
 
-  if (!skip_prepare_) {
+  if (!skip_prepare_cnt) {
     DisplayError error = display_intf_->Prepare(&layer_stack_);
     if (error != kErrorNone) {
       if (error == kErrorShutDown) {
         shutdown_pending_ = true;
-      } else if (error != kErrorPermission) {
+      } else if ((error != kErrorPermission) && (error != kErrorNoAppLayers)) {
         DLOGE("Prepare failed. Error = %d", error);
         // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
         // so that previous buffer and fences are released, and override the error.
         flush_ = true;
+      } else {
+        DLOGV("Prepare failed for Display = %d Error = %d", type_, error);
       }
-
       return 0;
     }
   } else {
     // Skip is not set
     MarkLayersForGPUBypass(content_list);
-    skip_prepare_ = false;
+    skip_prepare_cnt = skip_prepare_cnt - 1;
     DLOGI("SecureDisplay %s, Skip Prepare/Commit and Flush", secure_display_active_ ? "Starting" :
           "Stopping");
     flush_ = true;
@@ -598,12 +742,26 @@ int HWCDisplay::PrepareLayerStack(hwc_display_contents_1_t *content_list) {
     hwc_layer_1_t &hwc_layer = content_list->hwLayers[i];
     Layer *layer = layer_stack_.layers.at(i);
     LayerComposition composition = layer->composition;
+    private_handle_t* pvt_handle  = static_cast<private_handle_t*>
+      (const_cast<native_handle_t*>(hwc_layer.handle));
+    MetaData_t *meta_data = pvt_handle ?
+      reinterpret_cast<MetaData_t *>(pvt_handle->base_metadata) : NULL;
 
     if ((composition == kCompositionSDE) || (composition == kCompositionHybrid) ||
         (composition == kCompositionBlit)) {
       hwc_layer.hints |= HWC_HINT_CLEAR_FB;
     }
     SetComposition(composition, &hwc_layer.compositionType);
+
+    if (meta_data != NULL) {
+      if (composition == kCompositionGPUS3D) {
+        // Align HWC and client's dispaly ID in case of HDMI as primary
+        meta_data->s3dComp.displayId =
+          display_intf_->IsPrimaryDisplay() ? HWC_DISPLAY_PRIMARY: id_;
+        SetLayerS3DMode(layer->input_buffer.s3d_format,
+            &meta_data->s3dComp.s3dMode);
+      }
+    }
   }
 
   return 0;
@@ -640,6 +798,15 @@ int HWCDisplay::CommitLayerStack(hwc_display_contents_1_t *content_list) {
       }
     }
 
+    if (layer_stack_.flags.hdr_present) {
+      status = tone_mapper_->HandleToneMap(content_list, &layer_stack_);
+      if (status != 0) {
+        DLOGE("Error handling HDR in ToneMapper");
+      }
+    } else {
+      tone_mapper_->Terminate();
+    }
+
     DisplayError error = kErrorUndefined;
     if (status == 0) {
       error = display_intf_->Commit(&layer_stack_);
@@ -658,6 +825,8 @@ int HWCDisplay::CommitLayerStack(hwc_display_contents_1_t *content_list) {
         // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
         // so that previous buffer and fences are released, and override the error.
         flush_ = true;
+      } else {
+        DLOGI("Commit failed for Display = %d Error = %d", type_, error);
       }
     }
   }
@@ -674,6 +843,11 @@ int HWCDisplay::PostCommitLayerStack(hwc_display_contents_1_t *content_list) {
     display_intf_->Flush();
   }
 
+
+  if (tone_mapper_ && tone_mapper_->IsActive()) {
+     tone_mapper_->PostCommit(&layer_stack_);
+  }
+
   // Set the release fence fd to the blit engine
   if (use_blit_comp_ && blit_engine_->BlitActive()) {
     blit_engine_->PostCommit(&layer_stack_);
@@ -682,26 +856,28 @@ int HWCDisplay::PostCommitLayerStack(hwc_display_contents_1_t *content_list) {
   for (size_t i = 0; i < num_hw_layers; i++) {
     hwc_layer_1_t &hwc_layer = content_list->hwLayers[i];
     Layer *layer = layer_stack_.layers.at(i);
-    LayerBuffer *layer_buffer = layer->input_buffer;
+    LayerBuffer &layer_buffer = layer->input_buffer;
 
     if (!flush_) {
       // If swapinterval property is set to 0 or for single buffer layers, do not update f/w
       // release fences and discard fences from driver
       if (swap_interval_zero_ || layer->flags.single_buffer) {
         hwc_layer.releaseFenceFd = -1;
-        close(layer_buffer->release_fence_fd);
-        layer_buffer->release_fence_fd = -1;
+        close(layer_buffer.release_fence_fd);
+        layer_buffer.release_fence_fd = -1;
       } else if (layer->composition != kCompositionGPU) {
-        hwc_layer.releaseFenceFd = layer_buffer->release_fence_fd;
+        hwc_layer.releaseFenceFd = layer_buffer.release_fence_fd;
       }
 
       // During animation on external/virtual display, SDM will use the cached
       // framebuffer layer throughout animation and do not allow framework to do eglswapbuffer on
       // framebuffer target. So graphics doesn't close the release fence fd of framebuffer target,
       // Hence close the release fencefd of framebuffer target here.
-      if (layer->composition == kCompositionGPUTarget && animating_) {
-        close(hwc_layer.releaseFenceFd);
-        hwc_layer.releaseFenceFd = -1;
+      if (disable_animation_) {
+        if (layer->composition == kCompositionGPUTarget && animating_) {
+          close(hwc_layer.releaseFenceFd);
+          hwc_layer.releaseFenceFd = -1;
+        }
       }
     }
 
@@ -740,6 +916,17 @@ bool HWCDisplay::IsLayerUpdating(hwc_display_contents_1_t *content_list, const L
          (layer_stack_.flags.geometry_changed));
 }
 
+bool HWCDisplay::IsNonIntegralSourceCrop(const hwc_frect_t &source) {
+     if ((source.left != roundf(source.left)) ||
+         (source.top != roundf(source.top)) ||
+         (source.right != roundf(source.right)) ||
+         (source.bottom != roundf(source.bottom))) {
+         return true;
+     } else {
+         return false;
+     }
+}
+
 void HWCDisplay::SetRect(const hwc_rect_t &source, LayerRect *target) {
   target->left = FLOAT(source.left);
   target->top = FLOAT(source.top);
@@ -765,6 +952,7 @@ void HWCDisplay::SetComposition(const LayerComposition &source, int32_t *target)
   switch (source) {
   case kCompositionGPUTarget:   *target = HWC_FRAMEBUFFER_TARGET; break;
   case kCompositionGPU:         *target = HWC_FRAMEBUFFER;        break;
+  case kCompositionGPUS3D:      *target = HWC_FRAMEBUFFER;        break;
   case kCompositionHWCursor:    *target = HWC_CURSOR_OVERLAY;     break;
   default:                      *target = HWC_OVERLAY;            break;
   }
@@ -805,6 +993,7 @@ LayerBufferFormat HWCDisplay::GetSDMFormat(const int32_t &source, const int flag
     case HAL_PIXEL_FORMAT_RGBA_1010102:        format = kFormatRGBA1010102Ubwc;         break;
     case HAL_PIXEL_FORMAT_RGBX_1010102:        format = kFormatRGBX1010102Ubwc;         break;
     case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC: format = kFormatYCbCr420TP10Ubwc;        break;
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC: format = kFormatYCbCr420P010Ubwc;        break;
     default:
       DLOGE("Unsupported format type for UBWC %d", source);
       return kFormatInvalid;
@@ -831,6 +1020,7 @@ LayerBufferFormat HWCDisplay::GetSDMFormat(const int32_t &source, const int flag
   case HAL_PIXEL_FORMAT_YCbCr_420_SP:             format = kFormatYCbCr420SemiPlanar;       break;
   case HAL_PIXEL_FORMAT_YCbCr_422_SP:             format = kFormatYCbCr422H2V1SemiPlanar;   break;
   case HAL_PIXEL_FORMAT_YCbCr_422_I:              format = kFormatYCbCr422H2V1Packed;       break;
+  case HAL_PIXEL_FORMAT_CbYCrY_422_I:             format = kFormatCbYCrY422H2V1Packed;      break;
   case HAL_PIXEL_FORMAT_RGBA_1010102:             format = kFormatRGBA1010102;              break;
   case HAL_PIXEL_FORMAT_ARGB_2101010:             format = kFormatARGB2101010;              break;
   case HAL_PIXEL_FORMAT_RGBX_1010102:             format = kFormatRGBX1010102;              break;
@@ -841,6 +1031,7 @@ LayerBufferFormat HWCDisplay::GetSDMFormat(const int32_t &source, const int flag
   case HAL_PIXEL_FORMAT_XBGR_2101010:             format = kFormatXBGR2101010;              break;
   case HAL_PIXEL_FORMAT_YCbCr_420_P010:           format = kFormatYCbCr420P010;             break;
   case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:      format = kFormatYCbCr420TP10Ubwc;         break;
+  case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:      format = kFormatYCbCr420P010Ubwc;         break;
   default:
     DLOGW("Unsupported format type = %d", source);
     return kFormatInvalid;
@@ -888,7 +1079,7 @@ void HWCDisplay::DumpInputBuffers(hwc_display_contents_1_t *content_list) {
 
       snprintf(dump_file_name, sizeof(dump_file_name), "%s/input_layer%d_%dx%d_%s_frame%d.raw",
                dir_path, i, pvt_handle->width, pvt_handle->height,
-               GetHALPixelFormatString(pvt_handle->format), dump_frame_index_);
+               qdutils::GetHALPixelFormatString(pvt_handle->format), dump_frame_index_);
 
       FILE* fp = fopen(dump_file_name, "w+");
       if (fp) {
@@ -930,7 +1121,8 @@ void HWCDisplay::DumpOutputBuffer(const BufferInfo& buffer_info, void *base, int
     }
 
     snprintf(dump_file_name, sizeof(dump_file_name), "%s/output_layer_%dx%d_%s_frame%d.raw",
-             dir_path, buffer_info.buffer_config.width, buffer_info.buffer_config.height,
+             dir_path, buffer_info.alloc_buffer_info.aligned_width,
+             buffer_info.alloc_buffer_info.aligned_height,
              GetFormatString(buffer_info.buffer_config.format), dump_frame_index_);
 
     FILE* fp = fopen(dump_file_name, "w+");
@@ -940,81 +1132,6 @@ void HWCDisplay::DumpOutputBuffer(const BufferInfo& buffer_info, void *base, int
     }
 
     DLOGI("Frame Dump of %s is %s", dump_file_name, result ? "Successful" : "Failed");
-  }
-}
-
-const char *HWCDisplay::GetHALPixelFormatString(int format) {
-  switch (format) {
-  case HAL_PIXEL_FORMAT_RGBA_8888:
-    return "RGBA_8888";
-  case HAL_PIXEL_FORMAT_RGBX_8888:
-    return "RGBX_8888";
-  case HAL_PIXEL_FORMAT_RGB_888:
-    return "RGB_888";
-  case HAL_PIXEL_FORMAT_RGB_565:
-    return "RGB_565";
-  case HAL_PIXEL_FORMAT_BGR_565:
-    return "BGR_565";
-  case HAL_PIXEL_FORMAT_BGRA_8888:
-    return "BGRA_8888";
-  case HAL_PIXEL_FORMAT_RGBA_5551:
-    return "RGBA_5551";
-  case HAL_PIXEL_FORMAT_RGBA_4444:
-    return "RGBA_4444";
-  case HAL_PIXEL_FORMAT_YV12:
-    return "YV12";
-  case HAL_PIXEL_FORMAT_YCbCr_422_SP:
-    return "YCbCr_422_SP_NV16";
-  case HAL_PIXEL_FORMAT_YCrCb_420_SP:
-    return "YCrCb_420_SP_NV21";
-  case HAL_PIXEL_FORMAT_YCbCr_422_I:
-    return "YCbCr_422_I_YUY2";
-  case HAL_PIXEL_FORMAT_YCrCb_422_I:
-    return "YCrCb_422_I_YVYU";
-  case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
-    return "NV12_ENCODEABLE";
-  case HAL_PIXEL_FORMAT_YCbCr_420_SP_TILED:
-    return "YCbCr_420_SP_TILED_TILE_4x2";
-  case HAL_PIXEL_FORMAT_YCbCr_420_SP:
-    return "YCbCr_420_SP";
-  case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
-    return "YCrCb_420_SP_ADRENO";
-  case HAL_PIXEL_FORMAT_YCrCb_422_SP:
-    return "YCrCb_422_SP";
-  case HAL_PIXEL_FORMAT_R_8:
-    return "R_8";
-  case HAL_PIXEL_FORMAT_RG_88:
-    return "RG_88";
-  case HAL_PIXEL_FORMAT_INTERLACE:
-    return "INTERLACE";
-  case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
-    return "YCbCr_420_SP_VENUS";
-  case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
-    return "YCrCb_420_SP_VENUS";
-  case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
-    return "YCbCr_420_SP_VENUS_UBWC";
-  case HAL_PIXEL_FORMAT_RGBA_1010102:
-    return "RGBA_1010102";
-  case HAL_PIXEL_FORMAT_ARGB_2101010:
-    return "ARGB_2101010";
-  case HAL_PIXEL_FORMAT_RGBX_1010102:
-    return "RGBX_1010102";
-  case HAL_PIXEL_FORMAT_XRGB_2101010:
-    return "XRGB_2101010";
-  case HAL_PIXEL_FORMAT_BGRA_1010102:
-    return "BGRA_1010102";
-  case HAL_PIXEL_FORMAT_ABGR_2101010:
-    return "ABGR_2101010";
-  case HAL_PIXEL_FORMAT_BGRX_1010102:
-    return "BGRX_1010102";
-  case HAL_PIXEL_FORMAT_XBGR_2101010:
-    return "XBGR_2101010";
-  case HAL_PIXEL_FORMAT_YCbCr_420_P010:
-    return "YCbCr_420_P010";
-  case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
-    return "YCbCr_420_TP10_UBWC";
-  default:
-    return "Unknown_format";
   }
 }
 
@@ -1145,14 +1262,36 @@ void HWCDisplay::MarkLayersForGPUBypass(hwc_display_contents_1_t *content_list) 
 void HWCDisplay::ApplyScanAdjustment(hwc_rect_t *display_frame) {
 }
 
-DisplayError HWCDisplay::SetCSC(ColorSpace_t source, LayerCSC *target) {
-  switch (source) {
-  case ITU_R_601:       *target = kCSCLimitedRange601;   break;
-  case ITU_R_601_FR:    *target = kCSCFullRange601;      break;
-  case ITU_R_709:       *target = kCSCLimitedRange709;   break;
-  default:
-    DLOGE("Unsupported CSC: %d", source);
-    return kErrorNotSupported;
+DisplayError HWCDisplay::SetCSC(const MetaData_t *meta_data, ColorMetaData *color_metadata) {
+  if (meta_data->operation & COLOR_METADATA) {
+#ifdef USE_COLOR_METADATA
+    *color_metadata = meta_data->color;
+#endif
+  } else if (meta_data->operation & UPDATE_COLOR_SPACE) {
+    ColorSpace_t csc = meta_data->colorSpace;
+    color_metadata->range = Range_Limited;
+
+    if (csc == ITU_R_601_FR || csc == ITU_R_2020_FR) {
+      color_metadata->range = Range_Full;
+    }
+
+    switch (csc) {
+    case ITU_R_601:
+    case ITU_R_601_FR:
+      // display driver uses 601 irrespective of 525 or 625
+      color_metadata->colorPrimaries = ColorPrimaries_BT601_6_525;
+      break;
+    case ITU_R_709:
+      color_metadata->colorPrimaries = ColorPrimaries_BT709_5;
+      break;
+    case ITU_R_2020:
+    case ITU_R_2020_FR:
+      color_metadata->colorPrimaries = ColorPrimaries_BT2020;
+      break;
+    default:
+      DLOGE("Unsupported CSC: %d", csc);
+      return kErrorNotSupported;
+    }
   }
 
   return kErrorNone;
@@ -1172,20 +1311,27 @@ DisplayError HWCDisplay::SetIGC(IGC_t source, LayerIGC *target) {
 
 DisplayError HWCDisplay::SetMetaData(const private_handle_t *pvt_handle, Layer *layer) {
   const MetaData_t *meta_data = reinterpret_cast<MetaData_t *>(pvt_handle->base_metadata);
-  LayerBuffer *layer_buffer = layer->input_buffer;
+  LayerBuffer &layer_buffer = layer->input_buffer;
 
   if (!meta_data) {
     return kErrorNone;
   }
 
-  if (meta_data->operation & UPDATE_COLOR_SPACE) {
-    if (SetCSC(meta_data->colorSpace, &layer_buffer->csc) != kErrorNone) {
-      return kErrorNotSupported;
-    }
+  if (SetCSC(meta_data, &layer_buffer.color_metadata) != kErrorNone) {
+    return kErrorNotSupported;
+  }
+
+  bool hdr_layer = layer_buffer.color_metadata.colorPrimaries == ColorPrimaries_BT2020 &&
+                   (layer_buffer.color_metadata.transfer == Transfer_SMPTE_ST2084 ||
+                   layer_buffer.color_metadata.transfer == Transfer_HLG);
+  if (hdr_layer && !disable_hdr_handling_) {
+    // dont honor HDR when its handling is disabled
+    layer_buffer.flags.hdr = true;
+    layer_stack_.flags.hdr_present = true;
   }
 
   if (meta_data->operation & SET_IGC) {
-    if (SetIGC(meta_data->igc, &layer_buffer->igc) != kErrorNone) {
+    if (SetIGC(meta_data->igc, &layer_buffer.igc) != kErrorNone) {
       return kErrorNotSupported;
     }
   }
@@ -1195,19 +1341,11 @@ DisplayError HWCDisplay::SetMetaData(const private_handle_t *pvt_handle, Layer *
   }
 
   if ((meta_data->operation & PP_PARAM_INTERLACED) && meta_data->interlaced) {
-    layer_buffer->flags.interlace = true;
+    layer_buffer.flags.interlace = true;
   }
 
   if (meta_data->operation & LINEAR_FORMAT) {
-    layer_buffer->format = GetSDMFormat(INT32(meta_data->linearFormat), 0);
-  }
-
-  if (meta_data->operation & UPDATE_BUFFER_GEOMETRY) {
-    int actual_width = pvt_handle->width;
-    int actual_height = pvt_handle->height;
-    AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(pvt_handle, actual_width, actual_height);
-    layer_buffer->width = UINT32(actual_width);
-    layer_buffer->height = UINT32(actual_height);
+    layer_buffer.format = GetSDMFormat(INT32(meta_data->linearFormat), 0);
   }
 
   if (meta_data->operation & SET_SINGLE_BUFFER_MODE) {
@@ -1221,7 +1359,7 @@ DisplayError HWCDisplay::SetMetaData(const private_handle_t *pvt_handle, Layer *
     std::map<int, LayerBufferS3DFormat>::iterator it =
         s3d_format_hwc_to_sdm_.find(INT32(meta_data->s3dFormat));
     if (it != s3d_format_hwc_to_sdm_.end()) {
-      layer->input_buffer->s3d_format = it->second;
+      layer->input_buffer.s3d_format = it->second;
     } else {
       DLOGW("Invalid S3D format %d", meta_data->s3dFormat);
     }
@@ -1242,6 +1380,16 @@ int HWCDisplay::SetPanelBrightness(int level) {
 
 int HWCDisplay::GetPanelBrightness(int *level) {
   return display_intf_->GetPanelBrightness(level);
+}
+
+int HWCDisplay::CachePanelBrightness(int level) {
+  int ret = 0;
+  if (display_intf_)
+    ret = display_intf_->CachePanelBrightness(level);
+  else
+    ret = -EINVAL;
+
+  return ret;
 }
 
 int HWCDisplay::ToggleScreenUpdates(bool enable) {
@@ -1279,7 +1427,7 @@ int HWCDisplay::GetVisibleDisplayRect(hwc_rect_t* visible_rect) {
   return 0;
 }
 
-void HWCDisplay::SetSecureDisplay(bool secure_display_active) {
+void HWCDisplay::SetSecureDisplay(bool secure_display_active, bool force_flush) {
   secure_display_active_ = secure_display_active;
   return;
 }
@@ -1301,9 +1449,13 @@ int HWCDisplay::GetDisplayAttributesForConfig(int config,
   return display_intf_->GetConfig(UINT32(config), display_attributes) == kErrorNone ? 0 : -1;
 }
 
+int HWCDisplay::GetDisplayFixedConfig(DisplayConfigFixedInfo *fixed_info) {
+  return display_intf_->GetConfig(fixed_info) == kErrorNone ? 0 : -1;
+}
+
 // TODO(user): HWC needs to know updating for dyn_fps, cpu hint features,
 // once the features are moved to SDM, the two functions below can be removed.
-bool HWCDisplay::SingleLayerUpdating(uint32_t app_layer_count) {
+uint32_t HWCDisplay::GetUpdatingLayersCount(uint32_t app_layer_count) {
   uint32_t updating_count = 0;
 
   for (uint i = 0; i < app_layer_count; i++) {
@@ -1313,7 +1465,7 @@ bool HWCDisplay::SingleLayerUpdating(uint32_t app_layer_count) {
     }
   }
 
-  return (updating_count == 1);
+  return updating_count;
 }
 
 bool HWCDisplay::SingleVideoLayerUpdating(uint32_t app_layer_count) {
@@ -1321,7 +1473,12 @@ bool HWCDisplay::SingleVideoLayerUpdating(uint32_t app_layer_count) {
 
   for (uint i = 0; i < app_layer_count; i++) {
     Layer *layer = layer_stack_.layers[i];
-    if (layer->flags.updating && (layer->input_buffer->flags.video == true)) {
+    // TODO(user): disable DRC feature in S3D playbacl case.S3D video
+    // need play in dedicate resolution and fps, if DRC switch the
+    // mode to an non S3D supported mode, it would break S3D playback.
+    // Need figure out a way to make S3D and DRC co-exist.
+    if (layer->flags.updating && (layer->input_buffer.flags.video == true) &&
+       (layer->input_buffer.s3d_format == kS3dFormatNone)) {
       updating_count++;
     }
   }
@@ -1380,5 +1537,10 @@ bool HWCDisplay::IsSurfaceUpdated(const std::vector<LayerRect> &dirty_regions) {
   // dirty_rect count = 1 with (0,0,0,0) - not updating.
   return (dirty_regions.empty() || IsValid(dirty_regions.at(0)));
 }
+
+int HWCDisplay::GetDisplayPort(DisplayPort *port) {
+  return display_intf_->GetDisplayPort(port) == kErrorNone ? 0 : -1;
+}
+
 
 }  // namespace sdm

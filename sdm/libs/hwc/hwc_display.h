@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -32,10 +32,12 @@
 #include <private/color_params.h>
 #include <map>
 #include <vector>
+#include <string>
 
 namespace sdm {
 
 class BlitEngine;
+class HWCToneMapper;
 
 // Subclasses set this to their type. This has to be different from DisplayType.
 // This is to avoid RTTI and dynamic_cast
@@ -46,9 +48,40 @@ enum DisplayClass {
   DISPLAY_CLASS_NULL
 };
 
+class HWCColorMode {
+ public:
+  explicit HWCColorMode(DisplayInterface *display_intf) : display_intf_(display_intf) {}
+  ~HWCColorMode() {}
+  void Init();
+  void DeInit() {}
+  int SetColorMode(const std::string &color_mode);
+  const std::vector<std::string> &GetColorModes();
+  int SetColorTransform(uint32_t matrix_count, const float *matrix);
+
+ private:
+  static const uint32_t kColorTransformMatrixCount = 16;
+  template <class T>
+  void CopyColorTransformMatrix(const T *input_matrix, double *output_matrix) {
+    for (uint32_t i = 0; i < kColorTransformMatrixCount; i++) {
+      output_matrix[i] = static_cast<double>(input_matrix[i]);
+    }
+  }
+  int PopulateColorModes();
+  DisplayInterface *display_intf_ = NULL;
+  std::vector<std::string> color_modes_ = {};
+  std::string current_color_mode_ = {};
+};
 
 class HWCDisplay : public DisplayEventHandler {
  public:
+  enum {
+    SET_METADATA_DYN_REFRESH_RATE,
+    SET_BINDER_DYN_REFRESH_RATE,
+    SET_DISPLAY_MODE,
+    SET_QDCM_SOLID_FILL_INFO,
+    UNSET_QDCM_SOLID_FILL_INFO,
+  };
+
   virtual ~HWCDisplay() { }
   virtual int Init();
   virtual int Deinit();
@@ -77,7 +110,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
   virtual int Perform(uint32_t operation, ...);
   virtual int SetCursorPosition(int x, int y);
-  virtual void SetSecureDisplay(bool secure_display_active);
+  virtual void SetSecureDisplay(bool secure_display_active, bool force_flush);
   virtual DisplayError SetMixerResolution(uint32_t width, uint32_t height);
   virtual DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
   virtual void GetPanelResolution(uint32_t *width, uint32_t *height);
@@ -94,21 +127,28 @@ class HWCDisplay : public DisplayEventHandler {
   // 0 : Success.
   virtual int GetFrameCaptureStatus() { return -EAGAIN; }
 
+  virtual DisplayError SetDetailEnhancerConfig(const DisplayDetailEnhancerData &de_data) {
+    return kErrorNotSupported;
+  }
+
   // Display Configurations
   virtual int SetActiveDisplayConfig(int config);
   virtual int GetActiveDisplayConfig(uint32_t *config);
   virtual int GetDisplayConfigCount(uint32_t *count);
   virtual int GetDisplayAttributesForConfig(int config,
                                             DisplayConfigVariableInfo *display_attributes);
+  virtual int GetDisplayFixedConfig(DisplayConfigFixedInfo *fixed_info);
 
   int SetPanelBrightness(int level);
   int GetPanelBrightness(int *level);
+  int CachePanelBrightness(int level);
   int ToggleScreenUpdates(bool enable);
   int ColorSVCRequestRoute(const PPDisplayAPIPayload &in_payload,
                            PPDisplayAPIPayload *out_payload,
                            PPPendingParams *pending_action);
   int GetVisibleDisplayRect(hwc_rect_t* rect);
   DisplayClass GetDisplayClass();
+  int GetDisplayPort(DisplayPort *port);
 
  protected:
   enum DisplayStatus {
@@ -151,17 +191,18 @@ class HWCDisplay : public DisplayEventHandler {
   inline void SetComposition(const LayerComposition &source, int32_t *target);
   inline void SetBlending(const int32_t &source, LayerBlending *target);
   int SetFormat(const int32_t &source, const int flags, LayerBufferFormat *target);
+  void SetLayerS3DMode(const LayerBufferS3DFormat &source, uint32_t *target);
   LayerBufferFormat GetSDMFormat(const int32_t &source, const int flags);
-  const char *GetHALPixelFormatString(int format);
   const char *GetDisplayString();
   void MarkLayersForGPUBypass(hwc_display_contents_1_t *content_list);
   virtual void ApplyScanAdjustment(hwc_rect_t *display_frame);
-  DisplayError SetCSC(ColorSpace_t source, LayerCSC *target);
+  DisplayError SetCSC(const MetaData_t *meta_data, ColorMetaData *color_metadata);
   DisplayError SetIGC(IGC_t source, LayerIGC *target);
   DisplayError SetMetaData(const private_handle_t *pvt_handle, Layer *layer);
   bool NeedsFrameBufferRefresh(hwc_display_contents_1_t *content_list);
   bool IsLayerUpdating(hwc_display_contents_1_t *content_list, const Layer *layer);
-  bool SingleLayerUpdating(uint32_t app_layer_count);
+  bool IsNonIntegralSourceCrop(const hwc_frect_t &source);
+  uint32_t GetUpdatingLayersCount(uint32_t app_layer_count);
   bool SingleVideoLayerUpdating(uint32_t app_layer_count);
   bool IsSurfaceUpdated(const std::vector<LayerRect> &dirty_regions);
 
@@ -195,12 +236,16 @@ class HWCDisplay : public DisplayEventHandler {
   bool shutdown_pending_ = false;
   bool use_blit_comp_ = false;
   bool secure_display_active_ = false;
-  bool skip_prepare_ = false;
+  uint32_t skip_prepare_cnt = 0;
   bool solid_fill_enable_ = false;
+  bool disable_animation_ = false;
   uint32_t solid_fill_color_ = 0;
   LayerRect display_rect_;
   std::map<int, LayerBufferS3DFormat> s3d_format_hwc_to_sdm_;
   bool animating_ = false;
+  HWCToneMapper *tone_mapper_ = NULL;
+  HWCColorMode *color_mode_ = NULL;
+  int disable_hdr_handling_ = 0;  // disables HDR handling.
 
  private:
   void DumpInputBuffers(hwc_display_contents_1_t *content_list);

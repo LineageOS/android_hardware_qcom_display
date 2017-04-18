@@ -34,30 +34,6 @@
 
 namespace sdm {
 
-DisplayError HWVirtual::Create(HWInterface **intf, HWInfoInterface *hw_info_intf,
-                               BufferSyncHandler *buffer_sync_handler) {
-  DisplayError error = kErrorNone;
-  HWVirtual *hw_virtual = NULL;
-
-  hw_virtual = new HWVirtual(buffer_sync_handler, hw_info_intf);
-  error = hw_virtual->Init();
-  if (error != kErrorNone) {
-    delete hw_virtual;
-  } else {
-    *intf = hw_virtual;
-  }
-
-  return error;
-}
-
-DisplayError HWVirtual::Destroy(HWInterface *intf) {
-  HWVirtual *hw_virtual = static_cast<HWVirtual *>(intf);
-  hw_virtual->Deinit();
-  delete hw_virtual;
-
-  return kErrorNone;
-}
-
 HWVirtual::HWVirtual(BufferSyncHandler *buffer_sync_handler, HWInfoInterface *hw_info_intf)
   : HWDevice(buffer_sync_handler) {
   HWDevice::device_type_ = kDeviceVirtual;
@@ -75,10 +51,6 @@ DisplayError HWVirtual::Validate(HWLayers *hw_layers) {
 }
 
 DisplayError HWVirtual::GetMixerAttributes(HWMixerAttributes *mixer_attributes) {
-  if (!mixer_attributes) {
-    return kErrorParameters;
-  }
-
   mixer_attributes->width = display_attributes_.x_pixels;
   mixer_attributes->height = display_attributes_.y_pixels;
   mixer_attributes_.split_left = display_attributes_.is_device_split ?
@@ -100,6 +72,15 @@ DisplayError HWVirtual::SetDisplayAttributes(const HWDisplayAttributes &display_
 
   return kErrorNone;
 }
+
+DisplayError HWVirtual::GetDisplayAttributes(uint32_t index,
+                                             HWDisplayAttributes *display_attributes) {
+  display_attributes->fps = 60;
+  // TODO(user): Need to update WB fps
+
+  return kErrorNone;
+}
+
 
 }  // namespace sdm
 

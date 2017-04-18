@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -199,12 +199,16 @@ void SplitTopBottom(const LayerRect &in_rect, uint32_t split_count, uint32_t ali
   }
 }
 
-void ScaleRect(const LayerRect &src_domain, const LayerRect &dst_domain, const LayerRect &in_rect,
-               LayerRect *out_rect) {
+void MapRect(const LayerRect &src_domain, const LayerRect &dst_domain, const LayerRect &in_rect,
+             LayerRect *out_rect) {
   if (!IsValid(src_domain) || !IsValid(dst_domain) || !IsValid(in_rect)) {
     return;
   }
 
+  int x_offset = INT(src_domain.left);
+  int y_offset = INT(src_domain.top);
+
+  LayerRect modified_in_rect = Reposition(in_rect, -x_offset, -y_offset);
   float src_domain_width = src_domain.right - src_domain.left;
   float src_domain_height = src_domain.bottom - src_domain.top;
   float dst_domain_width = dst_domain.right - dst_domain.left;
@@ -213,10 +217,33 @@ void ScaleRect(const LayerRect &src_domain, const LayerRect &dst_domain, const L
   float width_ratio = dst_domain_width / src_domain_width;
   float height_ratio = dst_domain_height / src_domain_height;
 
-  out_rect->left = width_ratio * in_rect.left;
-  out_rect->top = height_ratio * in_rect.top;
-  out_rect->right = width_ratio * in_rect.right;
-  out_rect->bottom = height_ratio * in_rect.bottom;
+  out_rect->left = dst_domain.left + (width_ratio * modified_in_rect.left);
+  out_rect->top = dst_domain.top + (height_ratio * modified_in_rect.top);
+  out_rect->right = dst_domain.left + (width_ratio * modified_in_rect.right);
+  out_rect->bottom = dst_domain.top + (height_ratio * modified_in_rect.bottom);
+}
+
+void TransformHV(const LayerRect &src_domain, const LayerRect &in_rect,
+                 const LayerTransform &transform, LayerRect *out_rect) {
+  if (!IsValid(src_domain) || !IsValid(in_rect)) {
+    return;
+  }
+
+  float in_width = in_rect.right - in_rect.left;
+  float in_height = in_rect.bottom - in_rect.top;
+  float x_offset = in_rect.left - src_domain.left;
+  float y_offset = in_rect.top - src_domain.top;
+  *out_rect = in_rect;
+
+  if (transform.flip_horizontal) {
+    out_rect->right = src_domain.right - x_offset;
+    out_rect->left = out_rect->right - in_width;
+  }
+
+  if (transform.flip_vertical) {
+    out_rect->bottom = src_domain.bottom - y_offset;
+    out_rect->top = out_rect->bottom - in_height;
+  }
 }
 
 RectOrientation GetOrientation(const LayerRect &in_rect) {

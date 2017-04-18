@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -57,35 +57,23 @@
 #define MDP_COMMIT_CWB_DSPP 0x1000
 #endif
 
+#ifndef MDP_COMMIT_AVR_EN
+#define MDP_COMMIT_AVR_EN 0x08
+#endif
+
+#ifndef MDP_COMMIT_AVR_ONE_SHOT_MODE
+#define MDP_COMMIT_AVR_ONE_SHOT_MODE 0x10
+#endif
+
+#ifndef MDP_COMMIT_PARTIAL_UPDATE_DUAL_ROI
+#define MDP_COMMIT_PARTIAL_UPDATE_DUAL_ROI  0x20
+#endif
+
 namespace sdm {
 
 using std::string;
 using std::to_string;
 using std::fstream;
-
-DisplayError HWPrimary::Create(HWInterface **intf, HWInfoInterface *hw_info_intf,
-                               BufferSyncHandler *buffer_sync_handler) {
-  DisplayError error = kErrorNone;
-  HWPrimary *hw_primary = NULL;
-
-  hw_primary = new HWPrimary(buffer_sync_handler, hw_info_intf);
-  error = hw_primary->Init();
-  if (error != kErrorNone) {
-    delete hw_primary;
-  } else {
-    *intf = hw_primary;
-  }
-
-  return error;
-}
-
-DisplayError HWPrimary::Destroy(HWInterface *intf) {
-  HWPrimary *hw_primary = static_cast<HWPrimary *>(intf);
-  hw_primary->Deinit();
-  delete hw_primary;
-
-  return kErrorNone;
-}
 
 HWPrimary::HWPrimary(BufferSyncHandler *buffer_sync_handler, HWInfoInterface *hw_info_intf)
   : HWDevice(buffer_sync_handler) {
@@ -102,10 +90,7 @@ DisplayError HWPrimary::Init() {
     return error;
   }
 
-  uint32_t dest_scalar_count = hw_resource_.hw_dest_scalar_info.count;
-  if (dest_scalar_count) {
-    mdp_dest_scalar_data_ = new mdp_destination_scaler_data[dest_scalar_count];
-  }
+  mdp_dest_scalar_data_.resize(hw_resource_.hw_dest_scalar_info.count);
 
   error = PopulateDisplayAttributes();
   if (error != kErrorNone) {
@@ -119,6 +104,8 @@ DisplayError HWPrimary::Init() {
   EnableHotPlugDetection(0);
   EnableHotPlugDetection(1);
   InitializeConfigs();
+
+  avr_prop_disabled_ = Debug::IsAVRDisabled();
 
   return error;
 }
@@ -171,6 +158,8 @@ void HWPrimary::InitializeConfigs() {
   string line;
   while (Sys::getline_(fs, line)) {
     DisplayConfigVariableInfo config;
+    // std::getline (unlike ::getline) removes \n while driver expects it in mode, so add back
+    line += '\n';
     size_t xpos = line.find(':');
     size_t ypos = line.find('x');
 
@@ -189,12 +178,6 @@ void HWPrimary::InitializeConfigs() {
       DLOGI("Active config index %u", active_config_index_);
     }
   }
-}
-
-DisplayError HWPrimary::Deinit() {
-  delete [] mdp_dest_scalar_data_;
-
-  return HWDevice::Deinit();
 }
 
 DisplayError HWPrimary::GetNumDisplayAttributes(uint32_t *count) {
@@ -246,10 +229,11 @@ DisplayError HWPrimary::PopulateDisplayAttributes() {
     return kErrorHardware;
   }
 
-  // If driver doesn't return width/height information, default to 160 dpi
+  // If driver doesn't return width/height information, default to 320 dpi
   if (INT(var_screeninfo.width) <= 0 || INT(var_screeninfo.height) <= 0) {
-    var_screeninfo.width  = UINT32(((FLOAT(var_screeninfo.xres) * 25.4f)/160.0f) + 0.5f);
-    var_screeninfo.height = UINT32(((FLOAT(var_screeninfo.yres) * 25.4f)/160.0f) + 0.5f);
+    var_screeninfo.width  = UINT32(((FLOAT(var_screeninfo.xres) * 25.4f)/320.0f) + 0.5f);
+    var_screeninfo.height = UINT32(((FLOAT(var_screeninfo.yres) * 25.4f)/320.0f) + 0.5f);
+    DLOGW("Driver doesn't report panel physical width and height - defaulting to 320dpi");
   }
 
   display_attributes_.x_pixels = var_screeninfo.xres;
@@ -266,9 +250,10 @@ DisplayError HWPrimary::PopulateDisplayAttributes() {
       (FLOAT(var_screeninfo.yres) * 25.4f) / FLOAT(var_screeninfo.height);
   display_attributes_.fps = meta_data.data.panel_frame_rate;
   display_attributes_.vsync_period_ns = UINT32(1000000000L / display_attributes_.fps);
-  display_attributes_.is_device_split = (hw_panel_info_.split_info.left_split ||
-      (var_screeninfo.xres > hw_resource_.max_mixer_width)) ? true : false;
-  display_attributes_.h_total += display_attributes_.is_device_split ? h_blanking : 0;
+  display_attributes_.is_device_split = (hw_panel_info_.split_info.right_split ||
+      (var_screeninfo.xres > hw_resource_.max_mixer_width));
+  display_attributes_.h_total += (display_attributes_.is_device_split ||
+    hw_panel_info_.ping_pong_split)? h_blanking : 0;
 
   return kErrorNone;
 }
@@ -313,8 +298,8 @@ DisplayError HWPrimary::SetDisplayAttributes(uint32_t index) {
 DisplayError HWPrimary::SetRefreshRate(uint32_t refresh_rate) {
   char node_path[kMaxStringLength] = {0};
 
-  if (refresh_rate == display_attributes_.fps) {
-    return kErrorNone;
+  if (hw_resource_.has_avr && !avr_prop_disabled_) {
+    return kErrorNotSupported;
   }
 
   snprintf(node_path, sizeof(node_path), "%s%d/dynamic_fps", fb_path_, fb_node_index_);
@@ -354,6 +339,8 @@ DisplayError HWPrimary::PowerOff() {
     return kErrorHardware;
   }
 
+  auto_refresh_ = false;
+
   return kErrorNone;
 }
 
@@ -383,18 +370,28 @@ DisplayError HWPrimary::Validate(HWLayers *hw_layers) {
 
   mdp_layer_commit_v1 &mdp_commit = mdp_disp_commit_.commit_v1;
 
-  LayerRect left_roi = hw_layer_info.left_partial_update;
-  LayerRect right_roi = hw_layer_info.right_partial_update;
+  LayerRect left_roi = hw_layer_info.left_frame_roi.at(0);
+  LayerRect right_roi = hw_layer_info.right_frame_roi.at(0);
+
   mdp_commit.left_roi.x = UINT32(left_roi.left);
   mdp_commit.left_roi.y = UINT32(left_roi.top);
   mdp_commit.left_roi.w = UINT32(left_roi.right - left_roi.left);
   mdp_commit.left_roi.h = UINT32(left_roi.bottom - left_roi.top);
 
+  // Update second roi information in right_roi
+  if (hw_layer_info.left_frame_roi.size() == 2) {
+    mdp_commit.flags |= MDP_COMMIT_PARTIAL_UPDATE_DUAL_ROI;
+    right_roi = hw_layer_info.left_frame_roi.at(1);
+  }
+
   // SDM treats ROI as one full coordinate system.
   // In case source split is disabled, However, Driver assumes Mixer to operate in
   // different co-ordinate system.
-  if (!hw_resource_.is_src_split && IsValid(right_roi)) {
-    mdp_commit.right_roi.x = UINT32(right_roi.left) - mixer_attributes_.split_left;
+  if (IsValid(right_roi)) {
+    mdp_commit.right_roi.x = UINT32(right_roi.left);
+    if (!hw_resource_.is_src_split) {
+      mdp_commit.right_roi.x = UINT32(right_roi.left) - mixer_attributes_.split_left;
+    }
     mdp_commit.right_roi.y = UINT32(right_roi.top);
     mdp_commit.right_roi.w = UINT32(right_roi.right - right_roi.left);
     mdp_commit.right_roi.h = UINT32(right_roi.bottom - right_roi.top);
@@ -403,13 +400,13 @@ DisplayError HWPrimary::Validate(HWLayers *hw_layers) {
   if (stack->output_buffer && hw_resource_.has_concurrent_writeback) {
     LayerBuffer *output_buffer = stack->output_buffer;
     mdp_out_layer_.writeback_ndx = hw_resource_.writeback_index;
-    mdp_out_layer_.buffer.width = output_buffer->width;
-    mdp_out_layer_.buffer.height = output_buffer->height;
+    mdp_out_layer_.buffer.width = output_buffer->unaligned_width;
+    mdp_out_layer_.buffer.height = output_buffer->unaligned_height;
     mdp_out_layer_.buffer.comp_ratio.denom = 1000;
     mdp_out_layer_.buffer.comp_ratio.numer = UINT32(hw_layers->output_compression * 1000);
     mdp_out_layer_.buffer.fence = -1;
 #ifdef OUT_LAYER_COLOR_SPACE
-    SetCSC(output_buffer->csc, &mdp_out_layer_.color_space);
+    SetCSC(output_buffer->color_metadata, &mdp_out_layer_.color_space);
 #endif
     SetFormat(output_buffer->format, &mdp_out_layer_.buffer.format);
     mdp_commit.flags |= MDP_COMMIT_CWB_EN;
@@ -420,6 +417,10 @@ DisplayError HWPrimary::Validate(HWLayers *hw_layers) {
              mdp_out_layer_.buffer.format, mdp_out_layer_.writeback_ndx,
              stack->flags.post_processed_output);
     DLOGI_IF(kTagDriverConfig, "****************************************************************");
+  }
+
+  if (hw_resource_.has_avr) {
+    SetAVRFlags(hw_layers->hw_avr_info, &mdp_commit.flags);
   }
 
   return HWDevice::Validate(hw_layers);
@@ -516,7 +517,7 @@ DisplayError HWPrimary::SetDisplayMode(const HWDisplayMode hw_display_mode) {
 }
 
 DisplayError HWPrimary::SetPanelBrightness(int level) {
-  char buffer[MAX_SYSFS_COMMAND_LENGTH] = {0};
+  char buffer[kMaxSysfsCommandLength] = {0};
 
   DLOGV_IF(kTagDriverConfig, "Set brightness level to %d", level);
   int fd = Sys::open_(kBrightnessNode, O_RDWR);
@@ -526,7 +527,7 @@ DisplayError HWPrimary::SetPanelBrightness(int level) {
     return kErrorFileDescriptor;
   }
 
-  int32_t bytes = snprintf(buffer, MAX_SYSFS_COMMAND_LENGTH, "%d\n", level);
+  int32_t bytes = snprintf(buffer, kMaxSysfsCommandLength, "%d\n", level);
   if (bytes < 0) {
     DLOGV_IF(kTagDriverConfig, "Failed to copy new brightness level = %d", level);
     Sys::close_(fd);
@@ -569,6 +570,12 @@ DisplayError HWPrimary::GetPanelBrightness(int *level) {
   return kErrorNone;
 }
 
+DisplayError HWPrimary::CachePanelBrightness(int level) {
+  bl_level_update_commit = level;
+  bl_update_commit = true;
+  return kErrorNone;
+}
+
 DisplayError HWPrimary::SetAutoRefresh(bool enable) {
   const int kWriteLength = 2;
   char buffer[kWriteLength] = {'\0'};
@@ -590,7 +597,12 @@ DisplayError HWPrimary::SetAutoRefresh(bool enable) {
 DisplayError HWPrimary::GetPPFeaturesVersion(PPFeatureVersion *vers) {
   mdp_pp_feature_version version = {};
 
+#ifdef PA_DITHER
+  uint32_t feature_id_mapping[kMaxNumPPFeatures] = { PCC, IGC, GC, GC, PA,
+                                                     DITHER, GAMUT, PA_DITHER };
+#else
   uint32_t feature_id_mapping[kMaxNumPPFeatures] = { PCC, IGC, GC, GC, PA, DITHER, GAMUT };
+#endif
 
   for (int i(0); i < kMaxNumPPFeatures; i++) {
     version.pp_feature = feature_id_mapping[i];
@@ -651,6 +663,16 @@ void HWPrimary::UpdateMixerAttributes() {
   mixer_attributes_.height = display_attributes_.y_pixels;
   mixer_attributes_.split_left = display_attributes_.is_device_split ?
       hw_panel_info_.split_info.left_split : mixer_attributes_.width;
+}
+
+void HWPrimary::SetAVRFlags(const HWAVRInfo &hw_avr_info, uint32_t *avr_flags) {
+  if (hw_avr_info.enable) {
+    *avr_flags |= MDP_COMMIT_AVR_EN;
+  }
+
+  if (hw_avr_info.mode == kOneShotMode) {
+    *avr_flags |= MDP_COMMIT_AVR_ONE_SHOT_MODE;
+  }
 }
 
 }  // namespace sdm
