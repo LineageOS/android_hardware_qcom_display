@@ -1603,24 +1603,24 @@ void HWCDisplay::CloseAcquireFds() {
 std::string HWCDisplay::Dump() {
   std::ostringstream os;
   os << "-------------------------------" << std::endl;
-  os << "HWC2 LayerDump display_id: " << id_ << std::endl;
+  os << "HWC2 display_id: " << id_ << std::endl;
   for (auto layer : layer_set_) {
     auto sdm_layer = layer->GetSDMLayer();
     auto transform = sdm_layer->transform;
-    os << "-------------------------------" << std::endl;
-    os << "layer_id: " << layer->GetId() << std::endl;
-    os << "\tz: " << layer->GetZ() << std::endl;
-    os << "\tclient(SF) composition: " <<
-          to_string(layer->GetClientRequestedCompositionType()).c_str() << std::endl;
-    os << "\tdevice(SDM) composition: " <<
-          to_string(layer->GetDeviceSelectedCompositionType()).c_str() << std::endl;
-    os << "\tplane_alpha: " << std::to_string(sdm_layer->plane_alpha).c_str() << std::endl;
-    os << "\tformat: " << GetFormatString(sdm_layer->input_buffer.format) << std::endl;
-    os << "\ttransform: rot: " << transform.rotation << " flip_h: " << transform.flip_horizontal <<
-          " flip_v: "<< transform.flip_vertical << std::endl;
-    os << "\tbuffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec
+    os << "layer: " << layer->GetId();
+    os << " z: " << layer->GetZ();
+    os << " compositon: " <<
+          to_string(layer->GetClientRequestedCompositionType()).c_str();
+    os << "/" <<
+          to_string(layer->GetDeviceSelectedCompositionType()).c_str();
+    os << " alpha: " << std::to_string(sdm_layer->plane_alpha).c_str();
+    os << " format: " << GetFormatString(sdm_layer->input_buffer.format);
+    os << " transform: " << transform.rotation << "/" << transform.flip_horizontal <<
+          "/"<< transform.flip_vertical;
+    os << " buffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec
        << std::endl;
   }
+  os << "-------------------------------" << std::endl;
   return os.str();
 }
 }  // namespace sdm
