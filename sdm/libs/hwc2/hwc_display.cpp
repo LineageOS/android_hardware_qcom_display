@@ -30,6 +30,7 @@
 #include <qd_utils.h>
 
 #include <algorithm>
+#include <iomanip>
 #include <map>
 #include <sstream>
 #include <string>
@@ -213,6 +214,23 @@ void HWCColorMode::PopulateTransform(const android_color_mode_t &mode,
   } else if (color_transform.find("correct_tritanopia") != std::string::npos) {
     color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_CORRECT_TRITANOPIA] = color_transform;
   }
+}
+
+void HWCColorMode::Dump(std::ostringstream* os) {
+  *os << "color modes supported: ";
+  for (auto it : color_mode_transform_map_) {
+    *os << it.first <<" ";
+  }
+  *os << "current mode: " << current_color_mode_ << std::endl;
+  *os << "current transform: ";
+  for (uint32_t i = 0; i < kColorTransformMatrixCount; i++) {
+    if (i % 4 == 0) {
+     *os << std::endl;
+    }
+    *os << std::fixed << std::setprecision(2) << std::setw(6) << std::setfill(' ')
+        << color_matrix_[i] << " ";
+  }
+  *os << std::endl;
 }
 
 HWCDisplay::HWCDisplay(CoreInterface *core_intf, HWCCallbacks *callbacks, DisplayType type,
@@ -1619,6 +1637,9 @@ std::string HWCDisplay::Dump() {
           "/"<< transform.flip_vertical;
     os << " buffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec
        << std::endl;
+  }
+  if (color_mode_) {
+    color_mode_->Dump(&os);
   }
   os << "-------------------------------" << std::endl;
   return os.str();
