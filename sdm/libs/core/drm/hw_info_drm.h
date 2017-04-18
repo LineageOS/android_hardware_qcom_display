@@ -60,6 +60,10 @@ class HWInfoDRM: public HWInfoInterface {
   void GetRotatorFormatsForType(int fd, uint32_t type,
                                 std::vector<LayerBufferFormat> *supported_formats);
   DisplayError GetRotatorSupportedFormats(uint32_t v4l2_index, HWResourceInfo *hw_resource);
+  void PopulateSupportedFmts(HWSubBlockType sub_blk_type, const sde_drm::DRMPlaneTypeInfo  &info,
+                             HWResourceInfo *hw_resource);
+  void PopulatePipeCaps(const sde_drm::DRMPlaneTypeInfo &info, HWResourceInfo *hw_resource);
+
 
   sde_drm::DRMManagerInterface *drm_mgr_intf_ = {};
   bool default_mode_ = false;
