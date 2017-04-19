@@ -37,15 +37,9 @@
 #include <core/sdm_types.h>
 #include <core/display_interface.h>
 
-#include <utility>
-#include <string>
-#include <vector>
-
 #include "hw_info_types.h"
 
 namespace sdm {
-
-typedef std::vector<std::pair<std::string, std::string>> AttrVal;
 
 // Bitmap Pending action to indicate to the caller what's pending to be taken care of.
 enum PendingAction {
