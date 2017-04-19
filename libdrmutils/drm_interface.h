@@ -174,6 +174,12 @@ enum struct DRMOps {
   CONNECTOR_SET_OUTPUT_FB_ID,
 };
 
+enum struct DRMRotation {
+  FLIP_H = 0x1,
+  FLIP_V = 0x2,
+  ROT_90 = 0x4,
+};
+
 enum struct DRMBlendType {
   UNDEFINED = 0,
   OPAQUE = 1,

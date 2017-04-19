@@ -87,6 +87,7 @@ using sde_drm::DRMDisplayToken;
 using sde_drm::DRMConnectorInfo;
 using sde_drm::DRMPPFeatureInfo;
 using sde_drm::DRMRect;
+using sde_drm::DRMRotation;
 using sde_drm::DRMBlendType;
 using sde_drm::DRMSrcConfig;
 using sde_drm::DRMOps;
@@ -625,10 +626,10 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
         // In case of rotation, rotator handles flips
         if (!needs_rotation) {
           if (layer.transform.flip_horizontal) {
-            rot_bit_mask |= 1 << DRM_REFLECT_X;
+            rot_bit_mask |= UINT32(DRMRotation::FLIP_H);
           }
           if (layer.transform.flip_vertical) {
-            rot_bit_mask |= 1 << DRM_REFLECT_Y;
+            rot_bit_mask |= UINT32(DRMRotation::FLIP_V);
           }
         }
 
