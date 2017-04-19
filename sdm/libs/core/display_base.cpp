@@ -719,6 +719,26 @@ DisplayError DisplayBase::GetColorModes(uint32_t *mode_count,
   return kErrorNone;
 }
 
+DisplayError DisplayBase::GetColorModeAttr(const std::string &color_mode, AttrVal *attr) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (!attr) {
+    return kErrorParameters;
+  }
+
+  if (!color_mgr_) {
+    return kErrorNotSupported;
+  }
+
+  auto it = color_mode_attr_map_.find(color_mode);
+  if (it == color_mode_attr_map_.end()) {
+    DLOGE("Failed: Mode %s without attribute", color_mode.c_str());
+    return kErrorNotSupported;
+  }
+  *attr = it->second;
+
+  return kErrorNone;
+}
+
 DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   if (!color_mgr_) {
@@ -773,6 +793,33 @@ DisplayError DisplayBase::SetColorTransform(const uint32_t length, const double 
   }
 
   return color_mgr_->ColorMgrSetColorTransform(length, color_transform);
+}
+
+DisplayError DisplayBase::GetDefaultColorMode(std::string *color_mode) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (!color_mode) {
+    return kErrorParameters;
+  }
+
+  if (!color_mgr_) {
+    return kErrorNotSupported;
+  }
+
+  int32_t default_id = kInvalidModeId;
+  DisplayError error = color_mgr_->ColorMgrGetDefaultModeID(&default_id);
+  if (error != kErrorNone) {
+    DLOGE("Failed for get default color mode id");
+    return error;
+  }
+
+  for (uint32_t i = 0; i < num_color_modes_; i++) {
+    if (color_modes_[i].id == default_id) {
+      *color_mode = color_modes_[i].name;
+      return kErrorNone;
+    }
+  }
+
+  return kErrorNotSupported;
 }
 
 DisplayError DisplayBase::ApplyDefaultDisplayMode() {
