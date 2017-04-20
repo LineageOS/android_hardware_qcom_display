@@ -116,7 +116,7 @@ class HWDevice : public HWInterface {
   void SetBlending(const LayerBlending &source, mdss_mdp_blend_op *target);
   void SetRect(const LayerRect &source, mdp_rect *target);
   void SetMDPFlags(const Layer *layer, const bool &is_rotator_used,
-                   bool is_cursor_pipe_used, uint32_t *mdp_flags);
+                   bool async_cursor_updates, uint32_t *mdp_flags);
   // Retrieves HW FrameBuffer Node Index
   int GetFBNodeIndex(HWDeviceType device_type);
   // Populates HWPanelInfo based on node index

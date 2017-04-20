@@ -690,7 +690,7 @@ void HWCLayer::SetComposition(const LayerComposition &sdm_composition) {
     case kCompositionGPU:
       hwc_composition = HWC2::Composition::Client;
       break;
-    case kCompositionHWCursor:
+    case kCompositionCursor:
       hwc_composition = HWC2::Composition::Cursor;
       break;
     default:

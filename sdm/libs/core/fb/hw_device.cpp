@@ -208,7 +208,6 @@ DisplayError HWDevice::Validate(HWLayers *hw_layers) {
     HWPipeInfo *right_pipe = &hw_layers->config[i].right_pipe;
     HWRotatorSession *hw_rotator_session = &hw_layers->config[i].hw_rotator_session;
     bool is_rotator_used = (hw_rotator_session->hw_block_count != 0);
-    bool is_cursor_pipe_used = (hw_layer_info.use_hw_cursor & layer.flags.cursor);
 
     for (uint32_t count = 0; count < 2; count++) {
       HWPipeInfo *pipe_info = (count == 0) ? left_pipe : right_pipe;
@@ -247,7 +246,7 @@ DisplayError HWDevice::Validate(HWLayers *hw_layers) {
 #endif
         SetRect(pipe_info->src_roi, &mdp_layer.src_rect);
         SetRect(pipe_info->dst_roi, &mdp_layer.dst_rect);
-        SetMDPFlags(&layer, is_rotator_used, is_cursor_pipe_used, &mdp_layer.flags);
+        SetMDPFlags(&layer, is_rotator_used, hw_layer_info.async_cursor_updates, &mdp_layer.flags);
         SetCSC(layer.input_buffer.color_metadata, &mdp_layer.color_space);
         if (pipe_info->flags & kIGC) {
           SetIGC(&layer.input_buffer, mdp_layer_count);
@@ -710,7 +709,7 @@ void HWDevice::SetRect(const LayerRect &source, mdp_rect *target) {
 }
 
 void HWDevice::SetMDPFlags(const Layer *layer, const bool &is_rotator_used,
-                           bool is_cursor_pipe_used, uint32_t *mdp_flags) {
+                           bool async_cursor_updates, uint32_t *mdp_flags) {
   const LayerBuffer &input_buffer = layer->input_buffer;
 
   // Flips will be taken care by rotator, if layer uses rotator for downscale/rotation. So ignore
@@ -743,7 +742,7 @@ void HWDevice::SetMDPFlags(const Layer *layer, const bool &is_rotator_used,
     *mdp_flags |= MDP_LAYER_SOLID_FILL;
   }
 
-  if (hw_panel_info_.mode != kModeCommand && layer->flags.cursor && is_cursor_pipe_used) {
+  if (layer->flags.cursor && async_cursor_updates) {
     // command mode panels does not support async position update
     *mdp_flags |= MDP_LAYER_ASYNC;
   }

@@ -85,8 +85,8 @@ enum LayerComposition {
   kCompositionSDE,          //!< This layer will be composed by SDE. It must not be composed by
                             //!< GPU or Blit.
 
-  kCompositionHWCursor,     //!< This layer will be composed by SDE using HW Cursor. It must not be
-                            //!< composed by GPU or Blit.
+  kCompositionCursor,       // This cursor layer can receive async position updates irrespective of
+                            // dedicated h/w cursor usage. It must not be composed by GPU or Blit
 
   kCompositionHybrid,       //!< This layer will be drawn by a blit engine and SDE together.
                             //!< Display device will split the layer, update the blit rectangle

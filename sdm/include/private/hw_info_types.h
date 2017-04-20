@@ -485,10 +485,8 @@ struct HWLayersInfo {
   std::vector<LayerRect> left_frame_roi = {};   // Left ROI.
   std::vector<LayerRect> right_frame_roi = {};  // Right ROI.
   LayerRect partial_fb_roi = {};   // Damaged area in framebuffer.
-
   bool roi_split = false;          // Indicates separated left and right ROI
-
-  bool use_hw_cursor = false;      // Indicates that HWCursor pipe needs to be used for cursor layer
+  bool async_cursor_updates = false;  // Cursor layer allowed to have async updates
   DestScaleInfoMap dest_scale_info_map = {};
   HWHDRLayerInfo hdr_layer_info = {};
   Handle pvt_data = NULL;   // Private data used by sdm extension only.
