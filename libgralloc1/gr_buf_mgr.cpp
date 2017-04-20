@@ -454,7 +454,7 @@ int BufferManager::GetHandleFlags(int format, gralloc1_producer_usage_t prod_usa
     flags |= private_handle_t::PRIV_FLAGS_DISP_CONSUMER;
   }
 
-  if (!allocator_->UseUncached(prod_usage)) {
+  if (!allocator_->UseUncached(prod_usage, cons_usage)) {
     flags |= private_handle_t::PRIV_FLAGS_CACHED;
   }
 
@@ -499,7 +499,7 @@ int BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_han
   data.align = GetDataAlignment(format, prod_usage, cons_usage);
   data.size = ALIGN(size, data.align);
   data.handle = (uintptr_t) handle;
-  data.uncached = allocator_->UseUncached(prod_usage);
+  data.uncached = allocator_->UseUncached(prod_usage, cons_usage);
 
   // Allocate buffer memory
   err = allocator_->AllocateMem(&data, prod_usage, cons_usage);
