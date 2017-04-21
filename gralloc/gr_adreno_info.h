@@ -176,6 +176,11 @@ class AdrenoMemInfo {
                                                        int tile_mode, int raster_mode,
                                                        int padding_threshold, int *aligned_w,
                                                        int *aligned_h) = NULL;
+  void (*LINK_adreno_compute_fmt_aligned_width_and_height)(int width, int height, int plane_id,
+                                                           int format, int num_samples,
+                                                           int tile_mode, int raster_mode,
+                                                           int padding_threshold, int *aligned_w,
+                                                           int *aligned_h) = NULL;
   void (*LINK_adreno_compute_compressedfmt_aligned_width_and_height)(
       int width, int height, int format, int tile_mode, int raster_mode, int padding_threshold,
       int *aligned_w, int *aligned_h, int *bpp) = NULL;

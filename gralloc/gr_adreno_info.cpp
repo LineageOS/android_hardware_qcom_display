@@ -58,6 +58,8 @@ AdrenoMemInfo::AdrenoMemInfo() {
   if (libadreno_utils_) {
     *reinterpret_cast<void **>(&LINK_adreno_compute_aligned_width_and_height) =
         ::dlsym(libadreno_utils_, "compute_aligned_width_and_height");
+    *reinterpret_cast<void **>(&LINK_adreno_compute_fmt_aligned_width_and_height) =
+        ::dlsym(libadreno_utils_, "compute_fmt_aligned_width_and_height");
     *reinterpret_cast<void **>(&LINK_adreno_compute_padding) =
         ::dlsym(libadreno_utils_, "compute_surface_padding");
     *reinterpret_cast<void **>(&LINK_adreno_compute_compressedfmt_aligned_width_and_height) =
@@ -138,7 +140,15 @@ void AdrenoMemInfo::AlignUnCompressedRGB(int width, int height, int format, int 
   int padding_threshold = 512;  // Threshold for padding surfaces.
   // the function below computes aligned width and aligned height
   // based on linear or macro tile mode selected.
-  if (LINK_adreno_compute_aligned_width_and_height) {
+  if (LINK_adreno_compute_fmt_aligned_width_and_height) {
+    // We call into adreno_utils only for RGB formats. So plane_id is 0 and
+    // num_samples is 1 always. We may  have to add uitility function to
+    // find out these if there is a need to call this API for YUV formats.
+    LINK_adreno_compute_fmt_aligned_width_and_height(
+        width, height, 0/*plane_id*/, GetGpuPixelFormat(format), 1/*num_samples*/,
+        tile_enabled, raster_mode, padding_threshold,
+        reinterpret_cast<int *>(aligned_w), reinterpret_cast<int *>(aligned_h));
+  } else if (LINK_adreno_compute_aligned_width_and_height) {
     LINK_adreno_compute_aligned_width_and_height(
         width, height, bpp, tile_enabled, raster_mode, padding_threshold,
         reinterpret_cast<int *>(aligned_w), reinterpret_cast<int *>(aligned_h));
@@ -150,6 +160,7 @@ void AdrenoMemInfo::AlignUnCompressedRGB(int width, int height, int format, int 
   } else {
     ALOGW(
         "%s: Warning!! Symbols compute_surface_padding and "
+        "compute_fmt_aligned_width_and_height and "
         "compute_aligned_width_and_height not found",
         __FUNCTION__);
   }
