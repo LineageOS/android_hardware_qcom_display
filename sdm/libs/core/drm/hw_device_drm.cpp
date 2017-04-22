@@ -320,9 +320,9 @@ DisplayError HWDeviceDRM::Init() {
     drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
     InitializeConfigs();
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode_);
-#ifdef USE_SPECULATIVE_FENCES
+
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_OUTPUT_FENCE_OFFSET, token_.crtc_id, 1);
-#endif
+
     // TODO(user): Enable this and remove the one in SetupAtomic() onces underruns are fixed
     // drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
     // Commit to setup pipeline with mode, which then tells us the topology etc
