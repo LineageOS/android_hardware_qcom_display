@@ -518,7 +518,7 @@ HWC2::Error HWCDisplay::SetVsyncEnabled(HWC2::Vsync enabled) {
   DLOGV("Display ID: %d enabled: %s", id_, to_string(enabled).c_str());
   DisplayError error = kErrorNone;
 
-  if (shutdown_pending_) {
+  if (shutdown_pending_ || !callbacks_->VsyncCallbackRegistered()) {
     return HWC2::Error::None;
   }
 
