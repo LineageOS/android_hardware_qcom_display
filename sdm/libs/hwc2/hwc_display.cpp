@@ -1414,8 +1414,20 @@ HWC2::Error HWCDisplay::SetCursorPosition(hwc2_layer_t layer, int x, int y) {
     return HWC2::Error::None;
   }
 
-  // TODO(user): Validate layer
-  // TODO(user): Check if we're in a validate/present cycle
+  if (GetHWCLayer(layer) == nullptr) {
+    return HWC2::Error::BadLayer;
+  }
+
+  DisplayState state;
+  if (display_intf_->GetDisplayState(&state) == kErrorNone) {
+    if (state != kStateOn) {
+      return HWC2::Error::None;
+    }
+  }
+
+  if (!validated_) {
+    return HWC2::Error::NotValidated;
+  }
 
   auto error = display_intf_->SetCursorPosition(x, y);
   if (error != kErrorNone) {
