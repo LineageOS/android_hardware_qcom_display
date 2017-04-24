@@ -14,14 +14,11 @@ LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes)
 LOCAL_HEADER_LIBRARIES        := display_headers
 LOCAL_CFLAGS                  := -Wno-unused-parameter -DLOG_TAG=\"SDM\" \
                                  $(common_flags)
-ifeq ($(use_hwc2),false)
-  LOCAL_CFLAGS += -DUSE_SPECULATIVE_FENCES
-endif
 LOCAL_HW_INTF_PATH_1          := fb
 LOCAL_SHARED_LIBRARIES        := libdl libsdmutils
 
 ifneq ($(TARGET_IS_HEADLESS), true)
-    LOCAL_CFLAGS              += -isystem external/libdrm
+    LOCAL_CFLAGS              += -DCOMPILE_DRM -isystem external/libdrm
     LOCAL_SHARED_LIBRARIES    += libdrm libdrmutils
     LOCAL_HW_INTF_PATH_2      := drm
 endif
@@ -58,6 +55,7 @@ ifneq ($(TARGET_IS_HEADLESS), true)
     LOCAL_SRC_FILES           += $(LOCAL_HW_INTF_PATH_2)/hw_info_drm.cpp \
                                  $(LOCAL_HW_INTF_PATH_2)/hw_device_drm.cpp \
                                  $(LOCAL_HW_INTF_PATH_2)/hw_events_drm.cpp \
+                                 $(LOCAL_HW_INTF_PATH_2)/hw_scale_drm.cpp \
                                  $(LOCAL_HW_INTF_PATH_2)/hw_color_manager_drm.cpp
 endif
 

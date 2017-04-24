@@ -38,7 +38,8 @@ class HWPrimaryInterface;
 class DisplayPrimary : public DisplayBase, HWEventHandler {
  public:
   DisplayPrimary(DisplayEventHandler *event_handler, HWInfoInterface *hw_info_intf,
-                 BufferSyncHandler *buffer_sync_handler, CompManager *comp_manager);
+                 BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
+                 CompManager *comp_manager);
   virtual DisplayError Init();
   virtual DisplayError Prepare(LayerStack *layer_stack);
   virtual DisplayError Commit(LayerStack *layer_stack);

@@ -30,14 +30,31 @@
 #include <cutils/log.h>
 #include <cutils/properties.h>
 #include <dlfcn.h>
+#include <mutex>
 
 #include "gralloc_priv.h"
 #include "gr_adreno_info.h"
 #include "gr_utils.h"
 
+using std::lock_guard;
+using std::mutex;
+
 namespace gralloc1 {
 
-AdrenoMemInfo::AdrenoMemInfo() {
+AdrenoMemInfo *AdrenoMemInfo::s_instance = nullptr;
+
+AdrenoMemInfo *AdrenoMemInfo::GetInstance() {
+  static mutex s_lock;
+  lock_guard<mutex> obj(s_lock);
+  if (!s_instance) {
+    s_instance = new AdrenoMemInfo();
+    if (!s_instance->Init()) {
+      delete s_instance;
+      s_instance = nullptr;
+    }
+  }
+
+  return s_instance;
 }
 
 bool AdrenoMemInfo::Init() {
@@ -182,6 +199,12 @@ ADRENOPIXELFORMAT AdrenoMemInfo::GetGpuPixelFormat(int hal_format) {
     case HAL_PIXEL_FORMAT_YCbCr_420_P010:
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
       return ADRENO_PIXELFORMAT_P010;
+    case HAL_PIXEL_FORMAT_RGBA_1010102:
+       return ADRENO_PIXELFORMAT_R10G10B10A2_UNORM;
+    case HAL_PIXEL_FORMAT_RGBX_1010102:
+       return ADRENO_PIXELFORMAT_R10G10B10X2_UNORM;
+    case HAL_PIXEL_FORMAT_ABGR_2101010:
+       return ADRENO_PIXELFORMAT_A2B10G10R10_UNORM;
     default:
       ALOGE("%s: No map for format: 0x%x", __FUNCTION__, hal_format);
       break;

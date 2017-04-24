@@ -37,6 +37,7 @@ namespace gralloc1 {
 // Adreno Pixel Formats
 typedef enum {
   ADRENO_PIXELFORMAT_UNKNOWN = 0,
+  ADRENO_PIXELFORMAT_R10G10B10A2_UNORM = 24,  // Vertex, Normalized GL_UNSIGNED_INT_10_10_10_2_OES
   ADRENO_PIXELFORMAT_R8G8B8A8 = 28,
   ADRENO_PIXELFORMAT_R8G8B8A8_SRGB = 29,
   ADRENO_PIXELFORMAT_B5G6R5 = 85,
@@ -54,6 +55,10 @@ typedef enum {
   ADRENO_PIXELFORMAT_A1B5G5R5 = 519,       //  GL_RGB5_A1
   ADRENO_PIXELFORMAT_R8G8B8X8_SRGB = 520,  //  GL_SRGB8
   ADRENO_PIXELFORMAT_R8G8B8_SRGB = 521,    //  GL_SRGB8
+  ADRENO_PIXELFORMAT_A2B10G10R10_UNORM = 532,
+                                          // Vertex, Normalized GL_UNSIGNED_INT_10_10_10_2_OES
+  ADRENO_PIXELFORMAT_R10G10B10X2_UNORM = 537,
+                                          // Vertex, Normalized GL_UNSIGNED_INT_10_10_10_2_OES
   ADRENO_PIXELFORMAT_R5G6B5 = 610,         //  RGBA version of B5G6R5
   ADRENO_PIXELFORMAT_R5G5B5A1 = 611,       //  RGBA version of B5G5R5A1
   ADRENO_PIXELFORMAT_R4G4B4A4 = 612,       //  RGBA version of B4G4R4A4
@@ -61,15 +66,11 @@ typedef enum {
   ADRENO_PIXELFORMAT_NV21 = 619,
   ADRENO_PIXELFORMAT_Y8U8V8A8 = 620,  // YUV 4:4:4 packed (1 plane)
   ADRENO_PIXELFORMAT_Y8 = 625,        //  Single 8-bit luma only channel YUV format
-  ADRENO_PIXELFORMAT_TP10 = 654,      // YUV 4:2:0 planar 10 bits/comp (2 planes)
+  ADRENO_PIXELFORMAT_TP10 = 648,      // YUV 4:2:0 planar 10 bits/comp (2 planes)
 } ADRENOPIXELFORMAT;
 
 class AdrenoMemInfo {
  public:
-  AdrenoMemInfo();
-
-  ~AdrenoMemInfo();
-
   bool Init();
 
   /*
@@ -119,7 +120,10 @@ class AdrenoMemInfo {
    */
   ADRENOPIXELFORMAT GetGpuPixelFormat(int hal_format);
 
+  static AdrenoMemInfo *GetInstance();
+
  private:
+  ~AdrenoMemInfo();
   // link(s)to adreno surface padding library.
   int (*LINK_adreno_compute_padding)(int width, int bpp, int surface_tile_height,
                                      int screen_tile_height, int padding_threshold) = NULL;
@@ -136,6 +140,8 @@ class AdrenoMemInfo {
   bool gfx_ubwc_disable_ = false;
   bool map_fb_ = false;
   void *libadreno_utils_ = NULL;
+
+  static AdrenoMemInfo *s_instance;
 };
 
 }  // namespace gralloc1

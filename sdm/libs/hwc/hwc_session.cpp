@@ -140,11 +140,17 @@ int HWCSession::Init() {
     return -EINVAL;
   }
 
+  SCOPE_LOCK(uevent_locker_);
+
   if (pthread_create(&uevent_thread_, NULL, &HWCUeventThread, this) < 0) {
     DLOGE("Failed to start = %s, error = %s", uevent_thread_name_, strerror(errno));
     CoreInterface::DestroyCore();
     return -errno;
   }
+
+  // Wait for uevent_init() to happen and let the uevent thread wait for uevents, so that hdmi
+  // connect/disconnect events won't be missed
+  uevent_locker_.Wait();
 
   // Read which display is first, and create it and store it in primary slot
   HWDisplayInterfaceInfo hw_disp_info;
@@ -465,6 +471,8 @@ bool HWCSession::IsDisplayYUV(int disp) {
 }
 
 int HWCSession::EventControl(hwc_composer_device_1 *device, int disp, int event, int enable) {
+  SCOPE_LOCK(locker_);
+
   if (!device) {
     return -EINVAL;
   }
@@ -1418,13 +1426,20 @@ void* HWCSession::HWCUeventThread(void *context) {
 void* HWCSession::HWCUeventThreadHandler() {
   static char uevent_data[PAGE_SIZE];
   int length = 0;
+
+  uevent_locker_.Lock();
   prctl(PR_SET_NAME, uevent_thread_name_, 0, 0, 0);
   setpriority(PRIO_PROCESS, 0, HAL_PRIORITY_URGENT_DISPLAY);
   if (!uevent_init()) {
     DLOGE("Failed to init uevent");
     pthread_exit(0);
+    uevent_locker_.Signal();
+    uevent_locker_.Unlock();
     return NULL;
   }
+
+  uevent_locker_.Signal();
+  uevent_locker_.Unlock();
 
   while (!uevent_thread_exit_) {
     // keep last 2 zeroes to ensure double 0 termination
