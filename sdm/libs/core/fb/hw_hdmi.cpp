@@ -178,15 +178,13 @@ static bool MapHDMIDisplayTiming(const msm_hdmi_mode_timing_info *mode,
 
   if (!mode->active_low_h) {
     info->sync |= (uint32_t)FB_SYNC_HOR_HIGH_ACT;
-  }
-  else {
+  } else {
     info->sync &= (uint32_t)~FB_SYNC_HOR_HIGH_ACT;
   }
 
   if (!mode->active_low_v) {
     info->sync |= (uint32_t)FB_SYNC_VERT_HIGH_ACT;
-  }
-  else {
+  } else {
     info->sync &= (uint32_t)~FB_SYNC_VERT_HIGH_ACT;
   }
 
