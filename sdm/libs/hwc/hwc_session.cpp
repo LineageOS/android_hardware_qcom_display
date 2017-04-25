@@ -689,112 +689,130 @@ int HWCSession::DisconnectDisplay(int disp) {
 
 android::status_t HWCSession::notifyCallback(uint32_t command, const android::Parcel *input_parcel,
                                              android::Parcel *output_parcel) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_);
-
   android::status_t status = 0;
+  int wait_time = 0;
+  bool refresh_screen = false;
 
-  switch (command) {
-  case qService::IQService::DYNAMIC_DEBUG:
-    DynamicDebug(input_parcel);
-    break;
+  // To prevent sending events to client while a lock is held, acquire scope locks only within
+  // below scope so that those get automatically unlocked after the scope ends.
+  {
+    SEQUENCE_WAIT_SCOPE_LOCK(locker_);
 
-  case qService::IQService::SCREEN_REFRESH:
-    hwc_procs_->invalidate(hwc_procs_);
-    break;
+    switch (command) {
+    case qService::IQService::DYNAMIC_DEBUG:
+      DynamicDebug(input_parcel);
+      break;
 
-  case qService::IQService::SET_IDLE_TIMEOUT:
-    if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
-      uint32_t timeout = UINT32(input_parcel->readInt32());
-      hwc_display_[HWC_DISPLAY_PRIMARY]->SetIdleTimeoutMs(timeout);
+    case qService::IQService::SCREEN_REFRESH:
+      refresh_screen = true;
+      break;
+
+    case qService::IQService::SET_IDLE_TIMEOUT:
+      if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
+        uint32_t timeout = UINT32(input_parcel->readInt32());
+        hwc_display_[HWC_DISPLAY_PRIMARY]->SetIdleTimeoutMs(timeout);
+      }
+      break;
+
+    case qService::IQService::SET_FRAME_DUMP_CONFIG:
+      SetFrameDumpConfig(input_parcel);
+      break;
+
+    case qService::IQService::SET_MAX_PIPES_PER_MIXER:
+      status = SetMaxMixerStages(input_parcel);
+      break;
+
+    case qService::IQService::SET_DISPLAY_MODE:
+      status = SetDisplayMode(input_parcel);
+      break;
+
+    case qService::IQService::SET_SECONDARY_DISPLAY_STATUS:
+      status = SetSecondaryDisplayStatus(input_parcel, output_parcel);
+      break;
+
+    case qService::IQService::CONFIGURE_DYN_REFRESH_RATE:
+      status = ConfigureRefreshRate(input_parcel);
+      break;
+
+    case qService::IQService::SET_VIEW_FRAME:
+      break;
+
+    case qService::IQService::TOGGLE_SCREEN_UPDATES:
+      status = ToggleScreenUpdates(input_parcel, output_parcel);
+      break;
+
+    case qService::IQService::QDCM_SVC_CMDS:
+      status = QdcmCMDHandler(input_parcel, output_parcel);
+      break;
+
+    case qService::IQService::MIN_HDCP_ENCRYPTION_LEVEL_CHANGED:
+      status = OnMinHdcpEncryptionLevelChange(input_parcel, output_parcel);
+      break;
+
+    case qService::IQService::CONTROL_PARTIAL_UPDATE:
+      status = ControlPartialUpdate(input_parcel, output_parcel, &refresh_screen);
+      wait_time = kPartialUpdateControlTimeoutMs;
+      break;
+
+    case qService::IQService::SET_ACTIVE_CONFIG:
+      status = HandleSetActiveDisplayConfig(input_parcel, output_parcel, &refresh_screen);
+      break;
+
+    case qService::IQService::GET_ACTIVE_CONFIG:
+      status = HandleGetActiveDisplayConfig(input_parcel, output_parcel);
+      break;
+
+    case qService::IQService::GET_CONFIG_COUNT:
+      status = HandleGetDisplayConfigCount(input_parcel, output_parcel);
+      break;
+
+    case qService::IQService::GET_DISPLAY_ATTRIBUTES_FOR_CONFIG:
+      status = HandleGetDisplayAttributesForConfig(input_parcel, output_parcel);
+      break;
+
+    case qService::IQService::GET_PANEL_BRIGHTNESS:
+      status = GetPanelBrightness(input_parcel, output_parcel);
+      break;
+
+    case qService::IQService::SET_PANEL_BRIGHTNESS:
+      status = SetPanelBrightness(input_parcel, output_parcel);
+      break;
+
+    case qService::IQService::GET_DISPLAY_VISIBLE_REGION:
+      status = GetVisibleDisplayRect(input_parcel, output_parcel);
+      break;
+
+    case qService::IQService::SET_CAMERA_STATUS:
+      status = SetDynamicBWForCamera(input_parcel, output_parcel);
+      break;
+
+    case qService::IQService::GET_BW_TRANSACTION_STATUS:
+      status = GetBWTransactionStatus(input_parcel, output_parcel);
+      break;
+
+    case qService::IQService::SET_LAYER_MIXER_RESOLUTION:
+      status = SetMixerResolution(input_parcel);
+      break;
+
+    case qService::IQService::GET_HDR_CAPABILITIES:
+      status = GetHdrCapabilities(input_parcel, output_parcel);
+      break;
+
+    default:
+      DLOGW("QService command = %d is not supported", command);
+      return -EINVAL;
     }
-    break;
+  }
 
-  case qService::IQService::SET_FRAME_DUMP_CONFIG:
-    SetFrameDumpConfig(input_parcel);
-    break;
+  // notify client.
+  if (refresh_screen) {
+    hwc_procs_->invalidate(hwc_procs_);
 
-  case qService::IQService::SET_MAX_PIPES_PER_MIXER:
-    status = SetMaxMixerStages(input_parcel);
-    break;
-
-  case qService::IQService::SET_DISPLAY_MODE:
-    status = SetDisplayMode(input_parcel);
-    break;
-
-  case qService::IQService::SET_SECONDARY_DISPLAY_STATUS:
-    status = SetSecondaryDisplayStatus(input_parcel, output_parcel);
-    break;
-
-  case qService::IQService::CONFIGURE_DYN_REFRESH_RATE:
-    status = ConfigureRefreshRate(input_parcel);
-    break;
-
-  case qService::IQService::SET_VIEW_FRAME:
-    break;
-
-  case qService::IQService::TOGGLE_SCREEN_UPDATES:
-    status = ToggleScreenUpdates(input_parcel, output_parcel);
-    break;
-
-  case qService::IQService::QDCM_SVC_CMDS:
-    status = QdcmCMDHandler(input_parcel, output_parcel);
-    break;
-
-  case qService::IQService::MIN_HDCP_ENCRYPTION_LEVEL_CHANGED:
-    status = OnMinHdcpEncryptionLevelChange(input_parcel, output_parcel);
-    break;
-
-  case qService::IQService::CONTROL_PARTIAL_UPDATE:
-    status = ControlPartialUpdate(input_parcel, output_parcel);
-    break;
-
-  case qService::IQService::SET_ACTIVE_CONFIG:
-    status = HandleSetActiveDisplayConfig(input_parcel, output_parcel);
-    break;
-
-  case qService::IQService::GET_ACTIVE_CONFIG:
-    status = HandleGetActiveDisplayConfig(input_parcel, output_parcel);
-    break;
-
-  case qService::IQService::GET_CONFIG_COUNT:
-    status = HandleGetDisplayConfigCount(input_parcel, output_parcel);
-    break;
-
-  case qService::IQService::GET_DISPLAY_ATTRIBUTES_FOR_CONFIG:
-    status = HandleGetDisplayAttributesForConfig(input_parcel, output_parcel);
-    break;
-
-  case qService::IQService::GET_PANEL_BRIGHTNESS:
-    status = GetPanelBrightness(input_parcel, output_parcel);
-    break;
-
-  case qService::IQService::SET_PANEL_BRIGHTNESS:
-    status = SetPanelBrightness(input_parcel, output_parcel);
-    break;
-
-  case qService::IQService::GET_DISPLAY_VISIBLE_REGION:
-    status = GetVisibleDisplayRect(input_parcel, output_parcel);
-    break;
-
-  case qService::IQService::SET_CAMERA_STATUS:
-    status = SetDynamicBWForCamera(input_parcel, output_parcel);
-    break;
-
-  case qService::IQService::GET_BW_TRANSACTION_STATUS:
-    status = GetBWTransactionStatus(input_parcel, output_parcel);
-    break;
-
-  case qService::IQService::SET_LAYER_MIXER_RESOLUTION:
-    status = SetMixerResolution(input_parcel);
-    break;
-
-  case qService::IQService::GET_HDR_CAPABILITIES:
-    status = GetHdrCapabilities(input_parcel, output_parcel);
-    break;
-
-  default:
-    DLOGW("QService command = %d is not supported", command);
-    return -EINVAL;
+    // block until specified time for command processing to complete.
+    if (wait_time) {
+      SCOPE_LOCK(locker_);
+      locker_.WaitFinite(wait_time);
+    }
   }
 
   return status;
@@ -850,23 +868,26 @@ android::status_t HWCSession::GetPanelBrightness(const android::Parcel *input_pa
 }
 
 android::status_t HWCSession::ControlPartialUpdate(const android::Parcel *input_parcel,
-                                                   android::Parcel *out) {
+                                                   android::Parcel *output_parcel,
+                                                   bool *refresh_screen) {
   DisplayError error = kErrorNone;
   int ret = 0;
   uint32_t disp_id = UINT32(input_parcel->readInt32());
   uint32_t enable = UINT32(input_parcel->readInt32());
 
+  *refresh_screen = false;
+
   if (disp_id != HWC_DISPLAY_PRIMARY) {
     DLOGW("CONTROL_PARTIAL_UPDATE is not applicable for display = %d", disp_id);
     ret = -EINVAL;
-    out->writeInt32(ret);
+    output_parcel->writeInt32(ret);
     return ret;
   }
 
   if (!hwc_display_[HWC_DISPLAY_PRIMARY]) {
     DLOGE("primary display object is not instantiated");
     ret = -EINVAL;
-    out->writeInt32(ret);
+    output_parcel->writeInt32(ret);
     return ret;
   }
 
@@ -875,34 +896,33 @@ android::status_t HWCSession::ControlPartialUpdate(const android::Parcel *input_
 
   if (error == kErrorNone) {
     if (!pending) {
-      out->writeInt32(ret);
+      output_parcel->writeInt32(ret);
       return ret;
     }
   } else if (error == kErrorNotSupported) {
-    out->writeInt32(ret);
+    output_parcel->writeInt32(ret);
     return ret;
   } else {
     ret = -EINVAL;
-    out->writeInt32(ret);
+    output_parcel->writeInt32(ret);
     return ret;
   }
 
-  // Todo(user): Unlock it before sending events to client. It may cause deadlocks in future.
-  hwc_procs_->invalidate(hwc_procs_);
+  *refresh_screen = true;
 
-  // Wait until partial update control is complete
-  ret = locker_.WaitFinite(kPartialUpdateControlTimeoutMs);
-
-  out->writeInt32(ret);
+  output_parcel->writeInt32(ret);
 
   return ret;
 }
 
 android::status_t HWCSession::HandleSetActiveDisplayConfig(const android::Parcel *input_parcel,
-                                                     android::Parcel *output_parcel) {
+                                                           android::Parcel *output_parcel,
+                                                           bool *refresh_screen) {
   int config = input_parcel->readInt32();
   int dpy = input_parcel->readInt32();
   int error = android::BAD_VALUE;
+
+  *refresh_screen = false;
 
   if (dpy > HWC_DISPLAY_VIRTUAL) {
     return android::BAD_VALUE;
@@ -911,7 +931,7 @@ android::status_t HWCSession::HandleSetActiveDisplayConfig(const android::Parcel
   if (hwc_display_[dpy]) {
     error = hwc_display_[dpy]->SetActiveDisplayConfig(config);
     if (error == 0) {
-      hwc_procs_->invalidate(hwc_procs_);
+      *refresh_screen = true;
     }
   }
 
