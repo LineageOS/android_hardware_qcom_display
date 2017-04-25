@@ -21,22 +21,13 @@
 #include <cutils/properties.h>
 #include <sys/mman.h>
 #include <linux/msm_ion.h>
-#ifdef COMPILE_DRM
-#include <drm_master.h>
-#endif
 #include <qdMetaData.h>
-#include <qd_utils.h>
-
 #include <algorithm>
 
 #include "gr.h"
 #include "gpu.h"
 #include "memalloc.h"
 #include "alloc_controller.h"
-
-#ifdef COMPILE_DRM
-using namespace drm_utils;
-#endif
 
 using namespace gralloc;
 
@@ -178,43 +169,6 @@ int gpu_context_t::gralloc_alloc_buffer(unsigned int size, int usage,
         hnd->gpuaddr = 0;
         ColorSpace_t colorSpace = ITU_R_601;
         setMetaData(hnd, UPDATE_COLOR_SPACE, (void*) &colorSpace);
-
-#ifdef COMPILE_DRM
-        if (qdutils::getDriverType() == qdutils::DriverType::DRM &&
-                usage & GRALLOC_USAGE_HW_COMPOSER) {
-            DRMBuffer buf = {};
-            int ret = getPlaneStrideOffset(hnd, buf.stride, buf.offset,
-                    &buf.num_planes);
-            if (ret < 0) {
-                ALOGE("%s failed", __FUNCTION__);
-                return ret;
-            }
-
-            buf.fd = hnd->fd;
-            buf.width = hnd->width;
-            buf.height = hnd->height;
-            getDRMFormat(hnd->format, flags, &buf.drm_format,
-                    &buf.drm_format_modifier);
-
-            DRMMaster *master = nullptr;
-            ret = DRMMaster::GetInstance(&master);
-            if (ret < 0) {
-                ALOGE("%s Failed to acquire DRMMaster instance", __FUNCTION__);
-                return ret;
-            }
-
-            ret = master->CreateFbId(buf, &hnd->gem_handle, &hnd->fb_id);
-            if (ret < 0) {
-                ALOGE("%s: CreateFbId failed. width %d, height %d, " \
-                        "format: %s, stride %u, error %d", __FUNCTION__,
-                        buf.width, buf.height,
-                        qdutils::GetHALPixelFormatString(hnd->format),
-                        buf.stride[0], errno);
-                return ret;
-            }
-        }
-#endif
-
         *pHandle = hnd;
     }
 
@@ -414,22 +368,6 @@ int gpu_context_t::free_impl(private_handle_t const* hnd) {
         if (err)
             return err;
     }
-
-#ifdef COMPILE_DRM
-    if (hnd->fb_id) {
-        DRMMaster *master = nullptr;
-        int ret = DRMMaster::GetInstance(&master);
-        if (ret < 0) {
-            ALOGE("%s Failed to acquire DRMMaster instance", __FUNCTION__);
-            return ret;
-        }
-        ret = master->RemoveFbId(hnd->gem_handle, hnd->fb_id);
-        if (ret < 0) {
-            ALOGE("%s: Removing fb_id %d failed with error %d", __FUNCTION__,
-                    hnd->fb_id, errno);
-        }
-    }
-#endif
 
     delete hnd;
     return 0;

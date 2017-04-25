@@ -45,7 +45,7 @@ namespace sdm {
 
 DisplayError HWInterface::Create(DisplayType type, HWInfoInterface *hw_info_intf,
                                  BufferSyncHandler *buffer_sync_handler,
-                                 HWInterface **intf) {
+                                 BufferAllocator *buffer_allocator, HWInterface **intf) {
   DisplayError error = kErrorNone;
   HWInterface *hw = nullptr;
   DriverType driver_type = GetDriverType();
@@ -56,7 +56,7 @@ DisplayError HWInterface::Create(DisplayType type, HWInfoInterface *hw_info_intf
         hw = new HWPrimary(buffer_sync_handler, hw_info_intf);
       } else {
 #ifdef COMPILE_DRM
-        hw = new HWDeviceDRM(buffer_sync_handler, hw_info_intf);
+        hw = new HWDeviceDRM(buffer_sync_handler, buffer_allocator, hw_info_intf);
 #endif
       }
       break;

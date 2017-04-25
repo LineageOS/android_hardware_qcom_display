@@ -119,6 +119,7 @@ struct HWDynBwLimitInfo {
 struct HWPipeCaps {
   PipeType type = kPipeTypeUnused;
   uint32_t id = 0;
+  uint32_t master_pipe_id = 0;
   uint32_t max_rects = 1;
 };
 
@@ -139,6 +140,11 @@ struct HWDestScalarInfo {
   uint32_t max_input_width = 0;
   uint32_t max_output_width = 0;
   uint32_t max_scale_up = 1;
+};
+
+enum SmartDMARevision {
+  V1,
+  V2,
 };
 
 struct HWResourceInfo {
@@ -191,7 +197,7 @@ struct HWResourceInfo {
   HWDestScalarInfo hw_dest_scalar_info;
   bool has_avr = false;
   bool has_hdr = false;
-
+  SmartDMARevision smart_dma_rev = SmartDMARevision::V1;
   void Reset() { *this = HWResourceInfo(); }
 };
 
@@ -234,12 +240,12 @@ struct HWPanelInfo {
   DisplayPort port = kPortDefault;    // Display port
   HWDisplayMode mode = kModeDefault;  // Display mode
   bool partial_update = false;        // Partial update feature
-  int left_align = 0;                 // ROI left alignment restriction
-  int width_align = 0;                // ROI width alignment restriction
-  int top_align = 0;                  // ROI top alignment restriction
-  int height_align = 0;               // ROI height alignment restriction
-  int min_roi_width = 0;              // Min width needed for ROI
-  int min_roi_height = 0;             // Min height needed for ROI
+  int left_align = 1;                 // ROI left alignment restriction
+  int width_align = 1;                // ROI width alignment restriction
+  int top_align = 1;                  // ROI top alignment restriction
+  int height_align = 1;               // ROI height alignment restriction
+  int min_roi_width = 1;              // Min width needed for ROI
+  int min_roi_height = 1;             // Min height needed for ROI
   bool needs_roi_merge = false;       // Merge ROI's of both the DSI's
   bool dynamic_fps = false;           // Panel Supports dynamic fps
   bool dfps_porch_mode = false;       // dynamic fps VFP or HFP mode

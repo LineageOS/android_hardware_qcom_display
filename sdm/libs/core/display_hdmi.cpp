@@ -37,16 +37,17 @@
 namespace sdm {
 
 DisplayHDMI::DisplayHDMI(DisplayEventHandler *event_handler, HWInfoInterface *hw_info_intf,
-                         BufferSyncHandler *buffer_sync_handler, CompManager *comp_manager)
-  : DisplayBase(kHDMI, event_handler, kDeviceHDMI, buffer_sync_handler, comp_manager,
-                hw_info_intf) {
+                         BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
+                         CompManager *comp_manager)
+  : DisplayBase(kHDMI, event_handler, kDeviceHDMI, buffer_sync_handler, buffer_allocator,
+                comp_manager, hw_info_intf) {
 }
 
 DisplayError DisplayHDMI::Init() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
   DisplayError error = HWInterface::Create(kHDMI, hw_info_intf_, buffer_sync_handler_,
-                                           &hw_intf_);
+                                           buffer_allocator_, &hw_intf_);
   if (error != kErrorNone) {
     return error;
   }

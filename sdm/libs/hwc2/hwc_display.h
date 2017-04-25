@@ -55,6 +55,7 @@ class HWCColorMode {
   ~HWCColorMode() {}
   HWC2::Error Init();
   HWC2::Error DeInit();
+  void Dump(std::ostringstream* os);
   uint32_t GetColorModeCount();
   HWC2::Error GetColorModes(uint32_t *out_num_modes, android_color_mode_t *out_modes);
   HWC2::Error SetColorMode(android_color_mode_t mode);
