@@ -61,7 +61,7 @@ class Allocator {
                              ssize_t *max_index);
   int GetImplDefinedFormat(gralloc1_producer_usage_t prod_usage,
                            gralloc1_consumer_usage_t cons_usage, int format);
-  bool UseUncached(gralloc1_producer_usage_t usage);
+  bool UseUncached(gralloc1_producer_usage_t prod_usage, gralloc1_consumer_usage_t cons_usage);
 
  private:
   void GetIonHeapInfo(gralloc1_producer_usage_t prod_usage, gralloc1_consumer_usage_t cons_usage,
