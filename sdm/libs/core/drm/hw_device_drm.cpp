@@ -87,6 +87,7 @@ using sde_drm::DRMDisplayToken;
 using sde_drm::DRMConnectorInfo;
 using sde_drm::DRMPPFeatureInfo;
 using sde_drm::DRMRect;
+using sde_drm::DRMRotation;
 using sde_drm::DRMBlendType;
 using sde_drm::DRMSrcConfig;
 using sde_drm::DRMOps;
@@ -319,9 +320,9 @@ DisplayError HWDeviceDRM::Init() {
     drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
     InitializeConfigs();
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode_);
-#ifdef USE_SPECULATIVE_FENCES
+
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_OUTPUT_FENCE_OFFSET, token_.crtc_id, 1);
-#endif
+
     // TODO(user): Enable this and remove the one in SetupAtomic() onces underruns are fixed
     // drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
     // Commit to setup pipeline with mode, which then tells us the topology etc
@@ -625,10 +626,10 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
         // In case of rotation, rotator handles flips
         if (!needs_rotation) {
           if (layer.transform.flip_horizontal) {
-            rot_bit_mask |= 1 << DRM_REFLECT_X;
+            rot_bit_mask |= UINT32(DRMRotation::FLIP_H);
           }
           if (layer.transform.flip_vertical) {
-            rot_bit_mask |= 1 << DRM_REFLECT_Y;
+            rot_bit_mask |= UINT32(DRMRotation::FLIP_V);
           }
         }
 
