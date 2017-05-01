@@ -28,6 +28,7 @@
 #include <hardware/hwcomposer.h>
 #include <core/core_interface.h>
 #include <utils/locker.h>
+#include <future>   // NOLINT
 
 #include "hwc_display_primary.h"
 #include "hwc_display_external.h"
@@ -153,6 +154,7 @@ class HWCSession : hwc_composer_device_1_t, public qClient::BnQClient {
   qService::QService *qservice_ = NULL;
   bool is_hdmi_primary_ = false;
   bool is_hdmi_yuv_ = false;
+  std::future<void> future_;
   std::bitset<HWC_NUM_DISPLAY_TYPES> connected_displays_;  // Bit mask of connected displays
   HWCSocketHandler socket_handler_;
   Locker uevent_locker_;
