@@ -46,7 +46,6 @@
 #include <profiler.h>
 #include <bitset>
 #include <vector>
-#include <future>   // NOLINT
 
 #include "hwc_buffer_allocator.h"
 #include "hwc_buffer_sync_handler.h"
@@ -695,8 +694,7 @@ static void PostRefresh(hwc_procs_t const *hwc_procs) {
 }
 
 void HWCSession::AsyncRefresh() {
-  std::future<void> fut = std::async(PostRefresh, hwc_procs_);
-  fut.get();
+  future_ = std::async(PostRefresh, hwc_procs_);
 }
 
 android::status_t HWCSession::notifyCallback(uint32_t command, const android::Parcel *input_parcel,
