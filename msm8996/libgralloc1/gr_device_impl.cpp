@@ -103,11 +103,12 @@ int GrallocImpl::CloseDevice(hw_device_t *device __unused) {
 void GrallocImpl::GetCapabilities(struct gralloc1_device *device, uint32_t *out_count,
                                   int32_t  /*gralloc1_capability_t*/ *out_capabilities) {
   if (device != nullptr) {
-    if (out_capabilities != nullptr && *out_count >= 2) {
+    if (out_capabilities != nullptr && *out_count >= 3) {
       out_capabilities[0] = GRALLOC1_CAPABILITY_TEST_ALLOCATE;
       out_capabilities[1] = GRALLOC1_CAPABILITY_LAYERED_BUFFERS;
+      out_capabilities[2] = GRALLOC1_CAPABILITY_RELEASE_IMPLY_DELETE;
     }
-    *out_count = 2;
+    *out_count = 3;
   }
   return;
 }
