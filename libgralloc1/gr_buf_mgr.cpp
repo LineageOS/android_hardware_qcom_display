@@ -211,11 +211,10 @@ gralloc1_error_t BufferManager::FreeBuffer(std::shared_ptr<Buffer> buf) {
     return GRALLOC1_ERROR_BAD_HANDLE;
   }
 
-  // TODO(user): delete handle once framework bug around this is confirmed
-  // to be resolved. This is tracked in bug 36355756
   private_handle_t * handle = const_cast<private_handle_t *>(hnd);
   handle->fd = -1;
   handle->fd_metadata = -1;
+  delete handle;
   return GRALLOC1_ERROR_NONE;
 }
 
@@ -278,6 +277,10 @@ gralloc1_error_t BufferManager::MapBuffer(private_handle_t const *handle) {
 }
 
 gralloc1_error_t BufferManager::RetainBuffer(private_handle_t const *hnd) {
+  if (hnd->flags & private_handle_t::PRIV_FLAGS_CLIENT_ALLOCATED) {
+    return GRALLOC1_ERROR_NONE;
+  }
+
   ALOGD_IF(DEBUG, "Retain buffer handle:%p id: %" PRIu64, hnd, hnd->id);
   gralloc1_error_t err = GRALLOC1_ERROR_NONE;
   std::lock_guard<std::mutex> lock(buffer_lock_);
@@ -299,6 +302,10 @@ gralloc1_error_t BufferManager::RetainBuffer(private_handle_t const *hnd) {
 }
 
 gralloc1_error_t BufferManager::ReleaseBuffer(private_handle_t const *hnd) {
+  if (hnd->flags & private_handle_t::PRIV_FLAGS_CLIENT_ALLOCATED) {
+    return GRALLOC1_ERROR_NONE;
+  }
+
   ALOGD_IF(DEBUG, "Release buffer handle:%p id: %" PRIu64, hnd, hnd->id);
   std::lock_guard<std::mutex> lock(buffer_lock_);
   auto buf = GetBufferFromHandleLocked(hnd);
@@ -327,14 +334,14 @@ gralloc1_error_t BufferManager::LockBuffer(const private_handle_t *hnd,
     return GRALLOC1_ERROR_BAD_VALUE;
   }
 
-  if (hnd->base == 0) {
-    // we need to map for real
-    err = MapBuffer(hnd);
-  }
-
   auto buf = GetBufferFromHandleLocked(hnd);
   if (buf == nullptr) {
     return GRALLOC1_ERROR_BAD_HANDLE;
+  }
+
+  if (hnd->base == 0) {
+    // we need to map for real
+    err = MapBuffer(hnd);
   }
 
   // Invalidate if CPU reads in software and there are non-CPU
