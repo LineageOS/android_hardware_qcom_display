@@ -95,6 +95,8 @@ using sde_drm::DRMSrcConfig;
 using sde_drm::DRMOps;
 using sde_drm::DRMTopology;
 using sde_drm::DRMPowerMode;
+using sde_drm::DRMSecureMode;
+using sde_drm::DRMSecurityLevel;
 
 namespace sdm {
 
@@ -631,6 +633,7 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
   HWLayersInfo &hw_layer_info = hw_layers->info;
   uint32_t hw_layer_count = UINT32(hw_layer_info.hw_layers.size());
   HWQosData &qos_data = hw_layers->qos_data;
+  DRMSecurityLevel crtc_security_level = DRMSecurityLevel::SECURE_NON_SECURE;
 
   // TODO(user): Once destination scalar is enabled we can always send ROIs if driver allows
   if (hw_panel_info_.partial_update) {
@@ -702,6 +705,15 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
                                   pipe_info->horizontal_decimation);
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_V_DECIMATION, pipe_id,
                                   pipe_info->vertical_decimation);
+
+        DRMSecureMode fb_secure_mode;
+        DRMSecurityLevel security_level;
+        SetSecureConfig(layer.input_buffer, &fb_secure_mode, &security_level);
+        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_FB_SECURE_MODE, pipe_id, fb_secure_mode);
+        if (security_level > crtc_security_level) {
+          crtc_security_level = security_level;
+        }
+
         uint32_t config = 0;
         SetSrcConfig(layer.input_buffer, &config);
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_SRC_CONFIG, pipe_id, config);;
@@ -731,6 +743,7 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_DRAM_AB, token_.crtc_id, qos_data.dram_ab_bps);
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_DRAM_IB, token_.crtc_id, qos_data.dram_ib_bps);
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ROT_CLK, token_.crtc_id, qos_data.rot_clock_hz);
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_SECURITY_LEVEL, token_.crtc_id, crtc_security_level);
 
     DLOGI_IF(kTagDriverConfig, "System Clock=%d Hz, Core: AB=%llu Bps, IB=%llu Bps, " \
              "LLCC: AB=%llu Bps, IB=%llu Bps, DRAM AB=%llu Bps, IB=%llu Bps Rot Clock=%d",
@@ -1161,6 +1174,32 @@ void HWDeviceDRM::UpdateMixerAttributes() {
   mixer_attributes_.split_left = display_attributes_.is_device_split
                                      ? hw_panel_info_.split_info.left_split
                                      : mixer_attributes_.width;
+}
+
+void HWDeviceDRM::SetSecureConfig(const LayerBuffer &input_buffer, DRMSecureMode *fb_secure_mode,
+                                  DRMSecurityLevel *security_level) {
+  *fb_secure_mode = DRMSecureMode::NON_SECURE;
+  *security_level = DRMSecurityLevel::SECURE_NON_SECURE;
+
+  if (input_buffer.flags.secure) {
+    if (input_buffer.flags.secure_camera) {
+      // IOMMU configuration for this framebuffer mode is secure domain & requires
+      // only stage II translation, when this buffer is accessed by Display H/W.
+      // Secure and non-secure planes can be attached to this CRTC.
+      *fb_secure_mode = DRMSecureMode::SECURE_DIR_TRANSLATION;
+    } else if (input_buffer.flags.secure_display) {
+      // IOMMU configuration for this framebuffer mode is non-secure domain & requires
+      // only stage II translation, when this buffer is accessed by Display H/W.
+      // Only secure planes can be attached to this CRTC.
+      *fb_secure_mode = DRMSecureMode::NON_SECURE_DIR_TRANSLATION;
+      *security_level = DRMSecurityLevel::SECURE_ONLY;
+    } else {
+      // IOMMU configuration for this framebuffer mode is secure domain & requires both
+      // stage I and stage II translations, when this buffer is accessed by Display H/W.
+      // Secure and non-secure planes can be attached to this CRTC.
+      *fb_secure_mode = DRMSecureMode::SECURE;
+    }
+  }
 }
 
 }  // namespace sdm

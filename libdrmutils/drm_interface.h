@@ -131,6 +131,12 @@ enum struct DRMOps {
    */
   PLANE_SET_ROTATION_DST_RECT,
   /*
+   * Op: Sets FB Secure mode for this plane.
+   * Arg: uint32_t - Plane ID
+   *      uint32_t - Value of the FB Secure mode.
+   */
+  PLANE_SET_FB_SECURE_MODE,
+  /*
    * Op: Activate or deactivate a CRTC
    * Arg: uint32_t - CRTC ID
    *      uint32_t - 1 to enable, 0 to disable
@@ -216,6 +222,12 @@ enum struct DRMOps {
    *      DRMRect * - Array of CRTC ROIs
    */
   CRTC_SET_ROI,
+  /*
+   * Op: Sets Security level for CRTC.
+   * Arg: uint32_t - CRTC ID
+   *      uint32_t - Security level
+   */
+  CRTC_SET_SECURITY_LEVEL,
   /*
    * Op: Returns retire fence for this commit. Should be called after Commit() on
    * DRMAtomicReqInterface.
@@ -442,6 +454,18 @@ struct DRMScalerLUTInfo {
   uint64_t dir_lut = 0;
   uint64_t cir_lut = 0;
   uint64_t sep_lut = 0;
+};
+
+enum struct DRMSecureMode {
+  NON_SECURE,
+  SECURE,
+  NON_SECURE_DIR_TRANSLATION,
+  SECURE_DIR_TRANSLATION,
+};
+
+enum struct DRMSecurityLevel {
+  SECURE_NON_SECURE,
+  SECURE_ONLY,
 };
 
 /* DRM Atomic Request Property Set.

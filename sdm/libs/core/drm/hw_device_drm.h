@@ -124,6 +124,8 @@ class HWDeviceDRM : public HWInterface {
   DisplayError DefaultCommit(HWLayers *hw_layers);
   DisplayError AtomicCommit(HWLayers *hw_layers);
   void SetupAtomic(HWLayers *hw_layers, bool validate);
+  void SetSecureConfig(const LayerBuffer &input_buffer, sde_drm::DRMSecureMode *fb_secure_mode,
+                       sde_drm::DRMSecurityLevel *security_level);
 
   class Registry {
    public:
