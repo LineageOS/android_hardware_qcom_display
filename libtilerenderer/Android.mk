@@ -4,6 +4,7 @@ include $(CLEAR_VARS)
 
 ifeq ($(USE_OPENGL_RENDERER),true)
 LOCAL_MODULE           := libtilerenderer
+LOCAL_VENDOR_MODULE    := true
 LOCAL_MODULE_TAGS      := optional
 LOCAL_CFLAGS           := -DLOG_TAG=\"qdtilerenderer\"
 LOCAL_C_INCLUDES := \
