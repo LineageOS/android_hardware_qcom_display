@@ -878,7 +878,7 @@ DisplayError HWDeviceDRM::SetPPFeatures(PPFeaturesConfig *feature_list) {
 }
 
 DisplayError HWDeviceDRM::SetVSyncState(bool enable) {
-  return kErrorNone;
+  return kErrorNotSupported;
 }
 
 void HWDeviceDRM::SetIdleTimeoutMs(uint32_t timeout_ms) {}
