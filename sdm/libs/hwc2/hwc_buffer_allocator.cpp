@@ -165,7 +165,7 @@ uint32_t HWCBufferAllocator::GetBufferSize(BufferInfo *buffer_info) {
   producer_usage = gralloc1_producer_usage_t(alloc_flags);
   consumer_usage = gralloc1_consumer_usage_t(alloc_flags);
   gralloc1::BufferInfo info(width, height, format, producer_usage, consumer_usage);
-  GetBufferSizeAndDimensions(info, &aligned_width, &aligned_height, &buffer_size);
+  GetBufferSizeAndDimensions(info, &buffer_size, &aligned_width, &aligned_height);
   return buffer_size;
 }
 
@@ -312,7 +312,7 @@ DisplayError HWCBufferAllocator::GetAllocatedBufferInfo(
   producer_usage = gralloc1_producer_usage_t(alloc_flags);
   consumer_usage = gralloc1_consumer_usage_t(alloc_flags);
   gralloc1::BufferInfo info(width, height, format, producer_usage, consumer_usage);
-  GetBufferSizeAndDimensions(info, &aligned_width, &aligned_height, &buffer_size);
+  GetBufferSizeAndDimensions(info, &buffer_size, &aligned_width, &aligned_height);
   allocated_buffer_info->stride = UINT32(aligned_width);
   allocated_buffer_info->aligned_width = UINT32(aligned_width);
   allocated_buffer_info->aligned_height = UINT32(aligned_height);
