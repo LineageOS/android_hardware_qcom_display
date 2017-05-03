@@ -40,7 +40,7 @@ class Tonemapper {
  public:
   ~Tonemapper();
   static Tonemapper *build(int type, void *colorMap, int colorMapSize, void *lutXform,
-                           int lutXformSize);
+                           int lutXformSize, bool isSecure);
   int blit(const void *dst, const void *src, int srcFenceFd);
 };
 
