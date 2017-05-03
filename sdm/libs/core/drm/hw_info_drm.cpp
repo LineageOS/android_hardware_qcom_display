@@ -288,6 +288,7 @@ void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
           hw_resource->max_cursor_size = pipe_obj.second.max_linewidth;
         }
         hw_resource->num_cursor_pipe++;
+        break;
       default:
         continue;  // Not adding any other pipe type
     }
