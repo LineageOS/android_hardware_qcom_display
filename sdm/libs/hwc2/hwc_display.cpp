@@ -83,7 +83,7 @@ HWCColorMode::HWCColorMode(DisplayInterface *display_intf) : display_intf_(displ
 
 HWC2::Error HWCColorMode::Init() {
   PopulateColorModes();
-  return SetColorMode(HAL_COLOR_MODE_NATIVE);
+  return ApplyDefaultColorMode();
 }
 
 HWC2::Error HWCColorMode::DeInit() {
@@ -188,50 +188,116 @@ void HWCColorMode::PopulateColorModes() {
   DisplayError error = display_intf_->GetColorModeCount(&color_mode_count);
   if (error != kErrorNone || (color_mode_count == 0)) {
     DLOGW("GetColorModeCount failed, use native color mode");
-    PopulateTransform(HAL_COLOR_MODE_NATIVE, "native_identity");
+    PopulateTransform(HAL_COLOR_MODE_NATIVE, "native", "identity");
     return;
   }
 
   DLOGV_IF(kTagQDCM, "Color Modes supported count = %d", color_mode_count);
 
+  const std::string color_transform = "identity";
   std::vector<std::string> color_modes(color_mode_count);
   error = display_intf_->GetColorModes(&color_mode_count, &color_modes);
-
   for (uint32_t i = 0; i < color_mode_count; i++) {
     std::string &mode_string = color_modes.at(i);
     DLOGV_IF(kTagQDCM, "Color Mode[%d] = %s", i, mode_string.c_str());
-    if (mode_string.find("hal_native") != std::string::npos) {
-      PopulateTransform(HAL_COLOR_MODE_NATIVE, mode_string);
-    } else if (mode_string.find("hal_srgb") != std::string::npos) {
-      PopulateTransform(HAL_COLOR_MODE_SRGB, mode_string);
-    } else if (mode_string.find("hal_adobe") != std::string::npos) {
-      PopulateTransform(HAL_COLOR_MODE_ADOBE_RGB, mode_string);
-    } else if (mode_string.find("hal_dci_p3") != std::string::npos) {
-      PopulateTransform(HAL_COLOR_MODE_DCI_P3, mode_string);
-    } else if (mode_string.find("hal_display_p3") != std::string::npos) {
-      PopulateTransform(HAL_COLOR_MODE_DISPLAY_P3, mode_string);
+    AttrVal attr;
+    error = display_intf_->GetColorModeAttr(mode_string, &attr);
+    if (!attr.empty()) {
+      std::string color_gamut, dynamic_range, pic_quality;
+      for (auto &it : attr) {
+        if (it.first.find(kColorGamutAttribute) != std::string::npos) {
+          color_gamut = it.second;
+        } else if (it.first.find(kDynamicRangeAttribute) != std::string::npos) {
+          dynamic_range = it.second;
+        } else if (it.first.find(kPictureQualityAttribute) != std::string::npos) {
+          pic_quality = it.second;
+        }
+      }
+      if (dynamic_range == kHdr) {
+        continue;
+      }
+      if ((color_gamut == kNative) &&
+          (pic_quality.empty() || pic_quality == kStandard)) {
+        PopulateTransform(HAL_COLOR_MODE_NATIVE, mode_string, color_transform);
+      } else if ((color_gamut == kSrgb) &&
+                 (pic_quality.empty() || pic_quality == kStandard)) {
+        PopulateTransform(HAL_COLOR_MODE_SRGB, mode_string, color_transform);
+      } else if ((color_gamut == kDcip3) &&
+                 (pic_quality.empty() || pic_quality == kStandard)) {
+        PopulateTransform(HAL_COLOR_MODE_DCI_P3, mode_string, color_transform);
+      } else if ((color_gamut == kDisplayP3) &&
+                 (pic_quality.empty() || pic_quality == kStandard)) {
+        PopulateTransform(HAL_COLOR_MODE_DISPLAY_P3, mode_string, color_transform);
+      }
+    } else {
+      if (mode_string.find("hal_native") != std::string::npos) {
+        PopulateTransform(HAL_COLOR_MODE_NATIVE, mode_string, mode_string);
+      } else if (mode_string.find("hal_srgb") != std::string::npos) {
+        PopulateTransform(HAL_COLOR_MODE_SRGB, mode_string, mode_string);
+      } else if (mode_string.find("hal_adobe") != std::string::npos) {
+        PopulateTransform(HAL_COLOR_MODE_ADOBE_RGB, mode_string, mode_string);
+      } else if (mode_string.find("hal_dci_p3") != std::string::npos) {
+        PopulateTransform(HAL_COLOR_MODE_DCI_P3, mode_string, mode_string);
+      } else if (mode_string.find("hal_display_p3") != std::string::npos) {
+        PopulateTransform(HAL_COLOR_MODE_DISPLAY_P3, mode_string, mode_string);
+      }
     }
   }
 }
 
 void HWCColorMode::PopulateTransform(const android_color_mode_t &mode,
+                                     const std::string &color_mode,
                                      const std::string &color_transform) {
   // TODO(user): Check the substring from QDCM
   if (color_transform.find("identity") != std::string::npos) {
-    color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_IDENTITY] = color_transform;
+    color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_IDENTITY] = color_mode;
   } else if (color_transform.find("arbitrary") != std::string::npos) {
     // no color mode for arbitrary
   } else if (color_transform.find("inverse") != std::string::npos) {
-    color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_VALUE_INVERSE] = color_transform;
+    color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_VALUE_INVERSE] = color_mode;
   } else if (color_transform.find("grayscale") != std::string::npos) {
-    color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_GRAYSCALE] = color_transform;
+    color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_GRAYSCALE] = color_mode;
   } else if (color_transform.find("correct_protonopia") != std::string::npos) {
-    color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_CORRECT_PROTANOPIA] = color_transform;
+    color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_CORRECT_PROTANOPIA] = color_mode;
   } else if (color_transform.find("correct_deuteranopia") != std::string::npos) {
-    color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_CORRECT_DEUTERANOPIA] = color_transform;
+    color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_CORRECT_DEUTERANOPIA] = color_mode;
   } else if (color_transform.find("correct_tritanopia") != std::string::npos) {
-    color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_CORRECT_TRITANOPIA] = color_transform;
+    color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_CORRECT_TRITANOPIA] = color_mode;
+  } else {
+    color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_IDENTITY] = color_mode;
   }
+}
+
+HWC2::Error HWCColorMode::ApplyDefaultColorMode() {
+  android_color_mode_t color_mode = HAL_COLOR_MODE_NATIVE;
+  if (color_mode_transform_map_.size() == 1U) {
+    color_mode = color_mode_transform_map_.begin()->first;
+  } else if (color_mode_transform_map_.size() > 1U) {
+    std::string default_color_mode;
+    bool found = false;
+    DisplayError error = display_intf_->GetDefaultColorMode(&default_color_mode);
+    if (error == kErrorNone) {
+      // get the default mode corresponding android_color_mode_t
+      for (auto &it_mode : color_mode_transform_map_) {
+        for (auto &it : it_mode.second) {
+          if (it.second == default_color_mode) {
+            found = true;
+            break;
+          }
+        }
+        if (found) {
+          color_mode = it_mode.first;
+          break;
+        }
+      }
+    }
+
+    // return the first andrid_color_mode_t when we encouter if not found
+    if (!found) {
+      color_mode = color_mode_transform_map_.begin()->first;
+    }
+  }
+  return SetColorMode(color_mode);
 }
 
 void HWCColorMode::Dump(std::ostringstream* os) {
