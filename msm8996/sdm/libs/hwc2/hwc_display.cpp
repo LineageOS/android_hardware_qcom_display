@@ -334,14 +334,6 @@ void HWCDisplay::BuildLayerStack() {
       layer->flags.solid_fill = true;
     }
 
-    if (!hwc_layer->SupportedDataspace()) {
-      if (!layer->input_buffer->flags.secure) {
-        layer->flags.skip = true;
-      } else {
-        DLOGW("Unsupported dataspace: 0x%x", hwc_layer->GetLayerDataspace());
-      }
-    }
-
     // set default composition as GPU for SDM
     layer->composition = kCompositionGPU;
 

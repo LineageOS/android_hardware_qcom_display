@@ -174,10 +174,8 @@ HWC2::Error HWCLayer::SetLayerCompositionType(HWC2::Composition type) {
 }
 
 HWC2::Error HWCLayer::SetLayerDataspace(int32_t dataspace) {
-  if (dataspace_ != dataspace) {
-    geometry_changes_ |= kDataspace;
-    dataspace_ = dataspace;
-  }
+  // TODO(user): Implement later
+  geometry_changes_ |= kDataspace;
   return HWC2::Error::None;
 }
 
@@ -520,74 +518,6 @@ DisplayError HWCLayer::SetIGC(IGC_t source, LayerIGC *target) {
 
   return kErrorNone;
 }
-
-bool HWCLayer::SupportedDataspace() {
-  if (dataspace_ == HAL_DATASPACE_UNKNOWN) {
-    return true;
-  }
-
-  // Map deprecated dataspace values to appropriate
-  // new enums
-  if (dataspace_ & 0xffff) {
-    switch (dataspace_ & 0xffff) {
-      case HAL_DATASPACE_SRGB:
-        dataspace_ = HAL_DATASPACE_V0_SRGB;
-        break;
-      case HAL_DATASPACE_JFIF:
-        dataspace_ = HAL_DATASPACE_V0_JFIF;
-        break;
-      case HAL_DATASPACE_SRGB_LINEAR:
-        dataspace_ = HAL_DATASPACE_V0_SRGB_LINEAR;
-        break;
-      case HAL_DATASPACE_BT601_625:
-        dataspace_ = HAL_DATASPACE_V0_BT601_625;
-        break;
-      case HAL_DATASPACE_BT601_525:
-        dataspace_ = HAL_DATASPACE_V0_BT601_525;
-        break;
-      case HAL_DATASPACE_BT709:
-        dataspace_ = HAL_DATASPACE_V0_BT709;
-        break;
-      default:
-        // unknown legacy dataspace
-        DLOGE("Unsupported dataspace type %d", dataspace_);
-        return false;
-    }
-  }
-
-  LayerBuffer *layer_buffer = layer_->input_buffer;
-  auto transfer = (dataspace_ & HAL_DATASPACE_TRANSFER_MASK) >> HAL_DATASPACE_TRANSFER_SHIFT;
-  if (transfer != HAL_DATASPACE_TRANSFER_SRGB) {
-    return false;
-  } else {
-    layer_buffer->igc = kIGCsRGB;
-  }
-
-  bool ret = false;
-  auto range = (dataspace_ & HAL_DATASPACE_RANGE_MASK) >> HAL_DATASPACE_RANGE_SHIFT;
-  auto standard = (dataspace_ & HAL_DATASPACE_STANDARD_MASK) >> HAL_DATASPACE_STANDARD_SHIFT;
-
-  switch (standard) {
-    case  HAL_DATASPACE_STANDARD_BT709:
-      if (range !=  HAL_DATASPACE_RANGE_FULL) {
-        layer_buffer->csc = kCSCLimitedRange709;
-        ret = true;
-      }
-      break;
-    case HAL_DATASPACE_STANDARD_BT601_525:
-    case HAL_DATASPACE_STANDARD_BT601_525_UNADJUSTED:
-      ret = true;
-      layer_buffer->csc =
-        (range == HAL_DATASPACE_RANGE_FULL) ? kCSCFullRange601: kCSCLimitedRange601;
-      break;
-    default:
-      ret = false;
-      break;
-  };
-
-  return ret;
-}
-
 
 uint32_t HWCLayer::RoundToStandardFPS(float fps) {
   static const uint32_t standard_fps[4] = {24, 30, 48, 60};
