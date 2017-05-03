@@ -65,7 +65,7 @@ Tonemapper::~Tonemapper()
 
 //-----------------------------------------------------------------------------
 Tonemapper *Tonemapper::build(int type, void *colorMap, int colorMapSize, void *lutXform,
-                              int lutXformSize)
+                              int lutXformSize, bool isSecure)
 //-----------------------------------------------------------------------------
 {
   if (colorMapSize <= 0) {
@@ -76,7 +76,7 @@ Tonemapper *Tonemapper::build(int type, void *colorMap, int colorMapSize, void *
   // build new tonemapper
   Tonemapper *tonemapper = new Tonemapper();
 
-  tonemapper->engineContext = engine_initialize();
+  tonemapper->engineContext = engine_initialize(isSecure);
 
   void* caller_context = engine_backup();
   engine_bind(tonemapper->engineContext);

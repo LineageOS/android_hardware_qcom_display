@@ -303,7 +303,8 @@ DisplayError HWCToneMapper::AcquireToneMapSession(Layer *layer, uint32_t *sessio
   session->gpu_tone_mapper_ = TonemapperFactory_GetInstance(session->tone_map_config_.type,
                                                             layer->lut_3d.lutEntries,
                                                             layer->lut_3d.dim,
-                                                            grid_entries, grid_size);
+                                                            grid_entries, grid_size,
+                                                            session->tone_map_config_.secure);
 
   if (session->gpu_tone_mapper_ == NULL) {
     DLOGE("Get Tonemapper failed!");
