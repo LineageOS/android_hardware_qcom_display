@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2016, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015-2017, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -69,7 +69,9 @@ class ColorManagerProxy {
   DisplayError ColorMgrGetNumOfModes(uint32_t *mode_cnt);
   DisplayError ColorMgrGetModes(uint32_t *mode_cnt, SDEDisplayMode *modes);
   DisplayError ColorMgrSetMode(int32_t color_mode_id);
+  DisplayError ColorMgrGetModeInfo(int32_t mode_id, AttrVal *query);
   DisplayError ColorMgrSetColorTransform(uint32_t length, const double *trans_data);
+  DisplayError ColorMgrGetDefaultModeID(int32_t *mode_id);
   bool NeedsPartialUpdateDisable();
   DisplayError Commit();
 
