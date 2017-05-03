@@ -19,8 +19,7 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE_RELATIVE_PATH := hw
-LOCAL_MODULE_PATH_32          := $(TARGET_OUT_VENDOR)/lib
-LOCAL_MODULE_PATH_64          := $(TARGET_OUT_VENDOR)/lib64
+LOCAL_VENDOR_MODULE := true
 LOCAL_C_INCLUDES += hardware/libhardware/include
 LOCAL_CFLAGS := -Wconversion -Wall -Werror -Wno-sign-conversion
 LOCAL_CLANG  := true
