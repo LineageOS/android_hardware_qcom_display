@@ -37,6 +37,8 @@
 #include <core/sdm_types.h>
 #include <core/display_interface.h>
 
+#include <string>
+
 #include "hw_info_types.h"
 
 namespace sdm {

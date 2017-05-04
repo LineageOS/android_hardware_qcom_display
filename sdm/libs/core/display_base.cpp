@@ -827,7 +827,7 @@ DisplayError DisplayBase::SetColorModeInternal(const std::string &color_mode) {
   return error;
 }
 
-DisplayError DisplayBase::GetValueOfModeAttribute(const AttrVal &attr,const std::string &type,
+DisplayError DisplayBase::GetValueOfModeAttribute(const AttrVal &attr, const std::string &type,
                                                   std::string *value) {
   if (!value) {
     return kErrorParameters;
