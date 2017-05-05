@@ -694,6 +694,12 @@ static void PostRefresh(hwc_procs_t const *hwc_procs) {
 }
 
 void HWCSession::AsyncRefresh() {
+  // If a refresh request is already pending, do not post another request.
+  if (future_.valid() &&
+      future_.wait_for(std::chrono::milliseconds(0)) == std::future_status::timeout) {
+    return;
+  }
+
   future_ = std::async(PostRefresh, hwc_procs_);
 }
 
