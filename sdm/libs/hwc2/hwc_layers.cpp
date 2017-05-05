@@ -599,7 +599,7 @@ bool HWCLayer::SupportedDataspace() {
   ColorPrimaries sdm_primaries = {};
   ColorRange sdm_range = {};
 
-  auto transfer = (dataspace_ & HAL_DATASPACE_TRANSFER_MASK) >> HAL_DATASPACE_TRANSFER_SHIFT;
+  auto transfer = dataspace_ & HAL_DATASPACE_TRANSFER_MASK;
   // Handle transfer
   switch (transfer) {
     case HAL_DATASPACE_TRANSFER_SRGB:
@@ -619,7 +619,7 @@ bool HWCLayer::SupportedDataspace() {
   }
 
   // Handle standard
-  auto standard = (dataspace_ & HAL_DATASPACE_STANDARD_MASK) >> HAL_DATASPACE_STANDARD_SHIFT;
+  auto standard = dataspace_ & HAL_DATASPACE_STANDARD_MASK;
   switch (standard) {
     case  HAL_DATASPACE_STANDARD_BT709:
       sdm_primaries = ColorPrimaries_BT709_5;
@@ -644,7 +644,7 @@ bool HWCLayer::SupportedDataspace() {
   // TODO(user): Check transfer + primary combination
 
   // Handle range
-  auto range = (dataspace_ & HAL_DATASPACE_RANGE_MASK) >> HAL_DATASPACE_RANGE_SHIFT;
+  auto range = dataspace_ & HAL_DATASPACE_RANGE_MASK;
   switch (range) {
     case HAL_DATASPACE_RANGE_FULL:
       sdm_range = Range_Full;

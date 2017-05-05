@@ -1,4 +1,4 @@
-/* Copyright (c) 2015 - 2016, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015 - 2017, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -227,9 +227,17 @@ DisplayError ColorManagerProxy::ColorMgrSetMode(int32_t color_mode_id) {
   return color_intf_->ColorIntfSetDisplayMode(&pp_features_, 0, color_mode_id);
 }
 
+DisplayError ColorManagerProxy::ColorMgrGetModeInfo(int32_t mode_id, AttrVal *query) {
+  return color_intf_->ColorIntfGetModeInfo(&pp_features_, 0, mode_id, query);
+}
+
 DisplayError ColorManagerProxy::ColorMgrSetColorTransform(uint32_t length,
                                                           const double *trans_data) {
   return color_intf_->ColorIntfSetColorTransform(&pp_features_, 0, length, trans_data);
+}
+
+DisplayError ColorManagerProxy::ColorMgrGetDefaultModeID(int32_t *mode_id) {
+  return color_intf_->ColorIntfGetDefaultModeID(&pp_features_, 0, mode_id);
 }
 
 }  // namespace sdm
