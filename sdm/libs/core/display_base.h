@@ -145,6 +145,7 @@ class DisplayBase : public DisplayInterface, DumpImpl {
                                        std::string *value);
   DisplayError GetHdrColorMode(std::string *color_mode, bool *found_hdr);
   bool IsSupportColorModeAttribute(const std::string &color_mode);
+  DisplayState GetLastPowerMode();
 
   recursive_mutex recursive_mutex_;
   DisplayType display_type_;
@@ -183,6 +184,7 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   bool hdr_playback_ = false;
   bool hdr_mode_ = false;
   int disable_hdr_lut_gen_ = 0;
+  DisplayState last_power_mode_ = kStateOff;
 };
 
 }  // namespace sdm

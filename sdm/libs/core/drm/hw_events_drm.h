@@ -75,12 +75,14 @@ class HWEventsDRM : public HWEventsInterface {
   void HandleThermal(char *data) {}
   void HandleBlank(char *data) {}
   void HandleIdlePowerCollapse(char *data);
+  void HandlePanelDead(char *data);
   void PopulateHWEventData(const vector<HWEvent> &event_list);
   void WakeUpEventThread();
   DisplayError SetEventParser();
   DisplayError InitializePollFd();
   DisplayError CloseFds();
   DisplayError RegisterVSync();
+  DisplayError RegisterPanelDead(bool enable);
 
   HWEventHandler *event_handler_{};
   vector<HWEventData> event_data_list_{};
@@ -92,6 +94,7 @@ class HWEventsDRM : public HWEventsInterface {
   bool vsync_enabled_ = false;
   sde_drm::DRMDisplayToken token_ = {};
   bool is_primary_ = false;
+  uint32_t panel_dead_index_ = 0;
 };
 
 }  // namespace sdm

@@ -62,20 +62,24 @@ class DisplayPrimary : public DisplayBase, HWEventHandler {
   virtual void CECMessage(char *message) { }
   virtual void IdlePowerCollapse();
   virtual void PingPongTimeout();
+  virtual void PanelDead();
 
  private:
   bool NeedsAVREnable();
+  void ResetPanel();
 
   std::vector<HWEvent> event_list_ = { HWEvent::VSYNC, HWEvent::EXIT,
                                        HWEvent::IDLE_NOTIFY,
                                        HWEvent::SHOW_BLANK_EVENT,
                                        HWEvent::THERMAL_LEVEL,
                                        HWEvent::IDLE_POWER_COLLAPSE,
-                                       HWEvent::PINGPONG_TIMEOUT };
+                                       HWEvent::PINGPONG_TIMEOUT,
+                                       HWEvent::PANEL_DEAD };
   bool avr_prop_disabled_ = false;
   bool switch_to_cmd_ = false;
   bool handle_idle_timeout_ = false;
   uint32_t current_refresh_rate_ = 0;
+  bool reset_panel_ = false;
 };
 
 }  // namespace sdm

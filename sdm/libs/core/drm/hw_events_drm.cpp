@@ -93,6 +93,15 @@ DisplayError HWEventsDRM::InitializePollFd() {
       case HWEvent::IDLE_POWER_COLLAPSE:
       case HWEvent::PINGPONG_TIMEOUT:
         break;
+      case HWEvent::PANEL_DEAD: {
+        poll_fds_[i].fd = drmOpen("msm_drm", nullptr);
+        if (poll_fds_[i].fd < 0) {
+          DLOGE("drmOpen failed with error %d", poll_fds_[i].fd);
+          return kErrorResources;
+        }
+        poll_fds_[i].events = POLLIN | POLLPRI | POLLERR;;
+        panel_dead_index_ = i;
+      } break;
     }
   }
 
@@ -124,6 +133,9 @@ DisplayError HWEventsDRM::SetEventParser() {
         break;
       case HWEvent::IDLE_POWER_COLLAPSE:
         event_data.event_parser = &HWEventsDRM::HandleIdlePowerCollapse;
+        break;
+      case HWEvent::PANEL_DEAD:
+        event_data.event_parser = &HWEventsDRM::HandlePanelDead;
         break;
       default:
         error = kErrorParameters;
@@ -169,11 +181,14 @@ DisplayError HWEventsDRM::Init(int display_type, HWEventHandler *event_handler,
     return kErrorResources;
   }
 
+  RegisterPanelDead(true);
+
   return kErrorNone;
 }
 
 DisplayError HWEventsDRM::Deinit() {
   exit_threads_ = true;
+  RegisterPanelDead(false);
   Sys::pthread_cancel_(event_thread_);
   WakeUpEventThread();
   pthread_join(event_thread_, NULL);
@@ -232,6 +247,10 @@ DisplayError HWEventsDRM::CloseFds() {
       case HWEvent::THERMAL_LEVEL:
       case HWEvent::IDLE_POWER_COLLAPSE:
         break;
+      case HWEvent::PANEL_DEAD:
+        drmClose(poll_fds_[i].fd);
+        poll_fds_[i].fd = -1;
+        break;
       default:
         return kErrorNotSupported;
     }
@@ -274,6 +293,7 @@ void *HWEventsDRM::DisplayEventHandler() {
 
       switch (event_data_list_[i].event_type) {
         case HWEvent::VSYNC:
+        case HWEvent::PANEL_DEAD:
           if (poll_fd.revents & (POLLIN | POLLPRI)) {
             (this->*(event_data_list_[i]).event_parser)(nullptr);
           }
@@ -321,6 +341,27 @@ DisplayError HWEventsDRM::RegisterVSync() {
   return kErrorNone;
 }
 
+DisplayError HWEventsDRM::RegisterPanelDead(bool enable) {
+  struct drm_msm_event_req req = {};
+  int ret = 0;
+
+  req.object_id = token_.conn_id;
+  req.object_type = DRM_MODE_OBJECT_CONNECTOR;
+  req.event = DRM_EVENT_PANEL_DEAD;
+  if (enable) {
+    ret = drmIoctl(poll_fds_[panel_dead_index_].fd, DRM_IOCTL_MSM_REGISTER_EVENT, &req);
+  } else {
+    ret = drmIoctl(poll_fds_[panel_dead_index_].fd, DRM_IOCTL_MSM_DEREGISTER_EVENT, &req);
+  }
+
+  if (ret) {
+    DLOGE("register panel dead enable:%d failed", enable);
+    return kErrorResources;
+  }
+
+  return kErrorNone;
+}
+
 void HWEventsDRM::HandleVSync(char *data) {
   drmEventContext event = {};
   event.version = DRM_EVENT_CONTEXT_VERSION;
@@ -329,6 +370,47 @@ void HWEventsDRM::HandleVSync(char *data) {
   if (error != 0) {
     DLOGE("drmHandleEvent failed: %i", error);
   }
+}
+
+void HWEventsDRM::HandlePanelDead(char *data) {
+  char event_data[kMaxStringLength] = {0};
+  int32_t size;
+  struct drm_msm_event_resp *event_resp = NULL;
+
+  size = (int32_t)Sys::pread_(poll_fds_[panel_dead_index_].fd, event_data, kMaxStringLength, 0);
+  if (size <= 0) {
+    return;
+  }
+
+  if (size > kMaxStringLength) {
+    DLOGE("event size %d is greater than event buffer size %zd\n", size, kMaxStringLength);
+    return;
+  }
+
+  if (size < (int32_t)sizeof(*event_resp)) {
+    DLOGE("Invalid event size %d expected %zd\n", size, sizeof(*event_resp));
+    return;
+  }
+
+  int32_t i = 0;
+  while (i < size) {
+    event_resp = (struct drm_msm_event_resp *)&event_data[i];
+    switch (event_resp->base.type) {
+      case DRM_EVENT_PANEL_DEAD:
+      {
+        DLOGI("Received panel dead event");
+        event_handler_->PanelDead();
+        break;
+      }
+      default: {
+        DLOGE("invalid event %d", event_resp->base.type);
+        break;
+      }
+    }
+    i += event_resp->base.length;
+  }
+
+  return;
 }
 
 void HWEventsDRM::VSyncHandlerCallback(int fd, unsigned int sequence, unsigned int tv_sec,

@@ -416,6 +416,10 @@ DisplayError DisplayBase::GetVSyncState(bool *enabled) {
   return kErrorNone;
 }
 
+DisplayState DisplayBase::GetLastPowerMode() {
+  return last_power_mode_;
+}
+
 DisplayError DisplayBase::SetDisplayState(DisplayState state) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
@@ -450,11 +454,13 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state) {
     }
 
     active = true;
+    last_power_mode_ = kStateOn;
     break;
 
   case kStateDoze:
     error = hw_intf_->Doze();
     active = true;
+    last_power_mode_ = kStateDoze;
     break;
 
   case kStateDozeSuspend:
@@ -462,11 +468,12 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state) {
     if (display_type_ != kPrimary) {
       active = true;
     }
-
+    last_power_mode_ = kStateDozeSuspend;
     break;
 
   case kStateStandby:
     error = hw_intf_->Standby();
+    last_power_mode_ = kStateStandby;
     break;
 
   default:

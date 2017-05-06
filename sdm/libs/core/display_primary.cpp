@@ -91,6 +91,12 @@ DisplayError DisplayPrimary::Prepare(LayerStack *layer_stack) {
   uint32_t display_width = display_attributes_.x_pixels;
   uint32_t display_height = display_attributes_.y_pixels;
 
+  if (reset_panel_) {
+    DLOGW("panel is in bad state, resetting the panel");
+    ResetPanel();
+    reset_panel_ = false;
+  }
+
   if (NeedsMixerReconfiguration(layer_stack, &new_mixer_width, &new_mixer_height)) {
     error = ReconfigureMixer(new_mixer_width, new_mixer_height);
     if (error != kErrorNone) {
@@ -308,6 +314,14 @@ void DisplayPrimary::IdlePowerCollapse() {
   comp_manager_->ProcessIdlePowerCollapse(display_comp_ctx_);
 }
 
+void DisplayPrimary::PanelDead() {
+  event_handler_->Refresh();
+  {
+    lock_guard<recursive_mutex> obj(recursive_mutex_);
+    reset_panel_ = true;
+  }
+}
+
 DisplayError DisplayPrimary::GetPanelBrightness(int *level) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   return hw_intf_->GetPanelBrightness(level);
@@ -357,6 +371,29 @@ bool DisplayPrimary::NeedsAVREnable() {
   return (hw_panel_info_.mode == kModeVideo && ((hw_panel_info_.dynamic_fps &&
           hw_panel_info_.dfps_porch_mode) || (!hw_panel_info_.dynamic_fps &&
           hw_panel_info_.min_fps != hw_panel_info_.max_fps)));
+}
+
+void DisplayPrimary::ResetPanel() {
+  DisplayError status = kErrorNone;
+
+  DLOGI("Powering off primary");
+  status = SetDisplayState(kStateOff);
+  if (status != kErrorNone) {
+    DLOGE("power-off on primary failed with error = %d", status);
+  }
+
+  DLOGI("Restoring power mode on primary");
+  DisplayState mode = GetLastPowerMode();
+  status = SetDisplayState(mode);
+  if (status != kErrorNone) {
+    DLOGE("Setting power mode = %d on primary failed with error = %d", mode, status);
+  }
+
+  DLOGI("Enabling HWVsync");
+  status = SetVSyncState(true);
+  if (status != kErrorNone) {
+    DLOGE("enabling vsync failed for primary with error = %d", status);
+  }
 }
 
 }  // namespace sdm

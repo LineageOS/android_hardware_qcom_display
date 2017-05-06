@@ -44,6 +44,7 @@ enum HWEvent {
   THERMAL_LEVEL,
   IDLE_POWER_COLLAPSE,
   PINGPONG_TIMEOUT,
+  PANEL_DEAD,
 };
 
 class HWEventsInterface {
