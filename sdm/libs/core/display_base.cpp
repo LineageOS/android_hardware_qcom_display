@@ -804,6 +804,10 @@ DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
   return error;
 }
 
+DisplayError DisplayBase::SetColorModeById(int32_t color_mode_id) {
+  return color_mgr_->ColorMgrSetMode(color_mode_id);
+}
+
 DisplayError DisplayBase::SetColorModeInternal(const std::string &color_mode) {
   DLOGV_IF(kTagQDCM, "Color Mode = %s", color_mode.c_str());
 
