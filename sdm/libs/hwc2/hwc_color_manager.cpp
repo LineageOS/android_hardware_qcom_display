@@ -28,7 +28,6 @@
 */
 
 #include <dlfcn.h>
-#include <powermanager/IPowerManager.h>
 #include <cutils/sockets.h>
 #include <cutils/native_handle.h>
 #include <utils/String16.h>
@@ -386,17 +385,6 @@ HWCQDCMModeManager *HWCQDCMModeManager::CreateQDCMModeMgr() {
 
     // retrieve system GPU idle timeout value for later to recover.
     mode_mgr->entry_timeout_ = UINT32(HWCDebugHandler::GetIdleTimeoutMs());
-
-    // acquire the binder handle to Android system PowerManager for later use.
-    android::sp<android::IBinder> binder =
-        android::defaultServiceManager()->checkService(android::String16("power"));
-    if (binder == NULL) {
-      DLOGW("Application can't connect to  power manager service");
-      delete mode_mgr;
-      mode_mgr = NULL;
-    } else {
-      mode_mgr->power_mgr_ = android::interface_cast<android::IPowerManager>(binder);
-    }
   }
 
   return mode_mgr;
@@ -405,30 +393,6 @@ HWCQDCMModeManager *HWCQDCMModeManager::CreateQDCMModeMgr() {
 HWCQDCMModeManager::~HWCQDCMModeManager() {
   if (socket_fd_ >= 0)
     ::close(socket_fd_);
-}
-
-int HWCQDCMModeManager::AcquireAndroidWakeLock(bool enable) {
-  int ret = 0;
-
-  if (enable) {
-    if (wakelock_token_ == NULL) {
-      android::sp<android::IBinder> binder = new android::BBinder();
-      android::status_t status = power_mgr_->acquireWakeLock(
-          (kFullWakeLock | kAcquireCauseWakeup | kONAfterRelease), binder,
-          android::String16(kTagName), android::String16(kPackageName));
-      if (status == android::NO_ERROR) {
-        wakelock_token_ = binder;
-      }
-    }
-  } else {
-    if (wakelock_token_ != NULL && power_mgr_ != NULL) {
-      power_mgr_->releaseWakeLock(wakelock_token_, 0);
-      wakelock_token_.clear();
-      wakelock_token_ = NULL;
-    }
-  }
-
-  return ret;
 }
 
 int HWCQDCMModeManager::EnableActiveFeatures(bool enable,
@@ -486,7 +450,6 @@ int HWCQDCMModeManager::EnableQDCMMode(bool enable, HWCDisplay *hwc_display) {
 
   ret = EnableActiveFeatures((enable ? false : true), kActiveFeatureCMD[kCABLFeature],
                              &cabl_was_running_);
-  ret = AcquireAndroidWakeLock(enable);
 
   // if enter QDCM mode, disable GPU fallback idle timeout.
   if (hwc_display) {
@@ -497,4 +460,4 @@ int HWCQDCMModeManager::EnableQDCMMode(bool enable, HWCDisplay *hwc_display) {
   return ret;
 }
 
-}  // namespace sdm
+} // namespace sdm
