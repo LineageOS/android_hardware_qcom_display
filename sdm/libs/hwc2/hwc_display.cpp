@@ -30,6 +30,7 @@
 #include <qd_utils.h>
 
 #include <algorithm>
+#include <iomanip>
 #include <map>
 #include <sstream>
 #include <string>
@@ -60,11 +61,29 @@ static void ApplyDeInterlaceAdjustment(Layer *layer) {
   }
 }
 
+// This weight function is needed because the color primaries are not sorted by gamut size
+static ColorPrimaries WidestPrimaries(ColorPrimaries p1, ColorPrimaries p2) {
+  int weight = 10;
+  int lp1 = p1, lp2 = p2;
+  // TODO(user) add weight to other wide gamut primaries
+  if (lp1 == ColorPrimaries_BT2020) {
+    lp1 *= weight;
+  }
+  if (lp1 == ColorPrimaries_BT2020) {
+    lp2 *= weight;
+  }
+  if (lp1 >= lp2) {
+    return p1;
+  } else {
+    return p2;
+  }
+}
+
 HWCColorMode::HWCColorMode(DisplayInterface *display_intf) : display_intf_(display_intf) {}
 
 HWC2::Error HWCColorMode::Init() {
   PopulateColorModes();
-  return SetColorMode(HAL_COLOR_MODE_NATIVE);
+  return ApplyDefaultColorMode();
 }
 
 HWC2::Error HWCColorMode::DeInit() {
@@ -169,50 +188,133 @@ void HWCColorMode::PopulateColorModes() {
   DisplayError error = display_intf_->GetColorModeCount(&color_mode_count);
   if (error != kErrorNone || (color_mode_count == 0)) {
     DLOGW("GetColorModeCount failed, use native color mode");
-    PopulateTransform(HAL_COLOR_MODE_NATIVE, "native_identity");
+    PopulateTransform(HAL_COLOR_MODE_NATIVE, "native", "identity");
     return;
   }
 
   DLOGV_IF(kTagQDCM, "Color Modes supported count = %d", color_mode_count);
 
+  const std::string color_transform = "identity";
   std::vector<std::string> color_modes(color_mode_count);
   error = display_intf_->GetColorModes(&color_mode_count, &color_modes);
-
   for (uint32_t i = 0; i < color_mode_count; i++) {
     std::string &mode_string = color_modes.at(i);
     DLOGV_IF(kTagQDCM, "Color Mode[%d] = %s", i, mode_string.c_str());
-    if (mode_string.find("hal_native") != std::string::npos) {
-      PopulateTransform(HAL_COLOR_MODE_NATIVE, mode_string);
-    } else if (mode_string.find("hal_srgb") != std::string::npos) {
-      PopulateTransform(HAL_COLOR_MODE_SRGB, mode_string);
-    } else if (mode_string.find("hal_adobe") != std::string::npos) {
-      PopulateTransform(HAL_COLOR_MODE_ADOBE_RGB, mode_string);
-    } else if (mode_string.find("hal_dci_p3") != std::string::npos) {
-      PopulateTransform(HAL_COLOR_MODE_DCI_P3, mode_string);
-    } else if (mode_string.find("hal_display_p3") != std::string::npos) {
-      PopulateTransform(HAL_COLOR_MODE_DISPLAY_P3, mode_string);
+    AttrVal attr;
+    error = display_intf_->GetColorModeAttr(mode_string, &attr);
+    if (!attr.empty()) {
+      std::string color_gamut, dynamic_range, pic_quality;
+      for (auto &it : attr) {
+        if (it.first.find(kColorGamutAttribute) != std::string::npos) {
+          color_gamut = it.second;
+        } else if (it.first.find(kDynamicRangeAttribute) != std::string::npos) {
+          dynamic_range = it.second;
+        } else if (it.first.find(kPictureQualityAttribute) != std::string::npos) {
+          pic_quality = it.second;
+        }
+      }
+      if (dynamic_range == kHdr) {
+        continue;
+      }
+      if ((color_gamut == kNative) &&
+          (pic_quality.empty() || pic_quality == kStandard)) {
+        PopulateTransform(HAL_COLOR_MODE_NATIVE, mode_string, color_transform);
+      } else if ((color_gamut == kSrgb) &&
+                 (pic_quality.empty() || pic_quality == kStandard)) {
+        PopulateTransform(HAL_COLOR_MODE_SRGB, mode_string, color_transform);
+      } else if ((color_gamut == kDcip3) &&
+                 (pic_quality.empty() || pic_quality == kStandard)) {
+        PopulateTransform(HAL_COLOR_MODE_DCI_P3, mode_string, color_transform);
+      } else if ((color_gamut == kDisplayP3) &&
+                 (pic_quality.empty() || pic_quality == kStandard)) {
+        PopulateTransform(HAL_COLOR_MODE_DISPLAY_P3, mode_string, color_transform);
+      }
+    } else {
+      if (mode_string.find("hal_native") != std::string::npos) {
+        PopulateTransform(HAL_COLOR_MODE_NATIVE, mode_string, mode_string);
+      } else if (mode_string.find("hal_srgb") != std::string::npos) {
+        PopulateTransform(HAL_COLOR_MODE_SRGB, mode_string, mode_string);
+      } else if (mode_string.find("hal_adobe") != std::string::npos) {
+        PopulateTransform(HAL_COLOR_MODE_ADOBE_RGB, mode_string, mode_string);
+      } else if (mode_string.find("hal_dci_p3") != std::string::npos) {
+        PopulateTransform(HAL_COLOR_MODE_DCI_P3, mode_string, mode_string);
+      } else if (mode_string.find("hal_display_p3") != std::string::npos) {
+        PopulateTransform(HAL_COLOR_MODE_DISPLAY_P3, mode_string, mode_string);
+      }
     }
   }
 }
 
 void HWCColorMode::PopulateTransform(const android_color_mode_t &mode,
+                                     const std::string &color_mode,
                                      const std::string &color_transform) {
   // TODO(user): Check the substring from QDCM
   if (color_transform.find("identity") != std::string::npos) {
-    color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_IDENTITY] = color_transform;
+    color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_IDENTITY] = color_mode;
   } else if (color_transform.find("arbitrary") != std::string::npos) {
     // no color mode for arbitrary
   } else if (color_transform.find("inverse") != std::string::npos) {
-    color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_VALUE_INVERSE] = color_transform;
+    color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_VALUE_INVERSE] = color_mode;
   } else if (color_transform.find("grayscale") != std::string::npos) {
-    color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_GRAYSCALE] = color_transform;
+    color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_GRAYSCALE] = color_mode;
   } else if (color_transform.find("correct_protonopia") != std::string::npos) {
-    color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_CORRECT_PROTANOPIA] = color_transform;
+    color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_CORRECT_PROTANOPIA] = color_mode;
   } else if (color_transform.find("correct_deuteranopia") != std::string::npos) {
-    color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_CORRECT_DEUTERANOPIA] = color_transform;
+    color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_CORRECT_DEUTERANOPIA] = color_mode;
   } else if (color_transform.find("correct_tritanopia") != std::string::npos) {
-    color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_CORRECT_TRITANOPIA] = color_transform;
+    color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_CORRECT_TRITANOPIA] = color_mode;
+  } else {
+    color_mode_transform_map_[mode][HAL_COLOR_TRANSFORM_IDENTITY] = color_mode;
   }
+}
+
+HWC2::Error HWCColorMode::ApplyDefaultColorMode() {
+  android_color_mode_t color_mode = HAL_COLOR_MODE_NATIVE;
+  if (color_mode_transform_map_.size() == 1U) {
+    color_mode = color_mode_transform_map_.begin()->first;
+  } else if (color_mode_transform_map_.size() > 1U) {
+    std::string default_color_mode;
+    bool found = false;
+    DisplayError error = display_intf_->GetDefaultColorMode(&default_color_mode);
+    if (error == kErrorNone) {
+      // get the default mode corresponding android_color_mode_t
+      for (auto &it_mode : color_mode_transform_map_) {
+        for (auto &it : it_mode.second) {
+          if (it.second == default_color_mode) {
+            found = true;
+            break;
+          }
+        }
+        if (found) {
+          color_mode = it_mode.first;
+          break;
+        }
+      }
+    }
+
+    // return the first andrid_color_mode_t when we encouter if not found
+    if (!found) {
+      color_mode = color_mode_transform_map_.begin()->first;
+    }
+  }
+  return SetColorMode(color_mode);
+}
+
+void HWCColorMode::Dump(std::ostringstream* os) {
+  *os << "color modes supported: ";
+  for (auto it : color_mode_transform_map_) {
+    *os << it.first <<" ";
+  }
+  *os << "current mode: " << current_color_mode_ << std::endl;
+  *os << "current transform: ";
+  for (uint32_t i = 0; i < kColorTransformMatrixCount; i++) {
+    if (i % 4 == 0) {
+     *os << std::endl;
+    }
+    *os << std::fixed << std::setprecision(2) << std::setw(6) << std::setfill(' ')
+        << color_matrix_[i] << " ";
+  }
+  *os << std::endl;
 }
 
 HWCDisplay::HWCDisplay(CoreInterface *core_intf, HWCCallbacks *callbacks, DisplayType type,
@@ -313,10 +415,12 @@ HWC2::Error HWCDisplay::DestroyLayer(hwc2_layer_t layer_id) {
   return HWC2::Error::None;
 }
 
+
 void HWCDisplay::BuildLayerStack() {
   layer_stack_ = LayerStack();
   display_rect_ = LayerRect();
   metadata_refresh_rate_ = 0;
+  auto working_primaries = ColorPrimaries_BT709_5;
 
   // Add one layer for fb target
   // TODO(user): Add blit target layers
@@ -328,6 +432,14 @@ void HWCDisplay::BuildLayerStack() {
     } else if (hwc_layer->GetClientRequestedCompositionType() == HWC2::Composition::SolidColor) {
       layer->flags.solid_fill = true;
     }
+
+    if (!hwc_layer->SupportedDataspace()) {
+        layer->flags.skip = true;
+        DLOGW_IF(kTagStrategy, "Unsupported dataspace: 0x%x", hwc_layer->GetLayerDataspace());
+    }
+
+    working_primaries = WidestPrimaries(working_primaries,
+                                        layer->input_buffer.color_metadata.colorPrimaries);
 
     // set default composition as GPU for SDM
     layer->composition = kCompositionGPU;
@@ -407,6 +519,19 @@ void HWCDisplay::BuildLayerStack() {
 
     layer_stack_.layers.push_back(layer);
   }
+
+
+  for (auto hwc_layer : layer_set_) {
+    auto layer = hwc_layer->GetSDMLayer();
+    if (layer->input_buffer.color_metadata.colorPrimaries != working_primaries &&
+        !hwc_layer->SupportLocalConversion(working_primaries)) {
+      layer->flags.skip = true;
+    }
+    if (layer->flags.skip) {
+      layer_stack_.flags.skip_present = true;
+    }
+  }
+
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
   layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0);
   // Append client target to the layer stack
@@ -459,7 +584,7 @@ HWC2::Error HWCDisplay::SetVsyncEnabled(HWC2::Vsync enabled) {
   DLOGV("Display ID: %d enabled: %s", id_, to_string(enabled).c_str());
   DisplayError error = kErrorNone;
 
-  if (shutdown_pending_) {
+  if (shutdown_pending_ || !callbacks_->VsyncCallbackRegistered()) {
     return HWC2::Error::None;
   }
 
@@ -1355,8 +1480,20 @@ HWC2::Error HWCDisplay::SetCursorPosition(hwc2_layer_t layer, int x, int y) {
     return HWC2::Error::None;
   }
 
-  // TODO(user): Validate layer
-  // TODO(user): Check if we're in a validate/present cycle
+  if (GetHWCLayer(layer) == nullptr) {
+    return HWC2::Error::BadLayer;
+  }
+
+  DisplayState state;
+  if (display_intf_->GetDisplayState(&state) == kErrorNone) {
+    if (state != kStateOn) {
+      return HWC2::Error::None;
+    }
+  }
+
+  if (!validated_) {
+    return HWC2::Error::NotValidated;
+  }
 
   auto error = display_intf_->SetCursorPosition(x, y);
   if (error != kErrorNone) {
@@ -1603,24 +1740,27 @@ void HWCDisplay::CloseAcquireFds() {
 std::string HWCDisplay::Dump() {
   std::ostringstream os;
   os << "-------------------------------" << std::endl;
-  os << "HWC2 LayerDump display_id: " << id_ << std::endl;
+  os << "HWC2 display_id: " << id_ << std::endl;
   for (auto layer : layer_set_) {
     auto sdm_layer = layer->GetSDMLayer();
     auto transform = sdm_layer->transform;
-    os << "-------------------------------" << std::endl;
-    os << "layer_id: " << layer->GetId() << std::endl;
-    os << "\tz: " << layer->GetZ() << std::endl;
-    os << "\tclient(SF) composition: " <<
-          to_string(layer->GetClientRequestedCompositionType()).c_str() << std::endl;
-    os << "\tdevice(SDM) composition: " <<
-          to_string(layer->GetDeviceSelectedCompositionType()).c_str() << std::endl;
-    os << "\tplane_alpha: " << std::to_string(sdm_layer->plane_alpha).c_str() << std::endl;
-    os << "\tformat: " << GetFormatString(sdm_layer->input_buffer.format) << std::endl;
-    os << "\ttransform: rot: " << transform.rotation << " flip_h: " << transform.flip_horizontal <<
-          " flip_v: "<< transform.flip_vertical << std::endl;
-    os << "\tbuffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec
+    os << "layer: " << layer->GetId();
+    os << " z: " << layer->GetZ();
+    os << " compositon: " <<
+          to_string(layer->GetClientRequestedCompositionType()).c_str();
+    os << "/" <<
+          to_string(layer->GetDeviceSelectedCompositionType()).c_str();
+    os << " alpha: " << std::to_string(sdm_layer->plane_alpha).c_str();
+    os << " format: " << GetFormatString(sdm_layer->input_buffer.format);
+    os << " transform: " << transform.rotation << "/" << transform.flip_horizontal <<
+          "/"<< transform.flip_vertical;
+    os << " buffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec
        << std::endl;
   }
+  if (color_mode_) {
+    color_mode_->Dump(&os);
+  }
+  os << "-------------------------------" << std::endl;
   return os.str();
 }
 }  // namespace sdm
