@@ -103,9 +103,7 @@ class HWCSession : hwc_composer_device_1_t, public qClient::BnQClient {
   android::status_t ConfigureRefreshRate(const android::Parcel *input_parcel);
   android::status_t QdcmCMDHandler(const android::Parcel *input_parcel,
                                    android::Parcel *output_parcel);
-  android::status_t ControlPartialUpdate(const android::Parcel *input_parcel,
-                                         android::Parcel *output_parcel,
-                                         bool *refresh_screen);
+  android::status_t ControlPartialUpdate(const android::Parcel *input_parcel, android::Parcel *out);
   android::status_t OnMinHdcpEncryptionLevelChange(const android::Parcel *input_parcel,
                                                    android::Parcel *output_parcel);
   android::status_t SetPanelBrightness(const android::Parcel *input_parcel,
@@ -114,8 +112,7 @@ class HWCSession : hwc_composer_device_1_t, public qClient::BnQClient {
                                        android::Parcel *output_parcel);
   // These functions return the actual display config info as opposed to FB
   android::status_t HandleSetActiveDisplayConfig(const android::Parcel *input_parcel,
-                                                 android::Parcel *output_parcel,
-                                                 bool *refresh_screen);
+                                                 android::Parcel *output_parcel);
   android::status_t HandleGetActiveDisplayConfig(const android::Parcel *input_parcel,
                                                  android::Parcel *output_parcel);
   android::status_t HandleGetDisplayConfigCount(const android::Parcel *input_parcel,
