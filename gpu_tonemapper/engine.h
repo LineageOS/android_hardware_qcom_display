@@ -36,6 +36,7 @@ void engine_set2DInputBuffer(int binding, unsigned int textureID);
 void engine_set3DInputBuffer(int binding, unsigned int textureID);
 void engine_setExternalInputBuffer(int binding, unsigned int textureID);
 void engine_setDestination(int id, int x, int y, int w, int h);
+void engine_setData2f(int loc, float* data);
 
 int engine_blit(int);
 
