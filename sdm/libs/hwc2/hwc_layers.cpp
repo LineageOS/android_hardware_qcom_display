@@ -614,6 +614,12 @@ bool HWCLayer::SupportedDataspace() {
     case HAL_DATASPACE_TRANSFER_HLG:
       sdm_transfer = Transfer_HLG;
       break;
+    case HAL_DATASPACE_TRANSFER_LINEAR:
+      sdm_transfer = Transfer_Linear;
+      break;
+    case HAL_DATASPACE_TRANSFER_GAMMA2_2:
+      sdm_transfer = Transfer_Gamma2_2;
+      break;
     default:
       return false;
   }
@@ -635,7 +641,7 @@ bool HWCLayer::SupportedDataspace() {
     case HAL_DATASPACE_STANDARD_DCI_P3:
       sdm_primaries = ColorPrimaries_DCIP3;
       break;
-    case HAL_DATASPACE_BT2020:
+    case HAL_DATASPACE_STANDARD_BT2020:
       sdm_primaries = ColorPrimaries_BT2020;
       break;
     default:
