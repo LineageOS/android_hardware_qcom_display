@@ -150,9 +150,11 @@ void HWCDebugHandler::Verbose(DebugTag tag, const char *format, ...) {
 
 void HWCDebugHandler::BeginTrace(const char *class_name, const char *function_name,
                                  const char *custom_string) {
-  char name[PATH_MAX] = {0};
-  snprintf(name, sizeof(name), "%s::%s::%s", class_name, function_name, custom_string);
-  atrace_begin(ATRACE_TAG, name);
+  if (atrace_is_tag_enabled(ATRACE_TAG)) {
+    char name[PATH_MAX] = {0};
+    snprintf(name, sizeof(name), "%s::%s::%s", class_name, function_name, custom_string);
+    atrace_begin(ATRACE_TAG, name);
+  }
 }
 
 void HWCDebugHandler::EndTrace() {
