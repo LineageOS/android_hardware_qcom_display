@@ -111,6 +111,10 @@ HWC2::Error HWCColorMode::GetColorModes(uint32_t *out_num_modes,
 
 HWC2::Error HWCColorMode::SetColorMode(android_color_mode_t mode) {
   // first mode in 2D matrix is the mode (identity)
+  if (color_mode_transform_map_.find(mode) == color_mode_transform_map_.end()) {
+    DLOGE("Could not find mode: %d", mode);
+    return HWC2::Error::BadParameter;
+  }
   auto status = HandleColorModeTransform(mode, current_color_transform_, color_matrix_);
   if (status != HWC2::Error::None) {
     DLOGE("failed for mode = %d", mode);
