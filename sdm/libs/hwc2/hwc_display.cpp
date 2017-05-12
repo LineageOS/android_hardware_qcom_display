@@ -119,6 +119,15 @@ HWC2::Error HWCColorMode::SetColorMode(android_color_mode_t mode) {
   return status;
 }
 
+HWC2::Error HWCColorMode::SetColorModeById(int32_t color_mode_id) {
+  DLOGI("Applying mode: %d", color_mode_id);
+  DisplayError error = display_intf_->SetColorModeById(color_mode_id);
+  if (error != kErrorNone) {
+    return HWC2::Error::BadParameter;
+  }
+  return HWC2::Error::None;
+}
+
 HWC2::Error HWCColorMode::SetColorTransform(const float *matrix, android_color_transform_t hint) {
   if (!matrix) {
     return HWC2::Error::BadParameter;

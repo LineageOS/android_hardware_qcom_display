@@ -221,6 +221,34 @@ HWC2::Error HWCLayer::SetLayerCompositionType(HWC2::Composition type) {
 }
 
 HWC2::Error HWCLayer::SetLayerDataspace(int32_t dataspace) {
+  // Map deprecated dataspace values to appropriate
+  // new enums
+  if (dataspace & 0xffff) {
+    switch (dataspace & 0xffff) {
+      case HAL_DATASPACE_SRGB:
+        dataspace = HAL_DATASPACE_V0_SRGB;
+        break;
+      case HAL_DATASPACE_JFIF:
+        dataspace = HAL_DATASPACE_V0_JFIF;
+        break;
+      case HAL_DATASPACE_SRGB_LINEAR:
+        dataspace = HAL_DATASPACE_V0_SRGB_LINEAR;
+        break;
+      case HAL_DATASPACE_BT601_625:
+        dataspace = HAL_DATASPACE_V0_BT601_625;
+        break;
+      case HAL_DATASPACE_BT601_525:
+        dataspace = HAL_DATASPACE_V0_BT601_525;
+        break;
+      case HAL_DATASPACE_BT709:
+        dataspace = HAL_DATASPACE_V0_BT709;
+        break;
+      default:
+        // unknown legacy dataspace
+        DLOGW_IF(kTagQDCM, "Unsupported dataspace type %d", dataspace);
+    }
+  }
+
   if (dataspace_ != dataspace) {
     geometry_changes_ |= kDataspace;
     dataspace_ = dataspace;
@@ -562,35 +590,6 @@ bool HWCLayer::SupportedDataspace() {
   if (dataspace_ == HAL_DATASPACE_UNKNOWN) {
     // Pick values from metadata
     return true;
-  }
-
-  // Map deprecated dataspace values to appropriate
-  // new enums
-  if (dataspace_ & 0xffff) {
-    switch (dataspace_ & 0xffff) {
-      case HAL_DATASPACE_SRGB:
-        dataspace_ = HAL_DATASPACE_V0_SRGB;
-        break;
-      case HAL_DATASPACE_JFIF:
-        dataspace_ = HAL_DATASPACE_V0_JFIF;
-        break;
-      case HAL_DATASPACE_SRGB_LINEAR:
-        dataspace_ = HAL_DATASPACE_V0_SRGB_LINEAR;
-        break;
-      case HAL_DATASPACE_BT601_625:
-        dataspace_ = HAL_DATASPACE_V0_BT601_625;
-        break;
-      case HAL_DATASPACE_BT601_525:
-        dataspace_ = HAL_DATASPACE_V0_BT601_525;
-        break;
-      case HAL_DATASPACE_BT709:
-        dataspace_ = HAL_DATASPACE_V0_BT709;
-        break;
-      default:
-        // unknown legacy dataspace
-        DLOGE("Unsupported dataspace type %d", dataspace_);
-        return false;
-    }
   }
 
   LayerBuffer *layer_buffer = &layer_->input_buffer;
