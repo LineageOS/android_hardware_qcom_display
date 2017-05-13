@@ -49,5 +49,9 @@ else
     LOCAL_SRC_FILES += hwc_buffer_allocator.cpp
 endif
 
+ifeq ($(TARGET_HAS_WIDE_COLOR_DISPLAY), true)
+    LOCAL_CFLAGS += -DFEATURE_WIDE_COLOR
+endif
+
 include $(BUILD_SHARED_LIBRARY)
 endif

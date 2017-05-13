@@ -446,10 +446,12 @@ void HWCDisplay::BuildLayerStack() {
       layer->flags.solid_fill = true;
     }
 
+#ifdef FEATURE_WIDE_COLOR
     if (!hwc_layer->SupportedDataspace()) {
         layer->flags.skip = true;
         DLOGW_IF(kTagStrategy, "Unsupported dataspace: 0x%x", hwc_layer->GetLayerDataspace());
     }
+#endif
 
     working_primaries = WidestPrimaries(working_primaries,
                                         layer->input_buffer.color_metadata.colorPrimaries);
@@ -534,6 +536,7 @@ void HWCDisplay::BuildLayerStack() {
   }
 
 
+#ifdef FEATURE_WIDE_COLOR
   for (auto hwc_layer : layer_set_) {
     auto layer = hwc_layer->GetSDMLayer();
     if (layer->input_buffer.color_metadata.colorPrimaries != working_primaries &&
@@ -544,6 +547,7 @@ void HWCDisplay::BuildLayerStack() {
       layer_stack_.flags.skip_present = true;
     }
   }
+#endif
 
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
   layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0);
