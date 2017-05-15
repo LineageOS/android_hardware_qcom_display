@@ -172,12 +172,25 @@ enum struct DRMOps {
    *      uint32_t - Framebuffer ID
    */
   CONNECTOR_SET_OUTPUT_FB_ID,
+  /*
+   * Op: Sets power mode for connector.
+   * Arg: uint32_t - Connector ID
+   *      uint32_t - Power Mode
+   */
+  CONNECTOR_SET_POWER_MODE,
 };
 
 enum struct DRMRotation {
   FLIP_H = 0x1,
   FLIP_V = 0x2,
   ROT_90 = 0x4,
+};
+
+enum struct DRMPowerMode {
+  ON,
+  DOZE,
+  DOZE_SUSPEND,
+  OFF,
 };
 
 enum struct DRMBlendType {

@@ -111,6 +111,10 @@ HWC2::Error HWCColorMode::GetColorModes(uint32_t *out_num_modes,
 
 HWC2::Error HWCColorMode::SetColorMode(android_color_mode_t mode) {
   // first mode in 2D matrix is the mode (identity)
+  if (color_mode_transform_map_.find(mode) == color_mode_transform_map_.end()) {
+    DLOGE("Could not find mode: %d", mode);
+    return HWC2::Error::BadParameter;
+  }
   auto status = HandleColorModeTransform(mode, current_color_transform_, color_matrix_);
   if (status != HWC2::Error::None) {
     DLOGE("failed for mode = %d", mode);
@@ -442,10 +446,12 @@ void HWCDisplay::BuildLayerStack() {
       layer->flags.solid_fill = true;
     }
 
+#ifdef FEATURE_WIDE_COLOR
     if (!hwc_layer->SupportedDataspace()) {
         layer->flags.skip = true;
         DLOGW_IF(kTagStrategy, "Unsupported dataspace: 0x%x", hwc_layer->GetLayerDataspace());
     }
+#endif
 
     working_primaries = WidestPrimaries(working_primaries,
                                         layer->input_buffer.color_metadata.colorPrimaries);
@@ -530,6 +536,7 @@ void HWCDisplay::BuildLayerStack() {
   }
 
 
+#ifdef FEATURE_WIDE_COLOR
   for (auto hwc_layer : layer_set_) {
     auto layer = hwc_layer->GetSDMLayer();
     if (layer->input_buffer.color_metadata.colorPrimaries != working_primaries &&
@@ -540,6 +547,7 @@ void HWCDisplay::BuildLayerStack() {
       layer_stack_.flags.skip_present = true;
     }
   }
+#endif
 
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
   layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0);
@@ -1753,14 +1761,16 @@ std::string HWCDisplay::Dump() {
   for (auto layer : layer_set_) {
     auto sdm_layer = layer->GetSDMLayer();
     auto transform = sdm_layer->transform;
-    os << "layer: " << layer->GetId();
+    os << "layer: " << std::setw(4) << layer->GetId();
     os << " z: " << layer->GetZ();
     os << " compositon: " <<
           to_string(layer->GetClientRequestedCompositionType()).c_str();
     os << "/" <<
           to_string(layer->GetDeviceSelectedCompositionType()).c_str();
     os << " alpha: " << std::to_string(sdm_layer->plane_alpha).c_str();
-    os << " format: " << GetFormatString(sdm_layer->input_buffer.format);
+    os << " format: " << std::setw(22) << GetFormatString(sdm_layer->input_buffer.format);
+    os << " dataspace:" << std::hex << "0x" << std::setw(8) << std::setfill('0')
+       << layer->GetLayerDataspace() << std::dec << std::setfill(' ');
     os << " transform: " << transform.rotation << "/" << transform.flip_horizontal <<
           "/"<< transform.flip_vertical;
     os << " buffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec
