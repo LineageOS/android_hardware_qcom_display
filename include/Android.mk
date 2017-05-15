@@ -2,20 +2,19 @@ LOCAL_PATH:= $(call my-dir)
 include $(LOCAL_PATH)/../common.mk
 include $(CLEAR_VARS)
 
+# Legacy header copy. This is deprecated.
+# Modules using these headers should shift to using
+# LOCAL_HEADER_LIBRARIES := display_headers
+LOCAL_VENDOR_MODULE           := true
 LOCAL_COPY_HEADERS_TO         := $(common_header_export_path)
-LOCAL_COPY_HEADERS            := display_properties.h color_metadata.h
+LOCAL_COPY_HEADERS            := color_metadata.h \
+                                 display_properties.h \
+                                 ../libqdutils/qd_utils.h \
+                                 ../libqdutils/qdMetaData.h \
+                                 ../libqdutils/display_config.h \
+                                 ../libqservice/QServiceUtils.h \
+                                 ../libqservice/IQService.h \
+                                 ../libqservice/IQHDMIClient.h \
+                                 ../libqservice/IQClient.h
 
 include $(BUILD_COPY_HEADERS)
-
-include $(CLEAR_VARS)
-#TODO move all exported headers to this directory
-LOCAL_MODULE := display_headers
-LOCAL_EXPORT_C_INCLUDE_DIRS   := $(LOCAL_PATH) \
-                                 $(display_top)/libcopybit \
-                                 $(display_top)/libdrmutils \
-                                 $(display_top)/libqdutils \
-                                 $(display_top)/libqservice \
-                                 $(display_top)/gpu_tonemapper \
-                                 $(display_top)/sdm/include \
-                                 $(display_top)/gralloc
-include $(BUILD_HEADER_LIBRARY)
