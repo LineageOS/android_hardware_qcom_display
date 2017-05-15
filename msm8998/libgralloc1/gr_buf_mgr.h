@@ -54,7 +54,7 @@ class BufferManager {
   gralloc1_error_t CallBufferDescriptorFunction(gralloc1_buffer_descriptor_t descriptor_id,
                                                 void (BufferDescriptor::*member)(Args...),
                                                 Args... args) {
-    std::lock_guard<std::mutex> lock(locker_);
+    std::lock_guard<std::mutex> lock(descriptor_lock_);
     const auto map_descriptor = descriptors_map_.find(descriptor_id);
     if (map_descriptor == descriptors_map_.end()) {
       return GRALLOC1_ERROR_BAD_DESCRIPTOR;
@@ -83,10 +83,10 @@ class BufferManager {
                           buffer_handle_t *out_buffer);
 
   // Imports the ion fds into the current process. Returns an error for invalid handles
-  gralloc1_error_t ImportHandle(private_handle_t* hnd);
+  gralloc1_error_t ImportHandleLocked(private_handle_t *hnd);
 
   // Creates a Buffer from the valid private handle and adds it to the map
-  void RegisterHandle(const private_handle_t *hnd, int ion_handle, int ion_handle_meta);
+  void RegisterHandleLocked(const private_handle_t *hnd, int ion_handle, int ion_handle_meta);
 
   // Wrapper structure over private handle
   // Values associated with the private handle
@@ -115,12 +115,13 @@ class BufferManager {
   gralloc1_error_t FreeBuffer(std::shared_ptr<Buffer> buf);
 
   // Get the wrapper Buffer object from the handle, returns nullptr if handle is not found
-  std::shared_ptr<Buffer> GetBufferFromHandle(const private_handle_t *hnd);
+  std::shared_ptr<Buffer> GetBufferFromHandleLocked(const private_handle_t *hnd);
 
   bool map_fb_mem_ = false;
   bool ubwc_for_fb_ = false;
   Allocator *allocator_ = NULL;
-  std::mutex locker_;
+  std::mutex buffer_lock_;
+  std::mutex descriptor_lock_;
   // TODO(user): The private_handle_t is used as a key because the unique ID generated
   // from next_id_ is not unique across processes. The correct way to resolve this would
   // be to use the allocator over hwbinder

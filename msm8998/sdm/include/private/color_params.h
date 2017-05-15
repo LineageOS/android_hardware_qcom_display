@@ -36,6 +36,9 @@
 #include <utils/constants.h>
 #include <core/sdm_types.h>
 #include <core/display_interface.h>
+
+#include <string>
+
 #include "hw_info_types.h"
 
 namespace sdm {
@@ -75,6 +78,30 @@ static const uint32_t kPaFoliageEnable = BITMAP(11);
 
 static const uint32_t kLeftSplitMode = BITMAP(28);   // 0x10000000
 static const uint32_t kRightSplitMode = BITMAP(29);  // 0x20000000
+
+static const int32_t kInvalidModeId = -1;
+
+static const std::string kDynamicRangeAttribute = "DynamicRange";
+static const std::string kColorGamutAttribute = "ColorGamut";
+static const std::string kPictureQualityAttribute = "PictureQuality";
+
+static const std::string kHdr = "hdr";
+static const std::string kSdr = "sdr";
+
+static const std::string kNative = "native";
+static const std::string kDcip3 = "dci_p3";
+static const std::string kSrgb = "srgb";
+static const std::string kDisplayP3 = "display_p3";
+
+static const std::string kVivid = "vivid";
+static const std::string kSharp = "sharp";
+static const std::string kStandard = "standard";
+
+// Enum to identify type of dynamic range of color mode.
+enum DynamicRangeType {
+  kSdrType,
+  kHdrType,
+};
 
 // ENUM to identify different Postprocessing feature block to program.
 // Note: For each new entry added here, also need update hw_interface::GetPPFeaturesVersion<>
@@ -551,9 +578,13 @@ class PPFeaturesConfig {
   // from ColorManager, containing all physical features to be programmed and also compute
   // metadata/populate into T.
   inline DisplayError AddFeature(uint32_t feature_id, PPFeatureInfo *feature) {
-    if (feature_id < kMaxNumPPFeatures)
+    if (feature_id < kMaxNumPPFeatures) {
+      if (feature_[feature_id]) {
+        delete feature_[feature_id];
+        feature_[feature_id] = NULL;
+      }
       feature_[feature_id] = feature;
-
+    }
     return kErrorNone;
   }
 
