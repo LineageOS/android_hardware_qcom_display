@@ -328,14 +328,6 @@ void HWCDisplay::BuildLayerStack() {
       layer->flags.solid_fill = true;
     }
 
-    if (!hwc_layer->SupportedDataspace()) {
-      if (!layer->input_buffer->flags.secure) {
-        layer->flags.skip = true;
-      } else {
-        DLOGW("Unsupported dataspace: 0x%x", hwc_layer->GetLayerDataspace());
-      }
-    }
-
     // set default composition as GPU for SDM
     layer->composition = kCompositionGPU;
 
@@ -1309,15 +1301,9 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
 
   int aligned_width;
   int aligned_height;
-  uint32_t usage = GRALLOC_USAGE_HW_FB;
+  uint32_t usage = GRALLOC_USAGE_HW_FB | GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
   int format = HAL_PIXEL_FORMAT_RGBA_8888;
-  int ubwc_enabled = 0;
-  int flags = 0;
-  HWCDebugHandler::Get()->GetProperty("debug.gralloc.enable_fb_ubwc", &ubwc_enabled);
-  if (ubwc_enabled == 1) {
-    usage |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
-    flags |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
-  }
+  int flags = private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
 
 #ifdef USE_GRALLOC1
   buffer_allocator_->GetAlignedWidthAndHeight(INT(x_pixels), INT(y_pixels), format, usage,

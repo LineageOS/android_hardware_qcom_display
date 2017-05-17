@@ -71,7 +71,7 @@ class Allocator {
                                 unsigned int *aligned_h);
   int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr *ycbcr);
   int GetRgbDataAddress(private_handle_t *hnd, void **rgb_data);
-  bool UseUncached(gralloc1_producer_usage_t usage);
+  bool UseUncached(gralloc1_producer_usage_t prod_usage, gralloc1_consumer_usage_t cons_usage);
   bool IsUBwcFormat(int format);
   bool IsUBwcSupported(int format);
   bool IsUBwcEnabled(int format, gralloc1_producer_usage_t prod_usage,
