@@ -39,7 +39,6 @@
 
 #include "hwc_display.h"
 #include "hwc_debugger.h"
-#include "blit_engine_c2d.h"
 #include "hwc_tonemapper.h"
 
 #ifndef USE_GRALLOC1

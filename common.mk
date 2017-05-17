@@ -4,6 +4,7 @@ display_top := $(call my-dir)
 #Common C flags
 common_flags := -DDEBUG_CALC_FPS -Wno-missing-field-initializers
 common_flags += -Wconversion -Wall -Werror -std=c++14
+common_flags += -DUSE_GRALLOC1
 ifeq ($(TARGET_IS_HEADLESS), true)
     common_flags += -DTARGET_HEADLESS
     LOCAL_CLANG := false
@@ -29,10 +30,6 @@ use_hwc2 := false
 ifeq ($(TARGET_USES_HWC2), true)
     use_hwc2 := true
     common_flags += -DVIDEO_MODE_DEFER_RETIRE_FENCE
-endif
-
-ifeq ($(TARGET_USES_GRALLOC1), true)
-    common_flags += -DUSE_GRALLOC1
 endif
 
 ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
