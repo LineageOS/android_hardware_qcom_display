@@ -207,6 +207,7 @@ gralloc1_error_t BufferManager::FreeBuffer(std::shared_ptr<Buffer> buf) {
   private_handle_t * handle = const_cast<private_handle_t *>(hnd);
   handle->fd = -1;
   handle->fd_metadata = -1;
+  delete handle;
   return GRALLOC1_ERROR_NONE;
 }
 

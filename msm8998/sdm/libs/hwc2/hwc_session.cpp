@@ -872,6 +872,10 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       status = SetColorModeOverride(input_parcel);
       break;
 
+    case qService::IQService::SET_COLOR_MODE_BY_ID:
+      status = SetColorModeById(input_parcel);
+      break;
+
     default:
       DLOGW("QService command = %d is not supported", command);
       return -EINVAL;
@@ -1240,6 +1244,16 @@ android::status_t HWCSession::SetColorModeOverride(const android::Parcel *input_
   auto mode = static_cast<android_color_mode_t>(input_parcel->readInt32());
   auto device = static_cast<hwc2_device_t *>(this);
   auto err = CallDisplayFunction(device, display, &HWCDisplay::SetColorMode, mode);
+  if (err != HWC2_ERROR_NONE)
+    return -EINVAL;
+  return 0;
+}
+
+android::status_t HWCSession::SetColorModeById(const android::Parcel *input_parcel) {
+  auto display = static_cast<hwc2_display_t >(input_parcel->readInt32());
+  auto mode = input_parcel->readInt32();
+  auto device = static_cast<hwc2_device_t *>(this);
+  auto err = CallDisplayFunction(device, display, &HWCDisplay::SetColorModeById, mode);
   if (err != HWC2_ERROR_NONE)
     return -EINVAL;
   return 0;

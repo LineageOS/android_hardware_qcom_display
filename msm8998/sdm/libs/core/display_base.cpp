@@ -731,7 +731,7 @@ DisplayError DisplayBase::GetColorModeAttr(const std::string &color_mode, AttrVa
 
   auto it = color_mode_attr_map_.find(color_mode);
   if (it == color_mode_attr_map_.end()) {
-    DLOGE("Failed: Mode %s without attribute", color_mode.c_str());
+    DLOGI("Mode %s has no attribute", color_mode.c_str());
     return kErrorNotSupported;
   }
   *attr = it->second;
@@ -801,6 +801,10 @@ DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
   }
 
   return error;
+}
+
+DisplayError DisplayBase::SetColorModeById(int32_t color_mode_id) {
+  return color_mgr_->ColorMgrSetMode(color_mode_id);
 }
 
 DisplayError DisplayBase::SetColorModeInternal(const std::string &color_mode) {

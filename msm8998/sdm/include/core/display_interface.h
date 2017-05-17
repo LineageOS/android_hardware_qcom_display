@@ -539,6 +539,13 @@ class DisplayInterface {
   */
   virtual DisplayError SetColorMode(const std::string &color_mode) = 0;
 
+  /*! @brief Method to set the color mode by ID. This method is used for debugging only.
+
+  @param[in] mode_name Mode ID which needs to be set
+
+  @return \link DisplayError \endlink
+  */
+  virtual DisplayError SetColorModeById(int32_t color_mode_id) = 0;
   /*! @brief Method to set the color transform
 
     @param[in] length Mode name which needs to be set

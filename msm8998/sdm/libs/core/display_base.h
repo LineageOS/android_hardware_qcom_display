@@ -95,6 +95,7 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   virtual DisplayError GetColorModes(uint32_t *mode_count, std::vector<std::string> *color_modes);
   virtual DisplayError GetColorModeAttr(const std::string &color_mode, AttrVal *attr);
   virtual DisplayError SetColorMode(const std::string &color_mode);
+  virtual DisplayError SetColorModeById(int32_t color_mode_id);
   virtual DisplayError SetColorTransform(const uint32_t length, const double *color_transform);
   virtual DisplayError GetDefaultColorMode(std::string *color_mode);
   virtual DisplayError ApplyDefaultDisplayMode(void);

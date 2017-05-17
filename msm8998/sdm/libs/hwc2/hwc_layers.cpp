@@ -395,12 +395,6 @@ LayerBufferFormat HWCLayer::GetSDMFormat(const int32_t &source, const int flags)
       case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
         format = kFormatYCbCr420TP10Ubwc;
         break;
-      case HAL_PIXEL_FORMAT_RGBA_1010102:
-        format = kFormatRGBA1010102Ubwc;
-        break;
-      case HAL_PIXEL_FORMAT_RGBX_1010102:
-        format = kFormatRGBX1010102Ubwc;
-        break;
       default:
         DLOGE("Unsupported format type for UBWC %d", source);
         return kFormatInvalid;
@@ -614,6 +608,12 @@ bool HWCLayer::SupportedDataspace() {
     case HAL_DATASPACE_TRANSFER_HLG:
       sdm_transfer = Transfer_HLG;
       break;
+    case HAL_DATASPACE_TRANSFER_LINEAR:
+      sdm_transfer = Transfer_Linear;
+      break;
+    case HAL_DATASPACE_TRANSFER_GAMMA2_2:
+      sdm_transfer = Transfer_Gamma2_2;
+      break;
     default:
       return false;
   }
@@ -635,7 +635,7 @@ bool HWCLayer::SupportedDataspace() {
     case HAL_DATASPACE_STANDARD_DCI_P3:
       sdm_primaries = ColorPrimaries_DCIP3;
       break;
-    case HAL_DATASPACE_BT2020:
+    case HAL_DATASPACE_STANDARD_BT2020:
       sdm_primaries = ColorPrimaries_BT2020;
       break;
     default:

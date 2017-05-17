@@ -89,7 +89,7 @@ static const std::string kHdr = "hdr";
 static const std::string kSdr = "sdr";
 
 static const std::string kNative = "native";
-static const std::string kDcip3 = "dci_p3";
+static const std::string kDcip3 = "dcip3";
 static const std::string kSrgb = "srgb";
 static const std::string kDisplayP3 = "display_p3";
 
