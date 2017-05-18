@@ -135,7 +135,7 @@ class HWDeviceDRM : public HWInterface {
     uint32_t GetFbId(int fd);
 
    private:
-    static const int kCycleDelay = 1;  // N cycle delay before destroy
+    static const int kCycleDelay = 3;  // N cycle delay before destroy
     // fd to fb_id map. fd is used as key only for a single draw cycle between
     // prepare and commit. It should not be used for caching in future due to fd recycling
     std::unordered_map<int, uint32_t> hashmap_[kCycleDelay] {};
