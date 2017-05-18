@@ -192,19 +192,11 @@ int HWCDisplayPrimary::Prepare(hwc_display_contents_1_t *content_list) {
   }
 
   uint32_t refresh_rate = GetOptimalRefreshRate(one_updating_layer);
-  // TODO(user): Need to read current refresh rate to avoid
-  // redundant calls to set refresh rate during idle fall back.
-  if ((current_refresh_rate_ != refresh_rate) || (handle_idle_timeout_)) {
-    error = display_intf_->SetRefreshRate(refresh_rate);
-  }
-
+  bool final_rate = force_refresh_rate_ ? true : false;
+  error = display_intf_->SetRefreshRate(refresh_rate, final_rate);
   if (error == kErrorNone) {
     // On success, set current refresh rate to new refresh rate
     current_refresh_rate_ = refresh_rate;
-  }
-
-  if (handle_idle_timeout_) {
-    handle_idle_timeout_ = false;
   }
 
   if (content_list->numHwLayers <= 1) {
@@ -370,8 +362,6 @@ void HWCDisplayPrimary::ForceRefreshRate(uint32_t refresh_rate) {
 uint32_t HWCDisplayPrimary::GetOptimalRefreshRate(bool one_updating_layer) {
   if (force_refresh_rate_) {
     return force_refresh_rate_;
-  } else if (handle_idle_timeout_) {
-    return min_refresh_rate_;
   } else if (use_metadata_refresh_rate_ && one_updating_layer && metadata_refresh_rate_) {
     return metadata_refresh_rate_;
   }
@@ -388,7 +378,6 @@ DisplayError HWCDisplayPrimary::Refresh() {
   }
 
   hwc_procs->invalidate(hwc_procs);
-  handle_idle_timeout_ = true;
 
   return error;
 }
