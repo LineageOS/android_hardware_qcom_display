@@ -159,6 +159,9 @@ class HWCDisplay : public DisplayEventHandler {
     return INT32(status);
   }
 
+  virtual int SetState(bool connected) {
+    return kErrorNotSupported;
+  }
   int SetPanelBrightness(int level);
   int GetPanelBrightness(int *level);
   int ToggleScreenUpdates(bool enable);

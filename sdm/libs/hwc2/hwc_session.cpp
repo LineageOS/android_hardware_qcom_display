@@ -96,9 +96,7 @@ int HWCSession::Init() {
 
   StartServices();
 
-  buffer_allocator_ = new HWCBufferAllocator();
-
-  DisplayError error = CoreInterface::CreateCore(HWCDebugHandler::Get(), buffer_allocator_,
+  DisplayError error = CoreInterface::CreateCore(HWCDebugHandler::Get(), &buffer_allocator_,
                                                  &buffer_sync_handler_, &socket_handler_,
                                                  &core_intf_);
   if (error != kErrorNone) {
@@ -106,38 +104,36 @@ int HWCSession::Init() {
     return -EINVAL;
   }
 
-  // Read which display is first, and create it and store it in primary slot
-  // TODO(user): This will need to be redone for HWC2 - right now we validate only
-  // the primary physical path
-  HWDisplayInterfaceInfo hw_disp_info;
+  // If HDMI display is primary display, defer display creation until hotplug event is received.
+  HWDisplayInterfaceInfo hw_disp_info = {};
   error = core_intf_->GetFirstDisplayInterfaceType(&hw_disp_info);
-  if (error == kErrorNone && hw_disp_info.type == kHDMI && hw_disp_info.is_connected) {
-    // HDMI is primary display. If already connected, then create it and store in
-    // primary display slot. If not connected, create a NULL display for now.
-    status = HWCDisplayExternal::Create(core_intf_, buffer_allocator_, &callbacks_, qservice_,
-                                        &hwc_display_[HWC_DISPLAY_PRIMARY]);
+  if (error != kErrorNone) {
+    CoreInterface::DestroyCore();
+    DLOGE("Primary display type not recognized. Error = %d", error);
+    return -EINVAL;
+  }
+
+  if (hw_disp_info.type == kHDMI) {
+    status = 0;
+    hdmi_is_primary_ = true;
+    // Create display if it is connected, else wait for hotplug connect event.
+    if (hw_disp_info.is_connected) {
+      status = HWCDisplayExternal::Create(core_intf_, &buffer_allocator_, &callbacks_, qservice_,
+                                          &hwc_display_[HWC_DISPLAY_PRIMARY]);
+    }
   } else {
     // Create and power on primary display
-    status = HWCDisplayPrimary::Create(core_intf_, buffer_allocator_, &callbacks_, qservice_,
+    status = HWCDisplayPrimary::Create(core_intf_, &buffer_allocator_, &callbacks_, qservice_,
                                        &hwc_display_[HWC_DISPLAY_PRIMARY]);
+    color_mgr_ = HWCColorManager::CreateColorManager(&buffer_allocator_);
+    if (!color_mgr_) {
+      DLOGW("Failed to load HWCColorManager.");
+    }
   }
 
   if (status) {
     CoreInterface::DestroyCore();
     return status;
-  }
-
-  color_mgr_ = HWCColorManager::CreateColorManager(buffer_allocator_);
-  if (!color_mgr_) {
-    DLOGW("Failed to load HWCColorManager.");
-  }
-
-  if (pthread_create(&uevent_thread_, NULL, &HWCUeventThread, this) < 0) {
-    DLOGE("Failed to start = %s, error = %s", uevent_thread_name_, strerror(errno));
-    HWCDisplayPrimary::Destroy(hwc_display_[HWC_DISPLAY_PRIMARY]);
-    hwc_display_[HWC_DISPLAY_PRIMARY] = 0;
-    CoreInterface::DestroyCore();
-    return -errno;
   }
 
   struct rlimit fd_limit = {};
@@ -149,30 +145,37 @@ int HWCSession::Init() {
       DLOGW("Unable to increase fd limit -  err:%d, %s", errno, strerror(errno));
     }
   }
+
+  std::thread uevent_thread(HWCUeventThread, this);
+  uevent_thread_.swap(uevent_thread);
+
   return 0;
 }
 
 int HWCSession::Deinit() {
-  HWCDisplayPrimary::Destroy(hwc_display_[HWC_DISPLAY_PRIMARY]);
-  hwc_display_[HWC_DISPLAY_PRIMARY] = 0;
+  HWCDisplay *primary_display = hwc_display_[HWC_DISPLAY_PRIMARY];
+  if (primary_display) {
+    if (hdmi_is_primary_) {
+      HWCDisplayExternal::Destroy(primary_display);
+    } else {
+      HWCDisplayPrimary::Destroy(primary_display);
+    }
+  }
+  hwc_display_[HWC_DISPLAY_PRIMARY] = nullptr;
+
   if (color_mgr_) {
     color_mgr_->DestroyColorManager();
   }
-  uevent_thread_exit_ = true;
+
   DLOGD("Terminating uevent thread");
-  // TODO(user): on restarting HWC in the same process, the uevent thread does not restart
-  // cleanly.
-  Sys::pthread_cancel_(uevent_thread_);
+  uevent_thread_exit_ = true;
+  // todo(user): add a local event to interrupt thread execution and join.
+  uevent_thread_.detach();
 
   DisplayError error = CoreInterface::DestroyCore();
   if (error != kErrorNone) {
     DLOGE("Display core de-initialization failed. Error = %d", error);
   }
-
-  if (buffer_allocator_ != nullptr) {
-    delete buffer_allocator_;
-  }
-  buffer_allocator_ = nullptr;
 
   return 0;
 }
@@ -436,8 +439,13 @@ int32_t HWCSession::RegisterCallback(hwc2_device_t *device, int32_t descriptor,
   auto desc = static_cast<HWC2::Callback>(descriptor);
   auto error = hwc_session->callbacks_.Register(desc, callback_data, pointer);
   DLOGD("Registering callback: %s", to_string(desc).c_str());
-  if (descriptor == HWC2_CALLBACK_HOTPLUG)
-    hwc_session->callbacks_.Hotplug(HWC_DISPLAY_PRIMARY, HWC2::Connection::Connected);
+  if (descriptor == HWC2_CALLBACK_HOTPLUG) {
+    // If primary display (HDMI) is not created yet, wait for it to be hotplugged.
+    if (hwc_session->hwc_display_[HWC_DISPLAY_PRIMARY]) {
+      hwc_session->callbacks_.Hotplug(HWC_DISPLAY_PRIMARY, HWC2::Connection::Connected);
+    }
+  }
+
   return INT32(error);
 }
 
@@ -719,7 +727,7 @@ HWC2::Error HWCSession::CreateVirtualDisplayObject(uint32_t width, uint32_t heig
   if (hwc_display_[HWC_DISPLAY_VIRTUAL]) {
     return HWC2::Error::NoResources;
   }
-  auto status = HWCDisplayVirtual::Create(core_intf_, buffer_allocator_, &callbacks_, width,
+  auto status = HWCDisplayVirtual::Create(core_intf_, &buffer_allocator_, &callbacks_, width,
                                           height, format, &hwc_display_[HWC_DISPLAY_VIRTUAL]);
   // TODO(user): validate width and height support
   if (status)
@@ -738,7 +746,7 @@ int32_t HWCSession::ConnectDisplay(int disp) {
   hwc_display_[HWC_DISPLAY_PRIMARY]->GetFrameBufferResolution(&primary_width, &primary_height);
 
   if (disp == HWC_DISPLAY_EXTERNAL) {
-    status = HWCDisplayExternal::Create(core_intf_, buffer_allocator_, &callbacks_, primary_width,
+    status = HWCDisplayExternal::Create(core_intf_, &buffer_allocator_, &callbacks_, primary_width,
                                         primary_height, qservice_, false, &hwc_display_[disp]);
   } else {
     DLOGE("Invalid display type");
@@ -1341,34 +1349,35 @@ void HWCSession::ResetPanel() {
 int HWCSession::HotPlugHandler(bool connected) {
   int status = 0;
   bool notify_hotplug = false;
-  bool hdmi_primary = false;
 
   // To prevent sending events to client while a lock is held, acquire scope locks only within
   // below scope so that those get automatically unlocked after the scope ends.
-  {
+  do {
     SEQUENCE_WAIT_SCOPE_LOCK(locker_);
 
+    // If HDMI is primary but not created yet (first time), create it and notify surfaceflinger.
+    //    if it is already created, but got disconnected/connected again,
+    //    just toggle display status and do not notify surfaceflinger.
+    // If HDMI is not primary, create/destroy external display normally.
+    if (hdmi_is_primary_) {
+      if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
+        status = hwc_display_[HWC_DISPLAY_PRIMARY]->SetState(connected);
+      } else {
+        status = HWCDisplayExternal::Create(core_intf_, &buffer_allocator_, &callbacks_,
+                                            qservice_, &hwc_display_[HWC_DISPLAY_PRIMARY]);
+        notify_hotplug = true;
+      }
+
+      break;
+    }
+
+    // Primary display must be connected for HDMI as secondary cases.
     if (!hwc_display_[HWC_DISPLAY_PRIMARY]) {
       DLOGE("Primary display is not connected.");
       return -1;
     }
 
-    HWCDisplay *primary_display = hwc_display_[HWC_DISPLAY_PRIMARY];
-    HWCDisplay *external_display = NULL;
-
-    if (primary_display->GetDisplayClass() == DISPLAY_CLASS_EXTERNAL) {
-      external_display = static_cast<HWCDisplayExternal *>(hwc_display_[HWC_DISPLAY_PRIMARY]);
-      hdmi_primary = true;
-    }
-
-    // If primary display connected is a NULL display, then replace it with the external display
     if (connected) {
-      // If we are in HDMI as primary and the primary display just got plugged in
-      if (hwc_display_[HWC_DISPLAY_EXTERNAL]) {
-        DLOGE("HDMI is already connected");
-        return -1;
-      }
-
       // Connect external display if virtual display is not connected.
       // Else, defer external display connection and process it when virtual display
       // tears down; Do not notify SurfaceFlinger since connection is deferred now.
@@ -1386,39 +1395,28 @@ int HWCSession::HotPlugHandler(bool connected) {
       // Do not return error if external display is not in connected status.
       // Due to virtual display concurrency, external display connection might be still pending
       // but hdmi got disconnected before pending connection could be processed.
-
-      if (hdmi_primary) {
-        assert(external_display != NULL);
-        uint32_t x_res, y_res;
-        external_display->GetFrameBufferResolution(&x_res, &y_res);
-        // Need to manually disable VSYNC as SF is not aware of connect/disconnect cases
-        // for HDMI as primary
-        external_display->SetVsyncEnabled(HWC2::Vsync::Disable);
-        HWCDisplayExternal::Destroy(external_display);
-
-        // In HWC2, primary displays can be hotplugged out
+      if (hwc_display_[HWC_DISPLAY_EXTERNAL]) {
+        status = DisconnectDisplay(HWC_DISPLAY_EXTERNAL);
         notify_hotplug = true;
-      } else {
-        if (hwc_display_[HWC_DISPLAY_EXTERNAL]) {
-          status = DisconnectDisplay(HWC_DISPLAY_EXTERNAL);
-          notify_hotplug = true;
-        }
-        external_pending_connect_ = false;
       }
+      external_pending_connect_ = false;
+    }
+  } while (0);
+
+  if (connected) {
+    callbacks_.Refresh(0);
+
+    if (!hdmi_is_primary_) {
+      // wait for sufficient time to ensure sufficient resources are available to process new
+      // new display connection.
+      uint32_t vsync_period = UINT32(GetVsyncPeriod(HWC_DISPLAY_PRIMARY));
+      usleep(vsync_period * 2 / 1000);
     }
   }
 
-  if (connected && notify_hotplug) {
-    // trigger screen refresh to ensure sufficient resources are available to process new
-    // new display connection.
-    callbacks_.Refresh(0);
-    uint32_t vsync_period = UINT32(GetVsyncPeriod(HWC_DISPLAY_PRIMARY));
-    usleep(vsync_period * 2 / 1000);
-  }
   // notify client
-  // Handle HDMI as primary here
   if (notify_hotplug) {
-    callbacks_.Hotplug(HWC_DISPLAY_EXTERNAL,
+    callbacks_.Hotplug(hdmi_is_primary_ ? HWC_DISPLAY_PRIMARY : HWC_DISPLAY_EXTERNAL,
                        connected ? HWC2::Connection::Connected : HWC2::Connection::Disconnected);
   }
 

@@ -23,6 +23,7 @@
 #include <vendor/display/config/1.0/IDisplayConfig.h>
 #include <core/core_interface.h>
 #include <utils/locker.h>
+#include <thread>
 
 #include "hwc_callbacks.h"
 #include "hwc_layers.h"
@@ -188,23 +189,24 @@ class HWCSession : hwc2_device_t, public IDisplayConfig, public qClient::BnQClie
   android::status_t SetColorModeById(const android::Parcel *input_parcel);
 
   static Locker locker_;
-  CoreInterface *core_intf_ = NULL;
-  HWCDisplay *hwc_display_[HWC_NUM_DISPLAY_TYPES] = {NULL};
+  CoreInterface *core_intf_ = nullptr;
+  HWCDisplay *hwc_display_[HWC_NUM_DISPLAY_TYPES] = {nullptr};
   HWCCallbacks callbacks_;
-  pthread_t uevent_thread_;
+  std::thread uevent_thread_;
   bool uevent_thread_exit_ = false;
   const char *uevent_thread_name_ = "HWC_UeventThread";
-  HWCBufferAllocator *buffer_allocator_;
+  HWCBufferAllocator buffer_allocator_;
   HWCBufferSyncHandler buffer_sync_handler_;
-  HWCColorManager *color_mgr_ = NULL;
+  HWCColorManager *color_mgr_ = nullptr;
   bool reset_panel_ = false;
   bool secure_display_active_ = false;
   bool external_pending_connect_ = false;
   bool new_bw_mode_ = false;
   bool need_invalidate_ = false;
   int bw_mode_release_fd_ = -1;
-  qService::QService *qservice_ = NULL;
+  qService::QService *qservice_ = nullptr;
   HWCSocketHandler socket_handler_;
+  bool hdmi_is_primary_ = false;
 };
 
 }  // namespace sdm
