@@ -1458,6 +1458,7 @@ void HWCDisplay::MarkLayersForGPUBypass() {
     auto layer = hwc_layer->GetSDMLayer();
     layer->composition = kCompositionSDE;
   }
+  validated_ = true;
 }
 
 void HWCDisplay::MarkLayersForClientComposition() {

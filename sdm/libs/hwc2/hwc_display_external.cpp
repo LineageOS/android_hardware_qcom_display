@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -64,6 +64,7 @@ int HWCDisplayExternal::Create(CoreInterface *core_intf, HWCBufferAllocator *buf
 
   error = hwc_display_external->GetMixerResolution(&external_width, &external_height);
   if (error != kErrorNone) {
+    Destroy(hwc_display_external);
     return -EINVAL;
   }
 
@@ -211,6 +212,67 @@ void HWCDisplayExternal::GetDownscaleResolution(uint32_t primary_width, uint32_t
     }
     AdjustSourceResolution(primary_width, primary_height, non_primary_width, non_primary_height);
   }
+}
+
+int HWCDisplayExternal::SetState(bool connected) {
+  DisplayError error = kErrorNone;
+  DisplayState state = kStateOff;
+  DisplayConfigVariableInfo fb_config = {};
+
+  if (connected) {
+    if (display_null_.IsActive()) {
+      error = core_intf_->CreateDisplay(type_, this, &display_intf_);
+      if (error != kErrorNone) {
+        DLOGE("Display create failed. Error = %d display_type %d event_handler %p disp_intf %p",
+              error, type_, this, &display_intf_);
+        return -EINVAL;
+      }
+
+      // Restore HDMI attributes when display is reconnected.
+      // This is to ensure that surfaceflinger & sdm are in sync.
+      display_null_.GetFrameBufferConfig(&fb_config);
+      int status = SetFrameBufferResolution(fb_config.x_pixels, fb_config.y_pixels);
+      if (status) {
+        DLOGW("Set frame buffer config failed. Error = %d", error);
+        return -1;
+      }
+
+      display_null_.GetDisplayState(&state);
+      display_intf_->SetDisplayState(state);
+
+      SetVsyncEnabled(HWC2::Vsync::Enable);
+
+      display_null_.SetActive(false);
+      DLOGI("Display is connected successfully.");
+    } else {
+      DLOGI("Display is already connected.");
+    }
+  } else {
+    if (!display_null_.IsActive()) {
+      // Preserve required attributes of HDMI display that surfaceflinger sees.
+      // Restore HDMI attributes when display is reconnected.
+      display_intf_->GetDisplayState(&state);
+      display_null_.SetDisplayState(state);
+
+      error = display_intf_->GetFrameBufferConfig(&fb_config);
+      if (error != kErrorNone) {
+        DLOGW("Get frame buffer config failed. Error = %d", error);
+        return -1;
+      }
+      display_null_.SetFrameBufferConfig(fb_config);
+
+      SetVsyncEnabled(HWC2::Vsync::Disable);
+      core_intf_->DestroyDisplay(display_intf_);
+      display_intf_ = &display_null_;
+
+      display_null_.SetActive(true);
+      DLOGI("Display is disconnected successfully.");
+    } else {
+      DLOGI("Display is already disconnected.");
+    }
+  }
+
+  return 0;
 }
 
 }  // namespace sdm

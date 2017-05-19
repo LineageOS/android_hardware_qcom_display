@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,6 +31,7 @@
 #define __HWC_DISPLAY_EXTERNAL_H__
 
 #include "hwc_display.h"
+#include "display_null.h"
 
 namespace sdm {
 
@@ -47,6 +48,7 @@ class HWCDisplayExternal : public HWCDisplay {
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests);
   virtual HWC2::Error Present(int32_t *out_retire_fence);
   virtual void SetSecureDisplay(bool secure_display_active);
+  virtual int SetState(bool connected);
 
  private:
   HWCDisplayExternal(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
@@ -54,6 +56,8 @@ class HWCDisplayExternal : public HWCDisplay {
   void ApplyScanAdjustment(hwc_rect_t *display_frame);
   static void GetDownscaleResolution(uint32_t primary_width, uint32_t primary_height,
                                      uint32_t *virtual_width, uint32_t *virtual_height);
+
+  DisplayNull display_null_;
 };
 
 }  // namespace sdm
