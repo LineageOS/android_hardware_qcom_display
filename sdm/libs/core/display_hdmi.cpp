@@ -87,7 +87,8 @@ DisplayError DisplayHDMI::Init() {
   s3d_format_to_mode_.insert(std::pair<LayerBufferS3DFormat, HWS3DMode>
                             (kS3dFormatFramePacking, kS3DModeFP));
 
-  error = HWEventsInterface::Create(INT(display_type_), this, event_list_, &hw_events_intf_);
+  error = HWEventsInterface::Create(INT(display_type_), this, event_list_, hw_intf_,
+                                    &hw_events_intf_);
   if (error != kErrorNone) {
     DisplayBase::Deinit();
     HWInterface::Destroy(hw_intf_);

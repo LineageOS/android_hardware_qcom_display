@@ -139,9 +139,15 @@ void HWEventsDRM::PopulateHWEventData(const vector<HWEvent> &event_list) {
 }
 
 DisplayError HWEventsDRM::Init(int display_type, HWEventHandler *event_handler,
-                               const vector<HWEvent> &event_list) {
+                               const vector<HWEvent> &event_list,
+                               const HWInterface *hw_intf) {
   if (!event_handler)
     return kErrorParameters;
+
+  static_cast<const HWDeviceDRM *>(hw_intf)->GetDRMDisplayToken(&token_);
+
+  DLOGI("Setup event handler for display %d, CRTC %d, Connector %d",
+        display_type, token_.crtc_id, token_.conn_id);
 
   event_handler_ = event_handler;
   poll_fds_.resize(event_list.size());
