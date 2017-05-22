@@ -489,7 +489,8 @@ int HWCDisplay::PrepareLayerParams(hwc_layer_1_t *hwc_layer, Layer* layer) {
       int ubwc_enabled = 0;
       int flags = 0;
       HWCDebugHandler::Get()->GetProperty("debug.gralloc.enable_fb_ubwc", &ubwc_enabled);
-      if (ubwc_enabled == 1) {
+      bool linear = layer_stack_.output_buffer && !IsUBWCFormat(layer_stack_.output_buffer->format);
+      if ((ubwc_enabled == 1) && !linear) {
         usage |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
         flags |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
       }
