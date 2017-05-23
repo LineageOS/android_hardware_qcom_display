@@ -445,6 +445,15 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   hw_panel_info_.is_primary_panel = connector_info_.is_primary;
   hw_panel_info_.is_pluggable = 0;
 
+  // no supprt for 90 rotation only flips or 180 supported
+  hw_panel_info_.panel_orientation.rotation = 0;
+  hw_panel_info_.panel_orientation.flip_horizontal =
+    (connector_info_.panel_orientation == DRMRotation::FLIP_H) ||
+    (connector_info_.panel_orientation == DRMRotation::ROT_180);
+  hw_panel_info_.panel_orientation.flip_vertical =
+    (connector_info_.panel_orientation == DRMRotation::FLIP_V) ||
+    (connector_info_.panel_orientation == DRMRotation::ROT_180);
+
   GetHWDisplayPortAndMode();
   GetHWPanelMaxBrightness();
 

@@ -218,6 +218,7 @@ enum struct DRMOps {
 enum struct DRMRotation {
   FLIP_H = 0x1,
   FLIP_V = 0x2,
+  ROT_180 = FLIP_H | FLIP_V,
   ROT_90 = 0x4,
 };
 
@@ -358,6 +359,7 @@ struct DRMConnectorInfo {
   int wmin;
   int hmin;
   bool roi_merge;
+  DRMRotation panel_orientation;
 };
 
 /* Identifier token for a display */
