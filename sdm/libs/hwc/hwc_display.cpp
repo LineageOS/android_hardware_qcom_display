@@ -436,6 +436,7 @@ int HWCDisplay::PrepareLayerParams(hwc_layer_1_t *hwc_layer, Layer* layer) {
   LayerBuffer &layer_buffer = layer->input_buffer;
 
   if (pvt_handle) {
+    layer_buffer.planes[0].fd = pvt_handle->fd;
     layer_buffer.format = GetSDMFormat(pvt_handle->format, pvt_handle->flags);
     int aligned_width, aligned_height;
     int unaligned_width, unaligned_height;
@@ -449,7 +450,6 @@ int HWCDisplay::PrepareLayerParams(hwc_layer_1_t *hwc_layer, Layer* layer) {
     layer_buffer.height = UINT32(aligned_height);
     layer_buffer.unaligned_width = UINT32(unaligned_width);
     layer_buffer.unaligned_height = UINT32(unaligned_height);
-    layer_buffer.fb_id = pvt_handle->fb_id;
 
     if (SetMetaData(pvt_handle, layer) != kErrorNone) {
       return -EINVAL;
@@ -492,7 +492,8 @@ int HWCDisplay::PrepareLayerParams(hwc_layer_1_t *hwc_layer, Layer* layer) {
       int ubwc_enabled = 0;
       int flags = 0;
       HWCDebugHandler::Get()->GetProperty("debug.gralloc.enable_fb_ubwc", &ubwc_enabled);
-      if (ubwc_enabled == 1) {
+      bool linear = layer_stack_.output_buffer && !IsUBWCFormat(layer_stack_.output_buffer->format);
+      if ((ubwc_enabled == 1) && !linear) {
         usage |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
         flags |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
       }
@@ -521,7 +522,6 @@ void HWCDisplay::CommitLayerParams(hwc_layer_1_t *hwc_layer, Layer *layer) {
     layer_buffer.planes[0].offset = pvt_handle->offset;
     layer_buffer.planes[0].stride = UINT32(pvt_handle->width);
     layer_buffer.size = pvt_handle->size;
-    layer_buffer.fb_id = pvt_handle->fb_id;
   }
 
   // if swapinterval property is set to 0 then close and reset the acquireFd

@@ -78,10 +78,13 @@ class HWCLayer {
   HWC2::Composition GetClientRequestedCompositionType() { return client_requested_; }
   void UpdateClientCompositionType(HWC2::Composition type) { client_requested_ = type; }
   HWC2::Composition GetDeviceSelectedCompositionType() { return device_selected_; }
+  int32_t GetLayerDataspace() { return dataspace_; }
   uint32_t GetGeometryChanges() { return geometry_changes_; }
   void ResetGeometryChanges() { geometry_changes_ = GeometryChanges::kNone; }
   void PushReleaseFence(int32_t fence);
   int32_t PopReleaseFence(void);
+  bool SupportedDataspace();
+  bool SupportLocalConversion(ColorPrimaries working_primaries);
 
  private:
   Layer *layer_ = nullptr;
@@ -92,6 +95,7 @@ class HWCLayer {
   std::queue<int32_t> release_fences_;
   int ion_fd_ = -1;
   HWCBufferAllocator *buffer_allocator_ = NULL;
+  int32_t dataspace_ =  HAL_DATASPACE_UNKNOWN;
 
   // Composition requested by client(SF)
   HWC2::Composition client_requested_ = HWC2::Composition::Device;

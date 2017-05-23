@@ -54,7 +54,6 @@
 
 #include "hw_info_drm.h"
 
-#ifdef COMPILE_DRM
 #ifndef DRM_FORMAT_MOD_QCOM_COMPRESSED
 #define DRM_FORMAT_MOD_QCOM_COMPRESSED fourcc_mod_code(QCOM, 1)
 #endif
@@ -63,7 +62,6 @@
 #endif
 #ifndef DRM_FORMAT_MOD_QCOM_TIGHT
 #define DRM_FORMAT_MOD_QCOM_TIGHT fourcc_mod_code(QCOM, 0x4)
-#endif
 #endif
 
 #define __CLASS__ "HWInfoDRM"
@@ -254,85 +252,73 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   hw_resource->is_src_split = info.has_src_split;
   hw_resource->has_qseed3 = (info.qseed_version == sde_drm::QSEEDVersion::V3);
   hw_resource->num_blending_stages = info.max_blend_stages;
+  hw_resource->smart_dma_rev = (info.smart_dma_rev == sde_drm::SmartDMARevision::V2) ?
+    SmartDMARevision::V2 : SmartDMARevision::V1;
 }
 
 void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
-  DRMPlanesInfo info;
-  drm_mgr_intf_->GetPlanesInfo(&info);
-  for (auto &pipe_obj : info.planes) {
+  DRMPlanesInfo planes;
+  drm_mgr_intf_->GetPlanesInfo(&planes);
+  for (auto &pipe_obj : planes) {
     HWPipeCaps pipe_caps;
     string name = {};
-    switch (pipe_obj.second) {
-      case DRMPlaneType::RGB:
-        pipe_caps.type = kPipeTypeRGB;
-        hw_resource->num_rgb_pipe++;
-        name = "RGB";
+    switch (pipe_obj.second.type) {
+      case DRMPlaneType::DMA:
+        name = "DMA";
+        pipe_caps.type = kPipeTypeDMA;
+        if (!hw_resource->num_dma_pipe) {
+          PopulateSupportedFmts(kHWDMAPipe, pipe_obj.second, hw_resource);
+        }
+        hw_resource->num_dma_pipe++;
         break;
       case DRMPlaneType::VIG:
-        pipe_caps.type = kPipeTypeVIG;
-        hw_resource->num_vig_pipe++;
         name = "VIG";
-        break;
-      case DRMPlaneType::DMA:
-        pipe_caps.type = kPipeTypeDMA;
-        hw_resource->num_dma_pipe++;
-        name = "DMA";
+        pipe_caps.type = kPipeTypeVIG;
+        if (!hw_resource->num_vig_pipe) {
+          PopulatePipeCaps(pipe_obj.second, hw_resource);
+          PopulateSupportedFmts(kHWVIGPipe, pipe_obj.second, hw_resource);
+        }
+        hw_resource->num_vig_pipe++;
         break;
       case DRMPlaneType::CURSOR:
-        pipe_caps.type = kPipeTypeCursor;
-        hw_resource->num_cursor_pipe++;
         name = "CURSOR";
+        pipe_caps.type = kPipeTypeCursor;
+        if (!hw_resource->num_cursor_pipe) {
+          PopulateSupportedFmts(kHWCursorPipe, pipe_obj.second, hw_resource);
+          hw_resource->max_cursor_size = pipe_obj.second.max_linewidth;
+        }
+        hw_resource->num_cursor_pipe++;
         break;
       default:
-        break;
+        continue;  // Not adding any other pipe type
     }
     pipe_caps.id = pipe_obj.first;
-    pipe_caps.max_rects = 1;
-    DLOGI("%s Pipe : Id %d", name.c_str(), pipe_obj.first);
+    pipe_caps.master_pipe_id = pipe_obj.second.master_plane_id;
+    DLOGI("Adding %s Pipe : Id %d", name.c_str(), pipe_obj.first);
     hw_resource->hw_pipes.push_back(std::move(pipe_caps));
   }
+}
 
-  for (auto &pipe_type : info.types) {
-    vector<LayerBufferFormat> supported_sdm_formats = {};
-    for (auto &fmts : pipe_type.second.formats_supported) {
-      GetSDMFormat(fmts.first, fmts.second, &supported_sdm_formats);
+void HWInfoDRM::PopulatePipeCaps(const sde_drm::DRMPlaneTypeInfo &info,
+                                    HWResourceInfo *hw_resource) {
+  hw_resource->max_pipe_width = info.max_linewidth;
+  hw_resource->max_scale_down = info.max_downscale;
+  hw_resource->max_scale_up = info.max_upscale;
+  hw_resource->has_decimation = info.max_horizontal_deci > 1 && info.max_vertical_deci > 1;
+}
+
+void HWInfoDRM::PopulateSupportedFmts(HWSubBlockType sub_blk_type,
+                                      const sde_drm::DRMPlaneTypeInfo  &info,
+                                      HWResourceInfo *hw_resource) {
+  vector<LayerBufferFormat> sdm_formats = {};
+  FormatsMap &fmts_map = hw_resource->supported_formats_map;
+
+  if (fmts_map.find(sub_blk_type) == fmts_map.end()) {
+    for (auto &fmts : info.formats_supported) {
+      GetSDMFormat(fmts.first, fmts.second, &sdm_formats);
     }
 
-    HWSubBlockType sub_blk_type = kHWSubBlockMax;
-    switch (pipe_type.first) {
-      case DRMPlaneType::RGB:
-        sub_blk_type = kHWRGBPipe;
-        // These properties are per plane but modeled in SDM as system-wide.
-        hw_resource->max_pipe_width = pipe_type.second.max_linewidth;
-        hw_resource->max_scale_down = pipe_type.second.max_downscale;
-        hw_resource->max_scale_up = pipe_type.second.max_upscale;
-        hw_resource->has_decimation =
-            pipe_type.second.max_horizontal_deci > 1 && pipe_type.second.max_vertical_deci > 1;
-        break;
-      case DRMPlaneType::VIG:
-        sub_blk_type = kHWVIGPipe;
-        // These properties are per plane but modeled in SDM as system-wide.
-        hw_resource->max_pipe_width = pipe_type.second.max_linewidth;
-        hw_resource->max_scale_down = pipe_type.second.max_downscale;
-        hw_resource->max_scale_up = pipe_type.second.max_upscale;
-        hw_resource->has_decimation =
-            pipe_type.second.max_horizontal_deci > 1 && pipe_type.second.max_vertical_deci > 1;
-        break;
-      case DRMPlaneType::DMA:
-        sub_blk_type = kHWDMAPipe;
-        break;
-      case DRMPlaneType::CURSOR:
-        sub_blk_type = kHWCursorPipe;
-        hw_resource->max_cursor_size = pipe_type.second.max_linewidth;
-        break;
-      default:
-        break;
-    }
-
-    if (sub_blk_type != kHWSubBlockMax) {
-      hw_resource->supported_formats_map.erase(sub_blk_type);
-      hw_resource->supported_formats_map.insert(make_pair(sub_blk_type, supported_sdm_formats));
-    }
+    fmts_map.insert(make_pair(sub_blk_type, sdm_formats));
   }
 }
 

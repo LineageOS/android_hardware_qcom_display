@@ -67,9 +67,8 @@ struct AllocatedBufferInfo {
   uint32_t stride = 0;           //!< Specifies allocated buffer stride in bytes.
   uint32_t aligned_width = 0;    //!< Specifies aligned allocated buffer width in pixels.
   uint32_t aligned_height = 0;   //!< Specifies aligned allocated buffer height in pixels.
+  LayerBufferFormat format = kFormatInvalid;  // Specifies buffer format for allocated buffer.
   uint32_t size = 0;             //!< Specifies the size of the allocated buffer.
-  uint32_t fb_id = 0;            // Registered id with the DRM driver
-  uint32_t gem_handle = 0;       // GEM driver handle for correspoding import of ION buffer
 };
 
 /*! @brief Holds the information about the input/output configuration of an output buffer.
@@ -139,6 +138,15 @@ class BufferAllocator {
   */
   virtual DisplayError GetAllocatedBufferInfo(const BufferConfig &buffer_config,
                                               AllocatedBufferInfo *allocated_buffer_info) = 0;
+
+  /*
+   * Retuns a buffer's layout in terms of number of planes, stride and offset of each plane
+   * Input: AllocatedBufferInfo with a valid aligned width, aligned height, SDM format
+   * Output: stride for each plane, offset of each plane from base, number of planes
+   */
+  virtual DisplayError GetBufferLayout(const AllocatedBufferInfo &buf_info,
+                                       uint32_t stride[4], uint32_t offset[4],
+                                       uint32_t *num_planes) { return kErrorNotSupported; }
 
  protected:
   virtual ~BufferAllocator() { }

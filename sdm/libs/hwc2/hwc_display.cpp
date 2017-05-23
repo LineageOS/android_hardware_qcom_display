@@ -30,6 +30,7 @@
 #include <qd_utils.h>
 
 #include <algorithm>
+#include <iomanip>
 #include <map>
 #include <sstream>
 #include <string>
@@ -57,6 +58,24 @@ static void ApplyDeInterlaceAdjustment(Layer *layer) {
     float height = (layer->src_rect.bottom - layer->src_rect.top) / 2.0f;
     layer->src_rect.top = ROUND_UP_ALIGN_DOWN(layer->src_rect.top / 2.0f, 2);
     layer->src_rect.bottom = layer->src_rect.top + floorf(height);
+  }
+}
+
+// This weight function is needed because the color primaries are not sorted by gamut size
+static ColorPrimaries WidestPrimaries(ColorPrimaries p1, ColorPrimaries p2) {
+  int weight = 10;
+  int lp1 = p1, lp2 = p2;
+  // TODO(user) add weight to other wide gamut primaries
+  if (lp1 == ColorPrimaries_BT2020) {
+    lp1 *= weight;
+  }
+  if (lp1 == ColorPrimaries_BT2020) {
+    lp2 *= weight;
+  }
+  if (lp1 >= lp2) {
+    return p1;
+  } else {
+    return p2;
   }
 }
 
@@ -215,6 +234,23 @@ void HWCColorMode::PopulateTransform(const android_color_mode_t &mode,
   }
 }
 
+void HWCColorMode::Dump(std::ostringstream* os) {
+  *os << "color modes supported: ";
+  for (auto it : color_mode_transform_map_) {
+    *os << it.first <<" ";
+  }
+  *os << "current mode: " << current_color_mode_ << std::endl;
+  *os << "current transform: ";
+  for (uint32_t i = 0; i < kColorTransformMatrixCount; i++) {
+    if (i % 4 == 0) {
+     *os << std::endl;
+    }
+    *os << std::fixed << std::setprecision(2) << std::setw(6) << std::setfill(' ')
+        << color_matrix_[i] << " ";
+  }
+  *os << std::endl;
+}
+
 HWCDisplay::HWCDisplay(CoreInterface *core_intf, HWCCallbacks *callbacks, DisplayType type,
                        hwc2_display_t id, bool needs_blit, qService::QService *qservice,
                        DisplayClass display_class, BufferAllocator *buffer_allocator)
@@ -313,10 +349,12 @@ HWC2::Error HWCDisplay::DestroyLayer(hwc2_layer_t layer_id) {
   return HWC2::Error::None;
 }
 
+
 void HWCDisplay::BuildLayerStack() {
   layer_stack_ = LayerStack();
   display_rect_ = LayerRect();
   metadata_refresh_rate_ = 0;
+  auto working_primaries = ColorPrimaries_BT709_5;
 
   // Add one layer for fb target
   // TODO(user): Add blit target layers
@@ -328,6 +366,14 @@ void HWCDisplay::BuildLayerStack() {
     } else if (hwc_layer->GetClientRequestedCompositionType() == HWC2::Composition::SolidColor) {
       layer->flags.solid_fill = true;
     }
+
+    if (!hwc_layer->SupportedDataspace()) {
+        layer->flags.skip = true;
+        DLOGW_IF(kTagStrategy, "Unsupported dataspace: 0x%x", hwc_layer->GetLayerDataspace());
+    }
+
+    working_primaries = WidestPrimaries(working_primaries,
+                                        layer->input_buffer.color_metadata.colorPrimaries);
 
     // set default composition as GPU for SDM
     layer->composition = kCompositionGPU;
@@ -407,6 +453,19 @@ void HWCDisplay::BuildLayerStack() {
 
     layer_stack_.layers.push_back(layer);
   }
+
+
+  for (auto hwc_layer : layer_set_) {
+    auto layer = hwc_layer->GetSDMLayer();
+    if (layer->input_buffer.color_metadata.colorPrimaries != working_primaries &&
+        !hwc_layer->SupportLocalConversion(working_primaries)) {
+      layer->flags.skip = true;
+    }
+    if (layer->flags.skip) {
+      layer_stack_.flags.skip_present = true;
+    }
+  }
+
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
   layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0);
   // Append client target to the layer stack
@@ -459,7 +518,7 @@ HWC2::Error HWCDisplay::SetVsyncEnabled(HWC2::Vsync enabled) {
   DLOGV("Display ID: %d enabled: %s", id_, to_string(enabled).c_str());
   DisplayError error = kErrorNone;
 
-  if (shutdown_pending_) {
+  if (shutdown_pending_ || !callbacks_->VsyncCallbackRegistered()) {
     return HWC2::Error::None;
   }
 
@@ -1355,8 +1414,20 @@ HWC2::Error HWCDisplay::SetCursorPosition(hwc2_layer_t layer, int x, int y) {
     return HWC2::Error::None;
   }
 
-  // TODO(user): Validate layer
-  // TODO(user): Check if we're in a validate/present cycle
+  if (GetHWCLayer(layer) == nullptr) {
+    return HWC2::Error::BadLayer;
+  }
+
+  DisplayState state;
+  if (display_intf_->GetDisplayState(&state) == kErrorNone) {
+    if (state != kStateOn) {
+      return HWC2::Error::None;
+    }
+  }
+
+  if (!validated_) {
+    return HWC2::Error::NotValidated;
+  }
 
   auto error = display_intf_->SetCursorPosition(x, y);
   if (error != kErrorNone) {
@@ -1603,24 +1674,27 @@ void HWCDisplay::CloseAcquireFds() {
 std::string HWCDisplay::Dump() {
   std::ostringstream os;
   os << "-------------------------------" << std::endl;
-  os << "HWC2 LayerDump display_id: " << id_ << std::endl;
+  os << "HWC2 display_id: " << id_ << std::endl;
   for (auto layer : layer_set_) {
     auto sdm_layer = layer->GetSDMLayer();
     auto transform = sdm_layer->transform;
-    os << "-------------------------------" << std::endl;
-    os << "layer_id: " << layer->GetId() << std::endl;
-    os << "\tz: " << layer->GetZ() << std::endl;
-    os << "\tclient(SF) composition: " <<
-          to_string(layer->GetClientRequestedCompositionType()).c_str() << std::endl;
-    os << "\tdevice(SDM) composition: " <<
-          to_string(layer->GetDeviceSelectedCompositionType()).c_str() << std::endl;
-    os << "\tplane_alpha: " << std::to_string(sdm_layer->plane_alpha).c_str() << std::endl;
-    os << "\tformat: " << GetFormatString(sdm_layer->input_buffer.format) << std::endl;
-    os << "\ttransform: rot: " << transform.rotation << " flip_h: " << transform.flip_horizontal <<
-          " flip_v: "<< transform.flip_vertical << std::endl;
-    os << "\tbuffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec
+    os << "layer: " << layer->GetId();
+    os << " z: " << layer->GetZ();
+    os << " compositon: " <<
+          to_string(layer->GetClientRequestedCompositionType()).c_str();
+    os << "/" <<
+          to_string(layer->GetDeviceSelectedCompositionType()).c_str();
+    os << " alpha: " << std::to_string(sdm_layer->plane_alpha).c_str();
+    os << " format: " << GetFormatString(sdm_layer->input_buffer.format);
+    os << " transform: " << transform.rotation << "/" << transform.flip_horizontal <<
+          "/"<< transform.flip_vertical;
+    os << " buffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec
        << std::endl;
   }
+  if (color_mode_) {
+    color_mode_->Dump(&os);
+  }
+  os << "-------------------------------" << std::endl;
   return os.str();
 }
 }  // namespace sdm

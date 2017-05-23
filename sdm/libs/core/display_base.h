@@ -48,7 +48,8 @@ class DisplayBase : public DisplayInterface, DumpImpl {
  public:
   DisplayBase(DisplayType display_type, DisplayEventHandler *event_handler,
               HWDeviceType hw_device_type, BufferSyncHandler *buffer_sync_handler,
-              CompManager *comp_manager, HWInfoInterface *hw_info_intf);
+              BufferAllocator *buffer_allocator, CompManager *comp_manager,
+              HWInfoInterface *hw_info_intf);
   virtual ~DisplayBase() { }
   virtual DisplayError Init();
   virtual DisplayError Deinit();
@@ -138,6 +139,7 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   HWInterface *hw_intf_ = NULL;
   HWPanelInfo hw_panel_info_;
   BufferSyncHandler *buffer_sync_handler_ = NULL;
+  BufferAllocator *buffer_allocator_ {};
   CompManager *comp_manager_ = NULL;
   DisplayState state_ = kStateOff;
   bool active_ = false;

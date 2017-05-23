@@ -71,10 +71,6 @@ typedef enum {
 
 class AdrenoMemInfo {
  public:
-  AdrenoMemInfo();
-
-  ~AdrenoMemInfo();
-
   bool Init();
 
   /*
@@ -124,7 +120,10 @@ class AdrenoMemInfo {
    */
   ADRENOPIXELFORMAT GetGpuPixelFormat(int hal_format);
 
+  static AdrenoMemInfo *GetInstance();
+
  private:
+  ~AdrenoMemInfo();
   // link(s)to adreno surface padding library.
   int (*LINK_adreno_compute_padding)(int width, int bpp, int surface_tile_height,
                                      int screen_tile_height, int padding_threshold) = NULL;
@@ -141,6 +140,8 @@ class AdrenoMemInfo {
   bool gfx_ubwc_disable_ = false;
   bool map_fb_ = false;
   void *libadreno_utils_ = NULL;
+
+  static AdrenoMemInfo *s_instance;
 };
 
 }  // namespace gralloc1

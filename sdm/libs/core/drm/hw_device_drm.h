@@ -35,9 +35,11 @@
 #include <pthread.h>
 #include <xf86drmMode.h>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "hw_interface.h"
+#include "hw_scale_drm.h"
 
 #define IOCTL_LOGE(ioctl, type) \
   DLOGE("ioctl %s, device = %d errno = %d, desc = %s", #ioctl, type, errno, strerror(errno))
@@ -47,7 +49,8 @@ class HWInfoInterface;
 
 class HWDeviceDRM : public HWInterface {
  public:
-  explicit HWDeviceDRM(BufferSyncHandler *buffer_sync_handler, HWInfoInterface *hw_info_intf);
+  explicit HWDeviceDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
+                       HWInfoInterface *hw_info_intf);
   virtual ~HWDeviceDRM() {}
   virtual DisplayError Init();
   virtual DisplayError Deinit();
@@ -98,6 +101,8 @@ class HWDeviceDRM : public HWInterface {
   static const int kMaxStringLength = 1024;
   static const int kNumPhysicalDisplays = 2;
   static const int kMaxSysfsCommandLength = 12;
+  static constexpr const char *kBrightnessNode =
+    "/sys/class/backlight/panel0-backlight/brightness";
 
   DisplayError SetFormat(const LayerBufferFormat &source, uint32_t *target);
   DisplayError SetStride(HWDeviceType device_type, LayerBufferFormat format, uint32_t width,
@@ -117,6 +122,27 @@ class HWDeviceDRM : public HWInterface {
   DisplayError AtomicCommit(HWLayers *hw_layers);
   void SetupAtomic(HWLayers *hw_layers, bool validate);
 
+  class Registry {
+   public:
+    explicit Registry(BufferAllocator *buffer_allocator) : buffer_allocator_(buffer_allocator) {}
+    // Call on each validate and commit to register layer buffers
+    void RegisterCurrent(HWLayers *hw_layers);
+    // Call at the end of draw cycle to clear the next slot for business
+    void UnregisterNext();
+    // Call on display disconnect to release all gem handles and fb_ids
+    void Clear();
+    // Finds an fb_id corresponding to an fd in current map
+    uint32_t GetFbId(int fd);
+
+   private:
+    static const int kCycleDelay = 1;  // N cycle delay before destroy
+    // fd to fb_id map. fd is used as key only for a single draw cycle between
+    // prepare and commit. It should not be used for caching in future due to fd recycling
+    std::unordered_map<int, uint32_t> hashmap_[kCycleDelay] {};
+    int current_index_ = 0;
+    BufferAllocator *buffer_allocator_ = {};
+  };
+
   HWResourceInfo hw_resource_ = {};
   HWPanelInfo hw_panel_info_ = {};
   HWInfoInterface *hw_info_intf_ = {};
@@ -133,7 +159,8 @@ class HWDeviceDRM : public HWInterface {
   bool default_mode_ = false;
   sde_drm::DRMConnectorInfo connector_info_ = {};
   std::string interface_str_ = "DSI";
-  const char *kBrightnessNode = "/sys/class/backlight/panel0-backlight/brightness";
+  HWScaleDRM *hw_scale_ = {};
+  Registry registry_;
 };
 
 }  // namespace sdm

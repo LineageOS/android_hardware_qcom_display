@@ -31,6 +31,7 @@
 #define __GR_BUF_DESCRIPTOR_H__
 
 #include <hardware/gralloc1.h>
+#include <atomic>
 
 namespace gralloc1 {
 class BufferDescriptor {

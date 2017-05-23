@@ -268,7 +268,6 @@ struct LayerBuffer {
                                 //!< could be modified by both client and SDM.
   uint64_t buffer_id __attribute__((aligned(8))) = 0;
                                 //!< Specifies the buffer id.
-  uint32_t fb_id = 0;  // DRM f/w registered framebuffer id
 };
 
 // This enum represents buffer layout types.

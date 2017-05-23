@@ -94,8 +94,9 @@ DRMMaster::~DRMMaster() {
   dev_fd_ = -1;
 }
 
-int DRMMaster::CreateFbId(const DRMBuffer &drm_buffer, uint32_t *gem_handle, uint32_t *fb_id) {
-  int ret = drmPrimeFDToHandle(dev_fd_, drm_buffer.fd, gem_handle);
+int DRMMaster::CreateFbId(const DRMBuffer &drm_buffer, uint32_t *fb_id) {
+  uint32_t gem_handle = 0;
+  int ret = drmPrimeFDToHandle(dev_fd_, drm_buffer.fd, &gem_handle);
   if (ret) {
     DRM_LOGE("drmPrimeFDToHandle failed with error %d", ret);
     return ret;
@@ -106,7 +107,7 @@ int DRMMaster::CreateFbId(const DRMBuffer &drm_buffer, uint32_t *gem_handle, uin
   cmd2.height = drm_buffer.height;
   cmd2.pixel_format = drm_buffer.drm_format;
   cmd2.flags = DRM_MODE_FB_MODIFIERS;
-  fill(begin(cmd2.handles), begin(cmd2.handles) + drm_buffer.num_planes, *gem_handle);
+  fill(begin(cmd2.handles), begin(cmd2.handles) + drm_buffer.num_planes, gem_handle);
   copy(begin(drm_buffer.stride), end(drm_buffer.stride), begin(cmd2.pitches));
   copy(begin(drm_buffer.offset), end(drm_buffer.offset), begin(cmd2.offsets));
   fill(begin(cmd2.modifier), begin(cmd2.modifier) + drm_buffer.num_planes,
@@ -114,28 +115,23 @@ int DRMMaster::CreateFbId(const DRMBuffer &drm_buffer, uint32_t *gem_handle, uin
 
   if ((ret = drmIoctl(dev_fd_, DRM_IOCTL_MODE_ADDFB2, &cmd2))) {
     DRM_LOGE("DRM_IOCTL_MODE_ADDFB2 failed with error %d", ret);
-    struct drm_gem_close gem_close = {};
-    gem_close.handle = *gem_handle;
-    int ret1 = drmIoctl(dev_fd_, DRM_IOCTL_GEM_CLOSE, &gem_close);
-    if (ret1) {
-      DRM_LOGE("drmIoctl::DRM_IOCTL_GEM_CLOSE failed with error %d", ret1);
-      return ret1;
-    }
-    return ret;
+  } else {
+    *fb_id = cmd2.fb_id;
   }
 
-  *fb_id = cmd2.fb_id;
-  return 0;
-}
-
-int DRMMaster::RemoveFbId(uint32_t gem_handle, uint32_t fb_id) {
   struct drm_gem_close gem_close = {};
   gem_close.handle = gem_handle;
-  int ret = drmIoctl(dev_fd_, DRM_IOCTL_GEM_CLOSE, &gem_close);
-  if (ret) {
-    DRM_LOGE("drmIoctl::DRM_IOCTL_GEM_CLOSE failed with error %d", errno);
+  int ret1 = drmIoctl(dev_fd_, DRM_IOCTL_GEM_CLOSE, &gem_close);
+  if (ret1) {
+    DRM_LOGE("drmIoctl::DRM_IOCTL_GEM_CLOSE failed with error %d", ret1);
+    return ret1;
   }
 
+  return ret;
+}
+
+int DRMMaster::RemoveFbId(uint32_t fb_id) {
+  int ret = 0;
 #ifdef DRM_IOCTL_MSM_RMFB2
   ret = drmIoctl(dev_fd_, DRM_IOCTL_MSM_RMFB2, &fb_id);
   if (ret) {

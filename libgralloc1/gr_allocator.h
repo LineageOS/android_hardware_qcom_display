@@ -40,7 +40,6 @@
 
 #include "gralloc_priv.h"
 #include "gr_buf_descriptor.h"
-#include "gr_adreno_info.h"
 #include "gr_ion_alloc.h"
 
 namespace gralloc1 {
@@ -62,37 +61,13 @@ class Allocator {
                              ssize_t *max_index);
   int GetImplDefinedFormat(gralloc1_producer_usage_t prod_usage,
                            gralloc1_consumer_usage_t cons_usage, int format);
-  unsigned int GetSize(const BufferDescriptor &d, unsigned int alignedw, unsigned int alignedh);
-  void GetBufferSizeAndDimensions(const BufferDescriptor &d, unsigned int *size,
-                                  unsigned int *alignedw, unsigned int *alignedh);
-  void GetBufferSizeAndDimensions(int width, int height, int format, unsigned int *size,
-                                  unsigned int *alignedw, unsigned int *alignedh);
-  void GetAlignedWidthAndHeight(const BufferDescriptor &d, unsigned int *aligned_w,
-                                unsigned int *aligned_h);
-  int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr *ycbcr);
-  int GetRgbDataAddress(private_handle_t *hnd, void **rgb_data);
-  bool UseUncached(gralloc1_producer_usage_t usage);
-  bool IsUBwcFormat(int format);
-  bool IsUBwcSupported(int format);
-  bool IsUBwcEnabled(int format, gralloc1_producer_usage_t prod_usage,
-                     gralloc1_consumer_usage_t cons_usage);
+  bool UseUncached(gralloc1_producer_usage_t prod_usage, gralloc1_consumer_usage_t cons_usage);
 
  private:
-  void GetYuvUBwcWidthAndHeight(int width, int height, int format, unsigned int *aligned_w,
-                                unsigned int *aligned_h);
-  void GetYuvSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height, uint32_t bpp,
-                         struct android_ycbcr *ycbcr);
-  void GetYuvUbwcSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height, int color_format,
-                             struct android_ycbcr *ycbcr);
-  void GetRgbUBwcBlockSize(uint32_t bpp, int *block_width, int *block_height);
-  unsigned int GetRgbUBwcMetaBufferSize(int width, int height, uint32_t bpp);
-  unsigned int GetUBwcSize(int width, int height, int format, unsigned int alignedw,
-                           unsigned int alignedh);
   void GetIonHeapInfo(gralloc1_producer_usage_t prod_usage, gralloc1_consumer_usage_t cons_usage,
                       unsigned int *ion_heap_id, unsigned int *alloc_type, unsigned int *ion_flags);
 
   IonAlloc *ion_allocator_ = NULL;
-  AdrenoMemInfo *adreno_helper_ = NULL;
 };
 
 }  // namespace gralloc1
