@@ -140,9 +140,11 @@ int HWCSession::Init() {
   struct rlimit fd_limit = {};
   getrlimit(RLIMIT_NOFILE, &fd_limit);
   fd_limit.rlim_cur = fd_limit.rlim_cur * 2;
-  auto err = setrlimit(RLIMIT_NOFILE, &fd_limit);
-  if (err) {
-    DLOGW("Unable to increase fd limit -  err:%d, %s", errno, strerror(errno));
+  if (fd_limit.rlim_cur < fd_limit.rlim_max) {
+    auto err = setrlimit(RLIMIT_NOFILE, &fd_limit);
+    if (err) {
+      DLOGW("Unable to increase fd limit -  err:%d, %s", errno, strerror(errno));
+    }
   }
   return 0;
 }
@@ -369,11 +371,13 @@ static int32_t GetDisplayType(hwc2_device_t *device, hwc2_display_t display, int
 }
 
 static int32_t GetDozeSupport(hwc2_device_t *device, hwc2_display_t display, int32_t *out_support) {
-  // TODO(user): Check if it is an HDMI as primary display and disable support for it
   if (display == HWC_DISPLAY_PRIMARY) {
     *out_support = 1;
   } else {
+    // TODO(user): Port over connect_display_ from HWC1
+    // Return no error for connected displays
     *out_support = 0;
+    return HWC2_ERROR_BAD_DISPLAY;
   }
   return HWC2_ERROR_NONE;
 }
@@ -868,6 +872,10 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       status = SetColorModeOverride(input_parcel);
       break;
 
+    case qService::IQService::SET_COLOR_MODE_BY_ID:
+      status = SetColorModeById(input_parcel);
+      break;
+
     default:
       DLOGW("QService command = %d is not supported", command);
       return -EINVAL;
@@ -1236,6 +1244,16 @@ android::status_t HWCSession::SetColorModeOverride(const android::Parcel *input_
   auto mode = static_cast<android_color_mode_t>(input_parcel->readInt32());
   auto device = static_cast<hwc2_device_t *>(this);
   auto err = CallDisplayFunction(device, display, &HWCDisplay::SetColorMode, mode);
+  if (err != HWC2_ERROR_NONE)
+    return -EINVAL;
+  return 0;
+}
+
+android::status_t HWCSession::SetColorModeById(const android::Parcel *input_parcel) {
+  auto display = static_cast<hwc2_display_t >(input_parcel->readInt32());
+  auto mode = input_parcel->readInt32();
+  auto device = static_cast<hwc2_device_t *>(this);
+  auto err = CallDisplayFunction(device, display, &HWCDisplay::SetColorModeById, mode);
   if (err != HWC2_ERROR_NONE)
     return -EINVAL;
   return 0;
