@@ -156,10 +156,11 @@ HWC2::Error HWCColorMode::HandleColorModeTransform(android_color_mode_t mode,
   bool use_matrix = false;
   if (hint != HAL_COLOR_TRANSFORM_ARBITRARY_MATRIX) {
     // if the mode + transfrom request from HWC matches one mode in SDM, set that
-    color_mode_transform = color_mode_transform_map_[mode][hint];
     if (color_mode_transform.empty()) {
       transform_hint = HAL_COLOR_TRANSFORM_IDENTITY;
       use_matrix = true;
+    } else {
+      color_mode_transform = color_mode_transform_map_[mode][hint];
     }
   } else {
     use_matrix = true;
@@ -999,6 +1000,12 @@ HWC2::Error HWCDisplay::GetDisplayRequests(int32_t *out_display_requests,
       i++;
     }
   }
+
+  auto client_target_layer = client_target_->GetSDMLayer();
+  if (client_target_layer->request.flags.flip_buffer) {
+    *out_display_requests = INT32(HWC2::DisplayRequest::FlipClientTarget);
+  }
+
   return HWC2::Error::None;
 }
 
