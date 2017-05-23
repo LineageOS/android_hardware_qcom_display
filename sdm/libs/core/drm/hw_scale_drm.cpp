@@ -66,19 +66,24 @@ static uint32_t GetAlphaInterpolation(HWAlphaInterpolation alpha_filter_cfg) {
   }
 }
 
-void HWScaleDRM::SetPlaneScaler(const HWScaleData &scale_data, SDEScaler *scaler) {
+void HWScaleDRM::SetScaler(const HWScaleData &scale_data, SDEScaler *scaler) {
   if (version_ == Version::V2) {
-    SetPlaneScalerV2(scale_data, &scaler->scaler_v2);
+    SetScalerV2(scale_data, &scaler->scaler_v2);
   }
 }
 
-void HWScaleDRM::SetPlaneScalerV2(const HWScaleData &scale_data, sde_drm_scaler_v2 *scaler) {
+void HWScaleDRM::SetScalerV2(const HWScaleData &scale_data, sde_drm_scaler_v2 *scaler) {
   if (!scale_data.enable.scale && !scale_data.enable.direction_detection &&
       !scale_data.enable.detail_enhance) {
+    scaler->enable = 0;
+    scaler->dir_en = 0;
+    scaler->de.enable = 0;
     return;
   }
 
-  scaler->enable = scale_data.enable.scale;
+  scaler->enable = scale_data.enable.scale | scale_data.enable.direction_detection |
+                   scale_data.detail_enhance.enable;
+
   scaler->dir_en = scale_data.enable.direction_detection;
   scaler->de.enable = scale_data.detail_enhance.enable;
 
@@ -132,7 +137,6 @@ void HWScaleDRM::SetPlaneScalerV2(const HWScaleData &scale_data, sde_drm_scaler_
   scaler->y_rgb_sep_lut_idx = scale_data.y_rgb_sep_lut_idx;
   scaler->uv_sep_lut_idx = scale_data.uv_sep_lut_idx;
 
-  /* TODO(user): Uncomment when de support is added
   if (scaler->de.enable) {
     sde_drm_de_v1 *det_enhance = &scaler->de;
     det_enhance->sharpen_level1 = scale_data.detail_enhance.sharpen_level1;
@@ -151,7 +155,6 @@ void HWScaleDRM::SetPlaneScalerV2(const HWScaleData &scale_data, sde_drm_scaler_
       det_enhance->adjust_c[i] = scale_data.detail_enhance.adjust_c[i];
     }
   }
-  */
 
   return;
 }

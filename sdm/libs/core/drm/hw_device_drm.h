@@ -179,12 +179,15 @@ class HWDeviceDRM : public HWInterface {
   sde_drm::DRMConnectorInfo connector_info_ = {};
 
  private:
+  void SetDestScalarData(HWLayersInfo hw_layer_info);
   bool synchronous_commit_ = false;
   HWMixerAttributes mixer_attributes_ = {};
   std::string interface_str_ = "DSI";
   std::vector<sde_drm::DRMSolidfillStage> solid_fills_ {};
   bool resolution_switch_enabled_ = false;
   uint32_t vrefresh_ = 0;
+  sde_drm_dest_scaler_data sde_dest_scalar_data_ = {};
+  std::vector<SDEScaler> scalar_data_ = {};
 };
 
 }  // namespace sdm

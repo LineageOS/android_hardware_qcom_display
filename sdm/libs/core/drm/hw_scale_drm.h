@@ -50,11 +50,10 @@ class HWScaleDRM {
  public:
   enum class Version { V2 };
   explicit HWScaleDRM(Version v) : version_(v) {}
-  void SetPlaneScaler(const HWScaleData &scale, SDEScaler *scaler);
+  void SetScaler(const HWScaleData &scale, SDEScaler *scaler);
 
  private:
-  void SetPlaneScalerV2(const HWScaleData &scale, sde_drm_scaler_v2 *scaler_v2);
-
+  void SetScalerV2(const HWScaleData &scale, sde_drm_scaler_v2 *scaler_v2);
   Version version_ = Version::V2;
 };
 

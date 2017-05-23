@@ -209,7 +209,14 @@ enum struct DRMOps {
    * Arg: uint32_t - CRTC ID
    *      uint32_t - rot_clk
    */
-  CRTC_SET_ROT_CLK,  /*
+  CRTC_SET_ROT_CLK,
+  /*
+   * Op: Sets destination scalar data
+   * Arg: uint32_t - CRTC ID
+   *      uint64_t - Pointer to destination scalar data
+   */
+  CRTC_SET_DEST_SCALER_CONFIG,
+  /*
    * Op: Returns release fence for this frame. Should be called after Commit() on
    * DRMAtomicReqInterface.
    * Arg: uint32_t - CRTC ID
@@ -374,6 +381,10 @@ struct DRMCrtcInfo {
   uint64_t min_core_ib;
   uint64_t min_llcc_ib;
   uint64_t min_dram_ib;
+  uint32_t dest_scaler_count = 0;
+  uint32_t max_dest_scaler_input_width = 0;
+  uint32_t max_dest_scaler_output_width = 0;
+  uint32_t max_dest_scale_up = 1;
 };
 
 enum struct DRMPlaneType {
@@ -603,7 +614,7 @@ class DRMManagerInterface {
    * Will query post propcessing feature info of a CRTC.
    * [output]: DRMPPFeatureInfo: CRTC post processing feature info
    */
-  virtual void GetCrtcPPInfo(uint32_t crtc_id, DRMPPFeatureInfo &info) = 0;
+  virtual void GetCrtcPPInfo(uint32_t crtc_id, DRMPPFeatureInfo *info) = 0;
   /*
    * Register a logical display to receive a token.
    * Each display pipeline in DRM is identified by its CRTC and Connector(s).

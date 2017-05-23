@@ -27,6 +27,7 @@
 #include <utils/debug.h>
 #include <utils/formats.h>
 #include <utils/rect.h>
+#include <utils/utils.h>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -108,6 +109,9 @@ DisplayError DisplayBase::Init() {
   }
 
   Debug::Get()->GetProperty("sdm.disable_hdr_lut_gen", &disable_hdr_lut_gen_);
+  // TODO(user): Temporary changes, to be removed when DRM driver supports
+  // Partial update with Destination scaler enabled.
+  SetPUonDestScaler();
 
   return kErrorNone;
 
@@ -235,8 +239,10 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   if (color_mgr_ && color_mgr_->NeedsPartialUpdateDisable()) {
     DisablePartialUpdateOneFrame();
   }
-
-  if (partial_update_control_ == false || disable_pu_one_frame_) {
+  // TODO(user): Temporary changes, to be removed when DRM driver supports
+  // Partial update with Destination scaler enabled.
+  if (partial_update_control_ == false || disable_pu_one_frame_ ||
+      disable_pu_on_dest_scaler_) {
     comp_manager_->ControlPartialUpdate(display_comp_ctx_, false /* enable */);
     disable_pu_one_frame_ = false;
   }
@@ -1056,7 +1062,6 @@ DisplayError DisplayBase::ReconfigureDisplay() {
   if (error != kErrorNone) {
     return error;
   }
-
   if (mixer_attributes != mixer_attributes_) {
     DisablePartialUpdateOneFrame();
   }
@@ -1064,6 +1069,9 @@ DisplayError DisplayBase::ReconfigureDisplay() {
   display_attributes_ = display_attributes;
   mixer_attributes_ = mixer_attributes;
   hw_panel_info_ = hw_panel_info;
+  // TODO(user): Temporary changes, to be removed when DRM driver supports
+  // Partial update with Destination scaler enabled.
+  SetPUonDestScaler();
 
   return kErrorNone;
 }
@@ -1203,7 +1211,10 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
       *new_mixer_width = display_width;
       *new_mixer_height = display_height;
     }
-
+    if (*new_mixer_width > display_width || *new_mixer_height > display_height) {
+      *new_mixer_width = display_width;
+      *new_mixer_height = display_height;
+    }
     return true;
   }
 
@@ -1263,8 +1274,17 @@ DisplayError DisplayBase::SetDetailEnhancerData(const DisplayDetailEnhancerData 
   if (error != kErrorNone) {
     return error;
   }
-
-  DisablePartialUpdateOneFrame();
+  // TODO(user): Temporary changes, to be removed when DRM driver supports
+  // Partial update with Destination scaler enabled.
+  if (GetDriverType() == DriverType::DRM) {
+    if (de_data.enable) {
+      disable_pu_on_dest_scaler_ = true;
+    } else {
+      SetPUonDestScaler();
+    }
+  } else {
+    DisablePartialUpdateOneFrame();
+  }
 
   return kErrorNone;
 }
@@ -1587,6 +1607,21 @@ DisplayError DisplayBase::ValidateDataspace(const ColorMetaData &color_metadata)
   }
 
   return kErrorNone;
+}
+
+// TODO(user): Temporary changes, to be removed when DRM driver supports
+// Partial update with Destination scaler enabled.
+void DisplayBase::SetPUonDestScaler() {
+  if (GetDriverType() == DriverType::FB) {
+    return;
+  }
+  uint32_t mixer_width = mixer_attributes_.width;
+  uint32_t mixer_height = mixer_attributes_.height;
+  uint32_t display_width = display_attributes_.x_pixels;
+  uint32_t display_height = display_attributes_.y_pixels;
+
+  disable_pu_on_dest_scaler_ = (mixer_width != display_width ||
+                                mixer_height != display_height);
 }
 
 }  // namespace sdm

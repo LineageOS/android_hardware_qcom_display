@@ -305,6 +305,11 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
     hw_resource->comp_ratio_rt_map.insert(std::make_pair(sdm_format[0], it.second));
     sdm_format.clear();
   }
+
+  hw_resource->hw_dest_scalar_info.count = info.dest_scaler_count;
+  hw_resource->hw_dest_scalar_info.max_scale_up = info.max_dest_scale_up;
+  hw_resource->hw_dest_scalar_info.max_input_width = info.max_dest_scaler_input_width;
+  hw_resource->hw_dest_scalar_info.max_output_width = info.max_dest_scaler_output_width;
 }
 
 void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {

@@ -375,7 +375,7 @@ DisplayError HWDeviceDRM::Init() {
   if (hw_resource_.has_qseed3) {
     hw_scale_ = new HWScaleDRM(HWScaleDRM::Version::V2);
   }
-
+  scalar_data_.resize(hw_resource_.hw_dest_scalar_info.count);
   return kErrorNone;
 }
 
@@ -634,14 +634,22 @@ void HWDeviceDRM::GetHWPanelMaxBrightness() {
 }
 
 DisplayError HWDeviceDRM::GetActiveConfig(uint32_t *active_config) {
-  *active_config = current_mode_index_;
+  if (IsResolutionSwitchEnabled()) {
+    *active_config = current_mode_index_;
+  } else {
+    *active_config = 0;
+  }
   return kErrorNone;
 }
 
 DisplayError HWDeviceDRM::GetNumDisplayAttributes(uint32_t *count) {
-  *count = UINT32(display_attributes_.size());
-  if (*count <= 0) {
-    return kErrorHardware;
+  if (IsResolutionSwitchEnabled()) {
+    *count = UINT32(display_attributes_.size());
+    if (*count <= 0) {
+       return kErrorHardware;
+    }
+  } else {
+    *count = 1;
   }
   return kErrorNone;
 }
@@ -651,8 +659,11 @@ DisplayError HWDeviceDRM::GetDisplayAttributes(uint32_t index,
   if (index >= display_attributes_.size()) {
     return kErrorParameters;
   }
-
-  *display_attributes = display_attributes_[index];
+  if (IsResolutionSwitchEnabled()) {
+    *display_attributes = display_attributes_[index];
+  } else {
+    *display_attributes = display_attributes_[current_mode_index_];
+  }
   return kErrorNone;
 }
 
@@ -662,6 +673,10 @@ DisplayError HWDeviceDRM::GetHWPanelInfo(HWPanelInfo *panel_info) {
 }
 
 DisplayError HWDeviceDRM::SetDisplayAttributes(uint32_t index) {
+  if (!IsResolutionSwitchEnabled()) {
+    return kErrorNotSupported;
+  }
+
   if (index >= display_attributes_.size()) {
     DLOGE("Invalid mode index %d mode size %d", index, UINT32(display_attributes_.size()));
     return kErrorParameters;
@@ -779,6 +794,8 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
       crtc_rects[i].top = UINT32(roi.top);
       crtc_rects[i].bottom = UINT32(roi.bottom);
       // TODO(user): In Dest scaler + PU, populate from HWDestScaleInfo->panel_roi
+      // TODO(user): panel_roi need to be made as a vector in HWLayersInfo and
+      // needs to be removed from  HWDestScaleInfo.
       conn_rects[i].left = UINT32(roi.left);
       conn_rects[i].right = UINT32(roi.right);
       conn_rects[i].top = UINT32(roi.top);
@@ -860,7 +877,7 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
         }
         if (hw_scale_) {
           SDEScaler scaler_output = {};
-          hw_scale_->SetPlaneScaler(pipe_info->scale_data, &scaler_output);
+          hw_scale_->SetScaler(pipe_info->scale_data, &scaler_output);
           // TODO(user): Remove qseed3 and add version check, then send appropriate scaler object
           if (hw_resource_.has_qseed3) {
             drm_atomic_intf_->Perform(DRMOps::PLANE_SET_SCALER_CONFIG, pipe_id,
@@ -912,6 +929,7 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_IDLE_TIMEOUT, token_.crtc_id,
                               hw_layer_info.set_idle_time_ms);
   }
+  SetDestScalarData(hw_layer_info);
 }
 
 void HWDeviceDRM::AddSolidfillStage(const HWSolidfillStage &sf, uint32_t plane_alpha) {
@@ -1088,6 +1106,7 @@ DisplayError HWDeviceDRM::Flush() {
     return kErrorHardware;
   }
 
+  ResetDisplayParams();
   return kErrorNone;
 }
 
@@ -1183,7 +1202,12 @@ bool HWDeviceDRM::EnableHotPlugDetection(int enable) {
   return true;
 }
 
-void HWDeviceDRM::ResetDisplayParams() {}
+void HWDeviceDRM::ResetDisplayParams() {
+  sde_dest_scalar_data_ = {};
+  for (uint32_t j = 0; j < scalar_data_.size(); j++) {
+    scalar_data_[j] = {};
+  }
+}
 
 DisplayError HWDeviceDRM::SetCursorPosition(HWLayers *hw_layers, int x, int y) {
   DTRACE_SCOPED();
@@ -1198,7 +1222,7 @@ DisplayError HWDeviceDRM::GetPPFeaturesVersion(PPFeatureVersion *vers) {
     if (info.id >= sde_drm::kPPFeaturesMax)
       continue;
     // use crtc_id_ = 0 since PP features are same across all CRTCs
-    drm_mgr_intf_->GetCrtcPPInfo(0, info);
+    drm_mgr_intf_->GetCrtcPPInfo(0, &info);
     vers->version[i] = HWColorManagerDrm::GetFeatureVersion(info);
   }
   return kErrorNone;
@@ -1419,12 +1443,6 @@ DisplayError HWDeviceDRM::GetMixerAttributes(HWMixerAttributes *mixer_attributes
     return kErrorParameters;
   }
 
-  uint32_t index = current_mode_index_;
-  mixer_attributes_.width = display_attributes_[index].x_pixels;
-  mixer_attributes_.height = display_attributes_[index].y_pixels;
-  mixer_attributes_.split_left = display_attributes_[index].is_device_split
-                                     ? hw_panel_info_.split_info.left_split
-                                     : mixer_attributes_.width;
   *mixer_attributes = mixer_attributes_;
 
   return kErrorNone;
@@ -1492,6 +1510,47 @@ void HWDeviceDRM::SetTopology(sde_drm::DRMTopology drm_topology, HWTopology *hw_
     case DRMTopology::PPSPLIT:            *hw_topology = kPPSplit;         break;
     default:                              *hw_topology = kUnknown;         break;
   }
+}
+
+void HWDeviceDRM::SetDestScalarData(HWLayersInfo hw_layer_info) {
+  if (!hw_resource_.hw_dest_scalar_info.count) {
+    return;
+  }
+
+  uint32_t index = 0;
+  for (uint32_t i = 0; i < hw_resource_.hw_dest_scalar_info.count; i++) {
+    DestScaleInfoMap::iterator it = hw_layer_info.dest_scale_info_map.find(i);
+
+    if (it == hw_layer_info.dest_scale_info_map.end()) {
+      continue;
+    }
+
+    HWDestScaleInfo *dest_scale_info = it->second;
+    SDEScaler *scale = &scalar_data_[index];
+    hw_scale_->SetScaler(dest_scale_info->scale_data, scale);
+    sde_drm_dest_scaler_cfg *dest_scalar_data = &sde_dest_scalar_data_.ds_cfg[index];
+    dest_scalar_data->flags = 0;
+    if (scale->scaler_v2.enable) {
+      dest_scalar_data->flags |= SDE_DRM_DESTSCALER_ENABLE;
+    }
+    if (scale->scaler_v2.de.enable) {
+      dest_scalar_data->flags |= SDE_DRM_DESTSCALER_ENHANCER_UPDATE;
+    }
+    if (dest_scale_info->scale_update) {
+      dest_scalar_data->flags |= SDE_DRM_DESTSCALER_SCALE_UPDATE;
+    }
+    dest_scalar_data->index = i;
+    dest_scalar_data->lm_width = dest_scale_info->mixer_width;
+    dest_scalar_data->lm_height = dest_scale_info->mixer_height;
+    dest_scalar_data->scaler_cfg = reinterpret_cast<uint64_t>(&scale->scaler_v2);
+    if (hw_panel_info_.partial_update) {
+      dest_scalar_data->flags |= SDE_DRM_DESTSCALER_PU_ENABLE;
+    }
+    index++;
+  }
+  sde_dest_scalar_data_.num_dest_scaler = UINT32(hw_layer_info.dest_scale_info_map.size());
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_DEST_SCALER_CONFIG, token_.crtc_id,
+                            reinterpret_cast<uint64_t>(&sde_dest_scalar_data_));
 }
 
 }  // namespace sdm
