@@ -255,6 +255,18 @@ HWC2::Error HWCDisplayPrimary::SetColorMode(android_color_mode_t mode) {
   return status;
 }
 
+HWC2::Error HWCDisplayPrimary::SetColorModeById(int32_t color_mode_id) {
+  auto status = color_mode_->SetColorModeById(color_mode_id);
+  if (status != HWC2::Error::None) {
+    DLOGE("failed for mode = %d", color_mode_id);
+    return status;
+  }
+
+  callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
+
+  return status;
+}
+
 HWC2::Error HWCDisplayPrimary::SetColorTransform(const float *matrix,
                                                  android_color_transform_t hint) {
   if (!matrix) {

@@ -75,6 +75,7 @@ public:
         SET_LAYER_MIXER_RESOLUTION = 33, // Enables client to set layer mixer resolution.
         SET_COLOR_MODE = 34, // Overrides the QDCM mode on the display
         GET_HDR_CAPABILITIES = 35, // Get HDR capabilities for legacy HWC interface
+        SET_COLOR_MODE_BY_ID = 36, // Overrides the QDCM mode using the given mode ID
         COMMAND_LIST_END = 400,
     };
 

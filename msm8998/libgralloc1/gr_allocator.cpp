@@ -104,7 +104,7 @@ Allocator::~Allocator() {
 int Allocator::AllocateMem(AllocData *alloc_data, gralloc1_producer_usage_t prod_usage,
                            gralloc1_consumer_usage_t cons_usage) {
   int ret;
-  alloc_data->uncached = UseUncached(prod_usage);
+  alloc_data->uncached = UseUncached(prod_usage, cons_usage);
 
   // After this point we should have the right heap set, there is no fallback
   GetIonHeapInfo(prod_usage, cons_usage, &alloc_data->heap_id, &alloc_data->alloc_type,
@@ -166,7 +166,8 @@ bool Allocator::CheckForBufferSharing(uint32_t num_descriptors,
   *max_index = -1;
   for (uint32_t i = 0; i < num_descriptors; i++) {
     // Check Cached vs non-cached and all the ION flags
-    cur_uncached = UseUncached(descriptors[i]->GetProducerUsage());
+    cur_uncached = UseUncached(descriptors[i]->GetProducerUsage(),
+                               descriptors[i]->GetConsumerUsage());
     GetIonHeapInfo(descriptors[i]->GetProducerUsage(), descriptors[i]->GetConsumerUsage(),
                    &cur_heap_id, &cur_alloc_type, &cur_ion_flags);
 
@@ -359,15 +360,16 @@ int Allocator::GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr
   unsigned int ystride, cstride;
 
   memset(ycbcr->reserved, 0, sizeof(ycbcr->reserved));
-  MetaData_t *metadata = reinterpret_cast<MetaData_t *>(hnd->base_metadata);
 
   // Check if UBWC buffer has been rendered in linear format.
-  if (metadata && (metadata->operation & LINEAR_FORMAT)) {
-    format = INT(metadata->linearFormat);
+  int linear_format = 0;
+  if (getMetaData(const_cast<private_handle_t*>(hnd), GET_LINEAR_FORMAT, &linear_format) == 0) {
+    format = linear_format;
   }
 
   // Check metadata if the geometry has been updated.
-  if (metadata && metadata->operation & UPDATE_BUFFER_GEOMETRY) {
+  BufferDim_t  buffer_dim = {};
+  if (getMetaData(const_cast<private_handle_t*>(hnd), GET_BUFFER_GEOMETRY, &buffer_dim) == 0) {
     int usage = 0;
 
     if (hnd->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED) {
@@ -375,7 +377,7 @@ int Allocator::GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr
     }
 
     BufferDescriptor descriptor =
-        BufferDescriptor(metadata->bufferDim.sliceWidth, metadata->bufferDim.sliceHeight, format,
+        BufferDescriptor(buffer_dim.sliceWidth, buffer_dim.sliceHeight, format,
                          prod_usage, cons_usage);
     GetAlignedWidthAndHeight(descriptor, &width, &height);
   }
@@ -513,21 +515,27 @@ bool Allocator::IsUBwcSupported(int format) {
  * sets the PRIVATE_UNCACHED flag or indicates that the buffer will be rarely
  * read or written in software. */
 // TODO(user) : As of now relying only on producer usage
-bool Allocator::UseUncached(gralloc1_producer_usage_t usage) {
-  if ((usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_UNCACHED) ||
-      (usage & GRALLOC1_PRODUCER_USAGE_PROTECTED)) {
+bool Allocator::UseUncached(gralloc1_producer_usage_t prod_usage,
+                            gralloc1_consumer_usage_t cons_usage) {
+  if ((prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_UNCACHED) ||
+      (prod_usage & GRALLOC1_PRODUCER_USAGE_PROTECTED)) {
     return true;
   }
 
   // CPU read rarely
-  if ((usage & GRALLOC1_PRODUCER_USAGE_CPU_READ) &&
-      !(usage & GRALLOC1_PRODUCER_USAGE_CPU_READ_OFTEN)) {
+  if ((prod_usage & GRALLOC1_PRODUCER_USAGE_CPU_READ) &&
+      !(prod_usage & GRALLOC1_PRODUCER_USAGE_CPU_READ_OFTEN)) {
     return true;
   }
 
   // CPU  write rarely
-  if ((usage & GRALLOC1_PRODUCER_USAGE_CPU_WRITE) &&
-      !(usage & GRALLOC1_PRODUCER_USAGE_CPU_WRITE_OFTEN)) {
+  if ((prod_usage & GRALLOC1_PRODUCER_USAGE_CPU_WRITE) &&
+      !(prod_usage & GRALLOC1_PRODUCER_USAGE_CPU_WRITE_OFTEN)) {
+    return true;
+  }
+
+  if ((prod_usage & GRALLOC1_PRODUCER_USAGE_SENSOR_DIRECT_DATA) ||
+      (cons_usage & GRALLOC1_CONSUMER_USAGE_GPU_DATA_BUFFER)) {
     return true;
   }
 
@@ -570,7 +578,8 @@ void Allocator::GetIonHeapInfo(gralloc1_producer_usage_t prod_usage,
     heap_id |= ION_HEAP(ION_CAMERA_HEAP_ID);
   }
 
-  if (prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_ADSP_HEAP) {
+  if (prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_ADSP_HEAP ||
+      prod_usage & GRALLOC1_PRODUCER_USAGE_SENSOR_DIRECT_DATA) {
     heap_id |= ION_HEAP(ION_ADSP_HEAP_ID);
   }
 
@@ -595,6 +604,11 @@ bool Allocator::IsUBwcEnabled(int format, gralloc1_producer_usage_t prod_usage,
   // Allow UBWC, if client is using an explicitly defined UBWC pixel format.
   if (IsUBwcFormat(format)) {
     return true;
+  }
+
+  if ((prod_usage & GRALLOC1_PRODUCER_USAGE_SENSOR_DIRECT_DATA) ||
+      (cons_usage & GRALLOC1_CONSUMER_USAGE_GPU_DATA_BUFFER)) {
+    return false;
   }
 
   // Allow UBWC, if an OpenGL client sets UBWC usage flag and GPU plus MDP

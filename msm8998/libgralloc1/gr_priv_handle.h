@@ -76,7 +76,6 @@ struct private_handle_t : public native_handle_t {
   unsigned int size;
   unsigned int offset;
   unsigned int offset_metadata;
-  unsigned int fb_id;
   uint64_t base                            __attribute__((aligned(8)));
   uint64_t base_metadata                   __attribute__((aligned(8)));
   uint64_t gpuaddr                         __attribute__((aligned(8)));
@@ -118,7 +117,6 @@ struct private_handle_t : public native_handle_t {
         size(size),
         offset(0),
         offset_metadata(0),
-        fb_id(0),
         base(0),
         base_metadata(0),
         gpuaddr(0),

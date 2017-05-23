@@ -55,9 +55,11 @@ class HWCColorMode {
   ~HWCColorMode() {}
   HWC2::Error Init();
   HWC2::Error DeInit();
+  void Dump(std::ostringstream* os);
   uint32_t GetColorModeCount();
   HWC2::Error GetColorModes(uint32_t *out_num_modes, android_color_mode_t *out_modes);
   HWC2::Error SetColorMode(android_color_mode_t mode);
+  HWC2::Error SetColorModeById(int32_t color_mode_id);
   HWC2::Error SetColorTransform(const float *matrix, android_color_transform_t hint);
 
  private:
@@ -66,13 +68,15 @@ class HWCColorMode {
   HWC2::Error HandleColorModeTransform(android_color_mode_t mode,
                                        android_color_transform_t hint, const double *matrix);
   void PopulateColorModes();
-  void PopulateTransform(const android_color_mode_t &mode, const std::string &color_mode);
+  void PopulateTransform(const android_color_mode_t &mode,
+                         const std::string &color_mode, const std::string &color_transform);
   template <class T>
   void CopyColorTransformMatrix(const T *input_matrix, double *output_matrix) {
     for (uint32_t i = 0; i < kColorTransformMatrixCount; i++) {
       output_matrix[i] = static_cast<double>(input_matrix[i]);
     }
   }
+  HWC2::Error ApplyDefaultColorMode();
 
   DisplayInterface *display_intf_ = NULL;
   android_color_mode_t current_color_mode_ = HAL_COLOR_MODE_NATIVE;
@@ -150,6 +154,9 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error SetClientTarget(buffer_handle_t target, int32_t acquire_fence,
                                       int32_t dataspace, hwc_region_t damage);
   virtual HWC2::Error SetColorMode(android_color_mode_t mode) {
+    return HWC2::Error::Unsupported;
+  }
+  virtual HWC2::Error SetColorModeById(int32_t color_mode_id) {
     return HWC2::Error::Unsupported;
   }
   virtual HWC2::Error SetColorTransform(const float *matrix, android_color_transform_t hint) {
