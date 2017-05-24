@@ -266,6 +266,17 @@ HWC2::Error HWCLayer::SetLayerDisplayFrame(hwc_rect_t frame) {
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCLayer::SetCursorPosition(int32_t x, int32_t y) {
+  hwc_rect_t frame = {};
+  frame.left = x;
+  frame.top = y;
+  frame.right = x + INT(layer_->dst_rect.right - layer_->dst_rect.left);
+  frame.bottom = y + INT(layer_->dst_rect.bottom - layer_->dst_rect.top);
+  SetLayerDisplayFrame(frame);
+
+  return HWC2::Error::None;
+}
+
 HWC2::Error HWCLayer::SetLayerPlaneAlpha(float alpha) {
   // Conversion of float alpha in range 0.0 to 1.0 similar to the HWC Adapter
   uint8_t plane_alpha = static_cast<uint8_t>(std::round(255.0f * alpha));

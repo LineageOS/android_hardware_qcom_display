@@ -87,32 +87,6 @@ DisplayError DisplayPrimary::Prepare(LayerStack *layer_stack) {
   uint32_t new_mixer_height = 0;
   uint32_t display_width = display_attributes_.x_pixels;
   uint32_t display_height = display_attributes_.y_pixels;
-  bool needs_hv_flip = hw_panel_info_.panel_orientation.flip_horizontal &&
-                          hw_panel_info_.panel_orientation.flip_vertical;
-  LayerRect src_domain = {};
-  LayerTransform panel_transform = {};
-  DisplayConfigVariableInfo variable_info = {};
-
-  if (needs_hv_flip) {
-    DisplayBase::GetFrameBufferConfig(&variable_info);
-    src_domain.right = variable_info.x_pixels;
-    src_domain.bottom = variable_info.y_pixels;
-    panel_transform.flip_horizontal = hw_panel_info_.panel_orientation.flip_horizontal;
-    panel_transform.flip_vertical = hw_panel_info_.panel_orientation.flip_vertical;
-
-    for (Layer *layer : layer_stack->layers) {
-      // Modify destination based on panel flip
-      TransformHV(src_domain, layer->dst_rect, panel_transform, &layer->dst_rect);
-
-      if (layer->flags.solid_fill) {
-        continue;
-      }
-
-      layer->transform.flip_horizontal ^= (hw_panel_info_.panel_orientation.flip_horizontal);
-      layer->transform.flip_vertical ^= (hw_panel_info_.panel_orientation.flip_vertical);
-     // TODO(user): Check how to handle rotation, if panel has rotation.
-    }
-  }
 
   if (NeedsMixerReconfiguration(layer_stack, &new_mixer_width, &new_mixer_height)) {
     error = ReconfigureMixer(new_mixer_width, new_mixer_height);
