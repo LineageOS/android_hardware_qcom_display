@@ -336,6 +336,11 @@ int HWCDisplay::Init() {
     return -EINVAL;
   }
 
+  HWCDebugHandler::Get()->GetProperty("sys.hwc_disable_hdr", &disable_hdr_handling_);
+  if (disable_hdr_handling_) {
+    DLOGI("HDR Handling disabled");
+  }
+
   int property_swap_interval = 1;
   HWCDebugHandler::Get()->GetProperty("debug.egl.swapinterval", &property_swap_interval);
   if (property_swap_interval == 0) {
@@ -490,11 +495,13 @@ void HWCDisplay::BuildLayerStack() {
       }
     }
 
-    if (layer->input_buffer.color_metadata.colorPrimaries == ColorPrimaries_BT2020 &&
-       (layer->input_buffer.color_metadata.transfer == Transfer_SMPTE_ST2084 ||
-         layer->input_buffer.color_metadata.transfer == Transfer_HLG)) {
-         layer->input_buffer.flags.hdr = true;
-         layer_stack_.flags.hdr_present = true;
+    bool hdr_layer = layer->input_buffer.color_metadata.colorPrimaries == ColorPrimaries_BT2020 &&
+                     (layer->input_buffer.color_metadata.transfer == Transfer_SMPTE_ST2084 ||
+                     layer->input_buffer.color_metadata.transfer == Transfer_HLG);
+    if (hdr_layer && !disable_hdr_handling_) {
+      // dont honor HDR when its handling is disabled
+      layer->input_buffer.flags.hdr = true;
+      layer_stack_.flags.hdr_present = true;
     }
 
     // TODO(user): Move to a getter if this is needed at other places
