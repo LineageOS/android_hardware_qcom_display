@@ -66,7 +66,7 @@ class CompManager : public DumpImpl {
   DisplayError SetMaxMixerStages(Handle display_ctx, uint32_t max_mixer_stages);
   void ControlPartialUpdate(Handle display_ctx, bool enable);
   DisplayError ValidateScaling(const LayerRect &crop, const LayerRect &dst, bool rotate90);
-  DisplayError ValidateCursorPosition(Handle display_ctx, HWLayers *hw_layers, int x, int y);
+  DisplayError ValidateAndSetCursorPosition(Handle display_ctx, HWLayers *hw_layers, int x, int y);
   bool SetDisplayState(Handle display_ctx, DisplayState state, DisplayType display_type);
   DisplayError SetMaxBandwidthMode(HWBwModes mode);
   DisplayError GetScaleLutConfig(HWScaleLutInfo *lut_info);
@@ -97,6 +97,7 @@ class CompManager : public DumpImpl {
     // panel parameters for now.
     bool is_primary_panel = false;
     PUConstraints pu_constraints = {};
+    DisplayConfigVariableInfo fb_config = {};
   };
 
   Locker locker_;

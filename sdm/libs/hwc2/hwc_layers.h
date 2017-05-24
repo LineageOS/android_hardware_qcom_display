@@ -69,6 +69,7 @@ class HWCLayer {
   HWC2::Error SetLayerCompositionType(HWC2::Composition type);
   HWC2::Error SetLayerDataspace(int32_t dataspace);
   HWC2::Error SetLayerDisplayFrame(hwc_rect_t frame);
+  HWC2::Error SetCursorPosition(int32_t x, int32_t y);
   HWC2::Error SetLayerPlaneAlpha(float alpha);
   HWC2::Error SetLayerSourceCrop(hwc_frect_t crop);
   HWC2::Error SetLayerSurfaceDamage(hwc_region_t damage);
