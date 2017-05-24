@@ -112,8 +112,9 @@ int HWCDisplayPrimary::Init() {
     return status;
   }
   color_mode_ = new HWCColorMode(display_intf_);
+  color_mode_->Init();
 
-  return INT(color_mode_->Init());
+  return status;
 }
 
 void HWCDisplayPrimary::ProcessBootAnimCompleted() {
