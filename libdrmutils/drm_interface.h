@@ -155,19 +155,48 @@ enum struct DRMOps {
    *      uint32_t - core_clk
    */
   CRTC_SET_CORE_CLK,
-   /*
-   * Op: Sets overall SDE core average bandwidth
+  /*
+   * Op: Sets MNOC bus average bandwidth
    * Arg: uint32_t - CRTC ID
    *      uint32_t - core_ab
    */
   CRTC_SET_CORE_AB,
    /*
-   * Op: Sets overall SDE core instantaneous bandwidth
+   * Op: Sets MNOC bus instantaneous bandwidth
    * Arg: uint32_t - CRTC ID
    *      uint32_t - core_ib
    */
   CRTC_SET_CORE_IB,
   /*
+   * Op: Sets LLCC Bus average bandwidth
+   * Arg: uint32_t - CRTC ID
+   *      uint32_t - llcc_ab
+   */
+  CRTC_SET_LLCC_AB,
+  /*
+   * Op: Sets LLCC Bus instantaneous bandwidth
+   * Arg: uint32_t - CRTC ID
+   *      uint32_t - llcc_ib
+   */
+  CRTC_SET_LLCC_IB,
+  /*
+   * Op: Sets DRAM bus average bandwidth
+   * Arg: uint32_t - CRTC ID
+   *      uint32_t - dram_ab
+   */
+  CRTC_SET_DRAM_AB,
+  /*
+   * Op: Sets DRAM bus instantaneous bandwidth
+   * Arg: uint32_t - CRTC ID
+   *      uint32_t - dram_ib
+   */
+  CRTC_SET_DRAM_IB,
+  /*
+   * Op: Sets rotator clock for inline rotation
+   * Arg: uint32_t - CRTC ID
+   *      uint32_t - rot_clk
+   */
+  CRTC_SET_ROT_CLK,  /*
    * Op: Returns release fence for this frame. Should be called after Commit() on
    * DRMAtomicReqInterface.
    * Arg: uint32_t - CRTC ID
