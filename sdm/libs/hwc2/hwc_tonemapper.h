@@ -32,18 +32,27 @@
 
 #include <fcntl.h>
 #include <sys/mman.h>
-
 #include <hardware/hwcomposer.h>
-
 #include <core/layer_stack.h>
 #include <utils/sys.h>
 #include <vector>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+
 #include "hwc_buffer_sync_handler.h"
 #include "hwc_buffer_allocator.h"
 
 class Tonemapper;
 
 namespace sdm {
+
+enum ToneMapEvent {
+  kEventNone,
+  kEventGetInstance,
+  kEventBlit,
+  kEventExit,
+};
 
 struct ToneMapConfig {
   int type = 0;
@@ -57,6 +66,7 @@ class ToneMapSession {
  public:
   explicit ToneMapSession(HWCBufferAllocator *buffer_allocator);
   ~ToneMapSession();
+  void Init();
   DisplayError AllocateIntermediateBuffers(const Layer *layer);
   void FreeIntermediateBuffers();
   void UpdateBuffer(int acquire_fence, LayerBuffer *buffer);
@@ -64,7 +74,19 @@ class ToneMapSession {
   void SetToneMapConfig(Layer *layer);
   bool IsSameToneMapConfig(Layer *layer);
 
+  // worker thread for gles operations
+  static void ToneMapThread(ToneMapSession *session);
+  void ToneMapHandler();
+  void NotifyClient();
+  void ProcessEvent(ToneMapEvent event);
+
   static const uint8_t kNumIntermediateBuffers = 2;
+  std::thread worker_thread_;
+  std::mutex main_mutex_;
+  std::condition_variable main_condition_;
+  std::mutex worker_mutex_;
+  std::condition_variable worker_condition_;
+
   Tonemapper *gpu_tone_mapper_ = nullptr;
   HWCBufferAllocator *buffer_allocator_ = nullptr;
   ToneMapConfig tone_map_config_ = {};
@@ -73,6 +95,10 @@ class ToneMapSession {
   int release_fence_fd_[kNumIntermediateBuffers] = {-1, -1};
   bool acquired_ = false;
   int layer_index_ = -1;
+  ToneMapEvent tone_map_event_ = kEventNone;
+  Layer *layer_ = nullptr;
+  int fence_fd_ = -1;
+  int merged_fd_ = -1;
 };
 
 class HWCToneMapper {
