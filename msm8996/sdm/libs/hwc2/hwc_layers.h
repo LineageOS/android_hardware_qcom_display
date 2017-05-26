@@ -84,6 +84,7 @@ class HWCLayer {
  private:
   Layer *layer_ = nullptr;
   uint32_t z_ = 0;
+  int32_t dataspace_ = 0;
   const hwc2_layer_t id_;
   const hwc2_display_t display_id_;
   static std::atomic<hwc2_layer_t> next_id_;
