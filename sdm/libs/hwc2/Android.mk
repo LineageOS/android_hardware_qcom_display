@@ -43,7 +43,8 @@ LOCAL_SRC_FILES               := hwc_session.cpp \
                                  hwc_layers.cpp \
                                  hwc_callbacks.cpp \
                                  ../hwc/cpuhint.cpp \
-                                 ../hwc/hwc_socket_handler.cpp
+                                 ../hwc/hwc_socket_handler.cpp \
+                                 display_null.cpp
 
 ifneq ($(TARGET_USES_GRALLOC1), true)
     LOCAL_SRC_FILES += ../hwc/hwc_buffer_allocator.cpp
