@@ -1683,14 +1683,16 @@ std::string HWCDisplay::Dump() {
   for (auto layer : layer_set_) {
     auto sdm_layer = layer->GetSDMLayer();
     auto transform = sdm_layer->transform;
-    os << "layer: " << layer->GetId();
+    os << "layer: " << std::setw(4) << layer->GetId();
     os << " z: " << layer->GetZ();
     os << " compositon: " <<
           to_string(layer->GetClientRequestedCompositionType()).c_str();
     os << "/" <<
           to_string(layer->GetDeviceSelectedCompositionType()).c_str();
     os << " alpha: " << std::to_string(sdm_layer->plane_alpha).c_str();
-    os << " format: " << GetFormatString(sdm_layer->input_buffer.format);
+    os << " format: " << std::setw(22) << GetFormatString(sdm_layer->input_buffer.format);
+    os << " dataspace:" << std::hex << "0x" << std::setw(8) << std::setfill('0')
+       << layer->GetLayerDataspace() << std::dec << std::setfill(' ');
     os << " transform: " << transform.rotation << "/" << transform.flip_horizontal <<
           "/"<< transform.flip_vertical;
     os << " buffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec
