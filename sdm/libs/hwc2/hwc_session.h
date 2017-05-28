@@ -38,7 +38,29 @@ namespace sdm {
 using ::vendor::display::config::V1_0::IDisplayConfig;
 using ::android::hardware::Return;
 
-class HWCSession : hwc2_device_t, public IDisplayConfig, public qClient::BnQClient {
+// Create a singleton uevent listener thread valid for life of hardware composer process.
+// This thread blocks on uevents poll inside uevent library implementation. This poll exits
+// only when there is a valid uevent, it can not be interrupted otherwise. Tieing life cycle
+// of this thread with HWC session cause HWC deinitialization to wait infinitely for the
+// thread to exit.
+class HWCUEventHandler {
+ public:
+  virtual ~HWCUEventHandler() {}
+  virtual void UEvent(const char *uevent_data, int length) = 0;
+};
+
+class HWCUEvent {
+ public:
+  HWCUEvent();
+  static void *UEventThread(HWCUEvent *hwc_event);
+  void Register(HWCUEventHandler *event_handler);
+
+ private:
+  std::mutex mutex_;
+  HWCUEventHandler *event_handler_ = nullptr;
+};
+
+class HWCSession : hwc2_device_t, HWCUEventHandler, IDisplayConfig, public qClient::BnQClient {
  public:
   struct HWCModuleMethods : public hw_module_methods_t {
     HWCModuleMethods() { hw_module_methods_t::open = HWCSession::Open; }
@@ -123,9 +145,8 @@ class HWCSession : hwc2_device_t, public IDisplayConfig, public qClient::BnQClie
                               int32_t *outCapabilities);
   static hwc2_function_pointer_t GetFunction(struct hwc2_device *device, int32_t descriptor);
 
-  // Uevent thread
-  static void *HWCUeventThread(void *context);
-  void *HWCUeventThreadHandler();
+  // Uevent handler
+  virtual void UEvent(const char *uevent_data, int length);
   int GetEventValue(const char *uevent_data, int length, const char *event_info);
   int HotPlugHandler(bool connected);
   void ResetPanel();
@@ -189,23 +210,21 @@ class HWCSession : hwc2_device_t, public IDisplayConfig, public qClient::BnQClie
   android::status_t SetColorModeOverride(const android::Parcel *input_parcel);
 
   static Locker locker_;
-  CoreInterface *core_intf_ = NULL;
-  HWCDisplay *hwc_display_[HWC_NUM_DISPLAY_TYPES] = {NULL};
+  CoreInterface *core_intf_ = nullptr;
+  HWCDisplay *hwc_display_[HWC_NUM_DISPLAY_TYPES] = {nullptr};
   HWCCallbacks callbacks_;
-  pthread_t uevent_thread_;
-  bool uevent_thread_exit_ = false;
-  const char *uevent_thread_name_ = "HWC_UeventThread";
-  HWCBufferAllocator *buffer_allocator_;
+  HWCBufferAllocator buffer_allocator_;
   HWCBufferSyncHandler buffer_sync_handler_;
-  HWCColorManager *color_mgr_ = NULL;
+  HWCColorManager *color_mgr_ = nullptr;
   bool reset_panel_ = false;
   bool secure_display_active_ = false;
   bool external_pending_connect_ = false;
   bool new_bw_mode_ = false;
   bool need_invalidate_ = false;
   int bw_mode_release_fd_ = -1;
-  qService::QService *qservice_ = NULL;
+  qService::QService *qservice_ = nullptr;
   HWCSocketHandler socket_handler_;
+  bool hdmi_is_primary_ = false;
 };
 
 }  // namespace sdm

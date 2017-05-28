@@ -221,6 +221,34 @@ HWC2::Error HWCLayer::SetLayerCompositionType(HWC2::Composition type) {
 }
 
 HWC2::Error HWCLayer::SetLayerDataspace(int32_t dataspace) {
+  // Map deprecated dataspace values to appropriate
+  // new enums
+  if (dataspace & 0xffff) {
+    switch (dataspace & 0xffff) {
+      case HAL_DATASPACE_SRGB:
+        dataspace = HAL_DATASPACE_V0_SRGB;
+        break;
+      case HAL_DATASPACE_JFIF:
+        dataspace = HAL_DATASPACE_V0_JFIF;
+        break;
+      case HAL_DATASPACE_SRGB_LINEAR:
+        dataspace = HAL_DATASPACE_V0_SRGB_LINEAR;
+        break;
+      case HAL_DATASPACE_BT601_625:
+        dataspace = HAL_DATASPACE_V0_BT601_625;
+        break;
+      case HAL_DATASPACE_BT601_525:
+        dataspace = HAL_DATASPACE_V0_BT601_525;
+        break;
+      case HAL_DATASPACE_BT709:
+        dataspace = HAL_DATASPACE_V0_BT709;
+        break;
+      default:
+        // unknown legacy dataspace
+        DLOGW_IF(kTagQDCM, "Unsupported dataspace type %d", dataspace);
+    }
+  }
+
   if (dataspace_ != dataspace) {
     geometry_changes_ |= kDataspace;
     dataspace_ = dataspace;
@@ -564,35 +592,6 @@ bool HWCLayer::SupportedDataspace() {
     return true;
   }
 
-  // Map deprecated dataspace values to appropriate
-  // new enums
-  if (dataspace_ & 0xffff) {
-    switch (dataspace_ & 0xffff) {
-      case HAL_DATASPACE_SRGB:
-        dataspace_ = HAL_DATASPACE_V0_SRGB;
-        break;
-      case HAL_DATASPACE_JFIF:
-        dataspace_ = HAL_DATASPACE_V0_JFIF;
-        break;
-      case HAL_DATASPACE_SRGB_LINEAR:
-        dataspace_ = HAL_DATASPACE_V0_SRGB_LINEAR;
-        break;
-      case HAL_DATASPACE_BT601_625:
-        dataspace_ = HAL_DATASPACE_V0_BT601_625;
-        break;
-      case HAL_DATASPACE_BT601_525:
-        dataspace_ = HAL_DATASPACE_V0_BT601_525;
-        break;
-      case HAL_DATASPACE_BT709:
-        dataspace_ = HAL_DATASPACE_V0_BT709;
-        break;
-      default:
-        // unknown legacy dataspace
-        DLOGE("Unsupported dataspace type %d", dataspace_);
-        return false;
-    }
-  }
-
   LayerBuffer *layer_buffer = &layer_->input_buffer;
 
   GammaTransfer sdm_transfer = {};
@@ -613,6 +612,12 @@ bool HWCLayer::SupportedDataspace() {
       break;
     case HAL_DATASPACE_TRANSFER_HLG:
       sdm_transfer = Transfer_HLG;
+      break;
+    case HAL_DATASPACE_TRANSFER_LINEAR:
+      sdm_transfer = Transfer_Linear;
+      break;
+    case HAL_DATASPACE_TRANSFER_GAMMA2_2:
+      sdm_transfer = Transfer_Gamma2_2;
       break;
     default:
       return false;
@@ -635,7 +640,7 @@ bool HWCLayer::SupportedDataspace() {
     case HAL_DATASPACE_STANDARD_DCI_P3:
       sdm_primaries = ColorPrimaries_DCIP3;
       break;
-    case HAL_DATASPACE_BT2020:
+    case HAL_DATASPACE_STANDARD_BT2020:
       sdm_primaries = ColorPrimaries_BT2020;
       break;
     default:

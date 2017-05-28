@@ -77,10 +77,9 @@ DisplayError DisplayBase::Init() {
   error = comp_manager_->GetScaleLutConfig(&lut_info);
   if (error == kErrorNone) {
     error = hw_intf_->SetScaleLutConfig(&lut_info);
-  }
-
-  if (error != kErrorNone) {
-    goto CleanupOnError;
+    if (error != kErrorNone) {
+      goto CleanupOnError;
+    }
   }
 
   error = comp_manager_->RegisterDisplay(display_type_, display_attributes_, hw_panel_info_,
@@ -125,6 +124,7 @@ DisplayError DisplayBase::Deinit() {
     lock_guard<recursive_mutex> obj(recursive_mutex_);
     color_modes_.clear();
     color_mode_map_.clear();
+    color_mode_attr_map_.clear();
 
     if (color_mgr_) {
       delete color_mgr_;
@@ -719,22 +719,86 @@ DisplayError DisplayBase::GetColorModes(uint32_t *mode_count,
   return kErrorNone;
 }
 
+DisplayError DisplayBase::GetColorModeAttr(const std::string &color_mode, AttrVal *attr) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (!attr) {
+    return kErrorParameters;
+  }
+
+  if (!color_mgr_) {
+    return kErrorNotSupported;
+  }
+
+  auto it = color_mode_attr_map_.find(color_mode);
+  if (it == color_mode_attr_map_.end()) {
+    DLOGE("Failed: Mode %s without attribute", color_mode.c_str());
+    return kErrorNotSupported;
+  }
+  *attr = it->second;
+
+  return kErrorNone;
+}
+
 DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   if (!color_mgr_) {
     return kErrorNotSupported;
   }
 
+  DynamicRangeType dynamic_range_type;
+  if (IsSupportColorModeAttribute(color_mode)) {
+    auto it_mode = color_mode_attr_map_.find(color_mode);
+    std::string dynamic_range;
+    GetValueOfModeAttribute(it_mode->second, kDynamicRangeAttribute, &dynamic_range);
+    if (dynamic_range == kHdr) {
+      dynamic_range_type = kHdrType;
+    } else {
+      dynamic_range_type = kSdrType;
+    }
+  } else {
+    if (color_mode.find("hal_hdr") != std::string::npos) {
+      dynamic_range_type = kHdrType;
+    } else {
+      dynamic_range_type = kSdrType;
+    }
+  }
+
   DisplayError error = kErrorNone;
-  // Set client requests when not in HDR Mode or lut generation is disabled
-  if (disable_hdr_lut_gen_ || !hdr_playback_mode_) {
+  if (disable_hdr_lut_gen_) {
     error = SetColorModeInternal(color_mode);
     if (error != kErrorNone) {
       return error;
     }
+    // Store the new SDR color mode request by client
+    if (dynamic_range_type == kSdrType) {
+      current_color_mode_ = color_mode;
+    }
+    return error;
   }
-  // Store the new color mode request by client
-  current_color_mode_ = color_mode;
+
+  if (hdr_playback_mode_) {
+    // HDR playback on, If incoming mode is SDR mode,
+    // cache the mode and apply it after HDR playback stop.
+    if (dynamic_range_type == kHdrType) {
+      error = SetColorModeInternal(color_mode);
+      if (error != kErrorNone) {
+        return error;
+      }
+    } else if (dynamic_range_type == kSdrType) {
+      current_color_mode_ = color_mode;
+    }
+  } else {
+    // HDR playback off, do not apply HDR mode
+    if (dynamic_range_type == kHdrType) {
+      DLOGE("Failed: Forbid setting HDR Mode : %s when HDR playback off", color_mode.c_str());
+      return kErrorNotSupported;
+    }
+    error = SetColorModeInternal(color_mode);
+    if (error != kErrorNone) {
+      return error;
+    }
+    current_color_mode_ = color_mode;
+  }
 
   return error;
 }
@@ -762,6 +826,76 @@ DisplayError DisplayBase::SetColorModeInternal(const std::string &color_mode) {
   return error;
 }
 
+DisplayError DisplayBase::GetValueOfModeAttribute(const AttrVal &attr,const std::string &type,
+                                                  std::string *value) {
+  if (!value) {
+    return kErrorParameters;
+  }
+  for (auto &it : attr) {
+    if (it.first.find(type) != std::string::npos) {
+      *value = it.second;
+    }
+  }
+
+  return kErrorNone;
+}
+
+bool DisplayBase::IsSupportColorModeAttribute(const std::string &color_mode) {
+  auto it = color_mode_attr_map_.find(color_mode);
+  if (it == color_mode_attr_map_.end()) {
+    return false;
+  }
+  return true;
+}
+
+DisplayError DisplayBase::GetHdrColorMode(std::string *color_mode, bool *found_hdr) {
+  if (!found_hdr || !color_mode) {
+    return kErrorParameters;
+  }
+  auto it_mode = color_mode_attr_map_.find(current_color_mode_);
+  if (it_mode == color_mode_attr_map_.end()) {
+    DLOGE("Failed: Unknown Mode : %s", current_color_mode_.c_str());
+    return kErrorNotSupported;
+  }
+
+  *found_hdr = false;
+  std::string cur_color_gamut, cur_pic_quality;
+  // get the attributes of current color mode
+  GetValueOfModeAttribute(it_mode->second, kColorGamutAttribute, &cur_color_gamut);
+  GetValueOfModeAttribute(it_mode->second, kPictureQualityAttribute, &cur_pic_quality);
+
+  // found the corresponding HDR mode id which
+  // has the same attributes with current SDR mode.
+  for (auto &it_hdr : color_mode_attr_map_) {
+    std::string dynamic_range, color_gamut, pic_quality;
+    GetValueOfModeAttribute(it_hdr.second, kDynamicRangeAttribute, &dynamic_range);
+    GetValueOfModeAttribute(it_hdr.second, kColorGamutAttribute, &color_gamut);
+    GetValueOfModeAttribute(it_hdr.second, kPictureQualityAttribute, &pic_quality);
+    if (dynamic_range == kHdr && cur_color_gamut == color_gamut &&
+        cur_pic_quality == pic_quality) {
+      *color_mode = it_hdr.first;
+      *found_hdr = true;
+      DLOGV_IF(kTagQDCM, "corresponding hdr mode  = %s", color_mode->c_str());
+      return kErrorNone;
+    }
+  }
+
+  // The corresponding HDR mode was not be found,
+  // apply the first HDR mode that we encouter.
+  for (auto &it_hdr : color_mode_attr_map_) {
+    std::string dynamic_range;
+    GetValueOfModeAttribute(it_hdr.second, kDynamicRangeAttribute, &dynamic_range);
+    if (dynamic_range == kHdr) {
+      *color_mode = it_hdr.first;
+      *found_hdr = true;
+      DLOGV_IF(kTagQDCM, "First hdr mode = %s", color_mode->c_str());
+      return kErrorNone;
+    }
+  }
+
+  return kErrorNone;
+}
+
 DisplayError DisplayBase::SetColorTransform(const uint32_t length, const double *color_transform) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   if (!color_mgr_) {
@@ -773,6 +907,33 @@ DisplayError DisplayBase::SetColorTransform(const uint32_t length, const double 
   }
 
   return color_mgr_->ColorMgrSetColorTransform(length, color_transform);
+}
+
+DisplayError DisplayBase::GetDefaultColorMode(std::string *color_mode) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (!color_mode) {
+    return kErrorParameters;
+  }
+
+  if (!color_mgr_) {
+    return kErrorNotSupported;
+  }
+
+  int32_t default_id = kInvalidModeId;
+  DisplayError error = color_mgr_->ColorMgrGetDefaultModeID(&default_id);
+  if (error != kErrorNone) {
+    DLOGE("Failed for get default color mode id");
+    return error;
+  }
+
+  for (uint32_t i = 0; i < num_color_modes_; i++) {
+    if (color_modes_[i].id == default_id) {
+      *color_mode = color_modes_[i].name;
+      return kErrorNone;
+    }
+  }
+
+  return kErrorNotSupported;
 }
 
 DisplayError DisplayBase::ApplyDefaultDisplayMode() {
@@ -1186,10 +1347,17 @@ DisplayError DisplayBase::InitializeColorModes() {
       DLOGE("Failed");
       return error;
     }
+    int32_t default_id = kInvalidModeId;
+    error = color_mgr_->ColorMgrGetDefaultModeID(&default_id);
 
+    AttrVal var;
     for (uint32_t i = 0; i < num_color_modes_; i++) {
       DLOGV_IF(kTagQDCM, "Color Mode[%d]: Name = %s mode_id = %d", i, color_modes_[i].name,
                color_modes_[i].id);
+      // get the name of default color mode
+      if (color_modes_[i].id == default_id) {
+        current_color_mode_ = color_modes_[i].name;
+      }
       auto it = color_mode_map_.find(color_modes_[i].name);
       if (it != color_mode_map_.end()) {
         if (it->second->id < color_modes_[i].id) {
@@ -1198,6 +1366,19 @@ DisplayError DisplayBase::InitializeColorModes() {
         }
       } else {
         color_mode_map_.insert(std::make_pair(color_modes_[i].name, &color_modes_[i]));
+      }
+
+      var.clear();
+      error = color_mgr_->ColorMgrGetModeInfo(color_modes_[i].id, &var);
+      if (error != kErrorNone) {
+        DLOGE("Failed for get attributes of mode_id = %d", color_modes_[i].id);
+        continue;
+      }
+      if (!var.empty()) {
+        auto it = color_mode_attr_map_.find(color_modes_[i].name);
+        if (it == color_mode_attr_map_.end()) {
+          color_mode_attr_map_.insert(std::make_pair(color_modes_[i].name, var));
+        }
       }
     }
   }
@@ -1220,7 +1401,7 @@ DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
       if (color_mgr_ && !disable_hdr_lut_gen_) {
         // Do not apply HDR Mode when hdr lut generation is disabled
         DLOGI("Setting color mode = %s", current_color_mode_.c_str());
-        //  HDR playback off - set prev mode
+        // HDR playback off - set prev mode
         error = SetColorModeInternal(current_color_mode_);
       }
       comp_manager_->ControlDpps(true);  // Enable Dpps
@@ -1231,8 +1412,20 @@ DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
       // hdr is starting
       hdr_playback_mode_ = true;
       if (color_mgr_ && !disable_hdr_lut_gen_) {
-        DLOGI("Setting HDR color mode = %s", hdr_color_mode_.c_str());
-        error = SetColorModeInternal(hdr_color_mode_);
+        std::string hdr_color_mode;
+        if (IsSupportColorModeAttribute(current_color_mode_)) {
+          bool found_hdr = false;
+          error = GetHdrColorMode(&hdr_color_mode, &found_hdr);
+          // try to set "hal-hdr" mode if did not found that
+          // the dynamic range of mode is hdr
+          if (!found_hdr) {
+            hdr_color_mode = "hal_hdr";
+          }
+        } else {
+          hdr_color_mode = "hal_hdr";
+        }
+        DLOGI("Setting color mode = %s", hdr_color_mode.c_str());
+        error = SetColorModeInternal(hdr_color_mode);
       }
       comp_manager_->ControlDpps(false);  // Disable Dpps
     }
