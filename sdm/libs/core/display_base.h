@@ -94,8 +94,10 @@ class DisplayBase : public DisplayInterface, DumpImpl {
                                             PPPendingParams *pending_action);
   virtual DisplayError GetColorModeCount(uint32_t *mode_count);
   virtual DisplayError GetColorModes(uint32_t *mode_count, std::vector<std::string> *color_modes);
+  virtual DisplayError GetColorModeAttr(const std::string &color_mode, AttrVal *attr);
   virtual DisplayError SetColorMode(const std::string &color_mode);
   virtual DisplayError SetColorTransform(const uint32_t length, const double *color_transform);
+  virtual DisplayError GetDefaultColorMode(std::string *color_mode);
   virtual DisplayError ApplyDefaultDisplayMode(void);
   virtual DisplayError SetCursorPosition(int x, int y);
   virtual DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate, uint32_t *max_refresh_rate);
