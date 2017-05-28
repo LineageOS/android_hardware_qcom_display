@@ -44,6 +44,9 @@ class HWEvents : public HWEventsInterface {
   virtual DisplayError Init(int fb_num, HWEventHandler *event_handler,
                             const vector<HWEvent> &event_list);
   virtual DisplayError Deinit();
+  virtual DisplayError SetEventState(HWEvent event, bool enable, void *aux = nullptr) {
+    return kErrorNotSupported;
+  }
 
  private:
   static const int kMaxStringLength = 1024;
