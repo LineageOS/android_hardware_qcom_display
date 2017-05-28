@@ -58,8 +58,6 @@ class ResourceInterface {
   virtual DisplayError ValidateScaling(const LayerRect &crop, const LayerRect &dst,
                                        bool rotate90, BufferLayout layout,
                                        bool use_rotator_downscale) = 0;
-  virtual DisplayError ValidateCursorConfig(Handle display_ctx, const Layer *layer,
-                                            bool is_top) = 0;
   virtual DisplayError ValidateCursorPosition(Handle display_ctx, HWLayers *hw_layers,
                                               int x, int y) = 0;
   virtual DisplayError SetMaxBandwidthMode(HWBwModes mode) = 0;

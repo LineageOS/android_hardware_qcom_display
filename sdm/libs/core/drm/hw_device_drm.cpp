@@ -429,23 +429,21 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
         display_attributes_.x_pixels / 2;
   }
 
-  hw_panel_info_.partial_update = 0;
-  hw_panel_info_.left_align = 0;
-  hw_panel_info_.width_align = 0;
-  hw_panel_info_.top_align = 0;
-  hw_panel_info_.height_align = 0;
-  hw_panel_info_.min_roi_width = 0;
-  hw_panel_info_.min_roi_height = 0;
-  hw_panel_info_.needs_roi_merge = 0;
+  hw_panel_info_.partial_update = connector_info_.num_roi;
+  hw_panel_info_.left_roi_count = UINT32(connector_info_.num_roi);
+  hw_panel_info_.right_roi_count = UINT32(connector_info_.num_roi);
+  hw_panel_info_.left_align = connector_info_.xstart;
+  hw_panel_info_.top_align = connector_info_.ystart;
+  hw_panel_info_.width_align = connector_info_.walign;
+  hw_panel_info_.height_align = connector_info_.halign;
+  hw_panel_info_.min_roi_width = connector_info_.wmin;
+  hw_panel_info_.min_roi_height = connector_info_.hmin;
+  hw_panel_info_.needs_roi_merge = connector_info_.roi_merge;
   hw_panel_info_.dynamic_fps = connector_info_.dynamic_fps;
   hw_panel_info_.min_fps = 60;
   hw_panel_info_.max_fps = 60;
   hw_panel_info_.is_primary_panel = connector_info_.is_primary;
   hw_panel_info_.is_pluggable = 0;
-
-  if (!default_mode_) {
-    hw_panel_info_.needs_roi_merge = (connector_info_.topology == DRMTopology::DUAL_LM_MERGE);
-  }
 
   GetHWDisplayPortAndMode();
   GetHWPanelMaxBrightness();
@@ -605,6 +603,34 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
   HWLayersInfo &hw_layer_info = hw_layers->info;
   uint32_t hw_layer_count = UINT32(hw_layer_info.hw_layers.size());
 
+  // TODO(user): Once destination scalar is enabled we can always send ROIs if driver allows
+  if (hw_panel_info_.partial_update) {
+    const int kNumMaxROIs = 4;
+    DRMRect crtc_rects[kNumMaxROIs] = {{0, 0, mixer_attributes_.width, mixer_attributes_.height}};
+    DRMRect conn_rects[kNumMaxROIs] = {{0, 0, display_attributes_.x_pixels,
+                                        display_attributes_.y_pixels}};
+
+    for (uint32_t i = 0; i < hw_layer_info.left_frame_roi.size(); i++) {
+      auto &roi = hw_layer_info.left_frame_roi.at(i);
+      // TODO(user): In multi PU, stitch ROIs vertically adjacent and upate plane destination
+      crtc_rects[i].left = UINT32(roi.left);
+      crtc_rects[i].right = UINT32(roi.right);
+      crtc_rects[i].top = UINT32(roi.top);
+      crtc_rects[i].bottom = UINT32(roi.bottom);
+      // TODO(user): In Dest scaler + PU, populate from HWDestScaleInfo->panel_roi
+      conn_rects[i].left = UINT32(roi.left);
+      conn_rects[i].right = UINT32(roi.right);
+      conn_rects[i].top = UINT32(roi.top);
+      conn_rects[i].bottom = UINT32(roi.bottom);
+    }
+
+    uint32_t num_rects = std::max(1u, static_cast<uint32_t>(hw_layer_info.left_frame_roi.size()));
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ROI, token_.crtc_id,
+                              num_rects, crtc_rects);
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_ROI, token_.conn_id,
+                              num_rects, conn_rects);
+  }
+
   for (uint32_t i = 0; i < hw_layer_count; i++) {
     Layer &layer = hw_layer_info.hw_layers.at(i);
     LayerBuffer *input_buffer = &layer.input_buffer;
@@ -673,6 +699,13 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
         }
       }
     }
+
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_CLK, token_.crtc_id, hw_layers->clock_hz);
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_AB, token_.crtc_id, hw_layers->ab_bps);
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_IB, token_.crtc_id, hw_layers->ib_bps);
+
+    DLOGI_IF(kTagDriverConfig, "System: clock=%d Hz, ab=%llu Bps ib=%llu Bps", hw_layers->clock_hz,
+             hw_layers->ab_bps, hw_layers->ib_bps);
   }
 }
 

@@ -135,7 +135,7 @@ HWInfoDRM::~HWInfoDRM() {
 DisplayError HWInfoDRM::GetDynamicBWLimits(HWResourceInfo *hw_resource) {
   HWDynBwLimitInfo* bw_info = &hw_resource->dyn_bw_info;
   for (int index = 0; index < kBwModeMax; index++) {
-    bw_info->total_bw_limit[index] = UINT32(hw_resource->max_bandwidth_low);
+    bw_info->total_bw_limit[index] = hw_resource->max_bandwidth_low;
     bw_info->pipe_bw_limit[index] = hw_resource->max_pipe_bw;
   }
 
@@ -164,14 +164,13 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
   hw_resource->linear_factor = 1;
   hw_resource->scale_factor = 1;
   hw_resource->extra_fudge_factor = 2;
-  hw_resource->amortizable_threshold = 0;
+  hw_resource->amortizable_threshold = 25;
   hw_resource->system_overhead_lines = 0;
   hw_resource->hw_dest_scalar_info.count = 0;
   hw_resource->hw_dest_scalar_info.max_scale_up = 0;
   hw_resource->hw_dest_scalar_info.max_input_width = 0;
   hw_resource->hw_dest_scalar_info.max_output_width = 0;
   hw_resource->is_src_split = true;
-  hw_resource->perf_calc = false;
   hw_resource->has_dyn_bw_support = false;
   hw_resource->has_qseed3 = false;
   hw_resource->has_concurrent_writeback = false;
@@ -254,6 +253,33 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   hw_resource->num_blending_stages = info.max_blend_stages;
   hw_resource->smart_dma_rev = (info.smart_dma_rev == sde_drm::SmartDMARevision::V2) ?
     SmartDMARevision::V2 : SmartDMARevision::V1;
+  hw_resource->ib_fudge_factor = info.ib_fudge_factor;
+  hw_resource->hw_dest_scalar_info.prefill_lines = info.dest_scale_prefill_lines;
+  hw_resource->undersized_prefill_lines = info.undersized_prefill_lines;
+  hw_resource->macrotile_factor = info.macrotile_prefill_lines;
+  hw_resource->macrotile_nv12_factor = info.nv12_prefill_lines;
+  hw_resource->linear_factor = info.linear_prefill_lines;
+  hw_resource->scale_factor = info.downscale_prefill_lines;
+  hw_resource->extra_fudge_factor = info.extra_prefill_lines;
+  hw_resource->amortizable_threshold = info.amortized_threshold;
+  hw_resource->max_bandwidth_low = info.max_bandwidth_low / kKiloUnit;
+  hw_resource->max_bandwidth_high = info.max_bandwidth_high / kKiloUnit;
+  hw_resource->max_sde_clk = info.max_sde_clk;
+
+  std::vector<LayerBufferFormat> sdm_format;
+  for (auto &it : info.comp_ratio_rt_map) {
+    std::pair<uint32_t, uint64_t> drm_format = it.first;
+    GetSDMFormat(drm_format.first, drm_format.second, &sdm_format);
+    hw_resource->comp_ratio_rt_map.insert(std::make_pair(sdm_format[0], it.second));
+    sdm_format.clear();
+  }
+
+  for (auto &it : info.comp_ratio_nrt_map) {
+    std::pair<uint32_t, uint64_t> drm_format = it.first;
+    GetSDMFormat(drm_format.first, drm_format.second, &sdm_format);
+    hw_resource->comp_ratio_rt_map.insert(std::make_pair(sdm_format[0], it.second));
+    sdm_format.clear();
+  }
 }
 
 void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
@@ -305,6 +331,7 @@ void HWInfoDRM::PopulatePipeCaps(const sde_drm::DRMPlaneTypeInfo &info,
   hw_resource->max_scale_down = info.max_downscale;
   hw_resource->max_scale_up = info.max_upscale;
   hw_resource->has_decimation = info.max_horizontal_deci > 1 && info.max_vertical_deci > 1;
+  hw_resource->max_pipe_bw = info.max_pipe_bandwidth / kKiloUnit;
 }
 
 void HWInfoDRM::PopulateSupportedFmts(HWSubBlockType sub_blk_type,

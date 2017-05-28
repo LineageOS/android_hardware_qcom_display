@@ -664,7 +664,7 @@ const char * DisplayBase::GetName(const LayerComposition &composition) {
   switch (composition) {
   case kCompositionGPU:         return "GPU";
   case kCompositionSDE:         return "SDE";
-  case kCompositionHWCursor:    return "CURSOR";
+  case kCompositionCursor:      return "CURSOR";
   case kCompositionHybrid:      return "HYBRID";
   case kCompositionBlit:        return "BLIT";
   case kCompositionGPUTarget:   return "GPU_TARGET";
