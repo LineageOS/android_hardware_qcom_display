@@ -52,12 +52,23 @@
 
 namespace sdm {
 
-static void ApplyDeInterlaceAdjustment(Layer *layer) {
+static void ApplyDeInterlaceAdjustment(HWCLayer *hwc_layer, Layer *sdm_layer) {
   // De-interlacing adjustment
-  if (layer->input_buffer.flags.interlace) {
-    float height = (layer->src_rect.bottom - layer->src_rect.top) / 2.0f;
-    layer->src_rect.top = ROUND_UP_ALIGN_DOWN(layer->src_rect.top / 2.0f, 2);
-    layer->src_rect.bottom = layer->src_rect.top + floorf(height);
+  if (sdm_layer->input_buffer.flags.interlace) {
+    // Adjust src_rect only if new source crop was set
+    if (hwc_layer->GetGeometryChanges() & kSourceCrop) {
+      float height = (sdm_layer->src_rect.bottom - sdm_layer->src_rect.top) / 2.0f;
+      sdm_layer->src_rect.top = ROUND_UP_ALIGN_DOWN(sdm_layer->src_rect.top / 2.0f, 2);
+      sdm_layer->src_rect.bottom = sdm_layer->src_rect.top + floorf(height);
+    }
+
+    // Handle deinterlacing for UBWC Interlaced format.
+    if (IsUBWCFormat(sdm_layer->input_buffer.format)) {
+      sdm_layer->input_buffer.height /= 2;
+      sdm_layer->input_buffer.unaligned_height /= 2;
+      // After adjustments layer needs to be treated as UBWC progressive. Reset interlace flag.
+      sdm_layer->input_buffer.flags.interlace = 0;
+    }
   }
 }
 
@@ -504,7 +515,7 @@ void HWCDisplay::BuildLayerStack() {
                                        INT(layer->dst_rect.right), INT(layer->dst_rect.bottom)};
     ApplyScanAdjustment(&scaled_display_frame);
     hwc_layer->SetLayerDisplayFrame(scaled_display_frame);
-    ApplyDeInterlaceAdjustment(layer);
+    ApplyDeInterlaceAdjustment(hwc_layer, layer);
     // SDM requires these details even for solid fill
     if (layer->flags.solid_fill) {
       LayerBuffer *layer_buffer = &layer->input_buffer;
