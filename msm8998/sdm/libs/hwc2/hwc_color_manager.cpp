@@ -335,6 +335,7 @@ int HWCColorManager::SetHWDetailedEnhancerConfig(void *params, HWCDisplay *hwc_d
 }
 
 void HWCColorManager::SetColorModeDetailEnhancer(HWCDisplay *hwc_display) {
+#ifdef ENABLE_DETAIL_ENHANCER
   SCOPE_LOCK(locker_);
   int err = -1;
   PPPendingParams pending_action;
@@ -349,6 +350,7 @@ void HWCColorManager::SetColorModeDetailEnhancer(HWCDisplay *hwc_display) {
       err = SetHWDetailedEnhancerConfig(pending_action.params, hwc_display);
     }
   }
+#endif
   return;
 }
 
