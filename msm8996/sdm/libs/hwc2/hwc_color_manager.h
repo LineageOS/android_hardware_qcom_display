@@ -32,7 +32,6 @@
 
 #include <stdlib.h>
 #include <binder/Parcel.h>
-#include <powermanager/IPowerManager.h>
 #include <binder/BinderService.h>
 #include <core/sdm_types.h>
 #include <utils/locker.h>
@@ -94,7 +93,6 @@ class HWCQDCMModeManager {
   bool cabl_was_running_ = false;
   int socket_fd_ = -1;
   android::sp<android::IBinder> wakelock_token_ = NULL;
-  android::sp<android::IPowerManager> power_mgr_ = NULL;
   uint32_t entry_timeout_ = 0;
   static const char *const kSocketName;
   static const char *const kTagName;
