@@ -953,7 +953,7 @@ void HWCDisplay::SetComposition(const LayerComposition &source, int32_t *target)
   case kCompositionGPUTarget:   *target = HWC_FRAMEBUFFER_TARGET; break;
   case kCompositionGPU:         *target = HWC_FRAMEBUFFER;        break;
   case kCompositionGPUS3D:      *target = HWC_FRAMEBUFFER;        break;
-  case kCompositionHWCursor:    *target = HWC_CURSOR_OVERLAY;     break;
+  case kCompositionCursor:      *target = HWC_CURSOR_OVERLAY;     break;
   default:                      *target = HWC_OVERLAY;            break;
   }
 }

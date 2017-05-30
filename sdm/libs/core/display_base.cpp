@@ -664,7 +664,7 @@ const char * DisplayBase::GetName(const LayerComposition &composition) {
   switch (composition) {
   case kCompositionGPU:         return "GPU";
   case kCompositionSDE:         return "SDE";
-  case kCompositionHWCursor:    return "CURSOR";
+  case kCompositionCursor:      return "CURSOR";
   case kCompositionHybrid:      return "HYBRID";
   case kCompositionBlit:        return "BLIT";
   case kCompositionGPUTarget:   return "GPU_TARGET";
@@ -986,10 +986,14 @@ DisplayError DisplayBase::SetVSyncState(bool enable) {
   DisplayError error = kErrorNone;
   if (vsync_enable_ != enable) {
     error = hw_intf_->SetVSyncState(enable);
+    if (error == kErrorNotSupported) {
+      error = hw_events_intf_->SetEventState(HWEvent::VSYNC, enable);
+    }
     if (error == kErrorNone) {
       vsync_enable_ = enable;
     }
   }
+
   return error;
 }
 
