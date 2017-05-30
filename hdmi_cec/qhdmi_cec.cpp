@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014, 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014, 2016-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -296,8 +296,10 @@ void cec_receive_message(cec_context_t *ctx, char *msg, ssize_t len)
     event.cec.initiator = (cec_logical_address_t) msg[CEC_OFFSET_SENDER_ID];
     event.cec.destination = (cec_logical_address_t) msg[CEC_OFFSET_RECEIVER_ID];
     //Copy opcode and operand
-    memcpy(event.cec.body, &msg[CEC_OFFSET_OPCODE], event.cec.length);
-    hex_to_string((char *) event.cec.body, event.cec.length, dump);
+    size_t copy_size = event.cec.length > sizeof(event.cec.body) ?
+                       sizeof(event.cec.body) : event.cec.length;
+    memcpy(event.cec.body, &msg[CEC_OFFSET_OPCODE],copy_size);
+    hex_to_string((char *) event.cec.body, copy_size, dump);
     ALOGD_IF(DEBUG, "%s: Message to framework: %s", __FUNCTION__, dump);
     ctx->callback.callback_func(&event, ctx->callback.callback_arg);
 }

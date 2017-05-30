@@ -521,9 +521,14 @@ LayerBufferS3DFormat HWCLayer::GetS3DFormat(uint32_t s3d_format) {
 
 DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *layer) {
   LayerBuffer *layer_buffer = &layer->input_buffer;
+  bool use_color_metadata = true;
 
+#ifdef FEATURE_WIDE_COLOR
   // Only use color metadata if Android framework metadata is not set
-  if (dataspace_ == HAL_DATASPACE_UNKNOWN) {
+  use_color_metadata = (dataspace_ == HAL_DATASPACE_UNKNOWN);
+#endif
+
+  if (use_color_metadata) {
     if (sdm::SetCSC(pvt_handle, &layer_buffer->color_metadata) != kErrorNone) {
       return kErrorNotSupported;
     }
