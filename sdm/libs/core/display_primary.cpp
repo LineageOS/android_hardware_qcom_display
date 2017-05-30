@@ -311,6 +311,11 @@ void DisplayPrimary::IdleTimeout() {
   comp_manager_->ProcessIdleTimeout(display_comp_ctx_);
 }
 
+void DisplayPrimary::PingPongTimeout() {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  hw_intf_->DumpDebugData();
+}
+
 void DisplayPrimary::ThermalEvent(int64_t thermal_level) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   comp_manager_->ProcessThermalEvent(display_comp_ctx_, thermal_level);

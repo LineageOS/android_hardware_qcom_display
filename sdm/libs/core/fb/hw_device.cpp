@@ -1359,5 +1359,33 @@ DisplayError HWDevice::GetMixerAttributes(HWMixerAttributes *mixer_attributes) {
   return kErrorNone;
 }
 
+DisplayError HWDevice::DumpDebugData() {
+  DLOGW("Pingpong timeout occurred in the driver.");
+#ifdef USER_DEBUG
+  // Save the xlogs on ping pong time out
+  std::ofstream  dst("/data/vendor/display/mdp_xlog");
+  dst << "+++ MDP:XLOG +++" << std::endl;
+  std::ifstream  src("/sys/kernel/debug/mdp/xlog/dump");
+  dst << src.rdbuf() << std::endl;
+  src.close();
+
+  dst << "+++ MDP:REG_XLOG +++" << std::endl;
+  src.open("/sys/kernel/debug/mdp/xlog/reg_xlog");
+  dst << src.rdbuf() << std::endl;
+  src.close();
+
+  dst << "+++ MDP:DBGBUS_XLOG +++" << std::endl;
+  src.open("/sys/kernel/debug/mdp/xlog/dbgbus_xlog");
+  dst << src.rdbuf() << std::endl;
+  src.close();
+
+  dst << "+++ MDP:VBIF_DBGBUS_XLOG +++" << std::endl;
+  src.open("/sys/kernel/debug/mdp/xlog/vbif_dbgbus_xlog");
+  dst << src.rdbuf() << std::endl;
+  src.close();
+#endif
+  return kErrorNone;
+}
+
 }  // namespace sdm
 

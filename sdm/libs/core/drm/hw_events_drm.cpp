@@ -85,6 +85,7 @@ DisplayError HWEventsDRM::InitializePollFd() {
       case HWEvent::SHOW_BLANK_EVENT:
       case HWEvent::THERMAL_LEVEL:
       case HWEvent::IDLE_POWER_COLLAPSE:
+      case HWEvent::PINGPONG_TIMEOUT:
         break;
     }
   }
@@ -270,6 +271,7 @@ void *HWEventsDRM::DisplayEventHandler() {
         case HWEvent::SHOW_BLANK_EVENT:
         case HWEvent::THERMAL_LEVEL:
         case HWEvent::IDLE_POWER_COLLAPSE:
+        case HWEvent::PINGPONG_TIMEOUT:
           if (poll_fd.fd >= 0 && (poll_fd.revents & POLLPRI) &&
               (Sys::pread_(poll_fd.fd, data, kMaxStringLength, 0) > 0)) {
             (this->*(event_data_list_[i]).event_parser)(data);

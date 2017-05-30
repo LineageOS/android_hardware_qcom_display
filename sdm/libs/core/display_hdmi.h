@@ -55,6 +55,7 @@ class DisplayHDMI : public DisplayBase, HWEventHandler {
   virtual void ThermalEvent(int64_t thermal_level) { }
   virtual void CECMessage(char *message);
   virtual void IdlePowerCollapse() { }
+  virtual void PingPongTimeout() { }
 
  private:
   uint32_t GetBestConfig(HWS3DMode s3d_mode);

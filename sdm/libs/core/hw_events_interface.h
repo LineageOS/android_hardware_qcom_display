@@ -43,6 +43,7 @@ enum HWEvent {
   SHOW_BLANK_EVENT,
   THERMAL_LEVEL,
   IDLE_POWER_COLLAPSE,
+  PINGPONG_TIMEOUT,
 };
 
 class HWEventsInterface {
