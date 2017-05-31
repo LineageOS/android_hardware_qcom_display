@@ -177,8 +177,10 @@ HWC2::Error HWCLayer::SetLayerCompositionType(HWC2::Composition type) {
 }
 
 HWC2::Error HWCLayer::SetLayerDataspace(int32_t dataspace) {
-  // TODO(user): Implement later
-  geometry_changes_ |= kDataspace;
+  if (dataspace != dataspace_) {
+    dataspace_ = dataspace;
+    geometry_changes_ |= kDataspace;
+  }
   return HWC2::Error::None;
 }
 
