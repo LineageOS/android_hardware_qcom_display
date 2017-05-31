@@ -258,12 +258,19 @@ HWC2::Error HWCLayer::SetLayerDataspace(int32_t dataspace) {
 
 HWC2::Error HWCLayer::SetLayerDisplayFrame(hwc_rect_t frame) {
   LayerRect dst_rect = {};
+
   SetRect(frame, &dst_rect);
-  if (layer_->dst_rect != dst_rect) {
+  if (dst_rect_ != dst_rect) {
     geometry_changes_ |= kDisplayFrame;
-    layer_->dst_rect = dst_rect;
+    dst_rect_ = dst_rect;
   }
+
   return HWC2::Error::None;
+}
+
+void HWCLayer::ResetPerFrameData() {
+  layer_->dst_rect = dst_rect_;
+  layer_->transform = layer_transform_;
 }
 
 HWC2::Error HWCLayer::SetLayerPlaneAlpha(float alpha) {
@@ -322,10 +329,11 @@ HWC2::Error HWCLayer::SetLayerTransform(HWC2::Transform transform) {
       break;
   }
 
-  if (layer_->transform != layer_transform) {
+  if (layer_transform_ != layer_transform) {
     geometry_changes_ |= kTransform;
-    layer_->transform = layer_transform;
+    layer_transform_ = layer_transform;
   }
+
   return HWC2::Error::None;
 }
 

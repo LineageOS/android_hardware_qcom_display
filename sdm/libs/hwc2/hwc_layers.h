@@ -61,6 +61,7 @@ class HWCLayer {
   uint32_t GetZ() const { return z_; }
   hwc2_layer_t GetId() const { return id_; }
   Layer *GetSDMLayer() { return layer_; }
+  void ResetPerFrameData();
 
   HWC2::Error SetLayerBlendMode(HWC2::BlendMode mode);
   HWC2::Error SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fence);
@@ -96,6 +97,8 @@ class HWCLayer {
   int ion_fd_ = -1;
   HWCBufferAllocator *buffer_allocator_ = NULL;
   int32_t dataspace_ =  HAL_DATASPACE_UNKNOWN;
+  LayerTransform layer_transform_ = {};
+  LayerRect dst_rect_ = {};
 
   // Composition requested by client(SF)
   HWC2::Composition client_requested_ = HWC2::Composition::Device;
