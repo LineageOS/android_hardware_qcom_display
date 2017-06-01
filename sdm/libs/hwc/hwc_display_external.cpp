@@ -137,12 +137,11 @@ int HWCDisplayExternal::Prepare(hwc_display_contents_1_t *content_list) {
   bool one_video_updating_layer = SingleVideoLayerUpdating(UINT32(content_list->numHwLayers - 1));
 
   uint32_t refresh_rate = GetOptimalRefreshRate(one_video_updating_layer);
-  if (current_refresh_rate_ != refresh_rate) {
-    error = display_intf_->SetRefreshRate(refresh_rate);
-    if (error == kErrorNone) {
-      // On success, set current refresh rate to new refresh rate
-      current_refresh_rate_ = refresh_rate;
-    }
+  bool final_rate = force_refresh_rate_ ? true : false;
+  error = display_intf_->SetRefreshRate(refresh_rate, final_rate);
+  if (error == kErrorNone) {
+    // On success, set current refresh rate to new refresh rate
+    current_refresh_rate_ = refresh_rate;
   }
 
   status = PrepareLayerStack(content_list);

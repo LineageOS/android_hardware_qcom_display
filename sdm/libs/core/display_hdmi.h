@@ -44,7 +44,7 @@ class DisplayHDMI : public DisplayBase, HWEventHandler {
   virtual DisplayError Init();
   virtual DisplayError Prepare(LayerStack *layer_stack);
   virtual DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate, uint32_t *max_refresh_rate);
-  virtual DisplayError SetRefreshRate(uint32_t refresh_rate);
+  virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate);
   virtual bool IsUnderscanSupported();
   virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
 
@@ -66,6 +66,7 @@ class DisplayHDMI : public DisplayBase, HWEventHandler {
   std::map<LayerBufferS3DFormat, HWS3DMode> s3d_format_to_mode_;
   std::vector<HWEvent> event_list_ = { HWEvent::VSYNC, HWEvent::IDLE_NOTIFY, HWEvent::EXIT,
     HWEvent::CEC_READ_MESSAGE };
+  uint32_t current_refresh_rate_ = 0;
 };
 
 }  // namespace sdm
