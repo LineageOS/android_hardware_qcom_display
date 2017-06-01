@@ -20,6 +20,7 @@
 #ifndef __HWC_DISPLAY_H__
 #define __HWC_DISPLAY_H__
 
+#include <sys/stat.h>
 #include <QService.h>
 #include <core/core_interface.h>
 #include <hardware/hwcomposer.h>
@@ -67,13 +68,15 @@ class HWCColorMode {
   HWC2::Error HandleColorModeTransform(android_color_mode_t mode,
                                        android_color_transform_t hint, const double *matrix);
   void PopulateColorModes();
-  void PopulateTransform(const android_color_mode_t &mode, const std::string &color_mode);
+  void PopulateTransform(const android_color_mode_t &mode,
+                         const std::string &color_mode, const std::string &color_transform);
   template <class T>
   void CopyColorTransformMatrix(const T *input_matrix, double *output_matrix) {
     for (uint32_t i = 0; i < kColorTransformMatrixCount; i++) {
       output_matrix[i] = static_cast<double>(input_matrix[i]);
     }
   }
+  HWC2::Error ApplyDefaultColorMode();
 
   DisplayInterface *display_intf_ = NULL;
   android_color_mode_t current_color_mode_ = HAL_COLOR_MODE_NATIVE;
@@ -85,6 +88,14 @@ class HWCColorMode {
 
 class HWCDisplay : public DisplayEventHandler {
  public:
+  enum DisplayStatus {
+    kDisplayStatusInvalid = -1,
+    kDisplayStatusOffline,
+    kDisplayStatusOnline,
+    kDisplayStatusPause,
+    kDisplayStatusResume,
+  };
+
   virtual ~HWCDisplay() {}
   virtual int Init();
   virtual int Deinit();
@@ -99,7 +110,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::PowerMode GetLastPowerMode();
   virtual int SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels);
   virtual void GetFrameBufferResolution(uint32_t *x_pixels, uint32_t *y_pixels);
-  virtual int SetDisplayStatus(uint32_t display_status);
+  virtual int SetDisplayStatus(DisplayStatus display_status);
   virtual int OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
   virtual int Perform(uint32_t operation, ...);
   virtual void SetSecureDisplay(bool secure_display_active);
@@ -125,12 +136,14 @@ class HWCDisplay : public DisplayEventHandler {
   }
 
   // Display Configurations
-  virtual int SetActiveDisplayConfig(int config);
+  virtual int SetActiveDisplayConfig(uint32_t config);
   virtual int GetActiveDisplayConfig(uint32_t *config);
   virtual int GetDisplayConfigCount(uint32_t *count);
   virtual int GetDisplayAttributesForConfig(int config,
                                             DisplayConfigVariableInfo *display_attributes);
-
+  virtual int SetState(bool connected) {
+    return kErrorNotSupported;
+  }
   int SetPanelBrightness(int level);
   int GetPanelBrightness(int *level);
   int ToggleScreenUpdates(bool enable);
@@ -189,13 +202,6 @@ class HWCDisplay : public DisplayEventHandler {
                                          float* out_min_luminance);
 
  protected:
-  enum DisplayStatus {
-    kDisplayStatusOffline = 0,
-    kDisplayStatusOnline,
-    kDisplayStatusPause,
-    kDisplayStatusResume,
-  };
-
   // Maximum number of layers supported by display manager.
   static const uint32_t kMaxLayerCount = 32;
 
