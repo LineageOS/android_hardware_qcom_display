@@ -80,6 +80,11 @@ DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
     // Allocate uncached buffers
     alloc_flags |= GRALLOC_USAGE_PRIVATE_UNCACHED;
   }
+
+  if (buffer_config.gfx_client) {
+    alloc_flags |= GRALLOC1_CONSUMER_USAGE_GPU_TEXTURE;
+  }
+
   uint64_t producer_usage = alloc_flags;
   uint64_t consumer_usage = alloc_flags;
   // CreateBuffer
