@@ -115,6 +115,7 @@ void AdrenoMemInfo::AlignUnCompressedRGB(int width, int height, int format, int 
   int bpp = 4;
   switch (format) {
     case HAL_PIXEL_FORMAT_RGB_888:
+    case HAL_PIXEL_FORMAT_BGR_888:
       bpp = 3;
       break;
     case HAL_PIXEL_FORMAT_RGB_565:

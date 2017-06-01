@@ -129,6 +129,9 @@ inline int roundUpToPageSize(int x) {
 #define HAL_PIXEL_FORMAT_YCbCr_420_P010 0x11F
 #define HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC 0x124
 
+#define HAL_PIXEL_FORMAT_CbYCrY_422_I            0x120
+#define HAL_PIXEL_FORMAT_BGR_888                 0x121
+
 #define HAL_PIXEL_FORMAT_INTERLACE 0x180
 
 // v4l2_fourcc('Y', 'U', 'Y', 'L'). 24 bpp YUYV 4:2:2 10 bit per component
