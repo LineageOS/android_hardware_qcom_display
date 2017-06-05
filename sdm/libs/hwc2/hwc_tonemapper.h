@@ -37,6 +37,7 @@
 
 #include <core/layer_stack.h>
 #include <utils/sys.h>
+#include <utils/sync_task.h>
 #include <vector>
 #include "hwc_buffer_sync_handler.h"
 #include "hwc_buffer_allocator.h"
@@ -44,6 +45,22 @@
 class Tonemapper;
 
 namespace sdm {
+
+enum class ToneMapTaskCode : int32_t {
+  kCodeGetInstance,
+  kCodeBlit,
+  kCodeDestroy,
+};
+
+struct ToneMapGetInstanceContext : public SyncTask<ToneMapTaskCode>::TaskContext {
+  Layer *layer = nullptr;
+};
+
+struct ToneMapBlitContext : public SyncTask<ToneMapTaskCode>::TaskContext {
+  Layer *layer = nullptr;
+  int merged_fd = -1;
+  int fence_fd = -1;
+};
 
 struct ToneMapConfig {
   int type = 0;
@@ -53,7 +70,7 @@ struct ToneMapConfig {
   bool secure = false;
 };
 
-class ToneMapSession {
+class ToneMapSession : public SyncTask<ToneMapTaskCode>::TaskHandler {
  public:
   explicit ToneMapSession(HWCBufferAllocator *buffer_allocator);
   ~ToneMapSession();
@@ -64,7 +81,12 @@ class ToneMapSession {
   void SetToneMapConfig(Layer *layer);
   bool IsSameToneMapConfig(Layer *layer);
 
+  // TaskHandler methods implementation.
+  virtual void OnTask(const ToneMapTaskCode &task_code,
+                      SyncTask<ToneMapTaskCode>::TaskContext *task_context);
+
   static const uint8_t kNumIntermediateBuffers = 2;
+  SyncTask<ToneMapTaskCode> tone_map_task_;
   Tonemapper *gpu_tone_mapper_ = nullptr;
   HWCBufferAllocator *buffer_allocator_ = nullptr;
   ToneMapConfig tone_map_config_ = {};
