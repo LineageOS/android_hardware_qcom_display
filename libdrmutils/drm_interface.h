@@ -321,11 +321,15 @@ struct DRMPlaneTypeInfo {
 typedef std::vector<std::pair<uint32_t, DRMPlaneTypeInfo>>  DRMPlanesInfo;
 
 enum struct DRMTopology {
-  UNKNOWN,  // To be compat with driver defs in sde_kms.h
+  UNKNOWN,  // To be compat with driver defs in sde_rm.h
   SINGLE_LM,
+  SINGLE_LM_DSC,
   DUAL_LM,
-  PPSPLIT,
+  DUAL_LM_DSC,
   DUAL_LM_MERGE,
+  DUAL_LM_MERGE_DSC,
+  DUAL_LM_DSCMERGE,
+  PPSPLIT,
 };
 
 enum struct DRMPanelMode {

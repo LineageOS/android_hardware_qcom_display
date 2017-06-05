@@ -414,7 +414,9 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes() {
   display_attributes_.h_total = mode.htotal;
   uint32_t h_blanking = mode.htotal - mode.hdisplay;
   display_attributes_.is_device_split =
-      (topology == DRMTopology::DUAL_LM || topology == DRMTopology::DUAL_LM_MERGE);
+      (topology == DRMTopology::DUAL_LM || topology == DRMTopology::DUAL_LM_MERGE ||
+       topology == DRMTopology::DUAL_LM_MERGE_DSC || topology == DRMTopology::DUAL_LM_DSC ||
+       topology == DRMTopology::DUAL_LM_DSCMERGE);
   display_attributes_.h_total += display_attributes_.is_device_split ? h_blanking : 0;
 
   display_attributes_.x_dpi = (FLOAT(mode.hdisplay) * 25.4f) / FLOAT(mm_width);
