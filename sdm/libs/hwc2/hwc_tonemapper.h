@@ -97,7 +97,7 @@ class ToneMapSession {
   int layer_index_ = -1;
   ToneMapEvent tone_map_event_ = kEventNone;
   Layer *layer_ = nullptr;
-  int fence_fd_ = -1;
+  int *fence_fd_ = nullptr;
   int merged_fd_ = -1;
 };
 
