@@ -27,23 +27,22 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include "hw_tv_drm.h"
+#include <utils/debug.h>
+#include <utils/sys.h>
+#include <utils/formats.h>
 #include <drm_lib_loader.h>
 #include <drm_master.h>
 #include <drm_res_mgr.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <string.h>
-#include <utils/debug.h>
-#include <utils/sys.h>
-#include <utils/formats.h>
-
+#include <string>
 #include <vector>
 #include <map>
 #include <utility>
 
-#include "hw_hdmi_drm.h"
 
-#define __CLASS__ "HWHDMIDRM"
+#define __CLASS__ "HWTVDRM"
 
 using drm_utils::DRMMaster;
 using drm_utils::DRMResMgr;
@@ -60,17 +59,16 @@ using sde_drm::DRMTopology;
 
 namespace sdm {
 
-HWHDMIDRM::HWHDMIDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
+HWTVDRM::HWTVDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
                      HWInfoInterface *hw_info_intf)
-  : HWDeviceDRM(buffer_sync_handler, buffer_allocator, hw_info_intf),
-  active_config_index_(0) {
-  HWDeviceDRM::device_type_ = kDeviceHDMI;
-  HWDeviceDRM::device_name_ = "HDMI Display Device";
+  : HWDeviceDRM(buffer_sync_handler, buffer_allocator, hw_info_intf), active_config_index_(0) {
+  disp_type_ = DRMDisplayType::TV;
+  device_name_ = "TV Display Device";
 }
 
 // TODO(user) : split function in base class and avoid code duplicacy
 // by using base implementation for this basic stuff
-DisplayError HWHDMIDRM::Init() {
+DisplayError HWTVDRM::Init() {
   DisplayError error = kErrorNone;
 
   default_mode_ = (DRMLibLoader::GetInstance()->IsLoaded() == false);
@@ -89,28 +87,23 @@ DisplayError HWHDMIDRM::Init() {
     drm_mgr_intf_->CreateAtomicReq(token_, &drm_atomic_intf_);
     drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
     InitializeConfigs();
-    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode_);
-    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
-
-    if (drm_atomic_intf_->Commit(true /* synchronous */)) {
-      DLOGE("Setting up CRTC %d, Connector %d for %s failed", token_.crtc_id, token_.conn_id,
-            device_name_);
-      return kErrorResources;
-    }
-
-    // Reload connector info for updated info after 1st commit
-    drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
-    DLOGI("Setup CRTC %d, Connector %d for %s", token_.crtc_id, token_.conn_id, device_name_);
   }
 
-  PopulateDisplayAttributes();
-  PopulateHWPanelInfo();
-  UpdateMixerAttributes();
+  hw_info_intf_->GetHWResourceInfo(&hw_resource_);
+
+  // TODO(user): In future, remove has_qseed3 member, add version and pass version to constructor
+  if (hw_resource_.has_qseed3) {
+    hw_scale_ = new HWScaleDRM(HWScaleDRM::Version::V2);
+  }
+
+  if (error != kErrorNone) {
+    return error;
+  }
 
   return error;
 }
 
-DisplayError HWHDMIDRM::GetNumDisplayAttributes(uint32_t *count) {
+DisplayError HWTVDRM::GetNumDisplayAttributes(uint32_t *count) {
   *count = connector_info_.num_modes;
   if (*count <= 0) {
     return kErrorHardware;
@@ -119,44 +112,71 @@ DisplayError HWHDMIDRM::GetNumDisplayAttributes(uint32_t *count) {
   return kErrorNone;
 }
 
-DisplayError HWHDMIDRM::GetActiveConfig(uint32_t *active_config_index) {
+DisplayError HWTVDRM::GetActiveConfig(uint32_t *active_config_index) {
   *active_config_index = active_config_index_;
   return kErrorNone;
 }
 
-DisplayError HWHDMIDRM::SetDisplayAttributes(uint32_t index) {
-  DTRACE_SCOPED();
-
+DisplayError HWTVDRM::SetDisplayAttributes(uint32_t index) {
   if (index >= connector_info_.num_modes) {
     return kErrorNotSupported;
   }
 
   active_config_index_ = index;
+  current_mode_ = connector_info_.modes[index];
 
-  // TODO(user): fix this hard coding
-  frame_rate_ = 60;
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &connector_info_.modes[index]);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
 
-  // Get the display attributes for current active config index
-  GetDisplayAttributes(active_config_index_, &display_attributes_);
+  // Commit to setup pipeline with mode, which then tells us the topology etc
+  if (drm_atomic_intf_->Commit(true /* synchronous */)) {
+    DLOGE("Setting up CRTC %d, Connector %d for %s failed", token_.crtc_id,
+          token_.conn_id, device_name_);
+    return kErrorResources;
+  }
+
+  // Reload connector info for updated info after 1st commit
+  drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
+  DLOGI("Setup CRTC %d, Connector %d for %s", token_.crtc_id, token_.conn_id, device_name_);
+
+  frame_rate_ = display_attributes_.fps;
+  PopulateDisplayAttributes();
+  PopulateHWPanelInfo();
   UpdateMixerAttributes();
 
   return kErrorNone;
 }
 
-DisplayError HWHDMIDRM::GetConfigIndex(uint32_t mode, uint32_t *index) {
-  *index = mode;
+DisplayError HWTVDRM::GetConfigIndex(char *mode, uint32_t *index) {
+  uint32_t width = 0, height = 0, fps = 0, format = 0;
+  std::string str(mode);
+
+  // mode should be in width:height:fps:format
+  // TODO(user): it is not fully robust, User needs to provide in above format only
+  if (str.length() != 0) {
+    width = UINT32(stoi(str));
+    height = UINT32(stoi(str.substr(str.find(':') + 1)));
+    std::string str3 = str.substr(str.find(':') + 1);
+    fps = UINT32(stoi(str3.substr(str3.find(':')  + 1)));
+    std::string str4 = str3.substr(str3.find(':') + 1);
+    format = UINT32(stoi(str4.substr(str4.find(':') + 1)));
+  }
+
+  for (size_t idex = 0; idex < connector_info_.num_modes; idex ++) {
+    if ((height == connector_info_.modes[idex].vdisplay) &&
+        (width == connector_info_.modes[idex].hdisplay) &&
+        (fps == connector_info_.modes[idex].vrefresh)) {
+      if ((format >> 1) & (connector_info_.modes[idex].flags >> kBitYUV)) {
+        *index = UINT32(idex);
+      }
+
+      if (format & (connector_info_.modes[idex].flags >> kBitRGB)) {
+        *index = UINT32(idex);
+      }
+    }
+  }
 
   return kErrorNone;
-}
-
-DisplayError HWHDMIDRM::Validate(HWLayers *hw_layers) {
-  HWDeviceDRM::ResetDisplayParams();
-
-  return HWDeviceDRM::Validate(hw_layers);
-}
-
-DisplayError HWHDMIDRM::Commit(HWLayers *hw_layers) {
-  return HWDeviceDRM::Commit(hw_layers);
 }
 
 }  // namespace sdm

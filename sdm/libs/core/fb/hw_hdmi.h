@@ -83,7 +83,7 @@ class HWHDMI : public HWDevice {
   virtual DisplayError GetMaxCEAFormat(uint32_t *max_cea_format);
   virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
   virtual DisplayError SetDisplayAttributes(uint32_t index);
-  virtual DisplayError GetConfigIndex(uint32_t mode, uint32_t *index);
+  virtual DisplayError GetConfigIndex(char *mode, uint32_t *index);
   virtual DisplayError Validate(HWLayers *hw_layers);
   virtual DisplayError Commit(HWLayers *hw_layers);
   virtual DisplayError SetS3DMode(HWS3DMode s3d_mode);
@@ -109,6 +109,7 @@ class HWHDMI : public HWDevice {
   DisplayError GetDynamicFrameRateMode(uint32_t refresh_rate, uint32_t*mode,
                                        DynamicFPSData *data, uint32_t *config_index);
   static const int kThresholdRefreshRate = 1000;
+  static const int kVideoFormatArrayMax = 8;
   vector<uint32_t> hdmi_modes_;
   // Holds the hdmi timing information. Ex: resolution, fps etc.,
   vector<msm_hdmi_mode_timing_info> supported_video_modes_;

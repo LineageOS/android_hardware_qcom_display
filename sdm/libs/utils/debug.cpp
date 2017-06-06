@@ -47,11 +47,14 @@ int Debug::GetSimulationFlag() {
   return value;
 }
 
-int Debug::GetHDMIResolution() {
-  int value = 0;
-  debug_.debug_handler_->GetProperty("hw.hdmi.resolution", &value);
+bool Debug::GetExternalResolution(char *value) {
+  uint32_t retval = 0;
+  debug_.debug_handler_->GetProperty("hw.hdmi.resolution", value);
+  if (value[0]) {
+    retval = 1;
+  }
 
-  return value;
+  return retval;
 }
 
 void Debug::GetIdleTimeoutMs(uint32_t *active_ms, uint32_t *inactive_ms) {

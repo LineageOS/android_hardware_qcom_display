@@ -38,6 +38,7 @@
 #include <utils/sys.h>
 #include <utils/formats.h>
 
+#include <string>
 #include <vector>
 #include <map>
 #include <utility>
@@ -407,17 +408,20 @@ DisplayError HWHDMI::SetDisplayAttributes(uint32_t index) {
   return kErrorNone;
 }
 
-DisplayError HWHDMI::GetConfigIndex(uint32_t mode, uint32_t *index) {
+DisplayError HWHDMI::GetConfigIndex(char *mode, uint32_t *index) {
+  std::string str(mode);
+  uint32_t value = UINT32(stoi(str));
+
   // Check if the mode is valid and return corresponding index
   for (uint32_t i = 0; i < hdmi_modes_.size(); i++) {
-    if (hdmi_modes_[i] == mode) {
+    if (hdmi_modes_[i] == value) {
       *index = i;
-      DLOGI("Index = %d for config = %d", *index, mode);
+      DLOGI("Index = %d for config = %d", *index, value);
       return kErrorNone;
     }
   }
 
-  DLOGE("Config = %d not supported", mode);
+  DLOGE("Config = %d not supported", value);
   return kErrorNotSupported;
 }
 
@@ -864,7 +868,9 @@ DisplayError HWHDMI::GetDynamicFrameRateMode(uint32_t refresh_rate, uint32_t *mo
     return kErrorNotSupported;
   }
 
-  GetConfigIndex(dst->video_format, config_index);
+  char mode_val[kVideoFormatArrayMax]={};
+  snprintf(mode_val, sizeof(mode_val), "%d", dst->video_format);
+  GetConfigIndex(mode_val, config_index);
 
   data->hor_front_porch = dst->front_porch_h;
   data->hor_back_porch = dst->back_porch_h;

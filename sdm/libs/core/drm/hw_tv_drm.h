@@ -22,8 +22,8 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef __HW_HDMI_DRM_H__
-#define __HW_HDMI_DRM_H__
+#ifndef __HW_TV_DRM_H__
+#define __HW_TV_DRM_H__
 
 #include <map>
 #include <vector>
@@ -34,9 +34,9 @@ namespace sdm {
 
 using std::vector;
 
-class HWHDMIDRM : public HWDeviceDRM {
+class HWTVDRM : public HWDeviceDRM {
  public:
-  explicit HWHDMIDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
+  explicit HWTVDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
                      HWInfoInterface *hw_info_intf);
 
  protected:
@@ -45,16 +45,17 @@ class HWHDMIDRM : public HWDeviceDRM {
   // Requirement to call this only after the first config has been explicitly set by client
   virtual DisplayError GetActiveConfig(uint32_t *active_config);
   virtual DisplayError SetDisplayAttributes(uint32_t index);
-  virtual DisplayError GetConfigIndex(uint32_t mode, uint32_t *index);
-  virtual DisplayError Validate(HWLayers *hw_layers);
-  virtual DisplayError Commit(HWLayers *hw_layers);
+  virtual DisplayError GetConfigIndex(char *mode, uint32_t *index);
 
  private:
+  static const int kBitRGB  = 20;
+  static const int kBitYUV  = 21;
+
   uint32_t active_config_index_;
   uint32_t frame_rate_ = 0;
 };
 
 }  // namespace sdm
 
-#endif  // __HW_HDMI_DRM_H__
+#endif  // __HW_TV_DRM_H__
 

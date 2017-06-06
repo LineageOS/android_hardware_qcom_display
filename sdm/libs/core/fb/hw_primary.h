@@ -44,7 +44,7 @@ class HWPrimary : public HWDevice {
   virtual DisplayError GetDisplayAttributes(uint32_t index,
                                             HWDisplayAttributes *display_attributes);
   virtual DisplayError SetDisplayAttributes(uint32_t index);
-  virtual DisplayError GetConfigIndex(uint32_t mode, uint32_t *index);
+  virtual DisplayError GetConfigIndex(char *mode, uint32_t *index);
   virtual DisplayError PowerOff();
   virtual DisplayError Doze();
   virtual DisplayError DozeSuspend();

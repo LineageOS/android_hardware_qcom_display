@@ -329,7 +329,7 @@ DisplayError HWPrimary::SetRefreshRate(uint32_t refresh_rate) {
   return kErrorNone;
 }
 
-DisplayError HWPrimary::GetConfigIndex(uint32_t mode, uint32_t *index) {
+DisplayError HWPrimary::GetConfigIndex(char *mode, uint32_t *index) {
   return HWDevice::GetConfigIndex(mode, index);
 }
 

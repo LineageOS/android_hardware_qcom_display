@@ -65,7 +65,7 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError GetHWPanelInfo(HWPanelInfo *panel_info);
   virtual DisplayError SetDisplayAttributes(uint32_t index);
   virtual DisplayError SetDisplayAttributes(const HWDisplayAttributes &display_attributes);
-  virtual DisplayError GetConfigIndex(uint32_t mode, uint32_t *index);
+  virtual DisplayError GetConfigIndex(char *mode, uint32_t *index);
   virtual DisplayError PowerOn();
   virtual DisplayError PowerOff();
   virtual DisplayError Doze();
@@ -167,6 +167,7 @@ class HWDeviceDRM : public HWInterface {
   HWResourceInfo hw_resource_ = {};
   HWPanelInfo hw_panel_info_ = {};
   HWDeviceType device_type_ = {};
+  HWScaleDRM *hw_scale_ = {};
   sde_drm::DRMManagerInterface *drm_mgr_intf_ = {};
   sde_drm::DRMAtomicReqInterface *drm_atomic_intf_ = {};
   sde_drm::DRMConnectorInfo connector_info_ = {};
@@ -177,7 +178,6 @@ class HWDeviceDRM : public HWInterface {
   bool synchronous_commit_ = false;
   HWMixerAttributes mixer_attributes_ = {};
   std::string interface_str_ = "DSI";
-  HWScaleDRM *hw_scale_ = {};
   std::vector<sde_drm::DRMSolidfillStage> solid_fills_ {};
 };
 

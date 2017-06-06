@@ -185,37 +185,33 @@ uint32_t DisplayHDMI::GetBestConfig(HWS3DMode s3d_mode) {
       break;
     }
   }
-  if (index < num_modes) {
-    best_index = UINT32(index);
-    for (size_t index = best_index + 1; index < num_modes; index ++) {
-      if (!attrib[index].s3d_config[s3d_mode])
-        continue;
 
-      // From the available configs, select the best
-      // Ex: 1920x1080@60Hz is better than 1920x1080@30 and 1920x1080@30 is better than 1280x720@60
+  index = 0;
+  best_index = UINT32(index);
+  for (size_t index = best_index + 1; index < num_modes; index ++) {
+    // TODO(user): Need to add support to S3D modes
+    // From the available configs, select the best
+    // Ex: 1920x1080@60Hz is better than 1920x1080@30 and 1920x1080@30 is better than 1280x720@60
+    if (attrib[index].x_pixels > attrib[best_index].x_pixels) {
+      best_index = UINT32(index);
+    } else if (attrib[index].x_pixels == attrib[best_index].x_pixels) {
       if (attrib[index].y_pixels > attrib[best_index].y_pixels) {
         best_index = UINT32(index);
       } else if (attrib[index].y_pixels == attrib[best_index].y_pixels) {
-        if (attrib[index].x_pixels > attrib[best_index].x_pixels) {
+        if (attrib[index].vsync_period_ns < attrib[best_index].vsync_period_ns) {
           best_index = UINT32(index);
-        } else if (attrib[index].x_pixels == attrib[best_index].x_pixels) {
-          if (attrib[index].vsync_period_ns < attrib[best_index].vsync_period_ns) {
-            best_index = UINT32(index);
-          }
         }
       }
     }
-  } else {
-    DLOGW("%s, could not support S3D mode from EDID info. S3D mode is %d",
-          __FUNCTION__, s3d_mode);
   }
-
+  char val[kPropertyMax]={};
   // Used for changing HDMI Resolution - override the best with user set config
-  uint32_t user_config = UINT32(Debug::GetHDMIResolution());
+  bool user_config = (Debug::GetExternalResolution(val));
+
   if (user_config) {
     uint32_t config_index = 0;
     // For the config, get the corresponding index
-    DisplayError error = hw_intf_->GetConfigIndex(user_config, &config_index);
+    DisplayError error = hw_intf_->GetConfigIndex(val, &config_index);
     if (error == kErrorNone)
       return config_index;
   }

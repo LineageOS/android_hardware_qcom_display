@@ -63,7 +63,7 @@ class Debug {
   }
   static inline DebugHandler* Get() { return debug_.debug_handler_; }
   static int GetSimulationFlag();
-  static int GetHDMIResolution();
+  static bool GetExternalResolution(char *val);
   static void GetIdleTimeoutMs(uint32_t *active_ms, uint32_t *inactive_ms);
   static int GetBootAnimLayerCount();
   static bool IsRotatorDownScaleDisabled();

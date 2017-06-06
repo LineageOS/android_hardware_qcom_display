@@ -61,6 +61,7 @@ class DisplayHDMI : public DisplayBase, HWEventHandler {
   uint32_t GetBestConfig(HWS3DMode s3d_mode);
   void GetScanSupport();
   void SetS3DMode(LayerStack *layer_stack);
+  static const int kPropertyMax = 256;
 
   bool underscan_supported_ = false;
   HWScanSupport scan_support_;

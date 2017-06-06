@@ -606,7 +606,7 @@ DisplayError HWDeviceDRM::SetDisplayAttributes(const HWDisplayAttributes &displa
   return kErrorNotSupported;
 }
 
-DisplayError HWDeviceDRM::GetConfigIndex(uint32_t mode, uint32_t *index) {
+DisplayError HWDeviceDRM::GetConfigIndex(char *mode, uint32_t *index) {
   return kErrorNone;
 }
 
