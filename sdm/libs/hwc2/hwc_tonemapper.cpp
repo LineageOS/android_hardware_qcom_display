@@ -98,7 +98,7 @@ void ToneMapSession::ToneMapHandler() {
           const void *dst_hnd = reinterpret_cast<const void *>
                                      (buffer_info_[buffer_index].private_data);
           const void *src_hnd = reinterpret_cast<const void *>(layer_->input_buffer.buffer_id);
-          fence_fd_ = gpu_tone_mapper_->blit(dst_hnd,src_hnd, merged_fd_);
+          *fence_fd_ = gpu_tone_mapper_->blit(dst_hnd,src_hnd, merged_fd_);
         }
         break;
       case kEventGetInstance: {
@@ -286,6 +286,8 @@ void HWCToneMapper::ToneMap(Layer* layer, ToneMapSession *session) {
 
   session->merged_fd_ = merged_fd;
   session->layer_ = layer;
+  session->fence_fd_ = &fence_fd;
+
   DTRACE_BEGIN("GPU_TM_BLIT");
   session->ProcessEvent(kEventBlit);
   DTRACE_END();
