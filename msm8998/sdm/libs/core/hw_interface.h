@@ -60,6 +60,7 @@ class HWEventHandler {
   virtual void ThermalEvent(int64_t thermal_level) = 0;
   virtual void CECMessage(char *message) = 0;
   virtual void IdlePowerCollapse() = 0;
+  virtual void PingPongTimeout() = 0;
 
  protected:
   virtual ~HWEventHandler() { }
@@ -108,6 +109,7 @@ class HWInterface {
   virtual DisplayError SetScaleLutConfig(HWScaleLutInfo *lut_info) = 0;
   virtual DisplayError SetMixerAttributes(const HWMixerAttributes &mixer_attributes) = 0;
   virtual DisplayError GetMixerAttributes(HWMixerAttributes *mixer_attributes) = 0;
+  virtual DisplayError DumpDebugData() = 0;
 
  protected:
   virtual ~HWInterface() { }
