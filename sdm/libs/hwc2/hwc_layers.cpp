@@ -198,6 +198,9 @@ HWC2::Error HWCLayer::SetLayerBlendMode(HWC2::BlendMode mode) {
 }
 
 HWC2::Error HWCLayer::SetLayerColor(hwc_color_t color) {
+  if (client_requested_ != HWC2::Composition::SolidColor) {
+    return HWC2::Error::None;
+  }
   layer_->solid_fill_color = GetUint32Color(color);
   layer_->input_buffer.format = kFormatARGB8888;
   DLOGV_IF(kTagCompManager, "[%" PRIu64 "][%" PRIu64 "] Layer color set to %x", display_id_, id_,

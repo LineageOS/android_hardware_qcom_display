@@ -344,7 +344,7 @@ int32_t HWCSession::DestroyLayer(hwc2_device_t *device, hwc2_display_t display,
 
 int32_t HWCSession::DestroyVirtualDisplay(hwc2_device_t *device, hwc2_display_t display) {
   SCOPE_LOCK(locker_);
-  if (!device) {
+  if (!device || display != HWC_DISPLAY_VIRTUAL) {
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
@@ -633,8 +633,12 @@ int32_t HWCSession::SetOutputBuffer(hwc2_device_t *device, hwc2_display_t displa
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
+  if (display != HWC_DISPLAY_VIRTUAL) {
+    return HWC2_ERROR_UNSUPPORTED;
+  }
+
   auto *hwc_session = static_cast<HWCSession *>(device);
-  if (display == HWC_DISPLAY_VIRTUAL && hwc_session->hwc_display_[display]) {
+  if (hwc_session->hwc_display_[display]) {
     auto vds = reinterpret_cast<HWCDisplayVirtual *>(hwc_session->hwc_display_[display]);
     auto status = vds->SetOutputBuffer(buffer, releaseFence);
     return INT32(status);
