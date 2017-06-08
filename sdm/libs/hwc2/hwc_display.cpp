@@ -104,10 +104,14 @@ HWC2::Error HWCColorMode::GetColorModes(uint32_t *out_num_modes,
 
 HWC2::Error HWCColorMode::SetColorMode(android_color_mode_t mode) {
   // first mode in 2D matrix is the mode (identity)
-  if (color_mode_transform_map_.find(mode) == color_mode_transform_map_.end()) {
+  if (mode < HAL_COLOR_MODE_NATIVE || mode > HAL_COLOR_MODE_DISPLAY_P3) {
     DLOGE("Could not find mode: %d", mode);
     return HWC2::Error::BadParameter;
   }
+  if (color_mode_transform_map_.find(mode) == color_mode_transform_map_.end()) {
+    return HWC2::Error::Unsupported;
+  }
+
   auto status = HandleColorModeTransform(mode, current_color_transform_, color_matrix_);
   if (status != HWC2::Error::None) {
     DLOGE("failed for mode = %d", mode);
@@ -117,7 +121,8 @@ HWC2::Error HWCColorMode::SetColorMode(android_color_mode_t mode) {
 }
 
 HWC2::Error HWCColorMode::SetColorTransform(const float *matrix, android_color_transform_t hint) {
-  if (!matrix) {
+  if (!matrix || (hint < HAL_COLOR_TRANSFORM_IDENTITY ||
+      hint > HAL_COLOR_TRANSFORM_CORRECT_TRITANOPIA)) {
     return HWC2::Error::BadParameter;
   }
 
@@ -974,6 +979,7 @@ HWC2::Error HWCDisplay::GetChangedCompositionTypes(uint32_t *out_num_elements,
     DLOGW("Display is not validated");
     return HWC2::Error::NotValidated;
   }
+
   *out_num_elements = UINT32(layer_changes_.size());
   if (out_layers != nullptr && out_types != nullptr) {
     int i = 0;
@@ -1003,18 +1009,19 @@ HWC2::Error HWCDisplay::GetReleaseFences(uint32_t *out_num_elements, hwc2_layer_
 HWC2::Error HWCDisplay::GetDisplayRequests(int32_t *out_display_requests,
                                            uint32_t *out_num_elements, hwc2_layer_t *out_layers,
                                            int32_t *out_layer_requests) {
-  // No display requests for now
-  // Use for sharing blit buffers and
-  // writing wfd buffer directly to output if there is full GPU composition
-  // and no color conversion needed
   if (layer_set_.empty()) {
     return HWC2::Error::None;
   }
 
+  // No display requests for now
+  // Use for sharing blit buffers and
+  // writing wfd buffer directly to output if there is full GPU composition
+  // and no color conversion needed
   if (!validated_) {
     DLOGW("Display is not validated");
     return HWC2::Error::NotValidated;
   }
+
   *out_display_requests = 0;
   *out_num_elements = UINT32(layer_requests_.size());
   if (out_layers != nullptr && out_layer_requests != nullptr) {
@@ -1557,8 +1564,17 @@ HWC2::Error HWCDisplay::SetCursorPosition(hwc2_layer_t layer, int x, int y) {
     return HWC2::Error::None;
   }
 
-  if (GetHWCLayer(layer) == nullptr) {
+  HWCLayer *hwc_layer = GetHWCLayer(layer);
+  if (hwc_layer == nullptr) {
     return HWC2::Error::BadLayer;
+  }
+  if (hwc_layer->GetDeviceSelectedCompositionType() != HWC2::Composition::Cursor) {
+    return HWC2::Error::None;
+  }
+  if (validated_ == true) {
+    // the device is currently in the middle of the validate/present sequence,
+    // cannot set the Position(as per HWC2 spec)
+    return HWC2::Error::NotValidated;
   }
 
   DisplayState state;
@@ -1568,9 +1584,9 @@ HWC2::Error HWCDisplay::SetCursorPosition(hwc2_layer_t layer, int x, int y) {
     }
   }
 
-  if (!validated_) {
-    return HWC2::Error::NotValidated;
-  }
+  // TODO(user): HWC1.5 was not letting SetCursorPosition before validateDisplay,
+  // but HWC2.0 doesn't let setting cursor position after validate before present.
+  // Need to revisit.
 
   auto error = display_intf_->SetCursorPosition(x, y);
   if (error != kErrorNone) {
