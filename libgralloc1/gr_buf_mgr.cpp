@@ -214,7 +214,9 @@ gralloc1_error_t BufferManager::FreeBuffer(std::shared_ptr<Buffer> buf) {
   private_handle_t * handle = const_cast<private_handle_t *>(hnd);
   handle->fd = -1;
   handle->fd_metadata = -1;
-  delete handle;
+  if (!(handle->flags & private_handle_t::PRIV_FLAGS_CLIENT_ALLOCATED)) {
+      delete handle;
+  }
   return GRALLOC1_ERROR_NONE;
 }
 
@@ -277,10 +279,6 @@ gralloc1_error_t BufferManager::MapBuffer(private_handle_t const *handle) {
 }
 
 gralloc1_error_t BufferManager::RetainBuffer(private_handle_t const *hnd) {
-  if (hnd->flags & private_handle_t::PRIV_FLAGS_CLIENT_ALLOCATED) {
-    return GRALLOC1_ERROR_NONE;
-  }
-
   ALOGD_IF(DEBUG, "Retain buffer handle:%p id: %" PRIu64, hnd, hnd->id);
   gralloc1_error_t err = GRALLOC1_ERROR_NONE;
   std::lock_guard<std::mutex> lock(buffer_lock_);
@@ -302,10 +300,6 @@ gralloc1_error_t BufferManager::RetainBuffer(private_handle_t const *hnd) {
 }
 
 gralloc1_error_t BufferManager::ReleaseBuffer(private_handle_t const *hnd) {
-  if (hnd->flags & private_handle_t::PRIV_FLAGS_CLIENT_ALLOCATED) {
-    return GRALLOC1_ERROR_NONE;
-  }
-
   ALOGD_IF(DEBUG, "Release buffer handle:%p id: %" PRIu64, hnd, hnd->id);
   std::lock_guard<std::mutex> lock(buffer_lock_);
   auto buf = GetBufferFromHandleLocked(hnd);
