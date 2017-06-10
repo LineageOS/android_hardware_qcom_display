@@ -88,6 +88,7 @@ class HWCSession : hwc_composer_device_1_t, public qClient::BnQClient {
   int GetVsyncPeriod(int disp);
   int CreateExternalDisplay(int disp, uint32_t primary_width, uint32_t primary_height,
                             bool use_primary_res);
+  void AsyncRefresh();
 
   // QClient methods
   virtual android::status_t notifyCallback(uint32_t command, const android::Parcel *input_parcel,
@@ -103,7 +104,8 @@ class HWCSession : hwc_composer_device_1_t, public qClient::BnQClient {
   android::status_t ConfigureRefreshRate(const android::Parcel *input_parcel);
   android::status_t QdcmCMDHandler(const android::Parcel *input_parcel,
                                    android::Parcel *output_parcel);
-  android::status_t ControlPartialUpdate(const android::Parcel *input_parcel, android::Parcel *out);
+  android::status_t ControlPartialUpdate(const android::Parcel *input_parcel,
+                                         android::Parcel *output_parcel);
   android::status_t OnMinHdcpEncryptionLevelChange(const android::Parcel *input_parcel,
                                                    android::Parcel *output_parcel);
   android::status_t SetPanelBrightness(const android::Parcel *input_parcel,
