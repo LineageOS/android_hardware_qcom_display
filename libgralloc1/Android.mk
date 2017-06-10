@@ -31,7 +31,7 @@ LOCAL_VENDOR_MODULE           := true
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes)
 LOCAL_HEADER_LIBRARIES        := display_headers
-LOCAL_SHARED_LIBRARIES        := $(common_libs) libqdutils libqdMetaData libdl
+LOCAL_SHARED_LIBRARIES        := $(common_libs) libqdMetaData libdl
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"grallocutils\" -Wno-sign-conversion
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps) $(kernel_deps)
 LOCAL_SRC_FILES               := gr_utils.cpp gr_adreno_info.cpp
