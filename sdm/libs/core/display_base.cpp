@@ -400,6 +400,8 @@ DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   fixed_info->max_luminance = fixed_info->hdr_supported ? hw_panel_info_.peak_luminance: 0;
   fixed_info->average_luminance = fixed_info->hdr_supported ? hw_panel_info_.average_luminance : 0;
   fixed_info->min_luminance = fixed_info->hdr_supported ?  hw_panel_info_.blackness_level: 0;
+  fixed_info->hdr_eotf = hw_panel_info_.hdr_eotf;
+  fixed_info->hdr_metadata_type_one = hw_panel_info_.hdr_metadata_type_one;
 
   return kErrorNone;
 }

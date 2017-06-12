@@ -46,6 +46,7 @@ class HWTVDRM : public HWDeviceDRM {
   virtual DisplayError Doze();
   virtual DisplayError DozeSuspend();
   virtual DisplayError Standby();
+  virtual void PopulateHWPanelInfo();
 
  private:
   static const int kBitRGB  = 20;

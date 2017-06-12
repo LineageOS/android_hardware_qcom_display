@@ -148,5 +148,21 @@ DisplayError HWTVDRM::Standby() {
   return kErrorNone;
 }
 
+void HWTVDRM::PopulateHWPanelInfo() {
+  hw_panel_info_ = {};
+
+  HWDeviceDRM::PopulateHWPanelInfo();
+  hw_panel_info_.hdr_enabled = connector_info_.ext_hdr_prop.hdr_supported;
+  hw_panel_info_.hdr_metadata_type_one = connector_info_.ext_hdr_prop.hdr_metadata_type_one;
+  hw_panel_info_.hdr_eotf = connector_info_.ext_hdr_prop.hdr_eotf;
+  hw_panel_info_.peak_luminance = connector_info_.ext_hdr_prop.hdr_max_luminance;
+  hw_panel_info_.average_luminance = connector_info_.ext_hdr_prop.hdr_avg_luminance;
+  hw_panel_info_.blackness_level = connector_info_.ext_hdr_prop.hdr_min_luminance;
+  DLOGI("TV Panel: %s, type_one = %d, eotf = %d, luminance[max = %d, min = %d, avg = %d]",
+        hw_panel_info_.hdr_enabled ? "HDR" : "Non-HDR", hw_panel_info_.hdr_metadata_type_one,
+        hw_panel_info_.hdr_eotf, hw_panel_info_.peak_luminance, hw_panel_info_.blackness_level,
+        hw_panel_info_.average_luminance);
+}
+
 }  // namespace sdm
 
