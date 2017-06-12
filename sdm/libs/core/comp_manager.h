@@ -68,6 +68,7 @@ class CompManager : public DumpImpl {
   DisplayError ValidateScaling(const LayerRect &crop, const LayerRect &dst, bool rotate90);
   DisplayError ValidateCursorPosition(Handle display_ctx, HWLayers *hw_layers, int x, int y);
   bool SupportLayerAsCursor(Handle display_ctx, HWLayers *hw_layers);
+  DisplayError ValidateAndSetCursorPosition(Handle display_ctx, HWLayers *hw_layers, int x, int y);
   bool SetDisplayState(Handle display_ctx, DisplayState state, DisplayType display_type);
   DisplayError SetMaxBandwidthMode(HWBwModes mode);
   DisplayError GetScaleLutConfig(HWScaleLutInfo *lut_info);
@@ -100,6 +101,7 @@ class CompManager : public DumpImpl {
     bool valid_cursor = false;
     PUConstraints pu_constraints = {};
     bool scaled_composition = false;
+    DisplayConfigVariableInfo fb_config = {};
   };
 
   Locker locker_;
