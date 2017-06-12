@@ -582,9 +582,13 @@ class PPFeaturesConfig {
   // from ColorManager, containing all physical features to be programmed and also compute
   // metadata/populate into T.
   inline DisplayError AddFeature(uint32_t feature_id, PPFeatureInfo *feature) {
-    if (feature_id < kMaxNumPPFeatures)
+    if (feature_id < kMaxNumPPFeatures) {
+      if (feature_[feature_id]) {
+        delete feature_[feature_id];
+        feature_[feature_id] = NULL;
+      }
       feature_[feature_id] = feature;
-
+    }
     return kErrorNone;
   }
 
