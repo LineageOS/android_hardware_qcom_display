@@ -106,10 +106,6 @@ DisplayError HWCBufferAllocator::FreeBuffer(BufferInfo *buffer_info) {
   alloc_buffer_info->fd = -1;
   alloc_buffer_info->stride = 0;
   alloc_buffer_info->size = 0;
-  // Works around b/36355756
-  if (hnd != nullptr) {
-    delete hnd;
-  }
   buffer_info->private_data = NULL;
   return err;
 }
