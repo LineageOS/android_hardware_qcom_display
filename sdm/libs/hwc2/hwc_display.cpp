@@ -444,6 +444,9 @@ void HWCDisplay::BuildLayerStack() {
   // Add one layer for fb target
   // TODO(user): Add blit target layers
   for (auto hwc_layer : layer_set_) {
+    // Reset layer data which SDM may change
+    hwc_layer->ResetPerFrameData();
+
     Layer *layer = hwc_layer->GetSDMLayer();
     layer->flags = {};   // Reset earlier flags
     if (hwc_layer->GetClientRequestedCompositionType() == HWC2::Composition::Client) {
