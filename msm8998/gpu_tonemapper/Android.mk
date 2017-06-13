@@ -8,8 +8,7 @@ include $(BUILD_COPY_HEADERS)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE              := libgpu_tonemapper
-LOCAL_MODULE_PATH_32      := $(TARGET_OUT_VENDOR)/lib
-LOCAL_MODULE_PATH_64      := $(TARGET_OUT_VENDOR)/lib64
+LOCAL_VENDOR_MODULE       := true
 LOCAL_MODULE_TAGS         := optional
 LOCAL_C_INCLUDES          := $(TARGET_OUT_HEADERS)/qcom/display/
 LOCAL_C_INCLUDES          += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
