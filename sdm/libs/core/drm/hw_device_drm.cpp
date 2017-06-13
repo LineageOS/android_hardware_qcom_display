@@ -391,8 +391,15 @@ DisplayError HWDeviceDRM::Deinit() {
 }
 
 void HWDeviceDRM::InitializeConfigs() {
-  // TODO(user): Choose Best Mode
   current_mode_index_ = 0;
+  // Update current mode with preferred mode
+  for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
+      if (connector_info_.modes[mode_index].type & DRM_MODE_TYPE_PREFERRED) {
+        current_mode_index_ = mode_index;
+        break;
+      }
+  }
+
   display_attributes_.resize(connector_info_.modes.size());
 
   uint32_t width = connector_info_.modes[current_mode_index_].hdisplay;
@@ -499,8 +506,28 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   hw_panel_info_.min_roi_height = connector_info_.hmin;
   hw_panel_info_.needs_roi_merge = connector_info_.roi_merge;
   hw_panel_info_.dynamic_fps = connector_info_.dynamic_fps;
-  hw_panel_info_.min_fps = 60;
-  hw_panel_info_.max_fps = 60;
+  drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_];
+  if (hw_panel_info_.dynamic_fps) {
+    uint32_t min_fps = current_mode.vrefresh;
+    uint32_t max_fps = current_mode.vrefresh;
+    for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
+      if ((current_mode.vdisplay == connector_info_.modes[mode_index].vdisplay) &&
+          (current_mode.hdisplay == connector_info_.modes[mode_index].hdisplay)) {
+        if (min_fps > connector_info_.modes[mode_index].vrefresh)  {
+          min_fps = connector_info_.modes[mode_index].vrefresh;
+        }
+        if (max_fps < connector_info_.modes[mode_index].vrefresh)  {
+          max_fps = connector_info_.modes[mode_index].vrefresh;
+        }
+      }
+    }
+    hw_panel_info_.min_fps = min_fps;
+    hw_panel_info_.max_fps = max_fps;
+  } else {
+    hw_panel_info_.min_fps = current_mode.vrefresh;
+    hw_panel_info_.max_fps = current_mode.vrefresh;
+  }
+
   hw_panel_info_.is_primary_panel = connector_info_.is_primary;
   hw_panel_info_.is_pluggable = 0;
   hw_panel_info_.hdr_enabled = connector_info_.panel_hdr_prop.hdr_enabled;
@@ -537,7 +564,7 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
         hw_panel_info_.width_align, hw_panel_info_.top_align, hw_panel_info_.height_align);
   DLOGI("ROI: min_width = %d, min_height = %d, need_merge = %d", hw_panel_info_.min_roi_width,
         hw_panel_info_.min_roi_height, hw_panel_info_.needs_roi_merge);
-  DLOGI("FPS: min = %d, max =%d", hw_panel_info_.min_fps, hw_panel_info_.max_fps);
+  DLOGI("FPS: min = %d, max = %d", hw_panel_info_.min_fps, hw_panel_info_.max_fps);
   DLOGI("Left Split = %d, Right Split = %d", hw_panel_info_.split_info.left_split,
         hw_panel_info_.split_info.right_split);
   DLOGI("Panel Transfer time = %d us", hw_panel_info_.transfer_time_us);
@@ -865,6 +892,21 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
            qos_data.clock_hz, qos_data.core_ab_bps, qos_data.core_ib_bps, qos_data.llcc_ab_bps,
            qos_data.llcc_ib_bps, qos_data.dram_ab_bps, qos_data.dram_ib_bps,
            qos_data.rot_clock_hz);
+
+  // Set refresh rate
+  if (vrefresh_) {
+    drmModeModeInfo mode = {};
+    drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_];
+    for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
+      if ((current_mode.vdisplay == connector_info_.modes[mode_index].vdisplay) &&
+          (current_mode.hdisplay == connector_info_.modes[mode_index].hdisplay) &&
+          (vrefresh_ == connector_info_.modes[mode_index].vrefresh)) {
+        mode = connector_info_.modes[mode_index];
+        break;
+      }
+    }
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &mode);
+  }
 }
 
 void HWDeviceDRM::AddSolidfillStage(const HWSolidfillStage &sf, uint32_t plane_alpha) {
@@ -910,6 +952,7 @@ DisplayError HWDeviceDRM::Validate(HWLayers *hw_layers) {
   int ret = drm_atomic_intf_->Validate();
   if (ret) {
     DLOGE("%s failed with error %d", __FUNCTION__, ret);
+    vrefresh_ = 0;
     return kErrorHardware;
   }
 
@@ -989,6 +1032,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   int ret = drm_atomic_intf_->Commit(false /* synchronous */, false /* retain_planes*/);
   if (ret) {
     DLOGE("%s failed with error %d crtc %d", __FUNCTION__, ret, token_.crtc_id);
+    vrefresh_ = 0;
     return kErrorHardware;
   }
 
@@ -1013,6 +1057,20 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   }
 
   hw_layer_info.sync_handle = release_fence;
+
+  if (vrefresh_) {
+    // Update current mode index if refresh rate is changed
+    drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_];
+    for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
+      if ((current_mode.vdisplay == connector_info_.modes[mode_index].vdisplay) &&
+          (current_mode.hdisplay == connector_info_.modes[mode_index].hdisplay) &&
+          (vrefresh_ == connector_info_.modes[mode_index].vrefresh)) {
+        current_mode_index_ = mode_index;
+        break;
+      }
+    }
+    vrefresh_ = 0;
+  }
 
   return kErrorNone;
 }
@@ -1181,6 +1239,17 @@ DisplayError HWDeviceDRM::SetDisplayMode(const HWDisplayMode hw_display_mode) {
 }
 
 DisplayError HWDeviceDRM::SetRefreshRate(uint32_t refresh_rate) {
+  // Check if requested refresh rate is valid
+  drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_];
+  for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
+    if ((current_mode.vdisplay == connector_info_.modes[mode_index].vdisplay) &&
+        (current_mode.hdisplay == connector_info_.modes[mode_index].hdisplay) &&
+        (refresh_rate == connector_info_.modes[mode_index].vrefresh)) {
+      vrefresh_ = refresh_rate;
+      DLOGV_IF(kTagDriverConfig, "Set refresh rate to %d", refresh_rate);
+      return kErrorNone;
+    }
+  }
   return kErrorNotSupported;
 }
 

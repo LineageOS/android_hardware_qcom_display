@@ -184,6 +184,7 @@ class HWDeviceDRM : public HWInterface {
   std::string interface_str_ = "DSI";
   std::vector<sde_drm::DRMSolidfillStage> solid_fills_ {};
   bool resolution_switch_enabled_ = false;
+  uint32_t vrefresh_ = 0;
 };
 
 }  // namespace sdm
