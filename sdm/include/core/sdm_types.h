@@ -56,6 +56,7 @@ enum DisplayError {
   kErrorPerfValidation,   //!< Bandwidth or Clock requirement validation failure.
   kErrorNoAppLayers,      //!< No App layer(s) in the draw cycle.
   kErrorRotatorValidation,  //!< Rotator configuration validation failure.
+  kErrorNotValidated,     //!< Draw cycle has not been validated.
 };
 
 /*! @brief This structure is defined for client and library compatibility check purpose only. This

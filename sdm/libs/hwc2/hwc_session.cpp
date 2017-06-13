@@ -290,10 +290,20 @@ int HWCSession::Close(hw_device_t *device) {
 
 void HWCSession::GetCapabilities(struct hwc2_device *device, uint32_t *outCount,
                                  int32_t *outCapabilities) {
-  if (outCapabilities != nullptr && *outCount >= 1) {
-    outCapabilities[0] = HWC2_CAPABILITY_SKIP_CLIENT_COLOR_TRANSFORM;
+  int value = 0;
+  bool disable_skip_validate = false;
+  if (Debug::Get()->GetProperty("sdm.debug.disable_skip_validate", &value) == kErrorNone) {
+    disable_skip_validate = (value == 1);
   }
-  *outCount = 1;
+  uint32_t count = 1 + (disable_skip_validate ? 0 : 1);
+
+  if (outCapabilities != nullptr && (*outCount >= count)) {
+    outCapabilities[0] = HWC2_CAPABILITY_SKIP_CLIENT_COLOR_TRANSFORM;
+    if (!disable_skip_validate) {
+      outCapabilities[1] = HWC2_CAPABILITY_SKIP_VALIDATE;
+    }
+  }
+  *outCount = count;
 }
 
 template <typename PFN, typename T>
@@ -1310,6 +1320,7 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
   HWCColorManager::MarshallStructIntoParcel(resp_payload, output_parcel);
   req_payload.DestroyPayload();
   resp_payload.DestroyPayload();
+  hwc_display_[display_id]->ResetValidation();
 
   return (ret ? -EINVAL : 0);
 }

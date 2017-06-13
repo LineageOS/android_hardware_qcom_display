@@ -161,6 +161,8 @@ class HWCDisplay : public DisplayEventHandler {
   void BuildLayerStack(void);
   void BuildSolidFillStack(void);
   HWCLayer *GetHWCLayer(hwc2_layer_t layer);
+  void ResetValidation() { validated_.reset(); }
+  uint32_t GetGeometryChanges() { return geometry_changes_; }
 
   // HWC2 APIs
   virtual HWC2::Error AcceptDisplayChanges(void);
@@ -221,6 +223,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual DisplayError VSync(const DisplayEventVSync &vsync);
   virtual DisplayError Refresh();
   virtual DisplayError CECMessage(char *message);
+  virtual DisplayError HandleEvent(DisplayEvent event);
   virtual void DumpOutputBuffer(const BufferInfo &buffer_info, void *base, int fence);
   virtual HWC2::Error PrepareLayerStack(uint32_t *out_num_types, uint32_t *out_num_requests);
   virtual HWC2::Error CommitLayerStack(void);
@@ -239,12 +242,14 @@ class HWCDisplay : public DisplayEventHandler {
   uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate);
   virtual void CloseAcquireFds();
   virtual void ClearRequestFlags();
+  virtual void GetUnderScanConfig() { }
 
   enum {
     INPUT_LAYER_DUMP,
     OUTPUT_LAYER_DUMP,
   };
 
+  static std::bitset<kDisplayMax> validated_;
   CoreInterface *core_intf_ = nullptr;
   HWCCallbacks *callbacks_  = nullptr;
   HWCBufferAllocator *buffer_allocator_ = NULL;
@@ -282,7 +287,6 @@ class HWCDisplay : public DisplayEventHandler {
   LayerRect solid_fill_rect_ = {};
   uint32_t solid_fill_color_ = 0;
   LayerRect display_rect_;
-  bool validated_ = false;
   bool color_tranform_failed_ = false;
   HWCColorMode *color_mode_ = NULL;
   HWCToneMapper *tone_mapper_ = nullptr;
@@ -291,9 +295,11 @@ class HWCDisplay : public DisplayEventHandler {
 
  private:
   void DumpInputBuffers(void);
+  bool CanSkipValidate();
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
   uint32_t geometry_changes_ = GeometryChanges::kNone;
+  bool skip_validate_ = false;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {
