@@ -51,6 +51,7 @@ class HWCDebugHandler : public DebugHandler {
   static void DebugCompManager(bool enable, int verbose_level);
   static void DebugDriverConfig(bool enable, int verbose_level);
   static void DebugRotator(bool enable, int verbose_level);
+  static void DebugScalar(bool enable, int verbose_level);
   static void DebugQdcm(bool enable, int verbose_level);
   static int  GetIdleTimeoutMs();
 
