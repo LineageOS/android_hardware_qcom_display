@@ -98,6 +98,16 @@ void HWCDebugHandler::DebugRotator(bool enable, int verbose_level) {
   }
 }
 
+void HWCDebugHandler::DebugScalar(bool enable, int verbose_level) {
+  if (enable) {
+    debug_flags_[kTagScalar] = 1;
+    verbose_level_ = verbose_level;
+  } else {
+    debug_flags_[kTagScalar] = 0;
+    verbose_level_ = 0;
+  }
+}
+
 void HWCDebugHandler::DebugQdcm(bool enable, int verbose_level) {
   if (enable) {
     debug_flags_[kTagQDCM] = 1;
