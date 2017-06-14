@@ -54,6 +54,7 @@ struct BufferConfig {
   bool cache = false;                         //!< Specifies whether the buffer needs to be cache.
   bool secure_camera = false;                 //!< Specifies buffer to be allocated from specific
                                               //!< secure heap and with a specific alignment.
+  bool gfx_client = false;                    //!< Specifies whether buffer is used by gfx.
 };
 
 /*! @brief Holds the information about the allocated buffer.

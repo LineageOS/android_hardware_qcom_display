@@ -58,15 +58,6 @@
 
 namespace sdm {
 
-static void ApplyDeInterlaceAdjustment(Layer *layer) {
-  // De-interlacing adjustment
-  if (layer->input_buffer.flags.interlace) {
-    float height = (layer->src_rect.bottom - layer->src_rect.top) / 2.0f;
-    layer->src_rect.top = ROUND_UP_ALIGN_DOWN(layer->src_rect.top / 2.0f, 2);
-    layer->src_rect.bottom = layer->src_rect.top + floorf(height);
-  }
-}
-
 void HWCColorMode::Init() {
   int ret = PopulateColorModes();
   if (ret != 0) {
@@ -575,7 +566,6 @@ int HWCDisplay::PrePrepareLayerStack(hwc_display_contents_1_t *content_list) {
         }
     }
     SetRect(hwc_layer.sourceCropf, &layer->src_rect);
-    ApplyDeInterlaceAdjustment(layer);
 
     uint32_t num_visible_rects = UINT32(hwc_layer.visibleRegionScreen.numRects);
     uint32_t num_dirty_rects = UINT32(hwc_layer.surfaceDamage.numRects);

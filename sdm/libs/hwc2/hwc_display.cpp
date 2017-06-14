@@ -40,6 +40,8 @@
 #include "hwc_display.h"
 #include "hwc_debugger.h"
 #include "blit_engine_c2d.h"
+#include "hwc_tonemapper.h"
+
 #ifndef USE_GRALLOC1
 #include <gr.h>
 #endif
@@ -51,15 +53,6 @@
 #define __CLASS__ "HWCDisplay"
 
 namespace sdm {
-
-static void ApplyDeInterlaceAdjustment(Layer *layer) {
-  // De-interlacing adjustment
-  if (layer->input_buffer.flags.interlace) {
-    float height = (layer->src_rect.bottom - layer->src_rect.top) / 2.0f;
-    layer->src_rect.top = ROUND_UP_ALIGN_DOWN(layer->src_rect.top / 2.0f, 2);
-    layer->src_rect.bottom = layer->src_rect.top + floorf(height);
-  }
-}
 
 // This weight function is needed because the color primaries are not sorted by gamut size
 static ColorPrimaries WidestPrimaries(ColorPrimaries p1, ColorPrimaries p2) {
@@ -356,6 +349,8 @@ int HWCDisplay::Init() {
     // TODO(user): Add blit engine when needed
   }
 
+  tone_mapper_ = new HWCToneMapper(buffer_allocator_);
+
   display_intf_->GetRefreshRateRange(&min_refresh_rate_, &max_refresh_rate_);
   current_refresh_rate_ = max_refresh_rate_;
   DLOGI("Display created with id: %d", id_);
@@ -375,6 +370,9 @@ int HWCDisplay::Deinit() {
     color_mode_->DeInit();
     delete color_mode_;
   }
+
+  delete tone_mapper_;
+  tone_mapper_ = nullptr;
 
   return 0;
 }
@@ -437,10 +435,12 @@ void HWCDisplay::BuildLayerStack() {
       layer->flags.solid_fill = true;
     }
 
+#ifdef FEATURE_WIDE_COLOR
     if (!hwc_layer->SupportedDataspace()) {
         layer->flags.skip = true;
         DLOGW_IF(kTagStrategy, "Unsupported dataspace: 0x%x", hwc_layer->GetLayerDataspace());
     }
+#endif
 
     working_primaries = WidestPrimaries(working_primaries,
                                         layer->input_buffer.color_metadata.colorPrimaries);
@@ -487,12 +487,18 @@ void HWCDisplay::BuildLayerStack() {
       }
     }
 
+    if (layer->input_buffer.color_metadata.colorPrimaries == ColorPrimaries_BT2020 &&
+       (layer->input_buffer.color_metadata.transfer == Transfer_SMPTE_ST2084 ||
+         layer->input_buffer.color_metadata.transfer == Transfer_HLG)) {
+         layer->input_buffer.flags.hdr = true;
+         layer_stack_.flags.hdr_present = true;
+    }
+
     // TODO(user): Move to a getter if this is needed at other places
     hwc_rect_t scaled_display_frame = {INT(layer->dst_rect.left), INT(layer->dst_rect.top),
                                        INT(layer->dst_rect.right), INT(layer->dst_rect.bottom)};
     ApplyScanAdjustment(&scaled_display_frame);
     hwc_layer->SetLayerDisplayFrame(scaled_display_frame);
-    ApplyDeInterlaceAdjustment(layer);
     // SDM requires these details even for solid fill
     if (layer->flags.solid_fill) {
       LayerBuffer *layer_buffer = &layer->input_buffer;
@@ -525,6 +531,7 @@ void HWCDisplay::BuildLayerStack() {
   }
 
 
+#ifdef FEATURE_WIDE_COLOR
   for (auto hwc_layer : layer_set_) {
     auto layer = hwc_layer->GetSDMLayer();
     if (layer->input_buffer.color_metadata.colorPrimaries != working_primaries &&
@@ -535,6 +542,7 @@ void HWCDisplay::BuildLayerStack() {
       layer_stack_.flags.skip_present = true;
     }
   }
+#endif
 
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
   layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0);
@@ -629,6 +637,9 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode) {
       // Do not flush until a buffer is successfully submitted again.
       flush_on_error = false;
       state = kStateOff;
+      if (tone_mapper_) {
+        tone_mapper_->Terminate();
+      }
       break;
     case HWC2::PowerMode::On:
       state = kStateOn;
@@ -819,6 +830,10 @@ void HWCDisplay::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type
   dump_frame_count_ = count;
   dump_frame_index_ = 0;
   dump_input_layers_ = ((bit_mask_layer_type & (1 << INPUT_LAYER_DUMP)) != 0);
+
+  if (tone_mapper_) {
+    tone_mapper_->SetFrameDumpConfig(count);
+  }
 
   DLOGI("num_frame_dump %d, input_layer_dump_enable %d", dump_frame_count_, dump_input_layers_);
 }
@@ -1036,6 +1051,17 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
 
   if (!flush_) {
     DisplayError error = kErrorUndefined;
+    int status = 0;
+    if (tone_mapper_) {
+      if (layer_stack_.flags.hdr_present) {
+        status = tone_mapper_->HandleToneMap(&layer_stack_);
+        if (status != 0) {
+          DLOGE("Error handling HDR in ToneMapper");
+        }
+      } else {
+        tone_mapper_->Terminate();
+      }
+    }
     error = display_intf_->Commit(&layer_stack_);
     validated_ = false;
 
@@ -1064,6 +1090,10 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
   // Do no call flush on errors, if a successful buffer is never submitted.
   if (flush_ && flush_on_error_) {
     display_intf_->Flush();
+  }
+
+  if (tone_mapper_ && tone_mapper_->IsActive()) {
+     tone_mapper_->PostCommit(&layer_stack_);
   }
 
   // TODO(user): No way to set the client target release fence on SF
@@ -1116,6 +1146,8 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
 
   geometry_changes_ = GeometryChanges::kNone;
   flush_ = false;
+
+  ClearRequestFlags();
 
   return status;
 }
@@ -1745,6 +1777,12 @@ void HWCDisplay::CloseAcquireFds() {
   if (client_target_acquire_fence >= 0) {
     close(client_target_acquire_fence);
     client_target_acquire_fence = -1;
+  }
+}
+
+void HWCDisplay::ClearRequestFlags() {
+  for (Layer *layer : layer_stack_.layers) {
+    layer->request.flags = {};
   }
 }
 
