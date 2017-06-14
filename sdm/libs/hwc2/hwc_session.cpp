@@ -523,8 +523,14 @@ int32_t HWCSession::SetColorTransform(hwc2_device_t *device, hwc2_display_t disp
 
 static int32_t SetCursorPosition(hwc2_device_t *device, hwc2_display_t display, hwc2_layer_t layer,
                                  int32_t x, int32_t y) {
-  return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::SetCursorPosition, layer, x,
-                                         y);
+  auto status = INT32(HWC2::Error::None);
+  status = HWCSession::CallDisplayFunction(device, display, &HWCDisplay::SetCursorPosition,
+                                           layer, x, y);
+  if (status == INT32(HWC2::Error::None)) {
+    // Update cursor position
+    HWCSession::CallLayerFunction(device, display, layer, &HWCLayer::SetCursorPosition, x, y);
+  }
+  return status;
 }
 
 static int32_t SetLayerBlendMode(hwc2_device_t *device, hwc2_display_t display, hwc2_layer_t layer,

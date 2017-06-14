@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -517,12 +517,12 @@ int HWCDisplayPrimary::FrameCaptureAsync(const BufferInfo &output_buffer_info,
   GetPanelResolution(&panel_width, &panel_height);
   GetFrameBufferResolution(&fb_width, &fb_height);
 
-  if (post_processed_output && (output_buffer_info_.buffer_config.width < panel_width ||
-                                output_buffer_info_.buffer_config.height < panel_height)) {
+  if (post_processed_output && (output_buffer_info.buffer_config.width < panel_width ||
+                                output_buffer_info.buffer_config.height < panel_height)) {
     DLOGE("Buffer dimensions should not be less than panel resolution");
     return -1;
-  } else if (!post_processed_output && (output_buffer_info_.buffer_config.width < fb_width ||
-                                        output_buffer_info_.buffer_config.height < fb_height)) {
+  } else if (!post_processed_output && (output_buffer_info.buffer_config.width < fb_width ||
+                                        output_buffer_info.buffer_config.height < fb_height)) {
     DLOGE("Buffer dimensions should not be less than FB resolution");
     return -1;
   }

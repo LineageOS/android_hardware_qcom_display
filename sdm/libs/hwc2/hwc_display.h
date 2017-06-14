@@ -84,7 +84,10 @@ class HWCColorMode {
   android_color_transform_t current_color_transform_ = HAL_COLOR_TRANSFORM_IDENTITY;
   typedef std::map<android_color_transform_t, std::string> TransformMap;
   std::map<android_color_mode_t, TransformMap> color_mode_transform_map_ = {};
-  double color_matrix_[kColorTransformMatrixCount] = {0};
+  double color_matrix_[kColorTransformMatrixCount] = { 1.0, 0.0, 0.0, 0.0, \
+                                                       0.0, 1.0, 0.0, 0.0, \
+                                                       0.0, 0.0, 1.0, 0.0, \
+                                                       0.0, 0.0, 0.0, 1.0 };
 };
 
 class HWCDisplay : public DisplayEventHandler {
@@ -145,6 +148,20 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int SetState(bool connected) {
     return kErrorNotSupported;
   }
+
+  template <typename... Args>
+  int32_t CallLayerFunction(hwc2_layer_t layer, HWC2::Error (HWCLayer::*member)(Args... ),
+                            Args... args) {
+    auto status = HWC2::Error::BadLayer;
+    validated_ = false;
+    auto hwc_layer = GetHWCLayer(layer);
+    if (hwc_layer != nullptr) {
+      status = (hwc_layer->*member)(std::forward<Args>(args)...);
+    }
+
+    return INT32(status);
+  }
+
   int SetPanelBrightness(int level);
   int GetPanelBrightness(int *level);
   int ToggleScreenUpdates(bool enable);
