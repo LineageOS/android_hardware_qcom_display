@@ -48,12 +48,14 @@ HWCBufferAllocator::HWCBufferAllocator() {
   } else {
     gralloc1_open(module_, &gralloc_device_);
   }
-  ReleaseBuffer_ = reinterpret_cast<GRALLOC1_PFN_RELEASE>(
-      gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_RELEASE));
-  Perform_ = reinterpret_cast<GRALLOC1_PFN_PERFORM>(
-      gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_PERFORM));
-  Lock_ = reinterpret_cast<GRALLOC1_PFN_LOCK>(
-      gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_LOCK));
+  if (gralloc_device_ != nullptr) {
+    ReleaseBuffer_ = reinterpret_cast<GRALLOC1_PFN_RELEASE>(
+        gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_RELEASE));
+    Perform_ = reinterpret_cast<GRALLOC1_PFN_PERFORM>(
+        gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_PERFORM));
+    Lock_ = reinterpret_cast<GRALLOC1_PFN_LOCK>(
+        gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_LOCK));
+  }
 }
 
 HWCBufferAllocator::~HWCBufferAllocator() {
