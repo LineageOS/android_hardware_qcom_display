@@ -270,9 +270,14 @@ DisplayError HWColorManagerDrm::GetDrmGamut(const PPFeatureInfo &in_data,
       return kErrorParameters;
   }
 
-  if (sde_gamut->map_en)
-    std::memcpy(mdp_gamut->scale_off, sde_gamut->scale_off_data,
-                sizeof(uint32_t) * GAMUT_3D_SCALE_OFF_SZ * GAMUT_3D_SCALE_OFF_TBL_NUM);
+  if (sde_gamut->map_en) {
+    std::memcpy(&mdp_gamut->scale_off[0][0], sde_gamut->scale_off_data[0],
+                sizeof(uint32_t) * GAMUT_3D_SCALE_OFF_SZ);
+    std::memcpy(&mdp_gamut->scale_off[1][0], sde_gamut->scale_off_data[1],
+                sizeof(uint32_t) * GAMUT_3D_SCALE_OFF_SZ);
+    std::memcpy(&mdp_gamut->scale_off[2][0], sde_gamut->scale_off_data[2],
+                sizeof(uint32_t) * GAMUT_3D_SCALE_OFF_SZ);
+  }
 
   for (uint32_t row = 0; row < GAMUT_3D_TBL_NUM; row++) {
     for (uint32_t col = 0; col < size; col++) {
