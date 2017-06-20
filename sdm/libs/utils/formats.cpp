@@ -127,5 +127,87 @@ BufferLayout GetBufferLayout(LayerBufferFormat format) {
   }
 }
 
+float GetBufferFormatBpp(LayerBufferFormat format) {
+  float bpp = 0.0f;
+  switch (format) {
+    case kFormatARGB8888:
+    case kFormatRGBA8888:
+    case kFormatBGRA8888:
+    case kFormatXRGB8888:
+    case kFormatRGBX8888:
+    case kFormatBGRX8888:
+    case kFormatRGBA8888Ubwc:
+    case kFormatRGBX8888Ubwc:
+    case kFormatRGBA1010102:
+    case kFormatARGB2101010:
+    case kFormatRGBX1010102:
+    case kFormatXRGB2101010:
+    case kFormatBGRA1010102:
+    case kFormatABGR2101010:
+    case kFormatBGRX1010102:
+    case kFormatXBGR2101010:
+    case kFormatRGBA1010102Ubwc:
+    case kFormatRGBX1010102Ubwc:
+      return 4.0f;
+    case kFormatRGB888:
+    case kFormatBGR888:
+    case kFormatYCbCr420P010:
+    case kFormatYCbCr420P010Ubwc:
+      return 3.0f;
+    case kFormatRGB565:
+    case kFormatBGR565:
+    case kFormatRGBA5551:
+    case kFormatRGBA4444:
+    case kFormatBGR565Ubwc:
+    case kFormatYCbCr422H2V1Packed:
+    case kFormatCbYCrY422H2V1Packed:
+    case kFormatYCrCb422H2V1SemiPlanar:
+    case kFormatYCbCr422H2V1SemiPlanar:
+    case kFormatYCbCr420TP10Ubwc:
+    case kFormatYCbCr422H1V2SemiPlanar:
+    case kFormatYCrCb422H1V2SemiPlanar:
+      return 2.0f;
+    case kFormatYCbCr420Planar:
+    case kFormatYCrCb420Planar:
+    case kFormatYCrCb420PlanarStride16:
+    case kFormatYCbCr420SemiPlanar:
+    case kFormatYCrCb420SemiPlanar:
+    case kFormatYCbCr420SemiPlanarVenus:
+    case kFormatYCrCb420SemiPlanarVenus:
+    case kFormatYCbCr420SPVenusUbwc:
+      return 1.5f;
+    default:
+      return 0.0f;
+  }
+
+  return bpp;
+}
+
+DisplayError GetBufferFormatTileSize(LayerBufferFormat format, FormatTileSize *tile_size) {
+  switch (format) {
+  case kFormatYCbCr420SPVenusUbwc:
+    tile_size->tile_width = 32;
+    tile_size->tile_height = 8;
+    tile_size->uv_tile_width = 16;
+    tile_size->uv_tile_height = 8;
+    break;
+  case kFormatYCbCr420TP10Ubwc:
+    tile_size->tile_width = 48;
+    tile_size->tile_height = 4;
+    tile_size->uv_tile_width = 24;
+    tile_size->uv_tile_height = 4;
+    break;
+  case kFormatYCbCr420P010Ubwc:
+    tile_size->tile_width = 32;
+    tile_size->tile_height = 4;
+    tile_size->uv_tile_width = 16;
+    tile_size->uv_tile_height = 4;
+    break;
+  default:
+    return kErrorNotSupported;
+  }
+  return kErrorNone;
+}
+
 }  // namespace sdm
 

@@ -205,6 +205,7 @@ struct HWResourceInfo {
   uint32_t undersized_prefill_lines = 0;
   CompRatioMap comp_ratio_rt_map;
   CompRatioMap comp_ratio_nrt_map;
+  uint32_t cache_size = 0;  // cache size in bytes
 
   void Reset() { *this = HWResourceInfo(); }
 };
@@ -321,6 +322,12 @@ struct HWSessionConfig {
   }
 };
 
+enum HWRotatorMode {
+  kRotatorNone,
+  kRotatorOffline,
+  kRotatorInline
+};
+
 struct HWRotateInfo {
   int pipe_id = -1;  // Not actual pipe id, but the relative DMA id
   int writeback_id = -1;  // Writeback block id, but this is the same as DMA id
@@ -342,6 +349,7 @@ struct HWRotatorSession {
   float input_compression = 1.0f;
   float output_compression = 1.0f;
   bool is_buffer_cached = false;
+  HWRotatorMode mode = kRotatorNone;
 };
 
 struct HWScaleLutInfo {

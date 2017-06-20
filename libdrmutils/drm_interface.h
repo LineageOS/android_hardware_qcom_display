@@ -125,6 +125,12 @@ enum struct DRMOps {
    */
   PLANE_SET_SCALER_CONFIG,
   /*
+   * Op: Sets plane rotation destination rect
+   * Arg: uint32_t - Plane ID
+   *      DRMRect - rotator dst Rectangle
+   */
+  PLANE_SET_ROTATION_DST_RECT,
+  /*
    * Op: Activate or deactivate a CRTC
    * Arg: uint32_t - CRTC ID
    *      uint32_t - 1 to enable, 0 to disable
@@ -315,6 +321,7 @@ struct DRMPlaneTypeInfo {
   uint32_t max_horizontal_deci;
   uint32_t max_vertical_deci;
   uint64_t max_pipe_bandwidth;
+  uint32_t cache_size;  // cache size in bytes for inline rotation support.
 };
 
 // All DRM Planes as map<Plane_id , plane_type_info> listed from highest to lowest priority

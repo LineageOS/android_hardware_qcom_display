@@ -332,6 +332,7 @@ void HWInfoDRM::PopulatePipeCaps(const sde_drm::DRMPlaneTypeInfo &info,
   hw_resource->max_scale_up = info.max_upscale;
   hw_resource->has_decimation = info.max_horizontal_deci > 1 && info.max_vertical_deci > 1;
   hw_resource->max_pipe_bw = info.max_pipe_bandwidth / kKiloUnit;
+  hw_resource->cache_size = info.cache_size;
 }
 
 void HWInfoDRM::PopulateSupportedFmts(HWSubBlockType sub_blk_type,

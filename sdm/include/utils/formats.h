@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -34,10 +34,28 @@
 
 namespace sdm {
 
+struct FormatTileSize {
+  /*< Tile width in pixels. For YUV formats this will give only the
+      tile width for Y plane*/
+  uint32_t tile_width = 0;
+  /*< Tile height in pixels. For YUV formats this will give only the
+      tile height for Y plane*/
+  uint32_t tile_height = 0;
+
+  /*< Tile width in pixels. Only valid for YUV formats where this will
+      give tile width for UV plane*/
+  uint32_t uv_tile_width = 0;
+  /*< Tile height in pixels. Only valid for YUV formats where this will
+       give tile height for UV plane*/
+  uint32_t uv_tile_height = 0;
+};
+
 bool IsUBWCFormat(LayerBufferFormat format);
 bool Is10BitFormat(LayerBufferFormat format);
 const char *GetFormatString(const LayerBufferFormat &format);
 BufferLayout GetBufferLayout(LayerBufferFormat format);
+DisplayError GetBufferFormatTileSize(LayerBufferFormat format, FormatTileSize *tile_size);
+float GetBufferFormatBpp(LayerBufferFormat format);
 
 }  // namespace sdm
 

@@ -590,21 +590,24 @@ void DisplayBase::AppendDump(char *buffer, uint32_t length) {
     char idx[8] = { 0 };
     const char *comp_type = GetName(sdm_layer->composition);
     const char *buffer_format = GetFormatString(input_buffer->format);
-    const char *rotate_split[2] = { "Rot-1", "Rot-2" };
     const char *comp_split[2] = { "Comp-1", "Comp-2" };
 
     snprintf(idx, sizeof(idx), "%d", layer_index);
 
     for (uint32_t count = 0; count < hw_rotator_session.hw_block_count; count++) {
-      char writeback_id[8] = { 0 };
+      char writeback_id[8] = { "I" };
       HWRotateInfo &rotate = hw_rotator_session.hw_rotate_info[count];
       LayerRect &src_roi = rotate.src_roi;
       LayerRect &dst_roi = rotate.dst_roi;
+      const char *rotate_split[2] = { "Rot-1", "Rot-2" };
+      int pipe_id = 0;
 
-      snprintf(writeback_id, sizeof(writeback_id), "%d", rotate.writeback_id);
-
+      if (hw_rotator_session.mode == kRotatorOffline) {
+        snprintf(writeback_id, sizeof(writeback_id), "%d", rotate.writeback_id);
+        pipe_id = rotate.pipe_id;
+      }
       DumpImpl::AppendString(buffer, length, format, idx, comp_type, rotate_split[count],
-                             writeback_id, rotate.pipe_id, input_buffer->width,
+                             writeback_id, pipe_id, input_buffer->width,
                              input_buffer->height, buffer_format, INT(src_roi.left),
                              INT(src_roi.top), INT(src_roi.right), INT(src_roi.bottom),
                              INT(dst_roi.left), INT(dst_roi.top), INT(dst_roi.right),
@@ -633,8 +636,11 @@ void DisplayBase::AppendDump(char *buffer, uint32_t length) {
         continue;
       }
 
-      LayerRect &src_roi = pipe.src_roi;
+      LayerRect src_roi = pipe.src_roi;
       LayerRect &dst_roi = pipe.dst_roi;
+      if (hw_rotator_session.mode == kRotatorInline) {
+        src_roi = hw_rotator_session.hw_rotate_info[count].dst_roi;
+      }
 
       snprintf(z_order, sizeof(z_order), "%d", pipe.z_order);
       snprintf(flags, sizeof(flags), "0x%08x", hw_layer.flags.flags);
