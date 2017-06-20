@@ -1137,8 +1137,8 @@ DisplayError HWDevice::SetCursorPosition(HWLayers *hw_layers, int x, int y) {
   async_layer.pipe_ndx = left_pipe->pipe_id;
   async_layer.src.x = UINT32(left_pipe->src_roi.left);
   async_layer.src.y = UINT32(left_pipe->src_roi.top);
-  async_layer.dst.x = UINT32(x);
-  async_layer.dst.y = UINT32(y);
+  async_layer.dst.x = UINT32(left_pipe->dst_roi.left);
+  async_layer.dst.y = UINT32(left_pipe->dst_roi.top);
 
   mdp_position_update pos_update = {};
   pos_update.input_layer_cnt = 1;

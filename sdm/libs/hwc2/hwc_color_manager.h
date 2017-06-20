@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2016, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015-2017, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -32,7 +32,6 @@
 
 #include <stdlib.h>
 #include <binder/Parcel.h>
-#include <powermanager/IPowerManager.h>
 #include <binder/BinderService.h>
 #include <core/sdm_types.h>
 #include <utils/locker.h>
@@ -41,7 +40,7 @@ namespace sdm {
 
 // This macro defines name for display APIs interface wrapper library.
 // This macro shall be used to load library using dlopen().
-#define DISPLAY_API_INTERFACE_LIBRARY_NAME "libsdm-disp-apis.so"
+#define DISPLAY_API_INTERFACE_LIBRARY_NAME "libsdm-disp-vndapis.so"
 
 // This macro defines variable name of display color APIs function tables
 // This macro shall be used to specify name of the variable in dlsym().
@@ -94,7 +93,6 @@ class HWCQDCMModeManager {
   bool cabl_was_running_ = false;
   int socket_fd_ = -1;
   android::sp<android::IBinder> wakelock_token_ = NULL;
-  android::sp<android::IPowerManager> power_mgr_ = NULL;
   uint32_t entry_timeout_ = 0;
   static const char *const kSocketName;
   static const char *const kTagName;

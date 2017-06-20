@@ -928,8 +928,9 @@ DisplayError ResourceDefault::ValidateCursorConfig(Handle display_ctx, const Lay
   return kErrorNotSupported;
 }
 
-DisplayError ResourceDefault::ValidateCursorPosition(Handle display_ctx, HWLayers *hw_layers,
-                                                     int x, int y) {
+DisplayError ResourceDefault::ValidateAndSetCursorPosition(Handle display_ctx, HWLayers *hw_layers,
+                                                           int x, int y,
+                                                           DisplayConfigVariableInfo *fb_config) {
   return kErrorNotSupported;
 }
 

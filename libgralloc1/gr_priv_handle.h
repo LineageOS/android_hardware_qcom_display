@@ -23,7 +23,9 @@
 #include <cutils/log.h>
 #include <hardware/gralloc1.h>
 #include <hardware/gralloc.h>
+#ifdef __cplusplus
 #include <cinttypes>
+#endif
 
 #define GRALLOC1_FUNCTION_PERFORM 0x00001000
 
@@ -33,7 +35,12 @@ typedef gralloc1_error_t (*GRALLOC1_PFN_PERFORM)(gralloc1_device_t *device, int 
 
 #define PRIV_HANDLE_CONST(exp) static_cast<const private_handle_t *>(exp)
 
+#ifdef __cplusplus
 struct private_handle_t : public native_handle_t {
+#else
+struct private_handle_t {
+        native_handle_t nativeHandle;
+#endif
   enum {
     PRIV_FLAGS_FRAMEBUFFER = 0x00000001,
     PRIV_FLAGS_USES_ION = 0x00000008,
@@ -83,7 +90,7 @@ struct private_handle_t : public native_handle_t {
   gralloc1_producer_usage_t producer_usage __attribute__((aligned(8)));
   gralloc1_consumer_usage_t consumer_usage __attribute__((aligned(8)));
   unsigned int layer_count;
-
+#ifdef __cplusplus
   static const int kNumFds = 2;
   static const int kMagic = 'gmsm';
 
@@ -160,7 +167,6 @@ struct private_handle_t : public native_handle_t {
 
     return 0;
   }
-
   static void Dump(const private_handle_t *hnd) {
     ALOGD("handle id:%" PRIu64 " wxh:%dx%d uwxuh:%dx%d size: %d fd:%d fd_meta:%d flags:0x%x "
           "prod_usage:0x%" PRIx64" cons_usage:0x%" PRIx64 " format:0x%x layer_count: %d",
@@ -187,6 +193,7 @@ struct private_handle_t : public native_handle_t {
   gralloc1_producer_usage_t GetProducerUsage() const { return producer_usage; }
 
   uint64_t GetBackingstore() const { return id; }
+#endif
 };
 
 #endif  // __GR_PRIV_HANDLE_H__

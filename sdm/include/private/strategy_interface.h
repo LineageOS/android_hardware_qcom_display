@@ -56,7 +56,6 @@ class StrategyInterface {
   virtual DisplayError Purge() = 0;
   virtual DisplayError SetIdleTimeoutMs(uint32_t active_ms) = 0;
 
- protected:
   virtual ~StrategyInterface() { }
 };
 

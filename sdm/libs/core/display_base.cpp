@@ -77,10 +77,9 @@ DisplayError DisplayBase::Init() {
   error = comp_manager_->GetScaleLutConfig(&lut_info);
   if (error == kErrorNone) {
     error = hw_intf_->SetScaleLutConfig(&lut_info);
-  }
-
-  if (error != kErrorNone) {
-    goto CleanupOnError;
+    if (error != kErrorNone) {
+      goto CleanupOnError;
+    }
   }
 
   error = comp_manager_->RegisterDisplay(display_type_, display_attributes_, hw_panel_info_,
@@ -951,7 +950,8 @@ DisplayError DisplayBase::SetCursorPosition(int x, int y) {
     return kErrorNotSupported;
   }
 
-  DisplayError error = comp_manager_->ValidateCursorPosition(display_comp_ctx_, &hw_layers_, x, y);
+  DisplayError error = comp_manager_->ValidateAndSetCursorPosition(display_comp_ctx_, &hw_layers_,
+                                                                   x, y);
   if (error == kErrorNone) {
     return hw_intf_->SetCursorPosition(&hw_layers_, x, y);
   }

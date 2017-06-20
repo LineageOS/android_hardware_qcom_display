@@ -216,6 +216,8 @@ ADRENOPIXELFORMAT AdrenoMemInfo::GetGpuPixelFormat(int hal_format) {
        return ADRENO_PIXELFORMAT_R10G10B10X2_UNORM;
     case HAL_PIXEL_FORMAT_ABGR_2101010:
        return ADRENO_PIXELFORMAT_A2B10G10R10_UNORM;
+    case HAL_PIXEL_FORMAT_RGB_888:
+       return ADRENO_PIXELFORMAT_R8G8B8;
     default:
       ALOGE("%s: No map for format: 0x%x", __FUNCTION__, hal_format);
       break;

@@ -30,5 +30,8 @@ LOCAL_COPY_HEADERS             = $(SDM_HEADER_PATH)/utils/constants.h \
                                  $(SDM_HEADER_PATH)/utils/locker.h \
                                  $(SDM_HEADER_PATH)/utils/rect.h \
                                  $(SDM_HEADER_PATH)/utils/sys.h \
-                                 $(SDM_HEADER_PATH)/utils/utils.h
+                                 $(SDM_HEADER_PATH)/utils/sync_task.h \
+                                 $(SDM_HEADER_PATH)/utils/utils.h \
+                                 $(SDM_HEADER_PATH)/utils/factory.h
+
 include $(BUILD_COPY_HEADERS)

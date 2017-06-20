@@ -20,6 +20,7 @@
 #ifndef __HWC_DISPLAY_H__
 #define __HWC_DISPLAY_H__
 
+#include <sys/stat.h>
 #include <QService.h>
 #include <core/core_interface.h>
 #include <hardware/hwcomposer.h>
@@ -39,6 +40,7 @@
 namespace sdm {
 
 class BlitEngine;
+class HWCToneMapper;
 
 // Subclasses set this to their type. This has to be different from DisplayType.
 // This is to avoid RTTI and dynamic_cast
@@ -82,11 +84,22 @@ class HWCColorMode {
   android_color_transform_t current_color_transform_ = HAL_COLOR_TRANSFORM_IDENTITY;
   typedef std::map<android_color_transform_t, std::string> TransformMap;
   std::map<android_color_mode_t, TransformMap> color_mode_transform_map_ = {};
-  double color_matrix_[kColorTransformMatrixCount] = {0};
+  double color_matrix_[kColorTransformMatrixCount] = { 1.0, 0.0, 0.0, 0.0, \
+                                                       0.0, 1.0, 0.0, 0.0, \
+                                                       0.0, 0.0, 1.0, 0.0, \
+                                                       0.0, 0.0, 0.0, 1.0 };
 };
 
 class HWCDisplay : public DisplayEventHandler {
  public:
+  enum DisplayStatus {
+    kDisplayStatusInvalid = -1,
+    kDisplayStatusOffline,
+    kDisplayStatusOnline,
+    kDisplayStatusPause,
+    kDisplayStatusResume,
+  };
+
   virtual ~HWCDisplay() {}
   virtual int Init();
   virtual int Deinit();
@@ -101,7 +114,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::PowerMode GetLastPowerMode();
   virtual int SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels);
   virtual void GetFrameBufferResolution(uint32_t *x_pixels, uint32_t *y_pixels);
-  virtual int SetDisplayStatus(uint32_t display_status);
+  virtual int SetDisplayStatus(DisplayStatus display_status);
   virtual int OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
   virtual int Perform(uint32_t operation, ...);
   virtual void SetSecureDisplay(bool secure_display_active);
@@ -127,11 +140,27 @@ class HWCDisplay : public DisplayEventHandler {
   }
 
   // Display Configurations
-  virtual int SetActiveDisplayConfig(int config);
+  virtual int SetActiveDisplayConfig(uint32_t config);
   virtual int GetActiveDisplayConfig(uint32_t *config);
   virtual int GetDisplayConfigCount(uint32_t *count);
   virtual int GetDisplayAttributesForConfig(int config,
                                             DisplayConfigVariableInfo *display_attributes);
+  virtual int SetState(bool connected) {
+    return kErrorNotSupported;
+  }
+
+  template <typename... Args>
+  int32_t CallLayerFunction(hwc2_layer_t layer, HWC2::Error (HWCLayer::*member)(Args... ),
+                            Args... args) {
+    auto status = HWC2::Error::BadLayer;
+    validated_ = false;
+    auto hwc_layer = GetHWCLayer(layer);
+    if (hwc_layer != nullptr) {
+      status = (hwc_layer->*member)(std::forward<Args>(args)...);
+    }
+
+    return INT32(status);
+  }
 
   int SetPanelBrightness(int level);
   int GetPanelBrightness(int *level);
@@ -191,13 +220,6 @@ class HWCDisplay : public DisplayEventHandler {
                                          float* out_min_luminance);
 
  protected:
-  enum DisplayStatus {
-    kDisplayStatusOffline = 0,
-    kDisplayStatusOnline,
-    kDisplayStatusPause,
-    kDisplayStatusResume,
-  };
-
   // Maximum number of layers supported by display manager.
   static const uint32_t kMaxLayerCount = 32;
 
@@ -226,6 +248,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool IsLayerUpdating(const Layer *layer);
   uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate);
   virtual void CloseAcquireFds();
+  virtual void ClearRequestFlags();
 
   enum {
     INPUT_LAYER_DUMP,
@@ -272,6 +295,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool validated_ = false;
   bool color_tranform_failed_ = false;
   HWCColorMode *color_mode_ = NULL;
+  HWCToneMapper *tone_mapper_ = nullptr;
 
  private:
   void DumpInputBuffers(void);

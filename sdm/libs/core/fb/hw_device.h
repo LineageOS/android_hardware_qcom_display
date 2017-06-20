@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -143,7 +143,7 @@ class HWDevice : public HWInterface {
   int fb_node_index_;
   const char *fb_path_;
   BufferSyncHandler *buffer_sync_handler_;
-  int device_fd_;
+  int device_fd_ = -1;
   int stored_retire_fence = -1;
   HWDeviceType device_type_;
   mdp_layer_commit mdp_disp_commit_;

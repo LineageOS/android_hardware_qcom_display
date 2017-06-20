@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -189,6 +189,7 @@ struct LayerRequestFlags {
     struct {
       uint32_t tone_map : 1;  //!< This flag will be set by SDM when the layer needs tone map
       uint32_t secure: 1;  //!< This flag will be set by SDM when the layer must be secure
+      uint32_t flip_buffer: 1;  //!< This flag will be set by SDM when the layer needs FBT flip
     };
     uint32_t request_flags = 0;  //!< For initialization purpose only.
                                  //!< Shall not be refered directly.

@@ -36,8 +36,10 @@
 namespace sdm {
 using std::string;
 
-const int kMaxSDELayers = 16;   // Maximum number of layers that can be handled by hardware in a
-                                // given layer stack.
+const int kMaxSDELayers = 16;   // Maximum number of layers that can be handled by MDP5 hardware
+                                // in a given layer stack.
+const int kMaxBlitLayers = 32;   // Maximum number of layers that can be handled by MDP3 hardware
+                                // in a given layer stack.
 #define MAX_PLANES 4
 
 #define MAX_DETAIL_ENHANCE_CURVE 3
@@ -488,6 +490,7 @@ struct HWLayersInfo {
   bool use_hw_cursor = false;      // Indicates that HWCursor pipe needs to be used for cursor layer
   DestScaleInfoMap dest_scale_info_map = {};
   HWHDRLayerInfo hdr_layer_info = {};
+  Handle pvt_data = NULL;   // Private data used by sdm extension only.
 };
 
 struct HWLayers {

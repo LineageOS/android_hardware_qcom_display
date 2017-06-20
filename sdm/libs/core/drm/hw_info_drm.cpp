@@ -310,7 +310,7 @@ void HWInfoDRM::PopulatePipeCaps(const sde_drm::DRMPlaneTypeInfo &info,
 void HWInfoDRM::PopulateSupportedFmts(HWSubBlockType sub_blk_type,
                                       const sde_drm::DRMPlaneTypeInfo  &info,
                                       HWResourceInfo *hw_resource) {
-  vector<LayerBufferFormat> sdm_formats = {};
+  vector<LayerBufferFormat> sdm_formats;
   FormatsMap &fmts_map = hw_resource->supported_formats_map;
 
   if (fmts_map.find(sub_blk_type) == fmts_map.end()) {
@@ -324,7 +324,7 @@ void HWInfoDRM::PopulateSupportedFmts(HWSubBlockType sub_blk_type,
 
 void HWInfoDRM::GetWBInfo(HWResourceInfo *hw_resource) {
   HWSubBlockType sub_blk_type = kHWWBIntfOutput;
-  vector<LayerBufferFormat> supported_sdm_formats = {};
+  vector<LayerBufferFormat> supported_sdm_formats;
   sde_drm::DRMDisplayToken token;
 
   // Fake register

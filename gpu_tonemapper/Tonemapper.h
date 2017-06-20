@@ -32,6 +32,8 @@ class Tonemapper {
   unsigned int tonemapTexture;
   unsigned int lutXformTexture;
   unsigned int programID;
+  float lutXformScaleOffset[2];
+  float tonemapScaleOffset[2];
   EGLImageWrapper* eglImageWrapper;
   Tonemapper();
 
