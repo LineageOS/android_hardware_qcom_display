@@ -46,11 +46,16 @@ class HWTVDRM : public HWDeviceDRM {
   virtual DisplayError Doze();
   virtual DisplayError DozeSuspend();
   virtual DisplayError Standby();
+  virtual DisplayError Commit(HWLayers *hw_layers);
   virtual void PopulateHWPanelInfo();
 
  private:
+  DisplayError UpdateHDRMetaData(HWLayers *hw_layers);
+  void DumpHDRMetaData(HWHDRLayerInfo::HDROperation operation);
+
   static const int kBitRGB  = 20;
   static const int kBitYUV  = 21;
+  drm_msm_ext_hdr_metadata hdr_metadata_ = {};
 };
 
 }  // namespace sdm

@@ -304,6 +304,12 @@ enum struct DRMOps {
    *      uint32_t - CRTC ID
    */
   CONNECTOR_SET_CRTC,
+  /*
+   * Op: Sets connector hdr metadata
+   * Arg: uint32_t - Connector ID
+   *      drm_msm_ext_hdr_metadata - hdr_metadata
+   */
+  CONNECTOR_SET_HDR_METADATA,
 };
 
 enum struct DRMRotation {
