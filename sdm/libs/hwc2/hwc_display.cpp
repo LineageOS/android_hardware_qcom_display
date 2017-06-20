@@ -1235,6 +1235,9 @@ LayerBufferFormat HWCDisplay::GetSDMFormat(const int32_t &source, const int flag
     case HAL_PIXEL_FORMAT_BGR_565:
       format = kFormatBGR565;
       break;
+    case HAL_PIXEL_FORMAT_BGR_888:
+      format = kFormatBGR888;
+      break;
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
       format = kFormatYCbCr420SemiPlanarVenus;
@@ -1259,6 +1262,9 @@ LayerBufferFormat HWCDisplay::GetSDMFormat(const int32_t &source, const int flag
       break;
     case HAL_PIXEL_FORMAT_YCbCr_422_I:
       format = kFormatYCbCr422H2V1Packed;
+      break;
+    case HAL_PIXEL_FORMAT_CbYCrY_422_I:
+      format = kFormatCbYCrY422H2V1Packed;
       break;
     case HAL_PIXEL_FORMAT_RGBA_1010102:
       format = kFormatRGBA1010102;
