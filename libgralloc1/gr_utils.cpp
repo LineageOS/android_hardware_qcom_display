@@ -201,6 +201,7 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw,
   // Below switch should be for only YUV/custom formats
   switch (format) {
     case HAL_PIXEL_FORMAT_RAW16:
+    case HAL_PIXEL_FORMAT_Y16:
       size = alignedw * alignedh * 2;
       break;
     case HAL_PIXEL_FORMAT_RAW10:
@@ -208,6 +209,7 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw,
       size = ALIGN(alignedw * alignedh, SIZE_4K);
       break;
     case HAL_PIXEL_FORMAT_RAW8:
+    case HAL_PIXEL_FORMAT_Y8:
       size = alignedw * alignedh * 1;
       break;
 
@@ -389,8 +391,10 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr *ycbcr) {
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
     case HAL_PIXEL_FORMAT_NV21_ZSL:
     case HAL_PIXEL_FORMAT_RAW16:
+    case HAL_PIXEL_FORMAT_Y16:
     case HAL_PIXEL_FORMAT_RAW10:
     case HAL_PIXEL_FORMAT_RAW8:
+    case HAL_PIXEL_FORMAT_Y8:
       GetYuvSPPlaneInfo(hnd->base, width, height, 1, ycbcr);
       std::swap(ycbcr->cb, ycbcr->cr);
       break;
@@ -669,6 +673,8 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       aligned_w = ALIGN(width, alignment);
       break;
     case HAL_PIXEL_FORMAT_RAW16:
+    case HAL_PIXEL_FORMAT_Y16:
+    case HAL_PIXEL_FORMAT_Y8:
       aligned_w = ALIGN(width, 16);
       break;
     case HAL_PIXEL_FORMAT_RAW12:

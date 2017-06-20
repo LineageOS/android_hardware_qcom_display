@@ -247,6 +247,8 @@ void AdrenoMemInfo::getAlignedWidthAndHeight(int width, int height, int format,
                 aligned_w = ALIGN(width, alignment);
                 break;
             case HAL_PIXEL_FORMAT_RAW16:
+            case HAL_PIXEL_FORMAT_Y16:
+            case HAL_PIXEL_FORMAT_Y8:
                 aligned_w = ALIGN(width, 16);
                 break;
             case HAL_PIXEL_FORMAT_RAW12:
@@ -564,6 +566,7 @@ unsigned int getSize(int format, int width, int height, int usage,
         case HAL_PIXEL_FORMAT_RGBA_5551:
         case HAL_PIXEL_FORMAT_RGBA_4444:
         case HAL_PIXEL_FORMAT_RAW16:
+        case HAL_PIXEL_FORMAT_Y16:
             size = alignedw * alignedh * 2;
             break;
         case HAL_PIXEL_FORMAT_RAW12:
@@ -573,6 +576,7 @@ unsigned int getSize(int format, int width, int height, int usage,
             size = ALIGN(alignedw * alignedh, 4096);
             break;
         case HAL_PIXEL_FORMAT_RAW8:
+        case HAL_PIXEL_FORMAT_Y8:
             size = alignedw * alignedh;
             break;
             // adreno formats
@@ -815,9 +819,11 @@ int getYUVPlaneInfo(private_handle_t* hnd, struct android_ycbcr* ycbcr)
         case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
         case HAL_PIXEL_FORMAT_NV21_ZSL:
         case HAL_PIXEL_FORMAT_RAW16:
+        case HAL_PIXEL_FORMAT_Y16:
         case HAL_PIXEL_FORMAT_RAW12:
         case HAL_PIXEL_FORMAT_RAW10:
         case HAL_PIXEL_FORMAT_RAW8:
+        case HAL_PIXEL_FORMAT_Y8:
             getYuvSPPlaneInfo(hnd->base, width, height, 1, ycbcr);
             std::swap(ycbcr->cb, ycbcr->cr);
         break;
