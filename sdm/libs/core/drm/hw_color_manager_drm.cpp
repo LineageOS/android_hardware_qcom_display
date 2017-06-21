@@ -91,10 +91,13 @@ uint32_t HWColorManagerDrm::GetFeatureVersion(const DRMPPFeatureInfo &feature) {
         version = PPFeatureVersion::kSDEPgcV17;
       break;
     case kFeatureMixerGc:
+        version = PPFeatureVersion::kSDEPgcV17;
       break;
     case kFeaturePaV2:
+        version = PPFeatureVersion::kSDEPaV17;
       break;
     case kFeatureDither:
+        version = PPFeatureVersion::kSDEDitherV17;
       break;
     case kFeatureGamut:
       if (feature.version == 1)
@@ -103,6 +106,7 @@ uint32_t HWColorManagerDrm::GetFeatureVersion(const DRMPPFeatureInfo &feature) {
         version = PPFeatureVersion::kSDEGamutV4;
       break;
     case kFeaturePADither:
+        version = PPFeatureVersion::kSDEPADitherV17;
       break;
     default:
       break;
@@ -348,18 +352,49 @@ DisplayError HWColorManagerDrm::GetDrmPGC(const PPFeatureInfo &in_data,
 DisplayError HWColorManagerDrm::GetDrmMixerGC(const PPFeatureInfo &in_data,
                                               DRMPPFeatureInfo *out_data) {
   DisplayError ret = kErrorNone;
+#ifdef PP_DRM_ENABLE
+  if (!out_data) {
+    DLOGE("Invalid input parameter for Mixer GC");
+    return kErrorParameters;
+  }
+
+  out_data->id = kPPFeaturesMax;
+  out_data->type = sde_drm::kPropBlob;
+  out_data->version = in_data.feature_version_;
+#endif
   return ret;
 }
 
 DisplayError HWColorManagerDrm::GetDrmPAV2(const PPFeatureInfo &in_data,
                                            DRMPPFeatureInfo *out_data) {
   DisplayError ret = kErrorNone;
+#ifdef PP_DRM_ENABLE
+  if (!out_data) {
+    DLOGE("Invalid input parameter for PA V2");
+    return kErrorParameters;
+  }
+
+  out_data->id = kPPFeaturesMax;
+  out_data->type = sde_drm::kPropBlob;
+  out_data->version = in_data.feature_version_;
+
+#endif
   return ret;
 }
 
 DisplayError HWColorManagerDrm::GetDrmDither(const PPFeatureInfo &in_data,
                                              DRMPPFeatureInfo *out_data) {
   DisplayError ret = kErrorNone;
+#ifdef PP_DRM_ENABLE
+  if (!out_data) {
+    DLOGE("Invalid input parameter for dither");
+    return kErrorParameters;
+  }
+
+  out_data->id = kPPFeaturesMax;
+  out_data->type = sde_drm::kPropBlob;
+  out_data->version = in_data.feature_version_;
+#endif
   return ret;
 }
 
@@ -442,6 +477,16 @@ DisplayError HWColorManagerDrm::GetDrmGamut(const PPFeatureInfo &in_data,
 DisplayError HWColorManagerDrm::GetDrmPADither(const PPFeatureInfo &in_data,
                                                DRMPPFeatureInfo *out_data) {
   DisplayError ret = kErrorNone;
+#ifdef PP_DRM_ENABLE
+  if (!out_data) {
+    DLOGE("Invalid input parameter for PA dither");
+    return kErrorParameters;
+  }
+
+  out_data->id = kPPFeaturesMax;
+  out_data->type = sde_drm::kPropBlob;
+  out_data->version = in_data.feature_version_;
+#endif
   return ret;
 }
 
