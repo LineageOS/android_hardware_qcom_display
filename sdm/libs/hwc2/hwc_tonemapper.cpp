@@ -47,104 +47,50 @@
 
 namespace sdm {
 
-ToneMapSession::ToneMapSession(HWCBufferAllocator *buffer_allocator) :
-                buffer_allocator_(buffer_allocator) {
+ToneMapSession::ToneMapSession(HWCBufferAllocator *buffer_allocator)
+  : tone_map_task_(*this), buffer_allocator_(buffer_allocator) {
   buffer_info_.resize(kNumIntermediateBuffers);
 }
 
 ToneMapSession::~ToneMapSession() {
-  ProcessEvent(kEventExit);
-  worker_thread_.join();
-
-  delete gpu_tone_mapper_;
-  gpu_tone_mapper_ = nullptr;
+  tone_map_task_.ScheduleTask(ToneMapTaskCode::kCodeDestroy);
   FreeIntermediateBuffers();
   buffer_info_.clear();
 }
 
-void ToneMapSession::Init() {
-  std::thread thread(ToneMapThread, this);
-  worker_thread_.swap(thread);
-}
-
-void ToneMapSession::ToneMapThread(ToneMapSession *session) {
-  if (session) {
-    session->ToneMapHandler();
-  }
-}
-
-void ToneMapSession::NotifyClient() {
-  // Notify Main thread that worker is ready for events.
-  std::unique_lock<std::mutex> main_lock(main_mutex_);
-  main_condition_.notify_one();
-}
-
-void ToneMapSession::ToneMapHandler() {
-  // Acquire worker lock and start waiting for events.
-  // Wait must be started before caller thread can post events,
-  // otherwise posted events will be lost.
-  std::unique_lock<std::mutex> worker_lock(worker_mutex_);
-  // Notify main thread and ensure that main thread mutex is
-  // unlocked before moving further.
-  NotifyClient();
-
-  while(tone_map_event_ != kEventExit) {
-    worker_condition_.wait(worker_lock);
-
-    // Start Processing Commands.
-    switch (tone_map_event_) {
-      case kEventBlit: {
-          uint8_t buffer_index = current_buffer_index_;
-          const void *dst_hnd = reinterpret_cast<const void *>
-                                     (buffer_info_[buffer_index].private_data);
-          const void *src_hnd = reinterpret_cast<const void *>(layer_->input_buffer.buffer_id);
-          *fence_fd_ = gpu_tone_mapper_->blit(dst_hnd,src_hnd, merged_fd_);
+void ToneMapSession::OnTask(const ToneMapTaskCode &task_code) {
+  switch (task_code) {
+    case ToneMapTaskCode::kCodeGetInstance: {
+        Color10Bit *grid_entries = NULL;
+        int grid_size = 0;
+        if (layer_->lut_3d.validGridEntries) {
+          grid_entries = layer_->lut_3d.gridEntries;
+          grid_size = INT(layer_->lut_3d.gridSize);
         }
-        break;
-      case kEventGetInstance: {
-          Color10Bit *grid_entries = NULL;
-          int grid_size = 0;
-          if (layer_->lut_3d.validGridEntries) {
-            grid_entries = layer_->lut_3d.gridEntries;
-            grid_size = INT(layer_->lut_3d.gridSize);
-          }
-          gpu_tone_mapper_ = TonemapperFactory_GetInstance(tone_map_config_.type,
-                                                           layer_->lut_3d.lutEntries,
-                                                           layer_->lut_3d.dim,
-                                                           grid_entries, grid_size);
-        }
-        break;
-      case kEventExit:
-        break;
-      case kEventNone:
-        break;
-    }
+        gpu_tone_mapper_ = TonemapperFactory_GetInstance(tone_map_config_.type,
+                                                         layer_->lut_3d.lutEntries,
+                                                         layer_->lut_3d.dim,
+                                                         grid_entries, grid_size);
+      }
+      break;
 
-    if (tone_map_event_ == kEventNone) {
-      // Check if event is Spurious.
-      continue;
-    } else if (tone_map_event_ != kEventExit) {
-      // Reset handled event.
-      tone_map_event_ = kEventNone;
-    }
+    case ToneMapTaskCode::kCodeBlit: {
+        uint8_t buffer_index = current_buffer_index_;
+        const void *dst_hnd = reinterpret_cast<const void *>
+                                (buffer_info_[buffer_index].private_data);
+        const void *src_hnd = reinterpret_cast<const void *>(layer_->input_buffer.buffer_id);
+        *fence_fd_ = gpu_tone_mapper_->blit(dst_hnd,src_hnd, merged_fd_);
+      }
+      break;
 
-    std::unique_lock<std::mutex> main_lock(main_mutex_);
-    // Notify completion of current job to main thread
-    // and start waiting for new event after notification.
-    main_condition_.notify_one();
+    case ToneMapTaskCode::kCodeDestroy: {
+        delete gpu_tone_mapper_;
+      }
+      break;
+
+    default:
+      break;
   }
-}
-
-void ToneMapSession::ProcessEvent(ToneMapEvent event) {
-  std::unique_lock<std::mutex> main_lock(main_mutex_);
-  {
-    // Ensure that worker is waiting for events.
-    std::unique_lock<std::mutex> worker_lock(worker_mutex_);
-    tone_map_event_ = event;
-    worker_condition_.notify_one();
-  }
-  // Wait until worker signals.
-  main_condition_.wait(main_lock);
 }
 
 DisplayError ToneMapSession::AllocateIntermediateBuffers(const Layer *layer) {
@@ -289,7 +235,7 @@ void HWCToneMapper::ToneMap(Layer* layer, ToneMapSession *session) {
   session->fence_fd_ = &fence_fd;
 
   DTRACE_BEGIN("GPU_TM_BLIT");
-  session->ProcessEvent(kEventBlit);
+  session->tone_map_task_.ScheduleTask(ToneMapTaskCode::kCodeBlit);
   DTRACE_END();
 
   DumpToneMapOutput(session, &fence_fd);
@@ -400,14 +346,8 @@ DisplayError HWCToneMapper::AcquireToneMapSession(Layer *layer, uint32_t *sessio
     return kErrorMemory;
   }
 
-  {
-    std::unique_lock<std::mutex> main_lock(session->main_mutex_);
-    session->Init();
-    session->main_condition_.wait(main_lock);
-  }
-
   session->layer_ = layer;
-  session->ProcessEvent(kEventGetInstance);
+  session->tone_map_task_.ScheduleTask(ToneMapTaskCode::kCodeGetInstance);
 
   session->SetToneMapConfig(layer);
 

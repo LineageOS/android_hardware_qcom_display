@@ -950,7 +950,8 @@ DisplayError DisplayBase::SetCursorPosition(int x, int y) {
     return kErrorNotSupported;
   }
 
-  DisplayError error = comp_manager_->ValidateCursorPosition(display_comp_ctx_, &hw_layers_, x, y);
+  DisplayError error = comp_manager_->ValidateAndSetCursorPosition(display_comp_ctx_, &hw_layers_,
+                                                                   x, y);
   if (error == kErrorNone) {
     return hw_intf_->SetCursorPosition(&hw_layers_, x, y);
   }
