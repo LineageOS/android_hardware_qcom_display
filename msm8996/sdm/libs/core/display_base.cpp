@@ -38,6 +38,9 @@
 
 namespace sdm {
 
+std::bitset<kDisplayMax> DisplayBase::registered_displays_ = 0;
+std::bitset<kDisplayMax> DisplayBase::needs_validate_ = 0;
+
 // TODO(user): Have a single structure handle carries all the interface pointers and variables.
 DisplayBase::DisplayBase(DisplayType display_type, DisplayEventHandler *event_handler,
                          HWDeviceType hw_device_type, BufferSyncHandler *buffer_sync_handler,
@@ -91,6 +94,11 @@ DisplayError DisplayBase::Init() {
     }
   }
 
+  registered_displays_[display_type_] = 1;
+  if (!hw_panel_info_.is_primary_panel) {
+    AllDisplaysNeedValidate();
+  }
+
   if (hw_info_intf_) {
     HWResourceInfo hw_resource_info = HWResourceInfo();
     hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
@@ -130,6 +138,7 @@ DisplayError DisplayBase::Deinit() {
   }
 
   comp_manager_->UnregisterDisplay(display_comp_ctx_);
+  registered_displays_[display_type_] = 0;
 
   HWEventsInterface::Destroy(hw_events_intf_);
 
@@ -258,6 +267,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   }
 
   comp_manager_->PostPrepare(display_comp_ctx_, &hw_layers_);
+  needs_validate_[display_type_] = 0;
 
   return error;
 }
@@ -275,7 +285,13 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     return kErrorParameters;
   }
 
-  if (!pending_commit_) {
+  if (needs_validate_[display_type_]) {
+    DLOGE("Display %d needs validate!", display_type_);
+    return kErrorNotValidated;
+  }
+
+  pending_commit_ = false;
+  if (pending_commit_) {
     DLOGE("Commit: Corresponding Prepare() is not called for display = %d", display_type_);
     return kErrorUndefined;
   }
@@ -1046,4 +1062,11 @@ DisplayError DisplayBase::SetDetailEnhancerData(const DisplayDetailEnhancerData 
   return kErrorNone;
 }
 
+void DisplayBase::AllDisplaysNeedValidate() {
+  for (size_t type = kPrimary; type < kDisplayMax; type++) {
+    if (registered_displays_[type]) {
+      needs_validate_[type] = 1;
+    }
+  }
+}
 }  // namespace sdm
