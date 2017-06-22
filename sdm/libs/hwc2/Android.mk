@@ -19,7 +19,7 @@ LOCAL_CLANG                   := true
 
 LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware libhardware_legacy \
                                  libutils libcutils libsync libqdutils libqdMetaData libdl \
-                                 libpowermanager libsdmutils libc++ liblog libgrallocutils \
+                                 libsdmutils libc++ liblog libgrallocutils \
                                  libui libgpu_tonemapper
 
 ifneq ($(TARGET_USES_GRALLOC1), true)
