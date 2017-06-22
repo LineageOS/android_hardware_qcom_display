@@ -75,6 +75,9 @@ class HWCSession : hwc2_device_t, public qClient::BnQClient {
       auto hwc_layer = hwc_session->hwc_display_[display]->GetHWCLayer(layer);
       if (hwc_layer != nullptr) {
         status = (hwc_layer->*member)(std::forward<Args>(args)...);
+        if (hwc_session->hwc_display_[display]->geometry_changes_) {
+          hwc_session->hwc_display_[display]->validated_ = false;
+        }
       }
     }
     return INT32(status);

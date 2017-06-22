@@ -121,7 +121,10 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   bool NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *new_mixer_width,
                                  uint32_t *new_mixer_height);
   DisplayError ReconfigureMixer(uint32_t width, uint32_t height);
+  void AllDisplaysNeedValidate();
 
+  static std::bitset<kDisplayMax> registered_displays_;
+  static std::bitset<kDisplayMax> needs_validate_;
   recursive_mutex recursive_mutex_;
   DisplayType display_type_;
   DisplayEventHandler *event_handler_ = NULL;
