@@ -115,6 +115,20 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
 }
 
 HWC2::Error HWCLayer::SetLayerSurfaceDamage(hwc_region_t damage) {
+  // Check if there is an update in SurfaceDamage rects
+  if (layer_->dirty_regions.size() != damage.numRects) {
+    needs_validate_ = true;
+  } else {
+    for (uint32_t j = 0; j < damage.numRects; j++) {
+      LayerRect damage_rect;
+      SetRect(damage.rects[j], &damage_rect);
+      if (damage_rect != layer_->dirty_regions.at(j)) {
+        needs_validate_ = true;
+        break;
+      }
+    }
+  }
+
   layer_->dirty_regions.clear();
   for (uint32_t i = 0; i < damage.numRects; i++) {
     LayerRect rect;
