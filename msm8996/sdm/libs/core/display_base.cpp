@@ -257,6 +257,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
       if (error == kErrorNone) {
         // Strategy is successful now, wait for Commit().
         pending_commit_ = true;
+        needs_validate_[display_type_] = 0;
         break;
       }
       if (error == kErrorShutDown) {
@@ -267,7 +268,6 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   }
 
   comp_manager_->PostPrepare(display_comp_ctx_, &hw_layers_);
-  needs_validate_[display_type_] = 0;
 
   return error;
 }
@@ -278,6 +278,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
 
   if (!active_) {
     pending_commit_ = false;
+    needs_validate_[display_type_] = 1;
     return kErrorPermission;
   }
 
@@ -285,15 +286,9 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     return kErrorParameters;
   }
 
-  if (needs_validate_[display_type_]) {
-    DLOGE("Display %d needs validate!", display_type_);
-    return kErrorNotValidated;
-  }
-
-  pending_commit_ = false;
-  if (pending_commit_) {
+  if (!pending_commit_ && needs_validate_[display_type_]) {
     DLOGE("Commit: Corresponding Prepare() is not called for display = %d", display_type_);
-    return kErrorUndefined;
+    return kErrorNotValidated;
   }
 
   pending_commit_ = false;
@@ -377,6 +372,7 @@ DisplayError DisplayBase::Flush() {
     DLOGW("Unable to flush display = %d", display_type_);
   }
 
+  needs_validate_[display_type_] = 1;
   return error;
 }
 
@@ -433,6 +429,8 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state) {
     DLOGI("Same state transition is requested.");
     return kErrorNone;
   }
+
+  needs_validate_[display_type_] = 1;
 
   switch (state) {
   case kStateOff:
