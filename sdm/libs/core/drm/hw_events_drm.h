@@ -30,6 +30,7 @@
 #ifndef __HW_EVENTS_DRM_H__
 #define __HW_EVENTS_DRM_H__
 
+#include <drm_interface.h>
 #include <sys/poll.h>
 #include <map>
 #include <string>
@@ -38,6 +39,7 @@
 
 #include "hw_events_interface.h"
 #include "hw_interface.h"
+#include "hw_device_drm.h"
 
 namespace sdm {
 
@@ -46,7 +48,8 @@ using std::vector;
 class HWEventsDRM : public HWEventsInterface {
  public:
   virtual DisplayError Init(int display_type, HWEventHandler *event_handler,
-                            const vector<HWEvent> &event_list);
+                            const vector<HWEvent> &event_list,
+                            const HWInterface *hw_intf);
   virtual DisplayError Deinit();
   virtual DisplayError SetEventState(HWEvent event, bool enable, void *aux = nullptr);
 
@@ -87,6 +90,7 @@ class HWEventsDRM : public HWEventsInterface {
   bool exit_threads_ = false;
   uint32_t vsync_index_ = 0;
   bool vsync_enabled_ = true;
+  sde_drm::DRMDisplayToken token_ = {};
 };
 
 }  // namespace sdm

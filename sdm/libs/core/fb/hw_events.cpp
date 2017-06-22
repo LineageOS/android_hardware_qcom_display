@@ -123,7 +123,8 @@ void HWEvents::PopulateHWEventData() {
 }
 
 DisplayError HWEvents::Init(int fb_num, HWEventHandler *event_handler,
-                            const vector<HWEvent> &event_list) {
+                            const vector<HWEvent> &event_list,
+                            const HWInterface *hw_intf) {
   if (!event_handler)
     return kErrorParameters;
 

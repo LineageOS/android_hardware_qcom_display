@@ -1131,6 +1131,11 @@ DisplayError HWDeviceDRM::GetMixerAttributes(HWMixerAttributes *mixer_attributes
   return kErrorNone;
 }
 
+void HWDeviceDRM::GetDRMDisplayToken(sde_drm::DRMDisplayToken *token) const {
+  token->conn_id = token_.conn_id;
+  token->crtc_id = token_.crtc_id;
+}
+
 void HWDeviceDRM::UpdateMixerAttributes() {
   mixer_attributes_.width = display_attributes_.x_pixels;
   mixer_attributes_.height = display_attributes_.y_pixels;

@@ -70,7 +70,8 @@ DisplayError DisplayPrimary::Init() {
 
   avr_prop_disabled_ = Debug::IsAVRDisabled();
 
-  error = HWEventsInterface::Create(INT(display_type_), this, event_list_, &hw_events_intf_);
+  error = HWEventsInterface::Create(INT(display_type_), this, event_list_, hw_intf_,
+                                    &hw_events_intf_);
   if (error != kErrorNone) {
     DLOGE("Failed to create hardware events interface. Error = %d", error);
     DisplayBase::Deinit();

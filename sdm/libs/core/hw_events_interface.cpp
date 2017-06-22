@@ -42,7 +42,7 @@ namespace sdm {
 
 DisplayError HWEventsInterface::Create(int display_type, HWEventHandler *event_handler,
                                        const std::vector<HWEvent> &event_list,
-                                       HWEventsInterface **intf) {
+                                       const HWInterface *hw_intf, HWEventsInterface **intf) {
   DisplayError error = kErrorNone;
   HWEventsInterface *hw_events = nullptr;
   if (GetDriverType() == DriverType::FB) {
@@ -53,7 +53,7 @@ DisplayError HWEventsInterface::Create(int display_type, HWEventHandler *event_h
 #endif
   }
 
-  error = hw_events->Init(display_type, event_handler, event_list);
+  error = hw_events->Init(display_type, event_handler, event_list, hw_intf);
   if (error != kErrorNone) {
     delete hw_events;
   } else {

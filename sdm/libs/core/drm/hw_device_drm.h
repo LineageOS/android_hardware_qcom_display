@@ -54,6 +54,7 @@ class HWDeviceDRM : public HWInterface {
   virtual ~HWDeviceDRM() {}
   virtual DisplayError Init();
   virtual DisplayError Deinit();
+  void GetDRMDisplayToken(sde_drm::DRMDisplayToken *token) const;
 
  protected:
   // From HWInterface
