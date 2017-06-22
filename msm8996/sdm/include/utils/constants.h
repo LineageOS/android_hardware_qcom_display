@@ -71,6 +71,7 @@ namespace sdm {
   const int kMaxRotatePerLayer = 2;
   const uint32_t kMaxBlitTargetLayers = 2;
   const int kPageSize = 4096;
+  const int kMaxThermalLevel = 3;
 
   typedef void * Handle;
 
