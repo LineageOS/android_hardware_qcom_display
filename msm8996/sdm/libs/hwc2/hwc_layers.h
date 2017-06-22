@@ -80,6 +80,8 @@ class HWCLayer {
   void ResetGeometryChanges() { geometry_changes_ = GeometryChanges::kNone; }
   void PushReleaseFence(int32_t fence);
   int32_t PopReleaseFence(void);
+  void ResetValidation() { needs_validate_ = false; }
+  bool NeedsValidation() { return geometry_changes_ || needs_validate_; }
 
  private:
   Layer *layer_ = nullptr;
@@ -91,6 +93,7 @@ class HWCLayer {
   std::queue<int32_t> release_fences_;
   int ion_fd_ = -1;
   HWCBufferAllocator *buffer_allocator_ = NULL;
+  bool needs_validate_ = true;
 
   // Composition requested by client(SF)
   HWC2::Composition client_requested_ = HWC2::Composition::Device;
