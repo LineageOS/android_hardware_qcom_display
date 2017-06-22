@@ -594,13 +594,13 @@ int HWCDisplay::PrepareLayerStack(hwc_display_contents_1_t *content_list) {
     if (error != kErrorNone) {
       if (error == kErrorShutDown) {
         shutdown_pending_ = true;
-      } else if (error != kErrorPermission) {
+      } else if ((error != kErrorPermission) && (error != kErrorNoAppLayers)) {
         DLOGE("Prepare failed. Error = %d", error);
         // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
         // so that previous buffer and fences are released, and override the error.
         flush_ = true;
       } else {
-        DLOGI("Prepare failed for Display = %d Error = %d", type_, error);
+        DLOGV("Prepare failed for Display = %d Error = %d", type_, error);
       }
       return 0;
     }
