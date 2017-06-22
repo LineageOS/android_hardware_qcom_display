@@ -946,6 +946,7 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
       layer_stack_.retire_fence_fd = -1;
     }
     *out_retire_fence = layer_stack_.retire_fence_fd;
+    layer_stack_.retire_fence_fd = -1;
 
     if (dump_frame_count_) {
       dump_frame_count_--;
