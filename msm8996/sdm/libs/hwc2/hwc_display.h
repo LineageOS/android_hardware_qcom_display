@@ -179,6 +179,10 @@ class HWCDisplay : public DisplayEventHandler {
                                        int32_t *out_fences);
   virtual HWC2::Error Present(int32_t *out_retire_fence) = 0;
 
+ bool validated_ = false;
+ bool skip_validate_ = false;
+ uint32_t geometry_changes_ = GeometryChanges::kNone;
+
  protected:
   enum DisplayStatus {
     kDisplayStatusOffline = 0,
@@ -259,15 +263,14 @@ class HWCDisplay : public DisplayEventHandler {
   LayerRect solid_fill_rect_ = {};
   uint32_t solid_fill_color_ = 0;
   LayerRect display_rect_;
-  bool validated_ = false;
   bool color_tranform_failed_ = false;
   HWCColorMode *color_mode_ = NULL;
 
  private:
   void DumpInputBuffers(void);
+  bool CanSkipValidate();
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
-  uint32_t geometry_changes_ = GeometryChanges::kNone;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {

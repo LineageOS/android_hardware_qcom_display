@@ -278,6 +278,7 @@ HWC2::Error HWCDisplay::CreateLayer(hwc2_layer_t *out_layer_id) {
   layer_map_.emplace(std::make_pair(layer->GetId(), layer));
   *out_layer_id = layer->GetId();
   geometry_changes_ |= GeometryChanges::kAdded;
+  validated_ = false;
   return HWC2::Error::None;
 }
 
@@ -293,6 +294,7 @@ HWCLayer *HWCDisplay::GetHWCLayer(hwc2_layer_t layer_id) {
 
 HWC2::Error HWCDisplay::DestroyLayer(hwc2_layer_t layer_id) {
   const auto map_layer = layer_map_.find(layer_id);
+  validated_ = false;
   if (map_layer == layer_map_.end()) {
     DLOGE("[%" PRIu64 "] destroyLayer(%" PRIu64 ") failed: no such layer", id_, layer_id);
     return HWC2::Error::BadLayer;
@@ -753,10 +755,12 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
     if (requested_composition != device_composition) {
       layer_changes_[hwc_layer->GetId()] = device_composition;
     }
+    hwc_layer->ResetValidation();
   }
   *out_num_types = UINT32(layer_changes_.size());
   *out_num_requests = UINT32(layer_requests_.size());
   validated_ = true;
+  skip_validate_ = false;
   if (*out_num_types > 0) {
     return HWC2::Error::HasChanges;
   } else {
@@ -856,7 +860,11 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
   }
 
   if (!validated_) {
-    DLOGW("Display is not validated");
+    return HWC2::Error::NotValidated;
+  }
+
+  if (skip_validate_ && !CanSkipValidate()) {
+    validated_ = false;
     return HWC2::Error::NotValidated;
   }
 
@@ -865,7 +873,6 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
   if (!flush_) {
     DisplayError error = kErrorUndefined;
     error = display_intf_->Commit(&layer_stack_);
-    validated_ = false;
 
     if (error == kErrorNone) {
       // A commit is successfully submitted, start flushing on failure now onwards.
@@ -874,6 +881,9 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
       if (error == kErrorShutDown) {
         shutdown_pending_ = true;
         return HWC2::Error::Unsupported;
+      } else if (error == kErrorNotValidated) {
+        validated_ = false;
+        return HWC2::Error::NotValidated;
       } else if (error != kErrorPermission) {
         DLOGE("Commit failed. Error = %d", error);
         // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
@@ -883,6 +893,7 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
     }
   }
 
+  skip_validate_ = true;
   return HWC2::Error::None;
 }
 
@@ -1649,4 +1660,20 @@ std::string HWCDisplay::Dump() {
   }
   return os.str();
 }
+
+bool HWCDisplay::CanSkipValidate() {
+  for (auto hwc_layer : layer_set_) {
+    if (hwc_layer->NeedsValidation()) {
+      return false;
+    }
+
+    // Do not allow Skip Validate, if any layer needs GPU Composition.
+    if (hwc_layer->GetDeviceSelectedCompositionType() == HWC2::Composition::Client) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 }  // namespace sdm
