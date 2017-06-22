@@ -35,11 +35,9 @@
 #include "fb/hw_primary.h"
 #include "fb/hw_hdmi.h"
 #include "fb/hw_virtual.h"
-#ifdef COMPILE_DRM
 #include "drm/hw_device_drm.h"
 #include "drm/hw_virtual_drm.h"
 #include "drm/hw_tv_drm.h"
-#endif
 
 #define __CLASS__ "HWInterface"
 
@@ -57,27 +55,21 @@ DisplayError HWInterface::Create(DisplayType type, HWInfoInterface *hw_info_intf
       if (driver_type == DriverType::FB) {
         hw = new HWPrimary(buffer_sync_handler, hw_info_intf);
       } else {
-#ifdef COMPILE_DRM
         hw = new HWDeviceDRM(buffer_sync_handler, buffer_allocator, hw_info_intf);
-#endif
       }
       break;
     case kHDMI:
       if (driver_type == DriverType::FB) {
         hw = new HWHDMI(buffer_sync_handler, hw_info_intf);
       } else {
-#ifdef COMPILE_DRM
         hw = new HWTVDRM(buffer_sync_handler, buffer_allocator, hw_info_intf);
-#endif
       }
       break;
     case kVirtual:
       if (driver_type == DriverType::FB) {
         hw = new HWVirtual(buffer_sync_handler, hw_info_intf);
       } else {
-#ifdef COMPILE_DRM
         hw = new HWVirtualDRM(buffer_sync_handler, buffer_allocator, hw_info_intf);
-#endif
       }
       break;
     default:

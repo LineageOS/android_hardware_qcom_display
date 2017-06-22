@@ -13,7 +13,7 @@ LOCAL_HW_INTF_PATH_1          := fb
 LOCAL_SHARED_LIBRARIES        := libdl libsdmutils
 
 ifneq ($(TARGET_IS_HEADLESS), true)
-    LOCAL_CFLAGS              += -DCOMPILE_DRM -isystem external/libdrm
+    LOCAL_CFLAGS              += -isystem external/libdrm
     LOCAL_SHARED_LIBRARIES    += libdrm libdrmutils
     LOCAL_HW_INTF_PATH_2      := drm
 endif

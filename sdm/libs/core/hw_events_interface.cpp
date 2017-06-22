@@ -32,9 +32,7 @@
 
 #include "hw_events_interface.h"
 #include "fb/hw_events.h"
-#ifdef COMPILE_DRM
 #include "drm/hw_events_drm.h"
-#endif
 
 #define __CLASS__ "HWEventsInterface"
 
@@ -48,9 +46,7 @@ DisplayError HWEventsInterface::Create(int display_type, HWEventHandler *event_h
   if (GetDriverType() == DriverType::FB) {
     hw_events = new HWEvents();
   } else {
-#ifdef COMPILE_DRM
     hw_events = new HWEventsDRM();
-#endif
   }
 
   error = hw_events->Init(display_type, event_handler, event_list, hw_intf);

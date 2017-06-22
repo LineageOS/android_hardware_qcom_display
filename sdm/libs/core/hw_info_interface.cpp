@@ -31,9 +31,7 @@
 
 #include "hw_info_interface.h"
 #include "fb/hw_info.h"
-#ifdef COMPILE_DRM
 #include "drm/hw_info_drm.h"
-#endif
 
 #define __CLASS__ "HWInfoInterface"
 
@@ -43,9 +41,7 @@ DisplayError HWInfoInterface::Create(HWInfoInterface **intf) {
   if (GetDriverType() == DriverType::FB) {
     *intf = new HWInfo();
   } else {
-#ifdef COMPILE_DRM
     *intf = new HWInfoDRM();
-#endif
   }
 
   return kErrorNone;
