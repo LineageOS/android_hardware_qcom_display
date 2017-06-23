@@ -620,6 +620,7 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
 
   HWLayersInfo &hw_layer_info = hw_layers->info;
   uint32_t hw_layer_count = UINT32(hw_layer_info.hw_layers.size());
+  HWQosData &qos_data = hw_layers->qos_data;
 
   // TODO(user): Once destination scalar is enabled we can always send ROIs if driver allows
   if (hw_panel_info_.partial_update) {
@@ -712,12 +713,20 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
       }
     }
 
-    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_CLK, token_.crtc_id, hw_layers->clock_hz);
-    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_AB, token_.crtc_id, hw_layers->ab_bps);
-    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_IB, token_.crtc_id, hw_layers->ib_bps);
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_CLK, token_.crtc_id, qos_data.clock_hz);
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_AB, token_.crtc_id, qos_data.core_ab_bps);
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_IB, token_.crtc_id, qos_data.core_ib_bps);
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_LLCC_AB, token_.crtc_id, qos_data.llcc_ab_bps);
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_LLCC_IB, token_.crtc_id, qos_data.llcc_ib_bps);
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_DRAM_AB, token_.crtc_id, qos_data.dram_ab_bps);
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_DRAM_IB, token_.crtc_id, qos_data.dram_ib_bps);
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ROT_CLK, token_.crtc_id, qos_data.rot_clock_hz);
 
-    DLOGI_IF(kTagDriverConfig, "System: clock=%d Hz, ab=%llu Bps ib=%llu Bps", hw_layers->clock_hz,
-             hw_layers->ab_bps, hw_layers->ib_bps);
+    DLOGI_IF(kTagDriverConfig, "System Clock=%d Hz, Core: AB=%llu Bps, IB=%llu Bps, " \
+             "LLCC: AB=%llu Bps, IB=%llu Bps, DRAM AB=%llu Bps, IB=%llu Bps Rot Clock=%d",
+             qos_data.clock_hz, qos_data.core_ab_bps, qos_data.core_ib_bps, qos_data.llcc_ab_bps,
+             qos_data.llcc_ib_bps, qos_data.dram_ab_bps, qos_data.dram_ib_bps,
+             qos_data.rot_clock_hz);
   }
 }
 

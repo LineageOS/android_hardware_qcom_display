@@ -507,13 +507,22 @@ struct HWLayersInfo {
   Handle pvt_data = NULL;   // Private data used by sdm extension only.
 };
 
+struct HWQosData {
+  uint64_t core_ab_bps = 0;
+  uint64_t core_ib_bps = 0;
+  uint64_t llcc_ab_bps = 0;
+  uint64_t llcc_ib_bps = 0;
+  uint64_t dram_ab_bps = 0;
+  uint64_t dram_ib_bps = 0;
+  uint32_t clock_hz = 0;
+  uint32_t rot_clock_hz = 0;
+};
+
 struct HWLayers {
   HWLayersInfo info;
   HWLayerConfig config[kMaxSDELayers];
   float output_compression = 1.0f;
-  uint64_t ab_bps = 0;
-  uint64_t ib_bps = 0;
-  uint32_t clock_hz = 0;
+  HWQosData qos_data = {};
   HWAVRInfo hw_avr_info = {};
 };
 
