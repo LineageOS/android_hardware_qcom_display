@@ -191,6 +191,9 @@ int HWCBufferAllocator::SetBufferInfo(LayerBufferFormat format, int *target, uin
     case kFormatBGR565:
       *target = HAL_PIXEL_FORMAT_BGR_565;
       break;
+    case kFormatBGR888:
+      *target = HAL_PIXEL_FORMAT_BGR_888;
+      break;
     case kFormatBGRA8888:
       *target = HAL_PIXEL_FORMAT_BGRA_8888;
       break;
@@ -205,6 +208,9 @@ int HWCBufferAllocator::SetBufferInfo(LayerBufferFormat format, int *target, uin
       break;
     case kFormatYCbCr422H2V1Packed:
       *target = HAL_PIXEL_FORMAT_YCbCr_422_I;
+      break;
+    case kFormatCbYCrY422H2V1Packed:
+      *target = HAL_PIXEL_FORMAT_CbYCrY_422_I;
       break;
     case kFormatYCbCr422H2V1SemiPlanar:
       *target = HAL_PIXEL_FORMAT_YCbCr_422_SP;
