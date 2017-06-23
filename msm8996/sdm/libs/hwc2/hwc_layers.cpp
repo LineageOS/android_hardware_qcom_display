@@ -89,21 +89,12 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
     return HWC2::Error::BadLayer;
   }
 
-#ifdef USE_GRALLOC1
-  // TODO(user): Clean this up
-  if (handle->buffer_type == BUFFER_TYPE_VIDEO) {
-#else
-    if (handle->bufferType == BUFFER_TYPE_VIDEO) {
-#endif
-    layer_buffer->flags.video = true;
-  }
+  layer_buffer->flags.video = (handle->buffer_type == BUFFER_TYPE_VIDEO) ? true : false;
   // TZ Protected Buffer - L1
-  if (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER) {
-    layer_buffer->flags.secure = true;
-  }
-  if (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_DISPLAY) {
-    layer_buffer->flags.secure_display = true;
-  }
+  layer_buffer->flags.secure =
+      (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER) ? true: false;
+  layer_buffer->flags.secure_display =
+      (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_DISPLAY) ? true : false;
 
   layer_buffer->planes[0].fd = ion_fd_;
   layer_buffer->planes[0].offset = handle->offset;

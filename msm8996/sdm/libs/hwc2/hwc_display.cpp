@@ -1654,6 +1654,7 @@ std::string HWCDisplay::Dump() {
           to_string(layer->GetDeviceSelectedCompositionType()).c_str() << std::endl;
     os << "\tplane_alpha: " << std::to_string(sdm_layer->plane_alpha).c_str() << std::endl;
     os << "\tformat: " << GetFormatString(sdm_layer->input_buffer->format) << std::endl;
+    os << "\tsecure: " << sdm_layer->input_buffer->flags.secure << std::endl;
     os << "\ttransform: rot: " << transform.rotation << " flip_h: " << transform.flip_horizontal <<
           " flip_v: "<< transform.flip_vertical << std::endl;
     os << "\tbuffer_id: " << std::hex << "0x" << sdm_layer->input_buffer->buffer_id << std::dec
