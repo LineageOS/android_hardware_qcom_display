@@ -902,9 +902,9 @@ DisplayError HWDeviceDRM::GetPPFeaturesVersion(PPFeatureVersion *vers) {
 DisplayError HWDeviceDRM::SetPPFeatures(PPFeaturesConfig *feature_list) {
   int ret = 0;
   PPFeatureInfo *feature = NULL;
-  DRMPPFeatureInfo kernel_params = {};
 
   while (true) {
+    DRMPPFeatureInfo kernel_params = {};
     ret = feature_list->RetrieveNextFeature(&feature);
     if (ret)
       break;
