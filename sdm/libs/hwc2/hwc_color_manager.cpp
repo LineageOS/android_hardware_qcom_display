@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -271,7 +271,6 @@ int HWCColorManager::SetHWDetailedEnhancerConfig(void *params, HWCDisplay *hwc_d
   PPDETuningCfgData *de_tuning_cfg_data = reinterpret_cast<PPDETuningCfgData*>(params);
   if (de_tuning_cfg_data->cfg_pending == true) {
     if (!de_tuning_cfg_data->cfg_en) {
-      de_data.override_flags = kOverrideDEEnable;
       de_data.enable = 0;
     } else {
       de_data.override_flags = kOverrideDEEnable;
