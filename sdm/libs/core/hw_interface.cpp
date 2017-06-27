@@ -38,6 +38,7 @@
 #ifdef COMPILE_DRM
 #include "drm/hw_device_drm.h"
 #include "drm/hw_virtual_drm.h"
+#include "drm/hw_hdmi_drm.h"
 #endif
 
 #define __CLASS__ "HWInterface"
@@ -65,7 +66,9 @@ DisplayError HWInterface::Create(DisplayType type, HWInfoInterface *hw_info_intf
       if (driver_type == DriverType::FB) {
         hw = new HWHDMI(buffer_sync_handler, hw_info_intf);
       } else {
-        return kErrorNotSupported;
+#ifdef COMPILE_DRM
+        hw = new HWHDMIDRM(buffer_sync_handler, buffer_allocator, hw_info_intf);
+#endif
       }
       break;
     case kVirtual:

@@ -119,6 +119,7 @@ class HWCSession : hwc2_device_t, public qClient::BnQClient {
   static void *HWCUeventThread(void *context);
   void *HWCUeventThreadHandler();
   int GetEventValue(const char *uevent_data, int length, const char *event_info);
+  void HandleExtHPD(const char *uevent_data, int length);
   int HotPlugHandler(bool connected);
   void ResetPanel();
   int32_t ConnectDisplay(int disp);
