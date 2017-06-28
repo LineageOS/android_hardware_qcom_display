@@ -55,6 +55,8 @@ class HWVirtualDRM : public HWDeviceDRM {
   virtual DisplayError Commit(HWLayers *hw_layers);
   virtual DisplayError GetPPFeaturesVersion(PPFeatureVersion *vers);
   virtual DisplayError SetScaleLutConfig(HWScaleLutInfo *lut_info);
+  virtual DisplayError PowerOn();
+  virtual DisplayError PowerOff();
   void ConfigureWbConnectorFbId(uint32_t fb_id);
   void ConfigureWbConnectorDestRect();
   void DumpConfigs();
