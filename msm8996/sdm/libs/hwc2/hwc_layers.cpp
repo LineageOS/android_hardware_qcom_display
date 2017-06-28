@@ -84,7 +84,11 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
 
   layer_buffer->width = UINT32(handle->width);
   layer_buffer->height = UINT32(handle->height);
+  auto format = layer_buffer->format;
   layer_buffer->format = GetSDMFormat(handle->format, handle->flags);
+  if (format != layer_buffer->format) {
+    needs_validate_ = true;
+  }
   if (SetMetaData(handle, layer_) != kErrorNone) {
     return HWC2::Error::BadLayer;
   }
