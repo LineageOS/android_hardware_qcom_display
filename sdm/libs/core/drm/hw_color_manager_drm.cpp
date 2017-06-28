@@ -48,6 +48,9 @@ using sde_drm::kPPFeaturesMax;
 #ifdef PP_DRM_ENABLE
 static const uint32_t kPgcDataMask = 0x3FF;
 static const uint32_t kPgcShift = 16;
+
+static const uint32_t kIgcDataMask = 0xFFF;
+static const uint32_t kIgcShift = 16;
 #endif
 
 namespace sdm {
@@ -75,6 +78,8 @@ uint32_t HWColorManagerDrm::GetFeatureVersion(const DRMPPFeatureInfo &feature) {
     case kFeaturePcc:
       break;
     case kFeatureIgc:
+      if (feature.version == 3)
+        version = PPFeatureVersion::kSDEIgcV30;
       break;
     case kFeaturePgc:
       if (feature.version == 1)
@@ -143,6 +148,67 @@ DisplayError HWColorManagerDrm::GetDrmPCC(const PPFeatureInfo &in_data,
 DisplayError HWColorManagerDrm::GetDrmIGC(const PPFeatureInfo &in_data,
                                           DRMPPFeatureInfo *out_data) {
   DisplayError ret = kErrorNone;
+#ifdef PP_DRM_ENABLE
+  struct SDEIgcV30LUTData *sde_igc;
+  struct drm_msm_igc_lut *mdp_igc;
+  uint32_t *c0_c1_data_ptr = NULL;
+  uint32_t *c2_data_ptr = NULL;
+
+
+  if (!out_data) {
+    DLOGE("Invalid input parameter for igc");
+    return kErrorParameters;
+  }
+
+  switch (in_data.feature_version_) {
+  case PPFeatureVersion::kSDEIgcV30:
+    sde_igc = (struct SDEIgcV30LUTData *) in_data.GetConfigData();
+    break;
+  default:
+    DLOGE("Unsupported igc feature version: %d", in_data.feature_version_);
+    return kErrorParameters;
+  }
+
+  out_data->id = kFeatureIgc;
+  out_data->type = sde_drm::kPropBlob;
+  out_data->version = in_data.feature_version_;
+  out_data->payload_size = sizeof(struct drm_msm_igc_lut);
+
+  if (in_data.enable_flags_ & kOpsDisable) {
+    /* feature disable case */
+    out_data->payload = NULL;
+    return ret;
+  } else if (!(in_data.enable_flags_ & kOpsEnable)) {
+    out_data->payload = NULL;
+    return kErrorParameters;
+  }
+
+  mdp_igc = new drm_msm_igc_lut();
+  if (!mdp_igc) {
+    DLOGE("Failed to allocate memory for igc");
+    return kErrorMemory;
+  }
+
+  mdp_igc->flags = IGC_DITHER_ENABLE;
+  mdp_igc->strength = sde_igc->strength;
+
+  c0_c1_data_ptr = reinterpret_cast<uint32_t*>(sde_igc->c0_c1_data);
+  c2_data_ptr = reinterpret_cast<uint32_t*>(sde_igc->c2_data);
+
+  if (!c0_c1_data_ptr || !c2_data_ptr) {
+    DLOGE("Invaid igc data pointer");
+    delete mdp_igc;
+    out_data->payload = NULL;
+    return kErrorParameters;
+  }
+
+  for (int i = 0; i < IGC_TBL_LEN; i++) {
+    mdp_igc->c0[i] = c0_c1_data_ptr[i] & kIgcDataMask;
+    mdp_igc->c1[i] = (c0_c1_data_ptr[i] >> kIgcShift) & kIgcDataMask;
+    mdp_igc->c2[i] = c2_data_ptr[i] & kIgcDataMask;
+  }
+  out_data->payload = mdp_igc;
+#endif
   return ret;
 }
 
