@@ -1331,10 +1331,6 @@ void DisplayBase::PostCommitLayerParams(LayerStack *layer_stack) {
 
       sdm_layer->input_buffer.release_fence_fd = temp;
     }
-
-    // Reset the sync fence fds of HWLayer
-    hw_layer.input_buffer.acquire_fence_fd = -1;
-    hw_layer.input_buffer.release_fence_fd = -1;
   }
 
   return;
