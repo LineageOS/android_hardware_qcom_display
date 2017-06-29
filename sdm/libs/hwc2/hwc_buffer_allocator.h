@@ -45,9 +45,8 @@ inline Type ALIGN(Type x, Type align) {
 
 class HWCBufferAllocator : public BufferAllocator {
  public:
-  HWCBufferAllocator();
-  ~HWCBufferAllocator();
-
+  DisplayError Init();
+  DisplayError Deinit();
   DisplayError AllocateBuffer(BufferInfo *buffer_info);
   DisplayError FreeBuffer(BufferInfo *buffer_info);
   uint32_t GetBufferSize(BufferInfo *buffer_info);
