@@ -630,9 +630,20 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
       }
 
       BufferDim_t buffer_dim;
+      int interlaced = 0;
       if (getMetaData(hnd, GET_BUFFER_GEOMETRY, &buffer_dim) == 0) {
         *stride = buffer_dim.sliceWidth;
         *height = buffer_dim.sliceHeight;
+      } else if (getMetaData(hnd, GET_PP_PARAM_INTERLACED, &interlaced) == 0) {
+        if (interlaced && IsUBwcFormat(hnd->format)) {
+          unsigned int alignedw = 0, alignedh = 0;
+          // Get re-aligned height for single ubwc interlaced field and
+          // multiple by 2 to get frame height.
+          BufferInfo info(hnd->width, ((hnd->height+1)>>1), hnd->format);
+          GetAlignedWidthAndHeight(info, &alignedw, &alignedh);
+          *stride = static_cast<int>(alignedw);
+          *height = static_cast<int>(alignedh * 2);
+        }
       } else {
         *stride = hnd->width;
         *height = hnd->height;
