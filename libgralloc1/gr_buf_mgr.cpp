@@ -782,9 +782,11 @@ static bool IsYuvFormat(const private_handle_t *hnd) {
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
     case HAL_PIXEL_FORMAT_NV21_ZSL:
     case HAL_PIXEL_FORMAT_RAW16:
+    case HAL_PIXEL_FORMAT_Y16:
     case HAL_PIXEL_FORMAT_RAW12:
     case HAL_PIXEL_FORMAT_RAW10:
     case HAL_PIXEL_FORMAT_YV12:
+    case HAL_PIXEL_FORMAT_Y8:
       return true;
     default:
       return false;

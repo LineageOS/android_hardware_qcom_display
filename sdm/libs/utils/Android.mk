@@ -3,12 +3,7 @@ include $(CLEAR_VARS)
 include $(LOCAL_PATH)/../../../common.mk
 
 LOCAL_MODULE                  := libsdmutils
-
-ifneq ($(TARGET_IS_HEADLESS), true)
-LOCAL_MODULE_PATH_32          := $(TARGET_OUT_VENDOR)/lib
-LOCAL_MODULE_PATH_64          := $(TARGET_OUT_VENDOR)/lib64
-endif
-
+LOCAL_VENDOR_MODULE           := true
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes)
 LOCAL_HEADER_LIBRARIES        := display_headers

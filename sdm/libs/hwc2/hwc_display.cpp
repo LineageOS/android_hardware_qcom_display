@@ -1021,15 +1021,18 @@ HWC2::Error HWCDisplay::GetHdrCapabilities(uint32_t *out_num_types, int32_t *out
   DisplayConfigFixedInfo fixed_info = {};
   display_intf_->GetConfig(&fixed_info);
 
+  if (!fixed_info.hdr_supported) {
+    *out_num_types = 0;
+    DLOGI("HDR is not supported");
+    return HWC2::Error::None;
+  }
+
   if (out_types == nullptr) {
-    *out_num_types  = 0;
-    if (fixed_info.hdr_supported) {
-      // 1(now) - because we support only HDR10, change when HLG & DOLBY vision are supported
-      *out_num_types  = 1;
-    }
+    // 1(now) - because we support only HDR10, change when HLG & DOLBY vision are supported
+    *out_num_types  = 1;
   } else {
     // Only HDR10 supported
-    out_types[0] = HAL_HDR_HDR10;
+    *out_types = HAL_HDR_HDR10;
     static const float kLuminanceFactor = 10000.0;
     // luminance is expressed in the unit of 0.0001 cd/m2, convert it to 1cd/m2.
     *out_max_luminance = FLOAT(fixed_info.max_luminance)/kLuminanceFactor;
@@ -1235,6 +1238,9 @@ LayerBufferFormat HWCDisplay::GetSDMFormat(const int32_t &source, const int flag
     case HAL_PIXEL_FORMAT_BGR_565:
       format = kFormatBGR565;
       break;
+    case HAL_PIXEL_FORMAT_BGR_888:
+      format = kFormatBGR888;
+      break;
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
       format = kFormatYCbCr420SemiPlanarVenus;
@@ -1259,6 +1265,9 @@ LayerBufferFormat HWCDisplay::GetSDMFormat(const int32_t &source, const int flag
       break;
     case HAL_PIXEL_FORMAT_YCbCr_422_I:
       format = kFormatYCbCr422H2V1Packed;
+      break;
+    case HAL_PIXEL_FORMAT_CbYCrY_422_I:
+      format = kFormatCbYCrY422H2V1Packed;
       break;
     case HAL_PIXEL_FORMAT_RGBA_1010102:
       format = kFormatRGBA1010102;
