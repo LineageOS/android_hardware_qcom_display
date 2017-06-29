@@ -356,6 +356,7 @@ DisplayError HWDeviceDRM::Init() {
 }
 
 DisplayError HWDeviceDRM::Deinit() {
+  PowerOff();
   delete hw_scale_;
   registry_.Clear();
   drm_mgr_intf_->DestroyAtomicReq(drm_atomic_intf_);
