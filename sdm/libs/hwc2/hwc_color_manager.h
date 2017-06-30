@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2016, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015-2017, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -40,7 +40,7 @@ namespace sdm {
 
 // This macro defines name for display APIs interface wrapper library.
 // This macro shall be used to load library using dlopen().
-#define DISPLAY_API_INTERFACE_LIBRARY_NAME "libsdm-disp-apis.so"
+#define DISPLAY_API_INTERFACE_LIBRARY_NAME "libsdm-disp-vndapis.so"
 
 // This macro defines variable name of display color APIs function tables
 // This macro shall be used to specify name of the variable in dlsym().
