@@ -318,6 +318,13 @@ enum struct QSEEDVersion {
   V3,
 };
 
+/* QSEED3 Step version */
+enum struct QSEEDStepVersion {
+  V2,
+  V3,
+  V4,
+};
+
 enum struct SmartDMARevision {
   V1,
   V2,
@@ -372,6 +379,7 @@ struct DRMPlaneTypeInfo {
   uint32_t max_vertical_deci;
   uint64_t max_pipe_bandwidth;
   uint32_t cache_size;  // cache size in bytes for inline rotation support.
+  QSEEDStepVersion qseed3_version;
 };
 
 // All DRM Planes as map<Plane_id , plane_type_info> listed from highest to lowest priority
