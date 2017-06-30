@@ -70,7 +70,8 @@ void ToneMapSession::OnTask(const ToneMapTaskCode &task_code) {
         gpu_tone_mapper_ = TonemapperFactory_GetInstance(tone_map_config_.type,
                                                          layer_->lut_3d.lutEntries,
                                                          layer_->lut_3d.dim,
-                                                         grid_entries, grid_size);
+                                                         grid_entries, grid_size,
+                                                         tone_map_config_.secure);
       }
       break;
 
