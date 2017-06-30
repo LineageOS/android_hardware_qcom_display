@@ -32,12 +32,13 @@
 
 #include <fcntl.h>
 #include <sys/mman.h>
+
 #include <hardware/hwcomposer.h>
+
 #include <core/layer_stack.h>
 #include <utils/sys.h>
 #include <utils/sync_task.h>
 #include <vector>
-
 #include "hwc_buffer_sync_handler.h"
 #include "hwc_buffer_allocator.h"
 
@@ -49,6 +50,16 @@ enum class ToneMapTaskCode : int32_t {
   kCodeGetInstance,
   kCodeBlit,
   kCodeDestroy,
+};
+
+struct ToneMapGetInstanceContext : public SyncTask<ToneMapTaskCode>::TaskContext {
+  Layer *layer = nullptr;
+};
+
+struct ToneMapBlitContext : public SyncTask<ToneMapTaskCode>::TaskContext {
+  Layer *layer = nullptr;
+  int merged_fd = -1;
+  int fence_fd = -1;
 };
 
 struct ToneMapConfig {
@@ -71,10 +82,10 @@ class ToneMapSession : public SyncTask<ToneMapTaskCode>::TaskHandler {
   bool IsSameToneMapConfig(Layer *layer);
 
   // TaskHandler methods implementation.
-  virtual void OnTask(const ToneMapTaskCode &task_code);
+  virtual void OnTask(const ToneMapTaskCode &task_code,
+                      SyncTask<ToneMapTaskCode>::TaskContext *task_context);
 
   static const uint8_t kNumIntermediateBuffers = 2;
-
   SyncTask<ToneMapTaskCode> tone_map_task_;
   Tonemapper *gpu_tone_mapper_ = nullptr;
   HWCBufferAllocator *buffer_allocator_ = nullptr;
@@ -84,9 +95,6 @@ class ToneMapSession : public SyncTask<ToneMapTaskCode>::TaskHandler {
   int release_fence_fd_[kNumIntermediateBuffers] = {-1, -1};
   bool acquired_ = false;
   int layer_index_ = -1;
-  Layer *layer_ = nullptr;
-  int *fence_fd_ = nullptr;
-  int merged_fd_ = -1;
 };
 
 class HWCToneMapper {

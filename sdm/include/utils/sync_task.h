@@ -39,11 +39,17 @@ namespace sdm {
 template <class TaskCode>
 class SyncTask {
  public:
+  // This class need to be overridden by caller to pass on a task context.
+  class TaskContext {
+   public:
+    virtual ~TaskContext() { }
+  };
+
   // Methods to callback into caller for command codes executions in worker thread.
   class TaskHandler {
    public:
     virtual ~TaskHandler() { }
-    virtual void OnTask(const TaskCode &task_code) = 0;
+    virtual void OnTask(const TaskCode &task_code, TaskContext *task_context) = 0;
   };
 
   explicit SyncTask(TaskHandler &task_handler) : task_handler_(task_handler) {
@@ -56,16 +62,17 @@ class SyncTask {
   }
 
   ~SyncTask() {
-    ScheduleTask(task_code_, true);
+    // Task code does not matter here.
+    PerformTask(task_code_, nullptr, true);
     worker_thread_.join();
   }
 
-  void ScheduleTask(const TaskCode &task_code) {
-    ScheduleTask(task_code, false);
+  void PerformTask(const TaskCode &task_code, TaskContext *task_context) {
+    PerformTask(task_code, task_context, false);
   }
 
  private:
-  void ScheduleTask(const TaskCode &task_code, bool terminate) {
+  void PerformTask(const TaskCode &task_code, TaskContext *task_context, bool terminate) {
     std::unique_lock<std::mutex> caller_lock(caller_mutex_);
 
     // New scope to limit scope of worker lock to this block.
@@ -73,6 +80,7 @@ class SyncTask {
       // Set task command code and notify worker thread.
       std::unique_lock<std::mutex> worker_lock(worker_mutex_);
       task_code_ = task_code;
+      task_context_ = task_context;
       worker_thread_exit_ = terminate;
       pending_code_ = true;
       worker_cv_.notify_one();
@@ -108,7 +116,7 @@ class SyncTask {
 
       // Call task handler which is implemented by the caller.
       if (!worker_thread_exit_) {
-        task_handler_.OnTask(task_code_);
+        task_handler_.OnTask(task_code_, task_context_);
       }
 
       pending_code_ = false;
@@ -120,6 +128,7 @@ class SyncTask {
 
   TaskHandler &task_handler_;
   TaskCode task_code_;
+  TaskContext *task_context_ = nullptr;
   std::thread worker_thread_;
   std::mutex caller_mutex_;
   std::mutex worker_mutex_;
