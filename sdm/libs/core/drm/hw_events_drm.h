@@ -83,6 +83,7 @@ class HWEventsDRM : public HWEventsInterface {
   DisplayError CloseFds();
   DisplayError RegisterVSync();
   DisplayError RegisterPanelDead(bool enable);
+  DisplayError RegisterIdleNotify(bool enable);
 
   HWEventHandler *event_handler_{};
   vector<HWEventData> event_data_list_{};
@@ -92,6 +93,7 @@ class HWEventsDRM : public HWEventsInterface {
   bool exit_threads_ = false;
   uint32_t vsync_index_ = 0;
   bool vsync_enabled_ = false;
+  uint32_t idle_notify_index_ = 0;
   sde_drm::DRMDisplayToken token_ = {};
   bool is_primary_ = false;
   uint32_t panel_dead_index_ = 0;

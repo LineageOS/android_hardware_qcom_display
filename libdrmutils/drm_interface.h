@@ -242,6 +242,12 @@ enum struct DRMOps {
    */
   CRTC_SET_SOLIDFILL_STAGES,
   /*
+   * Op: Sets idle timeout.
+   * Arg: uint32_t - CRTC ID
+   *      uint32_t - idle timeout in ms
+   */
+  CRTC_SET_IDLE_TIMEOUT,
+  /*
    * Op: Returns retire fence for this commit. Should be called after Commit() on
    * DRMAtomicReqInterface.
    * Arg: uint32_t - Connector ID

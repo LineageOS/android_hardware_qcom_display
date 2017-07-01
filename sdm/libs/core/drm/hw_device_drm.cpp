@@ -905,6 +905,13 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
   }
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
+
+  if (!validate && (hw_layer_info.set_idle_time_ms >= 0)) {
+    DLOGI_IF(kTagDriverConfig, "Setting idle timeout to = %d ms",
+             hw_layer_info.set_idle_time_ms);
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_IDLE_TIMEOUT, token_.crtc_id,
+                              hw_layer_info.set_idle_time_ms);
+  }
 }
 
 void HWDeviceDRM::AddSolidfillStage(const HWSolidfillStage &sf, uint32_t plane_alpha) {
@@ -1230,7 +1237,9 @@ DisplayError HWDeviceDRM::SetVSyncState(bool enable) {
   return kErrorNotSupported;
 }
 
-void HWDeviceDRM::SetIdleTimeoutMs(uint32_t timeout_ms) {}
+void HWDeviceDRM::SetIdleTimeoutMs(uint32_t timeout_ms) {
+  // TODO(user): This function can be removed after fb is deprecated
+}
 
 DisplayError HWDeviceDRM::SetDisplayMode(const HWDisplayMode hw_display_mode) {
   return kErrorNotSupported;

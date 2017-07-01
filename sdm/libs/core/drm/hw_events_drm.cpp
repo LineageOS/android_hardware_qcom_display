@@ -40,6 +40,7 @@
 #include <utils/debug.h>
 #include <utils/sys.h>
 #include <xf86drm.h>
+#include <drm/msm_drm.h>
 
 #include <algorithm>
 #include <map>
@@ -86,7 +87,15 @@ DisplayError HWEventsDRM::InitializePollFd() {
         // Clear any existing data
         Sys::pread_(poll_fds_[i].fd, data, kMaxStringLength, 0);
       } break;
-      case HWEvent::IDLE_NOTIFY:
+      case HWEvent::IDLE_NOTIFY: {
+        poll_fds_[i].fd = drmOpen("msm_drm", nullptr);
+        if (poll_fds_[i].fd < 0) {
+          DLOGE("drmOpen failed with error %d", poll_fds_[i].fd);
+          return kErrorResources;
+        }
+        poll_fds_[i].events = POLLIN | POLLPRI | POLLERR;
+        idle_notify_index_ = i;
+      } break;
       case HWEvent::CEC_READ_MESSAGE:
       case HWEvent::SHOW_BLANK_EVENT:
       case HWEvent::THERMAL_LEVEL:
@@ -182,6 +191,7 @@ DisplayError HWEventsDRM::Init(int display_type, HWEventHandler *event_handler,
   }
 
   RegisterPanelDead(true);
+  RegisterIdleNotify(true);
 
   return kErrorNone;
 }
@@ -189,6 +199,7 @@ DisplayError HWEventsDRM::Init(int display_type, HWEventHandler *event_handler,
 DisplayError HWEventsDRM::Deinit() {
   exit_threads_ = true;
   RegisterPanelDead(false);
+  RegisterIdleNotify(false);
   Sys::pthread_cancel_(event_thread_);
   WakeUpEventThread();
   pthread_join(event_thread_, NULL);
@@ -294,6 +305,7 @@ void *HWEventsDRM::DisplayEventHandler() {
       switch (event_data_list_[i].event_type) {
         case HWEvent::VSYNC:
         case HWEvent::PANEL_DEAD:
+        case HWEvent::IDLE_NOTIFY:
           if (poll_fd.revents & (POLLIN | POLLPRI | POLLERR)) {
             (this->*(event_data_list_[i]).event_parser)(nullptr);
           }
@@ -304,7 +316,6 @@ void *HWEventsDRM::DisplayEventHandler() {
             (this->*(event_data_list_[i]).event_parser)(data);
           }
           break;
-        case HWEvent::IDLE_NOTIFY:
         case HWEvent::CEC_READ_MESSAGE:
         case HWEvent::SHOW_BLANK_EVENT:
         case HWEvent::THERMAL_LEVEL:
@@ -374,6 +385,39 @@ DisplayError HWEventsDRM::RegisterPanelDead(bool enable) {
   return kErrorNone;
 }
 
+DisplayError HWEventsDRM::RegisterIdleNotify(bool enable) {
+  uint32_t i = 0;
+  for (; i < event_data_list_.size(); i++) {
+    if (event_data_list_[i].event_type == HWEvent::IDLE_NOTIFY) {
+      break;
+    }
+  }
+
+  if (i == event_data_list_.size()) {
+    DLOGI("idle notify is not supported event");
+    return kErrorNone;
+  }
+
+  struct drm_msm_event_req req = {};
+  int ret = 0;
+
+  req.object_id = token_.crtc_id;
+  req.object_type = DRM_MODE_OBJECT_CRTC;
+  req.event = DRM_EVENT_IDLE_NOTIFY;
+  if (enable) {
+    ret = drmIoctl(poll_fds_[idle_notify_index_].fd, DRM_IOCTL_MSM_REGISTER_EVENT, &req);
+  } else {
+    ret = drmIoctl(poll_fds_[idle_notify_index_].fd, DRM_IOCTL_MSM_DEREGISTER_EVENT, &req);
+  }
+
+  if (ret) {
+    DLOGE("register idle notify enable:%d failed", enable);
+    return kErrorResources;
+  }
+
+  return kErrorNone;
+}
+
 void HWEventsDRM::HandleVSync(char *data) {
   drmEventContext event = {};
   event.version = DRM_EVENT_CONTEXT_VERSION;
@@ -432,7 +476,45 @@ void HWEventsDRM::VSyncHandlerCallback(int fd, unsigned int sequence, unsigned i
 }
 
 void HWEventsDRM::HandleIdleTimeout(char *data) {
-  event_handler_->IdleTimeout();
+  char event_data[kMaxStringLength];
+  int32_t size;
+  struct drm_msm_event_resp *event_resp = NULL;
+
+  size = (int32_t)Sys::pread_(poll_fds_[idle_notify_index_].fd, event_data, kMaxStringLength, 0);
+  if (size < 0) {
+    return;
+  }
+
+  if (size > kMaxStringLength) {
+    DLOGE("event size %d is greater than event buffer size %zd\n", size, kMaxStringLength);
+    return;
+  }
+
+  if (size < (int32_t)sizeof(*event_resp)) {
+    DLOGE("size %d exp %zd\n", size, sizeof(*event_resp));
+    return;
+  }
+
+  int32_t i = 0;
+
+  while (i < size) {
+    event_resp = (struct drm_msm_event_resp *)&event_data[i];
+    switch (event_resp->base.type) {
+      case DRM_EVENT_IDLE_NOTIFY:
+      {
+        DLOGV("Received Idle time event");
+        event_handler_->IdleTimeout();
+        break;
+      }
+      default: {
+        DLOGE("invalid event %d", event_resp->base.type);
+        break;
+      }
+    }
+    i += event_resp->base.length;
+  }
+
+  return;
 }
 
 void HWEventsDRM::HandleCECMessage(char *data) {

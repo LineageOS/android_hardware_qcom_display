@@ -166,10 +166,7 @@ DisplayError DisplayPrimary::SetDisplayState(DisplayState state) {
 
 void DisplayPrimary::SetIdleTimeoutMs(uint32_t active_ms) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-
-  if (comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, active_ms) == kErrorNone) {
-    hw_intf_->SetIdleTimeoutMs(active_ms);
-  }
+  comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, active_ms);
 }
 
 DisplayError DisplayPrimary::SetDisplayMode(uint32_t mode) {
@@ -208,7 +205,7 @@ DisplayError DisplayPrimary::SetDisplayMode(uint32_t mode) {
       ControlPartialUpdate(false /* enable */, &pending);
     } else if (mode == kModeCommand) {
       // Flush idle timeout value currently set.
-      hw_intf_->SetIdleTimeoutMs(0);
+      comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, 0);
       switch_to_cmd_ = true;
     }
   }
