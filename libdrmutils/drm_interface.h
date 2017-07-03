@@ -138,6 +138,12 @@ enum struct DRMOps {
    */
   PLANE_SET_FB_SECURE_MODE,
   /*
+   * Op: Sets csc config on this plane.
+   * Arg: uint32_t - Plane ID
+   *      uint32_t* - pointer to csc type
+   */
+  PLANE_SET_CSC_CONFIG,
+  /*
    * Op: Activate or deactivate a CRTC
    * Arg: uint32_t - CRTC ID
    *      uint32_t - 1 to enable, 0 to disable
@@ -463,6 +469,15 @@ struct DRMPPFeatureInfo {
   uint32_t version;
   uint32_t payload_size;
   void *payload;
+};
+
+enum DRMCscType {
+  kCscYuv2Rgb601L,
+  kCscYuv2Rgb601FR,
+  kCscYuv2Rgb709L,
+  kCscYuv2Rgb2020L,
+  kCscYuv2Rgb2020FR,
+  kCscTypeMax,
 };
 
 struct DRMScalerLUTInfo {
