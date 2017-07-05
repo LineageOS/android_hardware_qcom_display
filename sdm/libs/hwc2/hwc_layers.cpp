@@ -18,6 +18,7 @@
  */
 
 #include <stdint.h>
+#include <utility>
 #include <qdMetaData.h>
 
 #include "hwc_layers.h"
@@ -549,6 +550,27 @@ LayerBufferS3DFormat HWCLayer::GetS3DFormat(uint32_t s3d_format) {
   return sdm_s3d_format;
 }
 
+void HWCLayer::GetUBWCStatsFromMetaData(UBWCStats *cr_stats, UbwcCrStatsVector *cr_vec) {
+  // TODO(user): Check if we can use UBWCStats directly
+  // in layer_buffer or copy directly to Vector
+  if (cr_stats->bDataValid) {
+    switch (cr_stats->version) {
+      case UBWC_2_0:
+        cr_vec->push_back(std::make_pair(32, cr_stats->ubwc_stats.nCRStatsTile32));
+        cr_vec->push_back(std::make_pair(64, cr_stats->ubwc_stats.nCRStatsTile64));
+        cr_vec->push_back(std::make_pair(96, cr_stats->ubwc_stats.nCRStatsTile96));
+        cr_vec->push_back(std::make_pair(128, cr_stats->ubwc_stats.nCRStatsTile128));
+        cr_vec->push_back(std::make_pair(160, cr_stats->ubwc_stats.nCRStatsTile160));
+        cr_vec->push_back(std::make_pair(192, cr_stats->ubwc_stats.nCRStatsTile192));
+        cr_vec->push_back(std::make_pair(256, cr_stats->ubwc_stats.nCRStatsTile256));
+        break;
+      default:
+        DLOGW("Invalid UBWC Version %d", cr_stats->version);
+        break;
+    }  // switch(cr_stats->version)
+  }  // if (cr_stats->bDatvalid)
+}
+
 DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *layer) {
   LayerBuffer *layer_buffer = &layer->input_buffer;
   bool use_color_metadata = true;
@@ -591,6 +613,18 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
   if (getMetaData(handle, GET_S3D_FORMAT, &s3d) == 0) {
     layer_buffer->s3d_format = GetS3DFormat(s3d);
   }
+
+  // Check if metadata is set
+  struct UBWCStats cr_stats[NUM_UBWC_CR_STATS_LAYERS] = {};
+
+  for (int i = 0; i < NUM_UBWC_CR_STATS_LAYERS; i++) {
+    layer_buffer->ubwc_crstats[i].clear();
+  }
+
+  if (getMetaData(handle, GET_UBWC_CR_STATS_INFO, cr_stats) == 0) {
+  // Only copy top layer for now as only top field for interlaced is used
+    GetUBWCStatsFromMetaData(&cr_stats[0], &(layer_buffer->ubwc_crstats[0]));
+  }  // if (getMetaData)
 
   return kErrorNone;
 }
