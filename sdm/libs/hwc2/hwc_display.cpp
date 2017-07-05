@@ -1523,7 +1523,7 @@ void HWCDisplay::GetPanelResolution(uint32_t *x_pixels, uint32_t *y_pixels) {
   *y_pixels = display_config.y_pixels;
 }
 
-int HWCDisplay::SetDisplayStatus(uint32_t display_status) {
+int HWCDisplay::SetDisplayStatus(DisplayStatus display_status) {
   int status = 0;
 
   switch (display_status) {
@@ -1726,8 +1726,8 @@ void HWCDisplay::SetSecureDisplay(bool secure_display_active) {
   return;
 }
 
-int HWCDisplay::SetActiveDisplayConfig(int config) {
-  return display_intf_->SetActiveConfig(UINT32(config)) == kErrorNone ? 0 : -1;
+int HWCDisplay::SetActiveDisplayConfig(uint32_t config) {
+  return display_intf_->SetActiveConfig(config) == kErrorNone ? 0 : -1;
 }
 
 int HWCDisplay::GetActiveDisplayConfig(uint32_t *config) {
