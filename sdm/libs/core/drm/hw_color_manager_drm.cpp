@@ -76,6 +76,11 @@ uint32_t HWColorManagerDrm::GetFeatureVersion(const DRMPPFeatureInfo &feature) {
 
   switch (feature.id) {
     case kFeaturePcc:
+      if (feature.version == 1) {
+        version = PPFeatureVersion::kSDEPccV17;
+      } else if (feature.version == 4) {
+        version = PPFeatureVersion::kSDEPccV4;
+      }
       break;
     case kFeatureIgc:
       if (feature.version == 3)
@@ -142,6 +147,84 @@ DRMPPFeatureID HWColorManagerDrm::ToDrmFeatureId(uint32_t id) {
 DisplayError HWColorManagerDrm::GetDrmPCC(const PPFeatureInfo &in_data,
                                           DRMPPFeatureInfo *out_data) {
   DisplayError ret = kErrorNone;
+#ifdef PP_DRM_ENABLE
+  struct SDEPccV4Cfg *sde_pcc = NULL;
+  struct SDEPccV4Coeff *sde_pcc_coeffs = NULL;
+  struct drm_msm_pcc *mdp_pcc = NULL;
+  struct drm_msm_pcc_coeff *mdp_pcc_coeffs = NULL;
+  uint32_t i = 0;
+
+  if (!out_data) {
+    DLOGE("Invalid input parameter for pcc");
+    return kErrorParameters;
+  }
+
+  switch (in_data.feature_version_) {
+  case PPFeatureVersion::kSDEPccV4:
+    sde_pcc = (struct SDEPccV4Cfg *) in_data.GetConfigData();
+    break;
+  default:
+    DLOGE("Unsupported pcc feature version: %d", in_data.feature_version_);
+    return kErrorParameters;
+  }
+
+  out_data->id = kFeaturePcc;
+  out_data->type = sde_drm::kPropBlob;
+  out_data->version = in_data.feature_version_;
+  out_data->payload_size = sizeof(struct drm_msm_pcc);
+
+  if (in_data.enable_flags_ & kOpsDisable) {
+    /* feature disable case */
+    out_data->payload = NULL;
+    return ret;
+  } else if (!(in_data.enable_flags_ & kOpsEnable)) {
+    out_data->payload = NULL;
+    return kErrorParameters;
+  }
+
+  mdp_pcc = new drm_msm_pcc();
+  if (!mdp_pcc) {
+    DLOGE("Failed to allocate memory for pcc");
+    return kErrorMemory;
+  }
+
+  mdp_pcc->flags = 0;
+
+  for (i = 0; i < kMaxPCCChanel; i++) {
+    switch (i) {
+    case 0:
+      sde_pcc_coeffs = &sde_pcc->red;
+      mdp_pcc_coeffs = &mdp_pcc->r;
+      mdp_pcc->r_rr = sde_pcc_coeffs->rr;
+      mdp_pcc->r_gg = sde_pcc_coeffs->gg;
+      mdp_pcc->r_bb = sde_pcc_coeffs->bb;
+      break;
+    case 1:
+        sde_pcc_coeffs = &sde_pcc->green;
+        mdp_pcc_coeffs = &mdp_pcc->g;
+        mdp_pcc->g_rr = sde_pcc_coeffs->rr;
+        mdp_pcc->g_gg = sde_pcc_coeffs->gg;
+        mdp_pcc->g_bb = sde_pcc_coeffs->bb;
+      break;
+    case 2:
+        sde_pcc_coeffs = &sde_pcc->blue;
+        mdp_pcc_coeffs = &mdp_pcc->b;
+        mdp_pcc->b_rr = sde_pcc_coeffs->rr;
+        mdp_pcc->b_gg = sde_pcc_coeffs->gg;
+        mdp_pcc->b_bb = sde_pcc_coeffs->bb;
+      break;
+    }
+    mdp_pcc_coeffs->c = sde_pcc_coeffs->c;
+    mdp_pcc_coeffs->r = sde_pcc_coeffs->r;
+    mdp_pcc_coeffs->g = sde_pcc_coeffs->g;
+    mdp_pcc_coeffs->b = sde_pcc_coeffs->b;
+    mdp_pcc_coeffs->rg = sde_pcc_coeffs->rg;
+    mdp_pcc_coeffs->gb = sde_pcc_coeffs->gb;
+    mdp_pcc_coeffs->rb = sde_pcc_coeffs->rb;
+    mdp_pcc_coeffs->rgb = sde_pcc_coeffs->rgb;
+  }
+  out_data->payload = mdp_pcc;
+#endif
   return ret;
 }
 

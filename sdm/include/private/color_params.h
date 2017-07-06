@@ -157,6 +157,7 @@ struct PPFeatureVersion {
   static const uint32_t kSDEPADitherV17 = 16;
   static const uint32_t kSDEIgcV30 = 17;
   static const uint32_t kSDEGamutV4 = 18;
+  static const uint32_t kSDEPccV4 = 19;
 
   uint32_t version[kMaxNumPPFeatures];
   PPFeatureVersion() { memset(version, 0, sizeof(version)); }
@@ -325,6 +326,29 @@ struct SDEPccCfg {
 
   static SDEPccCfg *Init(uint32_t arg __attribute__((__unused__)));
   SDEPccCfg *GetConfig() { return this; }
+};
+
+struct SDEPccV4Coeff {
+  uint32_t c = 0;
+  uint32_t r = 0;
+  uint32_t g = 0;
+  uint32_t b = 0;
+  uint32_t rg = 0;
+  uint32_t gb = 0;
+  uint32_t rb = 0;
+  uint32_t rgb = 0;
+  uint32_t rr = 0;
+  uint32_t gg = 0;
+  uint32_t bb = 0;
+};
+
+struct SDEPccV4Cfg {
+  SDEPccV4Coeff red;
+  SDEPccV4Coeff green;
+  SDEPccV4Coeff blue;
+
+  static SDEPccV4Cfg *Init(uint32_t arg __attribute__((__unused__)));
+  SDEPccV4Cfg *GetConfig() { return this; }
 };
 
 struct SDEDitherCfg {
