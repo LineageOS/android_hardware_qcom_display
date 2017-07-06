@@ -37,6 +37,7 @@
 
 #include "xf86drm.h"
 #include "xf86drmMode.h"
+#include <drm/msm_drm.h>
 
 namespace sde_drm {
 
@@ -400,6 +401,7 @@ struct DRMConnectorInfo {
   int hmin;
   bool roi_merge;
   DRMRotation panel_orientation;
+  drm_panel_hdr_properties panel_hdr_prop;
 };
 
 /* Identifier token for a display */

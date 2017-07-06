@@ -453,6 +453,17 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   hw_panel_info_.max_fps = 60;
   hw_panel_info_.is_primary_panel = connector_info_.is_primary;
   hw_panel_info_.is_pluggable = 0;
+  hw_panel_info_.hdr_enabled = connector_info_.panel_hdr_prop.hdr_enabled;
+  hw_panel_info_.peak_luminance = connector_info_.panel_hdr_prop.peak_brightness;
+  hw_panel_info_.blackness_level = connector_info_.panel_hdr_prop.blackness_level;
+  hw_panel_info_.primaries.white_point[0] = connector_info_.panel_hdr_prop.display_primaries[0];
+  hw_panel_info_.primaries.white_point[1] = connector_info_.panel_hdr_prop.display_primaries[1];
+  hw_panel_info_.primaries.red[0] = connector_info_.panel_hdr_prop.display_primaries[2];
+  hw_panel_info_.primaries.red[1] = connector_info_.panel_hdr_prop.display_primaries[3];
+  hw_panel_info_.primaries.green[0] = connector_info_.panel_hdr_prop.display_primaries[4];
+  hw_panel_info_.primaries.green[1] = connector_info_.panel_hdr_prop.display_primaries[5];
+  hw_panel_info_.primaries.blue[0] = connector_info_.panel_hdr_prop.display_primaries[6];
+  hw_panel_info_.primaries.blue[1] = connector_info_.panel_hdr_prop.display_primaries[7];
 
   // no supprt for 90 rotation only flips or 180 supported
   hw_panel_info_.panel_orientation.rotation = 0;
@@ -469,8 +480,8 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   DLOGI("%s, Panel Interface = %s, Panel Mode = %s, Is Primary = %d", device_name_,
         interface_str_.c_str(), hw_panel_info_.mode == kModeVideo ? "Video" : "Command",
         hw_panel_info_.is_primary_panel);
-  DLOGI("Partial Update = %d, Dynamic FPS = %d", hw_panel_info_.partial_update,
-        hw_panel_info_.dynamic_fps);
+  DLOGI("Partial Update = %d, Dynamic FPS = %d, HDR Panel = %d", hw_panel_info_.partial_update,
+        hw_panel_info_.dynamic_fps, hw_panel_info_.hdr_enabled);
   DLOGI("Align: left = %d, width = %d, top = %d, height = %d", hw_panel_info_.left_align,
         hw_panel_info_.width_align, hw_panel_info_.top_align, hw_panel_info_.height_align);
   DLOGI("ROI: min_width = %d, min_height = %d, need_merge = %d", hw_panel_info_.min_roi_width,
