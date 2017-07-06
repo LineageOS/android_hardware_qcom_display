@@ -191,7 +191,6 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
   hw_resource->has_dyn_bw_support = false;
   hw_resource->has_qseed3 = false;
   hw_resource->has_concurrent_writeback = false;
-  hw_resource->has_hdr = true;
 
   hw_resource->hw_version = SDEVERSION(4, 0, 1);
   // TODO(user): On FB driver hw_revision comprises of major version, minor version and hw_revision.
@@ -278,6 +277,7 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
 void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   DRMCrtcInfo info;
   drm_mgr_intf_->GetCrtcInfo(0 /* system_info */, &info);
+  hw_resource->has_hdr = info.has_hdr;
   hw_resource->is_src_split = info.has_src_split;
   hw_resource->has_qseed3 = (info.qseed_version == sde_drm::QSEEDVersion::V3);
   hw_resource->num_blending_stages = info.max_blend_stages;
