@@ -170,7 +170,7 @@ int getConfigCount(int dpy) {
     }
 
     int count = 0;
-    intf->getActiveConfig(MapDisplayType(dpy),
+    intf->getConfigCount(MapDisplayType(dpy),
         [&](const auto &tmpError, const auto &tmpCount) {
             if (tmpError) {
                 return;
