@@ -494,6 +494,7 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   hw_panel_info_.primaries.green[1] = connector_info_.panel_hdr_prop.display_primaries[5];
   hw_panel_info_.primaries.blue[0] = connector_info_.panel_hdr_prop.display_primaries[6];
   hw_panel_info_.primaries.blue[1] = connector_info_.panel_hdr_prop.display_primaries[7];
+  hw_panel_info_.transfer_time_us = connector_info_.transfer_time_us;
 
   // no supprt for 90 rotation only flips or 180 supported
   hw_panel_info_.panel_orientation.rotation = 0;
@@ -519,6 +520,7 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   DLOGI("FPS: min = %d, max =%d", hw_panel_info_.min_fps, hw_panel_info_.max_fps);
   DLOGI("Left Split = %d, Right Split = %d", hw_panel_info_.split_info.left_split,
         hw_panel_info_.split_info.right_split);
+  DLOGI("Panel Transfer time = %d us", hw_panel_info_.transfer_time_us);
 }
 
 void HWDeviceDRM::GetHWDisplayPortAndMode() {
