@@ -19,7 +19,7 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE_RELATIVE_PATH := hw
-LOCAL_PROPRIETARY_MODULE := true
+LOCAL_VENDOR_MODULE := true
 LOCAL_CFLAGS := -Wno-sign-conversion
 LOCAL_CLANG  := true
 LOCAL_SHARED_LIBRARIES := liblog
