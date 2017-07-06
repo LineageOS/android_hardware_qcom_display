@@ -296,6 +296,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool color_tranform_failed_ = false;
   HWCColorMode *color_mode_ = NULL;
   HWCToneMapper *tone_mapper_ = nullptr;
+  int disable_hdr_handling_ = 0;  // disables HDR handling.
 
  private:
   void DumpInputBuffers(void);
