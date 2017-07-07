@@ -192,7 +192,13 @@ void BufferManager::CreateSharedHandle(buffer_handle_t inbuffer, const BufferDes
 
 gralloc1_error_t BufferManager::FreeBuffer(std::shared_ptr<Buffer> buf) {
   auto hnd = buf->handle;
-  ALOGD_IF(DEBUG, "FreeBuffer handle:%p id: %" PRIu64, hnd, hnd->id);
+  ALOGD_IF(DEBUG, "FreeBuffer handle:%p", hnd);
+
+  if (private_handle_t::validate(hnd) != 0) {
+    ALOGE("FreeBuffer: Invalid handle: %p", hnd);
+    return GRALLOC1_ERROR_BAD_HANDLE;
+  }
+
   if (allocator_->FreeBuffer(reinterpret_cast<void *>(hnd->base), hnd->size, hnd->offset,
                              hnd->fd, buf->ion_handle_main) != 0) {
     return GRALLOC1_ERROR_BAD_HANDLE;
@@ -284,7 +290,7 @@ gralloc1_error_t BufferManager::RetainBuffer(private_handle_t const *hnd) {
 }
 
 gralloc1_error_t BufferManager::ReleaseBuffer(private_handle_t const *hnd) {
-  ALOGD_IF(DEBUG, "Release buffer handle:%p id: %" PRIu64, hnd, hnd->id);
+  ALOGD_IF(DEBUG, "Release buffer handle:%p", hnd);
   std::lock_guard<std::mutex> lock(buffer_lock_);
   auto buf = GetBufferFromHandleLocked(hnd);
   if (buf == nullptr) {
