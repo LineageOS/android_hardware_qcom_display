@@ -625,6 +625,9 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
 
       BufferDim_t buffer_dim;
       int interlaced = 0;
+
+      *stride = hnd->width;
+      *height = hnd->height;
       if (getMetaData(hnd, GET_BUFFER_GEOMETRY, &buffer_dim) == 0) {
         *stride = buffer_dim.sliceWidth;
         *height = buffer_dim.sliceHeight;
@@ -638,9 +641,6 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
           *stride = static_cast<int>(alignedw);
           *height = static_cast<int>(alignedh * 2);
         }
-      } else {
-        *stride = hnd->width;
-        *height = hnd->height;
       }
     } break;
 
