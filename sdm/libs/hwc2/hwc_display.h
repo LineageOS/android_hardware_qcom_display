@@ -146,19 +146,6 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int GetDisplayConfigCount(uint32_t *count);
   virtual int GetDisplayAttributesForConfig(int config,
                                             DisplayConfigVariableInfo *display_attributes);
-  template <typename... Args>
-  int32_t CallLayerFunction(hwc2_layer_t layer, HWC2::Error (HWCLayer::*member)(Args... ),
-                            Args... args) {
-    auto status = HWC2::Error::BadLayer;
-    validated_ = false;
-    auto hwc_layer = GetHWCLayer(layer);
-    if (hwc_layer != nullptr) {
-      status = (hwc_layer->*member)(std::forward<Args>(args)...);
-    }
-
-    return INT32(status);
-  }
-
   virtual int SetState(bool connected) {
     return kErrorNotSupported;
   }
