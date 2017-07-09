@@ -38,8 +38,6 @@ using std::string;
 
 const int kMaxSDELayers = 16;   // Maximum number of layers that can be handled by MDP5 hardware
                                 // in a given layer stack.
-const int kMaxBlitLayers = 32;   // Maximum number of layers that can be handled by MDP3 hardware
-                                // in a given layer stack.
 #define MAX_PLANES 4
 
 #define MAX_DETAIL_ENHANCE_CURVE 3
