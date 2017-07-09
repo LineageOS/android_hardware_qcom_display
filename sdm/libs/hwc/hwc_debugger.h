@@ -43,6 +43,7 @@ namespace sdm {
 class HWCDebugHandler : public DebugHandler {
  public:
   static inline DebugHandler* Get() { return &debug_handler_; }
+  static const char* DumpDir() { return "/data/vendor/display"; }
 
   static void DebugAll(bool enable, int verbose_level);
   static void DebugResources(bool enable, int verbose_level);
