@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -50,6 +50,7 @@ class HWCDebugHandler : public DebugHandler {
   static void DebugCompManager(bool enable, int verbose_level);
   static void DebugDriverConfig(bool enable, int verbose_level);
   static void DebugRotator(bool enable, int verbose_level);
+  static void DebugScalar(bool enable, int verbose_level);
   static void DebugQdcm(bool enable, int verbose_level);
   static int  GetIdleTimeoutMs();
 
