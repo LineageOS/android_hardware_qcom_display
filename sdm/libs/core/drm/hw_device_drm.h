@@ -95,6 +95,7 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError SetMixerAttributes(const HWMixerAttributes &mixer_attributes);
   virtual DisplayError GetMixerAttributes(HWMixerAttributes *mixer_attributes);
   virtual void InitializeConfigs();
+  virtual DisplayError DumpDebugData() { return kErrorNone; }
 
   enum {
     kHWEventVSync,
