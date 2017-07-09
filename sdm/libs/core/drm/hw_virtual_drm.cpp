@@ -41,7 +41,7 @@ using sde_drm::DRMDisplayType;
 using sde_drm::DRMConnectorInfo;
 using sde_drm::DRMRect;
 using sde_drm::DRMOps;
-
+using sde_drm::DRMPowerMode;
 namespace sdm {
 
 HWVirtualDRM::HWVirtualDRM(BufferSyncHandler *buffer_sync_handler,
@@ -146,7 +146,6 @@ DisplayError HWVirtualDRM::Validate(HWLayers *hw_layers) {
   return kErrorNone;
 }
 
-
 DisplayError HWVirtualDRM::SetDisplayAttributes(const HWDisplayAttributes &display_attributes) {
   if (display_attributes.x_pixels == 0 || display_attributes.y_pixels == 0) {
     return kErrorParameters;
@@ -162,6 +161,18 @@ DisplayError HWVirtualDRM::SetDisplayAttributes(const HWDisplayAttributes &displ
   height_ = display_attributes_.y_pixels;
   DeferredInit();
 
+  return kErrorNone;
+}
+
+DisplayError HWVirtualDRM::PowerOn() {
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
+  return kErrorNone;
+}
+
+DisplayError HWVirtualDRM::PowerOff() {
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::OFF);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
   return kErrorNone;
 }
 

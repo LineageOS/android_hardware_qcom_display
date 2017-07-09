@@ -59,15 +59,15 @@ int HWCDisplayVirtual::Create(CoreInterface *core_intf, HWCBufferAllocator *buff
     return status;
   }
 
-  status = INT32(hwc_display_virtual->SetPowerMode(HWC2::PowerMode::On));
+  status = hwc_display_virtual->SetConfig(width, height);
   if (status) {
-    DLOGW("Failed to set power mode on virtual display");
     Destroy(hwc_display_virtual);
     return status;
   }
 
-  status = hwc_display_virtual->SetConfig(width, height);
+  status = INT32(hwc_display_virtual->SetPowerMode(HWC2::PowerMode::On));
   if (status) {
+    DLOGW("Failed to set power mode on virtual display");
     Destroy(hwc_display_virtual);
     return status;
   }
