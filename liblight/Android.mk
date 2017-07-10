@@ -23,6 +23,7 @@ LOCAL_VENDOR_MODULE := true
 LOCAL_SHARED_LIBRARIES := liblog
 LOCAL_CFLAGS := $(common_flags) -DLOG_TAG=\"qdlights\"
 LOCAL_MODULE := lights.$(TARGET_BOARD_PLATFORM)
+LOCAL_HEADER_LIBRARIES := libhardware_headers
 LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)
