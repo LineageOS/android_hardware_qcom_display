@@ -121,7 +121,7 @@ static EGLImageBuffer* L_wrap(const private_handle_t *src)
     }
 
     android::sp<android::GraphicBuffer> graphicBuffer =
-        new android::GraphicBuffer(src->width, src->height, src->format,
+        new android::GraphicBuffer(src->unaligned_width, src->unaligned_height, src->format,
 #ifndef __NOUGAT__
                                    1, // Layer count
 #endif
