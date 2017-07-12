@@ -94,10 +94,12 @@ int kgsl_memtrack_get_memory(pid_t pid, enum memtrack_type type,
         }
 
         if (size == 0) {
+            fclose(fp);
             return -EINVAL;
         }
 
         if (unaccounted_size + size < size) {
+            fclose(fp);
             return -ERANGE;
         }
 
@@ -105,11 +107,13 @@ int kgsl_memtrack_get_memory(pid_t pid, enum memtrack_type type,
 
             if (flags[6] == 'Y') {
                 if (accounted_size + mapsize < accounted_size) {
+                    fclose(fp);
                     return -ERANGE;
                 }
                 accounted_size += mapsize;
 
                 if (mapsize > size) {
+                    fclose(fp);
                     return -EINVAL;
                 }
                 unaccounted_size += size - mapsize;
