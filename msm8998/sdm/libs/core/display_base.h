@@ -138,6 +138,7 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   DisplayError GetHdrColorMode(std::string *color_mode, bool *found_hdr);
   bool IsSupportColorModeAttribute(const std::string &color_mode);
 
+  static std::bitset<kDisplayMax> needs_validate_;
   recursive_mutex recursive_mutex_;
   DisplayType display_type_;
   DisplayEventHandler *event_handler_ = NULL;
@@ -151,7 +152,6 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   Handle hw_device_ = 0;
   Handle display_comp_ctx_ = 0;
   HWLayers hw_layers_;
-  bool pending_commit_ = false;
   bool vsync_enable_ = false;
   uint32_t max_mixer_stages_ = 0;
   HWInfoInterface *hw_info_intf_ = NULL;

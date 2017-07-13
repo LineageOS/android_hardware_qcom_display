@@ -24,7 +24,6 @@
 #include <map>
 #include "EGLImageWrapper.h"
 #include "glengine.h"
-#define EGL_PROTECTED_CONTENT_EXT 0x32C0
 
 //-----------------------------------------------------------------------------
 EGLImageKHR create_eglImage(android::sp<android::GraphicBuffer> graphicBuffer)

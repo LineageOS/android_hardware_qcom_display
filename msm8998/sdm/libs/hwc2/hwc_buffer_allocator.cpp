@@ -78,8 +78,14 @@ DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
     // Allocate uncached buffers
     alloc_flags |= GRALLOC_USAGE_PRIVATE_UNCACHED;
   }
+
+  if (buffer_config.gfx_client) {
+    alloc_flags |= GRALLOC1_CONSUMER_USAGE_GPU_TEXTURE;
+  }
+
   uint64_t producer_usage = UINT64(alloc_flags);
   uint64_t consumer_usage = UINT64(alloc_flags);
+
   // CreateBuffer
   private_handle_t *hnd = nullptr;
   Perform_(gralloc_device_, GRALLOC1_MODULE_PERFORM_ALLOCATE_BUFFER, width, height, format,

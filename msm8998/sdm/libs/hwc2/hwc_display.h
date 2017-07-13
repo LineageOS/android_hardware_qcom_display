@@ -39,6 +39,7 @@
 namespace sdm {
 
 class BlitEngine;
+class HWCToneMapper;
 
 // Subclasses set this to their type. This has to be different from DisplayType.
 // This is to avoid RTTI and dynamic_cast
@@ -197,6 +198,10 @@ class HWCDisplay : public DisplayEventHandler {
                                          float* out_max_average_luminance,
                                          float* out_min_luminance);
 
+ bool validated_ = false;
+ bool skip_validate_ = false;
+ uint32_t geometry_changes_ = GeometryChanges::kNone;
+
  protected:
   enum DisplayStatus {
     kDisplayStatusOffline = 0,
@@ -233,6 +238,8 @@ class HWCDisplay : public DisplayEventHandler {
   bool IsLayerUpdating(const Layer *layer);
   uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate);
   virtual void CloseAcquireFds();
+  virtual void ClearRequestFlags();
+  virtual void GetUnderScanConfig() { }
 
   enum {
     INPUT_LAYER_DUMP,
@@ -276,15 +283,16 @@ class HWCDisplay : public DisplayEventHandler {
   LayerRect solid_fill_rect_ = {};
   uint32_t solid_fill_color_ = 0;
   LayerRect display_rect_;
-  bool validated_ = false;
   bool color_tranform_failed_ = false;
   HWCColorMode *color_mode_ = NULL;
+  HWCToneMapper *tone_mapper_ = nullptr;
+  int disable_hdr_handling_ = 0;  // disables HDR handling.
 
  private:
   void DumpInputBuffers(void);
+  bool CanSkipValidate();
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
-  uint32_t geometry_changes_ = GeometryChanges::kNone;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {

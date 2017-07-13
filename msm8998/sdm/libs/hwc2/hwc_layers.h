@@ -52,6 +52,7 @@ enum GeometryChanges {
   kZOrder       = 0x040,
   kAdded        = 0x080,
   kRemoved      = 0x100,
+  kBufferGeometry = 0x200,
 };
 
 class HWCLayer {
@@ -85,6 +86,8 @@ class HWCLayer {
   int32_t PopReleaseFence(void);
   bool SupportedDataspace();
   bool SupportLocalConversion(ColorPrimaries working_primaries);
+  void ResetValidation() { needs_validate_ = false; }
+  bool NeedsValidation() { return (needs_validate_ || geometry_changes_); }
 
  private:
   Layer *layer_ = nullptr;
@@ -96,6 +99,7 @@ class HWCLayer {
   int ion_fd_ = -1;
   HWCBufferAllocator *buffer_allocator_ = NULL;
   int32_t dataspace_ =  HAL_DATASPACE_UNKNOWN;
+  bool needs_validate_ = true;
 
   // Composition requested by client(SF)
   HWC2::Composition client_requested_ = HWC2::Composition::Device;
