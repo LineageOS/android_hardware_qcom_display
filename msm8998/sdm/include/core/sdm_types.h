@@ -55,6 +55,7 @@ enum DisplayError {
   kErrorShutDown,         //!< Driver is processing shutdown sequence
   kErrorPerfValidation,   //!< Bandwidth or Clock requirement validation failure.
   kErrorNoAppLayers,      //!< No App layer(s) in the draw cycle.
+  kErrorNotValidated,     //!< Draw cycle has not been validated.
 };
 
 /*! @brief This structure is defined for client and library compatibility check purpose only. This

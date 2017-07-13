@@ -38,6 +38,8 @@
 
 namespace sdm {
 
+std::bitset<kDisplayMax> DisplayBase::needs_validate_ = 0;
+
 // TODO(user): Have a single structure handle carries all the interface pointers and variables.
 DisplayBase::DisplayBase(DisplayType display_type, DisplayEventHandler *event_handler,
                          HWDeviceType hw_device_type, BufferSyncHandler *buffer_sync_handler,
@@ -86,6 +88,10 @@ DisplayError DisplayBase::Init() {
                                          mixer_attributes_, fb_config_, &display_comp_ctx_);
   if (error != kErrorNone) {
     goto CleanupOnError;
+  }
+
+  if (!IsPrimaryDisplay()) {
+    needs_validate_.set();
   }
 
   if (hw_info_intf_) {
@@ -250,7 +256,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
     error = hw_intf_->Validate(&hw_layers_);
     if (error == kErrorNone) {
       // Strategy is successful now, wait for Commit().
-      pending_commit_ = true;
+      needs_validate_.reset(display_type_);
       break;
     }
     if (error == kErrorShutDown) {
@@ -269,7 +275,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
   DisplayError error = kErrorNone;
 
   if (!active_) {
-    pending_commit_ = false;
+    needs_validate_.set(display_type_);
     return kErrorPermission;
   }
 
@@ -277,12 +283,10 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     return kErrorParameters;
   }
 
-  if (!pending_commit_) {
+  if (needs_validate_.test(display_type_)) {
     DLOGE("Commit: Corresponding Prepare() is not called for display = %d", display_type_);
-    return kErrorUndefined;
+    return kErrorNotValidated;
   }
-
-  pending_commit_ = false;
 
   // Layer stack attributes has changed, need to Reconfigure, currently in use for Hybrid Comp
   if (layer_stack->flags.attributes_changed) {
@@ -343,11 +347,11 @@ DisplayError DisplayBase::Flush() {
   error = hw_intf_->Flush();
   if (error == kErrorNone) {
     comp_manager_->Purge(display_comp_ctx_);
-    pending_commit_ = false;
   } else {
     DLOGW("Unable to flush display = %d", display_type_);
   }
 
+  needs_validate_.set(display_type_);
   return error;
 }
 
@@ -420,6 +424,8 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state) {
     DLOGI("Same state transition is requested.");
     return kErrorNone;
   }
+
+  needs_validate_.set(display_type_);
 
   switch (state) {
   case kStateOff:

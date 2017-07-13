@@ -474,14 +474,14 @@ int BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_han
   int buffer_type = GetBufferType(gralloc_format);
   allocator_->GetBufferSizeAndDimensions(descriptor, &size, &alignedw, &alignedh);
   size = (bufferSize >= size) ? bufferSize : size;
-  size = size * layer_count;
 
   int err = 0;
   int flags = 0;
   auto page_size = UINT(getpagesize());
   AllocData data;
   data.align = GetDataAlignment(format, prod_usage, cons_usage);
-  data.size = ALIGN(size, data.align);
+  size = ALIGN(size, data.align) * layer_count;
+  data.size = size;
   data.handle = (uintptr_t) handle;
   data.uncached = allocator_->UseUncached(prod_usage, cons_usage);
 

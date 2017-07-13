@@ -244,6 +244,7 @@ HWC2::Error HWCDisplayPrimary::GetColorModes(uint32_t *out_num_modes,
 }
 
 HWC2::Error HWCDisplayPrimary::SetColorMode(android_color_mode_t mode) {
+  validated_ = false;
   auto status = color_mode_->SetColorMode(mode);
   if (status != HWC2::Error::None) {
     DLOGE("failed for mode = %d", mode);
@@ -269,6 +270,7 @@ HWC2::Error HWCDisplayPrimary::SetColorModeById(int32_t color_mode_id) {
 
 HWC2::Error HWCDisplayPrimary::SetColorTransform(const float *matrix,
                                                  android_color_transform_t hint) {
+  validated_ = false;
   if (!matrix) {
     return HWC2::Error::BadParameter;
   }
@@ -406,6 +408,7 @@ DisplayError HWCDisplayPrimary::Refresh() {
 
   callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
   handle_idle_timeout_ = true;
+  validated_ = false;
 
   return error;
 }
@@ -581,6 +584,7 @@ DisplayError HWCDisplayPrimary::DisablePartialUpdateOneFrame() {
 
 
 DisplayError HWCDisplayPrimary::SetMixerResolution(uint32_t width, uint32_t height) {
+  validated_ = false;
   return display_intf_->SetMixerResolution(width, height);
 }
 
