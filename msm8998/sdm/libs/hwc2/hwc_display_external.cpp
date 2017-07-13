@@ -139,20 +139,12 @@ HWC2::Error HWCDisplayExternal::Present(int32_t *out_retire_fence) {
 }
 
 void HWCDisplayExternal::ApplyScanAdjustment(hwc_rect_t *display_frame) {
-  if (display_intf_->IsUnderscanSupported()) {
+  if ((underscan_width_ <= 0) || (underscan_height_ <= 0)) {
     return;
   }
 
-  // Read user defined width and height ratio
-  int width = 0, height = 0;
-  HWCDebugHandler::Get()->GetProperty("sdm.external_action_safe_width", &width);
-  float width_ratio = FLOAT(width) / 100.0f;
-  HWCDebugHandler::Get()->GetProperty("sdm.external_action_safe_height", &height);
-  float height_ratio = FLOAT(height) / 100.0f;
-
-  if (width_ratio == 0.0f || height_ratio == 0.0f) {
-    return;
-  }
+  float width_ratio = FLOAT(underscan_width_) / 100.0f;
+  float height_ratio = FLOAT(underscan_height_) / 100.0f;
 
   uint32_t mixer_width = 0;
   uint32_t mixer_height = 0;
@@ -210,6 +202,14 @@ void HWCDisplayExternal::GetDownscaleResolution(uint32_t primary_width, uint32_t
       std::swap(primary_height, primary_width);
     }
     AdjustSourceResolution(primary_width, primary_height, non_primary_width, non_primary_height);
+  }
+}
+
+void HWCDisplayExternal::GetUnderScanConfig() {
+  if (!display_intf_->IsUnderscanSupported()) {
+    // Read user defined underscan width and height
+    HWCDebugHandler::Get()->GetProperty("sdm.external_action_safe_width", &underscan_width_);
+    HWCDebugHandler::Get()->GetProperty("sdm.external_action_safe_height", &underscan_height_);
   }
 }
 

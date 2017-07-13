@@ -19,7 +19,7 @@ LOCAL_CLANG                   := true
 
 LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware libhardware_legacy \
                                  libutils libcutils libsync libqdutils libqdMetaData libdl \
-                                 libsdmutils libc++ liblog libdrmutils
+                                 libsdmutils libc++ liblog libdrmutils libui libgpu_tonemapper
 
 ifneq ($(TARGET_USES_GRALLOC1), true)
     LOCAL_SHARED_LIBRARIES += libmemalloc
@@ -36,7 +36,8 @@ LOCAL_SRC_FILES               := hwc_session.cpp \
                                  hwc_layers.cpp \
                                  hwc_callbacks.cpp \
                                  ../hwc/cpuhint.cpp \
-                                 ../hwc/hwc_socket_handler.cpp
+                                 ../hwc/hwc_socket_handler.cpp \
+                                 hwc_tonemapper.cpp
 
 ifneq ($(TARGET_USES_GRALLOC1), true)
     LOCAL_SRC_FILES += ../hwc/hwc_buffer_allocator.cpp
