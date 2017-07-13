@@ -10,12 +10,14 @@ include $(BUILD_COPY_HEADERS)
 
 include $(CLEAR_VARS)
 #TODO move all exported headers to this directory
-LOCAL_MODULE := display_headers
+LOCAL_MODULE                  := display_headers
+LOCAL_VENDOR_MODULE           := true
 LOCAL_EXPORT_C_INCLUDE_DIRS   := $(LOCAL_PATH) \
                                  $(display_top)/libcopybit \
                                  $(display_top)/libdrmutils \
                                  $(display_top)/libqdutils \
                                  $(display_top)/libqservice \
+                                 $(display_top)/gpu_tonemapper \
                                  $(display_top)/sdm/include
 
 ifeq ($(TARGET_USES_GRALLOC1), true)

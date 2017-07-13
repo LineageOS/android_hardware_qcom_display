@@ -47,9 +47,30 @@ void engine_bind(void* context)
 }
 
 //-----------------------------------------------------------------------------
+// store the current context(caller)
+void* engine_backup()
+{
+  EngineContext* callerContext = new EngineContext();
+  // store the previous display/context
+  callerContext->eglDisplay = eglGetCurrentDisplay();
+  callerContext->eglContext = eglGetCurrentContext();
+  callerContext->eglSurface = eglGetCurrentSurface(EGL_DRAW);
+
+  return (void*)callerContext;
+}
+//-----------------------------------------------------------------------------
+// frees the backed up caller context
+void engine_free_backup(void* context)
+{
+  EngineContext* callerContext = (EngineContext*)(context);
+
+  delete callerContext;
+}
+
+//-----------------------------------------------------------------------------
 // initialize GL
 //
-void* engine_initialize()
+void* engine_initialize(bool isSecure)
 //-----------------------------------------------------------------------------
 {
   EngineContext* engineContext = new EngineContext();
@@ -73,11 +94,18 @@ void* engine_initialize()
   EGL(eglChooseConfig(engineContext->eglDisplay, eglConfigAttribList, &eglConfig, 1, &numConfig));
 
   // context
-  EGLint eglContextAttribList[] = {EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE};
+  EGLint eglContextAttribList[] = {EGL_CONTEXT_CLIENT_VERSION, 3,
+                                   isSecure ? EGL_PROTECTED_CONTENT_EXT : EGL_NONE,
+                                   isSecure ? EGL_TRUE : EGL_NONE,
+                                   EGL_NONE};
   engineContext->eglContext = eglCreateContext(engineContext->eglDisplay, eglConfig, NULL, eglContextAttribList);
 
   // surface
-  EGLint eglSurfaceAttribList[] = {EGL_WIDTH, 1, EGL_HEIGHT, 1, EGL_NONE, EGL_NONE};
+  EGLint eglSurfaceAttribList[] = {EGL_WIDTH, 1,
+                                   EGL_HEIGHT, 1,
+                                   isSecure ? EGL_PROTECTED_CONTENT_EXT : EGL_NONE,
+                                   isSecure ? EGL_TRUE : EGL_NONE,
+                                   EGL_NONE};
   engineContext->eglSurface = eglCreatePbufferSurface(engineContext->eglDisplay, eglConfig, eglSurfaceAttribList);
 
   eglMakeCurrent(engineContext->eglDisplay, engineContext->eglSurface, engineContext->eglSurface, engineContext->eglContext);
@@ -118,6 +146,13 @@ void engine_deleteProgram(unsigned int id)
   if (id != 0) {
     GL(glDeleteProgram(id));
   }
+}
+
+//-----------------------------------------------------------------------------
+void engine_setData2f(int location, float* data)
+//-----------------------------------------------------------------------------
+{
+    GL(glUniform2f(location, data[0], data[1]));
 }
 
 //-----------------------------------------------------------------------------

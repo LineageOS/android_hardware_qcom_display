@@ -27,10 +27,7 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <alloc_controller.h>
-#include <gr.h>
 #include <gralloc_priv.h>
-#include <memalloc.h>
 #include <sync/sync.h>
 
 #include <TonemapFactory.h>
@@ -52,18 +49,70 @@
 
 namespace sdm {
 
-ToneMapSession::~ToneMapSession() {
-  delete gpu_tone_mapper_;
-  gpu_tone_mapper_ = NULL;
-  FreeIntermediateBuffers();
+ToneMapSession::ToneMapSession(HWCBufferAllocator *buffer_allocator)
+  : tone_map_task_(*this), buffer_allocator_(buffer_allocator) {
+  buffer_info_.resize(kNumIntermediateBuffers);
 }
 
-DisplayError ToneMapSession::AllocateIntermediateBuffers(int w, int h, int format, int usage) {
+ToneMapSession::~ToneMapSession() {
+  tone_map_task_.PerformTask(ToneMapTaskCode::kCodeDestroy, nullptr);
+  FreeIntermediateBuffers();
+  buffer_info_.clear();
+}
+
+void ToneMapSession::OnTask(const ToneMapTaskCode &task_code,
+                            SyncTask<ToneMapTaskCode>::TaskContext *task_context) {
+  switch (task_code) {
+    case ToneMapTaskCode::kCodeGetInstance: {
+        ToneMapGetInstanceContext *ctx = static_cast<ToneMapGetInstanceContext *>(task_context);
+        Lut3d &lut_3d = ctx->layer->lut_3d;
+        Color10Bit *grid_entries = NULL;
+        int grid_size = 0;
+        if (lut_3d.validGridEntries) {
+          grid_entries = lut_3d.gridEntries;
+          grid_size = INT(lut_3d.gridSize);
+        }
+        gpu_tone_mapper_ = TonemapperFactory_GetInstance(tone_map_config_.type,
+                                                         lut_3d.lutEntries, lut_3d.dim,
+                                                         grid_entries, grid_size,
+                                                         tone_map_config_.secure);
+      }
+      break;
+
+    case ToneMapTaskCode::kCodeBlit: {
+        ToneMapBlitContext *ctx = static_cast<ToneMapBlitContext *>(task_context);
+        uint8_t buffer_index = current_buffer_index_;
+        const void *dst_hnd = reinterpret_cast<const void *>
+                                (buffer_info_[buffer_index].private_data);
+        const void *src_hnd = reinterpret_cast<const void *>
+                                (ctx->layer->input_buffer.buffer_id);
+        ctx->fence_fd = gpu_tone_mapper_->blit(dst_hnd, src_hnd, ctx->merged_fd);
+      }
+      break;
+
+    case ToneMapTaskCode::kCodeDestroy: {
+        delete gpu_tone_mapper_;
+      }
+      break;
+
+    default:
+      break;
+  }
+}
+
+DisplayError ToneMapSession::AllocateIntermediateBuffers(const Layer *layer) {
+  DisplayError error = kErrorNone;
   for (uint8_t i = 0; i < kNumIntermediateBuffers; i++) {
-    int status = alloc_buffer(&intermediate_buffer_[i], w, h, format, usage);
-    if (status < 0) {
+    BufferInfo &buffer_info = buffer_info_[i];
+    buffer_info.buffer_config.width = layer->request.width;
+    buffer_info.buffer_config.height = layer->request.height;
+    buffer_info.buffer_config.format = layer->request.format;
+    buffer_info.buffer_config.secure = layer->request.flags.secure;
+    buffer_info.buffer_config.gfx_client = true;
+    error = buffer_allocator_->AllocateBuffer(&buffer_info);
+    if (error != kErrorNone) {
       FreeIntermediateBuffers();
-      return kErrorMemory;
+      return error;
     }
   }
 
@@ -72,14 +121,13 @@ DisplayError ToneMapSession::AllocateIntermediateBuffers(int w, int h, int forma
 
 void ToneMapSession::FreeIntermediateBuffers() {
   for (uint8_t i = 0; i < kNumIntermediateBuffers; i++) {
-    private_handle_t *buffer = intermediate_buffer_[i];
-    if (buffer) {
-      // Free the valid fence
-      if (release_fence_fd_[i] >= 0) {
-        CloseFd(&release_fence_fd_[i]);
-      }
-      free_buffer(buffer);
-      intermediate_buffer_[i] = NULL;
+    // Free the valid fence
+    if (release_fence_fd_[i] >= 0) {
+      CloseFd(&release_fence_fd_[i]);
+    }
+    BufferInfo &buffer_info = buffer_info_[i];
+    if (buffer_info.private_data) {
+      buffer_allocator_->FreeBuffer(&buffer_info);
     }
   }
 }
@@ -88,8 +136,8 @@ void ToneMapSession::UpdateBuffer(int acquire_fence, LayerBuffer *buffer) {
   // Acquire fence will be closed by HWC Display.
   // Fence returned by GPU will be closed in PostCommit.
   buffer->acquire_fence_fd = acquire_fence;
-  buffer->size = intermediate_buffer_[current_buffer_index_]->size;
-  buffer->planes[0].fd = intermediate_buffer_[current_buffer_index_]->fd;
+  buffer->size = buffer_info_[current_buffer_index_].alloc_buffer_info.size;
+  buffer->planes[0].fd = buffer_info_[current_buffer_index_].alloc_buffer_info.fd;
 }
 
 void ToneMapSession::SetReleaseFence(int fd) {
@@ -109,7 +157,7 @@ void ToneMapSession::SetToneMapConfig(Layer *layer) {
 
 bool ToneMapSession::IsSameToneMapConfig(Layer *layer) {
   LayerBuffer& buffer = layer->input_buffer;
-  private_handle_t *handle = intermediate_buffer_[0];
+  private_handle_t *handle = static_cast<private_handle_t *>(buffer_info_[0].private_data);
   int tonemap_type = buffer.flags.hdr ? TONEMAP_FORWARD : TONEMAP_INVERSE;
 
   return ((tonemap_type == tone_map_config_.type) &&
@@ -121,7 +169,7 @@ bool ToneMapSession::IsSameToneMapConfig(Layer *layer) {
           (layer->request.height == UINT32(handle->unaligned_height)));
 }
 
-int HWCToneMapper::HandleToneMap(hwc_display_contents_1_t *content_list, LayerStack *layer_stack) {
+int HWCToneMapper::HandleToneMap(LayerStack *layer_stack) {
   uint32_t gpu_count = 0;
   DisplayError error = kErrorNone;
 
@@ -162,7 +210,7 @@ int HWCToneMapper::HandleToneMap(hwc_display_contents_1_t *content_list, LayerSt
       }
 
       ToneMapSession *session = tone_map_sessions_.at(session_index);
-      ToneMap(&content_list->hwLayers[i], layer, session);
+      ToneMap(layer, session);
       session->layer_index_ = INT(i);
     }
   }
@@ -170,33 +218,31 @@ int HWCToneMapper::HandleToneMap(hwc_display_contents_1_t *content_list, LayerSt
   return 0;
 }
 
-void HWCToneMapper::ToneMap(hwc_layer_1_t *hwc_layer, Layer* layer, ToneMapSession *session) {
-  int fence_fd = -1;
-  int acquire_fd = -1;
-  int merged_fd = -1;
+void HWCToneMapper::ToneMap(Layer* layer, ToneMapSession *session) {
+  ToneMapBlitContext ctx = {};
+  ctx.layer = layer;
 
   uint8_t buffer_index = session->current_buffer_index_;
-  const private_handle_t *dst_hnd = session->intermediate_buffer_[buffer_index];
-  const private_handle_t *src_hnd = static_cast<const private_handle_t *>(hwc_layer->handle);
+  int &release_fence_fd = session->release_fence_fd_[buffer_index];
 
-  acquire_fd = dup(layer->input_buffer.acquire_fence_fd);
-  buffer_sync_handler_.SyncMerge(session->release_fence_fd_[buffer_index], acquire_fd, &merged_fd);
+  // use and close the layer->input_buffer acquire fence fd.
+  int acquire_fd = layer->input_buffer.acquire_fence_fd;
+  buffer_sync_handler_.SyncMerge(release_fence_fd, acquire_fd, &ctx.merged_fd);
 
   if (acquire_fd >= 0) {
     CloseFd(&acquire_fd);
   }
 
-  if (session->release_fence_fd_[buffer_index] >= 0) {
-    CloseFd(&session->release_fence_fd_[buffer_index]);
+  if (release_fence_fd >= 0) {
+    CloseFd(&release_fence_fd);
   }
 
   DTRACE_BEGIN("GPU_TM_BLIT");
-  fence_fd = session->gpu_tone_mapper_->blit(reinterpret_cast<const void *>(dst_hnd),
-                                             reinterpret_cast<const void *>(src_hnd), merged_fd);
+  session->tone_map_task_.PerformTask(ToneMapTaskCode::kCodeBlit, &ctx);
   DTRACE_END();
 
-  DumpToneMapOutput(session, &fence_fd);
-  session->UpdateBuffer(fence_fd, &layer->input_buffer);
+  DumpToneMapOutput(session, &ctx.fence_fd);
+  session->UpdateBuffer(ctx.fence_fd, &layer->input_buffer);
 }
 
 void HWCToneMapper::PostCommit(LayerStack *layer_stack) {
@@ -204,8 +250,8 @@ void HWCToneMapper::PostCommit(LayerStack *layer_stack) {
   while (it != tone_map_sessions_.end()) {
     uint32_t session_index = UINT32(std::distance(tone_map_sessions_.begin(), it));
     ToneMapSession *session = tone_map_sessions_.at(session_index);
-    Layer *layer = layer_stack->layers.at(UINT32(session->layer_index_));
     if (session->acquired_) {
+      Layer *layer = layer_stack->layers.at(UINT32(session->layer_index_));
       // Close the fd returned by GPU ToneMapper and set release fence.
       LayerBuffer &layer_buffer = layer->input_buffer;
       CloseFd(&layer_buffer.acquire_fence_fd);
@@ -240,7 +286,8 @@ void HWCToneMapper::DumpToneMapOutput(ToneMapSession *session, int *acquire_fd) 
     return;
   }
 
-  private_handle_t *target_buffer = session->intermediate_buffer_[session->current_buffer_index_];
+  BufferInfo &buffer_info = session->buffer_info_[session->current_buffer_index_];
+  private_handle_t *target_buffer = static_cast<private_handle_t *>(buffer_info.private_data);
 
   if (*acquire_fd >= 0) {
     int error = sync_wait(*acquire_fd, 1000);
@@ -268,14 +315,6 @@ void HWCToneMapper::DumpToneMapOutput(ToneMapSession *session, int *acquire_fd) 
 }
 
 DisplayError HWCToneMapper::AcquireToneMapSession(Layer *layer, uint32_t *session_index) {
-  Color10Bit *grid_entries = NULL;
-  int grid_size = 0;
-
-  if (layer->lut_3d.validGridEntries) {
-    grid_entries = layer->lut_3d.gridEntries;
-    grid_size = INT(layer->lut_3d.gridSize);
-  }
-
   // When the property sdm.disable_hdr_lut_gen is set, the lutEntries and gridEntries in
   // the Lut3d will be NULL, clients needs to allocate the memory and set correct 3D Lut
   // for Tonemapping.
@@ -297,34 +336,23 @@ DisplayError HWCToneMapper::AcquireToneMapSession(Layer *layer, uint32_t *sessio
     }
   }
 
-  ToneMapSession *session = new ToneMapSession();
+  ToneMapSession *session = new ToneMapSession(buffer_allocator_);
+  if (!session) {
+    return kErrorMemory;
+  }
 
   session->SetToneMapConfig(layer);
-  session->gpu_tone_mapper_ = TonemapperFactory_GetInstance(session->tone_map_config_.type,
-                                                            layer->lut_3d.lutEntries,
-                                                            layer->lut_3d.dim,
-                                                            grid_entries, grid_size,
-                                                            session->tone_map_config_.secure);
+
+  ToneMapGetInstanceContext ctx;
+  ctx.layer = layer;
+  session->tone_map_task_.PerformTask(ToneMapTaskCode::kCodeGetInstance, &ctx);
 
   if (session->gpu_tone_mapper_ == NULL) {
     DLOGE("Get Tonemapper failed!");
     delete session;
     return kErrorNotSupported;
   }
-
-  int status, format;
-  DisplayError error = kErrorNone;
-  int usage = INT(GRALLOC_USAGE_PRIVATE_IOMMU_HEAP | GRALLOC_USAGE_HW_TEXTURE);
-
-  if (layer->request.flags.secure) {
-    usage = INT(GRALLOC_USAGE_PRIVATE_MM_HEAP);
-    usage |= INT(GRALLOC_USAGE_PROTECTED);
-  }
-
-  status = buffer_allocator_.SetBufferInfo(layer->request.format, &format, &usage);
-  error = session->AllocateIntermediateBuffers(INT(layer->request.width),
-                                               INT(layer->request.height), format, usage);
-
+  DisplayError error = session->AllocateIntermediateBuffers(layer);
   if (error != kErrorNone) {
     DLOGE("Allocation of Intermediate Buffers failed!");
     delete session;
