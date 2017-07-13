@@ -384,6 +384,8 @@ struct LayerStack {
                                        //!< NOTE: This field applies to a virtual display only.
 
   LayerStackFlags flags;               //!< Flags associated with this layer set.
+
+  ColorPrimaries blend_cs = ColorPrimaries_BT709_5;  //!< o/p - Blending color space updated by SDM
 };
 
 }  // namespace sdm
