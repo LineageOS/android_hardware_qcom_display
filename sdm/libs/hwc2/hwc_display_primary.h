@@ -101,6 +101,7 @@ class HWCDisplayPrimary : public HWCDisplay {
   bool dump_output_to_file_ = false;
   BufferInfo output_buffer_info_ = {};
   void *output_buffer_base_ = nullptr;
+  int default_mode_status_ = 0;
 };
 
 }  // namespace sdm
