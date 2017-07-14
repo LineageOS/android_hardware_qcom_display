@@ -21,4 +21,6 @@ LOCAL_EXPORT_C_INCLUDE_DIRS   := $(LOCAL_PATH) \
                                  $(display_top)/sdm/include \
                                  $(display_top)/libgralloc1
 
+LOCAL_EXPORT_HEADER_LIBRARY_HEADERS := libhardware_headers
+
 include $(BUILD_HEADER_LIBRARY)
