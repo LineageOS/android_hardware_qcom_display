@@ -177,6 +177,13 @@ bool Debug::IsPartialSplitDisabled() {
   return (value == 1);
 }
 
+bool Debug::IsSrcSplitPreferred() {
+  int value = 0;
+  debug_.debug_handler_->GetProperty("sdm.debug.prefersplit", &value);
+
+  return (value == 1);
+}
+
 DisplayError Debug::GetMixerResolution(uint32_t *width, uint32_t *height) {
   char value[64] = {};
 

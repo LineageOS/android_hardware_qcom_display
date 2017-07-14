@@ -78,6 +78,7 @@ class Debug {
   static bool IsAVRDisabled();
   static bool IsExtAnimDisabled();
   static bool IsPartialSplitDisabled();
+  static bool IsSrcSplitPreferred();
   static DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
   static DisplayError GetReducedConfig(uint32_t *num_vig_pipes, uint32_t *num_dma_pipes);
   static int GetExtMaxlayers();
