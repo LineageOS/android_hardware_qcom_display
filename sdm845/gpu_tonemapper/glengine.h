@@ -39,6 +39,8 @@
   checkEglError(__FILE__, __LINE__);
 #endif
 
+#define EGL_PROTECTED_CONTENT_EXT 0x32C0
+
 void checkGlError(const char *file, int line);
 void checkEglError(const char *file, int line);
 

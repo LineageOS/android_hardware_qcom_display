@@ -20,7 +20,7 @@
 #ifndef __TONEMAPPER_ENGINE_H__
 #define __TONEMAPPER_ENGINE_H__
 
-void* engine_initialize();
+void* engine_initialize(bool isSecure);
 void engine_bind(void*);
 void* engine_backup();
 void engine_free_backup(void*);

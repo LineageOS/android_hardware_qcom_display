@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -49,6 +49,7 @@ enum DebugTag {
   kTagRotator,          //!< Debug log is tagged for rotator.
   kTagScalar,           //!< Debug log is tagged for Scalar Helper.
   kTagQDCM,             //!< Debug log is tagged for display QDCM color managing.
+  kTagQOSClient,        //!< Debug log is tagged for Qos client
 };
 
 /*! @brief Display debug handler class.

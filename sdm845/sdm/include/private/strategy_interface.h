@@ -36,9 +36,6 @@ struct StrategyConstraints {
                             //!< that requires minimum number of pipe for the current frame. i.e.,
                             //!< video only composition, secure only composition or GPU composition
 
-  bool use_cursor = false;  //!< If this is set, strategy manager will configure cursor layer in the
-                            //!< layer stack as hw cursor else it will be treated as a normal layer
-
   uint32_t max_layers = kMaxSDELayers;  //!< Maximum number of layers that shall be programmed
                                         //!< on hardware for the given layer stack.
 };
@@ -56,7 +53,6 @@ class StrategyInterface {
   virtual DisplayError Purge() = 0;
   virtual DisplayError SetIdleTimeoutMs(uint32_t active_ms) = 0;
 
- protected:
   virtual ~StrategyInterface() { }
 };
 

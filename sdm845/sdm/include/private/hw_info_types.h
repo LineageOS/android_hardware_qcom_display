@@ -36,8 +36,10 @@
 namespace sdm {
 using std::string;
 
-const int kMaxSDELayers = 16;   // Maximum number of layers that can be handled by hardware in a
-                                // given layer stack.
+const int kMaxSDELayers = 16;   // Maximum number of layers that can be handled by MDP5 hardware
+                                // in a given layer stack.
+const int kMaxBlitLayers = 32;   // Maximum number of layers that can be handled by MDP3 hardware
+                                // in a given layer stack.
 #define MAX_PLANES 4
 
 #define MAX_DETAIL_ENHANCE_CURVE 3
@@ -109,11 +111,12 @@ enum HWAVRModes {
 };
 
 typedef std::map<HWSubBlockType, std::vector<LayerBufferFormat>> FormatsMap;
+typedef std::map<LayerBufferFormat, float> CompRatioMap;
 
 struct HWDynBwLimitInfo {
   uint32_t cur_mode = kBwDefault;
-  uint32_t total_bw_limit[kBwModeMax] = { 0 };
-  uint32_t pipe_bw_limit[kBwModeMax] = { 0 };
+  uint64_t total_bw_limit[kBwModeMax] = { 0 };
+  uint64_t pipe_bw_limit[kBwModeMax] = { 0 };
 };
 
 struct HWPipeCaps {
@@ -140,6 +143,7 @@ struct HWDestScalarInfo {
   uint32_t max_input_width = 0;
   uint32_t max_output_width = 0;
   uint32_t max_scale_up = 1;
+  uint32_t prefill_lines = 4;
 };
 
 enum SmartDMARevision {
@@ -167,7 +171,7 @@ struct HWResourceInfo {
   uint32_t max_mixer_width = 2048;
   uint32_t max_pipe_width = 2048;
   uint32_t max_cursor_size = 0;
-  uint32_t max_pipe_bw =  0;
+  uint64_t max_pipe_bw =  0;
   uint32_t max_sde_clk = 0;
   float clk_fudge_factor = 1.0f;
   uint32_t macrotile_nv12_factor = 0;
@@ -183,7 +187,6 @@ struct HWResourceInfo {
   bool has_macrotile = false;
   bool has_non_scalar_rgb = false;
   bool is_src_split = false;
-  bool perf_calc = false;
   bool has_dyn_bw_support = false;
   bool separate_rotator = false;
   bool has_qseed3 = false;
@@ -198,6 +201,11 @@ struct HWResourceInfo {
   bool has_avr = false;
   bool has_hdr = false;
   SmartDMARevision smart_dma_rev = SmartDMARevision::V1;
+  float ib_fudge_factor = 1.0f;
+  uint32_t undersized_prefill_lines = 0;
+  CompRatioMap comp_ratio_rt_map;
+  CompRatioMap comp_ratio_nrt_map;
+
   void Reset() { *this = HWResourceInfo(); }
 };
 
@@ -430,6 +438,8 @@ struct HWAVRInfo {
 };
 
 struct HWPipeInfo {
+  HWPipeInfo *pair = NULL;
+  uint8_t rect = 255;
   uint32_t pipe_id = 0;
   HWSubBlockType sub_block_type = kHWSubBlockMax;
   LayerRect src_roi;
@@ -482,20 +492,20 @@ struct HWLayersInfo {
   std::vector<LayerRect> left_frame_roi = {};   // Left ROI.
   std::vector<LayerRect> right_frame_roi = {};  // Right ROI.
   LayerRect partial_fb_roi = {};   // Damaged area in framebuffer.
-
   bool roi_split = false;          // Indicates separated left and right ROI
-
-  bool use_hw_cursor = false;      // Indicates that HWCursor pipe needs to be used for cursor layer
+  bool async_cursor_updates = false;  // Cursor layer allowed to have async updates
   DestScaleInfoMap dest_scale_info_map = {};
   HWHDRLayerInfo hdr_layer_info = {};
+  Handle pvt_data = NULL;   // Private data used by sdm extension only.
 };
 
 struct HWLayers {
   HWLayersInfo info;
   HWLayerConfig config[kMaxSDELayers];
   float output_compression = 1.0f;
-  uint32_t bandwidth = 0;
-  uint32_t clock = 0;
+  uint64_t ab_bps = 0;
+  uint64_t ib_bps = 0;
+  uint32_t clock_hz = 0;
   HWAVRInfo hw_avr_info = {};
 };
 
