@@ -174,6 +174,7 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
   hw_resource->has_dyn_bw_support = false;
   hw_resource->has_qseed3 = false;
   hw_resource->has_concurrent_writeback = false;
+  hw_resource->has_hdr = true;
 
   // TODO(user): Deprecate
   hw_resource->hw_version = kHWMdssVersion5;
