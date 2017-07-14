@@ -48,7 +48,6 @@ int kgsl_memtrack_get_memory(pid_t pid, enum memtrack_type type,
     FILE *fp;
     char line[1024];
     char tmp[128];
-    bool is_surfaceflinger = false;
     size_t accounted_size = 0;
     size_t unaccounted_size = 0;
 
@@ -57,16 +56,6 @@ int kgsl_memtrack_get_memory(pid_t pid, enum memtrack_type type,
     /* fastpath to return the necessary number of records */
     if (allocated_records == 0) {
         return 0;
-    }
-
-    snprintf(tmp, sizeof(tmp), "/proc/%d/cmdline", pid);
-    fp = fopen(tmp, "r");
-    if (fp != NULL) {
-        if (fgets(line, sizeof(line), fp)) {
-            if (strcmp(line, "/system/bin/surfaceflinger") == 0)
-                is_surfaceflinger = true;
-        }
-        fclose(fp);
     }
 
     memcpy(records, record_templates,
@@ -83,36 +72,60 @@ int kgsl_memtrack_get_memory(pid_t pid, enum memtrack_type type,
      * count the entry as accounted else count the entry as unaccounted.
      */
     while (1) {
-        unsigned long size;
+        unsigned long size, mapsize;
         char line_type[7];
-        char flags[7];
+        char flags[8];
         char line_usage[19];
-        int ret;
+        int ret, egl_surface_count = 0, egl_image_count = 0;
 
         if (fgets(line, sizeof(line), fp) == NULL) {
             break;
         }
 
         /* Format:
-         *  gpuaddr useraddr     size    id flags       type            usage sglen
-         * 545ba000 545ba000     4096     1 ----pY     gpumem      arraybuffer     1
+         *  gpuaddr useraddr     size    id  flags       type            usage  sglen  mapsize  egLsrf  egLimg
+         * 545ba000 545ba000     4096     1  -----pY     gpumem      arraybuffer     1     4096      0       0
          */
-        ret = sscanf(line, "%*x %*x %lu %*d %6s %6s %18s %*d\n",
-                     &size, flags, line_type, line_usage);
-        if (ret != 4) {
+        ret = sscanf(line, "%*x %*x %lu %*d %6s %6s %18s %*d %lu %6d %6d\n",
+                     &size, flags, line_type, line_usage, &mapsize,
+                     &egl_surface_count, &egl_image_count);
+        if (ret != 7) {
             continue;
+        }
+
+        if (size == 0) {
+            fclose(fp);
+            return -EINVAL;
+        }
+
+        if (unaccounted_size + size < size) {
+            fclose(fp);
+            return -ERANGE;
         }
 
         if (type == MEMTRACK_TYPE_GL && strcmp(line_type, "gpumem") == 0) {
 
-            if (flags[5] == 'Y')
-                accounted_size += size;
-            else
-                unaccounted_size += size;
+            if (flags[6] == 'Y') {
+                if (accounted_size + mapsize < accounted_size) {
+                    fclose(fp);
+                    return -ERANGE;
+                }
+                accounted_size += mapsize;
 
-        } else if (type == MEMTRACK_TYPE_GRAPHICS && strcmp(line_type, "ion") == 0) {
-            if (!is_surfaceflinger || strcmp(line_usage, "egl_image") != 0) {
+                if (mapsize > size) {
+                    fclose(fp);
+                    return -EINVAL;
+                }
+                unaccounted_size += size - mapsize;
+            } else {
                 unaccounted_size += size;
+            }
+        } else if (type == MEMTRACK_TYPE_GRAPHICS && strcmp(line_type, "ion") == 0) {
+            if (strcmp(line_usage, "egl_surface") == 0) {
+                unaccounted_size += size;
+            }
+            else if (egl_surface_count == 0) {
+                unaccounted_size += size / (egl_image_count ? egl_image_count : 1);
             }
         }
     }
