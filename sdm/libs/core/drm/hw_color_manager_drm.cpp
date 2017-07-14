@@ -861,7 +861,7 @@ DisplayError HWColorManagerDrm::GetDrmGamut(const PPFeatureInfo &in_data,
       break;
     default:
       DLOGE("Invalid gamut mode %d", sde_gamut->mode);
-      free(mdp_gamut);
+      delete mdp_gamut;
       return kErrorParameters;
   }
 

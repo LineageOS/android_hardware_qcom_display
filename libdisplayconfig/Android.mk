@@ -9,4 +9,8 @@ LOCAL_SRC_FILES               := DisplayConfig.cpp
 LOCAL_SHARED_LIBRARIES        := libhidlbase libhidltransport libutils \
                                  vendor.display.config@1.0 android.hidl.base@1.0
 
+ifeq ($(LLVM_SA), true)
+    LOCAL_CFLAGS += --compile-and-analyze --analyzer-perf --analyzer-Werror
+endif
+
 include $(BUILD_SHARED_LIBRARY)

@@ -24,6 +24,9 @@ LOCAL_SRC_FILES := lights.c lights_prv.cpp
 LOCAL_MODULE_RELATIVE_PATH := hw
 LOCAL_SHARED_LIBRARIES := liblog libcutils libsdm-disp-vndapis
 LOCAL_CFLAGS := -DLOG_TAG=\"qdlights\"
+ifeq ($(LLVM_SA), true)
+    LOCAL_CFLAGS += --compile-and-analyze --analyzer-perf --analyzer-Werror
+endif
 LOCAL_CLANG  := true
 LOCAL_MODULE := lights.$(TARGET_BOARD_PLATFORM)
 LOCAL_MODULE_TAGS := optional
