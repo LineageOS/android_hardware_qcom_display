@@ -109,6 +109,15 @@ void HWVirtualDRM::InitializeConfigs() {
     current_mode_ = connector_info_.modes[0];
     DumpConfigs();
   }
+
+  // TODO(user): Remove this code once driver populates appropriate topology based on virtual
+  // display configuration
+  if (connector_info_.topology == sde_drm::DRMTopology::UNKNOWN) {
+    connector_info_.topology = sde_drm::DRMTopology::SINGLE_LM;
+    if (width_ > hw_resource_.max_mixer_width) {
+      connector_info_.topology = sde_drm::DRMTopology::DUAL_LM_MERGE;
+    }
+  }
 }
 
 void HWVirtualDRM::DumpConfigs() {

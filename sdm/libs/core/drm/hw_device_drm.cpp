@@ -746,10 +746,10 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ROT_CLK, token_.crtc_id, qos_data.rot_clock_hz);
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_SECURITY_LEVEL, token_.crtc_id, crtc_security_level);
 
-    DLOGI_IF(kTagDriverConfig, "System Clock=%d Hz, Core: AB=%llu Bps, IB=%llu Bps, " \
+    DLOGI_IF(kTagDriverConfig, "Display %s: System Clock=%d Hz, Core: AB=%llu Bps, IB=%llu Bps, " \
              "LLCC: AB=%llu Bps, IB=%llu Bps, DRAM AB=%llu Bps, IB=%llu Bps Rot Clock=%d",
-             qos_data.clock_hz, qos_data.core_ab_bps, qos_data.core_ib_bps, qos_data.llcc_ab_bps,
-             qos_data.llcc_ib_bps, qos_data.dram_ab_bps, qos_data.dram_ib_bps,
+             device_name_, qos_data.clock_hz, qos_data.core_ab_bps, qos_data.core_ib_bps,
+             qos_data.llcc_ab_bps, qos_data.llcc_ib_bps, qos_data.dram_ab_bps, qos_data.dram_ib_bps,
              qos_data.rot_clock_hz);
   }
 }
