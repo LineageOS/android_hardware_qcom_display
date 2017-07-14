@@ -40,6 +40,8 @@
 #include "hwc_display.h"
 #include "hwc_debugger.h"
 #include "blit_engine_c2d.h"
+#include "hwc_tonemapper.h"
+
 #ifndef USE_GRALLOC1
 #include <gr.h>
 #endif
@@ -51,15 +53,6 @@
 #define __CLASS__ "HWCDisplay"
 
 namespace sdm {
-
-static void ApplyDeInterlaceAdjustment(Layer *layer) {
-  // De-interlacing adjustment
-  if (layer->input_buffer.flags.interlace) {
-    float height = (layer->src_rect.bottom - layer->src_rect.top) / 2.0f;
-    layer->src_rect.top = ROUND_UP_ALIGN_DOWN(layer->src_rect.top / 2.0f, 2);
-    layer->src_rect.bottom = layer->src_rect.top + floorf(height);
-  }
-}
 
 // This weight function is needed because the color primaries are not sorted by gamut size
 static ColorPrimaries WidestPrimaries(ColorPrimaries p1, ColorPrimaries p2) {
@@ -111,6 +104,10 @@ HWC2::Error HWCColorMode::GetColorModes(uint32_t *out_num_modes,
 
 HWC2::Error HWCColorMode::SetColorMode(android_color_mode_t mode) {
   // first mode in 2D matrix is the mode (identity)
+  if (color_mode_transform_map_.find(mode) == color_mode_transform_map_.end()) {
+    DLOGE("Could not find mode: %d", mode);
+    return HWC2::Error::BadParameter;
+  }
   auto status = HandleColorModeTransform(mode, current_color_transform_, color_matrix_);
   if (status != HWC2::Error::None) {
     DLOGE("failed for mode = %d", mode);
@@ -152,10 +149,11 @@ HWC2::Error HWCColorMode::HandleColorModeTransform(android_color_mode_t mode,
   bool use_matrix = false;
   if (hint != HAL_COLOR_TRANSFORM_ARBITRARY_MATRIX) {
     // if the mode + transfrom request from HWC matches one mode in SDM, set that
-    color_mode_transform = color_mode_transform_map_[mode][hint];
     if (color_mode_transform.empty()) {
       transform_hint = HAL_COLOR_TRANSFORM_IDENTITY;
       use_matrix = true;
+    } else {
+      color_mode_transform = color_mode_transform_map_[mode][hint];
     }
   } else {
     use_matrix = true;
@@ -347,6 +345,11 @@ int HWCDisplay::Init() {
     return -EINVAL;
   }
 
+  HWCDebugHandler::Get()->GetProperty("sys.hwc_disable_hdr", &disable_hdr_handling_);
+  if (disable_hdr_handling_) {
+    DLOGI("HDR Handling disabled");
+  }
+
   int property_swap_interval = 1;
   HWCDebugHandler::Get()->GetProperty("debug.egl.swapinterval", &property_swap_interval);
   if (property_swap_interval == 0) {
@@ -360,6 +363,8 @@ int HWCDisplay::Init() {
   if (needs_blit_ && blit_enabled) {
     // TODO(user): Add blit engine when needed
   }
+
+  tone_mapper_ = new HWCToneMapper(buffer_allocator_);
 
   display_intf_->GetRefreshRateRange(&min_refresh_rate_, &max_refresh_rate_);
   current_refresh_rate_ = max_refresh_rate_;
@@ -381,6 +386,9 @@ int HWCDisplay::Deinit() {
     delete color_mode_;
   }
 
+  delete tone_mapper_;
+  tone_mapper_ = nullptr;
+
   return 0;
 }
 
@@ -389,6 +397,7 @@ HWC2::Error HWCDisplay::CreateLayer(hwc2_layer_t *out_layer_id) {
   HWCLayer *layer = *layer_set_.emplace(new HWCLayer(id_, buffer_allocator_));
   layer_map_.emplace(std::make_pair(layer->GetId(), layer));
   *out_layer_id = layer->GetId();
+  validated_ = false;
   geometry_changes_ |= GeometryChanges::kAdded;
   return HWC2::Error::None;
 }
@@ -419,6 +428,7 @@ HWC2::Error HWCDisplay::DestroyLayer(hwc2_layer_t layer_id) {
       break;
     }
   }
+  validated_ = false;
 
   geometry_changes_ |= GeometryChanges::kRemoved;
   return HWC2::Error::None;
@@ -434,6 +444,9 @@ void HWCDisplay::BuildLayerStack() {
   // Add one layer for fb target
   // TODO(user): Add blit target layers
   for (auto hwc_layer : layer_set_) {
+    // Reset layer data which SDM may change
+    hwc_layer->ResetPerFrameData();
+
     Layer *layer = hwc_layer->GetSDMLayer();
     layer->flags = {};   // Reset earlier flags
     if (hwc_layer->GetClientRequestedCompositionType() == HWC2::Composition::Client) {
@@ -442,10 +455,12 @@ void HWCDisplay::BuildLayerStack() {
       layer->flags.solid_fill = true;
     }
 
+#ifdef FEATURE_WIDE_COLOR
     if (!hwc_layer->SupportedDataspace()) {
         layer->flags.skip = true;
         DLOGW_IF(kTagStrategy, "Unsupported dataspace: 0x%x", hwc_layer->GetLayerDataspace());
     }
+#endif
 
     working_primaries = WidestPrimaries(working_primaries,
                                         layer->input_buffer.color_metadata.colorPrimaries);
@@ -492,12 +507,20 @@ void HWCDisplay::BuildLayerStack() {
       }
     }
 
+    bool hdr_layer = layer->input_buffer.color_metadata.colorPrimaries == ColorPrimaries_BT2020 &&
+                     (layer->input_buffer.color_metadata.transfer == Transfer_SMPTE_ST2084 ||
+                     layer->input_buffer.color_metadata.transfer == Transfer_HLG);
+    if (hdr_layer && !disable_hdr_handling_) {
+      // dont honor HDR when its handling is disabled
+      layer->input_buffer.flags.hdr = true;
+      layer_stack_.flags.hdr_present = true;
+    }
+
     // TODO(user): Move to a getter if this is needed at other places
     hwc_rect_t scaled_display_frame = {INT(layer->dst_rect.left), INT(layer->dst_rect.top),
                                        INT(layer->dst_rect.right), INT(layer->dst_rect.bottom)};
     ApplyScanAdjustment(&scaled_display_frame);
     hwc_layer->SetLayerDisplayFrame(scaled_display_frame);
-    ApplyDeInterlaceAdjustment(layer);
     // SDM requires these details even for solid fill
     if (layer->flags.solid_fill) {
       LayerBuffer *layer_buffer = &layer->input_buffer;
@@ -530,6 +553,7 @@ void HWCDisplay::BuildLayerStack() {
   }
 
 
+#ifdef FEATURE_WIDE_COLOR
   for (auto hwc_layer : layer_set_) {
     auto layer = hwc_layer->GetSDMLayer();
     if (layer->input_buffer.color_metadata.colorPrimaries != working_primaries &&
@@ -540,6 +564,7 @@ void HWCDisplay::BuildLayerStack() {
       layer_stack_.flags.skip_present = true;
     }
   }
+#endif
 
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
   layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0);
@@ -563,6 +588,7 @@ HWC2::Error HWCDisplay::SetLayerZOrder(hwc2_layer_t layer_id, uint32_t z) {
     DLOGE("[%" PRIu64 "] updateLayerZ failed to find layer", id_);
     return HWC2::Error::BadLayer;
   }
+  validated_ = false;
 
   const auto layer = map_layer->second;
   const auto z_range = layer_set_.equal_range(layer);
@@ -634,6 +660,9 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode) {
       // Do not flush until a buffer is successfully submitted again.
       flush_on_error = false;
       state = kStateOff;
+      if (tone_mapper_) {
+        tone_mapper_->Terminate();
+      }
       break;
     case HWC2::PowerMode::On:
       state = kStateOn;
@@ -825,6 +854,10 @@ void HWCDisplay::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type
   dump_frame_index_ = 0;
   dump_input_layers_ = ((bit_mask_layer_type & (1 << INPUT_LAYER_DUMP)) != 0);
 
+  if (tone_mapper_) {
+    tone_mapper_->SetFrameDumpConfig(count);
+  }
+
   DLOGI("num_frame_dump %d, input_layer_dump_enable %d", dump_frame_count_, dump_input_layers_);
 }
 
@@ -991,6 +1024,12 @@ HWC2::Error HWCDisplay::GetDisplayRequests(int32_t *out_display_requests,
       i++;
     }
   }
+
+  auto client_target_layer = client_target_->GetSDMLayer();
+  if (client_target_layer->request.flags.flip_buffer) {
+    *out_display_requests = INT32(HWC2::DisplayRequest::FlipClientTarget);
+  }
+
   return HWC2::Error::None;
 }
 
@@ -1001,15 +1040,18 @@ HWC2::Error HWCDisplay::GetHdrCapabilities(uint32_t *out_num_types, int32_t *out
   DisplayConfigFixedInfo fixed_info = {};
   display_intf_->GetConfig(&fixed_info);
 
+  if (!fixed_info.hdr_supported) {
+    *out_num_types = 0;
+    DLOGI("HDR is not supported");
+    return HWC2::Error::None;
+  }
+
   if (out_types == nullptr) {
-    *out_num_types  = 0;
-    if (fixed_info.hdr_supported) {
-      // 1(now) - because we support only HDR10, change when HLG & DOLBY vision are supported
-      *out_num_types  = 1;
-    }
+    // 1(now) - because we support only HDR10, change when HLG & DOLBY vision are supported
+    *out_num_types  = 1;
   } else {
     // Only HDR10 supported
-    out_types[0] = HAL_HDR_HDR10;
+    *out_types = HAL_HDR_HDR10;
     static const float kLuminanceFactor = 10000.0;
     // luminance is expressed in the unit of 0.0001 cd/m2, convert it to 1cd/m2.
     *out_max_luminance = FLOAT(fixed_info.max_luminance)/kLuminanceFactor;
@@ -1035,6 +1077,17 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
 
   if (!flush_) {
     DisplayError error = kErrorUndefined;
+    int status = 0;
+    if (tone_mapper_) {
+      if (layer_stack_.flags.hdr_present) {
+        status = tone_mapper_->HandleToneMap(&layer_stack_);
+        if (status != 0) {
+          DLOGE("Error handling HDR in ToneMapper");
+        }
+      } else {
+        tone_mapper_->Terminate();
+      }
+    }
     error = display_intf_->Commit(&layer_stack_);
     validated_ = false;
 
@@ -1063,6 +1116,10 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
   // Do no call flush on errors, if a successful buffer is never submitted.
   if (flush_ && flush_on_error_) {
     display_intf_->Flush();
+  }
+
+  if (tone_mapper_ && tone_mapper_->IsActive()) {
+     tone_mapper_->PostCommit(&layer_stack_);
   }
 
   // TODO(user): No way to set the client target release fence on SF
@@ -1115,6 +1172,8 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
 
   geometry_changes_ = GeometryChanges::kNone;
   flush_ = false;
+
+  ClearRequestFlags();
 
   return status;
 }
@@ -1198,6 +1257,9 @@ LayerBufferFormat HWCDisplay::GetSDMFormat(const int32_t &source, const int flag
     case HAL_PIXEL_FORMAT_BGR_565:
       format = kFormatBGR565;
       break;
+    case HAL_PIXEL_FORMAT_BGR_888:
+      format = kFormatBGR888;
+      break;
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
       format = kFormatYCbCr420SemiPlanarVenus;
@@ -1222,6 +1284,9 @@ LayerBufferFormat HWCDisplay::GetSDMFormat(const int32_t &source, const int flag
       break;
     case HAL_PIXEL_FORMAT_YCbCr_422_I:
       format = kFormatYCbCr422H2V1Packed;
+      break;
+    case HAL_PIXEL_FORMAT_CbYCrY_422_I:
+      format = kFormatCbYCrY422H2V1Packed;
       break;
     case HAL_PIXEL_FORMAT_RGBA_1010102:
       format = kFormatRGBA1010102;
@@ -1746,6 +1811,12 @@ void HWCDisplay::CloseAcquireFds() {
   }
 }
 
+void HWCDisplay::ClearRequestFlags() {
+  for (Layer *layer : layer_stack_.layers) {
+    layer->request.flags = {};
+  }
+}
+
 std::string HWCDisplay::Dump() {
   std::ostringstream os;
   os << "-------------------------------" << std::endl;
@@ -1753,14 +1824,16 @@ std::string HWCDisplay::Dump() {
   for (auto layer : layer_set_) {
     auto sdm_layer = layer->GetSDMLayer();
     auto transform = sdm_layer->transform;
-    os << "layer: " << layer->GetId();
+    os << "layer: " << std::setw(4) << layer->GetId();
     os << " z: " << layer->GetZ();
     os << " compositon: " <<
           to_string(layer->GetClientRequestedCompositionType()).c_str();
     os << "/" <<
           to_string(layer->GetDeviceSelectedCompositionType()).c_str();
     os << " alpha: " << std::to_string(sdm_layer->plane_alpha).c_str();
-    os << " format: " << GetFormatString(sdm_layer->input_buffer.format);
+    os << " format: " << std::setw(22) << GetFormatString(sdm_layer->input_buffer.format);
+    os << " dataspace:" << std::hex << "0x" << std::setw(8) << std::setfill('0')
+       << layer->GetLayerDataspace() << std::dec << std::setfill(' ');
     os << " transform: " << transform.rotation << "/" << transform.flip_horizontal <<
           "/"<< transform.flip_vertical;
     os << " buffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec

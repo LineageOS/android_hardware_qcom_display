@@ -80,6 +80,11 @@ DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
     // Allocate uncached buffers
     alloc_flags |= GRALLOC_USAGE_PRIVATE_UNCACHED;
   }
+
+  if (buffer_config.gfx_client) {
+    alloc_flags |= GRALLOC1_CONSUMER_USAGE_GPU_TEXTURE;
+  }
+
   uint64_t producer_usage = alloc_flags;
   uint64_t consumer_usage = alloc_flags;
   // CreateBuffer
@@ -109,10 +114,6 @@ DisplayError HWCBufferAllocator::FreeBuffer(BufferInfo *buffer_info) {
   alloc_buffer_info->fd = -1;
   alloc_buffer_info->stride = 0;
   alloc_buffer_info->size = 0;
-  // Works around b/36355756
-  if (hnd != nullptr) {
-    delete hnd;
-  }
   buffer_info->private_data = NULL;
   return err;
 }
@@ -186,6 +187,9 @@ int HWCBufferAllocator::SetBufferInfo(LayerBufferFormat format, int *target, uin
     case kFormatBGR565:
       *target = HAL_PIXEL_FORMAT_BGR_565;
       break;
+    case kFormatBGR888:
+      *target = HAL_PIXEL_FORMAT_BGR_888;
+      break;
     case kFormatBGRA8888:
       *target = HAL_PIXEL_FORMAT_BGRA_8888;
       break;
@@ -200,6 +204,9 @@ int HWCBufferAllocator::SetBufferInfo(LayerBufferFormat format, int *target, uin
       break;
     case kFormatYCbCr422H2V1Packed:
       *target = HAL_PIXEL_FORMAT_YCbCr_422_I;
+      break;
+    case kFormatCbYCrY422H2V1Packed:
+      *target = HAL_PIXEL_FORMAT_CbYCrY_422_I;
       break;
     case kFormatYCbCr422H2V1SemiPlanar:
       *target = HAL_PIXEL_FORMAT_YCbCr_422_SP;

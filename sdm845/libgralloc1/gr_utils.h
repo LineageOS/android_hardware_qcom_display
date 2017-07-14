@@ -83,6 +83,8 @@ void GetYuvSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height, uint32_t 
                        struct android_ycbcr *ycbcr);
 void GetYuvUbwcSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height, int color_format,
                            struct android_ycbcr *ycbcr);
+void GetYuvUbwcInterlacedSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height,
+                                     int color_format, struct android_ycbcr *ycbcr);
 void GetRgbUBwcBlockSize(uint32_t bpp, int *block_width, int *block_height);
 unsigned int GetRgbUBwcMetaBufferSize(int width, int height, uint32_t bpp);
 unsigned int GetUBwcSize(int width, int height, int format, unsigned int alignedw,

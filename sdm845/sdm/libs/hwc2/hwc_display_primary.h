@@ -88,7 +88,6 @@ class HWCDisplayPrimary : public HWCDisplay {
 
   BufferAllocator *buffer_allocator_ = nullptr;
   CPUHint *cpu_hint_ = nullptr;
-  bool handle_idle_timeout_ = false;
 
   // Primary output buffer configuration
   LayerBuffer output_buffer_ = {};
