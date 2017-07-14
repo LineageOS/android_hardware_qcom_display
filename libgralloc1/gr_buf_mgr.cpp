@@ -211,11 +211,12 @@ gralloc1_error_t BufferManager::FreeBuffer(std::shared_ptr<Buffer> buf) {
     return GRALLOC1_ERROR_BAD_HANDLE;
   }
 
-  // TODO(user): delete handle once framework bug around this is confirmed
-  // to be resolved. This is tracked in bug 36355756
   private_handle_t * handle = const_cast<private_handle_t *>(hnd);
   handle->fd = -1;
   handle->fd_metadata = -1;
+  if (!(handle->flags & private_handle_t::PRIV_FLAGS_CLIENT_ALLOCATED)) {
+      delete handle;
+  }
   return GRALLOC1_ERROR_NONE;
 }
 
@@ -327,14 +328,14 @@ gralloc1_error_t BufferManager::LockBuffer(const private_handle_t *hnd,
     return GRALLOC1_ERROR_BAD_VALUE;
   }
 
-  if (hnd->base == 0) {
-    // we need to map for real
-    err = MapBuffer(hnd);
-  }
-
   auto buf = GetBufferFromHandleLocked(hnd);
   if (buf == nullptr) {
     return GRALLOC1_ERROR_BAD_HANDLE;
+  }
+
+  if (hnd->base == 0) {
+    // we need to map for real
+    err = MapBuffer(hnd);
   }
 
   // Invalidate if CPU reads in software and there are non-CPU
