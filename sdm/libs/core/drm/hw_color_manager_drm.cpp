@@ -66,6 +66,7 @@ DisplayError (*HWColorManagerDrm::GetDrmFeature[])(const PPFeatureInfo &, DRMPPF
 void HWColorManagerDrm::FreeDrmFeatureData(DRMPPFeatureInfo *feature) {
   if (feature->payload)
     free(feature->payload);
+  feature->payload = NULL;
 }
 
 uint32_t HWColorManagerDrm::GetFeatureVersion(const DRMPPFeatureInfo &feature) {
