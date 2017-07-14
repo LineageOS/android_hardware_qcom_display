@@ -121,6 +121,8 @@ HWC2::Error HWCDisplayExternal::Validate(uint32_t *out_num_types, uint32_t *out_
     return status;
   }
 
+  // TODO(user): SetRefreshRate need to follow new interface when added.
+
   status = PrepareLayerStack(out_num_types, out_num_requests);
   return status;
 }

@@ -35,8 +35,6 @@ namespace sdm {
 
 struct PUConstraints {
   bool enable = true;             //!< If this is set, PU will be enabled or it will be disabled
-  bool enable_cursor_pu = false;  //!< If this is set, PU will consider cursor layer in the layer
-                                   //!< stack for cursor partial update
 };
 
 class PartialUpdateInterface {

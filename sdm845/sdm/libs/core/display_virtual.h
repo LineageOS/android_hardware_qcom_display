@@ -53,7 +53,7 @@ class DisplayVirtual : public DisplayBase {
   virtual DisplayError SetVSyncState(bool enable) {
     return kErrorNotSupported;
   }
-  virtual DisplayError SetRefreshRate(uint32_t refresh_rate) {
+  virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate) {
     return kErrorNotSupported;
   }
   virtual DisplayError GetMixerResolution(uint32_t *width, uint32_t *height) {

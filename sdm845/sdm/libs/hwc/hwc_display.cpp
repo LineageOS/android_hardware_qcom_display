@@ -58,15 +58,6 @@
 
 namespace sdm {
 
-static void ApplyDeInterlaceAdjustment(Layer *layer) {
-  // De-interlacing adjustment
-  if (layer->input_buffer.flags.interlace) {
-    float height = (layer->src_rect.bottom - layer->src_rect.top) / 2.0f;
-    layer->src_rect.top = ROUND_UP_ALIGN_DOWN(layer->src_rect.top / 2.0f, 2);
-    layer->src_rect.bottom = layer->src_rect.top + floorf(height);
-  }
-}
-
 void HWCColorMode::Init() {
   int ret = PopulateColorModes();
   if (ret != 0) {
@@ -492,7 +483,8 @@ int HWCDisplay::PrepareLayerParams(hwc_layer_1_t *hwc_layer, Layer* layer) {
       int ubwc_enabled = 0;
       int flags = 0;
       HWCDebugHandler::Get()->GetProperty("debug.gralloc.enable_fb_ubwc", &ubwc_enabled);
-      if (ubwc_enabled == 1) {
+      bool linear = layer_stack_.output_buffer && !IsUBWCFormat(layer_stack_.output_buffer->format);
+      if ((ubwc_enabled == 1) && !linear) {
         usage |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
         flags |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
       }
@@ -574,7 +566,6 @@ int HWCDisplay::PrePrepareLayerStack(hwc_display_contents_1_t *content_list) {
         }
     }
     SetRect(hwc_layer.sourceCropf, &layer->src_rect);
-    ApplyDeInterlaceAdjustment(layer);
 
     uint32_t num_visible_rects = UINT32(hwc_layer.visibleRegionScreen.numRects);
     uint32_t num_dirty_rects = UINT32(hwc_layer.surfaceDamage.numRects);
@@ -952,7 +943,7 @@ void HWCDisplay::SetComposition(const LayerComposition &source, int32_t *target)
   case kCompositionGPUTarget:   *target = HWC_FRAMEBUFFER_TARGET; break;
   case kCompositionGPU:         *target = HWC_FRAMEBUFFER;        break;
   case kCompositionGPUS3D:      *target = HWC_FRAMEBUFFER;        break;
-  case kCompositionHWCursor:    *target = HWC_CURSOR_OVERLAY;     break;
+  case kCompositionCursor:      *target = HWC_CURSOR_OVERLAY;     break;
   default:                      *target = HWC_OVERLAY;            break;
   }
 }
