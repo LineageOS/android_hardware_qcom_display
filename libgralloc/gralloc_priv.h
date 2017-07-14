@@ -26,6 +26,14 @@
 #include <errno.h>
 #include <unistd.h>
 
+
+/* DEPRECATION NOTICE: This file is no longer used, please use the new
+ * implementation in libgralloc1
+ */
+
+
+
+
 #include <cutils/native_handle.h>
 
 #include <cutils/log.h>
