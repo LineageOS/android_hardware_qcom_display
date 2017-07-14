@@ -16,6 +16,7 @@ LOCAL_EXPORT_C_INCLUDE_DIRS   := $(display_top)/libcopybit \
 
 ifeq ($(TARGET_USES_GRALLOC1), true)
     LOCAL_EXPORT_C_INCLUDE_DIRS += $(display_top)/libgralloc1
+    LOCAL_EXPORT_HEADER_LIBRARY_HEADERS := libhardware_headers
 else
     LOCAL_EXPORT_C_INCLUDE_DIRS += $(display_top)/libgralloc
 endif
