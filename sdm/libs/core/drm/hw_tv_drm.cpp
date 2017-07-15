@@ -28,6 +28,7 @@
 */
 
 #include "hw_tv_drm.h"
+#include <sys/time.h>
 #include <utils/debug.h>
 #include <utils/sys.h>
 #include <utils/formats.h>
@@ -49,6 +50,10 @@
 #endif
 
 #define __CLASS__ "HWTVDRM"
+
+#define HDR_DISABLE 0
+#define HDR_ENABLE 1
+#define MIN_HDR_RESET_WAITTIME 2
 
 using drm_utils::DRMMaster;
 using drm_utils::DRMResMgr;
@@ -196,8 +201,10 @@ DisplayError HWTVDRM::Commit(HWLayers *hw_layers) {
 }
 
 DisplayError HWTVDRM::UpdateHDRMetaData(HWLayers *hw_layers) {
+  static struct timeval hdr_reset_start, hdr_reset_end;
+  static bool reset_hdr_flag = false;
   const HWHDRLayerInfo &hdr_layer_info = hw_layers->info.hdr_layer_info;
-  if (!hw_panel_info_.hdr_enabled || hdr_layer_info.operation == HWHDRLayerInfo::kNoOp) {
+  if (!hw_panel_info_.hdr_enabled) {
     return kErrorNone;
   }
 
@@ -216,6 +223,7 @@ DisplayError HWTVDRM::UpdateHDRMetaData(HWLayers *hw_layers) {
   if (hdr_layer_info.operation == HWHDRLayerInfo::kSet) {
     int32_t eotf = GetEOTF(layer_buffer->color_metadata.transfer);
     hdr_metadata_.hdr_supported = 1;
+    hdr_metadata_.hdr_state = HDR_ENABLE;
     hdr_metadata_.eotf = (eotf < 0) ? 0 : UINT32(eotf);
     hdr_metadata_.white_point_x = primaries.whitePoint[0];
     hdr_metadata_.white_point_y = primaries.whitePoint[1];
@@ -232,6 +240,35 @@ DisplayError HWTVDRM::UpdateHDRMetaData(HWLayers *hw_layers) {
 
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_HDR_METADATA, token_.conn_id, &hdr_metadata_);
     DumpHDRMetaData(hdr_layer_info.operation);
+  } else if (hdr_layer_info.operation == HWHDRLayerInfo::kReset) {
+    memset(&hdr_metadata_, 0, sizeof(hdr_metadata_));
+    hdr_metadata_.hdr_supported = 1;
+    hdr_metadata_.hdr_state = HDR_ENABLE;
+    reset_hdr_flag = true;
+    gettimeofday(&hdr_reset_start, NULL);
+
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_HDR_METADATA, token_.conn_id, &hdr_metadata_);
+    DumpHDRMetaData(hdr_layer_info.operation);
+  } else if (hdr_layer_info.operation == HWHDRLayerInfo::kNoOp) {
+    // TODO(user): This case handles the state transition from HDR_ENABLED to HDR_DISABLED.
+    // As per HDMI spec requirement, we need to send zero metadata for atleast 2 sec after end of
+    // playback. This timer calculates the 2 sec window after playback stops to stop sending HDR
+    // metadata. This will be replaced with an idle timer implementation in the future.
+    if (reset_hdr_flag) {
+      gettimeofday(&hdr_reset_end, NULL);
+      float hdr_reset_time_start = ((hdr_reset_start.tv_sec*1000) + (hdr_reset_start.tv_usec/1000));
+      float hdr_reset_time_end = ((hdr_reset_end.tv_sec*1000) + (hdr_reset_end.tv_usec/1000));
+
+      if (((hdr_reset_time_end-hdr_reset_time_start)/1000) >= MIN_HDR_RESET_WAITTIME) {
+        memset(&hdr_metadata_, 0, sizeof(hdr_metadata_));
+        hdr_metadata_.hdr_supported = 1;
+        hdr_metadata_.hdr_state = HDR_DISABLE;
+        reset_hdr_flag = false;
+
+        drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_HDR_METADATA, token_.conn_id,
+                                  &hdr_metadata_);
+      }
+    }
   }
 
   return error;
