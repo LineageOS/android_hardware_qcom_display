@@ -93,31 +93,41 @@ int kgsl_memtrack_get_memory(pid_t pid, enum memtrack_type type,
             continue;
         }
 
-        if (size == 0)
+        if (size == 0) {
+            fclose(fp);
             return -EINVAL;
+        }
 
-        if (unaccounted_size + size < size)
+        if (unaccounted_size + size < size) {
+            fclose(fp);
             return -ERANGE;
+        }
 
         if (type == MEMTRACK_TYPE_GL && strcmp(line_type, "gpumem") == 0) {
 
             if (flags[6] == 'Y') {
-                if (accounted_size + mapsize < accounted_size)
+                if (accounted_size + mapsize < accounted_size) {
+                    fclose(fp);
                     return -ERANGE;
+                }
 
                 accounted_size += mapsize;
 
-                if (mapsize > size)
+                if (mapsize > size) {
+                    fclose(fp);
                     return -EINVAL;
-
+                }
                 unaccounted_size += size - mapsize;
-            } else
+            } else {
                 unaccounted_size += size;
+            }
         } else if (type == MEMTRACK_TYPE_GRAPHICS && strcmp(line_type, "ion") == 0) {
-            if (strcmp(line_usage, "egl_surface") == 0)
+            if (strcmp(line_usage, "egl_surface") == 0) {
                 unaccounted_size += size;
-            else if (egl_surface_count == 0)
+            }
+            else if (egl_surface_count == 0) {
                 unaccounted_size += size / (egl_image_count ? egl_image_count : 1);
+            }
         }
     }
 
