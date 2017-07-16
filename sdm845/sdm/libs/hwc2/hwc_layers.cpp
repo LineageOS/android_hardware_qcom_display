@@ -258,12 +258,19 @@ HWC2::Error HWCLayer::SetLayerDataspace(int32_t dataspace) {
 
 HWC2::Error HWCLayer::SetLayerDisplayFrame(hwc_rect_t frame) {
   LayerRect dst_rect = {};
+
   SetRect(frame, &dst_rect);
-  if (layer_->dst_rect != dst_rect) {
+  if (dst_rect_ != dst_rect) {
     geometry_changes_ |= kDisplayFrame;
-    layer_->dst_rect = dst_rect;
+    dst_rect_ = dst_rect;
   }
+
   return HWC2::Error::None;
+}
+
+void HWCLayer::ResetPerFrameData() {
+  layer_->dst_rect = dst_rect_;
+  layer_->transform = layer_transform_;
 }
 
 HWC2::Error HWCLayer::SetLayerPlaneAlpha(float alpha) {
@@ -322,10 +329,11 @@ HWC2::Error HWCLayer::SetLayerTransform(HWC2::Transform transform) {
       break;
   }
 
-  if (layer_->transform != layer_transform) {
+  if (layer_transform_ != layer_transform) {
     geometry_changes_ |= kTransform;
-    layer_->transform = layer_transform;
+    layer_transform_ = layer_transform;
   }
+
   return HWC2::Error::None;
 }
 
@@ -426,6 +434,9 @@ LayerBufferFormat HWCLayer::GetSDMFormat(const int32_t &source, const int flags)
     case HAL_PIXEL_FORMAT_RGB_888:
       format = kFormatRGB888;
       break;
+    case HAL_PIXEL_FORMAT_BGR_888:
+      format = kFormatBGR888;
+      break;
     case HAL_PIXEL_FORMAT_RGB_565:
       format = kFormatRGB565;
       break;
@@ -456,6 +467,9 @@ LayerBufferFormat HWCLayer::GetSDMFormat(const int32_t &source, const int flags)
       break;
     case HAL_PIXEL_FORMAT_YCbCr_422_I:
       format = kFormatYCbCr422H2V1Packed;
+      break;
+    case HAL_PIXEL_FORMAT_CbYCrY_422_I:
+      format = kFormatCbYCrY422H2V1Packed;
       break;
     case HAL_PIXEL_FORMAT_RGBA_1010102:
       format = kFormatRGBA1010102;
@@ -521,9 +535,14 @@ LayerBufferS3DFormat HWCLayer::GetS3DFormat(uint32_t s3d_format) {
 
 DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *layer) {
   LayerBuffer *layer_buffer = &layer->input_buffer;
+  bool use_color_metadata = true;
 
+#ifdef FEATURE_WIDE_COLOR
   // Only use color metadata if Android framework metadata is not set
-  if (dataspace_ == HAL_DATASPACE_UNKNOWN) {
+  use_color_metadata = (dataspace_ == HAL_DATASPACE_UNKNOWN);
+#endif
+
+  if (use_color_metadata) {
     if (sdm::SetCSC(pvt_handle, &layer_buffer->color_metadata) != kErrorNone) {
       return kErrorNotSupported;
     }
@@ -613,6 +632,12 @@ bool HWCLayer::SupportedDataspace() {
     case HAL_DATASPACE_TRANSFER_HLG:
       sdm_transfer = Transfer_HLG;
       break;
+    case HAL_DATASPACE_TRANSFER_LINEAR:
+      sdm_transfer = Transfer_Linear;
+      break;
+    case HAL_DATASPACE_TRANSFER_GAMMA2_2:
+      sdm_transfer = Transfer_Gamma2_2;
+      break;
     default:
       return false;
   }
@@ -634,7 +659,7 @@ bool HWCLayer::SupportedDataspace() {
     case HAL_DATASPACE_STANDARD_DCI_P3:
       sdm_primaries = ColorPrimaries_DCIP3;
       break;
-    case HAL_DATASPACE_BT2020:
+    case HAL_DATASPACE_STANDARD_BT2020:
       sdm_primaries = ColorPrimaries_BT2020;
       break;
     default:
@@ -684,7 +709,7 @@ void HWCLayer::SetComposition(const LayerComposition &sdm_composition) {
     case kCompositionGPU:
       hwc_composition = HWC2::Composition::Client;
       break;
-    case kCompositionHWCursor:
+    case kCompositionCursor:
       hwc_composition = HWC2::Composition::Cursor;
       break;
     default:

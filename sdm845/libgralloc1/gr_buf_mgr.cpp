@@ -211,11 +211,10 @@ gralloc1_error_t BufferManager::FreeBuffer(std::shared_ptr<Buffer> buf) {
     return GRALLOC1_ERROR_BAD_HANDLE;
   }
 
-  // TODO(user): delete handle once framework bug around this is confirmed
-  // to be resolved. This is tracked in bug 36355756
   private_handle_t * handle = const_cast<private_handle_t *>(hnd);
   handle->fd = -1;
   handle->fd_metadata = -1;
+  delete handle;
   return GRALLOC1_ERROR_NONE;
 }
 
@@ -278,6 +277,10 @@ gralloc1_error_t BufferManager::MapBuffer(private_handle_t const *handle) {
 }
 
 gralloc1_error_t BufferManager::RetainBuffer(private_handle_t const *hnd) {
+  if (hnd->flags & private_handle_t::PRIV_FLAGS_CLIENT_ALLOCATED) {
+    return GRALLOC1_ERROR_NONE;
+  }
+
   ALOGD_IF(DEBUG, "Retain buffer handle:%p id: %" PRIu64, hnd, hnd->id);
   gralloc1_error_t err = GRALLOC1_ERROR_NONE;
   std::lock_guard<std::mutex> lock(buffer_lock_);
@@ -299,6 +302,10 @@ gralloc1_error_t BufferManager::RetainBuffer(private_handle_t const *hnd) {
 }
 
 gralloc1_error_t BufferManager::ReleaseBuffer(private_handle_t const *hnd) {
+  if (hnd->flags & private_handle_t::PRIV_FLAGS_CLIENT_ALLOCATED) {
+    return GRALLOC1_ERROR_NONE;
+  }
+
   ALOGD_IF(DEBUG, "Release buffer handle:%p id: %" PRIu64, hnd, hnd->id);
   std::lock_guard<std::mutex> lock(buffer_lock_);
   auto buf = GetBufferFromHandleLocked(hnd);
@@ -327,14 +334,14 @@ gralloc1_error_t BufferManager::LockBuffer(const private_handle_t *hnd,
     return GRALLOC1_ERROR_BAD_VALUE;
   }
 
-  if (hnd->base == 0) {
-    // we need to map for real
-    err = MapBuffer(hnd);
-  }
-
   auto buf = GetBufferFromHandleLocked(hnd);
   if (buf == nullptr) {
     return GRALLOC1_ERROR_BAD_HANDLE;
+  }
+
+  if (hnd->base == 0) {
+    // we need to map for real
+    err = MapBuffer(hnd);
   }
 
   // Invalidate if CPU reads in software and there are non-CPU
@@ -764,6 +771,17 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
       AllocateBuffer(descriptor, hnd, size);
     } break;
 
+    case GRALLOC1_MODULE_PERFORM_GET_INTERLACE_FLAG: {
+      private_handle_t *hnd = va_arg(args, private_handle_t *);
+      int *flag = va_arg(args, int *);
+      if (private_handle_t::validate(hnd) != 0) {
+        return GRALLOC1_ERROR_BAD_HANDLE;
+      }
+      if (getMetaData(hnd, GET_PP_PARAM_INTERLACED, flag) != 0) {
+        *flag = 0;
+      }
+    } break;
+
     default:
       break;
   }
@@ -782,9 +800,11 @@ static bool IsYuvFormat(const private_handle_t *hnd) {
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
     case HAL_PIXEL_FORMAT_NV21_ZSL:
     case HAL_PIXEL_FORMAT_RAW16:
+    case HAL_PIXEL_FORMAT_Y16:
     case HAL_PIXEL_FORMAT_RAW12:
     case HAL_PIXEL_FORMAT_RAW10:
     case HAL_PIXEL_FORMAT_YV12:
+    case HAL_PIXEL_FORMAT_Y8:
       return true;
     default:
       return false;

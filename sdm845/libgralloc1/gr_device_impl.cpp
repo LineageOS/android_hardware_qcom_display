@@ -27,7 +27,10 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#define ATRACE_TAG (ATRACE_TAG_GRAPHICS | ATRACE_TAG_HAL)
 #include <cutils/log.h>
+#include <utils/Trace.h>
+#include <cutils/trace.h>
 #include <sync/sync.h>
 #include <algorithm>
 #include <sstream>
@@ -103,11 +106,12 @@ int GrallocImpl::CloseDevice(hw_device_t *device __unused) {
 void GrallocImpl::GetCapabilities(struct gralloc1_device *device, uint32_t *out_count,
                                   int32_t  /*gralloc1_capability_t*/ *out_capabilities) {
   if (device != nullptr) {
-    if (out_capabilities != nullptr && *out_count >= 2) {
+    if (out_capabilities != nullptr && *out_count >= 3) {
       out_capabilities[0] = GRALLOC1_CAPABILITY_TEST_ALLOCATE;
       out_capabilities[1] = GRALLOC1_CAPABILITY_LAYERED_BUFFERS;
+      out_capabilities[2] = GRALLOC1_CAPABILITY_RELEASE_IMPLY_DELETE;
     }
-    *out_count = 2;
+    *out_count = 3;
   }
   return;
 }
@@ -420,6 +424,7 @@ gralloc1_error_t GrallocImpl::LockBuffer(gralloc1_device_t *device, buffer_handl
                                          gralloc1_consumer_usage_t cons_usage,
                                          const gralloc1_rect_t *region, void **out_data,
                                          int32_t acquire_fence) {
+  ATRACE_CALL();
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
   if (status != GRALLOC1_ERROR_NONE) {
     CloseFdIfValid(acquire_fence);
@@ -427,7 +432,9 @@ gralloc1_error_t GrallocImpl::LockBuffer(gralloc1_device_t *device, buffer_handl
   }
 
   if (acquire_fence > 0) {
+    ATRACE_BEGIN("fence wait");
     int error = sync_wait(acquire_fence, 1000);
+    ATRACE_END();
     CloseFdIfValid(acquire_fence);
     if (error < 0) {
       ALOGE("%s: sync_wait timedout! error = %s", __FUNCTION__, strerror(errno));

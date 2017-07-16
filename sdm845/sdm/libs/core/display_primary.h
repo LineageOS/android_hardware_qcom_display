@@ -49,7 +49,7 @@ class DisplayPrimary : public DisplayBase, HWEventHandler {
   virtual void SetIdleTimeoutMs(uint32_t active_ms);
   virtual DisplayError SetDisplayMode(uint32_t mode);
   virtual DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate, uint32_t *max_refresh_rate);
-  virtual DisplayError SetRefreshRate(uint32_t refresh_rate);
+  virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate);
   virtual DisplayError SetPanelBrightness(int level);
   virtual DisplayError GetPanelBrightness(int *level);
   virtual DisplayError CachePanelBrightness(int level);
@@ -69,6 +69,8 @@ class DisplayPrimary : public DisplayBase, HWEventHandler {
       HWEvent::SHOW_BLANK_EVENT, HWEvent::THERMAL_LEVEL, HWEvent::IDLE_POWER_COLLAPSE };
   bool avr_prop_disabled_ = false;
   bool switch_to_cmd_ = false;
+  bool handle_idle_timeout_ = false;
+  uint32_t current_refresh_rate_ = 0;
 };
 
 }  // namespace sdm

@@ -49,7 +49,7 @@ class HWInfoInterface;
 
 class HWDeviceDRM : public HWInterface {
  public:
-  explicit HWDeviceDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
+  HWDeviceDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
                        HWInfoInterface *hw_info_intf);
   virtual ~HWDeviceDRM() {}
   virtual DisplayError Init();
@@ -75,6 +75,7 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError Flush();
   virtual DisplayError GetPPFeaturesVersion(PPFeatureVersion *vers);
   virtual DisplayError SetPPFeatures(PPFeaturesConfig *feature_list);
+  // This API is no longer supported, expectation is to call the correct API on HWEvents
   virtual DisplayError SetVSyncState(bool enable);
   virtual void SetIdleTimeoutMs(uint32_t timeout_ms);
   virtual DisplayError SetDisplayMode(const HWDisplayMode hw_display_mode);
@@ -92,6 +93,7 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError SetScaleLutConfig(HWScaleLutInfo *lut_info);
   virtual DisplayError SetMixerAttributes(const HWMixerAttributes &mixer_attributes);
   virtual DisplayError GetMixerAttributes(HWMixerAttributes *mixer_attributes);
+  virtual void InitializeConfigs();
 
   enum {
     kHWEventVSync,
@@ -114,7 +116,6 @@ class HWDeviceDRM : public HWInterface {
   void ResetDisplayParams();
   bool EnableHotPlugDetection(int enable);
   void UpdateMixerAttributes();
-  void InitializeConfigs();
   void SetBlending(const LayerBlending &source, sde_drm::DRMBlendType *target);
   void SetSrcConfig(const LayerBuffer &input_buffer, uint32_t *config);
   void SetRect(const LayerRect &source, sde_drm::DRMRect *target);
@@ -131,11 +132,13 @@ class HWDeviceDRM : public HWInterface {
     void UnregisterNext();
     // Call on display disconnect to release all gem handles and fb_ids
     void Clear();
+    // Maps given fd to FB ID
+    void MapBufferToFbId(LayerBuffer* buffer);
     // Finds an fb_id corresponding to an fd in current map
     uint32_t GetFbId(int fd);
 
    private:
-    static const int kCycleDelay = 1;  // N cycle delay before destroy
+    static const int kCycleDelay = 3;  // N cycle delay before destroy
     // fd to fb_id map. fd is used as key only for a single draw cycle between
     // prepare and commit. It should not be used for caching in future due to fd recycling
     std::unordered_map<int, uint32_t> hashmap_[kCycleDelay] {};
@@ -143,24 +146,30 @@ class HWDeviceDRM : public HWInterface {
     BufferAllocator *buffer_allocator_ = {};
   };
 
-  HWResourceInfo hw_resource_ = {};
-  HWPanelInfo hw_panel_info_ = {};
+ protected:
+  const char *device_name_ = {};
+  bool deferred_initialize_ = false;
+  sde_drm::DRMDisplayType disp_type_ = {};
   HWInfoInterface *hw_info_intf_ = {};
   BufferSyncHandler *buffer_sync_handler_ = {};
+  int dev_fd_ = -1;
+  Registry registry_;
+  sde_drm::DRMDisplayToken token_ = {};
+  HWResourceInfo hw_resource_ = {};
+  HWPanelInfo hw_panel_info_ = {};
   HWDeviceType device_type_ = {};
-  const char *device_name_ = {};
-  bool synchronous_commit_ = false;
-  HWDisplayAttributes display_attributes_ = {};
-  HWMixerAttributes mixer_attributes_ = {};
   sde_drm::DRMManagerInterface *drm_mgr_intf_ = {};
   sde_drm::DRMAtomicReqInterface *drm_atomic_intf_ = {};
-  sde_drm::DRMDisplayToken token_ = {};
-  drmModeModeInfo current_mode_ = {};
-  bool default_mode_ = false;
   sde_drm::DRMConnectorInfo connector_info_ = {};
+  drmModeModeInfo current_mode_ = {};
+  HWDisplayAttributes display_attributes_ = {};
+
+ private:
+  bool synchronous_commit_ = false;
+  HWMixerAttributes mixer_attributes_ = {};
+  bool default_mode_ = false;
   std::string interface_str_ = "DSI";
   HWScaleDRM *hw_scale_ = {};
-  Registry registry_;
 };
 
 }  // namespace sdm

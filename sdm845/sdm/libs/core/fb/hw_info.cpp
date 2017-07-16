@@ -95,7 +95,7 @@ DisplayError HWInfo::GetDynamicBWLimits(HWResourceInfo *hw_resource) {
 
   HWDynBwLimitInfo* bw_info = &hw_resource->dyn_bw_info;
   for (int index = 0; index < kBwModeMax; index++) {
-    bw_info->total_bw_limit[index] = UINT32(hw_resource->max_bandwidth_low);
+    bw_info->total_bw_limit[index] = hw_resource->max_bandwidth_low;
     bw_info->pipe_bw_limit[index] = hw_resource->max_pipe_bw;
   }
 
@@ -169,9 +169,9 @@ DisplayError HWInfo::GetHWResourceInfo(HWResourceInfo *hw_resource) {
       } else if (!strncmp(tokens[0], "max_upscale_ratio", strlen("max_upscale_ratio"))) {
         hw_resource_->max_scale_up = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "max_bandwidth_low", strlen("max_bandwidth_low"))) {
-        hw_resource_->max_bandwidth_low = UINT64(atol(tokens[1]));
+        hw_resource_->max_bandwidth_low = std::stoull(tokens[1]);
       } else if (!strncmp(tokens[0], "max_bandwidth_high", strlen("max_bandwidth_high"))) {
-        hw_resource_->max_bandwidth_high = UINT64(atol(tokens[1]));
+        hw_resource_->max_bandwidth_high = std::stoull(tokens[1]);
       } else if (!strncmp(tokens[0], "max_mixer_width", strlen("max_mixer_width"))) {
         hw_resource_->max_mixer_width = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "max_pipe_width", strlen("max_pipe_width"))) {
@@ -179,7 +179,7 @@ DisplayError HWInfo::GetHWResourceInfo(HWResourceInfo *hw_resource) {
       } else if (!strncmp(tokens[0], "max_cursor_size", strlen("max_cursor_size"))) {
         hw_resource_->max_cursor_size = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "max_pipe_bw", strlen("max_pipe_bw"))) {
-        hw_resource_->max_pipe_bw = UINT32(atoi(tokens[1]));
+        hw_resource_->max_pipe_bw = std::stoull(tokens[1]);
       } else if (!strncmp(tokens[0], "max_mdp_clk", strlen("max_mdp_clk"))) {
         hw_resource_->max_sde_clk = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "clk_fudge_factor", strlen("clk_fudge_factor"))) {
@@ -224,8 +224,6 @@ DisplayError HWInfo::GetHWResourceInfo(HWResourceInfo *hw_resource) {
             hw_resource_->is_src_split = true;
           } else if (!strncmp(tokens[i], "non_scalar_rgb", strlen("non_scalar_rgb"))) {
             hw_resource_->has_non_scalar_rgb = true;
-          } else if (!strncmp(tokens[i], "perf_calc", strlen("perf_calc"))) {
-            hw_resource_->perf_calc = true;
           } else if (!strncmp(tokens[i], "dynamic_bw_limit", strlen("dynamic_bw_limit"))) {
             hw_resource_->has_dyn_bw_support = true;
           } else if (!strncmp(tokens[i], "separate_rotator", strlen("separate_rotator"))) {

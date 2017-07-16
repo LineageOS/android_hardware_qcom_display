@@ -67,7 +67,6 @@ class CompManager : public DumpImpl {
   void ControlPartialUpdate(Handle display_ctx, bool enable);
   DisplayError ValidateScaling(const LayerRect &crop, const LayerRect &dst, bool rotate90);
   DisplayError ValidateCursorPosition(Handle display_ctx, HWLayers *hw_layers, int x, int y);
-  bool SupportLayerAsCursor(Handle display_ctx, HWLayers *hw_layers);
   bool SetDisplayState(Handle display_ctx, DisplayState state, DisplayType display_type);
   DisplayError SetMaxBandwidthMode(HWBwModes mode);
   DisplayError GetScaleLutConfig(HWScaleLutInfo *lut_info);
@@ -97,9 +96,7 @@ class CompManager : public DumpImpl {
     // Using primary panel flag of hw panel to configure Constraints. We do not need other hw
     // panel parameters for now.
     bool is_primary_panel = false;
-    bool valid_cursor = false;
     PUConstraints pu_constraints = {};
-    bool scaled_composition = false;
   };
 
   Locker locker_;

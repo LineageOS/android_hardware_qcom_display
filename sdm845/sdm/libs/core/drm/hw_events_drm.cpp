@@ -160,7 +160,30 @@ DisplayError HWEventsDRM::Init(int display_type, HWEventHandler *event_handler,
 DisplayError HWEventsDRM::Deinit() {
   exit_threads_ = true;
   Sys::pthread_cancel_(event_thread_);
+  WakeUpEventThread();
+  pthread_join(event_thread_, NULL);
+  CloseFds();
 
+  return kErrorNone;
+}
+
+DisplayError HWEventsDRM::SetEventState(HWEvent event, bool enable, void *arg) {
+  switch (event) {
+    case HWEvent::VSYNC:
+      vsync_enabled_ = enable;
+      if (enable) {
+        WakeUpEventThread();
+      }
+      break;
+    default:
+      DLOGE("Event not supported");
+      return kErrorNotSupported;
+  }
+
+  return kErrorNone;
+}
+
+void HWEventsDRM::WakeUpEventThread() {
   for (uint32_t i = 0; i < event_data_list_.size(); i++) {
     if (event_data_list_[i].event_type == HWEvent::EXIT) {
       uint64_t exit_value = 1;
@@ -169,13 +192,9 @@ DisplayError HWEventsDRM::Deinit() {
         DLOGW("Error triggering exit fd (%d). write size = %d, error = %s", poll_fds_[i].fd,
               write_size, strerror(errno));
       }
+      break;
     }
   }
-
-  pthread_join(event_thread_, NULL);
-  CloseFds();
-
-  return kErrorNone;
 }
 
 DisplayError HWEventsDRM::CloseFds() {
@@ -217,7 +236,7 @@ void *HWEventsDRM::DisplayEventHandler() {
   setpriority(PRIO_PROCESS, 0, kThreadPriorityUrgent);
 
   while (!exit_threads_) {
-    if (RegisterVSync() != kErrorNone) {
+    if (vsync_enabled_ && RegisterVSync() != kErrorNone) {
       pthread_exit(0);
       return nullptr;
     }

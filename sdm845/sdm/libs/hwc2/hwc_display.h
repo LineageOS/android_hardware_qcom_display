@@ -39,6 +39,7 @@
 namespace sdm {
 
 class BlitEngine;
+class HWCToneMapper;
 
 // Subclasses set this to their type. This has to be different from DisplayType.
 // This is to avoid RTTI and dynamic_cast
@@ -83,7 +84,10 @@ class HWCColorMode {
   android_color_transform_t current_color_transform_ = HAL_COLOR_TRANSFORM_IDENTITY;
   typedef std::map<android_color_transform_t, std::string> TransformMap;
   std::map<android_color_mode_t, TransformMap> color_mode_transform_map_ = {};
-  double color_matrix_[kColorTransformMatrixCount] = {0};
+  double color_matrix_[kColorTransformMatrixCount] = { 1.0, 0.0, 0.0, 0.0, \
+                                                       0.0, 1.0, 0.0, 0.0, \
+                                                       0.0, 0.0, 1.0, 0.0, \
+                                                       0.0, 0.0, 0.0, 1.0 };
 };
 
 class HWCDisplay : public DisplayEventHandler {
@@ -133,6 +137,18 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int GetDisplayConfigCount(uint32_t *count);
   virtual int GetDisplayAttributesForConfig(int config,
                                             DisplayConfigVariableInfo *display_attributes);
+  template <typename... Args>
+  int32_t CallLayerFunction(hwc2_layer_t layer, HWC2::Error (HWCLayer::*member)(Args... ),
+                            Args... args) {
+    auto status = HWC2::Error::BadLayer;
+    validated_ = false;
+    auto hwc_layer = GetHWCLayer(layer);
+    if (hwc_layer != nullptr) {
+      status = (hwc_layer->*member)(std::forward<Args>(args)...);
+    }
+
+    return INT32(status);
+  }
 
   int SetPanelBrightness(int level);
   int GetPanelBrightness(int *level);
@@ -230,6 +246,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool IsLayerUpdating(const Layer *layer);
   uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate);
   virtual void CloseAcquireFds();
+  virtual void ClearRequestFlags();
 
   enum {
     INPUT_LAYER_DUMP,
@@ -276,6 +293,8 @@ class HWCDisplay : public DisplayEventHandler {
   bool validated_ = false;
   bool color_tranform_failed_ = false;
   HWCColorMode *color_mode_ = NULL;
+  HWCToneMapper *tone_mapper_ = nullptr;
+  int disable_hdr_handling_ = 0;  // disables HDR handling.
 
  private:
   void DumpInputBuffers(void);

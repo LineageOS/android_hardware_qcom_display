@@ -64,6 +64,7 @@ bool IsUncompressedRGBFormat(int format) {
     case HAL_PIXEL_FORMAT_BGRX_1010102:
     case HAL_PIXEL_FORMAT_XBGR_2101010:
     case HAL_PIXEL_FORMAT_RGBA_FP16:
+    case HAL_PIXEL_FORMAT_BGR_888:
       return true;
     default:
       break;
@@ -131,6 +132,7 @@ uint32_t GetBppForUncompressedRGB(int format) {
       bpp = 4;
       break;
     case HAL_PIXEL_FORMAT_RGB_888:
+    case HAL_PIXEL_FORMAT_BGR_888:
       bpp = 3;
       break;
     case HAL_PIXEL_FORMAT_RGB_565:
@@ -199,6 +201,7 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw,
   // Below switch should be for only YUV/custom formats
   switch (format) {
     case HAL_PIXEL_FORMAT_RAW16:
+    case HAL_PIXEL_FORMAT_Y16:
       size = alignedw * alignedh * 2;
       break;
     case HAL_PIXEL_FORMAT_RAW10:
@@ -206,6 +209,7 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw,
       size = ALIGN(alignedw * alignedh, SIZE_4K);
       break;
     case HAL_PIXEL_FORMAT_RAW8:
+    case HAL_PIXEL_FORMAT_Y8:
       size = alignedw * alignedh * 1;
       break;
 
@@ -240,6 +244,7 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw,
     case HAL_PIXEL_FORMAT_YCrCb_422_SP:
     case HAL_PIXEL_FORMAT_YCbCr_422_I:
     case HAL_PIXEL_FORMAT_YCrCb_422_I:
+    case HAL_PIXEL_FORMAT_CbYCrY_422_I:
       if (width & 1) {
         ALOGE("width is odd for the YUV422_SP format");
         return 0;
@@ -306,6 +311,28 @@ void GetYuvUbwcSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height,
   ycbcr->cstride = VENUS_UV_STRIDE(color_format, INT(width));
 }
 
+void GetYuvUbwcInterlacedSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height,
+                                     int color_format, struct android_ycbcr *ycbcr) {
+  unsigned int uv_stride, uv_height, uv_size;
+  unsigned int alignment = 4096;
+  uint64_t field_base;
+
+  // UBWC interlaced has top-bottom field layout with each field as
+  // 4-plane NV12_UBWC with width = image_width & height = image_height / 2.
+  // Client passed ycbcr argument is ptr to struct android_ycbcr[2].
+  // Plane info to be filled for each field separately.
+  height = (height + 1) >> 1;
+  uv_stride = VENUS_UV_STRIDE(color_format, INT(width));
+  uv_height = VENUS_UV_SCANLINES(color_format, INT(height));
+  uv_size = ALIGN((uv_stride * uv_height), alignment);
+
+  field_base = base;
+  GetYuvUbwcSPPlaneInfo(field_base, width, height, COLOR_FMT_NV12_UBWC, &ycbcr[0]);
+
+  field_base = reinterpret_cast<uint64_t>(ycbcr[0].cb) + uv_size;
+  GetYuvUbwcSPPlaneInfo(field_base, width, height, COLOR_FMT_NV12_UBWC, &ycbcr[1]);
+}
+
 void GetYuvSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height, uint32_t bpp,
                        struct android_ycbcr *ycbcr) {
   unsigned int ystride, cstride;
@@ -327,6 +354,7 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr *ycbcr) {
   gralloc1_producer_usage_t prod_usage = hnd->GetProducerUsage();
   gralloc1_consumer_usage_t cons_usage = hnd->GetConsumerUsage();
   unsigned int ystride, cstride;
+  bool interlaced = false;
 
   memset(ycbcr->reserved, 0, sizeof(ycbcr->reserved));
   MetaData_t *metadata = reinterpret_cast<MetaData_t *>(hnd->base_metadata);
@@ -349,6 +377,11 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr *ycbcr) {
     GetAlignedWidthAndHeight(info, &width, &height);
   }
 
+  // Check metadata for interlaced content.
+  if (metadata && (metadata->operation & PP_PARAM_INTERLACED)) {
+    interlaced = metadata->interlaced ? true : false;
+  }
+
   // Get the chroma offsets from the handle width/height. We take advantage
   // of the fact the width _is_ the stride
   switch (format) {
@@ -366,7 +399,11 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr *ycbcr) {
       break;
 
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
-      GetYuvUbwcSPPlaneInfo(hnd->base, width, height, COLOR_FMT_NV12_UBWC, ycbcr);
+      if (!interlaced) {
+        GetYuvUbwcSPPlaneInfo(hnd->base, width, height, COLOR_FMT_NV12_UBWC, ycbcr);
+      } else {
+        GetYuvUbwcInterlacedSPPlaneInfo(hnd->base, width, height, COLOR_FMT_NV12_UBWC, ycbcr);
+      }
       ycbcr->chroma_step = 2;
       break;
 
@@ -386,8 +423,10 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr *ycbcr) {
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
     case HAL_PIXEL_FORMAT_NV21_ZSL:
     case HAL_PIXEL_FORMAT_RAW16:
+    case HAL_PIXEL_FORMAT_Y16:
     case HAL_PIXEL_FORMAT_RAW10:
     case HAL_PIXEL_FORMAT_RAW8:
+    case HAL_PIXEL_FORMAT_Y8:
       GetYuvSPPlaneInfo(hnd->base, width, height, 1, ycbcr);
       std::swap(ycbcr->cb, ycbcr->cr);
       break;
@@ -403,7 +442,16 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr *ycbcr) {
       ycbcr->cstride = cstride;
       ycbcr->chroma_step = 1;
       break;
-
+    case HAL_PIXEL_FORMAT_CbYCrY_422_I:
+      ystride = width * 2;
+      cstride = 0;
+      ycbcr->y  = reinterpret_cast<void *>(hnd->base);
+      ycbcr->cr = NULL;
+      ycbcr->cb = NULL;
+      ycbcr->ystride = ystride;
+      ycbcr->cstride = 0;
+      ycbcr->chroma_step = 0;
+      break;
       // Unsupported formats
     case HAL_PIXEL_FORMAT_YCbCr_422_I:
     case HAL_PIXEL_FORMAT_YCrCb_422_I:
@@ -657,6 +705,8 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       aligned_w = ALIGN(width, alignment);
       break;
     case HAL_PIXEL_FORMAT_RAW16:
+    case HAL_PIXEL_FORMAT_Y16:
+    case HAL_PIXEL_FORMAT_Y8:
       aligned_w = ALIGN(width, 16);
       break;
     case HAL_PIXEL_FORMAT_RAW12:

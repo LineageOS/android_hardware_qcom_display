@@ -48,6 +48,7 @@ class HWEventsDRM : public HWEventsInterface {
   virtual DisplayError Init(int display_type, HWEventHandler *event_handler,
                             const vector<HWEvent> &event_list);
   virtual DisplayError Deinit();
+  virtual DisplayError SetEventState(HWEvent event, bool enable, void *aux = nullptr);
 
  private:
   static const int kMaxStringLength = 1024;
@@ -72,6 +73,7 @@ class HWEventsDRM : public HWEventsInterface {
   void HandleBlank(char *data) {}
   void HandleIdlePowerCollapse(char *data);
   void PopulateHWEventData(const vector<HWEvent> &event_list);
+  void WakeUpEventThread();
   DisplayError SetEventParser();
   DisplayError InitializePollFd();
   DisplayError CloseFds();
@@ -84,6 +86,7 @@ class HWEventsDRM : public HWEventsInterface {
   std::string event_thread_name_ = "SDM_EventThread";
   bool exit_threads_ = false;
   uint32_t vsync_index_ = 0;
+  bool vsync_enabled_ = true;
 };
 
 }  // namespace sdm

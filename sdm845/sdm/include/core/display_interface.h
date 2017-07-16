@@ -455,11 +455,13 @@ class DisplayInterface {
 
   /*! @brief Method to set the refresh rate of a display.
 
-    @param[in] new refresh rate of the display.
+    @param[in] refresh_rate new refresh rate of the display.
+
+    @param[in] final_rate indicates whether refresh rate is final rate or can be changed by sdm
 
     @return \link DisplayError \endlink
   */
-  virtual DisplayError SetRefreshRate(uint32_t refresh_rate) = 0;
+  virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate) = 0;
 
   /*! @brief Method to query whether scanning is support for the HDMI display.
 

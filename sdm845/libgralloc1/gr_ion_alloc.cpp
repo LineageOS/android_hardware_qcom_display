@@ -36,6 +36,8 @@
 #include <cutils/log.h>
 #include <errno.h>
 #include <utils/Trace.h>
+#include <cutils/trace.h>
+#include <string>
 
 #include "gralloc_priv.h"
 #include "gr_utils.h"
@@ -77,21 +79,29 @@ int IonAlloc::AllocBuffer(AllocData *data) {
   ion_alloc_data.heap_id_mask = data->heap_id;
   ion_alloc_data.flags = data->flags;
   ion_alloc_data.flags |= data->uncached ? 0 : ION_FLAG_CACHED;
+  std::string tag_name{};
+  if (ATRACE_ENABLED()) {
+    tag_name = "ION_IOC_ALLOC size: " + std::to_string(data->size);
+  }
 
+  ATRACE_BEGIN(tag_name.c_str());
   if (ioctl(ion_dev_fd_, INT(ION_IOC_ALLOC), &ion_alloc_data)) {
     err = -errno;
     ALOGE("ION_IOC_ALLOC failed with error - %s", strerror(errno));
     return err;
   }
+  ATRACE_END();
 
   fd_data.handle = ion_alloc_data.handle;
   handle_data.handle = ion_alloc_data.handle;
+  ATRACE_BEGIN("ION_IOC_MAP");
   if (ioctl(ion_dev_fd_, INT(ION_IOC_MAP), &fd_data)) {
     err = -errno;
     ALOGE("%s: ION_IOC_MAP failed with error - %s", __FUNCTION__, strerror(errno));
     ioctl(ion_dev_fd_, INT(ION_IOC_FREE), &handle_data);
     return err;
   }
+  ATRACE_END();
 
   data->fd = fd_data.fd;
   data->ion_handle = handle_data.handle;

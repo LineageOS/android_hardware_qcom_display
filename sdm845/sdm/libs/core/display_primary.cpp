@@ -77,6 +77,8 @@ DisplayError DisplayPrimary::Init() {
     HWInterface::Destroy(hw_intf_);
   }
 
+  current_refresh_rate_ = hw_panel_info_.max_fps;
+
   return error;
 }
 
@@ -262,7 +264,7 @@ DisplayError DisplayPrimary::GetRefreshRateRange(uint32_t *min_refresh_rate,
   return error;
 }
 
-DisplayError DisplayPrimary::SetRefreshRate(uint32_t refresh_rate) {
+DisplayError DisplayPrimary::SetRefreshRate(uint32_t refresh_rate, bool final_rate) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
   if (!active_ || !hw_panel_info_.dynamic_fps) {
@@ -274,10 +276,20 @@ DisplayError DisplayPrimary::SetRefreshRate(uint32_t refresh_rate) {
     return kErrorParameters;
   }
 
-  DisplayError error = hw_intf_->SetRefreshRate(refresh_rate);
-  if (error != kErrorNone) {
-    return error;
+  if (handle_idle_timeout_ && !final_rate) {
+    refresh_rate = hw_panel_info_.min_fps;
   }
+
+  if ((current_refresh_rate_ != refresh_rate) || handle_idle_timeout_) {
+    DisplayError error = hw_intf_->SetRefreshRate(refresh_rate);
+    if (error != kErrorNone) {
+      return error;
+    }
+  }
+
+  // On success, set current refresh rate to new refresh rate
+  current_refresh_rate_ = refresh_rate;
+  handle_idle_timeout_ = false;
 
   return DisplayBase::ReconfigureDisplay();
 }
@@ -293,6 +305,7 @@ DisplayError DisplayPrimary::VSync(int64_t timestamp) {
 }
 
 void DisplayPrimary::IdleTimeout() {
+  handle_idle_timeout_ = true;
   event_handler_->Refresh();
   comp_manager_->ProcessIdleTimeout(display_comp_ctx_);
 }

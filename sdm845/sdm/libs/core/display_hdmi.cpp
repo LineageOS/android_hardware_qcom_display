@@ -94,6 +94,8 @@ DisplayError DisplayHDMI::Init() {
     DLOGE("Failed to create hardware events interface. Error = %d", error);
   }
 
+  current_refresh_rate_ = hw_panel_info_.max_fps;
+
   return error;
 }
 
@@ -135,18 +137,21 @@ DisplayError DisplayHDMI::GetRefreshRateRange(uint32_t *min_refresh_rate,
   return error;
 }
 
-DisplayError DisplayHDMI::SetRefreshRate(uint32_t refresh_rate) {
+DisplayError DisplayHDMI::SetRefreshRate(uint32_t refresh_rate, bool final_rate) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
   if (!active_) {
     return kErrorPermission;
   }
 
-  DisplayError error = hw_intf_->SetRefreshRate(refresh_rate);
-  if (error != kErrorNone) {
-    return error;
+  if (current_refresh_rate_ != refresh_rate) {
+    DisplayError error = hw_intf_->SetRefreshRate(refresh_rate);
+    if (error != kErrorNone) {
+      return error;
+    }
   }
 
+  current_refresh_rate_ = refresh_rate;
   return DisplayBase::ReconfigureDisplay();
 }
 

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -85,8 +85,8 @@ enum LayerComposition {
   kCompositionSDE,          //!< This layer will be composed by SDE. It must not be composed by
                             //!< GPU or Blit.
 
-  kCompositionHWCursor,     //!< This layer will be composed by SDE using HW Cursor. It must not be
-                            //!< composed by GPU or Blit.
+  kCompositionCursor,       // This cursor layer can receive async position updates irrespective of
+                            // dedicated h/w cursor usage. It must not be composed by GPU or Blit
 
   kCompositionHybrid,       //!< This layer will be drawn by a blit engine and SDE together.
                             //!< Display device will split the layer, update the blit rectangle
@@ -189,6 +189,7 @@ struct LayerRequestFlags {
     struct {
       uint32_t tone_map : 1;  //!< This flag will be set by SDM when the layer needs tone map
       uint32_t secure: 1;  //!< This flag will be set by SDM when the layer must be secure
+      uint32_t flip_buffer: 1;  //!< This flag will be set by SDM when the layer needs FBT flip
     };
     uint32_t request_flags = 0;  //!< For initialization purpose only.
                                  //!< Shall not be refered directly.
