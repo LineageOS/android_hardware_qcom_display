@@ -559,12 +559,16 @@ HWC2::Error HWCDisplay::GetColorModes(uint32_t *out_num_modes, android_color_mod
 }
 
 HWC2::Error HWCDisplay::GetDisplayConfigs(uint32_t *out_num_configs, hwc2_config_t *out_configs) {
-  // TODO(user): Actually handle multiple configs
-  if (out_configs == nullptr) {
-    *out_num_configs = 1;
-  } else {
-    *out_num_configs = 1;
-    out_configs[0] = 0;
+  uint32_t cfgs;
+  uint32_t i;
+
+  if (GetDisplayConfigCount(&cfgs) == 0) {
+    if (out_configs == nullptr) {
+      *out_num_configs = cfgs;
+    } else {
+      for (i = 0; i < cfgs; i++)
+        out_configs[i] = (hwc2_config_t)cfgs - 1 - i;
+    }
   }
 
   return HWC2::Error::None;
@@ -644,9 +648,13 @@ HWC2::Error HWCDisplay::GetDisplayType(int32_t *out_type) {
 
 // TODO(user): Store configurations and hook them up here
 HWC2::Error HWCDisplay::GetActiveConfig(hwc2_config_t *out_config) {
+  DisplayError ret;
+
   if (out_config != nullptr) {
     *out_config = 0;
-    return HWC2::Error::None;
+    ret = display_intf_->GetActiveConfig(out_config);
+    return ret == kErrorNone ?
+                     HWC2::Error::None : HWC2::Error::BadParameter;
   } else {
     return HWC2::Error::BadParameter;
   }
@@ -674,8 +682,10 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, int32_t acquire_
 }
 
 HWC2::Error HWCDisplay::SetActiveConfig(hwc2_config_t config) {
-  // We have only one config right now - do nothing
-  return HWC2::Error::None;
+  DLOGI("Setting active display configuration");
+
+  return SetActiveDisplayConfig((int)config) == 0 ?
+            HWC2::Error::None : HWC2::Error::BadConfig;
 }
 
 DisplayError HWCDisplay::SetMixerResolution(uint32_t width, uint32_t height) {
@@ -1556,7 +1566,28 @@ void HWCDisplay::SetSecureDisplay(bool secure_display_active) {
 }
 
 int HWCDisplay::SetActiveDisplayConfig(int config) {
-  return display_intf_->SetActiveConfig(UINT32(config)) == kErrorNone ? 0 : -1;
+  DisplayError error;
+  int status;
+  uint32_t mWidth = 0, mHeight = 0;
+
+  status = SetDisplayStatus(kDisplayStatusPause);
+  if (status != 0)
+    DLOGW("Cannot pause display.");
+
+  error = display_intf_->SetActiveConfig(UINT32(config));
+  if (error != kErrorNone) {
+    DLOGE("Cannot set display configuration!!!");
+    return -1;
+  }
+
+  GetMixerResolution(&mWidth, &mHeight);
+  SetFrameBufferResolution(mWidth, mHeight);
+
+  status = SetDisplayStatus(kDisplayStatusResume);
+  if (status != 0)
+    DLOGW("Cannot resume display.");
+
+  return 0;
 }
 
 int HWCDisplay::GetActiveDisplayConfig(uint32_t *config) {
