@@ -449,17 +449,58 @@ DisplayError DisplayBase::SetActiveConfig(uint32_t index) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
   uint32_t active_index = 0;
+  HWDisplayAttributes display_attrs;
+  HWMixerAttributes   mixer_attrs;
+  HWPanelInfo         hw_panel_info;
+  DisplayConfigVariableInfo fb_config = fb_config_;
 
   hw_intf_->GetActiveConfig(&active_index);
-
   if (active_index == index) {
     return kErrorNone;
   }
 
+  error = hw_intf_->GetDisplayAttributes(index, &display_attrs);
+  if (error != kErrorNone)
+    return error;
+
+  error = hw_intf_->GetHWPanelInfo(&hw_panel_info);
+  if (error != kErrorNone) {
+    DLOGE("Cannot get panel info.");
+    return error;
+  }
+
+  /* Now we can start doing the real magic */
   error = hw_intf_->SetDisplayAttributes(index);
   if (error != kErrorNone) {
     return error;
   }
+
+  error = hw_intf_->GetMixerAttributes(&mixer_attrs);
+  if (error != kErrorNone) {
+    return error;
+  }
+  DLOGI("Current mixer attributes: w%d h%d s%d",
+        mixer_attrs.width, mixer_attrs.height,
+        mixer_attrs.split_left);
+
+  mixer_attrs.split_left = display_attrs.is_device_split ?
+    hw_panel_info.split_info.left_split : mixer_attributes_.width;
+
+  if (mixer_attrs.split_left != mixer_attributes_.split_left) {
+    DLOGI("Setting mixer left split to %d", mixer_attrs.split_left);
+
+    error = hw_intf_->SetMixerAttributes(mixer_attrs);
+    if (error != kErrorNone)
+      DLOGW("Cannot set new mixer attributes.");
+  }
+
+  fb_config.x_pixels = display_attrs.x_pixels;
+  fb_config.y_pixels = display_attrs.y_pixels;
+  SetMixerResolution(fb_config.x_pixels, fb_config.y_pixels);
+
+  display_attributes_ = display_attrs;
+  mixer_attributes_ = mixer_attrs;
+  fb_config_ = fb_config;
 
   return ReconfigureDisplay();
 }
