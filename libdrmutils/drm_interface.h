@@ -338,6 +338,7 @@ struct DRMCrtcInfo {
   uint32_t max_sde_clk;
   CompRatioMap comp_ratio_rt_map;
   CompRatioMap comp_ratio_nrt_map;
+  uint32_t hw_version;
 };
 
 enum struct DRMPlaneType {
