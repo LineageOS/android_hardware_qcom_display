@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -186,6 +186,22 @@ DisplayError Debug::GetMixerResolution(uint32_t *width, uint32_t *height) {
 
   *width = UINT32(stoi(str));
   *height = UINT32(stoi(str.substr(str.find('x') + 1)));
+
+  return kErrorNone;
+}
+
+DisplayError Debug::GetReducedConfig(uint32_t *num_vig_pipes, uint32_t *num_dma_pipes) {
+  char value[64] = {};
+
+  DisplayError error = debug_.debug_handler_->GetProperty("sdm.debug.reduced_config", value);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  std::string str(value);
+
+  *num_vig_pipes = UINT32(stoi(str));
+  *num_dma_pipes = UINT32(stoi(str.substr(str.find('x') + 1)));
 
   return kErrorNone;
 }

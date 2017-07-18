@@ -218,6 +218,7 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
   DLOGI("\tLinear = %d", hw_resource->linear_factor);
   DLOGI("\tScale = %d", hw_resource->scale_factor);
   DLOGI("\tFudge_factor = %d", hw_resource->extra_fudge_factor);
+  DLOGI("\tib_fudge_factor = %d", hw_resource->ib_fudge_factor);
 
   if (hw_resource->separate_rotator || hw_resource->num_dma_pipe) {
     GetHWRotatorInfo(hw_resource);
@@ -286,7 +287,42 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
 void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
   DRMPlanesInfo planes;
   drm_mgr_intf_->GetPlanesInfo(&planes);
+
+  // To simulate reduced config.
+  uint32_t max_vig_pipes = 0;
+  uint32_t max_dma_pipes = 0;
+  Debug::GetReducedConfig(&max_vig_pipes, &max_dma_pipes);
+  uint32_t max_virtual_pipes = max_vig_pipes + max_dma_pipes;
+  uint32_t vig_pipe_count = 0;
+  uint32_t dma_pipe_count = 0;
+  uint32_t virtual_pipe_count = 0;
+
   for (auto &pipe_obj : planes) {
+    if (max_vig_pipes && max_dma_pipes) {
+      uint32_t master_plane_id = pipe_obj.second.master_plane_id;
+      if ((pipe_obj.second.type == DRMPlaneType::DMA) && (dma_pipe_count < max_dma_pipes)
+          && !master_plane_id) {
+        dma_pipe_count++;
+      } else if ((pipe_obj.second.type == DRMPlaneType::VIG) && (vig_pipe_count < max_vig_pipes)
+          && !master_plane_id) {
+        vig_pipe_count++;
+      } else if ((master_plane_id) && (virtual_pipe_count < max_virtual_pipes)) {
+        bool is_virtual = false;
+        for (auto &pipe_caps : hw_resource->hw_pipes) {
+          if (master_plane_id == pipe_caps.id) {
+            is_virtual = true;
+            virtual_pipe_count++;
+            break;
+          }
+        }
+        if (!is_virtual) {
+          continue;
+        }
+      } else {
+        continue;
+      }
+    }
+
     HWPipeCaps pipe_caps;
     string name = {};
     switch (pipe_obj.second.type) {
@@ -321,7 +357,8 @@ void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
     }
     pipe_caps.id = pipe_obj.first;
     pipe_caps.master_pipe_id = pipe_obj.second.master_plane_id;
-    DLOGI("Adding %s Pipe : Id %d", name.c_str(), pipe_obj.first);
+    DLOGI("Adding %s Pipe : Id %d, master_pipe_id : Id %d",
+          name.c_str(), pipe_obj.first, pipe_obj.second.master_plane_id);
     hw_resource->hw_pipes.push_back(std::move(pipe_caps));
   }
 }
