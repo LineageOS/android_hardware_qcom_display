@@ -832,7 +832,7 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, int32_t acquire_
 
   client_target_->SetLayerBuffer(target, acquire_fence);
   client_target_->SetLayerSurfaceDamage(damage);
-  // Ignoring dataspace for now
+  client_target_->SetLayerDataspace(dataspace);
   return HWC2::Error::None;
 }
 
