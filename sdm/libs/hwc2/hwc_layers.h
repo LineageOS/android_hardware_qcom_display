@@ -112,6 +112,7 @@ class HWCLayer {
   uint32_t GetUint32Color(const hwc_color_t &source);
   LayerBufferFormat GetSDMFormat(const int32_t &source, const int flags);
   LayerBufferS3DFormat GetS3DFormat(uint32_t s3d_format);
+  void GetUBWCStatsFromMetaData(UBWCStats *cr_stats, UbwcCrStatsVector *cr_vec);
   DisplayError SetMetaData(const private_handle_t *pvt_handle, Layer *layer);
   DisplayError SetIGC(IGC_t source, LayerIGC *target);
   uint32_t RoundToStandardFPS(float fps);

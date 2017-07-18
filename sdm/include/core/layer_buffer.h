@@ -31,10 +31,15 @@
 
 #include <stdint.h>
 #include <color_metadata.h>
+#include <utility>
+#include <vector>
 
 #include "sdm_types.h"
 
 namespace sdm {
+
+#define NUM_UBWC_CR_STATS_LAYERS 2
+typedef std::vector<std::pair<int, int>> UbwcCrStatsVector;
 
 /*! @brief This enum represents display layer inverse gamma correction (IGC) types.
 
@@ -268,6 +273,9 @@ struct LayerBuffer {
                                 //!< could be modified by both client and SDM.
   uint64_t buffer_id __attribute__((aligned(8))) = 0;
                                 //!< Specifies the buffer id.
+  UbwcCrStatsVector  ubwc_crstats[NUM_UBWC_CR_STATS_LAYERS] = {};
+                                //! < UBWC Compression ratio,stats. Stored as a vector of pair of
+                                //! of (tile size, #of tiles)
 };
 
 // This enum represents buffer layout types.
