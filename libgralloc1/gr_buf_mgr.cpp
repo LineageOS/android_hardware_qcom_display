@@ -404,14 +404,6 @@ uint32_t BufferManager::GetDataAlignment(int format, gralloc1_producer_usage_t p
 int BufferManager::GetHandleFlags(int format, gralloc1_producer_usage_t prod_usage,
                                   gralloc1_consumer_usage_t cons_usage) {
   int flags = 0;
-  if (cons_usage & GRALLOC1_CONSUMER_USAGE_PRIVATE_EXTERNAL_ONLY) {
-    flags |= private_handle_t::PRIV_FLAGS_EXTERNAL_ONLY;
-  }
-
-  if (cons_usage & GRALLOC1_CONSUMER_USAGE_PRIVATE_INTERNAL_ONLY) {
-    flags |= private_handle_t::PRIV_FLAGS_INTERNAL_ONLY;
-  }
-
   if (cons_usage & GRALLOC1_CONSUMER_USAGE_VIDEO_ENCODER) {
     flags |= private_handle_t::PRIV_FLAGS_VIDEO_ENCODER;
   }
