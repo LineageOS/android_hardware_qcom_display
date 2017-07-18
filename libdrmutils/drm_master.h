@@ -71,6 +71,8 @@ class DRMMaster {
    *   fd: Pointer to store master fd into
    */
   void GetHandle(int *fd) { *fd = dev_fd_; }
+  /* Returns true if the ref counted version of rmfb is being used */
+  bool IsRmFbRefCounted();
 
   /* Creates an instance of DRMMaster if it doesn't exist and initializes it. Threadsafe.
    * Input:

@@ -146,4 +146,11 @@ int DRMMaster::RemoveFbId(uint32_t fb_id) {
   return ret;
 }
 
+bool DRMMaster::IsRmFbRefCounted() {
+#ifdef DRM_IOCTL_MSM_RMFB2
+  return true;
+#endif
+  return false;
+}
+
 }  // namespace drm_utils

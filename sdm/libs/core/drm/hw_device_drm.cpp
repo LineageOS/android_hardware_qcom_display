@@ -218,6 +218,27 @@ static void GetDRMFormat(LayerBufferFormat format, uint32_t *drm_format,
   }
 }
 
+HWDeviceDRM::Registry::Registry(BufferAllocator *buffer_allocator) :
+  buffer_allocator_(buffer_allocator) {
+  DRMMaster *master = nullptr;
+  DRMMaster::GetInstance(&master);
+
+  if (!master) {
+    DLOGE("Failed to acquire DRM Master instance");
+    return;
+  }
+
+  // If RMFB is ref-counted, we should immediately make a call to clean up fb_id after commit.
+  // Driver will release fb_id after its usage. Otherwise speculatively free up fb_id after 3
+  // cycles assuming driver is done with it.
+  rmfb_delay_ = master->IsRmFbRefCounted() ? 1 : 3;
+  hashmap_ = new std::unordered_map<int, uint32_t>[rmfb_delay_];
+}
+
+HWDeviceDRM::Registry::~Registry() {
+  delete [] hashmap_;
+}
+
 void HWDeviceDRM::Registry::RegisterCurrent(HWLayers *hw_layers) {
   HWLayersInfo &hw_layer_info = hw_layers->info;
   uint32_t hw_layer_count = UINT32(hw_layer_info.hw_layers.size());
@@ -278,7 +299,7 @@ void HWDeviceDRM::Registry::UnregisterNext() {
     return;
   }
 
-  current_index_ = (current_index_ + 1) % kCycleDelay;
+  current_index_ = (current_index_ + 1) % rmfb_delay_;
   auto &curr_map = hashmap_[current_index_];
   for (auto &pair : curr_map) {
     uint32_t fb_id = pair.second;
@@ -292,7 +313,7 @@ void HWDeviceDRM::Registry::UnregisterNext() {
 }
 
 void HWDeviceDRM::Registry::Clear() {
-  for (int i = 0; i < kCycleDelay; i++) {
+  for (int i = 0; i < rmfb_delay_; i++) {
     UnregisterNext();
   }
   current_index_ = 0;

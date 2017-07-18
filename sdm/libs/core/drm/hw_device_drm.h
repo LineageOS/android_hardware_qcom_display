@@ -130,7 +130,8 @@ class HWDeviceDRM : public HWInterface {
 
   class Registry {
    public:
-    explicit Registry(BufferAllocator *buffer_allocator) : buffer_allocator_(buffer_allocator) {}
+    explicit Registry(BufferAllocator *buffer_allocator);
+    ~Registry();
     // Call on each validate and commit to register layer buffers
     void RegisterCurrent(HWLayers *hw_layers);
     // Call at the end of draw cycle to clear the next slot for business
@@ -143,10 +144,10 @@ class HWDeviceDRM : public HWInterface {
     uint32_t GetFbId(int fd);
 
    private:
-    static const int kCycleDelay = 3;  // N cycle delay before destroy
+    uint8_t rmfb_delay_ = 1;  // N cycle delay before destroy
     // fd to fb_id map. fd is used as key only for a single draw cycle between
     // prepare and commit. It should not be used for caching in future due to fd recycling
-    std::unordered_map<int, uint32_t> hashmap_[kCycleDelay] {};
+    std::unordered_map<int, uint32_t> *hashmap_ {};
     int current_index_ = 0;
     BufferAllocator *buffer_allocator_ = {};
   };
