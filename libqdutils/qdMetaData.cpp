@@ -125,6 +125,14 @@ int setMetaDataVa(MetaData_t *data, DispParamType paramType,
             data->color = *((ColorMetaData *)param);
 #endif
             break;
+        case SET_UBWC_CR_STATS_INFO: {
+             struct UBWCStats* stats = (struct UBWCStats*)param;
+             int numelems = sizeof(data->ubwcCRStats) / sizeof(struct UBWCStats);
+             for (int i = 0; i < numelems; i++) {
+                  data->ubwcCRStats[i] = stats[i];
+             }
+              break;
+          }
         default:
             ALOGE("Unknown paramType %d", paramType);
             break;
@@ -170,6 +178,8 @@ int getMetaDataVa(MetaData_t *data, DispFetchParamType paramType,
     // Make sure we send 0 only if the operation queried is present
     int ret = -EINVAL;
     if (data == nullptr)
+        return ret;
+    if (param == nullptr)
         return ret;
 
     switch (paramType) {
@@ -246,6 +256,16 @@ int getMetaDataVa(MetaData_t *data, DispFetchParamType paramType,
                 ret = 0;
             }
 #endif
+            break;
+        case GET_UBWC_CR_STATS_INFO:
+            if (data->operation & SET_UBWC_CR_STATS_INFO) {
+                struct UBWCStats* stats = (struct UBWCStats*)param;
+                int numelems = sizeof(data->ubwcCRStats) / sizeof(struct UBWCStats);
+                for (int i = 0; i < numelems; i++) {
+                    stats[i] = data->ubwcCRStats[i];
+                }
+                ret = 0;
+            }
             break;
         default:
             ALOGE("Unknown paramType %d", paramType);
