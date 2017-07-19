@@ -174,25 +174,13 @@ gralloc1_function_pointer_t GrallocImpl::GetFunction(gralloc1_device_t *device, 
 }
 
 gralloc1_error_t GrallocImpl::Dump(gralloc1_device_t *device, uint32_t *out_size,
-                                   char *out_buffer) {
+                                   char *out_buffer __unused) {
   if (!device) {
     ALOGE("Gralloc Error : device=%p", (void *)device);
     return GRALLOC1_ERROR_BAD_DESCRIPTOR;
   }
-  const size_t max_dump_size = 8192;
-  if (out_buffer == nullptr) {
-    *out_size = max_dump_size;
-  } else {
-    std::ostringstream os;
-    os << "-------------------------------" << std::endl;
-    os << "QTI gralloc dump:" << std::endl;
-    os << "-------------------------------" << std::endl;
-    GrallocImpl const *dev = GRALLOC_IMPL(device);
-    dev->buf_mgr_->Dump(&os);
-    os << "-------------------------------" << std::endl;
-    auto copied = os.str().copy(out_buffer, std::min(os.str().size(), max_dump_size), 0);
-    *out_size = UINT(copied);
-  }
+  // nothing to dump
+  *out_size = 0;
 
   return GRALLOC1_ERROR_NONE;
 }
