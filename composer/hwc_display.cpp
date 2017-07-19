@@ -791,15 +791,6 @@ void HWCDisplay::BuildLayerStack() {
       layer->flags.skip = true;
     }
 
-    if (!layer->flags.skip &&
-        (hwc_layer->GetClientRequestedCompositionType() == Composition::CURSOR)) {
-      // Currently we support only one HWCursor & only at top most z-order
-      if ((*layer_set_.rbegin())->GetId() == hwc_layer->GetId()) {
-        layer->flags.cursor = true;
-        layer_stack_.flags.cursor_present = true;
-      }
-    }
-
     // VTS case failure with solid layer dimming due to no support on pipe
     // TODO(user): Remove this when we add support for solid_fill in pipe
     if (layer->flags.solid_fill && layer->layer_brightness != 1.0f) {
@@ -2325,17 +2316,12 @@ HWC3::Error HWCDisplay::SetCursorPosition(LayerId layer, int x, int y) {
     return HWC3::Error::None;
   }
 
-  if (!layer_stack_.flags.cursor_present) {
-    DLOGW("Cursor layer not present");
-    return HWC3::Error::BadLayer;
-  }
-
   HWCLayer *hwc_layer = GetHWCLayer(layer);
   if (hwc_layer == nullptr) {
     return HWC3::Error::BadLayer;
   }
   if (hwc_layer->GetDeviceSelectedCompositionType() != Composition::CURSOR) {
-    return HWC3::Error::None;
+    return HWC3::Error::BadLayer;
   }
   if (display_intf_->IsValidated()) {
     // the device is currently in the middle of the validate/present sequence,
