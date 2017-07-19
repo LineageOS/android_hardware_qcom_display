@@ -1262,7 +1262,7 @@ android::status_t HWCSession::SetColorModeById(const android::Parcel *input_parc
   auto device = static_cast<hwc2_device_t *>(this);
 
   if (display > HWC_DISPLAY_VIRTUAL) {
-    return -EINVAL;
+    return android::BAD_VALUE;
   }
 
   auto err = CallDisplayFunction(device, display, &HWCDisplay::SetColorModeById, mode);
