@@ -170,7 +170,7 @@ int32_t HWCSession::GetConfigCount(int disp_id, uint32_t *count) {
 Return<void> HWCSession::getConfigCount(IDisplayConfig::DisplayType dpy,
                                         getConfigCount_cb _hidl_cb) {
   uint32_t count = 0;
-  int32_t error = GetActiveConfigIndex(MapDisplayType(dpy), &count);
+  int32_t error = GetConfigCount(MapDisplayType(dpy), &count);
 
   _hidl_cb(error, count);
 
