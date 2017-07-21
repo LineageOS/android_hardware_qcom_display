@@ -797,14 +797,43 @@ DisplayError HWColorManagerDrm::GetDrmDither(const PPFeatureInfo &in_data,
                                              DRMPPFeatureInfo *out_data) {
   DisplayError ret = kErrorNone;
 #ifdef PP_DRM_ENABLE
+  struct SDEDitherCfg *sde_dither = NULL;
+  struct drm_msm_dither *mdp_dither = NULL;
+
   if (!out_data) {
     DLOGE("Invalid input parameter for dither");
     return kErrorParameters;
   }
 
-  out_data->id = kPPFeaturesMax;
+  sde_dither = (struct SDEDitherCfg *)in_data.GetConfigData();
+  out_data->id = kFeatureDither;
   out_data->type = sde_drm::kPropBlob;
   out_data->version = in_data.feature_version_;
+  out_data->payload_size = sizeof(struct drm_msm_dither);
+
+  if (in_data.enable_flags_ & kOpsDisable) {
+    out_data->payload = NULL;
+    return ret;
+  } else if (!(in_data.enable_flags_ & kOpsEnable)) {
+    out_data->payload = NULL;
+    return kErrorParameters;
+  }
+
+  mdp_dither = new drm_msm_dither();
+  if (!mdp_dither) {
+    DLOGE("Failed to allocate memory for dither");
+    return kErrorMemory;
+  }
+
+  mdp_dither->flags = 0;
+  std::memcpy(mdp_dither->matrix, sde_dither->dither_matrix,
+                sizeof(sde_dither->dither_matrix));
+  mdp_dither->temporal_en = sde_dither->temporal_en;
+  mdp_dither->c0_bitdepth = sde_dither->g_y_depth;
+  mdp_dither->c1_bitdepth = sde_dither->b_cb_depth;
+  mdp_dither->c2_bitdepth = sde_dither->r_cr_depth;
+  mdp_dither->c3_bitdepth = 0;
+  out_data->payload = mdp_dither;
 #endif
   return ret;
 }
