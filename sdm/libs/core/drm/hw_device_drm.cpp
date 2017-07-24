@@ -444,6 +444,13 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes() {
        topology == DRMTopology::DUAL_LM_DSCMERGE);
   display_attributes_.h_total += display_attributes_.is_device_split ? h_blanking : 0;
 
+  // If driver doesn't return panel width/height information, default to 320 dpi
+  if (INT(mm_width) <= 0 || INT(mm_height) <= 0) {
+    mm_width  = UINT32(((FLOAT(mode.hdisplay) * 25.4f) / 320.0f) + 0.5f);
+    mm_height = UINT32(((FLOAT(mode.vdisplay) * 25.4f) / 320.0f) + 0.5f);
+    DLOGW("Driver doesn't report panel physical width and height - defaulting to 320dpi");
+  }
+
   display_attributes_.x_dpi = (FLOAT(mode.hdisplay) * 25.4f) / FLOAT(mm_width);
   display_attributes_.y_dpi = (FLOAT(mode.vdisplay) * 25.4f) / FLOAT(mm_height);
 
