@@ -90,9 +90,7 @@ DisplayError DisplayBase::Init() {
     goto CleanupOnError;
   }
 
-  if (!IsPrimaryDisplay()) {
-    needs_validate_.set();
-  }
+  needs_validate_.set();
 
   if (hw_info_intf_) {
     HWResourceInfo hw_resource_info = HWResourceInfo();
@@ -217,6 +215,7 @@ DisplayError DisplayBase::ValidateGPUTargetParams() {
 DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
+  needs_validate_.set(display_type_);
 
   if (!active_) {
     return kErrorPermission;
@@ -284,7 +283,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
   }
 
   if (needs_validate_.test(display_type_)) {
-    DLOGE("Commit: Corresponding Prepare() is not called for display = %d", display_type_);
+    DLOGV_IF(kTagNone, "Corresponding Prepare() is not called for display = %d", display_type_);
     return kErrorNotValidated;
   }
 
