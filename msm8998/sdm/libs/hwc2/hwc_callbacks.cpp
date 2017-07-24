@@ -48,6 +48,7 @@ void HWCCallbacks::Refresh(hwc2_display_t display) {
 
 void HWCCallbacks::Vsync(hwc2_display_t display, int64_t timestamp) {
   if (vsync_) {
+    DTRACE_SCOPED();
     vsync_(vsync_data_, display, timestamp);
   }
 }
