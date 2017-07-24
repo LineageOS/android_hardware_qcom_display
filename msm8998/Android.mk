@@ -3,14 +3,10 @@ display-hals := include libqservice libqdutils $(sdm-libs)/utils $(sdm-libs)/cor
 
 ifneq ($(TARGET_IS_HEADLESS), true)
     display-hals += libcopybit liblight libmemtrack hdmi_cec \
-                    $(sdm-libs)/hwc $(sdm-libs)/hwc2 gpu_tonemapper libdrmutils
+                    $(sdm-libs)/hwc2 gpu_tonemapper libdrmutils
 endif
 
-ifneq ($(TARGET_USES_GRALLOC1), true)
-    display-hals += libgralloc
-else
-    display-hals += libgralloc1
-endif
+display-hals += libgralloc1
 
 ifeq ($(call is-vendor-board-platform,QCOM),true)
     include $(call all-named-subdir-makefiles,$(display-hals))
