@@ -175,7 +175,7 @@ int HWCSession::Deinit() {
 }
 
 int HWCSession::Open(const hw_module_t *module, const char *name, hw_device_t **device) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_);
+  SCOPE_LOCK(locker_);
 
   if (!module || !name || !device) {
     DLOGE("Invalid parameters.");
@@ -201,7 +201,7 @@ int HWCSession::Open(const hw_module_t *module, const char *name, hw_device_t **
 }
 
 int HWCSession::Close(hw_device_t *device) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_);
+  SCOPE_LOCK(locker_);
 
   if (!device) {
     return -EINVAL;
@@ -217,11 +217,16 @@ int HWCSession::Close(hw_device_t *device) {
 
 void HWCSession::GetCapabilities(struct hwc2_device *device, uint32_t *outCount,
                                  int32_t *outCapabilities) {
-  if (outCapabilities != nullptr && *outCount >= 2) {
+  bool skip_validate = !Debug::IsSkipValidateDisabled();
+  uint32_t count = 1 + (skip_validate ? 1 : 0);
+
+  if (outCapabilities != nullptr && (*outCount >= count)) {
     outCapabilities[0] = HWC2_CAPABILITY_SKIP_CLIENT_COLOR_TRANSFORM;
-    outCapabilities[1] = HWC2_CAPABILITY_SKIP_VALIDATE;
+    if (skip_validate) {
+      outCapabilities[1] = HWC2_CAPABILITY_SKIP_VALIDATE;
+    }
   }
-  *outCount = 2;
+  *outCount = count;
 }
 
 template <typename PFN, typename T>
@@ -272,7 +277,7 @@ int32_t HWCSession::DestroyLayer(hwc2_device_t *device, hwc2_display_t display,
 
 int32_t HWCSession::DestroyVirtualDisplay(hwc2_device_t *device, hwc2_display_t display) {
   SCOPE_LOCK(locker_);
-  if (!device) {
+  if (!device || display != HWC_DISPLAY_VIRTUAL) {
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
@@ -289,7 +294,7 @@ int32_t HWCSession::DestroyVirtualDisplay(hwc2_device_t *device, hwc2_display_t 
 }
 
 void HWCSession::Dump(hwc2_device_t *device, uint32_t *out_size, char *out_buffer) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_);
+  SCOPE_LOCK(locker_);
 
   if (!device) {
     return;
@@ -407,7 +412,6 @@ int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display
                                    int32_t *out_retire_fence) {
   HWCSession *hwc_session = static_cast<HWCSession *>(device);
   DTRACE_SCOPED();
-  SEQUENCE_EXIT_SCOPE_LOCK(locker_);
   if (!device) {
     return HWC2_ERROR_BAD_DISPLAY;
   }
@@ -454,14 +458,14 @@ static int32_t SetClientTarget(hwc2_device_t *device, hwc2_display_t display,
 int32_t HWCSession::SetColorMode(hwc2_device_t *device, hwc2_display_t display,
                                  int32_t /*android_color_mode_t*/ int_mode) {
   auto mode = static_cast<android_color_mode_t>(int_mode);
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_);
+  SCOPE_LOCK(locker_);
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::SetColorMode, mode);
 }
 
 int32_t HWCSession::SetColorTransform(hwc2_device_t *device, hwc2_display_t display,
                                       const float *matrix,
                                       int32_t /*android_color_transform_t*/ hint) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_);
+  SCOPE_LOCK(locker_);
   android_color_transform_t transform_hint = static_cast<android_color_transform_t>(hint);
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::SetColorTransform, matrix,
                                          transform_hint);
@@ -551,8 +555,12 @@ int32_t HWCSession::SetOutputBuffer(hwc2_device_t *device, hwc2_display_t displa
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
+  if (display != HWC_DISPLAY_VIRTUAL) {
+    return HWC2_ERROR_UNSUPPORTED;
+  }
+
   auto *hwc_session = static_cast<HWCSession *>(device);
-  if (display == HWC_DISPLAY_VIRTUAL && hwc_session->hwc_display_[display]) {
+  if (hwc_session->hwc_display_[display]) {
     auto vds = reinterpret_cast<HWCDisplayVirtual *>(hwc_session->hwc_display_[display]);
     auto status = vds->SetOutputBuffer(buffer, releaseFence);
     return INT32(status);
@@ -563,7 +571,7 @@ int32_t HWCSession::SetOutputBuffer(hwc2_device_t *device, hwc2_display_t displa
 
 int32_t HWCSession::SetPowerMode(hwc2_device_t *device, hwc2_display_t display, int32_t int_mode) {
   auto mode = static_cast<HWC2::PowerMode>(int_mode);
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_);
+  SCOPE_LOCK(locker_);
   return CallDisplayFunction(device, display, &HWCDisplay::SetPowerMode, mode);
 }
 
@@ -575,6 +583,7 @@ static int32_t SetVsyncEnabled(hwc2_device_t *device, hwc2_display_t display, in
 int32_t HWCSession::ValidateDisplay(hwc2_device_t *device, hwc2_display_t display,
                                     uint32_t *out_num_types, uint32_t *out_num_requests) {
   DTRACE_SCOPED();
+  SCOPE_LOCK(locker_);
   HWCSession *hwc_session = static_cast<HWCSession *>(device);
   if (!device) {
     return HWC2_ERROR_BAD_DISPLAY;
@@ -584,7 +593,6 @@ int32_t HWCSession::ValidateDisplay(hwc2_device_t *device, hwc2_display_t displa
   // Handle external_pending_connect_ in CreateVirtualDisplay
   auto status = HWC2::Error::BadDisplay;
   if (hwc_session->hwc_display_[display]) {
-    SEQUENCE_ENTRY_SCOPE_LOCK(locker_);
     if (display == HWC_DISPLAY_PRIMARY) {
       // TODO(user): This can be moved to HWCDisplayPrimary
       if (hwc_session->reset_panel_) {
@@ -602,11 +610,6 @@ int32_t HWCSession::ValidateDisplay(hwc2_device_t *device, hwc2_display_t displa
     }
 
     status = hwc_session->hwc_display_[display]->Validate(out_num_types, out_num_requests);
-  }
-  // If validate fails, cancel the sequence lock so that other operations
-  // (such as Dump or SetPowerMode) may succeed without blocking on the condition
-  if (status == HWC2::Error::BadDisplay) {
-    SEQUENCE_CANCEL_SCOPE_LOCK(locker_);
   }
   return INT32(status);
 }
@@ -1046,6 +1049,7 @@ android::status_t HWCSession::HandleGetDisplayConfigCount(const android::Parcel 
 android::status_t HWCSession::HandleGetDisplayAttributesForConfig(const android::Parcel
                                                                   *input_parcel,
                                                                   android::Parcel *output_parcel) {
+  SCOPE_LOCK(locker_);
   int config = input_parcel->readInt32();
   int dpy = input_parcel->readInt32();
   int error = android::BAD_VALUE;
@@ -1117,11 +1121,13 @@ android::status_t HWCSession::ConfigureRefreshRate(const android::Parcel *input_
 }
 
 android::status_t HWCSession::SetDisplayMode(const android::Parcel *input_parcel) {
+  SCOPE_LOCK(locker_);
   uint32_t mode = UINT32(input_parcel->readInt32());
   return hwc_display_[HWC_DISPLAY_PRIMARY]->Perform(HWCDisplayPrimary::SET_DISPLAY_MODE, mode);
 }
 
 android::status_t HWCSession::SetMaxMixerStages(const android::Parcel *input_parcel) {
+  SCOPE_LOCK(locker_);
   DisplayError error = kErrorNone;
   std::bitset<32> bit_mask_display_type = UINT32(input_parcel->readInt32());
   uint32_t max_mixer_stages = UINT32(input_parcel->readInt32());
@@ -1187,7 +1193,6 @@ android::status_t HWCSession::GetBWTransactionStatus(const android::Parcel *inpu
     }
     output_parcel->writeInt32(state);
   }
-
   return 0;
 }
 
@@ -1216,6 +1221,7 @@ void HWCSession::SetFrameDumpConfig(const android::Parcel *input_parcel) {
 }
 
 android::status_t HWCSession::SetMixerResolution(const android::Parcel *input_parcel) {
+  SCOPE_LOCK(locker_);
   DisplayError error = kErrorNone;
   uint32_t dpy = UINT32(input_parcel->readInt32());
 
@@ -1241,6 +1247,7 @@ android::status_t HWCSession::SetMixerResolution(const android::Parcel *input_pa
 }
 
 android::status_t HWCSession::SetColorModeOverride(const android::Parcel *input_parcel) {
+  SCOPE_LOCK(locker_);
   auto display = static_cast<hwc2_display_t >(input_parcel->readInt32());
   auto mode = static_cast<android_color_mode_t>(input_parcel->readInt32());
   auto device = static_cast<hwc2_device_t *>(this);
@@ -1256,7 +1263,7 @@ android::status_t HWCSession::SetColorModeById(const android::Parcel *input_parc
   auto device = static_cast<hwc2_device_t *>(this);
 
   if (display > HWC_DISPLAY_VIRTUAL) {
-    return android::BAD_VALUE;
+    return -EINVAL;
   }
 
   auto err = CallDisplayFunction(device, display, &HWCDisplay::SetColorModeById, mode);
@@ -1266,6 +1273,7 @@ android::status_t HWCSession::SetColorModeById(const android::Parcel *input_parc
 }
 
 void HWCSession::DynamicDebug(const android::Parcel *input_parcel) {
+  SCOPE_LOCK(locker_);
   int type = input_parcel->readInt32();
   bool enable = (input_parcel->readInt32() > 0);
   DLOGI("type = %d enable = %d", type, enable);
@@ -1306,6 +1314,7 @@ void HWCSession::DynamicDebug(const android::Parcel *input_parcel) {
 
 android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel,
                                              android::Parcel *output_parcel) {
+  SCOPE_LOCK(locker_);
   int ret = 0;
   int32_t *brightness_value = NULL;
   uint32_t display_id(0);
@@ -1511,7 +1520,7 @@ int HWCSession::HotPlugHandler(bool connected) {
   // To prevent sending events to client while a lock is held, acquire scope locks only within
   // below scope so that those get automatically unlocked after the scope ends.
   {
-    SEQUENCE_WAIT_SCOPE_LOCK(locker_);
+    SCOPE_LOCK(locker_);
 
     if (!hwc_display_[HWC_DISPLAY_PRIMARY]) {
       DLOGE("Primary display is not connected.");
@@ -1607,6 +1616,7 @@ int HWCSession::GetVsyncPeriod(int disp) {
 
 android::status_t HWCSession::GetVisibleDisplayRect(const android::Parcel *input_parcel,
                                                     android::Parcel *output_parcel) {
+  SCOPE_LOCK(locker_);
   int dpy = input_parcel->readInt32();
 
   if (dpy < HWC_DISPLAY_PRIMARY || dpy > HWC_DISPLAY_VIRTUAL) {
