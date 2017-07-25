@@ -38,9 +38,6 @@
 
 namespace sdm {
 
-class HWInfoInterface;
-class RotatorCtrl;
-
 class CoreImpl : public CoreInterface {
  public:
   // This class implements display core interface revision 1.0.
@@ -63,12 +60,11 @@ class CoreImpl : public CoreInterface {
 
  protected:
   Locker locker_;
-  BufferAllocator *buffer_allocator_;
-  BufferSyncHandler *buffer_sync_handler_;
+  BufferAllocator *buffer_allocator_ = NULL;
+  BufferSyncHandler *buffer_sync_handler_ = NULL;
   HWResourceInfo hw_resource_;
   CompManager comp_mgr_;
   HWInfoInterface *hw_info_intf_ = NULL;
-  RotatorInterface *rotator_intf_ = NULL;
   DynLib extension_lib_;
   ExtensionInterface *extension_intf_ = NULL;
   CreateExtensionInterface create_extension_intf_ = NULL;

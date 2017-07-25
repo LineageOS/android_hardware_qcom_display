@@ -40,7 +40,7 @@ namespace sdm {
 class CompManager : public DumpImpl {
  public:
   DisplayError Init(const HWResourceInfo &hw_res_info_, ExtensionInterface *extension_intf,
-                  BufferSyncHandler *buffer_sync_handler);
+                    BufferAllocator *buffer_allocator, BufferSyncHandler *buffer_sync_handler);
   DisplayError Deinit();
   DisplayError RegisterDisplay(DisplayType type, const HWDisplayAttributes &display_attributes,
                                const HWPanelInfo &hw_panel_info,
@@ -53,6 +53,7 @@ class CompManager : public DumpImpl {
                                   const DisplayConfigVariableInfo &fb_config);
   void PrePrepare(Handle display_ctx, HWLayers *hw_layers);
   DisplayError Prepare(Handle display_ctx, HWLayers *hw_layers);
+  DisplayError Commit(Handle display_ctx, HWLayers *hw_layers);
   DisplayError PostPrepare(Handle display_ctx, HWLayers *hw_layers);
   DisplayError ReConfigure(Handle display_ctx, HWLayers *hw_layers);
   DisplayError PostCommit(Handle display_ctx, HWLayers *hw_layers);
@@ -68,6 +69,7 @@ class CompManager : public DumpImpl {
   DisplayError SetMaxBandwidthMode(HWBwModes mode);
   DisplayError GetScaleLutConfig(HWScaleLutInfo *lut_info);
   DisplayError SetDetailEnhancerData(Handle display_ctx, const DisplayDetailEnhancerData &de_data);
+  DisplayError ControlDpps(bool enable);
 
   // DumpImpl method
   virtual void AppendDump(char *buffer, uint32_t length);
@@ -95,7 +97,6 @@ class CompManager : public DumpImpl {
 
   Locker locker_;
   ResourceInterface *resource_intf_ = NULL;
-  ResourceDefault resource_default_;
   std::bitset<kDisplayMax> registered_displays_;  // Bit mask of registered displays
   std::bitset<kDisplayMax> configured_displays_;  // Bit mask of sucessfully configured displays
   bool safe_mode_ = false;              // Flag to notify all displays to be in resource crunch
@@ -105,9 +106,9 @@ class CompManager : public DumpImpl {
   ExtensionInterface *extension_intf_ = NULL;
   uint32_t max_layers_ = kMaxSDELayers;
   uint32_t max_sde_ext_layers_ = 0;
+  DppsControlInterface *dpps_ctrl_intf_ = NULL;
 };
 
 }  // namespace sdm
 
 #endif  // __COMP_MANAGER_H__
-

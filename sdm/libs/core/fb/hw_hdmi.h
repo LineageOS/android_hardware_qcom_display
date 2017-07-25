@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -85,6 +85,7 @@ class HWHDMI : public HWDevice {
   virtual DisplayError SetDisplayAttributes(uint32_t index);
   virtual DisplayError GetConfigIndex(uint32_t mode, uint32_t *index);
   virtual DisplayError Validate(HWLayers *hw_layers);
+  virtual DisplayError Commit(HWLayers *hw_layers);
   virtual DisplayError SetS3DMode(HWS3DMode s3d_mode);
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate);
 
@@ -102,6 +103,7 @@ class HWHDMI : public HWDevice {
                                     HWDisplayAttributes *attrib);
   bool IsSupportedS3DMode(HWS3DMode s3d_mode);
   void UpdateMixerAttributes();
+  DisplayError UpdateHDRMetaData(HWLayers *hw_layers);
 
   DisplayError GetDynamicFrameRateMode(uint32_t refresh_rate, uint32_t*mode,
                                        DynamicFPSData *data, uint32_t *config_index);

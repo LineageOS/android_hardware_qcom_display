@@ -9,6 +9,19 @@ LOCAL_CFLAGS                  := -DLOG_TAG=\"SDM\" $(common_flags)
 LOCAL_SRC_FILES               := debug.cpp \
                                  rect.cpp \
                                  sys.cpp \
-                                 formats.cpp
+                                 formats.cpp \
+                                 utils.cpp
 
 include $(BUILD_SHARED_LIBRARY)
+
+SDM_HEADER_PATH := ../../include
+include $(CLEAR_VARS)
+LOCAL_COPY_HEADERS_TO         := $(common_header_export_path)/sdm/utils
+LOCAL_COPY_HEADERS             = $(SDM_HEADER_PATH)/utils/constants.h \
+                                 $(SDM_HEADER_PATH)/utils/debug.h \
+                                 $(SDM_HEADER_PATH)/utils/formats.h \
+                                 $(SDM_HEADER_PATH)/utils/locker.h \
+                                 $(SDM_HEADER_PATH)/utils/rect.h \
+                                 $(SDM_HEADER_PATH)/utils/sys.h \
+                                 $(SDM_HEADER_PATH)/utils/utils.h
+include $(BUILD_COPY_HEADERS)
