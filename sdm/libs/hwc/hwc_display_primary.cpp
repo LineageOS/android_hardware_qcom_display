@@ -99,8 +99,24 @@ int HWCDisplayPrimary::Init() {
     use_metadata_refresh_rate_ = false;
   }
 
-  return HWCDisplay::Init();
+  int status = HWCDisplay::Init();
+  if (status) {
+    return status;
+  }
+  color_mode_ = new HWCColorMode(display_intf_);
+  color_mode_->Init();
+
+  return status;
 }
+
+int HWCDisplayPrimary::Deinit() {
+  color_mode_->DeInit();
+  delete color_mode_;
+  color_mode_ = NULL;
+
+  return HWCDisplay::Deinit();
+}
+
 
 void HWCDisplayPrimary::ProcessBootAnimCompleted(hwc_display_contents_1_t *list) {
   uint32_t numBootUpLayers = 0;

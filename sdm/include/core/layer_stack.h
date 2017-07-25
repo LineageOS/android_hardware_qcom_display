@@ -149,6 +149,36 @@ struct LayerFlags {
   };
 };
 
+/*! @brief This structure defines flags associated with the layer requests. The 1-bit flag can be
+    set to ON(1) or OFF(0).
+
+  @sa Layer
+*/
+struct LayerRequestFlags {
+  union {
+    struct {
+      uint32_t tone_map : 1;  //!< This flag will be set by SDM when the layer needs tone map
+      uint32_t secure: 1;  //!< This flag will be set by SDM when the layer must be secure
+    };
+    uint32_t request_flags = 0;  //!< For initialization purpose only.
+                                 //!< Shall not be refered directly.
+  };
+};
+
+/*! @brief This structure defines LayerRequest.
+   Includes width/height/format of the LayerRequest.
+
+   SDM shall set the properties of LayerRequest to be used by the client
+
+  @sa LayerRequest
+*/
+struct LayerRequest {
+  LayerRequestFlags flags;  // Flags associated with this request
+  LayerBufferFormat format = kFormatRGBA8888;  // Requested format
+  uint32_t width = 0;  // Requested unaligned width.
+  uint32_t height = 0;  // Requested unalighed height
+};
+
 /*! @brief This structure defines flags associated with a layer stack. The 1-bit flag can be set to
   ON(1) or OFF(0).
 
@@ -189,6 +219,8 @@ struct LayerStackFlags {
 
       uint32_t post_processed_output : 1;  // If output_buffer should contain post processed output
                                            // This applies only to primary displays currently
+
+      uint32_t hdr_present : 1;  //!< Set if stack has HDR content
     };
 
     uint32_t flags = 0;               //!< For initialization purpose only.
@@ -292,6 +324,11 @@ struct Layer {
                                                    //!< no content is associated with the layer.
 
   LayerFlags flags;                                //!< Flags associated with this layer.
+
+  LayerRequest request = {};                       //!< o/p - request on this Layer by SDM.
+
+  Lut3d lut_3d = {};                               //!< o/p - Populated by SDM when tone mapping is
+                                                   //!< needed on this layer.
 };
 
 /*! @brief This structure defines a layer stack that contains layers which need to be composed and

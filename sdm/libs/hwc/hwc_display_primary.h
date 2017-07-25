@@ -37,6 +37,7 @@ class HWCDisplayPrimary : public HWCDisplay {
                     HWCDisplay **hwc_display);
   static void Destroy(HWCDisplay *hwc_display);
   virtual int Init();
+  virtual int Deinit();
   virtual int Prepare(hwc_display_contents_1_t *content_list);
   virtual int Commit(hwc_display_contents_1_t *content_list);
   virtual int Perform(uint32_t operation, ...);

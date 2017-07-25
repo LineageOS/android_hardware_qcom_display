@@ -251,6 +251,8 @@ DisplayError HWInfo::GetHWResourceInfo(HWResourceInfo *hw_resource) {
             hw_resource->has_concurrent_writeback = true;
           } else if (!strncmp(tokens[i], "avr", strlen("avr"))) {
             hw_resource->has_avr = true;
+          } else if (!strncmp(tokens[i], "hdr", strlen("hdr"))) {
+            hw_resource->has_hdr = true;
           }
         }
       } else if (!strncmp(tokens[0], "pipe_count", strlen("pipe_count"))) {
