@@ -118,7 +118,7 @@ class HWCToneMapper {
   HWCBufferAllocator *buffer_allocator_ = nullptr;
   uint32_t dump_frame_count_ = 0;
   uint32_t dump_frame_index_ = 0;
-  uint32_t fb_session_index_ = 0;
+  int fb_session_index_ = -1;
 };
 
 }  // namespace sdm
