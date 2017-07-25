@@ -199,6 +199,9 @@ struct LayerBufferFlags {
       uint32_t secure_display : 1;  //!< This flag shall be set by the client to indicate that the
                                     //!< secure display session is in progress. Secure display
                                     //!< session can not coexist with non-secure session.
+
+      uint32_t hdr : 1;             //!< This flag shall be set by the client to indicate that the
+                                    //!< the content is HDR.
     };
 
     uint32_t flags = 0;             //!< For initialization purpose only.
@@ -258,4 +261,3 @@ struct LayerBuffer {
 }  // namespace sdm
 
 #endif  // __LAYER_BUFFER_H__
-

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -46,6 +46,7 @@
 #include <sync/sync.h>
 #include <profiler.h>
 #include <bitset>
+#include <vector>
 
 #include "hwc_buffer_allocator.h"
 #include "hwc_buffer_sync_handler.h"
@@ -784,6 +785,10 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
     status = SetMixerResolution(input_parcel);
     break;
 
+  case qService::IQService::GET_HDR_CAPABILITIES:
+    status = GetHdrCapabilities(input_parcel, output_parcel);
+    break;
+
   default:
     DLOGW("QService command = %d is not supported", command);
     return -EINVAL;
@@ -1186,6 +1191,51 @@ android::status_t HWCSession::SetMixerResolution(const android::Parcel *input_pa
   error = hwc_display_[HWC_DISPLAY_PRIMARY]->SetMixerResolution(width, height);
   if (error != kErrorNone) {
     return -EINVAL;
+  }
+
+  return 0;
+}
+
+android::status_t HWCSession::GetHdrCapabilities(const android::Parcel *input_parcel,
+                                                 android::Parcel *output_parcel) {
+  uint32_t display_id = UINT32(input_parcel->readInt32());
+  if (display_id >= HWC_NUM_DISPLAY_TYPES) {
+    DLOGE("Invalid display id = %d", display_id);
+    return -EINVAL;
+  }
+
+  if (hwc_display_[display_id] == NULL) {
+    DLOGW("Display = %d not initialized", display_id);
+    return -EINVAL;
+  }
+
+  DisplayConfigFixedInfo fixed_info = {};
+  int ret = hwc_display_[display_id]->GetDisplayFixedConfig(&fixed_info);
+  if (ret) {
+    DLOGE("Failed");
+    return ret;
+  }
+
+  if (!fixed_info.hdr_supported) {
+    DLOGI("HDR is not supported");
+    return 0;
+  }
+
+  std::vector<int32_t> supported_hdr_types = {};
+  // Only HDR10 supported now, in future add other supported HDR formats(HLG, DolbyVision)
+  supported_hdr_types.push_back(HAL_HDR_HDR10);
+
+  static const float kLuminanceFactor = 10000.0;
+  // luminance is expressed in the unit of 0.0001 cd/m2, convert it to 1cd/m2.
+  float max_luminance = FLOAT(fixed_info.max_luminance)/kLuminanceFactor;
+  float max_average_luminance = FLOAT(fixed_info.average_luminance)/kLuminanceFactor;
+  float min_luminance = FLOAT(fixed_info.min_luminance)/kLuminanceFactor;
+
+  if (output_parcel != nullptr) {
+    output_parcel->writeInt32Vector(supported_hdr_types);
+    output_parcel->writeFloat(max_luminance);
+    output_parcel->writeFloat(max_average_luminance);
+    output_parcel->writeFloat(min_luminance);
   }
 
   return 0;

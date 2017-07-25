@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -36,6 +36,8 @@
 #include <linux/videodev2.h>
 #include <utils/debug.h>
 #include <utils/sys.h>
+#include <utils/formats.h>
+
 #include <vector>
 #include <map>
 #include <utility>
@@ -45,6 +47,104 @@
 #define __CLASS__ "HWHDMI"
 
 namespace sdm {
+
+#ifdef MDP_HDR_STREAM
+static int32_t GetEOTF(const GammaTransfer &transfer) {
+  int32_t mdp_transfer = -1;
+
+  switch (transfer) {
+  case Transfer_SMPTE_ST2084:
+    mdp_transfer = MDP_HDR_EOTF_SMTPE_ST2084;
+    break;
+  case Transfer_HLG:
+    mdp_transfer = MDP_HDR_EOTF_HLG;
+    break;
+  default:
+    DLOGW("Unknown Transfer: %d", transfer);
+  }
+
+  return mdp_transfer;
+}
+
+static int32_t GetColoriMetry(const LayerBuffer & layer_buffer) {
+  bool is_yuv = layer_buffer.flags.video;
+  int32_t colorimetry = -1;
+
+  if (is_yuv) {
+    switch (layer_buffer.color_metadata.colorPrimaries) {
+    case ColorPrimaries_BT601_6_525:
+    case ColorPrimaries_BT601_6_625:
+      colorimetry = MDP_COLORIMETRY_YCBCR_ITU_R_BT_601;
+      break;
+    case ColorPrimaries_BT709_5:
+      colorimetry = MDP_COLORIMETRY_YCBCR_ITU_R_BT_709;
+      break;
+    case ColorPrimaries_BT2020:
+      colorimetry = MDP_COLORIMETRY_YCBCR_ITU_R_BT_2020_YCBCR;
+      break;
+    default:
+      DLOGW("Unknown color primary = %d for YUV", layer_buffer.color_metadata.colorPrimaries);
+    }
+  }
+
+  return colorimetry;
+}
+
+static int32_t GetPixelEncoding(const LayerBuffer &layer_buffer) {
+  bool is_yuv = layer_buffer.flags.video;
+  int32_t mdp_pixel_encoding = -1;
+  mdp_pixel_encoding = MDP_PIXEL_ENCODING_RGB;  // set RGB as default
+
+  if (is_yuv) {
+    switch (layer_buffer.format) {
+    case kFormatYCbCr420SemiPlanarVenus:
+    case kFormatYCbCr420SPVenusUbwc:
+    case kFormatYCbCr420Planar:
+    case kFormatYCrCb420Planar:
+    case kFormatYCrCb420PlanarStride16:
+    case kFormatYCbCr420SemiPlanar:
+    case kFormatYCrCb420SemiPlanar:
+    case kFormatYCbCr420P010:
+    case kFormatYCbCr420TP10Ubwc:
+      mdp_pixel_encoding = MDP_PIXEL_ENCODING_YCBCR_420;
+      break;
+    case kFormatYCbCr422H2V1Packed:
+    case kFormatYCrCb422H2V1SemiPlanar:
+    case kFormatYCrCb422H1V2SemiPlanar:
+    case kFormatYCbCr422H2V1SemiPlanar:
+    case kFormatYCbCr422H1V2SemiPlanar:
+      mdp_pixel_encoding = MDP_PIXEL_ENCODING_YCBCR_422;
+      break;
+    default:  // other yuv formats
+      DLOGW("New YUV format = %d, need to add support", layer_buffer.format);
+      break;
+    }
+  }
+
+  return mdp_pixel_encoding;
+}
+static int32_t GetBitsPerComponent(const LayerBuffer &layer_buffer) {
+  bool is_yuv = layer_buffer.flags.video;
+  bool is_10_bit = Is10BitFormat(layer_buffer.format);
+  int32_t mdp_bpc = -1;
+
+  if (is_yuv) {
+    mdp_bpc = is_10_bit ? MDP_YUV_10_BPC : MDP_YUV_8_BPC;
+  } else {
+    mdp_bpc = is_10_bit ? MDP_RGB_10_BPC : MDP_RGB_8_BPC;
+  }
+
+  return mdp_bpc;
+}
+
+static uint32_t GetRange(const ColorRange &range) {
+  return ((range == Range_Full) ? MDP_DYNAMIC_RANGE_VESA : MDP_DYNAMIC_RANGE_CEA);
+}
+
+static uint32_t GetContentType(const LayerBuffer &layer_buffer) {
+  return (layer_buffer.flags.video ? MDP_CONTENT_TYPE_VIDEO : MDP_CONTENT_TYPE_GRAPHICS);
+}
+#endif
 
 static bool MapHDMIDisplayTiming(const msm_hdmi_mode_timing_info *mode,
                                  fb_var_screeninfo *info) {
@@ -322,6 +422,15 @@ DisplayError HWHDMI::GetConfigIndex(uint32_t mode, uint32_t *index) {
 DisplayError HWHDMI::Validate(HWLayers *hw_layers) {
   HWDevice::ResetDisplayParams();
   return HWDevice::Validate(hw_layers);
+}
+
+DisplayError HWHDMI::Commit(HWLayers *hw_layers) {
+  DisplayError error = UpdateHDRMetaData(hw_layers);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  return HWDevice::Commit(hw_layers);
 }
 
 DisplayError HWHDMI::GetHWScanInfo(HWScanInfo *scan_info) {
@@ -833,6 +942,85 @@ void HWHDMI::UpdateMixerAttributes() {
   mixer_attributes_.height = display_attributes_.y_pixels;
   mixer_attributes_.split_left = display_attributes_.is_device_split ?
       (display_attributes_.x_pixels / 2) : mixer_attributes_.width;
+}
+
+DisplayError HWHDMI::UpdateHDRMetaData(HWLayers *hw_layers) {
+  const HWHDRLayerInfo &hdr_layer_info = hw_layers->info.hdr_layer_info;
+  if (!hw_panel_info_.hdr_enabled || hdr_layer_info.operation == HWHDRLayerInfo::kNoOp) {
+    return kErrorNone;
+  }
+
+  DisplayError error = kErrorNone;
+
+#ifdef MDP_HDR_STREAM
+  char hdr_stream_path[kMaxStringLength] = {};
+  snprintf(hdr_stream_path, sizeof(hdr_stream_path), "%s%d/hdr_stream", fb_path_, fb_node_index_);
+
+  int fd = Sys::open_(hdr_stream_path, O_WRONLY);
+  if (fd < 0) {
+    DLOGE("Failed to open %s with error %s", hdr_stream_path, strerror(errno));
+    return kErrorFileDescriptor;
+  }
+
+  Layer hdr_layer = {};
+  if (hdr_layer_info.operation == HWHDRLayerInfo::kSet && hdr_layer_info.layer_index > -1) {
+    hdr_layer = *(hw_layers->info.stack->layers.at(UINT32(hdr_layer_info.layer_index)));
+  }
+
+  const LayerBuffer *layer_buffer = &hdr_layer.input_buffer;
+  const MasteringDisplay &mastering_display = layer_buffer->color_metadata.masteringDisplayInfo;
+  const ContentLightLevel &light_level = layer_buffer->color_metadata.contentLightLevel;
+  const Primaries &primaries = mastering_display.primaries;
+
+  mdp_hdr_stream hdr_stream = {};
+  if (hdr_layer_info.operation == HWHDRLayerInfo::kSet) {
+    int32_t eotf = GetEOTF(layer_buffer->color_metadata.transfer);
+    hdr_stream.eotf = (eotf < 0) ? 0 : UINT32(eotf);
+    hdr_stream.white_point_x = primaries.whitePoint[0];
+    hdr_stream.white_point_y = primaries.whitePoint[1];
+    hdr_stream.display_primaries_x[0] = primaries.rgbPrimaries[0][0];
+    hdr_stream.display_primaries_y[0] = primaries.rgbPrimaries[0][1];
+    hdr_stream.display_primaries_x[1] = primaries.rgbPrimaries[1][0];
+    hdr_stream.display_primaries_y[1] = primaries.rgbPrimaries[1][1];
+    hdr_stream.display_primaries_x[2] = primaries.rgbPrimaries[2][0];
+    hdr_stream.display_primaries_y[2] = primaries.rgbPrimaries[2][1];
+    hdr_stream.min_luminance = mastering_display.minDisplayLuminance;
+    hdr_stream.max_luminance = mastering_display.maxDisplayLuminance/10000;
+    hdr_stream.max_content_light_level = light_level.maxContentLightLevel;
+    hdr_stream.max_average_light_level = light_level.minPicAverageLightLevel;
+    // DP related
+    int32_t pixel_encoding = GetPixelEncoding(hdr_layer.input_buffer);
+    hdr_stream.pixel_encoding = (pixel_encoding < 0) ? 0 : UINT32(pixel_encoding);
+    int32_t colorimetry = GetColoriMetry(hdr_layer.input_buffer);
+    hdr_stream.colorimetry = (colorimetry < 0) ? 0 : UINT32(colorimetry);
+    hdr_stream.range = GetRange(hdr_layer.input_buffer.color_metadata.range);
+    int32_t bits_per_component = GetBitsPerComponent(hdr_layer.input_buffer);
+    hdr_stream.bits_per_component = (bits_per_component  < 0) ? 0 : UINT32(bits_per_component);
+    hdr_stream.content_type = GetContentType(hdr_layer.input_buffer);
+
+    DLOGV_IF(kTagDriverConfig, "HDR Stream : MaxDisplayLuminance = %d MinDisplayLuminance = %d\n"
+      "MaxContentLightLevel = %d MaxAverageLightLevel = %d Red_x = %d Red_y = %d Green_x = %d\n"
+      "Green_y = %d Blue_x = %d Blue_y = %d WhitePoint_x = %d WhitePoint_y = %d EOTF = %d\n"
+      "PixelEncoding = %d Colorimetry = %d Range = %d BPC = %d ContentType = %d",
+      hdr_stream.max_luminance, hdr_stream.min_luminance, hdr_stream.max_content_light_level,
+      hdr_stream.max_average_light_level, hdr_stream.display_primaries_x[0],
+      hdr_stream.display_primaries_y[0], hdr_stream.display_primaries_x[1],
+      hdr_stream.display_primaries_y[1], hdr_stream.display_primaries_x[2],
+      hdr_stream.display_primaries_y[2], hdr_stream.white_point_x, hdr_stream.white_point_x,
+      hdr_stream.eotf, hdr_stream.pixel_encoding, hdr_stream.colorimetry, hdr_stream.range,
+      hdr_stream.bits_per_component, hdr_stream.content_type);
+  }
+
+  const void *hdr_metadata = reinterpret_cast<const void*>(&hdr_stream);
+  ssize_t len = Sys::pwrite_(fd, hdr_metadata, sizeof(hdr_stream), 0);
+  if (len <= 0) {
+    DLOGE("Failed to write hdr_metadata");
+    error = kErrorUndefined;
+  }
+  Sys::close_(fd);
+#endif
+
+  return error;
 }
 
 }  // namespace sdm

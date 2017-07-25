@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -40,10 +40,12 @@
 #include <map>
 #include <utility>
 #include <vector>
+#include <string>
 
-#include "hwc_display.h"
-#include "hwc_debugger.h"
 #include "blit_engine_c2d.h"
+#include "hwc_debugger.h"
+#include "hwc_display.h"
+#include "hwc_tonemapper.h"
 
 #ifdef QTI_BSP
 #include <hardware/display_defs.h>
@@ -62,6 +64,80 @@ static void ApplyDeInterlaceAdjustment(Layer *layer) {
   }
 }
 
+void HWCColorMode::Init() {
+  int ret = PopulateColorModes();
+  if (ret != 0) {
+    DLOGW("Failed!!");
+  }
+  return;
+}
+
+int HWCColorMode::SetColorMode(const std::string &color_mode) {
+  if (color_modes_.empty()) {
+    DLOGW("No Color Modes supported");
+    return -1;
+  }
+
+  std::vector<std::string>::iterator it = std::find(color_modes_.begin(), color_modes_.end(),
+                                                    color_mode);
+  if (it == color_modes_.end()) {
+    DLOGE("Invalid colorMode request: %s", color_mode.c_str());
+    return -1;
+  }
+
+  DisplayError error = display_intf_->SetColorMode(color_mode);
+  if (error != kErrorNone) {
+    DLOGE("Failed to set color_mode = %s", color_mode.c_str());
+    return -1;
+  }
+  current_color_mode_ = color_mode;
+
+  return 0;
+}
+
+const std::vector<std::string> &HWCColorMode::GetColorModes() {
+  return color_modes_;
+}
+
+int HWCColorMode::SetColorTransform(uint32_t matrix_count, const float *matrix) {
+  if (matrix_count > kColorTransformMatrixCount) {
+    DLOGE("Transform matrix count = %d, exceeds max = %d", matrix_count,
+          kColorTransformMatrixCount);
+    return -1;
+  }
+
+  double color_matrix[kColorTransformMatrixCount] = {0};
+  CopyColorTransformMatrix(matrix, color_matrix);
+  DisplayError error = display_intf_->SetColorTransform(matrix_count, color_matrix);
+  if (error != kErrorNone) {
+    DLOGE("Failed!");
+    return -1;
+  }
+
+  return 0;
+}
+
+int HWCColorMode::PopulateColorModes() {
+  uint32_t color_mode_count = 0;
+  DisplayError error = display_intf_->GetColorModeCount(&color_mode_count);
+  if (error != kErrorNone || (color_mode_count == 0)) {
+    return -1;
+  }
+
+  DLOGI("Color Mode count = %d", color_mode_count);
+
+  color_modes_.resize(color_mode_count);
+
+  // SDM returns modes which is string
+  error = display_intf_->GetColorModes(&color_mode_count, &color_modes_);
+  if (error != kErrorNone) {
+    DLOGE("GetColorModes Failed for count = %d", color_mode_count);
+    return -1;
+  }
+
+  return 0;
+}
+
 HWCDisplay::HWCDisplay(CoreInterface *core_intf, hwc_procs_t const **hwc_procs, DisplayType type,
                        int id, bool needs_blit, qService::QService *qservice,
                        DisplayClass display_class)
@@ -75,6 +151,11 @@ int HWCDisplay::Init() {
     DLOGE("Display create failed. Error = %d display_type %d event_handler %p disp_intf %p",
       error, type_, this, &display_intf_);
     return -EINVAL;
+  }
+
+  HWCDebugHandler::Get()->GetProperty("sys.hwc_disable_hdr", &disable_hdr_handling_);
+  if (disable_hdr_handling_) {
+    DLOGI("HDR Handling disabled");
   }
 
   int property_swap_interval = 1;
@@ -97,6 +178,8 @@ int HWCDisplay::Init() {
       }
     }
   }
+
+  tone_mapper_ = new HWCToneMapper();
 
   display_intf_->GetRefreshRateRange(&min_refresh_rate_, &max_refresh_rate_);
   current_refresh_rate_ = max_refresh_rate_;
@@ -124,6 +207,9 @@ int HWCDisplay::Deinit() {
     delete blit_engine_;
     blit_engine_ = NULL;
   }
+
+  delete tone_mapper_;
+  tone_mapper_ = NULL;
 
   return 0;
 }
@@ -170,6 +256,7 @@ int HWCDisplay::SetPowerMode(int mode) {
     // Do not flush until a buffer is successfully submitted again.
     flush_on_error = false;
     state = kStateOff;
+    tone_mapper_->Terminate();
     break;
 
   case HWC_POWER_MODE_NORMAL:
@@ -269,6 +356,10 @@ void HWCDisplay::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type
 
   if (blit_engine_) {
     blit_engine_->SetFrameDumpConfig(count);
+  }
+
+  if (tone_mapper_) {
+    tone_mapper_->SetFrameDumpConfig(count);
   }
 
   DLOGI("num_frame_dump %d, input_layer_dump_enable %d", dump_frame_count_, dump_input_layers_);
@@ -659,6 +750,15 @@ int HWCDisplay::CommitLayerStack(hwc_display_contents_1_t *content_list) {
       }
     }
 
+    if (layer_stack_.flags.hdr_present) {
+      status = tone_mapper_->HandleToneMap(content_list, &layer_stack_);
+      if (status != 0) {
+        DLOGE("Error handling HDR in ToneMapper");
+      }
+    } else {
+      tone_mapper_->Terminate();
+    }
+
     DisplayError error = kErrorUndefined;
     if (status == 0) {
       error = display_intf_->Commit(&layer_stack_);
@@ -693,6 +793,11 @@ int HWCDisplay::PostCommitLayerStack(hwc_display_contents_1_t *content_list) {
   // Do no call flush on errors, if a successful buffer is never submitted.
   if (flush_ && flush_on_error_) {
     display_intf_->Flush();
+  }
+
+
+  if (tone_mapper_ && tone_mapper_->IsActive()) {
+     tone_mapper_->PostCommit(&layer_stack_);
   }
 
   // Set the release fence fd to the blit engine
@@ -1235,6 +1340,15 @@ DisplayError HWCDisplay::SetMetaData(const private_handle_t *pvt_handle, Layer *
       return kErrorNotSupported;
   }
 
+  bool hdr_layer = layer_buffer->color_metadata.colorPrimaries == ColorPrimaries_BT2020 &&
+                   (layer_buffer->color_metadata.transfer == Transfer_SMPTE_ST2084 ||
+                   layer_buffer->color_metadata.transfer == Transfer_HLG);
+  if (hdr_layer && !disable_hdr_handling_) {
+    // dont honor HDR when its handling is disabled
+    layer_buffer->flags.hdr = true;
+    layer_stack_.flags.hdr_present = true;
+  }
+
   if (meta_data->operation & SET_IGC) {
     if (SetIGC(meta_data->igc, &layer_buffer->igc) != kErrorNone) {
       return kErrorNotSupported;
@@ -1350,6 +1464,10 @@ int HWCDisplay::GetDisplayConfigCount(uint32_t *count) {
 int HWCDisplay::GetDisplayAttributesForConfig(int config,
                                             DisplayConfigVariableInfo *display_attributes) {
   return display_intf_->GetConfig(UINT32(config), display_attributes) == kErrorNone ? 0 : -1;
+}
+
+int HWCDisplay::GetDisplayFixedConfig(DisplayConfigFixedInfo *fixed_info) {
+  return display_intf_->GetConfig(fixed_info) == kErrorNone ? 0 : -1;
 }
 
 // TODO(user): HWC needs to know updating for dyn_fps, cpu hint features,

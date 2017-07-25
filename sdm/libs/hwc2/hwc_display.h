@@ -177,6 +177,10 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error GetReleaseFences(uint32_t *out_num_elements, hwc2_layer_t *out_layers,
                                        int32_t *out_fences);
   virtual HWC2::Error Present(int32_t *out_retire_fence) = 0;
+  virtual HWC2::Error GetHdrCapabilities(uint32_t *out_num_types, int32_t* out_types,
+                                         float* out_max_luminance,
+                                         float* out_max_average_luminance,
+                                         float* out_min_luminance);
 
  protected:
   enum DisplayStatus {

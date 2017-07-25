@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -22,48 +22,19 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef __DISPLAY_VIRTUAL_H__
-#define __DISPLAY_VIRTUAL_H__
-
-#include <private/hw_info_types.h>
-#include "display_base.h"
-#include "dump_impl.h"
+#ifndef __DPPS_CONTROL_INTERFACE_H__
+#define __DPPS_CONTROL_INTERFACE_H__
 
 namespace sdm {
 
-class HWVirtualInterface;
-
-class DisplayVirtual : public DisplayBase {
+class DppsControlInterface {
  public:
-  DisplayVirtual(DisplayEventHandler *event_handler, HWInfoInterface *hw_info_intf,
-                 BufferSyncHandler *buffer_sync_handler, CompManager *comp_manager);
-  virtual DisplayError Init();
-  virtual DisplayError Prepare(LayerStack *layer_stack);
-  virtual DisplayError GetNumVariableInfoConfigs(uint32_t *count);
-  virtual DisplayError GetConfig(uint32_t index, DisplayConfigVariableInfo *variable_info);
-  virtual DisplayError GetActiveConfig(uint32_t *index);
-  virtual DisplayError SetActiveConfig(uint32_t index) {
-    return kErrorNotSupported;
-  }
-  virtual DisplayError SetActiveConfig(DisplayConfigVariableInfo *variable_info);
-  virtual DisplayError SetMixerResolution(uint32_t width, uint32_t height) {
-    return kErrorNotSupported;
-  }
-  virtual DisplayError SetVSyncState(bool enable) {
-    return kErrorNotSupported;
-  }
-  virtual DisplayError SetRefreshRate(uint32_t refresh_rate) {
-    return kErrorNotSupported;
-  }
-  virtual DisplayError GetMixerResolution(uint32_t *width, uint32_t *height) {
-    return kErrorNotSupported;
-  }
-  virtual DisplayError SetDetailEnhancerData(const DisplayDetailEnhancerData &de_data) {
-    return kErrorNotSupported;
-  }
+  virtual ~DppsControlInterface() { }
+  virtual DisplayError On() = 0;
+  virtual DisplayError Off() = 0;
 };
 
 }  // namespace sdm
 
-#endif  // __DISPLAY_VIRTUAL_H__
+#endif  // __DPPS_CONTROL_INTERFACE_H__
 
