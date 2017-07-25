@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -141,6 +141,10 @@ struct DisplayConfigFixedInfo {
   bool underscan = false;   //!< If display support CE underscan.
   bool secure = false;      //!< If this display is capable of handling secure content.
   bool is_cmdmode = false;  //!< If panel is command mode panel.
+  bool hdr_supported = false;  //!< if HDR is enabled
+  uint32_t max_luminance = 0;  //!< From Panel's peak luminance
+  uint32_t average_luminance = 0;  //!< From Panel's average luminance
+  uint32_t min_luminance = 0;  //!< From Panel's blackness level
 };
 
 /*! @brief This structure defines configuration for variable properties of a display device.

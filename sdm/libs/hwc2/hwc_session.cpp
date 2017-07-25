@@ -96,7 +96,8 @@ int HWCSession::Init() {
   }
 
   DisplayError error = CoreInterface::CreateCore(HWCDebugHandler::Get(), &buffer_allocator_,
-                                                 &buffer_sync_handler_, &core_intf_);
+                                                 &buffer_sync_handler_, &socket_handler_,
+                                                 &core_intf_);
   if (error != kErrorNone) {
     DLOGE("Display core initialization failed. Error = %d", error);
     return -EINVAL;
@@ -368,8 +369,9 @@ static int32_t GetHdrCapabilities(hwc2_device_t* device, hwc2_display_t display,
                                   uint32_t* out_num_types, int32_t* out_types,
                                   float* out_max_luminance, float* out_max_average_luminance,
                                   float* out_min_luminance) {
-  *out_num_types = 0;
-  return HWC2_ERROR_NONE;
+  return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::GetHdrCapabilities,
+                                         out_num_types, out_types, out_max_luminance,
+                                         out_max_average_luminance, out_min_luminance);
 }
 
 static uint32_t GetMaxVirtualDisplayCount(hwc2_device_t *device) {

@@ -35,19 +35,25 @@ namespace sdm {
 
 DisplayError CompManager::Init(const HWResourceInfo &hw_res_info,
                                ExtensionInterface *extension_intf,
-                               BufferSyncHandler *buffer_sync_handler) {
+                               BufferAllocator *buffer_allocator,
+                               BufferSyncHandler *buffer_sync_handler,
+                               SocketHandler *socket_handler) {
   SCOPE_LOCK(locker_);
 
   DisplayError error = kErrorNone;
 
   if (extension_intf) {
-    error = extension_intf->CreateResourceExtn(hw_res_info, &resource_intf_, buffer_sync_handler);
+    error = extension_intf->CreateResourceExtn(hw_res_info, &resource_intf_, buffer_allocator,
+                                               buffer_sync_handler);
+    extension_intf->CreateDppsControlExtn(&dpps_ctrl_intf_, socket_handler);
   } else {
-    resource_intf_ = &resource_default_;
-    error = resource_default_.Init(hw_res_info);
+    error = ResourceDefault::CreateResourceDefault(hw_res_info, &resource_intf_);
   }
 
   if (error != kErrorNone) {
+    if (extension_intf) {
+      extension_intf->DestroyDppsControlExtn(dpps_ctrl_intf_);
+    }
     return error;
   }
 
@@ -62,8 +68,9 @@ DisplayError CompManager::Deinit() {
 
   if (extension_intf_) {
     extension_intf_->DestroyResourceExtn(resource_intf_);
+    extension_intf_->DestroyDppsControlExtn(dpps_ctrl_intf_);
   } else {
-    resource_default_.Deinit();
+    ResourceDefault::DestroyResourceDefault(resource_intf_);
   }
 
   return kErrorNone;
@@ -272,8 +279,8 @@ DisplayError CompManager::Prepare(Handle display_ctx, HWLayers *hw_layers) {
     }
 
     if (!exit) {
-      error = resource_intf_->Acquire(display_resource_ctx, hw_layers);
-      // Exit if successfully allocated resource, else try next strategy.
+      error = resource_intf_->Prepare(display_resource_ctx, hw_layers);
+      // Exit if successfully prepared resource, else try next strategy.
       exit = (error == kErrorNone);
     }
   }
@@ -304,6 +311,15 @@ DisplayError CompManager::PostPrepare(Handle display_ctx, HWLayers *hw_layers) {
   return kErrorNone;
 }
 
+DisplayError CompManager::Commit(Handle display_ctx, HWLayers *hw_layers) {
+  SCOPE_LOCK(locker_);
+
+  DisplayCompositionContext *display_comp_ctx =
+                             reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+
+  return resource_intf_->Commit(display_comp_ctx->display_resource_ctx, hw_layers);
+}
+
 DisplayError CompManager::ReConfigure(Handle display_ctx, HWLayers *hw_layers) {
   SCOPE_LOCK(locker_);
 
@@ -313,7 +329,7 @@ DisplayError CompManager::ReConfigure(Handle display_ctx, HWLayers *hw_layers) {
 
   DisplayError error = kErrorUndefined;
   resource_intf_->Start(display_resource_ctx);
-  error = resource_intf_->Acquire(display_resource_ctx, hw_layers);
+  error = resource_intf_->Prepare(display_resource_ctx, hw_layers);
 
   if (error != kErrorNone) {
     DLOGE("Reconfigure failed for display = %d", display_comp_ctx->display_type);
@@ -359,6 +375,8 @@ void CompManager::Purge(Handle display_ctx) {
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
   resource_intf_->Purge(display_comp_ctx->display_resource_ctx);
+
+  display_comp_ctx->strategy->Purge();
 }
 
 void CompManager::ProcessIdleTimeout(Handle display_ctx) {
@@ -497,5 +515,12 @@ DisplayError CompManager::SetDetailEnhancerData(Handle display_ctx,
   return resource_intf_->SetDetailEnhancerData(display_comp_ctx->display_resource_ctx, de_data);
 }
 
-}  // namespace sdm
+DisplayError CompManager::ControlDpps(bool enable) {
+  if (dpps_ctrl_intf_) {
+    return enable ? dpps_ctrl_intf_->On() : dpps_ctrl_intf_->Off();
+  }
 
+  return kErrorNone;
+}
+
+}  // namespace sdm

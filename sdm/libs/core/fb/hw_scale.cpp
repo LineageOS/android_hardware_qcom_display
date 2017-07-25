@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -198,17 +198,11 @@ void HWScaleV2::SetHWScaleData(const HWScaleData &scale_data, uint32_t index,
                         (scale_data.lut_flag.lut_y_sep_wr ? SCALER_LUT_Y_SEP_WR : 0) |
                         (scale_data.lut_flag.lut_uv_sep_wr ? SCALER_LUT_UV_SEP_WR : 0);
 
-  // lut indicies - index starts from 0, hence subtract by 1 when > 0
-  mdp_scale->dir_lut_idx = (scale_data.dir_lut_idx > 0) ? scale_data.dir_lut_idx - 1 :
-                                                          scale_data.dir_lut_idx;
-  mdp_scale->y_rgb_cir_lut_idx = (scale_data.y_rgb_cir_lut_idx  > 0) ?
-                                  scale_data.y_rgb_cir_lut_idx - 1 : scale_data.y_rgb_cir_lut_idx;
-  mdp_scale->uv_cir_lut_idx = (scale_data.uv_cir_lut_idx > 0) ? scale_data.uv_cir_lut_idx - 1 :
-                               scale_data.uv_cir_lut_idx;
-  mdp_scale->y_rgb_sep_lut_idx = (scale_data.y_rgb_sep_lut_idx  > 0) ?
-                                  scale_data.y_rgb_sep_lut_idx - 1 : scale_data.y_rgb_sep_lut_idx;
-  mdp_scale->uv_sep_lut_idx = (scale_data.uv_sep_lut_idx  > 0) ? scale_data.uv_sep_lut_idx - 1 :
-                               scale_data.uv_sep_lut_idx;
+  mdp_scale->dir_lut_idx = scale_data.dir_lut_idx;
+  mdp_scale->y_rgb_cir_lut_idx = scale_data.y_rgb_cir_lut_idx;
+  mdp_scale->uv_cir_lut_idx = scale_data.uv_cir_lut_idx;
+  mdp_scale->y_rgb_sep_lut_idx = scale_data.y_rgb_sep_lut_idx;
+  mdp_scale->uv_sep_lut_idx = scale_data.uv_sep_lut_idx;
 
   if (mdp_scale->enable & ENABLE_DETAIL_ENHANCE) {
     mdp_det_enhance_data *mdp_det_enhance = &mdp_scale->detail_enhance;

@@ -185,6 +185,7 @@ class HWCSession : hwc2_device_t, public qClient::BnQClient {
   bool need_invalidate_ = false;
   int bw_mode_release_fd_ = -1;
   qService::QService *qservice_ = NULL;
+  HWCSocketHandler socket_handler_;
 };
 
 }  // namespace sdm

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -27,40 +27,49 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*! @file socket_handler.h
+  @brief Interface file for platform specific Socket Handler.
 
-#ifndef __HWC_BUFFER_ALLOCATOR_H__
-#define __HWC_BUFFER_ALLOCATOR_H__
+  @details SDM will use this interface to get the platform specific Socket fd.
+*/
 
-#include <sys/mman.h>
-#include <fcntl.h>
-
-namespace gralloc {
-
-class IAllocController;
-
-}  // namespace gralloc
+#ifndef __SOCKET_HANDLER_H__
+#define __SOCKET_HANDLER_H__
 
 namespace sdm {
 
-class HWCBufferAllocator : public BufferAllocator {
+/*! @brief This enum represents Socket types, for which SDM can request the fd.
+
+*/
+enum SocketType {
+  kDpps,       //!< Socket for Dpps
+};
+
+/*! @brief Socket handler implemented by the client
+
+  @details This class declares prototype for SocketHandler methods which must be
+  implemented by client. SDM will use these methods to get the platform specific Socket fd.
+
+  @sa CoreInterface::CreateCore
+*/
+class SocketHandler {
  public:
-  HWCBufferAllocator();
+  /*! @brief Method to get the platform specific Socket fd for a given socket type.
 
-  DisplayError AllocateBuffer(BufferInfo *buffer_info);
-  DisplayError FreeBuffer(BufferInfo *buffer_info);
-  uint32_t GetBufferSize(BufferInfo *buffer_info);
+    @details This method returns the platform specific Socket fd for a given socket type.
+    It is the responsibility of the caller to close the file descriptor.
 
-  int SetBufferInfo(LayerBufferFormat format, int *target, int *flags);
+    @param[in] socket_type
 
- private:
-  struct MetaBufferInfo {
-    int alloc_type;              //!< Specifies allocation type set by the buffer allocator.
-    void *base_addr;             //!< Specifies the base address of the allocated output buffer.
-  };
+    @return \link int \endlink
+  */
 
-  gralloc::IAllocController *alloc_controller_;
+  virtual int GetSocketFd(SocketType socket_type) = 0;
+
+ protected:
+  virtual ~SocketHandler() { }
 };
 
 }  // namespace sdm
-#endif  // __HWC_BUFFER_ALLOCATOR_H__
 
+#endif  // __SOCKET_HANDLER_H__

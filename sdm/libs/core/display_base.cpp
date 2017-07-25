@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -41,11 +41,10 @@ namespace sdm {
 // TODO(user): Have a single structure handle carries all the interface pointers and variables.
 DisplayBase::DisplayBase(DisplayType display_type, DisplayEventHandler *event_handler,
                          HWDeviceType hw_device_type, BufferSyncHandler *buffer_sync_handler,
-                         CompManager *comp_manager, RotatorInterface *rotator_intf,
-                         HWInfoInterface *hw_info_intf)
+                         CompManager *comp_manager, HWInfoInterface *hw_info_intf)
   : display_type_(display_type), event_handler_(event_handler), hw_device_type_(hw_device_type),
     buffer_sync_handler_(buffer_sync_handler), comp_manager_(comp_manager),
-    rotator_intf_(rotator_intf), hw_info_intf_(hw_info_intf) {
+    hw_info_intf_(hw_info_intf) {
 }
 
 DisplayError DisplayBase::Init() {
@@ -84,13 +83,6 @@ DisplayError DisplayBase::Init() {
     goto CleanupOnError;
   }
 
-  if (rotator_intf_) {
-    error = rotator_intf_->RegisterDisplay(display_type_, &display_rotator_ctx_);
-    if (error != kErrorNone) {
-      goto CleanupOnError;
-    }
-  }
-
   if (hw_info_intf_) {
     HWResourceInfo hw_resource_info = HWResourceInfo();
     hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
@@ -106,7 +98,11 @@ DisplayError DisplayBase::Init() {
                                display_attributes_, hw_panel_info_);
   if (!color_mgr_) {
     DLOGW("Unable to create ColorManagerProxy for display = %d", display_type_);
+  } else if (InitializeColorModes() != kErrorNone) {
+    DLOGW("InitColorModes failed for display = %d", display_type_);
   }
+
+  Debug::Get()->GetProperty("sdm.disable_hdr_lut_gen", &disable_hdr_lut_gen_);
 
   return kErrorNone;
 
@@ -120,9 +116,9 @@ CleanupOnError:
 
 DisplayError DisplayBase::Deinit() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-  if (rotator_intf_) {
-    rotator_intf_->UnregisterDisplay(display_rotator_ctx_);
-  }
+
+  color_modes_.clear();
+  color_mode_map_.clear();
 
   if (color_mgr_) {
     delete color_mgr_;
@@ -210,6 +206,12 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
     return error;
   }
 
+  error = HandleHDR(layer_stack);
+  if (error != kErrorNone) {
+    DLOGW("HandleHDR failed");
+    return error;
+  }
+
   if (color_mgr_ && color_mgr_->NeedsPartialUpdateDisable()) {
     DisablePartialUpdateOneFrame();
   }
@@ -229,29 +231,15 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
       break;
     }
 
-    if (IsRotationRequired(&hw_layers_)) {
-      if (!rotator_intf_) {
-        continue;
-      }
-      error = rotator_intf_->Prepare(display_rotator_ctx_, &hw_layers_);
-    } else {
-      // Release all the previous rotator sessions.
-      if (rotator_intf_) {
-        error = rotator_intf_->Purge(display_rotator_ctx_);
-      }
-    }
-
+    error = hw_intf_->Validate(&hw_layers_);
     if (error == kErrorNone) {
-      error = hw_intf_->Validate(&hw_layers_);
-      if (error == kErrorNone) {
-        // Strategy is successful now, wait for Commit().
-        pending_commit_ = true;
-        break;
-      }
-      if (error == kErrorShutDown) {
-        comp_manager_->PostPrepare(display_comp_ctx_, &hw_layers_);
-        return error;
-      }
+      // Strategy is successful now, wait for Commit().
+      pending_commit_ = true;
+      break;
+    }
+    if (error == kErrorShutDown) {
+      comp_manager_->PostPrepare(display_comp_ctx_, &hw_layers_);
+      return error;
     }
   }
 
@@ -293,8 +281,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     }
   }
 
-  if (rotator_intf_ && IsRotationRequired(&hw_layers_)) {
-    error = rotator_intf_->Commit(display_rotator_ctx_, &hw_layers_);
+  if (comp_manager_->Commit(display_comp_ctx_, &hw_layers_)) {
     if (error != kErrorNone) {
       return error;
     }
@@ -311,13 +298,6 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
   error = hw_intf_->Commit(&hw_layers_);
   if (error != kErrorNone) {
     return error;
-  }
-
-  if (rotator_intf_ && IsRotationRequired(&hw_layers_)) {
-    error = rotator_intf_->PostCommit(display_rotator_ctx_, &hw_layers_);
-    if (error != kErrorNone) {
-      return error;
-    }
   }
 
   if (partial_update_control_) {
@@ -343,17 +323,7 @@ DisplayError DisplayBase::Flush() {
   hw_layers_.info.count = 0;
   error = hw_intf_->Flush();
   if (error == kErrorNone) {
-    // Release all the rotator sessions.
-    if (rotator_intf_) {
-      error = rotator_intf_->Purge(display_rotator_ctx_);
-      if (error != kErrorNone) {
-        DLOGE("Rotator purge failed for display %d", display_type_);
-        return error;
-      }
-    }
-
     comp_manager_->Purge(display_comp_ctx_);
-
     pending_commit_ = false;
   } else {
     DLOGW("Unable to flush display = %d", display_type_);
@@ -388,9 +358,18 @@ DisplayError DisplayBase::GetConfig(uint32_t index, DisplayConfigVariableInfo *v
   return kErrorNotSupported;
 }
 
-DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *variable_info) {
+DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-  variable_info->is_cmdmode = (hw_panel_info_.mode == kModeCommand);
+  fixed_info->is_cmdmode = (hw_panel_info_.mode == kModeCommand);
+
+  HWResourceInfo hw_resource_info = HWResourceInfo();
+  hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
+  // hdr can be supported by display when target and panel supports HDR.
+  fixed_info->hdr_supported = (hw_resource_info.has_hdr && hw_panel_info_.hdr_enabled);
+  // Populate luminance values only if hdr will be supported on that display
+  fixed_info->max_luminance = fixed_info->hdr_supported ? hw_panel_info_.peak_luminance: 0;
+  fixed_info->average_luminance = fixed_info->hdr_supported ? hw_panel_info_.average_luminance : 0;
+  fixed_info->min_luminance = fixed_info->hdr_supported ?  hw_panel_info_.blackness_level: 0;
 
   return kErrorNone;
 }
@@ -428,17 +407,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state) {
     hw_layers_.info.count = 0;
     error = hw_intf_->Flush();
     if (error == kErrorNone) {
-      // Release all the rotator sessions.
-      if (rotator_intf_) {
-        error = rotator_intf_->Purge(display_rotator_ctx_);
-        if (error != kErrorNone) {
-          DLOGE("Rotator purge failed for display %d", display_type_);
-          return error;
-        }
-      }
-
       comp_manager_->Purge(display_comp_ctx_);
-
       error = hw_intf_->PowerOff();
     }
     break;
@@ -646,21 +615,6 @@ void DisplayBase::AppendDump(char *buffer, uint32_t length) {
   }
 }
 
-bool DisplayBase::IsRotationRequired(HWLayers *hw_layers) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
-  HWLayersInfo &layer_info = hw_layers->info;
-
-  for (uint32_t i = 0; i < layer_info.count; i++) {
-    HWRotatorSession *hw_rotator_session = &hw_layers->config[i].hw_rotator_session;
-
-    if (hw_rotator_session->hw_block_count) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
 const char * DisplayBase::GetName(const LayerComposition &composition) {
   switch (composition) {
   case kCompositionGPU:         return "GPU";
@@ -694,11 +648,6 @@ DisplayError DisplayBase::GetColorModeCount(uint32_t *mode_count) {
     return kErrorNotSupported;
   }
 
-  DisplayError error = color_mgr_->ColorMgrGetNumOfModes(&num_color_modes_);
-  if (error != kErrorNone || !num_color_modes_) {
-    return kErrorNotSupported;
-  }
-
   DLOGV_IF(kTagQDCM, "Number of modes from color manager = %d", num_color_modes_);
   *mode_count = num_color_modes_;
 
@@ -716,30 +665,6 @@ DisplayError DisplayBase::GetColorModes(uint32_t *mode_count,
     return kErrorNotSupported;
   }
 
-  if (!color_modes_.size()) {
-    color_modes_.resize(num_color_modes_);
-
-    DisplayError error = color_mgr_->ColorMgrGetModes(&num_color_modes_, color_modes_.data());
-    if (error != kErrorNone) {
-      DLOGE("Failed");
-      return error;
-    }
-
-    for (uint32_t i = 0; i < num_color_modes_; i++) {
-      DLOGV_IF(kTagQDCM, "Color Mode[%d]: Name = %s mode_id = %d", i, color_modes_[i].name,
-               color_modes_[i].id);
-      auto it = color_mode_map_.find(color_modes_[i].name);
-      if (it != color_mode_map_.end()) {
-        if (it->second->id < color_modes_[i].id) {
-          color_mode_map_.erase(it);
-          color_mode_map_.insert(std::make_pair(color_modes_[i].name, &color_modes_[i]));
-        }
-      } else {
-        color_mode_map_.insert(std::make_pair(color_modes_[i].name, &color_modes_[i]));
-      }
-    }
-  }
-
   for (uint32_t i = 0; i < num_color_modes_; i++) {
     DLOGV_IF(kTagQDCM, "Color Mode[%d]: Name = %s mode_id = %d", i, color_modes_[i].name,
              color_modes_[i].id);
@@ -755,6 +680,21 @@ DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
     return kErrorNotSupported;
   }
 
+  DisplayError error = kErrorNone;
+  // Set client requests when not in HDR Mode or lut generation is disabled
+  if (disable_hdr_lut_gen_ || !hdr_playback_mode_) {
+    error = SetColorModeInternal(color_mode);
+    if (error != kErrorNone) {
+      return error;
+    }
+  }
+  // Store the new color mode request by client
+  current_color_mode_ = color_mode;
+
+  return error;
+}
+
+DisplayError DisplayBase::SetColorModeInternal(const std::string &color_mode) {
   DLOGV_IF(kTagQDCM, "Color Mode = %s", color_mode.c_str());
 
   ColorModeMap::iterator it = color_mode_map_.find(color_mode);
@@ -765,7 +705,7 @@ DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
 
   SDEDisplayMode *sde_display_mode = it->second;
 
-  DLOGD("Color Mode Name = %s corresponding mode_id = %d", sde_display_mode->name,
+  DLOGV_IF(kTagQDCM, "Color Mode Name = %s corresponding mode_id = %d", sde_display_mode->name,
            sde_display_mode->id);
   DisplayError error = kErrorNone;
   error = color_mgr_->ColorMgrSetMode(sde_display_mode->id);
@@ -1064,6 +1004,82 @@ DisplayError DisplayBase::GetDisplayPort(DisplayPort *port) {
   *port = hw_panel_info_.port;
 
   return kErrorNone;
+}
+
+DisplayError DisplayBase::InitializeColorModes() {
+  if (!color_mgr_) {
+    return kErrorNotSupported;
+  }
+
+  DisplayError error = color_mgr_->ColorMgrGetNumOfModes(&num_color_modes_);
+  if (error != kErrorNone || !num_color_modes_) {
+    DLOGV_IF(kTagQDCM, "GetNumModes failed = %d count = %d", error, num_color_modes_);
+    return kErrorNotSupported;
+  }
+  DLOGI("Number of Color Modes = %d", num_color_modes_);
+
+  if (!color_modes_.size()) {
+    color_modes_.resize(num_color_modes_);
+
+    DisplayError error = color_mgr_->ColorMgrGetModes(&num_color_modes_, color_modes_.data());
+    if (error != kErrorNone) {
+      color_modes_.clear();
+      DLOGE("Failed");
+      return error;
+    }
+
+    for (uint32_t i = 0; i < num_color_modes_; i++) {
+      DLOGV_IF(kTagQDCM, "Color Mode[%d]: Name = %s mode_id = %d", i, color_modes_[i].name,
+               color_modes_[i].id);
+      auto it = color_mode_map_.find(color_modes_[i].name);
+      if (it != color_mode_map_.end()) {
+        if (it->second->id < color_modes_[i].id) {
+          color_mode_map_.erase(it);
+          color_mode_map_.insert(std::make_pair(color_modes_[i].name, &color_modes_[i]));
+        }
+      } else {
+        color_mode_map_.insert(std::make_pair(color_modes_[i].name, &color_modes_[i]));
+      }
+    }
+  }
+
+  return kErrorNone;
+}
+
+DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
+  DisplayError error = kErrorNone;
+
+  if (display_type_ != kPrimary) {
+    // Handling is needed for only primary displays
+    return kErrorNone;
+  }
+
+  if (!layer_stack->flags.hdr_present) {
+    //  HDR playback off - set prev mode
+    if (hdr_playback_mode_) {
+      hdr_playback_mode_ = false;
+      if (color_mgr_ && !disable_hdr_lut_gen_) {
+        // Do not apply HDR Mode when hdr lut generation is disabled
+        DLOGI("Setting color mode = %s", current_color_mode_.c_str());
+        //  HDR playback off - set prev mode
+        error = SetColorModeInternal(current_color_mode_);
+      }
+      comp_manager_->ControlDpps(true);  // Enable Dpps
+    }
+  } else {
+    // hdr is present
+    if (!hdr_playback_mode_ && !layer_stack->flags.animating) {
+      // hdr is starting
+      hdr_playback_mode_ = true;
+      if (color_mgr_ && !disable_hdr_lut_gen_) {
+        DLOGI("Setting HDR color mode = %s", hdr_color_mode_.c_str());
+        error = SetColorModeInternal(hdr_color_mode_);
+      }
+      comp_manager_->ControlDpps(false);  // Disable Dpps
+    }
+  }
+
+  return error;
 }
 
 }  // namespace sdm

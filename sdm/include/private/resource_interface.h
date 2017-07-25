@@ -44,8 +44,9 @@ class ResourceInterface {
                                           const HWMixerAttributes &mixer_attributes) = 0;
   virtual DisplayError Start(Handle display_ctx) = 0;
   virtual DisplayError Stop(Handle display_ctx) = 0;
-  virtual DisplayError Acquire(Handle display_ctx, HWLayers *hw_layers) = 0;
+  virtual DisplayError Prepare(Handle display_ctx, HWLayers *hw_layers) = 0;
   virtual DisplayError PostPrepare(Handle display_ctx, HWLayers *hw_layers) = 0;
+  virtual DisplayError Commit(Handle display_ctx, HWLayers *hw_layers) = 0;
   virtual DisplayError PostCommit(Handle display_ctx, HWLayers *hw_layers) = 0;
   virtual void Purge(Handle display_ctx) = 0;
   virtual DisplayError SetMaxMixerStages(Handle display_ctx, uint32_t max_mixer_stages) = 0;

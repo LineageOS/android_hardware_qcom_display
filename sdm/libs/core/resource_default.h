@@ -36,8 +36,9 @@ namespace sdm {
 
 class ResourceDefault : public ResourceInterface {
  public:
-  DisplayError Init(const HWResourceInfo &hw_resource_info);
-  DisplayError Deinit();
+  static DisplayError CreateResourceDefault(const HWResourceInfo &hw_resource_info,
+                                            ResourceInterface **resource_intf);
+  static DisplayError DestroyResourceDefault(ResourceInterface *resource_intf);
   virtual DisplayError RegisterDisplay(DisplayType type,
                                        const HWDisplayAttributes &display_attributes,
                                        const HWPanelInfo &hw_panel_info,
@@ -50,8 +51,9 @@ class ResourceDefault : public ResourceInterface {
                                           const HWMixerAttributes &mixer_attributes);
   virtual DisplayError Start(Handle display_ctx);
   virtual DisplayError Stop(Handle display_ctx);
-  virtual DisplayError Acquire(Handle display_ctx, HWLayers *hw_layers);
+  virtual DisplayError Prepare(Handle display_ctx, HWLayers *hw_layers);
   virtual DisplayError PostPrepare(Handle display_ctx, HWLayers *hw_layers);
+  virtual DisplayError Commit(Handle display_ctx, HWLayers *hw_layers);
   virtual DisplayError PostCommit(Handle display_ctx, HWLayers *hw_layers);
   virtual void Purge(Handle display_ctx);
   virtual DisplayError SetMaxMixerStages(Handle display_ctx, uint32_t max_mixer_stages);
@@ -102,6 +104,9 @@ class ResourceDefault : public ResourceInterface {
     HWBlockContext() : is_in_use(false) { }
   };
 
+  explicit ResourceDefault(const HWResourceInfo &hw_res_info);
+  DisplayError Init();
+  DisplayError Deinit();
   uint32_t NextPipe(PipeType pipe_type, HWBlockType hw_block_id);
   uint32_t SearchPipe(HWBlockType hw_block_id, SourcePipe *src_pipes, uint32_t num_pipe);
   uint32_t GetPipe(HWBlockType hw_block_id, bool need_scale);

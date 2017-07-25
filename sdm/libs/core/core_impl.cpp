@@ -39,8 +39,10 @@
 namespace sdm {
 
 CoreImpl::CoreImpl(BufferAllocator *buffer_allocator,
-                   BufferSyncHandler *buffer_sync_handler)
-  : buffer_allocator_(buffer_allocator), buffer_sync_handler_(buffer_sync_handler) {
+                   BufferSyncHandler *buffer_sync_handler,
+                   SocketHandler *socket_handler)
+  : buffer_allocator_(buffer_allocator), buffer_sync_handler_(buffer_sync_handler),
+    socket_handler_(socket_handler) {
 }
 
 DisplayError CoreImpl::Init() {
@@ -76,21 +78,11 @@ DisplayError CoreImpl::Init() {
     goto CleanupOnError;
   }
 
-  error = comp_mgr_.Init(hw_resource_, extension_intf_, buffer_sync_handler_);
+  error = comp_mgr_.Init(hw_resource_, extension_intf_, buffer_allocator_,
+                         buffer_sync_handler_, socket_handler_);
+
   if (error != kErrorNone) {
     goto CleanupOnError;
-  }
-
-  if (extension_intf_ && hw_resource_.hw_rot_info.num_rotator) {
-    error = extension_intf_->CreateRotator(
-#ifndef SDM_LEGACY
-                                           hw_resource_.hw_rot_info,
-#endif
-                                           buffer_allocator_,
-                                           buffer_sync_handler_, &rotator_intf_);
-    if (error != kErrorNone) {
-      DLOGW("rotation is not supported");
-    }
   }
 
   error = ColorManagerProxy::Init(hw_resource_);
@@ -111,10 +103,6 @@ CleanupOnError:
 
 DisplayError CoreImpl::Deinit() {
   SCOPE_LOCK(locker_);
-
-  if (extension_intf_ && hw_resource_.hw_rot_info.num_rotator) {
-    extension_intf_->DestroyRotator(rotator_intf_);
-  }
 
   ColorManagerProxy::Deinit();
 
@@ -137,15 +125,15 @@ DisplayError CoreImpl::CreateDisplay(DisplayType type, DisplayEventHandler *even
   switch (type) {
   case kPrimary:
     display_base = new DisplayPrimary(event_handler, hw_info_intf_, buffer_sync_handler_,
-                                      &comp_mgr_, rotator_intf_);
+                                      &comp_mgr_);
     break;
   case kHDMI:
     display_base = new DisplayHDMI(event_handler, hw_info_intf_, buffer_sync_handler_,
-                                   &comp_mgr_, rotator_intf_);
+                                   &comp_mgr_);
     break;
   case kVirtual:
     display_base = new DisplayVirtual(event_handler, hw_info_intf_, buffer_sync_handler_,
-                                      &comp_mgr_, rotator_intf_);
+                                      &comp_mgr_);
     break;
   default:
     DLOGE("Spurious display type %d", type);
@@ -191,4 +179,3 @@ DisplayError CoreImpl::GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_d
 }
 
 }  // namespace sdm
-

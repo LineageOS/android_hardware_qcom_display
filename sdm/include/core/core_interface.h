@@ -43,6 +43,7 @@
 #include "sdm_types.h"
 #include "buffer_allocator.h"
 #include "buffer_sync_handler.h"
+#include "socket_handler.h"
 
 /*! @brief Display manager interface version.
 
@@ -130,6 +131,29 @@ class CoreInterface {
   */
   static DisplayError CreateCore(DebugHandler *debug_handler, BufferAllocator *buffer_allocator,
                                  BufferSyncHandler *buffer_sync_handler, CoreInterface **interface,
+                                 uint32_t version = SDM_VERSION_TAG);
+
+  /*! @brief Method to create and get handle to display core interface.
+
+    @details This method is the entry point into the display core. Client can create and operate on
+    different display devices only through a valid interface handle obtained using this method. An
+    object of display core is created and handle to this object is returned via output parameter.
+    This interface shall be called only once.
+
+    @param[in] debug_handler \link DebugHandler \endlink
+    @param[in] buffer_allocator \link BufferAllocator \endlink
+    @param[in] buffer_sync_handler \link BufferSyncHandler \endlink
+    @param[in] socket_handler \link SocketHandler \endlink
+    @param[out] interface \link CoreInterface \endlink
+    @param[in] version \link SDM_VERSION_TAG \endlink. Client must not override this argument.
+
+    @return \link DisplayError \endlink
+
+    @sa DestroyCore
+  */
+  static DisplayError CreateCore(DebugHandler *debug_handler, BufferAllocator *buffer_allocator,
+                                 BufferSyncHandler *buffer_sync_handler,
+                                 SocketHandler *socket_handler, CoreInterface **interface,
                                  uint32_t version = SDM_VERSION_TAG);
 
   /*! @brief Method to release handle to display core interface.

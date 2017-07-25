@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -28,39 +28,20 @@
 */
 
 
-#ifndef __HWC_BUFFER_ALLOCATOR_H__
-#define __HWC_BUFFER_ALLOCATOR_H__
+#ifndef __HWC_SOCKET_HANDLER_H__
+#define __HWC_SOCKET_HANDLER_H__
 
-#include <sys/mman.h>
-#include <fcntl.h>
-
-namespace gralloc {
-
-class IAllocController;
-
-}  // namespace gralloc
+#include <core/socket_handler.h>
 
 namespace sdm {
 
-class HWCBufferAllocator : public BufferAllocator {
+class HWCSocketHandler : public SocketHandler {
  public:
-  HWCBufferAllocator();
+  HWCSocketHandler() { }
 
-  DisplayError AllocateBuffer(BufferInfo *buffer_info);
-  DisplayError FreeBuffer(BufferInfo *buffer_info);
-  uint32_t GetBufferSize(BufferInfo *buffer_info);
-
-  int SetBufferInfo(LayerBufferFormat format, int *target, int *flags);
-
- private:
-  struct MetaBufferInfo {
-    int alloc_type;              //!< Specifies allocation type set by the buffer allocator.
-    void *base_addr;             //!< Specifies the base address of the allocated output buffer.
-  };
-
-  gralloc::IAllocController *alloc_controller_;
+  virtual int GetSocketFd(SocketType socket_type);
 };
 
 }  // namespace sdm
-#endif  // __HWC_BUFFER_ALLOCATOR_H__
 
+#endif  // __HWC_SOCKET_HANDLER_H__

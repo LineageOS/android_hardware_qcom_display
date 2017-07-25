@@ -37,10 +37,42 @@
 
 namespace sdm {
 
-DisplayError ResourceDefault::Init(const HWResourceInfo &hw_res_info) {
+DisplayError ResourceDefault::CreateResourceDefault(const HWResourceInfo &hw_resource_info,
+                                                    ResourceInterface **resource_intf) {
   DisplayError error = kErrorNone;
 
-  num_pipe_ = hw_res_info.num_vig_pipe + hw_res_info.num_rgb_pipe + hw_res_info.num_dma_pipe;
+  ResourceDefault *resource_default = new ResourceDefault(hw_resource_info);
+  if (!resource_default) {
+    return kErrorNone;
+  }
+
+  error = resource_default->Init();
+  if (error != kErrorNone) {
+    delete resource_default;
+  }
+
+  *resource_intf = resource_default;
+
+  return kErrorNone;
+}
+
+DisplayError ResourceDefault::DestroyResourceDefault(ResourceInterface *resource_intf) {
+  ResourceDefault *resource_default = static_cast<ResourceDefault *>(resource_intf);
+
+  resource_default->Deinit();
+  delete resource_default;
+
+  return kErrorNone;
+}
+
+ResourceDefault::ResourceDefault(const HWResourceInfo &hw_res_info)
+  : hw_res_info_(hw_res_info) {
+}
+
+DisplayError ResourceDefault::Init() {
+  DisplayError error = kErrorNone;
+
+  num_pipe_ = hw_res_info_.num_vig_pipe + hw_res_info_.num_rgb_pipe + hw_res_info_.num_dma_pipe;
 
   if (!num_pipe_) {
     DLOGE("Number of H/W pipes is Zero!");
@@ -48,7 +80,6 @@ DisplayError ResourceDefault::Init(const HWResourceInfo &hw_res_info) {
   }
 
   src_pipes_.resize(num_pipe_);
-  hw_res_info_ = hw_res_info;
 
   // Priority order of pipes: VIG, RGB, DMA
   uint32_t vig_index = 0;
@@ -187,7 +218,7 @@ DisplayError ResourceDefault::Stop(Handle display_ctx) {
   return kErrorNone;
 }
 
-DisplayError ResourceDefault::Acquire(Handle display_ctx, HWLayers *hw_layers) {
+DisplayError ResourceDefault::Prepare(Handle display_ctx, HWLayers *hw_layers) {
   DisplayResourceContext *display_resource_ctx =
                           reinterpret_cast<DisplayResourceContext *>(display_ctx);
 
@@ -292,6 +323,12 @@ CleanupOnError:
 }
 
 DisplayError ResourceDefault::PostPrepare(Handle display_ctx, HWLayers *hw_layers) {
+  SCOPE_LOCK(locker_);
+
+  return kErrorNone;
+}
+
+DisplayError ResourceDefault::Commit(Handle display_ctx, HWLayers *hw_layers) {
   SCOPE_LOCK(locker_);
 
   return kErrorNone;

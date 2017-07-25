@@ -156,6 +156,7 @@ DisplayError Strategy::GetNextStrategy(StrategyConstraints *constraints) {
     } else if (composition != kCompositionBlitTarget) {
       composition = kCompositionGPU;
     }
+    layer_stack->layers.at(i)->request.flags.request_flags = 0;  // Reset layer request
   }
 
   tried_default_ = true;
@@ -224,5 +225,14 @@ DisplayError Strategy::Reconfigure(const HWPanelInfo &hw_panel_info,
   return strategy_intf_->Reconfigure(hw_panel_info_.mode, hw_panel_info_.s3d_mode, mixer_attributes,
                                      fb_config);
 }
+
+DisplayError Strategy::Purge() {
+  if (strategy_intf_) {
+    return strategy_intf_->Purge();
+  }
+
+  return kErrorNone;
+}
+
 
 }  // namespace sdm

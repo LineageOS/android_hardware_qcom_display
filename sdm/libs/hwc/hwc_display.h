@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -32,10 +32,12 @@
 #include <private/color_params.h>
 #include <map>
 #include <vector>
+#include <string>
 
 namespace sdm {
 
 class BlitEngine;
+class HWCToneMapper;
 
 // Subclasses set this to their type. This has to be different from DisplayType.
 // This is to avoid RTTI and dynamic_cast
@@ -46,6 +48,29 @@ enum DisplayClass {
   DISPLAY_CLASS_NULL
 };
 
+class HWCColorMode {
+ public:
+  explicit HWCColorMode(DisplayInterface *display_intf) : display_intf_(display_intf) {}
+  ~HWCColorMode() {}
+  void Init();
+  void DeInit() {}
+  int SetColorMode(const std::string &color_mode);
+  const std::vector<std::string> &GetColorModes();
+  int SetColorTransform(uint32_t matrix_count, const float *matrix);
+
+ private:
+  static const uint32_t kColorTransformMatrixCount = 16;
+  template <class T>
+  void CopyColorTransformMatrix(const T *input_matrix, double *output_matrix) {
+    for (uint32_t i = 0; i < kColorTransformMatrixCount; i++) {
+      output_matrix[i] = static_cast<double>(input_matrix[i]);
+    }
+  }
+  int PopulateColorModes();
+  DisplayInterface *display_intf_ = NULL;
+  std::vector<std::string> color_modes_ = {};
+  std::string current_color_mode_ = {};
+};
 
 class HWCDisplay : public DisplayEventHandler {
  public:
@@ -108,6 +133,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int GetDisplayConfigCount(uint32_t *count);
   virtual int GetDisplayAttributesForConfig(int config,
                                             DisplayConfigVariableInfo *display_attributes);
+  virtual int GetDisplayFixedConfig(DisplayConfigFixedInfo *fixed_info);
 
   int SetPanelBrightness(int level);
   int GetPanelBrightness(int *level);
@@ -211,6 +237,9 @@ class HWCDisplay : public DisplayEventHandler {
   LayerRect display_rect_;
   std::map<int, LayerBufferS3DFormat> s3d_format_hwc_to_sdm_;
   bool animating_ = false;
+  HWCToneMapper *tone_mapper_ = NULL;
+  HWCColorMode *color_mode_ = NULL;
+  int disable_hdr_handling_ = 0;  // disables HDR handling.
 
  private:
   void DumpInputBuffers(hwc_display_contents_1_t *content_list);

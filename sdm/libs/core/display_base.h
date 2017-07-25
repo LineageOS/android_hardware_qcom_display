@@ -27,7 +27,6 @@
 
 #include <core/display_interface.h>
 #include <private/strategy_interface.h>
-#include <private/rotator_interface.h>
 #include <private/color_interface.h>
 
 #include <map>
@@ -45,15 +44,11 @@ namespace sdm {
 using std::recursive_mutex;
 using std::lock_guard;
 
-class RotatorCtrl;
-class HWInfoInterface;
-
 class DisplayBase : public DisplayInterface, DumpImpl {
  public:
   DisplayBase(DisplayType display_type, DisplayEventHandler *event_handler,
               HWDeviceType hw_device_type, BufferSyncHandler *buffer_sync_handler,
-              CompManager *comp_manager, RotatorInterface *rotator_intf,
-              HWInfoInterface *hw_info_intf);
+              CompManager *comp_manager, HWInfoInterface *hw_info_intf);
   virtual ~DisplayBase() { }
   virtual DisplayError Init();
   virtual DisplayError Deinit();
@@ -113,16 +108,20 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   virtual DisplayError GetDisplayPort(DisplayPort *port);
 
  protected:
+  DisplayError HandleHDR(LayerStack *layer_stack);
+
   // DumpImpl method
   void AppendDump(char *buffer, uint32_t length);
 
-  bool IsRotationRequired(HWLayers *hw_layers);
   const char *GetName(const LayerComposition &composition);
   DisplayError ValidateGPUTarget(LayerStack *layer_stack);
   DisplayError ReconfigureDisplay();
   bool NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *new_mixer_width,
                                  uint32_t *new_mixer_height);
   DisplayError ReconfigureMixer(uint32_t width, uint32_t height);
+  bool NeedsDownScale(const LayerRect &src_rect, const LayerRect &dst_rect, bool needs_rotation);
+  DisplayError InitializeColorModes();
+  DisplayError SetColorModeInternal(const std::string &color_mode);
 
   recursive_mutex recursive_mutex_;
   DisplayType display_type_;
@@ -132,12 +131,10 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   HWPanelInfo hw_panel_info_;
   BufferSyncHandler *buffer_sync_handler_ = NULL;
   CompManager *comp_manager_ = NULL;
-  RotatorInterface *rotator_intf_ = NULL;
   DisplayState state_ = kStateOff;
   bool active_ = false;
   Handle hw_device_ = 0;
   Handle display_comp_ctx_ = 0;
-  Handle display_rotator_ctx_ = 0;
   HWLayers hw_layers_;
   bool pending_commit_ = false;
   bool vsync_enable_ = false;
@@ -154,6 +151,10 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   HWDisplayAttributes display_attributes_ = {};
   HWMixerAttributes mixer_attributes_ = {};
   DisplayConfigVariableInfo fb_config_ = {};
+  std::string current_color_mode_ = "hal_native";
+  std::string hdr_color_mode_ = "hal_hdr";
+  bool hdr_playback_mode_ = false;
+  int disable_hdr_lut_gen_ = 0;
 };
 
 }  // namespace sdm

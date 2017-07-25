@@ -33,6 +33,7 @@
 #include "hwc_display_external.h"
 #include "hwc_display_virtual.h"
 #include "hwc_color_manager.h"
+#include "hwc_socket_handler.h"
 
 namespace sdm {
 
@@ -125,6 +126,8 @@ class HWCSession : hwc_composer_device_1_t, public qClient::BnQClient {
                                           android::Parcel *output_parcel);
   android::status_t SetMixerResolution(const android::Parcel *input_parcel);
   android::status_t SetDisplayPort(DisplayPort sdm_disp_port, int *hwc_disp_port);
+  android::status_t GetHdrCapabilities(const android::Parcel *input_parcel,
+                                       android::Parcel *output_parcel);
 
   static Locker locker_;
   CoreInterface *core_intf_ = NULL;
@@ -147,6 +150,7 @@ class HWCSession : hwc_composer_device_1_t, public qClient::BnQClient {
   bool is_hdmi_primary_ = false;
   bool is_hdmi_yuv_ = false;
   std::bitset<HWC_NUM_DISPLAY_TYPES> connected_displays_;  // Bit mask of connected displays
+  HWCSocketHandler socket_handler_;
 };
 
 }  // namespace sdm
