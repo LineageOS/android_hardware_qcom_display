@@ -1367,7 +1367,7 @@ DisplayError HWDevice::DumpDebugData() {
   const char* xlog_path = "/data/vendor/display/mdp_xlog";
   DLOGD("Dumping debugfs data to %s", xlog_path);
   std::ostringstream  dst;
-  auto file = open(xlog_path, O_CREAT | O_DSYNC | O_RDWR, "w+");
+  auto file = open(xlog_path, O_CREAT | O_TRUNC | O_DSYNC | O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP);
   if (file < 0) {
     DLOGE("Couldn't open file: err:%d (%s)",errno, strerror(errno));
     return kErrorResources;
