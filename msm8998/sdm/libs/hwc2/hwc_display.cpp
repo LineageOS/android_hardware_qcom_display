@@ -39,7 +39,6 @@
 
 #include "hwc_display.h"
 #include "hwc_debugger.h"
-#include "blit_engine_c2d.h"
 #include "hwc_tonemapper.h"
 
 #ifndef USE_GRALLOC1
@@ -103,11 +102,16 @@ HWC2::Error HWCColorMode::GetColorModes(uint32_t *out_num_modes,
 }
 
 HWC2::Error HWCColorMode::SetColorMode(android_color_mode_t mode) {
+  DTRACE_SCOPED();
   // first mode in 2D matrix is the mode (identity)
-  if (color_mode_transform_map_.find(mode) == color_mode_transform_map_.end()) {
+  if (mode < HAL_COLOR_MODE_NATIVE || mode > HAL_COLOR_MODE_DISPLAY_P3) {
     DLOGE("Could not find mode: %d", mode);
     return HWC2::Error::BadParameter;
   }
+  if (color_mode_transform_map_.find(mode) == color_mode_transform_map_.end()) {
+    return HWC2::Error::Unsupported;
+  }
+
   auto status = HandleColorModeTransform(mode, current_color_transform_, color_matrix_);
   if (status != HWC2::Error::None) {
     DLOGE("failed for mode = %d", mode);
@@ -126,7 +130,9 @@ HWC2::Error HWCColorMode::SetColorModeById(int32_t color_mode_id) {
 }
 
 HWC2::Error HWCColorMode::SetColorTransform(const float *matrix, android_color_transform_t hint) {
-  if (!matrix) {
+  DTRACE_SCOPED();
+  if (!matrix || (hint < HAL_COLOR_TRANSFORM_IDENTITY ||
+      hint > HAL_COLOR_TRANSFORM_CORRECT_TRITANOPIA)) {
     return HWC2::Error::BadParameter;
   }
 
@@ -457,12 +463,11 @@ void HWCDisplay::BuildLayerStack() {
       layer->flags.solid_fill = true;
     }
 
+    if (!hwc_layer->ValidateAndSetCSC()) {
 #ifdef FEATURE_WIDE_COLOR
-    if (!hwc_layer->SupportedDataspace()) {
-        layer->flags.skip = true;
-        DLOGW_IF(kTagStrategy, "Unsupported dataspace: 0x%x", hwc_layer->GetLayerDataspace());
-    }
+      layer->flags.skip = true;
 #endif
+    }
 
     working_primaries = WidestPrimaries(working_primaries,
                                         layer->input_buffer.color_metadata.colorPrimaries);
@@ -499,14 +504,6 @@ void HWCDisplay::BuildLayerStack() {
 
     if (layer->flags.skip) {
       layer_stack_.flags.skip_present = true;
-    }
-
-    if (hwc_layer->GetClientRequestedCompositionType() == HWC2::Composition::Cursor) {
-      // Currently we support only one HWCursor & only at top most z-order
-      if ((*layer_set_.rbegin())->GetId() == hwc_layer->GetId()) {
-        layer->flags.cursor = true;
-        layer_stack_.flags.cursor_present = true;
-      }
     }
 
     bool hdr_layer = layer->input_buffer.color_metadata.colorPrimaries == ColorPrimaries_BT2020 &&
@@ -571,7 +568,15 @@ void HWCDisplay::BuildLayerStack() {
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
   layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0);
   // Append client target to the layer stack
-  layer_stack_.layers.push_back(client_target_->GetSDMLayer());
+  Layer *sdm_client_target = client_target_->GetSDMLayer();
+  layer_stack_.layers.push_back(sdm_client_target);
+  // fall back frame composition to GPU when client target is 10bit
+  // TODO(user): clarify the behaviour from Client(SF) and SDM Extn -
+  // when handling 10bit FBT, as it would affect blending
+  if (Is10BitFormat(sdm_client_target->input_buffer.format)) {
+    // Must fall back to client composition
+    MarkLayersForClientComposition();
+  }
 }
 
 void HWCDisplay::BuildSolidFillStack() {
@@ -618,6 +623,7 @@ HWC2::Error HWCDisplay::SetLayerZOrder(hwc2_layer_t layer_id, uint32_t z) {
 
 HWC2::Error HWCDisplay::SetVsyncEnabled(HWC2::Vsync enabled) {
   DLOGV("Display ID: %d enabled: %s", id_, to_string(enabled).c_str());
+  ATRACE_INT("SetVsyncState ", enabled == HWC2::Vsync::Enable ? 1 : 0);
   DisplayError error = kErrorNone;
 
   if (shutdown_pending_ || !callbacks_->VsyncCallbackRegistered()) {
@@ -681,6 +687,7 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode) {
       return HWC2::Error::BadParameter;
   }
 
+  ATRACE_INT("SetPowerMode ", state);
   DisplayError error = display_intf_->SetDisplayState(state);
   if (error == kErrorNone) {
     flush_on_error_ = flush_on_error;
@@ -699,14 +706,27 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode) {
 HWC2::Error HWCDisplay::GetClientTargetSupport(uint32_t width, uint32_t height, int32_t format,
                                                int32_t dataspace) {
   DisplayConfigVariableInfo variable_config;
+  HWC2::Error supported = HWC2::Error::None;
   display_intf_->GetFrameBufferConfig(&variable_config);
-  // TODO(user): Support scaled configurations, other formats and other dataspaces
-  if (format != HAL_PIXEL_FORMAT_RGBA_8888 || dataspace != HAL_DATASPACE_UNKNOWN ||
-      width != variable_config.x_pixels || height != variable_config.y_pixels) {
-    return HWC2::Error::Unsupported;
-  } else {
-    return HWC2::Error::None;
+  if (format != HAL_PIXEL_FORMAT_RGBA_8888 && format != HAL_PIXEL_FORMAT_RGBA_1010102) {
+     DLOGW("Unsupported format = %d", format);
+    supported = HWC2::Error::Unsupported;
+  } else if (width != variable_config.x_pixels || height != variable_config.y_pixels) {
+    DLOGW("Unsupported width = %d height = %d", width, height);
+    supported = HWC2::Error::Unsupported;
+  } else if (dataspace != HAL_DATASPACE_UNKNOWN) {
+    ColorMetaData color_metadata = {};
+    if (sdm::GetSDMColorSpace(dataspace, &color_metadata) == false) {
+      DLOGW("Unsupported dataspace = %d", dataspace);
+      supported = HWC2::Error::Unsupported;
+    }
+    if (sdm::IsBT2020(color_metadata.colorPrimaries)) {
+      DLOGW("Unsupported color Primary BT2020");
+      supported = HWC2::Error::Unsupported;
+    }
   }
+
+  return supported;
 }
 
 HWC2::Error HWCDisplay::GetColorModes(uint32_t *out_num_modes, android_color_mode_t *out_modes) {
@@ -834,7 +854,13 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, int32_t acquire_
 
   client_target_->SetLayerBuffer(target, acquire_fence);
   client_target_->SetLayerSurfaceDamage(damage);
-  client_target_->SetLayerDataspace(dataspace);
+  if (client_target_->GetLayerDataspace() != dataspace) {
+    client_target_->SetLayerDataspace(dataspace);
+    Layer *sdm_layer = client_target_->GetSDMLayer();
+    // Data space would be validated at GetClientTargetSupport, so just use here.
+    sdm::GetSDMColorSpace(dataspace, &sdm_layer->input_buffer.color_metadata);
+  }
+
   return HWC2::Error::None;
 }
 
@@ -934,6 +960,7 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
     }
     hwc_layer->ResetValidation();
   }
+  client_target_->ResetValidation();
   *out_num_types = UINT32(layer_changes_.size());
   *out_num_requests = UINT32(layer_requests_.size());
   validated_ = true;
@@ -976,6 +1003,7 @@ HWC2::Error HWCDisplay::GetChangedCompositionTypes(uint32_t *out_num_elements,
     DLOGW("Display is not validated");
     return HWC2::Error::NotValidated;
   }
+
   *out_num_elements = UINT32(layer_changes_.size());
   if (out_layers != nullptr && out_types != nullptr) {
     int i = 0;
@@ -1005,18 +1033,19 @@ HWC2::Error HWCDisplay::GetReleaseFences(uint32_t *out_num_elements, hwc2_layer_
 HWC2::Error HWCDisplay::GetDisplayRequests(int32_t *out_display_requests,
                                            uint32_t *out_num_elements, hwc2_layer_t *out_layers,
                                            int32_t *out_layer_requests) {
-  // No display requests for now
-  // Use for sharing blit buffers and
-  // writing wfd buffer directly to output if there is full GPU composition
-  // and no color conversion needed
   if (layer_set_.empty()) {
     return HWC2::Error::None;
   }
 
+  // No display requests for now
+  // Use for sharing blit buffers and
+  // writing wfd buffer directly to output if there is full GPU composition
+  // and no color conversion needed
   if (!validated_) {
     DLOGW("Display is not validated");
     return HWC2::Error::NotValidated;
   }
+
   *out_display_requests = 0;
   *out_num_elements = UINT32(layer_requests_.size());
   if (out_layers != nullptr && out_layer_requests != nullptr) {
@@ -1135,6 +1164,7 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
     close(client_target_release_fence);
     client_target_release_fence = -1;
   }
+  client_target_->ResetGeometryChanges();
 
   for (auto hwc_layer : layer_set_) {
     hwc_layer->ResetGeometryChanges();
@@ -1549,8 +1579,17 @@ HWC2::Error HWCDisplay::SetCursorPosition(hwc2_layer_t layer, int x, int y) {
     return HWC2::Error::None;
   }
 
-  if (GetHWCLayer(layer) == nullptr) {
+  HWCLayer *hwc_layer = GetHWCLayer(layer);
+  if (hwc_layer == nullptr) {
     return HWC2::Error::BadLayer;
+  }
+  if (hwc_layer->GetDeviceSelectedCompositionType() != HWC2::Composition::Cursor) {
+    return HWC2::Error::None;
+  }
+  if (validated_ == true) {
+    // the device is currently in the middle of the validate/present sequence,
+    // cannot set the Position(as per HWC2 spec)
+    return HWC2::Error::NotValidated;
   }
 
   DisplayState state;
@@ -1560,9 +1599,9 @@ HWC2::Error HWCDisplay::SetCursorPosition(hwc2_layer_t layer, int x, int y) {
     }
   }
 
-  if (!validated_) {
-    return HWC2::Error::NotValidated;
-  }
+  // TODO(user): HWC1.5 was not letting SetCursorPosition before validateDisplay,
+  // but HWC2.0 doesn't let setting cursor position after validate before present.
+  // Need to revisit.
 
   auto error = display_intf_->SetCursorPosition(x, y);
   if (error != kErrorNone) {
@@ -1844,6 +1883,10 @@ std::string HWCDisplay::Dump() {
 bool HWCDisplay::CanSkipValidate() {
   // Layer Stack checks
   if (layer_stack_.flags.hdr_present && (tone_mapper_ && tone_mapper_->IsActive())) {
+    return false;
+  }
+
+  if (client_target_->NeedsValidation()) {
     return false;
   }
 
