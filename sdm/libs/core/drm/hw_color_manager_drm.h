@@ -38,6 +38,8 @@ using sde_drm::DRMPPFeatureInfo;
 
 namespace sdm {
 
+static const uint32_t kMaxPCCChanel = 3;
+
 class HWColorManagerDrm {
  public:
   static DisplayError (*GetDrmFeature[kMaxNumPPFeatures])(const PPFeatureInfo &in_data,
