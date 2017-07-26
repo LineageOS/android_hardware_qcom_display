@@ -85,7 +85,7 @@ class HWCLayer {
   void ResetGeometryChanges() { geometry_changes_ = GeometryChanges::kNone; }
   void PushReleaseFence(int32_t fence);
   int32_t PopReleaseFence(void);
-  bool SupportedDataspace();
+  bool ValidateAndSetCSC();
   bool SupportLocalConversion(ColorPrimaries working_primaries);
 
  private:

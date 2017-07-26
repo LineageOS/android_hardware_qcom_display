@@ -255,6 +255,7 @@ HWC2::Error HWCLayer::SetLayerDataspace(int32_t dataspace) {
     }
   }
 
+  // cache the dataspace, to be used later to update SDM ColorMetaData
   if (dataspace_ != dataspace) {
     geometry_changes_ |= kDataspace;
     dataspace_ = dataspace;
@@ -573,19 +574,6 @@ void HWCLayer::GetUBWCStatsFromMetaData(UBWCStats *cr_stats, UbwcCrStatsVector *
 
 DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *layer) {
   LayerBuffer *layer_buffer = &layer->input_buffer;
-  bool use_color_metadata = true;
-
-#ifdef FEATURE_WIDE_COLOR
-  // Only use color metadata if Android framework metadata is not set
-  use_color_metadata = (dataspace_ == HAL_DATASPACE_UNKNOWN);
-#endif
-
-  if (use_color_metadata) {
-    if (sdm::SetCSC(pvt_handle, &layer_buffer->color_metadata) != kErrorNone) {
-      return kErrorNotSupported;
-    }
-  }
-
   private_handle_t *handle = const_cast<private_handle_t *>(pvt_handle);
   IGC_t igc = {};
   if (getMetaData(handle, GET_IGC, &igc) == 0) {
@@ -655,84 +643,106 @@ bool HWCLayer::SupportLocalConversion(ColorPrimaries working_primaries) {
   return false;
 }
 
-bool HWCLayer::SupportedDataspace() {
-  if (dataspace_ == HAL_DATASPACE_UNKNOWN) {
-    // Pick values from metadata
+bool HWCLayer::ValidateAndSetCSC() {
+  if (client_requested_ != HWC2::Composition::Device &&
+      client_requested_ != HWC2::Composition::Cursor) {
+    // Check the layers which are configured to Device
     return true;
   }
 
+  // Retrieve ColorMetaData from android_data_space_t (STANDARD|TRANSFER|RANGE)
   LayerBuffer *layer_buffer = &layer_->input_buffer;
+  bool use_color_metadata = true;
 
+#ifdef FEATURE_WIDE_COLOR
   GammaTransfer sdm_transfer = {};
   ColorPrimaries sdm_primaries = {};
   ColorRange sdm_range = {};
+  if (dataspace_ != HAL_DATASPACE_UNKNOWN) {
+    use_color_metadata = false;  // avoid using color_metadata
+    auto transfer = dataspace_ & HAL_DATASPACE_TRANSFER_MASK;
+    // Handle transfer
+    switch (transfer) {
+      case HAL_DATASPACE_TRANSFER_SRGB:
+        sdm_transfer = Transfer_sRGB;
+        break;
+      case HAL_DATASPACE_TRANSFER_SMPTE_170M:
+        sdm_transfer = Transfer_SMPTE_170M;
+        break;
+      case HAL_DATASPACE_TRANSFER_ST2084:
+        sdm_transfer = Transfer_SMPTE_ST2084;
+        break;
+      case HAL_DATASPACE_TRANSFER_HLG:
+        sdm_transfer = Transfer_HLG;
+        break;
+      case HAL_DATASPACE_TRANSFER_LINEAR:
+        sdm_transfer = Transfer_Linear;
+        break;
+      case HAL_DATASPACE_TRANSFER_GAMMA2_2:
+        sdm_transfer = Transfer_Gamma2_2;
+        break;
+      default:
+        DLOGV_IF(kTagStrategy, "Unsupported Transfer Request = %d", transfer);
+        return false;
+    }
 
-  auto transfer = dataspace_ & HAL_DATASPACE_TRANSFER_MASK;
-  // Handle transfer
-  switch (transfer) {
-    case HAL_DATASPACE_TRANSFER_SRGB:
-      sdm_transfer = Transfer_sRGB;
-      break;
-    case HAL_DATASPACE_TRANSFER_SMPTE_170M:
-      sdm_transfer = Transfer_SMPTE_170M;
-      break;
-    case HAL_DATASPACE_TRANSFER_ST2084:
-      sdm_transfer = Transfer_SMPTE_ST2084;
-      break;
-    case HAL_DATASPACE_TRANSFER_HLG:
-      sdm_transfer = Transfer_HLG;
-      break;
-    case HAL_DATASPACE_TRANSFER_LINEAR:
-      sdm_transfer = Transfer_Linear;
-      break;
-    case HAL_DATASPACE_TRANSFER_GAMMA2_2:
-      sdm_transfer = Transfer_Gamma2_2;
-      break;
-    default:
+    // Handle standard
+    auto standard = dataspace_ & HAL_DATASPACE_STANDARD_MASK;
+    switch (standard) {
+      case  HAL_DATASPACE_STANDARD_BT709:
+        sdm_primaries = ColorPrimaries_BT709_5;
+        break;
+      case HAL_DATASPACE_STANDARD_BT601_525:
+      case HAL_DATASPACE_STANDARD_BT601_525_UNADJUSTED:
+        sdm_primaries = ColorPrimaries_BT601_6_525;
+        break;
+      case HAL_DATASPACE_STANDARD_BT601_625:
+      case HAL_DATASPACE_STANDARD_BT601_625_UNADJUSTED:
+        sdm_primaries = ColorPrimaries_BT601_6_625;
+        break;
+      case HAL_DATASPACE_STANDARD_DCI_P3:
+        sdm_primaries = ColorPrimaries_DCIP3;
+        break;
+      case HAL_DATASPACE_STANDARD_BT2020:
+        sdm_primaries = ColorPrimaries_BT2020;
+        // android_dataspace_t doesnt support mastering display and light levels
+        // so retrieve it from metadata
+        use_color_metadata = true;
+        break;
+      default:
+        DLOGV_IF(kTagStrategy, "Unsupported Standard Request = %d", standard);
+        return false;
+    }
+    // TODO(user): Check transfer + primary combination
+
+    // Handle range
+    auto range = dataspace_ & HAL_DATASPACE_RANGE_MASK;
+    switch (range) {
+      case HAL_DATASPACE_RANGE_FULL:
+        sdm_range = Range_Full;
+        break;
+      case HAL_DATASPACE_RANGE_LIMITED:
+        sdm_range = Range_Limited;
+        break;
+      default:
+        DLOGV_IF(kTagStrategy, "Unsupported Range Request = %d", range);
+        break;
+    }
+    // If we got here, the value is supported, update the layer
+    layer_buffer->color_metadata.transfer = sdm_transfer;
+    layer_buffer->color_metadata.colorPrimaries = sdm_primaries;
+    layer_buffer->color_metadata.range = sdm_range;
+  }
+#endif
+
+  if (use_color_metadata) {
+    const private_handle_t *handle =
+      reinterpret_cast<const private_handle_t *>(layer_buffer->buffer_id);
+    if (sdm::SetCSC(handle, &layer_buffer->color_metadata) != kErrorNone) {
       return false;
+    }
   }
 
-  // Handle standard
-  auto standard = dataspace_ & HAL_DATASPACE_STANDARD_MASK;
-  switch (standard) {
-    case  HAL_DATASPACE_STANDARD_BT709:
-      sdm_primaries = ColorPrimaries_BT709_5;
-      break;
-    case HAL_DATASPACE_STANDARD_BT601_525:
-    case HAL_DATASPACE_STANDARD_BT601_525_UNADJUSTED:
-      sdm_primaries = ColorPrimaries_BT601_6_525;
-      break;
-    case HAL_DATASPACE_STANDARD_BT601_625:
-    case HAL_DATASPACE_STANDARD_BT601_625_UNADJUSTED:
-      sdm_primaries = ColorPrimaries_BT601_6_625;
-      break;
-    case HAL_DATASPACE_STANDARD_DCI_P3:
-      sdm_primaries = ColorPrimaries_DCIP3;
-      break;
-    case HAL_DATASPACE_STANDARD_BT2020:
-      sdm_primaries = ColorPrimaries_BT2020;
-      break;
-    default:
-      return false;
-  }
-  // TODO(user): Check transfer + primary combination
-
-  // Handle range
-  auto range = dataspace_ & HAL_DATASPACE_RANGE_MASK;
-  switch (range) {
-    case HAL_DATASPACE_RANGE_FULL:
-      sdm_range = Range_Full;
-      break;
-    case HAL_DATASPACE_RANGE_LIMITED:
-    default:
-      sdm_range = Range_Limited;
-      break;
-  }
-
-  // If we got here, the value is supported, update the layer
-  layer_buffer->color_metadata.transfer = sdm_transfer;
-  layer_buffer->color_metadata.colorPrimaries = sdm_primaries;
-  layer_buffer->color_metadata.range = sdm_range;
   return true;
 }
 
