@@ -1147,8 +1147,6 @@ void HWCSession::DynamicDebug(const android::Parcel *input_parcel) {
 
 android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel,
                                              android::Parcel *output_parcel) {
-  SCOPE_LOCK(locker_);
-
   int ret = 0;
   int32_t *brightness_value = NULL;
   uint32_t display_id(0);
