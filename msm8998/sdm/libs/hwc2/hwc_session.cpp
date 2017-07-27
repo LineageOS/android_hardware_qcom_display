@@ -1247,7 +1247,6 @@ android::status_t HWCSession::SetMixerResolution(const android::Parcel *input_pa
 }
 
 android::status_t HWCSession::SetColorModeOverride(const android::Parcel *input_parcel) {
-  SCOPE_LOCK(locker_);
   auto display = static_cast<hwc2_display_t >(input_parcel->readInt32());
   auto mode = static_cast<android_color_mode_t>(input_parcel->readInt32());
   auto device = static_cast<hwc2_device_t *>(this);
@@ -1273,7 +1272,6 @@ android::status_t HWCSession::SetColorModeById(const android::Parcel *input_parc
 }
 
 void HWCSession::DynamicDebug(const android::Parcel *input_parcel) {
-  SCOPE_LOCK(locker_);
   int type = input_parcel->readInt32();
   bool enable = (input_parcel->readInt32() > 0);
   DLOGI("type = %d enable = %d", type, enable);
@@ -1314,7 +1312,6 @@ void HWCSession::DynamicDebug(const android::Parcel *input_parcel) {
 
 android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel,
                                              android::Parcel *output_parcel) {
-  SCOPE_LOCK(locker_);
   int ret = 0;
   int32_t *brightness_value = NULL;
   uint32_t display_id(0);
