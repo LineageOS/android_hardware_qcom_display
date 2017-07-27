@@ -137,6 +137,9 @@ void HWCBufferAllocator::GetAlignedWidthAndHeight(int width, int height, int for
   if (alloc_type & GRALLOC_USAGE_HW_FB) {
     consumer_usage = GRALLOC1_CONSUMER_USAGE_CLIENT_TARGET;
   }
+  if (alloc_type & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC) {
+    producer_usage = GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
+  }
 
   Perform_(gralloc_device_, GRALLOC_MODULE_PERFORM_GET_ATTRIBUTES, width, height, format,
            producer_usage, consumer_usage, aligned_width, aligned_height, &tile_enabled);

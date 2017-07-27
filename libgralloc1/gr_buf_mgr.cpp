@@ -49,13 +49,6 @@ BufferManager::BufferManager() : next_id_(0) {
     map_fb_mem_ = true;
   }
 
-  // Enable UBWC for framebuffer
-  if ((property_get("debug.gralloc.enable_fb_ubwc", property, NULL) > 0) &&
-      (!strncmp(property, "1", PROPERTY_VALUE_MAX) ||
-       (!strncasecmp(property, "true", PROPERTY_VALUE_MAX)))) {
-    ubwc_for_fb_ = true;
-  }
-
   handles_map_.clear();
   allocator_ = new Allocator();
   allocator_->Init();
