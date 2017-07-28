@@ -1121,8 +1121,6 @@ android::status_t HWCSession::SetMixerResolution(const android::Parcel *input_pa
 }
 
 android::status_t HWCSession::SetColorModeOverride(const android::Parcel *input_parcel) {
-  SCOPE_LOCK(locker_);
-
   auto display = static_cast<hwc2_display_t >(input_parcel->readInt32());
   auto mode = static_cast<android_color_mode_t>(input_parcel->readInt32());
   auto device = static_cast<hwc2_device_t *>(this);
