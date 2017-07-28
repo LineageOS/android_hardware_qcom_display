@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "cca2da47_087a8a1c",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 8,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-07-28T23:58:30Z",
+      "side": 1,
+      "message": "Newline after topic, otherwise git garbles this",
+      "revId": "9330ed11f94d3b81e965edcf54261f7c591c1ce6",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
