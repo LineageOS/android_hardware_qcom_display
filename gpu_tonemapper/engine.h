@@ -22,8 +22,6 @@
 
 void* engine_initialize(bool isSecure);
 void engine_bind(void*);
-void* engine_backup();
-void engine_free_backup(void*);
 void engine_shutdown(void*);
 
 unsigned int engine_loadProgram(int, const char **, int, const char **);
