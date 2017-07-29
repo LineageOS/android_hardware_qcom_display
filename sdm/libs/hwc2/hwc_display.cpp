@@ -363,11 +363,18 @@ int HWCDisplay::Init() {
     // TODO(user): Add blit engine when needed
   }
 
+  error = display_intf_->GetNumVariableInfoConfigs(&num_configs_);
+  if (error != kErrorNone) {
+    DLOGE("Getting config count failed. Error = %d", error);
+    return -EINVAL;
+  }
+
   tone_mapper_ = new HWCToneMapper(buffer_allocator_);
 
   display_intf_->GetRefreshRateRange(&min_refresh_rate_, &max_refresh_rate_);
   current_refresh_rate_ = max_refresh_rate_;
   DLOGI("Display created with id: %d", id_);
+
   return 0;
 }
 
@@ -716,12 +723,15 @@ HWC2::Error HWCDisplay::GetColorModes(uint32_t *out_num_modes, android_color_mod
 }
 
 HWC2::Error HWCDisplay::GetDisplayConfigs(uint32_t *out_num_configs, hwc2_config_t *out_configs) {
-  // TODO(user): Actually handle multiple configs
   if (out_configs == nullptr) {
-    *out_num_configs = 1;
-  } else {
-    *out_num_configs = 1;
-    out_configs[0] = 0;
+    *out_num_configs = num_configs_;
+    return HWC2::Error::None;
+  }
+
+  *out_num_configs = num_configs_;
+
+  for (uint32_t i = 0; i < num_configs_; i++) {
+    out_configs[i] = i;
   }
 
   return HWC2::Error::None;
@@ -730,14 +740,9 @@ HWC2::Error HWCDisplay::GetDisplayConfigs(uint32_t *out_num_configs, hwc2_config
 HWC2::Error HWCDisplay::GetDisplayAttribute(hwc2_config_t config, HWC2::Attribute attribute,
                                             int32_t *out_value) {
   DisplayConfigVariableInfo variable_config;
-  DisplayError error = display_intf_->GetFrameBufferConfig(&variable_config);
-  if (error != kErrorNone) {
-    DLOGV("Get variable config failed. Error = %d", error);
+  if (GetDisplayAttributesForConfig(INT(config), &variable_config) != kErrorNone) {
+    DLOGE("Get variable config failed");
     return HWC2::Error::BadDisplay;
-  }
-
-  if (config != 0) {  // We only use config[0] - see TODO above
-      return HWC2::Error::BadConfig;
   }
 
   switch (attribute) {
@@ -804,14 +809,19 @@ HWC2::Error HWCDisplay::GetDisplayType(int32_t *out_type) {
   }
 }
 
-// TODO(user): Store configurations and hook them up here
 HWC2::Error HWCDisplay::GetActiveConfig(hwc2_config_t *out_config) {
-  if (out_config != nullptr) {
-    *out_config = 0;
-    return HWC2::Error::None;
-  } else {
-    return HWC2::Error::BadParameter;
+  if (out_config == nullptr) {
+    return HWC2::Error::BadDisplay;
   }
+
+  uint32_t active_index = 0;
+  if (GetActiveDisplayConfig(&active_index) != kErrorNone) {
+    return HWC2::Error::BadConfig;
+  }
+
+  *out_config = active_index;
+
+  return HWC2::Error::None;
 }
 
 HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, int32_t acquire_fence,
@@ -836,10 +846,10 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, int32_t acquire_
 }
 
 HWC2::Error HWCDisplay::SetActiveConfig(hwc2_config_t config) {
-  if (config != 0) {
+  if (SetActiveDisplayConfig(config) != kErrorNone) {
     return HWC2::Error::BadConfig;
   }
-  // We have only one config right now - do nothing
+
   return HWC2::Error::None;
 }
 
