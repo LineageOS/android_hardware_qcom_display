@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "de6b6758_fa100485",
+        "filename": "common.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 36,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-07-29T00:02:00Z",
+      "side": 0,
+      "message": "Why would you not just set this, like the other commenter suggested?",
+      "revId": "38e457cdb7f6c6d98346166a3327d04edd3fefc2",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
