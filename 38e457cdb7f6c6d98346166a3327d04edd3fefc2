@@ -55,6 +55,29 @@
     },
     {
       "key": {
+        "uuid": "3bc600ec_47223d49",
+        "filename": "hdmi_cec/qhdmi_cec.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 370,
+      "author": {
+        "id": 15402
+      },
+      "writtenOn": "2017-07-30T17:50:41Z",
+      "side": 0,
+      "message": "Btw., there\u0027s an upstream patch to fix this, which\nshould be cherry-picked here:\n\ncommit 6f4eaf07116a95ce32fa969e2b30dee7f6466701\nAuthor:     Naseer Ahmed \u003cnaseer@codeaurora.org\u003e\ncec: Fix breakage due to API change\n\nThis is actually the only change necessary, afaics.",
+      "range": {
+        "startLine": 366,
+        "startChar": 0,
+        "endLine": 370,
+        "endChar": 60
+      },
+      "revId": "38e457cdb7f6c6d98346166a3327d04edd3fefc2",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "d14ac53d_5de79f64",
         "filename": "libhdmi/hdmi.cpp",
         "patchSetId": 1
