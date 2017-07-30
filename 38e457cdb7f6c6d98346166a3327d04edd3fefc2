@@ -37,6 +37,24 @@
     },
     {
       "key": {
+        "uuid": "f871f388_55015933",
+        "filename": "common.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 36,
+      "author": {
+        "id": 15402
+      },
+      "writtenOn": "2017-07-30T17:33:25Z",
+      "side": 0,
+      "message": "Actually, commit f3072db9f indicates that\nenabling DISPLAY_DEBUG_SWAPINTERVAL may not\nbe sucha a good idea",
+      "parentUuid": "4de6ab8e_a3144b26",
+      "revId": "38e457cdb7f6c6d98346166a3327d04edd3fefc2",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "d14ac53d_5de79f64",
         "filename": "libhdmi/hdmi.cpp",
         "patchSetId": 1
