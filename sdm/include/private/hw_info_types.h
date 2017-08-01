@@ -38,8 +38,6 @@ using std::string;
 
 const int kMaxSDELayers = 16;   // Maximum number of layers that can be handled by MDP5 hardware
                                 // in a given layer stack.
-const int kMaxBlitLayers = 32;   // Maximum number of layers that can be handled by MDP3 hardware
-                                // in a given layer stack.
 #define MAX_PLANES 4
 
 #define MAX_DETAIL_ENHANCE_CURVE 3
@@ -432,6 +430,7 @@ struct HWAVRInfo {
 };
 
 struct HWPipeInfo {
+  uint8_t rect = 255;
   uint32_t pipe_id = 0;
   HWSubBlockType sub_block_type = kHWSubBlockMax;
   LayerRect src_roi;
