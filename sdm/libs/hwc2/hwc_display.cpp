@@ -879,11 +879,15 @@ HWC2::Error HWCDisplay::GetHdrCapabilities(uint32_t *out_num_types, int32_t *out
   } else {
     // Only HDR10 supported
     *out_types = HAL_HDR_HDR10;
+    DLOGI("HDR type: %d", *out_types);
     static const float kLuminanceFactor = 10000.0;
     // luminance is expressed in the unit of 0.0001 cd/m2, convert it to 1cd/m2.
     *out_max_luminance = FLOAT(fixed_info.max_luminance)/kLuminanceFactor;
     *out_max_average_luminance = FLOAT(fixed_info.average_luminance)/kLuminanceFactor;
     *out_min_luminance = FLOAT(fixed_info.min_luminance)/kLuminanceFactor;
+    DLOGI("HDR max luminance: %f", *out_max_luminance);
+    DLOGI("HDR max avg luminance: %f", *out_max_average_luminance);
+    DLOGI("HDR min luminance: %f", *out_min_luminance);
   }
 
   return HWC2::Error::None;
