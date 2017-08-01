@@ -221,6 +221,10 @@ DisplayError HWTVDRM::UpdateHDRMetaData(HWLayers *hw_layers) {
   const Primaries &primaries = mastering_display.primaries;
 
   if (hdr_layer_info.operation == HWHDRLayerInfo::kSet) {
+    // Reset reset_hdr_flag to handle where there are two consecutive HDR video playbacks with not
+    // enough non-HDR frames in between to reset the HDR metadata.
+    reset_hdr_flag = false;
+
     int32_t eotf = GetEOTF(layer_buffer->color_metadata.transfer);
     hdr_metadata_.hdr_supported = 1;
     hdr_metadata_.hdr_state = HDR_ENABLE;
