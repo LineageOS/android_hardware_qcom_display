@@ -118,6 +118,9 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   void CommitLayerParams(LayerStack *layer_stack);
   void PostCommitLayerParams(LayerStack *layer_stack);
   DisplayError HandleHDR(LayerStack *layer_stack);
+#ifdef USE_EXTRA_HDR
+  void DeviceExtraHDR(int state);
+#endif
 
   // DumpImpl method
   void AppendDump(char *buffer, uint32_t length);
