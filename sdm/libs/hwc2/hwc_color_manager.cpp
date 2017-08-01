@@ -171,6 +171,7 @@ int HWCColorManager::EnableQDCMMode(bool enable, HWCDisplay *hwc_display) {
 
 int HWCColorManager::SetSolidFill(const void *params, bool enable, HWCDisplay *hwc_display) {
   SCOPE_LOCK(locker_);
+  LayerSolidFill solid_fill_color;
 
   if (params) {
     solid_fill_params_ = *reinterpret_cast<const PPColorFillParams *>(params);
@@ -178,7 +179,19 @@ int HWCColorManager::SetSolidFill(const void *params, bool enable, HWCDisplay *h
     solid_fill_params_ = PPColorFillParams();
   }
 
-  uint32_t solid_fill_color = Get8BitsARGBColorValue(solid_fill_params_);
+  if (solid_fill_params_.color.r_bitdepth != solid_fill_params_.color.b_bitdepth
+    || solid_fill_params_.color.r_bitdepth != solid_fill_params_.color.g_bitdepth) {
+    DLOGE("invalid bit depth r %d g %d b %d", solid_fill_params_.color.r_bitdepth,
+        solid_fill_params_.color.g_bitdepth, solid_fill_params_.color.b_bitdepth);
+    return -EINVAL;
+  }
+
+  solid_fill_color.bit_depth = solid_fill_params_.color.r_bitdepth;
+  solid_fill_color.red = solid_fill_params_.color.r;
+  solid_fill_color.blue = solid_fill_params_.color.b;
+  solid_fill_color.green = solid_fill_params_.color.g;
+  solid_fill_color.alpha = 0x3ff;
+
   if (enable) {
     LayerRect solid_fill_rect = {
       FLOAT(solid_fill_params_.rect.x), FLOAT(solid_fill_params_.rect.y),
@@ -186,10 +199,14 @@ int HWCColorManager::SetSolidFill(const void *params, bool enable, HWCDisplay *h
       FLOAT(solid_fill_params_.rect.y) + FLOAT(solid_fill_params_.rect.height),
     };
 
-    hwc_display->Perform(HWCDisplayPrimary::SET_QDCM_SOLID_FILL_INFO, solid_fill_color);
+    hwc_display->Perform(HWCDisplayPrimary::SET_QDCM_SOLID_FILL_INFO, &solid_fill_color);
     hwc_display->Perform(HWCDisplayPrimary::SET_QDCM_SOLID_FILL_RECT, &solid_fill_rect);
   } else {
-    hwc_display->Perform(HWCDisplayPrimary::UNSET_QDCM_SOLID_FILL_INFO, 0);
+    solid_fill_color.red = 0;
+    solid_fill_color.blue = 0;
+    solid_fill_color.green = 0;
+    solid_fill_color.alpha = 0;
+    hwc_display->Perform(HWCDisplayPrimary::UNSET_QDCM_SOLID_FILL_INFO, &solid_fill_color);
   }
 
   return 0;

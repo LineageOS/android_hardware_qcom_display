@@ -1694,7 +1694,12 @@ void HWCDisplay::SolidFillPrepare() {
     solid_fill_layer_->dst_rect = rect;
 
     solid_fill_layer_->blending = kBlendingPremultiplied;
-    solid_fill_layer_->solid_fill_color = solid_fill_color_;
+    solid_fill_layer_->solid_fill_color = 0;
+    solid_fill_layer_->solid_fill_info.bit_depth = solid_fill_color_.bit_depth;
+    solid_fill_layer_->solid_fill_info.red = solid_fill_color_.red;
+    solid_fill_layer_->solid_fill_info.blue = solid_fill_color_.blue;
+    solid_fill_layer_->solid_fill_info.green = solid_fill_color_.green;
+    solid_fill_layer_->solid_fill_info.alpha = solid_fill_color_.alpha;
     solid_fill_layer_->frame_rate = 60;
     solid_fill_layer_->visible_regions.push_back(solid_fill_layer_->dst_rect);
     solid_fill_layer_->flags.updating = 1;

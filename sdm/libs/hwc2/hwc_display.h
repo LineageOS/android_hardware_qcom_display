@@ -293,7 +293,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool solid_fill_enable_ = false;
   Layer *solid_fill_layer_ = NULL;
   LayerRect solid_fill_rect_ = {};
-  uint32_t solid_fill_color_ = 0;
+  LayerSolidFill solid_fill_color_ = {};
   LayerRect display_rect_;
   bool validated_ = false;
   bool color_tranform_failed_ = false;

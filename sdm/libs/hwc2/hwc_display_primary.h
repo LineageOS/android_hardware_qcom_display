@@ -76,7 +76,7 @@ class HWCDisplayPrimary : public HWCDisplay {
   virtual DisplayError SetDisplayMode(uint32_t mode);
   virtual DisplayError DisablePartialUpdateOneFrame();
   void ProcessBootAnimCompleted(void);
-  void SetQDCMSolidFillInfo(bool enable, uint32_t color);
+  void SetQDCMSolidFillInfo(bool enable, const LayerSolidFill &color);
   void ToggleCPUHint(bool set);
   void ForceRefreshRate(uint32_t refresh_rate);
   uint32_t GetOptimalRefreshRate(bool one_updating_layer);

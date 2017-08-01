@@ -291,6 +291,18 @@ struct LayerRectArray {
   uint32_t count = 0;      //!< Number of elements in the array.
 };
 
+/*! @brief This structure defines solidfill structure.
+
+  @sa LayerSolidFill
+*/
+struct LayerSolidFill {
+  uint32_t bit_depth = 0;  //!< Bit depth of solid fill colors
+  uint32_t red = 0;        //!< Red value
+  uint32_t green = 0;      //!< Green value
+  uint32_t blue = 0;       //!< Blue value
+  uint32_t alpha = 0;      //!< Alpha value
+};
+
 /*! @brief This structure defines display layer object which contains layer properties and a drawing
   buffer.
 
@@ -351,7 +363,9 @@ struct Layer {
   uint32_t frame_rate = 0;                         //!< Rate at which frames are being updated for
                                                    //!< this layer.
 
-  uint32_t solid_fill_color = 0;                   //!< Solid color used to fill the layer when
+  uint32_t solid_fill_color = 0;                   //!< TODO: Remove this field when fb support
+                                                   //!  is deprecated.
+                                                   //!< Solid color used to fill the layer when
                                                    //!< no content is associated with the layer.
 
   LayerFlags flags;                                //!< Flags associated with this layer.
@@ -360,6 +374,7 @@ struct Layer {
 
   Lut3d lut_3d = {};                               //!< o/p - Populated by SDM when tone mapping is
                                                    //!< needed on this layer.
+  LayerSolidFill solid_fill_info = {};             //!< solid fill info along with depth.
 };
 
 /*! @brief This structure defines a layer stack that contains layers which need to be composed and
