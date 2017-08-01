@@ -35,6 +35,8 @@
 #include <algorithm>
 #include <string>
 #include <bitset>
+#include <thread>
+#include <memory>
 
 #include "hwc_buffer_allocator.h"
 #include "hwc_buffer_sync_handler.h"
@@ -66,7 +68,54 @@ hwc_module_t HAL_MODULE_INFO_SYM = {
 };
 
 namespace sdm {
+
+static HWCUEvent g_hwc_uevent_;
 Locker HWCSession::locker_;
+
+void * HWCUEvent::UEventThread(HWCUEvent *hwc_event) {
+  const char *uevent_thread_name = "HWC_UeventThread";
+
+  prctl(PR_SET_NAME, uevent_thread_name, 0, 0, 0);
+  setpriority(PRIO_PROCESS, 0, HAL_PRIORITY_URGENT_DISPLAY);
+
+  if (!uevent_init()) {
+    DLOGE("Failed to init uevent");
+    pthread_exit(0);
+    return NULL;
+  }
+
+  while (1) {
+    char uevent_data[PAGE_SIZE] = {};
+
+    // keep last 2 zeroes to ensure double 0 termination
+    int length = uevent_next_event(uevent_data, INT32(sizeof(uevent_data)) - 2);
+
+    // scope of lock to this block only, so that caller is free to set event handler to nullptr;
+    {
+      std::lock_guard<std::mutex> guard(hwc_event->mutex_);
+      if (hwc_event->event_handler_) {
+        hwc_event->event_handler_->UEvent(uevent_data, length);
+      } else {
+        DLOGW("UEvent dropped. No uevent listener.");
+      }
+    }
+  }
+  pthread_exit(0);
+
+  return NULL;
+}
+
+HWCUEvent::HWCUEvent() {
+  std::thread thread(HWCUEvent::UEventThread, this);
+  thread.detach();
+}
+
+void HWCUEvent::Register(HWCUEventHandler *event_handler) {
+  DLOGI("Set uevent listener = %p", event_handler);
+
+  std::lock_guard<std::mutex> obj(mutex_);
+  event_handler_ = event_handler;
+}
 
 HWCSession::HWCSession(const hw_module_t *module) {
   hwc2_device_t::common.tag = HARDWARE_DEVICE_TAG;
@@ -146,8 +195,7 @@ int HWCSession::Init() {
     }
   }
 
-  std::thread uevent_thread(HWCUeventThread, this);
-  uevent_thread_.swap(uevent_thread);
+  g_hwc_uevent_.Register(this);
 
   return 0;
 }
@@ -167,10 +215,7 @@ int HWCSession::Deinit() {
     color_mgr_->DestroyColorManager();
   }
 
-  DLOGD("Terminating uevent thread");
-  uevent_thread_exit_ = true;
-  // todo(user): add a local event to interrupt thread execution and join.
-  uevent_thread_.detach();
+  g_hwc_uevent_.Register(nullptr);
 
   DisplayError error = CoreInterface::DestroyCore();
   if (error != kErrorNone) {
@@ -1238,52 +1283,26 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
   return (ret ? -EINVAL : 0);
 }
 
-void *HWCSession::HWCUeventThread(void *context) {
-  if (context) {
-    return reinterpret_cast<HWCSession *>(context)->HWCUeventThreadHandler();
-  }
-
-  return NULL;
-}
-
-void *HWCSession::HWCUeventThreadHandler() {
-  static char uevent_data[PAGE_SIZE];
-  int length = 0;
-  prctl(PR_SET_NAME, uevent_thread_name_, 0, 0, 0);
-  setpriority(PRIO_PROCESS, 0, HAL_PRIORITY_URGENT_DISPLAY);
-  if (!uevent_init()) {
-    DLOGE("Failed to init uevent");
-    pthread_exit(0);
-    return NULL;
-  }
-
-  while (!uevent_thread_exit_) {
-    // keep last 2 zeroes to ensure double 0 termination
-    length = uevent_next_event(uevent_data, INT32(sizeof(uevent_data)) - 2);
-
-    if (strcasestr(HWC_UEVENT_SWITCH_HDMI, uevent_data)) {
-      DLOGI("Uevent HDMI = %s", uevent_data);
-      int connected = GetEventValue(uevent_data, length, "SWITCH_STATE=");
-      if (connected >= 0) {
-        DLOGI("HDMI = %s", connected ? "connected" : "disconnected");
-        if (HotPlugHandler(connected) == -1) {
-          DLOGE("Failed handling Hotplug = %s", connected ? "connected" : "disconnected");
-        }
+void HWCSession::UEvent(const char *uevent_data, int length) {
+  if (strcasestr(uevent_data, HWC_UEVENT_SWITCH_HDMI)) {
+    DLOGI("Uevent HDMI = %s", uevent_data);
+    int connected = GetEventValue(uevent_data, length, "SWITCH_STATE=");
+    if (connected >= 0) {
+      DLOGI("HDMI = %s", connected ? "connected" : "disconnected");
+      if (HotPlugHandler(connected) == -1) {
+        DLOGE("Failed handling Hotplug = %s", connected ? "connected" : "disconnected");
       }
-    } else if (strcasestr(HWC_UEVENT_GRAPHICS_FB0, uevent_data)) {
-      DLOGI("Uevent FB0 = %s", uevent_data);
-      int panel_reset = GetEventValue(uevent_data, length, "PANEL_ALIVE=");
-      if (panel_reset == 0) {
-        callbacks_.Refresh(0);
-        reset_panel_ = true;
-      }
-    } else if (strcasestr(uevent_data, HWC_UEVENT_DRM_EXT_HOTPLUG)) {
-      HandleExtHPD(uevent_data, length);
     }
+  } else if (strcasestr(uevent_data, HWC_UEVENT_GRAPHICS_FB0)) {
+    DLOGI("Uevent FB0 = %s", uevent_data);
+    int panel_reset = GetEventValue(uevent_data, length, "PANEL_ALIVE=");
+    if (panel_reset == 0) {
+      callbacks_.Refresh(0);
+      reset_panel_ = true;
+    }
+  } else if (strcasestr(uevent_data, HWC_UEVENT_DRM_EXT_HOTPLUG)) {
+    HandleExtHPD(uevent_data, length);
   }
-  pthread_exit(0);
-
-  return NULL;
 }
 
 void HWCSession::HandleExtHPD(const char *uevent_data, int length) {
