@@ -69,6 +69,11 @@ ifeq ($(call is-board-platform-in-list, $(MASTER_SIDE_CP_TARGET_LIST)), true)
     common_flags += -DMASTER_SIDE_CP
 endif
 
+ifeq ($(TARGET_PROVIDES_EXTRA_HDR_FUNCTION), true)
+    common_flags     += -DUSE_EXTRA_HDR
+    common_includes  += $(TARGET_OUT_HEADERS)/hdr
+endif
+
 common_deps  :=
 kernel_includes :=
 
