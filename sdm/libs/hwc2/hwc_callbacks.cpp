@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -34,22 +34,28 @@
 
 namespace sdm {
 
-void HWCCallbacks::Hotplug(hwc2_display_t display, HWC2::Connection state) {
-  if (hotplug_) {
-    hotplug_(hotplug_data_, display, INT32(state));
+HWC2::Error HWCCallbacks::Hotplug(hwc2_display_t display, HWC2::Connection state) {
+  if (!hotplug_) {
+    return HWC2::Error::NoResources;
   }
+  hotplug_(hotplug_data_, display, INT32(state));
+  return HWC2::Error::None;
 }
 
-void HWCCallbacks::Refresh(hwc2_display_t display) {
-  if (refresh_) {
-    refresh_(refresh_data_, display);
+HWC2::Error HWCCallbacks::Refresh(hwc2_display_t display) {
+  if (!refresh_) {
+    return HWC2::Error::NoResources;
   }
+  refresh_(refresh_data_, display);
+  return HWC2::Error::None;
 }
 
-void HWCCallbacks::Vsync(hwc2_display_t display, int64_t timestamp) {
-  if (vsync_) {
-    vsync_(vsync_data_, display, timestamp);
+HWC2::Error HWCCallbacks::Vsync(hwc2_display_t display, int64_t timestamp) {
+  if (!vsync_) {
+    return HWC2::Error::NoResources;
   }
+  vsync_(vsync_data_, display, timestamp);
+  return HWC2::Error::None;
 }
 
 HWC2::Error HWCCallbacks::Register(HWC2::Callback descriptor, hwc2_callback_data_t callback_data,
