@@ -12,6 +12,11 @@ LOCAL_CFLAGS                  := -Wno-unused-parameter -DLOG_TAG=\"SDM\" \
 LOCAL_HW_INTF_PATH_1          := fb
 LOCAL_SHARED_LIBRARIES        := libdl libsdmutils
 
+ifneq ($(TARGET_EXTRA_HDR_LIB),)
+    common_flags     += -DUSE_EXTRA_HDR
+    LOCAL_STATIC_LIBRARIES := $(TARGET_EXTRA_HDR_LIB)
+endif
+
 ifneq ($(TARGET_IS_HEADLESS), true)
     LOCAL_CFLAGS              += -DCOMPILE_DRM -isystem external/libdrm
     LOCAL_SHARED_LIBRARIES    += libdrm libdrmutils
