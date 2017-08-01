@@ -36,6 +36,10 @@
 
 #define __CLASS__ "DisplayBase"
 
+#ifdef USE_EXTRA_HDR
+#include <hdr/DeviceHDRExtension.h>
+#endif
+
 namespace sdm {
 
 // TODO(user): Have a single structure handle carries all the interface pointers and variables.
@@ -1398,6 +1402,10 @@ DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
         DLOGI("Setting color mode = %s", current_color_mode_.c_str());
         // HDR playback off - set prev mode
         error = SetColorModeInternal(current_color_mode_);
+#ifdef USE_EXTRA_HDR
+        /* Deactivate device specific HDR extension function */
+        DeviceExtraHDR(0);
+#endif
       }
       comp_manager_->ControlDpps(true);  // Enable Dpps
     }
@@ -1421,6 +1429,10 @@ DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
         }
         DLOGI("Setting color mode = %s", hdr_color_mode.c_str());
         error = SetColorModeInternal(hdr_color_mode);
+#ifdef USE_EXTRA_HDR
+        /* Activate device specific HDR extension function */
+        DeviceExtraHDR(1);
+#endif
       }
       comp_manager_->ControlDpps(false);  // Disable Dpps
     }
