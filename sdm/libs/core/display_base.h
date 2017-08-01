@@ -179,6 +179,9 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   std::string current_color_mode_ = "hal_native";
   bool hdr_playback_mode_ = false;
   int disable_hdr_lut_gen_ = 0;
+#ifdef USE_EXTRA_HDR
+  void DeviceExtraHDR(bool state);
+#endif
 };
 
 }  // namespace sdm
