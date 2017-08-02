@@ -59,7 +59,6 @@ class DisplayPrimary : public DisplayBase, HWEventHandler {
   virtual DisplayError Blank(bool blank) { return kErrorNone; }
   virtual void IdleTimeout();
   virtual void ThermalEvent(int64_t thermal_level);
-  virtual void CECMessage(char *message) { }
   virtual void IdlePowerCollapse();
 
  private:
