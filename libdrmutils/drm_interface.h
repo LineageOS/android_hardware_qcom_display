@@ -422,6 +422,7 @@ struct DRMConnectorInfo {
   bool roi_merge;
   DRMRotation panel_orientation;
   drm_panel_hdr_properties panel_hdr_prop;
+  uint32_t transfer_time_us;
 };
 
 /* Identifier token for a display */

@@ -274,6 +274,7 @@ struct HWPanelInfo {
   uint32_t blackness_level = 0;       // Panel's blackness level
   HWColorPrimaries primaries = {};    // WRGB color primaries
   HWPanelOrientation panel_orientation = {};  // Panel Orientation
+  uint32_t transfer_time_us = 0;      // transfer time in micro seconds to panel's active region
 
   bool operator !=(const HWPanelInfo &panel_info) {
     return ((port != panel_info.port) || (mode != panel_info.mode) ||
@@ -289,7 +290,8 @@ struct HWPanelInfo {
             (max_fps != panel_info.max_fps) || (is_primary_panel != panel_info.is_primary_panel) ||
             (split_info != panel_info.split_info) || (s3d_mode != panel_info.s3d_mode) ||
             (left_roi_count != panel_info.left_roi_count) ||
-            (right_roi_count != panel_info.right_roi_count));
+            (right_roi_count != panel_info.right_roi_count) ||
+            (transfer_time_us != panel_info.transfer_time_us));
   }
 
   bool operator ==(const HWPanelInfo &panel_info) {
