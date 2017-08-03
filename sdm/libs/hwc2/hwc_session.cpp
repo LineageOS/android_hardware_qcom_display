@@ -157,10 +157,16 @@ int HWCSession::Init() {
 
   StartServices();
 
-  DisplayError error = CoreInterface::CreateCore(HWCDebugHandler::Get(), &buffer_allocator_,
-                                                 &buffer_sync_handler_, &socket_handler_,
-                                                 &core_intf_);
+  DisplayError error = buffer_allocator_.Init();
   if (error != kErrorNone) {
+    DLOGE("Buffer allocaor initialization failed. Error = %d", error);
+    return -EINVAL;
+  }
+
+  error = CoreInterface::CreateCore(HWCDebugHandler::Get(), &buffer_allocator_,
+                                    &buffer_sync_handler_, &socket_handler_, &core_intf_);
+  if (error != kErrorNone) {
+    buffer_allocator_.Deinit();
     DLOGE("Display core initialization failed. Error = %d", error);
     return -EINVAL;
   }
@@ -173,6 +179,7 @@ int HWCSession::Init() {
   if (error != kErrorNone) {
     g_hwc_uevent_.Register(nullptr);
     CoreInterface::DestroyCore();
+    buffer_allocator_.Deinit();
     DLOGE("Primary display type not recognized. Error = %d", error);
     return -EINVAL;
   }
@@ -198,6 +205,7 @@ int HWCSession::Init() {
   if (status) {
     g_hwc_uevent_.Register(nullptr);
     CoreInterface::DestroyCore();
+    buffer_allocator_.Deinit();
     return status;
   }
 

@@ -41,25 +41,43 @@
 
 namespace sdm {
 
-HWCBufferAllocator::HWCBufferAllocator() {
+DisplayError HWCBufferAllocator::Init() {
   int err = hw_get_module(GRALLOC_HARDWARE_MODULE_ID, &module_);
   if (err != 0) {
-    DLOGE("FATAL: can not open GRALLOC module");
-  } else {
-    gralloc1_open(module_, &gralloc_device_);
+    DLOGE("FATAL: can not get GRALLOC module");
+    return kErrorResources;
   }
+
+  err = gralloc1_open(module_, &gralloc_device_);
+  if (err != 0) {
+    DLOGE("FATAL: can not open GRALLOC device");
+    return kErrorResources;
+  }
+
+  if (gralloc_device_ == nullptr) {
+    DLOGE("FATAL: gralloc device is null");
+    return kErrorResources;
+  }
+
   ReleaseBuffer_ = reinterpret_cast<GRALLOC1_PFN_RELEASE>(
       gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_RELEASE));
   Perform_ = reinterpret_cast<GRALLOC1_PFN_PERFORM>(
       gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_PERFORM));
   Lock_ = reinterpret_cast<GRALLOC1_PFN_LOCK>(
       gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_LOCK));
+
+  return kErrorNone;
 }
 
-HWCBufferAllocator::~HWCBufferAllocator() {
+DisplayError HWCBufferAllocator::Deinit() {
   if (gralloc_device_ != nullptr) {
-    gralloc1_close(gralloc_device_);
+    int err = gralloc1_close(gralloc_device_);
+    if (err != 0) {
+      DLOGE("FATAL: can not close GRALLOC device");
+      return kErrorResources;
+    }
   }
+  return kErrorNone;
 }
 
 DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
