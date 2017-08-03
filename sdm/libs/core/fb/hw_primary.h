@@ -73,6 +73,7 @@ class HWPrimary : public HWDevice {
     kMaxSysfsCommandLength = 12,
   };
 
+  static const int kHWMdssVersion3 = 3;
   DisplayError PopulateDisplayAttributes();
   void InitializeConfigs();
   bool IsResolutionSwitchEnabled() { return !display_configs_.empty(); }

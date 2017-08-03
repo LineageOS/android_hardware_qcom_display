@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2016, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015-2017, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -47,7 +47,7 @@ class HWColorManager {
   static DisplayError SetDither(const PPFeatureInfo &feature, msmfb_mdp_pp *kernel_params);
   static DisplayError SetGamut(const PPFeatureInfo &feature, msmfb_mdp_pp *kernel_params);
   static DisplayError SetPADither(const PPFeatureInfo &feature, msmfb_mdp_pp *kernel_params);
-
+  static DisplayError SetCSCLegacy(const PPFeatureInfo &feature, msmfb_mdp_pp *kernel_params);
   static DisplayError (*SetFeature[kMaxNumPPFeatures])(const PPFeatureInfo &feature,
                                                        msmfb_mdp_pp *kernel_params);
 
