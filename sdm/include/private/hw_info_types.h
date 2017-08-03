@@ -88,6 +88,7 @@ enum HWSubBlockType {
 enum HWAlphaInterpolation {
   kInterpolationPixelRepeat,
   kInterpolationBilinear,
+  kInterpolation2D,
   kInterpolationMax,
 };
 
@@ -134,6 +135,12 @@ struct HWRotatorInfo {
   bool downscale_compression = false;
 
   void Reset() { *this = HWRotatorInfo(); }
+};
+
+enum HWQseedStepVersion {
+  kQseed3v2,
+  kQseed3v3,
+  kQseed3v4,
 };
 
 struct HWDestScalarInfo {
@@ -205,6 +212,7 @@ struct HWResourceInfo {
   CompRatioMap comp_ratio_rt_map;
   CompRatioMap comp_ratio_nrt_map;
   uint32_t cache_size = 0;  // cache size in bytes
+  HWQseedStepVersion pipe_qseed3_version = kQseed3v2;  // only valid when has_qseed3=true
 
   void Reset() { *this = HWResourceInfo(); }
 };

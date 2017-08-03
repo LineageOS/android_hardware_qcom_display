@@ -64,7 +64,6 @@ class HWInfoDRM: public HWInfoInterface {
                              HWResourceInfo *hw_resource);
   void PopulatePipeCaps(const sde_drm::DRMPlaneTypeInfo &info, HWResourceInfo *hw_resource);
 
-
   sde_drm::DRMManagerInterface *drm_mgr_intf_ = {};
   bool default_mode_ = false;
 

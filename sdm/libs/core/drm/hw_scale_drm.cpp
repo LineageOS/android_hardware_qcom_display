@@ -58,6 +58,8 @@ static uint32_t GetAlphaInterpolation(HWAlphaInterpolation alpha_filter_cfg) {
       return FILTER_ALPHA_DROP_REPEAT;
     case kInterpolationBilinear:
       return FILTER_ALPHA_BILINEAR;
+    case kInterpolation2D:
+      return FILTER_ALPHA_2D;
     default:
       DLOGE("Invalid Alpha Interpolation");
       return kInterpolationMax;
