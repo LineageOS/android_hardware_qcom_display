@@ -794,6 +794,7 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_DRAM_AB, token_.crtc_id, qos_data.dram_ab_bps);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_DRAM_IB, token_.crtc_id, qos_data.dram_ib_bps);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ROT_CLK, token_.crtc_id, qos_data.rot_clock_hz);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_SECURITY_LEVEL, token_.crtc_id, crtc_security_level);
 
   DLOGI_IF(kTagDriverConfig, "System Clock=%d Hz, Core: AB=%llu Bps, IB=%llu Bps, " \
            "LLCC: AB=%llu Bps, IB=%llu Bps, DRAM AB=%llu Bps, IB=%llu Bps Rot Clock=%d",
