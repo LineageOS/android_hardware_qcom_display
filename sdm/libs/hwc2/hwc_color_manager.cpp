@@ -234,7 +234,7 @@ int HWCColorManager::SetFrameCapture(void *params, bool enable, HWCDisplay *hwc_
         return -EFAULT;
       } else {
         frame_capture_data->buffer = reinterpret_cast<uint8_t *>(buffer);
-        frame_capture_data->buffer_stride = buffer_info.buffer_config.width;
+        frame_capture_data->buffer_stride = buffer_info.alloc_buffer_info.stride;
         frame_capture_data->buffer_size = buffer_info.alloc_buffer_info.size;
       }
       ret = hwc_display->FrameCaptureAsync(buffer_info, 1);
