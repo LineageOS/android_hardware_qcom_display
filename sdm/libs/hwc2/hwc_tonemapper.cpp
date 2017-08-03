@@ -289,6 +289,7 @@ void HWCToneMapper::SetFrameDumpConfig(uint32_t count) {
 }
 
 void HWCToneMapper::DumpToneMapOutput(ToneMapSession *session, int *acquire_fd) {
+  DisplayError error = kErrorNone;
   if (!dump_frame_count_) {
     return;
   }
@@ -302,6 +303,12 @@ void HWCToneMapper::DumpToneMapOutput(ToneMapSession *session, int *acquire_fd) 
       DLOGW("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
       return;
     }
+  }
+
+  error = buffer_allocator_->MapBuffer(target_buffer, *acquire_fd);
+  if (error != kErrorNone) {
+    DLOGE("MapBuffer failed, base addr = %x", target_buffer->base);
+    return;
   }
 
   size_t result = 0;
