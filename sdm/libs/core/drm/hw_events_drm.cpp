@@ -62,6 +62,11 @@ DisplayError HWEventsDRM::InitializePollFd() {
 
     switch (event_data.event_type) {
       case HWEvent::VSYNC: {
+        if (!is_primary_) {
+          // TODO(user): Once secondary support is added, use a different fd by calling drmOpen
+          break;
+        }
+
         poll_fds_[i].events = POLLIN | POLLPRI | POLLERR;
         DRMMaster *master = nullptr;
         int ret = DRMMaster::GetInstance(&master);
@@ -146,6 +151,8 @@ DisplayError HWEventsDRM::Init(int display_type, HWEventHandler *event_handler,
     return kErrorParameters;
 
   static_cast<const HWDeviceDRM *>(hw_intf)->GetDRMDisplayToken(&token_);
+  is_primary_ = static_cast<const HWDeviceDRM *>(hw_intf)->IsPrimaryDisplay();
+  vsync_enabled_ = is_primary_;
 
   DLOGI("Setup event handler for display %d, CRTC %d, Connector %d",
         display_type, token_.crtc_id, token_.conn_id);
@@ -177,6 +184,9 @@ DisplayError HWEventsDRM::Deinit() {
 DisplayError HWEventsDRM::SetEventState(HWEvent event, bool enable, void *arg) {
   switch (event) {
     case HWEvent::VSYNC:
+      if (!is_primary_) {
+        break;
+      }
       vsync_enabled_ = enable;
       if (enable) {
         WakeUpEventThread();
@@ -208,6 +218,7 @@ DisplayError HWEventsDRM::CloseFds() {
   for (uint32_t i = 0; i < event_data_list_.size(); i++) {
     switch (event_data_list_[i].event_type) {
       case HWEvent::VSYNC:
+        // TODO(user): close for secondary
         poll_fds_[i].fd = -1;
         break;
       case HWEvent::EXIT:
@@ -287,6 +298,7 @@ void *HWEventsDRM::DisplayEventHandler() {
 }
 
 DisplayError HWEventsDRM::RegisterVSync() {
+  // TODO(user): For secondary use DRM_VBLANK_HIGH_CRTC_MASK and DRM_VBLANK_HIGH_CRTC_SHIFT
   drmVBlank vblank{};
   vblank.request.type = (drmVBlankSeqType)(DRM_VBLANK_RELATIVE | DRM_VBLANK_EVENT);
   vblank.request.sequence = 1;

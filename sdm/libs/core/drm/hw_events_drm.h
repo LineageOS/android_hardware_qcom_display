@@ -89,8 +89,9 @@ class HWEventsDRM : public HWEventsInterface {
   std::string event_thread_name_ = "SDM_EventThread";
   bool exit_threads_ = false;
   uint32_t vsync_index_ = 0;
-  bool vsync_enabled_ = true;
+  bool vsync_enabled_ = false;
   sde_drm::DRMDisplayToken token_ = {};
+  bool is_primary_ = false;
 };
 
 }  // namespace sdm
