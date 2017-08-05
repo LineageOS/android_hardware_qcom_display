@@ -118,7 +118,6 @@ class BufferManager {
   std::shared_ptr<Buffer> GetBufferFromHandleLocked(const private_handle_t *hnd);
 
   bool map_fb_mem_ = false;
-  bool ubwc_for_fb_ = false;
   Allocator *allocator_ = NULL;
   std::mutex buffer_lock_;
   std::mutex descriptor_lock_;
