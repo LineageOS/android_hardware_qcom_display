@@ -104,7 +104,7 @@ DisplayError HWTVDRM::Init() {
 }
 
 DisplayError HWTVDRM::GetNumDisplayAttributes(uint32_t *count) {
-  *count = connector_info_.num_modes;
+  *count = UINT32(connector_info_.modes.size());
   if (*count <= 0) {
     return kErrorHardware;
   }
@@ -118,7 +118,7 @@ DisplayError HWTVDRM::GetActiveConfig(uint32_t *active_config_index) {
 }
 
 DisplayError HWTVDRM::SetDisplayAttributes(uint32_t index) {
-  if (index >= connector_info_.num_modes) {
+  if (index >= connector_info_.modes.size()) {
     return kErrorNotSupported;
   }
 
@@ -162,7 +162,7 @@ DisplayError HWTVDRM::GetConfigIndex(char *mode, uint32_t *index) {
     format = UINT32(stoi(str4.substr(str4.find(':') + 1)));
   }
 
-  for (size_t idex = 0; idex < connector_info_.num_modes; idex ++) {
+  for (size_t idex = 0; idex < connector_info_.modes.size(); idex ++) {
     if ((height == connector_info_.modes[idex].vdisplay) &&
         (width == connector_info_.modes[idex].hdisplay) &&
         (fps == connector_info_.modes[idex].vrefresh)) {

@@ -121,7 +121,7 @@ void HWVirtualDRM::InitializeConfigs() {
 }
 
 void HWVirtualDRM::DumpConfigs() {
-  for (uint32_t i = 0; i < (uint32_t)connector_info_.num_modes; i++) {
+  for (uint32_t i = 0; i < (uint32_t)connector_info_.modes.size(); i++) {
   DLOGI(
     "Name: %s\tvref: %d\thdisp: %d\t hsync_s: %d\thsync_e:%d\thtotal: %d\t"
     "vdisp: %d\tvsync_s: %d\tvsync_e: %d\tvtotal: %d\n",
