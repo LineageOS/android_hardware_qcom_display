@@ -211,6 +211,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
 
   android::status_t SetColorModeById(const android::Parcel *input_parcel);
 
+  void Refresh(hwc2_display_t display);
+  void HotPlug(hwc2_display_t display, HWC2::Connection state);
+
   static Locker locker_;
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWC_NUM_DISPLAY_TYPES] = {nullptr};
@@ -227,6 +230,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   qService::QService *qservice_ = nullptr;
   HWCSocketHandler socket_handler_;
   bool hdmi_is_primary_ = false;
+  Locker callbacks_lock_;
 };
 
 }  // namespace sdm
