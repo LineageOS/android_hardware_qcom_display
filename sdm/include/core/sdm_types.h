@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2015, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -53,6 +53,7 @@ enum DisplayError {
   kErrorHardware,         //!< A hardware error has occured.
   kErrorTimeOut,          //!< The operation has timed out to prevent client from waiting forever.
   kErrorShutDown,         //!< Driver is processing shutdown sequence
+  kErrorNoAppLayers,      //!< No App layer(s) in the draw cycle.
 };
 
 /*! @brief This structure is defined for client and library compatibility check purpose only. This

@@ -69,15 +69,11 @@ class HWCSession : hwc2_device_t, public qClient::BnQClient {
     }
 
     HWCSession *hwc_session = static_cast<HWCSession *>(device);
-    auto status = HWC2::Error::BadDisplay;
+    int32_t status = INT32(HWC2::Error::BadDisplay);
     if (hwc_session->hwc_display_[display]) {
-      status = HWC2::Error::BadLayer;
-      auto hwc_layer = hwc_session->hwc_display_[display]->GetHWCLayer(layer);
-      if (hwc_layer != nullptr) {
-        status = (hwc_layer->*member)(std::forward<Args>(args)...);
-      }
+      status = hwc_session->hwc_display_[display]->CallLayerFunction(layer, member, args...);
     }
-    return INT32(status);
+    return status;
   }
 
   // HWC2 Functions that require a concrete implementation in hwc session
