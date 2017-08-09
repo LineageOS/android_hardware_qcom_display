@@ -102,6 +102,7 @@ HWC2::Error HWCColorMode::GetColorModes(uint32_t *out_num_modes,
 }
 
 HWC2::Error HWCColorMode::SetColorMode(android_color_mode_t mode) {
+  DTRACE_SCOPED();
   // first mode in 2D matrix is the mode (identity)
   if (color_mode_transform_map_.find(mode) == color_mode_transform_map_.end()) {
     DLOGE("Could not find mode: %d", mode);
@@ -129,6 +130,7 @@ HWC2::Error HWCColorMode::SetColorTransform(const float *matrix, android_color_t
     return HWC2::Error::BadParameter;
   }
 
+  DTRACE_SCOPED();
   double color_matrix[kColorTransformMatrixCount] = {0};
   CopyColorTransformMatrix(matrix, color_matrix);
 
@@ -625,6 +627,7 @@ HWC2::Error HWCDisplay::SetLayerZOrder(hwc2_layer_t layer_id, uint32_t z) {
 
 HWC2::Error HWCDisplay::SetVsyncEnabled(HWC2::Vsync enabled) {
   DLOGV("Display ID: %d enabled: %s", id_, to_string(enabled).c_str());
+  ATRACE_INT("SetVsyncState ", enabled == HWC2::Vsync::Enable ? 1 : 0);
   DisplayError error = kErrorNone;
 
   if (shutdown_pending_ || !callbacks_->VsyncCallbackRegistered()) {
@@ -688,6 +691,7 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode) {
       return HWC2::Error::BadParameter;
   }
 
+  ATRACE_INT("SetPowerMode ", state);
   DisplayError error = display_intf_->SetDisplayState(state);
   if (error == kErrorNone) {
     flush_on_error_ = flush_on_error;

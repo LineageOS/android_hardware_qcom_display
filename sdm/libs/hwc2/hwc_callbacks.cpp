@@ -54,6 +54,7 @@ HWC2::Error HWCCallbacks::Vsync(hwc2_display_t display, int64_t timestamp) {
   if (!vsync_) {
     return HWC2::Error::NoResources;
   }
+  DTRACE_SCOPED();
   vsync_(vsync_data_, display, timestamp);
   return HWC2::Error::None;
 }
