@@ -404,8 +404,8 @@ int HWCQDCMModeManager::EnableActiveFeatures(bool enable,
   };
 
   if (socket_fd_ < 0) {
-    DLOGW("No socket connection available!");
-    return -EFAULT;
+    DLOGW("No socket connection available - assuming dpps is not enabled");
+    return 0;
   }
 
   if (!enable) {  // if client requesting to disable it.
