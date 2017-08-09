@@ -1369,7 +1369,7 @@ DisplayError HWDevice::DumpDebugData() {
   std::ostringstream  dst;
   auto file = open(xlog_path, O_CREAT | O_DSYNC | O_RDWR, "w+");
   if (file < 0) {
-    DLOGE("Couldn't open file: err:%d (%s)",errno, strerror(errno));
+    DLOGE("Couldn't open file: err:%d (%s)", errno, strerror(errno));
     return kErrorResources;
   }
   dst << "+++ MDP:XLOG +++" << std::endl;
