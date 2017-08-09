@@ -92,7 +92,7 @@ HWCDisplay::DisplayStatus MapExternalStatus(IDisplayConfig::DisplayExternalStatu
 // Methods from ::vendor::hardware::display::config::V1_0::IDisplayConfig follow.
 Return<void> HWCSession::isDisplayConnected(IDisplayConfig::DisplayType dpy,
                                             isDisplayConnected_cb _hidl_cb) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_);
+  SCOPE_LOCK(locker_);
 
   int32_t error = -EINVAL;
   bool connected = false;
@@ -109,7 +109,7 @@ Return<void> HWCSession::isDisplayConnected(IDisplayConfig::DisplayType dpy,
 }
 
 int32_t HWCSession::SetSecondaryDisplayStatus(int disp_id, HWCDisplay::DisplayStatus status) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_);
+  SCOPE_LOCK(locker_);
 
   if (disp_id < 0) {
     return -EINVAL;
@@ -135,7 +135,7 @@ Return<int32_t> HWCSession::setSecondayDisplayStatus(IDisplayConfig::DisplayType
 
 Return<int32_t> HWCSession::configureDynRefeshRate(IDisplayConfig::DisplayDynRefreshRateOp op,
                                                    uint32_t refreshRate) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_);
+  SCOPE_LOCK(locker_);
 
   HWCDisplay *hwc_display = hwc_display_[HWC_DISPLAY_PRIMARY];
 
@@ -158,7 +158,7 @@ Return<int32_t> HWCSession::configureDynRefeshRate(IDisplayConfig::DisplayDynRef
 }
 
 int32_t HWCSession::GetConfigCount(int disp_id, uint32_t *count) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_);
+  SCOPE_LOCK(locker_);
 
   if (disp_id >= 0 && hwc_display_[disp_id]) {
     return hwc_display_[disp_id]->GetDisplayConfigCount(count);
@@ -170,7 +170,7 @@ int32_t HWCSession::GetConfigCount(int disp_id, uint32_t *count) {
 Return<void> HWCSession::getConfigCount(IDisplayConfig::DisplayType dpy,
                                         getConfigCount_cb _hidl_cb) {
   uint32_t count = 0;
-  int32_t error = GetActiveConfigIndex(MapDisplayType(dpy), &count);
+  int32_t error = GetConfigCount(MapDisplayType(dpy), &count);
 
   _hidl_cb(error, count);
 
@@ -178,7 +178,7 @@ Return<void> HWCSession::getConfigCount(IDisplayConfig::DisplayType dpy,
 }
 
 int32_t HWCSession::GetActiveConfigIndex(int disp_id, uint32_t *config) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_);
+  SCOPE_LOCK(locker_);
 
   if (disp_id >= 0 && hwc_display_[disp_id]) {
     return hwc_display_[disp_id]->GetActiveDisplayConfig(config);
@@ -198,7 +198,7 @@ Return<void> HWCSession::getActiveConfig(IDisplayConfig::DisplayType dpy,
 }
 
 int32_t HWCSession::SetActiveConfigIndex(int disp_id, uint32_t config) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_);
+  SCOPE_LOCK(locker_);
 
   if (disp_id < 0) {
     return -EINVAL;
@@ -222,7 +222,7 @@ Return<int32_t> HWCSession::setActiveConfig(IDisplayConfig::DisplayType dpy, uin
 Return<void> HWCSession::getDisplayAttributes(uint32_t configIndex,
                                               IDisplayConfig::DisplayType dpy,
                                               getDisplayAttributes_cb _hidl_cb) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_);
+  SCOPE_LOCK(locker_);
 
   int32_t error = -EINVAL;
   IDisplayConfig::DisplayAttributes display_attributes = {};
@@ -247,7 +247,7 @@ Return<void> HWCSession::getDisplayAttributes(uint32_t configIndex,
 }
 
 Return<int32_t> HWCSession::setPanelBrightness(uint32_t level) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_);
+  SCOPE_LOCK(locker_);
 
   int32_t error = -EINVAL;
   if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
@@ -261,7 +261,7 @@ Return<int32_t> HWCSession::setPanelBrightness(uint32_t level) {
 }
 
 int32_t HWCSession::GetPanelBrightness(int *level) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_);
+  SCOPE_LOCK(locker_);
 
   int32_t error = -EINVAL;
 
@@ -285,7 +285,7 @@ Return<void> HWCSession::getPanelBrightness(getPanelBrightness_cb _hidl_cb) {
 }
 
 int32_t HWCSession::MinHdcpEncryptionLevelChanged(int disp_id, uint32_t min_enc_level) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_);
+  SCOPE_LOCK(locker_);
 
   DLOGI("Display %d", disp_id);
 
@@ -310,7 +310,7 @@ Return<int32_t> HWCSession::minHdcpEncryptionLevelChanged(IDisplayConfig::Displa
 }
 
 Return<int32_t> HWCSession::refreshScreen() {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_);
+  SCOPE_LOCK(locker_);
 
   callbacks_.Refresh(HWC_DISPLAY_PRIMARY);
 
@@ -318,7 +318,7 @@ Return<int32_t> HWCSession::refreshScreen() {
 }
 
 int32_t HWCSession::ControlPartialUpdate(int disp_id, bool enable) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_);
+  SCOPE_LOCK(locker_);
 
   if (disp_id < 0) {
     return -EINVAL;
@@ -362,7 +362,7 @@ Return<int32_t> HWCSession::controlPartialUpdate(IDisplayConfig::DisplayType dpy
 }
 
 Return<int32_t> HWCSession::toggleScreenUpdate(bool on) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_);
+  SCOPE_LOCK(locker_);
 
   int32_t error = -EINVAL;
   if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
@@ -376,7 +376,7 @@ Return<int32_t> HWCSession::toggleScreenUpdate(bool on) {
 }
 
 Return<int32_t> HWCSession::setIdleTimeout(uint32_t value) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_);
+  SCOPE_LOCK(locker_);
 
   if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
     hwc_display_[HWC_DISPLAY_PRIMARY]->SetIdleTimeoutMs(value);
@@ -388,7 +388,7 @@ Return<int32_t> HWCSession::setIdleTimeout(uint32_t value) {
 
 Return<void> HWCSession::getHDRCapabilities(IDisplayConfig::DisplayType dpy,
                                             getHDRCapabilities_cb _hidl_cb) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_);
+  SCOPE_LOCK(locker_);
 
   int32_t error = -EINVAL;
   IDisplayConfig::DisplayHDRCapabilities hdr_caps = {};
@@ -438,7 +438,7 @@ Return<void> HWCSession::getHDRCapabilities(IDisplayConfig::DisplayType dpy,
 }
 
 Return<int32_t> HWCSession::setCameraLaunchStatus(uint32_t on) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_);
+  SCOPE_LOCK(locker_);
 
   HWBwModes mode = on > 0 ? kBwCamera : kBwDefault;
 
@@ -456,7 +456,7 @@ Return<int32_t> HWCSession::setCameraLaunchStatus(uint32_t on) {
 }
 
 int32_t HWCSession::DisplayBWTransactionPending(bool *status) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_);
+  SCOPE_LOCK(locker_);
 
   if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
     if (sync_wait(bw_mode_release_fd_, 0) < 0) {
