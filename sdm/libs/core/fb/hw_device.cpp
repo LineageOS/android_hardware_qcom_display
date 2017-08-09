@@ -46,6 +46,7 @@
 #include <vector>
 #include <algorithm>
 #include <string>
+#include <sstream>
 
 #include "hw_device.h"
 #include "hw_primary.h"
@@ -1363,7 +1364,14 @@ DisplayError HWDevice::DumpDebugData() {
   DLOGW("Pingpong timeout occurred in the driver.");
 #ifdef USER_DEBUG
   // Save the xlogs on ping pong time out
-  std::ofstream  dst("/data/vendor/display/mdp_xlog");
+  const char* xlog_path = "/data/vendor/display/mdp_xlog";
+  DLOGD("Dumping debugfs data to %s", xlog_path);
+  std::ostringstream  dst;
+  auto file = open(xlog_path, O_CREAT | O_DSYNC | O_RDWR, "w+");
+  if (file < 0) {
+    DLOGE("Couldn't open file: err:%d (%s)",errno, strerror(errno));
+    return kErrorResources;
+  }
   dst << "+++ MDP:XLOG +++" << std::endl;
   std::ifstream  src("/sys/kernel/debug/mdp/xlog/dump");
   dst << src.rdbuf() << std::endl;
@@ -1383,6 +1391,14 @@ DisplayError HWDevice::DumpDebugData() {
   src.open("/sys/kernel/debug/mdp/xlog/vbif_dbgbus_xlog");
   dst << src.rdbuf() << std::endl;
   src.close();
+  auto ret = write(file, dst.str().c_str(), dst.str().size());
+  if (ret < 0) {
+    DLOGE("Failed to write xlog data err: %d (%s)", errno, strerror(errno));
+  } else {
+    fsync(file);
+  }
+  close(file);
+  DLOGD("Finished dumping xlogs");;
 #endif
   return kErrorNone;
 }
