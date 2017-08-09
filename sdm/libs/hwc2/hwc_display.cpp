@@ -200,8 +200,8 @@ void HWCColorMode::PopulateColorModes() {
     DLOGV_IF(kTagQDCM, "Color Mode[%d] = %s", i, mode_string.c_str());
     AttrVal attr;
     error = display_intf_->GetColorModeAttr(mode_string, &attr);
+    std::string color_gamut, dynamic_range, pic_quality;
     if (!attr.empty()) {
-      std::string color_gamut, dynamic_range, pic_quality;
       for (auto &it : attr) {
         if (it.first.find(kColorGamutAttribute) != std::string::npos) {
           color_gamut = it.second;
@@ -222,12 +222,15 @@ void HWCColorMode::PopulateColorModes() {
         PopulateTransform(HAL_COLOR_MODE_SRGB, mode_string, color_transform);
       } else if ((color_gamut == kDcip3) &&
                  (pic_quality.empty() || pic_quality == kStandard)) {
-        PopulateTransform(HAL_COLOR_MODE_DCI_P3, mode_string, color_transform);
+        PopulateTransform(HAL_COLOR_MODE_DISPLAY_P3, mode_string, color_transform);
       } else if ((color_gamut == kDisplayP3) &&
                  (pic_quality.empty() || pic_quality == kStandard)) {
         PopulateTransform(HAL_COLOR_MODE_DISPLAY_P3, mode_string, color_transform);
       }
-    } else {
+    }
+
+    // Look at the mode name, if no color gamut is found
+    if (color_gamut.empty()) {
       if (mode_string.find("hal_native") != std::string::npos) {
         PopulateTransform(HAL_COLOR_MODE_NATIVE, mode_string, mode_string);
       } else if (mode_string.find("hal_srgb") != std::string::npos) {
