@@ -70,6 +70,6 @@ enum class DriverType {
 };
 DriverType getDriverType();
 const char *GetHALPixelFormatString(int format);
-
+static const int kFBNodeMax = 4;
 }; //namespace qdutils
 #endif

@@ -115,6 +115,8 @@ DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
   if (hnd) {
     alloc_buffer_info->fd = hnd->fd;
     alloc_buffer_info->stride = UINT32(hnd->width);
+    alloc_buffer_info->aligned_width = UINT32(hnd->width);
+    alloc_buffer_info->aligned_height = UINT32(hnd->height);
     alloc_buffer_info->size = hnd->size;
   } else {
     DLOGE("Failed to allocate memory");
