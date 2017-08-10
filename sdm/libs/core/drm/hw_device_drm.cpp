@@ -985,7 +985,7 @@ void HWDeviceDRM::SetRotation(LayerTransform transform, const HWRotatorMode &mod
 
   // In no rotation case or inline rotation case, plane will handle flips
   // In DRM framework rotation is applied in counter-clockwise direction.
-  if (transform.rotation == 90) {
+  if (mode == kRotatorInline && transform.rotation == 90) {
     // a) rotate 90 clockwise = rotate 270 counter-clockwise in DRM
     // rotate 270 is translated as hflip + vflip + rotate90
     // b) rotate 270 clockwise = rotate 90 counter-clockwise in DRM
