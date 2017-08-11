@@ -163,6 +163,8 @@ int HWCSession::Init() {
     return -EINVAL;
   }
 
+  g_hwc_uevent_.Register(this);
+
   error = CoreInterface::CreateCore(HWCDebugHandler::Get(), &buffer_allocator_,
                                     &buffer_sync_handler_, &socket_handler_, &core_intf_);
   if (error != kErrorNone) {
@@ -171,7 +173,6 @@ int HWCSession::Init() {
     return -EINVAL;
   }
 
-  g_hwc_uevent_.Register(this);
 
   // If HDMI display is primary display, defer display creation until hotplug event is received.
   HWDisplayInterfaceInfo hw_disp_info = {};
@@ -1347,25 +1348,37 @@ void HWCSession::UEventHandler(const char *uevent_data, int length) {
   }
 }
 
-void HWCSession::HandleExtHPD(const char *uevent_data, int length) {
+const char *GetTokenValue(const char *uevent_data, int length, const char *token) {
   const char *iterator_str = uevent_data;
-  const char *event_info = "status=";
   const char *pstr = NULL;
   while (((iterator_str - uevent_data) <= length) && (*iterator_str)) {
-    pstr = strstr(iterator_str, event_info);
-    if (pstr != NULL) {
+    pstr = strstr(iterator_str, token);
+    if (pstr) {
       break;
     }
     iterator_str += strlen(iterator_str) + 1;
   }
 
+  if (pstr)
+    pstr = pstr+strlen(token);
+
+  return pstr;
+}
+
+void HWCSession::HandleExtHPD(const char *uevent_data, int length) {
+  const char *pstr = GetTokenValue(uevent_data, length, "name=");
+  if (!pstr || (strcmp(pstr, "DP-1") != 0)) {
+    return;
+  }
+
+  pstr = GetTokenValue(uevent_data, length, "status=");
   if (pstr) {
     bool connected = false;
-    if (strcmp(pstr+strlen(event_info), "connected") == 0) {
+    if (strcmp(pstr, "connected") == 0) {
       connected = true;
     }
 
-    DLOGI("Recived Ext HPD, connected:%d  status=%s", connected, pstr+strlen(event_info));
+    DLOGI("Recived Ext HPD, connected:%d  status=%s", connected, pstr);
     HotPlugHandler(connected);
   }
 }

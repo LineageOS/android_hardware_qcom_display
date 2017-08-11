@@ -146,10 +146,12 @@ DisplayError HWTVDRM::GetConfigIndex(char *mode, uint32_t *index) {
         (fps == connector_info_.modes[idex].vrefresh)) {
       if ((format >> 1) & (connector_info_.modes[idex].flags >> kBitYUV)) {
         *index = UINT32(idex);
+        break;
       }
 
       if (format & (connector_info_.modes[idex].flags >> kBitRGB)) {
         *index = UINT32(idex);
+        break;
       }
     }
   }
