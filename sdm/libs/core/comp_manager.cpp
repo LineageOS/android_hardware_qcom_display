@@ -307,10 +307,12 @@ DisplayError CompManager::Prepare(Handle display_ctx, HWLayers *hw_layers) {
   }
 
   if (error != kErrorNone) {
+    resource_intf_->Stop(display_resource_ctx, hw_layers);
     DLOGE("Composition strategies exhausted for display = %d", display_comp_ctx->display_type);
+    return error;
   }
 
-  resource_intf_->Stop(display_resource_ctx);
+  error = resource_intf_->Stop(display_resource_ctx, hw_layers);
 
   return error;
 }
@@ -356,7 +358,7 @@ DisplayError CompManager::ReConfigure(Handle display_ctx, HWLayers *hw_layers) {
     DLOGE("Reconfigure failed for display = %d", display_comp_ctx->display_type);
   }
 
-  resource_intf_->Stop(display_resource_ctx);
+  resource_intf_->Stop(display_resource_ctx, hw_layers);
   if (error != kErrorNone) {
       error = resource_intf_->PostPrepare(display_resource_ctx, hw_layers);
   }

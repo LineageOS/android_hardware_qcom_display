@@ -115,7 +115,7 @@ class HWCLayer {
 };
 
 struct SortLayersByZ {
-  bool operator()(const HWCLayer *lhs, const HWCLayer *rhs) {
+  bool operator()(const HWCLayer *lhs, const HWCLayer *rhs) const {
     return lhs->GetZ() < rhs->GetZ();
   }
 };
