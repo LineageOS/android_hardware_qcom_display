@@ -410,6 +410,7 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
   uint32_t mm_width = 0;
   uint32_t mm_height = 0;
   DRMTopology topology = DRMTopology::SINGLE_LM;
+  bool dual_display = false;
 
   if (default_mode_) {
     DRMResMgr *res_mgr = nullptr;
@@ -454,7 +455,9 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
       (topology == DRMTopology::DUAL_LM || topology == DRMTopology::DUAL_LM_MERGE ||
        topology == DRMTopology::DUAL_LM_MERGE_DSC || topology == DRMTopology::DUAL_LM_DSC ||
        topology == DRMTopology::DUAL_LM_DSCMERGE);
-  display_attributes_[index].h_total += display_attributes_[index].is_device_split ? h_blanking : 0;
+  dual_display = (topology == DRMTopology::DUAL_LM || topology == DRMTopology::DUAL_LM_DSC ||
+       topology == DRMTopology::PPSPLIT);
+  display_attributes_[index].h_total += dual_display ? h_blanking : 0;
 
   // If driver doesn't return panel width/height information, default to 320 dpi
   if (INT(mm_width) <= 0 || INT(mm_height) <= 0) {
@@ -466,10 +469,14 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
   display_attributes_[index].x_dpi = (FLOAT(mode.hdisplay) * 25.4f) / FLOAT(mm_width);
   display_attributes_[index].y_dpi = (FLOAT(mode.vdisplay) * 25.4f) / FLOAT(mm_height);
 
-  DLOGI("Display attributes[%d]: WxH: %dx%d, DPI: %fx%f, FPS: %d, SPLIT: %d", index,
+  DLOGI("Display attributes[%d]: WxH: %dx%d, DPI: %fx%f, FPS: %d, LM_SPLIT: %d, V_BACK_PORCH: %d," \
+        " V_FRONT_PORCH: %d, V_PULSE_WIDTH: %d, V_TOTAL: %d, H_TOTAL: %d, TOPOLOGY: %d", index,
         display_attributes_[index].x_pixels, display_attributes_[index].y_pixels,
         display_attributes_[index].x_dpi, display_attributes_[index].y_dpi,
-        display_attributes_[index].fps, display_attributes_[index].is_device_split);
+        display_attributes_[index].fps, display_attributes_[index].is_device_split,
+        display_attributes_[index].v_back_porch, display_attributes_[index].v_front_porch,
+        display_attributes_[index].v_pulse_width, display_attributes_[index].v_total,
+        display_attributes_[index].h_total, topology);
 
   return kErrorNone;
 }
