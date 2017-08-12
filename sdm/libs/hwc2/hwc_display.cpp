@@ -752,9 +752,18 @@ HWC2::Error HWCDisplay::GetDisplayConfigs(uint32_t *out_num_configs, hwc2_config
 HWC2::Error HWCDisplay::GetDisplayAttribute(hwc2_config_t config, HWC2::Attribute attribute,
                                             int32_t *out_value) {
   DisplayConfigVariableInfo variable_config;
-  if (GetDisplayAttributesForConfig(INT(config), &variable_config) != kErrorNone) {
-    DLOGE("Get variable config failed");
-    return HWC2::Error::BadDisplay;
+  // Get display attributes from config index only if resolution switch is supported.
+  // Otherwise always send mixer attributes. This is to support destination scaler.
+  if (num_configs_ > 1) {
+    if (GetDisplayAttributesForConfig(INT(config), &variable_config) != kErrorNone) {
+      DLOGE("Get variable config failed");
+      return HWC2::Error::BadDisplay;
+    }
+  } else {
+    if (display_intf_->GetFrameBufferConfig(&variable_config) != kErrorNone) {
+      DLOGV("Get variable config failed");
+      return HWC2::Error::BadDisplay;
+    }
   }
 
   switch (attribute) {
