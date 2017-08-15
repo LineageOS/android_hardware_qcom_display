@@ -55,6 +55,7 @@ HWVirtualDRM::HWVirtualDRM(BufferSyncHandler *buffer_sync_handler,
 }
 
 DisplayError HWVirtualDRM::Init() {
+  display_attributes_.push_back(HWDisplayAttributes());
   return kErrorNone;
 }
 
@@ -85,20 +86,19 @@ void HWVirtualDRM::ConfigureWbConnectorDestRect() {
 }
 
 void HWVirtualDRM::InitializeConfigs() {
-  current_mode_.hdisplay = current_mode_.hsync_start = current_mode_.hsync_end \
-  = current_mode_.htotal = (uint16_t) width_;
-  current_mode_.vdisplay = current_mode_.vsync_start = current_mode_.vsync_end \
-  = current_mode_.vtotal = (uint16_t) height_;
+  drmModeModeInfo mode = {};
+  mode.hdisplay = mode.hsync_start = mode.hsync_end = mode.htotal = (uint16_t) width_;
+  mode.vdisplay = mode.vsync_start = mode.vsync_end = mode.vtotal = (uint16_t) height_;
   // Not sure SF has a way to configure refresh rate. Hardcoding to 60 fps for now.
   // TODO(user): Make this configurable.
-  current_mode_.vrefresh = 60;
-  current_mode_.clock = (current_mode_.htotal * current_mode_.vtotal \
-  * current_mode_.vrefresh) / 1000;
+  mode.vrefresh = 60;
+  mode.clock = (mode.htotal * mode.vtotal * mode.vrefresh) / 1000;
+
   struct sde_drm_wb_cfg wb_cfg;
   wb_cfg.connector_id = token_.conn_id;
   wb_cfg.flags |= SDE_DRM_WB_CFG_FLAGS_CONNECTED;
   wb_cfg.count_modes = 1;
-  wb_cfg.modes = (uint64_t)&current_mode_;
+  wb_cfg.modes = (uint64_t)&mode;
   #ifdef DRM_IOCTL_SDE_WB_CONFIG
   int ret = drmIoctl(dev_fd_, DRM_IOCTL_SDE_WB_CONFIG, &wb_cfg);
   #endif
@@ -106,7 +106,6 @@ void HWVirtualDRM::InitializeConfigs() {
     DLOGE("WB config failed\n");
   } else {
     drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
-    current_mode_ = connector_info_.modes[0];
     DumpConfigs();
   }
 
@@ -118,6 +117,7 @@ void HWVirtualDRM::InitializeConfigs() {
       connector_info_.topology = sde_drm::DRMTopology::DUAL_LM_MERGE;
     }
   }
+  PopulateDisplayAttributes(current_mode_index_);
 }
 
 void HWVirtualDRM::DumpConfigs() {
@@ -160,15 +160,24 @@ DisplayError HWVirtualDRM::SetDisplayAttributes(const HWDisplayAttributes &displ
     return kErrorParameters;
   }
 
-  display_attributes_ = display_attributes;
+  uint32_t index = current_mode_index_;
+  width_ = display_attributes.x_pixels;
+  height_ = display_attributes.y_pixels;
 
-  if (display_attributes_.x_pixels > hw_resource_.max_mixer_width) {
-    display_attributes_.is_device_split = true;
+  DisplayError error = DeferredInit();
+  if (error != kErrorNone) {
+    width_ = display_attributes_[index].x_pixels;
+    height_ = display_attributes_[index].y_pixels;
+    return error;
   }
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &connector_info_.modes[index]);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
 
-  width_ = display_attributes_.x_pixels;
-  height_ = display_attributes_.y_pixels;
-  DeferredInit();
+  display_attributes_[index] = display_attributes;
+  if (display_attributes_[index].x_pixels > hw_resource_.max_mixer_width) {
+    display_attributes_[index].is_device_split = true;
+  }
+  UpdateMixerAttributes();
 
   return kErrorNone;
 }

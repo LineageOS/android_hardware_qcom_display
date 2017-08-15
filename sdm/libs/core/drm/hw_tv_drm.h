@@ -41,18 +41,12 @@ class HWTVDRM : public HWDeviceDRM {
 
  protected:
   virtual DisplayError Init();
-  virtual DisplayError GetNumDisplayAttributes(uint32_t *count);
-  // Requirement to call this only after the first config has been explicitly set by client
-  virtual DisplayError GetActiveConfig(uint32_t *active_config);
   virtual DisplayError SetDisplayAttributes(uint32_t index);
   virtual DisplayError GetConfigIndex(char *mode, uint32_t *index);
 
  private:
   static const int kBitRGB  = 20;
   static const int kBitYUV  = 21;
-
-  uint32_t active_config_index_;
-  uint32_t frame_rate_ = 0;
 };
 
 }  // namespace sdm
