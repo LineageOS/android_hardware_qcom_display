@@ -451,6 +451,7 @@ Return<int32_t> HWCSession::setCameraLaunchStatus(uint32_t on) {
 
   new_bw_mode_ = true;
   need_invalidate_ = true;
+  hwc_display_[HWC_DISPLAY_PRIMARY]->ResetValidation();
 
   return 0;
 }

@@ -283,6 +283,7 @@ void DisplayPrimary::IdleTimeout() {
   handle_idle_timeout_ = true;
   event_handler_->Refresh();
   comp_manager_->ProcessIdleTimeout(display_comp_ctx_);
+  event_handler_->HandleEvent(kIdleTimeout);
 }
 
 void DisplayPrimary::PingPongTimeout() {
@@ -293,6 +294,7 @@ void DisplayPrimary::PingPongTimeout() {
 void DisplayPrimary::ThermalEvent(int64_t thermal_level) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   comp_manager_->ProcessThermalEvent(display_comp_ctx_, thermal_level);
+  event_handler_->HandleEvent(kThermalEvent);
 }
 
 void DisplayPrimary::IdlePowerCollapse() {

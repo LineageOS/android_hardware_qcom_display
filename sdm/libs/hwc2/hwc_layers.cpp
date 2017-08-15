@@ -125,34 +125,38 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
   AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(handle, aligned_width, aligned_height);
 #endif
 
+  LayerBufferFormat format = GetSDMFormat(handle->format, handle->flags);
+  if ((format != layer_buffer->format) || (UINT32(aligned_width) != layer_buffer->width) ||
+      (UINT32(aligned_height) != layer_buffer->height)) {
+    // Layer buffer geometry has changed.
+    geometry_changes_ |= kBufferGeometry;
+  }
+
+  layer_buffer->format = format;
   layer_buffer->width = UINT32(aligned_width);
   layer_buffer->height = UINT32(aligned_height);
   layer_buffer->unaligned_width = UINT32(handle->unaligned_width);
   layer_buffer->unaligned_height = UINT32(handle->unaligned_height);
 
-  layer_buffer->format = GetSDMFormat(handle->format, handle->flags);
   if (SetMetaData(const_cast<private_handle_t *>(handle), layer_) != kErrorNone) {
     return HWC2::Error::BadLayer;
   }
 
-#ifdef USE_GRALLOC1
-  // TODO(user): Clean this up
-  if (handle->buffer_type == BUFFER_TYPE_VIDEO) {
-#else
-    if (handle->bufferType == BUFFER_TYPE_VIDEO) {
-#endif
-    layer_buffer->flags.video = true;
-  }
+  layer_buffer->flags.video = (handle->buffer_type == BUFFER_TYPE_VIDEO) ? true : false;
+
   // TZ Protected Buffer - L1
-  if (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER) {
-    layer_buffer->flags.secure = true;
-    if (handle->flags & private_handle_t::PRIV_FLAGS_CAMERA_WRITE) {
-      layer_buffer->flags.secure_camera = true;
-    }
+  bool secure = (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER);
+  bool secure_camera = secure && (handle->flags & private_handle_t::PRIV_FLAGS_CAMERA_WRITE);
+  bool secure_display = (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_DISPLAY);
+  if (secure != layer_buffer->flags.secure || secure_camera != layer_buffer->flags.secure_camera ||
+      secure_display != layer_buffer->flags.secure_display) {
+    // Secure attribute of layer buffer has changed.
+    needs_validate_ = true;
   }
-  if (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_DISPLAY) {
-    layer_buffer->flags.secure_display = true;
-  }
+
+  layer_buffer->flags.secure = secure;
+  layer_buffer->flags.secure_camera = secure_camera;
+  layer_buffer->flags.secure_display = secure_display;
 
   layer_buffer->planes[0].fd = ion_fd_;
   layer_buffer->planes[0].offset = handle->offset;
@@ -165,6 +169,20 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
 }
 
 HWC2::Error HWCLayer::SetLayerSurfaceDamage(hwc_region_t damage) {
+  // Check if there is an update in SurfaceDamage rects
+  if (layer_->dirty_regions.size() != damage.numRects) {
+    needs_validate_ = true;
+  } else {
+    for (uint32_t j = 0; j < damage.numRects; j++) {
+      LayerRect damage_rect;
+      SetRect(damage.rects[j], &damage_rect);
+      if (damage_rect != layer_->dirty_regions.at(j)) {
+        needs_validate_ = true;
+        break;
+      }
+    }
+  }
+
   layer_->dirty_regions.clear();
   for (uint32_t i = 0; i < damage.numRects; i++) {
     LayerRect rect;
@@ -579,20 +597,23 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
   LayerBuffer *layer_buffer = &layer->input_buffer;
   private_handle_t *handle = const_cast<private_handle_t *>(pvt_handle);
   IGC_t igc = {};
+  LayerIGC layer_igc = layer_buffer->igc;
   if (getMetaData(handle, GET_IGC, &igc) == 0) {
-    if (SetIGC(igc, &layer_buffer->igc) != kErrorNone) {
+    if (SetIGC(igc, &layer_igc) != kErrorNone) {
       return kErrorNotSupported;
     }
   }
 
   float fps = 0;
-  if (getMetaData(handle, GET_REFRESH_RATE  , &fps) == 0) {
-    layer->frame_rate = RoundToStandardFPS(fps);
+  uint32_t frame_rate = layer->frame_rate;
+  if (getMetaData(handle, GET_REFRESH_RATE, &fps) == 0) {
+    frame_rate = RoundToStandardFPS(fps);
   }
 
   int32_t interlaced = 0;
+  bool interlace = layer_buffer->flags.interlace;
   if (getMetaData(handle, GET_PP_PARAM_INTERLACED, &interlaced) == 0) {
-    layer_buffer->flags.interlace = interlaced ? true : false;
+    interlace = interlaced ? true : false;
   }
 
   uint32_t linear_format = 0;
@@ -601,8 +622,19 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
   }
 
   uint32_t s3d = 0;
+  LayerBufferS3DFormat s3d_format = layer_buffer->s3d_format;
   if (getMetaData(handle, GET_S3D_FORMAT, &s3d) == 0) {
-    layer_buffer->s3d_format = GetS3DFormat(s3d);
+    s3d_format = GetS3DFormat(s3d);
+  }
+
+  if ((layer_igc != layer_buffer->igc) || (interlace != layer_buffer->flags.interlace) ||
+      (frame_rate != layer->frame_rate) || (s3d_format != layer_buffer->s3d_format)) {
+    // Layer buffer metadata has changed.
+    needs_validate_ = true;
+    layer_buffer->igc = layer_igc;
+    layer->frame_rate = frame_rate;
+    layer_buffer->s3d_format = s3d_format;
+    layer_buffer->flags.interlace = interlace;
   }
 
   // Check if metadata is set
