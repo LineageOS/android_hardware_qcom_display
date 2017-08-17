@@ -119,6 +119,8 @@ class HWHDMI : public HWDevice {
   vector<HWS3DMode> supported_s3d_modes_;
   msm_hdmi_s3d_mode active_mdp_s3d_mode_ = HDMI_S3D_NONE;
   uint32_t frame_rate_ = 0;
+  time_t hdr_reset_start_ = 0, hdr_reset_end_ = 0;
+  bool reset_hdr_flag_ = false;
 };
 
 }  // namespace sdm
