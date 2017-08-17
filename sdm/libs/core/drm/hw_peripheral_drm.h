@@ -30,6 +30,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __HW_PERIPHERAL_DRM_H__
 #define __HW_PERIPHERAL_DRM_H__
 
+#include <vector>
 #include "hw_device_drm.h"
 
 namespace sdm {
@@ -44,7 +45,14 @@ class HWPeripheralDRM : public HWDeviceDRM {
  protected:
   virtual DisplayError Init();
   virtual DisplayError Validate(HWLayers *hw_layers);
+  virtual DisplayError Commit(HWLayers *hw_layers);
   virtual DisplayError PowerOn();
+  virtual DisplayError Flush();
+ private:
+  void SetDestScalarData(HWLayersInfo hw_layer_info);
+  void ResetDisplayParams();
+  sde_drm_dest_scaler_data sde_dest_scalar_data_ = {};
+  std::vector<SDEScaler> scalar_data_ = {};
 };
 
 }  // namespace sdm
