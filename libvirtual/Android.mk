@@ -10,5 +10,6 @@ LOCAL_SHARED_LIBRARIES        := $(common_libs) liboverlay libqdutils
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdvirtual\"
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
 LOCAL_SRC_FILES               := virtual.cpp
+LOCAL_STATIC_LIBRARIES        := libbase
 
 include $(BUILD_SHARED_LIBRARY)
