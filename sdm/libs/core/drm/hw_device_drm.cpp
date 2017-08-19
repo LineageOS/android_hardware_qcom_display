@@ -673,7 +673,7 @@ DisplayError HWDeviceDRM::PowerOn() {
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
   int ret = drm_atomic_intf_->Commit(false /* synchronous */);
   if (ret) {
-    DLOGE("%s failed with error %d", __FUNCTION__, ret);
+    DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
   }
   return kErrorNone;
@@ -689,14 +689,21 @@ DisplayError HWDeviceDRM::PowerOff() {
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
   int ret = drm_atomic_intf_->Commit(false /* synchronous */);
   if (ret) {
-    DLOGE("%s failed with error %d", __FUNCTION__, ret);
+    DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
   }
   return kErrorNone;
 }
 
 DisplayError HWDeviceDRM::Doze() {
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::DOZE);
+  int ret = drm_atomic_intf_->Commit(false /* synchronous */);
+  if (ret) {
+    DLOGE("Failed with error: %d", ret);
+    return kErrorHardware;
+  }
+
   return kErrorNone;
 }
 
