@@ -272,13 +272,6 @@ gralloc1_error_t BufferManager::RetainBuffer(private_handle_t const *hnd) {
   } else {
     private_handle_t *handle = const_cast<private_handle_t *>(hnd);
     err = ImportHandleLocked(handle);
-    if (err == GRALLOC1_ERROR_NONE) {
-      // TODO(user): See bug 35955598
-      if (hnd->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER) {
-        return GRALLOC1_ERROR_NONE;  // Don't map secure buffer
-      }
-      err = MapBuffer(hnd);
-    }
   }
   return err;
 }
