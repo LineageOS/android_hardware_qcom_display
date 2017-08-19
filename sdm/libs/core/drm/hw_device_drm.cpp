@@ -97,6 +97,7 @@ using sde_drm::DRMTopology;
 using sde_drm::DRMPowerMode;
 using sde_drm::DRMSecureMode;
 using sde_drm::DRMSecurityLevel;
+using sde_drm::DRMCscType;
 
 namespace sdm {
 
@@ -824,6 +825,10 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
                                       reinterpret_cast<uint64_t>(&scaler_output.scaler_v2));
           }
         }
+
+        DRMCscType csc_type = DRMCscType::kCscTypeMax;
+        SelectCscType(layer.input_buffer, &csc_type);
+        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_CSC_CONFIG, pipe_id, &csc_type);
       }
     }
   }
@@ -1008,6 +1013,34 @@ void HWDeviceDRM::SetBlending(const LayerBlending &source, DRMBlendType *target)
 void HWDeviceDRM::SetSrcConfig(const LayerBuffer &input_buffer, uint32_t *config) {
   if (input_buffer.flags.interlace) {
     *config |= (0x01 << UINT32(DRMSrcConfig::DEINTERLACE));
+  }
+}
+
+void HWDeviceDRM::SelectCscType(const LayerBuffer &input_buffer, DRMCscType *type) {
+  if (type == NULL) {
+    return;
+  }
+
+  *type = DRMCscType::kCscTypeMax;
+  if (input_buffer.format < kFormatYCbCr420Planar) {
+    return;
+  }
+
+  switch (input_buffer.color_metadata.colorPrimaries) {
+    case ColorPrimaries_BT601_6_525:
+    case ColorPrimaries_BT601_6_625:
+      *type = ((input_buffer.color_metadata.range == Range_Full) ?
+               DRMCscType::kCscYuv2Rgb601FR : DRMCscType::kCscYuv2Rgb601L);
+      break;
+    case ColorPrimaries_BT709_5:
+      *type = DRMCscType::kCscYuv2Rgb709L;
+      break;
+    case ColorPrimaries_BT2020:
+      *type = ((input_buffer.color_metadata.range == Range_Full) ?
+                DRMCscType::kCscYuv2Rgb2020FR : DRMCscType::kCscYuv2Rgb2020L);
+      break;
+    default:
+      break;
   }
 }
 
