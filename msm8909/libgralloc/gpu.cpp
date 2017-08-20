@@ -313,22 +313,9 @@ int gpu_context_t::alloc_impl(int w, int h, int format, int usage,
         return -EINVAL;
     size = (bufferSize >= size)? bufferSize : size;
 
-    bool useFbMem = false;
-    char property[PROPERTY_VALUE_MAX];
-    if((usage & GRALLOC_USAGE_HW_FB) &&
-       (property_get("debug.gralloc.map_fb_memory", property, NULL) > 0) &&
-       (!strncmp(property, "1", PROPERTY_VALUE_MAX ) ||
-        (!strncasecmp(property,"true", PROPERTY_VALUE_MAX )))) {
-        useFbMem = true;
-    }
-
     int err = 0;
-    if(useFbMem) {
-        err = gralloc_alloc_framebuffer(usage, pHandle);
-    } else {
-        err = gralloc_alloc_buffer(size, usage, pHandle, bufferType,
-                                   grallocFormat, alignedw, alignedh);
-    }
+    err = gralloc_alloc_buffer(size, usage, pHandle, bufferType,
+                               grallocFormat, alignedw, alignedh);
 
     if (err < 0) {
         return err;
