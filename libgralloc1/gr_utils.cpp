@@ -509,7 +509,7 @@ bool IsUBwcEnabled(int format, gralloc1_producer_usage_t prod_usage,
   // support the format. OR if a non-OpenGL client like Rotator, sets UBWC
   // usage flag and MDP supports the format.
   if ((prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_ALLOC_UBWC) && IsUBwcSupported(format)) {
-    bool enable = false;
+    bool enable = true;
     // Query GPU for UBWC only if buffer is intended to be used by GPU.
     if ((cons_usage & GRALLOC1_CONSUMER_USAGE_GPU_TEXTURE) ||
         (prod_usage & GRALLOC1_PRODUCER_USAGE_GPU_RENDER_TARGET)) {
