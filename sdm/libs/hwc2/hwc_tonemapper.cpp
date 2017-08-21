@@ -188,8 +188,8 @@ int HWCToneMapper::HandleToneMap(LayerStack *layer_stack) {
           // then SDM marks them for SDE Composition because the cached FB layer gets displayed.
           // GPU count will be 0 in this case. Try to use the existing tone-mapped frame buffer.
           // No ToneMap/Blit is required. Just update the buffer & acquire fence fd of FB layer.
-          if (!tone_map_sessions_.empty()) {
-            ToneMapSession *fb_tone_map_session = tone_map_sessions_.at(fb_session_index_);
+          if (!tone_map_sessions_.empty() && (fb_session_index_ >= 0)) {
+            ToneMapSession *fb_tone_map_session = tone_map_sessions_.at(UINT32(fb_session_index_));
             fb_tone_map_session->UpdateBuffer(-1 /* acquire_fence */, &layer->input_buffer);
             fb_tone_map_session->layer_index_ = INT(i);
             fb_tone_map_session->acquired_ = true;
@@ -197,7 +197,7 @@ int HWCToneMapper::HandleToneMap(LayerStack *layer_stack) {
           }
         }
         error = AcquireToneMapSession(layer, &session_index);
-        fb_session_index_ = session_index;
+        fb_session_index_ = INT(session_index);
         break;
       default:
         error = AcquireToneMapSession(layer, &session_index);
@@ -261,6 +261,13 @@ void HWCToneMapper::PostCommit(LayerStack *layer_stack) {
     } else {
       delete session;
       it = tone_map_sessions_.erase(it);
+      int deleted_session = INT(session_index);
+      // If FB tonemap session gets deleted, reset fb_session_index_, else update it.
+      if (deleted_session == fb_session_index_) {
+        fb_session_index_ = -1;
+      } else if (deleted_session < fb_session_index_) {
+        fb_session_index_--;
+      }
     }
   }
 }
@@ -271,7 +278,7 @@ void HWCToneMapper::Terminate() {
       delete tone_map_sessions_.back();
       tone_map_sessions_.pop_back();
     }
-    fb_session_index_ = 0;
+    fb_session_index_ = -1;
   }
 }
 

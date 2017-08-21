@@ -357,29 +357,33 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr *ycbcr) {
   bool interlaced = false;
 
   memset(ycbcr->reserved, 0, sizeof(ycbcr->reserved));
-  MetaData_t *metadata = reinterpret_cast<MetaData_t *>(hnd->base_metadata);
 
   // Check if UBWC buffer has been rendered in linear format.
-  if (metadata && (metadata->operation & LINEAR_FORMAT)) {
-    format = INT(metadata->linearFormat);
+  int linear_format = 0;
+  if (getMetaData(const_cast<private_handle_t *>(hnd),
+                  GET_LINEAR_FORMAT, &linear_format) == 0) {
+      format = INT(linear_format);
   }
 
   // Check metadata if the geometry has been updated.
-  if (metadata && metadata->operation & UPDATE_BUFFER_GEOMETRY) {
+  BufferDim_t buffer_dim;
+  if (getMetaData(const_cast<private_handle_t *>(hnd),
+                  GET_BUFFER_GEOMETRY, &buffer_dim) == 0) {
     int usage = 0;
-
     if (hnd->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED) {
       usage = GRALLOC1_PRODUCER_USAGE_PRIVATE_ALLOC_UBWC;
     }
 
-    BufferInfo info(metadata->bufferDim.sliceWidth, metadata->bufferDim.sliceHeight, format,
+    BufferInfo info(buffer_dim.sliceWidth, buffer_dim.sliceHeight, format,
                     prod_usage, cons_usage);
     GetAlignedWidthAndHeight(info, &width, &height);
   }
 
   // Check metadata for interlaced content.
-  if (metadata && (metadata->operation & PP_PARAM_INTERLACED)) {
-    interlaced = metadata->interlaced ? true : false;
+  int interlace_flag = 0;
+  if (getMetaData(const_cast<private_handle_t *>(hnd),
+                  GET_PP_PARAM_INTERLACED, &interlace_flag) != 0) {
+    interlaced = interlace_flag;
   }
 
   // Get the chroma offsets from the handle width/height. We take advantage
@@ -505,7 +509,7 @@ bool IsUBwcEnabled(int format, gralloc1_producer_usage_t prod_usage,
   // support the format. OR if a non-OpenGL client like Rotator, sets UBWC
   // usage flag and MDP supports the format.
   if ((prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_ALLOC_UBWC) && IsUBwcSupported(format)) {
-    bool enable = false;
+    bool enable = true;
     // Query GPU for UBWC only if buffer is intended to be used by GPU.
     if ((cons_usage & GRALLOC1_CONSUMER_USAGE_GPU_TEXTURE) ||
         (prod_usage & GRALLOC1_PRODUCER_USAGE_GPU_RENDER_TARGET)) {

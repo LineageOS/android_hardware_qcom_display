@@ -223,6 +223,7 @@ HWC2::Error HWCDisplayPrimary::Present(int32_t *out_retire_fence) {
     // If we do not handle the frame set retireFenceFd to outbufAcquireFenceFd
     // Revisit this when validating display_paused
     DisplayError error = display_intf_->Flush();
+    validated_.reset();
     if (error != kErrorNone) {
       DLOGE("Flush failed. Error = %d", error);
     }
@@ -258,6 +259,7 @@ HWC2::Error HWCDisplayPrimary::SetColorMode(android_color_mode_t mode) {
   }
 
   callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
+  validated_.reset();
 
   return status;
 }
@@ -277,6 +279,7 @@ HWC2::Error HWCDisplayPrimary::SetColorTransform(const float *matrix,
 
   callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
   color_tranform_failed_ = false;
+  validated_.reset();
 
   return status;
 }
@@ -318,6 +321,7 @@ int HWCDisplayPrimary::Perform(uint32_t operation, ...) {
       return -EINVAL;
   }
   va_end(args);
+  validated_.reset();
 
   return 0;
 }
@@ -407,6 +411,7 @@ DisplayError HWCDisplayPrimary::Refresh() {
 
 void HWCDisplayPrimary::SetIdleTimeoutMs(uint32_t timeout_ms) {
   display_intf_->SetIdleTimeoutMs(timeout_ms);
+  validated_.reset();
 }
 
 static void SetLayerBuffer(const BufferInfo &output_buffer_info, LayerBuffer *output_buffer) {
@@ -506,6 +511,7 @@ void HWCDisplayPrimary::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_lay
   output_buffer_base_ = buffer;
   post_processed_output_ = true;
   DisablePartialUpdateOneFrame();
+  validated_.reset();
 }
 
 int HWCDisplayPrimary::FrameCaptureAsync(const BufferInfo &output_buffer_info,
@@ -550,6 +556,7 @@ DisplayError HWCDisplayPrimary::SetDetailEnhancerConfig
 
   if (display_intf_) {
     error = display_intf_->SetDetailEnhancerData(de_data);
+    validated_.reset();
   }
   return error;
 }
@@ -559,6 +566,7 @@ DisplayError HWCDisplayPrimary::ControlPartialUpdate(bool enable, uint32_t *pend
 
   if (display_intf_) {
     error = display_intf_->ControlPartialUpdate(enable, pending);
+    validated_.reset();
   }
 
   return error;
@@ -569,6 +577,7 @@ DisplayError HWCDisplayPrimary::DisablePartialUpdateOneFrame() {
 
   if (display_intf_) {
     error = display_intf_->DisablePartialUpdateOneFrame();
+    validated_.reset();
   }
 
   return error;
@@ -576,7 +585,9 @@ DisplayError HWCDisplayPrimary::DisablePartialUpdateOneFrame() {
 
 
 DisplayError HWCDisplayPrimary::SetMixerResolution(uint32_t width, uint32_t height) {
-  return display_intf_->SetMixerResolution(width, height);
+  DisplayError error = display_intf_->SetMixerResolution(width, height);
+  validated_.reset();
+  return error;
 }
 
 DisplayError HWCDisplayPrimary::GetMixerResolution(uint32_t *width, uint32_t *height) {

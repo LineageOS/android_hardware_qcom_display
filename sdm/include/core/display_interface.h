@@ -135,6 +135,12 @@ enum DisplayPort {
   kPortDP,         // Display is connected to DP port.
 };
 
+/*! @brief This enum represents the events received by Display HAL. */
+enum DisplayEvent {
+  kIdleTimeout,    // Event triggered by Idle Timer.
+  kThermalEvent,   // Event triggered by Thermal.
+};
+
 /*! @brief This structure defines configuration for fixed properties of a display device.
 
   @sa DisplayInterface::GetConfig
@@ -244,6 +250,9 @@ class DisplayEventHandler {
     @return \link DisplayError \endlink
   */
   virtual DisplayError CECMessage(char *message) = 0;
+
+  /*! @brief Event handler for events received by Display HAL. */
+  virtual DisplayError HandleEvent(DisplayEvent event) = 0;
 
  protected:
   virtual ~DisplayEventHandler() { }
