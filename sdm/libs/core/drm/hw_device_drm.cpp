@@ -1359,10 +1359,10 @@ void HWDeviceDRM::SetSecureConfig(const LayerBuffer &input_buffer, DRMSecureMode
       // Secure and non-secure planes can be attached to this CRTC.
       *fb_secure_mode = DRMSecureMode::SECURE_DIR_TRANSLATION;
     } else if (input_buffer.flags.secure_display) {
-      // IOMMU configuration for this framebuffer mode is non-secure domain & requires
+      // IOMMU configuration for this framebuffer mode is secure domain & requires
       // only stage II translation, when this buffer is accessed by Display H/W.
       // Only secure planes can be attached to this CRTC.
-      *fb_secure_mode = DRMSecureMode::NON_SECURE_DIR_TRANSLATION;
+      *fb_secure_mode = DRMSecureMode::SECURE_DIR_TRANSLATION;
       *security_level = DRMSecurityLevel::SECURE_ONLY;
     } else {
       // IOMMU configuration for this framebuffer mode is secure domain & requires both
