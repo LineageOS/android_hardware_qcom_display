@@ -57,6 +57,7 @@ inline int roundUpToPageSize(int x) {
 /* TODO(user): move these to use producer private bits once 64-bit support available */
 /* This flag is used to indicate 10-bit tight pack format (e.g. TP10) */
 #define GRALLOC1_PRODUCER_USAGE_PRIVATE_10BIT_TP  0x08000000
+#define GRALLOC1_CONSUMER_USAGE_PRIVATE_10BIT_TP  0x08000000
 
 
 /* Consumer flags */
