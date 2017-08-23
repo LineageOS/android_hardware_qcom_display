@@ -190,8 +190,11 @@ HWC2::Error HWCDisplayPrimary::Validate(uint32_t *out_num_types, uint32_t *out_n
     layer_stack_.flags.post_processed_output = post_processed_output_;
   }
 
-  bool one_updating_layer = SingleLayerUpdating();
-  ToggleCPUHint(one_updating_layer);
+  uint32_t num_updating_layers = GetUpdatingLayersCount();
+  bool one_updating_layer = (num_updating_layers == 1);
+  if (num_updating_layers != 0) {
+    ToggleCPUHint(one_updating_layer);
+  }
 
   uint32_t refresh_rate = GetOptimalRefreshRate(one_updating_layer);
   if (current_refresh_rate_ != refresh_rate) {
