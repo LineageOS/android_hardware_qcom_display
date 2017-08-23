@@ -1805,7 +1805,7 @@ int HWCDisplay::GetDisplayAttributesForConfig(int config,
   return display_intf_->GetConfig(UINT32(config), display_attributes) == kErrorNone ? 0 : -1;
 }
 
-bool HWCDisplay::SingleLayerUpdating(void) {
+uint32_t HWCDisplay::GetUpdatingLayersCount(void) {
   uint32_t updating_count = 0;
 
   for (uint i = 0; i < layer_stack_.layers.size(); i++) {
@@ -1815,7 +1815,7 @@ bool HWCDisplay::SingleLayerUpdating(void) {
     }
   }
 
-  return (updating_count == 1);
+  return updating_count;
 }
 
 bool HWCDisplay::IsLayerUpdating(const Layer *layer) {
