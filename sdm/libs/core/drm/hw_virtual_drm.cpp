@@ -42,6 +42,7 @@ using sde_drm::DRMConnectorInfo;
 using sde_drm::DRMRect;
 using sde_drm::DRMOps;
 using sde_drm::DRMPowerMode;
+using sde_drm::DRMSecureMode;
 namespace sdm {
 
 HWVirtualDRM::HWVirtualDRM(BufferSyncHandler *buffer_sync_handler,
@@ -83,6 +84,11 @@ void HWVirtualDRM::ConfigureWbConnectorDestRect() {
   dst.right = width_;
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_RECT, token_.conn_id, dst);
   return;
+}
+
+void HWVirtualDRM::ConfigureWbConnectorSecureMode(bool secure) {
+  DRMSecureMode secure_mode = secure ? DRMSecureMode::SECURE : DRMSecureMode::NON_SECURE;
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_FB_SECURE_MODE, token_.conn_id, secure_mode);
 }
 
 void HWVirtualDRM::InitializeConfigs() {
@@ -144,6 +150,7 @@ DisplayError HWVirtualDRM::Commit(HWLayers *hw_layers) {
 
   ConfigureWbConnectorFbId(fb_id);
   ConfigureWbConnectorDestRect();
+  ConfigureWbConnectorSecureMode(output_buffer->flags.secure);
 
   err = HWDeviceDRM::AtomicCommit(hw_layers);
   registry_.UnregisterNext();
