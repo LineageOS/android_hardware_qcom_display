@@ -41,8 +41,13 @@ class HWTVDRM : public HWDeviceDRM {
 
  protected:
   virtual DisplayError Init();
+  virtual DisplayError Deinit();
   virtual DisplayError SetDisplayAttributes(uint32_t index);
   virtual DisplayError GetConfigIndex(char *mode, uint32_t *index);
+  virtual DisplayError PowerOff();
+  virtual DisplayError Doze();
+  virtual DisplayError DozeSuspend();
+  virtual DisplayError Standby();
 
  private:
   static const int kBitRGB  = 20;
