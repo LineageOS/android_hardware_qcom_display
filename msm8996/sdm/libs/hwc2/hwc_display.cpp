@@ -364,15 +364,6 @@ void HWCDisplay::BuildLayerStack() {
       layer_stack_.flags.skip_present = true;
     }
 
-
-    if (hwc_layer->GetClientRequestedCompositionType() == HWC2::Composition::Cursor) {
-      // Currently we support only one HWCursor & only at top most z-order
-      if ((*layer_set_.rbegin())->GetId() == hwc_layer->GetId()) {
-        layer->flags.cursor = true;
-        layer_stack_.flags.cursor_present = true;
-      }
-    }
-
     // TODO(user): Move to a getter if this is needed at other places
     hwc_rect_t scaled_display_frame = {INT(layer->dst_rect.left), INT(layer->dst_rect.top),
                                        INT(layer->dst_rect.right), INT(layer->dst_rect.bottom)};
@@ -1391,8 +1382,26 @@ HWC2::Error HWCDisplay::SetCursorPosition(hwc2_layer_t layer, int x, int y) {
     return HWC2::Error::None;
   }
 
-  // TODO(user): Validate layer
-  // TODO(user): Check if we're in a validate/present cycle
+  HWCLayer *hwc_layer = GetHWCLayer(layer);
+  if (hwc_layer == nullptr) {
+    return HWC2::Error::BadLayer;
+  }
+  if (hwc_layer->GetDeviceSelectedCompositionType() != HWC2::Composition::Cursor) {
+    return HWC2::Error::BadLayer;
+  }
+  if (validated_ == true) {
+    // the device is currently in the middle of the validate/present sequence,
+    // cannot set the Position(as per HWC2 spec)
+    return HWC2::Error::NotValidated;
+  }
+
+  DisplayState state;
+  if (display_intf_->GetDisplayState(&state) == kErrorNone) {
+    if (state != kStateOn) {
+      return HWC2::Error::None;
+    }
+  }
+
 
   auto error = display_intf_->SetCursorPosition(x, y);
   if (error != kErrorNone) {
