@@ -40,9 +40,9 @@ namespace sdm {
 
 class HWCCallbacks {
  public:
-  void Hotplug(hwc2_display_t display, HWC2::Connection state);
-  void Refresh(hwc2_display_t display);
-  void Vsync(hwc2_display_t display, int64_t timestamp);
+  HWC2::Error Hotplug(hwc2_display_t display, HWC2::Connection state);
+  HWC2::Error Refresh(hwc2_display_t display);
+  HWC2::Error Vsync(hwc2_display_t display, int64_t timestamp);
   HWC2::Error Register(HWC2::Callback, hwc2_callback_data_t callback_data,
                        hwc2_function_pointer_t pointer);
 

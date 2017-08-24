@@ -47,27 +47,6 @@ void engine_bind(void* context)
 }
 
 //-----------------------------------------------------------------------------
-// store the current context(caller)
-void* engine_backup()
-{
-  EngineContext* callerContext = new EngineContext();
-  // store the previous display/context
-  callerContext->eglDisplay = eglGetCurrentDisplay();
-  callerContext->eglContext = eglGetCurrentContext();
-  callerContext->eglSurface = eglGetCurrentSurface(EGL_DRAW);
-
-  return (void*)callerContext;
-}
-//-----------------------------------------------------------------------------
-// frees the backed up caller context
-void engine_free_backup(void* context)
-{
-  EngineContext* callerContext = (EngineContext*)(context);
-
-  delete callerContext;
-}
-
-//-----------------------------------------------------------------------------
 // initialize GL
 //
 void* engine_initialize(bool isSecure)

@@ -208,7 +208,7 @@ int32_t HWCSession::SetActiveConfigIndex(int disp_id, uint32_t config) {
   if (hwc_display_[disp_id]) {
     error = hwc_display_[disp_id]->SetActiveDisplayConfig(config);
     if (!error) {
-      callbacks_.Refresh(0);
+      Refresh(0);
     }
   }
 
@@ -312,7 +312,7 @@ Return<int32_t> HWCSession::minHdcpEncryptionLevelChanged(IDisplayConfig::Displa
 Return<int32_t> HWCSession::refreshScreen() {
   SCOPE_LOCK(locker_);
 
-  callbacks_.Refresh(HWC_DISPLAY_PRIMARY);
+  Refresh(HWC_DISPLAY_PRIMARY);
 
   return 0;
 }
@@ -349,7 +349,7 @@ int32_t HWCSession::ControlPartialUpdate(int disp_id, bool enable) {
   }
 
   // Todo(user): Unlock it before sending events to client. It may cause deadlocks in future.
-  callbacks_.Refresh(HWC_DISPLAY_PRIMARY);
+  Refresh(HWC_DISPLAY_PRIMARY);
 
   // Wait until partial update control is complete
   int32_t error = locker_.WaitFinite(kPartialUpdateControlTimeoutMs);
@@ -443,7 +443,7 @@ Return<int32_t> HWCSession::setCameraLaunchStatus(uint32_t on) {
   HWBwModes mode = on > 0 ? kBwCamera : kBwDefault;
 
   // trigger invalidate to apply new bw caps.
-  callbacks_.Refresh(HWC_DISPLAY_PRIMARY);
+  Refresh(HWC_DISPLAY_PRIMARY);
 
   if (core_intf_->SetMaxBandwidthMode(mode) != kErrorNone) {
     return -EINVAL;
@@ -451,6 +451,7 @@ Return<int32_t> HWCSession::setCameraLaunchStatus(uint32_t on) {
 
   new_bw_mode_ = true;
   need_invalidate_ = true;
+  hwc_display_[HWC_DISPLAY_PRIMARY]->ResetValidation();
 
   return 0;
 }

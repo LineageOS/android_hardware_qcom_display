@@ -53,7 +53,6 @@ class DisplayHDMI : public DisplayBase, HWEventHandler {
   virtual DisplayError Blank(bool blank) { return kErrorNone; }
   virtual void IdleTimeout() { }
   virtual void ThermalEvent(int64_t thermal_level) { }
-  virtual void CECMessage(char *message);
   virtual void IdlePowerCollapse() { }
 
  private:
@@ -64,8 +63,8 @@ class DisplayHDMI : public DisplayBase, HWEventHandler {
   bool underscan_supported_ = false;
   HWScanSupport scan_support_;
   std::map<LayerBufferS3DFormat, HWS3DMode> s3d_format_to_mode_;
-  std::vector<HWEvent> event_list_ = { HWEvent::VSYNC, HWEvent::IDLE_NOTIFY, HWEvent::EXIT,
-    HWEvent::CEC_READ_MESSAGE };
+  std::vector<HWEvent> event_list_ = { HWEvent::VSYNC, HWEvent::IDLE_NOTIFY, HWEvent::EXIT
+ };
 };
 
 }  // namespace sdm

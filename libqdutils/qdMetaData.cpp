@@ -265,7 +265,7 @@ int copyMetaData(struct private_handle_t *src, struct private_handle_t *dst) {
 
     MetaData_t *src_data = reinterpret_cast <MetaData_t *>(src->base_metadata);
     MetaData_t *dst_data = reinterpret_cast <MetaData_t *>(dst->base_metadata);
-    memcpy(src_data, dst_data, getMetaDataSize());
+    *dst_data = *src_data;
     return 0;
 }
 
@@ -279,7 +279,7 @@ int copyMetaDataVaToHandle(MetaData_t *src_data, struct private_handle_t *dst) {
         return err;
 
     MetaData_t *dst_data = reinterpret_cast <MetaData_t *>(dst->base_metadata);
-    memcpy(src_data, dst_data, getMetaDataSize());
+    *dst_data = *src_data;
     return 0;
 }
 
@@ -293,7 +293,7 @@ int copyMetaDataHandleToVa(struct private_handle_t *src, MetaData_t *dst_data) {
         return err;
 
     MetaData_t *src_data = reinterpret_cast <MetaData_t *>(src->base_metadata);
-    memcpy(src_data, dst_data, getMetaDataSize());
+    *dst_data = *src_data;
     return 0;
 }
 
@@ -305,7 +305,7 @@ int copyMetaDataVaToVa(MetaData_t *src_data, MetaData_t *dst_data) {
     if (dst_data == nullptr)
         return err;
 
-    memcpy(src_data, dst_data, getMetaDataSize());
+    *dst_data = *src_data;
     return 0;
 }
 
