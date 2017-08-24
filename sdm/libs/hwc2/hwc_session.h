@@ -221,7 +221,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   void Refresh(hwc2_display_t display);
   void HotPlug(hwc2_display_t display, HWC2::Connection state);
 
-  static Locker locker_;
+  static Locker locker_[HWC_NUM_DISPLAY_TYPES];
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWC_NUM_DISPLAY_TYPES] = {nullptr};
   HWCCallbacks callbacks_;
