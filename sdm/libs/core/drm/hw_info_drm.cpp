@@ -287,6 +287,9 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   hw_resource->max_bandwidth_high = info.max_bandwidth_high / kKiloUnit;
   hw_resource->max_sde_clk = info.max_sde_clk;
   hw_resource->hw_revision = info.hw_version;
+  hw_resource->min_core_ib_kbps = info.min_core_ib / kKiloUnit;
+  hw_resource->min_llcc_ib_kbps = info.min_llcc_ib / kKiloUnit;
+  hw_resource->min_dram_ib_kbps = info.min_dram_ib / kKiloUnit;
 
   std::vector<LayerBufferFormat> sdm_format;
   for (auto &it : info.comp_ratio_rt_map) {

@@ -213,6 +213,9 @@ struct HWResourceInfo {
   CompRatioMap comp_ratio_nrt_map;
   uint32_t cache_size = 0;  // cache size in bytes
   HWQseedStepVersion pipe_qseed3_version = kQseed3v2;  // only valid when has_qseed3=true
+  uint64_t min_core_ib_kbps = 0;
+  uint64_t min_llcc_ib_kbps = 0;
+  uint64_t min_dram_ib_kbps = 0;
 
   void Reset() { *this = HWResourceInfo(); }
 };
