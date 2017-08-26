@@ -273,6 +273,12 @@ enum struct DRMOps {
    *      DRMRect * - Array of Connector ROIs
    */
   CONNECTOR_SET_ROI,
+  /*
+   * Op: Set FB secure mode for Writeback connector.
+   * Arg: uint32_t - Connector ID
+   *      uint32_t - FB Secure mode
+   */
+  CONNECTOR_SET_FB_SECURE_MODE,
 };
 
 enum struct DRMRotation {

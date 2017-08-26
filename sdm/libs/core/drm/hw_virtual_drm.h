@@ -59,6 +59,7 @@ class HWVirtualDRM : public HWDeviceDRM {
   virtual DisplayError PowerOff();
   void ConfigureWbConnectorFbId(uint32_t fb_id);
   void ConfigureWbConnectorDestRect();
+  void ConfigureWbConnectorSecureMode(bool secure);
   void DumpConfigs();
 
  private:
