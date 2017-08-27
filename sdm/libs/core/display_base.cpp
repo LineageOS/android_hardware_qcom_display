@@ -211,6 +211,7 @@ DisplayError DisplayBase::ValidateGPUTargetParams() {
 DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
+  needs_validate_ = true;
 
   if (!active_) {
     return kErrorPermission;
@@ -250,7 +251,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
     error = hw_intf_->Validate(&hw_layers_);
     if (error == kErrorNone) {
       // Strategy is successful now, wait for Commit().
-      pending_commit_ = true;
+      needs_validate_ = false;
       break;
     }
     if (error == kErrorShutDown) {
@@ -269,7 +270,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
   DisplayError error = kErrorNone;
 
   if (!active_) {
-    pending_commit_ = false;
+    needs_validate_ = true;
     return kErrorPermission;
   }
 
@@ -277,12 +278,10 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     return kErrorParameters;
   }
 
-  if (!pending_commit_) {
+  if (needs_validate_) {
     DLOGE("Commit: Corresponding Prepare() is not called for display = %d", display_type_);
-    return kErrorUndefined;
+    return kErrorNotValidated;
   }
-
-  pending_commit_ = false;
 
   // Layer stack attributes has changed, need to Reconfigure, currently in use for Hybrid Comp
   if (layer_stack->flags.attributes_changed) {
@@ -343,7 +342,7 @@ DisplayError DisplayBase::Flush() {
   error = hw_intf_->Flush();
   if (error == kErrorNone) {
     comp_manager_->Purge(display_comp_ctx_);
-    pending_commit_ = false;
+    needs_validate_ = true;
   } else {
     DLOGW("Unable to flush display = %d", display_type_);
   }

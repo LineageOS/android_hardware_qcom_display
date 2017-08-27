@@ -48,10 +48,14 @@ HWCBufferAllocator::HWCBufferAllocator() {
   } else {
     gralloc1_open(module_, &gralloc_device_);
   }
-  ReleaseBuffer_ = reinterpret_cast<GRALLOC1_PFN_RELEASE>(
-      gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_RELEASE));
-  Perform_ = reinterpret_cast<GRALLOC1_PFN_PERFORM>(
-      gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_PERFORM));
+  if (gralloc_device_ != nullptr) {
+    ReleaseBuffer_ = reinterpret_cast<GRALLOC1_PFN_RELEASE>(
+        gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_RELEASE));
+    Perform_ = reinterpret_cast<GRALLOC1_PFN_PERFORM>(
+        gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_PERFORM));
+    Lock_ = reinterpret_cast<GRALLOC1_PFN_LOCK>(
+        gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_LOCK));
+  }
 }
 
 HWCBufferAllocator::~HWCBufferAllocator() {
@@ -349,6 +353,23 @@ DisplayError HWCBufferAllocator::GetBufferLayout(const AllocatedBufferInfo &buf_
   if (ret < 0) {
     DLOGE("GetBufferLayout failed");
     return kErrorParameters;
+  }
+
+  return kErrorNone;
+}
+
+DisplayError HWCBufferAllocator::MapBuffer(const private_handle_t *handle, int acquire_fence) {
+  void* buffer_ptr = NULL;
+  const gralloc1_rect_t accessRegion = {
+        .left = 0,
+        .top = 0,
+        .width = 0,
+        .height = 0
+  };
+  Lock_(gralloc_device_, handle, GRALLOC1_PRODUCER_USAGE_CPU_READ, GRALLOC1_CONSUMER_USAGE_NONE,
+        &accessRegion, &buffer_ptr, acquire_fence);
+  if (!buffer_ptr) {
+    return kErrorUndefined;
   }
 
   return kErrorNone;

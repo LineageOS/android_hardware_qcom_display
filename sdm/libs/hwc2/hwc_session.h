@@ -43,24 +43,27 @@ using ::android::hardware::Return;
 // only when there is a valid uevent, it can not be interrupted otherwise. Tieing life cycle
 // of this thread with HWC session cause HWC deinitialization to wait infinitely for the
 // thread to exit.
-class HWCUEventHandler {
+class HWCUEventListener {
  public:
-  virtual ~HWCUEventHandler() {}
-  virtual void UEvent(const char *uevent_data, int length) = 0;
+  virtual ~HWCUEventListener() {}
+  virtual void UEventHandler(const char *uevent_data, int length) = 0;
 };
 
 class HWCUEvent {
  public:
   HWCUEvent();
-  static void *UEventThread(HWCUEvent *hwc_event);
-  void Register(HWCUEventHandler *event_handler);
+  static void UEventThread(HWCUEvent *hwc_event);
+  void Register(HWCUEventListener *uevent_listener);
+  inline bool InitDone() { return init_done_; }
 
  private:
   std::mutex mutex_;
-  HWCUEventHandler *event_handler_ = nullptr;
+  std::condition_variable caller_cv_;
+  HWCUEventListener *uevent_listener_ = nullptr;
+  bool init_done_ = false;
 };
 
-class HWCSession : hwc2_device_t, HWCUEventHandler, IDisplayConfig, public qClient::BnQClient {
+class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qClient::BnQClient {
  public:
   struct HWCModuleMethods : public hw_module_methods_t {
     HWCModuleMethods() { hw_module_methods_t::open = HWCSession::Open; }
@@ -96,11 +99,18 @@ class HWCSession : hwc2_device_t, HWCUEventHandler, IDisplayConfig, public qClie
     }
 
     HWCSession *hwc_session = static_cast<HWCSession *>(device);
-    int32_t status = INT32(HWC2::Error::BadDisplay);
+    auto status = HWC2::Error::BadDisplay;
     if (hwc_session->hwc_display_[display]) {
-      status = hwc_session->hwc_display_[display]->CallLayerFunction(layer, member, args...);
+      status = HWC2::Error::BadLayer;
+      auto hwc_layer = hwc_session->hwc_display_[display]->GetHWCLayer(layer);
+      if (hwc_layer != nullptr) {
+        status = (hwc_layer->*member)(std::forward<Args>(args)...);
+        if (hwc_session->hwc_display_[display]->GetGeometryChanges()) {
+          hwc_session->hwc_display_[display]->ResetValidation();
+        }
+      }
     }
-    return status;
+    return INT32(status);
   }
 
   // HWC2 Functions that require a concrete implementation in hwc session
@@ -142,7 +152,7 @@ class HWCSession : hwc2_device_t, HWCUEventHandler, IDisplayConfig, public qClie
   static hwc2_function_pointer_t GetFunction(struct hwc2_device *device, int32_t descriptor);
 
   // Uevent handler
-  virtual void UEvent(const char *uevent_data, int length);
+  virtual void UEventHandler(const char *uevent_data, int length);
   int GetEventValue(const char *uevent_data, int length, const char *event_info);
   int HotPlugHandler(bool connected);
   void ResetPanel();
@@ -205,6 +215,9 @@ class HWCSession : hwc2_device_t, HWCUEventHandler, IDisplayConfig, public qClie
   android::status_t SetMixerResolution(const android::Parcel *input_parcel);
   android::status_t SetColorModeOverride(const android::Parcel *input_parcel);
 
+  void Refresh(hwc2_display_t display);
+  void HotPlug(hwc2_display_t display, HWC2::Connection state);
+
   static Locker locker_;
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWC_NUM_DISPLAY_TYPES] = {nullptr};
@@ -221,6 +234,7 @@ class HWCSession : hwc2_device_t, HWCUEventHandler, IDisplayConfig, public qClie
   qService::QService *qservice_ = nullptr;
   HWCSocketHandler socket_handler_;
   bool hdmi_is_primary_ = false;
+  Locker callbacks_lock_;
 };
 
 }  // namespace sdm

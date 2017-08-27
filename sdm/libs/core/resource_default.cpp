@@ -212,7 +212,7 @@ DisplayError ResourceDefault::Start(Handle display_ctx) {
   return kErrorNone;
 }
 
-DisplayError ResourceDefault::Stop(Handle display_ctx) {
+DisplayError ResourceDefault::Stop(Handle display_ctx, HWLayers *hw_layers) {
   locker_.Unlock();
 
   return kErrorNone;
