@@ -48,7 +48,10 @@ using sde_drm::kFeatureGamut;
 using sde_drm::kFeaturePADither;
 using sde_drm::kFeaturePAHsic;
 using sde_drm::kFeaturePASixZone;
-using sde_drm::kFeaturePAMemColor;
+using sde_drm::kFeaturePAMemColSkin;
+using sde_drm::kFeaturePAMemColSky;
+using sde_drm::kFeaturePAMemColFoliage;
+using sde_drm::kFeaturePAMemColProt;
 using sde_drm::kPPFeaturesMax;
 
 namespace sdm {
@@ -60,7 +63,9 @@ static const DrmPPFeatureMap DrmPPfeatureMap_ = \
     {kGlobalColorFeatureIgc, {kFeatureIgc}},
     {kGlobalColorFeaturePgc, {kFeaturePgc}},
     {kMixerColorFeatureGc, {kMixerColorFeatureGc}},
-    {kGlobalColorFeaturePaV2, {kFeaturePAHsic, kFeaturePASixZone, kFeaturePAMemColor}},
+    {kGlobalColorFeaturePaV2, {kFeaturePAHsic, kFeaturePASixZone,
+                               kFeaturePAMemColSkin, kFeaturePAMemColSky,
+                               kFeaturePAMemColFoliage, kFeaturePAMemColProt}},
     {kGlobalColorFeatureDither, {kFeatureDither}},
     {kGlobalColorFeatureGamut, {kFeatureGamut}},
     {kGlobalColorFeaturePADither, {kFeaturePADither}},
@@ -75,6 +80,7 @@ class HWColorManagerDrm {
   static void FreeDrmFeatureData(DRMPPFeatureInfo *feature);
   static uint32_t GetFeatureVersion(const DRMPPFeatureInfo &feature);
   static DRMPPFeatureID ToDrmFeatureId(uint32_t id);
+
  protected:
   HWColorManagerDrm() {}
 
@@ -88,7 +94,11 @@ class HWColorManagerDrm {
   static DisplayError GetDrmPADither(const PPFeatureInfo &in_data, DRMPPFeatureInfo *out_data);
   static DisplayError GetDrmPAHsic(const PPFeatureInfo &in_data, DRMPPFeatureInfo *out_data);
   static DisplayError GetDrmPASixZone(const PPFeatureInfo &in_data, DRMPPFeatureInfo *out_data);
-  static DisplayError GetDrmPAMemColor(const PPFeatureInfo &in_data, DRMPPFeatureInfo *out_data);
+  static DisplayError GetDrmPAMemColSkin(const PPFeatureInfo &in_data, DRMPPFeatureInfo *out_data);
+  static DisplayError GetDrmPAMemColSky(const PPFeatureInfo &in_data, DRMPPFeatureInfo *out_data);
+  static DisplayError GetDrmPAMemColFoliage(const PPFeatureInfo &in_data,
+                                            DRMPPFeatureInfo *out_data);
+  static DisplayError GetDrmPAMemColProt(const PPFeatureInfo &in_data, DRMPPFeatureInfo *out_data);
 };
 
 }  // namespace sdm

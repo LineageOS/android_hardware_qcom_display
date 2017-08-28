@@ -56,6 +56,23 @@ static const uint32_t kSixZoneHueMask = (1 << 16);
 static const uint32_t kSixZoneSatMask = (1 << 17);
 static const uint32_t kSixZoneValMask = (1 << 18);
 #endif
+
+#ifdef DRM_MSM_MEMCOL
+static const uint32_t kMemColorProtHueMask = (1 << 0);
+static const uint32_t kMemColorProtSatMask = (1 << 1);
+static const uint32_t kMemColorProtValMask = (1 << 2);
+static const uint32_t kMemColorProtContMask = (1 << 3);
+static const uint32_t kMemColorProtSixZoneMask = (1 << 4);
+static const uint32_t kMemColorProtBlendMask = (1 << 5);
+
+static const uint32_t kMemColorProtMask = \
+  (kMemColorProtHueMask | kMemColorProtSatMask | kMemColorProtValMask | \
+    kMemColorProtContMask | kMemColorProtSixZoneMask | kMemColorProtBlendMask);
+
+static const uint32_t kMemColorSkinMask = (1 << 19);
+static const uint32_t kMemColorSkyMask = (1 << 20);
+static const uint32_t kMemColorFolMask = (1 << 21);
+#endif
 #endif
 
 namespace sdm {
@@ -71,7 +88,10 @@ DisplayError (*HWColorManagerDrm::GetDrmFeature[])(const PPFeatureInfo &, DRMPPF
         [kFeaturePADither] = &HWColorManagerDrm::GetDrmPADither,
         [kFeaturePAHsic] = &HWColorManagerDrm::GetDrmPAHsic,
         [kFeaturePASixZone] = &HWColorManagerDrm::GetDrmPASixZone,
-        [kFeaturePAMemColor] = &HWColorManagerDrm::GetDrmPAMemColor,
+        [kFeaturePAMemColSkin] = &HWColorManagerDrm::GetDrmPAMemColSkin,
+        [kFeaturePAMemColSky] = &HWColorManagerDrm::GetDrmPAMemColSky,
+        [kFeaturePAMemColFoliage] = &HWColorManagerDrm::GetDrmPAMemColFoliage,
+        [kFeaturePAMemColProt] = &HWColorManagerDrm::GetDrmPAMemColProt,
 };
 
 void HWColorManagerDrm::FreeDrmFeatureData(DRMPPFeatureInfo *feature) {
@@ -104,7 +124,10 @@ uint32_t HWColorManagerDrm::GetFeatureVersion(const DRMPPFeatureInfo &feature) {
       break;
     case kFeaturePAHsic:
     case kFeaturePASixZone:
-    case kFeaturePAMemColor:
+    case kFeaturePAMemColSkin:
+    case kFeaturePAMemColSky:
+    case kFeaturePAMemColFoliage:
+    case kFeaturePAMemColProt:
       if (feature.version == 1)
         version = PPFeatureVersion::kSDEPaV17;
       break;
@@ -529,9 +552,245 @@ DisplayError HWColorManagerDrm::GetDrmPASixZone(const PPFeatureInfo &in_data,
   return ret;
 }
 
-DisplayError HWColorManagerDrm::GetDrmPAMemColor(const PPFeatureInfo &in_data,
-                                                 DRMPPFeatureInfo *out_data) {
-  return kErrorNotSupported;
+DisplayError HWColorManagerDrm::GetDrmPAMemColSkin(const PPFeatureInfo &in_data,
+                                                   DRMPPFeatureInfo *out_data) {
+  DisplayError ret = kErrorNone;
+#if defined(PP_DRM_ENABLE) && defined(DRM_MSM_MEMCOL)
+  struct SDEPaData *sde_pa;
+
+  if (!out_data) {
+    DLOGE("Invalid input parameter for memory color skin");
+    return kErrorParameters;
+  }
+
+  sde_pa = (struct SDEPaData *) in_data.GetConfigData();
+
+  out_data->id = kFeaturePAMemColSkin;
+  out_data->type = sde_drm::kPropBlob;
+  out_data->version = in_data.feature_version_;
+  out_data->payload_size = 0;
+  out_data->payload = NULL;
+
+  if (in_data.enable_flags_ & kOpsDisable) {
+    /* Complete PA features disable case */
+    return ret;
+  } else if (!(in_data.enable_flags_ & kOpsEnable)) {
+    DLOGE("Invalid ops for memory color skin");
+    return kErrorParameters;
+  }
+
+  if (!(sde_pa->mode & kMemColorSkinMask)) {
+    /* PA MemColSkin feature disable case, but other PA features active */
+    return ret;
+  }
+
+  if (in_data.enable_flags_ & kPaSkinEnable) {
+    struct drm_msm_memcol *mdp_memcol = NULL;
+    struct SDEPaMemColorData *pa_memcol = &sde_pa->skin;
+
+    mdp_memcol = new drm_msm_memcol();
+    if (!mdp_memcol) {
+      DLOGE("Failed to allocate memory for memory color skin");
+      return kErrorMemory;
+    }
+
+    mdp_memcol->prot_flags = 0;
+    mdp_memcol->color_adjust_p0 = pa_memcol->adjust_p0;
+    mdp_memcol->color_adjust_p1 = pa_memcol->adjust_p1;
+    mdp_memcol->color_adjust_p2 = pa_memcol->adjust_p2;
+    mdp_memcol->blend_gain = pa_memcol->blend_gain;
+    mdp_memcol->sat_hold = pa_memcol->sat_hold;
+    mdp_memcol->val_hold = pa_memcol->val_hold;
+    mdp_memcol->hue_region = pa_memcol->hue_region;
+    mdp_memcol->sat_region = pa_memcol->sat_region;
+    mdp_memcol->val_region = pa_memcol->val_region;
+
+    out_data->payload = mdp_memcol;
+    out_data->payload_size = sizeof(struct drm_msm_memcol);
+  } else {
+    /* PA MemColSkin configuration unchanged, no better return code available */
+    ret = kErrorPermission;
+  }
+#endif
+  return ret;
+}
+
+DisplayError HWColorManagerDrm::GetDrmPAMemColSky(const PPFeatureInfo &in_data,
+                                                  DRMPPFeatureInfo *out_data) {
+  DisplayError ret = kErrorNone;
+#if defined(PP_DRM_ENABLE) && defined(DRM_MSM_MEMCOL)
+  struct SDEPaData *sde_pa;
+
+  if (!out_data) {
+    DLOGE("Invalid input parameter for memory color sky");
+    return kErrorParameters;
+  }
+
+  sde_pa = (struct SDEPaData *) in_data.GetConfigData();
+
+  out_data->id = kFeaturePAMemColSky;
+  out_data->type = sde_drm::kPropBlob;
+  out_data->version = in_data.feature_version_;
+  out_data->payload_size = 0;
+  out_data->payload = NULL;
+
+  if (in_data.enable_flags_ & kOpsDisable) {
+    /* Complete PA features disable case */
+    return ret;
+  } else if (!(in_data.enable_flags_ & kOpsEnable)) {
+    DLOGE("Invalid ops for memory color sky");
+    return kErrorParameters;
+  }
+
+  if (!(sde_pa->mode & kMemColorSkyMask)) {
+    /* PA MemColSky feature disable case, but other PA features active */
+    return ret;
+  }
+
+  if (in_data.enable_flags_ & kPaSkyEnable) {
+    struct drm_msm_memcol *mdp_memcol = NULL;
+    struct SDEPaMemColorData *pa_memcol = &sde_pa->sky;
+
+    mdp_memcol = new drm_msm_memcol();
+    if (!mdp_memcol) {
+      DLOGE("Failed to allocate memory for memory color sky");
+      return kErrorMemory;
+    }
+
+    mdp_memcol->prot_flags = 0;
+    mdp_memcol->color_adjust_p0 = pa_memcol->adjust_p0;
+    mdp_memcol->color_adjust_p1 = pa_memcol->adjust_p1;
+    mdp_memcol->color_adjust_p2 = pa_memcol->adjust_p2;
+    mdp_memcol->blend_gain = pa_memcol->blend_gain;
+    mdp_memcol->sat_hold = pa_memcol->sat_hold;
+    mdp_memcol->val_hold = pa_memcol->val_hold;
+    mdp_memcol->hue_region = pa_memcol->hue_region;
+    mdp_memcol->sat_region = pa_memcol->sat_region;
+    mdp_memcol->val_region = pa_memcol->val_region;
+
+    out_data->payload = mdp_memcol;
+    out_data->payload_size = sizeof(struct drm_msm_memcol);
+  } else {
+    /* PA MemColSky configuration unchanged, no better return code available */
+    ret = kErrorPermission;
+  }
+#endif
+  return ret;
+}
+
+DisplayError HWColorManagerDrm::GetDrmPAMemColFoliage(const PPFeatureInfo &in_data,
+                                                      DRMPPFeatureInfo *out_data) {
+  DisplayError ret = kErrorNone;
+#if defined(PP_DRM_ENABLE) && defined(DRM_MSM_MEMCOL)
+  struct SDEPaData *sde_pa;
+
+  if (!out_data) {
+    DLOGE("Invalid input parameter for memory color foliage");
+    return kErrorParameters;
+  }
+
+  sde_pa = (struct SDEPaData *) in_data.GetConfigData();
+
+  out_data->id = kFeaturePAMemColFoliage;
+  out_data->type = sde_drm::kPropBlob;
+  out_data->version = in_data.feature_version_;
+  out_data->payload_size = 0;
+  out_data->payload = NULL;
+
+  if (in_data.enable_flags_ & kOpsDisable) {
+    /* Complete PA features disable case */
+    return ret;
+  } else if (!(in_data.enable_flags_ & kOpsEnable)) {
+    DLOGE("Invalid ops for memory color foliage");
+    return kErrorParameters;
+  }
+
+  if (!(sde_pa->mode & kMemColorFolMask)) {
+    /* PA MemColFoliage feature disable case, but other PA features active */
+    return ret;
+  }
+
+  if (in_data.enable_flags_ & kPaFoliageEnable) {
+    struct drm_msm_memcol *mdp_memcol = NULL;
+    struct SDEPaMemColorData *pa_memcol = &sde_pa->foliage;
+
+    mdp_memcol = new drm_msm_memcol();
+    if (!mdp_memcol) {
+      DLOGE("Failed to allocate memory for memory color foliage");
+      return kErrorMemory;
+    }
+
+    mdp_memcol->prot_flags = 0;
+    mdp_memcol->color_adjust_p0 = pa_memcol->adjust_p0;
+    mdp_memcol->color_adjust_p1 = pa_memcol->adjust_p1;
+    mdp_memcol->color_adjust_p2 = pa_memcol->adjust_p2;
+    mdp_memcol->blend_gain = pa_memcol->blend_gain;
+    mdp_memcol->sat_hold = pa_memcol->sat_hold;
+    mdp_memcol->val_hold = pa_memcol->val_hold;
+    mdp_memcol->hue_region = pa_memcol->hue_region;
+    mdp_memcol->sat_region = pa_memcol->sat_region;
+    mdp_memcol->val_region = pa_memcol->val_region;
+
+    out_data->payload = mdp_memcol;
+    out_data->payload_size = sizeof(struct drm_msm_memcol);
+  } else {
+    /* PA MemColFoliage configuration unchanged, no better return code available */
+    ret = kErrorPermission;
+  }
+#endif
+  return ret;
+}
+
+DisplayError HWColorManagerDrm::GetDrmPAMemColProt(const PPFeatureInfo &in_data,
+                                                   DRMPPFeatureInfo *out_data) {
+  DisplayError ret = kErrorNone;
+#if defined(PP_DRM_ENABLE) && defined(DRM_MSM_MEMCOL)
+  struct SDEPaData *sde_pa;
+  struct drm_msm_memcol *mdp_memcol;
+
+  if (!out_data) {
+    DLOGE("Invalid input parameter for memory color prot");
+    return kErrorParameters;
+  }
+
+  sde_pa = (struct SDEPaData *) in_data.GetConfigData();
+
+  out_data->id = kFeaturePAMemColProt;
+  out_data->type = sde_drm::kPropBlob;
+  out_data->version = in_data.feature_version_;
+  out_data->payload_size = sizeof(struct drm_msm_memcol);
+
+  if (in_data.enable_flags_ & kOpsDisable) {
+    /* Complete PA features disable case */
+    out_data->payload = NULL;
+    return ret;
+  } else if (!(in_data.enable_flags_ & kOpsEnable)) {
+    out_data->payload = NULL;
+    return kErrorParameters;
+  }
+
+  out_data->payload = NULL;
+  if (!(sde_pa->mode & kMemColorProtMask)) {
+    /* PA MemColProt feature disable case, but other PA features active */
+    return ret;
+  }
+
+  mdp_memcol = new drm_msm_memcol();
+  if (!mdp_memcol) {
+    DLOGE("Failed to allocate memory for memory color prot");
+    return kErrorMemory;
+  }
+
+  mdp_memcol->prot_flags = 0;
+
+  if (sde_pa->mode & kMemColorProtMask) {
+    mdp_memcol->prot_flags |= (sde_pa->mode & kMemColorProtMask);
+  }
+
+  out_data->payload = mdp_memcol;
+
+#endif
+  return ret;
 }
 
 DisplayError HWColorManagerDrm::GetDrmDither(const PPFeatureInfo &in_data,
