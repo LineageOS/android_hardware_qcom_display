@@ -1749,14 +1749,9 @@ void HWCDisplay::SolidFillPrepare() {
     layer_buffer->acquire_fence_fd = -1;
     layer_buffer->release_fence_fd = -1;
 
-    LayerRect rect;
-    rect.top = 0; rect.left = 0;
-    rect.right = primary_width;
-    rect.bottom = primary_height;
-
     solid_fill_layer_->composition = kCompositionGPU;
-    solid_fill_layer_->src_rect = rect;
-    solid_fill_layer_->dst_rect = rect;
+    solid_fill_layer_->src_rect = solid_fill_rect_;
+    solid_fill_layer_->dst_rect = solid_fill_rect_;
 
     solid_fill_layer_->blending = kBlendingPremultiplied;
     solid_fill_layer_->solid_fill_color = solid_fill_color_;
