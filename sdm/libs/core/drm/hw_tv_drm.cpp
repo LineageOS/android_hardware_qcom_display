@@ -102,6 +102,7 @@ DisplayError HWTVDRM::Init() {
 
 DisplayError HWTVDRM::SetDisplayAttributes(uint32_t index) {
   if (index >= connector_info_.modes.size()) {
+    DLOGE("Invalid mode index %d mode size %d", index, UINT32(connector_info_.modes.size()));
     return kErrorNotSupported;
   }
 
