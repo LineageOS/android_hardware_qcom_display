@@ -729,28 +729,18 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode) {
 
 HWC2::Error HWCDisplay::GetClientTargetSupport(uint32_t width, uint32_t height, int32_t format,
                                                int32_t dataspace) {
-  DisplayConfigVariableInfo variable_config;
-  HWC2::Error supported = HWC2::Error::None;
-  display_intf_->GetFrameBufferConfig(&variable_config);
-  if (format != HAL_PIXEL_FORMAT_RGBA_8888 && format != HAL_PIXEL_FORMAT_RGBA_1010102) {
-     DLOGW("Unsupported format = %d", format);
-    supported = HWC2::Error::Unsupported;
-  } else if (width != variable_config.x_pixels || height != variable_config.y_pixels) {
-    DLOGW("Unsupported width = %d height = %d", width, height);
-    supported = HWC2::Error::Unsupported;
-  } else if (dataspace != HAL_DATASPACE_UNKNOWN) {
-    ColorMetaData color_metadata = {};
-    if (sdm::GetSDMColorSpace(dataspace, &color_metadata) == false) {
-      DLOGW("Unsupported dataspace = %d", dataspace);
-      supported = HWC2::Error::Unsupported;
-    }
-    if (sdm::IsBT2020(color_metadata.colorPrimaries)) {
-      DLOGW("Unsupported color Primary BT2020");
-      supported = HWC2::Error::Unsupported;
-    }
+  ColorMetaData color_metadata = {};
+  LayerBufferFormat sdm_format = GetSDMFormat(format, 0);
+  GetColorPrimary(dataspace, &(color_metadata.colorPrimaries));
+  GetTransfer(dataspace, &(color_metadata.transfer));
+  GetRange(dataspace, &(color_metadata.range));
+
+  if (display_intf_->GetClientTargetSupport(width, height, sdm_format,
+                                            color_metadata) != kErrorNone) {
+    return HWC2::Error::Unsupported;
   }
 
-  return supported;
+  return HWC2::Error::None;
 }
 
 HWC2::Error HWCDisplay::GetColorModes(uint32_t *out_num_modes, android_color_mode_t *out_modes) {
