@@ -51,6 +51,19 @@ typedef DisplayError (*CreateColorInterface)(uint16_t version, DisplayType type,
 
 typedef DisplayError (*DestroyColorInterface)(DisplayType type);
 
+class ColorModeInterface {
+ public:
+  virtual DisplayError ColorIntfGetActiveColorParam(uint32_t hint, uint32_t display_id,
+                                                    void* data) = 0;
+  virtual DisplayError ColorIntfSetActiveColorParam(uint32_t hint, uint32_t display_id,
+                                                    void* data) = 0;
+ protected:
+  virtual ~ColorModeInterface() {}
+};
+
+extern "C" ColorModeInterface* GetColorModeInterface(DisplayType type);
+extern "C" void ReleaseColorModeInterface(DisplayType type);
+
 class ColorInterface {
  public:
   virtual DisplayError ColorSVCRequestRoute(const PPDisplayAPIPayload &in_payload,

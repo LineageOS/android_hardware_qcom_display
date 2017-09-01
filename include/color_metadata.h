@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -30,6 +30,7 @@ extern "C" {
 #else
 #include <stdbool.h>
 #endif
+#include <stdint.h>
 
 typedef enum ColorRange {
   Range_Limited = 0,
@@ -136,6 +137,7 @@ typedef struct ColorRemappingInfo {
   uint32_t           crPostLutTargetValue[3*33];
 } ColorRemappingInfo;
 
+#define HDR_DYNAMIC_META_DATA_SZ 1024
 typedef struct ColorMetaData {
   // Default values based on sRGB, needs to be overridden in gralloc
   // based on the format and size.
@@ -147,6 +149,11 @@ typedef struct ColorMetaData {
   MasteringDisplay   masteringDisplayInfo;
   ContentLightLevel  contentLightLevel;
   ColorRemappingInfo cRI;
+
+  // Dynamic meta data elements
+  bool dynamicMetaDataValid;
+  uint32_t dynamicMetaDataLen;
+  uint8_t dynamicMetaDataPayload[HDR_DYNAMIC_META_DATA_SZ];
 } ColorMetaData;
 
 typedef struct Color10Bit {

@@ -83,6 +83,15 @@ DisplayError DisplayBase::Init() {
     }
   }
 
+  color_mgr_ = ColorManagerProxy::CreateColorManagerProxy(display_type_, hw_intf_,
+                                                          display_attributes_, hw_panel_info_);
+
+  if (!color_mgr_) {
+    DLOGW("Unable to create ColorManagerProxy for display = %d", display_type_);
+  } else if (InitializeColorModes() != kErrorNone) {
+    DLOGW("InitColorModes failed for display = %d", display_type_);
+  }
+
   error = comp_manager_->RegisterDisplay(display_type_, display_attributes_, hw_panel_info_,
                                          mixer_attributes_, fb_config_, &display_comp_ctx_);
   if (error != kErrorNone) {
@@ -100,14 +109,6 @@ DisplayError DisplayBase::Init() {
     DisplayBase::SetMaxMixerStages(max_mixer_stages);
   }
 
-  color_mgr_ = ColorManagerProxy::CreateColorManagerProxy(display_type_, hw_intf_,
-                               display_attributes_, hw_panel_info_);
-  if (!color_mgr_) {
-    DLOGW("Unable to create ColorManagerProxy for display = %d", display_type_);
-  } else if (InitializeColorModes() != kErrorNone) {
-    DLOGW("InitColorModes failed for display = %d", display_type_);
-  }
-
   Debug::Get()->GetProperty("sdm.disable_hdr_lut_gen", &disable_hdr_lut_gen_);
   // TODO(user): Temporary changes, to be removed when DRM driver supports
   // Partial update with Destination scaler enabled.
@@ -116,6 +117,7 @@ DisplayError DisplayBase::Init() {
   return kErrorNone;
 
 CleanupOnError:
+  ClearColorInfo();
   if (display_comp_ctx_) {
     comp_manager_->UnregisterDisplay(display_comp_ctx_);
   }
@@ -126,15 +128,7 @@ CleanupOnError:
 DisplayError DisplayBase::Deinit() {
   {  // Scope for lock
     lock_guard<recursive_mutex> obj(recursive_mutex_);
-    color_modes_.clear();
-    color_mode_map_.clear();
-    color_mode_attr_map_.clear();
-
-    if (color_mgr_) {
-      delete color_mgr_;
-      color_mgr_ = NULL;
-    }
-
+    ClearColorInfo();
     comp_manager_->UnregisterDisplay(display_comp_ctx_);
   }
   HWEventsInterface::Destroy(hw_events_intf_);
@@ -1623,6 +1617,17 @@ void DisplayBase::SetPUonDestScaler() {
 
   disable_pu_on_dest_scaler_ = (mixer_width != display_width ||
                                 mixer_height != display_height);
+}
+
+void DisplayBase::ClearColorInfo() {
+  color_modes_.clear();
+  color_mode_map_.clear();
+  color_mode_attr_map_.clear();
+
+  if (color_mgr_) {
+    delete color_mgr_;
+    color_mgr_ = NULL;
+  }
 }
 
 }  // namespace sdm
