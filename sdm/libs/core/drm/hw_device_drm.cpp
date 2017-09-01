@@ -459,6 +459,7 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
   dual_display = (topology == DRMTopology::DUAL_LM || topology == DRMTopology::DUAL_LM_DSC ||
        topology == DRMTopology::PPSPLIT);
   display_attributes_[index].h_total += dual_display ? h_blanking : 0;
+  display_attributes_[index].clock_khz = mode.clock;
 
   // If driver doesn't return panel width/height information, default to 320 dpi
   if (INT(mm_width) <= 0 || INT(mm_height) <= 0) {
@@ -469,15 +470,17 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
 
   display_attributes_[index].x_dpi = (FLOAT(mode.hdisplay) * 25.4f) / FLOAT(mm_width);
   display_attributes_[index].y_dpi = (FLOAT(mode.vdisplay) * 25.4f) / FLOAT(mm_height);
+  SetTopology(topology, &display_attributes_[index].topology);
 
   DLOGI("Display attributes[%d]: WxH: %dx%d, DPI: %fx%f, FPS: %d, LM_SPLIT: %d, V_BACK_PORCH: %d," \
-        " V_FRONT_PORCH: %d, V_PULSE_WIDTH: %d, V_TOTAL: %d, H_TOTAL: %d, TOPOLOGY: %d", index,
-        display_attributes_[index].x_pixels, display_attributes_[index].y_pixels,
+        " V_FRONT_PORCH: %d, V_PULSE_WIDTH: %d, V_TOTAL: %d, H_TOTAL: %d, CLK: %dKHZ, TOPOLOGY: %d",
+        index, display_attributes_[index].x_pixels, display_attributes_[index].y_pixels,
         display_attributes_[index].x_dpi, display_attributes_[index].y_dpi,
         display_attributes_[index].fps, display_attributes_[index].is_device_split,
         display_attributes_[index].v_back_porch, display_attributes_[index].v_front_porch,
         display_attributes_[index].v_pulse_width, display_attributes_[index].v_total,
-        display_attributes_[index].h_total, topology);
+        display_attributes_[index].h_total, display_attributes_[index].clock_khz,
+        display_attributes_[index].topology);
 
   return kErrorNone;
 }
@@ -1379,6 +1382,20 @@ void HWDeviceDRM::UpdatePanelSplitInfo() {
   if (display_attributes_[index].is_device_split) {
     hw_panel_info_.split_info.left_split = hw_panel_info_.split_info.right_split =
         display_attributes_[index].x_pixels / 2;
+  }
+}
+
+void HWDeviceDRM::SetTopology(sde_drm::DRMTopology drm_topology, HWTopology *hw_topology) {
+  switch (drm_topology) {
+    case DRMTopology::SINGLE_LM:          *hw_topology = kSingleLM;        break;
+    case DRMTopology::SINGLE_LM_DSC:      *hw_topology = kSingleLMDSC;     break;
+    case DRMTopology::DUAL_LM:            *hw_topology = kDualLM;          break;
+    case DRMTopology::DUAL_LM_DSC:        *hw_topology = kDualLMDSC;       break;
+    case DRMTopology::DUAL_LM_MERGE:      *hw_topology = kDualLMMerge;     break;
+    case DRMTopology::DUAL_LM_MERGE_DSC:  *hw_topology = kDualLMMergeDSC;  break;
+    case DRMTopology::DUAL_LM_DSCMERGE:   *hw_topology = kDualLMDSCMerge;  break;
+    case DRMTopology::PPSPLIT:            *hw_topology = kPPSplit;         break;
+    default:                              *hw_topology = kUnknown;         break;
   }
 }
 
