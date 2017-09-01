@@ -527,7 +527,9 @@ void HWCDisplay::BuildLayerStack() {
     // TODO(user): Move to a getter if this is needed at other places
     hwc_rect_t scaled_display_frame = {INT(layer->dst_rect.left), INT(layer->dst_rect.top),
                                        INT(layer->dst_rect.right), INT(layer->dst_rect.bottom)};
-    ApplyScanAdjustment(&scaled_display_frame);
+    if (hwc_layer->GetGeometryChanges() & kDisplayFrame) {
+      ApplyScanAdjustment(&scaled_display_frame);
+    }
     hwc_layer->SetLayerDisplayFrame(scaled_display_frame);
     // SDM requires these details even for solid fill
     if (layer->flags.solid_fill) {
@@ -1515,10 +1517,12 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
 
   // Create rects to represent the new source and destination crops
   LayerRect crop = LayerRect(0, 0, FLOAT(x_pixels), FLOAT(y_pixels));
-  LayerRect dst = LayerRect(0, 0, FLOAT(fb_config.x_pixels), FLOAT(fb_config.y_pixels));
+  hwc_rect_t scaled_display_frame = {0, 0, INT(x_pixels), INT(y_pixels)};
+  ApplyScanAdjustment(&scaled_display_frame);
+  client_target_->SetLayerDisplayFrame(scaled_display_frame);
+
   auto client_target_layer = client_target_->GetSDMLayer();
   client_target_layer->src_rect = crop;
-  client_target_layer->dst_rect = dst;
 
   int aligned_width;
   int aligned_height;
