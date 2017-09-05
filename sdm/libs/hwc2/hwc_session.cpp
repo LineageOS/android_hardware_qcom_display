@@ -689,6 +689,13 @@ int32_t HWCSession::ValidateDisplay(hwc2_device_t *device, hwc2_display_t displa
     }
 
     status = hwc_session->hwc_display_[display]->Validate(out_num_types, out_num_requests);
+    // Handle pending external display connection
+    if (hwc_session->external_pending_connect_ && !hwc_session->hwc_display_[HWC_DISPLAY_VIRTUAL]) {
+      DLOGE("Process pending external display connection");
+      hwc_session->ConnectDisplay(HWC_DISPLAY_EXTERNAL);
+      hwc_session->external_pending_connect_ = false;
+      hwc_session->HotPlug(HWC_DISPLAY_EXTERNAL, HWC2::Connection::Connected);
+    }
   }
   return INT32(status);
 }
