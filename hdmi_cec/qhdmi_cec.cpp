@@ -581,7 +581,7 @@ static int populate_event_data(cec_context_t* ctx, std::vector<eventData> *event
 }
 
 static int set_event_params(cec_context_t* ctx, uint32_t node_event, eventData *event_data) {
-    pollfd poll_fd;
+    pollfd poll_fd = {0};
     poll_fd.fd = -EINVAL;
 
     if (!strncmp(event_data->event_name, "cec_msg_event", strlen("cec_msg_event"))) {
