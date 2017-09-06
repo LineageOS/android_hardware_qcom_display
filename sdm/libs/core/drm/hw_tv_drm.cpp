@@ -67,35 +67,14 @@ HWTVDRM::HWTVDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer
   device_name_ = "TV Display Device";
 }
 
-// TODO(user) : split function in base class and avoid code duplicacy
-// by using base implementation for this basic stuff
 DisplayError HWTVDRM::Init() {
-  DisplayError error = kErrorNone;
-
-  default_mode_ = (DRMLibLoader::GetInstance()->IsLoaded() == false);
-
-  if (!default_mode_) {
-    DRMMaster *drm_master = {};
-    int dev_fd = -1;
-    DRMMaster::GetInstance(&drm_master);
-    drm_master->GetHandle(&dev_fd);
-    DRMLibLoader::GetInstance()->FuncGetDRMManager()(dev_fd, &drm_mgr_intf_);
-    if (drm_mgr_intf_->RegisterDisplay(DRMDisplayType::TV, &token_)) {
-      DLOGE("RegisterDisplay failed");
-      return kErrorResources;
-    }
-
-    drm_mgr_intf_->CreateAtomicReq(token_, &drm_atomic_intf_);
-    drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
-    InitializeConfigs();
+  DisplayError error = HWDeviceDRM::Init();
+  if (error != kErrorNone) {
+    DLOGE("Init failed for %s", device_name_);
+    return error;
   }
 
-  hw_info_intf_->GetHWResourceInfo(&hw_resource_);
-
-  // TODO(user): In future, remove has_qseed3 member, add version and pass version to constructor
-  if (hw_resource_.has_qseed3) {
-    hw_scale_ = new HWScaleDRM(HWScaleDRM::Version::V2);
-  }
+  InitializeConfigs();
 
   return error;
 }
@@ -104,6 +83,10 @@ DisplayError HWTVDRM::SetDisplayAttributes(uint32_t index) {
   if (index >= connector_info_.modes.size()) {
     DLOGE("Invalid mode index %d mode size %d", index, UINT32(connector_info_.modes.size()));
     return kErrorNotSupported;
+  }
+
+  if (first_cycle_) {
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
   }
 
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &connector_info_.modes[index]);
@@ -116,14 +99,15 @@ DisplayError HWTVDRM::SetDisplayAttributes(uint32_t index) {
     return kErrorResources;
   }
 
-  // Reload connector info for updated info after 1st commit and validate
+  DLOGI("Setup CRTC %d, Connector %d for %s", token_.crtc_id, token_.conn_id, device_name_);
+  first_cycle_ = false;
+
+  // Reload connector info for updated info after 1st commit
   drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
   if (index >= connector_info_.modes.size()) {
     DLOGE("Invalid mode index %d mode size %d", index, UINT32(connector_info_.modes.size()));
     return kErrorNotSupported;
   }
-
-  DLOGI("Setup CRTC %d, Connector %d for %s", token_.crtc_id, token_.conn_id, device_name_);
 
   current_mode_index_ = index;
   PopulateDisplayAttributes(index);

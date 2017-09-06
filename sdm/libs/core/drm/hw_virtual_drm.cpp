@@ -49,24 +49,15 @@ HWVirtualDRM::HWVirtualDRM(BufferSyncHandler *buffer_sync_handler,
                            BufferAllocator *buffer_allocator,
                            HWInfoInterface *hw_info_intf)
                            : HWDeviceDRM(buffer_sync_handler, buffer_allocator, hw_info_intf) {
-  HWDeviceDRM::deferred_initialize_ = true;
   HWDeviceDRM::device_name_ = "Virtual Display Device";
-  HWDeviceDRM::hw_info_intf_ = hw_info_intf;
   HWDeviceDRM::disp_type_ = DRMDisplayType::VIRTUAL;
 }
 
 DisplayError HWVirtualDRM::Init() {
   display_attributes_.push_back(HWDisplayAttributes());
-  return kErrorNone;
-}
-
-DisplayError HWVirtualDRM::DeferredInit() {
-  if (HWDeviceDRM::Init() != kErrorNone)
+  if (HWDeviceDRM::Init() != kErrorNone) {
     return kErrorResources;
-
-  drm_mgr_intf_->SetScalerLUT(drm_lut_info_);
-  DLOGI_IF(kTagDriverConfig, "Setup CRTC %d, Connector %d for %s",
-            token_.crtc_id, token_.conn_id, device_name_);
+  }
 
   return kErrorNone;
 }
@@ -79,9 +70,9 @@ void HWVirtualDRM::ConfigureWbConnectorFbId(uint32_t fb_id) {
 void HWVirtualDRM::ConfigureWbConnectorDestRect() {
   DRMRect dst = {};
   dst.left = 0;
-  dst.bottom = height_;
+  dst.bottom = display_attributes_[0].y_pixels;
   dst.top = 0;
-  dst.right = width_;
+  dst.right = display_attributes_[0].x_pixels;
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_RECT, token_.conn_id, dst);
   return;
 }
@@ -91,13 +82,13 @@ void HWVirtualDRM::ConfigureWbConnectorSecureMode(bool secure) {
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_FB_SECURE_MODE, token_.conn_id, secure_mode);
 }
 
-void HWVirtualDRM::InitializeConfigs() {
+DisplayError HWVirtualDRM::InitializeConfig(const HWDisplayAttributes &display_attributes) {
   drmModeModeInfo mode = {};
-  mode.hdisplay = mode.hsync_start = mode.hsync_end = mode.htotal = (uint16_t) width_;
-  mode.vdisplay = mode.vsync_start = mode.vsync_end = mode.vtotal = (uint16_t) height_;
-  // Not sure SF has a way to configure refresh rate. Hardcoding to 60 fps for now.
-  // TODO(user): Make this configurable.
-  mode.vrefresh = 60;
+  mode.hdisplay = mode.hsync_start = mode.hsync_end = mode.htotal =
+    (uint16_t) display_attributes.x_pixels;
+  mode.vdisplay = mode.vsync_start = mode.vsync_end = mode.vtotal =
+    (uint16_t) display_attributes.y_pixels;
+  mode.vrefresh = display_attributes.fps;
   mode.clock = (mode.htotal * mode.vtotal * mode.vrefresh) / 1000;
 
   struct sde_drm_wb_cfg wb_cfg;
@@ -105,11 +96,13 @@ void HWVirtualDRM::InitializeConfigs() {
   wb_cfg.flags |= SDE_DRM_WB_CFG_FLAGS_CONNECTED;
   wb_cfg.count_modes = 1;
   wb_cfg.modes = (uint64_t)&mode;
+  int ret = 0;
   #ifdef DRM_IOCTL_SDE_WB_CONFIG
-  int ret = drmIoctl(dev_fd_, DRM_IOCTL_SDE_WB_CONFIG, &wb_cfg);
+  ret = drmIoctl(dev_fd_, DRM_IOCTL_SDE_WB_CONFIG, &wb_cfg);
   #endif
   if (ret) {
     DLOGE("WB config failed\n");
+    return kErrorHardware;
   } else {
     drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
     DumpConfigs();
@@ -119,11 +112,14 @@ void HWVirtualDRM::InitializeConfigs() {
   // display configuration
   if (connector_info_.topology == sde_drm::DRMTopology::UNKNOWN) {
     connector_info_.topology = sde_drm::DRMTopology::SINGLE_LM;
-    if (width_ > hw_resource_.max_mixer_width) {
+    if (display_attributes.x_pixels > hw_resource_.max_mixer_width) {
       connector_info_.topology = sde_drm::DRMTopology::DUAL_LM_MERGE;
     }
   }
-  PopulateDisplayAttributes(current_mode_index_);
+
+  PopulateDisplayAttributes(0);
+
+  return kErrorNone;
 }
 
 void HWVirtualDRM::DumpConfigs() {
@@ -143,6 +139,12 @@ void HWVirtualDRM::DumpConfigs() {
 DisplayError HWVirtualDRM::Commit(HWLayers *hw_layers) {
   LayerBuffer *output_buffer = hw_layers->info.stack->output_buffer;
   DisplayError err = kErrorNone;
+
+  if (first_cycle_) {
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
+    first_cycle_ = false;
+  }
 
   registry_.RegisterCurrent(hw_layers);
   registry_.MapBufferToFbId(output_buffer);
@@ -167,54 +169,27 @@ DisplayError HWVirtualDRM::SetDisplayAttributes(const HWDisplayAttributes &displ
     return kErrorParameters;
   }
 
-  uint32_t index = current_mode_index_;
-  width_ = display_attributes.x_pixels;
-  height_ = display_attributes.y_pixels;
-
-  DisplayError error = DeferredInit();
-  if (error != kErrorNone) {
-    width_ = display_attributes_[index].x_pixels;
-    height_ = display_attributes_[index].y_pixels;
-    return error;
+  DisplayError ret = InitializeConfig(display_attributes);
+  if (ret != kErrorNone) {
+    DLOGE("InitializeConfig failed");
+    return ret;
   }
 
-  display_attributes_[index] = display_attributes;
-  if (display_attributes_[index].x_pixels > hw_resource_.max_mixer_width) {
-    display_attributes_[index].is_device_split = true;
-  }
+  PopulateHWPanelInfo();
   UpdateMixerAttributes();
 
   return kErrorNone;
 }
 
 DisplayError HWVirtualDRM::PowerOn() {
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
-  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
-  return kErrorNone;
-}
+  if (first_cycle_) {
+    return kErrorNone;
+  }
 
-DisplayError HWVirtualDRM::PowerOff() {
-  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::OFF);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
-  return kErrorNone;
+  return HWDeviceDRM::PowerOn();
 }
 
 DisplayError HWVirtualDRM::GetPPFeaturesVersion(PPFeatureVersion *vers) {
-  return kErrorNone;
-}
-
-DisplayError HWVirtualDRM::SetScaleLutConfig(HWScaleLutInfo *lut_info) {
-  drm_lut_info_.cir_lut = lut_info->cir_lut;
-  drm_lut_info_.dir_lut = lut_info->dir_lut;
-  drm_lut_info_.sep_lut = lut_info->sep_lut;
-  drm_lut_info_.cir_lut_size = lut_info->cir_lut_size;
-  drm_lut_info_.dir_lut_size = lut_info->dir_lut_size;
-  drm_lut_info_.sep_lut_size = lut_info->sep_lut_size;
-
-  // Due to differed Init in WB case, we cannot set scaler config immediately as we
-  // won't have SDE DRM initialized at this point. Hence have to cache LUT info here
-  // and set it in ::DeferredInit
-
   return kErrorNone;
 }
 

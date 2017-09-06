@@ -161,7 +161,6 @@ class HWDeviceDRM : public HWInterface {
 
  protected:
   const char *device_name_ = {};
-  bool deferred_initialize_ = false;
   bool default_mode_ = false;
   sde_drm::DRMDisplayType disp_type_ = {};
   HWInfoInterface *hw_info_intf_ = {};
@@ -177,6 +176,7 @@ class HWDeviceDRM : public HWInterface {
   std::vector<HWDisplayAttributes> display_attributes_ = {};
   uint32_t current_mode_index_ = 0;
   sde_drm::DRMConnectorInfo connector_info_ = {};
+  bool first_cycle_ = true;
 
  private:
   void SetDestScalarData(HWLayersInfo hw_layer_info);
