@@ -177,8 +177,6 @@ DisplayError HWVirtualDRM::SetDisplayAttributes(const HWDisplayAttributes &displ
     height_ = display_attributes_[index].y_pixels;
     return error;
   }
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &connector_info_.modes[index]);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
 
   display_attributes_[index] = display_attributes;
   if (display_attributes_[index].x_pixels > hw_resource_.max_mixer_width) {
