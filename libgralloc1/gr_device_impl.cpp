@@ -389,14 +389,13 @@ gralloc1_error_t GrallocImpl::RetainBuffer(gralloc1_device_t *device, buffer_han
 }
 
 gralloc1_error_t GrallocImpl::ReleaseBuffer(gralloc1_device_t *device, buffer_handle_t buffer) {
-  gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
-  if (status == GRALLOC1_ERROR_NONE) {
-    const private_handle_t *hnd = PRIV_HANDLE_CONST(buffer);
-    GrallocImpl const *dev = GRALLOC_IMPL(device);
-    status = dev->buf_mgr_->ReleaseBuffer(hnd);
+  if (!device || !buffer) {
+    return GRALLOC1_ERROR_BAD_DESCRIPTOR;
   }
 
-  return status;
+  const private_handle_t *hnd = PRIV_HANDLE_CONST(buffer);
+  GrallocImpl const *dev = GRALLOC_IMPL(device);
+  return dev->buf_mgr_->ReleaseBuffer(hnd);
 }
 
 gralloc1_error_t GrallocImpl::GetNumFlexPlanes(gralloc1_device_t *device, buffer_handle_t buffer,
