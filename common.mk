@@ -48,9 +48,11 @@ ifeq ($(ARCH_ARM_HAVE_NEON),true)
     common_flags += -D__ARM_HAVE_NEON
 endif
 
-common_flags += -DVENUS_COLOR_FORMAT
+ifeq ($(call is-board-platform-in-list, $(MSM_VIDC_TARGET_LIST)), true)
+    common_flags += -DVENUS_COLOR_FORMAT
+endif
 
-ifeq ($(filter msm8996,$(TARGET_BOARD_PLATFORM)),)
+ifeq ($(call is-board-platform-in-list, $(MASTER_SIDE_CP_TARGET_LIST)), true)
     common_flags += -DMASTER_SIDE_CP
 endif
 

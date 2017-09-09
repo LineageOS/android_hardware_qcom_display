@@ -286,6 +286,7 @@ HWC2::Error HWCDisplay::CreateLayer(hwc2_layer_t *out_layer_id) {
   HWCLayer *layer = *layer_set_.emplace(new HWCLayer(id_));
   layer_map_.emplace(std::make_pair(layer->GetId(), layer));
   *out_layer_id = layer->GetId();
+  validated_ = false;
   geometry_changes_ |= GeometryChanges::kAdded;
   return HWC2::Error::None;
 }
@@ -316,6 +317,7 @@ HWC2::Error HWCDisplay::DestroyLayer(hwc2_layer_t layer_id) {
       break;
     }
   }
+  validated_ = false;
 
   geometry_changes_ |= GeometryChanges::kRemoved;
   return HWC2::Error::None;
@@ -434,6 +436,7 @@ HWC2::Error HWCDisplay::SetLayerZOrder(hwc2_layer_t layer_id, uint32_t z) {
     DLOGE("[%" PRIu64 "] updateLayerZ failed to find layer", id_);
     return HWC2::Error::BadLayer;
   }
+  validated_ = false;
 
   const auto layer = map_layer->second;
   const auto z_range = layer_set_.equal_range(layer);
