@@ -613,6 +613,16 @@ class PPFeaturesConfig {
     return kErrorNone;
   }
 
+  inline PPFeatureInfo* GetFeature(uint32_t feature_id) {
+    PPFeatureInfo* feature = nullptr;
+    if (feature_id < kMaxNumPPFeatures) {
+      if (feature_[feature_id]) {
+        feature = feature_[feature_id];
+      }
+    }
+    return feature;
+  }
+
   inline Locker &GetLocker(void) { return locker_; }
   inline PPFrameCaptureData *GetFrameCaptureData(void) { return &frame_capture_data; }
   inline PPDETuningCfgData *GetDETuningCfgData(void) { return &de_tuning_data_; }
