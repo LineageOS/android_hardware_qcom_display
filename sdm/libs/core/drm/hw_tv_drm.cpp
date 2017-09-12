@@ -151,13 +151,6 @@ DisplayError HWTVDRM::GetConfigIndex(char *mode, uint32_t *index) {
   return kErrorNone;
 }
 
-/* overriding display state funcs to have special or NO OP implementation for TVs */
-DisplayError HWTVDRM::Deinit() {
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
-
-  return HWDeviceDRM::Deinit();
-}
-
 DisplayError HWTVDRM::PowerOff() {
   DTRACE_SCOPED();
 
