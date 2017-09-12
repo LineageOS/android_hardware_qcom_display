@@ -527,7 +527,9 @@ void HWCDisplay::BuildLayerStack() {
     // TODO(user): Move to a getter if this is needed at other places
     hwc_rect_t scaled_display_frame = {INT(layer->dst_rect.left), INT(layer->dst_rect.top),
                                        INT(layer->dst_rect.right), INT(layer->dst_rect.bottom)};
-    ApplyScanAdjustment(&scaled_display_frame);
+    if (hwc_layer->GetGeometryChanges() & kDisplayFrame) {
+      ApplyScanAdjustment(&scaled_display_frame);
+    }
     hwc_layer->SetLayerDisplayFrame(scaled_display_frame);
     // SDM requires these details even for solid fill
     if (layer->flags.solid_fill) {
@@ -744,9 +746,18 @@ HWC2::Error HWCDisplay::GetDisplayConfigs(uint32_t *out_num_configs, hwc2_config
 HWC2::Error HWCDisplay::GetDisplayAttribute(hwc2_config_t config, HWC2::Attribute attribute,
                                             int32_t *out_value) {
   DisplayConfigVariableInfo variable_config;
-  if (GetDisplayAttributesForConfig(INT(config), &variable_config) != kErrorNone) {
-    DLOGE("Get variable config failed");
-    return HWC2::Error::BadDisplay;
+  // Get display attributes from config index only if resolution switch is supported.
+  // Otherwise always send mixer attributes. This is to support destination scaler.
+  if (num_configs_ > 1) {
+    if (GetDisplayAttributesForConfig(INT(config), &variable_config) != kErrorNone) {
+      DLOGE("Get variable config failed");
+      return HWC2::Error::BadDisplay;
+    }
+  } else {
+    if (display_intf_->GetFrameBufferConfig(&variable_config) != kErrorNone) {
+      DLOGV("Get variable config failed");
+      return HWC2::Error::BadDisplay;
+    }
   }
 
   switch (attribute) {
@@ -1506,19 +1517,24 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
 
   // Create rects to represent the new source and destination crops
   LayerRect crop = LayerRect(0, 0, FLOAT(x_pixels), FLOAT(y_pixels));
-  LayerRect dst = LayerRect(0, 0, FLOAT(fb_config.x_pixels), FLOAT(fb_config.y_pixels));
+  hwc_rect_t scaled_display_frame = {0, 0, INT(x_pixels), INT(y_pixels)};
+  ApplyScanAdjustment(&scaled_display_frame);
+  client_target_->SetLayerDisplayFrame(scaled_display_frame);
+
   auto client_target_layer = client_target_->GetSDMLayer();
   client_target_layer->src_rect = crop;
-  client_target_layer->dst_rect = dst;
 
   int aligned_width;
   int aligned_height;
   uint32_t usage = GRALLOC_USAGE_HW_FB;
   int format = HAL_PIXEL_FORMAT_RGBA_8888;
-  int ubwc_enabled = 0;
+  int ubwc_disabled = 0;
   int flags = 0;
-  HWCDebugHandler::Get()->GetProperty("debug.gralloc.enable_fb_ubwc", &ubwc_enabled);
-  if (ubwc_enabled == 1) {
+
+  // By default UBWC is enabled and below property is global enable/disable for all
+  // buffers allocated through gralloc , including framebuffer targets.
+  HWCDebugHandler::Get()->GetProperty("debug.gralloc.gfx_ubwc_disable", &ubwc_disabled);
+  if (!ubwc_disabled) {
     usage |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
     flags |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
   }
@@ -1805,7 +1821,7 @@ int HWCDisplay::GetDisplayAttributesForConfig(int config,
   return display_intf_->GetConfig(UINT32(config), display_attributes) == kErrorNone ? 0 : -1;
 }
 
-bool HWCDisplay::SingleLayerUpdating(void) {
+uint32_t HWCDisplay::GetUpdatingLayersCount(void) {
   uint32_t updating_count = 0;
 
   for (uint i = 0; i < layer_stack_.layers.size(); i++) {
@@ -1815,7 +1831,7 @@ bool HWCDisplay::SingleLayerUpdating(void) {
     }
   }
 
-  return (updating_count == 1);
+  return updating_count;
 }
 
 bool HWCDisplay::IsLayerUpdating(const Layer *layer) {

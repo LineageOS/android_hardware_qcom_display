@@ -49,13 +49,6 @@ BufferManager::BufferManager() : next_id_(0) {
     map_fb_mem_ = true;
   }
 
-  // Enable UBWC for framebuffer
-  if ((property_get("debug.gralloc.enable_fb_ubwc", property, NULL) > 0) &&
-      (!strncmp(property, "1", PROPERTY_VALUE_MAX) ||
-       (!strncasecmp(property, "true", PROPERTY_VALUE_MAX)))) {
-    ubwc_for_fb_ = true;
-  }
-
   handles_map_.clear();
   allocator_ = new Allocator();
   allocator_->Init();
@@ -285,13 +278,6 @@ gralloc1_error_t BufferManager::RetainBuffer(private_handle_t const *hnd) {
   } else {
     private_handle_t *handle = const_cast<private_handle_t *>(hnd);
     err = ImportHandleLocked(handle);
-    if (err == GRALLOC1_ERROR_NONE) {
-      // TODO(user): See bug 35955598
-      if (hnd->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER) {
-        return GRALLOC1_ERROR_NONE;  // Don't map secure buffer
-      }
-      err = MapBuffer(hnd);
-    }
   }
   return err;
 }

@@ -71,8 +71,6 @@ typedef enum {
 
 class AdrenoMemInfo {
  public:
-  bool Init();
-
   /*
    * Function to compute aligned width and aligned height based on
    * width, height, format and usage flags.
@@ -123,6 +121,7 @@ class AdrenoMemInfo {
   static AdrenoMemInfo *GetInstance();
 
  private:
+  AdrenoMemInfo();
   ~AdrenoMemInfo();
   // link(s)to adreno surface padding library.
   int (*LINK_adreno_compute_padding)(int width, int bpp, int surface_tile_height,
