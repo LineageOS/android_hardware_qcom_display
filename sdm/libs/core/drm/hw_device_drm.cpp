@@ -411,7 +411,6 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
   uint32_t mm_width = 0;
   uint32_t mm_height = 0;
   DRMTopology topology = DRMTopology::SINGLE_LM;
-  bool dual_display = false;
 
   if (default_mode_) {
     DRMResMgr *res_mgr = nullptr;
@@ -451,14 +450,10 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
   display_attributes_[index].v_back_porch = mode.vtotal - mode.vsync_end;
   display_attributes_[index].v_total = mode.vtotal;
   display_attributes_[index].h_total = mode.htotal;
-  uint32_t h_blanking = mode.htotal - mode.hdisplay;
   display_attributes_[index].is_device_split =
       (topology == DRMTopology::DUAL_LM || topology == DRMTopology::DUAL_LM_MERGE ||
        topology == DRMTopology::DUAL_LM_MERGE_DSC || topology == DRMTopology::DUAL_LM_DSC ||
        topology == DRMTopology::DUAL_LM_DSCMERGE);
-  dual_display = (topology == DRMTopology::DUAL_LM || topology == DRMTopology::DUAL_LM_DSC ||
-       topology == DRMTopology::PPSPLIT);
-  display_attributes_[index].h_total += dual_display ? h_blanking : 0;
   display_attributes_[index].clock_khz = mode.clock;
 
   // If driver doesn't return panel width/height information, default to 320 dpi
