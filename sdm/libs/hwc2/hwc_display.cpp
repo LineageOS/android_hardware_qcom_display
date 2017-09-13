@@ -589,7 +589,15 @@ void HWCDisplay::BuildLayerStack() {
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
   layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0);
   // Append client target to the layer stack
-  layer_stack_.layers.push_back(client_target_->GetSDMLayer());
+  Layer *sdm_client_target = client_target_->GetSDMLayer();
+  layer_stack_.layers.push_back(sdm_client_target);
+  // fall back frame composition to GPU when client target is 10bit
+  // TODO(user): clarify the behaviour from Client(SF) and SDM Extn -
+  // when handling 10bit FBT, as it would affect blending
+  if (Is10BitFormat(sdm_client_target->input_buffer.format)) {
+    // Must fall back to client composition
+    MarkLayersForClientComposition();
+  }
 }
 
 void HWCDisplay::BuildSolidFillStack() {
@@ -721,14 +729,27 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode) {
 HWC2::Error HWCDisplay::GetClientTargetSupport(uint32_t width, uint32_t height, int32_t format,
                                                int32_t dataspace) {
   DisplayConfigVariableInfo variable_config;
+  HWC2::Error supported = HWC2::Error::None;
   display_intf_->GetFrameBufferConfig(&variable_config);
-  // TODO(user): Support scaled configurations, other formats and other dataspaces
-  if (format != HAL_PIXEL_FORMAT_RGBA_8888 || dataspace != HAL_DATASPACE_UNKNOWN ||
-      width != variable_config.x_pixels || height != variable_config.y_pixels) {
-    return HWC2::Error::Unsupported;
-  } else {
-    return HWC2::Error::None;
+  if (format != HAL_PIXEL_FORMAT_RGBA_8888 && format != HAL_PIXEL_FORMAT_RGBA_1010102) {
+     DLOGW("Unsupported format = %d", format);
+    supported = HWC2::Error::Unsupported;
+  } else if (width != variable_config.x_pixels || height != variable_config.y_pixels) {
+    DLOGW("Unsupported width = %d height = %d", width, height);
+    supported = HWC2::Error::Unsupported;
+  } else if (dataspace != HAL_DATASPACE_UNKNOWN) {
+    ColorMetaData color_metadata = {};
+    if (sdm::GetSDMColorSpace(dataspace, &color_metadata) == false) {
+      DLOGW("Unsupported dataspace = %d", dataspace);
+      supported = HWC2::Error::Unsupported;
+    }
+    if (sdm::IsBT2020(color_metadata.colorPrimaries)) {
+      DLOGW("Unsupported color Primary BT2020");
+      supported = HWC2::Error::Unsupported;
+    }
   }
+
+  return supported;
 }
 
 HWC2::Error HWCDisplay::GetColorModes(uint32_t *out_num_modes, android_color_mode_t *out_modes) {
@@ -868,7 +889,13 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, int32_t acquire_
 
   client_target_->SetLayerBuffer(target, acquire_fence);
   client_target_->SetLayerSurfaceDamage(damage);
-  client_target_->SetLayerDataspace(dataspace);
+  if (client_target_->GetLayerDataspace() != dataspace) {
+    client_target_->SetLayerDataspace(dataspace);
+    Layer *sdm_layer = client_target_->GetSDMLayer();
+    // Data space would be validated at GetClientTargetSupport, so just use here.
+    sdm::GetSDMColorSpace(dataspace, &sdm_layer->input_buffer.color_metadata);
+  }
+
   return HWC2::Error::None;
 }
 
@@ -986,6 +1013,7 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
     }
     hwc_layer->ResetValidation();
   }
+  client_target_->ResetValidation();
   *out_num_types = UINT32(layer_changes_.size());
   *out_num_requests = UINT32(layer_requests_.size());
   skip_validate_ = false;
@@ -1193,6 +1221,7 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
     close(client_target_release_fence);
     client_target_release_fence = -1;
   }
+  client_target_->ResetGeometryChanges();
 
   for (auto hwc_layer : layer_set_) {
     hwc_layer->ResetGeometryChanges();
@@ -1932,6 +1961,10 @@ std::string HWCDisplay::Dump() {
 bool HWCDisplay::CanSkipValidate() {
   // Layer Stack checks
   if (layer_stack_.flags.hdr_present && (tone_mapper_ && tone_mapper_->IsActive())) {
+    return false;
+  }
+
+  if (client_target_->NeedsValidation()) {
     return false;
   }
 
