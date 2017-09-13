@@ -58,6 +58,7 @@ DisplayError HWEventsDRM::InitializePollFd() {
   for (uint32_t i = 0; i < event_data_list_.size(); i++) {
     char data[kMaxStringLength]{};
     HWEventData &event_data = event_data_list_[i];
+    poll_fds_[i] = {};
     poll_fds_[i].fd = -1;
 
     switch (event_data.event_type) {
@@ -202,7 +203,7 @@ DisplayError HWEventsDRM::SetEventState(HWEvent event, bool enable, void *arg) {
 
 void HWEventsDRM::WakeUpEventThread() {
   for (uint32_t i = 0; i < event_data_list_.size(); i++) {
-    if (event_data_list_[i].event_type == HWEvent::EXIT) {
+    if (event_data_list_[i].event_type == HWEvent::EXIT && poll_fds_[i].fd >= 0) {
       uint64_t exit_value = 1;
       ssize_t write_size = Sys::write_(poll_fds_[i].fd, &exit_value, sizeof(uint64_t));
       if (write_size != sizeof(uint64_t)) {
@@ -267,9 +268,15 @@ void *HWEventsDRM::DisplayEventHandler() {
 
     for (uint32_t i = 0; i < event_data_list_.size(); i++) {
       pollfd &poll_fd = poll_fds_[i];
+      if (poll_fd.fd < 0) {
+        continue;
+      }
+
       switch (event_data_list_[i].event_type) {
         case HWEvent::VSYNC:
-          (this->*(event_data_list_[i]).event_parser)(nullptr);
+          if (poll_fd.revents & (POLLIN | POLLPRI)) {
+            (this->*(event_data_list_[i]).event_parser)(nullptr);
+          }
           break;
         case HWEvent::EXIT:
           if ((poll_fd.revents & POLLIN) &&
@@ -283,7 +290,7 @@ void *HWEventsDRM::DisplayEventHandler() {
         case HWEvent::THERMAL_LEVEL:
         case HWEvent::IDLE_POWER_COLLAPSE:
         case HWEvent::PINGPONG_TIMEOUT:
-          if (poll_fd.fd >= 0 && (poll_fd.revents & POLLPRI) &&
+          if ((poll_fd.revents & POLLPRI) &&
               (Sys::pread_(poll_fd.fd, data, kMaxStringLength, 0) > 0)) {
             (this->*(event_data_list_[i]).event_parser)(data);
           }
@@ -315,14 +322,12 @@ DisplayError HWEventsDRM::RegisterVSync() {
 }
 
 void HWEventsDRM::HandleVSync(char *data) {
-  if (poll_fds_[vsync_index_].revents & (POLLIN | POLLPRI)) {
-    drmEventContext event = {};
-    event.version = DRM_EVENT_CONTEXT_VERSION;
-    event.vblank_handler = &HWEventsDRM::VSyncHandlerCallback;
-    int error = drmHandleEvent(poll_fds_[vsync_index_].fd, &event);
-    if (error != 0) {
-      DLOGE("drmHandleEvent failed: %i", error);
-    }
+  drmEventContext event = {};
+  event.version = DRM_EVENT_CONTEXT_VERSION;
+  event.vblank_handler = &HWEventsDRM::VSyncHandlerCallback;
+  int error = drmHandleEvent(poll_fds_[vsync_index_].fd, &event);
+  if (error != 0) {
+    DLOGE("drmHandleEvent failed: %i", error);
   }
 }
 
