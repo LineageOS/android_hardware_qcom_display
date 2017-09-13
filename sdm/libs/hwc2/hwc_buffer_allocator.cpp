@@ -165,6 +165,8 @@ DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
   hnd = (private_handle_t *)buf;  // NOLINT
   alloc_buffer_info->fd = hnd->fd;
   alloc_buffer_info->stride = UINT32(hnd->width);
+  alloc_buffer_info->aligned_width = UINT32(hnd->width);
+  alloc_buffer_info->aligned_height = UINT32(hnd->height);
   alloc_buffer_info->size = hnd->size;
 
   buffer_info->private_data = reinterpret_cast<void *>(hnd);
