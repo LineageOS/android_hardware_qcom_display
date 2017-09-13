@@ -479,6 +479,7 @@ struct HWSolidfillStage {
   uint32_t color = 0;
   LayerRect roi = {};
   bool is_exclusion_rect = false;
+  LayerSolidFill solid_fill_info = {};
 };
 
 struct HWLayerConfig {

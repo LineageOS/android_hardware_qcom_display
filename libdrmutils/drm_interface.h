@@ -514,6 +514,11 @@ struct DRMSolidfillStage {
  DRMRect bounding_rect {};
  bool is_exclusion_rect = false;
  uint32_t color = 0xff000000; // in 8bit argb
+ uint32_t red = 0;
+ uint32_t blue = 0;
+ uint32_t green = 0;
+ uint32_t alpha = 0xff;
+ uint32_t color_bit_depth = 0;
  uint32_t z_order = 0;
  uint32_t plane_alpha = 0xff;
 };
