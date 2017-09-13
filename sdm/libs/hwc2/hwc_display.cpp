@@ -40,6 +40,7 @@
 #include "hwc_display.h"
 #include "hwc_debugger.h"
 #include "hwc_tonemapper.h"
+#include "hwc_session.h"
 
 #ifndef USE_GRALLOC1
 #include <gr.h>
@@ -952,6 +953,7 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
   switch (event) {
     case kIdleTimeout:
     case kThermalEvent:
+      HWCSession::WaitForSequence(id_);
       validated_.reset();
       break;
     default:

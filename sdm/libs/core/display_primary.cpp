@@ -280,10 +280,11 @@ DisplayError DisplayPrimary::VSync(int64_t timestamp) {
 }
 
 void DisplayPrimary::IdleTimeout() {
+  event_handler_->HandleEvent(kIdleTimeout);
   handle_idle_timeout_ = true;
   event_handler_->Refresh();
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
   comp_manager_->ProcessIdleTimeout(display_comp_ctx_);
-  event_handler_->HandleEvent(kIdleTimeout);
 }
 
 void DisplayPrimary::PingPongTimeout() {
@@ -292,9 +293,9 @@ void DisplayPrimary::PingPongTimeout() {
 }
 
 void DisplayPrimary::ThermalEvent(int64_t thermal_level) {
+  event_handler_->HandleEvent(kThermalEvent);
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   comp_manager_->ProcessThermalEvent(display_comp_ctx_, thermal_level);
-  event_handler_->HandleEvent(kThermalEvent);
 }
 
 void DisplayPrimary::IdlePowerCollapse() {
