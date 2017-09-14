@@ -953,6 +953,7 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
   switch (event) {
     case kIdleTimeout:
     case kThermalEvent:
+    case kIdlePowerCollapse:
       HWCSession::WaitForSequence(id_);
       validated_.reset();
       break;

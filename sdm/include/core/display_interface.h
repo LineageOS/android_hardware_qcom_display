@@ -137,8 +137,9 @@ enum DisplayPort {
 
 /*! @brief This enum represents the events received by Display HAL. */
 enum DisplayEvent {
-  kIdleTimeout,    // Event triggered by Idle Timer.
-  kThermalEvent,   // Event triggered by Thermal.
+  kIdleTimeout,        // Event triggered by Idle Timer.
+  kThermalEvent,       // Event triggered by Thermal.
+  kIdlePowerCollapse,  // Event triggered by Idle Power Collapse.
 };
 
 /*! @brief This structure defines configuration for fixed properties of a display device.
