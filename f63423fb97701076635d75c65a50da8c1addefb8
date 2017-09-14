@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "55a22009_c0b10ddc",
+        "filename": "libhwcomposer/Android.mk",
+        "patchSetId": 2
+      },
+      "lineNbr": 11,
+      "author": {
+        "id": 1063
+      },
+      "writtenOn": "2017-09-14T09:48:58Z",
+      "side": 1,
+      "message": "This doesn\u0027t seem to be needed for me?",
+      "revId": "f63423fb97701076635d75c65a50da8c1addefb8",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "60e20eb7_3eb7da59",
+        "filename": "libhwcomposer/hwc_uevents.cpp",
+        "patchSetId": 2
+      },
+      "lineNbr": 61,
+      "author": {
+        "id": 1063
+      },
+      "writtenOn": "2017-09-14T09:48:58Z",
+      "side": 1,
+      "message": "Rather should be\n\nconst char *pstr \u003d strstr(...);",
+      "revId": "f63423fb97701076635d75c65a50da8c1addefb8",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
