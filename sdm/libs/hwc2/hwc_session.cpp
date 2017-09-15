@@ -212,6 +212,7 @@ int HWCSession::Init() {
     return status;
   }
 
+  is_composer_up_ = true;
   return 0;
 }
 
@@ -1092,12 +1093,20 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       status = GetSupportedDsiClk(input_parcel, output_parcel);
       break;
 
+    case qService::IQService::GET_COMPOSER_STATUS:
+      output_parcel->writeInt32(getComposerStatus());
+      break;
+
     default:
       DLOGW("QService command = %d is not supported", command);
       return -EINVAL;
   }
 
   return status;
+}
+
+android::status_t HWCSession::getComposerStatus() {
+  return is_composer_up_;
 }
 
 android::status_t HWCSession::HandleGetDisplayAttributesForConfig(const android::Parcel
