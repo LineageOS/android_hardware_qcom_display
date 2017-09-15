@@ -353,7 +353,7 @@ DisplayError HWDeviceDRM::Init() {
       drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id,
                                 &connector_info_.modes[current_mode_index_]);
       drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
-      if (drm_atomic_intf_->Commit(true /* synchronous */)) {
+      if (drm_atomic_intf_->Commit(true /* synchronous */, false /* retain_planes*/)) {
         DRM_LOGI("Setting up CRTC %d, Connector %d for %s failed", token_.crtc_id,
           token_.conn_id, device_name_);
         return kErrorResources;
@@ -669,7 +669,7 @@ DisplayError HWDeviceDRM::PowerOn() {
 
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
-  int ret = drm_atomic_intf_->Commit(true /* synchronous */);
+  int ret = drm_atomic_intf_->Commit(true /* synchronous */, true /* retain_planes */);
   if (ret) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
@@ -678,6 +678,7 @@ DisplayError HWDeviceDRM::PowerOn() {
 }
 
 DisplayError HWDeviceDRM::PowerOff() {
+  DTRACE_SCOPED();
   if (!drm_atomic_intf_) {
     DLOGE("DRM Atomic Interface is null!");
     return kErrorUndefined;
@@ -685,7 +686,7 @@ DisplayError HWDeviceDRM::PowerOff() {
 
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::OFF);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
-  int ret = drm_atomic_intf_->Commit(true /* synchronous */);
+  int ret = drm_atomic_intf_->Commit(true /* synchronous */, false /* retain_planes */);
   if (ret) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
@@ -694,9 +695,10 @@ DisplayError HWDeviceDRM::PowerOff() {
 }
 
 DisplayError HWDeviceDRM::Doze() {
+  DTRACE_SCOPED();
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::DOZE);
-  int ret = drm_atomic_intf_->Commit(false /* synchronous */);
+  int ret = drm_atomic_intf_->Commit(true /* synchronous */, true /* retain_planes */);
   if (ret) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
@@ -706,8 +708,16 @@ DisplayError HWDeviceDRM::Doze() {
 }
 
 DisplayError HWDeviceDRM::DozeSuspend() {
+  DTRACE_SCOPED();
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id,
                             DRMPowerMode::DOZE_SUSPEND);
+  int ret = drm_atomic_intf_->Commit(true /* synchronous */, true /* retain_planes */);
+  if (ret) {
+    DLOGE("Failed with error: %d", ret);
+    return kErrorHardware;
+  }
+
   return kErrorNone;
 }
 
@@ -976,7 +986,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   DTRACE_SCOPED();
   SetupAtomic(hw_layers, false /* validate */);
 
-  int ret = drm_atomic_intf_->Commit(false /* synchronous */);
+  int ret = drm_atomic_intf_->Commit(false /* synchronous */, false /* retain_planes*/);
   if (ret) {
     DLOGE("%s failed with error %d crtc %d", __FUNCTION__, ret, token_.crtc_id);
     return kErrorHardware;
@@ -1008,7 +1018,8 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
 }
 
 DisplayError HWDeviceDRM::Flush() {
-  int ret = drm_atomic_intf_->Commit(false /* synchronous */);
+  DTRACE_SCOPED();
+  int ret = drm_atomic_intf_->Commit(false /* synchronous */, false /* retain_planes*/);
   if (ret) {
     DLOGE("failed with error %d", ret);
     return kErrorHardware;
