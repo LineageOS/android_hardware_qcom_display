@@ -162,6 +162,7 @@ struct HWResourceInfo {
   uint32_t num_smp_per_pipe = 0;
   uint32_t max_scale_up = 1;
   uint32_t max_scale_down = 1;
+  float rot_downscale_max = 0.0f;
   uint64_t max_bandwidth_low = 0;
   uint64_t max_bandwidth_high = 0;
   uint32_t max_mixer_width = 2048;
