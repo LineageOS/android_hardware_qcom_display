@@ -121,6 +121,8 @@ class HWHDMI : public HWDevice {
   uint32_t frame_rate_ = 0;
   time_t hdr_reset_start_ = 0, hdr_reset_end_ = 0;
   bool reset_hdr_flag_ = false;
+  mdp_color_space cdm_color_space_ = {};
+  bool cdm_color_space_commit_ = false;
 };
 
 }  // namespace sdm

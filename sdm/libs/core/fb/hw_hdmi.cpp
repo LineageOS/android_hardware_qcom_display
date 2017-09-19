@@ -190,6 +190,7 @@ HWHDMI::HWHDMI(BufferSyncHandler *buffer_sync_handler,  HWInfoInterface *hw_info
   (void)hdr_reset_start_;
   (void)hdr_reset_end_;
   (void)reset_hdr_flag_;
+  (void)cdm_color_space_;
 }
 
 DisplayError HWHDMI::Init() {
@@ -440,8 +441,19 @@ DisplayError HWHDMI::Commit(HWLayers *hw_layers) {
   if (error != kErrorNone) {
     return error;
   }
+  if (cdm_color_space_commit_) {
+#ifdef MDP_COMMIT_UPDATE_CDM_COLOR_SPACE
+    mdp_layer_commit_v1 &mdp_commit = mdp_disp_commit_.commit_v1;
+    mdp_commit.cdm_color_space = cdm_color_space_;
+    mdp_commit.flags |= MDP_COMMIT_UPDATE_CDM_COLOR_SPACE;
+#endif
+  }
 
-  return HWDevice::Commit(hw_layers);
+  error = HWDevice::Commit(hw_layers);
+  if (cdm_color_space_commit_)
+    cdm_color_space_commit_ = false;
+
+  return error;
 }
 
 DisplayError HWHDMI::GetHWScanInfo(HWScanInfo *scan_info) {
@@ -1032,6 +1044,10 @@ DisplayError HWHDMI::UpdateHDRMetaData(HWLayers *hw_layers) {
     hdr_ctrl.hdr_stream.max_average_light_level = light_level.minPicAverageLightLevel;
     hdr_ctrl.hdr_state = HDR_ENABLE;
     reset_hdr_flag_ = false;
+#ifdef MDP_COMMIT_UPDATE_CDM_COLOR_SPACE
+    HWDevice::SetCSC(layer_buffer->color_metadata, &cdm_color_space_);
+    cdm_color_space_commit_ = true;
+#endif
     // DP related
     int32_t pixel_encoding = GetPixelEncoding(hdr_layer.input_buffer);
     hdr_ctrl.hdr_stream.pixel_encoding = (pixel_encoding < 0) ? 0 : UINT32(pixel_encoding);
@@ -1063,6 +1079,10 @@ DisplayError HWHDMI::UpdateHDRMetaData(HWLayers *hw_layers) {
     hdr_ctrl.hdr_state = HDR_RESET;
     reset_hdr_flag_ = true;
     hdr_reset_start_ = time(NULL);
+#ifdef MDP_COMMIT_UPDATE_CDM_COLOR_SPACE
+    cdm_color_space_ = (mdp_color_space) MDP_CSC_DEFAULT;
+    cdm_color_space_commit_ = true;
+#endif
     DLOGV_IF(kTagDriverConfig, "kReset: HDR Stream: HDR_RESET");
   } else if (hdr_layer_info.operation == HWHDRLayerInfo::kNoOp) {
      if (reset_hdr_flag_) {
