@@ -508,7 +508,7 @@ int BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_han
                                                descriptor.GetHeight(),
                                                format,
                                                buffer_type,
-                                               size,
+                                               data.size,
                                                prod_usage,
                                                cons_usage);
 
