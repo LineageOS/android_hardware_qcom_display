@@ -84,9 +84,7 @@ bool Allocator::Init() {
   }
 
   adreno_helper_ = new AdrenoMemInfo();
-  if (!adreno_helper_->Init()) {
-    return false;
-  }
+  adreno_helper_->Init();
 
   return true;
 }
