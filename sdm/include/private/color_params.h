@@ -297,6 +297,7 @@ struct SDEGamutCfg {
   static const int kGamutTableNum = 4;
   static const int kGamutScaleoffTableNum = 3;
   static const int kGamutTableSize = 1229;
+  static const int kGamutTableCoarse13Size = 550;
   static const int kGamutTableCoarseSize = 32;
   static const int kGamutScaleoffSize = 16;
   uint32_t mode;
