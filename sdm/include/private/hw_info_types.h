@@ -430,7 +430,6 @@ struct HWAVRInfo {
 };
 
 struct HWPipeInfo {
-  uint8_t rect = 255;
   uint32_t pipe_id = 0;
   HWSubBlockType sub_block_type = kHWSubBlockMax;
   LayerRect src_roi;

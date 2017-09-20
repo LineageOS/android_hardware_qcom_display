@@ -242,9 +242,7 @@ DisplayError HWDevice::Validate(HWLayers *hw_layers) {
         mdp_layer.pipe_ndx = pipe_info->pipe_id;
         mdp_layer.horz_deci = pipe_info->horizontal_decimation;
         mdp_layer.vert_deci = pipe_info->vertical_decimation;
-#ifdef MDP_COMMIT_RECT_NUM
-        mdp_layer.rect_num = pipe_info->rect;
-#endif
+
         SetRect(pipe_info->src_roi, &mdp_layer.src_rect);
         SetRect(pipe_info->dst_roi, &mdp_layer.dst_rect);
         SetMDPFlags(&layer, is_rotator_used, is_cursor_pipe_used, &mdp_layer.flags);
@@ -352,9 +350,6 @@ DisplayError HWDevice::Validate(HWLayers *hw_layers) {
   mdp_commit.dest_scaler_cnt = UINT32(hw_layer_info.dest_scale_info_map.size());
 
   mdp_commit.flags |= MDP_VALIDATE_LAYER;
-#ifdef MDP_COMMIT_RECT_NUM
-  mdp_commit.flags |= MDP_COMMIT_RECT_NUM;
-#endif
   if (Sys::ioctl_(device_fd_, INT(MSMFB_ATOMIC_COMMIT), &mdp_disp_commit_) < 0) {
     if (errno == ESHUTDOWN) {
       DLOGI_IF(kTagDriverConfig, "Driver is processing shutdown sequence");
