@@ -57,6 +57,8 @@ class ColorModeInterface {
                                                     void* data) = 0;
   virtual DisplayError ColorIntfSetActiveColorParam(uint32_t hint, uint32_t display_id,
                                                     void* data) = 0;
+  virtual DisplayError ColorIntfSetHdrInterface(void *hdr_intf) = 0;
+
  protected:
   virtual ~ColorModeInterface() {}
 };
