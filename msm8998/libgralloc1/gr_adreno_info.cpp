@@ -54,8 +54,7 @@ bool AdrenoMemInfo::Init() {
     *reinterpret_cast<void **>(&LINK_adreno_get_gpu_pixel_alignment) =
         ::dlsym(libadreno_utils_, "get_gpu_pixel_alignment");
   } else {
-    ALOGE(" Failed to load libadreno_utils.so");
-    return false;
+    ALOGW(" Failed to load libadreno_utils.so");
   }
 
   // Check if the overriding property debug.gralloc.gfx_ubwc_disable_
@@ -141,6 +140,8 @@ void AdrenoMemInfo::AlignCompressedRGB(int width, int height, int format, unsign
         width, height, format, 0, raster_mode, padding_threshold,
         reinterpret_cast<int *>(aligned_w), reinterpret_cast<int *>(aligned_h), &bytesPerPixel);
   } else {
+    *aligned_w = (unsigned int)ALIGN(width, 32);
+    *aligned_h = (unsigned int)ALIGN(height, 32);
     ALOGW("%s: Warning!! compute_compressedfmt_aligned_width_and_height not found", __FUNCTION__);
   }
 }
