@@ -116,8 +116,13 @@ DisplayError HWTVDRM::SetDisplayAttributes(uint32_t index) {
     return kErrorResources;
   }
 
-  // Reload connector info for updated info after 1st commit
+  // Reload connector info for updated info after 1st commit and validate
   drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
+  if (index >= connector_info_.modes.size()) {
+    DLOGE("Invalid mode index %d mode size %d", index, UINT32(connector_info_.modes.size()));
+    return kErrorNotSupported;
+  }
+
   DLOGI("Setup CRTC %d, Connector %d for %s", token_.crtc_id, token_.conn_id, device_name_);
 
   current_mode_index_ = index;
