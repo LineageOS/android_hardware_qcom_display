@@ -1142,14 +1142,22 @@ DisplayError HWDeviceDRM::SetPPFeatures(PPFeaturesConfig *feature_list) {
 
     if (feature) {
       DLOGV_IF(kTagDriverConfig, "feature_id = %d", feature->feature_id_);
-      if (!HWColorManagerDrm::GetDrmFeature[feature->feature_id_]) {
-        DLOGE("GetDrmFeature is not valid for feature %d", feature->feature_id_);
+      auto drm_features = DrmPPfeatureMap_.find(feature->feature_id_);
+      if (drm_features == DrmPPfeatureMap_.end()) {
+        DLOGE("DrmFeatures not valid for feature %d", feature->feature_id_);
         continue;
       }
-      ret = HWColorManagerDrm::GetDrmFeature[feature->feature_id_](*feature, &kernel_params);
-      if (!ret)
-        drm_atomic_intf_->Perform(DRMOps::CRTC_SET_POST_PROC, token_.crtc_id, &kernel_params);
-      HWColorManagerDrm::FreeDrmFeatureData(&kernel_params);
+
+      for (uint32_t drm_feature : drm_features->second) {
+        if (!HWColorManagerDrm::GetDrmFeature[drm_feature]) {
+          DLOGE("GetDrmFeature is not valid for DRM feature %d", drm_feature);
+          continue;
+        }
+        ret = HWColorManagerDrm::GetDrmFeature[drm_feature](*feature, &kernel_params);
+        if (!ret)
+          drm_atomic_intf_->Perform(DRMOps::CRTC_SET_POST_PROC, token_.crtc_id, &kernel_params);
+        HWColorManagerDrm::FreeDrmFeatureData(&kernel_params);
+      }
     }
   }
 

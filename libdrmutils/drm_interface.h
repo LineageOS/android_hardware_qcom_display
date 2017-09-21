@@ -462,6 +462,9 @@ enum DRMPPFeatureID {
   kFeatureDither,
   kFeatureGamut,
   kFeaturePADither,
+  kFeaturePAHsic,
+  kFeaturePASixZone,
+  kFeaturePAMemColor,
   kPPFeaturesMax,
 };
 
