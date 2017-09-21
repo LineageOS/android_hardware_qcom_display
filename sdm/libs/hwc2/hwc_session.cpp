@@ -1302,7 +1302,7 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
 }
 
 void HWCSession::UEventHandler(const char *uevent_data, int length) {
-  if (strcasestr(uevent_data, HWC_UEVENT_SWITCH_HDMI)) {
+  if (!strcasecmp(uevent_data, HWC_UEVENT_SWITCH_HDMI)) {
     DLOGI("Uevent HDMI = %s", uevent_data);
     int connected = GetEventValue(uevent_data, length, "SWITCH_STATE=");
     if (connected >= 0) {
@@ -1311,7 +1311,7 @@ void HWCSession::UEventHandler(const char *uevent_data, int length) {
         DLOGE("Failed handling Hotplug = %s", connected ? "connected" : "disconnected");
       }
     }
-  } else if (strcasestr(uevent_data, HWC_UEVENT_GRAPHICS_FB0)) {
+  } else if (!strcasecmp(uevent_data, HWC_UEVENT_GRAPHICS_FB0)) {
     DLOGI("Uevent FB0 = %s", uevent_data);
     int panel_reset = GetEventValue(uevent_data, length, "PANEL_ALIVE=");
     if (panel_reset == 0) {
