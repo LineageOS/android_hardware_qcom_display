@@ -59,12 +59,26 @@ DisplayError HWCBufferAllocator::Init() {
     return kErrorResources;
   }
 
+  CreateBufferDescriptor_ = reinterpret_cast<GRALLOC1_PFN_CREATE_DESCRIPTOR>(
+      gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_CREATE_DESCRIPTOR));
+  DestroyBufferDescriptor_ = reinterpret_cast<GRALLOC1_PFN_DESTROY_DESCRIPTOR>(
+      gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_DESTROY_DESCRIPTOR));
+  AllocateBuffer_ = reinterpret_cast<GRALLOC1_PFN_ALLOCATE>(
+      gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_ALLOCATE));
   ReleaseBuffer_ = reinterpret_cast<GRALLOC1_PFN_RELEASE>(
       gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_RELEASE));
+  SetBufferDimensions_ = reinterpret_cast<GRALLOC1_PFN_SET_DIMENSIONS>(
+      gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_SET_DIMENSIONS));
+  SetBufferFormat_ = reinterpret_cast<GRALLOC1_PFN_SET_FORMAT>(
+      gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_SET_FORMAT));
+  SetConsumerUsage_ = reinterpret_cast<GRALLOC1_PFN_SET_CONSUMER_USAGE>(
+      gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_SET_CONSUMER_USAGE));
+  SetProducerUsage_ = reinterpret_cast<GRALLOC1_PFN_SET_PRODUCER_USAGE>(
+      gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_SET_PRODUCER_USAGE));
+  LockBuffer_ = reinterpret_cast<GRALLOC1_PFN_LOCK>(
+      gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_LOCK));
   Perform_ = reinterpret_cast<GRALLOC1_PFN_PERFORM>(
       gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_PERFORM));
-  Lock_ = reinterpret_cast<GRALLOC1_PFN_LOCK>(
-      gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_LOCK));
 
   return kErrorNone;
 }
@@ -81,6 +95,7 @@ DisplayError HWCBufferAllocator::Deinit() {
 }
 
 DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
+  DisplayError sdm_err = kErrorNone;
   const BufferConfig &buffer_config = buffer_info->buffer_config;
   AllocatedBufferInfo *alloc_buffer_info = &buffer_info->alloc_buffer_info;
   uint32_t width = buffer_config.width;
@@ -109,29 +124,58 @@ DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
     alloc_flags |= GRALLOC1_CONSUMER_USAGE_GPU_TEXTURE;
   }
 
-  uint64_t producer_usage = alloc_flags;
-  uint64_t consumer_usage = (alloc_flags | GRALLOC1_CONSUMER_USAGE_HWCOMPOSER);
-  // CreateBuffer
+  gralloc1_producer_usage_t producer_usage = static_cast<gralloc1_producer_usage_t>(alloc_flags);
+  gralloc1_consumer_usage_t consumer_usage = static_cast<gralloc1_consumer_usage_t>(alloc_flags |
+                                             GRALLOC1_CONSUMER_USAGE_HWCOMPOSER);
+  gralloc1_buffer_descriptor_t descriptor_id = {};
+  buffer_handle_t buf = nullptr;
   private_handle_t *hnd = nullptr;
-  Perform_(gralloc_device_, GRALLOC1_MODULE_PERFORM_ALLOCATE_BUFFER, width, height, format,
-           producer_usage, consumer_usage, &hnd);
 
-  if (hnd) {
-    alloc_buffer_info->fd = hnd->fd;
-    alloc_buffer_info->stride = UINT32(hnd->width);
-    alloc_buffer_info->size = hnd->size;
-  } else {
-    DLOGE("Failed to allocate memory");
-    return kErrorMemory;
+  // CreateBuffer
+  if (CreateBufferDescriptor_(gralloc_device_, &descriptor_id) != GRALLOC1_ERROR_NONE) {
+    DLOGE("CreateBufferDescriptor failed gr_device=%p", gralloc_device_);
+    return kErrorParameters;
+  }
+  if (SetBufferDimensions_(gralloc_device_, descriptor_id, width, height) != GRALLOC1_ERROR_NONE) {
+    DLOGE("SetBufferDimensions failed gr_device=%x desc=%d", gralloc_device_, descriptor_id);
+    sdm_err = kErrorParameters;
+    goto CleanupOnError;
+  }
+  if (SetBufferFormat_(gralloc_device_, descriptor_id, format) != GRALLOC1_ERROR_NONE) {
+    DLOGE("SetBufferFormat failed gr_device=%x desc=%d", gralloc_device_, descriptor_id);
+    sdm_err = kErrorParameters;
+    goto CleanupOnError;
+  }
+  if (SetConsumerUsage_(gralloc_device_, descriptor_id, consumer_usage) != GRALLOC1_ERROR_NONE) {
+    DLOGE("SetConsumerUsage failed gr_device=%x desc=%d", gralloc_device_, descriptor_id);
+    sdm_err = kErrorParameters;
+    goto CleanupOnError;
+  }
+  if (SetProducerUsage_(gralloc_device_, descriptor_id, producer_usage) != GRALLOC1_ERROR_NONE) {
+    DLOGE("SetProducerUsage failed gr_device=%x desc=%d", gralloc_device_, descriptor_id);
+    sdm_err = kErrorParameters;
+    goto CleanupOnError;
+  }
+  if (AllocateBuffer_(gralloc_device_, 1, &descriptor_id, &buf) != GRALLOC1_ERROR_NONE) {
+    DLOGE("AllocateBuffer failed gr_device=%x desc=%d", gralloc_device_, descriptor_id);
+    sdm_err = kErrorMemory;
+    goto CleanupOnError;
   }
 
+  hnd = (private_handle_t *)buf;  // NOLINT
+  alloc_buffer_info->fd = hnd->fd;
+  alloc_buffer_info->stride = UINT32(hnd->width);
+  alloc_buffer_info->size = hnd->size;
+
   buffer_info->private_data = reinterpret_cast<void *>(hnd);
-  return kErrorNone;
+CleanupOnError:
+  DestroyBufferDescriptor_(gralloc_device_, descriptor_id);
+  return sdm_err;
 }
 
 DisplayError HWCBufferAllocator::FreeBuffer(BufferInfo *buffer_info) {
   DisplayError err = kErrorNone;
-  buffer_handle_t hnd = static_cast<private_handle_t *>(buffer_info->private_data);
+  buffer_handle_t hnd = static_cast<buffer_handle_t>(buffer_info->private_data);
   ReleaseBuffer_(gralloc_device_, hnd);
   AllocatedBufferInfo *alloc_buffer_info = &buffer_info->alloc_buffer_info;
 
@@ -389,8 +433,8 @@ DisplayError HWCBufferAllocator::MapBuffer(const private_handle_t *handle, int a
         .width = 0,
         .height = 0
   };
-  Lock_(gralloc_device_, handle, GRALLOC1_PRODUCER_USAGE_CPU_READ, GRALLOC1_CONSUMER_USAGE_NONE,
-        &accessRegion, &buffer_ptr, acquire_fence);
+  LockBuffer_(gralloc_device_, handle, GRALLOC1_PRODUCER_USAGE_CPU_READ,
+              GRALLOC1_CONSUMER_USAGE_NONE, &accessRegion, &buffer_ptr, acquire_fence);
   if (!buffer_ptr) {
     return kErrorUndefined;
   }

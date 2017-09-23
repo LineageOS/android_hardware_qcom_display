@@ -124,7 +124,7 @@ gralloc1_error_t BufferManager::AllocateBuffers(uint32_t num_descriptors,
   std::lock_guard<std::mutex> buffer_lock(buffer_lock_);
   if (shared && (max_buf_index >= 0)) {
     // Allocate one and duplicate/copy the handles for each descriptor
-    if (AllocateBuffer(*descriptors[UINT(max_buf_index)], &out_buffers[max_buf_index])) {
+    if (AllocateBufferLocked(*descriptors[UINT(max_buf_index)], &out_buffers[max_buf_index])) {
       return GRALLOC1_ERROR_NO_RESOURCES;
     }
 
@@ -140,7 +140,7 @@ gralloc1_error_t BufferManager::AllocateBuffers(uint32_t num_descriptors,
     // Buffer sharing is not feasible.
     // Allocate separate buffer for each descriptor
     for (i = 0; i < num_descriptors; i++) {
-      if (AllocateBuffer(*descriptors[i], &out_buffers[i])) {
+      if (AllocateBufferLocked(*descriptors[i], &out_buffers[i])) {
         return GRALLOC1_ERROR_NO_RESOURCES;
       }
     }
@@ -447,8 +447,8 @@ int BufferManager::GetBufferType(int inputFormat) {
   return buffer_type;
 }
 
-int BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_handle_t *handle,
-                                  unsigned int bufferSize) {
+int BufferManager::AllocateBufferLocked(const BufferDescriptor &descriptor, buffer_handle_t *handle,
+                                        unsigned int bufferSize) {
   if (!handle)
     return -EINVAL;
 
@@ -738,22 +738,6 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
     } break;
 
       // TODO(user): Break out similar functionality, preferably moving to a common lib.
-
-    case GRALLOC1_MODULE_PERFORM_ALLOCATE_BUFFER: {
-      int width = va_arg(args, int);
-      int height = va_arg(args, int);
-      int format = va_arg(args, int);
-      uint64_t p_usage = va_arg(args, uint64_t);
-      uint64_t c_usage = va_arg(args, uint64_t);
-      buffer_handle_t *hnd = va_arg(args, buffer_handle_t*);
-      gralloc1_producer_usage_t producer_usage = static_cast<gralloc1_producer_usage_t>(p_usage);
-      gralloc1_consumer_usage_t consumer_usage = static_cast<gralloc1_consumer_usage_t>(c_usage);
-      BufferDescriptor descriptor(width, height, format, producer_usage, consumer_usage);
-      unsigned int size;
-      unsigned int alignedw, alignedh;
-      GetBufferSizeAndDimensions(GetBufferInfo(descriptor), &size, &alignedw, &alignedh);
-      AllocateBuffer(descriptor, hnd, size);
-    } break;
 
     case GRALLOC1_MODULE_PERFORM_GET_INTERLACE_FLAG: {
       private_handle_t *hnd = va_arg(args, private_handle_t *);
