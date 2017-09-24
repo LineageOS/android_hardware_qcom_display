@@ -451,6 +451,7 @@ void HWCDisplay::BuildLayerStack() {
   display_rect_ = LayerRect();
   metadata_refresh_rate_ = 0;
   auto working_primaries = ColorPrimaries_BT709_5;
+  bool secure_display_active = false;
 
   // Add one layer for fb target
   // TODO(user): Add blit target layers
@@ -505,6 +506,10 @@ void HWCDisplay::BuildLayerStack() {
 
     if (layer->flags.skip) {
       layer_stack_.flags.skip_present = true;
+    }
+
+    if (layer->input_buffer.flags.secure_display) {
+      secure_display_active = true;
     }
 
     if (hwc_layer->GetClientRequestedCompositionType() == HWC2::Composition::Cursor) {
@@ -580,6 +585,9 @@ void HWCDisplay::BuildLayerStack() {
   layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0);
   // Append client target to the layer stack
   layer_stack_.layers.push_back(client_target_->GetSDMLayer());
+
+  // set secure display
+  SetSecureDisplay(secure_display_active);
 }
 
 void HWCDisplay::BuildSolidFillStack() {
@@ -1798,7 +1806,12 @@ int HWCDisplay::GetVisibleDisplayRect(hwc_rect_t *visible_rect) {
 }
 
 void HWCDisplay::SetSecureDisplay(bool secure_display_active) {
-  secure_display_active_ = secure_display_active;
+  if (secure_display_active_ != secure_display_active) {
+    DLOGI("SecureDisplay state changed from %d to %d Needs Flush!!", secure_display_active_,
+          secure_display_active);
+    secure_display_active_ = secure_display_active;
+    skip_prepare_ = true;
+  }
   return;
 }
 
