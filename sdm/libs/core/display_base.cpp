@@ -307,10 +307,9 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
 
   CommitLayerParams(layer_stack);
 
-  if (comp_manager_->Commit(display_comp_ctx_, &hw_layers_)) {
-    if (error != kErrorNone) {
-      return error;
-    }
+  error = comp_manager_->Commit(display_comp_ctx_, &hw_layers_);
+  if (error != kErrorNone) {
+    return error;
   }
 
   // check if feature list cache is dirty and pending.
