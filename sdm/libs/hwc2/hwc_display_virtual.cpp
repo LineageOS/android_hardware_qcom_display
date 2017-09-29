@@ -131,7 +131,7 @@ HWC2::Error HWCDisplayVirtual::Present(int32_t *out_retire_fence) {
   auto status = HWC2::Error::None;
   if (display_paused_) {
     DisplayError error = display_intf_->Flush();
-    validated_.reset();
+    validated_ = false;
     if (error != kErrorNone) {
       DLOGE("Flush failed. Error = %d", error);
     }

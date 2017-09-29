@@ -140,11 +140,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   static int32_t SetColorTransform(hwc2_device_t *device, hwc2_display_t display,
                                    const float *matrix, int32_t /*android_color_transform_t*/ hint);
 
-  // Meant to be called by HWCDisplay to preserve sequence of validate/present during events from
-  // polling thread
-  static void WaitForSequence(hwc2_display_t display) {
-    SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
-  }
+  static Locker locker_[HWC_NUM_DISPLAY_TYPES];
 
  private:
   static const int kExternalConnectionTimeoutMs = 500;
@@ -227,7 +223,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   void Refresh(hwc2_display_t display);
   void HotPlug(hwc2_display_t display, HWC2::Connection state);
 
-  static Locker locker_[HWC_NUM_DISPLAY_TYPES];
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWC_NUM_DISPLAY_TYPES] = {nullptr};
   HWCCallbacks callbacks_;
