@@ -33,7 +33,10 @@
 #include <sys/types.h>
 
 #include <hardware/lights.h>
+
+#ifdef LEGACY_COMPATIBILITY
 #include "lights_prv.h"
+#endif
 
 #ifndef DEFAULT_LOW_PERSISTENCE_MODE_BRIGHTNESS
 #define DEFAULT_LOW_PERSISTENCE_MODE_BRIGHTNESS 0x80
@@ -47,7 +50,10 @@ static struct light_state_t g_notification;
 static struct light_state_t g_battery;
 static int g_last_backlight_mode = BRIGHTNESS_MODE_USER;
 static int g_attention = 0;
+
+#ifdef LEGACY_COMPATIBILITY
 static int g_brightness_max = 0;
+#endif
 
 char const*const RED_LED_FILE
         = "/sys/class/leds/red/brightness";
@@ -165,6 +171,7 @@ set_light_backlight(struct light_device_t* dev,
     return err;
 }
 
+#ifdef LEGACY_COMPATIBILITY
 static int
 set_light_backlight_ext(struct light_device_t* dev,
         struct light_state_t const* state)
@@ -186,6 +193,7 @@ set_light_backlight_ext(struct light_device_t* dev,
 
     return err;
 }
+#endif
 
 static int
 set_speaker_light_locked(struct light_device_t* dev,
@@ -346,6 +354,7 @@ static int open_lights(const struct hw_module_t* module, char const* name,
             struct light_state_t const* state);
 
     if (0 == strcmp(LIGHT_ID_BACKLIGHT, name)) {
+#ifdef LEGACY_COMPATIBILITY
         char property[PROPERTY_VALUE_MAX];
         property_get("persist.extend.brightness", property, "0");
 
@@ -356,6 +365,7 @@ static int open_lights(const struct hw_module_t* module, char const* name,
             set_brightness_ext_init();
             set_light = set_light_backlight_ext;
         } else
+#endif
             set_light = set_light_backlight;
     } else if (0 == strcmp(LIGHT_ID_BATTERY, name))
         set_light = set_light_battery;
