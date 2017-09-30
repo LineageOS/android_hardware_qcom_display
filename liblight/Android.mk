@@ -17,13 +17,27 @@ LOCAL_PATH:= $(call my-dir)
 # hw/<COPYPIX_HARDWARE_MODULE_ID>.<ro.board.platform>.so
 include $(CLEAR_VARS)
 
+ifneq ($(TARGET_USES_LEGACY_LIBLIGHT),true)
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/common/inc
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/qdcm/inc
+endif
 
-LOCAL_SRC_FILES := lights.c lights_prv.cpp
+LOCAL_SRC_FILES := lights.c
+ifneq ($(TARGET_USES_LEGACY_LIBLIGHT),true)
+LOCAL_SRC_FILES += lights_prv.cpp
+endif
+
 LOCAL_MODULE_RELATIVE_PATH := hw
-LOCAL_SHARED_LIBRARIES := liblog libcutils libsdm-disp-vndapis
+LOCAL_SHARED_LIBRARIES := liblog libcutils
+ifneq ($(TARGET_USES_LEGACY_LIBLIGHT),true)
+LOCAL_SHARED_LIBRARIES += libsdm-disp-vndapis
+endif
+
 LOCAL_CFLAGS := -DLOG_TAG=\"qdlights\"
+ifeq ($(TARGET_USES_LEGACY_LIBLIGHT),true)
+LOCAL_CFLAGS += -DLEGACY_COMPATIBILITY
+endif
+
 LOCAL_CLANG  := true
 LOCAL_MODULE := lights.$(TARGET_BOARD_PLATFORM)
 LOCAL_MODULE_TAGS := optional
