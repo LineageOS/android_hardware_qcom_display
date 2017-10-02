@@ -64,10 +64,17 @@ class HWCBufferAllocator : public BufferAllocator {
 
  private:
   gralloc1_device_t *gralloc_device_ = nullptr;
-  const hw_module_t *module_;
+  const hw_module_t *module_ = nullptr;
+  GRALLOC1_PFN_CREATE_DESCRIPTOR CreateBufferDescriptor_ = nullptr;
+  GRALLOC1_PFN_DESTROY_DESCRIPTOR DestroyBufferDescriptor_ = nullptr;
+  GRALLOC1_PFN_ALLOCATE AllocateBuffer_ = nullptr;
   GRALLOC1_PFN_RELEASE ReleaseBuffer_ = nullptr;
+  GRALLOC1_PFN_SET_DIMENSIONS SetBufferDimensions_ = nullptr;
+  GRALLOC1_PFN_SET_FORMAT SetBufferFormat_ = nullptr;
+  GRALLOC1_PFN_SET_CONSUMER_USAGE SetConsumerUsage_ = nullptr;
+  GRALLOC1_PFN_SET_PRODUCER_USAGE SetProducerUsage_ = nullptr;
+  GRALLOC1_PFN_LOCK LockBuffer_ = nullptr;
   GRALLOC1_PFN_PERFORM Perform_ = nullptr;
-  GRALLOC1_PFN_LOCK Lock_ = nullptr;
 };
 
 }  // namespace sdm
