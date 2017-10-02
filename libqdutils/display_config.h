@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013, 2017 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -34,7 +34,8 @@
 // This header is for clients to use to set/get global display configuration.
 // Only primary and external displays are supported here.
 
-namespace qdutils {
+namespace display = qdutils;
+namespace qdutils{
 
 
 /* TODO: Have all the common enums that need be exposed to clients and which
@@ -46,9 +47,6 @@ namespace qdutils {
 enum {
     DISPLAY_PRIMARY  = HWC_DISPLAY_PRIMARY,
     DISPLAY_EXTERNAL = HWC_DISPLAY_EXTERNAL,
-#ifdef QTI_BSP
-    DISPLAY_TERTIARY = HWC_DISPLAY_TERTIARY,
-#endif
     DISPLAY_VIRTUAL  = HWC_DISPLAY_VIRTUAL,
 };
 
@@ -112,10 +110,10 @@ int getDisplayVisibleRegion(int dpy, hwc_rect_t &rect);
 int setViewFrame(int dpy, int l, int t, int r, int b);
 
 // Set the secondary display status(pause/resume/offline etc.,)
-int setSecondaryDisplayStatus(int dpy, uint32_t status);
+int setSecondayDisplayStatus(int dpy, uint32_t status);
 
 // Enable/Disable/Set refresh rate dynamically
-int configureDynRefreshRate(uint32_t op, uint32_t refreshRate);
+int configureDynRefeshRate(uint32_t op, uint32_t refreshRate);
 
 // Returns the number of configs supported for the display on success.
 // Returns -1 on error.

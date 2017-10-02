@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2013-2014,2016 The Linux Foundation. All rights reserved.
+* Copyright (c) 2013-2014,2016-2017 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -144,7 +144,7 @@ int setViewFrame(int dpy, int l, int t, int r, int b) {
     return err;
 }
 
-int setSecondaryDisplayStatus(int dpy, uint32_t status) {
+int setSecondayDisplayStatus(int dpy, uint32_t status) {
     status_t err = (status_t) FAILED_TRANSACTION;
     sp<IQService> binder = getBinder();
     Parcel inParcel, outParcel;
@@ -162,7 +162,7 @@ int setSecondaryDisplayStatus(int dpy, uint32_t status) {
     return err;
 }
 
-int configureDynRefreshRate(uint32_t op, uint32_t refreshRate) {
+int configureDynRefeshRate(uint32_t op, uint32_t refreshRate) {
     status_t err = (status_t) FAILED_TRANSACTION;
     sp<IQService> binder = getBinder();
     Parcel inParcel, outParcel;
