@@ -543,9 +543,11 @@ class DRMAtomicReqInterface {
    * Commit the params set via Perform(). Also resets the properties after commit. Needs to be
    * called every frame.
    * [input]: synchronous: Determines if the call should block until a h/w flip
+   * [input]: retain_planes: Retains already staged planes. Useful when not explicitly programming
+   *          planes but still need the previously staged ones to not be unstaged
    * [return]: Error code if the API fails, 0 on success.
    */
-  virtual int Commit(bool synchronous) = 0;
+  virtual int Commit(bool synchronous, bool retain_planes) = 0;
   /*
    * Validate the params set via Perform().
    * [return]: Error code if the API fails, 0 on success.

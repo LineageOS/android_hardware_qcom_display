@@ -110,7 +110,7 @@ DisplayError HWTVDRM::SetDisplayAttributes(uint32_t index) {
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
 
   // Commit to setup pipeline with mode, which then tells us the topology etc
-  if (drm_atomic_intf_->Commit(true /* synchronous */)) {
+  if (drm_atomic_intf_->Commit(true /* synchronous */, false /* retain_planes*/)) {
     DLOGE("Setting up CRTC %d, Connector %d for %s failed", token_.crtc_id,
           token_.conn_id, device_name_);
     return kErrorResources;
@@ -177,7 +177,7 @@ DisplayError HWTVDRM::Deinit() {
 DisplayError HWTVDRM::PowerOff() {
   DTRACE_SCOPED();
 
-  int ret = drm_atomic_intf_->Commit(true /* synchronous */);
+  int ret = drm_atomic_intf_->Commit(true /* synchronous */, false /* retain_planes*/);
   if (ret) {
     DLOGE("%s failed with error %d", __FUNCTION__, ret);
     return kErrorHardware;
