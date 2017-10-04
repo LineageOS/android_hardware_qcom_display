@@ -61,6 +61,7 @@ class HWCBufferAllocator : public BufferAllocator {
                                uint32_t *num_planes);
   int SetBufferInfo(LayerBufferFormat format, int *target, uint64_t *flags);
   DisplayError MapBuffer(const private_handle_t *handle, int acquire_fence);
+  DisplayError UnmapBuffer(const private_handle_t *handle, int* release_fence);
 
  private:
   gralloc1_device_t *gralloc_device_ = nullptr;
@@ -68,6 +69,7 @@ class HWCBufferAllocator : public BufferAllocator {
   GRALLOC1_PFN_RELEASE ReleaseBuffer_ = nullptr;
   GRALLOC1_PFN_PERFORM Perform_ = nullptr;
   GRALLOC1_PFN_LOCK Lock_ = nullptr;
+  GRALLOC1_PFN_UNLOCK Unlock_ = nullptr;
 };
 
 }  // namespace sdm
