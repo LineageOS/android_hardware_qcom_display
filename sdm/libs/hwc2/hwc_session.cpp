@@ -1693,11 +1693,7 @@ int HWCSession::HotPlugHandler(bool connected) {
       }
     } else {
       SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_EXTERNAL]);
-      // Do not return error if external display is not in connected status.
-      // Due to virtual display concurrency, external display connection might be still pending
-      // but hdmi got disconnected before pending connection could be processed.
       if (hwc_display_[HWC_DISPLAY_EXTERNAL]) {
-        status = DisconnectDisplay(HWC_DISPLAY_EXTERNAL);
         notify_hotplug = true;
       }
       external_pending_connect_ = false;
@@ -1705,6 +1701,7 @@ int HWCSession::HotPlugHandler(bool connected) {
   } while (0);
 
   if (connected) {
+    // In connect case, we send hotplug after we create display
     Refresh(0);
 
     if (!hdmi_is_primary_) {
@@ -1713,13 +1710,35 @@ int HWCSession::HotPlugHandler(bool connected) {
       uint32_t vsync_period = UINT32(GetVsyncPeriod(HWC_DISPLAY_PRIMARY));
       usleep(vsync_period * 2 / 1000);
     }
+    if (notify_hotplug) {
+      HotPlug(hdmi_is_primary_ ? HWC_DISPLAY_PRIMARY : HWC_DISPLAY_EXTERNAL,
+              HWC2::Connection::Connected);
+    }
+  } else {
+    // In disconnect case, we notify hotplug first to let the listener state update happen first
+    // Then we can destroy the underlying display object
+    if (notify_hotplug) {
+      HotPlug(hdmi_is_primary_ ? HWC_DISPLAY_PRIMARY : HWC_DISPLAY_EXTERNAL,
+              HWC2::Connection::Disconnected);
+    }
+    Refresh(0);
+    if (!hdmi_is_primary_) {
+      uint32_t vsync_period = UINT32(GetVsyncPeriod(HWC_DISPLAY_PRIMARY));
+      usleep(vsync_period * 2 / 1000);
+    }
+    // Now disconnect the display
+    {
+      SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_EXTERNAL]);
+      // Do not return error if external display is not in connected status.
+      // Due to virtual display concurrency, external display connection might be still pending
+      // but hdmi got disconnected before pending connection could be processed.
+      if (hwc_display_[HWC_DISPLAY_EXTERNAL]) {
+        status = DisconnectDisplay(HWC_DISPLAY_EXTERNAL);
+      }
+    }
   }
 
   // notify client
-  if (notify_hotplug) {
-    HotPlug(hdmi_is_primary_ ? HWC_DISPLAY_PRIMARY : HWC_DISPLAY_EXTERNAL,
-            connected ? HWC2::Connection::Connected : HWC2::Connection::Disconnected);
-  }
 
   qservice_->onHdmiHotplug(INT(connected));
 
