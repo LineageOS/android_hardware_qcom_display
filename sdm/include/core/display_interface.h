@@ -674,6 +674,20 @@ class DisplayInterface {
   */
   virtual DisplayError SetCompositionState(LayerComposition composition_type, bool enable) = 0;
 
+  /*! @brief Method to check whether a client target with the given properties
+      can be supported/handled by hardware.
+
+    @param[in] width client target width
+    @param[in] height client target height
+    @param[in] format client target format
+    @param[in] colorMetaData client target colorMetaData
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetClientTargetSupport(uint32_t width, uint32_t height,
+                                              LayerBufferFormat format,
+                                              const ColorMetaData &color_metadata) = 0;
+
  protected:
   virtual ~DisplayInterface() { }
 };

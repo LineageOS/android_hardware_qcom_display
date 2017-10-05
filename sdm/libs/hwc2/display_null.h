@@ -95,6 +95,8 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(SetDetailEnhancerData(const DisplayDetailEnhancerData &))
   MAKE_NO_OP(GetDisplayPort(DisplayPort *))
   MAKE_NO_OP(SetCompositionState(LayerComposition, bool))
+  MAKE_NO_OP(GetClientTargetSupport(uint32_t, uint32_t, LayerBufferFormat,
+                                    const ColorMetaData &))
 
  private:
   bool active_ = false;

@@ -1493,4 +1493,93 @@ DisplayError DisplayBase::ValidateHDR(LayerStack *layer_stack) {
   return kErrorNone;
 }
 
+DisplayError DisplayBase::GetClientTargetSupport(uint32_t width, uint32_t height,
+                                                 LayerBufferFormat format,
+                                                 const ColorMetaData &color_metadata) {
+  DisplayError error = kErrorNone;
+
+  if (format != kFormatRGBA8888 && format != kFormatRGBA1010102) {
+    DLOGW("Unsupported format = %d", format);
+    error = kErrorNotSupported;
+  } else if (ValidateScaling(width, height) != kErrorNone) {
+    DLOGW("Unsupported width = %d height = %d", width, height);
+    error = kErrorNotSupported;
+  } else {
+    error = ValidateDataspace(color_metadata);
+    if (error != kErrorNone) {
+      return error;
+    }
+
+    // Check for BT2020 support
+    if (color_metadata.colorPrimaries == ColorPrimaries_BT2020) {
+      DLOGW("Unsupported dataspace");
+      error = kErrorNotSupported;
+    }
+  }
+
+  return error;
+}
+
+DisplayError DisplayBase::ValidateScaling(uint32_t width, uint32_t height) {
+  uint32_t display_width = display_attributes_.x_pixels;
+  uint32_t display_height = display_attributes_.y_pixels;
+
+  HWResourceInfo hw_resource_info = HWResourceInfo();
+  hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
+  float max_scale_down = FLOAT(hw_resource_info.max_scale_down);
+  float max_scale_up = FLOAT(hw_resource_info.max_scale_up);
+
+  float scale_x = FLOAT(width / display_width);
+  float scale_y = FLOAT(height / display_height);
+
+  if (scale_x > max_scale_down || scale_y > max_scale_down) {
+    return kErrorNotSupported;
+  }
+
+  if (UINT32(scale_x) < 1 && scale_x > 0.0f) {
+    if ((1.0f / scale_x) > max_scale_up) {
+      return kErrorNotSupported;
+    }
+  }
+
+  if (UINT32(scale_y) < 1 && scale_y > 0.0f) {
+    if ((1.0f / scale_y) > max_scale_up) {
+      return kErrorNotSupported;
+    }
+  }
+
+  return kErrorNone;
+}
+
+DisplayError DisplayBase::ValidateDataspace(const ColorMetaData &color_metadata) {
+  // Handle transfer
+  switch (color_metadata.transfer) {
+    case Transfer_sRGB:
+    case Transfer_SMPTE_170M:
+    case Transfer_SMPTE_ST2084:
+    case Transfer_HLG:
+    case Transfer_Linear:
+    case Transfer_Gamma2_2:
+      break;
+    default:
+      DLOGW("Unsupported Transfer Request = %d", color_metadata.transfer);
+      return kErrorNotSupported;
+  }
+
+  // Handle colorPrimaries
+  switch (color_metadata.colorPrimaries) {
+    case ColorPrimaries_BT709_5:
+    case ColorPrimaries_BT601_6_525:
+    case ColorPrimaries_BT601_6_625:
+    case ColorPrimaries_DCIP3:
+    case ColorPrimaries_BT2020:
+      break;
+    default:
+      DLOGW("Unsupported Color Primary = %d", color_metadata.colorPrimaries);
+      return kErrorNotSupported;
+  }
+
+  return kErrorNone;
+}
+
 }  // namespace sdm
