@@ -1673,6 +1673,10 @@ std::string HWCDisplay::Dump() {
 }
 
 bool HWCDisplay::CanSkipValidate() {
+  if (solid_fill_enable_) {
+    return false;
+  }
+
   for (auto hwc_layer : layer_set_) {
     if (hwc_layer->NeedsValidation()) {
       return false;
