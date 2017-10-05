@@ -133,6 +133,11 @@ HWC2::Error HWCDisplayVirtual::Validate(uint32_t *out_num_types, uint32_t *out_n
       }
     }
   }
+
+  if (layer_set_.empty()) {
+    DLOGI("Skipping Validate and Commit");
+    return status;
+  }
   status = PrepareLayerStack(out_num_types, out_num_requests);
   return status;
 }
