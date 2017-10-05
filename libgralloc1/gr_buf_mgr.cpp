@@ -508,7 +508,7 @@ int BufferManager::AllocateBufferLocked(const BufferDescriptor &descriptor, buff
                                                descriptor.GetHeight(),
                                                format,
                                                buffer_type,
-                                               size,
+                                               data.size,
                                                prod_usage,
                                                cons_usage);
 
