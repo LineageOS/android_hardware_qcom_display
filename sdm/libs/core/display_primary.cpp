@@ -315,6 +315,7 @@ void DisplayPrimary::IdlePowerCollapse() {
 }
 
 void DisplayPrimary::PanelDead() {
+  event_handler_->HandleEvent(kPanelDeadEvent);
   event_handler_->Refresh();
   {
     lock_guard<recursive_mutex> obj(recursive_mutex_);

@@ -99,7 +99,7 @@ DisplayError HWEventsDRM::InitializePollFd() {
           DLOGE("drmOpen failed with error %d", poll_fds_[i].fd);
           return kErrorResources;
         }
-        poll_fds_[i].events = POLLIN | POLLPRI | POLLERR;;
+        poll_fds_[i].events = POLLIN | POLLPRI | POLLERR;
         panel_dead_index_ = i;
       } break;
     }
@@ -294,7 +294,7 @@ void *HWEventsDRM::DisplayEventHandler() {
       switch (event_data_list_[i].event_type) {
         case HWEvent::VSYNC:
         case HWEvent::PANEL_DEAD:
-          if (poll_fd.revents & (POLLIN | POLLPRI)) {
+          if (poll_fd.revents & (POLLIN | POLLPRI | POLLERR)) {
             (this->*(event_data_list_[i]).event_parser)(nullptr);
           }
           break;
@@ -342,6 +342,18 @@ DisplayError HWEventsDRM::RegisterVSync() {
 }
 
 DisplayError HWEventsDRM::RegisterPanelDead(bool enable) {
+  uint32_t i = 0;
+  for (; i < event_data_list_.size(); i++) {
+    if (event_data_list_[i].event_type == HWEvent::PANEL_DEAD) {
+      break;
+    }
+  }
+
+  if (i == event_data_list_.size()) {
+    DLOGI("panel dead is not supported event");
+    return kErrorNone;
+  }
+
   struct drm_msm_event_req req = {};
   int ret = 0;
 
