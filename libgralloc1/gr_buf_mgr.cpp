@@ -725,7 +725,7 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
         return GRALLOC1_ERROR_BAD_VALUE;
       }
 
-      if (getMetaData(hnd, GET_MAP_SECURE_BUFFER, map_secure_buffer) == 0) {
+      if (getMetaData(hnd, GET_MAP_SECURE_BUFFER, map_secure_buffer) != 0) {
         *map_secure_buffer = 0;
       }
     } break;
@@ -853,8 +853,8 @@ gralloc1_error_t BufferManager::GetFlexLayout(const private_handle_t *hnd,
     return GRALLOC1_ERROR_UNSUPPORTED;
   }
 
-  android_ycbcr ycbcr;
-  int err = GetYUVPlaneInfo(hnd, &ycbcr);
+  android_ycbcr yuvPlaneInfo[2];
+  int err = GetYUVPlaneInfo(hnd, yuvPlaneInfo);
 
   if (err != 0) {
     return GRALLOC1_ERROR_BAD_HANDLE;
@@ -872,6 +872,8 @@ gralloc1_error_t BufferManager::GetFlexLayout(const private_handle_t *hnd,
     layout->planes[i].v_subsampling = 2;
   }
 
+  // We are only returning flex layout for progressive or single field formats.
+  struct android_ycbcr ycbcr = yuvPlaneInfo[0];
   layout->planes[0].top_left = static_cast<uint8_t *>(ycbcr.y);
   layout->planes[0].component = FLEX_COMPONENT_Y;
   layout->planes[0].v_increment = static_cast<int32_t>(ycbcr.ystride);

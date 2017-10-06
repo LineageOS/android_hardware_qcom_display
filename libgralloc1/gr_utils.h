@@ -71,7 +71,7 @@ void GetBufferSizeAndDimensions(const BufferInfo &d, unsigned int *size,
                                 unsigned int *alignedw, unsigned int *alignedh);
 void GetAlignedWidthAndHeight(const BufferInfo &d, unsigned int *aligned_w,
                               unsigned int *aligned_h);
-int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr *ycbcr);
+int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]);
 int GetRgbDataAddress(private_handle_t *hnd, void **rgb_data);
 bool IsUBwcFormat(int format);
 bool IsUBwcSupported(int format);
@@ -84,7 +84,7 @@ void GetYuvSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height, uint32_t 
 void GetYuvUbwcSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height, int color_format,
                            struct android_ycbcr *ycbcr);
 void GetYuvUbwcInterlacedSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height,
-                                     int color_format, struct android_ycbcr *ycbcr);
+                                     int color_format, struct android_ycbcr ycbcr[2]);
 void GetRgbUBwcBlockSize(uint32_t bpp, int *block_width, int *block_height);
 unsigned int GetRgbUBwcMetaBufferSize(int width, int height, uint32_t bpp);
 unsigned int GetUBwcSize(int width, int height, int format, unsigned int alignedw,
