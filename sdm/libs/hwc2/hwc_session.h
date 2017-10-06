@@ -211,7 +211,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   virtual android::status_t notifyCallback(uint32_t command, const android::Parcel *input_parcel,
                                            android::Parcel *output_parcel);
   void DynamicDebug(const android::Parcel *input_parcel);
-  void SetFrameDumpConfig(const android::Parcel *input_parcel);
+  android::status_t SetFrameDumpConfig(const android::Parcel *input_parcel);
   android::status_t SetMaxMixerStages(const android::Parcel *input_parcel);
   android::status_t SetDisplayMode(const android::Parcel *input_parcel);
   android::status_t ConfigureRefreshRate(const android::Parcel *input_parcel);

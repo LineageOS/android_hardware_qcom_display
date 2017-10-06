@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -46,7 +46,7 @@ class HWCDisplayVirtual : public HWCDisplay {
   virtual int Deinit();
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests);
   virtual HWC2::Error Present(int32_t *out_retire_fence);
-  virtual void SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type);
+  virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type);
   HWC2::Error SetOutputBuffer(buffer_handle_t buf, int32_t release_fence);
 
  private:

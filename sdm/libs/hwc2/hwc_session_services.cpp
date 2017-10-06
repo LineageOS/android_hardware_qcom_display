@@ -383,7 +383,8 @@ Return<int32_t> HWCSession::setIdleTimeout(uint32_t value) {
     return 0;
   }
 
-  return -EINVAL;
+  DLOGW("Display = %d is not connected.", HWC_DISPLAY_PRIMARY);
+  return -ENODEV;
 }
 
 Return<void> HWCSession::getHDRCapabilities(IDisplayConfig::DisplayType dpy,
@@ -391,9 +392,14 @@ Return<void> HWCSession::getHDRCapabilities(IDisplayConfig::DisplayType dpy,
   int32_t error = -EINVAL;
   IDisplayConfig::DisplayHDRCapabilities hdr_caps = {};
 
+  if (!_hidl_cb) {
+    DLOGE("_hidl_cb callback not provided.");
+    return Void();
+  }
+
   do {
     int disp_id = MapDisplayType(dpy);
-    if (disp_id < 0) {
+    if ((disp_id < 0) || (disp_id >= HWC_NUM_DISPLAY_TYPES)) {
       DLOGE("Invalid display id = %d", disp_id);
       break;
     }
@@ -401,7 +407,8 @@ Return<void> HWCSession::getHDRCapabilities(IDisplayConfig::DisplayType dpy,
     SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_id]);
     HWCDisplay *hwc_display = hwc_display_[disp_id];
     if (!hwc_display) {
-      DLOGE("Display = %d is not connected.", disp_id);
+      DLOGW("Display = %d is not connected.", disp_id);
+      error = -ENODEV;
       break;
     }
 
@@ -439,6 +446,16 @@ Return<void> HWCSession::getHDRCapabilities(IDisplayConfig::DisplayType dpy,
 Return<int32_t> HWCSession::setCameraLaunchStatus(uint32_t on) {
   SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
 
+  if (!core_intf_) {
+    DLOGW("core_intf_ not initialized.");
+    return -ENOENT;
+  }
+
+  if (!hwc_display_[HWC_DISPLAY_PRIMARY]) {
+    DLOGW("Display = %d is not connected.", HWC_DISPLAY_PRIMARY);
+    return -ENODEV;
+  }
+
   HWBwModes mode = on > 0 ? kBwCamera : kBwDefault;
 
   // trigger invalidate to apply new bw caps.
@@ -467,11 +484,17 @@ int32_t HWCSession::DisplayBWTransactionPending(bool *status) {
     return 0;
   }
 
-  return -EINVAL;
+  DLOGW("Display = %d is not connected.", HWC_DISPLAY_PRIMARY);
+  return -ENODEV;
 }
 
 Return<void> HWCSession::displayBWTransactionPending(displayBWTransactionPending_cb _hidl_cb) {
   bool status = true;
+
+  if (!_hidl_cb) {
+      DLOGE("_hidl_cb callback not provided.");
+      return Void();
+  }
 
   int32_t error = DisplayBWTransactionPending(&status);
 

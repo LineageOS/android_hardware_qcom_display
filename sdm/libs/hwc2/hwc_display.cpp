@@ -908,7 +908,7 @@ DisplayError HWCDisplay::SetMixerResolution(uint32_t width, uint32_t height) {
   return kErrorNotSupported;
 }
 
-void HWCDisplay::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type) {
+HWC2::Error HWCDisplay::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type) {
   dump_frame_count_ = count;
   dump_frame_index_ = 0;
   dump_input_layers_ = ((bit_mask_layer_type & (1 << INPUT_LAYER_DUMP)) != 0);
@@ -919,6 +919,7 @@ void HWCDisplay::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type
 
   DLOGI("num_frame_dump %d, input_layer_dump_enable %d", dump_frame_count_, dump_input_layers_);
   validated_ = false;
+  return HWC2::Error::None;
 }
 
 HWC2::PowerMode HWCDisplay::GetLastPowerMode() {

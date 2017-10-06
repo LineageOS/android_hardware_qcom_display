@@ -484,13 +484,13 @@ void HWCDisplayPrimary::HandleFrameDump() {
   }
 }
 
-void HWCDisplayPrimary::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type) {
+HWC2::Error HWCDisplayPrimary::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type) {
   HWCDisplay::SetFrameDumpConfig(count, bit_mask_layer_type);
   dump_output_to_file_ = bit_mask_layer_type & (1 << OUTPUT_LAYER_DUMP);
   DLOGI("output_layer_dump_enable %d", dump_output_to_file_);
 
   if (!count || !dump_output_to_file_) {
-    return;
+    return HWC2::Error::None;
   }
 
   // Allocate and map output buffer
@@ -503,7 +503,7 @@ void HWCDisplayPrimary::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_lay
   if (buffer_allocator_->AllocateBuffer(&output_buffer_info_) != 0) {
     DLOGE("Buffer allocation failed");
     output_buffer_info_ = {};
-    return;
+    return HWC2::Error::NoResources;
   }
 
   void *buffer = mmap(NULL, output_buffer_info_.alloc_buffer_info.size, PROT_READ | PROT_WRITE,
@@ -513,13 +513,14 @@ void HWCDisplayPrimary::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_lay
     DLOGE("mmap failed with err %d", errno);
     buffer_allocator_->FreeBuffer(&output_buffer_info_);
     output_buffer_info_ = {};
-    return;
+    return HWC2::Error::NoResources;
   }
 
   output_buffer_base_ = buffer;
   post_processed_output_ = true;
   DisablePartialUpdateOneFrame();
   validated_ = false;
+  return HWC2::Error::None;
 }
 
 int HWCDisplayPrimary::FrameCaptureAsync(const BufferInfo &output_buffer_info,
