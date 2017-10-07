@@ -170,6 +170,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int32_t SetSecondaryDisplayStatus(int disp_id, HWCDisplay::DisplayStatus status);
   int32_t GetPanelBrightness(int *level);
   int32_t MinHdcpEncryptionLevelChanged(int disp_id, uint32_t min_enc_level);
+  int32_t CreateExternalDisplay(int disp_id, uint32_t primary_width, uint32_t primary_height,
+                                bool use_primary_res);
 
   // service methods
   void StartServices();
@@ -241,6 +243,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   bool hdmi_is_primary_ = false;
   bool is_composer_up_ = false;
   Locker callbacks_lock_;
+  int hpd_bpp_ = 0;
+  int hpd_pattern_ = 0;
 };
 
 }  // namespace sdm

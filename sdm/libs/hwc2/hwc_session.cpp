@@ -32,6 +32,8 @@
 #include <utils/debug.h>
 #include <sync/sync.h>
 #include <profiler.h>
+#include <qd_utils.h>
+#include <utils/utils.h>
 #include <algorithm>
 #include <string>
 #include <bitset>
@@ -44,6 +46,7 @@
 #include "hwc_debugger.h"
 #include "hwc_display_primary.h"
 #include "hwc_display_virtual.h"
+#include "hwc_display_external_test.h"
 
 #define __CLASS__ "HWCSession"
 
@@ -192,8 +195,7 @@ int HWCSession::Init() {
     hdmi_is_primary_ = true;
     // Create display if it is connected, else wait for hotplug connect event.
     if (hw_disp_info.is_connected) {
-      status = HWCDisplayExternal::Create(core_intf_, &buffer_allocator_, &callbacks_, qservice_,
-                                          &hwc_display_[HWC_DISPLAY_PRIMARY]);
+      status = CreateExternalDisplay(HWC_DISPLAY_PRIMARY, 0, 0, false);
     }
   } else {
     // Create and power on primary display
@@ -847,8 +849,7 @@ int32_t HWCSession::ConnectDisplay(int disp) {
   hwc_display_[HWC_DISPLAY_PRIMARY]->GetFrameBufferResolution(&primary_width, &primary_height);
 
   if (disp == HWC_DISPLAY_EXTERNAL) {
-    status = HWCDisplayExternal::Create(core_intf_, &buffer_allocator_, &callbacks_, primary_width,
-                                        primary_height, qservice_, false, &hwc_display_[disp]);
+    status = CreateExternalDisplay(disp, primary_width, primary_height, false);
   } else {
     DLOGE("Invalid display type");
     return -1;
@@ -1397,18 +1398,27 @@ const char *GetTokenValue(const char *uevent_data, int length, const char *token
 
 void HWCSession::HandleExtHPD(const char *uevent_data, int length) {
   const char *pstr = GetTokenValue(uevent_data, length, "name=");
-  if (!pstr || (strcmp(pstr, "DP-1") != 0)) {
+  if (!pstr || (strncmp(pstr, "DP-1", strlen("DP-1")) != 0)) {
     return;
   }
 
   pstr = GetTokenValue(uevent_data, length, "status=");
   if (pstr) {
     bool connected = false;
-    if (strcmp(pstr, "connected") == 0) {
+    hpd_bpp_ = 0;
+    hpd_pattern_ = 0;
+    if (strncmp(pstr, "connected", strlen("connected")) == 0) {
       connected = true;
     }
+    int bpp = GetEventValue(uevent_data, length, "bpp=");
+    int pattern = GetEventValue(uevent_data, length, "pattern=");
+    if (bpp >=0 && pattern >= 0) {
+      hpd_bpp_ = bpp;
+      hpd_pattern_ = pattern;
+    }
 
-    DLOGI("Recived Ext HPD, connected:%d  status=%s", connected, pstr);
+    DLOGI("Recived Ext HPD, connected:%d  status=%s  bpp = %d pattern =%d ",
+          connected, pstr, hpd_bpp_, hpd_pattern_);
     HotPlugHandler(connected);
   }
 }
@@ -1466,8 +1476,7 @@ int HWCSession::HotPlugHandler(bool connected) {
       if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
         status = hwc_display_[HWC_DISPLAY_PRIMARY]->SetState(connected);
       } else {
-        status = HWCDisplayExternal::Create(core_intf_, &buffer_allocator_, &callbacks_,
-                                            qservice_, &hwc_display_[HWC_DISPLAY_PRIMARY]);
+        status = CreateExternalDisplay(HWC_DISPLAY_PRIMARY, 0, 0, false);
         notify_hotplug = true;
       }
 
@@ -1591,6 +1600,29 @@ void HWCSession::HotPlug(hwc2_display_t display, HWC2::Connection state) {
     callbacks_lock_.Wait();
     err = callbacks_.Hotplug(display, state);
   }
+}
+
+int HWCSession::CreateExternalDisplay(int disp_id, uint32_t primary_width,
+                                      uint32_t primary_height, bool use_primary_res) {
+  uint32_t panel_bpp = 0;
+  uint32_t pattern_type = 0;
+
+  if (GetDriverType() == DriverType::FB) {
+    qdutils::getDPTestConfig(&panel_bpp, &pattern_type);
+  } else {
+    panel_bpp = static_cast<uint32_t>(hpd_bpp_);
+    pattern_type = static_cast<uint32_t>(hpd_pattern_);
+  }
+
+  if (panel_bpp && pattern_type) {
+    return HWCDisplayExternalTest::Create(core_intf_, &buffer_allocator_, &callbacks_,
+                                          qservice_, panel_bpp, pattern_type,
+                                          &hwc_display_[disp_id]);
+  }
+
+  return  HWCDisplayExternal::Create(core_intf_, &buffer_allocator_, &callbacks_,
+                                     primary_width, primary_height, qservice_,
+                                     use_primary_res, &hwc_display_[disp_id]);
 }
 
 }  // namespace sdm
