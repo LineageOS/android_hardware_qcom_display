@@ -78,6 +78,10 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   static int32_t CallDisplayFunction(hwc2_device_t *device, hwc2_display_t display,
                                      HWC2::Error (HWCDisplay::*member)(Args...), Args... args) {
     if (!device) {
+      return HWC2_ERROR_BAD_PARAMETER;
+    }
+
+    if (display >= HWC_NUM_DISPLAY_TYPES) {
       return HWC2_ERROR_BAD_DISPLAY;
     }
 
