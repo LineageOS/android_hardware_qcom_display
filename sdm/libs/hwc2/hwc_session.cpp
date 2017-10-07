@@ -333,13 +333,13 @@ int32_t HWCSession::CreateLayer(hwc2_device_t *device, hwc2_display_t display,
 int32_t HWCSession::CreateVirtualDisplay(hwc2_device_t *device, uint32_t width, uint32_t height,
                                          int32_t *format, hwc2_display_t *out_display_id) {
   // TODO(user): Handle concurrency with HDMI
-  SCOPE_LOCK(locker_[HWC_DISPLAY_VIRTUAL]);
   if (!device) {
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
   HWCSession *hwc_session = static_cast<HWCSession *>(device);
   auto status = hwc_session->CreateVirtualDisplayObject(width, height, format);
+
   if (status == HWC2::Error::None) {
     *out_display_id = HWC_DISPLAY_VIRTUAL;
     DLOGI("Created virtual display id:% " PRIu64 " with res: %dx%d",
@@ -815,18 +815,24 @@ hwc2_function_pointer_t HWCSession::GetFunction(struct hwc2_device *device,
   return nullptr;
 }
 
-// TODO(user): handle locking
-
 HWC2::Error HWCSession::CreateVirtualDisplayObject(uint32_t width, uint32_t height,
                                                    int32_t *format) {
-  if (hwc_display_[HWC_DISPLAY_VIRTUAL]) {
-    return HWC2::Error::NoResources;
+  {
+    SCOPE_LOCK(locker_[HWC_DISPLAY_VIRTUAL]);
+    if (hwc_display_[HWC_DISPLAY_VIRTUAL]) {
+      return HWC2::Error::NoResources;
+    }
+
+    auto status = HWCDisplayVirtual::Create(core_intf_, &buffer_allocator_, &callbacks_, width,
+                                            height, format, &hwc_display_[HWC_DISPLAY_VIRTUAL]);
+    // TODO(user): validate width and height support
+    if (status) {
+      return HWC2::Error::Unsupported;
+    }
   }
-  auto status = HWCDisplayVirtual::Create(core_intf_, &buffer_allocator_, &callbacks_, width,
-                                          height, format, &hwc_display_[HWC_DISPLAY_VIRTUAL]);
-  // TODO(user): validate width and height support
-  if (status)
-    return HWC2::Error::Unsupported;
+
+  SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
+  hwc_display_[HWC_DISPLAY_PRIMARY]->ResetValidation();
 
   return HWC2::Error::None;
 }
@@ -1475,6 +1481,8 @@ int HWCSession::HotPlugHandler(bool connected) {
         DLOGE("Primary display is not connected.");
         return -1;
       }
+
+      hwc_display_[HWC_DISPLAY_PRIMARY]->ResetValidation();
     }
 
     if (connected) {

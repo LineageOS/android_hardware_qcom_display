@@ -180,7 +180,7 @@ void HWCDisplayExternal::SetSecureDisplay(bool secure_display_active) {
 
     if (secure_display_active_) {
       DisplayError error = display_intf_->Flush();
-      validated_.reset();
+      validated_ = false;
       if (error != kErrorNone) {
         DLOGE("Flush failed. Error = %d", error);
       }
@@ -234,7 +234,7 @@ int HWCDisplayExternal::SetState(bool connected) {
 
       display_null_.GetDisplayState(&state);
       display_intf_->SetDisplayState(state);
-      validated_.reset();
+      validated_ = false;
 
       SetVsyncEnabled(HWC2::Vsync::Enable);
 
