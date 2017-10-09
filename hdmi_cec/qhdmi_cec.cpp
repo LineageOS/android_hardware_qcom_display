@@ -258,7 +258,11 @@ static int cec_send_message(const struct hdmi_cec_device* dev,
     ssize_t err = 0;
     //HAL spec requires us to retry at least once.
     while (true) {
-        err = write_node(write_msg_path.c_str(), write_msg, sizeof(write_msg));
+        if (msg->initiator == msg->destination) {
+            err = -ENXIO;
+        } else {
+            err = write_node(write_msg_path.c_str(), write_msg, sizeof(write_msg));
+        }
         retry_count++;
         if (err == -EAGAIN && retry_count <= MAX_SEND_MESSAGE_RETRIES) {
             ALOGE("%s: CEC line busy, retrying", __FUNCTION__);
