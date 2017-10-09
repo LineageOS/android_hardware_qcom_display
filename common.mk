@@ -13,9 +13,9 @@ ifeq ($(TARGET_USES_COLOR_METADATA), true)
     common_flags += -DUSE_COLOR_METADATA
 endif
 
-ifeq ($(TARGET_USES_QCOM_BSP),true)
-    common_flags += -DQTI_BSP
-endif
+#ifeq ($(TARGET_USES_QCOM_BSP),true)
+#    common_flags += -DQTI_BSP
+#endif
 
 ifeq ($(ARCH_ARM_HAVE_NEON),true)
     common_flags += -D__ARM_HAVE_NEON
