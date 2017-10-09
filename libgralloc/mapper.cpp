@@ -76,7 +76,7 @@ static int gralloc_map(gralloc_module_t const* module,
             return -errno;
         }
 
-        hnd->base = intptr_t(mappedAddress) + hnd->offset;
+        hnd->base = intptr_t(mappedAddress);
     }
 
     //Allow mapping of metadata for all buffers and SECURE_BUFFER
@@ -91,7 +91,7 @@ static int gralloc_map(gralloc_module_t const* module,
             hnd->base_metadata = 0;
             return -errno;
         }
-        hnd->base_metadata = intptr_t(mappedAddress) + hnd->offset_metadata;
+        hnd->base_metadata = intptr_t(mappedAddress);
     }
     return 0;
 }
