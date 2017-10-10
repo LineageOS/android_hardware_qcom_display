@@ -483,14 +483,20 @@ static int32_t GetDisplayType(hwc2_device_t *device, hwc2_display_t display, int
 }
 
 static int32_t GetDozeSupport(hwc2_device_t *device, hwc2_display_t display, int32_t *out_support) {
+  if (!device || !out_support) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (display >= HWC_NUM_DISPLAY_TYPES) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
   if (display == HWC_DISPLAY_PRIMARY) {
     *out_support = 1;
   } else {
-    // TODO(user): Port over connect_display_ from HWC1
-    // Return no error for connected displays
     *out_support = 0;
-    return HWC2_ERROR_BAD_DISPLAY;
   }
+
   return HWC2_ERROR_NONE;
 }
 
@@ -663,14 +669,19 @@ static int32_t SetLayerVisibleRegion(hwc2_device_t *device, hwc2_display_t displ
 
 int32_t HWCSession::SetLayerZOrder(hwc2_device_t *device, hwc2_display_t display,
                                    hwc2_layer_t layer, uint32_t z) {
+  if (display >= HWC_NUM_DISPLAY_TYPES) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
   SCOPE_LOCK(locker_[display]);
+
   return CallDisplayFunction(device, display, &HWCDisplay::SetLayerZOrder, layer, z);
 }
 
 int32_t HWCSession::SetOutputBuffer(hwc2_device_t *device, hwc2_display_t display,
                                     buffer_handle_t buffer, int32_t releaseFence) {
   if (!device) {
-    return HWC2_ERROR_BAD_DISPLAY;
+    return HWC2_ERROR_BAD_PARAMETER;
   }
 
   if (display != HWC_DISPLAY_VIRTUAL) {
@@ -689,24 +700,51 @@ int32_t HWCSession::SetOutputBuffer(hwc2_device_t *device, hwc2_display_t displa
 }
 
 int32_t HWCSession::SetPowerMode(hwc2_device_t *device, hwc2_display_t display, int32_t int_mode) {
+  if (display >= HWC_NUM_DISPLAY_TYPES) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  //  validate device and also avoid undefined behavior in cast to HWC2::PowerMode
+  if (!device || int_mode < HWC2_POWER_MODE_OFF || int_mode > HWC2_POWER_MODE_DOZE_SUSPEND) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
   auto mode = static_cast<HWC2::PowerMode>(int_mode);
+
+  //  all displays support on/off. Check for doze modes
+  int support = 0;
+  GetDozeSupport(device, display, &support);
+  if (!support && (mode == HWC2::PowerMode::Doze || mode == HWC2::PowerMode::DozeSuspend)) {
+    return HWC2_ERROR_UNSUPPORTED;
+  }
+
   SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
   return CallDisplayFunction(device, display, &HWCDisplay::SetPowerMode, mode);
 }
 
 static int32_t SetVsyncEnabled(hwc2_device_t *device, hwc2_display_t display, int32_t int_enabled) {
+  //  avoid undefined behavior in cast to HWC2::Vsync
+  if (int_enabled < HWC2_VSYNC_INVALID || int_enabled > HWC2_VSYNC_DISABLE) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
   auto enabled = static_cast<HWC2::Vsync>(int_enabled);
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::SetVsyncEnabled, enabled);
 }
 
 int32_t HWCSession::ValidateDisplay(hwc2_device_t *device, hwc2_display_t display,
                                     uint32_t *out_num_types, uint32_t *out_num_requests) {
-  DTRACE_SCOPED();
-  HWCSession *hwc_session = static_cast<HWCSession *>(device);
+  //  out_num_types and out_num_requests will be non-NULL
   if (!device) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (display >= HWC_NUM_DISPLAY_TYPES) {
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
+  DTRACE_SCOPED();
+  HWCSession *hwc_session = static_cast<HWCSession *>(device);
   // TODO(user): Handle secure session, handle QDCM solid fill
   // Handle external_pending_connect_ in CreateVirtualDisplay
   auto status = HWC2::Error::BadDisplay;
