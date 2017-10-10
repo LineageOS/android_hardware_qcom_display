@@ -544,10 +544,10 @@ int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display
 int32_t HWCSession::RegisterCallback(hwc2_device_t *device, int32_t descriptor,
                                      hwc2_callback_data_t callback_data,
                                      hwc2_function_pointer_t pointer) {
-  HWCSession *hwc_session = static_cast<HWCSession *>(device);
-  if (!device) {
-    return HWC2_ERROR_BAD_DISPLAY;
+  if (!device || pointer == nullptr) {
+    return HWC2_ERROR_BAD_PARAMETER;
   }
+  HWCSession *hwc_session = static_cast<HWCSession *>(device);
   SCOPE_LOCK(hwc_session->callbacks_lock_);
   auto desc = static_cast<HWC2::Callback>(descriptor);
   auto error = hwc_session->callbacks_.Register(desc, callback_data, pointer);
@@ -575,6 +575,12 @@ static int32_t SetClientTarget(hwc2_device_t *device, hwc2_display_t display,
 
 int32_t HWCSession::SetColorMode(hwc2_device_t *device, hwc2_display_t display,
                                  int32_t /*android_color_mode_t*/ int_mode) {
+  if (display >= HWC_NUM_DISPLAY_TYPES) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+  if (int_mode < HAL_COLOR_MODE_NATIVE || int_mode > HAL_COLOR_MODE_DISPLAY_P3) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
   auto mode = static_cast<android_color_mode_t>(int_mode);
   SCOPE_LOCK(locker_[display]);
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::SetColorMode, mode);
@@ -583,6 +589,13 @@ int32_t HWCSession::SetColorMode(hwc2_device_t *device, hwc2_display_t display,
 int32_t HWCSession::SetColorTransform(hwc2_device_t *device, hwc2_display_t display,
                                       const float *matrix,
                                       int32_t /*android_color_transform_t*/ hint) {
+  if (display >= HWC_NUM_DISPLAY_TYPES) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+  if (!matrix || hint < HAL_COLOR_TRANSFORM_IDENTITY ||
+       hint > HAL_COLOR_TRANSFORM_CORRECT_TRITANOPIA) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
   SCOPE_LOCK(locker_[display]);
   android_color_transform_t transform_hint = static_cast<android_color_transform_t>(hint);
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::SetColorTransform, matrix,
@@ -603,6 +616,9 @@ static int32_t SetCursorPosition(hwc2_device_t *device, hwc2_display_t display, 
 
 static int32_t SetLayerBlendMode(hwc2_device_t *device, hwc2_display_t display, hwc2_layer_t layer,
                                  int32_t int_mode) {
+  if (int_mode < HWC2_BLEND_MODE_INVALID || int_mode > HWC2_BLEND_MODE_COVERAGE) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
   auto mode = static_cast<HWC2::BlendMode>(int_mode);
   return HWCSession::CallLayerFunction(device, display, layer, &HWCLayer::SetLayerBlendMode, mode);
 }
