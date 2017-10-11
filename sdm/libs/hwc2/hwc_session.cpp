@@ -446,6 +446,9 @@ static int32_t GetClientTargetSupport(hwc2_device_t *device, hwc2_display_t disp
 static int32_t GetColorModes(hwc2_device_t *device, hwc2_display_t display, uint32_t *out_num_modes,
                              int32_t /*android_color_mode_t*/ *int_out_modes) {
   auto out_modes = reinterpret_cast<android_color_mode_t *>(int_out_modes);
+  if (out_num_modes == nullptr) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::GetColorModes, out_num_modes,
                                          out_modes);
 }
@@ -453,6 +456,10 @@ static int32_t GetColorModes(hwc2_device_t *device, hwc2_display_t display, uint
 static int32_t GetDisplayAttribute(hwc2_device_t *device, hwc2_display_t display,
                                    hwc2_config_t config, int32_t int_attribute,
                                    int32_t *out_value) {
+  if (out_value == nullptr || int_attribute < HWC2_ATTRIBUTE_INVALID ||
+      int_attribute > HWC2_ATTRIBUTE_DPI_Y) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
   auto attribute = static_cast<HWC2::Attribute>(int_attribute);
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::GetDisplayAttribute, config,
                                          attribute, out_value);
@@ -510,6 +517,10 @@ static int32_t GetHdrCapabilities(hwc2_device_t* device, hwc2_display_t display,
 }
 
 static uint32_t GetMaxVirtualDisplayCount(hwc2_device_t *device) {
+  if (device == nullptr) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
   return 1;
 }
 
@@ -528,7 +539,9 @@ int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display
   if (!device) {
     return HWC2_ERROR_BAD_DISPLAY;
   }
-
+  if (out_retire_fence == nullptr) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
   auto status = HWC2::Error::BadDisplay;
   // TODO(user): Handle virtual display/HDMI concurrency
   if (hwc_session->hwc_display_[display]) {
