@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013, 2017 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -37,7 +37,8 @@
 // Only primary and external displays are supported here.
 // WiFi/virtual displays are not supported.
 
-namespace qdutils {
+namespace display = qdutils;
+namespace qdutils{
 
 // Use this enum to specify the dpy parameters where needed
 enum {
@@ -94,8 +95,8 @@ int getDisplayVisibleRegion(int dpy, hwc_rect_t &rect);
 int setViewFrame(int dpy, int l, int t, int r, int b);
 
 // Set the secondary display status(pause/resume/offline etc.,)
-int setSecondaryDisplayStatus(int dpy, uint32_t status);
+int setSecondayDisplayStatus(int dpy, uint32_t status);
 
 // Enable/Disable/Set refresh rate dynamically
-int configureDynRefreshRate(uint32_t op, uint32_t refreshRate);
+int configureDynRefeshRate(uint32_t op, uint32_t refreshRate);
 }; //namespace
