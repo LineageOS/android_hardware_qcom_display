@@ -739,6 +739,7 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
       // TODO(user): Break out similar functionality, preferably moving to a common lib.
 
     case GRALLOC1_MODULE_PERFORM_ALLOCATE_BUFFER: {
+      std::lock_guard<std::mutex> lock(buffer_lock_);
       int width = va_arg(args, int);
       int height = va_arg(args, int);
       int format = va_arg(args, int);
