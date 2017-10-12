@@ -48,6 +48,7 @@ static struct light_state_t g_battery;
 static int g_last_backlight_mode = BRIGHTNESS_MODE_USER;
 static int g_attention = 0;
 static int g_brightness_max = 0;
+static bool g_has_persistence_node = false;
 
 char const*const RED_LED_FILE
         = "/sys/class/leds/red/brightness";
@@ -139,19 +140,22 @@ set_light_backlight(struct light_device_t* dev,
 
     pthread_mutex_lock(&g_lock);
     // Toggle low persistence mode state
-    if ((g_last_backlight_mode != state->brightnessMode && lpEnabled) ||
-        (!lpEnabled &&
-         g_last_backlight_mode == BRIGHTNESS_MODE_LOW_PERSISTENCE)) {
-        if ((err = write_int(PERSISTENCE_FILE, lpEnabled)) != 0) {
-            ALOGE("%s: Failed to write to %s: %s\n", __FUNCTION__,
-                   PERSISTENCE_FILE, strerror(errno));
+    bool persistence_mode = ((g_last_backlight_mode != state->brightnessMode && lpEnabled) ||
+                            (!lpEnabled &&
+                            g_last_backlight_mode == BRIGHTNESS_MODE_LOW_PERSISTENCE));
+    bool cannot_handle_persistence = !g_has_persistence_node && persistence_mode;
+    if (g_has_persistence_node) {
+        if (persistence_mode) {
+            if ((err = write_int(PERSISTENCE_FILE, lpEnabled)) != 0) {
+                ALOGE("%s: Failed to write to %s: %s\n", __FUNCTION__,
+                       PERSISTENCE_FILE, strerror(errno));
+            }
+            if (lpEnabled != 0) {
+                brightness = DEFAULT_LOW_PERSISTENCE_MODE_BRIGHTNESS;
+            }
         }
-        if (lpEnabled != 0) {
-            brightness = DEFAULT_LOW_PERSISTENCE_MODE_BRIGHTNESS;
-        }
+        g_last_backlight_mode = state->brightnessMode;
     }
-
-    g_last_backlight_mode = state->brightnessMode;
 
     if (!err) {
         if (!access(LCD_FILE, F_OK)) {
@@ -162,7 +166,7 @@ set_light_backlight(struct light_device_t* dev,
     }
 
     pthread_mutex_unlock(&g_lock);
-    return err;
+    return cannot_handle_persistence ? -ENOSYS : err;
 }
 
 static int
@@ -355,8 +359,10 @@ static int open_lights(const struct hw_module_t* module, char const* name,
             g_brightness_max = atoi(property);
             set_brightness_ext_init();
             set_light = set_light_backlight_ext;
-        } else
+        } else {
+            g_has_persistence_node = !access(PERSISTENCE_FILE, F_OK);
             set_light = set_light_backlight;
+        }
     } else if (0 == strcmp(LIGHT_ID_BATTERY, name))
         set_light = set_light_battery;
     else if (0 == strcmp(LIGHT_ID_NOTIFICATIONS, name))
