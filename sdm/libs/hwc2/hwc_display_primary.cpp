@@ -153,8 +153,10 @@ void HWCDisplayPrimary::ProcessBootAnimCompleted() {
     boot_animation_completed_ = true;
     // Applying default mode after bootanimation is finished And
     // If Data is Encrypted, it is ready for access.
-    if (display_intf_)
+    if (display_intf_) {
       display_intf_->ApplyDefaultDisplayMode();
+      RestoreColorTransform();
+    }
   }
 }
 
@@ -263,6 +265,18 @@ HWC2::Error HWCDisplayPrimary::SetColorMode(android_color_mode_t mode) {
 
   callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
   validated_.reset();
+
+  return status;
+}
+
+HWC2::Error HWCDisplayPrimary::RestoreColorTransform() {
+  auto status = color_mode_->RestoreColorTransform();
+  if (status != HWC2::Error::None) {
+    DLOGE("failed to RestoreColorTransform");
+    return status;
+  }
+
+  callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
 
   return status;
 }
