@@ -353,6 +353,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   void HandlePendingRefresh();
   bool GetSecondBuiltinStatus();
   hwc2_display_t GetNextBuiltinIndex();
+  HWC2::Error ValidateDisplayInternal(hwc2_display_t display, uint32_t *out_num_types,
+                                      uint32_t *out_num_requests);
+  HWC2::Error PresentDisplayInternal(hwc2_display_t display, int32_t *out_retire_fence);
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};
