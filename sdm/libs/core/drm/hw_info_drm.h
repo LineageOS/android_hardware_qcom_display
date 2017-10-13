@@ -36,6 +36,7 @@
 #include <private/hw_info_types.h>
 #include <bitset>
 #include <vector>
+#include <drm_lib_loader.h>
 
 #include "hw_info_interface.h"
 
@@ -72,6 +73,8 @@ class HWInfoDRM: public HWInfoInterface {
   static const int kHWMdssVersion5 = 500;  // MDSS_V5
   static const int kMaxStringLength = 1024;
   static HWResourceInfo *hw_resource_;
+
+  drm_utils::DRMLibLoader *drm_lib = nullptr;
 };
 
 }  // namespace sdm
