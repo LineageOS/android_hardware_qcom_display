@@ -103,6 +103,12 @@ class HWCDisplay : public DisplayEventHandler {
     kDisplayStatusResume,
   };
 
+  enum DisplayValidateState {
+    kNormalValidate,
+    kInternalValidate,
+    kSkipValidate,
+  };
+
   virtual ~HWCDisplay() {}
   virtual int Init();
   virtual int Deinit();
@@ -165,6 +171,11 @@ class HWCDisplay : public DisplayEventHandler {
   HWCLayer *GetHWCLayer(hwc2_layer_t layer_id);
   void ResetValidation() { validated_ = false; }
   uint32_t GetGeometryChanges() { return geometry_changes_; }
+  bool CanSkipValidate();
+  bool HasClientComposition() { return has_client_composition_; }
+  bool IsSkipValidateState() { return (validate_state_ == kSkipValidate); }
+  bool IsInternalValidateState() { return (validated_ && (validate_state_ == kInternalValidate)); }
+  void SetValidationState(DisplayValidateState state) { validate_state_ = state; }
 
   // HWC2 APIs
   virtual HWC2::Error AcceptDisplayChanges(void);
@@ -220,6 +231,7 @@ class HWCDisplay : public DisplayEventHandler {
     validated_ = false;
     return HWC2::Error::None;
   }
+  virtual HWC2::Error GetValidateDisplayOutput(uint32_t *out_num_types, uint32_t *out_num_requests);
 
  protected:
   // Maximum number of layers supported by display manager.
@@ -304,13 +316,13 @@ class HWCDisplay : public DisplayEventHandler {
 
  private:
   void DumpInputBuffers(void);
-  bool CanSkipValidate();
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
   uint32_t geometry_changes_ = GeometryChanges::kNone;
-  bool skip_validate_ = false;
   bool animating_ = false;
   int null_display_mode_ = 0;
+  bool has_client_composition_ = false;
+  DisplayValidateState validate_state_ = kNormalValidate;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {

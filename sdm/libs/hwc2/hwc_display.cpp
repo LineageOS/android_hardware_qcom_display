@@ -1054,7 +1054,10 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
 HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out_num_requests) {
   layer_changes_.clear();
   layer_requests_.clear();
+  has_client_composition_ = false;
+
   if (shutdown_pending_) {
+    validated_ = false;
     return HWC2::Error::BadDisplay;
   }
 
@@ -1069,9 +1072,8 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
         // so that previous buffer and fences are released, and override the error.
         flush_ = true;
       }
+      validated_ = false;
       return HWC2::Error::BadDisplay;
-    } else {
-      validated_ = true;
     }
   } else {
     // Skip is not set
@@ -1095,6 +1097,9 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
     // Set SDM composition to HWC2 type in HWCLayer
     hwc_layer->SetComposition(composition);
     HWC2::Composition device_composition  = hwc_layer->GetDeviceSelectedCompositionType();
+    if (device_composition == HWC2::Composition::Client) {
+      has_client_composition_ = true;
+    }
     // Update the changes list only if the requested composition is different from SDM comp type
     // TODO(user): Take Care of other comptypes(BLIT)
     if (requested_composition != device_composition) {
@@ -1102,15 +1107,14 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
     }
     hwc_layer->ResetValidation();
   }
+
   client_target_->ResetValidation();
   *out_num_types = UINT32(layer_changes_.size());
   *out_num_requests = UINT32(layer_requests_.size());
-  skip_validate_ = false;
-  if (*out_num_types > 0) {
-    return HWC2::Error::HasChanges;
-  } else {
-    return HWC2::Error::None;
-  }
+  validate_state_ = kNormalValidate;
+  validated_ = true;
+
+  return ((*out_num_types > 0) ? HWC2::Error::HasChanges : HWC2::Error::None);
 }
 
 HWC2::Error HWCDisplay::AcceptDisplayChanges() {
@@ -1254,10 +1258,6 @@ HWC2::Error HWCDisplay::GetHdrCapabilities(uint32_t *out_num_types, int32_t *out
 
 
 HWC2::Error HWCDisplay::CommitLayerStack(void) {
-  if (skip_validate_ && !CanSkipValidate()) {
-    validated_ = false;
-  }
-
   if (!validated_) {
     DLOGV_IF(kTagClient, "Display %d is not validated", id_);
     return HWC2::Error::NotValidated;
@@ -1303,7 +1303,7 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
     }
   }
 
-  skip_validate_ = true;
+  validate_state_ = kSkipValidate;
   return HWC2::Error::None;
 }
 
@@ -1801,7 +1801,7 @@ HWC2::Error HWCDisplay::SetCursorPosition(hwc2_layer_t layer, int x, int y) {
   if (hwc_layer->GetDeviceSelectedCompositionType() != HWC2::Composition::Cursor) {
     return HWC2::Error::None;
   }
-  if (!skip_validate_ && validated_) {
+  if ((validate_state_ != kSkipValidate) && validated_) {
     // the device is currently in the middle of the validate/present sequence,
     // cannot set the Position(as per HWC2 spec)
     return HWC2::Error::NotValidated;
@@ -2134,6 +2134,14 @@ bool HWCDisplay::CanSkipValidate() {
   }
 
   return true;
+}
+
+HWC2::Error HWCDisplay::GetValidateDisplayOutput(uint32_t *out_num_types,
+                                                 uint32_t *out_num_requests) {
+  *out_num_types = UINT32(layer_changes_.size());
+  *out_num_requests = UINT32(layer_requests_.size());
+
+  return ((*out_num_types > 0) ? HWC2::Error::HasChanges : HWC2::Error::None);
 }
 
 }  // namespace sdm

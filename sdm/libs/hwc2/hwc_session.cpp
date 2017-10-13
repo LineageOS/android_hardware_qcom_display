@@ -554,7 +554,7 @@ int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display
 
     // TODO(user): Handle virtual display/HDMI concurrency
     if (hwc_session->hwc_display_[display]) {
-      status = hwc_session->hwc_display_[display]->Present(out_retire_fence);
+      status = hwc_session->PresentDisplayInternal(display, out_retire_fence);
     }
   }
 
@@ -794,24 +794,7 @@ int32_t HWCSession::ValidateDisplay(hwc2_device_t *device, hwc2_display_t displa
   {
     SEQUENCE_ENTRY_SCOPE_LOCK(locker_[display]);
     if (hwc_session->hwc_display_[display]) {
-      if (display == HWC_DISPLAY_PRIMARY) {
-        // TODO(user): This can be moved to HWCDisplayPrimary
-        if (hwc_session->reset_panel_) {
-          DLOGW("panel is in bad state, resetting the panel");
-          hwc_session->ResetPanel();
-        }
-
-        if (hwc_session->need_invalidate_) {
-          hwc_session->Refresh(display);
-          hwc_session->need_invalidate_ = false;
-        }
-
-        if (hwc_session->color_mgr_) {
-          hwc_session->color_mgr_->SetColorModeDetailEnhancer(hwc_session->hwc_display_[display]);
-        }
-      }
-
-      status = hwc_session->hwc_display_[display]->Validate(out_num_types, out_num_requests);
+      status = hwc_session->ValidateDisplayInternal(display, out_num_types, out_num_requests);
     }
   }
 
@@ -1899,5 +1882,49 @@ Return<int32_t> HWCSession::setDisplayAnimating(uint64_t display_id, bool animat
                              &HWCDisplay::SetDisplayAnimating, animating);
 }
 #endif
+
+HWC2::Error HWCSession::ValidateDisplayInternal(hwc2_display_t display, uint32_t *out_num_types,
+                                                uint32_t *out_num_requests) {
+  HWCDisplay *hwc_display = hwc_display_[display];
+  if (hwc_display->IsInternalValidateState()) {
+    // Internal Validation has already been done on display, get the Output params.
+    return hwc_display->GetValidateDisplayOutput(out_num_types, out_num_requests);
+  }
+
+  if (display == HWC_DISPLAY_PRIMARY) {
+    // TODO(user): This can be moved to HWCDisplayPrimary
+    if (reset_panel_) {
+      DLOGW("panel is in bad state, resetting the panel");
+      ResetPanel();
+    }
+
+    if (need_invalidate_) {
+      Refresh(display);
+      need_invalidate_ = false;
+    }
+
+    if (color_mgr_) {
+      color_mgr_->SetColorModeDetailEnhancer(hwc_display_[display]);
+    }
+  }
+
+  return hwc_display->Validate(out_num_types, out_num_requests);
+}
+
+HWC2::Error HWCSession::PresentDisplayInternal(hwc2_display_t display, int32_t *out_retire_fence) {
+  HWCDisplay *hwc_display = hwc_display_[display];
+  // If display is in Skip-Validate state and Validate cannot be skipped, do Internal
+  // Validation to optimize for the frames which don't require the Client composition.
+  if (hwc_display->IsSkipValidateState() && !hwc_display->CanSkipValidate()) {
+    uint32_t out_num_types = 0, out_num_requests = 0;
+    HWC2::Error error = ValidateDisplayInternal(display, &out_num_types, &out_num_requests);
+    if ((error != HWC2::Error::None) || hwc_display->HasClientComposition()) {
+      hwc_display->SetValidationState(HWCDisplay::kInternalValidate);
+      return HWC2::Error::NotValidated;
+    }
+  }
+
+  return hwc_display->Present(out_retire_fence);
+}
 
 }  // namespace sdm
