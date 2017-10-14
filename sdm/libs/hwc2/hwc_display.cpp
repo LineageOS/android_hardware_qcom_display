@@ -594,6 +594,7 @@ void HWCDisplay::BuildLayerStack() {
   layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0);
   // Append client target to the layer stack
   Layer *sdm_client_target = client_target_->GetSDMLayer();
+  sdm_client_target->flags.updating = IsLayerUpdating(sdm_client_target);
   layer_stack_.layers.push_back(sdm_client_target);
   // fall back frame composition to GPU when client target is 10bit
   // TODO(user): clarify the behaviour from Client(SF) and SDM Extn -
