@@ -1062,9 +1062,9 @@ DisplayError DisplayBase::ReconfigureDisplay() {
   if (error != kErrorNone) {
     return error;
   }
-  if (mixer_attributes != mixer_attributes_) {
-    DisablePartialUpdateOneFrame();
-  }
+
+  // Disable partial update for one frame on any display changes
+  DisablePartialUpdateOneFrame();
 
   display_attributes_ = display_attributes;
   mixer_attributes_ = mixer_attributes;

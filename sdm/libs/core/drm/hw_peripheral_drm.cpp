@@ -85,7 +85,7 @@ DisplayError HWPeripheralDRM::Validate(HWLayers *hw_layers) {
     // Reload connector info for updated info after 1st commit
     drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
     PopulateDisplayAttributes(current_mode_index_);
-    UpdatePanelSplitInfo();
+    PopulateHWPanelInfo();
     first_cycle_ = false;
   }
   SetDestScalarData(hw_layer_info);
