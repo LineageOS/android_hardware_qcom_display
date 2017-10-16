@@ -64,6 +64,7 @@ bool Is10BitFormat(LayerBufferFormat format) {
   case kFormatYCbCr420P010:
   case kFormatYCbCr420TP10Ubwc:
   case kFormatYCbCr420P010Ubwc:
+  case kFormatYCbCr420P010Venus:
     return true;
   default:
     return false;
@@ -114,6 +115,7 @@ const char *GetFormatString(const LayerBufferFormat &format) {
   case kFormatYCbCr420P010:             return "Y_CBCR_420_P010";
   case kFormatYCbCr420TP10Ubwc:         return "Y_CBCR_420_TP10_UBWC";
   case kFormatYCbCr420P010Ubwc:         return "Y_CBCR_420_P010_UBWC";
+  case kFormatYCbCr420P010Venus:        return "Y_CBCR_420_P010_VENUS";
   default:                              return "UNKNOWN";
   }
 }
@@ -153,6 +155,7 @@ float GetBufferFormatBpp(LayerBufferFormat format) {
     case kFormatBGR888:
     case kFormatYCbCr420P010:
     case kFormatYCbCr420P010Ubwc:
+    case kFormatYCbCr420P010Venus:
       return 3.0f;
     case kFormatRGB565:
     case kFormatBGR565:
