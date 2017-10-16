@@ -27,6 +27,9 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <errno.h>
+#include <string.h>
+
 #include <sync/sync.h>
 #include <utils/constants.h>
 #include <utils/debug.h>
