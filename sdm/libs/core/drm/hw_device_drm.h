@@ -90,7 +90,7 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError SetCursorPosition(HWLayers *hw_layers, int x, int y);
   virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
   virtual DisplayError GetPanelBrightness(int *level);
-  virtual DisplayError SetAutoRefresh(bool enable) { return kErrorNone; }
+  virtual DisplayError SetAutoRefresh(bool enable) { autorefresh_ = enable; return kErrorNone; }
   virtual DisplayError SetS3DMode(HWS3DMode s3d_mode);
   virtual DisplayError SetScaleLutConfig(HWScaleLutInfo *lut_info);
   virtual DisplayError SetMixerAttributes(const HWMixerAttributes &mixer_attributes);
@@ -184,6 +184,7 @@ class HWDeviceDRM : public HWInterface {
   bool resolution_switch_enabled_ = false;
   uint32_t vrefresh_ = 0;
   bool switch_mode_ = false;
+  bool autorefresh_ = false;
 };
 
 }  // namespace sdm
