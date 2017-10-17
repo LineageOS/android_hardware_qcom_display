@@ -16,6 +16,7 @@
 
 #include <errno.h>
 #include <stdlib.h>
+#include <string.h>
 #include <utils/Log.h>
 
 #include <hardware/memtrack.h>
