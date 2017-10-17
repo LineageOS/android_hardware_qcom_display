@@ -73,7 +73,7 @@ static int gralloc_map_metadata(buffer_handle_t handle) {
                   hnd, hnd->fd_metadata, strerror(errno));
             return -errno;
         }
-        hnd->base_metadata = uint64_t(mappedAddress) + hnd->offset_metadata;
+        hnd->base_metadata = uint64_t(mappedAddress);
     }
     return 0;
 }
@@ -104,7 +104,7 @@ static int gralloc_map(gralloc_module_t const* module,
             return -errno;
         }
 
-        hnd->base = uint64_t(mappedAddress) + hnd->offset;
+        hnd->base = uint64_t(mappedAddress);
     } else {
         // Cannot map secure buffers or framebuffers, but still need to map
         // metadata for secure buffers.
