@@ -884,6 +884,8 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, int32_t acquire_
     return HWC2::Error::BadParameter;
   }
 
+  Layer *sdm_layer = client_target_->GetSDMLayer();
+  sdm_layer->frame_rate = current_refresh_rate_;
   client_target_->SetLayerBuffer(target, acquire_fence);
   client_target_->SetLayerSurfaceDamage(damage);
   if (client_target_->GetLayerDataspace() != dataspace) {
