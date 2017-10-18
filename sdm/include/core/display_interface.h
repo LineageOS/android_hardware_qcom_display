@@ -140,6 +140,7 @@ enum DisplayEvent {
   kIdleTimeout,        // Event triggered by Idle Timer.
   kThermalEvent,       // Event triggered by Thermal.
   kIdlePowerCollapse,  // Event triggered by Idle Power Collapse.
+  kPanelDeadEvent,     // Event triggered by ESD.
 };
 
 /*! @brief This structure defines configuration for fixed properties of a display device.

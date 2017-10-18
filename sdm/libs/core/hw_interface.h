@@ -62,6 +62,7 @@ class HWEventHandler {
   virtual void CECMessage(char *message) = 0;
   virtual void IdlePowerCollapse() = 0;
   virtual void PingPongTimeout() = 0;
+  virtual void PanelDead() = 0;
 
  protected:
   virtual ~HWEventHandler() { }

@@ -948,7 +948,8 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
   switch (event) {
     case kIdleTimeout:
     case kThermalEvent:
-    case kIdlePowerCollapse: {
+    case kIdlePowerCollapse:
+    case kPanelDeadEvent: {
       SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[type_]);
       validated_ = false;
     } break;
