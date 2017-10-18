@@ -166,8 +166,10 @@ HWC2::Error HWCDisplayVirtual::Present(int32_t *out_retire_fence) {
       status = HWCDisplay::PostCommitLayerStack(out_retire_fence);
     }
   }
-  CloseAcquireFds();
-  close(output_buffer_->acquire_fence_fd);
+  if (output_buffer_->acquire_fence_fd >= 0) {
+    close(output_buffer_->acquire_fence_fd);
+    output_buffer_->acquire_fence_fd = -1;
+  }
   return status;
 }
 

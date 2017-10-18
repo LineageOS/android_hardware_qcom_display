@@ -184,6 +184,9 @@ HWCLayer::~HWCLayer() {
     release_fences_.pop();
   }
   if (layer_) {
+    if (layer_->input_buffer.acquire_fence_fd >= 0) {
+      close(layer_->input_buffer.acquire_fence_fd);
+    }
     delete layer_;
   }
 }
@@ -251,10 +254,13 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
   layer_buffer->flags.secure_camera = secure_camera;
   layer_buffer->flags.secure_display = secure_display;
 
+  if (layer_buffer->acquire_fence_fd >= 0) {
+    close(layer_buffer->acquire_fence_fd);
+  }
+  layer_buffer->acquire_fence_fd = acquire_fence;
   layer_buffer->planes[0].fd = handle->fd;
   layer_buffer->planes[0].offset = handle->offset;
   layer_buffer->planes[0].stride = UINT32(handle->width);
-  layer_buffer->acquire_fence_fd = acquire_fence;
   layer_buffer->size = handle->size;
   layer_buffer->buffer_id = reinterpret_cast<uint64_t>(handle);
 
