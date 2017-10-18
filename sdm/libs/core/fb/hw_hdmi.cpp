@@ -47,6 +47,8 @@
 
 #define __CLASS__ "HWHDMI"
 
+#define  MIN_HDR_RESET_WAITTIME_SEC 2
+
 namespace sdm {
 
 #ifdef MDP_HDR_STREAM
@@ -185,6 +187,9 @@ HWHDMI::HWHDMI(BufferSyncHandler *buffer_sync_handler,  HWInfoInterface *hw_info
   HWDevice::device_type_ = kDeviceHDMI;
   HWDevice::device_name_ = "HDMI Display Device";
   HWDevice::hw_info_intf_ = hw_info_intf;
+  (void)hdr_reset_start_;
+  (void)hdr_reset_end_;
+  (void)reset_hdr_flag_;
 }
 
 DisplayError HWHDMI::Init() {
@@ -988,22 +993,16 @@ void HWHDMI::UpdateMixerAttributes() {
 }
 
 DisplayError HWHDMI::UpdateHDRMetaData(HWLayers *hw_layers) {
-  const HWHDRLayerInfo &hdr_layer_info = hw_layers->info.hdr_layer_info;
-  if (!hw_panel_info_.hdr_enabled || hdr_layer_info.operation == HWHDRLayerInfo::kNoOp) {
+  if (!hw_panel_info_.hdr_enabled) {
     return kErrorNone;
   }
 
   DisplayError error = kErrorNone;
 
 #ifdef MDP_HDR_STREAM
+  const HWHDRLayerInfo &hdr_layer_info = hw_layers->info.hdr_layer_info;
   char hdr_stream_path[kMaxStringLength] = {};
   snprintf(hdr_stream_path, sizeof(hdr_stream_path), "%s%d/hdr_stream", fb_path_, fb_node_index_);
-
-  int fd = Sys::open_(hdr_stream_path, O_WRONLY);
-  if (fd < 0) {
-    DLOGE("Failed to open %s with error %s", hdr_stream_path, strerror(errno));
-    return kErrorFileDescriptor;
-  }
 
   Layer hdr_layer = {};
   if (hdr_layer_info.operation == HWHDRLayerInfo::kSet && hdr_layer_info.layer_index > -1) {
@@ -1015,47 +1014,81 @@ DisplayError HWHDMI::UpdateHDRMetaData(HWLayers *hw_layers) {
   const ContentLightLevel &light_level = layer_buffer->color_metadata.contentLightLevel;
   const Primaries &primaries = mastering_display.primaries;
 
-  mdp_hdr_stream hdr_stream = {};
+  mdp_hdr_stream_ctrl hdr_ctrl = {};
   if (hdr_layer_info.operation == HWHDRLayerInfo::kSet) {
     int32_t eotf = GetEOTF(layer_buffer->color_metadata.transfer);
-    hdr_stream.eotf = (eotf < 0) ? 0 : UINT32(eotf);
-    hdr_stream.white_point_x = primaries.whitePoint[0];
-    hdr_stream.white_point_y = primaries.whitePoint[1];
-    hdr_stream.display_primaries_x[0] = primaries.rgbPrimaries[0][0];
-    hdr_stream.display_primaries_y[0] = primaries.rgbPrimaries[0][1];
-    hdr_stream.display_primaries_x[1] = primaries.rgbPrimaries[1][0];
-    hdr_stream.display_primaries_y[1] = primaries.rgbPrimaries[1][1];
-    hdr_stream.display_primaries_x[2] = primaries.rgbPrimaries[2][0];
-    hdr_stream.display_primaries_y[2] = primaries.rgbPrimaries[2][1];
-    hdr_stream.min_luminance = mastering_display.minDisplayLuminance;
-    hdr_stream.max_luminance = mastering_display.maxDisplayLuminance/10000;
-    hdr_stream.max_content_light_level = light_level.maxContentLightLevel;
-    hdr_stream.max_average_light_level = light_level.minPicAverageLightLevel;
+    hdr_ctrl.hdr_stream.eotf = (eotf < 0) ? 0 : UINT32(eotf);
+    hdr_ctrl.hdr_stream.white_point_x = primaries.whitePoint[0];
+    hdr_ctrl.hdr_stream.white_point_y = primaries.whitePoint[1];
+    hdr_ctrl.hdr_stream.display_primaries_x[0] = primaries.rgbPrimaries[0][0];
+    hdr_ctrl.hdr_stream.display_primaries_y[0] = primaries.rgbPrimaries[0][1];
+    hdr_ctrl.hdr_stream.display_primaries_x[1] = primaries.rgbPrimaries[1][0];
+    hdr_ctrl.hdr_stream.display_primaries_y[1] = primaries.rgbPrimaries[1][1];
+    hdr_ctrl.hdr_stream.display_primaries_x[2] = primaries.rgbPrimaries[2][0];
+    hdr_ctrl.hdr_stream.display_primaries_y[2] = primaries.rgbPrimaries[2][1];
+    hdr_ctrl.hdr_stream.min_luminance = mastering_display.minDisplayLuminance;
+    hdr_ctrl.hdr_stream.max_luminance = mastering_display.maxDisplayLuminance/10000;
+    hdr_ctrl.hdr_stream.max_content_light_level = light_level.maxContentLightLevel;
+    hdr_ctrl.hdr_stream.max_average_light_level = light_level.minPicAverageLightLevel;
+    hdr_ctrl.hdr_state = HDR_ENABLE;
+    reset_hdr_flag_ = false;
     // DP related
     int32_t pixel_encoding = GetPixelEncoding(hdr_layer.input_buffer);
-    hdr_stream.pixel_encoding = (pixel_encoding < 0) ? 0 : UINT32(pixel_encoding);
+    hdr_ctrl.hdr_stream.pixel_encoding = (pixel_encoding < 0) ? 0 : UINT32(pixel_encoding);
     int32_t colorimetry = GetColoriMetry(hdr_layer.input_buffer);
-    hdr_stream.colorimetry = (colorimetry < 0) ? 0 : UINT32(colorimetry);
-    hdr_stream.range = GetRange(hdr_layer.input_buffer.color_metadata.range);
+    hdr_ctrl.hdr_stream.colorimetry = (colorimetry < 0) ? 0 : UINT32(colorimetry);
+    hdr_ctrl.hdr_stream.range = GetRange(hdr_layer.input_buffer.color_metadata.range);
     int32_t bits_per_component = GetBitsPerComponent(hdr_layer.input_buffer);
-    hdr_stream.bits_per_component = (bits_per_component  < 0) ? 0 : UINT32(bits_per_component);
-    hdr_stream.content_type = GetContentType(hdr_layer.input_buffer);
+    hdr_ctrl.hdr_stream.bits_per_component =
+                           (bits_per_component  < 0) ? 0 : UINT32(bits_per_component);
+    hdr_ctrl.hdr_stream.content_type = GetContentType(hdr_layer.input_buffer);
 
-    DLOGV_IF(kTagDriverConfig, "HDR Stream : MaxDisplayLuminance = %d MinDisplayLuminance = %d\n"
-      "MaxContentLightLevel = %d MaxAverageLightLevel = %d Red_x = %d Red_y = %d Green_x = %d\n"
-      "Green_y = %d Blue_x = %d Blue_y = %d WhitePoint_x = %d WhitePoint_y = %d EOTF = %d\n"
-      "PixelEncoding = %d Colorimetry = %d Range = %d BPC = %d ContentType = %d",
-      hdr_stream.max_luminance, hdr_stream.min_luminance, hdr_stream.max_content_light_level,
-      hdr_stream.max_average_light_level, hdr_stream.display_primaries_x[0],
-      hdr_stream.display_primaries_y[0], hdr_stream.display_primaries_x[1],
-      hdr_stream.display_primaries_y[1], hdr_stream.display_primaries_x[2],
-      hdr_stream.display_primaries_y[2], hdr_stream.white_point_x, hdr_stream.white_point_x,
-      hdr_stream.eotf, hdr_stream.pixel_encoding, hdr_stream.colorimetry, hdr_stream.range,
-      hdr_stream.bits_per_component, hdr_stream.content_type);
+    DLOGV_IF(kTagDriverConfig, "kSet: HDR Stream : MaxDisplayLuminance = %d\n"
+      "MinDisplayLuminance = %d MaxContentLightLevel = %d MaxAverageLightLevel = %d\n"
+      "Red_x = %d Red_y = %d Green_x = %d Green_y = %d Blue_x = %d Blue_y = %d\n"
+      "WhitePoint_x = %d WhitePoint_y = %d EOTF = %d PixelEncoding = %d Colorimetry = %d\n"
+      "Range = %d BPC = %d ContentType = %d hdr_state = %d",
+      hdr_ctrl.hdr_stream.max_luminance, hdr_ctrl.hdr_stream.min_luminance,
+      hdr_ctrl.hdr_stream.max_content_light_level, hdr_ctrl.hdr_stream.max_average_light_level,
+      hdr_ctrl.hdr_stream.display_primaries_x[0], hdr_ctrl.hdr_stream.display_primaries_y[0],
+      hdr_ctrl.hdr_stream.display_primaries_x[1], hdr_ctrl.hdr_stream.display_primaries_y[1],
+      hdr_ctrl.hdr_stream.display_primaries_x[2], hdr_ctrl.hdr_stream.display_primaries_y[2],
+      hdr_ctrl.hdr_stream.white_point_x, hdr_ctrl.hdr_stream.white_point_x,
+      hdr_ctrl.hdr_stream.eotf, hdr_ctrl.hdr_stream.pixel_encoding,
+      hdr_ctrl.hdr_stream.colorimetry, hdr_ctrl.hdr_stream.range,
+      hdr_ctrl.hdr_stream.bits_per_component, hdr_ctrl.hdr_stream.content_type,
+      hdr_ctrl.hdr_state);
+  } else if (hdr_layer_info.operation == HWHDRLayerInfo::kReset) {
+    memset(&hdr_ctrl.hdr_stream, 0, sizeof(hdr_ctrl.hdr_stream));
+    hdr_ctrl.hdr_state = HDR_RESET;
+    reset_hdr_flag_ = true;
+    hdr_reset_start_ = time(NULL);
+    DLOGV_IF(kTagDriverConfig, "kReset: HDR Stream: HDR_RESET");
+  } else if (hdr_layer_info.operation == HWHDRLayerInfo::kNoOp) {
+     if (reset_hdr_flag_) {
+       hdr_reset_end_ = time(NULL);
+
+       if ((hdr_reset_end_ - hdr_reset_start_) >= MIN_HDR_RESET_WAITTIME_SEC) {
+          reset_hdr_flag_ = false;
+          memset(&hdr_ctrl.hdr_stream, 0, sizeof(hdr_ctrl.hdr_stream));
+          hdr_ctrl.hdr_state = HDR_DISABLE;
+          DLOGV_IF(kTagDriverConfig, "kNoOp: HDR Stream: HDR_DISABLE");
+       } else {
+          return kErrorNone;
+       }
+     } else {
+        return kErrorNone;
+     }
   }
 
-  const void *hdr_metadata = reinterpret_cast<const void*>(&hdr_stream);
-  ssize_t len = Sys::pwrite_(fd, hdr_metadata, sizeof(hdr_stream), 0);
+  int fd = Sys::open_(hdr_stream_path, O_WRONLY);
+  if (fd < 0) {
+    DLOGE("Failed to open %s with error %s", hdr_stream_path, strerror(errno));
+    return kErrorFileDescriptor;
+  }
+
+  const void *hdr_metadata = reinterpret_cast<const void*>(&hdr_ctrl);
+  ssize_t len = Sys::pwrite_(fd, hdr_metadata, sizeof(hdr_ctrl), 0);
   if (len <= 0) {
     DLOGE("Failed to write hdr_metadata");
     error = kErrorUndefined;
