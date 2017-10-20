@@ -329,7 +329,7 @@ gralloc1_error_t BufferManager::LockBuffer(const private_handle_t *hnd,
   if (!err && (hnd->flags & private_handle_t::PRIV_FLAGS_USES_ION) &&
       (hnd->flags & private_handle_t::PRIV_FLAGS_CACHED)) {
     if (allocator_->CleanBuffer(reinterpret_cast<void *>(hnd->base), hnd->size, hnd->offset,
-                                buf->ion_handle_main, CACHE_INVALIDATE)) {
+                                buf->ion_handle_main, CACHE_INVALIDATE, hnd->fd)) {
       return GRALLOC1_ERROR_BAD_HANDLE;
     }
   }
@@ -355,7 +355,7 @@ gralloc1_error_t BufferManager::UnlockBuffer(const private_handle_t *handle) {
 
   if (hnd->flags & private_handle_t::PRIV_FLAGS_NEEDS_FLUSH) {
     if (allocator_->CleanBuffer(reinterpret_cast<void *>(hnd->base), hnd->size, hnd->offset,
-                                buf->ion_handle_main, CACHE_CLEAN) != 0) {
+                                buf->ion_handle_main, CACHE_CLEAN, hnd->fd) != 0) {
       status = GRALLOC1_ERROR_BAD_HANDLE;
     }
     hnd->flags &= ~private_handle_t::PRIV_FLAGS_NEEDS_FLUSH;
