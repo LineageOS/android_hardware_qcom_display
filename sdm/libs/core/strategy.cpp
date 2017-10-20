@@ -144,9 +144,9 @@ DisplayError Strategy::GetNextStrategy(StrategyConstraints *constraints) {
   LayerRect dst_domain = (LayerRect){0.0f, 0.0f, layer_mixer_width, layer_mixer_height};
 
   Layer layer = *gpu_target_layer;
-  hw_layers_info_->index[0] = hw_layers_info_->gpu_target_index;
+  hw_layers_info_->index.push_back(hw_layers_info_->gpu_target_index);
+  hw_layers_info_->roi_index.push_back(0);
   MapRect(src_domain, dst_domain, layer.dst_rect, &layer.dst_rect);
-  hw_layers_info_->hw_layers.clear();
   hw_layers_info_->hw_layers.push_back(layer);
 
   return kErrorNone;

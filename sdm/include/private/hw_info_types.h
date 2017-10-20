@@ -524,9 +524,9 @@ struct HWLayersInfo {
 
   std::vector<Layer> hw_layers = {};  // Layers which need to be programmed on the HW
 
-  uint32_t index[kMaxSDELayers] = {};   // Indexes of the layers from the layer stack which need to
-                                        // be programmed on hardware.
-  uint32_t roi_index[kMaxSDELayers] = {0};  // Stores the ROI index where the layers are visible.
+  std::vector<uint32_t> index;   // Indexes of the layers from the layer stack which need to
+                                 // be programmed on hardware.
+  std::vector<uint32_t> roi_index;  // Stores the ROI index where the layers are visible.
 
   int sync_handle = -1;         // Release fence id for current draw cycle.
   int set_idle_time_ms = -1;    // Set idle time to the new specified value.
