@@ -44,9 +44,8 @@ static int validateAndMap(private_handle_t* handle) {
         ALOGE("%s: Private handle is invalid - handle:%p", __func__, handle);
         return -1;
     }
-    if (handle->fd_metadata == -1) {
-        ALOGE("%s: Invalid metadata fd - handle:%p fd: %d",
-                __func__, handle, handle->fd_metadata);
+    if (handle->fd_metadata < 0) {
+        // Silently return, metadata cannot be used
         return -1;
     }
 

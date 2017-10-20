@@ -312,7 +312,7 @@ void GetYuvUbwcSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height,
 }
 
 void GetYuvUbwcInterlacedSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height,
-                                     int color_format, struct android_ycbcr *ycbcr) {
+                                     int color_format, struct android_ycbcr ycbcr[2]) {
   unsigned int uv_stride, uv_height, uv_size;
   unsigned int alignment = 4096;
   uint64_t field_base;
@@ -329,6 +329,7 @@ void GetYuvUbwcInterlacedSPPlaneInfo(uint64_t base, uint32_t width, uint32_t hei
   field_base = base;
   GetYuvUbwcSPPlaneInfo(field_base, width, height, COLOR_FMT_NV12_UBWC, &ycbcr[0]);
 
+  memset(ycbcr[1].reserved, 0, sizeof(ycbcr[1].reserved));
   field_base = reinterpret_cast<uint64_t>(ycbcr[0].cb) + uv_size;
   GetYuvUbwcSPPlaneInfo(field_base, width, height, COLOR_FMT_NV12_UBWC, &ycbcr[1]);
 }
@@ -346,7 +347,7 @@ void GetYuvSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height, uint32_t 
   ycbcr->chroma_step = 2 * bpp;
 }
 
-int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr *ycbcr) {
+int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]) {
   int err = 0;
   uint32_t width = UINT(hnd->width);
   uint32_t height = UINT(hnd->height);
@@ -382,7 +383,7 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr *ycbcr) {
   // Check metadata for interlaced content.
   int interlace_flag = 0;
   if (getMetaData(const_cast<private_handle_t *>(hnd),
-                  GET_PP_PARAM_INTERLACED, &interlace_flag) != 0) {
+                  GET_PP_PARAM_INTERLACED, &interlace_flag) == 0) {
     interlaced = interlace_flag;
   }
 
@@ -772,7 +773,7 @@ int GetBufferLayout(private_handle_t *hnd, uint32_t stride[4],
     return -EINVAL;
   }
 
-  struct android_ycbcr yuvInfo = {};
+  struct android_ycbcr yuvPlaneInfo[2] = {};
   *num_planes = 1;
   stride[0] = 0;
 
@@ -808,12 +809,14 @@ int GetBufferLayout(private_handle_t *hnd, uint32_t stride[4],
   }
 
   (*num_planes)++;
-  int ret = GetYUVPlaneInfo(hnd, &yuvInfo);
+  int ret = GetYUVPlaneInfo(hnd, yuvPlaneInfo);
   if (ret < 0) {
     ALOGE("%s failed", __FUNCTION__);
     return ret;
   }
 
+  // We are only returning buffer layout for progressive or single field formats.
+  struct android_ycbcr yuvInfo = yuvPlaneInfo[0];
   stride[0] = static_cast<uint32_t>(yuvInfo.ystride);
   offset[0] = static_cast<uint32_t>(reinterpret_cast<uint64_t>(yuvInfo.y) - hnd->base);
   stride[1] = static_cast<uint32_t>(yuvInfo.cstride);
