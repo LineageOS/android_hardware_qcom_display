@@ -410,8 +410,13 @@ HWC2::Error HWCLayer::SetCursorPosition(int32_t x, int32_t y) {
 }
 
 HWC2::Error HWCLayer::SetLayerPlaneAlpha(float alpha) {
-  // Conversion of float alpha in range 0.0 to 1.0 similar to the HWC Adapter
+  if (alpha < 0.0f || alpha > 1.0f) {
+    return HWC2::Error::BadParameter;
+  }
+
+  //  Conversion of float alpha in range 0.0 to 1.0 similar to the HWC Adapter
   uint8_t plane_alpha = static_cast<uint8_t>(std::round(255.0f * alpha));
+
   if (layer_->plane_alpha != plane_alpha) {
     geometry_changes_ |= kPlaneAlpha;
     layer_->plane_alpha = plane_alpha;
@@ -461,8 +466,10 @@ HWC2::Error HWCLayer::SetLayerTransform(HWC2::Transform transform) {
       layer_transform.flip_vertical = true;
       break;
     case HWC2::Transform::None:
-      // do nothing
       break;
+    default:
+      //  bad transform
+      return HWC2::Error::BadParameter;
   }
 
   if (layer_transform_ != layer_transform) {

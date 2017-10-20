@@ -99,6 +99,10 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
                                    hwc2_layer_t layer, HWC2::Error (HWCLayer::*member)(Args...),
                                    Args... args) {
     if (!device) {
+      return HWC2_ERROR_BAD_PARAMETER;
+    }
+
+    if (display >= HWC_NUM_DISPLAY_TYPES) {
       return HWC2_ERROR_BAD_DISPLAY;
     }
 

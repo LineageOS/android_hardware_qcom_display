@@ -160,7 +160,7 @@ class HWCDisplay : public DisplayEventHandler {
   int GetVisibleDisplayRect(hwc_rect_t *rect);
   void BuildLayerStack(void);
   void BuildSolidFillStack(void);
-  HWCLayer *GetHWCLayer(hwc2_layer_t layer);
+  HWCLayer *GetHWCLayer(hwc2_layer_t layer_id);
   void ResetValidation() { validated_ = false; }
   uint32_t GetGeometryChanges() { return geometry_changes_; }
 

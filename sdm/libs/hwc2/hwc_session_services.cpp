@@ -94,22 +94,25 @@ Return<void> HWCSession::isDisplayConnected(IDisplayConfig::DisplayType dpy,
                                             isDisplayConnected_cb _hidl_cb) {
   int32_t error = -EINVAL;
   bool connected = false;
-
   int disp_id = MapDisplayType(dpy);
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_id]);
 
-  if (disp_id >= 0) {
-    connected = hwc_display_[disp_id];
-    error = 0;
+  if (disp_id < HWC_DISPLAY_PRIMARY || disp_id >= HWC_NUM_DISPLAY_TYPES) {
+    _hidl_cb(error, connected);
+    return Void();
   }
 
-  _hidl_cb(error, connected);
+  SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_id]);
 
+  connected = hwc_display_[disp_id];
+  error = 0;
+
+  _hidl_cb(error, connected);
   return Void();
 }
 
 int32_t HWCSession::SetSecondaryDisplayStatus(int disp_id, HWCDisplay::DisplayStatus status) {
-  if (disp_id < 0) {
+  if (disp_id < HWC_DISPLAY_PRIMARY || disp_id >= HWC_NUM_DISPLAY_TYPES) {
+    DLOGE("Invalid display = %d", disp_id);
     return -EINVAL;
   }
 
