@@ -320,6 +320,10 @@ HWC2::Error HWCLayer::SetLayerColor(hwc_color_t color) {
 }
 
 HWC2::Error HWCLayer::SetLayerCompositionType(HWC2::Composition type) {
+  // Validation is required when the client changes the composition type
+  if (client_requested_ != type) {
+    needs_validate_ = true;
+  }
   client_requested_ = type;
   switch (type) {
     case HWC2::Composition::Client:
