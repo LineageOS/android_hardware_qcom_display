@@ -389,6 +389,7 @@ enum struct QSEEDStepVersion {
 enum struct SmartDMARevision {
   V1,
   V2,
+  V2p5
 };
 
 /* Per CRTC Resource Info*/
@@ -440,6 +441,7 @@ struct DRMPlaneTypeInfo {
   // FourCC format enum and modifier
   std::vector<std::pair<uint32_t, uint64_t>> formats_supported;
   uint32_t max_linewidth;
+  uint32_t max_scaler_linewidth;
   uint32_t max_upscale;
   uint32_t max_downscale;
   uint32_t max_horizontal_deci;

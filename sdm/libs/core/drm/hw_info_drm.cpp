@@ -283,8 +283,9 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   hw_resource->has_qseed3 = (info.qseed_version == sde_drm::QSEEDVersion::V3);
   hw_resource->num_blending_stages = info.max_blend_stages;
   hw_resource->num_solidfill_stages = info.max_solidfill_stages;
-  hw_resource->smart_dma_rev = (info.smart_dma_rev == sde_drm::SmartDMARevision::V2) ?
-    SmartDMARevision::V2 : SmartDMARevision::V1;
+  hw_resource->smart_dma_rev = (info.smart_dma_rev == sde_drm::SmartDMARevision::V2p5) ?
+    SmartDMARevision::V2p5 : ((info.smart_dma_rev == sde_drm::SmartDMARevision::V2) ?
+    SmartDMARevision::V2 : SmartDMARevision::V1);
   hw_resource->ib_fudge_factor = info.ib_fudge_factor;
   hw_resource->hw_dest_scalar_info.prefill_lines = info.dest_scale_prefill_lines;
   hw_resource->undersized_prefill_lines = info.undersized_prefill_lines;
@@ -409,6 +410,7 @@ void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
 void HWInfoDRM::PopulatePipeCaps(const sde_drm::DRMPlaneTypeInfo &info,
                                     HWResourceInfo *hw_resource) {
   hw_resource->max_pipe_width = info.max_linewidth;
+  hw_resource->max_scaler_pipe_width = info.max_scaler_linewidth;
   hw_resource->max_scale_down = info.max_downscale;
   hw_resource->max_scale_up = info.max_upscale;
   hw_resource->has_decimation = info.max_horizontal_deci > 1 && info.max_vertical_deci > 1;

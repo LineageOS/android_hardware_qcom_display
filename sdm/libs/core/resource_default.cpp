@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2016, 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -465,11 +465,16 @@ DisplayError ResourceDefault::SrcSplitConfig(DisplayResourceContext *display_res
                                         HWLayerConfig *layer_config) {
   HWPipeInfo *left_pipe = &layer_config->left_pipe;
   HWPipeInfo *right_pipe = &layer_config->right_pipe;
-  float src_width = src_rect.right - src_rect.left;
-  float dst_width = dst_rect.right - dst_rect.left;
+  uint32_t max_pipe_width = hw_res_info_.max_pipe_width;
+  uint32_t src_width = (uint32_t)(src_rect.right - src_rect.left);
+  uint32_t dst_width = (uint32_t)(dst_rect.right - dst_rect.left);
+
+  if (src_width != dst_width) {
+    max_pipe_width =  hw_res_info_.max_scaler_pipe_width;
+  }
 
   // Layer cannot qualify for SrcSplit if source or destination width exceeds max pipe width.
-  if ((src_width > hw_res_info_.max_pipe_width) || (dst_width > hw_res_info_.max_pipe_width)) {
+  if ((src_width > max_pipe_width) || (dst_width > max_pipe_width)) {
     SplitRect(src_rect, dst_rect, &left_pipe->src_roi, &left_pipe->dst_roi, &right_pipe->src_roi,
               &right_pipe->dst_roi);
     left_pipe->valid = true;
