@@ -39,8 +39,10 @@ using std::string;
 const int kMaxSDELayers = 16;   // Maximum number of layers that can be handled by MDP5 hardware
                                 // in a given layer stack.
 #define MAX_PLANES 4
-
 #define MAX_DETAIL_ENHANCE_CURVE 3
+#define MAJOR 28
+#define MINOR 16
+#define SDEVERSION(major, minor, hw_rev) ((major) << MAJOR) | ((minor) << MINOR) | (hw_rev)
 
 enum HWDeviceType {
   kDevicePrimary,
@@ -226,9 +228,6 @@ struct HWResourceInfo {
   CompRatioMap comp_ratio_nrt_map;
   uint32_t cache_size = 0;  // cache size in bytes
   HWQseedStepVersion pipe_qseed3_version = kQseed3v2;  // only valid when has_qseed3=true
-  uint64_t min_core_ib_kbps = 0;
-  uint64_t min_llcc_ib_kbps = 0;
-  uint64_t min_dram_ib_kbps = 0;
 
   void Reset() { *this = HWResourceInfo(); }
 };

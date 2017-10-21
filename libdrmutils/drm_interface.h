@@ -378,9 +378,6 @@ struct DRMCrtcInfo {
   CompRatioMap comp_ratio_rt_map;
   CompRatioMap comp_ratio_nrt_map;
   uint32_t hw_version;
-  uint64_t min_core_ib;
-  uint64_t min_llcc_ib;
-  uint64_t min_dram_ib;
   uint32_t dest_scaler_count = 0;
   uint32_t max_dest_scaler_input_width = 0;
   uint32_t max_dest_scaler_output_width = 0;
