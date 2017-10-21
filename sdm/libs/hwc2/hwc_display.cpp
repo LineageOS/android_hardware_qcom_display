@@ -1921,22 +1921,6 @@ DisplayClass HWCDisplay::GetDisplayClass() {
   return display_class_;
 }
 
-void HWCDisplay::CloseAcquireFds() {
-  for (auto hwc_layer : layer_set_) {
-    auto layer = hwc_layer->GetSDMLayer();
-    if (layer->input_buffer.acquire_fence_fd >= 0) {
-      close(layer->input_buffer.acquire_fence_fd);
-      layer->input_buffer.acquire_fence_fd = -1;
-    }
-  }
-  int32_t &client_target_acquire_fence =
-      client_target_->GetSDMLayer()->input_buffer.acquire_fence_fd;
-  if (client_target_acquire_fence >= 0) {
-    close(client_target_acquire_fence);
-    client_target_acquire_fence = -1;
-  }
-}
-
 void HWCDisplay::ClearRequestFlags() {
   for (Layer *layer : layer_stack_.layers) {
     layer->request.flags = {};
