@@ -91,7 +91,7 @@ bool GetColorPrimary(const int32_t &dataspace, ColorPrimaries *color_primary) {
       *color_primary = ColorPrimaries_BT2020;
       break;
     default:
-      DLOGV_IF(kTagStrategy, "Unsupported Standard Request = %d", standard);
+      DLOGV_IF(kTagClient, "Unsupported Standard Request = %d", standard);
       supported_csc = false;
   }
   return supported_csc;
@@ -120,7 +120,7 @@ bool GetTransfer(const int32_t &dataspace, GammaTransfer *gamma_transfer) {
       *gamma_transfer = Transfer_Gamma2_2;
       break;
     default:
-      DLOGV_IF(kTagStrategy, "Unsupported Transfer Request = %d", transfer);
+      DLOGV_IF(kTagClient, "Unsupported Transfer Request = %d", transfer);
       supported_transfer = false;
   }
   return supported_transfer;
@@ -136,7 +136,7 @@ void GetRange(const int32_t &dataspace, ColorRange *color_range) {
       *color_range = Range_Limited;
       break;
     default:
-      DLOGV_IF(kTagStrategy, "Unsupported Range Request = %d", range);
+      DLOGV_IF(kTagClient, "Unsupported Range Request = %d", range);
       break;
   }
 }
@@ -314,7 +314,7 @@ HWC2::Error HWCLayer::SetLayerColor(hwc_color_t color) {
   }
   layer_->solid_fill_color = GetUint32Color(color);
   layer_->input_buffer.format = kFormatARGB8888;
-  DLOGV_IF(kTagCompManager, "[%" PRIu64 "][%" PRIu64 "] Layer color set to %x", display_id_, id_,
+  DLOGV_IF(kTagClient, "[%" PRIu64 "][%" PRIu64 "] Layer color set to %x", display_id_, id_,
            layer_->solid_fill_color);
   return HWC2::Error::None;
 }
@@ -365,7 +365,7 @@ HWC2::Error HWCLayer::SetLayerDataspace(int32_t dataspace) {
         break;
       default:
         // unknown legacy dataspace
-        DLOGW_IF(kTagQDCM, "Unsupported dataspace type %d", dataspace);
+        DLOGW_IF(kTagClient, "Unsupported dataspace type %d", dataspace);
     }
   }
 
@@ -678,6 +678,10 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
   bool interlace = layer_buffer->flags.interlace;
   if (getMetaData(handle, GET_PP_PARAM_INTERLACED, &interlaced) == 0) {
     interlace = interlaced ? true : false;
+  }
+  if (interlace != layer_buffer->flags.interlace) {
+    DLOGI("Layer buffer interlaced metadata has changed. old=%d, new=%d",
+          layer_buffer->flags.interlace, interlace);
   }
 
   uint32_t linear_format = 0;

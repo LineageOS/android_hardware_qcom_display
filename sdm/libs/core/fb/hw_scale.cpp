@@ -104,7 +104,7 @@ void HWScaleV1::DumpScaleData(void *mdp_scale) {
 
   mdp_scale_data *scale = reinterpret_cast<mdp_scale_data *>(mdp_scale);
   if (scale->enable_pxl_ext) {
-    DLOGV_IF(kTagDriverConfig, "Scale Enable = %d", scale->enable_pxl_ext);
+    DLOGD_IF(kTagDriverConfig, "Scale Enable = %d", scale->enable_pxl_ext);
     for (int j = 0; j < MAX_PLANES; j++) {
       DLOGV_IF(kTagDriverConfig, "Scale Data[%d] : Phase=[%x %x %x %x] Pixel_Ext=[%d %d %d %d]",
                j, scale->init_phase_x[j], scale->phase_step_x[j], scale->init_phase_y[j],
@@ -273,7 +273,7 @@ void HWScaleV2::DumpScaleData(void *mdp_scale) {
 
   mdp_scale_data_v2 *scale = reinterpret_cast<mdp_scale_data_v2 *>(mdp_scale);
   if (scale->enable) {
-    DLOGV_IF(kTagDriverConfig, "Scale Enable = %d", scale->enable);
+    DLOGD_IF(kTagDriverConfig, "Scale Enable = %d", scale->enable);
     for (int j = 0; j < MAX_PLANES; j++) {
       DLOGV_IF(kTagDriverConfig, "Scale Data[%d]: Phase_init[x y]=[%x %x] Phase_step:[x y]=[%x %x]",
         j, scale->init_phase_x[j], scale->init_phase_y[j], scale->phase_step_x[j],
@@ -287,7 +287,7 @@ void HWScaleV2::DumpScaleData(void *mdp_scale) {
         scale->src_width[j], scale->src_height[j], scale->roi_w[j]);
     }
 
-    DLOGV_IF(kTagDriverConfig, "LUT flags = %d", scale->lut_flag);
+    DLOGD_IF(kTagDriverConfig, "LUT flags = %d", scale->lut_flag);
     DLOGV_IF(kTagDriverConfig, "y_rgb_filter=%d, uv_filter=%d, alpha_filter=%d, blend_cfg=%d",
       scale->y_rgb_filter_cfg, scale->uv_filter_cfg, scale->alpha_filter_cfg, scale->blend_cfg);
     DLOGV_IF(kTagDriverConfig, "dir_lut=%d, y_rgb_cir=%d, uv_cir=%d, y_rgb_sep=%d, uv_sep=%d",

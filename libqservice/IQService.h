@@ -93,6 +93,10 @@ public:
         DEBUG_ROTATOR,
         DEBUG_QDCM,
         DEBUG_SCALAR,
+        DEBUG_CLIENT,
+        DEBUG_DISPLAY,
+        DEBUG_MAX_VAL = DEBUG_DISPLAY, // Used to check each bit of the debug command paramater.
+        // Update DEBUG_MAX_VAL when adding new debug tag.
     };
 
     enum {
