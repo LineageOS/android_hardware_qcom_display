@@ -53,6 +53,8 @@ class HWCDebugHandler : public DebugHandler {
   static void DebugRotator(bool enable, int verbose_level);
   static void DebugScalar(bool enable, int verbose_level);
   static void DebugQdcm(bool enable, int verbose_level);
+  static void DebugClient(bool enable, int verbose_level);
+  static void DebugDisplay(bool enable, int verbose_level);
   static int  GetIdleTimeoutMs();
 
   virtual void Error(DebugTag tag, const char *format, ...);

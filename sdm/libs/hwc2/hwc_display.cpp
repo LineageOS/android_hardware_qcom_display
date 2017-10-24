@@ -119,6 +119,7 @@ HWC2::Error HWCColorMode::SetColorMode(android_color_mode_t mode) {
     DLOGE("failed for mode = %d", mode);
   }
 
+  DLOGV_IF(kTagClient, "Color mode %d successfully set.", mode);
   return status;
 }
 
@@ -126,6 +127,7 @@ HWC2::Error HWCColorMode::SetColorModeById(int32_t color_mode_id) {
   DLOGI("Applying mode: %d", color_mode_id);
   DisplayError error = display_intf_->SetColorModeById(color_mode_id);
   if (error != kErrorNone) {
+    DLOGI_IF(kTagClient, "Failed to apply mode: %d", color_mode_id);
     return HWC2::Error::BadParameter;
   }
   return HWC2::Error::None;
@@ -202,14 +204,14 @@ void HWCColorMode::PopulateColorModes() {
     return;
   }
 
-  DLOGV_IF(kTagQDCM, "Color Modes supported count = %d", color_mode_count);
+  DLOGV_IF(kTagClient, "Color Modes supported count = %d", color_mode_count);
 
   const std::string color_transform = "identity";
   std::vector<std::string> color_modes(color_mode_count);
   error = display_intf_->GetColorModes(&color_mode_count, &color_modes);
   for (uint32_t i = 0; i < color_mode_count; i++) {
     std::string &mode_string = color_modes.at(i);
-    DLOGV_IF(kTagQDCM, "Color Mode[%d] = %s", i, mode_string.c_str());
+    DLOGV_IF(kTagClient, "Color Mode[%d] = %s", i, mode_string.c_str());
     AttrVal attr;
     error = display_intf_->GetColorModeAttr(mode_string, &attr);
     std::string color_gamut, dynamic_range, pic_quality;
@@ -223,6 +225,10 @@ void HWCColorMode::PopulateColorModes() {
           pic_quality = it.second;
         }
       }
+
+      DLOGV_IF(kTagClient, "color_gamut : %s, dynamic_range : %s, pic_quality : %s",
+               color_gamut.c_str(), dynamic_range.c_str(), pic_quality.c_str());
+
       if (dynamic_range == kHdr) {
         continue;
       }
@@ -1195,7 +1201,7 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
   }
 
   if (!validated_) {
-    DLOGV_IF(kTagCompManager, "Display %d is not validated", id_);
+    DLOGV_IF(kTagClient, "Display %d is not validated", id_);
     return HWC2::Error::NotValidated;
   }
 
@@ -1780,6 +1786,7 @@ void HWCDisplay::MarkLayersForClientComposition() {
   // ClientComposition - GPU comp, to acheive this, set skip flag so that
   // SDM does not handle this layer and hwc_layer composition will be
   // set correctly at the end of Prepare.
+  DLOGV_IF(kTagClient, "HWC Layers marked for GPU comp");
   for (auto hwc_layer : layer_set_) {
     Layer *layer = hwc_layer->GetSDMLayer();
     layer->flags.skip = true;
@@ -2027,25 +2034,32 @@ std::string HWCDisplay::Dump() {
 
 bool HWCDisplay::CanSkipValidate() {
   if (solid_fill_enable_) {
+    DLOGV_IF(kTagClient, "Solid fill is enabled. Returning false.");
     return false;
   }
 
   // Layer Stack checks
   if (layer_stack_.flags.hdr_present && (tone_mapper_ && tone_mapper_->IsActive())) {
+    DLOGV_IF(kTagClient, "HDR content present with tone mapping enabled. Returning false.");
     return false;
   }
 
   if (client_target_->NeedsValidation()) {
+    DLOGV_IF(kTagClient, "Framebuffer target needs validation. Returning false.");
     return false;
   }
 
   for (auto hwc_layer : layer_set_) {
     if (hwc_layer->NeedsValidation()) {
+      DLOGV_IF(kTagClient, "hwc_layer[%d] needs validation. Returning false.",
+               hwc_layer->GetId());
       return false;
     }
 
     // Do not allow Skip Validate, if any layer needs GPU Composition.
     if (hwc_layer->GetDeviceSelectedCompositionType() == HWC2::Composition::Client) {
+      DLOGV_IF(kTagClient, "hwc_layer[%d] is GPU composed. Returning false.",
+               hwc_layer->GetId());
       return false;
     }
   }

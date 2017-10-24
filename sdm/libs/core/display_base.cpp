@@ -155,7 +155,7 @@ DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
     hw_layers_info.app_layer_count++;
   }
 
-  DLOGV_IF(kTagNone, "LayerStack layer_count: %d, app_layer_count: %d, gpu_target_index: %d, "
+  DLOGD_IF(kTagNone, "LayerStack layer_count: %d, app_layer_count: %d, gpu_target_index: %d, "
            "display type: %d", layers.size(), hw_layers_info.app_layer_count,
            hw_layers_info.gpu_target_index, display_type_);
 
@@ -223,6 +223,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
     return kErrorParameters;
   }
 
+  DLOGI_IF(kTagDisplay, "Entering Prepare for display type : %d", display_type_);
   error = BuildLayerStackStats(layer_stack);
   if (error != kErrorNone) {
     return error;
@@ -275,6 +276,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
     DLOGW("ValidateHDR failed");
   }
 
+  DLOGI_IF(kTagDisplay, "Exiting Prepare for display type : %d", display_type_);
   return error;
 }
 
@@ -309,6 +311,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     }
   }
 
+  DLOGI_IF(kTagDisplay, "Entering commit for display type : %d", display_type_);
   CommitLayerParams(layer_stack);
 
   error = comp_manager_->Commit(display_comp_ctx_, &hw_layers_);
@@ -340,6 +343,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     return error;
   }
 
+  DLOGI_IF(kTagDisplay, "Exiting commit for display type : %d", display_type_);
   return kErrorNone;
 }
 
@@ -1117,6 +1121,7 @@ DisplayError DisplayBase::ReconfigureMixer(uint32_t width, uint32_t height) {
     return kErrorParameters;
   }
 
+  DLOGD_IF(kTagQDCM, "Reconfiguring mixer with width : %d, height : %d", width, height);
   HWMixerAttributes mixer_attributes;
   mixer_attributes.width = width;
   mixer_attributes.height = height;
@@ -1169,9 +1174,10 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
   uint32_t align_y = 2;
 
   if (req_mixer_width_ && req_mixer_height_) {
+    DLOGD_IF(kTagDisplay, "Required mixer width : %d, height : %d",
+             req_mixer_width_, req_mixer_height_);
     *new_mixer_width = req_mixer_width_;
     *new_mixer_height = req_mixer_height_;
-
     return (req_mixer_width_ != mixer_width || req_mixer_height_ != mixer_height);
   }
 
@@ -1187,6 +1193,7 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
       max_area_layer_index = i;
     }
   }
+  DLOGV_IF(kTagDisplay, "Max area layer at index : %d", max_area_layer_index);
 
   // TODO(user): Mark layer which needs downscaling on GPU fallback as priority layer and use MDP
   // for composition to avoid quality mismatch between GPU and MDP switch(idle timeout usecase).
