@@ -114,6 +114,9 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   virtual DisplayError GetDisplayPort(DisplayPort *port);
   virtual bool IsPrimaryDisplay();
   virtual DisplayError SetCompositionState(LayerComposition composition_type, bool enable);
+  virtual DisplayError GetClientTargetSupport(uint32_t width, uint32_t height,
+                                              LayerBufferFormat format,
+                                              const ColorMetaData &color_metadata);
 
  protected:
   DisplayError BuildLayerStackStats(LayerStack *layer_stack);
@@ -121,6 +124,8 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   void CommitLayerParams(LayerStack *layer_stack);
   void PostCommitLayerParams(LayerStack *layer_stack);
   DisplayError HandleHDR(LayerStack *layer_stack);
+  DisplayError ValidateScaling(uint32_t width, uint32_t height);
+  DisplayError ValidateDataspace(const ColorMetaData &color_metadata);
 
   // DumpImpl method
   void AppendDump(char *buffer, uint32_t length);
