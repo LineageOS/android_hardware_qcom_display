@@ -49,6 +49,7 @@ LOCAL_SRC_FILES               := core_interface.cpp \
 ifneq ($(TARGET_IS_HEADLESS), true)
     LOCAL_SRC_FILES           += $(LOCAL_HW_INTF_PATH_2)/hw_info_drm.cpp \
                                  $(LOCAL_HW_INTF_PATH_2)/hw_device_drm.cpp \
+                                 $(LOCAL_HW_INTF_PATH_2)/hw_peripheral_drm.cpp \
                                  $(LOCAL_HW_INTF_PATH_2)/hw_tv_drm.cpp \
                                  $(LOCAL_HW_INTF_PATH_2)/hw_events_drm.cpp \
                                  $(LOCAL_HW_INTF_PATH_2)/hw_scale_drm.cpp \

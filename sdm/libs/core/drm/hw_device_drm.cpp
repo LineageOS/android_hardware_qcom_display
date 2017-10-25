@@ -329,8 +329,6 @@ HWDeviceDRM::HWDeviceDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator
                          HWInfoInterface *hw_info_intf)
     : hw_info_intf_(hw_info_intf), buffer_sync_handler_(buffer_sync_handler),
       registry_(buffer_allocator) {
-  disp_type_ = DRMDisplayType::PERIPHERAL;
-  device_name_ = "Peripheral Display";
   hw_info_intf_ = hw_info_intf;
 }
 
@@ -346,31 +344,15 @@ DisplayError HWDeviceDRM::Init() {
       DLOGE("RegisterDisplay failed for %s", device_name_);
       return kErrorResources;
     }
+
     drm_mgr_intf_->CreateAtomicReq(token_, &drm_atomic_intf_);
     drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
-    // Commit to setup pipeline with mode, which then tells us the topology etc
-    if (!deferred_initialize_) {
-      drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id,
-                                &connector_info_.modes[current_mode_index_]);
-      drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
-      if (drm_atomic_intf_->Commit(true /* synchronous */, false /* retain_planes*/)) {
-        DRM_LOGI("Setting up CRTC %d, Connector %d for %s failed", token_.crtc_id,
-          token_.conn_id, device_name_);
-        return kErrorResources;
-      }
-      // Reload connector info for updated info after 1st commit
-      drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
-    }
-    InitializeConfigs();
   } else {
     display_attributes_.push_back(HWDisplayAttributes());
     PopulateDisplayAttributes(current_mode_index_);
   }
-  PopulateHWPanelInfo();
-  UpdateMixerAttributes();
 
   hw_info_intf_->GetHWResourceInfo(&hw_resource_);
-
   // TODO(user): In future, remove has_qseed3 member, add version and pass version to constructor
   if (hw_resource_.has_qseed3) {
     hw_scale_ = new HWScaleDRM(HWScaleDRM::Version::V2);
@@ -714,6 +696,7 @@ DisplayError HWDeviceDRM::PowerOn() {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
   }
+
   return kErrorNone;
 }
 
@@ -731,6 +714,7 @@ DisplayError HWDeviceDRM::PowerOff() {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
   }
+
   return kErrorNone;
 }
 

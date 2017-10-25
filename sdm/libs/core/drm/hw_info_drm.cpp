@@ -242,7 +242,7 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
   DLOGI("\tLinear = %d", hw_resource->linear_factor);
   DLOGI("\tScale = %d", hw_resource->scale_factor);
   DLOGI("\tFudge_factor = %d", hw_resource->extra_fudge_factor);
-  DLOGI("\tib_fudge_factor = %d", hw_resource->ib_fudge_factor);
+  DLOGI("\tib_fudge_factor = %f", hw_resource->ib_fudge_factor);
 
   if (hw_resource->separate_rotator || hw_resource->num_dma_pipe) {
     GetHWRotatorInfo(hw_resource);

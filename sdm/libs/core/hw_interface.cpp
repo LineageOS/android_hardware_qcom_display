@@ -35,7 +35,7 @@
 #include "fb/hw_primary.h"
 #include "fb/hw_hdmi.h"
 #include "fb/hw_virtual.h"
-#include "drm/hw_device_drm.h"
+#include "drm/hw_peripheral_drm.h"
 #include "drm/hw_virtual_drm.h"
 #include "drm/hw_tv_drm.h"
 
@@ -55,7 +55,7 @@ DisplayError HWInterface::Create(DisplayType type, HWInfoInterface *hw_info_intf
       if (driver_type == DriverType::FB) {
         hw = new HWPrimary(buffer_sync_handler, hw_info_intf);
       } else {
-        hw = new HWDeviceDRM(buffer_sync_handler, buffer_allocator, hw_info_intf);
+        hw = new HWPeripheralDRM(buffer_sync_handler, buffer_allocator, hw_info_intf);
       }
       break;
     case kHDMI:

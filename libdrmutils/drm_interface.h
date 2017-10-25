@@ -292,6 +292,12 @@ enum struct DRMOps {
    *      uint32_t - FB Secure mode
    */
   CONNECTOR_SET_FB_SECURE_MODE,
+  /*
+   * Op: Sets a crtc id to this connector
+   * Arg: uint32_t - Connector ID
+   *      uint32_t - CRTC ID
+   */
+  CONNECTOR_SET_CRTC,
 };
 
 enum struct DRMRotation {
