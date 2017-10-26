@@ -131,7 +131,6 @@ class HWDeviceDRM : public HWInterface {
   void SetSecureConfig(const LayerBuffer &input_buffer, sde_drm::DRMSecureMode *fb_secure_mode,
                        sde_drm::DRMSecurityLevel *security_level);
   bool IsResolutionSwitchEnabled() const { return resolution_switch_enabled_; }
-  void UpdatePanelSplitInfo();
   void SetTopology(sde_drm::DRMTopology drm_topology, HWTopology *hw_topology);
 
   class Registry {
@@ -184,6 +183,7 @@ class HWDeviceDRM : public HWInterface {
   std::vector<sde_drm::DRMSolidfillStage> solid_fills_ {};
   bool resolution_switch_enabled_ = false;
   uint32_t vrefresh_ = 0;
+  bool switch_mode_ = false;
 };
 
 }  // namespace sdm

@@ -474,7 +474,12 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   snprintf(hw_panel_info_.panel_name, sizeof(hw_panel_info_.panel_name), "%s",
            connector_info_.panel_name.c_str());
 
-  UpdatePanelSplitInfo();
+  uint32_t index = current_mode_index_;
+  hw_panel_info_.split_info.left_split = display_attributes_[index].x_pixels;
+  if (display_attributes_[index].is_device_split) {
+    hw_panel_info_.split_info.left_split = hw_panel_info_.split_info.right_split =
+        display_attributes_[index].x_pixels / 2;
+  }
 
   hw_panel_info_.partial_update = connector_info_.num_roi;
   hw_panel_info_.left_roi_count = UINT32(connector_info_.num_roi);
@@ -662,14 +667,13 @@ DisplayError HWDeviceDRM::SetDisplayAttributes(uint32_t index) {
     DLOGE("Invalid mode index %d mode size %d", index, UINT32(display_attributes_.size()));
     return kErrorParameters;
   }
-
   current_mode_index_ = index;
-  UpdatePanelSplitInfo();
+  // TODO(user): Topology/panel roi alignment information will be updated as a part of next commit
+  // which is too late for the requested mode that has different panel alignments. So driver needs
+  // to update panel/topology information for all modes during probe to reslove this issue.
+  PopulateHWPanelInfo();
   UpdateMixerAttributes();
-
-  DLOGI("Setting mode index %d for CRTC %d, Connector %d display %s is successful", index,
-         token_.crtc_id, token_.conn_id, device_name_);
-
+  switch_mode_ = true;
   return kErrorNone;
 }
 
@@ -1077,6 +1081,13 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
     vrefresh_ = 0;
   }
 
+  if (switch_mode_) {
+    // Reload connector info for updated info after 1st commit
+    drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
+    PopulateHWPanelInfo();
+    switch_mode_ = false;
+  }
+
   return kErrorNone;
 }
 
@@ -1469,15 +1480,6 @@ void HWDeviceDRM::SetSecureConfig(const LayerBuffer &input_buffer, DRMSecureMode
       // Secure and non-secure planes can be attached to this CRTC.
       *fb_secure_mode = DRMSecureMode::SECURE;
     }
-  }
-}
-
-void HWDeviceDRM::UpdatePanelSplitInfo() {
-  uint32_t index = current_mode_index_;
-  hw_panel_info_.split_info.left_split = display_attributes_[index].x_pixels;
-  if (display_attributes_[index].is_device_split) {
-    hw_panel_info_.split_info.left_split = hw_panel_info_.split_info.right_split =
-        display_attributes_[index].x_pixels / 2;
   }
 }
 
