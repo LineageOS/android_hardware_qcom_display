@@ -1,11 +1,15 @@
 #Common headers
-common_includes := $(LOCAL_PATH)/../libgralloc
-common_includes += $(LOCAL_PATH)/../liboverlay
-common_includes += $(LOCAL_PATH)/../libcopybit
-common_includes += $(LOCAL_PATH)/../libqdutils
-common_includes += $(LOCAL_PATH)/../libhwcomposer
-common_includes += $(LOCAL_PATH)/../libhdmi
-common_includes += $(LOCAL_PATH)/../libqservice
+display_top := $(call my-dir)
+
+#Common headers
+common_includes := $(display_top)/libgralloc
+common_includes += $(display_top)/liboverlay
+common_includes += $(display_top)/libcopybit
+common_includes += $(display_top)/libqdutils
+common_includes += $(display_top)/libhwcomposer
+common_includes += $(display_top)/libhdmi
+common_includes += $(display_top)/libqservice
+common_includes += $(display_top)/include
 
 ifeq ($(TARGET_USES_POST_PROCESSING),true)
     common_flags     += -DUSES_POST_PROCESSING
@@ -51,6 +55,9 @@ ifeq ($(TARGET_USES_QCOM_BSP),true)
     common_flags += -DQTI_BSP
     common_includes += vendor/qcom/opensource/display-frameworks/include
 endif
+
+common_flags += -isystem $(TARGET_OUT_HEADERS)/qcom/display
+
 ifneq ($(call is-platform-sdk-version-at-least,18),true)
     common_flags += -DANDROID_JELLYBEAN_MR1=1
 endif
