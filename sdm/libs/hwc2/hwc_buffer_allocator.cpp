@@ -77,6 +77,8 @@ DisplayError HWCBufferAllocator::Init() {
       gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_SET_PRODUCER_USAGE));
   LockBuffer_ = reinterpret_cast<GRALLOC1_PFN_LOCK>(
       gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_LOCK));
+  UnlockBuffer_ = reinterpret_cast<GRALLOC1_PFN_UNLOCK>(
+      gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_UNLOCK));
   Perform_ = reinterpret_cast<GRALLOC1_PFN_PERFORM>(
       gralloc_device_->getFunction(gralloc_device_, GRALLOC1_FUNCTION_PERFORM));
 
@@ -442,6 +444,10 @@ DisplayError HWCBufferAllocator::MapBuffer(const private_handle_t *handle, int a
   }
 
   return kErrorNone;
+}
+
+DisplayError HWCBufferAllocator::UnmapBuffer(const private_handle_t *handle, int* release_fence) {
+  return (DisplayError)(UnlockBuffer_(gralloc_device_, handle, release_fence));
 }
 
 }  // namespace sdm
