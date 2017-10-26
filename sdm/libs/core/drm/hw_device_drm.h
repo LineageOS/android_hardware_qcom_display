@@ -116,7 +116,6 @@ class HWDeviceDRM : public HWInterface {
   void PopulateHWPanelInfo();
   void GetHWDisplayPortAndMode();
   void GetHWPanelMaxBrightness();
-  void ResetDisplayParams();
   bool EnableHotPlugDetection(int enable);
   void UpdateMixerAttributes();
   void SetSolidfillStages();
@@ -179,15 +178,12 @@ class HWDeviceDRM : public HWInterface {
   bool first_cycle_ = true;
 
  private:
-  void SetDestScalarData(HWLayersInfo hw_layer_info);
   bool synchronous_commit_ = false;
   HWMixerAttributes mixer_attributes_ = {};
   std::string interface_str_ = "DSI";
   std::vector<sde_drm::DRMSolidfillStage> solid_fills_ {};
   bool resolution_switch_enabled_ = false;
   uint32_t vrefresh_ = 0;
-  sde_drm_dest_scaler_data sde_dest_scalar_data_ = {};
-  std::vector<SDEScaler> scalar_data_ = {};
 };
 
 }  // namespace sdm

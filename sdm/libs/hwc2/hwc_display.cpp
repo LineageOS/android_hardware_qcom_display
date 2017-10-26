@@ -1435,6 +1435,7 @@ void HWCDisplay::DumpInputBuffers() {
     return;
   }
 
+  DLOGI("dump_frame_count %d dump_input_layers %d", dump_frame_count_, dump_input_layers_);
   snprintf(dir_path, sizeof(dir_path), "%s/frame_dump_%s", HWCDebugHandler::DumpDir(),
            GetDisplayString());
 
@@ -1456,12 +1457,15 @@ void HWCDisplay::DumpInputBuffers() {
     auto acquire_fence_fd = layer->input_buffer.acquire_fence_fd;
 
     if (acquire_fence_fd >= 0) {
-      int error = sync_wait(acquire_fence_fd, 1000);
-      if (error < 0) {
-        DLOGW("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
-        return;
+      DisplayError error = buffer_allocator_->MapBuffer(pvt_handle, acquire_fence_fd);
+      if (error != kErrorNone) {
+        continue;
       }
     }
+
+
+    DLOGI("Dump layer[%d] of %d pvt_handle %x pvt_handle->base %x", i, layer_stack_.layers.size(),
+          pvt_handle, pvt_handle? pvt_handle->base : 0);
 
     if (pvt_handle && pvt_handle->base) {
       char dump_file_name[PATH_MAX];

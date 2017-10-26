@@ -33,6 +33,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "hw_device_drm.h"
 #include <drm/msm_drm.h>
 #include <drm/sde_drm.h>
+#include <vector>
 
 namespace sdm {
 
@@ -53,13 +54,15 @@ class HWVirtualDRM : public HWDeviceDRM {
   virtual DisplayError Validate(HWLayers *hw_layers);
   virtual DisplayError Commit(HWLayers *hw_layers);
   virtual DisplayError GetPPFeaturesVersion(PPFeatureVersion *vers);
+
+ private:
   void ConfigureWbConnectorFbId(uint32_t fb_id);
   void ConfigureWbConnectorDestRect();
   void ConfigureWbConnectorSecureMode(bool secure);
-  void DumpConfigs();
-
- private:
-  DisplayError InitializeConfig(const HWDisplayAttributes &display_attributes);
+  void InitializeConfigs();
+  void DumpConnectorModeInfo();
+  DisplayError SetWbConfigs(const HWDisplayAttributes &display_attributes);
+  void GetModeIndex(const HWDisplayAttributes &display_attributes, int *mode_index);
 };
 
 }  // namespace sdm

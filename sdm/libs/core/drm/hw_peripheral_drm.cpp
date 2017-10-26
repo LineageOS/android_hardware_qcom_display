@@ -55,6 +55,8 @@ DisplayError HWPeripheralDRM::Init() {
     return ret;
   }
 
+  scalar_data_.resize(hw_resource_.hw_dest_scalar_info.count);
+
   if (connector_info_.topology == DRMTopology::UNKNOWN) {
     connector_info_.topology = DRMTopology::DUAL_LM;
   }
@@ -68,6 +70,7 @@ DisplayError HWPeripheralDRM::Init() {
 
 DisplayError HWPeripheralDRM::Validate(HWLayers *hw_layers) {
   // Hijack the first validate to setup pipeline. This is a stopgap solution
+  HWLayersInfo &hw_layer_info = hw_layers->info;
   if (first_cycle_) {
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
@@ -85,8 +88,16 @@ DisplayError HWPeripheralDRM::Validate(HWLayers *hw_layers) {
     UpdatePanelSplitInfo();
     first_cycle_ = false;
   }
+  SetDestScalarData(hw_layer_info);
 
   return HWDeviceDRM::Validate(hw_layers);
+}
+
+DisplayError HWPeripheralDRM::Commit(HWLayers *hw_layers) {
+  HWLayersInfo &hw_layer_info = hw_layers->info;
+  SetDestScalarData(hw_layer_info);
+
+  return HWDeviceDRM::Commit(hw_layers);
 }
 
 DisplayError HWPeripheralDRM::PowerOn() {
@@ -96,5 +107,64 @@ DisplayError HWPeripheralDRM::PowerOn() {
 
   return HWDeviceDRM::PowerOn();
 }
+
+void HWPeripheralDRM::ResetDisplayParams() {
+  sde_dest_scalar_data_ = {};
+  for (uint32_t j = 0; j < scalar_data_.size(); j++) {
+    scalar_data_[j] = {};
+  }
+}
+
+void HWPeripheralDRM::SetDestScalarData(HWLayersInfo hw_layer_info) {
+  if (!hw_resource_.hw_dest_scalar_info.count) {
+    return;
+  }
+
+  uint32_t index = 0;
+  for (uint32_t i = 0; i < hw_resource_.hw_dest_scalar_info.count; i++) {
+    DestScaleInfoMap::iterator it = hw_layer_info.dest_scale_info_map.find(i);
+
+    if (it == hw_layer_info.dest_scale_info_map.end()) {
+      continue;
+    }
+
+    HWDestScaleInfo *dest_scale_info = it->second;
+    SDEScaler *scale = &scalar_data_[index];
+    hw_scale_->SetScaler(dest_scale_info->scale_data, scale);
+    sde_drm_dest_scaler_cfg *dest_scalar_data = &sde_dest_scalar_data_.ds_cfg[index];
+    dest_scalar_data->flags = 0;
+    if (scale->scaler_v2.enable) {
+      dest_scalar_data->flags |= SDE_DRM_DESTSCALER_ENABLE;
+    }
+    if (scale->scaler_v2.de.enable) {
+      dest_scalar_data->flags |= SDE_DRM_DESTSCALER_ENHANCER_UPDATE;
+    }
+    if (dest_scale_info->scale_update) {
+      dest_scalar_data->flags |= SDE_DRM_DESTSCALER_SCALE_UPDATE;
+    }
+    dest_scalar_data->index = i;
+    dest_scalar_data->lm_width = dest_scale_info->mixer_width;
+    dest_scalar_data->lm_height = dest_scale_info->mixer_height;
+    dest_scalar_data->scaler_cfg = reinterpret_cast<uint64_t>(&scale->scaler_v2);
+    if (hw_panel_info_.partial_update) {
+      dest_scalar_data->flags |= SDE_DRM_DESTSCALER_PU_ENABLE;
+    }
+    index++;
+  }
+  sde_dest_scalar_data_.num_dest_scaler = UINT32(hw_layer_info.dest_scale_info_map.size());
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_DEST_SCALER_CONFIG, token_.crtc_id,
+                            reinterpret_cast<uint64_t>(&sde_dest_scalar_data_));
+}
+
+DisplayError HWPeripheralDRM::Flush() {
+  DisplayError err = HWDeviceDRM::Flush();
+  if (err != kErrorNone) {
+    return err;
+  }
+
+  ResetDisplayParams();
+  return kErrorNone;
+}
+
 
 }  // namespace sdm
