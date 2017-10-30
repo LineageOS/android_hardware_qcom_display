@@ -725,11 +725,13 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode) {
 HWC2::Error HWCDisplay::GetClientTargetSupport(uint32_t width, uint32_t height, int32_t format,
                                                int32_t dataspace) {
   ColorMetaData color_metadata = {};
-  LayerBufferFormat sdm_format = GetSDMFormat(format, 0);
-  GetColorPrimary(dataspace, &(color_metadata.colorPrimaries));
-  GetTransfer(dataspace, &(color_metadata.transfer));
-  GetRange(dataspace, &(color_metadata.range));
+  if (dataspace != HAL_DATASPACE_UNKNOWN) {
+    GetColorPrimary(dataspace, &(color_metadata.colorPrimaries));
+    GetTransfer(dataspace, &(color_metadata.transfer));
+    GetRange(dataspace, &(color_metadata.range));
+  }
 
+  LayerBufferFormat sdm_format = GetSDMFormat(format, 0);
   if (display_intf_->GetClientTargetSupport(width, height, sdm_format,
                                             color_metadata) != kErrorNone) {
     return HWC2::Error::Unsupported;

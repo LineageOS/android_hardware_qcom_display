@@ -1433,28 +1433,28 @@ DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
 DisplayError DisplayBase::GetClientTargetSupport(uint32_t width, uint32_t height,
                                                  LayerBufferFormat format,
                                                  const ColorMetaData &color_metadata) {
-  DisplayError error = kErrorNone;
-
   if (format != kFormatRGBA8888 && format != kFormatRGBA1010102) {
     DLOGW("Unsupported format = %d", format);
-    error = kErrorNotSupported;
+    return kErrorNotSupported;
   } else if (ValidateScaling(width, height) != kErrorNone) {
     DLOGW("Unsupported width = %d height = %d", width, height);
-    error = kErrorNotSupported;
-  } else {
-    error = ValidateDataspace(color_metadata);
+    return kErrorNotSupported;
+  } else if (color_metadata.transfer && color_metadata.colorPrimaries) {
+    DisplayError error = ValidateDataspace(color_metadata);
     if (error != kErrorNone) {
+      DLOGW("Unsupported Transfer Request = %d Color Primary = %d",
+             color_metadata.transfer, color_metadata.colorPrimaries);
       return error;
     }
 
     // Check for BT2020 support
     if (color_metadata.colorPrimaries == ColorPrimaries_BT2020) {
-      DLOGW("Unsupported dataspace");
-      error = kErrorNotSupported;
+      DLOGW("Unsupported Color Primary = %d", color_metadata.colorPrimaries);
+      return kErrorNotSupported;
     }
   }
 
-  return error;
+  return kErrorNone;
 }
 
 DisplayError DisplayBase::ValidateScaling(uint32_t width, uint32_t height) {
