@@ -19,7 +19,6 @@
  */
 
 #include <cutils/properties.h>
-#include <cutils/iosched_policy.h>
 #include <utils/Log.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
@@ -58,9 +57,8 @@ static void *vsync_loop(void *param)
 
     char thread_name[64] = HWC_VSYNC_THREAD_NAME;
     prctl(PR_SET_NAME, (unsigned long) &thread_name, 0, 0, 0);
-    androidSetThreadPriority(0, HAL_PRIORITY_URGENT_DISPLAY +
+    setpriority(PRIO_PROCESS, 0, HAL_PRIORITY_URGENT_DISPLAY +
                 android::PRIORITY_MORE_FAVORABLE);
-    android_set_rt_ioprio(0, 1);
 
     const int MAX_DATA = 64;
     static char vdata[MAX_DATA];
