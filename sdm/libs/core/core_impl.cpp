@@ -23,6 +23,7 @@
 */
 
 #include <dlfcn.h>
+#include <signal.h>
 #include <utils/locker.h>
 #include <utils/constants.h>
 #include <utils/debug.h>
@@ -91,6 +92,7 @@ DisplayError CoreImpl::Init() {
     DLOGW("Unable creating color manager and continue without it.");
   }
 
+  signal(SIGPIPE, SIG_IGN);
   return kErrorNone;
 
 CleanupOnError:
