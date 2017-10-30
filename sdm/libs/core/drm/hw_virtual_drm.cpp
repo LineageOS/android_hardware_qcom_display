@@ -55,28 +55,6 @@ HWVirtualDRM::HWVirtualDRM(BufferSyncHandler *buffer_sync_handler,
   HWDeviceDRM::disp_type_ = DRMDisplayType::VIRTUAL;
 }
 
-DisplayError HWVirtualDRM::Init() {
-  DisplayError err = HWDeviceDRM::Init();
-  if (err != kErrorNone) {
-    return err;
-  }
-  // TODO(user): Remove this code once driver populates appropriate topology based on virtual
-  // display configuration
-  if (connector_info_.topology == sde_drm::DRMTopology::UNKNOWN) {
-    uint32_t max_width = 0;
-    for (uint32_t i = 0; i < (uint32_t)connector_info_.modes.size(); i++) {
-      max_width = std::max(max_width, UINT32(connector_info_.modes[i].hdisplay));
-    }
-    connector_info_.topology = sde_drm::DRMTopology::SINGLE_LM;
-    if (max_width > hw_resource_.max_mixer_width) {
-      connector_info_.topology = sde_drm::DRMTopology::DUAL_LM_MERGE;
-    }
-  }
-  InitializeConfigs();
-
-  return kErrorNone;
-}
-
 void HWVirtualDRM::ConfigureWbConnectorFbId(uint32_t fb_id) {
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_FB_ID, token_.conn_id, fb_id);
   return;
@@ -133,6 +111,18 @@ DisplayError HWVirtualDRM::SetWbConfigs(const HWDisplayAttributes &display_attri
   }
   // Reload connector info for updated info after null commit
   drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
+  // TODO(user): Remove this code once driver populates appropriate topology based on virtual
+  // display configuration
+  if (connector_info_.topology == sde_drm::DRMTopology::UNKNOWN) {
+    uint32_t max_width = 0;
+    for (uint32_t i = 0; i < (uint32_t)connector_info_.modes.size(); i++) {
+      max_width = std::max(max_width, UINT32(connector_info_.modes[i].hdisplay));
+    }
+    connector_info_.topology = sde_drm::DRMTopology::SINGLE_LM;
+    if (max_width > hw_resource_.max_mixer_width) {
+      connector_info_.topology = sde_drm::DRMTopology::DUAL_LM_MERGE;
+    }
+  }
   InitializeConfigs();
 
   GetModeIndex(display_attributes, &mode_index);
