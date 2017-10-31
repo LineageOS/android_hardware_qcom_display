@@ -519,7 +519,8 @@ class SDEIgcV30LUTWrapper : private SDEIgcV30LUTData {
   inline SDEIgcV30LUTData *GetConfig(void) { return this; }
 
  private:
-  SDEIgcV30LUTWrapper(const SDEIgcV30LUTWrapper& src) { /* do not create copies */ }
+  SDEIgcV30LUTWrapper(const SDEIgcV30LUTWrapper& src __attribute__((__unused__))) {
+    /* do not create copies */ }
   SDEIgcV30LUTWrapper& operator=(const SDEIgcV30LUTWrapper&) { return *this; }
   SDEIgcV30LUTWrapper() {}
   uint32_t *buffer_ = NULL;

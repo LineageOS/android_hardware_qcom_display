@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -147,7 +147,12 @@ class BufferAllocator {
    */
   virtual DisplayError GetBufferLayout(const AllocatedBufferInfo &buf_info,
                                        uint32_t stride[4], uint32_t offset[4],
-                                       uint32_t *num_planes) { return kErrorNotSupported; }
+                                       uint32_t *num_planes) {
+    (void) buf_info;
+    (void) stride;
+    (void) offset;
+    (void) num_planes;
+    return kErrorNotSupported; }
 
  protected:
   virtual ~BufferAllocator() { }
