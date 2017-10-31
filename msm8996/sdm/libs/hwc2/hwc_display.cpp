@@ -135,7 +135,7 @@ HWC2::Error HWCColorMode::HandleColorModeTransform(android_color_mode_t mode,
 
   // if the mode count is 1, then only native mode is supported, so just apply matrix w/o
   // setting mode
-  if (color_mode_transform_map_.size() > 1U && current_color_mode_ != mode) {
+  if (color_mode_transform_map_.size() > 1U) {
     color_mode_transform = color_mode_transform_map_[mode][transform_hint];
     DisplayError error = display_intf_->SetColorMode(color_mode_transform);
     if (error != kErrorNone) {
@@ -143,7 +143,6 @@ HWC2::Error HWCColorMode::HandleColorModeTransform(android_color_mode_t mode,
       // failure to force client composition
       return HWC2::Error::Unsupported;
     }
-    DLOGI("Setting Color Mode = %d Transform Hint = %d Success", mode, hint);
   }
 
   if (use_matrix) {
@@ -158,6 +157,8 @@ HWC2::Error HWCColorMode::HandleColorModeTransform(android_color_mode_t mode,
   current_color_mode_ = mode;
   current_color_transform_ = hint;
   CopyColorTransformMatrix(matrix, color_matrix_);
+  DLOGV_IF(kTagQDCM, "Setting Color Mode = %d Transform Hint = %d Success", mode, hint);
+
   return HWC2::Error::None;
 }
 
