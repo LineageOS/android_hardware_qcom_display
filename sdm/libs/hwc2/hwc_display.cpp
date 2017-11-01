@@ -1460,32 +1460,50 @@ void HWCDisplay::DumpInputBuffers() {
     auto acquire_fence_fd = layer->input_buffer.acquire_fence_fd;
 
     if (acquire_fence_fd >= 0) {
-      DisplayError error = buffer_allocator_->MapBuffer(pvt_handle, acquire_fence_fd);
-      if (error != kErrorNone) {
-        continue;
+      int error = sync_wait(acquire_fence_fd, 1000);
+      if (error < 0) {
+        DLOGW("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
+        return;
       }
     }
-
 
     DLOGI("Dump layer[%d] of %d pvt_handle %x pvt_handle->base %x", i, layer_stack_.layers.size(),
           pvt_handle, pvt_handle? pvt_handle->base : 0);
 
-    if (pvt_handle && pvt_handle->base) {
-      char dump_file_name[PATH_MAX];
-      size_t result = 0;
-
-      snprintf(dump_file_name, sizeof(dump_file_name), "%s/input_layer%d_%dx%d_%s_frame%d.raw",
-               dir_path, i, pvt_handle->width, pvt_handle->height,
-               qdutils::GetHALPixelFormatString(pvt_handle->format), dump_frame_index_);
-
-      FILE *fp = fopen(dump_file_name, "w+");
-      if (fp) {
-        result = fwrite(reinterpret_cast<void *>(pvt_handle->base), pvt_handle->size, 1, fp);
-        fclose(fp);
-      }
-
-      DLOGI("Frame Dump %s: is %s", dump_file_name, result ? "Successful" : "Failed");
+    if (!pvt_handle) {
+      DLOGE("Buffer handle is null");
+      return;
     }
+
+    if (!pvt_handle->base) {
+      DisplayError error = buffer_allocator_->MapBuffer(pvt_handle, -1);
+      if (error != kErrorNone) {
+        DLOGE("Failed to map buffer, error = %d", error);
+        return;
+      }
+    }
+
+    char dump_file_name[PATH_MAX];
+    size_t result = 0;
+
+    snprintf(dump_file_name, sizeof(dump_file_name), "%s/input_layer%d_%dx%d_%s_frame%d.raw",
+             dir_path, i, pvt_handle->width, pvt_handle->height,
+             qdutils::GetHALPixelFormatString(pvt_handle->format), dump_frame_index_);
+
+    FILE *fp = fopen(dump_file_name, "w+");
+    if (fp) {
+      result = fwrite(reinterpret_cast<void *>(pvt_handle->base), pvt_handle->size, 1, fp);
+      fclose(fp);
+    }
+
+    int release_fence = -1;
+    DisplayError error = buffer_allocator_->UnmapBuffer(pvt_handle, &release_fence);
+    if (error != kErrorNone) {
+      DLOGE("Failed to unmap buffer, error = %d", error);
+      return;
+    }
+
+    DLOGI("Frame Dump %s: is %s", dump_file_name, result ? "Successful" : "Failed");
   }
 }
 
