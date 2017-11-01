@@ -877,12 +877,6 @@ DisplayError DisplayBase::GetHdrColorMode(std::string *color_mode, bool *found_h
   if (!found_hdr || !color_mode) {
     return kErrorParameters;
   }
-  auto it_mode = color_mode_attr_map_.find(current_color_mode_);
-  if (it_mode == color_mode_attr_map_.end()) {
-    DLOGE("Failed: Unknown Mode : %s", current_color_mode_.c_str());
-    return kErrorNotSupported;
-  }
-
   *found_hdr = false;
   // get the default HDR mode which is value of picture quality equal to "standard"
   for (auto &it_hdr : color_mode_attr_map_) {
@@ -940,10 +934,28 @@ DisplayError DisplayBase::GetDefaultColorMode(std::string *color_mode) {
 
 DisplayError DisplayBase::ApplyDefaultDisplayMode() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-  if (color_mgr_)
-    return color_mgr_->ApplyDefaultDisplayMode();
-  else
+  DisplayError error = kErrorNone;
+  if (color_mgr_) {
+    error = color_mgr_->ApplyDefaultDisplayMode();
+    // Apply default mode failed
+    if (error != kErrorNone) {
+      DLOGI("default mode not found");
+      return error;
+    }
+    DeInitializeColorModes();
+    // Default mode apply is called during first frame, if file system
+    // where mode files is present, ColorManager will not find any modes.
+    // Once boot animation is complete we re-try to apply the modes, since
+    // file system should be mounted. InitColorModes needs to called again
+    error = InitializeColorModes();
+    if (error != kErrorNone) {
+      DLOGE("failed to initial modes\n");
+      return error;
+    }
+  } else {
     return kErrorParameters;
+  }
+  return kErrorNone;
 }
 
 DisplayError DisplayBase::SetCursorPosition(int x, int y) {
@@ -1607,4 +1619,10 @@ void DisplayBase::ClearColorInfo() {
   }
 }
 
+void DisplayBase::DeInitializeColorModes() {
+    color_mode_map_.clear();
+    color_modes_.clear();
+    color_mode_attr_map_.clear();
+    num_color_modes_ = 0;
+}
 }  // namespace sdm
