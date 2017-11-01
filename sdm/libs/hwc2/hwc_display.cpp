@@ -94,11 +94,12 @@ uint32_t HWCColorMode::GetColorModeCount() {
 HWC2::Error HWCColorMode::GetColorModes(uint32_t *out_num_modes,
                                         android_color_mode_t *out_modes) {
   auto it = color_mode_transform_map_.begin();
-  for (auto i = 0; it != color_mode_transform_map_.end(); it++, i++) {
+  *out_num_modes = std::min(*out_num_modes, UINT32(color_mode_transform_map_.size()));
+  for (uint32_t i = 0; i < *out_num_modes; it++, i++) {
     out_modes[i] = it->first;
     DLOGI("Supports color mode[%d] = %d", i, it->first);
   }
-  *out_num_modes = UINT32(color_mode_transform_map_.size());
+
   return HWC2::Error::None;
 }
 
@@ -750,23 +751,28 @@ HWC2::Error HWCDisplay::GetClientTargetSupport(uint32_t width, uint32_t height, 
 }
 
 HWC2::Error HWCDisplay::GetColorModes(uint32_t *out_num_modes, android_color_mode_t *out_modes) {
-  if (out_modes) {
+  if (out_modes == nullptr) {
+    *out_num_modes = 1;
+  } else if (out_modes && *out_num_modes > 0) {
+    *out_num_modes = 1;
     out_modes[0] = HAL_COLOR_MODE_NATIVE;
   }
-  *out_num_modes = 1;
 
   return HWC2::Error::None;
 }
 
 HWC2::Error HWCDisplay::GetDisplayConfigs(uint32_t *out_num_configs, hwc2_config_t *out_configs) {
+  if (out_num_configs == nullptr) {
+    return HWC2::Error::BadParameter;
+  }
+
   if (out_configs == nullptr) {
     *out_num_configs = num_configs_;
     return HWC2::Error::None;
   }
 
-  *out_num_configs = num_configs_;
-
-  for (uint32_t i = 0; i < num_configs_; i++) {
+  *out_num_configs = std::min(*out_num_configs, num_configs_);
+  for (uint32_t i = 0; i < *out_num_configs; i++) {
     out_configs[i] = i;
   }
 
@@ -817,27 +823,38 @@ HWC2::Error HWCDisplay::GetDisplayAttribute(hwc2_config_t config, HWC2::Attribut
 
 HWC2::Error HWCDisplay::GetDisplayName(uint32_t *out_size, char *out_name) {
   // TODO(user): Get panel name and EDID name and populate it here
-  if (out_name == nullptr) {
-    *out_size = 32;
-  } else {
-    std::string name;
-    switch (id_) {
-      case HWC_DISPLAY_PRIMARY:
-        name = "Primary Display";
-        break;
-      case HWC_DISPLAY_EXTERNAL:
-        name = "External Display";
-        break;
-      case HWC_DISPLAY_VIRTUAL:
-        name = "Virtual Display";
-        break;
-      default:
-        name = "Unknown";
-        break;
-    }
-    std::strncpy(out_name, name.c_str(), name.size());
-    *out_size = UINT32(name.size());
+  if (out_size == nullptr) {
+    return HWC2::Error::BadParameter;
   }
+
+  std::string name;
+  switch (id_) {
+    case HWC_DISPLAY_PRIMARY:
+      name = "Primary Display";
+      break;
+    case HWC_DISPLAY_EXTERNAL:
+      name = "External Display";
+      break;
+    case HWC_DISPLAY_VIRTUAL:
+      name = "Virtual Display";
+      break;
+    default:
+      name = "Unknown";
+      break;
+  }
+
+  if (out_name == nullptr) {
+    *out_size = UINT32(name.size()) + 1;
+  } else {
+    *out_size = std::min((UINT32(name.size()) + 1), *out_size);
+    if (*out_size > 0) {
+      std::strncpy(out_name, name.c_str(), *out_size);
+      out_name[*out_size - 1] = '\0';
+    } else {
+      DLOGW("Invalid size requested");
+    }
+  }
+
   return HWC2::Error::None;
 }
 
@@ -1073,15 +1090,22 @@ HWC2::Error HWCDisplay::GetChangedCompositionTypes(uint32_t *out_num_elements,
 
 HWC2::Error HWCDisplay::GetReleaseFences(uint32_t *out_num_elements, hwc2_layer_t *out_layers,
                                          int32_t *out_fences) {
+  if (out_num_elements == nullptr) {
+    return HWC2::Error::BadParameter;
+  }
+
   if (out_layers != nullptr && out_fences != nullptr) {
-    int i = 0;
-    for (auto hwc_layer : layer_set_) {
+    *out_num_elements = std::min(*out_num_elements, UINT32(layer_set_.size()));
+    auto it = layer_set_.begin();
+    for (uint32_t i = 0; i < *out_num_elements; i++, it++) {
+      auto hwc_layer = *it;
       out_layers[i] = hwc_layer->GetId();
       out_fences[i] = hwc_layer->PopReleaseFence();
-      i++;
     }
+  } else {
+    *out_num_elements = UINT32(layer_set_.size());
   }
-  *out_num_elements = UINT32(layer_set_.size());
+
   return HWC2::Error::None;
 }
 
@@ -1090,6 +1114,10 @@ HWC2::Error HWCDisplay::GetDisplayRequests(int32_t *out_display_requests,
                                            int32_t *out_layer_requests) {
   if (layer_set_.empty()) {
     return HWC2::Error::None;
+  }
+
+  if (out_display_requests == nullptr || out_num_elements == nullptr) {
+    return HWC2::Error::BadParameter;
   }
 
   // No display requests for now
@@ -1102,14 +1130,15 @@ HWC2::Error HWCDisplay::GetDisplayRequests(int32_t *out_display_requests,
   }
 
   *out_display_requests = 0;
-  *out_num_elements = UINT32(layer_requests_.size());
   if (out_layers != nullptr && out_layer_requests != nullptr) {
-    int i = 0;
-    for (auto &request : layer_requests_) {
-      out_layers[i] = request.first;
-      out_layer_requests[i] = INT32(request.second);
-      i++;
+    *out_num_elements = std::min(*out_num_elements, UINT32(layer_requests_.size()));
+    auto it = layer_requests_.begin();
+    for (uint32_t i = 0; i < *out_num_elements; i++, it++) {
+      out_layers[i] = it->first;
+      out_layer_requests[i] = INT32(it->second);
     }
+  } else {
+    *out_num_elements = UINT32(layer_requests_.size());
   }
 
   auto client_target_layer = client_target_->GetSDMLayer();
@@ -1124,6 +1153,11 @@ HWC2::Error HWCDisplay::GetHdrCapabilities(uint32_t *out_num_types, int32_t *out
                                            float *out_max_luminance,
                                            float *out_max_average_luminance,
                                            float *out_min_luminance) {
+  if (out_num_types == nullptr || out_max_luminance == nullptr ||
+      out_max_average_luminance == nullptr || out_min_luminance == nullptr) {
+    return HWC2::Error::BadParameter;
+  }
+
   DisplayConfigFixedInfo fixed_info = {};
   display_intf_->GetConfig(&fixed_info);
 
