@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -167,6 +167,8 @@ bool isUncompressedRgbFormat(int format)
         case HAL_PIXEL_FORMAT_R_8:
         case HAL_PIXEL_FORMAT_RG_88:
         case HAL_PIXEL_FORMAT_BGRX_8888:    // Intentional fallthrough
+        case HAL_PIXEL_FORMAT_RGBA_1010102:
+        case HAL_PIXEL_FORMAT_RGBA_FP16:
             is_rgb_format = true;
             break;
         default:
@@ -307,6 +309,9 @@ void AdrenoMemInfo::getGpuAlignedWidthHeight(int width, int height, int format,
     int bpp = 4;
     switch(format)
     {
+        case HAL_PIXEL_FORMAT_RGBA_FP16:
+            bpp = 8;
+            break;
         case HAL_PIXEL_FORMAT_RGB_888:
             bpp = 3;
             break;
@@ -368,6 +373,8 @@ ADRENOPIXELFORMAT AdrenoMemInfo::getGpuPixelFormat(int hal_format)
         case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
         case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
             return ADRENO_PIXELFORMAT_NV12_EXT;
+        case HAL_PIXEL_FORMAT_RGBA_1010102:
+            return ADRENO_PIXELFORMAT_R10G10B10A2_UNORM;
         default:
             ALOGE("%s: No map for format: 0x%x", __FUNCTION__, hal_format);
             break;
@@ -512,6 +519,7 @@ unsigned int getSize(int format, int width, int height, int usage,
         case HAL_PIXEL_FORMAT_RGBA_8888:
         case HAL_PIXEL_FORMAT_RGBX_8888:
         case HAL_PIXEL_FORMAT_BGRA_8888:
+        case HAL_PIXEL_FORMAT_RGBA_1010102:
             size = alignedw * alignedh * 4;
             break;
         case HAL_PIXEL_FORMAT_RGB_888:
@@ -526,7 +534,9 @@ unsigned int getSize(int format, int width, int height, int usage,
         case HAL_PIXEL_FORMAT_RAW10:
             size = ALIGN(alignedw * alignedh, 4096);
             break;
-
+        case HAL_PIXEL_FORMAT_RGBA_FP16:
+            size = alignedw * alignedh * 8;
+            break;
             // adreno formats
         case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:  // NV21
             size  = ALIGN(alignedw*alignedh, 4096);
@@ -844,6 +854,7 @@ static bool isUBwcSupported(int format)
         case HAL_PIXEL_FORMAT_RGBX_8888:
         case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
         case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
+        case HAL_PIXEL_FORMAT_RGBA_1010102:
             return true;
         default:
             return false;
@@ -948,6 +959,7 @@ static unsigned int getUBwcSize(int width, int height, int format,
             break;
         case HAL_PIXEL_FORMAT_RGBA_8888:
         case HAL_PIXEL_FORMAT_RGBX_8888:
+        case HAL_PIXEL_FORMAT_RGBA_1010102:
             size = alignedw * alignedh * 4;
             size += getUBwcMetaBufferSize(width, height, 4);
             break;

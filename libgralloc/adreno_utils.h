@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015,2017 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -26,6 +26,7 @@
 typedef enum {
 
     ADRENO_PIXELFORMAT_UNKNOWN       = 0,
+    ADRENO_PIXELFORMAT_R10G10B10A2_UNORM = 24,// Vertex, Normalized GL_UNSIGNED_INT_10_10_10_2_OES
     ADRENO_PIXELFORMAT_R8G8B8A8      = 28,
     ADRENO_PIXELFORMAT_R8G8B8A8_SRGB = 29,
     ADRENO_PIXELFORMAT_B5G6R5        = 85,
