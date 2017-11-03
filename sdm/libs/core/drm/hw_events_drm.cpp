@@ -99,7 +99,15 @@ DisplayError HWEventsDRM::InitializePollFd() {
       case HWEvent::CEC_READ_MESSAGE:
       case HWEvent::SHOW_BLANK_EVENT:
       case HWEvent::THERMAL_LEVEL:
-      case HWEvent::IDLE_POWER_COLLAPSE:
+      case HWEvent::IDLE_POWER_COLLAPSE: {
+        poll_fds_[i].fd = drmOpen("msm_drm", nullptr);
+        if (poll_fds_[i].fd < 0) {
+          DLOGE("drmOpen failed with error %d", poll_fds_[i].fd);
+          return kErrorResources;
+        }
+        poll_fds_[i].events = POLLIN | POLLPRI | POLLERR;
+        idle_pc_index_ = i;
+      } break;
       case HWEvent::PINGPONG_TIMEOUT:
         break;
       case HWEvent::PANEL_DEAD: {
@@ -192,6 +200,7 @@ DisplayError HWEventsDRM::Init(int display_type, HWEventHandler *event_handler,
 
   RegisterPanelDead(true);
   RegisterIdleNotify(true);
+  RegisterIdlePowerCollapse(true);
 
   return kErrorNone;
 }
@@ -200,6 +209,7 @@ DisplayError HWEventsDRM::Deinit() {
   exit_threads_ = true;
   RegisterPanelDead(false);
   RegisterIdleNotify(false);
+  RegisterIdlePowerCollapse(false);
   Sys::pthread_cancel_(event_thread_);
   WakeUpEventThread();
   pthread_join(event_thread_, NULL);
@@ -306,6 +316,7 @@ void *HWEventsDRM::DisplayEventHandler() {
         case HWEvent::VSYNC:
         case HWEvent::PANEL_DEAD:
         case HWEvent::IDLE_NOTIFY:
+        case HWEvent::IDLE_POWER_COLLAPSE:
           if (poll_fd.revents & (POLLIN | POLLPRI | POLLERR)) {
             (this->*(event_data_list_[i]).event_parser)(nullptr);
           }
@@ -319,7 +330,6 @@ void *HWEventsDRM::DisplayEventHandler() {
         case HWEvent::CEC_READ_MESSAGE:
         case HWEvent::SHOW_BLANK_EVENT:
         case HWEvent::THERMAL_LEVEL:
-        case HWEvent::IDLE_POWER_COLLAPSE:
         case HWEvent::PINGPONG_TIMEOUT:
           if ((poll_fd.revents & POLLPRI) &&
               (Sys::pread_(poll_fd.fd, data, kMaxStringLength, 0) > 0)) {
@@ -412,6 +422,39 @@ DisplayError HWEventsDRM::RegisterIdleNotify(bool enable) {
 
   if (ret) {
     DLOGE("register idle notify enable:%d failed", enable);
+    return kErrorResources;
+  }
+
+  return kErrorNone;
+}
+
+DisplayError HWEventsDRM::RegisterIdlePowerCollapse(bool enable) {
+  uint32_t i = 0;
+  for (; i < event_data_list_.size(); i++) {
+    if (event_data_list_[i].event_type == HWEvent::IDLE_POWER_COLLAPSE) {
+      break;
+    }
+  }
+
+  if (i == event_data_list_.size()) {
+    DLOGI("idle power collapse is not supported event");
+    return kErrorNone;
+  }
+
+  struct drm_msm_event_req req = {};
+  int ret = 0;
+
+  req.object_id = token_.crtc_id;
+  req.object_type = DRM_MODE_OBJECT_CRTC;
+  req.event = DRM_EVENT_SDE_POWER;
+  if (enable) {
+    ret = drmIoctl(poll_fds_[idle_pc_index_].fd, DRM_IOCTL_MSM_REGISTER_EVENT, &req);
+  } else {
+    ret = drmIoctl(poll_fds_[idle_pc_index_].fd, DRM_IOCTL_MSM_DEREGISTER_EVENT, &req);
+  }
+
+  if (ret) {
+    DLOGE("register idle power collapse enable:%d failed", enable);
     return kErrorResources;
   }
 
@@ -522,7 +565,48 @@ void HWEventsDRM::HandleCECMessage(char *data) {
 }
 
 void HWEventsDRM::HandleIdlePowerCollapse(char *data) {
-  event_handler_->IdlePowerCollapse();
+  char event_data[kMaxStringLength];
+  int32_t size;
+  struct drm_msm_event_resp *event_resp = NULL;
+
+  size = (int32_t)Sys::pread_(poll_fds_[idle_pc_index_].fd, event_data, kMaxStringLength, 0);
+  if (size < 0) {
+    return;
+  }
+
+  if (size > kMaxStringLength) {
+    DLOGE("event size %d is greater than event buffer size %zd\n", size, kMaxStringLength);
+    return;
+  }
+
+  if (size < (int32_t)sizeof(*event_resp)) {
+    DLOGE("size %d exp %zd\n", size, sizeof(*event_resp));
+    return;
+  }
+
+  int32_t i = 0;
+
+  while (i < size) {
+    event_resp = (struct drm_msm_event_resp *)&event_data[i];
+    switch (event_resp->base.type) {
+      case DRM_EVENT_SDE_POWER:
+      {
+        uint32_t* event_payload = reinterpret_cast<uint32_t *>(event_resp->data);
+        if (*event_payload == 0) {
+          DLOGV("Received Idle power collapse event");
+          event_handler_->IdlePowerCollapse();
+        }
+        break;
+      }
+      default: {
+        DLOGE("invalid event %d", event_resp->base.type);
+        break;
+      }
+    }
+    i += event_resp->base.length;
+  }
+
+  return;
 }
 
 }  // namespace sdm

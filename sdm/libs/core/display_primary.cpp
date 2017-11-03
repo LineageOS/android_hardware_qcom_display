@@ -283,9 +283,7 @@ DisplayError DisplayPrimary::VSync(int64_t timestamp) {
 }
 
 void DisplayPrimary::IdleTimeout() {
-  if (hw_panel_info_.mode == kModeCommand) {
-    IdlePowerCollapse();
-  } else {
+  if (hw_panel_info_.mode == kModeVideo) {
     event_handler_->HandleEvent(kIdleTimeout);
     handle_idle_timeout_ = true;
     event_handler_->Refresh();
@@ -306,9 +304,11 @@ void DisplayPrimary::ThermalEvent(int64_t thermal_level) {
 }
 
 void DisplayPrimary::IdlePowerCollapse() {
-  event_handler_->HandleEvent(kIdlePowerCollapse);
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
-  comp_manager_->ProcessIdlePowerCollapse(display_comp_ctx_);
+  if (hw_panel_info_.mode == kModeCommand) {
+    event_handler_->HandleEvent(kIdlePowerCollapse);
+    lock_guard<recursive_mutex> obj(recursive_mutex_);
+    comp_manager_->ProcessIdlePowerCollapse(display_comp_ctx_);
+  }
 }
 
 void DisplayPrimary::PanelDead() {
