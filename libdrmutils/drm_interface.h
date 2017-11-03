@@ -287,6 +287,12 @@ enum struct DRMOps {
    */
   CONNECTOR_SET_ROI,
   /*
+   * Op: Sets the connector to autorefresh mode.
+   * Arg: uint32_t - Connector ID
+   *      uint32_t - Enable-1, Disable-0
+   */
+  CONNECTOR_SET_AUTOREFRESH,
+  /*
    * Op: Set FB secure mode for Writeback connector.
    * Arg: uint32_t - Connector ID
    *      uint32_t - FB Secure mode
