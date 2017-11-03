@@ -346,7 +346,6 @@ DisplayError HWDeviceDRM::Init() {
     }
 
     drm_mgr_intf_->CreateAtomicReq(token_, &drm_atomic_intf_);
-    drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
   } else {
     display_attributes_.push_back(HWDisplayAttributes());
     PopulateDisplayAttributes(current_mode_index_);

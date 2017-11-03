@@ -57,6 +57,7 @@ DisplayError HWPeripheralDRM::Init() {
 
   scalar_data_.resize(hw_resource_.hw_dest_scalar_info.count);
 
+  drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
   if (connector_info_.topology == DRMTopology::UNKNOWN) {
     connector_info_.topology = DRMTopology::DUAL_LM;
   }

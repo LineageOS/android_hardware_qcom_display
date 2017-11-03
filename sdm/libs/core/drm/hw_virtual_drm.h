@@ -50,7 +50,6 @@ class HWVirtualDRM : public HWDeviceDRM {
   virtual DisplayError PowerOn();
 
  protected:
-  virtual DisplayError Init();
   virtual DisplayError Validate(HWLayers *hw_layers);
   virtual DisplayError Commit(HWLayers *hw_layers);
   virtual DisplayError GetPPFeaturesVersion(PPFeatureVersion *vers);

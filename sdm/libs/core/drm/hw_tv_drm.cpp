@@ -73,6 +73,7 @@ DisplayError HWTVDRM::Init() {
     DLOGE("Init failed for %s", device_name_);
     return error;
   }
+  drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
 
   InitializeConfigs();
 
