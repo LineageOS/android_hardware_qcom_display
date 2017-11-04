@@ -243,6 +243,13 @@ DisplayError HWDevice::Validate(HWLayers *hw_layers) {
         mdp_layer.horz_deci = pipe_info->horizontal_decimation;
         mdp_layer.vert_deci = pipe_info->vertical_decimation;
 
+#ifdef DISPLAY_SHIFT_X
+        if (device_type_ == kDevicePrimary) {
+          pipe_info->dst_roi.left += DISPLAY_SHIFT_X;
+          pipe_info->dst_roi.right += DISPLAY_SHIFT_X;
+        }
+#endif
+
         SetRect(pipe_info->src_roi, &mdp_layer.src_rect);
         SetRect(pipe_info->dst_roi, &mdp_layer.dst_rect);
         SetMDPFlags(&layer, is_rotator_used, is_cursor_pipe_used, &mdp_layer.flags);
