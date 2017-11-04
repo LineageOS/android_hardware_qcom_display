@@ -19,8 +19,11 @@ ifneq ($(TARGET_IS_HEADLESS), true)
     LOCAL_HW_INTF_PATH_2      := drm
 endif
 
-LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps) $(kernel_deps)
-LOCAL_SRC_FILES               := core_interface.cpp \
+ifneq ($TARGET_DISPLAY_SHIFT_X),)
+    LOCAL_CFLAGS += -DDISPLAY_SHIFT_X=$(TARGET_DISPLAY_SHIFT_X)
+endif
+
+LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps) $(kernel_deps) LOCAL_SRC_FILES := core_interface.cpp \
                                  core_impl.cpp \
                                  display_base.cpp \
                                  display_primary.cpp \
