@@ -40,7 +40,6 @@ class HWTVDRM : public HWDeviceDRM {
                      HWInfoInterface *hw_info_intf);
 
  protected:
-  virtual DisplayError Init();
   virtual DisplayError SetDisplayAttributes(uint32_t index);
   virtual DisplayError GetConfigIndex(char *mode, uint32_t *index);
   virtual DisplayError PowerOff();
