@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "3d0613b0_20c9b4ee",
+        "filename": "sdm/libs/core/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 26,
+      "author": {
+        "id": 3671
+      },
+      "writtenOn": "2017-11-04T14:45:05Z",
+      "side": 1,
+      "message": "err, what\u0027d you do here?",
+      "range": {
+        "startLine": 26,
+        "startChar": 0,
+        "endLine": 26,
+        "endChar": 102
+      },
+      "revId": "535b31b4975f08969d3d7f708f4f3669a68ad668",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
