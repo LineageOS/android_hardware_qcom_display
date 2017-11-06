@@ -737,6 +737,7 @@ int32_t HWCSession::ValidateDisplay(hwc2_device_t *device, hwc2_display_t displa
 
         if (hwc_session->need_invalidate_) {
           hwc_session->Refresh(display);
+          hwc_session->need_invalidate_ = false;
         }
 
         if (hwc_session->color_mgr_) {
