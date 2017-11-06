@@ -57,9 +57,9 @@ static int getExternalNode(const char *type) {
     char msmFbTypePath[MAX_FRAME_BUFFER_NAME_SIZE];
     int j = 0;
 
-    for(j = 0; j < HWC_NUM_DISPLAY_TYPES; j++) {
+    for(j = 0; j < kFBNodeMax; j++) {
         snprintf (msmFbTypePath, sizeof(msmFbTypePath),
-                  "/sys/class/graphics/fb%d/msm_fb_type", j);
+                  "/sys/devices/virtual/graphics/fb%d/msm_fb_type", j);
         displayDeviceFP = fopen(msmFbTypePath, "r");
         if(displayDeviceFP) {
             fread(fbType, sizeof(char), MAX_FRAME_BUFFER_NAME_SIZE,
@@ -71,11 +71,11 @@ static int getExternalNode(const char *type) {
             }
             fclose(displayDeviceFP);
         } else {
-            ALOGE("%s: Failed to open fb node %d", __func__, j);
+            ALOGE("%s: Failed to open fb node %s", __func__, msmFbTypePath);
         }
     }
 
-    if (j < HWC_NUM_DISPLAY_TYPES)
+    if (j < kFBNodeMax)
         return j;
     else
         ALOGE("%s: Failed to find %s node", __func__, type);
@@ -186,12 +186,12 @@ int getEdidRawData(char *buffer)
     }
 
     snprintf(msmFbTypePath, sizeof(msmFbTypePath),
-                 "/sys/class/graphics/fb%d/edid_raw_data", node_id);
+                 "/sys/devices/virtual/graphics/fb%d/edid_raw_data", node_id);
 
     edidFile = open(msmFbTypePath, O_RDONLY, 0);
 
     if (edidFile < 0) {
-        ALOGE("%s no edid raw data found", __func__);
+        ALOGE("%s no edid raw data found %s", __func__,msmFbTypePath);
         return 0;
     }
 
@@ -214,11 +214,11 @@ bool isDPConnected() {
     }
 
     snprintf(connectPath, sizeof(connectPath),
-             "/sys/class/graphics/fb%d/connected", nodeId);
+             "/sys/devices/virtual/graphics/fb%d/connected", nodeId);
 
     connectFile = fopen(connectPath, "rb");
     if (!connectFile) {
-        ALOGW("Failed to open connect node for device node %d", nodeId);
+        ALOGW("Failed to open connect node for device node %s", connectPath);
         return false;
     }
 
@@ -253,11 +253,11 @@ int getDPTestConfig(uint32_t *panelBpp, uint32_t *patternType) {
     }
 
     snprintf(configPath, sizeof(configPath),
-             "/sys/class/graphics/fb%d/config", nodeId);
+             "/sys/devices/virtual/graphics/fb%d/config", nodeId);
 
     configFile = fopen(configPath, "rb");
     if (!configFile) {
-        ALOGW("Failed to open config node for device node %d", nodeId);
+        ALOGW("Failed to open config node for device node %s", configPath);
         return -EINVAL;
     }
 
