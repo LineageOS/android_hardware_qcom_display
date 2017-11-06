@@ -42,7 +42,8 @@ LOCAL_SRC_FILES               := hwc_session.cpp \
                                  ../hwc/cpuhint.cpp \
                                  ../hwc/hwc_socket_handler.cpp \
                                  display_null.cpp \
-                                 hwc_tonemapper.cpp
+                                 hwc_tonemapper.cpp \
+                                 hwc_display_external_test.cpp
 
 ifneq ($(TARGET_USES_GRALLOC1), true)
     LOCAL_SRC_FILES += ../hwc/hwc_buffer_allocator.cpp

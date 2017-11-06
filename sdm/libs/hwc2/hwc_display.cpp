@@ -746,9 +746,18 @@ HWC2::Error HWCDisplay::GetDisplayConfigs(uint32_t *out_num_configs, hwc2_config
 HWC2::Error HWCDisplay::GetDisplayAttribute(hwc2_config_t config, HWC2::Attribute attribute,
                                             int32_t *out_value) {
   DisplayConfigVariableInfo variable_config;
-  if (GetDisplayAttributesForConfig(INT(config), &variable_config) != kErrorNone) {
-    DLOGE("Get variable config failed");
-    return HWC2::Error::BadDisplay;
+  // Get display attributes from config index only if resolution switch is supported.
+  // Otherwise always send mixer attributes. This is to support destination scaler.
+  if (num_configs_ > 1) {
+    if (GetDisplayAttributesForConfig(INT(config), &variable_config) != kErrorNone) {
+      DLOGE("Get variable config failed");
+      return HWC2::Error::BadDisplay;
+    }
+  } else {
+    if (display_intf_->GetFrameBufferConfig(&variable_config) != kErrorNone) {
+      DLOGV("Get variable config failed");
+      return HWC2::Error::BadDisplay;
+    }
   }
 
   switch (attribute) {
@@ -1519,10 +1528,13 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
   int aligned_height;
   uint32_t usage = GRALLOC_USAGE_HW_FB;
   int format = HAL_PIXEL_FORMAT_RGBA_8888;
-  int ubwc_enabled = 0;
+  int ubwc_disabled = 0;
   int flags = 0;
-  HWCDebugHandler::Get()->GetProperty("debug.gralloc.enable_fb_ubwc", &ubwc_enabled);
-  if (ubwc_enabled == 1) {
+
+  // By default UBWC is enabled and below property is global enable/disable for all
+  // buffers allocated through gralloc , including framebuffer targets.
+  HWCDebugHandler::Get()->GetProperty("debug.gralloc.gfx_ubwc_disable", &ubwc_disabled);
+  if (!ubwc_disabled) {
     usage |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
     flags |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
   }
