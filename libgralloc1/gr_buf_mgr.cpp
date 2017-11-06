@@ -49,13 +49,6 @@ BufferManager::BufferManager() : next_id_(0) {
     map_fb_mem_ = true;
   }
 
-  // Enable UBWC for framebuffer
-  if ((property_get("debug.gralloc.enable_fb_ubwc", property, NULL) > 0) &&
-      (!strncmp(property, "1", PROPERTY_VALUE_MAX) ||
-       (!strncasecmp(property, "true", PROPERTY_VALUE_MAX)))) {
-    ubwc_for_fb_ = true;
-  }
-
   handles_map_.clear();
   allocator_ = new Allocator();
   allocator_->Init();
@@ -199,7 +192,13 @@ void BufferManager::CreateSharedHandle(buffer_handle_t inbuffer, const BufferDes
 
 gralloc1_error_t BufferManager::FreeBuffer(std::shared_ptr<Buffer> buf) {
   auto hnd = buf->handle;
-  ALOGD_IF(DEBUG, "FreeBuffer handle:%p id: %" PRIu64, hnd, hnd->id);
+  ALOGD_IF(DEBUG, "FreeBuffer handle:%p", hnd);
+
+  if (private_handle_t::validate(hnd) != 0) {
+    ALOGE("FreeBuffer: Invalid handle: %p", hnd);
+    return GRALLOC1_ERROR_BAD_HANDLE;
+  }
+
   if (allocator_->FreeBuffer(reinterpret_cast<void *>(hnd->base), hnd->size, hnd->offset,
                              hnd->fd, buf->ion_handle_main) != 0) {
     return GRALLOC1_ERROR_BAD_HANDLE;
@@ -291,7 +290,7 @@ gralloc1_error_t BufferManager::RetainBuffer(private_handle_t const *hnd) {
 }
 
 gralloc1_error_t BufferManager::ReleaseBuffer(private_handle_t const *hnd) {
-  ALOGD_IF(DEBUG, "Release buffer handle:%p id: %" PRIu64, hnd, hnd->id);
+  ALOGD_IF(DEBUG, "Release buffer handle:%p", hnd);
   std::lock_guard<std::mutex> lock(buffer_lock_);
   auto buf = GetBufferFromHandleLocked(hnd);
   if (buf == nullptr) {
@@ -526,7 +525,7 @@ int BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_han
                                                descriptor.GetHeight(),
                                                format,
                                                buffer_type,
-                                               size,
+                                               data.size,
                                                prod_usage,
                                                cons_usage);
 

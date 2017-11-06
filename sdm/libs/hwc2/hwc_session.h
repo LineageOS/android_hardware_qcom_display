@@ -167,6 +167,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int32_t SetSecondaryDisplayStatus(int disp_id, HWCDisplay::DisplayStatus status);
   int32_t GetPanelBrightness(int *level);
   int32_t MinHdcpEncryptionLevelChanged(int disp_id, uint32_t min_enc_level);
+  int32_t CreateExternalDisplay(int disp, uint32_t primary_width = 0,
+                                 uint32_t primary_height = 0,
+                                 bool use_primary_res  = false);
 
   // service methods
   void StartServices();
@@ -218,7 +221,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   void Refresh(hwc2_display_t display);
   void HotPlug(hwc2_display_t display, HWC2::Connection state);
 
-  static Locker locker_;
+  static Locker locker_[HWC_NUM_DISPLAY_TYPES];
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWC_NUM_DISPLAY_TYPES] = {nullptr};
   HWCCallbacks callbacks_;
