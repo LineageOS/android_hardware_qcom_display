@@ -1,0 +1,96 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ed90e393_f066ce3d",
+        "filename": "liboverlay/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 6,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2017-11-07T08:25:58Z",
+      "side": 1,
+      "message": "This needs to be removed, otherwise the module goes to /system/lib/ no matter what.",
+      "range": {
+        "startLine": 6,
+        "startChar": 0,
+        "endLine": 6,
+        "endChar": 63
+      },
+      "revId": "1f8101c1a13321607492c89296af4784b9179e8e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "745dfca6_cc35529c",
+        "filename": "libqdutils/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 25,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2017-11-07T08:25:58Z",
+      "side": 1,
+      "message": "This needs to be removed, otherwise the module goes to /system/lib/ no matter what.",
+      "range": {
+        "startLine": 25,
+        "startChar": 0,
+        "endLine": 25,
+        "endChar": 65
+      },
+      "revId": "1f8101c1a13321607492c89296af4784b9179e8e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "942b50cd_ef7dda1d",
+        "filename": "libqservice/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 6,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2017-11-07T08:25:58Z",
+      "side": 1,
+      "message": "This needs to be removed, otherwise the module goes to /system/lib/ no matter what.",
+      "range": {
+        "startLine": 6,
+        "startChar": 0,
+        "endLine": 6,
+        "endChar": 63
+      },
+      "revId": "1f8101c1a13321607492c89296af4784b9179e8e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "792e28f0_25eafb3f",
+        "filename": "libvirtual/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 6,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2017-11-07T08:25:58Z",
+      "side": 1,
+      "message": "This needs to be removed, otherwise the module goes to /system/lib/ no matter what.",
+      "range": {
+        "startLine": 6,
+        "startChar": 0,
+        "endLine": 6,
+        "endChar": 63
+      },
+      "revId": "1f8101c1a13321607492c89296af4784b9179e8e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
