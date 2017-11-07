@@ -27,4 +27,6 @@ LOCAL_HEADER_LIBRARIES := libhardware_headers
 LOCAL_MODULE_TAGS := optional
 LOCAL_VENDOR_MODULE := true
 
+LOCAL_CFLAGS += -Wall -Werror
+
 include $(BUILD_SHARED_LIBRARY)
