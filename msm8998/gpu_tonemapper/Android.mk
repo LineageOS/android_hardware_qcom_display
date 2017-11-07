@@ -24,4 +24,6 @@ LOCAL_SRC_FILES           := TonemapFactory.cpp \
                              EGLImageWrapper.cpp \
                              Tonemapper.cpp
 
+LOCAL_CFLAGS              += -Werror
+
 include $(BUILD_SHARED_LIBRARY)
