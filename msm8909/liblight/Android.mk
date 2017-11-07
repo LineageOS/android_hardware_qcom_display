@@ -13,6 +13,7 @@
 # limitations under the License.
 
 LOCAL_PATH:= $(call my-dir)
+include $(LOCAL_PATH)/../common.mk
 # HAL module implemenation stored in
 # hw/<COPYPIX_HARDWARE_MODULE_ID>.<ro.board.platform>.so
 include $(CLEAR_VARS)
