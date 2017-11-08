@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "94408377_76be4cb3",
+        "filename": "libhdmi/Android.mk",
+        "patchSetId": 2
+      },
+      "lineNbr": 6,
+      "author": {
+        "id": 14403
+      },
+      "writtenOn": "2017-11-08T12:07:11Z",
+      "side": 1,
+      "message": "You dont want to delete this path ??\nSame as other packages ?",
+      "range": {
+        "startLine": 6,
+        "startChar": 35,
+        "endLine": 6,
+        "endChar": 62
+      },
+      "revId": "32ab7f571f59d87c06326504fac9b5414843c858",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
