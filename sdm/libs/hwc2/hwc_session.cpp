@@ -572,6 +572,7 @@ int32_t HWCSession::RegisterCallback(hwc2_device_t *device, int32_t descriptor,
       hwc_session->callbacks_.Hotplug(HWC_DISPLAY_PRIMARY, HWC2::Connection::Connected);
     }
   }
+  hwc_session->need_invalidate_ = false;
   hwc_session->callbacks_lock_.Broadcast();
   return INT32(error);
 }
