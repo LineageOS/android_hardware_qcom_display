@@ -122,7 +122,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual DisplayError SetMixerResolution(uint32_t width, uint32_t height);
   virtual DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
   virtual void GetPanelResolution(uint32_t *width, uint32_t *height);
-  virtual std::string Dump(void);
+  virtual std::string Dump();
 
   // Captures frame output in the buffer specified by output_buffer_info. The API is
   // non-blocking and the client is expected to check operation status later on.

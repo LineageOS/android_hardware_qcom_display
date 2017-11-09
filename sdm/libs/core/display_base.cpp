@@ -28,6 +28,10 @@
 #include <utils/formats.h>
 #include <utils/rect.h>
 #include <utils/utils.h>
+
+#include <iomanip>
+#include <map>
+#include <sstream>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -528,21 +532,21 @@ DisplayError DisplayBase::SetMaxMixerStages(uint32_t max_mixer_stages) {
   return error;
 }
 
-void DisplayBase::AppendDump(char *buffer, uint32_t length) {
+std::string DisplayBase::Dump() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   HWDisplayAttributes attrib;
   uint32_t active_index = 0;
   uint32_t num_modes = 0;
+  std::ostringstream os;
+
   hw_intf_->GetNumDisplayAttributes(&num_modes);
   hw_intf_->GetActiveConfig(&active_index);
   hw_intf_->GetDisplayAttributes(active_index, &attrib);
 
-  DumpImpl::AppendString(buffer, length, "\n-----------------------");
-  DumpImpl::AppendString(buffer, length, "\ndevice type: %u", display_type_);
-  DumpImpl::AppendString(buffer, length, "\nstate: %u, vsync on: %u, max. mixer stages: %u",
-                         state_, INT(vsync_enable_), max_mixer_stages_);
-  DumpImpl::AppendString(buffer, length, "\nnum configs: %u, active config index: %u",
-                         num_modes, active_index);
+  os << "device type:" << display_type_;
+  os << "\nstate: " << state_ << " vsync on: " << vsync_enable_ << " max. mixer stages: "
+    << max_mixer_stages_;
+  os << "\nnum configs: " << num_modes << " active config index: " << active_index;
 
   DisplayConfigVariableInfo &info = attrib;
 
@@ -552,50 +556,48 @@ void DisplayBase::AppendDump(char *buffer, uint32_t length) {
   }
 
   if (num_hw_layers == 0) {
-    DumpImpl::AppendString(buffer, length, "\nNo hardware layers programmed");
-    return;
+    os << "\nNo hardware layers programmed";
+    return os.str();
   }
 
   LayerBuffer *out_buffer = hw_layers_.info.stack->output_buffer;
   if (out_buffer) {
-    DumpImpl::AppendString(buffer, length, "\nres:%u x %u format: %s", out_buffer->width,
-                           out_buffer->height, GetFormatString(out_buffer->format));
+    os << "\nres: " << out_buffer->width << "x" << out_buffer->height << " format: "
+      << GetFormatString(out_buffer->format);
   } else {
-    DumpImpl::AppendString(buffer, length, "\nres:%u x %u, dpi:%.2f x %.2f, fps:%u,"
-                           "vsync period: %u", info.x_pixels, info.y_pixels, info.x_dpi,
-                           info.y_dpi, info.fps, info.vsync_period_ns);
+    os.precision(2);
+    os << "\nres: " << info.x_pixels << "x" << info.y_pixels << " dpi: " << std::fixed <<
+      info.x_dpi << "x" << std::fixed << info.y_dpi << " fps: " << info.fps <<
+      " vsync period: " << info.vsync_period_ns;
   }
 
-  DumpImpl::AppendString(buffer, length, "\n");
-
   HWLayersInfo &layer_info = hw_layers_.info;
-
   for (uint32_t i = 0; i < layer_info.left_frame_roi.size(); i++) {
     LayerRect &l_roi = layer_info.left_frame_roi.at(i);
     LayerRect &r_roi = layer_info.right_frame_roi.at(i);
 
-    DumpImpl::AppendString(buffer, length, "\nROI%d(L T R B) : LEFT(%d %d %d %d)", i,
-                           INT(l_roi.left), INT(l_roi.top), INT(l_roi.right), INT(l_roi.bottom));
+    os << "\nROI(LTRB)#" << i << " LEFT(" << INT(l_roi.left) << " " << INT(l_roi.top) << " " <<
+      INT(l_roi.right) << " " << INT(l_roi.bottom) << ")";
     if (IsValid(r_roi)) {
-      DumpImpl::AppendString(buffer, length, ", RIGHT(%d %d %d %d)", INT(r_roi.left),
-                             INT(r_roi.top), INT(r_roi.right), INT(r_roi.bottom));
+    os << " RIGHT(" << INT(r_roi.left) << " " << INT(r_roi.top) << " " << INT(r_roi.right) << " "
+      << INT(r_roi.bottom) << ")";
     }
   }
 
   LayerRect &fb_roi = layer_info.partial_fb_roi;
   if (IsValid(fb_roi)) {
-    DumpImpl::AppendString(buffer, length, "\nPartial FB ROI(L T R B) : (%d %d %d %d)",
-                          INT(fb_roi.left), INT(fb_roi.top), INT(fb_roi.right), INT(fb_roi.bottom));
+    os << "\nPartial FB ROI(LTRB):(" << INT(fb_roi.left) << " " << INT(fb_roi.top) << " " <<
+      INT(fb_roi.right) << " " << INT(fb_roi.bottom) << ")";
   }
 
-  const char *header  = "\n| Idx |  Comp Type  |  Split | WB |  Pipe  |    W x H    |          Format          |  Src Rect (L T R B) |  Dst Rect (L T R B) |  Z |    Flags   | Deci(HxV) | CS | Rng |";  //NOLINT
-  const char *newline = "\n|-----|-------------|--------|----|--------|-------------|--------------------------|---------------------|---------------------|----|------------|-----------|----|-----|";  //NOLINT
-  const char *format  = "\n| %3s | %11s "     "| %6s " "| %2s | 0x%04x | %4d x %4d | %24s "                  "| %4d %4d %4d %4d "  "| %4d %4d %4d %4d "  "| %2s | %10s "   "| %9s | %2s | %3s |";  //NOLINT
+  const char *header  = "\n| Idx |  Comp Type |   Split   | Pipe |    W x H    |          Format          |  Src Rect (L T R B) |  Dst Rect (L T R B) |  Z |    Flags   | Deci(HxV) | CS | Rng |";  //NOLINT
+  const char *newline = "\n|-----|------------|-----------|------|-------------|--------------------------|---------------------|---------------------|----|------------|-----------|----|-----|";  //NOLINT
+  const char *format  = "\n| %3s | %10s | %9s | %4d | %4d x %4d | %24s | %4d %4d %4d %4d | %4d %4d %4d %4d | %2s | %10s | %9s | %2s | %3s |";  //NOLINT
 
-  DumpImpl::AppendString(buffer, length, "\n");
-  DumpImpl::AppendString(buffer, length, newline);
-  DumpImpl::AppendString(buffer, length, header);
-  DumpImpl::AppendString(buffer, length, newline);
+  os << "\n";
+  os << newline;
+  os << header;
+  os << newline;
 
   for (uint32_t i = 0; i < num_hw_layers; i++) {
     uint32_t layer_index = hw_layers_.info.index.at(i);
@@ -607,33 +609,29 @@ void DisplayBase::AppendDump(char *buffer, uint32_t length) {
     HWLayerConfig &layer_config = hw_layers_.config[i];
     HWRotatorSession &hw_rotator_session = layer_config.hw_rotator_session;
 
-    char idx[8] = { 0 };
     const char *comp_type = GetName(sdm_layer->composition);
     const char *buffer_format = GetFormatString(input_buffer->format);
-    const char *comp_split[2] = { "Comp-1", "Comp-2" };
+    const char *pipe_split[2] = { "Pipe-1", "Pipe-2" };
+    char idx[8];
 
     snprintf(idx, sizeof(idx), "%d", layer_index);
 
     for (uint32_t count = 0; count < hw_rotator_session.hw_block_count; count++) {
-      char writeback_id[8] = { "I" };
+      char row[1024];
       HWRotateInfo &rotate = hw_rotator_session.hw_rotate_info[count];
       LayerRect &src_roi = rotate.src_roi;
       LayerRect &dst_roi = rotate.dst_roi;
-      char rot[8] = { 0 };
-      int pipe_id = 0;
+      char rot[12] = { 0 };
 
-      if (hw_rotator_session.mode == kRotatorOffline) {
-        snprintf(writeback_id, sizeof(writeback_id), "%d", rotate.writeback_id);
-        pipe_id = rotate.pipe_id;
-      }
-      snprintf(rot, sizeof(rot), "Rot-%d", count + 1);
-      DumpImpl::AppendString(buffer, length, format, idx, comp_type, rot,
-                             writeback_id, pipe_id, input_buffer->width,
-                             input_buffer->height, buffer_format, INT(src_roi.left),
-                             INT(src_roi.top), INT(src_roi.right), INT(src_roi.bottom),
-                             INT(dst_roi.left), INT(dst_roi.top), INT(dst_roi.right),
-                             INT(dst_roi.bottom), "-", "-    ", "-    ", "-", "-");
+      snprintf(rot, sizeof(rot), "Rot-%s-%d", hw_rotator_session.mode == kRotatorInline ?
+               "inl" : "off", count + 1);
 
+      snprintf(row, sizeof(row), format, idx, comp_type, rot,
+               0, input_buffer->width, input_buffer->height, buffer_format,
+               INT(src_roi.left), INT(src_roi.top), INT(src_roi.right), INT(src_roi.bottom),
+               INT(dst_roi.left), INT(dst_roi.top), INT(dst_roi.right), INT(dst_roi.bottom),
+               "-", "-    ", "-    ", "-", "-");
+      os << row;
       // print the below only once per layer block, fill with spaces for rest.
       idx[0] = 0;
       comp_type = "";
@@ -671,20 +669,24 @@ void DisplayBase::AppendDump(char *buffer, uint32_t length) {
       snprintf(color_primary, sizeof(color_primary), "%d", color_metadata.colorPrimaries);
       snprintf(range, sizeof(range), "%d", color_metadata.range);
 
-      DumpImpl::AppendString(buffer, length, format, idx, comp_type, comp_split[count],
-                             "-", pipe.pipe_id, input_buffer->width, input_buffer->height,
-                             buffer_format, INT(src_roi.left), INT(src_roi.top),
-                             INT(src_roi.right), INT(src_roi.bottom), INT(dst_roi.left),
-                             INT(dst_roi.top), INT(dst_roi.right), INT(dst_roi.bottom),
-                             z_order, flags, decimation, color_primary, range);
+      char row[1024];
+      snprintf(row, sizeof(row), format, idx, comp_type, pipe_split[count],
+               pipe.pipe_id, input_buffer->width, input_buffer->height,
+               buffer_format, INT(src_roi.left), INT(src_roi.top),
+               INT(src_roi.right), INT(src_roi.bottom), INT(dst_roi.left),
+               INT(dst_roi.top), INT(dst_roi.right), INT(dst_roi.bottom),
+               z_order, flags, decimation, color_primary, range);
 
+      os << row;
       // print the below only once per layer block, fill with spaces for rest.
       idx[0] = 0;
       comp_type = "";
     }
-
-    DumpImpl::AppendString(buffer, length, newline);
   }
+
+  os << newline << "\n";
+
+  return os.str();
 }
 
 const char * DisplayBase::GetName(const LayerComposition &composition) {

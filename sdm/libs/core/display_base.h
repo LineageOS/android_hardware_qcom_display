@@ -44,7 +44,7 @@ namespace sdm {
 using std::recursive_mutex;
 using std::lock_guard;
 
-class DisplayBase : public DisplayInterface, DumpImpl {
+class DisplayBase : public DisplayInterface {
  public:
   DisplayBase(DisplayType display_type, DisplayEventHandler *event_handler,
               HWDeviceType hw_device_type, BufferSyncHandler *buffer_sync_handler,
@@ -118,6 +118,7 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   virtual DisplayError GetClientTargetSupport(uint32_t width, uint32_t height,
                                               LayerBufferFormat format,
                                               const ColorMetaData &color_metadata);
+  virtual std::string Dump();
 
  protected:
   DisplayError BuildLayerStackStats(LayerStack *layer_stack);
@@ -129,9 +130,6 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   DisplayError SetHDRMode(bool set);
   DisplayError ValidateScaling(uint32_t width, uint32_t height);
   DisplayError ValidateDataspace(const ColorMetaData &color_metadata);
-
-  // DumpImpl method
-  void AppendDump(char *buffer, uint32_t length);
 
   const char *GetName(const LayerComposition &composition);
   DisplayError ReconfigureDisplay();

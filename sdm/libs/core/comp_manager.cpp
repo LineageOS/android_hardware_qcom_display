@@ -454,10 +454,6 @@ void CompManager::ControlPartialUpdate(Handle display_ctx, bool enable) {
   display_comp_ctx->pu_constraints.enable = enable;
 }
 
-void CompManager::AppendDump(char *buffer, uint32_t length) {
-  SCOPE_LOCK(locker_);
-}
-
 DisplayError CompManager::ValidateScaling(const LayerRect &crop, const LayerRect &dst,
                                           bool rotate90) {
   BufferLayout layout = Debug::IsUbwcTiledFrameBuffer() ? kUBWC : kLinear;
