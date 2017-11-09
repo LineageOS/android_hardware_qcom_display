@@ -17,7 +17,6 @@
  * limitations under the License.
  */
 
-#include <core/dump_interface.h>
 #include <core/buffer_allocator.h>
 #include <private/color_params.h>
 #include <utils/constants.h>
@@ -394,22 +393,20 @@ void HWCSession::Dump(hwc2_device_t *device, uint32_t *out_size, char *out_buffe
   if (!device || !out_size) {
     return;
   }
+
   auto *hwc_session = static_cast<HWCSession *>(device);
   const size_t max_dump_size = 8192;
 
   if (out_buffer == nullptr) {
     *out_size = max_dump_size;
   } else {
-    char sdm_dump[4096];
-    DumpInterface::GetDump(sdm_dump, 4096);  // TODO(user): Fix this workaround
-    std::string s("");
+    std::string s {};
     for (int id = HWC_DISPLAY_PRIMARY; id <= HWC_DISPLAY_VIRTUAL; id++) {
       SCOPE_LOCK(locker_[id]);
       if (hwc_session->hwc_display_[id]) {
         s += hwc_session->hwc_display_[id]->Dump();
       }
     }
-    s += sdm_dump;
     auto copied = s.copy(out_buffer, std::min(s.size(), max_dump_size), 0);
     *out_size = UINT32(copied);
   }

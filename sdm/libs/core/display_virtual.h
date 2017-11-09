@@ -27,7 +27,6 @@
 
 #include <private/hw_info_types.h>
 #include "display_base.h"
-#include "dump_impl.h"
 
 namespace sdm {
 
