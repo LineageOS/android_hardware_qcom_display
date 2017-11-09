@@ -96,9 +96,6 @@ DisplayError HWEventsDRM::InitializePollFd() {
         poll_fds_[i].events = POLLIN | POLLPRI | POLLERR;
         idle_notify_index_ = i;
       } break;
-      case HWEvent::CEC_READ_MESSAGE:
-      case HWEvent::SHOW_BLANK_EVENT:
-      case HWEvent::THERMAL_LEVEL:
       case HWEvent::IDLE_POWER_COLLAPSE: {
         poll_fds_[i].fd = drmOpen("msm_drm", nullptr);
         if (poll_fds_[i].fd < 0) {
@@ -108,8 +105,6 @@ DisplayError HWEventsDRM::InitializePollFd() {
         poll_fds_[i].events = POLLIN | POLLPRI | POLLERR;
         idle_pc_index_ = i;
       } break;
-      case HWEvent::PINGPONG_TIMEOUT:
-        break;
       case HWEvent::PANEL_DEAD: {
         poll_fds_[i].fd = drmOpen("msm_drm", nullptr);
         if (poll_fds_[i].fd < 0) {
@@ -119,6 +114,11 @@ DisplayError HWEventsDRM::InitializePollFd() {
         poll_fds_[i].events = POLLIN | POLLPRI | POLLERR;
         panel_dead_index_ = i;
       } break;
+      case HWEvent::CEC_READ_MESSAGE:
+      case HWEvent::SHOW_BLANK_EVENT:
+      case HWEvent::THERMAL_LEVEL:
+      case HWEvent::PINGPONG_TIMEOUT:
+        break;
     }
   }
 
@@ -263,14 +263,14 @@ DisplayError HWEventsDRM::CloseFds() {
         poll_fds_[i].fd = -1;
         break;
       case HWEvent::IDLE_NOTIFY:
-      case HWEvent::CEC_READ_MESSAGE:
-      case HWEvent::SHOW_BLANK_EVENT:
-      case HWEvent::THERMAL_LEVEL:
       case HWEvent::IDLE_POWER_COLLAPSE:
-        break;
       case HWEvent::PANEL_DEAD:
         drmClose(poll_fds_[i].fd);
         poll_fds_[i].fd = -1;
+        break;
+      case HWEvent::CEC_READ_MESSAGE:
+      case HWEvent::SHOW_BLANK_EVENT:
+      case HWEvent::THERMAL_LEVEL:
         break;
       default:
         return kErrorNotSupported;
