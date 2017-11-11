@@ -84,6 +84,7 @@ class HWEventsDRM : public HWEventsInterface {
   DisplayError RegisterVSync();
   DisplayError RegisterPanelDead(bool enable);
   DisplayError RegisterIdleNotify(bool enable);
+  DisplayError RegisterIdlePowerCollapse(bool enable);
 
   HWEventHandler *event_handler_{};
   vector<HWEventData> event_data_list_{};
@@ -97,6 +98,7 @@ class HWEventsDRM : public HWEventsInterface {
   sde_drm::DRMDisplayToken token_ = {};
   bool is_primary_ = false;
   uint32_t panel_dead_index_ = 0;
+  uint32_t idle_pc_index_ = 0;
 };
 
 }  // namespace sdm
