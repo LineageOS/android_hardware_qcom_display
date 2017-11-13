@@ -60,6 +60,9 @@ DisplayError HWPeripheralDRM::Init() {
   drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
   if (connector_info_.topology == DRMTopology::UNKNOWN) {
     connector_info_.topology = DRMTopology::DUAL_LM;
+    if (connector_info_.modes[current_mode_index_].hdisplay <= 1080) {
+      connector_info_.topology = DRMTopology::SINGLE_LM;
+    }
   }
 
   InitializeConfigs();
