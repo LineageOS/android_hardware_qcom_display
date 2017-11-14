@@ -98,6 +98,7 @@ using sde_drm::DRMPowerMode;
 using sde_drm::DRMSecureMode;
 using sde_drm::DRMSecurityLevel;
 using sde_drm::DRMCscType;
+using sde_drm::DRMMultiRectMode;
 
 namespace sdm {
 
@@ -897,6 +898,10 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
         DRMCscType csc_type = DRMCscType::kCscTypeMax;
         SelectCscType(layer.input_buffer, &csc_type);
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_CSC_CONFIG, pipe_id, &csc_type);
+
+        DRMMultiRectMode multirect_mode;
+        SetMultiRectMode(pipe_info->flags, &multirect_mode);
+        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_MULTIRECT_MODE, pipe_id, multirect_mode);
       }
     }
   }
@@ -1144,7 +1149,6 @@ void HWDeviceDRM::SetBlending(const LayerBlending &source, DRMBlendType *target)
       *target = DRMBlendType::UNDEFINED;
   }
 }
-
 
 void HWDeviceDRM::SetSrcConfig(const LayerBuffer &input_buffer, const HWRotatorMode &mode,
                                uint32_t *config) {
@@ -1525,6 +1529,16 @@ void HWDeviceDRM::SetTopology(sde_drm::DRMTopology drm_topology, HWTopology *hw_
     case DRMTopology::DUAL_LM_DSCMERGE:   *hw_topology = kDualLMDSCMerge;  break;
     case DRMTopology::PPSPLIT:            *hw_topology = kPPSplit;         break;
     default:                              *hw_topology = kUnknown;         break;
+  }
+}
+
+void HWDeviceDRM::SetMultiRectMode(const uint32_t flags, DRMMultiRectMode *target) {
+  *target = DRMMultiRectMode::NONE;
+  if (flags & kMultiRect) {
+    *target = DRMMultiRectMode::SERIAL;
+    if (flags & kMultiRectParallelMode) {
+      *target = DRMMultiRectMode::PARALLEL;
+    }
   }
 }
 
