@@ -132,6 +132,7 @@ class HWDeviceDRM : public HWInterface {
                        sde_drm::DRMSecurityLevel *security_level);
   bool IsResolutionSwitchEnabled() const { return resolution_switch_enabled_; }
   void SetTopology(sde_drm::DRMTopology drm_topology, HWTopology *hw_topology);
+  void SetMultiRectMode(const uint32_t flags, sde_drm::DRMMultiRectMode *target);
 
   class Registry {
    public:

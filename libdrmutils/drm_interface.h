@@ -144,6 +144,12 @@ enum struct DRMOps {
    */
   PLANE_SET_CSC_CONFIG,
   /*
+   * Op: Sets multirect mode on this plane.
+   * Arg: uint32_t - Plane ID
+   *      uint32_t - multirect mode
+   */
+  PLANE_SET_MULTIRECT_MODE,
+  /*
    * Op: Activate or deactivate a CRTC
    * Arg: uint32_t - CRTC ID
    *      uint32_t - 1 to enable, 0 to disable
@@ -429,6 +435,7 @@ struct DRMPlaneTypeInfo {
   uint64_t max_pipe_bandwidth;
   uint32_t cache_size;  // cache size in bytes for inline rotation support.
   QSEEDStepVersion qseed3_version;
+  bool multirect_prop_present = false;
 };
 
 // All DRM Planes as map<Plane_id , plane_type_info> listed from highest to lowest priority
@@ -554,6 +561,12 @@ enum struct DRMSecureMode {
 enum struct DRMSecurityLevel {
   SECURE_NON_SECURE,
   SECURE_ONLY,
+};
+
+enum struct DRMMultiRectMode {
+  NONE = 0,
+  PARALLEL = 1,
+  SERIAL = 2,
 };
 
 struct DRMSolidfillStage {
