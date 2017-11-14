@@ -48,11 +48,9 @@ ifeq ($(ARCH_ARM_HAVE_NEON),true)
     common_flags += -D__ARM_HAVE_NEON
 endif
 
-ifeq ($(call is-board-platform-in-list, $(MSM_VIDC_TARGET_LIST)), true)
-    common_flags += -DVENUS_COLOR_FORMAT
-endif
+common_flags += -DVENUS_COLOR_FORMAT
 
-ifeq ($(call is-board-platform-in-list, $(MASTER_SIDE_CP_TARGET_LIST)), true)
+ifeq ($(filter msm8996,$(TARGET_BOARD_PLATFORM)),)
     common_flags += -DMASTER_SIDE_CP
 endif
 
@@ -69,12 +67,10 @@ ifeq ($(TARGET_IS_HEADLESS),true)
     common_flags += -DTARGET_HEADLESS
 endif
 
-ifeq ($(TARGET_COMPILE_WITH_MSM_KERNEL),true)
 # This check is to pick the kernel headers from the right location.
 # If the macro above is defined, we make the assumption that we have the kernel
 # available in the build tree.
 # If the macro is not present, the headers are picked from hardware/qcom/msmXXXX
 # failing which, they are picked from bionic.
-    common_deps += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
-    kernel_includes += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
-endif
+common_deps += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
+kernel_includes += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
