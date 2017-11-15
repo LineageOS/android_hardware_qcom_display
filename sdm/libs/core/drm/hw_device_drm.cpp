@@ -303,14 +303,19 @@ HWDeviceDRM::HWDeviceDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator
 }
 
 DisplayError HWDeviceDRM::Init() {
-  default_mode_ = (DRMLibLoader::GetInstance()->IsLoaded() == false);
+  DRMLibLoader *drm_lib = DRMLibLoader::GetInstance();
+  if (drm_lib == nullptr) {
+    DLOGE("Failed to load DRM Lib");
+    return kErrorResources;
+  }
+  default_mode_ = (drm_lib->IsLoaded() == false);
 
   if (!default_mode_) {
     DRMMaster *drm_master = {};
     int dev_fd = -1;
     DRMMaster::GetInstance(&drm_master);
     drm_master->GetHandle(&dev_fd);
-    DRMLibLoader::GetInstance()->FuncGetDRMManager()(dev_fd, &drm_mgr_intf_);
+    drm_lib->FuncGetDRMManager()(dev_fd, &drm_mgr_intf_);
     if (drm_mgr_intf_->RegisterDisplay(DRMDisplayType::PERIPHERAL, &token_)) {
       DLOGE("RegisterDisplay failed");
       return kErrorResources;
