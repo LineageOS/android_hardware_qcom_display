@@ -598,7 +598,7 @@ void DisplayBase::AppendDump(char *buffer, uint32_t length) {
   DumpImpl::AppendString(buffer, length, newline);
 
   for (uint32_t i = 0; i < num_hw_layers; i++) {
-    uint32_t layer_index = hw_layers_.info.index[i];
+    uint32_t layer_index = hw_layers_.info.index.at(i);
     // sdm-layer from client layer stack
     Layer *sdm_layer = hw_layers_.info.stack->layers.at(layer_index);
     // hw-layer from hw layers info
@@ -1319,7 +1319,7 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
   uint32_t hw_layers_count = UINT32(hw_layers_.info.hw_layers.size());
 
   for (uint32_t i = 0; i < hw_layers_count; i++) {
-    Layer *sdm_layer = layer_stack->layers.at(hw_layers_.info.index[i]);
+    Layer *sdm_layer = layer_stack->layers.at(hw_layers_.info.index.at(i));
     Layer &hw_layer = hw_layers_.info.hw_layers.at(i);
 
     hw_layer.input_buffer.planes[0].fd = sdm_layer->input_buffer.planes[0].fd;
@@ -1339,7 +1339,7 @@ void DisplayBase::PostCommitLayerParams(LayerStack *layer_stack) {
   std::vector<uint32_t> fence_dup_flag;
 
   for (uint32_t i = 0; i < hw_layers_count; i++) {
-    uint32_t sdm_layer_index = hw_layers_.info.index[i];
+    uint32_t sdm_layer_index = hw_layers_.info.index.at(i);
     Layer *sdm_layer = layer_stack->layers.at(sdm_layer_index);
     Layer &hw_layer = hw_layers_.info.hw_layers.at(i);
 
