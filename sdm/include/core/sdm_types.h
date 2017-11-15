@@ -57,6 +57,7 @@ enum DisplayError {
   kErrorNoAppLayers,      //!< No App layer(s) in the draw cycle.
   kErrorRotatorValidation,  //!< Rotator configuration validation failure.
   kErrorNotValidated,     //!< Draw cycle has not been validated.
+  kErrorCriticalResource,   //!< Critical resource allocation has failed.
 };
 
 /*! @brief This structure is defined for client and library compatibility check purpose only. This
