@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "88ef756a_ecf0b9cc",
+        "filename": "msm8974/common.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 44,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-11-15T04:30:18Z",
+      "side": 1,
+      "message": "Does hammerhead define it\u0027s own version of this?",
+      "revId": "548adc765202200bcd3061786a9581adf5222c1e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
