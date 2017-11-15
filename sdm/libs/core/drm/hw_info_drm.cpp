@@ -194,7 +194,11 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
   hw_resource->has_hdr = true;
 
   hw_resource->hw_version = SDEVERSION(4, 0, 1);
-  hw_resource->hw_revision = 0;
+  // TODO(user): On FB driver hw_revision comprises of major version, minor version and hw_revision.
+  // On DRM driver, hw_revision is deprecated and hw_version comprises major version, minor version
+  // and hw_revision information. Since QDCM uses hw_revision variable populate hw_revision with
+  // hw_version. Remove hw_revision variable when FB code is deperecated.
+  hw_resource->hw_revision = SDEVERSION(4, 0, 1);
 
   // TODO(user): Deprecate
   hw_resource->max_mixer_width = 2560;
@@ -293,6 +297,11 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   hw_resource->max_bandwidth_high = info.max_bandwidth_high / kKiloUnit;
   hw_resource->max_sde_clk = info.max_sde_clk;
   hw_resource->hw_version = info.hw_version;
+  // TODO(user): On FB driver hw_revision comprises of major version, minor version and hw_revision.
+  // On DRM driver, hw_revision is deprecated and hw_version comprises major version, minor version
+  // and hw_revision information. Since QDCM uses hw_revision variable populate hw_revision with
+  // hw_version. Remove hw_revision variable when FB code is deperecated.
+  hw_resource->hw_revision = info.hw_version;
 
   std::vector<LayerBufferFormat> sdm_format;
   for (auto &it : info.comp_ratio_rt_map) {
