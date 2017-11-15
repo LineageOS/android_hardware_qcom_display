@@ -863,7 +863,7 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
         }
 
         uint32_t config = 0;
-        SetSrcConfig(layer.input_buffer, &config);
+        SetSrcConfig(layer.input_buffer, hw_rotator_session->mode, &config);
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_SRC_CONFIG, pipe_id, config);;
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_FB_ID, pipe_id, fb_id);
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_CRTC, pipe_id, token_.crtc_id);
@@ -1132,9 +1132,13 @@ void HWDeviceDRM::SetBlending(const LayerBlending &source, DRMBlendType *target)
 }
 
 
-void HWDeviceDRM::SetSrcConfig(const LayerBuffer &input_buffer, uint32_t *config) {
-  if (input_buffer.flags.interlace) {
-    *config |= (0x01 << UINT32(DRMSrcConfig::DEINTERLACE));
+void HWDeviceDRM::SetSrcConfig(const LayerBuffer &input_buffer, const HWRotatorMode &mode,
+                               uint32_t *config) {
+  // In offline rotation case, rotator will handle deinterlacing.
+  if (mode != kRotatorOffline) {
+    if (input_buffer.flags.interlace) {
+      *config |= (0x01 << UINT32(DRMSrcConfig::DEINTERLACE));
+    }
   }
 }
 
