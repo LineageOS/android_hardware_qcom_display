@@ -37,9 +37,11 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <memory>
 
 #include "hw_interface.h"
 #include "hw_scale_drm.h"
+#include "hw_color_manager_drm.h"
 
 #define IOCTL_LOGE(ioctl, type) \
   DLOGE("ioctl %s, device = %d errno = %d, desc = %s", #ioctl, type, errno, strerror(errno))
@@ -188,6 +190,7 @@ class HWDeviceDRM : public HWInterface {
   bool resolution_switch_enabled_ = false;
   uint32_t vrefresh_ = 0;
   bool autorefresh_ = false;
+  std::unique_ptr<HWColorManagerDrm> hw_color_mgr_ = {};
 };
 
 }  // namespace sdm

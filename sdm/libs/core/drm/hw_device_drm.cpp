@@ -61,7 +61,6 @@
 
 #include "hw_device_drm.h"
 #include "hw_info_interface.h"
-#include "hw_color_manager_drm.h"
 
 #define __CLASS__ "HWDeviceDRM"
 
@@ -381,6 +380,9 @@ DisplayError HWDeviceDRM::Init() {
   if (hw_resource_.has_qseed3) {
     hw_scale_ = new HWScaleDRM(HWScaleDRM::Version::V2);
   }
+
+  std::unique_ptr<HWColorManagerDrm> hw_color_mgr(new HWColorManagerDrm());
+  hw_color_mgr_ = std::move(hw_color_mgr);
 
   return kErrorNone;
 }
@@ -1279,14 +1281,21 @@ DisplayError HWDeviceDRM::SetCursorPosition(HWLayers *hw_layers, int x, int y) {
 
 DisplayError HWDeviceDRM::GetPPFeaturesVersion(PPFeatureVersion *vers) {
   struct DRMPPFeatureInfo info = {};
+
+  if (!hw_color_mgr_)
+    return kErrorNotSupported;
+
   for (uint32_t i = 0; i < kMaxNumPPFeatures; i++) {
+    std::vector<DRMPPFeatureID> drm_id = {};
     memset(&info, 0, sizeof(struct DRMPPFeatureInfo));
-    info.id = HWColorManagerDrm::ToDrmFeatureId(i);
-    if (info.id >= sde_drm::kPPFeaturesMax)
+    hw_color_mgr_->ToDrmFeatureId(kDSPP, i, &drm_id);
+    if (drm_id.empty())
       continue;
 
+    info.id = drm_id.at(0);
+
     drm_mgr_intf_->GetCrtcPPInfo(token_.crtc_id, &info);
-    vers->version[i] = HWColorManagerDrm::GetFeatureVersion(info);
+    vers->version[i] = hw_color_mgr_->GetFeatureVersion(info);
   }
   return kErrorNone;
 }
@@ -1294,37 +1303,40 @@ DisplayError HWDeviceDRM::GetPPFeaturesVersion(PPFeatureVersion *vers) {
 DisplayError HWDeviceDRM::SetPPFeatures(PPFeaturesConfig *feature_list) {
   int ret = 0;
   PPFeatureInfo *feature = NULL;
-  DRMPPFeatureInfo kernel_params = {};
-  bool crtc_feature = true;
+
+  if (!hw_color_mgr_)
+    return kErrorNotSupported;
 
   while (true) {
-    crtc_feature = true;
+    std::vector<DRMPPFeatureID> drm_id = {};
+    DRMPPFeatureInfo kernel_params = {};
+    bool crtc_feature = true;
+
     ret = feature_list->RetrieveNextFeature(&feature);
     if (ret)
       break;
-    kernel_params.id = HWColorManagerDrm::ToDrmFeatureId(feature->feature_id_);
+
+    hw_color_mgr_->ToDrmFeatureId(kDSPP, feature->feature_id_, &drm_id);
+    if (drm_id.empty())
+      continue;
+
+    kernel_params.id = drm_id.at(0);
     drm_mgr_intf_->GetCrtcPPInfo(token_.crtc_id, &kernel_params);
     if (kernel_params.version == std::numeric_limits<uint32_t>::max())
         crtc_feature = false;
     if (feature) {
       DLOGV_IF(kTagDriverConfig, "feature_id = %d", feature->feature_id_);
-      auto drm_features = DrmPPfeatureMap_.find(feature->feature_id_);
-      if (drm_features == DrmPPfeatureMap_.end()) {
-        DLOGE("DrmFeatures not valid for feature %d", feature->feature_id_);
-        continue;
-      }
+      for (DRMPPFeatureID id : drm_id) {
+        kernel_params.id = id;
+        ret = hw_color_mgr_->GetDrmFeature(feature, &kernel_params);
+        if (!ret && crtc_feature)
+          drm_atomic_intf_->Perform(DRMOps::CRTC_SET_POST_PROC,
+                                    token_.crtc_id, &kernel_params);
+        else if (!ret && !crtc_feature)
+          drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POST_PROC,
+                                    token_.conn_id, &kernel_params);
 
-      for (uint32_t drm_feature : drm_features->second) {
-        if (!HWColorManagerDrm::GetDrmFeature[drm_feature]) {
-          DLOGE("GetDrmFeature is not valid for DRM feature %d", drm_feature);
-          continue;
-        }
-        ret = HWColorManagerDrm::GetDrmFeature[drm_feature](*feature, &kernel_params);
-      if (!ret && crtc_feature)
-        drm_atomic_intf_->Perform(DRMOps::CRTC_SET_POST_PROC, token_.crtc_id, &kernel_params);
-      else if (!ret && !crtc_feature)
-        drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POST_PROC, token_.conn_id, &kernel_params);
-      HWColorManagerDrm::FreeDrmFeatureData(&kernel_params);
+        hw_color_mgr_->FreeDrmFeatureData(&kernel_params);
       }
     }
   }

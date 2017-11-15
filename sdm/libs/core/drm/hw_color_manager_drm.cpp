@@ -29,6 +29,11 @@
 
 #define __CLASS__ "HWColorManagerDRM"
 
+#include <array>
+#include <map>
+#include <cstring>
+#include <vector>
+
 #ifdef PP_DRM_ENABLE
 #include <drm/msm_drm_pp.h>
 #endif
@@ -72,33 +77,67 @@ static const uint32_t kMemColorProtMask = \
 static const uint32_t kMemColorSkinMask = (1 << 19);
 static const uint32_t kMemColorSkyMask = (1 << 20);
 static const uint32_t kMemColorFolMask = (1 << 21);
+
+static const uint32_t kSourceFeatureV5 = 5;
 #endif
 #endif
 
 namespace sdm {
 
-DisplayError (*HWColorManagerDrm::GetDrmFeature[])(const PPFeatureInfo &, DRMPPFeatureInfo *) = {
-        [kFeaturePcc] = &HWColorManagerDrm::GetDrmPCC,
-        [kFeatureIgc] = &HWColorManagerDrm::GetDrmIGC,
-        [kFeaturePgc] = &HWColorManagerDrm::GetDrmPGC,
-        [kFeatureMixerGc] = &HWColorManagerDrm::GetDrmMixerGC,
-        [kFeaturePaV2] = NULL,
-        [kFeatureDither] = &HWColorManagerDrm::GetDrmDither,
-        [kFeatureGamut] = &HWColorManagerDrm::GetDrmGamut,
-        [kFeaturePADither] = &HWColorManagerDrm::GetDrmPADither,
-        [kFeaturePAHsic] = &HWColorManagerDrm::GetDrmPAHsic,
-        [kFeaturePASixZone] = &HWColorManagerDrm::GetDrmPASixZone,
-        [kFeaturePAMemColSkin] = &HWColorManagerDrm::GetDrmPAMemColSkin,
-        [kFeaturePAMemColSky] = &HWColorManagerDrm::GetDrmPAMemColSky,
-        [kFeaturePAMemColFoliage] = &HWColorManagerDrm::GetDrmPAMemColFoliage,
-        [kFeaturePAMemColProt] = &HWColorManagerDrm::GetDrmPAMemColProt,
+typedef std::map<uint32_t, std::vector<DRMPPFeatureID>> DrmPPFeatureMap;
+
+static const DrmPPFeatureMap g_dspp_map = {
+  {kGlobalColorFeaturePcc,      {kFeaturePcc}},
+  {kGlobalColorFeatureIgc,      {kFeatureIgc}},
+  {kGlobalColorFeaturePgc,      {kFeaturePgc}},
+  {kMixerColorFeatureGc,        {kFeatureMixerGc}},
+  {kGlobalColorFeaturePaV2,     {kFeaturePAHsic,
+                                 kFeaturePASixZone,
+                                 kFeaturePAMemColSkin,
+                                 kFeaturePAMemColSky,
+                                 kFeaturePAMemColFoliage,
+                                 kFeaturePAMemColProt}},
+  {kGlobalColorFeatureDither,   {kFeatureDither}},
+  {kGlobalColorFeatureGamut,    {kFeatureGamut}},
+  {kGlobalColorFeaturePADither, {kFeaturePADither}},
 };
 
-void HWColorManagerDrm::FreeDrmFeatureData(DRMPPFeatureInfo *feature) {
-  if (feature->payload)
-    free(feature->payload);
-  feature->payload = NULL;
-}
+static const DrmPPFeatureMap g_vig_map = {
+  {kSourceColorFeatureIgc,      {kFeatureVigIgc}},
+  {kSourceColorFeatureGamut,    {kFeatureVigGamut}},
+};
+
+static const DrmPPFeatureMap g_dgm_map = {
+  {kSourceColorFeatureIgc,      {kFeatureDgmIgc}},
+  {kSourceColorFeatureGc,       {kFeatureDgmGc}},
+};
+
+static const std::array<const DrmPPFeatureMap *,
+                        static_cast<int>(kPPBlockMax)> feature_map_list = {
+  {&g_dspp_map, &g_vig_map, &g_dgm_map}
+};
+
+DisplayError (*HWColorManagerDrm::pp_features_[])(const PPFeatureInfo &,
+                                                    DRMPPFeatureInfo *) = {
+  [kFeaturePcc] = &HWColorManagerDrm::GetDrmPCC,
+  [kFeatureIgc] = &HWColorManagerDrm::GetDrmIGC,
+  [kFeaturePgc] = &HWColorManagerDrm::GetDrmPGC,
+  [kFeatureMixerGc] = &HWColorManagerDrm::GetDrmMixerGC,
+  [kFeaturePaV2] = NULL,
+  [kFeatureDither] = &HWColorManagerDrm::GetDrmDither,
+  [kFeatureGamut] = &HWColorManagerDrm::GetDrmGamut,
+  [kFeaturePADither] = &HWColorManagerDrm::GetDrmPADither,
+  [kFeaturePAHsic] = &HWColorManagerDrm::GetDrmPAHsic,
+  [kFeaturePASixZone] = &HWColorManagerDrm::GetDrmPASixZone,
+  [kFeaturePAMemColSkin] = &HWColorManagerDrm::GetDrmPAMemColSkin,
+  [kFeaturePAMemColSky] = &HWColorManagerDrm::GetDrmPAMemColSky,
+  [kFeaturePAMemColFoliage] = &HWColorManagerDrm::GetDrmPAMemColFoliage,
+  [kFeaturePAMemColProt] = &HWColorManagerDrm::GetDrmPAMemColProt,
+  [kFeatureDgmIgc] = &HWColorManagerDrm::GetDrmIGC,
+  [kFeatureDgmGc] = &HWColorManagerDrm::GetDrmPGC,
+  [kFeatureVigIgc] = &HWColorManagerDrm::GetDrmIGC,
+  [kFeatureVigGamut] = &HWColorManagerDrm::GetDrmGamut,
+};
 
 uint32_t HWColorManagerDrm::GetFeatureVersion(const DRMPPFeatureInfo &feature) {
   uint32_t version = PPFeatureVersion::kSDEPpVersionInvalid;
@@ -149,38 +188,144 @@ uint32_t HWColorManagerDrm::GetFeatureVersion(const DRMPPFeatureInfo &feature) {
   return version;
 }
 
-DRMPPFeatureID HWColorManagerDrm::ToDrmFeatureId(uint32_t id) {
-  DRMPPFeatureID ret = kPPFeaturesMax;
-
-  switch (id) {
-    case kGlobalColorFeaturePcc:
-      ret = kFeaturePcc;
-      break;
-    case kGlobalColorFeatureIgc:
-      ret = kFeatureIgc;
-      break;
-    case kGlobalColorFeaturePgc:
-      ret = kFeaturePgc;
-      break;
-    case kMixerColorFeatureGc:
-      ret = kFeatureMixerGc;
-      break;
-    case kGlobalColorFeaturePaV2:
-      ret = kFeaturePAHsic;
-      break;
-    case kGlobalColorFeatureDither:
-      ret = kFeatureDither;
-      break;
-    case kGlobalColorFeatureGamut:
-      ret = kFeatureGamut;
-      break;
-    case kGlobalColorFeaturePADither:
-      ret = kFeaturePADither;
-      break;
-    default:
-      break;
+DisplayError HWColorManagerDrm::ToDrmFeatureId(PPBlock block, uint32_t id,
+  std::vector<DRMPPFeatureID> *drm_id) {
+  if (block < kDSPP || block >= kPPBlockMax) {
+    DLOGE("Invalid input parameter, block = %d", (int) block);
+    return kErrorParameters;
   }
+
+  if (!drm_id) {
+    DLOGE("Invalid output parameter, block = %d", (int) block);
+    return kErrorParameters;
+  }
+
+  auto map = feature_map_list[block];
+  auto drm_features = map->find(id);
+  if (drm_features == map->end()) {
+    return kErrorParameters;
+  }
+  for (DRMPPFeatureID fid : drm_features->second)
+    drm_id->push_back(fid);
+
+  return kErrorNone;
+}
+
+DisplayError HWColorManagerDrm::GetDrmFeature(PPFeatureInfo *in_data,
+                                              DRMPPFeatureInfo *out_data,
+                                              bool force_disable) {
+  DisplayError ret = kErrorParameters;
+  uint32_t flags = 0;
+
+  if (!in_data || !out_data) {
+    DLOGE("Invalid input parameter, in_data or out_data is NULL");
+    return ret;
+  }
+
+  /* Cache and override the enable_flags_ if force_disable is requested */
+  if (force_disable) {
+    flags = in_data->enable_flags_;
+    in_data->enable_flags_ = kOpsDisable;
+  }
+
+  if (pp_features_[out_data->id])
+    ret = pp_features_[out_data->id](*in_data, out_data);
+
+
+  /* Restore the original enable_flags_ */
+  if (force_disable) {
+    in_data->enable_flags_ = flags;
+  }
+
   return ret;
+}
+
+void HWColorManagerDrm::FreeDrmFeatureData(DRMPPFeatureInfo *feature) {
+  if (feature && feature->payload) {
+#ifdef PP_DRM_ENABLE
+    void *ptr = feature->payload;
+#endif
+
+    switch (feature->id) {
+      case kFeaturePcc: {
+#ifdef PP_DRM_ENABLE
+        drm_msm_pcc *pcc = reinterpret_cast<drm_msm_pcc *>(ptr);
+        delete pcc;
+#endif
+        break;
+      }
+      case kFeatureIgc:
+      case kFeatureDgmIgc:
+      case kFeatureVigIgc: {
+#ifdef PP_DRM_ENABLE
+        drm_msm_igc_lut *igc = reinterpret_cast<drm_msm_igc_lut *>(ptr);
+        delete igc;
+#endif
+        break;
+      }
+      case kFeaturePgc:
+      case kFeatureDgmGc: {
+#ifdef PP_DRM_ENABLE
+        drm_msm_pgc_lut *pgc = reinterpret_cast<drm_msm_pgc_lut *>(ptr);
+        delete pgc;
+#endif
+        break;
+      }
+      case kFeatureDither: {
+#ifdef PP_DRM_ENABLE
+        drm_msm_dither *dither = reinterpret_cast<drm_msm_dither *>(ptr);
+        delete dither;
+#endif
+        break;
+      }
+      case kFeatureGamut:
+      case kFeatureVigGamut: {
+#ifdef PP_DRM_ENABLE
+        drm_msm_3d_gamut *gamut = reinterpret_cast<drm_msm_3d_gamut *>(ptr);
+        delete gamut;
+#endif
+        break;
+      }
+      case kFeaturePADither: {
+#if defined(PP_DRM_ENABLE) && defined(DRM_MSM_PA_DITHER)
+        drm_msm_pa_dither *pa_dither = reinterpret_cast<drm_msm_pa_dither *>(ptr);
+        delete pa_dither;
+#endif
+        break;
+      }
+      case kFeaturePAHsic: {
+#if defined(PP_DRM_ENABLE) && defined(DRM_MSM_PA_HSIC)
+        drm_msm_pa_hsic *hsic = reinterpret_cast<drm_msm_pa_hsic *>(ptr);
+        delete hsic;
+#endif
+        break;
+      }
+      case kFeaturePASixZone: {
+#if defined(PP_DRM_ENABLE) && defined(DRM_MSM_SIXZONE)
+        drm_msm_sixzone *sixzone = reinterpret_cast<drm_msm_sixzone *>(ptr);
+        delete sixzone;
+#endif
+        break;
+      }
+      case kFeaturePAMemColSkin:
+      case kFeaturePAMemColSky:
+      case kFeaturePAMemColFoliage:
+      case kFeaturePAMemColProt: {
+#if defined(PP_DRM_ENABLE) && defined(DRM_MSM_MEMCOL)
+        drm_msm_memcol *memcol = reinterpret_cast<drm_msm_memcol *>(ptr);
+        delete memcol;
+#endif
+        break;
+      }
+      case kFeatureMixerGc:
+      case kFeaturePaV2:
+      default: {
+        DLOGE("Invalid feature: %d\n", feature->id);
+        return;
+      }
+    }
+    feature->payload = nullptr;
+  }
 }
 
 DisplayError HWColorManagerDrm::GetDrmPCC(const PPFeatureInfo &in_data,
@@ -193,11 +338,6 @@ DisplayError HWColorManagerDrm::GetDrmPCC(const PPFeatureInfo &in_data,
   struct drm_msm_pcc_coeff *mdp_pcc_coeffs = NULL;
   uint32_t i = 0;
 
-  if (!out_data) {
-    DLOGE("Invalid input parameter for pcc");
-    return kErrorParameters;
-  }
-
   switch (in_data.feature_version_) {
   case PPFeatureVersion::kSDEPccV4:
     sde_pcc = (struct SDEPccV4Cfg *) in_data.GetConfigData();
@@ -207,7 +347,6 @@ DisplayError HWColorManagerDrm::GetDrmPCC(const PPFeatureInfo &in_data,
     return kErrorParameters;
   }
 
-  out_data->id = kFeaturePcc;
   out_data->type = sde_drm::kPropBlob;
   out_data->version = in_data.feature_version_;
   out_data->payload_size = sizeof(struct drm_msm_pcc);
@@ -276,14 +415,9 @@ DisplayError HWColorManagerDrm::GetDrmIGC(const PPFeatureInfo &in_data,
   uint32_t *c0_c1_data_ptr = NULL;
   uint32_t *c2_data_ptr = NULL;
 
-
-  if (!out_data) {
-    DLOGE("Invalid input parameter for igc");
-    return kErrorParameters;
-  }
-
   switch (in_data.feature_version_) {
   case PPFeatureVersion::kSDEIgcV30:
+  case kSourceFeatureV5:
     sde_igc = (struct SDEIgcV30LUTData *) in_data.GetConfigData();
     break;
   default:
@@ -291,7 +425,6 @@ DisplayError HWColorManagerDrm::GetDrmIGC(const PPFeatureInfo &in_data,
     return kErrorParameters;
   }
 
-  out_data->id = kFeatureIgc;
   out_data->type = sde_drm::kPropBlob;
   out_data->version = in_data.feature_version_;
   out_data->payload_size = sizeof(struct drm_msm_igc_lut);
@@ -341,12 +474,8 @@ DisplayError HWColorManagerDrm::GetDrmPGC(const PPFeatureInfo &in_data,
   struct SDEPgcLUTData *sde_pgc;
   struct drm_msm_pgc_lut *mdp_pgc;
 
-  if (!out_data) {
-    DLOGE("Invalid input parameter for gamut");
-    return kErrorParameters;
-  }
   sde_pgc = (struct SDEPgcLUTData *)in_data.GetConfigData();
-  out_data->id = kFeaturePgc;
+
   out_data->type = sde_drm::kPropBlob;
   out_data->version = in_data.feature_version_;
   out_data->payload_size = sizeof(struct drm_msm_pgc_lut);
@@ -366,7 +495,8 @@ DisplayError HWColorManagerDrm::GetDrmPGC(const PPFeatureInfo &in_data,
     return kErrorMemory;
   }
 
-  if (in_data.enable_flags_ & kOpsEnable)
+  if ((in_data.enable_flags_ & kOpsEnable) &&
+      (in_data.feature_id_ == kGlobalColorFeaturePgc))
     mdp_pgc->flags = PGC_8B_ROUND;
   else
     mdp_pgc->flags = 0;
@@ -388,11 +518,6 @@ DisplayError HWColorManagerDrm::GetDrmMixerGC(const PPFeatureInfo &in_data,
                                               DRMPPFeatureInfo *out_data) {
   DisplayError ret = kErrorNone;
 #ifdef PP_DRM_ENABLE
-  if (!out_data) {
-    DLOGE("Invalid input parameter for Mixer GC");
-    return kErrorParameters;
-  }
-
   out_data->id = kPPFeaturesMax;
   out_data->type = sde_drm::kPropBlob;
   out_data->version = in_data.feature_version_;
@@ -407,14 +532,8 @@ DisplayError HWColorManagerDrm::GetDrmPAHsic(const PPFeatureInfo &in_data,
   struct SDEPaData *sde_pa;
   struct drm_msm_pa_hsic *mdp_hsic;
 
-  if (!out_data) {
-    DLOGE("Invalid input parameter for pa hsic");
-    return kErrorParameters;
-  }
-
   sde_pa = (struct SDEPaData *) in_data.GetConfigData();
 
-  out_data->id = kFeaturePAHsic;
   out_data->type = sde_drm::kPropBlob;
   out_data->version = in_data.feature_version_;
   out_data->payload_size = 0;
@@ -477,14 +596,8 @@ DisplayError HWColorManagerDrm::GetDrmPASixZone(const PPFeatureInfo &in_data,
 #if defined(PP_DRM_ENABLE) && defined(DRM_MSM_SIXZONE)
   struct SDEPaData *sde_pa;
 
-  if (!out_data) {
-    DLOGE("Invalid input parameter for six zone");
-    return kErrorParameters;
-  }
-
   sde_pa = (struct SDEPaData *) in_data.GetConfigData();
 
-  out_data->id = kFeaturePASixZone;
   out_data->type = sde_drm::kPropBlob;
   out_data->version = in_data.feature_version_;
   out_data->payload_size = 0;
@@ -558,14 +671,8 @@ DisplayError HWColorManagerDrm::GetDrmPAMemColSkin(const PPFeatureInfo &in_data,
 #if defined(PP_DRM_ENABLE) && defined(DRM_MSM_MEMCOL)
   struct SDEPaData *sde_pa;
 
-  if (!out_data) {
-    DLOGE("Invalid input parameter for memory color skin");
-    return kErrorParameters;
-  }
-
   sde_pa = (struct SDEPaData *) in_data.GetConfigData();
 
-  out_data->id = kFeaturePAMemColSkin;
   out_data->type = sde_drm::kPropBlob;
   out_data->version = in_data.feature_version_;
   out_data->payload_size = 0;
@@ -621,14 +728,8 @@ DisplayError HWColorManagerDrm::GetDrmPAMemColSky(const PPFeatureInfo &in_data,
 #if defined(PP_DRM_ENABLE) && defined(DRM_MSM_MEMCOL)
   struct SDEPaData *sde_pa;
 
-  if (!out_data) {
-    DLOGE("Invalid input parameter for memory color sky");
-    return kErrorParameters;
-  }
-
   sde_pa = (struct SDEPaData *) in_data.GetConfigData();
 
-  out_data->id = kFeaturePAMemColSky;
   out_data->type = sde_drm::kPropBlob;
   out_data->version = in_data.feature_version_;
   out_data->payload_size = 0;
@@ -684,14 +785,8 @@ DisplayError HWColorManagerDrm::GetDrmPAMemColFoliage(const PPFeatureInfo &in_da
 #if defined(PP_DRM_ENABLE) && defined(DRM_MSM_MEMCOL)
   struct SDEPaData *sde_pa;
 
-  if (!out_data) {
-    DLOGE("Invalid input parameter for memory color foliage");
-    return kErrorParameters;
-  }
-
   sde_pa = (struct SDEPaData *) in_data.GetConfigData();
 
-  out_data->id = kFeaturePAMemColFoliage;
   out_data->type = sde_drm::kPropBlob;
   out_data->version = in_data.feature_version_;
   out_data->payload_size = 0;
@@ -748,14 +843,8 @@ DisplayError HWColorManagerDrm::GetDrmPAMemColProt(const PPFeatureInfo &in_data,
   struct SDEPaData *sde_pa;
   struct drm_msm_memcol *mdp_memcol;
 
-  if (!out_data) {
-    DLOGE("Invalid input parameter for memory color prot");
-    return kErrorParameters;
-  }
-
   sde_pa = (struct SDEPaData *) in_data.GetConfigData();
 
-  out_data->id = kFeaturePAMemColProt;
   out_data->type = sde_drm::kPropBlob;
   out_data->version = in_data.feature_version_;
   out_data->payload_size = sizeof(struct drm_msm_memcol);
@@ -800,13 +889,7 @@ DisplayError HWColorManagerDrm::GetDrmDither(const PPFeatureInfo &in_data,
   struct SDEDitherCfg *sde_dither = NULL;
   struct drm_msm_dither *mdp_dither = NULL;
 
-  if (!out_data) {
-    DLOGE("Invalid input parameter for dither");
-    return kErrorParameters;
-  }
-
   sde_dither = (struct SDEDitherCfg *)in_data.GetConfigData();
-  out_data->id = kFeatureDither;
   out_data->type = sde_drm::kPropBlob;
   out_data->version = in_data.feature_version_;
   out_data->payload_size = sizeof(struct drm_msm_dither);
@@ -846,12 +929,8 @@ DisplayError HWColorManagerDrm::GetDrmGamut(const PPFeatureInfo &in_data,
   struct drm_msm_3d_gamut *mdp_gamut = NULL;
   uint32_t size = 0;
 
-  if (!out_data) {
-    DLOGE("Invalid input parameter for gamut");
-    return kErrorParameters;
-  }
   sde_gamut = (struct SDEGamutCfg *)in_data.GetConfigData();
-  out_data->id = kFeatureGamut;
+
   out_data->type = sde_drm::kPropBlob;
   out_data->version = in_data.feature_version_;
   out_data->payload_size = sizeof(struct drm_msm_3d_gamut);
@@ -921,12 +1000,6 @@ DisplayError HWColorManagerDrm::GetDrmPADither(const PPFeatureInfo &in_data,
   struct SDEPADitherData* sde_dither;
   struct drm_msm_pa_dither* mdp_dither;
 
-  if (!out_data) {
-    DLOGE("Invalid input parameter for PA dither");
-    return kErrorParameters;
-  }
-
-  out_data->id = kFeaturePADither;
   out_data->type = sde_drm::kPropBlob;
   out_data->version = in_data.feature_version_;
 
