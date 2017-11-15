@@ -488,6 +488,9 @@ DisplayError CompManager::GetScaleLutConfig(HWScaleLutInfo *lut_info) {
 DisplayError CompManager::SetDetailEnhancerData(Handle display_ctx,
                                                 const DisplayDetailEnhancerData &de_data) {
   SCOPE_LOCK(locker_);
+  if (!hw_res_info_.hw_dest_scalar_info.count) {
+    return kErrorResources;
+  }
 
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
