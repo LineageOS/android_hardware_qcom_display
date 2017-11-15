@@ -264,10 +264,12 @@ int getDPTestConfig(uint32_t *panelBpp, uint32_t *patternType) {
 
     while (getline(&line, &len, configFile) != -1) {
         if (!parseLine(line, tokens, maxCount, &tokenCount)) {
-            if (!strncmp(tokens[0], "bpp", strlen("bpp"))) {
+            if (tokens[0] != NULL) {
+              if (!strncmp(tokens[0], "bpp", strlen("bpp"))) {
                 *panelBpp = static_cast<uint32_t>(atoi(tokens[1]));
-            } else  if (!strncmp(tokens[0], "pattern", strlen("pattern"))) {
+              } else  if (!strncmp(tokens[0], "pattern", strlen("pattern"))) {
                 *patternType = static_cast<uint32_t>(atoi(tokens[1]));
+              }
             }
         }
     }

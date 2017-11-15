@@ -411,10 +411,12 @@ DisplayError HWInfo::GetV4L2RotatorInfo(HWResourceInfo *hw_resource) {
          string caps;
          while (Sys::getline_(caps_fs, caps)) {
            if (!ParseString(caps.c_str(), tokens, max_count, ":, =\n", &token_count)) {
-             if (!strncmp(tokens[0], "downscale_compression", strlen("downscale_compression"))) {
-               hw_resource->hw_rot_info.downscale_compression = UINT8(atoi(tokens[1]));
-             } else if (!strncmp(tokens[0], "min_downscale", strlen("min_downscale"))) {
-               hw_resource->hw_rot_info.min_downscale = FLOAT(atof(tokens[1]));
+             if (tokens[0] != NULL) {
+               if (!strncmp(tokens[0], "downscale_compression", strlen("downscale_compression"))) {
+                 hw_resource->hw_rot_info.downscale_compression = UINT8(atoi(tokens[1]));
+               } else if (!strncmp(tokens[0], "min_downscale", strlen("min_downscale"))) {
+                 hw_resource->hw_rot_info.min_downscale = FLOAT(atof(tokens[1]));
+               }
              }
            }
          }

@@ -36,6 +36,10 @@ ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
     common_flags += -DUSER_DEBUG
 endif
 
+ifeq ($(LLVM_SA), true)
+    common_flags += --compile-and-analyze --analyzer-perf --analyzer-Werror
+endif
+
 common_includes := system/core/base/include
 CHECK_VERSION_LE = $(shell if [ $(1) -le $(2) ] ; then echo true ; else echo false ; fi)
 PLATFORM_SDK_NOUGAT = 25

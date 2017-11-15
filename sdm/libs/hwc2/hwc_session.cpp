@@ -271,6 +271,8 @@ int HWCSession::Open(const hw_module_t *module, const char *name, hw_device_t **
 
     int status = hwc_session->Init();
     if (status != 0) {
+      delete hwc_session;
+      hwc_session = NULL;
       return status;
     }
 

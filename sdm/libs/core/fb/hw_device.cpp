@@ -813,9 +813,11 @@ void HWDevice::GetHWPanelNameByNode(int device_node, HWPanelInfo *panel_info) {
     const uint32_t max_count = 10;
     char *tokens[max_count] = { NULL };
     if (!ParseLine(line.c_str(), "=\n", tokens, max_count, &token_count)) {
-      if (!strncmp(tokens[0], "panel_name", strlen("panel_name"))) {
-        snprintf(panel_info->panel_name, sizeof(panel_info->panel_name), "%s", tokens[1]);
-        break;
+      if (tokens[0] != NULL) {
+        if (!strncmp(tokens[0], "panel_name", strlen("panel_name"))) {
+           snprintf(panel_info->panel_name, sizeof(panel_info->panel_name), "%s", tokens[1]);
+           break;
+        }
       }
     }
   }
