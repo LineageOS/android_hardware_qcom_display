@@ -34,6 +34,24 @@
       "revId": "548adc765202200bcd3061786a9581adf5222c1e",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ab211a73_d2895af1",
+        "filename": "msm8974/common.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 44,
+      "author": {
+        "id": 13026
+      },
+      "writtenOn": "2017-11-16T08:25:56Z",
+      "side": 1,
+      "message": "Wasn\u0027t aware of the Pixel distinction, but msm8974 was missed in the current version of\nhttps://review.lineageos.org/#/q/Ic860035406ffb3d181b41249cd63bbf6cf5f32fb",
+      "parentUuid": "cd5d1170_0795a3cd",
+      "revId": "548adc765202200bcd3061786a9581adf5222c1e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
