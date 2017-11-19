@@ -105,7 +105,12 @@ HWResourceInfo *HWInfoDRM::hw_resource_ = nullptr;
 
 HWInfoDRM::HWInfoDRM() {
   DRMLogger::Set(new DRMLoggerImpl());
-  default_mode_ = (DRMLibLoader::GetInstance()->IsLoaded() == false);
+  drm_lib = DRMLibLoader::GetInstance();
+  if (drm_lib == nullptr) {
+    DLOGE("Failed to load DRM Library");
+    return;
+  }
+  default_mode_ = (drm_lib->IsLoaded() == false);
   if (!default_mode_) {
     DRMMaster *drm_master = {};
     int dev_fd = -1;
@@ -115,20 +120,25 @@ HWInfoDRM::HWInfoDRM() {
       return;
     }
     drm_master->GetHandle(&dev_fd);
-    DRMLibLoader::GetInstance()->FuncGetDRMManager()(dev_fd, &drm_mgr_intf_);
+    drm_lib->FuncGetDRMManager()(dev_fd, &drm_mgr_intf_);
   }
 }
 
 HWInfoDRM::~HWInfoDRM() {
-  delete hw_resource_;
-  hw_resource_ = nullptr;
+  if (hw_resource_ != nullptr) {
+    delete hw_resource_;
+    hw_resource_ = nullptr;
+  }
 
   if (drm_mgr_intf_) {
-    DRMLibLoader::GetInstance()->FuncDestroyDRMManager()();
+    if (drm_lib != nullptr) {
+      drm_lib->FuncDestroyDRMManager()();
+    }
     drm_mgr_intf_ = nullptr;
   }
 
-  DRMLibLoader::Destroy();
+  drm_lib->Destroy();
+  drm_lib = nullptr;
   DRMMaster::DestroyInstance();
 }
 

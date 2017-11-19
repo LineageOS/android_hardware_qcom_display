@@ -464,12 +464,11 @@ void HWCDisplay::BuildLayerStack() {
       layer->flags.solid_fill = true;
     }
 
+    if (!hwc_layer->ValidateAndSetCSC()) {
 #ifdef FEATURE_WIDE_COLOR
-    if (!hwc_layer->SupportedDataspace()) {
-        layer->flags.skip = true;
-        DLOGW_IF(kTagStrategy, "Unsupported dataspace: 0x%x", hwc_layer->GetLayerDataspace());
-    }
+      layer->flags.skip = true;
 #endif
+    }
 
     working_primaries = WidestPrimaries(working_primaries,
                                         layer->input_buffer.color_metadata.colorPrimaries);
@@ -584,7 +583,16 @@ void HWCDisplay::BuildLayerStack() {
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
   layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0);
   // Append client target to the layer stack
-  layer_stack_.layers.push_back(client_target_->GetSDMLayer());
+
+  Layer *sdm_client_target = client_target_->GetSDMLayer();
+  layer_stack_.layers.push_back(sdm_client_target);
+  // fall back frame composition to GPU when client target is 10bit
+  // TODO(user): clarify the behaviour from Client(SF) and SDM Extn -
+  // when handling 10bit FBT, as it would affect blending
+  if (Is10BitFormat(sdm_client_target->input_buffer.format)) {
+    // Must fall back to client composition
+    MarkLayersForClientComposition();
+  }
 
   // set secure display
   SetSecureDisplay(secure_display_active);
@@ -716,15 +724,20 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode) {
 
 HWC2::Error HWCDisplay::GetClientTargetSupport(uint32_t width, uint32_t height, int32_t format,
                                                int32_t dataspace) {
-  DisplayConfigVariableInfo variable_config;
-  display_intf_->GetFrameBufferConfig(&variable_config);
-  // TODO(user): Support scaled configurations, other formats and other dataspaces
-  if (format != HAL_PIXEL_FORMAT_RGBA_8888 || dataspace != HAL_DATASPACE_UNKNOWN ||
-      width != variable_config.x_pixels || height != variable_config.y_pixels) {
-    return HWC2::Error::Unsupported;
-  } else {
-    return HWC2::Error::None;
+  ColorMetaData color_metadata = {};
+  if (dataspace != HAL_DATASPACE_UNKNOWN) {
+    GetColorPrimary(dataspace, &(color_metadata.colorPrimaries));
+    GetTransfer(dataspace, &(color_metadata.transfer));
+    GetRange(dataspace, &(color_metadata.range));
   }
+
+  LayerBufferFormat sdm_format = GetSDMFormat(format, 0);
+  if (display_intf_->GetClientTargetSupport(width, height, sdm_format,
+                                            color_metadata) != kErrorNone) {
+    return HWC2::Error::Unsupported;
+  }
+
+  return HWC2::Error::None;
 }
 
 HWC2::Error HWCDisplay::GetColorModes(uint32_t *out_num_modes, android_color_mode_t *out_modes) {
@@ -864,7 +877,13 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, int32_t acquire_
 
   client_target_->SetLayerBuffer(target, acquire_fence);
   client_target_->SetLayerSurfaceDamage(damage);
-  // Ignoring dataspace for now
+  if (client_target_->GetLayerDataspace() != dataspace) {
+    client_target_->SetLayerDataspace(dataspace);
+    Layer *sdm_layer = client_target_->GetSDMLayer();
+    // Data space would be validated at GetClientTargetSupport, so just use here.
+    sdm::GetSDMColorSpace(dataspace, &sdm_layer->input_buffer.color_metadata);
+  }
+
   return HWC2::Error::None;
 }
 
@@ -982,6 +1001,7 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
     }
     hwc_layer->ResetValidation();
   }
+  client_target_->ResetValidation();
   *out_num_types = UINT32(layer_changes_.size());
   *out_num_requests = UINT32(layer_requests_.size());
   skip_validate_ = false;
@@ -1189,6 +1209,7 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
     close(client_target_release_fence);
     client_target_release_fence = -1;
   }
+  client_target_->ResetGeometryChanges();
 
   for (auto hwc_layer : layer_set_) {
     hwc_layer->ResetGeometryChanges();
@@ -1398,6 +1419,7 @@ void HWCDisplay::DumpInputBuffers() {
     return;
   }
 
+  DLOGI("dump_frame_count %d dump_input_layers %d", dump_frame_count_, dump_input_layers_);
   snprintf(dir_path, sizeof(dir_path), "%s/frame_dump_%s", HWCDebugHandler::DumpDir(),
            GetDisplayString());
 
@@ -1426,22 +1448,43 @@ void HWCDisplay::DumpInputBuffers() {
       }
     }
 
-    if (pvt_handle && pvt_handle->base) {
-      char dump_file_name[PATH_MAX];
-      size_t result = 0;
+    DLOGI("Dump layer[%d] of %d pvt_handle %x pvt_handle->base %x", i, layer_stack_.layers.size(),
+          pvt_handle, pvt_handle? pvt_handle->base : 0);
 
-      snprintf(dump_file_name, sizeof(dump_file_name), "%s/input_layer%d_%dx%d_%s_frame%d.raw",
-               dir_path, i, pvt_handle->width, pvt_handle->height,
-               qdutils::GetHALPixelFormatString(pvt_handle->format), dump_frame_index_);
-
-      FILE *fp = fopen(dump_file_name, "w+");
-      if (fp) {
-        result = fwrite(reinterpret_cast<void *>(pvt_handle->base), pvt_handle->size, 1, fp);
-        fclose(fp);
-      }
-
-      DLOGI("Frame Dump %s: is %s", dump_file_name, result ? "Successful" : "Failed");
+    if (!pvt_handle) {
+      DLOGE("Buffer handle is null");
+      return;
     }
+
+    if (!pvt_handle->base) {
+      DisplayError error = buffer_allocator_->MapBuffer(pvt_handle, -1);
+      if (error != kErrorNone) {
+        DLOGE("Failed to map buffer, error = %d", error);
+        return;
+      }
+    }
+
+    char dump_file_name[PATH_MAX];
+    size_t result = 0;
+
+    snprintf(dump_file_name, sizeof(dump_file_name), "%s/input_layer%d_%dx%d_%s_frame%d.raw",
+             dir_path, i, pvt_handle->width, pvt_handle->height,
+             qdutils::GetHALPixelFormatString(pvt_handle->format), dump_frame_index_);
+
+    FILE *fp = fopen(dump_file_name, "w+");
+    if (fp) {
+      result = fwrite(reinterpret_cast<void *>(pvt_handle->base), pvt_handle->size, 1, fp);
+      fclose(fp);
+    }
+
+    int release_fence = -1;
+    DisplayError error = buffer_allocator_->UnmapBuffer(pvt_handle, &release_fence);
+    if (error != kErrorNone) {
+      DLOGE("Failed to unmap buffer, error = %d", error);
+      return;
+    }
+
+    DLOGI("Frame Dump %s: is %s", dump_file_name, result ? "Successful" : "Failed");
   }
 }
 
@@ -1940,6 +1983,10 @@ std::string HWCDisplay::Dump() {
 bool HWCDisplay::CanSkipValidate() {
   // Layer Stack checks
   if (layer_stack_.flags.hdr_present && (tone_mapper_ && tone_mapper_->IsActive())) {
+    return false;
+  }
+
+  if (client_target_->NeedsValidation()) {
     return false;
   }
 
