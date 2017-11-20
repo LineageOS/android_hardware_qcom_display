@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -36,6 +36,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using sde_drm::DRMDisplayType;
 using sde_drm::DRMOps;
 using sde_drm::DRMPowerMode;
+using sde_drm::DRMDppsFeatureInfo;
 
 namespace sdm {
 
@@ -131,5 +132,27 @@ DisplayError HWPeripheralDRM::Flush() {
   return kErrorNone;
 }
 
+DisplayError HWPeripheralDRM::SetDppsFeature(uint32_t object_type,
+        uint32_t feature_id, uint64_t value) {
+  uint32_t obj_id;
+
+  if (object_type == DRM_MODE_OBJECT_CRTC) {
+    obj_id = token_.crtc_id;
+  } else if (object_type == DRM_MODE_OBJECT_CONNECTOR) {
+    obj_id = token_.conn_id;
+  } else {
+    DLOGE("invalid object type 0x%x", object_type);
+    return kErrorUndefined;
+  }
+
+  drm_atomic_intf_->Perform(DRMOps::DPPS_CACHE_FEATURE, obj_id, feature_id, value);
+  return kErrorNone;
+}
+
+DisplayError HWPeripheralDRM::GetDppsFeatureInfo(void *info) {
+  DRMDppsFeatureInfo *feature_info = reinterpret_cast<DRMDppsFeatureInfo *>(info);
+  drm_mgr_intf_->GetDppsFeatureInfo(feature_info);
+  return kErrorNone;
+}
 
 }  // namespace sdm
