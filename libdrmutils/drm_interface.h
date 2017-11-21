@@ -607,11 +607,12 @@ class DRMAtomicReqInterface {
   /* Perform request operation.
    *
    * [input]: opcode: operation code from DRMOps list.
+   *          obj_id: Relevant crtc, connector, plane id
    *          var_arg: arguments for DRMOps's can differ in number and
    *          data type. Refer above DRMOps to details.
    * [return]: Error code if the API fails, 0 on success.
    */
-  virtual int Perform(DRMOps opcode, ...) = 0;
+  virtual int Perform(DRMOps opcode, uint32_t obj_id, ...) = 0;
 
   /*
    * Commit the params set via Perform(). Also resets the properties after commit. Needs to be
