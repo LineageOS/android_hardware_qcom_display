@@ -89,11 +89,12 @@ static int32_t GetEOTF(const GammaTransfer &transfer) {
   return hdr_transfer;
 }
 
-HWTVDRM::HWTVDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
-                     HWInfoInterface *hw_info_intf)
+HWTVDRM::HWTVDRM(int32_t display_id, BufferSyncHandler *buffer_sync_handler,
+                    BufferAllocator *buffer_allocator, HWInfoInterface *hw_info_intf)
   : HWDeviceDRM(buffer_sync_handler, buffer_allocator, hw_info_intf) {
   disp_type_ = DRMDisplayType::TV;
   device_name_ = "TV Display Device";
+  display_id_ = display_id;
 }
 
 DisplayError HWTVDRM::SetDisplayAttributes(uint32_t index) {

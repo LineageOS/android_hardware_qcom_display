@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2016, 2018 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -30,6 +30,7 @@
 #include <private/color_interface.h>
 #include <utils/locker.h>
 #include <utils/sys.h>
+#include <utils/utils.h>
 
 #include "hw_interface.h"
 #include "comp_manager.h"
@@ -55,9 +56,13 @@ class CoreImpl : public CoreInterface {
   // Methods from core interface
   virtual DisplayError CreateDisplay(DisplayType type, DisplayEventHandler *event_handler,
                                      DisplayInterface **intf);
+  virtual DisplayError CreateDisplay(int32_t display_id, DisplayEventHandler *event_handler,
+                                     DisplayInterface **intf);
   virtual DisplayError DestroyDisplay(DisplayInterface *intf);
   virtual DisplayError SetMaxBandwidthMode(HWBwModes mode);
   virtual DisplayError GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_disp_info);
+  virtual DisplayError GetDisplaysStatus(HWDisplaysInfo *hw_displays_info);
+  virtual DisplayError GetMaxDisplaysSupported(DisplayType type, int32_t *max_displays);
 
  protected:
   Locker locker_;
@@ -71,6 +76,7 @@ class CoreImpl : public CoreInterface {
   CreateExtensionInterface create_extension_intf_ = NULL;
   DestroyExtensionInterface destroy_extension_intf_ = NULL;
   SocketHandler *socket_handler_ = NULL;
+  HWDisplaysInfo hw_displays_info_;
 };
 
 }  // namespace sdm

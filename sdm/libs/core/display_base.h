@@ -50,6 +50,10 @@ class DisplayBase : public DisplayInterface {
               HWDeviceType hw_device_type, BufferSyncHandler *buffer_sync_handler,
               BufferAllocator *buffer_allocator, CompManager *comp_manager,
               HWInfoInterface *hw_info_intf);
+  DisplayBase(int32_t display_id, DisplayType display_type, DisplayEventHandler *event_handler,
+              HWDeviceType hw_device_type, BufferSyncHandler *buffer_sync_handler,
+              BufferAllocator *buffer_allocator, CompManager *comp_manager,
+              HWInfoInterface *hw_info_intf);
   virtual ~DisplayBase() { }
   virtual DisplayError Init();
   virtual DisplayError Deinit();
@@ -110,6 +114,8 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError GetFrameBufferConfig(DisplayConfigVariableInfo *variable_info);
   virtual DisplayError SetDetailEnhancerData(const DisplayDetailEnhancerData &de_data);
   virtual DisplayError GetDisplayPort(DisplayPort *port);
+  virtual DisplayError GetDisplayId(int32_t *display_id);
+  virtual DisplayError GetDisplayType(DisplayType *display_type);
   virtual bool IsPrimaryDisplay();
   virtual DisplayError SetCompositionState(LayerComposition composition_type, bool enable);
   virtual DisplayError GetClientTargetSupport(uint32_t width, uint32_t height,
@@ -154,6 +160,7 @@ class DisplayBase : public DisplayInterface {
   }
 
   recursive_mutex recursive_mutex_;
+  int32_t display_id_ = -1;
   DisplayType display_type_;
   DisplayEventHandler *event_handler_ = NULL;
   HWDeviceType hw_device_type_;

@@ -29,6 +29,7 @@
 #include <private/extension_interface.h>
 #include <utils/locker.h>
 #include <bitset>
+#include <map>
 
 #include "strategy.h"
 #include "resource_default.h"
@@ -42,7 +43,8 @@ class CompManager {
                     BufferAllocator *buffer_allocator, BufferSyncHandler *buffer_sync_handler,
                     SocketHandler *socket_handler);
   DisplayError Deinit();
-  DisplayError RegisterDisplay(DisplayType type, const HWDisplayAttributes &display_attributes,
+  DisplayError RegisterDisplay(int32_t display_id, DisplayType type,
+                               const HWDisplayAttributes &display_attributes,
                                const HWPanelInfo &hw_panel_info,
                                const HWMixerAttributes &mixer_attributes,
                                const DisplayConfigVariableInfo &fb_config, Handle *display_ctx);
@@ -66,7 +68,7 @@ class CompManager {
   void ControlPartialUpdate(Handle display_ctx, bool enable);
   DisplayError ValidateScaling(const LayerRect &crop, const LayerRect &dst, bool rotate90);
   DisplayError ValidateAndSetCursorPosition(Handle display_ctx, HWLayers *hw_layers, int x, int y);
-  bool SetDisplayState(Handle display_ctx, DisplayState state, DisplayType display_type);
+  bool SetDisplayState(Handle display_ctx, DisplayState state, int32_t display_id);
   DisplayError SetMaxBandwidthMode(HWBwModes mode);
   DisplayError GetScaleLutConfig(HWScaleLutInfo *lut_info);
   DisplayError GetCapabilities(Handle display_ctx, HWDisplayCaps *caps);
@@ -80,12 +82,14 @@ class CompManager {
   static const int kSafeModeThreshold = 4;
 
   void PrepareStrategyConstraints(Handle display_ctx, HWLayers *hw_layers);
+  const char* StringDisplayList(const std::map<int32_t, bool>& displays);
 
   struct DisplayCompositionContext {
     Strategy *strategy = NULL;
     StrategyConstraints constraints;
     Handle display_resource_ctx = NULL;
-    DisplayType display_type = kPrimary;
+    int32_t display_id = -1;
+    DisplayType display_type = kBuiltIn;
     uint32_t max_strategies = 0;
     uint32_t remaining_strategies = 0;
     bool idle_fallback = false;
@@ -99,9 +103,9 @@ class CompManager {
 
   Locker locker_;
   ResourceInterface *resource_intf_ = NULL;
-  std::bitset<kDisplayMax> registered_displays_;  // Bit mask of registered displays
-  std::bitset<kDisplayMax> configured_displays_;  // Bit mask of sucessfully configured displays
-  uint32_t display_state_[kDisplayMax] = {};
+  std::map<int32_t, bool> registered_displays_;  // List of registered displays
+  std::map<int32_t, bool> configured_displays_;  // List of sucessfully configured displays
+  std::map<int32_t, uint32_t> display_state_;
   bool safe_mode_ = false;              // Flag to notify all displays to be in resource crunch
                                         // mode, where strategy manager chooses the best strategy
                                         // that uses optimal number of pipes for each display

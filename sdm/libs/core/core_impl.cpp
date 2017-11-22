@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2016, 2018 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -92,6 +92,14 @@ DisplayError CoreImpl::Init() {
     DLOGW("Unable creating color manager and continue without it.");
   }
 
+  // Populate hw_displays_info_ once.
+  GetDisplaysStatus(&hw_displays_info_);
+  // Log out max supported displays per type.
+  for (int i = kBuiltIn; i < kDisplayTypeMax; i++) {
+    int32_t max_displays;
+    GetMaxDisplaysSupported((DisplayType)i, &max_displays);
+  }
+
   signal(SIGPIPE, SIG_IGN);
   return kErrorNone;
 
@@ -125,11 +133,11 @@ DisplayError CoreImpl::CreateDisplay(DisplayType type, DisplayEventHandler *even
   DisplayBase *display_base = NULL;
 
   switch (type) {
-  case kPrimary:
+  case kBuiltIn:
     display_base = new DisplayPrimary(event_handler, hw_info_intf_, buffer_sync_handler_,
                                       buffer_allocator_, &comp_mgr_);
     break;
-  case kHDMI:
+  case kPluggable:
     display_base = new DisplayHDMI(event_handler, hw_info_intf_, buffer_sync_handler_,
                                    buffer_allocator_, &comp_mgr_);
     break;
@@ -156,6 +164,57 @@ DisplayError CoreImpl::CreateDisplay(DisplayType type, DisplayEventHandler *even
   return kErrorNone;
 }
 
+DisplayError CoreImpl::CreateDisplay(int32_t display_id, DisplayEventHandler *event_handler,
+                                     DisplayInterface **intf) {
+  SCOPE_LOCK(locker_);
+
+  if (!event_handler || !intf) {
+    return kErrorParameters;
+  }
+
+  auto iter = hw_displays_info_.find(display_id);
+
+  if (iter ==  hw_displays_info_.end()) {
+    DLOGE("Spurious display id %d", display_id);
+    return kErrorParameters;
+  }
+
+  DisplayBase *display_base = NULL;
+  DisplayType display_type = iter->second.display_type;
+
+  switch (display_type) {
+  case kBuiltIn:
+    display_base = new DisplayPrimary(display_id, event_handler, hw_info_intf_,
+                                      buffer_sync_handler_, buffer_allocator_, &comp_mgr_);
+    break;
+  case kPluggable:
+    display_base = new DisplayHDMI(display_id, event_handler, hw_info_intf_,
+                                    buffer_sync_handler_, buffer_allocator_, &comp_mgr_);
+    break;
+  case kVirtual:
+    display_base = new DisplayVirtual(display_id, event_handler, hw_info_intf_,
+                                      buffer_sync_handler_, buffer_allocator_, &comp_mgr_);
+    break;
+  default:
+    DLOGE("Spurious display type %d", display_type);
+    return kErrorParameters;
+  }
+
+  if (!display_base) {
+    return kErrorMemory;
+  }
+
+  DisplayError error = display_base->Init();
+  if (error != kErrorNone) {
+    delete display_base;
+    return error;
+  }
+
+  *intf = display_base;
+
+  return kErrorNone;
+}
+
 DisplayError CoreImpl::DestroyDisplay(DisplayInterface *intf) {
   SCOPE_LOCK(locker_);
 
@@ -178,6 +237,14 @@ DisplayError CoreImpl::SetMaxBandwidthMode(HWBwModes mode) {
 
 DisplayError CoreImpl::GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_disp_info) {
   return hw_info_intf_->GetFirstDisplayInterfaceType(hw_disp_info);
+}
+
+DisplayError CoreImpl::GetDisplaysStatus(HWDisplaysInfo *hw_displays_info) {
+  return hw_info_intf_->GetDisplaysStatus(hw_displays_info);
+}
+
+DisplayError CoreImpl::GetMaxDisplaysSupported(DisplayType type, int32_t *max_displays) {
+  return hw_info_intf_->GetMaxDisplaysSupported(type, max_displays);
 }
 
 }  // namespace sdm

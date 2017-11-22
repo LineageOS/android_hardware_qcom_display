@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -120,6 +120,11 @@ DisplayError HWDevice::Deinit() {
     Sys::close_(stored_retire_fence);
     stored_retire_fence = -1;
   }
+  return kErrorNone;
+}
+
+DisplayError HWDevice::GetDisplayId(int32_t *display_id) {
+  *display_id = fb_node_index_;
   return kErrorNone;
 }
 

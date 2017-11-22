@@ -36,8 +36,8 @@ using std::vector;
 
 class HWTVDRM : public HWDeviceDRM {
  public:
-  explicit HWTVDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
-                     HWInfoInterface *hw_info_intf);
+  explicit HWTVDRM(int32_t display_id, BufferSyncHandler *buffer_sync_handler,
+                      BufferAllocator *buffer_allocator, HWInfoInterface *hw_info_intf);
 
  protected:
   virtual DisplayError SetDisplayAttributes(uint32_t index);
