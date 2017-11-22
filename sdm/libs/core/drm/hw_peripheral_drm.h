@@ -42,9 +42,8 @@ struct CWBConfig {
 
 class HWPeripheralDRM : public HWDeviceDRM {
  public:
-  explicit HWPeripheralDRM(BufferSyncHandler *buffer_sync_handler,
-                           BufferAllocator *buffer_allocator,
-                           HWInfoInterface *hw_info_intf);
+  explicit HWPeripheralDRM(int32_t display_id, BufferSyncHandler *buffer_sync_handler,
+                           BufferAllocator *buffer_allocator, HWInfoInterface *hw_info_intf);
   virtual ~HWPeripheralDRM() {}
 
  protected:

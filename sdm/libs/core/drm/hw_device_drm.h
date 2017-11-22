@@ -70,6 +70,7 @@ class HWDeviceDRM : public HWInterface {
 
  protected:
   // From HWInterface
+  virtual DisplayError GetDisplayId(int32_t *display_id);
   virtual DisplayError GetActiveConfig(uint32_t *active_config);
   virtual DisplayError GetNumDisplayAttributes(uint32_t *count);
   virtual DisplayError GetDisplayAttributes(uint32_t index,
@@ -183,6 +184,7 @@ class HWDeviceDRM : public HWInterface {
  protected:
   const char *device_name_ = {};
   bool default_mode_ = false;
+  int32_t display_id_ = -1;
   sde_drm::DRMDisplayType disp_type_ = {};
   HWInfoInterface *hw_info_intf_ = {};
   BufferSyncHandler *buffer_sync_handler_ = {};

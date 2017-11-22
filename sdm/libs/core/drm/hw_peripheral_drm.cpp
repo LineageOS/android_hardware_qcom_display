@@ -44,12 +44,12 @@ using sde_drm::DRMCWbCaptureMode;
 
 namespace sdm {
 
-HWPeripheralDRM::HWPeripheralDRM(BufferSyncHandler *buffer_sync_handler,
-                                 BufferAllocator *buffer_allocator,
-                                 HWInfoInterface *hw_info_intf)
+HWPeripheralDRM::HWPeripheralDRM(int32_t display_id, BufferSyncHandler *buffer_sync_handler,
+                                 BufferAllocator *buffer_allocator, HWInfoInterface *hw_info_intf)
   : HWDeviceDRM(buffer_sync_handler, buffer_allocator, hw_info_intf) {
   disp_type_ = DRMDisplayType::PERIPHERAL;
   device_name_ = "Peripheral";
+  display_id_ = display_id;
 }
 
 DisplayError HWPeripheralDRM::Init() {

@@ -53,16 +53,16 @@ const int kMaxSDELayers = 16;   // Maximum number of layers that can be handled 
 #define MAX_CSC_BIAS_SIZE           3
 
 enum HWDeviceType {
-  kDevicePrimary,
-  kDeviceHDMI,
+  kDeviceBuiltIn,
+  kDevicePluggable,
   kDeviceVirtual,
   kDeviceRotator,
   kDeviceMax,
 };
 
 enum HWBlockType {
-  kHWPrimary,
-  kHWHDMI,
+  kHWBuiltIn,
+  kHWPluggable,
   kHWWriteback0,
   kHWWriteback1,
   kHWWriteback2,

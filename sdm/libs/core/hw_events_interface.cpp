@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -38,7 +38,8 @@
 
 namespace sdm {
 
-DisplayError HWEventsInterface::Create(int display_type, HWEventHandler *event_handler,
+DisplayError HWEventsInterface::Create(int display_id, DisplayType display_type,
+                                       HWEventHandler *event_handler,
                                        const std::vector<HWEvent> &event_list,
                                        const HWInterface *hw_intf, HWEventsInterface **intf) {
   DisplayError error = kErrorNone;
@@ -49,7 +50,7 @@ DisplayError HWEventsInterface::Create(int display_type, HWEventHandler *event_h
     hw_events = new HWEventsDRM();
   }
 
-  error = hw_events->Init(display_type, event_handler, event_list, hw_intf);
+  error = hw_events->Init(display_id, display_type, event_handler, event_list, hw_intf);
   if (error != kErrorNone) {
     delete hw_events;
   } else {

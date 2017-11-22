@@ -36,6 +36,7 @@
 #ifndef __BUFFER_ALLOCATOR_H__
 #define __BUFFER_ALLOCATOR_H__
 
+#include <cstddef>
 #include "layer_buffer.h"
 
 namespace sdm {

@@ -87,17 +87,17 @@ bool Debug::IsDecimationDisabled() {
 int Debug::GetMaxPipesPerMixer(DisplayType display_type) {
   int value = -1;
   switch (display_type) {
-  case kPrimary:
-    DebugHandler::Get()->GetProperty(PRIMARY_MIXER_STAGES_PROP, &value);
-    break;
-  case kHDMI:
-    DebugHandler::Get()->GetProperty(EXTERNAL_MIXER_STAGES_PROP, &value);
-    break;
-  case kVirtual:
-    DebugHandler::Get()->GetProperty(VIRTUAL_MIXER_STAGES_PROP, &value);
-    break;
-  default:
-    break;
+    case kBuiltIn:
+      DebugHandler::Get()->GetProperty(PRIMARY_MIXER_STAGES_PROP, &value);
+      break;
+    case kPluggable:
+      DebugHandler::Get()->GetProperty(EXTERNAL_MIXER_STAGES_PROP, &value);
+      break;
+    case kVirtual:
+      DebugHandler::Get()->GetProperty(VIRTUAL_MIXER_STAGES_PROP, &value);
+      break;
+    default:
+      break;
   }
 
   return value;

@@ -71,13 +71,14 @@ class HWEventHandler {
 
 class HWInterface {
  public:
-  static DisplayError Create(DisplayType type, HWInfoInterface *hw_info_intf,
+  static DisplayError Create(int32_t display_id, DisplayType type, HWInfoInterface *hw_info_intf,
                              BufferSyncHandler *buffer_sync_handler,
                              BufferAllocator *buffer_allocator, HWInterface **intf);
   static DisplayError Destroy(HWInterface *intf);
 
   virtual DisplayError Init() = 0;
   virtual DisplayError Deinit() = 0;
+  virtual DisplayError GetDisplayId(int32_t *display_id) = 0;
   virtual DisplayError GetActiveConfig(uint32_t *active_config) = 0;
   virtual DisplayError GetNumDisplayAttributes(uint32_t *count) = 0;
   virtual DisplayError GetDisplayAttributes(uint32_t index,

@@ -134,33 +134,33 @@ DisplayError ResourceDefault::Deinit() {
   return kErrorNone;
 }
 
-DisplayError ResourceDefault::RegisterDisplay(DisplayType type,
+DisplayError ResourceDefault::RegisterDisplay(int32_t display_id, DisplayType type,
                                               const HWDisplayAttributes &display_attributes,
                                               const HWPanelInfo &hw_panel_info,
                                               const HWMixerAttributes &mixer_attributes,
                                               Handle *display_ctx) {
   DisplayError error = kErrorNone;
 
-  HWBlockType hw_block_id = kHWBlockMax;
+  HWBlockType hw_block_type = kHWBlockMax;
   switch (type) {
-  case kPrimary:
-    if (!hw_block_ctx_[kHWPrimary].is_in_use) {
-      hw_block_id = kHWPrimary;
-    }
-    break;
+    case kBuiltIn:
+      if (!hw_block_ctx_[kHWBuiltIn].is_in_use) {
+        hw_block_type = kHWBuiltIn;
+      }
+      break;
 
-  case kHDMI:
-    if (!hw_block_ctx_[kHWHDMI].is_in_use) {
-      hw_block_id = kHWHDMI;
-    }
-    break;
+    case kPluggable:
+      if (!hw_block_ctx_[kHWPluggable].is_in_use) {
+        hw_block_type = kHWPluggable;
+      }
+      break;
 
-  default:
-    DLOGW("RegisterDisplay, invalid type %d", type);
-    return kErrorParameters;
+    default:
+      DLOGW("RegisterDisplay, invalid type %d", type);
+      return kErrorParameters;
   }
 
-  if (hw_block_id == kHWBlockMax) {
+  if (hw_block_type == kHWBlockMax) {
     return kErrorResources;
   }
 
@@ -169,10 +169,10 @@ DisplayError ResourceDefault::RegisterDisplay(DisplayType type,
     return kErrorMemory;
   }
 
-  hw_block_ctx_[hw_block_id].is_in_use = true;
+  hw_block_ctx_[hw_block_type].is_in_use = true;
 
   display_resource_ctx->display_attributes = display_attributes;
-  display_resource_ctx->hw_block_id = hw_block_id;
+  display_resource_ctx->hw_block_type = hw_block_type;
   display_resource_ctx->mixer_attributes = mixer_attributes;
 
   *display_ctx = display_resource_ctx;
@@ -184,7 +184,7 @@ DisplayError ResourceDefault::UnregisterDisplay(Handle display_ctx) {
                           reinterpret_cast<DisplayResourceContext *>(display_ctx);
   Purge(display_ctx);
 
-  hw_block_ctx_[display_resource_ctx->hw_block_id].is_in_use = false;
+  hw_block_ctx_[display_resource_ctx->hw_block_type].is_in_use = false;
 
   delete display_resource_ctx;
 
@@ -224,9 +224,9 @@ DisplayError ResourceDefault::Prepare(Handle display_ctx, HWLayers *hw_layers) {
 
   DisplayError error = kErrorNone;
   const struct HWLayersInfo &layer_info = hw_layers->info;
-  HWBlockType hw_block_id = display_resource_ctx->hw_block_id;
+  HWBlockType hw_block_type = display_resource_ctx->hw_block_type;
 
-  DLOGV_IF(kTagResources, "==== Resource reserving start: hw_block = %d ====", hw_block_id);
+  DLOGV_IF(kTagResources, "==== Resource reserving start: hw_block_type = %d ====", hw_block_type);
 
   if (layer_info.hw_layers.size() > 1) {
     DLOGV_IF(kTagResources, "More than one FB layers");
@@ -247,7 +247,7 @@ DisplayError ResourceDefault::Prepare(Handle display_ctx, HWLayers *hw_layers) {
   }
 
   for (uint32_t i = 0; i < num_pipe_; i++) {
-    if (src_pipes_[i].hw_block_id == hw_block_id && src_pipes_[i].owner == kPipeOwnerUserMode) {
+    if (src_pipes_[i].hw_block_type == hw_block_type && src_pipes_[i].owner == kPipeOwnerUserMode) {
       src_pipes_[i].ResetState();
     }
   }
@@ -264,10 +264,10 @@ DisplayError ResourceDefault::Prepare(Handle display_ctx, HWLayers *hw_layers) {
   // left pipe is needed
   if (left_pipe->valid) {
     need_scale = IsScalingNeeded(left_pipe);
-    left_index = GetPipe(hw_block_id, need_scale);
+    left_index = GetPipe(hw_block_type, need_scale);
     if (left_index >= num_pipe_) {
-      DLOGV_IF(kTagResources, "Get left pipe failed: hw_block_id = %d, need_scale = %d",
-               hw_block_id, need_scale);
+      DLOGV_IF(kTagResources, "Get left pipe failed: hw_block_type = %d, need_scale = %d",
+               hw_block_type, need_scale);
       ResourceStateLog();
       goto CleanupOnError;
     }
@@ -289,10 +289,10 @@ DisplayError ResourceDefault::Prepare(Handle display_ctx, HWLayers *hw_layers) {
 
   need_scale = IsScalingNeeded(right_pipe);
 
-  right_index = GetPipe(hw_block_id, need_scale);
+  right_index = GetPipe(hw_block_type, need_scale);
   if (right_index >= num_pipe_) {
-    DLOGV_IF(kTagResources, "Get right pipe failed: hw_block_id = %d, need_scale = %d", hw_block_id,
-             need_scale);
+    DLOGV_IF(kTagResources, "Get right pipe failed: hw_block_type = %d, need_scale = %d",
+             hw_block_type, need_scale);
     ResourceStateLog();
     goto CleanupOnError;
   }
@@ -317,7 +317,7 @@ DisplayError ResourceDefault::Prepare(Handle display_ctx, HWLayers *hw_layers) {
   return kErrorNone;
 
 CleanupOnError:
-  DLOGV_IF(kTagResources, "Resource reserving failed! hw_block = %d", hw_block_id);
+  DLOGV_IF(kTagResources, "Resource reserving failed! hw_block_type = %d", hw_block_type);
 
   return kErrorResources;
 }
@@ -338,15 +338,17 @@ DisplayError ResourceDefault::PostCommit(Handle display_ctx, HWLayers *hw_layers
   SCOPE_LOCK(locker_);
   DisplayResourceContext *display_resource_ctx =
                           reinterpret_cast<DisplayResourceContext *>(display_ctx);
-  HWBlockType hw_block_id = display_resource_ctx->hw_block_id;
+  HWBlockType hw_block_type = display_resource_ctx->hw_block_type;
   uint64_t frame_count = display_resource_ctx->frame_count;
 
-  DLOGV_IF(kTagResources, "Resource for hw_block = %d, frame_count = %d", hw_block_id, frame_count);
+  DLOGV_IF(kTagResources, "Resource for hw_block = %d, frame_count = %d", hw_block_type,
+           frame_count);
 
   // handoff pipes which are used by splash screen
-  if ((frame_count == 0) && (hw_block_id == kHWPrimary)) {
+  if ((frame_count == 0) && (hw_block_type == kHWBuiltIn)) {
     for (uint32_t i = 0; i < num_pipe_; i++) {
-      if (src_pipes_[i].hw_block_id == hw_block_id && src_pipes_[i].owner == kPipeOwnerKernelMode) {
+      if (src_pipes_[i].hw_block_type == hw_block_type &&
+          src_pipes_[i].owner == kPipeOwnerKernelMode) {
         src_pipes_[i].owner = kPipeOwnerUserMode;
       }
     }
@@ -365,14 +367,14 @@ void ResourceDefault::Purge(Handle display_ctx) {
 
   DisplayResourceContext *display_resource_ctx =
                           reinterpret_cast<DisplayResourceContext *>(display_ctx);
-  HWBlockType hw_block_id = display_resource_ctx->hw_block_id;
+  HWBlockType hw_block_type = display_resource_ctx->hw_block_type;
 
   for (uint32_t i = 0; i < num_pipe_; i++) {
-    if (src_pipes_[i].hw_block_id == hw_block_id && src_pipes_[i].owner == kPipeOwnerUserMode) {
+    if (src_pipes_[i].hw_block_type == hw_block_type && src_pipes_[i].owner == kPipeOwnerUserMode) {
       src_pipes_[i].ResetState();
     }
   }
-  DLOGV_IF(kTagResources, "display id = %d", display_resource_ctx->hw_block_id);
+  DLOGV_IF(kTagResources, "display hw_block_type = %d", display_resource_ctx->hw_block_type);
 }
 
 DisplayError ResourceDefault::SetMaxMixerStages(Handle display_ctx, uint32_t max_mixer_stages) {
@@ -381,17 +383,17 @@ DisplayError ResourceDefault::SetMaxMixerStages(Handle display_ctx, uint32_t max
   return kErrorNone;
 }
 
-uint32_t ResourceDefault::SearchPipe(HWBlockType hw_block_id, SourcePipe *src_pipes,
-                                uint32_t num_pipe) {
+uint32_t ResourceDefault::SearchPipe(HWBlockType hw_block_type, SourcePipe *src_pipes,
+                                     uint32_t num_pipe) {
   uint32_t index = num_pipe_;
   SourcePipe *src_pipe;
 
   // search the pipe being used
   for (uint32_t i = 0; i < num_pipe; i++) {
     src_pipe = &src_pipes[i];
-    if (src_pipe->owner == kPipeOwnerUserMode && src_pipe->hw_block_id == kHWBlockMax) {
+    if (src_pipe->owner == kPipeOwnerUserMode && src_pipe->hw_block_type == kHWBlockMax) {
       index = src_pipe->index;
-      src_pipe->hw_block_id = hw_block_id;
+      src_pipe->hw_block_type = hw_block_type;
       break;
     }
   }
@@ -399,7 +401,7 @@ uint32_t ResourceDefault::SearchPipe(HWBlockType hw_block_id, SourcePipe *src_pi
   return index;
 }
 
-uint32_t ResourceDefault::NextPipe(PipeType type, HWBlockType hw_block_id) {
+uint32_t ResourceDefault::NextPipe(PipeType type, HWBlockType hw_block_type) {
   uint32_t num_pipe = 0;
   SourcePipe *src_pipes = NULL;
 
@@ -419,23 +421,23 @@ uint32_t ResourceDefault::NextPipe(PipeType type, HWBlockType hw_block_id) {
     break;
   }
 
-  return SearchPipe(hw_block_id, src_pipes, num_pipe);
+  return SearchPipe(hw_block_type, src_pipes, num_pipe);
 }
 
-uint32_t ResourceDefault::GetPipe(HWBlockType hw_block_id, bool need_scale) {
+uint32_t ResourceDefault::GetPipe(HWBlockType hw_block_type, bool need_scale) {
   uint32_t index = num_pipe_;
 
   // The default behavior is to assume RGB and VG pipes have scalars
   if (!need_scale) {
-    index = NextPipe(kPipeTypeDMA, hw_block_id);
+    index = NextPipe(kPipeTypeDMA, hw_block_type);
   }
 
   if ((index >= num_pipe_) && (!need_scale || !hw_res_info_.has_non_scalar_rgb)) {
-    index = NextPipe(kPipeTypeRGB, hw_block_id);
+    index = NextPipe(kPipeTypeRGB, hw_block_type);
   }
 
   if (index >= num_pipe_) {
-    index = NextPipe(kPipeTypeVIG, hw_block_id);
+    index = NextPipe(kPipeTypeVIG, hw_block_type);
   }
 
   return index;
@@ -454,9 +456,9 @@ void ResourceDefault::ResourceStateLog() {
   uint32_t i;
   for (i = 0; i < num_pipe_; i++) {
     SourcePipe *src_pipe = &src_pipes_[i];
-    DLOGV_IF(kTagResources, "index = %d, id = %x, hw_block = %d, owner = %s",
-                 src_pipe->index, src_pipe->mdss_pipe_id, src_pipe->hw_block_id,
-                 (src_pipe->owner == kPipeOwnerUserMode) ? "user mode" : "kernel mode");
+    DLOGV_IF(kTagResources, "index = %d, id = %x, hw_block_type = %d, owner = %s", src_pipe->index,
+             src_pipe->mdss_pipe_id, src_pipe->hw_block_type,
+             (src_pipe->owner == kPipeOwnerUserMode) ? "user mode" : "kernel mode");
   }
 }
 

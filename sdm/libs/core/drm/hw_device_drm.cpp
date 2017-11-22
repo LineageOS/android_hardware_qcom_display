@@ -431,8 +431,13 @@ DisplayError HWDeviceDRM::Init() {
   drm_master->GetHandle(&dev_fd_);
   DRMLibLoader::GetInstance()->FuncGetDRMManager()(dev_fd_, &drm_mgr_intf_);
 
-  if (drm_mgr_intf_->RegisterDisplay(disp_type_, &token_)) {
-    DLOGE("RegisterDisplay failed for %s", device_name_);
+  if (-1 == display_id_) {
+    if (drm_mgr_intf_->RegisterDisplay(disp_type_, &token_)) {
+      DLOGE("RegisterDisplay (by type) failed for %s", device_name_);
+      return kErrorResources;
+    }
+  } else if (drm_mgr_intf_->RegisterDisplay(display_id_, &token_)) {
+    DLOGE("RegisterDisplay (by id) failed for %s - %d", device_name_, display_id_);
     return kErrorResources;
   }
 
@@ -441,6 +446,8 @@ DisplayError HWDeviceDRM::Init() {
     drm_mgr_intf_->UnregisterDisplay(token_);
     return kErrorNotSupported;
   }
+
+  display_id_ = static_cast<int32_t>(token_.conn_id);
 
   ret = drm_mgr_intf_->CreateAtomicReq(token_, &drm_atomic_intf_);
   if (ret) {
@@ -502,6 +509,11 @@ DisplayError HWDeviceDRM::Deinit() {
   drm_atomic_intf_ = {};
   drm_mgr_intf_->UnregisterDisplay(token_);
   return err;
+}
+
+DisplayError HWDeviceDRM::GetDisplayId(int32_t *display_id) {
+  *display_id = display_id_;
+  return kErrorNone;
 }
 
 void HWDeviceDRM::InitializeConfigs() {

@@ -34,32 +34,35 @@
 namespace sdm {
 
 Strategy::Strategy(ExtensionInterface *extension_intf, BufferAllocator *buffer_allocator,
-                   DisplayType type,
-                   const HWResourceInfo &hw_resource_info, const HWPanelInfo &hw_panel_info,
-                   const HWMixerAttributes &mixer_attributes,
+                   int32_t display_id, DisplayType type, const HWResourceInfo &hw_resource_info,
+                   const HWPanelInfo &hw_panel_info, const HWMixerAttributes &mixer_attributes,
                    const HWDisplayAttributes &display_attributes,
                    const DisplayConfigVariableInfo &fb_config)
-  : extension_intf_(extension_intf), display_type_(type), hw_resource_info_(hw_resource_info),
-    hw_panel_info_(hw_panel_info), mixer_attributes_(mixer_attributes),
-    display_attributes_(display_attributes), fb_config_(fb_config),
-    buffer_allocator_(buffer_allocator) {
-}
+  : extension_intf_(extension_intf),
+    display_id_(display_id),
+    display_type_(type),
+    hw_resource_info_(hw_resource_info),
+    hw_panel_info_(hw_panel_info),
+    mixer_attributes_(mixer_attributes),
+    display_attributes_(display_attributes),
+    fb_config_(fb_config),
+    buffer_allocator_(buffer_allocator) {}
 
 DisplayError Strategy::Init() {
   DisplayError error = kErrorNone;
 
   if (extension_intf_) {
-    error = extension_intf_->CreateStrategyExtn(display_type_, buffer_allocator_, hw_resource_info_,
-                                                hw_panel_info_, mixer_attributes_, fb_config_,
-                                                &strategy_intf_);
+    error = extension_intf_->CreateStrategyExtn(display_id_, display_type_, buffer_allocator_,
+                                                hw_resource_info_, hw_panel_info_,
+                                                mixer_attributes_, fb_config_, &strategy_intf_);
     if (error != kErrorNone) {
       DLOGE("Failed to create strategy");
       return error;
     }
 
-    error = extension_intf_->CreatePartialUpdate(display_type_, hw_resource_info_, hw_panel_info_,
-                                                 mixer_attributes_, display_attributes_, fb_config_,
-                                                 &partial_update_intf_);
+    error = extension_intf_->CreatePartialUpdate(
+        display_id_, display_type_, hw_resource_info_, hw_panel_info_, mixer_attributes_,
+        display_attributes_, fb_config_, &partial_update_intf_);
   }
 
   return kErrorNone;
@@ -200,7 +203,7 @@ DisplayError Strategy::Reconfigure(const HWPanelInfo &hw_panel_info,
     partial_update_intf_ = NULL;
   }
 
-  extension_intf_->CreatePartialUpdate(display_type_, hw_resource_info_, hw_panel_info,
+  extension_intf_->CreatePartialUpdate(display_id_, display_type_, hw_resource_info_, hw_panel_info,
                                        mixer_attributes, display_attributes, fb_config,
                                        &partial_update_intf_);
 

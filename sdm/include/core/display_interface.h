@@ -51,11 +51,16 @@ typedef std::vector<std::pair<std::string, std::string>> AttrVal;
   @sa CoreInterface::IsDisplaySupported
 */
 enum DisplayType {
-  kPrimary,         //!< Main physical display which is attached to the handheld device.
-  kHDMI,            //!< HDMI physical display which is generally detachable.
-  kVirtual,         //!< Contents would be rendered into the output buffer provided by the client
-                    //!< e.g. wireless display.
+  kPrimary,             //!< Main physical display which is attached to the handheld device.
+  kBuiltIn = kPrimary,  //!< Type name for all non-detachable physical displays. Use kBuiltIn
+                        //!< instead of kPrimary.
+  kHDMI,                //!< HDMI physical display which is generally detachable.
+  kPluggable = kHDMI,   //!< Type name for all pluggable physical displays. Use kPluggable
+                        //!< instead of kHDMI.
+  kVirtual,             //!< Contents would be rendered into the output buffer provided by the
+                        //!< client e.g. wireless display.
   kDisplayMax,
+  kDisplayTypeMax = kDisplayMax
 };
 
 /*! @brief This enum represents states of a display device.
@@ -164,15 +169,15 @@ enum QSyncMode {
   @sa DisplayInterface::SetConfig
 */
 struct DisplayConfigFixedInfo {
-  bool underscan = false;   //!< If display support CE underscan.
-  bool secure = false;      //!< If this display is capable of handling secure content.
-  bool is_cmdmode = false;  //!< If panel is command mode panel.
-  bool hdr_supported = false;  //!< if HDR is enabled
+  bool underscan = false;              //!< If display support CE underscan.
+  bool secure = false;                 //!< If this display is capable of handling secure content.
+  bool is_cmdmode = false;             //!< If panel is command mode panel.
+  bool hdr_supported = false;          //!< if HDR is enabled
   bool hdr_metadata_type_one = false;  //!< Metadata type one obtained from HDR sink
-  uint32_t hdr_eotf = 0;  //!< Electro optical transfer function
-  uint32_t max_luminance = 0;  //!< From Panel's peak luminance
-  uint32_t average_luminance = 0;  //!< From Panel's average luminance
-  uint32_t min_luminance = 0;  //!< From Panel's blackness level
+  uint32_t hdr_eotf = 0;               //!< Electro optical transfer function
+  uint32_t max_luminance = 0;          //!< From Panel's peak luminance
+  uint32_t average_luminance = 0;      //!< From Panel's average luminance
+  uint32_t min_luminance = 0;          //!< From Panel's blackness level
 };
 
 /*! @brief This structure defines configuration for variable properties of a display device.
@@ -658,6 +663,23 @@ class DisplayInterface {
     @return \link DisplayError \endlink
   */
   virtual DisplayError GetDisplayPort(DisplayPort *port) = 0;
+
+  /*! @brief Method to get display ID information.
+
+    @param[out] display_id Current display's ID as can be discovered using
+    CoreInterface::GetDisplaysStatus().
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetDisplayId(int32_t *display_id) = 0;
+
+  /*! @brief Method to get the display's type.
+
+    @param[out] display_type Current display's type.
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetDisplayType(DisplayType *display_type) = 0;
 
   /*! @brief Method to query whether it is Primrary device.
 

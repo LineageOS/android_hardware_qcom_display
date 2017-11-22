@@ -37,7 +37,7 @@ class ResourceInterface {
     kCmdMax,
   };
 
-  virtual DisplayError RegisterDisplay(DisplayType type,
+  virtual DisplayError RegisterDisplay(int32_t display_id, DisplayType type,
                                        const HWDisplayAttributes &display_attributes,
                                        const HWPanelInfo &hw_panel_info,
                                        const HWMixerAttributes &mixer_attributes,

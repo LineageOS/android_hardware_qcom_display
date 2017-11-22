@@ -62,6 +62,7 @@ class HWDevice : public HWInterface {
   explicit HWDevice(BufferSyncHandler *buffer_sync_handler);
 
   // From HWInterface
+  virtual DisplayError GetDisplayId(int32_t *display_id);
   virtual DisplayError GetActiveConfig(uint32_t *active_config);
   virtual DisplayError GetNumDisplayAttributes(uint32_t *count);
   virtual DisplayError GetDisplayAttributes(uint32_t index,

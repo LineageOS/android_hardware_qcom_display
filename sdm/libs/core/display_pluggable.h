@@ -22,85 +22,60 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef __DISPLAY_PRIMARY_H__
-#define __DISPLAY_PRIMARY_H__
+#ifndef __DISPLAY_PLUGGABLE_H__
+#define __DISPLAY_PLUGGABLE_H__
 
-#include <core/dpps_interface.h>
+#include <map>
 #include <vector>
-#include <string>
 
 #include "display_base.h"
 #include "hw_events_interface.h"
 
 namespace sdm {
 
-class HWPrimaryInterface;
-
-class DppsInfo {
+class DisplayPluggable : public DisplayBase, HWEventHandler {
  public:
-  void Init(DppsPropIntf* intf, const std::string &panel_name);
-  void Deinit();
-  void DppsNotifyOps(enum DppsNotifyOps op, void *payload, size_t size);
-
- private:
-  const char *kDppsLib = "libdpps.so";
-  DynLib dpps_impl_lib;
-  DppsInterface* dpps_intf = NULL;
-  DppsInterface* (*GetDppsInterface)() = NULL;
-  bool dpps_initialized_ = false;
-};
-
-class DisplayPrimary : public DisplayBase, HWEventHandler, DppsPropIntf {
- public:
-  DisplayPrimary(DisplayEventHandler *event_handler, HWInfoInterface *hw_info_intf,
-                 BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
-                 CompManager *comp_manager);
+  DisplayPluggable(DisplayEventHandler *event_handler, HWInfoInterface *hw_info_intf,
+                   BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
+                   CompManager *comp_manager);
+  DisplayPluggable(int32_t display_id, DisplayEventHandler *event_handler,
+                   HWInfoInterface *hw_info_intf, BufferSyncHandler *buffer_sync_handler,
+                   BufferAllocator *buffer_allocator, CompManager *comp_manager);
   virtual DisplayError Init();
-  virtual DisplayError Deinit();
   virtual DisplayError Prepare(LayerStack *layer_stack);
-  virtual DisplayError Commit(LayerStack *layer_stack);
-  virtual DisplayError ControlPartialUpdate(bool enable, uint32_t *pending);
-  virtual DisplayError DisablePartialUpdateOneFrame();
-  virtual DisplayError SetDisplayState(DisplayState state, int *release_fence);
-  virtual void SetIdleTimeoutMs(uint32_t active_ms);
-  virtual DisplayError SetDisplayMode(uint32_t mode);
   virtual DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate, uint32_t *max_refresh_rate);
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate);
-  virtual DisplayError SetPanelBrightness(int level);
-  virtual DisplayError GetPanelBrightness(int *level);
-  virtual DisplayError HandleSecureEvent(SecureEvent secure_event);
-  virtual DisplayError SetQSyncMode(QSyncMode qsync_mode);
+  virtual bool IsUnderscanSupported();
+  virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
+  virtual DisplayError InitializeColorModes();
+  virtual DisplayError SetDisplayState(DisplayState state, int *release_fence);
 
   // Implement the HWEventHandlers
   virtual DisplayError VSync(int64_t timestamp);
   virtual DisplayError Blank(bool blank) { return kErrorNone; }
-  virtual void IdleTimeout();
-  virtual void ThermalEvent(int64_t thermal_level);
-  virtual void CECMessage(char *message) { }
-  virtual void IdlePowerCollapse();
-  virtual void PingPongTimeout();
-  virtual void PanelDead();
+  virtual void IdleTimeout() {}
+  virtual void ThermalEvent(int64_t thermal_level) {}
+  virtual void CECMessage(char *message);
+  virtual void IdlePowerCollapse() {}
+  virtual void PingPongTimeout() {}
+  virtual void PanelDead() {}
   virtual void HwRecovery(const HWRecoveryEvent sdm_event_code);
 
-  // Implement the DppsPropIntf
-  virtual DisplayError DppsProcessOps(enum DppsOps op, void *payload, size_t size);
-
  private:
-  bool NeedsAVREnable();
-  void ResetPanel();
+  uint32_t GetBestConfig(HWS3DMode s3d_mode);
+  void GetScanSupport();
+  void SetS3DMode(LayerStack *layer_stack);
 
-  std::vector<HWEvent> event_list_;
-  bool avr_prop_disabled_ = false;
-  bool switch_to_cmd_ = false;
-  bool handle_idle_timeout_ = false;
+  static const int kPropertyMax = 256;
+
+  bool underscan_supported_ = false;
+  HWScanSupport scan_support_;
+  std::map<LayerBufferS3DFormat, HWS3DMode> s3d_format_to_mode_;
+  std::vector<HWEvent> event_list_ = {HWEvent::VSYNC, HWEvent::IDLE_NOTIFY, HWEvent::EXIT,
+                                      HWEvent::CEC_READ_MESSAGE, HWEvent::HW_RECOVERY};
   uint32_t current_refresh_rate_ = 0;
-  bool reset_panel_ = false;
-  bool commit_event_enabled_ = false;
-  DppsInfo dpps_info_ = {};
-  QSyncMode qsync_mode_ = kQSyncModeNone;
 };
 
 }  // namespace sdm
 
-#endif  // __DISPLAY_PRIMARY_H__
-
+#endif  // __DISPLAY_PLUGGABLE_H__
