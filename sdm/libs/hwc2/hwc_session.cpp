@@ -533,21 +533,43 @@ static int32_t GetReleaseFences(hwc2_device_t *device, hwc2_display_t display,
 int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display,
                                    int32_t *out_retire_fence) {
   HWCSession *hwc_session = static_cast<HWCSession *>(device);
-  DTRACE_SCOPED();
-  SEQUENCE_EXIT_SCOPE_LOCK(locker_[display]);
-  if (!device) {
-    return HWC2_ERROR_BAD_DISPLAY;
-  }
-  if (out_retire_fence == nullptr) {
-    return HWC2_ERROR_BAD_PARAMETER;
-  }
+  bool notify_hotplug = false;
   auto status = HWC2::Error::BadDisplay;
-  // TODO(user): Handle virtual display/HDMI concurrency
-  if (hwc_session->hwc_display_[display]) {
-    status = hwc_session->hwc_display_[display]->Present(out_retire_fence);
-    // This is only indicative of how many times SurfaceFlinger posts
-    // frames to the display.
-    CALC_FPS();
+  DTRACE_SCOPED();
+  {
+    SEQUENCE_EXIT_SCOPE_LOCK(locker_[display]);
+    if (!device) {
+      return HWC2_ERROR_BAD_DISPLAY;
+    }
+
+    if (out_retire_fence == nullptr) {
+      return HWC2_ERROR_BAD_PARAMETER;
+    }
+
+    // TODO(user): Handle virtual display/HDMI concurrency
+    if (hwc_session->hwc_display_[display]) {
+      status = hwc_session->hwc_display_[display]->Present(out_retire_fence);
+      // This is only indicative of how many times SurfaceFlinger posts
+      // frames to the display.
+      CALC_FPS();
+    }
+  }
+
+  // Handle Pending external display connection
+  if (hwc_session->external_pending_connect_ && (display == HWC_DISPLAY_PRIMARY)) {
+    Locker::ScopeLock lock_e(locker_[HWC_DISPLAY_EXTERNAL]);
+    Locker::ScopeLock lock_v(locker_[HWC_DISPLAY_VIRTUAL]);
+
+    if (!hwc_session->hwc_display_[HWC_DISPLAY_VIRTUAL]) {
+      DLOGD("Process pending external display connection");
+      hwc_session->ConnectDisplay(HWC_DISPLAY_EXTERNAL);
+      hwc_session->external_pending_connect_ = false;
+      notify_hotplug = true;
+    }
+  }
+
+  if (notify_hotplug) {
+    hwc_session->HotPlug(HWC_DISPLAY_EXTERNAL, HWC2::Connection::Connected);
   }
 
   return INT32(status);
