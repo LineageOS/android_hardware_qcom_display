@@ -33,11 +33,10 @@
 #include "strategy.h"
 #include "resource_default.h"
 #include "hw_interface.h"
-#include "dump_impl.h"
 
 namespace sdm {
 
-class CompManager : public DumpImpl {
+class CompManager {
  public:
   DisplayError Init(const HWResourceInfo &hw_res_info_, ExtensionInterface *extension_intf,
                     BufferAllocator *buffer_allocator, BufferSyncHandler *buffer_sync_handler,
@@ -74,9 +73,6 @@ class CompManager : public DumpImpl {
   DisplayError SetCompositionState(Handle display_ctx, LayerComposition composition_type,
                                    bool enable);
   DisplayError ControlDpps(bool enable);
-
-  // DumpImpl method
-  virtual void AppendDump(char *buffer, uint32_t length);
 
  private:
   static const int kMaxThermalLevel = 3;

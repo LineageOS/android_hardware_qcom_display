@@ -97,6 +97,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(SetCompositionState(LayerComposition, bool))
   MAKE_NO_OP(GetClientTargetSupport(uint32_t, uint32_t, LayerBufferFormat,
                                     const ColorMetaData &))
+  std::string Dump() { return ""; }
 
  private:
   bool active_ = false;

@@ -37,7 +37,6 @@
 #include <hardware/hwcomposer_defs.h>
 #include <QService.h>
 
-#include <core/dump_interface.h>
 #include <utils/constants.h>
 #include <utils/debug.h>
 #include <core/buffer_allocator.h>
