@@ -145,6 +145,7 @@ class DisplayBase : public DisplayInterface {
   bool IsSupportColorModeAttribute(const std::string &color_mode);
   DisplayState GetLastPowerMode();
   void SetPUonDestScaler();
+  void ClearColorInfo();
 
   recursive_mutex recursive_mutex_;
   DisplayType display_type_;
