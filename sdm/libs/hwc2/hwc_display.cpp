@@ -1343,6 +1343,7 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
       dump_frame_index_++;
     }
   }
+  config_pending_ = false;
 
   geometry_changes_ = GeometryChanges::kNone;
   flush_ = false;
@@ -1956,9 +1957,16 @@ void HWCDisplay::SetSecureDisplay(bool secure_display_active) {
 }
 
 int HWCDisplay::SetActiveDisplayConfig(uint32_t config) {
-  int status = (display_intf_->SetActiveConfig(config) == kErrorNone) ? 0 : -1;
+  if (display_config_ == config) {
+    return 0;
+  }
+  display_config_ = config;
+  config_pending_ = true;
   validated_ = false;
-  return status;
+
+  callbacks_->Refresh(id_);
+
+  return 0;
 }
 
 int HWCDisplay::GetActiveDisplayConfig(uint32_t *config) {
