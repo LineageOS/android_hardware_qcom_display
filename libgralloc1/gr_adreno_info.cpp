@@ -70,10 +70,10 @@ AdrenoMemInfo::AdrenoMemInfo() {
     ALOGE(" Failed to load libadreno_utils.so");
   }
 
-  // Check if the overriding property debug.gralloc.gfx_ubwc_disable_
+  // Check if the overriding property debug.gralloc.gfx_ubwc_disable
   // that disables UBWC allocations for the graphics stack is set
   char property[PROPERTY_VALUE_MAX];
-  property_get("debug.gralloc.gfx_ubwc_disable_", property, "0");
+  property_get("debug.gralloc.gfx_ubwc_disable", property, "0");
   if (!(strncmp(property, "1", PROPERTY_VALUE_MAX)) ||
       !(strncmp(property, "true", PROPERTY_VALUE_MAX))) {
     gfx_ubwc_disable_ = true;
