@@ -737,6 +737,7 @@ DisplayError HWDeviceDRM::PowerOff() {
     return kErrorUndefined;
   }
 
+  SetFullROI();
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::OFF);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
   int ret = drm_atomic_intf_->Commit(true /* synchronous */, false /* retain_planes */);
@@ -1547,6 +1548,19 @@ void HWDeviceDRM::SetMultiRectMode(const uint32_t flags, DRMMultiRectMode *targe
       *target = DRMMultiRectMode::PARALLEL;
     }
   }
+}
+
+void HWDeviceDRM::SetFullROI() {
+  // Reset the CRTC ROI and connector ROI only for the panel that supports partial update
+  if (!hw_panel_info_.partial_update) {
+    return;
+  }
+  uint32_t index = current_mode_index_;
+  DRMRect crtc_rects = {0, 0, mixer_attributes_.width, mixer_attributes_.height};
+  DRMRect conn_rects = {0, 0, display_attributes_[index].x_pixels,
+                         display_attributes_[index].y_pixels};
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ROI, token_.crtc_id, 1, &crtc_rects);
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_ROI, token_.conn_id, 1, &conn_rects);
 }
 
 }  // namespace sdm
