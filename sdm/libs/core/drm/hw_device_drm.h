@@ -150,6 +150,7 @@ class HWDeviceDRM : public HWInterface {
   void AddDimLayerIfNeeded();
   DisplayError NullCommit(bool synchronous, bool retain_planes);
   void DumpConnectorModeInfo();
+  void SetFullROI();
 
   class Registry {
    public:
