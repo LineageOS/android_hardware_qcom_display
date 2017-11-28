@@ -212,6 +212,7 @@ class HWCDisplay : public DisplayEventHandler {
                                          float* out_min_luminance);
   virtual HWC2::Error SetDisplayAnimating(bool animating) {
     animating_ = animating;
+    validated_ = false;
     return HWC2::Error::None;
   }
 
