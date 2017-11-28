@@ -457,6 +457,9 @@ void HWCDisplay::BuildLayerStack() {
   metadata_refresh_rate_ = 0;
   auto working_primaries = ColorPrimaries_BT709_5;
 
+  uint32_t color_mode_count = 0;
+  display_intf_->GetColorModeCount(&color_mode_count);
+
   // Add one layer for fb target
   // TODO(user): Add blit target layers
   for (auto hwc_layer : layer_set_) {
@@ -523,7 +526,7 @@ void HWCDisplay::BuildLayerStack() {
     bool hdr_layer = layer->input_buffer.color_metadata.colorPrimaries == ColorPrimaries_BT2020 &&
                      (layer->input_buffer.color_metadata.transfer == Transfer_SMPTE_ST2084 ||
                      layer->input_buffer.color_metadata.transfer == Transfer_HLG);
-    if (hdr_layer && !disable_hdr_handling_) {
+    if (hdr_layer && !disable_hdr_handling_ && color_mode_count) {
       // dont honor HDR when its handling is disabled
       layer->input_buffer.flags.hdr = true;
       layer_stack_.flags.hdr_present = true;
