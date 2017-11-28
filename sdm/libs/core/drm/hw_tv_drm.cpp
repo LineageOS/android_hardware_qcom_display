@@ -67,53 +67,25 @@ HWTVDRM::HWTVDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer
   device_name_ = "TV Display Device";
 }
 
-DisplayError HWTVDRM::Init() {
-  DisplayError error = HWDeviceDRM::Init();
-  if (error != kErrorNone) {
-    DLOGE("Init failed for %s", device_name_);
-    return error;
-  }
-  drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
-
-  InitializeConfigs();
-
-  return error;
-}
-
 DisplayError HWTVDRM::SetDisplayAttributes(uint32_t index) {
   if (index >= connector_info_.modes.size()) {
     DLOGE("Invalid mode index %d mode size %d", index, UINT32(connector_info_.modes.size()));
     return kErrorNotSupported;
   }
 
-  if (first_cycle_) {
-    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
-  }
-
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &connector_info_.modes[index]);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
-
-  // Commit to setup pipeline with mode, which then tells us the topology etc
-  if (drm_atomic_intf_->Commit(true /* synchronous */, false /* retain_planes*/)) {
-    DLOGE("Setting up CRTC %d, Connector %d for %s failed", token_.crtc_id,
-          token_.conn_id, device_name_);
-    return kErrorResources;
-  }
-
-  DLOGI("Setup CRTC %d, Connector %d for %s", token_.crtc_id, token_.conn_id, device_name_);
-  first_cycle_ = false;
-
-  // Reload connector info for updated info after 1st commit
-  drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
-  if (index >= connector_info_.modes.size()) {
-    DLOGE("Invalid mode index %d mode size %d", index, UINT32(connector_info_.modes.size()));
-    return kErrorNotSupported;
-  }
-
   current_mode_index_ = index;
-  PopulateDisplayAttributes(index);
   PopulateHWPanelInfo();
   UpdateMixerAttributes();
+
+  DLOGI("Display attributes[%d]: WxH: %dx%d, DPI: %fx%f, FPS: %d, LM_SPLIT: %d, V_BACK_PORCH: %d," \
+        " V_FRONT_PORCH: %d, V_PULSE_WIDTH: %d, V_TOTAL: %d, H_TOTAL: %d, CLK: %dKHZ, TOPOLOGY: %d",
+        index, display_attributes_[index].x_pixels, display_attributes_[index].y_pixels,
+        display_attributes_[index].x_dpi, display_attributes_[index].y_dpi,
+        display_attributes_[index].fps, display_attributes_[index].is_device_split,
+        display_attributes_[index].v_back_porch, display_attributes_[index].v_front_porch,
+        display_attributes_[index].v_pulse_width, display_attributes_[index].v_total,
+        display_attributes_[index].h_total, display_attributes_[index].clock_khz,
+        display_attributes_[index].topology);
 
   return kErrorNone;
 }
@@ -134,15 +106,15 @@ DisplayError HWTVDRM::GetConfigIndex(char *mode, uint32_t *index) {
   }
 
   for (size_t idex = 0; idex < connector_info_.modes.size(); idex ++) {
-    if ((height == connector_info_.modes[idex].vdisplay) &&
-        (width == connector_info_.modes[idex].hdisplay) &&
-        (fps == connector_info_.modes[idex].vrefresh)) {
-      if ((format >> 1) & (connector_info_.modes[idex].flags >> kBitYUV)) {
+    if ((height == connector_info_.modes[idex].mode.vdisplay) &&
+        (width == connector_info_.modes[idex].mode.hdisplay) &&
+        (fps == connector_info_.modes[idex].mode.vrefresh)) {
+      if ((format >> 1) & (connector_info_.modes[idex].mode.flags >> kBitYUV)) {
         *index = UINT32(idex);
         break;
       }
 
-      if (format & (connector_info_.modes[idex].flags >> kBitRGB)) {
+      if (format & (connector_info_.modes[idex].mode.flags >> kBitRGB)) {
         *index = UINT32(idex);
         break;
       }

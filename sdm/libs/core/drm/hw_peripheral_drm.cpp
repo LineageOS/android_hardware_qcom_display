@@ -35,7 +35,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using sde_drm::DRMDisplayType;
 using sde_drm::DRMOps;
-using sde_drm::DRMTopology;
 using sde_drm::DRMPowerMode;
 
 namespace sdm {
@@ -57,41 +56,11 @@ DisplayError HWPeripheralDRM::Init() {
 
   scalar_data_.resize(hw_resource_.hw_dest_scalar_info.count);
 
-  drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
-  if (connector_info_.topology == DRMTopology::UNKNOWN) {
-    connector_info_.topology = DRMTopology::DUAL_LM;
-    if (connector_info_.modes[current_mode_index_].hdisplay <= 1080) {
-      connector_info_.topology = DRMTopology::SINGLE_LM;
-    }
-  }
-
-  InitializeConfigs();
-  PopulateHWPanelInfo();
-  UpdateMixerAttributes();
-
   return kErrorNone;
 }
 
 DisplayError HWPeripheralDRM::Validate(HWLayers *hw_layers) {
-  // Hijack the first validate to setup pipeline. This is a stopgap solution
   HWLayersInfo &hw_layer_info = hw_layers->info;
-  if (first_cycle_) {
-    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
-    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
-    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id,
-                              &connector_info_.modes[current_mode_index_]);
-    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
-    if (drm_atomic_intf_->Commit(true /* synchronous */, false /* retain pipes*/)) {
-      DLOGE("Setting up CRTC %d, Connector %d for %s failed",
-            token_.crtc_id, token_.conn_id, device_name_);
-      return kErrorResources;
-    }
-    // Reload connector info for updated info after 1st commit
-    drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
-    PopulateDisplayAttributes(current_mode_index_);
-    PopulateHWPanelInfo();
-    first_cycle_ = false;
-  }
   SetDestScalarData(hw_layer_info);
 
   return HWDeviceDRM::Validate(hw_layers);
@@ -102,14 +71,6 @@ DisplayError HWPeripheralDRM::Commit(HWLayers *hw_layers) {
   SetDestScalarData(hw_layer_info);
 
   return HWDeviceDRM::Commit(hw_layers);
-}
-
-DisplayError HWPeripheralDRM::PowerOn() {
-  if (first_cycle_) {
-    return kErrorNone;
-  }
-
-  return HWDeviceDRM::PowerOn();
 }
 
 void HWPeripheralDRM::ResetDisplayParams() {

@@ -333,29 +333,29 @@ HWDeviceDRM::HWDeviceDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator
 }
 
 DisplayError HWDeviceDRM::Init() {
-  default_mode_ = (DRMLibLoader::GetInstance()->IsLoaded() == false);
+  DRMMaster *drm_master = {};
+  DRMMaster::GetInstance(&drm_master);
+  drm_master->GetHandle(&dev_fd_);
+  DRMLibLoader::GetInstance()->FuncGetDRMManager()(dev_fd_, &drm_mgr_intf_);
 
-  if (!default_mode_) {
-    DRMMaster *drm_master = {};
-    DRMMaster::GetInstance(&drm_master);
-    drm_master->GetHandle(&dev_fd_);
-    DRMLibLoader::GetInstance()->FuncGetDRMManager()(dev_fd_, &drm_mgr_intf_);
-    if (drm_mgr_intf_->RegisterDisplay(disp_type_, &token_)) {
-      DLOGE("RegisterDisplay failed for %s", device_name_);
-      return kErrorResources;
-    }
-
-    drm_mgr_intf_->CreateAtomicReq(token_, &drm_atomic_intf_);
-  } else {
-    display_attributes_.push_back(HWDisplayAttributes());
-    PopulateDisplayAttributes(current_mode_index_);
+  if (drm_mgr_intf_->RegisterDisplay(disp_type_, &token_)) {
+    DLOGE("RegisterDisplay failed for %s", device_name_);
+    return kErrorResources;
   }
 
+  drm_mgr_intf_->CreateAtomicReq(token_, &drm_atomic_intf_);
+  drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
   hw_info_intf_->GetHWResourceInfo(&hw_resource_);
+
+  InitializeConfigs();
+  PopulateHWPanelInfo();
+  UpdateMixerAttributes();
+
   // TODO(user): In future, remove has_qseed3 member, add version and pass version to constructor
   if (hw_resource_.has_qseed3) {
     hw_scale_ = new HWScaleDRM(HWScaleDRM::Version::V2);
   }
+
   return kErrorNone;
 }
 
@@ -384,7 +384,7 @@ void HWDeviceDRM::InitializeConfigs() {
   current_mode_index_ = 0;
   // Update current mode with preferred mode
   for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
-      if (connector_info_.modes[mode_index].type & DRM_MODE_TYPE_PREFERRED) {
+      if (connector_info_.modes[mode_index].mode.type & DRM_MODE_TYPE_PREFERRED) {
         current_mode_index_ = mode_index;
         break;
       }
@@ -392,10 +392,10 @@ void HWDeviceDRM::InitializeConfigs() {
 
   display_attributes_.resize(connector_info_.modes.size());
 
-  uint32_t width = connector_info_.modes[current_mode_index_].hdisplay;
-  uint32_t height = connector_info_.modes[current_mode_index_].vdisplay;
+  uint32_t width = connector_info_.modes[current_mode_index_].mode.hdisplay;
+  uint32_t height = connector_info_.modes[current_mode_index_].mode.vdisplay;
   for (uint32_t i = 0; i < connector_info_.modes.size(); i++) {
-    auto &mode = connector_info_.modes[i];
+    auto &mode = connector_info_.modes[i].mode;
     if (mode.hdisplay != width || mode.vdisplay != height) {
       resolution_switch_enabled_ = true;
     }
@@ -420,10 +420,10 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
     res_mgr->GetMode(&mode);
     res_mgr->GetDisplayDimInMM(&mm_width, &mm_height);
   } else {
-    mode = connector_info_.modes[index];
+    mode = connector_info_.modes[index].mode;
     mm_width = connector_info_.mmWidth;
     mm_height = connector_info_.mmHeight;
-    topology = connector_info_.topology;
+    topology = connector_info_.modes[index].topology;
   }
 
   display_attributes_[index].x_pixels = mode.hdisplay;
@@ -490,29 +490,29 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
         display_attributes_[index].x_pixels / 2;
   }
 
-  hw_panel_info_.partial_update = connector_info_.num_roi;
-  hw_panel_info_.left_roi_count = UINT32(connector_info_.num_roi);
-  hw_panel_info_.right_roi_count = UINT32(connector_info_.num_roi);
-  hw_panel_info_.left_align = connector_info_.xstart;
-  hw_panel_info_.top_align = connector_info_.ystart;
-  hw_panel_info_.width_align = connector_info_.walign;
-  hw_panel_info_.height_align = connector_info_.halign;
-  hw_panel_info_.min_roi_width = connector_info_.wmin;
-  hw_panel_info_.min_roi_height = connector_info_.hmin;
-  hw_panel_info_.needs_roi_merge = connector_info_.roi_merge;
+  hw_panel_info_.partial_update = connector_info_.modes[index].num_roi;
+  hw_panel_info_.left_roi_count = UINT32(connector_info_.modes[index].num_roi);
+  hw_panel_info_.right_roi_count = UINT32(connector_info_.modes[index].num_roi);
+  hw_panel_info_.left_align = connector_info_.modes[index].xstart;
+  hw_panel_info_.top_align = connector_info_.modes[index].ystart;
+  hw_panel_info_.width_align = connector_info_.modes[index].walign;
+  hw_panel_info_.height_align = connector_info_.modes[index].halign;
+  hw_panel_info_.min_roi_width = connector_info_.modes[index].wmin;
+  hw_panel_info_.min_roi_height = connector_info_.modes[index].hmin;
+  hw_panel_info_.needs_roi_merge = connector_info_.modes[index].roi_merge;
   hw_panel_info_.dynamic_fps = connector_info_.dynamic_fps;
-  drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_];
+  drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
   if (hw_panel_info_.dynamic_fps) {
     uint32_t min_fps = current_mode.vrefresh;
     uint32_t max_fps = current_mode.vrefresh;
     for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
-      if ((current_mode.vdisplay == connector_info_.modes[mode_index].vdisplay) &&
-          (current_mode.hdisplay == connector_info_.modes[mode_index].hdisplay)) {
-        if (min_fps > connector_info_.modes[mode_index].vrefresh)  {
-          min_fps = connector_info_.modes[mode_index].vrefresh;
+      if ((current_mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
+          (current_mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay)) {
+        if (min_fps > connector_info_.modes[mode_index].mode.vrefresh)  {
+          min_fps = connector_info_.modes[mode_index].mode.vrefresh;
         }
-        if (max_fps < connector_info_.modes[mode_index].vrefresh)  {
-          max_fps = connector_info_.modes[mode_index].vrefresh;
+        if (max_fps < connector_info_.modes[mode_index].mode.vrefresh)  {
+          max_fps = connector_info_.modes[mode_index].mode.vrefresh;
         }
       }
     }
@@ -676,13 +676,21 @@ DisplayError HWDeviceDRM::SetDisplayAttributes(uint32_t index) {
     DLOGE("Invalid mode index %d mode size %d", index, UINT32(display_attributes_.size()));
     return kErrorParameters;
   }
+
   current_mode_index_ = index;
-  // TODO(user): Topology/panel roi alignment information will be updated as a part of next commit
-  // which is too late for the requested mode that has different panel alignments. So driver needs
-  // to update panel/topology information for all modes during probe to reslove this issue.
   PopulateHWPanelInfo();
   UpdateMixerAttributes();
-  switch_mode_ = true;
+
+  DLOGI("Display attributes[%d]: WxH: %dx%d, DPI: %fx%f, FPS: %d, LM_SPLIT: %d, V_BACK_PORCH: %d," \
+        " V_FRONT_PORCH: %d, V_PULSE_WIDTH: %d, V_TOTAL: %d, H_TOTAL: %d, CLK: %dKHZ, TOPOLOGY: %d",
+        index, display_attributes_[index].x_pixels, display_attributes_[index].y_pixels,
+        display_attributes_[index].x_dpi, display_attributes_[index].y_dpi,
+        display_attributes_[index].fps, display_attributes_[index].is_device_split,
+        display_attributes_[index].v_back_porch, display_attributes_[index].v_front_porch,
+        display_attributes_[index].v_pulse_width, display_attributes_[index].v_total,
+        display_attributes_[index].h_total, display_attributes_[index].clock_khz,
+        display_attributes_[index].topology);
+
   return kErrorNone;
 }
 
@@ -699,6 +707,10 @@ DisplayError HWDeviceDRM::PowerOn() {
   if (!drm_atomic_intf_) {
     DLOGE("DRM Atomic Interface is null!");
     return kErrorUndefined;
+  }
+
+  if (first_cycle_) {
+    return kErrorNone;
   }
 
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
@@ -771,7 +783,7 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
   HWQosData &qos_data = hw_layers->qos_data;
   DRMSecurityLevel crtc_security_level = DRMSecurityLevel::SECURE_NON_SECURE;
   uint32_t index = current_mode_index_;
-  drmModeModeInfo current_mode = connector_info_.modes[index];
+  drmModeModeInfo current_mode = connector_info_.modes[index].mode;
 
   solid_fills_.clear();
 
@@ -908,14 +920,20 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
   // Set refresh rate
   if (vrefresh_) {
     for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
-      if ((current_mode.vdisplay == connector_info_.modes[mode_index].vdisplay) &&
-          (current_mode.hdisplay == connector_info_.modes[mode_index].hdisplay) &&
-          (vrefresh_ == connector_info_.modes[mode_index].vrefresh)) {
-        current_mode = connector_info_.modes[mode_index];
+      if ((current_mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
+          (current_mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
+          (vrefresh_ == connector_info_.modes[mode_index].mode.vrefresh)) {
+        current_mode = connector_info_.modes[mode_index].mode;
         break;
       }
     }
   }
+
+  if (first_cycle_) {
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
+  }
+
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
 
@@ -1082,11 +1100,11 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
 
   if (vrefresh_) {
     // Update current mode index if refresh rate is changed
-    drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_];
+    drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
     for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
-      if ((current_mode.vdisplay == connector_info_.modes[mode_index].vdisplay) &&
-          (current_mode.hdisplay == connector_info_.modes[mode_index].hdisplay) &&
-          (vrefresh_ == connector_info_.modes[mode_index].vrefresh)) {
+      if ((current_mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
+          (current_mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
+          (vrefresh_ == connector_info_.modes[mode_index].mode.vrefresh)) {
         current_mode_index_ = mode_index;
         break;
       }
@@ -1094,12 +1112,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
     vrefresh_ = 0;
   }
 
-  if (switch_mode_) {
-    // Reload connector info for updated info after 1st commit
-    drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
-    PopulateHWPanelInfo();
-    switch_mode_ = false;
-  }
+  first_cycle_ = false;
 
   return kErrorNone;
 }
@@ -1281,11 +1294,11 @@ DisplayError HWDeviceDRM::SetDisplayMode(const HWDisplayMode hw_display_mode) {
 
 DisplayError HWDeviceDRM::SetRefreshRate(uint32_t refresh_rate) {
   // Check if requested refresh rate is valid
-  drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_];
+  drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
   for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
-    if ((current_mode.vdisplay == connector_info_.modes[mode_index].vdisplay) &&
-        (current_mode.hdisplay == connector_info_.modes[mode_index].hdisplay) &&
-        (refresh_rate == connector_info_.modes[mode_index].vrefresh)) {
+    if ((current_mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
+        (current_mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
+        (refresh_rate == connector_info_.modes[mode_index].mode.vrefresh)) {
       vrefresh_ = refresh_rate;
       DLOGV_IF(kTagDriverConfig, "Set refresh rate to %d", refresh_rate);
       return kErrorNone;

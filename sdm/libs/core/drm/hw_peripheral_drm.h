@@ -46,7 +46,6 @@ class HWPeripheralDRM : public HWDeviceDRM {
   virtual DisplayError Init();
   virtual DisplayError Validate(HWLayers *hw_layers);
   virtual DisplayError Commit(HWLayers *hw_layers);
-  virtual DisplayError PowerOn();
   virtual DisplayError Flush();
  private:
   void SetDestScalarData(HWLayersInfo hw_layer_info);

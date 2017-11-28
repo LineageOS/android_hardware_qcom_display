@@ -443,22 +443,10 @@ enum struct DRMPanelMode {
   COMMAND,
 };
 
-/* Per Connector Info*/
-struct DRMConnectorInfo {
-  uint32_t mmWidth;
-  uint32_t mmHeight;
-  uint32_t type;
-  std::vector<drmModeModeInfo> modes;
+/* Per mode info */
+struct DRMModeInfo {
+  drmModeModeInfo mode;
   DRMTopology topology;
-  std::string panel_name;
-  DRMPanelMode panel_mode;
-  bool is_primary;
-  // Valid only if DRMPanelMode is VIDEO
-  bool dynamic_fps;
-  // FourCC format enum and modifier
-  std::vector<std::pair<uint32_t, uint64_t>> formats_supported;
-  // Valid only if type is DRM_MODE_CONNECTOR_VIRTUAL
-  uint32_t max_linewidth;
   // Valid only if mode is command
   int num_roi;
   int xstart;
@@ -468,6 +456,23 @@ struct DRMConnectorInfo {
   int wmin;
   int hmin;
   bool roi_merge;
+};
+
+/* Per Connector Info*/
+struct DRMConnectorInfo {
+  uint32_t mmWidth;
+  uint32_t mmHeight;
+  uint32_t type;
+  std::vector<DRMModeInfo> modes;
+  std::string panel_name;
+  DRMPanelMode panel_mode;
+  bool is_primary;
+  // Valid only if DRMPanelMode is VIDEO
+  bool dynamic_fps;
+  // FourCC format enum and modifier
+  std::vector<std::pair<uint32_t, uint64_t>> formats_supported;
+  // Valid only if type is DRM_MODE_CONNECTOR_VIRTUAL
+  uint32_t max_linewidth;
   DRMRotation panel_orientation;
   drm_panel_hdr_properties panel_hdr_prop;
   uint32_t transfer_time_us;

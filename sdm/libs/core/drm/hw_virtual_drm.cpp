@@ -39,12 +39,15 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define __CLASS__ "HWVirtualDRM"
 
+using std::vector;
+
 using sde_drm::DRMDisplayType;
 using sde_drm::DRMConnectorInfo;
 using sde_drm::DRMRect;
 using sde_drm::DRMOps;
 using sde_drm::DRMPowerMode;
 using sde_drm::DRMSecureMode;
+
 namespace sdm {
 
 HWVirtualDRM::HWVirtualDRM(BufferSyncHandler *buffer_sync_handler,
@@ -83,24 +86,29 @@ void HWVirtualDRM::InitializeConfigs() {
 }
 
 DisplayError HWVirtualDRM::SetWbConfigs(const HWDisplayAttributes &display_attributes) {
-  int ret = -EINVAL;
-  int mode_index = -1;
-  // Add new connector mode to the list
   drmModeModeInfo mode = {};
+  vector<drmModeModeInfo> modes;
+
   mode.hdisplay = mode.hsync_start = mode.hsync_end = mode.htotal =
                                        UINT16(display_attributes.x_pixels);
   mode.vdisplay = mode.vsync_start = mode.vsync_end = mode.vtotal =
                                        UINT16(display_attributes.y_pixels);
   mode.vrefresh = UINT32(display_attributes.fps);
   mode.clock = (mode.htotal * mode.vtotal * mode.vrefresh) / 1000;
-  connector_info_.modes.push_back(mode);
+  snprintf(mode.name, DRM_DISPLAY_MODE_LEN, "%dx%d", mode.hdisplay, mode.vdisplay);
+  modes.push_back(mode);
+  for (auto &item : connector_info_.modes) {
+    modes.push_back(item.mode);
+  }
 
   // Inform the updated mode list to the driver
   struct sde_drm_wb_cfg wb_cfg = {};
   wb_cfg.connector_id = token_.conn_id;
   wb_cfg.flags = SDE_DRM_WB_CFG_FLAGS_CONNECTED;
-  wb_cfg.count_modes = UINT32(connector_info_.modes.size());
-  wb_cfg.modes = (uint64_t)connector_info_.modes.data();
+  wb_cfg.count_modes = UINT32(modes.size());
+  wb_cfg.modes = (uint64_t)modes.data();
+
+  int ret = -EINVAL;
 #ifdef DRM_IOCTL_SDE_WB_CONFIG
   ret = drmIoctl(dev_fd_, DRM_IOCTL_SDE_WB_CONFIG, &wb_cfg);
 #endif
@@ -109,57 +117,25 @@ DisplayError HWVirtualDRM::SetWbConfigs(const HWDisplayAttributes &display_attri
     DumpConnectorModeInfo();
     return kErrorHardware;
   }
-  // Reload connector info for updated info after null commit
-  drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
-  // TODO(user): Remove this code once driver populates appropriate topology based on virtual
-  // display configuration
-  if (connector_info_.topology == sde_drm::DRMTopology::UNKNOWN) {
-    uint32_t max_width = 0;
-    for (uint32_t i = 0; i < (uint32_t)connector_info_.modes.size(); i++) {
-      max_width = std::max(max_width, UINT32(connector_info_.modes[i].hdisplay));
-    }
-    connector_info_.topology = sde_drm::DRMTopology::SINGLE_LM;
-    if (max_width > hw_resource_.max_mixer_width) {
-      connector_info_.topology = sde_drm::DRMTopology::DUAL_LM_MERGE;
-    }
-  }
-  InitializeConfigs();
-
-  GetModeIndex(display_attributes, &mode_index);
-  if (mode_index < 0) {
-    DLOGE("Mode not found for resolution %dx%d fps %d", display_attributes.x_pixels,
-          display_attributes.y_pixels, UINT32(display_attributes.fps));
-    DumpConnectorModeInfo();
-    return kErrorNotSupported;
-  }
-  current_mode_index_ = UINT32(mode_index);
-
-  DumpConnectorModeInfo();
 
   return kErrorNone;
 }
 
 void HWVirtualDRM::DumpConnectorModeInfo() {
   for (uint32_t i = 0; i < (uint32_t)connector_info_.modes.size(); i++) {
-    DLOGI("Mode[%d]: Name: %s\tvref: %d\thdisp: %d\t hsync_s: %d\thsync_e:%d\thtotal: %d\t" \
-          "vdisp: %d\tvsync_s: %d\tvsync_e: %d\tvtotal: %d\n", i, connector_info_.modes[i].name,
-          connector_info_.modes[i].vrefresh, connector_info_.modes[i].hdisplay,
-          connector_info_.modes[i].hsync_start, connector_info_.modes[i].hsync_end,
-          connector_info_.modes[i].htotal, connector_info_.modes[i].vdisplay,
-          connector_info_.modes[i].vsync_start, connector_info_.modes[i].vsync_end,
-          connector_info_.modes[i].vtotal);
+    DLOGI("Mode[%d] Name:%s vref:%d hdisp:%d hsync_s:%d hsync_e:%d htotal:%d " \
+          "vdisp:%d vsync_s:%d vsync_e:%d vtotal:%d\n", i, connector_info_.modes[i].mode.name,
+          connector_info_.modes[i].mode.vrefresh, connector_info_.modes[i].mode.hdisplay,
+          connector_info_.modes[i].mode.hsync_start, connector_info_.modes[i].mode.hsync_end,
+          connector_info_.modes[i].mode.htotal, connector_info_.modes[i].mode.vdisplay,
+          connector_info_.modes[i].mode.vsync_start, connector_info_.modes[i].mode.vsync_end,
+          connector_info_.modes[i].mode.vtotal);
   }
 }
 
 DisplayError HWVirtualDRM::Commit(HWLayers *hw_layers) {
   LayerBuffer *output_buffer = hw_layers->info.stack->output_buffer;
   DisplayError err = kErrorNone;
-
-  if (first_cycle_) {
-    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
-    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
-    first_cycle_ = false;
-  }
 
   registry_.RegisterCurrent(hw_layers);
   registry_.MapBufferToFbId(output_buffer);
@@ -181,11 +157,6 @@ DisplayError HWVirtualDRM::Commit(HWLayers *hw_layers) {
 DisplayError HWVirtualDRM::Validate(HWLayers *hw_layers) {
   LayerBuffer *output_buffer = hw_layers->info.stack->output_buffer;
 
-  if (first_cycle_) {
-    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
-    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
-  }
-
   registry_.MapBufferToFbId(output_buffer);
   uint32_t fb_id = registry_.GetFbId(output_buffer->planes[0].fd);
 
@@ -203,28 +174,34 @@ DisplayError HWVirtualDRM::SetDisplayAttributes(const HWDisplayAttributes &displ
 
   int mode_index = -1;
   GetModeIndex(display_attributes, &mode_index);
+
   if (mode_index < 0) {
     DisplayError error = SetWbConfigs(display_attributes);
     if (error != kErrorNone) {
       return error;
     }
-  } else {
-    current_mode_index_ = UINT32(mode_index);
   }
+
+  // Reload connector info for updated info
+  drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
+  GetModeIndex(display_attributes, &mode_index);
+
+  if (mode_index < 0) {
+    DLOGE("Mode not found for resolution %dx%d fps %d", display_attributes.x_pixels,
+          display_attributes.y_pixels, UINT32(display_attributes.fps));
+    DumpConnectorModeInfo();
+    return kErrorNotSupported;
+  }
+
+  current_mode_index_ = UINT32(mode_index);
+  InitializeConfigs();
   PopulateHWPanelInfo();
   UpdateMixerAttributes();
 
   DLOGI("New WB Resolution: %dx%d cur_mode_index %d", display_attributes.x_pixels,
         display_attributes.y_pixels, current_mode_index_);
+
   return kErrorNone;
-}
-
-DisplayError HWVirtualDRM::PowerOn() {
-  if (first_cycle_) {
-    return kErrorNone;
-  }
-
-  return HWDeviceDRM::PowerOn();
 }
 
 DisplayError HWVirtualDRM::GetPPFeaturesVersion(PPFeatureVersion *vers) {
@@ -234,9 +211,9 @@ DisplayError HWVirtualDRM::GetPPFeaturesVersion(PPFeatureVersion *vers) {
 void HWVirtualDRM::GetModeIndex(const HWDisplayAttributes &display_attributes, int *mode_index) {
   *mode_index = -1;
   for (uint32_t i = 0; i < connector_info_.modes.size(); i++) {
-    if (display_attributes.x_pixels == connector_info_.modes[i].hdisplay &&
-        display_attributes.y_pixels == connector_info_.modes[i].vdisplay &&
-        display_attributes.fps == connector_info_.modes[i].vrefresh) {
+    if (display_attributes.x_pixels == connector_info_.modes[i].mode.hdisplay &&
+        display_attributes.y_pixels == connector_info_.modes[i].mode.vdisplay &&
+        display_attributes.fps == connector_info_.modes[i].mode.vrefresh) {
       *mode_index = INT32(i);
       break;
     }

@@ -183,7 +183,6 @@ class HWDeviceDRM : public HWInterface {
   std::vector<sde_drm::DRMSolidfillStage> solid_fills_ {};
   bool resolution_switch_enabled_ = false;
   uint32_t vrefresh_ = 0;
-  bool switch_mode_ = false;
   bool autorefresh_ = false;
 };
 

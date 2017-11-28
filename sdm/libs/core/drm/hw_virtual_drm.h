@@ -47,7 +47,6 @@ class HWVirtualDRM : public HWDeviceDRM {
     return kErrorNotSupported;
   }
   virtual DisplayError SetDisplayAttributes(const HWDisplayAttributes &display_attributes);
-  virtual DisplayError PowerOn();
 
  protected:
   virtual DisplayError Validate(HWLayers *hw_layers);
