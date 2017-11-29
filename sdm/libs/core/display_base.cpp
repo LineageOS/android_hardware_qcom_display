@@ -636,6 +636,27 @@ std::string DisplayBase::Dump() {
       buffer_format = GetFormatString(input_buffer->format);
     }
 
+    if (layer_config.use_solidfill_stage) {
+      LayerRect src_roi = layer_config.hw_solidfill_stage.roi;
+      const char *decimation = "";
+      char flags[16] = { 0 };
+      char z_order[8] = { 0 };
+      const char *color_primary = "";
+      const char *range = "";
+      char row[1024] = { 0 };
+
+      snprintf(z_order, sizeof(z_order), "%d", layer_config.hw_solidfill_stage.z_order);
+      snprintf(flags, sizeof(flags), "0x%08x", hw_layer.flags.flags);
+      snprintf(row, sizeof(row), format, idx, comp_type, pipe_split[0],
+               0, INT(src_roi.right), INT(src_roi.bottom),
+               buffer_format, INT(src_roi.left), INT(src_roi.top),
+               INT(src_roi.right), INT(src_roi.bottom), INT(src_roi.left),
+               INT(src_roi.top), INT(src_roi.right), INT(src_roi.bottom),
+               z_order, flags, decimation, color_primary, range);
+      os << row;
+      continue;
+    }
+
     for (uint32_t count = 0; count < 2; count++) {
       char decimation[16] = { 0 };
       char flags[16] = { 0 };
