@@ -879,44 +879,15 @@ DisplayError DisplayBase::GetHdrColorMode(std::string *color_mode, bool *found_h
   if (!found_hdr || !color_mode) {
     return kErrorParameters;
   }
-  auto it_mode = color_mode_attr_map_.find(current_color_mode_);
-  if (it_mode == color_mode_attr_map_.end()) {
-    DLOGE("Failed: Unknown Mode : %s", current_color_mode_.c_str());
-    return kErrorNotSupported;
-  }
-
   *found_hdr = false;
-  std::string cur_color_gamut, cur_pic_quality;
-  // get the attributes of current color mode
-  GetValueOfModeAttribute(it_mode->second, kColorGamutAttribute, &cur_color_gamut);
-  GetValueOfModeAttribute(it_mode->second, kPictureQualityAttribute, &cur_pic_quality);
-
-  // found the corresponding HDR mode id which
-  // has the same attributes with current SDR mode.
+  // get the default HDR mode which is value of picture quality equal to "standard"
   for (auto &it_hdr : color_mode_attr_map_) {
-    std::string dynamic_range, color_gamut, pic_quality;
+    std::string dynamic_range, pic_quality;
     GetValueOfModeAttribute(it_hdr.second, kDynamicRangeAttribute, &dynamic_range);
-    GetValueOfModeAttribute(it_hdr.second, kColorGamutAttribute, &color_gamut);
     GetValueOfModeAttribute(it_hdr.second, kPictureQualityAttribute, &pic_quality);
-    if (dynamic_range == kHdr && cur_color_gamut == color_gamut &&
-        cur_pic_quality == pic_quality) {
+    if (dynamic_range == kHdr && pic_quality == kStandard) {
       *color_mode = it_hdr.first;
       *found_hdr = true;
-      DLOGV_IF(kTagQDCM, "corresponding hdr mode  = %s", color_mode->c_str());
-      return kErrorNone;
-    }
-  }
-
-  // The corresponding HDR mode was not be found,
-  // apply the first HDR mode that we encouter.
-  for (auto &it_hdr : color_mode_attr_map_) {
-    std::string dynamic_range;
-    GetValueOfModeAttribute(it_hdr.second, kDynamicRangeAttribute, &dynamic_range);
-    if (dynamic_range == kHdr) {
-      *color_mode = it_hdr.first;
-      *found_hdr = true;
-      DLOGV_IF(kTagQDCM, "First hdr mode = %s", color_mode->c_str());
-      return kErrorNone;
     }
   }
 
@@ -965,10 +936,28 @@ DisplayError DisplayBase::GetDefaultColorMode(std::string *color_mode) {
 
 DisplayError DisplayBase::ApplyDefaultDisplayMode() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-  if (color_mgr_)
-    return color_mgr_->ApplyDefaultDisplayMode();
-  else
+  DisplayError error = kErrorNone;
+  if (color_mgr_) {
+    error = color_mgr_->ApplyDefaultDisplayMode();
+    // Apply default mode failed
+    if (error != kErrorNone) {
+      DLOGI("default mode not found");
+      return error;
+    }
+    DeInitializeColorModes();
+    // Default mode apply is called during first frame, if file system
+    // where mode files is present, ColorManager will not find any modes.
+    // Once boot animation is complete we re-try to apply the modes, since
+    // file system should be mounted. InitColorModes needs to called again
+    error = InitializeColorModes();
+    if (error != kErrorNone) {
+      DLOGE("failed to initial modes\n");
+      return error;
+    }
+  } else {
     return kErrorParameters;
+  }
+  return kErrorNone;
 }
 
 DisplayError DisplayBase::SetCursorPosition(int x, int y) {
@@ -1632,4 +1621,10 @@ void DisplayBase::ClearColorInfo() {
   }
 }
 
+void DisplayBase::DeInitializeColorModes() {
+    color_mode_map_.clear();
+    color_modes_.clear();
+    color_mode_attr_map_.clear();
+    num_color_modes_ = 0;
+}
 }  // namespace sdm

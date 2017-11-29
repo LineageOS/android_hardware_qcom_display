@@ -96,6 +96,8 @@ static const std::string kDisplayP3 = "display_p3";
 static const std::string kVivid = "vivid";
 static const std::string kSharp = "sharp";
 static const std::string kStandard = "standard";
+static const std::string kAmazon = "amazon";
+static const std::string kNetflix = "netflix";
 
 // Enum to identify type of dynamic range of color mode.
 enum DynamicRangeType {
