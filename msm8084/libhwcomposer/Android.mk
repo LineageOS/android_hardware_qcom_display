@@ -12,7 +12,8 @@ LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes) \
 LOCAL_SHARED_LIBRARIES        := $(common_libs) libEGL liboverlay \
                                  libexternal libqdutils libhardware_legacy \
                                  libdl libmemalloc libqservice libsync \
-                                 libbinder libmedia libvirtual
+                                 libbinder libmedia libvirtual \
+                                 libbfqio_vendor
 
 ifeq ($(TARGET_USES_QCOM_BSP),true)
 LOCAL_SHARED_LIBRARIES += libskia
