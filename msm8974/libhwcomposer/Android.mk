@@ -12,7 +12,9 @@ LOCAL_C_INCLUDES              := $(common_includes)
 LOCAL_SHARED_LIBRARIES        := $(common_libs) libEGL liboverlay \
                                  libexternal libqdutils libhardware_legacy \
                                  libdl libmemalloc libqservice libsync \
-                                 libbinder libmedia
+                                 libbinder libmedia \
+                                 libbfqio
+
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdhwcomposer\"
 LOCAL_HEADER_LIBRARIES        := generated_kernel_headers
 LOCAL_SRC_FILES               := hwc.cpp          \
