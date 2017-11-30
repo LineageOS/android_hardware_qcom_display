@@ -220,6 +220,7 @@ struct HWResourceInfo {
   bool has_qseed3 = false;
   bool has_concurrent_writeback = false;
   bool has_ppp = false;
+  bool has_excl_rect = false;
   uint32_t writeback_index = kHWBlockMax;
   HWDynBwLimitInfo dyn_bw_info;
   std::vector<HWPipeCaps> hw_pipes;
@@ -486,6 +487,7 @@ struct HWPipeInfo {
   HWSubBlockType sub_block_type = kHWSubBlockMax;
   LayerRect src_roi;
   LayerRect dst_roi;
+  LayerRect excl_rect;  // exclusion rectangle per pipe rectangle
   uint8_t horizontal_decimation = 0;
   uint8_t vertical_decimation = 0;
   HWScaleData scale_data;
@@ -528,12 +530,18 @@ struct HWHDRLayerInfo {
   HDROperation operation = kNoOp;
 };
 
+struct LayerExt {
+  std::vector<LayerRect> excl_rects = {};  // list of exclusion rects
+};
+
 struct HWLayersInfo {
   LayerStack *stack = NULL;        // Input layer stack. Set by the caller.
   uint32_t app_layer_count = 0;    // Total number of app layers. Must not be 0.
   uint32_t gpu_target_index = 0;   // GPU target layer index. 0 if not present.
 
   std::vector<Layer> hw_layers = {};  // Layers which need to be programmed on the HW
+  std::vector<LayerExt> layer_exts = {};  // Extention layer having list of
+                                          // exclusion rectangles for each layer
 
   std::vector<uint32_t> index;   // Indexes of the layers from the layer stack which need to
                                  // be programmed on hardware.

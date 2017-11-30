@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -59,6 +59,12 @@ enum struct DRMOps {
    *      DRMRect - Dst Rectangle
    */
   PLANE_SET_DST_RECT,
+  /*
+   * Op: Sets plane exclusion rect
+   * Arg: uint32_t - Plane ID
+   *      drm_clip_rect - Exclusion Rectangle
+   */
+  PLANE_SET_EXCL_RECT,
   /*
    * Op: Sets plane zorder
    * Arg: uint32_t - Plane ID
@@ -434,6 +440,7 @@ struct DRMPlaneTypeInfo {
   uint32_t max_vertical_deci;
   uint64_t max_pipe_bandwidth;
   uint32_t cache_size;  // cache size in bytes for inline rotation support.
+  bool has_excl_rect = false;
   QSEEDStepVersion qseed3_version;
   bool multirect_prop_present = false;
 };

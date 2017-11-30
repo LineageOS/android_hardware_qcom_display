@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -96,6 +96,47 @@ LayerRect Reposition(const LayerRect &rect, const int &x_offset, const int &y_of
   res.bottom = rect.bottom + FLOAT(y_offset);
 
   return res;
+}
+
+// Is rect2 completely inside rect1?
+bool Contains(const LayerRect &rect1, const LayerRect &rect2) {
+  if (!IsValid(rect1) || !IsValid(rect2)) {
+    return false;
+  }
+  return (rect1.top <= rect2.top && rect1.bottom >= rect2.bottom &&
+          rect1.left <= rect2.left && rect1.right >= rect2.right);
+}
+
+// subtracts 2 rects iff result of subtraction is 2 rects.
+void Subtract(const LayerRect &rect1, const LayerRect &rect2, LayerRect *res) {
+  if (!res) {
+    return;
+  }
+  if (!IsValid(rect1) || !IsValid(rect2)) {
+    return;
+  }
+
+  if (rect1.left != rect2.left || rect1.right != rect2.right) {
+    return;
+  }
+  res[0].left = rect1.left;
+  res[0].right = rect1.right;
+  if (rect1.top < rect2.top) {
+    res[0].top = rect1.top;
+    res[0].bottom = rect2.top;
+  } else {
+    res[0].top = rect2.top;
+    res[0].bottom = rect1.top;
+  }
+  res[1].left = rect1.left;
+  res[1].right = rect1.right;
+  if (rect1.bottom < rect2.bottom) {
+    res[1].top = rect1.bottom;
+    res[1].bottom = rect2.bottom;
+  } else {
+    res[1].top = rect2.bottom;
+    res[1].bottom = rect1.bottom;
+  }
 }
 
 // Not a geometrical rect deduction. Deducts rect2 from rect1 only if it results a single rect

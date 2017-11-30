@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -51,6 +51,8 @@ namespace sdm {
   LayerRect Union(const LayerRect &rect1, const LayerRect &rect2);
   LayerRect Intersection(const LayerRect &rect1, const LayerRect &rect2);
   LayerRect Subtract(const LayerRect &rect1, const LayerRect &rect2);
+  void Subtract(const LayerRect &rect1, const LayerRect &rect2, LayerRect *res);
+  bool Contains(const LayerRect &rect1, const LayerRect &rect2);
   LayerRect Reposition(const LayerRect &rect1, const int &x_offset, const int &y_offset);
   void SplitLeftRight(const LayerRect &in_rect, uint32_t split_count, uint32_t align_x,
                       bool flip_horizontal, LayerRect *out_rects);

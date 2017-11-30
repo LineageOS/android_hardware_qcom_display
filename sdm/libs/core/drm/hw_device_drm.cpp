@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -863,7 +863,9 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
         DRMRect dst = {};
         SetRect(pipe_info->dst_roi, &dst);
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_DST_RECT, pipe_id, dst);
-
+        DRMRect excl = {};
+        SetRect(pipe_info->excl_rect, &excl);
+        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_EXCL_RECT, pipe_id, excl);
         uint32_t rot_bit_mask = 0;
         SetRotation(layer.transform, hw_rotator_session->mode, &rot_bit_mask);
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ROTATION, pipe_id, rot_bit_mask);

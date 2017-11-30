@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -403,6 +403,7 @@ void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
           name.c_str(), pipe_obj.first, pipe_obj.second.master_plane_id);
     hw_resource->hw_pipes.push_back(std::move(pipe_caps));
   }
+  hw_resource->has_excl_rect = planes[0].second.has_excl_rect;
 }
 
 void HWInfoDRM::PopulatePipeCaps(const sde_drm::DRMPlaneTypeInfo &info,

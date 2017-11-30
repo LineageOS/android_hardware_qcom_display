@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -211,6 +211,26 @@ DisplayError GetBufferFormatTileSize(LayerBufferFormat format, FormatTileSize *t
   }
   return kErrorNone;
 }
+
+bool HasAlphaChannel(LayerBufferFormat format) {
+  switch (format) {
+  case kFormatARGB8888:
+  case kFormatRGBA8888:
+  case kFormatBGRA8888:
+  case kFormatRGBA5551:
+  case kFormatRGBA4444:
+  case kFormatRGBA8888Ubwc:
+  case kFormatRGBA1010102:
+  case kFormatARGB2101010:
+  case kFormatBGRA1010102:
+  case kFormatABGR2101010:
+  case kFormatRGBA1010102Ubwc:
+    return true;
+  default:
+    return false;
+  }
+}
+
 
 }  // namespace sdm
 
