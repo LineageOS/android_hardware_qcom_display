@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -29,21 +29,21 @@
 
 #define DEBUG 0
 #define ATRACE_TAG (ATRACE_TAG_GRAPHICS | ATRACE_TAG_HAL)
+#include <cutils/log.h>
+#include <cutils/trace.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdlib.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <cutils/log.h>
-#include <errno.h>
 #include <utils/Trace.h>
-#include <cutils/trace.h>
 #include <string>
 
-#include "gralloc_priv.h"
-#include "gr_utils.h"
 #include "gr_ion_alloc.h"
+#include "gr_utils.h"
+#include "gralloc_priv.h"
 
-namespace gralloc1 {
+namespace gralloc {
 
 bool IonAlloc::Init() {
   if (ion_dev_fd_ == FD_INIT) {
@@ -105,8 +105,8 @@ int IonAlloc::AllocBuffer(AllocData *data) {
 
   data->fd = fd_data.fd;
   data->ion_handle = handle_data.handle;
-  ALOGD_IF(DEBUG, "ion: Allocated buffer size:%zu fd:%d handle:0x%x",
-          ion_alloc_data.len, data->fd, data->ion_handle);
+  ALOGD_IF(DEBUG, "ion: Allocated buffer size:%zu fd:%d handle:0x%x", ion_alloc_data.len, data->fd,
+           data->ion_handle);
 
   return 0;
 }
@@ -210,4 +210,4 @@ int IonAlloc::CleanBuffer(void *base, unsigned int size, unsigned int offset, in
   return 0;
 }
 
-}  // namespace gralloc1
+}  // namespace gralloc

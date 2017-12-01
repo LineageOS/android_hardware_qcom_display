@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,8 +31,8 @@
 #include <algorithm>
 #include <vector>
 
-#include "gr_utils.h"
 #include "gr_allocator.h"
+#include "gr_utils.h"
 #include "gralloc_priv.h"
 
 #include "qd_utils.h"
@@ -65,18 +65,17 @@
 #define ION_SC_PREVIEW_FLAGS ION_SECURE
 #endif
 
-using std::vector;
 using std::shared_ptr;
+using std::vector;
 
-namespace gralloc1 {
+namespace gralloc {
 
 static BufferInfo GetBufferInfo(const BufferDescriptor &descriptor) {
   return BufferInfo(descriptor.GetWidth(), descriptor.GetHeight(), descriptor.GetFormat(),
-                    descriptor.GetProducerUsage(), descriptor.GetConsumerUsage());
+                    descriptor.GetUsage());
 }
 
-Allocator::Allocator() : ion_allocator_(NULL) {
-}
+Allocator::Allocator() : ion_allocator_(nullptr) {}
 
 bool Allocator::Init() {
   ion_allocator_ = new IonAlloc();
@@ -93,14 +92,12 @@ Allocator::~Allocator() {
   }
 }
 
-int Allocator::AllocateMem(AllocData *alloc_data, gralloc1_producer_usage_t prod_usage,
-                           gralloc1_consumer_usage_t cons_usage) {
+int Allocator::AllocateMem(AllocData *alloc_data, uint64_t usage) {
   int ret;
-  alloc_data->uncached = UseUncached(prod_usage, cons_usage);
+  alloc_data->uncached = UseUncached(usage);
 
   // After this point we should have the right heap set, there is no fallback
-  GetIonHeapInfo(prod_usage, cons_usage, &alloc_data->heap_id, &alloc_data->alloc_type,
-                 &alloc_data->flags);
+  GetIonHeapInfo(usage, &alloc_data->heap_id, &alloc_data->alloc_type, &alloc_data->flags);
 
   ret = ion_allocator_->AllocBuffer(alloc_data);
   if (ret >= 0) {
@@ -128,8 +125,7 @@ int Allocator::ImportBuffer(int fd) {
   return -EINVAL;
 }
 
-int Allocator::FreeBuffer(void *base, unsigned int size, unsigned int offset, int fd,
-                          int handle) {
+int Allocator::FreeBuffer(void *base, unsigned int size, unsigned int offset, int fd, int handle) {
   if (ion_allocator_) {
     return ion_allocator_->FreeBuffer(base, size, offset, fd, handle);
   }
@@ -146,7 +142,7 @@ int Allocator::CleanBuffer(void *base, unsigned int size, unsigned int offset, i
 }
 
 bool Allocator::CheckForBufferSharing(uint32_t num_descriptors,
-                                      const vector<shared_ptr<BufferDescriptor>>& descriptors,
+                                      const vector<shared_ptr<BufferDescriptor>> &descriptors,
                                       ssize_t *max_index) {
   unsigned int cur_heap_id = 0, prev_heap_id = 0;
   unsigned int cur_alloc_type = 0, prev_alloc_type = 0;
@@ -158,10 +154,8 @@ bool Allocator::CheckForBufferSharing(uint32_t num_descriptors,
   *max_index = -1;
   for (uint32_t i = 0; i < num_descriptors; i++) {
     // Check Cached vs non-cached and all the ION flags
-    cur_uncached = UseUncached(descriptors[i]->GetProducerUsage(),
-                               descriptors[i]->GetConsumerUsage());
-    GetIonHeapInfo(descriptors[i]->GetProducerUsage(), descriptors[i]->GetConsumerUsage(),
-                   &cur_heap_id, &cur_alloc_type, &cur_ion_flags);
+    cur_uncached = UseUncached(descriptors[i]->GetUsage());
+    GetIonHeapInfo(descriptors[i]->GetUsage(), &cur_heap_id, &cur_alloc_type, &cur_ion_flags);
 
     if (i > 0 && (cur_heap_id != prev_heap_id || cur_alloc_type != prev_alloc_type ||
                   cur_ion_flags != prev_ion_flags)) {
@@ -185,43 +179,42 @@ bool Allocator::CheckForBufferSharing(uint32_t num_descriptors,
   return true;
 }
 
-int Allocator::GetImplDefinedFormat(gralloc1_producer_usage_t prod_usage,
-                                    gralloc1_consumer_usage_t cons_usage, int format) {
+int Allocator::GetImplDefinedFormat(uint64_t usage, int format) {
   int gr_format = format;
 
   // If input format is HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED then based on
   // the usage bits, gralloc assigns a format.
   if (format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED ||
       format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
-    if (prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_ALLOC_UBWC) {
+    if (usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC) {
       // Use of 10BIT_TP and 10BIT bits is supposed to be mutually exclusive.
       // Each bit maps to only one format. Here we will check one of the bits
       // and ignore the other.
-      if (prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_10BIT_TP) {
+      if (usage & GRALLOC_USAGE_PRIVATE_10BIT_TP) {
         gr_format = HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC;
-      } else if (prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_10BIT) {
+      } else if (usage & GRALLOC_USAGE_PRIVATE_10BIT) {
         gr_format = HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC;
       } else {
         gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC;
       }
-    } else if (prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_10BIT) {
+    } else if (usage & GRALLOC_USAGE_PRIVATE_10BIT) {
       gr_format = HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS;
-    } else if (cons_usage & GRALLOC1_CONSUMER_USAGE_VIDEO_ENCODER) {
+    } else if (usage & BufferUsage::VIDEO_ENCODER) {
       gr_format = HAL_PIXEL_FORMAT_NV12_ENCODEABLE;  // NV12
-    } else if (cons_usage & GRALLOC1_CONSUMER_USAGE_CAMERA) {
-      if (prod_usage & GRALLOC1_PRODUCER_USAGE_CAMERA) {
+    } else if (usage & BufferUsage::CAMERA_INPUT) {
+      if (usage & BufferUsage::CAMERA_OUTPUT) {
         // Assumed ZSL if both producer and consumer camera flags set
         gr_format = HAL_PIXEL_FORMAT_NV21_ZSL;  // NV21
       } else {
         gr_format = HAL_PIXEL_FORMAT_YCrCb_420_SP;  // NV21
       }
-    } else if (prod_usage & GRALLOC1_PRODUCER_USAGE_CAMERA) {
+    } else if (usage & BufferUsage::CAMERA_OUTPUT) {
       if (format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
         gr_format = HAL_PIXEL_FORMAT_NV21_ZSL;  // NV21
       } else {
         gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS;  // NV12 preview
       }
-    } else if (cons_usage & GRALLOC1_CONSUMER_USAGE_HWCOMPOSER) {
+    } else if (usage & BufferUsage::COMPOSER_OVERLAY) {
       // XXX: If we still haven't set a format, default to RGBA8888
       gr_format = HAL_PIXEL_FORMAT_RGBA_8888;
     } else if (format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
@@ -237,50 +230,44 @@ int Allocator::GetImplDefinedFormat(gralloc1_producer_usage_t prod_usage,
 /* The default policy is to return cached buffers unless the client explicity
  * sets the PRIVATE_UNCACHED flag or indicates that the buffer will be rarely
  * read or written in software. */
-bool Allocator::UseUncached(gralloc1_producer_usage_t prod_usage,
-                            gralloc1_consumer_usage_t cons_usage) {
-  if ((prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_UNCACHED) ||
-      (prod_usage & GRALLOC1_PRODUCER_USAGE_PROTECTED)) {
+bool Allocator::UseUncached(uint64_t usage) {
+  if ((usage & GRALLOC_USAGE_PRIVATE_UNCACHED) || (usage & BufferUsage::PROTECTED)) {
     return true;
   }
 
   // CPU read rarely
-  if ((prod_usage & GRALLOC1_PRODUCER_USAGE_CPU_READ) &&
-      !(prod_usage & GRALLOC1_PRODUCER_USAGE_CPU_READ_OFTEN)) {
+  if ((usage & BufferUsage::CPU_READ_RARELY) && !(usage & BufferUsage::CPU_READ_OFTEN)) {
     return true;
   }
 
   // CPU  write rarely
-  if ((prod_usage & GRALLOC1_PRODUCER_USAGE_CPU_WRITE) &&
-      !(prod_usage & GRALLOC1_PRODUCER_USAGE_CPU_WRITE_OFTEN)) {
+  if ((usage & BufferUsage::CPU_WRITE_RARELY) && !(usage & BufferUsage::CPU_WRITE_OFTEN)) {
     return true;
   }
 
-  if ((prod_usage & GRALLOC1_PRODUCER_USAGE_SENSOR_DIRECT_DATA) ||
-      (cons_usage & GRALLOC1_CONSUMER_USAGE_GPU_DATA_BUFFER)) {
+  if ((usage & BufferUsage::SENSOR_DIRECT_DATA) || (usage & BufferUsage::GPU_DATA_BUFFER)) {
     return true;
   }
 
   return false;
 }
 
-void Allocator::GetIonHeapInfo(gralloc1_producer_usage_t prod_usage,
-                               gralloc1_consumer_usage_t cons_usage, unsigned int *ion_heap_id,
-                               unsigned int *alloc_type, unsigned int *ion_flags) {
+void Allocator::GetIonHeapInfo(uint64_t usage, unsigned int *ion_heap_id, unsigned int *alloc_type,
+                               unsigned int *ion_flags) {
   unsigned int heap_id = 0;
   unsigned int type = 0;
   uint32_t flags = 0;
-  if (prod_usage & GRALLOC1_PRODUCER_USAGE_PROTECTED) {
-    if (cons_usage & GRALLOC1_CONSUMER_USAGE_PRIVATE_SECURE_DISPLAY) {
+  if (usage & GRALLOC_USAGE_PROTECTED) {
+    if (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY) {
       heap_id = ION_HEAP(SD_HEAP_ID);
       /*
        * There is currently no flag in ION for Secure Display
        * VM. Please add it to the define once available.
        */
       flags |= UINT(ION_SD_FLAGS);
-    } else if (prod_usage & GRALLOC1_PRODUCER_USAGE_CAMERA) {
+    } else if (usage & BufferUsage::CAMERA_OUTPUT) {
       heap_id = ION_HEAP(SD_HEAP_ID);
-      if (cons_usage & GRALLOC1_CONSUMER_USAGE_HWCOMPOSER) {
+      if (usage & BufferUsage::COMPOSER_OVERLAY) {
         flags |= UINT(ION_SC_PREVIEW_FLAGS);
       } else {
         flags |= UINT(ION_SC_FLAGS);
@@ -289,15 +276,9 @@ void Allocator::GetIonHeapInfo(gralloc1_producer_usage_t prod_usage,
       heap_id = ION_HEAP(CP_HEAP_ID);
       flags |= UINT(ION_CP_FLAGS);
     }
-  } else if (prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_MM_HEAP) {
-    // MM Heap is exclusively a secure heap.
-    // If it is used for non secure cases, fallback to IOMMU heap
-    ALOGW("MM_HEAP cannot be used as an insecure heap. Using system heap instead!!");
-    heap_id |= ION_HEAP(ION_SYSTEM_HEAP_ID);
   }
 
-  if (prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_ADSP_HEAP ||
-      prod_usage & GRALLOC1_PRODUCER_USAGE_SENSOR_DIRECT_DATA) {
+  if (usage & BufferUsage::SENSOR_DIRECT_DATA) {
     heap_id |= ION_HEAP(ION_ADSP_HEAP_ID);
   }
 
@@ -316,4 +297,4 @@ void Allocator::GetIonHeapInfo(gralloc1_producer_usage_t prod_usage,
 
   return;
 }
-}  // namespace gralloc1
+}  // namespace gralloc

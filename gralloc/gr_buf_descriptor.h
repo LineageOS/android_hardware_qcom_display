@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,34 +30,48 @@
 #ifndef __GR_BUF_DESCRIPTOR_H__
 #define __GR_BUF_DESCRIPTOR_H__
 
-#include <hardware/gralloc1.h>
+#include <android/hardware/graphics/mapper/2.0/IMapper.h>
 #include <atomic>
 
-namespace gralloc1 {
+namespace gralloc {
+using android::hardware::graphics::mapper::V2_0::Error;
+using android::hardware::graphics::mapper::V2_0::IMapper;
+using android::hardware::hidl_vec;
+
+const uint32_t kBufferDescriptorSize = 7;
+const uint32_t kMagicVersion = 0x76312E30;  // v1.0
+
 class BufferDescriptor {
  public:
-  BufferDescriptor() : id_(next_id_++) {}
+  BufferDescriptor() {}
+  explicit BufferDescriptor(uint64_t id) : id_(id) {}
 
-  BufferDescriptor(int w, int h, int f)
-      : width_(w),
-        height_(h),
-        format_(f),
-        producer_usage_(GRALLOC1_PRODUCER_USAGE_NONE),
-        consumer_usage_(GRALLOC1_CONSUMER_USAGE_NONE),
-        id_(next_id_++) {}
+  static hidl_vec<uint32_t> Encode(const IMapper::BufferDescriptorInfo &bd_info) {
+    hidl_vec<uint32_t> out;
+    out.resize(kBufferDescriptorSize);
+    out[0] = kMagicVersion;
+    out[1] = bd_info.width;
+    out[2] = bd_info.height;
+    out[3] = bd_info.layerCount;
+    out[4] = static_cast<uint32_t>(bd_info.format);
+    out[5] = static_cast<uint32_t>(bd_info.usage);
+    out[6] = static_cast<uint32_t>(bd_info.usage >> 32);
+    return out;
+  }
 
-  BufferDescriptor(int w, int h, int f, gralloc1_producer_usage_t prod_usage,
-                   gralloc1_consumer_usage_t cons_usage)
-      : width_(w),
-        height_(h),
-        format_(f),
-        producer_usage_(prod_usage),
-        consumer_usage_(cons_usage),
-        id_(next_id_++) {}
+  Error Decode(const hidl_vec<uint32_t> &in) {
+    if (in.size() != kBufferDescriptorSize || in[0] != kMagicVersion) {
+      return Error::BAD_DESCRIPTOR;
+    }
+    width_ = static_cast<int32_t>(in[1]);
+    height_ = static_cast<int32_t>(in[2]);
+    layer_count_ = in[3];
+    format_ = static_cast<int32_t>(in[4]);
+    usage_ = static_cast<uint64_t>(in[6]) << 32 | in[5];
+    return Error::NONE;
+  }
 
-  void SetConsumerUsage(gralloc1_consumer_usage_t usage) { consumer_usage_ = usage; }
-
-  void SetProducerUsage(gralloc1_producer_usage_t usage) { producer_usage_ = usage; }
+  void SetUsage(uint64_t usage) { usage_ |= usage; }
 
   void SetDimensions(int w, int h) {
     width_ = w;
@@ -68,9 +82,7 @@ class BufferDescriptor {
 
   void SetLayerCount(uint32_t layer_count) { layer_count_ = layer_count; }
 
-  gralloc1_consumer_usage_t GetConsumerUsage() const { return consumer_usage_; }
-
-  gralloc1_producer_usage_t GetProducerUsage() const { return producer_usage_; }
+  uint64_t GetUsage() const { return usage_; }
 
   int GetWidth() const { return width_; }
 
@@ -80,17 +92,15 @@ class BufferDescriptor {
 
   uint32_t GetLayerCount() const { return layer_count_; }
 
-  gralloc1_buffer_descriptor_t GetId() const { return id_; }
+  uint64_t GetId() const { return id_; }
 
  private:
   int width_ = -1;
   int height_ = -1;
   int format_ = -1;
   uint32_t layer_count_ = 1;
-  gralloc1_producer_usage_t producer_usage_ = GRALLOC1_PRODUCER_USAGE_NONE;
-  gralloc1_consumer_usage_t consumer_usage_ = GRALLOC1_CONSUMER_USAGE_NONE;
-  const gralloc1_buffer_descriptor_t id_;
-  static std::atomic<gralloc1_buffer_descriptor_t> next_id_;
+  uint64_t usage_ = 0;
+  const uint64_t id_ = 0;
 };
-};  // namespace gralloc1
+};      // namespace gralloc
 #endif  // __GR_BUF_DESCRIPTOR_H__

@@ -17,9 +17,11 @@ LOCAL_CFLAGS                  := -Wno-missing-field-initializers -Wno-unused-par
 LOCAL_CLANG                   := true
 
 LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware libhardware_legacy \
-                                 libutils libcutils libsync libqdutils libqdMetaData libdl \
+                                 libutils libcutils libsync libqdutils libqdMetaData \
                                  libsdmutils libc++ liblog libgrallocutils libui libgpu_tonemapper \
-                                 libhidlbase libhidltransport vendor.display.config@1.0_vendor
+                                 libhidlbase libhidltransport vendor.display.config@1.0_vendor \
+                                 android.hardware.graphics.mapper@2.0\
+                                 android.hardware.graphics.allocator@2.0
 
 ifeq ($(display_config_version), DISPLAY_CONFIG_1_1)
 LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.1_vendor

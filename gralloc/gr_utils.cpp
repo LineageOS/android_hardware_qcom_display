@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,8 +30,8 @@
 #include <media/msm_media_info.h>
 #include <algorithm>
 
-#include "gr_utils.h"
 #include "gr_adreno_info.h"
+#include "gr_utils.h"
 #include "qdMetaData.h"
 
 #define ASTC_BLOCK_SIZE 16
@@ -40,14 +40,14 @@
 #define COLOR_FMT_P010_UBWC 9
 #endif
 
-namespace gralloc1 {
+namespace gralloc {
 
 bool IsYuvFormat(const private_handle_t *hnd) {
   switch (hnd->format) {
     case HAL_PIXEL_FORMAT_YCbCr_420_SP:
     case HAL_PIXEL_FORMAT_YCbCr_422_SP:
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
-    case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:   // Same as YCbCr_420_SP_VENUS
+    case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:  // Same as YCbCr_420_SP_VENUS
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
     case HAL_PIXEL_FORMAT_YCrCb_420_SP:
     case HAL_PIXEL_FORMAT_YCrCb_422_SP:
@@ -177,24 +177,20 @@ uint32_t GetBppForUncompressedRGB(int format) {
   return bpp;
 }
 
-bool CpuCanAccess(gralloc1_producer_usage_t prod_usage, gralloc1_consumer_usage_t cons_usage) {
-  return CpuCanRead(prod_usage, cons_usage) || CpuCanWrite(prod_usage);
+bool CpuCanAccess(uint64_t usage) {
+  return CpuCanRead(usage) || CpuCanWrite(usage);
 }
 
-bool CpuCanRead(gralloc1_producer_usage_t prod_usage, gralloc1_consumer_usage_t cons_usage) {
-  if (prod_usage & GRALLOC1_PRODUCER_USAGE_CPU_READ) {
-    return true;
-  }
-
-  if (cons_usage & GRALLOC1_CONSUMER_USAGE_CPU_READ) {
+bool CpuCanRead(uint64_t usage) {
+  if (usage & BufferUsage::CPU_READ_MASK) {
     return true;
   }
 
   return false;
 }
 
-bool CpuCanWrite(gralloc1_producer_usage_t prod_usage) {
-  if (prod_usage & GRALLOC1_PRODUCER_USAGE_CPU_WRITE) {
+bool CpuCanWrite(uint64_t usage) {
+  if (usage & BufferUsage::CPU_WRITE_MASK) {
     // Application intends to use CPU for rendering
     return true;
   }
@@ -202,16 +198,14 @@ bool CpuCanWrite(gralloc1_producer_usage_t prod_usage) {
   return false;
 }
 
-unsigned int GetSize(const BufferInfo &info, unsigned int alignedw,
-                     unsigned int alignedh) {
+unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int alignedh) {
   unsigned int size = 0;
   int format = info.format;
   int width = info.width;
   int height = info.height;
-  gralloc1_producer_usage_t prod_usage = info.prod_usage;
-  gralloc1_consumer_usage_t cons_usage = info.cons_usage;
+  uint64_t usage = info.usage;
 
-  if (IsUBwcEnabled(format, prod_usage, cons_usage)) {
+  if (IsUBwcEnabled(format, usage)) {
     return GetUBwcSize(width, height, format, alignedw, alignedh);
   }
 
@@ -308,14 +302,14 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw,
   return size;
 }
 
-void GetBufferSizeAndDimensions(const BufferInfo &info, unsigned int *size,
-                                unsigned int *alignedw, unsigned int *alignedh) {
+void GetBufferSizeAndDimensions(const BufferInfo &info, unsigned int *size, unsigned int *alignedw,
+                                unsigned int *alignedh) {
   GetAlignedWidthAndHeight(info, alignedw, alignedh);
   *size = GetSize(info, *alignedw, *alignedh);
 }
 
-void GetYuvUbwcSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height,
-                           int color_format, struct android_ycbcr *ycbcr) {
+void GetYuvUbwcSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height, int color_format,
+                           struct android_ycbcr *ycbcr) {
   // UBWC buffer has these 4 planes in the following sequence:
   // Y_Meta_Plane, Y_Plane, UV_Meta_Plane, UV_Plane
   unsigned int y_meta_stride, y_meta_height, y_meta_size;
@@ -383,8 +377,7 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]) 
   uint32_t width = UINT(hnd->width);
   uint32_t height = UINT(hnd->height);
   int format = hnd->format;
-  gralloc1_producer_usage_t prod_usage = hnd->GetProducerUsage();
-  gralloc1_consumer_usage_t cons_usage = hnd->GetConsumerUsage();
+  uint64_t usage = hnd->usage;
   unsigned int ystride, cstride;
   bool interlaced = false;
 
@@ -392,29 +385,21 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]) 
 
   // Check if UBWC buffer has been rendered in linear format.
   int linear_format = 0;
-  if (getMetaData(const_cast<private_handle_t *>(hnd),
-                  GET_LINEAR_FORMAT, &linear_format) == 0) {
-      format = INT(linear_format);
+  if (getMetaData(const_cast<private_handle_t *>(hnd), GET_LINEAR_FORMAT, &linear_format) == 0) {
+    format = INT(linear_format);
   }
 
   // Check metadata if the geometry has been updated.
   BufferDim_t buffer_dim;
-  if (getMetaData(const_cast<private_handle_t *>(hnd),
-                  GET_BUFFER_GEOMETRY, &buffer_dim) == 0) {
-    int usage = 0;
-    if (hnd->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED) {
-      usage = GRALLOC1_PRODUCER_USAGE_PRIVATE_ALLOC_UBWC;
-    }
-
-    BufferInfo info(buffer_dim.sliceWidth, buffer_dim.sliceHeight, format,
-                    prod_usage, cons_usage);
+  if (getMetaData(const_cast<private_handle_t *>(hnd), GET_BUFFER_GEOMETRY, &buffer_dim) == 0) {
+    BufferInfo info(buffer_dim.sliceWidth, buffer_dim.sliceHeight, format, usage);
     GetAlignedWidthAndHeight(info, &width, &height);
   }
 
   // Check metadata for interlaced content.
   int interlace_flag = 0;
-  if (getMetaData(const_cast<private_handle_t *>(hnd),
-                  GET_PP_PARAM_INTERLACED, &interlace_flag) == 0) {
+  if (getMetaData(const_cast<private_handle_t *>(hnd), GET_PP_PARAM_INTERLACED, &interlace_flag) ==
+      0) {
     interlaced = interlace_flag;
   }
 
@@ -457,8 +442,8 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]) 
       ystride = VENUS_Y_STRIDE(COLOR_FMT_P010, width);
       cstride = VENUS_UV_STRIDE(COLOR_FMT_P010, width);
       ycbcr->y = reinterpret_cast<void *>(hnd->base);
-      ycbcr->cb = reinterpret_cast<void *>(hnd->base +
-                                           ystride * VENUS_Y_SCANLINES(COLOR_FMT_P010, height));
+      ycbcr->cb =
+          reinterpret_cast<void *>(hnd->base + ystride * VENUS_Y_SCANLINES(COLOR_FMT_P010, height));
       ycbcr->cr = reinterpret_cast<void *>(hnd->base +
                                            ystride * VENUS_Y_SCANLINES(COLOR_FMT_P010, height) + 1);
       ycbcr->ystride = ystride;
@@ -494,7 +479,7 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]) 
     case HAL_PIXEL_FORMAT_CbYCrY_422_I:
       ystride = width * 2;
       cstride = 0;
-      ycbcr->y  = reinterpret_cast<void *>(hnd->base);
+      ycbcr->y = reinterpret_cast<void *>(hnd->base);
       ycbcr->cr = NULL;
       ycbcr->cb = NULL;
       ycbcr->ystride = ystride;
@@ -543,8 +528,7 @@ bool IsUBwcSupported(int format) {
   return false;
 }
 
-bool IsUBwcEnabled(int format, gralloc1_producer_usage_t prod_usage,
-                   gralloc1_consumer_usage_t cons_usage) {
+bool IsUBwcEnabled(int format, uint64_t usage) {
   // Allow UBWC, if client is using an explicitly defined UBWC pixel format.
   if (IsUBwcFormat(format)) {
     return true;
@@ -553,18 +537,17 @@ bool IsUBwcEnabled(int format, gralloc1_producer_usage_t prod_usage,
   // Allow UBWC, if an OpenGL client sets UBWC usage flag and GPU plus MDP
   // support the format. OR if a non-OpenGL client like Rotator, sets UBWC
   // usage flag and MDP supports the format.
-  if ((prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_ALLOC_UBWC) && IsUBwcSupported(format)) {
+  if ((usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC) && IsUBwcSupported(format)) {
     bool enable = true;
     // Query GPU for UBWC only if buffer is intended to be used by GPU.
-    if ((cons_usage & GRALLOC1_CONSUMER_USAGE_GPU_TEXTURE) ||
-        (prod_usage & GRALLOC1_PRODUCER_USAGE_GPU_RENDER_TARGET)) {
+    if ((usage & BufferUsage::GPU_TEXTURE) || (usage & BufferUsage::GPU_RENDER_TARGET)) {
       if (AdrenoMemInfo::GetInstance()) {
         enable = AdrenoMemInfo::GetInstance()->IsUBWCSupportedByGPU(format);
       }
     }
 
     // Allow UBWC, only if CPU usage flags are not set
-    if (enable && !(CpuCanAccess(prod_usage, cons_usage))) {
+    if (enable && !(CpuCanAccess(usage))) {
       return true;
     }
   }
@@ -683,7 +666,7 @@ int GetRgbDataAddress(private_handle_t *hnd, void **rgb_data) {
   int err = 0;
 
   // This api is for RGB* formats
-  if (!gralloc1::IsUncompressedRGBFormat(hnd->format)) {
+  if (!IsUncompressedRGBFormat(hnd->format)) {
     return -EINVAL;
   }
 
@@ -713,16 +696,60 @@ int GetRgbDataAddress(private_handle_t *hnd, void **rgb_data) {
   return err;
 }
 
+void GetCustomDimensions(private_handle_t *hnd, int *stride, int *height) {
+  BufferDim_t buffer_dim;
+  int interlaced = 0;
+
+  *stride = hnd->width;
+  *height = hnd->height;
+  if (getMetaData(hnd, GET_BUFFER_GEOMETRY, &buffer_dim) == 0) {
+    *stride = buffer_dim.sliceWidth;
+    *height = buffer_dim.sliceHeight;
+  } else if (getMetaData(hnd, GET_PP_PARAM_INTERLACED, &interlaced) == 0) {
+    if (interlaced && IsUBwcFormat(hnd->format)) {
+      unsigned int alignedw = 0, alignedh = 0;
+      // Get re-aligned height for single ubwc interlaced field and
+      // multiply by 2 to get frame height.
+      BufferInfo info(hnd->width, ((hnd->height + 1) >> 1), hnd->format);
+      GetAlignedWidthAndHeight(info, &alignedw, &alignedh);
+      *stride = static_cast<int>(alignedw);
+      *height = static_cast<int>(alignedh * 2);
+    }
+  }
+}
+
+void GetColorSpaceFromMetadata(private_handle_t *hnd, int *color_space) {
+  ColorMetaData color_metadata;
+  if (getMetaData(hnd, GET_COLOR_METADATA, &color_metadata) == 0) {
+    switch (color_metadata.colorPrimaries) {
+      case ColorPrimaries_BT709_5:
+        *color_space = HAL_CSC_ITU_R_709;
+        break;
+      case ColorPrimaries_BT601_6_525:
+      case ColorPrimaries_BT601_6_625:
+        *color_space = ((color_metadata.range) ? HAL_CSC_ITU_R_601_FR : HAL_CSC_ITU_R_601);
+        break;
+      case ColorPrimaries_BT2020:
+        *color_space = (color_metadata.range) ? HAL_CSC_ITU_R_2020_FR : HAL_CSC_ITU_R_2020;
+        break;
+      default:
+        ALOGE("Unknown Color Space = %d", color_metadata.colorPrimaries);
+        break;
+    }
+  } else if (getMetaData(hnd, GET_COLOR_SPACE, color_space) != 0) {
+    *color_space = 0;
+  }
+}
+
 void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
                               unsigned int *alignedh) {
   int width = info.width;
   int height = info.height;
   int format = info.format;
-  gralloc1_producer_usage_t prod_usage = info.prod_usage;
-  gralloc1_consumer_usage_t cons_usage = info.cons_usage;
+  uint64_t usage = info.usage;
 
   // Currently surface padding is only computed for RGB* surfaces.
-  bool ubwc_enabled = IsUBwcEnabled(format, prod_usage, cons_usage);
+  bool ubwc_enabled = IsUBwcEnabled(format, usage);
   int tile = ubwc_enabled;
 
   if (IsUncompressedRGBFormat(format)) {
@@ -815,8 +842,8 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
   *alignedh = (unsigned int)aligned_h;
 }
 
-int GetBufferLayout(private_handle_t *hnd, uint32_t stride[4],
-                    uint32_t offset[4], uint32_t *num_planes) {
+int GetBufferLayout(private_handle_t *hnd, uint32_t stride[4], uint32_t offset[4],
+                    uint32_t *num_planes) {
   if (!hnd || !stride || !offset || !num_planes) {
     return -EINVAL;
   }
@@ -903,4 +930,4 @@ int GetBufferLayout(private_handle_t *hnd, uint32_t stride[4],
   return 0;
 }
 
-}  // namespace gralloc1
+}  // namespace gralloc

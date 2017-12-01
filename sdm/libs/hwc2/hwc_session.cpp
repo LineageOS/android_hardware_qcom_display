@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -162,7 +162,7 @@ int HWCSession::Init() {
 
   DisplayError error = buffer_allocator_.Init();
   if (error != kErrorNone) {
-    ALOGE("%s::%s: Buffer allocaor initialization failed. Error = %d",
+    ALOGE("%s::%s: Buffer allocator initialization failed. Error = %d",
           __CLASS__, __FUNCTION__, error);
     return -EINVAL;
   }

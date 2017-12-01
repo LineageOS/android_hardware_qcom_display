@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -34,7 +34,7 @@
 
 #define FD_INIT -1
 
-namespace gralloc1 {
+namespace gralloc {
 
 enum {
   CACHE_CLEAN = 0x1,
@@ -79,6 +79,6 @@ class IonAlloc {
   int ion_dev_fd_;
 };
 
-}  // namespace gralloc1
+}  // namespace gralloc
 
 #endif  // __GR_ION_ALLOC_H__

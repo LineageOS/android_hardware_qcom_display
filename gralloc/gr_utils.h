@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016,2018, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,6 +30,7 @@
 #ifndef __GR_UTILS_H__
 #define __GR_UTILS_H__
 
+#include <android/hardware/graphics/common/1.0/types.h>
 #include "gralloc_priv.h"
 
 #define SZ_2M 0x200000
@@ -42,17 +43,16 @@
 #define INT(exp) static_cast<int>(exp)
 #define UINT(exp) static_cast<unsigned int>(exp)
 
-namespace gralloc1 {
+using android::hardware::graphics::common::V1_0::BufferUsage;
 
+namespace gralloc {
 struct BufferInfo {
-  BufferInfo(int w, int h, int f, gralloc1_producer_usage_t prod = GRALLOC1_PRODUCER_USAGE_NONE,
-             gralloc1_consumer_usage_t cons = GRALLOC1_CONSUMER_USAGE_NONE) : width(w), height(h),
-    format(f), prod_usage(prod), cons_usage(cons) {}
+  BufferInfo(int w, int h, int f, uint64_t usage = 0)
+      : width(w), height(h), format(f), usage(usage) {}
   int width;
   int height;
   int format;
-  gralloc1_producer_usage_t prod_usage;
-  gralloc1_consumer_usage_t cons_usage;
+  uint64_t usage;
 };
 
 template <class Type1, class Type2>
@@ -64,20 +64,21 @@ bool IsYuvFormat(const private_handle_t *hnd);
 bool IsCompressedRGBFormat(int format);
 bool IsUncompressedRGBFormat(int format);
 uint32_t GetBppForUncompressedRGB(int format);
-bool CpuCanAccess(gralloc1_producer_usage_t prod_usage, gralloc1_consumer_usage_t cons_usage);
-bool CpuCanRead(gralloc1_producer_usage_t prod_usage, gralloc1_consumer_usage_t cons_usage);
-bool CpuCanWrite(gralloc1_producer_usage_t prod_usage);
+bool CpuCanAccess(uint64_t usage);
+bool CpuCanRead(uint64_t usage);
+bool CpuCanWrite(uint64_t usage);
 unsigned int GetSize(const BufferInfo &d, unsigned int alignedw, unsigned int alignedh);
-void GetBufferSizeAndDimensions(const BufferInfo &d, unsigned int *size,
-                                unsigned int *alignedw, unsigned int *alignedh);
+void GetBufferSizeAndDimensions(const BufferInfo &d, unsigned int *size, unsigned int *alignedw,
+                                unsigned int *alignedh);
+void GetCustomDimensions(private_handle_t *hnd, int *stride, int *height);
+void GetColorSpaceFromMetadata(private_handle_t *hnd, int *color_space);
 void GetAlignedWidthAndHeight(const BufferInfo &d, unsigned int *aligned_w,
                               unsigned int *aligned_h);
 int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]);
 int GetRgbDataAddress(private_handle_t *hnd, void **rgb_data);
 bool IsUBwcFormat(int format);
 bool IsUBwcSupported(int format);
-bool IsUBwcEnabled(int format, gralloc1_producer_usage_t prod_usage,
-                   gralloc1_consumer_usage_t cons_usage);
+bool IsUBwcEnabled(int format, uint64_t usage);
 void GetYuvUBwcWidthAndHeight(int width, int height, int format, unsigned int *aligned_w,
                               unsigned int *aligned_h);
 void GetYuvSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height, uint32_t bpp,
@@ -90,8 +91,9 @@ void GetRgbUBwcBlockSize(uint32_t bpp, int *block_width, int *block_height);
 unsigned int GetRgbUBwcMetaBufferSize(int width, int height, uint32_t bpp);
 unsigned int GetUBwcSize(int width, int height, int format, unsigned int alignedw,
                          unsigned int alignedh);
-int GetBufferLayout(private_handle_t *hnd, uint32_t stride[4],
-                    uint32_t offset[4], uint32_t *num_planes);
-}  // namespace gralloc1
+int GetBufferLayout(private_handle_t *hnd, uint32_t stride[4], uint32_t offset[4],
+                    uint32_t *num_planes);
+
+}  // namespace gralloc
 
 #endif  // __GR_UTILS_H__

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,7 +32,7 @@
 
 #include <media/msm_media_info.h>
 
-namespace gralloc1 {
+namespace gralloc {
 
 // Adreno Pixel Formats
 typedef enum {
@@ -57,13 +57,13 @@ typedef enum {
   ADRENO_PIXELFORMAT_R8G8B8X8_SRGB = 520,  //  GL_SRGB8
   ADRENO_PIXELFORMAT_R8G8B8_SRGB = 521,    //  GL_SRGB8
   ADRENO_PIXELFORMAT_A2B10G10R10_UNORM = 532,
-                                          // Vertex, Normalized GL_UNSIGNED_INT_10_10_10_2_OES
+  // Vertex, Normalized GL_UNSIGNED_INT_10_10_10_2_OES
   ADRENO_PIXELFORMAT_R10G10B10X2_UNORM = 537,
-                                          // Vertex, Normalized GL_UNSIGNED_INT_10_10_10_2_OES
-  ADRENO_PIXELFORMAT_R5G6B5 = 610,         //  RGBA version of B5G6R5
-  ADRENO_PIXELFORMAT_R5G5B5A1 = 611,       //  RGBA version of B5G5R5A1
-  ADRENO_PIXELFORMAT_R4G4B4A4 = 612,       //  RGBA version of B4G4R4A4
-  ADRENO_PIXELFORMAT_UYVY = 614,           //  YUV 4:2:2 packed progressive (1 plane)
+  // Vertex, Normalized GL_UNSIGNED_INT_10_10_10_2_OES
+  ADRENO_PIXELFORMAT_R5G6B5 = 610,    //  RGBA version of B5G6R5
+  ADRENO_PIXELFORMAT_R5G5B5A1 = 611,  //  RGBA version of B5G5R5A1
+  ADRENO_PIXELFORMAT_R4G4B4A4 = 612,  //  RGBA version of B4G4R4A4
+  ADRENO_PIXELFORMAT_UYVY = 614,      //  YUV 4:2:2 packed progressive (1 plane)
   ADRENO_PIXELFORMAT_NV21 = 619,
   ADRENO_PIXELFORMAT_Y8U8V8A8 = 620,  // YUV 4:4:4 packed (1 plane)
   ADRENO_PIXELFORMAT_Y8 = 625,        //  Single 8-bit luma only channel YUV format
@@ -149,6 +149,6 @@ class AdrenoMemInfo {
   static AdrenoMemInfo *s_instance;
 };
 
-}  // namespace gralloc1
+}  // namespace gralloc
 
 #endif  // __GR_ADRENO_INFO_H__
