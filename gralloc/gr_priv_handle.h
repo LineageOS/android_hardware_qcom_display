@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution
  *
  * Copyright (C) 2008 The Android Open Source Project
@@ -21,8 +21,8 @@
 #define __GR_PRIV_HANDLE_H__
 
 #include <cutils/log.h>
-#include <hardware/gralloc1.h>
 #include <hardware/gralloc.h>
+#include <hardware/gralloc1.h>
 #include <cinttypes>
 
 #define GRALLOC1_FUNCTION_PERFORM 0x00001000
@@ -57,7 +57,7 @@ struct private_handle_t : public native_handle_t {
     PRIV_FLAGS_CPU_RENDERED = 0x04000000,
     PRIV_FLAGS_UBWC_ALIGNED = 0x08000000,
     PRIV_FLAGS_DISP_CONSUMER = 0x10000000,
-    PRIV_FLAGS_CLIENT_ALLOCATED = 0x20000000,   // Ion buffer allocated outside of gralloc
+    PRIV_FLAGS_CLIENT_ALLOCATED = 0x20000000,  // Ion buffer allocated outside of gralloc
   };
 
   // file-descriptors dup'd over IPC
@@ -67,43 +67,32 @@ struct private_handle_t : public native_handle_t {
   // values sent over IPC
   int magic;
   int flags;
-  int width;        // holds width of the actual buffer allocated
-  int height;       // holds height of the  actual buffer allocated
+  int width;             // holds width of the actual buffer allocated
+  int height;            // holds height of the  actual buffer allocated
   int unaligned_width;   // holds width client asked to allocate
   int unaligned_height;  // holds height client asked to allocate
   int format;
   int buffer_type;
+  unsigned int layer_count;
+  uint64_t id __attribute__((aligned(8)));
+  uint64_t usage __attribute__((aligned(8)));
+
   unsigned int size;
   unsigned int offset;
   unsigned int offset_metadata;
-  uint64_t base                            __attribute__((aligned(8)));
-  uint64_t base_metadata                   __attribute__((aligned(8)));
-  uint64_t gpuaddr                         __attribute__((aligned(8)));
-  uint64_t id                              __attribute__((aligned(8)));
-  gralloc1_producer_usage_t producer_usage __attribute__((aligned(8)));
-  gralloc1_consumer_usage_t consumer_usage __attribute__((aligned(8)));
-  unsigned int layer_count;
+  uint64_t base __attribute__((aligned(8)));
+  uint64_t base_metadata __attribute__((aligned(8)));
+  uint64_t gpuaddr __attribute__((aligned(8)));
 
   static const int kNumFds = 2;
   static const int kMagic = 'gmsm';
 
   static inline int NumInts() {
-    return ((sizeof(private_handle_t) - sizeof(native_handle_t)) / sizeof(int))
-        - kNumFds;
+    return ((sizeof(private_handle_t) - sizeof(native_handle_t)) / sizeof(int)) - kNumFds;
   }
 
-  private_handle_t(int fd,
-                   int meta_fd,
-                   int flags,
-                   int width,
-                   int height,
-                   int uw,
-                   int uh,
-                   int format,
-                   int buf_type,
-                   unsigned int size,
-                   gralloc1_producer_usage_t prod_usage = GRALLOC1_PRODUCER_USAGE_NONE,
-                   gralloc1_consumer_usage_t cons_usage = GRALLOC1_CONSUMER_USAGE_NONE)
+  private_handle_t(int fd, int meta_fd, int flags, int width, int height, int uw, int uh,
+                   int format, int buf_type, unsigned int size, uint64_t usage = 0)
       : fd(fd),
         fd_metadata(meta_fd),
         magic(kMagic),
@@ -114,27 +103,24 @@ struct private_handle_t : public native_handle_t {
         unaligned_height(uh),
         format(format),
         buffer_type(buf_type),
+        layer_count(1),
+        id(0),
+        usage(usage),
         size(size),
         offset(0),
         offset_metadata(0),
         base(0),
         base_metadata(0),
-        gpuaddr(0),
-        id(0),
-        producer_usage(prod_usage),
-        consumer_usage(cons_usage),
-        layer_count(1) {
+        gpuaddr(0) {
     version = static_cast<int>(sizeof(native_handle));
     numInts = NumInts();
     numFds = kNumFds;
   }
 
-// Legacy constructor used by some clients
+  // Legacy constructor used by some clients
   private_handle_t(int fd, unsigned int size, int usage, int buf_type, int format, int w, int h)
-  : private_handle_t(fd, -1, PRIV_FLAGS_CLIENT_ALLOCATED, w, h, 0, 0, format, buf_type, size,
-                     static_cast<gralloc1_producer_usage_t>(usage),
-                     static_cast<gralloc1_consumer_usage_t>(usage)) {
-  }
+      : private_handle_t(fd, -1, PRIV_FLAGS_CLIENT_ALLOCATED, w, h, 0, 0, format, buf_type, size,
+                         static_cast<uint64_t>(usage)) {}
 
   ~private_handle_t() {
     magic = 0;
@@ -142,7 +128,7 @@ struct private_handle_t : public native_handle_t {
   }
 
   static int validate(const native_handle *h) {
-    const private_handle_t *hnd = (const private_handle_t *)h;
+    auto *hnd = static_cast<const private_handle_t *>(h);
     if (!h || h->version != sizeof(native_handle) || h->numInts != NumInts() ||
         h->numFds != kNumFds || hnd->magic != kMagic) {
       ALOGE(
@@ -162,11 +148,11 @@ struct private_handle_t : public native_handle_t {
   }
 
   static void Dump(const private_handle_t *hnd) {
-    ALOGD("handle id:%" PRIu64 " wxh:%dx%d uwxuh:%dx%d size: %d fd:%d fd_meta:%d flags:0x%x "
-          "prod_usage:0x%" PRIx64" cons_usage:0x%" PRIx64 " format:0x%x layer_count: %d",
+    ALOGD("handle id:%" PRIu64
+          " wxh:%dx%d uwxuh:%dx%d size: %d fd:%d fd_meta:%d flags:0x%x "
+          "usage:0x%" PRIx64 "  format:0x%x layer_count: %d",
           hnd->id, hnd->width, hnd->height, hnd->unaligned_width, hnd->unaligned_height, hnd->size,
-          hnd->fd, hnd->fd_metadata, hnd->flags, hnd->producer_usage, hnd->consumer_usage,
-          hnd->format, hnd->layer_count);
+          hnd->fd, hnd->fd_metadata, hnd->flags, hnd->usage, hnd->format, hnd->layer_count);
   }
 
   int GetUnalignedWidth() const { return unaligned_width; }
@@ -182,9 +168,7 @@ struct private_handle_t : public native_handle_t {
     return width;
   }
 
-  gralloc1_consumer_usage_t GetConsumerUsage() const { return consumer_usage; }
-
-  gralloc1_producer_usage_t GetProducerUsage() const { return producer_usage; }
+  uint64_t GetUsage() const { return usage; }
 
   uint64_t GetBackingstore() const { return id; }
 };

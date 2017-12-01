@@ -26,68 +26,53 @@
 
 #define ROUND_UP_PAGESIZE(x) roundUpToPageSize(x)
 inline int roundUpToPageSize(int x) {
-    return (x + (getpagesize()-1)) & ~(getpagesize()-1);
+  return (x + (getpagesize() - 1)) & ~(getpagesize() - 1);
 }
 
 /* Gralloc usage bits indicating the type of allocation that should be used */
-/* Refer gralloc1_producer_usage_t & gralloc1_consumer_usage-t in gralloc1.h */
+/* Refer to BufferUsage in hardware/interfaces/graphics/common/<ver>/types.hal */
 
-/* Producer flags */
+/* The bits below are in officially defined vendor space
+ * i.e bits 28-31 and 48-63*/
 /* Non linear, Universal Bandwidth Compression */
-#define GRALLOC1_PRODUCER_USAGE_PRIVATE_ALLOC_UBWC  GRALLOC1_PRODUCER_USAGE_PRIVATE_0
+#define GRALLOC_USAGE_PRIVATE_ALLOC_UBWC 1 << 28
 
 /* Set this for allocating uncached memory (using O_DSYNC),
  * cannot be used with noncontiguous heaps */
-#define GRALLOC1_PRODUCER_USAGE_PRIVATE_UNCACHED    GRALLOC1_PRODUCER_USAGE_PRIVATE_1
+#define GRALLOC_USAGE_PRIVATE_UNCACHED 1 << 29
 
 /* This flag is used to indicate P010 format */
-#define GRALLOC1_PRODUCER_USAGE_PRIVATE_10BIT       GRALLOC1_PRODUCER_USAGE_PRIVATE_2
-
-/* ADSP heap is a carveout heap, is not secured */
-#define GRALLOC1_PRODUCER_USAGE_PRIVATE_ADSP_HEAP   GRALLOC1_PRODUCER_USAGE_PRIVATE_3
-
-/* IOMMU heap comes from manually allocated pages, can be cached/uncached, is not secured */
-#define GRALLOC1_PRODUCER_USAGE_PRIVATE_IOMMU_HEAP  GRALLOC1_PRODUCER_USAGE_PRIVATE_4
-
-/* MM heap is a carveout heap for video, can be secured */
-#define GRALLOC1_PRODUCER_USAGE_PRIVATE_MM_HEAP     GRALLOC1_PRODUCER_USAGE_PRIVATE_5
-
-/* Use legacy ZSL definition until we know the correct usage on gralloc1 */
-#define GRALLOC1_PRODUCER_USAGE_PRIVATE_CAMERA_ZSL  GRALLOC_USAGE_HW_CAMERA_ZSL
-
-/* TODO(user): move these to use producer private bits once 64-bit support available */
-/* This flag is used to indicate 10-bit tight pack format (e.g. TP10) */
-#define GRALLOC1_PRODUCER_USAGE_PRIVATE_10BIT_TP  0x08000000
-#define GRALLOC1_CONSUMER_USAGE_PRIVATE_10BIT_TP  0x08000000
-
-/* This flag is used to indicate video NV21 format */
-#define GRALLOC1_PRODUCER_USAGE_PRIVATE_VIDEO_NV21_ENCODER (1ULL << 24)
-
-/* Consumer flags */
-/* TODO(user): Fix when producer and consumer flags are actually separated */
-/* This flag is set for WFD usecase */
-#define GRALLOC1_CONSUMER_USAGE_PRIVATE_WFD            0x00200000
+#define GRALLOC_USAGE_PRIVATE_10BIT 1 << 30
 
 /* This flag is used for SECURE display usecase */
-#define GRALLOC1_CONSUMER_USAGE_PRIVATE_SECURE_DISPLAY 0x02000000
+#define GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY 1 << 31
 
-/* This flag is used to indicate P010 format */
-#define GRALLOC1_CONSUMER_USAGE_PRIVATE_10BIT       GRALLOC1_PRODUCER_USAGE_PRIVATE_10BIT
+/* This flag is used to indicate video NV21 format */
+#define GRALLOC_USAGE_PRIVATE_VIDEO_NV21_ENCODER 1ULL << 48
 
-/* Unused flag */
-#define GRALLOC1_USAGE_PRIVATE_UNUSED1  0x04000000
+/* unused legacy flags */
+#define GRALLOC_USAGE_PRIVATE_MM_HEAP 0
+#define GRALLOC_USAGE_PRIVATE_IOMMU_HEAP 0
 
+/* TODO(user): move these to use sanctioned vendor bits
+ * once end to end 64-bit support is available */
+/* This flag is set for WFD usecase */
+#define GRALLOC_USAGE_PRIVATE_WFD 1 << 21
 
-/* Legacy gralloc0.x definitions */
+/* This flag is used to indicate 10-bit tight pack format (e.g. TP10) */
+#define GRALLOC_USAGE_PRIVATE_10BIT_TP 1 << 27
+
+/* Legacy gralloc1 definitions */
 /* Some clients may still be using the old flags */
-#define GRALLOC_USAGE_PRIVATE_ALLOC_UBWC GRALLOC1_PRODUCER_USAGE_PRIVATE_ALLOC_UBWC
-#define GRALLOC_USAGE_PRIVATE_UNCACHED GRALLOC1_PRODUCER_USAGE_PRIVATE_UNCACHED
-#define GRALLOC_USAGE_PRIVATE_IOMMU_HEAP GRALLOC1_PRODUCER_USAGE_PRIVATE_IOMMU_HEAP
-#define GRALLOC_USAGE_PRIVATE_WFD GRALLOC1_CONSUMER_USAGE_PRIVATE_WFD
-#define GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY GRALLOC1_CONSUMER_USAGE_PRIVATE_SECURE_DISPLAY
-#define GRALLOC_USAGE_PRIVATE_MM_HEAP 0x0
-
-
+#define GRALLOC1_PRODUCER_USAGE_PRIVATE_ADSP_HEAP GRALLOC_USAGE_PRIVATE_ADSP_HEAP
+#define GRALLOC1_PRODUCER_USAGE_PRIVATE_ALLOC_UBWC GRALLOC_USAGE_PRIVATE_ALLOC_UBWC
+#define GRALLOC1_PRODUCER_USAGE_PRIVATE_UNCACHED GRALLOC_USAGE_PRIVATE_UNCACHED
+#define GRALLOC1_CONSUMER_USAGE_PRIVATE_SECURE_DISPLAY GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY
+#define GRALLOC1_PRODUCER_USAGE_PRIVATE_MM_HEAP GRALLOC_USAGE_PRIVATE_MM_HEAP
+#define GRALLOC1_PRODUCER_USAGE_PRIVATE_10BIT GRALLOC_USAGE_PRIVATE_10BIT
+#define GRALLOC1_PRODUCER_USAGE_PRIVATE_10BIT_TP GRALLOC_USAGE_PRIVATE_10BIT_TP
+#define GRALLOC1_CONSUMER_USAGE_PRIVATE_10BIT_TP GRALLOC_USAGE_PRIVATE_10BIT_TP
+#define GRALLOC1_PRODUCER_USAGE_PRIVATE_VIDEO_NV21_ENCODER GRALLOC_USAGE_PRIVATE_VIDEO_NV21_ENCODER
 
 // for PERFORM API :
 #define GRALLOC_MODULE_PERFORM_CREATE_HANDLE_FROM_BUFFER 1
@@ -139,8 +124,8 @@ inline int roundUpToPageSize(int x) {
 #define HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC 0x124
 #define HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS 0x7FA30C0A
 
-#define HAL_PIXEL_FORMAT_CbYCrY_422_I            0x120
-#define HAL_PIXEL_FORMAT_BGR_888                 0x121
+#define HAL_PIXEL_FORMAT_CbYCrY_422_I 0x120
+#define HAL_PIXEL_FORMAT_BGR_888 0x121
 
 #define HAL_PIXEL_FORMAT_INTERLACE 0x180
 
@@ -153,7 +138,7 @@ inline int roundUpToPageSize(int x) {
 
 // UBWC aligned Venus format
 #define HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC 0x7FA30C06
-#define HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC     0x7FA30C09
+#define HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC 0x7FA30C09
 
 // Khronos ASTC formats
 #define HAL_PIXEL_FORMAT_COMPRESSED_RGBA_ASTC_4x4_KHR 0x93B0
@@ -190,11 +175,11 @@ inline int roundUpToPageSize(int x) {
 #define HAL_IGC_s_RGB 1
 
 /* Color Space: Values maps to ColorSpace_t in qdMetadata.h */
-#define HAL_CSC_ITU_R_601         0
-#define HAL_CSC_ITU_R_601_FR      1
-#define HAL_CSC_ITU_R_709         2
-#define HAL_CSC_ITU_R_2020        3
-#define HAL_CSC_ITU_R_2020_FR     4
+#define HAL_CSC_ITU_R_601 0
+#define HAL_CSC_ITU_R_601_FR 1
+#define HAL_CSC_ITU_R_709 2
+#define HAL_CSC_ITU_R_2020 3
+#define HAL_CSC_ITU_R_2020_FR 4
 
 /* possible formats for 3D content*/
 enum {

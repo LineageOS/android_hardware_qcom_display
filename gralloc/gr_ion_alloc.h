@@ -34,7 +34,7 @@
 
 #define FD_INIT -1
 
-namespace gralloc1 {
+namespace gralloc {
 
 enum {
   CACHE_CLEAN = 0x1,
@@ -81,6 +81,6 @@ class IonAlloc {
   int ion_dev_fd_;
 };
 
-}  // namespace gralloc1
+}  // namespace gralloc
 
 #endif  // __GR_ION_ALLOC_H__

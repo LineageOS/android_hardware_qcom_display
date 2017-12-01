@@ -42,10 +42,6 @@
 #include "hwc_tonemapper.h"
 #include "hwc_session.h"
 
-#ifndef USE_GRALLOC1
-#include <gr.h>
-#endif
-
 #ifdef QTI_BSP
 #include <hardware/display_defs.h>
 #endif
@@ -547,11 +543,7 @@ void HWCDisplay::BuildLayerStack() {
     const private_handle_t *handle =
         reinterpret_cast<const private_handle_t *>(layer->input_buffer.buffer_id);
     if (handle) {
-#ifdef USE_GRALLOC1
       if (handle->buffer_type == BUFFER_TYPE_VIDEO) {
-#else
-      if (handle->bufferType == BUFFER_TYPE_VIDEO) {
-#endif
         layer_stack_.flags.video_present = true;
       }
       // TZ Protected Buffer - L1
@@ -1724,13 +1716,8 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
     flags |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
   }
 
-#ifdef USE_GRALLOC1
   buffer_allocator_->GetAlignedWidthAndHeight(INT(x_pixels), INT(y_pixels), format, usage,
                                               &aligned_width, &aligned_height);
-#else
-  AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(INT(x_pixels), INT(y_pixels), format,
-                                                        INT(usage), aligned_width, aligned_height);
-#endif
 
   // TODO(user): How does the dirty region get set on the client target? File bug on Google
   client_target_layer->composition = kCompositionGPUTarget;

@@ -33,22 +33,22 @@
 #include <sys/mman.h>
 #include <linux/msm_ion.h>
 #if TARGET_ION_ABI_VERSION >= 2
-#include <ion/ion.h>
 #include <linux/dma-buf.h>
+#include <ion/ion.h>
 #endif
 #include <stdlib.h>
 #include <fcntl.h>
 #include <cutils/log.h>
+#include <cutils/trace.h>
 #include <errno.h>
 #include <utils/Trace.h>
-#include <cutils/trace.h>
 #include <string>
 
-#include "gralloc_priv.h"
 #include "gr_utils.h"
+#include "gralloc_priv.h"
 #include "gr_ion_alloc.h"
 
-namespace gralloc1 {
+namespace gralloc {
 
 bool IonAlloc::Init() {
   if (ion_dev_fd_ == FD_INIT) {
@@ -207,8 +207,8 @@ int IonAlloc::AllocBuffer(AllocData *data) {
 
   data->fd = fd_data.fd;
   data->ion_handle = handle_data.handle;
-  ALOGD_IF(DEBUG, "ion: Allocated buffer size:%zu fd:%d handle:0x%x",
-          ion_alloc_data.len, data->fd, data->ion_handle);
+  ALOGD_IF(DEBUG, "ion: Allocated buffer size:%zu fd:%d handle:0x%x", ion_alloc_data.len, data->fd,
+           data->ion_handle);
 
   return 0;
 }
@@ -342,4 +342,4 @@ int IonAlloc::UnmapBuffer(void *base, unsigned int size, unsigned int /*offset*/
   return err;
 }
 
-}  // namespace gralloc1
+}  // namespace gralloc

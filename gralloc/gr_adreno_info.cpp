@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,14 +32,14 @@
 #include <dlfcn.h>
 #include <mutex>
 
-#include "gralloc_priv.h"
 #include "gr_adreno_info.h"
 #include "gr_utils.h"
+#include "gralloc_priv.h"
 
 using std::lock_guard;
 using std::mutex;
 
-namespace gralloc1 {
+namespace gralloc {
 
 AdrenoMemInfo *AdrenoMemInfo::s_instance = nullptr;
 
@@ -130,9 +130,9 @@ void AdrenoMemInfo::AlignUnCompressedRGB(int width, int height, int format, int 
     // num_samples is 1 always. We may  have to add uitility function to
     // find out these if there is a need to call this API for YUV formats.
     LINK_adreno_compute_fmt_aligned_width_and_height(
-        width, height, 0/*plane_id*/, GetGpuPixelFormat(format), 1/*num_samples*/,
-        tile_enabled, raster_mode, padding_threshold,
-        reinterpret_cast<int *>(aligned_w), reinterpret_cast<int *>(aligned_h));
+        width, height, 0 /*plane_id*/, GetGpuPixelFormat(format), 1 /*num_samples*/, tile_enabled,
+        raster_mode, padding_threshold, reinterpret_cast<int *>(aligned_w),
+        reinterpret_cast<int *>(aligned_h));
   } else if (LINK_adreno_compute_aligned_width_and_height) {
     LINK_adreno_compute_aligned_width_and_height(
         width, height, bpp, tile_enabled, raster_mode, padding_threshold,
@@ -212,7 +212,6 @@ ADRENOPIXELFORMAT AdrenoMemInfo::GetGpuPixelFormat(int hal_format) {
        return ADRENO_PIXELFORMAT_A2B10G10R10_UNORM;
     case HAL_PIXEL_FORMAT_RGBA_FP16:
        return ADRENO_PIXELFORMAT_R16G16B16A16_FLOAT;
-
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
       return ADRENO_PIXELFORMAT_NV12;
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
@@ -224,7 +223,6 @@ ADRENOPIXELFORMAT AdrenoMemInfo::GetGpuPixelFormat(int hal_format) {
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
       return ADRENO_PIXELFORMAT_P010;
-
     default:
       ALOGE("%s: No map for format: 0x%x", __FUNCTION__, hal_format);
       break;
@@ -233,4 +231,4 @@ ADRENOPIXELFORMAT AdrenoMemInfo::GetGpuPixelFormat(int hal_format) {
   return ADRENO_PIXELFORMAT_UNKNOWN;
 }
 
-}  // namespace gralloc1
+}  // namespace gralloc

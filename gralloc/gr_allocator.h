@@ -38,11 +38,11 @@
 
 #include <vector>
 
-#include "gralloc_priv.h"
 #include "gr_buf_descriptor.h"
 #include "gr_ion_alloc.h"
+#include "gralloc_priv.h"
 
-namespace gralloc1 {
+namespace gralloc {
 
 class Allocator {
  public:
@@ -53,23 +53,21 @@ class Allocator {
   int ImportBuffer(int fd);
   int FreeBuffer(void *base, unsigned int size, unsigned int offset, int fd, int handle);
   int CleanBuffer(void *base, unsigned int size, unsigned int offset, int handle, int op, int fd);
-  int AllocateMem(AllocData *data, gralloc1_producer_usage_t prod_usage,
-                  gralloc1_consumer_usage_t cons_usage);
+  int AllocateMem(AllocData *data, uint64_t usage);
   // @return : index of the descriptor with maximum buffer size req
   bool CheckForBufferSharing(uint32_t num_descriptors,
-                             const std::vector<std::shared_ptr<BufferDescriptor>>& descriptors,
+                             const std::vector<std::shared_ptr<BufferDescriptor>> &descriptors,
                              ssize_t *max_index);
-  int GetImplDefinedFormat(gralloc1_producer_usage_t prod_usage,
-                           gralloc1_consumer_usage_t cons_usage, int format);
-  bool UseUncached(gralloc1_producer_usage_t prod_usage, gralloc1_consumer_usage_t cons_usage);
+  int GetImplDefinedFormat(uint64_t usage, int format);
+  bool UseUncached(uint64_t usage);
 
  private:
-  void GetIonHeapInfo(gralloc1_producer_usage_t prod_usage, gralloc1_consumer_usage_t cons_usage,
-                      unsigned int *ion_heap_id, unsigned int *alloc_type, unsigned int *ion_flags);
+  void GetIonHeapInfo(uint64_t usage, unsigned int *ion_heap_id, unsigned int *alloc_type,
+                      unsigned int *ion_flags);
 
   IonAlloc *ion_allocator_ = NULL;
 };
 
-}  // namespace gralloc1
+}  // namespace gralloc
 
 #endif  // __GR_ALLOCATOR_H__

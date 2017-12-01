@@ -17,16 +17,12 @@
  * limitations under the License.
  */
 
+#include "hwc_layers.h"
+#include <utils/debug.h>
 #include <stdint.h>
 #include <utility>
-#include <qdMetaData.h>
-
-#include "hwc_layers.h"
-#ifndef USE_GRALLOC1
-#include <gr.h>
-#endif
-#include <utils/debug.h>
 #include <cmath>
+#include <qdMetaData.h>
 
 #define __CLASS__ "HWCLayer"
 
@@ -220,11 +216,7 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
 
   LayerBuffer *layer_buffer = &layer_->input_buffer;
   int aligned_width, aligned_height;
-#ifdef USE_GRALLOC1
   buffer_allocator_->GetCustomWidthAndHeight(handle, &aligned_width, &aligned_height);
-#else
-  AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(handle, aligned_width, aligned_height);
-#endif
 
   LayerBufferFormat format = GetSDMFormat(handle->format, handle->flags);
   if ((format != layer_buffer->format) || (UINT32(aligned_width) != layer_buffer->width) ||

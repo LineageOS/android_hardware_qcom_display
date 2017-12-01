@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,8 +30,8 @@
 #ifndef __GR_DEVICE_IMPL_H__
 #define __GR_DEVICE_IMPL_H__
 
-#include <hardware/hardware.h>
 #include <hardware/gralloc1.h>
+#include <hardware/hardware.h>
 #include "gr_buf_mgr.h"
 
 struct private_module_t {
@@ -40,7 +40,7 @@ struct private_module_t {
 
 #define GRALLOC_IMPL(exp) reinterpret_cast<GrallocImpl const *>(exp)
 
-namespace gralloc1 {
+namespace gralloc {
 
 class GrallocImpl : public gralloc1_device_t {
  public:
@@ -50,7 +50,7 @@ class GrallocImpl : public gralloc1_device_t {
   static gralloc1_function_pointer_t GetFunction(
       struct gralloc1_device *device, int32_t /*gralloc1_function_descriptor_t*/ descriptor);
 
-  static GrallocImpl* GetInstance(const struct hw_module_t *module) {
+  static GrallocImpl *GetInstance(const struct hw_module_t *module) {
     static GrallocImpl *instance = new GrallocImpl(module);
     if (instance->IsInitialized()) {
       return instance;
@@ -119,15 +119,39 @@ class GrallocImpl : public gralloc1_device_t {
                                        int32_t *release_fence);
   static gralloc1_error_t Gralloc1Perform(gralloc1_device_t *device, int operation, ...);
 
+  gralloc1_error_t CreateBufferDescriptorLocked(gralloc1_buffer_descriptor_t *descriptor_id);
+  gralloc1_error_t DestroyBufferDescriptorLocked(gralloc1_buffer_descriptor_t descriptor_id);
+  gralloc1_error_t AllocateBuffer(const gralloc1_buffer_descriptor_t *descriptor_ids,
+                                  buffer_handle_t *out_buffers);
+  gralloc1_error_t GetFlexLayout(const private_handle_t *hnd, struct android_flex_layout *layout);
+
+  template <typename... Args>
+  gralloc1_error_t CallBufferDescriptorFunction(gralloc1_buffer_descriptor_t descriptor_id,
+                                                void (BufferDescriptor::*member)(Args...),
+                                                Args... args) {
+    std::lock_guard<std::mutex> lock(descriptor_lock_);
+    const auto map_descriptor = descriptors_map_.find(descriptor_id);
+    if (map_descriptor == descriptors_map_.end()) {
+      return GRALLOC1_ERROR_BAD_DESCRIPTOR;
+    }
+    const auto descriptor = map_descriptor->second;
+    (descriptor.get()->*member)(std::forward<Args>(args)...);
+    return GRALLOC1_ERROR_NONE;
+  }
+
   explicit GrallocImpl(const hw_module_t *module);
   ~GrallocImpl();
   bool Init();
-  bool IsInitialized() const { return initalized_; }
+  bool IsInitialized() const { return initialized_; }
 
   BufferManager *buf_mgr_ = NULL;
-  bool initalized_ = false;
+  bool initialized_ = false;
+  std::mutex descriptor_lock_;
+  std::unordered_map<gralloc1_buffer_descriptor_t, std::shared_ptr<gralloc::BufferDescriptor>>
+      descriptors_map_ = {};
+  static std::atomic<uint64_t> next_descriptor_id_;
 };
 
-}  // namespace gralloc1
+}  // namespace gralloc
 
 #endif  // __GR_DEVICE_IMPL_H__

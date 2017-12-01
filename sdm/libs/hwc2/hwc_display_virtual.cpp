@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -31,9 +31,6 @@
 #include <utils/debug.h>
 #include <sync/sync.h>
 #include <stdarg.h>
-#ifndef USE_GRALLOC1
-#include <gr.h>
-#endif
 
 #include "hwc_display_virtual.h"
 #include "hwc_debugger.h"
