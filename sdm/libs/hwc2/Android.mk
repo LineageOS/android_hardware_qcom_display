@@ -30,10 +30,11 @@ LOCAL_CLANG                   := true
 
 # TODO: Remove libui after addressing gpu_tonemapper issues
 LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware libhardware_legacy \
-                                 libutils libcutils libsync libqdutils libqdMetaData libdl libdrmutils \
-                                 libsdmutils libc++ liblog libgrallocutils libdl \
-                                 vendor.display.config@2.0 libhidlbase libhidltransport \
-                                 libdisplayconfig.qti libui libgpu_tonemapper
+                                 libutils libcutils libsync libqdutils libqdMetaData \
+                                 libsdmutils libc++ liblog libgrallocutils libui libgpu_tonemapper \
+                                 libhidlbase libhidltransport vendor.display.config@2.0 \
+                                 android.hardware.graphics.mapper@2.0\
+                                 android.hardware.graphics.allocator@2.0
 
 ifneq ($(TARGET_USES_GRALLOC1), true)
     LOCAL_SHARED_LIBRARIES += libmemalloc
