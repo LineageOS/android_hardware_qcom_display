@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -37,6 +37,7 @@
 #include <drm_res_mgr.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <string>
 #include <vector>
 #include <map>
@@ -288,6 +289,32 @@ void HWTVDRM::DumpHDRMetaData(HWHDRLayerInfo::HDROperation operation) {
         hdr_metadata_.display_primaries_x[1], hdr_metadata_.display_primaries_y[1],
         hdr_metadata_.display_primaries_x[2], hdr_metadata_.display_primaries_y[2],
         hdr_metadata_.white_point_x, hdr_metadata_.white_point_y, hdr_metadata_.eotf);
+}
+
+DisplayError HWTVDRM::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
+  DisplayError error = kErrorNone;
+  int fd = -1;
+  char data[kMaxStringLength] = {'\0'};
+
+  snprintf(data, sizeof(data), "/sys/devices/virtual/hdcp/msm_hdcp/min_level_change");
+
+  fd = Sys::open_(data, O_WRONLY);
+  if (fd < 0) {
+    DLOGE("File '%s' could not be opened. errno = %d, desc = %s", data, errno, strerror(errno));
+    return kErrorHardware;
+  }
+
+  snprintf(data, sizeof(data), "%d", min_enc_level);
+
+  ssize_t err = Sys::pwrite_(fd, data, strlen(data), 0);
+  if (err <= 0) {
+    DLOGE("Write failed, Error = %s", strerror(errno));
+    error = kErrorHardware;
+  }
+
+  Sys::close_(fd);
+
+  return error;
 }
 
 }  // namespace sdm
