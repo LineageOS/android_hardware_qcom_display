@@ -192,6 +192,7 @@ static void GetDRMFormat(LayerBufferFormat format, uint32_t *drm_format,
       *drm_format = DRM_FORMAT_NV21;
       break;
     case kFormatYCbCr420P010:
+    case kFormatYCbCr420P010Venus:
       *drm_format = DRM_FORMAT_NV12;
       *drm_format_modifier = DRM_FORMAT_MOD_QCOM_DX;
       break;

@@ -240,6 +240,9 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw,
     case HAL_PIXEL_FORMAT_YCbCr_420_P010:
       size = ALIGN((alignedw * alignedh * 2) + (alignedw * alignedh) + 1, SIZE_4K);
       break;
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
+      size = VENUS_BUFFER_SIZE(COLOR_FMT_P010, width, height);
+      break;
     case HAL_PIXEL_FORMAT_YCbCr_422_SP:
     case HAL_PIXEL_FORMAT_YCrCb_422_SP:
     case HAL_PIXEL_FORMAT_YCbCr_422_I:
@@ -399,10 +402,6 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]) 
       GetYuvSPPlaneInfo(hnd->base, width, height, 1, ycbcr);
       break;
 
-    case HAL_PIXEL_FORMAT_YCbCr_420_P010:
-      GetYuvSPPlaneInfo(hnd->base, width, height, 2, ycbcr);
-      break;
-
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
       if (!interlaced) {
         GetYuvUbwcSPPlaneInfo(hnd->base, width, height, COLOR_FMT_NV12_UBWC, ycbcr);
@@ -412,6 +411,10 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]) 
       ycbcr->chroma_step = 2;
       break;
 
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010:
+      GetYuvSPPlaneInfo(hnd->base, width, height, 2, ycbcr);
+      break;
+
     case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
       GetYuvUbwcSPPlaneInfo(hnd->base, width, height, COLOR_FMT_NV12_BPP10_UBWC, ycbcr);
       ycbcr->chroma_step = 3;
@@ -419,6 +422,19 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]) 
 
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
       GetYuvUbwcSPPlaneInfo(hnd->base, width, height, COLOR_FMT_P010_UBWC, ycbcr);
+      ycbcr->chroma_step = 4;
+      break;
+
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
+      ystride = VENUS_Y_STRIDE(COLOR_FMT_P010, width);
+      cstride = VENUS_UV_STRIDE(COLOR_FMT_P010, width);
+      ycbcr->y = reinterpret_cast<void *>(hnd->base);
+      ycbcr->cb = reinterpret_cast<void *>(hnd->base +
+                                           ystride * VENUS_Y_SCANLINES(COLOR_FMT_P010, height));
+      ycbcr->cr = reinterpret_cast<void *>(hnd->base +
+                                           ystride * VENUS_Y_SCANLINES(COLOR_FMT_P010, height) + 1);
+      ycbcr->ystride = ystride;
+      ycbcr->cstride = cstride;
       ycbcr->chroma_step = 4;
       break;
 
@@ -743,6 +759,10 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
     case HAL_PIXEL_FORMAT_YCbCr_420_P010:
       aligned_w = ALIGN(width, 16);
       break;
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
+      aligned_w = INT(VENUS_Y_STRIDE(COLOR_FMT_P010, width) / 2);
+      aligned_h = INT(VENUS_Y_SCANLINES(COLOR_FMT_P010, height));
+      break;
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
       aligned_w = INT(VENUS_Y_STRIDE(COLOR_FMT_NV12, width));
@@ -829,6 +849,7 @@ int GetBufferLayout(private_handle_t *hnd, uint32_t stride[4],
     case HAL_PIXEL_FORMAT_YCbCr_420_P010:
     case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
       offset[1] = static_cast<uint32_t>(reinterpret_cast<uint64_t>(yuvInfo.cb) - hnd->base);
       break;
     case HAL_PIXEL_FORMAT_YCrCb_420_SP:

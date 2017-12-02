@@ -355,6 +355,8 @@ const char *GetHALPixelFormatString(int format) {
     return "YCbCr_420_P010";
   case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
     return "YCbCr_420_TP10_UBWC";
+  case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
+    return "YCbCr_420_P010_VENUS";
   default:
     return "Unknown_format";
   }

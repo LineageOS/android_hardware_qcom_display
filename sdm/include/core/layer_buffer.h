@@ -148,6 +148,8 @@ enum LayerBufferFormat {
 
   kFormatYCbCr420P010Ubwc,            //!< UBWC aligned YCbCr420P010 format.
 
+  kFormatYCbCr420P010Venus,           //!< Venus aligned YCbCr420P010 format.
+
   /* All YUV-Packed formats, Any new format will be added towards end of this group to maintain
      backward compatibility.
   */
