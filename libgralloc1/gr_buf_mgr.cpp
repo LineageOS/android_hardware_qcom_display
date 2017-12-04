@@ -517,8 +517,11 @@ int BufferManager::AllocateBufferLocked(const BufferDescriptor &descriptor, buff
   hnd->base_metadata = 0;
   hnd->layer_count = layer_count;
 
-  ColorSpace_t colorSpace = ITU_R_601;
-  setMetaData(hnd, UPDATE_COLOR_SPACE, reinterpret_cast<void *>(&colorSpace));
+  if (buffer_type == BUFFER_TYPE_VIDEO) {
+    // set default csc to 601L for only video buffers
+    ColorSpace_t colorSpace = ITU_R_601;
+    setMetaData(hnd, UPDATE_COLOR_SPACE, reinterpret_cast<void *>(&colorSpace));
+  }
   *handle = hnd;
   RegisterHandleLocked(hnd, data.ion_handle, e_data.ion_handle);
   ALOGD_IF(DEBUG, "Allocated buffer handle: %p id: %" PRIu64, hnd, hnd->id);

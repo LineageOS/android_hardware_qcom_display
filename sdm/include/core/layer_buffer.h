@@ -282,6 +282,10 @@ struct LayerBuffer {
   UbwcCrStatsVector  ubwc_crstats[NUM_UBWC_CR_STATS_LAYERS] = {};
                                 //! < UBWC Compression ratio,stats. Stored as a vector of pair of
                                 //! of (tile size, #of tiles)
+  LayerBuffer() {
+    color_metadata.colorPrimaries = ColorPrimaries_BT709_5;
+    color_metadata.transfer = Transfer_sRGB;
+  }
 };
 
 // This enum represents buffer layout types.

@@ -62,6 +62,13 @@ using std::fstream;
 
 namespace sdm {
 
+#ifndef MDP_CSC_ITU_R_2020
+#define MDP_CSC_ITU_R_2020 (MDP_CSC_ITU_R_709 + 1)
+#endif
+#ifndef MDP_CSC_ITU_R_2020_FR
+#define MDP_CSC_ITU_R_2020_FR (MDP_CSC_ITU_R_2020 + 1)
+#endif
+
 HWDevice::HWDevice(BufferSyncHandler *buffer_sync_handler)
   : fb_node_index_(-1), fb_path_("/sys/devices/virtual/graphics/fb"),
     buffer_sync_handler_(buffer_sync_handler), synchronous_commit_(false) {
@@ -1100,12 +1107,10 @@ void HWDevice::SetCSC(const ColorMetaData &color_metadata, mdp_color_space *colo
   case ColorPrimaries_BT709_5:
     *color_space = MDP_CSC_ITU_R_709;
     break;
-#if defined MDP_CSC_ITU_R_2020 && defined MDP_CSC_ITU_R_2020_FR
   case ColorPrimaries_BT2020:
     *color_space = static_cast<mdp_color_space>((color_metadata.range == Range_Full) ?
                                                  MDP_CSC_ITU_R_2020_FR : MDP_CSC_ITU_R_2020);
     break;
-#endif
   default:
     break;
   }
