@@ -194,11 +194,18 @@ int Allocator::GetImplDefinedFormat(gralloc1_producer_usage_t prod_usage,
   if (format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED ||
       format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
     if (prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_ALLOC_UBWC) {
+      // Use of 10BIT_TP and 10BIT bits is supposed to be mutually exclusive.
+      // Each bit maps to only one format. Here we will check one of the bits
+      // and ignore the other.
       if (prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_10BIT_TP) {
         gr_format = HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC;
+      } else if (prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_10BIT) {
+        gr_format = HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC;
       } else {
         gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC;
       }
+    } else if (prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_10BIT) {
+      gr_format = HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS;
     } else if (cons_usage & GRALLOC1_CONSUMER_USAGE_VIDEO_ENCODER) {
       gr_format = HAL_PIXEL_FORMAT_NV12_ENCODEABLE;  // NV12
     } else if (cons_usage & GRALLOC1_CONSUMER_USAGE_CAMERA) {
@@ -287,10 +294,6 @@ void Allocator::GetIonHeapInfo(gralloc1_producer_usage_t prod_usage,
     // If it is used for non secure cases, fallback to IOMMU heap
     ALOGW("MM_HEAP cannot be used as an insecure heap. Using system heap instead!!");
     heap_id |= ION_HEAP(ION_SYSTEM_HEAP_ID);
-  }
-
-  if (prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_CAMERA_HEAP) {
-    heap_id |= ION_HEAP(ION_CAMERA_HEAP_ID);
   }
 
   if (prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_ADSP_HEAP ||
