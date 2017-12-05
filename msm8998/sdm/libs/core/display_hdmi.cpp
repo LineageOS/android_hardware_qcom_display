@@ -162,7 +162,6 @@ DisplayError DisplayHDMI::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level)
 uint32_t DisplayHDMI::GetBestConfig(HWS3DMode s3d_mode) {
   uint32_t best_index = 0, index;
   uint32_t num_modes = 0;
-  HWDisplayAttributes best_attrib;
 
   hw_intf_->GetNumDisplayAttributes(&num_modes);
 
