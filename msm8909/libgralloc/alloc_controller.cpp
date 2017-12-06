@@ -143,18 +143,13 @@ void AdrenoMemInfo::getAlignedWidthAndHeight(int width, int height, int format,
     if (format <= HAL_PIXEL_FORMAT_BGRA_8888) {
         aligned_w = ALIGN(width, 32);
         aligned_h = ALIGN(height, 32);
-        // Don't add any additional padding if debug.gralloc.map_fb_memory
-        // is enabled
-        char property[PROPERTY_VALUE_MAX];
-        if((property_get("debug.gralloc.map_fb_memory", property, NULL) > 0) &&
-           (!strncmp(property, "1", PROPERTY_VALUE_MAX ) ||
-           (!strncasecmp(property,"true", PROPERTY_VALUE_MAX )))) {
-              return;
-        }
 
         int bpp = 4;
         switch(format)
         {
+            case HAL_PIXEL_FORMAT_RGBA_FP16:
+                bpp = 8;
+                break;
             case HAL_PIXEL_FORMAT_RGB_888:
                 bpp = 3;
                 break;
@@ -412,9 +407,13 @@ unsigned int getSize(int format, int width, int height, const int alignedw,
     unsigned int size = 0;
 
     switch (format) {
+        case HAL_PIXEL_FORMAT_RGBA_FP16:
+            size = alignedw * alignedh * 8;
+            break;
         case HAL_PIXEL_FORMAT_RGBA_8888:
         case HAL_PIXEL_FORMAT_RGBX_8888:
         case HAL_PIXEL_FORMAT_BGRA_8888:
+        case HAL_PIXEL_FORMAT_RGBA_1010102:
             size = alignedw * alignedh * 4;
             break;
         case HAL_PIXEL_FORMAT_RGB_888:
