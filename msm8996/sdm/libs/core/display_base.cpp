@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -578,6 +578,12 @@ void DisplayBase::AppendDump(char *buffer, uint32_t length) {
   for (uint32_t i = 0; i < num_hw_layers; i++) {
     uint32_t layer_index = hw_layers_.info.index[i];
     Layer *layer = hw_layers_.info.stack->layers.at(layer_index);
+
+    if (layer == NULL || layer->input_buffer == NULL) {
+      DumpImpl::AppendString(buffer, length, "\n|                                                                  Invalid Layer                                                                                  |");  //NOLINT
+      DumpImpl::AppendString(buffer, length, newline);
+      continue;
+    }
     LayerBuffer *input_buffer = layer->input_buffer;
     HWLayerConfig &layer_config = hw_layers_.config[i];
     HWRotatorSession &hw_rotator_session = layer_config.hw_rotator_session;
