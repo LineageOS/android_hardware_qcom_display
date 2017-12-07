@@ -34,7 +34,7 @@
 
 #include <hardware/lights.h>
 
-#ifdef LEGACY_COMPATIBILITY
+#ifndef LEGACY_COMPATIBILITY
 #include "lights_prv.h"
 #endif
 
@@ -51,7 +51,7 @@ static struct light_state_t g_battery;
 static int g_last_backlight_mode = BRIGHTNESS_MODE_USER;
 static int g_attention = 0;
 
-#ifdef LEGACY_COMPATIBILITY
+#ifndef LEGACY_COMPATIBILITY
 static int g_brightness_max = 0;
 #endif
 
@@ -171,7 +171,7 @@ set_light_backlight(struct light_device_t* dev,
     return err;
 }
 
-#ifdef LEGACY_COMPATIBILITY
+#ifndef LEGACY_COMPATIBILITY
 static int
 set_light_backlight_ext(struct light_device_t* dev,
         struct light_state_t const* state)
@@ -354,7 +354,7 @@ static int open_lights(const struct hw_module_t* module, char const* name,
             struct light_state_t const* state);
 
     if (0 == strcmp(LIGHT_ID_BACKLIGHT, name)) {
-#ifdef LEGACY_COMPATIBILITY
+#ifndef LEGACY_COMPATIBILITY
         char property[PROPERTY_VALUE_MAX];
         property_get("persist.extend.brightness", property, "0");
 
