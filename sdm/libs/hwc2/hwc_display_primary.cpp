@@ -372,9 +372,12 @@ void HWCDisplayPrimary::SetSecureDisplay(bool secure_display_active) {
     DLOGI("SecureDisplay state changed from %d to %d Needs Flush!!", secure_display_active_,
           secure_display_active);
     secure_display_active_ = secure_display_active;
-    skip_prepare_ = true;
+
+    // Avoid flush for Command mode panel.
+    DisplayConfigFixedInfo display_config;
+    display_intf_->GetConfig(&display_config);
+    skip_prepare_ = !display_config.is_cmdmode;
   }
-  return;
 }
 
 void HWCDisplayPrimary::ForceRefreshRate(uint32_t refresh_rate) {

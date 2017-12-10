@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -53,6 +53,7 @@ DisplayError (*HWColorManager::SetFeature[])(const PPFeatureInfo &, msmfb_mdp_pp
         [kGlobalColorFeatureDither] = &HWColorManager::SetDither,
         [kGlobalColorFeatureGamut] = &HWColorManager::SetGamut,
         [kGlobalColorFeaturePADither] = &HWColorManager::SetPADither,
+        [kGlobalColorFeatureCsc] = &HWColorManager::SetCSCLegacy,
 };
 
 DisplayError HWColorManager::SetPCC(const PPFeatureInfo &feature, msmfb_mdp_pp *kernel_params) {
@@ -160,6 +161,27 @@ DisplayError HWColorManager::SetPADither(const PPFeatureInfo &feature,
   kernel_params->data.dither_cfg_data.flags = feature.enable_flags_;
   kernel_params->data.dither_cfg_data.cfg_payload = feature.GetConfigData();
 #endif
+  return ret;
+}
+
+DisplayError HWColorManager::SetCSCLegacy(const PPFeatureInfo &feature, msmfb_mdp_pp *kernel_params) {
+  DisplayError ret = kErrorNone;
+
+  kernel_params->op = mdp_op_csc_cfg;
+  kernel_params->data.csc_cfg_data.block = MDP_BLOCK_DMA_P;
+  std::memcpy(&kernel_params->data.csc_cfg_data.csc_data, feature.GetConfigData(),
+          sizeof(mdp_csc_cfg));
+
+  for( int row = 0; row < 3; row++) {
+    DLOGV_IF(kTagQDCM, "kernel mv[%d][0]=0x%x  mv[%d][1]=0x%x mv[%d][2]=0x%x\n",
+            row, kernel_params->data.csc_cfg_data.csc_data.csc_mv[row*3 + 0],
+            row, kernel_params->data.csc_cfg_data.csc_data.csc_mv[row*3 + 1],
+            row, kernel_params->data.csc_cfg_data.csc_data.csc_mv[row*3 + 2]);
+    DLOGV_IF(kTagQDCM, "kernel pre_bv[%d]=%x\n", row,
+            kernel_params->data.csc_cfg_data.csc_data.csc_pre_bv[row]);
+    DLOGV_IF(kTagQDCM, "kernel post_bv[%d]=%x\n", row,
+            kernel_params->data.csc_cfg_data.csc_data.csc_post_bv[row]);
+  }
   return ret;
 }
 

@@ -604,14 +604,22 @@ DisplayError HWPrimary::GetPPFeaturesVersion(PPFeatureVersion *vers) {
   uint32_t feature_id_mapping[kMaxNumPPFeatures] = { PCC, IGC, GC, GC, PA, DITHER, GAMUT };
 #endif
 
-  for (int i(0); i < kMaxNumPPFeatures; i++) {
-    version.pp_feature = feature_id_mapping[i];
+  if (hw_resource_.hw_version != kHWMdssVersion3) {
+    // Do not query kGlobalColorFeatureCsc for kHWMdssVersion5
+    for (int i(0); i < (kMaxNumPPFeatures - 1); i++) {
+      version.pp_feature = feature_id_mapping[i];
 
-    if (Sys::ioctl_(device_fd_,  INT(MSMFB_MDP_PP_GET_FEATURE_VERSION), &version) < 0) {
-      IOCTL_LOGE(MSMFB_MDP_PP_GET_FEATURE_VERSION, device_type_);
-      return kErrorHardware;
+      if (Sys::ioctl_(device_fd_,  INT(MSMFB_MDP_PP_GET_FEATURE_VERSION), &version) < 0) {
+        IOCTL_LOGE(MSMFB_MDP_PP_GET_FEATURE_VERSION, device_type_);
+        return kErrorHardware;
+      }
+      vers->version[i] = version.version_info;
     }
-    vers->version[i] = version.version_info;
+  } else {
+    for (int i(0); i < kMaxNumPPFeatures; i++) {
+      version.pp_feature = feature_id_mapping[i];
+      vers->version[i] = mdp_pp_legacy;
+    }
   }
 
   return kErrorNone;

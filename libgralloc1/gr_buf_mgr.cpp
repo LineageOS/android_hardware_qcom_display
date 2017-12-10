@@ -321,16 +321,20 @@ gralloc1_error_t BufferManager::LockBuffer(const private_handle_t *hnd,
     err = MapBuffer(hnd);
   }
 
-  // Invalidate if CPU reads in software and there are non-CPU
-  // writers. No need to do this for the metadata buffer as it is
-  // only read/written in software.
-
   // todo use handle here
   if (!err && (hnd->flags & private_handle_t::PRIV_FLAGS_USES_ION) &&
       (hnd->flags & private_handle_t::PRIV_FLAGS_CACHED)) {
-    if (allocator_->CleanBuffer(reinterpret_cast<void *>(hnd->base), hnd->size, hnd->offset,
-                                buf->ion_handle_main, CACHE_INVALIDATE)) {
-      return GRALLOC1_ERROR_BAD_HANDLE;
+
+    // Invalidate if CPU reads in software and there are non-CPU
+    // writers. No need to do this for the metadata buffer as it is
+    // only read/written in software.
+    if ((cons_usage & (GRALLOC1_CONSUMER_USAGE_CPU_READ | GRALLOC1_CONSUMER_USAGE_CPU_READ_OFTEN))
+       && (hnd->flags & private_handle_t::PRIV_FLAGS_NON_CPU_WRITER)) {
+      if (allocator_->CleanBuffer(reinterpret_cast<void *>(hnd->base), hnd->size, hnd->offset,
+                                  buf->ion_handle_main, CACHE_INVALIDATE)) {
+
+         return GRALLOC1_ERROR_BAD_HANDLE;
+      }
     }
   }
 
@@ -474,14 +478,14 @@ int BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_han
   BufferInfo info = GetBufferInfo(descriptor);
   GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh);
   size = (bufferSize >= size) ? bufferSize : size;
-  size = size * layer_count;
 
   int err = 0;
   int flags = 0;
   auto page_size = UINT(getpagesize());
   AllocData data;
   data.align = GetDataAlignment(format, prod_usage, cons_usage);
-  data.size = ALIGN(size, data.align);
+  size = ALIGN(size, data.align) * layer_count;
+  data.size = size;
   data.handle = (uintptr_t) handle;
   data.uncached = allocator_->UseUncached(prod_usage, cons_usage);
 
