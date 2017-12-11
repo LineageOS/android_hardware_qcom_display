@@ -211,6 +211,12 @@ enum struct DRMOps {
    */
   CRTC_SET_DRAM_IB,
   /*
+   * Op: Sets Rotator BW for inline rotation
+   * Arg: uint32_t - CRTC ID
+   *      uint32_t - rot_bw
+   */
+  CRTC_SET_ROT_PREFILL_BW,
+  /*
    * Op: Sets rotator clock for inline rotation
    * Arg: uint32_t - CRTC ID
    *      uint32_t - rot_clk
