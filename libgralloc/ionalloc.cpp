@@ -35,6 +35,8 @@
 #include <fcntl.h>
 #include <cutils/log.h>
 #include <errno.h>
+#include <string.h>
+
 #include "gralloc_priv.h"
 #include "ionalloc.h"
 
