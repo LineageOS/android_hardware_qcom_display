@@ -30,7 +30,6 @@
 #include <core/buffer_allocator.h>
 #include <utils/debug.h>
 #include <sync/sync.h>
-#include <profiler.h>
 
 #include "hwc_buffer_sync_handler.h"
 #include "hwc_session.h"
@@ -42,8 +41,8 @@ namespace sdm {
 using ::android::hardware::Void;
 
 void HWCSession::StartServices() {
-  status_t status = IDisplayConfig::registerAsService();
-  if (status != OK) {
+  android::status_t status = IDisplayConfig::registerAsService();
+  if (status != android::OK) {
     ALOGW("%s::%s: Could not register IDisplayConfig as service (%d).",
           __CLASS__, __FUNCTION__, status);
   } else {
