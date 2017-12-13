@@ -33,6 +33,7 @@
 #include <stdint.h>
 #include <utils/Singleton.h>
 #include <cutils/properties.h>
+#include <string.h>
 
 using namespace android;
 namespace qdutils {
