@@ -31,6 +31,7 @@
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <stdlib.h>
+#include <string.h>
 #include <fcntl.h>
 #include <cutils/log.h>
 #include <errno.h>
