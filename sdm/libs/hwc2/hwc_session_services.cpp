@@ -251,6 +251,7 @@ Return<void> HWCSession::getDisplayAttributes(uint32_t configIndex,
       }
     }
   }
+  _hidl_cb(error, display_attributes);
 
   return Void();
 }
