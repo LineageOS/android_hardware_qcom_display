@@ -190,9 +190,9 @@ DisplayError HWDevice::Validate(HWLayers *hw_layers) {
   HWLayersInfo &hw_layer_info = hw_layers->info;
   uint32_t hw_layer_count = UINT32(hw_layer_info.hw_layers.size());
 
-  DLOGV_IF(kTagDriverConfig, "************************** %s Validate Input ***********************",
+  DLOGD_IF(kTagDriverConfig, "************************** %s Validate Input ***********************",
            device_name_);
-  DLOGV_IF(kTagDriverConfig, "SDE layer count is %d", hw_layer_count);
+  DLOGD_IF(kTagDriverConfig, "SDE layer count is %d", hw_layer_count);
 
   mdp_layer_commit_v1 &mdp_commit = mdp_disp_commit_.commit_v1;
   uint32_t &mdp_layer_count = mdp_commit.input_layer_cnt;
@@ -267,11 +267,11 @@ DisplayError HWDevice::Validate(HWLayers *hw_layers) {
 
         mdp_layer_count++;
 
-        DLOGV_IF(kTagDriverConfig, "******************* Layer[%d] %s pipe Input ******************",
+        DLOGD_IF(kTagDriverConfig, "******************* Layer[%d] %s pipe Input ******************",
                  i, count ? "Right" : "Left");
-        DLOGV_IF(kTagDriverConfig, "in_w %d, in_h %d, in_f %d", mdp_buffer.width, mdp_buffer.height,
+        DLOGD_IF(kTagDriverConfig, "in_w %d, in_h %d, in_f %d", mdp_buffer.width, mdp_buffer.height,
                  mdp_buffer.format);
-        DLOGV_IF(kTagDriverConfig, "plane_alpha %d, zorder %d, blending %d, horz_deci %d, "
+        DLOGD_IF(kTagDriverConfig, "plane_alpha %d, zorder %d, blending %d, horz_deci %d, "
                  "vert_deci %d, pipe_id = 0x%x, mdp_flags 0x%x", mdp_layer.alpha, mdp_layer.z_order,
                  mdp_layer.blend_op, mdp_layer.horz_deci, mdp_layer.vert_deci, mdp_layer.pipe_ndx,
                  mdp_layer.flags);
@@ -280,7 +280,7 @@ DisplayError HWDevice::Validate(HWLayers *hw_layers) {
         DLOGV_IF(kTagDriverConfig, "dst_rect [%d, %d, %d, %d]", mdp_layer.dst_rect.x,
                  mdp_layer.dst_rect.y, mdp_layer.dst_rect.w, mdp_layer.dst_rect.h);
         hw_scale_->DumpScaleData(mdp_layer.scale);
-        DLOGV_IF(kTagDriverConfig, "*************************************************************");
+        DLOGD_IF(kTagDriverConfig, "*************************************************************");
       }
     }
   }
@@ -338,16 +338,16 @@ DisplayError HWDevice::Validate(HWLayers *hw_layers) {
 
     index++;
 
-    DLOGV_IF(kTagDriverConfig, "************************ DestScalar[%d] **************************",
+    DLOGD_IF(kTagDriverConfig, "************************ DestScalar[%d] **************************",
              dest_scalar_data->dest_scaler_ndx);
-    DLOGV_IF(kTagDriverConfig, "Mixer WxH %dx%d flags %x", dest_scalar_data->lm_width,
+    DLOGD_IF(kTagDriverConfig, "Mixer WxH %dx%d flags %x", dest_scalar_data->lm_width,
              dest_scalar_data->lm_height, dest_scalar_data->flags);
 #ifdef MDP_DESTSCALER_ROI_ENABLE
-    DLOGV_IF(kTagDriverConfig, "Panel ROI [%d, %d, %d, %d]", dest_scalar_data->panel_roi.x,
+    DLOGD_IF(kTagDriverConfig, "Panel ROI [%d, %d, %d, %d]", dest_scalar_data->panel_roi.x,
              dest_scalar_data->panel_roi.y, dest_scalar_data->panel_roi.w,
              dest_scalar_data->panel_roi.h);
 #endif
-    DLOGV_IF(kTagDriverConfig, "*****************************************************************");
+    DLOGD_IF(kTagDriverConfig, "*****************************************************************");
   }
   mdp_commit.dest_scaler_cnt = UINT32(hw_layer_info.dest_scale_info_map.size());
 
@@ -411,9 +411,9 @@ DisplayError HWDevice::Commit(HWLayers *hw_layers) {
   HWLayersInfo &hw_layer_info = hw_layers->info;
   uint32_t hw_layer_count = UINT32(hw_layer_info.hw_layers.size());
 
-  DLOGV_IF(kTagDriverConfig, "*************************** %s Commit Input ************************",
+  DLOGD_IF(kTagDriverConfig, "*************************** %s Commit Input ************************",
            device_name_);
-  DLOGV_IF(kTagDriverConfig, "SDE layer count is %d", hw_layer_count);
+  DLOGD_IF(kTagDriverConfig, "SDE layer count is %d", hw_layer_count);
 
   mdp_layer_commit_v1 &mdp_commit = mdp_disp_commit_.commit_v1;
   uint32_t mdp_layer_index = 0;
@@ -449,16 +449,16 @@ DisplayError HWDevice::Commit(HWLayers *hw_layers) {
         mdp_buffer.fence = input_buffer->acquire_fence_fd;
         mdp_layer_index++;
 
-        DLOGV_IF(kTagDriverConfig, "****************** Layer[%d] %s pipe Input *******************",
+        DLOGD_IF(kTagDriverConfig, "****************** Layer[%d] %s pipe Input *******************",
                  i, count ? "Right" : "Left");
-        DLOGI_IF(kTagDriverConfig, "in_w %d, in_h %d, in_f %d, horz_deci %d, vert_deci %d",
+        DLOGD_IF(kTagDriverConfig, "in_w %d, in_h %d, in_f %d, horz_deci %d, vert_deci %d",
                  mdp_buffer.width, mdp_buffer.height, mdp_buffer.format, mdp_layer.horz_deci,
                  mdp_layer.vert_deci);
-        DLOGI_IF(kTagDriverConfig, "in_buf_fd %d, in_buf_offset %d, in_buf_stride %d, " \
+        DLOGV_IF(kTagDriverConfig, "in_buf_fd %d, in_buf_offset %d, in_buf_stride %d, " \
                  "in_plane_count %d, in_fence %d, layer count %d", mdp_buffer.planes[0].fd,
                  mdp_buffer.planes[0].offset, mdp_buffer.planes[0].stride, mdp_buffer.plane_count,
                  mdp_buffer.fence, mdp_commit.input_layer_cnt);
-        DLOGV_IF(kTagDriverConfig, "*************************************************************");
+        DLOGD_IF(kTagDriverConfig, "*************************************************************");
       }
     }
   }

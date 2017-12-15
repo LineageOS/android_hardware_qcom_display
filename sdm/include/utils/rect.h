@@ -45,6 +45,7 @@ namespace sdm {
 
   bool IsValid(const LayerRect &rect);
   bool IsCongruent(const LayerRect &rect1, const LayerRect &rect2);
+  void LogI(DebugTag debug_tag, const char *prefix, const LayerRect &roi);
   void Log(DebugTag debug_tag, const char *prefix, const LayerRect &roi);
   void Normalize(const uint32_t &align_x, const uint32_t &align_y, LayerRect *rect);
   LayerRect Union(const LayerRect &rect1, const LayerRect &rect2);

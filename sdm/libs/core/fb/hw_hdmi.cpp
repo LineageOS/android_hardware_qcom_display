@@ -1059,7 +1059,7 @@ DisplayError HWHDMI::UpdateHDRMetaData(HWLayers *hw_layers) {
                            (bits_per_component  < 0) ? 0 : UINT32(bits_per_component);
     hdr_ctrl.hdr_stream.content_type = GetContentType(hdr_layer.input_buffer);
 
-    DLOGV_IF(kTagDriverConfig, "kSet: HDR Stream : MaxDisplayLuminance = %d\n"
+    DLOGD_IF(kTagDriverConfig, "kSet: HDR Stream : MaxDisplayLuminance = %d\n"
       "MinDisplayLuminance = %d MaxContentLightLevel = %d MaxAverageLightLevel = %d\n"
       "Red_x = %d Red_y = %d Green_x = %d Green_y = %d Blue_x = %d Blue_y = %d\n"
       "WhitePoint_x = %d WhitePoint_y = %d EOTF = %d PixelEncoding = %d Colorimetry = %d\n"
@@ -1083,7 +1083,7 @@ DisplayError HWHDMI::UpdateHDRMetaData(HWLayers *hw_layers) {
     cdm_color_space_ = (mdp_color_space) MDP_CSC_DEFAULT;
     cdm_color_space_commit_ = true;
 #endif
-    DLOGV_IF(kTagDriverConfig, "kReset: HDR Stream: HDR_RESET");
+    DLOGD_IF(kTagDriverConfig, "kReset: HDR Stream: HDR_RESET");
   } else if (hdr_layer_info.operation == HWHDRLayerInfo::kNoOp) {
      if (reset_hdr_flag_) {
        hdr_reset_end_ = time(NULL);
@@ -1092,7 +1092,7 @@ DisplayError HWHDMI::UpdateHDRMetaData(HWLayers *hw_layers) {
           reset_hdr_flag_ = false;
           memset(&hdr_ctrl.hdr_stream, 0, sizeof(hdr_ctrl.hdr_stream));
           hdr_ctrl.hdr_state = HDR_DISABLE;
-          DLOGV_IF(kTagDriverConfig, "kNoOp: HDR Stream: HDR_DISABLE");
+          DLOGD_IF(kTagDriverConfig, "kNoOp: HDR Stream: HDR_DISABLE");
        } else {
           return kErrorNone;
        }
