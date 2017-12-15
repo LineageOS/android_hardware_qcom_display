@@ -55,6 +55,7 @@ enum PendingAction {
   kDisableFrameCapture = BITMAP(7),
   kConfigureDetailedEnhancer = BITMAP(8),
   kInvalidatingAndkSetPanelBrightness = BITMAP(9),
+  kModeSet = BITMAP(10),
   kGetDetailedEnhancerData = BITMAP(21),
   kNoAction = BITMAP(31),
 };
@@ -121,7 +122,7 @@ enum PPGlobalColorFeatureID {
 };
 
 struct PPPendingParams {
-  PendingAction action = kNoAction;
+  int32_t action = kNoAction;
   void *params = NULL;
 };
 

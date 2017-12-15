@@ -131,6 +131,16 @@ HWC2::Error HWCColorMode::SetColorModeById(int32_t color_mode_id) {
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCColorMode::RestoreColorTransform() {
+  DisplayError error = display_intf_->SetColorTransform(kColorTransformMatrixCount, color_matrix_);
+  if (error != kErrorNone) {
+    DLOGE("Failed to set Color Transform");
+    return HWC2::Error::BadParameter;
+  }
+
+  return HWC2::Error::None;
+}
+
 HWC2::Error HWCColorMode::SetColorTransform(const float *matrix, android_color_transform_t hint) {
   DTRACE_SCOPED();
   double color_matrix[kColorTransformMatrixCount] = {0};
