@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014, 2016-2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014, 2016-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -149,6 +149,10 @@ enum LayerBufferFormat {
   kFormatYCbCr420P010Ubwc,            //!< UBWC aligned YCbCr420P010 format.
 
   kFormatYCbCr420P010Venus,           //!< Venus aligned YCbCr420P010 format.
+                                      //!
+  kFormatYCbCr420SPVenusTile,         //!< Tiled & uncompressed YCbCr420SemiPlanarVenus format
+  kFormatYCbCr420TP10Tile,            //!< Tiled & uncompressed YCbCr420TP10 format.
+  kFormatYCbCr420P010Tile,            //!< Tiled & uncompressed YCbCr420P010 format.
 
   /* All YUV-Packed formats, Any new format will be added towards end of this group to maintain
      backward compatibility.

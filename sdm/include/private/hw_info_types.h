@@ -179,6 +179,12 @@ enum SmartDMARevision {
   V2p5
 };
 
+enum InlineRotationVersion {
+  kInlineRotationNone,
+  kInlineRotationV1,
+  kInlineRotationV1p1,
+};
+
 struct HWResourceInfo {
   uint32_t hw_version = 0;
   uint32_t hw_revision = 0;
@@ -239,6 +245,7 @@ struct HWResourceInfo {
   uint32_t cache_size = 0;  // cache size in bytes
   HWQseedStepVersion pipe_qseed3_version = kQseed3v2;  // only valid when has_qseed3=true
   uint32_t min_prefill_lines = 0;
+  InlineRotationVersion inrot_version = kInlineRotationNone;
 
   void Reset() { *this = HWResourceInfo(); }
 };

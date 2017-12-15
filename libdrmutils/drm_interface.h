@@ -156,6 +156,12 @@ enum struct DRMOps {
    */
   PLANE_SET_MULTIRECT_MODE,
   /*
+   * Op: Sets rotator output frame buffer ID for plane.
+   * Arg: uint32_t - Plane ID
+   *      uint32_t - Framebuffer ID
+   */
+  PLANE_SET_ROT_FB_ID,
+  /*
    * Op: Activate or deactivate a CRTC
    * Arg: uint32_t - CRTC ID
    *      uint32_t - 1 to enable, 0 to disable
@@ -392,6 +398,13 @@ enum struct SmartDMARevision {
   V2p5
 };
 
+/* Inline Rotation version */
+enum struct InlineRotationVersion {
+  UNKNOWN,
+  V1,
+  V1p1,   // Rotator FB ID needs to be set
+};
+
 /* Per CRTC Resource Info*/
 struct DRMCrtcInfo {
   bool has_src_split;
@@ -451,6 +464,7 @@ struct DRMPlaneTypeInfo {
   bool has_excl_rect = false;
   QSEEDStepVersion qseed3_version;
   bool multirect_prop_present = false;
+  InlineRotationVersion inrot_version;  // inline rotation version
 };
 
 // All DRM Planes as map<Plane_id , plane_type_info> listed from highest to lowest priority

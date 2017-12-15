@@ -119,6 +119,17 @@ static HWQseedStepVersion GetQseedStepVersion(sde_drm::QSEEDStepVersion drm_vers
   return sdm_version;
 }
 
+static InlineRotationVersion GetInRotVersion(sde_drm::InlineRotationVersion drm_version) {
+  switch (drm_version) {
+    case sde_drm::InlineRotationVersion::V1:
+      return InlineRotationVersion::kInlineRotationV1;
+    case sde_drm::InlineRotationVersion::V1p1:
+      return InlineRotationVersion::kInlineRotationV1p1;
+    default:
+      return kInlineRotationNone;
+  }
+}
+
 HWResourceInfo *HWInfoDRM::hw_resource_ = nullptr;
 
 HWInfoDRM::HWInfoDRM() {
@@ -417,6 +428,7 @@ void HWInfoDRM::PopulatePipeCaps(const sde_drm::DRMPlaneTypeInfo &info,
   hw_resource->max_pipe_bw = info.max_pipe_bandwidth / kKiloUnit;
   hw_resource->cache_size = info.cache_size;
   hw_resource->pipe_qseed3_version = GetQseedStepVersion(info.qseed3_version);
+  hw_resource->inrot_version = GetInRotVersion(info.inrot_version);
 }
 
 void HWInfoDRM::PopulateSupportedFmts(HWSubBlockType sub_blk_type,

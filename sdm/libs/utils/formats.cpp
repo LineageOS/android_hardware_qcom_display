@@ -100,6 +100,7 @@ const char *GetFormatString(const LayerBufferFormat &format) {
   case kFormatYCbCr422H2V1SemiPlanar:   return "Y_CBCR_422_H2V1";
   case kFormatYCrCb422H2V1SemiPlanar:   return "Y_CRCB_422_H2V2";
   case kFormatYCbCr420SPVenusUbwc:      return "Y_CBCR_420_VENUS_UBWC";
+  case kFormatYCbCr420SPVenusTile:      return "Y_CBCR_420_VENUS_TILED";
   case kFormatYCbCr422H2V1Packed:       return "YCBYCR_422_H2V1";
   case kFormatCbYCrY422H2V1Packed:      return "CBYCRY_422_H2V1";
   case kFormatRGBA1010102:              return "RGBA_1010102";
@@ -116,6 +117,8 @@ const char *GetFormatString(const LayerBufferFormat &format) {
   case kFormatYCbCr420TP10Ubwc:         return "Y_CBCR_420_TP10_UBWC";
   case kFormatYCbCr420P010Ubwc:         return "Y_CBCR_420_P010_UBWC";
   case kFormatYCbCr420P010Venus:        return "Y_CBCR_420_P010_VENUS";
+  case kFormatYCbCr420TP10Tile:         return "Y_CBCR_420_TP10_TILED";
+  case kFormatYCbCr420P010Tile:         return "Y_CBCR_420_P010_TILED";
   default:                              return "UNKNOWN";
   }
 }
@@ -123,7 +126,11 @@ const char *GetFormatString(const LayerBufferFormat &format) {
 BufferLayout GetBufferLayout(LayerBufferFormat format) {
   switch (format) {
   case kFormatYCbCr420TP10Ubwc:
+  case kFormatYCbCr420TP10Tile:
     return kTPTiled;
+  case kFormatYCbCr420SPVenusTile:
+  case kFormatYCbCr420P010Tile:
+    return kUBWC;
   default:
     return (IsUBWCFormat(format) ? kUBWC : kLinear);
   }
@@ -156,6 +163,7 @@ float GetBufferFormatBpp(LayerBufferFormat format) {
     case kFormatYCbCr420P010:
     case kFormatYCbCr420P010Ubwc:
     case kFormatYCbCr420P010Venus:
+    case kFormatYCbCr420P010Tile:
       return 3.0f;
     case kFormatRGB565:
     case kFormatBGR565:
@@ -167,6 +175,7 @@ float GetBufferFormatBpp(LayerBufferFormat format) {
     case kFormatYCrCb422H2V1SemiPlanar:
     case kFormatYCbCr422H2V1SemiPlanar:
     case kFormatYCbCr420TP10Ubwc:
+    case kFormatYCbCr420TP10Tile:
     case kFormatYCbCr422H1V2SemiPlanar:
     case kFormatYCrCb422H1V2SemiPlanar:
       return 2.0f;
@@ -178,6 +187,7 @@ float GetBufferFormatBpp(LayerBufferFormat format) {
     case kFormatYCbCr420SemiPlanarVenus:
     case kFormatYCrCb420SemiPlanarVenus:
     case kFormatYCbCr420SPVenusUbwc:
+    case kFormatYCbCr420SPVenusTile:
       return 1.5f;
     default:
       return 0.0f;
@@ -189,18 +199,21 @@ float GetBufferFormatBpp(LayerBufferFormat format) {
 DisplayError GetBufferFormatTileSize(LayerBufferFormat format, FormatTileSize *tile_size) {
   switch (format) {
   case kFormatYCbCr420SPVenusUbwc:
+  case kFormatYCbCr420SPVenusTile:
     tile_size->tile_width = 32;
     tile_size->tile_height = 8;
     tile_size->uv_tile_width = 16;
     tile_size->uv_tile_height = 8;
     break;
   case kFormatYCbCr420TP10Ubwc:
+  case kFormatYCbCr420TP10Tile:
     tile_size->tile_width = 48;
     tile_size->tile_height = 4;
     tile_size->uv_tile_width = 24;
     tile_size->uv_tile_height = 4;
     break;
   case kFormatYCbCr420P010Ubwc:
+  case kFormatYCbCr420P010Tile:
     tile_size->tile_width = 32;
     tile_size->tile_height = 4;
     tile_size->uv_tile_width = 16;

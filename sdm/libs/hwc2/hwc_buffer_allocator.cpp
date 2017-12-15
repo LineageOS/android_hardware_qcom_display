@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -293,6 +293,7 @@ int HWCBufferAllocator::SetBufferInfo(LayerBufferFormat format, int *target, uin
       *target = HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS;
       break;
     case kFormatYCbCr420SPVenusUbwc:
+    case kFormatYCbCr420SPVenusTile:
       *target = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC;
       *flags |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
       break;
@@ -330,10 +331,12 @@ int HWCBufferAllocator::SetBufferInfo(LayerBufferFormat format, int *target, uin
       *target = HAL_PIXEL_FORMAT_YCbCr_420_P010;
       break;
     case kFormatYCbCr420TP10Ubwc:
+    case kFormatYCbCr420TP10Tile:
       *target = HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC;
       *flags |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
       break;
     case kFormatYCbCr420P010Ubwc:
+    case kFormatYCbCr420P010Tile:
       *target = HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC;
       *flags |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
       break;

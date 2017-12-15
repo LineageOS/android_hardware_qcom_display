@@ -186,6 +186,10 @@ static void GetDRMFormat(LayerBufferFormat format, uint32_t *drm_format,
       *drm_format = DRM_FORMAT_NV12;
       *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED;
       break;
+    case kFormatYCbCr420SPVenusTile:
+      *drm_format = DRM_FORMAT_NV12;
+      *drm_format_modifier = DRM_FORMAT_MOD_QCOM_TILE;
+      break;
     case kFormatYCrCb420SemiPlanar:
       *drm_format = DRM_FORMAT_NV21;
       break;
@@ -202,9 +206,19 @@ static void GetDRMFormat(LayerBufferFormat format, uint32_t *drm_format,
       *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED |
         DRM_FORMAT_MOD_QCOM_DX;
       break;
+    case kFormatYCbCr420P010Tile:
+      *drm_format = DRM_FORMAT_NV12;
+      *drm_format_modifier = DRM_FORMAT_MOD_QCOM_TILE |
+        DRM_FORMAT_MOD_QCOM_DX;
+      break;
     case kFormatYCbCr420TP10Ubwc:
       *drm_format = DRM_FORMAT_NV12;
       *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED |
+        DRM_FORMAT_MOD_QCOM_DX | DRM_FORMAT_MOD_QCOM_TIGHT;
+      break;
+    case kFormatYCbCr420TP10Tile:
+      *drm_format = DRM_FORMAT_NV12;
+      *drm_format_modifier = DRM_FORMAT_MOD_QCOM_TILE |
         DRM_FORMAT_MOD_QCOM_DX | DRM_FORMAT_MOD_QCOM_TIGHT;
       break;
     case kFormatYCbCr422H2V1SemiPlanar:
@@ -257,6 +271,11 @@ void HWDeviceDRM::Registry::Register(HWLayers *hw_layers) {
     }
 
     MapBufferToFbId(input_buffer);
+
+    if (hw_rotator_session->mode == kRotatorInline && hw_rotate_info->valid &&
+        hw_rotator_session->output_buffer.planes[0].fd >= 0) {
+      MapBufferToFbId(&hw_rotator_session->output_buffer);
+    }
   }
 }
 
@@ -864,6 +883,12 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
         if (hw_rotator_session->mode == kRotatorInline && hw_rotate_info->valid) {
           SetRect(hw_rotate_info->dst_roi, &rot_dst);
           drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ROTATION_DST_RECT, pipe_id, rot_dst);
+          if (hw_rotator_session->output_buffer.planes[0].fd >= 0) {
+            uint32_t rot_fb_id = registry_.GetFbId(hw_rotator_session->output_buffer.planes[0].fd);
+            if (rot_fb_id) {
+              drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ROT_FB_ID, pipe_id, rot_fb_id);
+            }
+          }
         }
         DRMRect dst = {};
         SetRect(pipe_info->dst_roi, &dst);
