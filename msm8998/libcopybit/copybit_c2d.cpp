@@ -17,24 +17,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <cutils/log.h>
-#include <sys/resource.h>
-#include <sys/prctl.h>
 
-#include <stdint.h>
-#include <string.h>
-#include <unistd.h>
+#include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
-
-#include <sys/ioctl.h>
-#include <sys/types.h>
-#include <sys/mman.h>
-
 #include <linux/msm_kgsl.h>
+#include <stdint.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
+#include <sys/prctl.h>
+#include <sys/resource.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#include <cutils/native_handle.h>
+#include <log/log.h>
 
 #include <EGL/eglplatform.h>
-#include <cutils/native_handle.h>
 
 #include <copybit.h>
 #include <alloc_controller.h>
@@ -42,8 +42,6 @@
 
 #include "c2d2.h"
 #include "software_converter.h"
-
-#include <dlfcn.h>
 
 using gralloc::IMemAlloc;
 using gralloc::IonController;

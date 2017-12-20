@@ -30,10 +30,13 @@
 #ifndef ANDROID_QSERVICE_H
 #define ANDROID_QSERVICE_H
 
-#include <utils/Errors.h>
+#include <stdint.h>
 #include <sys/types.h>
-#include <cutils/log.h>
+
 #include <binder/IServiceManager.h>
+#include <log/log.h>
+#include <utils/Errors.h>
+
 #include <IQService.h>
 #include <IQClient.h>
 
