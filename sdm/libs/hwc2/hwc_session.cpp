@@ -328,10 +328,6 @@ static hwc2_function_pointer_t AsFP(T function) {
 // Defined in the same order as in the HWC2 header
 
 int32_t HWCSession::AcceptDisplayChanges(hwc2_device_t *device, hwc2_display_t display) {
-  if (display >= HWC_NUM_DISPLAY_TYPES) {
-    return  HWC2_ERROR_BAD_DISPLAY;
-  }
-  SCOPE_LOCK(locker_[display]);
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::AcceptDisplayChanges);
 }
 
@@ -340,10 +336,7 @@ int32_t HWCSession::CreateLayer(hwc2_device_t *device, hwc2_display_t display,
   if (!out_layer_id) {
     return  HWC2_ERROR_BAD_PARAMETER;
   }
-  if (display >= HWC_NUM_DISPLAY_TYPES) {
-    return  HWC2_ERROR_BAD_DISPLAY;
-  }
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
+
   return CallDisplayFunction(device, display, &HWCDisplay::CreateLayer, out_layer_id);
 }
 
@@ -373,10 +366,6 @@ int32_t HWCSession::CreateVirtualDisplay(hwc2_device_t *device, uint32_t width, 
 
 int32_t HWCSession::DestroyLayer(hwc2_device_t *device, hwc2_display_t display,
                                  hwc2_layer_t layer) {
-  if (display >= HWC_NUM_DISPLAY_TYPES) {
-    return  HWC2_ERROR_BAD_DISPLAY;
-  }
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
   return CallDisplayFunction(device, display, &HWCDisplay::DestroyLayer, layer);
 }
 
@@ -411,7 +400,7 @@ void HWCSession::Dump(hwc2_device_t *device, uint32_t *out_size, char *out_buffe
   } else {
     std::string s {};
     for (int id = HWC_DISPLAY_PRIMARY; id <= HWC_DISPLAY_VIRTUAL; id++) {
-      SEQUENCE_WAIT_SCOPE_LOCK(locker_[id]);
+      SCOPE_LOCK(locker_[id]);
       if (hwc_session->hwc_display_[id]) {
         s += hwc_session->hwc_display_[id]->Dump();
       }
@@ -537,6 +526,11 @@ int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display
   bool notify_hotplug = false;
   auto status = HWC2::Error::BadDisplay;
   DTRACE_SCOPED();
+
+  if (display >= HWC_NUM_DISPLAY_TYPES) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
   {
     SEQUENCE_EXIT_SCOPE_LOCK(locker_[display]);
     if (!device) {
@@ -554,6 +548,10 @@ int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display
       // frames to the display.
       CALC_FPS();
     }
+  }
+
+  if (status != HWC2::Error::None && status != HWC2::Error::NotValidated) {
+    SEQUENCE_CANCEL_SCOPE_LOCK(locker_[display]);
   }
 
   // Handle Pending external display connection
@@ -611,28 +609,20 @@ static int32_t SetClientTarget(hwc2_device_t *device, hwc2_display_t display,
 
 int32_t HWCSession::SetColorMode(hwc2_device_t *device, hwc2_display_t display,
                                  int32_t /*android_color_mode_t*/ int_mode) {
-  if (display >= HWC_NUM_DISPLAY_TYPES) {
-    return HWC2_ERROR_BAD_DISPLAY;
-  }
   if (int_mode < HAL_COLOR_MODE_NATIVE || int_mode > HAL_COLOR_MODE_DISPLAY_P3) {
     return HWC2_ERROR_BAD_PARAMETER;
   }
   auto mode = static_cast<android_color_mode_t>(int_mode);
-  SCOPE_LOCK(locker_[display]);
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::SetColorMode, mode);
 }
 
 int32_t HWCSession::SetColorTransform(hwc2_device_t *device, hwc2_display_t display,
                                       const float *matrix,
                                       int32_t /*android_color_transform_t*/ hint) {
-  if (display >= HWC_NUM_DISPLAY_TYPES) {
-    return HWC2_ERROR_BAD_DISPLAY;
-  }
   if (!matrix || hint < HAL_COLOR_TRANSFORM_IDENTITY ||
        hint > HAL_COLOR_TRANSFORM_CORRECT_TRITANOPIA) {
     return HWC2_ERROR_BAD_PARAMETER;
   }
-  SCOPE_LOCK(locker_[display]);
   android_color_transform_t transform_hint = static_cast<android_color_transform_t>(hint);
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::SetColorTransform, matrix,
                                          transform_hint);
@@ -719,15 +709,9 @@ static int32_t SetLayerVisibleRegion(hwc2_device_t *device, hwc2_display_t displ
                                        visible);
 }
 
-int32_t HWCSession::SetLayerZOrder(hwc2_device_t *device, hwc2_display_t display,
-                                   hwc2_layer_t layer, uint32_t z) {
-  if (display >= HWC_NUM_DISPLAY_TYPES) {
-    return HWC2_ERROR_BAD_DISPLAY;
-  }
-
-  SCOPE_LOCK(locker_[display]);
-
-  return CallDisplayFunction(device, display, &HWCDisplay::SetLayerZOrder, layer, z);
+static int32_t SetLayerZOrder(hwc2_device_t *device, hwc2_display_t display, hwc2_layer_t layer,
+                              uint32_t z) {
+  return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::SetLayerZOrder, layer, z);
 }
 
 int32_t HWCSession::SetOutputBuffer(hwc2_device_t *device, hwc2_display_t display,
@@ -770,7 +754,6 @@ int32_t HWCSession::SetPowerMode(hwc2_device_t *device, hwc2_display_t display, 
     return HWC2_ERROR_UNSUPPORTED;
   }
 
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
   return CallDisplayFunction(device, display, &HWCDisplay::SetPowerMode, mode);
 }
 
@@ -824,9 +807,8 @@ int32_t HWCSession::ValidateDisplay(hwc2_device_t *device, hwc2_display_t displa
     }
   }
 
-  // If validate fails, cancel the sequence lock so that other operations
-  // (such as Dump or SetPowerMode) may succeed without blocking on the condition
-  if (status == HWC2::Error::BadDisplay) {
+  // Sequence locking currently begins on Validate, so cancel the sequence lock on failures
+  if (status != HWC2::Error::None) {
     SEQUENCE_CANCEL_SCOPE_LOCK(locker_[display]);
   }
 
@@ -1410,14 +1392,10 @@ android::status_t HWCSession::SetColorModeOverride(const android::Parcel *input_
   auto mode = static_cast<android_color_mode_t>(input_parcel->readInt32());
   auto device = static_cast<hwc2_device_t *>(this);
 
-  if (display >= HWC_NUM_DISPLAY_TYPES) {
-    return -EINVAL;
-  }
-
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
   auto err = CallDisplayFunction(device, display, &HWCDisplay::SetColorMode, mode);
   if (err != HWC2_ERROR_NONE)
     return -EINVAL;
+
   return 0;
 }
 
@@ -1426,14 +1404,10 @@ android::status_t HWCSession::SetColorModeById(const android::Parcel *input_parc
   auto mode = input_parcel->readInt32();
   auto device = static_cast<hwc2_device_t *>(this);
 
-  if (display >= HWC_NUM_DISPLAY_TYPES) {
-    return -EINVAL;
-  }
-
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
   auto err = CallDisplayFunction(device, display, &HWCDisplay::SetColorModeById, mode);
   if (err != HWC2_ERROR_NONE)
     return -EINVAL;
+
   return 0;
 }
 
@@ -1901,5 +1875,13 @@ int HWCSession::CreateExternalDisplay(int disp_id, uint32_t primary_width,
                                      primary_width, primary_height, qservice_,
                                      use_primary_res, &hwc_display_[disp_id]);
 }
+
+#ifdef DISPLAY_CONFIG_1_1
+// Methods from ::vendor::hardware::display::config::V1_1::IDisplayConfig follow.
+Return<int32_t> HWCSession::setDisplayAnimating(uint64_t display_id, bool animating ) {
+  return CallDisplayFunction(static_cast<hwc2_device_t *>(this), display_id,
+                             &HWCDisplay::SetDisplayAnimating, animating);
+}
+#endif
 
 }  // namespace sdm
