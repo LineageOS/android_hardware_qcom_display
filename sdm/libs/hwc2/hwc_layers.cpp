@@ -772,6 +772,9 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
     GetUBWCStatsFromMetaData(&cr_stats[0], &(layer_buffer->ubwc_crstats[0]));
   }  // if (getMetaData)
 
+  single_buffer_ = false;
+  getMetaData(const_cast<private_handle_t *>(handle), GET_SINGLE_BUFFER_MODE, &single_buffer_);
+
   return kErrorNone;
 }
 
@@ -889,6 +892,21 @@ int32_t HWCLayer::PopReleaseFence(void) {
   auto fence = release_fences_.front();
   release_fences_.pop();
   return fence;
+}
+
+bool HWCLayer::IsRotationPresent() {
+  return ((layer_->transform.rotation != 0.0f) ||
+         layer_->transform.flip_horizontal ||
+         layer_->transform.flip_vertical);
+}
+
+bool HWCLayer::IsScalingPresent() {
+  uint32_t src_width  = static_cast<uint32_t>(layer_->src_rect.right - layer_->src_rect.left);
+  uint32_t src_height = static_cast<uint32_t>(layer_->src_rect.bottom - layer_->src_rect.top);
+  uint32_t dst_width  = static_cast<uint32_t>(layer_->dst_rect.right - layer_->dst_rect.left);
+  uint32_t dst_height = static_cast<uint32_t>(layer_->dst_rect.bottom - layer_->dst_rect.top);
+
+  return ((src_width != dst_width) || (dst_height != src_height));
 }
 
 }  // namespace sdm

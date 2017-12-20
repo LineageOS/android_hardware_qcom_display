@@ -542,6 +542,12 @@ void HWCDisplay::BuildLayerStack() {
       secure_display_active = true;
     }
 
+    if (hwc_layer->IsSingleBuffered() &&
+       !(hwc_layer->IsRotationPresent() || hwc_layer->IsScalingPresent())) {
+      layer->flags.single_buffer = true;
+      layer_stack_.flags.single_buffered_layer_present = true;
+    }
+
     if (hwc_layer->GetClientRequestedCompositionType() == HWC2::Composition::Cursor) {
       // Currently we support only one HWCursor & only at top most z-order
       if ((*layer_set_.rbegin())->GetId() == hwc_layer->GetId()) {
@@ -2061,7 +2067,8 @@ bool HWCDisplay::CanSkipValidate() {
   }
 
   // Layer Stack checks
-  if (layer_stack_.flags.hdr_present && (tone_mapper_ && tone_mapper_->IsActive())) {
+  if ((layer_stack_.flags.hdr_present && (tone_mapper_ && tone_mapper_->IsActive())) ||
+     layer_stack_.flags.single_buffered_layer_present) {
     DLOGV_IF(kTagClient, "HDR content present with tone mapping enabled. Returning false.");
     return false;
   }
