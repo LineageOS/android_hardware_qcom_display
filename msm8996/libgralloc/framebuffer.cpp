@@ -15,31 +15,28 @@
  * limitations under the License.
  */
 
-#include <sys/mman.h>
-
-#include <cutils/log.h>
-#include <cutils/properties.h>
 #include <dlfcn.h>
-
-#include <hardware/hardware.h>
-
-#include <fcntl.h>
 #include <errno.h>
-#include <sys/ioctl.h>
-#include <string.h>
-#include <stdlib.h>
-#include <pthread.h>
-#include <cutils/atomic.h>
-
+#include <fcntl.h>
 #include <linux/fb.h>
 #include <linux/msm_mdp.h>
+#include <pthread.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
+
+#include <cutils/atomic.h>
+#include <cutils/properties.h>
+#include <log/log.h>
+
+#include <hardware/hardware.h>
 
 #include <GLES/gl.h>
 
 #include "gralloc_priv.h"
 #include "fb_priv.h"
 #include "gr.h"
-#include <cutils/properties.h>
 #include <profiler.h>
 
 #define EVEN_OUT(x) if (x & 0x0001) {x--;}

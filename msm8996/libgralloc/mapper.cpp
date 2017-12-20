@@ -16,20 +16,20 @@
  */
 
 #define ATRACE_TAG (ATRACE_TAG_GRAPHICS | ATRACE_TAG_HAL)
-#include <limits.h>
-#include <errno.h>
-#include <pthread.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdarg.h>
 
+#include <errno.h>
+#include <limits.h>
+#include <pthread.h>
+#include <stdarg.h>
+#include <string.h>
+#include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/ioctl.h>
+#include <unistd.h>
 
-#include <cutils/log.h>
 #include <cutils/atomic.h>
+#include <log/log.h>
 #include <utils/Trace.h>
 
 #include <hardware/hardware.h>
@@ -42,7 +42,6 @@
 #include "alloc_controller.h"
 #include "memalloc.h"
 #include <qdMetaData.h>
-
 
 using namespace gralloc;
 /*****************************************************************************/

@@ -18,20 +18,18 @@
  * limitations under the License.
  */
 
-#include <cutils/log.h>
-
-#include <linux/msm_mdp.h>
-#include <linux/fb.h>
-
-#include <stdint.h>
-#include <string.h>
-#include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
-
+#include <linux/msm_mdp.h>
+#include <linux/fb.h>
+#include <stdint.h>
+#include <string.h>
 #include <sys/ioctl.h>
-#include <sys/types.h>
 #include <sys/mman.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#include <log/log.h>
 
 #include <copybit.h>
 
