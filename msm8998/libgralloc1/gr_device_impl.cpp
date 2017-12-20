@@ -28,13 +28,16 @@
  */
 
 #define ATRACE_TAG (ATRACE_TAG_GRAPHICS | ATRACE_TAG_HAL)
-#include <cutils/log.h>
-#include <utils/Trace.h>
-#include <cutils/trace.h>
+#include <string.h>
 #include <sync/sync.h>
+
 #include <algorithm>
 #include <sstream>
 #include <string>
+
+#include <cutils/trace.h>
+#include <log/log.h>
+#include <utils/Trace.h>
 
 #include "gr_device_impl.h"
 #include "gr_buf_descriptor.h"
