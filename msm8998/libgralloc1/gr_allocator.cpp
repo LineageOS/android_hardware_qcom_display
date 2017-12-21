@@ -27,9 +27,12 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <cutils/log.h>
+#include <unistd.h>
+
 #include <algorithm>
 #include <vector>
+
+#include <log/log.h>
 
 #include "gr_utils.h"
 #include "gr_allocator.h"

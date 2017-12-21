@@ -27,9 +27,11 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <cutils/log.h>
-#include <stdlib.h>
 #include <errno.h>
+#include <stdlib.h>
+
+#include <log/log.h>
+
 #include "software_converter.h"
 
 /** Convert YV12 to YCrCb_420_SP */
