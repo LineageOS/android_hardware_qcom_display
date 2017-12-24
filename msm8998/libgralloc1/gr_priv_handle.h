@@ -21,8 +21,10 @@
 #define __GR_PRIV_HANDLE_H__
 
 #include <errno.h>
+#include <stdint.h>
 
-#include <cutils/log.h>
+#include <log/log.h>
+
 #include <hardware/gralloc1.h>
 #include <hardware/gralloc.h>
 #include <cinttypes>

@@ -29,12 +29,16 @@
 
 #define DEBUG 0
 #define ATRACE_TAG (ATRACE_TAG_GRAPHICS | ATRACE_TAG_HAL)
-#include <cstdlib>
-#include <cutils/log.h>
+
 #include <errno.h>
 #include <fcntl.h>
-#include <hardware/hdmi_cec.h>
+
+#include <cstdlib>
+
+#include <log/log.h>
 #include <utils/Trace.h>
+
+#include <hardware/hdmi_cec.h>
 #include "qhdmi_cec.h"
 #include "QHDMIClient.h"
 

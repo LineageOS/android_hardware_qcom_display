@@ -27,11 +27,11 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <dlfcn.h>
 #include <string.h>
 
-#include <cutils/log.h>
 #include <cutils/properties.h>
-#include <dlfcn.h>
+#include <log/log.h>
 
 #include "gralloc_priv.h"
 #include "gr_adreno_info.h"

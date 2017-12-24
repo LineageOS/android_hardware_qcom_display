@@ -18,12 +18,11 @@
 #ifndef GRALLOC_PRIV_H_
 #define GRALLOC_PRIV_H_
 
-#include <stdint.h>
-#include <limits.h>
-#include <sys/cdefs.h>
-#include <hardware/gralloc.h>
-#include <pthread.h>
 #include <errno.h>
+#include <limits.h>
+#include <pthread.h>
+#include <stdint.h>
+#include <sys/cdefs.h>
 #include <unistd.h>
 
 
@@ -35,8 +34,9 @@
 
 
 #include <cutils/native_handle.h>
+#include <log/log.h>
 
-#include <cutils/log.h>
+#include <hardware/gralloc.h>
 
 #define ROUND_UP_PAGESIZE(x) (unsigned int)( ((x) + getpagesize()-1)  & \
                                              (~(getpagesize()-1)) )
