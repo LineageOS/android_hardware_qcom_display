@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -191,6 +191,8 @@ struct LayerRequestFlags {
       uint32_t tone_map : 1;  //!< This flag will be set by SDM when the layer needs tone map
       uint32_t secure: 1;  //!< This flag will be set by SDM when the layer must be secure
       uint32_t flip_buffer: 1;  //!< This flag will be set by SDM when the layer needs FBT flip
+      uint32_t dest_tone_map : 1;  //!< This flag will be set by SDM when the layer needs
+                                   //!< destination tone map
     };
     uint32_t request_flags = 0;  //!< For initialization purpose only.
                                  //!< Shall not be refered directly.
@@ -378,14 +380,27 @@ struct Layer {
   LayerSolidFill solid_fill_info = {};             //!< solid fill info along with depth.
 };
 
+/*! @brief This structure defines the color space + transfer of a given layer.
+
+  @sa PrimariesTransfer
+*/
+
+struct PrimariesTransfer {
+  ColorPrimaries primaries = ColorPrimaries_BT709_5;
+  GammaTransfer transfer = Transfer_sRGB;
+
+  bool operator==(const PrimariesTransfer& blend_cs) const {
+    return ((primaries == blend_cs.primaries) && (transfer == blend_cs.transfer));
+  }
+};
+
+
 /*! @brief This structure defines a layer stack that contains layers which need to be composed and
   rendered onto the target.
 
   @sa DisplayInterface::Prepare
   @sa DisplayInterface::Commit
 */
-
-typedef std::pair<ColorPrimaries, GammaTransfer> PrimariesTransfer;
 
 struct LayerStack {
   std::vector<Layer *> layers = {};    //!< Vector of layer pointers.
@@ -404,8 +419,8 @@ struct LayerStack {
 
   LayerStackFlags flags;               //!< Flags associated with this layer set.
 
-  PrimariesTransfer blend_cs = {ColorPrimaries_BT709_5, Transfer_sRGB};
-                                       //!< o/p - Blending color space updated by SDM
+
+  PrimariesTransfer blend_cs = {};     //!< o/p - Blending color space of the frame, updated by SDM
 };
 
 }  // namespace sdm
