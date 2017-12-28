@@ -162,6 +162,24 @@ enum struct DRMOps {
    */
   PLANE_SET_ROT_FB_ID,
   /*
+   * Op: Sets inverse pma mode on this plane.
+   * Arg: uint32_t - Plane ID
+   *      uint32_t - enable/disable inverse pma.
+   */
+  PLANE_SET_INVERSE_PMA,
+  /*
+   * Op: Sets csc config on this plane.
+   * Arg: uint32_t - Plane ID
+   *      uint64_t - Address of the csc config object(version based)
+   */
+  PLANE_SET_DGM_CSC_CONFIG,
+  /*
+   * Op: Sets SSPP Feature
+   * Arg: uint32_t - Plane ID
+   *      DRMPPFeatureInfo * - PP feature data pointer
+   */
+  PLANE_SET_POST_PROC,
+  /*
    * Op: Activate or deactivate a CRTC
    * Arg: uint32_t - CRTC ID
    *      uint32_t - 1 to enable, 0 to disable
@@ -454,6 +472,13 @@ enum struct DRMPlaneType {
   MAX,
 };
 
+enum struct DRMTonemapLutType {
+  DMA_1D_GC,
+  DMA_1D_IGC,
+  VIG_1D_IGC,
+  VIG_3D_GAMUT,
+};
+
 struct DRMPlaneTypeInfo {
   DRMPlaneType type;
   uint32_t master_plane_id;
@@ -471,6 +496,9 @@ struct DRMPlaneTypeInfo {
   QSEEDStepVersion qseed3_version;
   bool multirect_prop_present = false;
   InlineRotationVersion inrot_version;  // inline rotation version
+  bool inverse_pma = false;
+  uint32_t dgm_csc_version = 0;  // csc used with DMA
+  std::map<DRMTonemapLutType, uint32_t> tonemap_lut_version_map = {};
 };
 
 // All DRM Planes as map<Plane_id , plane_type_info> listed from highest to lowest priority
