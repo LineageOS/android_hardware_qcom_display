@@ -160,7 +160,7 @@ int IonAlloc::map_buffer(void **pBase, size_t size, int offset, int fd)
     return err;
 }
 
-int IonAlloc::unmap_buffer(void *base, size_t size, int offset)
+int IonAlloc::unmap_buffer(void *base, size_t size, int offset __unused)
 {
     ALOGD_IF(DEBUG, "ion: Unmapping buffer  base:%p size:%d", base, size);
     int err = 0;

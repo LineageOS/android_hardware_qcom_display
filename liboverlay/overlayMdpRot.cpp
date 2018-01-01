@@ -113,11 +113,11 @@ void MdpRot::setSource(const overlay::utils::Whf& awhf) {
     mRotImgInfo.dst.height = whf.h;
 }
 
-void MdpRot::setCrop(const utils::Dim& crop) {
+void MdpRot::setCrop(const utils::Dim& crop __unused) {
     // NO-OP for non-mdss rotator due to possible h/w limitations
 }
 
-bool MdpRot::isRotBufReusable(const utils::eMdpFlags& flags) {
+bool MdpRot::isRotBufReusable(const utils::eMdpFlags& flags __unused) {
     return true;
 }
 

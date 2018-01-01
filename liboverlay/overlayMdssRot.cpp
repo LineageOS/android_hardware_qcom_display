@@ -114,7 +114,7 @@ void MdssRot::setCrop(const utils::Dim& crop) {
     mRotInfo.src_rect.h = crop.h;
 }
 
-void MdssRot::setDownscale(int ds) {}
+void MdssRot::setDownscale(int ds __unused) {}
 
 void MdssRot::setFlags(const utils::eMdpFlags& flags) {
     mRotInfo.flags = flags;
