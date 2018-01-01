@@ -1,11 +1,15 @@
 #Common headers
-common_includes := $(call project-path-for,qcom-display)/libgralloc
-common_includes += $(call project-path-for,qcom-display)/liboverlay
-common_includes += $(call project-path-for,qcom-display)/libcopybit
-common_includes += $(call project-path-for,qcom-display)/libqdutils
-common_includes += $(call project-path-for,qcom-display)/libhwcomposer
-common_includes += $(call project-path-for,qcom-display)/libhdmi
-common_includes += $(call project-path-for,qcom-display)/libqservice
+display_top := $(call my-dir)
+
+#Common headers
+common_includes := $(display_top)/libgralloc
+common_includes += $(display_top)/liboverlay
+common_includes += $(display_top)/libcopybit
+common_includes += $(display_top)/libqdutils
+common_includes += $(display_top)/libhwcomposer
+common_includes += $(display_top)/libhdmi
+common_includes += $(display_top)/libqservice
+common_includes += $(display_top)/include
 
 common_header_export_path := qcom/display
 
@@ -36,6 +40,9 @@ ifeq ($(TARGET_USES_QCOM_BSP),true)
 # Enable QCOM Display features
     common_flags += -DQTI_BSP
 endif
+
+common_flags += -isystem $(TARGET_OUT_HEADERS)/qcom/display
+
 ifneq ($(call is-platform-sdk-version-at-least,18),true)
     common_flags += -DANDROID_JELLYBEAN_MR1=1
 endif
