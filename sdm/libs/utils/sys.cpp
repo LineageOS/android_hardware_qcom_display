@@ -27,6 +27,7 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <utils/debug.h>
 #include <utils/sys.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
@@ -70,6 +71,9 @@ DynLib::~DynLib() {
 bool DynLib::Open(const char *lib_name) {
   Close();
   lib_ = ::dlopen(lib_name, RTLD_NOW);
+  if (lib_ == NULL) {
+    DLOGD("dlopen error: %s", dlerror());
+  }
 
   return (lib_ != NULL);
 }
