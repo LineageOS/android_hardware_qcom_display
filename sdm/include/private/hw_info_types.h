@@ -134,6 +134,19 @@ enum HwHdrEotf {
 typedef std::map<HWSubBlockType, std::vector<LayerBufferFormat>> FormatsMap;
 typedef std::map<LayerBufferFormat, float> CompRatioMap;
 
+// Base Postprocessing features information.
+class PPFeatureInfo {
+ public:
+  uint32_t enable_flags_ = 0;  // bitmap to indicate subset of parameters enabling or not.
+  uint32_t feature_version_ = 0;
+  uint32_t feature_id_ = 0;
+  uint32_t disp_id_ = 0;
+  uint32_t pipe_id_ = 0;
+
+  virtual ~PPFeatureInfo() {}
+  virtual void *GetConfigData(void) const = 0;
+};
+
 struct HWDynBwLimitInfo {
   uint32_t cur_mode = kBwDefault;
   uint64_t total_bw_limit[kBwModeMax] = { 0 };

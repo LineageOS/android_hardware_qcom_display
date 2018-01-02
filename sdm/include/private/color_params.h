@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2017, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015-2018, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -537,19 +537,6 @@ class SDEPgcLUTWrapper : private SDEPgcLUTData {
  private:
   SDEPgcLUTWrapper() {}
   uint32_t *buffer_ = NULL;
-};
-
-// Base Postprocessing features information.
-class PPFeatureInfo {
- public:
-  uint32_t enable_flags_ = 0;  // bitmap to indicate subset of parameters enabling or not.
-  uint32_t feature_version_ = 0;
-  uint32_t feature_id_ = 0;
-  uint32_t disp_id_ = 0;
-  uint32_t pipe_id_ = 0;
-
-  virtual ~PPFeatureInfo() {}
-  virtual void *GetConfigData(void) const = 0;
 };
 
 // Individual Postprocessing feature representing physical attributes and information
