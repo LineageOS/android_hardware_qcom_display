@@ -73,25 +73,16 @@ namespace sdm {
 static HWCUEvent g_hwc_uevent_;
 Locker HWCSession::locker_[HWC_NUM_DISPLAY_TYPES];
 
-void HWCUEvent::UEventThread(HWCUEvent *hwc_uevent) {
+void * HWCUEvent::UEventThread(HWCUEvent *hwc_event) {
   const char *uevent_thread_name = "HWC_UeventThread";
 
   prctl(PR_SET_NAME, uevent_thread_name, 0, 0, 0);
   setpriority(PRIO_PROCESS, 0, HAL_PRIORITY_URGENT_DISPLAY);
 
-  int status = uevent_init();
-  if (!status) {
-    std::unique_lock<std::mutex> caller_lock(hwc_uevent->mutex_);
-    hwc_uevent->caller_cv_.notify_one();
-    DLOGE("Failed to init uevent with err %d", status);
-    return;
-  }
-
-  {
-    // Signal caller thread that worker thread is ready to listen to events.
-    std::unique_lock<std::mutex> caller_lock(hwc_uevent->mutex_);
-    hwc_uevent->init_done_ = true;
-    hwc_uevent->caller_cv_.notify_one();
+  if (!uevent_init()) {
+    DLOGE("Failed to init uevent");
+    pthread_exit(0);
+    return NULL;
   }
 
   while (1) {
@@ -102,28 +93,29 @@ void HWCUEvent::UEventThread(HWCUEvent *hwc_uevent) {
 
     // scope of lock to this block only, so that caller is free to set event handler to nullptr;
     {
-      std::lock_guard<std::mutex> guard(hwc_uevent->mutex_);
-      if (hwc_uevent->uevent_listener_) {
-        hwc_uevent->uevent_listener_->UEventHandler(uevent_data, length);
+      std::lock_guard<std::mutex> guard(hwc_event->mutex_);
+      if (hwc_event->event_handler_) {
+        hwc_event->event_handler_->UEvent(uevent_data, length);
       } else {
         DLOGW("UEvent dropped. No uevent listener.");
       }
     }
   }
+  pthread_exit(0);
+
+  return NULL;
 }
 
 HWCUEvent::HWCUEvent() {
-  std::unique_lock<std::mutex> caller_lock(mutex_);
   std::thread thread(HWCUEvent::UEventThread, this);
   thread.detach();
-  caller_cv_.wait(caller_lock);
 }
 
-void HWCUEvent::Register(HWCUEventListener *uevent_listener) {
-  DLOGI("Set uevent listener = %p", uevent_listener);
+void HWCUEvent::Register(HWCUEventHandler *event_handler) {
+  DLOGI("Set uevent listener = %p", event_handler);
 
   std::lock_guard<std::mutex> obj(mutex_);
-  uevent_listener_ = uevent_listener;
+  event_handler_ = event_handler;
 }
 
 HWCSession::HWCSession(const hw_module_t *module) {
@@ -140,10 +132,6 @@ int HWCSession::Init() {
 
   int status = -EINVAL;
   const char *qservice_name = "display.qservice";
-
-  if (!g_hwc_uevent_.InitDone()) {
-    return status;
-  }
 
   // Start QService and connect to it.
   qService::QService::init();
@@ -174,13 +162,10 @@ int HWCSession::Init() {
     return -EINVAL;
   }
 
-  g_hwc_uevent_.Register(this);
-
   // If HDMI display is primary display, defer display creation until hotplug event is received.
   HWDisplayInterfaceInfo hw_disp_info = {};
   error = core_intf_->GetFirstDisplayInterfaceType(&hw_disp_info);
   if (error != kErrorNone) {
-    g_hwc_uevent_.Register(nullptr);
     CoreInterface::DestroyCore();
     buffer_allocator_.Deinit();
     DLOGE("Primary display type not recognized. Error = %d", error);
@@ -205,7 +190,6 @@ int HWCSession::Init() {
   }
 
   if (status) {
-    g_hwc_uevent_.Register(nullptr);
     CoreInterface::DestroyCore();
     buffer_allocator_.Deinit();
     return status;
@@ -220,6 +204,8 @@ int HWCSession::Init() {
       DLOGW("Unable to increase fd limit -  err:%d, %s", errno, strerror(errno));
     }
   }
+
+  g_hwc_uevent_.Register(this);
 
   return 0;
 }
@@ -1377,7 +1363,7 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
   return (ret ? -EINVAL : 0);
 }
 
-void HWCSession::UEventHandler(const char *uevent_data, int length) {
+void HWCSession::UEvent(const char *uevent_data, int length) {
   if (!strcasecmp(uevent_data, HWC_UEVENT_SWITCH_HDMI)) {
     DLOGI("Uevent HDMI = %s", uevent_data);
     int connected = GetEventValue(uevent_data, length, "SWITCH_STATE=");

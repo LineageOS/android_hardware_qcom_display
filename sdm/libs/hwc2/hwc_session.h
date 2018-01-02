@@ -43,27 +43,24 @@ using ::android::hardware::Return;
 // only when there is a valid uevent, it can not be interrupted otherwise. Tieing life cycle
 // of this thread with HWC session cause HWC deinitialization to wait infinitely for the
 // thread to exit.
-class HWCUEventListener {
+class HWCUEventHandler {
  public:
-  virtual ~HWCUEventListener() {}
-  virtual void UEventHandler(const char *uevent_data, int length) = 0;
+  virtual ~HWCUEventHandler() {}
+  virtual void UEvent(const char *uevent_data, int length) = 0;
 };
 
 class HWCUEvent {
  public:
   HWCUEvent();
-  static void UEventThread(HWCUEvent *hwc_event);
-  void Register(HWCUEventListener *uevent_listener);
-  inline bool InitDone() { return init_done_; }
+  static void *UEventThread(HWCUEvent *hwc_event);
+  void Register(HWCUEventHandler *event_handler);
 
  private:
   std::mutex mutex_;
-  std::condition_variable caller_cv_;
-  HWCUEventListener *uevent_listener_ = nullptr;
-  bool init_done_ = false;
+  HWCUEventHandler *event_handler_ = nullptr;
 };
 
-class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qClient::BnQClient {
+class HWCSession : hwc2_device_t, HWCUEventHandler, IDisplayConfig, public qClient::BnQClient {
  public:
   struct HWCModuleMethods : public hw_module_methods_t {
     HWCModuleMethods() { hw_module_methods_t::open = HWCSession::Open; }
@@ -156,7 +153,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   static hwc2_function_pointer_t GetFunction(struct hwc2_device *device, int32_t descriptor);
 
   // Uevent handler
-  virtual void UEventHandler(const char *uevent_data, int length);
+  virtual void UEvent(const char *uevent_data, int length);
   int GetEventValue(const char *uevent_data, int length, const char *event_info);
   int HotPlugHandler(bool connected);
   void ResetPanel();
