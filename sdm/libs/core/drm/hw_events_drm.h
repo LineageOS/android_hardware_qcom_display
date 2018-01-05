@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -33,6 +33,7 @@
 #include <drm_interface.h>
 #include <sys/poll.h>
 #include <map>
+#include <mutex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -94,6 +95,8 @@ class HWEventsDRM : public HWEventsInterface {
   bool exit_threads_ = false;
   uint32_t vsync_index_ = 0;
   bool vsync_enabled_ = false;
+  bool vsync_registered_ = false;
+  std::mutex vsync_mutex_;  // To protect vsync_enabled_ and vsync_registered_
   uint32_t idle_notify_index_ = 0;
   sde_drm::DRMDisplayToken token_ = {};
   bool is_primary_ = false;
