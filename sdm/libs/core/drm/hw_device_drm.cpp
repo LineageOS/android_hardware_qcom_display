@@ -102,6 +102,24 @@ using sde_drm::DRMMultiRectMode;
 
 namespace sdm {
 
+static PPBlock GetPPBlock(const HWToneMapLut &lut_type) {
+  PPBlock pp_block = kPPBlockMax;
+  switch (lut_type) {
+    case kDma1dIgc:
+    case kDma1dGc:
+      pp_block = kDGM;
+      break;
+    case kVig1dIgc:
+    case kVig3dGamut:
+      pp_block = kVIG;
+      break;
+    default:
+      DLOGE("Unknown PP Block");
+      break;
+  }
+  return pp_block;
+}
+
 static void GetDRMFormat(LayerBufferFormat format, uint32_t *drm_format,
                          uint64_t *drm_format_modifier) {
   switch (format) {
@@ -951,6 +969,8 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
         DRMMultiRectMode multirect_mode;
         SetMultiRectMode(pipe_info->flags, &multirect_mode);
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_MULTIRECT_MODE, pipe_id, multirect_mode);
+
+        SetSsppTonemapFeatures(pipe_info);
       }
     }
   }
@@ -1608,12 +1628,83 @@ void HWDeviceDRM::SetTopology(sde_drm::DRMTopology drm_topology, HWTopology *hw_
   }
 }
 
+
 void HWDeviceDRM::SetMultiRectMode(const uint32_t flags, DRMMultiRectMode *target) {
   *target = DRMMultiRectMode::NONE;
   if (flags & kMultiRect) {
     *target = DRMMultiRectMode::SERIAL;
     if (flags & kMultiRectParallelMode) {
       *target = DRMMultiRectMode::PARALLEL;
+    }
+  }
+}
+
+void HWDeviceDRM::SetSsppTonemapFeatures(HWPipeInfo *pipe_info) {
+  if (pipe_info->dgm_csc_info.op != kNoOp) {
+    SDECsc csc = {};
+    SetDGMCsc(pipe_info->dgm_csc_info, &csc);
+    DLOGV_IF(kTagDriverConfig, "Call Perform DGM CSC Op = %s",
+            (pipe_info->dgm_csc_info.op == kSet) ? "Set" : "Reset");
+    drm_atomic_intf_->Perform(DRMOps::PLANE_SET_DGM_CSC_CONFIG, pipe_info->pipe_id,
+                              reinterpret_cast<uint64_t>(&csc.csc_v1));
+  }
+  if (pipe_info->inverse_pma_info.op != kNoOp) {
+    DLOGV_IF(kTagDriverConfig, "Call Perform Inverse PMA Op = %s",
+            (pipe_info->inverse_pma_info.op == kSet) ? "Set" : "Reset");
+    drm_atomic_intf_->Perform(DRMOps::PLANE_SET_INVERSE_PMA, pipe_info->pipe_id,
+                             (pipe_info->inverse_pma_info.inverse_pma) ? 1: 0);
+  }
+  SetSsppLutFeatures(pipe_info);
+}
+
+void HWDeviceDRM::SetDGMCsc(const HWPipeCscInfo &dgm_csc_info, SDECsc *csc) {
+  SetDGMCscV1(dgm_csc_info.csc, &csc->csc_v1);
+}
+
+void HWDeviceDRM::SetDGMCscV1(const HWCsc &dgm_csc, sde_drm_csc_v1 *csc_v1) {
+  uint32_t i = 0;
+  for (i = 0; i < MAX_CSC_MATRIX_COEFF_SIZE; i++) {
+    csc_v1->ctm_coeff[i] = dgm_csc.ctm_coeff[i];
+    DLOGV_IF(kTagDriverConfig, " DGM csc_v1[%d] = %d", i, csc_v1->ctm_coeff[i]);
+  }
+  for (i = 0; i < MAX_CSC_BIAS_SIZE; i++) {
+    csc_v1->pre_bias[i] = dgm_csc.pre_bias[i];
+    csc_v1->post_bias[i] = dgm_csc.post_bias[i];
+  }
+  for (i = 0; i < MAX_CSC_CLAMP_SIZE; i++) {
+    csc_v1->pre_clamp[i] = dgm_csc.pre_clamp[i];
+    csc_v1->post_clamp[i] = dgm_csc.post_clamp[i];
+  }
+}
+
+void HWDeviceDRM::SetSsppLutFeatures(HWPipeInfo *pipe_info) {
+  for (HWPipeTonemapLutInfo &lut_info : pipe_info->lut_info) {
+    if (lut_info.op != kNoOp) {
+      std::shared_ptr<PPFeatureInfo> feature = lut_info.pay_load;
+      if (feature == nullptr) {
+        DLOGE("Null Pointer for Op = %d lut type = %d", lut_info.op, lut_info.type);
+        continue;
+      }
+      DRMPPFeatureInfo kernel_params = {};
+      std::vector<DRMPPFeatureID> drm_id = {};
+      PPBlock pp_block = GetPPBlock(lut_info.type);
+      hw_color_mgr_->ToDrmFeatureId(pp_block, feature->feature_id_, &drm_id);
+      for (DRMPPFeatureID id : drm_id) {
+        kernel_params.id = id;
+        bool disable = (lut_info.op == kReset);
+        DLOGV_IF(kTagDriverConfig, "Lut Type = %d PPBlock = %d Op = %s Disable = %d Feature = %p",
+                 lut_info.type, pp_block, (lut_info.op ==kSet) ? "Set" : "Reset", disable,
+                 feature.get());
+        int ret = hw_color_mgr_->GetDrmFeature(feature.get(), &kernel_params, disable);
+        if (!ret) {
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_POST_PROC, pipe_info->pipe_id,
+                                    &kernel_params);
+          hw_color_mgr_->FreeDrmFeatureData(&kernel_params);
+        } else {
+          DLOGE("GetDrmFeature failed for Lut type = %d", lut_info.type);
+        }
+      }
+      drm_id.clear();
     }
   }
 }

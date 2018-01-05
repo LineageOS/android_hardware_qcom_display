@@ -193,6 +193,10 @@ struct LayerRequestFlags {
       uint32_t flip_buffer: 1;  //!< This flag will be set by SDM when the layer needs FBT flip
       uint32_t dest_tone_map : 1;  //!< This flag will be set by SDM when the layer needs
                                    //!< destination tone map
+      uint32_t src_3d_tone_map: 1;  //!< This flag will be set by SDM when the layer needs
+                                    //!< 3d tonemap
+      uint32_t src_1d_tone_map: 1;  //!< This flag will be set by SDM when the layer needs
+                                    //!< 1d tone map
     };
     uint32_t request_flags = 0;  //!< For initialization purpose only.
                                  //!< Shall not be refered directly.

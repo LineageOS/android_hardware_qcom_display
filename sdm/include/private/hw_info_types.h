@@ -32,6 +32,7 @@
 #include <map>
 #include <string>
 #include <bitset>
+#include <memory>
 
 namespace sdm {
 using std::string;
@@ -43,6 +44,11 @@ const int kMaxSDELayers = 16;   // Maximum number of layers that can be handled 
 #define MAJOR 28
 #define MINOR 16
 #define SDEVERSION(major, minor, hw_rev) ((major) << MAJOR) | ((minor) << MINOR) | (hw_rev)
+
+// CSC Max Size
+#define MAX_CSC_MATRIX_COEFF_SIZE   9
+#define MAX_CSC_CLAMP_SIZE          6
+#define MAX_CSC_BIAS_SIZE           3
 
 enum HWDeviceType {
   kDevicePrimary,
@@ -131,6 +137,25 @@ enum HwHdrEotf {
   kHdrEOTFHLG = 0x8,
 };
 
+enum HWSrcTonemap {
+  kSrcTonemap1d,  // DMA
+  kSrcTonemap3d,  // VIG
+};
+
+enum HWToneMapLut {
+  kLutNone,     // No valid lut
+  kDma1dIgc,    // DMA IGC Lut
+  kDma1dGc,     // DMA GC Lut
+  kVig1dIgc,    // VIG IGC Lut
+  kVig3dGamut,  // 3D Gamut Lut
+};
+
+enum HWWriteOperation {
+  kNoOp,   // No-op, previously set config holds good
+  kSet,    // Sets the new config
+  kReset,  // Resets/Clears the previously set config
+};
+
 typedef std::map<HWSubBlockType, std::vector<LayerBufferFormat>> FormatsMap;
 typedef std::map<LayerBufferFormat, float> CompRatioMap;
 
@@ -158,6 +183,9 @@ struct HWPipeCaps {
   uint32_t id = 0;
   uint32_t master_pipe_id = 0;
   uint32_t max_rects = 1;
+  bool inverse_pma = 0;
+  uint32_t dgm_csc_version = 0;
+  std::map<HWToneMapLut, uint32_t> tm_lut_version_map = {};
 };
 
 struct HWRotatorInfo {
@@ -257,6 +285,7 @@ struct HWResourceInfo {
   HWQseedStepVersion pipe_qseed3_version = kQseed3v2;  // only valid when has_qseed3=true
   uint32_t min_prefill_lines = 0;
   InlineRotationVersion inrot_version = kInlineRotationNone;
+  std::bitset<32> src_tone_map = 0;  //!< Stores the bit mask of src tone map capability
 };
 
 struct HWSplitInfo {
@@ -447,6 +476,14 @@ struct HWPlane {
   uint32_t src_height = 0;
 };
 
+struct HWCsc {
+  int64_t ctm_coeff[MAX_CSC_MATRIX_COEFF_SIZE] = {0};
+  uint32_t pre_bias[MAX_CSC_BIAS_SIZE] = {0};
+  uint32_t post_bias[MAX_CSC_BIAS_SIZE] = {0};
+  uint32_t pre_clamp[MAX_CSC_CLAMP_SIZE] = {0};
+  uint32_t post_clamp[MAX_CSC_CLAMP_SIZE] = {0};
+};
+
 struct HWScaleData {
   struct enable {
     uint8_t scale = 0;
@@ -495,6 +532,22 @@ struct HWAVRInfo {
   HWAVRModes mode = kContinuousMode;  // Specifies the AVR mode
 };
 
+struct HWPipeCscInfo {
+  HWWriteOperation op = kNoOp;
+  HWCsc csc = {};
+};
+
+struct HWPipeTonemapLutInfo {
+  HWWriteOperation op = kNoOp;
+  HWToneMapLut type = kLutNone;
+  std::shared_ptr<PPFeatureInfo> pay_load = nullptr;
+};
+
+struct HWPipeTonemapInversePma {
+  HWWriteOperation op = kNoOp;
+  bool inverse_pma = false;
+};
+
 struct HWPipeInfo {
   HWPipeInfo *pair = NULL;
   uint8_t rect = 255;
@@ -510,6 +563,9 @@ struct HWPipeInfo {
   uint8_t flags = 0;
   bool valid = false;
   bool is_virtual = 0;
+  HWPipeTonemapInversePma inverse_pma_info = {};
+  HWPipeCscInfo dgm_csc_info = {};
+  std::vector<HWPipeTonemapLutInfo> lut_info = {};
 };
 
 struct HWSolidfillStage {

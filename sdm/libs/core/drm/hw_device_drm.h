@@ -49,6 +49,11 @@
 namespace sdm {
 class HWInfoInterface;
 
+struct SDECsc {
+  struct sde_drm_csc_v1 csc_v1 = {};
+  // More here, maybe in a union
+};
+
 class HWDeviceDRM : public HWInterface {
  public:
   HWDeviceDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
@@ -135,6 +140,10 @@ class HWDeviceDRM : public HWInterface {
   bool IsResolutionSwitchEnabled() const { return resolution_switch_enabled_; }
   void SetTopology(sde_drm::DRMTopology drm_topology, HWTopology *hw_topology);
   void SetMultiRectMode(const uint32_t flags, sde_drm::DRMMultiRectMode *target);
+  void SetSsppTonemapFeatures(HWPipeInfo *pipe_info);
+  void SetDGMCsc(const HWPipeCscInfo &dgm_csc_info, SDECsc *csc);
+  void SetDGMCscV1(const HWCsc &dgm_csc, sde_drm_csc_v1 *csc_v1);
+  void SetSsppLutFeatures(HWPipeInfo *pipe_info);
 
   class Registry {
    public:

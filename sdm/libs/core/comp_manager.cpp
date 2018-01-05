@@ -426,7 +426,7 @@ void CompManager::ProcessIdlePowerCollapse(Handle display_ctx) {
           reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
   if (display_comp_ctx) {
-    resource_intf_->Perform(ResourceInterface::kCmdResetScalarLUT,
+    resource_intf_->Perform(ResourceInterface::kCmdResetLUT,
                             display_comp_ctx->display_resource_ctx);
   }
 }
