@@ -25,5 +25,6 @@ LOCAL_CFLAGS := $(common_flags) -DLOG_TAG=\"qdlights\"
 LOCAL_CLANG  := true
 LOCAL_MODULE := lights.$(TARGET_BOARD_PLATFORM)
 LOCAL_MODULE_TAGS := optional
+LOCAL_CFLAGS += -Wno-error
 
 include $(BUILD_SHARED_LIBRARY)
