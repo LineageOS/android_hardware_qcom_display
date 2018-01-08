@@ -444,9 +444,15 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state) {
     break;
 
   case kStateDoze:
+    error = hw_intf_->Doze();
+    active = true;
+    break;
+
   case kStateDozeSuspend:
     error = hw_intf_->DozeSuspend();
-    active = true;
+    if (display_type_ != kPrimary) {
+      active = true;
+    }
     break;
 
   case kStateStandby:
