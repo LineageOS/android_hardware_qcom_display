@@ -1470,6 +1470,10 @@ DisplayError DisplayBase::SetHDRMode(bool set) {
     // Do not apply HDR Mode when hdr lut generation is disabled
     if (set) {
       color_mode = "hal_hdr";
+      error = color_mgr_->ColorMgrGetActiveMode(&current_color_mode_);
+      if (error != kErrorNone) {
+        DLOGW("Failed to get active color mode");
+      }
       if (IsSupportColorModeAttribute(current_color_mode_)) {
         bool found_hdr = false;
         error = GetHdrColorMode(&color_mode, &found_hdr);
