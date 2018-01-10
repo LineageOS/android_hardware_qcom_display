@@ -16,6 +16,24 @@
       "revId": "6353f6a2536c924614d29417506f7811865a0e8c",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5b0d6beb_a31b17e8",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 9,
+      "author": {
+        "id": 13026
+      },
+      "writtenOn": "2018-01-10T09:01:33Z",
+      "side": 1,
+      "message": "This is slightly different from my initial message. Will condense it further.",
+      "parentUuid": "044e6fa8_932c5d9b",
+      "revId": "6353f6a2536c924614d29417506f7811865a0e8c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
