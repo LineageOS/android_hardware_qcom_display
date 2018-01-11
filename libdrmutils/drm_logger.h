@@ -41,6 +41,7 @@ class DRMLogger {
   virtual void Warning(const char *format, ...) = 0;
   virtual void Info(const char *format, ...) = 0;
   virtual void Debug(const char *format, ...) = 0;
+  virtual void Verbose(const char *format, ...) = 0;
 
   static void Set(DRMLogger *logger) { s_instance = logger; }
   static DRMLogger *Get() { return s_instance; }
@@ -60,9 +61,8 @@ class DRMLogger {
 #define DRM_LOGE(format, ...) DRM_LOG_CONTEXT(Error, format, ##__VA_ARGS__)
 #define DRM_LOGW(format, ...) DRM_LOG_CONTEXT(Warning, format, ##__VA_ARGS__)
 #define DRM_LOGI(format, ...) DRM_LOG_CONTEXT(Info, format, ##__VA_ARGS__)
-#define DRM_LOGD_IF(pred, format, ...) \
-  if (pred)                            \
-  DRM_LOG_CONTEXT(Debug, format, ##__VA_ARGS__)
+#define DRM_LOGD(format, ...) DRM_LOG_CONTEXT(Debug, format, ##__VA_ARGS__)
+#define DRM_LOGV(format, ...) DRM_LOG_CONTEXT(Verbose, format, ##__VA_ARGS__)
 
 }  // namespace drm_utils
 

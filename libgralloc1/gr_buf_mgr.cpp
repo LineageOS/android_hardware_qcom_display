@@ -692,8 +692,11 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
             break;
         }
         break;
+      } else if (getMetaData(hnd, GET_COLOR_SPACE, color_space) != 0) {
+          *color_space = 0;
       }
-      if (getMetaData(hnd, GET_COLOR_SPACE, &color_metadata) != 0) {
+#else
+      if (getMetaData(hnd, GET_COLOR_SPACE, color_space) != 0) {
           *color_space = 0;
       }
 #endif
@@ -806,6 +809,17 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
 
       if (getMetaData(hnd, GET_PP_PARAM_INTERLACED, flag) != 0) {
         *flag = 0;
+      }
+    } break;
+
+    case GRALLOC_MODULE_PERFORM_SET_SINGLE_BUFFER_MODE: {
+      private_handle_t* hnd =  va_arg(args, private_handle_t*);
+      uint32_t *enable = va_arg(args, uint32_t*);
+      if (private_handle_t::validate(hnd) != 0) {
+        return GRALLOC1_ERROR_BAD_HANDLE;
+      }
+      if (setMetaData(hnd, SET_SINGLE_BUFFER_MODE, enable) != 0) {
+        return GRALLOC1_ERROR_UNSUPPORTED;
       }
     } break;
 

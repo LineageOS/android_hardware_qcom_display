@@ -138,13 +138,16 @@ struct MetaData_t {
      * [1] : Bottom field, if it is interlaced.
      */
     struct UBWCStats ubwcCRStats[2];
+    /* Set by camera to indicate that this buffer will be used for a High
+     * Performance Video Usecase */
+    uint32_t isVideoPerfMode;
 };
 
 enum DispParamType {
     SET_VT_TIMESTAMP         = 0x0001,
     COLOR_METADATA           = 0x0002,
     PP_PARAM_INTERLACED      = 0x0004,
-    UNUSED2                  = 0x0008,
+    SET_VIDEO_PERF_MODE      = 0x0008,
     UNUSED3                  = 0x0010,
     UNUSED4                  = 0x0020,
     SET_UBWC_CR_STATS_INFO   = 0x0040,
@@ -163,6 +166,7 @@ enum DispFetchParamType {
     GET_VT_TIMESTAMP         = 0x0001,
     GET_COLOR_METADATA       = 0x0002,
     GET_PP_PARAM_INTERLACED  = 0x0004,
+    GET_VIDEO_PERF_MODE      = 0x0008,
     GET_UBWC_CR_STATS_INFO   = 0x0040,
     GET_BUFFER_GEOMETRY      = 0x0080,
     GET_REFRESH_RATE         = 0x0100,

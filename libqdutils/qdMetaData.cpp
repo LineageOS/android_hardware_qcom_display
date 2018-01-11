@@ -132,6 +132,9 @@ int setMetaDataVa(MetaData_t *data, DispParamType paramType,
              }
               break;
           }
+        case SET_VIDEO_PERF_MODE:
+            data->isVideoPerfMode = *((uint32_t *)param);
+            break;
         default:
             ALOGE("Unknown paramType %d", paramType);
             break;
@@ -263,6 +266,12 @@ int getMetaDataVa(MetaData_t *data, DispFetchParamType paramType,
                 for (int i = 0; i < numelems; i++) {
                     stats[i] = data->ubwcCRStats[i];
                 }
+                ret = 0;
+            }
+            break;
+        case GET_VIDEO_PERF_MODE:
+            if (data->operation & SET_VIDEO_PERF_MODE) {
+                *((uint32_t *)param) = data->isVideoPerfMode;
                 ret = 0;
             }
             break;

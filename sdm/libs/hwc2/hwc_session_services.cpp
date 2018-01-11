@@ -44,9 +44,10 @@ using ::android::hardware::Void;
 void HWCSession::StartServices() {
   status_t status = IDisplayConfig::registerAsService();
   if (status != OK) {
-    DLOGW("Could not register IDisplayConfig as service (%d).", status);
+    ALOGW("%s::%s: Could not register IDisplayConfig as service (%d).",
+          __CLASS__, __FUNCTION__, status);
   } else {
-    DLOGI("IDisplayConfig service registration completed.");
+    ALOGI("%s::%s: IDisplayConfig service registration completed.", __CLASS__, __FUNCTION__);
   }
 }
 
@@ -251,6 +252,7 @@ Return<void> HWCSession::getDisplayAttributes(uint32_t configIndex,
       }
     }
   }
+  _hidl_cb(error, display_attributes);
 
   return Void();
 }
@@ -507,15 +509,5 @@ Return<void> HWCSession::displayBWTransactionPending(displayBWTransactionPending
 
   return Void();
 }
-
-#ifdef DISPLAY_CONFIG_1_1
-// Methods from ::vendor::hardware::display::config::V1_1::IDisplayConfig follow.
-Return<int32_t> HWCSession::setDisplayAnimating(uint64_t display_id, bool animating ) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[display_id]);
-  return CallDisplayFunction(static_cast<hwc2_device_t *>(this), display_id,
-                             &HWCDisplay::SetDisplayAnimating, animating);
-}
-#endif
-
 
 }  // namespace sdm

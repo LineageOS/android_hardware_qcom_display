@@ -85,17 +85,18 @@ namespace sdm {
 
 class DRMLoggerImpl : public DRMLogger {
  public:
-#define PRINTLOG(method, format, buf)        \
+#define PRINTLOG(tag, method, format, buf)        \
   va_list list;                              \
   va_start(list, format);                    \
   vsnprintf(buf, sizeof(buf), format, list); \
   va_end(list);                              \
-  Debug::Get()->method(kTagNone, "%s", buf);
+  Debug::Get()->method(tag, "%s", buf);
 
-  void Error(const char *format, ...) { PRINTLOG(Error, format, buf_); }
-  void Warning(const char *format, ...) { PRINTLOG(Warning, format, buf_); }
-  void Info(const char *format, ...) { PRINTLOG(Info, format, buf_); }
-  void Debug(const char *format, ...) { PRINTLOG(Debug, format, buf_); }
+  void Error(const char *format, ...) { PRINTLOG(kTagNone, Error, format, buf_); }
+  void Warning(const char *format, ...) { PRINTLOG(kTagDriverConfig, Warning, format, buf_); }
+  void Info(const char *format, ...) { PRINTLOG(kTagDriverConfig, Info, format, buf_); }
+  void Debug(const char *format, ...) { PRINTLOG(kTagDriverConfig, Debug, format, buf_); }
+  void Verbose(const char *format, ...) { PRINTLOG(kTagDriverConfig, Verbose, format, buf_); }
 
  private:
   char buf_[1024] = {};
@@ -322,6 +323,7 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   hw_resource->hw_dest_scalar_info.max_scale_up = info.max_dest_scale_up;
   hw_resource->hw_dest_scalar_info.max_input_width = info.max_dest_scaler_input_width;
   hw_resource->hw_dest_scalar_info.max_output_width = info.max_dest_scaler_output_width;
+  hw_resource->min_prefill_lines = info.min_prefill_lines;
 }
 
 void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {

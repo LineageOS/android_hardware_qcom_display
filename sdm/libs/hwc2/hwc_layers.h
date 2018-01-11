@@ -94,6 +94,9 @@ class HWCLayer {
   bool SupportLocalConversion(ColorPrimaries working_primaries);
   void ResetValidation() { needs_validate_ = false; }
   bool NeedsValidation() { return (needs_validate_ || geometry_changes_); }
+  bool IsSingleBuffered() { return single_buffer_; }
+  bool IsScalingPresent();
+  bool IsRotationPresent();
 
  private:
   Layer *layer_ = nullptr;
@@ -107,6 +110,7 @@ class HWCLayer {
   LayerTransform layer_transform_ = {};
   LayerRect dst_rect_ = {};
   bool needs_validate_ = true;
+  bool single_buffer_ = false;
 
   // Composition requested by client(SF)
   HWC2::Composition client_requested_ = HWC2::Composition::Device;

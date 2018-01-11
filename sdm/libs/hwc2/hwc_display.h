@@ -63,6 +63,7 @@ class HWCColorMode {
   HWC2::Error SetColorMode(android_color_mode_t mode);
   HWC2::Error SetColorModeById(int32_t color_mode_id);
   HWC2::Error SetColorTransform(const float *matrix, android_color_transform_t hint);
+  HWC2::Error RestoreColorTransform();
 
  private:
   static const uint32_t kColorTransformMatrixCount = 16;
@@ -176,6 +177,9 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error SetColorModeById(int32_t color_mode_id) {
     return HWC2::Error::Unsupported;
   }
+  virtual HWC2::Error RestoreColorTransform() {
+    return HWC2::Error::Unsupported;
+  }
   virtual HWC2::Error SetColorTransform(const float *matrix, android_color_transform_t hint) {
     return HWC2::Error::Unsupported;
   }
@@ -212,6 +216,7 @@ class HWCDisplay : public DisplayEventHandler {
                                          float* out_min_luminance);
   virtual HWC2::Error SetDisplayAnimating(bool animating) {
     animating_ = animating;
+    validated_ = false;
     return HWC2::Error::None;
   }
 
