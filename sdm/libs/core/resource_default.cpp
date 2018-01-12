@@ -483,7 +483,7 @@ DisplayError ResourceDefault::SrcSplitConfig(DisplayResourceContext *display_res
     left_pipe->src_roi = src_rect;
     left_pipe->dst_roi = dst_rect;
     left_pipe->valid = true;
-    right_pipe->Reset();
+    *right_pipe = {};
   }
 
   return kErrorNone;
@@ -520,8 +520,8 @@ DisplayError ResourceDefault::DisplaySplitConfig(DisplayResourceContext *display
   }
 
   // Reset left_pipe and right_pipe to invalid by default
-  left_pipe->Reset();
-  right_pipe->Reset();
+  *left_pipe = {};
+  *right_pipe = {};
 
   if (crop_left_valid) {
     // assign left pipe
