@@ -1743,13 +1743,14 @@ void HWCDisplay::MarkLayersForGPUBypass() {
 }
 
 void HWCDisplay::MarkLayersForClientComposition() {
-  // ClientComposition - GPU comp, to acheive this, set skip flag so that
+  // ClientComposition - GPU comp, to achieve this, set skip flag so that
   // SDM does not handle this layer and hwc_layer composition will be
   // set correctly at the end of Prepare.
   for (auto hwc_layer : layer_set_) {
     Layer *layer = hwc_layer->GetSDMLayer();
     layer->flags.skip = true;
   }
+  layer_stack_.flags.skip_present = true;
 }
 
 void HWCDisplay::ApplyScanAdjustment(hwc_rect_t *display_frame) {
