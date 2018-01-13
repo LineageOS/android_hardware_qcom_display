@@ -30,7 +30,6 @@
 #include <display_config.h>
 #include <utils/debug.h>
 #include <sync/sync.h>
-#include <profiler.h>
 #include <qd_utils.h>
 #include <utils/utils.h>
 #include <algorithm>
@@ -544,9 +543,6 @@ int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display
     // TODO(user): Handle virtual display/HDMI concurrency
     if (hwc_session->hwc_display_[display]) {
       status = hwc_session->hwc_display_[display]->Present(out_retire_fence);
-      // This is only indicative of how many times SurfaceFlinger posts
-      // frames to the display.
-      CALC_FPS();
     }
   }
 
