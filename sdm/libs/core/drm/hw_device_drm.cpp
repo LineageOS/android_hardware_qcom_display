@@ -241,7 +241,7 @@ HWDeviceDRM::Registry::~Registry() {
   delete [] hashmap_;
 }
 
-void HWDeviceDRM::Registry::RegisterCurrent(HWLayers *hw_layers) {
+void HWDeviceDRM::Registry::Register(HWLayers *hw_layers) {
   HWLayersInfo &hw_layer_info = hw_layers->info;
   uint32_t hw_layer_count = UINT32(hw_layer_info.hw_layers.size());
 
@@ -292,7 +292,11 @@ void HWDeviceDRM::Registry::MapBufferToFbId(LayerBuffer* buffer) {
   return;
 }
 
-void HWDeviceDRM::Registry::UnregisterNext() {
+void HWDeviceDRM::Registry::Next() {
+  current_index_ = (current_index_ + 1) % rmfb_delay_;
+}
+
+void HWDeviceDRM::Registry::Unregister() {
   DRMMaster *master = nullptr;
   DRMMaster::GetInstance(&master);
 
@@ -301,7 +305,6 @@ void HWDeviceDRM::Registry::UnregisterNext() {
     return;
   }
 
-  current_index_ = (current_index_ + 1) % rmfb_delay_;
   auto &curr_map = hashmap_[current_index_];
   for (auto &pair : curr_map) {
     uint32_t fb_id = pair.second;
@@ -316,7 +319,8 @@ void HWDeviceDRM::Registry::UnregisterNext() {
 
 void HWDeviceDRM::Registry::Clear() {
   for (int i = 0; i < rmfb_delay_; i++) {
-    UnregisterNext();
+    Unregister();
+    Next();
   }
   current_index_ = 0;
 }
@@ -987,24 +991,26 @@ void HWDeviceDRM::SetSolidfillStages() {
 DisplayError HWDeviceDRM::Validate(HWLayers *hw_layers) {
   DTRACE_SCOPED();
 
-  registry_.RegisterCurrent(hw_layers);
+  DisplayError err = kErrorNone;
+  registry_.Register(hw_layers);
   SetupAtomic(hw_layers, true /* validate */);
 
   int ret = drm_atomic_intf_->Validate();
   if (ret) {
     DLOGE("failed with error %d for %s", ret, device_name_);
     vrefresh_ = 0;
-    return kErrorHardware;
+    err = kErrorHardware;
   }
 
-  return kErrorNone;
+  registry_.Unregister();
+  return err;
 }
 
 DisplayError HWDeviceDRM::Commit(HWLayers *hw_layers) {
   DTRACE_SCOPED();
 
   DisplayError err = kErrorNone;
-  registry_.RegisterCurrent(hw_layers);
+  registry_.Register(hw_layers);
 
   if (default_mode_) {
     err = DefaultCommit(hw_layers);
@@ -1012,7 +1018,8 @@ DisplayError HWDeviceDRM::Commit(HWLayers *hw_layers) {
     err = AtomicCommit(hw_layers);
   }
 
-  registry_.UnregisterNext();
+  registry_.Next();
+  registry_.Unregister();
 
   return err;
 }
