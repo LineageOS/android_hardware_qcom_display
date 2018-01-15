@@ -257,6 +257,7 @@ class HWCDisplay : public DisplayEventHandler {
   };
 
   bool validated_ = false;
+  bool layer_stack_invalid_ = true;
   CoreInterface *core_intf_ = nullptr;
   HWCCallbacks *callbacks_  = nullptr;
   HWCBufferAllocator *buffer_allocator_ = NULL;

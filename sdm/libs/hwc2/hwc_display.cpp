@@ -434,6 +434,8 @@ HWC2::Error HWCDisplay::CreateLayer(hwc2_layer_t *out_layer_id) {
   *out_layer_id = layer->GetId();
   geometry_changes_ |= GeometryChanges::kAdded;
   validated_ = false;
+  layer_stack_invalid_ = true;
+
   return HWC2::Error::None;
 }
 
@@ -466,6 +468,8 @@ HWC2::Error HWCDisplay::DestroyLayer(hwc2_layer_t layer_id) {
 
   geometry_changes_ |= GeometryChanges::kRemoved;
   validated_ = false;
+  layer_stack_invalid_ = true;
+
   return HWC2::Error::None;
 }
 
@@ -633,6 +637,8 @@ void HWCDisplay::BuildLayerStack() {
   }
   // set secure display
   SetSecureDisplay(secure_display_active);
+
+  layer_stack_invalid_ = false;
 }
 
 void HWCDisplay::BuildSolidFillStack() {
@@ -2038,6 +2044,11 @@ std::string HWCDisplay::Dump() {
           "/"<< transform.flip_vertical;
     os << " buffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec
        << std::endl;
+  }
+
+  if (layer_stack_invalid_) {
+    os << "\n Layers added or removed but not reflected to SDM's layer stack yet\n";
+    return os.str();
   }
 
   if (color_mode_) {
