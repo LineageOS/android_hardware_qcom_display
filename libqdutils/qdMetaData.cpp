@@ -250,6 +250,12 @@ int getMetaDataVa(MetaData_t *data, DispFetchParamType paramType,
             }
 #endif
             break;
+        case GET_BLUR:
+            if (data->operation & BLUR_LAYER) {
+                *((uint32_t *)param) = data->blurLayer;
+                ret = 0;
+            }
+            break;
         default:
             ALOGE("Unknown paramType %d", paramType);
             break;

@@ -691,6 +691,12 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
     s3d_format = GetS3DFormat(s3d);
   }
 
+  uint32_t blur_layer = 0;
+  if (getMetaData(handle, GET_BLUR, &blur_layer) == 0) {
+    layer->flags.blur = blur_layer;
+    layer_stack_.flags.blur_present |= blur_layer;
+  }
+
   if ((layer_igc != layer_buffer->igc) || (interlace != layer_buffer->flags.interlace) ||
       (frame_rate != layer->frame_rate) || (s3d_format != layer_buffer->s3d_format)) {
     // Layer buffer metadata has changed.

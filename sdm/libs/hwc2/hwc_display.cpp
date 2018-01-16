@@ -1905,9 +1905,10 @@ bool HWCDisplay::IsLayerUpdating(const Layer *layer) {
   //   a) layer is in single buffer mode, or
   //   b) valid dirty_regions(android specific hint for updating status), or
   //   c) layer stack geometry has changed (TODO(user): Remove when SDM accepts
-  //      geometry_changed as bit fields).
+  //      geometry_changed as bit fields), or
+  //   d) layer is being blurred
   return (layer->flags.single_buffer || IsSurfaceUpdated(layer->dirty_regions) ||
-          geometry_changes_);
+          geometry_changes_ || layer->flags.blur);
 }
 
 bool HWCDisplay::IsSurfaceUpdated(const std::vector<LayerRect> &dirty_regions) {
