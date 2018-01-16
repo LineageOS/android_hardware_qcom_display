@@ -165,6 +165,7 @@ enum DispFetchParamType {
     GET_VT_TIMESTAMP         = 0x0001,
     GET_COLOR_METADATA       = 0x0002,
     GET_PP_PARAM_INTERLACED  = 0x0004,
+    GET_BLUR                 = 0x0008,
     GET_UBWC_CR_STATS_INFO   = 0x0040,
     GET_BUFFER_GEOMETRY      = 0x0080,
     GET_REFRESH_RATE         = 0x0100,
