@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -155,7 +155,7 @@ DisplayError HWDevice::GetConfigIndex(char *mode, uint32_t *index) {
   return kErrorNone;
 }
 
-DisplayError HWDevice::PowerOn() {
+DisplayError HWDevice::PowerOn(int *release_fence) {
   DTRACE_SCOPED();
 
   if (Sys::ioctl_(device_fd_, FBIOBLANK, FB_BLANK_UNBLANK) < 0) {
@@ -174,11 +174,11 @@ DisplayError HWDevice::PowerOff() {
   return kErrorNone;
 }
 
-DisplayError HWDevice::Doze() {
+DisplayError HWDevice::Doze(int *release_fence) {
   return kErrorNone;
 }
 
-DisplayError HWDevice::DozeSuspend() {
+DisplayError HWDevice::DozeSuspend(int *release_fence) {
   return kErrorNone;
 }
 

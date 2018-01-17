@@ -32,7 +32,7 @@
 #undef HWC2_INCLUDE_STRINGIFICATION
 #undef HWC2_USE_CPP11
 #include <map>
-#include <queue>
+#include <deque>
 #include <set>
 #include "core/buffer_allocator.h"
 #include "hwc_buffer_allocator.h"
@@ -88,8 +88,9 @@ class HWCLayer {
   int32_t GetLayerDataspace() { return dataspace_; }
   uint32_t GetGeometryChanges() { return geometry_changes_; }
   void ResetGeometryChanges() { geometry_changes_ = GeometryChanges::kNone; }
-  void PushReleaseFence(int32_t fence);
-  int32_t PopReleaseFence(void);
+  void PushBackReleaseFence(int32_t fence);
+  int32_t PopBackReleaseFence(void);
+  int32_t PopFrontReleaseFence(void);
   bool ValidateAndSetCSC();
   bool SupportLocalConversion(ColorPrimaries working_primaries);
   void ResetValidation() { needs_validate_ = false; }
@@ -105,7 +106,7 @@ class HWCLayer {
   const hwc2_layer_t id_;
   const hwc2_display_t display_id_;
   static std::atomic<hwc2_layer_t> next_id_;
-  std::queue<int32_t> release_fences_;
+  std::deque<int32_t> release_fences_;
   HWCBufferAllocator *buffer_allocator_ = NULL;
   int32_t dataspace_ =  HAL_DATASPACE_UNKNOWN;
   LayerTransform layer_transform_ = {};
