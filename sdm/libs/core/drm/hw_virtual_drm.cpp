@@ -137,7 +137,7 @@ DisplayError HWVirtualDRM::Commit(HWLayers *hw_layers) {
   LayerBuffer *output_buffer = hw_layers->info.stack->output_buffer;
   DisplayError err = kErrorNone;
 
-  registry_.RegisterCurrent(hw_layers);
+  registry_.Register(hw_layers);
   registry_.MapBufferToFbId(output_buffer);
   uint32_t fb_id = registry_.GetFbId(output_buffer->planes[0].fd);
 
@@ -149,7 +149,9 @@ DisplayError HWVirtualDRM::Commit(HWLayers *hw_layers) {
   if (err != kErrorNone) {
     DLOGE("Atomic commit failed for crtc_id %d conn_id %d", token_.crtc_id, token_.conn_id);
   }
-  registry_.UnregisterNext();
+
+  registry_.Next();
+  registry_.Unregister();
 
   return(err);
 }

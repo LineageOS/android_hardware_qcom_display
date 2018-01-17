@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -182,7 +182,6 @@ DisplayError HWEventsDRM::Init(int display_type, HWEventHandler *event_handler,
 
   static_cast<const HWDeviceDRM *>(hw_intf)->GetDRMDisplayToken(&token_);
   is_primary_ = static_cast<const HWDeviceDRM *>(hw_intf)->IsPrimaryDisplay();
-  vsync_enabled_ = is_primary_;
 
   DLOGI("Setup event handler for display %d, CRTC %d, Connector %d",
         display_type, token_.crtc_id, token_.conn_id);
@@ -196,6 +195,11 @@ DisplayError HWEventsDRM::Init(int display_type, HWEventHandler *event_handler,
   if (pthread_create(&event_thread_, NULL, &DisplayEventThread, this) < 0) {
     DLOGE("Failed to start %s, error = %s", event_thread_name_.c_str());
     return kErrorResources;
+  }
+
+  if (is_primary_) {
+    RegisterVSync();
+    vsync_registered_ = true;
   }
 
   RegisterPanelDead(true);
@@ -220,15 +224,17 @@ DisplayError HWEventsDRM::Deinit() {
 
 DisplayError HWEventsDRM::SetEventState(HWEvent event, bool enable, void *arg) {
   switch (event) {
-    case HWEvent::VSYNC:
+    case HWEvent::VSYNC: {
+      std::lock_guard<std::mutex> lock(vsync_mutex_);
       if (!is_primary_) {
         break;
       }
       vsync_enabled_ = enable;
-      if (enable) {
-        WakeUpEventThread();
+      if (vsync_enabled_ && !vsync_registered_) {
+        RegisterVSync();
+        vsync_registered_ = true;
       }
-      break;
+    } break;
     default:
       DLOGE("Event not supported");
       return kErrorNotSupported;
@@ -295,11 +301,6 @@ void *HWEventsDRM::DisplayEventHandler() {
   setpriority(PRIO_PROCESS, 0, kThreadPriorityUrgent);
 
   while (!exit_threads_) {
-    if (vsync_enabled_ && RegisterVSync() != kErrorNone) {
-      pthread_exit(0);
-      return nullptr;
-    }
-
     int error = Sys::poll_(poll_fds_.data(), UINT32(poll_fds_.size()), -1);
     if (error <= 0) {
       DLOGW("poll failed. error = %s", strerror(errno));
@@ -468,6 +469,13 @@ void HWEventsDRM::HandleVSync(char *data) {
   int error = drmHandleEvent(poll_fds_[vsync_index_].fd, &event);
   if (error != 0) {
     DLOGE("drmHandleEvent failed: %i", error);
+  }
+
+  std::lock_guard<std::mutex> lock(vsync_mutex_);
+  vsync_registered_ = false;
+  if (vsync_enabled_) {
+    RegisterVSync();
+    vsync_registered_ = true;
   }
 }
 

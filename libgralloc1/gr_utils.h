@@ -60,6 +60,7 @@ inline Type1 ALIGN(Type1 x, Type2 align) {
   return (Type1)((x + (Type1)align - 1) & ~((Type1)align - 1));
 }
 
+bool IsYuvFormat(const private_handle_t *hnd);
 bool IsCompressedRGBFormat(int format);
 bool IsUncompressedRGBFormat(int format);
 uint32_t GetBppForUncompressedRGB(int format);
