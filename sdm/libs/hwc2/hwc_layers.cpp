@@ -174,14 +174,14 @@ HWCLayer::HWCLayer(hwc2_display_t display_id, HWCBufferAllocator *buf_allocator)
   layer_ = new Layer();
   // Fences are deferred, so the first time this layer is presented, return -1
   // TODO(user): Verify that fences are properly obtained on suspend/resume
-  release_fences_.push(-1);
+  release_fences_.push_back(-1);
 }
 
 HWCLayer::~HWCLayer() {
   // Close any fences left for this layer
   while (!release_fences_.empty()) {
     ::close(release_fences_.front());
-    release_fences_.pop();
+    release_fences_.pop_front();
   }
   if (layer_) {
     if (layer_->input_buffer.acquire_fence_fd >= 0) {
@@ -892,14 +892,28 @@ void HWCLayer::SetComposition(const LayerComposition &sdm_composition) {
 
   return;
 }
-void HWCLayer::PushReleaseFence(int32_t fence) {
-  release_fences_.push(fence);
+
+void HWCLayer::PushBackReleaseFence(int32_t fence) {
+  release_fences_.push_back(fence);
 }
-int32_t HWCLayer::PopReleaseFence(void) {
+
+int32_t HWCLayer::PopBackReleaseFence() {
   if (release_fences_.empty())
     return -1;
+
+  auto fence = release_fences_.back();
+  release_fences_.pop_back();
+
+  return fence;
+}
+
+int32_t HWCLayer::PopFrontReleaseFence() {
+  if (release_fences_.empty())
+    return -1;
+
   auto fence = release_fences_.front();
-  release_fences_.pop();
+  release_fences_.pop_front();
+
   return fence;
 }
 

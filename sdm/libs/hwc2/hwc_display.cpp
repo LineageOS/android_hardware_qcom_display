@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -748,9 +748,10 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode) {
     default:
       return HWC2::Error::BadParameter;
   }
+  int release_fence = -1;
 
   ATRACE_INT("SetPowerMode ", state);
-  DisplayError error = display_intf_->SetDisplayState(state);
+  DisplayError error = display_intf_->SetDisplayState(state, &release_fence);
   validated_ = false;
 
   if (error == kErrorNone) {
@@ -764,6 +765,20 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode) {
     return HWC2::Error::BadParameter;
   }
 
+  if (release_fence >= 0) {
+    for (auto hwc_layer : layer_set_) {
+      auto fence = hwc_layer->PopBackReleaseFence();
+      auto merged_fence = -1;
+      if (fence >= 0) {
+        merged_fence = sync_merge("sync_merge", release_fence, fence);
+        ::close(fence);
+      } else {
+        merged_fence = ::dup(release_fence);
+      }
+      hwc_layer->PushBackReleaseFence(merged_fence);
+    }
+    ::close(release_fence);
+  }
   return HWC2::Error::None;
 }
 
@@ -1135,7 +1150,7 @@ HWC2::Error HWCDisplay::GetReleaseFences(uint32_t *out_num_elements, hwc2_layer_
     for (uint32_t i = 0; i < *out_num_elements; i++, it++) {
       auto hwc_layer = *it;
       out_layers[i] = hwc_layer->GetId();
-      out_fences[i] = hwc_layer->PopReleaseFence();
+      out_fences[i] = hwc_layer->PopFrontReleaseFence();
     }
   } else {
     *out_num_elements = UINT32(layer_set_.size());
@@ -1306,15 +1321,15 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
       if (swap_interval_zero_ || layer->flags.single_buffer) {
         close(layer_buffer->release_fence_fd);
       } else if (layer->composition != kCompositionGPU) {
-        hwc_layer->PushReleaseFence(layer_buffer->release_fence_fd);
+        hwc_layer->PushBackReleaseFence(layer_buffer->release_fence_fd);
       } else {
-        hwc_layer->PushReleaseFence(-1);
+        hwc_layer->PushBackReleaseFence(-1);
       }
     } else {
       // In case of flush, we don't return an error to f/w, so it will get a release fence out of
       // the hwc_layer's release fence queue. We should push a -1 to preserve release fence
       // circulation semantics.
-      hwc_layer->PushReleaseFence(-1);
+      hwc_layer->PushBackReleaseFence(-1);
     }
 
     layer_buffer->release_fence_fd = -1;

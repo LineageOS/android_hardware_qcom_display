@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -708,7 +708,7 @@ DisplayError HWDeviceDRM::GetConfigIndex(char *mode, uint32_t *index) {
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::PowerOn() {
+DisplayError HWDeviceDRM::PowerOn(int *release_fence) {
   DTRACE_SCOPED();
   if (!drm_atomic_intf_) {
     DLOGE("DRM Atomic Interface is null!");
@@ -726,6 +726,7 @@ DisplayError HWDeviceDRM::PowerOn() {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
   }
+  drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, release_fence);
 
   return kErrorNone;
 }
@@ -748,7 +749,7 @@ DisplayError HWDeviceDRM::PowerOff() {
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::Doze() {
+DisplayError HWDeviceDRM::Doze(int *release_fence) {
   DTRACE_SCOPED();
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::DOZE);
@@ -758,10 +759,12 @@ DisplayError HWDeviceDRM::Doze() {
     return kErrorHardware;
   }
 
+  drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, release_fence);
+
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::DozeSuspend() {
+DisplayError HWDeviceDRM::DozeSuspend(int *release_fence) {
   DTRACE_SCOPED();
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id,
@@ -771,6 +774,8 @@ DisplayError HWDeviceDRM::DozeSuspend() {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
   }
+
+  drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, release_fence);
 
   return kErrorNone;
 }
