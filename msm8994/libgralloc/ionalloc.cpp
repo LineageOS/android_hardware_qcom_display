@@ -29,6 +29,7 @@
 
 #define DEBUG 0
 #define ATRACE_TAG (ATRACE_TAG_GRAPHICS | ATRACE_TAG_HAL)
+#include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <stdlib.h>
