@@ -132,16 +132,20 @@ class HWDeviceDRM : public HWInterface {
                        sde_drm::DRMSecurityLevel *security_level);
   bool IsResolutionSwitchEnabled() const { return resolution_switch_enabled_; }
   void SetTopology(sde_drm::DRMTopology drm_topology, HWTopology *hw_topology);
+  void SetMultiRectMode(const uint32_t flags, sde_drm::DRMMultiRectMode *target);
 
   class Registry {
    public:
     explicit Registry(BufferAllocator *buffer_allocator);
     ~Registry();
-    // Call on each validate and commit to register layer buffers
-    void RegisterCurrent(HWLayers *hw_layers);
-    // Call at the end of draw cycle to clear the next slot for business
-    void UnregisterNext();
-    // Call on display disconnect to release all gem handles and fb_ids
+    // Called on each Validate and Commit to register layer buffers fds to the slot pointed to by
+    // current_index_
+    void Register(HWLayers *hw_layers);
+    // Clears the slot pointed to by current_index_
+    void Unregister();
+    // Moves current_index_ to the next position
+    void Next();
+    // Called on display disconnect to release all gem handles and fb_ids
     void Clear();
     // Maps given fd to FB ID
     void MapBufferToFbId(LayerBuffer* buffer);
