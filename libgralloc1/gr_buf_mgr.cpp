@@ -694,8 +694,11 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
             break;
         }
         break;
+      } else if (getMetaData(hnd, GET_COLOR_SPACE, color_space) != 0) {
+          *color_space = 0;
       }
-      if (getMetaData(hnd, GET_COLOR_SPACE, &color_metadata) != 0) {
+#else
+      if (getMetaData(hnd, GET_COLOR_SPACE, color_space) != 0) {
           *color_space = 0;
       }
 #endif
