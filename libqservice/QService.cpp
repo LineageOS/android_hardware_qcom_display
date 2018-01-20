@@ -31,7 +31,7 @@
 #include <binder/Parcel.h>
 #include <binder/IPCThreadState.h>
 
-#define QSERVICE_DEBUG 0
+#define QSERVICE_DEBUG 1
 
 using namespace android;
 
