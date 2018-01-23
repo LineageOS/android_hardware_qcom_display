@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -173,13 +173,15 @@ HWC2::Error HWCDisplayPrimary::Validate(uint32_t *out_num_types, uint32_t *out_n
     return status;
   }
 
+
+  // Fill in the remaining blanks in the layers and add them to the SDM layerstack
+  BuildLayerStack();
+
   if (color_tranform_failed_) {
     // Must fall back to client composition
     MarkLayersForClientComposition();
   }
 
-  // Fill in the remaining blanks in the layers and add them to the SDM layerstack
-  BuildLayerStack();
   // Checks and replaces layer stack for solid fill
   SolidFillPrepare();
 
@@ -288,7 +290,7 @@ HWC2::Error HWCDisplayPrimary::SetColorTransform(const float *matrix,
   }
 
   auto status = color_mode_->SetColorTransform(matrix, hint);
-  if (status != HWC2::Error::None) {
+  if ((hint != HAL_COLOR_TRANSFORM_IDENTITY) && (status != HWC2::Error::None)) {
     DLOGE("failed for hint = %d", hint);
     color_tranform_failed_ = true;
     return status;
