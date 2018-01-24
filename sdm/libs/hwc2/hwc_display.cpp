@@ -504,6 +504,8 @@ void HWCDisplay::BuildLayerStack() {
   uint32_t color_mode_count = 0;
   display_intf_->GetColorModeCount(&color_mode_count);
 
+  bool extended_range = false;
+
   // Add one layer for fb target
   // TODO(user): Add blit target layers
   for (auto hwc_layer : layer_set_) {
@@ -522,6 +524,11 @@ void HWCDisplay::BuildLayerStack() {
 #ifdef FEATURE_WIDE_COLOR
       layer->flags.skip = true;
 #endif
+    }
+
+    auto range = hwc_layer->GetLayerDataspace() & HAL_DATASPACE_RANGE_MASK;
+    if (range == HAL_DATASPACE_RANGE_EXTENDED) {
+      extended_range = true;
     }
 
     working_primaries = WidestPrimaries(working_primaries,
@@ -650,7 +657,7 @@ void HWCDisplay::BuildLayerStack() {
   // fall back frame composition to GPU when client target is 10bit
   // TODO(user): clarify the behaviour from Client(SF) and SDM Extn -
   // when handling 10bit FBT, as it would affect blending
-  if (Is10BitFormat(sdm_client_target->input_buffer.format)) {
+  if (Is10BitFormat(sdm_client_target->input_buffer.format) || extended_range) {
     // Must fall back to client composition
     MarkLayersForClientComposition();
   }
@@ -1860,6 +1867,7 @@ void HWCDisplay::MarkLayersForClientComposition() {
     Layer *layer = hwc_layer->GetSDMLayer();
     layer->flags.skip = true;
   }
+  layer_stack_.flags.skip_present = true;
 }
 
 void HWCDisplay::ApplyScanAdjustment(hwc_rect_t *display_frame) {
