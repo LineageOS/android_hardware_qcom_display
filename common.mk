@@ -1,5 +1,8 @@
 #Common headers
 display_top := $(call my-dir)
+display_config_version := $(shell \
+    if [ -d "$(TOP)/vendor/qcom/opensource/interfaces/display/config/1.1" ];\
+    then echo DISPLAY_CONFIG_1_1; fi)
 
 #Common C flags
 common_flags := -DDEBUG_CALC_FPS -Wno-missing-field-initializers
@@ -7,6 +10,10 @@ common_flags += -Wconversion -Wall -Werror -std=c++14
 ifeq ($(TARGET_IS_HEADLESS), true)
     common_flags += -DTARGET_HEADLESS
     LOCAL_CLANG := false
+endif
+
+ifeq ($(display_config_version), DISPLAY_CONFIG_1_1)
+    common_flags += -DDISPLAY_CONFIG_1_1
 endif
 
 ifeq ($(TARGET_USES_COLOR_METADATA), true)
