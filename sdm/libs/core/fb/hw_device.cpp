@@ -776,6 +776,23 @@ int HWDevice::GetFBNodeIndex(HWDeviceType device_type) {
       break;
     case kDeviceHDMI:
       if (panel_info.is_pluggable == true) {
+        char connected_path[kMaxStringLength] = {'\0'};
+        snprintf(connected_path, sizeof(connected_path), "%s%d/connected", fb_path_, i);
+        DLOGI("Reading %s file", connected_path);
+        Sys::fstream fs(connected_path, fstream::in);
+        string line;
+
+        if (!fs.is_open()) {
+          DLOGE("connected file open failed.");
+        } else {
+          if (!Sys::getline_(fs, line)) {
+            DLOGE("connected file read error");
+          }
+          fs.close();
+          if (!strncmp(line.c_str(), "1", strlen("1"))) {
+            return i;
+          }
+        }
         if (IsFBNodeConnected(i)) {
           return i;
         }
