@@ -22,7 +22,7 @@
 
 #include <errno.h>
 
-#include <cutils/log.h>
+#include <log/log.h>
 #include <hardware/gralloc1.h>
 #include <hardware/gralloc.h>
 #include <cinttypes>
