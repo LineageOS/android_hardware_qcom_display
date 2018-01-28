@@ -599,6 +599,9 @@ void Allocator::GetIonHeapInfo(gralloc1_producer_usage_t prod_usage,
 
 bool Allocator::IsUBwcEnabled(int format, gralloc1_producer_usage_t prod_usage,
                               gralloc1_consumer_usage_t cons_usage) {
+  // Property is used to check whether the video encoder supports UBWC
+  char property[PROPERTY_VALUE_MAX];
+
   // Allow UBWC, if client is using an explicitly defined UBWC pixel format.
   if (IsUBwcFormat(format)) {
     return true;
@@ -618,6 +621,12 @@ bool Allocator::IsUBwcEnabled(int format, gralloc1_producer_usage_t prod_usage,
     if ((cons_usage & GRALLOC1_CONSUMER_USAGE_GPU_TEXTURE) ||
         (prod_usage & GRALLOC1_PRODUCER_USAGE_GPU_RENDER_TARGET)) {
       enable = adreno_helper_->IsUBWCSupportedByGPU(format);
+    }
+
+    // Check if client is video encoder, and UBWC is disabled by a prop
+    if ((cons_usage & GRALLOC1_CONSUMER_USAGE_VIDEO_ENCODER) &&
+        (property_get("video.disable.ubwc", property, "0") > 0)) {
+      enable = atoi(property) == 0;
     }
 
     // Allow UBWC, only if CPU usage flags are not set
