@@ -1,0 +1,44 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1931394e_24e4f170",
+        "filename": "sdm/libs/core/fb/hw_device.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 779,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-01-28T01:30:03Z",
+      "side": 1,
+      "message": "Would it be better to move this block to it\u0027s own helper function?",
+      "revId": "079857daf9cf26cd3584ed6c4908579f0cef1ab3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "75f6cf23_d7d6dcbf",
+        "filename": "sdm/libs/core/fb/hw_device.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 796,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-01-28T01:30:03Z",
+      "side": 1,
+      "message": "What\u0027s the logic in this function doing then?",
+      "range": {
+        "startLine": 796,
+        "startChar": 12,
+        "endLine": 796,
+        "endChar": 29
+      },
+      "revId": "079857daf9cf26cd3584ed6c4908579f0cef1ab3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
