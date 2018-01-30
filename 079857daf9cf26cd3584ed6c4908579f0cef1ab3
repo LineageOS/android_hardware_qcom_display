@@ -37,6 +37,24 @@
     },
     {
       "key": {
+        "uuid": "42c4dccf_133d2a88",
+        "filename": "sdm/libs/core/fb/hw_device.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 779,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-01-30T03:31:58Z",
+      "side": 1,
+      "message": "No arguing that point, but making this a function makes this much more readable.",
+      "parentUuid": "e9d04997_dde5b744",
+      "revId": "079857daf9cf26cd3584ed6c4908579f0cef1ab3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "75f6cf23_d7d6dcbf",
         "filename": "sdm/libs/core/fb/hw_device.cpp",
         "patchSetId": 1
