@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -111,6 +111,7 @@ class HWCLayer {
   LayerRect dst_rect_ = {};
   bool needs_validate_ = true;
   bool single_buffer_ = false;
+  int buffer_fd_ = -1;
 
   // Composition requested by client(SF)
   HWC2::Composition client_requested_ = HWC2::Composition::Device;
