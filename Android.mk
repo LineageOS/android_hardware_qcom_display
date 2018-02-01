@@ -1,3 +1,4 @@
+ifneq ($(TARGET_DISABLE_DISPLAY),true)
 sdm-libs := sdm/libs
 display-hals := include libqservice libqdutils $(sdm-libs)/utils $(sdm-libs)/core
 
@@ -15,3 +16,4 @@ ifneq ($(filter msm% apq%,$(TARGET_BOARD_PLATFORM)),)
     include $(call all-named-subdir-makefiles,$(display-hals))
 endif
 endif
+endif #TARGET_DISABLE_DISPLAY
