@@ -20,6 +20,7 @@
 #ifndef __GRALLOC_PRIV_H__
 #define __GRALLOC_PRIV_H__
 
+#include <errno.h>
 #include <unistd.h>
 #include "gr_priv_handle.h"
 
