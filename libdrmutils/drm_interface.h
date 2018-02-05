@@ -577,6 +577,7 @@ struct DRMConnectorInfo {
 struct DRMDisplayToken {
   uint32_t conn_id;
   uint32_t crtc_id;
+  uint32_t crtc_index;
 };
 
 enum DRMPPFeatureID {

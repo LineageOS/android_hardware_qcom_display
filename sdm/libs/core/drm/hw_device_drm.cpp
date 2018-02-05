@@ -1622,8 +1622,7 @@ DisplayError HWDeviceDRM::DumpDebugData() {
 }
 
 void HWDeviceDRM::GetDRMDisplayToken(sde_drm::DRMDisplayToken *token) const {
-  token->conn_id = token_.conn_id;
-  token->crtc_id = token_.crtc_id;
+  *token = token_;
 }
 
 void HWDeviceDRM::UpdateMixerAttributes() {
