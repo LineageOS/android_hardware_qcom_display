@@ -297,16 +297,25 @@ void HWCSession::GetCapabilities(struct hwc2_device *device, uint32_t *outCount,
   }
 
   int value = 0;
+  uint32_t count = 0;
   bool disable_skip_validate = false;
+  HWCSession *hwc_session = static_cast<HWCSession *>(device);
+  bool color_transform_supported = hwc_session->core_intf_->IsColorTransformSupported();
+
   if (Debug::Get()->GetProperty("sdm.debug.disable_skip_validate", &value) == kErrorNone) {
     disable_skip_validate = (value == 1);
   }
-  uint32_t count = 1 + (disable_skip_validate ? 0 : 1);
+
+  count += (color_transform_supported) ? 1 : 0;
+  count += (!disable_skip_validate) ? 1 : 0;
 
   if (outCapabilities != nullptr && (*outCount >= count)) {
-    outCapabilities[0] = HWC2_CAPABILITY_SKIP_CLIENT_COLOR_TRANSFORM;
+    int i = 0;
+    if (color_transform_supported) {
+      outCapabilities[i++] = HWC2_CAPABILITY_SKIP_CLIENT_COLOR_TRANSFORM;
+    }
     if (!disable_skip_validate) {
-      outCapabilities[1] = HWC2_CAPABILITY_SKIP_VALIDATE;
+      outCapabilities[i++] = HWC2_CAPABILITY_SKIP_VALIDATE;
     }
   }
   *outCount = count;
