@@ -64,7 +64,7 @@ struct ToneMapBlitContext : public SyncTask<ToneMapTaskCode>::TaskContext {
 
 struct ToneMapConfig {
   int type = 0;
-  ColorPrimaries colorPrimaries = ColorPrimaries_Max;
+  PrimariesTransfer blend_cs = {ColorPrimaries_BT709_5, Transfer_sRGB};
   GammaTransfer transfer = Transfer_Max;
   LayerBufferFormat format = kFormatRGBA8888;
   bool secure = false;
@@ -78,8 +78,8 @@ class ToneMapSession : public SyncTask<ToneMapTaskCode>::TaskHandler {
   void FreeIntermediateBuffers();
   void UpdateBuffer(int acquire_fence, LayerBuffer *buffer);
   void SetReleaseFence(int fd);
-  void SetToneMapConfig(Layer *layer);
-  bool IsSameToneMapConfig(Layer *layer);
+  void SetToneMapConfig(Layer *layer, PrimariesTransfer blend_cs);
+  bool IsSameToneMapConfig(Layer *layer, PrimariesTransfer blend_cs);
 
   // TaskHandler methods implementation.
   virtual void OnTask(const ToneMapTaskCode &task_code,
@@ -110,7 +110,7 @@ class HWCToneMapper {
 
  private:
   void ToneMap(Layer *layer, ToneMapSession *session);
-  DisplayError AcquireToneMapSession(Layer *layer, uint32_t *session_index);
+  DisplayError AcquireToneMapSession(Layer *layer, uint32_t *sess_idx, PrimariesTransfer blend_cs);
   void DumpToneMapOutput(ToneMapSession *session, int *acquire_fence);
 
   std::vector<ToneMapSession*> tone_map_sessions_;

@@ -35,6 +35,7 @@
 #include <utils/constants.h>
 
 #include <vector>
+#include <utility>
 
 #include "layer_buffer.h"
 #include "sdm_types.h"
@@ -383,6 +384,9 @@ struct Layer {
   @sa DisplayInterface::Prepare
   @sa DisplayInterface::Commit
 */
+
+typedef std::pair<ColorPrimaries, GammaTransfer> PrimariesTransfer;
+
 struct LayerStack {
   std::vector<Layer *> layers = {};    //!< Vector of layer pointers.
 
@@ -400,7 +404,8 @@ struct LayerStack {
 
   LayerStackFlags flags;               //!< Flags associated with this layer set.
 
-  ColorPrimaries blend_cs = ColorPrimaries_BT709_5;  //!< o/p - Blending color space updated by SDM
+  PrimariesTransfer blend_cs = {ColorPrimaries_BT709_5, Transfer_sRGB};
+                                       //!< o/p - Blending color space updated by SDM
 };
 
 }  // namespace sdm

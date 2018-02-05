@@ -1525,7 +1525,7 @@ DisplayError DisplayBase::ValidateHDR(LayerStack *layer_stack) {
     // HDR color mode is set when hdr layer is present in layer_stack.
     // If client flags HDR layer as skipped, then blending happens
     // in SDR color space. Hence, need to restore the SDR color mode.
-    if (layer_stack->blend_cs != ColorPrimaries_BT2020) {
+    if (layer_stack->blend_cs.first != ColorPrimaries_BT2020) {
       error = SetHDRMode(false);
       if (error != kErrorNone) {
         DLOGW("Failed to restore SDR mode");
