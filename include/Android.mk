@@ -7,6 +7,7 @@ LOCAL_COPY_HEADERS            := color_metadata.h
 
 include $(BUILD_COPY_HEADERS)
 
+include $(CLEAR_VARS)
 #TODO move all exported headers to this directory
 LOCAL_MODULE := display_headers
 LOCAL_EXPORT_C_INCLUDE_DIRS   := $(display_top)/libcopybit \
