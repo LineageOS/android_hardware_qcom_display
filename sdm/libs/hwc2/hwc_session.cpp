@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -160,35 +160,44 @@ int HWCSession::Init() {
 
   StartServices();
 
+  HWCDebugHandler::Get()->GetProperty("sdm.debug.enable_null_display", &null_display_mode_);
+
   DisplayError error = buffer_allocator_.Init();
   if (error != kErrorNone) {
-    ALOGE("%s::%s: Buffer allocaor initialization failed. Error = %d",
+    ALOGE("%s::%s: Buffer allocator initialization failed. Error = %d",
           __CLASS__, __FUNCTION__, error);
     return -EINVAL;
   }
 
-  g_hwc_uevent_.Register(this);
+  HWDisplayInterfaceInfo hw_disp_info = {};
+  if (null_display_mode_) {
+    hw_disp_info.type = kPrimary;
+    hw_disp_info.is_connected = true;
+  } else {
+    g_hwc_uevent_.Register(this);
 
-  error = CoreInterface::CreateCore(HWCDebugHandler::Get(), &buffer_allocator_,
-                                    &buffer_sync_handler_, &socket_handler_, &core_intf_);
-  if (error != kErrorNone) {
-    buffer_allocator_.Deinit();
-    ALOGE("%s::%s: Display core initialization failed. Error = %d", __CLASS__, __FUNCTION__, error);
-    return -EINVAL;
+    error = CoreInterface::CreateCore(HWCDebugHandler::Get(), &buffer_allocator_,
+                                      &buffer_sync_handler_, &socket_handler_, &core_intf_);
+
+    if (error != kErrorNone) {
+      buffer_allocator_.Deinit();
+      ALOGE("%s::%s: Display core initialization failed. Error = %d", __CLASS__, __FUNCTION__,
+            error);
+      return -EINVAL;
+    }
+
+    error = core_intf_->GetFirstDisplayInterfaceType(&hw_disp_info);
+
+    if (error != kErrorNone) {
+      g_hwc_uevent_.Register(nullptr);
+      CoreInterface::DestroyCore();
+      buffer_allocator_.Deinit();
+      DLOGE("Primary display type not recognized. Error = %d", error);
+      return -EINVAL;
+    }
   }
-
 
   // If HDMI display is primary display, defer display creation until hotplug event is received.
-  HWDisplayInterfaceInfo hw_disp_info = {};
-  error = core_intf_->GetFirstDisplayInterfaceType(&hw_disp_info);
-  if (error != kErrorNone) {
-    g_hwc_uevent_.Register(nullptr);
-    CoreInterface::DestroyCore();
-    buffer_allocator_.Deinit();
-    DLOGE("Primary display type not recognized. Error = %d", error);
-    return -EINVAL;
-  }
-
   if (hw_disp_info.type == kHDMI) {
     status = 0;
     hdmi_is_primary_ = true;
@@ -246,11 +255,13 @@ int HWCSession::Deinit() {
     color_mgr_->DestroyColorManager();
   }
 
-  g_hwc_uevent_.Register(nullptr);
+  if (!null_display_mode_) {
+    g_hwc_uevent_.Register(nullptr);
 
-  DisplayError error = CoreInterface::DestroyCore();
-  if (error != kErrorNone) {
-    ALOGE("Display core de-initialization failed. Error = %d", error);
+    DisplayError error = CoreInterface::DestroyCore();
+    if (error != kErrorNone) {
+      ALOGE("Display core de-initialization failed. Error = %d", error);
+    }
   }
 
   return 0;

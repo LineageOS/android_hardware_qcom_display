@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -36,35 +36,31 @@
 
 namespace sdm {
 
-#define MAKE_NO_OP(virtual_method_name) \
-      virtual DisplayError virtual_method_name { return kErrorNone; }
+#define MAKE_NO_OP(virtual_method_signature) \
+      virtual DisplayError virtual_method_signature { return kErrorNone; }
 
 class DisplayNull : public DisplayInterface {
  public:
   virtual ~DisplayNull() { }
-  virtual DisplayError Commit(LayerStack *layer_stack);
-  virtual DisplayError GetDisplayState(DisplayState *state);
-  virtual DisplayError SetDisplayState(DisplayState state);
-  virtual DisplayError SetFrameBufferConfig(const DisplayConfigVariableInfo &variable_info);
+  virtual DisplayError Init();
+  virtual DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
   virtual DisplayError GetFrameBufferConfig(DisplayConfigVariableInfo *variable_info);
+  virtual DisplayError GetConfig(uint32_t index, DisplayConfigVariableInfo *disp_attr);
+  virtual DisplayError GetConfig(DisplayConfigFixedInfo *fixed_info);
+  virtual DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate, uint32_t *max_refresh_rate);
+  virtual DisplayError GetActiveConfig(uint32_t *config);
+  virtual DisplayError GetNumVariableInfoConfigs(uint32_t *count);
+  virtual DisplayError Prepare(LayerStack *layer_stack);
+  virtual bool IsPrimaryDisplay() { return true; }
   virtual bool IsUnderscanSupported() { return true; }
   virtual void SetIdleTimeoutMs(uint32_t active_ms) { }
-  virtual bool IsPrimaryDisplay() { return true; }
+  virtual std::string Dump() { return ""; }
 
-  void SetActive(bool active) {
-    active_ = active;
-  }
-
-  bool IsActive() {
-    return active_;
-  }
-
-  MAKE_NO_OP(Prepare(LayerStack *))
+  MAKE_NO_OP(Commit(LayerStack *))
+  MAKE_NO_OP(GetDisplayState(DisplayState *))
+  MAKE_NO_OP(SetDisplayState(DisplayState))
+  MAKE_NO_OP(SetFrameBufferConfig(const DisplayConfigVariableInfo &))
   MAKE_NO_OP(Flush())
-  MAKE_NO_OP(GetNumVariableInfoConfigs(uint32_t *))
-  MAKE_NO_OP(GetConfig(uint32_t, DisplayConfigVariableInfo *))
-  MAKE_NO_OP(GetConfig(DisplayConfigFixedInfo *))
-  MAKE_NO_OP(GetActiveConfig(uint32_t *))
   MAKE_NO_OP(GetVSyncState(bool *))
   MAKE_NO_OP(SetActiveConfig(uint32_t))
   MAKE_NO_OP(SetActiveConfig(DisplayConfigVariableInfo *))
@@ -86,18 +82,29 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(GetDefaultColorMode(std::string *))
   MAKE_NO_OP(ApplyDefaultDisplayMode())
   MAKE_NO_OP(SetCursorPosition(int, int))
-  MAKE_NO_OP(GetRefreshRateRange(uint32_t *, uint32_t *))
   MAKE_NO_OP(SetRefreshRate(uint32_t, bool))
   MAKE_NO_OP(GetPanelBrightness(int *))
   MAKE_NO_OP(SetVSyncState(bool))
   MAKE_NO_OP(SetMixerResolution(uint32_t, uint32_t))
-  MAKE_NO_OP(GetMixerResolution(uint32_t *, uint32_t *))
   MAKE_NO_OP(SetDetailEnhancerData(const DisplayDetailEnhancerData &))
   MAKE_NO_OP(GetDisplayPort(DisplayPort *))
   MAKE_NO_OP(SetCompositionState(LayerComposition, bool))
   MAKE_NO_OP(GetClientTargetSupport(uint32_t, uint32_t, LayerBufferFormat,
                                     const ColorMetaData &))
-  std::string Dump() { return ""; }
+
+  DisplayConfigVariableInfo default_variable_config_ = {};
+  DisplayConfigFixedInfo default_fixed_config_ = {};
+};
+
+class DisplayNullExternal : public DisplayNull {
+ public:
+  virtual DisplayError Commit(LayerStack *layer_stack);
+  virtual DisplayError GetDisplayState(DisplayState *state);
+  virtual DisplayError SetDisplayState(DisplayState state);
+  virtual DisplayError SetFrameBufferConfig(const DisplayConfigVariableInfo &variable_info);
+  virtual DisplayError GetFrameBufferConfig(DisplayConfigVariableInfo *variable_info);
+  void SetActive(bool active) { active_ = active; }
+  bool IsActive() { return active_; }
 
  private:
   bool active_ = false;

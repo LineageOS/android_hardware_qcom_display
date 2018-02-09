@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -475,13 +475,17 @@ void HWCDisplayPrimary::HandleFrameCapture() {
 }
 
 void HWCDisplayPrimary::HandleFrameDump() {
-  if (dump_frame_count_ && output_buffer_.release_fence_fd >= 0) {
-    int ret = sync_wait(output_buffer_.release_fence_fd, 1000);
-    ::close(output_buffer_.release_fence_fd);
-    output_buffer_.release_fence_fd = -1;
-    if (ret < 0) {
-      DLOGE("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
-    } else {
+  if (dump_frame_count_) {
+    int ret = 0;
+    if (output_buffer_.release_fence_fd >= 0) {
+      ret = sync_wait(output_buffer_.release_fence_fd, 1000);
+      ::close(output_buffer_.release_fence_fd);
+      output_buffer_.release_fence_fd = -1;
+      if (ret < 0) {
+        DLOGE("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
+      }
+    }
+    if (ret >= 0) {
       DumpOutputBuffer(output_buffer_info_, output_buffer_base_, layer_stack_.retire_fence_fd);
     }
   }
