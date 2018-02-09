@@ -958,6 +958,7 @@ DisplayError HWCDisplay::CECMessage(char *message) {
 DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
   switch (event) {
     case kIdleTimeout:
+      break;
     case kThermalEvent:
       validated_.reset();
       break;
