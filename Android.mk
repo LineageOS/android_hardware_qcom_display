@@ -7,7 +7,7 @@ ifneq ($(TARGET_IS_HEADLESS), true)
                     $(sdm-libs)/hwc2 gpu_tonemapper libdrmutils libdisplayconfig
 endif
 
-display-hals += libgralloc1
+display-hals += gralloc
 
 ifeq ($(call is-vendor-board-platform,QCOM),true)
     include $(call all-named-subdir-makefiles,$(display-hals))
