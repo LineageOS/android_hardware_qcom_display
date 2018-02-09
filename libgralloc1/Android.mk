@@ -8,12 +8,14 @@ LOCAL_VENDOR_MODULE           := true
 LOCAL_MODULE_RELATIVE_PATH    := hw
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes) \
-                                 external/libcxx/include/
+                                 external/libcxx/include/ \
+                                 system/core/libion/include/ \
+                                 system/core/libion/kernel-headers/ \
+                                 $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 
 LOCAL_HEADER_LIBRARIES        := display_headers
-LOCAL_SHARED_LIBRARIES        := $(common_libs) libqdMetaData libsync libgrallocutils
+LOCAL_SHARED_LIBRARIES        := $(common_libs) libqdMetaData libsync libgrallocutils libion
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdgralloc\" -Wall -std=c++11 -Werror
-LOCAL_CFLAGS                  += -isystem  $(kernel_includes)
 LOCAL_CLANG                   := true
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps) $(kernel_deps)
 LOCAL_SRC_FILES               := gr_ion_alloc.cpp \
