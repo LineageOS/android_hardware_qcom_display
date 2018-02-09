@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -28,10 +28,16 @@
 void free_ion_cookie(int ion_fd, int cookie)
 //-----------------------------------------------------------------------------
 {
+  // TODO(user): replace with appropriate handling for new ion apis
+#ifndef TARGET_ION_ABI_VERSION
   if (ion_fd && !ioctl(ion_fd, ION_IOC_FREE, &cookie)) {
   } else {
       ALOGE("ION_IOC_FREE failed: ion_fd = %d, cookie = %d", ion_fd, cookie);
   }
+#else
+  (void) ion_fd;
+  (void) cookie;
+#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -40,6 +46,8 @@ int get_ion_cookie(int ion_fd, int fd)
 {
    int cookie = fd;
 
+  // TODO(user): replace with appropriate handling for new ion apis
+#ifndef TARGET_ION_ABI_VERSION
    struct ion_fd_data fdData;
    memset(&fdData, 0, sizeof(fdData));
    fdData.fd = fd;
@@ -49,7 +57,9 @@ int get_ion_cookie(int ion_fd, int fd)
    } else {
         ALOGE("ION_IOC_IMPORT failed: ion_fd = %d, fd = %d", ion_fd, fd);
    }
-
+#else
+   (void) ion_fd;
+#endif
    return cookie;
 }
 
