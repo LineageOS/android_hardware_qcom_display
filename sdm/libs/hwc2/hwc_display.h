@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -36,6 +36,7 @@
 #include "hwc_buffer_allocator.h"
 #include "hwc_callbacks.h"
 #include "hwc_layers.h"
+#include "display_null.h"
 
 namespace sdm {
 
@@ -309,6 +310,7 @@ class HWCDisplay : public DisplayEventHandler {
   uint32_t geometry_changes_ = GeometryChanges::kNone;
   bool skip_validate_ = false;
   bool animating_ = false;
+  int null_display_mode_ = 0;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {

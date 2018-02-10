@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -360,11 +360,23 @@ HWCDisplay::HWCDisplay(CoreInterface *core_intf, HWCCallbacks *callbacks, Displa
 }
 
 int HWCDisplay::Init() {
-  DisplayError error = core_intf_->CreateDisplay(type_, this, &display_intf_);
-  if (error != kErrorNone) {
-    DLOGE("Display create failed. Error = %d display_type %d event_handler %p disp_intf %p", error,
-          type_, this, &display_intf_);
-    return -EINVAL;
+  DisplayError error = kErrorNone;
+
+  HWCDebugHandler::Get()->GetProperty("sdm.debug.enable_null_display", &null_display_mode_);
+
+  if (null_display_mode_) {
+    DisplayNull *disp_null = new DisplayNull();
+    disp_null->Init();
+    use_metadata_refresh_rate_ = false;
+    display_intf_ = disp_null;
+    ALOGI("Enabling null display mode for display type %d", type_);
+  } else {
+    error = core_intf_->CreateDisplay(type_, this, &display_intf_);
+    if (error != kErrorNone) {
+      DLOGE("Display create failed. Error = %d display_type %d event_handler %p disp_intf %p",
+            error, type_, this, &display_intf_);
+      return -EINVAL;
+    }
   }
 
   validated_ = false;
@@ -405,10 +417,15 @@ int HWCDisplay::Init() {
 }
 
 int HWCDisplay::Deinit() {
-  DisplayError error = core_intf_->DestroyDisplay(display_intf_);
-  if (error != kErrorNone) {
-    DLOGE("Display destroy failed. Error = %d", error);
-    return -EINVAL;
+  if (null_display_mode_) {
+    delete static_cast<DisplayNull *>(display_intf_);
+    display_intf_ = nullptr;
+  } else {
+    DisplayError error = core_intf_->DestroyDisplay(display_intf_);
+    if (error != kErrorNone) {
+      DLOGE("Display destroy failed. Error = %d", error);
+      return -EINVAL;
+    }
   }
 
   delete client_target_;
@@ -421,8 +438,10 @@ int HWCDisplay::Deinit() {
     delete color_mode_;
   }
 
-  delete tone_mapper_;
-  tone_mapper_ = nullptr;
+  if (tone_mapper_) {
+    delete tone_mapper_;
+    tone_mapper_ = nullptr;
+  }
 
   return 0;
 }

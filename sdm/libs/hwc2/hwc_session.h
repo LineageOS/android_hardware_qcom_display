@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -267,6 +267,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   Locker callbacks_lock_;
   int hpd_bpp_ = 0;
   int hpd_pattern_ = 0;
+  int null_display_mode_ = 0;
 };
 
 }  // namespace sdm
