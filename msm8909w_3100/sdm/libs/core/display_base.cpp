@@ -453,7 +453,6 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state) {
     if (display_type_ != kPrimary) {
       active = true;
     }
-
     break;
 
   case kStateStandby:

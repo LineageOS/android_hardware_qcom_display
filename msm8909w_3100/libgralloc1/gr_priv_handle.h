@@ -27,6 +27,8 @@
 #include <cinttypes>
 #endif
 
+#include <errno.h>
+
 #define GRALLOC1_FUNCTION_PERFORM 0x00001000
 
 #define DBG_HANDLE false
