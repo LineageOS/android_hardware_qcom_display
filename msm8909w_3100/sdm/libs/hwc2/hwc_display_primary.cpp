@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -592,6 +592,30 @@ DisplayError HWCDisplayPrimary::SetMixerResolution(uint32_t width, uint32_t heig
 
 DisplayError HWCDisplayPrimary::GetMixerResolution(uint32_t *width, uint32_t *height) {
   return display_intf_->GetMixerResolution(width, height);
+}
+
+DisplayError HWCDisplayPrimary::SetStandByMode(bool enable) {
+  if (enable) {
+    if (!display_null_.IsActive()) {
+      stored_display_intf_ = display_intf_;
+      display_intf_ = &display_null_;
+      display_null_.SetActive(true);
+      DLOGD("Null display is connected successfully");
+    } else {
+      DLOGD("Null display is already connected.");
+    }
+  } else {
+    if (display_null_.IsActive()) {
+      display_intf_ = stored_display_intf_;
+      validated_.reset();
+      display_null_.SetActive(false);
+      DLOGD("Display is connected successfully");
+    } else {
+      DLOGD("Display is already connected.");
+    }
+  }
+
+  return kErrorNone;
 }
 
 }  // namespace sdm
