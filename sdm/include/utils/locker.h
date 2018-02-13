@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2016, 2018 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -26,6 +26,7 @@
 #define __LOCKER_H__
 
 #include <stdint.h>
+#include <errno.h>
 #include <pthread.h>
 #include <sys/time.h>
 
@@ -126,12 +127,15 @@ class Locker {
 
   Locker() : sequence_wait_(0) {
     pthread_mutex_init(&mutex_, 0);
-    pthread_cond_init(&condition_, 0);
+    pthread_condattr_init(&cond_attr);
+    pthread_condattr_setclock(&cond_attr, CLOCK_MONOTONIC);
+    pthread_cond_init(&condition_, &cond_attr);
   }
 
   ~Locker() {
     pthread_mutex_destroy(&mutex_);
     pthread_cond_destroy(&condition_);
+    pthread_condattr_destroy(&cond_attr);
   }
 
   void Lock() { pthread_mutex_lock(&mutex_); }
@@ -139,20 +143,21 @@ class Locker {
   void Signal() { pthread_cond_signal(&condition_); }
   void Broadcast() { pthread_cond_broadcast(&condition_); }
   void Wait() { pthread_cond_wait(&condition_, &mutex_); }
-  int WaitFinite(int ms) {
+  int WaitFinite(uint32_t ms) {
     struct timespec ts;
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    ts.tv_sec = tv.tv_sec + ms/1000;
-    ts.tv_nsec = tv.tv_usec*1000 + (ms%1000)*1000000;
-    ts.tv_sec += ts.tv_nsec/1000000000L;
-    ts.tv_nsec %= 1000000000L;
+    if (clock_gettime(CLOCK_MONOTONIC, &ts)) {
+       return EINVAL;
+    }
+    uint64_t ns = (uint64_t)ts.tv_nsec + (ms * 1000000L);
+    ts.tv_sec   = ts.tv_sec + (time_t)(ns / 1000000000L);
+    ts.tv_nsec  = ns % 1000000000L;
     return pthread_cond_timedwait(&condition_, &mutex_, &ts);
   }
 
  private:
   pthread_mutex_t mutex_;
   pthread_cond_t condition_;
+  pthread_condattr_t cond_attr;
   int sequence_wait_;   // This flag is set to 1 on sequence entry, 0 on exit, and -1 on cancel.
                         // Some routines will wait for sequence of function calls to finish
                         // so that capturing a transitionary snapshot of context is prevented.
