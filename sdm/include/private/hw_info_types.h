@@ -123,6 +123,13 @@ enum HWTopology {
   kPPSplit,
 };
 
+enum HwHdrEotf {
+  kHdrEOTFInvalid = 0,
+  kHdrEOTFSDR = 0x1,
+  kHdrEOTFHdrLumRange = 0x2,
+  kHdrEOTFHDR10 = 0x4,
+  kHdrEOTFHLG = 0x8,
+};
 
 typedef std::map<HWSubBlockType, std::vector<LayerBufferFormat>> FormatsMap;
 typedef std::map<LayerBufferFormat, float> CompRatioMap;

@@ -249,7 +249,6 @@ class HWCDisplay : public DisplayEventHandler {
   bool IsSurfaceUpdated(const std::vector<LayerRect> &dirty_regions);
   bool IsLayerUpdating(const Layer *layer);
   uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate);
-  virtual void ClearRequestFlags();
   virtual void GetUnderScanConfig() { }
 
   enum {
@@ -258,6 +257,7 @@ class HWCDisplay : public DisplayEventHandler {
   };
 
   bool validated_ = false;
+  bool layer_stack_invalid_ = true;
   CoreInterface *core_intf_ = nullptr;
   HWCCallbacks *callbacks_  = nullptr;
   HWCBufferAllocator *buffer_allocator_ = NULL;

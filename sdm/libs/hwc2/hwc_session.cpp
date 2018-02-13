@@ -804,7 +804,7 @@ int32_t HWCSession::ValidateDisplay(hwc2_device_t *device, hwc2_display_t displa
   }
 
   // Sequence locking currently begins on Validate, so cancel the sequence lock on failures
-  if (status != HWC2::Error::None) {
+  if (status != HWC2::Error::None && status != HWC2::Error::HasChanges) {
     SEQUENCE_CANCEL_SCOPE_LOCK(locker_[display]);
   }
 
