@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -210,7 +210,8 @@ HWC2::Error HWCDisplayPrimary::Validate(uint32_t *out_num_types, uint32_t *out_n
     // Avoid flush for Command mode panel.
     DisplayConfigFixedInfo display_config;
     display_intf_->GetConfig(&display_config);
-    flush_ = !display_config.is_cmdmode;
+    flush_ = !(display_config.is_cmdmode && secure_display_active_);
+    validated_ = true;
     return status;
   }
 
