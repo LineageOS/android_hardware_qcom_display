@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -164,11 +164,11 @@ DisplayError HWTVDRM::PowerOff() {
   return kErrorNone;
 }
 
-DisplayError HWTVDRM::Doze() {
+DisplayError HWTVDRM::Doze(int *release_fence) {
   return kErrorNone;
 }
 
-DisplayError HWTVDRM::DozeSuspend() {
+DisplayError HWTVDRM::DozeSuspend(int *release_fence) {
   return kErrorNone;
 }
 

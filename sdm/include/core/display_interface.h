@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -388,12 +388,13 @@ class DisplayInterface {
   /*! @brief Method to set current state of the display device.
 
     @param[in] state \link DisplayState \endlink
+    @param[in] pointer to release fence
 
     @return \link DisplayError \endlink
 
     @sa SetDisplayState
   */
-  virtual DisplayError SetDisplayState(DisplayState state) = 0;
+  virtual DisplayError SetDisplayState(DisplayState state, int *release_fence) = 0;
 
   /*! @brief Method to set active configuration for variable properties of the display device.
 
