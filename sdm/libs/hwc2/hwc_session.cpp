@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -72,6 +72,7 @@ namespace sdm {
 
 static HWCUEvent g_hwc_uevent_;
 Locker HWCSession::locker_[HWC_NUM_DISPLAY_TYPES];
+static const int kSolidFillDelay = 100 * 1000;
 
 void HWCUEvent::UEventThread(HWCUEvent *hwc_uevent) {
   const char *uevent_thread_name = "HWC_UeventThread";
@@ -1530,14 +1531,22 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
           ret = color_mgr_->EnableQDCMMode(false, hwc_display_[HWC_DISPLAY_PRIMARY]);
           break;
         case kApplySolidFill:
-          ret = color_mgr_->SetSolidFill(pending_action.params,
+          {
+            SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
+            ret = color_mgr_->SetSolidFill(pending_action.params,
                                             true, hwc_display_[HWC_DISPLAY_PRIMARY]);
+          }
           Refresh(HWC_DISPLAY_PRIMARY);
+          usleep(kSolidFillDelay);
           break;
         case kDisableSolidFill:
-          ret = color_mgr_->SetSolidFill(pending_action.params,
+          {
+            SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
+            ret = color_mgr_->SetSolidFill(pending_action.params,
                                             false, hwc_display_[HWC_DISPLAY_PRIMARY]);
+          }
           Refresh(HWC_DISPLAY_PRIMARY);
+          usleep(kSolidFillDelay);
           break;
         case kSetPanelBrightness:
           brightness_value = reinterpret_cast<int32_t *>(resp_payload.payload);
