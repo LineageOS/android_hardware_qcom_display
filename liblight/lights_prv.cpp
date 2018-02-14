@@ -30,7 +30,14 @@
 
 
 #include <hardware/hwcomposer_defs.h>
+#ifndef _OSS
 #include "disp_color_apis.h"
+#else
+typedef uint64_t DISPAPI_HANDLE;
+int32_t disp_api_init(DISPAPI_HANDLE *hctx, uint32_t flags);
+int32_t disp_api_set_panel_brightness_level_ext(DISPAPI_HANDLE hctx, uint32_t disp_id, int32_t level,
+                                          uint32_t flags);
+#endif
 #include "lights_prv.h"
 
 /******************************************************************************/
