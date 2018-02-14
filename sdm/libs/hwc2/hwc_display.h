@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -150,6 +150,10 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int SetState(bool connected) {
     return kErrorNotSupported;
   }
+  virtual DisplayError Flush() {
+    return kErrorNotSupported;
+  }
+
   int SetPanelBrightness(int level);
   int GetPanelBrightness(int *level);
   int ToggleScreenUpdates(bool enable);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -49,6 +49,7 @@ class HWCDisplayExternal : public HWCDisplay {
   virtual HWC2::Error Present(int32_t *out_retire_fence);
   virtual void SetSecureDisplay(bool secure_display_active);
   virtual int SetState(bool connected);
+  virtual DisplayError Flush();
 
  private:
   HWCDisplayExternal(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
