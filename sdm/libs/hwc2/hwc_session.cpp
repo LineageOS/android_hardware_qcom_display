@@ -939,6 +939,10 @@ int HWCSession::DisconnectDisplay(int disp) {
   DLOGI("Display = %d", disp);
 
   if (disp == HWC_DISPLAY_EXTERNAL) {
+    DisplayError error = hwc_display_[disp]->Flush();
+    if (error != kErrorNone) {
+        DLOGW("Flush failed. Error = %d", error);
+    }
     HWCDisplayExternal::Destroy(hwc_display_[disp]);
   } else if (disp == HWC_DISPLAY_VIRTUAL) {
     HWCDisplayVirtual::Destroy(hwc_display_[disp]);

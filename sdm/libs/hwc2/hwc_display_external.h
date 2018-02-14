@@ -49,6 +49,7 @@ class HWCDisplayExternal : public HWCDisplay {
   virtual HWC2::Error Present(int32_t *out_retire_fence);
   virtual void SetSecureDisplay(bool secure_display_active);
   virtual int SetState(bool connected);
+  virtual DisplayError Flush();
 
  private:
   HWCDisplayExternal(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
