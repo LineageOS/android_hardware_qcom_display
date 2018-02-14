@@ -59,6 +59,8 @@ inline int roundUpToPageSize(int x) {
 #define GRALLOC1_PRODUCER_USAGE_PRIVATE_10BIT_TP  0x08000000
 #define GRALLOC1_CONSUMER_USAGE_PRIVATE_10BIT_TP  0x08000000
 
+/* This flag is used to indicate video NV21 format */
+#define GRALLOC1_PRODUCER_USAGE_PRIVATE_VIDEO_NV21_ENCODER (1ULL << 24)
 
 /* Consumer flags */
 /* TODO(user): Fix when producer and consumer flags are actually separated */
@@ -107,6 +109,7 @@ inline int roundUpToPageSize(int x) {
 #define HAL_PIXEL_FORMAT_RGBA_5551 6
 #define HAL_PIXEL_FORMAT_RGBA_4444 7
 #define HAL_PIXEL_FORMAT_NV12_ENCODEABLE 0x102
+#define HAL_PIXEL_FORMAT_NV21_ENCODEABLE 0x7FA30C00
 #define HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS 0x7FA30C04
 #define HAL_PIXEL_FORMAT_YCbCr_420_SP_TILED 0x7FA30C03
 #define HAL_PIXEL_FORMAT_YCbCr_420_SP 0x109

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -287,6 +287,7 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw,
       size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12, width, height);
       break;
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
+    case HAL_PIXEL_FORMAT_NV21_ENCODEABLE:
       size = VENUS_BUFFER_SIZE(COLOR_FMT_NV21, width, height);
       break;
     case HAL_PIXEL_FORMAT_BLOB:

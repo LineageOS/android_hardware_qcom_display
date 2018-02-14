@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -207,7 +207,11 @@ int Allocator::GetImplDefinedFormat(gralloc1_producer_usage_t prod_usage,
     } else if (prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_10BIT) {
       gr_format = HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS;
     } else if (cons_usage & GRALLOC1_CONSUMER_USAGE_VIDEO_ENCODER) {
-      gr_format = HAL_PIXEL_FORMAT_NV12_ENCODEABLE;  // NV12
+      if (prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_VIDEO_NV21_ENCODER) {
+        gr_format = HAL_PIXEL_FORMAT_NV21_ENCODEABLE;  // NV21
+      } else {
+        gr_format = HAL_PIXEL_FORMAT_NV12_ENCODEABLE;  // NV12
+      }
     } else if (cons_usage & GRALLOC1_CONSUMER_USAGE_CAMERA) {
       if (prod_usage & GRALLOC1_PRODUCER_USAGE_CAMERA) {
         // Assumed ZSL if both producer and consumer camera flags set
