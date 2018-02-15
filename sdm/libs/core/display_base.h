@@ -189,6 +189,9 @@ class DisplayBase : public DisplayInterface {
   bool hdr_mode_ = false;
   int disable_hdr_lut_gen_ = 0;
   DisplayState last_power_mode_ = kStateOff;
+  bool drop_hw_vsync_ = false;
+  uint32_t current_refresh_rate_ = 0;
+  bool drop_skewed_vsync_ = false;
 };
 
 }  // namespace sdm
