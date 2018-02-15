@@ -95,7 +95,6 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   bool avr_prop_disabled_ = false;
   bool switch_to_cmd_ = false;
   bool handle_idle_timeout_ = false;
-  uint32_t current_refresh_rate_ = 0;
   bool reset_panel_ = false;
   bool commit_event_enabled_ = false;
   DppsInfo dpps_info_ = {};

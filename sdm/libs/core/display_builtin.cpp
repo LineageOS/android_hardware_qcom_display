@@ -311,7 +311,7 @@ DisplayError DisplayBuiltIn::SetRefreshRate(uint32_t refresh_rate, bool final_ra
 }
 
 DisplayError DisplayBuiltIn::VSync(int64_t timestamp) {
-  if (vsync_enable_) {
+  if (vsync_enable_ && !drop_hw_vsync_) {
     DisplayEventVSync vsync;
     vsync.timestamp = timestamp;
     event_handler_->VSync(vsync);
