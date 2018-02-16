@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -299,16 +299,25 @@ void HWCSession::GetCapabilities(struct hwc2_device *device, uint32_t *outCount,
   }
 
   int value = 0;
+  uint32_t count = 0;
   bool disable_skip_validate = false;
+  HWCSession *hwc_session = static_cast<HWCSession *>(device);
+  bool color_transform_supported = hwc_session->core_intf_->IsColorTransformSupported();
+
   if (Debug::Get()->GetProperty("sdm.debug.disable_skip_validate", &value) == kErrorNone) {
     disable_skip_validate = (value == 1);
   }
-  uint32_t count = 1 + (disable_skip_validate ? 0 : 1);
+
+  count += (color_transform_supported) ? 1 : 0;
+  count += (!disable_skip_validate) ? 1 : 0;
 
   if (outCapabilities != nullptr && (*outCount >= count)) {
-    outCapabilities[0] = HWC2_CAPABILITY_SKIP_CLIENT_COLOR_TRANSFORM;
+    int i = 0;
+    if (color_transform_supported) {
+      outCapabilities[i++] = HWC2_CAPABILITY_SKIP_CLIENT_COLOR_TRANSFORM;
+    }
     if (!disable_skip_validate) {
-      outCapabilities[1] = HWC2_CAPABILITY_SKIP_VALIDATE;
+      outCapabilities[i++] = HWC2_CAPABILITY_SKIP_VALIDATE;
     }
   }
   *outCount = count;
@@ -502,7 +511,9 @@ static int32_t GetHdrCapabilities(hwc2_device_t* device, hwc2_display_t display,
 }
 
 static uint32_t GetMaxVirtualDisplayCount(hwc2_device_t *device) {
-  return 1;
+  char property[PROPERTY_VALUE_MAX];
+  property_get("debug.sdm.support_writeback", property, "1");
+  return (uint32_t) atoi(property);
 }
 
 static int32_t GetReleaseFences(hwc2_device_t *device, hwc2_display_t display,
@@ -1071,7 +1082,7 @@ android::status_t HWCSession::HandleGetDisplayAttributesForConfig(const android:
   int error = android::BAD_VALUE;
   DisplayConfigVariableInfo display_attributes;
 
-  if (dpy > HWC_DISPLAY_VIRTUAL) {
+  if (dpy < HWC_DISPLAY_PRIMARY || dpy >= HWC_NUM_DISPLAY_TYPES || config < 0) {
     return android::BAD_VALUE;
   }
 
@@ -1219,6 +1230,10 @@ android::status_t HWCSession::SetColorModeOverride(const android::Parcel *input_
   auto display = static_cast<hwc2_display_t >(input_parcel->readInt32());
   auto mode = static_cast<android_color_mode_t>(input_parcel->readInt32());
   auto device = static_cast<hwc2_device_t *>(this);
+
+  if (display >= HWC_NUM_DISPLAY_TYPES) {
+    return -EINVAL;
+  }
 
   SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
   auto err = CallDisplayFunction(device, display, &HWCDisplay::SetColorMode, mode);
@@ -1535,7 +1550,7 @@ int HWCSession::GetVsyncPeriod(int disp) {
 android::status_t HWCSession::GetVisibleDisplayRect(const android::Parcel *input_parcel,
                                                     android::Parcel *output_parcel) {
   int dpy = input_parcel->readInt32();
-  if (dpy < HWC_DISPLAY_PRIMARY || dpy > HWC_DISPLAY_VIRTUAL) {
+  if (dpy < HWC_DISPLAY_PRIMARY || dpy >= HWC_NUM_DISPLAY_TYPES) {
     return android::BAD_VALUE;
   }
 

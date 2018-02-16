@@ -20,7 +20,12 @@
 #ifndef __HWC_SESSION_H__
 #define __HWC_SESSION_H__
 
+#ifdef DISPLAY_CONFIG_1_1
+#include <vendor/display/config/1.1/IDisplayConfig.h>
+#else
 #include <vendor/display/config/1.0/IDisplayConfig.h>
+#endif
+
 #include <core/core_interface.h>
 #include <utils/locker.h>
 
@@ -35,7 +40,11 @@
 
 namespace sdm {
 
+#ifdef DISPLAY_CONFIG_1_1
+using vendor::display::config::V1_1::IDisplayConfig;
+#else
 using ::vendor::display::config::V1_0::IDisplayConfig;
+#endif
 using ::android::hardware::Return;
 
 // Create a singleton uevent listener thread valid for life of hardware composer process.
@@ -204,6 +213,11 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
                                   getHDRCapabilities_cb _hidl_cb) override;
   Return<int32_t> setCameraLaunchStatus(uint32_t on) override;
   Return<void> displayBWTransactionPending(displayBWTransactionPending_cb _hidl_cb) override;
+
+  // Methods from ::android::hardware::display::config::V1_1::IDisplayConfig follow.
+#ifdef DISPLAY_CONFIG_1_1
+  Return<int32_t> setDisplayAnimating(uint64_t display_id, bool animating) override;
+#endif
 
   // QClient methods
   virtual android::status_t notifyCallback(uint32_t command, const android::Parcel *input_parcel,
