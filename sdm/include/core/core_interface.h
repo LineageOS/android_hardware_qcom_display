@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2016, 2018 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -219,6 +219,15 @@ class CoreInterface {
 
    */
     virtual DisplayError GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_disp_info) = 0;
+
+   /*! @brief Method to check color transform supported or not.
+
+    @details Client shall use this method to determine if target supports color transform or not
+
+    @return bool
+
+   */
+    virtual bool IsColorTransformSupported() = 0;
 
 
  protected:

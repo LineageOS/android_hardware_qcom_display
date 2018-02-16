@@ -115,6 +115,10 @@ DisplayError HWDevice::Deinit() {
     device_fd_ = -1;
   }
 
+  if (stored_retire_fence >= 0) {
+    Sys::close_(stored_retire_fence);
+    stored_retire_fence = -1;
+  }
   return kErrorNone;
 }
 

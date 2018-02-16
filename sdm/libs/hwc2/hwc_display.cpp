@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -89,8 +89,11 @@ HWC2::Error HWCColorMode::DeInit() {
 uint32_t HWCColorMode::GetColorModeCount() {
   uint32_t count = UINT32(color_mode_transform_map_.size());
   DLOGI("Supported color mode count = %d", count);
-
+#ifdef EXCLUDE_DISPLAY_PP
+  return count;
+#else
   return std::max(1U, count);
+#endif
 }
 
 HWC2::Error HWCColorMode::GetColorModes(uint32_t *out_num_modes,
@@ -202,8 +205,10 @@ void HWCColorMode::PopulateColorModes() {
   // SDM returns modes which is string combination of mode + transform.
   DisplayError error = display_intf_->GetColorModeCount(&color_mode_count);
   if (error != kErrorNone || (color_mode_count == 0)) {
+#ifndef EXCLUDE_DISPLAY_PP
     DLOGW("GetColorModeCount failed, use native color mode");
     PopulateTransform(HAL_COLOR_MODE_NATIVE, "native", "identity");
+#endif
     return;
   }
 
@@ -401,6 +406,9 @@ int HWCDisplay::Deinit() {
   }
 
   delete client_target_;
+  for (auto hwc_layer : layer_set_) {
+    delete hwc_layer;
+  }
 
   if (color_mode_) {
     color_mode_->DeInit();
@@ -462,6 +470,7 @@ void HWCDisplay::BuildLayerStack() {
   metadata_refresh_rate_ = 0;
   auto working_primaries = ColorPrimaries_BT709_5;
   bool secure_display_active = false;
+  layer_stack_.flags.animating = animating_;
 
   // Add one layer for fb target
   // TODO(user): Add blit target layers
@@ -1735,13 +1744,14 @@ void HWCDisplay::MarkLayersForGPUBypass() {
 }
 
 void HWCDisplay::MarkLayersForClientComposition() {
-  // ClientComposition - GPU comp, to acheive this, set skip flag so that
+  // ClientComposition - GPU comp, to achieve this, set skip flag so that
   // SDM does not handle this layer and hwc_layer composition will be
   // set correctly at the end of Prepare.
   for (auto hwc_layer : layer_set_) {
     Layer *layer = hwc_layer->GetSDMLayer();
     layer->flags.skip = true;
   }
+  layer_stack_.flags.skip_present = true;
 }
 
 void HWCDisplay::ApplyScanAdjustment(hwc_rect_t *display_frame) {
