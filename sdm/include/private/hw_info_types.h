@@ -568,6 +568,7 @@ struct HWQosData {
   uint64_t llcc_ib_bps = 0;
   uint64_t dram_ab_bps = 0;
   uint64_t dram_ib_bps = 0;
+  uint64_t rot_prefill_bw_bps = 0;
   uint32_t clock_hz = 0;
   uint32_t rot_clock_hz = 0;
 };

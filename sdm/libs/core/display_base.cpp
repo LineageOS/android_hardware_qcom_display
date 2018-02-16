@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -430,7 +430,7 @@ DisplayState DisplayBase::GetLastPowerMode() {
   return last_power_mode_;
 }
 
-DisplayError DisplayBase::SetDisplayState(DisplayState state) {
+DisplayError DisplayBase::SetDisplayState(DisplayState state, int *release_fence) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
   bool active = false;
@@ -452,7 +452,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state) {
     break;
 
   case kStateOn:
-    error = hw_intf_->PowerOn();
+    error = hw_intf_->PowerOn(release_fence);
     if (error != kErrorNone) {
       return error;
     }
@@ -468,13 +468,13 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state) {
     break;
 
   case kStateDoze:
-    error = hw_intf_->Doze();
+    error = hw_intf_->Doze(release_fence);
     active = true;
     last_power_mode_ = kStateDoze;
     break;
 
   case kStateDozeSuspend:
-    error = hw_intf_->DozeSuspend();
+    error = hw_intf_->DozeSuspend(release_fence);
     if (display_type_ != kPrimary) {
       active = true;
     }
@@ -1525,7 +1525,7 @@ DisplayError DisplayBase::ValidateHDR(LayerStack *layer_stack) {
     // HDR color mode is set when hdr layer is present in layer_stack.
     // If client flags HDR layer as skipped, then blending happens
     // in SDR color space. Hence, need to restore the SDR color mode.
-    if (layer_stack->blend_cs != ColorPrimaries_BT2020) {
+    if (layer_stack->blend_cs.first != ColorPrimaries_BT2020) {
       error = SetHDRMode(false);
       if (error != kErrorNone) {
         DLOGW("Failed to restore SDR mode");

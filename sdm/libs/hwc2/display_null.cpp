@@ -146,7 +146,7 @@ DisplayError DisplayNullExternal::GetDisplayState(DisplayState *state) {
   return kErrorNone;
 }
 
-DisplayError DisplayNullExternal::SetDisplayState(DisplayState state) {
+DisplayError DisplayNullExternal::SetDisplayState(DisplayState state, int *release_fence) {
   state_ = state;
   return kErrorNone;
 }

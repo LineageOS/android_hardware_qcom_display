@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -62,7 +62,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError GetConfig(DisplayConfigFixedInfo *variable_info);
   virtual DisplayError GetActiveConfig(uint32_t *index);
   virtual DisplayError GetVSyncState(bool *enabled);
-  virtual DisplayError SetDisplayState(DisplayState state);
+  virtual DisplayError SetDisplayState(DisplayState state, int *release_fence);
   virtual DisplayError SetActiveConfig(uint32_t index);
   virtual DisplayError SetActiveConfig(DisplayConfigVariableInfo *variable_info) {
     return kErrorNotSupported;

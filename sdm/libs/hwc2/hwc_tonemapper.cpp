@@ -146,22 +146,22 @@ void ToneMapSession::SetReleaseFence(int fd) {
   release_fence_fd_[current_buffer_index_] = dup(fd);
 }
 
-void ToneMapSession::SetToneMapConfig(Layer *layer) {
+void ToneMapSession::SetToneMapConfig(Layer *layer, PrimariesTransfer blend_cs) {
   // HDR -> SDR is FORWARD and SDR - > HDR is INVERSE
   tone_map_config_.type = layer->input_buffer.flags.hdr ? TONEMAP_FORWARD : TONEMAP_INVERSE;
-  tone_map_config_.colorPrimaries = layer->input_buffer.color_metadata.colorPrimaries;
+  tone_map_config_.blend_cs = blend_cs;
   tone_map_config_.transfer = layer->input_buffer.color_metadata.transfer;
   tone_map_config_.secure = layer->request.flags.secure;
   tone_map_config_.format = layer->request.format;
 }
 
-bool ToneMapSession::IsSameToneMapConfig(Layer *layer) {
+bool ToneMapSession::IsSameToneMapConfig(Layer *layer, PrimariesTransfer blend_cs) {
   LayerBuffer& buffer = layer->input_buffer;
   private_handle_t *handle = static_cast<private_handle_t *>(buffer_info_[0].private_data);
   int tonemap_type = buffer.flags.hdr ? TONEMAP_FORWARD : TONEMAP_INVERSE;
 
   return ((tonemap_type == tone_map_config_.type) &&
-          (buffer.color_metadata.colorPrimaries == tone_map_config_.colorPrimaries) &&
+          (blend_cs == tone_map_config_.blend_cs) &&
           (buffer.color_metadata.transfer == tone_map_config_.transfer) &&
           (layer->request.flags.secure == tone_map_config_.secure) &&
           (layer->request.format == tone_map_config_.format) &&
@@ -197,11 +197,11 @@ int HWCToneMapper::HandleToneMap(LayerStack *layer_stack) {
             return 0;
           }
         }
-        error = AcquireToneMapSession(layer, &session_index);
+        error = AcquireToneMapSession(layer, &session_index, layer_stack->blend_cs);
         fb_session_index_ = INT(session_index);
         break;
       default:
-        error = AcquireToneMapSession(layer, &session_index);
+        error = AcquireToneMapSession(layer, &session_index, layer_stack->blend_cs);
         break;
       }
 
@@ -331,7 +331,8 @@ void HWCToneMapper::DumpToneMapOutput(ToneMapSession *session, int *acquire_fd) 
   CloseFd(acquire_fd);
 }
 
-DisplayError HWCToneMapper::AcquireToneMapSession(Layer *layer, uint32_t *session_index) {
+DisplayError HWCToneMapper::AcquireToneMapSession(Layer *layer, uint32_t *session_index,
+                                                  PrimariesTransfer blend_cs) {
   // When the property sdm.disable_hdr_lut_gen is set, the lutEntries and gridEntries in
   // the Lut3d will be NULL, clients needs to allocate the memory and set correct 3D Lut
   // for Tonemapping.
@@ -344,7 +345,7 @@ DisplayError HWCToneMapper::AcquireToneMapSession(Layer *layer, uint32_t *sessio
   // Check if we can re-use an existing tone map session.
   for (uint32_t i = 0; i < tone_map_sessions_.size(); i++) {
     ToneMapSession *tonemap_session = tone_map_sessions_.at(i);
-    if (!tonemap_session->acquired_ && tonemap_session->IsSameToneMapConfig(layer)) {
+    if (!tonemap_session->acquired_ && tonemap_session->IsSameToneMapConfig(layer, blend_cs)) {
       tonemap_session->current_buffer_index_ = (tonemap_session->current_buffer_index_ + 1) %
                                                 ToneMapSession::kNumIntermediateBuffers;
       tonemap_session->acquired_ = true;
@@ -358,7 +359,7 @@ DisplayError HWCToneMapper::AcquireToneMapSession(Layer *layer, uint32_t *sessio
     return kErrorMemory;
   }
 
-  session->SetToneMapConfig(layer);
+  session->SetToneMapConfig(layer, blend_cs);
 
   ToneMapGetInstanceContext ctx;
   ctx.layer = layer;
