@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+#include <bfqio/bfqio.h>
 #include <cutils/properties.h>
 #include <utils/Log.h>
 #include <fcntl.h>
@@ -115,6 +116,7 @@ static void *vsync_loop(void *param)
     prctl(PR_SET_NAME, (unsigned long) &thread_name, 0, 0, 0);
     setpriority(PRIO_PROCESS, 0, HAL_PRIORITY_URGENT_DISPLAY +
                 android::PRIORITY_MORE_FAVORABLE);
+    android_set_rt_ioprio(0, 1);
 
     char vdata[MAX_DATA];
     //Number of physical displays
