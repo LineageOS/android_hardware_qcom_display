@@ -344,6 +344,10 @@ gralloc1_error_t GrallocImpl::GetLayerCount(gralloc1_device_t *device, buffer_ha
 
 gralloc1_error_t GrallocImpl::GetProducerUsage(gralloc1_device_t *device, buffer_handle_t buffer,
                                                gralloc1_producer_usage_t *outUsage) {
+  if (!outUsage) {
+    return GRALLOC1_ERROR_BAD_VALUE;
+  }
+
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
   if (status == GRALLOC1_ERROR_NONE) {
     const private_handle_t *hnd = PRIV_HANDLE_CONST(buffer);
@@ -355,6 +359,10 @@ gralloc1_error_t GrallocImpl::GetProducerUsage(gralloc1_device_t *device, buffer
 
 gralloc1_error_t GrallocImpl::GetBufferStride(gralloc1_device_t *device, buffer_handle_t buffer,
                                               uint32_t *outStride) {
+  if (!outStride) {
+    return GRALLOC1_ERROR_BAD_VALUE;
+  }
+
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
   if (status == GRALLOC1_ERROR_NONE) {
     *outStride = UINT(PRIV_HANDLE_CONST(buffer)->GetStride());
@@ -368,6 +376,10 @@ gralloc1_error_t GrallocImpl::AllocateBuffers(gralloc1_device_t *device, uint32_
                                               buffer_handle_t *out_buffers) {
   if (!num_descriptors || !descriptors) {
     return GRALLOC1_ERROR_BAD_DESCRIPTOR;
+  }
+
+  if (!device) {
+    return GRALLOC1_ERROR_BAD_VALUE;
   }
 
   GrallocImpl const *dev = GRALLOC_IMPL(device);
@@ -401,6 +413,10 @@ gralloc1_error_t GrallocImpl::ReleaseBuffer(gralloc1_device_t *device, buffer_ha
 
 gralloc1_error_t GrallocImpl::GetNumFlexPlanes(gralloc1_device_t *device, buffer_handle_t buffer,
                                                uint32_t *out_num_planes) {
+  if (!out_num_planes) {
+    return GRALLOC1_ERROR_BAD_VALUE;
+  }
+
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
   if (status == GRALLOC1_ERROR_NONE) {
     GrallocImpl const *dev = GRALLOC_IMPL(device);
@@ -422,7 +438,8 @@ gralloc1_error_t GrallocImpl::LockBuffer(gralloc1_device_t *device, buffer_handl
                                          const gralloc1_rect_t *region, void **out_data,
                                          int32_t acquire_fence) {
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
-  if (status != GRALLOC1_ERROR_NONE) {
+  if (status != GRALLOC1_ERROR_NONE || !out_data ||
+      !region) {  // currently we ignore the region/rect client wants to lock
     CloseFdIfValid(acquire_fence);
     return status;
   }
@@ -447,13 +464,8 @@ gralloc1_error_t GrallocImpl::LockBuffer(gralloc1_device_t *device, buffer_handl
     // return GRALLOC1_ERROR_BAD_VALUE;
   }
 
-  // currently we ignore the region/rect client wants to lock
-  if (region == NULL) {
-    return GRALLOC1_ERROR_BAD_VALUE;
-  }
   // TODO(user): Need to check if buffer was allocated with the same flags
   status = dev->buf_mgr_->LockBuffer(hnd, prod_usage, cons_usage);
-
   *out_data = reinterpret_cast<void *>(hnd->base);
 
   return status;
@@ -465,7 +477,12 @@ gralloc1_error_t GrallocImpl::LockFlex(gralloc1_device_t *device, buffer_handle_
                                        const gralloc1_rect_t *region,
                                        struct android_flex_layout *out_flex_layout,
                                        int32_t acquire_fence) {
-  void *out_data;
+  if (!out_flex_layout) {
+    CloseFdIfValid(acquire_fence);
+    return GRALLOC1_ERROR_BAD_VALUE;
+  }
+
+  void *out_data {};
   gralloc1_error_t status = GrallocImpl::LockBuffer(device, buffer, prod_usage, cons_usage, region,
                                                     &out_data, acquire_fence);
   if (status != GRALLOC1_ERROR_NONE) {
@@ -481,9 +498,12 @@ gralloc1_error_t GrallocImpl::LockFlex(gralloc1_device_t *device, buffer_handle_
 gralloc1_error_t GrallocImpl::UnlockBuffer(gralloc1_device_t *device, buffer_handle_t buffer,
                                            int32_t *release_fence) {
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
-
   if (status != GRALLOC1_ERROR_NONE) {
     return status;
+  }
+
+  if (!release_fence) {
+    return GRALLOC1_ERROR_BAD_VALUE;
   }
 
   const private_handle_t *hnd = PRIV_HANDLE_CONST(buffer);
@@ -495,6 +515,10 @@ gralloc1_error_t GrallocImpl::UnlockBuffer(gralloc1_device_t *device, buffer_han
 }
 
 gralloc1_error_t GrallocImpl::Gralloc1Perform(gralloc1_device_t *device, int operation, ...) {
+  if (!device) {
+    return GRALLOC1_ERROR_BAD_VALUE;
+  }
+
   va_list args;
   va_start(args, operation);
   GrallocImpl const *dev = GRALLOC_IMPL(device);

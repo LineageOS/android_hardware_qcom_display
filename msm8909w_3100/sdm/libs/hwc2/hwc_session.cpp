@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -281,6 +281,10 @@ int HWCSession::Close(hw_device_t *device) {
 
 void HWCSession::GetCapabilities(struct hwc2_device *device, uint32_t *outCount,
                                  int32_t *outCapabilities) {
+  if (!outCount) {
+    return;
+  }
+
   int value = 0;
   bool disable_skip_validate = false;
   if (Debug::Get()->GetProperty("sdm.debug.disable_skip_validate", &value) == kErrorNone) {
@@ -307,12 +311,22 @@ static hwc2_function_pointer_t AsFP(T function) {
 // Defined in the same order as in the HWC2 header
 
 int32_t HWCSession::AcceptDisplayChanges(hwc2_device_t *device, hwc2_display_t display) {
+
+  if (display >= HWC_NUM_DISPLAY_TYPES) {
+    return  HWC2_ERROR_BAD_DISPLAY;
+  }
   SCOPE_LOCK(locker_);
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::AcceptDisplayChanges);
 }
 
 int32_t HWCSession::CreateLayer(hwc2_device_t *device, hwc2_display_t display,
                                 hwc2_layer_t *out_layer_id) {
+  if (!out_layer_id) {
+    return  HWC2_ERROR_BAD_PARAMETER;
+  }
+  if (display >= HWC_NUM_DISPLAY_TYPES) {
+    return  HWC2_ERROR_BAD_DISPLAY;
+  }
   SCOPE_LOCK(locker_);
   return CallDisplayFunction(device, display, &HWCDisplay::CreateLayer, out_layer_id);
 }
@@ -323,6 +337,10 @@ int32_t HWCSession::CreateVirtualDisplay(hwc2_device_t *device, uint32_t width, 
   SCOPE_LOCK(locker_);
   if (!device) {
     return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  if (!out_display_id || !width || !height || !format) {
+    return  HWC2_ERROR_BAD_PARAMETER;
   }
 
   HWCSession *hwc_session = static_cast<HWCSession *>(device);
@@ -339,6 +357,9 @@ int32_t HWCSession::CreateVirtualDisplay(hwc2_device_t *device, uint32_t width, 
 
 int32_t HWCSession::DestroyLayer(hwc2_device_t *device, hwc2_display_t display,
                                  hwc2_layer_t layer) {
+  if (display >= HWC_NUM_DISPLAY_TYPES) {
+    return  HWC2_ERROR_BAD_DISPLAY;
+  }
   SCOPE_LOCK(locker_);
   return CallDisplayFunction(device, display, &HWCDisplay::DestroyLayer, layer);
 }
@@ -364,7 +385,7 @@ int32_t HWCSession::DestroyVirtualDisplay(hwc2_device_t *device, hwc2_display_t 
 void HWCSession::Dump(hwc2_device_t *device, uint32_t *out_size, char *out_buffer) {
   SCOPE_LOCK(locker_);
 
-  if (!device) {
+  if (!device || !out_size) {
     return;
   }
   auto *hwc_session = static_cast<HWCSession *>(device);
@@ -395,6 +416,10 @@ static int32_t GetActiveConfig(hwc2_device_t *device, hwc2_display_t display,
 static int32_t GetChangedCompositionTypes(hwc2_device_t *device, hwc2_display_t display,
                                           uint32_t *out_num_elements, hwc2_layer_t *out_layers,
                                           int32_t *out_types) {
+  // null_ptr check only for out_num_elements, as out_layers and out_types can be null.
+  if (!out_num_elements) {
+    return  HWC2_ERROR_BAD_PARAMETER;
+  }
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::GetChangedCompositionTypes,
                                          out_num_elements, out_layers, out_types);
 }
@@ -1006,7 +1031,7 @@ android::status_t HWCSession::HandleGetDisplayAttributesForConfig(const android:
   int error = android::BAD_VALUE;
   DisplayConfigVariableInfo display_attributes;
 
-  if (dpy > HWC_DISPLAY_VIRTUAL) {
+  if (dpy < HWC_DISPLAY_PRIMARY || dpy >= HWC_NUM_DISPLAY_TYPES || config < 0) {
     return android::BAD_VALUE;
   }
 
@@ -1152,6 +1177,11 @@ android::status_t HWCSession::SetColorModeOverride(const android::Parcel *input_
   auto display = static_cast<hwc2_display_t >(input_parcel->readInt32());
   auto mode = static_cast<android_color_mode_t>(input_parcel->readInt32());
   auto device = static_cast<hwc2_device_t *>(this);
+
+  if (display >= HWC_NUM_DISPLAY_TYPES) {
+    return -EINVAL;
+  }
+
   auto err = CallDisplayFunction(device, display, &HWCDisplay::SetColorMode, mode);
   if (err != HWC2_ERROR_NONE)
     return -EINVAL;
@@ -1447,8 +1477,7 @@ android::status_t HWCSession::GetVisibleDisplayRect(const android::Parcel *input
   SCOPE_LOCK(locker_);
 
   int dpy = input_parcel->readInt32();
-
-  if (dpy < HWC_DISPLAY_PRIMARY || dpy > HWC_DISPLAY_VIRTUAL) {
+  if (dpy < HWC_DISPLAY_PRIMARY || dpy >= HWC_NUM_DISPLAY_TYPES) {
     return android::BAD_VALUE;
   }
 
