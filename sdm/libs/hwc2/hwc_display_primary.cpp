@@ -233,7 +233,6 @@ HWC2::Error HWCDisplayPrimary::Present(int32_t *out_retire_fence) {
     // If we do not handle the frame set retireFenceFd to outbufAcquireFenceFd
     // Revisit this when validating display_paused
     DisplayError error = display_intf_->Flush();
-    validated_.reset();
     if (error != kErrorNone) {
       DLOGE("Flush failed. Error = %d", error);
     }
