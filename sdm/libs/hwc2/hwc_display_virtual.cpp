@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -136,7 +136,6 @@ HWC2::Error HWCDisplayVirtual::Present(int32_t *out_retire_fence) {
   auto status = HWC2::Error::None;
   if (display_paused_) {
     DisplayError error = display_intf_->Flush();
-    validated_.reset();
     if (error != kErrorNone) {
       DLOGE("Flush failed. Error = %d", error);
     }
