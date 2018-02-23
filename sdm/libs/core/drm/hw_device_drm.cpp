@@ -1258,8 +1258,8 @@ DisplayError HWDeviceDRM::GetPPFeaturesVersion(PPFeatureVersion *vers) {
     info.id = HWColorManagerDrm::ToDrmFeatureId(i);
     if (info.id >= sde_drm::kPPFeaturesMax)
       continue;
-    // use crtc_id_ = 0 since PP features are same across all CRTCs
-    drm_mgr_intf_->GetCrtcPPInfo(0, &info);
+
+    drm_mgr_intf_->GetCrtcPPInfo(token_.crtc_id, &info);
     vers->version[i] = HWColorManagerDrm::GetFeatureVersion(info);
   }
   return kErrorNone;
