@@ -35,7 +35,7 @@
 #include <media/AudioSystem.h>
 #include <utils/threads.h>
 #include <utils/Errors.h>
-#include <utils/Log.h>
+#include <log/log.h>
 
 #include <linux/msm_mdp.h>
 #include <linux/fb.h>

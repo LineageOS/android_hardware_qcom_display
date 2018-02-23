@@ -28,7 +28,7 @@
 #include <sys/ioctl.h>
 #include <linux/ashmem.h>
 
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/atomic.h>
 #include <cutils/ashmem.h>
 

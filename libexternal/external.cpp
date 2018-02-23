@@ -23,7 +23,7 @@
 #include <fcntl.h>
 #include <utils/threads.h>
 #include <utils/Errors.h>
-#include <utils/Log.h>
+#include <log/log.h>
 
 #include <linux/msm_mdp.h>
 #include <video/msm_hdmi_modes.h>

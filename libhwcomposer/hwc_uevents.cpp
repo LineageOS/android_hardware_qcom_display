@@ -20,7 +20,7 @@
  */
 #define UEVENT_DEBUG 0
 #include <hardware_legacy/uevent.h>
-#include <utils/Log.h>
+#include <log/log.h>
 #include <sys/resource.h>
 #include <sys/prctl.h>
 #include <string.h>

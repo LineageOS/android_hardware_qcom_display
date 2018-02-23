@@ -19,7 +19,7 @@
  */
 
 #include <cutils/properties.h>
-#include <utils/Log.h>
+#include <log/log.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <linux/msm_mdp.h>

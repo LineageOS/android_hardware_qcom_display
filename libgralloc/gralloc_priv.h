@@ -28,7 +28,7 @@
 
 #include <cutils/native_handle.h>
 
-#include <cutils/log.h>
+#include <log/log.h>
 
 #define ROUND_UP_PAGESIZE(x) ( (((unsigned long)(x)) + PAGE_SIZE-1)  & \
                                (~(PAGE_SIZE-1)) )

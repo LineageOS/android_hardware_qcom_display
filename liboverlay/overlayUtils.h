@@ -30,7 +30,7 @@
 #ifndef OVERLAY_UTILS_H
 #define OVERLAY_UTILS_H
 
-#include <cutils/log.h> // ALOGE, etc
+#include <log/log.h> // ALOGE, etc
 #include <errno.h>
 #include <fcntl.h> // open, O_RDWR, etc
 #include <hardware/hardware.h>
@@ -42,7 +42,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <utils/Log.h>
+#include <log/log.h>
 #include "gralloc_priv.h" //for interlace
 
 // Older platforms do not support Venus.

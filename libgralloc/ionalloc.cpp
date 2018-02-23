@@ -32,7 +32,7 @@
 #include <sys/mman.h>
 #include <stdlib.h>
 #include <fcntl.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <errno.h>
 #include <string.h>
 #include <gralloc_priv.h>
