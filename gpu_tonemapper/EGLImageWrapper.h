@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -21,27 +21,40 @@
 #define __TONEMAPPER_EGLIMAGEWRAPPER_H__
 
 #include <utils/LruCache.h>
+#include <linux/msm_ion.h>
+#include <string>
+#include <map>
 #include "EGLImageBuffer.h"
 
+using std::string;
+using std::map;
+
 class EGLImageWrapper {
-    private:
-        class DeleteEGLImageCallback : public android::OnEntryRemoved<int, EGLImageBuffer*>
-        {
-        private:
-          int ion_fd;
-        public:
-          DeleteEGLImageCallback(int ion_fd);
-          void operator()(int& ion_cookie, EGLImageBuffer*& eglImage);
-        };
+ private:
+  class DeleteEGLImageCallback : public android::OnEntryRemoved<int, EGLImageBuffer*> {
+   public:
+     explicit DeleteEGLImageCallback(map<string, int>* mapPtr) { buffStrbuffIntMapPtr = mapPtr; }
+     void operator()(int& buffInt, EGLImageBuffer*& eglImage);
+     map<string, int>* buffStrbuffIntMapPtr = nullptr;
+     bool mapClearPending = false;
+   #ifndef TARGET_ION_ABI_VERSION
+     int ion_fd = -1;
+   #endif
+  };
 
-        android::LruCache<int, EGLImageBuffer *>* eglImageBufferMap;
-        DeleteEGLImageCallback* callback;
-        int ion_fd;
+  android::LruCache<int, EGLImageBuffer *>* eglImageBufferCache;
+  map<string, int> buffStrbuffIntMap = {};
+  DeleteEGLImageCallback* callback = 0;
+ #ifndef TARGET_ION_ABI_VERSION
+   int ion_fd = -1;
+ #else
+   uint64_t buffInt = 0;
+ #endif
 
-    public:
-        EGLImageWrapper();
-        ~EGLImageWrapper();
-        EGLImageBuffer* wrap(const void *pvt_handle);
+ public:
+  EGLImageWrapper();
+  ~EGLImageWrapper();
+  EGLImageBuffer* wrap(const void *pvt_handle);
 };
 
-#endif  //__TONEMAPPER_EGLIMAGEWRAPPER_H__
+#endif  // __TONEMAPPER_EGLIMAGEWRAPPER_H__
