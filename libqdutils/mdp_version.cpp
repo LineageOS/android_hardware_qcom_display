@@ -26,7 +26,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include <cutils/log.h>
+#include <log/log.h>
 #include <fcntl.h>
 #include <string.h>
 #include <sys/ioctl.h>

@@ -27,7 +27,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/native_handle.h>
 #include <gralloc_priv.h>
 #include <linux/genlock.h>

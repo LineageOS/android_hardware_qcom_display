@@ -38,7 +38,7 @@
 #include <linux/msm_mdp.h>
 #include <linux/msm_rotator.h>
 #include <sys/ioctl.h>
-#include <utils/Log.h>
+#include <log/log.h>
 #include <errno.h>
 #include "overlayUtils.h"
 

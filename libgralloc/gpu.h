@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/ashmem.h>
 
 #include <gralloc_priv.h>
