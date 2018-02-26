@@ -324,6 +324,7 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
 
   int buffer_type = GetBufferType(format);
   BufferInfo info = GetBufferInfo(descriptor);
+  info.format = format;
   GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh);
   size = (bufferSize >= size) ? bufferSize : size;
 
