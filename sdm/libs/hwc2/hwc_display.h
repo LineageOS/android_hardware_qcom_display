@@ -306,6 +306,7 @@ class HWCDisplay : public DisplayEventHandler {
   int disable_hdr_handling_ = 0;  // disables HDR handling.
   uint32_t display_config_ = 0;
   bool config_pending_ = false;
+  bool pending_commit_ = false;
 
  private:
   void DumpInputBuffers(void);

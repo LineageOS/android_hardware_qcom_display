@@ -302,7 +302,9 @@ DisplayError DisplayPrimary::VSync(int64_t timestamp) {
 
 void DisplayPrimary::IdleTimeout() {
   if (hw_panel_info_.mode == kModeVideo) {
-    event_handler_->HandleEvent(kIdleTimeout);
+    if (event_handler_->HandleEvent(kIdleTimeout) != kErrorNone) {
+      return;
+    }
     handle_idle_timeout_ = true;
     event_handler_->Refresh();
     lock_guard<recursive_mutex> obj(recursive_mutex_);
