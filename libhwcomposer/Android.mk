@@ -15,7 +15,7 @@ LOCAL_SHARED_LIBRARIES        := $(common_libs) libEGL liboverlay \
                                  libbinder libmedia libvirtual libbfqio_vendor
 
 ifeq ($(TARGET_USES_QCOM_BSP),true)
-LOCAL_SHARED_LIBRARIES += libskia
+LOCAL_SHARED_LIBRARIES += libhwui
 ifeq ($(GET_DISPLAY_SECURE_STATUS_FROM_HWC),true)
     LOCAL_CFLAGS += -DGET_DISPLAY_SECURE_STATUS_FROM_HWC
 endif
