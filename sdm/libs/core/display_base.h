@@ -147,6 +147,12 @@ class DisplayBase : public DisplayInterface {
   DisplayState GetLastPowerMode();
   void SetPUonDestScaler();
   void ClearColorInfo();
+  void CopyColorTransformMatrix(const double *input_matrix) {
+    for (uint32_t i = 0; i < kColorTransformlength_; i++) {
+      color_transform_[i] = input_matrix[i];
+    }
+    color_transform_active_ = true;
+  }
 
   recursive_mutex recursive_mutex_;
   DisplayType display_type_;
@@ -192,6 +198,9 @@ class DisplayBase : public DisplayInterface {
   bool drop_hw_vsync_ = false;
   uint32_t current_refresh_rate_ = 0;
   bool drop_skewed_vsync_ = false;
+  static const uint32_t kColorTransformlength_ = 16;
+  double color_transform_[kColorTransformlength_] = {0};
+  bool color_transform_active_ = false;
 };
 
 }  // namespace sdm
