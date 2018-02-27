@@ -16,7 +16,7 @@ LOCAL_SHARED_LIBRARIES        := $(common_libs) libEGL liboverlay \
                                  libbfqio_vendor
 
 ifeq ($(TARGET_USES_QCOM_BSP),true)
-LOCAL_SHARED_LIBRARIES += libskia
+LOCAL_SHARED_LIBRARIES += libhwui
 endif #TARGET_USES_QCOM_BSP
 
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdhwcomposer\"
