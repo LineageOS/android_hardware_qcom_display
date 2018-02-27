@@ -27,7 +27,7 @@ LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdhwcomposer\" -Wno
 LOCAL_CLANG                   := true
 
 ifeq ($(TARGET_USES_QCOM_BSP),true)
-LOCAL_SHARED_LIBRARIES += libskia
+LOCAL_SHARED_LIBRARIES += libhwui
 ifeq ($(GET_FRAMEBUFFER_FORMAT_FROM_HWC),true)
     LOCAL_CFLAGS += -DGET_FRAMEBUFFER_FORMAT_FROM_HWC
 endif
