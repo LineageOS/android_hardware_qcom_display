@@ -25,6 +25,8 @@
 #include <utils/constants.h>
 #include <utils/debug.h>
 #include <utils/rect.h>
+#include <utils/utils.h>
+
 #include <map>
 #include <algorithm>
 #include <functional>
@@ -400,6 +402,10 @@ DisplayError DisplayPrimary::DisablePartialUpdateOneFrame() {
 bool DisplayPrimary::NeedsAVREnable() {
   if (avr_prop_disabled_) {
     return false;
+  }
+
+  if (GetDriverType() == DriverType::DRM) {
+    return hw_panel_info_.qsync_support;
   }
 
   return (hw_panel_info_.mode == kModeVideo && ((hw_panel_info_.dynamic_fps &&

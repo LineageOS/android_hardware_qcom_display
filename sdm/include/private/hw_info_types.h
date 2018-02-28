@@ -366,6 +366,7 @@ struct HWPanelInfo {
   HWColorPrimaries primaries = {};    // WRGB color primaries
   HWPanelOrientation panel_orientation = {};  // Panel Orientation
   uint32_t transfer_time_us = 0;      // transfer time in micro seconds to panel's active region
+  bool qsync_support = false;         // Specifies panel supports qsync feature or not.
 
   bool operator !=(const HWPanelInfo &panel_info) {
     return ((port != panel_info.port) || (mode != panel_info.mode) ||
@@ -382,7 +383,8 @@ struct HWPanelInfo {
             (split_info != panel_info.split_info) || (s3d_mode != panel_info.s3d_mode) ||
             (left_roi_count != panel_info.left_roi_count) ||
             (right_roi_count != panel_info.right_roi_count) ||
-            (transfer_time_us != panel_info.transfer_time_us));
+            (transfer_time_us != panel_info.transfer_time_us) ||
+            (qsync_support != panel_info.qsync_support));
   }
 
   bool operator ==(const HWPanelInfo &panel_info) {
