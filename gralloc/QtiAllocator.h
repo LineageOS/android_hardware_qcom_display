@@ -32,7 +32,7 @@
 
 #include <hidl/MQDescriptor.h>
 #include <hidl/Status.h>
-#include <vendor/qti/hardware/display/allocator/1.0/IQtiAllocator.h>
+#include <android/hardware/graphics/allocator/2.0/IAllocator.h>
 
 #include "gr_buf_mgr.h"
 
@@ -55,10 +55,9 @@ using ::android::hardware::hidl_vec;
 using ::android::hidl::base::V1_0::DebugInfo;
 using ::android::hidl::base::V1_0::IBase;
 using ::android::sp;
-using ::vendor::qti::hardware::display::allocator::V1_0::IQtiAllocator;
 using gralloc::BufferManager;
 
-class QtiAllocator : public IQtiAllocator {
+class QtiAllocator : public IAllocator {
  public:
   QtiAllocator();
   // Methods from ::android::hardware::graphics::allocator::V2_0::IAllocator follow.
@@ -71,7 +70,7 @@ class QtiAllocator : public IQtiAllocator {
   BufferManager *buf_mgr_ = nullptr;
 };
 
-extern "C" IQtiAllocator *HIDL_FETCH_IQtiAllocator(const char *name);
+extern "C" IAllocator *HIDL_FETCH_IAllocator(const char *name);
 
 }  // namespace implementation
 }  // namespace V1_0

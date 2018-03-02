@@ -32,7 +32,6 @@
 
 #include <hidl/MQDescriptor.h>
 #include <hidl/Status.h>
-#include <vendor/qti/hardware/display/mapper/1.0/IQtiMapper.h>
 
 #include "gr_buf_mgr.h"
 namespace vendor {
@@ -56,10 +55,9 @@ using ::android::hardware::hidl_vec;
 using ::android::hidl::base::V1_0::DebugInfo;
 using ::android::hidl::base::V1_0::IBase;
 using ::android::sp;
-using ::vendor::qti::hardware::display::mapper::V1_0::IQtiMapper;
 using gralloc::BufferManager;
 
-class QtiMapper : public IQtiMapper {
+class QtiMapper : public IMapper {
  public:
   QtiMapper();
   // Methods from ::android::hardware::graphics::mapper::V2_0::IMapper follow.
@@ -72,6 +70,8 @@ class QtiMapper : public IQtiMapper {
   Return<void> lockYCbCr(void *buffer, uint64_t cpu_usage, const IMapper::Rect &access_region,
                          const hidl_handle &acquire_fence, lockYCbCr_cb hidl_cb) override;
   Return<void> unlock(void *buffer, unlock_cb hidl_cb) override;
+
+#ifdef ENABLE_QTI_MAPPER_EXTENSION
   Return<void> getMapSecureBufferFlag(void *buffer, getMapSecureBufferFlag_cb _hidl_cb) override;
   Return<void> getInterlacedFlag(void *buffer, getInterlacedFlag_cb _hidl_cb) override;
   Return<void> getCustomDimensions(void *buffer, getCustomDimensions_cb _hidl_cb) override;
@@ -82,6 +82,7 @@ class QtiMapper : public IQtiMapper {
   Return<void> getColorSpace(void *buffer, getColorSpace_cb _hidl_cb) override;
   Return<void> getYuvPlaneInfo(void *buffer, getYuvPlaneInfo_cb _hidl_cb) override;
   Return<Error> setSingleBufferMode(void *buffer, bool enable) override;
+#endif
 
  private:
   BufferManager *buf_mgr_ = nullptr;
@@ -92,8 +93,6 @@ class QtiMapper : public IQtiMapper {
 };
 
 extern "C" IMapper *HIDL_FETCH_IMapper(const char *name);
-extern "C" IQtiMapper *HIDL_FETCH_IQtiMapper(const char *name);
-
 }  // namespace implementation
 }  // namespace V1_0
 }  // namespace mapper
