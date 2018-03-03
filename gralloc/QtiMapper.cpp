@@ -207,6 +207,7 @@ Return<void> QtiMapper::unlock(void *buffer, unlock_cb hidl_cb) {
   return Void();
 }
 
+#ifdef ENABLE_QTI_MAPPER_EXTENSION
 Return<void> QtiMapper::getMapSecureBufferFlag(void *buffer, getMapSecureBufferFlag_cb hidl_cb) {
   auto err = Error::BAD_BUFFER;
   auto hnd = static_cast<private_handle_t *>(buffer);
@@ -323,6 +324,7 @@ Return<Error> QtiMapper::setSingleBufferMode(void *buffer, bool enable) {
   }
   return err;
 }
+#endif
 
 // Methods from ::android::hidl::base::V1_0::IBase follow.
 
@@ -334,10 +336,6 @@ IMapper *HIDL_FETCH_IMapper(const char * /* name */) {
   return static_cast<IMapper *>(mapper);
 }
 
-IQtiMapper *HIDL_FETCH_IQtiMapper(const char * /* name */) {
-  ALOGD_IF(DEBUG, "Fetching QtiMapper");
-  return new QtiMapper();
-}
 }  // namespace implementation
 }  // namespace V1_0
 }  // namespace mapper

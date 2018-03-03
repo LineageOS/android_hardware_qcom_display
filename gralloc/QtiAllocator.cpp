@@ -100,7 +100,7 @@ Return<void> QtiAllocator::allocate(const hidl_vec<uint32_t> &descriptor, uint32
 
 // Methods from ::android::hidl::base::V1_0::IBase follow.
 
-IQtiAllocator *HIDL_FETCH_IQtiAllocator(const char * /* name */) {
+IAllocator *HIDL_FETCH_IAllocator(const char * /* name */) {
   return new QtiAllocator();
 }
 

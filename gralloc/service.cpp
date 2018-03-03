@@ -32,11 +32,11 @@
 
 using android::hardware::configureRpcThreadpool;
 using android::hardware::joinRpcThreadpool;
-using vendor::qti::hardware::display::allocator::V1_0::IQtiAllocator;
 using vendor::qti::hardware::display::allocator::V1_0::implementation::QtiAllocator;
+using android::hardware::graphics::allocator::V2_0::IAllocator;
 
 int main(int, char **) {
-  android::sp<IQtiAllocator> service = new QtiAllocator();
+  android::sp<IAllocator> service = new QtiAllocator();
   configureRpcThreadpool(1, true /*callerWillJoin*/);
   if (service->registerAsService() != android::OK) {
     ALOGE("Cannot register QTI Allocator service");
