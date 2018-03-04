@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
- * Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016, 2018 The Linux Foundation. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,7 +82,7 @@ static int gralloc_map(gralloc_module_t const* module,
             return -errno;
         }
 
-        hnd->base = uint64_t(mappedAddress) + hnd->offset;
+        hnd->base = uint64_t(mappedAddress);
     }
 
     //Allow mapping of metadata for all buffers including secure ones, but not
@@ -97,7 +97,7 @@ static int gralloc_map(gralloc_module_t const* module,
                   handle, hnd->fd_metadata, strerror(errno));
             return -errno;
         }
-        hnd->base_metadata = uint64_t(mappedAddress) + hnd->offset_metadata;
+        hnd->base_metadata = uint64_t(mappedAddress);
     }
     return 0;
 }
@@ -309,6 +309,7 @@ int gralloc_perform(struct gralloc_module_t const* module,
                 int width = va_arg(args, int);
                 int height = va_arg(args, int);
                 int format = va_arg(args, int);
+                int alignedw = 0, alignedh = 0;
 
                 native_handle_t** handle = va_arg(args, native_handle_t**);
                 private_handle_t* hnd = (private_handle_t*)native_handle_create(
@@ -321,8 +322,12 @@ int gralloc_perform(struct gralloc_module_t const* module,
                   hnd->offset = offset;
                   hnd->base = uint64_t(base) + offset;
                   hnd->gpuaddr = 0;
-                  hnd->width = width;
-                  hnd->height = height;
+                  AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(width,
+                          height, format, 0, alignedw, alignedh);
+                  hnd->width = alignedw;
+                  hnd->height = alignedh;
+                  hnd->unaligned_width = width;
+                  hnd->unaligned_height = height;
                   hnd->format = format;
                   *handle = (native_handle_t *)hnd;
                   res = 0;

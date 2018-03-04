@@ -214,9 +214,11 @@ struct private_handle_t : public native_handle {
         // The gpu address mapped into the mmu.
         uint64_t gpuaddr __attribute__((aligned(8)));
         int     format;
-        int     width;
-        int     height;
+        int     width;   // holds aligned width of the actual buffer allocated
+        int     height;  // holds aligned height of the  actual buffer allocated
         uint64_t base_metadata __attribute__((aligned(8)));
+        int unaligned_width;   // holds width client asked to allocate
+        int unaligned_height;  // holds height client asked to allocate
 
 #ifdef __cplusplus
         static const int sNumFds = 2;
@@ -227,18 +229,40 @@ struct private_handle_t : public native_handle {
         static const int sMagic = 'gmsm';
 
         private_handle_t(int fd, unsigned int size, int flags, int bufferType,
-                         int format, int width, int height, int eFd = -1,
-                         unsigned int eOffset = 0, uint64_t eBase = 0) :
-            fd(fd), fd_metadata(eFd), magic(sMagic),
+                int format, int width, int height) :
+            fd(fd), fd_metadata(-1), magic(sMagic),
             flags(flags), size(size), offset(0), bufferType(bufferType),
-            base(0), offset_metadata(eOffset), gpuaddr(0),
+            base(0), offset_metadata(0), gpuaddr(0),
             format(format), width(width), height(height),
-            base_metadata(eBase)
+            base_metadata(0), unaligned_width(width),
+            unaligned_height(height)
         {
             version = (int) sizeof(native_handle);
             numInts = sNumInts();
             numFds = sNumFds;
         }
+
+        private_handle_t(int fd, unsigned int size, int flags, int bufferType,
+                int format, int width, int height,
+                int eFd, unsigned int eOffset, uint64_t eBase) :
+            private_handle_t(fd, size, flags, bufferType, format, width, height)
+        {
+            fd_metadata = eFd;
+            offset_metadata = eOffset;
+            base_metadata = eBase;
+        }
+
+        private_handle_t(int fd, unsigned int size, int flags, int bufferType,
+                int format, int width, int height,
+                int eFd, unsigned int eOffset, uint64_t eBase,
+                int unaligned_w, int unaligned_h) :
+            private_handle_t(fd, size, flags, bufferType, format, width, height,
+                    eFd, eOffset, eBase)
+        {
+            unaligned_width = unaligned_w;
+            unaligned_height = unaligned_h;
+        }
+
         ~private_handle_t() {
             magic = 0;
         }
