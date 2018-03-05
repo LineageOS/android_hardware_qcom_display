@@ -156,6 +156,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
  private:
   static const int kExternalConnectionTimeoutMs = 500;
   static const int kPartialUpdateControlTimeoutMs = 100;
+  static bool disable_skip_validate_;
 
   // hwc methods
   static int Open(const hw_module_t *module, const char *name, hw_device_t **device);
