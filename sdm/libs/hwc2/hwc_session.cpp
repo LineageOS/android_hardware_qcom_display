@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -167,20 +167,10 @@ int HWCSession::Init() {
 
   StartServices();
 
-  DisplayError error = buffer_allocator_.Init();
-  if (error != kErrorNone) {
-    ALOGE("%s::%s: Buffer allocaor initialization failed. Error = %d",
-          __CLASS__, __FUNCTION__, error);
-    return -EINVAL;
-  }
+  DisplayError error = kErrorNone;
 
   error = CoreInterface::CreateCore(HWCDebugHandler::Get(), &buffer_allocator_,
                                     &buffer_sync_handler_, &socket_handler_, &core_intf_);
-  if (error != kErrorNone) {
-    buffer_allocator_.Deinit();
-    ALOGE("%s::%s: Display core initialization failed. Error = %d", __CLASS__, __FUNCTION__, error);
-    return -EINVAL;
-  }
 
   g_hwc_uevent_.Register(this);
 
@@ -190,7 +180,6 @@ int HWCSession::Init() {
   if (error != kErrorNone) {
     g_hwc_uevent_.Register(nullptr);
     CoreInterface::DestroyCore();
-    buffer_allocator_.Deinit();
     DLOGE("Primary display type not recognized. Error = %d", error);
     return -EINVAL;
   }
@@ -219,7 +208,6 @@ int HWCSession::Init() {
   if (status) {
     g_hwc_uevent_.Register(nullptr);
     CoreInterface::DestroyCore();
-    buffer_allocator_.Deinit();
     return status;
   }
 

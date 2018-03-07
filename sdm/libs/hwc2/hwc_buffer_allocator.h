@@ -48,8 +48,6 @@ inline Type ALIGN(Type x, Type align) {
 
 class HWCBufferAllocator : public BufferAllocator {
  public:
-  DisplayError Init();
-  DisplayError Deinit();
   DisplayError AllocateBuffer(BufferInfo *buffer_info);
   DisplayError FreeBuffer(BufferInfo *buffer_info);
   uint32_t GetBufferSize(BufferInfo *buffer_info);
@@ -66,6 +64,7 @@ class HWCBufferAllocator : public BufferAllocator {
   DisplayError UnmapBuffer(const private_handle_t *handle, int *release_fence);
 
  private:
+  DisplayError GetGrallocInstance();
   android::sp<IMapper> mapper_;
   android::sp<IAllocator> allocator_;
 };
