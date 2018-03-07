@@ -27,7 +27,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/properties.h>
 #include <dlfcn.h>
 #include <mutex>

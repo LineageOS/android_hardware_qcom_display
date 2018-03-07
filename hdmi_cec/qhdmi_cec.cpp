@@ -29,7 +29,7 @@
 
 #define DEBUG 0
 #define ATRACE_TAG (ATRACE_TAG_GRAPHICS | ATRACE_TAG_HAL)
-#include <cutils/log.h>
+#include <log/log.h>
 #include <errno.h>
 #include <hardware/hdmi_cec.h>
 #include <utils/Trace.h>

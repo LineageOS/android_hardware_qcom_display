@@ -26,7 +26,7 @@
 * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-#include <utils/Log.h>
+#include <log/log.h>
 #include <binder/Parcel.h>
 #include "IQHDMIClient.h"
 
