@@ -18,7 +18,7 @@
  */
 
 #include "glengine.h"
-#include <utils/Log.h>
+#include <log/log.h>
 #include "engine.h"
 
 void checkGlError(const char *, int);
