@@ -37,7 +37,7 @@ using android::hardware::graphics::allocator::V2_0::IAllocator;
 
 int main(int, char **) {
   android::sp<IAllocator> service = new QtiAllocator();
-  configureRpcThreadpool(1, true /*callerWillJoin*/);
+  configureRpcThreadpool(4, true /*callerWillJoin*/);
   if (service->registerAsService() != android::OK) {
     ALOGE("Cannot register QTI Allocator service");
     return -EINVAL;
