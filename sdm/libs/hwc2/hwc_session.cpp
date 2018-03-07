@@ -162,13 +162,7 @@ int HWCSession::Init() {
   StartServices();
 
   HWCDebugHandler::Get()->GetProperty("sdm.debug.enable_null_display", &null_display_mode_);
-
-  DisplayError error = buffer_allocator_.Init();
-  if (error != kErrorNone) {
-    ALOGE("%s::%s: Buffer allocator initialization failed. Error = %d",
-          __CLASS__, __FUNCTION__, error);
-    return -EINVAL;
-  }
+  DisplayError error = kErrorNone;
 
   HWDisplayInterfaceInfo hw_disp_info = {};
   if (null_display_mode_) {
@@ -180,19 +174,11 @@ int HWCSession::Init() {
     error = CoreInterface::CreateCore(HWCDebugHandler::Get(), &buffer_allocator_,
                                       &buffer_sync_handler_, &socket_handler_, &core_intf_);
 
-    if (error != kErrorNone) {
-      buffer_allocator_.Deinit();
-      ALOGE("%s::%s: Display core initialization failed. Error = %d", __CLASS__, __FUNCTION__,
-            error);
-      return -EINVAL;
-    }
-
     error = core_intf_->GetFirstDisplayInterfaceType(&hw_disp_info);
 
     if (error != kErrorNone) {
       g_hwc_uevent_.Register(nullptr);
       CoreInterface::DestroyCore();
-      buffer_allocator_.Deinit();
       DLOGE("Primary display type not recognized. Error = %d", error);
       return -EINVAL;
     }
@@ -219,7 +205,6 @@ int HWCSession::Init() {
   if (status) {
     g_hwc_uevent_.Register(nullptr);
     CoreInterface::DestroyCore();
-    buffer_allocator_.Deinit();
     return status;
   }
 

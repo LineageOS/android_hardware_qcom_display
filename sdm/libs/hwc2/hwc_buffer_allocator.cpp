@@ -47,7 +47,12 @@ using android::hardware::hidl_vec;
 
 namespace sdm {
 
-DisplayError HWCBufferAllocator::Init() {
+DisplayError HWCBufferAllocator::GetGrallocInstance() {
+  // Lazy initialization of gralloc HALs
+  if (mapper_ != nullptr || allocator_ != nullptr) {
+    return kErrorNone;
+  }
+
   allocator_ = IAllocator::getService();
   mapper_ = IMapper::getService();
 
@@ -58,11 +63,11 @@ DisplayError HWCBufferAllocator::Init() {
   return kErrorNone;
 }
 
-DisplayError HWCBufferAllocator::Deinit() {
-  return kErrorNone;
-}
-
 DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
+  auto err = GetGrallocInstance();
+  if (err != kErrorNone) {
+    return err;
+  }
   const BufferConfig &buffer_config = buffer_info->buffer_config;
   AllocatedBufferInfo *alloc_buffer_info = &buffer_info->alloc_buffer_info;
   int format;
