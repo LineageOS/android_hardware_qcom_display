@@ -597,11 +597,10 @@ void HWCDisplay::BuildLayerStack() {
       layer->src_rect.bottom = layer_buffer->height;
     }
 
-    if (layer->frame_rate > metadata_refresh_rate_) {
+    if (hwc_layer->HasMetaDataRefreshRate() && layer->frame_rate > metadata_refresh_rate_) {
       metadata_refresh_rate_ = SanitizeRefreshRate(layer->frame_rate);
-    } else {
-      layer->frame_rate = current_refresh_rate_;
     }
+
     display_rect_ = Union(display_rect_, layer->dst_rect);
     geometry_changes_ |= hwc_layer->GetGeometryChanges();
 
@@ -1105,6 +1104,7 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
     return ((*out_num_types > 0) ? HWC2::Error::HasChanges : HWC2::Error::None);
   }
 
+  UpdateRefreshRate();
   DisplayError error = display_intf_->Prepare(&layer_stack_);
   if (error != kErrorNone) {
     if (error == kErrorShutDown) {
@@ -2125,6 +2125,16 @@ bool HWCDisplay::CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests) 
   }
 
   return skip_prepare;
+}
+
+void HWCDisplay::UpdateRefreshRate() {
+  for (auto hwc_layer : layer_set_) {
+    if (hwc_layer->HasMetaDataRefreshRate()) {
+      continue;
+    }
+    auto layer = hwc_layer->GetSDMLayer();
+    layer->frame_rate = current_refresh_rate_;
+  }
 }
 
 }  // namespace sdm

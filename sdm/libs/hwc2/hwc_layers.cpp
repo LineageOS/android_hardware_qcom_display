@@ -805,6 +805,7 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
   uint32_t frame_rate = layer->frame_rate;
   if (getMetaData(handle, GET_REFRESH_RATE, &fps) == 0) {
     frame_rate = (fps != 0) ? RoundToStandardFPS(fps) : layer->frame_rate;
+    has_metadata_refresh_rate_ = true;
   }
 
   int32_t interlaced = 0;

@@ -364,7 +364,7 @@ class HWCDisplay : public DisplayEventHandler {
  private:
   void DumpInputBuffers(void);
   bool CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests);
-
+  void UpdateRefreshRate();
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
   uint32_t geometry_changes_ = GeometryChanges::kNone;
