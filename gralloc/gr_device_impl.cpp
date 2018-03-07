@@ -28,7 +28,7 @@
  */
 
 #define ATRACE_TAG (ATRACE_TAG_GRAPHICS | ATRACE_TAG_HAL)
-#include <cutils/log.h>
+#include <log/log.h>
 #include <cutils/trace.h>
 #include <sync/sync.h>
 #include <utils/Trace.h>

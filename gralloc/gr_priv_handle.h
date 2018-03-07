@@ -20,7 +20,7 @@
 #ifndef __GR_PRIV_HANDLE_H__
 #define __GR_PRIV_HANDLE_H__
 
-#include <cutils/log.h>
+#include <log/log.h>
 #include <hardware/gralloc.h>
 #include <hardware/gralloc1.h>
 #include <cinttypes>

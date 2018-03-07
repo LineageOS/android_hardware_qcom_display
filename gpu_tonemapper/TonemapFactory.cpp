@@ -18,7 +18,7 @@
  */
 
 #include "TonemapFactory.h"
-#include <utils/Log.h>
+#include <log/log.h>
 #include "Tonemapper.h"
 #include "engine.h"
 
