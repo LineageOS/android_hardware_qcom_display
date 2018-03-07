@@ -94,6 +94,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
       return HWC2_ERROR_BAD_DISPLAY;
     }
 
+    SCOPE_LOCK(locker_[display]);
     HWCSession *hwc_session = static_cast<HWCSession *>(device);
     auto status = HWC2::Error::BadDisplay;
     if (hwc_session->hwc_display_[display]) {
@@ -111,6 +112,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
       return HWC2_ERROR_BAD_DISPLAY;
     }
 
+    SCOPE_LOCK(locker_[display]);
     HWCSession *hwc_session = static_cast<HWCSession *>(device);
     auto status = HWC2::Error::BadDisplay;
     if (hwc_session->hwc_display_[display]) {
@@ -143,8 +145,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
                                   hwc2_function_pointer_t pointer);
   static int32_t SetOutputBuffer(hwc2_device_t *device, hwc2_display_t display,
                                  buffer_handle_t buffer, int32_t releaseFence);
-  static int32_t SetLayerZOrder(hwc2_device_t *device, hwc2_display_t display, hwc2_layer_t layer,
-                                uint32_t z);
   static int32_t SetPowerMode(hwc2_device_t *device, hwc2_display_t display, int32_t int_mode);
   static int32_t ValidateDisplay(hwc2_device_t *device, hwc2_display_t display,
                                  uint32_t *out_num_types, uint32_t *out_num_requests);
