@@ -31,6 +31,7 @@
 #define __DPPS_INTERFACE_H__
 
 #include <core/sdm_types.h>
+#include <string>
 
 namespace sdm {
 
@@ -52,7 +53,7 @@ class DppsPropIntf {
 
 class DppsInterface {
  public:
-  virtual int Init(DppsPropIntf* intf) = 0;
+  virtual int Init(DppsPropIntf* intf, const std::string &panel_name) = 0;
   virtual int Deinit() = 0;
 
  protected:
@@ -61,8 +62,9 @@ class DppsInterface {
 
 class DppsDummyImpl : public DppsInterface {
  public:
-  int Init(DppsPropIntf* intf) {
+  int Init(DppsPropIntf* intf, const std::string &panel_name) {
     (void)intf;
+    (void)panel_name;
     return 0;
   }
   int Deinit() {

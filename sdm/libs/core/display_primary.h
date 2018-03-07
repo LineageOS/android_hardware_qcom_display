@@ -27,6 +27,7 @@
 
 #include <core/dpps_interface.h>
 #include <vector>
+#include <string>
 
 #include "display_base.h"
 #include "hw_events_interface.h"
@@ -37,7 +38,7 @@ class HWPrimaryInterface;
 
 class DppsInfo {
  public:
-  void Init(DppsPropIntf* intf);
+  void Init(DppsPropIntf* intf, const std::string &panel_name);
   void Deinit();
 
  private:
