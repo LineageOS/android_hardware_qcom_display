@@ -194,6 +194,7 @@ struct HWPipeCaps {
   bool inverse_pma = 0;
   uint32_t dgm_csc_version = 0;
   std::map<HWToneMapLut, uint32_t> tm_lut_version_map = {};
+  bool block_sec_ui = false;
 };
 
 struct HWRotatorInfo {
