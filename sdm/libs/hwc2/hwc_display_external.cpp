@@ -76,7 +76,7 @@ int HWCDisplayExternal::Create(CoreInterface *core_intf, HWCBufferAllocator *buf
       external_height = primary_height;
     } else {
       int downscale_enabled = 0;
-      HWCDebugHandler::Get()->GetProperty("sdm.debug.downscale_external", &downscale_enabled);
+      HWCDebugHandler::Get()->GetProperty(ENABLE_EXTERNAL_DOWNSCALE_PROP, &downscale_enabled);
       if (downscale_enabled) {
         GetDownscaleResolution(primary_width, primary_height, &external_width, &external_height);
       }
@@ -281,8 +281,8 @@ int HWCDisplayExternal::SetState(bool connected) {
 void HWCDisplayExternal::GetUnderScanConfig() {
   if (!display_intf_->IsUnderscanSupported()) {
     // Read user defined underscan width and height
-    HWCDebugHandler::Get()->GetProperty("sdm.external_action_safe_width", &underscan_width_);
-    HWCDebugHandler::Get()->GetProperty("sdm.external_action_safe_height", &underscan_height_);
+    HWCDebugHandler::Get()->GetProperty(EXTERNAL_ACTION_SAFE_WIDTH_PROP, &underscan_width_);
+    HWCDebugHandler::Get()->GetProperty(EXTERNAL_ACTION_SAFE_HEIGHT_PROP, &underscan_height_);
   }
 }
 

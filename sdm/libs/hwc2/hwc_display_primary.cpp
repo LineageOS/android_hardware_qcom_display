@@ -62,8 +62,8 @@ int HWCDisplayPrimary::Create(CoreInterface *core_intf, BufferAllocator *buffer_
 
   hwc_display_primary->GetMixerResolution(&primary_width, &primary_height);
   int width = 0, height = 0;
-  HWCDebugHandler::Get()->GetProperty("sdm.fb_size_width", &width);
-  HWCDebugHandler::Get()->GetProperty("sdm.fb_size_height", &height);
+  HWCDebugHandler::Get()->GetProperty(FB_WIDTH_PROP, &width);
+  HWCDebugHandler::Get()->GetProperty(FB_HEIGHT_PROP, &height);
   if (width > 0 && height > 0) {
     primary_width = UINT32(width);
     primary_height = UINT32(height);
@@ -102,7 +102,7 @@ int HWCDisplayPrimary::Init() {
 
   use_metadata_refresh_rate_ = true;
   int disable_metadata_dynfps = 0;
-  HWCDebugHandler::Get()->GetProperty("persist.metadata_dynfps.disable", &disable_metadata_dynfps);
+  HWCDebugHandler::Get()->GetProperty(DISABLE_METADATA_DYNAMIC_FPS_PROP, &disable_metadata_dynfps);
   if (disable_metadata_dynfps) {
     use_metadata_refresh_rate_ = false;
   }
@@ -374,7 +374,7 @@ DisplayError HWCDisplayPrimary::SetDisplayMode(uint32_t mode) {
 void HWCDisplayPrimary::SetMetaDataRefreshRateFlag(bool enable) {
   int disable_metadata_dynfps = 0;
 
-  HWCDebugHandler::Get()->GetProperty("persist.metadata_dynfps.disable", &disable_metadata_dynfps);
+  HWCDebugHandler::Get()->GetProperty(DISABLE_METADATA_DYNAMIC_FPS_PROP, &disable_metadata_dynfps);
   if (disable_metadata_dynfps) {
     return;
   }

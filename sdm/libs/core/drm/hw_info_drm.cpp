@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -217,7 +217,7 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
   // through property
   int value = 0;
   bool disable_dest_scalar = false;
-  if (Debug::Get()->GetProperty("sdm.debug.disable_dest_scalar", &value) == kErrorNone) {
+  if (Debug::Get()->GetProperty(DISABLE_DESTINATION_SCALER_PROP, &value) == kErrorNone) {
     disable_dest_scalar = (value == 1);
   }
   DynLib extension_lib;
