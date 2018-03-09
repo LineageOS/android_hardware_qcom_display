@@ -731,10 +731,9 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
   }
 
   int32_t interlaced = 0;
-  bool interlace = layer_buffer->flags.interlace;
-  if (getMetaData(handle, GET_PP_PARAM_INTERLACED, &interlaced) == 0) {
-    interlace = interlaced ? true : false;
-  }
+  getMetaData(handle, GET_PP_PARAM_INTERLACED, &interlaced);
+  bool interlace = interlaced ? true : false;
+
   if (interlace != layer_buffer->flags.interlace) {
     DLOGI("Layer buffer interlaced metadata has changed. old=%d, new=%d",
           layer_buffer->flags.interlace, interlace);
