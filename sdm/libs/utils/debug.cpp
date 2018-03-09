@@ -35,21 +35,16 @@
 
 namespace sdm {
 
-Debug Debug::debug_;
-
-Debug::Debug() : debug_handler_(&default_debug_handler_) {
-}
-
 int Debug::GetSimulationFlag() {
   int value = 0;
-  debug_.debug_handler_->GetProperty("sdm.composition_simulation", &value);
+  DebugHandler::Get()->GetProperty("sdm.composition_simulation", &value);
 
   return value;
 }
 
 bool Debug::GetExternalResolution(char *value) {
   uint32_t retval = 0;
-  debug_.debug_handler_->GetProperty("hw.hdmi.resolution", value);
+  DebugHandler::Get()->GetProperty("hw.hdmi.resolution", value);
   if (value[0]) {
     retval = 1;
   }
@@ -61,8 +56,8 @@ void Debug::GetIdleTimeoutMs(uint32_t *active_ms, uint32_t *inactive_ms) {
   int active_val = IDLE_TIMEOUT_ACTIVE_MS;
   int inactive_val = IDLE_TIMEOUT_INACTIVE_MS;
 
-  debug_.debug_handler_->GetProperty("sdm.idle_time", &active_val);
-  debug_.debug_handler_->GetProperty("sdm.idle_time.inactive", &inactive_val);
+  DebugHandler::Get()->GetProperty("sdm.idle_time", &active_val);
+  DebugHandler::Get()->GetProperty("sdm.idle_time.inactive", &inactive_val);
 
   *active_ms = UINT32(active_val);
   *inactive_ms = UINT32(inactive_val);
@@ -70,21 +65,21 @@ void Debug::GetIdleTimeoutMs(uint32_t *active_ms, uint32_t *inactive_ms) {
 
 int Debug::GetBootAnimLayerCount() {
   int value = 0;
-  debug_.debug_handler_->GetProperty("sdm.boot_anim_layer_count", &value);
+  DebugHandler::Get()->GetProperty("sdm.boot_anim_layer_count", &value);
 
   return value;
 }
 
 bool Debug::IsRotatorDownScaleDisabled() {
   int value = 0;
-  debug_.debug_handler_->GetProperty("sdm.debug.rotator_downscale", &value);
+  DebugHandler::Get()->GetProperty("sdm.debug.rotator_downscale", &value);
 
   return (value == 1);
 }
 
 bool Debug::IsDecimationDisabled() {
   int value = 0;
-  debug_.debug_handler_->GetProperty("sdm.disable_decimation", &value);
+  DebugHandler::Get()->GetProperty("sdm.disable_decimation", &value);
 
   return (value == 1);
 }
@@ -93,13 +88,13 @@ int Debug::GetMaxPipesPerMixer(DisplayType display_type) {
   int value = -1;
   switch (display_type) {
   case kPrimary:
-    debug_.debug_handler_->GetProperty("sdm.primary.mixer_stages", &value);
+    DebugHandler::Get()->GetProperty("sdm.primary.mixer_stages", &value);
     break;
   case kHDMI:
-    debug_.debug_handler_->GetProperty("sdm.external.mixer_stages", &value);
+    DebugHandler::Get()->GetProperty("sdm.external.mixer_stages", &value);
     break;
   case kVirtual:
-    debug_.debug_handler_->GetProperty("sdm.virtual.mixer_stages", &value);
+    DebugHandler::Get()->GetProperty("sdm.virtual.mixer_stages", &value);
     break;
   default:
     break;
@@ -110,35 +105,35 @@ int Debug::GetMaxPipesPerMixer(DisplayType display_type) {
 
 int Debug::GetMaxUpscale() {
   int value = 0;
-  debug_.debug_handler_->GetProperty("sdm.max_upscale", &value);
+  DebugHandler::Get()->GetProperty("sdm.max_upscale", &value);
 
   return value;
 }
 
 bool Debug::IsVideoModeEnabled() {
   int value = 0;
-  debug_.debug_handler_->GetProperty("sdm.video_mode_panel", &value);
+  DebugHandler::Get()->GetProperty("sdm.video_mode_panel", &value);
 
   return (value == 1);
 }
 
 bool Debug::IsRotatorUbwcDisabled() {
   int value = 0;
-  debug_.debug_handler_->GetProperty("sdm.debug.rotator_disable_ubwc", &value);
+  DebugHandler::Get()->GetProperty("sdm.debug.rotator_disable_ubwc", &value);
 
   return (value == 1);
 }
 
 bool Debug::IsRotatorSplitDisabled() {
   int value = 0;
-  debug_.debug_handler_->GetProperty("sdm.debug.disable_rotator_split", &value);
+  DebugHandler::Get()->GetProperty("sdm.debug.disable_rotator_split", &value);
 
   return (value == 1);
 }
 
 bool Debug::IsScalarDisabled() {
   int value = 0;
-  debug_.debug_handler_->GetProperty("sdm.debug.disable_scalar", &value);
+  DebugHandler::Get()->GetProperty("sdm.debug.disable_scalar", &value);
 
   return (value == 1);
 }
@@ -147,10 +142,10 @@ bool Debug::IsUbwcTiledFrameBuffer() {
   int ubwc_disabled = 0;
   int ubwc_framebuffer = 0;
 
-  debug_.debug_handler_->GetProperty("debug.gralloc.gfx_ubwc_disable", &ubwc_disabled);
+  DebugHandler::Get()->GetProperty("debug.gralloc.gfx_ubwc_disable", &ubwc_disabled);
 
   if (!ubwc_disabled) {
-    debug_.debug_handler_->GetProperty("debug.gralloc.enable_fb_ubwc", &ubwc_framebuffer);
+    DebugHandler::Get()->GetProperty("debug.gralloc.enable_fb_ubwc", &ubwc_framebuffer);
   }
 
   return (ubwc_framebuffer == 1);
@@ -158,28 +153,28 @@ bool Debug::IsUbwcTiledFrameBuffer() {
 
 bool Debug::IsAVRDisabled() {
   int value = 0;
-  debug_.debug_handler_->GetProperty("sdm.debug.disable_avr", &value);
+  DebugHandler::Get()->GetProperty("sdm.debug.disable_avr", &value);
 
   return (value == 1);
 }
 
 bool Debug::IsExtAnimDisabled() {
   int value = 0;
-  debug_.debug_handler_->GetProperty("sys.disable_ext_animation", &value);
+  DebugHandler::Get()->GetProperty("sys.disable_ext_animation", &value);
 
   return (value == 1);
 }
 
 bool Debug::IsPartialSplitDisabled() {
   int value = 0;
-  debug_.debug_handler_->GetProperty("sdm.debug.disable_partial_split", &value);
+  DebugHandler::Get()->GetProperty("sdm.debug.disable_partial_split", &value);
 
   return (value == 1);
 }
 
 bool Debug::IsSrcSplitPreferred() {
   int value = 0;
-  debug_.debug_handler_->GetProperty("sdm.debug.prefersplit", &value);
+  DebugHandler::Get()->GetProperty("sdm.debug.prefersplit", &value);
 
   return (value == 1);
 }
@@ -187,9 +182,9 @@ bool Debug::IsSrcSplitPreferred() {
 DisplayError Debug::GetMixerResolution(uint32_t *width, uint32_t *height) {
   char value[64] = {};
 
-  DisplayError error = debug_.debug_handler_->GetProperty("sdm.mixer_resolution", value);
-  if (error !=kErrorNone) {
-    return error;
+  int error = DebugHandler::Get()->GetProperty("sdm.mixer_resolution", value);
+  if (error != 0) {
+    return kErrorUndefined;
   }
 
   std::string str(value);
@@ -203,9 +198,9 @@ DisplayError Debug::GetMixerResolution(uint32_t *width, uint32_t *height) {
 DisplayError Debug::GetReducedConfig(uint32_t *num_vig_pipes, uint32_t *num_dma_pipes) {
   char value[64] = {};
 
-  DisplayError error = debug_.debug_handler_->GetProperty("sdm.debug.reduced_config", value);
-  if (error != kErrorNone) {
-    return error;
+  int error = DebugHandler::Get()->GetProperty("sdm.debug.reduced_config", value);
+  if (error != 0) {
+    return kErrorUndefined;
   }
 
   std::string str(value);
@@ -218,25 +213,25 @@ DisplayError Debug::GetReducedConfig(uint32_t *num_vig_pipes, uint32_t *num_dma_
 
 int Debug::GetExtMaxlayers() {
   int max_external_layers = 0;
-  debug_.debug_handler_->GetProperty("sdm.max_external_layers", &max_external_layers);
+  DebugHandler::Get()->GetProperty("sdm.max_external_layers", &max_external_layers);
 
   return std::max(max_external_layers, 2);
 }
 
-bool Debug::GetProperty(const char* property_name, char* value) {
-  if (debug_.debug_handler_->GetProperty(property_name, value) != kErrorNone) {
-    return false;
+DisplayError Debug::GetProperty(const char *property_name, char *value) {
+  if (DebugHandler::Get()->GetProperty(property_name, value)) {
+    return kErrorUndefined;
   }
 
-  return true;
+  return kErrorNone;
 }
 
-bool Debug::SetProperty(const char* property_name, const char* value) {
-  if (debug_.debug_handler_->SetProperty(property_name, value) != kErrorNone) {
-    return false;
+DisplayError Debug::GetProperty(const char *property_name, int *value) {
+  if (DebugHandler::Get()->GetProperty(property_name, value)) {
+    return kErrorUndefined;
   }
 
-  return true;
+  return kErrorNone;
 }
 
 }  // namespace sdm

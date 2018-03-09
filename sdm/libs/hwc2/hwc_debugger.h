@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -33,15 +33,18 @@
 #define ATRACE_TAG (ATRACE_TAG_GRAPHICS | ATRACE_TAG_HAL)
 
 #include <core/sdm_types.h>
-#include <core/debug_interface.h>
+#include <debug_handler.h>
 #include <log/log.h>
 #include <utils/Trace.h>
 #include <bitset>
 
 namespace sdm {
 
+using display::DebugHandler;
+
 class HWCDebugHandler : public DebugHandler {
  public:
+  HWCDebugHandler();
   static inline DebugHandler* Get() { return &debug_handler_; }
   static const char* DumpDir() { return "/data/vendor/display"; }
 
@@ -57,22 +60,21 @@ class HWCDebugHandler : public DebugHandler {
   static void DebugDisplay(bool enable, int verbose_level);
   static int  GetIdleTimeoutMs();
 
-  virtual void Error(DebugTag tag, const char *format, ...);
-  virtual void Warning(DebugTag tag, const char *format, ...);
-  virtual void Info(DebugTag tag, const char *format, ...);
-  virtual void Debug(DebugTag tag, const char *format, ...);
-  virtual void Verbose(DebugTag tag, const char *format, ...);
+  virtual void Error(const char *format, ...);
+  virtual void Warning(const char *format, ...);
+  virtual void Info(const char *format, ...);
+  virtual void Debug(const char *format, ...);
+  virtual void Verbose(const char *format, ...);
   virtual void BeginTrace(const char *class_name, const char *function_name,
                           const char *custom_string);
   virtual void EndTrace();
-  virtual DisplayError GetProperty(const char *property_name, int *value);
-  virtual DisplayError GetProperty(const char *property_name, char *value);
-  virtual DisplayError SetProperty(const char *property_name, const char *value);
+  virtual int GetProperty(const char *property_name, int *value);
+  virtual int GetProperty(const char *property_name, char *value);
 
  private:
   static HWCDebugHandler debug_handler_;
-  static std::bitset<32> debug_flags_;
-  static int32_t verbose_level_;
+  std::bitset<32> log_mask_;
+  int32_t verbose_level_;
 };
 
 }  // namespace sdm

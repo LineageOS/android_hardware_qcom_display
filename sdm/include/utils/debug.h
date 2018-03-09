@@ -31,37 +31,17 @@
 #define __DEBUG_H__
 
 #include <stdint.h>
+#include <debug_handler.h>
 #include <core/sdm_types.h>
-#include <core/debug_interface.h>
 #include <core/display_interface.h>
-
-#define DLOG(tag, method, format, ...) Debug::Get()->method(tag, __CLASS__ "::%s: " format, \
-                                                            __FUNCTION__, ##__VA_ARGS__)
-
-#define DLOGE_IF(tag, format, ...) DLOG(tag, Error, format, ##__VA_ARGS__)
-#define DLOGW_IF(tag, format, ...) DLOG(tag, Warning, format, ##__VA_ARGS__)
-#define DLOGI_IF(tag, format, ...) DLOG(tag, Info, format, ##__VA_ARGS__)
-#define DLOGD_IF(tag, format, ...) DLOG(tag, Debug, format, ##__VA_ARGS__)
-#define DLOGV_IF(tag, format, ...) DLOG(tag, Verbose, format, ##__VA_ARGS__)
-
-#define DLOGE(format, ...) DLOGE_IF(kTagNone, format, ##__VA_ARGS__)
-#define DLOGD(format, ...) DLOGD_IF(kTagNone, format, ##__VA_ARGS__)
-#define DLOGW(format, ...) DLOGW_IF(kTagNone, format, ##__VA_ARGS__)
-#define DLOGI(format, ...) DLOGI_IF(kTagNone, format, ##__VA_ARGS__)
-#define DLOGV(format, ...) DLOGV_IF(kTagNone, format, ##__VA_ARGS__)
-
-#define DTRACE_BEGIN(custom_string) Debug::Get()->BeginTrace(__CLASS__, __FUNCTION__, custom_string)
-#define DTRACE_END() Debug::Get()->EndTrace()
-#define DTRACE_SCOPED() ScopeTracer <Debug> scope_tracer(__CLASS__, __FUNCTION__)
 
 namespace sdm {
 
+using display::DebugHandler;
+
 class Debug {
  public:
-  static inline void SetDebugHandler(DebugHandler *debug_handler) {
-    debug_.debug_handler_ = debug_handler;
-  }
-  static inline DebugHandler* Get() { return debug_.debug_handler_; }
+  static inline DebugHandler* Get() { return DebugHandler::Get(); }
   static int GetSimulationFlag();
   static bool GetExternalResolution(char *val);
   static void GetIdleTimeoutMs(uint32_t *active_ms, uint32_t *inactive_ms);
@@ -82,38 +62,8 @@ class Debug {
   static DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
   static DisplayError GetReducedConfig(uint32_t *num_vig_pipes, uint32_t *num_dma_pipes);
   static int GetExtMaxlayers();
-  static bool GetProperty(const char *property_name, char *value);
-  static bool SetProperty(const char *property_name, const char *value);
-
- private:
-  Debug();
-
-  // By default, drop any log messages/traces coming from Display manager. It will be overriden by
-  // Display manager client when core is successfully initialized.
-  class DefaultDebugHandler : public DebugHandler {
-   public:
-    virtual void Error(DebugTag /*tag*/, const char */*format*/, ...) { }
-    virtual void Warning(DebugTag /*tag*/, const char */*format*/, ...) { }
-    virtual void Info(DebugTag /*tag*/, const char */*format*/, ...) { }
-    virtual void Debug(DebugTag /*tag*/, const char */*format*/, ...) { }
-    virtual void Verbose(DebugTag /*tag*/, const char */*format*/, ...) { }
-    virtual void BeginTrace(const char */*class_name*/, const char */*function_name*/,
-                            const char */*custom_string*/) { }
-    virtual void EndTrace() { }
-    virtual DisplayError GetProperty(const char */*property_name*/, int */*value*/) {
-      return kErrorNotSupported;
-    }
-    virtual DisplayError GetProperty(const char */*property_name*/, char */*value*/) {
-      return kErrorNotSupported;
-    }
-    virtual DisplayError SetProperty(const char */*property_name*/, const char */*value*/) {
-      return kErrorNotSupported;
-    }
-  };
-
-  DefaultDebugHandler default_debug_handler_;
-  DebugHandler *debug_handler_;
-  static Debug debug_;
+  static DisplayError GetProperty(const char *property_name, char *value);
+  static DisplayError GetProperty(const char *property_name, int *value);
 };
 
 }  // namespace sdm

@@ -10,7 +10,7 @@ LOCAL_HEADER_LIBRARIES        := display_headers
 LOCAL_CFLAGS                  := -fno-operator-names -Wno-unused-parameter -DLOG_TAG=\"SDM\" \
                                  $(common_flags)
 LOCAL_HW_INTF_PATH_1          := fb
-LOCAL_SHARED_LIBRARIES        := libdl libsdmutils
+LOCAL_SHARED_LIBRARIES        := libdl libdisplaydebug libsdmutils
 
 ifneq ($(TARGET_IS_HEADLESS), true)
     LOCAL_CFLAGS              += -isystem external/libdrm
@@ -65,7 +65,6 @@ LOCAL_COPY_HEADERS_TO         := $(common_header_export_path)/sdm/core
 LOCAL_COPY_HEADERS             = $(SDM_HEADER_PATH)/core/buffer_allocator.h \
                                  $(SDM_HEADER_PATH)/core/buffer_sync_handler.h \
                                  $(SDM_HEADER_PATH)/core/core_interface.h \
-                                 $(SDM_HEADER_PATH)/core/debug_interface.h \
                                  $(SDM_HEADER_PATH)/core/display_interface.h \
                                  $(SDM_HEADER_PATH)/core/layer_buffer.h \
                                  $(SDM_HEADER_PATH)/core/layer_stack.h \

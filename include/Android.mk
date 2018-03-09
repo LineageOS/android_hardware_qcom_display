@@ -21,6 +21,7 @@ LOCAL_EXPORT_C_INCLUDE_DIRS   := $(LOCAL_PATH) \
                                  $(display_top)/gpu_tonemapper \
                                  $(display_top)/sdm/include \
                                  $(display_top)/gralloc \
-                                 $(display_top)/libgralloc1
+                                 $(display_top)/libgralloc1 \
+                                 $(display_top)/libdebug
 
 include $(BUILD_HEADER_LIBRARY)

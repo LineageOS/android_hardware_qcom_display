@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -69,6 +69,24 @@ struct SDMCompatibility {
   int i1;
   char c2;
   int i2;
+};
+
+/*! @brief This enum represents different modules/logical unit tags that a log message may
+  be associated with. Client may use this to filter messages for dynamic logging.
+
+*/
+enum DebugTag {
+  kTagNone,             //!< Debug log is not tagged. This type of logs should always be printed.
+  kTagResources,        //!< Debug log is tagged for resource management.
+  kTagStrategy,         //!< Debug log is tagged for strategy decisions.
+  kTagCompManager,      //!< Debug log is tagged for composition manager.
+  kTagDriverConfig,     //!< Debug log is tagged for driver config.
+  kTagRotator,          //!< Debug log is tagged for rotator.
+  kTagScalar,           //!< Debug log is tagged for Scalar Helper.
+  kTagQDCM,             //!< Debug log is tagged for display QDCM color managing.
+  kTagQOSClient,        //!< Debug log is tagged for Qos client.
+  kTagDisplay,          //!< Debug log is tagged for display core logs.
+  kTagClient,           //!< Debug log is tagged for SDM client.
 };
 
 }  // namespace sdm
