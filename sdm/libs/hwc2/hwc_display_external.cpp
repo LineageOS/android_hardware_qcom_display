@@ -115,6 +115,14 @@ HWC2::Error HWCDisplayExternal::Validate(uint32_t *out_num_types, uint32_t *out_
     return status;
   }
 
+  if (config_pending_) {
+    if (display_intf_->SetActiveConfig(display_config_) != kErrorNone) {
+      DLOGW("Invalid display config %d", display_config_);
+      // Reset the display config with active config
+      display_intf_->GetActiveConfig(&display_config_);
+    }
+  }
+
   BuildLayerStack();
 
   if (layer_set_.empty()) {
