@@ -57,6 +57,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <limits>
 
 #include "hw_device_drm.h"
 #include "hw_info_interface.h"
@@ -1261,13 +1262,18 @@ DisplayError HWDeviceDRM::GetPPFeaturesVersion(PPFeatureVersion *vers) {
 DisplayError HWDeviceDRM::SetPPFeatures(PPFeaturesConfig *feature_list) {
   int ret = 0;
   PPFeatureInfo *feature = NULL;
+  DRMPPFeatureInfo kernel_params = {};
+  bool crtc_feature = true;
 
   while (true) {
-    DRMPPFeatureInfo kernel_params = {};
+    crtc_feature = true;
     ret = feature_list->RetrieveNextFeature(&feature);
     if (ret)
       break;
-
+    kernel_params.id = HWColorManagerDrm::ToDrmFeatureId(feature->feature_id_);
+    drm_mgr_intf_->GetCrtcPPInfo(0, &kernel_params);
+    if (kernel_params.version == std::numeric_limits<uint32_t>::max())
+        crtc_feature = false;
     if (feature) {
       DLOGV_IF(kTagDriverConfig, "feature_id = %d", feature->feature_id_);
       auto drm_features = DrmPPfeatureMap_.find(feature->feature_id_);
@@ -1282,9 +1288,11 @@ DisplayError HWDeviceDRM::SetPPFeatures(PPFeaturesConfig *feature_list) {
           continue;
         }
         ret = HWColorManagerDrm::GetDrmFeature[drm_feature](*feature, &kernel_params);
-        if (!ret)
-          drm_atomic_intf_->Perform(DRMOps::CRTC_SET_POST_PROC, token_.crtc_id, &kernel_params);
-        HWColorManagerDrm::FreeDrmFeatureData(&kernel_params);
+      if (!ret && crtc_feature)
+        drm_atomic_intf_->Perform(DRMOps::CRTC_SET_POST_PROC, token_.crtc_id, &kernel_params);
+      else if (!ret && !crtc_feature)
+        drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POST_PROC, token_.conn_id, &kernel_params);
+      HWColorManagerDrm::FreeDrmFeatureData(&kernel_params);
       }
     }
   }

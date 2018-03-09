@@ -317,6 +317,12 @@ enum struct DRMOps {
    */
   CONNECTOR_SET_CRTC,
   /*
+   * Op: Sets PP feature
+   * Arg: uint32_t - Connector ID
+   * DRMPPFeatureInfo * - PP feature data pointer
+   */
+   CONNECTOR_SET_POST_PROC,
+  /*
    * Op: Sets connector hdr metadata
    * Arg: uint32_t - Connector ID
    *      drm_msm_ext_hdr_metadata - hdr_metadata
@@ -538,6 +544,7 @@ struct DRMPPFeatureInfo {
   uint32_t version;
   uint32_t payload_size;
   void *payload;
+  uint32_t object_type;
 };
 
 enum DRMCscType {
