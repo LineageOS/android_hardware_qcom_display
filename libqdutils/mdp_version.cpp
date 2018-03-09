@@ -27,6 +27,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <cutils/log.h>
+#include <string.h>
 #include <linux/msm_mdp.h>
 #include "mdp_version.h"
 #include "qd_utils.h"
