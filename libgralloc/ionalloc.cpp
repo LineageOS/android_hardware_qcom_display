@@ -29,6 +29,7 @@
 
 #define DEBUG 0
 #include <linux/ioctl.h>
+#include <string.h>
 #include <sys/mman.h>
 #include <stdlib.h>
 #include <fcntl.h>
