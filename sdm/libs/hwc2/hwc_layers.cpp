@@ -435,6 +435,10 @@ HWC2::Error HWCLayer::SetLayerPlaneAlpha(float alpha) {
 HWC2::Error HWCLayer::SetLayerSourceCrop(hwc_frect_t crop) {
   LayerRect src_rect = {};
   SetRect(crop, &src_rect);
+  non_integral_source_crop_ = ((crop.left != roundf(crop.left)) ||
+                              (crop.top != roundf(crop.top)) ||
+                              (crop.right != roundf(crop.right)) ||
+                              (crop.bottom != roundf(crop.bottom)));
   if (layer_->src_rect != src_rect) {
     geometry_changes_ |= kSourceCrop;
     layer_->src_rect = src_rect;

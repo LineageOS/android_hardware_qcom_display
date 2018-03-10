@@ -97,6 +97,7 @@ class HWCLayer {
   bool IsSingleBuffered() { return single_buffer_; }
   bool IsScalingPresent();
   bool IsRotationPresent();
+  bool IsNonIntegralSourceCrop() { return non_integral_source_crop_; }
 
  private:
   Layer *layer_ = nullptr;
@@ -112,6 +113,7 @@ class HWCLayer {
   bool needs_validate_ = true;
   bool single_buffer_ = false;
   int buffer_fd_ = -1;
+  bool non_integral_source_crop_ = false;
 
   // Composition requested by client(SF)
   HWC2::Composition client_requested_ = HWC2::Composition::Device;
