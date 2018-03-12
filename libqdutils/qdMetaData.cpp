@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -121,9 +121,7 @@ int setMetaDataVa(MetaData_t *data, DispParamType paramType,
             data->vtTimeStamp = *((uint64_t *)param);
             break;
         case COLOR_METADATA:
-#ifdef USE_COLOR_METADATA
             data->color = *((ColorMetaData *)param);
-#endif
             break;
         default:
             ALOGE("Unknown paramType %d", paramType);
@@ -240,12 +238,10 @@ int getMetaDataVa(MetaData_t *data, DispFetchParamType paramType,
             }
             break;
         case GET_COLOR_METADATA:
-#ifdef USE_COLOR_METADATA
             if (data->operation & COLOR_METADATA) {
                 *((ColorMetaData *)param) = data->color;
                 ret = 0;
             }
-#endif
             break;
         default:
             ALOGE("Unknown paramType %d", paramType);
