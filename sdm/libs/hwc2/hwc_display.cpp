@@ -634,8 +634,6 @@ void HWCDisplay::BuildLayerStack() {
   }
   // set secure display
   SetSecureDisplay(secure_display_active);
-
-  layer_stack_invalid_ = false;
 }
 
 void HWCDisplay::BuildSolidFillStack() {
@@ -1079,11 +1077,13 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
   *out_num_types = UINT32(layer_changes_.size());
   *out_num_requests = UINT32(layer_requests_.size());
   skip_validate_ = false;
+  layer_stack_invalid_ = false;
+
   if (*out_num_types > 0) {
     return HWC2::Error::HasChanges;
-  } else {
-    return HWC2::Error::None;
   }
+
+  return HWC2::Error::None;
 }
 
 HWC2::Error HWCDisplay::AcceptDisplayChanges() {
