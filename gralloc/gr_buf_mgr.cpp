@@ -507,7 +507,6 @@ int BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_han
   auto page_size = UINT(getpagesize());
   AllocData data;
   data.align = GetDataAlignment(format, prod_usage, cons_usage);
-  size = ALIGN(size, data.align) * layer_count;
   data.size = size;
   data.handle = (uintptr_t) handle;
   data.uncached = allocator_->UseUncached(prod_usage, cons_usage);
