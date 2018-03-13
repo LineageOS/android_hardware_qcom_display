@@ -27,7 +27,6 @@
 #include "gr_buf_descriptor.h"
 #include "gr_buf_mgr.h"
 #include "gr_priv_handle.h"
-#include "gr_utils.h"
 #include "qdMetaData.h"
 #include "qd_utils.h"
 
@@ -235,24 +234,6 @@ Error BufferManager::UnlockBuffer(const private_handle_t *handle) {
   return status;
 }
 
-uint32_t BufferManager::GetDataAlignment(int format, uint64_t usage) {
-  uint32_t align = UINT(getpagesize());
-  if (format == HAL_PIXEL_FORMAT_YCbCr_420_SP_TILED) {
-    align = 8192;
-  }
-
-  if (usage & BufferUsage::PROTECTED) {
-    if ((usage & BufferUsage::CAMERA_OUTPUT) || (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY)) {
-      // The alignment here reflects qsee mmu V7L/V8L requirement
-      align = SZ_2M;
-    } else {
-      align = SECURE_ALIGN;
-    }
-  }
-
-  return align;
-}
-
 int BufferManager::GetHandleFlags(int format, uint64_t usage) {
   int flags = 0;
   if (usage & BufferUsage::VIDEO_ENCODER) {
@@ -333,7 +314,6 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   auto page_size = UINT(getpagesize());
   AllocData data;
   data.align = GetDataAlignment(format, usage);
-  size = ALIGN(size, data.align) * layer_count;
   data.size = size;
   data.handle = (uintptr_t)handle;
   data.uncached = allocator_->UseUncached(usage);
