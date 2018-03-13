@@ -40,6 +40,7 @@ enum {
   CACHE_CLEAN = 0x1,
   CACHE_INVALIDATE,
   CACHE_CLEAN_AND_INVALIDATE,
+  CACHE_READ_DONE
 };
 
 struct AllocData {

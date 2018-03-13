@@ -96,9 +96,9 @@ Allocator::~Allocator() {
   }
 }
 
-int Allocator::AllocateMem(AllocData *alloc_data, uint64_t usage) {
+int Allocator::AllocateMem(AllocData *alloc_data, uint64_t usage, int format) {
   int ret;
-  alloc_data->uncached = UseUncached(usage);
+  alloc_data->uncached = UseUncached(format, usage);
 
   // After this point we should have the right heap set, there is no fallback
   GetIonHeapInfo(usage, &alloc_data->heap_id, &alloc_data->alloc_type, &alloc_data->flags);
@@ -159,7 +159,7 @@ bool Allocator::CheckForBufferSharing(uint32_t num_descriptors,
   *max_index = -1;
   for (uint32_t i = 0; i < num_descriptors; i++) {
     // Check Cached vs non-cached and all the ION flags
-    cur_uncached = UseUncached(descriptors[i]->GetUsage());
+    cur_uncached = UseUncached(descriptors[i]->GetFormat(), descriptors[i]->GetUsage());
     GetIonHeapInfo(descriptors[i]->GetUsage(), &cur_heap_id, &cur_alloc_type, &cur_ion_flags);
 
     if (i > 0 && (cur_heap_id != prev_heap_id || cur_alloc_type != prev_alloc_type ||
@@ -239,7 +239,7 @@ int Allocator::GetImplDefinedFormat(uint64_t usage, int format) {
 /* The default policy is to return cached buffers unless the client explicity
  * sets the PRIVATE_UNCACHED flag or indicates that the buffer will be rarely
  * read or written in software. */
-bool Allocator::UseUncached(uint64_t usage) {
+bool Allocator::UseUncached(int format, uint64_t usage) {
   if ((usage & GRALLOC_USAGE_PRIVATE_UNCACHED) || (usage & BufferUsage::PROTECTED)) {
     return true;
   }
@@ -256,6 +256,10 @@ bool Allocator::UseUncached(uint64_t usage) {
   }
 
   if ((usage & BufferUsage::SENSOR_DIRECT_DATA) || (usage & BufferUsage::GPU_DATA_BUFFER)) {
+    return true;
+  }
+
+  if (format && IsUBwcEnabled(format, usage)) {
     return true;
   }
 
