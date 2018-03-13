@@ -60,6 +60,7 @@ DisplayError DisplayBase::Init() {
   hw_intf_->GetHWPanelInfo(&hw_panel_info_);
 
   uint32_t active_index = 0;
+  int drop_vsync = 0;
   hw_intf_->GetActiveConfig(&active_index);
   hw_intf_->GetDisplayAttributes(active_index, &display_attributes_);
   fb_config_ = display_attributes_;
@@ -117,7 +118,8 @@ DisplayError DisplayBase::Init() {
   // TODO(user): Temporary changes, to be removed when DRM driver supports
   // Partial update with Destination scaler enabled.
   SetPUonDestScaler();
-
+  Debug::Get()->GetProperty("sdm.drop_skewed_vsync", &drop_vsync);
+  drop_skewed_vsync_ = (drop_vsync == 1);
   return kErrorNone;
 
 CleanupOnError:
@@ -342,7 +344,8 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
   if (error != kErrorNone) {
     return error;
   }
-
+  // Stop dropping vsync when first commit is received after idle fallback.
+  drop_hw_vsync_ = false;
   DLOGI_IF(kTagDisplay, "Exiting commit for display type : %d", display_type_);
   return kErrorNone;
 }
@@ -1029,6 +1032,10 @@ DisplayError DisplayBase::SetVSyncState(bool enable) {
   if (vsync_enable_ != enable) {
     error = hw_intf_->SetVSyncState(enable);
     if (error == kErrorNotSupported) {
+      if (drop_skewed_vsync_ && (hw_panel_info_.mode == kModeVideo) &&
+        enable && (current_refresh_rate_ == hw_panel_info_.min_fps)) {
+        drop_hw_vsync_ = true;
+      }
       error = hw_events_intf_->SetEventState(HWEvent::VSYNC, enable);
     }
     if (error == kErrorNone) {
