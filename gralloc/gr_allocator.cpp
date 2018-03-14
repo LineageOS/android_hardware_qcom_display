@@ -236,12 +236,13 @@ bool Allocator::UseUncached(uint64_t usage) {
   }
 
   // CPU read rarely
-  if ((usage & BufferUsage::CPU_READ_RARELY) && !(usage & BufferUsage::CPU_READ_OFTEN)) {
+  if ((usage & BufferUsage::CPU_READ_MASK) == static_cast<uint64_t>(BufferUsage::CPU_READ_RARELY)) {
     return true;
   }
 
   // CPU  write rarely
-  if ((usage & BufferUsage::CPU_WRITE_RARELY) && !(usage & BufferUsage::CPU_WRITE_OFTEN)) {
+  if ((usage & BufferUsage::CPU_WRITE_MASK) ==
+      static_cast<uint64_t>(BufferUsage::CPU_WRITE_RARELY)) {
     return true;
   }
 
