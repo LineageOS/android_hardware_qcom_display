@@ -667,6 +667,9 @@ LayerBufferFormat HWCLayer::GetSDMFormat(const int32_t &source, const int flags)
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
       format = kFormatYCbCr420P010Venus;
       break;
+    case HAL_PIXEL_FORMAT_RGBA_FP16:
+      format = kFormatInvalid;
+      break;
     default:
       DLOGW("Unsupported format type = %d", source);
       return kFormatInvalid;
