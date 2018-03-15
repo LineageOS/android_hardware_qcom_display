@@ -48,7 +48,6 @@ class HWCDisplayExternal : public HWCDisplay {
   static void Destroy(HWCDisplay *hwc_display);
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests);
   virtual HWC2::Error Present(int32_t *out_retire_fence);
-  virtual void SetSecureDisplay(bool secure_display_active);
   virtual int SetState(bool connected);
   virtual DisplayError Flush();
 

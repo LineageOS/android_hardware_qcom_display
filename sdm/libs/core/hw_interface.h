@@ -117,6 +117,7 @@ class HWInterface {
   virtual DisplayError SetDppsFeature(uint32_t object_type,
                                       uint32_t feature_id, uint64_t value) = 0;
   virtual DisplayError GetDppsFeatureInfo(void *info) = 0;
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event) = 0;
 
  protected:
   virtual ~HWInterface() { }

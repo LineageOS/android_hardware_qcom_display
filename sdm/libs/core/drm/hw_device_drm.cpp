@@ -416,7 +416,7 @@ DisplayError HWDeviceDRM::Deinit() {
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::OFF);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, nullptr);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
-  int ret = drm_atomic_intf_->Commit(true /* synchronous */, false /* retain_planes */);
+  int ret = NullCommit(true /* synchronous */, false /* retain_planes */);
   if (ret) {
     DLOGE("Commit failed with error: %d", ret);
     err = kErrorHardware;
@@ -769,7 +769,7 @@ DisplayError HWDeviceDRM::PowerOn(int *release_fence) {
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
   drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_t);
 
-  int ret = drm_atomic_intf_->Commit(true /* synchronous */, true /* retain_planes */);
+  int ret = NullCommit(true /* synchronous */, true /* retain_planes */);
   if (ret) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
@@ -789,7 +789,7 @@ DisplayError HWDeviceDRM::PowerOff() {
 
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::OFF);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
-  int ret = drm_atomic_intf_->Commit(true /* synchronous */, false /* retain_planes */);
+  int ret = NullCommit(true /* synchronous */, false /* retain_planes */);
   if (ret) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
@@ -805,7 +805,7 @@ DisplayError HWDeviceDRM::Doze(int *release_fence) {
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::DOZE);
   drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_t);
-  int ret = drm_atomic_intf_->Commit(true /* synchronous */, true /* retain_planes */);
+  int ret = NullCommit(true /* synchronous */, true /* retain_planes */);
   if (ret) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
@@ -824,7 +824,7 @@ DisplayError HWDeviceDRM::DozeSuspend(int *release_fence) {
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id,
                             DRMPowerMode::DOZE_SUSPEND);
   drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_t);
-  int ret = drm_atomic_intf_->Commit(true /* synchronous */, true /* retain_planes */);
+  int ret = NullCommit(true /* synchronous */, true /* retain_planes */);
   if (ret) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
@@ -908,6 +908,7 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
       if (pipe_info->valid && fb_id) {
         uint32_t pipe_id = pipe_info->pipe_id;
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ALPHA, pipe_id, layer.plane_alpha);
+
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ZORDER, pipe_id, pipe_info->z_order);
         DRMBlendType blending = {};
         SetBlending(layer.blending, &blending);
@@ -1208,8 +1209,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
 }
 
 DisplayError HWDeviceDRM::Flush() {
-  DTRACE_SCOPED();
-  int ret = drm_atomic_intf_->Commit(false /* synchronous */, false /* retain_planes*/);
+  int ret = NullCommit(secure_display_active_ /* synchronous */, false /* retain_planes*/);
   if (ret) {
     DLOGE("failed with error %d", ret);
     return kErrorHardware;
@@ -1756,6 +1756,29 @@ void HWDeviceDRM::SetSsppLutFeatures(HWPipeInfo *pipe_info) {
       drm_id.clear();
     }
   }
+}
+
+void HWDeviceDRM::AddDimLayerIfNeeded() {
+  if (secure_display_active_ && hw_resource_.secure_disp_blend_stage >= 0) {
+    HWSolidfillStage sf = {};
+    sf.z_order = UINT32(hw_resource_.secure_disp_blend_stage);
+    sf.roi = { 0.0, 0.0, FLOAT(mixer_attributes_.width), FLOAT(mixer_attributes_.height) };
+    solid_fills_.clear();
+    AddSolidfillStage(sf, 0xFF);
+    SetSolidfillStages();
+  }
+}
+
+DisplayError HWDeviceDRM::NullCommit(bool synchronous, bool retain_planes) {
+  DTRACE_SCOPED();
+  AddDimLayerIfNeeded();
+  int ret = drm_atomic_intf_->Commit(synchronous , retain_planes);
+  if (ret) {
+    DLOGE("failed with error %d", ret);
+    return kErrorHardware;
+  }
+
+  return kErrorNone;
 }
 
 }  // namespace sdm

@@ -144,6 +144,13 @@ enum DisplayEvent {
   kDisplayPowerResetEvent,  // Event triggered by Hardware Recovery.
 };
 
+/*! @brief This enum represents the secure events received by Display HAL. */
+enum SecureEvent {
+  kSecureDisplayStart,  // Client sets it to notify secure display session start
+  kSecureDisplayEnd,    // Client sets it to notify secure display session end
+  kSecureEventMax,
+};
+
 /*! @brief This structure defines configuration for fixed properties of a display device.
 
   @sa DisplayInterface::GetConfig
@@ -692,6 +699,14 @@ class DisplayInterface {
   virtual DisplayError GetClientTargetSupport(uint32_t width, uint32_t height,
                                               LayerBufferFormat format,
                                               const ColorMetaData &color_metadata) = 0;
+
+  /*! @brief Method to handle secure events.
+
+    @param[in] secure_event \link SecureEvent \endlink
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event) = 0;
 
   /*
    * Returns a string consisting of a dump of SDM's display and layer related state

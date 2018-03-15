@@ -465,6 +465,7 @@ struct DRMCrtcInfo {
   uint32_t max_dest_scaler_output_width = 0;
   uint32_t max_dest_scale_up = 1;
   uint32_t min_prefill_lines = 0;
+  int secure_disp_blend_stage = -1;
 };
 
 enum struct DRMPlaneType {

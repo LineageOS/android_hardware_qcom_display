@@ -80,6 +80,12 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
     HWCModuleMethods() { hw_module_methods_t::open = HWCSession::Open; }
   };
 
+  enum HotPlugEvent {
+    kHotPlugNone,
+    kHotPlugConnect,
+    kHotPlugDisconnect,
+  };
+
   explicit HWCSession(const hw_module_t *module);
   int Init();
   int Deinit();
@@ -255,6 +261,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   HWC2::Error ValidateDisplayInternal(hwc2_display_t display, uint32_t *out_num_types,
                                       uint32_t *out_num_requests);
   HWC2::Error PresentDisplayInternal(hwc2_display_t display, int32_t *out_retire_fence);
+  void HandleSecureSession(hwc2_display_t display);
+  void HandlePowerOnPending(hwc2_display_t display, int retire_fence);
+  void HandleHotplugPending(hwc2_display_t disp_id, int retire_fence);
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWC_NUM_DISPLAY_TYPES] = {nullptr};
@@ -263,8 +272,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   HWCBufferSyncHandler buffer_sync_handler_;
   HWCColorManager *color_mgr_ = nullptr;
   bool reset_panel_ = false;
-  bool secure_display_active_ = false;
-  bool external_pending_connect_ = false;
   bool new_bw_mode_ = false;
   bool need_invalidate_ = false;
   int bw_mode_release_fd_ = -1;
@@ -276,6 +283,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int hpd_bpp_ = 0;
   int hpd_pattern_ = 0;
   int null_display_mode_ = 0;
+  bool power_on_pending_[HWC_NUM_DISPLAY_TYPES] = {false};
+  HotPlugEvent hotplug_pending_event_ = kHotPlugNone;
+  bool destroy_virtual_disp_pending_ = false;
 };
 
 }  // namespace sdm

@@ -155,4 +155,36 @@ DisplayError HWPeripheralDRM::GetDppsFeatureInfo(void *info) {
   return kErrorNone;
 }
 
+DisplayError HWPeripheralDRM::HandleSecureEvent(SecureEvent secure_event) {
+  switch (secure_event) {
+    case kSecureDisplayStart: {
+      secure_display_active_ = true;
+      if (hw_panel_info_.mode != kModeCommand) {
+        DisplayError err = Flush();
+        if (err != kErrorNone) {
+          return err;
+        }
+      }
+    }
+    break;
+
+    case kSecureDisplayEnd: {
+      if (hw_panel_info_.mode != kModeCommand) {
+        DisplayError err = Flush();
+        if (err != kErrorNone) {
+          return err;
+        }
+      }
+      secure_display_active_ = false;
+    }
+    break;
+
+    default:
+      DLOGE("Invalid secure event %d", secure_event);
+      return kErrorNotSupported;
+  }
+
+  return kErrorNone;
+}
+
 }  // namespace sdm

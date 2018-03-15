@@ -61,7 +61,8 @@ class HWCDisplayPrimary : public HWCDisplay {
   virtual HWC2::Error SetColorTransform(const float *matrix, android_color_transform_t hint);
   virtual HWC2::Error RestoreColorTransform();
   virtual int Perform(uint32_t operation, ...);
-  virtual void SetSecureDisplay(bool secure_display_active);
+  virtual int HandleSecureSession(const std::bitset<kSecureMax> &secure_session,
+                                  bool *power_on_pending);
   virtual DisplayError Refresh();
   virtual void SetIdleTimeoutMs(uint32_t timeout_ms);
   virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type);

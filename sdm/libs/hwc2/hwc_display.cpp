@@ -486,7 +486,6 @@ void HWCDisplay::BuildLayerStack() {
   layer_stack_ = LayerStack();
   display_rect_ = LayerRect();
   metadata_refresh_rate_ = 0;
-  bool secure_display_active = false;
   layer_stack_.flags.animating = animating_;
 
   uint32_t color_mode_count = 0;
@@ -538,10 +537,6 @@ void HWCDisplay::BuildLayerStack() {
 
     if (layer->flags.skip) {
       layer_stack_.flags.skip_present = true;
-    }
-
-    if (layer->input_buffer.flags.secure_display) {
-      secure_display_active = true;
     }
 
     if (hwc_layer->IsSingleBuffered() &&
@@ -619,8 +614,6 @@ void HWCDisplay::BuildLayerStack() {
     // Must fall back to client composition
     MarkLayersForClientComposition();
   }
-  // set secure display
-  SetSecureDisplay(secure_display_active);
 
   layer_stack_invalid_ = false;
 }
@@ -705,6 +698,11 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode) {
 
   if (shutdown_pending_) {
     return HWC2::Error::None;
+  }
+
+  if (active_secure_sessions_[kSecureDisplay]) {
+    DLOGW("Changing display power mode not allowed during secure display session");
+    return HWC2::Error::Unsupported;
   }
 
   switch (mode) {
@@ -1035,27 +1033,18 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
     return HWC2::Error::BadDisplay;
   }
 
-  if (!skip_prepare_) {
-    DisplayError error = display_intf_->Prepare(&layer_stack_);
-    if (error != kErrorNone) {
-      if (error == kErrorShutDown) {
-        shutdown_pending_ = true;
-      } else if (error != kErrorPermission) {
-        DLOGE("Prepare failed. Error = %d", error);
-        // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
-        // so that previous buffer and fences are released, and override the error.
-        flush_ = true;
-      }
-      validated_ = false;
-      return HWC2::Error::BadDisplay;
+  DisplayError error = display_intf_->Prepare(&layer_stack_);
+  if (error != kErrorNone) {
+    if (error == kErrorShutDown) {
+      shutdown_pending_ = true;
+    } else if (error != kErrorPermission) {
+      DLOGE("Prepare failed. Error = %d", error);
+      // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
+      // so that previous buffer and fences are released, and override the error.
+      flush_ = true;
     }
-  } else {
-    // Skip is not set
-    MarkLayersForGPUBypass();
-    skip_prepare_ = false;
-    DLOGI("SecureDisplay %s, Skip Prepare/Commit and Flush",
-          secure_display_active_ ? "Starting" : "Stopping");
-    flush_ = true;
+    validated_ = false;
+    return HWC2::Error::BadDisplay;
   }
 
   for (auto hwc_layer : layer_set_) {
@@ -1806,14 +1795,45 @@ int HWCDisplay::GetVisibleDisplayRect(hwc_rect_t *visible_rect) {
   return 0;
 }
 
-void HWCDisplay::SetSecureDisplay(bool secure_display_active) {
-  if (secure_display_active_ != secure_display_active) {
-    DLOGI("SecureDisplay state changed from %d to %d Needs Flush!!", secure_display_active_,
-          secure_display_active);
-    secure_display_active_ = secure_display_active;
-    skip_prepare_ = true;
+int HWCDisplay::HandleSecureSession(const std::bitset<kSecureMax> &secure_sessions,
+                                    bool *power_on_pending) {
+  if (!power_on_pending) {
+    return -EINVAL;
   }
-  return;
+
+  if (active_secure_sessions_[kSecureDisplay] != secure_sessions[kSecureDisplay]) {
+    if (secure_sessions[kSecureDisplay]) {
+      HWC2::Error error = SetPowerMode(HWC2::PowerMode::Off);
+      if (error != HWC2::Error::None) {
+        DLOGE("SetPowerMode failed. Error = %d", error);
+      }
+    } else {
+      *power_on_pending = true;
+    }
+
+    DLOGI("SecureDisplay state changed from %d to %d for display %d",
+          active_secure_sessions_.test(kSecureDisplay), secure_sessions.test(kSecureDisplay),
+          type_);
+  }
+  active_secure_sessions_ = secure_sessions;
+  return 0;
+}
+
+int HWCDisplay::GetActiveSecureSession(std::bitset<kSecureMax> *secure_sessions) {
+  if (!secure_sessions) {
+    return -1;
+  }
+  secure_sessions->reset();
+  for (auto hwc_layer : layer_set_) {
+    Layer *layer = hwc_layer->GetSDMLayer();
+    if (layer->input_buffer.flags.secure_camera) {
+      secure_sessions->set(kSecureCamera);
+    }
+    if (layer->input_buffer.flags.secure_display) {
+      secure_sessions->set(kSecureDisplay);
+    }
+  }
+  return 0;
 }
 
 int HWCDisplay::SetActiveDisplayConfig(uint32_t config) {
@@ -1973,6 +1993,12 @@ HWC2::Error HWCDisplay::GetValidateDisplayOutput(uint32_t *out_num_types,
   *out_num_requests = UINT32(layer_requests_.size());
 
   return ((*out_num_types > 0) ? HWC2::Error::HasChanges : HWC2::Error::None);
+}
+
+bool HWCDisplay::IsDisplayCommandMode() {
+  DisplayConfigFixedInfo display_config;
+  display_intf_->GetConfig(&display_config);
+  return display_config.is_cmdmode;
 }
 
 }  // namespace sdm

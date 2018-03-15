@@ -128,7 +128,7 @@ int HWCDisplayExternalTest::Deinit() {
 
 HWC2::Error HWCDisplayExternalTest::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
   auto status = HWC2::Error::None;
-  if (secure_display_active_ || display_paused_) {
+  if (active_secure_sessions_[kSecureDisplay] || display_paused_) {
     MarkLayersForGPUBypass();
     return status;
   }
@@ -161,7 +161,7 @@ HWC2::Error HWCDisplayExternalTest::Validate(uint32_t *out_num_types, uint32_t *
 HWC2::Error HWCDisplayExternalTest::Present(int32_t *out_retire_fence) {
   auto status = HWC2::Error::None;
 
-  if (secure_display_active_) {
+  if (active_secure_sessions_[kSecureDisplay]) {
     return status;
   }
 
@@ -199,20 +199,6 @@ HWC2::Error HWCDisplayExternalTest::Present(int32_t *out_retire_fence) {
   }
   PostCommit(out_retire_fence);
   return status;
-}
-
-void HWCDisplayExternalTest::SetSecureDisplay(bool secure_display_active) {
-  if (secure_display_active_ != secure_display_active) {
-    secure_display_active_ = secure_display_active;
-
-    if (secure_display_active_) {
-      DisplayError error = display_intf_->Flush();
-      if (error != kErrorNone) {
-        DLOGE("Flush failed. Error = %d", error);
-      }
-    }
-  }
-  return;
 }
 
 int HWCDisplayExternalTest::Perform(uint32_t operation, ...) {

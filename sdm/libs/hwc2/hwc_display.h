@@ -32,6 +32,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <bitset>
 
 #include "hwc_buffer_allocator.h"
 #include "hwc_callbacks.h"
@@ -51,6 +52,12 @@ enum DisplayClass {
   DISPLAY_CLASS_EXTERNAL,
   DISPLAY_CLASS_VIRTUAL,
   DISPLAY_CLASS_NULL
+};
+
+enum SecureSessionType {
+  kSecureDisplay,
+  kSecureCamera,
+  kSecureMax,
 };
 
 class HWCColorMode {
@@ -127,7 +134,9 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int SetDisplayStatus(DisplayStatus display_status);
   virtual int OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
   virtual int Perform(uint32_t operation, ...);
-  virtual void SetSecureDisplay(bool secure_display_active);
+  virtual int HandleSecureSession(const std::bitset<kSecureMax> &secure_sessions,
+                                  bool *power_on_pending);
+  virtual int GetActiveSecureSession(std::bitset<kSecureMax> *secure_sessions);
   virtual DisplayError SetMixerResolution(uint32_t width, uint32_t height);
   virtual DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
   virtual void GetPanelResolution(uint32_t *width, uint32_t *height);
@@ -237,6 +246,7 @@ class HWCDisplay : public DisplayEventHandler {
     return HWC2::Error::None;
   }
   virtual HWC2::Error GetValidateDisplayOutput(uint32_t *out_num_types, uint32_t *out_num_requests);
+  virtual bool IsDisplayCommandMode();
 
  protected:
   // Maximum number of layers supported by display manager.
@@ -307,8 +317,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool boot_animation_completed_ = false;
   bool shutdown_pending_ = false;
   bool use_blit_comp_ = false;
-  bool secure_display_active_ = false;
-  bool skip_prepare_ = false;
+  std::bitset<kSecureMax> active_secure_sessions_ = 0;
   bool solid_fill_enable_ = false;
   Layer *solid_fill_layer_ = NULL;
   LayerRect solid_fill_rect_ = {};

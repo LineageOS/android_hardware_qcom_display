@@ -295,6 +295,7 @@ struct HWResourceInfo {
   uint32_t min_prefill_lines = 0;
   InlineRotationVersion inrot_version = kInlineRotationNone;
   std::bitset<32> src_tone_map = 0;  //!< Stores the bit mask of src tone map capability
+  int secure_disp_blend_stage = -1;
 };
 
 struct HWSplitInfo {
