@@ -165,11 +165,11 @@ DisplayError HWTVDRM::PowerOff() {
   return kErrorNone;
 }
 
-DisplayError HWTVDRM::Doze() {
+DisplayError HWTVDRM::Doze(int *release_fence) {
   return kErrorNone;
 }
 
-DisplayError HWTVDRM::DozeSuspend() {
+DisplayError HWTVDRM::DozeSuspend(int *release_fence) {
   return kErrorNone;
 }
 

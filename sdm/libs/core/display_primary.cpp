@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -166,10 +166,10 @@ DisplayError DisplayPrimary::Commit(LayerStack *layer_stack) {
   return error;
 }
 
-DisplayError DisplayPrimary::SetDisplayState(DisplayState state) {
+DisplayError DisplayPrimary::SetDisplayState(DisplayState state, int *release_fence) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
-  error = DisplayBase::SetDisplayState(state);
+  error = DisplayBase::SetDisplayState(state, release_fence);
   if (error != kErrorNone) {
     return error;
   }
@@ -393,18 +393,25 @@ bool DisplayPrimary::NeedsAVREnable() {
 
 void DisplayPrimary::ResetPanel() {
   DisplayError status = kErrorNone;
+  int release_fence = -1;
 
   DLOGI("Powering off primary");
-  status = SetDisplayState(kStateOff);
+  status = SetDisplayState(kStateOff, &release_fence);
   if (status != kErrorNone) {
     DLOGE("power-off on primary failed with error = %d", status);
+  }
+  if (release_fence >= 0) {
+    ::close(release_fence);
   }
 
   DLOGI("Restoring power mode on primary");
   DisplayState mode = GetLastPowerMode();
-  status = SetDisplayState(mode);
+  status = SetDisplayState(mode, &release_fence);
   if (status != kErrorNone) {
     DLOGE("Setting power mode = %d on primary failed with error = %d", mode, status);
+  }
+  if (release_fence >= 0) {
+    ::close(release_fence);
   }
 
   DLOGI("Enabling HWVsync");

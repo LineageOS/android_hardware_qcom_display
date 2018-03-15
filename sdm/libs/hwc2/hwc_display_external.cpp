@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -239,9 +239,12 @@ int HWCDisplayExternal::SetState(bool connected) {
         DLOGW("Set frame buffer config failed. Error = %d", error);
         return -1;
       }
-
+      int release_fence = -1;
       display_null_.GetDisplayState(&state);
-      display_intf_->SetDisplayState(state);
+      display_intf_->SetDisplayState(state, &release_fence);
+      if (release_fence >= 0) {
+        ::close(release_fence);
+      }
       validated_ = false;
 
       SetVsyncEnabled(HWC2::Vsync::Enable);
@@ -253,10 +256,14 @@ int HWCDisplayExternal::SetState(bool connected) {
     }
   } else {
     if (!display_null_.IsActive()) {
+      int release_fence = -1;
       // Preserve required attributes of HDMI display that surfaceflinger sees.
       // Restore HDMI attributes when display is reconnected.
       display_intf_->GetDisplayState(&state);
-      display_null_.SetDisplayState(state);
+      display_null_.SetDisplayState(state, &release_fence);
+      if (release_fence >= 0) {
+        ::close(release_fence);
+      }
 
       error = display_intf_->GetFrameBufferConfig(&fb_config);
       if (error != kErrorNone) {
