@@ -67,7 +67,6 @@ class DisplayPrimary : public DisplayBase, HWEventHandler, DppsPropIntf {
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate);
   virtual DisplayError SetPanelBrightness(int level);
   virtual DisplayError GetPanelBrightness(int *level);
-  virtual DisplayError CachePanelBrightness(int level);
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event);
 
   // Implement the HWEventHandlers
