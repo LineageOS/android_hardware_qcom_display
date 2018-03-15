@@ -85,7 +85,6 @@ class HWDevice : public HWInterface {
   virtual DisplayError SetDisplayMode(const HWDisplayMode hw_display_mode);
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate);
   virtual DisplayError SetPanelBrightness(int level);
-  virtual DisplayError CachePanelBrightness(int level);
   virtual DisplayError GetHWScanInfo(HWScanInfo *scan_info);
   virtual DisplayError GetVideoFormat(uint32_t config_index, uint32_t *video_format);
   virtual DisplayError GetMaxCEAFormat(uint32_t *max_cea_format);
@@ -158,8 +157,6 @@ class HWDevice : public HWInterface {
   HWDisplayAttributes display_attributes_ = {};
   HWMixerAttributes mixer_attributes_ = {};
   std::vector<mdp_destination_scaler_data> mdp_dest_scalar_data_;
-  int bl_level_update_commit = -1;
-  bool bl_update_commit = false;
 };
 
 }  // namespace sdm
