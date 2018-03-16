@@ -378,7 +378,7 @@ int HWCDisplay::Init() {
   client_target_ = new HWCLayer(id_, buffer_allocator_);
 
   int blit_enabled = 0;
-  HWCDebugHandler::Get()->GetProperty("persist.hwc.blit.comp", &blit_enabled);
+  HWCDebugHandler::Get()->GetProperty(DISABLE_BLIT_COMPOSITION_PROP, &blit_enabled);
   if (needs_blit_ && blit_enabled) {
     // TODO(user): Add blit engine when needed
   }
@@ -1707,7 +1707,7 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
 
   // By default UBWC is enabled and below property is global enable/disable for all
   // buffers allocated through gralloc , including framebuffer targets.
-  HWCDebugHandler::Get()->GetProperty("debug.gralloc.gfx_ubwc_disable", &ubwc_disabled);
+  HWCDebugHandler::Get()->GetProperty(DISABLE_UBWC_PROP, &ubwc_disabled);
   if (!ubwc_disabled) {
     usage |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
     flags |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
