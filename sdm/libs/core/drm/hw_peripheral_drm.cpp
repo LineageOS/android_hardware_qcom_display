@@ -28,6 +28,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <utils/debug.h>
+#include <vector>
 
 #include "hw_peripheral_drm.h"
 
@@ -37,6 +38,8 @@ using sde_drm::DRMDisplayType;
 using sde_drm::DRMOps;
 using sde_drm::DRMPowerMode;
 using sde_drm::DRMDppsFeatureInfo;
+using sde_drm::DRMSecureMode;
+using sde_drm::DRMCWbCaptureMode;
 
 namespace sdm {
 
@@ -63,6 +66,7 @@ DisplayError HWPeripheralDRM::Init() {
 DisplayError HWPeripheralDRM::Validate(HWLayers *hw_layers) {
   HWLayersInfo &hw_layer_info = hw_layers->info;
   SetDestScalarData(hw_layer_info);
+  SetupConcurrentWriteback(hw_layer_info, true);
 
   return HWDeviceDRM::Validate(hw_layers);
 }
@@ -70,8 +74,15 @@ DisplayError HWPeripheralDRM::Validate(HWLayers *hw_layers) {
 DisplayError HWPeripheralDRM::Commit(HWLayers *hw_layers) {
   HWLayersInfo &hw_layer_info = hw_layers->info;
   SetDestScalarData(hw_layer_info);
+  SetupConcurrentWriteback(hw_layer_info, false);
 
-  return HWDeviceDRM::Commit(hw_layers);
+  DisplayError error = HWDeviceDRM::Commit(hw_layers);
+
+  if (cwb_config_.enabled && (error == kErrorNone)) {
+    PostCommitConcurrentWriteback(hw_layer_info.stack->output_buffer);
+  }
+
+  return error;
 }
 
 void HWPeripheralDRM::ResetDisplayParams() {
@@ -185,6 +196,105 @@ DisplayError HWPeripheralDRM::HandleSecureEvent(SecureEvent secure_event) {
   }
 
   return kErrorNone;
+}
+
+void HWPeripheralDRM::SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info, bool validate) {
+  bool enable = hw_resource_.has_concurrent_writeback && hw_layer_info.stack->output_buffer;
+  if (!(enable || cwb_config_.enabled)) {
+    return;
+  }
+
+  bool setup_modes = enable && !cwb_config_.enabled && validate;
+  if (setup_modes && (SetupConcurrentWritebackModes() == kErrorNone)) {
+    cwb_config_.enabled = true;
+  }
+
+  if (cwb_config_.enabled) {
+    if (enable) {
+      // Set DRM properties for Concurrent Writeback.
+      ConfigureConcurrentWriteback(hw_layer_info.stack);
+    } else {
+      // Tear down the Concurrent Writeback topology.
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, cwb_config_.token.conn_id, 0);
+    }
+  }
+}
+
+DisplayError HWPeripheralDRM::SetupConcurrentWritebackModes() {
+  // To setup Concurrent Writeback topology, get the Connector ID of Virtual display
+  if (drm_mgr_intf_->RegisterDisplay(DRMDisplayType::VIRTUAL, &cwb_config_.token)) {
+    DLOGE("RegisterDisplay failed for Concurrent Writeback");
+    return kErrorResources;
+  }
+
+  // Set the modes based on Primary display.
+  std::vector<drmModeModeInfo> modes;
+  for (auto &item : connector_info_.modes) {
+    modes.push_back(item.mode);
+  }
+
+  // Inform the mode list to driver.
+  struct sde_drm_wb_cfg cwb_cfg = {};
+  cwb_cfg.connector_id = cwb_config_.token.conn_id;
+  cwb_cfg.flags = SDE_DRM_WB_CFG_FLAGS_CONNECTED;
+  cwb_cfg.count_modes = UINT32(modes.size());
+  cwb_cfg.modes = (uint64_t)modes.data();
+
+  int ret = -EINVAL;
+#ifdef DRM_IOCTL_SDE_WB_CONFIG
+  ret = drmIoctl(dev_fd_, DRM_IOCTL_SDE_WB_CONFIG, &cwb_cfg);
+#endif
+  if (ret) {
+    drm_mgr_intf_->UnregisterDisplay(cwb_config_.token);
+    DLOGE("Dump CWBConfig: mode_count %d flags %x", cwb_cfg.count_modes, cwb_cfg.flags);
+    DumpConnectorModeInfo();
+    return kErrorHardware;
+  }
+
+  return kErrorNone;
+}
+
+void HWPeripheralDRM::ConfigureConcurrentWriteback(LayerStack *layer_stack) {
+  LayerBuffer *output_buffer = layer_stack->output_buffer;
+  registry_.MapBufferToFbId(output_buffer);
+
+  // Set the topology for Concurrent Writeback: [CRTC_PRIMARY_DISPLAY - CONNECTOR_VIRTUAL_DISPLAY].
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, cwb_config_.token.conn_id, token_.crtc_id);
+
+  // Set CRTC Capture Mode
+  DRMCWbCaptureMode capture_mode = layer_stack->flags.post_processed_output ?
+                                   DRMCWbCaptureMode::DSPP_OUT : DRMCWbCaptureMode::MIXER_OUT;
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CAPTURE_MODE, token_.crtc_id, capture_mode);
+
+  // Set Connector Output FB
+  uint32_t fb_id = registry_.GetFbId(output_buffer->planes[0].fd);
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_FB_ID, cwb_config_.token.conn_id, fb_id);
+
+  // Set Connector Secure Mode
+  bool secure = output_buffer->flags.secure;
+  DRMSecureMode mode = secure ? DRMSecureMode::SECURE : DRMSecureMode::NON_SECURE;
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_FB_SECURE_MODE, cwb_config_.token.conn_id, mode);
+
+  // Set Connector Output Rect
+  sde_drm::DRMRect dst = {};
+  dst.left = 0;
+  dst.top = 0;
+  dst.right = display_attributes_[current_mode_index_].x_pixels;
+  dst.bottom = display_attributes_[current_mode_index_].y_pixels;
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_RECT, cwb_config_.token.conn_id, dst);
+}
+
+void HWPeripheralDRM::PostCommitConcurrentWriteback(LayerBuffer *output_buffer) {
+  bool enabled = hw_resource_.has_concurrent_writeback && output_buffer;
+
+  if (enabled) {
+    // Get Concurrent Writeback fence
+    int *fence = &output_buffer->release_fence_fd;
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, cwb_config_.token.conn_id, fence);
+  } else {
+    drm_mgr_intf_->UnregisterDisplay(cwb_config_.token);
+    cwb_config_.enabled = false;
+  }
 }
 
 }  // namespace sdm

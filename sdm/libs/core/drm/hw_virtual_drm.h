@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -58,7 +58,6 @@ class HWVirtualDRM : public HWDeviceDRM {
   void ConfigureWbConnectorDestRect();
   void ConfigureWbConnectorSecureMode(bool secure);
   void InitializeConfigs();
-  void DumpConnectorModeInfo();
   DisplayError SetWbConfigs(const HWDisplayAttributes &display_attributes);
   void GetModeIndex(const HWDisplayAttributes &display_attributes, int *mode_index);
 };

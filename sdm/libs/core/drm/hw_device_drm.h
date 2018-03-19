@@ -150,6 +150,7 @@ class HWDeviceDRM : public HWInterface {
   void SetSsppLutFeatures(HWPipeInfo *pipe_info);
   void AddDimLayerIfNeeded();
   DisplayError NullCommit(bool synchronous, bool retain_planes);
+  void DumpConnectorModeInfo();
 
   class Registry {
    public:

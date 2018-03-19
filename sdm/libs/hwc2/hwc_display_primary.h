@@ -67,9 +67,12 @@ class HWCDisplayPrimary : public HWCDisplay {
   virtual void SetIdleTimeoutMs(uint32_t timeout_ms);
   virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type);
   virtual int FrameCaptureAsync(const BufferInfo &output_buffer_info, bool post_processed);
-  virtual int GetFrameCaptureStatus() { return frame_capture_status_; }
+  virtual bool GetFrameCaptureFence(int32_t *release_fence);
   virtual DisplayError SetDetailEnhancerConfig(const DisplayDetailEnhancerData &de_data);
   virtual DisplayError ControlPartialUpdate(bool enable, uint32_t *pending);
+  virtual HWC2::Error SetReadbackBuffer(const native_handle_t *buffer, int32_t acquire_fence,
+                                        bool post_processed_output);
+  virtual HWC2::Error GetReadbackBufferFence(int32_t *release_fence);
 
  private:
   HWCDisplayPrimary(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
@@ -84,7 +87,6 @@ class HWCDisplayPrimary : public HWCDisplay {
   void ForceRefreshRate(uint32_t refresh_rate);
   uint32_t GetOptimalRefreshRate(bool one_updating_layer);
   void HandleFrameOutput();
-  void HandleFrameCapture();
   void HandleFrameDump();
   DisplayError SetMixerResolution(uint32_t width, uint32_t height);
   DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
@@ -92,13 +94,11 @@ class HWCDisplayPrimary : public HWCDisplay {
   BufferAllocator *buffer_allocator_ = nullptr;
   CPUHint *cpu_hint_ = nullptr;
 
-  // Primary output buffer configuration
+  // Primary readback buffer configuration
   LayerBuffer output_buffer_ = {};
   bool post_processed_output_ = false;
-
-  // Members for 1 frame capture in a client provided buffer
-  bool frame_capture_buffer_queued_ = false;
-  int frame_capture_status_ = -EAGAIN;
+  bool readback_buffer_queued_ = false;
+  bool readback_configured_ = false;
 
   // Members for N frame output dump to file
   bool dump_output_to_file_ = false;

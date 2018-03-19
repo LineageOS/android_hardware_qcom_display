@@ -483,6 +483,7 @@ void HWInfoDRM::GetWBInfo(HWResourceInfo *hw_resource) {
 
   hw_resource->supported_formats_map.erase(sub_blk_type);
   hw_resource->supported_formats_map.insert(make_pair(sub_blk_type, supported_sdm_formats));
+  hw_resource->has_concurrent_writeback = connector_info.concurrent_writeback;
 
   drm_mgr_intf_->UnregisterDisplay(token);
 }

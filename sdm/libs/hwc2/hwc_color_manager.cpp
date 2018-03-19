@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -30,6 +30,7 @@
 #include <dlfcn.h>
 #include <cutils/sockets.h>
 #include <cutils/native_handle.h>
+#include <sync/sync.h>
 #include <utils/String16.h>
 #include <binder/Parcel.h>
 #include <gralloc_priv.h>
@@ -259,7 +260,13 @@ int HWCColorManager::SetFrameCapture(void *params, bool enable, HWCDisplay *hwc_
       }
     }
   } else {
-    ret = hwc_display->GetFrameCaptureStatus();
+    ret = -EAGAIN;
+    int fence_fd = -1;
+    if (hwc_display->GetFrameCaptureFence(&fence_fd) && (fence_fd >= 0)) {
+      ret = sync_wait(fence_fd, 1000);
+      ::close(fence_fd);
+    }
+
     if (!ret) {
       if (frame_capture_data->buffer != NULL) {
         if (munmap(frame_capture_data->buffer, buffer_info.alloc_buffer_info.size) != 0) {
@@ -274,7 +281,7 @@ int HWCColorManager::SetFrameCapture(void *params, bool enable, HWCDisplay *hwc_
         }
       }
     } else {
-      DLOGE("GetFrameCaptureStatus failed. ret = %d", ret);
+      DLOGE("GetFrameCaptureFence failed. ret = %d", ret);
     }
   }
   return ret;

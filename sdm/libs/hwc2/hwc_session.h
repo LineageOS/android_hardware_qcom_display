@@ -164,6 +164,12 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
                               int32_t /*android_color_mode_t*/ int_mode);
   static int32_t SetColorTransform(hwc2_device_t *device, hwc2_display_t display,
                                    const float *matrix, int32_t /*android_color_transform_t*/ hint);
+  static int32_t GetReadbackBufferAttributes(hwc2_device_t *device, hwc2_display_t display,
+                                             int32_t *format, int32_t *dataspace);
+  static int32_t SetReadbackBuffer(hwc2_device_t *device, hwc2_display_t display,
+                                   const native_handle_t *buffer, int32_t acquire_fence);
+  static int32_t GetReadbackBufferFence(hwc2_device_t *device, hwc2_display_t display,
+                                        int32_t *release_fence);
 
   // HWCDisplayEventHandler
   virtual void DisplayPowerReset();

@@ -148,14 +148,20 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int FrameCaptureAsync(const BufferInfo &output_buffer_info, bool post_processed) {
     return -1;
   }
-  // Returns the status of frame capture operation requested with FrameCaptureAsync().
-  // -EAGAIN : No status obtain yet, call API again after another frame.
-  // < 0 : Operation happened but failed.
-  // 0 : Success.
-  virtual int GetFrameCaptureStatus() { return -EAGAIN; }
+  // Client gets release fence of the frame capture, requested with FrameCaptureAsync().
+  // True : Frame capture configured and client gets release fence.
+  // False: Frame capture is not valid and has not been configured.
+  virtual bool GetFrameCaptureFence(int32_t *release_fence) { return false; }
 
   virtual DisplayError SetDetailEnhancerConfig(const DisplayDetailEnhancerData &de_data) {
     return kErrorNotSupported;
+  }
+  virtual HWC2::Error SetReadbackBuffer(const native_handle_t *buffer, int32_t acquire_fence,
+                                        bool post_processed_output) {
+    return HWC2::Error::Unsupported;
+  }
+  virtual HWC2::Error GetReadbackBufferFence(int32_t *release_fence) {
+    return HWC2::Error::Unsupported;
   }
 
   // Display Configurations
