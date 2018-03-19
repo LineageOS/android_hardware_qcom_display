@@ -113,8 +113,7 @@ int HWCDisplayPrimary::Init() {
   }
   color_mode_ = new HWCColorMode(display_intf_);
   color_mode_->Init();
-  HWCDebugHandler::Get()->GetProperty("vendor.display.enable_default_color_mode",
-                                      &default_mode_status_);
+  HWCDebugHandler::Get()->GetProperty(ENABLE_DEFAULT_COLOR_MODE, &default_mode_status_);
 
   return status;
 }

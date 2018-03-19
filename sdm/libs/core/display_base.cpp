@@ -114,7 +114,7 @@ DisplayError DisplayBase::Init() {
     DisplayBase::SetMaxMixerStages(max_mixer_stages);
   }
 
-  Debug::Get()->GetProperty("sdm.disable_hdr_lut_gen", &disable_hdr_lut_gen_);
+  Debug::Get()->GetProperty(DISABLE_HDR_LUT_GEN, &disable_hdr_lut_gen_);
   // TODO(user): Temporary changes, to be removed when DRM driver supports
   // Partial update with Destination scaler enabled.
   SetPUonDestScaler();
