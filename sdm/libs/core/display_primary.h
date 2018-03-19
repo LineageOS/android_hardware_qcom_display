@@ -69,6 +69,7 @@ class DisplayPrimary : public DisplayBase, HWEventHandler, DppsPropIntf {
   virtual DisplayError GetPanelBrightness(int *level);
   virtual DisplayError CachePanelBrightness(int level);
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event);
+  virtual DisplayError SetQSyncMode(QSyncMode qsync_mode);
 
   // Implement the HWEventHandlers
   virtual DisplayError VSync(int64_t timestamp);
@@ -95,6 +96,7 @@ class DisplayPrimary : public DisplayBase, HWEventHandler, DppsPropIntf {
   uint32_t current_refresh_rate_ = 0;
   bool reset_panel_ = false;
   DppsInfo dpps_info_ = {};
+  QSyncMode qsync_mode_ = kQSyncModeNone;
 };
 
 }  // namespace sdm

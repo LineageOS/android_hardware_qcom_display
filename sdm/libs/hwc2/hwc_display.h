@@ -253,6 +253,9 @@ class HWCDisplay : public DisplayEventHandler {
   }
   virtual HWC2::Error GetValidateDisplayOutput(uint32_t *out_num_types, uint32_t *out_num_requests);
   virtual bool IsDisplayCommandMode();
+  virtual HWC2::Error SetQSyncMode(QSyncMode qsync_mode) {
+    return HWC2::Error::Unsupported;
+  }
 
  protected:
   // Maximum number of layers supported by display manager.

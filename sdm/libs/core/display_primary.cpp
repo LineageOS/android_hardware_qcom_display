@@ -400,7 +400,7 @@ DisplayError DisplayPrimary::DisablePartialUpdateOneFrame() {
 }
 
 bool DisplayPrimary::NeedsAVREnable() {
-  if (avr_prop_disabled_) {
+  if (avr_prop_disabled_ || qsync_mode_ == kQSyncModeNone) {
     return false;
   }
 
@@ -534,6 +534,16 @@ void DppsInfo::Deinit() {
 
 DisplayError DisplayPrimary::HandleSecureEvent(SecureEvent secure_event) {
   return hw_intf_->HandleSecureEvent(secure_event);
+}
+
+DisplayError DisplayPrimary::SetQSyncMode(QSyncMode qsync_mode) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (GetDriverType() == DriverType::DRM && qsync_mode == kQsyncModeOneShot) {
+    return kErrorNotSupported;
+  }
+  qsync_mode_ = qsync_mode;
+
+  return kErrorNone;
 }
 
 }  // namespace sdm

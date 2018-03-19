@@ -151,6 +151,13 @@ enum SecureEvent {
   kSecureEventMax,
 };
 
+/*! @brief This enum represents the QSync modes supported by the hardware. */
+enum QSyncMode {
+  kQSyncModeNone,        // This is set by the client to disable qsync
+  kQSyncModeContinuous,  // This is set by the client to enable qsync forever
+  kQsyncModeOneShot,     // This is set by client to enable qsync only for current frame.
+};
+
 /*! @brief This structure defines configuration for fixed properties of a display device.
 
   @sa DisplayInterface::GetConfig
@@ -707,6 +714,14 @@ class DisplayInterface {
     @return \link DisplayError \endlink
   */
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event) = 0;
+
+  /*! @brief Method to set the Qsync mode.
+
+  @param[in] qsync_mode: \link QSyncMode \endlink
+
+  @return \link DisplayError \endlink
+  */
+  virtual DisplayError SetQSyncMode(QSyncMode qsync_mode) = 0;
 
   /*
    * Returns a string consisting of a dump of SDM's display and layer related state
