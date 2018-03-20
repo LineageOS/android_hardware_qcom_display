@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -888,15 +888,49 @@ DisplayError HWColorManagerDrm::GetDrmGamut(const PPFeatureInfo &in_data,
 DisplayError HWColorManagerDrm::GetDrmPADither(const PPFeatureInfo &in_data,
                                                DRMPPFeatureInfo *out_data) {
   DisplayError ret = kErrorNone;
-#ifdef PP_DRM_ENABLE
+#if defined(PP_DRM_ENABLE) && defined(DRM_MSM_PA_DITHER)
+  struct SDEPADitherData* sde_dither;
+  struct drm_msm_pa_dither* mdp_dither;
+
   if (!out_data) {
     DLOGE("Invalid input parameter for PA dither");
     return kErrorParameters;
   }
 
-  out_data->id = kPPFeaturesMax;
+  out_data->id = kFeaturePADither;
   out_data->type = sde_drm::kPropBlob;
   out_data->version = in_data.feature_version_;
+
+  out_data->payload_size = sizeof(struct drm_msm_pa_dither);
+  if (in_data.enable_flags_ & kOpsDisable) {
+    /* feature disable case */
+    out_data->payload = NULL;
+    return ret;
+  } else if (!(in_data.enable_flags_ & kOpsEnable)) {
+    out_data->payload = NULL;
+    return kErrorParameters;
+  }
+
+  sde_dither = (struct SDEPADitherData *)in_data.GetConfigData();
+  if (sde_dither->matrix_size != DITHER_MATRIX_SZ) {
+    DLOGE("Invalid dither matrix size %d, exp sz %d",
+          sde_dither->matrix_size, DITHER_MATRIX_SZ);
+    return kErrorParameters;
+  }
+
+  mdp_dither = new drm_msm_pa_dither();
+  if (!mdp_dither) {
+    DLOGE("Failed to allocate memory for dither");
+    return kErrorMemory;
+  }
+
+  mdp_dither->flags = 0;
+  mdp_dither->strength = sde_dither->strength;
+  mdp_dither->offset_en = sde_dither->offset_en;
+  std::memcpy(&mdp_dither->matrix[0],
+              reinterpret_cast<void*>(sde_dither->matrix_data_addr),
+              sizeof(uint32_t) * DITHER_MATRIX_SZ);
+  out_data->payload = mdp_dither;
 #endif
   return ret;
 }
