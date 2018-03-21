@@ -1102,10 +1102,6 @@ HWC2::Error HWCDisplay::GetHdrCapabilities(uint32_t *out_num_types, int32_t *out
 
 
 HWC2::Error HWCDisplay::CommitLayerStack(void) {
-  if (shutdown_pending_ || layer_set_.empty()) {
-    return HWC2::Error::None;
-  }
-
   if (skip_validate_ && !CanSkipValidate()) {
     validated_.reset(type_);
   }
@@ -1113,6 +1109,10 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
   if (!validated_.test(type_)) {
     DLOGV_IF(kTagCompManager, "Display %d is not validated", id_);
     return HWC2::Error::NotValidated;
+  }
+
+  if (shutdown_pending_ || layer_set_.empty()) {
+    return HWC2::Error::None;
   }
 
   DumpInputBuffers();
@@ -1199,8 +1199,10 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
       close(layer_buffer->acquire_fence_fd);
       layer_buffer->acquire_fence_fd = -1;
     }
+    layer->request.flags = {};
   }
 
+  client_target_->GetSDMLayer()->request.flags = {};
   *out_retire_fence = -1;
   if (!flush_) {
     // if swapinterval property is set to 0 then close and reset the list retire fence
@@ -1219,8 +1221,6 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
 
   geometry_changes_ = GeometryChanges::kNone;
   flush_ = false;
-
-  ClearRequestFlags();
 
   return status;
 }
@@ -1878,12 +1878,6 @@ void HWCDisplay::CloseAcquireFds() {
   if (client_target_acquire_fence >= 0) {
     close(client_target_acquire_fence);
     client_target_acquire_fence = -1;
-  }
-}
-
-void HWCDisplay::ClearRequestFlags() {
-  for (Layer *layer : layer_stack_.layers) {
-    layer->request.flags = {};
   }
 }
 

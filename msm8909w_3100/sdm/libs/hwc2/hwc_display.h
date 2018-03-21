@@ -240,7 +240,6 @@ class HWCDisplay : public DisplayEventHandler {
   bool IsLayerUpdating(const Layer *layer);
   uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate);
   virtual void CloseAcquireFds();
-  virtual void ClearRequestFlags();
   virtual void GetUnderScanConfig() { }
 
   enum {
