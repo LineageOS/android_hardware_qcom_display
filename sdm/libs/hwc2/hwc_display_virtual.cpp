@@ -105,6 +105,10 @@ int HWCDisplayVirtual::Init() {
 int HWCDisplayVirtual::Deinit() {
   int status = 0;
   if (output_buffer_) {
+    if (output_buffer_->acquire_fence_fd >= 0) {
+      close(output_buffer_->acquire_fence_fd);
+      output_buffer_->acquire_fence_fd = -1;
+    }
     delete output_buffer_;
     output_buffer_ = nullptr;
   }
@@ -176,7 +180,10 @@ HWC2::Error HWCDisplayVirtual::Present(int32_t *out_retire_fence) {
     }
   }
   CloseAcquireFds();
-  close(output_buffer_->acquire_fence_fd);
+  if (output_buffer_->acquire_fence_fd >= 0) {
+    close(output_buffer_->acquire_fence_fd);
+    output_buffer_->acquire_fence_fd = -1;
+  }
   return status;
 }
 
