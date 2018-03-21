@@ -27,7 +27,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <cutils/log.h>
+#include <log/log.h>
 #include <sync/sync.h>
 #include <algorithm>
 #include <sstream>

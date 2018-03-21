@@ -25,7 +25,7 @@ LOCAL_CLANG                   := true
 LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware libhardware_legacy \
                                  libutils libcutils libsync libqdutils libqdMetaData libdl libdrmutils \
                                  libsdmutils libc++ liblog libgrallocutils libdl \
-                                 vendor.display.config@1.0_vendor libhidlbase libhidltransport \
+                                 vendor.display.config@1.0 libhidlbase libhidltransport \
                                  libui libgpu_tonemapper
 
 ifneq ($(TARGET_USES_GRALLOC1), true)
@@ -33,7 +33,7 @@ ifneq ($(TARGET_USES_GRALLOC1), true)
 endif
 
 ifeq ($(display_config_version), DISPLAY_CONFIG_1_1)
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.1_vendor
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.1
 endif
 
 LOCAL_SRC_FILES               := hwc_session.cpp \
