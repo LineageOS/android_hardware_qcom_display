@@ -676,7 +676,6 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
       }
 
       *color_space = 0;
-#ifdef USE_COLOR_METADATA
       ColorMetaData color_metadata;
       if (getMetaData(hnd, GET_COLOR_METADATA, &color_metadata) == 0) {
         switch (color_metadata.colorPrimaries) {
@@ -697,11 +696,6 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
       } else if (getMetaData(hnd, GET_COLOR_SPACE, color_space) != 0) {
           *color_space = 0;
       }
-#else
-      if (getMetaData(hnd, GET_COLOR_SPACE, color_space) != 0) {
-          *color_space = 0;
-      }
-#endif
     } break;
     case GRALLOC_MODULE_PERFORM_GET_YUV_PLANE_INFO: {
       private_handle_t *hnd = va_arg(args, private_handle_t *);
