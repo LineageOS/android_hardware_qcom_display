@@ -928,6 +928,7 @@ DisplayError DisplayBase::GetHdrColorMode(std::string *color_mode, bool *found_h
 
 DisplayError DisplayBase::SetColorTransform(const uint32_t length, const double *color_transform) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
+  DisplayError ret = kErrorNone;
   if (!color_mgr_) {
     return kErrorNotSupported;
   }
@@ -936,7 +937,12 @@ DisplayError DisplayBase::SetColorTransform(const uint32_t length, const double 
     return kErrorParameters;
   }
 
-  return color_mgr_->ColorMgrSetColorTransform(length, color_transform);
+  color_transform_active_ = false;
+  ret = color_mgr_->ColorMgrSetColorTransform(length, color_transform);
+  if (!ret) {
+    CopyColorTransformMatrix(color_transform);
+  }
+  return ret;
 }
 
 DisplayError DisplayBase::GetDefaultColorMode(std::string *color_mode) {
@@ -1477,6 +1483,9 @@ DisplayError DisplayBase::SetHDRMode(bool set) {
     }
     DLOGI("Setting color mode = %s", color_mode.c_str());
     error = SetColorModeInternal(color_mode);
+    if (color_transform_active_) {
+      color_mgr_->ColorMgrSetColorTransform(kColorTransformlength_, color_transform_);
+    }
   }
 
   // DPPS and HDR features are mutually exclusive
