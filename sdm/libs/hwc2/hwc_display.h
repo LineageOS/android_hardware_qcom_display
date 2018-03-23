@@ -311,6 +311,7 @@ class HWCDisplay : public DisplayEventHandler {
  private:
   void DumpInputBuffers(void);
   bool CanSkipValidate();
+  void UpdateRefreshRate();
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
   uint32_t geometry_changes_ = GeometryChanges::kNone;
