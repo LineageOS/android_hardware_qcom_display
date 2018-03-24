@@ -140,6 +140,9 @@ int IonAlloc::CleanBuffer(void */*base*/, unsigned int /*size*/, unsigned int /*
     case CACHE_INVALIDATE:
       sync.flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_RW;
       break;
+    case CACHE_READ_DONE:
+      sync.flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_READ;
+      break;
     default:
       ALOGE("%s: Invalid operation %d", __FUNCTION__, op);
       return -1;
@@ -247,6 +250,10 @@ int IonAlloc::ImportBuffer(int fd) {
 
 int IonAlloc::CleanBuffer(void *base, unsigned int size, unsigned int offset, int handle, int op,
                           int /*fd*/) {
+  if (op == CACHE_READ_DONE)  {
+    return 0;
+  }
+
   ATRACE_CALL();
   ATRACE_INT("operation id", op);
   struct ion_flush_data flush_data;

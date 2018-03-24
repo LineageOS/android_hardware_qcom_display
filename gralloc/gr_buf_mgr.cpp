@@ -229,6 +229,11 @@ Error BufferManager::UnlockBuffer(const private_handle_t *handle) {
       status = Error::BAD_BUFFER;
     }
     hnd->flags &= ~private_handle_t::PRIV_FLAGS_NEEDS_FLUSH;
+  } else {
+    if (allocator_->CleanBuffer(reinterpret_cast<void *>(hnd->base), hnd->size, hnd->offset,
+                                buf->ion_handle_main, CACHE_READ_DONE, hnd->fd) != 0) {
+      status = Error::BAD_BUFFER;
+    }
   }
 
   return status;
@@ -273,7 +278,7 @@ int BufferManager::GetHandleFlags(int format, uint64_t usage) {
     flags |= private_handle_t::PRIV_FLAGS_NON_CPU_WRITER;
   }
 
-  if (!allocator_->UseUncached(usage)) {
+  if (!allocator_->UseUncached(format, usage)) {
     flags |= private_handle_t::PRIV_FLAGS_CACHED;
   }
 
@@ -316,10 +321,10 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   data.align = GetDataAlignment(format, usage);
   data.size = size;
   data.handle = (uintptr_t)handle;
-  data.uncached = allocator_->UseUncached(usage);
+  data.uncached = allocator_->UseUncached(format, usage);
 
   // Allocate buffer memory
-  err = allocator_->AllocateMem(&data, usage);
+  err = allocator_->AllocateMem(&data, usage, format);
   if (err) {
     ALOGE("gralloc failed to allocate err=%s", strerror(-err));
     return Error::NO_RESOURCES;
@@ -331,7 +336,7 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   e_data.handle = data.handle;
   e_data.align = page_size;
 
-  err = allocator_->AllocateMem(&e_data, 0);
+  err = allocator_->AllocateMem(&e_data, 0, 0);
   if (err) {
     ALOGE("gralloc failed to allocate metadata error=%s", strerror(-err));
     return Error::NO_RESOURCES;
