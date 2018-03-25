@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -105,6 +105,10 @@ int HWCDisplayVirtual::Init() {
 int HWCDisplayVirtual::Deinit() {
   int status = 0;
   if (output_buffer_) {
+    if (output_buffer_->acquire_fence_fd >= 0) {
+      close(output_buffer_->acquire_fence_fd);
+      output_buffer_->acquire_fence_fd = -1;
+    }
     delete output_buffer_;
     output_buffer_ = nullptr;
   }
@@ -136,7 +140,6 @@ HWC2::Error HWCDisplayVirtual::Present(int32_t *out_retire_fence) {
   auto status = HWC2::Error::None;
   if (display_paused_) {
     DisplayError error = display_intf_->Flush();
-    validated_.reset();
     if (error != kErrorNone) {
       DLOGE("Flush failed. Error = %d", error);
     }
@@ -177,7 +180,10 @@ HWC2::Error HWCDisplayVirtual::Present(int32_t *out_retire_fence) {
     }
   }
   CloseAcquireFds();
-  close(output_buffer_->acquire_fence_fd);
+  if (output_buffer_->acquire_fence_fd >= 0) {
+    close(output_buffer_->acquire_fence_fd);
+    output_buffer_->acquire_fence_fd = -1;
+  }
   return status;
 }
 

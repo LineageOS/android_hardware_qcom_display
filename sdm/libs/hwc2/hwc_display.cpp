@@ -136,11 +136,7 @@ HWC2::Error HWCColorMode::RestoreColorTransform() {
 }
 
 HWC2::Error HWCColorMode::SetColorTransform(const float *matrix, android_color_transform_t hint) {
-  if (!matrix || (hint < HAL_COLOR_TRANSFORM_IDENTITY ||
-      hint > HAL_COLOR_TRANSFORM_CORRECT_TRITANOPIA)) {
-    return HWC2::Error::BadParameter;
-  }
-
+  DTRACE_SCOPED();
   double color_matrix[kColorTransformMatrixCount] = {0};
   CopyColorTransformMatrix(matrix, color_matrix);
 
@@ -958,6 +954,7 @@ DisplayError HWCDisplay::CECMessage(char *message) {
 DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
   switch (event) {
     case kIdleTimeout:
+      break;
     case kThermalEvent:
       validated_.reset();
       break;
@@ -1240,15 +1237,19 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
       // release fences and discard fences from driver
       if (swap_interval_zero_ || layer->flags.single_buffer) {
         close(layer_buffer->release_fence_fd);
-        layer_buffer->release_fence_fd = -1;
       } else if (layer->composition != kCompositionGPU) {
         hwc_layer->PushReleaseFence(layer_buffer->release_fence_fd);
-        layer_buffer->release_fence_fd = -1;
       } else {
         hwc_layer->PushReleaseFence(-1);
       }
+    } else {
+      // In case of flush, we don't return an error to f/w, so it will get a release fence out of
+      // the hwc_layer's release fence queue. We should push a -1 to preserve release fence
+      // circulation semantics.
+      hwc_layer->PushReleaseFence(-1);
     }
 
+    layer_buffer->release_fence_fd = -1;
     if (layer_buffer->acquire_fence_fd >= 0) {
       close(layer_buffer->acquire_fence_fd);
       layer_buffer->acquire_fence_fd = -1;
