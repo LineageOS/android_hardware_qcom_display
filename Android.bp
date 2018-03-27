@@ -30,6 +30,8 @@ cc_library_headers {
         "gralloc",
         "libdebug",
     ],
+    header_libs: ["libhardware_headers"],
+    export_header_lib_headers: ["libhardware_headers"],
 }
 
 subdirs = [
