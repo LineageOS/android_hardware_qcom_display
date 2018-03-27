@@ -2,6 +2,7 @@ cc_library_shared {
     name: "libqdutils",
     vendor: true,
     defaults: ["display_defaults"],
+    header_libs: ["libhardware_headers"],
     shared_libs: [
         "libbinder",
         "libqservice",
