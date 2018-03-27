@@ -88,12 +88,13 @@
 
 #define DISABLE_HDR_LUT_GEN                  DISPLAY_PROP("disable_hdr_lut_gen")
 #define ENABLE_DEFAULT_COLOR_MODE            DISPLAY_PROP("enable_default_color_mode")
-#define DISABLE_HDR                          DISPLAY_PROP("disable_hdr")
+#define DISABLE_HDR                          DISPLAY_PROP("hwc_disable_hdr")
 
 #define HDR_CONFIG_PROP                      RO_DISPLAY_PROP("hdr.config")
 #define QDCM_PCC_TRANS_PROP                  DISPLAY_PROP("qdcm.pcc_for_trans")
 #define QDCM_DIAGONAL_MATRIXMODE_PROP        DISPLAY_PROP("qdcm.diagonal_matrix_mode")
 #define QDCM_DISABLE_TIMEOUT_PROP            PERSIST_DISPLAY_PROP("qdcm.disable_timeout")
 
+#define ZERO_SWAP_INTERVAL                   "vendor.debug.egl.swapinterval"
 
 #endif  // __DISPLAY_PROPERTIES_H__
