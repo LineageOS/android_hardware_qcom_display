@@ -42,18 +42,17 @@ inline int roundUpToPageSize(int x) {
 /* The bits below are in officially defined vendor space
  * i.e bits 28-31 and 48-63*/
 /* Non linear, Universal Bandwidth Compression */
-#define GRALLOC_USAGE_PRIVATE_ALLOC_UBWC 1 << 28
+#define GRALLOC_USAGE_PRIVATE_ALLOC_UBWC (UINT32_C(1) << 28)
 
 /* Set this for allocating uncached memory (using O_DSYNC),
  * cannot be used with noncontiguous heaps */
-#define GRALLOC_USAGE_PRIVATE_UNCACHED 1 << 29
+#define GRALLOC_USAGE_PRIVATE_UNCACHED (UINT32_C(1) << 29)
 
 /* This flag is used to indicate P010 format */
-#define GRALLOC_USAGE_PRIVATE_10BIT 1 << 30
+#define GRALLOC_USAGE_PRIVATE_10BIT (UINT32_C(1) << 30)
 
 /* This flag is used for SECURE display usecase */
-#define GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY 1 << 31
-
+#define GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY (UINT32_C(1) << 31)
 /* unused legacy flags */
 #define GRALLOC_USAGE_PRIVATE_MM_HEAP 0
 #define GRALLOC_USAGE_PRIVATE_IOMMU_HEAP 0
@@ -61,10 +60,10 @@ inline int roundUpToPageSize(int x) {
 /* TODO(user): move these to use sanctioned vendor bits
  * once end to end 64-bit support is available */
 /* This flag is set for WFD usecase */
-#define GRALLOC_USAGE_PRIVATE_WFD 1 << 21
+#define GRALLOC_USAGE_PRIVATE_WFD (UINT32_C(1) << 21)
 
 /* This flag is used to indicate 10-bit tight pack format (e.g. TP10) */
-#define GRALLOC_USAGE_PRIVATE_10BIT_TP 1 << 27
+#define GRALLOC_USAGE_PRIVATE_10BIT_TP (UINT32_C(1) << 27)
 
 /* Legacy gralloc1 definitions */
 /* Some clients may still be using the old flags */
