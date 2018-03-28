@@ -115,8 +115,11 @@ static void *vsync_loop(void *param)
 
     char thread_name[64] = HWC_VSYNC_THREAD_NAME;
     prctl(PR_SET_NAME, (unsigned long) &thread_name, 0, 0, 0);
-    setpriority(PRIO_PROCESS, 0, HAL_PRIORITY_URGENT_DISPLAY +
-                android::PRIORITY_MORE_FAVORABLE);
+    struct sched_param sched_param = {0};
+    sched_param.sched_priority = 5;
+    if (sched_setscheduler(gettid(), SCHED_FIFO, &sched_param) != 0) {
+        ALOGE("Couldn't set SCHED_FIFO for hwc_vsync");
+    }
     android_set_rt_ioprio(0, 1);
 
     char vdata[MAX_DATA];
