@@ -182,7 +182,8 @@ static void *vsync_loop(void *param)
 
     if (LIKELY(!ctx->vstate.fakevsync)) {
         do {
-            int err = poll(*pfd, (int)(num_displays * num_events), -1);
+            int err = poll(reinterpret_cast<struct pollfd *>(pfd),
+                           (int)(num_displays * num_events), -1);
             if(err > 0) {
                 for (int dpy = HWC_DISPLAY_PRIMARY; dpy < num_displays; dpy++) {
                     for(size_t ev = 0; ev < num_events; ev++) {
