@@ -2,6 +2,10 @@ cc_library_shared {
     name: "libqdutils",
     vendor: true,
     defaults: ["display_defaults"],
+    header_libs: [
+        "libhardware_headers",
+        "libutils_headers",
+    ],
     shared_libs: [
         "libbinder",
         "libqservice",
@@ -24,7 +28,10 @@ cc_library_shared {
         "-Wno-sign-conversion",
         "-DLOG_TAG=\"qdmetadata\"",
     ],
-    srcs: ["qdMetaData.cpp","qd_utils.cpp"],
+    srcs: [
+        "qdMetaData.cpp",
+        "qd_utils.cpp",
+    ],
 }
 
 // Remove after WFD moves to use libqdMetaData directly
@@ -35,5 +42,8 @@ cc_library_shared {
         "-Wno-sign-conversion",
         "-DLOG_TAG=\"qdmetadata\"",
     ],
-    srcs: ["qdMetaData.cpp","qd_utils.cpp"],
+    srcs: [
+        "qdMetaData.cpp",
+        "qd_utils.cpp",
+    ],
 }
