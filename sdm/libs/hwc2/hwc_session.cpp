@@ -499,7 +499,7 @@ static int32_t GetHdrCapabilities(hwc2_device_t* device, hwc2_display_t display,
 
 static uint32_t GetMaxVirtualDisplayCount(hwc2_device_t *device) {
   char property[PROPERTY_VALUE_MAX];
-  property_get("debug.sdm.support_writeback", property, "1");
+  property_get(WRITEBACK_SUPPORTED, property, "1");
   return (uint32_t) atoi(property);
 }
 
