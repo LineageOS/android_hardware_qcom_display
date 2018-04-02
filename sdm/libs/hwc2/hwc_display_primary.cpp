@@ -201,7 +201,7 @@ HWC2::Error HWCDisplayPrimary::Validate(uint32_t *out_num_types, uint32_t *out_n
   }
 
   uint32_t refresh_rate = GetOptimalRefreshRate(one_updating_layer);
-  if (current_refresh_rate_ != refresh_rate) {
+  if (current_refresh_rate_ != refresh_rate || handle_idle_timeout_) {
     error = display_intf_->SetRefreshRate(refresh_rate);
   }
 
