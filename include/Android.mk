@@ -12,6 +12,7 @@ LOCAL_COPY_HEADERS            := color_metadata.h \
                                  ../libqdutils/qd_utils.h \
                                  ../libqdutils/qdMetaData.h \
                                  ../libqdutils/display_config.h \
+                                 ../libdebug/debug_handler.h \
                                  ../libqservice/QServiceUtils.h \
                                  ../libqservice/IQService.h \
                                  ../libqservice/IQHDMIClient.h \
