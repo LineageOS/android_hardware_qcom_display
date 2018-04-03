@@ -17,12 +17,9 @@ LOCAL_PATH:= $(call my-dir)
 # hw/<COPYPIX_HARDWARE_MODULE_ID>.<ro.board.platform>.so
 include $(CLEAR_VARS)
 
-LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/common/inc
-LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/qdcm/inc
-
-LOCAL_SRC_FILES := lights.c lights_prv.cpp
+LOCAL_SRC_FILES := lights.c
 LOCAL_MODULE_RELATIVE_PATH := hw
-LOCAL_SHARED_LIBRARIES := liblog libcutils libsdm-disp-vndapis
+LOCAL_SHARED_LIBRARIES := liblog
 LOCAL_HEADER_LIBRARIES := libhardware_headers
 LOCAL_CFLAGS := -DLOG_TAG=\"qdlights\"
 ifeq ($(LLVM_SA), true)
