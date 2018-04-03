@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -1010,7 +1010,7 @@ android::status_t HWCSession::HandleGetDisplayAttributesForConfig(const android:
   DisplayPort sdm_disp_port = kPortDefault;
   int hwc_disp_port = qdutils::DISPLAY_PORT_DEFAULT;
 
-  if (dpy > HWC_DISPLAY_VIRTUAL) {
+  if (dpy < HWC_DISPLAY_PRIMARY || dpy >= HWC_NUM_DISPLAY_TYPES || config < 0) {
     return android::BAD_VALUE;
   }
 
@@ -1692,7 +1692,7 @@ android::status_t HWCSession::GetVisibleDisplayRect(const android::Parcel *input
                                                     android::Parcel *output_parcel) {
   int dpy = input_parcel->readInt32();
 
-  if (dpy < HWC_DISPLAY_PRIMARY || dpy > HWC_DISPLAY_VIRTUAL) {
+  if (dpy < HWC_DISPLAY_PRIMARY || dpy >= HWC_NUM_DISPLAY_TYPES) {
     return android::BAD_VALUE;;
   }
 
