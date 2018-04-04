@@ -171,7 +171,7 @@ HWC2::Error HWCDisplayVirtual::Present(int32_t *out_retire_fence) {
           buffer_info.buffer_config.width = static_cast<uint32_t>(output_handle->width);
           buffer_info.buffer_config.height = static_cast<uint32_t>(output_handle->height);
           buffer_info.buffer_config.format =
-              GetSDMFormat(output_handle->format, output_handle->flags);
+              HWCLayer::GetSDMFormat(output_handle->format, output_handle->flags);
           buffer_info.alloc_buffer_info.size = static_cast<uint32_t>(output_handle->size);
           DumpOutputBuffer(buffer_info, reinterpret_cast<void *>(output_handle->base),
                            layer_stack_.retire_fence_fd);
@@ -229,7 +229,8 @@ HWC2::Error HWCDisplayVirtual::SetOutputBuffer(buffer_handle_t buf, int32_t rele
       output_handle_format = HAL_PIXEL_FORMAT_RGBX_8888;
     }
 
-    LayerBufferFormat new_sdm_format = GetSDMFormat(output_handle_format, output_handle->flags);
+    LayerBufferFormat new_sdm_format =
+        HWCLayer::GetSDMFormat(output_handle_format, output_handle->flags);
     if (new_sdm_format == kFormatInvalid) {
       return HWC2::Error::BadParameter;
     }
