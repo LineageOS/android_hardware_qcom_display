@@ -41,24 +41,22 @@ DisplayError SetCSC(const private_handle_t *pvt_handle, ColorMetaData *color_met
       }
 
       switch (csc) {
-      case ITU_R_601:
-      case ITU_R_601_FR:
-        // video and display driver uses 601_525
-        color_metadata->colorPrimaries = ColorPrimaries_BT601_6_525;
-        break;
-      case ITU_R_709:
-        color_metadata->colorPrimaries = ColorPrimaries_BT709_5;
-        break;
-      case ITU_R_2020:
-      case ITU_R_2020_FR:
-        color_metadata->colorPrimaries = ColorPrimaries_BT2020;
-        break;
-      default:
-        DLOGE("Unsupported CSC: %d", csc);
-        return kErrorNotSupported;
+        case ITU_R_601:
+        case ITU_R_601_FR:
+          // video and display driver uses 601_525
+          color_metadata->colorPrimaries = ColorPrimaries_BT601_6_525;
+          break;
+        case ITU_R_709:
+          color_metadata->colorPrimaries = ColorPrimaries_BT709_5;
+          break;
+        case ITU_R_2020:
+        case ITU_R_2020_FR:
+          color_metadata->colorPrimaries = ColorPrimaries_BT2020;
+          break;
+        default:
+          DLOGE("Unsupported CSC: %d", csc);
+          return kErrorNotSupported;
       }
-    } else {
-      return kErrorNotSupported;
     }
   }
 
