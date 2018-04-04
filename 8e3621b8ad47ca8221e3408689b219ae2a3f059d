@@ -22,6 +22,30 @@
       "revId": "8e3621b8ad47ca8221e3408689b219ae2a3f059d",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "c91fedc1_17bda7fc",
+        "filename": "sdm/libs/core/display_base.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1407,
+      "author": {
+        "id": 3962
+      },
+      "writtenOn": "2018-04-04T04:14:37Z",
+      "side": 1,
+      "message": "T/F works too. And I don\u0027t remember seeing anything of the like, but last I looked was in August when I originally wrote this so something might have changed in Oreo",
+      "parentUuid": "a32a4ec1_763fae0b",
+      "range": {
+        "startLine": 1407,
+        "startChar": 8,
+        "endLine": 1407,
+        "endChar": 22
+      },
+      "revId": "8e3621b8ad47ca8221e3408689b219ae2a3f059d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
