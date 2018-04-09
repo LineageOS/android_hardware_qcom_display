@@ -996,7 +996,17 @@ DisplayError HWCDisplay::CECMessage(char *message) {
 
 DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
   switch (event) {
-    case kIdleTimeout:
+    case kIdleTimeout: {
+      SCOPE_LOCK(HWCSession::locker_[type_]);
+      if (pending_commit_) {
+        // If idle timeout event comes in between prepare
+        // and commit, drop it since device is not really
+        // idle.
+        return kErrorNotSupported;
+      }
+      validated_ = false;
+      break;
+    }
     case kThermalEvent:
     case kIdlePowerCollapse:
     case kPanelDeadEvent: {

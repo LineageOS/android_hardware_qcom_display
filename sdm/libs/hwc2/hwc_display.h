@@ -300,6 +300,7 @@ class HWCDisplay : public DisplayEventHandler {
   HWCToneMapper *tone_mapper_ = nullptr;
   uint32_t num_configs_ = 0;
   int disable_hdr_handling_ = 0;  // disables HDR handling.
+  bool pending_commit_ = false;
 
  private:
   void DumpInputBuffers(void);
