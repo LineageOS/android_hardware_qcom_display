@@ -31,14 +31,9 @@ TARGET_USES_COLOR_METADATA := true
 TARGET_USES_DRM_PP := true
 
 PRODUCT_PROPERTY_OVERRIDES += \
-    debug.mdpcomp.logs=0 \
-    debug.sf.enable_hwc_vds=0 \
+    debug.sf.enable_hwc_vds=1 \
     persist.demo.hdmirotationlock=false \
     ro.vendor.display.cabl=2 \
-    vendor.gralloc.disable_ubwc=0 \
-    vendor.display.disable_scaler=0 \
-    vendor.display.disable_secure_inline_rotator=1 \
-    vendor.display.prefer_source_split=1 \
     debug.sf.hw=0 \
     debug.egl.hw=0 \
     debug.sf.latch_unsignaled=1
