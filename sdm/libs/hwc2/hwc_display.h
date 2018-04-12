@@ -210,6 +210,11 @@ class HWCDisplay : public DisplayEventHandler {
                                          float* out_max_luminance,
                                          float* out_max_average_luminance,
                                          float* out_min_luminance);
+  virtual HWC2::Error SetDisplayAnimating(bool animating) {
+    animating_ = animating;
+    validated_ = false;
+    return HWC2::Error::None;
+  }
 
  protected:
   // Maximum number of layers supported by display manager.
@@ -300,6 +305,7 @@ class HWCDisplay : public DisplayEventHandler {
   DisplayClass display_class_;
   uint32_t geometry_changes_ = GeometryChanges::kNone;
   bool skip_validate_ = false;
+  bool animating_ = false;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {

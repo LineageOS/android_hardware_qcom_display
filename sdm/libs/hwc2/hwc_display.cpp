@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -89,8 +89,11 @@ HWC2::Error HWCColorMode::DeInit() {
 uint32_t HWCColorMode::GetColorModeCount() {
   uint32_t count = UINT32(color_mode_transform_map_.size());
   DLOGI("Supported color mode count = %d", count);
-
+#ifdef EXCLUDE_DISPLAY_PP
+  return count;
+#else
   return std::max(1U, count);
+#endif
 }
 
 HWC2::Error HWCColorMode::GetColorModes(uint32_t *out_num_modes,
@@ -133,11 +136,7 @@ HWC2::Error HWCColorMode::RestoreColorTransform() {
 }
 
 HWC2::Error HWCColorMode::SetColorTransform(const float *matrix, android_color_transform_t hint) {
-  if (!matrix || (hint < HAL_COLOR_TRANSFORM_IDENTITY ||
-      hint > HAL_COLOR_TRANSFORM_CORRECT_TRITANOPIA)) {
-    return HWC2::Error::BadParameter;
-  }
-
+  DTRACE_SCOPED();
   double color_matrix[kColorTransformMatrixCount] = {0};
   CopyColorTransformMatrix(matrix, color_matrix);
 
@@ -202,8 +201,10 @@ void HWCColorMode::PopulateColorModes() {
   // SDM returns modes which is string combination of mode + transform.
   DisplayError error = display_intf_->GetColorModeCount(&color_mode_count);
   if (error != kErrorNone || (color_mode_count == 0)) {
+#ifndef EXCLUDE_DISPLAY_PP
     DLOGW("GetColorModeCount failed, use native color mode");
     PopulateTransform(HAL_COLOR_MODE_NATIVE, "native", "identity");
+#endif
     return;
   }
 
@@ -401,6 +402,9 @@ int HWCDisplay::Deinit() {
   }
 
   delete client_target_;
+  for (auto hwc_layer : layer_set_) {
+    delete hwc_layer;
+  }
 
   if (color_mode_) {
     color_mode_->DeInit();
@@ -462,6 +466,7 @@ void HWCDisplay::BuildLayerStack() {
   metadata_refresh_rate_ = 0;
   auto working_primaries = ColorPrimaries_BT709_5;
   bool secure_display_active = false;
+  layer_stack_.flags.animating = animating_;
 
   // Add one layer for fb target
   // TODO(user): Add blit target layers
@@ -949,6 +954,7 @@ DisplayError HWCDisplay::CECMessage(char *message) {
 DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
   switch (event) {
     case kIdleTimeout:
+      break;
     case kThermalEvent:
       validated_.reset();
       break;
@@ -1231,15 +1237,19 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
       // release fences and discard fences from driver
       if (swap_interval_zero_ || layer->flags.single_buffer) {
         close(layer_buffer->release_fence_fd);
-        layer_buffer->release_fence_fd = -1;
       } else if (layer->composition != kCompositionGPU) {
         hwc_layer->PushReleaseFence(layer_buffer->release_fence_fd);
-        layer_buffer->release_fence_fd = -1;
       } else {
         hwc_layer->PushReleaseFence(-1);
       }
+    } else {
+      // In case of flush, we don't return an error to f/w, so it will get a release fence out of
+      // the hwc_layer's release fence queue. We should push a -1 to preserve release fence
+      // circulation semantics.
+      hwc_layer->PushReleaseFence(-1);
     }
 
+    layer_buffer->release_fence_fd = -1;
     if (layer_buffer->acquire_fence_fd >= 0) {
       close(layer_buffer->acquire_fence_fd);
       layer_buffer->acquire_fence_fd = -1;
@@ -1735,13 +1745,14 @@ void HWCDisplay::MarkLayersForGPUBypass() {
 }
 
 void HWCDisplay::MarkLayersForClientComposition() {
-  // ClientComposition - GPU comp, to acheive this, set skip flag so that
+  // ClientComposition - GPU comp, to achieve this, set skip flag so that
   // SDM does not handle this layer and hwc_layer composition will be
   // set correctly at the end of Prepare.
   for (auto hwc_layer : layer_set_) {
     Layer *layer = hwc_layer->GetSDMLayer();
     layer->flags.skip = true;
   }
+  layer_stack_.flags.skip_present = true;
 }
 
 void HWCDisplay::ApplyScanAdjustment(hwc_rect_t *display_frame) {

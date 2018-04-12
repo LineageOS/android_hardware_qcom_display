@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
  * Not a Contribution
  *
  * Copyright (C) 2010 The Android Open Source Project
@@ -419,7 +419,7 @@ int BufferManager::GetHandleFlags(int format, gralloc1_producer_usage_t prod_usa
     flags |= private_handle_t::PRIV_FLAGS_HW_TEXTURE;
   }
 
-  if (prod_usage & GRALLOC1_CONSUMER_USAGE_PRIVATE_SECURE_DISPLAY) {
+  if (cons_usage & GRALLOC1_CONSUMER_USAGE_PRIVATE_SECURE_DISPLAY) {
     flags |= private_handle_t::PRIV_FLAGS_SECURE_DISPLAY;
   }
 
@@ -694,8 +694,11 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
             break;
         }
         break;
+      } else if (getMetaData(hnd, GET_COLOR_SPACE, color_space) != 0) {
+          *color_space = 0;
       }
-      if (getMetaData(hnd, GET_COLOR_SPACE, &color_metadata) != 0) {
+#else
+      if (getMetaData(hnd, GET_COLOR_SPACE, color_space) != 0) {
           *color_space = 0;
       }
 #endif
