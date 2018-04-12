@@ -87,8 +87,6 @@ class BufferManager {
 
   // Get the wrapper Buffer object from the handle, returns nullptr if handle is not found
   std::shared_ptr<Buffer> GetBufferFromHandleLocked(const private_handle_t *hnd);
-
-  bool map_fb_mem_ = false;
   Allocator *allocator_ = NULL;
   std::mutex buffer_lock_;
   std::unordered_map<const private_handle_t *, std::shared_ptr<Buffer>> handles_map_ = {};

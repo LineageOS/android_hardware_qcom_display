@@ -38,15 +38,6 @@ static BufferInfo GetBufferInfo(const BufferDescriptor &descriptor) {
 }
 
 BufferManager::BufferManager() : next_id_(0) {
-  char property[PROPERTY_VALUE_MAX];
-
-  // Map framebuffer memory
-  if ((property_get("debug.gralloc.map_fb_memory", property, NULL) > 0) &&
-      (!strncmp(property, "1", PROPERTY_VALUE_MAX) ||
-       (!strncasecmp(property, "true", PROPERTY_VALUE_MAX)))) {
-    map_fb_mem_ = true;
-  }
-
   handles_map_.clear();
   allocator_ = new Allocator();
   allocator_->Init();
