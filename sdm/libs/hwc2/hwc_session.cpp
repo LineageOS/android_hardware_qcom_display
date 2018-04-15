@@ -1311,8 +1311,11 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
                                                                      &pending_action);
   }
 
-  if (ret) {
+  if (ret || pending_action.action == kNoAction) {
     output_parcel->writeInt32(ret);  // first field in out parcel indicates return code.
+    if (pending_action.action == kNoAction) {
+      HWCColorManager::MarshallStructIntoParcel(resp_payload, output_parcel);
+    }
     req_payload.DestroyPayload();
     resp_payload.DestroyPayload();
     return ret;
