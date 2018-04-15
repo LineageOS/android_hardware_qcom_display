@@ -401,8 +401,14 @@ DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *fixed_info) {
 
   HWResourceInfo hw_resource_info = HWResourceInfo();
   hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
-  // hdr can be supported by display when target and panel supports HDR.
-  fixed_info->hdr_supported = (hw_resource_info.has_hdr && hw_panel_info_.hdr_enabled);
+  bool hdr_supported = hw_resource_info.has_hdr;
+  HWDisplayInterfaceInfo hw_disp_info = {};
+  hw_info_intf_->GetFirstDisplayInterfaceType(&hw_disp_info);
+  if (hw_disp_info.type == kHDMI) {
+    hdr_supported = (hdr_supported && hw_panel_info_.hdr_enabled);
+  }
+
+  fixed_info->hdr_supported = hdr_supported;
   // Populate luminance values only if hdr will be supported on that display
   fixed_info->max_luminance = fixed_info->hdr_supported ? hw_panel_info_.peak_luminance: 0;
   fixed_info->average_luminance = fixed_info->hdr_supported ? hw_panel_info_.average_luminance : 0;
