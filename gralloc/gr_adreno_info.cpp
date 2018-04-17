@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -73,13 +73,13 @@ AdrenoMemInfo::AdrenoMemInfo() {
   // Check if the overriding property debug.gralloc.gfx_ubwc_disable
   // that disables UBWC allocations for the graphics stack is set
   char property[PROPERTY_VALUE_MAX];
-  property_get("debug.gralloc.gfx_ubwc_disable", property, "0");
+  property_get(DISABLE_UBWC_PROP, property, "0");
   if (!(strncmp(property, "1", PROPERTY_VALUE_MAX)) ||
       !(strncmp(property, "true", PROPERTY_VALUE_MAX))) {
     gfx_ubwc_disable_ = true;
   }
 
-  if ((property_get("debug.gralloc.map_fb_memory", property, NULL) > 0) &&
+  if ((property_get(MAP_FB_MEMORY_PROP, property, NULL) > 0) &&
       (!strncmp(property, "1", PROPERTY_VALUE_MAX) ||
        (!strncasecmp(property, "true", PROPERTY_VALUE_MAX)))) {
     map_fb_ = true;

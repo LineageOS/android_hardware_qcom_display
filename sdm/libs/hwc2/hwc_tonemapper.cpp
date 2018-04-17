@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -329,7 +329,7 @@ void HWCToneMapper::DumpToneMapOutput(ToneMapSession *session, int *acquire_fd) 
 }
 
 DisplayError HWCToneMapper::AcquireToneMapSession(Layer *layer, uint32_t *session_index) {
-  // When the property sdm.disable_hdr_lut_gen is set, the lutEntries and gridEntries in
+  // When the property vendor.display.disable_hdr_lut_gen is set, the lutEntries and gridEntries in
   // the Lut3d will be NULL, clients needs to allocate the memory and set correct 3D Lut
   // for Tonemapping.
   if (!layer->lut_3d.lutEntries || !layer->lut_3d.dim) {

@@ -23,6 +23,13 @@
 #include <unistd.h>
 #include "gr_priv_handle.h"
 
+#define GRALLOC_PROP_PREFIX  "vendor.gralloc."
+#define GRALLOC_PROP(prop_name) GRALLOC_PROP_PREFIX prop_name
+
+#define DISABLE_UBWC_PROP                    GRALLOC_PROP("disable_ubwc")
+#define ENABLE_FB_UBWC_PROP                  GRALLOC_PROP("enable_fb_ubwc")
+#define MAP_FB_MEMORY_PROP                   GRALLOC_PROP("map_fb_memory")
+
 #define ROUND_UP_PAGESIZE(x) roundUpToPageSize(x)
 inline int roundUpToPageSize(int x) {
     return (x + (getpagesize()-1)) & ~(getpagesize()-1);

@@ -302,7 +302,7 @@ void HWCSession::GetCapabilities(struct hwc2_device *device, uint32_t *outCount,
   HWCSession *hwc_session = static_cast<HWCSession *>(device);
   bool color_transform_supported = hwc_session->core_intf_->IsColorTransformSupported();
 
-  if (Debug::Get()->GetProperty("sdm.debug.disable_skip_validate", &value) == kErrorNone) {
+  if (Debug::Get()->GetProperty(DISABLE_SKIP_VALIDATE_PROP, &value) == kErrorNone) {
     disable_skip_validate_ = (value == 1);
   }
 
@@ -499,7 +499,7 @@ static int32_t GetHdrCapabilities(hwc2_device_t* device, hwc2_display_t display,
 
 static uint32_t GetMaxVirtualDisplayCount(hwc2_device_t *device) {
   char property[PROPERTY_VALUE_MAX];
-  property_get("debug.sdm.support_writeback", property, "1");
+  property_get(WRITEBACK_SUPPORTED, property, "1");
   return (uint32_t) atoi(property);
 }
 

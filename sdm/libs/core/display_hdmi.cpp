@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -54,7 +54,7 @@ DisplayError DisplayHDMI::Init() {
 
   uint32_t active_mode_index;
   char value[64] = "0";
-  Debug::GetProperty("sdm.hdmi.s3d_mode", value);
+  Debug::GetProperty(HDMI_S3D_MODE_PROP, value);
   HWS3DMode mode = (HWS3DMode)atoi(value);
   if (mode > kS3DModeNone && mode < kS3DModeMax) {
     active_mode_index = GetBestConfig(mode);
