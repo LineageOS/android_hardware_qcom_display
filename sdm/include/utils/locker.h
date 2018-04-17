@@ -127,15 +127,15 @@ class Locker {
 
   Locker() : sequence_wait_(0) {
     pthread_mutex_init(&mutex_, 0);
-    pthread_condattr_init(&cond_attr);
-    pthread_condattr_setclock(&cond_attr, CLOCK_MONOTONIC);
-    pthread_cond_init(&condition_, &cond_attr);
+    pthread_condattr_init(&cond_attr_);
+    pthread_condattr_setclock(&cond_attr_, CLOCK_MONOTONIC);
+    pthread_cond_init(&condition_, &cond_attr_);
   }
 
   ~Locker() {
     pthread_mutex_destroy(&mutex_);
     pthread_cond_destroy(&condition_);
-    pthread_condattr_destroy(&cond_attr);
+    pthread_condattr_destroy(&cond_attr_);
   }
 
   void Lock() { pthread_mutex_lock(&mutex_); }
@@ -157,7 +157,7 @@ class Locker {
  private:
   pthread_mutex_t mutex_;
   pthread_cond_t condition_;
-  pthread_condattr_t cond_attr;
+  pthread_condattr_t cond_attr_;
   int sequence_wait_;   // This flag is set to 1 on sequence entry, 0 on exit, and -1 on cancel.
                         // Some routines will wait for sequence of function calls to finish
                         // so that capturing a transitionary snapshot of context is prevented.
