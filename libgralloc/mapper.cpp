@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
- * Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016, 2017 The Linux Foundation. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,7 +71,7 @@ static int gralloc_map_metadata(buffer_handle_t handle) {
                   hnd, hnd->fd_metadata, strerror(errno));
             return -errno;
         }
-        hnd->base_metadata = uint64_t(mappedAddress) + hnd->offset_metadata;
+        hnd->base_metadata = uint64_t(mappedAddress);
     }
     return 0;
 }
@@ -102,7 +102,7 @@ static int gralloc_map(gralloc_module_t const* module,
             return -errno;
         }
 
-        hnd->base = uint64_t(mappedAddress) + hnd->offset;
+        hnd->base = uint64_t(mappedAddress);
     } else {
         // Cannot map secure buffers or framebuffers, but still need to map
         // metadata for secure buffers.

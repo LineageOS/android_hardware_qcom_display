@@ -317,6 +317,10 @@ gralloc1_error_t GrallocImpl::GetColorFormat(gralloc1_device_t *device, buffer_h
 
 gralloc1_error_t GrallocImpl::GetProducerUsage(gralloc1_device_t *device, buffer_handle_t buffer,
                                                gralloc1_producer_usage_t *outUsage) {
+  if (!outUsage) {
+    return GRALLOC1_ERROR_BAD_VALUE;
+  }
+
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
   if (status == GRALLOC1_ERROR_NONE) {
     const private_handle_t *hnd = PRIV_HANDLE_CONST(buffer);
@@ -328,6 +332,10 @@ gralloc1_error_t GrallocImpl::GetProducerUsage(gralloc1_device_t *device, buffer
 
 gralloc1_error_t GrallocImpl::GetBufferStride(gralloc1_device_t *device, buffer_handle_t buffer,
                                               uint32_t *outStride) {
+  if (!outStride) {
+    return GRALLOC1_ERROR_BAD_VALUE;
+  }
+
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
   if (status == GRALLOC1_ERROR_NONE) {
     *outStride = UINT(PRIV_HANDLE_CONST(buffer)->GetStride());
@@ -341,6 +349,10 @@ gralloc1_error_t GrallocImpl::AllocateBuffers(gralloc1_device_t *device, uint32_
                                               buffer_handle_t *outBuffers) {
   if (!num_dptors || !dptors) {
     return GRALLOC1_ERROR_BAD_DESCRIPTOR;
+  }
+
+  if (!device) {
+    return GRALLOC1_ERROR_BAD_VALUE;
   }
 
   GrallocImpl const *dev = GRALLOC_IMPL(device);
@@ -372,13 +384,26 @@ gralloc1_error_t GrallocImpl::ReleaseBuffer(gralloc1_device_t *device, buffer_ha
   return status;
 }
 
+static inline void CloseFdIfValid(int fd) {
+  if (fd > 0) {
+    close(fd);
+  }
+}
+
 gralloc1_error_t GrallocImpl::LockBuffer(gralloc1_device_t *device, buffer_handle_t buffer,
                                          gralloc1_producer_usage_t prod_usage,
                                          gralloc1_consumer_usage_t cons_usage,
                                          const gralloc1_rect_t *region, void **out_data,
                                          int32_t acquire_fence) {
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
-  if (status == GRALLOC1_ERROR_NONE && (acquire_fence > 0)) {
+
+  if (status != GRALLOC1_ERROR_NONE || !out_data ||
+      !region) {  // currently we ignore the region/rect client wants to lock
+    CloseFdIfValid(acquire_fence);
+    return status;
+  }
+
+  if (acquire_fence > 0) {
     int error = sync_wait(acquire_fence, 1000);
     if (error < 0) {
       ALOGE("%s: sync_wait timedout! error = %s", __FUNCTION__, strerror(errno));
@@ -400,8 +425,8 @@ gralloc1_error_t GrallocImpl::LockBuffer(gralloc1_device_t *device, buffer_handl
     return GRALLOC1_ERROR_BAD_VALUE;
   }
 
+  // TODO(user): Need to check if buffer was allocated with the same flags
   status = dev->buf_mgr_->LockBuffer(hnd, prod_usage, cons_usage);
-
   *out_data = reinterpret_cast<void *>(hnd->base);
 
   return status;
@@ -432,9 +457,12 @@ gralloc1_error_t GrallocImpl::LockYCbCrBuffer(gralloc1_device_t* device, buffer_
 gralloc1_error_t GrallocImpl::UnlockBuffer(gralloc1_device_t *device, buffer_handle_t buffer,
                                            int32_t *release_fence) {
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
-
   if (status != GRALLOC1_ERROR_NONE) {
     return status;
+  }
+
+  if (!release_fence) {
+    return GRALLOC1_ERROR_BAD_VALUE;
   }
 
   const private_handle_t *hnd = PRIV_HANDLE_CONST(buffer);
@@ -446,6 +474,10 @@ gralloc1_error_t GrallocImpl::UnlockBuffer(gralloc1_device_t *device, buffer_han
 }
 
 gralloc1_error_t GrallocImpl::Gralloc1Perform(gralloc1_device_t *device, int operation, ...) {
+  if (!device) {
+    return GRALLOC1_ERROR_BAD_VALUE;
+  }
+
   va_list args;
   va_start(args, operation);
   GrallocImpl const *dev = GRALLOC_IMPL(device);
