@@ -1993,6 +1993,10 @@ int HWCDisplay::SetActiveDisplayConfig(uint32_t config) {
 }
 
 int HWCDisplay::GetActiveDisplayConfig(uint32_t *config) {
+  if (config_pending_) {
+    *config = display_config_;
+    return 0;
+  }
   return display_intf_->GetActiveConfig(config) == kErrorNone ? 0 : -1;
 }
 
