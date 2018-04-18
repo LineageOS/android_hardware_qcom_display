@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2017, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015-2018, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -36,6 +36,7 @@
 #include <private/color_interface.h>
 #include <utils/sys.h>
 #include <utils/debug.h>
+#include <string>
 #include "hw_interface.h"
 
 namespace sdm {
@@ -72,6 +73,7 @@ class ColorManagerProxy {
   DisplayError ColorMgrGetModeInfo(int32_t mode_id, AttrVal *query);
   DisplayError ColorMgrSetColorTransform(uint32_t length, const double *trans_data);
   DisplayError ColorMgrGetDefaultModeID(int32_t *mode_id);
+  DisplayError ColorMgrGetActiveMode(std::string *mode);
   bool NeedsPartialUpdateDisable();
   DisplayError Commit();
 
