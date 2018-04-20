@@ -739,15 +739,19 @@ DisplayError HWDeviceDRM::PowerOn(int *release_fence) {
     return kErrorNone;
   }
 
+  int64_t release_fence_t = -1;
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_t);
+
   int ret = drm_atomic_intf_->Commit(true /* synchronous */, true /* retain_planes */);
   if (ret) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
   }
-  drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, release_fence);
 
+  *release_fence = static_cast<int>(release_fence_t);
+  DLOGD("RELEASE fence created: fd:%d", *release_fence);
   return kErrorNone;
 }
 
@@ -771,32 +775,38 @@ DisplayError HWDeviceDRM::PowerOff() {
 
 DisplayError HWDeviceDRM::Doze(int *release_fence) {
   DTRACE_SCOPED();
+
+  int64_t release_fence_t = -1;
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::DOZE);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_t);
   int ret = drm_atomic_intf_->Commit(true /* synchronous */, true /* retain_planes */);
   if (ret) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
   }
 
-  drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, release_fence);
-
+  *release_fence = static_cast<int>(release_fence_t);
+  DLOGD("RELEASE fence created: fd:%d", *release_fence);
   return kErrorNone;
 }
 
 DisplayError HWDeviceDRM::DozeSuspend(int *release_fence) {
   DTRACE_SCOPED();
+
+  int64_t release_fence_t = -1;
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id,
                             DRMPowerMode::DOZE_SUSPEND);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_t);
   int ret = drm_atomic_intf_->Commit(true /* synchronous */, true /* retain_planes */);
   if (ret) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
   }
 
-  drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, release_fence);
-
+  *release_fence = static_cast<int>(release_fence_t);
+  DLOGD("RELEASE fence created: fd:%d", *release_fence);
   return kErrorNone;
 }
 
@@ -955,6 +965,11 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
                             qos_data.rot_prefill_bw_bps);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ROT_CLK, token_.crtc_id, qos_data.rot_clock_hz);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_SECURITY_LEVEL, token_.crtc_id, crtc_security_level);
+
+  if (!validate) {
+    drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_);
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence_);
+  }
 
   DLOGI_IF(kTagDriverConfig, "%s::%s System Clock=%d Hz, Core: AB=%llu Bps, IB=%llu Bps, " \
            "LLCC: AB=%llu Bps, IB=%llu Bps, DRAM AB=%llu Bps, IB=%llu Bps, "\
@@ -1125,11 +1140,10 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
     return kErrorHardware;
   }
 
-  int release_fence = -1;
-  int retire_fence = -1;
-
-  drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence);
-  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence);
+  int release_fence = static_cast<int>(release_fence_);
+  int retire_fence = static_cast<int>(retire_fence_);
+  DLOGD("RELEASE fence created: fd:%d", release_fence);
+  DLOGD("RETIRE fence created: fd:%d", retire_fence);
 
   HWLayersInfo &hw_layer_info = hw_layers->info;
   LayerStack *stack = hw_layer_info.stack;
