@@ -751,7 +751,7 @@ DisplayError HWDeviceDRM::PowerOn(int *release_fence) {
   }
 
   *release_fence = static_cast<int>(release_fence_t);
-  DLOGD("RELEASE fence created: fd:%d", *release_fence);
+  DLOGD_IF(kTagDriverConfig, "RELEASE fence created: fd:%d", *release_fence);
   return kErrorNone;
 }
 
@@ -787,7 +787,7 @@ DisplayError HWDeviceDRM::Doze(int *release_fence) {
   }
 
   *release_fence = static_cast<int>(release_fence_t);
-  DLOGD("RELEASE fence created: fd:%d", *release_fence);
+  DLOGD_IF(kTagDriverConfig, "RELEASE fence created: fd:%d", *release_fence);
   return kErrorNone;
 }
 
@@ -806,7 +806,7 @@ DisplayError HWDeviceDRM::DozeSuspend(int *release_fence) {
   }
 
   *release_fence = static_cast<int>(release_fence_t);
-  DLOGD("RELEASE fence created: fd:%d", *release_fence);
+  DLOGD_IF(kTagDriverConfig, "RELEASE fence created: fd:%d", *release_fence);
   return kErrorNone;
 }
 
@@ -1142,8 +1142,8 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
 
   int release_fence = static_cast<int>(release_fence_);
   int retire_fence = static_cast<int>(retire_fence_);
-  DLOGD("RELEASE fence created: fd:%d", release_fence);
-  DLOGD("RETIRE fence created: fd:%d", retire_fence);
+  DLOGD_IF(kTagDriverConfig, "RELEASE fence created: fd:%d", release_fence);
+  DLOGD_IF(kTagDriverConfig, "RETIRE fence created: fd:%d", retire_fence);
 
   HWLayersInfo &hw_layer_info = hw_layers->info;
   LayerStack *stack = hw_layer_info.stack;
