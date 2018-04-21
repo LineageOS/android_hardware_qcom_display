@@ -809,7 +809,7 @@ HWC2::Error HWCDisplay::GetClientTargetSupport(uint32_t width, uint32_t height, 
     GetRange(dataspace, &(color_metadata.range));
   }
 
-  LayerBufferFormat sdm_format = GetSDMFormat(format, 0);
+  LayerBufferFormat sdm_format = HWCLayer::GetSDMFormat(format, 0);
   if (display_intf_->GetClientTargetSupport(width, height, sdm_format,
                                             color_metadata) != kErrorNone) {
     return HWC2::Error::Unsupported;
@@ -1397,146 +1397,6 @@ DisplayError HWCDisplay::SetMaxMixerStages(uint32_t max_mixer_stages) {
   return error;
 }
 
-LayerBufferFormat HWCDisplay::GetSDMFormat(const int32_t &source, const int flags) {
-  LayerBufferFormat format = kFormatInvalid;
-  if (flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED) {
-    switch (source) {
-      case HAL_PIXEL_FORMAT_RGBA_8888:
-        format = kFormatRGBA8888Ubwc;
-        break;
-      case HAL_PIXEL_FORMAT_RGBX_8888:
-        format = kFormatRGBX8888Ubwc;
-        break;
-      case HAL_PIXEL_FORMAT_BGR_565:
-        format = kFormatBGR565Ubwc;
-        break;
-      case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
-      case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
-      case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
-        format = kFormatYCbCr420SPVenusUbwc;
-        break;
-      case HAL_PIXEL_FORMAT_RGBA_1010102:
-        format = kFormatRGBA1010102Ubwc;
-        break;
-      case HAL_PIXEL_FORMAT_RGBX_1010102:
-        format = kFormatRGBX1010102Ubwc;
-        break;
-      case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
-        format = kFormatYCbCr420TP10Ubwc;
-        break;
-      case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
-        format = kFormatYCbCr420P010Ubwc;
-        break;
-      default:
-        DLOGE("Unsupported format type for UBWC %d", source);
-        return kFormatInvalid;
-    }
-    return format;
-  }
-
-  switch (source) {
-    case HAL_PIXEL_FORMAT_RGBA_8888:
-      format = kFormatRGBA8888;
-      break;
-    case HAL_PIXEL_FORMAT_RGBA_5551:
-      format = kFormatRGBA5551;
-      break;
-    case HAL_PIXEL_FORMAT_RGBA_4444:
-      format = kFormatRGBA4444;
-      break;
-    case HAL_PIXEL_FORMAT_BGRA_8888:
-      format = kFormatBGRA8888;
-      break;
-    case HAL_PIXEL_FORMAT_RGBX_8888:
-      format = kFormatRGBX8888;
-      break;
-    case HAL_PIXEL_FORMAT_BGRX_8888:
-      format = kFormatBGRX8888;
-      break;
-    case HAL_PIXEL_FORMAT_RGB_888:
-      format = kFormatRGB888;
-      break;
-    case HAL_PIXEL_FORMAT_RGB_565:
-      format = kFormatRGB565;
-      break;
-    case HAL_PIXEL_FORMAT_BGR_565:
-      format = kFormatBGR565;
-      break;
-    case HAL_PIXEL_FORMAT_BGR_888:
-      format = kFormatBGR888;
-      break;
-    case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
-    case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
-      format = kFormatYCbCr420SemiPlanarVenus;
-      break;
-    case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
-      format = kFormatYCrCb420SemiPlanarVenus;
-      break;
-    case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
-      format = kFormatYCbCr420SPVenusUbwc;
-      break;
-    case HAL_PIXEL_FORMAT_YV12:
-      format = kFormatYCrCb420PlanarStride16;
-      break;
-    case HAL_PIXEL_FORMAT_YCrCb_420_SP:
-      format = kFormatYCrCb420SemiPlanar;
-      break;
-    case HAL_PIXEL_FORMAT_YCbCr_420_SP:
-      format = kFormatYCbCr420SemiPlanar;
-      break;
-    case HAL_PIXEL_FORMAT_YCbCr_422_SP:
-      format = kFormatYCbCr422H2V1SemiPlanar;
-      break;
-    case HAL_PIXEL_FORMAT_YCbCr_422_I:
-      format = kFormatYCbCr422H2V1Packed;
-      break;
-    case HAL_PIXEL_FORMAT_CbYCrY_422_I:
-      format = kFormatCbYCrY422H2V1Packed;
-      break;
-    case HAL_PIXEL_FORMAT_RGBA_1010102:
-      format = kFormatRGBA1010102;
-      break;
-    case HAL_PIXEL_FORMAT_ARGB_2101010:
-      format = kFormatARGB2101010;
-      break;
-    case HAL_PIXEL_FORMAT_RGBX_1010102:
-      format = kFormatRGBX1010102;
-      break;
-    case HAL_PIXEL_FORMAT_XRGB_2101010:
-      format = kFormatXRGB2101010;
-      break;
-    case HAL_PIXEL_FORMAT_BGRA_1010102:
-      format = kFormatBGRA1010102;
-      break;
-    case HAL_PIXEL_FORMAT_ABGR_2101010:
-      format = kFormatABGR2101010;
-      break;
-    case HAL_PIXEL_FORMAT_BGRX_1010102:
-      format = kFormatBGRX1010102;
-      break;
-    case HAL_PIXEL_FORMAT_XBGR_2101010:
-      format = kFormatXBGR2101010;
-      break;
-    case HAL_PIXEL_FORMAT_YCbCr_420_P010:
-      format = kFormatYCbCr420P010;
-      break;
-    case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
-      format = kFormatYCbCr420TP10Ubwc;
-      break;
-    case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
-      format = kFormatYCbCr420P010Ubwc;
-      break;
-    case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
-      format = kFormatYCbCr420P010Venus;
-      break;
-    default:
-      DLOGW("Unsupported format type = %d", source);
-      return kFormatInvalid;
-  }
-
-  return format;
-}
-
 void HWCDisplay::DumpInputBuffers() {
   char dir_path[PATH_MAX];
 
@@ -1721,7 +1581,7 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
 
   // TODO(user): How does the dirty region get set on the client target? File bug on Google
   client_target_layer->composition = kCompositionGPUTarget;
-  client_target_layer->input_buffer.format = GetSDMFormat(format, flags);
+  client_target_layer->input_buffer.format = HWCLayer::GetSDMFormat(format, flags);
   client_target_layer->input_buffer.width = UINT32(aligned_width);
   client_target_layer->input_buffer.height = UINT32(aligned_height);
   client_target_layer->input_buffer.unaligned_width = x_pixels;

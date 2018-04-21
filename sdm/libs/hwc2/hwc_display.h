@@ -253,7 +253,6 @@ class HWCDisplay : public DisplayEventHandler {
   virtual DisplayError DisablePartialUpdateOneFrame() {
     return kErrorNotSupported;
   }
-  LayerBufferFormat GetSDMFormat(const int32_t &source, const int flags);
   const char *GetDisplayString();
   void MarkLayersForGPUBypass(void);
   void MarkLayersForClientComposition(void);
