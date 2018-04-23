@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -505,7 +505,9 @@ DisplayError CompManager::SetCompositionState(Handle display_ctx,
 }
 
 DisplayError CompManager::ControlDpps(bool enable) {
-  if (dpps_ctrl_intf_) {
+  // DPPS feature and HDR using SSPP tone mapping can co-exist
+  // DPPS feature and HDR using DSPP tone mapping are mutually exclusive
+  if (dpps_ctrl_intf_ && hw_res_info_.src_tone_map.none()) {
     return enable ? dpps_ctrl_intf_->On() : dpps_ctrl_intf_->Off();
   }
 

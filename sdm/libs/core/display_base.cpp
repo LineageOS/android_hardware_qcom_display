@@ -1470,7 +1470,6 @@ DisplayError DisplayBase::SetHDRMode(bool set) {
     error = SetColorModeInternal(color_mode);
   }
 
-  // DPPS and HDR features are mutually exclusive
   comp_manager_->ControlDpps(!set);
   hdr_mode_ = set;
 
