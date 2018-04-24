@@ -318,6 +318,7 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   hw_resource->hw_dest_scalar_info.max_output_width = info.max_dest_scaler_output_width;
   hw_resource->min_prefill_lines = info.min_prefill_lines;
   hw_resource->secure_disp_blend_stage = info.secure_disp_blend_stage;
+  hw_resource->has_concurrent_writeback = info.concurrent_writeback;
 }
 
 void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
@@ -483,7 +484,6 @@ void HWInfoDRM::GetWBInfo(HWResourceInfo *hw_resource) {
 
   hw_resource->supported_formats_map.erase(sub_blk_type);
   hw_resource->supported_formats_map.insert(make_pair(sub_blk_type, supported_sdm_formats));
-  hw_resource->has_concurrent_writeback = connector_info.concurrent_writeback;
 
   drm_mgr_intf_->UnregisterDisplay(token);
 }
