@@ -121,6 +121,13 @@ enum PPGlobalColorFeatureID {
   kMaxNumPPFeatures,
 };
 
+enum PPSourceColorFeatureID {
+  kSourceColorFeatureIgc = kMaxNumPPFeatures + 1,
+  kSourceColorFeatureGc,
+  kSourceColorFeatureGamut,
+  kMaxNumSourcePPFeatures,
+};
+
 struct PPPendingParams {
   int32_t action = kNoAction;
   void *params = NULL;

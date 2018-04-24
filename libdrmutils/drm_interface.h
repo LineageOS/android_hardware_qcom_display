@@ -550,6 +550,10 @@ enum DRMPPFeatureID {
   kFeaturePAMemColSky,
   kFeaturePAMemColFoliage,
   kFeaturePAMemColProt,
+  kFeatureDgmIgc,
+  kFeatureDgmGc,
+  kFeatureVigIgc,
+  kFeatureVigGamut,
   kPPFeaturesMax,
 };
 
