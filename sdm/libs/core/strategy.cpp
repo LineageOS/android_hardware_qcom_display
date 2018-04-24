@@ -150,6 +150,11 @@ DisplayError Strategy::GetNextStrategy(StrategyConstraints *constraints) {
   Layer layer = *gpu_target_layer;
   hw_layers_info_->index.push_back(hw_layers_info_->gpu_target_index);
   hw_layers_info_->roi_index.push_back(0);
+  layer.transform.flip_horizontal ^= hw_panel_info_.panel_orientation.flip_horizontal;
+  layer.transform.flip_vertical ^= hw_panel_info_.panel_orientation.flip_vertical;
+  // Flip rect to match transform.
+  TransformHV(src_domain, layer.dst_rect, layer.transform, &layer.dst_rect);
+  // Scale to mixer resolution.
   MapRect(src_domain, dst_domain, layer.dst_rect, &layer.dst_rect);
   hw_layers_info_->hw_layers.push_back(layer);
 
