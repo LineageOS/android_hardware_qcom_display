@@ -68,7 +68,6 @@
 
 using drm_utils::DRMMaster;
 using drm_utils::DRMResMgr;
-using drm_utils::DRMLogger;
 using drm_utils::DRMLibLoader;
 using sde_drm::GetDRMManager;
 using sde_drm::DRMPlanesInfo;
@@ -82,25 +81,6 @@ using std::fstream;
 using std::to_string;
 
 namespace sdm {
-
-class DRMLoggerImpl : public DRMLogger {
- public:
-#define PRINTLOG(tag, method, format, buf)        \
-  va_list list;                              \
-  va_start(list, format);                    \
-  vsnprintf(buf, sizeof(buf), format, list); \
-  va_end(list);                              \
-  Debug::Get()->method(tag, "%s", buf);
-
-  void Error(const char *format, ...) { PRINTLOG(kTagNone, Error, format, buf_); }
-  void Warning(const char *format, ...) { PRINTLOG(kTagDriverConfig, Warning, format, buf_); }
-  void Info(const char *format, ...) { PRINTLOG(kTagDriverConfig, Info, format, buf_); }
-  void Debug(const char *format, ...) { PRINTLOG(kTagDriverConfig, Debug, format, buf_); }
-  void Verbose(const char *format, ...) { PRINTLOG(kTagDriverConfig, Verbose, format, buf_); }
-
- private:
-  char buf_[1024] = {};
-};
 
 static HWQseedStepVersion GetQseedStepVersion(sde_drm::QSEEDStepVersion drm_version) {
   HWQseedStepVersion sdm_version;
@@ -133,7 +113,6 @@ static InlineRotationVersion GetInRotVersion(sde_drm::InlineRotationVersion drm_
 HWResourceInfo *HWInfoDRM::hw_resource_ = nullptr;
 
 HWInfoDRM::HWInfoDRM() {
-  DRMLogger::Set(new DRMLoggerImpl());
   default_mode_ = (DRMLibLoader::GetInstance()->IsLoaded() == false);
   if (!default_mode_) {
     DRMMaster *drm_master = {};
@@ -228,7 +207,7 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
   // through property
   int value = 0;
   bool disable_dest_scalar = false;
-  if (Debug::Get()->GetProperty("sdm.debug.disable_dest_scalar", &value) == kErrorNone) {
+  if (Debug::GetProperty("sdm.debug.disable_dest_scalar", &value) == kErrorNone) {
     disable_dest_scalar = (value == 1);
   }
   DynLib extension_lib;

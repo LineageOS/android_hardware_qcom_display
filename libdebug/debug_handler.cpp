@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -27,46 +27,34 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef __DEBUG_H__
-#define __DEBUG_H__
+#include "debug_handler.h"
 
-#include <stdint.h>
-#include <debug_handler.h>
-#include <core/sdm_types.h>
-#include <core/display_interface.h>
+namespace display {
 
-namespace sdm {
-
-using display::DebugHandler;
-
-class Debug {
+// By default, drop any log messages/traces. It need to be overridden by client.
+class DefaultDebugHandler : public DebugHandler {
  public:
-  static inline DebugHandler* Get() { return DebugHandler::Get(); }
-  static int GetSimulationFlag();
-  static bool GetExternalResolution(char *val);
-  static void GetIdleTimeoutMs(uint32_t *active_ms, uint32_t *inactive_ms);
-  static int GetBootAnimLayerCount();
-  static bool IsRotatorDownScaleDisabled();
-  static bool IsDecimationDisabled();
-  static int GetMaxPipesPerMixer(DisplayType display_type);
-  static int GetMaxUpscale();
-  static bool IsVideoModeEnabled();
-  static bool IsRotatorUbwcDisabled();
-  static bool IsRotatorSplitDisabled();
-  static bool IsScalarDisabled();
-  static bool IsUbwcTiledFrameBuffer();
-  static bool IsAVRDisabled();
-  static bool IsExtAnimDisabled();
-  static bool IsPartialSplitDisabled();
-  static bool IsSrcSplitPreferred();
-  static DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
-  static DisplayError GetReducedConfig(uint32_t *num_vig_pipes, uint32_t *num_dma_pipes);
-  static int GetExtMaxlayers();
-  static DisplayError GetProperty(const char *property_name, char *value);
-  static DisplayError GetProperty(const char *property_name, int *value);
+  virtual void Error(const char *, ...) { }
+  virtual void Warning(const char *, ...) { }
+  virtual void Info(const char *, ...) { }
+  virtual void Debug(const char *, ...) { }
+  virtual void Verbose(const char *, ...) { }
+  virtual void BeginTrace(const char *, const char *, const char *) { }
+  virtual void EndTrace() { }
+  virtual int GetProperty(const char *, int *) { return -1; }
+  virtual int GetProperty(const char *, char *) { return -1; }
 };
 
-}  // namespace sdm
+DefaultDebugHandler g_default_debug_handler;
+DebugHandler * DebugHandler::debug_handler_ = &g_default_debug_handler;
+std::bitset<32> DebugHandler::log_mask_ = 0x1;  // Always print logs tagged with value 0
 
-#endif  // __DEBUG_H__
+void DebugHandler::Set(DebugHandler *debug_handler) {
+  if (debug_handler) {
+    debug_handler_ = debug_handler;
+  } else {
+    debug_handler_ = &g_default_debug_handler;
+  }
+}
 
+}  // namespace display

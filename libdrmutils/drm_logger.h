@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -30,39 +30,18 @@
 #ifndef __DRM_LOGGER_H__
 #define __DRM_LOGGER_H__
 
+#include <debug_handler.h>
 #include <utility>
 
 namespace drm_utils {
 
-class DRMLogger {
- public:
-  virtual ~DRMLogger() {}
-  virtual void Error(const char *format, ...) = 0;
-  virtual void Warning(const char *format, ...) = 0;
-  virtual void Info(const char *format, ...) = 0;
-  virtual void Debug(const char *format, ...) = 0;
-  virtual void Verbose(const char *format, ...) = 0;
+#define DRM_LOG_TAG  4  // = kTagRotator
 
-  static void Set(DRMLogger *logger) { s_instance = logger; }
-  static DRMLogger *Get() { return s_instance; }
-
- private:
-  static DRMLogger *s_instance;
-};
-
-#define DRM_LOG(method, format, ...)                            \
-  if (drm_utils::DRMLogger::Get()) {                            \
-    drm_utils::DRMLogger::Get()->method(format, ##__VA_ARGS__); \
-  }
-
-#define DRM_LOG_CONTEXT(method, format, ...) \
-  DRM_LOG(method, __CLASS__ "::%s: " format, __FUNCTION__, ##__VA_ARGS__);
-
-#define DRM_LOGE(format, ...) DRM_LOG_CONTEXT(Error, format, ##__VA_ARGS__)
-#define DRM_LOGW(format, ...) DRM_LOG_CONTEXT(Warning, format, ##__VA_ARGS__)
-#define DRM_LOGI(format, ...) DRM_LOG_CONTEXT(Info, format, ##__VA_ARGS__)
-#define DRM_LOGD(format, ...) DRM_LOG_CONTEXT(Debug, format, ##__VA_ARGS__)
-#define DRM_LOGV(format, ...) DRM_LOG_CONTEXT(Verbose, format, ##__VA_ARGS__)
+#define DRM_LOGE(format, ...) DLOGE(format, ##__VA_ARGS__)
+#define DRM_LOGW(format, ...) DLOGW_IF(DRM_LOG_TAG, format, ##__VA_ARGS__)
+#define DRM_LOGI(format, ...) DLOGI_IF(DRM_LOG_TAG, format, ##__VA_ARGS__)
+#define DRM_LOGD(format, ...) DLOGD_IF(DRM_LOG_TAG, format, ##__VA_ARGS__)
+#define DRM_LOGV(format, ...) DLOGV_IF(DRM_LOG_TAG, format, ##__VA_ARGS__)
 
 }  // namespace drm_utils
 

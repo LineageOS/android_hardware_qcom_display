@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -53,7 +53,6 @@ using std::fill;
 
 namespace drm_utils {
 
-DRMLogger *DRMLogger::s_instance = nullptr;
 DRMMaster *DRMMaster::s_instance = nullptr;
 mutex DRMMaster::s_lock;
 
