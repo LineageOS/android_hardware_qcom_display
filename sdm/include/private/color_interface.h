@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2017, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015-2018, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -30,6 +30,7 @@
 #ifndef __COLOR_INTERFACE_H__
 #define __COLOR_INTERFACE_H__
 
+#include <string>
 #include "core/sdm_types.h"
 #include "color_params.h"
 
@@ -93,6 +94,8 @@ class ColorInterface {
                                             AttrVal *query) = 0;
   virtual DisplayError ColorIntfGetDefaultModeID(PPFeaturesConfig *out_features,
                                                  uint32_t disp_id, int32_t *mode_id) = 0;
+  virtual DisplayError ColorIntfGetActiveMode(PPFeaturesConfig *out_features,
+                                              int32_t disp_id, std::string *mode) = 0;
 
  protected:
   virtual ~ColorInterface() {}

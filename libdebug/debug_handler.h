@@ -47,9 +47,9 @@
 #define DLOGV_IF(tag, format, ...) DLOG_IF(tag, Verbose, format, ##__VA_ARGS__)
 
 #define DLOGE(format, ...) DLOG(Error, format, ##__VA_ARGS__)
-#define DLOGD(format, ...) DLOG(Debug, format, ##__VA_ARGS__)
 #define DLOGW(format, ...) DLOG(Warning, format, ##__VA_ARGS__)
 #define DLOGI(format, ...) DLOG(Info, format, ##__VA_ARGS__)
+#define DLOGD(format, ...) DLOG(Debug, format, ##__VA_ARGS__)
 #define DLOGV(format, ...) DLOG(Verbose, format, ##__VA_ARGS__)
 
 #define DTRACE_BEGIN(custom_string) display::DebugHandler::Get()->BeginTrace( \

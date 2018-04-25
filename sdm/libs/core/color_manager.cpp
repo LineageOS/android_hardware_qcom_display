@@ -1,4 +1,4 @@
-/* Copyright (c) 2015 - 2017, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015 - 2018, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -31,6 +31,7 @@
 #include <private/color_interface.h>
 #include <utils/constants.h>
 #include <utils/debug.h>
+#include <string>
 #include "color_manager.h"
 
 #define __CLASS__ "ColorManager"
@@ -244,6 +245,10 @@ DisplayError ColorManagerProxy::ColorMgrSetColorTransform(uint32_t length,
 
 DisplayError ColorManagerProxy::ColorMgrGetDefaultModeID(int32_t *mode_id) {
   return color_intf_->ColorIntfGetDefaultModeID(&pp_features_, 0, mode_id);
+}
+
+DisplayError ColorManagerProxy::ColorMgrGetActiveMode(std::string *mode) {
+  return color_intf_->ColorIntfGetActiveMode(&pp_features_, 0, mode);
 }
 
 }  // namespace sdm
