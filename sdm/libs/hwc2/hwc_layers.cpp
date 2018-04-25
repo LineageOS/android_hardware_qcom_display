@@ -114,8 +114,11 @@ bool GetTransfer(const int32_t &dataspace, GammaTransfer *gamma_transfer) {
     case HAL_DATASPACE_TRANSFER_GAMMA2_2:
       *gamma_transfer = Transfer_Gamma2_2;
       break;
+    case HAL_DATASPACE_TRANSFER_GAMMA2_8:
+      *gamma_transfer = Transfer_Gamma2_8;
+      break;
     default:
-      DLOGV_IF(kTagClient, "Unsupported Transfer Request = %d", transfer);
+      DLOGE("Unsupported Transfer Request = %d", transfer);
       supported_transfer = false;
   }
   return supported_transfer;
