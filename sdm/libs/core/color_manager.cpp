@@ -128,7 +128,7 @@ ColorManagerProxy *ColorManagerProxy::CreateColorManagerProxy(DisplayType type,
       DLOGW("Fail to get DSPP feature versions");
     } else {
       hw_attr.Set(hw_res_info_, panel_info, attribute, versions);
-      DLOGW("PAV2 version is versions = %d, version = %d ",
+      DLOGI("PAV2 version is versions = %d, version = %d ",
             hw_attr.version.version[kGlobalColorFeaturePaV2],
             versions.version[kGlobalColorFeaturePaV2]);
     }
