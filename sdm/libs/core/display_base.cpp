@@ -625,6 +625,16 @@ std::string DisplayBase::Dump() {
     << max_mixer_stages_;
   os << "\nnum configs: " << num_modes << " active config index: " << active_index;
 
+  os << "\nAvailable Color Modes:\n";
+  for (auto it : color_mode_map_) {
+    os << "  " << it.first << " " << std::setw(35 - INT(it.first.length())) <<
+       it.second->id;
+    os << " ";
+    for (auto attr_it : color_mode_attr_map_[it.first]) {
+      os << std::right << " " << attr_it.first << ": " << attr_it.second;
+    }
+    os << "\n";
+  }
   DisplayConfigVariableInfo &info = attrib;
 
   uint32_t num_hw_layers = 0;
