@@ -2122,6 +2122,12 @@ int32_t HWCSession::SetReadbackBuffer(hwc2_device_t *device, hwc2_display_t disp
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
+  HWCSession *hwc_session = static_cast<HWCSession *>(device);
+  if (hwc_session->hwc_display_[HWC_DISPLAY_EXTERNAL] ||
+      hwc_session->hwc_display_[HWC_DISPLAY_VIRTUAL]) {
+    return HWC2_ERROR_UNSUPPORTED;
+  }
+
   return CallDisplayFunction(device, display, &HWCDisplay::SetReadbackBuffer,
                              buffer, acquire_fence, false);
 }

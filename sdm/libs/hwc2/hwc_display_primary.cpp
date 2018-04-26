@@ -523,6 +523,7 @@ void HWCDisplayPrimary::HandleFrameDump() {
     } else {
       DumpOutputBuffer(output_buffer_info_, output_buffer_base_, layer_stack_.retire_fence_fd);
       readback_buffer_queued_ = false;
+      validated_ = false;
     }
   }
 
