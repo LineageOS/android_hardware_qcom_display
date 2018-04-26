@@ -424,6 +424,8 @@ HWC2::Error HWCDisplay::CreateLayer(hwc2_layer_t *out_layer_id) {
   *out_layer_id = layer->GetId();
   geometry_changes_ |= GeometryChanges::kAdded;
   validated_.reset();
+  layer_stack_invalid_ = true;
+
   return HWC2::Error::None;
 }
 
@@ -456,6 +458,8 @@ HWC2::Error HWCDisplay::DestroyLayer(hwc2_layer_t layer_id) {
 
   geometry_changes_ |= GeometryChanges::kRemoved;
   validated_.reset();
+  layer_stack_invalid_ = true;
+
   return HWC2::Error::None;
 }
 
@@ -616,6 +620,8 @@ void HWCDisplay::BuildLayerStack() {
 
   // set secure display
   SetSecureDisplay(secure_display_active);
+
+  layer_stack_invalid_ = false;
 }
 
 void HWCDisplay::BuildSolidFillStack() {
@@ -1157,6 +1163,10 @@ HWC2::Error HWCDisplay::GetHdrCapabilities(uint32_t *out_num_types, int32_t *out
 
 
 HWC2::Error HWCDisplay::CommitLayerStack(void) {
+  if (flush_) {
+     return HWC2::Error::None;
+  }
+
   if (skip_validate_ && !CanSkipValidate()) {
     validated_.reset(type_);
   }
@@ -1172,37 +1182,36 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
 
   DumpInputBuffers();
 
-  if (!flush_) {
-    DisplayError error = kErrorUndefined;
-    int status = 0;
-    if (tone_mapper_) {
-      if (layer_stack_.flags.hdr_present) {
-        status = tone_mapper_->HandleToneMap(&layer_stack_);
-        if (status != 0) {
-          DLOGE("Error handling HDR in ToneMapper");
-        }
-      } else {
-        tone_mapper_->Terminate();
+  DisplayError error = kErrorUndefined;
+  int status = 0;
+  if (tone_mapper_) {
+    if (layer_stack_.flags.hdr_present) {
+      status = tone_mapper_->HandleToneMap(&layer_stack_);
+      if (status != 0) {
+        DLOGE("Error handling HDR in ToneMapper");
       }
-    }
-    error = display_intf_->Commit(&layer_stack_);
-
-    if (error == kErrorNone) {
-      // A commit is successfully submitted, start flushing on failure now onwards.
-      flush_on_error_ = true;
     } else {
-      if (error == kErrorShutDown) {
-        shutdown_pending_ = true;
-        return HWC2::Error::Unsupported;
-      } else if (error == kErrorNotValidated) {
-        validated_.reset(type_);
-        return HWC2::Error::NotValidated;
-      } else if (error != kErrorPermission) {
-        DLOGE("Commit failed. Error = %d", error);
-        // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
-        // so that previous buffer and fences are released, and override the error.
-        flush_ = true;
-      }
+      tone_mapper_->Terminate();
+    }
+  }
+
+  error = display_intf_->Commit(&layer_stack_);
+
+  if (error == kErrorNone) {
+    // A commit is successfully submitted, start flushing on failure now onwards.
+    flush_on_error_ = true;
+  } else {
+    if (error == kErrorShutDown) {
+      shutdown_pending_ = true;
+      return HWC2::Error::Unsupported;
+    } else if (error == kErrorNotValidated) {
+      validated_.reset(type_);
+      return HWC2::Error::NotValidated;
+    } else if (error != kErrorPermission) {
+      DLOGE("Commit failed. Error = %d", error);
+      // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
+      // so that previous buffer and fences are released, and override the error.
+      flush_ = true;
     }
   }
 
@@ -1994,6 +2003,12 @@ std::string HWCDisplay::Dump() {
     os << " buffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec
        << std::endl;
   }
+
+  if (layer_stack_invalid_) {
+    os << "\n Layers added or removed but not reflected to SDM's layer stack yet\n";
+    return os.str();
+  }
+
   if (color_mode_) {
     color_mode_->Dump(&os);
   }
