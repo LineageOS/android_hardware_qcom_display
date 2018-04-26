@@ -50,24 +50,6 @@
 
 namespace sdm {
 
-// This weight function is needed because the color primaries are not sorted by gamut size
-static ColorPrimaries WidestPrimaries(ColorPrimaries p1, ColorPrimaries p2) {
-  int weight = 10;
-  int lp1 = p1, lp2 = p2;
-  // TODO(user) add weight to other wide gamut primaries
-  if (lp1 == ColorPrimaries_BT2020) {
-    lp1 *= weight;
-  }
-  if (lp1 == ColorPrimaries_BT2020) {
-    lp2 *= weight;
-  }
-  if (lp1 >= lp2) {
-    return p1;
-  } else {
-    return p2;
-  }
-}
-
 HWCColorMode::HWCColorMode(DisplayInterface *display_intf) : display_intf_(display_intf) {}
 
 HWC2::Error HWCColorMode::Init() {
@@ -493,14 +475,11 @@ void HWCDisplay::BuildLayerStack() {
   layer_stack_ = LayerStack();
   display_rect_ = LayerRect();
   metadata_refresh_rate_ = 0;
-  auto working_primaries = ColorPrimaries_BT709_5;
   bool secure_display_active = false;
   layer_stack_.flags.animating = animating_;
 
   uint32_t color_mode_count = 0;
   display_intf_->GetColorModeCount(&color_mode_count);
-
-  bool extended_range = false;
 
   // Add one layer for fb target
   // TODO(user): Add blit target layers
@@ -517,18 +496,8 @@ void HWCDisplay::BuildLayerStack() {
     }
 
     if (!hwc_layer->ValidateAndSetCSC()) {
-#ifdef FEATURE_WIDE_COLOR
       layer->flags.skip = true;
-#endif
     }
-
-    auto range = hwc_layer->GetLayerDataspace() & HAL_DATASPACE_RANGE_MASK;
-    if (range == HAL_DATASPACE_RANGE_EXTENDED) {
-      extended_range = true;
-    }
-
-    working_primaries = WidestPrimaries(working_primaries,
-                                        layer->input_buffer.color_metadata.colorPrimaries);
 
     // set default composition as GPU for SDM
     layer->composition = kCompositionGPU;
@@ -626,20 +595,6 @@ void HWCDisplay::BuildLayerStack() {
     layer_stack_.layers.push_back(layer);
   }
 
-
-#ifdef FEATURE_WIDE_COLOR
-  for (auto hwc_layer : layer_set_) {
-    auto layer = hwc_layer->GetSDMLayer();
-    if (layer->input_buffer.color_metadata.colorPrimaries != working_primaries &&
-        !hwc_layer->SupportLocalConversion(working_primaries)) {
-      layer->flags.skip = true;
-    }
-    if (layer->flags.skip) {
-      layer_stack_.flags.skip_present = true;
-    }
-  }
-#endif
-
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
   layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0);
   // Append client target to the layer stack
@@ -649,7 +604,7 @@ void HWCDisplay::BuildLayerStack() {
   // fall back frame composition to GPU when client target is 10bit
   // TODO(user): clarify the behaviour from Client(SF) and SDM Extn -
   // when handling 10bit FBT, as it would affect blending
-  if (Is10BitFormat(sdm_client_target->input_buffer.format) || extended_range) {
+  if (Is10BitFormat(sdm_client_target->input_buffer.format)) {
     // Must fall back to client composition
     MarkLayersForClientComposition();
   }

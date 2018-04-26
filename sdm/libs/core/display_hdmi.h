@@ -46,6 +46,7 @@ class DisplayHDMI : public DisplayBase, HWEventHandler {
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate);
   virtual bool IsUnderscanSupported();
   virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
+  virtual DisplayError InitializeColorModes();
 
   // Implement the HWEventHandlers
   virtual DisplayError VSync(int64_t timestamp);
@@ -61,6 +62,7 @@ class DisplayHDMI : public DisplayBase, HWEventHandler {
   uint32_t GetBestConfig(HWS3DMode s3d_mode);
   void GetScanSupport();
   void SetS3DMode(LayerStack *layer_stack);
+
   static const int kPropertyMax = 256;
 
   bool underscan_supported_ = false;

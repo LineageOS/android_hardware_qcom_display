@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -24,6 +24,7 @@
 
 #include <utils/constants.h>
 #include <utils/debug.h>
+#include <vector>
 
 #include "strategy.h"
 #include "utils/rect.h"
@@ -244,6 +245,13 @@ DisplayError Strategy::SetIdleTimeoutMs(uint32_t active_ms) {
     return strategy_intf_->SetIdleTimeoutMs(active_ms);
   }
 
+  return kErrorNotSupported;
+}
+
+DisplayError Strategy::SetColorModesInfo(const std::vector<PrimariesTransfer> &colormodes_cs) {
+  if (strategy_intf_) {
+    return strategy_intf_->SetColorModesInfo(colormodes_cs);
+  }
   return kErrorNotSupported;
 }
 

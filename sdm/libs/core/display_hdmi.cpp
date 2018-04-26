@@ -96,6 +96,8 @@ DisplayError DisplayHDMI::Init() {
     DLOGE("Failed to create hardware events interface. Error = %d", error);
   }
 
+  InitializeColorModes();
+
   current_refresh_rate_ = hw_panel_info_.max_fps;
 
   return error;
@@ -301,6 +303,27 @@ DisplayError DisplayHDMI::VSync(int64_t timestamp) {
     DisplayEventVSync vsync;
     vsync.timestamp = timestamp;
     event_handler_->VSync(vsync);
+  }
+
+  return kErrorNone;
+}
+
+DisplayError DisplayHDMI::InitializeColorModes() {
+  PrimariesTransfer pt = {};
+  color_modes_cs_.push_back(pt);
+
+  if (!hw_panel_info_.hdr_enabled) {
+    return kErrorNone;
+  }
+
+  pt.primaries = ColorPrimaries_BT2020;
+  if (hw_panel_info_.hdr_eotf & kHdrEOTFHDR10) {
+    pt.transfer = Transfer_SMPTE_ST2084;
+    color_modes_cs_.push_back(pt);
+  }
+  if (hw_panel_info_.hdr_eotf & kHdrEOTFHLG) {
+    pt.transfer = Transfer_HLG;
+    color_modes_cs_.push_back(pt);
   }
 
   return kErrorNone;

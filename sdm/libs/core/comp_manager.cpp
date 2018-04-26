@@ -25,6 +25,7 @@
 #include <utils/constants.h>
 #include <utils/debug.h>
 #include <core/buffer_allocator.h>
+#include <vector>
 
 #include "comp_manager.h"
 #include "strategy.h"
@@ -537,6 +538,16 @@ bool CompManager::SetDisplayState(Handle display_ctx,
   }
 
   return true;
+}
+
+DisplayError CompManager::SetColorModesInfo(Handle display_ctx,
+                                            const std::vector<PrimariesTransfer> &colormodes_cs) {
+  DisplayCompositionContext *display_comp_ctx =
+      reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+
+  display_comp_ctx->strategy->SetColorModesInfo(colormodes_cs);
+
+  return kErrorNone;
 }
 
 }  // namespace sdm

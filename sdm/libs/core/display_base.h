@@ -119,6 +119,7 @@ class DisplayBase : public DisplayInterface {
                                               LayerBufferFormat format,
                                               const ColorMetaData &color_metadata);
   virtual std::string Dump();
+  virtual DisplayError InitializeColorModes();
 
  protected:
   DisplayError BuildLayerStackStats(LayerStack *layer_stack);
@@ -137,7 +138,6 @@ class DisplayBase : public DisplayInterface {
                                  uint32_t *new_mixer_height);
   DisplayError ReconfigureMixer(uint32_t width, uint32_t height);
   bool NeedsDownScale(const LayerRect &src_rect, const LayerRect &dst_rect, bool needs_rotation);
-  DisplayError InitializeColorModes();
   void DeInitializeColorModes();
   DisplayError SetColorModeInternal(const std::string &color_mode);
   DisplayError GetValueOfModeAttribute(const AttrVal &attr, const std::string &type,
@@ -147,6 +147,10 @@ class DisplayBase : public DisplayInterface {
   DisplayState GetLastPowerMode();
   void SetPUonDestScaler();
   void ClearColorInfo();
+  bool NeedsGpuFallback(const Layer *layer);
+  bool NeedsHdrHandling();
+  void GetColorPrimaryTransferFromAttributes(const AttrVal &attr,
+      std::vector<PrimariesTransfer> *supported_pt);
 
   recursive_mutex recursive_mutex_;
   DisplayType display_type_;
@@ -179,6 +183,7 @@ class DisplayBase : public DisplayInterface {
   ColorModeMap color_mode_map_ = {};
   typedef std::map<std::string, AttrVal> ColorModeAttrMap;
   ColorModeAttrMap color_mode_attr_map_ = {};
+  std::vector<PrimariesTransfer> color_modes_cs_ = {};  // Gamut+Gamma(color space) of color mode
   HWDisplayAttributes display_attributes_ = {};
   HWMixerAttributes mixer_attributes_ = {};
   DisplayConfigVariableInfo fb_config_ = {};
@@ -189,6 +194,7 @@ class DisplayBase : public DisplayInterface {
   bool hdr_mode_ = false;
   int disable_hdr_lut_gen_ = 0;
   DisplayState last_power_mode_ = kStateOff;
+  bool gpu_fallback_ = false;
 };
 
 }  // namespace sdm
