@@ -479,12 +479,20 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, int *release_fence
     break;
 
   case kStateDoze:
+    if (state_ == kStateOff) {
+      DLOGI("Doze state not supported after suspend");
+      return kErrorNone;
+    }
     error = hw_intf_->Doze(release_fence);
     active = true;
     last_power_mode_ = kStateDoze;
     break;
 
   case kStateDozeSuspend:
+    if (state_ == kStateOff) {
+      DLOGI("Doze suspend state not supported after suspend");
+      return kErrorNone;
+    }
     error = hw_intf_->DozeSuspend(release_fence);
     if (display_type_ != kPrimary) {
       active = true;
