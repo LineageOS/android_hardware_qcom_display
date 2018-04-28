@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -47,6 +47,9 @@ class HWPeripheralDRM : public HWDeviceDRM {
   virtual DisplayError Validate(HWLayers *hw_layers);
   virtual DisplayError Commit(HWLayers *hw_layers);
   virtual DisplayError Flush();
+  virtual DisplayError SetDppsFeature(uint32_t object_type, uint32_t feature_id,
+                                      uint64_t value);
+  virtual DisplayError GetDppsFeatureInfo(void *info);
  private:
   void SetDestScalarData(HWLayersInfo hw_layer_info);
   void ResetDisplayParams();

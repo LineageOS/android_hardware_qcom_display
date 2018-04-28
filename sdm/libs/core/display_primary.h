@@ -25,6 +25,7 @@
 #ifndef __DISPLAY_PRIMARY_H__
 #define __DISPLAY_PRIMARY_H__
 
+#include <core/dpps_interface.h>
 #include <vector>
 
 #include "display_base.h"
@@ -34,12 +35,26 @@ namespace sdm {
 
 class HWPrimaryInterface;
 
-class DisplayPrimary : public DisplayBase, HWEventHandler {
+class DppsInfo {
+ public:
+  void Init(DppsPropIntf* intf);
+  void Deinit();
+
+ private:
+  const char *kDppsLib = "libdpps.so";
+  DynLib dpps_impl_lib;
+  DppsInterface* dpps_intf = NULL;
+  DppsInterface* (*GetDppsInterface)() = NULL;
+  bool dpps_initialized_ = false;
+};
+
+class DisplayPrimary : public DisplayBase, HWEventHandler, DppsPropIntf {
  public:
   DisplayPrimary(DisplayEventHandler *event_handler, HWInfoInterface *hw_info_intf,
                  BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
                  CompManager *comp_manager);
   virtual DisplayError Init();
+  virtual DisplayError Deinit();
   virtual DisplayError Prepare(LayerStack *layer_stack);
   virtual DisplayError Commit(LayerStack *layer_stack);
   virtual DisplayError ControlPartialUpdate(bool enable, uint32_t *pending);
@@ -63,6 +78,11 @@ class DisplayPrimary : public DisplayBase, HWEventHandler {
   virtual void PingPongTimeout();
   virtual void PanelDead();
 
+  // Implement the DppsPropIntf
+  virtual DisplayError SetDppsFeature(uint32_t object_type,
+                                      uint32_t feature_id, uint64_t value);
+  virtual DisplayError GetDppsFeatureInfo(void *info);
+
  private:
   bool NeedsAVREnable();
   void ResetPanel();
@@ -73,6 +93,7 @@ class DisplayPrimary : public DisplayBase, HWEventHandler {
   bool handle_idle_timeout_ = false;
   uint32_t current_refresh_rate_ = 0;
   bool reset_panel_ = false;
+  DppsInfo dpps_info_ = {};
 };
 
 }  // namespace sdm
