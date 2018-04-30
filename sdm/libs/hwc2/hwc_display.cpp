@@ -342,13 +342,15 @@ void HWCColorMode::Dump(std::ostringstream* os) {
   *os << std::endl;
 }
 
-HWCDisplay::HWCDisplay(CoreInterface *core_intf, HWCCallbacks *callbacks, DisplayType type,
-                       hwc2_display_t id, bool needs_blit, qService::QService *qservice,
-                       DisplayClass display_class, BufferAllocator *buffer_allocator)
+HWCDisplay::HWCDisplay(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
+                       HWCCallbacks *callbacks, qService::QService *qservice,
+                       DisplayType type, hwc2_display_t id, int32_t sdm_id,
+                       bool needs_blit, DisplayClass display_class)
     : core_intf_(core_intf),
       callbacks_(callbacks),
       type_(type),
       id_(id),
+      sdm_id_(sdm_id),
       needs_blit_(needs_blit),
       qservice_(qservice),
       display_class_(display_class) {
@@ -356,10 +358,10 @@ HWCDisplay::HWCDisplay(CoreInterface *core_intf, HWCCallbacks *callbacks, Displa
 }
 
 int HWCDisplay::Init() {
-  DisplayError error = core_intf_->CreateDisplay(type_, this, &display_intf_);
+  DisplayError error = core_intf_->CreateDisplay(sdm_id_, this, &display_intf_);
   if (error != kErrorNone) {
-    DLOGE("Display create failed. Error = %d display_type %d event_handler %p disp_intf %p", error,
-          type_, this, &display_intf_);
+    DLOGE("Display create failed. Error = %d display_id = %d event_handler = %p disp_intf = %p",
+          error, sdm_id_, this, &display_intf_);
     return -EINVAL;
   }
 
@@ -880,14 +882,14 @@ HWC2::Error HWCDisplay::GetDisplayName(uint32_t *out_size, char *out_name) {
   }
 
   std::string name;
-  switch (id_) {
-    case HWC_DISPLAY_PRIMARY:
-      name = "Primary Display";
+  switch (type_) {
+    case kBuiltIn:
+      name = "Built-in Display";
       break;
-    case HWC_DISPLAY_EXTERNAL:
-      name = "External Display";
+    case kPluggable:
+      name = "Pluggable Display";
       break;
-    case HWC_DISPLAY_VIRTUAL:
+    case kVirtual:
       name = "Virtual Display";
       break;
     default:
@@ -911,16 +913,13 @@ HWC2::Error HWCDisplay::GetDisplayName(uint32_t *out_size, char *out_name) {
 }
 
 HWC2::Error HWCDisplay::GetDisplayType(int32_t *out_type) {
-  if (out_type != nullptr) {
-    if (id_ == HWC_DISPLAY_VIRTUAL) {
-      *out_type = HWC2_DISPLAY_TYPE_VIRTUAL;
-    } else {
-      *out_type = HWC2_DISPLAY_TYPE_PHYSICAL;
-    }
-    return HWC2::Error::None;
-  } else {
+  if (out_type == nullptr) {
     return HWC2::Error::BadParameter;
   }
+
+  *out_type = HWC2_DISPLAY_TYPE_PHYSICAL;
+
+  return HWC2::Error::None;
 }
 
 HWC2::Error HWCDisplay::GetActiveConfig(hwc2_config_t *out_config) {

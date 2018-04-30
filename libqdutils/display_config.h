@@ -47,12 +47,9 @@ namespace qdutils {
 
 // Use this enum to specify the dpy parameters where needed
 enum {
-    DISPLAY_PRIMARY = HWC_DISPLAY_PRIMARY,
-    DISPLAY_EXTERNAL = HWC_DISPLAY_EXTERNAL,
-#ifdef QTI_BSP
-    DISPLAY_TERTIARY = HWC_DISPLAY_TERTIARY,
-#endif
-    DISPLAY_VIRTUAL = HWC_DISPLAY_VIRTUAL,
+    DISPLAY_PRIMARY = 0,    // = HWC_DISPLAY_PRIMARY
+    DISPLAY_EXTERNAL = 1,   // = HWC_DISPLAY_EXTERNAL
+    DISPLAY_VIRTUAL = 2,    // = HWC_DISPLAY_VIRTUAL
 };
 
 // External Display states - used in setSecondaryDisplayStatus()
