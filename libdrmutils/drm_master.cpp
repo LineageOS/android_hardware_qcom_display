@@ -97,7 +97,7 @@ int DRMMaster::CreateFbId(const DRMBuffer &drm_buffer, uint32_t *fb_id) {
   uint32_t gem_handle = 0;
   int ret = drmPrimeFDToHandle(dev_fd_, drm_buffer.fd, &gem_handle);
   if (ret) {
-    DRM_LOGE("drmPrimeFDToHandle failed with error %d", ret);
+    DRM_LOGW("drmPrimeFDToHandle failed with error %d", ret);
     return ret;
   }
 
