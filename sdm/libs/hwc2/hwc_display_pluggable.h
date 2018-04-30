@@ -27,8 +27,8 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __HWC_DISPLAY_EXTERNAL_H__
-#define __HWC_DISPLAY_EXTERNAL_H__
+#ifndef __HWC_DISPLAY_PLUGGABLE_H__
+#define __HWC_DISPLAY_PLUGGABLE_H__
 
 #include "hwc_display.h"
 #include "display_null.h"
@@ -36,15 +36,13 @@
 
 namespace sdm {
 
-class HWCDisplayExternal : public HWCDisplay {
+class HWCDisplayPluggable : public HWCDisplay {
  public:
   static int Create(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
                     HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
-                    uint32_t primary_width, uint32_t primary_height, qService::QService *qservice,
+                    qService::QService *qservice, hwc2_display_t id,
+                    int32_t sdm_id, uint32_t primary_width, uint32_t primary_height,
                     bool use_primary_res, HWCDisplay **hwc_display);
-  static int Create(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
-                    HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
-                    qService::QService *qservice, HWCDisplay **hwc_display);
   static void Destroy(HWCDisplay *hwc_display);
   virtual int Init();
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests);
@@ -58,9 +56,9 @@ class HWCDisplayExternal : public HWCDisplay {
   virtual HWC2::Error SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
 
  private:
-  HWCDisplayExternal(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
-                     HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
-                     qService::QService *qservice);
+  HWCDisplayPluggable(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
+                      HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
+                      qService::QService *qservice, hwc2_display_t id, int32_t sdm_id);
   void ApplyScanAdjustment(hwc_rect_t *display_frame);
   void GetUnderScanConfig();
   static void GetDownscaleResolution(uint32_t primary_width, uint32_t primary_height,
@@ -73,4 +71,4 @@ class HWCDisplayExternal : public HWCDisplay {
 
 }  // namespace sdm
 
-#endif  // __HWC_DISPLAY_EXTERNAL_H__
+#endif  // __HWC_DISPLAY_PLUGGABLE_H__
