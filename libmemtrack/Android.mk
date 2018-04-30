@@ -24,6 +24,7 @@ LOCAL_C_INCLUDES += hardware/libhardware/include
 LOCAL_CFLAGS := -Wconversion -Wall -Werror -Wno-sign-conversion
 LOCAL_CLANG  := true
 LOCAL_SHARED_LIBRARIES := liblog
+LOCAL_HEADER_LIBRARIES := libhardware_headers
 LOCAL_SRC_FILES := memtrack_msm.c kgsl.c
 LOCAL_MODULE := memtrack.$(TARGET_BOARD_PLATFORM)
 include $(BUILD_SHARED_LIBRARY)

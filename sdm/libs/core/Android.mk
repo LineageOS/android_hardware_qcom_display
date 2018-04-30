@@ -32,7 +32,6 @@ LOCAL_SRC_FILES               := core_interface.cpp \
                                  comp_manager.cpp \
                                  strategy.cpp \
                                  resource_default.cpp \
-                                 dump_impl.cpp \
                                  color_manager.cpp \
                                  hw_events_interface.cpp \
                                  hw_info_interface.cpp \
@@ -64,7 +63,6 @@ LOCAL_COPY_HEADERS             = $(SDM_HEADER_PATH)/core/buffer_allocator.h \
                                  $(SDM_HEADER_PATH)/core/core_interface.h \
                                  $(SDM_HEADER_PATH)/core/debug_interface.h \
                                  $(SDM_HEADER_PATH)/core/display_interface.h \
-                                 $(SDM_HEADER_PATH)/core/dump_interface.h \
                                  $(SDM_HEADER_PATH)/core/layer_buffer.h \
                                  $(SDM_HEADER_PATH)/core/layer_stack.h \
                                  $(SDM_HEADER_PATH)/core/sdm_types.h \

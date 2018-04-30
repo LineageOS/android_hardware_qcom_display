@@ -29,7 +29,6 @@
 #include <map>
 
 #include "display_base.h"
-#include "dump_impl.h"
 #include "hw_events_interface.h"
 
 namespace sdm {
