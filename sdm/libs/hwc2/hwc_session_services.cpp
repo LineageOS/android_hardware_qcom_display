@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -43,10 +43,9 @@ using ::android::hardware::Void;
 void HWCSession::StartServices() {
   android::status_t status = IDisplayConfig::registerAsService();
   if (status != android::OK) {
-    ALOGW("%s::%s: Could not register IDisplayConfig as service (%d).",
-          __CLASS__, __FUNCTION__, status);
+    DLOGW("Could not register IDisplayConfig as service (%d).", status);
   } else {
-    ALOGI("%s::%s: IDisplayConfig service registration completed.", __CLASS__, __FUNCTION__);
+    DLOGI("IDisplayConfig service registration completed.");
   }
 }
 

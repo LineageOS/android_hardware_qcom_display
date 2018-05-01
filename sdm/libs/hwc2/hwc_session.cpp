@@ -155,7 +155,7 @@ int HWCSession::Init() {
     iqservice->connect(android::sp<qClient::IQClient>(this));
     qservice_ = reinterpret_cast<qService::QService *>(iqservice.get());
   } else {
-    ALOGE("%s::%s: Failed to acquire %s", __CLASS__, __FUNCTION__, qservice_name);
+    DLOGE("Failed to acquire %s", qservice_name);
     return -EINVAL;
   }
 
@@ -227,7 +227,7 @@ int HWCSession::Deinit() {
 
   DisplayError error = CoreInterface::DestroyCore();
   if (error != kErrorNone) {
-    ALOGE("Display core de-initialization failed. Error = %d", error);
+    DLOGE("Display core de-initialization failed. Error = %d", error);
   }
 
   return 0;
@@ -235,7 +235,7 @@ int HWCSession::Deinit() {
 
 int HWCSession::Open(const hw_module_t *module, const char *name, hw_device_t **device) {
   if (!module || !name || !device) {
-    ALOGE("%s::%s: Invalid parameters.", __CLASS__, __FUNCTION__);
+    DLOGE("Invalid parameters.");
     return -EINVAL;
   }
 
