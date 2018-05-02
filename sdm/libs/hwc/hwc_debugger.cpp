@@ -42,6 +42,10 @@ int32_t HWCDebugHandler::verbose_level_ = 0x0;
 void HWCDebugHandler::DebugAll(bool enable, int verbose_level) {
   if (enable) {
     debug_flags_ = 0x7FFFFFFF;
+    if (verbose_level) {
+      // Enable verbose scalar logs only when explicitely enabled
+      debug_flags_[kTagScalar] = 0;
+    }
     verbose_level_ = verbose_level;
   } else {
     debug_flags_ = 0x1;   // kTagNone should always be printed.
@@ -99,12 +103,42 @@ void HWCDebugHandler::DebugRotator(bool enable, int verbose_level) {
   }
 }
 
+void HWCDebugHandler::DebugScalar(bool enable, int verbose_level) {
+  if (enable) {
+    debug_flags_[kTagScalar] = 1;
+    verbose_level_ = verbose_level;
+  } else {
+    debug_flags_[kTagScalar] = 0;
+    verbose_level_ = 0;
+  }
+}
+
 void HWCDebugHandler::DebugQdcm(bool enable, int verbose_level) {
   if (enable) {
     debug_flags_[kTagQDCM] = 1;
     verbose_level_ = verbose_level;
   } else {
     debug_flags_[kTagQDCM] = 0;
+    verbose_level_ = 0;
+  }
+}
+
+void HWCDebugHandler::DebugClient(bool enable, int verbose_level) {
+  if (enable) {
+    debug_flags_[kTagClient] = 1;
+    verbose_level_ = verbose_level;
+  } else {
+    debug_flags_[kTagClient] = 0;
+    verbose_level_ = 0;
+  }
+}
+
+void HWCDebugHandler::DebugDisplay(bool enable, int verbose_level) {
+  if (enable) {
+    debug_flags_[kTagDisplay] = 1;
+    verbose_level_ = verbose_level;
+  } else {
+    debug_flags_[kTagDisplay] = 0;
     verbose_level_ = 0;
   }
 }

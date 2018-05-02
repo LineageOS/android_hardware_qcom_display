@@ -47,6 +47,11 @@ bool IsCongruent(const LayerRect &rect1, const LayerRect &rect2) {
           (rect1.bottom == rect2.bottom));
 }
 
+void LogI(DebugTag debug_tag, const char *prefix, const LayerRect &roi) {
+  DLOGI_IF(debug_tag, "%s: left = %.0f, top = %.0f, right = %.0f, bottom = %.0f",
+           prefix, roi.left, roi.top, roi.right, roi.bottom);
+}
+
 void Log(DebugTag debug_tag, const char *prefix, const LayerRect &roi) {
   DLOGV_IF(debug_tag, "%s: left = %.0f, top = %.0f, right = %.0f, bottom = %.0f",
            prefix, roi.left, roi.top, roi.right, roi.bottom);

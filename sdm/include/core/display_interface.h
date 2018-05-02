@@ -678,6 +678,12 @@ class DisplayInterface {
                                               LayerBufferFormat format,
                                               const ColorMetaData &color_metadata) = 0;
 
+  /*
+   * Returns a string consisting of a dump of SDM's display and layer related state
+   * as programmed to driver
+  */
+  virtual std::string Dump() = 0;
+
  protected:
   virtual ~DisplayInterface() { }
 };

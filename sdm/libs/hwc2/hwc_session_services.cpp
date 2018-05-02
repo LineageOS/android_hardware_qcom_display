@@ -44,9 +44,10 @@ using ::android::hardware::Void;
 void HWCSession::StartServices() {
   status_t status = IDisplayConfig::registerAsService();
   if (status != OK) {
-    DLOGW("Could not register IDisplayConfig as service (%d).", status);
+    ALOGW("%s::%s: Could not register IDisplayConfig as service (%d).",
+          __CLASS__, __FUNCTION__, status);
   } else {
-    DLOGI("IDisplayConfig service registration completed.");
+    ALOGI("%s::%s: IDisplayConfig service registration completed.", __CLASS__, __FUNCTION__);
   }
 }
 

@@ -49,6 +49,8 @@ enum DebugTag {
   kTagRotator,          //!< Debug log is tagged for rotator.
   kTagScalar,           //!< Debug log is tagged for Scalar Helper.
   kTagQDCM,             //!< Debug log is tagged for display QDCM color managing.
+  kTagDisplay,          //!< Debug log is tagged for display core logs.
+  kTagClient,           //!< Debug log is tagged for SDM client.
 };
 
 /*! @brief Display debug handler class.
