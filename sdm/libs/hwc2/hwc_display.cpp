@@ -365,7 +365,7 @@ int HWCDisplay::Init() {
     disp_null->Init();
     use_metadata_refresh_rate_ = false;
     display_intf_ = disp_null;
-    ALOGI("Enabling null display mode for display type %d", type_);
+    DLOGI("Enabling null display mode for display type %d", type_);
   } else {
     error = core_intf_->CreateDisplay(type_, this, &display_intf_);
     if (error != kErrorNone) {
