@@ -45,7 +45,7 @@ HWPeripheralDRM::HWPeripheralDRM(BufferSyncHandler *buffer_sync_handler,
                                  HWInfoInterface *hw_info_intf)
   : HWDeviceDRM(buffer_sync_handler, buffer_allocator, hw_info_intf) {
   disp_type_ = DRMDisplayType::PERIPHERAL;
-  device_name_ = "Peripheral Display";
+  device_name_ = "Peripheral";
 }
 
 DisplayError HWPeripheralDRM::Init() {

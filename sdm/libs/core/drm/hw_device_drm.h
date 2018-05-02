@@ -103,7 +103,7 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError SetMixerAttributes(const HWMixerAttributes &mixer_attributes);
   virtual DisplayError GetMixerAttributes(HWMixerAttributes *mixer_attributes);
   virtual void InitializeConfigs();
-  virtual DisplayError DumpDebugData() { return kErrorNone; }
+  virtual DisplayError DumpDebugData();
   virtual void PopulateHWPanelInfo();
   virtual DisplayError SetDppsFeature(uint32_t object_type, uint32_t feature_id,
                                       uint64_t value) { return kErrorNotSupported; }

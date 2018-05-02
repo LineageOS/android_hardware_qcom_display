@@ -63,6 +63,7 @@ class HWEventHandler {
   virtual void IdlePowerCollapse() = 0;
   virtual void PingPongTimeout() = 0;
   virtual void PanelDead() = 0;
+  virtual void HwRecovery(const HWRecoveryEvent sdm_event_code) = 0;
 
  protected:
   virtual ~HWEventHandler() { }

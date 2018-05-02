@@ -37,6 +37,7 @@
 #include <sys/prctl.h>
 #include <sys/resource.h>
 #include <sys/types.h>
+#include <utils/constants.h>
 #include <utils/debug.h>
 #include <utils/sys.h>
 #include <xf86drm.h>
@@ -48,6 +49,19 @@
 #include <vector>
 
 #include "hw_events_drm.h"
+
+#ifndef DRM_EVENT_SDE_HW_RECOVERY
+#define DRM_EVENT_SDE_HW_RECOVERY 0x80000007
+#endif
+#ifndef SDE_RECOVERY_SUCCESS
+#define SDE_RECOVERY_SUCCESS 0
+#endif
+#ifndef SDE_RECOVERY_CAPTURE
+#define SDE_RECOVERY_CAPTURE 1
+#endif
+#ifndef SDE_RECOVERY_DISPLAY_POWER_RESET
+#define SDE_RECOVERY_DISPLAY_POWER_RESET 2
+#endif
 
 #define __CLASS__ "HWEventsDRM"
 
@@ -114,6 +128,15 @@ DisplayError HWEventsDRM::InitializePollFd() {
         poll_fds_[i].events = POLLIN | POLLPRI | POLLERR;
         panel_dead_index_ = i;
       } break;
+      case HWEvent::HW_RECOVERY: {
+        poll_fds_[i].fd = drmOpen("msm_drm", nullptr);
+        if (poll_fds_[i].fd < 0) {
+          DLOGE("drmOpen failed with error %d", poll_fds_[i].fd);
+          return kErrorResources;
+        }
+        poll_fds_[i].events = POLLIN | POLLPRI | POLLERR;
+        hw_recovery_index_ = i;
+      } break;
       case HWEvent::CEC_READ_MESSAGE:
       case HWEvent::SHOW_BLANK_EVENT:
       case HWEvent::THERMAL_LEVEL:
@@ -153,6 +176,9 @@ DisplayError HWEventsDRM::SetEventParser() {
         break;
       case HWEvent::PANEL_DEAD:
         event_data.event_parser = &HWEventsDRM::HandlePanelDead;
+        break;
+      case HWEvent::HW_RECOVERY:
+        event_data.event_parser = &HWEventsDRM::HandleHwRecovery;
         break;
       default:
         error = kErrorParameters;
@@ -206,6 +232,15 @@ DisplayError HWEventsDRM::Init(int display_type, HWEventHandler *event_handler,
   RegisterIdleNotify(true);
   RegisterIdlePowerCollapse(true);
 
+  int value = 0;
+  if (Debug::Get()->GetProperty("sdm.debug.disable_hw_recovery", &value) == kErrorNone) {
+    disable_hw_recovery_ = (value == 1);
+  }
+  DLOGI("disable_hw_recovery set to %d", disable_hw_recovery_);
+  if (!disable_hw_recovery_) {
+    RegisterHwRecovery(true);
+  }
+
   return kErrorNone;
 }
 
@@ -214,6 +249,9 @@ DisplayError HWEventsDRM::Deinit() {
   RegisterPanelDead(false);
   RegisterIdleNotify(false);
   RegisterIdlePowerCollapse(false);
+  if (!disable_hw_recovery_) {
+    RegisterHwRecovery(false);
+  }
   Sys::pthread_cancel_(event_thread_);
   WakeUpEventThread();
   pthread_join(event_thread_, NULL);
@@ -271,6 +309,7 @@ DisplayError HWEventsDRM::CloseFds() {
       case HWEvent::IDLE_NOTIFY:
       case HWEvent::IDLE_POWER_COLLAPSE:
       case HWEvent::PANEL_DEAD:
+      case HWEvent::HW_RECOVERY:
         drmClose(poll_fds_[i].fd);
         poll_fds_[i].fd = -1;
         break;
@@ -318,6 +357,7 @@ void *HWEventsDRM::DisplayEventHandler() {
         case HWEvent::PANEL_DEAD:
         case HWEvent::IDLE_NOTIFY:
         case HWEvent::IDLE_POWER_COLLAPSE:
+        case HWEvent::HW_RECOVERY:
           if (poll_fd.revents & (POLLIN | POLLPRI | POLLERR)) {
             (this->*(event_data_list_[i]).event_parser)(nullptr);
           }
@@ -456,6 +496,31 @@ DisplayError HWEventsDRM::RegisterIdlePowerCollapse(bool enable) {
 
   if (ret) {
     DLOGE("register idle power collapse enable:%d failed", enable);
+    return kErrorResources;
+  }
+
+  return kErrorNone;
+}
+
+DisplayError HWEventsDRM::RegisterHwRecovery(bool enable) {
+  if (hw_recovery_index_ == UINT_MAX) {
+    DLOGE("Hardware recovery is not supported");
+    return kErrorNotSupported;
+  }
+
+  struct drm_msm_event_req req = {};
+  int ret = 0;
+
+  req.object_id = token_.conn_id;
+  req.object_type = DRM_MODE_OBJECT_CONNECTOR;
+  req.event = DRM_EVENT_SDE_HW_RECOVERY;
+  if (enable) {
+    ret = drmIoctl(poll_fds_[hw_recovery_index_].fd, DRM_IOCTL_MSM_REGISTER_EVENT, &req);
+  } else {
+    ret = drmIoctl(poll_fds_[hw_recovery_index_].fd, DRM_IOCTL_MSM_DEREGISTER_EVENT, &req);
+  }
+  if (ret) {
+    DLOGE("Register hardware recovery enable:%d failed", enable);
     return kErrorResources;
   }
 
@@ -615,6 +680,82 @@ void HWEventsDRM::HandleIdlePowerCollapse(char *data) {
   }
 
   return;
+}
+
+void HWEventsDRM::HandleHwRecovery(char *data) {
+  char event_data[kMaxStringLength] = {0};
+  int32_t size;
+  struct drm_msm_event_resp *event_resp = NULL;
+
+  size = (int32_t)Sys::pread_(poll_fds_[hw_recovery_index_].fd, event_data, kMaxStringLength, 0);
+  if (size < 0) {
+    return;
+  }
+
+  if (size > kMaxStringLength) {
+    DLOGE("Hardware recovery event size %d is greater than event buffer size %zd\n", size,
+          kMaxStringLength);
+    return;
+  }
+
+  if (size < (int32_t)sizeof(*event_resp)) {
+    DLOGE("Hardware recovery event size is %d, expected %zd\n", size, sizeof(*event_resp));
+    return;
+  }
+
+  int32_t i = 0;
+
+  while (i < size) {
+    event_resp = (struct drm_msm_event_resp *)&event_data[i];
+    switch (event_resp->base.type) {
+      case DRM_EVENT_SDE_HW_RECOVERY: {
+        std::size_t size_of_data = (std::size_t)event_resp->base.length -
+                                   (sizeof(event_resp->base) + sizeof(event_resp->info));
+        // expect up to uint32_t from driver
+        if (size_of_data > sizeof(uint32_t)) {
+          DLOGE("Size of hardware recovery event data: %" PRIu32 " exceeds %zd", size_of_data,
+                sizeof(uint32_t));
+          return;
+        }
+
+        uint32_t hw_event_code = 0;
+        memcpy(&hw_event_code, event_resp->data, size_of_data);
+
+        HWRecoveryEvent sdm_event_code;
+        if (SetHwRecoveryEvent(hw_event_code, &sdm_event_code)) {
+          return;
+        }
+        event_handler_->HwRecovery(sdm_event_code);
+        break;
+      }
+      default: {
+        DLOGE("Invalid event type %d", event_resp->base.type);
+        break;
+      }
+    }
+    i += event_resp->base.length;
+  }
+
+  return;
+}
+
+int HWEventsDRM::SetHwRecoveryEvent(const uint32_t hw_event_code, HWRecoveryEvent *sdm_event_code) {
+  switch (hw_event_code) {
+     case SDE_RECOVERY_SUCCESS:
+       *sdm_event_code = HWRecoveryEvent::kSuccess;
+       break;
+     case SDE_RECOVERY_CAPTURE:
+       *sdm_event_code = HWRecoveryEvent::kCapture;
+       break;
+     case SDE_RECOVERY_DISPLAY_POWER_RESET:
+       *sdm_event_code = HWRecoveryEvent::kDisplayPowerReset;
+       break;
+     default:
+       DLOGE("Unsupported hardware recovery event value received = %" PRIu32, hw_event_code);
+       return -EINVAL;
+  }
+
+  return 0;
 }
 
 }  // namespace sdm

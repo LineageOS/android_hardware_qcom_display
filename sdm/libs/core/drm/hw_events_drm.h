@@ -37,6 +37,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <climits>
 
 #include "hw_events_interface.h"
 #include "hw_interface.h"
@@ -77,6 +78,8 @@ class HWEventsDRM : public HWEventsInterface {
   void HandleBlank(char *data) {}
   void HandleIdlePowerCollapse(char *data);
   void HandlePanelDead(char *data);
+  void HandleHwRecovery(char *data);
+  int SetHwRecoveryEvent(const uint32_t hw_event_code, HWRecoveryEvent *sdm_event_code);
   void PopulateHWEventData(const vector<HWEvent> &event_list);
   void WakeUpEventThread();
   DisplayError SetEventParser();
@@ -86,6 +89,7 @@ class HWEventsDRM : public HWEventsInterface {
   DisplayError RegisterPanelDead(bool enable);
   DisplayError RegisterIdleNotify(bool enable);
   DisplayError RegisterIdlePowerCollapse(bool enable);
+  DisplayError RegisterHwRecovery(bool enable);
 
   HWEventHandler *event_handler_{};
   vector<HWEventData> event_data_list_{};
@@ -102,6 +106,8 @@ class HWEventsDRM : public HWEventsInterface {
   bool is_primary_ = false;
   uint32_t panel_dead_index_ = 0;
   uint32_t idle_pc_index_ = 0;
+  bool disable_hw_recovery_ = false;
+  uint32_t hw_recovery_index_ = UINT_MAX;
 };
 
 }  // namespace sdm

@@ -40,13 +40,14 @@
 namespace sdm {
 
 int HWCDisplayExternal::Create(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
-                               HWCCallbacks *callbacks, qService::QService *qservice,
-                               HWCDisplay **hwc_display) {
-  return Create(core_intf, buffer_allocator, callbacks, 0, 0, qservice, false, hwc_display);
+                               HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
+                               qService::QService *qservice, HWCDisplay **hwc_display) {
+  return Create(core_intf, buffer_allocator, callbacks, event_handler, 0, 0, qservice, false,
+                hwc_display);
 }
 
 int HWCDisplayExternal::Create(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
-                               HWCCallbacks *callbacks,
+                               HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
                                uint32_t primary_width, uint32_t primary_height,
                                qService::QService *qservice, bool use_primary_res,
                                HWCDisplay **hwc_display) {
@@ -55,7 +56,7 @@ int HWCDisplayExternal::Create(CoreInterface *core_intf, HWCBufferAllocator *buf
   DisplayError error = kErrorNone;
 
   HWCDisplay *hwc_display_external = new HWCDisplayExternal(core_intf, buffer_allocator, callbacks,
-                                                            qservice);
+                                                            event_handler, qservice);
   int status = hwc_display_external->Init();
   if (status) {
     delete hwc_display_external;
@@ -102,9 +103,10 @@ void HWCDisplayExternal::Destroy(HWCDisplay *hwc_display) {
 HWCDisplayExternal::HWCDisplayExternal(CoreInterface *core_intf,
                                        HWCBufferAllocator *buffer_allocator,
                                        HWCCallbacks *callbacks,
+                                       HWCDisplayEventHandler *event_handler,
                                        qService::QService *qservice)
-    : HWCDisplay(core_intf, callbacks, kHDMI, HWC_DISPLAY_EXTERNAL, false, qservice,
-                 DISPLAY_CLASS_EXTERNAL, buffer_allocator) {
+    : HWCDisplay(core_intf, callbacks, event_handler, kHDMI, HWC_DISPLAY_EXTERNAL, false,
+                 qservice, DISPLAY_CLASS_EXTERNAL, buffer_allocator) {
 }
 
 HWC2::Error HWCDisplayExternal::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {

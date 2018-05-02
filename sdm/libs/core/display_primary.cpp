@@ -51,6 +51,7 @@ DisplayError DisplayPrimary::Init() {
   DisplayError error = HWInterface::Create(kPrimary, hw_info_intf_, buffer_sync_handler_,
                                            buffer_allocator_, &hw_intf_);
   if (error != kErrorNone) {
+    DLOGE("Failed to create hardware interface on. Error = %d", error);
     return error;
   }
 
@@ -75,7 +76,8 @@ DisplayError DisplayPrimary::Init() {
                     HWEvent::THERMAL_LEVEL,
                     HWEvent::IDLE_POWER_COLLAPSE,
                     HWEvent::PINGPONG_TIMEOUT,
-                    HWEvent::PANEL_DEAD };
+                    HWEvent::PANEL_DEAD,
+                    HWEvent::HW_RECOVERY };
   } else {
     event_list_ = { HWEvent::VSYNC,
                     HWEvent::EXIT,
@@ -83,7 +85,8 @@ DisplayError DisplayPrimary::Init() {
                     HWEvent::SHOW_BLANK_EVENT,
                     HWEvent::THERMAL_LEVEL,
                     HWEvent::PINGPONG_TIMEOUT,
-                    HWEvent::PANEL_DEAD };
+                    HWEvent::PANEL_DEAD,
+                    HWEvent::HW_RECOVERY };
   }
 
   avr_prop_disabled_ = Debug::IsAVRDisabled();
@@ -91,9 +94,9 @@ DisplayError DisplayPrimary::Init() {
   error = HWEventsInterface::Create(INT(display_type_), this, event_list_, hw_intf_,
                                     &hw_events_intf_);
   if (error != kErrorNone) {
-    DLOGE("Failed to create hardware events interface. Error = %d", error);
     DisplayBase::Deinit();
     HWInterface::Destroy(hw_intf_);
+    DLOGE("Failed to create hardware events interface on. Error = %d", error);
   }
 
   current_refresh_rate_ = hw_panel_info_.max_fps;
@@ -345,6 +348,11 @@ void DisplayPrimary::PanelDead() {
     lock_guard<recursive_mutex> obj(recursive_mutex_);
     reset_panel_ = true;
   }
+}
+
+// HWEventHandler overload, not DisplayBase
+void DisplayPrimary::HwRecovery(const HWRecoveryEvent sdm_event_code) {
+  DisplayBase::HwRecovery(sdm_event_code);
 }
 
 DisplayError DisplayPrimary::GetPanelBrightness(int *level) {

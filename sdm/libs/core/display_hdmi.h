@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -47,6 +47,7 @@ class DisplayHDMI : public DisplayBase, HWEventHandler {
   virtual bool IsUnderscanSupported();
   virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
   virtual DisplayError InitializeColorModes();
+  virtual DisplayError SetDisplayState(DisplayState state, int *release_fence);
 
   // Implement the HWEventHandlers
   virtual DisplayError VSync(int64_t timestamp);
@@ -57,6 +58,7 @@ class DisplayHDMI : public DisplayBase, HWEventHandler {
   virtual void IdlePowerCollapse() { }
   virtual void PingPongTimeout() { }
   virtual void PanelDead() { }
+  virtual void HwRecovery(const HWRecoveryEvent sdm_event_code);
 
  private:
   uint32_t GetBestConfig(HWS3DMode s3d_mode);
@@ -68,8 +70,11 @@ class DisplayHDMI : public DisplayBase, HWEventHandler {
   bool underscan_supported_ = false;
   HWScanSupport scan_support_;
   std::map<LayerBufferS3DFormat, HWS3DMode> s3d_format_to_mode_;
-  std::vector<HWEvent> event_list_ = { HWEvent::VSYNC, HWEvent::IDLE_NOTIFY, HWEvent::EXIT,
-    HWEvent::CEC_READ_MESSAGE };
+  std::vector<HWEvent> event_list_ = { HWEvent::VSYNC,
+                                       HWEvent::IDLE_NOTIFY,
+                                       HWEvent::EXIT,
+                                       HWEvent::CEC_READ_MESSAGE,
+                                       HWEvent::HW_RECOVERY };
   uint32_t current_refresh_rate_ = 0;
 };
 

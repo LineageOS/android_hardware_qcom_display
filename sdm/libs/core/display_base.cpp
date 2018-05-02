@@ -43,6 +43,9 @@
 
 namespace sdm {
 
+bool DisplayBase::display_power_reset_pending_ = false;
+Locker DisplayBase::display_power_reset_lock_;
+
 static ColorPrimaries GetColorPrimariesFromAttribute(const std::string &gamut) {
   if (gamut.find(kDisplayP3) != std::string::npos || gamut.find(kDcip3) != std::string::npos) {
     return ColorPrimaries_DCIP3;
@@ -1756,4 +1759,56 @@ void DisplayBase::GetColorPrimaryTransferFromAttributes(const AttrVal &attr,
   }
 }
 
+void DisplayBase::HwRecovery(const HWRecoveryEvent sdm_event_code) {
+  DLOGI("Handling event = %" PRIu32, sdm_event_code);
+  if (DisplayPowerResetPending()) {
+    DLOGI("Skipping handling for display = %d, display power reset in progress", display_type_);
+    return;
+  }
+  switch (sdm_event_code) {
+    case HWRecoveryEvent::kSuccess:
+      hw_recovery_logs_captured_ = false;
+      break;
+    case HWRecoveryEvent::kCapture:
+      if (!hw_recovery_logs_captured_) {
+        hw_intf_->DumpDebugData();
+        hw_recovery_logs_captured_ = true;
+        DLOGI("Captured debugfs data for display = %d", display_type_);
+      } else {
+        DLOGI("Multiple capture events without intermediate success event, skipping debugfs"
+              "capture for display = %d", display_type_);
+      }
+      break;
+    case HWRecoveryEvent::kDisplayPowerReset:
+      DLOGI("display = %d attempting to start display power reset", display_type_);
+      if (StartDisplayPowerReset()) {
+        DLOGI("display = %d allowed to start display power reset", display_type_);
+        event_handler_->HandleEvent(kDisplayPowerResetEvent);
+        EndDisplayPowerReset();
+        DLOGI("display = %d has finished display power reset", display_type_);
+      }
+      break;
+    default:
+      return;
+  }
+}
+
+bool DisplayBase::DisplayPowerResetPending() {
+  SCOPE_LOCK(display_power_reset_lock_);
+  return display_power_reset_pending_;
+}
+
+bool DisplayBase::StartDisplayPowerReset() {
+  SCOPE_LOCK(display_power_reset_lock_);
+  if (!display_power_reset_pending_) {
+    display_power_reset_pending_ = true;
+    return true;
+  }
+  return false;
+}
+
+void DisplayBase::EndDisplayPowerReset() {
+  SCOPE_LOCK(display_power_reset_lock_);
+  display_power_reset_pending_ = false;
+}
 }  // namespace sdm

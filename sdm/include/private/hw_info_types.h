@@ -28,6 +28,8 @@
 #include <stdint.h>
 #include <core/display_interface.h>
 #include <core/core_interface.h>
+#include <utils/locker.h>
+#include <utils/debug.h>
 #include <vector>
 #include <map>
 #include <string>
@@ -154,6 +156,12 @@ enum HWWriteOperation {
   kNoOp,   // No-op, previously set config holds good
   kSet,    // Sets the new config
   kReset,  // Resets/Clears the previously set config
+};
+
+enum class HWRecoveryEvent : uint32_t {
+  kSuccess,            // driver succeeded recovery
+  kCapture,            // driver PP_TIMEOUT, capture logs
+  kDisplayPowerReset,  // driver requesting display power cycle
 };
 
 typedef std::map<HWSubBlockType, std::vector<LayerBufferFormat>> FormatsMap;

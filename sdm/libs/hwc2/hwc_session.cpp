@@ -194,7 +194,7 @@ int HWCSession::Init() {
     }
   } else {
     // Create and power on primary display
-    status = HWCDisplayPrimary::Create(core_intf_, &buffer_allocator_, &callbacks_, qservice_,
+    status = HWCDisplayPrimary::Create(core_intf_, &buffer_allocator_, &callbacks_, this, qservice_,
                                        &hwc_display_[HWC_DISPLAY_PRIMARY]);
     color_mgr_ = HWCColorManager::CreateColorManager(&buffer_allocator_);
     if (!color_mgr_) {
@@ -898,8 +898,9 @@ HWC2::Error HWCSession::CreateVirtualDisplayObject(uint32_t width, uint32_t heig
       return HWC2::Error::NoResources;
     }
 
-    auto status = HWCDisplayVirtual::Create(core_intf_, &buffer_allocator_, &callbacks_, width,
-                                            height, format, &hwc_display_[HWC_DISPLAY_VIRTUAL]);
+    auto status = HWCDisplayVirtual::Create(core_intf_, &buffer_allocator_, &callbacks_,
+                                            width, height, format,
+                                            &hwc_display_[HWC_DISPLAY_VIRTUAL]);
     // TODO(user): validate width and height support
     if (status) {
       return HWC2::Error::Unsupported;
@@ -1653,7 +1654,7 @@ int HWCSession::GetEventValue(const char *uevent_data, int length, const char *e
 }
 
 void HWCSession::ResetPanel() {
-  HWC2::Error status;
+  HWC2::Error status = HWC2::Error::None;
 
   DLOGI("Powering off primary");
   status = hwc_display_[HWC_DISPLAY_PRIMARY]->SetPowerMode(HWC2::PowerMode::Off);
@@ -1850,14 +1851,14 @@ int HWCSession::CreateExternalDisplay(int disp_id, uint32_t primary_width,
   }
 
   if (panel_bpp && pattern_type) {
-    return HWCDisplayExternalTest::Create(core_intf_, &buffer_allocator_, &callbacks_,
+    return HWCDisplayExternalTest::Create(core_intf_, &buffer_allocator_, &callbacks_, this,
                                           qservice_, panel_bpp, pattern_type,
                                           &hwc_display_[disp_id]);
   }
 
-  return  HWCDisplayExternal::Create(core_intf_, &buffer_allocator_, &callbacks_,
-                                     primary_width, primary_height, qservice_,
-                                     use_primary_res, &hwc_display_[disp_id]);
+  return  HWCDisplayExternal::Create(core_intf_, &buffer_allocator_, &callbacks_, this,
+                                     primary_width, primary_height, qservice_, use_primary_res,
+                                     &hwc_display_[disp_id]);
 }
 
 #ifdef DISPLAY_CONFIG_1_1
@@ -1912,4 +1913,35 @@ HWC2::Error HWCSession::PresentDisplayInternal(hwc2_display_t display, int32_t *
   return hwc_display->Present(out_retire_fence);
 }
 
+void HWCSession::DisplayPowerReset() {
+  Locker::ScopeLock lock_p(locker_[HWC_DISPLAY_PRIMARY]);
+  Locker::ScopeLock lock_e(locker_[HWC_DISPLAY_EXTERNAL]);
+  Locker::ScopeLock lock_v(locker_[HWC_DISPLAY_VIRTUAL]);
+
+  HWC2::Error status = HWC2::Error::None;
+
+  for (hwc2_display_t display = HWC_DISPLAY_PRIMARY; display < HWC_NUM_DISPLAY_TYPES; display++) {
+    if (hwc_display_[display] != NULL) {
+      DLOGI("Powering off display = %d", display);
+      status = hwc_display_[display]->SetPowerMode(HWC2::PowerMode::Off);
+      if (status != HWC2::Error::None) {
+        DLOGE("Power off for display = %d failed with error = %d", display, status);
+      }
+    }
+  }
+  for (hwc2_display_t display = HWC_DISPLAY_PRIMARY; display < HWC_NUM_DISPLAY_TYPES; display++) {
+    if (hwc_display_[display] != NULL) {
+      DLOGI("Powering on display = %d", display);
+      status = hwc_display_[display]->SetPowerMode(HWC2::PowerMode::On);
+      if (status != HWC2::Error::None) {
+        DLOGE("Power on for display = %d failed with error = %d", display, status);
+      }
+    }
+  }
+
+  status = hwc_display_[HWC_DISPLAY_PRIMARY]->SetVsyncEnabled(HWC2::Vsync::Enable);
+  if (status != HWC2::Error::None) {
+    DLOGE("Enabling vsync failed for primary with error = %d", status);
+  }
+}
 }  // namespace sdm

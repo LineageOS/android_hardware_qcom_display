@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -51,11 +51,11 @@ using std::array;
 
 int HWCDisplayExternalTest::Create(CoreInterface *core_intf,
                                    HWCBufferAllocator *buffer_allocator,
-                                   HWCCallbacks *callbacks,
+                                   HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
                                    qService::QService *qservice, uint32_t panel_bpp,
                                    uint32_t pattern_type, HWCDisplay **hwc_display) {
   HWCDisplay *hwc_external_test = new HWCDisplayExternalTest(core_intf, buffer_allocator,
-                                                             callbacks, qservice,
+                                                             callbacks, event_handler, qservice,
                                                              panel_bpp, pattern_type);
 
   int status = static_cast<HWCDisplayExternalTest *>(hwc_external_test)->Init();
@@ -80,10 +80,11 @@ void HWCDisplayExternalTest::Destroy(HWCDisplay *hwc_display) {
 HWCDisplayExternalTest::HWCDisplayExternalTest(CoreInterface *core_intf,
                                                HWCBufferAllocator *buffer_allocator,
                                                HWCCallbacks *callbacks,
+                                               HWCDisplayEventHandler *event_handler,
                                                qService::QService *qservice, uint32_t panel_bpp,
                                                uint32_t pattern_type)
-  : HWCDisplay(core_intf, callbacks, kHDMI, HWC_DISPLAY_EXTERNAL, false, qservice,
-               DISPLAY_CLASS_EXTERNAL, buffer_allocator), panel_bpp_(panel_bpp),
+  : HWCDisplay(core_intf, callbacks, event_handler, kHDMI, HWC_DISPLAY_EXTERNAL, false,
+               qservice, DISPLAY_CLASS_EXTERNAL, buffer_allocator), panel_bpp_(panel_bpp),
                pattern_type_(pattern_type) {
 }
 
@@ -127,7 +128,7 @@ int HWCDisplayExternalTest::Deinit() {
 
 HWC2::Error HWCDisplayExternalTest::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
   auto status = HWC2::Error::None;
-  if (secure_display_active_) {
+  if (secure_display_active_ || display_paused_) {
     MarkLayersForGPUBypass();
     return status;
   }
@@ -162,6 +163,14 @@ HWC2::Error HWCDisplayExternalTest::Present(int32_t *out_retire_fence) {
 
   if (secure_display_active_) {
     return status;
+  }
+
+  if (display_paused_) {
+    DisplayError error = display_intf_->Flush();
+    validated_ = false;
+    if (error != kErrorNone) {
+      DLOGE("Flush failed. Error = %d", error);
+    }
   }
 
   if (shutdown_pending_) {

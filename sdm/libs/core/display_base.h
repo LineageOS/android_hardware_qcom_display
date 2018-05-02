@@ -131,6 +131,7 @@ class DisplayBase : public DisplayInterface {
   DisplayError SetHDRMode(bool set);
   DisplayError ValidateScaling(uint32_t width, uint32_t height);
   DisplayError ValidateDataspace(const ColorMetaData &color_metadata);
+  void HwRecovery(const HWRecoveryEvent sdm_event_code);
 
   const char *GetName(const LayerComposition &composition);
   DisplayError ReconfigureDisplay();
@@ -151,6 +152,7 @@ class DisplayBase : public DisplayInterface {
   bool NeedsHdrHandling();
   void GetColorPrimaryTransferFromAttributes(const AttrVal &attr,
       std::vector<PrimariesTransfer> *supported_pt);
+  bool DisplayPowerResetPending();
 
   recursive_mutex recursive_mutex_;
   DisplayType display_type_;
@@ -195,6 +197,14 @@ class DisplayBase : public DisplayInterface {
   int disable_hdr_lut_gen_ = 0;
   DisplayState last_power_mode_ = kStateOff;
   bool gpu_fallback_ = false;
+  bool hw_recovery_logs_captured_ = false;
+
+  static Locker display_power_reset_lock_;
+  static bool display_power_reset_pending_;
+
+ private:
+  bool StartDisplayPowerReset();
+  void EndDisplayPowerReset();
 };
 
 }  // namespace sdm

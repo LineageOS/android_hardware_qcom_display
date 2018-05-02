@@ -52,6 +52,8 @@
 #include <private/color_params.h>
 #include <utils/rect.h>
 
+#include <sstream>
+#include <ctime>
 #include <algorithm>
 #include <string>
 #include <unordered_map>
@@ -78,6 +80,9 @@ using std::string;
 using std::to_string;
 using std::fstream;
 using std::unordered_map;
+using std::stringstream;
+using std::ifstream;
+using std::ofstream;
 using drm_utils::DRMMaster;
 using drm_utils::DRMResMgr;
 using drm_utils::DRMLibLoader;
@@ -1568,6 +1573,50 @@ DisplayError HWDeviceDRM::GetMixerAttributes(HWMixerAttributes *mixer_attributes
   }
 
   *mixer_attributes = mixer_attributes_;
+
+  return kErrorNone;
+}
+
+DisplayError HWDeviceDRM::DumpDebugData() {
+#if USER_DEBUG
+  string device_str = device_name_;
+  stringstream date_str;
+  stringstream time_str;
+  time_t t = time(0);
+  struct tm t_now;
+  localtime_r(&t, &t_now);
+  date_str << (t_now.tm_mon + 1) << '-'
+          << (t_now.tm_mday) << '-'
+          << (t_now.tm_year + 1900) << '_';
+  time_str << (t_now.tm_hour) << '-'
+          << (t_now.tm_min) << '-'
+          << (t_now.tm_sec) << ".log";
+
+  ofstream dst("data/vendor/display/"+device_str+"_"+date_str.str()+time_str.str());
+  ifstream src;
+
+  src.open("/sys/kernel/debug/dri/0/debug/dump");
+  dst << "---- Event Logs ----" << std::endl;
+  dst << src.rdbuf() << std::endl;
+  src.close();
+
+  src.open("/sys/kernel/debug/dri/0/debug/recovery_reg");
+  dst << "---- All Registers ----" << std::endl;
+  dst << src.rdbuf() << std::endl;
+  src.close();
+
+  src.open("/sys/kernel/debug/dri/0/debug/recovery_dbgbus");
+  dst << "---- Debug Bus ----" << std::endl;
+  dst << src.rdbuf() << std::endl;
+  src.close();
+
+  src.open("/sys/kernel/debug/dri/0/debug/recovery_vbif_dbgbus");
+  dst << "---- VBIF Debug Bus ----" << std::endl;
+  dst << src.rdbuf() << std::endl;
+  src.close();
+
+  dst.close();
+#endif
 
   return kErrorNone;
 }

@@ -324,11 +324,13 @@ void HWCColorMode::Dump(std::ostringstream* os) {
   *os << std::endl;
 }
 
-HWCDisplay::HWCDisplay(CoreInterface *core_intf, HWCCallbacks *callbacks, DisplayType type,
-                       hwc2_display_t id, bool needs_blit, qService::QService *qservice,
-                       DisplayClass display_class, BufferAllocator *buffer_allocator)
+HWCDisplay::HWCDisplay(CoreInterface *core_intf, HWCCallbacks *callbacks,
+                       HWCDisplayEventHandler* event_handler, DisplayType type, hwc2_display_t id,
+                       bool needs_blit, qService::QService *qservice, DisplayClass display_class,
+                       BufferAllocator *buffer_allocator)
     : core_intf_(core_intf),
       callbacks_(callbacks),
+      event_handler_(event_handler),
       type_(type),
       id_(id),
       needs_blit_(needs_blit),
@@ -996,6 +998,15 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
     case kPanelDeadEvent: {
       SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[type_]);
       validated_ = false;
+    } break;
+    case kDisplayPowerResetEvent: {
+      validated_ = false;
+      if (event_handler_) {
+        event_handler_->DisplayPowerReset();
+      } else {
+        DLOGI("Cannot process kDisplayPowerEventReset (display = %d), event_handler_ is nullptr",
+              type_);
+      }
     } break;
     default:
       DLOGW("Unknown event: %d", event);

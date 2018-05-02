@@ -77,6 +77,7 @@ class DisplayPrimary : public DisplayBase, HWEventHandler, DppsPropIntf {
   virtual void IdlePowerCollapse();
   virtual void PingPongTimeout();
   virtual void PanelDead();
+  virtual void HwRecovery(const HWRecoveryEvent sdm_event_code);
 
   // Implement the DppsPropIntf
   virtual DisplayError SetDppsFeature(uint32_t object_type,

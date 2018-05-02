@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -49,6 +49,7 @@ DisplayError DisplayHDMI::Init() {
   DisplayError error = HWInterface::Create(kHDMI, hw_info_intf_, buffer_sync_handler_,
                                            buffer_allocator_, &hw_intf_);
   if (error != kErrorNone) {
+    DLOGE("Failed to create hardware interface. Error = %d", error);
     return error;
   }
 
@@ -298,6 +299,11 @@ void DisplayHDMI::CECMessage(char *message) {
   event_handler_->CECMessage(message);
 }
 
+// HWEventHandler overload, not DisplayBase
+void DisplayHDMI::HwRecovery(const HWRecoveryEvent sdm_event_code) {
+  DisplayBase::HwRecovery(sdm_event_code);
+}
+
 DisplayError DisplayHDMI::VSync(int64_t timestamp) {
   if (vsync_enable_) {
     DisplayEventVSync vsync;
@@ -324,6 +330,17 @@ DisplayError DisplayHDMI::InitializeColorModes() {
   if (hw_panel_info_.hdr_eotf & kHdrEOTFHLG) {
     pt.transfer = Transfer_HLG;
     color_modes_cs_.push_back(pt);
+  }
+
+  return kErrorNone;
+}
+
+DisplayError DisplayHDMI::SetDisplayState(DisplayState state, int *release_fence) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  DisplayError error = kErrorNone;
+  error = DisplayBase::SetDisplayState(state, release_fence);
+  if (error != kErrorNone) {
+    return error;
   }
 
   return kErrorNone;
