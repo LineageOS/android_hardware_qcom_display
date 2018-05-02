@@ -34,11 +34,17 @@
 
 namespace sdm {
 
+enum DppsOps {
+  kDppsSetFeature,
+  kDppsGetFeatureInfo,
+  kDppsScreenRefresh,
+  kDppsPartialUpdate,
+  kDppsOpMax,
+};
+
 class DppsPropIntf {
  public:
-  virtual DisplayError SetDppsFeature(uint32_t object_type,
-                                      uint32_t feature_id, uint64_t value) = 0;
-  virtual DisplayError GetDppsFeatureInfo(void *info) = 0;
+  virtual DisplayError DppsProcessOps(enum DppsOps op, void *payload, size_t size) = 0;
 
  protected:
   virtual ~DppsPropIntf() { }

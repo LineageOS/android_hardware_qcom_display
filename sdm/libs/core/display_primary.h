@@ -81,9 +81,7 @@ class DisplayPrimary : public DisplayBase, HWEventHandler, DppsPropIntf {
   virtual void HwRecovery(const HWRecoveryEvent sdm_event_code);
 
   // Implement the DppsPropIntf
-  virtual DisplayError SetDppsFeature(uint32_t object_type,
-                                      uint32_t feature_id, uint64_t value);
-  virtual DisplayError GetDppsFeatureInfo(void *info);
+  virtual DisplayError DppsProcessOps(enum DppsOps op, void *payload, size_t size);
 
  private:
   bool NeedsAVREnable();

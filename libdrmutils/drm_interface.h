@@ -643,6 +643,12 @@ enum DRMDPPSFeatureID {
   kDppsFeaturesMax,
 };
 
+struct DppsFeaturePayload {
+  uint32_t object_type;
+  uint32_t feature_id;
+  uint64_t value;
+};
+
 struct DRMDppsFeatureInfo {
   DRMDPPSFeatureID id;
   uint32_t version;

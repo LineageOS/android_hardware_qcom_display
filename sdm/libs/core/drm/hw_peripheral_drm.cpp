@@ -37,6 +37,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using sde_drm::DRMDisplayType;
 using sde_drm::DRMOps;
 using sde_drm::DRMPowerMode;
+using sde_drm::DppsFeaturePayload;
 using sde_drm::DRMDppsFeatureInfo;
 using sde_drm::DRMSecureMode;
 using sde_drm::DRMCWbCaptureMode;
@@ -143,10 +144,19 @@ DisplayError HWPeripheralDRM::Flush() {
   return kErrorNone;
 }
 
-DisplayError HWPeripheralDRM::SetDppsFeature(uint32_t object_type,
-        uint32_t feature_id, uint64_t value) {
-  uint32_t obj_id;
+DisplayError HWPeripheralDRM::SetDppsFeature(void *payload, size_t size) {
+  uint32_t obj_id = 0, object_type = 0, feature_id = 0;
+  uint64_t value = 0;
 
+  if (size != sizeof(DppsFeaturePayload)) {
+    DLOGE("invalid payload size %d, expected %d", size, sizeof(DppsFeaturePayload));
+    return kErrorParameters;
+  }
+
+  DppsFeaturePayload *feature_payload = reinterpret_cast<DppsFeaturePayload *>(payload);
+  object_type = feature_payload->object_type;
+  feature_id = feature_payload->feature_id;
+  value = feature_payload->value;
   if (object_type == DRM_MODE_OBJECT_CRTC) {
     obj_id = token_.crtc_id;
   } else if (object_type == DRM_MODE_OBJECT_CONNECTOR) {
@@ -160,8 +170,12 @@ DisplayError HWPeripheralDRM::SetDppsFeature(uint32_t object_type,
   return kErrorNone;
 }
 
-DisplayError HWPeripheralDRM::GetDppsFeatureInfo(void *info) {
-  DRMDppsFeatureInfo *feature_info = reinterpret_cast<DRMDppsFeatureInfo *>(info);
+DisplayError HWPeripheralDRM::GetDppsFeatureInfo(void *payload, size_t size) {
+  if (size != sizeof(DRMDppsFeatureInfo)) {
+    DLOGE("invalid payload size %d, expected %d", size, sizeof(DRMDppsFeatureInfo));
+    return kErrorParameters;
+  }
+  DRMDppsFeatureInfo *feature_info = reinterpret_cast<DRMDppsFeatureInfo *>(payload);
   drm_mgr_intf_->GetDppsFeatureInfo(feature_info);
   return kErrorNone;
 }
