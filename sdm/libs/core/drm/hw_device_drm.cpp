@@ -222,25 +222,31 @@ static void GetDRMFormat(LayerBufferFormat format, uint32_t *drm_format,
   }
 }
 
-HWDeviceDRM::Registry::Registry(BufferAllocator *buffer_allocator) :
-  buffer_allocator_(buffer_allocator) {
-  DRMMaster *master = nullptr;
-  DRMMaster::GetInstance(&master);
-
-  if (!master) {
-    DLOGE("Failed to acquire DRM Master instance");
-    return;
+class FrameBufferObject : public LayerBufferObject {
+ public:
+  FrameBufferObject(uint32_t fb_id) : fb_id_(fb_id) {
   }
 
-  // If RMFB is ref-counted, we should immediately make a call to clean up fb_id after commit.
-  // Driver will release fb_id after its usage. Otherwise speculatively free up fb_id after 3
-  // cycles assuming driver is done with it.
-  rmfb_delay_ = master->IsRmFbRefCounted() ? 1 : 3;
-  hashmap_ = new std::unordered_map<int, uint32_t>[rmfb_delay_];
-}
+  ~FrameBufferObject() {
+    DRMMaster *master;
+    DRMMaster::GetInstance(&master);
+    int ret = master->RemoveFbId(fb_id_);
+    if (ret < 0) {
+      DLOGE("Removing fb_id %d failed with error %d", fb_id_, errno);
+    }
+  };
+  uint32_t GetFbId() { return fb_id_; }
 
-HWDeviceDRM::Registry::~Registry() {
-  delete [] hashmap_;
+ private:
+  uint32_t fb_id_;
+};
+
+HWDeviceDRM::Registry::Registry(BufferAllocator *buffer_allocator) :
+  buffer_allocator_(buffer_allocator) {
+  int value = 0;
+  if (Debug::GetProperty(DISABLE_FBID_CACHE, &value) == kErrorNone) {
+    disable_fbid_cache_ = (value == 1);
+  }
 }
 
 void HWDeviceDRM::Registry::Register(HWLayers *hw_layers) {
@@ -257,79 +263,105 @@ void HWDeviceDRM::Registry::Register(HWLayers *hw_layers) {
       input_buffer = &hw_rotator_session->output_buffer;
     }
 
-    MapBufferToFbId(input_buffer);
+    MapBufferToFbId(&layer, input_buffer);
   }
 }
 
-void HWDeviceDRM::Registry::MapBufferToFbId(LayerBuffer* buffer) {
-  int fd = buffer->planes[0].fd;
+int HWDeviceDRM::Registry::CreateFbId(LayerBuffer *buffer, uint32_t *fb_id) {
   DRMMaster *master = nullptr;
   DRMMaster::GetInstance(&master);
+  int ret = -1;
 
   if (!master) {
     DLOGE("Failed to acquire DRM Master instance");
+    return ret;
+  }
+
+  DRMBuffer layout{};
+  AllocatedBufferInfo buf_info{};
+  buf_info.fd = layout.fd = buffer->planes[0].fd;
+  buf_info.aligned_width = layout.width = buffer->width;
+  buf_info.aligned_height = layout.height = buffer->height;
+  buf_info.format = buffer->format;
+  GetDRMFormat(buf_info.format, &layout.drm_format, &layout.drm_format_modifier);
+  buffer_allocator_->GetBufferLayout(buf_info, layout.stride, layout.offset, &layout.num_planes);
+  ret = master->CreateFbId(layout, fb_id);
+  if (ret < 0) {
+    DLOGE("CreateFbId failed. width %d, height %d, format: %s, stride %u, error %d",
+        layout.width, layout.height, GetFormatString(buf_info.format), layout.stride[0], errno);
+  }
+
+  return ret;
+}
+
+void HWDeviceDRM::Registry::MapBufferToFbId(Layer* layer, LayerBuffer* buffer) {
+  if (buffer->planes[0].fd < 0) {
     return;
   }
 
-  if (fd >= 0 && hashmap_[current_index_].find(fd) == hashmap_[current_index_].end()) {
-    AllocatedBufferInfo buf_info{};
-    DRMBuffer layout{};
-    buf_info.fd = layout.fd = fd;
-    buf_info.aligned_width = layout.width = buffer->width;
-    buf_info.aligned_height = layout.height = buffer->height;
-    buf_info.format = buffer->format;
-    GetDRMFormat(buf_info.format, &layout.drm_format, &layout.drm_format_modifier);
-    buffer_allocator_->GetBufferLayout(buf_info, layout.stride, layout.offset,
-        &layout.num_planes);
-    uint32_t fb_id = 0;
-    int ret = master->CreateFbId(layout, &fb_id);
-    if (ret < 0) {
-      DLOGW("CreateFbId failed. width %d, height %d, format: %s, stride %u, error %d",
-          layout.width, layout.height, GetFormatString(buf_info.format), layout.stride[0],
-          errno);
-    } else {
-      hashmap_[current_index_][fd] = fb_id;
-    }
+  uint64_t handle_id = buffer->handle_id;
+
+  if (!handle_id || disable_fbid_cache_) {
+    // Legacy: Remove & Create fb_id in each frame
+    layer->buffer_map->buffer_map.clear();
   }
-  return;
-}
 
-void HWDeviceDRM::Registry::Next() {
-  current_index_ = (current_index_ + 1) % rmfb_delay_;
-}
-
-void HWDeviceDRM::Registry::Unregister() {
-  DRMMaster *master = nullptr;
-  DRMMaster::GetInstance(&master);
-
-  if (!master) {
-    DLOGE("Failed to acquire DRM Master instance");
+  if (layer->buffer_map->buffer_map.find(handle_id) != layer->buffer_map->buffer_map.end()) {
+    // Found fb_id for given handle_id key
     return;
   }
 
-  auto &curr_map = hashmap_[current_index_];
-  for (auto &pair : curr_map) {
-    uint32_t fb_id = pair.second;
-    int ret = master->RemoveFbId(fb_id);
-    if (ret < 0) {
-      DLOGE("Removing fb_id %d failed with error %d", fb_id, errno);
-    }
+  uint32_t fb_id = 0;
+  if (CreateFbId(buffer, &fb_id) >= 0) {
+    // Create and cache the fb_id in map
+    layer->buffer_map->buffer_map[handle_id] = std::make_shared<FrameBufferObject>(fb_id);
+  }
+}
+
+void HWDeviceDRM::Registry::MapOutputBufferToFbId(LayerBuffer *output_buffer) {
+  if (output_buffer->planes[0].fd < 0) {
+    return;
   }
 
-  curr_map.clear();
+  uint64_t handle_id = output_buffer->handle_id;
+
+  if (!handle_id || disable_fbid_cache_) {
+    // Legacy: Remove & Create fb_id in each frame
+    output_buffer_map_.clear();
+  }
+
+  if (output_buffer_map_.find(handle_id) != output_buffer_map_.end()) {
+    return;
+  }
+
+  uint32_t fb_id = 0;
+  if (CreateFbId(output_buffer, &fb_id) >= 0) {
+    output_buffer_map_[handle_id] = std::make_shared<FrameBufferObject>(fb_id);
+  }
 }
 
 void HWDeviceDRM::Registry::Clear() {
-  for (int i = 0; i < rmfb_delay_; i++) {
-    Unregister();
-    Next();
-  }
-  current_index_ = 0;
+  output_buffer_map_.clear();
 }
 
-uint32_t HWDeviceDRM::Registry::GetFbId(int fd) {
-  auto it = hashmap_[current_index_].find(fd);
-  return (it == hashmap_[current_index_].end()) ? 0 : it->second;
+uint32_t HWDeviceDRM::Registry::GetFbId(Layer *layer, uint64_t handle_id) {
+  auto it = layer->buffer_map->buffer_map.find(handle_id);
+  if (it != layer->buffer_map->buffer_map.end()) {
+    FrameBufferObject *fb_obj = static_cast<FrameBufferObject*>(it->second.get());
+    return fb_obj->GetFbId();
+  }
+
+  return 0;
+}
+
+uint32_t HWDeviceDRM::Registry::GetOutputFbId(uint64_t handle_id) {
+  auto it = output_buffer_map_.find(handle_id);
+  if (it != output_buffer_map_.end()) {
+    FrameBufferObject *fb_obj = static_cast<FrameBufferObject*>(it->second.get());
+    return fb_obj->GetFbId();
+  }
+
+  return 0;
 }
 
 HWDeviceDRM::HWDeviceDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
@@ -881,7 +913,8 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
         input_buffer = &hw_rotator_session->output_buffer;
       }
 
-      uint32_t fb_id = registry_.GetFbId(input_buffer->planes[0].fd);
+      uint32_t fb_id = registry_.GetFbId(&layer, input_buffer->handle_id);
+
       if (pipe_info->valid && fb_id) {
         uint32_t pipe_id = pipe_info->pipe_id;
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ALPHA, pipe_id, layer.plane_alpha);
@@ -1047,7 +1080,6 @@ DisplayError HWDeviceDRM::Validate(HWLayers *hw_layers) {
     err = kErrorHardware;
   }
 
-  registry_.Unregister();
   return err;
 }
 
@@ -1062,9 +1094,6 @@ DisplayError HWDeviceDRM::Commit(HWLayers *hw_layers) {
   } else {
     err = AtomicCommit(hw_layers);
   }
-
-  registry_.Next();
-  registry_.Unregister();
 
   return err;
 }
@@ -1106,7 +1135,8 @@ DisplayError HWDeviceDRM::DefaultCommit(HWLayers *hw_layers) {
   drmModeModeInfo mode;
   res_mgr->GetMode(&mode);
 
-  uint32_t fb_id = registry_.GetFbId(hw_layer_info.hw_layers.at(0).input_buffer.planes[0].fd);
+  uint64_t handle_id = hw_layer_info.hw_layers.at(0).input_buffer.handle_id;
+  uint32_t fb_id = registry_.GetFbId(&hw_layer_info.hw_layers.at(0), handle_id);
   ret = drmModeSetCrtc(dev_fd, crtc_id, fb_id, 0 /* x */, 0 /* y */, &connector_id,
                        1 /* num_connectors */, &mode);
   if (ret < 0) {

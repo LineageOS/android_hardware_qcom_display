@@ -163,6 +163,9 @@ DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
   hw_layers_info.stack = layer_stack;
 
   for (auto &layer : layers) {
+    if (layer->buffer_map == nullptr) {
+      layer->buffer_map = std::make_shared<LayerBufferMap>();
+    }
     if (layer->composition == kCompositionGPUTarget) {
       hw_layers_info.gpu_target_index = hw_layers_info.app_layer_count;
       break;
@@ -1422,6 +1425,7 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
     hw_layer.input_buffer.planes[0].stride = sdm_layer->input_buffer.planes[0].stride;
     hw_layer.input_buffer.size = sdm_layer->input_buffer.size;
     hw_layer.input_buffer.acquire_fence_fd = sdm_layer->input_buffer.acquire_fence_fd;
+    hw_layer.input_buffer.handle_id = sdm_layer->input_buffer.handle_id;
   }
 
   return;

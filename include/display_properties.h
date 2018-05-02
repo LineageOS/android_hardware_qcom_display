@@ -86,6 +86,7 @@
 #define DISABLE_FB_CROPPING_PROP             DISPLAY_PROP("disable_fb_cropping")
 #define PRIORITIZE_CACHE_COMPOSITION_PROP    DISPLAY_PROP("prioritize_cache_comp")
 #define DROP_SKEWED_VSYNC_PROP               DISPLAY_PROP("drop_skewed_vsync")
+#define DISABLE_FBID_CACHE                   DISPLAY_PROP("disable_fbid_cache")
 
 #define DISABLE_HDR_LUT_GEN                  DISPLAY_PROP("disable_hdr_lut_gen")
 #define ENABLE_DEFAULT_COLOR_MODE            DISPLAY_PROP("enable_default_color_mode")

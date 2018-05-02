@@ -278,6 +278,7 @@ struct LayerBuffer {
   UbwcCrStatsVector  ubwc_crstats[NUM_UBWC_CR_STATS_LAYERS] = {};
                                 //! < UBWC Compression ratio,stats. Stored as a vector of pair of
                                 //! of (tile size, #of tiles)
+  uint64_t handle_id = 0;
 };
 
 // This enum represents buffer layout types.
@@ -285,6 +286,11 @@ enum BufferLayout {
   kLinear,    //!< Linear data
   kUBWC,      //!< UBWC aligned data
   kTPTiled    //!< Tightly Packed data
+};
+
+class LayerBufferObject {
+public:
+  virtual ~LayerBufferObject() {};
 };
 
 }  // namespace sdm
