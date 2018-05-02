@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -33,8 +33,9 @@ extern "C" {
 #include <stdint.h>
 
 typedef enum ColorRange {
-  Range_Limited = 0,
-  Range_Full    = 1,
+  Range_Limited   = 0,
+  Range_Full      = 1,
+  Range_Extended  = 2,
   Range_Max     = 0xff,
 } ColorRange;
 

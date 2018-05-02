@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -27,6 +27,8 @@
 
 #include <core/sdm_types.h>
 #include <core/display_interface.h>
+#include <vector>
+
 #include "hw_info_types.h"
 
 namespace sdm {
@@ -52,6 +54,8 @@ class StrategyInterface {
   virtual DisplayError SetCompositionState(LayerComposition composition_type, bool enable) = 0;
   virtual DisplayError Purge() = 0;
   virtual DisplayError SetIdleTimeoutMs(uint32_t active_ms) = 0;
+  /* Sets the list of color modes supported on a display */
+  virtual DisplayError SetColorModesInfo(const std::vector<PrimariesTransfer> &colormodes_cs) = 0;
 
   virtual ~StrategyInterface() { }
 };
