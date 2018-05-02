@@ -80,12 +80,6 @@ AdrenoMemInfo::AdrenoMemInfo() {
       !(strncmp(property, "true", PROPERTY_VALUE_MAX))) {
     gfx_ubwc_disable_ = true;
   }
-
-  if ((property_get("debug.gralloc.map_fb_memory", property, NULL) > 0) &&
-      (!strncmp(property, "1", PROPERTY_VALUE_MAX) ||
-       (!strncasecmp(property, "true", PROPERTY_VALUE_MAX)))) {
-    map_fb_ = true;
-  }
 }
 
 AdrenoMemInfo::~AdrenoMemInfo() {
@@ -98,12 +92,6 @@ void AdrenoMemInfo::AlignUnCompressedRGB(int width, int height, int format, int 
                                          unsigned int *aligned_w, unsigned int *aligned_h) {
   *aligned_w = (unsigned int)ALIGN(width, 32);
   *aligned_h = (unsigned int)ALIGN(height, 32);
-
-  // Don't add any additional padding if debug.gralloc.map_fb_memory
-  // is enabled
-  if (map_fb_) {
-    return;
-  }
 
   int bpp = 4;
   switch (format) {

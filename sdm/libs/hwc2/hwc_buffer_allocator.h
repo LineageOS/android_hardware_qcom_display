@@ -33,7 +33,7 @@
 #include <sys/mman.h>
 
 #include <android/hardware/graphics/allocator/2.0/IAllocator.h>
-#include <android/hardware/graphics/mapper/2.0/IMapper.h>
+#include <android/hardware/graphics/mapper/2.1/IMapper.h>
 #include "gralloc_priv.h"
 
 using android::hardware::graphics::allocator::V2_0::IAllocator;

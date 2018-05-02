@@ -30,7 +30,7 @@
 #ifndef __GR_UTILS_H__
 #define __GR_UTILS_H__
 
-#include <android/hardware/graphics/common/1.0/types.h>
+#include <android/hardware/graphics/common/1.1/types.h>
 #include "gralloc_priv.h"
 
 #define SZ_2M 0x200000
@@ -49,7 +49,7 @@
 #define INT(exp) static_cast<int>(exp)
 #define UINT(exp) static_cast<unsigned int>(exp)
 
-using android::hardware::graphics::common::V1_0::BufferUsage;
+using android::hardware::graphics::common::V1_1::BufferUsage;
 
 namespace gralloc {
 struct BufferInfo {

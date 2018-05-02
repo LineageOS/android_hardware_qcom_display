@@ -143,7 +143,6 @@ class AdrenoMemInfo {
   unsigned int (*LINK_adreno_get_gpu_pixel_alignment)() = NULL;
 
   bool gfx_ubwc_disable_ = false;
-  bool map_fb_ = false;
   void *libadreno_utils_ = NULL;
 
   static AdrenoMemInfo *s_instance;

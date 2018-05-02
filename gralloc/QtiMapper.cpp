@@ -50,7 +50,7 @@ QtiMapper::QtiMapper() {
   ALOGD_IF(DEBUG, "Created QtiMapper instance");
 }
 
-bool QtiMapper::ValidDescriptor(const IMapper::BufferDescriptorInfo &bd) {
+bool QtiMapper::ValidDescriptor(const BufferDescriptorInfo_2_1 &bd) {
   if (bd.width == 0 || bd.height == 0 || (static_cast<int32_t>(bd.format) <= 0) ||
       bd.layerCount != 1) {
     return false;
@@ -59,9 +59,8 @@ bool QtiMapper::ValidDescriptor(const IMapper::BufferDescriptorInfo &bd) {
   return true;
 }
 
-// Methods from ::android::hardware::graphics::mapper::V2_0::IMapper follow.
-Return<void> QtiMapper::createDescriptor(const IMapper::BufferDescriptorInfo &descriptor_info,
-                                         createDescriptor_cb hidl_cb) {
+Error QtiMapper::CreateDescriptor(const BufferDescriptorInfo_2_1& descriptor_info,
+                                  IMapperBufferDescriptor *descriptor) {
   ALOGD_IF(DEBUG,
            "BufferDescriptorInfo: wxh: %dx%d usage: 0x%" PRIu64 " format: %d layer_count: %d",
            descriptor_info.width, descriptor_info.height, descriptor_info.usage,
@@ -69,10 +68,26 @@ Return<void> QtiMapper::createDescriptor(const IMapper::BufferDescriptorInfo &de
 
   if (ValidDescriptor(descriptor_info)) {
     auto vec = gralloc::BufferDescriptor::Encode(descriptor_info);
-    hidl_cb(Error::NONE, vec);
+    *descriptor = vec;
+    return Error::NONE;
   } else {
-    hidl_cb(Error::BAD_VALUE, hidl_vec<uint32_t>());
+    return Error::BAD_VALUE;
   }
+}
+
+// Methods from ::android::hardware::graphics::mapper::V2_0::IMapper follow.
+Return<void> QtiMapper::createDescriptor(const BufferDescriptorInfo_2_0 &descriptor_info,
+                                         createDescriptor_cb hidl_cb) {
+  IMapperBufferDescriptor descriptor;
+  auto info_2_1 = BufferDescriptorInfo_2_1 {
+      descriptor_info.width,
+      descriptor_info.height,
+      descriptor_info.layerCount,
+      static_cast<PixelFormat>(descriptor_info.format),
+      descriptor_info.usage,
+  };
+  auto err = CreateDescriptor(info_2_1, &descriptor);
+  hidl_cb(err, descriptor);
   return Void();
 }
 
@@ -207,12 +222,54 @@ Return<void> QtiMapper::unlock(void *buffer, unlock_cb hidl_cb) {
   return Void();
 }
 
+Return<Error> QtiMapper::validateBufferSize(void* buffer,
+                                            const BufferDescriptorInfo_2_1& descriptor_info,
+                                            uint32_t /*stride*/) {
+  auto err = Error::BAD_BUFFER;
+  auto hnd = static_cast<private_handle_t *>(buffer);
+  if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
+    if (buf_mgr_->IsBufferImported(hnd) != Error::NONE) {
+      return Error::BAD_BUFFER;
+    }
+    auto info = gralloc::BufferInfo(descriptor_info.width, descriptor_info.height,
+                                    static_cast<uint32_t>(descriptor_info.format),
+                                    static_cast<uint64_t>(descriptor_info.usage));
+    info.layer_count = descriptor_info.layerCount;
+    err = buf_mgr_->ValidateBufferSize(hnd, info);
+  }
+  return err;
+}
+
+Return<void> QtiMapper::getTransportSize(void *buffer,
+                                         IMapper_2_1::getTransportSize_cb hidl_cb) {
+  auto err = Error::BAD_BUFFER;
+  auto hnd = static_cast<private_handle_t *>(buffer);
+  uint32_t num_fds = 0, num_ints = 0;
+  if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
+    num_fds = 2;
+    // TODO(user): reduce to transported values;
+    num_ints = static_cast<uint32_t >(hnd->numInts);
+    err = Error::NONE;
+  }
+  ALOGD_IF(DEBUG, "GetTransportSize: num fds: %d num ints: %d err:%d", num_fds, num_ints, err);
+  hidl_cb(err, num_fds, num_ints);
+  return Void();
+}
+
+Return<void> QtiMapper::createDescriptor_2_1(const BufferDescriptorInfo_2_1& descriptor_info,
+                                             IMapper_2_1::createDescriptor_2_1_cb hidl_cb) {
+  IMapperBufferDescriptor descriptor;
+  auto err = CreateDescriptor(descriptor_info, &descriptor);
+  hidl_cb(err, descriptor);
+  return Void();
+}
+
 #ifdef ENABLE_QTI_MAPPER_EXTENSION
 Return<void> QtiMapper::getMapSecureBufferFlag(void *buffer, getMapSecureBufferFlag_cb hidl_cb) {
   auto err = Error::BAD_BUFFER;
   auto hnd = static_cast<private_handle_t *>(buffer);
   int *map_secure_buffer = 0;
-  if (buffer != nullptr && private_handle_t::validate(hnd) != 0) {
+  if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
     if (getMetaData(hnd, GET_MAP_SECURE_BUFFER, map_secure_buffer) != 0) {
       *map_secure_buffer = 0;
     } else {
@@ -227,7 +284,7 @@ Return<void> QtiMapper::getInterlacedFlag(void *buffer, getInterlacedFlag_cb hid
   auto err = Error::BAD_BUFFER;
   auto hnd = static_cast<private_handle_t *>(buffer);
   int *interlaced_flag = nullptr;
-  if (buffer != nullptr && private_handle_t::validate(hnd) != 0) {
+  if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
     if (getMetaData(hnd, GET_PP_PARAM_INTERLACED, interlaced_flag) != 0) {
       *interlaced_flag = 0;
     } else {
@@ -243,7 +300,7 @@ Return<void> QtiMapper::getCustomDimensions(void *buffer, getCustomDimensions_cb
   auto hnd = static_cast<private_handle_t *>(buffer);
   int stride = 0;
   int height = 0;
-  if (buffer != nullptr && private_handle_t::validate(hnd) != 0) {
+  if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
     stride = hnd->width;
     height = hnd->height;
     gralloc::GetCustomDimensions(hnd, &stride, &height);
@@ -257,7 +314,7 @@ Return<void> QtiMapper::getRgbDataAddress(void *buffer, getRgbDataAddress_cb hid
   auto err = Error::BAD_BUFFER;
   auto hnd = static_cast<private_handle_t *>(buffer);
   void *rgb_data = nullptr;
-  if (buffer != nullptr && private_handle_t::validate(hnd) != 0) {
+  if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
     if (gralloc::GetRgbDataAddress(hnd, &rgb_data) == 0) {
       err = Error::NONE;
     }
@@ -281,7 +338,7 @@ Return<void> QtiMapper::getColorSpace(void *buffer, getColorSpace_cb hidl_cb) {
   auto err = Error::BAD_BUFFER;
   auto hnd = static_cast<private_handle_t *>(buffer);
   int color_space = 0;
-  if (buffer != nullptr && private_handle_t::validate(hnd) != 0) {
+  if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
     gralloc::GetColorSpaceFromMetadata(hnd, &color_space);
     err = Error::NONE;
   }
@@ -295,7 +352,7 @@ Return<void> QtiMapper::getYuvPlaneInfo(void *buffer, getYuvPlaneInfo_cb hidl_cb
   hidl_vec<YCbCrLayout> layout;
   layout.resize(2);
   android_ycbcr yuv_plane_info[2];
-  if (buffer != nullptr && private_handle_t::validate(hnd) != 0) {
+  if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
     if (gralloc::GetYUVPlaneInfo(hnd, yuv_plane_info) == 0) {
       err = Error::NONE;
       for (int i=0; i < 2; i++) {
@@ -315,7 +372,7 @@ Return<void> QtiMapper::getYuvPlaneInfo(void *buffer, getYuvPlaneInfo_cb hidl_cb
 Return<Error> QtiMapper::setSingleBufferMode(void *buffer, bool enable) {
   auto err = Error::BAD_BUFFER;
   auto hnd = static_cast<private_handle_t *>(buffer);
-  if (buffer != nullptr && private_handle_t::validate(hnd) != 0) {
+  if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
     if (setMetaData(hnd, SET_SINGLE_BUFFER_MODE, &enable) != 0) {
       err = Error::UNSUPPORTED;
     } else {
@@ -330,10 +387,10 @@ Return<Error> QtiMapper::setSingleBufferMode(void *buffer, bool enable) {
 
 // When we are in passthrough mode, this method is used
 // by hidl to obtain the SP HAL object
-IMapper *HIDL_FETCH_IMapper(const char * /* name */) {
+IMapper_2_1 *HIDL_FETCH_IMapper(const char * /* name */) {
   ALOGD_IF(DEBUG, "Fetching IMapper from QtiMapper");
   auto mapper = new QtiMapper();
-  return static_cast<IMapper *>(mapper);
+  return static_cast<IMapper_2_1 *>(mapper);
 }
 
 }  // namespace implementation

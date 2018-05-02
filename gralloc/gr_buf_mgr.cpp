@@ -38,15 +38,6 @@ static BufferInfo GetBufferInfo(const BufferDescriptor &descriptor) {
 }
 
 BufferManager::BufferManager() : next_id_(0) {
-  char property[PROPERTY_VALUE_MAX];
-
-  // Map framebuffer memory
-  if ((property_get("debug.gralloc.map_fb_memory", property, NULL) > 0) &&
-      (!strncmp(property, "1", PROPERTY_VALUE_MAX) ||
-       (!strncasecmp(property, "true", PROPERTY_VALUE_MAX)))) {
-    map_fb_mem_ = true;
-  }
-
   handles_map_.clear();
   allocator_ = new Allocator();
   allocator_->Init();
@@ -92,6 +83,17 @@ Error BufferManager::FreeBuffer(std::shared_ptr<Buffer> buf) {
   return Error::NONE;
 }
 
+Error BufferManager::ValidateBufferSize(private_handle_t const *hnd, BufferInfo info) {
+  unsigned int size, alignedw, alignedh;
+  info.format = allocator_->GetImplDefinedFormat(info.usage, info.format);
+  GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh);
+  auto ion_fd_size = static_cast<unsigned int>(lseek(hnd->fd, 0, SEEK_END));
+  if (size != ion_fd_size) {
+    return Error::BAD_VALUE;
+  }
+  return Error::NONE;
+}
+
 void BufferManager::RegisterHandleLocked(const private_handle_t *hnd, int ion_handle,
                                          int ion_handle_meta) {
   auto buffer = std::make_shared<Buffer>(hnd, ion_handle, ion_handle_meta);
@@ -111,9 +113,13 @@ Error BufferManager::ImportHandleLocked(private_handle_t *hnd) {
           hnd->id);
     return Error::BAD_BUFFER;
   }
-  // Set base pointers to NULL since the data here was received over binder
+  // Initialize members that aren't transported
+  hnd->size = static_cast<unsigned int>(lseek(hnd->fd, 0, SEEK_END));
+  hnd->offset = 0;
+  hnd->offset_metadata = 0;
   hnd->base = 0;
   hnd->base_metadata = 0;
+  hnd->gpuaddr = 0;
   RegisterHandleLocked(hnd, ion_handle, ion_handle_meta);
   return Error::NONE;
 }
@@ -138,6 +144,15 @@ Error BufferManager::MapBuffer(private_handle_t const *handle) {
     return Error::BAD_BUFFER;
   }
   return Error::NONE;
+}
+
+Error BufferManager::IsBufferImported(const private_handle_t *hnd) {
+  std::lock_guard<std::mutex> lock(buffer_lock_);
+  auto buf = GetBufferFromHandleLocked(hnd);
+  if (buf != nullptr) {
+    return Error::NONE;
+  }
+  return Error::BAD_BUFFER;
 }
 
 Error BufferManager::RetainBuffer(private_handle_t const *hnd) {
