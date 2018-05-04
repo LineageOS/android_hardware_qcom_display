@@ -130,12 +130,11 @@ DisplayError DisplayBase::Init() {
   }
 
   if (hw_info_intf_) {
-    HWResourceInfo hw_resource_info = HWResourceInfo();
-    hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
-    auto max_mixer_stages = hw_resource_info.num_blending_stages;
+    hw_info_intf_->GetHWResourceInfo(&hw_resource_info_);
+    auto max_mixer_stages = hw_resource_info_.num_blending_stages;
     int property_value = Debug::GetMaxPipesPerMixer(display_type_);
     if (property_value >= 0) {
-      max_mixer_stages = std::min(UINT32(property_value), hw_resource_info.num_blending_stages);
+      max_mixer_stages = std::min(UINT32(property_value), hw_resource_info_.num_blending_stages);
     }
     DisplayBase::SetMaxMixerStages(max_mixer_stages);
   }
@@ -182,6 +181,10 @@ DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
     hw_layers_info.app_layer_count++;
     if (!gpu_fallback_) {
       gpu_fallback_ = NeedsGpuFallback(layer);
+    }
+    if (IsWideColor(layer->input_buffer.color_metadata.colorPrimaries)) {
+      hw_layers_info.wide_color_primaries.push_back(
+          layer->input_buffer.color_metadata.colorPrimaries);
     }
   }
 
@@ -427,10 +430,8 @@ DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   fixed_info->is_cmdmode = (hw_panel_info_.mode == kModeCommand);
 
-  HWResourceInfo hw_resource_info = HWResourceInfo();
-  hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
   // hdr can be supported by display when target and panel supports HDR.
-  fixed_info->hdr_supported = (hw_resource_info.has_hdr);  // && hw_panel_info_.hdr_enabled);
+  fixed_info->hdr_supported = (hw_resource_info_.has_hdr && hw_panel_info_.hdr_enabled);
   // Populate luminance values only if hdr will be supported on that display
   fixed_info->max_luminance = fixed_info->hdr_supported ? hw_panel_info_.peak_luminance: 0;
   fixed_info->average_luminance = fixed_info->hdr_supported ? hw_panel_info_.average_luminance : 0;
@@ -1535,7 +1536,7 @@ DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
     return kErrorNone;
   }
 
-  if (!layer_stack->flags.hdr_present) {
+  if (hw_layers_.info.wide_color_primaries.empty()) {
     //  HDR playback off - set prev mode
     if (hdr_playback_) {
       hdr_playback_ = false;
@@ -1544,18 +1545,20 @@ DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
       }
     }
   } else {
-    // hdr is present
-    if (!hdr_playback_ && !layer_stack->flags.animating) {
-      // hdr is starting
-      hdr_playback_ = true;
-      error = SetHDRMode(true);
-      if (error != kErrorNone) {
-        DLOGW("Failed to set HDR mode");
-      }
-    } else if (hdr_playback_ && !hdr_mode_) {
-      error = SetHDRMode(true);
-      if (error != kErrorNone) {
-        DLOGW("Failed to set HDR mode");
+    // set HDR mode on legacy targets only
+    if (SetHdrModeAtStart(layer_stack)) {
+      if (!hdr_playback_ && !layer_stack->flags.animating) {
+        // hdr is starting
+        hdr_playback_ = true;
+        error = SetHDRMode(true);
+        if (error != kErrorNone) {
+          DLOGW("Failed to set HDR mode");
+        }
+      } else if (hdr_playback_ && !hdr_mode_) {
+        error = SetHDRMode(true);
+        if (error != kErrorNone) {
+          DLOGW("Failed to set HDR mode");
+        }
       }
     }
   }
@@ -1570,15 +1573,31 @@ DisplayError DisplayBase::ValidateHDR(LayerStack *layer_stack) {
     return kErrorNone;
   }
 
-  if (hdr_playback_) {
+  bool hdr_mode = false;
+  bool set = false;  // indicates if we need to call SetHDRMode
+  if (hw_resource_info_.src_tone_map.any()) {
+    if (!hw_layers_.info.wide_color_primaries.empty()) {
+      hdr_playback_ = true;
+      // Need to set HDR mode on target with SSPP only when blend cs is BT2020
+      if (layer_stack->blend_cs.primaries == ColorPrimaries_BT2020 && !hdr_mode_) {
+        hdr_mode = true;
+        set = true;
+      }
+    }
+  } else if (hdr_playback_) {  // legacy targets
     // HDR color mode is set when hdr layer is present in layer_stack.
     // If client flags HDR layer as skipped, then blending happens
     // in SDR color space. Hence, need to restore the SDR color mode.
     if (layer_stack->blend_cs.primaries != ColorPrimaries_BT2020) {
-      error = SetHDRMode(false);
-      if (error != kErrorNone) {
-        DLOGW("Failed to restore SDR mode");
-      }
+      hdr_mode = false;
+      set = true;
+    }
+  }
+
+  if (set) {
+    error = SetHDRMode(hdr_mode);
+    if (error != kErrorNone) {
+      DLOGW("Setting HDR Mode %d failed", hdr_mode);
     }
   }
 
@@ -1616,10 +1635,8 @@ DisplayError DisplayBase::ValidateScaling(uint32_t width, uint32_t height) {
   uint32_t display_width = display_attributes_.x_pixels;
   uint32_t display_height = display_attributes_.y_pixels;
 
-  HWResourceInfo hw_resource_info = HWResourceInfo();
-  hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
-  float max_scale_down = FLOAT(hw_resource_info.max_scale_down);
-  float max_scale_up = FLOAT(hw_resource_info.max_scale_up);
+  float max_scale_down = FLOAT(hw_resource_info_.max_scale_down);
+  float max_scale_up = FLOAT(hw_resource_info_.max_scale_up);
 
   float scale_x = FLOAT(width / display_width);
   float scale_y = FLOAT(height / display_height);
@@ -1811,4 +1828,9 @@ void DisplayBase::EndDisplayPowerReset() {
   SCOPE_LOCK(display_power_reset_lock_);
   display_power_reset_pending_ = false;
 }
+
+bool DisplayBase::SetHdrModeAtStart(LayerStack *layer_stack) {
+  return (hw_resource_info_.src_tone_map.none() && layer_stack->flags.hdr_present);
+}
+
 }  // namespace sdm

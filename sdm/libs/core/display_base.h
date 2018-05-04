@@ -153,6 +153,7 @@ class DisplayBase : public DisplayInterface {
   void GetColorPrimaryTransferFromAttributes(const AttrVal &attr,
       std::vector<PrimariesTransfer> *supported_pt);
   bool DisplayPowerResetPending();
+  bool SetHdrModeAtStart(LayerStack *layer_stack);
 
   recursive_mutex recursive_mutex_;
   DisplayType display_type_;
@@ -160,6 +161,7 @@ class DisplayBase : public DisplayInterface {
   HWDeviceType hw_device_type_;
   HWInterface *hw_intf_ = NULL;
   HWPanelInfo hw_panel_info_;
+  HWResourceInfo hw_resource_info_ = {};
   BufferSyncHandler *buffer_sync_handler_ = NULL;
   BufferAllocator *buffer_allocator_ {};
   CompManager *comp_manager_ = NULL;

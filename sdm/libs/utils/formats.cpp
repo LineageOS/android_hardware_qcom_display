@@ -244,6 +244,15 @@ bool HasAlphaChannel(LayerBufferFormat format) {
   }
 }
 
+bool IsWideColor(const ColorPrimaries &primary) {
+  switch (primary) {
+    case ColorPrimaries_DCIP3:
+    case ColorPrimaries_BT2020:
+      return true;
+    default:
+      return false;
+  }
+}
 
 }  // namespace sdm
 

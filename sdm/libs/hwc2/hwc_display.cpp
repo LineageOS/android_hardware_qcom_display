@@ -50,6 +50,15 @@
 
 namespace sdm {
 
+bool NeedsToneMap(const LayerStack &layer_stack) {
+  for (Layer *layer : layer_stack.layers) {
+    if (layer->request.flags.tone_map) {
+      return true;
+    }
+  }
+  return false;
+}
+
 HWCColorMode::HWCColorMode(DisplayInterface *display_intf) : display_intf_(display_intf) {}
 
 HWC2::Error HWCColorMode::Init() {
@@ -1238,7 +1247,7 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
     DisplayError error = kErrorUndefined;
     int status = 0;
     if (tone_mapper_) {
-      if (layer_stack_.flags.hdr_present) {
+      if (NeedsToneMap(layer_stack_)) {
         status = tone_mapper_->HandleToneMap(&layer_stack_);
         if (status != 0) {
           DLOGE("Error handling HDR in ToneMapper");
@@ -1926,10 +1935,12 @@ bool HWCDisplay::CanSkipValidate() {
     return false;
   }
 
-  // Layer Stack checks
-  if ((layer_stack_.flags.hdr_present && (tone_mapper_ && tone_mapper_->IsActive())) ||
-     layer_stack_.flags.single_buffered_layer_present) {
-    DLOGV_IF(kTagClient, "HDR content present with tone mapping enabled. Returning false.");
+  // Layer Stack checks TODO(user): Remove hdr_present when skip validate is fixed
+  if (layer_stack_.flags.hdr_present || (tone_mapper_ && tone_mapper_->IsActive()) ||
+      layer_stack_.flags.single_buffered_layer_present) {
+    DLOGV_IF(kTagClient, "HdrPresent = %d, Tonemapping enabled or single buffer layer present = %d"
+             " Returning false.", layer_stack_.flags.hdr_present,
+             layer_stack_.flags.single_buffered_layer_present);
     return false;
   }
 
