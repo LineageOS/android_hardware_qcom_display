@@ -179,8 +179,6 @@ class HWDeviceDRM : public HWInterface {
   uint32_t current_mode_index_ = 0;
   sde_drm::DRMConnectorInfo connector_info_ = {};
   bool first_cycle_ = true;
-  int64_t release_fence_ = -1;
-  int64_t retire_fence_ = -1;
 
  private:
   bool synchronous_commit_ = false;
