@@ -97,18 +97,15 @@ DisplayError DisplayBase::Init() {
     }
   }
 
-  // TODO(user): ColorManager supported only on a single built-in display.
-  static bool color_mgr_exists = false;
-  if (!color_mgr_exists && (kBuiltIn == display_type_)) {
+  // ColorManager supported for built-in display.
+  if (kBuiltIn == display_type_) {
     color_mgr_ = ColorManagerProxy::CreateColorManagerProxy(display_type_, hw_intf_,
                                                             display_attributes_, hw_panel_info_);
 
     if (!color_mgr_) {
-      DLOGW("Unable to create ColorManagerProxy for display = %d", display_type_);
+      DLOGW("Unable to create ColorManagerProxy for display %d-%d", display_id_, display_type_);
     } else if (InitializeColorModes() != kErrorNone) {
-      DLOGW("InitColorModes failed for display = %d", display_type_);
-    } else {
-      color_mgr_exists = true;
+      DLOGW("InitColorModes failed for display %d-%d", display_id_, display_type_);
     }
   }
 
