@@ -309,6 +309,10 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   android::status_t ConfigureRefreshRate(const android::Parcel *input_parcel);
   android::status_t QdcmCMDHandler(const android::Parcel *input_parcel,
                                    android::Parcel *output_parcel);
+  android::status_t QdcmCMDDispatch(uint32_t display_id,
+                                    const PPDisplayAPIPayload &req_payload,
+                                    PPDisplayAPIPayload *resp_payload,
+                                    PPPendingParams *pending_action);
   android::status_t GetDisplayAttributesForConfig(const android::Parcel *input_parcel,
                                                   android::Parcel *output_parcel);
   android::status_t GetVisibleDisplayRect(const android::Parcel *input_parcel,

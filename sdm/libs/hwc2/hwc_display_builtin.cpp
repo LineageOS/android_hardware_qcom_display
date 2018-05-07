@@ -153,7 +153,7 @@ void HWCDisplayBuiltIn::ProcessBootAnimCompleted() {
 
   if ((!isEncrypted || (isEncrypted && main_class_services_started)) &&
       bootanim_exit) {
-    DLOGI("Applying default mode");
+    DLOGI("Applying default mode for display %d", sdm_id_);
     boot_animation_completed_ = true;
     // Applying default mode after bootanimation is finished And
     // If Data is Encrypted, it is ready for access.
