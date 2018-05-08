@@ -27,8 +27,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <cutils/log.h>
-#include <string.h>
+#include <log/log.h>
 #include <stdlib.h>
 #include <errno.h>
 #include "software_converter.h"

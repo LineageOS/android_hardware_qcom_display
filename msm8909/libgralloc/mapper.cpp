@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
- * Copyright (c) 2011-2014,2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,6 +55,27 @@ static IMemAlloc* getAllocator(int flags)
     return memalloc;
 }
 
+static int gralloc_map_metadata(buffer_handle_t handle) {
+    private_handle_t* hnd = (private_handle_t*)handle;
+    hnd->base_metadata = 0;
+    IMemAlloc* memalloc = getAllocator(hnd->flags) ;
+    void *mappedAddress = MAP_FAILED;
+    unsigned int size = 0;
+    if (!(hnd->flags & private_handle_t::PRIV_FLAGS_FRAMEBUFFER)) {
+        mappedAddress = MAP_FAILED;
+        size = ROUND_UP_PAGESIZE(sizeof(MetaData_t));
+        int ret = memalloc->map_buffer(&mappedAddress, size,
+                                       hnd->offset_metadata, hnd->fd_metadata);
+        if(ret || mappedAddress == MAP_FAILED) {
+            ALOGE("Could not mmap metadata for handle %p, fd=%d (%s)",
+                  hnd, hnd->fd_metadata, strerror(errno));
+            return -errno;
+        }
+        hnd->base_metadata = uint64_t(mappedAddress);
+    }
+    return 0;
+}
+
 static int gralloc_map(gralloc_module_t const* module,
                        buffer_handle_t handle)
 {
@@ -66,8 +87,10 @@ static int gralloc_map(gralloc_module_t const* module,
     unsigned int size = 0;
     int err = 0;
     IMemAlloc* memalloc = getAllocator(hnd->flags) ;
-    void *mappedAddress;
-    // Dont map FRAMEBUFFER and SECURE_BUFFERS
+    void *mappedAddress = MAP_FAILED;
+    hnd->base = 0;
+
+    // Dont map framebuffer and secure buffers
     if (!(hnd->flags & private_handle_t::PRIV_FLAGS_FRAMEBUFFER) &&
         !(hnd->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER)) {
         size = hnd->size;
@@ -76,60 +99,62 @@ static int gralloc_map(gralloc_module_t const* module,
         if(err || mappedAddress == MAP_FAILED) {
             ALOGE("Could not mmap handle %p, fd=%d (%s)",
                   handle, hnd->fd, strerror(errno));
-            hnd->base = 0;
             return -errno;
         }
 
-        hnd->base = uint64_t(mappedAddress) + hnd->offset;
+        hnd->base = uint64_t(mappedAddress);
+    } else {
+        // Cannot map secure buffers or framebuffers, but still need to map
+        // metadata for secure buffers.
+        // If mapping a secure buffers fails, the framework needs to get
+        // an error code.
+        err = -EACCES;
     }
 
-    //Allow mapping of metadata for all buffers and SECURE_BUFFER
-    if (!(hnd->flags & private_handle_t::PRIV_FLAGS_FRAMEBUFFER)) {
-        mappedAddress = MAP_FAILED;
-        size = ROUND_UP_PAGESIZE(sizeof(MetaData_t));
-        err = memalloc->map_buffer(&mappedAddress, size,
-                                       hnd->offset_metadata, hnd->fd_metadata);
-        if(err || mappedAddress == MAP_FAILED) {
-            ALOGE("Could not mmap handle %p, fd=%d (%s)",
-                  handle, hnd->fd_metadata, strerror(errno));
-            hnd->base_metadata = 0;
-            return -errno;
-        }
-        hnd->base_metadata = uint64_t(mappedAddress) + hnd->offset_metadata;
+    //Allow mapping of metadata for all buffers including secure ones, but not
+    //of framebuffer
+    int metadata_err = gralloc_map_metadata(handle);
+    if (!err) {
+        err = metadata_err;
     }
-    return 0;
+    return err;
 }
 
 static int gralloc_unmap(gralloc_module_t const* module,
                          buffer_handle_t handle)
 {
     ATRACE_CALL();
+    int err = -EINVAL;
     if(!module)
-        return -EINVAL;
+        return err;
 
     private_handle_t* hnd = (private_handle_t*)handle;
-    if (!(hnd->flags & private_handle_t::PRIV_FLAGS_FRAMEBUFFER)) {
-        int err = -EINVAL;
-        void* base = (void*)hnd->base;
-        unsigned int size = hnd->size;
-        IMemAlloc* memalloc = getAllocator(hnd->flags) ;
-        if(memalloc != NULL) {
-            err = memalloc->unmap_buffer(base, size, hnd->offset);
-            if (err) {
-                ALOGE("Could not unmap memory at address %p", (void*)base);
-            }
-            base = (void*)hnd->base_metadata;
-            size = ROUND_UP_PAGESIZE(sizeof(MetaData_t));
-            err = memalloc->unmap_buffer(base, size, hnd->offset_metadata);
-            if (err) {
-                ALOGE("Could not unmap memory at address %p", (void*)base);
-            }
+    IMemAlloc* memalloc = getAllocator(hnd->flags) ;
+    if(!memalloc)
+        return err;
+
+    if(hnd->base) {
+        err = memalloc->unmap_buffer((void*)hnd->base, hnd->size, hnd->offset);
+        if (err) {
+            ALOGE("Could not unmap memory at address %p, %s", (void*) hnd->base,
+                    strerror(errno));
+            return -errno;
         }
+        hnd->base = 0;
     }
-    /* need to initialize the pointer to NULL otherwise unmapping for that
-     * buffer happens twice which leads to crash */
-    hnd->base = 0;
-    hnd->base_metadata = 0;
+
+    if(hnd->base_metadata) {
+        unsigned int size = ROUND_UP_PAGESIZE(sizeof(MetaData_t));
+        err = memalloc->unmap_buffer((void*)hnd->base_metadata,
+                size, hnd->offset_metadata);
+        if (err) {
+            ALOGE("Could not unmap memory at address %p, %s",
+                    (void*) hnd->base_metadata, strerror(errno));
+            return -errno;
+        }
+        hnd->base_metadata = 0;
+    }
+
     return 0;
 }
 
@@ -146,25 +171,11 @@ int gralloc_register_buffer(gralloc_module_t const* module,
     if (!module || private_handle_t::validate(handle) < 0)
         return -EINVAL;
 
-    // In this implementation, we don't need to do anything here
-
-    /* NOTE: we need to initialize the buffer as not mapped/not locked
-     * because it shouldn't when this function is called the first time
-     * in a new process. Ideally these flags shouldn't be part of the
-     * handle, but instead maintained in the kernel or at least
-     * out-of-line
-     */
-
-    private_handle_t* hnd = (private_handle_t*)handle;
-    hnd->base = 0;
-    hnd->base_metadata = 0;
-    int err = gralloc_map(module, handle);
-    if (err) {
-        ALOGE("%s: gralloc_map failed", __FUNCTION__);
-        return err;
-    }
-
-    return 0;
+    int err =  gralloc_map(module, handle);
+    /* Do not fail register_buffer for secure buffers*/
+    if (err == -EACCES)
+        err = 0;
+    return err;
 }
 
 int gralloc_unregister_buffer(gralloc_module_t const* module,
@@ -178,16 +189,9 @@ int gralloc_unregister_buffer(gralloc_module_t const* module,
      * If the buffer has been mapped during a lock operation, it's time
      * to un-map it. It's an error to be here with a locked buffer.
      * NOTE: the framebuffer is handled differently and is never unmapped.
+     * Also base and base_metadata are reset.
      */
-
-    private_handle_t* hnd = (private_handle_t*)handle;
-
-    if (hnd->base != 0) {
-        gralloc_unmap(module, handle);
-    }
-    hnd->base = 0;
-    hnd->base_metadata = 0;
-    return 0;
+    return gralloc_unmap(module, handle);
 }
 
 int terminateBuffer(gralloc_module_t const* module,
@@ -200,23 +204,10 @@ int terminateBuffer(gralloc_module_t const* module,
     /*
      * If the buffer has been mapped during a lock operation, it's time
      * to un-map it. It's an error to be here with a locked buffer.
+     * NOTE: the framebuffer is handled differently and is never unmapped.
+     * Also base and base_metadata are reset.
      */
-
-    if (hnd->base != 0) {
-        // this buffer was mapped, unmap it now
-        if (hnd->flags & (private_handle_t::PRIV_FLAGS_USES_PMEM |
-                          private_handle_t::PRIV_FLAGS_USES_PMEM_ADSP |
-                          private_handle_t::PRIV_FLAGS_USES_ASHMEM |
-                          private_handle_t::PRIV_FLAGS_USES_ION)) {
-                gralloc_unmap(module, hnd);
-        } else {
-            ALOGE("terminateBuffer: unmapping a non pmem/ashmem buffer flags = 0x%x",
-                  hnd->flags);
-            gralloc_unmap(module, hnd);
-        }
-    }
-
-    return 0;
+    return gralloc_unmap(module, hnd);
 }
 
 static int gralloc_map_and_invalidate (gralloc_module_t const* module,
@@ -327,6 +318,7 @@ int gralloc_perform(struct gralloc_module_t const* module,
                 int width = va_arg(args, int);
                 int height = va_arg(args, int);
                 int format = va_arg(args, int);
+                int alignedw = 0, alignedh = 0;
 
                 native_handle_t** handle = va_arg(args, native_handle_t**);
                 private_handle_t* hnd = (private_handle_t*)native_handle_create(
@@ -339,8 +331,12 @@ int gralloc_perform(struct gralloc_module_t const* module,
                   hnd->offset = offset;
                   hnd->base = uint64_t(base) + offset;
                   hnd->gpuaddr = 0;
-                  hnd->width = width;
-                  hnd->height = height;
+                  AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(width,
+                          height, format, 0, alignedw, alignedh);
+                  hnd->width = alignedw;
+                  hnd->height = alignedh;
+                  hnd->unaligned_width = width;
+                  hnd->unaligned_height = height;
                   hnd->format = format;
                   *handle = (native_handle_t *)hnd;
                   res = 0;
@@ -355,45 +351,40 @@ int gralloc_perform(struct gralloc_module_t const* module,
                 int *stride = va_arg(args, int *);
                 int alignedw = 0, alignedh = 0;
                 AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(width,
-                        0, format, false, alignedw, alignedh);
+                        0, format, 0, alignedw, alignedh);
                 *stride = alignedw;
                 res = 0;
             } break;
 
         case GRALLOC_MODULE_PERFORM_GET_CUSTOM_STRIDE_FROM_HANDLE:
             {
-                private_handle_t* hnd =  va_arg(args, private_handle_t*);
+                const private_handle_t* hnd =  va_arg(args, private_handle_t*);
                 int *stride = va_arg(args, int *);
                 if (private_handle_t::validate(hnd)) {
-                    va_end(args);
                     return res;
                 }
-                MetaData_t *metadata = (MetaData_t *)hnd->base_metadata;
-                if(metadata && metadata->operation & UPDATE_BUFFER_GEOMETRY) {
-                    *stride = metadata->bufferDim.sliceWidth;
-                } else {
-                    *stride = hnd->width;
-                }
+
+                int alignedw = 0, alignedh = 0;
+                AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(hnd, alignedw, alignedh);
+                *stride = alignedw;
+
                 res = 0;
             } break;
 
         case GRALLOC_MODULE_PERFORM_GET_CUSTOM_STRIDE_AND_HEIGHT_FROM_HANDLE:
             {
-                private_handle_t* hnd =  va_arg(args, private_handle_t*);
+                const private_handle_t* hnd =  va_arg(args, private_handle_t*);
                 int *stride = va_arg(args, int *);
                 int *height = va_arg(args, int *);
                 if (private_handle_t::validate(hnd)) {
-                    va_end(args);
                     return res;
                 }
-                MetaData_t *metadata = (MetaData_t *)hnd->base_metadata;
-                if(metadata && metadata->operation & UPDATE_BUFFER_GEOMETRY) {
-                    *stride = metadata->bufferDim.sliceWidth;
-                    *height = metadata->bufferDim.sliceHeight;
-                } else {
-                    *stride = hnd->width;
-                    *height = hnd->height;
-                }
+
+                int alignedw = 0, alignedh = 0;
+                AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(hnd, alignedw, alignedh);
+                *stride = alignedw;
+                *height = alignedh;
+
                 res = 0;
             } break;
 
@@ -406,10 +397,9 @@ int gralloc_perform(struct gralloc_module_t const* module,
                 int *alignedWidth = va_arg(args, int *);
                 int *alignedHeight = va_arg(args, int *);
                 int *tileEnabled = va_arg(args,int *);
-                *tileEnabled = isMacroTileEnabled(format, usage);
+                *tileEnabled = isUBwcEnabled(format, usage);
                 AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(width,
-                        height, format, *tileEnabled, *alignedWidth,
-                        *alignedHeight);
+                        height, format, usage, *alignedWidth, *alignedHeight);
                 res = 0;
             } break;
 
@@ -418,15 +408,38 @@ int gralloc_perform(struct gralloc_module_t const* module,
                 private_handle_t* hnd =  va_arg(args, private_handle_t*);
                 int *color_space = va_arg(args, int *);
                 if (private_handle_t::validate(hnd)) {
-                    va_end(args);
                     return res;
                 }
                 MetaData_t *metadata = (MetaData_t *)hnd->base_metadata;
-                if(metadata && metadata->operation & UPDATE_COLOR_SPACE) {
+                if (!metadata) {
+                    break;
+#ifdef USE_COLOR_METADATA
+                } else if (metadata->operation & COLOR_METADATA) {
+                    ColorMetaData *colorMetadata = &metadata->color;
+                    res = 0;
+                    switch (colorMetadata->colorPrimaries) {
+                    case ColorPrimaries_BT709_5:
+                        *color_space = HAL_CSC_ITU_R_709;
+                        break;
+                    case ColorPrimaries_BT601_6_525:
+                        *color_space = ((colorMetadata->range) ?
+                                        HAL_CSC_ITU_R_601_FR : HAL_CSC_ITU_R_601);
+                        break;
+                    case ColorPrimaries_BT2020:
+                        *color_space = (colorMetadata->range) ?
+                            HAL_CSC_ITU_R_2020_FR : HAL_CSC_ITU_R_2020;
+                        break;
+                    default:
+                        res = -EINVAL;
+                        break;
+                    }
+#endif
+                } else if(metadata->operation & UPDATE_COLOR_SPACE) {
                     *color_space = metadata->colorSpace;
                     res = 0;
                 }
             } break;
+
         case GRALLOC_MODULE_PERFORM_GET_YUV_PLANE_INFO:
             {
                 private_handle_t* hnd =  va_arg(args, private_handle_t*);
@@ -436,6 +449,72 @@ int gralloc_perform(struct gralloc_module_t const* module,
                 }
             } break;
 
+        case GRALLOC_MODULE_PERFORM_GET_MAP_SECURE_BUFFER_INFO:
+            {
+                private_handle_t* hnd =  va_arg(args, private_handle_t*);
+                int *map_secure_buffer = va_arg(args, int *);
+                if (private_handle_t::validate(hnd)) {
+                    return res;
+                }
+                MetaData_t *metadata = (MetaData_t *)hnd->base_metadata;
+                if(metadata && metadata->operation & MAP_SECURE_BUFFER) {
+                    *map_secure_buffer = metadata->mapSecureBuffer;
+                    res = 0;
+                } else {
+                    *map_secure_buffer = 0;
+                }
+            } break;
+
+        case GRALLOC_MODULE_PERFORM_GET_UBWC_FLAG:
+            {
+                private_handle_t* hnd =  va_arg(args, private_handle_t*);
+                int *flag = va_arg(args, int *);
+                if (private_handle_t::validate(hnd)) {
+                    return res;
+                }
+                *flag = hnd->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
+                MetaData_t *metadata = (MetaData_t *)hnd->base_metadata;
+                if (metadata && (metadata->operation & LINEAR_FORMAT)) {
+                    *flag = 0;
+                }
+                res = 0;
+            } break;
+
+        case GRALLOC_MODULE_PERFORM_GET_RGB_DATA_ADDRESS:
+            {
+                private_handle_t* hnd = va_arg(args, private_handle_t*);
+                void** rgb_data = va_arg(args, void**);
+                if (!private_handle_t::validate(hnd)) {
+                    res = getRgbDataAddress(hnd, rgb_data);
+                }
+            } break;
+
+        case GRALLOC_MODULE_PERFORM_GET_IGC:
+            {
+                private_handle_t* hnd = va_arg(args, private_handle_t*);
+                uint32_t *igc = va_arg(args, uint32_t *);
+                if (!private_handle_t::validate(hnd) && igc) {
+                    MetaData_t *metadata = (MetaData_t *)hnd->base_metadata;
+                    if (metadata && (metadata->operation & SET_IGC)) {
+                        *igc = metadata->igc;
+                        res = 0;
+                    }
+                }
+            } break;
+
+        case GRALLOC_MODULE_PERFORM_SET_IGC:
+            res = 0;
+            break;
+
+        case GRALLOC_MODULE_PERFORM_SET_SINGLE_BUFFER_MODE:
+            {
+                private_handle_t* hnd =  va_arg(args, private_handle_t*);
+                uint32_t *enable = va_arg(args, uint32_t*);
+                if (!private_handle_t::validate(hnd)) {
+                    setMetaData(hnd, SET_SINGLE_BUFFER_MODE, enable);
+                    res = 0;
+                }
+            } break;
         default:
             break;
     }

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
- * Copyright (c) 2010-2014,2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2010-2014 The Linux Foundation. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,9 @@
 #include <linux/fb.h>
 #include <linux/msm_mdp.h>
 
+#ifndef TARGET_HEADLESS
 #include <GLES/gl.h>
+#endif
 
 #include "gralloc_priv.h"
 #include "fb_priv.h"
@@ -57,7 +59,6 @@ struct fb_context_t {
 static int fb_setSwapInterval(struct framebuffer_device_t* dev,
                               int interval)
 {
-#ifdef DEBUG_SWAPINTERVAL
     //XXX: Get the value here and implement along with
     //single vsync in HWC
     char pval[PROPERTY_VALUE_MAX];
@@ -65,7 +66,6 @@ static int fb_setSwapInterval(struct framebuffer_device_t* dev,
     int property_interval = atoi(pval);
     if (property_interval >= 0)
         interval = property_interval;
-#endif
 
     private_module_t* m = reinterpret_cast<private_module_t*>(
         dev->common.module);
@@ -101,7 +101,9 @@ static int fb_compositionComplete(struct framebuffer_device_t* dev)
     if(!dev) {
         return -1;
     }
+#ifndef TARGET_HEADLESS
     glFinish();
+#endif
 
     return 0;
 }

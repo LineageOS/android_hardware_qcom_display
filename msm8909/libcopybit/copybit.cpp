@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
- * Copyright (c) 2010 - 2014,2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2010 - 2014, The Linux Foundation. All rights reserved.
  *
  * Not a Contribution, Apache license notifications and license are retained
  * for attribution purposes only.
@@ -18,7 +18,7 @@
  * limitations under the License.
  */
 
-#include <cutils/log.h>
+#include <log/log.h>
 
 #include <linux/msm_mdp.h>
 #include <linux/fb.h>
@@ -75,22 +75,22 @@ static int open_copybit(const struct hw_module_t* module, const char* name,
                         struct hw_device_t** device);
 
 static struct hw_module_methods_t copybit_module_methods = {
-    .open = open_copybit
+open:  open_copybit
 };
 
 /*
  * The COPYBIT Module
  */
 struct copybit_module_t HAL_MODULE_INFO_SYM = {
-    .common = {
-        .tag = HARDWARE_MODULE_TAG,
-        .version_major = 1,
-        .version_minor = 0,
-        .id = COPYBIT_HARDWARE_MODULE_ID,
-        .name = "QCT MSM7K COPYBIT Module",
-        .author = "Google, Inc.",
-        .methods = &copybit_module_methods
-    }
+common: {
+tag: HARDWARE_MODULE_TAG,
+     version_major: 1,
+     version_minor: 0,
+     id: COPYBIT_HARDWARE_MODULE_ID,
+     name: "QCT MSM7K COPYBIT Module",
+     author: "Google, Inc.",
+     methods: &copybit_module_methods
+        }
 };
 
 /******************************************************************************/
@@ -131,6 +131,8 @@ static bool validateCopybitRect(struct copybit_rect_t *rect) {
 static int get_format(int format) {
     switch (format) {
         case HAL_PIXEL_FORMAT_RGB_565:       return MDP_RGB_565;
+        case HAL_PIXEL_FORMAT_RGBA_5551:     return MDP_RGBA_5551;
+        case HAL_PIXEL_FORMAT_RGBA_4444:     return MDP_RGBA_4444;
         case HAL_PIXEL_FORMAT_RGBX_8888:     return MDP_RGBX_8888;
         case HAL_PIXEL_FORMAT_BGRX_8888:     return MDP_BGRX_8888;
         case HAL_PIXEL_FORMAT_RGB_888:       return MDP_RGB_888;
@@ -144,7 +146,10 @@ static int get_format(int format) {
         case HAL_PIXEL_FORMAT_YCbCr_420_SP:  return MDP_Y_CBCR_H2V2;
         case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO: return MDP_Y_CBCR_H2V2_ADRENO;
         case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS: return MDP_Y_CBCR_H2V2_VENUS;
+        case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS: return MDP_Y_CRCB_H2V2_VENUS;
         case HAL_PIXEL_FORMAT_NV12_ENCODEABLE: return MDP_Y_CBCR_H2V2;
+        case HAL_PIXEL_FORMAT_CbYCrY_422_I: return MDP_CBYCRY_H2V1;
+        case HAL_PIXEL_FORMAT_BGR_888: return MDP_BGR_888;
     }
     return -1;
 }
@@ -454,6 +459,8 @@ static int stretch_copybit(
                 // we don't support plane alpha with RGBA formats
                 case HAL_PIXEL_FORMAT_RGBA_8888:
                 case HAL_PIXEL_FORMAT_BGRA_8888:
+                case HAL_PIXEL_FORMAT_RGBA_5551:
+                case HAL_PIXEL_FORMAT_RGBA_4444:
                     ALOGE ("%s : Unsupported Pixel format %d", __FUNCTION__,
                            src->format);
                     return -EINVAL;
