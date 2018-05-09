@@ -50,22 +50,13 @@
 
 namespace sdm {
 
-// This weight function is needed because the color primaries are not sorted by gamut size
-static ColorPrimaries WidestPrimaries(ColorPrimaries p1, ColorPrimaries p2) {
-  int weight = 10;
-  int lp1 = p1, lp2 = p2;
-  // TODO(user) add weight to other wide gamut primaries
-  if (lp1 == ColorPrimaries_BT2020) {
-    lp1 *= weight;
+bool NeedsToneMap(const LayerStack &layer_stack) {
+  for (Layer *layer : layer_stack.layers) {
+    if (layer->request.flags.tone_map) {
+      return true;
+    }
   }
-  if (lp1 == ColorPrimaries_BT2020) {
-    lp2 *= weight;
-  }
-  if (lp1 >= lp2) {
-    return p1;
-  } else {
-    return p2;
-  }
+  return false;
 }
 
 HWCColorMode::HWCColorMode(DisplayInterface *display_intf) : display_intf_(display_intf) {}
@@ -342,11 +333,13 @@ void HWCColorMode::Dump(std::ostringstream* os) {
   *os << std::endl;
 }
 
-HWCDisplay::HWCDisplay(CoreInterface *core_intf, HWCCallbacks *callbacks, DisplayType type,
-                       hwc2_display_t id, bool needs_blit, qService::QService *qservice,
-                       DisplayClass display_class, BufferAllocator *buffer_allocator)
+HWCDisplay::HWCDisplay(CoreInterface *core_intf, HWCCallbacks *callbacks,
+                       HWCDisplayEventHandler* event_handler, DisplayType type, hwc2_display_t id,
+                       bool needs_blit, qService::QService *qservice, DisplayClass display_class,
+                       BufferAllocator *buffer_allocator)
     : core_intf_(core_intf),
       callbacks_(callbacks),
+      event_handler_(event_handler),
       type_(type),
       id_(id),
       needs_blit_(needs_blit),
@@ -365,7 +358,7 @@ int HWCDisplay::Init() {
     disp_null->Init();
     use_metadata_refresh_rate_ = false;
     display_intf_ = disp_null;
-    ALOGI("Enabling null display mode for display type %d", type_);
+    DLOGI("Enabling null display mode for display type %d", type_);
   } else {
     error = core_intf_->CreateDisplay(type_, this, &display_intf_);
     if (error != kErrorNone) {
@@ -493,14 +486,11 @@ void HWCDisplay::BuildLayerStack() {
   layer_stack_ = LayerStack();
   display_rect_ = LayerRect();
   metadata_refresh_rate_ = 0;
-  auto working_primaries = ColorPrimaries_BT709_5;
   bool secure_display_active = false;
   layer_stack_.flags.animating = animating_;
 
   uint32_t color_mode_count = 0;
   display_intf_->GetColorModeCount(&color_mode_count);
-
-  bool extended_range = false;
 
   // Add one layer for fb target
   // TODO(user): Add blit target layers
@@ -517,18 +507,8 @@ void HWCDisplay::BuildLayerStack() {
     }
 
     if (!hwc_layer->ValidateAndSetCSC()) {
-#ifdef FEATURE_WIDE_COLOR
       layer->flags.skip = true;
-#endif
     }
-
-    auto range = hwc_layer->GetLayerDataspace() & HAL_DATASPACE_RANGE_MASK;
-    if (range == HAL_DATASPACE_RANGE_EXTENDED) {
-      extended_range = true;
-    }
-
-    working_primaries = WidestPrimaries(working_primaries,
-                                        layer->input_buffer.color_metadata.colorPrimaries);
 
     // set default composition as GPU for SDM
     layer->composition = kCompositionGPU;
@@ -626,20 +606,6 @@ void HWCDisplay::BuildLayerStack() {
     layer_stack_.layers.push_back(layer);
   }
 
-
-#ifdef FEATURE_WIDE_COLOR
-  for (auto hwc_layer : layer_set_) {
-    auto layer = hwc_layer->GetSDMLayer();
-    if (layer->input_buffer.color_metadata.colorPrimaries != working_primaries &&
-        !hwc_layer->SupportLocalConversion(working_primaries)) {
-      layer->flags.skip = true;
-    }
-    if (layer->flags.skip) {
-      layer_stack_.flags.skip_present = true;
-    }
-  }
-#endif
-
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
   layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0);
   // Append client target to the layer stack
@@ -649,7 +615,7 @@ void HWCDisplay::BuildLayerStack() {
   // fall back frame composition to GPU when client target is 10bit
   // TODO(user): clarify the behaviour from Client(SF) and SDM Extn -
   // when handling 10bit FBT, as it would affect blending
-  if (Is10BitFormat(sdm_client_target->input_buffer.format) || extended_range) {
+  if (Is10BitFormat(sdm_client_target->input_buffer.format)) {
     // Must fall back to client composition
     MarkLayersForClientComposition();
   }
@@ -1042,6 +1008,15 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
       SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[type_]);
       validated_ = false;
     } break;
+    case kDisplayPowerResetEvent: {
+      validated_ = false;
+      if (event_handler_) {
+        event_handler_->DisplayPowerReset();
+      } else {
+        DLOGI("Cannot process kDisplayPowerEventReset (display = %d), event_handler_ is nullptr",
+              type_);
+      }
+    } break;
     default:
       DLOGW("Unknown event: %d", event);
       break;
@@ -1272,7 +1247,7 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
     DisplayError error = kErrorUndefined;
     int status = 0;
     if (tone_mapper_) {
-      if (layer_stack_.flags.hdr_present) {
+      if (NeedsToneMap(layer_stack_)) {
         status = tone_mapper_->HandleToneMap(&layer_stack_);
         if (status != 0) {
           DLOGE("Error handling HDR in ToneMapper");
@@ -1960,10 +1935,12 @@ bool HWCDisplay::CanSkipValidate() {
     return false;
   }
 
-  // Layer Stack checks
-  if ((layer_stack_.flags.hdr_present && (tone_mapper_ && tone_mapper_->IsActive())) ||
-     layer_stack_.flags.single_buffered_layer_present) {
-    DLOGV_IF(kTagClient, "HDR content present with tone mapping enabled. Returning false.");
+  // Layer Stack checks TODO(user): Remove hdr_present when skip validate is fixed
+  if (layer_stack_.flags.hdr_present || (tone_mapper_ && tone_mapper_->IsActive()) ||
+      layer_stack_.flags.single_buffered_layer_present) {
+    DLOGV_IF(kTagClient, "HdrPresent = %d, Tonemapping enabled or single buffer layer present = %d"
+             " Returning false.", layer_stack_.flags.hdr_present,
+             layer_stack_.flags.single_buffered_layer_present);
     return false;
   }
 

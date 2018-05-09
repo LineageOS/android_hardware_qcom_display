@@ -52,6 +52,8 @@
 #include <private/color_params.h>
 #include <utils/rect.h>
 
+#include <sstream>
+#include <ctime>
 #include <algorithm>
 #include <string>
 #include <unordered_map>
@@ -61,7 +63,6 @@
 
 #include "hw_device_drm.h"
 #include "hw_info_interface.h"
-#include "hw_color_manager_drm.h"
 
 #define __CLASS__ "HWDeviceDRM"
 
@@ -79,6 +80,9 @@ using std::string;
 using std::to_string;
 using std::fstream;
 using std::unordered_map;
+using std::stringstream;
+using std::ifstream;
+using std::ofstream;
 using drm_utils::DRMMaster;
 using drm_utils::DRMResMgr;
 using drm_utils::DRMLibLoader;
@@ -102,6 +106,24 @@ using sde_drm::DRMCscType;
 using sde_drm::DRMMultiRectMode;
 
 namespace sdm {
+
+static PPBlock GetPPBlock(const HWToneMapLut &lut_type) {
+  PPBlock pp_block = kPPBlockMax;
+  switch (lut_type) {
+    case kDma1dIgc:
+    case kDma1dGc:
+      pp_block = kDGM;
+      break;
+    case kVig1dIgc:
+    case kVig3dGamut:
+      pp_block = kVIG;
+      break;
+    default:
+      DLOGE("Unknown PP Block");
+      break;
+  }
+  return pp_block;
+}
 
 static void GetDRMFormat(LayerBufferFormat format, uint32_t *drm_format,
                          uint64_t *drm_format_modifier) {
@@ -381,6 +403,9 @@ DisplayError HWDeviceDRM::Init() {
   if (hw_resource_.has_qseed3) {
     hw_scale_ = new HWScaleDRM(HWScaleDRM::Version::V2);
   }
+
+  std::unique_ptr<HWColorManagerDrm> hw_color_mgr(new HWColorManagerDrm());
+  hw_color_mgr_ = std::move(hw_color_mgr);
 
   return kErrorNone;
 }
@@ -739,15 +764,19 @@ DisplayError HWDeviceDRM::PowerOn(int *release_fence) {
     return kErrorNone;
   }
 
+  int64_t release_fence_t = -1;
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_t);
+
   int ret = drm_atomic_intf_->Commit(true /* synchronous */, true /* retain_planes */);
   if (ret) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
   }
-  drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, release_fence);
 
+  *release_fence = static_cast<int>(release_fence_t);
+  DLOGD_IF(kTagDriverConfig, "RELEASE fence created: fd:%d", *release_fence);
   return kErrorNone;
 }
 
@@ -771,32 +800,38 @@ DisplayError HWDeviceDRM::PowerOff() {
 
 DisplayError HWDeviceDRM::Doze(int *release_fence) {
   DTRACE_SCOPED();
+
+  int64_t release_fence_t = -1;
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::DOZE);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_t);
   int ret = drm_atomic_intf_->Commit(true /* synchronous */, true /* retain_planes */);
   if (ret) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
   }
 
-  drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, release_fence);
-
+  *release_fence = static_cast<int>(release_fence_t);
+  DLOGD_IF(kTagDriverConfig, "RELEASE fence created: fd:%d", *release_fence);
   return kErrorNone;
 }
 
 DisplayError HWDeviceDRM::DozeSuspend(int *release_fence) {
   DTRACE_SCOPED();
+
+  int64_t release_fence_t = -1;
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id,
                             DRMPowerMode::DOZE_SUSPEND);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_t);
   int ret = drm_atomic_intf_->Commit(true /* synchronous */, true /* retain_planes */);
   if (ret) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
   }
 
-  drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, release_fence);
-
+  *release_fence = static_cast<int>(release_fence_t);
+  DLOGD_IF(kTagDriverConfig, "RELEASE fence created: fd:%d", *release_fence);
   return kErrorNone;
 }
 
@@ -939,6 +974,8 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
         DRMMultiRectMode multirect_mode;
         SetMultiRectMode(pipe_info->flags, &multirect_mode);
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_MULTIRECT_MODE, pipe_id, multirect_mode);
+
+        SetSsppTonemapFeatures(pipe_info);
       }
     }
   }
@@ -955,6 +992,11 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
                             qos_data.rot_prefill_bw_bps);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ROT_CLK, token_.crtc_id, qos_data.rot_clock_hz);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_SECURITY_LEVEL, token_.crtc_id, crtc_security_level);
+
+  if (!validate) {
+    drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_);
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence_);
+  }
 
   DLOGI_IF(kTagDriverConfig, "%s::%s System Clock=%d Hz, Core: AB=%llu Bps, IB=%llu Bps, " \
            "LLCC: AB=%llu Bps, IB=%llu Bps, DRAM AB=%llu Bps, IB=%llu Bps, "\
@@ -1125,11 +1167,10 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
     return kErrorHardware;
   }
 
-  int release_fence = -1;
-  int retire_fence = -1;
-
-  drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence);
-  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence);
+  int release_fence = static_cast<int>(release_fence_);
+  int retire_fence = static_cast<int>(retire_fence_);
+  DLOGD_IF(kTagDriverConfig, "RELEASE fence created: fd:%d", release_fence);
+  DLOGD_IF(kTagDriverConfig, "RETIRE fence created: fd:%d", retire_fence);
 
   HWLayersInfo &hw_layer_info = hw_layers->info;
   LayerStack *stack = hw_layer_info.stack;
@@ -1279,14 +1320,21 @@ DisplayError HWDeviceDRM::SetCursorPosition(HWLayers *hw_layers, int x, int y) {
 
 DisplayError HWDeviceDRM::GetPPFeaturesVersion(PPFeatureVersion *vers) {
   struct DRMPPFeatureInfo info = {};
+
+  if (!hw_color_mgr_)
+    return kErrorNotSupported;
+
   for (uint32_t i = 0; i < kMaxNumPPFeatures; i++) {
+    std::vector<DRMPPFeatureID> drm_id = {};
     memset(&info, 0, sizeof(struct DRMPPFeatureInfo));
-    info.id = HWColorManagerDrm::ToDrmFeatureId(i);
-    if (info.id >= sde_drm::kPPFeaturesMax)
+    hw_color_mgr_->ToDrmFeatureId(kDSPP, i, &drm_id);
+    if (drm_id.empty())
       continue;
 
+    info.id = drm_id.at(0);
+
     drm_mgr_intf_->GetCrtcPPInfo(token_.crtc_id, &info);
-    vers->version[i] = HWColorManagerDrm::GetFeatureVersion(info);
+    vers->version[i] = hw_color_mgr_->GetFeatureVersion(info);
   }
   return kErrorNone;
 }
@@ -1294,37 +1342,40 @@ DisplayError HWDeviceDRM::GetPPFeaturesVersion(PPFeatureVersion *vers) {
 DisplayError HWDeviceDRM::SetPPFeatures(PPFeaturesConfig *feature_list) {
   int ret = 0;
   PPFeatureInfo *feature = NULL;
-  DRMPPFeatureInfo kernel_params = {};
-  bool crtc_feature = true;
+
+  if (!hw_color_mgr_)
+    return kErrorNotSupported;
 
   while (true) {
-    crtc_feature = true;
+    std::vector<DRMPPFeatureID> drm_id = {};
+    DRMPPFeatureInfo kernel_params = {};
+    bool crtc_feature = true;
+
     ret = feature_list->RetrieveNextFeature(&feature);
     if (ret)
       break;
-    kernel_params.id = HWColorManagerDrm::ToDrmFeatureId(feature->feature_id_);
+
+    hw_color_mgr_->ToDrmFeatureId(kDSPP, feature->feature_id_, &drm_id);
+    if (drm_id.empty())
+      continue;
+
+    kernel_params.id = drm_id.at(0);
     drm_mgr_intf_->GetCrtcPPInfo(token_.crtc_id, &kernel_params);
     if (kernel_params.version == std::numeric_limits<uint32_t>::max())
         crtc_feature = false;
     if (feature) {
       DLOGV_IF(kTagDriverConfig, "feature_id = %d", feature->feature_id_);
-      auto drm_features = DrmPPfeatureMap_.find(feature->feature_id_);
-      if (drm_features == DrmPPfeatureMap_.end()) {
-        DLOGE("DrmFeatures not valid for feature %d", feature->feature_id_);
-        continue;
-      }
+      for (DRMPPFeatureID id : drm_id) {
+        kernel_params.id = id;
+        ret = hw_color_mgr_->GetDrmFeature(feature, &kernel_params);
+        if (!ret && crtc_feature)
+          drm_atomic_intf_->Perform(DRMOps::CRTC_SET_POST_PROC,
+                                    token_.crtc_id, &kernel_params);
+        else if (!ret && !crtc_feature)
+          drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POST_PROC,
+                                    token_.conn_id, &kernel_params);
 
-      for (uint32_t drm_feature : drm_features->second) {
-        if (!HWColorManagerDrm::GetDrmFeature[drm_feature]) {
-          DLOGE("GetDrmFeature is not valid for DRM feature %d", drm_feature);
-          continue;
-        }
-        ret = HWColorManagerDrm::GetDrmFeature[drm_feature](*feature, &kernel_params);
-      if (!ret && crtc_feature)
-        drm_atomic_intf_->Perform(DRMOps::CRTC_SET_POST_PROC, token_.crtc_id, &kernel_params);
-      else if (!ret && !crtc_feature)
-        drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POST_PROC, token_.conn_id, &kernel_params);
-      HWColorManagerDrm::FreeDrmFeatureData(&kernel_params);
+        hw_color_mgr_->FreeDrmFeatureData(&kernel_params);
       }
     }
   }
@@ -1526,6 +1577,50 @@ DisplayError HWDeviceDRM::GetMixerAttributes(HWMixerAttributes *mixer_attributes
   return kErrorNone;
 }
 
+DisplayError HWDeviceDRM::DumpDebugData() {
+#if USER_DEBUG
+  string device_str = device_name_;
+  stringstream date_str;
+  stringstream time_str;
+  time_t t = time(0);
+  struct tm t_now;
+  localtime_r(&t, &t_now);
+  date_str << (t_now.tm_mon + 1) << '-'
+          << (t_now.tm_mday) << '-'
+          << (t_now.tm_year + 1900) << '_';
+  time_str << (t_now.tm_hour) << '-'
+          << (t_now.tm_min) << '-'
+          << (t_now.tm_sec) << ".log";
+
+  ofstream dst("data/vendor/display/"+device_str+"_"+date_str.str()+time_str.str());
+  ifstream src;
+
+  src.open("/sys/kernel/debug/dri/0/debug/dump");
+  dst << "---- Event Logs ----" << std::endl;
+  dst << src.rdbuf() << std::endl;
+  src.close();
+
+  src.open("/sys/kernel/debug/dri/0/debug/recovery_reg");
+  dst << "---- All Registers ----" << std::endl;
+  dst << src.rdbuf() << std::endl;
+  src.close();
+
+  src.open("/sys/kernel/debug/dri/0/debug/recovery_dbgbus");
+  dst << "---- Debug Bus ----" << std::endl;
+  dst << src.rdbuf() << std::endl;
+  src.close();
+
+  src.open("/sys/kernel/debug/dri/0/debug/recovery_vbif_dbgbus");
+  dst << "---- VBIF Debug Bus ----" << std::endl;
+  dst << src.rdbuf() << std::endl;
+  src.close();
+
+  dst.close();
+#endif
+
+  return kErrorNone;
+}
+
 void HWDeviceDRM::GetDRMDisplayToken(sde_drm::DRMDisplayToken *token) const {
   token->conn_id = token_.conn_id;
   token->crtc_id = token_.crtc_id;
@@ -1582,12 +1677,83 @@ void HWDeviceDRM::SetTopology(sde_drm::DRMTopology drm_topology, HWTopology *hw_
   }
 }
 
+
 void HWDeviceDRM::SetMultiRectMode(const uint32_t flags, DRMMultiRectMode *target) {
   *target = DRMMultiRectMode::NONE;
   if (flags & kMultiRect) {
     *target = DRMMultiRectMode::SERIAL;
     if (flags & kMultiRectParallelMode) {
       *target = DRMMultiRectMode::PARALLEL;
+    }
+  }
+}
+
+void HWDeviceDRM::SetSsppTonemapFeatures(HWPipeInfo *pipe_info) {
+  if (pipe_info->dgm_csc_info.op != kNoOp) {
+    SDECsc csc = {};
+    SetDGMCsc(pipe_info->dgm_csc_info, &csc);
+    DLOGV_IF(kTagDriverConfig, "Call Perform DGM CSC Op = %s",
+            (pipe_info->dgm_csc_info.op == kSet) ? "Set" : "Reset");
+    drm_atomic_intf_->Perform(DRMOps::PLANE_SET_DGM_CSC_CONFIG, pipe_info->pipe_id,
+                              reinterpret_cast<uint64_t>(&csc.csc_v1));
+  }
+  if (pipe_info->inverse_pma_info.op != kNoOp) {
+    DLOGV_IF(kTagDriverConfig, "Call Perform Inverse PMA Op = %s",
+            (pipe_info->inverse_pma_info.op == kSet) ? "Set" : "Reset");
+    drm_atomic_intf_->Perform(DRMOps::PLANE_SET_INVERSE_PMA, pipe_info->pipe_id,
+                             (pipe_info->inverse_pma_info.inverse_pma) ? 1: 0);
+  }
+  SetSsppLutFeatures(pipe_info);
+}
+
+void HWDeviceDRM::SetDGMCsc(const HWPipeCscInfo &dgm_csc_info, SDECsc *csc) {
+  SetDGMCscV1(dgm_csc_info.csc, &csc->csc_v1);
+}
+
+void HWDeviceDRM::SetDGMCscV1(const HWCsc &dgm_csc, sde_drm_csc_v1 *csc_v1) {
+  uint32_t i = 0;
+  for (i = 0; i < MAX_CSC_MATRIX_COEFF_SIZE; i++) {
+    csc_v1->ctm_coeff[i] = dgm_csc.ctm_coeff[i];
+    DLOGV_IF(kTagDriverConfig, " DGM csc_v1[%d] = %d", i, csc_v1->ctm_coeff[i]);
+  }
+  for (i = 0; i < MAX_CSC_BIAS_SIZE; i++) {
+    csc_v1->pre_bias[i] = dgm_csc.pre_bias[i];
+    csc_v1->post_bias[i] = dgm_csc.post_bias[i];
+  }
+  for (i = 0; i < MAX_CSC_CLAMP_SIZE; i++) {
+    csc_v1->pre_clamp[i] = dgm_csc.pre_clamp[i];
+    csc_v1->post_clamp[i] = dgm_csc.post_clamp[i];
+  }
+}
+
+void HWDeviceDRM::SetSsppLutFeatures(HWPipeInfo *pipe_info) {
+  for (HWPipeTonemapLutInfo &lut_info : pipe_info->lut_info) {
+    if (lut_info.op != kNoOp) {
+      std::shared_ptr<PPFeatureInfo> feature = lut_info.pay_load;
+      if (feature == nullptr) {
+        DLOGE("Null Pointer for Op = %d lut type = %d", lut_info.op, lut_info.type);
+        continue;
+      }
+      DRMPPFeatureInfo kernel_params = {};
+      std::vector<DRMPPFeatureID> drm_id = {};
+      PPBlock pp_block = GetPPBlock(lut_info.type);
+      hw_color_mgr_->ToDrmFeatureId(pp_block, feature->feature_id_, &drm_id);
+      for (DRMPPFeatureID id : drm_id) {
+        kernel_params.id = id;
+        bool disable = (lut_info.op == kReset);
+        DLOGV_IF(kTagDriverConfig, "Lut Type = %d PPBlock = %d Op = %s Disable = %d Feature = %p",
+                 lut_info.type, pp_block, (lut_info.op ==kSet) ? "Set" : "Reset", disable,
+                 feature.get());
+        int ret = hw_color_mgr_->GetDrmFeature(feature.get(), &kernel_params, disable);
+        if (!ret) {
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_POST_PROC, pipe_info->pipe_id,
+                                    &kernel_params);
+          hw_color_mgr_->FreeDrmFeatureData(&kernel_params);
+        } else {
+          DLOGE("GetDrmFeature failed for Lut type = %d", lut_info.type);
+        }
+      }
+      drm_id.clear();
     }
   }
 }

@@ -32,27 +32,30 @@
 
 #include "hwc_display.h"
 #include "display_null.h"
+#include "hwc_display_event_handler.h"
 
 namespace sdm {
 
 class HWCDisplayExternal : public HWCDisplay {
  public:
   static int Create(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
-                    HWCCallbacks *callbacks, uint32_t primary_width,
-                    uint32_t primary_height, qService::QService *qservice, bool use_primary_res,
-                    HWCDisplay **hwc_display);
+                    HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
+                    uint32_t primary_width, uint32_t primary_height, qService::QService *qservice,
+                    bool use_primary_res, HWCDisplay **hwc_display);
   static int Create(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
-                    HWCCallbacks *callbacks, qService::QService *qservice,
-                    HWCDisplay **hwc_display);
+                    HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
+                    qService::QService *qservice, HWCDisplay **hwc_display);
   static void Destroy(HWCDisplay *hwc_display);
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests);
   virtual HWC2::Error Present(int32_t *out_retire_fence);
   virtual void SetSecureDisplay(bool secure_display_active);
   virtual int SetState(bool connected);
+  virtual DisplayError Flush();
 
  private:
   HWCDisplayExternal(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
-                     HWCCallbacks *callbacks, qService::QService *qservice);
+                     HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
+                     qService::QService *qservice);
   void ApplyScanAdjustment(hwc_rect_t *display_frame);
   void GetUnderScanConfig();
   static void GetDownscaleResolution(uint32_t primary_width, uint32_t primary_height,

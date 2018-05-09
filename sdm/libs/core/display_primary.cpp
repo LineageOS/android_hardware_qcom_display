@@ -51,6 +51,7 @@ DisplayError DisplayPrimary::Init() {
   DisplayError error = HWInterface::Create(kPrimary, hw_info_intf_, buffer_sync_handler_,
                                            buffer_allocator_, &hw_intf_);
   if (error != kErrorNone) {
+    DLOGE("Failed to create hardware interface on. Error = %d", error);
     return error;
   }
 
@@ -75,7 +76,8 @@ DisplayError DisplayPrimary::Init() {
                     HWEvent::THERMAL_LEVEL,
                     HWEvent::IDLE_POWER_COLLAPSE,
                     HWEvent::PINGPONG_TIMEOUT,
-                    HWEvent::PANEL_DEAD };
+                    HWEvent::PANEL_DEAD,
+                    HWEvent::HW_RECOVERY };
   } else {
     event_list_ = { HWEvent::VSYNC,
                     HWEvent::EXIT,
@@ -83,7 +85,8 @@ DisplayError DisplayPrimary::Init() {
                     HWEvent::SHOW_BLANK_EVENT,
                     HWEvent::THERMAL_LEVEL,
                     HWEvent::PINGPONG_TIMEOUT,
-                    HWEvent::PANEL_DEAD };
+                    HWEvent::PANEL_DEAD,
+                    HWEvent::HW_RECOVERY };
   }
 
   avr_prop_disabled_ = Debug::IsAVRDisabled();
@@ -91,14 +94,21 @@ DisplayError DisplayPrimary::Init() {
   error = HWEventsInterface::Create(INT(display_type_), this, event_list_, hw_intf_,
                                     &hw_events_intf_);
   if (error != kErrorNone) {
-    DLOGE("Failed to create hardware events interface. Error = %d", error);
     DisplayBase::Deinit();
     HWInterface::Destroy(hw_intf_);
+    DLOGE("Failed to create hardware events interface on. Error = %d", error);
   }
 
   current_refresh_rate_ = hw_panel_info_.max_fps;
 
   return error;
+}
+
+DisplayError DisplayPrimary::Deinit() {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+
+  dpps_info_.Deinit();
+  return DisplayBase::Deinit();
 }
 
 DisplayError DisplayPrimary::Prepare(LayerStack *layer_stack) {
@@ -162,6 +172,8 @@ DisplayError DisplayPrimary::Commit(LayerStack *layer_stack) {
     switch_to_cmd_ = false;
     ControlPartialUpdate(true /* enable */, &pending);
   }
+
+  dpps_info_.Init(this);
 
   return error;
 }
@@ -338,6 +350,11 @@ void DisplayPrimary::PanelDead() {
   }
 }
 
+// HWEventHandler overload, not DisplayBase
+void DisplayPrimary::HwRecovery(const HWRecoveryEvent sdm_event_code) {
+  DisplayBase::HwRecovery(sdm_event_code);
+}
+
 DisplayError DisplayPrimary::GetPanelBrightness(int *level) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   return hw_intf_->GetPanelBrightness(level);
@@ -417,6 +434,62 @@ void DisplayPrimary::ResetPanel() {
   if (status != kErrorNone) {
     DLOGE("enabling vsync failed for primary with error = %d", status);
   }
+}
+
+DisplayError DisplayPrimary::SetDppsFeature(uint32_t object_type,
+                            uint32_t feature_id, uint64_t value) {
+    return hw_intf_->SetDppsFeature(object_type, feature_id, value);
+}
+
+DisplayError DisplayPrimary::GetDppsFeatureInfo(void *info) {
+    return hw_intf_->GetDppsFeatureInfo(info);
+}
+
+void DppsInfo::Init(DppsPropIntf* intf) {
+  int error = 0;
+
+  if (dpps_initialized_) {
+    return;
+  }
+
+  if (!dpps_impl_lib.Open(kDppsLib)) {
+    DLOGW("Failed to load Dpps lib %s", kDppsLib);
+    goto exit;
+  }
+
+  if (!dpps_impl_lib.Sym("GetDppsInterface",
+         reinterpret_cast<void **>(&GetDppsInterface))) {
+    DLOGE("GetDppsInterface not found!, err %s", dlerror());
+    goto exit;
+  }
+
+  dpps_intf = GetDppsInterface();
+  if (!dpps_intf) {
+    DLOGE("Failed to get Dpps Interface!");
+    goto exit;
+  }
+
+  error = dpps_intf->Init(intf);
+  if (!error) {
+    DLOGI("DPPS Interface init successfully");
+    dpps_initialized_ = true;
+    return;
+  } else {
+    DLOGE("DPPS Interface init failure with err %d", error);
+  }
+
+exit:
+  Deinit();
+  dpps_intf = new DppsDummyImpl();
+  dpps_initialized_ = true;
+}
+
+void DppsInfo::Deinit() {
+  if (dpps_intf) {
+    dpps_intf->Deinit();
+    dpps_intf = NULL;
+  }
+  dpps_impl_lib.~DynLib();
 }
 
 }  // namespace sdm

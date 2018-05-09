@@ -43,6 +43,26 @@
 
 namespace sdm {
 
+bool DisplayBase::display_power_reset_pending_ = false;
+Locker DisplayBase::display_power_reset_lock_;
+
+static ColorPrimaries GetColorPrimariesFromAttribute(const std::string &gamut) {
+  if (gamut.find(kDisplayP3) != std::string::npos || gamut.find(kDcip3) != std::string::npos) {
+    return ColorPrimaries_DCIP3;
+  } else if (gamut.find(kHdr) != std::string::npos || gamut.find("bt2020") != std::string::npos ||
+             gamut.find("BT2020") != std::string::npos) {
+    // BT2020 is hdr, but the dynamicrange of kHdr means its BT2020
+    return ColorPrimaries_BT2020;
+  } else if (gamut.find(kSrgb) != std::string::npos) {
+    return ColorPrimaries_BT709_5;
+  } else if (gamut.find(kNative) != std::string::npos) {
+    DLOGW("Native Gamut found, returning default: sRGB");
+    return ColorPrimaries_BT709_5;
+  }
+
+  return ColorPrimaries_BT709_5;
+}
+
 // TODO(user): Have a single structure handle carries all the interface pointers and variables.
 DisplayBase::DisplayBase(DisplayType display_type, DisplayEventHandler *event_handler,
                          HWDeviceType hw_device_type, BufferSyncHandler *buffer_sync_handler,
@@ -102,18 +122,24 @@ DisplayError DisplayBase::Init() {
     goto CleanupOnError;
   }
 
+  if (color_modes_cs_.size() > 0) {
+    error = comp_manager_->SetColorModesInfo(display_comp_ctx_, color_modes_cs_);
+    if (error) {
+      DLOGW("SetColorModesInfo failed on display = %d", display_type_);
+    }
+  }
+
   if (hw_info_intf_) {
-    HWResourceInfo hw_resource_info = HWResourceInfo();
-    hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
-    auto max_mixer_stages = hw_resource_info.num_blending_stages;
+    hw_info_intf_->GetHWResourceInfo(&hw_resource_info_);
+    auto max_mixer_stages = hw_resource_info_.num_blending_stages;
     int property_value = Debug::GetMaxPipesPerMixer(display_type_);
     if (property_value >= 0) {
-      max_mixer_stages = std::min(UINT32(property_value), hw_resource_info.num_blending_stages);
+      max_mixer_stages = std::min(UINT32(property_value), hw_resource_info_.num_blending_stages);
     }
     DisplayBase::SetMaxMixerStages(max_mixer_stages);
   }
 
-  Debug::Get()->GetProperty("sdm.disable_hdr_lut_gen", &disable_hdr_lut_gen_);
+  Debug::GetProperty("sdm.disable_hdr_lut_gen", &disable_hdr_lut_gen_);
   // TODO(user): Temporary changes, to be removed when DRM driver supports
   // Partial update with Destination scaler enabled.
   SetPUonDestScaler();
@@ -153,6 +179,13 @@ DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
       break;
     }
     hw_layers_info.app_layer_count++;
+    if (!gpu_fallback_) {
+      gpu_fallback_ = NeedsGpuFallback(layer);
+    }
+    if (IsWideColor(layer->input_buffer.color_metadata.colorPrimaries)) {
+      hw_layers_info.wide_color_primaries.push_back(
+          layer->input_buffer.color_metadata.colorPrimaries);
+    }
   }
 
   DLOGD_IF(kTagDisplay, "LayerStack layer_count: %d, app_layer_count: %d, gpu_target_index: %d, "
@@ -214,6 +247,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
   needs_validate_ = true;
+  gpu_fallback_ = false;
 
   if (!active_) {
     return kErrorPermission;
@@ -396,10 +430,8 @@ DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   fixed_info->is_cmdmode = (hw_panel_info_.mode == kModeCommand);
 
-  HWResourceInfo hw_resource_info = HWResourceInfo();
-  hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
   // hdr can be supported by display when target and panel supports HDR.
-  fixed_info->hdr_supported = (hw_resource_info.has_hdr && hw_panel_info_.hdr_enabled);
+  fixed_info->hdr_supported = (hw_resource_info_.has_hdr && hw_panel_info_.hdr_enabled);
   // Populate luminance values only if hdr will be supported on that display
   fixed_info->max_luminance = fixed_info->hdr_supported ? hw_panel_info_.peak_luminance: 0;
   fixed_info->average_luminance = fixed_info->hdr_supported ? hw_panel_info_.average_luminance : 0;
@@ -743,7 +775,9 @@ DisplayError DisplayBase::GetColorModeCount(uint32_t *mode_count) {
     return kErrorNotSupported;
   }
 
-  DLOGV_IF(kTagQDCM, "Number of modes from color manager = %d", num_color_modes_);
+  DLOGV_IF(kTagQDCM, "Display = %d Number of modes from color manager = %d", display_type_,
+           num_color_modes_);
+
   *mode_count = num_color_modes_;
 
   return kErrorNone;
@@ -980,6 +1014,12 @@ DisplayError DisplayBase::ApplyDefaultDisplayMode() {
     if (error != kErrorNone) {
       DLOGE("failed to initial modes\n");
       return error;
+    }
+    if (color_modes_cs_.size() > 0) {
+      error = comp_manager_->SetColorModesInfo(display_comp_ctx_, color_modes_cs_);
+      if (error) {
+        DLOGW("SetColorModesInfo failed on display = %d", display_type_);
+      }
     }
   } else {
     return kErrorParameters;
@@ -1440,7 +1480,20 @@ DisplayError DisplayBase::InitializeColorModes() {
         if (it == color_mode_attr_map_.end()) {
           color_mode_attr_map_.insert(std::make_pair(color_modes_[i].name, var));
         }
+        std::vector<PrimariesTransfer> pt_list = {};
+        GetColorPrimaryTransferFromAttributes(var, &pt_list);
+        for (const PrimariesTransfer &pt : pt_list) {
+          if (std::find(color_modes_cs_.begin(), color_modes_cs_.end(), pt) ==
+              color_modes_cs_.end()) {
+            color_modes_cs_.push_back(pt);
+          }
+        }
       }
+    }
+    PrimariesTransfer pt = {};
+    if (std::find(color_modes_cs_.begin(), color_modes_cs_.end(), pt) ==
+        color_modes_cs_.end()) {
+      color_modes_cs_.push_back(pt);
     }
   }
 
@@ -1470,7 +1523,6 @@ DisplayError DisplayBase::SetHDRMode(bool set) {
     error = SetColorModeInternal(color_mode);
   }
 
-  // DPPS and HDR features are mutually exclusive
   comp_manager_->ControlDpps(!set);
   hdr_mode_ = set;
 
@@ -1480,12 +1532,11 @@ DisplayError DisplayBase::SetHDRMode(bool set) {
 DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
   DisplayError error = kErrorNone;
 
-  if (display_type_ != kPrimary) {
-    // Handling is needed for only primary displays
+  if (!NeedsHdrHandling()) {
     return kErrorNone;
   }
 
-  if (!layer_stack->flags.hdr_present) {
+  if (hw_layers_.info.wide_color_primaries.empty()) {
     //  HDR playback off - set prev mode
     if (hdr_playback_) {
       hdr_playback_ = false;
@@ -1494,18 +1545,20 @@ DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
       }
     }
   } else {
-    // hdr is present
-    if (!hdr_playback_ && !layer_stack->flags.animating) {
-      // hdr is starting
-      hdr_playback_ = true;
-      error = SetHDRMode(true);
-      if (error != kErrorNone) {
-        DLOGW("Failed to set HDR mode");
-      }
-    } else if (hdr_playback_ && !hdr_mode_) {
-      error = SetHDRMode(true);
-      if (error != kErrorNone) {
-        DLOGW("Failed to set HDR mode");
+    // set HDR mode on legacy targets only
+    if (SetHdrModeAtStart(layer_stack)) {
+      if (!hdr_playback_ && !layer_stack->flags.animating) {
+        // hdr is starting
+        hdr_playback_ = true;
+        error = SetHDRMode(true);
+        if (error != kErrorNone) {
+          DLOGW("Failed to set HDR mode");
+        }
+      } else if (hdr_playback_ && !hdr_mode_) {
+        error = SetHDRMode(true);
+        if (error != kErrorNone) {
+          DLOGW("Failed to set HDR mode");
+        }
       }
     }
   }
@@ -1516,20 +1569,35 @@ DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
 DisplayError DisplayBase::ValidateHDR(LayerStack *layer_stack) {
   DisplayError error = kErrorNone;
 
-  if (display_type_ != kPrimary) {
-    // Handling is needed for only primary displays
+  if (!NeedsHdrHandling()) {
     return kErrorNone;
   }
 
-  if (hdr_playback_) {
+  bool hdr_mode = false;
+  bool set = false;  // indicates if we need to call SetHDRMode
+  if (hw_resource_info_.src_tone_map.any()) {
+    if (!hw_layers_.info.wide_color_primaries.empty()) {
+      hdr_playback_ = true;
+      // Need to set HDR mode on target with SSPP only when blend cs is BT2020
+      if (layer_stack->blend_cs.primaries == ColorPrimaries_BT2020 && !hdr_mode_) {
+        hdr_mode = true;
+        set = true;
+      }
+    }
+  } else if (hdr_playback_) {  // legacy targets
     // HDR color mode is set when hdr layer is present in layer_stack.
     // If client flags HDR layer as skipped, then blending happens
     // in SDR color space. Hence, need to restore the SDR color mode.
     if (layer_stack->blend_cs.primaries != ColorPrimaries_BT2020) {
-      error = SetHDRMode(false);
-      if (error != kErrorNone) {
-        DLOGW("Failed to restore SDR mode");
-      }
+      hdr_mode = false;
+      set = true;
+    }
+  }
+
+  if (set) {
+    error = SetHDRMode(hdr_mode);
+    if (error != kErrorNone) {
+      DLOGW("Setting HDR Mode %d failed", hdr_mode);
     }
   }
 
@@ -1567,10 +1635,8 @@ DisplayError DisplayBase::ValidateScaling(uint32_t width, uint32_t height) {
   uint32_t display_width = display_attributes_.x_pixels;
   uint32_t display_height = display_attributes_.y_pixels;
 
-  HWResourceInfo hw_resource_info = HWResourceInfo();
-  hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
-  float max_scale_down = FLOAT(hw_resource_info.max_scale_down);
-  float max_scale_up = FLOAT(hw_resource_info.max_scale_up);
+  float max_scale_down = FLOAT(hw_resource_info_.max_scale_down);
+  float max_scale_up = FLOAT(hw_resource_info_.max_scale_up);
 
   float scale_x = FLOAT(width / display_width);
   float scale_y = FLOAT(height / display_height);
@@ -1644,6 +1710,7 @@ void DisplayBase::ClearColorInfo() {
   color_modes_.clear();
   color_mode_map_.clear();
   color_mode_attr_map_.clear();
+  color_modes_cs_.clear();
 
   if (color_mgr_) {
     delete color_mgr_;
@@ -1657,4 +1724,113 @@ void DisplayBase::DeInitializeColorModes() {
     color_mode_attr_map_.clear();
     num_color_modes_ = 0;
 }
+
+bool DisplayBase::NeedsGpuFallback(const Layer *layer) {
+  const LayerBufferFormat &format = layer->input_buffer.format;
+  const ColorRange &range = layer->input_buffer.color_metadata.range;
+
+  if (format == kFormatInvalid || range == Range_Extended) {
+    DLOGV_IF(kTagDisplay, "Format = %d Range = %d", format, range);
+    // when there is invalid format or extended range fall back to GPU
+    return true;
+  }
+
+  return false;
+}
+
+bool DisplayBase::NeedsHdrHandling() {
+  if (display_type_ != kPrimary || !num_color_modes_ || gpu_fallback_) {
+    // No HDR Handling for non-primary displays or when color modes are not present or
+    // if frame is falling back to GPU
+    return false;
+  }
+  return true;
+}
+
+void DisplayBase::GetColorPrimaryTransferFromAttributes(const AttrVal &attr,
+    std::vector<PrimariesTransfer> *supported_pt) {
+  std::string attribute_field = {};
+  if (attr.empty()) {
+    return;
+  }
+
+  for (auto &it : attr) {
+    if ((it.first.find(kColorGamutAttribute) != std::string::npos) ||
+        (it.first.find(kDynamicRangeAttribute) != std::string::npos)) {
+      attribute_field = it.second;
+      PrimariesTransfer pt = {};
+      pt.primaries = GetColorPrimariesFromAttribute(attribute_field);
+      if (pt.primaries == ColorPrimaries_BT709_5) {
+        pt.transfer = Transfer_sRGB;
+        supported_pt->push_back(pt);
+      } else if (pt.primaries == ColorPrimaries_DCIP3) {
+        pt.transfer = Transfer_Gamma2_2;
+        supported_pt->push_back(pt);
+      } else if (pt.primaries == ColorPrimaries_BT2020) {
+        pt.transfer = Transfer_SMPTE_ST2084;
+        supported_pt->push_back(pt);
+        pt.transfer = Transfer_HLG;
+        supported_pt->push_back(pt);
+      }
+    }
+  }
+}
+
+void DisplayBase::HwRecovery(const HWRecoveryEvent sdm_event_code) {
+  DLOGI("Handling event = %" PRIu32, sdm_event_code);
+  if (DisplayPowerResetPending()) {
+    DLOGI("Skipping handling for display = %d, display power reset in progress", display_type_);
+    return;
+  }
+  switch (sdm_event_code) {
+    case HWRecoveryEvent::kSuccess:
+      hw_recovery_logs_captured_ = false;
+      break;
+    case HWRecoveryEvent::kCapture:
+      if (!hw_recovery_logs_captured_) {
+        hw_intf_->DumpDebugData();
+        hw_recovery_logs_captured_ = true;
+        DLOGI("Captured debugfs data for display = %d", display_type_);
+      } else {
+        DLOGI("Multiple capture events without intermediate success event, skipping debugfs"
+              "capture for display = %d", display_type_);
+      }
+      break;
+    case HWRecoveryEvent::kDisplayPowerReset:
+      DLOGI("display = %d attempting to start display power reset", display_type_);
+      if (StartDisplayPowerReset()) {
+        DLOGI("display = %d allowed to start display power reset", display_type_);
+        event_handler_->HandleEvent(kDisplayPowerResetEvent);
+        EndDisplayPowerReset();
+        DLOGI("display = %d has finished display power reset", display_type_);
+      }
+      break;
+    default:
+      return;
+  }
+}
+
+bool DisplayBase::DisplayPowerResetPending() {
+  SCOPE_LOCK(display_power_reset_lock_);
+  return display_power_reset_pending_;
+}
+
+bool DisplayBase::StartDisplayPowerReset() {
+  SCOPE_LOCK(display_power_reset_lock_);
+  if (!display_power_reset_pending_) {
+    display_power_reset_pending_ = true;
+    return true;
+  }
+  return false;
+}
+
+void DisplayBase::EndDisplayPowerReset() {
+  SCOPE_LOCK(display_power_reset_lock_);
+  display_power_reset_pending_ = false;
+}
+
+bool DisplayBase::SetHdrModeAtStart(LayerStack *layer_stack) {
+  return (hw_resource_info_.src_tone_map.none() && layer_stack->flags.hdr_present);
+}
+
 }  // namespace sdm

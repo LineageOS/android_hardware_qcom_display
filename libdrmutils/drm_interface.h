@@ -162,6 +162,24 @@ enum struct DRMOps {
    */
   PLANE_SET_ROT_FB_ID,
   /*
+   * Op: Sets inverse pma mode on this plane.
+   * Arg: uint32_t - Plane ID
+   *      uint32_t - enable/disable inverse pma.
+   */
+  PLANE_SET_INVERSE_PMA,
+  /*
+   * Op: Sets csc config on this plane.
+   * Arg: uint32_t - Plane ID
+   *      uint64_t - Address of the csc config object(version based)
+   */
+  PLANE_SET_DGM_CSC_CONFIG,
+  /*
+   * Op: Sets SSPP Feature
+   * Arg: uint32_t - Plane ID
+   *      DRMPPFeatureInfo * - PP feature data pointer
+   */
+  PLANE_SET_POST_PROC,
+  /*
    * Op: Activate or deactivate a CRTC
    * Arg: uint32_t - CRTC ID
    *      uint32_t - 1 to enable, 0 to disable
@@ -333,13 +351,20 @@ enum struct DRMOps {
    * Arg: uint32_t - Connector ID
    * DRMPPFeatureInfo * - PP feature data pointer
    */
-   CONNECTOR_SET_POST_PROC,
+  CONNECTOR_SET_POST_PROC,
   /*
    * Op: Sets connector hdr metadata
    * Arg: uint32_t - Connector ID
    *      drm_msm_ext_hdr_metadata - hdr_metadata
    */
   CONNECTOR_SET_HDR_METADATA,
+  /*
+   * Op: Cache Dpps features.
+   * Arg: uint32_t - Object ID
+          uint32_t - Feature ID
+   *      uint64_t - Pointer to feature config data
+   */
+  DPPS_CACHE_FEATURE,
 };
 
 enum struct DRMRotation {
@@ -454,6 +479,13 @@ enum struct DRMPlaneType {
   MAX,
 };
 
+enum struct DRMTonemapLutType {
+  DMA_1D_GC,
+  DMA_1D_IGC,
+  VIG_1D_IGC,
+  VIG_3D_GAMUT,
+};
+
 struct DRMPlaneTypeInfo {
   DRMPlaneType type;
   uint32_t master_plane_id;
@@ -471,6 +503,9 @@ struct DRMPlaneTypeInfo {
   QSEEDStepVersion qseed3_version;
   bool multirect_prop_present = false;
   InlineRotationVersion inrot_version;  // inline rotation version
+  bool inverse_pma = false;
+  uint32_t dgm_csc_version = 0;  // csc used with DMA
+  std::map<DRMTonemapLutType, uint32_t> tonemap_lut_version_map = {};
 };
 
 // All DRM Planes as map<Plane_id , plane_type_info> listed from highest to lowest priority
@@ -550,6 +585,10 @@ enum DRMPPFeatureID {
   kFeaturePAMemColSky,
   kFeaturePAMemColFoliage,
   kFeaturePAMemColProt,
+  kFeatureDgmIgc,
+  kFeatureDgmGc,
+  kFeatureVigIgc,
+  kFeatureVigGamut,
   kPPFeaturesMax,
 };
 
@@ -567,6 +606,56 @@ struct DRMPPFeatureInfo {
   uint32_t payload_size;
   void *payload;
   uint32_t object_type;
+};
+
+enum DRMDPPSFeatureID {
+  // Ad4 properties
+  kFeatureAd4Mode,
+  kFeatureAd4Init,
+  kFeatureAd4Cfg,
+  kFeatureAd4Input,
+  kFeatureAd4Backlight,
+  kFeatureAd4Assertiveness,
+  kFeatureAd4ManualStrength,
+  // ABA properties
+  kFeatureAbaHistCtrl,
+  kFeatureAbaHistIRQ,
+  kFeatureAbaLut,
+  // BL scale properties
+  kFeatureAd4BlScale,
+  kFeatureBacklightScale,
+  // Events
+  kFeaturePowerEvent,
+  kFeatureAbaHistEvent,
+  kFeatureBackLightEvent,
+  kFeatureAdAttBlEvent,
+  // Insert features above
+  kDppsFeaturesMax,
+};
+
+struct DRMDppsFeatureInfo {
+  DRMDPPSFeatureID id;
+  uint32_t version;
+};
+
+enum AD4Modes {
+  kAd4Off,
+  kAd4AutoStrength,
+  kAd4Calibration,
+  kAd4Manual,
+  kAd4ModeMax,
+};
+
+enum HistModes {
+  kHistDisabled,
+  kHistEnabled,
+};
+
+struct DRMDppsEventInfo {
+  uint32_t object_type;
+  uint32_t event_type;
+  int drm_fd;
+  bool enable;
 };
 
 enum DRMCscType {
@@ -606,16 +695,16 @@ enum struct DRMMultiRectMode {
 };
 
 struct DRMSolidfillStage {
- DRMRect bounding_rect {};
- bool is_exclusion_rect = false;
- uint32_t color = 0xff000000; // in 8bit argb
- uint32_t red = 0;
- uint32_t blue = 0;
- uint32_t green = 0;
- uint32_t alpha = 0xff;
- uint32_t color_bit_depth = 0;
- uint32_t z_order = 0;
- uint32_t plane_alpha = 0xff;
+  DRMRect bounding_rect {};
+  bool is_exclusion_rect = false;
+  uint32_t color = 0xff000000;  // in 8bit argb
+  uint32_t red = 0;
+  uint32_t blue = 0;
+  uint32_t green = 0;
+  uint32_t alpha = 0xff;
+  uint32_t color_bit_depth = 0;
+  uint32_t z_order = 0;
+  uint32_t plane_alpha = 0xff;
 };
 
 /* DRM Atomic Request Property Set.
@@ -735,6 +824,13 @@ class DRMManagerInterface {
    * [return]: Error code if the API fails, 0 on success.
    */
   virtual int SetScalerLUT(const DRMScalerLUTInfo &lut_info) = 0;
+
+  /*
+   * Get the DPPS feature info
+   * [input]: Dpps feature id, info->id
+   * [output]: Dpps feature version, info->version
+   */
+  virtual void GetDppsFeatureInfo(DRMDppsFeatureInfo *info) = 0;
 };
 
 }  // namespace sde_drm

@@ -37,6 +37,7 @@
 #include "hwc_callbacks.h"
 #include "hwc_layers.h"
 #include "display_null.h"
+#include "hwc_display_event_handler.h"
 
 namespace sdm {
 
@@ -157,6 +158,10 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int SetState(bool connected) {
     return kErrorNotSupported;
   }
+  virtual DisplayError Flush() {
+    return kErrorNotSupported;
+  }
+
   int SetPanelBrightness(int level);
   int GetPanelBrightness(int *level);
   int ToggleScreenUpdates(bool enable);
@@ -237,7 +242,8 @@ class HWCDisplay : public DisplayEventHandler {
   // Maximum number of layers supported by display manager.
   static const uint32_t kMaxLayerCount = 32;
 
-  HWCDisplay(CoreInterface *core_intf, HWCCallbacks *callbacks, DisplayType type, hwc2_display_t id,
+  HWCDisplay(CoreInterface *core_intf, HWCCallbacks *callbacks,
+             HWCDisplayEventHandler *event_handler, DisplayType type, hwc2_display_t id,
              bool needs_blit, qService::QService *qservice, DisplayClass display_class,
              BufferAllocator *buffer_allocator);
 
@@ -272,6 +278,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool layer_stack_invalid_ = true;
   CoreInterface *core_intf_ = nullptr;
   HWCCallbacks *callbacks_  = nullptr;
+  HWCDisplayEventHandler *event_handler_ = nullptr;
   HWCBufferAllocator *buffer_allocator_ = NULL;
   DisplayType type_;
   hwc2_display_t id_;

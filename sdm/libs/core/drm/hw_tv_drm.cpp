@@ -92,7 +92,7 @@ HWTVDRM::HWTVDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer
                      HWInfoInterface *hw_info_intf)
   : HWDeviceDRM(buffer_sync_handler, buffer_allocator, hw_info_intf) {
   disp_type_ = DRMDisplayType::TV;
-  device_name_ = "TV Display Device";
+  device_name_ = "TV";
 }
 
 DisplayError HWTVDRM::SetDisplayAttributes(uint32_t index) {

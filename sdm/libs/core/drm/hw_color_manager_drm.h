@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -33,7 +33,6 @@
 #include <drm_interface.h>
 #include <private/color_params.h>
 #include <vector>
-#include <map>
 
 using sde_drm::DRMPPFeatureID;
 using sde_drm::DRMPPFeatureInfo;
@@ -53,36 +52,32 @@ using sde_drm::kFeaturePAMemColSky;
 using sde_drm::kFeaturePAMemColFoliage;
 using sde_drm::kFeaturePAMemColProt;
 using sde_drm::kPPFeaturesMax;
+using sde_drm::kFeatureDgmIgc;
+using sde_drm::kFeatureDgmGc;
+using sde_drm::kFeatureVigIgc;
+using sde_drm::kFeatureVigGamut;
 
 namespace sdm {
 
-typedef std::map<uint32_t, std::vector<uint32_t>> DrmPPFeatureMap;
-
-static const DrmPPFeatureMap DrmPPfeatureMap_ = \
-  {{kGlobalColorFeaturePcc, {kFeaturePcc}},
-    {kGlobalColorFeatureIgc, {kFeatureIgc}},
-    {kGlobalColorFeaturePgc, {kFeaturePgc}},
-    {kMixerColorFeatureGc, {kMixerColorFeatureGc}},
-    {kGlobalColorFeaturePaV2, {kFeaturePAHsic, kFeaturePASixZone,
-                               kFeaturePAMemColSkin, kFeaturePAMemColSky,
-                               kFeaturePAMemColFoliage, kFeaturePAMemColProt}},
-    {kGlobalColorFeatureDither, {kFeatureDither}},
-    {kGlobalColorFeatureGamut, {kFeatureGamut}},
-    {kGlobalColorFeaturePADither, {kFeaturePADither}},
-};
-
 static const uint32_t kMaxPCCChanel = 3;
+
+enum PPBlock {
+  kDSPP,
+  kVIG,
+  kDGM,
+  kPPBlockMax,
+};
 
 class HWColorManagerDrm {
  public:
-  static DisplayError (*GetDrmFeature[kPPFeaturesMax])(const PPFeatureInfo &in_data,
-                                                          DRMPPFeatureInfo *out_data);
-  static void FreeDrmFeatureData(DRMPPFeatureInfo *feature);
-  static uint32_t GetFeatureVersion(const DRMPPFeatureInfo &feature);
-  static DRMPPFeatureID ToDrmFeatureId(uint32_t id);
-
- protected:
+  DisplayError GetDrmFeature(PPFeatureInfo *in_data, DRMPPFeatureInfo *out_data,
+                             bool force_disable = false);
+  void FreeDrmFeatureData(DRMPPFeatureInfo *feature);
+  uint32_t GetFeatureVersion(const DRMPPFeatureInfo &feature);
+  DisplayError ToDrmFeatureId(const PPBlock block, const uint32_t id,
+                              std::vector<DRMPPFeatureID> *drm_id);
   HWColorManagerDrm() {}
+  ~HWColorManagerDrm() {}
 
  private:
   static DisplayError GetDrmPCC(const PPFeatureInfo &in_data, DRMPPFeatureInfo *out_data);
@@ -99,6 +94,9 @@ class HWColorManagerDrm {
   static DisplayError GetDrmPAMemColFoliage(const PPFeatureInfo &in_data,
                                             DRMPPFeatureInfo *out_data);
   static DisplayError GetDrmPAMemColProt(const PPFeatureInfo &in_data, DRMPPFeatureInfo *out_data);
+
+  static DisplayError (*pp_features_[kPPFeaturesMax])(const PPFeatureInfo &in_data,
+                                                      DRMPPFeatureInfo *out_data);
 };
 
 }  // namespace sdm

@@ -28,10 +28,13 @@
 #include <stdint.h>
 #include <core/display_interface.h>
 #include <core/core_interface.h>
+#include <utils/locker.h>
+#include <utils/debug.h>
 #include <vector>
 #include <map>
 #include <string>
 #include <bitset>
+#include <memory>
 
 namespace sdm {
 using std::string;
@@ -43,6 +46,11 @@ const int kMaxSDELayers = 16;   // Maximum number of layers that can be handled 
 #define MAJOR 28
 #define MINOR 16
 #define SDEVERSION(major, minor, hw_rev) ((major) << MAJOR) | ((minor) << MINOR) | (hw_rev)
+
+// CSC Max Size
+#define MAX_CSC_MATRIX_COEFF_SIZE   9
+#define MAX_CSC_CLAMP_SIZE          6
+#define MAX_CSC_BIAS_SIZE           3
 
 enum HWDeviceType {
   kDevicePrimary,
@@ -131,6 +139,31 @@ enum HwHdrEotf {
   kHdrEOTFHLG = 0x8,
 };
 
+enum HWSrcTonemap {
+  kSrcTonemap1d,  // DMA
+  kSrcTonemap3d,  // VIG
+};
+
+enum HWToneMapLut {
+  kLutNone,     // No valid lut
+  kDma1dIgc,    // DMA IGC Lut
+  kDma1dGc,     // DMA GC Lut
+  kVig1dIgc,    // VIG IGC Lut
+  kVig3dGamut,  // 3D Gamut Lut
+};
+
+enum HWWriteOperation {
+  kNoOp,   // No-op, previously set config holds good
+  kSet,    // Sets the new config
+  kReset,  // Resets/Clears the previously set config
+};
+
+enum class HWRecoveryEvent : uint32_t {
+  kSuccess,            // driver succeeded recovery
+  kCapture,            // driver PP_TIMEOUT, capture logs
+  kDisplayPowerReset,  // driver requesting display power cycle
+};
+
 typedef std::map<HWSubBlockType, std::vector<LayerBufferFormat>> FormatsMap;
 typedef std::map<LayerBufferFormat, float> CompRatioMap;
 
@@ -158,6 +191,9 @@ struct HWPipeCaps {
   uint32_t id = 0;
   uint32_t master_pipe_id = 0;
   uint32_t max_rects = 1;
+  bool inverse_pma = 0;
+  uint32_t dgm_csc_version = 0;
+  std::map<HWToneMapLut, uint32_t> tm_lut_version_map = {};
 };
 
 struct HWRotatorInfo {
@@ -168,8 +204,6 @@ struct HWRotatorInfo {
   std::string device_path = "";
   float min_downscale = 2.0f;
   bool downscale_compression = false;
-
-  void Reset() { *this = HWRotatorInfo(); }
 };
 
 enum HWQseedStepVersion {
@@ -259,8 +293,7 @@ struct HWResourceInfo {
   HWQseedStepVersion pipe_qseed3_version = kQseed3v2;  // only valid when has_qseed3=true
   uint32_t min_prefill_lines = 0;
   InlineRotationVersion inrot_version = kInlineRotationNone;
-
-  void Reset() { *this = HWResourceInfo(); }
+  std::bitset<32> src_tone_map = 0;  //!< Stores the bit mask of src tone map capability
 };
 
 struct HWSplitInfo {
@@ -356,8 +389,8 @@ struct HWPanelInfo {
 };
 
 struct HWSessionConfig {
-  LayerRect src_rect;
-  LayerRect dst_rect;
+  LayerRect src_rect {};
+  LayerRect dst_rect {};
   uint32_t buffer_count = 0;
   bool secure = false;
   uint32_t frame_rate = 0;
@@ -388,21 +421,19 @@ enum HWRotatorMode {
 struct HWRotateInfo {
   int pipe_id = -1;  // Not actual pipe id, but the relative DMA id
   int writeback_id = -1;  // Writeback block id, but this is the same as DMA id
-  LayerRect src_roi;  // Source crop of each split
-  LayerRect dst_roi;  // Destination crop of each split
+  LayerRect src_roi {};  // Source crop of each split
+  LayerRect dst_roi {};  // Destination crop of each split
   bool valid = false;
   int rotate_id = -1;  // Actual rotator session id with driver
-
-  void Reset() { *this = HWRotateInfo(); }
 };
 
 struct HWRotatorSession {
-  HWRotateInfo hw_rotate_info[kMaxRotatePerLayer];
+  HWRotateInfo hw_rotate_info[kMaxRotatePerLayer] {};
   uint32_t hw_block_count = 0;  // number of rotator hw blocks used by rotator session
   int session_id = -1;  // A handle with Session Manager
-  HWSessionConfig hw_session_config;
-  LayerBuffer input_buffer;  // Input to rotator
-  LayerBuffer output_buffer;  // Output of rotator, crop width and stride are same
+  HWSessionConfig hw_session_config {};
+  LayerBuffer input_buffer {};  // Input to rotator
+  LayerBuffer output_buffer {};  // Output of rotator, crop width and stride are same
   float input_compression = 1.0f;
   float output_compression = 1.0f;
   bool is_buffer_cached = false;
@@ -442,15 +473,23 @@ struct HWPlane {
   int32_t phase_step_x = 0;
   int32_t init_phase_y = 0;
   int32_t phase_step_y = 0;
-  HWPixelExtension left;
-  HWPixelExtension top;
-  HWPixelExtension right;
-  HWPixelExtension bottom;
+  HWPixelExtension left {};
+  HWPixelExtension top {};
+  HWPixelExtension right {};
+  HWPixelExtension bottom {};
   uint32_t roi_width = 0;
   int32_t preload_x = 0;
   int32_t preload_y = 0;
   uint32_t src_width = 0;
   uint32_t src_height = 0;
+};
+
+struct HWCsc {
+  int64_t ctm_coeff[MAX_CSC_MATRIX_COEFF_SIZE] = {0};
+  uint32_t pre_bias[MAX_CSC_BIAS_SIZE] = {0};
+  uint32_t post_bias[MAX_CSC_BIAS_SIZE] = {0};
+  uint32_t pre_clamp[MAX_CSC_CLAMP_SIZE] = {0};
+  uint32_t post_clamp[MAX_CSC_CLAMP_SIZE] = {0};
 };
 
 struct HWScaleData {
@@ -461,7 +500,7 @@ struct HWScaleData {
   } enable;
   uint32_t dst_width = 0;
   uint32_t dst_height = 0;
-  HWPlane plane[MAX_PLANES];
+  HWPlane plane[MAX_PLANES] {};
   // scale_v2_data fields
   ScalingFilterConfig y_rgb_filter_cfg = kFilterEdgeDirected;
   ScalingFilterConfig uv_filter_cfg = kFilterEdgeDirected;
@@ -483,8 +522,7 @@ struct HWScaleData {
   uint32_t uv_cir_lut_idx = 0;
   uint32_t y_rgb_sep_lut_idx = 0;
   uint32_t uv_sep_lut_idx = 0;
-
-  HWDetailEnhanceData detail_enhance;
+  HWDetailEnhanceData detail_enhance {};
 };
 
 struct HWDestScaleInfo {
@@ -502,23 +540,40 @@ struct HWAVRInfo {
   HWAVRModes mode = kContinuousMode;  // Specifies the AVR mode
 };
 
+struct HWPipeCscInfo {
+  HWWriteOperation op = kNoOp;
+  HWCsc csc = {};
+};
+
+struct HWPipeTonemapLutInfo {
+  HWWriteOperation op = kNoOp;
+  HWToneMapLut type = kLutNone;
+  std::shared_ptr<PPFeatureInfo> pay_load = nullptr;
+};
+
+struct HWPipeTonemapInversePma {
+  HWWriteOperation op = kNoOp;
+  bool inverse_pma = false;
+};
+
 struct HWPipeInfo {
   HWPipeInfo *pair = NULL;
   uint8_t rect = 255;
   uint32_t pipe_id = 0;
   HWSubBlockType sub_block_type = kHWSubBlockMax;
-  LayerRect src_roi;
-  LayerRect dst_roi;
-  LayerRect excl_rect;  // exclusion rectangle per pipe rectangle
+  LayerRect src_roi {};
+  LayerRect dst_roi {};
+  LayerRect excl_rect {};  // exclusion rectangle per pipe rectangle
   uint8_t horizontal_decimation = 0;
   uint8_t vertical_decimation = 0;
-  HWScaleData scale_data;
+  HWScaleData scale_data {};
   uint32_t z_order = 0;
   uint8_t flags = 0;
   bool valid = false;
   bool is_virtual = 0;
-
-  void Reset() { *this = HWPipeInfo(); }
+  HWPipeTonemapInversePma inverse_pma_info = {};
+  HWPipeCscInfo dgm_csc_info = {};
+  std::vector<HWPipeTonemapLutInfo> lut_info = {};
 };
 
 struct HWSolidfillStage {
@@ -530,15 +585,12 @@ struct HWSolidfillStage {
 };
 
 struct HWLayerConfig {
-  HWPipeInfo left_pipe;           // pipe for left side of output
-  HWPipeInfo right_pipe;          // pipe for right side of output
-  HWRotatorSession hw_rotator_session;
-  HWSolidfillStage hw_solidfill_stage;
-
+  HWPipeInfo left_pipe {};           // pipe for left side of output
+  HWPipeInfo right_pipe {};          // pipe for right side of output
+  HWRotatorSession hw_rotator_session {};
+  HWSolidfillStage hw_solidfill_stage {};
   float compression = 1.0f;
   bool use_solidfill_stage = false;
-
-  void Reset() { *this = HWLayerConfig(); }
 };
 
 struct HWHDRLayerInfo {
@@ -560,19 +612,17 @@ struct HWLayersInfo {
   LayerStack *stack = NULL;        // Input layer stack. Set by the caller.
   uint32_t app_layer_count = 0;    // Total number of app layers. Must not be 0.
   uint32_t gpu_target_index = 0;   // GPU target layer index. 0 if not present.
+  std::vector<ColorPrimaries> wide_color_primaries = {};  // list of wide color primaries
 
   std::vector<Layer> hw_layers = {};  // Layers which need to be programmed on the HW
   std::vector<LayerExt> layer_exts = {};  // Extention layer having list of
                                           // exclusion rectangles for each layer
-
-  std::vector<uint32_t> index;   // Indexes of the layers from the layer stack which need to
+  std::vector<uint32_t> index {};   // Indexes of the layers from the layer stack which need to
                                  // be programmed on hardware.
-  std::vector<uint32_t> roi_index;  // Stores the ROI index where the layers are visible.
-
+  std::vector<uint32_t> roi_index {};  // Stores the ROI index where the layers are visible.
   int sync_handle = -1;         // Release fence id for current draw cycle.
   int set_idle_time_ms = -1;    // Set idle time to the new specified value.
                                 //    -1 indicates no change in idle time since last set value.
-
   std::vector<LayerRect> left_frame_roi = {};   // Left ROI.
   std::vector<LayerRect> right_frame_roi = {};  // Right ROI.
   LayerRect partial_fb_roi = {};   // Damaged area in framebuffer.
@@ -596,8 +646,8 @@ struct HWQosData {
 };
 
 struct HWLayers {
-  HWLayersInfo info;
-  HWLayerConfig config[kMaxSDELayers];
+  HWLayersInfo info {};
+  HWLayerConfig config[kMaxSDELayers] {};
   float output_compression = 1.0f;
   HWQosData qos_data = {};
   HWAVRInfo hw_avr_info = {};
@@ -610,11 +660,9 @@ struct HWDisplayAttributes : DisplayConfigVariableInfo {
   uint32_t v_pulse_width = 0;  //!< Vertical pulse width of panel
   uint32_t h_total = 0;        //!< Total width of panel (hActive + hFP + hBP + hPulseWidth)
   uint32_t v_total = 0;        //!< Total height of panel (vActive + vFP + vBP + vPulseWidth)
-  std::bitset<32> s3d_config;  //!< Stores the bit mask of S3D modes
+  std::bitset<32> s3d_config {};  //!< Stores the bit mask of S3D modes
   uint32_t clock_khz = 0;      //!< Stores the pixel clock of panel in khz
   HWTopology topology = kUnknown;  //!< Stores the topology information.
-
-  void Reset() { *this = HWDisplayAttributes(); }
 
   bool operator !=(const HWDisplayAttributes &display_attributes) {
     return ((is_device_split != display_attributes.is_device_split) ||

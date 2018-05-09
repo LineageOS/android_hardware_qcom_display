@@ -14,6 +14,7 @@ LOCAL_SRC_FILES               := debug.cpp \
                                  formats.cpp \
                                  utils.cpp
 
+LOCAL_SHARED_LIBRARIES        := libdisplaydebug
 include $(BUILD_SHARED_LIBRARY)
 
 SDM_HEADER_PATH := ../../include

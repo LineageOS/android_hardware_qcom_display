@@ -37,15 +37,22 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <memory>
 
 #include "hw_interface.h"
 #include "hw_scale_drm.h"
+#include "hw_color_manager_drm.h"
 
 #define IOCTL_LOGE(ioctl, type) \
   DLOGE("ioctl %s, device = %d errno = %d, desc = %s", #ioctl, type, errno, strerror(errno))
 
 namespace sdm {
 class HWInfoInterface;
+
+struct SDECsc {
+  struct sde_drm_csc_v1 csc_v1 = {};
+  // More here, maybe in a union
+};
 
 class HWDeviceDRM : public HWInterface {
  public:
@@ -96,8 +103,11 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError SetMixerAttributes(const HWMixerAttributes &mixer_attributes);
   virtual DisplayError GetMixerAttributes(HWMixerAttributes *mixer_attributes);
   virtual void InitializeConfigs();
-  virtual DisplayError DumpDebugData() { return kErrorNone; }
+  virtual DisplayError DumpDebugData();
   virtual void PopulateHWPanelInfo();
+  virtual DisplayError SetDppsFeature(uint32_t object_type, uint32_t feature_id,
+                                      uint64_t value) { return kErrorNotSupported; }
+  virtual DisplayError GetDppsFeatureInfo(void *info) { return kErrorNotSupported; }
 
   enum {
     kHWEventVSync,
@@ -133,6 +143,10 @@ class HWDeviceDRM : public HWInterface {
   bool IsResolutionSwitchEnabled() const { return resolution_switch_enabled_; }
   void SetTopology(sde_drm::DRMTopology drm_topology, HWTopology *hw_topology);
   void SetMultiRectMode(const uint32_t flags, sde_drm::DRMMultiRectMode *target);
+  void SetSsppTonemapFeatures(HWPipeInfo *pipe_info);
+  void SetDGMCsc(const HWPipeCscInfo &dgm_csc_info, SDECsc *csc);
+  void SetDGMCscV1(const HWCsc &dgm_csc, sde_drm_csc_v1 *csc_v1);
+  void SetSsppLutFeatures(HWPipeInfo *pipe_info);
 
   class Registry {
    public:
@@ -179,6 +193,8 @@ class HWDeviceDRM : public HWInterface {
   uint32_t current_mode_index_ = 0;
   sde_drm::DRMConnectorInfo connector_info_ = {};
   bool first_cycle_ = true;
+  int64_t release_fence_ = -1;
+  int64_t retire_fence_ = -1;
 
  private:
   bool synchronous_commit_ = false;
@@ -188,6 +204,7 @@ class HWDeviceDRM : public HWInterface {
   bool resolution_switch_enabled_ = false;
   uint32_t vrefresh_ = 0;
   bool autorefresh_ = false;
+  std::unique_ptr<HWColorManagerDrm> hw_color_mgr_ = {};
 };
 
 }  // namespace sdm

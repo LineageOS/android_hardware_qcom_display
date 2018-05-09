@@ -86,7 +86,7 @@ bool GetColorPrimary(const int32_t &dataspace, ColorPrimaries *color_primary) {
       *color_primary = ColorPrimaries_BT2020;
       break;
     default:
-      DLOGV_IF(kTagClient, "Unsupported Standard Request = %d", standard);
+      DLOGE("Unsupported Standard Request = %d", standard);
       supported_csc = false;
   }
   return supported_csc;
@@ -114,14 +114,17 @@ bool GetTransfer(const int32_t &dataspace, GammaTransfer *gamma_transfer) {
     case HAL_DATASPACE_TRANSFER_GAMMA2_2:
       *gamma_transfer = Transfer_Gamma2_2;
       break;
+    case HAL_DATASPACE_TRANSFER_GAMMA2_8:
+      *gamma_transfer = Transfer_Gamma2_8;
+      break;
     default:
-      DLOGV_IF(kTagClient, "Unsupported Transfer Request = %d", transfer);
+      DLOGE("Unsupported Transfer Request = %d", transfer);
       supported_transfer = false;
   }
   return supported_transfer;
 }
 
-void GetRange(const int32_t &dataspace, ColorRange *color_range) {
+bool GetRange(const int32_t &dataspace, ColorRange *color_range) {
   auto range = dataspace & HAL_DATASPACE_RANGE_MASK;
   switch (range) {
     case HAL_DATASPACE_RANGE_FULL:
@@ -130,10 +133,14 @@ void GetRange(const int32_t &dataspace, ColorRange *color_range) {
     case HAL_DATASPACE_RANGE_LIMITED:
       *color_range = Range_Limited;
       break;
-    default:
-      DLOGV_IF(kTagClient, "Unsupported Range Request = %d", range);
+    case HAL_DATASPACE_RANGE_EXTENDED:
+      *color_range = Range_Extended;
       break;
+    default:
+      DLOGE("Unsupported Range Request = %d", range);
+      return false;
   }
+  return true;
 }
 
 bool IsBT2020(const ColorPrimaries &color_primary) {
@@ -150,16 +157,14 @@ bool IsBT2020(const ColorPrimaries &color_primary) {
 bool GetSDMColorSpace(const int32_t &dataspace, ColorMetaData *color_metadata) {
   bool valid = false;
   valid = GetColorPrimary(dataspace, &(color_metadata->colorPrimaries));
-  if (!valid) {
-    return valid;
+  if (valid) {
+    valid = GetTransfer(dataspace, &(color_metadata->transfer));
   }
-  valid = GetTransfer(dataspace, &(color_metadata->transfer));
-  if (!valid) {
-    return valid;
+  if (valid) {
+    valid = GetRange(dataspace, &(color_metadata->range));
   }
-  GetRange(dataspace, &(color_metadata->range));
 
-  return true;
+  return valid;
 }
 
 // Layer operations
@@ -796,16 +801,6 @@ DisplayError HWCLayer::SetIGC(IGC_t source, LayerIGC *target) {
   return kErrorNone;
 }
 
-
-
-bool HWCLayer::SupportLocalConversion(ColorPrimaries working_primaries) {
-  if (layer_->input_buffer.color_metadata.colorPrimaries <= ColorPrimaries_BT601_6_525 &&
-      working_primaries <= ColorPrimaries_BT601_6_525) {
-    return true;
-  }
-  return false;
-}
-
 bool HWCLayer::ValidateAndSetCSC() {
   if (client_requested_ != HWC2::Composition::Device &&
       client_requested_ != HWC2::Composition::Cursor) {
@@ -815,7 +810,6 @@ bool HWCLayer::ValidateAndSetCSC() {
 
   LayerBuffer *layer_buffer = &layer_->input_buffer;
   bool use_color_metadata = true;
-#ifdef FEATURE_WIDE_COLOR
   ColorMetaData csc = {};
   if (dataspace_ != HAL_DATASPACE_UNKNOWN) {
     use_color_metadata = false;
@@ -828,7 +822,6 @@ bool HWCLayer::ValidateAndSetCSC() {
     layer_buffer->color_metadata.colorPrimaries = csc.colorPrimaries;
     layer_buffer->color_metadata.range = csc.range;
   }
-#endif
 
   if (IsBT2020(layer_buffer->color_metadata.colorPrimaries)) {
      // android_dataspace_t doesnt support mastering display and light levels

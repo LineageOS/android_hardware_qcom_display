@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -27,46 +27,18 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef __DEBUG_H__
-#define __DEBUG_H__
-
-#include <stdint.h>
-#include <debug_handler.h>
-#include <core/sdm_types.h>
-#include <core/display_interface.h>
+#ifndef __HWC_DISPLAY_EVENT_HANDLER_H__
+#define __HWC_DISPLAY_EVENT_HANDLER_H__
 
 namespace sdm {
 
-using display::DebugHandler;
-
-class Debug {
+class HWCDisplayEventHandler {
  public:
-  static inline DebugHandler* Get() { return DebugHandler::Get(); }
-  static int GetSimulationFlag();
-  static bool GetExternalResolution(char *val);
-  static void GetIdleTimeoutMs(uint32_t *active_ms, uint32_t *inactive_ms);
-  static int GetBootAnimLayerCount();
-  static bool IsRotatorDownScaleDisabled();
-  static bool IsDecimationDisabled();
-  static int GetMaxPipesPerMixer(DisplayType display_type);
-  static int GetMaxUpscale();
-  static bool IsVideoModeEnabled();
-  static bool IsRotatorUbwcDisabled();
-  static bool IsRotatorSplitDisabled();
-  static bool IsScalarDisabled();
-  static bool IsUbwcTiledFrameBuffer();
-  static bool IsAVRDisabled();
-  static bool IsExtAnimDisabled();
-  static bool IsPartialSplitDisabled();
-  static bool IsSrcSplitPreferred();
-  static DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
-  static DisplayError GetReducedConfig(uint32_t *num_vig_pipes, uint32_t *num_dma_pipes);
-  static int GetExtMaxlayers();
-  static DisplayError GetProperty(const char *property_name, char *value);
-  static DisplayError GetProperty(const char *property_name, int *value);
-};
+  virtual void DisplayPowerReset() = 0;
 
+ protected:
+  virtual ~HWCDisplayEventHandler() {}
+};
 }  // namespace sdm
 
-#endif  // __DEBUG_H__
-
+#endif  // __HWC_DISPLAY_EVENT_HANDLER_H__

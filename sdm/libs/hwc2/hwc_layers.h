@@ -42,7 +42,7 @@ namespace sdm {
 DisplayError SetCSC(const private_handle_t *pvt_handle, ColorMetaData *color_metadata);
 bool GetColorPrimary(const int32_t &dataspace, ColorPrimaries *color_primary);
 bool GetTransfer(const int32_t &dataspace, GammaTransfer *gamma_transfer);
-void GetRange(const int32_t &dataspace, ColorRange *color_range);
+bool GetRange(const int32_t &dataspace, ColorRange *color_range);
 bool GetSDMColorSpace(const int32_t &dataspace, ColorMetaData *color_metadata);
 bool IsBT2020(const ColorPrimaries &color_primary);
 enum GeometryChanges {
@@ -92,7 +92,6 @@ class HWCLayer {
   int32_t PopBackReleaseFence(void);
   int32_t PopFrontReleaseFence(void);
   bool ValidateAndSetCSC();
-  bool SupportLocalConversion(ColorPrimaries working_primaries);
   void ResetValidation() { needs_validate_ = false; }
   bool NeedsValidation() { return (needs_validate_ || geometry_changes_); }
   bool IsSingleBuffered() { return single_buffer_; }

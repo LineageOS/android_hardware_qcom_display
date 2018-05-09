@@ -27,6 +27,7 @@
 #include <utility>
 
 #include "gr_allocator.h"
+#include "gr_utils.h"
 #include "gr_buf_descriptor.h"
 #include "gralloc_priv.h"
 
@@ -45,6 +46,8 @@ class BufferManager {
   Error LockBuffer(const private_handle_t *hnd, uint64_t usage);
   Error UnlockBuffer(const private_handle_t *hnd);
   Error Dump(std::ostringstream *os);
+  Error ValidateBufferSize(private_handle_t const *hnd, BufferInfo info);
+  Error IsBufferImported(const private_handle_t *hnd);
   static BufferManager *GetInstance();
 
  private:
@@ -84,8 +87,6 @@ class BufferManager {
 
   // Get the wrapper Buffer object from the handle, returns nullptr if handle is not found
   std::shared_ptr<Buffer> GetBufferFromHandleLocked(const private_handle_t *hnd);
-
-  bool map_fb_mem_ = false;
   Allocator *allocator_ = NULL;
   std::mutex buffer_lock_;
   std::unordered_map<const private_handle_t *, std::shared_ptr<Buffer>> handles_map_ = {};

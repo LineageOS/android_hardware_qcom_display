@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -35,147 +35,161 @@
 namespace sdm {
 
 HWCDebugHandler HWCDebugHandler::debug_handler_;
-std::bitset<32> HWCDebugHandler::debug_flags_ = 0x1;
-int32_t HWCDebugHandler::verbose_level_ = 0x0;
+
+HWCDebugHandler::HWCDebugHandler() {
+  DebugHandler::Set(HWCDebugHandler::Get());
+}
 
 void HWCDebugHandler::DebugAll(bool enable, int verbose_level) {
   if (enable) {
-    debug_flags_ = 0x7FFFFFFF;
+    debug_handler_.log_mask_ = 0x7FFFFFFF;
     if (verbose_level) {
-      // Enable verbose scalar logs only when explicitely enabled
-      debug_flags_[kTagScalar] = 0;
+      // Enable verbose scalar logs only when explicitly enabled
+      debug_handler_.log_mask_[kTagScalar] = 0;
     }
-    verbose_level_ = verbose_level;
+    debug_handler_.verbose_level_ = verbose_level;
   } else {
-    debug_flags_ = 0x1;   // kTagNone should always be printed.
-    verbose_level_ = 0;
+    debug_handler_.log_mask_ = 0x1;   // kTagNone should always be printed.
+    debug_handler_.verbose_level_ = 0;
   }
+
+  DebugHandler::SetLogMask(debug_handler_.log_mask_);
 }
 
 void HWCDebugHandler::DebugResources(bool enable, int verbose_level) {
   if (enable) {
-    debug_flags_[kTagResources] = 1;
-    verbose_level_ = verbose_level;
+    debug_handler_.log_mask_[kTagResources] = 1;
+    debug_handler_.verbose_level_ = verbose_level;
   } else {
-    debug_flags_[kTagResources] = 0;
-    verbose_level_ = 0;
+    debug_handler_.log_mask_[kTagResources] = 0;
+    debug_handler_.verbose_level_ = 0;
   }
+
+  DebugHandler::SetLogMask(debug_handler_.log_mask_);
 }
 
 void HWCDebugHandler::DebugStrategy(bool enable, int verbose_level) {
   if (enable) {
-    debug_flags_[kTagStrategy] = 1;
-    verbose_level_ = verbose_level;
+    debug_handler_.log_mask_[kTagStrategy] = 1;
+    debug_handler_.verbose_level_ = verbose_level;
   } else {
-    debug_flags_[kTagStrategy] = 0;
-    verbose_level_ = 0;
+    debug_handler_.log_mask_[kTagStrategy] = 0;
+    debug_handler_.verbose_level_ = 0;
   }
+
+  DebugHandler::SetLogMask(debug_handler_.log_mask_);
 }
 
 void HWCDebugHandler::DebugCompManager(bool enable, int verbose_level) {
   if (enable) {
-    debug_flags_[kTagCompManager] = 1;
-    verbose_level_ = verbose_level;
+    debug_handler_.log_mask_[kTagCompManager] = 1;
+    debug_handler_.verbose_level_ = verbose_level;
   } else {
-    debug_flags_[kTagCompManager] = 0;
-    verbose_level_ = 0;
+    debug_handler_.log_mask_[kTagCompManager] = 0;
+    debug_handler_.verbose_level_ = 0;
   }
+
+  DebugHandler::SetLogMask(debug_handler_.log_mask_);
 }
 
 void HWCDebugHandler::DebugDriverConfig(bool enable, int verbose_level) {
   if (enable) {
-    debug_flags_[kTagDriverConfig] = 1;
-    verbose_level_ = verbose_level;
+    debug_handler_.log_mask_[kTagDriverConfig] = 1;
+    debug_handler_.verbose_level_ = verbose_level;
   } else {
-    debug_flags_[kTagDriverConfig] = 0;
-    verbose_level_ = 0;
+    debug_handler_.log_mask_[kTagDriverConfig] = 0;
+    debug_handler_.verbose_level_ = 0;
   }
+
+  DebugHandler::SetLogMask(debug_handler_.log_mask_);
 }
 
 void HWCDebugHandler::DebugRotator(bool enable, int verbose_level) {
   if (enable) {
-    debug_flags_[kTagRotator] = 1;
-    verbose_level_ = verbose_level;
+    debug_handler_.log_mask_[kTagRotator] = 1;
+    debug_handler_.verbose_level_ = verbose_level;
   } else {
-    debug_flags_[kTagRotator] = 0;
-    verbose_level_ = 0;
+    debug_handler_.log_mask_[kTagRotator] = 0;
+    debug_handler_.verbose_level_ = 0;
   }
+
+  DebugHandler::SetLogMask(debug_handler_.log_mask_);
 }
 
 void HWCDebugHandler::DebugScalar(bool enable, int verbose_level) {
   if (enable) {
-    debug_flags_[kTagScalar] = 1;
-    verbose_level_ = verbose_level;
+    debug_handler_.log_mask_[kTagScalar] = 1;
+    debug_handler_.verbose_level_ = verbose_level;
   } else {
-    debug_flags_[kTagScalar] = 0;
-    verbose_level_ = 0;
+    debug_handler_.log_mask_[kTagScalar] = 0;
+    debug_handler_.verbose_level_ = 0;
   }
+
+  DebugHandler::SetLogMask(debug_handler_.log_mask_);
 }
 
 void HWCDebugHandler::DebugQdcm(bool enable, int verbose_level) {
   if (enable) {
-    debug_flags_[kTagQDCM] = 1;
-    verbose_level_ = verbose_level;
+    debug_handler_.log_mask_[kTagQDCM] = 1;
+    debug_handler_.verbose_level_ = verbose_level;
   } else {
-    debug_flags_[kTagQDCM] = 0;
-    verbose_level_ = 0;
+    debug_handler_.log_mask_[kTagQDCM] = 0;
+    debug_handler_.verbose_level_ = 0;
   }
+
+  DebugHandler::SetLogMask(debug_handler_.log_mask_);
 }
 
 void HWCDebugHandler::DebugClient(bool enable, int verbose_level) {
   if (enable) {
-    debug_flags_[kTagClient] = 1;
-    verbose_level_ = verbose_level;
+    debug_handler_.log_mask_[kTagClient] = 1;
+    debug_handler_.verbose_level_ = verbose_level;
   } else {
-    debug_flags_[kTagClient] = 0;
-    verbose_level_ = 0;
+    debug_handler_.log_mask_[kTagClient] = 0;
+    debug_handler_.verbose_level_ = 0;
   }
+
+  DebugHandler::SetLogMask(debug_handler_.log_mask_);
 }
 
 void HWCDebugHandler::DebugDisplay(bool enable, int verbose_level) {
   if (enable) {
-    debug_flags_[kTagDisplay] = 1;
-    verbose_level_ = verbose_level;
+    debug_handler_.log_mask_[kTagDisplay] = 1;
+    debug_handler_.verbose_level_ = verbose_level;
   } else {
-    debug_flags_[kTagDisplay] = 0;
-    verbose_level_ = 0;
+    debug_handler_.log_mask_[kTagDisplay] = 0;
+    debug_handler_.verbose_level_ = 0;
   }
+
+  DebugHandler::SetLogMask(debug_handler_.log_mask_);
 }
 
-void HWCDebugHandler::Error(DebugTag tag, const char *format, ...) {
-  if (debug_flags_[tag]) {
-    va_list list;
-    va_start(list, format);
-    __android_log_vprint(ANDROID_LOG_ERROR, LOG_TAG, format, list);
-  }
+void HWCDebugHandler::Error(const char *format, ...) {
+  va_list list;
+  va_start(list, format);
+  __android_log_vprint(ANDROID_LOG_ERROR, LOG_TAG, format, list);
 }
 
-void HWCDebugHandler::Warning(DebugTag tag, const char *format, ...) {
-  if (debug_flags_[tag]) {
-    va_list list;
-    va_start(list, format);
-    __android_log_vprint(ANDROID_LOG_WARN, LOG_TAG, format, list);
-  }
+void HWCDebugHandler::Warning(const char *format, ...) {
+  va_list list;
+  va_start(list, format);
+  __android_log_vprint(ANDROID_LOG_WARN, LOG_TAG, format, list);
 }
 
-void HWCDebugHandler::Info(DebugTag tag, const char *format, ...) {
-  if (debug_flags_[tag]) {
-    va_list list;
-    va_start(list, format);
-    __android_log_vprint(ANDROID_LOG_INFO, LOG_TAG, format, list);
-  }
+void HWCDebugHandler::Info(const char *format, ...) {
+  va_list list;
+  va_start(list, format);
+  __android_log_vprint(ANDROID_LOG_INFO, LOG_TAG, format, list);
 }
 
-void HWCDebugHandler::Debug(DebugTag tag, const char *format, ...) {
-  if (debug_flags_[tag]) {
-    va_list list;
-    va_start(list, format);
-    __android_log_vprint(ANDROID_LOG_DEBUG, LOG_TAG, format, list);
-  }
+void HWCDebugHandler::Debug(const char *format, ...) {
+  va_list list;
+  va_start(list, format);
+  __android_log_vprint(ANDROID_LOG_DEBUG, LOG_TAG, format, list);
 }
 
-void HWCDebugHandler::Verbose(DebugTag tag, const char *format, ...) {
-  if (debug_flags_[tag] && verbose_level_) {
+void HWCDebugHandler::Verbose(const char *format, ...) {
+  if (debug_handler_.verbose_level_) {
     va_list list;
     va_start(list, format);
     __android_log_vprint(ANDROID_LOG_VERBOSE, LOG_TAG, format, list);
@@ -202,7 +216,7 @@ int  HWCDebugHandler::GetIdleTimeoutMs() {
   return value;
 }
 
-DisplayError HWCDebugHandler::GetProperty(const char *property_name, int *value) {
+int HWCDebugHandler::GetProperty(const char *property_name, int *value) {
   char property[PROPERTY_VALUE_MAX];
 
   if (property_get(property_name, property, NULL) > 0) {
@@ -213,16 +227,8 @@ DisplayError HWCDebugHandler::GetProperty(const char *property_name, int *value)
   return kErrorNotSupported;
 }
 
-DisplayError HWCDebugHandler::GetProperty(const char *property_name, char *value) {
+int HWCDebugHandler::GetProperty(const char *property_name, char *value) {
   if (property_get(property_name, value, NULL) > 0) {
-    return kErrorNone;
-  }
-
-  return kErrorNotSupported;
-}
-
-DisplayError HWCDebugHandler::SetProperty(const char *property_name, const char *value) {
-  if (property_set(property_name, value) == 0) {
     return kErrorNone;
   }
 

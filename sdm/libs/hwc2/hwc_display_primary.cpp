@@ -46,14 +46,14 @@
 namespace sdm {
 
 int HWCDisplayPrimary::Create(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
-                              HWCCallbacks *callbacks, qService::QService *qservice,
-                              HWCDisplay **hwc_display) {
+                              HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
+                              qService::QService *qservice, HWCDisplay **hwc_display) {
   int status = 0;
   uint32_t primary_width = 0;
   uint32_t primary_height = 0;
 
   HWCDisplay *hwc_display_primary =
-      new HWCDisplayPrimary(core_intf, buffer_allocator, callbacks, qservice);
+      new HWCDisplayPrimary(core_intf, buffer_allocator, callbacks, event_handler, qservice);
   status = hwc_display_primary->Init();
   if (status) {
     delete hwc_display_primary;
@@ -86,11 +86,11 @@ void HWCDisplayPrimary::Destroy(HWCDisplay *hwc_display) {
 }
 
 HWCDisplayPrimary::HWCDisplayPrimary(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
-                                     HWCCallbacks *callbacks, qService::QService *qservice)
-    : HWCDisplay(core_intf, callbacks, kPrimary, HWC_DISPLAY_PRIMARY, true, qservice,
-                 DISPLAY_CLASS_PRIMARY, buffer_allocator),
-      buffer_allocator_(buffer_allocator),
-      cpu_hint_(NULL) {
+                                     HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
+                                     qService::QService *qservice)
+  : HWCDisplay(core_intf, callbacks, event_handler, kPrimary, HWC_DISPLAY_PRIMARY, true,
+               qservice, DISPLAY_CLASS_PRIMARY, buffer_allocator),
+               buffer_allocator_(buffer_allocator), cpu_hint_(NULL) {
 }
 
 int HWCDisplayPrimary::Init() {
@@ -221,9 +221,6 @@ HWC2::Error HWCDisplayPrimary::Validate(uint32_t *out_num_types, uint32_t *out_n
 HWC2::Error HWCDisplayPrimary::Present(int32_t *out_retire_fence) {
   auto status = HWC2::Error::None;
   if (display_paused_) {
-    // TODO(user): From old HWC implementation
-    // If we do not handle the frame set retireFenceFd to outbufAcquireFenceFd
-    // Revisit this when validating display_paused
     DisplayError error = display_intf_->Flush();
     validated_ = false;
     if (error != kErrorNone) {

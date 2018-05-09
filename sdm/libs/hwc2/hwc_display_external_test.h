@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -40,8 +40,9 @@ namespace sdm {
 class HWCDisplayExternalTest : public HWCDisplay {
  public:
   static int Create(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
-                    HWCCallbacks *callbacks, qService::QService *qservice,
-                    uint32_t panel_bpp, uint32_t pattern_type, HWCDisplay **hwc_display);
+                    HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
+                    qService::QService *qservice, uint32_t panel_bpp, uint32_t pattern_type,
+                    HWCDisplay **hwc_display);
   static void Destroy(HWCDisplay *hwc_display);
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests);
   virtual HWC2::Error Present(int32_t *out_retire_fence);
@@ -80,8 +81,8 @@ class HWCDisplayExternalTest : public HWCDisplay {
 
  private:
   HWCDisplayExternalTest(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
-                         HWCCallbacks *callbacks, qService::QService *qservice,
-                         uint32_t panel_bpp, uint32_t pattern_type);
+                         HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
+                         qService::QService *qservice, uint32_t panel_bpp, uint32_t pattern_type);
   int Init();
   int Deinit();
   void DumpInputBuffer();

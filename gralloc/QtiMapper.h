@@ -44,9 +44,10 @@ namespace implementation {
 
 using ::android::hardware::Return;
 using ::android::hardware::Void;
-using ::android::hardware::graphics::mapper::V2_0::Error;
 using ::android::hardware::graphics::mapper::V2_0::IMapper;
+using ::android::hardware::graphics::mapper::V2_0::Error;
 using ::android::hardware::graphics::mapper::V2_0::YCbCrLayout;
+using ::android::hardware::graphics::common::V1_1::PixelFormat;
 using ::android::hardware::hidl_array;
 using ::android::hardware::hidl_handle;
 using ::android::hardware::hidl_memory;
@@ -57,11 +58,18 @@ using ::android::hidl::base::V1_0::IBase;
 using ::android::sp;
 using gralloc::BufferManager;
 
-class QtiMapper : public IMapper {
+using IMapper_2_1 = android::hardware::graphics::mapper::V2_1::IMapper;
+using BufferDescriptorInfo_2_0 =
+android::hardware::graphics::mapper::V2_0::IMapper::BufferDescriptorInfo;
+using BufferDescriptorInfo_2_1 =
+android::hardware::graphics::mapper::V2_1::IMapper::BufferDescriptorInfo;
+using IMapperBufferDescriptor = android::hardware::graphics::mapper::V2_0::BufferDescriptor;
+
+class QtiMapper : public IMapper_2_1 {
  public:
   QtiMapper();
   // Methods from ::android::hardware::graphics::mapper::V2_0::IMapper follow.
-  Return<void> createDescriptor(const IMapper::BufferDescriptorInfo &descriptor_info,
+  Return<void> createDescriptor(const BufferDescriptorInfo_2_0 &descriptor_info,
                                 createDescriptor_cb hidl_cb) override;
   Return<void> importBuffer(const hidl_handle &raw_handle, importBuffer_cb hidl_cb) override;
   Return<Error> freeBuffer(void *buffer) override;
@@ -71,6 +79,13 @@ class QtiMapper : public IMapper {
                          const hidl_handle &acquire_fence, lockYCbCr_cb hidl_cb) override;
   Return<void> unlock(void *buffer, unlock_cb hidl_cb) override;
 
+  // Methods from ::android::hardware::graphics::mapper::V2_1::IMapper follow.
+  Return<Error> validateBufferSize(void* buffer,
+                                   const BufferDescriptorInfo_2_1& descriptorInfo,
+                                   uint32_t stride) override;
+  Return<void> getTransportSize(void* buffer, IMapper_2_1::getTransportSize_cb hidl_cb) override;
+  Return<void> createDescriptor_2_1(const BufferDescriptorInfo_2_1& descriptorInfo,
+                                    createDescriptor_2_1_cb _hidl_cb) override;
 #ifdef ENABLE_QTI_MAPPER_EXTENSION
   Return<void> getMapSecureBufferFlag(void *buffer, getMapSecureBufferFlag_cb _hidl_cb) override;
   Return<void> getInterlacedFlag(void *buffer, getInterlacedFlag_cb _hidl_cb) override;
@@ -86,13 +101,15 @@ class QtiMapper : public IMapper {
 
  private:
   BufferManager *buf_mgr_ = nullptr;
+  Error CreateDescriptor(const BufferDescriptorInfo_2_1& descriptor_info,
+                         IMapperBufferDescriptor * descriptor);
   bool ValidDescriptor(const IMapper::BufferDescriptorInfo &bd);
   bool GetFenceFd(const hidl_handle &fence_handle, int *outFenceFd);
   void WaitFenceFd(int fence_fd);
   Error LockBuffer(void *buffer, uint64_t usage, const hidl_handle &acquire_fence);
 };
 
-extern "C" IMapper *HIDL_FETCH_IMapper(const char *name);
+extern "C" IMapper_2_1 *HIDL_FETCH_IMapper(const char *name);
 }  // namespace implementation
 }  // namespace V1_0
 }  // namespace mapper

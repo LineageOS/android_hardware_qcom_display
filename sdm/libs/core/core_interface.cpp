@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2015, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2015, 2018 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -51,23 +51,13 @@ struct CoreSingleton {
   Locker locker;
 } g_core;
 
-// TODO(user): Have a single structure handle carries all the interface pointers.
-DisplayError CoreInterface::CreateCore(DebugHandler *debug_handler,
-                                       BufferAllocator *buffer_allocator,
-                                       BufferSyncHandler *buffer_sync_handler,
-                                       CoreInterface **interface, uint32_t client_version) {
-  return CreateCore(debug_handler, buffer_allocator, buffer_sync_handler, NULL,
-                    interface, client_version);
-}
-
-DisplayError CoreInterface::CreateCore(DebugHandler *debug_handler,
-                                       BufferAllocator *buffer_allocator,
+DisplayError CoreInterface::CreateCore(BufferAllocator *buffer_allocator,
                                        BufferSyncHandler *buffer_sync_handler,
                                        SocketHandler *socket_handler,
                                        CoreInterface **interface, uint32_t client_version) {
   SCOPE_LOCK(g_core.locker);
 
-  if (!debug_handler || !buffer_allocator || !buffer_sync_handler || !interface) {
+  if (!buffer_allocator || !buffer_sync_handler || !interface) {
     return kErrorParameters;
   }
 
@@ -85,8 +75,6 @@ DisplayError CoreInterface::CreateCore(DebugHandler *debug_handler,
   if (core_impl) {
     return kErrorUndefined;
   }
-
-  Debug::SetDebugHandler(debug_handler);
 
   // Create appropriate CoreImpl object based on client version.
   if (GET_REVISION(client_version) == CoreImpl::kRevision) {

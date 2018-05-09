@@ -63,6 +63,7 @@ class HWEventHandler {
   virtual void IdlePowerCollapse() = 0;
   virtual void PingPongTimeout() = 0;
   virtual void PanelDead() = 0;
+  virtual void HwRecovery(const HWRecoveryEvent sdm_event_code) = 0;
 
  protected:
   virtual ~HWEventHandler() { }
@@ -113,6 +114,9 @@ class HWInterface {
   virtual DisplayError SetMixerAttributes(const HWMixerAttributes &mixer_attributes) = 0;
   virtual DisplayError GetMixerAttributes(HWMixerAttributes *mixer_attributes) = 0;
   virtual DisplayError DumpDebugData() = 0;
+  virtual DisplayError SetDppsFeature(uint32_t object_type,
+                                      uint32_t feature_id, uint64_t value) = 0;
+  virtual DisplayError GetDppsFeatureInfo(void *info) = 0;
 
  protected:
   virtual ~HWInterface() { }

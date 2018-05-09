@@ -68,12 +68,12 @@
 
 using drm_utils::DRMMaster;
 using drm_utils::DRMResMgr;
-using drm_utils::DRMLogger;
 using drm_utils::DRMLibLoader;
 using sde_drm::GetDRMManager;
 using sde_drm::DRMPlanesInfo;
 using sde_drm::DRMCrtcInfo;
 using sde_drm::DRMPlaneType;
+using sde_drm::DRMTonemapLutType;
 
 using std::vector;
 using std::map;
@@ -82,25 +82,6 @@ using std::fstream;
 using std::to_string;
 
 namespace sdm {
-
-class DRMLoggerImpl : public DRMLogger {
- public:
-#define PRINTLOG(tag, method, format, buf)        \
-  va_list list;                              \
-  va_start(list, format);                    \
-  vsnprintf(buf, sizeof(buf), format, list); \
-  va_end(list);                              \
-  Debug::Get()->method(tag, "%s", buf);
-
-  void Error(const char *format, ...) { PRINTLOG(kTagNone, Error, format, buf_); }
-  void Warning(const char *format, ...) { PRINTLOG(kTagDriverConfig, Warning, format, buf_); }
-  void Info(const char *format, ...) { PRINTLOG(kTagDriverConfig, Info, format, buf_); }
-  void Debug(const char *format, ...) { PRINTLOG(kTagDriverConfig, Debug, format, buf_); }
-  void Verbose(const char *format, ...) { PRINTLOG(kTagDriverConfig, Verbose, format, buf_); }
-
- private:
-  char buf_[1024] = {};
-};
 
 static HWQseedStepVersion GetQseedStepVersion(sde_drm::QSEEDStepVersion drm_version) {
   HWQseedStepVersion sdm_version;
@@ -133,7 +114,6 @@ static InlineRotationVersion GetInRotVersion(sde_drm::InlineRotationVersion drm_
 HWResourceInfo *HWInfoDRM::hw_resource_ = nullptr;
 
 HWInfoDRM::HWInfoDRM() {
-  DRMLogger::Set(new DRMLoggerImpl());
   default_mode_ = (DRMLibLoader::GetInstance()->IsLoaded() == false);
   if (!default_mode_) {
     DRMMaster *drm_master = {};
@@ -228,7 +208,7 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
   // through property
   int value = 0;
   bool disable_dest_scalar = false;
-  if (Debug::Get()->GetProperty("sdm.debug.disable_dest_scalar", &value) == kErrorNone) {
+  if (Debug::GetProperty("sdm.debug.disable_dest_scalar", &value) == kErrorNone) {
     disable_dest_scalar = (value == 1);
   }
   DynLib extension_lib;
@@ -246,6 +226,7 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
   DLOGI("Has QSEED3 = %d", hw_resource->has_qseed3);
   DLOGI("Has UBWC = %d", hw_resource->has_ubwc);
   DLOGI("Has Concurrent Writeback = %d", hw_resource->has_concurrent_writeback);
+  DLOGI("Has Src Tonemap = %d", hw_resource->src_tone_map);
   DLOGI("Max Low Bw = %" PRIu64 "", hw_resource->max_bandwidth_low);
   DLOGI("Max High Bw = % " PRIu64 "", hw_resource->max_bandwidth_high);
   DLOGI("Max Pipe Bw = %" PRIu64 " KBps", hw_resource->max_pipe_bw);
@@ -350,6 +331,8 @@ void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
   uint32_t vig_pipe_count = 0;
   uint32_t dma_pipe_count = 0;
   uint32_t virtual_pipe_count = 0;
+  int disable_src_tonemap = 0;
+  Debug::Get()->GetProperty("sdm.disable_src_tonemap", &disable_src_tonemap);
 
   for (auto &pipe_obj : planes) {
     if (max_vig_pipes && max_dma_pipes) {
@@ -413,6 +396,39 @@ void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
     pipe_caps.master_pipe_id = pipe_obj.second.master_plane_id;
     DLOGI("Adding %s Pipe : Id %x, master_pipe_id : Id %x",
           name.c_str(), pipe_obj.first, pipe_obj.second.master_plane_id);
+    pipe_caps.inverse_pma = pipe_obj.second.inverse_pma;
+    pipe_caps.dgm_csc_version = pipe_obj.second.dgm_csc_version;
+    // disable src tonemap feature if its disabled using property.
+    if (!disable_src_tonemap) {
+      for (auto &it : pipe_obj.second.tonemap_lut_version_map) {
+        HWToneMapLut tonemap_lut = kLutNone;
+        switch (it.first) {
+          case DRMTonemapLutType::DMA_1D_IGC:
+            tonemap_lut = kDma1dIgc;
+            break;
+          case DRMTonemapLutType::DMA_1D_GC:
+            tonemap_lut = kDma1dGc;
+            break;
+          case DRMTonemapLutType::VIG_1D_IGC:
+            tonemap_lut = kVig1dIgc;
+            break;
+          case DRMTonemapLutType::VIG_3D_GAMUT:
+            tonemap_lut = kVig3dGamut;
+            break;
+          default:
+            DLOGE("Unknown Tonemap Lut");
+            break;
+        }
+        if (tonemap_lut != kLutNone) {
+          pipe_caps.tm_lut_version_map[tonemap_lut] = it.second;
+          if (pipe_caps.type == kPipeTypeVIG) {
+            hw_resource->src_tone_map[kSrcTonemap3d] = 1;
+          } else if (pipe_caps.type == kPipeTypeDMA) {
+            hw_resource->src_tone_map[kSrcTonemap1d] = 1;
+          }
+        }
+      }
+    }
     hw_resource->hw_pipes.push_back(std::move(pipe_caps));
   }
   hw_resource->has_excl_rect = planes[0].second.has_excl_rect;

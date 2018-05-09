@@ -37,6 +37,7 @@
 #include "hwc_display_virtual.h"
 #include "hwc_color_manager.h"
 #include "hwc_socket_handler.h"
+#include "hwc_display_event_handler.h"
 
 namespace sdm {
 
@@ -72,7 +73,8 @@ class HWCUEvent {
   bool init_done_ = false;
 };
 
-class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qClient::BnQClient {
+class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qClient::BnQClient,
+                   public HWCDisplayEventHandler {
  public:
   struct HWCModuleMethods : public hw_module_methods_t {
     HWCModuleMethods() { hw_module_methods_t::open = HWCSession::Open; }
@@ -156,6 +158,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
                               int32_t /*android_color_mode_t*/ int_mode);
   static int32_t SetColorTransform(hwc2_device_t *device, hwc2_display_t display,
                                    const float *matrix, int32_t /*android_color_transform_t*/ hint);
+
+  // HWCDisplayEventHandler
+  virtual void DisplayPowerReset();
 
   static Locker locker_[HWC_NUM_DISPLAY_TYPES];
 

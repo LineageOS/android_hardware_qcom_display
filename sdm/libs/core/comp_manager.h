@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -29,6 +29,7 @@
 #include <private/extension_interface.h>
 #include <utils/locker.h>
 #include <bitset>
+#include <vector>
 
 #include "strategy.h"
 #include "resource_default.h"
@@ -73,6 +74,8 @@ class CompManager {
   DisplayError SetCompositionState(Handle display_ctx, LayerComposition composition_type,
                                    bool enable);
   DisplayError ControlDpps(bool enable);
+  DisplayError SetColorModesInfo(Handle display_ctx,
+                                 const std::vector<PrimariesTransfer> &colormodes_cs);
 
  private:
   static const int kMaxThermalLevel = 3;
