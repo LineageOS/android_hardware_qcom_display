@@ -13,7 +13,6 @@ LOCAL_C_INCLUDES              := $(common_includes) \
 LOCAL_HEADER_LIBRARIES        := display_headers generated_kernel_headers
 LOCAL_SHARED_LIBRARIES        := $(common_libs) libqdMetaData libsync libgrallocutils
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdgralloc\" -Wall -std=c++11 -Werror
-LOCAL_CFLAGS                  += -isystem
 LOCAL_CLANG                   := true
 LOCAL_SRC_FILES               := gr_ion_alloc.cpp \
                                  gr_allocator.cpp \
