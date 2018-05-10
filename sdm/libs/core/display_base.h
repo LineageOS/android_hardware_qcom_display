@@ -144,6 +144,8 @@ class DisplayBase : public DisplayInterface {
   DisplayState GetLastPowerMode();
   void SetPUonDestScaler();
   void ClearColorInfo();
+  bool NeedsGpuFallback(const Layer *layer);
+  bool NeedsHdrHandling();
   void CopyColorTransformMatrix(const double *input_matrix) {
     for (uint32_t i = 0; i < kColorTransformlength_; i++) {
       color_transform_[i] = input_matrix[i];
@@ -198,6 +200,7 @@ class DisplayBase : public DisplayInterface {
   static const uint32_t kColorTransformlength_ = 16;
   double color_transform_[kColorTransformlength_] = {0};
   bool color_transform_active_ = false;
+  bool gpu_fallback_ = false;
 };
 
 }  // namespace sdm

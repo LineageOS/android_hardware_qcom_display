@@ -58,7 +58,7 @@ static ColorPrimaries WidestPrimaries(ColorPrimaries p1, ColorPrimaries p2) {
   if (lp1 == ColorPrimaries_BT2020) {
     lp1 *= weight;
   }
-  if (lp1 == ColorPrimaries_BT2020) {
+  if (lp2 == ColorPrimaries_BT2020) {
     lp2 *= weight;
   }
   if (lp1 >= lp2) {

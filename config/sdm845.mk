@@ -29,6 +29,8 @@ TARGET_USES_HWC2 := true
 TARGET_USES_QCOM_DISPLAY_BSP := true
 TARGET_USES_COLOR_METADATA := true
 TARGET_USES_DRM_PP := true
+#Enable Wide color gamut support
+TARGET_HAS_WIDE_COLOR_DISPLAY := true
 
 PRODUCT_PROPERTY_OVERRIDES += \
     debug.sf.enable_hwc_vds=1 \
