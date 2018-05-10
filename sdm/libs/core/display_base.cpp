@@ -155,6 +155,9 @@ DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
       break;
     }
     hw_layers_info.app_layer_count++;
+    if (!gpu_fallback_) {
+      gpu_fallback_ = NeedsGpuFallback(layer);
+    }
   }
 
   DLOGD_IF(kTagDisplay, "LayerStack layer_count: %d, app_layer_count: %d, gpu_target_index: %d, "
@@ -216,6 +219,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
   needs_validate_ = true;
+  gpu_fallback_ = false;
 
   if (!active_) {
     return kErrorPermission;
@@ -775,7 +779,9 @@ DisplayError DisplayBase::GetColorModeCount(uint32_t *mode_count) {
     return kErrorNotSupported;
   }
 
-  DLOGV_IF(kTagQDCM, "Number of modes from color manager = %d", num_color_modes_);
+  DLOGV_IF(kTagQDCM, "Display = %d Number of modes from color manager = %d", display_type_,
+           num_color_modes_);
+
   *mode_count = num_color_modes_;
 
   return kErrorNone;
@@ -1529,8 +1535,7 @@ DisplayError DisplayBase::SetHDRMode(bool set) {
 DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
   DisplayError error = kErrorNone;
 
-  if (display_type_ != kPrimary) {
-    // Handling is needed for only primary displays
+  if (!NeedsHdrHandling()) {
     return kErrorNone;
   }
 
@@ -1565,8 +1570,7 @@ DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
 DisplayError DisplayBase::ValidateHDR(LayerStack *layer_stack) {
   DisplayError error = kErrorNone;
 
-  if (display_type_ != kPrimary) {
-    // Handling is needed for only primary displays
+  if (!NeedsHdrHandling()) {
     return kErrorNone;
   }
 
@@ -1705,5 +1709,26 @@ void DisplayBase::DeInitializeColorModes() {
     color_modes_.clear();
     color_mode_attr_map_.clear();
     num_color_modes_ = 0;
+}
+bool DisplayBase::NeedsGpuFallback(const Layer *layer) {
+  const LayerBufferFormat &format = layer->input_buffer.format;
+  const ColorRange &range = layer->input_buffer.color_metadata.range;
+
+  if (format == kFormatInvalid || range == Range_Extended) {
+    DLOGV_IF(kTagDisplay, "Format = %d Range = %d", format, range);
+    // when there is invalid format or extended range fall back to GPU
+    return true;
+  }
+
+  return false;
+}
+
+bool DisplayBase::NeedsHdrHandling() {
+  if (display_type_ != kPrimary || !num_color_modes_ || gpu_fallback_) {
+    // No HDR Handling for non-primary displays or when color modes are not present or
+    // if frame is falling back to GPU
+    return false;
+  }
+  return true;
 }
 }  // namespace sdm
