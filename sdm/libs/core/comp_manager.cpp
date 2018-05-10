@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -479,6 +479,15 @@ DisplayError CompManager::SetMaxBandwidthMode(HWBwModes mode) {
 
 DisplayError CompManager::GetScaleLutConfig(HWScaleLutInfo *lut_info) {
   return resource_intf_->GetScaleLutConfig(lut_info);
+}
+
+DisplayError CompManager::GetCapabilities(Handle display_ctx, HWDisplayCaps *caps) {
+  SCOPE_LOCK(locker_);
+
+  DisplayCompositionContext *display_comp_ctx =
+                             reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+
+  return display_comp_ctx->strategy->GetCapabilities(caps);
 }
 
 DisplayError CompManager::SetDetailEnhancerData(Handle display_ctx,

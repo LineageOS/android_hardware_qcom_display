@@ -399,11 +399,13 @@ DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   fixed_info->is_cmdmode = (hw_panel_info_.mode == kModeCommand);
 
-  HWResourceInfo hw_resource_info = HWResourceInfo();
-  hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
-  bool hdr_supported = hw_resource_info.has_hdr;
+  HWResourceInfo hw_resource_info = {};
   HWDisplayInterfaceInfo hw_disp_info = {};
+  HWDisplayCaps caps = {};
+  hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
   hw_info_intf_->GetFirstDisplayInterfaceType(&hw_disp_info);
+  comp_manager_->GetCapabilities(display_comp_ctx_, &caps);
+  bool hdr_supported = hw_resource_info.has_hdr && caps.hdr_supported;
   if (hw_disp_info.type == kHDMI) {
     hdr_supported = (hdr_supported && hw_panel_info_.hdr_enabled);
   }
