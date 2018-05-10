@@ -1718,6 +1718,11 @@ HWC2::Error HWCDisplay::SetCursorPosition(hwc2_layer_t layer, int x, int y) {
     return HWC2::Error::None;
   }
 
+  if (!layer_stack_.flags.cursor_present) {
+    DLOGW("Cursor layer not present");
+    return HWC2::Error::BadLayer;
+  }
+
   HWCLayer *hwc_layer = GetHWCLayer(layer);
   if (hwc_layer == nullptr) {
     return HWC2::Error::BadLayer;
