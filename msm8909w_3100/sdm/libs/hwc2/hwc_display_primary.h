@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2016, 2018 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -34,6 +34,7 @@
 
 #include "cpuhint.h"
 #include "hwc_display.h"
+#include "display_null.h"
 
 namespace sdm {
 
@@ -67,6 +68,7 @@ class HWCDisplayPrimary : public HWCDisplay {
   virtual int GetFrameCaptureStatus() { return frame_capture_status_; }
   virtual DisplayError SetDetailEnhancerConfig(const DisplayDetailEnhancerData &de_data);
   virtual DisplayError ControlPartialUpdate(bool enable, uint32_t *pending);
+  virtual DisplayError SetStandByMode(bool enable);
 
  private:
   HWCDisplayPrimary(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
@@ -102,6 +104,11 @@ class HWCDisplayPrimary : public HWCDisplay {
   BufferInfo output_buffer_info_ = {};
   void *output_buffer_base_ = nullptr;
   int default_mode_status_ = 0;
+
+  //Null display
+  DisplayNull display_null_;
+  DisplayInterface *stored_display_intf_ = NULL;
+
 };
 
 }  // namespace sdm
