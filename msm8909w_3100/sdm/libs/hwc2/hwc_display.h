@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -148,6 +148,9 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int SetState(bool connected) {
     return kErrorNotSupported;
   }
+  virtual DisplayError SetStandByMode(bool enable) {
+    return kErrorNotSupported;
+  }
   int SetPanelBrightness(int level);
   int GetPanelBrightness(int *level);
   int ToggleScreenUpdates(bool enable);
@@ -237,7 +240,6 @@ class HWCDisplay : public DisplayEventHandler {
   bool IsLayerUpdating(const Layer *layer);
   uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate);
   virtual void CloseAcquireFds();
-  virtual void ClearRequestFlags();
   virtual void GetUnderScanConfig() { }
 
   enum {
