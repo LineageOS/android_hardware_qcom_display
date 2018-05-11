@@ -35,9 +35,16 @@
 #define SZ_2M 0x200000
 #define SZ_1M 0x100000
 #define SZ_4K 0x1000
+#define SZ_8K 0x2000
 
 #define SIZE_4K 4096
 #define SIZE_8K 4096
+
+#ifdef MASTER_SIDE_CP
+#define SECURE_ALIGN SZ_4K
+#else
+#define SECURE_ALIGN SZ_1M
+#endif
 
 #define INT(exp) static_cast<int>(exp)
 #define UINT(exp) static_cast<unsigned int>(exp)
@@ -46,13 +53,14 @@ namespace gralloc1 {
 
 struct BufferInfo {
   BufferInfo(int w, int h, int f, gralloc1_producer_usage_t prod = GRALLOC1_PRODUCER_USAGE_NONE,
-             gralloc1_consumer_usage_t cons = GRALLOC1_CONSUMER_USAGE_NONE) : width(w), height(h),
-    format(f), prod_usage(prod), cons_usage(cons) {}
+             gralloc1_consumer_usage_t cons = GRALLOC1_CONSUMER_USAGE_NONE, uint32_t l = 1) : width(w), height(h),
+    format(f), prod_usage(prod), cons_usage(cons), layer_count(l) {}
   int width;
   int height;
   int format;
   gralloc1_producer_usage_t prod_usage;
   gralloc1_consumer_usage_t cons_usage;
+  uint32_t layer_count;
 };
 
 template <class Type1, class Type2>
@@ -77,6 +85,8 @@ bool IsUBwcFormat(int format);
 bool IsUBwcSupported(int format);
 bool IsUBwcEnabled(int format, gralloc1_producer_usage_t prod_usage,
                    gralloc1_consumer_usage_t cons_usage);
+uint32_t GetDataAlignment(int format, gralloc1_producer_usage_t prod_usage,
+                          gralloc1_consumer_usage_t cons_usage);
 void GetYuvUBwcWidthAndHeight(int width, int height, int format, unsigned int *aligned_w,
                               unsigned int *aligned_h);
 void GetYuvSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height, uint32_t bpp,
