@@ -789,6 +789,9 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
   single_buffer_ = false;
   getMetaData(const_cast<private_handle_t *>(handle), GET_SINGLE_BUFFER_MODE, &single_buffer_);
 
+  // Handle colorMetaData / Dataspace handling now
+  ValidateAndSetCSC(handle);
+
   return kErrorNone;
 }
 
@@ -808,13 +811,17 @@ DisplayError HWCLayer::SetIGC(IGC_t source, LayerIGC *target) {
   return kErrorNone;
 }
 
-bool HWCLayer::ValidateAndSetCSC() {
+bool HWCLayer::IsDataSpaceSupported() {
   if (client_requested_ != HWC2::Composition::Device &&
       client_requested_ != HWC2::Composition::Cursor) {
-    // Check the layers which are configured to Device
+    // Layers marked for GPU can have any dataspace
     return true;
   }
 
+  return dataspace_supported_;
+}
+
+void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
   LayerBuffer *layer_buffer = &layer_->input_buffer;
   bool use_color_metadata = true;
   ColorMetaData csc = {};
@@ -822,12 +829,20 @@ bool HWCLayer::ValidateAndSetCSC() {
     use_color_metadata = false;
     bool valid_csc = GetSDMColorSpace(dataspace_, &csc);
     if (!valid_csc) {
-      return false;
+      dataspace_supported_ = false;
+      return;
     }
-    // if we are here here, update the sdm layer csc.
-    layer_buffer->color_metadata.transfer = csc.transfer;
-    layer_buffer->color_metadata.colorPrimaries = csc.colorPrimaries;
-    layer_buffer->color_metadata.range = csc.range;
+
+    if (layer_buffer->color_metadata.transfer != csc.transfer ||
+       layer_buffer->color_metadata.colorPrimaries != csc.colorPrimaries ||
+       layer_buffer->color_metadata.range != csc.range) {
+        // ColorMetadata updated. Needs validate.
+        needs_validate_ = true;
+        // if we are here here, update the sdm layer csc.
+        layer_buffer->color_metadata.transfer = csc.transfer;
+        layer_buffer->color_metadata.colorPrimaries = csc.colorPrimaries;
+        layer_buffer->color_metadata.range = csc.range;
+    }
   }
 
   if (IsBT2020(layer_buffer->color_metadata.colorPrimaries)) {
@@ -837,14 +852,25 @@ bool HWCLayer::ValidateAndSetCSC() {
   }
 
   if (use_color_metadata) {
-    const private_handle_t *handle =
-      reinterpret_cast<const private_handle_t *>(layer_buffer->buffer_id);
-    if (sdm::SetCSC(handle, &layer_buffer->color_metadata) != kErrorNone) {
-      return false;
+    ColorMetaData old_meta_data = layer_buffer->color_metadata;
+    if (sdm::SetCSC(handle, &layer_buffer->color_metadata) == kErrorNone) {
+      if ((layer_buffer->color_metadata.colorPrimaries != old_meta_data.colorPrimaries) ||
+          (layer_buffer->color_metadata.transfer != old_meta_data.transfer) ||
+          (layer_buffer->color_metadata.range != old_meta_data.range)) {
+        needs_validate_ = true;
+      }
+      if (layer_buffer->color_metadata.dynamicMetaDataValid &&
+          !SameConfig(layer_buffer->color_metadata.dynamicMetaDataPayload,
+          old_meta_data.dynamicMetaDataPayload, HDR_DYNAMIC_META_DATA_SZ)) {
+        needs_validate_ = true;
+      }
+    } else {
+      dataspace_supported_ = false;
+      return;
     }
   }
 
-  return true;
+  dataspace_supported_ = true;
 }
 
 

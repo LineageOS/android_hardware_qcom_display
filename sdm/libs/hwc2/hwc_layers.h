@@ -26,6 +26,7 @@
 #include <gralloc_priv.h>
 #include <qdMetaData.h>
 #include <core/layer_stack.h>
+#include <utils/utils.h>
 #define HWC2_INCLUDE_STRINGIFICATION
 #define HWC2_USE_CPP11
 #include <hardware/hwcomposer2.h>
@@ -93,12 +94,12 @@ class HWCLayer {
   void PushBackReleaseFence(int32_t fence);
   int32_t PopBackReleaseFence(void);
   int32_t PopFrontReleaseFence(void);
-  bool ValidateAndSetCSC();
   void ResetValidation() { needs_validate_ = false; }
   bool NeedsValidation() { return (needs_validate_ || geometry_changes_); }
   bool IsSingleBuffered() { return single_buffer_; }
   bool IsScalingPresent();
   bool IsRotationPresent();
+  bool IsDataSpaceSupported();
   static LayerBufferFormat GetSDMFormat(const int32_t &source, const int flags);
 
  private:
@@ -115,6 +116,7 @@ class HWCLayer {
   bool needs_validate_ = true;
   bool single_buffer_ = false;
   int buffer_fd_ = -1;
+  bool dataspace_supported_ = false;
 
   // Composition requested by client(SF)
   HWC2::Composition client_requested_ = HWC2::Composition::Device;
@@ -130,6 +132,7 @@ class HWCLayer {
   DisplayError SetMetaData(const private_handle_t *pvt_handle, Layer *layer);
   DisplayError SetIGC(IGC_t source, LayerIGC *target);
   uint32_t RoundToStandardFPS(float fps);
+  void ValidateAndSetCSC(const private_handle_t *handle);
 };
 
 struct SortLayersByZ {

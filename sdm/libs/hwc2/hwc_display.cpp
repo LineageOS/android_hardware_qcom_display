@@ -502,7 +502,7 @@ void HWCDisplay::BuildLayerStack() {
       layer->flags.solid_fill = true;
     }
 
-    if (!hwc_layer->ValidateAndSetCSC()) {
+    if (!hwc_layer->IsDataSpaceSupported()) {
       layer->flags.skip = true;
     }
 
@@ -931,7 +931,6 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, int32_t acquire_
 
   Layer *sdm_layer = client_target_->GetSDMLayer();
   sdm_layer->frame_rate = current_refresh_rate_;
-  client_target_->SetLayerBuffer(target, acquire_fence);
   client_target_->SetLayerSurfaceDamage(damage);
   if (client_target_->GetLayerDataspace() != dataspace) {
     client_target_->SetLayerDataspace(dataspace);
@@ -940,6 +939,7 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, int32_t acquire_
     sdm::GetSDMColorSpace(client_target_->GetLayerDataspace(),
                           &sdm_layer->input_buffer.color_metadata);
   }
+  client_target_->SetLayerBuffer(target, acquire_fence);
 
   return HWC2::Error::None;
 }
@@ -1966,12 +1966,10 @@ bool HWCDisplay::CanSkipValidate() {
     return false;
   }
 
-  // Layer Stack checks TODO(user): Remove hdr_present when skip validate is fixed
-  if (layer_stack_.flags.hdr_present || (tone_mapper_ && tone_mapper_->IsActive()) ||
+  if ((tone_mapper_ && tone_mapper_->IsActive()) ||
       layer_stack_.flags.single_buffered_layer_present) {
-    DLOGV_IF(kTagClient, "HdrPresent = %d, Tonemapping enabled or single buffer layer present = %d"
-             " Returning false.", layer_stack_.flags.hdr_present,
-             layer_stack_.flags.single_buffered_layer_present);
+    DLOGV_IF(kTagClient, "Tonemapping enabled or single buffer layer present = %d"
+             " Returning false.", layer_stack_.flags.single_buffered_layer_present);
     return false;
   }
 
