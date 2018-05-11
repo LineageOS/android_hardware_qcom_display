@@ -76,7 +76,7 @@ namespace gralloc1 {
 
 static BufferInfo GetBufferInfo(const BufferDescriptor &descriptor) {
   return BufferInfo(descriptor.GetWidth(), descriptor.GetHeight(), descriptor.GetFormat(),
-                    descriptor.GetProducerUsage(), descriptor.GetConsumerUsage());
+                    descriptor.GetProducerUsage(), descriptor.GetConsumerUsage(), descriptor.GetLayerCount());
 }
 
 Allocator::Allocator() : ion_allocator_(NULL) {

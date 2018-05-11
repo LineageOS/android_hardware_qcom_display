@@ -30,12 +30,6 @@
 #ifndef __GR_ALLOCATOR_H__
 #define __GR_ALLOCATOR_H__
 
-#ifdef MASTER_SIDE_CP
-#define SECURE_ALIGN SZ_4K
-#else
-#define SECURE_ALIGN SZ_1M
-#endif
-
 #include <vector>
 
 #include "gralloc_priv.h"
