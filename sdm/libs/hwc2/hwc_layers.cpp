@@ -86,7 +86,7 @@ bool GetColorPrimary(const int32_t &dataspace, ColorPrimaries *color_primary) {
       *color_primary = ColorPrimaries_BT2020;
       break;
     default:
-      DLOGE("Unsupported Standard Request = %d", standard);
+      DLOGV_IF(kTagClient, "Unsupported Standard Request = %d", standard);
       supported_csc = false;
   }
   return supported_csc;
@@ -118,7 +118,7 @@ bool GetTransfer(const int32_t &dataspace, GammaTransfer *gamma_transfer) {
       *gamma_transfer = Transfer_Gamma2_8;
       break;
     default:
-      DLOGE("Unsupported Transfer Request = %d", transfer);
+      DLOGV_IF(kTagClient, "Unsupported Transfer Request = %d", transfer);
       supported_transfer = false;
   }
   return supported_transfer;
@@ -137,7 +137,7 @@ bool GetRange(const int32_t &dataspace, ColorRange *color_range) {
       *color_range = Range_Extended;
       break;
     default:
-      DLOGE("Unsupported Range Request = %d", range);
+      DLOGV_IF(kTagClient, "Unsupported Range Request = %d", range);
       return false;
   }
   return true;
