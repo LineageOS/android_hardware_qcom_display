@@ -795,6 +795,7 @@ DisplayError HWDeviceDRM::SetDisplayAttributes(uint32_t index) {
   current_mode_index_ = index;
   PopulateHWPanelInfo();
   UpdateMixerAttributes();
+  update_mode_ = true;
 
   DLOGI("Display attributes[%d]: WxH: %dx%d, DPI: %fx%f, FPS: %d, LM_SPLIT: %d, V_BACK_PORCH: %d," \
         " V_FRONT_PORCH: %d, V_PULSE_WIDTH: %d, V_TOTAL: %d, H_TOTAL: %d, CLK: %dKHZ, TOPOLOGY: %d",
@@ -829,6 +830,7 @@ DisplayError HWDeviceDRM::PowerOn(int *release_fence) {
   }
 
   int64_t release_fence_t = -1;
+  update_mode_ = true;
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
   drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_t);
@@ -1093,7 +1095,11 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
   }
 
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
+  // Set CRTC mode, only if display config changes
+  if (vrefresh_ || first_cycle_ || update_mode_) {
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
+  }
+
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
 
   if (!validate && (hw_layer_info.set_idle_time_ms >= 0)) {
@@ -1275,6 +1281,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   }
 
   first_cycle_ = false;
+  update_mode_ = false;
 
   return kErrorNone;
 }
