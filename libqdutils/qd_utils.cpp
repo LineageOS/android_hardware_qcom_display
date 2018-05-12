@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013, 2017 The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -94,7 +94,7 @@ static int querySDEInfoDRM(HWQueryType type, int *value) {
     case HAS_UBWC:
     case HAS_WB_UBWC:  // WFD stack still uses this
         *value = 1;
-        property_get(DISABLE_UBWC_PROP, property, "0");
+        property_get("debug.gralloc.gfx_ubwc_disable", property, "0");
         if(!(strncmp(property, "1", PROPERTY_VALUE_MAX)) ||
                 !(strncmp(property, "true", PROPERTY_VALUE_MAX))) {
             *value = 0;

@@ -300,7 +300,7 @@ void HWCSession::GetCapabilities(struct hwc2_device *device, uint32_t *outCount,
 
   int value = 0;
   bool disable_skip_validate = false;
-  if (Debug::Get()->GetProperty(DISABLE_SKIP_VALIDATE_PROP, &value) == kErrorNone) {
+  if (Debug::Get()->GetProperty("sdm.debug.disable_skip_validate", &value) == kErrorNone) {
     disable_skip_validate = (value == 1);
   }
   uint32_t count = 1 + (disable_skip_validate ? 0 : 1);

@@ -29,7 +29,6 @@
 
 #include <utils/constants.h>
 #include <cutils/properties.h>
-#include <utils/debug.h>
 
 #include "hwc_debugger.h"
 
@@ -212,7 +211,7 @@ void HWCDebugHandler::EndTrace() {
 
 int  HWCDebugHandler::GetIdleTimeoutMs() {
   int value = IDLE_TIMEOUT_DEFAULT_MS;
-  debug_handler_.GetProperty(IDLE_TIME_PROP, &value);
+  debug_handler_.GetProperty("sdm.idle_time", &value);
 
   return value;
 }

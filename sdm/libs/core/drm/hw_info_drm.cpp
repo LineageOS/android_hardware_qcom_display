@@ -208,7 +208,7 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
   // through property
   int value = 0;
   bool disable_dest_scalar = false;
-  if (Debug::GetProperty(DISABLE_DESTINATION_SCALER_PROP, &value) == kErrorNone) {
+  if (Debug::GetProperty("sdm.debug.disable_dest_scalar", &value) == kErrorNone) {
     disable_dest_scalar = (value == 1);
   }
   DynLib extension_lib;
