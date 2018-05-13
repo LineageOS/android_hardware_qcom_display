@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 The Android Open Source Project
- * Copyright (C) 2012-2014, 2016 The Linux Foundation. All rights reserved.
+ * Copyright (C) 2012-2014, 2016, 2018 The Linux Foundation. All rights reserved.
  *
  * Not a Contribution, Apache license notifications and license are
  * retained for attribution purposes only.
@@ -75,6 +75,7 @@ public:
         SET_LAYER_MIXER_RESOLUTION = 33, // Enables client to set layer mixer resolution.
         SET_COLOR_MODE = 34, // Overrides the QDCM mode on the display
         GET_HDR_CAPABILITIES = 35, // Get HDR capabilities for legacy HWC interface
+        SET_STAND_BY_MODE = 36, //Set stand by mode for MDP3 hardware.
         COMMAND_LIST_END = 400,
     };
 

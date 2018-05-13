@@ -491,7 +491,9 @@ static int32_t GetHdrCapabilities(hwc2_device_t* device, hwc2_display_t display,
 }
 
 static uint32_t GetMaxVirtualDisplayCount(hwc2_device_t *device) {
-  return 1;
+  char property[PROPERTY_VALUE_MAX];
+  property_get("debug.sdm.support_writeback", property, "1");
+  return (uint32_t) atoi(property);
 }
 
 static int32_t GetReleaseFences(hwc2_device_t *device, hwc2_display_t display,
@@ -1013,6 +1015,10 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       status = SetColorModeOverride(input_parcel);
       break;
 
+    case qService::IQService::SET_STAND_BY_MODE:
+      status = SetStandByMode(input_parcel);
+      break;
+
     default:
       DLOGW("QService command = %d is not supported", command);
       return -EINVAL;
@@ -1495,6 +1501,21 @@ android::status_t HWCSession::GetVisibleDisplayRect(const android::Parcel *input
   output_parcel->writeInt32(visible_rect.top);
   output_parcel->writeInt32(visible_rect.right);
   output_parcel->writeInt32(visible_rect.bottom);
+
+  return android::NO_ERROR;
+}
+
+android::status_t HWCSession::SetStandByMode(const android::Parcel *input_parcel) {
+  SCOPE_LOCK(locker_);
+
+  bool enable = (input_parcel->readInt32() > 0);
+
+  if (!hwc_display_[HWC_DISPLAY_PRIMARY]) {
+    DLOGI("Primary display is not initialized");
+    return -EINVAL;
+  }
+
+  hwc_display_[HWC_DISPLAY_PRIMARY]->SetStandByMode(enable);
 
   return android::NO_ERROR;
 }
