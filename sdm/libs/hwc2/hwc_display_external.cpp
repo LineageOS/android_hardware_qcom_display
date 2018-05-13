@@ -112,7 +112,7 @@ HWCDisplayExternal::HWCDisplayExternal(CoreInterface *core_intf,
 HWC2::Error HWCDisplayExternal::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
   auto status = HWC2::Error::None;
 
-  if (secure_display_active_) {
+  if (active_secure_sessions_[kSecureDisplay]) {
     MarkLayersForGPUBypass();
     return status;
   }
@@ -133,7 +133,7 @@ HWC2::Error HWCDisplayExternal::Validate(uint32_t *out_num_types, uint32_t *out_
 HWC2::Error HWCDisplayExternal::Present(int32_t *out_retire_fence) {
   auto status = HWC2::Error::None;
 
-  if (!secure_display_active_) {
+  if (!active_secure_sessions_[kSecureDisplay]) {
     status = HWCDisplay::CommitLayerStack();
     if (status == HWC2::Error::None) {
       status = HWCDisplay::PostCommitLayerStack(out_retire_fence);
@@ -173,21 +173,6 @@ void HWCDisplayExternal::ApplyScanAdjustment(hwc_rect_t *display_frame) {
                          x_offset;
   display_frame->bottom = ((display_frame->bottom * INT32(new_mixer_height)) / INT32(mixer_height))
                           + y_offset;
-}
-
-void HWCDisplayExternal::SetSecureDisplay(bool secure_display_active) {
-  if (secure_display_active_ != secure_display_active) {
-    secure_display_active_ = secure_display_active;
-
-    if (secure_display_active_) {
-      DisplayError error = display_intf_->Flush();
-      validated_ = false;
-      if (error != kErrorNone) {
-        DLOGE("Flush failed. Error = %d", error);
-      }
-    }
-  }
-  return;
 }
 
 static void AdjustSourceResolution(uint32_t dst_width, uint32_t dst_height, uint32_t *src_width,

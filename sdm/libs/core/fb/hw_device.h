@@ -102,6 +102,7 @@ class HWDevice : public HWInterface {
                                       uint64_t value) { return kErrorNotSupported; }
   virtual DisplayError GetDppsFeatureInfo(void *info) { return kErrorNotSupported; }
   virtual DisplayError DumpDebugData(DisplayType type) { return kErrorNone; }
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event) { return kErrorNotSupported; }
 
   enum {
     kHWEventVSync,

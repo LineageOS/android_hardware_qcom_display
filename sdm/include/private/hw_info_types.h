@@ -194,6 +194,7 @@ struct HWPipeCaps {
   bool inverse_pma = 0;
   uint32_t dgm_csc_version = 0;
   std::map<HWToneMapLut, uint32_t> tm_lut_version_map = {};
+  bool block_sec_ui = false;
 };
 
 struct HWRotatorInfo {
@@ -294,6 +295,7 @@ struct HWResourceInfo {
   uint32_t min_prefill_lines = 0;
   InlineRotationVersion inrot_version = kInlineRotationNone;
   std::bitset<32> src_tone_map = 0;  //!< Stores the bit mask of src tone map capability
+  int secure_disp_blend_stage = -1;
 };
 
 struct HWSplitInfo {

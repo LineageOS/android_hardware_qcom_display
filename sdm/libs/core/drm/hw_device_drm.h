@@ -108,6 +108,7 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError SetDppsFeature(uint32_t object_type, uint32_t feature_id,
                                       uint64_t value) { return kErrorNotSupported; }
   virtual DisplayError GetDppsFeatureInfo(void *info) { return kErrorNotSupported; }
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event) { return kErrorNotSupported; }
 
   enum {
     kHWEventVSync,
@@ -147,6 +148,8 @@ class HWDeviceDRM : public HWInterface {
   void SetDGMCsc(const HWPipeCscInfo &dgm_csc_info, SDECsc *csc);
   void SetDGMCscV1(const HWCsc &dgm_csc, sde_drm_csc_v1 *csc_v1);
   void SetSsppLutFeatures(HWPipeInfo *pipe_info);
+  void AddDimLayerIfNeeded();
+  DisplayError NullCommit(bool synchronous, bool retain_planes);
 
   class Registry {
    public:
@@ -195,12 +198,13 @@ class HWDeviceDRM : public HWInterface {
   bool first_cycle_ = true;
   int64_t release_fence_ = -1;
   int64_t retire_fence_ = -1;
+  HWMixerAttributes mixer_attributes_ = {};
+  std::vector<sde_drm::DRMSolidfillStage> solid_fills_ {};
+  bool secure_display_active_ = false;
 
  private:
   bool synchronous_commit_ = false;
-  HWMixerAttributes mixer_attributes_ = {};
   std::string interface_str_ = "DSI";
-  std::vector<sde_drm::DRMSolidfillStage> solid_fills_ {};
   bool resolution_switch_enabled_ = false;
   uint32_t vrefresh_ = 0;
   bool autorefresh_ = false;

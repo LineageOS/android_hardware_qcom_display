@@ -370,9 +370,20 @@ int32_t HWCSession::DestroyVirtualDisplay(hwc2_device_t *device, hwc2_display_t 
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
-  SCOPE_LOCK(locker_[display]);
+  Locker::ScopeLock lock_v(locker_[HWC_DISPLAY_VIRTUAL]);
+  Locker::ScopeLock lock_p(locker_[HWC_DISPLAY_PRIMARY]);
   DLOGI("Destroying virtual display id:%" PRIu64, display);
   auto *hwc_session = static_cast<HWCSession *>(device);
+
+  if (hwc_session->hwc_display_[HWC_DISPLAY_PRIMARY]) {
+    std :: bitset < kSecureMax > secure_sessions = 0;
+    hwc_session->hwc_display_[HWC_DISPLAY_PRIMARY]->GetActiveSecureSession(&secure_sessions);
+    if (secure_sessions.any()) {
+      DLOGW("Secure session is active, deferring destruction of virtual display");
+      hwc_session->destroy_virtual_disp_pending_ = true;
+      return HWC2_ERROR_NONE;
+    }
+  }
 
   if (hwc_session->hwc_display_[display]) {
     HWCDisplayVirtual::Destroy(hwc_session->hwc_display_[display]);
@@ -519,7 +530,6 @@ static int32_t GetReleaseFences(hwc2_device_t *device, hwc2_display_t display,
 int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display,
                                    int32_t *out_retire_fence) {
   HWCSession *hwc_session = static_cast<HWCSession *>(device);
-  bool notify_hotplug = false;
   auto status = HWC2::Error::BadDisplay;
   DTRACE_SCOPED();
 
@@ -527,6 +537,7 @@ int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
+  hwc_session->HandleSecureSession(display);
   {
     SEQUENCE_EXIT_SCOPE_LOCK(locker_[display]);
     if (!device) {
@@ -547,22 +558,8 @@ int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display
     SEQUENCE_CANCEL_SCOPE_LOCK(locker_[display]);
   }
 
-  // Handle Pending external display connection
-  if (hwc_session->external_pending_connect_ && (display == HWC_DISPLAY_PRIMARY)) {
-    Locker::ScopeLock lock_e(locker_[HWC_DISPLAY_EXTERNAL]);
-    Locker::ScopeLock lock_v(locker_[HWC_DISPLAY_VIRTUAL]);
-
-    if (!hwc_session->hwc_display_[HWC_DISPLAY_VIRTUAL]) {
-      DLOGD("Process pending external display connection");
-      hwc_session->ConnectDisplay(HWC_DISPLAY_EXTERNAL);
-      hwc_session->external_pending_connect_ = false;
-      notify_hotplug = true;
-    }
-  }
-
-  if (notify_hotplug) {
-    hwc_session->HotPlug(HWC_DISPLAY_EXTERNAL, HWC2::Connection::Connected);
-  }
+  hwc_session->HandlePowerOnPending(display, *out_retire_fence);
+  hwc_session->HandleHotplugPending(display, *out_retire_fence);
 
   return INT32(status);
 }
@@ -738,6 +735,12 @@ int32_t HWCSession::SetPowerMode(hwc2_device_t *device, hwc2_display_t display, 
     return HWC2_ERROR_BAD_PARAMETER;
   }
 
+  HWCSession *hwc_session = static_cast<HWCSession *>(device);
+  if (hwc_session->power_on_pending_[display]) {
+    DLOGW("Set power mode is not allowed during secure display session");
+    return HWC2_ERROR_UNSUPPORTED;
+  }
+
   auto mode = static_cast<HWC2::PowerMode>(int_mode);
 
   //  all displays support on/off. Check for doze modes
@@ -776,6 +779,7 @@ int32_t HWCSession::ValidateDisplay(hwc2_device_t *device, hwc2_display_t displa
   // TODO(user): Handle secure session, handle QDCM solid fill
   // Handle external_pending_connect_ in CreateVirtualDisplay
   auto status = HWC2::Error::BadDisplay;
+  hwc_session->HandleSecureSession(display);
   {
     SEQUENCE_ENTRY_SCOPE_LOCK(locker_[display]);
     if (hwc_session->hwc_display_[display]) {
@@ -892,6 +896,16 @@ hwc2_function_pointer_t HWCSession::GetFunction(struct hwc2_device *device,
 
 HWC2::Error HWCSession::CreateVirtualDisplayObject(uint32_t width, uint32_t height,
                                                    int32_t *format) {
+  if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
+    SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
+    std :: bitset < kSecureMax > secure_sessions = 0;
+    hwc_display_[HWC_DISPLAY_PRIMARY]->GetActiveSecureSession(&secure_sessions);
+    if (secure_sessions.any()) {
+      DLOGE("Secure session is active, cannot create virtual display");
+      return HWC2::Error::Unsupported;
+    }
+  }
+
   {
     SCOPE_LOCK(locker_[HWC_DISPLAY_VIRTUAL]);
     if (hwc_display_[HWC_DISPLAY_VIRTUAL]) {
@@ -927,10 +941,6 @@ int32_t HWCSession::ConnectDisplay(int disp) {
   } else {
     DLOGE("Invalid display type");
     return -1;
-  }
-
-  if (!status) {
-    hwc_display_[disp]->SetSecureDisplay(secure_display_active_);
   }
 
   return status;
@@ -1684,6 +1694,7 @@ void HWCSession::ResetPanel() {
 int HWCSession::HotPlugHandler(bool connected) {
   int status = 0;
   bool notify_hotplug = false;
+  std :: bitset < kSecureMax > secure_sessions = 0;
 
   // To prevent sending events to client while a lock is held, acquire scope locks only within
   // below scope so that those get automatically unlocked after the scope ends.
@@ -1700,7 +1711,6 @@ int HWCSession::HotPlugHandler(bool connected) {
         status = CreateExternalDisplay(HWC_DISPLAY_PRIMARY, 0, 0, false);
         notify_hotplug = true;
       }
-
       break;
     }
 
@@ -1711,8 +1721,14 @@ int HWCSession::HotPlugHandler(bool connected) {
         DLOGE("Primary display is not connected.");
         return -1;
       }
-
       hwc_display_[HWC_DISPLAY_PRIMARY]->ResetValidation();
+      hwc_display_[HWC_DISPLAY_PRIMARY]->GetActiveSecureSession(&secure_sessions);
+      hotplug_pending_event_ = kHotPlugNone;
+      if (secure_sessions[kSecureDisplay]) {
+        hotplug_pending_event_ = connected ? kHotPlugConnect : kHotPlugDisconnect;
+        notify_hotplug = connected ? false : true;
+        break;
+      }
     }
 
     if (connected) {
@@ -1729,14 +1745,13 @@ int HWCSession::HotPlugHandler(bool connected) {
         notify_hotplug = true;
       } else {
         DLOGI("Virtual display is connected, pending connection");
-        external_pending_connect_ = true;
+        hotplug_pending_event_ = kHotPlugConnect;
       }
     } else {
       SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_EXTERNAL]);
       if (hwc_display_[HWC_DISPLAY_EXTERNAL]) {
         notify_hotplug = true;
       }
-      external_pending_connect_ = false;
     }
   } while (0);
 
@@ -1772,7 +1787,8 @@ int HWCSession::HotPlugHandler(bool connected) {
       // Do not return error if external display is not in connected status.
       // Due to virtual display concurrency, external display connection might be still pending
       // but hdmi got disconnected before pending connection could be processed.
-      if (hwc_display_[HWC_DISPLAY_EXTERNAL]) {
+      // if secure display session is in progress, defer disconnection of external display
+      if (hwc_display_[HWC_DISPLAY_EXTERNAL] && !secure_sessions[kSecureDisplay]) {
         status = DisconnectDisplay(HWC_DISPLAY_EXTERNAL);
       }
     }
@@ -1948,4 +1964,130 @@ void HWCSession::DisplayPowerReset() {
     DLOGE("Enabling vsync failed for primary with error = %d", status);
   }
 }
+
+void HWCSession::HandleSecureSession(hwc2_display_t disp_id) {
+  Locker::ScopeLock lock_p(locker_[HWC_DISPLAY_PRIMARY]);
+  Locker::ScopeLock lock_e(locker_[HWC_DISPLAY_EXTERNAL]);
+  Locker::ScopeLock lock_v(locker_[HWC_DISPLAY_VIRTUAL]);
+  std :: bitset < kSecureMax > secure_sessions = 0;
+  if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
+    hwc_display_[HWC_DISPLAY_PRIMARY]->GetActiveSecureSession(&secure_sessions);
+  }
+
+  // If it is called during primary prepare/commit, we need to pause any onging commit on
+  // external/virtual display.
+  if (disp_id == HWC_DISPLAY_PRIMARY) {
+    if (hwc_display_[HWC_DISPLAY_EXTERNAL]) {
+      hwc_display_[HWC_DISPLAY_EXTERNAL]->HandleSecureSession(secure_sessions,
+                                           &power_on_pending_[HWC_DISPLAY_EXTERNAL]);
+    }
+    if (hwc_display_[HWC_DISPLAY_VIRTUAL]) {
+      hwc_display_[HWC_DISPLAY_VIRTUAL]->HandleSecureSession(secure_sessions,
+                                           &power_on_pending_[HWC_DISPLAY_VIRTUAL]);
+    }
+  }
+
+  if (hwc_display_[disp_id]) {
+    hwc_display_[disp_id]->HandleSecureSession(secure_sessions,
+                                           &power_on_pending_[disp_id]);
+  }
+}
+
+void HWCSession::HandlePowerOnPending(hwc2_display_t disp_id, int retire_fence) {
+  if (disp_id != HWC_DISPLAY_PRIMARY) {
+    return;
+  }
+  Locker::ScopeLock lock_p(locker_[HWC_DISPLAY_PRIMARY]);
+  Locker::ScopeLock lock_e(locker_[HWC_DISPLAY_EXTERNAL]);
+  Locker::ScopeLock lock_v(locker_[HWC_DISPLAY_VIRTUAL]);
+
+
+  if (!hwc_display_[HWC_DISPLAY_PRIMARY]->IsDisplayCommandMode()) {
+    if (power_on_pending_[HWC_DISPLAY_EXTERNAL] || power_on_pending_[HWC_DISPLAY_VIRTUAL]) {
+      // retire fence is set only after successful primary commit, So check for retire fence to know
+      // non secure commit went through to notify driver to change the CRTC mode to non secure.
+      // Otherwise any commit to external display would fail.
+      if (retire_fence < 0) {
+        return;
+      }
+      int error = sync_wait(retire_fence, 1000);
+      if (error < 0) {
+        DLOGE("sync_wait error errno = %d, desc = %s", errno,  strerror(errno));
+      }
+    }
+  }
+
+  if (power_on_pending_[HWC_DISPLAY_EXTERNAL]) {
+    if (hwc_display_[HWC_DISPLAY_EXTERNAL]) {
+      HWC2::Error status = hwc_display_[HWC_DISPLAY_EXTERNAL]->SetPowerMode(HWC2::PowerMode::On);
+      if (status == HWC2::Error::None) {
+        power_on_pending_[HWC_DISPLAY_EXTERNAL] = false;
+      }
+    }
+  }
+
+  if (power_on_pending_[HWC_DISPLAY_VIRTUAL]) {
+    if (hwc_display_[HWC_DISPLAY_VIRTUAL]) {
+      HWC2::Error status = hwc_display_[HWC_DISPLAY_VIRTUAL]->SetPowerMode(HWC2::PowerMode::On);
+      if (status == HWC2::Error::None) {
+        power_on_pending_[HWC_DISPLAY_VIRTUAL] = false;
+      }
+    }
+  }
+}
+
+void HWCSession::HandleHotplugPending(hwc2_display_t disp_id, int retire_fence) {
+  if (disp_id != HWC_DISPLAY_PRIMARY || hotplug_pending_event_ == kHotPlugNone) {
+    return;
+  }
+  bool notify_hotplug = false;
+  std :: bitset < kSecureMax > secure_sessions = 0;
+  {
+    Locker::ScopeLock lock_p(locker_[HWC_DISPLAY_PRIMARY]);
+    if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
+      if (!hwc_display_[HWC_DISPLAY_PRIMARY]->IsDisplayCommandMode()) {
+        if (destroy_virtual_disp_pending_ || hotplug_pending_event_ == kHotPlugDisconnect) {
+          if (retire_fence >= 0) {
+            int error = sync_wait(retire_fence, 1000);
+            if (error < 0) {
+              DLOGE("sync_wait error errno = %d, desc = %s", errno,  strerror(errno));
+            }
+          }
+        }
+      }
+      hwc_display_[HWC_DISPLAY_PRIMARY]->GetActiveSecureSession(&secure_sessions);
+    }
+    if (!secure_sessions.any()) {
+      Locker::ScopeLock lock_v(locker_[HWC_DISPLAY_VIRTUAL]);
+      if (hwc_display_[HWC_DISPLAY_VIRTUAL] && destroy_virtual_disp_pending_) {
+        HWCDisplayVirtual::Destroy(hwc_display_[disp_id]);
+        hwc_display_[disp_id] = nullptr;
+        destroy_virtual_disp_pending_ = false;
+      }
+    }
+  }
+  // Handle Pending external display connection
+  if (hotplug_pending_event_ == kHotPlugConnect) {
+    Locker::ScopeLock lock_e(locker_[HWC_DISPLAY_EXTERNAL]);
+    Locker::ScopeLock lock_v(locker_[HWC_DISPLAY_VIRTUAL]);
+
+    if (!hwc_display_[HWC_DISPLAY_VIRTUAL] && !secure_sessions[kSecureDisplay]) {
+      DLOGD("Process pending external display connection");
+      ConnectDisplay(HWC_DISPLAY_EXTERNAL);
+      hotplug_pending_event_ = kHotPlugNone;
+      notify_hotplug = true;
+    }
+  } else if (hotplug_pending_event_ == kHotPlugDisconnect) {
+    Locker::ScopeLock lock_e(locker_[HWC_DISPLAY_EXTERNAL]);
+    if (hwc_display_[HWC_DISPLAY_EXTERNAL]) {
+      DisconnectDisplay(HWC_DISPLAY_EXTERNAL);
+    }
+    hotplug_pending_event_ = kHotPlugNone;
+  }
+
+  if (notify_hotplug) {
+    HotPlug(HWC_DISPLAY_EXTERNAL, HWC2::Connection::Connected);
+  }
+}
+
 }  // namespace sdm

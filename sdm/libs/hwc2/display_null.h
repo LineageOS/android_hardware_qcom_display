@@ -92,6 +92,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(SetCompositionState(LayerComposition, bool))
   MAKE_NO_OP(GetClientTargetSupport(uint32_t, uint32_t, LayerBufferFormat,
                                     const ColorMetaData &))
+  MAKE_NO_OP(HandleSecureEvent(SecureEvent))
 
   DisplayConfigVariableInfo default_variable_config_ = {};
   DisplayConfigFixedInfo default_fixed_config_ = {};

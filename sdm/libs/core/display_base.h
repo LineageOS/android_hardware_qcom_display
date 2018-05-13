@@ -118,6 +118,9 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError GetClientTargetSupport(uint32_t width, uint32_t height,
                                               LayerBufferFormat format,
                                               const ColorMetaData &color_metadata);
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event) {
+    return kErrorNotSupported;
+  }
   virtual std::string Dump();
   virtual DisplayError InitializeColorModes();
 

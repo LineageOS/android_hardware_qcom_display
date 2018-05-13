@@ -317,6 +317,7 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   hw_resource->hw_dest_scalar_info.max_input_width = info.max_dest_scaler_input_width;
   hw_resource->hw_dest_scalar_info.max_output_width = info.max_dest_scaler_output_width;
   hw_resource->min_prefill_lines = info.min_prefill_lines;
+  hw_resource->secure_disp_blend_stage = info.secure_disp_blend_stage;
 }
 
 void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
@@ -394,8 +395,10 @@ void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
     }
     pipe_caps.id = pipe_obj.first;
     pipe_caps.master_pipe_id = pipe_obj.second.master_plane_id;
-    DLOGI("Adding %s Pipe : Id %x, master_pipe_id : Id %x",
-          name.c_str(), pipe_obj.first, pipe_obj.second.master_plane_id);
+    pipe_caps.block_sec_ui = pipe_obj.second.block_sec_ui;
+    DLOGI("Adding %s Pipe : Id %d, master_pipe_id : Id %d block_sec_ui: %d",
+          name.c_str(), pipe_obj.first, pipe_obj.second.master_plane_id,
+          pipe_obj.second.block_sec_ui);
     pipe_caps.inverse_pma = pipe_obj.second.inverse_pma;
     pipe_caps.dgm_csc_version = pipe_obj.second.dgm_csc_version;
     // disable src tonemap feature if its disabled using property.

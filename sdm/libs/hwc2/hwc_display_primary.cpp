@@ -208,9 +208,8 @@ HWC2::Error HWCDisplayPrimary::Validate(uint32_t *out_num_types, uint32_t *out_n
 
   if (layer_set_.empty()) {
     // Avoid flush for Command mode panel.
-    DisplayConfigFixedInfo display_config;
-    display_intf_->GetConfig(&display_config);
-    flush_ = !display_config.is_cmdmode;
+    flush_ = !IsDisplayCommandMode();
+    validated_ = true;
     return status;
   }
 
@@ -387,18 +386,28 @@ void HWCDisplayPrimary::ToggleCPUHint(bool set) {
   }
 }
 
-void HWCDisplayPrimary::SetSecureDisplay(bool secure_display_active) {
-  if (secure_display_active_ != secure_display_active) {
-    // Skip Prepare and call Flush for null commit
-    DLOGI("SecureDisplay state changed from %d to %d Needs Flush!!", secure_display_active_,
-          secure_display_active);
-    secure_display_active_ = secure_display_active;
-
-    // Avoid flush for Command mode panel.
-    DisplayConfigFixedInfo display_config;
-    display_intf_->GetConfig(&display_config);
-    skip_prepare_ = !display_config.is_cmdmode;
+int HWCDisplayPrimary::HandleSecureSession(const std::bitset<kSecureMax> &secure_sessions,
+                                           bool *power_on_pending) {
+  if (!power_on_pending) {
+    return -EINVAL;
   }
+
+  if (active_secure_sessions_[kSecureDisplay] != secure_sessions[kSecureDisplay]) {
+    SecureEvent secure_event =
+        secure_sessions.test(kSecureDisplay) ? kSecureDisplayStart : kSecureDisplayEnd;
+    DisplayError err = display_intf_->HandleSecureEvent(secure_event);
+    if (err != kErrorNone) {
+      DLOGE("Set secure event failed");
+      return err;
+    }
+
+    DLOGI("SecureDisplay state changed from %d to %d for display %d",
+          active_secure_sessions_.test(kSecureDisplay), secure_sessions.test(kSecureDisplay),
+          type_);
+  }
+  active_secure_sessions_ = secure_sessions;
+  *power_on_pending = false;
+  return 0;
 }
 
 void HWCDisplayPrimary::ForceRefreshRate(uint32_t refresh_rate) {

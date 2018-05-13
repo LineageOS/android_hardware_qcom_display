@@ -113,7 +113,7 @@ int HWCDisplayVirtual::Deinit() {
 HWC2::Error HWCDisplayVirtual::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
   auto status = HWC2::Error::None;
 
-  if (display_paused_) {
+  if (display_paused_ || active_secure_sessions_.any()) {
     MarkLayersForGPUBypass();
     return status;
   }
@@ -144,6 +144,10 @@ HWC2::Error HWCDisplayVirtual::Present(int32_t *out_retire_fence) {
 
   if (!output_buffer_->buffer_id) {
     return HWC2::Error::NoResources;
+  }
+
+  if (active_secure_sessions_.any()) {
+    return status;
   }
 
   if (display_paused_) {

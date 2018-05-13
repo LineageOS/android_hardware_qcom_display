@@ -492,5 +492,9 @@ void DppsInfo::Deinit() {
   dpps_impl_lib.~DynLib();
 }
 
+DisplayError DisplayPrimary::HandleSecureEvent(SecureEvent secure_event) {
+  return hw_intf_->HandleSecureEvent(secure_event);
+}
+
 }  // namespace sdm
 

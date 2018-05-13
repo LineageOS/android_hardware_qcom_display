@@ -50,6 +50,8 @@ class HWPeripheralDRM : public HWDeviceDRM {
   virtual DisplayError SetDppsFeature(uint32_t object_type, uint32_t feature_id,
                                       uint64_t value);
   virtual DisplayError GetDppsFeatureInfo(void *info);
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event);
+
  private:
   void SetDestScalarData(HWLayersInfo hw_layer_info);
   void ResetDisplayParams();

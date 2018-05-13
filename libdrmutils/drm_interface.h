@@ -465,6 +465,7 @@ struct DRMCrtcInfo {
   uint32_t max_dest_scaler_output_width = 0;
   uint32_t max_dest_scale_up = 1;
   uint32_t min_prefill_lines = 0;
+  int secure_disp_blend_stage = -1;
 };
 
 enum struct DRMPlaneType {
@@ -506,6 +507,7 @@ struct DRMPlaneTypeInfo {
   bool inverse_pma = false;
   uint32_t dgm_csc_version = 0;  // csc used with DMA
   std::map<DRMTonemapLutType, uint32_t> tonemap_lut_version_map = {};
+  bool block_sec_ui = false;
 };
 
 // All DRM Planes as map<Plane_id , plane_type_info> listed from highest to lowest priority
