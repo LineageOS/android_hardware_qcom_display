@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -27,6 +27,11 @@
 #include <utils/debug.h>
 #include <utils/formats.h>
 #include <utils/rect.h>
+#include <utils/utils.h>
+
+#include <iomanip>
+#include <map>
+#include <sstream>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -107,7 +112,7 @@ DisplayError DisplayBase::Init() {
     DLOGW("InitColorModes failed for display = %d", display_type_);
   }
 
-  Debug::Get()->GetProperty("sdm.disable_hdr_lut_gen", &disable_hdr_lut_gen_);
+  Debug::Get()->GetProperty(DISABLE_HDR_LUT_GEN, &disable_hdr_lut_gen_);
 
   return kErrorNone;
 
@@ -153,7 +158,7 @@ DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
     hw_layers_info.app_layer_count++;
   }
 
-  DLOGV_IF(kTagNone, "LayerStack layer_count: %d, app_layer_count: %d, gpu_target_index: %d, "
+  DLOGD_IF(kTagNone, "LayerStack layer_count: %d, app_layer_count: %d, gpu_target_index: %d, "
            "display type: %d", layers.size(), hw_layers_info.app_layer_count,
            hw_layers_info.gpu_target_index, display_type_);
 
@@ -221,6 +226,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
     return kErrorParameters;
   }
 
+  DLOGI_IF(kTagDisplay, "Entering Prepare for display type : %d", display_type_);
   error = BuildLayerStackStats(layer_stack);
   if (error != kErrorNone) {
     return error;
@@ -262,6 +268,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
 
   comp_manager_->PostPrepare(display_comp_ctx_, &hw_layers_);
 
+  DLOGI_IF(kTagDisplay, "Exiting Prepare for display type : %d", display_type_);
   return error;
 }
 
@@ -296,6 +303,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     }
   }
 
+  DLOGI_IF(kTagDisplay, "Entering commit for display type : %d", display_type_);
   CommitLayerParams(layer_stack);
 
   error = comp_manager_->Commit(display_comp_ctx_, &hw_layers_);
@@ -327,6 +335,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     return error;
   }
 
+  DLOGI_IF(kTagDisplay, "Exiting commit for display type : %d", display_type_);
   return kErrorNone;
 }
 
@@ -506,79 +515,76 @@ DisplayError DisplayBase::SetMaxMixerStages(uint32_t max_mixer_stages) {
   return error;
 }
 
-void DisplayBase::AppendDump(char *buffer, uint32_t length) {
+std::string DisplayBase::Dump() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   HWDisplayAttributes attrib;
   uint32_t active_index = 0;
   uint32_t num_modes = 0;
+  std::ostringstream os;
+
   hw_intf_->GetNumDisplayAttributes(&num_modes);
   hw_intf_->GetActiveConfig(&active_index);
   hw_intf_->GetDisplayAttributes(active_index, &attrib);
 
-  DumpImpl::AppendString(buffer, length, "\n-----------------------");
-  DumpImpl::AppendString(buffer, length, "\ndevice type: %u", display_type_);
-  DumpImpl::AppendString(buffer, length, "\nstate: %u, vsync on: %u, max. mixer stages: %u",
-                         state_, INT(vsync_enable_), max_mixer_stages_);
-  DumpImpl::AppendString(buffer, length, "\nnum configs: %u, active config index: %u",
-                         num_modes, active_index);
+  os << "device type:" << display_type_;
+  os << "\nstate: " << state_ << " vsync on: " << vsync_enable_ << " max. mixer stages: "
+    << max_mixer_stages_;
+  os << "\nnum configs: " << num_modes << " active config index: " << active_index;
 
   DisplayConfigVariableInfo &info = attrib;
 
-  uint32_t num_hw_layers = 0;
-  if (hw_layers_.info.stack) {
-    num_hw_layers = UINT32(hw_layers_.info.hw_layers.size());
-  }
+  uint32_t num_hw_layers = UINT32(hw_layers_.info.hw_layers.size());
 
   if (num_hw_layers == 0) {
-    DumpImpl::AppendString(buffer, length, "\nNo hardware layers programmed");
-    return;
+    os << "\nNo hardware layers programmed";
+    return os.str();
   }
 
-  LayerBuffer *out_buffer = hw_layers_.info.stack->output_buffer;
-  if (out_buffer) {
-    DumpImpl::AppendString(buffer, length, "\nres:%u x %u format: %s", out_buffer->width,
-                           out_buffer->height, GetFormatString(out_buffer->format));
+  LayerBuffer *out_buffer = nullptr;
+  if (hw_layers_.info.stack) {
+    out_buffer = hw_layers_.info.stack->output_buffer;
+  }
+  if (out_buffer != nullptr) {
+    os << "\nres: " << out_buffer->width << "x" << out_buffer->height << " format: "
+      << GetFormatString(out_buffer->format);
   } else {
-    DumpImpl::AppendString(buffer, length, "\nres:%u x %u, dpi:%.2f x %.2f, fps:%u,"
-                           "vsync period: %u", info.x_pixels, info.y_pixels, info.x_dpi,
-                           info.y_dpi, info.fps, info.vsync_period_ns);
+    os.precision(2);
+    os << "\nres: " << info.x_pixels << "x" << info.y_pixels << " dpi: " << std::fixed <<
+      info.x_dpi << "x" << std::fixed << info.y_dpi << " fps: " << info.fps <<
+      " vsync period: " << info.vsync_period_ns;
   }
-
-  DumpImpl::AppendString(buffer, length, "\n");
 
   HWLayersInfo &layer_info = hw_layers_.info;
-
   for (uint32_t i = 0; i < layer_info.left_frame_roi.size(); i++) {
     LayerRect &l_roi = layer_info.left_frame_roi.at(i);
     LayerRect &r_roi = layer_info.right_frame_roi.at(i);
 
-    DumpImpl::AppendString(buffer, length, "\nROI%d(L T R B) : LEFT(%d %d %d %d)", i,
-                           INT(l_roi.left), INT(l_roi.top), INT(l_roi.right), INT(l_roi.bottom));
+    os << "\nROI(LTRB)#" << i << " LEFT(" << INT(l_roi.left) << " " << INT(l_roi.top) << " " <<
+      INT(l_roi.right) << " " << INT(l_roi.bottom) << ")";
     if (IsValid(r_roi)) {
-      DumpImpl::AppendString(buffer, length, ", RIGHT(%d %d %d %d)", INT(r_roi.left),
-                             INT(r_roi.top), INT(r_roi.right), INT(r_roi.bottom));
+    os << " RIGHT(" << INT(r_roi.left) << " " << INT(r_roi.top) << " " << INT(r_roi.right) << " "
+      << INT(r_roi.bottom) << ")";
     }
   }
 
   LayerRect &fb_roi = layer_info.partial_fb_roi;
   if (IsValid(fb_roi)) {
-    DumpImpl::AppendString(buffer, length, "\nPartial FB ROI(L T R B) : (%d %d %d %d)",
-                          INT(fb_roi.left), INT(fb_roi.top), INT(fb_roi.right), INT(fb_roi.bottom));
+    os << "\nPartial FB ROI(LTRB):(" << INT(fb_roi.left) << " " << INT(fb_roi.top) << " " <<
+      INT(fb_roi.right) << " " << INT(fb_roi.bottom) << ")";
   }
 
   const char *header  = "\n| Idx |  Comp Type  |  Split | WB |  Pipe  |    W x H    |          Format          |  Src Rect (L T R B) |  Dst Rect (L T R B) |  Z |    Flags   | Deci(HxV) | CS | Rng |";  //NOLINT
   const char *newline = "\n|-----|-------------|--------|----|--------|-------------|--------------------------|---------------------|---------------------|----|------------|-----------|----|-----|";  //NOLINT
   const char *format  = "\n| %3s | %11s "     "| %6s " "| %2s | 0x%04x | %4d x %4d | %24s "                  "| %4d %4d %4d %4d "  "| %4d %4d %4d %4d "  "| %2s | %10s "   "| %9s | %2s | %3s |";  //NOLINT
 
-  DumpImpl::AppendString(buffer, length, "\n");
-  DumpImpl::AppendString(buffer, length, newline);
-  DumpImpl::AppendString(buffer, length, header);
-  DumpImpl::AppendString(buffer, length, newline);
+
+  os << "\n";
+  os << newline;
+  os << header;
+  os << newline;
 
   for (uint32_t i = 0; i < num_hw_layers; i++) {
     uint32_t layer_index = hw_layers_.info.index[i];
-    // sdm-layer from client layer stack
-    Layer *sdm_layer = hw_layers_.info.stack->layers.at(layer_index);
     // hw-layer from hw layers info
     Layer &hw_layer = hw_layers_.info.hw_layers.at(i);
     LayerBuffer *input_buffer = &hw_layer.input_buffer;
@@ -586,7 +592,7 @@ void DisplayBase::AppendDump(char *buffer, uint32_t length) {
     HWRotatorSession &hw_rotator_session = layer_config.hw_rotator_session;
 
     char idx[8] = { 0 };
-    const char *comp_type = GetName(sdm_layer->composition);
+    const char *comp_type = GetName(hw_layer.composition);
     const char *buffer_format = GetFormatString(input_buffer->format);
     const char *rotate_split[2] = { "Rot-1", "Rot-2" };
     const char *comp_split[2] = { "Comp-1", "Comp-2" };
@@ -595,19 +601,20 @@ void DisplayBase::AppendDump(char *buffer, uint32_t length) {
 
     for (uint32_t count = 0; count < hw_rotator_session.hw_block_count; count++) {
       char writeback_id[8] = { 0 };
+      char row[1024];
       HWRotateInfo &rotate = hw_rotator_session.hw_rotate_info[count];
       LayerRect &src_roi = rotate.src_roi;
       LayerRect &dst_roi = rotate.dst_roi;
 
       snprintf(writeback_id, sizeof(writeback_id), "%d", rotate.writeback_id);
 
-      DumpImpl::AppendString(buffer, length, format, idx, comp_type, rotate_split[count],
+      snprintf(row, sizeof(row), format, idx, comp_type, rotate_split[count],
                              writeback_id, rotate.pipe_id, input_buffer->width,
                              input_buffer->height, buffer_format, INT(src_roi.left),
                              INT(src_roi.top), INT(src_roi.right), INT(src_roi.bottom),
                              INT(dst_roi.left), INT(dst_roi.top), INT(dst_roi.right),
                              INT(dst_roi.bottom), "-", "-    ", "-    ", "-", "-");
-
+      os << row;
       // print the below only once per layer block, fill with spaces for rest.
       idx[0] = 0;
       comp_type = "";
@@ -642,20 +649,24 @@ void DisplayBase::AppendDump(char *buffer, uint32_t length) {
       snprintf(color_primary, sizeof(color_primary), "%d", color_metadata.colorPrimaries);
       snprintf(range, sizeof(range), "%d", color_metadata.range);
 
-      DumpImpl::AppendString(buffer, length, format, idx, comp_type, comp_split[count],
+      char row[1024];
+      snprintf(row, sizeof(row), format, idx, comp_type, comp_split[count],
                              "-", pipe.pipe_id, input_buffer->width, input_buffer->height,
                              buffer_format, INT(src_roi.left), INT(src_roi.top),
                              INT(src_roi.right), INT(src_roi.bottom), INT(dst_roi.left),
                              INT(dst_roi.top), INT(dst_roi.right), INT(dst_roi.bottom),
                              z_order, flags, decimation, color_primary, range);
 
+      os << row;
       // print the below only once per layer block, fill with spaces for rest.
       idx[0] = 0;
       comp_type = "";
     }
-
-    DumpImpl::AppendString(buffer, length, newline);
   }
+
+  os << newline << "\n";
+
+  return os.str();
 }
 
 const char * DisplayBase::GetName(const LayerComposition &composition) {
@@ -1072,6 +1083,7 @@ DisplayError DisplayBase::ReconfigureMixer(uint32_t width, uint32_t height) {
     return kErrorParameters;
   }
 
+  DLOGD_IF(kTagQDCM, "Reconfiguring mixer with width : %d, height : %d", width, height);
   HWMixerAttributes mixer_attributes;
   mixer_attributes.width = width;
   mixer_attributes.height = height;
@@ -1124,9 +1136,10 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
   uint32_t align_y = 2;
 
   if (req_mixer_width_ && req_mixer_height_) {
+    DLOGD_IF(kTagDisplay, "Required mixer width : %d, height : %d",
+             req_mixer_width_, req_mixer_height_);
     *new_mixer_width = req_mixer_width_;
     *new_mixer_height = req_mixer_height_;
-
     return (req_mixer_width_ != mixer_width || req_mixer_height_ != mixer_height);
   }
 
@@ -1142,6 +1155,7 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
       max_area_layer_index = i;
     }
   }
+  DLOGV_IF(kTagDisplay, "Max area layer at index : %d", max_area_layer_index);
 
   // TODO(user): Mark layer which needs downscaling on GPU fallback as priority layer and use MDP
   // for composition to avoid quality mismatch between GPU and MDP switch(idle timeout usecase).

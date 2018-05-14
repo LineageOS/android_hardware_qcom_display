@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -181,6 +181,7 @@ int HWCToneMapper::HandleToneMap(LayerStack *layer_stack) {
     }
 
     if (layer->request.flags.tone_map) {
+      DLOGV_IF(kTagClient, "Tonemapping for layer at index %d", i);
       switch (layer->composition) {
       case kCompositionGPUTarget:
         if (!gpu_count) {
@@ -211,6 +212,7 @@ int HWCToneMapper::HandleToneMap(LayerStack *layer_stack) {
 
       ToneMapSession *session = tone_map_sessions_.at(session_index);
       ToneMap(layer, session);
+      DLOGI_IF(kTagClient, "Layer %d associated with session index %d", i, session_index);
       session->layer_index_ = INT(i);
     }
   }
@@ -259,6 +261,7 @@ void HWCToneMapper::PostCommit(LayerStack *layer_stack) {
       session->acquired_ = false;
       it++;
     } else {
+      DLOGI_IF(kTagClient, "Tone map session %d closed.", session_index);
       delete session;
       it = tone_map_sessions_.erase(it);
       int deleted_session = INT(session_index);
@@ -329,7 +332,7 @@ void HWCToneMapper::DumpToneMapOutput(ToneMapSession *session, int *acquire_fd) 
 }
 
 DisplayError HWCToneMapper::AcquireToneMapSession(Layer *layer, uint32_t *session_index) {
-  // When the property sdm.disable_hdr_lut_gen is set, the lutEntries and gridEntries in
+  // When the property vendor.display.disable_hdr_lut_gen is set, the lutEntries and gridEntries in
   // the Lut3d will be NULL, clients needs to allocate the memory and set correct 3D Lut
   // for Tonemapping.
   if (!layer->lut_3d.lutEntries || !layer->lut_3d.dim) {

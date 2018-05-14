@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -29,6 +29,7 @@
 
 #include <utils/constants.h>
 #include <cutils/properties.h>
+#include <utils/debug.h>
 
 #include "hwc_debugger.h"
 
@@ -41,6 +42,10 @@ int32_t HWCDebugHandler::verbose_level_ = 0x0;
 void HWCDebugHandler::DebugAll(bool enable, int verbose_level) {
   if (enable) {
     debug_flags_ = 0x7FFFFFFF;
+    if (verbose_level) {
+      // Enable verbose scalar logs only when explicitely enabled
+      debug_flags_[kTagScalar] = 0;
+    }
     verbose_level_ = verbose_level;
   } else {
     debug_flags_ = 0x1;   // kTagNone should always be printed.
@@ -98,12 +103,42 @@ void HWCDebugHandler::DebugRotator(bool enable, int verbose_level) {
   }
 }
 
+void HWCDebugHandler::DebugScalar(bool enable, int verbose_level) {
+  if (enable) {
+    debug_flags_[kTagScalar] = 1;
+    verbose_level_ = verbose_level;
+  } else {
+    debug_flags_[kTagScalar] = 0;
+    verbose_level_ = 0;
+  }
+}
+
 void HWCDebugHandler::DebugQdcm(bool enable, int verbose_level) {
   if (enable) {
     debug_flags_[kTagQDCM] = 1;
     verbose_level_ = verbose_level;
   } else {
     debug_flags_[kTagQDCM] = 0;
+    verbose_level_ = 0;
+  }
+}
+
+void HWCDebugHandler::DebugClient(bool enable, int verbose_level) {
+  if (enable) {
+    debug_flags_[kTagClient] = 1;
+    verbose_level_ = verbose_level;
+  } else {
+    debug_flags_[kTagClient] = 0;
+    verbose_level_ = 0;
+  }
+}
+
+void HWCDebugHandler::DebugDisplay(bool enable, int verbose_level) {
+  if (enable) {
+    debug_flags_[kTagDisplay] = 1;
+    verbose_level_ = verbose_level;
+  } else {
+    debug_flags_[kTagDisplay] = 0;
     verbose_level_ = 0;
   }
 }
@@ -161,7 +196,7 @@ void HWCDebugHandler::EndTrace() {
 
 int  HWCDebugHandler::GetIdleTimeoutMs() {
   int value = IDLE_TIMEOUT_DEFAULT_MS;
-  debug_handler_.GetProperty("sdm.idle_time", &value);
+  debug_handler_.GetProperty(IDLE_TIME_PROP, &value);
 
   return value;
 }
