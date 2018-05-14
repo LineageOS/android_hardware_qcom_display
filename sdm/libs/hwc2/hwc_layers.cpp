@@ -86,7 +86,7 @@ bool GetColorPrimary(const int32_t &dataspace, ColorPrimaries *color_primary) {
       *color_primary = ColorPrimaries_BT2020;
       break;
     default:
-      DLOGV_IF(kTagClient, "Unsupported Standard Request = %d", standard);
+      DLOGW_IF(kTagClient, "Unsupported Standard Request = %d", standard);
       supported_csc = false;
   }
   return supported_csc;
@@ -118,7 +118,7 @@ bool GetTransfer(const int32_t &dataspace, GammaTransfer *gamma_transfer) {
       *gamma_transfer = Transfer_Gamma2_8;
       break;
     default:
-      DLOGV_IF(kTagClient, "Unsupported Transfer Request = %d", transfer);
+      DLOGW_IF(kTagClient, "Unsupported Transfer Request = %d", transfer);
       supported_transfer = false;
   }
   return supported_transfer;
@@ -137,7 +137,7 @@ bool GetRange(const int32_t &dataspace, ColorRange *color_range) {
       *color_range = Range_Extended;
       break;
     default:
-      DLOGV_IF(kTagClient, "Unsupported Range Request = %d", range);
+      DLOGW_IF(kTagClient, "Unsupported Range Request = %d", range);
       return false;
   }
   return true;
@@ -151,6 +151,38 @@ bool IsBT2020(const ColorPrimaries &color_primary) {
   default:
     return false;
   }
+}
+
+int32_t TranslateFromLegacyDataspace(const int32_t &legacy_ds) {
+  int32_t dataspace = legacy_ds;
+
+  if (dataspace & 0xffff) {
+    switch (dataspace & 0xffff) {
+      case HAL_DATASPACE_SRGB:
+        dataspace = HAL_DATASPACE_V0_SRGB;
+        break;
+      case HAL_DATASPACE_JFIF:
+        dataspace = HAL_DATASPACE_V0_JFIF;
+        break;
+      case HAL_DATASPACE_SRGB_LINEAR:
+        dataspace = HAL_DATASPACE_V0_SRGB_LINEAR;
+        break;
+      case HAL_DATASPACE_BT601_625:
+        dataspace = HAL_DATASPACE_V0_BT601_625;
+        break;
+      case HAL_DATASPACE_BT601_525:
+        dataspace = HAL_DATASPACE_V0_BT601_525;
+        break;
+      case HAL_DATASPACE_BT709:
+        dataspace = HAL_DATASPACE_V0_BT709;
+        break;
+      default:
+        // unknown legacy dataspace
+        DLOGW_IF(kTagClient, "Unsupported dataspace type %d", dataspace);
+    }
+  }
+
+  return dataspace;
 }
 
 // Retrieve ColorMetaData from android_data_space_t (STANDARD|TRANSFER|RANGE)
@@ -355,33 +387,8 @@ HWC2::Error HWCLayer::SetLayerCompositionType(HWC2::Composition type) {
 }
 
 HWC2::Error HWCLayer::SetLayerDataspace(int32_t dataspace) {
-  // Map deprecated dataspace values to appropriate
-  // new enums
-  if (dataspace & 0xffff) {
-    switch (dataspace & 0xffff) {
-      case HAL_DATASPACE_SRGB:
-        dataspace = HAL_DATASPACE_V0_SRGB;
-        break;
-      case HAL_DATASPACE_JFIF:
-        dataspace = HAL_DATASPACE_V0_JFIF;
-        break;
-      case HAL_DATASPACE_SRGB_LINEAR:
-        dataspace = HAL_DATASPACE_V0_SRGB_LINEAR;
-        break;
-      case HAL_DATASPACE_BT601_625:
-        dataspace = HAL_DATASPACE_V0_BT601_625;
-        break;
-      case HAL_DATASPACE_BT601_525:
-        dataspace = HAL_DATASPACE_V0_BT601_525;
-        break;
-      case HAL_DATASPACE_BT709:
-        dataspace = HAL_DATASPACE_V0_BT709;
-        break;
-      default:
-        // unknown legacy dataspace
-        DLOGW_IF(kTagClient, "Unsupported dataspace type %d", dataspace);
-    }
-  }
+  // Map deprecated dataspace values to appropriate new enums
+  dataspace = TranslateFromLegacyDataspace(dataspace);
 
   // cache the dataspace, to be used later to update SDM ColorMetaData
   if (dataspace_ != dataspace) {

@@ -45,6 +45,8 @@ bool GetTransfer(const int32_t &dataspace, GammaTransfer *gamma_transfer);
 bool GetRange(const int32_t &dataspace, ColorRange *color_range);
 bool GetSDMColorSpace(const int32_t &dataspace, ColorMetaData *color_metadata);
 bool IsBT2020(const ColorPrimaries &color_primary);
+int32_t TranslateFromLegacyDataspace(const int32_t &legacy_ds);
+
 enum GeometryChanges {
   kNone         = 0x000,
   kBlendMode    = 0x001,

@@ -763,6 +763,7 @@ HWC2::Error HWCDisplay::GetClientTargetSupport(uint32_t width, uint32_t height, 
                                                int32_t dataspace) {
   ColorMetaData color_metadata = {};
   if (dataspace != HAL_DATASPACE_UNKNOWN) {
+    dataspace = TranslateFromLegacyDataspace(dataspace);
     GetColorPrimary(dataspace, &(color_metadata.colorPrimaries));
     GetTransfer(dataspace, &(color_metadata.transfer));
     GetRange(dataspace, &(color_metadata.range));
@@ -936,7 +937,8 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, int32_t acquire_
     client_target_->SetLayerDataspace(dataspace);
     Layer *sdm_layer = client_target_->GetSDMLayer();
     // Data space would be validated at GetClientTargetSupport, so just use here.
-    sdm::GetSDMColorSpace(dataspace, &sdm_layer->input_buffer.color_metadata);
+    sdm::GetSDMColorSpace(client_target_->GetLayerDataspace(),
+                          &sdm_layer->input_buffer.color_metadata);
   }
 
   return HWC2::Error::None;
