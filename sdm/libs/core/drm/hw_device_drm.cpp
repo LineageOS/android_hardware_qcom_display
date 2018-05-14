@@ -1362,10 +1362,14 @@ DisplayError HWDeviceDRM::SetPPFeatures(PPFeaturesConfig *feature_list) {
     kernel_params.id = drm_id.at(0);
     drm_mgr_intf_->GetCrtcPPInfo(token_.crtc_id, &kernel_params);
     if (kernel_params.version == std::numeric_limits<uint32_t>::max())
-        crtc_feature = false;
+      crtc_feature = false;
     if (feature) {
       DLOGV_IF(kTagDriverConfig, "feature_id = %d", feature->feature_id_);
       for (DRMPPFeatureID id : drm_id) {
+        if (id >= kPPFeaturesMax) {
+          DLOGE("Invalid feature id %d", id);
+          continue;
+        }
         kernel_params.id = id;
         ret = hw_color_mgr_->GetDrmFeature(feature, &kernel_params);
         if (!ret && crtc_feature)
@@ -1738,6 +1742,10 @@ void HWDeviceDRM::SetSsppLutFeatures(HWPipeInfo *pipe_info) {
       PPBlock pp_block = GetPPBlock(lut_info.type);
       hw_color_mgr_->ToDrmFeatureId(pp_block, feature->feature_id_, &drm_id);
       for (DRMPPFeatureID id : drm_id) {
+        if (id >= kPPFeaturesMax) {
+          DLOGE("Invalid feature id %d", id);
+          continue;
+        }
         kernel_params.id = id;
         bool disable = (lut_info.op == kReset);
         DLOGV_IF(kTagDriverConfig, "Lut Type = %d PPBlock = %d Op = %s Disable = %d Feature = %p",
