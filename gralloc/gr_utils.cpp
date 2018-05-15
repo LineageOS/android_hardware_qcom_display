@@ -960,9 +960,12 @@ void GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
   }
 
   // Call adreno api for populating metadata blob
+  // Layer count is for 2D/Cubemap arrays and depth is used for 3D slice
+  // Using depth to pass layer_count here
   int ret = adreno_mem_info->AdrenoInitMemoryLayout(graphics_metadata->data, info.width,
-                                                    info.height, 1, info.format, 1,
-                                                    is_ubwc_enabled, adreno_usage, 1);
+                                                    info.height, info.layer_count, /* depth */
+                                                    info.format, 1, is_ubwc_enabled,
+                                                    adreno_usage, 1);
   if (ret != 0) {
     ALOGE("%s Graphics metadata init failed", __FUNCTION__);
     *size = 0;
