@@ -55,7 +55,7 @@ DisplayError DisplayHDMI::Init() {
 
   uint32_t active_mode_index;
   char value[64] = "0";
-  Debug::GetProperty("sdm.hdmi.s3d_mode", value);
+  Debug::GetProperty(HDMI_S3D_MODE_PROP, value);
   HWS3DMode mode = (HWS3DMode)atoi(value);
   if (mode > kS3DModeNone && mode < kS3DModeMax) {
     active_mode_index = GetBestConfig(mode);

@@ -9,6 +9,7 @@ LOCAL_VENDOR_MODULE           := true
 LOCAL_COPY_HEADERS_TO         := $(common_header_export_path)
 LOCAL_COPY_HEADERS            := color_metadata.h \
                                  display_color_processing.h \
+                                 display_properties.h \
                                  ../libqdutils/qd_utils.h \
                                  ../libqdutils/qdMetaData.h \
                                  ../libqdutils/display_config.h \

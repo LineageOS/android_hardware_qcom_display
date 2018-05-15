@@ -233,7 +233,7 @@ DisplayError HWEventsDRM::Init(int display_type, HWEventHandler *event_handler,
   RegisterIdlePowerCollapse(true);
 
   int value = 0;
-  if (Debug::Get()->GetProperty("sdm.debug.disable_hw_recovery", &value) == kErrorNone) {
+  if (Debug::Get()->GetProperty(DISABLE_HW_RECOVERY_PROP, &value) == kErrorNone) {
     disable_hw_recovery_ = (value == 1);
   }
   DLOGI("disable_hw_recovery set to %d", disable_hw_recovery_);

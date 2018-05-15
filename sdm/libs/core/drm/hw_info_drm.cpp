@@ -208,7 +208,7 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
   // through property
   int value = 0;
   bool disable_dest_scalar = false;
-  if (Debug::GetProperty("sdm.debug.disable_dest_scalar", &value) == kErrorNone) {
+  if (Debug::GetProperty(DISABLE_DESTINATION_SCALER_PROP, &value) == kErrorNone) {
     disable_dest_scalar = (value == 1);
   }
   DynLib extension_lib;
@@ -333,7 +333,7 @@ void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
   uint32_t dma_pipe_count = 0;
   uint32_t virtual_pipe_count = 0;
   int disable_src_tonemap = 0;
-  Debug::Get()->GetProperty("sdm.disable_src_tonemap", &disable_src_tonemap);
+  Debug::Get()->GetProperty(DISABLE_SRC_TONEMAP_PROP, &disable_src_tonemap);
 
   for (auto &pipe_obj : planes) {
     if (max_vig_pipes && max_dma_pipes) {

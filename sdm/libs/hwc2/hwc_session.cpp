@@ -161,7 +161,7 @@ int HWCSession::Init() {
 
   StartServices();
 
-  HWCDebugHandler::Get()->GetProperty("sdm.debug.enable_null_display", &null_display_mode_);
+  HWCDebugHandler::Get()->GetProperty(ENABLE_NULL_DISPLAY_PROP, &null_display_mode_);
   DisplayError error = kErrorNone;
 
   HWDisplayInterfaceInfo hw_disp_info = {};
@@ -300,7 +300,7 @@ void HWCSession::GetCapabilities(struct hwc2_device *device, uint32_t *outCount,
 
   int value = 0;
   bool disable_skip_validate = false;
-  if (Debug::Get()->GetProperty("sdm.debug.disable_skip_validate", &value) == kErrorNone) {
+  if (Debug::Get()->GetProperty(DISABLE_SKIP_VALIDATE_PROP, &value) == kErrorNone) {
     disable_skip_validate = (value == 1);
   }
   uint32_t count = 1 + (disable_skip_validate ? 0 : 1);
