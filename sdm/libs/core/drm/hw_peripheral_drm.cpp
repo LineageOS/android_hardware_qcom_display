@@ -94,7 +94,7 @@ void HWPeripheralDRM::ResetDisplayParams() {
 }
 
 void HWPeripheralDRM::SetDestScalarData(HWLayersInfo hw_layer_info) {
-  if (!hw_resource_.hw_dest_scalar_info.count) {
+  if (!hw_scale_ || !hw_resource_.hw_dest_scalar_info.count) {
     return;
   }
 
