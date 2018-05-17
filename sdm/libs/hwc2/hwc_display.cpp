@@ -1927,7 +1927,7 @@ std::string HWCDisplay::Dump() {
     auto transform = sdm_layer->transform;
     os << "layer: " << std::setw(4) << layer->GetId();
     os << " z: " << layer->GetZ();
-    os << " compositon: " <<
+    os << " composition: " <<
           to_string(layer->GetClientRequestedCompositionType()).c_str();
     os << "/" <<
           to_string(layer->GetDeviceSelectedCompositionType()).c_str();
