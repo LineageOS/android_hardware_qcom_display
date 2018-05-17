@@ -284,7 +284,7 @@ void HWDeviceDRM::Registry::MapBufferToFbId(LayerBuffer* buffer) {
     uint32_t fb_id = 0;
     int ret = master->CreateFbId(layout, &fb_id);
     if (ret < 0) {
-      DLOGE("CreateFbId failed. width %d, height %d, format: %s, stride %u, error %d",
+      DLOGW("CreateFbId failed. width %d, height %d, format: %s, stride %u, error %d",
           layout.width, layout.height, GetFormatString(buf_info.format), layout.stride[0],
           errno);
     } else {
