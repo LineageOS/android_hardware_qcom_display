@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,9 +30,7 @@
 #ifndef _QDMETADATA_H
 #define _QDMETADATA_H
 
-#ifdef USE_COLOR_METADATA
 #include <color_metadata.h>
-#endif
 
 #ifdef __cplusplus
 extern "C" {

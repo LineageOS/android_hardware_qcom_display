@@ -136,11 +136,7 @@ HWC2::Error HWCColorMode::RestoreColorTransform() {
 }
 
 HWC2::Error HWCColorMode::SetColorTransform(const float *matrix, android_color_transform_t hint) {
-  if (!matrix || (hint < HAL_COLOR_TRANSFORM_IDENTITY ||
-      hint > HAL_COLOR_TRANSFORM_CORRECT_TRITANOPIA)) {
-    return HWC2::Error::BadParameter;
-  }
-
+  DTRACE_SCOPED();
   double color_matrix[kColorTransformMatrixCount] = {0};
   CopyColorTransformMatrix(matrix, color_matrix);
 
@@ -428,6 +424,8 @@ HWC2::Error HWCDisplay::CreateLayer(hwc2_layer_t *out_layer_id) {
   *out_layer_id = layer->GetId();
   geometry_changes_ |= GeometryChanges::kAdded;
   validated_.reset();
+  layer_stack_invalid_ = true;
+
   return HWC2::Error::None;
 }
 
@@ -460,6 +458,8 @@ HWC2::Error HWCDisplay::DestroyLayer(hwc2_layer_t layer_id) {
 
   geometry_changes_ |= GeometryChanges::kRemoved;
   validated_.reset();
+  layer_stack_invalid_ = true;
+
   return HWC2::Error::None;
 }
 
@@ -502,6 +502,7 @@ void HWCDisplay::BuildLayerStack() {
       }
     }
 
+    bool is_secure = false;
     const private_handle_t *handle =
         reinterpret_cast<const private_handle_t *>(layer->input_buffer.buffer_id);
     if (handle) {
@@ -513,21 +514,17 @@ void HWCDisplay::BuildLayerStack() {
         layer_stack_.flags.video_present = true;
       }
       // TZ Protected Buffer - L1
-      if (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER) {
-        layer_stack_.flags.secure_present = true;
-      }
       // Gralloc Usage Protected Buffer - L3 - which needs to be treated as Secure & avoid fallback
-      if (handle->flags & private_handle_t::PRIV_FLAGS_PROTECTED_BUFFER) {
+      if (handle->flags & private_handle_t::PRIV_FLAGS_PROTECTED_BUFFER ||
+          handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER) {
         layer_stack_.flags.secure_present = true;
+        is_secure = true;
       }
-    }
-
-    if (layer->flags.skip) {
-      layer_stack_.flags.skip_present = true;
     }
 
     if (layer->input_buffer.flags.secure_display) {
       secure_display_active = true;
+      is_secure = true;
     }
 
     if (hwc_layer->GetClientRequestedCompositionType() == HWC2::Composition::Cursor) {
@@ -545,6 +542,15 @@ void HWCDisplay::BuildLayerStack() {
       // dont honor HDR when its handling is disabled
       layer->input_buffer.flags.hdr = true;
       layer_stack_.flags.hdr_present = true;
+    }
+
+    if (hwc_layer->IsNonIntegralSourceCrop() && !is_secure && !hdr_layer &&
+        !layer->flags.single_buffer && !layer->flags.solid_fill) {
+      layer->flags.skip = true;
+    }
+
+    if (layer->flags.skip) {
+      layer_stack_.flags.skip_present = true;
     }
 
     // TODO(user): Move to a getter if this is needed at other places
@@ -615,6 +621,8 @@ void HWCDisplay::BuildLayerStack() {
 
   // set secure display
   SetSecureDisplay(secure_display_active);
+
+  layer_stack_invalid_ = false;
 }
 
 void HWCDisplay::BuildSolidFillStack() {
@@ -958,6 +966,7 @@ DisplayError HWCDisplay::CECMessage(char *message) {
 DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
   switch (event) {
     case kIdleTimeout:
+      break;
     case kThermalEvent:
       validated_.reset();
       break;
@@ -1155,8 +1164,8 @@ HWC2::Error HWCDisplay::GetHdrCapabilities(uint32_t *out_num_types, int32_t *out
 
 
 HWC2::Error HWCDisplay::CommitLayerStack(void) {
-  if (shutdown_pending_ || layer_set_.empty()) {
-    return HWC2::Error::None;
+  if (flush_) {
+     return HWC2::Error::None;
   }
 
   if (skip_validate_ && !CanSkipValidate()) {
@@ -1168,39 +1177,42 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
     return HWC2::Error::NotValidated;
   }
 
+  if (shutdown_pending_ || layer_set_.empty()) {
+    return HWC2::Error::None;
+  }
+
   DumpInputBuffers();
 
-  if (!flush_) {
-    DisplayError error = kErrorUndefined;
-    int status = 0;
-    if (tone_mapper_) {
-      if (layer_stack_.flags.hdr_present) {
-        status = tone_mapper_->HandleToneMap(&layer_stack_);
-        if (status != 0) {
-          DLOGE("Error handling HDR in ToneMapper");
-        }
-      } else {
-        tone_mapper_->Terminate();
+  DisplayError error = kErrorUndefined;
+  int status = 0;
+  if (tone_mapper_) {
+    if (layer_stack_.flags.hdr_present) {
+      status = tone_mapper_->HandleToneMap(&layer_stack_);
+      if (status != 0) {
+        DLOGE("Error handling HDR in ToneMapper");
       }
-    }
-    error = display_intf_->Commit(&layer_stack_);
-
-    if (error == kErrorNone) {
-      // A commit is successfully submitted, start flushing on failure now onwards.
-      flush_on_error_ = true;
     } else {
-      if (error == kErrorShutDown) {
-        shutdown_pending_ = true;
-        return HWC2::Error::Unsupported;
-      } else if (error == kErrorNotValidated) {
-        validated_.reset(type_);
-        return HWC2::Error::NotValidated;
-      } else if (error != kErrorPermission) {
-        DLOGE("Commit failed. Error = %d", error);
-        // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
-        // so that previous buffer and fences are released, and override the error.
-        flush_ = true;
-      }
+      tone_mapper_->Terminate();
+    }
+  }
+
+  error = display_intf_->Commit(&layer_stack_);
+
+  if (error == kErrorNone) {
+    // A commit is successfully submitted, start flushing on failure now onwards.
+    flush_on_error_ = true;
+  } else {
+    if (error == kErrorShutDown) {
+      shutdown_pending_ = true;
+      return HWC2::Error::Unsupported;
+    } else if (error == kErrorNotValidated) {
+      validated_.reset(type_);
+      return HWC2::Error::NotValidated;
+    } else if (error != kErrorPermission) {
+      DLOGE("Commit failed. Error = %d", error);
+      // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
+      // so that previous buffer and fences are released, and override the error.
+      flush_ = true;
     }
   }
 
@@ -1240,21 +1252,28 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
       // release fences and discard fences from driver
       if (swap_interval_zero_ || layer->flags.single_buffer) {
         close(layer_buffer->release_fence_fd);
-        layer_buffer->release_fence_fd = -1;
       } else if (layer->composition != kCompositionGPU) {
         hwc_layer->PushReleaseFence(layer_buffer->release_fence_fd);
-        layer_buffer->release_fence_fd = -1;
       } else {
         hwc_layer->PushReleaseFence(-1);
       }
+    } else {
+      // In case of flush, we don't return an error to f/w, so it will get a release fence out of
+      // the hwc_layer's release fence queue. We should push a -1 to preserve release fence
+      // circulation semantics.
+      hwc_layer->PushReleaseFence(-1);
     }
 
+    layer_buffer->release_fence_fd = -1;
     if (layer_buffer->acquire_fence_fd >= 0) {
       close(layer_buffer->acquire_fence_fd);
       layer_buffer->acquire_fence_fd = -1;
     }
+
+    layer->request.flags = {};
   }
 
+  client_target_->GetSDMLayer()->request.flags = {};
   *out_retire_fence = -1;
   if (!flush_) {
     // if swapinterval property is set to 0 then close and reset the list retire fence
@@ -1273,8 +1292,6 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
 
   geometry_changes_ = GeometryChanges::kNone;
   flush_ = false;
-
-  ClearRequestFlags();
 
   return status;
 }
@@ -1965,12 +1982,6 @@ void HWCDisplay::CloseAcquireFds() {
   }
 }
 
-void HWCDisplay::ClearRequestFlags() {
-  for (Layer *layer : layer_stack_.layers) {
-    layer->request.flags = {};
-  }
-}
-
 std::string HWCDisplay::Dump() {
   std::ostringstream os;
   os << "-------------------------------" << std::endl;
@@ -1993,6 +2004,12 @@ std::string HWCDisplay::Dump() {
     os << " buffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec
        << std::endl;
   }
+
+  if (layer_stack_invalid_) {
+    os << "\n Layers added or removed but not reflected to SDM's layer stack yet\n";
+    return os.str();
+  }
+
   if (color_mode_) {
     color_mode_->Dump(&os);
   }
