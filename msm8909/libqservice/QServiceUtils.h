@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2013-15 The Linux Foundation. All rights reserved.
+* Copyright (c) 2013-14 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -62,24 +62,12 @@ inline android::status_t sendSingleParam(uint32_t command, uint32_t value) {
 // ----------------------------------------------------------------------------
 // Convenience wrappers that clients can call
 // ----------------------------------------------------------------------------
-inline android::status_t securing(uint32_t startEnd) {
-    return sendSingleParam(qService::IQService::SECURING, startEnd);
-}
-
-inline android::status_t unsecuring(uint32_t startEnd) {
-    return sendSingleParam(qService::IQService::UNSECURING, startEnd);
-}
-
 inline android::status_t screenRefresh() {
     return sendSingleParam(qService::IQService::SCREEN_REFRESH, 1);
 }
 
-inline android::status_t setPartialUpdate(uint32_t enable) {
-    return sendSingleParam(qService::IQService::SET_PARTIAL_UPDATE, enable);
-}
-
 inline android::status_t toggleScreenUpdate(uint32_t on) {
-    return sendSingleParam(qService::IQService::TOGGLE_SCREEN_UPDATE, on);
+    return sendSingleParam(qService::IQService::TOGGLE_SCREEN_UPDATES, on);
 }
 
 inline android::status_t setExtOrientation(uint32_t orientation) {
@@ -91,4 +79,24 @@ inline android::status_t setBufferMirrorMode(uint32_t enable) {
     return sendSingleParam(qService::IQService::BUFFER_MIRRORMODE, enable);
 }
 
+inline android::status_t setCameraLaunchStatus(uint32_t on) {
+    return sendSingleParam(qService::IQService::SET_CAMERA_STATUS, on);
+}
+
+inline bool displayBWTransactionPending() {
+    android::status_t err = (android::status_t) android::FAILED_TRANSACTION;
+    bool ret = false;
+    android::sp<qService::IQService> binder = getBinder();
+    android::Parcel inParcel, outParcel;
+    if(binder != NULL) {
+        err = binder->dispatch(qService::IQService::GET_BW_TRANSACTION_STATUS,
+                &inParcel , &outParcel);
+        if(err != android::NO_ERROR){
+          ALOGE("GET_BW_TRANSACTION_STATUS binder call failed err=%d", err);
+          return ret;
+        }
+    }
+    ret = outParcel.readInt32();
+    return ret;
+}
 #endif /* end of include guard: QSERVICEUTILS_H */
