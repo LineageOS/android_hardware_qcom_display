@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013, 2017 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -35,7 +35,7 @@
 #include <ctype.h>
 #include <fcntl.h>
 #include <utils/Errors.h>
-#include <utils/Log.h>
+#include <log/log.h>
 
 #include <linux/fb.h>
 #include <sys/ioctl.h>
@@ -45,18 +45,31 @@
 #include <hardware/hwcomposer.h>
 
 namespace qdutils {
-#define EDID_RAW_DATA_SIZE              640
 
-enum qd_utils {
-    MAX_FRAME_BUFFER_NAME_SIZE = 128,
-    MAX_SYSFS_FILE_PATH = 255,
-    SUPPORTED_DOWNSCALE_AREA = (1920*1080)
+enum HWQueryType {
+    HAS_UBWC = 1,
+    HAS_WB_UBWC = 2
 };
 
-int getHDMINode(void);
-int getEdidRawData(char *buffer);
+enum {
+    EDID_RAW_DATA_SIZE = 640,
+    MAX_FRAME_BUFFER_NAME_SIZE = 128,
+    MAX_SYSFS_FILE_PATH = 255,
+    MAX_STRING_LENGTH = 1024,
+};
 
-void getAspectRatioPosition(int destWidth, int destHeight, int srcWidth,
-                                int srcHeight, hwc_rect_t& rect);
+int querySDEInfo(HWQueryType type, int *value);
+int getEdidRawData(char *buffer);
+int getHDMINode(void);
+bool isDPConnected();
+int getDPTestConfig(uint32_t *panelBpp, uint32_t *patternType);
+
+enum class DriverType {
+    FB = 0,
+    DRM,
+};
+DriverType getDriverType();
+const char *GetHALPixelFormatString(int format);
+static const int kFBNodeMax = 4;
 }; //namespace qdutils
 #endif
