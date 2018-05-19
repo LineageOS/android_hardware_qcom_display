@@ -35,8 +35,8 @@
 #include <fcntl.h>
 #include <cutils/log.h>
 #include <errno.h>
-#include <string.h>
 #include <utils/Trace.h>
+#include <cutils/trace.h>
 #include "gralloc_priv.h"
 #include "ionalloc.h"
 
@@ -77,13 +77,9 @@ int IonAlloc::alloc_buffer(alloc_data& data)
 
     ionAllocData.len = data.size;
     ionAllocData.align = data.align;
-    ionAllocData.heap_id_mask = data.flags & ~ION_SECURE;
-    ionAllocData.flags = data.uncached ? 0 : ION_FLAG_CACHED;
-    // ToDo: replace usage of alloc data structure with
-    //  ionallocdata structure.
-    if (data.flags & ION_SECURE)
-        ionAllocData.flags |= ION_SECURE;
-
+    ionAllocData.heap_id_mask = data.heapId;
+    ionAllocData.flags = data.flags;
+    ionAllocData.flags |= data.uncached ? 0 : ION_FLAG_CACHED;
     err = open_device();
     if (err)
         return err;

@@ -1,69 +1,81 @@
 #Common headers
-common_includes := $(LOCAL_PATH)/../libgralloc
-common_includes += $(LOCAL_PATH)/../liboverlay
-common_includes += $(LOCAL_PATH)/../libcopybit
-common_includes += $(LOCAL_PATH)/../libqdutils
-common_includes += $(LOCAL_PATH)/../libhwcomposer
-common_includes += $(LOCAL_PATH)/../libhdmi
-common_includes += $(LOCAL_PATH)/../libqservice
+display_top := $(call my-dir)
+display_config_version := $(shell \
+    if [ -d "$(TOP)/vendor/qcom/codeaurora/interfaces/vendor/display/config/1.1" ];\
+    then echo DISPLAY_CONFIG_1_1; fi)
 
-ifeq ($(TARGET_USES_POST_PROCESSING),true)
-    common_flags     += -DUSES_POST_PROCESSING
-    common_includes  += $(TARGET_OUT_HEADERS)/pp/inc
+#Common C flags
+common_flags := -DDEBUG_CALC_FPS -Wno-missing-field-initializers
+common_flags += -Wconversion -Wall -Werror -std=c++14
+ifeq ($(TARGET_IS_HEADLESS), true)
+    common_flags += -DTARGET_HEADLESS
+    LOCAL_CLANG := false
+endif
+
+ifeq ($(display_config_version), DISPLAY_CONFIG_1_1)
+    common_flags += -DDISPLAY_CONFIG_1_1
+endif
+
+ifeq ($(TARGET_USES_COLOR_METADATA), true)
+    common_flags += -DUSE_COLOR_METADATA
+endif
+
+ifeq ($(TARGET_USES_QCOM_BSP),true)
+    common_flags += -DQTI_BSP
+endif
+
+ifeq ($(ARCH_ARM_HAVE_NEON),true)
+    common_flags += -D__ARM_HAVE_NEON
+endif
+
+ifeq ($(call is-board-platform-in-list, $(MASTER_SIDE_CP_TARGET_LIST)), true)
+    common_flags += -DMASTER_SIDE_CP
+endif
+
+use_hwc2 := false
+ifeq ($(TARGET_USES_HWC2), true)
+    use_hwc2 := true
+    common_flags += -DVIDEO_MODE_DEFER_RETIRE_FENCE
+endif
+
+ifeq ($(TARGET_USES_GRALLOC1), true)
+    common_flags += -DUSE_GRALLOC1
+endif
+
+common_includes := system/core/base/include
+CHECK_VERSION_LE = $(shell if [ $(1) -le $(2) ] ; then echo true ; else echo false ; fi)
+PLATFORM_SDK_NOUGAT = 25
+ifeq "REL" "$(PLATFORM_VERSION_CODENAME)"
+ifeq ($(call CHECK_VERSION_LE, $(PLATFORM_SDK_VERSION), $(PLATFORM_SDK_NOUGAT)), true)
+version_flag := -D__NOUGAT__
+
+# These include paths are deprecated post N
+common_includes += $(display_top)/libqdutils
+common_includes += $(display_top)/libqservice
+common_includes += $(display_top)/gpu_tonemapper
+ifneq ($(TARGET_IS_HEADLESS), true)
+    common_includes += $(display_top)/libcopybit
+endif
+
+common_includes += $(display_top)/include
+common_includes += $(display_top)/sdm/include
+common_flags += -isystem $(TARGET_OUT_HEADERS)/qcom/display
+endif
 endif
 
 common_header_export_path := qcom/display
 
 #Common libraries external to display HAL
 common_libs := liblog libutils libcutils libhardware
-
-#Common C flags
-common_flags := -DDEBUG_CALC_FPS -Wno-missing-field-initializers
-common_flags += -Wconversion -Wall -Werror -Wno-sign-conversion
-
-ifeq ($(ARCH_ARM_HAVE_NEON),true)
-    common_flags += -D__ARM_HAVE_NEON
-endif
-
-ifeq ($(call is-board-platform-in-list, $(MSM_VIDC_TARGET_LIST)), true)
-    common_flags += -DVENUS_COLOR_FORMAT
-endif
-
-ifeq ($(call is-board-platform-in-list, msm8974 msm8226 msm8610 apq8084 \
-        mpq8092 msm_bronze msm8916 msm8994), true)
-    common_flags += -DMDSS_TARGET
-endif
-ifeq ($(call is-board-platform-in-list, msm8909), true)
-    common_flags += -DVENUS_COLOR_FORMAT
-    common_flags += -DMDSS_TARGET
-endif
-
-ifeq ($(DISPLAY_DEBUG_SWAPINTERVAL),true)
-    common_flags += -DDEBUG_SWAPINTERVAL
-endif
-
-common_flags += -D__STDC_FORMAT_MACROS
-
 common_deps  :=
 kernel_includes :=
 
-# Executed only on QCOM BSPs
-ifeq ($(TARGET_USES_QCOM_BSP),true)
-# Enable QCOM Display features
-    common_flags += -DQTI_BSP
-    common_includes += $(BOARD_OPENSOURCE_DIR)/display-frameworks/include
-endif
-ifneq ($(call is-platform-sdk-version-at-least,18),true)
-    common_flags += -DANDROID_JELLYBEAN_MR1=1
-endif
-ifeq ($(call is-vendor-board-platform,QCOM),true)
+ifeq ($(TARGET_COMPILE_WITH_MSM_KERNEL),true)
 # This check is to pick the kernel headers from the right location.
 # If the macro above is defined, we make the assumption that we have the kernel
 # available in the build tree.
 # If the macro is not present, the headers are picked from hardware/qcom/msmXXXX
 # failing which, they are picked from bionic.
-    common_deps += $(BOARD_KERNEL_HEADER_DEPENDENCIES)
-    kernel_includes += $(BOARD_KERNEL_HEADER_DIR)
+    common_deps += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
+    kernel_includes += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 endif
-
-common_clang_flags := true

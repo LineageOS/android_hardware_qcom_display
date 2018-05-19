@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ *  Copyright (c) 2012-2013, 2016, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,7 +32,7 @@
 
 #include <utils/Errors.h>
 #include <sys/types.h>
-#include <cutils/log.h>
+#include <log/log.h>
 #include <binder/IServiceManager.h>
 #include <IQService.h>
 #include <IQClient.h>
@@ -46,13 +46,17 @@ class QService : public BnQService {
 public:
     virtual ~QService();
     virtual void connect(const android::sp<qClient::IQClient>& client);
+    virtual void connect(const android::sp<qClient::IQHDMIClient>& client);
     virtual android::status_t dispatch(uint32_t command,
             const android::Parcel* data,
             android::Parcel* reply);
+    virtual void onHdmiHotplug(int connected);
+    virtual void onCECMessageReceived(char *msg, ssize_t len);
     static void init();
 private:
     QService();
     android::sp<qClient::IQClient> mClient;
+    android::sp<qClient::IQHDMIClient> mHDMIClient;
     static QService *sQService;
 };
 }; // namespace qService
