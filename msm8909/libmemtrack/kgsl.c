@@ -74,7 +74,7 @@ int kgsl_memtrack_get_memory(pid_t pid, enum memtrack_type type,
     while (1) {
         unsigned long size, mapsize;
         char line_type[7];
-        char flags[8];
+        char flags[10];
         char line_usage[19];
         int ret, egl_surface_count = 0, egl_image_count = 0;
 
@@ -83,12 +83,12 @@ int kgsl_memtrack_get_memory(pid_t pid, enum memtrack_type type,
         }
 
         /* Format:
-         *  gpuaddr useraddr     size    id  flags       type            usage  sglen  mapsize  egLsrf  egLimg
-         * 545ba000 545ba000     4096     1  -----pY     gpumem      arraybuffer     1     4096      0       0
+         *  gpuaddr useraddr     size    id flags       type            usage sglen mapsize eglsrf eglimg
+         * 545ba000 545ba000     4096     1 -----pY     gpumem      arraybuffer     1  4096      0      0
          */
-        ret = sscanf(line, "%*x %*x %lu %*d %6s %6s %18s %*d %lu %6d %6d\n",
-                     &size, flags, line_type, line_usage, &mapsize,
-                     &egl_surface_count, &egl_image_count);
+        ret = sscanf(line, "%*x %*x %lu %*d %9s %6s %18s %*d %lu %6d %6d\n",
+                       &size, flags, line_type, line_usage, &mapsize,
+                       &egl_surface_count, &egl_image_count);
         if (ret != 7) {
             continue;
         }
@@ -110,6 +110,7 @@ int kgsl_memtrack_get_memory(pid_t pid, enum memtrack_type type,
                     fclose(fp);
                     return -ERANGE;
                 }
+
                 accounted_size += mapsize;
 
                 if (mapsize > size) {

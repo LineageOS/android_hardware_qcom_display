@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <log/log.h>
+#include <cutils/log.h>
 
 #include "gralloc_priv.h"
 #include "fb_priv.h"
