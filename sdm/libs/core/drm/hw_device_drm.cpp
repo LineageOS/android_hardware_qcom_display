@@ -1585,22 +1585,25 @@ DisplayError HWDeviceDRM::GetMixerAttributes(HWMixerAttributes *mixer_attributes
 }
 
 DisplayError HWDeviceDRM::DumpDebugData() {
-#if USER_DEBUG
+  string dir_path = "/data/vendor/display/hw_recovery/";
   string device_str = device_name_;
-  stringstream date_str;
-  stringstream time_str;
-  time_t t = time(0);
-  struct tm t_now;
-  localtime_r(&t, &t_now);
-  date_str << (t_now.tm_mon + 1) << '-'
-          << (t_now.tm_mday) << '-'
-          << (t_now.tm_year + 1900) << '_';
-  time_str << (t_now.tm_hour) << '-'
-          << (t_now.tm_min) << '-'
-          << (t_now.tm_sec) << ".log";
 
-  ofstream dst("data/vendor/display/"+device_str+"_"+date_str.str()+time_str.str());
+  // Attempt to make hw_recovery dir, it may exist
+  if (mkdir(dir_path.c_str(), 0777) != 0 && errno != EEXIST) {
+    DLOGW("Failed to create %s directory errno = %d, desc = %s", dir_path.c_str(), errno,
+          strerror(errno));
+    return kErrorPermission;
+  }
+  // If it does exist, ensure permissions are fine
+  if (errno == EEXIST && chmod(dir_path.c_str(), 0777) != 0) {
+    DLOGW("Failed to change permissions on %s directory", dir_path.c_str());
+    return kErrorPermission;
+  }
+
+  string filename = dir_path+device_str+"_HWR_"+to_string(debug_dump_count_);
+  ofstream dst(filename);
   ifstream src;
+  debug_dump_count_++;
 
   src.open("/sys/kernel/debug/dri/0/debug/dump");
   dst << "---- Event Logs ----" << std::endl;
@@ -1623,7 +1626,8 @@ DisplayError HWDeviceDRM::DumpDebugData() {
   src.close();
 
   dst.close();
-#endif
+
+  DLOGI("Wrote hw_recovery file %s", filename.c_str());
 
   return kErrorNone;
 }

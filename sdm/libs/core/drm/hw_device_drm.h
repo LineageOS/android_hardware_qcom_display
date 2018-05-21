@@ -202,6 +202,7 @@ class HWDeviceDRM : public HWInterface {
   HWMixerAttributes mixer_attributes_ = {};
   std::vector<sde_drm::DRMSolidfillStage> solid_fills_ {};
   bool secure_display_active_ = false;
+  uint64_t debug_dump_count_ = 0;
 
  private:
   bool synchronous_commit_ = false;
