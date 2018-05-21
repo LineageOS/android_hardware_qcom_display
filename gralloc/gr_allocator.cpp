@@ -281,6 +281,7 @@ void Allocator::GetIonHeapInfo(uint64_t usage, unsigned int *ion_heap_id, unsign
 
   if (usage & BufferUsage::SENSOR_DIRECT_DATA) {
     heap_id |= ION_HEAP(ION_ADSP_HEAP_ID);
+    heap_id |= ION_HEAP(ION_SYSTEM_HEAP_ID);
   }
 
   if (flags & UINT(ION_SECURE)) {
