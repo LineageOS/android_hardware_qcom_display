@@ -252,4 +252,14 @@ DisplayError Strategy::SetIdleTimeoutMs(uint32_t active_ms) {
   return kErrorNotSupported;
 }
 
+DisplayError Strategy::GetCapabilities(HWDisplayCaps *caps) {
+  if (strategy_intf_) {
+    return strategy_intf_->GetCapabilities(caps);
+  }
+
+  caps->hdr_supported = false;
+
+  return kErrorNotSupported;
+}
+
 }  // namespace sdm

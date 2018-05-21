@@ -317,9 +317,7 @@ Return<int32_t> HWCSession::minHdcpEncryptionLevelChanged(IDisplayConfig::Displa
 }
 
 Return<int32_t> HWCSession::refreshScreen() {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
   Refresh(HWC_DISPLAY_PRIMARY);
-
   return 0;
 }
 

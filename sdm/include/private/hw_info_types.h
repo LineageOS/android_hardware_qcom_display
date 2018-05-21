@@ -389,6 +389,10 @@ struct HWScaleLutInfo {
   uint64_t sep_lut = 0;
 };
 
+struct HWDisplayCaps {
+  bool hdr_supported = false;
+};
+
 struct HWDetailEnhanceData : DisplayDetailEnhancerData {
   uint16_t prec_shift = 0;
   int16_t adjust_a[MAX_DETAIL_ENHANCE_CURVE] = {0};

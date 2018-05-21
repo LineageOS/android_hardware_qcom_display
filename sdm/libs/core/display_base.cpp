@@ -399,11 +399,13 @@ DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   fixed_info->is_cmdmode = (hw_panel_info_.mode == kModeCommand);
 
-  HWResourceInfo hw_resource_info = HWResourceInfo();
-  hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
-  bool hdr_supported = hw_resource_info.has_hdr;
+  HWResourceInfo hw_resource_info = {};
   HWDisplayInterfaceInfo hw_disp_info = {};
+  HWDisplayCaps caps = {};
+  hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
   hw_info_intf_->GetFirstDisplayInterfaceType(&hw_disp_info);
+  comp_manager_->GetCapabilities(display_comp_ctx_, &caps);
+  bool hdr_supported = hw_resource_info.has_hdr && caps.hdr_supported;
   if (hw_disp_info.type == kHDMI) {
     hdr_supported = (hdr_supported && hw_panel_info_.hdr_enabled);
   }
@@ -477,12 +479,20 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, int *release_fence
     break;
 
   case kStateDoze:
+    if (state_ == kStateOff) {
+      DLOGI("Doze state not supported after suspend");
+      return kErrorNone;
+    }
     error = hw_intf_->Doze(release_fence);
     active = true;
     last_power_mode_ = kStateDoze;
     break;
 
   case kStateDozeSuspend:
+    if (state_ == kStateOff) {
+      DLOGI("Doze suspend state not supported after suspend");
+      return kErrorNone;
+    }
     error = hw_intf_->DozeSuspend(release_fence);
     if (display_type_ != kPrimary) {
       active = true;
@@ -559,6 +569,17 @@ std::string DisplayBase::Dump() {
     << max_mixer_stages_;
   os << "\nnum configs: " << num_modes << " active config index: " << active_index;
 
+  os << "\nAvailable Color Modes:\n";
+  for (auto it : color_mode_map_) {
+    os << "  " << it.first << " " << std::setw(35 - INT(it.first.length())) <<
+       it.second->id;
+    os << " ";
+    for (auto attr_it : color_mode_attr_map_[it.first]) {
+      os << attr_it.first << ": " << attr_it.second <<
+         std::setw(6 - INT(attr_it.second.length())) << " ";
+    }
+    os << "\n";
+  }
   DisplayConfigVariableInfo &info = attrib;
 
   uint32_t num_hw_layers = 0;
