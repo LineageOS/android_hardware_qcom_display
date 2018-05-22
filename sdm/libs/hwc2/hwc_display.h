@@ -114,6 +114,7 @@ class HWCDisplay : public DisplayEventHandler {
     return kErrorNotSupported;
   }
   virtual HWC2::PowerMode GetLastPowerMode();
+  virtual HWC2::Vsync GetLastVsyncMode();
   virtual int SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels);
   virtual void GetFrameBufferResolution(uint32_t *x_pixels, uint32_t *y_pixels);
   virtual int SetDisplayStatus(DisplayStatus display_status);
@@ -281,7 +282,8 @@ class HWCDisplay : public DisplayEventHandler {
   uint32_t dump_frame_count_ = 0;
   uint32_t dump_frame_index_ = 0;
   bool dump_input_layers_ = false;
-  HWC2::PowerMode last_power_mode_;
+  HWC2::PowerMode last_power_mode_ = HWC2::PowerMode::Off;
+  HWC2::Vsync last_vsync_mode_ = HWC2::Vsync::Invalid;
   bool swap_interval_zero_ = false;
   bool display_paused_ = false;
   uint32_t min_refresh_rate_ = 0;
