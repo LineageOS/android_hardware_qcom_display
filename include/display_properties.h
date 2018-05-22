@@ -92,6 +92,7 @@
 #define ENABLE_NULL_DISPLAY_PROP             DISPLAY_PROP("enable_null_display")
 #define DISABLE_EXCL_RECT_PROP               DISPLAY_PROP("disable_excl_rect")
 #define ENABLE_PIPE_PRIORITY_PROP            DISPLAY_PROP("enable_pipe_priority")
+#define DISABLE_EXCl_RECT_PARTIAL_FB         DISPLAY_PROP("disable_excl_rect_partial_fb")
 
 #define DISABLE_HDR_LUT_GEN                  DISPLAY_PROP("disable_hdr_lut_gen")
 #define ENABLE_DEFAULT_COLOR_MODE            DISPLAY_PROP("enable_default_color_mode")
