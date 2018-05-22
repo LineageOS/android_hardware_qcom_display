@@ -375,7 +375,7 @@ int HWCDisplay::Init() {
   }
 
   int property_swap_interval = 1;
-  HWCDebugHandler::Get()->GetProperty("debug.egl.swapinterval", &property_swap_interval);
+  HWCDebugHandler::Get()->GetProperty(ZERO_SWAP_INTERVAL, &property_swap_interval);
   if (property_swap_interval == 0) {
     swap_interval_zero_ = true;
   }
