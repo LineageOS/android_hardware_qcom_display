@@ -342,9 +342,10 @@ void HWDeviceDRM::Registry::MapBufferToFbId(Layer* layer, LayerBuffer* buffer) {
   }
 
   uint64_t handle_id = buffer->handle_id;
+  bool legacy_path = !handle_id || disable_fbid_cache_;
 
-  if (!handle_id || disable_fbid_cache_) {
-    // Legacy: Remove & Create fb_id in each frame
+  if (legacy_path || (layer->buffer_map->buffer_map.size() > fbid_cache_limit_)) {
+    // Clear fb_id map in each frame in legacy path or if the map size exceeds limit.
     layer->buffer_map->buffer_map.clear();
   }
 
@@ -367,8 +368,8 @@ void HWDeviceDRM::Registry::MapOutputBufferToFbId(LayerBuffer *output_buffer) {
 
   uint64_t handle_id = output_buffer->handle_id;
 
-  if (!handle_id || disable_fbid_cache_) {
-    // Legacy: Remove & Create fb_id in each frame
+  if (!handle_id || disable_fbid_cache_ || (output_buffer_map_.size() > fbid_cache_limit_)) {
+    // Clear output buffer map in each frame in legacy path or if the map size exceeds limit.
     output_buffer_map_.clear();
   }
 
