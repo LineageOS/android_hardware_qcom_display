@@ -157,6 +157,7 @@ class HWDeviceDRM : public HWInterface {
     bool disable_fbid_cache_ = false;
     std::unordered_map<uint64_t, std::shared_ptr<LayerBufferObject>> output_buffer_map_ {};
     BufferAllocator *buffer_allocator_ = {};
+    const uint8_t fbid_cache_limit_ = 16;
   };
 
  protected:
