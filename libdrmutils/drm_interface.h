@@ -297,6 +297,12 @@ enum struct DRMOps {
    */
   CRTC_SET_IDLE_TIMEOUT,
   /*
+   * Op: Sets Capture mode for Concurrent Writeback feature.
+   * Arg: uint32_t - CRTC ID
+   *      uint32_t - Capture mode
+   */
+  CRTC_SET_CAPTURE_MODE,
+  /*
    * Op: Returns retire fence for this commit. Should be called after Commit() on
    * DRMAtomicReqInterface.
    * Arg: uint32_t - Connector ID
@@ -564,6 +570,7 @@ struct DRMConnectorInfo {
   drm_panel_hdr_properties panel_hdr_prop;
   uint32_t transfer_time_us;
   drm_msm_ext_hdr_properties ext_hdr_prop;
+  bool concurrent_writeback;
 };
 
 /* Identifier token for a display */
@@ -694,6 +701,11 @@ enum struct DRMMultiRectMode {
   NONE = 0,
   PARALLEL = 1,
   SERIAL = 2,
+};
+
+enum struct DRMCWbCaptureMode {
+  MIXER_OUT = 0,
+  DSPP_OUT = 1,
 };
 
 struct DRMSolidfillStage {
