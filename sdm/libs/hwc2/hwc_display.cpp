@@ -351,7 +351,7 @@ HWCDisplay::HWCDisplay(CoreInterface *core_intf, HWCCallbacks *callbacks,
 int HWCDisplay::Init() {
   DisplayError error = kErrorNone;
 
-  HWCDebugHandler::Get()->GetProperty("sdm.debug.enable_null_display", &null_display_mode_);
+  HWCDebugHandler::Get()->GetProperty(ENABLE_NULL_DISPLAY_PROP, &null_display_mode_);
 
   if (null_display_mode_) {
     DisplayNull *disp_null = new DisplayNull();
@@ -369,7 +369,7 @@ int HWCDisplay::Init() {
   }
 
   validated_ = false;
-  HWCDebugHandler::Get()->GetProperty("sys.hwc_disable_hdr", &disable_hdr_handling_);
+  HWCDebugHandler::Get()->GetProperty(DISABLE_HDR, &disable_hdr_handling_);
   if (disable_hdr_handling_) {
     DLOGI("HDR Handling disabled");
   }
@@ -383,7 +383,7 @@ int HWCDisplay::Init() {
   client_target_ = new HWCLayer(id_, buffer_allocator_);
 
   int blit_enabled = 0;
-  HWCDebugHandler::Get()->GetProperty("persist.hwc.blit.comp", &blit_enabled);
+  HWCDebugHandler::Get()->GetProperty(DISABLE_BLIT_COMPOSITION_PROP, &blit_enabled);
   if (needs_blit_ && blit_enabled) {
     // TODO(user): Add blit engine when needed
   }
@@ -1204,11 +1204,12 @@ HWC2::Error HWCDisplay::GetHdrCapabilities(uint32_t *out_num_types, int32_t *out
   }
 
   if (out_types == nullptr) {
-    // 1(now) - because we support only HDR10, change when HLG & DOLBY vision are supported
-    *out_num_types  = 1;
+    // We support HDR10 and HLG
+    *out_num_types = 2;
   } else {
-    // Only HDR10 supported
-    *out_types = HAL_HDR_HDR10;
+    // HDR10 and HLG are supported
+    out_types[0] = HAL_HDR_HDR10;
+    out_types[1] = HAL_HDR_HLG;
     static const float kLuminanceFactor = 10000.0;
     // luminance is expressed in the unit of 0.0001 cd/m2, convert it to 1cd/m2.
     *out_max_luminance = FLOAT(fixed_info.max_luminance)/kLuminanceFactor;
@@ -1534,7 +1535,7 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
 
   // By default UBWC is enabled and below property is global enable/disable for all
   // buffers allocated through gralloc , including framebuffer targets.
-  HWCDebugHandler::Get()->GetProperty("debug.gralloc.gfx_ubwc_disable", &ubwc_disabled);
+  HWCDebugHandler::Get()->GetProperty(DISABLE_UBWC_PROP, &ubwc_disabled);
   if (!ubwc_disabled) {
     usage |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
     flags |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
