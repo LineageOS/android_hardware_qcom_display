@@ -1240,6 +1240,10 @@ android::status_t HWCSession::SetColorModeOverride(const android::Parcel *input_
   auto mode = static_cast<android_color_mode_t>(input_parcel->readInt32());
   auto device = static_cast<hwc2_device_t *>(this);
 
+  if (display > HWC_DISPLAY_VIRTUAL) {
+    return -EINVAL;
+  }
+
   if (display >= HWC_NUM_DISPLAY_TYPES) {
     return -EINVAL;
   }
