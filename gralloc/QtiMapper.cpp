@@ -334,6 +334,13 @@ Return<void> QtiMapper::calculateBufferAttributes(int32_t width, int32_t height,
   return Void();
 }
 
+Return<void> QtiMapper::getCustomFormatFlags(int32_t format, uint64_t usage,
+                                             getCustomFormatFlags_cb hidl_cb) {
+  uint64_t priv_flags = 0;
+  hidl_cb(Error::NONE, format, priv_flags);
+  return Void();
+}
+
 Return<void> QtiMapper::getColorSpace(void *buffer, getColorSpace_cb hidl_cb) {
   auto err = Error::BAD_BUFFER;
   auto hnd = static_cast<private_handle_t *>(buffer);

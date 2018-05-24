@@ -69,6 +69,8 @@ inline int roundUpToPageSize(int x) {
 /* This flag is used to indicate 10-bit tight pack format (e.g. TP10) */
 #define GRALLOC_USAGE_PRIVATE_10BIT_TP (UINT32_C(1) << 27)
 
+/* This flag indicates PI format is being used */
+#define GRALLOC_USAGE_PRIVATE_ALLOC_UBWC_PI 1ULL << 49
 /* Legacy gralloc1 definitions */
 /* Some clients may still be using the old flags */
 #define GRALLOC1_PRODUCER_USAGE_PRIVATE_ADSP_HEAP GRALLOC_USAGE_PRIVATE_ADSP_HEAP

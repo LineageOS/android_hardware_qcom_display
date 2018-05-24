@@ -94,6 +94,8 @@ class QtiMapper : public IMapper_2_1 {
   Return<void> calculateBufferAttributes(int32_t width, int32_t height, int32_t format,
                                          uint64_t usage,
                                          calculateBufferAttributes_cb _hidl_cb) override;
+  Return<void> getCustomFormatFlags(int32_t format, uint64_t usage,
+                                    getCustomFormatFlags_cb _hidl_cb) override;
   Return<void> getColorSpace(void *buffer, getColorSpace_cb _hidl_cb) override;
   Return<void> getYuvPlaneInfo(void *buffer, getYuvPlaneInfo_cb _hidl_cb) override;
   Return<Error> setSingleBufferMode(void *buffer, bool enable) override;
