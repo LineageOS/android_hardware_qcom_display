@@ -105,9 +105,8 @@ class HWDeviceDRM : public HWInterface {
   virtual void InitializeConfigs();
   virtual DisplayError DumpDebugData();
   virtual void PopulateHWPanelInfo();
-  virtual DisplayError SetDppsFeature(uint32_t object_type, uint32_t feature_id,
-                                      uint64_t value) { return kErrorNotSupported; }
-  virtual DisplayError GetDppsFeatureInfo(void *info) { return kErrorNotSupported; }
+  virtual DisplayError SetDppsFeature(void *payload, size_t size) { return kErrorNotSupported; }
+  virtual DisplayError GetDppsFeatureInfo(void *payload, size_t size) { return kErrorNotSupported; }
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event) { return kErrorNotSupported; }
 
   enum {

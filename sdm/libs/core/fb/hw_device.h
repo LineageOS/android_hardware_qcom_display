@@ -98,9 +98,8 @@ class HWDevice : public HWInterface {
   virtual DisplayError SetMixerAttributes(const HWMixerAttributes &mixer_attributes);
   virtual DisplayError GetMixerAttributes(HWMixerAttributes *mixer_attributes);
   virtual DisplayError DumpDebugData();
-  virtual DisplayError SetDppsFeature(uint32_t object_type, uint32_t feature_id,
-                                      uint64_t value) { return kErrorNotSupported; }
-  virtual DisplayError GetDppsFeatureInfo(void *info) { return kErrorNotSupported; }
+  virtual DisplayError SetDppsFeature(void *payload, size_t size) { return kErrorNotSupported; }
+  virtual DisplayError GetDppsFeatureInfo(void *payload, size_t size) { return kErrorNotSupported; }
   virtual DisplayError DumpDebugData(DisplayType type) { return kErrorNone; }
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event) { return kErrorNotSupported; }
 

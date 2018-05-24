@@ -52,9 +52,8 @@ class HWPeripheralDRM : public HWDeviceDRM {
   virtual DisplayError Validate(HWLayers *hw_layers);
   virtual DisplayError Commit(HWLayers *hw_layers);
   virtual DisplayError Flush();
-  virtual DisplayError SetDppsFeature(uint32_t object_type, uint32_t feature_id,
-                                      uint64_t value);
-  virtual DisplayError GetDppsFeatureInfo(void *info);
+  virtual DisplayError SetDppsFeature(void *payload, size_t size);
+  virtual DisplayError GetDppsFeatureInfo(void *payload, size_t size);
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event);
 
  private:
