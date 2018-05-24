@@ -337,7 +337,12 @@ Return<void> QtiMapper::calculateBufferAttributes(int32_t width, int32_t height,
 Return<void> QtiMapper::getCustomFormatFlags(int32_t format, uint64_t usage,
                                              getCustomFormatFlags_cb hidl_cb) {
   uint64_t priv_flags = 0;
-  hidl_cb(Error::NONE, format, priv_flags);
+  auto err = Error::NONE;
+  int32_t custom_format = format;
+  if (gralloc::GetCustomFormatFlags(format, usage, &custom_format, &priv_flags) != 0) {
+    err = Error::UNSUPPORTED;
+  }
+  hidl_cb(err, custom_format, priv_flags);
   return Void();
 }
 

@@ -127,6 +127,10 @@ class AdrenoMemInfo {
   bool IsUBWCSupportedByGPU(int format);
 
   /*
+  * Function to check if GPU supports PI or not
+  */
+  bool IsPISupportedByGPU(int format, uint64_t usage);
+  /*
    * Function to get the corresponding Adreno format for given HAL format
    */
   ADRENOPIXELFORMAT GetGpuPixelFormat(int hal_format);
@@ -185,6 +189,7 @@ class AdrenoMemInfo {
        ADRENOPIXELFORMAT format, int num_samples, surface_tile_mode_t tile_mode,
        uint64_t usage, uint32_t num_planes) = NULL;
   uint32_t (*LINK_adreno_get_aligned_gpu_buffer_size)(void* metadata_blob) = NULL;
+  int (*LINK_adreno_isPISupportedByGpu)(int format, uint64_t usage) = NULL;
 
   bool gfx_ubwc_disable_ = false;
   void *libadreno_utils_ = NULL;
