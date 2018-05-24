@@ -40,6 +40,7 @@ class DppsInfo {
  public:
   void Init(DppsPropIntf* intf, const std::string &panel_name);
   void Deinit();
+  void DppsNotifyOps(enum DppsNotifyOps op, void *payload, size_t size);
 
  private:
   const char *kDppsLib = "libdpps.so";
@@ -93,6 +94,7 @@ class DisplayPrimary : public DisplayBase, HWEventHandler, DppsPropIntf {
   bool handle_idle_timeout_ = false;
   uint32_t current_refresh_rate_ = 0;
   bool reset_panel_ = false;
+  bool commit_event_enabled_ = false;
   DppsInfo dpps_info_ = {};
 };
 

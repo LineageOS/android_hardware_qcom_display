@@ -161,6 +161,11 @@ DisplayError DisplayPrimary::Commit(LayerStack *layer_stack) {
     return error;
   }
 
+  if (commit_event_enabled_) {
+    dpps_info_.DppsNotifyOps(kDppsCommitEvent, &display_type_,
+                                            sizeof(display_type_));
+  }
+
   DisplayBase::ReconfigureDisplay();
 
   int idle_time_ms = hw_layers_.info.set_idle_time_ms;
@@ -466,6 +471,14 @@ DisplayError DisplayPrimary::DppsProcessOps(enum DppsOps op, void *payload, size
     enable = *(reinterpret_cast<bool *>(payload));
     ControlPartialUpdate(enable, &pending);
     break;
+  case kDppsRequestCommit:
+    if (!payload) {
+      DLOGE("Invalid payload parameter for op %d", op);
+      error = kErrorParameters;
+      break;
+    }
+    commit_event_enabled_ = *(reinterpret_cast<bool *>(payload));
+    break;
   default:
     DLOGE("Invalid input op %d", op);
     error = kErrorParameters;
@@ -519,6 +532,13 @@ void DppsInfo::Deinit() {
     dpps_intf = NULL;
   }
   dpps_impl_lib.~DynLib();
+}
+
+void DppsInfo::DppsNotifyOps(enum DppsNotifyOps op, void *payload, size_t size) {
+  int ret = 0;
+  ret = dpps_intf->DppsNotifyOps(op, payload, size);
+  if (ret)
+    DLOGE("DppsNotifyOps op %d error %d", op, ret);
 }
 
 DisplayError DisplayPrimary::HandleSecureEvent(SecureEvent secure_event) {
