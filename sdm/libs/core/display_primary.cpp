@@ -467,7 +467,7 @@ DisplayError DisplayPrimary::DppsProcessOps(enum DppsOps op, void *payload, size
       error = kErrorParameters;
       break;
     }
-    enable = *((bool *)payload);
+    enable = *(reinterpret_cast<bool *>(payload));
     ControlPartialUpdate(enable, &pending);
     break;
   default:
