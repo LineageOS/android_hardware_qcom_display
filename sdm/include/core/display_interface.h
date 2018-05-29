@@ -484,14 +484,6 @@ class DisplayInterface {
   */
   virtual DisplayError SetPanelBrightness(int level) = 0;
 
-  /*! @brief Method to cache brightness of the primary display.
-
-    @param[in] level the new backlight level.
-
-    @return \link DisplayError \endlink
-  */
-  virtual DisplayError CachePanelBrightness(int level) = 0;
-
   /*! @brief Method to notify display about change in min HDCP encryption level.
 
     @param[in] min_enc_level minimum encryption level value.
