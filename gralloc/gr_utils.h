@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016,2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016,2018,2019 The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,6 +32,7 @@
 
 #include <android/hardware/graphics/common/1.0/types.h>
 #include "gralloc_priv.h"
+#include "qdMetaData.h"
 
 #define SZ_2M 0x200000
 #define SZ_1M 0x100000
@@ -60,7 +61,7 @@ inline Type1 ALIGN(Type1 x, Type2 align) {
   return (Type1)((x + (Type1)align - 1) & ~((Type1)align - 1));
 }
 
-bool IsYuvFormat(const private_handle_t *hnd);
+bool IsYuvFormat(int format);
 bool IsCompressedRGBFormat(int format);
 bool IsUncompressedRGBFormat(int format);
 uint32_t GetBppForUncompressedRGB(int format);
@@ -94,6 +95,10 @@ unsigned int GetUBwcSize(int width, int height, int format, unsigned int aligned
 int GetBufferLayout(private_handle_t *hnd, uint32_t stride[4], uint32_t offset[4],
                     uint32_t *num_planes);
 
+void GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
+                                     unsigned int *alignedw, unsigned int *alignedh,
+                                     GraphicsMetadata *graphics_metadata);
+bool GetAdrenoSizeAPIStatus();
 }  // namespace gralloc
 
 #endif  // __GR_UTILS_H__
