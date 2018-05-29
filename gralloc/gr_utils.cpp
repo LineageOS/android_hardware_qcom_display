@@ -29,10 +29,8 @@
 
 #include <media/msm_media_info.h>
 #include <algorithm>
-
-#include "gr_utils.h"
 #include "gr_adreno_info.h"
-#include "qdMetaData.h"
+#include "gr_utils.h"
 
 #define ASTC_BLOCK_SIZE 16
 
@@ -41,6 +39,38 @@
 #endif
 
 namespace gralloc1 {
+
+bool IsYuvFormat(int format) {
+  switch (format) {
+    case HAL_PIXEL_FORMAT_YCbCr_420_SP:
+    case HAL_PIXEL_FORMAT_YCbCr_422_SP:
+    case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
+    case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:  // Same as YCbCr_420_SP_VENUS
+    case HAL_PIXEL_FORMAT_NV21_ENCODEABLE:
+    case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
+    case HAL_PIXEL_FORMAT_YCrCb_420_SP:
+    case HAL_PIXEL_FORMAT_YCrCb_422_SP:
+    case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
+    case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
+    case HAL_PIXEL_FORMAT_NV21_ZSL:
+    case HAL_PIXEL_FORMAT_RAW16:
+    case HAL_PIXEL_FORMAT_Y16:
+    case HAL_PIXEL_FORMAT_RAW12:
+    case HAL_PIXEL_FORMAT_RAW10:
+    case HAL_PIXEL_FORMAT_YV12:
+    case HAL_PIXEL_FORMAT_Y8:
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010:
+    case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
+    // Below formats used by camera and VR
+    case HAL_PIXEL_FORMAT_BLOB:
+    case HAL_PIXEL_FORMAT_RAW_OPAQUE:
+      return true;
+    default:
+      return false;
+  }
+}
 
 bool IsUncompressedRGBFormat(int format) {
   switch (format) {
@@ -883,4 +913,39 @@ bool IsGPUSupportedHwBuffer(gralloc1_producer_usage_t prod_usage) {
   return true;
 }
 
-}  // namespace gralloc1
+void GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
+                                     unsigned int *alignedw, unsigned int *alignedh,
+                                     GraphicsMetadata *graphics_metadata) {
+  GetAlignedWidthAndHeight(info, alignedw, alignedh);
+  AdrenoMemInfo* adreno_mem_info = AdrenoMemInfo::GetInstance();
+  graphics_metadata->size = adreno_mem_info->AdrenoGetMetadataBlobSize();
+  uint64_t adreno_usage = info.prod_usage | info.cons_usage;
+  // If gralloc disables UBWC based on any of the checks,
+  // we pass modified usage flag to adreno to convey this.
+  int is_ubwc_enabled = IsUBwcEnabled(info.format, info.prod_usage, info.cons_usage);
+  if (!is_ubwc_enabled) {
+    adreno_usage &= ~(GRALLOC_USAGE_PRIVATE_ALLOC_UBWC);
+  }
+
+  // Call adreno api for populating metadata blob
+  int ret = adreno_mem_info->AdrenoInitMemoryLayout(graphics_metadata->data, info.width,
+                                                    info.height, 1, info.format, 1,
+                                                    is_ubwc_enabled, adreno_usage, 1);
+  if (ret != 0) {
+    ALOGE("%s Graphics metadata init failed", __FUNCTION__);
+    *size = 0;
+    return;
+  }
+  // Call adreno api with the metadata blob to get buffer size
+  *size = adreno_mem_info->AdrenoGetAlignedGpuBufferSize(graphics_metadata->data);
+}
+
+bool GetAdrenoSizeAPIStatus() {
+  AdrenoMemInfo* adreno_mem_info = AdrenoMemInfo::GetInstance();
+  if (adreno_mem_info) {
+    return adreno_mem_info->AdrenoSizeAPIAvaliable();
+  }
+  return false;
+}
+
+}  // namespace gralloc

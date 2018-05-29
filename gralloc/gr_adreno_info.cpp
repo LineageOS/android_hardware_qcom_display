@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -69,6 +69,12 @@ AdrenoMemInfo::AdrenoMemInfo() {
     *reinterpret_cast<void **>(&LINK_adreno_isSecureContextSupportedByGpu) =
         ::dlsym(libadreno_utils_, "isSecureContextSupportedByGpu");
 
+    *reinterpret_cast<void **>(&LINK_adreno_get_metadata_blob_size) =
+        ::dlsym(libadreno_utils_, "adreno_get_metadata_blob_size");
+    *reinterpret_cast<void **>(&LINK_adreno_init_memory_layout) =
+        ::dlsym(libadreno_utils_, "adreno_init_memory_layout");
+    *reinterpret_cast<void **>(&LINK_adreno_get_aligned_gpu_buffer_size) =
+        ::dlsym(libadreno_utils_, "adreno_get_aligned_gpu_buffer_size");
   } else {
     ALOGE(" Failed to load libadreno_utils.so");
   }
@@ -184,6 +190,10 @@ ADRENOPIXELFORMAT AdrenoMemInfo::GetGpuPixelFormat(int hal_format) {
       return ADRENO_PIXELFORMAT_R8G8B8A8;
     case HAL_PIXEL_FORMAT_RGBX_8888:
       return ADRENO_PIXELFORMAT_R8G8B8X8;
+    case HAL_PIXEL_FORMAT_BGRA_8888:
+      return ADRENO_PIXELFORMAT_B8G8R8A8_UNORM;
+    case HAL_PIXEL_FORMAT_RGB_888:
+      return ADRENO_PIXELFORMAT_R8G8B8;
     case HAL_PIXEL_FORMAT_RGB_565:
       return ADRENO_PIXELFORMAT_B5G6R5;
     case HAL_PIXEL_FORMAT_BGR_565:
@@ -204,10 +214,20 @@ ADRENOPIXELFORMAT AdrenoMemInfo::GetGpuPixelFormat(int hal_format) {
        return ADRENO_PIXELFORMAT_R10G10B10X2_UNORM;
     case HAL_PIXEL_FORMAT_ABGR_2101010:
        return ADRENO_PIXELFORMAT_A2B10G10R10_UNORM;
-    case HAL_PIXEL_FORMAT_RGB_888:
-       return ADRENO_PIXELFORMAT_R8G8B8;
     case HAL_PIXEL_FORMAT_RGBA_FP16:
        return ADRENO_PIXELFORMAT_R16G16B16A16_FLOAT;
+    case HAL_PIXEL_FORMAT_DEPTH_16:
+      return ADRENO_PIXELFORMAT_D16_UNORM;
+    case HAL_PIXEL_FORMAT_DEPTH_24:
+      return ADRENO_PIXELFORMAT_D24_UNORM;
+    case HAL_PIXEL_FORMAT_DEPTH_24_STENCIL_8:
+      return ADRENO_PIXELFORMAT_D24_UNORM_S8_UINT;
+    case HAL_PIXEL_FORMAT_DEPTH_32F:
+      return ADRENO_PIXELFORMAT_D32_FLOAT;
+    case HAL_PIXEL_FORMAT_DEPTH_32F_STENCIL_8:
+      return ADRENO_PIXELFORMAT_D32_FLOAT_X24S8_UINT;
+    case HAL_PIXEL_FORMAT_STENCIL_8:
+      return ADRENO_PIXELFORMAT_S8_UINT;
     default:
       ALOGE("%s: No map for format: 0x%x", __FUNCTION__, hal_format);
       break;
@@ -223,4 +243,34 @@ bool AdrenoMemInfo::isSecureContextSupportedByGpu() {
   return 1;
 }
 
-}  // namespace gralloc1
+uint32_t AdrenoMemInfo::AdrenoGetMetadataBlobSize() {
+  if (LINK_adreno_get_metadata_blob_size) {
+    return LINK_adreno_get_metadata_blob_size();
+  }
+  return 0;
+}
+
+int AdrenoMemInfo::AdrenoInitMemoryLayout(void *metadata_blob, int width, int height, int depth,
+  int format, int num_samples, int isUBWC, uint64_t usage, uint32_t num_planes) {
+  if (LINK_adreno_init_memory_layout) {
+    surface_tile_mode_t tile_mode = static_cast<surface_tile_mode_t> (isUBWC);
+    return LINK_adreno_init_memory_layout(metadata_blob, width, height, depth,
+                                          GetGpuPixelFormat(format), num_samples,
+                                          tile_mode, usage, num_planes);
+  }
+  return -1;
+}
+
+uint32_t AdrenoMemInfo::AdrenoGetAlignedGpuBufferSize(void *metadata_blob) {
+  if (LINK_adreno_get_aligned_gpu_buffer_size) {
+    return LINK_adreno_get_aligned_gpu_buffer_size(metadata_blob);
+  }
+  return -1;
+}
+
+bool AdrenoMemInfo::AdrenoSizeAPIAvaliable() {
+  return (LINK_adreno_get_metadata_blob_size && LINK_adreno_init_memory_layout &&
+          LINK_adreno_get_aligned_gpu_buffer_size);
+}
+
+}  // namespace gralloc

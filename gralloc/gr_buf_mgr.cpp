@@ -465,10 +465,10 @@ int BufferManager::GetHandleFlags(int format, gralloc1_producer_usage_t prod_usa
 }
 
 int BufferManager::GetBufferType(int inputFormat) {
-  int buffer_type = BUFFER_TYPE_VIDEO;
-  if (IsUncompressedRGBFormat(inputFormat)) {
-    // RGB formats
-    buffer_type = BUFFER_TYPE_UI;
+  int buffer_type = BUFFER_TYPE_UI;
+  if (IsYuvFormat(inputFormat)) {
+    // Video format
+    buffer_type = BUFFER_TYPE_VIDEO;
   }
 
   return buffer_type;
@@ -499,9 +499,19 @@ int BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_han
   int buffer_type = GetBufferType(gralloc_format);
   BufferInfo info = GetBufferInfo(descriptor);
   info.layer_count = static_cast<int>(layer_count);
-  GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh);
-  size = (bufferSize >= size) ? bufferSize : size;
+  info.format = format;
 
+  bool use_adreno_for_size = false;
+  GraphicsMetadata graphics_metadata = {};
+
+  use_adreno_for_size = ((buffer_type != BUFFER_TYPE_VIDEO) && GetAdrenoSizeAPIStatus());
+  if (use_adreno_for_size) {
+    GetGpuResourceSizeAndDimensions(info, &size, &alignedw, &alignedh, &graphics_metadata);
+  } else {
+    GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh);
+  }
+
+  size = (bufferSize >= size) ? bufferSize : size;
   int err = 0;
   int flags = 0;
   auto page_size = UINT(getpagesize());
@@ -551,9 +561,14 @@ int BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_han
   hnd->base = 0;
   hnd->base_metadata = 0;
   hnd->layer_count = layer_count;
-
-  ColorSpace_t colorSpace = ITU_R_601;
+  // set default csc as 709, but for video(yuv) its 601L
+  ColorSpace_t colorSpace = (buffer_type == BUFFER_TYPE_VIDEO) ? ITU_R_601 : ITU_R_709;
   setMetaData(hnd, UPDATE_COLOR_SPACE, reinterpret_cast<void *>(&colorSpace));
+
+  if (use_adreno_for_size) {
+    setMetaData(hnd, SET_GRAPHICS_METADATA, reinterpret_cast<void *>(&graphics_metadata));
+  }
+
   *handle = hnd;
   RegisterHandleLocked(hnd, data.ion_handle, e_data.ion_handle);
   ALOGD_IF(DEBUG, "Allocated buffer handle: %p id: %" PRIu64, hnd, hnd->id);
@@ -846,6 +861,20 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
         *flag = 0;
       }
     } break;
+    case GRALLOC_MODULE_PERFORM_GET_GRAPHICS_METADATA: {
+      private_handle_t* hnd = va_arg(args, private_handle_t *);
+
+      if (private_handle_t::validate(hnd) != 0) {
+        return GRALLOC1_ERROR_BAD_HANDLE;
+      }
+
+      void* graphic_metadata = va_arg(args, void*);
+
+      if (getMetaData(hnd, GET_GRAPHICS_METADATA, graphic_metadata) != 0) {
+        graphic_metadata = NULL;
+        return GRALLOC1_ERROR_UNSUPPORTED;
+      }
+    } break;
 
     default:
       break;
@@ -853,35 +882,9 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
   return GRALLOC1_ERROR_NONE;
 }
 
-static bool IsYuvFormat(const private_handle_t *hnd) {
-  switch (hnd->format) {
-    case HAL_PIXEL_FORMAT_YCbCr_420_SP:
-    case HAL_PIXEL_FORMAT_YCbCr_422_SP:
-    case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
-    case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:   // Same as YCbCr_420_SP_VENUS
-    case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
-    case HAL_PIXEL_FORMAT_YCrCb_420_SP:
-    case HAL_PIXEL_FORMAT_YCrCb_422_SP:
-    case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
-    case HAL_PIXEL_FORMAT_NV21_ZSL:
-    case HAL_PIXEL_FORMAT_RAW16:
-    case HAL_PIXEL_FORMAT_Y16:
-    case HAL_PIXEL_FORMAT_RAW12:
-    case HAL_PIXEL_FORMAT_RAW10:
-    case HAL_PIXEL_FORMAT_YV12:
-    case HAL_PIXEL_FORMAT_Y8:
-    case HAL_PIXEL_FORMAT_YCbCr_420_P010:
-    case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
-    case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
-      return true;
-    default:
-      return false;
-  }
-}
-
 gralloc1_error_t BufferManager::GetNumFlexPlanes(const private_handle_t *hnd,
                                                  uint32_t *out_num_planes) {
-  if (!IsYuvFormat(hnd)) {
+  if (!IsYuvFormat(hnd->format)) {
     return GRALLOC1_ERROR_UNSUPPORTED;
   } else {
     *out_num_planes = 3;
@@ -891,7 +894,7 @@ gralloc1_error_t BufferManager::GetNumFlexPlanes(const private_handle_t *hnd,
 
 gralloc1_error_t BufferManager::GetFlexLayout(const private_handle_t *hnd,
                                               struct android_flex_layout *layout) {
-  if (!IsYuvFormat(hnd)) {
+  if (!IsYuvFormat(hnd->format)) {
     return GRALLOC1_ERROR_UNSUPPORTED;
   }
 
