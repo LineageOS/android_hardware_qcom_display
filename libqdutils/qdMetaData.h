@@ -37,6 +37,7 @@ extern "C" {
 #endif
 
 #define MAX_UBWC_STATS_LENGTH 32
+#define GRAPHICS_METADATA_SIZE 4096
 
 enum ColorSpace_t{
     ITU_R_601,
@@ -97,6 +98,11 @@ struct S3DGpuComp_t {
     uint32_t s3dMode; /* the S3D format of this layer to be accessed by client */
 };
 
+typedef struct GraphicsMetadata {
+    uint32_t size;
+    uint32_t data[GRAPHICS_METADATA_SIZE];
+} GraphicsMetadata;
+
 struct MetaData_t {
     int32_t operation;
     int32_t interlaced;
@@ -137,42 +143,47 @@ struct MetaData_t {
     /* Set by camera to indicate that this buffer will be used for a High
      * Performance Video Usecase */
     uint32_t isVideoPerfMode;
+    /* Populated and used by adreno during buffer size calculation.
+     * Set only for RGB formats. */
+    GraphicsMetadata graphics_metadata;
 };
 
 enum DispParamType {
-    SET_VT_TIMESTAMP         = 0x0001,
-    COLOR_METADATA           = 0x0002,
-    PP_PARAM_INTERLACED      = 0x0004,
-    SET_VIDEO_PERF_MODE      = 0x0008,
-    UNUSED3                  = 0x0010,
-    UNUSED4                  = 0x0020,
-    SET_UBWC_CR_STATS_INFO   = 0x0040,
-    UPDATE_BUFFER_GEOMETRY   = 0x0080,
-    UPDATE_REFRESH_RATE      = 0x0100,
-    UPDATE_COLOR_SPACE       = 0x0200,
-    MAP_SECURE_BUFFER        = 0x0400,
-    S3D_FORMAT               = 0x0800,
-    LINEAR_FORMAT            = 0x1000,
-    SET_IGC                  = 0x2000,
-    SET_SINGLE_BUFFER_MODE   = 0x4000,
-    SET_S3D_COMP             = 0x8000,
+    SET_VT_TIMESTAMP           = 0x0001,
+    COLOR_METADATA             = 0x0002,
+    PP_PARAM_INTERLACED        = 0x0004,
+    SET_VIDEO_PERF_MODE        = 0x0008,
+    SET_GRAPHICS_METADATA      = 0x0010,
+    SET_UNUSED                 = 0x0020,
+    SET_UBWC_CR_STATS_INFO     = 0x0040,
+    UPDATE_BUFFER_GEOMETRY     = 0x0080,
+    UPDATE_REFRESH_RATE        = 0x0100,
+    UPDATE_COLOR_SPACE         = 0x0200,
+    MAP_SECURE_BUFFER          = 0x0400,
+    S3D_FORMAT                 = 0x0800,
+    LINEAR_FORMAT              = 0x1000,
+    SET_IGC                    = 0x2000,
+    SET_SINGLE_BUFFER_MODE     = 0x4000,
+    SET_S3D_COMP               = 0x8000,
 };
 
 enum DispFetchParamType {
-    GET_VT_TIMESTAMP         = 0x0001,
-    GET_COLOR_METADATA       = 0x0002,
-    GET_PP_PARAM_INTERLACED  = 0x0004,
-    GET_VIDEO_PERF_MODE      = 0x0008,
-    GET_UBWC_CR_STATS_INFO   = 0x0040,
-    GET_BUFFER_GEOMETRY      = 0x0080,
-    GET_REFRESH_RATE         = 0x0100,
-    GET_COLOR_SPACE          = 0x0200,
-    GET_MAP_SECURE_BUFFER    = 0x0400,
-    GET_S3D_FORMAT           = 0x0800,
-    GET_LINEAR_FORMAT        = 0x1000,
-    GET_IGC                  = 0x2000,
-    GET_SINGLE_BUFFER_MODE   = 0x4000,
-    GET_S3D_COMP             = 0x8000,
+    GET_VT_TIMESTAMP          = 0x0001,
+    GET_COLOR_METADATA        = 0x0002,
+    GET_PP_PARAM_INTERLACED   = 0x0004,
+    GET_VIDEO_PERF_MODE       = 0x0008,
+    GET_GRAPHICS_METADATA     = 0x0010,
+    GET_UNUSED                = 0X0020,
+    GET_UBWC_CR_STATS_INFO    = 0x0040,
+    GET_BUFFER_GEOMETRY       = 0x0080,
+    GET_REFRESH_RATE          = 0x0100,
+    GET_COLOR_SPACE           = 0x0200,
+    GET_MAP_SECURE_BUFFER     = 0x0400,
+    GET_S3D_FORMAT            = 0x0800,
+    GET_LINEAR_FORMAT         = 0x1000,
+    GET_IGC                   = 0x2000,
+    GET_SINGLE_BUFFER_MODE    = 0x4000,
+    GET_S3D_COMP              = 0x8000,
 };
 
 struct private_handle_t;
