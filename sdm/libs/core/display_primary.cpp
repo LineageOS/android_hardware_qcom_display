@@ -216,11 +216,6 @@ DisplayError DisplayPrimary::SetPanelBrightness(int level) {
   return hw_intf_->SetPanelBrightness(level);
 }
 
-DisplayError DisplayPrimary::CachePanelBrightness(int level) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
-  return hw_intf_->CachePanelBrightness(level);
-}
-
 DisplayError DisplayPrimary::GetRefreshRateRange(uint32_t *min_refresh_rate,
                                                  uint32_t *max_refresh_rate) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
