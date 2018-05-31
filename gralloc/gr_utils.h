@@ -41,10 +41,10 @@
 #define SIZE_4K 4096
 #define SIZE_8K 8192
 
-#ifdef MASTER_SIDE_CP
-#define SECURE_ALIGN SZ_4K
-#else
+#ifdef SLAVE_SIDE_CP
 #define SECURE_ALIGN SZ_1M
+#else // MASTER_SIDE_CP
+#define SECURE_ALIGN SZ_4K
 #endif
 
 #define INT(exp) static_cast<int>(exp)
