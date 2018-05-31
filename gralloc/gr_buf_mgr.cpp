@@ -301,10 +301,10 @@ int BufferManager::GetHandleFlags(int format, uint64_t usage) {
 }
 
 int BufferManager::GetBufferType(int inputFormat) {
-  int buffer_type = BUFFER_TYPE_VIDEO;
-  if (IsUncompressedRGBFormat(inputFormat)) {
-    // RGB formats
-    buffer_type = BUFFER_TYPE_UI;
+  int buffer_type = BUFFER_TYPE_UI;
+  if (IsYuvFormat(inputFormat)) {
+    // Video format
+    buffer_type = BUFFER_TYPE_VIDEO;
   }
 
   return buffer_type;
@@ -326,9 +326,18 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   int buffer_type = GetBufferType(format);
   BufferInfo info = GetBufferInfo(descriptor);
   info.format = format;
-  GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh);
-  size = (bufferSize >= size) ? bufferSize : size;
 
+  bool use_adreno_for_size = false;
+  GraphicsMetadata graphics_metadata = {};
+
+  use_adreno_for_size = ((buffer_type != BUFFER_TYPE_VIDEO) && GetAdrenoSizeAPIStatus());
+  if (use_adreno_for_size) {
+    GetGpuResourceSizeAndDimensions(info, &size, &alignedw, &alignedh, &graphics_metadata);
+  } else {
+    GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh);
+  }
+
+  size = (bufferSize >= size) ? bufferSize : size;
   int err = 0;
   int flags = 0;
   auto page_size = UINT(getpagesize());
@@ -372,6 +381,10 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   // set default csc as 709, but for video(yuv) its 601L
   ColorSpace_t colorSpace = (buffer_type == BUFFER_TYPE_VIDEO) ? ITU_R_601 : ITU_R_709;
   setMetaData(hnd, UPDATE_COLOR_SPACE, reinterpret_cast<void *>(&colorSpace));
+
+  if (use_adreno_for_size) {
+    setMetaData(hnd, SET_GRAPHICS_METADATA, reinterpret_cast<void *>(&graphics_metadata));
+  }
 
   *handle = hnd;
   RegisterHandleLocked(hnd, data.ion_handle, e_data.ion_handle);
