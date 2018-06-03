@@ -91,6 +91,11 @@ DisplayError DisplayBase::Init() {
   DisplayError error = kErrorNone;
   hw_panel_info_ = HWPanelInfo();
   hw_intf_->GetHWPanelInfo(&hw_panel_info_);
+  if (hw_info_intf_) {
+    hw_info_intf_->GetHWResourceInfo(&hw_resource_info_);
+  }
+  auto max_mixer_stages = hw_resource_info_.num_blending_stages;
+  int property_value = Debug::GetMaxPipesPerMixer(display_type_);
 
   uint32_t active_index = 0;
   hw_intf_->GetActiveConfig(&active_index);
@@ -148,15 +153,10 @@ DisplayError DisplayBase::Init() {
     }
   }
 
-  if (hw_info_intf_) {
-    hw_info_intf_->GetHWResourceInfo(&hw_resource_info_);
-    auto max_mixer_stages = hw_resource_info_.num_blending_stages;
-    int property_value = Debug::GetMaxPipesPerMixer(display_type_);
-    if (property_value >= 0) {
-      max_mixer_stages = std::min(UINT32(property_value), hw_resource_info_.num_blending_stages);
-    }
-    DisplayBase::SetMaxMixerStages(max_mixer_stages);
+  if (property_value >= 0) {
+    max_mixer_stages = std::min(UINT32(property_value), hw_resource_info_.num_blending_stages);
   }
+  DisplayBase::SetMaxMixerStages(max_mixer_stages);
 
   Debug::GetProperty(DISABLE_HDR_LUT_GEN, &disable_hdr_lut_gen_);
   // TODO(user): Temporary changes, to be removed when DRM driver supports
@@ -823,11 +823,11 @@ DisplayError DisplayBase::GetColorModes(uint32_t *mode_count,
   if (!color_mgr_) {
     return kErrorNotSupported;
   }
-
-  for (uint32_t i = 0; i < num_color_modes_; i++) {
-    DLOGV_IF(kTagQDCM, "Color Mode[%d]: Name = %s mode_id = %d", i, color_modes_[i].name,
-             color_modes_[i].id);
-    color_modes->at(i) = color_modes_[i].name;
+  uint32_t i = 0;
+  for (ColorModeAttrMap::iterator it = color_mode_attr_map_.begin();
+       ((i < num_color_modes_) && (it != color_mode_attr_map_.end())); i++, it++) {
+    DLOGI("ColorMode name = %s", it->first.c_str());
+    color_modes->at(i) = it->first.c_str();
   }
 
   return kErrorNone;
@@ -874,6 +874,13 @@ DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
   comp_manager_->ControlDpps(dynamic_range != kHdr);
 
   current_color_mode_ = color_mode;
+  PrimariesTransfer blend_space = {};
+  blend_space = GetBlendSpaceFromColorMode();
+  error = comp_manager_->SetBlendSpace(display_comp_ctx_, blend_space);
+  if (error != kErrorNone) {
+    DLOGE("SetBlendSpace failed, error = %d display_type_=%d", error, display_type_);
+  }
+
   return error;
 }
 
@@ -1475,6 +1482,13 @@ DisplayError DisplayBase::InitializeColorModes() {
         auto it = color_mode_attr_map_.find(color_modes_[i].name);
         if (it == color_mode_attr_map_.end()) {
           color_mode_attr_map_.insert(std::make_pair(color_modes_[i].name, var));
+          // If target doesn't support SSPP tone maping and color mode is HDR,
+          // add bt2020pq and bt2020hlg color modes.
+          if (hw_resource_info_.src_tone_map.none() && IsHdrMode(var)) {
+            color_mode_map_.insert(std::make_pair(kBt2020Pq, &color_modes_[i]));
+            color_mode_map_.insert(std::make_pair(kBt2020Hlg, &color_modes_[i]));
+            InsertBT2020PqHlgModes();
+          }
         }
         std::vector<PrimariesTransfer> pt_list = {};
         GetColorPrimaryTransferFromAttributes(var, &pt_list);
@@ -1726,6 +1740,67 @@ void DisplayBase::EndDisplayPowerReset() {
 
 bool DisplayBase::SetHdrModeAtStart(LayerStack *layer_stack) {
   return (hw_resource_info_.src_tone_map.none() && layer_stack->flags.hdr_present);
+}
+
+PrimariesTransfer DisplayBase::GetBlendSpaceFromColorMode() {
+  PrimariesTransfer pt = {};
+  auto current_color_attr_ = color_mode_attr_map_.find(current_color_mode_);
+  AttrVal attr = current_color_attr_->second;
+  std::string color_gamut = kNative, dynamic_range = kSdr, pic_quality = kStandard;
+  std::string transfer = {};
+
+  for (auto &it : attr) {
+    if (it.first.find(kColorGamutAttribute) != std::string::npos) {
+      color_gamut = it.second;
+    } else if (it.first.find(kDynamicRangeAttribute) != std::string::npos) {
+      dynamic_range = it.second;
+    } else if (it.first.find(kPictureQualityAttribute) != std::string::npos) {
+      pic_quality = it.second;
+    } else if (it.first.find(kGammaTransferAttribute) != std::string::npos) {
+      transfer = it.second;
+    }
+  }
+  // TODO(user): Check is if someone calls with hal_display_p3
+  if (hw_resource_info_.src_tone_map.none() &&
+      (pic_quality == kStandard && color_gamut == kBt2020)) {
+    pt.primaries = GetColorPrimariesFromAttribute(color_gamut);
+    if (transfer == kHlg) {
+      pt.transfer = Transfer_HLG;
+    } else {
+      pt.transfer = Transfer_SMPTE_ST2084;
+    }
+  } else if ((color_gamut == kDcip3 && dynamic_range == kSdr)) {
+    pt.primaries = GetColorPrimariesFromAttribute(color_gamut);
+    pt.transfer = Transfer_Gamma2_2;
+  } else {
+    DLOGE("Invalid color mode: %s", current_color_mode_.c_str());
+  }
+
+  return pt;
+}
+
+void DisplayBase::InsertBT2020PqHlgModes() {
+  AttrVal hdr_var = {};
+  hdr_var.push_back(std::make_pair(kColorGamutAttribute, kBt2020));
+  hdr_var.push_back(std::make_pair(kPictureQualityAttribute, kStandard));
+  hdr_var.push_back(std::make_pair(kGammaTransferAttribute, kSt2084));
+  color_mode_attr_map_.insert(std::make_pair(kBt2020Pq, hdr_var));
+  hdr_var.pop_back();
+  hdr_var.push_back(std::make_pair(kGammaTransferAttribute, kHlg));
+  color_mode_attr_map_.insert(std::make_pair(kBt2020Hlg, hdr_var));
+
+  return;
+}
+
+bool DisplayBase::IsHdrMode(const AttrVal &attr) {
+  std::string color_gamut, dynamic_range;
+  GetValueOfModeAttribute(attr, kColorGamutAttribute, &color_gamut);
+  GetValueOfModeAttribute(attr, kDynamicRangeAttribute, &dynamic_range);
+  if (color_gamut == kDcip3 && dynamic_range == kHdr) {
+    return true;
+  }
+
+  return false;
 }
 
 }  // namespace sdm

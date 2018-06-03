@@ -129,6 +129,8 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError InitializeColorModes();
 
  protected:
+  const char *kBt2020Pq = "bt2020_pq";
+  const char *kBt2020Hlg = "bt2020_hlg";
   DisplayError BuildLayerStackStats(LayerStack *layer_stack);
   virtual DisplayError ValidateGPUTargetParams();
   void CommitLayerParams(LayerStack *layer_stack);
@@ -157,6 +159,9 @@ class DisplayBase : public DisplayInterface {
       std::vector<PrimariesTransfer> *supported_pt);
   bool DisplayPowerResetPending();
   bool SetHdrModeAtStart(LayerStack *layer_stack);
+  PrimariesTransfer GetBlendSpaceFromColorMode();
+  bool IsHdrMode(const AttrVal &attr);
+  void InsertBT2020PqHlgModes();
 
   recursive_mutex recursive_mutex_;
   int32_t display_id_ = -1;

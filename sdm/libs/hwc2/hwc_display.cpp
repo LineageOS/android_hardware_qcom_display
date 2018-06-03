@@ -203,7 +203,7 @@ void HWCColorMode::PopulateColorModes() {
     DLOGV_IF(kTagClient, "Color Mode[%d] = %s", i, mode_string.c_str());
     AttrVal attr;
     error = display_intf_->GetColorModeAttr(mode_string, &attr);
-    std::string color_gamut = kNative, dynamic_range = kSdr, pic_quality = kStandard;
+    std::string color_gamut = kNative, dynamic_range = kSdr, pic_quality = kStandard, transfer;
     if (!attr.empty()) {
       for (auto &it : attr) {
         if (it.first.find(kColorGamutAttribute) != std::string::npos) {
@@ -212,6 +212,8 @@ void HWCColorMode::PopulateColorModes() {
           dynamic_range = it.second;
         } else if (it.first.find(kPictureQualityAttribute) != std::string::npos) {
           pic_quality = it.second;
+        } else if (it.first.find(kGammaTransferAttribute) != std::string::npos) {
+          transfer = it.second;
         }
       }
 
@@ -238,10 +240,17 @@ void HWCColorMode::PopulateColorModes() {
           color_mode_map_[ColorMode::DISPLAY_P3][RenderIntent::ENHANCE] = mode_string;
         }
       }
-
-      if (pic_quality == kStandard && dynamic_range == kHdr) {
+      if (color_gamut == kDcip3 && pic_quality == kStandard && dynamic_range == kHdr) {
         color_mode_map_[ColorMode::BT2100_PQ][RenderIntent::TONE_MAP_COLORIMETRIC] = mode_string;
         color_mode_map_[ColorMode::BT2100_HLG][RenderIntent::TONE_MAP_COLORIMETRIC] = mode_string;
+      } else if (color_gamut == kBt2020) {
+        if (transfer == kSt2084) {
+          color_mode_map_[ColorMode::BT2100_PQ][RenderIntent::COLORIMETRIC] = mode_string;
+        } else if (transfer == kHlg) {
+          color_mode_map_[ColorMode::BT2100_HLG][RenderIntent::COLORIMETRIC] = mode_string;
+        } else if (transfer == kGamma2_2) {
+          color_mode_map_[ColorMode::BT2020][RenderIntent::COLORIMETRIC] = mode_string;
+        }
       }
     } else {
       // Look at the mode names, if no attributes are found
