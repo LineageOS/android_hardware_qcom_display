@@ -289,12 +289,6 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
     return error;
   }
 
-  error = HandleHDR(layer_stack);
-  if (error != kErrorNone) {
-    DLOGW("HandleHDR failed");
-    return error;
-  }
-
   if (color_mgr_ && color_mgr_->NeedsPartialUpdateDisable()) {
     DisablePartialUpdateOneFrame();
   }
@@ -327,16 +321,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
 
   comp_manager_->PostPrepare(display_comp_ctx_, &hw_layers_);
 
-  if (error != kErrorNone) {
-    return error;
-  }
-
-  error = ValidateHDR(layer_stack);
-  if (error != kErrorNone) {
-    DLOGW("ValidateHDR failed");
-  }
-
-  DLOGI_IF(kTagDisplay, "Exiting Prepare for display: %d-%d", display_id_, display_type_);
+  DLOGI_IF(kTagDisplay, "Exiting Prepare for display type : %d error: %d", display_type_, error);
   return error;
 }
 
@@ -874,61 +859,21 @@ DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
     return kErrorNotSupported;
   }
 
-  DynamicRangeType dynamic_range_type;
-  if (IsSupportColorModeAttribute(color_mode)) {
-    auto it_mode = color_mode_attr_map_.find(color_mode);
-    std::string dynamic_range;
-    GetValueOfModeAttribute(it_mode->second, kDynamicRangeAttribute, &dynamic_range);
-    if (dynamic_range == kHdr) {
-      dynamic_range_type = kHdrType;
-    } else {
-      dynamic_range_type = kSdrType;
-    }
-  } else {
-    if (color_mode.find("hal_hdr") != std::string::npos) {
-      dynamic_range_type = kHdrType;
-    } else {
-      dynamic_range_type = kSdrType;
-    }
-  }
-
   DisplayError error = kErrorNone;
-  if (disable_hdr_lut_gen_) {
-    error = SetColorModeInternal(color_mode);
-    if (error != kErrorNone) {
-      return error;
-    }
-    // Store the new SDR color mode request by client
-    if (dynamic_range_type == kSdrType) {
-      current_color_mode_ = color_mode;
-    }
+  error = SetColorModeInternal(color_mode);
+  if (error != kErrorNone) {
     return error;
   }
 
-  if (hdr_playback_) {
-    // HDR playback on, If incoming mode is SDR mode,
-    // cache the mode and apply it after HDR playback stop.
-    if (dynamic_range_type == kHdrType) {
-      error = SetColorModeInternal(color_mode);
-      if (error != kErrorNone) {
-        return error;
-      }
-    } else if (dynamic_range_type == kSdrType) {
-      current_color_mode_ = color_mode;
-    }
-  } else {
-    // HDR playback off, do not apply HDR mode
-    if (dynamic_range_type == kHdrType) {
-      DLOGE("Failed: Forbid setting HDR Mode : %s when HDR playback off", color_mode.c_str());
-      return kErrorNotSupported;
-    }
-    error = SetColorModeInternal(color_mode);
-    if (error != kErrorNone) {
-      return error;
-    }
-    current_color_mode_ = color_mode;
+  std::string dynamic_range = kSdr;
+  if (IsSupportColorModeAttribute(color_mode)) {
+    auto it_mode = color_mode_attr_map_.find(color_mode);
+    GetValueOfModeAttribute(it_mode->second, kDynamicRangeAttribute, &dynamic_range);
   }
 
+  comp_manager_->ControlDpps(dynamic_range != kHdr);
+
+  current_color_mode_ = color_mode;
   return error;
 }
 
@@ -979,25 +924,6 @@ bool DisplayBase::IsSupportColorModeAttribute(const std::string &color_mode) {
     return false;
   }
   return true;
-}
-
-DisplayError DisplayBase::GetHdrColorMode(std::string *color_mode, bool *found_hdr) {
-  if (!found_hdr || !color_mode) {
-    return kErrorParameters;
-  }
-  *found_hdr = false;
-  // get the default HDR mode which is value of picture quality equal to "standard"
-  for (auto &it_hdr : color_mode_attr_map_) {
-    std::string dynamic_range, pic_quality;
-    GetValueOfModeAttribute(it_hdr.second, kDynamicRangeAttribute, &dynamic_range);
-    GetValueOfModeAttribute(it_hdr.second, kPictureQualityAttribute, &pic_quality);
-    if (dynamic_range == kHdr && pic_quality == kStandard) {
-      *color_mode = it_hdr.first;
-      *found_hdr = true;
-    }
-  }
-
-  return kErrorNone;
 }
 
 DisplayError DisplayBase::SetColorTransform(const uint32_t length, const double *color_transform) {
@@ -1564,110 +1490,6 @@ DisplayError DisplayBase::InitializeColorModes() {
     if (std::find(color_modes_cs_.begin(), color_modes_cs_.end(), pt) ==
         color_modes_cs_.end()) {
       color_modes_cs_.push_back(pt);
-    }
-  }
-
-  return kErrorNone;
-}
-
-DisplayError DisplayBase::SetHDRMode(bool set) {
-  DisplayError error = kErrorNone;
-  std::string color_mode = "";
-
-  if (color_mgr_ && !disable_hdr_lut_gen_) {
-    // Do not apply HDR Mode when hdr lut generation is disabled
-    if (set) {
-      color_mode = "hal_hdr";
-      if (IsSupportColorModeAttribute(current_color_mode_)) {
-        bool found_hdr = false;
-        error = GetHdrColorMode(&color_mode, &found_hdr);
-        if (!found_hdr) {
-          color_mode = "hal_hdr";
-        }
-      }
-    } else {
-      // HDR playback off - set prev mode
-      color_mode = current_color_mode_;
-    }
-    DLOGI("Setting color mode = %s", color_mode.c_str());
-    error = SetColorModeInternal(color_mode);
-  }
-
-  comp_manager_->ControlDpps(!set);
-  hdr_mode_ = set;
-
-  return error;
-}
-
-DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
-  DisplayError error = kErrorNone;
-
-  if (!NeedsHdrHandling()) {
-    return kErrorNone;
-  }
-
-  if (hw_layers_.info.wide_color_primaries.empty()) {
-    //  HDR playback off - set prev mode
-    if (hdr_playback_) {
-      hdr_playback_ = false;
-      if (hdr_mode_) {
-        error = SetHDRMode(false);
-      }
-    }
-  } else {
-    // set HDR mode on legacy targets only
-    if (SetHdrModeAtStart(layer_stack)) {
-      if (!hdr_playback_ && !layer_stack->flags.animating) {
-        // hdr is starting
-        hdr_playback_ = true;
-        error = SetHDRMode(true);
-        if (error != kErrorNone) {
-          DLOGW("Failed to set HDR mode");
-        }
-      } else if (hdr_playback_ && !hdr_mode_) {
-        error = SetHDRMode(true);
-        if (error != kErrorNone) {
-          DLOGW("Failed to set HDR mode");
-        }
-      }
-    }
-  }
-
-  return error;
-}
-
-DisplayError DisplayBase::ValidateHDR(LayerStack *layer_stack) {
-  DisplayError error = kErrorNone;
-
-  if (!NeedsHdrHandling()) {
-    return kErrorNone;
-  }
-
-  bool hdr_mode = false;
-  bool set = false;  // indicates if we need to call SetHDRMode
-  if (hw_resource_info_.src_tone_map.any()) {
-    if (!hw_layers_.info.wide_color_primaries.empty()) {
-      hdr_playback_ = true;
-      // Need to set HDR mode on target with SSPP only when blend cs is BT2020
-      if (layer_stack->blend_cs.primaries == ColorPrimaries_BT2020 && !hdr_mode_) {
-        hdr_mode = true;
-        set = true;
-      }
-    }
-  } else if (hdr_playback_) {  // legacy targets
-    // HDR color mode is set when hdr layer is present in layer_stack.
-    // If client flags HDR layer as skipped, then blending happens
-    // in SDR color space. Hence, need to restore the SDR color mode.
-    if (layer_stack->blend_cs.primaries != ColorPrimaries_BT2020) {
-      hdr_mode = false;
-      set = true;
-    }
-  }
-
-  if (set) {
-    error = SetHDRMode(hdr_mode);
-    if (error != kErrorNone) {
-      DLOGW("Setting HDR Mode %d failed", hdr_mode);
     }
   }
 
