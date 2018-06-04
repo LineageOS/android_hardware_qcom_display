@@ -885,6 +885,29 @@ HWC2::Error HWCDisplay::GetDisplayType(int32_t *out_type) {
   }
 }
 
+HWC2::Error HWCDisplay::GetPerFrameMetadataKeys(uint32_t *out_num_keys,
+                                                PerFrameMetadataKey *out_keys) {
+  if (out_num_keys == nullptr) {
+    return HWC2::Error::BadParameter;
+  }
+  *out_num_keys = UINT32(PerFrameMetadataKey::MAX_FRAME_AVERAGE_LIGHT_LEVEL) + 1;
+  if (out_keys != nullptr) {
+    out_keys[0] = PerFrameMetadataKey::DISPLAY_RED_PRIMARY_X;
+    out_keys[1] = PerFrameMetadataKey::DISPLAY_RED_PRIMARY_Y;
+    out_keys[2] = PerFrameMetadataKey::DISPLAY_GREEN_PRIMARY_X;
+    out_keys[3] = PerFrameMetadataKey::DISPLAY_GREEN_PRIMARY_Y;
+    out_keys[4] = PerFrameMetadataKey::DISPLAY_BLUE_PRIMARY_X;
+    out_keys[5] = PerFrameMetadataKey::DISPLAY_BLUE_PRIMARY_Y;
+    out_keys[6] = PerFrameMetadataKey::WHITE_POINT_X;
+    out_keys[7] = PerFrameMetadataKey::WHITE_POINT_Y;
+    out_keys[8] = PerFrameMetadataKey::MAX_LUMINANCE;
+    out_keys[9] = PerFrameMetadataKey::MIN_LUMINANCE;
+    out_keys[10] = PerFrameMetadataKey::MAX_CONTENT_LIGHT_LEVEL;
+    out_keys[11] = PerFrameMetadataKey::MAX_FRAME_AVERAGE_LIGHT_LEVEL;
+  }
+  return HWC2::Error::None;
+}
+
 HWC2::Error HWCDisplay::GetActiveConfig(hwc2_config_t *out_config) {
   if (out_config == nullptr) {
     return HWC2::Error::BadDisplay;

@@ -509,6 +509,21 @@ static int32_t GetDataspaceSaturationMatrix(hwc2_device_t *device,
   return HWC2_ERROR_NONE;
 }
 
+static int32_t GetPerFrameMetadataKeys(hwc2_device_t *device, hwc2_display_t display,
+                                       uint32_t *out_num_keys, int32_t *int_out_keys) {
+  auto out_keys = reinterpret_cast<PerFrameMetadataKey *>(int_out_keys);
+  return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::GetPerFrameMetadataKeys,
+                                         out_num_keys, out_keys);
+}
+
+static int32_t SetLayerPerFrameMetadata(hwc2_device_t *device, hwc2_display_t display,
+                                        hwc2_layer_t layer, uint32_t num_elements,
+                                        const int32_t *int_keys, const float *metadata) {
+  auto keys = reinterpret_cast<const PerFrameMetadataKey *>(int_keys);
+  return HWCSession::CallLayerFunction(device, display, layer, &HWCLayer::SetLayerPerFrameMetadata,
+                                       num_elements, keys, metadata);
+}
+
 static int32_t GetDisplayAttribute(hwc2_device_t *device, hwc2_display_t display,
                                    hwc2_config_t config, int32_t int_attribute,
                                    int32_t *out_value) {
@@ -971,6 +986,10 @@ hwc2_function_pointer_t HWCSession::GetFunction(struct hwc2_device *device,
           HWCSession::SetColorModeWithRenderIntent);
     case HWC2::FunctionDescriptor::GetDataspaceSaturationMatrix:
       return AsFP<HWC2_PFN_GET_DATASPACE_SATURATION_MATRIX>(GetDataspaceSaturationMatrix);
+    case HWC2::FunctionDescriptor::GetPerFrameMetadataKeys:
+      return AsFP<HWC2_PFN_GET_PER_FRAME_METADATA_KEYS>(GetPerFrameMetadataKeys);
+    case HWC2::FunctionDescriptor::SetLayerPerFrameMetadata:
+      return AsFP<HWC2_PFN_SET_LAYER_PER_FRAME_METADATA>(SetLayerPerFrameMetadata);
     default:
       DLOGD("Unknown/Unimplemented function descriptor: %d (%s)", int_descriptor,
             to_string(descriptor).c_str());
