@@ -120,6 +120,10 @@ HWC2::Error HWCColorMode::SetColorModeWithRenderIntent(ColorMode mode, RenderInt
     return HWC2::Error::Unsupported;
   }
 
+  if (current_color_mode_ == mode && current_render_intent_ == intent) {
+    return HWC2::Error::None;
+  }
+
   auto mode_string = color_mode_map_[mode][intent];
   DisplayError error = display_intf_->SetColorMode(mode_string);
   if (error != kErrorNone) {
