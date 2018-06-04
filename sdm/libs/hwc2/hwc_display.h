@@ -80,6 +80,7 @@ class HWCColorMode {
   HWC2::Error SetColorModeById(int32_t color_mode_id);
   HWC2::Error SetColorTransform(const float *matrix, android_color_transform_t hint);
   HWC2::Error RestoreColorTransform();
+  ColorMode GetCurrentColorMode() { return current_color_mode_; }
 
  private:
   static const uint32_t kColorTransformMatrixCount = 16;
