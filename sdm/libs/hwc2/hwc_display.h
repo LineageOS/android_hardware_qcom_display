@@ -20,12 +20,13 @@
 #ifndef __HWC_DISPLAY_H__
 #define __HWC_DISPLAY_H__
 
-#include <sys/stat.h>
 #include <QService.h>
+#include <android/hardware/graphics/common/1.1/types.h>
 #include <core/core_interface.h>
 #include <hardware/hwcomposer.h>
 #include <private/color_params.h>
 #include <qdMetaData.h>
+#include <sys/stat.h>
 #include <map>
 #include <queue>
 #include <set>
@@ -39,6 +40,10 @@
 #include "hwc_layers.h"
 #include "display_null.h"
 #include "hwc_display_event_handler.h"
+
+using android::hardware::graphics::common::V1_1::ColorMode;
+using android::hardware::graphics::common::V1_1::Dataspace;
+using android::hardware::graphics::common::V1_1::RenderIntent;
 
 namespace sdm {
 
@@ -68,20 +73,18 @@ class HWCColorMode {
   HWC2::Error DeInit();
   void Dump(std::ostringstream* os);
   uint32_t GetColorModeCount();
-  HWC2::Error GetColorModes(uint32_t *out_num_modes, android_color_mode_t *out_modes);
-  HWC2::Error SetColorMode(android_color_mode_t mode);
+  uint32_t GetRenderIntentCount(ColorMode mode);
+  HWC2::Error GetColorModes(uint32_t *out_num_modes, ColorMode *out_modes);
+  HWC2::Error GetRenderIntents(ColorMode mode, uint32_t *out_num_intents, RenderIntent *out_modes);
+  HWC2::Error SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
   HWC2::Error SetColorModeById(int32_t color_mode_id);
   HWC2::Error SetColorTransform(const float *matrix, android_color_transform_t hint);
   HWC2::Error RestoreColorTransform();
 
  private:
   static const uint32_t kColorTransformMatrixCount = 16;
-
-  HWC2::Error HandleColorModeTransform(android_color_mode_t mode,
-                                       android_color_transform_t hint, const double *matrix);
   void PopulateColorModes();
-  void PopulateTransform(const android_color_mode_t &mode,
-                         const std::string &color_mode, const std::string &color_transform);
+  void FindRenderIntent(const ColorMode &mode, const std::string &mode_string);
   template <class T>
   void CopyColorTransformMatrix(const T *input_matrix, double *output_matrix) {
     for (uint32_t i = 0; i < kColorTransformMatrixCount; i++) {
@@ -91,10 +94,12 @@ class HWCColorMode {
   HWC2::Error ApplyDefaultColorMode();
 
   DisplayInterface *display_intf_ = NULL;
-  android_color_mode_t current_color_mode_ = HAL_COLOR_MODE_NATIVE;
-  android_color_transform_t current_color_transform_ = HAL_COLOR_TRANSFORM_IDENTITY;
-  typedef std::map<android_color_transform_t, std::string> TransformMap;
-  std::map<android_color_mode_t, TransformMap> color_mode_transform_map_ = {};
+
+  ColorMode current_color_mode_ = ColorMode::NATIVE;
+  RenderIntent current_render_intent_ = RenderIntent::COLORIMETRIC;
+  typedef std::map<RenderIntent, std::string> RenderIntentMap;
+  // Initialize supported mode/render intent combination
+  std::map<ColorMode, RenderIntentMap> color_mode_map_ = {};
   double color_matrix_[kColorTransformMatrixCount] = { 1.0, 0.0, 0.0, 0.0, \
                                                        0.0, 1.0, 0.0, 0.0, \
                                                        0.0, 0.0, 1.0, 0.0, \
@@ -203,7 +208,8 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error SetActiveConfig(hwc2_config_t config);
   virtual HWC2::Error SetClientTarget(buffer_handle_t target, int32_t acquire_fence,
                                       int32_t dataspace, hwc_region_t damage);
-  virtual HWC2::Error SetColorMode(android_color_mode_t mode) {
+  virtual HWC2::Error SetColorMode(ColorMode mode) { return HWC2::Error::Unsupported; }
+  virtual HWC2::Error SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
     return HWC2::Error::Unsupported;
   }
   virtual HWC2::Error SetColorModeById(int32_t color_mode_id) {
@@ -225,7 +231,9 @@ class HWCDisplay : public DisplayEventHandler {
                                           int32_t *out_value);
   virtual HWC2::Error GetClientTargetSupport(uint32_t width, uint32_t height, int32_t format,
                                              int32_t dataspace);
-  virtual HWC2::Error GetColorModes(uint32_t *outNumModes, android_color_mode_t *outModes);
+  virtual HWC2::Error GetColorModes(uint32_t *outNumModes, ColorMode *outModes);
+  virtual HWC2::Error GetRenderIntents(ColorMode mode, uint32_t *out_num_intents,
+                                       RenderIntent *out_intents);
   virtual HWC2::Error GetChangedCompositionTypes(uint32_t *out_num_elements,
                                                  hwc2_layer_t *out_layers, int32_t *out_types);
   virtual HWC2::Error GetDisplayRequests(int32_t *out_display_requests, uint32_t *out_num_elements,

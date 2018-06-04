@@ -17,26 +17,27 @@
  * limitations under the License.
  */
 
-#include <core/buffer_allocator.h>
-#include <private/color_params.h>
-#include <utils/constants.h>
-#include <utils/String16.h>
-#include <cutils/properties.h>
-#include <hardware_legacy/uevent.h>
-#include <sys/resource.h>
-#include <sys/prctl.h>
-#include <binder/Parcel.h>
 #include <QService.h>
+#include <binder/Parcel.h>
+#include <core/buffer_allocator.h>
+#include <cutils/properties.h>
 #include <display_config.h>
-#include <utils/debug.h>
-#include <sync/sync.h>
+#include <hardware_legacy/uevent.h>
+#include <private/color_params.h>
 #include <qd_utils.h>
+#include <sync/sync.h>
+#include <sys/prctl.h>
+#include <sys/resource.h>
+#include <utils/String16.h>
+#include <utils/constants.h>
+#include <utils/debug.h>
 #include <utils/utils.h>
 #include <algorithm>
-#include <string>
 #include <bitset>
-#include <thread>
 #include <memory>
+#include <string>
+#include <thread>
+#include <vector>
 
 #include "hwc_buffer_allocator.h"
 #include "hwc_buffer_sync_handler.h"
@@ -440,13 +441,72 @@ static int32_t GetClientTargetSupport(hwc2_device_t *device, hwc2_display_t disp
 }
 
 static int32_t GetColorModes(hwc2_device_t *device, hwc2_display_t display, uint32_t *out_num_modes,
-                             int32_t /*android_color_mode_t*/ *int_out_modes) {
-  auto out_modes = reinterpret_cast<android_color_mode_t *>(int_out_modes);
+                             int32_t /*ColorMode*/ *int_out_modes) {
+  auto out_modes = reinterpret_cast<ColorMode *>(int_out_modes);
   if (out_num_modes == nullptr) {
     return HWC2_ERROR_BAD_PARAMETER;
   }
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::GetColorModes, out_num_modes,
                                          out_modes);
+}
+
+static int32_t GetRenderIntents(hwc2_device_t *device, hwc2_display_t display,
+                                int32_t /*ColorMode*/ int_mode, uint32_t *out_num_intents,
+                                int32_t /*RenderIntent*/ *int_out_intents) {
+  auto mode = static_cast<ColorMode>(int_mode);
+  auto out_intents = reinterpret_cast<RenderIntent *>(int_out_intents);
+  if (out_num_intents == nullptr) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+  return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::GetRenderIntents, mode,
+                                         out_num_intents, out_intents);
+}
+
+static int32_t GetDataspaceSaturationMatrix(hwc2_device_t *device,
+                                            int32_t /*Dataspace*/ int_dataspace,
+                                            float *out_matrix) {
+  auto dataspace = static_cast<Dataspace>(int_dataspace);
+  if (device == nullptr || out_matrix == nullptr || dataspace != Dataspace::SRGB_LINEAR) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+  // We only have the matrix for sRGB
+  float saturation_matrix[kDataspaceSaturationMatrixCount] = { 1.0, 0.0, 0.0, 0.0, \
+                                                               0.0, 1.0, 0.0, 0.0, \
+                                                               0.0, 0.0, 1.0, 0.0, \
+                                                               0.0, 0.0, 0.0, 1.0 };
+
+  // TODO(user): This value should ideally be retrieved from a QDCM configuration file
+  char value[kPropertyMax] = {};
+  if (Debug::Get()->GetProperty(DATASPACE_SATURATION_MATRIX_PROP, value) != kErrorNone) {
+    DLOGW("Undefined saturation matrix");
+    return HWC2_ERROR_BAD_CONFIG;
+  }
+  std::string value_string(value);
+  std::size_t start = 0, end = 0;
+  int index = 0;
+  while ((end = value_string.find(",", start)) != std::string::npos) {
+    saturation_matrix[index] = std::stof(value_string.substr(start, end - start));
+    start = end + 1;
+    index++;
+    // We expect a 3x3, SF needs 4x4, keep the last row/column identity
+    if ((index + 1) % 4 == 0) {
+      index++;
+    }
+  }
+  saturation_matrix[index] = std::stof(value_string.substr(start, end - start));
+  if (index < kDataspaceSaturationPropertyElements - 1) {
+    // The property must have kDataspaceSaturationPropertyElements delimited by commas
+    DLOGW("Invalid saturation matrix defined");
+    return HWC2_ERROR_BAD_CONFIG;
+  }
+  for (int32_t i = 0; i < kDataspaceSaturationMatrixCount; i += 4) {
+    DLOGD("%f %f %f %f", saturation_matrix[i], saturation_matrix[i + 1], saturation_matrix[i + 2],
+          saturation_matrix[i + 3]);
+  }
+  for (uint32_t i = 0; i < kDataspaceSaturationMatrixCount; i++) {
+    out_matrix[i] = saturation_matrix[i];
+  }
+  return HWC2_ERROR_NONE;
 }
 
 static int32_t GetDisplayAttribute(hwc2_device_t *device, hwc2_display_t display,
@@ -598,12 +658,24 @@ static int32_t SetClientTarget(hwc2_device_t *device, hwc2_display_t display,
 }
 
 int32_t HWCSession::SetColorMode(hwc2_device_t *device, hwc2_display_t display,
-                                 int32_t /*android_color_mode_t*/ int_mode) {
-  if (int_mode < HAL_COLOR_MODE_NATIVE || int_mode > HAL_COLOR_MODE_DISPLAY_P3) {
+                                 int32_t /*ColorMode*/ int_mode) {
+  auto mode = static_cast<ColorMode>(int_mode);
+  if (mode < ColorMode::NATIVE || mode > ColorMode::BT2100_HLG) {
     return HWC2_ERROR_BAD_PARAMETER;
   }
-  auto mode = static_cast<android_color_mode_t>(int_mode);
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::SetColorMode, mode);
+}
+
+int32_t HWCSession::SetColorModeWithRenderIntent(hwc2_device_t *device, hwc2_display_t display,
+                                                 int32_t /*ColorMode*/ int_mode,
+                                                 int32_t /*RenderIntent*/ int_render_intent) {
+  auto mode = static_cast<ColorMode>(int_mode);
+  if (mode < ColorMode::NATIVE || mode > ColorMode::BT2100_HLG) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+  auto render_intent = static_cast<RenderIntent>(int_render_intent);
+  return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::SetColorModeWithRenderIntent,
+                                         mode, render_intent);
 }
 
 int32_t HWCSession::SetColorTransform(hwc2_device_t *device, hwc2_display_t display,
@@ -892,6 +964,13 @@ hwc2_function_pointer_t HWCSession::GetFunction(struct hwc2_device *device,
       return AsFP<HWC2_PFN_GET_READBACK_BUFFER_ATTRIBUTES>(HWCSession::GetReadbackBufferAttributes);
     case HWC2::FunctionDescriptor::GetReadbackBufferFence:
       return AsFP<HWC2_PFN_GET_READBACK_BUFFER_FENCE>(HWCSession::GetReadbackBufferFence);
+    case HWC2::FunctionDescriptor::GetRenderIntents:
+      return AsFP<HWC2_PFN_GET_RENDER_INTENTS>(GetRenderIntents);
+    case HWC2::FunctionDescriptor::SetColorModeWithRenderIntent:
+      return AsFP<HWC2_PFN_SET_COLOR_MODE_WITH_RENDER_INTENT>(
+          HWCSession::SetColorModeWithRenderIntent);
+    case HWC2::FunctionDescriptor::GetDataspaceSaturationMatrix:
+      return AsFP<HWC2_PFN_GET_DATASPACE_SATURATION_MATRIX>(GetDataspaceSaturationMatrix);
     default:
       DLOGD("Unknown/Unimplemented function descriptor: %d (%s)", int_descriptor,
             to_string(descriptor).c_str());
@@ -1202,6 +1281,14 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       status = SetColorModeOverride(input_parcel);
       break;
 
+    case qService::IQService::SET_COLOR_MODE_WITH_RENDER_INTENT:
+      if (!input_parcel) {
+        DLOGE("QService command = %d: input_parcel needed.", command);
+        break;
+      }
+      status = SetColorModeWithRenderIntentOverride(input_parcel);
+      break;
+
     case qService::IQService::SET_COLOR_MODE_BY_ID:
       if (!input_parcel) {
         DLOGE("QService command = %d: input_parcel needed.", command);
@@ -1394,7 +1481,7 @@ android::status_t HWCSession::SetMixerResolution(const android::Parcel *input_pa
 
 android::status_t HWCSession::SetColorModeOverride(const android::Parcel *input_parcel) {
   auto display = static_cast<hwc2_display_t >(input_parcel->readInt32());
-  auto mode = static_cast<android_color_mode_t>(input_parcel->readInt32());
+  auto mode = static_cast<ColorMode>(input_parcel->readInt32());
   auto device = static_cast<hwc2_device_t *>(this);
 
   auto err = CallDisplayFunction(device, display, &HWCDisplay::SetColorMode, mode);
@@ -1404,6 +1491,20 @@ android::status_t HWCSession::SetColorModeOverride(const android::Parcel *input_
   return 0;
 }
 
+android::status_t HWCSession::SetColorModeWithRenderIntentOverride(
+    const android::Parcel *input_parcel) {
+  auto display = static_cast<hwc2_display_t>(input_parcel->readInt32());
+  auto mode = static_cast<ColorMode>(input_parcel->readInt32());
+  auto intent = static_cast<RenderIntent>(input_parcel->readInt32());
+  auto device = static_cast<hwc2_device_t *>(this);
+
+  auto err =
+      CallDisplayFunction(device, display, &HWCDisplay::SetColorModeWithRenderIntent, mode, intent);
+  if (err != HWC2_ERROR_NONE)
+    return -EINVAL;
+
+  return 0;
+}
 android::status_t HWCSession::SetColorModeById(const android::Parcel *input_parcel) {
   auto display = static_cast<hwc2_display_t >(input_parcel->readInt32());
   auto mode = input_parcel->readInt32();
