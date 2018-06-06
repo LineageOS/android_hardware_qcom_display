@@ -224,6 +224,10 @@ class HWCDisplay : public DisplayEventHandler {
     validated_ = false;
     return HWC2::Error::None;
   }
+  virtual void ActivateDisplay(bool active) {
+    active_ = active;
+    validated_ = false;
+  }
 
  protected:
   // Maximum number of layers supported by display manager.
@@ -320,6 +324,8 @@ class HWCDisplay : public DisplayEventHandler {
   uint32_t geometry_changes_ = GeometryChanges::kNone;
   bool skip_validate_ = false;
   bool animating_ = false;
+  bool active_ = true;
+  bool layers_bypassed_ = false;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {

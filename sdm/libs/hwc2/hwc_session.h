@@ -284,6 +284,11 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   void Refresh(hwc2_display_t display);
   void HotPlug(hwc2_display_t display, HWC2::Connection state);
   void UpdateVsyncSource(hwc2_display_t display);
+  void HandleConcurrency(hwc2_display_t disp);
+  void ActivateDisplay(hwc2_display_t disp, bool enable);
+  void NonBuiltinConcurrency(hwc2_display_t disp, bool is_built_in_2_on);
+  bool GetSecondBuiltinStatus();
+  hwc2_display_t GetNextBuiltinIndex();
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[kNumDisplays] = {nullptr};

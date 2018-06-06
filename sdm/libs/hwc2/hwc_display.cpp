@@ -1058,7 +1058,8 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
   }
 
   UpdateRefreshRate();
-  if (!skip_prepare_) {
+  layers_bypassed_ = false;
+  if (active_ && !skip_prepare_) {
     DisplayError error = display_intf_->Prepare(&layer_stack_);
     if (error != kErrorNone) {
       if (error == kErrorShutDown) {
@@ -1270,7 +1271,7 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
     return HWC2::Error::NotValidated;
   }
 
-  if (shutdown_pending_ || layer_set_.empty()) {
+  if (shutdown_pending_ || layer_set_.empty() || !active_) {
     return HWC2::Error::None;
   }
 
@@ -1340,7 +1341,7 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
     Layer *layer = hwc_layer->GetSDMLayer();
     LayerBuffer *layer_buffer = &layer->input_buffer;
 
-    if (!flush_) {
+    if (!flush_ && !layers_bypassed_) {
       // If swapinterval property is set to 0 or for single buffer layers, do not update f/w
       // release fences and discard fences from driver
       if (swap_interval_zero_ || layer->flags.single_buffer) {
@@ -1856,6 +1857,7 @@ void HWCDisplay::MarkLayersForGPUBypass() {
     layer->composition = kCompositionSDE;
   }
   validated_ = true;
+  layers_bypassed_ = true;
 }
 
 void HWCDisplay::MarkLayersForClientComposition() {

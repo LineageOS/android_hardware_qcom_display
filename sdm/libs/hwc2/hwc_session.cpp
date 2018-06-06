@@ -373,6 +373,8 @@ int32_t HWCSession::CreateVirtualDisplay(hwc2_device_t *device, uint32_t width, 
   } else {
     DLOGE("Failed to create virtual display: %s", to_string(status).c_str());
   }
+
+  hwc_session->HandleConcurrency(*out_display_id);
   return INT32(status);
 }
 
@@ -392,6 +394,7 @@ int32_t HWCSession::DestroyVirtualDisplay(hwc2_device_t *device, hwc2_display_t 
     if (map_info.client_id == display) {
       DLOGI("Destroying virtual display id:%" PRIu64, display);
       hwc_session->DestroyDisplay(&map_info);
+      hwc_session->HandleConcurrency(display);
       break;
     }
   }
@@ -765,6 +768,7 @@ int32_t HWCSession::SetPowerMode(hwc2_device_t *device, hwc2_display_t display, 
 
   HWCSession *hwc_session = static_cast<HWCSession *>(device);
   hwc_session->UpdateVsyncSource(display);
+  hwc_session->HandleConcurrency(display);
 
   return HWC2_ERROR_NONE;
 }
@@ -991,6 +995,83 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
   hwc_display_[HWC_DISPLAY_PRIMARY]->ResetValidation();
 
   return HWC2::Error::None;
+}
+
+hwc2_display_t HWCSession::GetNextBuiltinIndex() {
+  for (auto &map_info : map_info_builtin_) {
+    if (hwc_display_[map_info.client_id]) {
+      return map_info.client_id;
+    }
+  }
+  return 0;
+}
+
+bool HWCSession::GetSecondBuiltinStatus() {
+  if (!GetNextBuiltinIndex()) {
+    // Single Builtin
+    return false;
+  }
+  auto &hwc_display = hwc_display_[GetNextBuiltinIndex()];
+  if (hwc_display) {
+    return hwc_display->GetLastPowerMode() != HWC2::PowerMode::Off;
+  }
+  return false;
+}
+
+void HWCSession::HandleConcurrency(hwc2_display_t disp) {
+  if (!primary_ready_) {
+    DLOGI("Primary isnt ready yet!!");
+    return;
+  }
+
+  hwc2_display_t virtual_display_index = (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
+  // Valid Concurrencies
+  // For two builtins   --> Builtin + Builtin OR Builtin + External OR Builtin + Virtual
+  // For Single Builtin --> Builtin + Virtual OR Builtin + External
+
+  bool sec_builtin_active = GetSecondBuiltinStatus();
+
+  DLOGI("sec_builtin_active %d", sec_builtin_active);
+  if (disp == GetNextBuiltinIndex()) {
+    // Activate non-built_in displays if any.
+    if (sec_builtin_active) {
+      ActivateDisplay(HWC_DISPLAY_EXTERNAL, false);
+      ActivateDisplay(virtual_display_index, false);
+    } else {
+      // Activate One of the two connected displays.
+      if (hwc_display_[HWC_DISPLAY_EXTERNAL]) {
+        ActivateDisplay(HWC_DISPLAY_EXTERNAL, true);
+      } else if (hwc_display_[virtual_display_index]) {
+        ActivateDisplay(virtual_display_index, true);
+      }
+    }
+    return;
+  }
+
+  NonBuiltinConcurrency(disp, sec_builtin_active);
+}
+
+void HWCSession::NonBuiltinConcurrency(hwc2_display_t disp, bool builtin_active) {
+  hwc2_display_t virtual_display_index = (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
+  if (disp != HWC_DISPLAY_EXTERNAL && disp != virtual_display_index) {
+    return;
+  }
+
+  bool display_created = hwc_display_[disp];
+  // Virtual and External cant be active at the same time.
+  hwc2_display_t cocu_disp = (disp == HWC_DISPLAY_EXTERNAL) ? virtual_display_index
+                             : HWC_DISPLAY_EXTERNAL;
+  DLOGI("Disp: %d created: %d cocu_disp %d", disp, display_created, cocu_disp);
+  if (display_created) {
+    if (builtin_active || hwc_display_[cocu_disp]) {
+      ActivateDisplay(disp, false);
+    }
+  } else {
+    // Activate pending Virtual Display if any.
+    if (!builtin_active) {
+      ActivateDisplay(cocu_disp, true);
+    }
+  }
 }
 
 // Qclient methods
@@ -1969,6 +2050,7 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
 
       pending_hotplugs.push_back((hwc2_display_t)client_id);
 
+      HandleConcurrency(client_id);
       // Display is created for this sdm id, move to next connected display.
       break;
     }
@@ -1996,6 +2078,7 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
   for (auto client_id : pending_hotplugs) {
     DLOGI("Notify hotplug connected: client id = %d", client_id);
     callbacks_.Hotplug(client_id, HWC2::Connection::Connected);
+    HandleConcurrency(client_id);
   }
 
   return 0;
@@ -2058,6 +2141,7 @@ void HWCSession::DestroyDisplay(DisplayMapInfo *map_info) {
     }
     hwc_display = nullptr;
     map_info->Reset();
+    HandleConcurrency(client_id);
   }
 
   if (notify_hotplug) {
@@ -2105,6 +2189,14 @@ void HWCSession::UpdateVsyncSource(hwc2_display_t display) {
     callbacks_.SetSwapVsync(HWC_DISPLAY_PRIMARY, HWC_DISPLAY_PRIMARY);
     hwc_display_[HWC_DISPLAY_PRIMARY]->SetVsyncEnabled(vsync_mode);
   }
+}
+
+void HWCSession::ActivateDisplay(hwc2_display_t disp, bool enable) {
+  if (!hwc_display_[disp]) {
+    return;
+  }
+  hwc_display_[disp]->ActivateDisplay(enable);
+  DLOGI("Disp: %d, Active: %d", disp, enable);
 }
 
 }  // namespace sdm
