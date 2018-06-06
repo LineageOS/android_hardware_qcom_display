@@ -96,6 +96,12 @@ static HWQseedStepVersion GetQseedStepVersion(sde_drm::QSEEDStepVersion drm_vers
     case sde_drm::QSEEDStepVersion::V4:
       sdm_version = kQseed3v4;
       break;
+    case sde_drm::QSEEDStepVersion::V3LITE_V4:
+      sdm_version = kQseed3litev4;
+      break;
+    case sde_drm::QSEEDStepVersion::V3LITE_V5:
+      sdm_version = kQseed3litev5;
+      break;
   }
   return sdm_version;
 }
@@ -272,7 +278,7 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   drm_mgr_intf_->GetCrtcInfo(0 /* system_info */, &info);
   hw_resource->has_hdr = info.has_hdr;
   hw_resource->is_src_split = info.has_src_split;
-  hw_resource->has_qseed3 = (info.qseed_version == sde_drm::QSEEDVersion::V3);
+  hw_resource->has_qseed3 = (info.qseed_version >= sde_drm::QSEEDVersion::V3);
   hw_resource->num_blending_stages = info.max_blend_stages;
   hw_resource->num_solidfill_stages = info.max_solidfill_stages;
   hw_resource->smart_dma_rev = (info.smart_dma_rev == sde_drm::SmartDMARevision::V2p5) ?

@@ -211,6 +211,8 @@ enum HWQseedStepVersion {
   kQseed3v2,
   kQseed3v3,
   kQseed3v4,
+  kQseed3litev4,
+  kQseed3litev5,
 };
 
 struct HWDestScalarInfo {
@@ -504,6 +506,7 @@ struct HWScaleData {
   } enable;
   uint32_t dst_width = 0;
   uint32_t dst_height = 0;
+  uint32_t dir_weight = 0;
   HWPlane plane[MAX_PLANES] {};
   // scale_v2_data fields
   ScalingFilterConfig y_rgb_filter_cfg = kFilterEdgeDirected;
