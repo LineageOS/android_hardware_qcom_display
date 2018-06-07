@@ -788,6 +788,8 @@ DisplayError HWDeviceDRM::PowerOff() {
   }
 
   SetFullROI();
+  drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::OFF);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
   int ret = NullCommit(true /* synchronous */, false /* retain_planes */);
