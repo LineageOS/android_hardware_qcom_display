@@ -536,8 +536,10 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, int *release_fence
 
   default:
     DLOGE("Spurious state = %d transition requested.", state);
-    break;
+    return kErrorParameters;
   }
+
+  DisablePartialUpdateOneFrame();
 
   if (error == kErrorNone) {
     active_ = active;
