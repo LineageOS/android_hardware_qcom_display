@@ -47,7 +47,8 @@ class HWCDisplayVirtual : public HWCDisplay {
   virtual int Deinit();
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests);
   virtual HWC2::Error Present(int32_t *out_retire_fence);
-  virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type);
+  virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
+                                         int32_t format, bool post_processed);
   virtual HWC2::Error GetDisplayType(int32_t *out_type);
   HWC2::Error SetOutputBuffer(buffer_handle_t buf, int32_t release_fence);
 
