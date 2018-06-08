@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 The Android Open Source Project
- * Copyright (c) 2011-2014 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2014,2017 The Linux Foundation. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,16 +20,16 @@
 #include <fcntl.h>
 #include <cutils/properties.h>
 #include <sys/mman.h>
+#include <linux/msm_ion.h>
+#include <qdMetaData.h>
+#include <algorithm>
 
 #include "gr.h"
 #include "gpu.h"
 #include "memalloc.h"
 #include "alloc_controller.h"
-#include <qdMetaData.h>
 
 using namespace gralloc;
-
-#define SZ_1M 0x100000
 
 gpu_context_t::gpu_context_t(const private_module_t* module,
                              IAllocController* alloc_ctrl ) :
@@ -54,6 +54,16 @@ int gpu_context_t::gralloc_alloc_buffer(unsigned int size, int usage,
 {
     int err = 0;
     int flags = 0;
+    int alignedw = 0;
+    int alignedh = 0;
+
+    AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(width,
+            height,
+            format,
+            usage,
+            alignedw,
+            alignedh);
+
     size = roundUpToPageSize(size);
     alloc_data data;
     data.offset = 0;
@@ -64,14 +74,16 @@ int gpu_context_t::gralloc_alloc_buffer(unsigned int size, int usage,
     else
         data.align = getpagesize();
 
-    /* force 1MB alignment selectively for secure buffers, MDP5 onwards */
-#ifdef MDSS_TARGET
-    if ((usage & GRALLOC_USAGE_PROTECTED) &&
-        (usage & GRALLOC_USAGE_PRIVATE_MM_HEAP)) {
-        data.align = ALIGN((int) data.align, SZ_1M);
+    if (usage & GRALLOC_USAGE_PROTECTED) {
+            if ((usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY) ||
+                (usage & GRALLOC_USAGE_HW_CAMERA_MASK)) {
+                /* The alignment here reflects qsee mmu V7L/V8L requirement */
+                data.align = SZ_2M;
+            } else {
+                data.align = SECURE_ALIGN;
+            }
         size = ALIGN(size, data.align);
     }
-#endif
 
     data.size = size;
     data.pHandle = (uintptr_t) pHandle;
@@ -86,7 +98,7 @@ int gpu_context_t::gralloc_alloc_buffer(unsigned int size, int usage,
         eData.size = ROUND_UP_PAGESIZE(sizeof(MetaData_t));
         eData.pHandle = data.pHandle;
         eData.align = getpagesize();
-        int eDataUsage = GRALLOC_USAGE_PRIVATE_SYSTEM_HEAP;
+        int eDataUsage = 0;
         int eDataErr = mAllocCtrl->allocate(eData, eDataUsage);
         ALOGE_IF(eDataErr, "gralloc failed for eDataErr=%s",
                                           strerror(-eDataErr));
@@ -94,34 +106,9 @@ int gpu_context_t::gralloc_alloc_buffer(unsigned int size, int usage,
         if (usage & GRALLOC_USAGE_PRIVATE_EXTERNAL_ONLY) {
             flags |= private_handle_t::PRIV_FLAGS_EXTERNAL_ONLY;
         }
+
         if (usage & GRALLOC_USAGE_PRIVATE_INTERNAL_ONLY) {
             flags |= private_handle_t::PRIV_FLAGS_INTERNAL_ONLY;
-        }
-
-        ColorSpace_t colorSpace = ITU_R_601;
-        flags |= private_handle_t::PRIV_FLAGS_ITU_R_601;
-        if (bufferType == BUFFER_TYPE_VIDEO) {
-            if (usage & GRALLOC_USAGE_HW_CAMERA_WRITE) {
-#ifndef MDSS_TARGET
-                colorSpace = ITU_R_601_FR;
-                flags |= private_handle_t::PRIV_FLAGS_ITU_R_601_FR;
-#else
-                // Per the camera spec ITU 709 format should be set only for
-                // video encoding.
-                // It should be set to ITU 601 full range format for any other
-                // camera buffer
-                //
-                if (usage & GRALLOC_USAGE_HW_CAMERA_MASK) {
-                    if (usage & GRALLOC_USAGE_HW_VIDEO_ENCODER) {
-                        flags |= private_handle_t::PRIV_FLAGS_ITU_R_709;
-                        colorSpace = ITU_R_709;
-                    } else {
-                        flags |= private_handle_t::PRIV_FLAGS_ITU_R_601_FR;
-                        colorSpace = ITU_R_601_FR;
-                    }
-                }
-#endif
-            }
         }
 
         if (usage & GRALLOC_USAGE_HW_VIDEO_ENCODER ) {
@@ -148,8 +135,8 @@ int gpu_context_t::gralloc_alloc_buffer(unsigned int size, int usage,
             flags |= private_handle_t::PRIV_FLAGS_SECURE_DISPLAY;
         }
 
-        if(isMacroTileEnabled(format, usage)) {
-            flags |= private_handle_t::PRIV_FLAGS_TILE_RENDERED;
+        if (isUBwcEnabled(format, usage)) {
+            flags |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
         }
 
         if(usage & (GRALLOC_USAGE_SW_READ_MASK | GRALLOC_USAGE_SW_WRITE_MASK)) {
@@ -163,6 +150,10 @@ int gpu_context_t::gralloc_alloc_buffer(unsigned int size, int usage,
             flags |= private_handle_t::PRIV_FLAGS_NON_CPU_WRITER;
         }
 
+        if(usage & GRALLOC_USAGE_HW_COMPOSER) {
+            flags |= private_handle_t::PRIV_FLAGS_DISP_CONSUMER;
+        }
+
         if(false == data.uncached) {
             flags |= private_handle_t::PRIV_FLAGS_CACHED;
         }
@@ -170,19 +161,18 @@ int gpu_context_t::gralloc_alloc_buffer(unsigned int size, int usage,
         flags |= data.allocType;
         uint64_t eBaseAddr = (uint64_t)(eData.base) + eData.offset;
         private_handle_t *hnd = new private_handle_t(data.fd, size, flags,
-                bufferType, format, width, height, eData.fd, eData.offset,
-                eBaseAddr);
+                bufferType, format, alignedw, alignedh,
+                eData.fd, eData.offset, eBaseAddr, width, height);
 
         hnd->offset = data.offset;
         hnd->base = (uint64_t)(data.base) + data.offset;
         hnd->gpuaddr = 0;
+        ColorSpace_t colorSpace = ITU_R_601;
         setMetaData(hnd, UPDATE_COLOR_SPACE, (void*) &colorSpace);
-
         *pHandle = hnd;
     }
 
     ALOGE_IF(err, "gralloc failed err=%s", strerror(-err));
-
     return err;
 }
 
@@ -191,11 +181,8 @@ void gpu_context_t::getGrallocInformationFromFormat(int inputFormat,
 {
     *bufferType = BUFFER_TYPE_VIDEO;
 
-    if (inputFormat <= HAL_PIXEL_FORMAT_BGRA_8888) {
+    if (isUncompressedRgbFormat(inputFormat) == TRUE) {
         // RGB formats
-        *bufferType = BUFFER_TYPE_UI;
-    } else if ((inputFormat == HAL_PIXEL_FORMAT_R_8) ||
-               (inputFormat == HAL_PIXEL_FORMAT_RG_88)) {
         *bufferType = BUFFER_TYPE_UI;
     }
 }
@@ -205,10 +192,7 @@ int gpu_context_t::gralloc_alloc_framebuffer_locked(int usage,
 {
     private_module_t* m = reinterpret_cast<private_module_t*>(common.module);
 
-    // we don't support framebuffer allocations with graphics heap flags
-    if (usage & GRALLOC_HEAP_MASK) {
-        return -EINVAL;
-    }
+    // This allocation will only happen when gralloc is in fb mode
 
     if (m->framebuffer == NULL) {
         ALOGE("%s: Invalid framebuffer", __FUNCTION__);
@@ -287,22 +271,54 @@ int gpu_context_t::alloc_impl(int w, int h, int format, int usage,
     //the usage bits, gralloc assigns a format.
     if(format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED ||
        format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
-        if(usage & GRALLOC_USAGE_HW_VIDEO_ENCODER)
-            grallocFormat = HAL_PIXEL_FORMAT_NV12_ENCODEABLE; //NV12
-        else if((usage & GRALLOC_USAGE_HW_CAMERA_MASK)
+        if (usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC)
+            grallocFormat = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC;
+        else if(usage & GRALLOC_USAGE_HW_VIDEO_ENCODER) {
+            if(MDPCapabilityInfo::getInstance().isWBUBWCSupportedByMDP() &&
+               !IAllocController::getInstance()->isDisableUBWCForEncoder() &&
+               usage & GRALLOC_USAGE_HW_COMPOSER)
+              grallocFormat = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC;
+            else
+              grallocFormat = HAL_PIXEL_FORMAT_NV12_ENCODEABLE; //NV12
+        } else if((usage & GRALLOC_USAGE_HW_CAMERA_MASK)
                 == GRALLOC_USAGE_HW_CAMERA_ZSL)
             grallocFormat = HAL_PIXEL_FORMAT_NV21_ZSL; //NV21 ZSL
         else if(usage & GRALLOC_USAGE_HW_CAMERA_READ)
             grallocFormat = HAL_PIXEL_FORMAT_YCrCb_420_SP; //NV21
-        else if(usage & GRALLOC_USAGE_HW_CAMERA_WRITE)
-            grallocFormat = HAL_PIXEL_FORMAT_YCrCb_420_SP; //NV21
-        else if(usage & GRALLOC_USAGE_HW_COMPOSER)
+        else if(usage & GRALLOC_USAGE_HW_CAMERA_WRITE) {
+           if (format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
+               grallocFormat = HAL_PIXEL_FORMAT_NV21_ZSL; //NV21
+           } else {
+               grallocFormat = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS; //NV12 preview
+           }
+        } else if(usage & GRALLOC_USAGE_HW_COMPOSER)
             //XXX: If we still haven't set a format, default to RGBA8888
             grallocFormat = HAL_PIXEL_FORMAT_RGBA_8888;
-        //If no other usage flags are detected, default the
-        //flexible YUV format to NV21.
-        else if(format == HAL_PIXEL_FORMAT_YCbCr_420_888)
-            grallocFormat = HAL_PIXEL_FORMAT_YCrCb_420_SP;
+        else if(format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
+            //If no other usage flags are detected, default the
+            //flexible YUV format to NV21_ZSL
+            grallocFormat = HAL_PIXEL_FORMAT_NV21_ZSL;
+        }
+    }
+
+    bool useFbMem = false;
+    char property[PROPERTY_VALUE_MAX];
+    char isUBWC[PROPERTY_VALUE_MAX];
+    if (usage & GRALLOC_USAGE_HW_FB) {
+        if ((property_get("debug.gralloc.map_fb_memory", property, NULL) > 0) &&
+            (!strncmp(property, "1", PROPERTY_VALUE_MAX ) ||
+            (!strncasecmp(property,"true", PROPERTY_VALUE_MAX )))) {
+            useFbMem = true;
+        } else {
+            usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
+            if (property_get("debug.gralloc.enable_fb_ubwc", isUBWC, NULL) > 0){
+                if ((!strncmp(isUBWC, "1", PROPERTY_VALUE_MAX)) ||
+                    (!strncasecmp(isUBWC, "true", PROPERTY_VALUE_MAX))) {
+                    // Allocate UBWC aligned framebuffer
+                    usage |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
+                }
+            }
+        }
     }
 
     getGrallocInformationFromFormat(grallocFormat, &bufferType);
@@ -314,8 +330,12 @@ int gpu_context_t::alloc_impl(int w, int h, int format, int usage,
     size = (bufferSize >= size)? bufferSize : size;
 
     int err = 0;
-    err = gralloc_alloc_buffer(size, usage, pHandle, bufferType,
-                               grallocFormat, alignedw, alignedh);
+    if(useFbMem) {
+        err = gralloc_alloc_framebuffer(usage, pHandle);
+    } else {
+        err = gralloc_alloc_buffer(size, usage, pHandle, bufferType,
+                                   grallocFormat, w, h);
+    }
 
     if (err < 0) {
         return err;
@@ -348,6 +368,7 @@ int gpu_context_t::free_impl(private_handle_t const* hnd) {
         if (err)
             return err;
     }
+
     delete hnd;
     return 0;
 }

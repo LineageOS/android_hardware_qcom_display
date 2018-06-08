@@ -557,13 +557,15 @@ void DisplayBase::AppendDump(char *buffer, uint32_t length) {
 
   for (uint32_t i = 0; i < layer_info.left_frame_roi.size(); i++) {
     LayerRect &l_roi = layer_info.left_frame_roi.at(i);
-    LayerRect &r_roi = layer_info.right_frame_roi.at(i);
 
     DumpImpl::AppendString(buffer, length, "\nROI%d(L T R B) : LEFT(%d %d %d %d)", i,
                            INT(l_roi.left), INT(l_roi.top), INT(l_roi.right), INT(l_roi.bottom));
-    if (IsValid(r_roi)) {
-      DumpImpl::AppendString(buffer, length, ", RIGHT(%d %d %d %d)", INT(r_roi.left),
-                             INT(r_roi.top), INT(r_roi.right), INT(r_roi.bottom));
+    if (i < layer_info.right_frame_roi.size()) {
+      LayerRect &r_roi = layer_info.right_frame_roi.at(i);
+      if (IsValid(r_roi)) {
+        DumpImpl::AppendString(buffer, length, ", RIGHT(%d %d %d %d)", INT(r_roi.left),
+                               INT(r_roi.top), INT(r_roi.right), INT(r_roi.bottom));
+      }
     }
   }
 
