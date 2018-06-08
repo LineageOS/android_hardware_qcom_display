@@ -61,6 +61,7 @@ class Debug {
   static bool IsPartialSplitDisabled();
   static bool IsSrcSplitPreferred();
   static DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
+  static DisplayError GetWindowRect(float *left, float *top, float *right, float *bottom);
   static DisplayError GetReducedConfig(uint32_t *num_vig_pipes, uint32_t *num_dma_pipes);
   static int GetExtMaxlayers();
   static DisplayError GetProperty(const char *property_name, char *value);
