@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -463,6 +463,12 @@ HWCDisplay::HWCDisplay(CoreInterface *core_intf, BufferAllocator *buffer_allocat
 
 int HWCDisplay::Init() {
   DisplayError error = kErrorNone;
+
+  Debug::GetWindowRect(&window_rect_.left, &window_rect_.top,
+                                 &window_rect_.right, &window_rect_.bottom);
+
+  DLOGI("Window rect : [%f %f %f %f]", window_rect_.left, window_rect_.top,
+         window_rect_.right, window_rect_.bottom);
 
   HWCDebugHandler::Get()->GetProperty(ENABLE_NULL_DISPLAY_PROP, &null_display_mode_);
   HWCDebugHandler::Get()->GetProperty(ENABLE_ASYNC_POWERMODE, &async_power_mode_);
@@ -1065,6 +1071,14 @@ HWC2::Error HWCDisplay::GetDisplayAttribute(hwc2_config_t config, HWC2::Attribut
   }
 
   DisplayConfigVariableInfo variable_config = variable_config_map_.at(config);
+
+  variable_config.x_pixels -= UINT32(window_rect_.right + window_rect_.left);
+  variable_config.y_pixels -= UINT32(window_rect_.bottom + window_rect_.top);
+  if (variable_config.x_pixels <= 0 || variable_config.y_pixels <= 0) {
+    DLOGE("window rects are not within the supported range");
+    return HWC2::Error::BadDisplay;
+  }
+
   switch (attribute) {
     case HWC2::Attribute::VsyncPeriod:
       *out_value = INT32(variable_config.vsync_period_ns);
@@ -1873,6 +1887,19 @@ int HWCDisplay::SetFrameBufferConfig(uint32_t x_pixels, uint32_t y_pixels) {
     return -EINVAL;
   }
 
+  // Reduce the src_rect and dst_rect as per FBT config.
+  // SF sending reduced FBT but here the src_rect is equal to mixer which is
+  // higher than allocated buffer of FBT.
+  if (windowed_display_) {
+    x_pixels -= UINT32(window_rect_.right + window_rect_.left);
+    y_pixels -= UINT32(window_rect_.bottom + window_rect_.top);
+  }
+
+  if (x_pixels <= 0 || y_pixels <= 0) {
+    DLOGE("window rects are not within the supported range");
+    return -EINVAL;
+  }
+
   // Create rects to represent the new source and destination crops
   LayerRect crop = LayerRect(0, 0, FLOAT(x_pixels), FLOAT(y_pixels));
   hwc_rect_t scaled_display_frame = {0, 0, INT(x_pixels), INT(y_pixels)};
@@ -1894,6 +1921,11 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
     return error;
   }
 
+  if (windowed_display_) {
+    x_pixels -= UINT32(window_rect_.right + window_rect_.left);
+    y_pixels -= UINT32(window_rect_.bottom + window_rect_.top);
+    windowed_display_ = false;
+  }
   auto client_target_layer = client_target_->GetSDMLayer();
 
   int aligned_width;
