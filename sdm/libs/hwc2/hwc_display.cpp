@@ -1363,6 +1363,7 @@ DisplayError HWCDisplay::SetMaxMixerStages(uint32_t max_mixer_stages) {
 
 void HWCDisplay::DumpInputBuffers() {
   char dir_path[PATH_MAX];
+  int  status;
 
   if (!dump_frame_count_ || flush_ || !dump_input_layers_) {
     return;
@@ -1372,13 +1373,14 @@ void HWCDisplay::DumpInputBuffers() {
   snprintf(dir_path, sizeof(dir_path), "%s/frame_dump_%s", HWCDebugHandler::DumpDir(),
            GetDisplayString());
 
-  if (mkdir(dir_path, 0777) != 0 && errno != EEXIST) {
+  status = mkdir(dir_path, 777);
+  if ((status != 0) && errno != EEXIST) {
     DLOGW("Failed to create %s directory errno = %d, desc = %s", dir_path, errno, strerror(errno));
     return;
   }
 
-  // if directory exists already, need to explicitly change the permission.
-  if (errno == EEXIST && chmod(dir_path, 0777) != 0) {
+  // Even if directory exists already, need to explicitly change the permission.
+  if (chmod(dir_path, 0777) != 0) {
     DLOGW("Failed to change permissions on %s directory", dir_path);
     return;
   }
@@ -1439,17 +1441,19 @@ void HWCDisplay::DumpInputBuffers() {
 
 void HWCDisplay::DumpOutputBuffer(const BufferInfo &buffer_info, void *base, int fence) {
   char dir_path[PATH_MAX];
+  int  status;
 
   snprintf(dir_path, sizeof(dir_path), "%s/frame_dump_%s", HWCDebugHandler::DumpDir(),
            GetDisplayString());
 
-  if (mkdir(dir_path, 777) != 0 && errno != EEXIST) {
+  status = mkdir(dir_path, 777);
+  if ((status != 0) && errno != EEXIST) {
     DLOGW("Failed to create %s directory errno = %d, desc = %s", dir_path, errno, strerror(errno));
     return;
   }
 
-  // if directory exists already, need to explicitly change the permission.
-  if (errno == EEXIST && chmod(dir_path, 0777) != 0) {
+  // Even if directory exists already, need to explicitly change the permission.
+  if (chmod(dir_path, 0777) != 0) {
     DLOGW("Failed to change permissions on %s directory", dir_path);
     return;
   }
