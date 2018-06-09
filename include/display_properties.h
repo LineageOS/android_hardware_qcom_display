@@ -88,6 +88,7 @@
 #define DISABLE_FB_CROPPING_PROP             DISPLAY_PROP("disable_fb_cropping")
 #define PRIORITIZE_CACHE_COMPOSITION_PROP    DISPLAY_PROP("prioritize_cache_comp")
 #define DISABLE_HW_RECOVERY_PROP             DISPLAY_PROP("disable_hw_recovery")
+#define DISABLE_HW_RECOVERY_DUMP_PROP        DISPLAY_PROP("disable_hw_recovery_dump")
 #define DISABLE_SRC_TONEMAP_PROP             DISPLAY_PROP("disable_src_tonemap")
 #define ENABLE_NULL_DISPLAY_PROP             DISPLAY_PROP("enable_null_display")
 #define DISABLE_EXCL_RECT_PROP               DISPLAY_PROP("disable_excl_rect")

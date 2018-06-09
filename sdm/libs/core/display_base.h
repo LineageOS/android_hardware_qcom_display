@@ -203,6 +203,7 @@ class DisplayBase : public DisplayInterface {
   DisplayState last_power_mode_ = kStateOff;
   bool gpu_fallback_ = false;
   bool hw_recovery_logs_captured_ = false;
+  int disable_hw_recovery_dump_ = 0;
 
   static Locker display_power_reset_lock_;
   static bool display_power_reset_pending_;

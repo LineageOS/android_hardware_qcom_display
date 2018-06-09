@@ -144,6 +144,9 @@ DisplayError DisplayBase::Init() {
   // Partial update with Destination scaler enabled.
   SetPUonDestScaler();
 
+  Debug::GetProperty(DISABLE_HW_RECOVERY_DUMP_PROP, &disable_hw_recovery_dump_);
+  DLOGI("disable_hw_recovery_dump_ set to %d", disable_hw_recovery_dump_);
+
   return kErrorNone;
 
 CleanupOnError:
@@ -1805,7 +1808,7 @@ void DisplayBase::HwRecovery(const HWRecoveryEvent sdm_event_code) {
       hw_recovery_logs_captured_ = false;
       break;
     case HWRecoveryEvent::kCapture:
-      if (!hw_recovery_logs_captured_) {
+      if (!disable_hw_recovery_dump_ && !hw_recovery_logs_captured_) {
         hw_intf_->DumpDebugData();
         hw_recovery_logs_captured_ = true;
         DLOGI("Captured debugfs data for display = %d", display_type_);

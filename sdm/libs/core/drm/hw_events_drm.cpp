@@ -232,7 +232,7 @@ DisplayError HWEventsDRM::Init(int display_type, HWEventHandler *event_handler,
   if (Debug::Get()->GetProperty(DISABLE_HW_RECOVERY_PROP, &value) == kErrorNone) {
     disable_hw_recovery_ = (value == 1);
   }
-  DLOGI("disable_hw_recovery set to %d", disable_hw_recovery_);
+  DLOGI("disable_hw_recovery_ set to %d", disable_hw_recovery_);
   if (!disable_hw_recovery_) {
     RegisterHwRecovery(true);
   }
