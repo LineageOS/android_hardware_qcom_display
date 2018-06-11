@@ -81,7 +81,6 @@ int kgsl_memtrack_get_memory(pid_t pid, enum memtrack_type type,
 
         fp = fopen(syspath, "r");
         if (fp == NULL) {
-            fclose(fp);
             return -errno;
         }
 
