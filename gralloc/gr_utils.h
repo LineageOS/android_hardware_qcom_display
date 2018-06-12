@@ -86,6 +86,7 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]);
 int GetRgbDataAddress(private_handle_t *hnd, void **rgb_data);
 bool IsUBwcFormat(int format);
 bool IsUBwcSupported(int format);
+bool IsUBwcPISupported(int format, uint64_t usage);
 bool IsUBwcEnabled(int format, uint64_t usage);
 void GetYuvUBwcWidthAndHeight(int width, int height, int format, unsigned int *aligned_w,
                               unsigned int *aligned_h);
@@ -102,11 +103,14 @@ unsigned int GetUBwcSize(int width, int height, int format, unsigned int aligned
 int GetBufferLayout(private_handle_t *hnd, uint32_t stride[4], uint32_t offset[4],
                     uint32_t *num_planes);
 uint32_t GetDataAlignment(int format, uint64_t usage);
-
 void GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
                                      unsigned int *alignedw, unsigned int *alignedh,
                                      GraphicsMetadata *graphics_metadata);
 bool GetAdrenoSizeAPIStatus();
+bool UseUncached(int format, uint64_t usage);
+uint64_t GetHandleFlags(int format, uint64_t usage);
+int GetImplDefinedFormat(uint64_t usage, int format);
+int GetCustomFormatFlags(int format, uint64_t usage, int *custom_format, uint64_t *priv_flags);
 }  // namespace gralloc
 
 #endif  // __GR_UTILS_H__

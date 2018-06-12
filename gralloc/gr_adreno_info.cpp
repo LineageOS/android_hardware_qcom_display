@@ -267,4 +267,11 @@ bool AdrenoMemInfo::AdrenoSizeAPIAvaliable() {
           LINK_adreno_get_aligned_gpu_buffer_size);
 }
 
+bool AdrenoMemInfo::IsPISupportedByGPU(int format, uint64_t usage) {
+  if (LINK_adreno_isPISupportedByGpu) {
+    return LINK_adreno_isPISupportedByGpu(format, usage);
+  }
+  return false;
+}
+
 }  // namespace gralloc
