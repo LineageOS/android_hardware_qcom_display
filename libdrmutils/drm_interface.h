@@ -371,6 +371,11 @@ enum struct DRMOps {
    *      uint64_t - Pointer to feature config data
    */
   DPPS_CACHE_FEATURE,
+  /*
+   * Op: Commit Dpps features.
+   * Arg: drmModeAtomicReq - Atomic request
+   */
+  DPPS_COMMIT_FEATURE,
 };
 
 enum struct DRMRotation {
