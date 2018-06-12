@@ -1569,6 +1569,7 @@ android::status_t HWCSession::QdcmCMDDispatch(uint32_t display_id,
                                               PPPendingParams *pending_action) {
   int ret = 0;
   bool is_physical_display = false;
+  disp_id_config *disp_id = NULL;
 
   if (display_id >= kNumDisplays || !hwc_display_[display_id]) {
       DLOGW("Invalid display id or display = %d is not connected.", display_id);
@@ -1612,6 +1613,25 @@ android::status_t HWCSession::QdcmCMDDispatch(uint32_t display_id,
             DLOGW("Failed to dispatch req %d to display %d, ret %d", req_id, id, result);
             ret = result;
           }
+        }
+      }
+      break;
+
+    case DISP_APIS_GET_DISPLAY_IDS + DISP_APIS_OFFSET:
+      ret = resp_payload->CreatePayload<disp_id_config>(disp_id);
+      if (ret) {
+        DLOGE("Failed to create payload for disp_id_config, ret %d", ret);
+      } else {
+        for (int i = 0; i < NUM_DISPLAY_TYPES; i++)
+          disp_id->disp_id[i] = INVALID_DISPLAY;
+
+        if (hwc_display_[HWC_DISPLAY_PRIMARY])
+          disp_id->disp_id[DISPLAY_PRIMARY] = HWC_DISPLAY_PRIMARY;
+
+        for (auto &map_info : map_info_builtin_) {
+          hwc2_display_t id = map_info.client_id;
+          if (id < kNumDisplays && hwc_display_[id])
+            disp_id->disp_id[id] = id;
         }
       }
       break;
