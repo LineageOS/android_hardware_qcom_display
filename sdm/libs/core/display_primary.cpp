@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <functional>
 #include <vector>
+#include <string>
 
 #include "display_primary.h"
 #include "hw_interface.h"
@@ -173,7 +174,7 @@ DisplayError DisplayPrimary::Commit(LayerStack *layer_stack) {
     ControlPartialUpdate(true /* enable */, &pending);
   }
 
-  dpps_info_.Init(this);
+  dpps_info_.Init(this, hw_panel_info_.panel_name);
 
   return error;
 }
@@ -478,7 +479,7 @@ DisplayError DisplayPrimary::DppsProcessOps(enum DppsOps op, void *payload, size
   return error;
 }
 
-void DppsInfo::Init(DppsPropIntf* intf) {
+void DppsInfo::Init(DppsPropIntf* intf, const std::string &panel_name) {
   int error = 0;
 
   if (dpps_initialized_) {
@@ -502,7 +503,7 @@ void DppsInfo::Init(DppsPropIntf* intf) {
     goto exit;
   }
 
-  error = dpps_intf->Init(intf);
+  error = dpps_intf->Init(intf, panel_name);
   if (!error) {
     DLOGI("DPPS Interface init successfully");
     dpps_initialized_ = true;
