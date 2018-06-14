@@ -381,6 +381,7 @@ HWDeviceDRM::HWDeviceDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator
 }
 
 DisplayError HWDeviceDRM::Init() {
+  int ret = 0;
   DRMMaster *drm_master = {};
   DRMMaster::GetInstance(&drm_master);
   drm_master->GetHandle(&dev_fd_);
@@ -391,8 +392,36 @@ DisplayError HWDeviceDRM::Init() {
     return kErrorResources;
   }
 
-  drm_mgr_intf_->CreateAtomicReq(token_, &drm_atomic_intf_);
-  drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
+  if (token_.conn_id > INT32_MAX) {
+    DLOGE("Connector id %u beyond supported range", token_.conn_id);
+    drm_mgr_intf_->UnregisterDisplay(token_);
+    return kErrorNotSupported;
+  }
+
+  ret = drm_mgr_intf_->CreateAtomicReq(token_, &drm_atomic_intf_);
+  if (ret) {
+    DLOGE("Failed creating atomic request for connector id %u. Error: %d.", token_.conn_id, ret);
+    drm_mgr_intf_->UnregisterDisplay(token_);
+    return kErrorResources;
+  }
+
+  ret = drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
+  if (ret) {
+    DLOGE("Failed getting info for connector id %u. Error: %d.", token_.conn_id, ret);
+    drm_mgr_intf_->DestroyAtomicReq(drm_atomic_intf_);
+    drm_atomic_intf_ = {};
+    drm_mgr_intf_->UnregisterDisplay(token_);
+    return kErrorHardware;
+  }
+
+  if (connector_info_.modes.empty()) {
+    DLOGE("Critical error: Zero modes on connector id %u.", token_.conn_id);
+    drm_mgr_intf_->DestroyAtomicReq(drm_atomic_intf_);
+    drm_atomic_intf_ = {};
+    drm_mgr_intf_->UnregisterDisplay(token_);
+    return kErrorHardware;
+  }
+
   hw_info_intf_->GetHWResourceInfo(&hw_resource_);
 
   InitializeConfigs();

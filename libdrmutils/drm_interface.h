@@ -795,14 +795,16 @@ class DRMManagerInterface {
    * Will provide all the information of a selected crtc.
    * [input]: Use crtc id 0 to obtain system wide info
    * [output]: DRMCrtcInfo: Resource Info for the given CRTC id.
+   * [return]: 0 on success, a negative error value otherwise.
    */
-  virtual void GetCrtcInfo(uint32_t crtc_id, DRMCrtcInfo *info) = 0;
+  virtual int GetCrtcInfo(uint32_t crtc_id, DRMCrtcInfo *info) = 0;
 
   /*
    * Will provide all the information of a selected connector.
    * [output]: DRMConnectorInfo: Resource Info for the given connector id
+   * [return]: 0 on success, a negative error value otherwise.
    */
-  virtual void GetConnectorInfo(uint32_t conn_id, DRMConnectorInfo *info) = 0;
+  virtual int GetConnectorInfo(uint32_t conn_id, DRMConnectorInfo *info) = 0;
 
   /*
    * Will query post propcessing feature info of a CRTC.
