@@ -56,7 +56,40 @@ DisplayError HWPeripheralDRM::Init() {
   }
 
   scalar_data_.resize(hw_resource_.hw_dest_scalar_info.count);
+  PopulateBitClkRates();
 
+  return kErrorNone;
+}
+
+void HWPeripheralDRM::PopulateBitClkRates() {
+  if (!hw_panel_info_.dyn_bitclk_support) {
+    return;
+  }
+
+  // Group all bit_clk_rates corresponding to DRM_PREFERRED mode.
+  uint32_t width = connector_info_.modes[current_mode_index_].mode.hdisplay;
+  uint32_t height = connector_info_.modes[current_mode_index_].mode.vdisplay;
+
+  for (auto &mode_info : connector_info_.modes) {
+    auto &mode = mode_info.mode;
+    if (mode.hdisplay == width && mode.vdisplay == height) {
+      bitclk_rates_.push_back(mode_info.bit_clk_rate);
+      DLOGI("Possible bit_clk_rates %d", mode_info.bit_clk_rate);
+    }
+  }
+
+  hw_panel_info_.bitclk_rates = bitclk_rates_;
+  DLOGI("bit_clk_rates Size %d", bitclk_rates_.size());
+}
+
+DisplayError HWPeripheralDRM::SetDynamicDSIClock(uint64_t bit_clk_rate) {
+  bit_clk_rate_ = bit_clk_rate;
+  return kErrorNone;
+}
+
+DisplayError HWPeripheralDRM::GetDynamicDSIClock(uint64_t *bit_clk_rate) {
+  // Update bit_rate corresponding to current refresh rate.
+  *bit_clk_rate = (uint32_t)connector_info_.modes[current_mode_index_].bit_clk_rate;
   return kErrorNone;
 }
 

@@ -93,6 +93,15 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError ColorSVCRequestRoute(const PPDisplayAPIPayload &in_payload,
                                             PPDisplayAPIPayload *out_payload,
                                             PPPendingParams *pending_action);
+  virtual DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate) {
+    return kErrorNotSupported;
+  }
+  virtual DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate) {
+    return kErrorNotSupported;
+  }
+  virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates) {
+    return kErrorNotSupported;
+  }
   virtual DisplayError GetColorModeCount(uint32_t *mode_count);
   virtual DisplayError GetColorModes(uint32_t *mode_count, std::vector<std::string> *color_modes);
   virtual DisplayError GetColorModeAttr(const std::string &color_mode, AttrVal *attr);

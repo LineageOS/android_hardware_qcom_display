@@ -197,6 +197,15 @@ class HWCDisplay : public DisplayEventHandler {
                                                const double *matrix) {
     return HWC2::Error::Unsupported;
   }
+  virtual DisplayError SetDynamicDSIClock(uint64_t bitclk) {
+    return kErrorNotSupported;
+  }
+  virtual DisplayError GetDynamicDSIClock(uint64_t *bitclk) {
+    return kErrorNotSupported;
+  }
+  virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk) {
+    return kErrorNotSupported;
+  }
   virtual HWC2::Error GetDisplayConfigs(uint32_t *out_num_configs, hwc2_config_t *out_configs);
   virtual HWC2::Error GetDisplayAttribute(hwc2_config_t config, HWC2::Attribute attribute,
                                           int32_t *out_value);

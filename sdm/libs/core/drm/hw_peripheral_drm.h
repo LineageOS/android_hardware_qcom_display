@@ -47,11 +47,15 @@ class HWPeripheralDRM : public HWDeviceDRM {
   virtual DisplayError Validate(HWLayers *hw_layers);
   virtual DisplayError Commit(HWLayers *hw_layers);
   virtual DisplayError Flush(HWLayers *hw_layers);
+  virtual DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate);
+  virtual DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate);
  private:
   void SetDestScalarData(HWLayersInfo hw_layer_info);
   void ResetDisplayParams();
+  void PopulateBitClkRates();
   sde_drm_dest_scaler_data sde_dest_scalar_data_ = {};
   std::vector<SDEScaler> scalar_data_ = {};
+  std::vector<uint64_t> bitclk_rates_;
 };
 
 }  // namespace sdm

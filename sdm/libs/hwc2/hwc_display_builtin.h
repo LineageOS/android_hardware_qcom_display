@@ -69,6 +69,9 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   virtual int GetFrameCaptureStatus() { return frame_capture_status_; }
   virtual DisplayError SetDetailEnhancerConfig(const DisplayDetailEnhancerData &de_data);
   virtual DisplayError ControlPartialUpdate(bool enable, uint32_t *pending);
+  virtual DisplayError SetDynamicDSIClock(uint64_t bitclk);
+  virtual DisplayError GetDynamicDSIClock(uint64_t *bitclk);
+  virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates);
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,

@@ -54,6 +54,9 @@ class DisplayPrimary : public DisplayBase, HWEventHandler {
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate);
   virtual DisplayError SetPanelBrightness(int level);
   virtual DisplayError GetPanelBrightness(int *level);
+  virtual DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate);
+  virtual DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate);
+  virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates);
 
   // Implement the HWEventHandlers
   virtual DisplayError VSync(int64_t timestamp);
