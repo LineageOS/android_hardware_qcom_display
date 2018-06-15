@@ -79,10 +79,7 @@ class HWCColorMode {
   android_color_transform_t current_color_transform_ = HAL_COLOR_TRANSFORM_IDENTITY;
   typedef std::map<android_color_transform_t, std::string> TransformMap;
   std::map<android_color_mode_t, TransformMap> color_mode_transform_map_ = {};
-  double color_matrix_[kColorTransformMatrixCount] = { 1.0, 0.0, 0.0, 0.0, \
-                                                       0.0, 1.0, 0.0, 0.0, \
-                                                       0.0, 0.0, 1.0, 0.0, \
-                                                       0.0, 0.0, 0.0, 1.0 };
+  double color_matrix_[kColorTransformMatrixCount] = {0};
 };
 
 class HWCDisplay : public DisplayEventHandler {
