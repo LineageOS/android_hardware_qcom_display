@@ -104,8 +104,10 @@ bool CpuCanAccess(gralloc1_producer_usage_t prod_usage, gralloc1_consumer_usage_
 bool CpuCanRead(gralloc1_producer_usage_t prod_usage, gralloc1_consumer_usage_t cons_usage);
 bool CpuCanWrite(gralloc1_producer_usage_t prod_usage);
 unsigned int GetSize(const BufferInfo &d, unsigned int alignedw, unsigned int alignedh);
-void GetBufferSizeAndDimensions(const BufferInfo &d, unsigned int *size,
-                                unsigned int *alignedw, unsigned int *alignedh);
+void GetBufferSizeAndDimensions(const BufferInfo &d, unsigned int *size, unsigned int *alignedw,
+                                unsigned int *alignedh);
+void GetBufferSizeAndDimensions(const BufferInfo &d, unsigned int *size, unsigned int *alignedw,
+                                unsigned int *alignedh, GraphicsMetadata *graphics_metadata);
 void GetAlignedWidthAndHeight(const BufferInfo &d, unsigned int *aligned_w,
                               unsigned int *aligned_h);
 int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr *ycbcr);
@@ -135,8 +137,10 @@ bool IsGPUSupportedHwBuffer(gralloc1_producer_usage_t prod_usage);
 void GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
                                      unsigned int *alignedw, unsigned int *alignedh,
                                      GraphicsMetadata *graphics_metadata);
+bool CanUseAdrenoForSize(int buffer_type, uint64_t usage);
 bool GetAdrenoSizeAPIStatus();
 bool IsGPUFlagSupported(uint64_t usage);
+int GetBufferType(int inputFormat);
 }  // namespace gralloc
 
 #endif  // __GR_UTILS_H__
