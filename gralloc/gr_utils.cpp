@@ -998,6 +998,19 @@ void GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
   *size = adreno_mem_info->AdrenoGetAlignedGpuBufferSize(graphics_metadata->data);
 }
 
+bool CanUseAdrenoForSize(int buffer_type, uint64_t usage) {
+  if (buffer_type == BUFFER_TYPE_VIDEO || !GetAdrenoSizeAPIStatus()) {
+    return false;
+  }
+
+  if ((usage & BufferUsage::PROTECTED) && ((usage & BufferUsage::CAMERA_OUTPUT) ||
+      (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY))) {
+    return false;
+  }
+
+  return true;
+}
+
 bool GetAdrenoSizeAPIStatus() {
   AdrenoMemInfo* adreno_mem_info = AdrenoMemInfo::GetInstance();
   if (adreno_mem_info) {
