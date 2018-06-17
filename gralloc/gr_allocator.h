@@ -66,6 +66,9 @@ class Allocator {
                       unsigned int *ion_flags);
 
   IonAlloc *ion_allocator_ = NULL;
+
+  bool use_system_heap_for_sensors_ = false;
+
 };
 
 }  // namespace gralloc
