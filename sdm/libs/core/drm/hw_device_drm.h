@@ -46,6 +46,10 @@
 #define IOCTL_LOGE(ioctl, type) \
   DLOGE("ioctl %s, device = %d errno = %d, desc = %s", #ioctl, type, errno, strerror(errno))
 
+#define UI_FBID_LIMIT 3
+#define VIDEO_FBID_LIMIT 16
+#define OFFLINE_ROTATOR_FBID_LIMIT 2
+
 namespace sdm {
 class HWInfoInterface;
 
@@ -173,7 +177,7 @@ class HWDeviceDRM : public HWInterface {
     bool disable_fbid_cache_ = false;
     std::unordered_map<uint64_t, std::shared_ptr<LayerBufferObject>> output_buffer_map_ {};
     BufferAllocator *buffer_allocator_ = {};
-    const uint8_t fbid_cache_limit_ = 16;
+    uint8_t fbid_cache_limit_ = UI_FBID_LIMIT;
   };
 
  protected:
