@@ -581,6 +581,7 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   hw_panel_info_.min_roi_height = connector_info_.modes[index].hmin;
   hw_panel_info_.needs_roi_merge = connector_info_.modes[index].roi_merge;
   hw_panel_info_.dynamic_fps = connector_info_.dynamic_fps;
+  hw_panel_info_.qsync_support = connector_info_.qsync_support;
   drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
   if (hw_panel_info_.dynamic_fps) {
     uint32_t min_fps = current_mode.vrefresh;
@@ -633,8 +634,9 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   DLOGI("%s, Panel Interface = %s, Panel Mode = %s, Is Primary = %d", device_name_,
         interface_str_.c_str(), hw_panel_info_.mode == kModeVideo ? "Video" : "Command",
         hw_panel_info_.is_primary_panel);
-  DLOGI("Partial Update = %d, Dynamic FPS = %d, HDR Panel = %d", hw_panel_info_.partial_update,
-        hw_panel_info_.dynamic_fps, hw_panel_info_.hdr_enabled);
+  DLOGI("Partial Update = %d, Dynamic FPS = %d, HDR Panel = %d QSync = %d",
+        hw_panel_info_.partial_update, hw_panel_info_.dynamic_fps, hw_panel_info_.hdr_enabled,
+        hw_panel_info_.qsync_support);
   DLOGI("Align: left = %d, width = %d, top = %d, height = %d", hw_panel_info_.left_align,
         hw_panel_info_.width_align, hw_panel_info_.top_align, hw_panel_info_.height_align);
   DLOGI("ROI: min_width = %d, min_height = %d, need_merge = %d", hw_panel_info_.min_roi_width,
@@ -1069,6 +1071,10 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
   if (hw_panel_info_.mode == kModeCommand) {
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_AUTOREFRESH, token_.conn_id, autorefresh_);
   }
+
+  sde_drm::DRMQsyncMode mode = hw_layers->hw_avr_info.enable ? sde_drm::DRMQsyncMode::CONTINUOUS :
+                                                               sde_drm::DRMQsyncMode::NONE;
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_QSYNC_MODE, token_.conn_id, mode);
 }
 
 void HWDeviceDRM::AddSolidfillStage(const HWSolidfillStage &sf, uint32_t plane_alpha) {

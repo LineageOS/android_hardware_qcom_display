@@ -376,6 +376,12 @@ enum struct DRMOps {
    * Arg: drmModeAtomicReq - Atomic request
    */
   DPPS_COMMIT_FEATURE,
+  /*
+   * Op: Sets qsync mode on connector
+   * Arg: uint32_t - Connector ID
+   *     uint32_t - qsync mode
+   */
+  CONNECTOR_SET_QSYNC_MODE,
 };
 
 enum struct DRMRotation {
@@ -576,6 +582,7 @@ struct DRMConnectorInfo {
   drm_panel_hdr_properties panel_hdr_prop;
   uint32_t transfer_time_us;
   drm_msm_ext_hdr_properties ext_hdr_prop;
+  bool qsync_support;
 };
 
 /* Identifier token for a display */
@@ -718,6 +725,11 @@ enum struct DRMMultiRectMode {
 enum struct DRMCWbCaptureMode {
   MIXER_OUT = 0,
   DSPP_OUT = 1,
+};
+
+enum struct DRMQsyncMode {
+  NONE = 0,
+  CONTINUOUS,
 };
 
 struct DRMSolidfillStage {

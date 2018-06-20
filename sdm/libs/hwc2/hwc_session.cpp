@@ -1219,6 +1219,14 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       output_parcel->writeInt32(getComposerStatus());
       break;
 
+    case qService::IQService::SET_QSYNC_MODE:
+      if (!input_parcel) {
+        DLOGE("QService command = %d: input_parcel needed.", command);
+        break;
+      }
+      status = SetQSyncMode(input_parcel);
+      break;
+
     default:
       DLOGW("QService command = %d is not supported.", command);
       break;
@@ -2143,6 +2151,28 @@ int32_t HWCSession::GetReadbackBufferFence(hwc2_device_t *device, hwc2_display_t
   }
 
   return CallDisplayFunction(device, display, &HWCDisplay::GetReadbackBufferFence, release_fence);
+}
+
+android::status_t HWCSession::SetQSyncMode(const android::Parcel *input_parcel) {
+  auto mode = input_parcel->readInt32();
+  auto device = static_cast<hwc2_device_t *>(this);
+
+  QSyncMode qsync_mode = kQSyncModeNone;
+  switch (mode) {
+    case qService::IQService::QSYNC_MODE_NONE:
+      qsync_mode = kQSyncModeNone;
+      break;
+    case qService::IQService::QSYNC_MODE_CONTINUOUS:
+      qsync_mode = kQSyncModeContinuous;
+      break;
+    case qService::IQService::QSYNC_MODE_ONESHOT:
+      qsync_mode = kQsyncModeOneShot;
+      break;
+    default:
+      DLOGE("Qsync mode not supported %d", mode);
+      return -EINVAL;
+  }
+  return CallDisplayFunction(device, HWC_DISPLAY_PRIMARY, &HWCDisplay::SetQSyncMode, qsync_mode);
 }
 
 }  // namespace sdm

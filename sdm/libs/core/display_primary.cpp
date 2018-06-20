@@ -25,6 +25,8 @@
 #include <utils/constants.h>
 #include <utils/debug.h>
 #include <utils/rect.h>
+#include <utils/utils.h>
+
 #include <map>
 #include <algorithm>
 #include <functional>
@@ -398,8 +400,12 @@ DisplayError DisplayPrimary::DisablePartialUpdateOneFrame() {
 }
 
 bool DisplayPrimary::NeedsAVREnable() {
-  if (avr_prop_disabled_) {
+  if (avr_prop_disabled_ || qsync_mode_ == kQSyncModeNone) {
     return false;
+  }
+
+  if (GetDriverType() == DriverType::DRM) {
+    return hw_panel_info_.qsync_support;
   }
 
   return (hw_panel_info_.mode == kModeVideo && ((hw_panel_info_.dynamic_fps &&
@@ -543,6 +549,16 @@ void DppsInfo::DppsNotifyOps(enum DppsNotifyOps op, void *payload, size_t size) 
 
 DisplayError DisplayPrimary::HandleSecureEvent(SecureEvent secure_event) {
   return hw_intf_->HandleSecureEvent(secure_event);
+}
+
+DisplayError DisplayPrimary::SetQSyncMode(QSyncMode qsync_mode) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (GetDriverType() == DriverType::DRM && qsync_mode == kQsyncModeOneShot) {
+    return kErrorNotSupported;
+  }
+  qsync_mode_ = qsync_mode;
+
+  return kErrorNone;
 }
 
 }  // namespace sdm

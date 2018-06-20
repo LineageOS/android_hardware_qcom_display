@@ -73,6 +73,7 @@ class HWCDisplayPrimary : public HWCDisplay {
   virtual HWC2::Error SetReadbackBuffer(const native_handle_t *buffer, int32_t acquire_fence,
                                         bool post_processed_output);
   virtual HWC2::Error GetReadbackBufferFence(int32_t *release_fence);
+  virtual HWC2::Error SetQSyncMode(QSyncMode qsync_mode);
 
  private:
   HWCDisplayPrimary(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
