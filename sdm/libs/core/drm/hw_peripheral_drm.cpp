@@ -270,7 +270,7 @@ DisplayError HWPeripheralDRM::SetupConcurrentWritebackModes() {
 
 void HWPeripheralDRM::ConfigureConcurrentWriteback(LayerStack *layer_stack) {
   LayerBuffer *output_buffer = layer_stack->output_buffer;
-  registry_.MapBufferToFbId(output_buffer);
+  registry_.MapOutputBufferToFbId(output_buffer);
 
   // Set the topology for Concurrent Writeback: [CRTC_PRIMARY_DISPLAY - CONNECTOR_VIRTUAL_DISPLAY].
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, cwb_config_.token.conn_id, token_.crtc_id);
@@ -281,7 +281,7 @@ void HWPeripheralDRM::ConfigureConcurrentWriteback(LayerStack *layer_stack) {
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CAPTURE_MODE, token_.crtc_id, capture_mode);
 
   // Set Connector Output FB
-  uint32_t fb_id = registry_.GetFbId(output_buffer->planes[0].fd);
+  uint32_t fb_id = registry_.GetOutputFbId(output_buffer->handle_id);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_FB_ID, cwb_config_.token.conn_id, fb_id);
 
   // Set Connector Secure Mode
