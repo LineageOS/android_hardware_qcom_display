@@ -43,7 +43,7 @@
 
 #ifdef SLAVE_SIDE_CP
 #define SECURE_ALIGN SZ_1M
-#else // MASTER_SIDE_CP
+#else  // MASTER_SIDE_CP
 #define SECURE_ALIGN SZ_4K
 #endif
 
