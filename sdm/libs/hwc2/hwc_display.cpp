@@ -614,6 +614,8 @@ void HWCDisplay::BuildLayerStack() {
     // Must fall back to client composition
     MarkLayersForClientComposition();
   }
+
+  layer_stack_invalid_ = false;
 }
 
 void HWCDisplay::BuildSolidFillStack() {
@@ -1074,7 +1076,6 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
   *out_num_requests = UINT32(layer_requests_.size());
   validate_state_ = kNormalValidate;
   validated_ = true;
-  layer_stack_invalid_ = false;
 
   return ((*out_num_types > 0) ? HWC2::Error::HasChanges : HWC2::Error::None);
 }
