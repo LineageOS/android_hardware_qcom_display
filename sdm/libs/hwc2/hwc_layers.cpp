@@ -416,6 +416,9 @@ HWC2::Error HWCLayer::SetLayerSourceCrop(hwc_frect_t crop) {
                               (crop.top != roundf(crop.top)) ||
                               (crop.right != roundf(crop.right)) ||
                               (crop.bottom != roundf(crop.bottom)));
+  if (non_integral_source_crop_) {
+    DLOGV_IF(kTagClient, "Crop: LRTB %f %f %f %f", crop.left, crop.top, crop.right, crop.bottom);
+  }
   if (layer_->src_rect != src_rect) {
     geometry_changes_ |= kSourceCrop;
     layer_->src_rect = src_rect;
