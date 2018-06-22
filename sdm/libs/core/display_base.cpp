@@ -118,7 +118,7 @@ DisplayError DisplayBase::Init() {
   // TODO(user): Temporary changes, to be removed when DRM driver supports
   // Partial update with Destination scaler enabled.
   SetPUonDestScaler();
-  Debug::Get()->GetProperty("sdm.drop_skewed_vsync", &drop_vsync);
+  Debug::Get()->GetProperty(DROP_SKEWED_VSYNC_PROP, &drop_vsync);
   drop_skewed_vsync_ = (drop_vsync == 1);
   return kErrorNone;
 
