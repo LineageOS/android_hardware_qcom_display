@@ -41,8 +41,12 @@ typedef enum {
   ADRENO_PIXELFORMAT_R10G10B10A2_UNORM = 24,  // Vertex, Normalized GL_UNSIGNED_INT_10_10_10_2_OES
   ADRENO_PIXELFORMAT_R8G8B8A8 = 28,
   ADRENO_PIXELFORMAT_R8G8B8A8_SRGB = 29,
+  ADRENO_PIXELFORMAT_D32_FLOAT = 40,
+  ADRENO_PIXELFORMAT_D24_UNORM_S8_UINT = 45,
+  ADRENO_PIXELFORMAT_D16_UNORM = 55,
   ADRENO_PIXELFORMAT_B5G6R5 = 85,
   ADRENO_PIXELFORMAT_B5G5R5A1 = 86,
+  ADRENO_PIXELFORMAT_B8G8R8A8_UNORM = 87,
   ADRENO_PIXELFORMAT_B8G8R8A8 = 90,
   ADRENO_PIXELFORMAT_B8G8R8A8_SRGB = 91,
   ADRENO_PIXELFORMAT_B8G8R8X8_SRGB = 93,
@@ -59,6 +63,9 @@ typedef enum {
   ADRENO_PIXELFORMAT_A2B10G10R10_UNORM = 532,
   // Vertex, Normalized GL_UNSIGNED_INT_10_10_10_2_OES
   ADRENO_PIXELFORMAT_R10G10B10X2_UNORM = 537,
+  ADRENO_PIXELFORMAT_D24_UNORM = 549,
+  ADRENO_PIXELFORMAT_D32_FLOAT_X24S8_UINT = 551,
+  ADRENO_PIXELFORMAT_S8_UINT = 552,
   // Vertex, Normalized GL_UNSIGNED_INT_10_10_10_2_OES
   ADRENO_PIXELFORMAT_R5G6B5 = 610,    //  RGBA version of B5G6R5
   ADRENO_PIXELFORMAT_R5G5B5A1 = 611,  //  RGBA version of B5G5R5A1
@@ -69,6 +76,11 @@ typedef enum {
   ADRENO_PIXELFORMAT_Y8 = 625,        //  Single 8-bit luma only channel YUV format
   ADRENO_PIXELFORMAT_TP10 = 654,      // YUV 4:2:0 planar 10 bits/comp (2 planes)
 } ADRENOPIXELFORMAT;
+
+typedef enum {
+  SURFACE_TILE_MODE_DISABLE    = 0x0,    // used for linear surface
+  SURFACE_TILE_MODE_ENABLE     = 0x1     // used for tiled surface
+} surface_tile_mode_t;
 
 class AdrenoMemInfo {
  public:
@@ -115,9 +127,39 @@ class AdrenoMemInfo {
   bool IsUBWCSupportedByGPU(int format);
 
   /*
+  * Function to check if GPU supports PI or not
+  */
+  bool IsPISupportedByGPU(int format, uint64_t usage);
+  /*
    * Function to get the corresponding Adreno format for given HAL format
    */
   ADRENOPIXELFORMAT GetGpuPixelFormat(int hal_format);
+
+  /*
+   * Function to get graphics metadata blob size
+   * @return graphics metadata size
+   */
+  uint32_t AdrenoGetMetadataBlobSize();
+
+  /*
+   * Function to populate the graphics metadata blob
+   * @return 1 : Successful
+   *         2 : Unsuccessful
+   */
+  int AdrenoInitMemoryLayout(void *metadata_blob, int width, int height, int depth, int format,
+                             int num_samples, int isUBWC, uint64_t usage, uint32_t num_planes);
+  /*
+   * Function to get buffer size for based on graphcis metadata
+   * @return buffer size
+   */
+  uint32_t AdrenoGetAlignedGpuBufferSize(void *metadata_blob);
+
+  /*
+   * Function to check if adreno size calculation APIs are avaliable
+   * @return true  : Avaliable
+   *         false : Unavaliable
+  */
+  bool AdrenoSizeAPIAvaliable();
 
   static AdrenoMemInfo *GetInstance();
 
@@ -141,6 +183,13 @@ class AdrenoMemInfo {
       int *aligned_w, int *aligned_h, int *bpp) = NULL;
   int (*LINK_adreno_isUBWCSupportedByGpu)(ADRENOPIXELFORMAT format) = NULL;
   unsigned int (*LINK_adreno_get_gpu_pixel_alignment)() = NULL;
+
+  uint32_t (*LINK_adreno_get_metadata_blob_size)() = NULL;
+  int (*LINK_adreno_init_memory_layout)(void* metadata_blob, int width, int height, int depth,
+       ADRENOPIXELFORMAT format, int num_samples, surface_tile_mode_t tile_mode,
+       uint64_t usage, uint32_t num_planes) = NULL;
+  uint32_t (*LINK_adreno_get_aligned_gpu_buffer_size)(void* metadata_blob) = NULL;
+  int (*LINK_adreno_isPISupportedByGpu)(int format, uint64_t usage) = NULL;
 
   bool gfx_ubwc_disable_ = false;
   void *libadreno_utils_ = NULL;

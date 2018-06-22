@@ -53,9 +53,6 @@ class Allocator {
   bool CheckForBufferSharing(uint32_t num_descriptors,
                              const std::vector<std::shared_ptr<BufferDescriptor>> &descriptors,
                              ssize_t *max_index);
-  int GetImplDefinedFormat(uint64_t usage, int format);
-  bool UseUncached(int format, uint64_t usage);
-
  private:
   void GetIonHeapInfo(uint64_t usage, unsigned int *ion_heap_id, unsigned int *alloc_type,
                       unsigned int *ion_flags);

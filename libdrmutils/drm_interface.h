@@ -297,6 +297,12 @@ enum struct DRMOps {
    */
   CRTC_SET_IDLE_TIMEOUT,
   /*
+   * Op: Sets Capture mode for Concurrent Writeback feature.
+   * Arg: uint32_t - CRTC ID
+   *      uint32_t - Capture mode
+   */
+  CRTC_SET_CAPTURE_MODE,
+  /*
    * Op: Returns retire fence for this commit. Should be called after Commit() on
    * DRMAtomicReqInterface.
    * Arg: uint32_t - Connector ID
@@ -365,6 +371,11 @@ enum struct DRMOps {
    *      uint64_t - Pointer to feature config data
    */
   DPPS_CACHE_FEATURE,
+  /*
+   * Op: Commit Dpps features.
+   * Arg: drmModeAtomicReq - Atomic request
+   */
+  DPPS_COMMIT_FEATURE,
 };
 
 enum struct DRMRotation {
@@ -466,6 +477,7 @@ struct DRMCrtcInfo {
   uint32_t max_dest_scale_up = 1;
   uint32_t min_prefill_lines = 0;
   int secure_disp_blend_stage = -1;
+  bool concurrent_writeback = false;
 };
 
 enum struct DRMPlaneType {
@@ -570,6 +582,7 @@ struct DRMConnectorInfo {
 struct DRMDisplayToken {
   uint32_t conn_id;
   uint32_t crtc_id;
+  uint32_t crtc_index;
 };
 
 enum DRMPPFeatureID {
@@ -635,6 +648,12 @@ enum DRMDPPSFeatureID {
   kDppsFeaturesMax,
 };
 
+struct DppsFeaturePayload {
+  uint32_t object_type;
+  uint32_t feature_id;
+  uint64_t value;
+};
+
 struct DRMDppsFeatureInfo {
   DRMDPPSFeatureID id;
   uint32_t version;
@@ -694,6 +713,11 @@ enum struct DRMMultiRectMode {
   NONE = 0,
   PARALLEL = 1,
   SERIAL = 2,
+};
+
+enum struct DRMCWbCaptureMode {
+  MIXER_OUT = 0,
+  DSPP_OUT = 1,
 };
 
 struct DRMSolidfillStage {
@@ -771,14 +795,16 @@ class DRMManagerInterface {
    * Will provide all the information of a selected crtc.
    * [input]: Use crtc id 0 to obtain system wide info
    * [output]: DRMCrtcInfo: Resource Info for the given CRTC id.
+   * [return]: 0 on success, a negative error value otherwise.
    */
-  virtual void GetCrtcInfo(uint32_t crtc_id, DRMCrtcInfo *info) = 0;
+  virtual int GetCrtcInfo(uint32_t crtc_id, DRMCrtcInfo *info) = 0;
 
   /*
    * Will provide all the information of a selected connector.
    * [output]: DRMConnectorInfo: Resource Info for the given connector id
+   * [return]: 0 on success, a negative error value otherwise.
    */
-  virtual void GetConnectorInfo(uint32_t conn_id, DRMConnectorInfo *info) = 0;
+  virtual int GetConnectorInfo(uint32_t conn_id, DRMConnectorInfo *info) = 0;
 
   /*
    * Will query post propcessing feature info of a CRTC.

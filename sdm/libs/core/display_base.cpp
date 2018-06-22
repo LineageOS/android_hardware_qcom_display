@@ -144,6 +144,9 @@ DisplayError DisplayBase::Init() {
   // Partial update with Destination scaler enabled.
   SetPUonDestScaler();
 
+  Debug::GetProperty(DISABLE_HW_RECOVERY_DUMP_PROP, &disable_hw_recovery_dump_);
+  DLOGI("disable_hw_recovery_dump_ set to %d", disable_hw_recovery_dump_);
+
   return kErrorNone;
 
 CleanupOnError:
@@ -430,8 +433,16 @@ DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   fixed_info->is_cmdmode = (hw_panel_info_.mode == kModeCommand);
 
-  // hdr can be supported by display when target and panel supports HDR.
-  fixed_info->hdr_supported = (hw_resource_info_.has_hdr && hw_panel_info_.hdr_enabled);
+  HWResourceInfo hw_resource_info = HWResourceInfo();
+  hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
+  bool hdr_supported = hw_resource_info.has_hdr;
+  HWDisplayInterfaceInfo hw_disp_info = {};
+  hw_info_intf_->GetFirstDisplayInterfaceType(&hw_disp_info);
+  if (hw_disp_info.type == kHDMI) {
+    hdr_supported = (hdr_supported && hw_panel_info_.hdr_enabled);
+  }
+
+  fixed_info->hdr_supported = hdr_supported;
   // Populate luminance values only if hdr will be supported on that display
   fixed_info->max_luminance = fixed_info->hdr_supported ? hw_panel_info_.peak_luminance: 0;
   fixed_info->average_luminance = fixed_info->hdr_supported ? hw_panel_info_.average_luminance : 0;
@@ -500,12 +511,20 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, int *release_fence
     break;
 
   case kStateDoze:
+    if (state_ == kStateOff) {
+      DLOGI("Doze state not supported after suspend");
+      return kErrorNone;
+    }
     error = hw_intf_->Doze(release_fence);
     active = true;
     last_power_mode_ = kStateDoze;
     break;
 
   case kStateDozeSuspend:
+    if (state_ == kStateOff) {
+      DLOGI("Doze suspend state not supported after suspend");
+      return kErrorNone;
+    }
     error = hw_intf_->DozeSuspend(release_fence);
     if (display_type_ != kPrimary) {
       active = true;
@@ -520,8 +539,10 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, int *release_fence
 
   default:
     DLOGE("Spurious state = %d transition requested.", state);
-    break;
+    return kErrorParameters;
   }
+
+  DisablePartialUpdateOneFrame();
 
   if (error == kErrorNone) {
     active_ = active;
@@ -1787,7 +1808,7 @@ void DisplayBase::HwRecovery(const HWRecoveryEvent sdm_event_code) {
       hw_recovery_logs_captured_ = false;
       break;
     case HWRecoveryEvent::kCapture:
-      if (!hw_recovery_logs_captured_) {
+      if (!disable_hw_recovery_dump_ && !hw_recovery_logs_captured_) {
         hw_intf_->DumpDebugData();
         hw_recovery_logs_captured_ = true;
         DLOGI("Captured debugfs data for display = %d", display_type_);

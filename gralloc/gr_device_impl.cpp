@@ -364,18 +364,25 @@ gralloc1_error_t GrallocImpl::SetProducerUsage(gralloc1_device_t *device,
 
 gralloc1_error_t GrallocImpl::GetBackingStore(gralloc1_device_t *device, buffer_handle_t buffer,
                                               gralloc1_backing_store_t *out_backstore) {
-  if (!device || !buffer) {
-    return GRALLOC1_ERROR_BAD_HANDLE;
+  if (!out_backstore) {
+    return GRALLOC1_ERROR_BAD_VALUE;
   }
 
-  *out_backstore =
-      static_cast<gralloc1_backing_store_t>(PRIV_HANDLE_CONST(buffer)->GetBackingstore());
+  gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
+  if (status == GRALLOC1_ERROR_NONE) {
+    *out_backstore =
+        static_cast<gralloc1_backing_store_t>(PRIV_HANDLE_CONST(buffer)->GetBackingstore());
+  }
 
-  return GRALLOC1_ERROR_NONE;
+  return status;
 }
 
 gralloc1_error_t GrallocImpl::GetConsumerUsage(gralloc1_device_t *device, buffer_handle_t buffer,
                                                gralloc1_consumer_usage_t *outUsage) {
+  if (!outUsage) {
+    return GRALLOC1_ERROR_BAD_VALUE;
+  }
+
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
   if (status == GRALLOC1_ERROR_NONE) {
     *outUsage = static_cast<gralloc1_consumer_usage_t>(PRIV_HANDLE_CONST(buffer)->GetUsage());
@@ -386,6 +393,10 @@ gralloc1_error_t GrallocImpl::GetConsumerUsage(gralloc1_device_t *device, buffer
 
 gralloc1_error_t GrallocImpl::GetBufferDimensions(gralloc1_device_t *device, buffer_handle_t buffer,
                                                   uint32_t *outWidth, uint32_t *outHeight) {
+  if (!outWidth || !outHeight) {
+    return GRALLOC1_ERROR_BAD_VALUE;
+  }
+
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
   if (status == GRALLOC1_ERROR_NONE) {
     const private_handle_t *hnd = PRIV_HANDLE_CONST(buffer);
@@ -398,6 +409,10 @@ gralloc1_error_t GrallocImpl::GetBufferDimensions(gralloc1_device_t *device, buf
 
 gralloc1_error_t GrallocImpl::GetColorFormat(gralloc1_device_t *device, buffer_handle_t buffer,
                                              int32_t *outFormat) {
+  if (!outFormat) {
+    return GRALLOC1_ERROR_BAD_VALUE;
+  }
+
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
   if (status == GRALLOC1_ERROR_NONE) {
     *outFormat = PRIV_HANDLE_CONST(buffer)->GetColorFormat();
@@ -408,6 +423,10 @@ gralloc1_error_t GrallocImpl::GetColorFormat(gralloc1_device_t *device, buffer_h
 
 gralloc1_error_t GrallocImpl::GetLayerCount(gralloc1_device_t *device, buffer_handle_t buffer,
                                             uint32_t *outLayerCount) {
+  if (!outLayerCount) {
+    return GRALLOC1_ERROR_BAD_VALUE;
+  }
+
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
   if (status == GRALLOC1_ERROR_NONE) {
     *outLayerCount = PRIV_HANDLE_CONST(buffer)->GetLayerCount();
@@ -510,7 +529,7 @@ gralloc1_error_t GrallocImpl::ReleaseBuffer(gralloc1_device_t *device, buffer_ha
 
 gralloc1_error_t GrallocImpl::GetFlexLayout(const private_handle_t *hnd,
                                             struct android_flex_layout *layout) {
-  if (!IsYuvFormat(hnd)) {
+  if (!IsYuvFormat(hnd->format)) {
     return GRALLOC1_ERROR_UNSUPPORTED;
   }
 
@@ -560,7 +579,7 @@ gralloc1_error_t GrallocImpl::GetNumFlexPlanes(gralloc1_device_t *device, buffer
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
   if (status == GRALLOC1_ERROR_NONE) {
     const private_handle_t *hnd = PRIV_HANDLE_CONST(buffer);
-    if (!IsYuvFormat(hnd)) {
+    if (!IsYuvFormat(hnd->format)) {
       status = GRALLOC1_ERROR_UNSUPPORTED;
     } else {
       *out_num_planes = 3;
@@ -843,6 +862,21 @@ static gralloc1_error_t Perform(int operation, va_list args) {
         return GRALLOC1_ERROR_BAD_HANDLE;
       }
       if (setMetaData(hnd, SET_SINGLE_BUFFER_MODE, enable) != 0) {
+        return GRALLOC1_ERROR_UNSUPPORTED;
+      }
+    } break;
+
+    case GRALLOC_MODULE_PERFORM_GET_GRAPHICS_METADATA: {
+      private_handle_t* hnd = va_arg(args, private_handle_t *);
+
+      if (private_handle_t::validate(hnd) != 0) {
+        return GRALLOC1_ERROR_BAD_HANDLE;
+      }
+
+      void* graphic_metadata = va_arg(args, void*);
+
+      if (getMetaData(hnd, GET_GRAPHICS_METADATA, graphic_metadata) != 0) {
+        graphic_metadata = NULL;
         return GRALLOC1_ERROR_UNSUPPORTED;
       }
     } break;

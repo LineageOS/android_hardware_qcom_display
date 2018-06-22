@@ -886,6 +886,12 @@ hwc2_function_pointer_t HWCSession::GetFunction(struct hwc2_device *device,
       return AsFP<HWC2_PFN_SET_VSYNC_ENABLED>(SetVsyncEnabled);
     case HWC2::FunctionDescriptor::ValidateDisplay:
       return AsFP<HWC2_PFN_VALIDATE_DISPLAY>(HWCSession::ValidateDisplay);
+    case HWC2::FunctionDescriptor::SetReadbackBuffer:
+      return AsFP<HWC2_PFN_SET_READBACK_BUFFER>(HWCSession::SetReadbackBuffer);
+    case HWC2::FunctionDescriptor::GetReadbackBufferAttributes:
+      return AsFP<HWC2_PFN_GET_READBACK_BUFFER_ATTRIBUTES>(HWCSession::GetReadbackBufferAttributes);
+    case HWC2::FunctionDescriptor::GetReadbackBufferFence:
+      return AsFP<HWC2_PFN_GET_READBACK_BUFFER_FENCE>(HWCSession::GetReadbackBufferFence);
     default:
       DLOGD("Unknown/Unimplemented function descriptor: %d (%s)", int_descriptor,
             to_string(descriptor).c_str());
@@ -2088,6 +2094,55 @@ void HWCSession::HandleHotplugPending(hwc2_display_t disp_id, int retire_fence) 
   if (notify_hotplug) {
     HotPlug(HWC_DISPLAY_EXTERNAL, HWC2::Connection::Connected);
   }
+}
+
+int32_t HWCSession::GetReadbackBufferAttributes(hwc2_device_t *device, hwc2_display_t display,
+                                                int32_t *format, int32_t *dataspace) {
+  if (!device || !format || !dataspace) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (display != HWC_DISPLAY_PRIMARY) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  *format = HAL_PIXEL_FORMAT_RGB_888;
+  *dataspace = HAL_DATASPACE_V0_SRGB;  // ((STANDARD_BT709 | TRANSFER_SRGB) | RANGE_FULL)
+
+  return HWC2_ERROR_NONE;
+}
+
+int32_t HWCSession::SetReadbackBuffer(hwc2_device_t *device, hwc2_display_t display,
+                                      const native_handle_t *buffer, int32_t acquire_fence) {
+  if (!buffer) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (display != HWC_DISPLAY_PRIMARY) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  HWCSession *hwc_session = static_cast<HWCSession *>(device);
+  if (hwc_session->hwc_display_[HWC_DISPLAY_EXTERNAL] ||
+      hwc_session->hwc_display_[HWC_DISPLAY_VIRTUAL]) {
+    return HWC2_ERROR_UNSUPPORTED;
+  }
+
+  return CallDisplayFunction(device, display, &HWCDisplay::SetReadbackBuffer,
+                             buffer, acquire_fence, false);
+}
+
+int32_t HWCSession::GetReadbackBufferFence(hwc2_device_t *device, hwc2_display_t display,
+                                           int32_t *release_fence) {
+  if (!release_fence) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (display != HWC_DISPLAY_PRIMARY) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  return CallDisplayFunction(device, display, &HWCDisplay::GetReadbackBufferFence, release_fence);
 }
 
 }  // namespace sdm

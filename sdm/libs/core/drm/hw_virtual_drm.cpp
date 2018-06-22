@@ -121,18 +121,6 @@ DisplayError HWVirtualDRM::SetWbConfigs(const HWDisplayAttributes &display_attri
   return kErrorNone;
 }
 
-void HWVirtualDRM::DumpConnectorModeInfo() {
-  for (uint32_t i = 0; i < (uint32_t)connector_info_.modes.size(); i++) {
-    DLOGI("Mode[%d] Name:%s vref:%d hdisp:%d hsync_s:%d hsync_e:%d htotal:%d " \
-          "vdisp:%d vsync_s:%d vsync_e:%d vtotal:%d\n", i, connector_info_.modes[i].mode.name,
-          connector_info_.modes[i].mode.vrefresh, connector_info_.modes[i].mode.hdisplay,
-          connector_info_.modes[i].mode.hsync_start, connector_info_.modes[i].mode.hsync_end,
-          connector_info_.modes[i].mode.htotal, connector_info_.modes[i].mode.vdisplay,
-          connector_info_.modes[i].mode.vsync_start, connector_info_.modes[i].mode.vsync_end,
-          connector_info_.modes[i].mode.vtotal);
-  }
-}
-
 DisplayError HWVirtualDRM::Commit(HWLayers *hw_layers) {
   LayerBuffer *output_buffer = hw_layers->info.stack->output_buffer;
   DisplayError err = kErrorNone;
@@ -175,6 +163,7 @@ DisplayError HWVirtualDRM::SetDisplayAttributes(const HWDisplayAttributes &displ
   }
 
   int mode_index = -1;
+  int ret = 0;
   GetModeIndex(display_attributes, &mode_index);
 
   if (mode_index < 0) {
@@ -185,7 +174,11 @@ DisplayError HWVirtualDRM::SetDisplayAttributes(const HWDisplayAttributes &displ
   }
 
   // Reload connector info for updated info
-  drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
+  ret = drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
+  if (ret) {
+    DLOGE("Failed getting info for connector id %u. Error: %d.", token_.conn_id, ret);
+    return kErrorHardware;
+  }
   GetModeIndex(display_attributes, &mode_index);
 
   if (mode_index < 0) {

@@ -101,7 +101,6 @@ class HWInterface {
   virtual DisplayError SetDisplayMode(const HWDisplayMode hw_display_mode) = 0;
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate) = 0;
   virtual DisplayError SetPanelBrightness(int level) = 0;
-  virtual DisplayError CachePanelBrightness(int level) = 0;
   virtual DisplayError GetHWScanInfo(HWScanInfo *scan_info) = 0;
   virtual DisplayError GetVideoFormat(uint32_t config_index, uint32_t *video_format) = 0;
   virtual DisplayError GetMaxCEAFormat(uint32_t *max_cea_format) = 0;
@@ -114,9 +113,8 @@ class HWInterface {
   virtual DisplayError SetMixerAttributes(const HWMixerAttributes &mixer_attributes) = 0;
   virtual DisplayError GetMixerAttributes(HWMixerAttributes *mixer_attributes) = 0;
   virtual DisplayError DumpDebugData() = 0;
-  virtual DisplayError SetDppsFeature(uint32_t object_type,
-                                      uint32_t feature_id, uint64_t value) = 0;
-  virtual DisplayError GetDppsFeatureInfo(void *info) = 0;
+  virtual DisplayError SetDppsFeature(void *payload, size_t size) = 0;
+  virtual DisplayError GetDppsFeatureInfo(void *payload, size_t size) = 0;
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event) = 0;
 
  protected:

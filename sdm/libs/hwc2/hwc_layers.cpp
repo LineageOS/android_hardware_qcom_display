@@ -86,7 +86,7 @@ bool GetColorPrimary(const int32_t &dataspace, ColorPrimaries *color_primary) {
       *color_primary = ColorPrimaries_BT2020;
       break;
     default:
-      DLOGV_IF(kTagClient, "Unsupported Standard Request = %d", standard);
+      DLOGW_IF(kTagClient, "Unsupported Standard Request = %d", standard);
       supported_csc = false;
   }
   return supported_csc;
@@ -118,7 +118,7 @@ bool GetTransfer(const int32_t &dataspace, GammaTransfer *gamma_transfer) {
       *gamma_transfer = Transfer_Gamma2_8;
       break;
     default:
-      DLOGV_IF(kTagClient, "Unsupported Transfer Request = %d", transfer);
+      DLOGW_IF(kTagClient, "Unsupported Transfer Request = %d", transfer);
       supported_transfer = false;
   }
   return supported_transfer;
@@ -137,7 +137,7 @@ bool GetRange(const int32_t &dataspace, ColorRange *color_range) {
       *color_range = Range_Extended;
       break;
     default:
-      DLOGV_IF(kTagClient, "Unsupported Range Request = %d", range);
+      DLOGW_IF(kTagClient, "Unsupported Range Request = %d", range);
       return false;
   }
   return true;
@@ -151,6 +151,38 @@ bool IsBT2020(const ColorPrimaries &color_primary) {
   default:
     return false;
   }
+}
+
+int32_t TranslateFromLegacyDataspace(const int32_t &legacy_ds) {
+  int32_t dataspace = legacy_ds;
+
+  if (dataspace & 0xffff) {
+    switch (dataspace & 0xffff) {
+      case HAL_DATASPACE_SRGB:
+        dataspace = HAL_DATASPACE_V0_SRGB;
+        break;
+      case HAL_DATASPACE_JFIF:
+        dataspace = HAL_DATASPACE_V0_JFIF;
+        break;
+      case HAL_DATASPACE_SRGB_LINEAR:
+        dataspace = HAL_DATASPACE_V0_SRGB_LINEAR;
+        break;
+      case HAL_DATASPACE_BT601_625:
+        dataspace = HAL_DATASPACE_V0_BT601_625;
+        break;
+      case HAL_DATASPACE_BT601_525:
+        dataspace = HAL_DATASPACE_V0_BT601_525;
+        break;
+      case HAL_DATASPACE_BT709:
+        dataspace = HAL_DATASPACE_V0_BT709;
+        break;
+      default:
+        // unknown legacy dataspace
+        DLOGW_IF(kTagClient, "Unsupported dataspace type %d", dataspace);
+    }
+  }
+
+  return dataspace;
 }
 
 // Retrieve ColorMetaData from android_data_space_t (STANDARD|TRANSFER|RANGE)
@@ -355,33 +387,8 @@ HWC2::Error HWCLayer::SetLayerCompositionType(HWC2::Composition type) {
 }
 
 HWC2::Error HWCLayer::SetLayerDataspace(int32_t dataspace) {
-  // Map deprecated dataspace values to appropriate
-  // new enums
-  if (dataspace & 0xffff) {
-    switch (dataspace & 0xffff) {
-      case HAL_DATASPACE_SRGB:
-        dataspace = HAL_DATASPACE_V0_SRGB;
-        break;
-      case HAL_DATASPACE_JFIF:
-        dataspace = HAL_DATASPACE_V0_JFIF;
-        break;
-      case HAL_DATASPACE_SRGB_LINEAR:
-        dataspace = HAL_DATASPACE_V0_SRGB_LINEAR;
-        break;
-      case HAL_DATASPACE_BT601_625:
-        dataspace = HAL_DATASPACE_V0_BT601_625;
-        break;
-      case HAL_DATASPACE_BT601_525:
-        dataspace = HAL_DATASPACE_V0_BT601_525;
-        break;
-      case HAL_DATASPACE_BT709:
-        dataspace = HAL_DATASPACE_V0_BT709;
-        break;
-      default:
-        // unknown legacy dataspace
-        DLOGW_IF(kTagClient, "Unsupported dataspace type %d", dataspace);
-    }
-  }
+  // Map deprecated dataspace values to appropriate new enums
+  dataspace = TranslateFromLegacyDataspace(dataspace);
 
   // cache the dataspace, to be used later to update SDM ColorMetaData
   if (dataspace_ != dataspace) {
@@ -782,6 +789,9 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
   single_buffer_ = false;
   getMetaData(const_cast<private_handle_t *>(handle), GET_SINGLE_BUFFER_MODE, &single_buffer_);
 
+  // Handle colorMetaData / Dataspace handling now
+  ValidateAndSetCSC(handle);
+
   return kErrorNone;
 }
 
@@ -801,13 +811,17 @@ DisplayError HWCLayer::SetIGC(IGC_t source, LayerIGC *target) {
   return kErrorNone;
 }
 
-bool HWCLayer::ValidateAndSetCSC() {
+bool HWCLayer::IsDataSpaceSupported() {
   if (client_requested_ != HWC2::Composition::Device &&
       client_requested_ != HWC2::Composition::Cursor) {
-    // Check the layers which are configured to Device
+    // Layers marked for GPU can have any dataspace
     return true;
   }
 
+  return dataspace_supported_;
+}
+
+void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
   LayerBuffer *layer_buffer = &layer_->input_buffer;
   bool use_color_metadata = true;
   ColorMetaData csc = {};
@@ -815,12 +829,20 @@ bool HWCLayer::ValidateAndSetCSC() {
     use_color_metadata = false;
     bool valid_csc = GetSDMColorSpace(dataspace_, &csc);
     if (!valid_csc) {
-      return false;
+      dataspace_supported_ = false;
+      return;
     }
-    // if we are here here, update the sdm layer csc.
-    layer_buffer->color_metadata.transfer = csc.transfer;
-    layer_buffer->color_metadata.colorPrimaries = csc.colorPrimaries;
-    layer_buffer->color_metadata.range = csc.range;
+
+    if (layer_buffer->color_metadata.transfer != csc.transfer ||
+       layer_buffer->color_metadata.colorPrimaries != csc.colorPrimaries ||
+       layer_buffer->color_metadata.range != csc.range) {
+        // ColorMetadata updated. Needs validate.
+        needs_validate_ = true;
+        // if we are here here, update the sdm layer csc.
+        layer_buffer->color_metadata.transfer = csc.transfer;
+        layer_buffer->color_metadata.colorPrimaries = csc.colorPrimaries;
+        layer_buffer->color_metadata.range = csc.range;
+    }
   }
 
   if (IsBT2020(layer_buffer->color_metadata.colorPrimaries)) {
@@ -830,14 +852,25 @@ bool HWCLayer::ValidateAndSetCSC() {
   }
 
   if (use_color_metadata) {
-    const private_handle_t *handle =
-      reinterpret_cast<const private_handle_t *>(layer_buffer->buffer_id);
-    if (sdm::SetCSC(handle, &layer_buffer->color_metadata) != kErrorNone) {
-      return false;
+    ColorMetaData old_meta_data = layer_buffer->color_metadata;
+    if (sdm::SetCSC(handle, &layer_buffer->color_metadata) == kErrorNone) {
+      if ((layer_buffer->color_metadata.colorPrimaries != old_meta_data.colorPrimaries) ||
+          (layer_buffer->color_metadata.transfer != old_meta_data.transfer) ||
+          (layer_buffer->color_metadata.range != old_meta_data.range)) {
+        needs_validate_ = true;
+      }
+      if (layer_buffer->color_metadata.dynamicMetaDataValid &&
+          !SameConfig(layer_buffer->color_metadata.dynamicMetaDataPayload,
+          old_meta_data.dynamicMetaDataPayload, HDR_DYNAMIC_META_DATA_SZ)) {
+        needs_validate_ = true;
+      }
+    } else {
+      dataspace_supported_ = false;
+      return;
     }
   }
 
-  return true;
+  dataspace_supported_ = true;
 }
 
 

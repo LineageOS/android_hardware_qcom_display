@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <functional>
 #include <vector>
+#include <string>
 
 #include "display_primary.h"
 #include "hw_interface.h"
@@ -160,6 +161,11 @@ DisplayError DisplayPrimary::Commit(LayerStack *layer_stack) {
     return error;
   }
 
+  if (commit_event_enabled_) {
+    dpps_info_.DppsNotifyOps(kDppsCommitEvent, &display_type_,
+                                            sizeof(display_type_));
+  }
+
   DisplayBase::ReconfigureDisplay();
 
   int idle_time_ms = hw_layers_.info.set_idle_time_ms;
@@ -173,7 +179,7 @@ DisplayError DisplayPrimary::Commit(LayerStack *layer_stack) {
     ControlPartialUpdate(true /* enable */, &pending);
   }
 
-  dpps_info_.Init(this);
+  dpps_info_.Init(this, hw_panel_info_.panel_name);
 
   return error;
 }
@@ -250,11 +256,6 @@ DisplayError DisplayPrimary::SetDisplayMode(uint32_t mode) {
 DisplayError DisplayPrimary::SetPanelBrightness(int level) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   return hw_intf_->SetPanelBrightness(level);
-}
-
-DisplayError DisplayPrimary::CachePanelBrightness(int level) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
-  return hw_intf_->CachePanelBrightness(level);
 }
 
 DisplayError DisplayPrimary::GetRefreshRateRange(uint32_t *min_refresh_rate,
@@ -436,16 +437,57 @@ void DisplayPrimary::ResetPanel() {
   }
 }
 
-DisplayError DisplayPrimary::SetDppsFeature(uint32_t object_type,
-                            uint32_t feature_id, uint64_t value) {
-    return hw_intf_->SetDppsFeature(object_type, feature_id, value);
+DisplayError DisplayPrimary::DppsProcessOps(enum DppsOps op, void *payload, size_t size) {
+  DisplayError error = kErrorNone;
+  uint32_t pending;
+  bool enable = false;
+
+  switch (op) {
+  case kDppsSetFeature:
+    if (!payload) {
+      DLOGE("Invalid payload parameter for op %d", op);
+      error = kErrorParameters;
+      break;
+    }
+    error = hw_intf_->SetDppsFeature(payload, size);
+    break;
+  case kDppsGetFeatureInfo:
+    if (!payload) {
+      DLOGE("Invalid payload parameter for op %d", op);
+      error = kErrorParameters;
+      break;
+    }
+    error = hw_intf_->GetDppsFeatureInfo(payload, size);
+    break;
+  case kDppsScreenRefresh:
+    event_handler_->Refresh();
+    break;
+  case kDppsPartialUpdate:
+    if (!payload) {
+      DLOGE("Invalid payload parameter for op %d", op);
+      error = kErrorParameters;
+      break;
+    }
+    enable = *(reinterpret_cast<bool *>(payload));
+    ControlPartialUpdate(enable, &pending);
+    break;
+  case kDppsRequestCommit:
+    if (!payload) {
+      DLOGE("Invalid payload parameter for op %d", op);
+      error = kErrorParameters;
+      break;
+    }
+    commit_event_enabled_ = *(reinterpret_cast<bool *>(payload));
+    break;
+  default:
+    DLOGE("Invalid input op %d", op);
+    error = kErrorParameters;
+    break;
+  }
+  return error;
 }
 
-DisplayError DisplayPrimary::GetDppsFeatureInfo(void *info) {
-    return hw_intf_->GetDppsFeatureInfo(info);
-}
-
-void DppsInfo::Init(DppsPropIntf* intf) {
+void DppsInfo::Init(DppsPropIntf* intf, const std::string &panel_name) {
   int error = 0;
 
   if (dpps_initialized_) {
@@ -469,7 +511,7 @@ void DppsInfo::Init(DppsPropIntf* intf) {
     goto exit;
   }
 
-  error = dpps_intf->Init(intf);
+  error = dpps_intf->Init(intf, panel_name);
   if (!error) {
     DLOGI("DPPS Interface init successfully");
     dpps_initialized_ = true;
@@ -490,6 +532,13 @@ void DppsInfo::Deinit() {
     dpps_intf = NULL;
   }
   dpps_impl_lib.~DynLib();
+}
+
+void DppsInfo::DppsNotifyOps(enum DppsNotifyOps op, void *payload, size_t size) {
+  int ret = 0;
+  ret = dpps_intf->DppsNotifyOps(op, payload, size);
+  if (ret)
+    DLOGE("DppsNotifyOps op %d error %d", op, ret);
 }
 
 DisplayError DisplayPrimary::HandleSecureEvent(SecureEvent secure_event) {

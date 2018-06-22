@@ -32,7 +32,6 @@
 
 #include "gr_adreno_info.h"
 #include "gr_utils.h"
-#include "qdMetaData.h"
 
 #define ASTC_BLOCK_SIZE 16
 
@@ -42,8 +41,8 @@
 
 namespace gralloc {
 
-bool IsYuvFormat(const private_handle_t *hnd) {
-  switch (hnd->format) {
+bool IsYuvFormat(int format) {
+  switch (format) {
     case HAL_PIXEL_FORMAT_YCbCr_420_SP:
     case HAL_PIXEL_FORMAT_YCbCr_422_SP:
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
@@ -64,6 +63,9 @@ bool IsYuvFormat(const private_handle_t *hnd) {
     case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
+    // Below formats used by camera and VR
+    case HAL_PIXEL_FORMAT_BLOB:
+    case HAL_PIXEL_FORMAT_RAW_OPAQUE:
       return true;
     default:
       return false;
@@ -541,6 +543,28 @@ bool IsUBwcSupported(int format) {
   return false;
 }
 
+bool IsUBwcPISupported(int format, uint64_t usage) {
+  if (usage & BufferUsage::COMPOSER_OVERLAY || !(usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC_PI)) {
+    return false;
+  }
+
+  // As of now only two formats
+  switch (format) {
+    case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
+    case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC: {
+      if ((usage & BufferUsage::GPU_TEXTURE) || (usage & BufferUsage::GPU_RENDER_TARGET)) {
+        if (AdrenoMemInfo::GetInstance()) {
+          return AdrenoMemInfo::GetInstance()->IsPISupportedByGPU(format, usage);
+        }
+      } else {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 bool IsUBwcEnabled(int format, uint64_t usage) {
   // Allow UBWC, if client is using an explicitly defined UBWC pixel format.
   if (IsUBwcFormat(format)) {
@@ -550,7 +574,8 @@ bool IsUBwcEnabled(int format, uint64_t usage) {
   // Allow UBWC, if an OpenGL client sets UBWC usage flag and GPU plus MDP
   // support the format. OR if a non-OpenGL client like Rotator, sets UBWC
   // usage flag and MDP supports the format.
-  if ((usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC) && IsUBwcSupported(format)) {
+  if (((usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC) || (usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC_PI))
+        && IsUBwcSupported(format)) {
     bool enable = true;
     // Query GPU for UBWC only if buffer is intended to be used by GPU.
     if ((usage & BufferUsage::GPU_TEXTURE) || (usage & BufferUsage::GPU_RENDER_TARGET)) {
@@ -939,6 +964,182 @@ int GetBufferLayout(private_handle_t *hnd, uint32_t stride[4], uint32_t offset[4
   if (hnd->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED) {
     std::fill(offset, offset + 4, 0);
   }
+
+  return 0;
+}
+
+void GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
+                                     unsigned int *alignedw, unsigned int *alignedh,
+                                     GraphicsMetadata *graphics_metadata) {
+  GetAlignedWidthAndHeight(info, alignedw, alignedh);
+  AdrenoMemInfo* adreno_mem_info = AdrenoMemInfo::GetInstance();
+  graphics_metadata->size = adreno_mem_info->AdrenoGetMetadataBlobSize();
+  uint64_t adreno_usage = info.usage;
+  // If gralloc disables UBWC based on any of the checks,
+  // we pass modified usage flag to adreno to convey this.
+  int is_ubwc_enabled = IsUBwcEnabled(info.format, info.usage);
+  if (!is_ubwc_enabled) {
+    adreno_usage &= ~(GRALLOC_USAGE_PRIVATE_ALLOC_UBWC);
+  }
+
+  // Call adreno api for populating metadata blob
+  // Layer count is for 2D/Cubemap arrays and depth is used for 3D slice
+  // Using depth to pass layer_count here
+  int ret = adreno_mem_info->AdrenoInitMemoryLayout(graphics_metadata->data, info.width,
+                                                    info.height, info.layer_count, /* depth */
+                                                    info.format, 1, is_ubwc_enabled,
+                                                    adreno_usage, 1);
+  if (ret != 0) {
+    ALOGE("%s Graphics metadata init failed", __FUNCTION__);
+    *size = 0;
+    return;
+  }
+  // Call adreno api with the metadata blob to get buffer size
+  *size = adreno_mem_info->AdrenoGetAlignedGpuBufferSize(graphics_metadata->data);
+}
+
+bool GetAdrenoSizeAPIStatus() {
+  AdrenoMemInfo* adreno_mem_info = AdrenoMemInfo::GetInstance();
+  if (adreno_mem_info) {
+    return adreno_mem_info->AdrenoSizeAPIAvaliable();
+  }
+  return false;
+}
+
+bool UseUncached(int format, uint64_t usage) {
+  if ((usage & GRALLOC_USAGE_PRIVATE_UNCACHED) || (usage & BufferUsage::PROTECTED)) {
+    return true;
+  }
+
+  // CPU read rarely
+  if ((usage & BufferUsage::CPU_READ_MASK) == static_cast<uint64_t>(BufferUsage::CPU_READ_RARELY)) {
+    return true;
+  }
+
+  // CPU  write rarely
+  if ((usage & BufferUsage::CPU_WRITE_MASK) ==
+      static_cast<uint64_t>(BufferUsage::CPU_WRITE_RARELY)) {
+    return true;
+  }
+
+  if ((usage & BufferUsage::SENSOR_DIRECT_DATA) || (usage & BufferUsage::GPU_DATA_BUFFER)) {
+    return true;
+  }
+
+  if (format && IsUBwcEnabled(format, usage)) {
+    return true;
+  }
+
+  return false;
+}
+
+uint64_t GetHandleFlags(int format, uint64_t usage) {
+  uint64_t priv_flags = 0;
+
+  if (usage & BufferUsage::VIDEO_ENCODER) {
+    priv_flags |= private_handle_t::PRIV_FLAGS_VIDEO_ENCODER;
+  }
+
+  if (usage & BufferUsage::CAMERA_OUTPUT) {
+    priv_flags |= private_handle_t::PRIV_FLAGS_CAMERA_WRITE;
+  }
+
+  if (usage & BufferUsage::CAMERA_INPUT) {
+    priv_flags |= private_handle_t::PRIV_FLAGS_CAMERA_READ;
+  }
+
+  if (usage & BufferUsage::COMPOSER_OVERLAY) {
+    priv_flags |= private_handle_t::PRIV_FLAGS_DISP_CONSUMER;
+  }
+
+  if (usage & BufferUsage::GPU_TEXTURE) {
+    priv_flags |= private_handle_t::PRIV_FLAGS_HW_TEXTURE;
+  }
+
+  if (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY) {
+    priv_flags |= private_handle_t::PRIV_FLAGS_SECURE_DISPLAY;
+  }
+
+  if (IsUBwcEnabled(format, usage)) {
+    if (IsUBwcPISupported(format, usage)) {
+      priv_flags |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED_PI;
+    } else {
+      priv_flags |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
+    }
+  }
+
+  if (usage & (BufferUsage::CPU_READ_MASK | BufferUsage::CPU_WRITE_MASK)) {
+    priv_flags |= private_handle_t::PRIV_FLAGS_CPU_RENDERED;
+  }
+
+  if ((usage & (BufferUsage::VIDEO_ENCODER | BufferUsage::VIDEO_DECODER |
+                BufferUsage::CAMERA_OUTPUT | BufferUsage::GPU_RENDER_TARGET))) {
+    priv_flags |= private_handle_t::PRIV_FLAGS_NON_CPU_WRITER;
+  }
+
+  if (!UseUncached(format, usage)) {
+    priv_flags |= private_handle_t::PRIV_FLAGS_CACHED;
+  }
+
+  return priv_flags;
+}
+
+int GetImplDefinedFormat(uint64_t usage, int format) {
+  int gr_format = format;
+
+  // If input format is HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED then based on
+  // the usage bits, gralloc assigns a format.
+  if (format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED ||
+      format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
+    if (usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC || usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC_PI) {
+      // Use of 10BIT_TP and 10BIT bits is supposed to be mutually exclusive.
+      // Each bit maps to only one format. Here we will check one of the bits
+      // and ignore the other.
+      if (usage & GRALLOC_USAGE_PRIVATE_10BIT_TP) {
+        gr_format = HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC;
+      } else if (usage & GRALLOC_USAGE_PRIVATE_10BIT) {
+        gr_format = HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC;
+      } else {
+        gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC;
+      }
+    } else if (usage & GRALLOC_USAGE_PRIVATE_10BIT) {
+      gr_format = HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS;
+    } else if (usage & BufferUsage::VIDEO_ENCODER) {
+      if (usage & GRALLOC_USAGE_PRIVATE_VIDEO_NV21_ENCODER) {
+        gr_format = HAL_PIXEL_FORMAT_NV21_ENCODEABLE;  // NV21
+      } else {
+        gr_format = HAL_PIXEL_FORMAT_NV12_ENCODEABLE;  // NV12
+      }
+    } else if (usage & BufferUsage::CAMERA_INPUT) {
+      if (usage & BufferUsage::CAMERA_OUTPUT) {
+        // Assumed ZSL if both producer and consumer camera flags set
+        gr_format = HAL_PIXEL_FORMAT_NV21_ZSL;  // NV21
+      } else {
+        gr_format = HAL_PIXEL_FORMAT_YCrCb_420_SP;  // NV21
+      }
+    } else if (usage & BufferUsage::CAMERA_OUTPUT) {
+      if (format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
+        gr_format = HAL_PIXEL_FORMAT_NV21_ZSL;  // NV21
+      } else {
+        gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS;  // NV12 preview
+      }
+    } else if (usage & BufferUsage::COMPOSER_OVERLAY) {
+      // XXX: If we still haven't set a format, default to RGBA8888
+      gr_format = HAL_PIXEL_FORMAT_RGBA_8888;
+    } else if (format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
+      // If no other usage flags are detected, default the
+      // flexible YUV format to NV21_ZSL
+      gr_format = HAL_PIXEL_FORMAT_NV21_ZSL;
+    }
+  }
+
+  return gr_format;
+}
+
+int GetCustomFormatFlags(int format, uint64_t usage,
+                        int *custom_format, uint64_t *priv_flags) {
+  *custom_format = GetImplDefinedFormat(usage, format);
+  *priv_flags = GetHandleFlags(*custom_format, usage);
 
   return 0;
 }

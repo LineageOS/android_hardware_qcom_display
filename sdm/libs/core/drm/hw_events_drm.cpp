@@ -78,19 +78,18 @@ DisplayError HWEventsDRM::InitializePollFd() {
 
     switch (event_data.event_type) {
       case HWEvent::VSYNC: {
-        if (!is_primary_) {
-          // TODO(user): Once secondary support is added, use a different fd by calling drmOpen
-          break;
-        }
-
         poll_fds_[i].events = POLLIN | POLLPRI | POLLERR;
-        DRMMaster *master = nullptr;
-        int ret = DRMMaster::GetInstance(&master);
-        if (ret < 0) {
-          DLOGE("Failed to acquire DRMMaster instance");
-          return kErrorNotSupported;
+        if (is_primary_) {
+          DRMMaster *master = nullptr;
+          int ret = DRMMaster::GetInstance(&master);
+          if (ret < 0) {
+            DLOGE("Failed to acquire DRMMaster instance");
+            return kErrorNotSupported;
+          }
+          master->GetHandle(&poll_fds_[i].fd);
+        } else {
+          poll_fds_[i].fd = drmOpen("msm_drm", nullptr);
         }
-        master->GetHandle(&poll_fds_[i].fd);
         vsync_index_ = i;
       } break;
       case HWEvent::EXIT: {
@@ -223,11 +222,8 @@ DisplayError HWEventsDRM::Init(int display_type, HWEventHandler *event_handler,
     return kErrorResources;
   }
 
-  if (is_primary_) {
-    RegisterVSync();
-    vsync_registered_ = true;
-  }
-
+  RegisterVSync();
+  vsync_registered_ = true;
   RegisterPanelDead(true);
   RegisterIdleNotify(true);
   RegisterIdlePowerCollapse(true);
@@ -236,7 +232,7 @@ DisplayError HWEventsDRM::Init(int display_type, HWEventHandler *event_handler,
   if (Debug::Get()->GetProperty(DISABLE_HW_RECOVERY_PROP, &value) == kErrorNone) {
     disable_hw_recovery_ = (value == 1);
   }
-  DLOGI("disable_hw_recovery set to %d", disable_hw_recovery_);
+  DLOGI("disable_hw_recovery_ set to %d", disable_hw_recovery_);
   if (!disable_hw_recovery_) {
     RegisterHwRecovery(true);
   }
@@ -264,9 +260,6 @@ DisplayError HWEventsDRM::SetEventState(HWEvent event, bool enable, void *arg) {
   switch (event) {
     case HWEvent::VSYNC: {
       std::lock_guard<std::mutex> lock(vsync_mutex_);
-      if (!is_primary_) {
-        break;
-      }
       vsync_enabled_ = enable;
       if (vsync_enabled_ && !vsync_registered_) {
         RegisterVSync();
@@ -299,7 +292,9 @@ DisplayError HWEventsDRM::CloseFds() {
   for (uint32_t i = 0; i < event_data_list_.size(); i++) {
     switch (event_data_list_[i].event_type) {
       case HWEvent::VSYNC:
-        // TODO(user): close for secondary
+        if (!is_primary_) {
+          Sys::close_(poll_fds_[i].fd);
+        }
         poll_fds_[i].fd = -1;
         break;
       case HWEvent::EXIT:
@@ -387,9 +382,10 @@ void *HWEventsDRM::DisplayEventHandler() {
 }
 
 DisplayError HWEventsDRM::RegisterVSync() {
-  // TODO(user): For secondary use DRM_VBLANK_HIGH_CRTC_MASK and DRM_VBLANK_HIGH_CRTC_SHIFT
-  drmVBlank vblank{};
-  vblank.request.type = (drmVBlankSeqType)(DRM_VBLANK_RELATIVE | DRM_VBLANK_EVENT);
+  drmVBlank vblank {};
+  uint32_t high_crtc = token_.crtc_index << DRM_VBLANK_HIGH_CRTC_SHIFT;
+  vblank.request.type = (drmVBlankSeqType)(DRM_VBLANK_RELATIVE | DRM_VBLANK_EVENT |
+                                           (high_crtc & DRM_VBLANK_HIGH_CRTC_MASK));
   vblank.request.sequence = 1;
   // DRM hack to pass in context to unused field signal. Driver will write this to the node being
   // polled on, and will be read as part of drm event handling and sent to handler

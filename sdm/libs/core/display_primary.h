@@ -27,6 +27,7 @@
 
 #include <core/dpps_interface.h>
 #include <vector>
+#include <string>
 
 #include "display_base.h"
 #include "hw_events_interface.h"
@@ -37,8 +38,9 @@ class HWPrimaryInterface;
 
 class DppsInfo {
  public:
-  void Init(DppsPropIntf* intf);
+  void Init(DppsPropIntf* intf, const std::string &panel_name);
   void Deinit();
+  void DppsNotifyOps(enum DppsNotifyOps op, void *payload, size_t size);
 
  private:
   const char *kDppsLib = "libdpps.so";
@@ -66,7 +68,6 @@ class DisplayPrimary : public DisplayBase, HWEventHandler, DppsPropIntf {
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate);
   virtual DisplayError SetPanelBrightness(int level);
   virtual DisplayError GetPanelBrightness(int *level);
-  virtual DisplayError CachePanelBrightness(int level);
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event);
 
   // Implement the HWEventHandlers
@@ -81,9 +82,7 @@ class DisplayPrimary : public DisplayBase, HWEventHandler, DppsPropIntf {
   virtual void HwRecovery(const HWRecoveryEvent sdm_event_code);
 
   // Implement the DppsPropIntf
-  virtual DisplayError SetDppsFeature(uint32_t object_type,
-                                      uint32_t feature_id, uint64_t value);
-  virtual DisplayError GetDppsFeatureInfo(void *info);
+  virtual DisplayError DppsProcessOps(enum DppsOps op, void *payload, size_t size);
 
  private:
   bool NeedsAVREnable();
@@ -95,6 +94,7 @@ class DisplayPrimary : public DisplayBase, HWEventHandler, DppsPropIntf {
   bool handle_idle_timeout_ = false;
   uint32_t current_refresh_rate_ = 0;
   bool reset_panel_ = false;
+  bool commit_event_enabled_ = false;
   DppsInfo dpps_info_ = {};
 };
 

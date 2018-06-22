@@ -1,11 +1,10 @@
 #Display related packages and configuration
 
 PRODUCT_PACKAGES += \
-    android.hardware.graphics.allocator@2.0-impl \
-    android.hardware.graphics.allocator@2.0-service \
-    android.hardware.graphics.mapper@2.0-impl \
     android.hardware.graphics.composer@2.1-impl \
     android.hardware.graphics.composer@2.1-service \
+    android.hardware.graphics.mapper@2.0-impl-qti-display \
+    vendor.qti.hardware.display.allocator@1.0-service \
     android.hardware.memtrack@1.0-impl \
     android.hardware.memtrack@1.0-service \
     android.hardware.light@2.0-impl \
@@ -42,5 +41,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_scaler=0 \
     vendor.display.disable_inline_rotator=1 \
     vendor.display.enable_null_display=0 \
-    vendor.display.disable_excl_rect=1 \
-    vendor.display.comp_mask=0
+    vendor.display.disable_excl_rect=0 \
+    vendor.display.comp_mask=0 \
+    vendor.display.disable_hw_recovery=1

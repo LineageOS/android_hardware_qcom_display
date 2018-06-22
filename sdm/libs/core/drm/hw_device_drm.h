@@ -90,7 +90,6 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError SetDisplayMode(const HWDisplayMode hw_display_mode);
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate);
   virtual DisplayError SetPanelBrightness(int level);
-  virtual DisplayError CachePanelBrightness(int level);
   virtual DisplayError GetHWScanInfo(HWScanInfo *scan_info);
   virtual DisplayError GetVideoFormat(uint32_t config_index, uint32_t *video_format);
   virtual DisplayError GetMaxCEAFormat(uint32_t *max_cea_format);
@@ -105,9 +104,8 @@ class HWDeviceDRM : public HWInterface {
   virtual void InitializeConfigs();
   virtual DisplayError DumpDebugData();
   virtual void PopulateHWPanelInfo();
-  virtual DisplayError SetDppsFeature(uint32_t object_type, uint32_t feature_id,
-                                      uint64_t value) { return kErrorNotSupported; }
-  virtual DisplayError GetDppsFeatureInfo(void *info) { return kErrorNotSupported; }
+  virtual DisplayError SetDppsFeature(void *payload, size_t size) { return kErrorNotSupported; }
+  virtual DisplayError GetDppsFeatureInfo(void *payload, size_t size) { return kErrorNotSupported; }
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event) { return kErrorNotSupported; }
 
   enum {
@@ -150,6 +148,8 @@ class HWDeviceDRM : public HWInterface {
   void SetSsppLutFeatures(HWPipeInfo *pipe_info);
   void AddDimLayerIfNeeded();
   DisplayError NullCommit(bool synchronous, bool retain_planes);
+  void DumpConnectorModeInfo();
+  void SetFullROI();
 
   class Registry {
    public:
@@ -201,6 +201,7 @@ class HWDeviceDRM : public HWInterface {
   HWMixerAttributes mixer_attributes_ = {};
   std::vector<sde_drm::DRMSolidfillStage> solid_fills_ {};
   bool secure_display_active_ = false;
+  uint64_t debug_dump_count_ = 0;
 
  private:
   bool synchronous_commit_ = false;

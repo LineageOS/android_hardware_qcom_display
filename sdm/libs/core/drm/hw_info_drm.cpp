@@ -318,6 +318,7 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   hw_resource->hw_dest_scalar_info.max_output_width = info.max_dest_scaler_output_width;
   hw_resource->min_prefill_lines = info.min_prefill_lines;
   hw_resource->secure_disp_blend_stage = info.secure_disp_blend_stage;
+  hw_resource->has_concurrent_writeback = info.concurrent_writeback;
 }
 
 void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
@@ -469,14 +470,22 @@ void HWInfoDRM::GetWBInfo(HWResourceInfo *hw_resource) {
   HWSubBlockType sub_blk_type = kHWWBIntfOutput;
   vector<LayerBufferFormat> supported_sdm_formats;
   sde_drm::DRMDisplayToken token;
+  int ret = 0;
 
   // Fake register
-  if (drm_mgr_intf_->RegisterDisplay(sde_drm::DRMDisplayType::VIRTUAL, &token)) {
+  ret = drm_mgr_intf_->RegisterDisplay(sde_drm::DRMDisplayType::VIRTUAL, &token);
+  if (ret) {
+    DLOGE("Failed registering display %d. Error: %d.", sde_drm::DRMDisplayType::VIRTUAL, ret);
     return;
   }
 
   sde_drm::DRMConnectorInfo connector_info;
-  drm_mgr_intf_->GetConnectorInfo(token.conn_id, &connector_info);
+  ret = drm_mgr_intf_->GetConnectorInfo(token.conn_id, &connector_info);
+  if (ret) {
+    DLOGE("Failed getting info for connector id %u. Error: %d.", token.conn_id, ret);
+    drm_mgr_intf_->UnregisterDisplay(token);
+    return;
+  }
   for (auto &fmts : connector_info.formats_supported) {
     GetSDMFormat(fmts.first, fmts.second, &supported_sdm_formats);
   }

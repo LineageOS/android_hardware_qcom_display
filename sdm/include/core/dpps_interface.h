@@ -31,14 +31,27 @@
 #define __DPPS_INTERFACE_H__
 
 #include <core/sdm_types.h>
+#include <string>
 
 namespace sdm {
 
+enum DppsOps {
+  kDppsSetFeature,
+  kDppsGetFeatureInfo,
+  kDppsScreenRefresh,
+  kDppsPartialUpdate,
+  kDppsRequestCommit,
+  kDppsOpMax,
+};
+
+enum DppsNotifyOps {
+  kDppsCommitEvent,
+  kDppsNotifyMax,
+};
+
 class DppsPropIntf {
  public:
-  virtual DisplayError SetDppsFeature(uint32_t object_type,
-                                      uint32_t feature_id, uint64_t value) = 0;
-  virtual DisplayError GetDppsFeatureInfo(void *info) = 0;
+  virtual DisplayError DppsProcessOps(enum DppsOps op, void *payload, size_t size) = 0;
 
  protected:
   virtual ~DppsPropIntf() { }
@@ -46,8 +59,9 @@ class DppsPropIntf {
 
 class DppsInterface {
  public:
-  virtual int Init(DppsPropIntf* intf) = 0;
+  virtual int Init(DppsPropIntf* intf, const std::string &panel_name) = 0;
   virtual int Deinit() = 0;
+  virtual int DppsNotifyOps(enum DppsNotifyOps op, void *payload, size_t size) = 0;
 
  protected:
   virtual ~DppsInterface() { }
@@ -55,12 +69,19 @@ class DppsInterface {
 
 class DppsDummyImpl : public DppsInterface {
  public:
-  int Init(DppsPropIntf* intf) {
+  int Init(DppsPropIntf* intf, const std::string &panel_name) {
     (void)intf;
+    (void)panel_name;
     return 0;
   }
   int Deinit() {
     delete this;
+    return 0;
+  }
+  int DppsNotifyOps(enum DppsNotifyOps op, void *payload, size_t size) {
+    (void)op;
+    (void)payload;
+    (void)size;
     return 0;
   }
 };

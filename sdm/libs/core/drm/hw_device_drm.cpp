@@ -381,6 +381,7 @@ HWDeviceDRM::HWDeviceDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator
 }
 
 DisplayError HWDeviceDRM::Init() {
+  int ret = 0;
   DRMMaster *drm_master = {};
   DRMMaster::GetInstance(&drm_master);
   drm_master->GetHandle(&dev_fd_);
@@ -391,8 +392,36 @@ DisplayError HWDeviceDRM::Init() {
     return kErrorResources;
   }
 
-  drm_mgr_intf_->CreateAtomicReq(token_, &drm_atomic_intf_);
-  drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
+  if (token_.conn_id > INT32_MAX) {
+    DLOGE("Connector id %u beyond supported range", token_.conn_id);
+    drm_mgr_intf_->UnregisterDisplay(token_);
+    return kErrorNotSupported;
+  }
+
+  ret = drm_mgr_intf_->CreateAtomicReq(token_, &drm_atomic_intf_);
+  if (ret) {
+    DLOGE("Failed creating atomic request for connector id %u. Error: %d.", token_.conn_id, ret);
+    drm_mgr_intf_->UnregisterDisplay(token_);
+    return kErrorResources;
+  }
+
+  ret = drm_mgr_intf_->GetConnectorInfo(token_.conn_id, &connector_info_);
+  if (ret) {
+    DLOGE("Failed getting info for connector id %u. Error: %d.", token_.conn_id, ret);
+    drm_mgr_intf_->DestroyAtomicReq(drm_atomic_intf_);
+    drm_atomic_intf_ = {};
+    drm_mgr_intf_->UnregisterDisplay(token_);
+    return kErrorHardware;
+  }
+
+  if (connector_info_.modes.empty()) {
+    DLOGE("Critical error: Zero modes on connector id %u.", token_.conn_id);
+    drm_mgr_intf_->DestroyAtomicReq(drm_atomic_intf_);
+    drm_atomic_intf_ = {};
+    drm_mgr_intf_->UnregisterDisplay(token_);
+    return kErrorHardware;
+  }
+
   hw_info_intf_->GetHWResourceInfo(&hw_resource_);
 
   InitializeConfigs();
@@ -787,6 +816,9 @@ DisplayError HWDeviceDRM::PowerOff() {
     return kErrorUndefined;
   }
 
+  SetFullROI();
+  drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::OFF);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
   int ret = NullCommit(true /* synchronous */, false /* retain_planes */);
@@ -993,6 +1025,7 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
                             qos_data.rot_prefill_bw_bps);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ROT_CLK, token_.crtc_id, qos_data.rot_clock_hz);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_SECURITY_LEVEL, token_.crtc_id, crtc_security_level);
+  drm_atomic_intf_->Perform(DRMOps::DPPS_COMMIT_FEATURE, 0 /* argument is not used */);
 
   if (!validate) {
     drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_);
@@ -1362,10 +1395,14 @@ DisplayError HWDeviceDRM::SetPPFeatures(PPFeaturesConfig *feature_list) {
     kernel_params.id = drm_id.at(0);
     drm_mgr_intf_->GetCrtcPPInfo(token_.crtc_id, &kernel_params);
     if (kernel_params.version == std::numeric_limits<uint32_t>::max())
-        crtc_feature = false;
+      crtc_feature = false;
     if (feature) {
       DLOGV_IF(kTagDriverConfig, "feature_id = %d", feature->feature_id_);
       for (DRMPPFeatureID id : drm_id) {
+        if (id >= kPPFeaturesMax) {
+          DLOGE("Invalid feature id %d", id);
+          continue;
+        }
         kernel_params.id = id;
         ret = hw_color_mgr_->GetDrmFeature(feature, &kernel_params);
         if (!ret && crtc_feature)
@@ -1465,10 +1502,6 @@ DisplayError HWDeviceDRM::GetPanelBrightness(int *level) {
   Sys::close_(fd);
 
   return err;
-}
-
-DisplayError HWDeviceDRM::CachePanelBrightness(int level) {
-  return kErrorNotSupported;
 }
 
 DisplayError HWDeviceDRM::GetHWScanInfo(HWScanInfo *scan_info) {
@@ -1578,22 +1611,25 @@ DisplayError HWDeviceDRM::GetMixerAttributes(HWMixerAttributes *mixer_attributes
 }
 
 DisplayError HWDeviceDRM::DumpDebugData() {
-#if USER_DEBUG
+  string dir_path = "/data/vendor/display/hw_recovery/";
   string device_str = device_name_;
-  stringstream date_str;
-  stringstream time_str;
-  time_t t = time(0);
-  struct tm t_now;
-  localtime_r(&t, &t_now);
-  date_str << (t_now.tm_mon + 1) << '-'
-          << (t_now.tm_mday) << '-'
-          << (t_now.tm_year + 1900) << '_';
-  time_str << (t_now.tm_hour) << '-'
-          << (t_now.tm_min) << '-'
-          << (t_now.tm_sec) << ".log";
 
-  ofstream dst("data/vendor/display/"+device_str+"_"+date_str.str()+time_str.str());
+  // Attempt to make hw_recovery dir, it may exist
+  if (mkdir(dir_path.c_str(), 0777) != 0 && errno != EEXIST) {
+    DLOGW("Failed to create %s directory errno = %d, desc = %s", dir_path.c_str(), errno,
+          strerror(errno));
+    return kErrorPermission;
+  }
+  // If it does exist, ensure permissions are fine
+  if (errno == EEXIST && chmod(dir_path.c_str(), 0777) != 0) {
+    DLOGW("Failed to change permissions on %s directory", dir_path.c_str());
+    return kErrorPermission;
+  }
+
+  string filename = dir_path+device_str+"_HWR_"+to_string(debug_dump_count_);
+  ofstream dst(filename);
   ifstream src;
+  debug_dump_count_++;
 
   src.open("/sys/kernel/debug/dri/0/debug/dump");
   dst << "---- Event Logs ----" << std::endl;
@@ -1616,14 +1652,14 @@ DisplayError HWDeviceDRM::DumpDebugData() {
   src.close();
 
   dst.close();
-#endif
+
+  DLOGI("Wrote hw_recovery file %s", filename.c_str());
 
   return kErrorNone;
 }
 
 void HWDeviceDRM::GetDRMDisplayToken(sde_drm::DRMDisplayToken *token) const {
-  token->conn_id = token_.conn_id;
-  token->crtc_id = token_.crtc_id;
+  *token = token_;
 }
 
 void HWDeviceDRM::UpdateMixerAttributes() {
@@ -1739,6 +1775,10 @@ void HWDeviceDRM::SetSsppLutFeatures(HWPipeInfo *pipe_info) {
       PPBlock pp_block = GetPPBlock(lut_info.type);
       hw_color_mgr_->ToDrmFeatureId(pp_block, feature->feature_id_, &drm_id);
       for (DRMPPFeatureID id : drm_id) {
+        if (id >= kPPFeaturesMax) {
+          DLOGE("Invalid feature id %d", id);
+          continue;
+        }
         kernel_params.id = id;
         bool disable = (lut_info.op == kReset);
         DLOGV_IF(kTagDriverConfig, "Lut Type = %d PPBlock = %d Op = %s Disable = %d Feature = %p",
@@ -1779,6 +1819,31 @@ DisplayError HWDeviceDRM::NullCommit(bool synchronous, bool retain_planes) {
   }
 
   return kErrorNone;
+}
+
+void HWDeviceDRM::DumpConnectorModeInfo() {
+  for (uint32_t i = 0; i < (uint32_t)connector_info_.modes.size(); i++) {
+    DLOGI("Mode[%d] Name:%s vref:%d hdisp:%d hsync_s:%d hsync_e:%d htotal:%d " \
+          "vdisp:%d vsync_s:%d vsync_e:%d vtotal:%d\n", i, connector_info_.modes[i].mode.name,
+          connector_info_.modes[i].mode.vrefresh, connector_info_.modes[i].mode.hdisplay,
+          connector_info_.modes[i].mode.hsync_start, connector_info_.modes[i].mode.hsync_end,
+          connector_info_.modes[i].mode.htotal, connector_info_.modes[i].mode.vdisplay,
+          connector_info_.modes[i].mode.vsync_start, connector_info_.modes[i].mode.vsync_end,
+          connector_info_.modes[i].mode.vtotal);
+  }
+}
+
+void HWDeviceDRM::SetFullROI() {
+  // Reset the CRTC ROI and connector ROI only for the panel that supports partial update
+  if (!hw_panel_info_.partial_update) {
+    return;
+  }
+  uint32_t index = current_mode_index_;
+  DRMRect crtc_rects = {0, 0, mixer_attributes_.width, mixer_attributes_.height};
+  DRMRect conn_rects = {0, 0, display_attributes_[index].x_pixels,
+                         display_attributes_[index].y_pixels};
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ROI, token_.crtc_id, 1, &crtc_rects);
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_ROI, token_.conn_id, 1, &conn_rects);
 }
 
 }  // namespace sdm

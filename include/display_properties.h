@@ -46,6 +46,8 @@
 #define IDLE_TIME_INACTIVE_PROP              DISPLAY_PROP("idle_time_inactive")
 #define BOOT_ANIMATION_LAYER_COUNT_PROP      DISPLAY_PROP("boot_anim_layer_count")
 #define DISABLE_ROTATOR_DOWNSCALE_PROP       DISPLAY_PROP("disable_rotator_downscale")
+// Enables rotator for UI
+#define ENABLE_ROTATOR_UI_PROP               DISPLAY_PROP("enable_rotator_ui")
 #define DISABLE_DECIMATION_PROP              DISPLAY_PROP("disable_decimation")
 #define PRIMARY_MIXER_STAGES_PROP            DISPLAY_PROP("primary_mixer_stages")
 #define EXTERNAL_MIXER_STAGES_PROP           DISPLAY_PROP("external_mixer_stages")
@@ -86,18 +88,22 @@
 #define DISABLE_FB_CROPPING_PROP             DISPLAY_PROP("disable_fb_cropping")
 #define PRIORITIZE_CACHE_COMPOSITION_PROP    DISPLAY_PROP("prioritize_cache_comp")
 #define DISABLE_HW_RECOVERY_PROP             DISPLAY_PROP("disable_hw_recovery")
+#define DISABLE_HW_RECOVERY_DUMP_PROP        DISPLAY_PROP("disable_hw_recovery_dump")
 #define DISABLE_SRC_TONEMAP_PROP             DISPLAY_PROP("disable_src_tonemap")
 #define ENABLE_NULL_DISPLAY_PROP             DISPLAY_PROP("enable_null_display")
 #define DISABLE_EXCL_RECT_PROP               DISPLAY_PROP("disable_excl_rect")
 #define ENABLE_PIPE_PRIORITY_PROP            DISPLAY_PROP("enable_pipe_priority")
+#define DISABLE_EXCl_RECT_PARTIAL_FB         DISPLAY_PROP("disable_excl_rect_partial_fb")
 
 #define DISABLE_HDR_LUT_GEN                  DISPLAY_PROP("disable_hdr_lut_gen")
 #define ENABLE_DEFAULT_COLOR_MODE            DISPLAY_PROP("enable_default_color_mode")
-#define DISABLE_HDR                          DISPLAY_PROP("disable_hdr")
+#define DISABLE_HDR                          DISPLAY_PROP("hwc_disable_hdr")
 
 #define HDR_CONFIG_PROP                      RO_DISPLAY_PROP("hdr.config")
 #define QDCM_PCC_TRANS_PROP                  DISPLAY_PROP("qdcm.pcc_for_trans")
 #define QDCM_DIAGONAL_MATRIXMODE_PROP        DISPLAY_PROP("qdcm.diagonal_matrix_mode")
 #define QDCM_DISABLE_TIMEOUT_PROP            PERSIST_DISPLAY_PROP("qdcm.disable_timeout")
+
+#define ZERO_SWAP_INTERVAL                   "vendor.debug.egl.swapinterval"
 
 #endif  // __DISPLAY_PROPERTIES_H__

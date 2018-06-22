@@ -85,7 +85,7 @@ Error BufferManager::FreeBuffer(std::shared_ptr<Buffer> buf) {
 
 Error BufferManager::ValidateBufferSize(private_handle_t const *hnd, BufferInfo info) {
   unsigned int size, alignedw, alignedh;
-  info.format = allocator_->GetImplDefinedFormat(info.usage, info.format);
+  info.format = GetImplDefinedFormat(info.usage, info.format);
   GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh);
   auto ion_fd_size = static_cast<unsigned int>(lseek(hnd->fd, 0, SEEK_END));
   if (size != ion_fd_size) {
@@ -254,57 +254,11 @@ Error BufferManager::UnlockBuffer(const private_handle_t *handle) {
   return status;
 }
 
-int BufferManager::GetHandleFlags(int format, uint64_t usage) {
-  int flags = 0;
-  if (usage & BufferUsage::VIDEO_ENCODER) {
-    flags |= private_handle_t::PRIV_FLAGS_VIDEO_ENCODER;
-  }
-
-  if (usage & BufferUsage::CAMERA_OUTPUT) {
-    flags |= private_handle_t::PRIV_FLAGS_CAMERA_WRITE;
-  }
-
-  if (usage & BufferUsage::CAMERA_INPUT) {
-    flags |= private_handle_t::PRIV_FLAGS_CAMERA_READ;
-  }
-
-  if (usage & BufferUsage::COMPOSER_OVERLAY) {
-    flags |= private_handle_t::PRIV_FLAGS_DISP_CONSUMER;
-  }
-
-  if (usage & BufferUsage::GPU_TEXTURE) {
-    flags |= private_handle_t::PRIV_FLAGS_HW_TEXTURE;
-  }
-
-  if (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY) {
-    flags |= private_handle_t::PRIV_FLAGS_SECURE_DISPLAY;
-  }
-
-  if (IsUBwcEnabled(format, usage)) {
-    flags |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
-  }
-
-  if (usage & (BufferUsage::CPU_READ_MASK | BufferUsage::CPU_WRITE_MASK)) {
-    flags |= private_handle_t::PRIV_FLAGS_CPU_RENDERED;
-  }
-
-  if ((usage & (BufferUsage::VIDEO_ENCODER | BufferUsage::VIDEO_DECODER |
-                BufferUsage::CAMERA_OUTPUT | BufferUsage::GPU_RENDER_TARGET))) {
-    flags |= private_handle_t::PRIV_FLAGS_NON_CPU_WRITER;
-  }
-
-  if (!allocator_->UseUncached(format, usage)) {
-    flags |= private_handle_t::PRIV_FLAGS_CACHED;
-  }
-
-  return flags;
-}
-
 int BufferManager::GetBufferType(int inputFormat) {
-  int buffer_type = BUFFER_TYPE_VIDEO;
-  if (IsUncompressedRGBFormat(inputFormat)) {
-    // RGB formats
-    buffer_type = BUFFER_TYPE_UI;
+  int buffer_type = BUFFER_TYPE_UI;
+  if (IsYuvFormat(inputFormat)) {
+    // Video format
+    buffer_type = BUFFER_TYPE_VIDEO;
   }
 
   return buffer_type;
@@ -317,7 +271,7 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   std::lock_guard<std::mutex> buffer_lock(buffer_lock_);
 
   uint64_t usage = descriptor.GetUsage();
-  int format = allocator_->GetImplDefinedFormat(usage, descriptor.GetFormat());
+  int format = GetImplDefinedFormat(usage, descriptor.GetFormat());
   uint32_t layer_count = descriptor.GetLayerCount();
 
   unsigned int size;
@@ -326,17 +280,27 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   int buffer_type = GetBufferType(format);
   BufferInfo info = GetBufferInfo(descriptor);
   info.format = format;
-  GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh);
-  size = (bufferSize >= size) ? bufferSize : size;
+  info.layer_count = layer_count;
 
+  bool use_adreno_for_size = false;
+  GraphicsMetadata graphics_metadata = {};
+
+  use_adreno_for_size = ((buffer_type != BUFFER_TYPE_VIDEO) && GetAdrenoSizeAPIStatus());
+  if (use_adreno_for_size) {
+    GetGpuResourceSizeAndDimensions(info, &size, &alignedw, &alignedh, &graphics_metadata);
+  } else {
+    GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh);
+  }
+
+  size = (bufferSize >= size) ? bufferSize : size;
   int err = 0;
-  int flags = 0;
+  uint64_t flags = 0;
   auto page_size = UINT(getpagesize());
   AllocData data;
   data.align = GetDataAlignment(format, usage);
   data.size = size;
   data.handle = (uintptr_t)handle;
-  data.uncached = allocator_->UseUncached(format, usage);
+  data.uncached = UseUncached(format, usage);
 
   // Allocate buffer memory
   err = allocator_->AllocateMem(&data, usage, format);
@@ -362,7 +326,7 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
 
   // Create handle
   private_handle_t *hnd = new private_handle_t(
-      data.fd, e_data.fd, flags, INT(alignedw), INT(alignedh), descriptor.GetWidth(),
+      data.fd, e_data.fd, INT(flags), INT(alignedw), INT(alignedh), descriptor.GetWidth(),
       descriptor.GetHeight(), format, buffer_type, data.size, usage);
 
   hnd->id = ++next_id_;
@@ -372,6 +336,10 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   // set default csc as 709, but for video(yuv) its 601L
   ColorSpace_t colorSpace = (buffer_type == BUFFER_TYPE_VIDEO) ? ITU_R_601 : ITU_R_709;
   setMetaData(hnd, UPDATE_COLOR_SPACE, reinterpret_cast<void *>(&colorSpace));
+
+  if (use_adreno_for_size) {
+    setMetaData(hnd, SET_GRAPHICS_METADATA, reinterpret_cast<void *>(&graphics_metadata));
+  }
 
   *handle = hnd;
   RegisterHandleLocked(hnd, data.ion_handle, e_data.ion_handle);

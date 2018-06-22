@@ -375,7 +375,7 @@ int HWCDisplay::Init() {
   }
 
   int property_swap_interval = 1;
-  HWCDebugHandler::Get()->GetProperty("debug.egl.swapinterval", &property_swap_interval);
+  HWCDebugHandler::Get()->GetProperty(ZERO_SWAP_INTERVAL, &property_swap_interval);
   if (property_swap_interval == 0) {
     swap_interval_zero_ = true;
   }
@@ -488,9 +488,6 @@ void HWCDisplay::BuildLayerStack() {
   metadata_refresh_rate_ = 0;
   layer_stack_.flags.animating = animating_;
 
-  uint32_t color_mode_count = 0;
-  display_intf_->GetColorModeCount(&color_mode_count);
-
   // Add one layer for fb target
   // TODO(user): Add blit target layers
   for (auto hwc_layer : layer_set_) {
@@ -505,7 +502,7 @@ void HWCDisplay::BuildLayerStack() {
       layer->flags.solid_fill = true;
     }
 
-    if (!hwc_layer->ValidateAndSetCSC()) {
+    if (!hwc_layer->IsDataSpaceSupported()) {
       layer->flags.skip = true;
     }
 
@@ -556,7 +553,7 @@ void HWCDisplay::BuildLayerStack() {
     bool hdr_layer = layer->input_buffer.color_metadata.colorPrimaries == ColorPrimaries_BT2020 &&
                      (layer->input_buffer.color_metadata.transfer == Transfer_SMPTE_ST2084 ||
                      layer->input_buffer.color_metadata.transfer == Transfer_HLG);
-    if (hdr_layer && !disable_hdr_handling_ && color_mode_count) {
+    if (hdr_layer && !disable_hdr_handling_) {
       // dont honor HDR when its handling is disabled
       layer->input_buffer.flags.hdr = true;
       layer_stack_.flags.hdr_present = true;
@@ -614,8 +611,6 @@ void HWCDisplay::BuildLayerStack() {
     // Must fall back to client composition
     MarkLayersForClientComposition();
   }
-
-  layer_stack_invalid_ = false;
 }
 
 void HWCDisplay::BuildSolidFillStack() {
@@ -768,6 +763,7 @@ HWC2::Error HWCDisplay::GetClientTargetSupport(uint32_t width, uint32_t height, 
                                                int32_t dataspace) {
   ColorMetaData color_metadata = {};
   if (dataspace != HAL_DATASPACE_UNKNOWN) {
+    dataspace = TranslateFromLegacyDataspace(dataspace);
     GetColorPrimary(dataspace, &(color_metadata.colorPrimaries));
     GetTransfer(dataspace, &(color_metadata.transfer));
     GetRange(dataspace, &(color_metadata.range));
@@ -935,14 +931,15 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, int32_t acquire_
 
   Layer *sdm_layer = client_target_->GetSDMLayer();
   sdm_layer->frame_rate = current_refresh_rate_;
-  client_target_->SetLayerBuffer(target, acquire_fence);
   client_target_->SetLayerSurfaceDamage(damage);
   if (client_target_->GetLayerDataspace() != dataspace) {
     client_target_->SetLayerDataspace(dataspace);
     Layer *sdm_layer = client_target_->GetSDMLayer();
     // Data space would be validated at GetClientTargetSupport, so just use here.
-    sdm::GetSDMColorSpace(dataspace, &sdm_layer->input_buffer.color_metadata);
+    sdm::GetSDMColorSpace(client_target_->GetLayerDataspace(),
+                          &sdm_layer->input_buffer.color_metadata);
   }
+  client_target_->SetLayerBuffer(target, acquire_fence);
 
   return HWC2::Error::None;
 }
@@ -1076,6 +1073,7 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
   *out_num_requests = UINT32(layer_requests_.size());
   validate_state_ = kNormalValidate;
   validated_ = true;
+  layer_stack_invalid_ = false;
 
   return ((*out_num_types > 0) ? HWC2::Error::HasChanges : HWC2::Error::None);
 }
@@ -1340,6 +1338,7 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
       dump_frame_index_++;
     }
   }
+  config_pending_ = false;
 
   geometry_changes_ = GeometryChanges::kNone;
   flush_ = false;
@@ -1838,12 +1837,23 @@ int HWCDisplay::GetActiveSecureSession(std::bitset<kSecureMax> *secure_sessions)
 }
 
 int HWCDisplay::SetActiveDisplayConfig(uint32_t config) {
-  int status = (display_intf_->SetActiveConfig(config) == kErrorNone) ? 0 : -1;
+  if (display_config_ == config) {
+    return 0;
+  }
+  display_config_ = config;
+  config_pending_ = true;
   validated_ = false;
-  return status;
+
+  callbacks_->Refresh(id_);
+
+  return 0;
 }
 
 int HWCDisplay::GetActiveDisplayConfig(uint32_t *config) {
+  if (config_pending_) {
+    *config = display_config_;
+    return 0;
+  }
   return display_intf_->GetActiveConfig(config) == kErrorNone ? 0 : -1;
 }
 
@@ -1917,7 +1927,7 @@ std::string HWCDisplay::Dump() {
     auto transform = sdm_layer->transform;
     os << "layer: " << std::setw(4) << layer->GetId();
     os << " z: " << layer->GetZ();
-    os << " compositon: " <<
+    os << " composition: " <<
           to_string(layer->GetClientRequestedCompositionType()).c_str();
     os << "/" <<
           to_string(layer->GetDeviceSelectedCompositionType()).c_str();
@@ -1956,12 +1966,10 @@ bool HWCDisplay::CanSkipValidate() {
     return false;
   }
 
-  // Layer Stack checks TODO(user): Remove hdr_present when skip validate is fixed
-  if (layer_stack_.flags.hdr_present || (tone_mapper_ && tone_mapper_->IsActive()) ||
+  if ((tone_mapper_ && tone_mapper_->IsActive()) ||
       layer_stack_.flags.single_buffered_layer_present) {
-    DLOGV_IF(kTagClient, "HdrPresent = %d, Tonemapping enabled or single buffer layer present = %d"
-             " Returning false.", layer_stack_.flags.hdr_present,
-             layer_stack_.flags.single_buffered_layer_present);
+    DLOGV_IF(kTagClient, "Tonemapping enabled or single buffer layer present = %d"
+             " Returning false.", layer_stack_.flags.single_buffered_layer_present);
     return false;
   }
 

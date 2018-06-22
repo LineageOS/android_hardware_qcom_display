@@ -58,6 +58,7 @@ struct private_handle_t : public native_handle_t {
     PRIV_FLAGS_UBWC_ALIGNED = 0x08000000,
     PRIV_FLAGS_DISP_CONSUMER = 0x10000000,
     PRIV_FLAGS_CLIENT_ALLOCATED = 0x20000000,  // Ion buffer allocated outside of gralloc
+    PRIV_FLAGS_UBWC_ALIGNED_PI = 0x40000000,  // PI format
   };
 
   // file-descriptors dup'd over IPC
