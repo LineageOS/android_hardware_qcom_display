@@ -191,6 +191,7 @@ class AdrenoMemInfo {
 
   bool gfx_ubwc_disable_ = false;
   bool map_fb_ = false;
+  bool gfx_ahardware_buffer_disable_ = false;
   void *libadreno_utils_ = NULL;
 
   static AdrenoMemInfo *s_instance;

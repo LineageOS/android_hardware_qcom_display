@@ -224,6 +224,21 @@ if (prod_usage & GRALLOC1_PRODUCER_USAGE_PROTECTED) {
   return align;
 }
 
+bool IsGPUFlagSupported(uint64_t usage) {
+  bool ret = true;
+  if ((usage & BufferUsage::GPU_MIPMAP_COMPLETE)) {
+    ALOGE("GPU_MIPMAP_COMPLETE not supported");
+    ret = false;
+  }
+
+  if ((usage & BufferUsage::GPU_CUBE_MAP)) {
+    ALOGE("GPU_CUBE_MAP not supported");
+    ret = false;
+  }
+
+  return ret;
+}
+
 // Returns the final buffer size meant to be allocated with ion
 
 unsigned int GetSize(const BufferInfo &info, unsigned int alignedw,
@@ -234,6 +249,11 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw,
   int height = info.height;
   gralloc1_producer_usage_t prod_usage = info.prod_usage;
   gralloc1_consumer_usage_t cons_usage = info.cons_usage;
+
+  if (!IsGPUFlagSupported(prod_usage | cons_usage)) {
+    ALOGE("Unsupported GPU usage flags present 0x%" PRIx64, (cons_usage | prod_usage));
+    return 0;
+  }
 
   if (IsUBwcEnabled(format, prod_usage, cons_usage)) {
     size = GetUBwcSize(width, height, format, alignedw, alignedh);
