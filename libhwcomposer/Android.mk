@@ -20,18 +20,21 @@ endif
 LOCAL_SHARED_LIBRARIES        := $(common_libs) libEGL liboverlay \
                                  libhdmi libqdutils libhardware_legacy \
                                  libdl libmemalloc libqservice libsync \
-                                 libbinder libmedia libdisplayconfig \
-                                 libbfqio_vendor
+                                 libbinder libdisplayconfig libbfqio_vendor
 
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdhwcomposer\" -Wno-absolute-value \
                                  -Wno-float-conversion -Wno-unused-parameter
 
+LOCAL_HEADER_LIBRARIES += libui_headers libmedia_headers
+
+ifneq ($(BOARD_VNDK_VERSION),current)
 ifeq ($(TARGET_USES_QCOM_BSP),true)
 LOCAL_SHARED_LIBRARIES += libskia
 ifeq ($(GET_FRAMEBUFFER_FORMAT_FROM_HWC),true)
     LOCAL_CFLAGS += -DGET_FRAMEBUFFER_FORMAT_FROM_HWC
 endif
 endif #TARGET_USES_QCOM_BSP
+endif
 
 #Enable Dynamic FPS if PHASE_OFFSET is not set
 ifeq ($(VSYNC_EVENT_PHASE_OFFSET_NS),)
