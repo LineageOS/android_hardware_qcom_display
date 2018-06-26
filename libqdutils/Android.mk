@@ -59,5 +59,6 @@ LOCAL_CFLAGS                    += -DLOG_TAG=\"DisplayMetaData\"
 
 LOCAL_MODULE_TAGS               := optional
 LOCAL_MODULE                    := libqdMetaData.system
+LOCAL_VENDOR_MODULE             := true
 
 include $(BUILD_SHARED_LIBRARY)
