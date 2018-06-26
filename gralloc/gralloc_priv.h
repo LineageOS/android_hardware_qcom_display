@@ -28,6 +28,7 @@
 #define GRALLOC_PROP(prop_name) GRALLOC_PROP_PREFIX prop_name
 
 #define DISABLE_UBWC_PROP                    GRALLOC_PROP("disable_ubwc")
+#define DISABLE_AHARDWAREBUFFER_PROP         GRALLOC_PROP("disable_ahardware_buffer")
 #define ENABLE_FB_UBWC_PROP                  GRALLOC_PROP("enable_fb_ubwc")
 #define MAP_FB_MEMORY_PROP                   GRALLOC_PROP("map_fb_memory")
 #define USE_SYSTEM_HEAP_FOR_SENSORS          GRALLOC_PROP("use_system_heap_for_sensors")

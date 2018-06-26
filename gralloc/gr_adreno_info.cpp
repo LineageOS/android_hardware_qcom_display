@@ -86,6 +86,12 @@ AdrenoMemInfo::AdrenoMemInfo() {
       !(strncmp(property, "true", PROPERTY_VALUE_MAX))) {
     gfx_ubwc_disable_ = true;
   }
+
+  property_get(DISABLE_AHARDWAREBUFFER_PROP, property, "0");
+  if (!(strncmp(property, "1", PROPERTY_VALUE_MAX)) ||
+      !(strncmp(property, "true", PROPERTY_VALUE_MAX))) {
+    gfx_ahardware_buffer_disable_ = true;
+  }
 }
 
 AdrenoMemInfo::~AdrenoMemInfo() {
@@ -263,6 +269,10 @@ uint32_t AdrenoMemInfo::AdrenoGetAlignedGpuBufferSize(void *metadata_blob) {
 }
 
 bool AdrenoMemInfo::AdrenoSizeAPIAvaliable() {
+  if (gfx_ahardware_buffer_disable_) {
+    return false;
+  }
+
   return (LINK_adreno_get_metadata_blob_size && LINK_adreno_init_memory_layout &&
           LINK_adreno_get_aligned_gpu_buffer_size);
 }
