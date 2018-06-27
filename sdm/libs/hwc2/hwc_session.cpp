@@ -2065,6 +2065,8 @@ int HWCSession::CreatePluggableDisplays(bool delay_hotplug) {
 int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool delay_hotplug) {
   int status = 0;
   std::vector<hwc2_display_t> pending_hotplugs = {};
+  std :: bitset <kSecureMax> secure_sessions = 0;
+  hwc_display_[HWC_DISPLAY_PRIMARY]->GetActiveSecureSession(&secure_sessions);
 
   for (auto &iter : *hw_displays_info) {
     auto &info = iter.second;
@@ -2092,9 +2094,11 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
         // Test pattern generation ?
         map_info.test_pattern = (hpd_bpp_ > 0) && (hpd_pattern_ > 0);
         if (!map_info.test_pattern) {
-          status = HWCDisplayPluggable::Create(core_intf_, &buffer_allocator_, &callbacks_, this,
+          if (!secure_sessions[kSecureDisplay]) {
+            status = HWCDisplayPluggable::Create(core_intf_, &buffer_allocator_, &callbacks_, this,
                                                qservice_, client_id, info.display_id, 0, 0, false,
                                                &hwc_display);
+          }
         } else {
           status = HWCDisplayPluggableTest::Create(core_intf_, &buffer_allocator_, &callbacks_,
                                                    this, qservice_, client_id, info.display_id,
@@ -2149,6 +2153,8 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
 
 int HWCSession::HandleDisconnectedDisplays(HWDisplaysInfo *hw_displays_info) {
   // Destroy pluggable displays which were connected earlier but got disconnected now.
+  std :: bitset <kSecureMax> secure_sessions = 0;
+  hwc_display_[HWC_DISPLAY_PRIMARY]->GetActiveSecureSession(&secure_sessions);
   for (auto &map_info : map_info_pluggable_) {
     bool disconnect = true;   // disconnect in case display id is not found in list.
 
@@ -2163,7 +2169,12 @@ int HWCSession::HandleDisconnectedDisplays(HWDisplaysInfo *hw_displays_info) {
     }
 
     if (disconnect) {
-      DestroyDisplay(&map_info);
+      if (secure_sessions[kSecureDisplay]) {
+        hotplug_pending_event_ = kHotPlugDisconnect;
+      } else {
+        DestroyDisplay(&map_info);
+        hotplug_pending_event_ = kHotPlugNone;
+      }
     }
   }
 
@@ -2362,7 +2373,7 @@ void HWCSession::HandleHotplugPending(hwc2_display_t disp_id, int retire_fence) 
   if (disp_id != HWC_DISPLAY_PRIMARY || hotplug_pending_event_ == kHotPlugNone) {
     return;
   }
-  bool notify_hotplug = false;
+
   std :: bitset < kSecureMax > secure_sessions = 0;
   {
     Locker::ScopeLock lock_p(locker_[HWC_DISPLAY_PRIMARY]);
@@ -2379,36 +2390,14 @@ void HWCSession::HandleHotplugPending(hwc2_display_t disp_id, int retire_fence) 
       }
       hwc_display_[HWC_DISPLAY_PRIMARY]->GetActiveSecureSession(&secure_sessions);
     }
-    if (!secure_sessions.any()) {
-      Locker::ScopeLock lock_v(locker_[HWC_DISPLAY_VIRTUAL]);
-      if (hwc_display_[HWC_DISPLAY_VIRTUAL] && destroy_virtual_disp_pending_) {
-        HWCDisplayVirtual::Destroy(hwc_display_[disp_id]);
-        hwc_display_[disp_id] = nullptr;
+
+    // Destroy the pending virtual display if secure session not present.
+    if (!secure_sessions.any() && destroy_virtual_disp_pending_) {
+      for (auto &map_info : map_info_virtual_) {
+        DestroyDisplay(&map_info);
         destroy_virtual_disp_pending_ = false;
       }
     }
-  }
-  // Handle Pending external display connection
-  if (hotplug_pending_event_ == kHotPlugConnect) {
-    Locker::ScopeLock lock_e(locker_[HWC_DISPLAY_EXTERNAL]);
-    Locker::ScopeLock lock_v(locker_[HWC_DISPLAY_VIRTUAL]);
-
-    if (!hwc_display_[HWC_DISPLAY_VIRTUAL] && !secure_sessions[kSecureDisplay]) {
-      DLOGD("Process pending external display connection");
-      ConnectDisplay(HWC_DISPLAY_EXTERNAL);
-      hotplug_pending_event_ = kHotPlugNone;
-      notify_hotplug = true;
-    }
-  } else if (hotplug_pending_event_ == kHotPlugDisconnect) {
-    Locker::ScopeLock lock_e(locker_[HWC_DISPLAY_EXTERNAL]);
-    if (hwc_display_[HWC_DISPLAY_EXTERNAL]) {
-      DisconnectDisplay(HWC_DISPLAY_EXTERNAL);
-    }
-    hotplug_pending_event_ = kHotPlugNone;
-  }
-
-  if (notify_hotplug) {
-    HotPlug(HWC_DISPLAY_EXTERNAL, HWC2::Connection::Connected);
   }
 }
 
