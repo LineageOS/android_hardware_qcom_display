@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2013-14 The Linux Foundation. All rights reserved.
+* Copyright (c) 2013-14, 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -62,8 +62,8 @@ inline android::status_t sendSingleParam(uint32_t command, uint32_t value) {
 // ----------------------------------------------------------------------------
 // Convenience wrappers that clients can call
 // ----------------------------------------------------------------------------
-inline android::status_t screenRefresh() {
-    return sendSingleParam(qService::IQService::SCREEN_REFRESH, 1);
+inline android::status_t screenRefresh(int dpy) {
+    return sendSingleParam(qService::IQService::SCREEN_REFRESH, dpy);
 }
 
 inline android::status_t toggleScreenUpdate(uint32_t on) {
