@@ -532,8 +532,10 @@ DisplayError CompManager::ControlDpps(bool enable) {
 }
 
 bool CompManager::SetDisplayState(Handle display_ctx,
-                                  DisplayState state, int32_t display_id) {
+                                  DisplayState state, int32_t display_id, int sync_handle) {
   display_state_[display_id] = state;
+  DisplayCompositionContext *display_comp_ctx =
+          reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
   switch (state) {
   case kStateOff:
@@ -552,6 +554,11 @@ bool CompManager::SetDisplayState(Handle display_ctx,
 
   default:
     break;
+  }
+
+  if (display_comp_ctx) {
+    resource_intf_->Perform(ResourceInterface::kCmdUpdateSyncHandle,
+                            display_comp_ctx->display_resource_ctx, sync_handle);
   }
 
   return true;

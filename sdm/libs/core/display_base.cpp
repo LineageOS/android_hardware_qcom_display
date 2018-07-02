@@ -529,7 +529,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, int *release_fence
   if (error == kErrorNone) {
     active_ = active;
     state_ = state;
-    comp_manager_->SetDisplayState(display_comp_ctx_, state, display_id_);
+    comp_manager_->SetDisplayState(display_comp_ctx_, state, display_id_, *release_fence);
   }
 
   return error;
