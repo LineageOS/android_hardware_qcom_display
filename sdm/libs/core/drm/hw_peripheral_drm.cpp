@@ -164,8 +164,8 @@ void HWPeripheralDRM::SetDestScalarData(HWLayersInfo hw_layer_info, bool validat
   }
 }
 
-DisplayError HWPeripheralDRM::Flush() {
-  DisplayError err = HWDeviceDRM::Flush();
+DisplayError HWPeripheralDRM::Flush(HWLayers *hw_layers) {
+  DisplayError err = HWDeviceDRM::Flush(hw_layers);
   if (err != kErrorNone) {
     return err;
   }
@@ -231,12 +231,12 @@ DisplayError HWPeripheralDRM::GetDppsFeatureInfo(void *payload, size_t size) {
   return kErrorNone;
 }
 
-DisplayError HWPeripheralDRM::HandleSecureEvent(SecureEvent secure_event) {
+DisplayError HWPeripheralDRM::HandleSecureEvent(SecureEvent secure_event, HWLayers *hw_layers) {
   switch (secure_event) {
     case kSecureDisplayStart: {
       secure_display_active_ = true;
       if (hw_panel_info_.mode != kModeCommand) {
-        DisplayError err = Flush();
+        DisplayError err = Flush(hw_layers);
         if (err != kErrorNone) {
           return err;
         }
@@ -246,7 +246,7 @@ DisplayError HWPeripheralDRM::HandleSecureEvent(SecureEvent secure_event) {
 
     case kSecureDisplayEnd: {
       if (hw_panel_info_.mode != kModeCommand) {
-        DisplayError err = Flush();
+        DisplayError err = Flush(hw_layers);
         if (err != kErrorNone) {
           return err;
         }

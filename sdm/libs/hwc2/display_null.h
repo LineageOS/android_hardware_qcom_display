@@ -61,7 +61,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(GetDisplayState(DisplayState *))
   MAKE_NO_OP(SetDisplayState(DisplayState, bool, int*))
   MAKE_NO_OP(SetFrameBufferConfig(const DisplayConfigVariableInfo &))
-  MAKE_NO_OP(Flush())
+  MAKE_NO_OP(Flush(LayerStack *))
   MAKE_NO_OP(GetVSyncState(bool *))
   MAKE_NO_OP(SetActiveConfig(uint32_t))
   MAKE_NO_OP(SetActiveConfig(DisplayConfigVariableInfo *))
@@ -94,7 +94,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(SetCompositionState(LayerComposition, bool))
   MAKE_NO_OP(GetClientTargetSupport(uint32_t, uint32_t, LayerBufferFormat,
                                     const ColorMetaData &))
-  MAKE_NO_OP(HandleSecureEvent(SecureEvent))
+  MAKE_NO_OP(HandleSecureEvent(SecureEvent, LayerStack *))
   MAKE_NO_OP(SetQSyncMode(QSyncMode))
   MAKE_NO_OP(ControlIdlePowerCollapse(bool, bool))
   MAKE_NO_OP(SetDisplayDppsAdROI(void *))

@@ -59,7 +59,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError Deinit();
   DisplayError Prepare(LayerStack *layer_stack);
   DisplayError Commit(LayerStack *layer_stack);
-  virtual DisplayError Flush();
+  virtual DisplayError Flush(LayerStack *layer_stack);
   virtual DisplayError GetDisplayState(DisplayState *state);
   virtual DisplayError GetNumVariableInfoConfigs(uint32_t *count);
   virtual DisplayError GetConfig(uint32_t index, DisplayConfigVariableInfo *variable_info);
@@ -122,7 +122,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError GetClientTargetSupport(uint32_t width, uint32_t height,
                                               LayerBufferFormat format,
                                               const ColorMetaData &color_metadata);
-  virtual DisplayError HandleSecureEvent(SecureEvent secure_event) {
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, LayerStack *layer_stack) {
     return kErrorNotSupported;
   }
   virtual DisplayError SetDisplayDppsAdROI(void *payload) {

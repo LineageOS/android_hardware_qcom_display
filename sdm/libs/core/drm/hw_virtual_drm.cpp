@@ -31,6 +31,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <ctype.h>
 #include <drm_logger.h>
 #include <utils/debug.h>
+#include <utils/utils.h>
 #include <algorithm>
 #include <vector>
 #include "hw_device_drm.h"
@@ -139,6 +140,19 @@ DisplayError HWVirtualDRM::Commit(HWLayers *hw_layers) {
   }
 
   return(err);
+}
+
+DisplayError HWVirtualDRM::Flush(HWLayers *hw_layers) {
+  DisplayError err = kErrorNone;
+  err = Commit(hw_layers);
+
+  if (err != kErrorNone) {
+    return err;
+  }
+
+  // Close the sync_handle
+  CloseFd(&hw_layers->info.sync_handle);
+  return kErrorNone;
 }
 
 DisplayError HWVirtualDRM::Validate(HWLayers *hw_layers) {

@@ -1382,7 +1382,7 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
 
   // Do no call flush on errors, if a successful buffer is never submitted.
   if (flush_ && flush_on_error_) {
-    display_intf_->Flush();
+    display_intf_->Flush(&layer_stack_);
     validated_ = false;
   }
 
@@ -1432,19 +1432,17 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
 
   client_target_->GetSDMLayer()->request.flags = {};
   *out_retire_fence = -1;
-  if (!flush_) {
-    // if swapinterval property is set to 0 then close and reset the list retire fence
-    if (swap_interval_zero_) {
-      close(layer_stack_.retire_fence_fd);
-      layer_stack_.retire_fence_fd = -1;
-    }
-    *out_retire_fence = layer_stack_.retire_fence_fd;
+  // if swapinterval property is set to 0 then close and reset the list retire fence
+  if (swap_interval_zero_) {
+    close(layer_stack_.retire_fence_fd);
     layer_stack_.retire_fence_fd = -1;
+  }
+  *out_retire_fence = layer_stack_.retire_fence_fd;
+  layer_stack_.retire_fence_fd = -1;
 
-    if (dump_frame_count_) {
-      dump_frame_count_--;
-      dump_frame_index_++;
-    }
+  if (dump_frame_count_) {
+    dump_frame_count_--;
+    dump_frame_index_++;
   }
   config_pending_ = false;
 
