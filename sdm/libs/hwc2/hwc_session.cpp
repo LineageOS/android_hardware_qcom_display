@@ -73,6 +73,7 @@ namespace sdm {
 
 static HWCUEvent g_hwc_uevent_;
 Locker HWCSession::locker_[HWC_NUM_DISPLAY_TYPES];
+bool HWCSession::disable_skip_validate_ = false;
 
 void HWCUEvent::UEventThread(HWCUEvent *hwc_uevent) {
   const char *uevent_thread_name = "HWC_UeventThread";
@@ -299,23 +300,22 @@ void HWCSession::GetCapabilities(struct hwc2_device *device, uint32_t *outCount,
 
   int value = 0;
   uint32_t count = 0;
-  bool disable_skip_validate = false;
   HWCSession *hwc_session = static_cast<HWCSession *>(device);
   bool color_transform_supported = hwc_session->core_intf_->IsColorTransformSupported();
 
   if (Debug::Get()->GetProperty("sdm.debug.disable_skip_validate", &value) == kErrorNone) {
-    disable_skip_validate = (value == 1);
+    disable_skip_validate_ = (value == 1);
   }
 
   count += (color_transform_supported) ? 1 : 0;
-  count += (!disable_skip_validate) ? 1 : 0;
+  count += (!disable_skip_validate_) ? 1 : 0;
 
   if (outCapabilities != nullptr && (*outCount >= count)) {
     int i = 0;
     if (color_transform_supported) {
       outCapabilities[i++] = HWC2_CAPABILITY_SKIP_CLIENT_COLOR_TRANSFORM;
     }
-    if (!disable_skip_validate) {
+    if (!disable_skip_validate_) {
       outCapabilities[i++] = HWC2_CAPABILITY_SKIP_VALIDATE;
     }
   }
@@ -1280,6 +1280,10 @@ void HWCSession::DynamicDebug(const android::Parcel *input_parcel) {
       HWCDebugHandler::DebugQdcm(enable, verbose_level);
       break;
 
+    case qService::IQService::DEBUG_CLIENT:
+      HWCDebugHandler::DebugClient(enable, verbose_level);
+      break;
+
     default:
       DLOGW("type = %d is not supported", type);
   }
@@ -1312,8 +1316,11 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
                                                                      &pending_action);
   }
 
-  if (ret) {
+  if (ret || pending_action.action == kNoAction) {
     output_parcel->writeInt32(ret);  // first field in out parcel indicates return code.
+    if (pending_action.action == kNoAction) {
+      HWCColorManager::MarshallStructIntoParcel(resp_payload, output_parcel);
+    }
     req_payload.DestroyPayload();
     resp_payload.DestroyPayload();
     return ret;
@@ -1322,6 +1329,7 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
 
   int32_t action = pending_action.action;
   int count = -1;
+  bool reset_validate = true;
   while (action > 0) {
     count++;
     int32_t bit = (action & 1);
@@ -1334,6 +1342,7 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
     switch (BITMAP(count)) {
       case kInvalidating:
         Refresh(HWC_DISPLAY_PRIMARY);
+        reset_validate = !disable_skip_validate_;
         break;
       case kEnterQDCMMode:
         ret = color_mgr_->EnableQDCMMode(true, hwc_display_[HWC_DISPLAY_PRIMARY]);
@@ -1391,7 +1400,9 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
   HWCColorManager::MarshallStructIntoParcel(resp_payload, output_parcel);
   req_payload.DestroyPayload();
   resp_payload.DestroyPayload();
-  hwc_display_[display_id]->ResetValidation();
+  if (reset_validate) {
+    hwc_display_[display_id]->ResetValidation();
+  }
 
   return (ret ? -EINVAL : 0);
 }
