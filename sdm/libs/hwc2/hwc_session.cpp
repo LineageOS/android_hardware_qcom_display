@@ -555,11 +555,14 @@ int32_t HWCSession::RegisterCallback(hwc2_device_t *device, int32_t descriptor,
     return HWC2_ERROR_BAD_PARAMETER;
   }
   HWCSession *hwc_session = static_cast<HWCSession *>(device);
-  SCOPE_LOCK(hwc_session->callbacks_lock_);
-  auto desc = static_cast<HWC2::Callback>(descriptor);
-  auto error = hwc_session->callbacks_.Register(desc, callback_data, pointer);
-  hwc_session->callbacks_lock_.Broadcast();
-  DLOGD("%s callback: %s", pointer ? "Registering" : "Deregistering", to_string(desc).c_str());
+  auto error =  HWC2::Error::BadDisplay;
+  {
+    SCOPE_LOCK(hwc_session->callbacks_lock_);
+    auto desc = static_cast<HWC2::Callback>(descriptor);
+    error = hwc_session->callbacks_.Register(desc, callback_data, pointer);
+    hwc_session->callbacks_lock_.Broadcast();
+    DLOGD("%s callback: %s", pointer ? "Registering" : "Deregistering", to_string(desc).c_str());
+  }
   if (descriptor == HWC2_CALLBACK_HOTPLUG) {
     if (hwc_session->hwc_display_[HWC_DISPLAY_PRIMARY]) {
       hwc_session->callbacks_.Hotplug(HWC_DISPLAY_PRIMARY, HWC2::Connection::Connected);
@@ -1583,11 +1586,7 @@ android::status_t HWCSession::GetVisibleDisplayRect(const android::Parcel *input
 
 void HWCSession::Refresh(hwc2_display_t display) {
   SCOPE_LOCK(callbacks_lock_);
-  HWC2::Error err = callbacks_.Refresh(display);
-  while (err != HWC2::Error::None) {
-    callbacks_lock_.Wait();
-    err = callbacks_.Refresh(display);
-  }
+   callbacks_.Refresh(display);
 }
 
 void HWCSession::HotPlug(hwc2_display_t display, HWC2::Connection state) {
