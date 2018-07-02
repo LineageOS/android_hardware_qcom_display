@@ -17,6 +17,11 @@ PRODUCT_PACKAGES += \
     libqdMetaData \
     libqdMetaData.system
 
+#QDCM calibration xml file for 2k panel
+PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml
+#QDCM calibration xml file for 4k panel
+PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_Sharp_4k_cmd_mode_dsc_dsi_panel.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_Sharp_4k_cmd_mode_dsc_dsi_panel.xml
+
 #Enable Charging Icon
 TARGET_RECOVERY_PIXEL_FORMAT := RGBX_8888
 
@@ -43,4 +48,5 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.enable_null_display=0 \
     vendor.display.disable_excl_rect=0 \
     vendor.display.comp_mask=0 \
-    vendor.display.disable_hw_recovery=1
+    vendor.display.disable_hw_recovery=1 \
+    vendor.display.enable_default_color_mode=1
