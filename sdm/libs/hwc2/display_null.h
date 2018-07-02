@@ -60,7 +60,7 @@ class DisplayNull : public DisplayInterface {
   }
 
   MAKE_NO_OP(Prepare(LayerStack *))
-  MAKE_NO_OP(Flush())
+  MAKE_NO_OP(Flush(LayerStack *))
   MAKE_NO_OP(GetNumVariableInfoConfigs(uint32_t *))
   MAKE_NO_OP(GetConfig(uint32_t, DisplayConfigVariableInfo *))
   MAKE_NO_OP(GetConfig(DisplayConfigFixedInfo *))

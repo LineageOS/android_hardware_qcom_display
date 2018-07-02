@@ -1170,7 +1170,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::Flush() {
+DisplayError HWDeviceDRM::Flush(HWLayers *hw_layers) {
   DTRACE_SCOPED();
   int ret = drm_atomic_intf_->Commit(false /* synchronous */, false /* retain_planes*/);
   if (ret) {

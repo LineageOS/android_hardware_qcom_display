@@ -372,7 +372,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
   return kErrorNone;
 }
 
-DisplayError DisplayBase::Flush() {
+DisplayError DisplayBase::Flush(LayerStack *layer_stack) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
 
@@ -380,7 +380,8 @@ DisplayError DisplayBase::Flush() {
     return kErrorPermission;
   }
   hw_layers_.info.hw_layers.clear();
-  error = hw_intf_->Flush();
+  hw_layers_.info.stack = layer_stack;
+  error = hw_intf_->Flush(&hw_layers_);
   if (error == kErrorNone) {
     comp_manager_->Purge(display_comp_ctx_);
     needs_validate_ = true;
@@ -478,7 +479,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, int *release_fence
   switch (state) {
   case kStateOff:
     hw_layers_.info.hw_layers.clear();
-    error = hw_intf_->Flush();
+    error = hw_intf_->Flush(&hw_layers_);
     if (error == kErrorNone) {
       error = hw_intf_->PowerOff();
     }

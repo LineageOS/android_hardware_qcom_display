@@ -59,7 +59,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError Deinit();
   DisplayError Prepare(LayerStack *layer_stack);
   DisplayError Commit(LayerStack *layer_stack);
-  virtual DisplayError Flush();
+  virtual DisplayError Flush(LayerStack *layer_stack);
   virtual DisplayError GetDisplayState(DisplayState *state);
   virtual DisplayError GetNumVariableInfoConfigs(uint32_t *count);
   virtual DisplayError GetConfig(uint32_t index, DisplayConfigVariableInfo *variable_info);
