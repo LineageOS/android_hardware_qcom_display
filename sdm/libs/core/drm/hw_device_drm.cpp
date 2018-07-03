@@ -1629,10 +1629,6 @@ DisplayError HWDeviceDRM::UnsetScaleLutConfig() {
 }
 
 DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attributes) {
-  if (IsResolutionSwitchEnabled()) {
-    return kErrorNotSupported;
-  }
-
   if (!hw_resource_.hw_dest_scalar_info.count) {
     return kErrorNotSupported;
   }
