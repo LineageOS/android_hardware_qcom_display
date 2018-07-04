@@ -48,12 +48,14 @@ class CompManager {
                                const HWDisplayAttributes &display_attributes,
                                const HWPanelInfo &hw_panel_info,
                                const HWMixerAttributes &mixer_attributes,
-                               const DisplayConfigVariableInfo &fb_config, Handle *display_ctx);
+                               const DisplayConfigVariableInfo &fb_config, Handle *display_ctx,
+                               uint32_t *default_clk_hz);
   DisplayError UnregisterDisplay(Handle display_ctx);
   DisplayError ReconfigureDisplay(Handle display_ctx, const HWDisplayAttributes &display_attributes,
                                   const HWPanelInfo &hw_panel_info,
                                   const HWMixerAttributes &mixer_attributes,
-                                  const DisplayConfigVariableInfo &fb_config);
+                                  const DisplayConfigVariableInfo &fb_config,
+                                  uint32_t *default_clk_hz);
   void PrePrepare(Handle display_ctx, HWLayers *hw_layers);
   DisplayError Prepare(Handle display_ctx, HWLayers *hw_layers);
   DisplayError Commit(Handle display_ctx, HWLayers *hw_layers);

@@ -841,7 +841,7 @@ DisplayError HWDeviceDRM::GetConfigIndex(char *mode, uint32_t *index) {
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::PowerOn(int *release_fence) {
+DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, int *release_fence) {
   DTRACE_SCOPED();
   if (!drm_atomic_intf_) {
     DLOGE("DRM Atomic Interface is null!");
@@ -851,6 +851,8 @@ DisplayError HWDeviceDRM::PowerOn(int *release_fence) {
   if (first_cycle_) {
     return kErrorNone;
   }
+
+  SetQOSData(qos_data);
 
   int64_t release_fence_t = -1;
   update_mode_ = true;
@@ -890,8 +892,10 @@ DisplayError HWDeviceDRM::PowerOff() {
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::Doze(int *release_fence) {
+DisplayError HWDeviceDRM::Doze(const HWQosData &qos_data, int *release_fence) {
   DTRACE_SCOPED();
+
+  SetQOSData(qos_data);
 
   int64_t release_fence_t = -1;
 
@@ -914,8 +918,10 @@ DisplayError HWDeviceDRM::Doze(int *release_fence) {
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::DozeSuspend(int *release_fence) {
+DisplayError HWDeviceDRM::DozeSuspend(const HWQosData &qos_data, int *release_fence) {
   DTRACE_SCOPED();
+
+  SetQOSData(qos_data);
 
   int64_t release_fence_t = -1;
 
@@ -937,6 +943,19 @@ DisplayError HWDeviceDRM::DozeSuspend(int *release_fence) {
   *release_fence = static_cast<int>(release_fence_t);
   DLOGD_IF(kTagDriverConfig, "RELEASE fence created: fd:%d", *release_fence);
   return kErrorNone;
+}
+
+void HWDeviceDRM::SetQOSData(const HWQosData &qos_data) {
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_CLK, token_.crtc_id, qos_data.clock_hz);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_AB, token_.crtc_id, qos_data.core_ab_bps);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_IB, token_.crtc_id, qos_data.core_ib_bps);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_LLCC_AB, token_.crtc_id, qos_data.llcc_ab_bps);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_LLCC_IB, token_.crtc_id, qos_data.llcc_ib_bps);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_DRAM_AB, token_.crtc_id, qos_data.dram_ab_bps);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_DRAM_IB, token_.crtc_id, qos_data.dram_ib_bps);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ROT_PREFILL_BW, token_.crtc_id,
+                            qos_data.rot_prefill_bw_bps);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ROT_CLK, token_.crtc_id, qos_data.rot_clock_hz);
 }
 
 DisplayError HWDeviceDRM::Standby() {
@@ -1088,16 +1107,7 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
   }
 
   SetSolidfillStages();
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_CLK, token_.crtc_id, qos_data.clock_hz);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_AB, token_.crtc_id, qos_data.core_ab_bps);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_IB, token_.crtc_id, qos_data.core_ib_bps);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_LLCC_AB, token_.crtc_id, qos_data.llcc_ab_bps);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_LLCC_IB, token_.crtc_id, qos_data.llcc_ib_bps);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_DRAM_AB, token_.crtc_id, qos_data.dram_ab_bps);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_DRAM_IB, token_.crtc_id, qos_data.dram_ib_bps);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ROT_PREFILL_BW, token_.crtc_id,
-                            qos_data.rot_prefill_bw_bps);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ROT_CLK, token_.crtc_id, qos_data.rot_clock_hz);
+  SetQOSData(qos_data);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_SECURITY_LEVEL, token_.crtc_id, crtc_security_level);
   drm_atomic_intf_->Perform(DRMOps::DPPS_COMMIT_FEATURE, 0 /* argument is not used */);
 
@@ -1126,6 +1136,7 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
   }
 
   if (first_cycle_) {
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
   }
@@ -1134,8 +1145,6 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
   if (vrefresh_ || first_cycle_ || update_mode_) {
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
   }
-
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
 
   if (!validate && (hw_layer_info.set_idle_time_ms >= 0)) {
     DLOGI_IF(kTagDriverConfig, "Setting idle timeout to = %d ms",
