@@ -30,7 +30,6 @@ TARGET_USES_COLOR_METADATA := true
 TARGET_USES_DRM_PP := true
 
 PRODUCT_PROPERTY_OVERRIDES += \
-    debug.sf.enable_hwc_vds=1 \
     persist.demo.hdmirotationlock=false \
     ro.vendor.display.cabl=2 \
     debug.sf.hw=0 \

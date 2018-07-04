@@ -37,7 +37,6 @@ TARGET_USES_DRM_PP := true
 TARGET_HAS_WIDE_COLOR_DISPLAY := true
 
 PRODUCT_PROPERTY_OVERRIDES += \
-    debug.sf.enable_hwc_vds=1 \
     persist.demo.hdmirotationlock=false \
     ro.vendor.display.cabl=2 \
     debug.sf.hw=0 \
