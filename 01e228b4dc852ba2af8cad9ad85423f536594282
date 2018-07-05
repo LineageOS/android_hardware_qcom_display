@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "98de954d_9212874b",
+        "filename": "sdm/libs/core/display_base.cpp",
+        "patchSetId": 2
+      },
+      "lineNbr": 40,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-07-05T17:17:40Z",
+      "side": 1,
+      "message": "Is this something the device is supposed to provide by adding the hdr to the target include dir list?",
+      "range": {
+        "startLine": 40,
+        "startChar": 0,
+        "endLine": 40,
+        "endChar": 35
+      },
+      "revId": "01e228b4dc852ba2af8cad9ad85423f536594282",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
