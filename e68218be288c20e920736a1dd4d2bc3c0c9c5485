@@ -22,6 +22,30 @@
       "revId": "e68218be288c20e920736a1dd4d2bc3c0c9c5485",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "afcfcc1b_177f48a9",
+        "filename": "liblight/lights.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 255,
+      "author": {
+        "id": 11801
+      },
+      "writtenOn": "2018-07-06T13:57:51Z",
+      "side": 0,
+      "message": "https://stackoverflow.com/questions/30542092/function-without-return-type-specified-in-c",
+      "parentUuid": "e7fa672c_b9ff0086",
+      "range": {
+        "startLine": 255,
+        "startChar": 0,
+        "endLine": 255,
+        "endChar": 24
+      },
+      "revId": "e68218be288c20e920736a1dd4d2bc3c0c9c5485",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
