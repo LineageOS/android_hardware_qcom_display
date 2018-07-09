@@ -510,6 +510,17 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
   return error;
 }
 
+DisplayError DisplayBuiltIn::SetDisplayDppsAdROI(void *payload) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  DisplayError err = kErrorNone;
+
+  err = hw_intf_->SetDisplayDppsAdROI(payload);
+  if (err != kErrorNone)
+    DLOGE("Failed to set ad roi config, err %d", err);
+
+  return err;
+}
+
 void DppsInfo::Init(DppsPropIntf *intf, const std::string &panel_name) {
   int error = 0;
 

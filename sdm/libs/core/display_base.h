@@ -125,6 +125,9 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event) {
     return kErrorNotSupported;
   }
+  virtual DisplayError SetDisplayDppsAdROI(void *payload) {
+    return kErrorNotSupported;
+  }
   virtual DisplayError SetQSyncMode(QSyncMode qsync_mode) { return kErrorNotSupported; }
   virtual std::string Dump();
   virtual DisplayError InitializeColorModes();

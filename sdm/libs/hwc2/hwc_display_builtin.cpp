@@ -388,6 +388,46 @@ HWC2::Error HWCDisplayBuiltIn::GetReadbackBufferFence(int32_t *release_fence) {
   return status;
 }
 
+HWC2::Error HWCDisplayBuiltIn::SetDisplayDppsAdROI(uint32_t h_start, uint32_t h_end,
+                                                   uint32_t v_start, uint32_t v_end,
+                                                   uint32_t factor_in, uint32_t factor_out) {
+  DisplayError error = kErrorNone;
+  DisplayDppsAd4RoiCfg dpps_ad4_roi_cfg = {};
+  uint32_t panel_width = 0, panel_height = 0;
+  constexpr uint16_t kMaxFactorVal = 0xffff;
+
+  if (h_start >= h_end || v_start >= v_end || factor_in > kMaxFactorVal ||
+      factor_out > kMaxFactorVal) {
+    DLOGE("Invalid roi region = [%u, %u, %u, %u, %u, %u]",
+           h_start, h_end, v_start, v_end, factor_in, factor_out);
+    return HWC2::Error::BadParameter;
+  }
+
+  GetPanelResolution(&panel_width, &panel_height);
+
+  if (h_start >= panel_width || h_end > panel_width ||
+      v_start >= panel_height || v_end > panel_height) {
+    DLOGE("Invalid roi region = [%u, %u, %u, %u], panel resolution = [%u, %u]",
+           h_start, h_end, v_start, v_end, panel_width, panel_height);
+    return HWC2::Error::BadParameter;
+  }
+
+  dpps_ad4_roi_cfg.h_start = h_start;
+  dpps_ad4_roi_cfg.h_end = h_end;
+  dpps_ad4_roi_cfg.v_start = v_start;
+  dpps_ad4_roi_cfg.v_end = v_end;
+  dpps_ad4_roi_cfg.factor_in = factor_in;
+  dpps_ad4_roi_cfg.factor_out = factor_out;
+
+  error = display_intf_->SetDisplayDppsAdROI(&dpps_ad4_roi_cfg);
+  if (error)
+    return HWC2::Error::BadConfig;
+
+  callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
+
+  return HWC2::Error::None;
+}
+
 int HWCDisplayBuiltIn::Perform(uint32_t operation, ...) {
   va_list args;
   va_start(args, operation);

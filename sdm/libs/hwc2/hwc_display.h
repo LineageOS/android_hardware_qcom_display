@@ -175,6 +175,12 @@ class HWCDisplay : public DisplayEventHandler {
     return HWC2::Error::Unsupported;
   }
 
+  virtual HWC2::Error SetDisplayDppsAdROI(uint32_t h_start, uint32_t h_end,
+                                          uint32_t v_start, uint32_t v_end,
+                                          uint32_t factor_in, uint32_t factor_out) {
+    return HWC2::Error::Unsupported;
+  }
+
   // Display Configurations
   virtual int SetActiveDisplayConfig(uint32_t config);
   virtual int GetActiveDisplayConfig(uint32_t *config);

@@ -38,6 +38,7 @@
 #include "xf86drm.h"
 #include "xf86drmMode.h"
 #include <drm/msm_drm.h>
+#include <drm/msm_drm_pp.h>
 
 namespace sde_drm {
 
@@ -667,6 +668,7 @@ enum DRMDPPSFeatureID {
   kFeatureAd4Init,
   kFeatureAd4Cfg,
   kFeatureAd4Input,
+  kFeatureAd4Roi,
   kFeatureAd4Backlight,
   kFeatureAd4Assertiveness,
   kFeatureAd4ManualStrength,

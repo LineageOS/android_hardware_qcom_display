@@ -187,6 +187,27 @@ DisplayError HWPeripheralDRM::SetDppsFeature(void *payload, size_t size) {
   object_type = feature_payload->object_type;
   feature_id = feature_payload->feature_id;
   value = feature_payload->value;
+
+  if (feature_id == sde_drm::kFeatureAd4Roi) {
+    if (feature_payload->value) {
+      DisplayDppsAd4RoiCfg *params = reinterpret_cast<DisplayDppsAd4RoiCfg *>
+                                                      (feature_payload->value);
+      if (!params) {
+        DLOGE("invalid playload value %d", feature_payload->value);
+        return kErrorNotSupported;
+      }
+
+      ad4_roi_cfg_.h_x = params->h_start;
+      ad4_roi_cfg_.h_y = params->h_end;
+      ad4_roi_cfg_.v_x = params->v_start;
+      ad4_roi_cfg_.v_y = params->v_end;
+      ad4_roi_cfg_.factor_in = params->factor_in;
+      ad4_roi_cfg_.factor_out = params->factor_out;
+
+      value = (uint64_t)&ad4_roi_cfg_;
+    }
+  }
+
   if (object_type == DRM_MODE_OBJECT_CRTC) {
     obj_id = token_.crtc_id;
   } else if (object_type == DRM_MODE_OBJECT_CONNECTOR) {
@@ -378,6 +399,28 @@ DisplayError HWPeripheralDRM::PowerOn(const HWQosData &qos_data, int *release_fe
   idle_pc_state_ = sde_drm::DRMIdlePCState::ENABLE;
 
   return kErrorNone;
+}
+
+DisplayError HWPeripheralDRM::SetDisplayDppsAdROI(void *payload) {
+  DisplayError err = kErrorNone;
+  struct sde_drm::DppsFeaturePayload feature_payload = {};
+
+  if (!payload) {
+    DLOGE("Invalid payload parameter");
+    return kErrorParameters;
+  }
+
+  feature_payload.object_type = DRM_MODE_OBJECT_CRTC;
+  feature_payload.feature_id = sde_drm::kFeatureAd4Roi;
+  feature_payload.value = (uint64_t)(payload);
+
+  err = SetDppsFeature(&feature_payload, sizeof(feature_payload));
+  if (err != kErrorNone) {
+    DLOGE("Faid to SetDppsFeature feature_id = %d, err = %d",
+           sde_drm::kFeatureAd4Roi, err);
+  }
+
+  return err;
 }
 
 }  // namespace sdm

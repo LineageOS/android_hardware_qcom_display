@@ -80,6 +80,8 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   virtual HWC2::Error GetReadbackBufferFence(int32_t *release_fence);
   virtual HWC2::Error SetQSyncMode(QSyncMode qsync_mode);
   virtual HWC2::Error ControlIdlePowerCollapse(bool enable, bool synchronous);
+  virtual HWC2::Error SetDisplayDppsAdROI(uint32_t h_start, uint32_t h_end, uint32_t v_start,
+                                          uint32_t v_end, uint32_t factor_in, uint32_t factor_out);
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,

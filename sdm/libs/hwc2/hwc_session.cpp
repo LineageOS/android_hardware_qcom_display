@@ -1432,6 +1432,14 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       status = SetIdlePC(input_parcel);
       break;
 
+    case qService::IQService::SET_DPPS_AD4_ROI_CONFIG:
+      if (!input_parcel) {
+        DLOGE("QService command = %d: input_parcel needed.", command);
+        break;
+      }
+      status = SetAd4RoiConfig(input_parcel);
+      break;
+
     default:
       DLOGW("QService command = %d is not supported.", command);
       break;
@@ -1629,6 +1637,29 @@ android::status_t HWCSession::SetColorModeOverride(const android::Parcel *input_
     return -EINVAL;
 
   return 0;
+}
+
+android::status_t HWCSession::SetAd4RoiConfig(const android::Parcel *input_parcel) {
+  auto display_id = static_cast<uint32_t>(input_parcel->readInt32());
+  auto h_s = static_cast<uint32_t>(input_parcel->readInt32());
+  auto h_e = static_cast<uint32_t>(input_parcel->readInt32());
+  auto v_s = static_cast<uint32_t>(input_parcel->readInt32());
+  auto v_e = static_cast<uint32_t>(input_parcel->readInt32());
+  auto f_in = static_cast<uint32_t>(input_parcel->readInt32());
+  auto f_out = static_cast<uint32_t>(input_parcel->readInt32());
+
+#ifdef DISPLAY_CONFIG_1_5
+  return static_cast<android::status_t>(SetDisplayDppsAdROI(display_id, h_s, h_e, v_s,
+                                                            v_e, f_in, f_out));
+#else
+  auto err = CallDisplayFunction(static_cast<hwc2_device_t *>(this), display_id,
+                                 &HWCDisplay::SetDisplayDppsAdROI, h_s, h_e, v_s, v_e,
+                                 f_in, f_out);
+  if (err != HWC2_ERROR_NONE)
+    return -EINVAL;
+
+  return 0;
+#endif
 }
 
 android::status_t HWCSession::SetColorModeWithRenderIntentOverride(
