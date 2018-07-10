@@ -125,14 +125,8 @@ int HWCDisplayBuiltIn::Init() {
 }
 
 void HWCDisplayBuiltIn::ProcessBootAnimCompleted() {
-  uint32_t numBootUpLayers = 0;
-  // TODO(user): Remove this hack
+  bool bootanim_exit = false;
 
-  numBootUpLayers = static_cast<uint32_t>(Debug::GetBootAnimLayerCount());
-
-  if (numBootUpLayers == 0) {
-    numBootUpLayers = 2;
-  }
   /* All other checks namely "init.svc.bootanim" or
   * HWC_GEOMETRY_CHANGED fail in correctly identifying the
   * exact bootup transition to homescreen
@@ -152,8 +146,13 @@ void HWCDisplayBuiltIn::ProcessBootAnimCompleted() {
     }
   }
 
+  property_get("service.bootanim.exit", property, "0");
+  if (!strcmp(property, "1")) {
+    bootanim_exit = true;
+  }
+
   if ((!isEncrypted || (isEncrypted && main_class_services_started)) &&
-      (layer_set_.size() > numBootUpLayers)) {
+      bootanim_exit) {
     DLOGI("Applying default mode");
     boot_animation_completed_ = true;
     // Applying default mode after bootanimation is finished And
