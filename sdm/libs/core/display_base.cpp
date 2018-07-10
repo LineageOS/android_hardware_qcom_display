@@ -118,7 +118,7 @@ DisplayError DisplayBase::Init() {
   // TODO(user): Temporary changes, to be removed when DRM driver supports
   // Partial update with Destination scaler enabled.
   SetPUonDestScaler();
-  Debug::Get()->GetProperty("sdm.drop_skewed_vsync", &drop_vsync);
+  Debug::Get()->GetProperty(DROP_SKEWED_VSYNC_PROP, &drop_vsync);
   drop_skewed_vsync_ = (drop_vsync == 1);
   return kErrorNone;
 
@@ -483,20 +483,12 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, int *release_fence
     break;
 
   case kStateDoze:
-    if (state_ == kStateOff) {
-      DLOGI("Doze state not supported after suspend");
-      return kErrorNone;
-    }
     error = hw_intf_->Doze(release_fence);
     active = true;
     last_power_mode_ = kStateDoze;
     break;
 
   case kStateDozeSuspend:
-    if (state_ == kStateOff) {
-      DLOGI("Doze suspend state not supported after suspend");
-      return kErrorNone;
-    }
     error = hw_intf_->DozeSuspend(release_fence);
     if (display_type_ != kPrimary) {
       active = true;

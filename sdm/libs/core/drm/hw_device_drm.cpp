@@ -755,6 +755,11 @@ DisplayError HWDeviceDRM::PowerOff() {
 
 DisplayError HWDeviceDRM::Doze(int *release_fence) {
   DTRACE_SCOPED();
+  if (first_cycle_) {
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
+    drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
+  }
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::DOZE);
   int ret = drm_atomic_intf_->Commit(true /* synchronous */, true /* retain_planes */);
@@ -770,6 +775,11 @@ DisplayError HWDeviceDRM::Doze(int *release_fence) {
 
 DisplayError HWDeviceDRM::DozeSuspend(int *release_fence) {
   DTRACE_SCOPED();
+  if (first_cycle_) {
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
+    drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
+  }
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id,
                             DRMPowerMode::DOZE_SUSPEND);
