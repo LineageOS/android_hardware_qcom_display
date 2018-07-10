@@ -655,7 +655,7 @@ std::string DisplayBase::Dump() {
       INT(fb_roi.right) << " " << INT(fb_roi.bottom) << ")";
   }
 
-  const char *header  = "\n| Idx |  Comp Type |   Split   | Pipe |    W x H    |          Format          |  Src Rect (L T R B) |  Dst Rect (L T R B) |  Z |    Flags   | Deci(HxV) | CS | Rng |";  //NOLINT
+  const char *header  = "\n| Idx |  Comp Type |   Split   | Pipe |    W x H    |          Format          |  Src Rect (L T R B) |  Dst Rect (L T R B) |  Z | Pipe Flags | Deci(HxV) | CS | Rng |";  //NOLINT
   const char *newline = "\n|-----|------------|-----------|------|-------------|--------------------------|---------------------|---------------------|----|------------|-----------|----|-----|";  //NOLINT
   const char *format  = "\n| %3s | %10s | %9s | %4d | %4d x %4d | %24s | %4d %4d %4d %4d | %4d %4d %4d %4d | %2s | %10s | %9s | %2s | %3s |";  //NOLINT
 
@@ -748,7 +748,7 @@ std::string DisplayBase::Dump() {
       }
 
       snprintf(z_order, sizeof(z_order), "%d", pipe.z_order);
-      snprintf(flags, sizeof(flags), "0x%08x", hw_layer.flags.flags);
+      snprintf(flags, sizeof(flags), "0x%08x", pipe.flags);
       snprintf(decimation, sizeof(decimation), "%3d x %3d", pipe.horizontal_decimation,
                pipe.vertical_decimation);
       ColorMetaData &color_metadata = hw_layer.input_buffer.color_metadata;
