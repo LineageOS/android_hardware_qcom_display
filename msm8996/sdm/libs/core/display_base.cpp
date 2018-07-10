@@ -397,6 +397,9 @@ DisplayError DisplayBase::GetConfig(uint32_t index, DisplayConfigVariableInfo *v
 }
 
 DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *fixed_info) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  fixed_info->partial_update = hw_panel_info_.partial_update;
+
   return kErrorNone;
 }
 
