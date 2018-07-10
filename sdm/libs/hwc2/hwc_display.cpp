@@ -383,6 +383,12 @@ int HWCDisplay::Init() {
   current_refresh_rate_ = max_refresh_rate_;
 
   GetUnderScanConfig();
+
+  DisplayConfigFixedInfo fixed_info = {};
+  display_intf_->GetConfig(&fixed_info);
+  partial_update_enabled_ = fixed_info.partial_update;
+  client_target_->SetPartialUpdate(partial_update_enabled_);
+
   DLOGI("Display created with id: %d", id_);
 
   return 0;
@@ -426,6 +432,7 @@ HWC2::Error HWCDisplay::CreateLayer(hwc2_layer_t *out_layer_id) {
   geometry_changes_ |= GeometryChanges::kAdded;
   validated_ = false;
   layer_stack_invalid_ = true;
+  layer->SetPartialUpdate(partial_update_enabled_);
 
   return HWC2::Error::None;
 }
@@ -579,7 +586,7 @@ void HWCDisplay::BuildLayerStack() {
 
     layer->flags.updating = true;
     if (layer_set_.size() <= kMaxLayerCount) {
-      layer->flags.updating = IsLayerUpdating(layer);
+      layer->flags.updating = IsLayerUpdating(hwc_layer);
     }
 
     layer_stack_.layers.push_back(layer);
@@ -589,7 +596,7 @@ void HWCDisplay::BuildLayerStack() {
   layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0);
   // Append client target to the layer stack
   Layer *sdm_client_target = client_target_->GetSDMLayer();
-  sdm_client_target->flags.updating = IsLayerUpdating(sdm_client_target);
+  sdm_client_target->flags.updating = IsLayerUpdating(client_target_);
   layer_stack_.layers.push_back(sdm_client_target);
   // fall back frame composition to GPU when client target is 10bit
   // TODO(user): clarify the behaviour from Client(SF) and SDM Extn -
@@ -1911,22 +1918,15 @@ uint32_t HWCDisplay::GetUpdatingLayersCount(void) {
   return updating_count;
 }
 
-bool HWCDisplay::IsLayerUpdating(const Layer *layer) {
+bool HWCDisplay::IsLayerUpdating(HWCLayer *hwc_layer) {
+  auto layer = hwc_layer->GetSDMLayer();
   // Layer should be considered updating if
   //   a) layer is in single buffer mode, or
   //   b) valid dirty_regions(android specific hint for updating status), or
   //   c) layer stack geometry has changed (TODO(user): Remove when SDM accepts
   //      geometry_changed as bit fields).
-  return (layer->flags.single_buffer || IsSurfaceUpdated(layer->dirty_regions) ||
+  return (layer->flags.single_buffer || hwc_layer->IsSurfaceUpdated() ||
           geometry_changes_);
-}
-
-bool HWCDisplay::IsSurfaceUpdated(const std::vector<LayerRect> &dirty_regions) {
-  // based on dirty_regions determine if its updating
-  // dirty_rect count = 0 - whole layer - updating.
-  // dirty_rect count = 1 or more valid rects - updating.
-  // dirty_rect count = 1 with (0,0,0,0) - not updating.
-  return (dirty_regions.empty() || IsValid(dirty_regions.at(0)));
 }
 
 uint32_t HWCDisplay::SanitizeRefreshRate(uint32_t req_refresh_rate) {

@@ -107,6 +107,8 @@ class HWCLayer {
   bool IsRotationPresent();
   bool IsDataSpaceSupported();
   static LayerBufferFormat GetSDMFormat(const int32_t &source, const int flags);
+  bool IsSurfaceUpdated() { return surface_updated_; }
+  void SetPartialUpdate(bool enabled) { partial_update_enabled_ = enabled; }
 
  private:
   Layer *layer_ = nullptr;
@@ -123,6 +125,8 @@ class HWCLayer {
   bool single_buffer_ = false;
   int buffer_fd_ = -1;
   bool dataspace_supported_ = false;
+  bool partial_update_enabled_ = false;
+  bool surface_updated_ = true;
 
   // Composition requested by client(SF)
   HWC2::Composition client_requested_ = HWC2::Composition::Device;
@@ -139,6 +143,7 @@ class HWCLayer {
   DisplayError SetIGC(IGC_t source, LayerIGC *target);
   uint32_t RoundToStandardFPS(float fps);
   void ValidateAndSetCSC(const private_handle_t *handle);
+  void SetDirtyRegions(hwc_region_t surface_damage);
 };
 
 struct SortLayersByZ {

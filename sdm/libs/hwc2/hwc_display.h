@@ -294,8 +294,7 @@ class HWCDisplay : public DisplayEventHandler {
   void MarkLayersForClientComposition(void);
   virtual void ApplyScanAdjustment(hwc_rect_t *display_frame);
   uint32_t GetUpdatingLayersCount(void);
-  bool IsSurfaceUpdated(const std::vector<LayerRect> &dirty_regions);
-  bool IsLayerUpdating(const Layer *layer);
+  bool IsLayerUpdating(HWCLayer *layer);
   uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate);
   virtual void GetUnderScanConfig() { }
 
@@ -362,6 +361,7 @@ class HWCDisplay : public DisplayEventHandler {
   int null_display_mode_ = 0;
   bool has_client_composition_ = false;
   DisplayValidateState validate_state_ = kNormalValidate;
+  bool partial_update_enabled_ = false;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {
