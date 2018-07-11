@@ -71,10 +71,10 @@ class HWDevice : public HWInterface {
   virtual DisplayError SetDisplayAttributes(uint32_t index);
   virtual DisplayError SetDisplayAttributes(const HWDisplayAttributes &display_attributes);
   virtual DisplayError GetConfigIndex(char *mode, uint32_t *index);
-  virtual DisplayError PowerOn(int *release_fence);
+  virtual DisplayError PowerOn(const HWQosData &qos_data, int *release_fence);
   virtual DisplayError PowerOff();
-  virtual DisplayError Doze(int *release_fence);
-  virtual DisplayError DozeSuspend(int *release_fence);
+  virtual DisplayError Doze(const HWQosData &qos_data, int *release_fence);
+  virtual DisplayError DozeSuspend(const HWQosData &qos_data, int *release_fence);
   virtual DisplayError Standby();
   virtual DisplayError Validate(HWLayers *hw_layers);
   virtual DisplayError Commit(HWLayers *hw_layers);
