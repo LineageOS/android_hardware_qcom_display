@@ -1471,7 +1471,8 @@ void HWCDisplay::DumpOutputBuffer(const BufferInfo &buffer_info, void *base, int
     }
 
     snprintf(dump_file_name, sizeof(dump_file_name), "%s/output_layer_%dx%d_%s_frame%d.raw",
-             dir_path, buffer_info.buffer_config.width, buffer_info.buffer_config.height,
+             dir_path, buffer_info.alloc_buffer_info.aligned_width,
+             buffer_info.alloc_buffer_info.aligned_height,
              GetFormatString(buffer_info.buffer_config.format), dump_frame_index_);
 
     FILE *fp = fopen(dump_file_name, "w+");
