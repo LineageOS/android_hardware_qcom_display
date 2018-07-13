@@ -358,6 +358,12 @@ HWCDisplay::HWCDisplay(CoreInterface *core_intf, BufferAllocator *buffer_allocat
 }
 
 int HWCDisplay::Init() {
+  Debug::GetWindowRect(&window_rect_.left, &window_rect_.top,
+                                 &window_rect_.right, &window_rect_.bottom);
+
+  DLOGI("Window rect : [%f %f %f %f]",window_rect_.left, window_rect_.top,
+         window_rect_.right, window_rect_.bottom);
+
   DisplayError error = core_intf_->CreateDisplay(sdm_id_, this, &display_intf_);
   if (error != kErrorNone) {
     DLOGE("Display create failed. Error = %d display_id = %d event_handler = %p disp_intf = %p",
@@ -847,6 +853,13 @@ HWC2::Error HWCDisplay::GetDisplayAttribute(hwc2_config_t config, HWC2::Attribut
       DLOGV("Get variable config failed");
       return HWC2::Error::BadDisplay;
     }
+  }
+
+  variable_config.x_pixels -= UINT32(window_rect_.right + window_rect_.left);
+  variable_config.y_pixels -= UINT32(window_rect_.bottom + window_rect_.top);
+  if (variable_config.x_pixels <= 0 || variable_config.y_pixels <= 0) {
+    DLOGE("window rects are not within the supported range");
+    return HWC2::Error::BadDisplay;
   }
 
   switch (attribute) {
@@ -1693,6 +1706,16 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
   error = display_intf_->SetFrameBufferConfig(fb_config);
   if (error != kErrorNone) {
     DLOGV("Set frame buffer config failed. Error = %d", error);
+    return -EINVAL;
+  }
+
+  // Reduce the src_rect and dst_rect as per FBT config.
+  // SF sending reduced FBT but here the src_rect is equal to mixer which is
+  // higher than allocated buffer of FBT.
+  x_pixels -= UINT32(window_rect_.right + window_rect_.left);
+  y_pixels -= UINT32(window_rect_.bottom + window_rect_.top);
+  if (x_pixels <= 0 || y_pixels <= 0) {
+    DLOGE("window rects are not within the supported range");
     return -EINVAL;
   }
 
