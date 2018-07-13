@@ -45,8 +45,8 @@ class HWCToneMapper;
 // Subclasses set this to their type. This has to be different from DisplayType.
 // This is to avoid RTTI and dynamic_cast
 enum DisplayClass {
-  DISPLAY_CLASS_PRIMARY,
-  DISPLAY_CLASS_EXTERNAL,
+  DISPLAY_CLASS_BUILTIN,
+  DISPLAY_CLASS_PLUGGABLE,
   DISPLAY_CLASS_VIRTUAL,
   DISPLAY_CLASS_NULL
 };
@@ -114,6 +114,7 @@ class HWCDisplay : public DisplayEventHandler {
     return kErrorNotSupported;
   }
   virtual HWC2::PowerMode GetLastPowerMode();
+  virtual HWC2::Vsync GetLastVsyncMode();
   virtual int SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels);
   virtual void GetFrameBufferResolution(uint32_t *x_pixels, uint32_t *y_pixels);
   virtual int SetDisplayStatus(DisplayStatus display_status);
@@ -223,14 +224,18 @@ class HWCDisplay : public DisplayEventHandler {
     validated_ = false;
     return HWC2::Error::None;
   }
+  virtual void ActivateDisplay(bool active) {
+    active_ = active;
+    validated_ = false;
+  }
 
  protected:
   // Maximum number of layers supported by display manager.
   static const uint32_t kMaxLayerCount = 32;
 
-  HWCDisplay(CoreInterface *core_intf, HWCCallbacks *callbacks, DisplayType type, hwc2_display_t id,
-             bool needs_blit, qService::QService *qservice, DisplayClass display_class,
-             BufferAllocator *buffer_allocator);
+  HWCDisplay(CoreInterface *core_intf, BufferAllocator *buffer_allocator, HWCCallbacks *callbacks,
+             qService::QService *qservice, DisplayType type, hwc2_display_t id, int32_t sdm_id,
+             bool needs_blit, DisplayClass display_class);
 
   // DisplayEventHandler methods
   virtual DisplayError VSync(const DisplayEventVSync &vsync);
@@ -263,10 +268,11 @@ class HWCDisplay : public DisplayEventHandler {
   bool validated_ = false;
   bool layer_stack_invalid_ = true;
   CoreInterface *core_intf_ = nullptr;
-  HWCCallbacks *callbacks_  = nullptr;
   HWCBufferAllocator *buffer_allocator_ = NULL;
-  DisplayType type_;
-  hwc2_display_t id_;
+  HWCCallbacks *callbacks_  = nullptr;
+  DisplayType type_ = kDisplayTypeMax;
+  hwc2_display_t id_ = UINT64_MAX;
+  int32_t sdm_id_ = -1;
   bool needs_blit_ = false;
   DisplayInterface *display_intf_ = NULL;
   LayerStack layer_stack_;
@@ -280,7 +286,8 @@ class HWCDisplay : public DisplayEventHandler {
   uint32_t dump_frame_count_ = 0;
   uint32_t dump_frame_index_ = 0;
   bool dump_input_layers_ = false;
-  HWC2::PowerMode last_power_mode_;
+  HWC2::PowerMode last_power_mode_ = HWC2::PowerMode::Off;
+  HWC2::Vsync last_vsync_mode_ = HWC2::Vsync::Invalid;
   bool swap_interval_zero_ = false;
   bool display_paused_ = false;
   uint32_t min_refresh_rate_ = 0;
@@ -317,6 +324,8 @@ class HWCDisplay : public DisplayEventHandler {
   uint32_t geometry_changes_ = GeometryChanges::kNone;
   bool skip_validate_ = false;
   bool animating_ = false;
+  bool active_ = true;
+  bool layers_bypassed_ = false;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {

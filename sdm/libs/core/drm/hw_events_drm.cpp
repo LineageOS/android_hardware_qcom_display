@@ -173,8 +173,8 @@ void HWEventsDRM::PopulateHWEventData(const vector<HWEvent> &event_list) {
   InitializePollFd();
 }
 
-DisplayError HWEventsDRM::Init(int display_type, HWEventHandler *event_handler,
-                               const vector<HWEvent> &event_list,
+DisplayError HWEventsDRM::Init(int display_id, DisplayType display_type,
+                               HWEventHandler *event_handler, const vector<HWEvent> &event_list,
                                const HWInterface *hw_intf) {
   if (!event_handler)
     return kErrorParameters;
@@ -182,12 +182,12 @@ DisplayError HWEventsDRM::Init(int display_type, HWEventHandler *event_handler,
   static_cast<const HWDeviceDRM *>(hw_intf)->GetDRMDisplayToken(&token_);
   is_primary_ = static_cast<const HWDeviceDRM *>(hw_intf)->IsPrimaryDisplay();
 
-  DLOGI("Setup event handler for display %d, CRTC %d, Connector %d",
-        display_type, token_.crtc_id, token_.conn_id);
+  DLOGI("Setup event handler for display id %d, CRTC %d, Connector %d",
+        display_id, token_.crtc_id, token_.conn_id);
 
   event_handler_ = event_handler;
   poll_fds_.resize(event_list.size());
-  event_thread_name_ += " - " + std::to_string(display_type);
+  event_thread_name_ += " - " + std::to_string(display_id);
 
   PopulateHWEventData(event_list);
 

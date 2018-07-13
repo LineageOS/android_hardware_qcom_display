@@ -342,13 +342,15 @@ void HWCColorMode::Dump(std::ostringstream* os) {
   *os << std::endl;
 }
 
-HWCDisplay::HWCDisplay(CoreInterface *core_intf, HWCCallbacks *callbacks, DisplayType type,
-                       hwc2_display_t id, bool needs_blit, qService::QService *qservice,
-                       DisplayClass display_class, BufferAllocator *buffer_allocator)
+HWCDisplay::HWCDisplay(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
+                       HWCCallbacks *callbacks, qService::QService *qservice,
+                       DisplayType type, hwc2_display_t id, int32_t sdm_id,
+                       bool needs_blit, DisplayClass display_class)
     : core_intf_(core_intf),
       callbacks_(callbacks),
       type_(type),
       id_(id),
+      sdm_id_(sdm_id),
       needs_blit_(needs_blit),
       qservice_(qservice),
       display_class_(display_class) {
@@ -356,10 +358,10 @@ HWCDisplay::HWCDisplay(CoreInterface *core_intf, HWCCallbacks *callbacks, Displa
 }
 
 int HWCDisplay::Init() {
-  DisplayError error = core_intf_->CreateDisplay(type_, this, &display_intf_);
+  DisplayError error = core_intf_->CreateDisplay(sdm_id_, this, &display_intf_);
   if (error != kErrorNone) {
-    DLOGE("Display create failed. Error = %d display_type %d event_handler %p disp_intf %p", error,
-          type_, this, &display_intf_);
+    DLOGE("Display create failed. Error = %d display_id = %d event_handler = %p disp_intf = %p",
+          error, sdm_id_, this, &display_intf_);
     return -EINVAL;
   }
 
@@ -709,6 +711,8 @@ HWC2::Error HWCDisplay::SetVsyncEnabled(HWC2::Vsync enabled) {
     return HWC2::Error::BadDisplay;
   }
 
+  last_vsync_mode_ = enabled;
+
   return HWC2::Error::None;
 }
 
@@ -730,6 +734,7 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode) {
       if (tone_mapper_) {
         tone_mapper_->Terminate();
       }
+      last_power_mode_ = HWC2::PowerMode::Off;
       break;
     case HWC2::PowerMode::On:
       state = kStateOn;
@@ -876,14 +881,14 @@ HWC2::Error HWCDisplay::GetDisplayName(uint32_t *out_size, char *out_name) {
   }
 
   std::string name;
-  switch (id_) {
-    case HWC_DISPLAY_PRIMARY:
-      name = "Primary Display";
+  switch (type_) {
+    case kBuiltIn:
+      name = "Built-in Display";
       break;
-    case HWC_DISPLAY_EXTERNAL:
-      name = "External Display";
+    case kPluggable:
+      name = "Pluggable Display";
       break;
-    case HWC_DISPLAY_VIRTUAL:
+    case kVirtual:
       name = "Virtual Display";
       break;
     default:
@@ -907,16 +912,13 @@ HWC2::Error HWCDisplay::GetDisplayName(uint32_t *out_size, char *out_name) {
 }
 
 HWC2::Error HWCDisplay::GetDisplayType(int32_t *out_type) {
-  if (out_type != nullptr) {
-    if (id_ == HWC_DISPLAY_VIRTUAL) {
-      *out_type = HWC2_DISPLAY_TYPE_VIRTUAL;
-    } else {
-      *out_type = HWC2_DISPLAY_TYPE_PHYSICAL;
-    }
-    return HWC2::Error::None;
-  } else {
+  if (out_type == nullptr) {
     return HWC2::Error::BadParameter;
   }
+
+  *out_type = HWC2_DISPLAY_TYPE_PHYSICAL;
+
+  return HWC2::Error::None;
 }
 
 HWC2::Error HWCDisplay::GetActiveConfig(hwc2_config_t *out_config) {
@@ -994,6 +996,10 @@ HWC2::PowerMode HWCDisplay::GetLastPowerMode() {
   return last_power_mode_;
 }
 
+HWC2::Vsync HWCDisplay::GetLastVsyncMode() {
+  return last_vsync_mode_;
+}
+
 DisplayError HWCDisplay::VSync(const DisplayEventVSync &vsync) {
   callbacks_->Vsync(id_, vsync.timestamp);
   return kErrorNone;
@@ -1048,7 +1054,8 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
   }
 
   UpdateRefreshRate();
-  if (!skip_prepare_) {
+  layers_bypassed_ = false;
+  if (active_ && !skip_prepare_) {
     DisplayError error = display_intf_->Prepare(&layer_stack_);
     if (error != kErrorNone) {
       if (error == kErrorShutDown) {
@@ -1260,7 +1267,7 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
     return HWC2::Error::NotValidated;
   }
 
-  if (shutdown_pending_ || layer_set_.empty()) {
+  if (shutdown_pending_ || layer_set_.empty() || !active_) {
     return HWC2::Error::None;
   }
 
@@ -1330,7 +1337,7 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
     Layer *layer = hwc_layer->GetSDMLayer();
     LayerBuffer *layer_buffer = &layer->input_buffer;
 
-    if (!flush_) {
+    if (!flush_ && !layers_bypassed_) {
       // If swapinterval property is set to 0 or for single buffer layers, do not update f/w
       // release fences and discard fences from driver
       if (swap_interval_zero_ || layer->flags.single_buffer) {
@@ -1846,6 +1853,7 @@ void HWCDisplay::MarkLayersForGPUBypass() {
     layer->composition = kCompositionSDE;
   }
   validated_ = true;
+  layers_bypassed_ = true;
 }
 
 void HWCDisplay::MarkLayersForClientComposition() {

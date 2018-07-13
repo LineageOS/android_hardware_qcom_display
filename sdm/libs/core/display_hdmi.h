@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -40,6 +40,9 @@ class DisplayHDMI : public DisplayBase, HWEventHandler {
   DisplayHDMI(DisplayEventHandler *event_handler, HWInfoInterface *hw_info_intf,
               BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
               CompManager *comp_manager);
+  DisplayHDMI(int32_t display_id, DisplayEventHandler *event_handler,
+              HWInfoInterface *hw_info_intf, BufferSyncHandler *buffer_sync_handler,
+              BufferAllocator *buffer_allocator, CompManager *comp_manager);
   virtual DisplayError Init();
   virtual DisplayError Prepare(LayerStack *layer_stack);
   virtual DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate, uint32_t *max_refresh_rate);

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -45,14 +45,24 @@ DisplayPrimary::DisplayPrimary(DisplayEventHandler *event_handler, HWInfoInterfa
                 comp_manager, hw_info_intf) {
 }
 
+DisplayPrimary::DisplayPrimary(int32_t display_id, DisplayEventHandler *event_handler,
+                              HWInfoInterface *hw_info_intf,
+                              BufferSyncHandler *buffer_sync_handler,
+                              BufferAllocator *buffer_allocator, CompManager *comp_manager)
+  : DisplayBase(display_id, kPrimary, event_handler, kDevicePrimary, buffer_sync_handler,
+                buffer_allocator, comp_manager, hw_info_intf) {
+}
+
 DisplayError DisplayPrimary::Init() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
-  DisplayError error = HWInterface::Create(kPrimary, hw_info_intf_, buffer_sync_handler_,
-                                           buffer_allocator_, &hw_intf_);
+  DisplayError error = HWInterface::Create(display_id_, kPrimary, hw_info_intf_,
+                                           buffer_sync_handler_, buffer_allocator_, &hw_intf_);
   if (error != kErrorNone) {
     return error;
   }
+
+  hw_intf_->GetDisplayId(&display_id_);
 
   error = DisplayBase::Init();
   if (error != kErrorNone) {
@@ -88,7 +98,7 @@ DisplayError DisplayPrimary::Init() {
 
   avr_prop_disabled_ = Debug::IsAVRDisabled();
 
-  error = HWEventsInterface::Create(INT(display_type_), this, event_list_, hw_intf_,
+  error = HWEventsInterface::Create(display_id_, kPrimary, this, event_list_, hw_intf_,
                                     &hw_events_intf_);
   if (error != kErrorNone) {
     DLOGE("Failed to create hardware events interface. Error = %d", error);
@@ -348,7 +358,7 @@ DisplayError DisplayPrimary::ControlPartialUpdate(bool enable, uint32_t *pending
 
   if (!hw_panel_info_.partial_update) {
     // Nothing to be done.
-    DLOGI("partial update is not applicable for display=%d", display_type_);
+    DLOGI("partial update is not applicable for display id = %d", display_id_);
     return kErrorNotSupported;
   }
 
@@ -390,20 +400,21 @@ void DisplayPrimary::ResetPanel() {
   DisplayError status = kErrorNone;
   int release_fence = -1;
 
-  DLOGI("Powering off primary");
+  DLOGI("Powering off built-in/primary %d", display_id_);
   status = SetDisplayState(kStateOff, &release_fence);
   if (status != kErrorNone) {
-    DLOGE("power-off on primary failed with error = %d", status);
+    DLOGE("power-off on built-in/primary %d failed with error = %d", display_id_, status);
   }
   if (release_fence >= 0) {
     ::close(release_fence);
   }
 
-  DLOGI("Restoring power mode on primary");
+  DLOGI("Restoring power mode on built-in/primary %d", display_id_);
   DisplayState mode = GetLastPowerMode();
   status = SetDisplayState(mode, &release_fence);
   if (status != kErrorNone) {
-    DLOGE("Setting power mode = %d on primary failed with error = %d", mode, status);
+    DLOGE("Setting power mode = %d on built-in/primary %d failed with error = %d", mode,
+          display_id_, status);
   }
   if (release_fence >= 0) {
     ::close(release_fence);
@@ -412,7 +423,7 @@ void DisplayPrimary::ResetPanel() {
   DLOGI("Enabling HWVsync");
   status = SetVSyncState(true);
   if (status != kErrorNone) {
-    DLOGE("enabling vsync failed for primary with error = %d", status);
+    DLOGE("enabling vsync failed for built-in/primary %d with error = %d", display_id_, status);
   }
 }
 

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -49,14 +49,13 @@ enum HWEvent {
 
 class HWEventsInterface {
  public:
-  virtual DisplayError Init(int display_type, HWEventHandler *event_handler,
-                            const std::vector<HWEvent> &event_list,
-                            const HWInterface *hw_intf) = 0;
+  virtual DisplayError Init(int display_id, DisplayType display_type, HWEventHandler *event_handler,
+                            const std::vector<HWEvent> &event_list, const HWInterface *hw_intf) = 0;
   virtual DisplayError Deinit() = 0;
   virtual DisplayError SetEventState(HWEvent event, bool enable, void *aux = nullptr) = 0;
 
-  static DisplayError Create(int display_type, HWEventHandler *event_handler,
-                             const std::vector<HWEvent> &event_list,
+  static DisplayError Create(int display_id, DisplayType display_type,
+                             HWEventHandler *event_handler, const std::vector<HWEvent> &event_list,
                              const HWInterface *hw_intf, HWEventsInterface **intf);
   static DisplayError Destroy(HWEventsInterface *intf);
 

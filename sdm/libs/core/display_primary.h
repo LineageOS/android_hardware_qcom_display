@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -39,6 +39,9 @@ class DisplayPrimary : public DisplayBase, HWEventHandler {
   DisplayPrimary(DisplayEventHandler *event_handler, HWInfoInterface *hw_info_intf,
                  BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
                  CompManager *comp_manager);
+  DisplayPrimary(int32_t display_id, DisplayEventHandler *event_handler,
+                 HWInfoInterface *hw_info_intf, BufferSyncHandler *buffer_sync_handler,
+                 BufferAllocator *buffer_allocator, CompManager *comp_manager);
   virtual DisplayError Init();
   virtual DisplayError Prepare(LayerStack *layer_stack);
   virtual DisplayError Commit(LayerStack *layer_stack);

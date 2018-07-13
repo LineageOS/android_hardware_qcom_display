@@ -41,7 +41,7 @@ using std::map;
 
 class HWEvents : public HWEventsInterface {
  public:
-  virtual DisplayError Init(int fb_num, HWEventHandler *event_handler,
+  virtual DisplayError Init(int fb_num, DisplayType display_type, HWEventHandler *event_handler,
                             const vector<HWEvent> &event_list,
                             const HWInterface *hw_intf);
   virtual DisplayError Deinit();

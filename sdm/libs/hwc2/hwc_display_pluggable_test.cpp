@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -40,60 +40,62 @@
 #include <string>
 #include <fstream>
 
-#include "hwc_display_external_test.h"
+#include "hwc_display_pluggable_test.h"
 #include "hwc_debugger.h"
 
-#define __CLASS__ "HWCDisplayExternalTest"
+#define __CLASS__ "HWCDisplayPluggableTest"
 
 namespace sdm {
 
 using std::array;
 
-int HWCDisplayExternalTest::Create(CoreInterface *core_intf,
-                                   HWCBufferAllocator *buffer_allocator,
-                                   HWCCallbacks *callbacks,
-                                   qService::QService *qservice, uint32_t panel_bpp,
-                                   uint32_t pattern_type, HWCDisplay **hwc_display) {
-  HWCDisplay *hwc_external_test = new HWCDisplayExternalTest(core_intf, buffer_allocator,
-                                                             callbacks, qservice,
-                                                             panel_bpp, pattern_type);
+int HWCDisplayPluggableTest::Create(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
+                                    HWCCallbacks *callbacks, qService::QService *qservice,
+                                    hwc2_display_t id, int32_t sdm_id, uint32_t panel_bpp,
+                                    uint32_t pattern_type, HWCDisplay **hwc_display) {
+  HWCDisplay *hwc_pluggable_test = new HWCDisplayPluggableTest(core_intf, buffer_allocator,
+                                                              callbacks, qservice, id, sdm_id,
+                                                              panel_bpp, pattern_type);
 
-  int status = static_cast<HWCDisplayExternalTest *>(hwc_external_test)->Init();
+  int status = hwc_pluggable_test->Init();
   if (status) {
-    delete hwc_external_test;
+    delete hwc_pluggable_test;
     return status;
   }
 
-  *hwc_display = hwc_external_test;
+  *hwc_display = hwc_pluggable_test;
 
-  DLOGE("EXTERNAL panel_bpp %d, pattern_type %d", panel_bpp, pattern_type);
+  DLOGD("Pluggable panel_bpp %d, pattern_type %d", panel_bpp, pattern_type);
 
   return status;
 }
 
-void HWCDisplayExternalTest::Destroy(HWCDisplay *hwc_display) {
-  static_cast<HWCDisplayExternalTest *>(hwc_display)->Deinit();
+void HWCDisplayPluggableTest::Destroy(HWCDisplay *hwc_display) {
+  // Flush the display to have outstanding fences signaled.
+  hwc_display->Flush();
+  hwc_display->Deinit();
 
   delete hwc_display;
 }
 
-HWCDisplayExternalTest::HWCDisplayExternalTest(CoreInterface *core_intf,
-                                               HWCBufferAllocator *buffer_allocator,
-                                               HWCCallbacks *callbacks,
-                                               qService::QService *qservice, uint32_t panel_bpp,
-                                               uint32_t pattern_type)
-  : HWCDisplay(core_intf, callbacks, kHDMI, HWC_DISPLAY_EXTERNAL, false, qservice,
-               DISPLAY_CLASS_EXTERNAL, buffer_allocator), panel_bpp_(panel_bpp),
-               pattern_type_(pattern_type) {
+HWCDisplayPluggableTest::HWCDisplayPluggableTest(CoreInterface *core_intf,
+                                                HWCBufferAllocator *buffer_allocator,
+                                                HWCCallbacks *callbacks,
+                                                qService::QService *qservice, hwc2_display_t id,
+                                                int32_t sdm_id,
+                                                uint32_t panel_bpp, uint32_t pattern_type)
+  : HWCDisplay(core_intf, buffer_allocator, callbacks,  qservice, kPluggable, id,
+               sdm_id, false, DISPLAY_CLASS_PLUGGABLE),
+    panel_bpp_(panel_bpp), pattern_type_(pattern_type) {
 }
 
-int HWCDisplayExternalTest::Init() {
-  uint32_t external_width = 0;
-  uint32_t external_height = 0;
+int HWCDisplayPluggableTest::Init() {
+  uint32_t pluggable_width = 0;
+  uint32_t pluggable_height = 0;
 
   int status = HWCDisplay::Init();
   if (status) {
-      DLOGE("HWCDisplayExternalTest::Init  status = %d ", status);
+      DLOGE("HWCDisplayPluggableTest::Init  status = %d ", status);
     return status;
   }
 
@@ -103,29 +105,29 @@ int HWCDisplayExternalTest::Init() {
     return status;
   }
 
-  DisplayError error = HWCDisplay::GetMixerResolution(&external_width, &external_height);
+  DisplayError error = HWCDisplay::GetMixerResolution(&pluggable_width, &pluggable_height);
   if (error != kErrorNone) {
     Deinit();
     return -EINVAL;
   }
 
-  status = HWCDisplay::SetFrameBufferResolution(external_width, external_height);
+  status = HWCDisplay::SetFrameBufferResolution(pluggable_width, pluggable_height);
   if (status) {
     Deinit();
-    DLOGE("HWCDisplayExternalTest:: set fb resolution status = %d ", status);
+    DLOGE("HWCDisplayPluggableTest:: set fb resolution status = %d ", status);
     return status;
   }
 
   return status;
 }
 
-int HWCDisplayExternalTest::Deinit() {
+int HWCDisplayPluggableTest::Deinit() {
   DestroyLayerStack();
   return HWCDisplay::Deinit();
 }
 
 
-HWC2::Error HWCDisplayExternalTest::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
+HWC2::Error HWCDisplayPluggableTest::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
   auto status = HWC2::Error::None;
   if (secure_display_active_) {
     MarkLayersForGPUBypass();
@@ -157,7 +159,7 @@ HWC2::Error HWCDisplayExternalTest::Validate(uint32_t *out_num_types, uint32_t *
   return  status;
 }
 
-HWC2::Error HWCDisplayExternalTest::Present(int32_t *out_retire_fence) {
+HWC2::Error HWCDisplayPluggableTest::Present(int32_t *out_retire_fence) {
   auto status = HWC2::Error::None;
 
   if (secure_display_active_) {
@@ -192,7 +194,7 @@ HWC2::Error HWCDisplayExternalTest::Present(int32_t *out_retire_fence) {
   return status;
 }
 
-void HWCDisplayExternalTest::SetSecureDisplay(bool secure_display_active) {
+void HWCDisplayPluggableTest::SetSecureDisplay(bool secure_display_active) {
   if (secure_display_active_ != secure_display_active) {
     secure_display_active_ = secure_display_active;
 
@@ -206,11 +208,11 @@ void HWCDisplayExternalTest::SetSecureDisplay(bool secure_display_active) {
   return;
 }
 
-int HWCDisplayExternalTest::Perform(uint32_t operation, ...) {
+int HWCDisplayPluggableTest::Perform(uint32_t operation, ...) {
   return 0;
 }
 
-void HWCDisplayExternalTest::DumpInputBuffer() {
+void HWCDisplayPluggableTest::DumpInputBuffer() {
   if (!dump_frame_count_ || flush_ || !dump_input_layers_) {
     return;
   }
@@ -268,7 +270,7 @@ void HWCDisplayExternalTest::DumpInputBuffer() {
   }
 }
 
-void HWCDisplayExternalTest::CalcCRC(uint32_t color_val, std::bitset<16> *crc_data) {
+void HWCDisplayPluggableTest::CalcCRC(uint32_t color_val, std::bitset<16> *crc_data) {
   std::bitset<16> color = {};
   std::bitset<16> temp_crc = {};
 
@@ -324,7 +326,7 @@ void HWCDisplayExternalTest::CalcCRC(uint32_t color_val, std::bitset<16> *crc_da
   (*crc_data) = temp_crc;
 }
 
-int HWCDisplayExternalTest::FillBuffer() {
+int HWCDisplayPluggableTest::FillBuffer() {
   uint8_t *buffer = reinterpret_cast<uint8_t *>(mmap(NULL, buffer_info_.alloc_buffer_info.size,
                                                 PROT_READ|PROT_WRITE, MAP_SHARED,
                                                 buffer_info_.alloc_buffer_info.fd, 0));
@@ -356,7 +358,7 @@ int HWCDisplayExternalTest::FillBuffer() {
   return 0;
 }
 
-int HWCDisplayExternalTest::GetStride(LayerBufferFormat format, uint32_t width, uint32_t *stride) {
+int HWCDisplayPluggableTest::GetStride(LayerBufferFormat format, uint32_t width, uint32_t *stride) {
   switch (format) {
   case kFormatRGBA8888:
   case kFormatRGBA1010102:
@@ -373,7 +375,7 @@ int HWCDisplayExternalTest::GetStride(LayerBufferFormat format, uint32_t width, 
   return 0;
 }
 
-void HWCDisplayExternalTest::PixelCopy(uint32_t red, uint32_t green, uint32_t blue, uint32_t alpha,
+void HWCDisplayPluggableTest::PixelCopy(uint32_t red, uint32_t green, uint32_t blue, uint32_t alpha,
                                        uint8_t **buffer) {
   LayerBufferFormat format = buffer_info_.buffer_config.format;
 
@@ -408,7 +410,7 @@ void HWCDisplayExternalTest::PixelCopy(uint32_t red, uint32_t green, uint32_t bl
   }
 }
 
-void HWCDisplayExternalTest::GenerateColorRamp(uint8_t *buffer) {
+void HWCDisplayPluggableTest::GenerateColorRamp(uint8_t *buffer) {
   uint32_t width = buffer_info_.buffer_config.width;
   uint32_t height = buffer_info_.buffer_config.height;
   LayerBufferFormat format = buffer_info_.buffer_config.format;
@@ -502,7 +504,7 @@ void HWCDisplayExternalTest::GenerateColorRamp(uint8_t *buffer) {
   DLOGI("CRC blue %x", crc_blue.to_ulong());
 }
 
-void HWCDisplayExternalTest::GenerateBWVertical(uint8_t *buffer) {
+void HWCDisplayPluggableTest::GenerateBWVertical(uint8_t *buffer) {
   uint32_t width = buffer_info_.buffer_config.width;
   uint32_t height = buffer_info_.buffer_config.height;
   LayerBufferFormat format = buffer_info_.buffer_config.format;
@@ -548,7 +550,7 @@ void HWCDisplayExternalTest::GenerateBWVertical(uint8_t *buffer) {
   DLOGI("CRC blue %x", crc_blue.to_ulong());
 }
 
-void HWCDisplayExternalTest::GenerateColorSquare(uint8_t *buffer) {
+void HWCDisplayPluggableTest::GenerateColorSquare(uint8_t *buffer) {
   uint32_t width = buffer_info_.buffer_config.width;
   uint32_t height = buffer_info_.buffer_config.height;
   LayerBufferFormat format = buffer_info_.buffer_config.format;
@@ -616,7 +618,7 @@ void HWCDisplayExternalTest::GenerateColorSquare(uint8_t *buffer) {
   DLOGI("CRC blue %x", crc_blue.to_ulong());
 }
 
-int HWCDisplayExternalTest::InitLayer(Layer *layer) {
+int HWCDisplayPluggableTest::InitLayer(Layer *layer) {
   uint32_t active_config = 0;
   DisplayConfigVariableInfo var_info = {};
 
@@ -679,7 +681,7 @@ int HWCDisplayExternalTest::InitLayer(Layer *layer) {
   return 0;
 }
 
-int HWCDisplayExternalTest::DeinitLayer(Layer *layer) {
+int HWCDisplayPluggableTest::DeinitLayer(Layer *layer) {
   if (layer->composition != kCompositionGPUTarget) {
     int ret = buffer_allocator_->FreeBuffer(&buffer_info_);
     if (ret != 0) {
@@ -691,14 +693,14 @@ int HWCDisplayExternalTest::DeinitLayer(Layer *layer) {
   return 0;
 }
 
-int HWCDisplayExternalTest::CreateLayerStack() {
+int HWCDisplayPluggableTest::CreateLayerStack() {
   for (uint32_t i = 0; i < (kTestLayerCnt + 1 /* one dummy gpu_target layer */); i++) {
     Layer *layer = new Layer();
 
     if (i == kTestLayerCnt) {
       layer->composition = kCompositionGPUTarget;
     }
-    DLOGE("External :: CreateLayerStack %d", i);
+    DLOGD("External :: CreateLayerStack %d", i);
     int ret = InitLayer(layer);
     if (ret != 0) {
       delete layer;
@@ -710,7 +712,7 @@ int HWCDisplayExternalTest::CreateLayerStack() {
   return 0;
 }
 
-int HWCDisplayExternalTest::DestroyLayerStack() {
+int HWCDisplayPluggableTest::DestroyLayerStack() {
   for (uint32_t i = 0; i < UINT32(layer_stack_.layers.size()); i++) {
     Layer *layer = layer_stack_.layers.at(i);
     int ret = DeinitLayer(layer);
@@ -724,7 +726,7 @@ int HWCDisplayExternalTest::DestroyLayerStack() {
   return 0;
 }
 
-HWC2::Error HWCDisplayExternalTest::PostCommit(int32_t *out_retire_fence) {
+HWC2::Error HWCDisplayPluggableTest::PostCommit(int32_t *out_retire_fence) {
   auto status = HWC2::Error::None;
   // Do no call flush on errors, if a successful buffer is never submitted.
   if (flush_ && flush_on_error_) {
