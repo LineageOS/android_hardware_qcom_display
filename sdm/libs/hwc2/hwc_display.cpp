@@ -477,10 +477,6 @@ void HWCDisplay::BuildLayerStack() {
   auto working_primaries = ColorPrimaries_BT709_5;
   bool secure_display_active = false;
   layer_stack_.flags.animating = animating_;
-
-  uint32_t color_mode_count = 0;
-  display_intf_->GetColorModeCount(&color_mode_count);
-
   bool extended_range = false;
 
   // Add one layer for fb target
@@ -559,7 +555,7 @@ void HWCDisplay::BuildLayerStack() {
     bool hdr_layer = layer->input_buffer.color_metadata.colorPrimaries == ColorPrimaries_BT2020 &&
                      (layer->input_buffer.color_metadata.transfer == Transfer_SMPTE_ST2084 ||
                      layer->input_buffer.color_metadata.transfer == Transfer_HLG);
-    if (hdr_layer && !disable_hdr_handling_ && color_mode_count) {
+    if (hdr_layer && !disable_hdr_handling_) {
       // dont honor HDR when its handling is disabled
       layer->input_buffer.flags.hdr = true;
       layer_stack_.flags.hdr_present = true;
