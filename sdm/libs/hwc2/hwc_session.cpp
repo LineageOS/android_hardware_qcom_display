@@ -123,18 +123,6 @@ void HWCUEvent::Register(HWCUEventListener *uevent_listener) {
   uevent_listener_ = uevent_listener;
 }
 
-static void SetProcessFDLimit() {
-  struct rlimit fd_limit = {};
-  getrlimit(RLIMIT_NOFILE, &fd_limit);
-  fd_limit.rlim_cur = fd_limit.rlim_cur * 2;
-  if (fd_limit.rlim_cur < fd_limit.rlim_max) {
-    auto err = setrlimit(RLIMIT_NOFILE, &fd_limit);
-    if (err) {
-      DLOGW("Unable to increase fd limit -  err:%d, %s", errno, strerror(errno));
-    }
-  }
-}
-
 HWCSession::HWCSession(const hw_module_t *module) {
   hwc2_device_t::common.tag = HARDWARE_DEVICE_TAG;
   hwc2_device_t::common.version = HWC_DEVICE_API_VERSION_2_0;
@@ -154,7 +142,6 @@ int HWCSession::Init() {
     return status;
   }
 
-  SetProcessFDLimit();
   InitDisplaySlots();
 
   // Start QService and connect to it.
