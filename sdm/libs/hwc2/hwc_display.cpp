@@ -1978,6 +1978,16 @@ std::string HWCDisplay::Dump() {
        << std::endl;
   }
 
+  if (has_client_composition_) {
+    os << "\n---------client target---------\n";
+    auto sdm_layer = client_target_->GetSDMLayer();
+    os << "format: " << std::setw(14) << GetFormatString(sdm_layer->input_buffer.format);
+    os << " dataspace:" << std::hex << "0x" << std::setw(8) << std::setfill('0')
+       << client_target_->GetLayerDataspace() << std::dec << std::setfill(' ');
+    os << "  buffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec
+       << std::endl;
+  }
+
   if (layer_stack_invalid_) {
     os << "\n Layers added or removed but not reflected to SDM's layer stack yet\n";
     return os.str();
