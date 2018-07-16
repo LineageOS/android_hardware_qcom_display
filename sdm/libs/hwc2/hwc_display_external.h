@@ -46,10 +46,16 @@ class HWCDisplayExternal : public HWCDisplay {
                     HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
                     qService::QService *qservice, HWCDisplay **hwc_display);
   static void Destroy(HWCDisplay *hwc_display);
+  virtual int Init();
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests);
   virtual HWC2::Error Present(int32_t *out_retire_fence);
   virtual int SetState(bool connected);
   virtual DisplayError Flush();
+  virtual HWC2::Error GetColorModes(uint32_t *out_num_modes, ColorMode *out_modes);
+  virtual HWC2::Error GetRenderIntents(ColorMode mode, uint32_t *out_num_intents,
+                                       RenderIntent *out_intents);
+  virtual HWC2::Error SetColorMode(ColorMode mode);
+  virtual HWC2::Error SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
 
  private:
   HWCDisplayExternal(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,

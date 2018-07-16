@@ -587,4 +587,13 @@ const char *CompManager::StringDisplayList(const std::set<int32_t> &displays) {
   return displays_str.c_str();
 }
 
+DisplayError CompManager::SetBlendSpace(Handle display_ctx, const PrimariesTransfer &blend_space) {
+  DisplayCompositionContext *display_comp_ctx =
+      reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+
+  display_comp_ctx->strategy->SetBlendSpace(blend_space);
+
+  return kErrorNone;
+}
+
 }  // namespace sdm

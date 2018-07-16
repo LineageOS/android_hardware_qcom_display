@@ -95,6 +95,17 @@ int HWCDisplayExternal::Create(CoreInterface *core_intf, HWCBufferAllocator *buf
   return status;
 }
 
+int HWCDisplayExternal::Init() {
+  int status = HWCDisplay::Init();
+  if (status) {
+    return status;
+  }
+  color_mode_ = new HWCColorMode(display_intf_);
+  color_mode_->Init();
+
+  return status;
+}
+
 void HWCDisplayExternal::Destroy(HWCDisplay *hwc_display) {
   hwc_display->Deinit();
   delete hwc_display;
@@ -282,6 +293,42 @@ void HWCDisplayExternal::GetUnderScanConfig() {
 
 DisplayError HWCDisplayExternal::Flush() {
   return display_intf_->Flush();
+}
+
+HWC2::Error HWCDisplayExternal::GetColorModes(uint32_t *out_num_modes, ColorMode *out_modes) {
+  if (out_modes == nullptr) {
+    *out_num_modes = color_mode_->GetColorModeCount();
+  } else {
+    color_mode_->GetColorModes(out_num_modes, out_modes);
+  }
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayExternal::GetRenderIntents(ColorMode mode, uint32_t *out_num_intents,
+                                                 RenderIntent *out_intents) {
+  if (out_intents == nullptr) {
+    *out_num_intents = color_mode_->GetRenderIntentCount(mode);
+  } else {
+    color_mode_->GetRenderIntents(mode, out_num_intents, out_intents);
+  }
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayExternal::SetColorMode(ColorMode mode) {
+  return SetColorModeWithRenderIntent(mode, RenderIntent::COLORIMETRIC);
+}
+
+HWC2::Error HWCDisplayExternal::SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
+  auto status = color_mode_->SetColorModeWithRenderIntent(mode, intent);
+  if (status != HWC2::Error::None) {
+    DLOGE("failed for mode = %d intent = %d", mode, intent);
+    return status;
+  }
+
+  callbacks_->Refresh(HWC_DISPLAY_EXTERNAL);
+  validated_ = false;
+
+  return status;
 }
 
 }  // namespace sdm

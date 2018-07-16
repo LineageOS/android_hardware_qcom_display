@@ -48,6 +48,10 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
   virtual bool IsUnderscanSupported();
   virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
   virtual DisplayError InitializeColorModes();
+  virtual DisplayError SetColorMode(const std::string &color_mode);
+  virtual DisplayError GetColorModeCount(uint32_t *mode_count);
+  virtual DisplayError GetColorModes(uint32_t *mode_count, std::vector<std::string> *color_modes);
+  virtual DisplayError GetColorModeAttr(const std::string &color_mode, AttrVal *attr);
   virtual DisplayError SetDisplayState(DisplayState state, int *release_fence);
 
   // Implement the HWEventHandlers
@@ -60,6 +64,8 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
   virtual void PingPongTimeout() {}
   virtual void PanelDead() {}
   virtual void HwRecovery(const HWRecoveryEvent sdm_event_code);
+
+  void UpdateColorModes();
 
  private:
   uint32_t GetBestConfig(HWS3DMode s3d_mode);

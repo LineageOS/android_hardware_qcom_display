@@ -250,8 +250,7 @@ HWC2::Error HWCDisplayPrimary::Present(int32_t *out_retire_fence) {
   return status;
 }
 
-HWC2::Error HWCDisplayPrimary::GetColorModes(uint32_t *out_num_modes,
-                                             android_color_mode_t *out_modes) {
+HWC2::Error HWCDisplayPrimary::GetColorModes(uint32_t *out_num_modes, ColorMode *out_modes) {
   if (out_modes == nullptr) {
     *out_num_modes = color_mode_->GetColorModeCount();
   } else {
@@ -261,16 +260,28 @@ HWC2::Error HWCDisplayPrimary::GetColorModes(uint32_t *out_num_modes,
   return HWC2::Error::None;
 }
 
-HWC2::Error HWCDisplayPrimary::SetColorMode(android_color_mode_t mode) {
-  auto status = color_mode_->SetColorMode(mode);
+HWC2::Error HWCDisplayPrimary::GetRenderIntents(ColorMode mode, uint32_t *out_num_intents,
+                                                RenderIntent *out_intents) {
+  if (out_intents == nullptr) {
+    *out_num_intents = color_mode_->GetRenderIntentCount(mode);
+  } else {
+    color_mode_->GetRenderIntents(mode, out_num_intents, out_intents);
+  }
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayPrimary::SetColorMode(ColorMode mode) {
+  return SetColorModeWithRenderIntent(mode, RenderIntent::COLORIMETRIC);
+}
+
+HWC2::Error HWCDisplayPrimary::SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
+  auto status = color_mode_->SetColorModeWithRenderIntent(mode, intent);
   if (status != HWC2::Error::None) {
-    DLOGE("failed for mode = %d", mode);
+    DLOGE("failed for mode = %d intent = %d", mode, intent);
     return status;
   }
-
   callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
   validated_ = false;
-
   return status;
 }
 
