@@ -25,6 +25,7 @@
 #include <utils/constants.h>
 #include <utils/debug.h>
 #include <map>
+#include <string>
 #include <utility>
 #include <vector>
 
