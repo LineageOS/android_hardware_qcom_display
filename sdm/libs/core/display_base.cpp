@@ -204,9 +204,6 @@ DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
       break;
     }
     hw_layers_info.app_layer_count++;
-    if (!gpu_fallback_) {
-      gpu_fallback_ = NeedsGpuFallback(layer);
-    }
     if (IsWideColor(layer->input_buffer.color_metadata.colorPrimaries)) {
       hw_layers_info.wide_color_primaries.push_back(
           layer->input_buffer.color_metadata.colorPrimaries);
@@ -273,7 +270,6 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
   needs_validate_ = true;
-  gpu_fallback_ = false;
 
   if (!active_) {
     return kErrorPermission;
@@ -1638,28 +1634,6 @@ void DisplayBase::DeInitializeColorModes() {
     color_modes_.clear();
     color_mode_attr_map_.clear();
     num_color_modes_ = 0;
-}
-
-bool DisplayBase::NeedsGpuFallback(const Layer *layer) {
-  const LayerBufferFormat &format = layer->input_buffer.format;
-  const ColorRange &range = layer->input_buffer.color_metadata.range;
-
-  if (format == kFormatInvalid || range == Range_Extended) {
-    DLOGV_IF(kTagDisplay, "Format = %d Range = %d", format, range);
-    // when there is invalid format or extended range fall back to GPU
-    return true;
-  }
-
-  return false;
-}
-
-bool DisplayBase::NeedsHdrHandling() {
-  if (display_type_ != kBuiltIn || !num_color_modes_ || gpu_fallback_) {
-    // No HDR Handling for non-primary displays or when color modes are not present or
-    // if frame is falling back to GPU
-    return false;
-  }
-  return true;
 }
 
 void DisplayBase::GetColorPrimaryTransferFromAttributes(const AttrVal &attr,

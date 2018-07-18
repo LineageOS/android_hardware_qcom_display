@@ -135,7 +135,7 @@ bool GetRange(const int32_t &dataspace, ColorRange *color_range) {
       break;
     case HAL_DATASPACE_RANGE_EXTENDED:
       *color_range = Range_Extended;
-      break;
+      return false;
     default:
       DLOGW_IF(kTagClient, "Unsupported Range Request = %d", range);
       return false;
