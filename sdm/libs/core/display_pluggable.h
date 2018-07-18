@@ -26,6 +26,7 @@
 #define __DISPLAY_PLUGGABLE_H__
 
 #include <map>
+#include <string>
 #include <vector>
 
 #include "display_base.h"
