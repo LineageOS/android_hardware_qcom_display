@@ -36,6 +36,7 @@
 #ifndef __BUFFER_ALLOCATOR_H__
 #define __BUFFER_ALLOCATOR_H__
 
+#include <cstddef>
 #include "layer_buffer.h"
 
 namespace sdm {
@@ -70,6 +71,7 @@ struct AllocatedBufferInfo {
   uint32_t aligned_height = 0;   //!< Specifies aligned allocated buffer height in pixels.
   LayerBufferFormat format = kFormatInvalid;  // Specifies buffer format for allocated buffer.
   uint32_t size = 0;             //!< Specifies the size of the allocated buffer.
+  uint64_t id = 0;               //!< Specifies the Id of the allocated buffer.
 };
 
 /*! @brief Holds the information about the input/output configuration of an output buffer.

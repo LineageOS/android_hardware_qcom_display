@@ -130,6 +130,11 @@ DisplayError HWDevice::Deinit() {
   return kErrorNone;
 }
 
+DisplayError HWDevice::GetDisplayId(int32_t *display_id) {
+  *display_id = fb_node_index_;
+  return kErrorNone;
+}
+
 DisplayError HWDevice::GetActiveConfig(uint32_t *active_config) {
   *active_config = 0;
   return kErrorNone;
@@ -756,25 +761,25 @@ int HWDevice::GetFBNodeIndex(HWDeviceType device_type) {
     HWPanelInfo panel_info;
     GetHWPanelInfoByNode(i, &panel_info);
     switch (device_type) {
-    case kDevicePrimary:
-      if (panel_info.is_primary_panel) {
-        return i;
-      }
-      break;
-    case kDeviceHDMI:
-      if (panel_info.is_pluggable == true) {
-        if (IsFBNodeConnected(i)) {
+      case kDeviceBuiltIn:
+        if (panel_info.is_primary_panel) {
           return i;
         }
-      }
-      break;
-    case kDeviceVirtual:
-      if (panel_info.port == kPortWriteBack) {
-        return i;
-      }
-      break;
-    default:
-      break;
+        break;
+      case kDevicePluggable:
+        if (panel_info.is_pluggable == true) {
+          if (IsFBNodeConnected(i)) {
+            return i;
+          }
+        }
+        break;
+      case kDeviceVirtual:
+        if (panel_info.port == kPortWriteBack) {
+          return i;
+        }
+        break;
+      default:
+        break;
     }
   }
   return -1;

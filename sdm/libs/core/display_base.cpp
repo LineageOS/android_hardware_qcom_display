@@ -73,6 +73,19 @@ DisplayBase::DisplayBase(DisplayType display_type, DisplayEventHandler *event_ha
     comp_manager_(comp_manager), hw_info_intf_(hw_info_intf) {
 }
 
+DisplayBase::DisplayBase(int32_t display_id, DisplayType display_type,
+                         DisplayEventHandler *event_handler, HWDeviceType hw_device_type,
+                         BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
+                         CompManager *comp_manager, HWInfoInterface *hw_info_intf)
+  : display_id_(display_id),
+    display_type_(display_type),
+    event_handler_(event_handler),
+    hw_device_type_(hw_device_type),
+    buffer_sync_handler_(buffer_sync_handler),
+    buffer_allocator_(buffer_allocator),
+    comp_manager_(comp_manager),
+    hw_info_intf_(hw_info_intf) {}
+
 DisplayError DisplayBase::Init() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
@@ -107,17 +120,23 @@ DisplayError DisplayBase::Init() {
     }
   }
 
-  color_mgr_ = ColorManagerProxy::CreateColorManagerProxy(display_type_, hw_intf_,
-                                                          display_attributes_, hw_panel_info_);
+  if (!color_mgr_exists_) {
+    color_mgr_ = ColorManagerProxy::CreateColorManagerProxy(display_type_, hw_intf_,
+                                                            display_attributes_, hw_panel_info_);
 
-  if (!color_mgr_) {
-    DLOGW("Unable to create ColorManagerProxy for display = %d", display_type_);
-  } else if (InitializeColorModes() != kErrorNone) {
-    DLOGW("InitColorModes failed for display = %d", display_type_);
+    if (!color_mgr_) {
+      DLOGW("Unable to create ColorManagerProxy for display = %d", display_type_);
+    } else {
+      color_mgr_exists_ = true;
+      if (InitializeColorModes() != kErrorNone) {
+        DLOGW("InitColorModes failed for display = %d", display_type_);
+      }
+    }
   }
 
-  error = comp_manager_->RegisterDisplay(display_type_, display_attributes_, hw_panel_info_,
-                                         mixer_attributes_, fb_config_, &display_comp_ctx_);
+  error = comp_manager_->RegisterDisplay(display_id_, display_type_, display_attributes_,
+                                         hw_panel_info_, mixer_attributes_, fb_config_,
+                                         &display_comp_ctx_);
   if (error != kErrorNone) {
     goto CleanupOnError;
   }
@@ -177,6 +196,9 @@ DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
   hw_layers_info.stack = layer_stack;
 
   for (auto &layer : layers) {
+    if (layer->buffer_map == nullptr) {
+      layer->buffer_map = std::make_shared<LayerBufferMap>();
+    }
     if (layer->composition == kCompositionGPUTarget) {
       hw_layers_info.gpu_target_index = hw_layers_info.app_layer_count;
       break;
@@ -191,9 +213,10 @@ DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
     }
   }
 
-  DLOGD_IF(kTagDisplay, "LayerStack layer_count: %d, app_layer_count: %d, gpu_target_index: %d, "
-           "display type: %d", layers.size(), hw_layers_info.app_layer_count,
-           hw_layers_info.gpu_target_index, display_type_);
+  DLOGD_IF(kTagDisplay,
+           "LayerStack layer_count: %d, app_layer_count: %d, gpu_target_index: %d, display: %d-%d",
+           layers.size(), hw_layers_info.app_layer_count, hw_layers_info.gpu_target_index,
+           display_id_, display_type_);
 
   if (!hw_layers_info.app_layer_count) {
     DLOGW("Layer count is zero");
@@ -260,7 +283,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
     return kErrorParameters;
   }
 
-  DLOGI_IF(kTagDisplay, "Entering Prepare for display type : %d", display_type_);
+  DLOGI_IF(kTagDisplay, "Entering Prepare for display: %d-%d", display_id_, display_type_);
   error = BuildLayerStackStats(layer_stack);
   if (error != kErrorNone) {
     return error;
@@ -313,7 +336,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
     DLOGW("ValidateHDR failed");
   }
 
-  DLOGI_IF(kTagDisplay, "Exiting Prepare for display type : %d", display_type_);
+  DLOGI_IF(kTagDisplay, "Exiting Prepare for display: %d-%d", display_id_, display_type_);
   return error;
 }
 
@@ -331,7 +354,8 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
   }
 
   if (needs_validate_) {
-    DLOGE("Commit: Corresponding Prepare() is not called for display = %d", display_type_);
+    DLOGE("Commit: Corresponding Prepare() is not called for display %d-%d", display_id_,
+          display_type_);
     return kErrorNotValidated;
   }
 
@@ -348,7 +372,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     }
   }
 
-  DLOGI_IF(kTagDisplay, "Entering commit for display type : %d", display_type_);
+  DLOGI_IF(kTagDisplay, "Entering commit for display: %d-%d", display_id_, display_type_);
   CommitLayerParams(layer_stack);
 
   error = comp_manager_->Commit(display_comp_ctx_, &hw_layers_);
@@ -380,7 +404,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     return error;
   }
 
-  DLOGI_IF(kTagDisplay, "Exiting commit for display type : %d", display_type_);
+  DLOGI_IF(kTagDisplay, "Exiting commit for display: %d-%d", display_id_, display_type_);
   return kErrorNone;
 }
 
@@ -397,7 +421,7 @@ DisplayError DisplayBase::Flush() {
     comp_manager_->Purge(display_comp_ctx_);
     needs_validate_ = true;
   } else {
-    DLOGW("Unable to flush display = %d", display_type_);
+    DLOGW("Unable to flush display %d-%d", display_id_, display_type_);
   }
 
   return error;
@@ -478,7 +502,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, int *release_fence
   DisplayError error = kErrorNone;
   bool active = false;
 
-  DLOGI("Set state = %d, display %d", state, display_type_);
+  DLOGI("Set state = %d, display %d-%d", state, display_id_, display_type_);
 
   if (state == state_) {
     DLOGI("Same state transition is requested.");
@@ -526,7 +550,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, int *release_fence
       return kErrorNone;
     }
     error = hw_intf_->DozeSuspend(release_fence);
-    if (display_type_ != kPrimary) {
+    if (display_type_ != kBuiltIn) {
       active = true;
     }
     last_power_mode_ = kStateDozeSuspend;
@@ -547,7 +571,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, int *release_fence
   if (error == kErrorNone) {
     active_ = active;
     state_ = state;
-    comp_manager_->SetDisplayState(display_comp_ctx_, state, display_type_);
+    comp_manager_->SetDisplayState(display_comp_ctx_, state);
   }
 
   return error;
@@ -1378,6 +1402,30 @@ DisplayError DisplayBase::GetDisplayPort(DisplayPort *port) {
   return kErrorNone;
 }
 
+DisplayError DisplayBase::GetDisplayId(int32_t *display_id) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+
+  if (!display_id) {
+    return kErrorParameters;
+  }
+
+  *display_id = display_id_;
+
+  return kErrorNone;
+}
+
+DisplayError DisplayBase::GetDisplayType(DisplayType *display_type) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+
+  if (!display_type) {
+    return kErrorParameters;
+  }
+
+  *display_type = display_type_;
+
+  return kErrorNone;
+}
+
 bool DisplayBase::IsPrimaryDisplay() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
@@ -1403,6 +1451,7 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
     hw_layer.input_buffer.planes[0].stride = sdm_layer->input_buffer.planes[0].stride;
     hw_layer.input_buffer.size = sdm_layer->input_buffer.size;
     hw_layer.input_buffer.acquire_fence_fd = sdm_layer->input_buffer.acquire_fence_fd;
+    hw_layer.input_buffer.handle_id = sdm_layer->input_buffer.handle_id;
   }
 
   return;
@@ -1727,6 +1776,8 @@ void DisplayBase::SetPUonDestScaler() {
                                 mixer_height != display_height);
 }
 
+bool DisplayBase::color_mgr_exists_ = false;
+
 void DisplayBase::ClearColorInfo() {
   color_modes_.clear();
   color_mode_map_.clear();
@@ -1736,6 +1787,7 @@ void DisplayBase::ClearColorInfo() {
   if (color_mgr_) {
     delete color_mgr_;
     color_mgr_ = NULL;
+    color_mgr_exists_ = false;
   }
 }
 
@@ -1760,7 +1812,7 @@ bool DisplayBase::NeedsGpuFallback(const Layer *layer) {
 }
 
 bool DisplayBase::NeedsHdrHandling() {
-  if (display_type_ != kPrimary || !num_color_modes_ || gpu_fallback_) {
+  if (display_type_ != kBuiltIn || !num_color_modes_ || gpu_fallback_) {
     // No HDR Handling for non-primary displays or when color modes are not present or
     // if frame is falling back to GPU
     return false;

@@ -89,10 +89,13 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(SetMixerResolution(uint32_t, uint32_t))
   MAKE_NO_OP(SetDetailEnhancerData(const DisplayDetailEnhancerData &))
   MAKE_NO_OP(GetDisplayPort(DisplayPort *))
+  MAKE_NO_OP(GetDisplayId(int32_t *))
+  MAKE_NO_OP(GetDisplayType(DisplayType *))
   MAKE_NO_OP(SetCompositionState(LayerComposition, bool))
   MAKE_NO_OP(GetClientTargetSupport(uint32_t, uint32_t, LayerBufferFormat,
                                     const ColorMetaData &))
   MAKE_NO_OP(HandleSecureEvent(SecureEvent))
+  MAKE_NO_OP(SetQSyncMode(QSyncMode))
 
   DisplayConfigVariableInfo default_variable_config_ = {};
   DisplayConfigFixedInfo default_fixed_config_ = {};

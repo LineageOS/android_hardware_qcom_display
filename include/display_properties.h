@@ -94,6 +94,7 @@
 #define DISABLE_EXCL_RECT_PROP               DISPLAY_PROP("disable_excl_rect")
 #define ENABLE_PIPE_PRIORITY_PROP            DISPLAY_PROP("enable_pipe_priority")
 #define DISABLE_EXCl_RECT_PARTIAL_FB         DISPLAY_PROP("disable_excl_rect_partial_fb")
+#define DISABLE_FBID_CACHE                   DISPLAY_PROP("disable_fbid_cache")
 
 #define DISABLE_HDR_LUT_GEN                  DISPLAY_PROP("disable_hdr_lut_gen")
 #define ENABLE_DEFAULT_COLOR_MODE            DISPLAY_PROP("enable_default_color_mode")
@@ -103,6 +104,7 @@
 #define QDCM_PCC_TRANS_PROP                  DISPLAY_PROP("qdcm.pcc_for_trans")
 #define QDCM_DIAGONAL_MATRIXMODE_PROP        DISPLAY_PROP("qdcm.diagonal_matrix_mode")
 #define QDCM_DISABLE_TIMEOUT_PROP            PERSIST_DISPLAY_PROP("qdcm.disable_timeout")
+#define QDCM_MODE_COMBINE_PROP               DISPLAY_PROP("qdcm.mode_combine")
 
 #define ZERO_SWAP_INTERVAL                   "vendor.debug.egl.swapinterval"
 

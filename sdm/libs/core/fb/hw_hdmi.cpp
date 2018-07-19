@@ -184,8 +184,8 @@ static bool MapHDMIDisplayTiming(const msm_hdmi_mode_timing_info *mode,
 
 HWHDMI::HWHDMI(BufferSyncHandler *buffer_sync_handler,  HWInfoInterface *hw_info_intf)
   : HWDevice(buffer_sync_handler), hw_scan_info_(), active_config_index_(0) {
-  HWDevice::device_type_ = kDeviceHDMI;
-  HWDevice::device_name_ = "HDMI Display Device";
+  HWDevice::device_type_ = kDevicePluggable;
+  HWDevice::device_name_ = "Pluggable Display Device";
   HWDevice::hw_info_intf_ = hw_info_intf;
   (void)hdr_reset_start_;
   (void)hdr_reset_end_;
@@ -669,7 +669,7 @@ bool HWHDMI::IsResolutionFilePresent() {
 void HWHDMI::SetSourceProductInformation(const char *node, const char *name) {
   char property_value[kMaxStringLength];
   char sys_fs_path[kMaxStringLength];
-  int hdmi_node_index = GetFBNodeIndex(kDeviceHDMI);
+  int hdmi_node_index = GetFBNodeIndex(kDevicePluggable);
   if (hdmi_node_index < 0) {
     return;
   }

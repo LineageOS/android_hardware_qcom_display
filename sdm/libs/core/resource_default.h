@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -39,7 +39,7 @@ class ResourceDefault : public ResourceInterface {
   static DisplayError CreateResourceDefault(const HWResourceInfo &hw_resource_info,
                                             ResourceInterface **resource_intf);
   static DisplayError DestroyResourceDefault(ResourceInterface *resource_intf);
-  virtual DisplayError RegisterDisplay(DisplayType type,
+  virtual DisplayError RegisterDisplay(int32_t display_id, DisplayType type,
                                        const HWDisplayAttributes &display_attributes,
                                        const HWPanelInfo &hw_panel_info,
                                        const HWMixerAttributes &mixer_attributes,
@@ -83,22 +83,27 @@ class ResourceDefault : public ResourceInterface {
     PipeOwner owner;
     uint32_t mdss_pipe_id;
     uint32_t index;
-    HWBlockType hw_block_id;
+    HWBlockType hw_block_type;
     int priority;
 
-    SourcePipe() : type(kPipeTypeUnused), owner(kPipeOwnerUserMode), mdss_pipe_id(0),
-                  index(0), hw_block_id(kHWBlockMax), priority(0) { }
+    SourcePipe()
+      : type(kPipeTypeUnused),
+        owner(kPipeOwnerUserMode),
+        mdss_pipe_id(0),
+        index(0),
+        hw_block_type(kHWBlockMax),
+        priority(0) {}
 
-    inline void ResetState() { hw_block_id = kHWBlockMax;}
+    inline void ResetState() { hw_block_type = kHWBlockMax; }
   };
 
   struct DisplayResourceContext {
     HWDisplayAttributes display_attributes;
-    HWBlockType hw_block_id;
+    HWBlockType hw_block_type;
     uint64_t frame_count;
     HWMixerAttributes mixer_attributes;
 
-    DisplayResourceContext() : hw_block_id(kHWBlockMax), frame_count(0) { }
+    DisplayResourceContext() : hw_block_type(kHWBlockMax), frame_count(0) {}
   };
 
   struct HWBlockContext {
@@ -109,9 +114,9 @@ class ResourceDefault : public ResourceInterface {
   explicit ResourceDefault(const HWResourceInfo &hw_res_info);
   DisplayError Init();
   DisplayError Deinit();
-  uint32_t NextPipe(PipeType pipe_type, HWBlockType hw_block_id);
-  uint32_t SearchPipe(HWBlockType hw_block_id, SourcePipe *src_pipes, uint32_t num_pipe);
-  uint32_t GetPipe(HWBlockType hw_block_id, bool need_scale);
+  uint32_t NextPipe(PipeType pipe_type, HWBlockType hw_block_type);
+  uint32_t SearchPipe(HWBlockType hw_block_type, SourcePipe *src_pipes, uint32_t num_pipe);
+  uint32_t GetPipe(HWBlockType hw_block_type, bool need_scale);
   bool IsScalingNeeded(const HWPipeInfo *pipe_info);
   DisplayError Config(DisplayResourceContext *display_resource_ctx, HWLayers *hw_layers);
   DisplayError DisplaySplitConfig(DisplayResourceContext *display_resource_ctx,

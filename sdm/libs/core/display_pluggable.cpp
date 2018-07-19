@@ -28,29 +28,40 @@
 #include <utility>
 #include <vector>
 
-#include "display_hdmi.h"
-#include "hw_interface.h"
+#include "display_pluggable.h"
 #include "hw_info_interface.h"
+#include "hw_interface.h"
 
-#define __CLASS__ "DisplayHDMI"
+#define __CLASS__ "DisplayPluggable"
 
 namespace sdm {
 
-DisplayHDMI::DisplayHDMI(DisplayEventHandler *event_handler, HWInfoInterface *hw_info_intf,
-                         BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
-                         CompManager *comp_manager)
-  : DisplayBase(kHDMI, event_handler, kDeviceHDMI, buffer_sync_handler, buffer_allocator,
-                comp_manager, hw_info_intf) {
-}
+DisplayPluggable::DisplayPluggable(DisplayEventHandler *event_handler,
+                                   HWInfoInterface *hw_info_intf,
+                                   BufferSyncHandler *buffer_sync_handler,
+                                   BufferAllocator *buffer_allocator, CompManager *comp_manager)
+  : DisplayBase(kPluggable, event_handler, kDevicePluggable, buffer_sync_handler, buffer_allocator,
+                comp_manager, hw_info_intf) {}
 
-DisplayError DisplayHDMI::Init() {
+DisplayPluggable::DisplayPluggable(int32_t display_id, DisplayEventHandler *event_handler,
+                                   HWInfoInterface *hw_info_intf,
+                                   BufferSyncHandler *buffer_sync_handler,
+                                   BufferAllocator *buffer_allocator, CompManager *comp_manager)
+  : DisplayBase(display_id, kPluggable, event_handler, kDevicePluggable, buffer_sync_handler,
+                buffer_allocator, comp_manager, hw_info_intf) {}
+
+DisplayError DisplayPluggable::Init() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
-  DisplayError error = HWInterface::Create(kHDMI, hw_info_intf_, buffer_sync_handler_,
-                                           buffer_allocator_, &hw_intf_);
+  DisplayError error = HWInterface::Create(display_id_, kPluggable, hw_info_intf_,
+                                           buffer_sync_handler_, buffer_allocator_, &hw_intf_);
   if (error != kErrorNone) {
     DLOGE("Failed to create hardware interface. Error = %d", error);
     return error;
+  }
+
+  if (-1 == display_id_) {
+    hw_intf_->GetDisplayId(&display_id_);
   }
 
   uint32_t active_mode_index;
@@ -78,18 +89,18 @@ DisplayError DisplayHDMI::Init() {
   GetScanSupport();
   underscan_supported_ = (scan_support_ == kScanAlwaysUnderscanned) || (scan_support_ == kScanBoth);
 
-  s3d_format_to_mode_.insert(std::pair<LayerBufferS3DFormat, HWS3DMode>
-                            (kS3dFormatNone, kS3DModeNone));
-  s3d_format_to_mode_.insert(std::pair<LayerBufferS3DFormat, HWS3DMode>
-                            (kS3dFormatLeftRight, kS3DModeLR));
-  s3d_format_to_mode_.insert(std::pair<LayerBufferS3DFormat, HWS3DMode>
-                            (kS3dFormatRightLeft, kS3DModeRL));
-  s3d_format_to_mode_.insert(std::pair<LayerBufferS3DFormat, HWS3DMode>
-                            (kS3dFormatTopBottom, kS3DModeTB));
-  s3d_format_to_mode_.insert(std::pair<LayerBufferS3DFormat, HWS3DMode>
-                            (kS3dFormatFramePacking, kS3DModeFP));
+  s3d_format_to_mode_.insert(
+      std::pair<LayerBufferS3DFormat, HWS3DMode>(kS3dFormatNone, kS3DModeNone));
+  s3d_format_to_mode_.insert(
+      std::pair<LayerBufferS3DFormat, HWS3DMode>(kS3dFormatLeftRight, kS3DModeLR));
+  s3d_format_to_mode_.insert(
+      std::pair<LayerBufferS3DFormat, HWS3DMode>(kS3dFormatRightLeft, kS3DModeRL));
+  s3d_format_to_mode_.insert(
+      std::pair<LayerBufferS3DFormat, HWS3DMode>(kS3dFormatTopBottom, kS3DModeTB));
+  s3d_format_to_mode_.insert(
+      std::pair<LayerBufferS3DFormat, HWS3DMode>(kS3dFormatFramePacking, kS3DModeFP));
 
-  error = HWEventsInterface::Create(INT(display_type_), this, event_list_, hw_intf_,
+  error = HWEventsInterface::Create(display_id_, kPluggable, this, event_list_, hw_intf_,
                                     &hw_events_intf_);
   if (error != kErrorNone) {
     DisplayBase::Deinit();
@@ -104,7 +115,7 @@ DisplayError DisplayHDMI::Init() {
   return error;
 }
 
-DisplayError DisplayHDMI::Prepare(LayerStack *layer_stack) {
+DisplayError DisplayPluggable::Prepare(LayerStack *layer_stack) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
   uint32_t new_mixer_width = 0;
@@ -127,8 +138,8 @@ DisplayError DisplayHDMI::Prepare(LayerStack *layer_stack) {
   return DisplayBase::Prepare(layer_stack);
 }
 
-DisplayError DisplayHDMI::GetRefreshRateRange(uint32_t *min_refresh_rate,
-                                              uint32_t *max_refresh_rate) {
+DisplayError DisplayPluggable::GetRefreshRateRange(uint32_t *min_refresh_rate,
+                                                   uint32_t *max_refresh_rate) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
 
@@ -142,7 +153,7 @@ DisplayError DisplayHDMI::GetRefreshRateRange(uint32_t *min_refresh_rate,
   return error;
 }
 
-DisplayError DisplayHDMI::SetRefreshRate(uint32_t refresh_rate, bool final_rate) {
+DisplayError DisplayPluggable::SetRefreshRate(uint32_t refresh_rate, bool final_rate) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
   if (!active_) {
@@ -160,17 +171,17 @@ DisplayError DisplayHDMI::SetRefreshRate(uint32_t refresh_rate, bool final_rate)
   return DisplayBase::ReconfigureDisplay();
 }
 
-bool DisplayHDMI::IsUnderscanSupported() {
+bool DisplayPluggable::IsUnderscanSupported() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   return underscan_supported_;
 }
 
-DisplayError DisplayHDMI::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
+DisplayError DisplayPluggable::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   return hw_intf_->OnMinHdcpEncryptionLevelChange(min_enc_level);
 }
 
-uint32_t DisplayHDMI::GetBestConfig(HWS3DMode s3d_mode) {
+uint32_t DisplayPluggable::GetBestConfig(HWS3DMode s3d_mode) {
   uint32_t best_index = 0, index;
   uint32_t num_modes = 0;
 
@@ -183,7 +194,7 @@ uint32_t DisplayHDMI::GetBestConfig(HWS3DMode s3d_mode) {
   }
 
   // Select best config for s3d_mode. If s3d is not enabled, s3d_mode is kS3DModeNone
-  for (index = 0; index < num_modes; index ++) {
+  for (index = 0; index < num_modes; index++) {
     if (attrib[index].s3d_config[s3d_mode]) {
       break;
     }
@@ -191,7 +202,7 @@ uint32_t DisplayHDMI::GetBestConfig(HWS3DMode s3d_mode) {
 
   index = 0;
   best_index = UINT32(index);
-  for (size_t index = best_index + 1; index < num_modes; index ++) {
+  for (size_t index = best_index + 1; index < num_modes; index++) {
     // TODO(user): Need to add support to S3D modes
     // From the available configs, select the best
     // Ex: 1920x1080@60Hz is better than 1920x1080@30 and 1920x1080@30 is better than 1280x720@60
@@ -207,7 +218,7 @@ uint32_t DisplayHDMI::GetBestConfig(HWS3DMode s3d_mode) {
       }
     }
   }
-  char val[kPropertyMax]={};
+  char val[kPropertyMax] = {};
   // Used for changing HDMI Resolution - override the best with user set config
   bool user_config = (Debug::GetExternalResolution(val));
 
@@ -222,7 +233,7 @@ uint32_t DisplayHDMI::GetBestConfig(HWS3DMode s3d_mode) {
   return best_index;
 }
 
-void DisplayHDMI::GetScanSupport() {
+void DisplayPluggable::GetScanSupport() {
   DisplayError error = kErrorNone;
   uint32_t video_format = 0;
   uint32_t max_cea_format = 0;
@@ -255,7 +266,7 @@ void DisplayHDMI::GetScanSupport() {
   }
 }
 
-void DisplayHDMI::SetS3DMode(LayerStack *layer_stack) {
+void DisplayPluggable::SetS3DMode(LayerStack *layer_stack) {
   uint32_t s3d_layer_count = 0;
   HWS3DMode s3d_mode = kS3DModeNone;
   uint32_t layer_count = UINT32(layer_stack->layers.size());
@@ -275,13 +286,13 @@ void DisplayHDMI::SetS3DMode(LayerStack *layer_stack) {
       }
 
       std::map<LayerBufferS3DFormat, HWS3DMode>::iterator it =
-                s3d_format_to_mode_.find(layer_buffer.s3d_format);
+          s3d_format_to_mode_.find(layer_buffer.s3d_format);
       if (it != s3d_format_to_mode_.end()) {
         s3d_mode = it->second;
       }
     } else if (layer_buffer.flags.secure && layer_count > 2) {
-        s3d_mode = kS3DModeNone;
-        break;
+      s3d_mode = kS3DModeNone;
+      break;
     }
   }
 
@@ -295,16 +306,16 @@ void DisplayHDMI::SetS3DMode(LayerStack *layer_stack) {
   DisplayBase::ReconfigureDisplay();
 }
 
-void DisplayHDMI::CECMessage(char *message) {
+void DisplayPluggable::CECMessage(char *message) {
   event_handler_->CECMessage(message);
 }
 
 // HWEventHandler overload, not DisplayBase
-void DisplayHDMI::HwRecovery(const HWRecoveryEvent sdm_event_code) {
+void DisplayPluggable::HwRecovery(const HWRecoveryEvent sdm_event_code) {
   DisplayBase::HwRecovery(sdm_event_code);
 }
 
-DisplayError DisplayHDMI::VSync(int64_t timestamp) {
+DisplayError DisplayPluggable::VSync(int64_t timestamp) {
   if (vsync_enable_) {
     DisplayEventVSync vsync;
     vsync.timestamp = timestamp;
@@ -314,7 +325,7 @@ DisplayError DisplayHDMI::VSync(int64_t timestamp) {
   return kErrorNone;
 }
 
-DisplayError DisplayHDMI::InitializeColorModes() {
+DisplayError DisplayPluggable::InitializeColorModes() {
   PrimariesTransfer pt = {};
   color_modes_cs_.push_back(pt);
 
@@ -335,7 +346,7 @@ DisplayError DisplayHDMI::InitializeColorModes() {
   return kErrorNone;
 }
 
-DisplayError DisplayHDMI::SetDisplayState(DisplayState state, int *release_fence) {
+DisplayError DisplayPluggable::SetDisplayState(DisplayState state, int *release_fence) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
   error = DisplayBase::SetDisplayState(state, release_fence);
@@ -347,4 +358,3 @@ DisplayError DisplayHDMI::SetDisplayState(DisplayState state, int *release_fence
 }
 
 }  // namespace sdm
-

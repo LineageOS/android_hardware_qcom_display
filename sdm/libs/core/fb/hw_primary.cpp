@@ -77,8 +77,8 @@ using std::fstream;
 
 HWPrimary::HWPrimary(BufferSyncHandler *buffer_sync_handler, HWInfoInterface *hw_info_intf)
   : HWDevice(buffer_sync_handler) {
-  HWDevice::device_type_ = kDevicePrimary;
-  HWDevice::device_name_ = "Primary Display Device";
+  HWDevice::device_type_ = kDeviceBuiltIn;
+  HWDevice::device_name_ = "BuiltIn Display Device";
   HWDevice::hw_info_intf_ = hw_info_intf;
 }
 

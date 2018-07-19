@@ -673,4 +673,13 @@ DisplayError HWCDisplayPrimary::GetMixerResolution(uint32_t *width, uint32_t *he
   return display_intf_->GetMixerResolution(width, height);
 }
 
+HWC2::Error HWCDisplayPrimary::SetQSyncMode(QSyncMode qsync_mode) {
+  auto err = display_intf_->SetQSyncMode(qsync_mode);
+  if (err != kErrorNone) {
+    return HWC2::Error::Unsupported;
+  }
+
+  return HWC2::Error::None;
+}
+
 }  // namespace sdm

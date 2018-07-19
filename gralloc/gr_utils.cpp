@@ -319,8 +319,19 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
 
 void GetBufferSizeAndDimensions(const BufferInfo &info, unsigned int *size, unsigned int *alignedw,
                                 unsigned int *alignedh) {
-  GetAlignedWidthAndHeight(info, alignedw, alignedh);
-  *size = GetSize(info, *alignedw, *alignedh);
+  GraphicsMetadata graphics_metadata = {};
+  GetBufferSizeAndDimensions(info, size, alignedw, alignedh, &graphics_metadata);
+}
+
+void GetBufferSizeAndDimensions(const BufferInfo &info, unsigned int *size, unsigned int *alignedw,
+                                unsigned int *alignedh, GraphicsMetadata *graphics_metadata) {
+  int buffer_type = GetBufferType(info.format);
+  if (CanUseAdrenoForSize(buffer_type, info.usage)) {
+    GetGpuResourceSizeAndDimensions(info, size, alignedw, alignedh, graphics_metadata);
+  } else {
+    GetAlignedWidthAndHeight(info, alignedw, alignedh);
+    *size = GetSize(info, *alignedw, *alignedh);
+  }
 }
 
 void GetYuvUbwcSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height, int color_format,
@@ -998,6 +1009,19 @@ void GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
   *size = adreno_mem_info->AdrenoGetAlignedGpuBufferSize(graphics_metadata->data);
 }
 
+bool CanUseAdrenoForSize(int buffer_type, uint64_t usage) {
+  if (buffer_type == BUFFER_TYPE_VIDEO || !GetAdrenoSizeAPIStatus()) {
+    return false;
+  }
+
+  if ((usage & BufferUsage::PROTECTED) && ((usage & BufferUsage::CAMERA_OUTPUT) ||
+      (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY))) {
+    return false;
+  }
+
+  return true;
+}
+
 bool GetAdrenoSizeAPIStatus() {
   AdrenoMemInfo* adreno_mem_info = AdrenoMemInfo::GetInstance();
   if (adreno_mem_info) {
@@ -1092,18 +1116,7 @@ int GetImplDefinedFormat(uint64_t usage, int format) {
   if (format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED ||
       format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
     if (usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC || usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC_PI) {
-      // Use of 10BIT_TP and 10BIT bits is supposed to be mutually exclusive.
-      // Each bit maps to only one format. Here we will check one of the bits
-      // and ignore the other.
-      if (usage & GRALLOC_USAGE_PRIVATE_10BIT_TP) {
-        gr_format = HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC;
-      } else if (usage & GRALLOC_USAGE_PRIVATE_10BIT) {
-        gr_format = HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC;
-      } else {
-        gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC;
-      }
-    } else if (usage & GRALLOC_USAGE_PRIVATE_10BIT) {
-      gr_format = HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS;
+      gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC;
     } else if (usage & BufferUsage::VIDEO_ENCODER) {
       if (usage & GRALLOC_USAGE_PRIVATE_VIDEO_NV21_ENCODER) {
         gr_format = HAL_PIXEL_FORMAT_NV21_ENCODEABLE;  // NV21
@@ -1141,7 +1154,17 @@ int GetCustomFormatFlags(int format, uint64_t usage,
   *custom_format = GetImplDefinedFormat(usage, format);
   *priv_flags = GetHandleFlags(*custom_format, usage);
 
+  if (usage & GRALLOC_USAGE_PROTECTED) {
+    *priv_flags |= private_handle_t::PRIV_FLAGS_SECURE_BUFFER;
+  }
+
+  *priv_flags |= private_handle_t::PRIV_FLAGS_USES_ION;
+
   return 0;
+}
+
+int GetBufferType(int inputFormat) {
+  return IsYuvFormat(inputFormat) ? BUFFER_TYPE_VIDEO : BUFFER_TYPE_UI;
 }
 
 }  // namespace gralloc

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 The Android Open Source Project
- * Copyright (C) 2012-2014, 2016-2017 The Linux Foundation. All rights reserved.
+ * Copyright (C) 2012-2014, 2016-2018 The Linux Foundation. All rights reserved.
  *
  * Not a Contribution, Apache license notifications and license are
  * retained for attribution purposes only.
@@ -77,6 +77,7 @@ public:
         GET_HDR_CAPABILITIES = 35, // Get HDR capabilities for legacy HWC interface
         SET_COLOR_MODE_BY_ID = 36, // Overrides the QDCM mode using the given mode ID
         GET_COMPOSER_STATUS = 37, // Get composer init status-true if primary display init is done
+        SET_QSYNC_MODE = 38, // Set qsync mode. 0 - (none)disable qsync, 1 - continuous mode.
         COMMAND_LIST_END = 400,
     };
 
@@ -105,6 +106,12 @@ public:
         PREF_POST_PROCESSING,
         PREF_PARTIAL_UPDATE,
         ENABLE_PARTIAL_UPDATE,
+    };
+
+    enum {
+        QSYNC_MODE_NONE,
+        QSYNC_MODE_CONTINUOUS,
+        QSYNC_MODE_ONESHOT,    // Not supported
     };
 
     // Register a HWC client that can be notified

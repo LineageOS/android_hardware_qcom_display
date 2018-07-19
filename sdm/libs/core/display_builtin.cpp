@@ -25,35 +25,47 @@
 #include <utils/constants.h>
 #include <utils/debug.h>
 #include <utils/rect.h>
-#include <map>
+#include <utils/utils.h>
+
 #include <algorithm>
 #include <functional>
-#include <vector>
+#include <map>
 #include <string>
+#include <vector>
 
-#include "display_primary.h"
-#include "hw_interface.h"
+#include "display_builtin.h"
 #include "hw_info_interface.h"
+#include "hw_interface.h"
 
-#define __CLASS__ "DisplayPrimary"
+#define __CLASS__ "DisplayBuiltIn"
 
 namespace sdm {
 
-DisplayPrimary::DisplayPrimary(DisplayEventHandler *event_handler, HWInfoInterface *hw_info_intf,
+DisplayBuiltIn::DisplayBuiltIn(DisplayEventHandler *event_handler, HWInfoInterface *hw_info_intf,
                                BufferSyncHandler *buffer_sync_handler,
                                BufferAllocator *buffer_allocator, CompManager *comp_manager)
-  : DisplayBase(kPrimary, event_handler, kDevicePrimary, buffer_sync_handler, buffer_allocator,
-                comp_manager, hw_info_intf) {
-}
+  : DisplayBase(kBuiltIn, event_handler, kDeviceBuiltIn, buffer_sync_handler, buffer_allocator,
+                comp_manager, hw_info_intf) {}
 
-DisplayError DisplayPrimary::Init() {
+DisplayBuiltIn::DisplayBuiltIn(int32_t display_id, DisplayEventHandler *event_handler,
+                               HWInfoInterface *hw_info_intf,
+                               BufferSyncHandler *buffer_sync_handler,
+                               BufferAllocator *buffer_allocator, CompManager *comp_manager)
+  : DisplayBase(display_id, kBuiltIn, event_handler, kDeviceBuiltIn, buffer_sync_handler,
+                buffer_allocator, comp_manager, hw_info_intf) {}
+
+DisplayError DisplayBuiltIn::Init() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
-  DisplayError error = HWInterface::Create(kPrimary, hw_info_intf_, buffer_sync_handler_,
-                                           buffer_allocator_, &hw_intf_);
+  DisplayError error = HWInterface::Create(display_id_, kBuiltIn, hw_info_intf_,
+                                           buffer_sync_handler_, buffer_allocator_, &hw_intf_);
   if (error != kErrorNone) {
     DLOGE("Failed to create hardware interface on. Error = %d", error);
     return error;
+  }
+
+  if (-1 == display_id_) {
+    hw_intf_->GetDisplayId(&display_id_);
   }
 
   error = DisplayBase::Init();
@@ -71,28 +83,24 @@ DisplayError DisplayPrimary::Init() {
   }
 
   if (hw_panel_info_.mode == kModeCommand) {
-    event_list_ = { HWEvent::VSYNC,
-                    HWEvent::EXIT,
-                    HWEvent::SHOW_BLANK_EVENT,
-                    HWEvent::THERMAL_LEVEL,
-                    HWEvent::IDLE_POWER_COLLAPSE,
-                    HWEvent::PINGPONG_TIMEOUT,
-                    HWEvent::PANEL_DEAD,
-                    HWEvent::HW_RECOVERY };
+    event_list_ = {HWEvent::VSYNC,
+                   HWEvent::EXIT,
+                   HWEvent::SHOW_BLANK_EVENT,
+                   HWEvent::THERMAL_LEVEL,
+                   HWEvent::IDLE_POWER_COLLAPSE,
+                   HWEvent::PINGPONG_TIMEOUT,
+                   HWEvent::PANEL_DEAD,
+                   HWEvent::HW_RECOVERY};
   } else {
-    event_list_ = { HWEvent::VSYNC,
-                    HWEvent::EXIT,
-                    HWEvent::IDLE_NOTIFY,
-                    HWEvent::SHOW_BLANK_EVENT,
-                    HWEvent::THERMAL_LEVEL,
-                    HWEvent::PINGPONG_TIMEOUT,
-                    HWEvent::PANEL_DEAD,
-                    HWEvent::HW_RECOVERY };
+    event_list_ = {HWEvent::VSYNC,         HWEvent::EXIT,
+                   HWEvent::IDLE_NOTIFY,   HWEvent::SHOW_BLANK_EVENT,
+                   HWEvent::THERMAL_LEVEL, HWEvent::PINGPONG_TIMEOUT,
+                   HWEvent::PANEL_DEAD,    HWEvent::HW_RECOVERY};
   }
 
   avr_prop_disabled_ = Debug::IsAVRDisabled();
 
-  error = HWEventsInterface::Create(INT(display_type_), this, event_list_, hw_intf_,
+  error = HWEventsInterface::Create(display_id_, kBuiltIn, this, event_list_, hw_intf_,
                                     &hw_events_intf_);
   if (error != kErrorNone) {
     DisplayBase::Deinit();
@@ -105,14 +113,14 @@ DisplayError DisplayPrimary::Init() {
   return error;
 }
 
-DisplayError DisplayPrimary::Deinit() {
+DisplayError DisplayBuiltIn::Deinit() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
   dpps_info_.Deinit();
   return DisplayBase::Deinit();
 }
 
-DisplayError DisplayPrimary::Prepare(LayerStack *layer_stack) {
+DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
   uint32_t new_mixer_width = 0;
@@ -140,7 +148,7 @@ DisplayError DisplayPrimary::Prepare(LayerStack *layer_stack) {
   return DisplayBase::Prepare(layer_stack);
 }
 
-DisplayError DisplayPrimary::Commit(LayerStack *layer_stack) {
+DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
   uint32_t app_layer_count = hw_layers_.info.app_layer_count;
@@ -162,8 +170,7 @@ DisplayError DisplayPrimary::Commit(LayerStack *layer_stack) {
   }
 
   if (commit_event_enabled_) {
-    dpps_info_.DppsNotifyOps(kDppsCommitEvent, &display_type_,
-                                            sizeof(display_type_));
+    dpps_info_.DppsNotifyOps(kDppsCommitEvent, &display_type_, sizeof(display_type_));
   }
 
   DisplayBase::ReconfigureDisplay();
@@ -184,7 +191,7 @@ DisplayError DisplayPrimary::Commit(LayerStack *layer_stack) {
   return error;
 }
 
-DisplayError DisplayPrimary::SetDisplayState(DisplayState state, int *release_fence) {
+DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, int *release_fence) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
   error = DisplayBase::SetDisplayState(state, release_fence);
@@ -200,12 +207,12 @@ DisplayError DisplayPrimary::SetDisplayState(DisplayState state, int *release_fe
   return kErrorNone;
 }
 
-void DisplayPrimary::SetIdleTimeoutMs(uint32_t active_ms) {
+void DisplayBuiltIn::SetIdleTimeoutMs(uint32_t active_ms) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, active_ms);
 }
 
-DisplayError DisplayPrimary::SetDisplayMode(uint32_t mode) {
+DisplayError DisplayBuiltIn::SetDisplayMode(uint32_t mode) {
   DisplayError error = kErrorNone;
 
   // Limit scope of mutex to this block
@@ -253,12 +260,12 @@ DisplayError DisplayPrimary::SetDisplayMode(uint32_t mode) {
   return error;
 }
 
-DisplayError DisplayPrimary::SetPanelBrightness(int level) {
+DisplayError DisplayBuiltIn::SetPanelBrightness(int level) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   return hw_intf_->SetPanelBrightness(level);
 }
 
-DisplayError DisplayPrimary::GetRefreshRateRange(uint32_t *min_refresh_rate,
+DisplayError DisplayBuiltIn::GetRefreshRateRange(uint32_t *min_refresh_rate,
                                                  uint32_t *max_refresh_rate) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
@@ -273,7 +280,7 @@ DisplayError DisplayPrimary::GetRefreshRateRange(uint32_t *min_refresh_rate,
   return error;
 }
 
-DisplayError DisplayPrimary::SetRefreshRate(uint32_t refresh_rate, bool final_rate) {
+DisplayError DisplayBuiltIn::SetRefreshRate(uint32_t refresh_rate, bool final_rate) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
   if (!active_ || !hw_panel_info_.dynamic_fps) {
@@ -303,7 +310,7 @@ DisplayError DisplayPrimary::SetRefreshRate(uint32_t refresh_rate, bool final_ra
   return DisplayBase::ReconfigureDisplay();
 }
 
-DisplayError DisplayPrimary::VSync(int64_t timestamp) {
+DisplayError DisplayBuiltIn::VSync(int64_t timestamp) {
   if (vsync_enable_) {
     DisplayEventVSync vsync;
     vsync.timestamp = timestamp;
@@ -313,7 +320,7 @@ DisplayError DisplayPrimary::VSync(int64_t timestamp) {
   return kErrorNone;
 }
 
-void DisplayPrimary::IdleTimeout() {
+void DisplayBuiltIn::IdleTimeout() {
   if (hw_panel_info_.mode == kModeVideo) {
     event_handler_->HandleEvent(kIdleTimeout);
     handle_idle_timeout_ = true;
@@ -323,18 +330,18 @@ void DisplayPrimary::IdleTimeout() {
   }
 }
 
-void DisplayPrimary::PingPongTimeout() {
+void DisplayBuiltIn::PingPongTimeout() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   hw_intf_->DumpDebugData();
 }
 
-void DisplayPrimary::ThermalEvent(int64_t thermal_level) {
+void DisplayBuiltIn::ThermalEvent(int64_t thermal_level) {
   event_handler_->HandleEvent(kThermalEvent);
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   comp_manager_->ProcessThermalEvent(display_comp_ctx_, thermal_level);
 }
 
-void DisplayPrimary::IdlePowerCollapse() {
+void DisplayBuiltIn::IdlePowerCollapse() {
   if (hw_panel_info_.mode == kModeCommand) {
     event_handler_->HandleEvent(kIdlePowerCollapse);
     lock_guard<recursive_mutex> obj(recursive_mutex_);
@@ -342,7 +349,7 @@ void DisplayPrimary::IdlePowerCollapse() {
   }
 }
 
-void DisplayPrimary::PanelDead() {
+void DisplayBuiltIn::PanelDead() {
   event_handler_->HandleEvent(kPanelDeadEvent);
   event_handler_->Refresh();
   {
@@ -352,16 +359,16 @@ void DisplayPrimary::PanelDead() {
 }
 
 // HWEventHandler overload, not DisplayBase
-void DisplayPrimary::HwRecovery(const HWRecoveryEvent sdm_event_code) {
+void DisplayBuiltIn::HwRecovery(const HWRecoveryEvent sdm_event_code) {
   DisplayBase::HwRecovery(sdm_event_code);
 }
 
-DisplayError DisplayPrimary::GetPanelBrightness(int *level) {
+DisplayError DisplayBuiltIn::GetPanelBrightness(int *level) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   return hw_intf_->GetPanelBrightness(level);
 }
 
-DisplayError DisplayPrimary::ControlPartialUpdate(bool enable, uint32_t *pending) {
+DisplayError DisplayBuiltIn::ControlPartialUpdate(bool enable, uint32_t *pending) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   if (!pending) {
     return kErrorParameters;
@@ -369,7 +376,7 @@ DisplayError DisplayPrimary::ControlPartialUpdate(bool enable, uint32_t *pending
 
   if (!hw_panel_info_.partial_update) {
     // Nothing to be done.
-    DLOGI("partial update is not applicable for display=%d", display_type_);
+    DLOGI("partial update is not applicable for display id = %d", display_id_);
     return kErrorNotSupported;
   }
 
@@ -390,41 +397,46 @@ DisplayError DisplayPrimary::ControlPartialUpdate(bool enable, uint32_t *pending
   return kErrorNone;
 }
 
-DisplayError DisplayPrimary::DisablePartialUpdateOneFrame() {
+DisplayError DisplayBuiltIn::DisablePartialUpdateOneFrame() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   disable_pu_one_frame_ = true;
 
   return kErrorNone;
 }
 
-bool DisplayPrimary::NeedsAVREnable() {
-  if (avr_prop_disabled_) {
+bool DisplayBuiltIn::NeedsAVREnable() {
+  if (avr_prop_disabled_ || qsync_mode_ == kQSyncModeNone) {
     return false;
   }
 
-  return (hw_panel_info_.mode == kModeVideo && ((hw_panel_info_.dynamic_fps &&
-          hw_panel_info_.dfps_porch_mode) || (!hw_panel_info_.dynamic_fps &&
-          hw_panel_info_.min_fps != hw_panel_info_.max_fps)));
+  if (GetDriverType() == DriverType::DRM) {
+    return hw_panel_info_.qsync_support;
+  }
+
+  return (hw_panel_info_.mode == kModeVideo &&
+          ((hw_panel_info_.dynamic_fps && hw_panel_info_.dfps_porch_mode) ||
+           (!hw_panel_info_.dynamic_fps && hw_panel_info_.min_fps != hw_panel_info_.max_fps)));
 }
 
-void DisplayPrimary::ResetPanel() {
+void DisplayBuiltIn::ResetPanel() {
   DisplayError status = kErrorNone;
   int release_fence = -1;
 
-  DLOGI("Powering off primary");
+  DLOGI("Powering off built-in/primary %d", display_id_);
   status = SetDisplayState(kStateOff, &release_fence);
   if (status != kErrorNone) {
-    DLOGE("power-off on primary failed with error = %d", status);
+    DLOGE("power-off on built-in/primary %d failed with error = %d", display_id_, status);
   }
   if (release_fence >= 0) {
     ::close(release_fence);
   }
 
-  DLOGI("Restoring power mode on primary");
+  DLOGI("Restoring power mode on built-in/primary %d", display_id_);
   DisplayState mode = GetLastPowerMode();
   status = SetDisplayState(mode, &release_fence);
   if (status != kErrorNone) {
-    DLOGE("Setting power mode = %d on primary failed with error = %d", mode, status);
+    DLOGE("Setting power mode = %d on built-in/primary %d failed with error = %d", mode,
+          display_id_, status);
   }
   if (release_fence >= 0) {
     ::close(release_fence);
@@ -433,61 +445,61 @@ void DisplayPrimary::ResetPanel() {
   DLOGI("Enabling HWVsync");
   status = SetVSyncState(true);
   if (status != kErrorNone) {
-    DLOGE("enabling vsync failed for primary with error = %d", status);
+    DLOGE("enabling vsync failed for built-in/primary %d with error = %d", display_id_, status);
   }
 }
 
-DisplayError DisplayPrimary::DppsProcessOps(enum DppsOps op, void *payload, size_t size) {
+DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size_t size) {
   DisplayError error = kErrorNone;
   uint32_t pending;
   bool enable = false;
 
   switch (op) {
-  case kDppsSetFeature:
-    if (!payload) {
-      DLOGE("Invalid payload parameter for op %d", op);
+    case kDppsSetFeature:
+      if (!payload) {
+        DLOGE("Invalid payload parameter for op %d", op);
+        error = kErrorParameters;
+        break;
+      }
+      error = hw_intf_->SetDppsFeature(payload, size);
+      break;
+    case kDppsGetFeatureInfo:
+      if (!payload) {
+        DLOGE("Invalid payload parameter for op %d", op);
+        error = kErrorParameters;
+        break;
+      }
+      error = hw_intf_->GetDppsFeatureInfo(payload, size);
+      break;
+    case kDppsScreenRefresh:
+      event_handler_->Refresh();
+      break;
+    case kDppsPartialUpdate:
+      if (!payload) {
+        DLOGE("Invalid payload parameter for op %d", op);
+        error = kErrorParameters;
+        break;
+      }
+      enable = *(reinterpret_cast<bool *>(payload));
+      ControlPartialUpdate(enable, &pending);
+      break;
+    case kDppsRequestCommit:
+      if (!payload) {
+        DLOGE("Invalid payload parameter for op %d", op);
+        error = kErrorParameters;
+        break;
+      }
+      commit_event_enabled_ = *(reinterpret_cast<bool *>(payload));
+      break;
+    default:
+      DLOGE("Invalid input op %d", op);
       error = kErrorParameters;
       break;
-    }
-    error = hw_intf_->SetDppsFeature(payload, size);
-    break;
-  case kDppsGetFeatureInfo:
-    if (!payload) {
-      DLOGE("Invalid payload parameter for op %d", op);
-      error = kErrorParameters;
-      break;
-    }
-    error = hw_intf_->GetDppsFeatureInfo(payload, size);
-    break;
-  case kDppsScreenRefresh:
-    event_handler_->Refresh();
-    break;
-  case kDppsPartialUpdate:
-    if (!payload) {
-      DLOGE("Invalid payload parameter for op %d", op);
-      error = kErrorParameters;
-      break;
-    }
-    enable = *(reinterpret_cast<bool *>(payload));
-    ControlPartialUpdate(enable, &pending);
-    break;
-  case kDppsRequestCommit:
-    if (!payload) {
-      DLOGE("Invalid payload parameter for op %d", op);
-      error = kErrorParameters;
-      break;
-    }
-    commit_event_enabled_ = *(reinterpret_cast<bool *>(payload));
-    break;
-  default:
-    DLOGE("Invalid input op %d", op);
-    error = kErrorParameters;
-    break;
   }
   return error;
 }
 
-void DppsInfo::Init(DppsPropIntf* intf, const std::string &panel_name) {
+void DppsInfo::Init(DppsPropIntf *intf, const std::string &panel_name) {
   int error = 0;
 
   if (dpps_initialized_) {
@@ -499,8 +511,7 @@ void DppsInfo::Init(DppsPropIntf* intf, const std::string &panel_name) {
     goto exit;
   }
 
-  if (!dpps_impl_lib.Sym("GetDppsInterface",
-         reinterpret_cast<void **>(&GetDppsInterface))) {
+  if (!dpps_impl_lib.Sym("GetDppsInterface", reinterpret_cast<void **>(&GetDppsInterface))) {
     DLOGE("GetDppsInterface not found!, err %s", dlerror());
     goto exit;
   }
@@ -541,9 +552,18 @@ void DppsInfo::DppsNotifyOps(enum DppsNotifyOps op, void *payload, size_t size) 
     DLOGE("DppsNotifyOps op %d error %d", op, ret);
 }
 
-DisplayError DisplayPrimary::HandleSecureEvent(SecureEvent secure_event) {
+DisplayError DisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event) {
   return hw_intf_->HandleSecureEvent(secure_event);
 }
 
-}  // namespace sdm
+DisplayError DisplayBuiltIn::SetQSyncMode(QSyncMode qsync_mode) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (GetDriverType() == DriverType::DRM && qsync_mode == kQsyncModeOneShot) {
+    return kErrorNotSupported;
+  }
+  qsync_mode_ = qsync_mode;
 
+  return kErrorNone;
+}
+
+}  // namespace sdm

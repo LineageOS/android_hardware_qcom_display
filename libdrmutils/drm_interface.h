@@ -376,6 +376,12 @@ enum struct DRMOps {
    * Arg: drmModeAtomicReq - Atomic request
    */
   DPPS_COMMIT_FEATURE,
+  /*
+   * Op: Sets qsync mode on connector
+   * Arg: uint32_t - Connector ID
+   *     uint32_t - qsync mode
+   */
+  CONNECTOR_SET_QSYNC_MODE,
 };
 
 enum struct DRMRotation {
@@ -576,13 +582,28 @@ struct DRMConnectorInfo {
   drm_panel_hdr_properties panel_hdr_prop;
   uint32_t transfer_time_us;
   drm_msm_ext_hdr_properties ext_hdr_prop;
+  bool qsync_support;
+  // Connection status of this connector
+  bool is_connected;
 };
+
+// All DRM Connectors as map<Connector_id , connector_info>
+typedef std::map<uint32_t, DRMConnectorInfo> DRMConnectorsInfo;
+
+/* Per Encoder Info */
+struct DRMEncoderInfo {
+  uint32_t type;
+};
+
+// All DRM Encoders as map<Encoder_id , encoder_info>
+typedef std::map<uint32_t, DRMEncoderInfo> DRMEncodersInfo;
 
 /* Identifier token for a display */
 struct DRMDisplayToken {
   uint32_t conn_id;
   uint32_t crtc_id;
   uint32_t crtc_index;
+  uint32_t encoder_id;
 };
 
 enum DRMPPFeatureID {
@@ -720,6 +741,11 @@ enum struct DRMCWbCaptureMode {
   DSPP_OUT = 1,
 };
 
+enum struct DRMQsyncMode {
+  NONE = 0,
+  CONTINUOUS,
+};
+
 struct DRMSolidfillStage {
   DRMRect bounding_rect {};
   bool is_exclusion_rect = false;
@@ -807,24 +833,59 @@ class DRMManagerInterface {
   virtual int GetConnectorInfo(uint32_t conn_id, DRMConnectorInfo *info) = 0;
 
   /*
+   * Provides information on all connectors.
+   * [output]: DRMConnectorsInfo: Resource info for connectors.
+   * [return]: 0 on success, a negative error value otherwise.
+   */
+  virtual int GetConnectorsInfo(DRMConnectorsInfo *info) = 0;
+
+  /*
+   * Provides information on a selected encoder.
+   * [output]: DRMEncoderInfo: Resource info for the given encoder id.
+   * [return]: 0 on success, a negative error value otherwise.
+   */
+  virtual int GetEncoderInfo(uint32_t encoder_id, DRMEncoderInfo *info) = 0;
+
+  /*
+   * Provides information on all encoders.
+   * [output]: DRMEncodersInfo: Resource info for encoders.
+   * [return]: 0 on success, a negative error value otherwise.
+   */
+  virtual int GetEncodersInfo(DRMEncodersInfo *info) = 0;
+
+  /*
    * Will query post propcessing feature info of a CRTC.
    * [output]: DRMPPFeatureInfo: CRTC post processing feature info
    */
   virtual void GetCrtcPPInfo(uint32_t crtc_id, DRMPPFeatureInfo *info) = 0;
+
   /*
    * Register a logical display to receive a token.
-   * Each display pipeline in DRM is identified by its CRTC and Connector(s).
-   * On display connect(bootup or hotplug), clients should invoke this interface to
-   * establish the pipeline for the display and should get a DisplayToken
-   * populated with crtc and connnector(s) id's. Here onwards, Client should
-   * use this token to represent the display for any Perform operations if
+   * Each display pipeline in DRM is identified by its CRTC and Connector(s). On display connect
+   * (bootup or hotplug), clients should invoke this interface to establish the pipeline for the
+   * display and should get a DisplayToken populated with crtc, encoder and connnector(s) id's. Here
+   * onwards, Client should use this token to represent the display for any Perform operations if
    * needed.
    *
    * [input]: disp_type - Peripheral / TV / Virtual
-   * [output]: DRMDisplayToken - CRTC and Connector id's for the display
-   * [return]: 0 on success, a negative error value otherwise
+   * [output]: DRMDisplayToken - CRTC and Connector IDs for the display.
+   * [return]: 0 on success, a negative error value otherwise.
    */
   virtual int RegisterDisplay(DRMDisplayType disp_type, DRMDisplayToken *tok) = 0;
+
+  /*
+   * Register a logical display to receive a token.
+   * Each display pipeline in DRM is identified by its CRTC and Connector(s). On display connect
+   * (bootup or hotplug), clients should invoke this interface to establish the pipeline for the
+   * display and should get a DisplayToken populated with crtc, encoder and connnector(s) id's. Here
+   * onwards, Client should use this token to represent the display for any Perform operations if
+   * needed.
+   *
+   * [input]: display_id - Connector ID
+   * [output]: DRMDisplayToken - CRTC and Connector id's for the display.
+   * [return]: 0 on success, a negative error value otherwise.
+   */
+  virtual int RegisterDisplay(int32_t display_id, DRMDisplayToken *tok) = 0;
 
   /* Client should invoke this interface on display disconnect.
    * [input]: DRMDisplayToken - identifier for the display.

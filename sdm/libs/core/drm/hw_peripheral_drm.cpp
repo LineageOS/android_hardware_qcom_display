@@ -44,12 +44,12 @@ using sde_drm::DRMCWbCaptureMode;
 
 namespace sdm {
 
-HWPeripheralDRM::HWPeripheralDRM(BufferSyncHandler *buffer_sync_handler,
-                                 BufferAllocator *buffer_allocator,
-                                 HWInfoInterface *hw_info_intf)
+HWPeripheralDRM::HWPeripheralDRM(int32_t display_id, BufferSyncHandler *buffer_sync_handler,
+                                 BufferAllocator *buffer_allocator, HWInfoInterface *hw_info_intf)
   : HWDeviceDRM(buffer_sync_handler, buffer_allocator, hw_info_intf) {
   disp_type_ = DRMDisplayType::PERIPHERAL;
   device_name_ = "Peripheral";
+  display_id_ = display_id;
 }
 
 DisplayError HWPeripheralDRM::Init() {
@@ -227,6 +227,13 @@ void HWPeripheralDRM::SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info
     if (enable) {
       // Set DRM properties for Concurrent Writeback.
       ConfigureConcurrentWriteback(hw_layer_info.stack);
+
+      if (!validate) {
+        // Set GET_RETIRE_FENCE property to get Concurrent Writeback fence.
+        int *fence = &hw_layer_info.stack->output_buffer->release_fence_fd;
+        drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE,
+                                  cwb_config_.token.conn_id, fence);
+      }
     } else {
       // Tear down the Concurrent Writeback topology.
       drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, cwb_config_.token.conn_id, 0);
@@ -270,7 +277,7 @@ DisplayError HWPeripheralDRM::SetupConcurrentWritebackModes() {
 
 void HWPeripheralDRM::ConfigureConcurrentWriteback(LayerStack *layer_stack) {
   LayerBuffer *output_buffer = layer_stack->output_buffer;
-  registry_.MapBufferToFbId(output_buffer);
+  registry_.MapOutputBufferToFbId(output_buffer);
 
   // Set the topology for Concurrent Writeback: [CRTC_PRIMARY_DISPLAY - CONNECTOR_VIRTUAL_DISPLAY].
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, cwb_config_.token.conn_id, token_.crtc_id);
@@ -281,7 +288,7 @@ void HWPeripheralDRM::ConfigureConcurrentWriteback(LayerStack *layer_stack) {
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CAPTURE_MODE, token_.crtc_id, capture_mode);
 
   // Set Connector Output FB
-  uint32_t fb_id = registry_.GetFbId(output_buffer->planes[0].fd);
+  uint32_t fb_id = registry_.GetOutputFbId(output_buffer->handle_id);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_FB_ID, cwb_config_.token.conn_id, fb_id);
 
   // Set Connector Secure Mode
@@ -301,11 +308,7 @@ void HWPeripheralDRM::ConfigureConcurrentWriteback(LayerStack *layer_stack) {
 void HWPeripheralDRM::PostCommitConcurrentWriteback(LayerBuffer *output_buffer) {
   bool enabled = hw_resource_.has_concurrent_writeback && output_buffer;
 
-  if (enabled) {
-    // Get Concurrent Writeback fence
-    int *fence = &output_buffer->release_fence_fd;
-    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, cwb_config_.token.conn_id, fence);
-  } else {
+  if (!enabled) {
     drm_mgr_intf_->UnregisterDisplay(cwb_config_.token);
     cwb_config_.enabled = false;
   }
