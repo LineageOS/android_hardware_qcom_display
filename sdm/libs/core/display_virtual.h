@@ -66,6 +66,9 @@ class DisplayVirtual : public DisplayBase {
     // on virtual display is functional.
     return kErrorNone;
   }
+  virtual DisplayError SetColorTransform(const uint32_t length, const double *color_transform) {
+    return kErrorNone;
+  }
 };
 
 }  // namespace sdm

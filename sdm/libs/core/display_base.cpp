@@ -881,7 +881,7 @@ DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
   blend_space = GetBlendSpaceFromColorMode();
   error = comp_manager_->SetBlendSpace(display_comp_ctx_, blend_space);
   if (error != kErrorNone) {
-    DLOGE("SetBlendSpace failed, error = %d display_type_=%d", error, display_type_);
+    DLOGE("SetBlendSpace failed, error = %d display_type_= %d", error, display_type_);
   }
 
   return error;
@@ -1777,8 +1777,6 @@ PrimariesTransfer DisplayBase::GetBlendSpaceFromColorMode() {
   } else if ((color_gamut == kDcip3 && dynamic_range == kSdr)) {
     pt.primaries = GetColorPrimariesFromAttribute(color_gamut);
     pt.transfer = Transfer_Gamma2_2;
-  } else {
-    DLOGE("Invalid color mode: %s", current_color_mode_.c_str());
   }
 
   return pt;
