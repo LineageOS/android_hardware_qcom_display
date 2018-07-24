@@ -102,6 +102,9 @@ class HWDevice : public HWInterface {
   virtual DisplayError GetDppsFeatureInfo(void *payload, size_t size) { return kErrorNotSupported; }
   virtual DisplayError DumpDebugData(DisplayType type) { return kErrorNone; }
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event) { return kErrorNotSupported; }
+  virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) {
+    return kErrorNotSupported;
+  }
 
   enum {
     kHWEventVSync,

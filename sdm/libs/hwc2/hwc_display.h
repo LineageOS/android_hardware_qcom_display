@@ -269,6 +269,9 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error SetQSyncMode(QSyncMode qsync_mode) {
     return HWC2::Error::Unsupported;
   }
+  virtual HWC2::Error ControlIdlePowerCollapse(bool enable, bool synchronous) {
+    return HWC2::Error::Unsupported;
+  }
 
  protected:
   // Maximum number of layers supported by display manager.

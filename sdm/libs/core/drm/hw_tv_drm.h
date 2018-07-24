@@ -48,6 +48,7 @@ class HWTVDRM : public HWDeviceDRM {
   virtual DisplayError Standby();
   virtual DisplayError Commit(HWLayers *hw_layers);
   virtual void PopulateHWPanelInfo();
+  virtual DisplayError PowerOn(const HWQosData &qos_data, int *release_fence);
 
  private:
   DisplayError UpdateHDRMetaData(HWLayers *hw_layers);
