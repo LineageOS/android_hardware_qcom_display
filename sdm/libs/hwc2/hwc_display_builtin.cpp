@@ -706,4 +706,15 @@ HWC2::Error HWCDisplayBuiltIn::SetQSyncMode(QSyncMode qsync_mode) {
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCDisplayBuiltIn::ControlIdlePowerCollapse(bool enable, bool synchronous) {
+  DisplayError error = kErrorNone;
+
+  if (display_intf_) {
+    error = display_intf_->ControlIdlePowerCollapse(enable, synchronous);
+    validated_ = false;
+  }
+
+  return (error != kErrorNone) ?  HWC2::Error::Unsupported : HWC2::Error::None;
+}
+
 }  // namespace sdm
