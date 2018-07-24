@@ -40,11 +40,12 @@
 namespace sdm {
 
 int HWCDisplayVirtual::Create(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
-                              HWCCallbacks *callbacks, uint32_t width,
-                              uint32_t height, int32_t *format, HWCDisplay **hwc_display) {
+                              HWCCallbacks *callbacks, hwc2_display_t id, int32_t sdm_id,
+                              uint32_t width, uint32_t height, int32_t *format,
+                              HWCDisplay **hwc_display) {
   int status = 0;
   HWCDisplayVirtual *hwc_display_virtual = new HWCDisplayVirtual(core_intf, buffer_allocator,
-                                                                 callbacks);
+                                                                 callbacks, id, sdm_id);
 
   // TODO(user): Populate format correctly
   DLOGI("Creating virtual display: w: %d h:%d format:0x%x", width, height, *format);
@@ -89,9 +90,9 @@ void HWCDisplayVirtual::Destroy(HWCDisplay *hwc_display) {
 }
 
 HWCDisplayVirtual::HWCDisplayVirtual(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
-                                     HWCCallbacks *callbacks)
-    : HWCDisplay(core_intf, callbacks, kVirtual, HWC_DISPLAY_VIRTUAL, false, NULL,
-                 DISPLAY_CLASS_VIRTUAL, buffer_allocator) {
+                                     HWCCallbacks *callbacks, hwc2_display_t id, int32_t sdm_id)
+    : HWCDisplay(core_intf, buffer_allocator, callbacks, nullptr, kVirtual, id, sdm_id, false,
+                 DISPLAY_CLASS_VIRTUAL) {
 }
 
 int HWCDisplayVirtual::Init() {
@@ -285,6 +286,16 @@ HWC2::Error HWCDisplayVirtual::SetFrameDumpConfig(uint32_t count, uint32_t bit_m
   dump_output_layer_ = ((bit_mask_layer_type & (1 << OUTPUT_LAYER_DUMP)) != 0);
 
   DLOGI("output_layer_dump_enable %d", dump_output_layer_);
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayVirtual::GetDisplayType(int32_t *out_type) {
+  if (out_type == nullptr) {
+    return HWC2::Error::BadParameter;
+  }
+
+  *out_type = HWC2_DISPLAY_TYPE_VIRTUAL;
+
   return HWC2::Error::None;
 }
 

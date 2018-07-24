@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -39,7 +39,7 @@ namespace sdm {
 #define CREATE_EXTENSION_INTERFACE_NAME "CreateExtensionInterface"
 #define DESTROY_EXTENSION_INTERFACE_NAME "DestroyExtensionInterface"
 
-#define EXTENSION_REVISION_MAJOR (1)
+#define EXTENSION_REVISION_MAJOR (2)
 #define EXTENSION_REVISION_MINOR (0)
 
 #define EXTENSION_VERSION_TAG ((uint16_t) ((EXTENSION_REVISION_MAJOR << 8) \
@@ -52,7 +52,8 @@ typedef DisplayError (*DestroyExtensionInterface)(ExtensionInterface *interface)
 
 class ExtensionInterface {
  public:
-  virtual DisplayError CreatePartialUpdate(DisplayType type, const HWResourceInfo &hw_resource_info,
+  virtual DisplayError CreatePartialUpdate(int32_t display_id, DisplayType type,
+                                           const HWResourceInfo &hw_resource_info,
                                            const HWPanelInfo &hw_panel_info,
                                            const HWMixerAttributes &mixer_attributes,
                                            const HWDisplayAttributes &display_attributes,
@@ -60,7 +61,8 @@ class ExtensionInterface {
                                            PartialUpdateInterface **interface) = 0;
   virtual DisplayError DestroyPartialUpdate(PartialUpdateInterface *interface) = 0;
 
-  virtual DisplayError CreateStrategyExtn(DisplayType type, BufferAllocator *buffer_allocator,
+  virtual DisplayError CreateStrategyExtn(int32_t display_id, DisplayType type,
+                                          BufferAllocator *buffer_allocator,
                                           const HWResourceInfo &hw_resource_info,
                                           const HWPanelInfo &hw_panel_info,
                                           const HWMixerAttributes &mixer_attributes,

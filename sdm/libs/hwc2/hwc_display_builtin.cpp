@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -38,62 +38,63 @@
 #include <string>
 #include <vector>
 
-#include "hwc_display_primary.h"
+#include "hwc_display_builtin.h"
 #include "hwc_debugger.h"
 
-#define __CLASS__ "HWCDisplayPrimary"
+#define __CLASS__ "HWCDisplayBuiltIn"
 
 namespace sdm {
 
-int HWCDisplayPrimary::Create(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
+int HWCDisplayBuiltIn::Create(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
                               HWCCallbacks *callbacks, qService::QService *qservice,
-                              HWCDisplay **hwc_display) {
+                              hwc2_display_t id, int32_t sdm_id, HWCDisplay **hwc_display) {
   int status = 0;
-  uint32_t primary_width = 0;
-  uint32_t primary_height = 0;
+  uint32_t builtin_width = 0;
+  uint32_t builtin_height = 0;
 
-  HWCDisplay *hwc_display_primary =
-      new HWCDisplayPrimary(core_intf, buffer_allocator, callbacks, qservice);
-  status = hwc_display_primary->Init();
+  HWCDisplay *hwc_display_builtin =
+      new HWCDisplayBuiltIn(core_intf, buffer_allocator, callbacks, qservice, id, sdm_id);
+  status = hwc_display_builtin->Init();
   if (status) {
-    delete hwc_display_primary;
+    delete hwc_display_builtin;
     return status;
   }
 
-  hwc_display_primary->GetMixerResolution(&primary_width, &primary_height);
+  hwc_display_builtin->GetMixerResolution(&builtin_width, &builtin_height);
   int width = 0, height = 0;
   HWCDebugHandler::Get()->GetProperty(FB_WIDTH_PROP, &width);
   HWCDebugHandler::Get()->GetProperty(FB_HEIGHT_PROP, &height);
   if (width > 0 && height > 0) {
-    primary_width = UINT32(width);
-    primary_height = UINT32(height);
+    builtin_width = UINT32(width);
+    builtin_height = UINT32(height);
   }
 
-  status = hwc_display_primary->SetFrameBufferResolution(primary_width, primary_height);
+  status = hwc_display_builtin->SetFrameBufferResolution(builtin_width, builtin_height);
   if (status) {
-    Destroy(hwc_display_primary);
+    Destroy(hwc_display_builtin);
     return status;
   }
 
-  *hwc_display = hwc_display_primary;
+  *hwc_display = hwc_display_builtin;
 
   return status;
 }
 
-void HWCDisplayPrimary::Destroy(HWCDisplay *hwc_display) {
+void HWCDisplayBuiltIn::Destroy(HWCDisplay *hwc_display) {
   hwc_display->Deinit();
   delete hwc_display;
 }
 
-HWCDisplayPrimary::HWCDisplayPrimary(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
-                                     HWCCallbacks *callbacks, qService::QService *qservice)
-    : HWCDisplay(core_intf, callbacks, kPrimary, HWC_DISPLAY_PRIMARY, true, qservice,
-                 DISPLAY_CLASS_PRIMARY, buffer_allocator),
+HWCDisplayBuiltIn::HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
+                                     HWCCallbacks *callbacks, qService::QService *qservice,
+                                     hwc2_display_t id, int32_t sdm_id)
+    : HWCDisplay(core_intf, buffer_allocator, callbacks, qservice, kBuiltIn, id, sdm_id, true,
+                 DISPLAY_CLASS_BUILTIN),
       buffer_allocator_(buffer_allocator),
       cpu_hint_(NULL) {
 }
 
-int HWCDisplayPrimary::Init() {
+int HWCDisplayBuiltIn::Init() {
   cpu_hint_ = new CPUHint();
   if (cpu_hint_->Init(static_cast<HWCDebugHandler *>(HWCDebugHandler::Get())) != kErrorNone) {
     delete cpu_hint_;
@@ -118,15 +119,9 @@ int HWCDisplayPrimary::Init() {
   return status;
 }
 
-void HWCDisplayPrimary::ProcessBootAnimCompleted() {
-  uint32_t numBootUpLayers = 0;
-  // TODO(user): Remove this hack
+void HWCDisplayBuiltIn::ProcessBootAnimCompleted() {
+  bool bootanim_exit = false;
 
-  numBootUpLayers = static_cast<uint32_t>(Debug::GetBootAnimLayerCount());
-
-  if (numBootUpLayers == 0) {
-    numBootUpLayers = 2;
-  }
   /* All other checks namely "init.svc.bootanim" or
   * HWC_GEOMETRY_CHANGED fail in correctly identifying the
   * exact bootup transition to homescreen
@@ -146,8 +141,13 @@ void HWCDisplayPrimary::ProcessBootAnimCompleted() {
     }
   }
 
+  property_get("service.bootanim.exit", property, "0");
+  if (!strcmp(property, "1")) {
+    bootanim_exit = true;
+  }
+
   if ((!isEncrypted || (isEncrypted && main_class_services_started)) &&
-      (layer_set_.size() > numBootUpLayers)) {
+      bootanim_exit) {
     DLOGI("Applying default mode");
     boot_animation_completed_ = true;
     // Applying default mode after bootanimation is finished And
@@ -159,7 +159,7 @@ void HWCDisplayPrimary::ProcessBootAnimCompleted() {
   }
 }
 
-HWC2::Error HWCDisplayPrimary::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
+HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
   auto status = HWC2::Error::None;
   DisplayError error = kErrorNone;
 
@@ -226,7 +226,7 @@ HWC2::Error HWCDisplayPrimary::Validate(uint32_t *out_num_types, uint32_t *out_n
   return status;
 }
 
-HWC2::Error HWCDisplayPrimary::Present(int32_t *out_retire_fence) {
+HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
   auto status = HWC2::Error::None;
   if (display_paused_) {
     // TODO(user): From old HWC implementation
@@ -249,7 +249,7 @@ HWC2::Error HWCDisplayPrimary::Present(int32_t *out_retire_fence) {
   return status;
 }
 
-HWC2::Error HWCDisplayPrimary::GetColorModes(uint32_t *out_num_modes,
+HWC2::Error HWCDisplayBuiltIn::GetColorModes(uint32_t *out_num_modes,
                                              android_color_mode_t *out_modes) {
   if (out_modes == nullptr) {
     *out_num_modes = color_mode_->GetColorModeCount();
@@ -260,7 +260,7 @@ HWC2::Error HWCDisplayPrimary::GetColorModes(uint32_t *out_num_modes,
   return HWC2::Error::None;
 }
 
-HWC2::Error HWCDisplayPrimary::SetColorMode(android_color_mode_t mode) {
+HWC2::Error HWCDisplayBuiltIn::SetColorMode(android_color_mode_t mode) {
   auto status = color_mode_->SetColorMode(mode);
   if (status != HWC2::Error::None) {
     DLOGE("failed for mode = %d", mode);
@@ -273,7 +273,7 @@ HWC2::Error HWCDisplayPrimary::SetColorMode(android_color_mode_t mode) {
   return status;
 }
 
-HWC2::Error HWCDisplayPrimary::SetColorModeById(int32_t color_mode_id) {
+HWC2::Error HWCDisplayBuiltIn::SetColorModeById(int32_t color_mode_id) {
   auto status = color_mode_->SetColorModeById(color_mode_id);
   if (status != HWC2::Error::None) {
     DLOGE("failed for mode = %d", color_mode_id);
@@ -286,7 +286,7 @@ HWC2::Error HWCDisplayPrimary::SetColorModeById(int32_t color_mode_id) {
   return status;
 }
 
-HWC2::Error HWCDisplayPrimary::RestoreColorTransform() {
+HWC2::Error HWCDisplayBuiltIn::RestoreColorTransform() {
   auto status = color_mode_->RestoreColorTransform();
   if (status != HWC2::Error::None) {
     DLOGE("failed to RestoreColorTransform");
@@ -298,7 +298,7 @@ HWC2::Error HWCDisplayPrimary::RestoreColorTransform() {
   return status;
 }
 
-HWC2::Error HWCDisplayPrimary::SetColorTransform(const float *matrix,
+HWC2::Error HWCDisplayBuiltIn::SetColorTransform(const float *matrix,
                                                  android_color_transform_t hint) {
   if (!matrix) {
     return HWC2::Error::BadParameter;
@@ -318,7 +318,7 @@ HWC2::Error HWCDisplayPrimary::SetColorTransform(const float *matrix,
   return status;
 }
 
-int HWCDisplayPrimary::Perform(uint32_t operation, ...) {
+int HWCDisplayBuiltIn::Perform(uint32_t operation, ...) {
   va_list args;
   va_start(args, operation);
   int val = 0;
@@ -361,7 +361,7 @@ int HWCDisplayPrimary::Perform(uint32_t operation, ...) {
   return 0;
 }
 
-DisplayError HWCDisplayPrimary::SetDisplayMode(uint32_t mode) {
+DisplayError HWCDisplayBuiltIn::SetDisplayMode(uint32_t mode) {
   DisplayError error = kErrorNone;
 
   if (display_intf_) {
@@ -371,7 +371,7 @@ DisplayError HWCDisplayPrimary::SetDisplayMode(uint32_t mode) {
   return error;
 }
 
-void HWCDisplayPrimary::SetMetaDataRefreshRateFlag(bool enable) {
+void HWCDisplayBuiltIn::SetMetaDataRefreshRateFlag(bool enable) {
   int disable_metadata_dynfps = 0;
 
   HWCDebugHandler::Get()->GetProperty(DISABLE_METADATA_DYNAMIC_FPS_PROP, &disable_metadata_dynfps);
@@ -381,12 +381,12 @@ void HWCDisplayPrimary::SetMetaDataRefreshRateFlag(bool enable) {
   use_metadata_refresh_rate_ = enable;
 }
 
-void HWCDisplayPrimary::SetQDCMSolidFillInfo(bool enable, const LayerSolidFill &color) {
+void HWCDisplayBuiltIn::SetQDCMSolidFillInfo(bool enable, const LayerSolidFill &color) {
   solid_fill_enable_ = enable;
   solid_fill_color_ = color;
 }
 
-void HWCDisplayPrimary::ToggleCPUHint(bool set) {
+void HWCDisplayBuiltIn::ToggleCPUHint(bool set) {
   if (!cpu_hint_) {
     return;
   }
@@ -398,7 +398,7 @@ void HWCDisplayPrimary::ToggleCPUHint(bool set) {
   }
 }
 
-void HWCDisplayPrimary::SetSecureDisplay(bool secure_display_active) {
+void HWCDisplayBuiltIn::SetSecureDisplay(bool secure_display_active) {
   if (secure_display_active_ != secure_display_active) {
     // Skip Prepare and call Flush for null commit
     DLOGI("SecureDisplay state changed from %d to %d Needs Flush!!", secure_display_active_,
@@ -412,7 +412,7 @@ void HWCDisplayPrimary::SetSecureDisplay(bool secure_display_active) {
   }
 }
 
-void HWCDisplayPrimary::ForceRefreshRate(uint32_t refresh_rate) {
+void HWCDisplayBuiltIn::ForceRefreshRate(uint32_t refresh_rate) {
   if ((refresh_rate && (refresh_rate < min_refresh_rate_ || refresh_rate > max_refresh_rate_)) ||
       force_refresh_rate_ == refresh_rate) {
     // Cannot honor force refresh rate, as its beyond the range or new request is same
@@ -426,7 +426,7 @@ void HWCDisplayPrimary::ForceRefreshRate(uint32_t refresh_rate) {
   return;
 }
 
-uint32_t HWCDisplayPrimary::GetOptimalRefreshRate(bool one_updating_layer) {
+uint32_t HWCDisplayBuiltIn::GetOptimalRefreshRate(bool one_updating_layer) {
   if (force_refresh_rate_) {
     return force_refresh_rate_;
   } else if (use_metadata_refresh_rate_ && one_updating_layer && metadata_refresh_rate_) {
@@ -436,7 +436,7 @@ uint32_t HWCDisplayPrimary::GetOptimalRefreshRate(bool one_updating_layer) {
   return max_refresh_rate_;
 }
 
-DisplayError HWCDisplayPrimary::Refresh() {
+DisplayError HWCDisplayBuiltIn::Refresh() {
   DisplayError error = kErrorNone;
 
   callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
@@ -444,7 +444,7 @@ DisplayError HWCDisplayPrimary::Refresh() {
   return error;
 }
 
-void HWCDisplayPrimary::SetIdleTimeoutMs(uint32_t timeout_ms) {
+void HWCDisplayBuiltIn::SetIdleTimeoutMs(uint32_t timeout_ms) {
   display_intf_->SetIdleTimeoutMs(timeout_ms);
   validated_ = false;
 }
@@ -462,7 +462,7 @@ static void SetLayerBuffer(const BufferInfo &output_buffer_info, LayerBuffer *ou
   output_buffer->planes[0].stride = alloc_buffer_info.stride;
 }
 
-void HWCDisplayPrimary::HandleFrameOutput() {
+void HWCDisplayBuiltIn::HandleFrameOutput() {
   if (frame_capture_buffer_queued_) {
     HandleFrameCapture();
   } else if (dump_output_to_file_) {
@@ -470,7 +470,7 @@ void HWCDisplayPrimary::HandleFrameOutput() {
   }
 }
 
-void HWCDisplayPrimary::HandleFrameCapture() {
+void HWCDisplayBuiltIn::HandleFrameCapture() {
   if (output_buffer_.release_fence_fd >= 0) {
     frame_capture_status_ = sync_wait(output_buffer_.release_fence_fd, 1000);
     ::close(output_buffer_.release_fence_fd);
@@ -482,7 +482,7 @@ void HWCDisplayPrimary::HandleFrameCapture() {
   output_buffer_ = {};
 }
 
-void HWCDisplayPrimary::HandleFrameDump() {
+void HWCDisplayBuiltIn::HandleFrameDump() {
   if (dump_frame_count_ && output_buffer_.release_fence_fd >= 0) {
     int ret = sync_wait(output_buffer_.release_fence_fd, 1000);
     ::close(output_buffer_.release_fence_fd);
@@ -511,7 +511,7 @@ void HWCDisplayPrimary::HandleFrameDump() {
   }
 }
 
-HWC2::Error HWCDisplayPrimary::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type) {
+HWC2::Error HWCDisplayBuiltIn::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type) {
   HWCDisplay::SetFrameDumpConfig(count, bit_mask_layer_type);
   dump_output_to_file_ = bit_mask_layer_type & (1 << OUTPUT_LAYER_DUMP);
   DLOGI("output_layer_dump_enable %d", dump_output_to_file_);
@@ -550,7 +550,7 @@ HWC2::Error HWCDisplayPrimary::SetFrameDumpConfig(uint32_t count, uint32_t bit_m
   return HWC2::Error::None;
 }
 
-int HWCDisplayPrimary::FrameCaptureAsync(const BufferInfo &output_buffer_info,
+int HWCDisplayBuiltIn::FrameCaptureAsync(const BufferInfo &output_buffer_info,
                                          bool post_processed_output) {
   // Note: This function is called in context of a binder thread and a lock is already held
   if (output_buffer_info.alloc_buffer_info.fd < 0) {
@@ -586,7 +586,7 @@ int HWCDisplayPrimary::FrameCaptureAsync(const BufferInfo &output_buffer_info,
   return 0;
 }
 
-DisplayError HWCDisplayPrimary::SetDetailEnhancerConfig
+DisplayError HWCDisplayBuiltIn::SetDetailEnhancerConfig
                                    (const DisplayDetailEnhancerData &de_data) {
   DisplayError error = kErrorNotSupported;
 
@@ -597,7 +597,7 @@ DisplayError HWCDisplayPrimary::SetDetailEnhancerConfig
   return error;
 }
 
-DisplayError HWCDisplayPrimary::ControlPartialUpdate(bool enable, uint32_t *pending) {
+DisplayError HWCDisplayBuiltIn::ControlPartialUpdate(bool enable, uint32_t *pending) {
   DisplayError error = kErrorNone;
 
   if (display_intf_) {
@@ -608,7 +608,7 @@ DisplayError HWCDisplayPrimary::ControlPartialUpdate(bool enable, uint32_t *pend
   return error;
 }
 
-DisplayError HWCDisplayPrimary::DisablePartialUpdateOneFrame() {
+DisplayError HWCDisplayBuiltIn::DisablePartialUpdateOneFrame() {
   DisplayError error = kErrorNone;
 
   if (display_intf_) {
@@ -620,13 +620,13 @@ DisplayError HWCDisplayPrimary::DisablePartialUpdateOneFrame() {
 }
 
 
-DisplayError HWCDisplayPrimary::SetMixerResolution(uint32_t width, uint32_t height) {
+DisplayError HWCDisplayBuiltIn::SetMixerResolution(uint32_t width, uint32_t height) {
   DisplayError error = display_intf_->SetMixerResolution(width, height);
   validated_ = false;
   return error;
 }
 
-DisplayError HWCDisplayPrimary::GetMixerResolution(uint32_t *width, uint32_t *height) {
+DisplayError HWCDisplayBuiltIn::GetMixerResolution(uint32_t *width, uint32_t *height) {
   return display_intf_->GetMixerResolution(width, height);
 }
 

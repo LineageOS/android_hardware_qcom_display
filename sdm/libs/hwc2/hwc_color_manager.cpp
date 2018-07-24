@@ -198,14 +198,14 @@ int HWCColorManager::SetSolidFill(const void *params, bool enable, HWCDisplay *h
       FLOAT(solid_fill_params_.rect.y) + FLOAT(solid_fill_params_.rect.height),
     };
 
-    hwc_display->Perform(HWCDisplayPrimary::SET_QDCM_SOLID_FILL_INFO, &solid_fill_color);
-    hwc_display->Perform(HWCDisplayPrimary::SET_QDCM_SOLID_FILL_RECT, &solid_fill_rect);
+    hwc_display->Perform(HWCDisplayBuiltIn::SET_QDCM_SOLID_FILL_INFO, &solid_fill_color);
+    hwc_display->Perform(HWCDisplayBuiltIn::SET_QDCM_SOLID_FILL_RECT, &solid_fill_rect);
   } else {
     solid_fill_color.red = 0;
     solid_fill_color.blue = 0;
     solid_fill_color.green = 0;
     solid_fill_color.alpha = 0;
-    hwc_display->Perform(HWCDisplayPrimary::UNSET_QDCM_SOLID_FILL_INFO, &solid_fill_color);
+    hwc_display->Perform(HWCDisplayBuiltIn::UNSET_QDCM_SOLID_FILL_INFO, &solid_fill_color);
   }
 
   return 0;

@@ -195,6 +195,27 @@ DisplayError Debug::GetMixerResolution(uint32_t *width, uint32_t *height) {
   return kErrorNone;
 }
 
+DisplayError Debug::GetWindowRect(float *left, float *top, float *right, float *bottom) {
+  char value[64] = {};
+
+  int error = DebugHandler::Get()->GetProperty(WINDOW_RECT_PROP, value);
+  if (error != 0) {
+    return kErrorUndefined;
+  }
+
+  std::string str(value);
+  *left = FLOAT(stof(str));
+  *top = FLOAT(stof(str.substr(str.find(',') + 1)));
+  *right = FLOAT(stof(str.substr(str.find(',') + 1)));
+  *bottom = FLOAT(stof(str.substr(str.find(',') + 1)));
+
+  if (*left < 0 || *top < 0  || *right < 0  || *bottom < 0 ) {
+    *left = *top = *right = *bottom = 0;
+  }
+
+  return kErrorNone;
+}
+
 DisplayError Debug::GetReducedConfig(uint32_t *num_vig_pipes, uint32_t *num_dma_pipes) {
   char value[64] = {};
 

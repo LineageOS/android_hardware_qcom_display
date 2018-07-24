@@ -43,14 +43,24 @@ DisplayHDMI::DisplayHDMI(DisplayEventHandler *event_handler, HWInfoInterface *hw
                 comp_manager, hw_info_intf) {
 }
 
+DisplayHDMI::DisplayHDMI(int32_t display_id, DisplayEventHandler *event_handler,
+                              HWInfoInterface *hw_info_intf,
+                              BufferSyncHandler *buffer_sync_handler,
+                              BufferAllocator *buffer_allocator, CompManager *comp_manager)
+  : DisplayBase(display_id, kHDMI, event_handler, kDeviceHDMI, buffer_sync_handler,
+                buffer_allocator, comp_manager, hw_info_intf) {
+}
+
 DisplayError DisplayHDMI::Init() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
-  DisplayError error = HWInterface::Create(kHDMI, hw_info_intf_, buffer_sync_handler_,
+  DisplayError error = HWInterface::Create(display_id_, kHDMI, hw_info_intf_, buffer_sync_handler_,
                                            buffer_allocator_, &hw_intf_);
   if (error != kErrorNone) {
     return error;
   }
+
+  hw_intf_->GetDisplayId(&display_id_);
 
   uint32_t active_mode_index;
   char value[64] = "0";
@@ -88,7 +98,7 @@ DisplayError DisplayHDMI::Init() {
   s3d_format_to_mode_.insert(std::pair<LayerBufferS3DFormat, HWS3DMode>
                             (kS3dFormatFramePacking, kS3DModeFP));
 
-  error = HWEventsInterface::Create(INT(display_type_), this, event_list_, hw_intf_,
+  error = HWEventsInterface::Create(display_id_, kHDMI, this, event_list_, hw_intf_,
                                     &hw_events_intf_);
   if (error != kErrorNone) {
     DisplayBase::Deinit();

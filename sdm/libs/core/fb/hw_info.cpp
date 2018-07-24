@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -553,6 +553,32 @@ DisplayError HWInfo::GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_dis
     hw_disp_info->is_connected =  (!strncmp(line.c_str(), "1", strlen("1")));
   }
 
+  return kErrorNone;
+}
+
+DisplayError HWInfo::GetDisplaysStatus(HWDisplaysInfo *hw_displays_info) {
+  // TODO(user):
+  DLOGW("This operation is not supported on FB Driver.");
+  return kErrorNone;
+}
+
+DisplayError HWInfo::GetMaxDisplaysSupported(DisplayType type, int32_t *max_displays) {
+  if (!max_displays) {
+    DLOGE("No output parameter provided!");
+    return kErrorParameters;
+  }
+  switch (type) {
+    case kBuiltIn:
+    case kPluggable:
+    case kVirtual:
+      *max_displays = 1;
+      break;
+    default:
+      *max_displays = 0;
+      break;
+  }
+  DLOGI("Max concurrent displays of type %d (%s) = %d", type, (kBuiltIn == type)? "BuiltIn":
+        (kPluggable == type)? "Pluggable": (kVirtual == type)? "Virtual": "???", *max_displays);
   return kErrorNone;
 }
 

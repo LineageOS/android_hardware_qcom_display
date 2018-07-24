@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -40,14 +40,25 @@ DisplayVirtual::DisplayVirtual(DisplayEventHandler *event_handler, HWInfoInterfa
                 comp_manager, hw_info_intf) {
 }
 
+DisplayVirtual::DisplayVirtual(int32_t display_id, DisplayEventHandler *event_handler,
+                               HWInfoInterface *hw_info_intf,
+                               BufferSyncHandler *buffer_sync_handler,
+                               BufferAllocator *buffer_allocator, CompManager *comp_manager)
+  : DisplayBase(display_id, kVirtual, event_handler, kDeviceVirtual, buffer_sync_handler,
+                buffer_allocator, comp_manager, hw_info_intf) {
+}
+
 DisplayError DisplayVirtual::Init() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
-  DisplayError error = HWInterface::Create(kVirtual, hw_info_intf_, buffer_sync_handler_,
-                                           buffer_allocator_, &hw_intf_);
+  DisplayError error = HWInterface::Create(display_id_, kVirtual, hw_info_intf_,
+                                           buffer_sync_handler_, buffer_allocator_, &hw_intf_);
+
   if (error != kErrorNone) {
     return error;
   }
+
+  hw_intf_->GetDisplayId(&display_id_);
 
   HWScaleLutInfo lut_info = {};
   error = comp_manager_->GetScaleLutConfig(&lut_info);
@@ -135,8 +146,9 @@ DisplayError DisplayVirtual::SetActiveConfig(DisplayConfigVariableInfo *variable
     comp_manager_->UnregisterDisplay(display_comp_ctx_);
   }
 
-  error = comp_manager_->RegisterDisplay(display_type_, display_attributes, hw_panel_info,
-                                         mixer_attributes, fb_config, &display_comp_ctx_);
+  error = comp_manager_->RegisterDisplay(display_id_, display_type_, display_attributes,
+                                         hw_panel_info, mixer_attributes, fb_config,
+                                         &display_comp_ctx_);
   if (error != kErrorNone) {
     return error;
   }

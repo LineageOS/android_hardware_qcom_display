@@ -669,4 +669,87 @@ DisplayError HWInfoDRM::GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_
   return kErrorNone;
 }
 
+DisplayError HWInfoDRM::GetDisplaysStatus(HWDisplaysInfo *hw_displays_info) {
+  if (!hw_displays_info) {
+    DLOGE("No output parameter provided!");
+    return kErrorParameters;
+  }
+  if (!drm_mgr_intf_) {
+    DLOGE("DRM Driver not initialized!");
+    return kErrorCriticalResource;
+  }
+  hw_displays_info->clear();
+  sde_drm::DRMConnectorsInfo conns_info = {};
+  int drm_err = drm_mgr_intf_->GetConnectorsInfo(&conns_info);
+  if (!drm_err) {
+    for (auto& iter : conns_info) {
+      HWDisplayInfo hw_info = {};
+      hw_info.display_id = ((0 == iter.first) || (iter.first > INT32_MAX))? -1 :
+                            (int32_t)(iter.first);
+      switch (iter.second.type) {
+        case DRM_MODE_CONNECTOR_DSI:
+          hw_info.display_type = kBuiltIn;
+        break;
+        case DRM_MODE_CONNECTOR_TV:
+        case DRM_MODE_CONNECTOR_HDMIA:
+        case DRM_MODE_CONNECTOR_HDMIB:
+        case DRM_MODE_CONNECTOR_DisplayPort:
+        case DRM_MODE_CONNECTOR_VGA:
+          hw_info.display_type = kPluggable;
+        break;
+        case DRM_MODE_CONNECTOR_VIRTUAL:
+          hw_info.display_type = kVirtual;
+        break;
+      }
+      hw_info.is_connected = iter.second.is_connected;
+      hw_info.is_primary = iter.second.is_primary;
+      if (hw_info.display_id >= 0) {
+        (*hw_displays_info)[hw_info.display_id] = hw_info;
+      }
+      DLOGI("display: %d-%d, connected: %s, primary: %s", hw_info.display_id, hw_info.display_type,
+            hw_info.is_connected? "true": "false", hw_info.is_primary? "true": "false");
+    }
+  } else {
+    DLOGE("DRM Driver error %d while getting displays' status!", drm_err);
+    return kErrorUndefined;
+  }
+  return kErrorNone;
+}
+
+DisplayError HWInfoDRM::GetMaxDisplaysSupported(DisplayType type, int32_t *max_displays) {
+  if (!max_displays) {
+    DLOGE("No output parameter provided!");
+    return kErrorParameters;
+  }
+  if (!drm_mgr_intf_) {
+    DLOGE("DRM Driver not initialized!");
+    return kErrorCriticalResource;
+  }
+  *max_displays = 0;
+  sde_drm::DRMEncodersInfo encoders_info = {};
+  int drm_err = drm_mgr_intf_->GetEncodersInfo(&encoders_info);
+  if (!drm_err) {
+    int32_t max_displays_tmds = 0;
+    int32_t max_displays_dpmst = 0;
+    for (auto& iter : encoders_info) {
+      if ((kBuiltIn == type) && (DRM_MODE_ENCODER_DSI == iter.second.type)) {
+        (*max_displays)++;
+      } else if ((kPluggable == type) && (DRM_MODE_ENCODER_TMDS == iter.second.type)) {
+        max_displays_tmds++;
+      } else if ((kPluggable == type) && (DRM_MODE_ENCODER_DPMST == iter.second.type)) {
+        max_displays_dpmst++;
+      } else if ((kVirtual == type) && (DRM_MODE_ENCODER_VIRTUAL == iter.second.type)) {
+        (*max_displays)++;
+      }
+    }
+    (*max_displays) += std::max(max_displays_tmds, max_displays_dpmst);
+  } else {
+    DLOGE("DRM Driver error %d while getting max displays supported!", drm_err);
+    return kErrorUndefined;
+  }
+  DLOGI("Max concurrent displays of type %d (%s) = %d", type, (kBuiltIn == type)? "BuiltIn":
+        (kPluggable == type)? "Pluggable": (kVirtual == type)? "Virtual": "???", *max_displays);
+  return kErrorNone;
+}
+
 }  // namespace sdm

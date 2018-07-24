@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -37,7 +37,7 @@ namespace sdm {
 
 class HWPeripheralDRM : public HWDeviceDRM {
  public:
-  explicit HWPeripheralDRM(BufferSyncHandler *buffer_sync_handler,
+  explicit HWPeripheralDRM(int32_t display_id, BufferSyncHandler *buffer_sync_handler,
                            BufferAllocator *buffer_allocator,
                            HWInfoInterface *hw_info_intf);
   virtual ~HWPeripheralDRM() {}

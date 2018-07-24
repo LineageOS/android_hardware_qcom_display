@@ -125,14 +125,15 @@ void HWEvents::PopulateHWEventData() {
   }
 }
 
-DisplayError HWEvents::Init(int fb_num, HWEventHandler *event_handler,
+DisplayError HWEvents::Init(int fb_num, DisplayType display_type, HWEventHandler *event_handler,
                             const vector<HWEvent> &event_list,
                             const HWInterface *hw_intf) {
   if (!event_handler)
     return kErrorParameters;
 
   event_handler_ = event_handler;
-  fb_num_ = fb_num;
+  // fb_num set to display_type for unit-test framework.
+  fb_num_ = display_type;
   event_list_ = event_list;
   poll_fds_.resize(event_list_.size());
   event_thread_name_ += " - " + std::to_string(fb_num_);

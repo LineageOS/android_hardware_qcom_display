@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -50,12 +50,13 @@ using sde_drm::DRMSecureMode;
 
 namespace sdm {
 
-HWVirtualDRM::HWVirtualDRM(BufferSyncHandler *buffer_sync_handler,
+HWVirtualDRM::HWVirtualDRM(int32_t display_id, BufferSyncHandler *buffer_sync_handler,
                            BufferAllocator *buffer_allocator,
                            HWInfoInterface *hw_info_intf)
                            : HWDeviceDRM(buffer_sync_handler, buffer_allocator, hw_info_intf) {
   HWDeviceDRM::device_name_ = "Virtual Display Device";
   HWDeviceDRM::disp_type_ = DRMDisplayType::VIRTUAL;
+  HWDeviceDRM::display_id_ = display_id;
 }
 
 void HWVirtualDRM::ConfigureWbConnectorFbId(uint32_t fb_id) {

@@ -342,13 +342,15 @@ void HWCColorMode::Dump(std::ostringstream* os) {
   *os << std::endl;
 }
 
-HWCDisplay::HWCDisplay(CoreInterface *core_intf, HWCCallbacks *callbacks, DisplayType type,
-                       hwc2_display_t id, bool needs_blit, qService::QService *qservice,
-                       DisplayClass display_class, BufferAllocator *buffer_allocator)
+HWCDisplay::HWCDisplay(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
+                       HWCCallbacks *callbacks, qService::QService *qservice,
+                       DisplayType type, hwc2_display_t id, int32_t sdm_id,
+                       bool needs_blit, DisplayClass display_class)
     : core_intf_(core_intf),
       callbacks_(callbacks),
       type_(type),
       id_(id),
+      sdm_id_(sdm_id),
       needs_blit_(needs_blit),
       qservice_(qservice),
       display_class_(display_class) {
@@ -356,10 +358,16 @@ HWCDisplay::HWCDisplay(CoreInterface *core_intf, HWCCallbacks *callbacks, Displa
 }
 
 int HWCDisplay::Init() {
-  DisplayError error = core_intf_->CreateDisplay(type_, this, &display_intf_);
+  Debug::GetWindowRect(&window_rect_.left, &window_rect_.top,
+                                 &window_rect_.right, &window_rect_.bottom);
+
+  DLOGI("Window rect : [%f %f %f %f]",window_rect_.left, window_rect_.top,
+         window_rect_.right, window_rect_.bottom);
+
+  DisplayError error = core_intf_->CreateDisplay(sdm_id_, this, &display_intf_);
   if (error != kErrorNone) {
-    DLOGE("Display create failed. Error = %d display_type %d event_handler %p disp_intf %p", error,
-          type_, this, &display_intf_);
+    DLOGE("Display create failed. Error = %d display_id = %d event_handler = %p disp_intf = %p",
+          error, sdm_id_, this, &display_intf_);
     return -EINVAL;
   }
 
@@ -477,10 +485,6 @@ void HWCDisplay::BuildLayerStack() {
   auto working_primaries = ColorPrimaries_BT709_5;
   bool secure_display_active = false;
   layer_stack_.flags.animating = animating_;
-
-  uint32_t color_mode_count = 0;
-  display_intf_->GetColorModeCount(&color_mode_count);
-
   bool extended_range = false;
 
   // Add one layer for fb target
@@ -559,7 +563,7 @@ void HWCDisplay::BuildLayerStack() {
     bool hdr_layer = layer->input_buffer.color_metadata.colorPrimaries == ColorPrimaries_BT2020 &&
                      (layer->input_buffer.color_metadata.transfer == Transfer_SMPTE_ST2084 ||
                      layer->input_buffer.color_metadata.transfer == Transfer_HLG);
-    if (hdr_layer && !disable_hdr_handling_ && color_mode_count) {
+    if (hdr_layer && !disable_hdr_handling_) {
       // dont honor HDR when its handling is disabled
       layer->input_buffer.flags.hdr = true;
       layer_stack_.flags.hdr_present = true;
@@ -713,6 +717,8 @@ HWC2::Error HWCDisplay::SetVsyncEnabled(HWC2::Vsync enabled) {
     return HWC2::Error::BadDisplay;
   }
 
+  last_vsync_mode_ = enabled;
+
   return HWC2::Error::None;
 }
 
@@ -734,6 +740,7 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode) {
       if (tone_mapper_) {
         tone_mapper_->Terminate();
       }
+      last_power_mode_ = HWC2::PowerMode::Off;
       break;
     case HWC2::PowerMode::On:
       state = kStateOn;
@@ -848,6 +855,13 @@ HWC2::Error HWCDisplay::GetDisplayAttribute(hwc2_config_t config, HWC2::Attribut
     }
   }
 
+  variable_config.x_pixels -= UINT32(window_rect_.right + window_rect_.left);
+  variable_config.y_pixels -= UINT32(window_rect_.bottom + window_rect_.top);
+  if (variable_config.x_pixels <= 0 || variable_config.y_pixels <= 0) {
+    DLOGE("window rects are not within the supported range");
+    return HWC2::Error::BadDisplay;
+  }
+
   switch (attribute) {
     case HWC2::Attribute::VsyncPeriod:
       *out_value = INT32(variable_config.vsync_period_ns);
@@ -880,14 +894,14 @@ HWC2::Error HWCDisplay::GetDisplayName(uint32_t *out_size, char *out_name) {
   }
 
   std::string name;
-  switch (id_) {
-    case HWC_DISPLAY_PRIMARY:
-      name = "Primary Display";
+  switch (type_) {
+    case kBuiltIn:
+      name = "Built-in Display";
       break;
-    case HWC_DISPLAY_EXTERNAL:
-      name = "External Display";
+    case kPluggable:
+      name = "Pluggable Display";
       break;
-    case HWC_DISPLAY_VIRTUAL:
+    case kVirtual:
       name = "Virtual Display";
       break;
     default:
@@ -911,16 +925,13 @@ HWC2::Error HWCDisplay::GetDisplayName(uint32_t *out_size, char *out_name) {
 }
 
 HWC2::Error HWCDisplay::GetDisplayType(int32_t *out_type) {
-  if (out_type != nullptr) {
-    if (id_ == HWC_DISPLAY_VIRTUAL) {
-      *out_type = HWC2_DISPLAY_TYPE_VIRTUAL;
-    } else {
-      *out_type = HWC2_DISPLAY_TYPE_PHYSICAL;
-    }
-    return HWC2::Error::None;
-  } else {
+  if (out_type == nullptr) {
     return HWC2::Error::BadParameter;
   }
+
+  *out_type = HWC2_DISPLAY_TYPE_PHYSICAL;
+
+  return HWC2::Error::None;
 }
 
 HWC2::Error HWCDisplay::GetActiveConfig(hwc2_config_t *out_config) {
@@ -998,6 +1009,10 @@ HWC2::PowerMode HWCDisplay::GetLastPowerMode() {
   return last_power_mode_;
 }
 
+HWC2::Vsync HWCDisplay::GetLastVsyncMode() {
+  return last_vsync_mode_;
+}
+
 DisplayError HWCDisplay::VSync(const DisplayEventVSync &vsync) {
   callbacks_->Vsync(id_, vsync.timestamp);
   return kErrorNone;
@@ -1052,7 +1067,8 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
   }
 
   UpdateRefreshRate();
-  if (!skip_prepare_) {
+  layers_bypassed_ = false;
+  if (active_ && !skip_prepare_) {
     DisplayError error = display_intf_->Prepare(&layer_stack_);
     if (error != kErrorNone) {
       if (error == kErrorShutDown) {
@@ -1264,7 +1280,7 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
     return HWC2::Error::NotValidated;
   }
 
-  if (shutdown_pending_ || layer_set_.empty()) {
+  if (shutdown_pending_ || layer_set_.empty() || !active_) {
     return HWC2::Error::None;
   }
 
@@ -1334,7 +1350,7 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
     Layer *layer = hwc_layer->GetSDMLayer();
     LayerBuffer *layer_buffer = &layer->input_buffer;
 
-    if (!flush_) {
+    if (!flush_ && !layers_bypassed_) {
       // If swapinterval property is set to 0 or for single buffer layers, do not update f/w
       // release fences and discard fences from driver
       if (swap_interval_zero_ || layer->flags.single_buffer) {
@@ -1693,6 +1709,16 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
     return -EINVAL;
   }
 
+  // Reduce the src_rect and dst_rect as per FBT config.
+  // SF sending reduced FBT but here the src_rect is equal to mixer which is
+  // higher than allocated buffer of FBT.
+  x_pixels -= UINT32(window_rect_.right + window_rect_.left);
+  y_pixels -= UINT32(window_rect_.bottom + window_rect_.top);
+  if (x_pixels <= 0 || y_pixels <= 0) {
+    DLOGE("window rects are not within the supported range");
+    return -EINVAL;
+  }
+
   // Create rects to represent the new source and destination crops
   LayerRect crop = LayerRect(0, 0, FLOAT(x_pixels), FLOAT(y_pixels));
   hwc_rect_t scaled_display_frame = {0, 0, INT(x_pixels), INT(y_pixels)};
@@ -1850,6 +1876,7 @@ void HWCDisplay::MarkLayersForGPUBypass() {
     layer->composition = kCompositionSDE;
   }
   validated_ = true;
+  layers_bypassed_ = true;
 }
 
 void HWCDisplay::MarkLayersForClientComposition() {
@@ -2157,6 +2184,9 @@ void HWCDisplay::UpdateRefreshRate() {
     auto layer = hwc_layer->GetSDMLayer();
     layer->frame_rate = current_refresh_rate_;
   }
+
+  Layer *sdm_client_target = client_target_->GetSDMLayer();
+  sdm_client_target->frame_rate = current_refresh_rate_;
 }
 
 }  // namespace sdm
