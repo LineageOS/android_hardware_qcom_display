@@ -400,14 +400,7 @@ DisplayError HWEventsDRM::RegisterVSync() {
 }
 
 DisplayError HWEventsDRM::RegisterPanelDead(bool enable) {
-  uint32_t i = 0;
-  for (; i < event_data_list_.size(); i++) {
-    if (event_data_list_[i].event_type == HWEvent::PANEL_DEAD) {
-      break;
-    }
-  }
-
-  if (i == event_data_list_.size()) {
+  if (panel_dead_index_ == UINT32_MAX) {
     DLOGI("panel dead is not supported event");
     return kErrorNone;
   }
@@ -433,14 +426,7 @@ DisplayError HWEventsDRM::RegisterPanelDead(bool enable) {
 }
 
 DisplayError HWEventsDRM::RegisterIdleNotify(bool enable) {
-  uint32_t i = 0;
-  for (; i < event_data_list_.size(); i++) {
-    if (event_data_list_[i].event_type == HWEvent::IDLE_NOTIFY) {
-      break;
-    }
-  }
-
-  if (i == event_data_list_.size()) {
+  if (idle_notify_index_ == UINT32_MAX) {
     DLOGI("idle notify is not supported event");
     return kErrorNone;
   }
@@ -466,14 +452,7 @@ DisplayError HWEventsDRM::RegisterIdleNotify(bool enable) {
 }
 
 DisplayError HWEventsDRM::RegisterIdlePowerCollapse(bool enable) {
-  uint32_t i = 0;
-  for (; i < event_data_list_.size(); i++) {
-    if (event_data_list_[i].event_type == HWEvent::IDLE_POWER_COLLAPSE) {
-      break;
-    }
-  }
-
-  if (i == event_data_list_.size()) {
+  if (idle_pc_index_ == UINT32_MAX) {
     DLOGI("idle power collapse is not supported event");
     return kErrorNone;
   }
@@ -499,9 +478,9 @@ DisplayError HWEventsDRM::RegisterIdlePowerCollapse(bool enable) {
 }
 
 DisplayError HWEventsDRM::RegisterHwRecovery(bool enable) {
-  if (hw_recovery_index_ == UINT_MAX) {
-    DLOGE("Hardware recovery is not supported");
-    return kErrorNotSupported;
+  if (hw_recovery_index_ == UINT32_MAX) {
+    DLOGI("Hardware recovery is not supported");
+    return kErrorNone;
   }
 
   struct drm_msm_event_req req = {};

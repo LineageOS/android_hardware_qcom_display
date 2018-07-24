@@ -56,6 +56,7 @@ class StrategyInterface {
   virtual DisplayError SetIdleTimeoutMs(uint32_t active_ms) = 0;
   /* Sets the list of color modes supported on a display */
   virtual DisplayError SetColorModesInfo(const std::vector<PrimariesTransfer> &colormodes_cs) = 0;
+  virtual DisplayError SetBlendSpace(const PrimariesTransfer &blend_space) = 0;
 
   virtual ~StrategyInterface() { }
 };

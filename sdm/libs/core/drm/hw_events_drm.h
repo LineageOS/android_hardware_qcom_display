@@ -96,17 +96,17 @@ class HWEventsDRM : public HWEventsInterface {
   pthread_t event_thread_{};
   std::string event_thread_name_ = "SDM_EventThread";
   bool exit_threads_ = false;
-  uint32_t vsync_index_ = 0;
+  uint32_t vsync_index_ = UINT32_MAX;
   bool vsync_enabled_ = false;
   bool vsync_registered_ = false;
   std::mutex vsync_mutex_;  // To protect vsync_enabled_ and vsync_registered_
-  uint32_t idle_notify_index_ = 0;
+  uint32_t idle_notify_index_ = UINT32_MAX;
   sde_drm::DRMDisplayToken token_ = {};
   bool is_primary_ = false;
-  uint32_t panel_dead_index_ = 0;
-  uint32_t idle_pc_index_ = 0;
+  uint32_t panel_dead_index_ = UINT32_MAX;
+  uint32_t idle_pc_index_ = UINT32_MAX;
   bool disable_hw_recovery_ = false;
-  uint32_t hw_recovery_index_ = UINT_MAX;
+  uint32_t hw_recovery_index_ = UINT32_MAX;
 };
 
 }  // namespace sdm

@@ -25,6 +25,7 @@
 #include <utils/constants.h>
 #include <utils/debug.h>
 #include <map>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -327,21 +328,41 @@ DisplayError DisplayPluggable::VSync(int64_t timestamp) {
 
 DisplayError DisplayPluggable::InitializeColorModes() {
   PrimariesTransfer pt = {};
+  AttrVal var = {};
   color_modes_cs_.push_back(pt);
-
+  var.push_back(std::make_pair(kColorGamutAttribute, kSrgb));
+  var.push_back(std::make_pair(kDynamicRangeAttribute, kSdr));
+  var.push_back(std::make_pair(kPictureQualityAttribute, kStandard));
+  color_mode_attr_map_.insert(std::make_pair(kSrgb, var));
+  pt.primaries = ColorPrimaries_BT2020;
   if (!hw_panel_info_.hdr_enabled) {
+    UpdateColorModes();
     return kErrorNone;
+  } else {
+    pt.transfer = Transfer_Gamma2_2;
+    color_modes_cs_.push_back(pt);
+    var.clear();
+    var.push_back(std::make_pair(kColorGamutAttribute, kBt2020));
+    var.push_back(std::make_pair(kGammaTransferAttribute, kGamma2_2));
+    color_mode_attr_map_.insert(std::make_pair(kBt2020, var));
   }
 
-  pt.primaries = ColorPrimaries_BT2020;
+  var.clear();
+  var.push_back(std::make_pair(kColorGamutAttribute, kBt2020));
   if (hw_panel_info_.hdr_eotf & kHdrEOTFHDR10) {
     pt.transfer = Transfer_SMPTE_ST2084;
+    var.push_back(std::make_pair(kGammaTransferAttribute, kSt2084));
     color_modes_cs_.push_back(pt);
+    color_mode_attr_map_.insert(std::make_pair(kBt2020Pq, var));
   }
   if (hw_panel_info_.hdr_eotf & kHdrEOTFHLG) {
     pt.transfer = Transfer_HLG;
+    var.pop_back();
+    var.push_back(std::make_pair(kGammaTransferAttribute, kHlg));
     color_modes_cs_.push_back(pt);
+    color_mode_attr_map_.insert(std::make_pair(kBt2020Hlg, var));
   }
+  UpdateColorModes();
 
   return kErrorNone;
 }
@@ -355,6 +376,114 @@ DisplayError DisplayPluggable::SetDisplayState(DisplayState state, int *release_
   }
 
   return kErrorNone;
+}
+
+static PrimariesTransfer GetBlendSpaceFromAttributes(const std::string &color_gamut,
+                                                     const std::string &transfer) {
+  PrimariesTransfer blend_space_ = {};
+  if (color_gamut == kBt2020) {
+    blend_space_.primaries = ColorPrimaries_BT2020;
+    if (transfer == kHlg) {
+      blend_space_.transfer = Transfer_HLG;
+    } else if (transfer == kSt2084) {
+      blend_space_.transfer = Transfer_SMPTE_ST2084;
+    } else if (transfer == kGamma2_2) {
+      blend_space_.transfer = Transfer_Gamma2_2;
+    }
+  } else if (color_gamut == kSrgb) {
+    blend_space_.primaries = ColorPrimaries_BT709_5;
+    blend_space_.transfer = Transfer_sRGB;
+  } else {
+    DLOGW("Failed to Get blend space color_gamut = %s transfer = %s", color_gamut.c_str(),
+          transfer.c_str());
+  }
+  DLOGI("Blend Space Primaries = %d Transfer = %d", blend_space_.primaries, blend_space_.transfer);
+
+  return blend_space_;
+}
+
+DisplayError DisplayPluggable::SetColorMode(const std::string &color_mode) {
+  auto current_color_attr_ = color_mode_attr_map_.find(color_mode);
+  if (current_color_attr_ == color_mode_attr_map_.end()) {
+    DLOGE("Failed to get attribues for color mode = %s", color_mode.c_str());
+    return kErrorNone;
+  }
+  AttrVal attr = current_color_attr_->second;
+  std::string color_gamut = kNative, transfer = {};
+
+  for (auto &it : attr) {
+    if (it.first.find(kColorGamutAttribute) != std::string::npos) {
+      color_gamut = it.second;
+    } else if (it.first.find(kGammaTransferAttribute) != std::string::npos) {
+      transfer = it.second;
+    }
+  }
+
+  DisplayError error = kErrorNone;
+  error = comp_manager_->SetBlendSpace(display_comp_ctx_,
+                                       GetBlendSpaceFromAttributes(color_gamut, transfer));
+  if (error != kErrorNone) {
+    DLOGE("Failed Set blend space, error = %d display_type_=%d", error, display_type_);
+  }
+
+  return kErrorNone;
+}
+
+DisplayError DisplayPluggable::GetColorModeCount(uint32_t *mode_count) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (!mode_count) {
+    return kErrorParameters;
+  }
+
+  DLOGI("Display = %d Number of modes = %d", display_type_, num_color_modes_);
+  *mode_count = num_color_modes_;
+
+  return kErrorNone;
+}
+
+DisplayError DisplayPluggable::GetColorModes(uint32_t *mode_count,
+                                             std::vector<std::string> *color_modes) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (!mode_count || !color_modes) {
+    return kErrorParameters;
+  }
+
+  for (uint32_t i = 0; i < num_color_modes_; i++) {
+    DLOGI_IF(kTagDisplay, "ColorMode[%d] = %s", i, color_modes_[i].name);
+    color_modes->at(i) = color_modes_[i].name;
+  }
+
+  return kErrorNone;
+}
+
+DisplayError DisplayPluggable::GetColorModeAttr(const std::string &color_mode, AttrVal *attr) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (!attr) {
+    return kErrorParameters;
+  }
+
+  auto it = color_mode_attr_map_.find(color_mode);
+  if (it == color_mode_attr_map_.end()) {
+    DLOGI("Mode %s has no attribute", color_mode.c_str());
+    return kErrorNotSupported;
+  }
+  *attr = it->second;
+
+  return kErrorNone;
+}
+
+void DisplayPluggable::UpdateColorModes() {
+  uint32_t i = 0;
+  num_color_modes_ = UINT32(color_mode_attr_map_.size());
+  color_modes_.resize(num_color_modes_);
+  for (ColorModeAttrMap::iterator it = color_mode_attr_map_.begin();
+       ((i < num_color_modes_) && (it != color_mode_attr_map_.end())); i++, it++) {
+    color_modes_[i].id = INT32(i);
+    strncpy(color_modes_[i].name, it->first.c_str(), sizeof(color_modes_[i].name));
+    color_mode_map_.insert(std::make_pair(color_modes_[i].name, &color_modes_[i]));
+    DLOGI("Attr map name = %s", it->first.c_str());
+  }
+  return;
 }
 
 }  // namespace sdm

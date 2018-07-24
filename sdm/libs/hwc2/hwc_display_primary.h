@@ -55,8 +55,11 @@ class HWCDisplayPrimary : public HWCDisplay {
   virtual int Init();
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests);
   virtual HWC2::Error Present(int32_t *out_retire_fence);
-  virtual HWC2::Error GetColorModes(uint32_t *out_num_modes, android_color_mode_t *out_modes);
-  virtual HWC2::Error SetColorMode(android_color_mode_t mode);
+  virtual HWC2::Error GetColorModes(uint32_t *out_num_modes, ColorMode *out_modes);
+  virtual HWC2::Error SetColorMode(ColorMode mode);
+  virtual HWC2::Error GetRenderIntents(ColorMode mode, uint32_t *out_num_intents,
+                                       RenderIntent *out_intents);
+  virtual HWC2::Error SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
   virtual HWC2::Error SetColorModeById(int32_t color_mode_id);
   virtual HWC2::Error SetColorTransform(const float *matrix, android_color_transform_t hint);
   virtual HWC2::Error RestoreColorTransform();

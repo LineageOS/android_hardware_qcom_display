@@ -149,7 +149,8 @@ DisplayError DisplayVirtual::SetActiveConfig(DisplayConfigVariableInfo *variable
 
   error =
       comp_manager_->RegisterDisplay(display_id_, display_type_, display_attributes, hw_panel_info,
-                                     mixer_attributes, fb_config, &display_comp_ctx_);
+                                     mixer_attributes, fb_config, &display_comp_ctx_,
+                                     &(default_qos_data_.clock_hz));
   if (error != kErrorNone) {
     return error;
   }

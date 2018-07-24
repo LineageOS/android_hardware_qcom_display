@@ -258,4 +258,11 @@ DisplayError Strategy::SetColorModesInfo(const std::vector<PrimariesTransfer> &c
   return kErrorNotSupported;
 }
 
+DisplayError Strategy::SetBlendSpace(const PrimariesTransfer &blend_space) {
+  if (strategy_intf_) {
+    return strategy_intf_->SetBlendSpace(blend_space);
+  }
+  return kErrorNotSupported;
+}
+
 }  // namespace sdm

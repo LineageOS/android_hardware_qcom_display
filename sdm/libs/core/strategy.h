@@ -55,6 +55,7 @@ class Strategy {
   DisplayError Purge();
   DisplayError SetIdleTimeoutMs(uint32_t active_ms);
   DisplayError SetColorModesInfo(const std::vector<PrimariesTransfer> &colormodes_cs);
+  DisplayError SetBlendSpace(const PrimariesTransfer &blend_space);
 
  private:
   void GenerateROI();
