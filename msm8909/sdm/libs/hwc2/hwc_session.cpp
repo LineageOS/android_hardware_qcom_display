@@ -212,16 +212,6 @@ int HWCSession::Init() {
     return status;
   }
 
-  struct rlimit fd_limit = {};
-  getrlimit(RLIMIT_NOFILE, &fd_limit);
-  fd_limit.rlim_cur = fd_limit.rlim_cur * 2;
-  if (fd_limit.rlim_cur < fd_limit.rlim_max) {
-    auto err = setrlimit(RLIMIT_NOFILE, &fd_limit);
-    if (err) {
-      DLOGW("Unable to increase fd limit -  err:%d, %s", errno, strerror(errno));
-    }
-  }
-
   return 0;
 }
 
@@ -568,6 +558,7 @@ int32_t HWCSession::RegisterCallback(hwc2_device_t *device, int32_t descriptor,
   SCOPE_LOCK(hwc_session->callbacks_lock_);
   auto desc = static_cast<HWC2::Callback>(descriptor);
   auto error = hwc_session->callbacks_.Register(desc, callback_data, pointer);
+  hwc_session->callbacks_lock_.Broadcast();
   DLOGD("Registering callback: %s", to_string(desc).c_str());
   if (descriptor == HWC2_CALLBACK_HOTPLUG) {
     if (hwc_session->hwc_display_[HWC_DISPLAY_PRIMARY]) {
@@ -575,7 +566,6 @@ int32_t HWCSession::RegisterCallback(hwc2_device_t *device, int32_t descriptor,
     }
   }
   hwc_session->need_invalidate_ = false;
-  hwc_session->callbacks_lock_.Broadcast();
   return INT32(error);
 }
 
@@ -1321,8 +1311,11 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
                                                                      &pending_action);
   }
 
-  if (ret) {
+  if (ret || pending_action.action == kNoAction) {
     output_parcel->writeInt32(ret);  // first field in out parcel indicates return code.
+    if (pending_action.action == kNoAction) {
+      HWCColorManager::MarshallStructIntoParcel(resp_payload, output_parcel);
+    }
     req_payload.DestroyPayload();
     resp_payload.DestroyPayload();
     return ret;
