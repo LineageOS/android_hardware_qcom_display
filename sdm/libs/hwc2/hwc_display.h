@@ -53,8 +53,8 @@ class HWCToneMapper;
 // Subclasses set this to their type. This has to be different from DisplayType.
 // This is to avoid RTTI and dynamic_cast
 enum DisplayClass {
-  DISPLAY_CLASS_PRIMARY,
-  DISPLAY_CLASS_EXTERNAL,
+  DISPLAY_CLASS_BUILTIN,
+  DISPLAY_CLASS_PLUGGABLE,
   DISPLAY_CLASS_VIRTUAL,
   DISPLAY_CLASS_NULL
 };
@@ -272,10 +272,9 @@ class HWCDisplay : public DisplayEventHandler {
   // Maximum number of layers supported by display manager.
   static const uint32_t kMaxLayerCount = 32;
 
-  HWCDisplay(CoreInterface *core_intf, HWCCallbacks *callbacks,
-             HWCDisplayEventHandler *event_handler, DisplayType type, hwc2_display_t id,
-             bool needs_blit, qService::QService *qservice, DisplayClass display_class,
-             BufferAllocator *buffer_allocator);
+  HWCDisplay(CoreInterface *core_intf, BufferAllocator *buffer_allocator, HWCCallbacks *callbacks,
+             HWCDisplayEventHandler *event_handler, qService::QService *qservice, DisplayType type,
+             hwc2_display_t id, int32_t sdm_id, bool needs_blit, DisplayClass display_class);
 
   // DisplayEventHandler methods
   virtual DisplayError VSync(const DisplayEventVSync &vsync);
@@ -307,11 +306,12 @@ class HWCDisplay : public DisplayEventHandler {
   bool validated_ = false;
   bool layer_stack_invalid_ = true;
   CoreInterface *core_intf_ = nullptr;
+  HWCBufferAllocator *buffer_allocator_ = NULL;
   HWCCallbacks *callbacks_  = nullptr;
   HWCDisplayEventHandler *event_handler_ = nullptr;
-  HWCBufferAllocator *buffer_allocator_ = NULL;
-  DisplayType type_;
-  hwc2_display_t id_;
+  DisplayType type_ = kDisplayTypeMax;
+  hwc2_display_t id_ = UINT64_MAX;
+  int32_t sdm_id_ = -1;
   bool needs_blit_ = false;
   DisplayInterface *display_intf_ = NULL;
   LayerStack layer_stack_;
