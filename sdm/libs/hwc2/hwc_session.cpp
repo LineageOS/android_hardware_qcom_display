@@ -875,16 +875,28 @@ int32_t HWCSession::SetPowerMode(hwc2_device_t *device, hwc2_display_t display, 
     return HWC2_ERROR_UNSUPPORTED;
   }
 
-  return CallDisplayFunction(device, display, &HWCDisplay::SetPowerMode, mode);
+  auto error = CallDisplayFunction(device, display, &HWCDisplay::SetPowerMode, mode);
+  if (error != HWC2_ERROR_NONE) {
+    return error;
+  }
+
+  hwc_session->UpdateVsyncSource(display);
+
+  return HWC2_ERROR_NONE;
 }
 
-static int32_t SetVsyncEnabled(hwc2_device_t *device, hwc2_display_t display, int32_t int_enabled) {
+int32_t HWCSession::SetVsyncEnabled(hwc2_device_t *device, hwc2_display_t display,
+                                    int32_t int_enabled) {
   //  avoid undefined behavior in cast to HWC2::Vsync
   if (int_enabled < HWC2_VSYNC_INVALID || int_enabled > HWC2_VSYNC_DISABLE) {
     return HWC2_ERROR_BAD_PARAMETER;
   }
 
   auto enabled = static_cast<HWC2::Vsync>(int_enabled);
+
+  HWCSession *hwc_session = static_cast<HWCSession *>(device);
+  display = hwc_session->callbacks_.GetVsyncSource();
+
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::SetVsyncEnabled, enabled);
 }
 
@@ -2470,6 +2482,48 @@ android::status_t HWCSession::SetQSyncMode(const android::Parcel *input_parcel) 
       return -EINVAL;
   }
   return CallDisplayFunction(device, HWC_DISPLAY_PRIMARY, &HWCDisplay::SetQSyncMode, qsync_mode);
+}
+
+void HWCSession::UpdateVsyncSource(hwc2_display_t display) {
+  // Nothing to do if this display is not source for vysnc currently and it is non-primary.
+  hwc2_display_t active_source = callbacks_.GetVsyncSource();
+  if (display != active_source && display != HWC_DISPLAY_PRIMARY) {
+    DLOGI("Display = %d is not source for vsync and non-primary", display);
+    return;
+  }
+
+  HWC2::Vsync vsync_mode = hwc_display_[active_source]->GetLastVsyncMode();
+  HWC2::PowerMode power_mode = hwc_display_[display]->GetLastPowerMode();
+
+  // If primary display is powered off, change vsync source to next builtin display.
+  // If primary display is powerd on, change vsync source back to primary display.
+  if (power_mode == HWC2::PowerMode::Off) {
+    hwc2_display_t next_vsync_source = HWC_DISPLAY_PRIMARY;
+    for (auto &info : map_info_builtin_) {
+      auto &hwc_display = hwc_display_[info.client_id];
+      if (!hwc_display) {
+        continue;
+      }
+
+      if (hwc_display->GetLastPowerMode() != HWC2::PowerMode::Off) {
+        next_vsync_source = info.client_id;
+        DLOGI("Swap vsync source to display = %d", next_vsync_source);
+        break;
+      }
+    }
+
+    // No other active builtin display is present.
+    if (next_vsync_source == HWC_DISPLAY_PRIMARY) {
+      DLOGI("No other active builtin display, nothing to do.");
+      return;
+    }
+
+    callbacks_.SetSwapVsync(next_vsync_source, HWC_DISPLAY_PRIMARY);
+    hwc_display_[next_vsync_source]->SetVsyncEnabled(vsync_mode);
+  } else if (display == HWC_DISPLAY_PRIMARY) {
+    callbacks_.SetSwapVsync(HWC_DISPLAY_PRIMARY, HWC_DISPLAY_PRIMARY);
+    hwc_display_[HWC_DISPLAY_PRIMARY]->SetVsyncEnabled(vsync_mode);
+  }
 }
 
 }  // namespace sdm
