@@ -55,6 +55,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
                     HWCDisplay **hwc_display);
   static void Destroy(HWCDisplay *hwc_display);
   virtual int Init();
+  virtual int Deinit();
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests);
   virtual HWC2::Error Present(int32_t *out_retire_fence);
   virtual HWC2::Error CommitLayerStack();
@@ -95,6 +96,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
     fast_path_composition_ = enable && !readback_buffer_queued_;
   }
   virtual HWC2::Error UpdatePowerMode(HWC2::PowerMode mode);
+  virtual HWC2::Error PostCommitLayerStack(int32_t *out_retire_fence);
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
@@ -113,6 +115,18 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   bool CanSkipCommit();
   DisplayError SetMixerResolution(uint32_t width, uint32_t height);
   DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
+  class PMICInterface {
+   public:
+    PMICInterface() { }
+    ~PMICInterface() { }
+    DisplayError Init();
+    void Deinit();
+    DisplayError Notify(SecureEvent event);
+
+   private:
+    int fd_lcd_bias_ = -1;
+    int fd_wled_ = -1;
+  };
 
   BufferAllocator *buffer_allocator_ = nullptr;
   CPUHint *cpu_hint_ = nullptr;
@@ -135,6 +149,9 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   // Members for 1 frame capture in a client provided buffer
   bool frame_capture_buffer_queued_ = false;
   int frame_capture_status_ = -EAGAIN;
+  // PMIC interface to notify secure display start/end
+  PMICInterface *pmic_intf_ = nullptr;
+  bool pmic_notification_pending_ = false;
 };
 
 }  // namespace sdm
