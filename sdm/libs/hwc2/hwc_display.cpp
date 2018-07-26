@@ -376,6 +376,8 @@ int HWCDisplay::Init() {
 
   client_target_ = new HWCLayer(id_, buffer_allocator_);
 
+  fbt_valid_ = false;
+
   int blit_enabled = 0;
   HWCDebugHandler::Get()->GetProperty(DISABLE_BLIT_COMPOSITION_PROP, &blit_enabled);
   if (needs_blit_ && blit_enabled) {
@@ -610,6 +612,7 @@ void HWCDisplay::BuildLayerStack() {
   }
 #endif
 
+  layer_stack_.flags.fbt_valid = fbt_valid_;
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
   layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0);
   // Append client target to the layer stack
@@ -915,7 +918,7 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, int32_t acquire_
     // Data space would be validated at GetClientTargetSupport, so just use here.
     sdm::GetSDMColorSpace(dataspace, &sdm_layer->input_buffer.color_metadata);
   }
-
+  fbt_valid_ = true;
   return HWC2::Error::None;
 }
 
@@ -1681,6 +1684,7 @@ int HWCDisplay::SetDisplayStatus(DisplayStatus display_status) {
   switch (display_status) {
     case kDisplayStatusResume:
       display_paused_ = false;
+      fbt_valid_ = false;
     case kDisplayStatusOnline:
       status = INT32(SetPowerMode(HWC2::PowerMode::On));
       break;
