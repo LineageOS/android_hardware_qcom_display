@@ -58,7 +58,7 @@ class HWPeripheralDRM : public HWDeviceDRM {
   virtual DisplayError PowerOn(const HWQosData &qos_data, int *release_fence);
 
  private:
-  void SetDestScalarData(HWLayersInfo hw_layer_info);
+  void SetDestScalarData(HWLayersInfo hw_layer_info, bool validate);
   void ResetDisplayParams();
   DisplayError SetupConcurrentWritebackModes();
   void SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info, bool validate);
@@ -69,10 +69,16 @@ class HWPeripheralDRM : public HWDeviceDRM {
                               idle_pc_state_);
   }
 
+  struct DestScalarCache {
+    SDEScaler scalar_data = {};
+    uint32_t flags = {};
+  };
+
   sde_drm_dest_scaler_data sde_dest_scalar_data_ = {};
   std::vector<SDEScaler> scalar_data_ = {};
   CWBConfig cwb_config_ = {};
   sde_drm::DRMIdlePCState idle_pc_state_ = sde_drm::DRMIdlePCState::NONE;
+  std::vector<DestScalarCache> dest_scalar_cache_ = {};
 };
 
 }  // namespace sdm
