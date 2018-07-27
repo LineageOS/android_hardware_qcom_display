@@ -463,7 +463,10 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
         error = kErrorParameters;
         break;
       }
-      error = hw_intf_->SetDppsFeature(payload, size);
+      {
+        lock_guard<recursive_mutex> obj(recursive_mutex_);
+        error = hw_intf_->SetDppsFeature(payload, size);
+      }
       break;
     case kDppsGetFeatureInfo:
       if (!payload) {
@@ -491,7 +494,10 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
         error = kErrorParameters;
         break;
       }
-      commit_event_enabled_ = *(reinterpret_cast<bool *>(payload));
+      {
+        lock_guard<recursive_mutex> obj(recursive_mutex_);
+        commit_event_enabled_ = *(reinterpret_cast<bool *>(payload));
+      }
       break;
     default:
       DLOGE("Invalid input op %d", op);
