@@ -49,11 +49,12 @@ inline int roundUpToPageSize(int x) {
  * cannot be used with noncontiguous heaps */
 #define GRALLOC_USAGE_PRIVATE_UNCACHED (UINT32_C(1) << 29)
 
-/* This flag is used to indicate P010 format */
-#define GRALLOC_USAGE_PRIVATE_10BIT 0
-
-/* This flag indicates PI format is being used */
-#define GRALLOC_USAGE_PRIVATE_ALLOC_UBWC_PI (UINT32_C(1) << 30)
+/* This flag is used to indicate 10 bit format.
+ * When both GRALLOC_USAGE_PRIVATE_ALLOC_UBWC & GRALLOC_USAGE_PRIVATE_10BIT
+ * are set then it will indicate UBWC_TP10 format.
+ * When only GRALLOC_USAGE_PRIVATE_10BIT is set it will indicate linear P010 format.
+ */
+#define GRALLOC_USAGE_PRIVATE_10BIT (UINT32_C(1) << 30)
 
 /* This flag is used for SECURE display usecase */
 #define GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY (UINT32_C(1) << 31)
@@ -70,8 +71,11 @@ inline int roundUpToPageSize(int x) {
 /* This flag is set for WFD usecase */
 #define GRALLOC_USAGE_PRIVATE_WFD (UINT32_C(1) << 21)
 
-/* This flag is used to indicate 10-bit tight pack format (e.g. TP10) */
+/* TODO(user): Remove when clients stop referencing this flag */
 #define GRALLOC_USAGE_PRIVATE_10BIT_TP 0
+
+/* This flag indicates PI format is being used */
+#define GRALLOC_USAGE_PRIVATE_ALLOC_UBWC_PI 1ULL << 49
 
 /* Legacy gralloc1 definitions */
 /* Some clients may still be using the old flags */
