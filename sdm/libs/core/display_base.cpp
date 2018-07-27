@@ -1755,15 +1755,17 @@ PrimariesTransfer DisplayBase::GetBlendSpaceFromColorMode() {
   std::string color_gamut = kNative, dynamic_range = kSdr, pic_quality = kStandard;
   std::string transfer = {};
 
-  for (auto &it : attr) {
-    if (it.first.find(kColorGamutAttribute) != std::string::npos) {
-      color_gamut = it.second;
-    } else if (it.first.find(kDynamicRangeAttribute) != std::string::npos) {
-      dynamic_range = it.second;
-    } else if (it.first.find(kPictureQualityAttribute) != std::string::npos) {
-      pic_quality = it.second;
-    } else if (it.first.find(kGammaTransferAttribute) != std::string::npos) {
-      transfer = it.second;
+  if (attr.begin() != attr.end()) {
+    for (auto &it : attr) {
+      if (it.first.find(kColorGamutAttribute) != std::string::npos) {
+        color_gamut = it.second;
+      } else if (it.first.find(kDynamicRangeAttribute) != std::string::npos) {
+        dynamic_range = it.second;
+      } else if (it.first.find(kPictureQualityAttribute) != std::string::npos) {
+        pic_quality = it.second;
+      } else if (it.first.find(kGammaTransferAttribute) != std::string::npos) {
+        transfer = it.second;
+      }
     }
   }
   // TODO(user): Check is if someone calls with hal_display_p3
