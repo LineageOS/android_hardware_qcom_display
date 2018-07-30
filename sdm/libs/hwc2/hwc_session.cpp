@@ -554,9 +554,9 @@ int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display
 
   // Handle pending builtin/pluggable display connections
   if (!hwc_session->primary_ready_ && (display == HWC_DISPLAY_PRIMARY)) {
+    hwc_session->primary_ready_ = true;
     hwc_session->CreateBuiltInDisplays();
     hwc_session->CreatePluggableDisplays(false);
-    hwc_session->primary_ready_ = true;
   }
 
   return INT32(status);
