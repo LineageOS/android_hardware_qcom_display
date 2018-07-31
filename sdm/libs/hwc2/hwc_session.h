@@ -206,6 +206,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
 
   static int32_t SetVsyncEnabled(hwc2_device_t *device, hwc2_display_t display,
                                  int32_t int_enabled);
+  static int32_t GetDozeSupport(hwc2_device_t *device, hwc2_display_t display,
+                                int32_t *out_support);
 
   static Locker locker_[kNumDisplays];
 
@@ -332,6 +334,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   void HandlePowerOnPending(hwc2_display_t display, int retire_fence);
   void HandleHotplugPending(hwc2_display_t disp_id, int retire_fence);
   void UpdateVsyncSource(hwc2_display_t display);
+  hwc2_display_t GetNextBuiltinIndex();
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[kNumDisplays] = {nullptr};
