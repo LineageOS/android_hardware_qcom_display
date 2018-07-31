@@ -250,7 +250,8 @@ void CompManager::PrepareStrategyConstraints(Handle comp_handle, HWLayers *hw_la
   if (!display_comp_ctx->is_primary_panel) {
     bool low_end_hw = ((hw_res_info_.num_vig_pipe + hw_res_info_.num_rgb_pipe +
                         hw_res_info_.num_dma_pipe) <= kSafeModeThreshold);
-    constraints->max_layers = max_sde_ext_layers_;
+    constraints->max_layers = display_comp_ctx->display_type == kBuiltIn ?
+                              max_sde_builtin_layers_ : max_sde_ext_layers_;
     constraints->safe_mode = (low_end_hw && !hw_res_info_.separate_rotator) ? true : safe_mode_;
   }
 
@@ -380,8 +381,8 @@ DisplayError CompManager::PostCommit(Handle display_ctx, HWLayers *hw_layers) {
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
   configured_displays_.insert(display_comp_ctx->display_id);
 
-  // Check if all registered displays are in the configured display list.
-  if ((registered_displays_.size() == configured_displays_.size())) {
+  // Check if all poweredon displays are in the configured display list.
+  if ((powered_on_displays_.size() == configured_displays_.size())) {
     safe_mode_ = false;
   }
 
@@ -544,29 +545,36 @@ bool CompManager::SetDisplayState(Handle display_ctx, DisplayState state) {
   DisplayCompositionContext *display_comp_ctx =
       reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
-  powered_on_displays_.erase(display_comp_ctx->display_id);
-
   switch (state) {
   case kStateOff:
     Purge(display_ctx);
     configured_displays_.erase(display_comp_ctx->display_id);
     DLOGV_IF(kTagCompManager, "Configured displays = [%s]",
              StringDisplayList(configured_displays_));
+    powered_on_displays_.erase(display_comp_ctx->display_id);
     break;
 
   case kStateOn:
+  case kStateDoze:
     // Get active display count.
     if (powered_on_displays_.size()) {
       safe_mode_ = true;
       DLOGV_IF(kTagCompManager, "safe_mode = %d", safe_mode_);
-      break;
     }
     powered_on_displays_.insert(display_comp_ctx->display_id);
+    break;
+
+  case kStateDozeSuspend:
+    configured_displays_.erase(display_comp_ctx->display_id);
+    powered_on_displays_.erase(display_comp_ctx->display_id);
     break;
 
   default:
     break;
   }
+
+  bool inactive = (state == kStateOff) || (state == kStateDozeSuspend);
+  UpdateStrategyConstraints(display_comp_ctx->is_primary_panel, inactive);
 
   return true;
 }
@@ -613,6 +621,16 @@ void CompManager::HandleSecureEvent(Handle display_ctx, SecureEvent secure_event
     resource_intf_->Perform(ResourceInterface::kCmdDisableRotatorOneFrame,
                             display_comp_ctx->display_resource_ctx);
   }
+}
+
+void CompManager::UpdateStrategyConstraints(bool is_primary, bool disabled) {
+  if (!is_primary) {
+    return;
+  }
+
+  // Allow builtin display to use all pipes when primary is suspended.
+  // Restore it back to 2 after primary poweron.
+  max_sde_builtin_layers_ = (disabled && (powered_on_displays_.size() <= 1)) ? kMaxSDELayers : 2;
 }
 
 }  // namespace sdm

@@ -88,6 +88,7 @@ class CompManager {
   static const int kSafeModeThreshold = 4;
 
   void PrepareStrategyConstraints(Handle display_ctx, HWLayers *hw_layers);
+  void UpdateStrategyConstraints(bool is_primary, bool disabled);
   const char *StringDisplayList(const std::set<int32_t> &displays);
 
   struct DisplayCompositionContext {
@@ -120,6 +121,7 @@ class CompManager {
   ExtensionInterface *extension_intf_ = NULL;
   uint32_t max_layers_ = kMaxSDELayers;
   uint32_t max_sde_ext_layers_ = 0;
+  uint32_t max_sde_builtin_layers_ = 2;
   DppsControlInterface *dpps_ctrl_intf_ = NULL;
 };
 
