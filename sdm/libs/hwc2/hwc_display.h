@@ -204,6 +204,9 @@ class HWCDisplay : public DisplayEventHandler {
   bool IsSkipValidateState() { return (validate_state_ == kSkipValidate); }
   bool IsInternalValidateState() { return (validated_ && (validate_state_ == kInternalValidate)); }
   void SetValidationState(DisplayValidateState state) { validate_state_ = state; }
+  ColorMode GetCurrentColorMode() {
+    return (color_mode_ ? color_mode_->GetCurrentColorMode() : ColorMode::SRGB);
+  }
 
   // HWC2 APIs
   virtual HWC2::Error AcceptDisplayChanges(void);

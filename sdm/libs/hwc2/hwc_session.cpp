@@ -73,6 +73,25 @@ static HWCUEvent g_hwc_uevent_;
 Locker HWCSession::locker_[kNumDisplays];
 static const int kSolidFillDelay = 100 * 1000;
 
+// Map the known color modes to dataspace.
+static int32_t GetDataspace(ColorMode mode) {
+  switch (mode) {
+    case ColorMode::SRGB:
+    case ColorMode::NATIVE:
+      return HAL_DATASPACE_V0_SRGB;
+    case ColorMode::DCI_P3:
+      return HAL_DATASPACE_DCI_P3;
+    case ColorMode::DISPLAY_P3:
+      return HAL_DATASPACE_DISPLAY_P3;
+    case ColorMode::BT2100_PQ:
+      return HAL_DATASPACE_BT2020_PQ;
+    case ColorMode::BT2100_HLG:
+      return HAL_DATASPACE_BT2020_HLG;
+    default:
+      return HAL_DATASPACE_UNKNOWN;
+  }
+}
+
 void HWCUEvent::UEventThread(HWCUEvent *hwc_uevent) {
   const char *uevent_thread_name = "HWC_UeventThread";
 
@@ -2437,10 +2456,16 @@ int32_t HWCSession::GetReadbackBufferAttributes(hwc2_device_t *device, hwc2_disp
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
-  *format = HAL_PIXEL_FORMAT_RGB_888;
-  *dataspace = HAL_DATASPACE_V0_SRGB;  // ((STANDARD_BT709 | TRANSFER_SRGB) | RANGE_FULL)
+  HWCSession *hwc_session = static_cast<HWCSession *>(device);
+  HWCDisplay *hwc_display = hwc_session->hwc_display_[display];
 
-  return HWC2_ERROR_NONE;
+  if (hwc_display) {
+    *format = HAL_PIXEL_FORMAT_RGB_888;
+    *dataspace = GetDataspace(hwc_display->GetCurrentColorMode());
+    return HWC2_ERROR_NONE;
+  }
+
+  return HWC2_ERROR_BAD_DISPLAY;
 }
 
 int32_t HWCSession::SetReadbackBuffer(hwc2_device_t *device, hwc2_display_t display,
