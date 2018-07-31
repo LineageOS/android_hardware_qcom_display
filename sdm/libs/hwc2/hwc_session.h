@@ -173,6 +173,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
                                    const float *matrix, int32_t /*android_color_transform_t*/ hint);
   static int32_t SetVsyncEnabled(hwc2_device_t *device, hwc2_display_t display,
                                  int32_t int_enabled);
+  static int32_t GetDozeSupport(hwc2_device_t *device, hwc2_display_t display,
+                                int32_t *out_support);
 
   static Locker locker_[kNumDisplays];
 
