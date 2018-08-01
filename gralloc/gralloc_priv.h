@@ -49,11 +49,19 @@ inline int roundUpToPageSize(int x) {
  * cannot be used with noncontiguous heaps */
 #define GRALLOC_USAGE_PRIVATE_UNCACHED (UINT32_C(1) << 29)
 
-/* This flag is used to indicate P010 format */
+/* This flag is used to indicate 10 bit format.
+ * When both GRALLOC_USAGE_PRIVATE_ALLOC_UBWC & GRALLOC_USAGE_PRIVATE_10BIT
+ * are set then it will indicate UBWC_TP10 format.
+ * When only GRALLOC_USAGE_PRIVATE_10BIT is set it will indicate linear P010 format.
+ */
 #define GRALLOC_USAGE_PRIVATE_10BIT (UINT32_C(1) << 30)
 
 /* This flag is used for SECURE display usecase */
 #define GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY (UINT32_C(1) << 31)
+
+/* This flag is used to indicate video NV21 format */
+#define GRALLOC_USAGE_PRIVATE_VIDEO_NV21_ENCODER 1ULL << 48
+
 /* unused legacy flags */
 #define GRALLOC_USAGE_PRIVATE_MM_HEAP 0
 #define GRALLOC_USAGE_PRIVATE_IOMMU_HEAP 0
@@ -63,8 +71,11 @@ inline int roundUpToPageSize(int x) {
 /* This flag is set for WFD usecase */
 #define GRALLOC_USAGE_PRIVATE_WFD (UINT32_C(1) << 21)
 
-/* This flag is used to indicate 10-bit tight pack format (e.g. TP10) */
-#define GRALLOC_USAGE_PRIVATE_10BIT_TP (UINT32_C(1) << 27)
+/* TODO(user): Remove when clients stop referencing this flag */
+#define GRALLOC_USAGE_PRIVATE_10BIT_TP 0
+
+/* This flag indicates PI format is being used */
+#define GRALLOC_USAGE_PRIVATE_ALLOC_UBWC_PI 1ULL << 49
 
 /* Legacy gralloc1 definitions */
 /* Some clients may still be using the old flags */
@@ -76,6 +87,7 @@ inline int roundUpToPageSize(int x) {
 #define GRALLOC1_PRODUCER_USAGE_PRIVATE_10BIT GRALLOC_USAGE_PRIVATE_10BIT
 #define GRALLOC1_PRODUCER_USAGE_PRIVATE_10BIT_TP GRALLOC_USAGE_PRIVATE_10BIT_TP
 #define GRALLOC1_CONSUMER_USAGE_PRIVATE_10BIT_TP GRALLOC_USAGE_PRIVATE_10BIT_TP
+#define GRALLOC1_PRODUCER_USAGE_PRIVATE_VIDEO_NV21_ENCODER GRALLOC_USAGE_PRIVATE_VIDEO_NV21_ENCODER
 
 // for PERFORM API :
 #define GRALLOC_MODULE_PERFORM_CREATE_HANDLE_FROM_BUFFER 1
@@ -93,11 +105,13 @@ inline int roundUpToPageSize(int x) {
 #define GRALLOC_MODULE_PERFORM_SET_SINGLE_BUFFER_MODE 13
 #define GRALLOC1_MODULE_PERFORM_GET_BUFFER_SIZE_AND_DIMENSIONS 14
 #define GRALLOC1_MODULE_PERFORM_GET_INTERLACE_FLAG 15
+#define GRALLOC_MODULE_PERFORM_GET_GRAPHICS_METADATA 16
 
 // OEM specific HAL formats
 #define HAL_PIXEL_FORMAT_RGBA_5551 6
 #define HAL_PIXEL_FORMAT_RGBA_4444 7
 #define HAL_PIXEL_FORMAT_NV12_ENCODEABLE 0x102
+#define HAL_PIXEL_FORMAT_NV21_ENCODEABLE 0x7FA30C00
 #define HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS 0x7FA30C04
 #define HAL_PIXEL_FORMAT_YCbCr_420_SP_TILED 0x7FA30C03
 #define HAL_PIXEL_FORMAT_YCbCr_420_SP 0x109
