@@ -332,12 +332,16 @@ class DisplayInterface {
     respective fences currently in use. This operation may result in a blank display on the panel
     until a new frame is submitted for composition.
 
+    For virtual displays this would result in output buffer getting cleared with border color.
+
+    @param[in] layer_stack \link LayerStack \endlink
+
     @return \link DisplayError \endlink
 
     @sa Prepare
     @sa Commit
   */
-  virtual DisplayError Flush() = 0;
+  virtual DisplayError Flush(LayerStack *layer_stack) = 0;
 
   /*! @brief Method to get current state of the display device.
 
