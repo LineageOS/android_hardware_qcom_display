@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,11 +31,11 @@
 
 using android::hardware::configureRpcThreadpool;
 using android::hardware::joinRpcThreadpool;
+using vendor::qti::hardware::display::allocator::V1_0::IQtiAllocator;
 using vendor::qti::hardware::display::allocator::V1_0::implementation::QtiAllocator;
-using android::hardware::graphics::allocator::V2_0::IAllocator;
 
 int main(int, char **) {
-  android::sp<IAllocator> service = new QtiAllocator();
+  android::sp<IQtiAllocator> service = new QtiAllocator();
   configureRpcThreadpool(4, true /*callerWillJoin*/);
   if (service->registerAsService() != android::OK) {
     ALOGE("Cannot register QTI Allocator service");
