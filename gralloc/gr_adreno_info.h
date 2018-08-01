@@ -193,6 +193,7 @@ class AdrenoMemInfo {
   int (*LINK_adreno_isPISupportedByGpu)(int format, uint64_t usage) = NULL;
 
   bool gfx_ubwc_disable_ = false;
+  bool gfx_ahardware_buffer_disable_ = false;
   void *libadreno_utils_ = NULL;
 
   static AdrenoMemInfo *s_instance;
