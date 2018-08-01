@@ -344,7 +344,7 @@ DisplayError HWPrimary::PowerOff() {
   return kErrorNone;
 }
 
-DisplayError HWPrimary::Doze(int *release_fence) {
+DisplayError HWPrimary::Doze(const HWQosData &qos_data, int *release_fence) {
   if (Sys::ioctl_(device_fd_, FBIOBLANK, FB_BLANK_NORMAL) < 0) {
     IOCTL_LOGE(FB_BLANK_NORMAL, device_type_);
     return kErrorHardware;
@@ -353,7 +353,7 @@ DisplayError HWPrimary::Doze(int *release_fence) {
   return kErrorNone;
 }
 
-DisplayError HWPrimary::DozeSuspend(int *release_fence) {
+DisplayError HWPrimary::DozeSuspend(const HWQosData &qos_data, int *release_fence) {
   if (Sys::ioctl_(device_fd_, FBIOBLANK, FB_BLANK_VSYNC_SUSPEND) < 0) {
     IOCTL_LOGE(FB_BLANK_VSYNC_SUSPEND, device_type_);
     return kErrorHardware;
