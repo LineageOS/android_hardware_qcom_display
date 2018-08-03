@@ -3,17 +3,24 @@ HEADER_PATH := ${WORKSPACE}/display/display-hal/sdm/include
 c_sources = core_interface.cpp \
             core_impl.cpp \
             display_base.cpp \
-            display_primary.cpp \
-            display_hdmi.cpp \
+            display_builtin.cpp \
+            display_pluggable.cpp \
             display_virtual.cpp \
             comp_manager.cpp \
             strategy.cpp \
             resource_default.cpp \
-            dump_impl.cpp \
             color_manager.cpp \
             hw_interface.cpp \
             hw_info_interface.cpp \
             hw_events_interface.cpp \
+            drm/hw_color_manager_drm.cpp \
+            drm/hw_device_drm.cpp \
+            drm/hw_events_drm.cpp \
+            drm/hw_info_drm.cpp \
+            drm/hw_peripheral_drm.cpp \
+            drm/hw_scale_drm.cpp \
+            drm/hw_tv_drm.cpp \
+            drm/hw_virtual_drm.cpp \
             fb/hw_info.cpp \
             fb/hw_device.cpp \
             fb/hw_primary.cpp \
