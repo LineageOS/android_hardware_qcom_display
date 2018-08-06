@@ -569,8 +569,9 @@ void HWCDisplayBuiltIn::HandleFrameDump() {
   }
 }
 
-HWC2::Error HWCDisplayBuiltIn::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type) {
-  HWCDisplay::SetFrameDumpConfig(count, bit_mask_layer_type);
+HWC2::Error HWCDisplayBuiltIn::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
+                                                  int32_t format, bool post_processed) {
+  HWCDisplay::SetFrameDumpConfig(count, bit_mask_layer_type, format, post_processed);
   dump_output_to_file_ = bit_mask_layer_type & (1 << OUTPUT_LAYER_DUMP);
   DLOGI("output_layer_dump_enable %d", dump_output_to_file_);
 
@@ -580,10 +581,18 @@ HWC2::Error HWCDisplayBuiltIn::SetFrameDumpConfig(uint32_t count, uint32_t bit_m
 
   // Allocate and map output buffer
   output_buffer_info_ = {};
-  // Since we dump DSPP output use Panel resolution.
-  GetPanelResolution(&output_buffer_info_.buffer_config.width,
-                     &output_buffer_info_.buffer_config.height);
-  output_buffer_info_.buffer_config.format = kFormatRGB888;
+
+  if (post_processed) {
+    // To dump post-processed (DSPP) output, use Panel resolution.
+    GetPanelResolution(&output_buffer_info_.buffer_config.width,
+                       &output_buffer_info_.buffer_config.height);
+  } else {
+    // To dump Layer Mixer output, use FrameBuffer resolution.
+    GetFrameBufferResolution(&output_buffer_info_.buffer_config.width,
+                             &output_buffer_info_.buffer_config.height);
+  }
+
+  output_buffer_info_.buffer_config.format = HWCLayer::GetSDMFormat(format, 0);
   output_buffer_info_.buffer_config.buffer_count = 1;
   if (buffer_allocator_->AllocateBuffer(&output_buffer_info_) != 0) {
     DLOGE("Buffer allocation failed");
@@ -603,7 +612,7 @@ HWC2::Error HWCDisplayBuiltIn::SetFrameDumpConfig(uint32_t count, uint32_t bit_m
 
   output_buffer_base_ = buffer;
   const native_handle_t *handle = static_cast<native_handle_t *>(output_buffer_info_.private_data);
-  SetReadbackBuffer(handle, -1, true);
+  SetReadbackBuffer(handle, -1, post_processed);
 
   return HWC2::Error::None;
 }

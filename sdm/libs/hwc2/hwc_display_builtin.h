@@ -69,7 +69,8 @@ class HWCDisplayBuiltIn : public HWCDisplay {
                                   bool *power_on_pending);
   virtual DisplayError Refresh();
   virtual void SetIdleTimeoutMs(uint32_t timeout_ms);
-  virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type);
+  virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
+                                         int32_t format, bool post_processed);
   virtual int FrameCaptureAsync(const BufferInfo &output_buffer_info, bool post_processed);
   virtual bool GetFrameCaptureFence(int32_t *release_fence);
   virtual DisplayError SetDetailEnhancerConfig(const DisplayDetailEnhancerData &de_data);
