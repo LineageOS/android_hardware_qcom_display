@@ -119,8 +119,11 @@ bool GetTransfer(const int32_t &dataspace, GammaTransfer *gamma_transfer) {
     case HAL_DATASPACE_TRANSFER_GAMMA2_2:
       *gamma_transfer = Transfer_Gamma2_2;
       break;
+    case HAL_DATASPACE_TRANSFER_GAMMA2_8:
+      *gamma_transfer = Transfer_Gamma2_8;
+      break;
     default:
-      DLOGV_IF(kTagStrategy, "Unsupported Transfer Request = %d", transfer);
+      DLOGE("Unsupported Transfer Request = %d", transfer);
       supported_transfer = false;
   }
   return supported_transfer;
@@ -256,10 +259,13 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
   layer_buffer->flags.secure_camera = secure_camera;
   layer_buffer->flags.secure_display = secure_display;
 
+  if (layer_buffer->acquire_fence_fd >= 0) {
+    close(layer_buffer->acquire_fence_fd);
+  }
+  layer_buffer->acquire_fence_fd = acquire_fence;
   layer_buffer->planes[0].fd = ion_fd_;
   layer_buffer->planes[0].offset = handle->offset;
   layer_buffer->planes[0].stride = UINT32(handle->width);
-  layer_buffer->acquire_fence_fd = acquire_fence;
   layer_buffer->size = handle->size;
   layer_buffer->buffer_id = reinterpret_cast<uint64_t>(handle);
   layer_buffer->fb_id = 0;
@@ -326,6 +332,10 @@ HWC2::Error HWCLayer::SetLayerColor(hwc_color_t color) {
 }
 
 HWC2::Error HWCLayer::SetLayerCompositionType(HWC2::Composition type) {
+  // Validation is required when the client changes the composition type
+  if (client_requested_ != type) {
+    needs_validate_ = true;
+  }
   client_requested_ = type;
   switch (type) {
     case HWC2::Composition::Client:
@@ -610,6 +620,9 @@ LayerBufferFormat HWCLayer::GetSDMFormat(const int32_t &source, const int flags)
       break;
     case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
       format = kFormatYCbCr420TP10Ubwc;
+      break;
+    case HAL_PIXEL_FORMAT_RGBA_FP16:
+      format = kFormatInvalid;
       break;
     default:
       DLOGW("Unsupported format type = %d", source);

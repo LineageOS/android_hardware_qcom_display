@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
- * Copyright (c) 2010-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2010-2015, The Linux Foundation. All rights reserved.
  *
  * Not a Contribution, Apache license notifications and license are retained
  * for attribution purposes only.
@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <cutils/log.h>
+#include <log/log.h>
 #include <sys/resource.h>
 #include <sys/prctl.h>
 
@@ -124,7 +124,8 @@ enum eConversionType {
 enum eC2DFlags {
     FLAGS_PREMULTIPLIED_ALPHA  = 1<<0,
     FLAGS_YUV_DESTINATION      = 1<<1,
-    FLAGS_TEMP_SRC_DST         = 1<<2
+    FLAGS_TEMP_SRC_DST         = 1<<2,
+    FLAGS_UBWC_FORMAT_MODE     = 1<<3
 };
 
 static gralloc::IAllocController* sAlloc = 0;
@@ -159,6 +160,8 @@ struct copybit_context_t {
     void* time_stamp;
     bool dst_surface_mapped; // Set when dst surface is mapped to GPU addr
     void* dst_surface_base; // Stores the dst surface addr
+    bool is_src_ubwc_format;
+    bool is_dst_ubwc_format;
 
     // used for signaling the wait thread
     bool wait_timestamp;
@@ -264,6 +267,8 @@ static int get_format(int format) {
         case HAL_PIXEL_FORMAT_RGBA_8888:      return C2D_COLOR_FORMAT_8888_ARGB |
                                               C2D_FORMAT_SWAP_RB;
         case HAL_PIXEL_FORMAT_BGRA_8888:      return C2D_COLOR_FORMAT_8888_ARGB;
+        case HAL_PIXEL_FORMAT_RGBA_5551:      return C2D_COLOR_FORMAT_5551_RGBA;
+        case HAL_PIXEL_FORMAT_RGBA_4444:      return C2D_COLOR_FORMAT_4444_RGBA;
         case HAL_PIXEL_FORMAT_YCbCr_420_SP:   return C2D_COLOR_FORMAT_420_NV12;
         case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:return C2D_COLOR_FORMAT_420_NV12;
         case HAL_PIXEL_FORMAT_YCrCb_420_SP:   return C2D_COLOR_FORMAT_420_NV21;
@@ -348,12 +353,7 @@ static size_t c2d_get_gpuaddr(copybit_context_t* ctx,
     if(!handle)
         return 0;
 
-    if (handle->flags & (private_handle_t::PRIV_FLAGS_USES_PMEM |
-                         private_handle_t::PRIV_FLAGS_USES_PMEM_ADSP))
-        memtype = KGSL_USER_MEM_TYPE_PMEM;
-    else if (handle->flags & private_handle_t::PRIV_FLAGS_USES_ASHMEM)
-        memtype = KGSL_USER_MEM_TYPE_ASHMEM;
-    else if (handle->flags & private_handle_t::PRIV_FLAGS_USES_ION)
+    if (handle->flags & private_handle_t::PRIV_FLAGS_USES_ION)
         memtype = KGSL_USER_MEM_TYPE_ION;
     else {
         ALOGE("Invalid handle flags: 0x%x", handle->flags);
@@ -402,7 +402,9 @@ static int is_supported_rgb_format(int format)
         case HAL_PIXEL_FORMAT_RGBX_8888:
         case HAL_PIXEL_FORMAT_RGB_888:
         case HAL_PIXEL_FORMAT_RGB_565:
-        case HAL_PIXEL_FORMAT_BGRA_8888: {
+        case HAL_PIXEL_FORMAT_BGRA_8888:
+        case HAL_PIXEL_FORMAT_RGBA_5551:
+        case HAL_PIXEL_FORMAT_RGBA_4444: {
             return COPYBIT_SUCCESS;
         }
         default:
@@ -544,6 +546,10 @@ static int set_image(copybit_context_t* ctx, uint32 surfaceId,
 
         surfaceDef.format = c2d_format |
             ((flags & FLAGS_PREMULTIPLIED_ALPHA) ? C2D_FORMAT_PREMULTIPLIED : 0);
+
+        surfaceDef.format = surfaceDef.format |
+            ((flags & FLAGS_UBWC_FORMAT_MODE) ? C2D_FORMAT_UBWC_COMPRESSED : 0);
+
         surfaceDef.width = rhs->w;
         surfaceDef.height = rhs->h;
         int aligned_width = ALIGN((int)surfaceDef.width,32);
@@ -700,6 +706,8 @@ static int clear_copybit(struct copybit_device_t *dev,
     int flags = FLAGS_PREMULTIPLIED_ALPHA;
     int mapped_dst_idx = -1;
     struct copybit_context_t* ctx = (struct copybit_context_t*)dev;
+    if (ctx->is_dst_ubwc_format)
+        flags |= FLAGS_UBWC_FORMAT_MODE;
     C2D_RECT c2drect = {rect->l, rect->t, rect->r - rect->l, rect->b - rect->t};
     pthread_mutex_lock(&ctx->wait_cleanup_lock);
     if(!ctx->dst_surface_mapped) {
@@ -865,6 +873,12 @@ static int set_parameter_copybit(
         case COPYBIT_BLIT_TO_FRAMEBUFFER:
             // Do nothing
             break;
+        case COPYBIT_SRC_FORMAT_MODE:
+            ctx->is_src_ubwc_format = (value == COPYBIT_UBWC_COMPRESSED);
+            break;
+        case COPYBIT_DST_FORMAT_MODE:
+            ctx->is_dst_ubwc_format = (value == COPYBIT_UBWC_COMPRESSED);
+            break;
         default:
             ALOGE("%s: default case param=0x%x", __FUNCTION__, name);
             status = -EINVAL;
@@ -897,6 +911,12 @@ static int get(struct copybit_device_t *dev, int name)
             break;
         case COPYBIT_ROTATION_STEP_DEG:
             value = 1;
+            break;
+        case COPYBIT_UBWC_SUPPORT:
+            value = 0;
+            if (ctx->c2d_driver_info.capabilities_mask & C2D_DRIVER_SUPPORTS_UBWC_COMPRESSED_OP) {
+                value = 1;
+            }
             break;
         default:
             ALOGE("%s: default case param=0x%x", __FUNCTION__, name);
@@ -980,7 +1000,7 @@ static int get_temp_buffer(const bufferInfo& info, alloc_data& data)
     data.size = get_size(info);
     data.align = getpagesize();
     data.uncached = true;
-    int allocFlags = GRALLOC_USAGE_PRIVATE_SYSTEM_HEAP;
+    int allocFlags = 0;
 
     if (sAlloc == 0) {
         sAlloc = gralloc::IAllocController::getInstance();
@@ -1103,6 +1123,9 @@ static int stretch_copybit_internal(
     }
 
     int dst_surface_type;
+    if (ctx->is_dst_ubwc_format)
+        flags |= FLAGS_UBWC_FORMAT_MODE;
+
     if (is_supported_rgb_format(dst->format) == COPYBIT_SUCCESS) {
         dst_surface_type = RGB_SURFACE;
         flags |= FLAGS_PREMULTIPLIED_ALPHA;
@@ -1285,6 +1308,7 @@ static int stretch_copybit_internal(
 
     flags |= (ctx->is_premultiplied_alpha) ? FLAGS_PREMULTIPLIED_ALPHA : 0;
     flags |= (ctx->dst_surface_type != RGB_SURFACE) ? FLAGS_YUV_DESTINATION : 0;
+    flags |= (ctx->is_src_ubwc_format) ? FLAGS_UBWC_FORMAT_MODE : 0;
     status = set_image(ctx, src_surface.surface_id, &src_image,
                        (eC2DFlags)flags, mapped_src_idx);
     if(status) {

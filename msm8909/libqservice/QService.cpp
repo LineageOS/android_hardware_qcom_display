@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+ *  Copyright (c) 2012-2014, 2016, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -50,8 +50,13 @@ QService::~QService()
 }
 
 void QService::connect(const sp<qClient::IQClient>& client) {
-    ALOGD_IF(QSERVICE_DEBUG,"client connected");
+    ALOGD_IF(QSERVICE_DEBUG,"HWC client connected");
     mClient = client;
+}
+
+void QService::connect(const sp<qClient::IQHDMIClient>& client) {
+    ALOGD_IF(QSERVICE_DEBUG,"HDMI client connected");
+    mHDMIClient = client;
 }
 
 status_t QService::dispatch(uint32_t command, const Parcel* inParcel,
@@ -59,14 +64,37 @@ status_t QService::dispatch(uint32_t command, const Parcel* inParcel,
     status_t err = (status_t) FAILED_TRANSACTION;
     IPCThreadState* ipc = IPCThreadState::self();
     //Rewind parcel in case we're calling from the same process
-    if (ipc->getCallingPid() == getpid())
+    bool sameProcess = (ipc->getCallingPid() == getpid());
+    if(sameProcess)
         inParcel->setDataPosition(0);
     if (mClient.get()) {
         ALOGD_IF(QSERVICE_DEBUG, "Dispatching command: %d", command);
         err = mClient->notifyCallback(command, inParcel, outParcel);
+        //Rewind parcel in case we're calling from the same process
+        if (sameProcess)
+            outParcel->setDataPosition(0);
     }
     return err;
 }
+
+void QService::onHdmiHotplug(int connected) {
+    if(mHDMIClient.get()) {
+        ALOGD_IF(QSERVICE_DEBUG, "%s: HDMI hotplug", __FUNCTION__);
+        mHDMIClient->onHdmiHotplug(connected);
+    } else {
+        ALOGW("%s: Failed to get a valid HDMI client", __FUNCTION__);
+    }
+}
+
+void QService::onCECMessageReceived(char *msg, ssize_t len) {
+    if(mHDMIClient.get()) {
+        ALOGD_IF(QSERVICE_DEBUG, "%s: CEC message received", __FUNCTION__);
+        mHDMIClient->onCECMessageRecieved(msg, len);
+    } else {
+        ALOGW("%s: Failed to get a valid HDMI client", __FUNCTION__);
+    }
+}
+
 
 void QService::init()
 {

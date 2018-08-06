@@ -452,6 +452,8 @@ void HWCDisplay::BuildLayerStack() {
   metadata_refresh_rate_ = 0;
   auto working_primaries = ColorPrimaries_BT709_5;
 
+  bool extended_range = false;
+
   // Add one layer for fb target
   // TODO(user): Add blit target layers
   for (auto hwc_layer : layer_set_) {
@@ -467,6 +469,11 @@ void HWCDisplay::BuildLayerStack() {
 #ifdef FEATURE_WIDE_COLOR
       layer->flags.skip = true;
 #endif
+    }
+
+    auto range = hwc_layer->GetLayerDataspace() & HAL_DATASPACE_RANGE_MASK;
+    if(range == HAL_DATASPACE_RANGE_EXTENDED) {
+      extended_range = true;
     }
 
     working_primaries = WidestPrimaries(working_primaries,
@@ -573,7 +580,7 @@ void HWCDisplay::BuildLayerStack() {
   // fall back frame composition to GPU when client target is 10bit
   // TODO(user): clarify the behaviour from Client(SF) and SDM Extn -
   // when handling 10bit FBT, as it would affect blending
-  if (Is10BitFormat(sdm_client_target->input_buffer.format)) {
+  if (Is10BitFormat(sdm_client_target->input_buffer.format) || extended_range) {
     // Must fall back to client composition
     MarkLayersForClientComposition();
   }
@@ -1090,8 +1097,8 @@ HWC2::Error HWCDisplay::GetHdrCapabilities(uint32_t *out_num_types, int32_t *out
 
 
 HWC2::Error HWCDisplay::CommitLayerStack(void) {
-  if (shutdown_pending_ || layer_set_.empty()) {
-    return HWC2::Error::None;
+  if (skip_validate_ && !CanSkipValidate()) {
+    validated_ = false;
   }
 
   if (!validated_) {
@@ -1099,10 +1106,9 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
     return HWC2::Error::NotValidated;
   }
 
-  if (skip_validate_ && !CanSkipValidate()) {
-    DLOGV_IF(kTagCompManager, "Cannot skip validate on display: %d", id_);
-    validated_ = false;
-    return HWC2::Error::NotValidated;
+
+  if (shutdown_pending_ || layer_set_.empty()) {
+    return HWC2::Error::None;
   }
 
   DumpInputBuffers();
@@ -1189,8 +1195,11 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
       close(layer_buffer->acquire_fence_fd);
       layer_buffer->acquire_fence_fd = -1;
     }
+
+    layer->request.flags = {};
   }
 
+  client_target_->GetSDMLayer()->request.flags = {};
   *out_retire_fence = -1;
   if (!flush_) {
     // if swapinterval property is set to 0 then close and reset the list retire fence
@@ -1209,8 +1218,6 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
 
   geometry_changes_ = GeometryChanges::kNone;
   flush_ = false;
-
-  ClearRequestFlags();
 
   return status;
 }
@@ -1642,6 +1649,7 @@ void HWCDisplay::MarkLayersForClientComposition() {
     Layer *layer = hwc_layer->GetSDMLayer();
     layer->flags.skip = true;
   }
+  layer_stack_.flags.skip_present = true;
 }
 
 void HWCDisplay::ApplyScanAdjustment(hwc_rect_t *display_frame) {
@@ -1845,12 +1853,6 @@ void HWCDisplay::CloseAcquireFds() {
   }
 }
 
-void HWCDisplay::ClearRequestFlags() {
-  for (Layer *layer : layer_stack_.layers) {
-    layer->request.flags = {};
-  }
-}
-
 std::string HWCDisplay::Dump() {
   std::ostringstream os;
   os << "-------------------------------" << std::endl;
@@ -1881,6 +1883,10 @@ std::string HWCDisplay::Dump() {
 }
 
 bool HWCDisplay::CanSkipValidate() {
+  if (solid_fill_enable_) {
+    return false;
+  }
+
   // Layer Stack checks
   if (layer_stack_.flags.hdr_present && (tone_mapper_ && tone_mapper_->IsActive())) {
     return false;
