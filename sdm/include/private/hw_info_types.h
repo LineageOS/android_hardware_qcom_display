@@ -208,8 +208,6 @@ struct HWPipeCaps {
 };
 
 struct HWRotatorInfo {
-  enum { ROT_TYPE_MDSS, ROT_TYPE_V4L2 };
-  uint32_t type = ROT_TYPE_MDSS;
   uint32_t num_rotator = 0;
   bool has_downscale = false;
   std::string device_path = "";

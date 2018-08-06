@@ -9,7 +9,6 @@ LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes)
 LOCAL_HEADER_LIBRARIES        := display_headers
 LOCAL_CFLAGS                  := -fno-operator-names -Wno-unused-parameter -DLOG_TAG=\"SDM\" \
                                  $(common_flags)
-LOCAL_HW_INTF_PATH_1          := fb
 LOCAL_SHARED_LIBRARIES        := libdl libdisplaydebug libsdmutils
 
 ifneq ($(TARGET_IS_HEADLESS), true)
@@ -35,15 +34,7 @@ LOCAL_SRC_FILES               := core_interface.cpp \
                                  color_manager.cpp \
                                  hw_events_interface.cpp \
                                  hw_info_interface.cpp \
-                                 hw_interface.cpp \
-                                 $(LOCAL_HW_INTF_PATH_1)/hw_info.cpp \
-                                 $(LOCAL_HW_INTF_PATH_1)/hw_device.cpp \
-                                 $(LOCAL_HW_INTF_PATH_1)/hw_primary.cpp \
-                                 $(LOCAL_HW_INTF_PATH_1)/hw_hdmi.cpp \
-                                 $(LOCAL_HW_INTF_PATH_1)/hw_virtual.cpp \
-                                 $(LOCAL_HW_INTF_PATH_1)/hw_color_manager.cpp \
-                                 $(LOCAL_HW_INTF_PATH_1)/hw_scale.cpp \
-                                 $(LOCAL_HW_INTF_PATH_1)/hw_events.cpp
+                                 hw_interface.cpp
 
 ifneq ($(TARGET_IS_HEADLESS), true)
     LOCAL_SRC_FILES           += $(LOCAL_HW_INTF_PATH_2)/hw_info_drm.cpp \

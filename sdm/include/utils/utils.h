@@ -38,13 +38,6 @@ float gcd(float a, float b);
 float lcm(float a, float b);
 void CloseFd(int *fd);
 
-enum class DriverType {
-    FB = 0,
-    DRM,
-};
-
-DriverType GetDriverType();
-
 template<class T>
 bool SameConfig(T *t1, T *t2, unsigned int size) {
   return !(std::memcmp(t1, t2, size));

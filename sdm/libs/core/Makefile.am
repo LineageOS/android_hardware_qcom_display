@@ -20,15 +20,7 @@ c_sources = core_interface.cpp \
             drm/hw_peripheral_drm.cpp \
             drm/hw_scale_drm.cpp \
             drm/hw_tv_drm.cpp \
-            drm/hw_virtual_drm.cpp \
-            fb/hw_info.cpp \
-            fb/hw_device.cpp \
-            fb/hw_primary.cpp \
-            fb/hw_hdmi.cpp \
-            fb/hw_virtual.cpp \
-            fb/hw_color_manager.cpp \
-            fb/hw_scale.cpp \
-            fb/hw_events.cpp
+            drm/hw_virtual_drm.cpp
 
 core_h_sources = $(HEADER_PATH)/core/*.h
 

@@ -414,13 +414,7 @@ bool DisplayBuiltIn::NeedsAVREnable() {
     return false;
   }
 
-  if (GetDriverType() == DriverType::DRM) {
-    return hw_panel_info_.qsync_support;
-  }
-
-  return (hw_panel_info_.mode == kModeVideo &&
-          ((hw_panel_info_.dynamic_fps && hw_panel_info_.dfps_porch_mode) ||
-           (!hw_panel_info_.dynamic_fps && hw_panel_info_.min_fps != hw_panel_info_.max_fps)));
+  return hw_panel_info_.qsync_support;
 }
 
 void DisplayBuiltIn::ResetPanel() {
@@ -583,7 +577,7 @@ DisplayError DisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event, LayerSt
 
 DisplayError DisplayBuiltIn::SetQSyncMode(QSyncMode qsync_mode) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-  if (GetDriverType() == DriverType::DRM && qsync_mode == kQsyncModeOneShot) {
+  if (qsync_mode == kQsyncModeOneShot) {
     return kErrorNotSupported;
   }
   qsync_mode_ = qsync_mode;

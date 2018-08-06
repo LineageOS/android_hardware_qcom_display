@@ -614,7 +614,6 @@ DisplayError HWInfoDRM::GetHWRotatorInfo(HWResourceInfo *hw_resource) {
     if (Sys::getline_(fs, line) && (!strncmp(line.c_str(), "sde_rotator", strlen("sde_rotator")))) {
       hw_resource->hw_rot_info.device_path = string("/dev/video" + to_string(i));
       hw_resource->hw_rot_info.num_rotator++;
-      hw_resource->hw_rot_info.type = HWRotatorInfo::ROT_TYPE_V4L2;
       hw_resource->hw_rot_info.has_downscale = true;
       GetRotatorSupportedFormats(i, hw_resource);
 
