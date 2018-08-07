@@ -36,6 +36,7 @@
 #include <utils/constants.h>
 #include <core/sdm_types.h>
 #include <core/display_interface.h>
+#include <hardware/hwcomposer_defs.h>
 
 #include <string>
 
@@ -55,6 +56,8 @@ enum PendingAction {
   kDisableFrameCapture = BITMAP(7),
   kConfigureDetailedEnhancer = BITMAP(8),
   kModeSet = BITMAP(10),
+  kMultiDispProc = BITMAP(11),
+  kMultiDispGetId = BITMAP(12),
   kGetDetailedEnhancerData = BITMAP(21),
   kNoAction = BITMAP(31),
 };
@@ -646,6 +649,14 @@ class PPFeaturesConfig {
   PPFrameCaptureData frame_capture_data;
   PPDETuningCfgData de_tuning_data_;
 };
+
+// Struct disp_id_config -- structure for storing display IDs
+struct disp_id_config {
+  uint32_t flags;
+  uint64_t disp_id[HWC_NUM_DISPLAY_TYPES];
+};
+
+#define INVALID_DISPLAY 0xffffffff
 
 }  // namespace sdm
 
