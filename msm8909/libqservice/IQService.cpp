@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 The Android Open Source Project
- * Copyright (C) 2012-2014, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * Not a Contribution, Apache license notifications and license are
  * retained for attribution purposes only.
@@ -25,8 +25,8 @@
 #include <binder/IBinder.h>
 #include <binder/IInterface.h>
 #include <binder/IPCThreadState.h>
+#include <cutils/android_filesystem_config.h>
 #include <utils/Errors.h>
-#include <private/android_filesystem_config.h>
 #include <IQService.h>
 
 #define QSERVICE_DEBUG 0
@@ -45,12 +45,21 @@ public:
         : BpInterface<IQService>(impl) {}
 
     virtual void connect(const sp<IQClient>& client) {
-        ALOGD_IF(QSERVICE_DEBUG, "%s: connect client", __FUNCTION__);
+        ALOGD_IF(QSERVICE_DEBUG, "%s: connect HWC client", __FUNCTION__);
         Parcel data, reply;
         data.writeInterfaceToken(IQService::getInterfaceDescriptor());
         data.writeStrongBinder(IInterface::asBinder(client));
-        remote()->transact(CONNECT, data, &reply);
+        remote()->transact(CONNECT_HWC_CLIENT, data, &reply);
     }
+
+    virtual void connect(const sp<IQHDMIClient>& client) {
+        ALOGD_IF(QSERVICE_DEBUG, "%s: connect HDMI client", __FUNCTION__);
+        Parcel data, reply;
+        data.writeInterfaceToken(IQService::getInterfaceDescriptor());
+        data.writeStrongBinder(IInterface::asBinder(client));
+        remote()->transact(CONNECT_HDMI_CLIENT, data, &reply);
+    }
+
 
     virtual android::status_t dispatch(uint32_t command, const Parcel* inParcel,
             Parcel* outParcel) {
@@ -70,8 +79,6 @@ IMPLEMENT_META_INTERFACE(QService, "android.display.IQService");
 
 // ----------------------------------------------------------------------
 
-static void getProcName(int pid, char *buf, int size);
-
 status_t BnQService::onTransact(
     uint32_t code, const Parcel& data, Parcel* reply, uint32_t flags)
 {
@@ -80,33 +87,41 @@ status_t BnQService::onTransact(
     IPCThreadState* ipc = IPCThreadState::self();
     const int callerPid = ipc->getCallingPid();
     const int callerUid = ipc->getCallingUid();
-    const int MAX_BUF_SIZE = 1024;
-    char callingProcName[MAX_BUF_SIZE] = {0};
-
-    getProcName(callerPid, callingProcName, MAX_BUF_SIZE);
 
     const bool permission = (callerUid == AID_MEDIA ||
             callerUid == AID_GRAPHICS ||
             callerUid == AID_ROOT ||
-            callerUid == AID_SYSTEM);
+            callerUid == AID_CAMERASERVER ||
+            callerUid == AID_AUDIO ||
+            callerUid == AID_SYSTEM ||
+            callerUid == AID_MEDIA_CODEC);
 
-    if (code == CONNECT) {
+    if (code == CONNECT_HWC_CLIENT) {
         CHECK_INTERFACE(IQService, data, reply);
         if(callerUid != AID_GRAPHICS) {
-            ALOGE("display.qservice CONNECT access denied: \
-                    pid=%d uid=%d process=%s",
-                    callerPid, callerUid, callingProcName);
+            ALOGE("display.qservice CONNECT_HWC_CLIENT access denied: pid=%d uid=%d",
+                   callerPid, callerUid);
             return PERMISSION_DENIED;
         }
         sp<IQClient> client =
                 interface_cast<IQClient>(data.readStrongBinder());
         connect(client);
         return NO_ERROR;
+    } else if(code == CONNECT_HDMI_CLIENT) {
+        CHECK_INTERFACE(IQService, data, reply);
+        if(callerUid != AID_SYSTEM && callerUid != AID_ROOT) {
+            ALOGE("display.qservice CONNECT_HDMI_CLIENT access denied: pid=%d uid=%d",
+                   callerPid, callerUid);
+            return PERMISSION_DENIED;
+        }
+        sp<IQHDMIClient> client =
+                interface_cast<IQHDMIClient>(data.readStrongBinder());
+        connect(client);
+        return NO_ERROR;
     } else if (code > COMMAND_LIST_START && code < COMMAND_LIST_END) {
         if(!permission) {
-            ALOGE("display.qservice access denied: command=%d\
-                  pid=%d uid=%d process=%s", code, callerPid,
-                  callerUid, callingProcName);
+            ALOGE("display.qservice access denied: command=%d pid=%d uid=%d",
+                   code, callerPid, callerUid);
             return PERMISSION_DENIED;
         }
         CHECK_INTERFACE(IQService, data, reply);
@@ -114,22 +129,6 @@ status_t BnQService::onTransact(
         return NO_ERROR;
     } else {
         return BBinder::onTransact(code, data, reply, flags);
-    }
-}
-
-//Helper
-static void getProcName(int pid, char *buf, int size) {
-    int fd = -1;
-    snprintf(buf, size, "/proc/%d/cmdline", pid);
-    fd = open(buf, O_RDONLY);
-    if (fd < 0) {
-        strlcpy(buf, "Unknown", size);
-    } else {
-        ssize_t len = read(fd, buf, size - 1);
-        if (len >= 0)
-           buf[len] = 0;
-
-        close(fd);
     }
 }
 

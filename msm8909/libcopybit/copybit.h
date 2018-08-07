@@ -49,6 +49,8 @@ enum {
     COPYBIT_FORMAT_RGB_888      = HAL_PIXEL_FORMAT_RGB_888,
     COPYBIT_FORMAT_RGB_565      = HAL_PIXEL_FORMAT_RGB_565,
     COPYBIT_FORMAT_BGRA_8888    = HAL_PIXEL_FORMAT_BGRA_8888,
+    COPYBIT_FORMAT_RGBA_5551    = HAL_PIXEL_FORMAT_RGBA_5551,
+    COPYBIT_FORMAT_RGBA_4444    = HAL_PIXEL_FORMAT_RGBA_4444,
     COPYBIT_FORMAT_YCbCr_422_SP = 0x10,
     COPYBIT_FORMAT_YCrCb_420_SP = 0x11,
 };
@@ -78,6 +80,10 @@ enum {
     COPYBIT_FRAMEBUFFER_HEIGHT = 8,
     COPYBIT_FG_LAYER = 9,
     COPYBIT_DYNAMIC_FPS = 10,
+    /* Source Format Mode */
+    COPYBIT_SRC_FORMAT_MODE = 11,
+    /* Destination Format Mode */
+    COPYBIT_DST_FORMAT_MODE = 12,
 };
 
 /* values for copybit_set_parameter(COPYBIT_TRANSFORM) */
@@ -114,6 +120,13 @@ enum {
     COPYBIT_BLENDING_COVERAGE = 0x0405
 };
 
+enum {
+    /* Linear format mode*/
+    COPYBIT_LINEAR = 0x0000,
+    /* UBWC format mode*/
+    COPYBIT_UBWC_COMPRESSED = 0x0001,
+};
+
 /* use get_static_info() to query static informations about the hardware */
 enum {
     /* Maximum amount of minification supported by the hardware*/
@@ -124,6 +137,8 @@ enum {
     COPYBIT_SCALING_FRAC_BITS   = 3,
     /* Supported rotation step in degres. */
     COPYBIT_ROTATION_STEP_DEG   = 4,
+    /* UBWC support*/
+    COPYBIT_UBWC_SUPPORT        = 5,
 };
 
 /* Image structure */
