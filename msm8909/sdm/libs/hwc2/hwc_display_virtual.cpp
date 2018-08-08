@@ -193,7 +193,11 @@ int HWCDisplayVirtual::SetConfig(uint32_t width, uint32_t height) {
   variable_info.y_pixels = height;
   // TODO(user): Need to get the framerate of primary display and update it.
   variable_info.fps = 60;
-  return display_intf_->SetActiveConfig(&variable_info);
+  DisplayError err = display_intf_->SetActiveConfig(&variable_info);
+  if (err != kErrorNone) {
+    return -EINVAL;
+  }
+  return 0;
 }
 
 HWC2::Error HWCDisplayVirtual::SetOutputBuffer(buffer_handle_t buf, int32_t release_fence) {
@@ -206,38 +210,53 @@ HWC2::Error HWCDisplayVirtual::SetOutputBuffer(buffer_handle_t buf, int32_t rele
   output_buffer_->acquire_fence_fd = dup(release_fence);
 
   if (output_handle) {
-    output_handle_ = output_handle;
-    output_buffer_->buffer_id = reinterpret_cast<uint64_t>(output_handle);
     int output_handle_format = output_handle->format;
+    int active_aligned_w, active_aligned_h;
+    int new_width, new_height;
+    int new_aligned_w, new_aligned_h;
+    uint32_t active_width, active_height;
+    ColorMetaData color_metadata = {};
 
     if (output_handle_format == HAL_PIXEL_FORMAT_RGBA_8888) {
       output_handle_format = HAL_PIXEL_FORMAT_RGBX_8888;
     }
 
-    output_buffer_->format = GetSDMFormat(output_handle_format, output_handle->flags);
-
-    if (output_buffer_->format == kFormatInvalid) {
+    LayerBufferFormat new_sdm_format = GetSDMFormat(output_handle_format, output_handle->flags);
+    if (new_sdm_format == kFormatInvalid) {
       return HWC2::Error::BadParameter;
     }
 
-    int aligned_width, aligned_height;
-#ifdef USE_GRALLOC1
-    buffer_allocator_->GetCustomWidthAndHeight(output_handle, &aligned_width, &aligned_height);
-#else
-    AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(output_handle, aligned_width,
-                                                          aligned_height);
-#endif
+    if (sdm::SetCSC(output_handle, &color_metadata) != kErrorNone) {
+      return HWC2::Error::BadParameter;
+    }
 
-    output_buffer_->width = UINT32(aligned_width);
-    output_buffer_->height = UINT32(aligned_height);
-    output_buffer_->unaligned_width = UINT32(output_handle->unaligned_width);
-    output_buffer_->unaligned_height = UINT32(output_handle->unaligned_height);
+    GetMixerResolution(&active_width, &active_height);
+    buffer_allocator_->GetCustomWidthAndHeight(output_handle, &new_width, &new_height);
+    buffer_allocator_->GetAlignedWidthAndHeight(INT(new_width), INT(new_height),
+                                                output_handle_format, 0, &new_aligned_w,
+                                                &new_aligned_h);
+    buffer_allocator_->GetAlignedWidthAndHeight(INT(active_width), INT(active_height),
+                                                output_handle_format, 0, &active_aligned_w,
+                                                &active_aligned_h);
+    if (new_aligned_w != active_aligned_w  || new_aligned_h != active_aligned_h) {
+      int status = SetConfig(UINT32(new_width), UINT32(new_height));
+      if (status) {
+        DLOGE("SetConfig failed custom WxH %dx%d", new_width, new_height);
+        return HWC2::Error::BadParameter;
+      }
+      validated_ = false;
+    }
+
+    output_buffer_->width = UINT32(new_aligned_w);
+    output_buffer_->height = UINT32(new_aligned_h);
+    output_buffer_->unaligned_width = UINT32(new_width);
+    output_buffer_->unaligned_height = UINT32(new_height);
     output_buffer_->flags.secure = 0;
     output_buffer_->flags.video = 0;
-
-    if (sdm::SetCSC(output_handle, &output_buffer_->color_metadata) != kErrorNone) {
-      return HWC2::Error::BadParameter;
-    }
+    output_buffer_->buffer_id = reinterpret_cast<uint64_t>(output_handle);
+    output_buffer_->format = new_sdm_format;
+    output_buffer_->color_metadata = color_metadata;
+    output_handle_ = output_handle;
 
     // TZ Protected Buffer - L1
     if (output_handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER) {

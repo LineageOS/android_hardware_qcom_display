@@ -443,6 +443,17 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state) {
       return error;
     }
 
+    if (display_comp_ctx_ == NULL) {
+      error = comp_manager_->RegisterDisplay(display_type_, display_attributes_, hw_panel_info_,
+                                              mixer_attributes_, fb_config_, &display_comp_ctx_);
+      if (error != kErrorNone) {
+        if (display_comp_ctx_) {
+          comp_manager_->UnregisterDisplay(display_comp_ctx_);
+        }
+        return error;
+      }
+    }
+
     error = comp_manager_->ReconfigureDisplay(display_comp_ctx_, display_attributes_,
                                               hw_panel_info_, mixer_attributes_, fb_config_);
     if (error != kErrorNone) {
