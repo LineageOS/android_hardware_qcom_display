@@ -170,37 +170,6 @@ int querySDEInfo(HWQueryType type, int *value) {
     return querySDEInfoFB(type, value);
 }
 
-int getHDMINode(void) {
-    return getExternalNode("dtv panel");
-}
-
-int getEdidRawData(char *buffer)
-{
-    int size;
-    int edidFile;
-    char msmFbTypePath[MAX_FRAME_BUFFER_NAME_SIZE];
-    int node_id = getHDMINode();
-
-    if (node_id < 0) {
-        ALOGE("%s no HDMI node found", __func__);
-        return 0;
-    }
-
-    snprintf(msmFbTypePath, sizeof(msmFbTypePath),
-                 "/sys/devices/virtual/graphics/fb%d/edid_raw_data", node_id);
-
-    edidFile = open(msmFbTypePath, O_RDONLY, 0);
-
-    if (edidFile < 0) {
-        ALOGE("%s no edid raw data found %s", __func__,msmFbTypePath);
-        return 0;
-    }
-
-    size = (int)read(edidFile, (char*)buffer, EDID_RAW_DATA_SIZE);
-    close(edidFile);
-    return size;
-}
-
 bool isDPConnected() {
     char connectPath[MAX_FRAME_BUFFER_NAME_SIZE];
     FILE *connectFile = NULL;
