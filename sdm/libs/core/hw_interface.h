@@ -93,7 +93,7 @@ class HWInterface {
   virtual DisplayError Standby() = 0;
   virtual DisplayError Validate(HWLayers *hw_layers) = 0;
   virtual DisplayError Commit(HWLayers *hw_layers) = 0;
-  virtual DisplayError Flush() = 0;
+  virtual DisplayError Flush(HWLayers *hw_layers) = 0;
   virtual DisplayError GetPPFeaturesVersion(PPFeatureVersion *vers) = 0;
   virtual DisplayError SetPPFeatures(PPFeaturesConfig *feature_list) = 0;
   virtual DisplayError SetVSyncState(bool enable) = 0;

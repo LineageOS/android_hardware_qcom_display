@@ -41,6 +41,7 @@
 #include "hwc_buffer_sync_handler.h"
 #include "hwc_session.h"
 #include "hwc_debugger.h"
+#include "disp_color_apis.h"
 
 #define __CLASS__ "HWCSession"
 
@@ -554,9 +555,9 @@ int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display
 
   // Handle pending builtin/pluggable display connections
   if (!hwc_session->primary_ready_ && (display == HWC_DISPLAY_PRIMARY)) {
+    hwc_session->primary_ready_ = true;
     hwc_session->CreateBuiltInDisplays();
     hwc_session->CreatePluggableDisplays(false);
-    hwc_session->primary_ready_ = true;
   }
 
   return INT32(status);
@@ -1562,6 +1563,89 @@ void HWCSession::DynamicDebug(const android::Parcel *input_parcel) {
   }
 }
 
+android::status_t HWCSession::QdcmCMDDispatch(uint32_t display_id,
+                                              const PPDisplayAPIPayload &req_payload,
+                                              PPDisplayAPIPayload *resp_payload,
+                                              PPPendingParams *pending_action) {
+  int ret = 0;
+  bool is_physical_display = false;
+  disp_id_config *disp_id = NULL;
+
+  if (display_id >= kNumDisplays || !hwc_display_[display_id]) {
+      DLOGW("Invalid display id or display = %d is not connected.", display_id);
+      return -ENODEV;
+  }
+
+  if (display_id == map_info_primary_.client_id) {
+    is_physical_display = true;
+  } else {
+    for (auto &map_info : map_info_builtin_) {
+      if (map_info.client_id == display_id) {
+        is_physical_display = true;
+        break;
+     }
+    }
+  }
+
+  if (!is_physical_display) {
+    DLOGW("Skipping QDCM command dispatch on display = %d", display_id);
+    return ret;
+  }
+
+  const uint32_t req_id = *reinterpret_cast<const uint32_t *>(req_payload.payload);
+
+  switch (req_id) {
+    case DISP_APIS_INIT + DISP_APIS_OFFSET:
+    case DISP_APIS_DEINIT + DISP_APIS_OFFSET:
+      ret = hwc_display_[HWC_DISPLAY_PRIMARY]->ColorSVCRequestRoute(req_payload,
+                                                                    resp_payload,
+                                                                    pending_action);
+      if (ret)
+        DLOGW("Failed to dispatch req %d to display primary, ret %d", req_id, ret);
+
+      for (auto &map_info : map_info_builtin_) {
+        uint32_t id = UINT32(map_info.client_id);
+        if (id < kNumDisplays && hwc_display_[id]) {
+          int result = hwc_display_[id]->ColorSVCRequestRoute(req_payload,
+                                                              resp_payload,
+                                                              pending_action);
+          if (result) {
+            DLOGW("Failed to dispatch req %d to display %d, ret %d", req_id, id, result);
+            ret = result;
+          }
+        }
+      }
+      break;
+
+    case DISP_APIS_GET_DISPLAY_IDS + DISP_APIS_OFFSET:
+      ret = resp_payload->CreatePayload<disp_id_config>(disp_id);
+      if (ret) {
+        DLOGE("Failed to create payload for disp_id_config, ret %d", ret);
+      } else {
+        for (int i = 0; i < NUM_DISPLAY_TYPES; i++)
+          disp_id->disp_id[i] = INVALID_DISPLAY;
+
+        if (hwc_display_[HWC_DISPLAY_PRIMARY])
+          disp_id->disp_id[DISPLAY_PRIMARY] = HWC_DISPLAY_PRIMARY;
+
+        for (auto &map_info : map_info_builtin_) {
+          hwc2_display_t id = map_info.client_id;
+          if (id < kNumDisplays && hwc_display_[id])
+            disp_id->disp_id[id] = id;
+        }
+      }
+      break;
+
+    default:
+      ret = hwc_display_[display_id]->ColorSVCRequestRoute(req_payload,
+                                                           resp_payload,
+                                                           pending_action);
+      break;
+  }
+
+  return ret;
+}
+
 android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel,
                                              android::Parcel *output_parcel) {
   int ret = 0;
@@ -1581,26 +1665,7 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
   // Read display_id, payload_size and payload from in_parcel.
   ret = HWCColorManager::CreatePayloadFromParcel(*input_parcel, &display_id, &req_payload);
   if (!ret) {
-    if (display_id >= kNumDisplays || !hwc_display_[display_id]) {
-      DLOGW("Invalid display id or display = %d is not connected.", display_id);
-      ret = -ENODEV;
-    }
-  }
-
-  if (!ret) {
-    if ((HWC_DISPLAY_PRIMARY == display_id) || (HWC_DISPLAY_EXTERNAL == display_id)) {
-      ret = hwc_display_[display_id]->ColorSVCRequestRoute(req_payload, &resp_payload,
-                                                           &pending_action);
-    } else {
-      // Virtual, Tertiary etc. not supported.
-      DLOGW("Operation not supported on display = %d.", display_id);
-      ret = -EINVAL;
-    }
-  }
-
-  if (HWC_DISPLAY_PRIMARY != display_id) {
-    DLOGW("Skipping pending action %d on display = %d.", pending_action.action, display_id);
-    pending_action.action = kNoAction;
+    ret = QdcmCMDDispatch(display_id, req_payload, &resp_payload, &pending_action);
   }
 
   if (ret || pending_action.action == kNoAction) {
@@ -1623,33 +1688,33 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
     if (!bit)
       continue;
 
-    DLOGV_IF(kTagQDCM, "pending action = %d", BITMAP(count));
+    DLOGV_IF(kTagQDCM, "pending action = %d, display_id = %d", BITMAP(count), display_id);
     switch (BITMAP(count)) {
     case kInvalidating:
-      Refresh(HWC_DISPLAY_PRIMARY);
+      Refresh(display_id);
       break;
     case kEnterQDCMMode:
-      ret = color_mgr_->EnableQDCMMode(true, hwc_display_[HWC_DISPLAY_PRIMARY]);
+      ret = color_mgr_->EnableQDCMMode(true, hwc_display_[display_id]);
       break;
     case kExitQDCMMode:
-      ret = color_mgr_->EnableQDCMMode(false, hwc_display_[HWC_DISPLAY_PRIMARY]);
+      ret = color_mgr_->EnableQDCMMode(false, hwc_display_[display_id]);
       break;
     case kApplySolidFill:
       {
-        SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
+        SCOPE_LOCK(locker_[display_id]);
         ret = color_mgr_->SetSolidFill(pending_action.params,
-                                       true, hwc_display_[HWC_DISPLAY_PRIMARY]);
+                                       true, hwc_display_[display_id]);
       }
-      Refresh(HWC_DISPLAY_PRIMARY);
+      Refresh(display_id);
       usleep(kSolidFillDelay);
       break;
     case kDisableSolidFill:
       {
-      SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
+      SCOPE_LOCK(locker_[display_id]);
       ret = color_mgr_->SetSolidFill(pending_action.params,
-                                     false, hwc_display_[HWC_DISPLAY_PRIMARY]);
+                                     false, hwc_display_[display_id]);
       }
-      Refresh(HWC_DISPLAY_PRIMARY);
+      Refresh(display_id);
       usleep(kSolidFillDelay);
       break;
     case kSetPanelBrightness:
@@ -1658,34 +1723,34 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
         DLOGE("Brightness value is Null");
         ret = -EINVAL;
       } else {
-        ret = hwc_display_[HWC_DISPLAY_PRIMARY]->SetPanelBrightness(*brightness_value);
+        ret = hwc_display_[display_id]->SetPanelBrightness(*brightness_value);
       }
       break;
-      case kEnableFrameCapture:
-        ret = color_mgr_->SetFrameCapture(pending_action.params, true,
-                                          hwc_display_[HWC_DISPLAY_PRIMARY]);
-        Refresh(HWC_DISPLAY_PRIMARY);
-        break;
-      case kDisableFrameCapture:
-        ret = color_mgr_->SetFrameCapture(pending_action.params, false,
-                                          hwc_display_[HWC_DISPLAY_PRIMARY]);
-        break;
-      case kConfigureDetailedEnhancer:
-        ret = color_mgr_->SetDetailedEnhancer(pending_action.params,
-                                              hwc_display_[HWC_DISPLAY_PRIMARY]);
-        Refresh(HWC_DISPLAY_PRIMARY);
-        break;
-      case kModeSet:
-        ret = static_cast<int>
-                 (hwc_display_[HWC_DISPLAY_PRIMARY]->RestoreColorTransform());
-        Refresh(HWC_DISPLAY_PRIMARY);
-        break;
-      case kNoAction:
-        break;
-      default:
-        DLOGW("Invalid pending action = %d!", pending_action.action);
-        break;
-     }
+    case kEnableFrameCapture:
+      ret = color_mgr_->SetFrameCapture(pending_action.params, true,
+                                        hwc_display_[display_id]);
+      Refresh(display_id);
+      break;
+    case kDisableFrameCapture:
+      ret = color_mgr_->SetFrameCapture(pending_action.params, false,
+                                        hwc_display_[display_id]);
+      break;
+    case kConfigureDetailedEnhancer:
+      ret = color_mgr_->SetDetailedEnhancer(pending_action.params,
+                                            hwc_display_[display_id]);
+      Refresh(display_id);
+      break;
+    case kModeSet:
+      ret = static_cast<int>
+               (hwc_display_[display_id]->RestoreColorTransform());
+      Refresh(display_id);
+      break;
+    case kNoAction:
+      break;
+    default:
+      DLOGW("Invalid pending action = %d!", pending_action.action);
+      break;
+    }
   }
   // for display API getter case, marshall returned params into out_parcel.
   output_parcel->writeInt32(ret);

@@ -122,8 +122,8 @@ void HWPeripheralDRM::SetDestScalarData(HWLayersInfo hw_layer_info) {
                             reinterpret_cast<uint64_t>(&sde_dest_scalar_data_));
 }
 
-DisplayError HWPeripheralDRM::Flush() {
-  DisplayError err = HWDeviceDRM::Flush();
+DisplayError HWPeripheralDRM::Flush(HWLayers *hw_layers) {
+  DisplayError err = HWDeviceDRM::Flush(hw_layers);
   if (err != kErrorNone) {
     return err;
   }

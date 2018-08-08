@@ -34,6 +34,7 @@ class ResourceInterface {
  public:
   enum ResourceCmd {
     kCmdResetScalarLUT,
+    kCmdUpdateSyncHandle,
     kCmdMax,
   };
 
