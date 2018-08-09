@@ -41,6 +41,7 @@
 #include "comptype.h"
 #include "mdp_version.h"
 #include <qdMetaData.h>
+#include <string.h>
 
 #ifdef VENUS_COLOR_FORMAT
 #include <media/msm_media_info.h>
