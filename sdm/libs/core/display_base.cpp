@@ -600,6 +600,7 @@ std::string DisplayBase::Dump() {
     << max_mixer_stages_;
   os << "\nnum configs: " << num_modes << " active config index: " << active_index;
 
+  os << "\nCurrent Color Mode: " << current_color_mode_.c_str();
   os << "\nAvailable Color Modes:\n";
   for (auto it : color_mode_map_) {
     os << "  " << it.first << " " << std::setw(35 - INT(it.first.length())) <<
