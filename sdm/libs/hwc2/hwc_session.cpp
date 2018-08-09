@@ -481,23 +481,6 @@ static int32_t GetDisplayType(hwc2_device_t *device, hwc2_display_t display, int
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::GetDisplayType, out_type);
 }
 
-static int32_t GetDozeSupport(hwc2_device_t *device, hwc2_display_t display, int32_t *out_support) {
-  if (!device || !out_support) {
-    return HWC2_ERROR_BAD_PARAMETER;
-  }
-
-  if (display >= HWCSession::kNumDisplays) {
-    return HWC2_ERROR_BAD_DISPLAY;
-  }
-
-  if (display == HWC_DISPLAY_PRIMARY) {
-    *out_support = 1;
-  } else {
-    *out_support = 0;
-  }
-
-  return HWC2_ERROR_NONE;
-}
 
 static int32_t GetHdrCapabilities(hwc2_device_t* device, hwc2_display_t display,
                                   uint32_t* out_num_types, int32_t* out_types,
@@ -742,9 +725,10 @@ int32_t HWCSession::SetPowerMode(hwc2_device_t *device, hwc2_display_t display, 
 
   auto mode = static_cast<HWC2::PowerMode>(int_mode);
 
+  HWCSession *hwc_session = static_cast<HWCSession *>(device);
   //  all displays support on/off. Check for doze modes
   int support = 0;
-  GetDozeSupport(device, display, &support);
+  hwc_session->GetDozeSupport(device, display, &support);
   if (!support && (mode == HWC2::PowerMode::Doze || mode == HWC2::PowerMode::DozeSuspend)) {
     return HWC2_ERROR_UNSUPPORTED;
   }
@@ -754,7 +738,6 @@ int32_t HWCSession::SetPowerMode(hwc2_device_t *device, hwc2_display_t display, 
     return error;
   }
 
-  HWCSession *hwc_session = static_cast<HWCSession *>(device);
   hwc_session->UpdateVsyncSource(display);
   hwc_session->HandleConcurrency(display);
 
@@ -774,6 +757,25 @@ int32_t HWCSession::SetVsyncEnabled(hwc2_device_t *device, hwc2_display_t displa
   display = hwc_session->callbacks_.GetVsyncSource();
 
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::SetVsyncEnabled, enabled);
+}
+
+int32_t HWCSession::GetDozeSupport(hwc2_device_t *device, hwc2_display_t display,
+                                   int32_t *out_support) {
+  if (!device || !out_support) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (display >= HWCSession::kNumDisplays) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  HWCSession *hwc_session = static_cast<HWCSession *>(device);
+  *out_support = 0;
+  if (display == HWC_DISPLAY_PRIMARY || display == hwc_session->GetNextBuiltinIndex()) {
+    *out_support = 1;
+  }
+
+  return HWC2_ERROR_NONE;
 }
 
 int32_t HWCSession::ValidateDisplay(hwc2_device_t *device, hwc2_display_t display,
