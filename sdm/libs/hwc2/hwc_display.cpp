@@ -914,7 +914,7 @@ HWC2::Error HWCDisplay::GetDisplayName(uint32_t *out_size, char *out_name) {
   } else {
     *out_size = std::min((UINT32(name.size()) + 1), *out_size);
     if (*out_size > 0) {
-      std::strncpy(out_name, name.c_str(), *out_size);
+      strlcpy(out_name, name.c_str(), *out_size);
       out_name[*out_size - 1] = '\0';
     } else {
       DLOGW("Invalid size requested");
