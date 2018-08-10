@@ -569,6 +569,10 @@ void HWCDisplay::BuildLayerStack() {
         layer_stack_.flags.secure_present = true;
         is_secure = true;
       }
+      // UBWC PI format
+      if (handle->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED_PI) {
+        layer->input_buffer.flags.ubwc_pi = true;
+      }
     }
 
     if (layer->input_buffer.flags.secure_display) {

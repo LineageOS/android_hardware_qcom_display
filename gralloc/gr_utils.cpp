@@ -585,7 +585,8 @@ bool IsUBwcSupported(int format) {
 }
 
 bool IsUBwcPISupported(int format, uint64_t usage) {
-  if (usage & BufferUsage::COMPOSER_OVERLAY || !(usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC_PI)) {
+  // TODO(user): try and differentiate b/w mdp capability to support PI.
+  if (!(usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC_PI)) {
     return false;
   }
 

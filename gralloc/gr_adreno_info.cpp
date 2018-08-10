@@ -279,6 +279,15 @@ bool AdrenoMemInfo::IsPISupportedByGPU(int format, uint64_t usage) {
   if (LINK_adreno_isPISupportedByGpu) {
     return LINK_adreno_isPISupportedByGpu(format, usage);
   }
+
+  // TODO(user): Remove later once Adreno API is available
+  if ((usage & BufferUsage::GPU_RENDER_TARGET)) {
+    return false;
+  }
+  if ((usage & BufferUsage::GPU_TEXTURE)) {
+    return true;
+  }
+
   return false;
 }
 
