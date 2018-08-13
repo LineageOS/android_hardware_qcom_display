@@ -41,7 +41,6 @@
 #include "hwc_buffer_sync_handler.h"
 #include "hwc_session.h"
 #include "hwc_debugger.h"
-#include "disp_color_apis.h"
 
 #define __CLASS__ "HWCSession"
 
@@ -1571,7 +1570,6 @@ android::status_t HWCSession::QdcmCMDDispatch(uint32_t display_id,
                                               PPPendingParams *pending_action) {
   int ret = 0;
   bool is_physical_display = false;
-  disp_id_config *disp_id = NULL;
 
   if (display_id >= kNumDisplays || !hwc_display_[display_id]) {
       DLOGW("Invalid display id or display = %d is not connected.", display_id);
@@ -1594,56 +1592,9 @@ android::status_t HWCSession::QdcmCMDDispatch(uint32_t display_id,
     return ret;
   }
 
-  const uint32_t req_id = *reinterpret_cast<const uint32_t *>(req_payload.payload);
-
-  switch (req_id) {
-    case DISP_APIS_INIT + DISP_APIS_OFFSET:
-    case DISP_APIS_DEINIT + DISP_APIS_OFFSET:
-      ret = hwc_display_[HWC_DISPLAY_PRIMARY]->ColorSVCRequestRoute(req_payload,
-                                                                    resp_payload,
-                                                                    pending_action);
-      if (ret)
-        DLOGW("Failed to dispatch req %d to display primary, ret %d", req_id, ret);
-
-      for (auto &map_info : map_info_builtin_) {
-        uint32_t id = UINT32(map_info.client_id);
-        if (id < kNumDisplays && hwc_display_[id]) {
-          int result = hwc_display_[id]->ColorSVCRequestRoute(req_payload,
-                                                              resp_payload,
-                                                              pending_action);
-          if (result) {
-            DLOGW("Failed to dispatch req %d to display %d, ret %d", req_id, id, result);
-            ret = result;
-          }
-        }
-      }
-      break;
-
-    case DISP_APIS_GET_DISPLAY_IDS + DISP_APIS_OFFSET:
-      ret = resp_payload->CreatePayload<disp_id_config>(disp_id);
-      if (ret) {
-        DLOGE("Failed to create payload for disp_id_config, ret %d", ret);
-      } else {
-        for (int i = 0; i < NUM_DISPLAY_TYPES; i++)
-          disp_id->disp_id[i] = INVALID_DISPLAY;
-
-        if (hwc_display_[HWC_DISPLAY_PRIMARY])
-          disp_id->disp_id[DISPLAY_PRIMARY] = HWC_DISPLAY_PRIMARY;
-
-        for (auto &map_info : map_info_builtin_) {
-          hwc2_display_t id = map_info.client_id;
-          if (id < kNumDisplays && hwc_display_[id])
-            disp_id->disp_id[id] = id;
-        }
-      }
-      break;
-
-    default:
-      ret = hwc_display_[display_id]->ColorSVCRequestRoute(req_payload,
-                                                           resp_payload,
-                                                           pending_action);
-      break;
-  }
+  ret = hwc_display_[display_id]->ColorSVCRequestRoute(req_payload,
+                                                       resp_payload,
+                                                       pending_action);
 
   return ret;
 }
@@ -1655,6 +1606,7 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
   uint32_t display_id(0);
   PPPendingParams pending_action;
   PPDisplayAPIPayload resp_payload, req_payload;
+  disp_id_config *disp_id = NULL;
 
   if (!color_mgr_) {
     DLOGW("color_mgr_ not initialized.");
@@ -1748,6 +1700,41 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
       Refresh(display_id);
       break;
     case kNoAction:
+      break;
+    case kMultiDispProc:
+      for (auto &map_info : map_info_builtin_) {
+        uint32_t id = UINT32(map_info.client_id);
+        if (id < kNumDisplays && hwc_display_[id]) {
+          int result = 0;
+          resp_payload.DestroyPayload();
+          result = hwc_display_[id]->ColorSVCRequestRoute(req_payload,
+                                                          &resp_payload,
+                                                          &pending_action);
+          if (result) {
+            DLOGW("Failed to dispatch action to disp %d ret %d", id, result);
+            ret = result;
+          }
+        }
+      }
+      break;
+    case kMultiDispGetId:
+      ret = resp_payload.CreatePayload<disp_id_config>(disp_id);
+      if (ret) {
+        DLOGW("Unable to create response payload!");
+      } else {
+        for (int i = 0; i < HWC_NUM_DISPLAY_TYPES; i++) {
+          disp_id->disp_id[i] = INVALID_DISPLAY;
+        }
+        if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
+          disp_id->disp_id[HWC_DISPLAY_PRIMARY] = HWC_DISPLAY_PRIMARY;
+        }
+        for (auto &map_info : map_info_builtin_) {
+          uint64_t id = map_info.client_id;
+          if (id < kNumDisplays && hwc_display_[id]) {
+            disp_id->disp_id[id] = id;
+          }
+        }
+      }
       break;
     default:
       DLOGW("Invalid pending action = %d!", pending_action.action);
