@@ -305,7 +305,21 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
 }
 
 HWC2::Error HWCLayer::SetLayerSurfaceDamage(hwc_region_t damage) {
-  // Check if there is an update in SurfaceDamage rects
+  surface_updated_ = true;
+  if ((damage.numRects == 1) && (damage.rects[0].bottom == 0) && (damage.rects[0].right == 0)) {
+    surface_updated_ = false;
+  }
+
+  if (!layer_->flags.updating && surface_updated_) {
+    needs_validate_ = true;
+  }
+
+  if (!partial_update_enabled_) {
+    SetDirtyRegions(damage);
+    return HWC2::Error::None;
+  }
+
+  // Check if there is an update in SurfaceDamage rects.
   if (layer_->dirty_regions.size() != damage.numRects) {
     needs_validate_ = true;
   } else {
@@ -319,12 +333,7 @@ HWC2::Error HWCLayer::SetLayerSurfaceDamage(hwc_region_t damage) {
     }
   }
 
-  layer_->dirty_regions.clear();
-  for (uint32_t i = 0; i < damage.numRects; i++) {
-    LayerRect rect;
-    SetRect(damage.rects[i], &rect);
-    layer_->dirty_regions.push_back(rect);
-  }
+  SetDirtyRegions(damage);
   return HWC2::Error::None;
 }
 
@@ -1000,6 +1009,15 @@ bool HWCLayer::IsScalingPresent() {
   uint32_t dst_height = static_cast<uint32_t>(layer_->dst_rect.bottom - layer_->dst_rect.top);
 
   return ((src_width != dst_width) || (dst_height != src_height));
+}
+
+void HWCLayer::SetDirtyRegions(hwc_region_t surface_damage) {
+  layer_->dirty_regions.clear();
+  for (uint32_t i = 0; i < surface_damage.numRects; i++) {
+    LayerRect rect;
+    SetRect(surface_damage.rects[i], &rect);
+    layer_->dirty_regions.push_back(rect);
+  }
 }
 
 }  // namespace sdm

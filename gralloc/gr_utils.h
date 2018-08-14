@@ -115,6 +115,7 @@ uint64_t GetHandleFlags(int format, uint64_t usage);
 int GetImplDefinedFormat(uint64_t usage, int format);
 int GetCustomFormatFlags(int format, uint64_t usage, int *custom_format, uint64_t *priv_flags);
 int GetBufferType(int inputFormat);
+bool IsGPUFlagSupported(uint64_t usage);
 }  // namespace gralloc
 
 #endif  // __GR_UTILS_H__

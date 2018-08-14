@@ -458,6 +458,7 @@ DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   fixed_info->min_luminance = fixed_info->hdr_supported ?  hw_panel_info_.blackness_level: 0;
   fixed_info->hdr_eotf = hw_panel_info_.hdr_eotf;
   fixed_info->hdr_metadata_type_one = hw_panel_info_.hdr_metadata_type_one;
+  fixed_info->partial_update = hw_panel_info_.partial_update;
 
   return kErrorNone;
 }
@@ -655,7 +656,7 @@ std::string DisplayBase::Dump() {
       INT(fb_roi.right) << " " << INT(fb_roi.bottom) << ")";
   }
 
-  const char *header  = "\n| Idx |  Comp Type |   Split   | Pipe |    W x H    |          Format          |  Src Rect (L T R B) |  Dst Rect (L T R B) |  Z |    Flags   | Deci(HxV) | CS | Rng |";  //NOLINT
+  const char *header  = "\n| Idx |  Comp Type |   Split   | Pipe |    W x H    |          Format          |  Src Rect (L T R B) |  Dst Rect (L T R B) |  Z | Pipe Flags | Deci(HxV) | CS | Rng |";  //NOLINT
   const char *newline = "\n|-----|------------|-----------|------|-------------|--------------------------|---------------------|---------------------|----|------------|-----------|----|-----|";  //NOLINT
   const char *format  = "\n| %3s | %10s | %9s | %4d | %4d x %4d | %24s | %4d %4d %4d %4d | %4d %4d %4d %4d | %2s | %10s | %9s | %2s | %3s |";  //NOLINT
 
@@ -748,7 +749,7 @@ std::string DisplayBase::Dump() {
       }
 
       snprintf(z_order, sizeof(z_order), "%d", pipe.z_order);
-      snprintf(flags, sizeof(flags), "0x%08x", hw_layer.flags.flags);
+      snprintf(flags, sizeof(flags), "0x%08x", pipe.flags);
       snprintf(decimation, sizeof(decimation), "%3d x %3d", pipe.horizontal_decimation,
                pipe.vertical_decimation);
       ColorMetaData &color_metadata = hw_layer.input_buffer.color_metadata;
@@ -881,7 +882,7 @@ DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
   blend_space = GetBlendSpaceFromColorMode();
   error = comp_manager_->SetBlendSpace(display_comp_ctx_, blend_space);
   if (error != kErrorNone) {
-    DLOGE("SetBlendSpace failed, error = %d display_type_=%d", error, display_type_);
+    DLOGE("SetBlendSpace failed, error = %d display_type_= %d", error, display_type_);
   }
 
   return error;
@@ -1777,8 +1778,6 @@ PrimariesTransfer DisplayBase::GetBlendSpaceFromColorMode() {
   } else if ((color_gamut == kDcip3 && dynamic_range == kSdr)) {
     pt.primaries = GetColorPrimariesFromAttribute(color_gamut);
     pt.transfer = Transfer_Gamma2_2;
-  } else {
-    DLOGE("Invalid color mode: %s", current_color_mode_.c_str());
   }
 
   return pt;

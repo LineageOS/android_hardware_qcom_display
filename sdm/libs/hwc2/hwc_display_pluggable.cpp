@@ -32,70 +32,63 @@
 #include <utils/debug.h>
 #include <algorithm>
 
-#include "hwc_display_external.h"
+#include "hwc_display_pluggable.h"
 #include "hwc_debugger.h"
 
-#define __CLASS__ "HWCDisplayExternal"
+#define __CLASS__ "HWCDisplayPluggable"
 
 namespace sdm {
 
-int HWCDisplayExternal::Create(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
+int HWCDisplayPluggable::Create(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
                                HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
-                               qService::QService *qservice, HWCDisplay **hwc_display) {
-  return Create(core_intf, buffer_allocator, callbacks, event_handler, 0, 0, qservice, false,
-                hwc_display);
-}
-
-int HWCDisplayExternal::Create(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
-                               HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
+                               qService::QService *qservice, hwc2_display_t id, int32_t sdm_id,
                                uint32_t primary_width, uint32_t primary_height,
-                               qService::QService *qservice, bool use_primary_res,
-                               HWCDisplay **hwc_display) {
-  uint32_t external_width = 0;
-  uint32_t external_height = 0;
+                               bool use_primary_res, HWCDisplay **hwc_display) {
+  uint32_t pluggable_width = 0;
+  uint32_t pluggable_height = 0;
   DisplayError error = kErrorNone;
 
-  HWCDisplay *hwc_display_external = new HWCDisplayExternal(core_intf, buffer_allocator, callbacks,
-                                                            event_handler, qservice);
-  int status = hwc_display_external->Init();
+  HWCDisplay *hwc_display_pluggable = new HWCDisplayPluggable(core_intf, buffer_allocator,
+                                                  callbacks, event_handler, qservice, id, sdm_id);
+  int status = hwc_display_pluggable->Init();
   if (status) {
-    delete hwc_display_external;
+    delete hwc_display_pluggable;
     return status;
   }
 
-  error = hwc_display_external->GetMixerResolution(&external_width, &external_height);
+  error = hwc_display_pluggable->GetMixerResolution(&pluggable_width, &pluggable_height);
   if (error != kErrorNone) {
-    Destroy(hwc_display_external);
+    Destroy(hwc_display_pluggable);
     return -EINVAL;
   }
 
   if (primary_width && primary_height) {
-    // use_primary_res means HWCDisplayExternal should directly set framebuffer resolution to the
+    // use_primary_res means HWCDisplayPluggable should directly set framebuffer resolution to the
     // provided primary_width and primary_height
     if (use_primary_res) {
-      external_width = primary_width;
-      external_height = primary_height;
+      pluggable_width = primary_width;
+      pluggable_height = primary_height;
     } else {
       int downscale_enabled = 0;
       HWCDebugHandler::Get()->GetProperty(ENABLE_EXTERNAL_DOWNSCALE_PROP, &downscale_enabled);
       if (downscale_enabled) {
-        GetDownscaleResolution(primary_width, primary_height, &external_width, &external_height);
+        GetDownscaleResolution(primary_width, primary_height, &pluggable_width, &pluggable_height);
       }
     }
   }
 
-  status = hwc_display_external->SetFrameBufferResolution(external_width, external_height);
+  status = hwc_display_pluggable->SetFrameBufferResolution(pluggable_width, pluggable_height);
   if (status) {
-    Destroy(hwc_display_external);
+    Destroy(hwc_display_pluggable);
     return status;
   }
 
-  *hwc_display = hwc_display_external;
+  *hwc_display = hwc_display_pluggable;
 
   return status;
 }
 
-int HWCDisplayExternal::Init() {
+int HWCDisplayPluggable::Init() {
   int status = HWCDisplay::Init();
   if (status) {
     return status;
@@ -106,21 +99,25 @@ int HWCDisplayExternal::Init() {
   return status;
 }
 
-void HWCDisplayExternal::Destroy(HWCDisplay *hwc_display) {
+void HWCDisplayPluggable::Destroy(HWCDisplay *hwc_display) {
+  // Flush the display to have outstanding fences signaled.
+  hwc_display->Flush();
   hwc_display->Deinit();
   delete hwc_display;
 }
 
-HWCDisplayExternal::HWCDisplayExternal(CoreInterface *core_intf,
-                                       HWCBufferAllocator *buffer_allocator,
-                                       HWCCallbacks *callbacks,
-                                       HWCDisplayEventHandler *event_handler,
-                                       qService::QService *qservice)
-    : HWCDisplay(core_intf, callbacks, event_handler, kHDMI, HWC_DISPLAY_EXTERNAL, false,
-                 qservice, DISPLAY_CLASS_EXTERNAL, buffer_allocator) {
+HWCDisplayPluggable::HWCDisplayPluggable(CoreInterface *core_intf,
+                                         HWCBufferAllocator *buffer_allocator,
+                                         HWCCallbacks *callbacks,
+                                         HWCDisplayEventHandler *event_handler,
+                                         qService::QService *qservice,
+                                         hwc2_display_t id,
+                                         int32_t sdm_id)
+    : HWCDisplay(core_intf, buffer_allocator, callbacks, event_handler, qservice, kPluggable, id,
+                 sdm_id, false, DISPLAY_CLASS_PLUGGABLE) {
 }
 
-HWC2::Error HWCDisplayExternal::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
+HWC2::Error HWCDisplayPluggable::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
   auto status = HWC2::Error::None;
 
   if (active_secure_sessions_[kSecureDisplay]) {
@@ -149,7 +146,7 @@ HWC2::Error HWCDisplayExternal::Validate(uint32_t *out_num_types, uint32_t *out_
   return status;
 }
 
-HWC2::Error HWCDisplayExternal::Present(int32_t *out_retire_fence) {
+HWC2::Error HWCDisplayPluggable::Present(int32_t *out_retire_fence) {
   auto status = HWC2::Error::None;
 
   if (!active_secure_sessions_[kSecureDisplay]) {
@@ -161,7 +158,7 @@ HWC2::Error HWCDisplayExternal::Present(int32_t *out_retire_fence) {
   return status;
 }
 
-void HWCDisplayExternal::ApplyScanAdjustment(hwc_rect_t *display_frame) {
+void HWCDisplayPluggable::ApplyScanAdjustment(hwc_rect_t *display_frame) {
   if ((underscan_width_ <= 0) || (underscan_height_ <= 0)) {
     return;
   }
@@ -200,7 +197,7 @@ static void AdjustSourceResolution(uint32_t dst_width, uint32_t dst_height, uint
   *src_width = dst_width;
 }
 
-void HWCDisplayExternal::GetDownscaleResolution(uint32_t primary_width, uint32_t primary_height,
+void HWCDisplayPluggable::GetDownscaleResolution(uint32_t primary_width, uint32_t primary_height,
                                                 uint32_t *non_primary_width,
                                                 uint32_t *non_primary_height) {
   uint32_t primary_area = primary_width * primary_height;
@@ -214,7 +211,7 @@ void HWCDisplayExternal::GetDownscaleResolution(uint32_t primary_width, uint32_t
   }
 }
 
-int HWCDisplayExternal::SetState(bool connected) {
+int HWCDisplayPluggable::SetState(bool connected) {
   DisplayError error = kErrorNone;
   DisplayState state = kStateOff;
   DisplayConfigVariableInfo fb_config = {};
@@ -283,7 +280,7 @@ int HWCDisplayExternal::SetState(bool connected) {
   return 0;
 }
 
-void HWCDisplayExternal::GetUnderScanConfig() {
+void HWCDisplayPluggable::GetUnderScanConfig() {
   if (!display_intf_->IsUnderscanSupported()) {
     // Read user defined underscan width and height
     HWCDebugHandler::Get()->GetProperty(EXTERNAL_ACTION_SAFE_WIDTH_PROP, &underscan_width_);
@@ -291,11 +288,11 @@ void HWCDisplayExternal::GetUnderScanConfig() {
   }
 }
 
-DisplayError HWCDisplayExternal::Flush() {
+DisplayError HWCDisplayPluggable::Flush() {
   return display_intf_->Flush();
 }
 
-HWC2::Error HWCDisplayExternal::GetColorModes(uint32_t *out_num_modes, ColorMode *out_modes) {
+HWC2::Error HWCDisplayPluggable::GetColorModes(uint32_t *out_num_modes, ColorMode *out_modes) {
   if (out_modes == nullptr) {
     *out_num_modes = color_mode_->GetColorModeCount();
   } else {
@@ -304,7 +301,7 @@ HWC2::Error HWCDisplayExternal::GetColorModes(uint32_t *out_num_modes, ColorMode
   return HWC2::Error::None;
 }
 
-HWC2::Error HWCDisplayExternal::GetRenderIntents(ColorMode mode, uint32_t *out_num_intents,
+HWC2::Error HWCDisplayPluggable::GetRenderIntents(ColorMode mode, uint32_t *out_num_intents,
                                                  RenderIntent *out_intents) {
   if (out_intents == nullptr) {
     *out_num_intents = color_mode_->GetRenderIntentCount(mode);
@@ -314,11 +311,11 @@ HWC2::Error HWCDisplayExternal::GetRenderIntents(ColorMode mode, uint32_t *out_n
   return HWC2::Error::None;
 }
 
-HWC2::Error HWCDisplayExternal::SetColorMode(ColorMode mode) {
+HWC2::Error HWCDisplayPluggable::SetColorMode(ColorMode mode) {
   return SetColorModeWithRenderIntent(mode, RenderIntent::COLORIMETRIC);
 }
 
-HWC2::Error HWCDisplayExternal::SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
+HWC2::Error HWCDisplayPluggable::SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
   auto status = color_mode_->SetColorModeWithRenderIntent(mode, intent);
   if (status != HWC2::Error::None) {
     DLOGE("failed for mode = %d intent = %d", mode, intent);

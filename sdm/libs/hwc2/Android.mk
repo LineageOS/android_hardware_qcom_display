@@ -30,12 +30,16 @@ LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware li
 ifeq ($(display_config_version), DISPLAY_CONFIG_1_1)
 LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.1
 endif
+ifeq ($(display_config_version), DISPLAY_CONFIG_1_2)
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.2 vendor.display.config@1.1
+endif
 
 LOCAL_SRC_FILES               := hwc_session.cpp \
                                  hwc_session_services.cpp \
                                  hwc_display.cpp \
-                                 hwc_display_primary.cpp \
-                                 hwc_display_external.cpp \
+                                 hwc_display_builtin.cpp \
+                                 hwc_display_pluggable.cpp \
+                                 hwc_display_pluggable_test.cpp \
                                  hwc_display_virtual.cpp \
                                  hwc_debugger.cpp \
                                  hwc_buffer_sync_handler.cpp \
@@ -46,8 +50,7 @@ LOCAL_SRC_FILES               := hwc_session.cpp \
                                  hwc_tonemapper.cpp \
                                  display_null.cpp \
                                  hwc_socket_handler.cpp \
-                                 hwc_buffer_allocator.cpp \
-                                 hwc_display_external_test.cpp
+                                 hwc_buffer_allocator.cpp
 
 include $(BUILD_SHARED_LIBRARY)
 endif

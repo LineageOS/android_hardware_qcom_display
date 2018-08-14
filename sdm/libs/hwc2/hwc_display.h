@@ -53,8 +53,8 @@ class HWCToneMapper;
 // Subclasses set this to their type. This has to be different from DisplayType.
 // This is to avoid RTTI and dynamic_cast
 enum DisplayClass {
-  DISPLAY_CLASS_PRIMARY,
-  DISPLAY_CLASS_EXTERNAL,
+  DISPLAY_CLASS_BUILTIN,
+  DISPLAY_CLASS_PLUGGABLE,
   DISPLAY_CLASS_VIRTUAL,
   DISPLAY_CLASS_NULL
 };
@@ -129,12 +129,14 @@ class HWCDisplay : public DisplayEventHandler {
 
   // Framebuffer configurations
   virtual void SetIdleTimeoutMs(uint32_t timeout_ms);
-  virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type);
+  virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
+                                         int32_t format, bool post_processed);
   virtual DisplayError SetMaxMixerStages(uint32_t max_mixer_stages);
   virtual DisplayError ControlPartialUpdate(bool enable, uint32_t *pending) {
     return kErrorNotSupported;
   }
   virtual HWC2::PowerMode GetLastPowerMode();
+  virtual HWC2::Vsync GetLastVsyncMode();
   virtual int SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels);
   virtual void GetFrameBufferResolution(uint32_t *x_pixels, uint32_t *y_pixels);
   virtual int SetDisplayStatus(DisplayStatus display_status);
@@ -272,10 +274,9 @@ class HWCDisplay : public DisplayEventHandler {
   // Maximum number of layers supported by display manager.
   static const uint32_t kMaxLayerCount = 32;
 
-  HWCDisplay(CoreInterface *core_intf, HWCCallbacks *callbacks,
-             HWCDisplayEventHandler *event_handler, DisplayType type, hwc2_display_t id,
-             bool needs_blit, qService::QService *qservice, DisplayClass display_class,
-             BufferAllocator *buffer_allocator);
+  HWCDisplay(CoreInterface *core_intf, BufferAllocator *buffer_allocator, HWCCallbacks *callbacks,
+             HWCDisplayEventHandler *event_handler, qService::QService *qservice, DisplayType type,
+             hwc2_display_t id, int32_t sdm_id, bool needs_blit, DisplayClass display_class);
 
   // DisplayEventHandler methods
   virtual DisplayError VSync(const DisplayEventVSync &vsync);
@@ -294,8 +295,7 @@ class HWCDisplay : public DisplayEventHandler {
   void MarkLayersForClientComposition(void);
   virtual void ApplyScanAdjustment(hwc_rect_t *display_frame);
   uint32_t GetUpdatingLayersCount(void);
-  bool IsSurfaceUpdated(const std::vector<LayerRect> &dirty_regions);
-  bool IsLayerUpdating(const Layer *layer);
+  bool IsLayerUpdating(HWCLayer *layer);
   uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate);
   virtual void GetUnderScanConfig() { }
 
@@ -307,11 +307,12 @@ class HWCDisplay : public DisplayEventHandler {
   bool validated_ = false;
   bool layer_stack_invalid_ = true;
   CoreInterface *core_intf_ = nullptr;
+  HWCBufferAllocator *buffer_allocator_ = NULL;
   HWCCallbacks *callbacks_  = nullptr;
   HWCDisplayEventHandler *event_handler_ = nullptr;
-  HWCBufferAllocator *buffer_allocator_ = NULL;
-  DisplayType type_;
-  hwc2_display_t id_;
+  DisplayType type_ = kDisplayTypeMax;
+  hwc2_display_t id_ = UINT64_MAX;
+  int32_t sdm_id_ = -1;
   bool needs_blit_ = false;
   DisplayInterface *display_intf_ = NULL;
   LayerStack layer_stack_;
@@ -325,7 +326,8 @@ class HWCDisplay : public DisplayEventHandler {
   uint32_t dump_frame_count_ = 0;
   uint32_t dump_frame_index_ = 0;
   bool dump_input_layers_ = false;
-  HWC2::PowerMode last_power_mode_;
+  HWC2::PowerMode last_power_mode_ = HWC2::PowerMode::Off;
+  HWC2::Vsync last_vsync_mode_ = HWC2::Vsync::Invalid;
   bool swap_interval_zero_ = false;
   bool display_paused_ = false;
   uint32_t min_refresh_rate_ = 0;
@@ -353,6 +355,8 @@ class HWCDisplay : public DisplayEventHandler {
 
  private:
   void DumpInputBuffers(void);
+  bool CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests);
+
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
   uint32_t geometry_changes_ = GeometryChanges::kNone;
@@ -360,6 +364,7 @@ class HWCDisplay : public DisplayEventHandler {
   int null_display_mode_ = 0;
   bool has_client_composition_ = false;
   DisplayValidateState validate_state_ = kNormalValidate;
+  bool partial_update_enabled_ = false;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {

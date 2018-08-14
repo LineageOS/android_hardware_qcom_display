@@ -27,8 +27,8 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __HWC_DISPLAY_PRIMARY_H__
-#define __HWC_DISPLAY_PRIMARY_H__
+#ifndef __HWC_DISPLAY_BUILTIN_H__
+#define __HWC_DISPLAY_BUILTIN_H__
 
 #include <string>
 
@@ -37,7 +37,7 @@
 
 namespace sdm {
 
-class HWCDisplayPrimary : public HWCDisplay {
+class HWCDisplayBuiltIn : public HWCDisplay {
  public:
   enum {
     SET_METADATA_DYN_REFRESH_RATE,
@@ -49,8 +49,9 @@ class HWCDisplayPrimary : public HWCDisplay {
   };
 
   static int Create(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
-                    HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
-                    qService::QService *qservice, HWCDisplay **hwc_display);
+                    HWCCallbacks *callbacks,  HWCDisplayEventHandler *event_handler,
+                    qService::QService *qservice, hwc2_display_t id, int32_t sdm_id,
+                    HWCDisplay **hwc_display);
   static void Destroy(HWCDisplay *hwc_display);
   virtual int Init();
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests);
@@ -68,7 +69,8 @@ class HWCDisplayPrimary : public HWCDisplay {
                                   bool *power_on_pending);
   virtual DisplayError Refresh();
   virtual void SetIdleTimeoutMs(uint32_t timeout_ms);
-  virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type);
+  virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
+                                         int32_t format, bool post_processed);
   virtual int FrameCaptureAsync(const BufferInfo &output_buffer_info, bool post_processed);
   virtual bool GetFrameCaptureFence(int32_t *release_fence);
   virtual DisplayError SetDetailEnhancerConfig(const DisplayDetailEnhancerData &de_data);
@@ -79,9 +81,9 @@ class HWCDisplayPrimary : public HWCDisplay {
   virtual HWC2::Error SetQSyncMode(QSyncMode qsync_mode);
 
  private:
-  HWCDisplayPrimary(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
+  HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
                     HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
-                    qService::QService *qservice);
+                    qService::QService *qservice, hwc2_display_t id, int32_t sdm_id);
   void SetMetaDataRefreshRateFlag(bool enable);
   virtual DisplayError SetDisplayMode(uint32_t mode);
   virtual DisplayError DisablePartialUpdateOneFrame();
@@ -98,7 +100,7 @@ class HWCDisplayPrimary : public HWCDisplay {
   BufferAllocator *buffer_allocator_ = nullptr;
   CPUHint *cpu_hint_ = nullptr;
 
-  // Primary readback buffer configuration
+  // Builtin readback buffer configuration
   LayerBuffer output_buffer_ = {};
   bool post_processed_output_ = false;
   bool readback_buffer_queued_ = false;
@@ -113,4 +115,4 @@ class HWCDisplayPrimary : public HWCDisplay {
 
 }  // namespace sdm
 
-#endif  // __HWC_DISPLAY_PRIMARY_H__
+#endif  // __HWC_DISPLAY_BUILTIN_H__

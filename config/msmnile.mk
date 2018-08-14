@@ -15,7 +15,8 @@ PRODUCT_PACKAGES += \
     memtrack.msmnile \
     libqdutils \
     libqdMetaData \
-    libqdMetaData.system
+    libqdMetaData.system \
+    modetest
 
 #QDCM calibration xml file for 2k panel
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml
@@ -42,7 +43,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
     debug.sf.latch_unsignaled=1 \
     debug.mdpcomp.logs=0 \
     debug.sf.enable_hwc_vds=1 \
-    ro.sf.disable_triple_buffer=0 \
     ro.vendor.display.cabl=2 \
     vendor.gralloc.disable_ubwc=0 \
     vendor.display.disable_scaler=0 \

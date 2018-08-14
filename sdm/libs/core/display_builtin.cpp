@@ -355,6 +355,8 @@ void DisplayBuiltIn::PanelDead() {
   {
     lock_guard<recursive_mutex> obj(recursive_mutex_);
     reset_panel_ = true;
+    // Handle IPC is clearing scalar and sspp luts, call same here.
+    comp_manager_->ProcessIdlePowerCollapse(display_comp_ctx_);
   }
 }
 

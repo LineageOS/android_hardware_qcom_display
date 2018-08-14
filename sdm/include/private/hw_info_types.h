@@ -109,9 +109,19 @@ enum HWBlendingFilter {
 };
 
 enum HWPipeFlags {
-  kIGC = 0x01,
-  kMultiRect = 0x02,
-  kMultiRectParallelMode = 0x04,
+  kIGC = 1 << 0,
+  kMultiRect = 1 << 1,
+  kMultiRectParallelMode = 1 << 2,
+  kFlipVertical = 1 << 5,
+  kFlipHorizontal = 1 << 6,
+  kSecure = 1 << 7,
+  kDisplaySecure = 1 << 8,
+  kCameraSecure = 1 << 9,
+  kInterlaced = 1 << 10,
+  kUpdating = 1 < 11,
+  kSolidFill = 1 << 12,
+  kTonemap1d = 1 << 13,
+  kTonemap3d = 1 << 14,
 };
 
 enum HWAVRModes {
@@ -211,6 +221,8 @@ enum HWQseedStepVersion {
   kQseed3v2,
   kQseed3v3,
   kQseed3v4,
+  kQseed3litev4,
+  kQseed3litev5,
 };
 
 struct HWDestScalarInfo {
@@ -504,6 +516,7 @@ struct HWScaleData {
   } enable;
   uint32_t dst_width = 0;
   uint32_t dst_height = 0;
+  uint32_t dir_weight = 0;
   HWPlane plane[MAX_PLANES] {};
   // scale_v2_data fields
   ScalingFilterConfig y_rgb_filter_cfg = kFilterEdgeDirected;
@@ -572,7 +585,7 @@ struct HWPipeInfo {
   uint8_t vertical_decimation = 0;
   HWScaleData scale_data {};
   uint32_t z_order = 0;
-  uint8_t flags = 0;
+  uint32_t flags = 0;
   bool valid = false;
   bool is_virtual = 0;
   HWPipeTonemapInversePma inverse_pma_info = {};
