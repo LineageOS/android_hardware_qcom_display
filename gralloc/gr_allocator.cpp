@@ -204,10 +204,15 @@ int Allocator::GetImplDefinedFormat(gralloc1_producer_usage_t prod_usage,
   // the usage bits, gralloc assigns a format.
   if (format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED ||
       format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
-    if (prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_ALLOC_UBWC) {
+    if ((prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_ALLOC_UBWC)
+        && format != HAL_PIXEL_FORMAT_YCbCr_420_888) {
       gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC;
     } else if (cons_usage & GRALLOC1_CONSUMER_USAGE_VIDEO_ENCODER) {
-      gr_format = HAL_PIXEL_FORMAT_NV12_ENCODEABLE;  // NV12
+      if (format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
+        gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS;
+      } else {
+        gr_format = HAL_PIXEL_FORMAT_NV12_ENCODEABLE;  // NV12
+      }
     } else if (cons_usage & GRALLOC1_CONSUMER_USAGE_CAMERA) {
       if (prod_usage & GRALLOC1_PRODUCER_USAGE_CAMERA) {
         // Assumed ZSL if both producer and consumer camera flags set
