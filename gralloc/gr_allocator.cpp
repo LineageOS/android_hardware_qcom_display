@@ -193,7 +193,8 @@ int Allocator::GetImplDefinedFormat(uint64_t usage, int format) {
   // the usage bits, gralloc assigns a format.
   if (format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED ||
       format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
-    if (usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC) {
+    if ((usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC)
+        && format != HAL_PIXEL_FORMAT_YCbCr_420_888) {
       // Use of 10BIT_TP and 10BIT bits is supposed to be mutually exclusive.
       // Each bit maps to only one format. Here we will check one of the bits
       // and ignore the other.
@@ -209,6 +210,8 @@ int Allocator::GetImplDefinedFormat(uint64_t usage, int format) {
     } else if (usage & BufferUsage::VIDEO_ENCODER) {
       if (usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_VIDEO_NV21_ENCODER) {
             gr_format = HAL_PIXEL_FORMAT_NV21_ENCODEABLE;
+      } else if (format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
+        gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS;
       } else {
         gr_format = HAL_PIXEL_FORMAT_NV12_ENCODEABLE;  // NV12
       }
