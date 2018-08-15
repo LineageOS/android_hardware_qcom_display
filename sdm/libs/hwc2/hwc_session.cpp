@@ -80,7 +80,7 @@ void HWCUEvent::UEventThread(HWCUEvent *hwc_uevent) {
 
   prctl(PR_SET_NAME, uevent_thread_name, 0, 0, 0);
   setpriority(PRIO_PROCESS, 0, HAL_PRIORITY_URGENT_DISPLAY);
-  android_set_rt_ioprio(0, 1);
+  android_set_bfq_ioprio(0, 1, 1);
   int status = uevent_init();
   if (!status) {
     std::unique_lock<std::mutex> caller_lock(hwc_uevent->mutex_);

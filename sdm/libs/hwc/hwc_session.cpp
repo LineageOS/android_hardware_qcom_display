@@ -1431,7 +1431,7 @@ void* HWCSession::HWCUeventThreadHandler() {
   uevent_locker_.Lock();
   prctl(PR_SET_NAME, uevent_thread_name_, 0, 0, 0);
   setpriority(PRIO_PROCESS, 0, HAL_PRIORITY_URGENT_DISPLAY);
-  android_set_rt_ioprio(0, 1);
+  android_set_bfq_ioprio(0, 1, 1);
   if (!uevent_init()) {
     DLOGE("Failed to init uevent");
     pthread_exit(0);
