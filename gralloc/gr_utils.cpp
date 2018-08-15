@@ -66,6 +66,7 @@ bool IsYuvFormat(int format) {
     // Below formats used by camera and VR
     case HAL_PIXEL_FORMAT_BLOB:
     case HAL_PIXEL_FORMAT_RAW_OPAQUE:
+    case HAL_PIXEL_FORMAT_NV12_HEIF:
       return true;
     default:
       return false;
@@ -328,6 +329,9 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
         size = ALIGN((alignedw * alignedh) + (alignedw * alignedh) / 2,
                      SIZE_4K);
         break;
+      case HAL_PIXEL_FORMAT_NV12_HEIF:
+        size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12_512, width, height);
+        break;
       default:ALOGE("%s: Unrecognized pixel format: 0x%x", __FUNCTION__, format);
         return 0;
     }
@@ -457,6 +461,7 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]) 
     case HAL_PIXEL_FORMAT_YCbCr_422_SP:
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
+    case HAL_PIXEL_FORMAT_NV12_HEIF:
       // Same as YCbCr_420_SP_VENUS
       GetYuvSPPlaneInfo(hnd->base, width, height, 1, ycbcr);
       break;
@@ -908,6 +913,10 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       aligned_w = ALIGN(width, 64);
       aligned_h = ALIGN(height, 64);
       break;
+    case HAL_PIXEL_FORMAT_NV12_HEIF:
+      aligned_w = INT(VENUS_Y_STRIDE(COLOR_FMT_NV12_512, width));
+      aligned_h = INT(VENUS_Y_SCANLINES(COLOR_FMT_NV12_512, height));
+      break;
     default:
       break;
   }
@@ -979,6 +988,7 @@ int GetBufferLayout(private_handle_t *hnd, uint32_t stride[4], uint32_t offset[4
     case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
+    case HAL_PIXEL_FORMAT_NV12_HEIF:
       offset[1] = static_cast<uint32_t>(reinterpret_cast<uint64_t>(yuvInfo.cb) - hnd->base);
       break;
     case HAL_PIXEL_FORMAT_YCrCb_420_SP:
