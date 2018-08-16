@@ -111,6 +111,7 @@ class HWInterface {
   virtual DisplayError SetAutoRefresh(bool enable) = 0;
   virtual DisplayError SetS3DMode(HWS3DMode s3d_mode) = 0;
   virtual DisplayError SetScaleLutConfig(HWScaleLutInfo *lut_info) = 0;
+  virtual DisplayError UnsetScaleLutConfig() = 0;
   virtual DisplayError SetMixerAttributes(const HWMixerAttributes &mixer_attributes) = 0;
   virtual DisplayError GetMixerAttributes(HWMixerAttributes *mixer_attributes) = 0;
   virtual DisplayError DumpDebugData() = 0;

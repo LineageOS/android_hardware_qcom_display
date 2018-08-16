@@ -1615,6 +1615,12 @@ DisplayError HWDeviceDRM::SetScaleLutConfig(HWScaleLutInfo *lut_info) {
   return kErrorNone;
 }
 
+DisplayError HWDeviceDRM::UnsetScaleLutConfig() {
+  drm_mgr_intf_->UnsetScalerLUT();
+
+  return kErrorNone;
+}
+
 DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attributes) {
   if (IsResolutionSwitchEnabled()) {
     return kErrorNotSupported;

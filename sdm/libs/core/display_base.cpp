@@ -116,12 +116,14 @@ DisplayError DisplayBase::Init() {
   fb_config_.x_pixels = mixer_attributes_.width;
   fb_config_.y_pixels = mixer_attributes_.height;
 
-  HWScaleLutInfo lut_info = {};
-  error = comp_manager_->GetScaleLutConfig(&lut_info);
-  if (error == kErrorNone) {
-    error = hw_intf_->SetScaleLutConfig(&lut_info);
-    if (error != kErrorNone) {
-      goto CleanupOnError;
+  if (IsPrimaryDisplay()) {
+    HWScaleLutInfo lut_info = {};
+    error = comp_manager_->GetScaleLutConfig(&lut_info);
+    if (error == kErrorNone) {
+      error = hw_intf_->SetScaleLutConfig(&lut_info);
+      if (error != kErrorNone) {
+        goto CleanupOnError;
+      }
     }
   }
 
@@ -182,6 +184,9 @@ DisplayError DisplayBase::Deinit() {
     lock_guard<recursive_mutex> obj(recursive_mutex_);
     ClearColorInfo();
     comp_manager_->UnregisterDisplay(display_comp_ctx_);
+    if (IsPrimaryDisplay()) {
+      hw_intf_->UnsetScaleLutConfig();
+    }
   }
   HWEventsInterface::Destroy(hw_events_intf_);
   HWInterface::Destroy(hw_intf_);
