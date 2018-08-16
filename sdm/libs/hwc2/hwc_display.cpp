@@ -861,7 +861,7 @@ HWC2::Error HWCDisplay::GetDisplayName(uint32_t *out_size, char *out_name) {
         name = "Unknown";
         break;
     }
-    std::strncpy(out_name, name.c_str(), name.size());
+    strlcpy(out_name, name.c_str(), name.size());
     *out_size = UINT32(name.size());
   }
   return HWC2::Error::None;
