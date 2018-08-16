@@ -413,15 +413,14 @@ int32_t HWCSession::DestroyVirtualDisplay(hwc2_device_t *device, hwc2_display_t 
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
-  Locker::ScopeLock lock_v(locker_[HWC_DISPLAY_VIRTUAL]);
   Locker::ScopeLock lock_p(locker_[HWC_DISPLAY_PRIMARY]);
-  DLOGI("Destroying virtual display id:%" PRIu64, display);
   auto *hwc_session = static_cast<HWCSession *>(device);
 
   if (hwc_session->hwc_display_[HWC_DISPLAY_PRIMARY]) {
     std :: bitset < kSecureMax > secure_sessions = 0;
     hwc_session->hwc_display_[HWC_DISPLAY_PRIMARY]->GetActiveSecureSession(&secure_sessions);
     if (secure_sessions.any()) {
+      DLOGI("Destroying virtual display id:%" PRIu64, display);
       DLOGW("Secure session is active, deferring destruction of virtual display");
       hwc_session->destroy_virtual_disp_pending_ = true;
       return HWC2_ERROR_NONE;
