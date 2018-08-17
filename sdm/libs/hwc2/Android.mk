@@ -33,6 +33,11 @@ endif
 ifeq ($(display_config_version), DISPLAY_CONFIG_1_2)
 LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.2 vendor.display.config@1.1
 endif
+ifeq ($(display_config_version), DISPLAY_CONFIG_1_3)
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.1
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.2
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.3
+endif
 
 LOCAL_SRC_FILES               := hwc_session.cpp \
                                  hwc_session_services.cpp \

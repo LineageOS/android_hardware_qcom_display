@@ -52,6 +52,7 @@ class HWVirtualDRM : public HWDeviceDRM {
   virtual DisplayError Validate(HWLayers *hw_layers);
   virtual DisplayError Commit(HWLayers *hw_layers);
   virtual DisplayError GetPPFeaturesVersion(PPFeatureVersion *vers);
+  virtual DisplayError PowerOn(const HWQosData &qos_data, int *release_fence);
 
  private:
   void ConfigureWbConnectorFbId(uint32_t fb_id);
