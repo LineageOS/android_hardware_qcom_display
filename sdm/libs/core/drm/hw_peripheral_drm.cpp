@@ -225,6 +225,7 @@ DisplayError HWPeripheralDRM::HandleSecureEvent(SecureEvent secure_event) {
         }
       }
       secure_display_active_ = false;
+      synchronous_commit_ = true;
     }
     break;
 

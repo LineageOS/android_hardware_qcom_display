@@ -561,7 +561,13 @@ void DppsInfo::DppsNotifyOps(enum DppsNotifyOps op, void *payload, size_t size) 
 }
 
 DisplayError DisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event) {
-  return hw_intf_->HandleSecureEvent(secure_event);
+  DisplayError err = hw_intf_->HandleSecureEvent(secure_event);
+  if (err != kErrorNone) {
+    return err;
+  }
+  comp_manager_->HandleSecureEvent(display_comp_ctx_, secure_event);
+
+  return kErrorNone;
 }
 
 DisplayError DisplayBuiltIn::SetQSyncMode(QSyncMode qsync_mode) {

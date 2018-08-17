@@ -35,6 +35,7 @@ class ResourceInterface {
   enum ResourceCmd {
     kCmdResetLUT,
     kCmdGetDefaultClk,
+    kCmdDisableRotatorOneFrame,
     kCmdMax,
   };
 
