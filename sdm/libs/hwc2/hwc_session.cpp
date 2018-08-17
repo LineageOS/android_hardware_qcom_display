@@ -1620,4 +1620,12 @@ int HWCSession::CreateExternalDisplay(int disp, uint32_t primary_width,
     }
 }
 
+#ifdef DISPLAY_CONFIG_1_1
+// Methods from ::vendor::hardware::display::config::V1_1::IDisplayConfig follow.
+Return<int32_t> HWCSession::setDisplayAnimating(uint64_t display_id, bool animating ) {
+  return CallDisplayFunction(static_cast<hwc2_device_t *>(this), display_id,
+                             &HWCDisplay::SetDisplayAnimating, animating);
+}
+#endif
+
 }  // namespace sdm
