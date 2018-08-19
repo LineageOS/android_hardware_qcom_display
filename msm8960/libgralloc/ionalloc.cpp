@@ -30,6 +30,7 @@
 #define DEBUG 0
 #include <linux/ioctl.h>
 #include <sys/mman.h>
+#include <string.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <cutils/log.h>
