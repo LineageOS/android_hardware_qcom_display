@@ -35,6 +35,7 @@ LOCAL_SRC_FILES               := hwc_session.cpp \
                                  hwc_display.cpp \
                                  hwc_display_builtin.cpp \
                                  hwc_display_pluggable.cpp \
+                                 hwc_display_dummy.cpp \
                                  hwc_display_pluggable_test.cpp \
                                  hwc_display_virtual.cpp \
                                  hwc_debugger.cpp \
