@@ -216,6 +216,7 @@ class HWCDisplay : public DisplayEventHandler {
   ColorMode GetCurrentColorMode() {
     return (color_mode_ ? color_mode_->GetCurrentColorMode() : ColorMode::SRGB);
   }
+  void SetFastPathComposition(bool enable) { fast_path_composition_ = enable; }
 
   // HWC2 APIs
   virtual HWC2::Error AcceptDisplayChanges(void);
@@ -368,6 +369,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool pending_commit_ = false;
   bool is_cmd_mode_ = false;
   bool partial_update_enabled_ = false;
+  bool fast_path_composition_ = false;
 
  private:
   void DumpInputBuffers(void);
@@ -380,6 +382,7 @@ class HWCDisplay : public DisplayEventHandler {
   int null_display_mode_ = 0;
   bool has_client_composition_ = false;
   DisplayValidateState validate_state_ = kNormalValidate;
+  bool fast_path_enabled_ = true;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {
