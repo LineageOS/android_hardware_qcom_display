@@ -53,6 +53,12 @@ class HWVirtualDRM : public HWDeviceDRM {
   virtual DisplayError Commit(HWLayers *hw_layers);
   virtual DisplayError GetPPFeaturesVersion(PPFeatureVersion *vers);
   virtual DisplayError PowerOn(const HWQosData &qos_data, int *release_fence);
+  virtual DisplayError SetScaleLutConfig(HWScaleLutInfo *lut_info) {
+    return kErrorNotSupported;
+  }
+  virtual DisplayError UnsetScaleLutConfig() {
+    return kErrorNotSupported;
+  }
 
  private:
   void ConfigureWbConnectorFbId(uint32_t fb_id);
