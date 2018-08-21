@@ -231,6 +231,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error SetColorModeFromClientApi(int32_t color_mode_id) {
     return HWC2::Error::Unsupported;
   }
+  void SetFastPathComposition(bool enable) { fast_path_composition_ = enable; }
 
   // HWC2 APIs
   virtual HWC2::Error AcceptDisplayChanges(void);
@@ -395,6 +396,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool partial_update_enabled_ = false;
   std::map<uint32_t, DisplayConfigVariableInfo> variable_config_map_;
   std::vector<uint32_t> hwc_config_map_;
+  bool fast_path_composition_ = false;
 
  private:
   void DumpInputBuffers(void);
@@ -407,6 +409,7 @@ class HWCDisplay : public DisplayEventHandler {
   int null_display_mode_ = 0;
   bool has_client_composition_ = false;
   DisplayValidateState validate_state_ = kNormalValidate;
+  bool fast_path_enabled_ = true;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {

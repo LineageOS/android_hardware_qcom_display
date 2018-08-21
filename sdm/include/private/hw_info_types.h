@@ -650,6 +650,7 @@ struct HWLayersInfo {
   LayerRect partial_fb_roi = {};   // Damaged area in framebuffer.
   bool roi_split = false;          // Indicates separated left and right ROI
   bool async_cursor_updates = false;  // Cursor layer allowed to have async updates
+  bool fast_path_composition = false;  // Indicates frame has fast path composition
   DestScaleInfoMap dest_scale_info_map = {};
   HWHDRLayerInfo hdr_layer_info = {};
   Handle pvt_data = NULL;   // Private data used by sdm extension only.

@@ -553,6 +553,10 @@ int HWCDisplay::Init() {
   partial_update_enabled_ = fixed_info.partial_update || (!fixed_info.is_cmdmode);
   client_target_->SetPartialUpdate(partial_update_enabled_);
 
+  int disable_fast_path = 0;
+  HWCDebugHandler::Get()->GetProperty(DISABLE_FAST_PATH, &disable_fast_path);
+  fast_path_enabled_ = !(disable_fast_path == 1);
+
   DLOGI("Display created with id: %d", id_);
 
   return 0;
@@ -671,6 +675,7 @@ void HWCDisplay::BuildLayerStack() {
   display_rect_ = LayerRect();
   metadata_refresh_rate_ = 0;
   layer_stack_.flags.animating = animating_;
+  layer_stack_.flags.fast_path = fast_path_enabled_ && fast_path_composition_;
 
   // Add one layer for fb target
   // TODO(user): Add blit target layers

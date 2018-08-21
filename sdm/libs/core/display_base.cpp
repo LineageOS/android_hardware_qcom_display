@@ -312,6 +312,13 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
       break;
     }
 
+    if (layer_stack->flags.fast_path && hw_layers_.info.fast_path_composition) {
+      // In Fast Path, driver validation happens in COMMIT Phase.
+      DLOGI_IF(kTagDisplay, "Draw cycle qualifies for Fast Path!");
+      needs_validate_ = false;
+      break;
+    }
+
     error = hw_intf_->Validate(&hw_layers_);
     if (error == kErrorNone) {
       // Strategy is successful now, wait for Commit().
@@ -380,6 +387,12 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
 
   error = hw_intf_->Commit(&hw_layers_);
   if (error != kErrorNone) {
+    if (layer_stack->flags.fast_path && hw_layers_.info.fast_path_composition) {
+      // If COMMIT fails on the Fast Path, set Safe Mode.
+      DLOGE("COMMIT failed in Fast Path, set Safe Mode!");
+      comp_manager_->SetSafeMode(true);
+      error = kErrorNotValidated;
+    }
     return error;
   }
 
