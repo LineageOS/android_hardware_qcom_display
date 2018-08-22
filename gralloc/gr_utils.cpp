@@ -1150,11 +1150,14 @@ int GetImplDefinedFormat(uint64_t usage, int format) {
   // the usage bits, gralloc assigns a format.
   if (format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED ||
       format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
-    if (usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC || usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC_PI) {
+    if ((usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC || usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC_PI)
+        && format != HAL_PIXEL_FORMAT_YCbCr_420_888) {
       gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC;
     } else if (usage & BufferUsage::VIDEO_ENCODER) {
       if (usage & GRALLOC_USAGE_PRIVATE_VIDEO_NV21_ENCODER) {
         gr_format = HAL_PIXEL_FORMAT_NV21_ENCODEABLE;  // NV21
+      } else if (format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
+        gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS;
       } else {
         gr_format = HAL_PIXEL_FORMAT_NV12_ENCODEABLE;  // NV12
       }
