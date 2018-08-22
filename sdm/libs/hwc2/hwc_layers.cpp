@@ -935,4 +935,16 @@ bool HWCLayer::IsScalingPresent() {
   return ((src_width != dst_width) || (dst_height != src_height));
 }
 
+float HWCLayer::GetScaleFactor() {
+  uint32_t src_width  = UINT32(layer_->src_rect.right - layer_->src_rect.left);
+  uint32_t src_height = UINT32(layer_->src_rect.bottom - layer_->src_rect.top);
+  uint32_t dst_width  = UINT32(layer_->dst_rect.right - layer_->dst_rect.left);
+  uint32_t dst_height = UINT32(layer_->dst_rect.bottom - layer_->dst_rect.top);
+  if ((dst_width < src_width) || (dst_height < src_height)) {
+    return (std::min(dst_width/src_width, dst_height/src_height));
+  }
+
+  return (std::max(dst_width/src_width, dst_height/src_height));
+}
+
 }  // namespace sdm

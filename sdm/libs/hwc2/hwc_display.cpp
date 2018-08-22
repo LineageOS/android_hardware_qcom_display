@@ -546,6 +546,11 @@ void HWCDisplay::BuildLayerStack() {
       is_secure = true;
     }
 
+    if (layer->input_buffer.flags.secure_camera) {
+      layer_stack_.flags.secure_camera_present = true;
+      is_secure = true;
+    }
+
     if (hwc_layer->IsSingleBuffered() &&
        !(hwc_layer->IsRotationPresent() || hwc_layer->IsScalingPresent())) {
       layer->flags.single_buffer = true;
@@ -629,6 +634,20 @@ void HWCDisplay::BuildLayerStack() {
     }
   }
 #endif
+
+  //MDP can't handle secure camera and normal rotation together.
+  if (layer_stack_.flags.secure_camera_present){
+    for (auto hwc_layer : layer_set_) {
+      auto layer = hwc_layer->GetSDMLayer();
+      //TODO(user): Need to add proper downscaling check.
+      if (hwc_layer->IsRotationPresent() || (hwc_layer->GetScaleFactor() < 0.25)) {
+        if (!layer->input_buffer.flags.secure_camera) {
+          layer->flags.skip = true;
+          layer_stack_.flags.skip_present = true;
+        }
+      }
+    }
+  }
 
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
   layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0);
