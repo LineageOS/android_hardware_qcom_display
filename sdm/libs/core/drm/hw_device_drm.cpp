@@ -842,16 +842,6 @@ DisplayError HWDeviceDRM::GetConfigIndex(char *mode, uint32_t *index) {
 }
 
 DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, int *release_fence) {
-  DTRACE_SCOPED();
-  if (!drm_atomic_intf_) {
-    DLOGE("DRM Atomic Interface is null!");
-    return kErrorUndefined;
-  }
-
-  if (first_cycle_) {
-    return kErrorNone;
-  }
-
   SetQOSData(qos_data);
 
   int64_t release_fence_t = -1;
@@ -859,7 +849,6 @@ DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, int *release_fence)
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
   drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_t);
-
   int ret = NullCommit(true /* synchronous */, true /* retain_planes */);
   if (ret) {
     DLOGE("Failed with error: %d", ret);
@@ -1282,7 +1271,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   DTRACE_SCOPED();
   SetupAtomic(hw_layers, false /* validate */);
 
-  int ret = drm_atomic_intf_->Commit(false /* synchronous */, false /* retain_planes*/);
+  int ret = drm_atomic_intf_->Commit(synchronous_commit_, false /* retain_planes*/);
   if (ret) {
     DLOGE("%s failed with error %d crtc %d", __FUNCTION__, ret, token_.crtc_id);
     vrefresh_ = 0;
@@ -1622,6 +1611,12 @@ DisplayError HWDeviceDRM::SetScaleLutConfig(HWScaleLutInfo *lut_info) {
   drm_lut_info.dir_lut_size = lut_info->dir_lut_size;
   drm_lut_info.sep_lut_size = lut_info->sep_lut_size;
   drm_mgr_intf_->SetScalerLUT(drm_lut_info);
+
+  return kErrorNone;
+}
+
+DisplayError HWDeviceDRM::UnsetScaleLutConfig() {
+  drm_mgr_intf_->UnsetScalerLUT();
 
   return kErrorNone;
 }

@@ -127,6 +127,9 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError SetQSyncMode(QSyncMode qsync_mode) { return kErrorNotSupported; }
   virtual std::string Dump();
   virtual DisplayError InitializeColorModes();
+  virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) {
+    return kErrorNotSupported;
+  }
 
  protected:
   const char *kBt2020Pq = "bt2020_pq";
@@ -153,8 +156,6 @@ class DisplayBase : public DisplayInterface {
   DisplayState GetLastPowerMode();
   void SetPUonDestScaler();
   void ClearColorInfo();
-  bool NeedsGpuFallback(const Layer *layer);
-  bool NeedsHdrHandling();
   void GetColorPrimaryTransferFromAttributes(const AttrVal &attr,
       std::vector<PrimariesTransfer> *supported_pt);
   bool DisplayPowerResetPending();
@@ -207,7 +208,6 @@ class DisplayBase : public DisplayInterface {
   std::string current_color_mode_ = "hal_native";
   int disable_hdr_lut_gen_ = 0;
   DisplayState last_power_mode_ = kStateOff;
-  bool gpu_fallback_ = false;
   bool hw_recovery_logs_captured_ = false;
   int disable_hw_recovery_dump_ = 0;
   HWQosData default_qos_data_;

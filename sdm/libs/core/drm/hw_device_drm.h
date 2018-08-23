@@ -104,6 +104,7 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError SetAutoRefresh(bool enable) { autorefresh_ = enable; return kErrorNone; }
   virtual DisplayError SetS3DMode(HWS3DMode s3d_mode);
   virtual DisplayError SetScaleLutConfig(HWScaleLutInfo *lut_info);
+  virtual DisplayError UnsetScaleLutConfig();
   virtual DisplayError SetMixerAttributes(const HWMixerAttributes &mixer_attributes);
   virtual DisplayError GetMixerAttributes(HWMixerAttributes *mixer_attributes);
   virtual void InitializeConfigs();
@@ -112,6 +113,9 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError SetDppsFeature(void *payload, size_t size) { return kErrorNotSupported; }
   virtual DisplayError GetDppsFeatureInfo(void *payload, size_t size) { return kErrorNotSupported; }
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event) { return kErrorNotSupported; }
+  virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) {
+    return kErrorNotSupported;
+  }
 
   enum {
     kHWEventVSync,
@@ -207,9 +211,9 @@ class HWDeviceDRM : public HWInterface {
   std::vector<sde_drm::DRMSolidfillStage> solid_fills_ {};
   bool secure_display_active_ = false;
   uint64_t debug_dump_count_ = 0;
+  bool synchronous_commit_ = false;
 
  private:
-  bool synchronous_commit_ = false;
   std::string interface_str_ = "DSI";
   bool resolution_switch_enabled_ = false;
   uint32_t vrefresh_ = 0;

@@ -95,6 +95,7 @@ class HWDevice : public HWInterface {
   virtual DisplayError SetAutoRefresh(bool enable) { return kErrorNone; }
   virtual DisplayError SetS3DMode(HWS3DMode s3d_mode);
   virtual DisplayError SetScaleLutConfig(HWScaleLutInfo *lut_info);
+  virtual DisplayError UnsetScaleLutConfig() { return kErrorNotSupported; }
   virtual DisplayError SetMixerAttributes(const HWMixerAttributes &mixer_attributes);
   virtual DisplayError GetMixerAttributes(HWMixerAttributes *mixer_attributes);
   virtual DisplayError DumpDebugData();
@@ -102,6 +103,9 @@ class HWDevice : public HWInterface {
   virtual DisplayError GetDppsFeatureInfo(void *payload, size_t size) { return kErrorNotSupported; }
   virtual DisplayError DumpDebugData(DisplayType type) { return kErrorNone; }
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event) { return kErrorNotSupported; }
+  virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) {
+    return kErrorNotSupported;
+  }
 
   enum {
     kHWEventVSync,

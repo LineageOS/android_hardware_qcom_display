@@ -204,6 +204,9 @@ class HWCDisplay : public DisplayEventHandler {
   bool IsSkipValidateState() { return (validate_state_ == kSkipValidate); }
   bool IsInternalValidateState() { return (validated_ && (validate_state_ == kInternalValidate)); }
   void SetValidationState(DisplayValidateState state) { validate_state_ = state; }
+  ColorMode GetCurrentColorMode() {
+    return (color_mode_ ? color_mode_->GetCurrentColorMode() : ColorMode::SRGB);
+  }
 
   // HWC2 APIs
   virtual HWC2::Error AcceptDisplayChanges(void);
@@ -267,6 +270,9 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error GetValidateDisplayOutput(uint32_t *out_num_types, uint32_t *out_num_requests);
   virtual bool IsDisplayCommandMode();
   virtual HWC2::Error SetQSyncMode(QSyncMode qsync_mode) {
+    return HWC2::Error::Unsupported;
+  }
+  virtual HWC2::Error ControlIdlePowerCollapse(bool enable, bool synchronous) {
     return HWC2::Error::Unsupported;
   }
 

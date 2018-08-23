@@ -212,5 +212,24 @@ void HWVirtualDRM::GetModeIndex(const HWDisplayAttributes &display_attributes, i
   }
 }
 
+DisplayError HWVirtualDRM::PowerOn(const HWQosData &qos_data, int *release_fence) {
+  DTRACE_SCOPED();
+  if (!drm_atomic_intf_) {
+    DLOGE("DRM Atomic Interface is null!");
+    return kErrorUndefined;
+  }
+
+  if (first_cycle_) {
+    return kErrorNone;
+  }
+
+  DisplayError err = HWDeviceDRM::PowerOn(qos_data, release_fence);
+  if (err != kErrorNone) {
+    return err;
+  }
+
+  return kErrorNone;
+}
+
 }  // namespace sdm
 

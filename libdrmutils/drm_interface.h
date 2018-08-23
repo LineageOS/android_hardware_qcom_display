@@ -303,6 +303,12 @@ enum struct DRMOps {
    */
   CRTC_SET_CAPTURE_MODE,
   /*
+   * Op: Sets Idle PC state for CRTC.
+   * Arg: uint32_t - CRTC ID
+   *      uint32_t - idle pc state
+   */
+  CRTC_SET_IDLE_PC_STATE,
+  /*
    * Op: Returns retire fence for this commit. Should be called after Commit() on
    * DRMAtomicReqInterface.
    * Arg: uint32_t - Connector ID
@@ -408,6 +414,13 @@ enum struct DRMBlendType {
 enum struct DRMSrcConfig {
   DEINTERLACE = 0,
 };
+
+enum struct DRMIdlePCState {
+  NONE,
+  ENABLE,
+  DISABLE,
+};
+
 
 /* Display type to identify a suitable connector */
 enum struct DRMDisplayType {
@@ -788,6 +801,7 @@ class DRMAtomicReqInterface {
    * [return]: Error code if the API fails, 0 on success.
    */
   virtual int Commit(bool synchronous, bool retain_planes) = 0;
+
   /*
    * Validate the params set via Perform().
    * [return]: Error code if the API fails, 0 on success.
@@ -910,12 +924,20 @@ class DRMManagerInterface {
    * [return]: Error code if the API fails, 0 on success.
    */
   virtual int DestroyAtomicReq(DRMAtomicReqInterface *intf) = 0;
+
   /*
    * Sets the global scaler LUT
    * [input]: LUT Info
    * [return]: Error code if the API fails, 0 on success.
    */
   virtual int SetScalerLUT(const DRMScalerLUTInfo &lut_info) = 0;
+
+  /*
+   * Unsets the global scaler LUT
+   * [input]: None
+   * [return]: Error code if the API fails, 0 on success.
+   */
+  virtual int UnsetScalerLUT() = 0;
 
   /*
    * Get the DPPS feature info

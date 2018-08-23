@@ -463,7 +463,10 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
         error = kErrorParameters;
         break;
       }
-      error = hw_intf_->SetDppsFeature(payload, size);
+      {
+        lock_guard<recursive_mutex> obj(recursive_mutex_);
+        error = hw_intf_->SetDppsFeature(payload, size);
+      }
       break;
     case kDppsGetFeatureInfo:
       if (!payload) {
@@ -491,7 +494,10 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
         error = kErrorParameters;
         break;
       }
-      commit_event_enabled_ = *(reinterpret_cast<bool *>(payload));
+      {
+        lock_guard<recursive_mutex> obj(recursive_mutex_);
+        commit_event_enabled_ = *(reinterpret_cast<bool *>(payload));
+      }
       break;
     default:
       DLOGE("Invalid input op %d", op);
@@ -567,5 +573,19 @@ DisplayError DisplayBuiltIn::SetQSyncMode(QSyncMode qsync_mode) {
 
   return kErrorNone;
 }
+
+DisplayError DisplayBuiltIn::ControlIdlePowerCollapse(bool enable, bool synchronous) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (!active_) {
+    DLOGW("Invalid display state = %d. Panel must be on.", state_);
+    return kErrorPermission;
+  }
+  if (hw_panel_info_.mode == kModeVideo) {
+    DLOGW("Idle power collapse not supported for video mode panel.");
+    return kErrorNotSupported;
+  }
+  return hw_intf_->ControlIdlePowerCollapse(enable, synchronous);
+}
+
 
 }  // namespace sdm

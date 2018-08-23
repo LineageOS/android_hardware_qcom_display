@@ -61,16 +61,6 @@ DisplayError DisplayVirtual::Init() {
     hw_intf_->GetDisplayId(&display_id_);
   }
 
-  HWScaleLutInfo lut_info = {};
-  error = comp_manager_->GetScaleLutConfig(&lut_info);
-  if (error == kErrorNone) {
-    error = hw_intf_->SetScaleLutConfig(&lut_info);
-    if (error != kErrorNone) {
-      HWInterface::Destroy(hw_intf_);
-      return error;
-    }
-  }
-
   if (hw_info_intf_) {
     HWResourceInfo hw_resource_info = HWResourceInfo();
     hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
