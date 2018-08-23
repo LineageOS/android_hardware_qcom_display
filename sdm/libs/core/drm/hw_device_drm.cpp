@@ -51,6 +51,7 @@
 #include <drm/sde_drm.h>
 #include <private/color_params.h>
 #include <utils/rect.h>
+#include <utils/utils.h>
 
 #include <sstream>
 #include <ctime>
@@ -1272,14 +1273,18 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   SetupAtomic(hw_layers, false /* validate */);
 
   int ret = drm_atomic_intf_->Commit(synchronous_commit_, false /* retain_planes*/);
+  int release_fence = INT(release_fence_);
+  int retire_fence = INT(retire_fence_);
   if (ret) {
     DLOGE("%s failed with error %d crtc %d", __FUNCTION__, ret, token_.crtc_id);
     vrefresh_ = 0;
+    CloseFd(&release_fence);
+    CloseFd(&retire_fence);
+    release_fence_ = -1;
+    retire_fence_ = -1;
     return kErrorHardware;
   }
 
-  int release_fence = static_cast<int>(release_fence_);
-  int retire_fence = static_cast<int>(retire_fence_);
   DLOGD_IF(kTagDriverConfig, "RELEASE fence created: fd:%d", release_fence);
   DLOGD_IF(kTagDriverConfig, "RETIRE fence created: fd:%d", retire_fence);
 
