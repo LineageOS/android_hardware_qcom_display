@@ -2132,6 +2132,16 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
       continue;
     }
 
+    // Check if we are already using the display.
+    auto display_used = std::find_if(map_info_pluggable_.begin(), map_info_pluggable_.end(),
+                                     [&](auto &p) {
+                                       return (p.sdm_id == info.display_id);
+                                     });
+    if (display_used != map_info_pluggable_.end()) {
+      // Display is already used in a slot.
+      continue;
+    }
+
     // find an empty slot to create display.
     for (auto &map_info : map_info_pluggable_) {
       hwc2_display_t client_id = map_info.client_id;
@@ -2141,7 +2151,7 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
         SCOPE_LOCK(locker_[client_id]);
         auto &hwc_display = hwc_display_[client_id];
         if (hwc_display) {
-          // Display is already connected.
+          // Display slot is already used.
           continue;
         }
 
@@ -2167,7 +2177,8 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
           return status;
         }
 
-        DLOGI("Created pluggable display successfully.");
+        DLOGI("Created pluggable display successfully: sdm id = %d, client id = %d",
+              info.display_id, client_id);
       }
 
       map_info.disp_type = info.display_type;
@@ -2200,7 +2211,7 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
   }
 
   for (auto client_id : pending_hotplugs) {
-    DLOGI("Notify hotplug connected: client id = %d", client_id);
+    DLOGI("Notify hotplug display connected: client id = %d", client_id);
     callbacks_.Hotplug(client_id, HWC2::Connection::Connected);
   }
 
@@ -2222,6 +2233,7 @@ int HWCSession::HandleDisconnectedDisplays(HWDisplaysInfo *hw_displays_info) {
       if (info.is_connected) {
         disconnect = false;
       }
+      break;
     }
 
     if (disconnect) {
@@ -2250,7 +2262,8 @@ void HWCSession::DestroyDisplay(DisplayMapInfo *map_info) {
       return;
     }
 
-    DLOGI("Destroy display type = %d, client id = %d", map_info->disp_type, client_id);
+    DLOGI("Destroy display %d-%d, client id = %d", map_info->sdm_id, map_info->disp_type,
+          client_id);
     switch (map_info->disp_type) {
       case kBuiltIn:
         HWCDisplayBuiltIn::Destroy(hwc_display);
@@ -2274,6 +2287,7 @@ void HWCSession::DestroyDisplay(DisplayMapInfo *map_info) {
   }
 
   if (notify_hotplug) {
+    DLOGI("Notify hotplug display disconnected: client id = %d", client_id);
     callbacks_.Hotplug(client_id, HWC2::Connection::Disconnected);
   }
 }
