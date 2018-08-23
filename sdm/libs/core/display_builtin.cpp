@@ -568,18 +568,4 @@ DisplayError DisplayBuiltIn::SetQSyncMode(QSyncMode qsync_mode) {
   return kErrorNone;
 }
 
-DisplayError DisplayBuiltIn::ControlIdlePowerCollapse(bool enable, bool synchronous) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
-  if (!active_) {
-    DLOGW("Invalid display state = %d. Panel must be on.", state_);
-    return kErrorPermission;
-  }
-  if (hw_panel_info_.mode == kModeVideo) {
-    DLOGW("Idle power collapse not supported for video mode panel.");
-    return kErrorNotSupported;
-  }
-  return hw_intf_->ControlIdlePowerCollapse(enable, synchronous);
-}
-
-
 }  // namespace sdm

@@ -303,12 +303,6 @@ enum struct DRMOps {
    */
   CRTC_SET_CAPTURE_MODE,
   /*
-   * Op: Sets Idle PC state for CRTC.
-   * Arg: uint32_t - CRTC ID
-   *      uint32_t - idle pc state
-   */
-  CRTC_SET_IDLE_PC_STATE,
-  /*
    * Op: Returns retire fence for this commit. Should be called after Commit() on
    * DRMAtomicReqInterface.
    * Arg: uint32_t - Connector ID
@@ -414,13 +408,6 @@ enum struct DRMBlendType {
 enum struct DRMSrcConfig {
   DEINTERLACE = 0,
 };
-
-enum struct DRMIdlePCState {
-  NONE,
-  ENABLE,
-  DISABLE,
-};
-
 
 /* Display type to identify a suitable connector */
 enum struct DRMDisplayType {

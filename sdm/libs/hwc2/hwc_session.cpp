@@ -879,10 +879,6 @@ int32_t HWCSession::SetPowerMode(hwc2_device_t *device, hwc2_display_t display, 
   if (error != HWC2_ERROR_NONE) {
     return error;
   }
-  // Reset idle pc ref count on suspend, as we enable idle pc during suspend.
-  if (mode == HWC2::PowerMode::Off) {
-    hwc_session->idle_pc_ref_cnt_ = 0;
-  }
 
   hwc_session->UpdateVsyncSource(display);
 
@@ -1384,14 +1380,6 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
         break;
       }
       status = SetQSyncMode(input_parcel);
-      break;
-
-    case qService::IQService::SET_IDLE_PC:
-      if (!input_parcel) {
-        DLOGE("QService command = %d: input_parcel needed.", command);
-        break;
-      }
-      status = SetIdlePC(input_parcel);
       break;
 
     default:
@@ -2550,37 +2538,6 @@ void HWCSession::UpdateVsyncSource(hwc2_display_t display) {
     callbacks_.SetSwapVsync(HWC_DISPLAY_PRIMARY, HWC_DISPLAY_PRIMARY);
     hwc_display_[HWC_DISPLAY_PRIMARY]->SetVsyncEnabled(vsync_mode);
   }
-}
-
-android::status_t HWCSession::SetIdlePC(const android::Parcel *input_parcel) {
-  auto enable = input_parcel->readInt32();
-  auto synchronous = input_parcel->readInt32();
-
-#ifdef DISPLAY_CONFIG_1_3
-  return static_cast<android::status_t>(controlIdlePowerCollapse(enable, synchronous));
-#else
-  {
-    SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
-    if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
-      DLOGE("Primary display is not ready");
-      return -EINVAL;
-    }
-    auto error = hwc_display_[HWC_DISPLAY_PRIMARY]->ControlIdlePowerCollapse(enable, synchronous);
-    if (error != HWC2::Error::None) {
-      return -EINVAL;
-    }
-    if (!enable) {
-      Refresh(HWC_DISPLAY_PRIMARY);
-      int32_t error = locker_[HWC_DISPLAY_PRIMARY].WaitFinite(kCommitDoneTimeoutMs);
-      if (error == ETIMEDOUT) {
-        DLOGE("Timed out!! Next frame commit done event not received!!");
-        return error;
-      }
-    }
-    DLOGI("Idle PC %s!!", enable ? "enabled" : "disabled");
-  }
-  return 0;
-#endif
 }
 
 }  // namespace sdm

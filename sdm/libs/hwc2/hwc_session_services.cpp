@@ -371,7 +371,7 @@ int32_t HWCSession::ControlPartialUpdate(int disp_id, bool enable) {
   Refresh(HWC_DISPLAY_PRIMARY);
 
   // Wait until partial update control is complete
-  int32_t error = locker_[disp_id].WaitFinite(kCommitDoneTimeoutMs);
+  int32_t error = locker_[disp_id].WaitFinite(kPartialUpdateControlTimeoutMs);
 
   return error;
 }
@@ -591,46 +591,6 @@ Return<int32_t> HWCSession::setDisplayIndex(IDisplayConfig::DisplayTypeExt disp_
 
   return 0;
 }
-#endif  // DISPLAY_CONFIG_1_2
-
-#ifdef DISPLAY_CONFIG_1_3
-Return<int32_t> HWCSession::controlIdlePowerCollapse(bool enable, bool synchronous) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
-
-  if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
-    if (!enable) {
-      if (!idle_pc_ref_cnt_) {
-        HWC2::Error err =
-            hwc_display_[HWC_DISPLAY_PRIMARY]->ControlIdlePowerCollapse(enable, synchronous);
-        if (err != HWC2::Error::None) {
-          return -EINVAL;
-        }
-        Refresh(HWC_DISPLAY_PRIMARY);
-        int32_t error = locker_[HWC_DISPLAY_PRIMARY].WaitFinite(kCommitDoneTimeoutMs);
-        if (error == ETIMEDOUT) {
-          DLOGE("Timed out!! Next frame commit done event not received!!");
-          return error;
-        }
-        DLOGI("Idle PC disabled!!");
-      }
-      idle_pc_ref_cnt_++;
-    } else if (idle_pc_ref_cnt_ > 0) {
-      if (!(idle_pc_ref_cnt_ - 1)) {
-        HWC2::Error err =
-            hwc_display_[HWC_DISPLAY_PRIMARY]->ControlIdlePowerCollapse(enable, synchronous);
-        if (err != HWC2::Error::None) {
-          return -EINVAL;
-        }
-        DLOGI("Idle PC enabled!!");
-      }
-      idle_pc_ref_cnt_--;
-    }
-    return 0;
-  }
-
-  DLOGW("Display = %d is not connected.", HWC_DISPLAY_PRIMARY);
-  return -ENODEV;
-}
-#endif  // DISPLAY_CONFIG_1_3
+#endif
 
 }  // namespace sdm

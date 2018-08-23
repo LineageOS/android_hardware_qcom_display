@@ -96,7 +96,6 @@ class DisplayNull : public DisplayInterface {
                                     const ColorMetaData &))
   MAKE_NO_OP(HandleSecureEvent(SecureEvent))
   MAKE_NO_OP(SetQSyncMode(QSyncMode))
-  MAKE_NO_OP(ControlIdlePowerCollapse(bool, bool))
 
   DisplayConfigVariableInfo default_variable_config_ = {};
   DisplayConfigFixedInfo default_fixed_config_ = {};

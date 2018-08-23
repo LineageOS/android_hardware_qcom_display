@@ -71,7 +71,6 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   virtual DisplayError GetPanelBrightness(int *level);
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event);
   virtual DisplayError SetQSyncMode(QSyncMode qsync_mode);
-  virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous);
 
   // Implement the HWEventHandlers
   virtual DisplayError VSync(int64_t timestamp);

@@ -738,15 +738,6 @@ class DisplayInterface {
   */
   virtual DisplayError SetQSyncMode(QSyncMode qsync_mode) = 0;
 
-  /*! @brief Method to control idle power collapse feature for primary display.
-
-    @param[in] enable idle power collapse feature control flag
-    @param[in] synchronous commit flag
-
-    @return \link DisplayError \endlink
-  */
-  virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) = 0;
-
   /*
    * Returns a string consisting of a dump of SDM's display and layer related state
    * as programmed to driver
