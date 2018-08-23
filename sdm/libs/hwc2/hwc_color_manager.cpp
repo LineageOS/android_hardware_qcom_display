@@ -254,7 +254,14 @@ int HWCColorManager::SetFrameCapture(void *params, bool enable, HWCDisplay *hwc_
         frame_capture_data->buffer_stride = buffer_info.alloc_buffer_info.stride;
         frame_capture_data->buffer_size = buffer_info.alloc_buffer_info.size;
       }
-      ret = hwc_display->FrameCaptureAsync(buffer_info, 1);
+      if (frame_capture_data->input_params.flags == 0x1) {
+        // Layer mixer mode
+        ret = hwc_display->FrameCaptureAsync(buffer_info, 0);
+      } else {
+        // DSPP mode
+        ret = hwc_display->FrameCaptureAsync(buffer_info, 1);
+      }
+
       if (ret < 0) {
         DLOGE("FrameCaptureAsync failed. ret = %d", ret);
       }
