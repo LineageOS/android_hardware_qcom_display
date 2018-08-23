@@ -83,6 +83,10 @@ struct DisplayHDRCapabilities {
     float min_luminance = 0.0f;
 };
 
+struct WriteBackCapabilities {
+    bool isWbUbwcSupported;
+};
+
 //=============================================================================
 // The functions below run in the client pocess and wherever necessary
 // do a binder call to HWC to get/set data.
@@ -104,6 +108,7 @@ int setIdleTimeout(uint32_t value);
 int getHDRCapabilities(int dpy, DisplayHDRCapabilities *caps);
 int setCameraLaunchStatus(uint32_t on);
 bool displayBWTransactionPending();
+int32_t getWriteBackCapabilities( WriteBackCapabilities *caps);
 
 } // namespace display
 
