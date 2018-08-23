@@ -781,6 +781,7 @@ DisplayError HWInfoDRM::GetDisplaysStatus(HWDisplaysInfo *hw_displays_info) {
     }
     hw_info.is_connected = iter.second.is_connected ? 1 : 0;
     hw_info.is_primary = iter.second.is_primary ? 1 : 0;
+    hw_info.is_wb_ubwc_supported = iter.second.is_wb_ubwc_supported;
     if (hw_info.display_id >= 0) {
       (*hw_displays_info)[hw_info.display_id] = hw_info;
     }

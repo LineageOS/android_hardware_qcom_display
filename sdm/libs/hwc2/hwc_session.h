@@ -20,7 +20,9 @@
 #ifndef __HWC_SESSION_H__
 #define __HWC_SESSION_H__
 
-#ifdef DISPLAY_CONFIG_1_3
+#ifdef DISPLAY_CONFIG_1_4
+#include <vendor/display/config/1.4/IDisplayConfig.h>
+#elif DISPLAY_CONFIG_1_3
 #include <vendor/display/config/1.3/IDisplayConfig.h>
 #elif DISPLAY_CONFIG_1_2
 #include <vendor/display/config/1.2/IDisplayConfig.h>
@@ -49,7 +51,9 @@
 
 namespace sdm {
 
-#ifdef DISPLAY_CONFIG_1_3
+#ifdef DISPLAY_CONFIG_1_4
+using vendor::display::config::V1_4::IDisplayConfig;
+#elif  DISPLAY_CONFIG_1_3
 using vendor::display::config::V1_3::IDisplayConfig;
 #elif DISPLAY_CONFIG_1_2
 using vendor::display::config::V1_2::IDisplayConfig;
@@ -249,6 +253,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int32_t SetSecondaryDisplayStatus(int disp_id, HWCDisplay::DisplayStatus status);
   int32_t GetPanelBrightness(int *level);
   int32_t MinHdcpEncryptionLevelChanged(int disp_id, uint32_t min_enc_level);
+  int32_t IsWbUbwcSupported(int *value);
 
   // service methods
   void StartServices();
@@ -289,6 +294,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
 #endif
 #ifdef DISPLAY_CONFIG_1_3
   Return<int32_t> controlIdlePowerCollapse(bool enable, bool synchronous) override;
+#endif
+#ifdef DISPLAY_CONFIG_1_4
+  Return<void> getWriteBackCapabilities(getWriteBackCapabilities_cb _hidl_cb) override;
 #endif
 
   // QClient methods

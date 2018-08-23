@@ -601,6 +601,7 @@ struct DRMConnectorInfo {
   bool qsync_support;
   // Connection status of this connector
   bool is_connected;
+  bool is_wb_ubwc_supported;
 };
 
 // All DRM Connectors as map<Connector_id , connector_info>
