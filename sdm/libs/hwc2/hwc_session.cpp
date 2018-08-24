@@ -2236,9 +2236,13 @@ void HWCSession::UpdateVsyncSource(hwc2_display_t display) {
 
   // If primary display is powered off, change vsync source to next builtin display.
   // If primary display is powerd on, change vsync source back to primary display.
+  // First check for active builtins. If not found switch to pluggable displays.
+  std::vector<DisplayMapInfo> map_info = map_info_builtin_;
+  std::copy(map_info_pluggable_.begin(), map_info_pluggable_.end(), std::back_inserter(map_info));
+
   if (power_mode == HWC2::PowerMode::Off) {
     hwc2_display_t next_vsync_source = HWC_DISPLAY_PRIMARY;
-    for (auto &info : map_info_builtin_) {
+    for (auto &info : map_info) {
       auto &hwc_display = hwc_display_[info.client_id];
       if (!hwc_display) {
         continue;
