@@ -140,8 +140,8 @@ DisplayError HWVirtualDRM::Commit(HWLayers *hw_layers) {
   DisplayError err = kErrorNone;
 
   registry_.Register(hw_layers);
-  registry_.MapBufferToFbId(output_buffer);
-  uint32_t fb_id = registry_.GetFbId(output_buffer->planes[0].fd);
+  registry_.MapOutputBufferToFbId(output_buffer);
+  uint32_t fb_id = registry_.GetOutputFbId(output_buffer->handle_id);
 
   ConfigureWbConnectorFbId(fb_id);
   ConfigureWbConnectorDestRect();
@@ -151,9 +151,6 @@ DisplayError HWVirtualDRM::Commit(HWLayers *hw_layers) {
   if (err != kErrorNone) {
     DLOGE("Atomic commit failed for crtc_id %d conn_id %d", token_.crtc_id, token_.conn_id);
   }
-
-  registry_.Next();
-  registry_.Unregister();
 
   return(err);
 }
@@ -174,8 +171,8 @@ DisplayError HWVirtualDRM::Flush(HWLayers *hw_layers) {
 DisplayError HWVirtualDRM::Validate(HWLayers *hw_layers) {
   LayerBuffer *output_buffer = hw_layers->info.stack->output_buffer;
 
-  registry_.MapBufferToFbId(output_buffer);
-  uint32_t fb_id = registry_.GetFbId(output_buffer->planes[0].fd);
+  registry_.MapOutputBufferToFbId(output_buffer);
+  uint32_t fb_id = registry_.GetOutputFbId(output_buffer->handle_id);
 
   ConfigureWbConnectorFbId(fb_id);
   ConfigureWbConnectorDestRect();

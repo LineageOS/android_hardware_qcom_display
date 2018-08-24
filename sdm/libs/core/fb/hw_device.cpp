@@ -160,7 +160,7 @@ DisplayError HWDevice::GetConfigIndex(char *mode, uint32_t *index) {
   return kErrorNone;
 }
 
-DisplayError HWDevice::PowerOn(int *release_fence) {
+DisplayError HWDevice::PowerOn(const HWQosData &qos_data, int *release_fence) {
   DTRACE_SCOPED();
 
   if (Sys::ioctl_(device_fd_, FBIOBLANK, FB_BLANK_UNBLANK) < 0) {
@@ -179,11 +179,11 @@ DisplayError HWDevice::PowerOff() {
   return kErrorNone;
 }
 
-DisplayError HWDevice::Doze(int *release_fence) {
+DisplayError HWDevice::Doze(const HWQosData &qos_data, int *release_fence) {
   return kErrorNone;
 }
 
-DisplayError HWDevice::DozeSuspend(int *release_fence) {
+DisplayError HWDevice::DozeSuspend(const HWQosData &qos_data, int *release_fence) {
   return kErrorNone;
 }
 

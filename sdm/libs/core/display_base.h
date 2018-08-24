@@ -208,6 +208,7 @@ class DisplayBase : public DisplayInterface {
   double color_transform_[kColorTransformlength_] = {0};
   bool color_transform_active_ = false;
   bool gpu_fallback_ = false;
+  HWQosData default_qos_data_;
 };
 
 }  // namespace sdm

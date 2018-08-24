@@ -144,6 +144,7 @@ DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
   alloc_buffer_info->aligned_width = UINT32(hnd->width);
   alloc_buffer_info->aligned_height = UINT32(hnd->height);
   alloc_buffer_info->size = hnd->size;
+  alloc_buffer_info->id = hnd->id;
 
   buffer_info->private_data = reinterpret_cast<void *>(hnd);
   return kErrorNone;

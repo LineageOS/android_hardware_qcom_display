@@ -132,5 +132,4 @@ DisplayError HWPeripheralDRM::Flush(HWLayers *hw_layers) {
   return kErrorNone;
 }
 
-
 }  // namespace sdm

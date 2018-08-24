@@ -44,6 +44,10 @@
 #define IOCTL_LOGE(ioctl, type) \
   DLOGE("ioctl %s, device = %d errno = %d, desc = %s", #ioctl, type, errno, strerror(errno))
 
+#define UI_FBID_LIMIT 3
+#define VIDEO_FBID_LIMIT 16
+#define ROTATOR_FBID_LIMIT 2
+
 namespace sdm {
 class HWInfoInterface;
 
@@ -68,10 +72,10 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError SetDisplayAttributes(uint32_t index);
   virtual DisplayError SetDisplayAttributes(const HWDisplayAttributes &display_attributes);
   virtual DisplayError GetConfigIndex(char *mode, uint32_t *index);
-  virtual DisplayError PowerOn(int *release_fence);
+  virtual DisplayError PowerOn(const HWQosData &qos_data, int *release_fence);
   virtual DisplayError PowerOff();
-  virtual DisplayError Doze(int *release_fence);
-  virtual DisplayError DozeSuspend(int *release_fence);
+  virtual DisplayError Doze(const HWQosData &qos_data, int *release_fence);
+  virtual DisplayError DozeSuspend(const HWQosData &qos_data, int *release_fence);
   virtual DisplayError Standby();
   virtual DisplayError Validate(HWLayers *hw_layers);
   virtual DisplayError Commit(HWLayers *hw_layers);
@@ -134,32 +138,31 @@ class HWDeviceDRM : public HWInterface {
   void SetTopology(sde_drm::DRMTopology drm_topology, HWTopology *hw_topology);
   void SetMultiRectMode(const uint32_t flags, sde_drm::DRMMultiRectMode *target);
   void SetFullROI();
+  void SetQOSData(const HWQosData &qos_data);
 
   class Registry {
    public:
     explicit Registry(BufferAllocator *buffer_allocator);
-    ~Registry();
-    // Called on each Validate and Commit to register layer buffers fds to the slot pointed to by
-    // current_index_
+    // Called on each Validate and Commit to map the handle_id to fb_id of each layer buffer.
     void Register(HWLayers *hw_layers);
-    // Clears the slot pointed to by current_index_
-    void Unregister();
-    // Moves current_index_ to the next position
-    void Next();
-    // Called on display disconnect to release all gem handles and fb_ids
+    // Called on display disconnect to clear output buffer map and remove fb_ids.
     void Clear();
-    // Maps given fd to FB ID
-    void MapBufferToFbId(LayerBuffer* buffer);
-    // Finds an fb_id corresponding to an fd in current map
-    uint32_t GetFbId(int fd);
+    // Create the fd_id for the given buffer.
+    int CreateFbId(LayerBuffer *buffer, uint32_t *fb_id);
+    // Find handle_id in the layer map. Else create fb_id and add <handle_id,fb_id> in map.
+    void MapBufferToFbId(Layer* layer, LayerBuffer* buffer);
+    // Find handle_id in output buffer map. Else create fb_id and add <handle_id,fb_id> in map.
+    void MapOutputBufferToFbId(LayerBuffer* buffer);
+    // Find fb_id for given handle_id in the layer map.
+    uint32_t GetFbId(Layer *layer, uint64_t handle_id);
+    // Find fb_id for given handle_id in output buffer map.
+    uint32_t GetOutputFbId(uint64_t handle_id);
 
    private:
-    uint8_t rmfb_delay_ = 1;  // N cycle delay before destroy
-    // fd to fb_id map. fd is used as key only for a single draw cycle between
-    // prepare and commit. It should not be used for caching in future due to fd recycling
-    std::unordered_map<int, uint32_t> *hashmap_ {};
-    int current_index_ = 0;
+    bool disable_fbid_cache_ = false;
+    std::unordered_map<uint64_t, std::shared_ptr<LayerBufferObject>> output_buffer_map_ {};
     BufferAllocator *buffer_allocator_ = {};
+    uint8_t fbid_cache_limit_ = UI_FBID_LIMIT;
   };
 
  protected:

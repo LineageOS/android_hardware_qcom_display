@@ -36,6 +36,7 @@
 
 #include <vector>
 #include <utility>
+#include <unordered_map>
 
 #include "layer_buffer.h"
 #include "sdm_types.h"
@@ -304,6 +305,10 @@ struct LayerSolidFill {
   uint32_t alpha = 0;      //!< Alpha value
 };
 
+struct LayerBufferMap {
+  std::unordered_map<uint64_t, std::shared_ptr<LayerBufferObject>> buffer_map;
+};
+
 /*! @brief This structure defines display layer object which contains layer properties and a drawing
   buffer.
 
@@ -376,6 +381,7 @@ struct Layer {
   Lut3d lut_3d = {};                               //!< o/p - Populated by SDM when tone mapping is
                                                    //!< needed on this layer.
   LayerSolidFill solid_fill_info = {};             //!< solid fill info along with depth.
+  std::shared_ptr<LayerBufferMap> buffer_map = nullptr;  //!< Map of handle_id and fb_id.
 };
 
 /*! @brief This structure defines a layer stack that contains layers which need to be composed and
