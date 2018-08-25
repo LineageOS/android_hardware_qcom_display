@@ -1,3 +1,6 @@
+soong_namespace {
+}
+
 cc_defaults {
     name: "display_defaults",
     cflags: [
