@@ -293,11 +293,13 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   void HandleConcurrency(hwc2_display_t disp);
   void ActivateDisplay(hwc2_display_t disp, bool enable);
   void NonBuiltinConcurrency(hwc2_display_t disp, bool is_built_in_2_on);
+  void MapBuiltInDisplays();
   bool GetSecondBuiltinStatus();
   hwc2_display_t GetNextBuiltinIndex();
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[kNumDisplays] = {nullptr};
+  HWCDisplay *hwc_display_builtin_[kNumBuiltIn] = {nullptr};
   HWCCallbacks callbacks_;
   HWCBufferAllocator buffer_allocator_;
   HWCBufferSyncHandler buffer_sync_handler_;
