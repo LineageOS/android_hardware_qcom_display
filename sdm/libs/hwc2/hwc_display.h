@@ -81,6 +81,7 @@ class HWCColorMode {
   HWC2::Error SetColorTransform(const float *matrix, android_color_transform_t hint);
   HWC2::Error RestoreColorTransform();
   ColorMode GetCurrentColorMode() { return current_color_mode_; }
+  HWC2::Error ApplyCurrentColorModeWithRenderIntent();
 
  private:
   static const uint32_t kColorTransformMatrixCount = 16;
@@ -95,7 +96,7 @@ class HWCColorMode {
   HWC2::Error ApplyDefaultColorMode();
 
   DisplayInterface *display_intf_ = NULL;
-
+  bool apply_mode_ = false;
   ColorMode current_color_mode_ = ColorMode::NATIVE;
   RenderIntent current_render_intent_ = RenderIntent::COLORIMETRIC;
   typedef std::map<RenderIntent, std::string> RenderIntentMap;
