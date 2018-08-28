@@ -101,6 +101,7 @@ enum LayerComposition {
   kCompositionBlit,         //!< This layer will be composed using Blit Engine.
                             //!< This composition type is used only if BlitTarget layer is provided
                             //!< in a composition cycle.
+  kCompositionNone,         //!< This layer will not be composed by any hardware.
 
   /* === List of composition types set by Client === */
   /* These composition types represent target buffer layers onto which GPU or Blit will draw if SDM

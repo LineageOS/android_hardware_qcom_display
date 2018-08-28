@@ -2026,6 +2026,7 @@ bool HWCDisplay::CanSkipValidate() {
   }
 
   for (auto hwc_layer : layer_set_) {
+    Layer *layer = hwc_layer->GetSDMLayer();
     if (hwc_layer->NeedsValidation()) {
       DLOGV_IF(kTagClient, "hwc_layer[%d] needs validation. Returning false.",
                hwc_layer->GetId());
@@ -2033,9 +2034,9 @@ bool HWCDisplay::CanSkipValidate() {
     }
 
     // Do not allow Skip Validate, if any layer needs GPU Composition.
-    if (hwc_layer->GetDeviceSelectedCompositionType() == HWC2::Composition::Client) {
-      DLOGV_IF(kTagClient, "hwc_layer[%d] is GPU composed. Returning false.",
-               hwc_layer->GetId());
+    if (layer->composition == kCompositionGPU || layer->composition == kCompositionNone) {
+      DLOGV_IF(kTagClient, "hwc_layer[%d] is %s. Returning false.", hwc_layer->GetId(),
+               (layer->composition == kCompositionGPU) ? "GPU composed": "Dropped");
       return false;
     }
   }
