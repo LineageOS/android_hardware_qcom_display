@@ -126,6 +126,7 @@ static int32_t GetPixelEncoding(const LayerBuffer &layer_buffer) {
 
   return mdp_pixel_encoding;
 }
+
 static int32_t GetBitsPerComponent(const LayerBuffer &layer_buffer) {
   bool is_yuv = layer_buffer.flags.video;
   bool is_10_bit = Is10BitFormat(layer_buffer.format);
@@ -226,6 +227,12 @@ DisplayError HWHDMI::Init() {
   ReadScanInfo();
 
   GetPanelS3DMode();
+
+  error = SetDisplayAttributes(active_config_index_);
+  if (error != kErrorNone) {
+    Deinit();
+    return error;
+  }
 
   s3d_mode_sdm_to_mdp_.insert(std::pair<HWS3DMode, msm_hdmi_s3d_mode>
                              (kS3DModeNone, HDMI_S3D_NONE));
