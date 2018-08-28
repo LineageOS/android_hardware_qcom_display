@@ -22,6 +22,30 @@
       "revId": "f84f4b0b95e92ae3bc9a6c20b9d898868180132f",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "bdcb19ec_1002f47a",
+        "filename": "Android.bp",
+        "patchSetId": 1
+      },
+      "lineNbr": 2,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2018-08-28T14:05:14Z",
+      "side": 1,
+      "message": "I was wondering that too. Let-s say that once 8996 P tag drops and the project becomes more close to 8998, is this enough to differentiate them? This just needs to be added even if empty?",
+      "parentUuid": "ace053bd_2143b8d4",
+      "range": {
+        "startLine": 1,
+        "startChar": 0,
+        "endLine": 2,
+        "endChar": 1
+      },
+      "revId": "f84f4b0b95e92ae3bc9a6c20b9d898868180132f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
