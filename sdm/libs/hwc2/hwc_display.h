@@ -368,6 +368,8 @@ class HWCDisplay : public DisplayEventHandler {
   uint32_t display_config_ = 0;
   bool config_pending_ = false;
   bool pending_commit_ = false;
+  bool is_cmd_mode_ = false;
+  bool partial_update_enabled_ = false;
 
  private:
   void DumpInputBuffers(void);
@@ -380,7 +382,6 @@ class HWCDisplay : public DisplayEventHandler {
   int null_display_mode_ = 0;
   bool has_client_composition_ = false;
   DisplayValidateState validate_state_ = kNormalValidate;
-  bool partial_update_enabled_ = false;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {
