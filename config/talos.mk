@@ -18,10 +18,8 @@ PRODUCT_PACKAGES += \
     libqdMetaData.system \
     modetest
 
-#QDCM calibration xml file for 2k panel
-PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml
-#QDCM calibration xml file for 4k panel
-PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_Sharp_4k_cmd_mode_dsc_dsi_panel.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_Sharp_4k_cmd_mode_dsc_dsi_panel.xml
+#QDCM calibration xml file
+PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_hx83112a_video_mode_dsi_truly_panel.xml
 
 #Enable Charging Icon
 TARGET_RECOVERY_PIXEL_FORMAT := RGBX_8888
@@ -34,7 +32,7 @@ NUM_FRAMEBUFFER_SURFACE_BUFFERS := 3
 TARGET_USES_HWC2 := true
 TARGET_USES_QCOM_DISPLAY_BSP := true
 TARGET_USES_COLOR_METADATA := true
-TARGET_HAS_WIDE_COLOR_DISPLAY := false
+TARGET_HAS_WIDE_COLOR_DISPLAY := true
 
 PRODUCT_PROPERTY_OVERRIDES += \
     persist.demo.hdmirotationlock=false \
