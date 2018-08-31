@@ -1265,11 +1265,9 @@ HWC2::Error HWCDisplay::GetHdrCapabilities(uint32_t *out_num_types, int32_t *out
     // HDR10 and HLG are supported
     out_types[0] = HAL_HDR_HDR10;
     out_types[1] = HAL_HDR_HLG;
-    static const float kLuminanceFactor = 10000.0;
-    // luminance is expressed in the unit of 0.0001 cd/m2, convert it to 1cd/m2.
-    *out_max_luminance = FLOAT(fixed_info.max_luminance)/kLuminanceFactor;
-    *out_max_average_luminance = FLOAT(fixed_info.average_luminance)/kLuminanceFactor;
-    *out_min_luminance = FLOAT(fixed_info.min_luminance)/kLuminanceFactor;
+    *out_max_luminance = fixed_info.max_luminance;
+    *out_max_average_luminance = fixed_info.average_luminance;
+    *out_min_luminance = fixed_info.min_luminance;
   }
 
   return HWC2::Error::None;

@@ -881,11 +881,11 @@ void HWDevice::GetHWPanelInfoByNode(int device_node, HWPanelInfo *panel_info) {
       } else if (!strncmp(tokens[0], "is_hdr_enabled", strlen("is_hdr_enabled"))) {
         panel_info->hdr_enabled = atoi(tokens[1]);
       } else if (!strncmp(tokens[0], "peak_brightness", strlen("peak_brightness"))) {
-        panel_info->peak_luminance = UINT32(atoi(tokens[1]));
+        panel_info->peak_luminance = FLOAT(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "average_brightness", strlen("average_brightness"))) {
-        panel_info->average_luminance = UINT32(atoi(tokens[1]));
+        panel_info->average_luminance = FLOAT(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "blackness_level", strlen("blackness_level"))) {
-        panel_info->blackness_level = UINT32(atoi(tokens[1]));
+        panel_info->blackness_level = FLOAT(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "white_chromaticity_x", strlen("white_chromaticity_x"))) {
         panel_info->primaries.white_point[0] = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "white_chromaticity_y", strlen("white_chromaticity_y"))) {
