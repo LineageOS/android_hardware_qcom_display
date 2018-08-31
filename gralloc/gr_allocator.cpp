@@ -54,6 +54,10 @@
 #define ION_SECURE ION_FLAG_SECURE
 #endif
 
+#ifndef ION_FLAG_CP_CDSP
+#define ION_FLAG_CP_CDSP 0
+#endif
+
 #ifdef SLAVE_SIDE_CP
 #define CP_HEAP_ID ION_CP_MM_HEAP_ID
 #define SD_HEAP_ID CP_HEAP_ID
@@ -206,11 +210,17 @@ void Allocator::GetIonHeapInfo(uint64_t usage, unsigned int *ion_heap_id, unsign
       flags |= UINT(ION_SD_FLAGS);
     } else if (usage & BufferUsage::CAMERA_OUTPUT) {
       heap_id = ION_HEAP(SD_HEAP_ID);
+      if (usage & GRALLOC_USAGE_PRIVATE_CDSP) {
+        flags |= UINT(ION_SECURE | ION_FLAG_CP_CDSP);
+      }
       if (usage & BufferUsage::COMPOSER_OVERLAY) {
         flags |= UINT(ION_SC_PREVIEW_FLAGS);
       } else {
         flags |= UINT(ION_SC_FLAGS);
       }
+    } else if (usage & GRALLOC_USAGE_PRIVATE_CDSP) {
+      heap_id = ION_HEAP(ION_SECURE_CARVEOUT_HEAP_ID);
+      flags |= UINT(ION_SECURE | ION_FLAG_CP_CDSP);
     } else {
       heap_id = ION_HEAP(CP_HEAP_ID);
       flags |= UINT(ION_CP_FLAGS);
