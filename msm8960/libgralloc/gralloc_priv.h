@@ -52,7 +52,7 @@ enum {
 
     /* Set this for allocating uncached memory (using O_DSYNC)
      * cannot be used with noncontiguous heaps */
-    GRALLOC_USAGE_PRIVATE_UNCACHED        =       0x02000000,
+    GRALLOC_USAGE_PRIVATE_UNCACHED        =       0x00000004,
 
     /* Buffer content should be displayed on an external display only */
     GRALLOC_USAGE_PRIVATE_EXTERNAL_ONLY   =       0x08000000,
