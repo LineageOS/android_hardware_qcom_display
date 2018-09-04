@@ -1295,6 +1295,10 @@ HWC2::Error HWCDisplay::GetHdrCapabilities(uint32_t *out_num_types, int32_t *out
 
 
 HWC2::Error HWCDisplay::CommitLayerStack(void) {
+  if (flush_) {
+    return HWC2::Error::None;
+  }
+
   if (!validated_) {
     DLOGV_IF(kTagClient, "Display %d is not validated", id_);
     return HWC2::Error::NotValidated;
@@ -1306,37 +1310,35 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
 
   DumpInputBuffers();
 
-  if (!flush_) {
-    DisplayError error = kErrorUndefined;
-    int status = 0;
-    if (tone_mapper_) {
-      if (NeedsToneMap(layer_stack_)) {
-        status = tone_mapper_->HandleToneMap(&layer_stack_);
-        if (status != 0) {
-          DLOGE("Error handling HDR in ToneMapper");
-        }
-      } else {
-        tone_mapper_->Terminate();
+  DisplayError error = kErrorUndefined;
+  int status = 0;
+  if (tone_mapper_) {
+    if (NeedsToneMap(layer_stack_)) {
+      status = tone_mapper_->HandleToneMap(&layer_stack_);
+      if (status != 0) {
+        DLOGE("Error handling HDR in ToneMapper");
       }
-    }
-    error = display_intf_->Commit(&layer_stack_);
-
-    if (error == kErrorNone) {
-      // A commit is successfully submitted, start flushing on failure now onwards.
-      flush_on_error_ = true;
     } else {
-      if (error == kErrorShutDown) {
-        shutdown_pending_ = true;
-        return HWC2::Error::Unsupported;
-      } else if (error == kErrorNotValidated) {
-        validated_ = false;
-        return HWC2::Error::NotValidated;
-      } else if (error != kErrorPermission) {
-        DLOGE("Commit failed. Error = %d", error);
-        // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
-        // so that previous buffer and fences are released, and override the error.
-        flush_ = true;
-      }
+      tone_mapper_->Terminate();
+    }
+  }
+  error = display_intf_->Commit(&layer_stack_);
+
+  if (error == kErrorNone) {
+    // A commit is successfully submitted, start flushing on failure now onwards.
+    flush_on_error_ = true;
+  } else {
+    if (error == kErrorShutDown) {
+      shutdown_pending_ = true;
+      return HWC2::Error::Unsupported;
+    } else if (error == kErrorNotValidated) {
+      validated_ = false;
+      return HWC2::Error::NotValidated;
+    } else if (error != kErrorPermission) {
+      DLOGE("Commit failed. Error = %d", error);
+      // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
+      // so that previous buffer and fences are released, and override the error.
+      flush_ = true;
     }
   }
 
