@@ -1078,6 +1078,8 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
         // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
         // so that previous buffer and fences are released, and override the error.
         flush_ = true;
+      } else {
+        WaitOnPreviousFence();
       }
       return HWC2::Error::BadDisplay;
     } else {
@@ -2185,6 +2187,28 @@ void HWCDisplay::UpdateRefreshRate() {
 
   Layer *sdm_client_target = client_target_->GetSDMLayer();
   sdm_client_target->frame_rate = current_refresh_rate_;
+}
+
+void HWCDisplay::WaitOnPreviousFence() {
+  DisplayConfigFixedInfo display_config;
+  display_intf_->GetConfig(&display_config);
+  if(!display_config.is_cmdmode) {
+    return;
+  }
+
+  // Since prepare failed commit would follow the same.
+  // Wait for previous rel fence.
+  for (auto hwc_layer : layer_set_) {
+    auto fence = hwc_layer->PopBackReleaseFence();
+    if (fence >= 0) {
+      int error = sync_wait(fence, 1000);
+      if (error < 0) {
+        DLOGW("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
+        return;
+      }
+    }
+    hwc_layer->PushBackReleaseFence(fence);
+  }
 }
 
 }  // namespace sdm
