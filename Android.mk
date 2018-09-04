@@ -1,7 +1,7 @@
 ifeq ($(call my-dir),$(call project-path-for,qcom-display))
 
 sdm-libs := sdm/libs
-display-hals := include $(sdm-libs)/utils $(sdm-libs)/core
+display-hals := include libqdutils libqservice $(sdm-libs)/utils $(sdm-libs)/core
 
 ifneq ($(TARGET_IS_HEADLESS), true)
     display-hals += libcopybit libmemtrack hdmi_cec \
