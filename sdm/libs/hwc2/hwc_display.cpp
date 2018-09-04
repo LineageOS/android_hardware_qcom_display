@@ -107,8 +107,7 @@ HWC2::Error HWCColorMode::GetRenderIntents(ColorMode mode, uint32_t *out_num_int
   return HWC2::Error::None;
 }
 
-HWC2::Error HWCColorMode::SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
-  DTRACE_SCOPED();
+HWC2::Error HWCColorMode::ValidateColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
   if (mode < ColorMode::NATIVE || mode > ColorMode::BT2100_HLG) {
     DLOGE("Could not find mode: %d", mode);
     return HWC2::Error::BadParameter;
@@ -118,6 +117,42 @@ HWC2::Error HWCColorMode::SetColorModeWithRenderIntent(ColorMode mode, RenderInt
   }
   if (color_mode_map_[mode].find(intent) == color_mode_map_[mode].end()) {
     return HWC2::Error::Unsupported;
+  }
+
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCColorMode::SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
+  DTRACE_SCOPED();
+  HWC2::Error hwc_error = ValidateColorModeWithRenderIntent(mode, intent);
+  if (hwc_error != HWC2::Error::None) {
+    return hwc_error;
+  }
+
+  if (current_color_mode_ == mode && current_render_intent_ == intent) {
+    return HWC2::Error::None;
+  }
+
+  auto mode_string = color_mode_map_[mode][intent];
+  DisplayError error = display_intf_->SetColorMode(mode_string);
+  if (error != kErrorNone) {
+    DLOGE("failed for mode = %d intent = %d name = %s", mode, intent, mode_string.c_str());
+    return HWC2::Error::Unsupported;
+  }
+  // The mode does not have the PCC configured, restore the transform
+  RestoreColorTransform();
+
+  current_color_mode_ = mode;
+  current_render_intent_ = intent;
+  DLOGV_IF(kTagClient, "Successfully applied mode = %d intent = %d name = %s", mode, intent,
+           mode_string.c_str());
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCColorMode::CacheColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
+  HWC2::Error error = ValidateColorModeWithRenderIntent(mode, intent);
+  if (error != HWC2::Error::None) {
+    return error;
   }
 
   if (current_color_mode_ == mode && current_render_intent_ == intent) {
@@ -612,14 +647,10 @@ void HWCDisplay::BuildLayerStack() {
   sdm_client_target->flags.updating = IsLayerUpdating(client_target_);
   layer_stack_.layers.push_back(sdm_client_target);
 
-  // Apply current Color Mode and Render Intent.
-  HWC2::Error error = color_mode_->ApplyCurrentColorModeWithRenderIntent();
-
   // fall back frame composition to GPU when client target is 10bit
   // TODO(user): clarify the behaviour from Client(SF) and SDM Extn -
   // when handling 10bit FBT, as it would affect blending
-  // Fallback to GPU Composition, if Color Mode can't be applied.
-  if ((error != HWC2::Error::None) || Is10BitFormat(sdm_client_target->input_buffer.format)) {
+  if (Is10BitFormat(sdm_client_target->input_buffer.format)) {
     // Must fall back to client composition
     MarkLayersForClientComposition();
   }

@@ -82,6 +82,7 @@ class HWCColorMode {
   HWC2::Error RestoreColorTransform();
   ColorMode GetCurrentColorMode() { return current_color_mode_; }
   HWC2::Error ApplyCurrentColorModeWithRenderIntent();
+  HWC2::Error CacheColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
 
  private:
   static const uint32_t kColorTransformMatrixCount = 16;
@@ -94,6 +95,7 @@ class HWCColorMode {
     }
   }
   HWC2::Error ApplyDefaultColorMode();
+  HWC2::Error ValidateColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
 
   DisplayInterface *display_intf_ = NULL;
   bool apply_mode_ = false;

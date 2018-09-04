@@ -195,6 +195,12 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
   // Checks and replaces layer stack for solid fill
   SolidFillPrepare();
 
+  // Apply current Color Mode and Render Intent.
+  if (color_mode_->ApplyCurrentColorModeWithRenderIntent() != HWC2::Error::None) {
+    // Fallback to GPU Composition, if Color Mode can't be applied.
+    MarkLayersForClientComposition();
+  }
+
   bool pending_output_dump = dump_frame_count_ && dump_output_to_file_;
 
   if (readback_buffer_queued_ || pending_output_dump) {
@@ -279,7 +285,7 @@ HWC2::Error HWCDisplayBuiltIn::SetColorMode(ColorMode mode) {
 }
 
 HWC2::Error HWCDisplayBuiltIn::SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
-  auto status = color_mode_->SetColorModeWithRenderIntent(mode, intent);
+  auto status = color_mode_->CacheColorModeWithRenderIntent(mode, intent);
   if (status != HWC2::Error::None) {
     DLOGE("failed for mode = %d intent = %d", mode, intent);
     return status;
