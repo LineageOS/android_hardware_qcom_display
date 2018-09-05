@@ -511,6 +511,7 @@ struct HWScaleData {
     uint8_t scale = 0;
     uint8_t direction_detection = 0;
     uint8_t detail_enhance = 0;
+    uint8_t dyn_exp_disable = 0;     // RGB format dynamic pixel expansion disable.
   } enable;
   uint32_t dst_width = 0;
   uint32_t dst_height = 0;

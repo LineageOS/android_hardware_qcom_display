@@ -99,6 +99,7 @@ enum DetailEnhancerOverrideFlags {
   kOverrideDEThrLow            = 0x80,    // Specifies user defined DE low threshold
   kOverrideDEThrHigh           = 0x100,   // Specifies user defined DE high threshold
   kOverrideDEFilterConfig      = 0x200,   // Specifies user defined scaling filter config
+  kOverrideDEBlend             = 0x400,   // Specifies user defined DE blend.
   kOverrideDEMax               = 0xFFFFFFFF,
 };
 
@@ -236,6 +237,7 @@ struct DisplayDetailEnhancerData {
                                       // Specifies context quality level
   ScalingFilterConfig filter_config = kFilterEdgeDirected;
                                       // Y/RGB filter configuration
+  uint32_t de_blend = 0;              // DE Unsharp Mask blend between High and Low frequencies
 };
 
 /*! @brief Display device event handler implemented by the client.
