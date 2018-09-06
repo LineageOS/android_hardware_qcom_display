@@ -109,6 +109,8 @@ HWInfoDRM::HWInfoDRM() {
     DRMMaster::GetInstance(&drm_master);
     if (!drm_master) {
       DLOGE("Failed to acquire DRMMaster instance");
+      // TODO(user): Get this info. from DRM driver.
+      no_device_ = true;
       return;
     }
     drm_master->GetHandle(&dev_fd);
@@ -187,8 +189,10 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
   hw_resource->has_macrotile = true;
   hw_resource->separate_rotator = true;
   hw_resource->has_non_scalar_rgb = false;
-
-  GetSystemInfo(hw_resource);
+  DisplayError error = GetSystemInfo(hw_resource);
+  if (error != kErrorNone) {
+    return error;
+  }
   GetHWPlanesInfo(hw_resource);
   GetWBInfo(hw_resource);
 
@@ -254,8 +258,11 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
   return kErrorNone;
 }
 
-void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
+DisplayError HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   DRMCrtcInfo info;
+  if (no_device_) {
+    return kErrorNoDevice;
+  }
   drm_mgr_intf_->GetCrtcInfo(0 /* system_info */, &info);
   hw_resource->has_hdr = info.has_hdr;
   hw_resource->is_src_split = info.has_src_split;
@@ -303,6 +310,7 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   hw_resource->hw_dest_scalar_info.max_input_width = info.max_dest_scaler_input_width;
   hw_resource->hw_dest_scalar_info.max_output_width = info.max_dest_scaler_output_width;
   hw_resource->min_prefill_lines = info.min_prefill_lines;
+  return kErrorNone;
 }
 
 void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {

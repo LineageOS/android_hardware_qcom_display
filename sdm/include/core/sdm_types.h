@@ -58,6 +58,7 @@ enum DisplayError {
   kErrorRotatorValidation,  //!< Rotator configuration validation failure.
   kErrorNotValidated,     //!< Draw cycle has not been validated.
   kErrorCriticalResource,   //!< Critical resource allocation has failed.
+  kErrorNoDevice,           //!< Display device is not present.
 };
 
 /*! @brief This structure is defined for client and library compatibility check purpose only. This

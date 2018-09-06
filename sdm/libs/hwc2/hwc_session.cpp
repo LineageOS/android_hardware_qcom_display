@@ -163,7 +163,13 @@ int HWCSession::Init() {
 
   auto error = CoreInterface::CreateCore(&buffer_allocator_, &buffer_sync_handler_,
                                     &socket_handler_, &core_intf_);
-  if (error != kErrorNone) {
+  if (error == kErrorNoDevice) {
+    CreateNullDisplay();
+    primary_ready_ = true;
+    is_composer_up_ = true;
+    DLOGI("NULL display created!");
+    return 0;
+  } else if (error != kErrorNone) {
     DLOGE("Display core initialization failed. Error = %d", error);
     Deinit();
     return -EINVAL;
@@ -1944,6 +1950,15 @@ void HWCSession::HotPlug(hwc2_display_t display, HWC2::Connection state) {
     callbacks_lock_.Wait();
     err = callbacks_.Hotplug(display, state);
   }
+}
+
+void HWCSession::CreateNullDisplay() {
+  auto hwc_display = &hwc_display_[HWC_DISPLAY_PRIMARY];
+
+  hwc2_display_t client_id = map_info_primary_.client_id;
+
+  HWCDisplayDummy::Create(core_intf_, &buffer_allocator_, &callbacks_, qservice_,
+                          client_id, 0, hwc_display);
 }
 
 int HWCSession::CreatePrimaryDisplay() {

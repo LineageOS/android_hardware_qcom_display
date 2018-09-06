@@ -52,7 +52,7 @@ class HWInfoDRM: public HWInfoInterface {
 
  private:
   DisplayError GetHWRotatorInfo(HWResourceInfo *hw_resource);
-  void GetSystemInfo(HWResourceInfo *hw_resource);
+  DisplayError GetSystemInfo(HWResourceInfo *hw_resource);
   void GetHWPlanesInfo(HWResourceInfo *hw_resource);
   void GetWBInfo(HWResourceInfo *hw_resource);
   DisplayError GetDynamicBWLimits(HWResourceInfo *hw_resource);
@@ -68,6 +68,7 @@ class HWInfoDRM: public HWInfoInterface {
 
   sde_drm::DRMManagerInterface *drm_mgr_intf_ = {};
   bool default_mode_ = false;
+  bool no_device_ = false;
 
   static const int kMaxStringLength = 1024;
   static const int kKiloUnit = 1000;
