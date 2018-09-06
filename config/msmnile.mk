@@ -53,7 +53,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.comp_mask=0 \
     vendor.display.disable_hw_recovery=0 \
     vendor.display.enable_default_color_mode=1
-    vendor.display.disable_hw_recovery=1
 
 # This matrix should be in column major order, per SurfaceFlinger requirement
 #  1.16868   -0.16868    0.00000
