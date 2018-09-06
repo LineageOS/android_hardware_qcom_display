@@ -248,8 +248,6 @@ void HDMIDisplay::readCEUnderscanInfo()
         return;
     } else {
         len = read(hdmiScanInfoFile, scanInfo, sizeof(scanInfo)-1);
-        ALOGD("%s: Scan Info string: %s length = %lu",
-                 __FUNCTION__, scanInfo, len);
         if (len <= 0) {
             close(hdmiScanInfoFile);
             ALOGE("%s: Scan Info file empty", __FUNCTION__);
@@ -363,10 +361,7 @@ bool HDMIDisplay::readResolution()
         return false;
     } else {
         len = read(hdmiEDIDFile, edidStr, sizeof(edidStr)-1);
-        ALOGD_IF(DEBUG, "%s: EDID string: %s length = %lu",
-                 __FUNCTION__, edidStr, len);
         if (len <= 0) {
-            ALOGE("%s: edid_modes file empty", __FUNCTION__);
             edidStr[0] = '\0';
         }
         else {
