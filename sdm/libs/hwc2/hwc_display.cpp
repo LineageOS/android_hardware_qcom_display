@@ -557,7 +557,7 @@ void HWCDisplay::BuildLayerStack() {
                      (layer->input_buffer.color_metadata.transfer == Transfer_SMPTE_ST2084 ||
                      layer->input_buffer.color_metadata.transfer == Transfer_HLG);
     if (hdr_layer && !disable_hdr_handling_  &&
-        (color_mode_->GetCurrentColorMode()) != ColorMode::NATIVE) {
+        GetCurrentColorMode() != ColorMode::NATIVE) {
       // Dont honor HDR when its handling is disabled
       // Also, when the color mode is native, it implies that
       // SF has not correctly set the mode to BT2100_PQ in the presence of an HDR layer
