@@ -170,6 +170,9 @@ class HWCDisplay : public DisplayEventHandler {
   HWCLayer *GetHWCLayer(hwc2_layer_t layer_id);
   void ResetValidation() { validated_ = false; }
   uint32_t GetGeometryChanges() { return geometry_changes_; }
+  android_color_mode_t GetCurrentColorMode() {
+    return (color_mode_ ? color_mode_->GetCurrentColorMode() : HAL_COLOR_MODE_SRGB);
+  }
 
   // HWC2 APIs
   virtual HWC2::Error AcceptDisplayChanges(void);
