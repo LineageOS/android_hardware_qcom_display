@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "916d03bc_5bc2a507",
+        "filename": "sdm/libs/hwc2/hwc_session.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1233,
+      "author": {
+        "id": 18836
+      },
+      "writtenOn": "2018-09-09T14:25:12Z",
+      "side": 1,
+      "message": "This already catches the overflow.",
+      "revId": "bd97950a799819ba042393df400e7b75252ce800",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
