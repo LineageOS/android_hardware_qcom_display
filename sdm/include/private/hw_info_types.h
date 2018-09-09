@@ -372,9 +372,9 @@ struct HWPanelInfo {
   bool hdr_enabled = false;           // HDR feature supported
   bool hdr_metadata_type_one = false;     // Static HDR metadata type one
   uint32_t hdr_eotf = 0;              // Electro optical transfer function
-  uint32_t peak_luminance = 0;        // Panel's peak luminance level
-  uint32_t average_luminance = 0;     // Panel's average luminance level
-  uint32_t blackness_level = 0;       // Panel's blackness level
+  float peak_luminance = 0.0f;        // Panel's peak luminance level
+  float average_luminance = 0.0f;     // Panel's average luminance level
+  float blackness_level = 0.0f;       // Panel's blackness level
   HWColorPrimaries primaries = {};    // WRGB color primaries
   HWPanelOrientation panel_orientation = {};  // Panel Orientation
   uint32_t transfer_time_us = 0;      // transfer time in micro seconds to panel's active region

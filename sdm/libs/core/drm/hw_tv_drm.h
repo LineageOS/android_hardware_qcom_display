@@ -57,6 +57,10 @@ class HWTVDRM : public HWDeviceDRM {
 
   static const int kBitRGB  = 20;
   static const int kBitYUV  = 21;
+  const float kDefaultMinLuminance = 0.02f;
+  const float kDefaultMaxLuminance = 500.0f;
+  const float kMinPeakLuminance = 300.0f;
+  const float kMaxPeakLuminance = 1000.0f;
   drm_msm_ext_hdr_metadata hdr_metadata_ = {};
 };
 

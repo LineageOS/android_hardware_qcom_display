@@ -175,9 +175,9 @@ struct DisplayConfigFixedInfo {
   bool hdr_supported = false;          //!< if HDR is enabled
   bool hdr_metadata_type_one = false;  //!< Metadata type one obtained from HDR sink
   uint32_t hdr_eotf = 0;               //!< Electro optical transfer function
-  uint32_t max_luminance = 0;          //!< From Panel's peak luminance
-  uint32_t average_luminance = 0;      //!< From Panel's average luminance
-  uint32_t min_luminance = 0;          //!< From Panel's blackness level
+  float max_luminance = 0.0f;          //!< From Panel's peak luminance
+  float average_luminance = 0.0f;      //!< From Panel's average luminance
+  float min_luminance = 0.0f;          //!< From Panel's blackness level
   bool partial_update = false;         //!< If display supports Partial Update.
 };
 

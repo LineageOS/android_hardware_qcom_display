@@ -28,6 +28,7 @@
 */
 
 #include "hw_tv_drm.h"
+#include <math.h>
 #include <sys/time.h>
 #include <utils/debug.h>
 #include <utils/sys.h>
@@ -87,6 +88,14 @@ static int32_t GetEOTF(const GammaTransfer &transfer) {
   }
 
   return hdr_transfer;
+}
+
+static float GetMaxOrAverageLuminance(float luminance) {
+  return (50.0f * powf(2.0f, (luminance / 32.0f)));
+}
+
+static float GetMinLuminance(float luminance, float max_luminance) {
+  return (max_luminance * ((luminance / 255.0f) * (luminance / 255.0f)) / 100.0f);
 }
 
 HWTVDRM::HWTVDRM(int32_t display_id, BufferSyncHandler *buffer_sync_handler,
@@ -185,10 +194,30 @@ void HWTVDRM::PopulateHWPanelInfo() {
   hw_panel_info_.hdr_enabled = connector_info_.ext_hdr_prop.hdr_supported;
   hw_panel_info_.hdr_metadata_type_one = connector_info_.ext_hdr_prop.hdr_metadata_type_one;
   hw_panel_info_.hdr_eotf = connector_info_.ext_hdr_prop.hdr_eotf;
-  hw_panel_info_.peak_luminance = connector_info_.ext_hdr_prop.hdr_max_luminance;
-  hw_panel_info_.average_luminance = connector_info_.ext_hdr_prop.hdr_avg_luminance;
-  hw_panel_info_.blackness_level = connector_info_.ext_hdr_prop.hdr_min_luminance;
-  DLOGI("TV Panel: %s, type_one = %d, eotf = %d, luminance[max = %d, min = %d, avg = %d]",
+
+  // Convert the raw luminance values from driver to Candela per meter^2 unit.
+  float max_luminance = FLOAT(connector_info_.ext_hdr_prop.hdr_max_luminance);
+  if (max_luminance != 0.0f) {
+    max_luminance = GetMaxOrAverageLuminance(max_luminance);
+  }
+  bool valid_luminance = (max_luminance > kMinPeakLuminance) && (max_luminance < kMaxPeakLuminance);
+  hw_panel_info_.peak_luminance = valid_luminance ? max_luminance : kDefaultMaxLuminance;
+
+  float min_luminance = FLOAT(connector_info_.ext_hdr_prop.hdr_min_luminance);
+  if (min_luminance != 0.0f) {
+    min_luminance = GetMinLuminance(min_luminance, hw_panel_info_.peak_luminance);
+  }
+  hw_panel_info_.blackness_level = (min_luminance < 1.0f) ? min_luminance : kDefaultMinLuminance;
+
+  float average_luminance = FLOAT(connector_info_.ext_hdr_prop.hdr_avg_luminance);
+  if (average_luminance != 0.0f) {
+    average_luminance = GetMaxOrAverageLuminance(average_luminance);
+  } else {
+    average_luminance = (hw_panel_info_.peak_luminance + hw_panel_info_.blackness_level) / 2.0f;
+  }
+  hw_panel_info_.average_luminance = average_luminance;
+
+  DLOGI("TV Panel: %s, type_one = %d, eotf = %d, luminance[max = %f, min = %f, avg = %f]",
         hw_panel_info_.hdr_enabled ? "HDR" : "Non-HDR", hw_panel_info_.hdr_metadata_type_one,
         hw_panel_info_.hdr_eotf, hw_panel_info_.peak_luminance, hw_panel_info_.blackness_level,
         hw_panel_info_.average_luminance);
