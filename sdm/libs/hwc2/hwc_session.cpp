@@ -163,7 +163,13 @@ int HWCSession::Init() {
 
   auto error = CoreInterface::CreateCore(&buffer_allocator_, &buffer_sync_handler_,
                                     &socket_handler_, &core_intf_);
-  if (error != kErrorNone) {
+  if (error == kErrorNoDevice) {
+    CreateNullDisplay();
+    primary_ready_ = true;
+    is_composer_up_ = true;
+    DLOGI("NULL display created!");
+    return 0;
+  } else if (error != kErrorNone) {
     DLOGE("Display core initialization failed. Error = %d", error);
     Deinit();
     return -EINVAL;
@@ -172,6 +178,12 @@ int HWCSession::Init() {
   // Create primary display here. Remaining builtin displays will be created after client has set
   // display indexes which may happen sometime before callback is registered.
   status = CreatePrimaryDisplay();
+  if (status) {
+    Deinit();
+    return status;
+  }
+
+  status = CreateBuiltInDisplays();
   if (status) {
     Deinit();
     return status;
@@ -538,11 +550,44 @@ int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display
   // Handle pending builtin/pluggable display connections
   if (!hwc_session->primary_ready_ && (display == HWC_DISPLAY_PRIMARY)) {
     hwc_session->primary_ready_ = true;
-    hwc_session->CreateBuiltInDisplays();
     hwc_session->CreatePluggableDisplays(false);
   }
 
   return INT32(status);
+}
+
+void HWCSession::MapBuiltInDisplays() {
+  // This would be called after client connection establishes.
+  // Update hwc_display_ to point to builtin displays.
+  HWDisplaysInfo hw_displays_info = {};
+
+  DisplayError error = core_intf_->GetDisplaysStatus(&hw_displays_info);
+  if (error != kErrorNone) {
+    DLOGE("Failed to get connected display list. Error = %d", error);
+    return;
+  }
+
+  size_t next_builtin_index = 0;
+  for (auto &iter : hw_displays_info) {
+    auto &info = iter.second;
+    if (info.is_primary || info.display_type != kBuiltIn || !info.is_connected) {
+      continue;
+    }
+
+    if (next_builtin_index >= map_info_builtin_.size() || next_builtin_index >= kNumBuiltIn) {
+      DLOGW("Insufficient builtin display slots. All displays could not be created.");
+      return;
+    }
+
+    DisplayMapInfo &map_info = map_info_builtin_[next_builtin_index];
+    map_info.disp_type = info.display_type;
+    map_info.sdm_id = info.display_id;
+    DLOGI("Builtin display mapped client_id %d sdm_id %d ", map_info.client_id, map_info.sdm_id);
+
+    // Update hwc display list.
+    hwc_display_[map_info.client_id] = hwc_display_builtin_[next_builtin_index];
+    next_builtin_index++;
+  }
 }
 
 int32_t HWCSession::RegisterCallback(hwc2_device_t *device, int32_t descriptor,
@@ -560,9 +605,18 @@ int32_t HWCSession::RegisterCallback(hwc2_device_t *device, int32_t descriptor,
   }
 
   DLOGD("%s callback: %s", pointer ? "Registering" : "Deregistering", to_string(desc).c_str());
-  if (descriptor == HWC2_CALLBACK_HOTPLUG) {
-    if (hwc_session->hwc_display_[HWC_DISPLAY_PRIMARY]) {
-      hwc_session->callbacks_.Hotplug(HWC_DISPLAY_PRIMARY, HWC2::Connection::Connected);
+  if (descriptor == HWC2_CALLBACK_HOTPLUG && pointer) {
+    if (!hwc_session->client_connected_) {
+      // Map Builtin displays that got created during init.
+      hwc_session->MapBuiltInDisplays();
+    }
+
+    // Notify All connected Displays.
+    for (hwc2_display_t disp = 0; disp < kNumDisplays; disp++) {
+      if (!hwc_session->hwc_display_[disp]) {
+        continue;
+      }
+      hwc_session->callbacks_.Hotplug(disp, HWC2::Connection::Connected);
     }
     hwc_session->client_connected_ = true;
   }
@@ -1898,6 +1952,15 @@ void HWCSession::HotPlug(hwc2_display_t display, HWC2::Connection state) {
   }
 }
 
+void HWCSession::CreateNullDisplay() {
+  auto hwc_display = &hwc_display_[HWC_DISPLAY_PRIMARY];
+
+  hwc2_display_t client_id = map_info_primary_.client_id;
+
+  HWCDisplayDummy::Create(core_intf_, &buffer_allocator_, &callbacks_, qservice_,
+                          client_id, 0, hwc_display);
+}
+
 int HWCSession::CreatePrimaryDisplay() {
   int status = 1;
   HWDisplaysInfo hw_displays_info = {};
@@ -1960,6 +2023,8 @@ int HWCSession::CreatePrimaryDisplay() {
 }
 
 int HWCSession::CreateBuiltInDisplays() {
+  // Just create builtin displays.
+  // Do not notify until client connection gets established.
   HWDisplaysInfo hw_displays_info = {};
 
   DisplayError error = core_intf_->GetDisplaysStatus(&hw_displays_info);
@@ -1969,41 +2034,24 @@ int HWCSession::CreateBuiltInDisplays() {
   }
 
   int status = 0;
-  size_t next_builtin_index = 0;
+  hwc2_display_t client_id = 0;
   for (auto &iter : hw_displays_info) {
     auto &info = iter.second;
 
     // Do not recreate primary display.
-    if (info.is_primary || info.display_type != kBuiltIn) {
+    if (info.is_primary || info.display_type != kBuiltIn || client_id >= kNumBuiltIn) {
       continue;
     }
 
-    if (next_builtin_index >= map_info_builtin_.size()) {
-      DLOGW("Insufficient builtin display slots. All displays could not be created.");
-      return 0;
+    DLOGI("Create builtin display, sdm id = %d, client id = %d", info.display_id, client_id);
+    status = HWCDisplayBuiltIn::Create(core_intf_, &buffer_allocator_, &callbacks_, qservice_,
+                                       client_id, info.display_id,
+                                       &hwc_display_builtin_[client_id]);
+    if (status) {
+      DLOGE("Builtin display creation failed.");
+      break;
     }
-
-    DisplayMapInfo &map_info = map_info_builtin_[next_builtin_index];
-    hwc2_display_t client_id = map_info.client_id;
-
-    // Lock confined to this scope
-    {
-      SCOPE_LOCK(locker_[client_id]);
-
-      DLOGI("Create builtin display, sdm id = %d, client id = %d", info.display_id, client_id);
-      status = HWCDisplayBuiltIn::Create(core_intf_, &buffer_allocator_, &callbacks_, qservice_,
-                                         client_id, info.display_id, &hwc_display_[client_id]);
-      if (!status) {
-        DLOGI("Builtin display created.");
-        map_info.disp_type = info.display_type;
-        map_info.sdm_id = info.display_id;
-      } else {
-        DLOGE("Builtin display creation failed.");
-        break;
-      }
-    }
-
-    callbacks_.Hotplug(client_id, HWC2::Connection::Connected);
+    client_id++;
   }
 
   return status;
@@ -2220,7 +2268,6 @@ void HWCSession::UpdateVsyncSource(hwc2_display_t display) {
 
     // No other active builtin display is present.
     if (next_vsync_source == HWC_DISPLAY_PRIMARY) {
-      DLOGI("No other active builtin display, nothing to do.");
       return;
     }
 

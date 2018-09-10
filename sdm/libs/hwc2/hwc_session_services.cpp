@@ -536,7 +536,7 @@ static const char * GetDisplayTypeName(IDisplayConfig::DisplayTypeExt disp_type)
 Return<int32_t> HWCSession::setDisplayIndex(IDisplayConfig::DisplayTypeExt disp_type,
                                             uint32_t base, uint32_t count) {
   if (client_connected_) {
-    DLOGW("Not supported after client connection is completed.");
+    DLOGI("Not supported after client connection is completed.");
     return -1;
   }
 
