@@ -333,7 +333,7 @@ DisplayError HWPrimary::GetConfigIndex(char *mode, uint32_t *index) {
   return HWDevice::GetConfigIndex(mode, index);
 }
 
-DisplayError HWPrimary::PowerOff() {
+DisplayError HWPrimary::PowerOff(bool teardown) {
   if (Sys::ioctl_(device_fd_, FBIOBLANK, FB_BLANK_POWERDOWN) < 0) {
     IOCTL_LOGE(FB_BLANK_POWERDOWN, device_type_);
     return kErrorHardware;

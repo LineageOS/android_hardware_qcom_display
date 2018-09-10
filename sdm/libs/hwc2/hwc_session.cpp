@@ -896,7 +896,8 @@ int32_t HWCSession::SetPowerMode(hwc2_device_t *device, hwc2_display_t display, 
     return HWC2_ERROR_UNSUPPORTED;
   }
 
-  auto error = CallDisplayFunction(device, display, &HWCDisplay::SetPowerMode, mode);
+  auto error = CallDisplayFunction(device, display, &HWCDisplay::SetPowerMode, mode,
+                                   false /* teardown */);
   if (error != HWC2_ERROR_NONE) {
     return error;
   }
@@ -1920,14 +1921,15 @@ void HWCSession::ResetPanel() {
   HWC2::Error status = HWC2::Error::None;
 
   DLOGI("Powering off primary");
-  status = hwc_display_[HWC_DISPLAY_PRIMARY]->SetPowerMode(HWC2::PowerMode::Off);
+  status = hwc_display_[HWC_DISPLAY_PRIMARY]->SetPowerMode(HWC2::PowerMode::Off,
+                                                           false /* teardown */);
   if (status != HWC2::Error::None) {
     DLOGE("power-off on primary failed with error = %d", status);
   }
 
   DLOGI("Restoring power mode on primary");
   HWC2::PowerMode mode = hwc_display_[HWC_DISPLAY_PRIMARY]->GetLastPowerMode();
-  status = hwc_display_[HWC_DISPLAY_PRIMARY]->SetPowerMode(mode);
+  status = hwc_display_[HWC_DISPLAY_PRIMARY]->SetPowerMode(mode, false /* teardown */);
   if (status != HWC2::Error::None) {
     DLOGE("Setting power mode = %d on primary failed with error = %d", mode, status);
   }
@@ -2367,7 +2369,8 @@ void HWCSession::DisplayPowerReset() {
   for (hwc2_display_t display = HWC_DISPLAY_PRIMARY; display < HWC_NUM_DISPLAY_TYPES; display++) {
     if (hwc_display_[display] != NULL) {
       DLOGI("Powering off display = %d", display);
-      status = hwc_display_[display]->SetPowerMode(HWC2::PowerMode::Off);
+      status = hwc_display_[display]->SetPowerMode(HWC2::PowerMode::Off,
+                                                   true /* teardown */);
       if (status != HWC2::Error::None) {
         DLOGE("Power off for display = %d failed with error = %d", display, status);
       }
@@ -2376,7 +2379,7 @@ void HWCSession::DisplayPowerReset() {
   for (hwc2_display_t display = HWC_DISPLAY_PRIMARY; display < HWC_NUM_DISPLAY_TYPES; display++) {
     if (hwc_display_[display] != NULL) {
       DLOGI("Powering on display = %d", display);
-      status = hwc_display_[display]->SetPowerMode(HWC2::PowerMode::On);
+      status = hwc_display_[display]->SetPowerMode(HWC2::PowerMode::On, false /* teardown */);
       if (status != HWC2::Error::None) {
         DLOGE("Power on for display = %d failed with error = %d", display, status);
       }
@@ -2443,7 +2446,8 @@ void HWCSession::HandlePowerOnPending(hwc2_display_t disp_id, int retire_fence) 
 
   if (power_on_pending_[HWC_DISPLAY_EXTERNAL]) {
     if (hwc_display_[HWC_DISPLAY_EXTERNAL]) {
-      HWC2::Error status = hwc_display_[HWC_DISPLAY_EXTERNAL]->SetPowerMode(HWC2::PowerMode::On);
+      HWC2::Error status = hwc_display_[HWC_DISPLAY_EXTERNAL]->SetPowerMode(HWC2::PowerMode::On,
+                                                                            false /* teardown */);
       if (status == HWC2::Error::None) {
         power_on_pending_[HWC_DISPLAY_EXTERNAL] = false;
       }
@@ -2452,7 +2456,8 @@ void HWCSession::HandlePowerOnPending(hwc2_display_t disp_id, int retire_fence) 
 
   if (power_on_pending_[HWC_DISPLAY_VIRTUAL]) {
     if (hwc_display_[HWC_DISPLAY_VIRTUAL]) {
-      HWC2::Error status = hwc_display_[HWC_DISPLAY_VIRTUAL]->SetPowerMode(HWC2::PowerMode::On);
+      HWC2::Error status = hwc_display_[HWC_DISPLAY_VIRTUAL]->SetPowerMode(HWC2::PowerMode::On,
+                                                                           false /* teardown */);
       if (status == HWC2::Error::None) {
         power_on_pending_[HWC_DISPLAY_VIRTUAL] = false;
       }

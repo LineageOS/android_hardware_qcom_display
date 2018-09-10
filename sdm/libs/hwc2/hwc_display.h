@@ -251,7 +251,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error GetDisplayType(int32_t *out_type);
   virtual HWC2::Error SetCursorPosition(hwc2_layer_t layer, int x, int y);
   virtual HWC2::Error SetVsyncEnabled(HWC2::Vsync enabled);
-  virtual HWC2::Error SetPowerMode(HWC2::PowerMode mode);
+  virtual HWC2::Error SetPowerMode(HWC2::PowerMode mode, bool teardown);
   virtual HWC2::Error CreateLayer(hwc2_layer_t *out_layer_id);
   virtual HWC2::Error DestroyLayer(hwc2_layer_t layer_id);
   virtual HWC2::Error SetLayerZOrder(hwc2_layer_t layer_id, uint32_t z);
