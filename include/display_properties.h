@@ -96,6 +96,7 @@
 #define DISABLE_EXCl_RECT_PARTIAL_FB         DISPLAY_PROP("disable_excl_rect_partial_fb")
 #define DISABLE_FBID_CACHE                   DISPLAY_PROP("disable_fbid_cache")
 #define DISABLE_HOTPLUG_BWCHECK              DISPLAY_PROP("disable_hotplug_bwcheck")
+#define DISABLE_MASK_LAYER_HINT              DISPLAY_PROP("disable_mask_layer_hint")
 
 #define DISABLE_HDR_LUT_GEN                  DISPLAY_PROP("disable_hdr_lut_gen")
 #define ENABLE_DEFAULT_COLOR_MODE            DISPLAY_PROP("enable_default_color_mode")
