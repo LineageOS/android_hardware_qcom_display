@@ -434,6 +434,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int32_t max_sde_builtin_displays_ = 0;
   int32_t registered_builtin_displays_ = 0;
   int32_t disable_hotplug_bwcheck_ = 0;
+  int32_t disable_mask_layer_hint_ = 0;
 };
 
 }  // namespace sdm
