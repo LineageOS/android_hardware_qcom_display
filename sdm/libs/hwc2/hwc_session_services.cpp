@@ -633,4 +633,34 @@ Return<int32_t> HWCSession::controlIdlePowerCollapse(bool enable, bool synchrono
 }
 #endif  // DISPLAY_CONFIG_1_3
 
+
+int32_t HWCSession::IsWbUbwcSupported(int *value) {
+  HWDisplaysInfo hw_displays_info = {};
+  DisplayError error = core_intf_->GetDisplaysStatus(&hw_displays_info);
+  if (error != kErrorNone) {
+    return -EINVAL;
+  }
+
+  for (auto &iter : hw_displays_info) {
+    auto &info = iter.second;
+    if (info.display_type == kVirtual && info.is_wb_ubwc_supported) {
+      *value = 1;
+    }
+  }
+
+  return error;
+}
+
+#ifdef DISPLAY_CONFIG_1_4
+Return<void> HWCSession::getWriteBackCapabilities(getWriteBackCapabilities_cb _hidl_cb) {
+  int value = 0;
+  IDisplayConfig::WriteBackCapabilities wb_caps = {};
+  int32_t error = IsWbUbwcSupported(&value);
+  wb_caps.isWbUbwcSupported = value;
+  _hidl_cb(error, wb_caps);
+
+  return Void();
+}
+#endif  // DISPLAY_CONFIG_1_4
+
 }  // namespace sdm
