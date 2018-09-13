@@ -356,7 +356,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int hpd_bpp_ = 0;
   int hpd_pattern_ = 0;
   int null_display_mode_ = 0;
-  bool power_on_pending_[HWC_NUM_DISPLAY_TYPES] = {false};
+  bool power_on_pending_[kNumDisplays] = {false};
   HotPlugEvent hotplug_pending_event_ = kHotPlugNone;
   bool destroy_virtual_disp_pending_ = false;
   uint32_t idle_pc_ref_cnt_ = 0;
