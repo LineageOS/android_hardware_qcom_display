@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017 The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2018 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -27,13 +27,21 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifdef DISPLAY_CONFIG_1_4
+#include <vendor/display/config/1.4/IDisplayConfig.h>
+#else
 #include <vendor/display/config/1.0/IDisplayConfig.h>
+#endif
+
 
 #include "DisplayConfig.h"
 
 namespace display {
-
+#ifdef DISPLAY_CONFIG_1_4
+using vendor::display::config::V1_4::IDisplayConfig;
+#else
 using vendor::display::config::V1_0::IDisplayConfig;
+#endif
 
 //=============================================================================
 // The functions below run in the client process and wherever necessary
@@ -331,6 +339,27 @@ int getHDRCapabilities(int dpy, DisplayHDRCapabilities *caps) {
 
     return error;
 }
+
+#ifdef DISPLAY_CONFIG_1_4
+int32_t getWriteBackCapabilities( WriteBackCapabilities *caps) {
+    android::sp<IDisplayConfig> intf = IDisplayConfig::getService();
+    if (intf == NULL || caps == NULL) {
+        return -1;
+    }
+
+    int error = -1;
+    intf->getWriteBackCapabilities(
+        [&](const auto &tmpError, const auto &tmpCaps) {
+            error = tmpError;
+            if (error) {
+                return;
+            }
+            caps->isWbUbwcSupported = tmpCaps.isWbUbwcSupported;
+        });
+
+    return error;
+}
+#endif
 
 int setCameraLaunchStatus(uint32_t on) {
     android::sp<IDisplayConfig> intf = IDisplayConfig::getService();
