@@ -554,6 +554,7 @@ void HWCDisplay::BuildLayerStack() {
       }
     }
 
+    bool is_secure = false;
     const private_handle_t *handle =
         reinterpret_cast<const private_handle_t *>(layer->input_buffer.buffer_id);
     if (handle) {
@@ -561,17 +562,16 @@ void HWCDisplay::BuildLayerStack() {
         layer_stack_.flags.video_present = true;
       }
       // TZ Protected Buffer - L1
-      if (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER) {
-        layer_stack_.flags.secure_present = true;
-      }
       // Gralloc Usage Protected Buffer - L3 - which needs to be treated as Secure & avoid fallback
-      if (handle->flags & private_handle_t::PRIV_FLAGS_PROTECTED_BUFFER) {
+      if (handle->flags & private_handle_t::PRIV_FLAGS_PROTECTED_BUFFER ||
+          handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER) {
         layer_stack_.flags.secure_present = true;
+        is_secure = true;
       }
     }
 
-    if (layer->flags.skip) {
-      layer_stack_.flags.skip_present = true;
+    if (layer->input_buffer.flags.secure_display) {
+      is_secure = true;
     }
 
     if (hwc_layer->IsSingleBuffered() &&
@@ -601,6 +601,14 @@ void HWCDisplay::BuildLayerStack() {
       layer_stack_.flags.hdr_present = true;
     }
 
+    if (hwc_layer->IsNonIntegralSourceCrop() && !is_secure && !hdr_layer) {
+      layer->flags.skip = true;
+    }
+
+    if (layer->flags.skip) {
+      layer_stack_.flags.skip_present = true;
+    }
+
     // TODO(user): Move to a getter if this is needed at other places
     hwc_rect_t scaled_display_frame = {INT(layer->dst_rect.left), INT(layer->dst_rect.top),
                                        INT(layer->dst_rect.right), INT(layer->dst_rect.bottom)};
@@ -624,11 +632,10 @@ void HWCDisplay::BuildLayerStack() {
       layer->src_rect.bottom = layer_buffer->height;
     }
 
-    if (layer->frame_rate > metadata_refresh_rate_) {
+    if (hwc_layer->HasMetaDataRefreshRate() && layer->frame_rate > metadata_refresh_rate_) {
       metadata_refresh_rate_ = SanitizeRefreshRate(layer->frame_rate);
-    } else {
-      layer->frame_rate = current_refresh_rate_;
     }
+
     display_rect_ = Union(display_rect_, layer->dst_rect);
     geometry_changes_ |= hwc_layer->GetGeometryChanges();
 
@@ -1080,7 +1087,17 @@ DisplayError HWCDisplay::CECMessage(char *message) {
 
 DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
   switch (event) {
-    case kIdleTimeout:
+    case kIdleTimeout: {
+      SCOPE_LOCK(HWCSession::locker_[type_]);
+      if (pending_commit_) {
+        // If idle timeout event comes in between prepare
+        // and commit, drop it since device is not really
+        // idle.
+        return kErrorNotSupported;
+      }
+      validated_ = false;
+      break;
+    }
     case kThermalEvent:
     case kIdlePowerCollapse:
     case kPanelDeadEvent: {
@@ -1118,6 +1135,7 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
     return ((*out_num_types > 0) ? HWC2::Error::HasChanges : HWC2::Error::None);
   }
 
+  UpdateRefreshRate();
   DisplayError error = display_intf_->Prepare(&layer_stack_);
   if (error != kErrorNone) {
     if (error == kErrorShutDown) {
@@ -1306,6 +1324,10 @@ HWC2::Error HWCDisplay::GetHdrCapabilities(uint32_t *out_num_types, int32_t *out
 
 
 HWC2::Error HWCDisplay::CommitLayerStack(void) {
+  if (flush_) {
+    return HWC2::Error::None;
+  }
+
   if (!validated_) {
     DLOGV_IF(kTagClient, "Display %d is not validated", id_);
     return HWC2::Error::NotValidated;
@@ -1317,37 +1339,35 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
 
   DumpInputBuffers();
 
-  if (!flush_) {
-    DisplayError error = kErrorUndefined;
-    int status = 0;
-    if (tone_mapper_) {
-      if (NeedsToneMap(layer_stack_)) {
-        status = tone_mapper_->HandleToneMap(&layer_stack_);
-        if (status != 0) {
-          DLOGE("Error handling HDR in ToneMapper");
-        }
-      } else {
-        tone_mapper_->Terminate();
+  DisplayError error = kErrorUndefined;
+  int status = 0;
+  if (tone_mapper_) {
+    if (NeedsToneMap(layer_stack_)) {
+      status = tone_mapper_->HandleToneMap(&layer_stack_);
+      if (status != 0) {
+        DLOGE("Error handling HDR in ToneMapper");
       }
-    }
-    error = display_intf_->Commit(&layer_stack_);
-
-    if (error == kErrorNone) {
-      // A commit is successfully submitted, start flushing on failure now onwards.
-      flush_on_error_ = true;
     } else {
-      if (error == kErrorShutDown) {
-        shutdown_pending_ = true;
-        return HWC2::Error::Unsupported;
-      } else if (error == kErrorNotValidated) {
-        validated_ = false;
-        return HWC2::Error::NotValidated;
-      } else if (error != kErrorPermission) {
-        DLOGE("Commit failed. Error = %d", error);
-        // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
-        // so that previous buffer and fences are released, and override the error.
-        flush_ = true;
-      }
+      tone_mapper_->Terminate();
+    }
+  }
+  error = display_intf_->Commit(&layer_stack_);
+
+  if (error == kErrorNone) {
+    // A commit is successfully submitted, start flushing on failure now onwards.
+    flush_on_error_ = true;
+  } else {
+    if (error == kErrorShutDown) {
+      shutdown_pending_ = true;
+      return HWC2::Error::Unsupported;
+    } else if (error == kErrorNotValidated) {
+      validated_ = false;
+      return HWC2::Error::NotValidated;
+    } else if (error != kErrorPermission) {
+      DLOGE("Commit failed. Error = %d", error);
+      // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
+      // so that previous buffer and fences are released, and override the error.
+      flush_ = true;
     }
   }
 
@@ -2136,6 +2156,16 @@ bool HWCDisplay::CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests) 
   }
 
   return skip_prepare;
+}
+
+void HWCDisplay::UpdateRefreshRate() {
+  for (auto hwc_layer : layer_set_) {
+    if (hwc_layer->HasMetaDataRefreshRate()) {
+      continue;
+    }
+    auto layer = hwc_layer->GetSDMLayer();
+    layer->frame_rate = current_refresh_rate_;
+  }
 }
 
 }  // namespace sdm

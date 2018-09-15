@@ -361,11 +361,12 @@ class HWCDisplay : public DisplayEventHandler {
   int disable_hdr_handling_ = 0;  // disables HDR handling.
   uint32_t display_config_ = 0;
   bool config_pending_ = false;
+  bool pending_commit_ = false;
 
  private:
   void DumpInputBuffers(void);
   bool CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests);
-
+  void UpdateRefreshRate();
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
   uint32_t geometry_changes_ = GeometryChanges::kNone;

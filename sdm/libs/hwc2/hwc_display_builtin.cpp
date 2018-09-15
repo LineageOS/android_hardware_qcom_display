@@ -236,6 +236,7 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
   }
 
   status = PrepareLayerStack(out_num_types, out_num_requests);
+  pending_commit_ = true;
   return status;
 }
 
@@ -257,6 +258,7 @@ HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
   }
 
   CloseFd(&output_buffer_.acquire_fence_fd);
+  pending_commit_ = false;
   return status;
 }
 

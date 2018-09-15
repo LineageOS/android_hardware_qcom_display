@@ -52,7 +52,7 @@ QtiMapper::QtiMapper() {
 
 bool QtiMapper::ValidDescriptor(const BufferDescriptorInfo_2_1 &bd) {
   if (bd.width == 0 || bd.height == 0 || (static_cast<int32_t>(bd.format) <= 0) ||
-      bd.layerCount != 1) {
+      bd.layerCount <= 0) {
     return false;
   }
 

@@ -455,6 +455,10 @@ HWC2::Error HWCLayer::SetLayerPlaneAlpha(float alpha) {
 HWC2::Error HWCLayer::SetLayerSourceCrop(hwc_frect_t crop) {
   LayerRect src_rect = {};
   SetRect(crop, &src_rect);
+  non_integral_source_crop_ = ((crop.left != roundf(crop.left)) ||
+                              (crop.top != roundf(crop.top)) ||
+                              (crop.right != roundf(crop.right)) ||
+                              (crop.bottom != roundf(crop.bottom)));
   if (layer_->src_rect != src_rect) {
     geometry_changes_ |= kSourceCrop;
     layer_->src_rect = src_rect;
@@ -801,13 +805,13 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
   uint32_t frame_rate = layer->frame_rate;
   if (getMetaData(handle, GET_REFRESH_RATE, &fps) == 0) {
     frame_rate = (fps != 0) ? RoundToStandardFPS(fps) : layer->frame_rate;
+    has_metadata_refresh_rate_ = true;
   }
 
   int32_t interlaced = 0;
-  bool interlace = layer_buffer->flags.interlace;
-  if (getMetaData(handle, GET_PP_PARAM_INTERLACED, &interlaced) == 0) {
-    interlace = interlaced ? true : false;
-  }
+  getMetaData(handle, GET_PP_PARAM_INTERLACED, &interlaced);
+  bool interlace = interlaced ? true : false;
+
   if (interlace != layer_buffer->flags.interlace) {
     DLOGI("Layer buffer interlaced metadata has changed. old=%d, new=%d",
           layer_buffer->flags.interlace, interlace);

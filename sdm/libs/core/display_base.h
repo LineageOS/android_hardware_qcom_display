@@ -211,6 +211,9 @@ class DisplayBase : public DisplayInterface {
   bool hw_recovery_logs_captured_ = false;
   int disable_hw_recovery_dump_ = 0;
   HWQosData default_qos_data_;
+  bool drop_hw_vsync_ = false;
+  uint32_t current_refresh_rate_ = 0;
+  bool drop_skewed_vsync_ = false;
 
   static Locker display_power_reset_lock_;
   static bool display_power_reset_pending_;
