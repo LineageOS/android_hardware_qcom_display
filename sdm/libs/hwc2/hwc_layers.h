@@ -97,6 +97,7 @@ class HWCLayer {
   bool NeedsValidation() { return (needs_validate_ || geometry_changes_); }
   bool IsSingleBuffered() { return single_buffer_; }
   bool IsScalingPresent();
+  float GetScaleFactor();
   bool IsRotationPresent();
   bool IsNonIntegralSourceCrop() { return non_integral_source_crop_; }
   bool HasMetaDataRefreshRate() { return has_metadata_refresh_rate_; }
