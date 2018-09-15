@@ -262,6 +262,9 @@ int HWCSession::GetDisplayIndex(int dpy) {
     case qdutils::DISPLAY_VIRTUAL:
       map_info = map_info_virtual_.size() ? &map_info_virtual_[0] : nullptr;
       break;
+    case qdutils::DISPLAY_BUILTIN_2:
+      map_info = map_info_builtin_.size() ? &map_info_builtin_[0] : nullptr;
+      break;
   }
 
   if (!map_info) {
@@ -1133,7 +1136,11 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       break;
 
     case qService::IQService::SCREEN_REFRESH:
-      status = refreshScreen();
+      if (!input_parcel) {
+        DLOGE("QService command = %d: input_parcel needed.", command);
+        break;
+      }
+      status = RefreshScreen(input_parcel);
       break;
 
     case qService::IQService::SET_IDLE_TIMEOUT:
@@ -1549,7 +1556,7 @@ android::status_t HWCSession::SetColorModeOverride(const android::Parcel *input_
 }
 
 android::status_t HWCSession::SetColorModeById(const android::Parcel *input_parcel) {
-  int display = static_cast<int >(input_parcel->readInt32());
+  int display = input_parcel->readInt32();
   auto mode = input_parcel->readInt32();
   auto device = static_cast<hwc2_device_t *>(this);
 
@@ -1563,6 +1570,20 @@ android::status_t HWCSession::SetColorModeById(const android::Parcel *input_parc
                                  &HWCDisplay::SetColorModeById, mode);
   if (err != HWC2_ERROR_NONE)
     return -EINVAL;
+
+  return 0;
+}
+
+android::status_t HWCSession::RefreshScreen(const android::Parcel *input_parcel) {
+  int display = input_parcel->readInt32();
+
+  int disp_idx = GetDisplayIndex(display);
+  if (disp_idx == -1) {
+    DLOGE("Invalid display = %d", display);
+    return -EINVAL;
+  }
+
+  Refresh(static_cast<hwc2_display_t>(disp_idx));
 
   return 0;
 }
