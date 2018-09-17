@@ -81,7 +81,6 @@ class CompManager {
   DisplayError SetColorModesInfo(Handle display_ctx,
                                  const std::vector<PrimariesTransfer> &colormodes_cs);
   DisplayError SetBlendSpace(Handle display_ctx, const PrimariesTransfer &blend_space);
-  void HandleSecureEvent(Handle display_ctx, SecureEvent secure_event);
 
  private:
   static const int kMaxThermalLevel = 3;

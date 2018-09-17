@@ -596,17 +596,4 @@ DisplayError CompManager::SetBlendSpace(Handle display_ctx, const PrimariesTrans
   return kErrorNone;
 }
 
-void CompManager::HandleSecureEvent(Handle display_ctx, SecureEvent secure_event) {
-  DisplayCompositionContext *display_comp_ctx =
-                             reinterpret_cast<DisplayCompositionContext *>(display_ctx);
-  // Disable rotator for non secure layers at the end of secure display session, because scm call
-  // has been made to end secure display session during the display commit. Since then access to
-  // non secure memory is unavailable. So this results in smmu page fault when rotator tries to
-  // access the non secure memory.
-  if (secure_event == kSecureDisplayEnd) {
-    resource_intf_->Perform(ResourceInterface::kCmdDisableRotatorOneFrame,
-                            display_comp_ctx->display_resource_ctx);
-  }
-}
-
 }  // namespace sdm
