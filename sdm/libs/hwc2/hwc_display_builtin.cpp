@@ -359,6 +359,7 @@ HWC2::Error HWCDisplayBuiltIn::SetReadbackBuffer(const native_handle_t *buffer,
   output_buffer_.planes[0].stride = UINT32(handle->width);
   output_buffer_.acquire_fence_fd = dup(acquire_fence);
   output_buffer_.release_fence_fd = -1;
+  output_buffer_.handle_id = handle->id;
 
   post_processed_output_ = post_processed_output;
   readback_buffer_queued_ = true;
@@ -582,13 +583,11 @@ HWC2::Error HWCDisplayBuiltIn::SetFrameDumpConfig(uint32_t count, uint32_t bit_m
   dump_output_to_file_ = bit_mask_layer_type & (1 << OUTPUT_LAYER_DUMP);
   DLOGI("output_layer_dump_enable %d", dump_output_to_file_);
 
-  if (!count || !dump_output_to_file_) {
+  if (!count || !dump_output_to_file_ || (output_buffer_info_.alloc_buffer_info.fd >= 0)) {
     return HWC2::Error::None;
   }
 
   // Allocate and map output buffer
-  output_buffer_info_ = {};
-
   if (post_processed) {
     // To dump post-processed (DSPP) output, use Panel resolution.
     GetPanelResolution(&output_buffer_info_.buffer_config.width,
