@@ -125,14 +125,8 @@ int HWCDisplayBuiltIn::Init() {
 }
 
 void HWCDisplayBuiltIn::ProcessBootAnimCompleted() {
-  uint32_t numBootUpLayers = 0;
-  // TODO(user): Remove this hack
+  bool bootanim_exit = false;
 
-  numBootUpLayers = static_cast<uint32_t>(Debug::GetBootAnimLayerCount());
-
-  if (numBootUpLayers == 0) {
-    numBootUpLayers = 2;
-  }
   /* All other checks namely "init.svc.bootanim" or
   * HWC_GEOMETRY_CHANGED fail in correctly identifying the
   * exact bootup transition to homescreen
@@ -152,8 +146,13 @@ void HWCDisplayBuiltIn::ProcessBootAnimCompleted() {
     }
   }
 
+  property_get("service.bootanim.exit", property, "0");
+  if (!strcmp(property, "1")) {
+    bootanim_exit = true;
+  }
+
   if ((!isEncrypted || (isEncrypted && main_class_services_started)) &&
-      (layer_set_.size() > numBootUpLayers)) {
+      bootanim_exit) {
     DLOGI("Applying default mode");
     boot_animation_completed_ = true;
     // Applying default mode after bootanimation is finished And
@@ -195,6 +194,12 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
   // Checks and replaces layer stack for solid fill
   SolidFillPrepare();
 
+  // Apply current Color Mode and Render Intent.
+  if (color_mode_->ApplyCurrentColorModeWithRenderIntent() != HWC2::Error::None) {
+    // Fallback to GPU Composition, if Color Mode can't be applied.
+    MarkLayersForClientComposition();
+  }
+
   bool pending_output_dump = dump_frame_count_ && dump_output_to_file_;
 
   if (readback_buffer_queued_ || pending_output_dump) {
@@ -230,6 +235,7 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
   }
 
   status = PrepareLayerStack(out_num_types, out_num_requests);
+  pending_commit_ = true;
   return status;
 }
 
@@ -251,6 +257,7 @@ HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
   }
 
   CloseFd(&output_buffer_.acquire_fence_fd);
+  pending_commit_ = false;
   return status;
 }
 
@@ -279,7 +286,7 @@ HWC2::Error HWCDisplayBuiltIn::SetColorMode(ColorMode mode) {
 }
 
 HWC2::Error HWCDisplayBuiltIn::SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
-  auto status = color_mode_->SetColorModeWithRenderIntent(mode, intent);
+  auto status = color_mode_->CacheColorModeWithRenderIntent(mode, intent);
   if (status != HWC2::Error::None) {
     DLOGE("failed for mode = %d intent = %d", mode, intent);
     return status;

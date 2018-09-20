@@ -107,8 +107,7 @@ HWC2::Error HWCColorMode::GetRenderIntents(ColorMode mode, uint32_t *out_num_int
   return HWC2::Error::None;
 }
 
-HWC2::Error HWCColorMode::SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
-  DTRACE_SCOPED();
+HWC2::Error HWCColorMode::ValidateColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
   if (mode < ColorMode::NATIVE || mode > ColorMode::BT2100_HLG) {
     DLOGE("Could not find mode: %d", mode);
     return HWC2::Error::BadParameter;
@@ -118,6 +117,16 @@ HWC2::Error HWCColorMode::SetColorModeWithRenderIntent(ColorMode mode, RenderInt
   }
   if (color_mode_map_[mode].find(intent) == color_mode_map_[mode].end()) {
     return HWC2::Error::Unsupported;
+  }
+
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCColorMode::SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
+  DTRACE_SCOPED();
+  HWC2::Error hwc_error = ValidateColorModeWithRenderIntent(mode, intent);
+  if (hwc_error != HWC2::Error::None) {
+    return hwc_error;
   }
 
   if (current_color_mode_ == mode && current_render_intent_ == intent) {
@@ -137,6 +146,45 @@ HWC2::Error HWCColorMode::SetColorModeWithRenderIntent(ColorMode mode, RenderInt
   current_render_intent_ = intent;
   DLOGV_IF(kTagClient, "Successfully applied mode = %d intent = %d name = %s", mode, intent,
            mode_string.c_str());
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCColorMode::CacheColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
+  HWC2::Error error = ValidateColorModeWithRenderIntent(mode, intent);
+  if (error != HWC2::Error::None) {
+    return error;
+  }
+
+  if (current_color_mode_ == mode && current_render_intent_ == intent) {
+    return HWC2::Error::None;
+  }
+
+  current_color_mode_ = mode;
+  current_render_intent_ = intent;
+  apply_mode_ = true;
+
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCColorMode::ApplyCurrentColorModeWithRenderIntent() {
+  if (!apply_mode_) {
+    return HWC2::Error::None;
+  }
+
+  apply_mode_ = false;
+  auto mode_string = color_mode_map_[current_color_mode_][current_render_intent_];
+  DisplayError error = display_intf_->SetColorMode(mode_string);
+  if (error != kErrorNone) {
+    DLOGE("Failed for mode = %d intent = %d name = %s", current_color_mode_,
+          current_render_intent_, mode_string.c_str());
+    return HWC2::Error::Unsupported;
+  }
+
+  // The mode does not have the PCC configured, restore the transform
+  RestoreColorTransform();
+  DLOGV_IF(kTagClient, "Successfully applied mode = %d intent = %d name = %s",
+           current_color_mode_, current_render_intent_, mode_string.c_str());
+
   return HWC2::Error::None;
 }
 
@@ -440,7 +488,7 @@ HWC2::Error HWCDisplay::CreateLayer(hwc2_layer_t *out_layer_id) {
 HWCLayer *HWCDisplay::GetHWCLayer(hwc2_layer_t layer_id) {
   const auto map_layer = layer_map_.find(layer_id);
   if (map_layer == layer_map_.end()) {
-    DLOGE("[%" PRIu64 "] GetLayer(%" PRIu64 ") failed: no such layer", id_, layer_id);
+    DLOGW("[%" PRIu64 "] GetLayer(%" PRIu64 ") failed: no such layer", id_, layer_id);
     return nullptr;
   } else {
     return map_layer->second;
@@ -450,7 +498,7 @@ HWCLayer *HWCDisplay::GetHWCLayer(hwc2_layer_t layer_id) {
 HWC2::Error HWCDisplay::DestroyLayer(hwc2_layer_t layer_id) {
   const auto map_layer = layer_map_.find(layer_id);
   if (map_layer == layer_map_.end()) {
-    DLOGE("[%" PRIu64 "] destroyLayer(%" PRIu64 ") failed: no such layer", id_, layer_id);
+    DLOGW("[%" PRIu64 "] destroyLayer(%" PRIu64 ") failed: no such layer", id_, layer_id);
     return HWC2::Error::BadLayer;
   }
   const auto layer = map_layer->second;
@@ -506,6 +554,7 @@ void HWCDisplay::BuildLayerStack() {
       }
     }
 
+    bool is_secure = false;
     const private_handle_t *handle =
         reinterpret_cast<const private_handle_t *>(layer->input_buffer.buffer_id);
     if (handle) {
@@ -513,17 +562,16 @@ void HWCDisplay::BuildLayerStack() {
         layer_stack_.flags.video_present = true;
       }
       // TZ Protected Buffer - L1
-      if (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER) {
-        layer_stack_.flags.secure_present = true;
-      }
       // Gralloc Usage Protected Buffer - L3 - which needs to be treated as Secure & avoid fallback
-      if (handle->flags & private_handle_t::PRIV_FLAGS_PROTECTED_BUFFER) {
+      if (handle->flags & private_handle_t::PRIV_FLAGS_PROTECTED_BUFFER ||
+          handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER) {
         layer_stack_.flags.secure_present = true;
+        is_secure = true;
       }
     }
 
-    if (layer->flags.skip) {
-      layer_stack_.flags.skip_present = true;
+    if (layer->input_buffer.flags.secure_display) {
+      is_secure = true;
     }
 
     if (hwc_layer->IsSingleBuffered() &&
@@ -553,6 +601,14 @@ void HWCDisplay::BuildLayerStack() {
       layer_stack_.flags.hdr_present = true;
     }
 
+    if (hwc_layer->IsNonIntegralSourceCrop() && !is_secure && !hdr_layer) {
+      layer->flags.skip = true;
+    }
+
+    if (layer->flags.skip) {
+      layer_stack_.flags.skip_present = true;
+    }
+
     // TODO(user): Move to a getter if this is needed at other places
     hwc_rect_t scaled_display_frame = {INT(layer->dst_rect.left), INT(layer->dst_rect.top),
                                        INT(layer->dst_rect.right), INT(layer->dst_rect.bottom)};
@@ -576,11 +632,10 @@ void HWCDisplay::BuildLayerStack() {
       layer->src_rect.bottom = layer_buffer->height;
     }
 
-    if (layer->frame_rate > metadata_refresh_rate_) {
+    if (hwc_layer->HasMetaDataRefreshRate() && layer->frame_rate > metadata_refresh_rate_) {
       metadata_refresh_rate_ = SanitizeRefreshRate(layer->frame_rate);
-    } else {
-      layer->frame_rate = current_refresh_rate_;
     }
+
     display_rect_ = Union(display_rect_, layer->dst_rect);
     geometry_changes_ |= hwc_layer->GetGeometryChanges();
 
@@ -598,6 +653,7 @@ void HWCDisplay::BuildLayerStack() {
   Layer *sdm_client_target = client_target_->GetSDMLayer();
   sdm_client_target->flags.updating = IsLayerUpdating(client_target_);
   layer_stack_.layers.push_back(sdm_client_target);
+
   // fall back frame composition to GPU when client target is 10bit
   // TODO(user): clarify the behaviour from Client(SF) and SDM Extn -
   // when handling 10bit FBT, as it would affect blending
@@ -1031,7 +1087,17 @@ DisplayError HWCDisplay::CECMessage(char *message) {
 
 DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
   switch (event) {
-    case kIdleTimeout:
+    case kIdleTimeout: {
+      SCOPE_LOCK(HWCSession::locker_[type_]);
+      if (pending_commit_) {
+        // If idle timeout event comes in between prepare
+        // and commit, drop it since device is not really
+        // idle.
+        return kErrorNotSupported;
+      }
+      validated_ = false;
+      break;
+    }
     case kThermalEvent:
     case kIdlePowerCollapse:
     case kPanelDeadEvent: {
@@ -1069,6 +1135,7 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
     return ((*out_num_types > 0) ? HWC2::Error::HasChanges : HWC2::Error::None);
   }
 
+  UpdateRefreshRate();
   DisplayError error = display_intf_->Prepare(&layer_stack_);
   if (error != kErrorNone) {
     if (error == kErrorShutDown) {
@@ -1247,11 +1314,9 @@ HWC2::Error HWCDisplay::GetHdrCapabilities(uint32_t *out_num_types, int32_t *out
     // HDR10 and HLG are supported
     out_types[0] = HAL_HDR_HDR10;
     out_types[1] = HAL_HDR_HLG;
-    static const float kLuminanceFactor = 10000.0;
-    // luminance is expressed in the unit of 0.0001 cd/m2, convert it to 1cd/m2.
-    *out_max_luminance = FLOAT(fixed_info.max_luminance)/kLuminanceFactor;
-    *out_max_average_luminance = FLOAT(fixed_info.average_luminance)/kLuminanceFactor;
-    *out_min_luminance = FLOAT(fixed_info.min_luminance)/kLuminanceFactor;
+    *out_max_luminance = fixed_info.max_luminance;
+    *out_max_average_luminance = fixed_info.average_luminance;
+    *out_min_luminance = fixed_info.min_luminance;
   }
 
   return HWC2::Error::None;
@@ -1259,6 +1324,10 @@ HWC2::Error HWCDisplay::GetHdrCapabilities(uint32_t *out_num_types, int32_t *out
 
 
 HWC2::Error HWCDisplay::CommitLayerStack(void) {
+  if (flush_) {
+    return HWC2::Error::None;
+  }
+
   if (!validated_) {
     DLOGV_IF(kTagClient, "Display %d is not validated", id_);
     return HWC2::Error::NotValidated;
@@ -1270,37 +1339,35 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
 
   DumpInputBuffers();
 
-  if (!flush_) {
-    DisplayError error = kErrorUndefined;
-    int status = 0;
-    if (tone_mapper_) {
-      if (NeedsToneMap(layer_stack_)) {
-        status = tone_mapper_->HandleToneMap(&layer_stack_);
-        if (status != 0) {
-          DLOGE("Error handling HDR in ToneMapper");
-        }
-      } else {
-        tone_mapper_->Terminate();
+  DisplayError error = kErrorUndefined;
+  int status = 0;
+  if (tone_mapper_) {
+    if (NeedsToneMap(layer_stack_)) {
+      status = tone_mapper_->HandleToneMap(&layer_stack_);
+      if (status != 0) {
+        DLOGE("Error handling HDR in ToneMapper");
       }
-    }
-    error = display_intf_->Commit(&layer_stack_);
-
-    if (error == kErrorNone) {
-      // A commit is successfully submitted, start flushing on failure now onwards.
-      flush_on_error_ = true;
     } else {
-      if (error == kErrorShutDown) {
-        shutdown_pending_ = true;
-        return HWC2::Error::Unsupported;
-      } else if (error == kErrorNotValidated) {
-        validated_ = false;
-        return HWC2::Error::NotValidated;
-      } else if (error != kErrorPermission) {
-        DLOGE("Commit failed. Error = %d", error);
-        // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
-        // so that previous buffer and fences are released, and override the error.
-        flush_ = true;
-      }
+      tone_mapper_->Terminate();
+    }
+  }
+  error = display_intf_->Commit(&layer_stack_);
+
+  if (error == kErrorNone) {
+    // A commit is successfully submitted, start flushing on failure now onwards.
+    flush_on_error_ = true;
+  } else {
+    if (error == kErrorShutDown) {
+      shutdown_pending_ = true;
+      return HWC2::Error::Unsupported;
+    } else if (error == kErrorNotValidated) {
+      validated_ = false;
+      return HWC2::Error::NotValidated;
+    } else if (error != kErrorPermission) {
+      DLOGE("Commit failed. Error = %d", error);
+      // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
+      // so that previous buffer and fences are released, and override the error.
+      flush_ = true;
     }
   }
 
@@ -2026,6 +2093,7 @@ bool HWCDisplay::CanSkipValidate() {
   }
 
   for (auto hwc_layer : layer_set_) {
+    Layer *layer = hwc_layer->GetSDMLayer();
     if (hwc_layer->NeedsValidation()) {
       DLOGV_IF(kTagClient, "hwc_layer[%d] needs validation. Returning false.",
                hwc_layer->GetId());
@@ -2033,9 +2101,9 @@ bool HWCDisplay::CanSkipValidate() {
     }
 
     // Do not allow Skip Validate, if any layer needs GPU Composition.
-    if (hwc_layer->GetDeviceSelectedCompositionType() == HWC2::Composition::Client) {
-      DLOGV_IF(kTagClient, "hwc_layer[%d] is GPU composed. Returning false.",
-               hwc_layer->GetId());
+    if (layer->composition == kCompositionGPU || layer->composition == kCompositionNone) {
+      DLOGV_IF(kTagClient, "hwc_layer[%d] is %s. Returning false.", hwc_layer->GetId(),
+               (layer->composition == kCompositionGPU) ? "GPU composed": "Dropped");
       return false;
     }
   }
@@ -2088,6 +2156,16 @@ bool HWCDisplay::CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests) 
   }
 
   return skip_prepare;
+}
+
+void HWCDisplay::UpdateRefreshRate() {
+  for (auto hwc_layer : layer_set_) {
+    if (hwc_layer->HasMetaDataRefreshRate()) {
+      continue;
+    }
+    auto layer = hwc_layer->GetSDMLayer();
+    layer->frame_rate = current_refresh_rate_;
+  }
 }
 
 }  // namespace sdm

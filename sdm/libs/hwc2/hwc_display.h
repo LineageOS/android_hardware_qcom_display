@@ -81,6 +81,8 @@ class HWCColorMode {
   HWC2::Error SetColorTransform(const float *matrix, android_color_transform_t hint);
   HWC2::Error RestoreColorTransform();
   ColorMode GetCurrentColorMode() { return current_color_mode_; }
+  HWC2::Error ApplyCurrentColorModeWithRenderIntent();
+  HWC2::Error CacheColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
 
  private:
   static const uint32_t kColorTransformMatrixCount = 16;
@@ -93,9 +95,10 @@ class HWCColorMode {
     }
   }
   HWC2::Error ApplyDefaultColorMode();
+  HWC2::Error ValidateColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
 
   DisplayInterface *display_intf_ = NULL;
-
+  bool apply_mode_ = false;
   ColorMode current_color_mode_ = ColorMode::NATIVE;
   RenderIntent current_render_intent_ = RenderIntent::COLORIMETRIC;
   typedef std::map<RenderIntent, std::string> RenderIntentMap;
@@ -358,11 +361,12 @@ class HWCDisplay : public DisplayEventHandler {
   int disable_hdr_handling_ = 0;  // disables HDR handling.
   uint32_t display_config_ = 0;
   bool config_pending_ = false;
+  bool pending_commit_ = false;
 
  private:
   void DumpInputBuffers(void);
   bool CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests);
-
+  void UpdateRefreshRate();
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
   uint32_t geometry_changes_ = GeometryChanges::kNone;

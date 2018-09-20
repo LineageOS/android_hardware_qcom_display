@@ -109,6 +109,8 @@ class HWCLayer {
   static LayerBufferFormat GetSDMFormat(const int32_t &source, const int flags);
   bool IsSurfaceUpdated() { return surface_updated_; }
   void SetPartialUpdate(bool enabled) { partial_update_enabled_ = enabled; }
+  bool IsNonIntegralSourceCrop() { return non_integral_source_crop_; }
+  bool HasMetaDataRefreshRate() { return has_metadata_refresh_rate_; }
 
  private:
   Layer *layer_ = nullptr;
@@ -127,6 +129,8 @@ class HWCLayer {
   bool dataspace_supported_ = false;
   bool partial_update_enabled_ = false;
   bool surface_updated_ = true;
+  bool non_integral_source_crop_ = false;
+  bool has_metadata_refresh_rate_ = false;
 
   // Composition requested by client(SF)
   HWC2::Composition client_requested_ = HWC2::Composition::Device;

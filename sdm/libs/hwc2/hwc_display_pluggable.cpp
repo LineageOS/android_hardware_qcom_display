@@ -137,6 +137,7 @@ HWC2::Error HWCDisplayPluggable::Validate(uint32_t *out_num_types, uint32_t *out
 
   if (layer_set_.empty()) {
     flush_ = true;
+    validated_ = true;
     return status;
   }
 

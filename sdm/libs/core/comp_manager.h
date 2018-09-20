@@ -81,6 +81,7 @@ class CompManager {
   DisplayError SetColorModesInfo(Handle display_ctx,
                                  const std::vector<PrimariesTransfer> &colormodes_cs);
   DisplayError SetBlendSpace(Handle display_ctx, const PrimariesTransfer &blend_space);
+  void HandleSecureEvent(Handle display_ctx, SecureEvent secure_event);
 
  private:
   static const int kMaxThermalLevel = 3;
@@ -110,6 +111,7 @@ class CompManager {
   ResourceInterface *resource_intf_ = NULL;
   std::set<int32_t> registered_displays_;  // List of registered displays
   std::set<int32_t> configured_displays_;  // List of sucessfully configured displays
+  std::set<int32_t> powered_on_displays_;  // List of powered on displays.
   bool safe_mode_ = false;              // Flag to notify all displays to be in resource crunch
                                         // mode, where strategy manager chooses the best strategy
                                         // that uses optimal number of pipes for each display

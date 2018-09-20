@@ -51,6 +51,7 @@
 #include <drm/sde_drm.h>
 #include <private/color_params.h>
 #include <utils/rect.h>
+#include <utils/utils.h>
 
 #include <sstream>
 #include <ctime>
@@ -663,8 +664,9 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   hw_panel_info_.is_primary_panel = connector_info_.is_primary;
   hw_panel_info_.is_pluggable = 0;
   hw_panel_info_.hdr_enabled = connector_info_.panel_hdr_prop.hdr_enabled;
-  hw_panel_info_.peak_luminance = connector_info_.panel_hdr_prop.peak_brightness;
-  hw_panel_info_.blackness_level = connector_info_.panel_hdr_prop.blackness_level;
+  // Convert the luminance values to cd/m^2 units.
+  hw_panel_info_.peak_luminance = FLOAT(connector_info_.panel_hdr_prop.peak_brightness) / 10000.0f;
+  hw_panel_info_.blackness_level = FLOAT(connector_info_.panel_hdr_prop.blackness_level) / 10000.0f;
   hw_panel_info_.primaries.white_point[0] = connector_info_.panel_hdr_prop.display_primaries[0];
   hw_panel_info_.primaries.white_point[1] = connector_info_.panel_hdr_prop.display_primaries[1];
   hw_panel_info_.primaries.red[0] = connector_info_.panel_hdr_prop.display_primaries[2];
@@ -818,7 +820,6 @@ DisplayError HWDeviceDRM::SetDisplayAttributes(uint32_t index) {
   current_mode_index_ = index;
   PopulateHWPanelInfo();
   UpdateMixerAttributes();
-  update_mode_ = true;
 
   DLOGI("Display attributes[%d]: WxH: %dx%d, DPI: %fx%f, FPS: %d, LM_SPLIT: %d, V_BACK_PORCH: %d," \
         " V_FRONT_PORCH: %d, V_PULSE_WIDTH: %d, V_TOTAL: %d, H_TOTAL: %d, CLK: %dKHZ, TOPOLOGY: %d",
@@ -1272,14 +1273,18 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   SetupAtomic(hw_layers, false /* validate */);
 
   int ret = drm_atomic_intf_->Commit(synchronous_commit_, false /* retain_planes*/);
+  int release_fence = INT(release_fence_);
+  int retire_fence = INT(retire_fence_);
   if (ret) {
     DLOGE("%s failed with error %d crtc %d", __FUNCTION__, ret, token_.crtc_id);
     vrefresh_ = 0;
+    CloseFd(&release_fence);
+    CloseFd(&retire_fence);
+    release_fence_ = -1;
+    retire_fence_ = -1;
     return kErrorHardware;
   }
 
-  int release_fence = static_cast<int>(release_fence_);
-  int retire_fence = static_cast<int>(retire_fence_);
   DLOGD_IF(kTagDriverConfig, "RELEASE fence created: fd:%d", release_fence);
   DLOGD_IF(kTagDriverConfig, "RETIRE fence created: fd:%d", retire_fence);
 
@@ -1755,6 +1760,7 @@ void HWDeviceDRM::UpdateMixerAttributes() {
                                      ? hw_panel_info_.split_info.left_split
                                      : mixer_attributes_.width;
   DLOGI("Mixer WxH %dx%d for %s", mixer_attributes_.width, mixer_attributes_.height, device_name_);
+  update_mode_ = true;
 }
 
 void HWDeviceDRM::SetSecureConfig(const LayerBuffer &input_buffer, DRMSecureMode *fb_secure_mode,

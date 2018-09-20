@@ -171,6 +171,7 @@ DisplayError CompManager::UnregisterDisplay(Handle display_ctx) {
 
   registered_displays_.erase(display_comp_ctx->display_id);
   configured_displays_.erase(display_comp_ctx->display_id);
+  powered_on_displays_.erase(display_comp_ctx->display_id);
 
   if (display_comp_ctx->display_type == kPluggable) {
     max_layers_ = kMaxSDELayers;
@@ -543,6 +544,8 @@ bool CompManager::SetDisplayState(Handle display_ctx, DisplayState state) {
   DisplayCompositionContext *display_comp_ctx =
       reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
+  powered_on_displays_.erase(display_comp_ctx->display_id);
+
   switch (state) {
   case kStateOff:
     Purge(display_ctx);
@@ -552,10 +555,13 @@ bool CompManager::SetDisplayState(Handle display_ctx, DisplayState state) {
     break;
 
   case kStateOn:
-    if (registered_displays_.size() > 1) {
+    // Get active display count.
+    if (powered_on_displays_.size()) {
       safe_mode_ = true;
       DLOGV_IF(kTagCompManager, "safe_mode = %d", safe_mode_);
+      break;
     }
+    powered_on_displays_.insert(display_comp_ctx->display_id);
     break;
 
   default:
@@ -594,6 +600,19 @@ DisplayError CompManager::SetBlendSpace(Handle display_ctx, const PrimariesTrans
   display_comp_ctx->strategy->SetBlendSpace(blend_space);
 
   return kErrorNone;
+}
+
+void CompManager::HandleSecureEvent(Handle display_ctx, SecureEvent secure_event) {
+  DisplayCompositionContext *display_comp_ctx =
+                             reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+  // Disable rotator for non secure layers at the end of secure display session, because scm call
+  // has been made to end secure display session during the display commit. Since then access to
+  // non secure memory is unavailable. So this results in smmu page fault when rotator tries to
+  // access the non secure memory.
+  if (secure_event == kSecureDisplayEnd) {
+    resource_intf_->Perform(ResourceInterface::kCmdDisableRotatorOneFrame,
+                            display_comp_ctx->display_resource_ctx);
+  }
 }
 
 }  // namespace sdm

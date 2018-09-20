@@ -334,6 +334,7 @@ DisplayError DisplayPluggable::InitializeColorModes() {
   var.push_back(std::make_pair(kDynamicRangeAttribute, kSdr));
   var.push_back(std::make_pair(kPictureQualityAttribute, kStandard));
   color_mode_attr_map_.insert(std::make_pair(kSrgb, var));
+  current_color_mode_ = kSrgb;
   pt.primaries = ColorPrimaries_BT2020;
   if (!hw_panel_info_.hdr_enabled) {
     UpdateColorModes();
@@ -427,6 +428,7 @@ DisplayError DisplayPluggable::SetColorMode(const std::string &color_mode) {
   if (error != kErrorNone) {
     DLOGE("Failed Set blend space, error = %d display_type_=%d", error, display_type_);
   }
+  current_color_mode_ = color_mode;
 
   return kErrorNone;
 }
@@ -481,10 +483,10 @@ void DisplayPluggable::UpdateColorModes() {
   for (ColorModeAttrMap::iterator it = color_mode_attr_map_.begin();
        ((i < num_color_modes_) && (it != color_mode_attr_map_.end())); i++, it++) {
     color_modes_[i].id = INT32(i);
-    std::size_t length = (it->first).copy(color_modes_[i].name, sizeof(it->first.c_str()));
+    std::size_t length = (it->first).copy(color_modes_[i].name, sizeof(SDEDisplayMode::name) - 1);
     color_modes_[i].name[length] = '\0';
     color_mode_map_.insert(std::make_pair(color_modes_[i].name, &color_modes_[i]));
-    DLOGI("Color mode = %s", it->first.c_str());
+    DLOGI("Color mode = %s", color_modes_[i].name);
   }
   return;
 }

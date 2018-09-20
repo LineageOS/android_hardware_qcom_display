@@ -290,6 +290,9 @@ int HWCSession::GetDisplayIndex(int dpy) {
     case qdutils::DISPLAY_VIRTUAL:
       map_info = map_info_virtual_.size() ? &map_info_virtual_[0] : nullptr;
       break;
+    case qdutils::DISPLAY_BUILTIN_2:
+      map_info = map_info_builtin_.size() ? &map_info_builtin_[0] : nullptr;
+      break;
   }
 
   if (!map_info) {
@@ -1158,7 +1161,11 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       break;
 
     case qService::IQService::SCREEN_REFRESH:
-      status = refreshScreen();
+      if (!input_parcel) {
+        DLOGE("QService command = %d: input_parcel needed.", command);
+        break;
+      }
+      status = RefreshScreen(input_parcel);
       break;
 
     case qService::IQService::SET_IDLE_TIMEOUT:
@@ -1626,7 +1633,7 @@ android::status_t HWCSession::SetColorModeWithRenderIntentOverride(
   return 0;
 }
 android::status_t HWCSession::SetColorModeById(const android::Parcel *input_parcel) {
-  int display = static_cast<int >(input_parcel->readInt32());
+  int display = input_parcel->readInt32();
   auto mode = input_parcel->readInt32();
   auto device = static_cast<hwc2_device_t *>(this);
 
@@ -1640,6 +1647,20 @@ android::status_t HWCSession::SetColorModeById(const android::Parcel *input_parc
                                  &HWCDisplay::SetColorModeById, mode);
   if (err != HWC2_ERROR_NONE)
     return -EINVAL;
+
+  return 0;
+}
+
+android::status_t HWCSession::RefreshScreen(const android::Parcel *input_parcel) {
+  int display = input_parcel->readInt32();
+
+  int disp_idx = GetDisplayIndex(display);
+  if (disp_idx == -1) {
+    DLOGE("Invalid display = %d", display);
+    return -EINVAL;
+  }
+
+  Refresh(static_cast<hwc2_display_t>(disp_idx));
 
   return 0;
 }
@@ -2132,6 +2153,16 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
       continue;
     }
 
+    // Check if we are already using the display.
+    auto display_used = std::find_if(map_info_pluggable_.begin(), map_info_pluggable_.end(),
+                                     [&](auto &p) {
+                                       return (p.sdm_id == info.display_id);
+                                     });
+    if (display_used != map_info_pluggable_.end()) {
+      // Display is already used in a slot.
+      continue;
+    }
+
     // find an empty slot to create display.
     for (auto &map_info : map_info_pluggable_) {
       hwc2_display_t client_id = map_info.client_id;
@@ -2141,7 +2172,7 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
         SCOPE_LOCK(locker_[client_id]);
         auto &hwc_display = hwc_display_[client_id];
         if (hwc_display) {
-          // Display is already connected.
+          // Display slot is already used.
           continue;
         }
 
@@ -2167,7 +2198,8 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
           return status;
         }
 
-        DLOGI("Created pluggable display successfully.");
+        DLOGI("Created pluggable display successfully: sdm id = %d, client id = %d",
+              info.display_id, client_id);
       }
 
       map_info.disp_type = info.display_type;
@@ -2200,7 +2232,7 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
   }
 
   for (auto client_id : pending_hotplugs) {
-    DLOGI("Notify hotplug connected: client id = %d", client_id);
+    DLOGI("Notify hotplug display connected: client id = %d", client_id);
     callbacks_.Hotplug(client_id, HWC2::Connection::Connected);
   }
 
@@ -2222,6 +2254,7 @@ int HWCSession::HandleDisconnectedDisplays(HWDisplaysInfo *hw_displays_info) {
       if (info.is_connected) {
         disconnect = false;
       }
+      break;
     }
 
     if (disconnect) {
@@ -2250,7 +2283,8 @@ void HWCSession::DestroyDisplay(DisplayMapInfo *map_info) {
       return;
     }
 
-    DLOGI("Destroy display type = %d, client id = %d", map_info->disp_type, client_id);
+    DLOGI("Destroy display %d-%d, client id = %d", map_info->sdm_id, map_info->disp_type,
+          client_id);
     switch (map_info->disp_type) {
       case kBuiltIn:
         HWCDisplayBuiltIn::Destroy(hwc_display);
@@ -2274,6 +2308,7 @@ void HWCSession::DestroyDisplay(DisplayMapInfo *map_info) {
   }
 
   if (notify_hotplug) {
+    DLOGI("Notify hotplug display disconnected: client id = %d", client_id);
     callbacks_.Hotplug(client_id, HWC2::Connection::Disconnected);
   }
 }
@@ -2547,9 +2582,13 @@ void HWCSession::UpdateVsyncSource(hwc2_display_t display) {
 
   // If primary display is powered off, change vsync source to next builtin display.
   // If primary display is powerd on, change vsync source back to primary display.
+  // First check for active builtins. If not found switch to pluggable displays.
+  std::vector<DisplayMapInfo> map_info = map_info_builtin_;
+  std::copy(map_info_pluggable_.begin(), map_info_pluggable_.end(), std::back_inserter(map_info));
+
   if (power_mode == HWC2::PowerMode::Off) {
     hwc2_display_t next_vsync_source = HWC_DISPLAY_PRIMARY;
-    for (auto &info : map_info_builtin_) {
+    for (auto &info : map_info) {
       auto &hwc_display = hwc_display_[info.client_id];
       if (!hwc_display) {
         continue;

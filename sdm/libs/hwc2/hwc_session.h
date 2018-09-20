@@ -20,7 +20,9 @@
 #ifndef __HWC_SESSION_H__
 #define __HWC_SESSION_H__
 
-#ifdef DISPLAY_CONFIG_1_3
+#ifdef DISPLAY_CONFIG_1_4
+#include <vendor/display/config/1.4/IDisplayConfig.h>
+#elif DISPLAY_CONFIG_1_3
 #include <vendor/display/config/1.3/IDisplayConfig.h>
 #elif DISPLAY_CONFIG_1_2
 #include <vendor/display/config/1.2/IDisplayConfig.h>
@@ -49,7 +51,9 @@
 
 namespace sdm {
 
-#ifdef DISPLAY_CONFIG_1_3
+#ifdef DISPLAY_CONFIG_1_4
+using vendor::display::config::V1_4::IDisplayConfig;
+#elif  DISPLAY_CONFIG_1_3
 using vendor::display::config::V1_3::IDisplayConfig;
 #elif DISPLAY_CONFIG_1_2
 using vendor::display::config::V1_2::IDisplayConfig;
@@ -249,6 +253,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int32_t SetSecondaryDisplayStatus(int disp_id, HWCDisplay::DisplayStatus status);
   int32_t GetPanelBrightness(int *level);
   int32_t MinHdcpEncryptionLevelChanged(int disp_id, uint32_t min_enc_level);
+  int32_t IsWbUbwcSupported(int *value);
 
   // service methods
   void StartServices();
@@ -290,6 +295,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
 #ifdef DISPLAY_CONFIG_1_3
   Return<int32_t> controlIdlePowerCollapse(bool enable, bool synchronous) override;
 #endif
+#ifdef DISPLAY_CONFIG_1_4
+  Return<void> getWriteBackCapabilities(getWriteBackCapabilities_cb _hidl_cb) override;
+#endif
 
   // QClient methods
   virtual android::status_t notifyCallback(uint32_t command, const android::Parcel *input_parcel,
@@ -313,6 +321,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   android::status_t getComposerStatus();
   android::status_t SetQSyncMode(const android::Parcel *input_parcel);
   android::status_t SetIdlePC(const android::Parcel *input_parcel);
+  android::status_t RefreshScreen(const android::Parcel *input_parcel);
 
   void Refresh(hwc2_display_t display);
   void HotPlug(hwc2_display_t display, HWC2::Connection state);
@@ -348,7 +357,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int hpd_bpp_ = 0;
   int hpd_pattern_ = 0;
   int null_display_mode_ = 0;
-  bool power_on_pending_[HWC_NUM_DISPLAY_TYPES] = {false};
+  bool power_on_pending_[kNumDisplays] = {false};
   HotPlugEvent hotplug_pending_event_ = kHotPlugNone;
   bool destroy_virtual_disp_pending_ = false;
   uint32_t idle_pc_ref_cnt_ = 0;

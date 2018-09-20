@@ -98,6 +98,7 @@ DisplayError DisplayBase::Init() {
   int property_value = Debug::GetMaxPipesPerMixer(display_type_);
 
   uint32_t active_index = 0;
+  int drop_vsync = 0;
   hw_intf_->GetActiveConfig(&active_index);
   hw_intf_->GetDisplayAttributes(active_index, &display_attributes_);
   fb_config_ = display_attributes_;
@@ -167,6 +168,9 @@ DisplayError DisplayBase::Init() {
 
   Debug::GetProperty(DISABLE_HW_RECOVERY_DUMP_PROP, &disable_hw_recovery_dump_);
   DLOGI("disable_hw_recovery_dump_ set to %d", disable_hw_recovery_dump_);
+
+  Debug::Get()->GetProperty("DROP_SKEWED_VSYNC", &drop_vsync);
+  drop_skewed_vsync_ = (drop_vsync == 1);
 
   return kErrorNone;
 
@@ -390,7 +394,10 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     return error;
   }
 
+  // Stop dropping vsync when first commit is received after idle fallback.
+  drop_hw_vsync_ = false;
   DLOGI_IF(kTagDisplay, "Exiting commit for display: %d-%d", display_id_, display_type_);
+
   return kErrorNone;
 }
 
@@ -1051,6 +1058,10 @@ DisplayError DisplayBase::SetVSyncState(bool enable) {
   if (vsync_enable_ != enable) {
     error = hw_intf_->SetVSyncState(enable);
     if (error == kErrorNotSupported) {
+      if (drop_skewed_vsync_ && (hw_panel_info_.mode == kModeVideo) &&
+        enable && (current_refresh_rate_ == hw_panel_info_.min_fps)) {
+        drop_hw_vsync_ = true;
+      }
       error = hw_events_intf_->SetEventState(HWEvent::VSYNC, enable);
     }
     if (error == kErrorNone) {
