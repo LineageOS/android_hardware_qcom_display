@@ -777,6 +777,7 @@ void HWCLayer::GetUBWCStatsFromMetaData(UBWCStats *cr_stats, UbwcCrStatsVector *
   // in layer_buffer or copy directly to Vector
   if (cr_stats->bDataValid) {
     switch (cr_stats->version) {
+      case UBWC_3_0:
       case UBWC_2_0:
         cr_vec->push_back(std::make_pair(32, cr_stats->ubwc_stats.nCRStatsTile32));
         cr_vec->push_back(std::make_pair(64, cr_stats->ubwc_stats.nCRStatsTile64));
