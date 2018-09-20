@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution
  *
  * Copyright (C) 2008 The Android Open Source Project
@@ -154,12 +154,14 @@ struct private_handle_t {
   static int validate(const native_handle *h) {
     const private_handle_t *hnd = (const private_handle_t *)h;
     if (!h || h->version != sizeof(native_handle) || h->numInts != NumInts() ||
-        h->numFds != kNumFds || hnd->magic != kMagic) {
-      ALOGE(
-          "Invalid gralloc handle (at %p): ver(%d/%zu) ints(%d/%d) fds(%d/%d) "
-          "magic(%c%c%c%c/%c%c%c%c)",
+        h->numFds != kNumFds) {
+      ALOGE("Invalid gralloc handle (at %p): ver(%d/%zu) ints(%d/%d) fds(%d/%d) ",
           h, h ? h->version : -1, sizeof(native_handle), h ? h->numInts : -1, NumInts(),
-          h ? h->numFds : -1, kNumFds,
+          h ? h->numFds : -1, kNumFds);
+      return -EINVAL;
+    }
+    if (hnd->magic != kMagic) {
+       ALOGE("magic(%c%c%c%c/%c%c%c%c)",
           hnd ? (((hnd->magic >> 24) & 0xFF) ? ((hnd->magic >> 24) & 0xFF) : '-') : '?',
           hnd ? (((hnd->magic >> 16) & 0xFF) ? ((hnd->magic >> 16) & 0xFF) : '-') : '?',
           hnd ? (((hnd->magic >> 8) & 0xFF) ? ((hnd->magic >> 8) & 0xFF) : '-') : '?',
