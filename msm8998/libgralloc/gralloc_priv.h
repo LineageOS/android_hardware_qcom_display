@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
- * Copyright (c) 2011 - 2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011 - 2018, The Linux Foundation. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -306,27 +306,27 @@ struct private_handle_t : public native_handle {
             magic = 0;
         }
 
+        static inline char clean_magic_byte(int b) {
+          return (b & 0xff) ? (b & 0xff) : '-';
+        }
+
         static int validate(const native_handle* h) {
             const private_handle_t* hnd = (const private_handle_t*)h;
             if (!h || h->version != sizeof(native_handle) ||
-                h->numInts != sNumInts() || h->numFds != sNumFds ||
-                hnd->magic != sMagic)
-            {
+                h->numInts != sNumInts() || h->numFds != sNumFds) {
                 ALOGD("Invalid gralloc handle (at %p): "
-                      "ver(%d/%zu) ints(%d/%d) fds(%d/%d)"
-                      "magic(%c%c%c%c/%c%c%c%c)",
-                      h,
-                      h ? h->version : -1, sizeof(native_handle),
+                      "ver(%d/%zu) ints(%d/%d) fds(%d/%d)",
+                      h, h ? h->version : -1, sizeof(native_handle),
                       h ? h->numInts : -1, sNumInts(),
-                      h ? h->numFds : -1, sNumFds,
-                      hnd ? (((hnd->magic >> 24) & 0xFF)?
-                             ((hnd->magic >> 24) & 0xFF) : '-') : '?',
-                      hnd ? (((hnd->magic >> 16) & 0xFF)?
-                             ((hnd->magic >> 16) & 0xFF) : '-') : '?',
-                      hnd ? (((hnd->magic >> 8) & 0xFF)?
-                             ((hnd->magic >> 8) & 0xFF) : '-') : '?',
-                      hnd ? (((hnd->magic >> 0) & 0xFF)?
-                             ((hnd->magic >> 0) & 0xFF) : '-') : '?',
+                      h ? h->numFds : -1, sNumFds);
+                return -EINVAL;
+            }
+            if (hnd->magic != sMagic) {
+                ALOGD("magic(%c%c%c%c/%c%c%c%c)",
+                      clean_magic_byte(hnd->magic >> 24),
+                      clean_magic_byte(hnd->magic >> 16),
+                      clean_magic_byte(hnd->magic >> 8),
+                      clean_magic_byte(hnd->magic >> 0),
                       (sMagic >> 24) & 0xFF,
                       (sMagic >> 16) & 0xFF,
                       (sMagic >> 8) & 0xFF,
