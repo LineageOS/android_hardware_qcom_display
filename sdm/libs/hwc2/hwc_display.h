@@ -228,6 +228,7 @@ class HWCDisplay : public DisplayEventHandler {
     active_ = active;
     validated_ = false;
   }
+  virtual DisplayError Refresh();
 
  protected:
   // Maximum number of layers supported by display manager.
@@ -239,7 +240,6 @@ class HWCDisplay : public DisplayEventHandler {
 
   // DisplayEventHandler methods
   virtual DisplayError VSync(const DisplayEventVSync &vsync);
-  virtual DisplayError Refresh();
   virtual DisplayError CECMessage(char *message);
   virtual DisplayError HandleEvent(DisplayEvent event);
   virtual void DumpOutputBuffer(const BufferInfo &buffer_info, void *base, int fence);
