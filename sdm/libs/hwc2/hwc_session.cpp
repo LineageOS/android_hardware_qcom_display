@@ -262,6 +262,9 @@ int HWCSession::GetDisplayIndex(int dpy) {
     case qdutils::DISPLAY_VIRTUAL:
       map_info = map_info_virtual_.size() ? &map_info_virtual_[0] : nullptr;
       break;
+    case qdutils::DISPLAY_BUILTIN_2:
+      map_info = map_info_builtin_.size() ? &map_info_builtin_[0] : nullptr;
+      break;
   }
 
   if (!map_info) {
@@ -1133,7 +1136,11 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       break;
 
     case qService::IQService::SCREEN_REFRESH:
-      status = refreshScreen();
+      if (!input_parcel) {
+        DLOGE("QService command = %d: input_parcel needed.", command);
+        break;
+      }
+      status = RefreshScreen(input_parcel);
       break;
 
     case qService::IQService::SET_IDLE_TIMEOUT:
@@ -1549,7 +1556,7 @@ android::status_t HWCSession::SetColorModeOverride(const android::Parcel *input_
 }
 
 android::status_t HWCSession::SetColorModeById(const android::Parcel *input_parcel) {
-  int display = static_cast<int >(input_parcel->readInt32());
+  int display = input_parcel->readInt32();
   auto mode = input_parcel->readInt32();
   auto device = static_cast<hwc2_device_t *>(this);
 
@@ -1563,6 +1570,20 @@ android::status_t HWCSession::SetColorModeById(const android::Parcel *input_parc
                                  &HWCDisplay::SetColorModeById, mode);
   if (err != HWC2_ERROR_NONE)
     return -EINVAL;
+
+  return 0;
+}
+
+android::status_t HWCSession::RefreshScreen(const android::Parcel *input_parcel) {
+  int display = input_parcel->readInt32();
+
+  int disp_idx = GetDisplayIndex(display);
+  if (disp_idx == -1) {
+    DLOGE("Invalid display = %d", display);
+    return -EINVAL;
+  }
+
+  Refresh(static_cast<hwc2_display_t>(disp_idx));
 
   return 0;
 }
@@ -2251,9 +2272,13 @@ void HWCSession::UpdateVsyncSource(hwc2_display_t display) {
 
   // If primary display is powered off, change vsync source to next builtin display.
   // If primary display is powerd on, change vsync source back to primary display.
+  // First check for active builtins. If not found switch to pluggable displays.
+  std::vector<DisplayMapInfo> map_info = map_info_builtin_;
+  std::copy(map_info_pluggable_.begin(), map_info_pluggable_.end(), std::back_inserter(map_info));
+
   if (power_mode == HWC2::PowerMode::Off) {
     hwc2_display_t next_vsync_source = HWC_DISPLAY_PRIMARY;
-    for (auto &info : map_info_builtin_) {
+    for (auto &info : map_info) {
       auto &hwc_display = hwc_display_[info.client_id];
       if (!hwc_display) {
         continue;
