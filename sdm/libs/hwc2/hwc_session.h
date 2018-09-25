@@ -112,8 +112,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
 
   enum HotPlugEvent {
     kHotPlugNone,
-    kHotPlugConnect,
-    kHotPlugDisconnect,
+    kHotPlugEvent,
   };
 
   explicit HWCSession(const hw_module_t *module);
@@ -341,6 +340,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
 
   void Refresh(hwc2_display_t display);
   void HotPlug(hwc2_display_t display, HWC2::Connection state);
+
+  // Internal methods
   HWC2::Error ValidateDisplayInternal(hwc2_display_t display, uint32_t *out_num_types,
                                       uint32_t *out_num_requests);
   HWC2::Error PresentDisplayInternal(hwc2_display_t display, int32_t *out_retire_fence);
@@ -348,7 +349,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   void HandlePowerOnPending(hwc2_display_t display, int retire_fence);
   void HandleHotplugPending(hwc2_display_t disp_id, int retire_fence);
   void UpdateVsyncSource(hwc2_display_t display);
-  hwc2_display_t GetNextBuiltinIndex();
+  bool GetFirstNonPrimaryBuiltinStatus();
+  DisplayClass GetDisplayClass(hwc2_display_t display_id);
+  bool IsPluggableDisplayConnected();
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[kNumDisplays] = {nullptr};
@@ -374,7 +377,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int hpd_bpp_ = 0;
   int hpd_pattern_ = 0;
   int null_display_mode_ = 0;
-  bool power_on_pending_[kNumDisplays] = {false};
+  static bool power_on_pending_[kNumDisplays];
   HotPlugEvent hotplug_pending_event_ = kHotPlugNone;
   bool destroy_virtual_disp_pending_ = false;
   uint32_t idle_pc_ref_cnt_ = 0;
