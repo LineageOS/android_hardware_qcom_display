@@ -101,6 +101,10 @@ void BufferManager::RegisterHandleLocked(const private_handle_t *hnd, int ion_ha
 }
 
 Error BufferManager::ImportHandleLocked(private_handle_t *hnd) {
+  if (private_handle_t::validate(hnd) != 0) {
+    ALOGE("ImportHandleLocked: Invalid handle: %p", hnd);
+    return Error::BAD_BUFFER;
+  }
   ALOGD_IF(DEBUG, "Importing handle:%p id: %" PRIu64, hnd, hnd->id);
   int ion_handle = allocator_->ImportBuffer(hnd->fd);
   if (ion_handle < 0) {
