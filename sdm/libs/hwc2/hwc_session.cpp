@@ -669,7 +669,7 @@ int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display
   if (!hwc_session->primary_ready_ && (display == HWC_DISPLAY_PRIMARY)) {
     hwc_session->primary_ready_ = true;
     hwc_session->CreateBuiltInDisplays();
-    hwc_session->CreatePluggableDisplays(false);
+    hwc_session->HandlePluggableDisplays(false);
   }
 
   return INT32(status);
@@ -1915,8 +1915,9 @@ void HWCSession::UEventHandler(const char *uevent_data, int length) {
 
     hpd_bpp_ = GetEventValue(uevent_data, length, "bpp=");
     hpd_pattern_ = GetEventValue(uevent_data, length, "pattern=");
-    DLOGI("Uevent = %s, bpp = %d, pattern = %d", uevent_data, hpd_bpp_, hpd_pattern_);
-    if (CreatePluggableDisplays(true)) {
+    DLOGI("Uevent = %s, status = %s, MST_HOTPLUG = %s, bpp = %d, pattern = %d", uevent_data,
+          str_status ? str_status : "NULL", str_mst ? str_mst : "NULL", hpd_bpp_, hpd_pattern_);
+    if (HandlePluggableDisplays(true)) {
       DLOGE("Could not handle hotplug. Event dropped.");
     }
 
@@ -2122,7 +2123,7 @@ int HWCSession::CreateBuiltInDisplays() {
   return status;
 }
 
-int HWCSession::CreatePluggableDisplays(bool delay_hotplug) {
+int HWCSession::HandlePluggableDisplays(bool delay_hotplug) {
   if (!primary_ready_) {
     DLOGI("Primary display is not ready. Connect displays later if any.");
     return 0;

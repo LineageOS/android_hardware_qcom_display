@@ -242,7 +242,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int GetDisplayIndex(int dpy);
   int CreatePrimaryDisplay();
   int CreateBuiltInDisplays();
-  int CreatePluggableDisplays(bool delay_hotplug);
+  int HandlePluggableDisplays(bool delay_hotplug);
   int HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool delay_hotplug);
   int HandleDisconnectedDisplays(HWDisplaysInfo *hw_displays_info);
   void DestroyDisplay(DisplayMapInfo *map_info);
