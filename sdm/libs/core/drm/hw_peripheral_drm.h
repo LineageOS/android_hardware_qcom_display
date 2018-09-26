@@ -79,6 +79,7 @@ class HWPeripheralDRM : public HWDeviceDRM {
   CWBConfig cwb_config_ = {};
   sde_drm::DRMIdlePCState idle_pc_state_ = sde_drm::DRMIdlePCState::NONE;
   std::vector<DestScalarCache> dest_scalar_cache_ = {};
+  bool needs_ds_update_ = false;
 };
 
 }  // namespace sdm
