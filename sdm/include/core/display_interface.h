@@ -409,13 +409,16 @@ class DisplayInterface {
   /*! @brief Method to set current state of the display device.
 
     @param[in] state \link DisplayState \endlink
+    @param[in] flag to force full bridge teardown for pluggable displays, no-op for other displays,
+               if requested state is kStateOff
     @param[in] pointer to release fence
 
     @return \link DisplayError \endlink
 
     @sa SetDisplayState
   */
-  virtual DisplayError SetDisplayState(DisplayState state, int *release_fence) = 0;
+  virtual DisplayError SetDisplayState(DisplayState state, bool teardown,
+                                       int *release_fence) = 0;
 
   /*! @brief Method to set active configuration for variable properties of the display device.
 

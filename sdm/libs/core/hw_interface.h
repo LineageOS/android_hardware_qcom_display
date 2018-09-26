@@ -88,7 +88,7 @@ class HWInterface {
   virtual DisplayError SetDisplayAttributes(const HWDisplayAttributes &display_attributes) = 0;
   virtual DisplayError GetConfigIndex(char *mode, uint32_t *index) = 0;
   virtual DisplayError PowerOn(const HWQosData &qos_data, int *release_fence) = 0;
-  virtual DisplayError PowerOff() = 0;
+  virtual DisplayError PowerOff(bool teardown) = 0;
   virtual DisplayError Doze(const HWQosData &qos_data, int *release_fence) = 0;
   virtual DisplayError DozeSuspend(const HWQosData &qos_data, int *release_fence) = 0;
   virtual DisplayError Standby() = 0;

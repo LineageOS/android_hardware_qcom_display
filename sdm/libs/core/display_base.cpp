@@ -491,12 +491,14 @@ DisplayState DisplayBase::GetLastPowerMode() {
   return last_power_mode_;
 }
 
-DisplayError DisplayBase::SetDisplayState(DisplayState state, int *release_fence) {
+DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
+                                          int *release_fence) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
   bool active = false;
 
-  DLOGI("Set state = %d, display %d-%d", state, display_id_, display_type_);
+  DLOGI("Set state = %d, display %d-%d, teardown = %d", state, display_id_,
+        display_type_, teardown);
 
   if (state == state_) {
     DLOGI("Same state transition is requested.");
@@ -508,7 +510,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, int *release_fence
     hw_layers_.info.hw_layers.clear();
     error = hw_intf_->Flush();
     if (error == kErrorNone) {
-      error = hw_intf_->PowerOff();
+      error = hw_intf_->PowerOff(teardown);
     }
     break;
 

@@ -343,17 +343,6 @@ DisplayError DisplayPluggable::InitializeColorModes() {
   return kErrorNone;
 }
 
-DisplayError DisplayPluggable::SetDisplayState(DisplayState state, int *release_fence) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
-  DisplayError error = kErrorNone;
-  error = DisplayBase::SetDisplayState(state, release_fence);
-  if (error != kErrorNone) {
-    return error;
-  }
-
-  return kErrorNone;
-}
-
 static PrimariesTransfer GetBlendSpaceFromAttributes(const std::string &color_gamut,
                                                      const std::string &transfer) {
   PrimariesTransfer blend_space_ = {};

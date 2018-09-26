@@ -863,7 +863,7 @@ DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, int *release_fence)
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::PowerOff() {
+DisplayError HWDeviceDRM::PowerOff(bool teardown) {
   DTRACE_SCOPED();
   if (!drm_atomic_intf_) {
     DLOGE("DRM Atomic Interface is null!");

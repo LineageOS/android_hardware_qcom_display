@@ -66,7 +66,8 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError GetConfig(DisplayConfigFixedInfo *variable_info);
   virtual DisplayError GetActiveConfig(uint32_t *index);
   virtual DisplayError GetVSyncState(bool *enabled);
-  virtual DisplayError SetDisplayState(DisplayState state, int *release_fence);
+  virtual DisplayError SetDisplayState(DisplayState state, bool teardown,
+                                       int *release_fence);
   virtual DisplayError SetActiveConfig(uint32_t index);
   virtual DisplayError SetActiveConfig(DisplayConfigVariableInfo *variable_info) {
     return kErrorNotSupported;

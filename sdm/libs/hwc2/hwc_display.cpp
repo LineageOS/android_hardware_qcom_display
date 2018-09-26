@@ -739,7 +739,7 @@ HWC2::Error HWCDisplay::SetVsyncEnabled(HWC2::Vsync enabled) {
   return HWC2::Error::None;
 }
 
-HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode) {
+HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
   DLOGV("display = %d, mode = %s", id_, to_string(mode).c_str());
   DisplayState state = kStateOff;
   bool flush_on_error = flush_on_error_;
@@ -782,7 +782,7 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode) {
   int release_fence = -1;
 
   ATRACE_INT("SetPowerMode ", state);
-  DisplayError error = display_intf_->SetDisplayState(state, &release_fence);
+  DisplayError error = display_intf_->SetDisplayState(state, teardown, &release_fence);
   validated_ = false;
 
   if (error == kErrorNone) {
@@ -1699,12 +1699,12 @@ int HWCDisplay::SetDisplayStatus(DisplayStatus display_status) {
     case kDisplayStatusResume:
       display_paused_ = false;
     case kDisplayStatusOnline:
-      status = INT32(SetPowerMode(HWC2::PowerMode::On));
+      status = INT32(SetPowerMode(HWC2::PowerMode::On, false /* teardown */));
       break;
     case kDisplayStatusPause:
       display_paused_ = true;
     case kDisplayStatusOffline:
-      status = INT32(SetPowerMode(HWC2::PowerMode::Off));
+      status = INT32(SetPowerMode(HWC2::PowerMode::Off, false /* teardown */));
       break;
     default:
       DLOGW("Invalid display status %d", display_status);
@@ -1915,7 +1915,7 @@ int HWCDisplay::HandleSecureSession(const std::bitset<kSecureMax> &secure_sessio
 
   if (active_secure_sessions_[kSecureDisplay] != secure_sessions[kSecureDisplay]) {
     if (secure_sessions[kSecureDisplay]) {
-      HWC2::Error error = SetPowerMode(HWC2::PowerMode::Off);
+      HWC2::Error error = SetPowerMode(HWC2::PowerMode::Off, true /* teardown */);
       if (error != HWC2::Error::None) {
         DLOGE("SetPowerMode failed. Error = %d", error);
       }

@@ -163,9 +163,17 @@ DisplayError HWTVDRM::GetConfigIndex(char *mode, uint32_t *index) {
   return kErrorNone;
 }
 
-DisplayError HWTVDRM::PowerOff() {
+DisplayError HWTVDRM::PowerOff(bool teardown) {
   DTRACE_SCOPED();
+  if (!drm_atomic_intf_) {
+    DLOGE("DRM Atomic Interface is null!");
+    return kErrorUndefined;
+  }
 
+  if (teardown) {
+    // LP connecter prop N/A for External
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
+  }
   int ret = drm_atomic_intf_->Commit(true /* synchronous */, false /* retain_planes*/);
   if (ret) {
     DLOGE("%s failed with error %d", __FUNCTION__, ret);
