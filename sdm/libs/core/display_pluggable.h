@@ -72,7 +72,7 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
   void UpdateColorModes();
 
  private:
-  uint32_t GetBestConfig(HWS3DMode s3d_mode);
+  DisplayError GetOverrideConfig(uint32_t *mode_index);
   void GetScanSupport();
   void SetS3DMode(LayerStack *layer_stack);
 
