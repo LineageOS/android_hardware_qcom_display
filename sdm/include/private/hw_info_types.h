@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2017, 2018 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -267,6 +267,8 @@ struct HWPanelInfo {
   uint32_t blackness_level = 0;       // Panel's blackness level
   HWColorPrimaries primaries = {};    // WRGB color primaries
   HWPanelOrientation panel_orientation = {};  // Panel Orientation
+  bool bitclk_update = false;         // Bit clk can be updated to avoid RF interference.
+  std::vector<uint64_t> bitclk_rates; // Supported bit clk levels.
 
   bool operator !=(const HWPanelInfo &panel_info) {
     return ((port != panel_info.port) || (mode != panel_info.mode) ||
@@ -282,7 +284,9 @@ struct HWPanelInfo {
             (max_fps != panel_info.max_fps) || (is_primary_panel != panel_info.is_primary_panel) ||
             (split_info != panel_info.split_info) || (s3d_mode != panel_info.s3d_mode) ||
             (left_roi_count != panel_info.left_roi_count) ||
-            (right_roi_count != panel_info.right_roi_count));
+            (right_roi_count != panel_info.right_roi_count) ||
+            (bitclk_update != panel_info.bitclk_update) ||
+            (bitclk_rates != panel_info.bitclk_rates));
   }
 
   bool operator ==(const HWPanelInfo &panel_info) {

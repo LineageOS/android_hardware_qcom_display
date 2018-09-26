@@ -1059,6 +1059,27 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       status = SetColorModeOverride(input_parcel);
       break;
 
+    case qService::IQService::SET_DSI_CLK:
+      if (!input_parcel) {
+        DLOGE("QService command = %d: input_parcel needed.", command);
+        break;
+      }
+      hwc_display_[HWC_DISPLAY_PRIMARY]->SetDynamicDSIClock(UINT32(input_parcel->readInt32()));
+      status = 0;
+      break;
+
+    case qService::IQService::GET_DSI_CLK: {
+      if (!output_parcel) {
+        DLOGE("QService command = %d: output_parcel needed.", command);
+        break;
+      }
+      uint64_t bitrate = 0;
+      hwc_display_[HWC_DISPLAY_PRIMARY]->GetDynamicDSIClock(&bitrate);
+      output_parcel->writeUint64(bitrate);
+      status = 0;
+      break;
+    }
+
     default:
       DLOGW("QService command = %d is not supported", command);
       return -EINVAL;
