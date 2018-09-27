@@ -432,9 +432,7 @@ void DisplayBuiltIn::ResetPanel() {
   if (status != kErrorNone) {
     DLOGE("power-off on built-in/primary %d failed with error = %d", display_id_, status);
   }
-  if (release_fence >= 0) {
-    ::close(release_fence);
-  }
+  CloseFd(&release_fence);
 
   DLOGI("Restoring power mode on built-in/primary %d", display_id_);
   DisplayState mode = GetLastPowerMode();
@@ -443,9 +441,7 @@ void DisplayBuiltIn::ResetPanel() {
     DLOGE("Setting power mode = %d on built-in/primary %d failed with error = %d", mode,
           display_id_, status);
   }
-  if (release_fence >= 0) {
-    ::close(release_fence);
-  }
+  CloseFd(&release_fence);
 
   DLOGI("Enabling HWVsync");
   status = SetVSyncState(true);
