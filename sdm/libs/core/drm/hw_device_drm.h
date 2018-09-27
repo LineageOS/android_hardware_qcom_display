@@ -116,6 +116,7 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) {
     return kErrorNotSupported;
   }
+  virtual DisplayError SetDisplayDppsAdROI(void *payload) { return kErrorNotSupported; }
 
   enum {
     kHWEventVSync,

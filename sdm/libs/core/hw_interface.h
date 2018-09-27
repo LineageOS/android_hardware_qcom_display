@@ -119,6 +119,7 @@ class HWInterface {
   virtual DisplayError GetDppsFeatureInfo(void *payload, size_t size) = 0;
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event) = 0;
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) = 0;
+  virtual DisplayError SetDisplayDppsAdROI(void *payload) = 0;
 
  protected:
   virtual ~HWInterface() { }
