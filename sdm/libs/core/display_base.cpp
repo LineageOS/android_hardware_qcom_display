@@ -128,17 +128,15 @@ DisplayError DisplayBase::Init() {
     }
   }
 
-  if (!color_mgr_exists_) {
+  // ColorManager supported for built-in display.
+  if (kBuiltIn == display_type_) {
     color_mgr_ = ColorManagerProxy::CreateColorManagerProxy(display_type_, hw_intf_,
                                                             display_attributes_, hw_panel_info_);
 
     if (!color_mgr_) {
-      DLOGW("Unable to create ColorManagerProxy for display = %d", display_type_);
-    } else {
-      color_mgr_exists_ = true;
-      if (InitializeColorModes() != kErrorNone) {
-        DLOGW("InitColorModes failed for display = %d", display_type_);
-      }
+      DLOGW("Unable to create ColorManagerProxy for display %d-%d", display_id_, display_type_);
+    } else if (InitializeColorModes() != kErrorNone) {
+      DLOGW("InitColorModes failed for display %d-%d", display_id_, display_type_);
     }
   }
 
@@ -1633,8 +1631,6 @@ void DisplayBase::SetPUonDestScaler() {
                                 mixer_height != display_height);
 }
 
-bool DisplayBase::color_mgr_exists_ = false;
-
 void DisplayBase::ClearColorInfo() {
   color_modes_.clear();
   color_mode_map_.clear();
@@ -1644,7 +1640,6 @@ void DisplayBase::ClearColorInfo() {
   if (color_mgr_) {
     delete color_mgr_;
     color_mgr_ = NULL;
-    color_mgr_exists_ = false;
   }
 }
 

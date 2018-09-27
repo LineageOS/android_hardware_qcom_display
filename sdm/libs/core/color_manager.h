@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2017, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015-2018, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -77,8 +77,8 @@ class ColorManagerProxy {
 
  protected:
   ColorManagerProxy() {}
-  ColorManagerProxy(DisplayType type, HWInterface *intf, const HWDisplayAttributes &attr,
-                    const HWPanelInfo &info);
+  ColorManagerProxy(int32_t id, DisplayType type, HWInterface *intf,
+                    const HWDisplayAttributes &attr, const HWPanelInfo &info);
 
  private:
   static DynLib color_lib_;
@@ -86,6 +86,7 @@ class ColorManagerProxy {
   static DestroyColorInterface destroy_intf_;
   static HWResourceInfo hw_res_info_;
 
+  int32_t display_id_;
   DisplayType device_type_;
   PPHWAttributes pp_hw_attributes_;
   HWInterface *hw_intf_;
