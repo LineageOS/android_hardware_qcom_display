@@ -68,6 +68,7 @@ enum UBWC_Version {
     UBWC_UNUSED      = 0,
     UBWC_1_0         = 0x1,
     UBWC_2_0         = 0x2,
+    UBWC_3_0         = 0x3,
     UBWC_MAX_VERSION = 0xFF,
 };
 
