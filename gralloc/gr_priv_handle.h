@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution
  *
  * Copyright (C) 2008 The Android Open Source Project
@@ -35,6 +35,8 @@
 typedef gralloc1_error_t (*GRALLOC1_PFN_PERFORM)(gralloc1_device_t *device, int operation, ...);
 
 #define PRIV_HANDLE_CONST(exp) static_cast<const private_handle_t *>(exp)
+
+#pragma pack(push, 4)
 
 #ifdef __cplusplus
 struct private_handle_t : public native_handle_t {
@@ -196,5 +198,6 @@ struct private_handle_t {
   uint64_t GetBackingstore() const { return id; }
 #endif
 };
+#pragma pack(pop)
 
 #endif  // __GR_PRIV_HANDLE_H__
