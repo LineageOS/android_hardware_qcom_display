@@ -2,4 +2,4 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = libqservice libqdutils sdm/libs/utils sdm/libs/core
+SUBDIRS = libqservice libdebug libdrmutils sdm/libs/utils sdm/libs/core libqdutils

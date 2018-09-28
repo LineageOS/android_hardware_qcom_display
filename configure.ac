@@ -31,7 +31,15 @@ fi
 AC_ARG_WITH(sanitized-headers,
    AS_HELP_STRING([--with-sanitized-headers=DIR],
        [Specify the location of the sanitized Linux headers]),
-   [CPPFLAGS="$CPPFLAGS -idirafter $withval"])
+   [CPPFLAGS="$CPPFLAGS -I$withval"])
+
+AC_ARG_ENABLE([sdmhaldrm],
+     AC_HELP_STRING([--enable-sdmhaldrm],
+        [enable sdmhaldrm, build display-hal-linux with sdmhaldrm]),
+        [enable_sdmhaldrm="${enableval}"],
+        enable_sdmhaldrm=no)
+
+AM_CONDITIONAL([ENABLE_SDMHALDRM], [test "x${enable_sdmhaldrm}" = "xyes"])
 
 # Checks for programs.
 AC_PROG_CC
@@ -50,6 +58,8 @@ AC_CONFIG_FILES([ \
         Makefile \
         libqservice/Makefile \
         libqdutils/Makefile \
+        libdebug/Makefile \
+        libdrmutils/Makefile \
         sdm/libs/utils/Makefile \
         sdm/libs/core/Makefile
         ])

@@ -9,4 +9,5 @@ libsdmutils_la_CC = @CC@
 libsdmutils_la_SOURCES = $(cpp_sources)
 libsdmutils_la_CFLAGS = $(COMMON_CFLAGS) -DLOG_TAG=\"SDM\"
 libsdmutils_la_CPPFLAGS = $(AM_CPPFLAGS)
+libsdmutils_la_LIBADD = ../../../libdebug/libdisplaydebug.la
 libsdmutils_la_LDFLAGS = -shared -avoid-version
