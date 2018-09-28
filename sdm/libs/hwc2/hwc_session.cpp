@@ -48,7 +48,6 @@
 #define __CLASS__ "HWCSession"
 
 #define HWC_UEVENT_SWITCH_HDMI "change@/devices/virtual/switch/hdmi"
-#define HWC_UEVENT_GRAPHICS_FB0 "change@/devices/virtual/graphics/fb0"
 #define HWC_UEVENT_DRM_EXT_HOTPLUG "mdss_mdp/drm/card"
 
 static sdm::HWCSession::HWCModuleMethods g_hwc_module_methods;
@@ -1977,16 +1976,6 @@ const char *GetTokenValue(const char *uevent_data, int length, const char *token
 }
 
 void HWCSession::UEventHandler(const char *uevent_data, int length) {
-  if (strcasestr(uevent_data, HWC_UEVENT_GRAPHICS_FB0)) {
-    DLOGI("Uevent FB0 = %s", uevent_data);
-    int panel_reset = GetEventValue(uevent_data, length, "PANEL_ALIVE=");
-    if (panel_reset == 0) {
-      Refresh(0);
-      reset_panel_ = true;
-    }
-    return;
-  }
-
   if (strcasestr(uevent_data, HWC_UEVENT_DRM_EXT_HOTPLUG)) {
     // MST hotplug will not carry connection status/test pattern etc.
     // Pluggable display handler will check all connection status' and take action accordingly.
@@ -2010,31 +1999,6 @@ void HWCSession::UEventHandler(const char *uevent_data, int length) {
       qservice_->onHdmiHotplug(INT(connected));
     }
   }
-}
-
-void HWCSession::ResetPanel() {
-  HWC2::Error status = HWC2::Error::None;
-
-  DLOGI("Powering off primary");
-  status = hwc_display_[HWC_DISPLAY_PRIMARY]->SetPowerMode(HWC2::PowerMode::Off,
-                                                           false /* teardown */);
-  if (status != HWC2::Error::None) {
-    DLOGE("power-off on primary failed with error = %d", status);
-  }
-
-  DLOGI("Restoring power mode on primary");
-  HWC2::PowerMode mode = hwc_display_[HWC_DISPLAY_PRIMARY]->GetLastPowerMode();
-  status = hwc_display_[HWC_DISPLAY_PRIMARY]->SetPowerMode(mode, false /* teardown */);
-  if (status != HWC2::Error::None) {
-    DLOGE("Setting power mode = %d on primary failed with error = %d", mode, status);
-  }
-
-  status = hwc_display_[HWC_DISPLAY_PRIMARY]->SetVsyncEnabled(HWC2::Vsync::Enable);
-  if (status != HWC2::Error::None) {
-    DLOGE("enabling vsync failed for primary with error = %d", status);
-  }
-
-  reset_panel_ = false;
 }
 
 int HWCSession::GetVsyncPeriod(int disp) {
@@ -2420,11 +2384,6 @@ HWC2::Error HWCSession::ValidateDisplayInternal(hwc2_display_t display, uint32_t
 
   if (display == HWC_DISPLAY_PRIMARY) {
     // TODO(user): This can be moved to HWCDisplayPrimary
-    if (reset_panel_) {
-      DLOGW("panel is in bad state, resetting the panel");
-      ResetPanel();
-    }
-
     if (need_invalidate_) {
       Refresh(display);
       need_invalidate_ = false;
