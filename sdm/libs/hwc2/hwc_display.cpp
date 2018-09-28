@@ -1482,13 +1482,14 @@ void HWCDisplay::DumpInputBuffers() {
     auto layer = layer_stack_.layers.at(i);
     const private_handle_t *pvt_handle =
         reinterpret_cast<const private_handle_t *>(layer->input_buffer.buffer_id);
-    auto acquire_fence_fd = layer->input_buffer.acquire_fence_fd;
+    auto &acquire_fence_fd = layer->input_buffer.acquire_fence_fd;
 
     if (acquire_fence_fd >= 0) {
       DisplayError error = buffer_allocator_->MapBuffer(pvt_handle, acquire_fence_fd);
       if (error != kErrorNone) {
         continue;
       }
+      acquire_fence_fd = -1;
     }
 
     DLOGI("Dump layer[%d] of %d pvt_handle %x pvt_handle->base %x", i, layer_stack_.layers.size(),
