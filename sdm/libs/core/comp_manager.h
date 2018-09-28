@@ -30,6 +30,7 @@
 #include <utils/locker.h>
 #include <bitset>
 #include <map>
+#include <set>
 
 #include "strategy.h"
 #include "resource_default.h"
@@ -84,6 +85,7 @@ class CompManager {
   static const int kSafeModeThreshold = 4;
 
   void PrepareStrategyConstraints(Handle display_ctx, HWLayers *hw_layers);
+  void UpdateStrategyConstraints(bool is_primary, bool disabled);
   const char* StringDisplayList(const std::map<int32_t, bool>& displays);
 
   struct DisplayCompositionContext {
@@ -108,6 +110,7 @@ class CompManager {
   std::map<int32_t, bool> registered_displays_;  // List of registered displays
   std::map<int32_t, bool> configured_displays_;  // List of sucessfully configured displays
   std::map<int32_t, uint32_t> display_state_;
+  std::set<int32_t> powered_on_displays_;  // List of powered on displays.
   bool safe_mode_ = false;              // Flag to notify all displays to be in resource crunch
                                         // mode, where strategy manager chooses the best strategy
                                         // that uses optimal number of pipes for each display
@@ -116,6 +119,7 @@ class CompManager {
   ExtensionInterface *extension_intf_ = NULL;
   uint32_t max_layers_ = kMaxSDELayers;
   uint32_t max_sde_ext_layers_ = 0;
+  uint32_t max_sde_builtin_layers_ = 2;
   DppsControlInterface *dpps_ctrl_intf_ = NULL;
 };
 
