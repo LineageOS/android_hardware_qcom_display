@@ -119,7 +119,7 @@ static InlineRotationVersion GetInRotVersion(sde_drm::InlineRotationVersion drm_
 
 HWResourceInfo *HWInfoDRM::hw_resource_ = nullptr;
 
-HWInfoDRM::HWInfoDRM() {
+DisplayError HWInfoDRM::Init() {
   default_mode_ = (DRMLibLoader::GetInstance()->IsLoaded() == false);
   if (!default_mode_) {
     DRMMaster *drm_master = {};
@@ -127,14 +127,22 @@ HWInfoDRM::HWInfoDRM() {
     DRMMaster::GetInstance(&drm_master);
     if (!drm_master) {
       DLOGE("Failed to acquire DRMMaster instance");
-      return;
+      return kErrorCriticalResource;
     }
     drm_master->GetHandle(&dev_fd);
     DRMLibLoader::GetInstance()->FuncGetDRMManager()(dev_fd, &drm_mgr_intf_);
+    if (!drm_mgr_intf_) {
+      DRMLibLoader::Destroy();
+      DRMMaster::DestroyInstance();
+      DLOGE("Failed to get DRMManagerInterface");
+      return kErrorCriticalResource;
+    }
   }
+
+  return kErrorNone;
 }
 
-HWInfoDRM::~HWInfoDRM() {
+void HWInfoDRM::Deinit() {
   delete hw_resource_;
   hw_resource_ = nullptr;
 
@@ -145,6 +153,10 @@ HWInfoDRM::~HWInfoDRM() {
 
   DRMLibLoader::Destroy();
   DRMMaster::DestroyInstance();
+}
+
+HWInfoDRM::~HWInfoDRM() {
+  Deinit();
 }
 
 DisplayError HWInfoDRM::GetDynamicBWLimits(HWResourceInfo *hw_resource) {
