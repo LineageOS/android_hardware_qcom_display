@@ -347,8 +347,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   void HandleSecureSession(hwc2_display_t display);
   void HandlePowerOnPending(hwc2_display_t display, int retire_fence);
   void HandleHotplugPending(hwc2_display_t disp_id, int retire_fence);
-  void UpdateVsyncSource(hwc2_display_t display);
+  void UpdateVsyncSource();
   hwc2_display_t GetNextBuiltinIndex();
+  hwc2_display_t GetNextVsyncSource();
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[kNumDisplays] = {nullptr};
