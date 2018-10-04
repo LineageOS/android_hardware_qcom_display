@@ -813,7 +813,13 @@ void Allocator::GetAlignedWidthAndHeight(const BufferDescriptor &descriptor, uns
       aligned_w = ALIGN(width * 12 / 8, 8);
       break;
     case HAL_PIXEL_FORMAT_RAW10:
-      aligned_w = ALIGN(width * 10 / 8, 8);
+      {
+        const unsigned int gpu_alignment =
+            adreno_helper_->GetGpuPixelAlignment();
+        // gpu_alignment can return 1. Make sure it's at least 8.
+        const unsigned int raw10_alignment = std::max(gpu_alignment, 8u);
+        aligned_w = ALIGN(width * 10 / 8, raw10_alignment);
+      }
       break;
     case HAL_PIXEL_FORMAT_RAW8:
       aligned_w = ALIGN(width, 8);
