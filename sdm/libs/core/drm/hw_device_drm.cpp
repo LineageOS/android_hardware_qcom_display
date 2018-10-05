@@ -420,6 +420,14 @@ DisplayError HWDeviceDRM::Init() {
     hw_scale_ = new HWScaleDRM(HWScaleDRM::Version::V2);
   }
 
+  char value[64] = {};
+  if (Debug::GetProperty(BUILTIN_MIRRORING, value) == kErrorNone) {
+    std::string str(value);
+    std::string enabled = "true";
+    builtin_mirroring_enabled_ = (str == enabled);
+  }
+
+  DLOGI("builtin_mirroring_enabled_ %d", builtin_mirroring_enabled_);
   return kErrorNone;
 }
 
@@ -779,9 +787,15 @@ DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, int *release_fence)
   }
 
   if (first_cycle_) {
-    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
-    drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
-    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
+    if (!hw_panel_info_.is_primary_panel && (disp_type_ == DRMDisplayType::PERIPHERAL)
+        && (!builtin_mirroring_enabled_)) {
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
+      drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
+      drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
+      DLOGI("Allowing poweron without commit");
+    } else {
+      return kErrorNone;
+    }
   }
 
   SetQOSData(qos_data);

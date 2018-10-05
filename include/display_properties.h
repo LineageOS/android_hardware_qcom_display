@@ -100,5 +100,6 @@
 
 #define ZERO_SWAP_INTERVAL                   "vendor.debug.egl.swapinterval"
 #define WINDOW_RECT_PROP                     DISPLAY_PROP("window_rect")
+#define BUILTIN_MIRRORING                    DISPLAY_PROP("builtin_mirroring")
 
 #endif  // __DISPLAY_PROPERTIES_H__
