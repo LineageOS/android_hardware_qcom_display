@@ -229,6 +229,7 @@ unsigned int Allocator::GetSize(const BufferDescriptor &descriptor, unsigned int
       size = ALIGN(alignedw * alignedh, SIZE_4K);
       break;
     case HAL_PIXEL_FORMAT_RAW8:
+    case HAL_PIXEL_FORMAT_Y8:
       size = alignedw * alignedh * 1;
       break;
 
@@ -848,6 +849,7 @@ void Allocator::GetAlignedWidthAndHeight(const BufferDescriptor &descriptor, uns
     case HAL_PIXEL_FORMAT_RAW_OPAQUE:
       break;
     case HAL_PIXEL_FORMAT_NV21_ZSL:
+    case HAL_PIXEL_FORMAT_Y8:
       aligned_w = ALIGN(width, 64);
       aligned_h = ALIGN(height, 64);
       break;
