@@ -437,11 +437,11 @@ uint32_t HWCDisplayBuiltIn::GetOptimalRefreshRate(bool one_updating_layer) {
 }
 
 DisplayError HWCDisplayBuiltIn::Refresh() {
-  DisplayError error = kErrorNone;
-
-  callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
-
-  return error;
+  if (pending_commit_) {
+    return kErrorNone;
+  }
+  callbacks_->Refresh(id_);
+  return kErrorNone;
 }
 
 void HWCDisplayBuiltIn::SetIdleTimeoutMs(uint32_t timeout_ms) {

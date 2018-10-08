@@ -326,7 +326,14 @@ Return<int32_t> HWCSession::minHdcpEncryptionLevelChanged(IDisplayConfig::Displa
 }
 
 Return<int32_t> HWCSession::refreshScreen() {
-  Refresh(HWC_DISPLAY_PRIMARY);
+  {
+    SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
+    if (!hwc_display_[HWC_DISPLAY_PRIMARY]) {
+      DLOGE("primary display object is not instantiated");
+      return -EINVAL;
+    }
+  }
+  hwc_display_[HWC_DISPLAY_PRIMARY]->Refresh();
   return 0;
 }
 
