@@ -435,7 +435,7 @@ int HWCDisplay::Init() {
   DisplayConfigFixedInfo fixed_info = {};
   display_intf_->GetConfig(&fixed_info);
   is_cmd_mode_ = fixed_info.is_cmdmode;
-  partial_update_enabled_ = fixed_info.partial_update;
+  partial_update_enabled_ = fixed_info.partial_update || (!fixed_info.is_cmdmode);
   client_target_->SetPartialUpdate(partial_update_enabled_);
 
   DLOGI("Display created with id: %d", id_);
