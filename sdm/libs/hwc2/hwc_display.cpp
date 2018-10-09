@@ -434,6 +434,7 @@ int HWCDisplay::Init() {
 
   DisplayConfigFixedInfo fixed_info = {};
   display_intf_->GetConfig(&fixed_info);
+  is_cmd_mode_ = fixed_info.is_cmdmode;
   partial_update_enabled_ = fixed_info.partial_update;
   client_target_->SetPartialUpdate(partial_update_enabled_);
 
@@ -2126,9 +2127,7 @@ HWC2::Error HWCDisplay::GetValidateDisplayOutput(uint32_t *out_num_types,
 }
 
 bool HWCDisplay::IsDisplayCommandMode() {
-  DisplayConfigFixedInfo display_config;
-  display_intf_->GetConfig(&display_config);
-  return display_config.is_cmdmode;
+  return is_cmd_mode_;
 }
 
 // Skip SDM prepare if all the layers in the current draw cycle are marked as Skip and

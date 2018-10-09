@@ -476,6 +476,16 @@ DisplayError HWCDisplayBuiltIn::SetDisplayMode(uint32_t mode) {
 
   if (display_intf_) {
     error = display_intf_->SetDisplayMode(mode);
+    if (error == kErrorNone) {
+      DisplayConfigFixedInfo fixed_info = {};
+      display_intf_->GetConfig(&fixed_info);
+      is_cmd_mode_ = fixed_info.is_cmdmode;
+      partial_update_enabled_ = fixed_info.partial_update;
+      for (auto hwc_layer : layer_set_) {
+        hwc_layer->SetPartialUpdate(partial_update_enabled_);
+      }
+      client_target_->SetPartialUpdate(partial_update_enabled_);
+    }
   }
 
   return error;
