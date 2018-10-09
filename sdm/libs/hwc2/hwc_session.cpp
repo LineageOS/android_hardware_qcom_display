@@ -2308,7 +2308,7 @@ hwc2_display_t HWCSession::GetNextVsyncSource() {
       continue;
     }
 
-    if (hwc_display->GetLastPowerMode() != HWC2::PowerMode::Off) {
+    if (hwc_display->GetLastPowerMode() == HWC2::PowerMode::On) {
       return info.client_id;
     }
   }
