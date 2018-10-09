@@ -448,6 +448,12 @@ void DisplayBuiltIn::ResetPanel() {
   if (status != kErrorNone) {
     DLOGE("enabling vsync failed for built-in/primary %d with error = %d", display_id_, status);
   }
+
+  DLOGI("Set Color Mode %s", current_color_mode_.c_str());
+  status = SetColorMode(current_color_mode_);
+  if (status != kErrorNone) {
+    DLOGE("set color mode failed for display id %d with error = %d", display_id_, status);
+  }
 }
 
 DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size_t size) {
