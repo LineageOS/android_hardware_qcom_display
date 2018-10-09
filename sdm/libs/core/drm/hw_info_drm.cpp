@@ -462,7 +462,7 @@ void HWInfoDRM::PopulatePipeCaps(const sde_drm::DRMPlaneTypeInfo &info,
   hw_resource->max_scaler_pipe_width = info.max_scaler_linewidth;
   hw_resource->max_scale_down = info.max_downscale;
   hw_resource->max_scale_up = info.max_upscale;
-  hw_resource->has_decimation = info.max_horizontal_deci > 1 && info.max_vertical_deci > 1;
+  hw_resource->has_decimation = info.max_horizontal_deci > 0 && info.max_vertical_deci > 0;
   hw_resource->max_pipe_bw = info.max_pipe_bandwidth / kKiloUnit;
   hw_resource->cache_size = info.cache_size;
   hw_resource->pipe_qseed3_version = GetQseedStepVersion(info.qseed3_version);
