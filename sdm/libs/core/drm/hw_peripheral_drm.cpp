@@ -63,6 +63,10 @@ DisplayError HWPeripheralDRM::Init() {
   scalar_data_.resize(hw_resource_.hw_dest_scalar_info.count);
   dest_scalar_cache_.resize(hw_resource_.hw_dest_scalar_info.count);
 
+  topology_control_ = UINT32(sde_drm::DRMTopologyControl::DSPP);
+  if (hw_panel_info_.is_primary_panel) {
+    topology_control_ |= UINT32(sde_drm::DRMTopologyControl::DEST_SCALER);
+  }
   return kErrorNone;
 }
 
