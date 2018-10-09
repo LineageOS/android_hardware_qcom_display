@@ -128,17 +128,15 @@ DisplayError DisplayBase::Init() {
     }
   }
 
-  if (!color_mgr_exists_) {
+  // ColorManager supported for built-in display.
+  if (kBuiltIn == display_type_) {
     color_mgr_ = ColorManagerProxy::CreateColorManagerProxy(display_type_, hw_intf_,
                                                             display_attributes_, hw_panel_info_);
 
     if (!color_mgr_) {
-      DLOGW("Unable to create ColorManagerProxy for display = %d", display_type_);
-    } else {
-      color_mgr_exists_ = true;
-      if (InitializeColorModes() != kErrorNone) {
-        DLOGW("InitColorModes failed for display = %d", display_type_);
-      }
+      DLOGW("Unable to create ColorManagerProxy for display %d-%d", display_id_, display_type_);
+    } else if (InitializeColorModes() != kErrorNone) {
+      DLOGW("InitColorModes failed for display %d-%d", display_id_, display_type_);
     }
   }
 
@@ -491,12 +489,14 @@ DisplayState DisplayBase::GetLastPowerMode() {
   return last_power_mode_;
 }
 
-DisplayError DisplayBase::SetDisplayState(DisplayState state, int *release_fence) {
+DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
+                                          int *release_fence) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
   bool active = false;
 
-  DLOGI("Set state = %d, display %d-%d", state, display_id_, display_type_);
+  DLOGI("Set state = %d, display %d-%d, teardown = %d", state, display_id_,
+        display_type_, teardown);
 
   if (state == state_) {
     DLOGI("Same state transition is requested.");
@@ -508,7 +508,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, int *release_fence
     hw_layers_.info.hw_layers.clear();
     error = hw_intf_->Flush();
     if (error == kErrorNone) {
-      error = hw_intf_->PowerOff();
+      error = hw_intf_->PowerOff(teardown);
     }
     break;
 
@@ -1631,8 +1631,6 @@ void DisplayBase::SetPUonDestScaler() {
                                 mixer_height != display_height);
 }
 
-bool DisplayBase::color_mgr_exists_ = false;
-
 void DisplayBase::ClearColorInfo() {
   color_modes_.clear();
   color_mode_map_.clear();
@@ -1642,7 +1640,6 @@ void DisplayBase::ClearColorInfo() {
   if (color_mgr_) {
     delete color_mgr_;
     color_mgr_ = NULL;
-    color_mgr_exists_ = false;
   }
 }
 

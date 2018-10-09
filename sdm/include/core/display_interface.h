@@ -163,6 +163,16 @@ enum QSyncMode {
   kQsyncModeOneShot,     // This is set by client to enable qsync only for current frame.
 };
 
+/*! @brief This structure defines configuration for display dpps ad4 region of interest. */
+struct DisplayDppsAd4RoiCfg {
+  uint32_t h_start;     //!< start in hotizontal direction
+  uint32_t h_end;       //!< end in hotizontal direction
+  uint32_t v_start;     //!< start in vertical direction
+  uint32_t v_end;       //!< end in vertical direction
+  uint32_t factor_in;   //!< the strength factor of inside ROI region
+  uint32_t factor_out;  //!< the strength factor of outside ROI region
+};
+
 /*! @brief This structure defines configuration for fixed properties of a display device.
 
   @sa DisplayInterface::GetConfig
@@ -409,13 +419,16 @@ class DisplayInterface {
   /*! @brief Method to set current state of the display device.
 
     @param[in] state \link DisplayState \endlink
+    @param[in] flag to force full bridge teardown for pluggable displays, no-op for other displays,
+               if requested state is kStateOff
     @param[in] pointer to release fence
 
     @return \link DisplayError \endlink
 
     @sa SetDisplayState
   */
-  virtual DisplayError SetDisplayState(DisplayState state, int *release_fence) = 0;
+  virtual DisplayError SetDisplayState(DisplayState state, bool teardown,
+                                       int *release_fence) = 0;
 
   /*! @brief Method to set active configuration for variable properties of the display device.
 
@@ -729,6 +742,15 @@ class DisplayInterface {
     @return \link DisplayError \endlink
   */
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event) = 0;
+
+  /*! @brief Method to set dpps ad roi.
+
+    @param[in] roi config parmas
+
+    @return \link DisplayError \endlink
+  */
+
+  virtual DisplayError SetDisplayDppsAdROI(void *payload) = 0;
 
   /*! @brief Method to set the Qsync mode.
 

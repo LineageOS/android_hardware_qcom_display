@@ -20,7 +20,9 @@
 #ifndef __HWC_SESSION_H__
 #define __HWC_SESSION_H__
 
-#ifdef DISPLAY_CONFIG_1_4
+#ifdef DISPLAY_CONFIG_1_5
+#include <vendor/display/config/1.5/IDisplayConfig.h>
+#elif DISPLAY_CONFIG_1_4
 #include <vendor/display/config/1.4/IDisplayConfig.h>
 #elif DISPLAY_CONFIG_1_3
 #include <vendor/display/config/1.3/IDisplayConfig.h>
@@ -51,7 +53,9 @@
 
 namespace sdm {
 
-#ifdef DISPLAY_CONFIG_1_4
+#ifdef DISPLAY_CONFIG_1_5
+using vendor::display::config::V1_5::IDisplayConfig;
+#elif DISPLAY_CONFIG_1_4
 using vendor::display::config::V1_4::IDisplayConfig;
 #elif  DISPLAY_CONFIG_1_3
 using vendor::display::config::V1_3::IDisplayConfig;
@@ -206,6 +210,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
 
   static int32_t SetVsyncEnabled(hwc2_device_t *device, hwc2_display_t display,
                                  int32_t int_enabled);
+  static int32_t GetDozeSupport(hwc2_device_t *device, hwc2_display_t display,
+                                int32_t *out_support);
 
   static Locker locker_[kNumDisplays];
 
@@ -240,7 +246,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int GetDisplayIndex(int dpy);
   int CreatePrimaryDisplay();
   int CreateBuiltInDisplays();
-  int CreatePluggableDisplays(bool delay_hotplug);
+  int HandlePluggableDisplays(bool delay_hotplug);
   int HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool delay_hotplug);
   int HandleDisconnectedDisplays(HWDisplaysInfo *hw_displays_info);
   void DestroyDisplay(DisplayMapInfo *map_info);
@@ -298,6 +304,11 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
 #ifdef DISPLAY_CONFIG_1_4
   Return<void> getWriteBackCapabilities(getWriteBackCapabilities_cb _hidl_cb) override;
 #endif
+#ifdef DISPLAY_CONFIG_1_5
+  Return<int32_t> SetDisplayDppsAdROI(uint32_t dispaly_id, uint32_t h_start, uint32_t h_end,
+                                      uint32_t v_start, uint32_t v_end, uint32_t factor_in,
+                                      uint32_t factor_out) override;
+#endif
 
   // QClient methods
   virtual android::status_t notifyCallback(uint32_t command, const android::Parcel *input_parcel,
@@ -309,6 +320,10 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   android::status_t ConfigureRefreshRate(const android::Parcel *input_parcel);
   android::status_t QdcmCMDHandler(const android::Parcel *input_parcel,
                                    android::Parcel *output_parcel);
+  android::status_t QdcmCMDDispatch(uint32_t display_id,
+                                    const PPDisplayAPIPayload &req_payload,
+                                    PPDisplayAPIPayload *resp_payload,
+                                    PPPendingParams *pending_action);
   android::status_t GetDisplayAttributesForConfig(const android::Parcel *input_parcel,
                                                   android::Parcel *output_parcel);
   android::status_t GetVisibleDisplayRect(const android::Parcel *input_parcel,
@@ -322,6 +337,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   android::status_t SetQSyncMode(const android::Parcel *input_parcel);
   android::status_t SetIdlePC(const android::Parcel *input_parcel);
   android::status_t RefreshScreen(const android::Parcel *input_parcel);
+  android::status_t SetAd4RoiConfig(const android::Parcel *input_parcel);
 
   void Refresh(hwc2_display_t display);
   void HotPlug(hwc2_display_t display, HWC2::Connection state);
@@ -332,6 +348,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   void HandlePowerOnPending(hwc2_display_t display, int retire_fence);
   void HandleHotplugPending(hwc2_display_t disp_id, int retire_fence);
   void UpdateVsyncSource(hwc2_display_t display);
+  hwc2_display_t GetNextBuiltinIndex();
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[kNumDisplays] = {nullptr};

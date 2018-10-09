@@ -88,7 +88,7 @@ class HWInterface {
   virtual DisplayError SetDisplayAttributes(const HWDisplayAttributes &display_attributes) = 0;
   virtual DisplayError GetConfigIndex(char *mode, uint32_t *index) = 0;
   virtual DisplayError PowerOn(const HWQosData &qos_data, int *release_fence) = 0;
-  virtual DisplayError PowerOff() = 0;
+  virtual DisplayError PowerOff(bool teardown) = 0;
   virtual DisplayError Doze(const HWQosData &qos_data, int *release_fence) = 0;
   virtual DisplayError DozeSuspend(const HWQosData &qos_data, int *release_fence) = 0;
   virtual DisplayError Standby() = 0;
@@ -119,6 +119,7 @@ class HWInterface {
   virtual DisplayError GetDppsFeatureInfo(void *payload, size_t size) = 0;
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event) = 0;
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) = 0;
+  virtual DisplayError SetDisplayDppsAdROI(void *payload) = 0;
 
  protected:
   virtual ~HWInterface() { }

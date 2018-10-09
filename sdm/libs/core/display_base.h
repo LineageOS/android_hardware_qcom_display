@@ -66,7 +66,8 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError GetConfig(DisplayConfigFixedInfo *variable_info);
   virtual DisplayError GetActiveConfig(uint32_t *index);
   virtual DisplayError GetVSyncState(bool *enabled);
-  virtual DisplayError SetDisplayState(DisplayState state, int *release_fence);
+  virtual DisplayError SetDisplayState(DisplayState state, bool teardown,
+                                       int *release_fence);
   virtual DisplayError SetActiveConfig(uint32_t index);
   virtual DisplayError SetActiveConfig(DisplayConfigVariableInfo *variable_info) {
     return kErrorNotSupported;
@@ -122,6 +123,9 @@ class DisplayBase : public DisplayInterface {
                                               LayerBufferFormat format,
                                               const ColorMetaData &color_metadata);
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event) {
+    return kErrorNotSupported;
+  }
+  virtual DisplayError SetDisplayDppsAdROI(void *payload) {
     return kErrorNotSupported;
   }
   virtual DisplayError SetQSyncMode(QSyncMode qsync_mode) { return kErrorNotSupported; }
@@ -185,8 +189,6 @@ class DisplayBase : public DisplayInterface {
   uint32_t max_mixer_stages_ = 0;
   HWInfoInterface *hw_info_intf_ = NULL;
   ColorManagerProxy *color_mgr_ = NULL;  // each display object owns its ColorManagerProxy
-  // TODO(user): ColorManager supported only on a single built-in display.
-  static bool color_mgr_exists_;
   bool partial_update_control_ = true;
   HWEventsInterface *hw_events_intf_ = NULL;
   bool disable_pu_one_frame_ = false;

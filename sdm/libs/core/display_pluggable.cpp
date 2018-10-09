@@ -65,20 +65,22 @@ DisplayError DisplayPluggable::Init() {
     hw_intf_->GetDisplayId(&display_id_);
   }
 
-  uint32_t active_mode_index;
-  char value[64] = "0";
-  Debug::GetProperty(HDMI_S3D_MODE_PROP, value);
-  HWS3DMode mode = (HWS3DMode)atoi(value);
-  if (mode > kS3DModeNone && mode < kS3DModeMax) {
-    active_mode_index = GetBestConfig(mode);
-  } else {
-    active_mode_index = GetBestConfig(kS3DModeNone);
-  }
-
-  error = hw_intf_->SetDisplayAttributes(active_mode_index);
+  uint32_t active_mode_index = 0;
+  error = hw_intf_->GetActiveConfig(&active_mode_index);
   if (error != kErrorNone) {
     HWInterface::Destroy(hw_intf_);
     return error;
+  }
+
+  uint32_t override_mode_index = active_mode_index;
+  error = GetOverrideConfig(&override_mode_index);
+  if (error == kErrorNone && override_mode_index != active_mode_index) {
+    DLOGI("Overriding display mode %d with mode %d.", active_mode_index, override_mode_index);
+    error = hw_intf_->SetDisplayAttributes(override_mode_index);
+    if (error != kErrorNone) {
+      DLOGI("Failed overriding display mode %d with mode %d. Continuing with display mode %d.",
+            active_mode_index, override_mode_index, active_mode_index);
+    }
   }
 
   error = DisplayBase::Init();
@@ -182,56 +184,29 @@ DisplayError DisplayPluggable::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_l
   return hw_intf_->OnMinHdcpEncryptionLevelChange(min_enc_level);
 }
 
-uint32_t DisplayPluggable::GetBestConfig(HWS3DMode s3d_mode) {
-  uint32_t best_index = 0, index;
-  uint32_t num_modes = 0;
+DisplayError DisplayPluggable::GetOverrideConfig(uint32_t *mode_index) {
+  DisplayError error = kErrorNone;
 
-  hw_intf_->GetNumDisplayAttributes(&num_modes);
-
-  // Get display attribute for each mode
-  std::vector<HWDisplayAttributes> attrib(num_modes);
-  for (index = 0; index < num_modes; index++) {
-    hw_intf_->GetDisplayAttributes(index, &attrib[index]);
+  if (!mode_index) {
+    DLOGE("Invalid mode index parameter.");
+    return kErrorParameters;
   }
 
-  // Select best config for s3d_mode. If s3d is not enabled, s3d_mode is kS3DModeNone
-  for (index = 0; index < num_modes; index++) {
-    if (attrib[index].s3d_config[s3d_mode]) {
-      break;
-    }
-  }
+  // TODO(user): Need to add support for S3D modes based on HDMI_S3D_MODE_PROP property.
 
-  index = 0;
-  best_index = UINT32(index);
-  for (size_t index = best_index + 1; index < num_modes; index++) {
-    // TODO(user): Need to add support to S3D modes
-    // From the available configs, select the best
-    // Ex: 1920x1080@60Hz is better than 1920x1080@30 and 1920x1080@30 is better than 1280x720@60
-    if (attrib[index].x_pixels > attrib[best_index].x_pixels) {
-      best_index = UINT32(index);
-    } else if (attrib[index].x_pixels == attrib[best_index].x_pixels) {
-      if (attrib[index].y_pixels > attrib[best_index].y_pixels) {
-        best_index = UINT32(index);
-      } else if (attrib[index].y_pixels == attrib[best_index].y_pixels) {
-        if (attrib[index].vsync_period_ns < attrib[best_index].vsync_period_ns) {
-          best_index = UINT32(index);
-        }
-      }
-    }
-  }
   char val[kPropertyMax] = {};
-  // Used for changing HDMI Resolution - override the best with user set config
-  bool user_config = (Debug::GetExternalResolution(val));
-
+  // Used for changing HDMI Resolution - Override the preferred mode with user set config.
+  bool user_config = Debug::GetExternalResolution(val);
   if (user_config) {
     uint32_t config_index = 0;
     // For the config, get the corresponding index
-    DisplayError error = hw_intf_->GetConfigIndex(val, &config_index);
-    if (error == kErrorNone)
-      return config_index;
+    error = hw_intf_->GetConfigIndex(val, &config_index);
+    if (error == kErrorNone) {
+      *mode_index = config_index;
+    }
   }
 
-  return best_index;
+  return error;
 }
 
 void DisplayPluggable::GetScanSupport() {
@@ -364,17 +339,6 @@ DisplayError DisplayPluggable::InitializeColorModes() {
     color_mode_attr_map_.insert(std::make_pair(kBt2020Hlg, var));
   }
   UpdateColorModes();
-
-  return kErrorNone;
-}
-
-DisplayError DisplayPluggable::SetDisplayState(DisplayState state, int *release_fence) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
-  DisplayError error = kErrorNone;
-  error = DisplayBase::SetDisplayState(state, release_fence);
-  if (error != kErrorNone) {
-    return error;
-  }
 
   return kErrorNone;
 }

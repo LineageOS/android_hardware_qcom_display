@@ -62,7 +62,8 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   virtual DisplayError Commit(LayerStack *layer_stack);
   virtual DisplayError ControlPartialUpdate(bool enable, uint32_t *pending);
   virtual DisplayError DisablePartialUpdateOneFrame();
-  virtual DisplayError SetDisplayState(DisplayState state, int *release_fence);
+  virtual DisplayError SetDisplayState(DisplayState state, bool teardown,
+                                       int *release_fence);
   virtual void SetIdleTimeoutMs(uint32_t active_ms);
   virtual DisplayError SetDisplayMode(uint32_t mode);
   virtual DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate, uint32_t *max_refresh_rate);
@@ -70,6 +71,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   virtual DisplayError SetPanelBrightness(int level);
   virtual DisplayError GetPanelBrightness(int *level);
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event);
+  virtual DisplayError SetDisplayDppsAdROI(void *payload);
   virtual DisplayError SetQSyncMode(QSyncMode qsync_mode);
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous);
 

@@ -72,7 +72,7 @@ class HWDevice : public HWInterface {
   virtual DisplayError SetDisplayAttributes(const HWDisplayAttributes &display_attributes);
   virtual DisplayError GetConfigIndex(char *mode, uint32_t *index);
   virtual DisplayError PowerOn(const HWQosData &qos_data, int *release_fence);
-  virtual DisplayError PowerOff();
+  virtual DisplayError PowerOff(bool teardown);
   virtual DisplayError Doze(const HWQosData &qos_data, int *release_fence);
   virtual DisplayError DozeSuspend(const HWQosData &qos_data, int *release_fence);
   virtual DisplayError Standby();
@@ -106,6 +106,7 @@ class HWDevice : public HWInterface {
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) {
     return kErrorNotSupported;
   }
+  virtual DisplayError SetDisplayDppsAdROI(void *payload) { return kErrorNotSupported; }
 
   enum {
     kHWEventVSync,

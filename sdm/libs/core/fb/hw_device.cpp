@@ -182,7 +182,7 @@ DisplayError HWDevice::PowerOn(const HWQosData &qos_data, int *release_fence) {
   return kErrorNone;
 }
 
-DisplayError HWDevice::PowerOff() {
+DisplayError HWDevice::PowerOff(bool teardown) {
   return kErrorNone;
 }
 

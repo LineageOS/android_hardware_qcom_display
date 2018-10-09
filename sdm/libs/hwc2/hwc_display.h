@@ -175,6 +175,12 @@ class HWCDisplay : public DisplayEventHandler {
     return HWC2::Error::Unsupported;
   }
 
+  virtual HWC2::Error SetDisplayDppsAdROI(uint32_t h_start, uint32_t h_end,
+                                          uint32_t v_start, uint32_t v_end,
+                                          uint32_t factor_in, uint32_t factor_out) {
+    return HWC2::Error::Unsupported;
+  }
+
   // Display Configurations
   virtual int SetActiveDisplayConfig(uint32_t config);
   virtual int GetActiveDisplayConfig(uint32_t *config);
@@ -251,7 +257,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error GetDisplayType(int32_t *out_type);
   virtual HWC2::Error SetCursorPosition(hwc2_layer_t layer, int x, int y);
   virtual HWC2::Error SetVsyncEnabled(HWC2::Vsync enabled);
-  virtual HWC2::Error SetPowerMode(HWC2::PowerMode mode);
+  virtual HWC2::Error SetPowerMode(HWC2::PowerMode mode, bool teardown);
   virtual HWC2::Error CreateLayer(hwc2_layer_t *out_layer_id);
   virtual HWC2::Error DestroyLayer(hwc2_layer_t layer_id);
   virtual HWC2::Error SetLayerZOrder(hwc2_layer_t layer_id, uint32_t z);

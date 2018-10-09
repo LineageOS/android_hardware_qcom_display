@@ -191,10 +191,11 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
   return error;
 }
 
-DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, int *release_fence) {
+DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
+                                             int *release_fence) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
-  error = DisplayBase::SetDisplayState(state, release_fence);
+  error = DisplayBase::SetDisplayState(state, teardown, release_fence);
   if (error != kErrorNone) {
     return error;
   }
@@ -427,24 +428,20 @@ void DisplayBuiltIn::ResetPanel() {
   int release_fence = -1;
 
   DLOGI("Powering off built-in/primary %d", display_id_);
-  status = SetDisplayState(kStateOff, &release_fence);
+  status = SetDisplayState(kStateOff, true /* teardown */, &release_fence);
   if (status != kErrorNone) {
     DLOGE("power-off on built-in/primary %d failed with error = %d", display_id_, status);
   }
-  if (release_fence >= 0) {
-    ::close(release_fence);
-  }
+  CloseFd(&release_fence);
 
   DLOGI("Restoring power mode on built-in/primary %d", display_id_);
   DisplayState mode = GetLastPowerMode();
-  status = SetDisplayState(mode, &release_fence);
+  status = SetDisplayState(mode, false /* teardown */, &release_fence);
   if (status != kErrorNone) {
     DLOGE("Setting power mode = %d on built-in/primary %d failed with error = %d", mode,
           display_id_, status);
   }
-  if (release_fence >= 0) {
-    ::close(release_fence);
-  }
+  CloseFd(&release_fence);
 
   DLOGI("Enabling HWVsync");
   status = SetVSyncState(true);
@@ -507,6 +504,17 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
       break;
   }
   return error;
+}
+
+DisplayError DisplayBuiltIn::SetDisplayDppsAdROI(void *payload) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  DisplayError err = kErrorNone;
+
+  err = hw_intf_->SetDisplayDppsAdROI(payload);
+  if (err != kErrorNone)
+    DLOGE("Failed to set ad roi config, err %d", err);
+
+  return err;
 }
 
 void DppsInfo::Init(DppsPropIntf *intf, const std::string &panel_name) {

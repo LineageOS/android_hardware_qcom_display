@@ -236,7 +236,7 @@ int HWCDisplayPluggable::SetState(bool connected) {
       }
       int release_fence = -1;
       display_null_.GetDisplayState(&state);
-      display_intf_->SetDisplayState(state, &release_fence);
+      display_intf_->SetDisplayState(state, false /* teardown */, &release_fence);
       if (release_fence >= 0) {
         ::close(release_fence);
       }
@@ -255,7 +255,7 @@ int HWCDisplayPluggable::SetState(bool connected) {
       // Preserve required attributes of HDMI display that surfaceflinger sees.
       // Restore HDMI attributes when display is reconnected.
       display_intf_->GetDisplayState(&state);
-      display_null_.SetDisplayState(state, &release_fence);
+      display_null_.SetDisplayState(state, false /* teardown */, &release_fence);
       if (release_fence >= 0) {
         ::close(release_fence);
       }

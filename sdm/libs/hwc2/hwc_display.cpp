@@ -592,7 +592,7 @@ void HWCDisplay::BuildLayerStack() {
                      (layer->input_buffer.color_metadata.transfer == Transfer_SMPTE_ST2084 ||
                      layer->input_buffer.color_metadata.transfer == Transfer_HLG);
     if (hdr_layer && !disable_hdr_handling_  &&
-        (color_mode_->GetCurrentColorMode()) != ColorMode::NATIVE) {
+        GetCurrentColorMode() != ColorMode::NATIVE) {
       // Dont honor HDR when its handling is disabled
       // Also, when the color mode is native, it implies that
       // SF has not correctly set the mode to BT2100_PQ in the presence of an HDR layer
@@ -601,7 +601,8 @@ void HWCDisplay::BuildLayerStack() {
       layer_stack_.flags.hdr_present = true;
     }
 
-    if (hwc_layer->IsNonIntegralSourceCrop() && !is_secure && !hdr_layer) {
+    if (hwc_layer->IsNonIntegralSourceCrop() && !is_secure && !hdr_layer &&
+        !layer->flags.single_buffer && !layer->flags.solid_fill) {
       layer->flags.skip = true;
     }
 
@@ -738,7 +739,7 @@ HWC2::Error HWCDisplay::SetVsyncEnabled(HWC2::Vsync enabled) {
   return HWC2::Error::None;
 }
 
-HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode) {
+HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
   DLOGV("display = %d, mode = %s", id_, to_string(mode).c_str());
   DisplayState state = kStateOff;
   bool flush_on_error = flush_on_error_;
@@ -781,7 +782,7 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode) {
   int release_fence = -1;
 
   ATRACE_INT("SetPowerMode ", state);
-  DisplayError error = display_intf_->SetDisplayState(state, &release_fence);
+  DisplayError error = display_intf_->SetDisplayState(state, teardown, &release_fence);
   validated_ = false;
 
   if (error == kErrorNone) {
@@ -942,7 +943,7 @@ HWC2::Error HWCDisplay::GetDisplayName(uint32_t *out_size, char *out_name) {
   } else {
     *out_size = std::min((UINT32(name.size()) + 1), *out_size);
     if (*out_size > 0) {
-      std::strncpy(out_name, name.c_str(), *out_size);
+      strlcpy(out_name, name.c_str(), *out_size);
       out_name[*out_size - 1] = '\0';
     } else {
       DLOGW("Invalid size requested");
@@ -1698,12 +1699,12 @@ int HWCDisplay::SetDisplayStatus(DisplayStatus display_status) {
     case kDisplayStatusResume:
       display_paused_ = false;
     case kDisplayStatusOnline:
-      status = INT32(SetPowerMode(HWC2::PowerMode::On));
+      status = INT32(SetPowerMode(HWC2::PowerMode::On, false /* teardown */));
       break;
     case kDisplayStatusPause:
       display_paused_ = true;
     case kDisplayStatusOffline:
-      status = INT32(SetPowerMode(HWC2::PowerMode::Off));
+      status = INT32(SetPowerMode(HWC2::PowerMode::Off, false /* teardown */));
       break;
     default:
       DLOGW("Invalid display status %d", display_status);
@@ -1721,6 +1722,11 @@ int HWCDisplay::SetDisplayStatus(DisplayStatus display_status) {
 HWC2::Error HWCDisplay::SetCursorPosition(hwc2_layer_t layer, int x, int y) {
   if (shutdown_pending_) {
     return HWC2::Error::None;
+  }
+
+  if (!layer_stack_.flags.cursor_present) {
+    DLOGW("Cursor layer not present");
+    return HWC2::Error::BadLayer;
   }
 
   HWCLayer *hwc_layer = GetHWCLayer(layer);
@@ -1914,7 +1920,7 @@ int HWCDisplay::HandleSecureSession(const std::bitset<kSecureMax> &secure_sessio
 
   if (active_secure_sessions_[kSecureDisplay] != secure_sessions[kSecureDisplay]) {
     if (secure_sessions[kSecureDisplay]) {
-      HWC2::Error error = SetPowerMode(HWC2::PowerMode::Off);
+      HWC2::Error error = SetPowerMode(HWC2::PowerMode::Off, true /* teardown */);
       if (error != HWC2::Error::None) {
         DLOGE("SetPowerMode failed. Error = %d", error);
       }

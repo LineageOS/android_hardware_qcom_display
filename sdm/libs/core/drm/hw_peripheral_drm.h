@@ -56,6 +56,7 @@ class HWPeripheralDRM : public HWDeviceDRM {
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event);
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous);
   virtual DisplayError PowerOn(const HWQosData &qos_data, int *release_fence);
+  virtual DisplayError SetDisplayDppsAdROI(void *payload);
 
  private:
   void SetDestScalarData(HWLayersInfo hw_layer_info, bool validate);
@@ -79,6 +80,8 @@ class HWPeripheralDRM : public HWDeviceDRM {
   CWBConfig cwb_config_ = {};
   sde_drm::DRMIdlePCState idle_pc_state_ = sde_drm::DRMIdlePCState::NONE;
   std::vector<DestScalarCache> dest_scalar_cache_ = {};
+  drm_msm_ad4_roi_cfg ad4_roi_cfg_ = {};
+  bool needs_ds_update_ = false;
 };
 
 }  // namespace sdm

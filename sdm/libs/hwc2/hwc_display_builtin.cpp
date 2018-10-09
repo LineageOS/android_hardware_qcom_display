@@ -153,7 +153,7 @@ void HWCDisplayBuiltIn::ProcessBootAnimCompleted() {
 
   if ((!isEncrypted || (isEncrypted && main_class_services_started)) &&
       bootanim_exit) {
-    DLOGI("Applying default mode");
+    DLOGI("Applying default mode for display %d", sdm_id_);
     boot_animation_completed_ = true;
     // Applying default mode after bootanimation is finished And
     // If Data is Encrypted, it is ready for access.
@@ -359,6 +359,7 @@ HWC2::Error HWCDisplayBuiltIn::SetReadbackBuffer(const native_handle_t *buffer,
   output_buffer_.planes[0].stride = UINT32(handle->width);
   output_buffer_.acquire_fence_fd = dup(acquire_fence);
   output_buffer_.release_fence_fd = -1;
+  output_buffer_.handle_id = handle->id;
 
   post_processed_output_ = post_processed_output;
   readback_buffer_queued_ = true;
@@ -385,6 +386,46 @@ HWC2::Error HWCDisplayBuiltIn::GetReadbackBufferFence(int32_t *release_fence) {
   output_buffer_ = {};
 
   return status;
+}
+
+HWC2::Error HWCDisplayBuiltIn::SetDisplayDppsAdROI(uint32_t h_start, uint32_t h_end,
+                                                   uint32_t v_start, uint32_t v_end,
+                                                   uint32_t factor_in, uint32_t factor_out) {
+  DisplayError error = kErrorNone;
+  DisplayDppsAd4RoiCfg dpps_ad4_roi_cfg = {};
+  uint32_t panel_width = 0, panel_height = 0;
+  constexpr uint16_t kMaxFactorVal = 0xffff;
+
+  if (h_start >= h_end || v_start >= v_end || factor_in > kMaxFactorVal ||
+      factor_out > kMaxFactorVal) {
+    DLOGE("Invalid roi region = [%u, %u, %u, %u, %u, %u]",
+           h_start, h_end, v_start, v_end, factor_in, factor_out);
+    return HWC2::Error::BadParameter;
+  }
+
+  GetPanelResolution(&panel_width, &panel_height);
+
+  if (h_start >= panel_width || h_end > panel_width ||
+      v_start >= panel_height || v_end > panel_height) {
+    DLOGE("Invalid roi region = [%u, %u, %u, %u], panel resolution = [%u, %u]",
+           h_start, h_end, v_start, v_end, panel_width, panel_height);
+    return HWC2::Error::BadParameter;
+  }
+
+  dpps_ad4_roi_cfg.h_start = h_start;
+  dpps_ad4_roi_cfg.h_end = h_end;
+  dpps_ad4_roi_cfg.v_start = v_start;
+  dpps_ad4_roi_cfg.v_end = v_end;
+  dpps_ad4_roi_cfg.factor_in = factor_in;
+  dpps_ad4_roi_cfg.factor_out = factor_out;
+
+  error = display_intf_->SetDisplayDppsAdROI(&dpps_ad4_roi_cfg);
+  if (error)
+    return HWC2::Error::BadConfig;
+
+  callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
+
+  return HWC2::Error::None;
 }
 
 int HWCDisplayBuiltIn::Perform(uint32_t operation, ...) {
@@ -582,13 +623,11 @@ HWC2::Error HWCDisplayBuiltIn::SetFrameDumpConfig(uint32_t count, uint32_t bit_m
   dump_output_to_file_ = bit_mask_layer_type & (1 << OUTPUT_LAYER_DUMP);
   DLOGI("output_layer_dump_enable %d", dump_output_to_file_);
 
-  if (!count || !dump_output_to_file_) {
+  if (!count || !dump_output_to_file_ || (output_buffer_info_.alloc_buffer_info.fd >= 0)) {
     return HWC2::Error::None;
   }
 
   // Allocate and map output buffer
-  output_buffer_info_ = {};
-
   if (post_processed) {
     // To dump post-processed (DSPP) output, use Panel resolution.
     GetPanelResolution(&output_buffer_info_.buffer_config.width,

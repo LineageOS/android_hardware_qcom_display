@@ -45,7 +45,7 @@ class HWPrimary : public HWDevice {
                                             HWDisplayAttributes *display_attributes);
   virtual DisplayError SetDisplayAttributes(uint32_t index);
   virtual DisplayError GetConfigIndex(char *mode, uint32_t *index);
-  virtual DisplayError PowerOff();
+  virtual DisplayError PowerOff(bool teardown);
   virtual DisplayError Doze(const HWQosData &qos_data, int *release_fence);
   virtual DisplayError DozeSuspend(const HWQosData &qos_data, int *release_fence);
   virtual DisplayError Validate(HWLayers *hw_layers);

@@ -522,6 +522,8 @@ void HWDeviceDRM::InitializeConfigs() {
   // Update current mode with preferred mode
   for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
       if (connector_info_.modes[mode_index].mode.type & DRM_MODE_TYPE_PREFERRED) {
+        DLOGI("Updating current display mode %d to preferred mode %d.", current_mode_index_,
+              mode_index);
         current_mode_index_ = mode_index;
         break;
       }
@@ -861,7 +863,7 @@ DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, int *release_fence)
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::PowerOff() {
+DisplayError HWDeviceDRM::PowerOff(bool teardown) {
   DTRACE_SCOPED();
   if (!drm_atomic_intf_) {
     DLOGE("DRM Atomic Interface is null!");

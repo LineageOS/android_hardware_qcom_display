@@ -53,7 +53,6 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
   virtual DisplayError GetColorModeCount(uint32_t *mode_count);
   virtual DisplayError GetColorModes(uint32_t *mode_count, std::vector<std::string> *color_modes);
   virtual DisplayError GetColorModeAttr(const std::string &color_mode, AttrVal *attr);
-  virtual DisplayError SetDisplayState(DisplayState state, int *release_fence);
   virtual DisplayError SetColorTransform(const uint32_t length, const double *color_transform) {
     return kErrorNone;
   }
@@ -72,7 +71,7 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
   void UpdateColorModes();
 
  private:
-  uint32_t GetBestConfig(HWS3DMode s3d_mode);
+  DisplayError GetOverrideConfig(uint32_t *mode_index);
   void GetScanSupport();
   void SetS3DMode(LayerStack *layer_stack);
 

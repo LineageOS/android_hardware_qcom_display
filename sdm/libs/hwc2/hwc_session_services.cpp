@@ -602,8 +602,8 @@ Return<int32_t> HWCSession::controlIdlePowerCollapse(bool enable, bool synchrono
       if (!idle_pc_ref_cnt_) {
         HWC2::Error err =
             hwc_display_[HWC_DISPLAY_PRIMARY]->ControlIdlePowerCollapse(enable, synchronous);
-        if (err != HWC2::Error::None) {
-          return -EINVAL;
+        if (err == HWC2::Error::Unsupported) {
+          return 0;
         }
         Refresh(HWC_DISPLAY_PRIMARY);
         int32_t error = locker_[HWC_DISPLAY_PRIMARY].WaitFinite(kCommitDoneTimeoutMs);
@@ -618,8 +618,8 @@ Return<int32_t> HWCSession::controlIdlePowerCollapse(bool enable, bool synchrono
       if (!(idle_pc_ref_cnt_ - 1)) {
         HWC2::Error err =
             hwc_display_[HWC_DISPLAY_PRIMARY]->ControlIdlePowerCollapse(enable, synchronous);
-        if (err != HWC2::Error::None) {
-          return -EINVAL;
+        if (err == HWC2::Error::Unsupported) {
+          return 0;
         }
         DLOGI("Idle PC enabled!!");
       }
@@ -662,5 +662,15 @@ Return<void> HWCSession::getWriteBackCapabilities(getWriteBackCapabilities_cb _h
   return Void();
 }
 #endif  // DISPLAY_CONFIG_1_4
+
+#ifdef DISPLAY_CONFIG_1_5
+Return<int32_t> HWCSession::SetDisplayDppsAdROI(uint32_t display_id, uint32_t h_start,
+                                                uint32_t h_end, uint32_t v_start, uint32_t v_end,
+                                                uint32_t factor_in, uint32_t factor_out) {
+  return CallDisplayFunction(static_cast<hwc2_device_t *>(this), display_id,
+                             &HWCDisplay::SetDisplayDppsAdROI, h_start, h_end, v_start, v_end,
+                             factor_in, factor_out);
+}
+#endif  // DISPLAY_CONFIG_1_5
 
 }  // namespace sdm
