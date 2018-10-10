@@ -1013,7 +1013,7 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, int32_t acquire_
   }
 
   if (acquire_fence == 0) {
-    DLOGE("acquire_fence is zero");
+    DLOGW("acquire_fence is zero");
     return HWC2::Error::BadParameter;
   }
 
