@@ -208,6 +208,7 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
     // here in a subsequent draw round. Readback is not allowed for any secure use case.
     readback_configured_ = !layer_stack_.flags.secure_present;
     if (readback_configured_) {
+      DisablePartialUpdateOneFrame();
       layer_stack_.output_buffer = &output_buffer_;
       layer_stack_.flags.post_processed_output = post_processed_output_;
     }
@@ -366,7 +367,6 @@ HWC2::Error HWCDisplayBuiltIn::SetReadbackBuffer(const native_handle_t *buffer,
   readback_configured_ = false;
   validated_ = false;
 
-  DisablePartialUpdateOneFrame();
   return HWC2::Error::None;
 }
 
