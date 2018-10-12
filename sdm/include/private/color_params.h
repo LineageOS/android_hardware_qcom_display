@@ -194,6 +194,7 @@ struct PPDisplayAPIPayload {
   bool own_payload = false;  // to indicate if *payload is owned by this or just a reference.
   uint32_t size = 0;
   uint8_t *payload = NULL;
+  int fd = -1;
 
   PPDisplayAPIPayload() = default;
   PPDisplayAPIPayload(uint32_t size, uint8_t *param)
