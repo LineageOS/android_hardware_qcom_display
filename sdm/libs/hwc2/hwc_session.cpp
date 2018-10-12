@@ -188,18 +188,21 @@ int HWCSession::Init() {
     hw_disp_info.type = kPrimary;
     hw_disp_info.is_connected = true;
   } else {
-    g_hwc_uevent_.Register(this);
     error = CoreInterface::CreateCore(&buffer_allocator_, &buffer_sync_handler_, &socket_handler_,
                                       &core_intf_);
+    if (error != kErrorNone) {
+      DLOGE("Failed to create CoreInterface");
+      return -EOWNERDEAD;
+    }
 
     error = core_intf_->GetFirstDisplayInterfaceType(&hw_disp_info);
-
     if (error != kErrorNone) {
-      g_hwc_uevent_.Register(nullptr);
       CoreInterface::DestroyCore();
       DLOGE("Primary display type not recognized. Error = %d", error);
       return -EINVAL;
     }
+
+    g_hwc_uevent_.Register(this);
   }
 
   // Create primary display here. Remaining builtin displays will be created after client has set
