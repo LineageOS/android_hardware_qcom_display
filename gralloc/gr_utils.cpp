@@ -341,21 +341,22 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
   return size;
 }
 
-void GetBufferSizeAndDimensions(const BufferInfo &info, unsigned int *size, unsigned int *alignedw,
-                                unsigned int *alignedh) {
+int GetBufferSizeAndDimensions(const BufferInfo &info, unsigned int *size, unsigned int *alignedw,
+                               unsigned int *alignedh) {
   GraphicsMetadata graphics_metadata = {};
-  GetBufferSizeAndDimensions(info, size, alignedw, alignedh, &graphics_metadata);
+  return GetBufferSizeAndDimensions(info, size, alignedw, alignedh, &graphics_metadata);
 }
 
-void GetBufferSizeAndDimensions(const BufferInfo &info, unsigned int *size, unsigned int *alignedw,
-                                unsigned int *alignedh, GraphicsMetadata *graphics_metadata) {
+int GetBufferSizeAndDimensions(const BufferInfo &info, unsigned int *size, unsigned int *alignedw,
+                               unsigned int *alignedh, GraphicsMetadata *graphics_metadata) {
   int buffer_type = GetBufferType(info.format);
   if (CanUseAdrenoForSize(buffer_type, info.usage)) {
-    GetGpuResourceSizeAndDimensions(info, size, alignedw, alignedh, graphics_metadata);
+    return GetGpuResourceSizeAndDimensions(info, size, alignedw, alignedh, graphics_metadata);
   } else {
     GetAlignedWidthAndHeight(info, alignedw, alignedh);
     *size = GetSize(info, *alignedw, *alignedh);
   }
+  return 0;
 }
 
 void GetYuvUbwcSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height, int color_format,
@@ -1014,9 +1015,9 @@ int GetBufferLayout(private_handle_t *hnd, uint32_t stride[4], uint32_t offset[4
   return 0;
 }
 
-void GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
-                                     unsigned int *alignedw, unsigned int *alignedh,
-                                     GraphicsMetadata *graphics_metadata) {
+int GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
+                                    unsigned int *alignedw, unsigned int *alignedh,
+                                    GraphicsMetadata *graphics_metadata) {
   GetAlignedWidthAndHeight(info, alignedw, alignedh);
   AdrenoMemInfo* adreno_mem_info = AdrenoMemInfo::GetInstance();
   graphics_metadata->size = adreno_mem_info->AdrenoGetMetadataBlobSize();
@@ -1038,10 +1039,11 @@ void GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
   if (ret != 0) {
     ALOGE("%s Graphics metadata init failed", __FUNCTION__);
     *size = 0;
-    return;
+    return -EINVAL;
   }
   // Call adreno api with the metadata blob to get buffer size
   *size = adreno_mem_info->AdrenoGetAlignedGpuBufferSize(graphics_metadata->data);
+  return 0;
 }
 
 bool CanUseAdrenoForSize(int buffer_type, uint64_t usage) {

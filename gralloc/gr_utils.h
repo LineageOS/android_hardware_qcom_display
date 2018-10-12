@@ -76,10 +76,10 @@ bool CpuCanAccess(uint64_t usage);
 bool CpuCanRead(uint64_t usage);
 bool CpuCanWrite(uint64_t usage);
 unsigned int GetSize(const BufferInfo &d, unsigned int alignedw, unsigned int alignedh);
-void GetBufferSizeAndDimensions(const BufferInfo &d, unsigned int *size, unsigned int *alignedw,
-                                unsigned int *alignedh);
-void GetBufferSizeAndDimensions(const BufferInfo &d, unsigned int *size, unsigned int *alignedw,
-                                unsigned int *alignedh, GraphicsMetadata *graphics_metadata);
+int GetBufferSizeAndDimensions(const BufferInfo &d, unsigned int *size, unsigned int *alignedw,
+                               unsigned int *alignedh);
+int GetBufferSizeAndDimensions(const BufferInfo &d, unsigned int *size, unsigned int *alignedw,
+                               unsigned int *alignedh, GraphicsMetadata *graphics_metadata);
 void GetCustomDimensions(private_handle_t *hnd, int *stride, int *height);
 void GetColorSpaceFromMetadata(private_handle_t *hnd, int *color_space);
 void GetAlignedWidthAndHeight(const BufferInfo &d, unsigned int *aligned_w,
@@ -105,9 +105,9 @@ unsigned int GetUBwcSize(int width, int height, int format, unsigned int aligned
 int GetBufferLayout(private_handle_t *hnd, uint32_t stride[4], uint32_t offset[4],
                     uint32_t *num_planes);
 uint32_t GetDataAlignment(int format, uint64_t usage);
-void GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
-                                     unsigned int *alignedw, unsigned int *alignedh,
-                                     GraphicsMetadata *graphics_metadata);
+int GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
+                                    unsigned int *alignedw, unsigned int *alignedh,
+                                    GraphicsMetadata *graphics_metadata);
 bool CanUseAdrenoForSize(int buffer_type, uint64_t usage);
 bool GetAdrenoSizeAPIStatus();
 bool UseUncached(int format, uint64_t usage);

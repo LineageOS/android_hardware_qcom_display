@@ -86,7 +86,10 @@ Error BufferManager::FreeBuffer(std::shared_ptr<Buffer> buf) {
 Error BufferManager::ValidateBufferSize(private_handle_t const *hnd, BufferInfo info) {
   unsigned int size, alignedw, alignedh;
   info.format = GetImplDefinedFormat(info.usage, info.format);
-  GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh);
+  int ret = GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh);
+  if (ret < 0) {
+    return Error::BAD_BUFFER;
+  }
   auto ion_fd_size = static_cast<unsigned int>(lseek(hnd->fd, 0, SEEK_END));
   if (size != ion_fd_size) {
     return Error::BAD_VALUE;
@@ -270,6 +273,7 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
 
   unsigned int size;
   unsigned int alignedw, alignedh;
+  int err = 0;
 
   int buffer_type = GetBufferType(format);
   BufferInfo info = GetBufferInfo(descriptor);
@@ -277,10 +281,12 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   info.layer_count = layer_count;
 
   GraphicsMetadata graphics_metadata = {};
-  GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh, &graphics_metadata);
+  err = GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh, &graphics_metadata);
+  if (err < 0) {
+    return Error::BAD_DESCRIPTOR;
+  }
 
   size = (bufferSize >= size) ? bufferSize : size;
-  int err = 0;
   uint64_t flags = 0;
   auto page_size = UINT(getpagesize());
   AllocData data;
@@ -292,7 +298,8 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   // Allocate buffer memory
   err = allocator_->AllocateMem(&data, usage, format);
   if (err) {
-    ALOGE("gralloc failed to allocate err=%s", strerror(-err));
+    ALOGE("gralloc failed to allocate err=%s format %d size %d WxH %dx%d usage %" PRIu64,
+          strerror(-err), format, size, alignedw, alignedh, usage);
     return Error::NO_RESOURCES;
   }
 
