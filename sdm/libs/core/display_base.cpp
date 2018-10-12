@@ -167,7 +167,7 @@ DisplayError DisplayBase::Init() {
   Debug::GetProperty(DISABLE_HW_RECOVERY_DUMP_PROP, &disable_hw_recovery_dump_);
   DLOGI("disable_hw_recovery_dump_ set to %d", disable_hw_recovery_dump_);
 
-  Debug::Get()->GetProperty("DROP_SKEWED_VSYNC", &drop_vsync);
+  Debug::Get()->GetProperty(DROP_SKEWED_VSYNC, &drop_vsync);
   drop_skewed_vsync_ = (drop_vsync == 1);
 
   return kErrorNone;
