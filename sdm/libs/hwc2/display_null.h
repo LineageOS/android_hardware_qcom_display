@@ -100,6 +100,7 @@ class DisplayNull : public DisplayInterface {
   std::string Dump() { return ""; }
   MAKE_NO_OP(SetDynamicDSIClock(uint64_t bitclk))
   MAKE_NO_OP(GetDynamicDSIClock(uint64_t *bitclk))
+  MAKE_NO_OP(GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates))
 
  private:
   bool active_ = false;

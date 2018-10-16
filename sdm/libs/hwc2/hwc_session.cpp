@@ -1064,21 +1064,24 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
         DLOGE("QService command = %d: input_parcel needed.", command);
         break;
       }
-      hwc_display_[HWC_DISPLAY_PRIMARY]->SetDynamicDSIClock(UINT32(input_parcel->readInt32()));
-      status = 0;
+      status = SetDsiClk(input_parcel);
       break;
 
-    case qService::IQService::GET_DSI_CLK: {
-      if (!output_parcel) {
-        DLOGE("QService command = %d: output_parcel needed.", command);
+    case qService::IQService::GET_DSI_CLK:
+      if (!input_parcel || !output_parcel) {
+        DLOGE("QService command = %d: input_parcel and output_parcel needed.", command);
         break;
       }
-      uint64_t bitrate = 0;
-      hwc_display_[HWC_DISPLAY_PRIMARY]->GetDynamicDSIClock(&bitrate);
-      output_parcel->writeUint64(bitrate);
-      status = 0;
+      status = GetDsiClk(input_parcel, output_parcel);
       break;
-    }
+
+    case qService::IQService::GET_SUPPORTED_DSI_CLK:
+      if (!input_parcel || !output_parcel) {
+        DLOGE("QService command = %d: input_parcel and output_parcel needed.", command);
+        break;
+      }
+      status = GetSupportedDsiClk(input_parcel, output_parcel);
+      break;
 
     default:
       DLOGW("QService command = %d is not supported", command);
@@ -1212,6 +1215,45 @@ void HWCSession::SetFrameDumpConfig(const android::Parcel *input_parcel) {
       hwc_display_[HWC_DISPLAY_VIRTUAL]->SetFrameDumpConfig(frame_dump_count, bit_mask_layer_type);
     }
   }
+}
+
+android::status_t HWCSession::SetDsiClk(const android::Parcel *input_parcel) {
+  int disp_id = input_parcel->readInt32();
+  uint64_t clk = UINT32(input_parcel->readInt64());
+  if (disp_id < 0 || !hwc_display_[disp_id]) {
+    return -EINVAL;
+  }
+
+  return hwc_display_[disp_id]->SetDynamicDSIClock(clk);
+}
+
+android::status_t HWCSession::GetDsiClk(const android::Parcel *input_parcel,
+                                        android::Parcel *output_parcel) {
+  int disp_id = input_parcel->readInt32();
+  if (disp_id < 0 || !hwc_display_[disp_id]) {
+    return -EINVAL;
+  }
+
+  uint64_t bitrate = 0;
+  hwc_display_[disp_id]->GetDynamicDSIClock(&bitrate);
+  output_parcel->writeUint64(bitrate);
+  return 0;
+}
+
+android::status_t HWCSession::GetSupportedDsiClk(const android::Parcel *input_parcel,
+                                                 android::Parcel *output_parcel) {
+  int disp_id = input_parcel->readInt32();
+  if (disp_id < 0 || !hwc_display_[disp_id]) {
+    return -EINVAL;
+  }
+
+  std::vector<uint64_t> bit_rates;
+  hwc_display_[disp_id]->GetSupportedDSIClock(&bit_rates);
+  output_parcel->writeInt32(INT32(bit_rates.size()));
+  for (auto &bit_rate : bit_rates) {
+    output_parcel->writeUint64(bit_rate);
+  }
+  return 0;
 }
 
 android::status_t HWCSession::SetMixerResolution(const android::Parcel *input_parcel) {

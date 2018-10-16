@@ -121,6 +121,9 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError GetDynamicDSIClock(uint64_t *bitclk) {
     return kErrorNotSupported;
   }
+  virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates) {
+    return kErrorNotSupported;
+  }
 
  protected:
   DisplayError BuildLayerStackStats(LayerStack *layer_stack);

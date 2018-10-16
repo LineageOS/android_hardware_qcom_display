@@ -358,5 +358,12 @@ DisplayError DisplayPrimary::GetDynamicDSIClock(uint64_t *bitclk) {
   return hw_intf_->GetDynamicDSIClock(bitclk);
 }
 
+DisplayError DisplayPrimary::GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+
+  *bitclk_rates = hw_panel_info_.bitclk_rates;
+  return kErrorNone;
+}
+
 }  // namespace sdm
 
