@@ -67,6 +67,7 @@ class DisplayVirtual : public DisplayBase {
     return kErrorNone;
   }
   virtual DisplayError GetColorModeCount(uint32_t *mode_count);
+  virtual DisplayError SetDisplayState(DisplayState state, int *release_fence);
 };
 
 }  // namespace sdm
