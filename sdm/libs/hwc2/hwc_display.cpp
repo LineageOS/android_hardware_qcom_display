@@ -1477,8 +1477,8 @@ void HWCDisplay::DumpInputBuffers() {
   }
 
   DLOGI("dump_frame_count %d dump_input_layers %d", dump_frame_count_, dump_input_layers_);
-  snprintf(dir_path, sizeof(dir_path), "%s/frame_dump_%s", HWCDebugHandler::DumpDir(),
-           GetDisplayString());
+  snprintf(dir_path, sizeof(dir_path), "%s/frame_dump_disp_id_%02u_%s", HWCDebugHandler::DumpDir(),
+           UINT32(id_), GetDisplayString());
 
   status = mkdir(dir_path, 777);
   if ((status != 0) && errno != EEXIST) {
@@ -1550,8 +1550,8 @@ void HWCDisplay::DumpOutputBuffer(const BufferInfo &buffer_info, void *base, int
   char dir_path[PATH_MAX];
   int  status;
 
-  snprintf(dir_path, sizeof(dir_path), "%s/frame_dump_%s", HWCDebugHandler::DumpDir(),
-           GetDisplayString());
+  snprintf(dir_path, sizeof(dir_path), "%s/frame_dump_disp_id_%02u_%s", HWCDebugHandler::DumpDir(),
+           UINT32(id_), GetDisplayString());
 
   status = mkdir(dir_path, 777);
   if ((status != 0) && errno != EEXIST) {
@@ -1594,10 +1594,10 @@ void HWCDisplay::DumpOutputBuffer(const BufferInfo &buffer_info, void *base, int
 
 const char *HWCDisplay::GetDisplayString() {
   switch (type_) {
-    case kPrimary:
-      return "primary";
-    case kHDMI:
-      return "hdmi";
+    case kBuiltIn:
+      return "builtin";
+    case kPluggable:
+      return "pluggable";
     case kVirtual:
       return "virtual";
     default:
