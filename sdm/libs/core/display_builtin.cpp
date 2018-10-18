@@ -570,8 +570,9 @@ void DppsInfo::DppsNotifyOps(enum DppsNotifyOps op, void *payload, size_t size) 
     DLOGE("DppsNotifyOps op %d error %d", op, ret);
 }
 
-DisplayError DisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event) {
-  DisplayError err = hw_intf_->HandleSecureEvent(secure_event);
+DisplayError DisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event, LayerStack *layer_stack) {
+  hw_layers_.info.stack = layer_stack;
+  DisplayError err = hw_intf_->HandleSecureEvent(secure_event, &hw_layers_);
   if (err != kErrorNone) {
     return err;
   }

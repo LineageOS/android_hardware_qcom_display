@@ -290,7 +290,7 @@ void HWCDisplayPluggable::GetUnderScanConfig() {
 }
 
 DisplayError HWCDisplayPluggable::Flush() {
-  return display_intf_->Flush();
+  return display_intf_->Flush(&layer_stack_);
 }
 
 HWC2::Error HWCDisplayPluggable::GetColorModes(uint32_t *out_num_modes, ColorMode *out_modes) {

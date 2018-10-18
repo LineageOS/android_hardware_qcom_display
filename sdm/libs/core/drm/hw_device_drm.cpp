@@ -1326,7 +1326,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::Flush() {
+DisplayError HWDeviceDRM::Flush(HWLayers *hw_layers) {
   int ret = NullCommit(secure_display_active_ /* synchronous */, false /* retain_planes*/);
   if (ret) {
     DLOGE("failed with error %d", ret);

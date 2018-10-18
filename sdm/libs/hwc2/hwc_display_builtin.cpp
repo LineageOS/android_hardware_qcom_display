@@ -243,7 +243,7 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
 HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
   auto status = HWC2::Error::None;
   if (display_paused_) {
-    DisplayError error = display_intf_->Flush();
+    DisplayError error = display_intf_->Flush(&layer_stack_);
     validated_ = false;
     if (error != kErrorNone) {
       DLOGE("Flush failed. Error = %d", error);
@@ -527,7 +527,7 @@ int HWCDisplayBuiltIn::HandleSecureSession(const std::bitset<kSecureMax> &secure
   if (active_secure_sessions_[kSecureDisplay] != secure_sessions[kSecureDisplay]) {
     SecureEvent secure_event =
         secure_sessions.test(kSecureDisplay) ? kSecureDisplayStart : kSecureDisplayEnd;
-    DisplayError err = display_intf_->HandleSecureEvent(secure_event);
+    DisplayError err = display_intf_->HandleSecureEvent(secure_event, &layer_stack_);
     if (err != kErrorNone) {
       DLOGE("Set secure event failed");
       return err;

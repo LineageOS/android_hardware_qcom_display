@@ -94,7 +94,7 @@ class HWInterface {
   virtual DisplayError Standby() = 0;
   virtual DisplayError Validate(HWLayers *hw_layers) = 0;
   virtual DisplayError Commit(HWLayers *hw_layers) = 0;
-  virtual DisplayError Flush() = 0;
+  virtual DisplayError Flush(HWLayers *hw_layers) = 0;
   virtual DisplayError GetPPFeaturesVersion(PPFeatureVersion *vers) = 0;
   virtual DisplayError SetPPFeatures(PPFeaturesConfig *feature_list) = 0;
   virtual DisplayError SetVSyncState(bool enable) = 0;
@@ -117,7 +117,7 @@ class HWInterface {
   virtual DisplayError DumpDebugData() = 0;
   virtual DisplayError SetDppsFeature(void *payload, size_t size) = 0;
   virtual DisplayError GetDppsFeatureInfo(void *payload, size_t size) = 0;
-  virtual DisplayError HandleSecureEvent(SecureEvent secure_event) = 0;
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, HWLayers *hw_layers) = 0;
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) = 0;
   virtual DisplayError SetDisplayDppsAdROI(void *payload) = 0;
 
