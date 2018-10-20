@@ -7,7 +7,6 @@ common_includes += $(call project-path-for,qcom-display)/libhwcomposer
 common_includes += $(call project-path-for,qcom-display)/libexternal
 common_includes += $(call project-path-for,qcom-display)/libqservice
 common_includes += $(call project-path-for,qcom-display)/libvirtual
-common_includes += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 
 common_header_export_path := qcom/display
 
@@ -35,22 +34,10 @@ ifeq ($(DISPLAY_DEBUG_SWAPINTERVAL),true)
     common_flags += -DDEBUG_SWAPINTERVAL
 endif
 
-common_deps  :=
-kernel_includes :=
-
 # Executed only on QCOM BSPs
 ifeq ($(TARGET_USES_QCOM_BSP),true)
 # This flag is used to compile out any features that depend on framework changes
     common_flags += -DQCOM_BSP
-endif
-ifneq (,$(filter $(QCOM_BOARD_PLATFORMS),$(TARGET_BOARD_PLATFORM)))
-# This check is to pick the kernel headers from the right location.
-# If the macro above is defined, we make the assumption that we have the kernel
-# available in the build tree.
-# If the macro is not present, the headers are picked from hardware/qcom/msmXXXX
-# failing which, they are picked from bionic.
-    common_deps += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
-    kernel_includes += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 endif
 
 ifeq ($(TARGET_DISPLAY_USE_RETIRE_FENCE),true)
