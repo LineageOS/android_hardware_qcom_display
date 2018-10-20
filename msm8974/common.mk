@@ -33,9 +33,6 @@ ifeq ($(TARGET_FORCE_HWC_FOR_VIRTUAL_DISPLAYS), true)
     common_flags += -DFORCE_HWC_FOR_VIRTUAL_DISPLAYS
 endif
 
-common_deps  :=
-kernel_includes :=
-
 # Executed only on QCOM BSPs
 ifeq ($(TARGET_USES_QCOM_BSP),true)
 # On jb_mr2- dont enable QCOM Display features
@@ -44,13 +41,4 @@ ifneq ($(call is-platform-sdk-version-at-least,18),true)
     common_flags += -DQCOM_BSP
     common_flags += -DANDROID_JELLYBEAN_MR1=1
 endif
-endif
-ifeq ($(call is-vendor-board-platform,QCOM),true)
-# This check is to pick the kernel headers from the right location.
-# If the macro above is defined, we make the assumption that we have the kernel
-# available in the build tree.
-# If the macro is not present, the headers are picked from hardware/qcom/msmXXXX
-# failing which, they are picked from bionic.
-    common_deps += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
-    kernel_includes += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 endif
