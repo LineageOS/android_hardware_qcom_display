@@ -12,7 +12,7 @@ LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdoverlay\"
 ifeq ($(TARGET_USES_QSEED_SCALAR),true)
     LOCAL_CFLAGS += -DUSES_QSEED_SCALAR
 endif
-LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
+LOCAL_HEADER_LIBRARIES        := generated_kernel_headers
 LOCAL_SRC_FILES := \
       overlay.cpp \
       overlayUtils.cpp \
