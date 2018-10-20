@@ -4,14 +4,13 @@ include $(CLEAR_VARS)
 LOCAL_MODULE                  := libsdmcore
 LOCAL_VENDOR_MODULE           := true
 LOCAL_MODULE_TAGS             := optional
-LOCAL_C_INCLUDES              := $(call project-path-for,qcom-display)/sdm/include/ \
-                                 $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_C_INCLUDES              := $(call project-path-for,qcom-display)/sdm/include/
 LOCAL_CFLAGS                  := -Wno-missing-field-initializers -Wno-unused-parameter \
                                  -Wconversion -Wall -Werror \
                                  -DLOG_TAG=\"SDM\"
 LOCAL_HW_INTF_PATH            := fb
 LOCAL_SHARED_LIBRARIES        := libdl libsdmutils
-LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
+LOCAL_HEADER_LIBRARIES        := generated_kernel_headers
 LOCAL_SRC_FILES               := core_interface.cpp \
                                  core_impl.cpp \
                                  display_base.cpp \
