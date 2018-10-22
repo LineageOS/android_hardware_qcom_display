@@ -71,6 +71,11 @@ inline int roundUpToPageSize(int x) {
 /* This flag is set for WFD usecase */
 #define GRALLOC_USAGE_PRIVATE_WFD (UINT32_C(1) << 21)
 
+/* TODO(user): move these to use sanctioned vendor bits
+ * once end to end 64-bit support is available */
+/* This flag is set for HEIF usecase */
+#define GRALLOC_USAGE_PRIVATE_HEIF (UINT32_C(1) << 27)
+
 /* TODO(user): Remove when clients stop referencing this flag */
 #define GRALLOC_USAGE_PRIVATE_10BIT_TP 0
 
