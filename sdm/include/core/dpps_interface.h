@@ -40,7 +40,13 @@ enum DppsOps {
   kDppsGetFeatureInfo,
   kDppsScreenRefresh,
   kDppsPartialUpdate,
+  kDppsRequestCommit,
   kDppsOpMax,
+};
+
+enum DppsNotifyOps {
+  kDppsCommitEvent,
+  kDppsNotifyMax,
 };
 
 class DppsPropIntf {
@@ -55,6 +61,7 @@ class DppsInterface {
  public:
   virtual int Init(DppsPropIntf* intf, const std::string &panel_name) = 0;
   virtual int Deinit() = 0;
+  virtual int DppsNotifyOps(enum DppsNotifyOps op, void *payload, size_t size) = 0;
 
  protected:
   virtual ~DppsInterface() { }
@@ -69,6 +76,12 @@ class DppsDummyImpl : public DppsInterface {
   }
   int Deinit() {
     delete this;
+    return 0;
+  }
+  int DppsNotifyOps(enum DppsNotifyOps op, void *payload, size_t size) {
+    (void)op;
+    (void)payload;
+    (void)size;
     return 0;
   }
 };

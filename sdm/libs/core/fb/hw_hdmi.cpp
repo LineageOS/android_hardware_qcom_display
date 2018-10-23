@@ -126,6 +126,7 @@ static int32_t GetPixelEncoding(const LayerBuffer &layer_buffer) {
 
   return mdp_pixel_encoding;
 }
+
 static int32_t GetBitsPerComponent(const LayerBuffer &layer_buffer) {
   bool is_yuv = layer_buffer.flags.video;
   bool is_10_bit = Is10BitFormat(layer_buffer.format);
@@ -184,8 +185,8 @@ static bool MapHDMIDisplayTiming(const msm_hdmi_mode_timing_info *mode,
 
 HWHDMI::HWHDMI(BufferSyncHandler *buffer_sync_handler,  HWInfoInterface *hw_info_intf)
   : HWDevice(buffer_sync_handler), hw_scan_info_(), active_config_index_(0) {
-  HWDevice::device_type_ = kDeviceHDMI;
-  HWDevice::device_name_ = "HDMI Display Device";
+  HWDevice::device_type_ = kDevicePluggable;
+  HWDevice::device_name_ = "Pluggable Display Device";
   HWDevice::hw_info_intf_ = hw_info_intf;
   (void)hdr_reset_start_;
   (void)hdr_reset_end_;
@@ -226,6 +227,12 @@ DisplayError HWHDMI::Init() {
   ReadScanInfo();
 
   GetPanelS3DMode();
+
+  error = SetDisplayAttributes(active_config_index_);
+  if (error != kErrorNone) {
+    Deinit();
+    return error;
+  }
 
   s3d_mode_sdm_to_mdp_.insert(std::pair<HWS3DMode, msm_hdmi_s3d_mode>
                              (kS3DModeNone, HDMI_S3D_NONE));
@@ -669,7 +676,7 @@ bool HWHDMI::IsResolutionFilePresent() {
 void HWHDMI::SetSourceProductInformation(const char *node, const char *name) {
   char property_value[kMaxStringLength];
   char sys_fs_path[kMaxStringLength];
-  int hdmi_node_index = GetFBNodeIndex(kDeviceHDMI);
+  int hdmi_node_index = GetFBNodeIndex(kDevicePluggable);
   if (hdmi_node_index < 0) {
     return;
   }

@@ -29,6 +29,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <utils/debug.h>
 #include <vector>
+#include <cstring>
 
 #include "hw_peripheral_drm.h"
 
@@ -44,12 +45,12 @@ using sde_drm::DRMCWbCaptureMode;
 
 namespace sdm {
 
-HWPeripheralDRM::HWPeripheralDRM(BufferSyncHandler *buffer_sync_handler,
-                                 BufferAllocator *buffer_allocator,
-                                 HWInfoInterface *hw_info_intf)
+HWPeripheralDRM::HWPeripheralDRM(int32_t display_id, BufferSyncHandler *buffer_sync_handler,
+                                 BufferAllocator *buffer_allocator, HWInfoInterface *hw_info_intf)
   : HWDeviceDRM(buffer_sync_handler, buffer_allocator, hw_info_intf) {
   disp_type_ = DRMDisplayType::PERIPHERAL;
   device_name_ = "Peripheral";
+  display_id_ = display_id;
 }
 
 DisplayError HWPeripheralDRM::Init() {
@@ -60,28 +61,37 @@ DisplayError HWPeripheralDRM::Init() {
   }
 
   scalar_data_.resize(hw_resource_.hw_dest_scalar_info.count);
+  dest_scalar_cache_.resize(hw_resource_.hw_dest_scalar_info.count);
 
   return kErrorNone;
 }
 
 DisplayError HWPeripheralDRM::Validate(HWLayers *hw_layers) {
   HWLayersInfo &hw_layer_info = hw_layers->info;
-  SetDestScalarData(hw_layer_info);
+  SetDestScalarData(hw_layer_info, true);
   SetupConcurrentWriteback(hw_layer_info, true);
+  SetIdlePCState();
 
   return HWDeviceDRM::Validate(hw_layers);
 }
 
 DisplayError HWPeripheralDRM::Commit(HWLayers *hw_layers) {
   HWLayersInfo &hw_layer_info = hw_layers->info;
-  SetDestScalarData(hw_layer_info);
+  SetDestScalarData(hw_layer_info, false);
   SetupConcurrentWriteback(hw_layer_info, false);
+  SetIdlePCState();
 
   DisplayError error = HWDeviceDRM::Commit(hw_layers);
+  if (error != kErrorNone) {
+    return error;
+  }
 
   if (cwb_config_.enabled && (error == kErrorNone)) {
     PostCommitConcurrentWriteback(hw_layer_info.stack->output_buffer);
   }
+
+  // Initialize to default after successful commit
+  synchronous_commit_ = false;
 
   return error;
 }
@@ -90,16 +100,16 @@ void HWPeripheralDRM::ResetDisplayParams() {
   sde_dest_scalar_data_ = {};
   for (uint32_t j = 0; j < scalar_data_.size(); j++) {
     scalar_data_[j] = {};
+    dest_scalar_cache_[j] = {};
   }
 }
 
-void HWPeripheralDRM::SetDestScalarData(HWLayersInfo hw_layer_info) {
+void HWPeripheralDRM::SetDestScalarData(HWLayersInfo hw_layer_info, bool validate) {
   if (!hw_scale_ || !hw_resource_.hw_dest_scalar_info.count) {
     return;
   }
 
-  uint32_t index = 0;
-  for (uint32_t i = 0; i < hw_resource_.hw_dest_scalar_info.count; i++) {
+  for (uint32_t i = 0; i < hw_resource_.hw_dest_scalar_info.count && validate; i++) {
     DestScaleInfoMap::iterator it = hw_layer_info.dest_scale_info_map.find(i);
 
     if (it == hw_layer_info.dest_scale_info_map.end()) {
@@ -107,9 +117,10 @@ void HWPeripheralDRM::SetDestScalarData(HWLayersInfo hw_layer_info) {
     }
 
     HWDestScaleInfo *dest_scale_info = it->second;
-    SDEScaler *scale = &scalar_data_[index];
+    SDEScaler *scale = &scalar_data_[i];
     hw_scale_->SetScaler(dest_scale_info->scale_data, scale);
-    sde_drm_dest_scaler_cfg *dest_scalar_data = &sde_dest_scalar_data_.ds_cfg[index];
+
+    sde_drm_dest_scaler_cfg *dest_scalar_data = &sde_dest_scalar_data_.ds_cfg[i];
     dest_scalar_data->flags = 0;
     if (scale->scaler_v2.enable) {
       dest_scalar_data->flags |= SDE_DRM_DESTSCALER_ENABLE;
@@ -120,22 +131,41 @@ void HWPeripheralDRM::SetDestScalarData(HWLayersInfo hw_layer_info) {
     if (dest_scale_info->scale_update) {
       dest_scalar_data->flags |= SDE_DRM_DESTSCALER_SCALE_UPDATE;
     }
+    if (hw_panel_info_.partial_update) {
+      dest_scalar_data->flags |= SDE_DRM_DESTSCALER_PU_ENABLE;
+    }
     dest_scalar_data->index = i;
     dest_scalar_data->lm_width = dest_scale_info->mixer_width;
     dest_scalar_data->lm_height = dest_scale_info->mixer_height;
     dest_scalar_data->scaler_cfg = reinterpret_cast<uint64_t>(&scale->scaler_v2);
-    if (hw_panel_info_.partial_update) {
-      dest_scalar_data->flags |= SDE_DRM_DESTSCALER_PU_ENABLE;
+
+    if (std::memcmp(&dest_scalar_cache_[i].scalar_data, scale, sizeof(SDEScaler)) ||
+        dest_scalar_cache_[i].flags != dest_scalar_data->flags) {
+      needs_ds_update_ = true;
     }
-    index++;
   }
-  sde_dest_scalar_data_.num_dest_scaler = UINT32(hw_layer_info.dest_scale_info_map.size());
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_DEST_SCALER_CONFIG, token_.crtc_id,
-                            reinterpret_cast<uint64_t>(&sde_dest_scalar_data_));
+
+  if (needs_ds_update_) {
+    if (!validate) {
+      // Cache the destination scalar data during commit
+      for (uint32_t i = 0; i < hw_resource_.hw_dest_scalar_info.count; i++) {
+        DestScaleInfoMap::iterator it = hw_layer_info.dest_scale_info_map.find(i);
+        if (it == hw_layer_info.dest_scale_info_map.end()) {
+          continue;
+        }
+        dest_scalar_cache_[i].flags = sde_dest_scalar_data_.ds_cfg[i].flags;
+        dest_scalar_cache_[i].scalar_data = scalar_data_[i];
+      }
+      needs_ds_update_ = false;
+    }
+    sde_dest_scalar_data_.num_dest_scaler = UINT32(hw_layer_info.dest_scale_info_map.size());
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_DEST_SCALER_CONFIG, token_.crtc_id,
+                              reinterpret_cast<uint64_t>(&sde_dest_scalar_data_));
+  }
 }
 
-DisplayError HWPeripheralDRM::Flush() {
-  DisplayError err = HWDeviceDRM::Flush();
+DisplayError HWPeripheralDRM::Flush(HWLayers *hw_layers) {
+  DisplayError err = HWDeviceDRM::Flush(hw_layers);
   if (err != kErrorNone) {
     return err;
   }
@@ -157,6 +187,27 @@ DisplayError HWPeripheralDRM::SetDppsFeature(void *payload, size_t size) {
   object_type = feature_payload->object_type;
   feature_id = feature_payload->feature_id;
   value = feature_payload->value;
+
+  if (feature_id == sde_drm::kFeatureAd4Roi) {
+    if (feature_payload->value) {
+      DisplayDppsAd4RoiCfg *params = reinterpret_cast<DisplayDppsAd4RoiCfg *>
+                                                      (feature_payload->value);
+      if (!params) {
+        DLOGE("invalid playload value %d", feature_payload->value);
+        return kErrorNotSupported;
+      }
+
+      ad4_roi_cfg_.h_x = params->h_start;
+      ad4_roi_cfg_.h_y = params->h_end;
+      ad4_roi_cfg_.v_x = params->v_start;
+      ad4_roi_cfg_.v_y = params->v_end;
+      ad4_roi_cfg_.factor_in = params->factor_in;
+      ad4_roi_cfg_.factor_out = params->factor_out;
+
+      value = (uint64_t)&ad4_roi_cfg_;
+    }
+  }
+
   if (object_type == DRM_MODE_OBJECT_CRTC) {
     obj_id = token_.crtc_id;
   } else if (object_type == DRM_MODE_OBJECT_CONNECTOR) {
@@ -180,12 +231,12 @@ DisplayError HWPeripheralDRM::GetDppsFeatureInfo(void *payload, size_t size) {
   return kErrorNone;
 }
 
-DisplayError HWPeripheralDRM::HandleSecureEvent(SecureEvent secure_event) {
+DisplayError HWPeripheralDRM::HandleSecureEvent(SecureEvent secure_event, HWLayers *hw_layers) {
   switch (secure_event) {
     case kSecureDisplayStart: {
       secure_display_active_ = true;
       if (hw_panel_info_.mode != kModeCommand) {
-        DisplayError err = Flush();
+        DisplayError err = Flush(hw_layers);
         if (err != kErrorNone) {
           return err;
         }
@@ -195,12 +246,13 @@ DisplayError HWPeripheralDRM::HandleSecureEvent(SecureEvent secure_event) {
 
     case kSecureDisplayEnd: {
       if (hw_panel_info_.mode != kModeCommand) {
-        DisplayError err = Flush();
+        DisplayError err = Flush(hw_layers);
         if (err != kErrorNone) {
           return err;
         }
       }
       secure_display_active_ = false;
+      synchronous_commit_ = true;
     }
     break;
 
@@ -227,6 +279,13 @@ void HWPeripheralDRM::SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info
     if (enable) {
       // Set DRM properties for Concurrent Writeback.
       ConfigureConcurrentWriteback(hw_layer_info.stack);
+
+      if (!validate) {
+        // Set GET_RETIRE_FENCE property to get Concurrent Writeback fence.
+        int *fence = &hw_layer_info.stack->output_buffer->release_fence_fd;
+        drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE,
+                                  cwb_config_.token.conn_id, fence);
+      }
     } else {
       // Tear down the Concurrent Writeback topology.
       drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, cwb_config_.token.conn_id, 0);
@@ -270,7 +329,7 @@ DisplayError HWPeripheralDRM::SetupConcurrentWritebackModes() {
 
 void HWPeripheralDRM::ConfigureConcurrentWriteback(LayerStack *layer_stack) {
   LayerBuffer *output_buffer = layer_stack->output_buffer;
-  registry_.MapBufferToFbId(output_buffer);
+  registry_.MapOutputBufferToFbId(output_buffer);
 
   // Set the topology for Concurrent Writeback: [CRTC_PRIMARY_DISPLAY - CONNECTOR_VIRTUAL_DISPLAY].
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, cwb_config_.token.conn_id, token_.crtc_id);
@@ -281,7 +340,7 @@ void HWPeripheralDRM::ConfigureConcurrentWriteback(LayerStack *layer_stack) {
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CAPTURE_MODE, token_.crtc_id, capture_mode);
 
   // Set Connector Output FB
-  uint32_t fb_id = registry_.GetFbId(output_buffer->planes[0].fd);
+  uint32_t fb_id = registry_.GetOutputFbId(output_buffer->handle_id);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_FB_ID, cwb_config_.token.conn_id, fb_id);
 
   // Set Connector Secure Mode
@@ -301,14 +360,67 @@ void HWPeripheralDRM::ConfigureConcurrentWriteback(LayerStack *layer_stack) {
 void HWPeripheralDRM::PostCommitConcurrentWriteback(LayerBuffer *output_buffer) {
   bool enabled = hw_resource_.has_concurrent_writeback && output_buffer;
 
-  if (enabled) {
-    // Get Concurrent Writeback fence
-    int *fence = &output_buffer->release_fence_fd;
-    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, cwb_config_.token.conn_id, fence);
-  } else {
+  if (!enabled) {
     drm_mgr_intf_->UnregisterDisplay(cwb_config_.token);
     cwb_config_.enabled = false;
+    registry_.Clear();
   }
+}
+
+DisplayError HWPeripheralDRM::ControlIdlePowerCollapse(bool enable, bool synchronous) {
+  sde_drm::DRMIdlePCState idle_pc_state =
+    enable ? sde_drm::DRMIdlePCState::ENABLE : sde_drm::DRMIdlePCState::DISABLE;
+  if (idle_pc_state == idle_pc_state_) {
+    return kErrorNone;
+  }
+  // As idle PC is disabled after subsequent commit, Make sure to have synchrounous commit and
+  // ensure TA accesses the display_cc registers after idle PC is disabled.
+  idle_pc_state_ = idle_pc_state;
+  synchronous_commit_ = !enable ? synchronous : false;
+  return kErrorNone;
+}
+
+DisplayError HWPeripheralDRM::PowerOn(const HWQosData &qos_data, int *release_fence) {
+  DTRACE_SCOPED();
+  if (!drm_atomic_intf_) {
+    DLOGE("DRM Atomic Interface is null!");
+    return kErrorUndefined;
+  }
+
+  if (first_cycle_) {
+    return kErrorNone;
+  }
+  drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_IDLE_PC_STATE, token_.crtc_id,
+                            sde_drm::DRMIdlePCState::ENABLE);
+  DisplayError err = HWDeviceDRM::PowerOn(qos_data, release_fence);
+  if (err != kErrorNone) {
+    return err;
+  }
+  idle_pc_state_ = sde_drm::DRMIdlePCState::ENABLE;
+
+  return kErrorNone;
+}
+
+DisplayError HWPeripheralDRM::SetDisplayDppsAdROI(void *payload) {
+  DisplayError err = kErrorNone;
+  struct sde_drm::DppsFeaturePayload feature_payload = {};
+
+  if (!payload) {
+    DLOGE("Invalid payload parameter");
+    return kErrorParameters;
+  }
+
+  feature_payload.object_type = DRM_MODE_OBJECT_CRTC;
+  feature_payload.feature_id = sde_drm::kFeatureAd4Roi;
+  feature_payload.value = (uint64_t)(payload);
+
+  err = SetDppsFeature(&feature_payload, sizeof(feature_payload));
+  if (err != kErrorNone) {
+    DLOGE("Faid to SetDppsFeature feature_id = %d, err = %d",
+           sde_drm::kFeatureAd4Roi, err);
+  }
+
+  return err;
 }
 
 }  // namespace sdm

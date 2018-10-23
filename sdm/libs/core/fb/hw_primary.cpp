@@ -77,8 +77,8 @@ using std::fstream;
 
 HWPrimary::HWPrimary(BufferSyncHandler *buffer_sync_handler, HWInfoInterface *hw_info_intf)
   : HWDevice(buffer_sync_handler) {
-  HWDevice::device_type_ = kDevicePrimary;
-  HWDevice::device_name_ = "Primary Display Device";
+  HWDevice::device_type_ = kDeviceBuiltIn;
+  HWDevice::device_name_ = "BuiltIn Display Device";
   HWDevice::hw_info_intf_ = hw_info_intf;
 }
 
@@ -333,7 +333,7 @@ DisplayError HWPrimary::GetConfigIndex(char *mode, uint32_t *index) {
   return HWDevice::GetConfigIndex(mode, index);
 }
 
-DisplayError HWPrimary::PowerOff() {
+DisplayError HWPrimary::PowerOff(bool teardown) {
   if (Sys::ioctl_(device_fd_, FBIOBLANK, FB_BLANK_POWERDOWN) < 0) {
     IOCTL_LOGE(FB_BLANK_POWERDOWN, device_type_);
     return kErrorHardware;
@@ -344,7 +344,7 @@ DisplayError HWPrimary::PowerOff() {
   return kErrorNone;
 }
 
-DisplayError HWPrimary::Doze(int *release_fence) {
+DisplayError HWPrimary::Doze(const HWQosData &qos_data, int *release_fence) {
   if (Sys::ioctl_(device_fd_, FBIOBLANK, FB_BLANK_NORMAL) < 0) {
     IOCTL_LOGE(FB_BLANK_NORMAL, device_type_);
     return kErrorHardware;
@@ -353,7 +353,7 @@ DisplayError HWPrimary::Doze(int *release_fence) {
   return kErrorNone;
 }
 
-DisplayError HWPrimary::DozeSuspend(int *release_fence) {
+DisplayError HWPrimary::DozeSuspend(const HWQosData &qos_data, int *release_fence) {
   if (Sys::ioctl_(device_fd_, FBIOBLANK, FB_BLANK_VSYNC_SUSPEND) < 0) {
     IOCTL_LOGE(FB_BLANK_VSYNC_SUSPEND, device_type_);
     return kErrorHardware;

@@ -42,31 +42,46 @@ struct CWBConfig {
 
 class HWPeripheralDRM : public HWDeviceDRM {
  public:
-  explicit HWPeripheralDRM(BufferSyncHandler *buffer_sync_handler,
-                           BufferAllocator *buffer_allocator,
-                           HWInfoInterface *hw_info_intf);
+  explicit HWPeripheralDRM(int32_t display_id, BufferSyncHandler *buffer_sync_handler,
+                           BufferAllocator *buffer_allocator, HWInfoInterface *hw_info_intf);
   virtual ~HWPeripheralDRM() {}
 
  protected:
   virtual DisplayError Init();
   virtual DisplayError Validate(HWLayers *hw_layers);
   virtual DisplayError Commit(HWLayers *hw_layers);
-  virtual DisplayError Flush();
+  virtual DisplayError Flush(HWLayers *hw_layers);
   virtual DisplayError SetDppsFeature(void *payload, size_t size);
   virtual DisplayError GetDppsFeatureInfo(void *payload, size_t size);
-  virtual DisplayError HandleSecureEvent(SecureEvent secure_event);
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, HWLayers *hw_layers);
+  virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous);
+  virtual DisplayError PowerOn(const HWQosData &qos_data, int *release_fence);
+  virtual DisplayError SetDisplayDppsAdROI(void *payload);
 
  private:
-  void SetDestScalarData(HWLayersInfo hw_layer_info);
+  void SetDestScalarData(HWLayersInfo hw_layer_info, bool validate);
   void ResetDisplayParams();
   DisplayError SetupConcurrentWritebackModes();
   void SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info, bool validate);
   void ConfigureConcurrentWriteback(LayerStack *stack);
   void PostCommitConcurrentWriteback(LayerBuffer *output_buffer);
+  void SetIdlePCState() {
+    drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_IDLE_PC_STATE, token_.crtc_id,
+                              idle_pc_state_);
+  }
+
+  struct DestScalarCache {
+    SDEScaler scalar_data = {};
+    uint32_t flags = {};
+  };
 
   sde_drm_dest_scaler_data sde_dest_scalar_data_ = {};
   std::vector<SDEScaler> scalar_data_ = {};
   CWBConfig cwb_config_ = {};
+  sde_drm::DRMIdlePCState idle_pc_state_ = sde_drm::DRMIdlePCState::NONE;
+  std::vector<DestScalarCache> dest_scalar_cache_ = {};
+  drm_msm_ad4_roi_cfg ad4_roi_cfg_ = {};
+  bool needs_ds_update_ = false;
 };
 
 }  // namespace sdm

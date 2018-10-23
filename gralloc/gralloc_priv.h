@@ -28,8 +28,10 @@
 #define GRALLOC_PROP(prop_name) GRALLOC_PROP_PREFIX prop_name
 
 #define DISABLE_UBWC_PROP                    GRALLOC_PROP("disable_ubwc")
+#define DISABLE_AHARDWAREBUFFER_PROP         GRALLOC_PROP("disable_ahardware_buffer")
 #define ENABLE_FB_UBWC_PROP                  GRALLOC_PROP("enable_fb_ubwc")
 #define MAP_FB_MEMORY_PROP                   GRALLOC_PROP("map_fb_memory")
+#define USE_SYSTEM_HEAP_FOR_SENSORS          GRALLOC_PROP("use_system_heap_for_sensors")
 
 #define ROUND_UP_PAGESIZE(x) roundUpToPageSize(x)
 inline int roundUpToPageSize(int x) {
@@ -48,7 +50,11 @@ inline int roundUpToPageSize(int x) {
  * cannot be used with noncontiguous heaps */
 #define GRALLOC_USAGE_PRIVATE_UNCACHED (UINT32_C(1) << 29)
 
-/* This flag is used to indicate P010 format */
+/* This flag is used to indicate 10 bit format.
+ * When both GRALLOC_USAGE_PRIVATE_ALLOC_UBWC & GRALLOC_USAGE_PRIVATE_10BIT
+ * are set then it will indicate UBWC_TP10 format.
+ * When only GRALLOC_USAGE_PRIVATE_10BIT is set it will indicate linear P010 format.
+ */
 #define GRALLOC_USAGE_PRIVATE_10BIT (UINT32_C(1) << 30)
 
 /* This flag is used for SECURE display usecase */
@@ -66,11 +72,17 @@ inline int roundUpToPageSize(int x) {
 /* This flag is set for WFD usecase */
 #define GRALLOC_USAGE_PRIVATE_WFD (UINT32_C(1) << 21)
 
-/* This flag is used to indicate 10-bit tight pack format (e.g. TP10) */
-#define GRALLOC_USAGE_PRIVATE_10BIT_TP (UINT32_C(1) << 27)
+/* TODO(user): move these to use sanctioned vendor bits
+ * once end to end 64-bit support is available */
+/* This flag is set for HEIF usecase */
+#define GRALLOC_USAGE_PRIVATE_HEIF (UINT32_C(1) << 27)
+
+/* TODO(user): Remove when clients stop referencing this flag */
+#define GRALLOC_USAGE_PRIVATE_10BIT_TP 0
 
 /* This flag indicates PI format is being used */
 #define GRALLOC_USAGE_PRIVATE_ALLOC_UBWC_PI 1ULL << 49
+
 /* Legacy gralloc1 definitions */
 /* Some clients may still be using the old flags */
 #define GRALLOC1_PRODUCER_USAGE_PRIVATE_ADSP_HEAP GRALLOC_USAGE_PRIVATE_ADSP_HEAP
@@ -121,6 +133,7 @@ inline int roundUpToPageSize(int x) {
 #define HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS 0x114
 #define HAL_PIXEL_FORMAT_BGR_565 0x115
 #define HAL_PIXEL_FORMAT_RAW8 0x123
+#define HAL_PIXEL_FORMAT_NV12_HEIF 0x116
 
 // 10 bit
 #define HAL_PIXEL_FORMAT_ARGB_2101010 0x117

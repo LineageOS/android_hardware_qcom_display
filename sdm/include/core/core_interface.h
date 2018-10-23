@@ -38,6 +38,8 @@
 #define __CORE_INTERFACE_H__
 
 #include <stdint.h>
+#include <map>
+#include <vector>
 
 #include "display_interface.h"
 #include "sdm_types.h"
@@ -85,17 +87,36 @@ enum HWBwModes {
   kBwModeMax,      //!< Limiter for maximum available bandwidth modes.
 };
 
-
 /*! @brief Information on hardware for the first display
 
   @details This structure returns the display type of the first display on the device
-  (internal display or HDMI etc) and whether it is currently connected,
-
+  (internal display or HDMI etc) and whether it is currently connected.
 */
 struct HWDisplayInterfaceInfo {
-  DisplayType type;
-  bool is_connected;
+  DisplayType type = kDisplayTypeMax;
+  bool is_connected = false;
 };
+
+/*! @brief Information about a single display/monitor/screen
+
+  @details This structure returns the display configuration and status of a single display. A
+  list of this structure type 'HWDisplaysInfo' is used to return information on all available
+  displays. See \link HWDisplaysInfo \endlink
+*/
+struct HWDisplayInfo {
+  int32_t display_id = -1;                     //!< ID of this display (Display ID).
+  DisplayType display_type = kDisplayTypeMax;  //!< Type of display: BuiltIn/Pluggable/Virtual
+  bool is_connected = false;                   //!< Connection status of the display.
+  bool is_primary = false;                     //!< True only if this is the main display of the
+                                               //!< device.
+  bool is_wb_ubwc_supported = true;            //!< check hardware wb ubwc support
+};
+
+/*! @brief Information on all displays as a map with display_id as key.
+
+  @details This map returns the display configuration and status of all displays.
+*/
+typedef std::map<int32_t, HWDisplayInfo> HWDisplaysInfo;
 
 /*! @brief Display core interface.
 
@@ -161,6 +182,24 @@ class CoreInterface {
   virtual DisplayError CreateDisplay(DisplayType type, DisplayEventHandler *event_handler,
                                      DisplayInterface **interface) = 0;
 
+  /*! @brief Method to create a display device for a given display ID.
+
+    @details Client shall use this method to create a DisplayInterface to a discovered display
+    identified by its display ID. A handle to the DisplayInterface is returned via the 'interface'
+    output parameter which can be used to interact further with the display device. Displays and
+    their IDs must be discovered using GetDisplaysStatus().
+
+    @param[in] display_id A display ID got from \link GetDisplaysStatus() \endlink
+    @param[in] event_handler \link DisplayEventHandler \endlink
+    @param[out] interface \link DisplayInterface \endlink
+
+    @return \link DisplayError \endlink
+
+    @sa DestroyDisplay
+  */
+  virtual DisplayError CreateDisplay(int32_t display_id, DisplayEventHandler *event_handler,
+                                     DisplayInterface **interface) = 0;
+
   /*! @brief Method to destroy a display device.
 
     @details Client shall use this method to destroy each of the created display device objects.
@@ -178,9 +217,8 @@ class CoreInterface {
     @param[in] mode indicate the mode or use case
 
     @return \link DisplayError \endlink
-
-   */
-    virtual DisplayError SetMaxBandwidthMode(HWBwModes mode) = 0;
+  */
+  virtual DisplayError SetMaxBandwidthMode(HWBwModes mode) = 0;
 
   /*! @brief Method to get characteristics of the first display.
 
@@ -190,10 +228,37 @@ class CoreInterface {
     @param[in] hw_disp_info structure that this method will fill up with info.
 
     @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_disp_info) = 0;
 
-   */
-    virtual DisplayError GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_disp_info) = 0;
+  /*! @brief Method to get an up-to-date list of all available displays.
 
+    @details Client shall use this method to get the updated list of all available displays and
+    their properties, usually in response to a hot-plug event. Client must use one of the returned
+    HWDisplayInfo::display_ids when using CreateDisplay(int32_t display_id, ...) to create the
+    DisplayInterface to the display.
+
+    @param[out] hw_displays_info \link HWDisplaysInfo \endlink which is a map of \link HWDisplayInfo
+    \endlink structures with display_id as the key.
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetDisplaysStatus(HWDisplaysInfo *hw_displays_info) = 0;
+
+  /*! @brief Method to get the maximum supported number of concurrent displays of a particular type.
+
+    @details Client shall use this method to get the maximum number of DisplayInterface instances
+    that can be created for a particular \link DisplayType \endlink display. For the maximum
+    number of concurrent DisplayInterfaces supported of all types, call with type kDisplayTypeMax.
+
+    @param[in] type Type of display: BuiltIn/Pluggable/Virtual/kDisplayTypeMax
+    key.
+
+    @param[out] max_displays Maximum number of DisplayInterface instances possible.
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetMaxDisplaysSupported(DisplayType type, int32_t *max_displays) = 0;
 
  protected:
   virtual ~CoreInterface() { }

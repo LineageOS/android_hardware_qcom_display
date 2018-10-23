@@ -199,14 +199,14 @@ int HWCColorManager::SetSolidFill(const void *params, bool enable, HWCDisplay *h
       FLOAT(solid_fill_params_.rect.y) + FLOAT(solid_fill_params_.rect.height),
     };
 
-    hwc_display->Perform(HWCDisplayPrimary::SET_QDCM_SOLID_FILL_INFO, &solid_fill_color);
-    hwc_display->Perform(HWCDisplayPrimary::SET_QDCM_SOLID_FILL_RECT, &solid_fill_rect);
+    hwc_display->Perform(HWCDisplayBuiltIn::SET_QDCM_SOLID_FILL_INFO, &solid_fill_color);
+    hwc_display->Perform(HWCDisplayBuiltIn::SET_QDCM_SOLID_FILL_RECT, &solid_fill_rect);
   } else {
     solid_fill_color.red = 0;
     solid_fill_color.blue = 0;
     solid_fill_color.green = 0;
     solid_fill_color.alpha = 0;
-    hwc_display->Perform(HWCDisplayPrimary::UNSET_QDCM_SOLID_FILL_INFO, &solid_fill_color);
+    hwc_display->Perform(HWCDisplayBuiltIn::UNSET_QDCM_SOLID_FILL_INFO, &solid_fill_color);
   }
 
   return 0;
@@ -254,7 +254,14 @@ int HWCColorManager::SetFrameCapture(void *params, bool enable, HWCDisplay *hwc_
         frame_capture_data->buffer_stride = buffer_info.alloc_buffer_info.stride;
         frame_capture_data->buffer_size = buffer_info.alloc_buffer_info.size;
       }
-      ret = hwc_display->FrameCaptureAsync(buffer_info, 1);
+      if (frame_capture_data->input_params.flags == 0x1) {
+        // Layer mixer mode
+        ret = hwc_display->FrameCaptureAsync(buffer_info, 0);
+      } else {
+        // DSPP mode
+        ret = hwc_display->FrameCaptureAsync(buffer_info, 1);
+      }
+
       if (ret < 0) {
         DLOGE("FrameCaptureAsync failed. ret = %d", ret);
       }

@@ -123,6 +123,7 @@ void HWScaleDRM::SetScalerV2(const HWScaleData &scale_data, sde_drm_scaler_v2 *s
   scaler->uv_filter_cfg = GetScalingFilter(scale_data.uv_filter_cfg);
   scaler->alpha_filter_cfg = GetAlphaInterpolation(scale_data.alpha_filter_cfg);
   scaler->blend_cfg = scale_data.blend_cfg;
+  scaler->dir_weight = scale_data.dir_weight;
 
   scaler->lut_flag = (scale_data.lut_flag.lut_swap ? SCALER_LUT_SWAP : 0) |
                      (scale_data.lut_flag.lut_dir_wr ? SCALER_LUT_DIR_WR : 0) |

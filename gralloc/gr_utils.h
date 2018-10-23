@@ -41,10 +41,10 @@
 #define SIZE_4K 4096
 #define SIZE_8K 8192
 
-#ifdef MASTER_SIDE_CP
-#define SECURE_ALIGN SZ_4K
-#else
+#ifdef SLAVE_SIDE_CP
 #define SECURE_ALIGN SZ_1M
+#else  // MASTER_SIDE_CP
+#define SECURE_ALIGN SZ_4K
 #endif
 
 #define INT(exp) static_cast<int>(exp)
@@ -78,6 +78,8 @@ bool CpuCanWrite(uint64_t usage);
 unsigned int GetSize(const BufferInfo &d, unsigned int alignedw, unsigned int alignedh);
 void GetBufferSizeAndDimensions(const BufferInfo &d, unsigned int *size, unsigned int *alignedw,
                                 unsigned int *alignedh);
+void GetBufferSizeAndDimensions(const BufferInfo &d, unsigned int *size, unsigned int *alignedw,
+                                unsigned int *alignedh, GraphicsMetadata *graphics_metadata);
 void GetCustomDimensions(private_handle_t *hnd, int *stride, int *height);
 void GetColorSpaceFromMetadata(private_handle_t *hnd, int *color_space);
 void GetAlignedWidthAndHeight(const BufferInfo &d, unsigned int *aligned_w,
@@ -106,11 +108,14 @@ uint32_t GetDataAlignment(int format, uint64_t usage);
 void GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
                                      unsigned int *alignedw, unsigned int *alignedh,
                                      GraphicsMetadata *graphics_metadata);
+bool CanUseAdrenoForSize(int buffer_type, uint64_t usage);
 bool GetAdrenoSizeAPIStatus();
 bool UseUncached(int format, uint64_t usage);
 uint64_t GetHandleFlags(int format, uint64_t usage);
 int GetImplDefinedFormat(uint64_t usage, int format);
 int GetCustomFormatFlags(int format, uint64_t usage, int *custom_format, uint64_t *priv_flags);
+int GetBufferType(int inputFormat);
+bool IsGPUFlagSupported(uint64_t usage);
 }  // namespace gralloc
 
 #endif  // __GR_UTILS_H__

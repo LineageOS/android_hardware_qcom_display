@@ -50,19 +50,24 @@ class DisplayBase : public DisplayInterface {
               HWDeviceType hw_device_type, BufferSyncHandler *buffer_sync_handler,
               BufferAllocator *buffer_allocator, CompManager *comp_manager,
               HWInfoInterface *hw_info_intf);
+  DisplayBase(int32_t display_id, DisplayType display_type, DisplayEventHandler *event_handler,
+              HWDeviceType hw_device_type, BufferSyncHandler *buffer_sync_handler,
+              BufferAllocator *buffer_allocator, CompManager *comp_manager,
+              HWInfoInterface *hw_info_intf);
   virtual ~DisplayBase() { }
   virtual DisplayError Init();
   virtual DisplayError Deinit();
   DisplayError Prepare(LayerStack *layer_stack);
   DisplayError Commit(LayerStack *layer_stack);
-  virtual DisplayError Flush();
+  virtual DisplayError Flush(LayerStack *layer_stack);
   virtual DisplayError GetDisplayState(DisplayState *state);
   virtual DisplayError GetNumVariableInfoConfigs(uint32_t *count);
   virtual DisplayError GetConfig(uint32_t index, DisplayConfigVariableInfo *variable_info);
   virtual DisplayError GetConfig(DisplayConfigFixedInfo *variable_info);
   virtual DisplayError GetActiveConfig(uint32_t *index);
   virtual DisplayError GetVSyncState(bool *enabled);
-  virtual DisplayError SetDisplayState(DisplayState state, int *release_fence);
+  virtual DisplayError SetDisplayState(DisplayState state, bool teardown,
+                                       int *release_fence);
   virtual DisplayError SetActiveConfig(uint32_t index);
   virtual DisplayError SetActiveConfig(DisplayConfigVariableInfo *variable_info) {
     return kErrorNotSupported;
@@ -110,25 +115,33 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError GetFrameBufferConfig(DisplayConfigVariableInfo *variable_info);
   virtual DisplayError SetDetailEnhancerData(const DisplayDetailEnhancerData &de_data);
   virtual DisplayError GetDisplayPort(DisplayPort *port);
+  virtual DisplayError GetDisplayId(int32_t *display_id);
+  virtual DisplayError GetDisplayType(DisplayType *display_type);
   virtual bool IsPrimaryDisplay();
   virtual DisplayError SetCompositionState(LayerComposition composition_type, bool enable);
   virtual DisplayError GetClientTargetSupport(uint32_t width, uint32_t height,
                                               LayerBufferFormat format,
                                               const ColorMetaData &color_metadata);
-  virtual DisplayError HandleSecureEvent(SecureEvent secure_event) {
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, LayerStack *layer_stack) {
     return kErrorNotSupported;
   }
+  virtual DisplayError SetDisplayDppsAdROI(void *payload) {
+    return kErrorNotSupported;
+  }
+  virtual DisplayError SetQSyncMode(QSyncMode qsync_mode) { return kErrorNotSupported; }
   virtual std::string Dump();
   virtual DisplayError InitializeColorModes();
+  virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) {
+    return kErrorNotSupported;
+  }
 
  protected:
+  const char *kBt2020Pq = "bt2020_pq";
+  const char *kBt2020Hlg = "bt2020_hlg";
   DisplayError BuildLayerStackStats(LayerStack *layer_stack);
   virtual DisplayError ValidateGPUTargetParams();
   void CommitLayerParams(LayerStack *layer_stack);
   void PostCommitLayerParams(LayerStack *layer_stack);
-  DisplayError HandleHDR(LayerStack *layer_stack);
-  DisplayError ValidateHDR(LayerStack *layer_stack);
-  DisplayError SetHDRMode(bool set);
   DisplayError ValidateScaling(uint32_t width, uint32_t height);
   DisplayError ValidateDataspace(const ColorMetaData &color_metadata);
   void HwRecovery(const HWRecoveryEvent sdm_event_code);
@@ -143,19 +156,20 @@ class DisplayBase : public DisplayInterface {
   DisplayError SetColorModeInternal(const std::string &color_mode);
   DisplayError GetValueOfModeAttribute(const AttrVal &attr, const std::string &type,
                                        std::string *value);
-  DisplayError GetHdrColorMode(std::string *color_mode, bool *found_hdr);
   bool IsSupportColorModeAttribute(const std::string &color_mode);
   DisplayState GetLastPowerMode();
   void SetPUonDestScaler();
   void ClearColorInfo();
-  bool NeedsGpuFallback(const Layer *layer);
-  bool NeedsHdrHandling();
   void GetColorPrimaryTransferFromAttributes(const AttrVal &attr,
       std::vector<PrimariesTransfer> *supported_pt);
   bool DisplayPowerResetPending();
   bool SetHdrModeAtStart(LayerStack *layer_stack);
+  PrimariesTransfer GetBlendSpaceFromColorMode();
+  bool IsHdrMode(const AttrVal &attr);
+  void InsertBT2020PqHlgModes();
 
   recursive_mutex recursive_mutex_;
+  int32_t display_id_ = -1;
   DisplayType display_type_;
   DisplayEventHandler *event_handler_ = NULL;
   HWDeviceType hw_device_type_;
@@ -194,13 +208,14 @@ class DisplayBase : public DisplayInterface {
   uint32_t req_mixer_width_ = 0;
   uint32_t req_mixer_height_ = 0;
   std::string current_color_mode_ = "hal_native";
-  bool hdr_playback_ = false;
-  bool hdr_mode_ = false;
   int disable_hdr_lut_gen_ = 0;
   DisplayState last_power_mode_ = kStateOff;
-  bool gpu_fallback_ = false;
   bool hw_recovery_logs_captured_ = false;
   int disable_hw_recovery_dump_ = 0;
+  HWQosData default_qos_data_;
+  bool drop_hw_vsync_ = false;
+  uint32_t current_refresh_rate_ = 0;
+  bool drop_skewed_vsync_ = false;
 
   static Locker display_power_reset_lock_;
   static bool display_power_reset_pending_;

@@ -36,6 +36,8 @@
 
 #include <vector>
 #include <utility>
+#include <unordered_map>
+#include <memory>
 
 #include "layer_buffer.h"
 #include "sdm_types.h"
@@ -99,6 +101,7 @@ enum LayerComposition {
   kCompositionBlit,         //!< This layer will be composed using Blit Engine.
                             //!< This composition type is used only if BlitTarget layer is provided
                             //!< in a composition cycle.
+  kCompositionNone,         //!< This layer will not be composed by any hardware.
 
   /* === List of composition types set by Client === */
   /* These composition types represent target buffer layers onto which GPU or Blit will draw if SDM
@@ -310,6 +313,10 @@ struct LayerSolidFill {
   uint32_t alpha = 0;      //!< Alpha value
 };
 
+struct LayerBufferMap {
+  std::unordered_map<uint64_t, std::shared_ptr<LayerBufferObject>> buffer_map;
+};
+
 /*! @brief This structure defines display layer object which contains layer properties and a drawing
   buffer.
 
@@ -382,6 +389,7 @@ struct Layer {
   Lut3d lut_3d = {};                               //!< o/p - Populated by SDM when tone mapping is
                                                    //!< needed on this layer.
   LayerSolidFill solid_fill_info = {};             //!< solid fill info along with depth.
+  std::shared_ptr<LayerBufferMap> buffer_map = nullptr;  //!< Map of handle_id and fb_id.
 };
 
 /*! @brief This structure defines the color space + transfer of a given layer.

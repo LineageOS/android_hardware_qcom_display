@@ -101,6 +101,10 @@ void BufferManager::RegisterHandleLocked(const private_handle_t *hnd, int ion_ha
 }
 
 Error BufferManager::ImportHandleLocked(private_handle_t *hnd) {
+  if (private_handle_t::validate(hnd) != 0) {
+    ALOGE("ImportHandleLocked: Invalid handle: %p", hnd);
+    return Error::BAD_BUFFER;
+  }
   ALOGD_IF(DEBUG, "Importing handle:%p id: %" PRIu64, hnd, hnd->id);
   int ion_handle = allocator_->ImportBuffer(hnd->fd);
   if (ion_handle < 0) {
@@ -254,16 +258,6 @@ Error BufferManager::UnlockBuffer(const private_handle_t *handle) {
   return status;
 }
 
-int BufferManager::GetBufferType(int inputFormat) {
-  int buffer_type = BUFFER_TYPE_UI;
-  if (IsYuvFormat(inputFormat)) {
-    // Video format
-    buffer_type = BUFFER_TYPE_VIDEO;
-  }
-
-  return buffer_type;
-}
-
 Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_handle_t *handle,
                                     unsigned int bufferSize) {
   if (!handle)
@@ -282,15 +276,8 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   info.format = format;
   info.layer_count = layer_count;
 
-  bool use_adreno_for_size = false;
   GraphicsMetadata graphics_metadata = {};
-
-  use_adreno_for_size = ((buffer_type != BUFFER_TYPE_VIDEO) && GetAdrenoSizeAPIStatus());
-  if (use_adreno_for_size) {
-    GetGpuResourceSizeAndDimensions(info, &size, &alignedw, &alignedh, &graphics_metadata);
-  } else {
-    GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh);
-  }
+  GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh, &graphics_metadata);
 
   size = (bufferSize >= size) ? bufferSize : size;
   int err = 0;
@@ -337,6 +324,7 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   ColorSpace_t colorSpace = (buffer_type == BUFFER_TYPE_VIDEO) ? ITU_R_601 : ITU_R_709;
   setMetaData(hnd, UPDATE_COLOR_SPACE, reinterpret_cast<void *>(&colorSpace));
 
+  bool use_adreno_for_size = CanUseAdrenoForSize(buffer_type, usage);
   if (use_adreno_for_size) {
     setMetaData(hnd, SET_GRAPHICS_METADATA, reinterpret_cast<void *>(&graphics_metadata));
   }
@@ -351,6 +339,7 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
 }
 
 Error BufferManager::Dump(std::ostringstream *os) {
+  std::lock_guard<std::mutex> buffer_lock(buffer_lock_);
   for (auto it : handles_map_) {
     auto buf = it.second;
     auto hnd = buf->handle;

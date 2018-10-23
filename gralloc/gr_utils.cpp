@@ -66,6 +66,7 @@ bool IsYuvFormat(int format) {
     // Below formats used by camera and VR
     case HAL_PIXEL_FORMAT_BLOB:
     case HAL_PIXEL_FORMAT_RAW_OPAQUE:
+    case HAL_PIXEL_FORMAT_NV12_HEIF:
       return true;
     default:
       return false;
@@ -218,6 +219,21 @@ uint32_t GetDataAlignment(int format, uint64_t usage) {
   return align;
 }
 
+bool IsGPUFlagSupported(uint64_t usage) {
+  bool ret = true;
+  if ((usage & BufferUsage::GPU_MIPMAP_COMPLETE)) {
+    ALOGE("GPU_MIPMAP_COMPLETE not supported");
+    ret = false;
+  }
+
+  if ((usage & BufferUsage::GPU_CUBE_MAP)) {
+    ALOGE("GPU_CUBE_MAP not supported");
+    ret = false;
+  }
+
+  return ret;
+}
+
 // Returns the final buffer size meant to be allocated with ion
 unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int alignedh) {
   unsigned int size = 0;
@@ -225,6 +241,11 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
   int width = info.width;
   int height = info.height;
   uint64_t usage = info.usage;
+
+  if (!IsGPUFlagSupported(usage)) {
+    ALOGE("Unsupported GPU usage flags present 0x%" PRIx64, usage);
+    return 0;
+  }
 
   if (IsUBwcEnabled(format, usage)) {
     size = GetUBwcSize(width, height, format, alignedw, alignedh);
@@ -308,6 +329,9 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
         size = ALIGN((alignedw * alignedh) + (alignedw * alignedh) / 2,
                      SIZE_4K);
         break;
+      case HAL_PIXEL_FORMAT_NV12_HEIF:
+        size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12_512, width, height);
+        break;
       default:ALOGE("%s: Unrecognized pixel format: 0x%x", __FUNCTION__, format);
         return 0;
     }
@@ -319,8 +343,19 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
 
 void GetBufferSizeAndDimensions(const BufferInfo &info, unsigned int *size, unsigned int *alignedw,
                                 unsigned int *alignedh) {
-  GetAlignedWidthAndHeight(info, alignedw, alignedh);
-  *size = GetSize(info, *alignedw, *alignedh);
+  GraphicsMetadata graphics_metadata = {};
+  GetBufferSizeAndDimensions(info, size, alignedw, alignedh, &graphics_metadata);
+}
+
+void GetBufferSizeAndDimensions(const BufferInfo &info, unsigned int *size, unsigned int *alignedw,
+                                unsigned int *alignedh, GraphicsMetadata *graphics_metadata) {
+  int buffer_type = GetBufferType(info.format);
+  if (CanUseAdrenoForSize(buffer_type, info.usage)) {
+    GetGpuResourceSizeAndDimensions(info, size, alignedw, alignedh, graphics_metadata);
+  } else {
+    GetAlignedWidthAndHeight(info, alignedw, alignedh);
+    *size = GetSize(info, *alignedw, *alignedh);
+  }
 }
 
 void GetYuvUbwcSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height, int color_format,
@@ -426,6 +461,7 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]) 
     case HAL_PIXEL_FORMAT_YCbCr_422_SP:
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
+    case HAL_PIXEL_FORMAT_NV12_HEIF:
       // Same as YCbCr_420_SP_VENUS
       GetYuvSPPlaneInfo(hnd->base, width, height, 1, ycbcr);
       break;
@@ -535,6 +571,11 @@ bool IsUBwcSupported(int format) {
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
     case HAL_PIXEL_FORMAT_RGBA_1010102:
     case HAL_PIXEL_FORMAT_RGBX_1010102:
+    case HAL_PIXEL_FORMAT_DEPTH_16:
+    case HAL_PIXEL_FORMAT_DEPTH_24:
+    case HAL_PIXEL_FORMAT_DEPTH_24_STENCIL_8:
+    case HAL_PIXEL_FORMAT_DEPTH_32F:
+    case HAL_PIXEL_FORMAT_STENCIL_8:
       return true;
     default:
       break;
@@ -872,6 +913,10 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       aligned_w = ALIGN(width, 64);
       aligned_h = ALIGN(height, 64);
       break;
+    case HAL_PIXEL_FORMAT_NV12_HEIF:
+      aligned_w = INT(VENUS_Y_STRIDE(COLOR_FMT_NV12_512, width));
+      aligned_h = INT(VENUS_Y_SCANLINES(COLOR_FMT_NV12_512, height));
+      break;
     default:
       break;
   }
@@ -943,6 +988,7 @@ int GetBufferLayout(private_handle_t *hnd, uint32_t stride[4], uint32_t offset[4
     case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
+    case HAL_PIXEL_FORMAT_NV12_HEIF:
       offset[1] = static_cast<uint32_t>(reinterpret_cast<uint64_t>(yuvInfo.cb) - hnd->base);
       break;
     case HAL_PIXEL_FORMAT_YCrCb_420_SP:
@@ -996,6 +1042,19 @@ void GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
   }
   // Call adreno api with the metadata blob to get buffer size
   *size = adreno_mem_info->AdrenoGetAlignedGpuBufferSize(graphics_metadata->data);
+}
+
+bool CanUseAdrenoForSize(int buffer_type, uint64_t usage) {
+  if (buffer_type == BUFFER_TYPE_VIDEO || !GetAdrenoSizeAPIStatus()) {
+    return false;
+  }
+
+  if ((usage & BufferUsage::PROTECTED) && ((usage & BufferUsage::CAMERA_OUTPUT) ||
+      (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY))) {
+    return false;
+  }
+
+  return true;
 }
 
 bool GetAdrenoSizeAPIStatus() {
@@ -1091,22 +1150,14 @@ int GetImplDefinedFormat(uint64_t usage, int format) {
   // the usage bits, gralloc assigns a format.
   if (format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED ||
       format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
-    if (usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC || usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC_PI) {
-      // Use of 10BIT_TP and 10BIT bits is supposed to be mutually exclusive.
-      // Each bit maps to only one format. Here we will check one of the bits
-      // and ignore the other.
-      if (usage & GRALLOC_USAGE_PRIVATE_10BIT_TP) {
-        gr_format = HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC;
-      } else if (usage & GRALLOC_USAGE_PRIVATE_10BIT) {
-        gr_format = HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC;
-      } else {
-        gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC;
-      }
-    } else if (usage & GRALLOC_USAGE_PRIVATE_10BIT) {
-      gr_format = HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS;
+    if ((usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC || usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC_PI)
+        && format != HAL_PIXEL_FORMAT_YCbCr_420_888) {
+      gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC;
     } else if (usage & BufferUsage::VIDEO_ENCODER) {
       if (usage & GRALLOC_USAGE_PRIVATE_VIDEO_NV21_ENCODER) {
         gr_format = HAL_PIXEL_FORMAT_NV21_ENCODEABLE;  // NV21
+      } else if (format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
+        gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS;
       } else {
         gr_format = HAL_PIXEL_FORMAT_NV12_ENCODEABLE;  // NV12
       }
@@ -1141,7 +1192,17 @@ int GetCustomFormatFlags(int format, uint64_t usage,
   *custom_format = GetImplDefinedFormat(usage, format);
   *priv_flags = GetHandleFlags(*custom_format, usage);
 
+  if (usage & GRALLOC_USAGE_PROTECTED) {
+    *priv_flags |= private_handle_t::PRIV_FLAGS_SECURE_BUFFER;
+  }
+
+  *priv_flags |= private_handle_t::PRIV_FLAGS_USES_ION;
+
   return 0;
+}
+
+int GetBufferType(int inputFormat) {
+  return IsYuvFormat(inputFormat) ? BUFFER_TYPE_VIDEO : BUFFER_TYPE_UI;
 }
 
 }  // namespace gralloc

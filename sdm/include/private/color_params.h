@@ -55,6 +55,8 @@ enum PendingAction {
   kDisableFrameCapture = BITMAP(7),
   kConfigureDetailedEnhancer = BITMAP(8),
   kModeSet = BITMAP(10),
+  kMultiDispProc = BITMAP(11),
+  kMultiDispGetId = BITMAP(12),
   kGetDetailedEnhancerData = BITMAP(21),
   kNoAction = BITMAP(31),
 };
@@ -84,6 +86,7 @@ static const int32_t kInvalidModeId = -1;
 static const std::string kDynamicRangeAttribute = "DynamicRange";
 static const std::string kColorGamutAttribute = "ColorGamut";
 static const std::string kPictureQualityAttribute = "PictureQuality";
+static const std::string kGammaTransferAttribute = "GammaTransfer";
 
 static const std::string kHdr = "hdr";
 static const std::string kSdr = "sdr";
@@ -92,12 +95,18 @@ static const std::string kNative = "native";
 static const std::string kDcip3 = "dcip3";
 static const std::string kSrgb = "srgb";
 static const std::string kDisplayP3 = "display_p3";
+static const std::string kBt2020 = "bt2020";
+
+static const std::string kHlg = "hlg";
+static const std::string kSt2084 = "st2084";
+static const std::string kGamma2_2 = "gamma2_2";
 
 static const std::string kVivid = "vivid";
 static const std::string kSharp = "sharp";
 static const std::string kStandard = "standard";
 static const std::string kAmazon = "amazon";
 static const std::string kNetflix = "netflix";
+static const std::string kEnhanced = "enhanced";
 
 // Enum to identify type of dynamic range of color mode.
 enum DynamicRangeType {

@@ -53,7 +53,6 @@ class BufferManager {
  private:
   BufferManager();
   Error MapBuffer(private_handle_t const *hnd);
-  int GetBufferType(int format);
 
   // Imports the ion fds into the current process. Returns an error for invalid handles
   Error ImportHandleLocked(private_handle_t *hnd);

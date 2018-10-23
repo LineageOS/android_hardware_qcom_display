@@ -22,24 +22,26 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef __DISPLAY_HDMI_H__
-#define __DISPLAY_HDMI_H__
+#ifndef __DISPLAY_PLUGGABLE_H__
+#define __DISPLAY_PLUGGABLE_H__
 
-#include <vector>
 #include <map>
+#include <string>
+#include <vector>
 
 #include "display_base.h"
 #include "hw_events_interface.h"
 
 namespace sdm {
 
-class HWHDMIInterface;
-
-class DisplayHDMI : public DisplayBase, HWEventHandler {
+class DisplayPluggable : public DisplayBase, HWEventHandler {
  public:
-  DisplayHDMI(DisplayEventHandler *event_handler, HWInfoInterface *hw_info_intf,
-              BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
-              CompManager *comp_manager);
+  DisplayPluggable(DisplayEventHandler *event_handler, HWInfoInterface *hw_info_intf,
+                   BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
+                   CompManager *comp_manager);
+  DisplayPluggable(int32_t display_id, DisplayEventHandler *event_handler,
+                   HWInfoInterface *hw_info_intf, BufferSyncHandler *buffer_sync_handler,
+                   BufferAllocator *buffer_allocator, CompManager *comp_manager);
   virtual DisplayError Init();
   virtual DisplayError Prepare(LayerStack *layer_stack);
   virtual DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate, uint32_t *max_refresh_rate);
@@ -47,21 +49,29 @@ class DisplayHDMI : public DisplayBase, HWEventHandler {
   virtual bool IsUnderscanSupported();
   virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
   virtual DisplayError InitializeColorModes();
-  virtual DisplayError SetDisplayState(DisplayState state, int *release_fence);
+  virtual DisplayError SetColorMode(const std::string &color_mode);
+  virtual DisplayError GetColorModeCount(uint32_t *mode_count);
+  virtual DisplayError GetColorModes(uint32_t *mode_count, std::vector<std::string> *color_modes);
+  virtual DisplayError GetColorModeAttr(const std::string &color_mode, AttrVal *attr);
+  virtual DisplayError SetColorTransform(const uint32_t length, const double *color_transform) {
+    return kErrorNone;
+  }
 
   // Implement the HWEventHandlers
   virtual DisplayError VSync(int64_t timestamp);
   virtual DisplayError Blank(bool blank) { return kErrorNone; }
-  virtual void IdleTimeout() { }
-  virtual void ThermalEvent(int64_t thermal_level) { }
+  virtual void IdleTimeout() {}
+  virtual void ThermalEvent(int64_t thermal_level) {}
   virtual void CECMessage(char *message);
-  virtual void IdlePowerCollapse() { }
-  virtual void PingPongTimeout() { }
-  virtual void PanelDead() { }
+  virtual void IdlePowerCollapse() {}
+  virtual void PingPongTimeout() {}
+  virtual void PanelDead() {}
   virtual void HwRecovery(const HWRecoveryEvent sdm_event_code);
 
+  void UpdateColorModes();
+
  private:
-  uint32_t GetBestConfig(HWS3DMode s3d_mode);
+  DisplayError GetOverrideConfig(uint32_t *mode_index);
   void GetScanSupport();
   void SetS3DMode(LayerStack *layer_stack);
 
@@ -70,14 +80,11 @@ class DisplayHDMI : public DisplayBase, HWEventHandler {
   bool underscan_supported_ = false;
   HWScanSupport scan_support_;
   std::map<LayerBufferS3DFormat, HWS3DMode> s3d_format_to_mode_;
-  std::vector<HWEvent> event_list_ = { HWEvent::VSYNC,
-                                       HWEvent::IDLE_NOTIFY,
-                                       HWEvent::EXIT,
-                                       HWEvent::CEC_READ_MESSAGE,
-                                       HWEvent::HW_RECOVERY };
+  std::vector<HWEvent> event_list_ = {HWEvent::VSYNC, HWEvent::IDLE_NOTIFY, HWEvent::EXIT,
+                                      HWEvent::CEC_READ_MESSAGE, HWEvent::HW_RECOVERY};
   uint32_t current_refresh_rate_ = 0;
 };
 
 }  // namespace sdm
 
-#endif  // __DISPLAY_HDMI_H__
+#endif  // __DISPLAY_PLUGGABLE_H__

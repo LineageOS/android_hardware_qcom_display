@@ -138,6 +138,7 @@ void ToneMapSession::UpdateBuffer(int acquire_fence, LayerBuffer *buffer) {
   buffer->acquire_fence_fd = acquire_fence;
   buffer->size = buffer_info_[current_buffer_index_].alloc_buffer_info.size;
   buffer->planes[0].fd = buffer_info_[current_buffer_index_].alloc_buffer_info.fd;
+  buffer->handle_id = buffer_info_[current_buffer_index_].alloc_buffer_info.id;
 }
 
 void ToneMapSession::SetReleaseFence(int fd) {

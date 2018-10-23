@@ -51,11 +51,16 @@ typedef std::vector<std::pair<std::string, std::string>> AttrVal;
   @sa CoreInterface::IsDisplaySupported
 */
 enum DisplayType {
-  kPrimary,         //!< Main physical display which is attached to the handheld device.
-  kHDMI,            //!< HDMI physical display which is generally detachable.
-  kVirtual,         //!< Contents would be rendered into the output buffer provided by the client
-                    //!< e.g. wireless display.
+  kPrimary,             //!< Main physical display which is attached to the handheld device.
+  kBuiltIn = kPrimary,  //!< Type name for all non-detachable physical displays. Use kBuiltIn
+                        //!< instead of kPrimary.
+  kHDMI,                //!< HDMI physical display which is generally detachable.
+  kPluggable = kHDMI,   //!< Type name for all pluggable physical displays. Use kPluggable
+                        //!< instead of kHDMI.
+  kVirtual,             //!< Contents would be rendered into the output buffer provided by the
+                        //!< client e.g. wireless display.
   kDisplayMax,
+  kDisplayTypeMax = kDisplayMax
 };
 
 /*! @brief This enum represents states of a display device.
@@ -151,21 +156,39 @@ enum SecureEvent {
   kSecureEventMax,
 };
 
+/*! @brief This enum represents the QSync modes supported by the hardware. */
+enum QSyncMode {
+  kQSyncModeNone,        // This is set by the client to disable qsync
+  kQSyncModeContinuous,  // This is set by the client to enable qsync forever
+  kQsyncModeOneShot,     // This is set by client to enable qsync only for current frame.
+};
+
+/*! @brief This structure defines configuration for display dpps ad4 region of interest. */
+struct DisplayDppsAd4RoiCfg {
+  uint32_t h_start;     //!< start in hotizontal direction
+  uint32_t h_end;       //!< end in hotizontal direction
+  uint32_t v_start;     //!< start in vertical direction
+  uint32_t v_end;       //!< end in vertical direction
+  uint32_t factor_in;   //!< the strength factor of inside ROI region
+  uint32_t factor_out;  //!< the strength factor of outside ROI region
+};
+
 /*! @brief This structure defines configuration for fixed properties of a display device.
 
   @sa DisplayInterface::GetConfig
   @sa DisplayInterface::SetConfig
 */
 struct DisplayConfigFixedInfo {
-  bool underscan = false;   //!< If display support CE underscan.
-  bool secure = false;      //!< If this display is capable of handling secure content.
-  bool is_cmdmode = false;  //!< If panel is command mode panel.
-  bool hdr_supported = false;  //!< if HDR is enabled
+  bool underscan = false;              //!< If display support CE underscan.
+  bool secure = false;                 //!< If this display is capable of handling secure content.
+  bool is_cmdmode = false;             //!< If panel is command mode panel.
+  bool hdr_supported = false;          //!< if HDR is enabled
   bool hdr_metadata_type_one = false;  //!< Metadata type one obtained from HDR sink
-  uint32_t hdr_eotf = 0;  //!< Electro optical transfer function
-  uint32_t max_luminance = 0;  //!< From Panel's peak luminance
-  uint32_t average_luminance = 0;  //!< From Panel's average luminance
-  uint32_t min_luminance = 0;  //!< From Panel's blackness level
+  uint32_t hdr_eotf = 0;               //!< Electro optical transfer function
+  float max_luminance = 0.0f;          //!< From Panel's peak luminance
+  float average_luminance = 0.0f;      //!< From Panel's average luminance
+  float min_luminance = 0.0f;          //!< From Panel's blackness level
+  bool partial_update = false;         //!< If display supports Partial Update.
 };
 
 /*! @brief This structure defines configuration for variable properties of a display device.
@@ -334,12 +357,16 @@ class DisplayInterface {
     respective fences currently in use. This operation may result in a blank display on the panel
     until a new frame is submitted for composition.
 
+    For virtual displays this would result in output buffer getting cleared with border color.
+
+    @param[in] layer_stack \link LayerStack \endlink
+
     @return \link DisplayError \endlink
 
     @sa Prepare
     @sa Commit
   */
-  virtual DisplayError Flush() = 0;
+  virtual DisplayError Flush(LayerStack *layer_stack) = 0;
 
   /*! @brief Method to get current state of the display device.
 
@@ -396,13 +423,16 @@ class DisplayInterface {
   /*! @brief Method to set current state of the display device.
 
     @param[in] state \link DisplayState \endlink
+    @param[in] flag to force full bridge teardown for pluggable displays, no-op for other displays,
+               if requested state is kStateOff
     @param[in] pointer to release fence
 
     @return \link DisplayError \endlink
 
     @sa SetDisplayState
   */
-  virtual DisplayError SetDisplayState(DisplayState state, int *release_fence) = 0;
+  virtual DisplayError SetDisplayState(DisplayState state, bool teardown,
+                                       int *release_fence) = 0;
 
   /*! @brief Method to set active configuration for variable properties of the display device.
 
@@ -652,6 +682,23 @@ class DisplayInterface {
   */
   virtual DisplayError GetDisplayPort(DisplayPort *port) = 0;
 
+  /*! @brief Method to get display ID information.
+
+    @param[out] display_id Current display's ID as can be discovered using
+    CoreInterface::GetDisplaysStatus().
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetDisplayId(int32_t *display_id) = 0;
+
+  /*! @brief Method to get the display's type.
+
+    @param[out] display_type Current display's type.
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetDisplayType(DisplayType *display_type) = 0;
+
   /*! @brief Method to query whether it is Primrary device.
 
     @return true if this interface is primary.
@@ -696,9 +743,37 @@ class DisplayInterface {
 
     @param[in] secure_event \link SecureEvent \endlink
 
+    @param[inout] layer_stack \link LayerStack \endlink
+
     @return \link DisplayError \endlink
   */
-  virtual DisplayError HandleSecureEvent(SecureEvent secure_event) = 0;
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, LayerStack *layer_stack) = 0;
+
+  /*! @brief Method to set dpps ad roi.
+
+    @param[in] roi config parmas
+
+    @return \link DisplayError \endlink
+  */
+
+  virtual DisplayError SetDisplayDppsAdROI(void *payload) = 0;
+
+  /*! @brief Method to set the Qsync mode.
+
+  @param[in] qsync_mode: \link QSyncMode \endlink
+
+  @return \link DisplayError \endlink
+  */
+  virtual DisplayError SetQSyncMode(QSyncMode qsync_mode) = 0;
+
+  /*! @brief Method to control idle power collapse feature for primary display.
+
+    @param[in] enable idle power collapse feature control flag
+    @param[in] synchronous commit flag
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) = 0;
 
   /*
    * Returns a string consisting of a dump of SDM's display and layer related state

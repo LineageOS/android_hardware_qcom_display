@@ -34,32 +34,35 @@
 namespace sdm {
 
 Strategy::Strategy(ExtensionInterface *extension_intf, BufferAllocator *buffer_allocator,
-                   DisplayType type,
-                   const HWResourceInfo &hw_resource_info, const HWPanelInfo &hw_panel_info,
-                   const HWMixerAttributes &mixer_attributes,
+                   int32_t display_id, DisplayType type, const HWResourceInfo &hw_resource_info,
+                   const HWPanelInfo &hw_panel_info, const HWMixerAttributes &mixer_attributes,
                    const HWDisplayAttributes &display_attributes,
                    const DisplayConfigVariableInfo &fb_config)
-  : extension_intf_(extension_intf), display_type_(type), hw_resource_info_(hw_resource_info),
-    hw_panel_info_(hw_panel_info), mixer_attributes_(mixer_attributes),
-    display_attributes_(display_attributes), fb_config_(fb_config),
-    buffer_allocator_(buffer_allocator) {
-}
+  : extension_intf_(extension_intf),
+    display_id_(display_id),
+    display_type_(type),
+    hw_resource_info_(hw_resource_info),
+    hw_panel_info_(hw_panel_info),
+    mixer_attributes_(mixer_attributes),
+    display_attributes_(display_attributes),
+    fb_config_(fb_config),
+    buffer_allocator_(buffer_allocator) {}
 
 DisplayError Strategy::Init() {
   DisplayError error = kErrorNone;
 
   if (extension_intf_) {
-    error = extension_intf_->CreateStrategyExtn(display_type_, buffer_allocator_, hw_resource_info_,
-                                                hw_panel_info_, mixer_attributes_, fb_config_,
-                                                &strategy_intf_);
+    error = extension_intf_->CreateStrategyExtn(display_id_, display_type_, buffer_allocator_,
+                                                hw_resource_info_, hw_panel_info_,
+                                                mixer_attributes_, fb_config_, &strategy_intf_);
     if (error != kErrorNone) {
       DLOGE("Failed to create strategy");
       return error;
     }
 
-    error = extension_intf_->CreatePartialUpdate(display_type_, hw_resource_info_, hw_panel_info_,
-                                                 mixer_attributes_, display_attributes_, fb_config_,
-                                                 &partial_update_intf_);
+    error = extension_intf_->CreatePartialUpdate(
+        display_id_, display_type_, hw_resource_info_, hw_panel_info_, mixer_attributes_,
+        display_attributes_, fb_config_, &partial_update_intf_);
   }
 
   return kErrorNone;
@@ -147,6 +150,11 @@ DisplayError Strategy::GetNextStrategy(StrategyConstraints *constraints) {
   Layer layer = *gpu_target_layer;
   hw_layers_info_->index.push_back(hw_layers_info_->gpu_target_index);
   hw_layers_info_->roi_index.push_back(0);
+  layer.transform.flip_horizontal ^= hw_panel_info_.panel_orientation.flip_horizontal;
+  layer.transform.flip_vertical ^= hw_panel_info_.panel_orientation.flip_vertical;
+  // Flip rect to match transform.
+  TransformHV(src_domain, layer.dst_rect, layer.transform, &layer.dst_rect);
+  // Scale to mixer resolution.
   MapRect(src_domain, dst_domain, layer.dst_rect, &layer.dst_rect);
   hw_layers_info_->hw_layers.push_back(layer);
 
@@ -200,7 +208,7 @@ DisplayError Strategy::Reconfigure(const HWPanelInfo &hw_panel_info,
     partial_update_intf_ = NULL;
   }
 
-  extension_intf_->CreatePartialUpdate(display_type_, hw_resource_info_, hw_panel_info,
+  extension_intf_->CreatePartialUpdate(display_id_, display_type_, hw_resource_info_, hw_panel_info,
                                        mixer_attributes, display_attributes, fb_config,
                                        &partial_update_intf_);
 
@@ -251,6 +259,13 @@ DisplayError Strategy::SetIdleTimeoutMs(uint32_t active_ms) {
 DisplayError Strategy::SetColorModesInfo(const std::vector<PrimariesTransfer> &colormodes_cs) {
   if (strategy_intf_) {
     return strategy_intf_->SetColorModesInfo(colormodes_cs);
+  }
+  return kErrorNotSupported;
+}
+
+DisplayError Strategy::SetBlendSpace(const PrimariesTransfer &blend_space) {
+  if (strategy_intf_) {
+    return strategy_intf_->SetBlendSpace(blend_space);
   }
   return kErrorNotSupported;
 }

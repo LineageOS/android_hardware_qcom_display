@@ -35,9 +35,9 @@ namespace sdm {
 class Strategy {
  public:
   Strategy(ExtensionInterface *extension_intf, BufferAllocator *buffer_allocator,
-           DisplayType type,
-           const HWResourceInfo &hw_resource_info, const HWPanelInfo &hw_panel_info,
-           const HWMixerAttributes &mixer_attributes, const HWDisplayAttributes &display_attributes,
+           int32_t display_id, DisplayType type, const HWResourceInfo &hw_resource_info,
+           const HWPanelInfo &hw_panel_info, const HWMixerAttributes &mixer_attributes,
+           const HWDisplayAttributes &display_attributes,
            const DisplayConfigVariableInfo &fb_config);
 
   DisplayError Init();
@@ -55,6 +55,7 @@ class Strategy {
   DisplayError Purge();
   DisplayError SetIdleTimeoutMs(uint32_t active_ms);
   DisplayError SetColorModesInfo(const std::vector<PrimariesTransfer> &colormodes_cs);
+  DisplayError SetBlendSpace(const PrimariesTransfer &blend_space);
 
  private:
   void GenerateROI();
@@ -62,6 +63,7 @@ class Strategy {
   ExtensionInterface *extension_intf_ = NULL;
   StrategyInterface *strategy_intf_ = NULL;
   PartialUpdateInterface *partial_update_intf_ = NULL;
+  int32_t display_id_;
   DisplayType display_type_;
   HWResourceInfo hw_resource_info_;
   HWPanelInfo hw_panel_info_;

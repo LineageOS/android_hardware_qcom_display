@@ -36,18 +36,20 @@ using std::vector;
 
 class HWTVDRM : public HWDeviceDRM {
  public:
-  explicit HWTVDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
-                     HWInfoInterface *hw_info_intf);
+  explicit HWTVDRM(int32_t display_id, BufferSyncHandler *buffer_sync_handler,
+                   BufferAllocator *buffer_allocator, HWInfoInterface *hw_info_intf);
 
  protected:
   virtual DisplayError SetDisplayAttributes(uint32_t index);
   virtual DisplayError GetConfigIndex(char *mode, uint32_t *index);
-  virtual DisplayError PowerOff();
-  virtual DisplayError Doze(int *release_fence);
-  virtual DisplayError DozeSuspend(int *release_fence);
+  virtual DisplayError PowerOff(bool teardown);
+  virtual DisplayError Doze(const HWQosData &qos_data, int *release_fence);
+  virtual DisplayError DozeSuspend(const HWQosData &qos_data, int *release_fence);
   virtual DisplayError Standby();
   virtual DisplayError Commit(HWLayers *hw_layers);
   virtual void PopulateHWPanelInfo();
+  virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
+  virtual DisplayError PowerOn(const HWQosData &qos_data, int *release_fence);
 
  private:
   DisplayError UpdateHDRMetaData(HWLayers *hw_layers);
@@ -55,6 +57,10 @@ class HWTVDRM : public HWDeviceDRM {
 
   static const int kBitRGB  = 20;
   static const int kBitYUV  = 21;
+  const float kDefaultMinLuminance = 0.02f;
+  const float kDefaultMaxLuminance = 500.0f;
+  const float kMinPeakLuminance = 300.0f;
+  const float kMaxPeakLuminance = 1000.0f;
   drm_msm_ext_hdr_metadata hdr_metadata_ = {};
 };
 

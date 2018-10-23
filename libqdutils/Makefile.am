@@ -1,28 +1,12 @@
-h_sources = qdMetaData.h
-
-cpp_sources = qdMetaData.cpp
-
-library_includedir = $(includedir)
-library_include_HEADERS = $(h_sources)
-
-lib_LTLIBRARIES = libqdMetaData.la
-libqdMetaData_la_CC = @CC@
-libqdMetaData_la_SOURCES = $(cpp_sources)
-libqdMetaData_la_CFLAGS = $(AM_CFLAGS) -DLOG_TAG=\"DisplayMetaData\"
-libqdMetaData_la_CPPFLAGS = $(AM_CPPFLAGS)
-libqdMetaData_LDADD = -lcutils -llog
-libqdMetaData_la_LDFLAGS = -shared -avoid-version
-
 header_sources = display_config.h
 
-c_sources = profiler.cpp \
-            qd_utils.cpp \
-            display_config.cpp
+cpp_sources = qd_utils.cpp \
+              display_config.cpp
 
-library_includedir = $(includedir)
-library_include_HEADERS = $(header_sources)
+qdutils_includedir = $(pkgincludedir)/display
+qdutils_include_HEADERS = $(header_sources)
 
-lib_LTLIBRARIES += libqdutils.la
+lib_LTLIBRARIES = libqdutils.la
 libqdutils_la_CC = @CC@
 libqdutils_la_SOURCES = $(c_sources)
 libqdutils_la_CFLAGS = $(COMMON_CFLAGS) -DLOG_TAG=\"qdutils\"

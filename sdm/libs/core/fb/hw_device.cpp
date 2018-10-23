@@ -130,6 +130,11 @@ DisplayError HWDevice::Deinit() {
   return kErrorNone;
 }
 
+DisplayError HWDevice::GetDisplayId(int32_t *display_id) {
+  *display_id = fb_node_index_;
+  return kErrorNone;
+}
+
 DisplayError HWDevice::GetActiveConfig(uint32_t *active_config) {
   *active_config = 0;
   return kErrorNone;
@@ -162,7 +167,7 @@ DisplayError HWDevice::GetConfigIndex(char *mode, uint32_t *index) {
   return kErrorNone;
 }
 
-DisplayError HWDevice::PowerOn(int *release_fence) {
+DisplayError HWDevice::PowerOn(const HWQosData &qos_data, int *release_fence) {
   DTRACE_SCOPED();
 
   if (Sys::ioctl_(device_fd_, FBIOBLANK, FB_BLANK_UNBLANK) < 0) {
@@ -177,15 +182,15 @@ DisplayError HWDevice::PowerOn(int *release_fence) {
   return kErrorNone;
 }
 
-DisplayError HWDevice::PowerOff() {
+DisplayError HWDevice::PowerOff(bool teardown) {
   return kErrorNone;
 }
 
-DisplayError HWDevice::Doze(int *release_fence) {
+DisplayError HWDevice::Doze(const HWQosData &qos_data, int *release_fence) {
   return kErrorNone;
 }
 
-DisplayError HWDevice::DozeSuspend(int *release_fence) {
+DisplayError HWDevice::DozeSuspend(const HWQosData &qos_data, int *release_fence) {
   return kErrorNone;
 }
 
@@ -560,7 +565,7 @@ DisplayError HWDevice::Commit(HWLayers *hw_layers) {
   return kErrorNone;
 }
 
-DisplayError HWDevice::Flush() {
+DisplayError HWDevice::Flush(HWLayers *hw_layers) {
   ResetDisplayParams();
   mdp_layer_commit_v1 &mdp_commit = mdp_disp_commit_.commit_v1;
   mdp_commit.input_layer_cnt = 0;
@@ -756,25 +761,25 @@ int HWDevice::GetFBNodeIndex(HWDeviceType device_type) {
     HWPanelInfo panel_info;
     GetHWPanelInfoByNode(i, &panel_info);
     switch (device_type) {
-    case kDevicePrimary:
-      if (panel_info.is_primary_panel) {
-        return i;
-      }
-      break;
-    case kDeviceHDMI:
-      if (panel_info.is_pluggable == true) {
-        if (IsFBNodeConnected(i)) {
+      case kDeviceBuiltIn:
+        if (panel_info.is_primary_panel) {
           return i;
         }
-      }
-      break;
-    case kDeviceVirtual:
-      if (panel_info.port == kPortWriteBack) {
-        return i;
-      }
-      break;
-    default:
-      break;
+        break;
+      case kDevicePluggable:
+        if (panel_info.is_pluggable == true) {
+          if (IsFBNodeConnected(i)) {
+            return i;
+          }
+        }
+        break;
+      case kDeviceVirtual:
+        if (panel_info.port == kPortWriteBack) {
+          return i;
+        }
+        break;
+      default:
+        break;
     }
   }
   return -1;
@@ -876,11 +881,11 @@ void HWDevice::GetHWPanelInfoByNode(int device_node, HWPanelInfo *panel_info) {
       } else if (!strncmp(tokens[0], "is_hdr_enabled", strlen("is_hdr_enabled"))) {
         panel_info->hdr_enabled = atoi(tokens[1]);
       } else if (!strncmp(tokens[0], "peak_brightness", strlen("peak_brightness"))) {
-        panel_info->peak_luminance = UINT32(atoi(tokens[1]));
+        panel_info->peak_luminance = FLOAT(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "average_brightness", strlen("average_brightness"))) {
-        panel_info->average_luminance = UINT32(atoi(tokens[1]));
+        panel_info->average_luminance = FLOAT(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "blackness_level", strlen("blackness_level"))) {
-        panel_info->blackness_level = UINT32(atoi(tokens[1]));
+        panel_info->blackness_level = FLOAT(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "white_chromaticity_x", strlen("white_chromaticity_x"))) {
         panel_info->primaries.white_point[0] = UINT32(atoi(tokens[1]));
       } else if (!strncmp(tokens[0], "white_chromaticity_y", strlen("white_chromaticity_y"))) {

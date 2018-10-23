@@ -20,7 +20,15 @@
 #ifndef __HWC_SESSION_H__
 #define __HWC_SESSION_H__
 
-#ifdef DISPLAY_CONFIG_1_1
+#ifdef DISPLAY_CONFIG_1_5
+#include <vendor/display/config/1.5/IDisplayConfig.h>
+#elif DISPLAY_CONFIG_1_4
+#include <vendor/display/config/1.4/IDisplayConfig.h>
+#elif DISPLAY_CONFIG_1_3
+#include <vendor/display/config/1.3/IDisplayConfig.h>
+#elif DISPLAY_CONFIG_1_2
+#include <vendor/display/config/1.2/IDisplayConfig.h>
+#elif DISPLAY_CONFIG_1_1
 #include <vendor/display/config/1.1/IDisplayConfig.h>
 #else
 #include <vendor/display/config/1.0/IDisplayConfig.h>
@@ -28,20 +36,32 @@
 
 #include <core/core_interface.h>
 #include <utils/locker.h>
+#include <qd_utils.h>
+#include <display_config.h>
+#include <vector>
 
 #include "hwc_callbacks.h"
 #include "hwc_layers.h"
 #include "hwc_display.h"
-#include "hwc_display_primary.h"
-#include "hwc_display_external.h"
+#include "hwc_display_builtin.h"
+#include "hwc_display_pluggable.h"
 #include "hwc_display_virtual.h"
+#include "hwc_display_pluggable_test.h"
 #include "hwc_color_manager.h"
 #include "hwc_socket_handler.h"
 #include "hwc_display_event_handler.h"
 
 namespace sdm {
 
-#ifdef DISPLAY_CONFIG_1_1
+#ifdef DISPLAY_CONFIG_1_5
+using vendor::display::config::V1_5::IDisplayConfig;
+#elif DISPLAY_CONFIG_1_4
+using vendor::display::config::V1_4::IDisplayConfig;
+#elif  DISPLAY_CONFIG_1_3
+using vendor::display::config::V1_3::IDisplayConfig;
+#elif DISPLAY_CONFIG_1_2
+using vendor::display::config::V1_2::IDisplayConfig;
+#elif DISPLAY_CONFIG_1_1
 using vendor::display::config::V1_1::IDisplayConfig;
 #else
 using ::vendor::display::config::V1_0::IDisplayConfig;
@@ -73,9 +93,19 @@ class HWCUEvent {
   bool init_done_ = false;
 };
 
+constexpr int32_t kDataspaceSaturationMatrixCount = 16;
+constexpr int32_t kDataspaceSaturationPropertyElements = 9;
+constexpr int32_t kPropertyMax = 256;
+
 class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qClient::BnQClient,
                    public HWCDisplayEventHandler {
  public:
+  static const int kNumBuiltIn = 4;
+  static const int kNumPluggable = 4;
+  static const int kNumVirtual = 4;
+  // Add 1 primary display which can be either a builtin or pluggable.
+  static const int kNumDisplays = 1 + kNumBuiltIn + kNumPluggable + kNumVirtual;
+
   struct HWCModuleMethods : public hw_module_methods_t {
     HWCModuleMethods() { hw_module_methods_t::open = HWCSession::Open; }
   };
@@ -89,7 +119,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   explicit HWCSession(const hw_module_t *module);
   int Init();
   int Deinit();
-  HWC2::Error CreateVirtualDisplayObject(uint32_t width, uint32_t height, int32_t *format);
+  HWC2::Error CreateVirtualDisplayObj(uint32_t width, uint32_t height, int32_t *format,
+                                      hwc2_display_t *out_display_id);
 
   template <typename... Args>
   static int32_t CallDisplayFunction(hwc2_device_t *device, hwc2_display_t display,
@@ -98,7 +129,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
       return HWC2_ERROR_BAD_PARAMETER;
     }
 
-    if (display >= HWC_NUM_DISPLAY_TYPES) {
+    if (display >= kNumDisplays) {
       return HWC2_ERROR_BAD_DISPLAY;
     }
 
@@ -120,7 +151,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
       return HWC2_ERROR_BAD_PARAMETER;
     }
 
-    if (display >= HWC_NUM_DISPLAY_TYPES) {
+    if (display >= kNumDisplays) {
       return HWC2_ERROR_BAD_DISPLAY;
     }
 
@@ -161,7 +192,10 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   static int32_t ValidateDisplay(hwc2_device_t *device, hwc2_display_t display,
                                  uint32_t *out_num_types, uint32_t *out_num_requests);
   static int32_t SetColorMode(hwc2_device_t *device, hwc2_display_t display,
-                              int32_t /*android_color_mode_t*/ int_mode);
+                              int32_t /*ColorMode*/ int_mode);
+  static int32_t SetColorModeWithRenderIntent(hwc2_device_t *device, hwc2_display_t display,
+                                              int32_t /*ColorMode*/ int_mode,
+                                              int32_t /*RenderIntent*/ int_render_intent);
   static int32_t SetColorTransform(hwc2_device_t *device, hwc2_display_t display,
                                    const float *matrix, int32_t /*android_color_transform_t*/ hint);
   static int32_t GetReadbackBufferAttributes(hwc2_device_t *device, hwc2_display_t display,
@@ -174,11 +208,29 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   // HWCDisplayEventHandler
   virtual void DisplayPowerReset();
 
-  static Locker locker_[HWC_NUM_DISPLAY_TYPES];
+  static int32_t SetVsyncEnabled(hwc2_device_t *device, hwc2_display_t display,
+                                 int32_t int_enabled);
+  static int32_t GetDozeSupport(hwc2_device_t *device, hwc2_display_t display,
+                                int32_t *out_support);
+
+  static Locker locker_[kNumDisplays];
 
  private:
+  struct DisplayMapInfo {
+    hwc2_display_t client_id = kNumDisplays;        // mapped sf id for this display
+    int32_t sdm_id = -1;                            // sdm id for this display
+    sdm:: DisplayType disp_type = kDisplayTypeMax;  // sdm display type
+    bool test_pattern = false;                      // display will show test pattern
+    void Reset() {
+      // Do not clear client id
+      sdm_id = -1;
+      disp_type = kDisplayTypeMax;
+      test_pattern = false;
+    }
+  };
+
   static const int kExternalConnectionTimeoutMs = 500;
-  static const int kPartialUpdateControlTimeoutMs = 100;
+  static const int kCommitDoneTimeoutMs = 100;
 
   // hwc methods
   static int Open(const hw_module_t *module, const char *name, hw_device_t **device);
@@ -189,12 +241,15 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
 
   // Uevent handler
   virtual void UEventHandler(const char *uevent_data, int length);
-  int GetEventValue(const char *uevent_data, int length, const char *event_info);
-  void HandleExtHPD(const char *uevent_data, int length);
-  int HotPlugHandler(bool connected);
   void ResetPanel();
-  int32_t ConnectDisplay(int disp);
-  int DisconnectDisplay(int disp);
+  void InitDisplaySlots();
+  int GetDisplayIndex(int dpy);
+  int CreatePrimaryDisplay();
+  int CreateBuiltInDisplays();
+  int HandlePluggableDisplays(bool delay_hotplug);
+  int HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool delay_hotplug);
+  int HandleDisconnectedDisplays(HWDisplaysInfo *hw_displays_info);
+  void DestroyDisplay(DisplayMapInfo *map_info);
   int GetVsyncPeriod(int disp);
   int32_t GetConfigCount(int disp_id, uint32_t *count);
   int32_t GetActiveConfigIndex(int disp_id, uint32_t *config);
@@ -204,8 +259,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int32_t SetSecondaryDisplayStatus(int disp_id, HWCDisplay::DisplayStatus status);
   int32_t GetPanelBrightness(int *level);
   int32_t MinHdcpEncryptionLevelChanged(int disp_id, uint32_t min_enc_level);
-  int32_t CreateExternalDisplay(int disp_id, uint32_t primary_width, uint32_t primary_height,
-                                bool use_primary_res);
+  int32_t IsWbUbwcSupported(int *value);
 
   // service methods
   void StartServices();
@@ -236,10 +290,24 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
                                   getHDRCapabilities_cb _hidl_cb) override;
   Return<int32_t> setCameraLaunchStatus(uint32_t on) override;
   Return<void> displayBWTransactionPending(displayBWTransactionPending_cb _hidl_cb) override;
-
-  // Methods from ::android::hardware::display::config::V1_1::IDisplayConfig follow.
 #ifdef DISPLAY_CONFIG_1_1
   Return<int32_t> setDisplayAnimating(uint64_t display_id, bool animating) override;
+#endif
+  // Methods from ::android::hardware::display::config::V1_2::IDisplayConfig follow.
+#ifdef DISPLAY_CONFIG_1_2
+  Return<int32_t> setDisplayIndex(IDisplayConfig::DisplayTypeExt disp_type,
+                                  uint32_t base, uint32_t count) override;
+#endif
+#ifdef DISPLAY_CONFIG_1_3
+  Return<int32_t> controlIdlePowerCollapse(bool enable, bool synchronous) override;
+#endif
+#ifdef DISPLAY_CONFIG_1_4
+  Return<void> getWriteBackCapabilities(getWriteBackCapabilities_cb _hidl_cb) override;
+#endif
+#ifdef DISPLAY_CONFIG_1_5
+  Return<int32_t> SetDisplayDppsAdROI(uint32_t dispaly_id, uint32_t h_start, uint32_t h_end,
+                                      uint32_t v_start, uint32_t v_end, uint32_t factor_in,
+                                      uint32_t factor_out) override;
 #endif
 
   // QClient methods
@@ -252,15 +320,24 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   android::status_t ConfigureRefreshRate(const android::Parcel *input_parcel);
   android::status_t QdcmCMDHandler(const android::Parcel *input_parcel,
                                    android::Parcel *output_parcel);
-  android::status_t HandleGetDisplayAttributesForConfig(const android::Parcel *input_parcel,
-                                                        android::Parcel *output_parcel);
+  android::status_t QdcmCMDDispatch(uint32_t display_id,
+                                    const PPDisplayAPIPayload &req_payload,
+                                    PPDisplayAPIPayload *resp_payload,
+                                    PPPendingParams *pending_action);
+  android::status_t GetDisplayAttributesForConfig(const android::Parcel *input_parcel,
+                                                  android::Parcel *output_parcel);
   android::status_t GetVisibleDisplayRect(const android::Parcel *input_parcel,
                                           android::Parcel *output_parcel);
   android::status_t SetMixerResolution(const android::Parcel *input_parcel);
   android::status_t SetColorModeOverride(const android::Parcel *input_parcel);
+  android::status_t SetColorModeWithRenderIntentOverride(const android::Parcel *input_parcel);
 
   android::status_t SetColorModeById(const android::Parcel *input_parcel);
   android::status_t getComposerStatus();
+  android::status_t SetQSyncMode(const android::Parcel *input_parcel);
+  android::status_t SetIdlePC(const android::Parcel *input_parcel);
+  android::status_t RefreshScreen(const android::Parcel *input_parcel);
+  android::status_t SetAd4RoiConfig(const android::Parcel *input_parcel);
 
   void Refresh(hwc2_display_t display);
   void HotPlug(hwc2_display_t display, HWC2::Connection state);
@@ -270,14 +347,22 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   void HandleSecureSession(hwc2_display_t display);
   void HandlePowerOnPending(hwc2_display_t display, int retire_fence);
   void HandleHotplugPending(hwc2_display_t disp_id, int retire_fence);
+  void UpdateVsyncSource(hwc2_display_t display);
+  hwc2_display_t GetNextBuiltinIndex();
 
   CoreInterface *core_intf_ = nullptr;
-  HWCDisplay *hwc_display_[HWC_NUM_DISPLAY_TYPES] = {nullptr};
+  HWCDisplay *hwc_display_[kNumDisplays] = {nullptr};
   HWCCallbacks callbacks_;
   HWCBufferAllocator buffer_allocator_;
   HWCBufferSyncHandler buffer_sync_handler_;
   HWCColorManager *color_mgr_ = nullptr;
+  DisplayMapInfo map_info_primary_;                 // Primary display (either builtin or pluggable)
+  std::vector<DisplayMapInfo> map_info_builtin_;    // Builtin displays excluding primary
+  std::vector<DisplayMapInfo> map_info_pluggable_;  // Pluggable displays excluding primary
+  std::vector<DisplayMapInfo> map_info_virtual_;    // Virtual displays
   bool reset_panel_ = false;
+  bool primary_ready_ = false;
+  bool client_connected_ = false;
   bool new_bw_mode_ = false;
   bool need_invalidate_ = false;
   int bw_mode_release_fd_ = -1;
@@ -289,9 +374,10 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int hpd_bpp_ = 0;
   int hpd_pattern_ = 0;
   int null_display_mode_ = 0;
-  bool power_on_pending_[HWC_NUM_DISPLAY_TYPES] = {false};
+  bool power_on_pending_[kNumDisplays] = {false};
   HotPlugEvent hotplug_pending_event_ = kHotPlugNone;
   bool destroy_virtual_disp_pending_ = false;
+  uint32_t idle_pc_ref_cnt_ = 0;
 };
 
 }  // namespace sdm

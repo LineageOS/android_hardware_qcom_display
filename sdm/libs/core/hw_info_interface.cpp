@@ -44,7 +44,18 @@ DisplayError HWInfoInterface::Create(HWInfoInterface **intf) {
     *intf = new HWInfoDRM();
   }
 
-  return kErrorNone;
+  DisplayError error = kErrorNone;
+  if (*intf) {
+    error = (*intf)->Init();
+    if (error != kErrorNone) {
+      delete *intf;
+      *intf = nullptr;
+    }
+  } else {
+    error = kErrorCriticalResource;
+  }
+
+  return error;
 }
 
 DisplayError HWInfoInterface::Destroy(HWInfoInterface *intf) {

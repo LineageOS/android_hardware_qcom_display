@@ -39,7 +39,7 @@ namespace sdm {
 
 class HWVirtualDRM : public HWDeviceDRM {
  public:
-  HWVirtualDRM(BufferSyncHandler *buffer_sync_handler,
+  HWVirtualDRM(int32_t display_id, BufferSyncHandler *buffer_sync_handler,
                BufferAllocator *buffer_allocator, HWInfoInterface *hw_info_intf);
   virtual ~HWVirtualDRM() {}
   virtual DisplayError SetVSyncState(bool enable) { return kErrorNotSupported; }
@@ -51,7 +51,15 @@ class HWVirtualDRM : public HWDeviceDRM {
  protected:
   virtual DisplayError Validate(HWLayers *hw_layers);
   virtual DisplayError Commit(HWLayers *hw_layers);
+  virtual DisplayError Flush(HWLayers *hw_layers);
   virtual DisplayError GetPPFeaturesVersion(PPFeatureVersion *vers);
+  virtual DisplayError PowerOn(const HWQosData &qos_data, int *release_fence);
+  virtual DisplayError SetScaleLutConfig(HWScaleLutInfo *lut_info) {
+    return kErrorNotSupported;
+  }
+  virtual DisplayError UnsetScaleLutConfig() {
+    return kErrorNotSupported;
+  }
 
  private:
   void ConfigureWbConnectorFbId(uint32_t fb_id);

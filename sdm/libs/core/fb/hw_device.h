@@ -62,6 +62,7 @@ class HWDevice : public HWInterface {
   explicit HWDevice(BufferSyncHandler *buffer_sync_handler);
 
   // From HWInterface
+  virtual DisplayError GetDisplayId(int32_t *display_id);
   virtual DisplayError GetActiveConfig(uint32_t *active_config);
   virtual DisplayError GetNumDisplayAttributes(uint32_t *count);
   virtual DisplayError GetDisplayAttributes(uint32_t index,
@@ -70,14 +71,14 @@ class HWDevice : public HWInterface {
   virtual DisplayError SetDisplayAttributes(uint32_t index);
   virtual DisplayError SetDisplayAttributes(const HWDisplayAttributes &display_attributes);
   virtual DisplayError GetConfigIndex(char *mode, uint32_t *index);
-  virtual DisplayError PowerOn(int *release_fence);
-  virtual DisplayError PowerOff();
-  virtual DisplayError Doze(int *release_fence);
-  virtual DisplayError DozeSuspend(int *release_fence);
+  virtual DisplayError PowerOn(const HWQosData &qos_data, int *release_fence);
+  virtual DisplayError PowerOff(bool teardown);
+  virtual DisplayError Doze(const HWQosData &qos_data, int *release_fence);
+  virtual DisplayError DozeSuspend(const HWQosData &qos_data, int *release_fence);
   virtual DisplayError Standby();
   virtual DisplayError Validate(HWLayers *hw_layers);
   virtual DisplayError Commit(HWLayers *hw_layers);
-  virtual DisplayError Flush();
+  virtual DisplayError Flush(HWLayers *hw_layers);
   virtual DisplayError GetPPFeaturesVersion(PPFeatureVersion *vers);
   virtual DisplayError SetPPFeatures(PPFeaturesConfig *feature_list);
   virtual DisplayError SetVSyncState(bool enable);
@@ -94,13 +95,20 @@ class HWDevice : public HWInterface {
   virtual DisplayError SetAutoRefresh(bool enable) { return kErrorNone; }
   virtual DisplayError SetS3DMode(HWS3DMode s3d_mode);
   virtual DisplayError SetScaleLutConfig(HWScaleLutInfo *lut_info);
+  virtual DisplayError UnsetScaleLutConfig() { return kErrorNotSupported; }
   virtual DisplayError SetMixerAttributes(const HWMixerAttributes &mixer_attributes);
   virtual DisplayError GetMixerAttributes(HWMixerAttributes *mixer_attributes);
   virtual DisplayError DumpDebugData();
   virtual DisplayError SetDppsFeature(void *payload, size_t size) { return kErrorNotSupported; }
   virtual DisplayError GetDppsFeatureInfo(void *payload, size_t size) { return kErrorNotSupported; }
   virtual DisplayError DumpDebugData(DisplayType type) { return kErrorNone; }
-  virtual DisplayError HandleSecureEvent(SecureEvent secure_event) { return kErrorNotSupported; }
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, HWLayers *hw_layers) {
+    return kErrorNotSupported;
+  }
+  virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) {
+    return kErrorNotSupported;
+  }
+  virtual DisplayError SetDisplayDppsAdROI(void *payload) { return kErrorNotSupported; }
 
   enum {
     kHWEventVSync,

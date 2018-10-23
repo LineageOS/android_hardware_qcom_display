@@ -53,16 +53,16 @@ const int kMaxSDELayers = 16;   // Maximum number of layers that can be handled 
 #define MAX_CSC_BIAS_SIZE           3
 
 enum HWDeviceType {
-  kDevicePrimary,
-  kDeviceHDMI,
+  kDeviceBuiltIn,
+  kDevicePluggable,
   kDeviceVirtual,
   kDeviceRotator,
   kDeviceMax,
 };
 
 enum HWBlockType {
-  kHWPrimary,
-  kHWHDMI,
+  kHWBuiltIn,
+  kHWPluggable,
   kHWWriteback0,
   kHWWriteback1,
   kHWWriteback2,
@@ -109,9 +109,19 @@ enum HWBlendingFilter {
 };
 
 enum HWPipeFlags {
-  kIGC = 0x01,
-  kMultiRect = 0x02,
-  kMultiRectParallelMode = 0x04,
+  kIGC = 1 << 0,
+  kMultiRect = 1 << 1,
+  kMultiRectParallelMode = 1 << 2,
+  kFlipVertical = 1 << 5,
+  kFlipHorizontal = 1 << 6,
+  kSecure = 1 << 7,
+  kDisplaySecure = 1 << 8,
+  kCameraSecure = 1 << 9,
+  kInterlaced = 1 << 10,
+  kUpdating = 1 < 11,
+  kSolidFill = 1 << 12,
+  kTonemap1d = 1 << 13,
+  kTonemap3d = 1 << 14,
 };
 
 enum HWAVRModes {
@@ -211,6 +221,8 @@ enum HWQseedStepVersion {
   kQseed3v2,
   kQseed3v3,
   kQseed3v4,
+  kQseed3litev4,
+  kQseed3litev5,
 };
 
 struct HWDestScalarInfo {
@@ -360,12 +372,13 @@ struct HWPanelInfo {
   bool hdr_enabled = false;           // HDR feature supported
   bool hdr_metadata_type_one = false;     // Static HDR metadata type one
   uint32_t hdr_eotf = 0;              // Electro optical transfer function
-  uint32_t peak_luminance = 0;        // Panel's peak luminance level
-  uint32_t average_luminance = 0;     // Panel's average luminance level
-  uint32_t blackness_level = 0;       // Panel's blackness level
+  float peak_luminance = 0.0f;        // Panel's peak luminance level
+  float average_luminance = 0.0f;     // Panel's average luminance level
+  float blackness_level = 0.0f;       // Panel's blackness level
   HWColorPrimaries primaries = {};    // WRGB color primaries
   HWPanelOrientation panel_orientation = {};  // Panel Orientation
   uint32_t transfer_time_us = 0;      // transfer time in micro seconds to panel's active region
+  bool qsync_support = false;         // Specifies panel supports qsync feature or not.
 
   bool operator !=(const HWPanelInfo &panel_info) {
     return ((port != panel_info.port) || (mode != panel_info.mode) ||
@@ -382,7 +395,8 @@ struct HWPanelInfo {
             (split_info != panel_info.split_info) || (s3d_mode != panel_info.s3d_mode) ||
             (left_roi_count != panel_info.left_roi_count) ||
             (right_roi_count != panel_info.right_roi_count) ||
-            (transfer_time_us != panel_info.transfer_time_us));
+            (transfer_time_us != panel_info.transfer_time_us) ||
+            (qsync_support != panel_info.qsync_support));
   }
 
   bool operator ==(const HWPanelInfo &panel_info) {
@@ -502,6 +516,7 @@ struct HWScaleData {
   } enable;
   uint32_t dst_width = 0;
   uint32_t dst_height = 0;
+  uint32_t dir_weight = 0;
   HWPlane plane[MAX_PLANES] {};
   // scale_v2_data fields
   ScalingFilterConfig y_rgb_filter_cfg = kFilterEdgeDirected;
@@ -570,7 +585,7 @@ struct HWPipeInfo {
   uint8_t vertical_decimation = 0;
   HWScaleData scale_data {};
   uint32_t z_order = 0;
-  uint8_t flags = 0;
+  uint32_t flags = 0;
   bool valid = false;
   bool is_virtual = 0;
   HWPipeTonemapInversePma inverse_pma_info = {};

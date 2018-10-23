@@ -135,7 +135,7 @@ bool GetRange(const int32_t &dataspace, ColorRange *color_range) {
       break;
     case HAL_DATASPACE_RANGE_EXTENDED:
       *color_range = Range_Extended;
-      break;
+      return false;
     default:
       DLOGW_IF(kTagClient, "Unsupported Range Request = %d", range);
       return false;
@@ -239,7 +239,7 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
   }
 
   if (acquire_fence == 0) {
-    DLOGE("acquire_fence is zero");
+    DLOGW("acquire_fence is zero");
     return HWC2::Error::BadParameter;
   }
 
@@ -299,12 +299,27 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
   layer_buffer->planes[0].stride = UINT32(handle->width);
   layer_buffer->size = handle->size;
   layer_buffer->buffer_id = reinterpret_cast<uint64_t>(handle);
+  layer_buffer->handle_id = handle->id;
 
   return HWC2::Error::None;
 }
 
 HWC2::Error HWCLayer::SetLayerSurfaceDamage(hwc_region_t damage) {
-  // Check if there is an update in SurfaceDamage rects
+  surface_updated_ = true;
+  if ((damage.numRects == 1) && (damage.rects[0].bottom == 0) && (damage.rects[0].right == 0)) {
+    surface_updated_ = false;
+  }
+
+  if (!layer_->flags.updating && surface_updated_) {
+    needs_validate_ = true;
+  }
+
+  if (!partial_update_enabled_) {
+    SetDirtyRegions(damage);
+    return HWC2::Error::None;
+  }
+
+  // Check if there is an update in SurfaceDamage rects.
   if (layer_->dirty_regions.size() != damage.numRects) {
     needs_validate_ = true;
   } else {
@@ -318,12 +333,7 @@ HWC2::Error HWCLayer::SetLayerSurfaceDamage(hwc_region_t damage) {
     }
   }
 
-  layer_->dirty_regions.clear();
-  for (uint32_t i = 0; i < damage.numRects; i++) {
-    LayerRect rect;
-    SetRect(damage.rects[i], &rect);
-    layer_->dirty_regions.push_back(rect);
-  }
+  SetDirtyRegions(damage);
   return HWC2::Error::None;
 }
 
@@ -445,6 +455,13 @@ HWC2::Error HWCLayer::SetLayerPlaneAlpha(float alpha) {
 HWC2::Error HWCLayer::SetLayerSourceCrop(hwc_frect_t crop) {
   LayerRect src_rect = {};
   SetRect(crop, &src_rect);
+  non_integral_source_crop_ = ((crop.left != roundf(crop.left)) ||
+                              (crop.top != roundf(crop.top)) ||
+                              (crop.right != roundf(crop.right)) ||
+                              (crop.bottom != roundf(crop.bottom)));
+  if (non_integral_source_crop_) {
+    DLOGV_IF(kTagClient, "Crop: LTRB %f %f %f %f", crop.left, crop.top, crop.right, crop.bottom);
+  }
   if (layer_->src_rect != src_rect) {
     geometry_changes_ |= kSourceCrop;
     layer_->src_rect = src_rect;
@@ -512,6 +529,56 @@ HWC2::Error HWCLayer::SetLayerZOrder(uint32_t z) {
   if (z_ != z) {
     geometry_changes_ |= kZOrder;
     z_ = z;
+  }
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCLayer::SetLayerPerFrameMetadata(uint32_t num_elements,
+                                               const PerFrameMetadataKey *keys,
+                                               const float *metadata) {
+  auto &mastering_display = layer_->input_buffer.color_metadata.masteringDisplayInfo;
+  auto &content_light = layer_->input_buffer.color_metadata.contentLightLevel;
+  for (uint32_t i = 0; i < num_elements; i++) {
+    switch (keys[i]) {
+      case PerFrameMetadataKey::DISPLAY_RED_PRIMARY_X:
+        mastering_display.colorVolumeSEIEnabled = true;
+        mastering_display.primaries.rgbPrimaries[0][0] = UINT32(metadata[i] * 50000);
+        break;
+      case PerFrameMetadataKey::DISPLAY_RED_PRIMARY_Y:
+        mastering_display.primaries.rgbPrimaries[0][1] = UINT32(metadata[i] * 50000);
+        break;
+      case PerFrameMetadataKey::DISPLAY_GREEN_PRIMARY_X:
+        mastering_display.primaries.rgbPrimaries[1][0] = UINT32(metadata[i] * 50000);
+        break;
+      case PerFrameMetadataKey::DISPLAY_GREEN_PRIMARY_Y:
+        mastering_display.primaries.rgbPrimaries[1][1] = UINT32(metadata[i] * 50000);
+        break;
+      case PerFrameMetadataKey::DISPLAY_BLUE_PRIMARY_X:
+        mastering_display.primaries.rgbPrimaries[2][0] = UINT32(metadata[i] * 50000);
+        break;
+      case PerFrameMetadataKey::DISPLAY_BLUE_PRIMARY_Y:
+        mastering_display.primaries.rgbPrimaries[2][1] = UINT32(metadata[i] * 50000);
+        break;
+      case PerFrameMetadataKey::WHITE_POINT_X:
+        mastering_display.primaries.whitePoint[0] = UINT32(metadata[i] * 50000);
+        break;
+      case PerFrameMetadataKey::WHITE_POINT_Y:
+        mastering_display.primaries.whitePoint[1] = UINT32(metadata[i] * 50000);
+        break;
+      case PerFrameMetadataKey::MAX_LUMINANCE:
+        mastering_display.maxDisplayLuminance = UINT32(metadata[i]);
+        break;
+      case PerFrameMetadataKey::MIN_LUMINANCE:
+        mastering_display.minDisplayLuminance = UINT32(metadata[i] * 10000);
+        break;
+      case PerFrameMetadataKey::MAX_CONTENT_LIGHT_LEVEL:
+        content_light.lightLevelSEIEnabled = true;
+        content_light.maxContentLightLevel = UINT32(metadata[i]);
+        break;
+      case PerFrameMetadataKey::MAX_FRAME_AVERAGE_LIGHT_LEVEL:
+        content_light.minPicAverageLightLevel = UINT32(metadata[i] * 10000);
+        break;
+    }
   }
   return HWC2::Error::None;
 }
@@ -710,6 +777,7 @@ void HWCLayer::GetUBWCStatsFromMetaData(UBWCStats *cr_stats, UbwcCrStatsVector *
   // in layer_buffer or copy directly to Vector
   if (cr_stats->bDataValid) {
     switch (cr_stats->version) {
+      case UBWC_3_0:
       case UBWC_2_0:
         cr_vec->push_back(std::make_pair(32, cr_stats->ubwc_stats.nCRStatsTile32));
         cr_vec->push_back(std::make_pair(64, cr_stats->ubwc_stats.nCRStatsTile64));
@@ -741,13 +809,13 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
   uint32_t frame_rate = layer->frame_rate;
   if (getMetaData(handle, GET_REFRESH_RATE, &fps) == 0) {
     frame_rate = (fps != 0) ? RoundToStandardFPS(fps) : layer->frame_rate;
+    has_metadata_refresh_rate_ = true;
   }
 
   int32_t interlaced = 0;
-  bool interlace = layer_buffer->flags.interlace;
-  if (getMetaData(handle, GET_PP_PARAM_INTERLACED, &interlaced) == 0) {
-    interlace = interlaced ? true : false;
-  }
+  getMetaData(handle, GET_PP_PARAM_INTERLACED, &interlaced);
+  bool interlace = interlaced ? true : false;
+
   if (interlace != layer_buffer->flags.interlace) {
     DLOGI("Layer buffer interlaced metadata has changed. old=%d, new=%d",
           layer_buffer->flags.interlace, interlace);
@@ -949,6 +1017,15 @@ bool HWCLayer::IsScalingPresent() {
   uint32_t dst_height = static_cast<uint32_t>(layer_->dst_rect.bottom - layer_->dst_rect.top);
 
   return ((src_width != dst_width) || (dst_height != src_height));
+}
+
+void HWCLayer::SetDirtyRegions(hwc_region_t surface_damage) {
+  layer_->dirty_regions.clear();
+  for (uint32_t i = 0; i < surface_damage.numRects; i++) {
+    LayerRect rect;
+    SetRect(surface_damage.rects[i], &rect);
+    layer_->dirty_regions.push_back(rect);
+  }
 }
 
 }  // namespace sdm

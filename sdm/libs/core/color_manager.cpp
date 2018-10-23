@@ -1,4 +1,4 @@
-/* Copyright (c) 2015 - 2017, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015 - 2018, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -99,10 +99,11 @@ void ColorManagerProxy::Deinit() {
   color_lib_.~DynLib();
 }
 
-ColorManagerProxy::ColorManagerProxy(DisplayType type, HWInterface *intf,
+ColorManagerProxy::ColorManagerProxy(int32_t id, DisplayType type, HWInterface *intf,
                                      const HWDisplayAttributes &attr,
                                      const HWPanelInfo &info)
-    : device_type_(type), pp_hw_attributes_(), hw_intf_(intf), color_intf_(NULL), pp_features_() {}
+    : display_id_(id), device_type_(type), pp_hw_attributes_(), hw_intf_(intf),
+      color_intf_(NULL), pp_features_() {}
 
 ColorManagerProxy *ColorManagerProxy::CreateColorManagerProxy(DisplayType type,
                                                               HWInterface *hw_intf,
@@ -110,6 +111,8 @@ ColorManagerProxy *ColorManagerProxy::CreateColorManagerProxy(DisplayType type,
                                                               const HWPanelInfo &panel_info) {
   DisplayError error = kErrorNone;
   PPFeatureVersion versions;
+  int32_t display_id = -1;
+  ColorManagerProxy *color_manager_proxy = NULL;
 
   // check if all resources are available before invoking factory method from libsdm-color.so.
   if (!color_lib_ || !create_intf_ || !destroy_intf_) {
@@ -117,8 +120,9 @@ ColorManagerProxy *ColorManagerProxy::CreateColorManagerProxy(DisplayType type,
     return NULL;
   }
 
-  ColorManagerProxy *color_manager_proxy =
-      new ColorManagerProxy(type, hw_intf, attribute, panel_info);
+  hw_intf->GetDisplayId(&display_id);
+  color_manager_proxy = new ColorManagerProxy(display_id, type, hw_intf, attribute, panel_info);
+
   if (color_manager_proxy) {
     // 1. need query post-processing feature version from HWInterface.
     error = color_manager_proxy->hw_intf_->GetPPFeaturesVersion(&versions);
@@ -133,7 +137,8 @@ ColorManagerProxy *ColorManagerProxy::CreateColorManagerProxy(DisplayType type,
     }
 
     // 2. instantiate concrete ColorInterface from libsdm-color.so, pass all hardware info in.
-    error = create_intf_(COLOR_VERSION_TAG, color_manager_proxy->device_type_, hw_attr,
+    error = create_intf_(COLOR_VERSION_TAG, color_manager_proxy->display_id_,
+                         color_manager_proxy->device_type_, hw_attr,
                          &color_manager_proxy->color_intf_);
     if (error != kErrorNone) {
       DLOGW("Unable to instantiate concrete ColorInterface from %s", COLORMGR_LIBRARY_NAME);
@@ -147,7 +152,7 @@ ColorManagerProxy *ColorManagerProxy::CreateColorManagerProxy(DisplayType type,
 
 ColorManagerProxy::~ColorManagerProxy() {
   if (destroy_intf_)
-    destroy_intf_(device_type_);
+    destroy_intf_(display_id_);
   color_intf_ = NULL;
 }
 

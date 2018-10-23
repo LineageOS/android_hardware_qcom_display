@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2017, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015-2018, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -45,11 +45,12 @@ namespace sdm {
 
 class ColorInterface;
 
-typedef DisplayError (*CreateColorInterface)(uint16_t version, DisplayType type,
+typedef DisplayError (*CreateColorInterface)(uint16_t version, int32_t display_id,
+                                             DisplayType type,
                                              const PPHWAttributes &attributes,
                                              ColorInterface **interface);
 
-typedef DisplayError (*DestroyColorInterface)(DisplayType type);
+typedef DisplayError (*DestroyColorInterface)(int32_t display_id);
 
 class ColorModeInterface {
  public:
@@ -63,8 +64,8 @@ class ColorModeInterface {
   virtual ~ColorModeInterface() {}
 };
 
-extern "C" ColorModeInterface* GetColorModeInterface(DisplayType type);
-extern "C" void ReleaseColorModeInterface(DisplayType type);
+extern "C" ColorModeInterface* GetColorModeInterface(int32_t display_id, DisplayType type);
+extern "C" void ReleaseColorModeInterface(int32_t display_id);
 
 class ColorInterface {
  public:

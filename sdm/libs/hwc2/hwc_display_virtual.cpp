@@ -40,11 +40,12 @@
 namespace sdm {
 
 int HWCDisplayVirtual::Create(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
-                              HWCCallbacks *callbacks, uint32_t width, uint32_t height,
-                              int32_t *format, HWCDisplay **hwc_display) {
+                              HWCCallbacks *callbacks, hwc2_display_t id, int32_t sdm_id,
+                              uint32_t width, uint32_t height, int32_t *format,
+                              HWCDisplay **hwc_display) {
   int status = 0;
   HWCDisplayVirtual *hwc_display_virtual = new HWCDisplayVirtual(core_intf, buffer_allocator,
-                                                                 callbacks);
+                                                                 callbacks, id, sdm_id);
 
   // TODO(user): Populate format correctly
   DLOGI("Creating virtual display: w: %d h:%d format:0x%x", width, height, *format);
@@ -62,7 +63,7 @@ int HWCDisplayVirtual::Create(CoreInterface *core_intf, HWCBufferAllocator *buff
     return status;
   }
 
-  status = INT32(hwc_display_virtual->SetPowerMode(HWC2::PowerMode::On));
+  status = INT32(hwc_display_virtual->SetPowerMode(HWC2::PowerMode::On, false /* teardown */));
   if (status) {
     DLOGW("Failed to set power mode on virtual display");
     Destroy(hwc_display_virtual);
@@ -89,13 +90,14 @@ void HWCDisplayVirtual::Destroy(HWCDisplay *hwc_display) {
 }
 
 HWCDisplayVirtual::HWCDisplayVirtual(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
-                                     HWCCallbacks *callbacks) :
-      HWCDisplay(core_intf, callbacks, nullptr, kVirtual, HWC_DISPLAY_VIRTUAL, false, nullptr,
-                 DISPLAY_CLASS_VIRTUAL, buffer_allocator) {
+                                     HWCCallbacks *callbacks, hwc2_display_t id, int32_t sdm_id) :
+      HWCDisplay(core_intf, buffer_allocator, callbacks, nullptr, nullptr, kVirtual, id, sdm_id,
+                 false, DISPLAY_CLASS_VIRTUAL) {
 }
 
 int HWCDisplayVirtual::Init() {
   output_buffer_ = new LayerBuffer();
+  flush_on_error_ = true;
   return HWCDisplay::Init();
 }
 
@@ -150,48 +152,49 @@ HWC2::Error HWCDisplayVirtual::Present(int32_t *out_retire_fence) {
     return status;
   }
 
+  layer_stack_.output_buffer = output_buffer_;
   if (display_paused_) {
-    DisplayError error = display_intf_->Flush();
     validated_ = false;
-    if (error != kErrorNone) {
-      DLOGE("Flush failed. Error = %d", error);
-    }
-  } else {
-    status = HWCDisplay::CommitLayerStack();
-    if (status == HWC2::Error::None) {
-      if (dump_frame_count_ && !flush_ && dump_output_layer_) {
-        if (output_handle_) {
-          BufferInfo buffer_info;
-          const private_handle_t *output_handle =
-              reinterpret_cast<const private_handle_t *>(output_buffer_->buffer_id);
-          DisplayError error = kErrorNone;
-          if (!output_handle->base) {
-            error = buffer_allocator_->MapBuffer(output_handle, -1);
-            if (error != kErrorNone) {
-              DLOGE("Failed to map output buffer, error = %d", error);
-              return HWC2::Error::BadParameter;
-            }
-          }
-          buffer_info.buffer_config.width = static_cast<uint32_t>(output_handle->width);
-          buffer_info.buffer_config.height = static_cast<uint32_t>(output_handle->height);
-          buffer_info.buffer_config.format =
-              HWCLayer::GetSDMFormat(output_handle->format, output_handle->flags);
-          buffer_info.alloc_buffer_info.size = static_cast<uint32_t>(output_handle->size);
-          DumpOutputBuffer(buffer_info, reinterpret_cast<void *>(output_handle->base),
-                           layer_stack_.retire_fence_fd);
+    flush_ = true;
+  }
 
-          int release_fence = -1;
-          error = buffer_allocator_->UnmapBuffer(output_handle, &release_fence);
-          if (error != kErrorNone) {
-            DLOGE("Failed to unmap buffer, error = %d", error);
-            return HWC2::Error::BadParameter;
-          }
+  status = HWCDisplay::CommitLayerStack();
+  if (status != HWC2::Error::None) {
+    return status;
+  }
+
+  if (dump_frame_count_ && !flush_ && dump_output_layer_) {
+    if (output_handle_) {
+      BufferInfo buffer_info;
+      const private_handle_t *output_handle =
+        reinterpret_cast<const private_handle_t *>(output_buffer_->buffer_id);
+      DisplayError error = kErrorNone;
+      if (!output_handle->base) {
+        error = buffer_allocator_->MapBuffer(output_handle, -1);
+        if (error != kErrorNone) {
+          DLOGE("Failed to map output buffer, error = %d", error);
+          return HWC2::Error::BadParameter;
         }
       }
+      buffer_info.buffer_config.width = static_cast<uint32_t>(output_handle->width);
+      buffer_info.buffer_config.height = static_cast<uint32_t>(output_handle->height);
+      buffer_info.buffer_config.format =
+      HWCLayer::GetSDMFormat(output_handle->format, output_handle->flags);
+      buffer_info.alloc_buffer_info.size = static_cast<uint32_t>(output_handle->size);
+      DumpOutputBuffer(buffer_info, reinterpret_cast<void *>(output_handle->base),
+                       layer_stack_.retire_fence_fd);
 
-      status = HWCDisplay::PostCommitLayerStack(out_retire_fence);
+      int release_fence = -1;
+      error = buffer_allocator_->UnmapBuffer(output_handle, &release_fence);
+      if (error != kErrorNone) {
+        DLOGE("Failed to unmap buffer, error = %d", error);
+        return HWC2::Error::BadParameter;
+      }
     }
   }
+
+  status = HWCDisplay::PostCommitLayerStack(out_retire_fence);
+
   if (output_buffer_->acquire_fence_fd >= 0) {
     close(output_buffer_->acquire_fence_fd);
     output_buffer_->acquire_fence_fd = -1;
@@ -285,11 +288,22 @@ HWC2::Error HWCDisplayVirtual::SetOutputBuffer(buffer_handle_t buf, int32_t rele
   return HWC2::Error::None;
 }
 
-HWC2::Error HWCDisplayVirtual::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type) {
-  HWCDisplay::SetFrameDumpConfig(count, bit_mask_layer_type);
+HWC2::Error HWCDisplayVirtual::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
+                                                  int32_t format, bool post_processed) {
+  HWCDisplay::SetFrameDumpConfig(count, bit_mask_layer_type, format, post_processed);
   dump_output_layer_ = ((bit_mask_layer_type & (1 << OUTPUT_LAYER_DUMP)) != 0);
 
   DLOGI("output_layer_dump_enable %d", dump_output_layer_);
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayVirtual::GetDisplayType(int32_t *out_type) {
+  if (out_type == nullptr) {
+    return HWC2::Error::BadParameter;
+  }
+
+  *out_type = HWC2_DISPLAY_TYPE_VIRTUAL;
+
   return HWC2::Error::None;
 }
 

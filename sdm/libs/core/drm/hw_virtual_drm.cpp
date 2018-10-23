@@ -31,6 +31,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <ctype.h>
 #include <drm_logger.h>
 #include <utils/debug.h>
+#include <utils/utils.h>
 #include <algorithm>
 #include <vector>
 #include "hw_device_drm.h"
@@ -50,12 +51,12 @@ using sde_drm::DRMSecureMode;
 
 namespace sdm {
 
-HWVirtualDRM::HWVirtualDRM(BufferSyncHandler *buffer_sync_handler,
-                           BufferAllocator *buffer_allocator,
-                           HWInfoInterface *hw_info_intf)
-                           : HWDeviceDRM(buffer_sync_handler, buffer_allocator, hw_info_intf) {
+HWVirtualDRM::HWVirtualDRM(int32_t display_id, BufferSyncHandler *buffer_sync_handler,
+                           BufferAllocator *buffer_allocator, HWInfoInterface *hw_info_intf)
+  : HWDeviceDRM(buffer_sync_handler, buffer_allocator, hw_info_intf) {
   HWDeviceDRM::device_name_ = "Virtual";
   HWDeviceDRM::disp_type_ = DRMDisplayType::VIRTUAL;
+  HWDeviceDRM::display_id_ = display_id;
 }
 
 void HWVirtualDRM::ConfigureWbConnectorFbId(uint32_t fb_id) {
@@ -126,8 +127,8 @@ DisplayError HWVirtualDRM::Commit(HWLayers *hw_layers) {
   DisplayError err = kErrorNone;
 
   registry_.Register(hw_layers);
-  registry_.MapBufferToFbId(output_buffer);
-  uint32_t fb_id = registry_.GetFbId(output_buffer->planes[0].fd);
+  registry_.MapOutputBufferToFbId(output_buffer);
+  uint32_t fb_id = registry_.GetOutputFbId(output_buffer->handle_id);
 
   ConfigureWbConnectorFbId(fb_id);
   ConfigureWbConnectorDestRect();
@@ -138,17 +139,27 @@ DisplayError HWVirtualDRM::Commit(HWLayers *hw_layers) {
     DLOGE("Atomic commit failed for crtc_id %d conn_id %d", token_.crtc_id, token_.conn_id);
   }
 
-  registry_.Next();
-  registry_.Unregister();
-
   return(err);
+}
+
+DisplayError HWVirtualDRM::Flush(HWLayers *hw_layers) {
+  DisplayError err = kErrorNone;
+  err = Commit(hw_layers);
+
+  if (err != kErrorNone) {
+    return err;
+  }
+
+  // Close the sync_handle
+  CloseFd(&hw_layers->info.sync_handle);
+  return kErrorNone;
 }
 
 DisplayError HWVirtualDRM::Validate(HWLayers *hw_layers) {
   LayerBuffer *output_buffer = hw_layers->info.stack->output_buffer;
 
-  registry_.MapBufferToFbId(output_buffer);
-  uint32_t fb_id = registry_.GetFbId(output_buffer->planes[0].fd);
+  registry_.MapOutputBufferToFbId(output_buffer);
+  uint32_t fb_id = registry_.GetOutputFbId(output_buffer->handle_id);
 
   ConfigureWbConnectorFbId(fb_id);
   ConfigureWbConnectorDestRect();
@@ -213,6 +224,25 @@ void HWVirtualDRM::GetModeIndex(const HWDisplayAttributes &display_attributes, i
       break;
     }
   }
+}
+
+DisplayError HWVirtualDRM::PowerOn(const HWQosData &qos_data, int *release_fence) {
+  DTRACE_SCOPED();
+  if (!drm_atomic_intf_) {
+    DLOGE("DRM Atomic Interface is null!");
+    return kErrorUndefined;
+  }
+
+  if (first_cycle_) {
+    return kErrorNone;
+  }
+
+  DisplayError err = HWDeviceDRM::PowerOn(qos_data, release_fence);
+  if (err != kErrorNone) {
+    return err;
+  }
+
+  return kErrorNone;
 }
 
 }  // namespace sdm

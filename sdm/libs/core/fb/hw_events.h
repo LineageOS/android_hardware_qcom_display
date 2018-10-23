@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -41,9 +41,8 @@ using std::map;
 
 class HWEvents : public HWEventsInterface {
  public:
-  virtual DisplayError Init(int fb_num, HWEventHandler *event_handler,
-                            const vector<HWEvent> &event_list,
-                            const HWInterface *hw_intf);
+  virtual DisplayError Init(int fb_num, DisplayType display_type, HWEventHandler *event_handler,
+                            const vector<HWEvent> &event_list, const HWInterface *hw_intf);
   virtual DisplayError Deinit();
   virtual DisplayError SetEventState(HWEvent event, bool enable, void *aux = nullptr) {
     return kErrorNotSupported;

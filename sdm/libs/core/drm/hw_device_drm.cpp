@@ -51,6 +51,7 @@
 #include <drm/sde_drm.h>
 #include <private/color_params.h>
 #include <utils/rect.h>
+#include <utils/utils.h>
 
 #include <sstream>
 #include <ctime>
@@ -258,25 +259,31 @@ static void GetDRMFormat(LayerBufferFormat format, uint32_t *drm_format,
   }
 }
 
-HWDeviceDRM::Registry::Registry(BufferAllocator *buffer_allocator) :
-  buffer_allocator_(buffer_allocator) {
-  DRMMaster *master = nullptr;
-  DRMMaster::GetInstance(&master);
-
-  if (!master) {
-    DLOGE("Failed to acquire DRM Master instance");
-    return;
+class FrameBufferObject : public LayerBufferObject {
+ public:
+  explicit FrameBufferObject(uint32_t fb_id) : fb_id_(fb_id) {
   }
 
-  // If RMFB is ref-counted, we should immediately make a call to clean up fb_id after commit.
-  // Driver will release fb_id after its usage. Otherwise speculatively free up fb_id after 3
-  // cycles assuming driver is done with it.
-  rmfb_delay_ = master->IsRmFbRefCounted() ? 1 : 3;
-  hashmap_ = new std::unordered_map<int, uint32_t>[rmfb_delay_];
-}
+  ~FrameBufferObject() {
+    DRMMaster *master;
+    DRMMaster::GetInstance(&master);
+    int ret = master->RemoveFbId(fb_id_);
+    if (ret < 0) {
+      DLOGE("Removing fb_id %d failed with error %d", fb_id_, errno);
+    }
+  }
+  uint32_t GetFbId() { return fb_id_; }
 
-HWDeviceDRM::Registry::~Registry() {
-  delete [] hashmap_;
+ private:
+  uint32_t fb_id_;
+};
+
+HWDeviceDRM::Registry::Registry(BufferAllocator *buffer_allocator) :
+  buffer_allocator_(buffer_allocator) {
+  int value = 0;
+  if (Debug::GetProperty(DISABLE_FBID_CACHE, &value) == kErrorNone) {
+    disable_fbid_cache_ = (value == 1);
+  }
 }
 
 void HWDeviceDRM::Registry::Register(HWLayers *hw_layers) {
@@ -288,89 +295,127 @@ void HWDeviceDRM::Registry::Register(HWLayers *hw_layers) {
     LayerBuffer *input_buffer = &layer.input_buffer;
     HWRotatorSession *hw_rotator_session = &hw_layers->config[i].hw_rotator_session;
     HWRotateInfo *hw_rotate_info = &hw_rotator_session->hw_rotate_info[0];
+    fbid_cache_limit_ = input_buffer->flags.video ? VIDEO_FBID_LIMIT : UI_FBID_LIMIT;
 
     if (hw_rotator_session->mode == kRotatorOffline && hw_rotate_info->valid) {
       input_buffer = &hw_rotator_session->output_buffer;
+      fbid_cache_limit_ = OFFLINE_ROTATOR_FBID_LIMIT;
     }
 
-    MapBufferToFbId(input_buffer);
+    // layer input buffer map to fb id also applies for inline rot
+    MapBufferToFbId(&layer, input_buffer);
 
     if (hw_rotator_session->mode == kRotatorInline && hw_rotate_info->valid &&
         hw_rotator_session->output_buffer.planes[0].fd >= 0) {
-      MapBufferToFbId(&hw_rotator_session->output_buffer);
+      fbid_cache_limit_ += 1;  // account for inline rot scratch buffer
+      MapBufferToFbId(&layer, &hw_rotator_session->output_buffer);
     }
   }
 }
 
-void HWDeviceDRM::Registry::MapBufferToFbId(LayerBuffer* buffer) {
-  int fd = buffer->planes[0].fd;
+int HWDeviceDRM::Registry::CreateFbId(LayerBuffer *buffer, uint32_t *fb_id) {
   DRMMaster *master = nullptr;
   DRMMaster::GetInstance(&master);
+  int ret = -1;
 
   if (!master) {
     DLOGE("Failed to acquire DRM Master instance");
+    return ret;
+  }
+
+  DRMBuffer layout{};
+  AllocatedBufferInfo buf_info{};
+  buf_info.fd = layout.fd = buffer->planes[0].fd;
+  buf_info.aligned_width = layout.width = buffer->width;
+  buf_info.aligned_height = layout.height = buffer->height;
+  buf_info.format = buffer->format;
+  GetDRMFormat(buf_info.format, &layout.drm_format, &layout.drm_format_modifier);
+  buffer_allocator_->GetBufferLayout(buf_info, layout.stride, layout.offset, &layout.num_planes);
+  ret = master->CreateFbId(layout, fb_id);
+  if (ret < 0) {
+    DLOGE("CreateFbId failed. width %d, height %d, format: %s, stride %u, error %d",
+        layout.width, layout.height, GetFormatString(buf_info.format), layout.stride[0], errno);
+  }
+
+  return ret;
+}
+
+void HWDeviceDRM::Registry::MapBufferToFbId(Layer* layer, LayerBuffer* buffer) {
+  if (buffer->planes[0].fd < 0) {
     return;
   }
 
-  if (fd >= 0 && hashmap_[current_index_].find(fd) == hashmap_[current_index_].end()) {
-    AllocatedBufferInfo buf_info{};
-    DRMBuffer layout{};
-    buf_info.fd = layout.fd = fd;
-    buf_info.aligned_width = layout.width = buffer->width;
-    buf_info.aligned_height = layout.height = buffer->height;
-    buf_info.format = buffer->format;
-    GetDRMFormat(buf_info.format, &layout.drm_format, &layout.drm_format_modifier);
-    buffer_allocator_->GetBufferLayout(buf_info, layout.stride, layout.offset,
-        &layout.num_planes);
-    uint32_t fb_id = 0;
-    int ret = master->CreateFbId(layout, &fb_id);
-    if (ret < 0) {
-      DLOGE("CreateFbId failed. width %d, height %d, format: %s, stride %u, error %d",
-          layout.width, layout.height, GetFormatString(buf_info.format), layout.stride[0],
-          errno);
-    } else {
-      hashmap_[current_index_][fd] = fb_id;
+  uint64_t handle_id = buffer->handle_id;
+  if (!handle_id || disable_fbid_cache_) {
+    // In legacy path, clear fb_id map in each frame.
+    layer->buffer_map->buffer_map.clear();
+  } else {
+    if (layer->buffer_map->buffer_map.find(handle_id) != layer->buffer_map->buffer_map.end()) {
+      // Found fb_id for given handle_id key
+      return;
+    }
+
+    if (layer->buffer_map->buffer_map.size() >= fbid_cache_limit_) {
+      // Clear fb_id map, if the size reaches cache limit.
+      layer->buffer_map->buffer_map.clear();
     }
   }
-  return;
+
+  uint32_t fb_id = 0;
+  if (CreateFbId(buffer, &fb_id) >= 0) {
+    // Create and cache the fb_id in map
+    layer->buffer_map->buffer_map[handle_id] = std::make_shared<FrameBufferObject>(fb_id);
+  }
 }
 
-void HWDeviceDRM::Registry::Next() {
-  current_index_ = (current_index_ + 1) % rmfb_delay_;
-}
-
-void HWDeviceDRM::Registry::Unregister() {
-  DRMMaster *master = nullptr;
-  DRMMaster::GetInstance(&master);
-
-  if (!master) {
-    DLOGE("Failed to acquire DRM Master instance");
+void HWDeviceDRM::Registry::MapOutputBufferToFbId(LayerBuffer *output_buffer) {
+  if (output_buffer->planes[0].fd < 0) {
     return;
   }
 
-  auto &curr_map = hashmap_[current_index_];
-  for (auto &pair : curr_map) {
-    uint32_t fb_id = pair.second;
-    int ret = master->RemoveFbId(fb_id);
-    if (ret < 0) {
-      DLOGE("Removing fb_id %d failed with error %d", fb_id, errno);
+  uint64_t handle_id = output_buffer->handle_id;
+  if (!handle_id || disable_fbid_cache_) {
+    // In legacy path, clear output buffer map in each frame.
+    output_buffer_map_.clear();
+  } else {
+    if (output_buffer_map_.find(handle_id) != output_buffer_map_.end()) {
+      return;
+    }
+
+    if (output_buffer_map_.size() >= UI_FBID_LIMIT) {
+      // Clear output buffer map, if the size reaches cache limit.
+      output_buffer_map_.clear();
     }
   }
 
-  curr_map.clear();
+  uint32_t fb_id = 0;
+  if (CreateFbId(output_buffer, &fb_id) >= 0) {
+    output_buffer_map_[handle_id] = std::make_shared<FrameBufferObject>(fb_id);
+  }
 }
 
 void HWDeviceDRM::Registry::Clear() {
-  for (int i = 0; i < rmfb_delay_; i++) {
-    Unregister();
-    Next();
-  }
-  current_index_ = 0;
+  output_buffer_map_.clear();
 }
 
-uint32_t HWDeviceDRM::Registry::GetFbId(int fd) {
-  auto it = hashmap_[current_index_].find(fd);
-  return (it == hashmap_[current_index_].end()) ? 0 : it->second;
+uint32_t HWDeviceDRM::Registry::GetFbId(Layer *layer, uint64_t handle_id) {
+  auto it = layer->buffer_map->buffer_map.find(handle_id);
+  if (it != layer->buffer_map->buffer_map.end()) {
+    FrameBufferObject *fb_obj = static_cast<FrameBufferObject*>(it->second.get());
+    return fb_obj->GetFbId();
+  }
+
+  return 0;
+}
+
+uint32_t HWDeviceDRM::Registry::GetOutputFbId(uint64_t handle_id) {
+  auto it = output_buffer_map_.find(handle_id);
+  if (it != output_buffer_map_.end()) {
+    FrameBufferObject *fb_obj = static_cast<FrameBufferObject*>(it->second.get());
+    return fb_obj->GetFbId();
+  }
+
+  return 0;
 }
 
 HWDeviceDRM::HWDeviceDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
@@ -387,8 +432,13 @@ DisplayError HWDeviceDRM::Init() {
   drm_master->GetHandle(&dev_fd_);
   DRMLibLoader::GetInstance()->FuncGetDRMManager()(dev_fd_, &drm_mgr_intf_);
 
-  if (drm_mgr_intf_->RegisterDisplay(disp_type_, &token_)) {
-    DLOGE("RegisterDisplay failed for %s", device_name_);
+  if (-1 == display_id_) {
+    if (drm_mgr_intf_->RegisterDisplay(disp_type_, &token_)) {
+      DLOGE("RegisterDisplay (by type) failed for %s", device_name_);
+      return kErrorResources;
+    }
+  } else if (drm_mgr_intf_->RegisterDisplay(display_id_, &token_)) {
+    DLOGE("RegisterDisplay (by id) failed for %s - %d", device_name_, display_id_);
     return kErrorResources;
   }
 
@@ -397,6 +447,8 @@ DisplayError HWDeviceDRM::Init() {
     drm_mgr_intf_->UnregisterDisplay(token_);
     return kErrorNotSupported;
   }
+
+  display_id_ = static_cast<int32_t>(token_.conn_id);
 
   ret = drm_mgr_intf_->CreateAtomicReq(token_, &drm_atomic_intf_);
   if (ret) {
@@ -460,11 +512,18 @@ DisplayError HWDeviceDRM::Deinit() {
   return err;
 }
 
+DisplayError HWDeviceDRM::GetDisplayId(int32_t *display_id) {
+  *display_id = display_id_;
+  return kErrorNone;
+}
+
 void HWDeviceDRM::InitializeConfigs() {
   current_mode_index_ = 0;
   // Update current mode with preferred mode
   for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
       if (connector_info_.modes[mode_index].mode.type & DRM_MODE_TYPE_PREFERRED) {
+        DLOGI("Updating current display mode %d to preferred mode %d.", current_mode_index_,
+              mode_index);
         current_mode_index_ = mode_index;
         break;
       }
@@ -581,6 +640,7 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   hw_panel_info_.min_roi_height = connector_info_.modes[index].hmin;
   hw_panel_info_.needs_roi_merge = connector_info_.modes[index].roi_merge;
   hw_panel_info_.dynamic_fps = connector_info_.dynamic_fps;
+  hw_panel_info_.qsync_support = connector_info_.qsync_support;
   drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
   if (hw_panel_info_.dynamic_fps) {
     uint32_t min_fps = current_mode.vrefresh;
@@ -606,8 +666,9 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   hw_panel_info_.is_primary_panel = connector_info_.is_primary;
   hw_panel_info_.is_pluggable = 0;
   hw_panel_info_.hdr_enabled = connector_info_.panel_hdr_prop.hdr_enabled;
-  hw_panel_info_.peak_luminance = connector_info_.panel_hdr_prop.peak_brightness;
-  hw_panel_info_.blackness_level = connector_info_.panel_hdr_prop.blackness_level;
+  // Convert the luminance values to cd/m^2 units.
+  hw_panel_info_.peak_luminance = FLOAT(connector_info_.panel_hdr_prop.peak_brightness) / 10000.0f;
+  hw_panel_info_.blackness_level = FLOAT(connector_info_.panel_hdr_prop.blackness_level) / 10000.0f;
   hw_panel_info_.primaries.white_point[0] = connector_info_.panel_hdr_prop.display_primaries[0];
   hw_panel_info_.primaries.white_point[1] = connector_info_.panel_hdr_prop.display_primaries[1];
   hw_panel_info_.primaries.red[0] = connector_info_.panel_hdr_prop.display_primaries[2];
@@ -633,8 +694,9 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   DLOGI("%s, Panel Interface = %s, Panel Mode = %s, Is Primary = %d", device_name_,
         interface_str_.c_str(), hw_panel_info_.mode == kModeVideo ? "Video" : "Command",
         hw_panel_info_.is_primary_panel);
-  DLOGI("Partial Update = %d, Dynamic FPS = %d, HDR Panel = %d", hw_panel_info_.partial_update,
-        hw_panel_info_.dynamic_fps, hw_panel_info_.hdr_enabled);
+  DLOGI("Partial Update = %d, Dynamic FPS = %d, HDR Panel = %d QSync = %d",
+        hw_panel_info_.partial_update, hw_panel_info_.dynamic_fps, hw_panel_info_.hdr_enabled,
+        hw_panel_info_.qsync_support);
   DLOGI("Align: left = %d, width = %d, top = %d, height = %d", hw_panel_info_.left_align,
         hw_panel_info_.width_align, hw_panel_info_.top_align, hw_panel_info_.height_align);
   DLOGI("ROI: min_width = %d, min_height = %d, need_merge = %d", hw_panel_info_.min_roi_width,
@@ -782,22 +844,14 @@ DisplayError HWDeviceDRM::GetConfigIndex(char *mode, uint32_t *index) {
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::PowerOn(int *release_fence) {
-  DTRACE_SCOPED();
-  if (!drm_atomic_intf_) {
-    DLOGE("DRM Atomic Interface is null!");
-    return kErrorUndefined;
-  }
-
-  if (first_cycle_) {
-    return kErrorNone;
-  }
+DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, int *release_fence) {
+  SetQOSData(qos_data);
 
   int64_t release_fence_t = -1;
+  update_mode_ = true;
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
   drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_t);
-
   int ret = NullCommit(true /* synchronous */, true /* retain_planes */);
   if (ret) {
     DLOGE("Failed with error: %d", ret);
@@ -809,7 +863,7 @@ DisplayError HWDeviceDRM::PowerOn(int *release_fence) {
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::PowerOff() {
+DisplayError HWDeviceDRM::PowerOff(bool teardown) {
   DTRACE_SCOPED();
   if (!drm_atomic_intf_) {
     DLOGE("DRM Atomic Interface is null!");
@@ -830,10 +884,18 @@ DisplayError HWDeviceDRM::PowerOff() {
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::Doze(int *release_fence) {
+DisplayError HWDeviceDRM::Doze(const HWQosData &qos_data, int *release_fence) {
   DTRACE_SCOPED();
 
+  SetQOSData(qos_data);
+
   int64_t release_fence_t = -1;
+
+  if (first_cycle_) {
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
+    drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
+  }
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::DOZE);
   drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_t);
@@ -848,10 +910,18 @@ DisplayError HWDeviceDRM::Doze(int *release_fence) {
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::DozeSuspend(int *release_fence) {
+DisplayError HWDeviceDRM::DozeSuspend(const HWQosData &qos_data, int *release_fence) {
   DTRACE_SCOPED();
 
+  SetQOSData(qos_data);
+
   int64_t release_fence_t = -1;
+
+  if (first_cycle_) {
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
+    drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
+  }
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id,
                             DRMPowerMode::DOZE_SUSPEND);
@@ -865,6 +935,19 @@ DisplayError HWDeviceDRM::DozeSuspend(int *release_fence) {
   *release_fence = static_cast<int>(release_fence_t);
   DLOGD_IF(kTagDriverConfig, "RELEASE fence created: fd:%d", *release_fence);
   return kErrorNone;
+}
+
+void HWDeviceDRM::SetQOSData(const HWQosData &qos_data) {
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_CLK, token_.crtc_id, qos_data.clock_hz);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_AB, token_.crtc_id, qos_data.core_ab_bps);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_IB, token_.crtc_id, qos_data.core_ib_bps);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_LLCC_AB, token_.crtc_id, qos_data.llcc_ab_bps);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_LLCC_IB, token_.crtc_id, qos_data.llcc_ib_bps);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_DRAM_AB, token_.crtc_id, qos_data.dram_ab_bps);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_DRAM_IB, token_.crtc_id, qos_data.dram_ib_bps);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ROT_PREFILL_BW, token_.crtc_id,
+                            qos_data.rot_prefill_bw_bps);
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ROT_CLK, token_.crtc_id, qos_data.rot_clock_hz);
 }
 
 DisplayError HWDeviceDRM::Standby() {
@@ -936,7 +1019,8 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
         input_buffer = &hw_rotator_session->output_buffer;
       }
 
-      uint32_t fb_id = registry_.GetFbId(input_buffer->planes[0].fd);
+      uint32_t fb_id = registry_.GetFbId(&layer, input_buffer->handle_id);
+
       if (pipe_info->valid && fb_id) {
         uint32_t pipe_id = pipe_info->pipe_id;
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ALPHA, pipe_id, layer.plane_alpha);
@@ -953,7 +1037,8 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
           SetRect(hw_rotate_info->dst_roi, &rot_dst);
           drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ROTATION_DST_RECT, pipe_id, rot_dst);
           if (hw_rotator_session->output_buffer.planes[0].fd >= 0) {
-            uint32_t rot_fb_id = registry_.GetFbId(hw_rotator_session->output_buffer.planes[0].fd);
+            uint32_t rot_fb_id = registry_.GetFbId(&layer,
+                                                   hw_rotator_session->output_buffer.handle_id);
             if (rot_fb_id) {
               drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ROT_FB_ID, pipe_id, rot_fb_id);
             }
@@ -1014,16 +1099,7 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
   }
 
   SetSolidfillStages();
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_CLK, token_.crtc_id, qos_data.clock_hz);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_AB, token_.crtc_id, qos_data.core_ab_bps);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_IB, token_.crtc_id, qos_data.core_ib_bps);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_LLCC_AB, token_.crtc_id, qos_data.llcc_ab_bps);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_LLCC_IB, token_.crtc_id, qos_data.llcc_ib_bps);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_DRAM_AB, token_.crtc_id, qos_data.dram_ab_bps);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_DRAM_IB, token_.crtc_id, qos_data.dram_ib_bps);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ROT_PREFILL_BW, token_.crtc_id,
-                            qos_data.rot_prefill_bw_bps);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ROT_CLK, token_.crtc_id, qos_data.rot_clock_hz);
+  SetQOSData(qos_data);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_SECURITY_LEVEL, token_.crtc_id, crtc_security_level);
   drm_atomic_intf_->Perform(DRMOps::DPPS_COMMIT_FEATURE, 0 /* argument is not used */);
 
@@ -1052,12 +1128,15 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
   }
 
   if (first_cycle_) {
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
   }
 
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
+  // Set CRTC mode, only if display config changes
+  if (vrefresh_ || first_cycle_ || update_mode_) {
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
+  }
 
   if (!validate && (hw_layer_info.set_idle_time_ms >= 0)) {
     DLOGI_IF(kTagDriverConfig, "Setting idle timeout to = %d ms",
@@ -1069,6 +1148,10 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
   if (hw_panel_info_.mode == kModeCommand) {
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_AUTOREFRESH, token_.conn_id, autorefresh_);
   }
+
+  sde_drm::DRMQsyncMode mode = hw_layers->hw_avr_info.enable ? sde_drm::DRMQsyncMode::CONTINUOUS :
+                                                               sde_drm::DRMQsyncMode::NONE;
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_QSYNC_MODE, token_.conn_id, mode);
 }
 
 void HWDeviceDRM::AddSolidfillStage(const HWSolidfillStage &sf, uint32_t plane_alpha) {
@@ -1119,7 +1202,6 @@ DisplayError HWDeviceDRM::Validate(HWLayers *hw_layers) {
     err = kErrorHardware;
   }
 
-  registry_.Unregister();
   return err;
 }
 
@@ -1134,9 +1216,6 @@ DisplayError HWDeviceDRM::Commit(HWLayers *hw_layers) {
   } else {
     err = AtomicCommit(hw_layers);
   }
-
-  registry_.Next();
-  registry_.Unregister();
 
   return err;
 }
@@ -1178,7 +1257,8 @@ DisplayError HWDeviceDRM::DefaultCommit(HWLayers *hw_layers) {
   drmModeModeInfo mode;
   res_mgr->GetMode(&mode);
 
-  uint32_t fb_id = registry_.GetFbId(hw_layer_info.hw_layers.at(0).input_buffer.planes[0].fd);
+  uint64_t handle_id = hw_layer_info.hw_layers.at(0).input_buffer.handle_id;
+  uint32_t fb_id = registry_.GetFbId(&hw_layer_info.hw_layers.at(0), handle_id);
   ret = drmModeSetCrtc(dev_fd, crtc_id, fb_id, 0 /* x */, 0 /* y */, &connector_id,
                        1 /* num_connectors */, &mode);
   if (ret < 0) {
@@ -1194,15 +1274,19 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   DTRACE_SCOPED();
   SetupAtomic(hw_layers, false /* validate */);
 
-  int ret = drm_atomic_intf_->Commit(false /* synchronous */, false /* retain_planes*/);
+  int ret = drm_atomic_intf_->Commit(synchronous_commit_, false /* retain_planes*/);
+  int release_fence = INT(release_fence_);
+  int retire_fence = INT(retire_fence_);
   if (ret) {
     DLOGE("%s failed with error %d crtc %d", __FUNCTION__, ret, token_.crtc_id);
     vrefresh_ = 0;
+    CloseFd(&release_fence);
+    CloseFd(&retire_fence);
+    release_fence_ = -1;
+    retire_fence_ = -1;
     return kErrorHardware;
   }
 
-  int release_fence = static_cast<int>(release_fence_);
-  int retire_fence = static_cast<int>(retire_fence_);
   DLOGD_IF(kTagDriverConfig, "RELEASE fence created: fd:%d", release_fence);
   DLOGD_IF(kTagDriverConfig, "RETIRE fence created: fd:%d", retire_fence);
 
@@ -1237,11 +1321,12 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   }
 
   first_cycle_ = false;
+  update_mode_ = false;
 
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::Flush() {
+DisplayError HWDeviceDRM::Flush(HWLayers *hw_layers) {
   int ret = NullCommit(secure_display_active_ /* synchronous */, false /* retain_planes*/);
   if (ret) {
     DLOGE("failed with error %d", ret);
@@ -1537,6 +1622,12 @@ DisplayError HWDeviceDRM::SetScaleLutConfig(HWScaleLutInfo *lut_info) {
   return kErrorNone;
 }
 
+DisplayError HWDeviceDRM::UnsetScaleLutConfig() {
+  drm_mgr_intf_->UnsetScalerLUT();
+
+  return kErrorNone;
+}
+
 DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attributes) {
   if (IsResolutionSwitchEnabled()) {
     return kErrorNotSupported;
@@ -1671,6 +1762,7 @@ void HWDeviceDRM::UpdateMixerAttributes() {
                                      ? hw_panel_info_.split_info.left_split
                                      : mixer_attributes_.width;
   DLOGI("Mixer WxH %dx%d for %s", mixer_attributes_.width, mixer_attributes_.height, device_name_);
+  update_mode_ = true;
 }
 
 void HWDeviceDRM::SetSecureConfig(const LayerBuffer &input_buffer, DRMSecureMode *fb_secure_mode,

@@ -199,8 +199,8 @@ void HWEventsDRM::PopulateHWEventData(const vector<HWEvent> &event_list) {
   InitializePollFd();
 }
 
-DisplayError HWEventsDRM::Init(int display_type, HWEventHandler *event_handler,
-                               const vector<HWEvent> &event_list,
+DisplayError HWEventsDRM::Init(int display_id, DisplayType display_type,
+                               HWEventHandler *event_handler, const vector<HWEvent> &event_list,
                                const HWInterface *hw_intf) {
   if (!event_handler)
     return kErrorParameters;
@@ -208,17 +208,17 @@ DisplayError HWEventsDRM::Init(int display_type, HWEventHandler *event_handler,
   static_cast<const HWDeviceDRM *>(hw_intf)->GetDRMDisplayToken(&token_);
   is_primary_ = static_cast<const HWDeviceDRM *>(hw_intf)->IsPrimaryDisplay();
 
-  DLOGI("Setup event handler for display %d, CRTC %d, Connector %d",
-        display_type, token_.crtc_id, token_.conn_id);
+  DLOGI("Setup event handler for display %d-%d, CRTC %d, Connector %d", display_id, display_type,
+        token_.crtc_id, token_.conn_id);
 
   event_handler_ = event_handler;
   poll_fds_.resize(event_list.size());
-  event_thread_name_ += " - " + std::to_string(display_type);
+  event_thread_name_ += " - " + std::to_string(display_id) + "-" + std::to_string(display_type);
 
   PopulateHWEventData(event_list);
 
   if (pthread_create(&event_thread_, NULL, &DisplayEventThread, this) < 0) {
-    DLOGE("Failed to start %s, error = %s", event_thread_name_.c_str());
+    DLOGE("Failed to start %s, error = %s", event_thread_name_.c_str(), strerror(errno));
     return kErrorResources;
   }
 
@@ -400,14 +400,7 @@ DisplayError HWEventsDRM::RegisterVSync() {
 }
 
 DisplayError HWEventsDRM::RegisterPanelDead(bool enable) {
-  uint32_t i = 0;
-  for (; i < event_data_list_.size(); i++) {
-    if (event_data_list_[i].event_type == HWEvent::PANEL_DEAD) {
-      break;
-    }
-  }
-
-  if (i == event_data_list_.size()) {
+  if (panel_dead_index_ == UINT32_MAX) {
     DLOGI("panel dead is not supported event");
     return kErrorNone;
   }
@@ -433,14 +426,7 @@ DisplayError HWEventsDRM::RegisterPanelDead(bool enable) {
 }
 
 DisplayError HWEventsDRM::RegisterIdleNotify(bool enable) {
-  uint32_t i = 0;
-  for (; i < event_data_list_.size(); i++) {
-    if (event_data_list_[i].event_type == HWEvent::IDLE_NOTIFY) {
-      break;
-    }
-  }
-
-  if (i == event_data_list_.size()) {
+  if (idle_notify_index_ == UINT32_MAX) {
     DLOGI("idle notify is not supported event");
     return kErrorNone;
   }
@@ -466,14 +452,7 @@ DisplayError HWEventsDRM::RegisterIdleNotify(bool enable) {
 }
 
 DisplayError HWEventsDRM::RegisterIdlePowerCollapse(bool enable) {
-  uint32_t i = 0;
-  for (; i < event_data_list_.size(); i++) {
-    if (event_data_list_[i].event_type == HWEvent::IDLE_POWER_COLLAPSE) {
-      break;
-    }
-  }
-
-  if (i == event_data_list_.size()) {
+  if (idle_pc_index_ == UINT32_MAX) {
     DLOGI("idle power collapse is not supported event");
     return kErrorNone;
   }
@@ -499,9 +478,9 @@ DisplayError HWEventsDRM::RegisterIdlePowerCollapse(bool enable) {
 }
 
 DisplayError HWEventsDRM::RegisterHwRecovery(bool enable) {
-  if (hw_recovery_index_ == UINT_MAX) {
-    DLOGE("Hardware recovery is not supported");
-    return kErrorNotSupported;
+  if (hw_recovery_index_ == UINT32_MAX) {
+    DLOGI("Hardware recovery is not supported");
+    return kErrorNone;
   }
 
   struct drm_msm_event_req req = {};

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -533,10 +533,10 @@ DisplayError HWInfo::GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_dis
 
   if (!strncmp(line.c_str(), "dtv panel", strlen("dtv panel")) ||
       !strncmp(line.c_str(), "dp panel", strlen("dp panel"))) {
-    hw_disp_info->type = kHDMI;
-    DLOGI("First display is HDMI");
+    hw_disp_info->type = kPluggable;
+    DLOGI("First display is HDMI/pluggable");
   } else {
-    hw_disp_info->type = kPrimary;
+    hw_disp_info->type = kBuiltIn;
     DLOGI("First display is internal display");
   }
 
@@ -552,6 +552,46 @@ DisplayError HWInfo::GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_dis
 
     hw_disp_info->is_connected =  (!strncmp(line.c_str(), "1", strlen("1")));
   }
+
+  return kErrorNone;
+}
+
+DisplayError HWInfo::GetDisplaysStatus(HWDisplaysInfo *hw_displays_info) {
+  // TODO(user):
+  DLOGW("This operation is not supported on FB Driver.");
+
+  return kErrorNotSupported;
+}
+
+DisplayError HWInfo::GetMaxDisplaysSupported(DisplayType type, int32_t *max_displays) {
+  static DebugTag log_once = kTagNone;
+
+  if (!max_displays) {
+    DLOGE("No output parameter provided!");
+    return kErrorParameters;
+  }
+
+  switch (type) {
+    case kBuiltIn:
+    case kPluggable:
+    case kVirtual:
+      *max_displays = 1;
+      break;
+    case kDisplayTypeMax:
+      *max_displays = 3;
+      break;
+    default:
+      *max_displays = 0;
+      DLOGE("Unknown display type %d.", type);
+      return kErrorParameters;
+  }
+
+  DLOGI_IF(log_once, "Max 3 concurrent displays.");
+  DLOGI_IF(log_once, "Max 1 concurrent display of type %d (BuiltIn).", kBuiltIn);
+  DLOGI_IF(log_once, "Max 1 concurrent display of type %d (Pluggable).", kPluggable);
+  DLOGI_IF(log_once, "Max 1 concurrent display of type %d (Virtual).", kVirtual);
+
+  log_once = kTagDisplay;
 
   return kErrorNone;
 }
