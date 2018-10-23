@@ -250,6 +250,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   bool reset_panel_ = false;
   bool secure_display_active_ = false;
   bool external_pending_connect_ = false;
+  bool external_pending_hotplug_ = false;
+  bool first_commit_ = false;
   bool new_bw_mode_ = false;
   bool need_invalidate_ = false;
   int bw_mode_release_fd_ = -1;

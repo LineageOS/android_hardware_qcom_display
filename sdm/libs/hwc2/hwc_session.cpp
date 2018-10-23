@@ -541,6 +541,15 @@ int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display
     }
   }
 
+  if (display == HWC_DISPLAY_PRIMARY) {
+    if (!hwc_session->first_commit_) {
+      hwc_session->first_commit_ = true;
+    }
+    if (hwc_session->external_pending_hotplug_) {
+      notify_hotplug = true;
+      hwc_session->external_pending_hotplug_ = false;
+    }
+  }
   if (notify_hotplug) {
     hwc_session->HotPlug(HWC_DISPLAY_EXTERNAL, HWC2::Connection::Connected);
   }
@@ -1531,6 +1540,16 @@ int HWCSession::HotPlugHandler(bool connected) {
       // new display connection.
       uint32_t vsync_period = UINT32(GetVsyncPeriod(HWC_DISPLAY_PRIMARY));
       usleep(vsync_period * 2 / 1000);
+    }
+  }
+
+  // Cache hotplug for external till first present is called
+  if (notify_hotplug) {
+    if (!hdmi_is_primary_) {
+      if (!first_commit_) {
+        notify_hotplug = false;
+        external_pending_hotplug_ = connected;
+      }
     }
   }
 
