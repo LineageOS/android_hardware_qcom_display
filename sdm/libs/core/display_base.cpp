@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -1505,6 +1505,7 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
     hw_layer.input_buffer.size = sdm_layer->input_buffer.size;
     hw_layer.input_buffer.acquire_fence_fd = sdm_layer->input_buffer.acquire_fence_fd;
     hw_layer.input_buffer.handle_id = sdm_layer->input_buffer.handle_id;
+    hw_layer.input_buffer.buffer_id = sdm_layer->input_buffer.buffer_id;
     // TODO(user): Other FBT layer attributes like surface damage, dataspace, secure camera and
     // secure display flags are also updated during SetClientTarget() called between validate and
     // commit. Need to revist this and update it accordingly for FBT layer.
