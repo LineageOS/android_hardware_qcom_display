@@ -1,8 +1,8 @@
 #Display related packages and configuration
 
 PRODUCT_PACKAGES += \
-    android.hardware.graphics.composer@2.2-impl \
-    android.hardware.graphics.composer@2.2-service \
+    android.hardware.graphics.composer@2.1-impl \
+    android.hardware.graphics.composer@2.1-service \
     android.hardware.graphics.mapper@2.0-impl-qti-display \
     vendor.qti.hardware.display.allocator@1.0-service \
     android.hardware.memtrack@1.0-impl \
@@ -35,8 +35,6 @@ TARGET_USES_HWC2 := true
 TARGET_USES_QCOM_DISPLAY_BSP := true
 TARGET_USES_COLOR_METADATA := true
 TARGET_HAS_WIDE_COLOR_DISPLAY := true
-TARGET_HAS_HDR_DISPLAY := true
-TARGET_USES_DISPLAY_RENDER_INTENTS := true
 
 PRODUCT_PROPERTY_OVERRIDES += \
     persist.demo.hdmirotationlock=false \
