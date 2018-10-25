@@ -252,6 +252,8 @@ struct LayerStackFlags {
                                            // This applies only to primary displays currently
 
       uint32_t hdr_present : 1;  //!< Set if stack has HDR content
+
+      uint32_t fbt_valid : 1;    //!< Indicates whether valid fbt is set
     };
 
     uint32_t flags = 0;               //!< For initialization purpose only.

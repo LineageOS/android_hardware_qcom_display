@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -677,7 +677,7 @@ DisplayError HWDeviceDRM::Validate(HWLayers *hw_layers) {
 
   int ret = drm_atomic_intf_->Validate();
   if (ret) {
-    DLOGE("%s failed with error %d", __FUNCTION__, ret);
+    DLOGE("failed with error %d for %s", ret, device_name_);
     return kErrorHardware;
   }
 
@@ -785,7 +785,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::Flush() {
+DisplayError HWDeviceDRM::Flush(bool secure) {
   return kErrorNone;
 }
 
@@ -822,8 +822,6 @@ void HWDeviceDRM::SetRect(const LayerRect &source, DRMRect *target) {
 bool HWDeviceDRM::EnableHotPlugDetection(int enable) {
   return true;
 }
-
-void HWDeviceDRM::ResetDisplayParams() {}
 
 DisplayError HWDeviceDRM::SetCursorPosition(HWLayers *hw_layers, int x, int y) {
   DTRACE_SCOPED();
@@ -1056,6 +1054,7 @@ void HWDeviceDRM::UpdateMixerAttributes() {
   mixer_attributes_.split_left = display_attributes_.is_device_split
                                      ? hw_panel_info_.split_info.left_split
                                      : mixer_attributes_.width;
+  DLOGI("Mixer WxH %dx%d for %s", mixer_attributes_.width, mixer_attributes_.height, device_name_);
 }
 
 }  // namespace sdm
