@@ -330,7 +330,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
   return kErrorNone;
 }
 
-DisplayError DisplayBase::Flush() {
+DisplayError DisplayBase::Flush(bool secure) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
 
@@ -338,7 +338,7 @@ DisplayError DisplayBase::Flush() {
     return kErrorPermission;
   }
   hw_layers_.info.hw_layers.clear();
-  error = hw_intf_->Flush();
+  error = hw_intf_->Flush(secure);
   if (error == kErrorNone) {
     comp_manager_->Purge(display_comp_ctx_);
     needs_validate_ = true;
@@ -422,7 +422,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state) {
   switch (state) {
   case kStateOff:
     hw_layers_.info.hw_layers.clear();
-    error = hw_intf_->Flush();
+    error = hw_intf_->Flush(false);
     if (error == kErrorNone) {
       error = hw_intf_->PowerOff();
     }
@@ -432,6 +432,17 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state) {
     error = hw_intf_->PowerOn();
     if (error != kErrorNone) {
       return error;
+    }
+
+    if (display_comp_ctx_ == NULL) {
+      error = comp_manager_->RegisterDisplay(display_type_, display_attributes_, hw_panel_info_,
+                                              mixer_attributes_, fb_config_, &display_comp_ctx_);
+      if (error != kErrorNone) {
+        if (display_comp_ctx_) {
+          comp_manager_->UnregisterDisplay(display_comp_ctx_);
+        }
+        return error;
+      }
     }
 
     error = comp_manager_->ReconfigureDisplay(display_comp_ctx_, display_attributes_,

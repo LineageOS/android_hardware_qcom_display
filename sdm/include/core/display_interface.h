@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -322,12 +322,14 @@ class DisplayInterface {
     respective fences currently in use. This operation may result in a blank display on the panel
     until a new frame is submitted for composition.
 
+    @param[in] secure \link secure \endlink
+
     @return \link DisplayError \endlink
 
     @sa Prepare
     @sa Commit
   */
-  virtual DisplayError Flush() = 0;
+  virtual DisplayError Flush(bool secure) = 0;
 
   /*! @brief Method to get current state of the display device.
 

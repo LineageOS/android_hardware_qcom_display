@@ -189,7 +189,9 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
   // TODO(user): Deprecate
   hw_resource->hw_version = kHWMdssVersion5;
   hw_resource->hw_revision = 0;
-  hw_resource->max_mixer_width = 0;
+
+  // TODO(user): Deprecate
+  hw_resource->max_mixer_width = 2560;
   hw_resource->writeback_index = 0;
   hw_resource->has_bwc = false;
   hw_resource->has_ubwc = true;

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -54,9 +54,6 @@ class DisplayVirtual : public DisplayBase {
     return kErrorNotSupported;
   }
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate) {
-    return kErrorNotSupported;
-  }
-  virtual DisplayError GetMixerResolution(uint32_t *width, uint32_t *height) {
     return kErrorNotSupported;
   }
   virtual DisplayError SetDetailEnhancerData(const DisplayDetailEnhancerData &de_data) {
