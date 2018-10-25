@@ -41,6 +41,7 @@ namespace sdm {
 
 class HWInfo: public HWInfoInterface {
  public:
+  virtual DisplayError Init() { return kErrorNone; }
   virtual ~HWInfo() { delete hw_resource_; }
   virtual DisplayError GetHWResourceInfo(HWResourceInfo *hw_resource);
   virtual DisplayError GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_disp_info);

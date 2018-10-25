@@ -35,6 +35,7 @@ class HWInfoInterface {
  public:
   static DisplayError Create(HWInfoInterface **intf);
   static DisplayError Destroy(HWInfoInterface *intf);
+  virtual DisplayError Init() = 0;
   virtual DisplayError GetHWResourceInfo(HWResourceInfo *hw_resource) = 0;
   virtual DisplayError GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_disp_info) = 0;
   virtual DisplayError GetDisplaysStatus(HWDisplaysInfo *hw_displays_info) = 0;

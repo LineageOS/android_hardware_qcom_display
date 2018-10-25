@@ -167,7 +167,7 @@ DisplayError DisplayBase::Init() {
   Debug::GetProperty(DISABLE_HW_RECOVERY_DUMP_PROP, &disable_hw_recovery_dump_);
   DLOGI("disable_hw_recovery_dump_ set to %d", disable_hw_recovery_dump_);
 
-  Debug::Get()->GetProperty("DROP_SKEWED_VSYNC", &drop_vsync);
+  Debug::Get()->GetProperty(DROP_SKEWED_VSYNC, &drop_vsync);
   drop_skewed_vsync_ = (drop_vsync == 1);
 
   return kErrorNone;
@@ -399,7 +399,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
   return kErrorNone;
 }
 
-DisplayError DisplayBase::Flush() {
+DisplayError DisplayBase::Flush(LayerStack *layer_stack) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
 
@@ -407,7 +407,8 @@ DisplayError DisplayBase::Flush() {
     return kErrorPermission;
   }
   hw_layers_.info.hw_layers.clear();
-  error = hw_intf_->Flush();
+  hw_layers_.info.stack = layer_stack;
+  error = hw_intf_->Flush(&hw_layers_);
   if (error == kErrorNone) {
     comp_manager_->Purge(display_comp_ctx_);
     needs_validate_ = true;
@@ -506,7 +507,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
   switch (state) {
   case kStateOff:
     hw_layers_.info.hw_layers.clear();
-    error = hw_intf_->Flush();
+    error = hw_intf_->Flush(&hw_layers_);
     if (error == kErrorNone) {
       error = hw_intf_->PowerOff(teardown);
     }

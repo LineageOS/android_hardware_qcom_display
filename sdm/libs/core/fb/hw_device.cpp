@@ -565,7 +565,7 @@ DisplayError HWDevice::Commit(HWLayers *hw_layers) {
   return kErrorNone;
 }
 
-DisplayError HWDevice::Flush() {
+DisplayError HWDevice::Flush(HWLayers *hw_layers) {
   ResetDisplayParams();
   mdp_layer_commit_v1 &mdp_commit = mdp_disp_commit_.commit_v1;
   mdp_commit.input_layer_cnt = 0;

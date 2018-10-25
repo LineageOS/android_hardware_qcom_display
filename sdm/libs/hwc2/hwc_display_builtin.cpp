@@ -208,6 +208,7 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
     // here in a subsequent draw round. Readback is not allowed for any secure use case.
     readback_configured_ = !layer_stack_.flags.secure_present;
     if (readback_configured_) {
+      DisablePartialUpdateOneFrame();
       layer_stack_.output_buffer = &output_buffer_;
       layer_stack_.flags.post_processed_output = post_processed_output_;
     }
@@ -242,7 +243,7 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
 HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
   auto status = HWC2::Error::None;
   if (display_paused_) {
-    DisplayError error = display_intf_->Flush();
+    DisplayError error = display_intf_->Flush(&layer_stack_);
     validated_ = false;
     if (error != kErrorNone) {
       DLOGE("Flush failed. Error = %d", error);
@@ -366,7 +367,6 @@ HWC2::Error HWCDisplayBuiltIn::SetReadbackBuffer(const native_handle_t *buffer,
   readback_configured_ = false;
   validated_ = false;
 
-  DisablePartialUpdateOneFrame();
   return HWC2::Error::None;
 }
 
@@ -476,6 +476,16 @@ DisplayError HWCDisplayBuiltIn::SetDisplayMode(uint32_t mode) {
 
   if (display_intf_) {
     error = display_intf_->SetDisplayMode(mode);
+    if (error == kErrorNone) {
+      DisplayConfigFixedInfo fixed_info = {};
+      display_intf_->GetConfig(&fixed_info);
+      is_cmd_mode_ = fixed_info.is_cmdmode;
+      partial_update_enabled_ = fixed_info.partial_update;
+      for (auto hwc_layer : layer_set_) {
+        hwc_layer->SetPartialUpdate(partial_update_enabled_);
+      }
+      client_target_->SetPartialUpdate(partial_update_enabled_);
+    }
   }
 
   return error;
@@ -517,7 +527,7 @@ int HWCDisplayBuiltIn::HandleSecureSession(const std::bitset<kSecureMax> &secure
   if (active_secure_sessions_[kSecureDisplay] != secure_sessions[kSecureDisplay]) {
     SecureEvent secure_event =
         secure_sessions.test(kSecureDisplay) ? kSecureDisplayStart : kSecureDisplayEnd;
-    DisplayError err = display_intf_->HandleSecureEvent(secure_event);
+    DisplayError err = display_intf_->HandleSecureEvent(secure_event, &layer_stack_);
     if (err != kErrorNone) {
       DLOGE("Set secure event failed");
       return err;

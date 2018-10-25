@@ -434,6 +434,7 @@ int HWCDisplay::Init() {
 
   DisplayConfigFixedInfo fixed_info = {};
   display_intf_->GetConfig(&fixed_info);
+  is_cmd_mode_ = fixed_info.is_cmdmode;
   partial_update_enabled_ = fixed_info.partial_update;
   client_target_->SetPartialUpdate(partial_update_enabled_);
 
@@ -1012,7 +1013,7 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, int32_t acquire_
   }
 
   if (acquire_fence == 0) {
-    DLOGE("acquire_fence is zero");
+    DLOGW("acquire_fence is zero");
     return HWC2::Error::BadParameter;
   }
 
@@ -1381,7 +1382,7 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
 
   // Do no call flush on errors, if a successful buffer is never submitted.
   if (flush_ && flush_on_error_) {
-    display_intf_->Flush();
+    display_intf_->Flush(&layer_stack_);
     validated_ = false;
   }
 
@@ -1431,19 +1432,17 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
 
   client_target_->GetSDMLayer()->request.flags = {};
   *out_retire_fence = -1;
-  if (!flush_) {
-    // if swapinterval property is set to 0 then close and reset the list retire fence
-    if (swap_interval_zero_) {
-      close(layer_stack_.retire_fence_fd);
-      layer_stack_.retire_fence_fd = -1;
-    }
-    *out_retire_fence = layer_stack_.retire_fence_fd;
+  // if swapinterval property is set to 0 then close and reset the list retire fence
+  if (swap_interval_zero_) {
+    close(layer_stack_.retire_fence_fd);
     layer_stack_.retire_fence_fd = -1;
+  }
+  *out_retire_fence = layer_stack_.retire_fence_fd;
+  layer_stack_.retire_fence_fd = -1;
 
-    if (dump_frame_count_) {
-      dump_frame_count_--;
-      dump_frame_index_++;
-    }
+  if (dump_frame_count_) {
+    dump_frame_count_--;
+    dump_frame_index_++;
   }
   config_pending_ = false;
 
@@ -2126,9 +2125,7 @@ HWC2::Error HWCDisplay::GetValidateDisplayOutput(uint32_t *out_num_types,
 }
 
 bool HWCDisplay::IsDisplayCommandMode() {
-  DisplayConfigFixedInfo display_config;
-  display_intf_->GetConfig(&display_config);
-  return display_config.is_cmdmode;
+  return is_cmd_mode_;
 }
 
 // Skip SDM prepare if all the layers in the current draw cycle are marked as Skip and
