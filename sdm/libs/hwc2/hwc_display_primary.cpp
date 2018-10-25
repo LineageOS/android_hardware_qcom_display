@@ -232,7 +232,7 @@ HWC2::Error HWCDisplayPrimary::Present(int32_t *out_retire_fence) {
     // TODO(user): From old HWC implementation
     // If we do not handle the frame set retireFenceFd to outbufAcquireFenceFd
     // Revisit this when validating display_paused
-    DisplayError error = display_intf_->Flush();
+    DisplayError error = display_intf_->Flush(false);
     if (error != kErrorNone) {
       DLOGE("Flush failed. Error = %d", error);
     }
@@ -395,6 +395,7 @@ void HWCDisplayPrimary::SetSecureDisplay(bool secure_display_active) {
     DisplayConfigFixedInfo display_config;
     display_intf_->GetConfig(&display_config);
     skip_prepare_ = !display_config.is_cmdmode;
+    secure_display_transition_ = true;
   }
 }
 
