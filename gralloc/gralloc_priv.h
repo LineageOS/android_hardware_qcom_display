@@ -28,6 +28,7 @@
 #define GRALLOC_PROP(prop_name) GRALLOC_PROP_PREFIX prop_name
 
 #define DISABLE_UBWC_PROP                    GRALLOC_PROP("disable_ubwc")
+#define DISABLE_AHARDWAREBUFFER_PROP         GRALLOC_PROP("disable_ahardware_buffer")
 #define ENABLE_FB_UBWC_PROP                  GRALLOC_PROP("enable_fb_ubwc")
 #define MAP_FB_MEMORY_PROP                   GRALLOC_PROP("map_fb_memory")
 #define USE_SYSTEM_HEAP_FOR_SENSORS          GRALLOC_PROP("use_system_heap_for_sensors")
@@ -70,6 +71,11 @@ inline int roundUpToPageSize(int x) {
  * once end to end 64-bit support is available */
 /* This flag is set for WFD usecase */
 #define GRALLOC_USAGE_PRIVATE_WFD (UINT32_C(1) << 21)
+
+/* TODO(user): move these to use sanctioned vendor bits
+ * once end to end 64-bit support is available */
+/* This flag is set for HEIF usecase */
+#define GRALLOC_USAGE_PRIVATE_HEIF (UINT32_C(1) << 27)
 
 /* TODO(user): Remove when clients stop referencing this flag */
 #define GRALLOC_USAGE_PRIVATE_10BIT_TP 0
@@ -127,6 +133,7 @@ inline int roundUpToPageSize(int x) {
 #define HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS 0x114
 #define HAL_PIXEL_FORMAT_BGR_565 0x115
 #define HAL_PIXEL_FORMAT_RAW8 0x123
+#define HAL_PIXEL_FORMAT_NV12_HEIF 0x116
 
 // 10 bit
 #define HAL_PIXEL_FORMAT_ARGB_2101010 0x117
