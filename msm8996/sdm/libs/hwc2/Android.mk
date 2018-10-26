@@ -14,6 +14,10 @@ LOCAL_CFLAGS                  := -Wno-missing-field-initializers -Wno-unused-par
                                  -std=c++11 -fcolor-diagnostics\
                                  -DLOG_TAG=\"SDM\" $(common_flags) \
                                  -I $(display_top)/sdm/libs/hwc
+
+# Suppress warnings until they are fixed in hwc_display.cpp.
+LOCAL_CFLAGS                  += -Wno-implicit-fallthrough
+
 LOCAL_CLANG                   := true
 
 LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware libhardware_legacy \
