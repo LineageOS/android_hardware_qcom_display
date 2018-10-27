@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -96,6 +96,8 @@ class HWDevice : public HWInterface {
   virtual DisplayError SetScaleLutConfig(HWScaleLutInfo *lut_info);
   virtual DisplayError SetMixerAttributes(const HWMixerAttributes &mixer_attributes);
   virtual DisplayError GetMixerAttributes(HWMixerAttributes *mixer_attributes);
+  virtual DisplayError SetDynamicDSIClock(uint64_t bitclk);
+  virtual DisplayError GetDynamicDSIClock(uint64_t *bitclk);
 
   enum {
     kHWEventVSync,
@@ -120,6 +122,7 @@ class HWDevice : public HWInterface {
   int GetFBNodeIndex(HWDeviceType device_type);
   // Populates HWPanelInfo based on node index
   void PopulateHWPanelInfo();
+  void PopulateBitClkRates();
   void GetHWPanelInfoByNode(int device_node, HWPanelInfo *panel_info);
   void GetHWPanelNameByNode(int device_node, HWPanelInfo *panel_info);
   void GetHWDisplayPortAndMode(int device_node, HWPanelInfo *panel_info);

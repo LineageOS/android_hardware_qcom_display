@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -1051,6 +1051,14 @@ void HWDeviceDRM::UpdateMixerAttributes() {
                                      ? hw_panel_info_.split_info.left_split
                                      : mixer_attributes_.width;
   DLOGI("Mixer WxH %dx%d for %s", mixer_attributes_.width, mixer_attributes_.height, device_name_);
+}
+
+DisplayError HWDeviceDRM::SetDynamicDSIClock(uint64_t bitclk) {
+  return kErrorNotSupported;
+}
+
+DisplayError HWDeviceDRM::GetDynamicDSIClock(uint64_t *bitclk) {
+  return kErrorNotSupported;
 }
 
 }  // namespace sdm
