@@ -207,7 +207,11 @@ int Allocator::GetImplDefinedFormat(uint64_t usage, int format) {
     } else if (usage & GRALLOC_USAGE_PRIVATE_10BIT) {
       gr_format = HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS;
     } else if (usage & BufferUsage::VIDEO_ENCODER) {
-      gr_format = HAL_PIXEL_FORMAT_NV12_ENCODEABLE;  // NV12
+      if (usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_VIDEO_NV21_ENCODER) {
+            gr_format = HAL_PIXEL_FORMAT_NV21_ENCODEABLE;
+      } else {
+        gr_format = HAL_PIXEL_FORMAT_NV12_ENCODEABLE;  // NV12
+      }
     } else if (usage & BufferUsage::CAMERA_INPUT) {
       if (usage & BufferUsage::CAMERA_OUTPUT) {
         // Assumed ZSL if both producer and consumer camera flags set
