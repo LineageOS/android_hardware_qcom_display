@@ -15,9 +15,6 @@ LOCAL_CFLAGS                  := -Wno-missing-field-initializers -Wno-unused-par
                                  -DLOG_TAG=\"SDM\" $(common_flags) \
                                  -I $(display_top)/sdm/libs/hwc
 
-# Suppress warnings until they are fixed in hwc_display.cpp.
-LOCAL_CFLAGS                  += -Wno-implicit-fallthrough
-
 LOCAL_CLANG                   := true
 
 LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware libhardware_legacy \
@@ -27,6 +24,9 @@ LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware li
 ifneq ($(TARGET_USES_GRALLOC1), true)
     LOCAL_SHARED_LIBRARIES += libmemalloc
 endif
+
+# Allow implicit fallthroughs in hwc_display.cpp until they are fixed.
+LOCAL_CFLAGS                  += -Wno-error=implicit-fallthrough
 
 LOCAL_SRC_FILES               := hwc_session.cpp \
                                  hwc_display.cpp \
