@@ -675,16 +675,24 @@ class DisplayInterface {
       @param[in] bitclk DSI bit clock in HZ.
 
       @return \link DisplayError \endlink
-   */
-   virtual DisplayError SetDynamicDSIClock(uint64_t bitclk) = 0;
+  */
+  virtual DisplayError SetDynamicDSIClock(uint64_t bitclk) = 0;
 
-   /*! @brief Method to get the current DSI clock rate
+  /*! @brief Method to get the current DSI clock rate
 
-       @param[out] bitclk DSI bit clock in HZ
+      @param[out] bitclk DSI bit clock in HZ
 
-       @return \link DisplayError \endlink
-    */
-    virtual DisplayError GetDynamicDSIClock(uint64_t *bitclk) = 0;
+      @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetDynamicDSIClock(uint64_t *bitclk) = 0;
+
+  /*! @brief Method to get the supported DSI clock rates
+
+      @param[out] bitclk DSI bit clock in HZ
+
+      @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates) = 0;
 
   /*
    * Returns a string consisting of a dump of SDM's display and layer related state

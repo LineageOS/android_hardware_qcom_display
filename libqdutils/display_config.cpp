@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2013-2014, 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2013-2014, 2016, 2018 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -314,6 +314,60 @@ int getPanelBrightness() {
         }
     }
     return panel_brightness;
+}
+
+int setDsiClk(int dpy, uint64_t bitClk) {
+    status_t err = (status_t) FAILED_TRANSACTION;
+    sp<IQService> binder = getBinder();
+    Parcel inParcel, outParcel;
+
+    if(binder != NULL) {
+        inParcel.writeInt32(dpy);
+        inParcel.writeUint64(bitClk);
+        status_t err = binder->dispatch(IQService::SET_DSI_CLK, &inParcel, &outParcel);
+        if(err) {
+            ALOGE("%s() failed with err %d", __FUNCTION__, err);
+        }
+    }
+    return err;
+}
+
+uint64_t getDsiClk(int dpy) {
+    uint64_t dsi_clk = 0;
+    sp<IQService> binder = getBinder();
+    Parcel inParcel, outParcel;
+
+    if(binder != NULL) {
+        inParcel.writeInt32(dpy);
+        status_t err = binder->dispatch(IQService::GET_DSI_CLK, &inParcel, &outParcel);
+        if(!err) {
+            dsi_clk = outParcel.readUint64();
+        } else {
+            ALOGE("%s() failed with err %d", __FUNCTION__, err);
+        }
+    }
+    return dsi_clk;
+}
+
+int getSupportedBitClk(int dpy, std::vector<uint64_t>& bit_rates) {
+    sp<IQService> binder = getBinder();
+    Parcel inParcel, outParcel;
+
+    if(binder != NULL) {
+        inParcel.writeInt32(dpy);
+        status_t err = binder->dispatch(IQService::GET_SUPPORTED_DSI_CLK, &inParcel, &outParcel);
+        if(err) {
+            ALOGE("%s() failed with err %d", __FUNCTION__, err);
+            return err;
+        }
+    }
+
+    int32_t clk_levels = outParcel.readInt32();
+    while (clk_levels > 0) {
+      bit_rates.push_back(outParcel.readUint64());
+      clk_levels--;
+    }
+    return 0;
 }
 
 }// namespace

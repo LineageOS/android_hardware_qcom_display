@@ -77,6 +77,7 @@ public:
         GET_HDR_CAPABILITIES = 35, // Get HDR capabilities for legacy HWC interface
         SET_DSI_CLK = 36, // Set DSI Clk.
         GET_DSI_CLK = 37, // Get DSI Clk.
+        GET_SUPPORTED_DSI_CLK = 38, // Get supported DSI Clk.
         COMMAND_LIST_END = 400,
     };
 
