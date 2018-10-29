@@ -147,7 +147,8 @@ class HWDeviceDRM : public HWInterface {
   void SetSrcConfig(const LayerBuffer &input_buffer, const HWRotatorMode &mode, uint32_t *config);
   void SelectCscType(const LayerBuffer &input_buffer, sde_drm::DRMCscType *type);
   void SetRect(const LayerRect &source, sde_drm::DRMRect *target);
-  void SetRotation(LayerTransform transform, const HWRotatorMode &mode, uint32_t* rot_bit_mask);
+  void SetRotation(LayerTransform transform, const HWLayerConfig &layer_config,
+                   uint32_t* rot_bit_mask);
   DisplayError DefaultCommit(HWLayers *hw_layers);
   DisplayError AtomicCommit(HWLayers *hw_layers);
   void SetupAtomic(HWLayers *hw_layers, bool validate);

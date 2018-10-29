@@ -52,6 +52,8 @@ const int kMaxSDELayers = 16;   // Maximum number of layers that can be handled 
 #define MAX_CSC_CLAMP_SIZE          6
 #define MAX_CSC_BIAS_SIZE           3
 
+#define MAX_SPLIT_COUNT             2
+
 enum HWDeviceType {
   kDeviceBuiltIn,
   kDevicePluggable,
@@ -241,7 +243,13 @@ enum SmartDMARevision {
 enum InlineRotationVersion {
   kInlineRotationNone,
   kInlineRotationV1,
-  kInlineRotationV1p1,
+};
+
+struct InlineRotationInfo {
+  InlineRotationVersion inrot_version = kInlineRotationNone;
+  std::vector<LayerBufferFormat> inrot_fmts_supported;
+  float max_downscale_rt = 2.2f;    // max downscale real time display
+  float max_downscale_nrt = 4.0f;   // max downsscale non-real time display
 };
 
 struct HWResourceInfo {
@@ -265,6 +273,7 @@ struct HWResourceInfo {
   uint32_t max_mixer_width = 2048;
   uint32_t max_pipe_width = 2048;
   uint32_t max_scaler_pipe_width = 2560;
+  uint32_t max_rotation_pipe_width = 1088;
   uint32_t max_cursor_size = 0;
   uint64_t max_pipe_bw =  0;
   uint32_t max_sde_clk = 0;
@@ -304,7 +313,7 @@ struct HWResourceInfo {
   uint32_t cache_size = 0;  // cache size in bytes
   HWQseedStepVersion pipe_qseed3_version = kQseed3v2;  // only valid when has_qseed3=true
   uint32_t min_prefill_lines = 0;
-  InlineRotationVersion inrot_version = kInlineRotationNone;
+  InlineRotationInfo inline_rot_info;
   std::bitset<32> src_tone_map = 0;  //!< Stores the bit mask of src tone map capability
   int secure_disp_blend_stage = -1;
 };
@@ -605,6 +614,7 @@ struct HWLayerConfig {
   HWPipeInfo left_pipe {};           // pipe for left side of output
   HWPipeInfo right_pipe {};          // pipe for right side of output
   HWRotatorSession hw_rotator_session {};
+  bool use_inline_rot = false;             // keep track of which layers inline rotation
   HWSolidfillStage hw_solidfill_stage {};
   float compression = 1.0f;
   bool use_solidfill_stage = false;

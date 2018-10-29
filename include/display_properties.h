@@ -85,6 +85,7 @@
 #define DISABLE_MULTIRECT_PROP               DISPLAY_PROP("disable_multirect")
 #define DISABLE_UBWC_FF_VOTING_PROP          DISPLAY_PROP("disable_ubwc_ff_voting")
 #define DISABLE_INLINE_ROTATOR_PROP          DISPLAY_PROP("disable_inline_rotator")
+#define DISABLE_OFFLINE_ROTATOR_PROP         DISPLAY_PROP("disable_offline_rotator")
 #define DISABLE_FB_CROPPING_PROP             DISPLAY_PROP("disable_fb_cropping")
 #define PRIORITIZE_CACHE_COMPOSITION_PROP    DISPLAY_PROP("prioritize_cache_comp")
 #define DISABLE_HW_RECOVERY_PROP             DISPLAY_PROP("disable_hw_recovery")

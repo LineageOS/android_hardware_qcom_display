@@ -304,12 +304,6 @@ void HWDeviceDRM::Registry::Register(HWLayers *hw_layers) {
 
     // layer input buffer map to fb id also applies for inline rot
     MapBufferToFbId(&layer, input_buffer);
-
-    if (hw_rotator_session->mode == kRotatorInline && hw_rotate_info->valid &&
-        hw_rotator_session->output_buffer.planes[0].fd >= 0) {
-      fbid_cache_limit_ += 1;  // account for inline rot scratch buffer
-      MapBufferToFbId(&layer, &hw_rotator_session->output_buffer);
-    }
   }
 }
 
@@ -993,7 +987,8 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
     LayerBuffer *input_buffer = &layer.input_buffer;
     HWPipeInfo *left_pipe = &hw_layers->config[i].left_pipe;
     HWPipeInfo *right_pipe = &hw_layers->config[i].right_pipe;
-    HWRotatorSession *hw_rotator_session = &hw_layers->config[i].hw_rotator_session;
+    HWLayerConfig &layer_config = hw_layers->config[i];
+    HWRotatorSession *hw_rotator_session = &layer_config.hw_rotator_session;
 
     if (hw_layers->config[i].use_solidfill_stage) {
       hw_layers->config[i].hw_solidfill_stage.solid_fill_info = layer.solid_fill_info;
@@ -1022,18 +1017,7 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
         DRMRect src = {};
         SetRect(pipe_info->src_roi, &src);
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_SRC_RECT, pipe_id, src);
-        DRMRect rot_dst = {0, 0, 0, 0};
-        if (hw_rotator_session->mode == kRotatorInline && hw_rotate_info->valid) {
-          SetRect(hw_rotate_info->dst_roi, &rot_dst);
-          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ROTATION_DST_RECT, pipe_id, rot_dst);
-          if (hw_rotator_session->output_buffer.planes[0].fd >= 0) {
-            uint32_t rot_fb_id = registry_.GetFbId(&layer,
-                                                   hw_rotator_session->output_buffer.handle_id);
-            if (rot_fb_id) {
-              drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ROT_FB_ID, pipe_id, rot_fb_id);
-            }
-          }
-        }
+
         DRMRect dst = {};
         SetRect(pipe_info->dst_roi, &dst);
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_DST_RECT, pipe_id, dst);
@@ -1041,7 +1025,7 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
         SetRect(pipe_info->excl_rect, &excl);
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_EXCL_RECT, pipe_id, excl);
         uint32_t rot_bit_mask = 0;
-        SetRotation(layer.transform, hw_rotator_session->mode, &rot_bit_mask);
+        SetRotation(layer.transform, layer_config, &rot_bit_mask);
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ROTATION, pipe_id, rot_bit_mask);
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_H_DECIMATION, pipe_id,
                                   pipe_info->horizontal_decimation);
@@ -1395,8 +1379,9 @@ void HWDeviceDRM::SetRect(const LayerRect &source, DRMRect *target) {
   target->bottom = UINT32(source.bottom);
 }
 
-void HWDeviceDRM::SetRotation(LayerTransform transform, const HWRotatorMode &mode,
+void HWDeviceDRM::SetRotation(LayerTransform transform, const HWLayerConfig &layer_config,
                               uint32_t* rot_bit_mask) {
+  HWRotatorMode mode = layer_config.hw_rotator_session.mode;
   // In offline rotation case, rotator will handle flips set via offline rotator interface.
   if (mode == kRotatorOffline) {
     *rot_bit_mask = 0;
@@ -1405,7 +1390,7 @@ void HWDeviceDRM::SetRotation(LayerTransform transform, const HWRotatorMode &mod
 
   // In no rotation case or inline rotation case, plane will handle flips
   // In DRM framework rotation is applied in counter-clockwise direction.
-  if (mode == kRotatorInline && transform.rotation == 90) {
+  if (layer_config.use_inline_rot && transform.rotation == 90) {
     // a) rotate 90 clockwise = rotate 270 counter-clockwise in DRM
     // rotate 270 is translated as hflip + vflip + rotate90
     // b) rotate 270 clockwise = rotate 90 counter-clockwise in DRM

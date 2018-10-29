@@ -108,10 +108,8 @@ static HWQseedStepVersion GetQseedStepVersion(sde_drm::QSEEDStepVersion drm_vers
 
 static InlineRotationVersion GetInRotVersion(sde_drm::InlineRotationVersion drm_version) {
   switch (drm_version) {
-    case sde_drm::InlineRotationVersion::V1:
+    case sde_drm::InlineRotationVersion::kInlineRotationV1:
       return InlineRotationVersion::kInlineRotationV1;
-    case sde_drm::InlineRotationVersion::V1p1:
-      return InlineRotationVersion::kInlineRotationV1p1;
     default:
       return kInlineRotationNone;
   }
@@ -460,13 +458,15 @@ void HWInfoDRM::PopulatePipeCaps(const sde_drm::DRMPlaneTypeInfo &info,
                                     HWResourceInfo *hw_resource) {
   hw_resource->max_pipe_width = info.max_linewidth;
   hw_resource->max_scaler_pipe_width = info.max_scaler_linewidth;
+  hw_resource->max_rotation_pipe_width = info.max_rotation_linewidth;
   hw_resource->max_scale_down = info.max_downscale;
   hw_resource->max_scale_up = info.max_upscale;
   hw_resource->has_decimation = info.max_horizontal_deci > 0 && info.max_vertical_deci > 0;
   hw_resource->max_pipe_bw = info.max_pipe_bandwidth / kKiloUnit;
   hw_resource->cache_size = info.cache_size;
   hw_resource->pipe_qseed3_version = GetQseedStepVersion(info.qseed3_version);
-  hw_resource->inrot_version = GetInRotVersion(info.inrot_version);
+  hw_resource->inline_rot_info.inrot_version = GetInRotVersion(info.inrot_version);
+  // TODO(user): Populate formats, scale ratios, width limits
 }
 
 void HWInfoDRM::PopulateSupportedFmts(HWSubBlockType sub_blk_type,

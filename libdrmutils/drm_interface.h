@@ -133,12 +133,6 @@ enum struct DRMOps {
    */
   PLANE_SET_SCALER_CONFIG,
   /*
-   * Op: Sets plane rotation destination rect
-   * Arg: uint32_t - Plane ID
-   *      DRMRect - rotator dst Rectangle
-   */
-  PLANE_SET_ROTATION_DST_RECT,
-  /*
    * Op: Sets FB Secure mode for this plane.
    * Arg: uint32_t - Plane ID
    *      uint32_t - Value of the FB Secure mode.
@@ -471,9 +465,8 @@ enum struct SmartDMARevision {
 
 /* Inline Rotation version */
 enum struct InlineRotationVersion {
-  UNKNOWN,
-  V1,
-  V1p1,   // Rotator FB ID needs to be set
+  kInlineRotationNone,
+  kInlineRotationV1,
 };
 
 /* Per CRTC Resource Info*/
@@ -535,6 +528,7 @@ struct DRMPlaneTypeInfo {
   std::vector<std::pair<uint32_t, uint64_t>> formats_supported;
   uint32_t max_linewidth;
   uint32_t max_scaler_linewidth;
+  uint32_t max_rotation_linewidth; // inline rotation limitation
   uint32_t max_upscale;
   uint32_t max_downscale;
   uint32_t max_horizontal_deci;
@@ -545,6 +539,7 @@ struct DRMPlaneTypeInfo {
   QSEEDStepVersion qseed3_version;
   bool multirect_prop_present = false;
   InlineRotationVersion inrot_version;  // inline rotation version
+  std::vector<std::pair<uint32_t, uint64_t>> inrot_fmts_supported;
   bool inverse_pma = false;
   uint32_t dgm_csc_version = 0;  // csc used with DMA
   std::map<DRMTonemapLutType, uint32_t> tonemap_lut_version_map = {};

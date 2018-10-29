@@ -710,7 +710,7 @@ std::string DisplayBase::Dump() {
       LayerRect &dst_roi = rotate.dst_roi;
       char rot[12] = { 0 };
 
-      snprintf(rot, sizeof(rot), "Rot-%s-%d", hw_rotator_session.mode == kRotatorInline ?
+      snprintf(rot, sizeof(rot), "Rot-%s-%d", layer_config.use_inline_rot ?
                "inl" : "off", count + 1);
 
       snprintf(row, sizeof(row), format, idx, comp_type, rot,
@@ -765,9 +765,6 @@ std::string DisplayBase::Dump() {
 
       LayerRect src_roi = pipe.src_roi;
       LayerRect &dst_roi = pipe.dst_roi;
-      if (hw_rotator_session.mode == kRotatorInline) {
-        src_roi = hw_rotator_session.hw_rotate_info[count].dst_roi;
-      }
 
       snprintf(z_order, sizeof(z_order), "%d", pipe.z_order);
       snprintf(flags, sizeof(flags), "0x%08x", pipe.flags);
