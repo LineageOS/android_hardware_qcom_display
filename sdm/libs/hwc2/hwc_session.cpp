@@ -1583,7 +1583,10 @@ android::status_t HWCSession::SetFrameDumpConfig(const android::Parcel *input_pa
 
   android::status_t status = 0;
 
-  for (uint32_t i = 0; i < 32 && bit_mask_display_type[i]; i++) {
+  for (uint32_t i = 0; i < bit_mask_display_type.size(); i++) {
+    if (!bit_mask_display_type[i]) {
+      continue;
+    }
     int disp_idx = GetDisplayIndex(INT(i));
     if (disp_idx == -1) {
       continue;
