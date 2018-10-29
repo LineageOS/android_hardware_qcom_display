@@ -27,8 +27,12 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <cstring>
 #include <errno.h>
 #include <drm_logger.h>
+
+#include "libdrm_macros.h"
+#include "drm/drm_fourcc.h"
 #include "drm_dpps_mgr_imp.h"
 
 #define __CLASS__ "DRMDppsManagerImp"
@@ -44,6 +48,15 @@ DRMDppsManagerIntf* GetDppsManagerIntf()
 #else
     return &dpps_dummy_mgr;
 #endif
+}
+
+DRMDppsManagerImp::~DRMDppsManagerImp() {
+  /* clean up the ION buffers for LTM */
+  DeInitLtmBuffers();
+
+  conn_id_ = -1;
+  crtc_id_ = -1;
+  drm_fd_ = -1;
 }
 
 int DRMDppsManagerImp::GetDrmResources(drmModeRes* res) {
@@ -255,11 +268,37 @@ void DRMDppsManagerImp::Init(int fd, drmModeRes* res) {
   dpps_feature_[kFeatureBacklightScale] = DRMDppsPropInfo {1 /* version */,
     DRMProperty::SDE_DSPP_BL_SCALE, prop_mgr_.GetPropertyId(DRMProperty::SDE_DSPP_BL_SCALE),
     false /* is_event */};
+  dpps_feature_[kFeatureLtm] = DRMDppsPropInfo {1 /* version */,
+    DRMProperty::SDE_LTM_VERSION, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_VERSION),
+    false /* is_event */};
+  dpps_feature_[kFeatureLtmInit] = DRMDppsPropInfo {1 /* version */,
+    DRMProperty::SDE_LTM_INIT, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_INIT),
+    false /* is_event */};
+  dpps_feature_[kFeatureLtmCfg] = DRMDppsPropInfo {1 /* version */,
+    DRMProperty::SDE_LTM_CFG, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_CFG),
+    false /* is_event */};
+  dpps_feature_[kFeatureLtmNoiseThresh] = DRMDppsPropInfo {1 /* version */,
+    DRMProperty::SDE_LTM_NOISE_THRESH, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_NOISE_THRESH),
+    false /* is_event */};
+  dpps_feature_[kFeatureLtmBufferCtrl] = DRMDppsPropInfo {1 /* version */,
+    DRMProperty::SDE_LTM_BUFFER_CTRL, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_BUFFER_CTRL),
+    false /* is_event */};
+  dpps_feature_[kFeatureLtmQueueBuffer] = DRMDppsPropInfo {1 /* version */,
+    DRMProperty::SDE_LTM_QUEUE_BUFFER, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_QUEUE_BUFFER),
+    false /* is_event */};
+  dpps_feature_[kFeatureLtmHistCtrl] = DRMDppsPropInfo {1 /* version */,
+    DRMProperty::SDE_LTM_HIST_CTRL, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_HIST_CTRL),
+    false /* is_event */};
+  dpps_feature_[kFeatureLtmVlut] = DRMDppsPropInfo {1 /* version */,
+    DRMProperty::SDE_LTM_VLUT, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_VLUT),
+    false /* is_event */};
 
   dpps_feature_[kFeaturePowerEvent] = DRMDppsPropInfo{1, DRMProperty::INVALID, 0, true /* is_event */};
   dpps_feature_[kFeatureAbaHistEvent] = DRMDppsPropInfo{1, DRMProperty::INVALID, 0, true /* is_event */};
   dpps_feature_[kFeatureBackLightEvent] = DRMDppsPropInfo{1, DRMProperty::INVALID, 0, true /* is_event */};
   dpps_feature_[kFeatureAdAttBlEvent] = DRMDppsPropInfo{1, DRMProperty::INVALID, 0, true /* is_event */};
+  dpps_feature_[kFeatureLtmHistEvent] = DRMDppsPropInfo{1, DRMProperty::INVALID, 0, true /* is_event */};
+  dpps_feature_[kFeatureLtmWbPbEvent] = DRMDppsPropInfo{1, DRMProperty::INVALID, 0, true /* is_event */};
 }
 
 void DRMDppsManagerImp::CacheDppsFeature(uint32_t obj_id, va_list args) {
@@ -334,6 +373,9 @@ void DRMDppsManagerImp::CommitDppsFeatures(drmModeAtomicReq *req, const DRMDispl
 
 void DRMDppsManagerImp::GetDppsFeatureInfo(DRMDppsFeatureInfo *info)
 {
+  int ret = 0;
+  struct DRMDppsPropInfo* prop_info;
+
   if (!info) {
     DRM_LOGE("Invalid info NULL");
     return;
@@ -345,6 +387,155 @@ void DRMDppsManagerImp::GetDppsFeatureInfo(DRMDppsFeatureInfo *info)
     return;
   }
   info->version = dpps_feature_[id].version;
+
+  if ((id == kFeatureLtmBufferCtrl) && (dpps_feature_[kFeatureLtm].prop_id != 0)) {
+    /* setup ION buffers for LTM */
+    ret = InitLtmBuffers(info);
+    if (ret) {
+      DRM_LOGE("Failed to init LTM buffers %d", ret);
+      return;
+    } else {
+      prop_info = &dpps_feature_[kFeatureLtmBufferCtrl];
+      prop_info->obj_id = crtc_id_;
+      prop_info->value = (uint64_t)&ltm_buffers_ctrl_;
+      dpps_dirty_prop_.push_back(*prop_info);
+    }
+  }
+}
+
+int DRMDppsManagerImp::InitLtmBuffers(struct DRMDppsFeatureInfo *info) {
+  int ret = 0;
+  uint32_t buffer_size, i = 0, bpp = 0;
+  void* uva;
+  struct DRMDppsLtmBuffers *buffers;
+  struct drm_prime_handle prime_req;
+  struct drm_mode_fb_cmd2 fb_obj;
+  struct drm_gem_close gem_close;
+
+  if (drm_fd_ < 0) {
+    DRM_LOGE("Invalid drm_fd_ %d", drm_fd_);
+    return -EINVAL;
+  }
+
+  if (ltm_buffers_.num_of_buffers != 0) {
+    DRM_LOGE("LTM buffer already initialized");
+    return -EALREADY;
+  }
+
+  if (!info->payload || info->payload_size != sizeof(struct DRMDppsLtmBuffers)) {
+    DRM_LOGE("Invalid payload %p size %d expected %d", info->payload, info->payload_size,
+       sizeof(struct DRMDppsLtmBuffers));
+    return -EINVAL;
+  }
+
+  buffers = (struct DRMDppsLtmBuffers *)info->payload;
+  if (buffers->num_of_buffers <= 0 || buffers->num_of_buffers > LTM_BUFFER_SIZE) {
+    DRM_LOGE("Invalid number of buffers %d", buffers->num_of_buffers);
+    return -EINVAL;
+  }
+
+  ltm_buffers_.num_of_buffers = buffers->num_of_buffers;
+
+  buffer_size = sizeof(struct drm_msm_ltm_stats_data) + LTM_GUARD_BYTES;
+  std::memset(&fb_obj, 0, sizeof(drm_mode_fb_cmd2));
+  fb_obj.pixel_format = DRM_FORMAT_YVYU;
+  /* YVYU gives us a bpp of 16 (2 bytes) so we must take that into account */
+  fb_obj.height = 2;
+  /* add extra one to compensate integer rounding */
+  fb_obj.width = buffer_size / (2 * fb_obj.height) + 1;
+  /* bpp for YVYU is 16 */
+  bpp = 16;
+  fb_obj.flags = DRM_MODE_FB_MODIFIERS;
+  fb_obj.pitches[0] = fb_obj.width * bpp / 8;
+
+  for (i = 0; i < buffers->num_of_buffers && !ret; i++) {
+    std::memset(&prime_req, 0, sizeof(drm_prime_handle));
+    prime_req.fd = buffers->ion_buffer_fd[i];
+    ret = drmIoctl(drm_fd_, DRM_IOCTL_PRIME_FD_TO_HANDLE, &prime_req);
+    if (ret) {
+      ret = -errno;
+      DRM_LOGE("failed get prime handle: %d", ret);
+      break;
+    }
+    ltm_buffers_.ion_buffer_fd[i] = buffers->ion_buffer_fd[i];
+
+    fb_obj.handles[0] = prime_req.handle;
+    ret = drmIoctl(drm_fd_, DRM_IOCTL_MODE_ADDFB2, &fb_obj);
+    if (ret) {
+      ret = -errno;
+      DRM_LOGE("return value from addFB2: %d", ret);
+      break;
+    }
+    ltm_buffers_.drm_fb_id[i] = buffers->drm_fb_id[i] = fb_obj.fb_id;
+    ltm_buffers_ctrl_.fds[i] = ltm_buffers_.drm_fb_id[i];
+
+    /**
+     * ADDFB2 will take reference to GEM handles,
+     * so drop reference taken by PrimeFDtoHandle now
+     */
+    std::memset(&gem_close, 0, sizeof(gem_close));
+    gem_close.handle = prime_req.handle;
+    ret = drmIoctl(drm_fd_, DRM_IOCTL_GEM_CLOSE, &gem_close);
+    if(ret) {
+      ret = -errno;
+      DRM_LOGE("return value from GEM_CLOSE: %d\n", ret);
+      break;
+    }
+
+    uva = drm_mmap(0, buffers->buffer_size, PROT_READ | PROT_WRITE, MAP_SHARED,
+                   buffers->ion_buffer_fd[i], 0);
+    if (uva == MAP_FAILED) {
+      ret = -errno;
+      DRM_LOGE("failed to get uva: %d", ret);
+      break;
+    }
+    ltm_buffers_.uva[i] = buffers->uva[i] = uva;
+  }
+
+  if (!ret) {
+    buffers->status = 0;
+    ltm_buffers_.buffer_size = buffers->buffer_size;
+    ltm_buffers_ctrl_.num_of_buffers = ltm_buffers_.num_of_buffers;
+    DRM_LOGV("InitLtmBuffers return successful");
+  } else {
+    DeInitLtmBuffers();
+    buffers->status = ret;
+  }
+
+  return ret;
+}
+
+int DRMDppsManagerImp::DeInitLtmBuffers() {
+  int ret = 0;
+  uint32_t i = 0;
+
+  if (drm_fd_ < 0) {
+    return -EINVAL;
+  }
+
+  for (i = 0; i < ltm_buffers_.num_of_buffers; i++) {
+    if (ltm_buffers_.uva[i]) {
+      drm_munmap(ltm_buffers_.uva[i], ltm_buffers_.buffer_size);
+      ltm_buffers_.uva[i] = NULL;
+    }
+
+    if (ltm_buffers_.drm_fb_id[i] >= 0) {
+#ifdef DRM_IOCTL_MSM_RMFB2
+      ret = drmIoctl(drm_fd_, DRM_IOCTL_MSM_RMFB2, &ltm_buffers_.drm_fb_id[i]);
+      if (ret) {
+        ret = errno;
+        DRM_LOGE("RMFB2 failed for fb_id %d with error %d", ltm_buffers_.drm_fb_id[i], ret);
+      }
+#endif
+      ltm_buffers_.drm_fb_id[i] = -1;
+    }
+    ltm_buffers_.ion_buffer_fd[i] = -1;
+  }
+
+  ltm_buffers_.num_of_buffers = 0;
+  ltm_buffers_.buffer_size = 0;
+  std::memset(&ltm_buffers_ctrl_, 0, sizeof(ltm_buffers_ctrl_));
+  return 0;
 }
 
 }  // namespace sde_drm

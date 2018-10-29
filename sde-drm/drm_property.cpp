@@ -147,6 +147,14 @@ DRMProperty DRMPropertyManager::GetPropertyEnum(const std::string &name) const {
   if (name == "idle_pc_state") { return DRMProperty::IDLE_PC_STATE; }
   if (name == "topology_control") { return DRMProperty::TOPOLOGY_CONTROL; }
   if (name == "EDID") { return DRMProperty::EDID; }
+  if (name == "SDE_DSPP_LTM_V1") { return DRMProperty::SDE_LTM_VERSION; }
+  if (name == "SDE_DSPP_LTM_INIT_V1") { return DRMProperty::SDE_LTM_INIT; }
+  if (name == "SDE_DSPP_LTM_ROI_V1") { return DRMProperty::SDE_LTM_CFG; }
+  if (name == "SDE_DSPP_LTM_HIST_THRESH_V1") { return DRMProperty::SDE_LTM_NOISE_THRESH; }
+  if (name == "SDE_DSPP_LTM_HIST_CTRL_V1") { return DRMProperty::SDE_LTM_HIST_CTRL; }
+  if (name == "SDE_DSPP_LTM_SET_BUF_V1") { return DRMProperty::SDE_LTM_BUFFER_CTRL; }
+  if (name == "SDE_DSPP_LTM_QUEUE_BUF_V1") { return DRMProperty::SDE_LTM_QUEUE_BUFFER; }
+  if (name == "SDE_DSPP_LTM_VLUT_V1") { return DRMProperty::SDE_LTM_VLUT; }
 
   return DRMProperty::INVALID;
 }

@@ -49,7 +49,7 @@ struct DRMDppsPropInfo {
 
 class DRMDppsManagerImp : public DRMDppsManagerIntf {
  public:
-  ~DRMDppsManagerImp() {}
+  ~DRMDppsManagerImp();
   void Init(int fd, drmModeRes* res);
   void CacheDppsFeature(uint32_t obj_id, va_list args);
   void CommitDppsFeatures(drmModeAtomicReq *req, const DRMDisplayToken &tok);
@@ -59,6 +59,8 @@ class DRMDppsManagerImp : public DRMDppsManagerIntf {
   int GetDrmResources(drmModeRes* res);
   int InitCrtcProps();
   int InitConnProps();
+  int InitLtmBuffers(struct DRMDppsFeatureInfo *info);
+  int DeInitLtmBuffers();
 
   struct DRMDppsPropInfo dpps_feature_[kDppsFeaturesMax];
   std::vector<struct DRMDppsPropInfo> dpps_dirty_prop_;
@@ -69,6 +71,8 @@ class DRMDppsManagerImp : public DRMDppsManagerIntf {
   int conn_id_ = -1;
   int crtc_id_ = -1;
   int drm_fd_ = -1;
+  struct drm_msm_ltm_buffers_ctrl ltm_buffers_ctrl_ = {};
+  struct DRMDppsLtmBuffers ltm_buffers_ = {};
 };
 
 class DRMDppsManagerDummyImp : public DRMDppsManagerIntf {

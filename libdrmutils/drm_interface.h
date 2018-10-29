@@ -34,6 +34,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <array>
 
 #include "xf86drm.h"
 #include "xf86drmMode.h"
@@ -692,6 +693,17 @@ enum DRMDPPSFeatureID {
   kFeatureAbaHistEvent,
   kFeatureBackLightEvent,
   kFeatureAdAttBlEvent,
+  kFeatureLtmHistEvent,
+  kFeatureLtmWbPbEvent,
+  // LTM properties
+  kFeatureLtm,
+  kFeatureLtmInit,
+  kFeatureLtmCfg,
+  kFeatureLtmNoiseThresh,
+  kFeatureLtmBufferCtrl,
+  kFeatureLtmQueueBuffer,
+  kFeatureLtmHistCtrl,
+  kFeatureLtmVlut,
   // Insert features above
   kDppsFeaturesMax,
 };
@@ -702,9 +714,20 @@ struct DppsFeaturePayload {
   uint64_t value;
 };
 
+struct DRMDppsLtmBuffers {
+  uint32_t num_of_buffers;
+  uint32_t buffer_size;
+  std::array<int, LTM_BUFFER_SIZE> ion_buffer_fd;
+  std::array<int, LTM_BUFFER_SIZE> drm_fb_id;
+  std::array<void*, LTM_BUFFER_SIZE> uva;
+  int status;
+};
+
 struct DRMDppsFeatureInfo {
   DRMDPPSFeatureID id;
   uint32_t version;
+  uint32_t payload_size;
+  void *payload;
 };
 
 enum AD4Modes {
