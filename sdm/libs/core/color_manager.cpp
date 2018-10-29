@@ -185,12 +185,6 @@ bool ColorManagerProxy::NeedsPartialUpdateDisable() {
 }
 
 DisplayError ColorManagerProxy::Commit() {
-  static bool first_cycle = true;
-  if (first_cycle) {
-    first_cycle = false;
-    return kErrorNone;
-  }
-
   Locker &locker(pp_features_.GetLocker());
   SCOPE_LOCK(locker);
 
