@@ -45,100 +45,75 @@ int kgsl_memtrack_get_memory(pid_t pid, enum memtrack_type type,
                              size_t *num_records)
 {
     size_t allocated_records = min(*num_records, ARRAY_SIZE(record_templates));
-    FILE *fp;
-    char line[1024];
-    char tmp[128];
+    char syspath[128];
     size_t accounted_size = 0;
     size_t unaccounted_size = 0;
+    FILE *fp;
+    int ret;
 
     *num_records = ARRAY_SIZE(record_templates);
 
     /* fastpath to return the necessary number of records */
-    if (allocated_records == 0) {
+    if (allocated_records == 0)
         return 0;
-    }
 
     memcpy(records, record_templates,
-           sizeof(struct memtrack_record) * allocated_records);
+            sizeof(struct memtrack_record) * allocated_records);
 
-    snprintf(tmp, sizeof(tmp), "/d/kgsl/proc/%d/mem", pid);
-    fp = fopen(tmp, "r");
-    if (fp == NULL) {
-        return -errno;
-    }
+    if (type == MEMTRACK_TYPE_GL) {
 
-    /* Go through each line of <pid>/mem file and for every entry of type "gpumem"
-     * check if the gpubuffer entry is usermapped or not. If the entry is usermapped
-     * count the entry as accounted else count the entry as unaccounted.
-     */
-    while (1) {
-        unsigned long size, mapsize;
-        char line_type[7];
-        char flags[10];
-        char line_usage[19];
-        int ret, egl_surface_count = 0, egl_image_count = 0;
+        snprintf(syspath, sizeof(syspath),
+                 "/sys/class/kgsl/kgsl/proc/%d/gpumem_mapped", pid);
 
-        if (fgets(line, sizeof(line), fp) == NULL) {
-            break;
-        }
+        fp = fopen(syspath, "r");
+        if (fp == NULL)
+            return -errno;
 
-        /* Format:
-         *  gpuaddr useraddr     size    id flags       type            usage sglen mapsize eglsrf eglimg
-         * 545ba000 545ba000     4096     1 -----pY     gpumem      arraybuffer     1  4096      0      0
-         */
-        ret = sscanf(line, "%*x %*x %lu %*d %9s %6s %18s %*d %lu %6d %6d\n",
-                       &size, flags, line_type, line_usage, &mapsize,
-                       &egl_surface_count, &egl_image_count);
-        if (ret != 7) {
-            continue;
-        }
-
-        if (size == 0) {
+        ret = fscanf(fp, "%zu", &accounted_size);
+        if (ret != 1) {
             fclose(fp);
             return -EINVAL;
         }
+        fclose(fp);
 
-        if (unaccounted_size + size < size) {
+        snprintf(syspath, sizeof(syspath),
+                 "/sys/class/kgsl/kgsl/proc/%d/gpumem_unmapped", pid);
+
+        fp = fopen(syspath, "r");
+        if (fp == NULL) {
             fclose(fp);
-            return -ERANGE;
+            return -errno;
         }
 
-        if (type == MEMTRACK_TYPE_GL && strcmp(line_type, "gpumem") == 0) {
-
-            if (flags[6] == 'Y') {
-                if (accounted_size + mapsize < accounted_size) {
-                    fclose(fp);
-                    return -ERANGE;
-                }
-
-                accounted_size += mapsize;
-
-                if (mapsize > size) {
-                    fclose(fp);
-                    return -EINVAL;
-                }
-                unaccounted_size += size - mapsize;
-            } else {
-                unaccounted_size += size;
-            }
-        } else if (type == MEMTRACK_TYPE_GRAPHICS && strcmp(line_type, "ion") == 0) {
-            if (strcmp(line_usage, "egl_surface") == 0) {
-                unaccounted_size += size;
-            }
-            else if (egl_surface_count == 0) {
-                unaccounted_size += size / (egl_image_count ? egl_image_count : 1);
-            }
+        ret = fscanf(fp, "%zu", &unaccounted_size);
+        if (ret != 1) {
+            fclose(fp);
+            return -EINVAL;
         }
+        fclose(fp);
+
+    } else if (type == MEMTRACK_TYPE_GRAPHICS) {
+
+        snprintf(syspath, sizeof(syspath),
+                 "/sys/class/kgsl/kgsl/proc/%d/imported_mem", pid);
+
+        fp = fopen(syspath, "r");
+        if (fp == NULL)
+            return -errno;
+
+        ret = fscanf(fp, "%zu", &unaccounted_size);
+        if (ret != 1) {
+            fclose(fp);
+            return -EINVAL;
+        }
+        fclose(fp);
     }
 
-    if (allocated_records > 0) {
-        records[0].size_in_bytes = accounted_size;
-    }
-    if (allocated_records > 1) {
-        records[1].size_in_bytes = unaccounted_size;
-    }
+    if (allocated_records > 0)
+    records[0].size_in_bytes = accounted_size;
 
-    fclose(fp);
+    if (allocated_records > 1)
+    records[1].size_in_bytes = unaccounted_size;
 
     return 0;
 }
