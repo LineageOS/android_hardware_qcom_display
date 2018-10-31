@@ -684,6 +684,7 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
             *color_space = HAL_CSC_ITU_R_709;
             break;
           case ColorPrimaries_BT601_6_525:
+          case ColorPrimaries_BT601_6_625:
             *color_space = ((color_metadata.range) ? HAL_CSC_ITU_R_601_FR : HAL_CSC_ITU_R_601);
             break;
           case ColorPrimaries_BT2020:

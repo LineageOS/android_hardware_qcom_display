@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -562,7 +562,12 @@ DisplayError HWDevice::Commit(HWLayers *hw_layers) {
   return kErrorNone;
 }
 
-DisplayError HWDevice::Flush() {
+DisplayError HWDevice::Flush(bool secure) {
+  if (hw_resource_.has_ppp && !secure) {
+    DLOGI_IF(kTagDriverConfig, "Avoid flush for non-secure use cases");
+    return kErrorNone;
+  }
+
   ResetDisplayParams();
   mdp_layer_commit_v1 &mdp_commit = mdp_disp_commit_.commit_v1;
   mdp_commit.input_layer_cnt = 0;
@@ -578,6 +583,7 @@ DisplayError HWDevice::Flush() {
     DumpLayerCommit(mdp_disp_commit_);
     return kErrorHardware;
   }
+
   return kErrorNone;
 }
 

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -72,7 +72,7 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError Standby();
   virtual DisplayError Validate(HWLayers *hw_layers);
   virtual DisplayError Commit(HWLayers *hw_layers);
-  virtual DisplayError Flush();
+  virtual DisplayError Flush(bool secure);
   virtual DisplayError GetPPFeaturesVersion(PPFeatureVersion *vers);
   virtual DisplayError SetPPFeatures(PPFeaturesConfig *feature_list);
   virtual DisplayError SetVSyncState(bool enable);
@@ -111,7 +111,6 @@ class HWDeviceDRM : public HWInterface {
   void PopulateHWPanelInfo();
   void GetHWDisplayPortAndMode();
   void GetHWPanelMaxBrightness();
-  void ResetDisplayParams();
   bool EnableHotPlugDetection(int enable);
   void UpdateMixerAttributes();
   void InitializeConfigs();
