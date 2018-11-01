@@ -874,18 +874,9 @@ HWC2::Error HWCDisplay::GetDisplayConfigs(uint32_t *out_num_configs, hwc2_config
 HWC2::Error HWCDisplay::GetDisplayAttribute(hwc2_config_t config, HWC2::Attribute attribute,
                                             int32_t *out_value) {
   DisplayConfigVariableInfo variable_config;
-  // Get display attributes from config index only if resolution switch is supported.
-  // Otherwise always send mixer attributes. This is to support destination scaler.
-  if (num_configs_ > 1) {
-    if (GetDisplayAttributesForConfig(INT(config), &variable_config) != kErrorNone) {
-      DLOGE("Get variable config failed");
-      return HWC2::Error::BadDisplay;
-    }
-  } else {
-    if (display_intf_->GetFrameBufferConfig(&variable_config) != kErrorNone) {
-      DLOGV("Get variable config failed");
-      return HWC2::Error::BadDisplay;
-    }
+  if (GetDisplayAttributesForConfig(INT(config), &variable_config) != kErrorNone) {
+    DLOGE("Get variable config failed");
+    return HWC2::Error::BadDisplay;
   }
 
   variable_config.x_pixels -= UINT32(window_rect_.right + window_rect_.left);
@@ -995,13 +986,7 @@ HWC2::Error HWCDisplay::GetActiveConfig(hwc2_config_t *out_config) {
     return HWC2::Error::BadDisplay;
   }
 
-  uint32_t active_index = 0;
-  if (GetActiveDisplayConfig(&active_index) != kErrorNone) {
-    return HWC2::Error::BadConfig;
-  }
-
-  *out_config = active_index;
-
+  GetActiveDisplayConfig(out_config);
   return HWC2::Error::None;
 }
 
@@ -1462,7 +1447,6 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
     dump_frame_count_--;
     dump_frame_index_++;
   }
-  config_pending_ = false;
 
   geometry_changes_ = GeometryChanges::kNone;
   flush_ = false;
@@ -2075,23 +2059,20 @@ void HWCDisplay::SetSecureDisplay(bool secure_display_active) {
 }
 
 int HWCDisplay::SetActiveDisplayConfig(uint32_t config) {
-  if (display_config_ == config) {
+  uint32_t current_config = 0;
+  display_intf_->GetActiveConfig(&current_config);
+  if (config == current_config) {
     return 0;
   }
-  display_config_ = config;
-  config_pending_ = true;
-  validated_ = false;
 
+  validated_ = false;
+  display_intf_->SetActiveConfig(config);
   callbacks_->Refresh(id_);
 
   return 0;
 }
 
 int HWCDisplay::GetActiveDisplayConfig(uint32_t *config) {
-  if (config_pending_) {
-    *config = display_config_;
-    return 0;
-  }
   return display_intf_->GetActiveConfig(config) == kErrorNone ? 0 : -1;
 }
 

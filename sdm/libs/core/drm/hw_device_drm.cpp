@@ -742,23 +742,12 @@ void HWDeviceDRM::GetHWDisplayPortAndMode() {
 }
 
 DisplayError HWDeviceDRM::GetActiveConfig(uint32_t *active_config) {
-  if (IsResolutionSwitchEnabled()) {
-    *active_config = current_mode_index_;
-  } else {
-    *active_config = 0;
-  }
+  *active_config = current_mode_index_;
   return kErrorNone;
 }
 
 DisplayError HWDeviceDRM::GetNumDisplayAttributes(uint32_t *count) {
-  if (IsResolutionSwitchEnabled()) {
-    *count = UINT32(display_attributes_.size());
-    if (*count <= 0) {
-       return kErrorHardware;
-    }
-  } else {
-    *count = 1;
-  }
+  *count = UINT32(display_attributes_.size());
   return kErrorNone;
 }
 
@@ -767,11 +756,7 @@ DisplayError HWDeviceDRM::GetDisplayAttributes(uint32_t index,
   if (index >= display_attributes_.size()) {
     return kErrorParameters;
   }
-  if (IsResolutionSwitchEnabled()) {
-    *display_attributes = display_attributes_[index];
-  } else {
-    *display_attributes = display_attributes_[current_mode_index_];
-  }
+  *display_attributes = display_attributes_[index];
   return kErrorNone;
 }
 
@@ -791,10 +776,6 @@ DisplayError HWDeviceDRM::SetDisplayFormat(uint32_t index, DisplayInterfaceForma
 }
 
 DisplayError HWDeviceDRM::SetDisplayAttributes(uint32_t index) {
-  if (!IsResolutionSwitchEnabled()) {
-    return kErrorNotSupported;
-  }
-
   if (index >= display_attributes_.size()) {
     DLOGE("Invalid mode index %d mode size %d", index, UINT32(display_attributes_.size()));
     return kErrorParameters;
