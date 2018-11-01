@@ -306,6 +306,7 @@ class HWCDisplay : public DisplayEventHandler {
   uint32_t geometry_changes_ = GeometryChanges::kNone;
   bool skip_validate_ = false;
   bool animating_ = false;
+  bool fbt_valid_ = false;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {
