@@ -77,6 +77,7 @@ DisplayError DisplayBase::Init() {
   error = Debug::GetMixerResolution(&mixer_attributes_.width, &mixer_attributes_.height);
   if (error == kErrorNone) {
     hw_intf_->SetMixerAttributes(mixer_attributes_);
+    custom_mixer_resolution_ = true;
   }
 
   error = hw_intf_->GetMixerAttributes(&mixer_attributes_);
@@ -417,6 +418,10 @@ DisplayError DisplayBase::GetConfig(uint32_t index, DisplayConfigVariableInfo *v
   HWDisplayAttributes attrib;
   if (hw_intf_->GetDisplayAttributes(index, &attrib) == kErrorNone) {
     *variable_info = attrib;
+    if (custom_mixer_resolution_) {
+      variable_info->x_pixels = fb_config_.x_pixels;
+      variable_info->y_pixels = fb_config_.y_pixels;
+    }
     return kErrorNone;
   }
 
