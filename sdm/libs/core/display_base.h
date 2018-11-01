@@ -223,6 +223,7 @@ class DisplayBase : public DisplayInterface {
   bool gpu_fallback_ = false;
   HWQosData default_qos_data_;
   bool lut_swap_ = false;
+  bool custom_mixer_resolution_ = false;
 };
 
 }  // namespace sdm
