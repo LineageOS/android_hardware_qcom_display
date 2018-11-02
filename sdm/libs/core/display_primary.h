@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -51,6 +51,9 @@ class DisplayPrimary : public DisplayBase, HWEventHandler {
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate);
   virtual DisplayError SetPanelBrightness(int level);
   virtual DisplayError GetPanelBrightness(int *level);
+  virtual DisplayError SetDynamicDSIClock(uint64_t bitclk);
+  virtual DisplayError GetDynamicDSIClock(uint64_t *bitclk);
+  virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates);
 
   // Implement the HWEventHandlers
   virtual DisplayError VSync(int64_t timestamp);
@@ -66,6 +69,7 @@ class DisplayPrimary : public DisplayBase, HWEventHandler {
       HWEvent::SHOW_BLANK_EVENT, HWEvent::THERMAL_LEVEL, HWEvent::IDLE_POWER_COLLAPSE };
   bool avr_prop_disabled_ = false;
   bool switch_to_cmd_ = false;
+  uint64_t bitclk_ = 0;
 };
 
 }  // namespace sdm
