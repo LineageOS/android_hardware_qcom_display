@@ -469,6 +469,12 @@ int BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_han
   gralloc1_consumer_usage_t cons_usage = descriptor.GetConsumerUsage();
   uint32_t layer_count = descriptor.GetLayerCount();
 
+  // Check if GPU supports requested hardware buffer usage
+  if (!IsGPUSupportedHwBuffer(prod_usage)) {
+    ALOGE("AllocateBuffer - Requested HW Buffer usage not supported by GPU");
+    return GRALLOC1_ERROR_UNSUPPORTED;
+  }
+
   // Get implementation defined format
   int gralloc_format = allocator_->GetImplDefinedFormat(prod_usage, cons_usage, format);
 

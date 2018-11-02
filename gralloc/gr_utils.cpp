@@ -851,4 +851,18 @@ int GetBufferLayout(private_handle_t *hnd, uint32_t stride[4],
   return 0;
 }
 
+bool IsGPUSupportedHwBuffer(gralloc1_producer_usage_t prod_usage) {
+  if ((prod_usage & GRALLOC1_PRODUCER_USAGE_PROTECTED) &&
+       ((prod_usage & GRALLOC1_PRODUCER_USAGE_GPU_RENDER_TARGET)  ||
+        (prod_usage &  GRALLOC1_PRODUCER_USAGE_GPU_SAMPLED_IMAGE) ||
+        (prod_usage & GRALLOC1_PRODUCER_USAGE_GPU_DATA_BUFFER) ||
+        (prod_usage & GRALLOC1_PRODUCER_USAGE_GPU_CUBE_MAP) ||
+        (prod_usage & GRALLOC1_PRODUCER_USAGE_GPU_MIPMAP_COMPLETE))) {
+    if (!AdrenoMemInfo::GetInstance()->isSecureContextSupportedByGpu()) {
+      return false;
+    }
+  }
+  return true;
+}
+
 }  // namespace gralloc1
