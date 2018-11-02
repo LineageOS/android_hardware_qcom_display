@@ -219,6 +219,8 @@ bool HasAlphaComponent(int32_t format);
 
 void GetDRMFormat(uint32_t format, uint32_t flags, uint32_t *drm_format,
                   uint64_t *drm_format_modifier);
-}  // namespace gralloc
+bool IsGPUSupportedHwBuffer(uint64_t usage);
+
+}  // namespace gralloc1
 
 #endif  // __GR_UTILS_H__
