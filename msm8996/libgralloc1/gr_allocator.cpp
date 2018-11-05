@@ -613,11 +613,12 @@ bool Allocator::IsUBwcEnabled(int format, gralloc1_producer_usage_t prod_usage,
   // Allow UBWC, if an OpenGL client sets UBWC usage flag and GPU plus MDP
   // support the format. OR if a non-OpenGL client like Rotator, sets UBWC
   // usage flag and MDP supports the format.
-  if ((prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_ALLOC_UBWC) && IsUBwcSupported(format)) {
-    bool enable = true;
+  if (IsUBwcSupported(format)) {
+    bool enable = (prod_usage & GRALLOC1_PRODUCER_USAGE_PRIVATE_ALLOC_UBWC) |
+                  (cons_usage & GRALLOC1_CONSUMER_USAGE_CLIENT_TARGET);
     // Query GPU for UBWC only if buffer is intended to be used by GPU.
-    if ((cons_usage & GRALLOC1_CONSUMER_USAGE_GPU_TEXTURE) ||
-        (prod_usage & GRALLOC1_PRODUCER_USAGE_GPU_RENDER_TARGET)) {
+    if (enable && ((cons_usage & GRALLOC1_CONSUMER_USAGE_GPU_TEXTURE) ||
+                   (prod_usage & GRALLOC1_PRODUCER_USAGE_GPU_RENDER_TARGET))) {
       enable = adreno_helper_->IsUBWCSupportedByGPU(format);
     }
 
