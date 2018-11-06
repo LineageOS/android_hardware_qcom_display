@@ -323,7 +323,7 @@ HWC2::Error HWCDisplayPluggable::SetColorModeWithRenderIntent(ColorMode mode, Re
     return status;
   }
 
-  callbacks_->Refresh(id_);
+  callbacks_->Refresh(HWC_DISPLAY_EXTERNAL);
   validated_ = false;
 
   return status;
