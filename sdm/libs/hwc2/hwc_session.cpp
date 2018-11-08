@@ -506,6 +506,11 @@ static int32_t GetRenderIntents(hwc2_device_t *device, hwc2_display_t display,
   if (out_num_intents == nullptr) {
     return HWC2_ERROR_BAD_PARAMETER;
   }
+
+  if (mode < ColorMode::NATIVE || mode > ColorMode::BT2100_HLG) {
+    DLOGE("Invalid ColorMode: %d", mode);
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::GetRenderIntents, mode,
                                          out_num_intents, out_intents);
 }
@@ -733,6 +738,11 @@ int32_t HWCSession::SetColorModeWithRenderIntent(hwc2_device_t *device, hwc2_dis
     return HWC2_ERROR_BAD_PARAMETER;
   }
   auto render_intent = static_cast<RenderIntent>(int_render_intent);
+  if ((render_intent < RenderIntent::COLORIMETRIC) ||
+      (render_intent > RenderIntent::TONE_MAP_ENHANCE)) {
+    DLOGE("Invalid RenderIntent: %d", render_intent);
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::SetColorModeWithRenderIntent,
                                          mode, render_intent);
 }
@@ -891,7 +901,7 @@ int32_t HWCSession::SetPowerMode(hwc2_device_t *device, hwc2_display_t display, 
     hwc_session->idle_pc_ref_cnt_ = 0;
   }
 
-  hwc_session->UpdateVsyncSource(display);
+  hwc_session->UpdateVsyncSource();
 
   return HWC2_ERROR_NONE;
 }
@@ -1573,7 +1583,10 @@ android::status_t HWCSession::SetFrameDumpConfig(const android::Parcel *input_pa
 
   android::status_t status = 0;
 
-  for (uint32_t i = 0; i < 32 && bit_mask_display_type[i]; i++) {
+  for (uint32_t i = 0; i < bit_mask_display_type.size(); i++) {
+    if (!bit_mask_display_type[i]) {
+      continue;
+    }
     int disp_idx = GetDisplayIndex(INT(i));
     if (disp_idx == -1) {
       continue;
@@ -1633,6 +1646,10 @@ android::status_t HWCSession::SetColorModeOverride(const android::Parcel *input_
     return -EINVAL;
   }
 
+  if (mode < ColorMode::NATIVE || mode > ColorMode::BT2100_HLG) {
+    DLOGE("Invalid ColorMode: %d", mode);
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
   auto err = CallDisplayFunction(device, static_cast<hwc2_display_t>(disp_idx),
                                  &HWCDisplay::SetColorMode, mode);
   if (err != HWC2_ERROR_NONE)
@@ -1670,6 +1687,16 @@ android::status_t HWCSession::SetColorModeWithRenderIntentOverride(
   auto mode = static_cast<ColorMode>(input_parcel->readInt32());
   auto intent = static_cast<RenderIntent>(input_parcel->readInt32());
   auto device = static_cast<hwc2_device_t *>(this);
+
+  if (mode < ColorMode::NATIVE || mode > ColorMode::BT2100_HLG) {
+    DLOGE("Invalid ColorMode: %d", mode);
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (intent < RenderIntent::COLORIMETRIC || intent > RenderIntent::TONE_MAP_ENHANCE) {
+    DLOGE("Invalid RenderIntent: %d", intent);
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
 
   auto err =
       CallDisplayFunction(device, display, &HWCDisplay::SetColorModeWithRenderIntent, mode, intent);
@@ -2298,6 +2325,7 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
   for (auto client_id : pending_hotplugs) {
     DLOGI("Notify hotplug display connected: client id = %d", client_id);
     callbacks_.Hotplug(client_id, HWC2::Connection::Connected);
+    UpdateVsyncSource();
   }
 
   return 0;
@@ -2369,6 +2397,7 @@ void HWCSession::DestroyDisplay(DisplayMapInfo *map_info) {
     }
     hwc_display = nullptr;
     map_info->Reset();
+    UpdateVsyncSource();
   }
 
   if (notify_hotplug) {
@@ -2631,46 +2660,49 @@ android::status_t HWCSession::SetQSyncMode(const android::Parcel *input_parcel) 
   return CallDisplayFunction(device, HWC_DISPLAY_PRIMARY, &HWCDisplay::SetQSyncMode, qsync_mode);
 }
 
-void HWCSession::UpdateVsyncSource(hwc2_display_t display) {
-  // Nothing to do if this display is not source for vysnc currently and it is non-primary.
+void HWCSession::UpdateVsyncSource() {
   hwc2_display_t active_source = callbacks_.GetVsyncSource();
-  if (display != active_source && display != HWC_DISPLAY_PRIMARY) {
-    DLOGI("Display = %d is not source for vsync and non-primary", display);
+  hwc2_display_t next_vsync_source = GetNextVsyncSource();
+  if (active_source == next_vsync_source) {
     return;
   }
 
-  HWC2::Vsync vsync_mode = hwc_display_[active_source]->GetLastVsyncMode();
-  HWC2::PowerMode power_mode = hwc_display_[display]->GetLastPowerMode();
+  callbacks_.SetSwapVsync(next_vsync_source, HWC_DISPLAY_PRIMARY);
+  HWC2::PowerMode power_mode = hwc_display_[next_vsync_source]->GetLastPowerMode();
 
+  // Skip enabling vsync if display is Off, happens only for default source ie; primary.
+  if (power_mode == HWC2::PowerMode::Off) {
+    return;
+  }
+
+  HWC2::Vsync vsync_mode = hwc_display_[active_source] ?
+                           hwc_display_[active_source]->GetLastVsyncMode() : HWC2::Vsync::Enable;
+  hwc_display_[next_vsync_source]->SetVsyncEnabled(vsync_mode);
+  DLOGI("active_source %d next_vsync_source %d", active_source, next_vsync_source);
+}
+
+hwc2_display_t HWCSession::GetNextVsyncSource() {
   // If primary display is powered off, change vsync source to next builtin display.
   // If primary display is powerd on, change vsync source back to primary display.
-  if (power_mode == HWC2::PowerMode::Off) {
-    hwc2_display_t next_vsync_source = HWC_DISPLAY_PRIMARY;
-    for (auto &info : map_info_builtin_) {
-      auto &hwc_display = hwc_display_[info.client_id];
-      if (!hwc_display) {
-        continue;
-      }
+  // First check for active builtins. If not found switch to pluggable displays.
 
-      if (hwc_display->GetLastPowerMode() != HWC2::PowerMode::Off) {
-        next_vsync_source = info.client_id;
-        DLOGI("Swap vsync source to display = %d", next_vsync_source);
-        break;
-      }
+  std::vector<DisplayMapInfo> map_info = {map_info_primary_};
+  std::copy(map_info_builtin_.begin(), map_info_builtin_.end(), std::back_inserter(map_info));
+  std::copy(map_info_pluggable_.begin(), map_info_pluggable_.end(), std::back_inserter(map_info));
+
+  for (auto &info : map_info) {
+    auto &hwc_display = hwc_display_[info.client_id];
+    if (!hwc_display) {
+      continue;
     }
 
-    // No other active builtin display is present.
-    if (next_vsync_source == HWC_DISPLAY_PRIMARY) {
-      DLOGI("No other active builtin display, nothing to do.");
-      return;
+    if (hwc_display->GetLastPowerMode() != HWC2::PowerMode::Off) {
+      return info.client_id;
     }
-
-    callbacks_.SetSwapVsync(next_vsync_source, HWC_DISPLAY_PRIMARY);
-    hwc_display_[next_vsync_source]->SetVsyncEnabled(vsync_mode);
-  } else if (display == HWC_DISPLAY_PRIMARY) {
-    callbacks_.SetSwapVsync(HWC_DISPLAY_PRIMARY, HWC_DISPLAY_PRIMARY);
-    hwc_display_[HWC_DISPLAY_PRIMARY]->SetVsyncEnabled(vsync_mode);
   }
+
+  // No Vsync source found. Default to main display.
+  return HWC_DISPLAY_PRIMARY;
 }
 
 android::status_t HWCSession::SetIdlePC(const android::Parcel *input_parcel) {

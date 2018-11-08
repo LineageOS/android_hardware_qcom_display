@@ -9,10 +9,10 @@ PRODUCT_PACKAGES += \
     android.hardware.memtrack@1.0-service \
     android.hardware.light@2.0-impl \
     android.hardware.light@2.0-service \
-    gralloc.talos \
-    lights.talos \
-    hwcomposer.talos \
-    memtrack.talos \
+    gralloc.trinket \
+    lights.trinket \
+    hwcomposer.trinket \
+    memtrack.trinket \
     libqdutils \
     libqdMetaData \
     libqdMetaData.system \
@@ -33,8 +33,6 @@ TARGET_USES_HWC2 := true
 TARGET_USES_QCOM_DISPLAY_BSP := true
 TARGET_USES_COLOR_METADATA := true
 TARGET_HAS_WIDE_COLOR_DISPLAY := true
-TARGET_HAS_HDR_DISPLAY := true
-TARGET_USES_DISPLAY_RENDER_INTENTS := true
 
 PRODUCT_PROPERTY_OVERRIDES += \
     persist.demo.hdmirotationlock=false \
@@ -52,8 +50,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_excl_rect=0 \
     vendor.display.comp_mask=0 \
     vendor.display.disable_hw_recovery=1 \
-    vendor.display.enable_default_color_mode=1 \
-    vendor.display.drop_skewed_vsync=1
+    vendor.display.enable_default_color_mode=1
 
 # This matrix should be in column major order, per SurfaceFlinger requirement
 #  1.16868   -0.16868    0.00000

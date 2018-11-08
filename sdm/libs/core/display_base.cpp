@@ -1060,7 +1060,7 @@ DisplayError DisplayBase::SetVSyncState(bool enable) {
     error = hw_intf_->SetVSyncState(enable);
     if (error == kErrorNotSupported) {
       if (drop_skewed_vsync_ && (hw_panel_info_.mode == kModeVideo) &&
-        enable && (current_refresh_rate_ == hw_panel_info_.min_fps)) {
+        enable && (current_refresh_rate_ < hw_panel_info_.max_fps)) {
         drop_hw_vsync_ = true;
       }
       error = hw_events_intf_->SetEventState(HWEvent::VSYNC, enable);

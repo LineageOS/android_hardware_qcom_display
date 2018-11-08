@@ -215,6 +215,7 @@ class HWDeviceDRM : public HWInterface {
   bool secure_display_active_ = false;
   uint64_t debug_dump_count_ = 0;
   bool synchronous_commit_ = false;
+  uint32_t topology_control_ = 0;
 
  private:
   std::string interface_str_ = "DSI";
