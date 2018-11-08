@@ -216,6 +216,7 @@ class DisplayBase : public DisplayInterface {
   bool drop_hw_vsync_ = false;
   uint32_t current_refresh_rate_ = 0;
   bool drop_skewed_vsync_ = false;
+  bool custom_mixer_resolution_ = false;
 
   static Locker display_power_reset_lock_;
   static bool display_power_reset_pending_;
