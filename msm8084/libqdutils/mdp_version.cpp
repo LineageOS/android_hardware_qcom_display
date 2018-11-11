@@ -29,6 +29,7 @@
 #include <cutils/log.h>
 #include <linux/msm_mdp.h>
 #include "mdp_version.h"
+#include <string.h>
 
 #define DEBUG 0
 
