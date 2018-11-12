@@ -77,7 +77,7 @@ inline int roundUpToPageSize(int x) {
 #define GRALLOC1_PRODUCER_USAGE_PRIVATE_10BIT_TP GRALLOC_USAGE_PRIVATE_10BIT_TP
 #define GRALLOC1_CONSUMER_USAGE_PRIVATE_10BIT_TP GRALLOC_USAGE_PRIVATE_10BIT_TP
 
-/* This flag is used to indicate video NV21 format  */
+/* This flag is used to indicate video NV21 format */
 #define GRALLOC1_PRODUCER_USAGE_PRIVATE_VIDEO_NV21_ENCODER (1ULL << 48)
 
 // for PERFORM API :
