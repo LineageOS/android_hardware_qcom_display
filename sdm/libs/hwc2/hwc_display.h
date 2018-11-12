@@ -328,6 +328,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool animating_ = false;
   bool active_ = true;
   bool layers_bypassed_ = false;
+  int fbt_release_fence_ = -1;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {

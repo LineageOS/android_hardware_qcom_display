@@ -182,5 +182,43 @@ DisplayError DisplayVirtual::GetColorModeCount(uint32_t *mode_count) {
   return kErrorNone;
 }
 
+DisplayError DisplayVirtual::SetDisplayState(DisplayState state, int *release_fence) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  DLOGI("Set state = %d, display %d-%d", state, display_id_, display_type_);
+
+  if (state == state_) {
+    DLOGI("Same state transition is requested.");
+    return kErrorNone;
+  }
+
+  DisplayError error = kErrorNone;
+  bool active = false;
+  switch (state) {
+  case kStateOff:
+    hw_layers_.info.hw_layers.clear();
+    error = hw_intf_->PowerOff();
+    break;
+
+  case kStateOn:
+    error = hw_intf_->PowerOn(default_qos_data_, release_fence);
+    active = true;
+    break;
+
+  default:
+    DLOGE("Spurious state = %d transition requested.", state);
+    return kErrorParameters;
+  }
+
+  if (error != kErrorNone) {
+    return error;
+  }
+  active_ = active;
+  state_ = state;
+  last_power_mode_ = state;
+  comp_manager_->SetDisplayState(display_comp_ctx_, state, display_id_, *release_fence);
+
+  return kErrorNone;
+}
+
 }  // namespace sdm
 
