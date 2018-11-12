@@ -370,13 +370,15 @@ DisplayError HWInfo::GetMDSSRotatorInfo(HWResourceInfo *hw_resource) {
         hw_resource->hw_rot_info.device_path = "/dev/mdss_rotator";
       } else if (!strncmp(tokens[0], "downscale", strlen("downscale"))) {
         hw_resource->hw_rot_info.has_downscale = UINT8(atoi(tokens[1]));
+      } else if (!strncmp(tokens[0], "max_line_width", strlen("max_line_width"))) {
+        hw_resource->hw_rot_info.max_line_width = UINT64(atoi(tokens[1]));
       }
     }
   }
 
-  DLOGI("MDSS Rotator: Count = %d, Downscale = %d, Min_downscale = %f",
+  DLOGI("MDSS Rotator: Count = %d, Downscale = %d, Min_downscale = %f Max_line_width= %d",
         hw_resource->hw_rot_info.num_rotator, hw_resource->hw_rot_info.has_downscale,
-        hw_resource->hw_rot_info.min_downscale);
+        hw_resource->hw_rot_info.min_downscale, hw_resource->hw_rot_info.max_line_width);
 
   return kErrorNone;
 }
@@ -416,6 +418,8 @@ DisplayError HWInfo::GetV4L2RotatorInfo(HWResourceInfo *hw_resource) {
                  hw_resource->hw_rot_info.downscale_compression = UINT8(atoi(tokens[1]));
                } else if (!strncmp(tokens[0], "min_downscale", strlen("min_downscale"))) {
                  hw_resource->hw_rot_info.min_downscale = FLOAT(atof(tokens[1]));
+               } else if (!strncmp(tokens[0], "max_line_width", strlen("max_line_width"))) {
+                 hw_resource->hw_rot_info.max_line_width = UINT64(atoi(tokens[1]));
                }
              }
            }
@@ -427,9 +431,10 @@ DisplayError HWInfo::GetV4L2RotatorInfo(HWResourceInfo *hw_resource) {
     }
   }
 
-  DLOGI("V4L2 Rotator: Count = %d, Downscale = %d, Min_downscale = %f, Downscale_compression = %d",
-        hw_resource->hw_rot_info.num_rotator, hw_resource->hw_rot_info.has_downscale,
-        hw_resource->hw_rot_info.min_downscale, hw_resource->hw_rot_info.downscale_compression);
+  DLOGI("V4L2 Rotator: Count = %d, Downscale = %d, Min_downscale = %f, Downscale_compression =%d", \
+        "Max_line_width = %d", hw_resource->hw_rot_info.num_rotator,
+        hw_resource->hw_rot_info.has_downscale, hw_resource->hw_rot_info.min_downscale,
+        hw_resource->hw_rot_info.downscale_compression, hw_resource->hw_rot_info.max_line_width);
 
   return kErrorNone;
 }
