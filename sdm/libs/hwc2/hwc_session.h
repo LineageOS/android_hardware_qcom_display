@@ -20,7 +20,9 @@
 #ifndef __HWC_SESSION_H__
 #define __HWC_SESSION_H__
 
-#ifdef DISPLAY_CONFIG_1_2
+#ifdef DISPLAY_CONFIG_1_3
+#include <vendor/display/config/1.3/IDisplayConfig.h>
+#elif DISPLAY_CONFIG_1_2
 #include <vendor/display/config/1.2/IDisplayConfig.h>
 #elif DISPLAY_CONFIG_1_1
 #include <vendor/display/config/1.1/IDisplayConfig.h>
@@ -47,7 +49,9 @@
 
 namespace sdm {
 
-#ifdef DISPLAY_CONFIG_1_2
+#ifdef DISPLAY_CONFIG_1_3
+using vendor::display::config::V1_3::IDisplayConfig;
+#elif DISPLAY_CONFIG_1_2
 using vendor::display::config::V1_2::IDisplayConfig;
 #elif DISPLAY_CONFIG_1_1
 using vendor::display::config::V1_1::IDisplayConfig;
@@ -263,6 +267,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
 #ifdef DISPLAY_CONFIG_1_2
   Return<int32_t> setDisplayIndex(IDisplayConfig::DisplayTypeExt disp_type,
                                   uint32_t base, uint32_t count) override;
+#endif
+#ifdef DISPLAY_CONFIG_1_3
+  Return<int32_t> controlIdlePowerCollapse(bool enable, bool synchronous) override;
 #endif
 
   // QClient methods

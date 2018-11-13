@@ -589,4 +589,11 @@ Return<int32_t> HWCSession::setDisplayIndex(IDisplayConfig::DisplayTypeExt disp_
 }
 #endif
 
+#ifdef DISPLAY_CONFIG_1_3
+Return<int32_t> HWCSession::controlIdlePowerCollapse(bool enable, bool synchronous) {
+  DLOGW("Not implemented.");
+  return 0;
+}
+#endif
+
 }  // namespace sdm
