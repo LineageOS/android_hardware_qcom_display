@@ -57,7 +57,11 @@ DisplayError DisplayPluggable::Init() {
   DisplayError error = HWInterface::Create(display_id_, kPluggable, hw_info_intf_,
                                            buffer_sync_handler_, buffer_allocator_, &hw_intf_);
   if (error != kErrorNone) {
-    DLOGE("Failed to create hardware interface. Error = %d", error);
+    if (kErrorDeviceRemoved == error) {
+      DLOGW("Aborted creating hardware interface. Device removed.");
+    } else {
+      DLOGE("Failed to create hardware interface. Error = %d", error);
+    }
     return error;
   }
 

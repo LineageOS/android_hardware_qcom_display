@@ -2312,8 +2312,7 @@ int HWCSession::HandlePluggableDisplays(bool delay_hotplug) {
 
   status = HandleConnectedDisplays(&hw_displays_info, delay_hotplug);
   if (status) {
-    DLOGE("All displays could not be connected.");
-    return status;
+    DLOGW("All displays could not be connected.");
   }
 
   return 0;
@@ -2377,20 +2376,24 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
 
         // Test pattern generation ?
         map_info.test_pattern = (hpd_bpp_ > 0) && (hpd_pattern_ > 0);
+        int err = 0;
         if (!map_info.test_pattern) {
-          status = HWCDisplayPluggable::Create(core_intf_, &buffer_allocator_, &callbacks_, this,
-                                               qservice_, client_id, info.display_id, 0, 0, false,
-                                               &hwc_display);
+          err = HWCDisplayPluggable::Create(core_intf_, &buffer_allocator_,
+                                            &callbacks_, this, qservice_, client_id,
+                                            info.display_id, 0, 0, false, &hwc_display);
         } else {
-          status = HWCDisplayPluggableTest::Create(core_intf_, &buffer_allocator_, &callbacks_,
-                                                   this, qservice_, client_id, info.display_id,
-                                                   UINT32(hpd_bpp_), UINT32(hpd_pattern_),
-                                                   &hwc_display);
+          err = HWCDisplayPluggableTest::Create(core_intf_, &buffer_allocator_,
+                                                &callbacks_, this, qservice_, client_id,
+                                                info.display_id, UINT32(hpd_bpp_),
+                                                UINT32(hpd_pattern_), &hwc_display);
         }
 
-        if (status) {
-          DLOGE("Pluggable display creation failed.");
-          return status;
+        if (err) {
+          DLOGW("Pluggable display creation failed/aborted. Error - %d (%s).", err,
+                strerror(err));
+          status = err;
+          // Attempt creating remaining pluggable displays.
+          break;
         }
 
         DLOGI("Created pluggable display successfully: sdm id = %d, client id = %d",
@@ -2409,7 +2412,7 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
 
   // No display was created.
   if (!pending_hotplugs.size()) {
-    return 0;
+    return status;
   }
 
   // Primary display needs revalidation
@@ -2432,7 +2435,7 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
     UpdateVsyncSource();
   }
 
-  return 0;
+  return status;
 }
 
 int HWCSession::HandleDisconnectedDisplays(HWDisplaysInfo *hw_displays_info) {
