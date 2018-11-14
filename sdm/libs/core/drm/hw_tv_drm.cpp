@@ -163,6 +163,22 @@ DisplayError HWTVDRM::GetConfigIndex(char *mode, uint32_t *index) {
   return kErrorNone;
 }
 
+DisplayError HWTVDRM::GetDefaultConfig(uint32_t *default_config) {
+  bool found = false;
+
+  for (uint32_t i = 0; i < connector_info_.modes.size(); i++) {
+    auto &mode = connector_info_.modes[i].mode;
+    if (mode.hdisplay == 640 && mode.vdisplay == 480) {
+      *default_config = i;
+      found = true;
+      DLOGI("Found 640x480 default mode, using as failure fallback");
+      break;
+    }
+  }
+
+  return found ? kErrorNone : kErrorNotSupported;
+}
+
 DisplayError HWTVDRM::PowerOff(bool teardown) {
   DTRACE_SCOPED();
   if (!drm_atomic_intf_) {
