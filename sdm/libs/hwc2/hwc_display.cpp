@@ -1681,11 +1681,15 @@ int HWCDisplay::SetDisplayStatus(DisplayStatus display_status) {
   switch (display_status) {
     case kDisplayStatusResume:
       display_paused_ = false;
+      status = INT32(SetPowerMode(HWC2::PowerMode::On, false /* teardown */));
+      break;
     case kDisplayStatusOnline:
       status = INT32(SetPowerMode(HWC2::PowerMode::On, false /* teardown */));
       break;
     case kDisplayStatusPause:
       display_paused_ = true;
+      status = INT32(SetPowerMode(HWC2::PowerMode::Off, false /* teardown */));
+      break;
     case kDisplayStatusOffline:
       status = INT32(SetPowerMode(HWC2::PowerMode::Off, false /* teardown */));
       break;
