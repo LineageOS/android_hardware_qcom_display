@@ -491,10 +491,6 @@ DisplayError DisplayBase::GetVSyncState(bool *enabled) {
   return kErrorNone;
 }
 
-DisplayState DisplayBase::GetLastPowerMode() {
-  return last_power_mode_;
-}
-
 DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
                                           int *release_fence) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
@@ -532,13 +528,11 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     }
 
     active = true;
-    last_power_mode_ = kStateOn;
     break;
 
   case kStateDoze:
     error = hw_intf_->Doze(default_qos_data_, release_fence);
     active = true;
-    last_power_mode_ = kStateDoze;
     break;
 
   case kStateDozeSuspend:
@@ -546,12 +540,10 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     if (display_type_ != kBuiltIn) {
       active = true;
     }
-    last_power_mode_ = kStateDozeSuspend;
     break;
 
   case kStateStandby:
     error = hw_intf_->Standby();
-    last_power_mode_ = kStateStandby;
     break;
 
   default:
