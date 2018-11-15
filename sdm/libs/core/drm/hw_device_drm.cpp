@@ -1512,6 +1512,9 @@ DisplayError HWDeviceDRM::SetRefreshRate(uint32_t refresh_rate) {
         (refresh_rate == connector_info_.modes[mode_index].mode.vrefresh)) {
       vrefresh_ = refresh_rate;
       DLOGV_IF(kTagDriverConfig, "Set refresh rate to %d", refresh_rate);
+      SetDisplayAttributes(mode_index);
+      UpdateMixerAttributes();
+
       return kErrorNone;
     }
   }
@@ -1612,10 +1615,6 @@ DisplayError HWDeviceDRM::UnsetScaleLutConfig() {
 }
 
 DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attributes) {
-  if (IsResolutionSwitchEnabled()) {
-    return kErrorNotSupported;
-  }
-
   if (!hw_resource_.hw_dest_scalar_info.count) {
     return kErrorNotSupported;
   }
