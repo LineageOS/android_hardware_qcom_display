@@ -1686,11 +1686,15 @@ int HWCDisplay::SetDisplayStatus(DisplayStatus display_status) {
     case kDisplayStatusResume:
       display_paused_ = false;
       fbt_valid_ = false;
+      status = INT32(SetPowerMode(HWC2::PowerMode::On));
+      break;
     case kDisplayStatusOnline:
       status = INT32(SetPowerMode(HWC2::PowerMode::On));
       break;
     case kDisplayStatusPause:
       display_paused_ = true;
+      status = INT32(SetPowerMode(HWC2::PowerMode::Off));
+      break;
     case kDisplayStatusOffline:
       status = INT32(SetPowerMode(HWC2::PowerMode::Off));
       break;
