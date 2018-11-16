@@ -64,6 +64,7 @@ class HWCColorMode {
   HWC2::Error SetColorModeById(int32_t color_mode_id);
   HWC2::Error SetColorTransform(const float *matrix, android_color_transform_t hint);
   HWC2::Error RestoreColorTransform();
+  android_color_mode_t GetCurrentColorMode() { return current_color_mode_; }
 
  private:
   static const uint32_t kColorTransformMatrixCount = 16;
@@ -169,6 +170,9 @@ class HWCDisplay : public DisplayEventHandler {
   HWCLayer *GetHWCLayer(hwc2_layer_t layer_id);
   void ResetValidation() { validated_ = false; }
   uint32_t GetGeometryChanges() { return geometry_changes_; }
+  android_color_mode_t GetCurrentColorMode() {
+    return (color_mode_ ? color_mode_->GetCurrentColorMode() : HAL_COLOR_MODE_SRGB);
+  }
 
   // HWC2 APIs
   virtual HWC2::Error AcceptDisplayChanges(void);
