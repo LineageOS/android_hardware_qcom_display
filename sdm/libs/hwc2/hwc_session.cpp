@@ -1199,7 +1199,7 @@ bool HWCSession::GetFirstNonPrimaryBuiltinStatus() {
   }
   auto &hwc_display = hwc_display_[builtin_id];
   if (hwc_display) {
-    return hwc_display->GetLastPowerMode() != HWC2::PowerMode::Off;
+    return hwc_display->GetCurrentPowerMode() != HWC2::PowerMode::Off;
   }
   return false;
 }
@@ -2541,38 +2541,49 @@ HWC2::Error HWCSession::PresentDisplayInternal(hwc2_display_t display, int32_t *
 }
 
 void HWCSession::DisplayPowerReset() {
-  Locker::ScopeLock lock_p(locker_[HWC_DISPLAY_PRIMARY]);
-  Locker::ScopeLock lock_b2(locker_[HWC_DISPLAY_BUILTIN_2]);
-  Locker::ScopeLock lock_e(locker_[HWC_DISPLAY_EXTERNAL]);
-  Locker::ScopeLock lock_e2(locker_[HWC_DISPLAY_EXTERNAL_2]);
-  Locker::ScopeLock lock_v(locker_[HWC_DISPLAY_VIRTUAL]);
+  {
+    Locker::ScopeLock lock_p(locker_[HWC_DISPLAY_PRIMARY]);
+    Locker::ScopeLock lock_b2(locker_[HWC_DISPLAY_BUILTIN_2]);
+    Locker::ScopeLock lock_e(locker_[HWC_DISPLAY_EXTERNAL]);
+    Locker::ScopeLock lock_e2(locker_[HWC_DISPLAY_EXTERNAL_2]);
+    Locker::ScopeLock lock_v(locker_[HWC_DISPLAY_VIRTUAL]);
 
-  HWC2::Error status = HWC2::Error::None;
+    HWC2::Error status = HWC2::Error::None;
+    HWC2::PowerMode last_power_mode[HWC_NUM_DISPLAY_TYPES] = {};
 
-  for (hwc2_display_t display = HWC_DISPLAY_PRIMARY; display < HWC_NUM_DISPLAY_TYPES; display++) {
-    if (hwc_display_[display] != NULL) {
-      DLOGI("Powering off display = %d", display);
-      status = hwc_display_[display]->SetPowerMode(HWC2::PowerMode::Off,
-                                                   true /* teardown */);
-      if (status != HWC2::Error::None) {
-        DLOGE("Power off for display = %d failed with error = %d", display, status);
+    for (hwc2_display_t display = HWC_DISPLAY_PRIMARY; display < HWC_NUM_DISPLAY_TYPES; display++) {
+      if (hwc_display_[display] != NULL) {
+        last_power_mode[display] = hwc_display_[display]->GetCurrentPowerMode();
+        DLOGI("Powering off display = %d", display);
+        status = hwc_display_[display]->SetPowerMode(HWC2::PowerMode::Off,
+                                                     true /* teardown */);
+        if (status != HWC2::Error::None) {
+          DLOGE("Power off for display = %d failed with error = %d", display, status);
+        }
       }
     }
-  }
-  for (hwc2_display_t display = HWC_DISPLAY_PRIMARY; display < HWC_NUM_DISPLAY_TYPES; display++) {
-    if (hwc_display_[display] != NULL) {
-      DLOGI("Powering on display = %d", display);
-      status = hwc_display_[display]->SetPowerMode(HWC2::PowerMode::On, false /* teardown */);
-      if (status != HWC2::Error::None) {
-        DLOGE("Power on for display = %d failed with error = %d", display, status);
+    for (hwc2_display_t display = HWC_DISPLAY_PRIMARY; display < HWC_NUM_DISPLAY_TYPES; display++) {
+      if (hwc_display_[display] != NULL) {
+        HWC2::PowerMode mode = last_power_mode[display];
+        DLOGI("Setting display %d to mode = %d", display, mode);
+        status = hwc_display_[display]->SetPowerMode(mode, false /* teardown */);
+        if (status != HWC2::Error::None) {
+          DLOGE("%d mode for display = %d failed with error = %d", mode, display, status);
+        }
+        ColorMode color_mode = hwc_display_[display]->GetCurrentColorMode();
+        status = hwc_display_[display]->SetColorMode(color_mode);
+        if (status != HWC2::Error::None) {
+          DLOGE("SetColorMode failed for display = %d error = %d", display, status);
+        }
       }
     }
-  }
 
-  status = hwc_display_[HWC_DISPLAY_PRIMARY]->SetVsyncEnabled(HWC2::Vsync::Enable);
-  if (status != HWC2::Error::None) {
-    DLOGE("Enabling vsync failed for primary with error = %d", status);
+    status = hwc_display_[HWC_DISPLAY_PRIMARY]->SetVsyncEnabled(HWC2::Vsync::Enable);
+    if (status != HWC2::Error::None) {
+      DLOGE("Enabling vsync failed for primary with error = %d", status);
+    }
   }
+  Refresh(HWC_DISPLAY_PRIMARY);
 }
 
 void HWCSession::HandleSecureSession(hwc2_display_t disp_id) {
@@ -2766,7 +2777,7 @@ void HWCSession::UpdateVsyncSource() {
   }
 
   callbacks_.SetSwapVsync(next_vsync_source, HWC_DISPLAY_PRIMARY);
-  HWC2::PowerMode power_mode = hwc_display_[next_vsync_source]->GetLastPowerMode();
+  HWC2::PowerMode power_mode = hwc_display_[next_vsync_source]->GetCurrentPowerMode();
 
   // Skip enabling vsync if display is Off, happens only for default source ie; primary.
   if (power_mode == HWC2::PowerMode::Off) {
@@ -2794,7 +2805,7 @@ hwc2_display_t HWCSession::GetNextVsyncSource() {
       continue;
     }
 
-    if (hwc_display->GetLastPowerMode() != HWC2::PowerMode::Off) {
+    if (hwc_display->GetCurrentPowerMode() != HWC2::PowerMode::Off) {
       return info.client_id;
     }
   }

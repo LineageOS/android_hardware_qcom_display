@@ -157,7 +157,6 @@ class DisplayBase : public DisplayInterface {
   DisplayError GetValueOfModeAttribute(const AttrVal &attr, const std::string &type,
                                        std::string *value);
   bool IsSupportColorModeAttribute(const std::string &color_mode);
-  DisplayState GetLastPowerMode();
   void SetPUonDestScaler();
   void ClearColorInfo();
   void GetColorPrimaryTransferFromAttributes(const AttrVal &attr,
@@ -209,7 +208,6 @@ class DisplayBase : public DisplayInterface {
   uint32_t req_mixer_height_ = 0;
   std::string current_color_mode_ = "hal_native";
   int disable_hdr_lut_gen_ = 0;
-  DisplayState last_power_mode_ = kStateOff;
   bool hw_recovery_logs_captured_ = false;
   int disable_hw_recovery_dump_ = 0;
   HWQosData default_qos_data_;
