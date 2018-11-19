@@ -89,6 +89,7 @@ class ColorManagerProxy {
   static HWResourceInfo hw_res_info_;
 
   int32_t display_id_;
+  bool first_cycle_ = true;
   DisplayType device_type_;
   PPHWAttributes pp_hw_attributes_;
   HWInterface *hw_intf_;
