@@ -54,7 +54,7 @@ class HWCSession : hwc2_device_t, public qClient::BnQClient {
 
     HWCSession *hwc_session = static_cast<HWCSession *>(device);
     auto status = HWC2::Error::BadDisplay;
-    if (hwc_session->hwc_display_[display]) {
+    if (display < HWC_NUM_DISPLAY_TYPES && hwc_session->hwc_display_[display]) {
       auto hwc_display = hwc_session->hwc_display_[display];
       status = (hwc_display->*member)(std::forward<Args>(args)...);
     }
@@ -71,7 +71,7 @@ class HWCSession : hwc2_device_t, public qClient::BnQClient {
 
     HWCSession *hwc_session = static_cast<HWCSession *>(device);
     auto status = HWC2::Error::BadDisplay;
-    if (hwc_session->hwc_display_[display]) {
+    if (display < HWC_NUM_DISPLAY_TYPES && hwc_session->hwc_display_[display]) {
       status = HWC2::Error::BadLayer;
       auto hwc_layer = hwc_session->hwc_display_[display]->GetHWCLayer(layer);
       if (hwc_layer != nullptr) {
