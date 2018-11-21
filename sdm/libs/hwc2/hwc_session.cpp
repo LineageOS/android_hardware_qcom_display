@@ -2024,6 +2024,8 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
   HWCColorManager::MarshallStructIntoParcel(resp_payload, output_parcel);
   req_payload.DestroyPayload();
   resp_payload.DestroyPayload();
+
+  SEQUENCE_WAIT_SCOPE_LOCK(locker_[display_id]);
   hwc_display_[display_id]->ResetValidation();
 
   return ret;
