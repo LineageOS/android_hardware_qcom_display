@@ -304,17 +304,21 @@ DisplayError DisplayPluggable::VSync(int64_t timestamp) {
 DisplayError DisplayPluggable::InitializeColorModes() {
   PrimariesTransfer pt = {};
   AttrVal var = {};
-  color_modes_cs_.push_back(pt);
-  var.push_back(std::make_pair(kColorGamutAttribute, kSrgb));
-  var.push_back(std::make_pair(kDynamicRangeAttribute, kSdr));
-  var.push_back(std::make_pair(kPictureQualityAttribute, kStandard));
-  color_mode_attr_map_.insert(std::make_pair(kSrgb, var));
-  current_color_mode_ = kSrgb;
-  pt.primaries = ColorPrimaries_BT2020;
   if (!hw_panel_info_.hdr_enabled) {
-    UpdateColorModes();
     return kErrorNone;
   } else {
+    color_modes_cs_.push_back(pt);
+    var.push_back(std::make_pair(kColorGamutAttribute, kSrgb));
+    var.push_back(std::make_pair(kDynamicRangeAttribute, kSdr));
+    var.push_back(std::make_pair(kPictureQualityAttribute, kStandard));
+    color_mode_attr_map_.insert(std::make_pair(kSrgb, var));
+
+    // native mode
+    color_modes_cs_.push_back(pt);
+    var.clear();
+    color_mode_attr_map_.insert(std::make_pair("hal_native", var));
+
+    pt.primaries = ColorPrimaries_BT2020;
     pt.transfer = Transfer_Gamma2_2;
     color_modes_cs_.push_back(pt);
     var.clear();
@@ -338,6 +342,7 @@ DisplayError DisplayPluggable::InitializeColorModes() {
     color_modes_cs_.push_back(pt);
     color_mode_attr_map_.insert(std::make_pair(kBt2020Hlg, var));
   }
+  current_color_mode_ = kSrgb;
   UpdateColorModes();
 
   return kErrorNone;
