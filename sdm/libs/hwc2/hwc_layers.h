@@ -101,6 +101,8 @@ class HWCLayer {
   bool IsRotationPresent();
   bool IsNonIntegralSourceCrop() { return non_integral_source_crop_; }
   bool HasMetaDataRefreshRate() { return has_metadata_refresh_rate_; }
+  bool BufferLatched() { return buffer_flipped_; }
+  void ResetBufferFlip() { buffer_flipped_ = false; }
 
  private:
   Layer *layer_ = nullptr;
@@ -118,6 +120,7 @@ class HWCLayer {
   int buffer_fd_ = -1;
   bool non_integral_source_crop_ = false;
   bool has_metadata_refresh_rate_ = false;
+  bool buffer_flipped_ = false;
 
   // Composition requested by client(SF)
   HWC2::Composition client_requested_ = HWC2::Composition::Device;
