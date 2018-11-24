@@ -1478,7 +1478,7 @@ void HWCDisplay::DumpInputBuffers() {
       int error = sync_wait(acquire_fence_fd, 1000);
       if (error < 0) {
         DLOGW("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
-        return;
+        continue;
       }
     }
 
@@ -1487,14 +1487,14 @@ void HWCDisplay::DumpInputBuffers() {
 
     if (!pvt_handle) {
       DLOGE("Buffer handle is null");
-      return;
+      continue;
     }
 
     if (!pvt_handle->base) {
       DisplayError error = buffer_allocator_->MapBuffer(pvt_handle, -1);
       if (error != kErrorNone) {
         DLOGE("Failed to map buffer, error = %d", error);
-        return;
+        continue;
       }
     }
 
@@ -1515,7 +1515,7 @@ void HWCDisplay::DumpInputBuffers() {
     DisplayError error = buffer_allocator_->UnmapBuffer(pvt_handle, &release_fence);
     if (error != kErrorNone) {
       DLOGE("Failed to unmap buffer, error = %d", error);
-      return;
+      continue;
     }
 
     DLOGI("Frame Dump %s: is %s", dump_file_name, result ? "Successful" : "Failed");
