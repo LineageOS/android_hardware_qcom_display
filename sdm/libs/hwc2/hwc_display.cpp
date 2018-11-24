@@ -745,11 +745,6 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
     return HWC2::Error::None;
   }
 
-  if (active_secure_sessions_[kSecureDisplay]) {
-    DLOGW("Changing display power mode not allowed during secure display session");
-    return HWC2::Error::Unsupported;
-  }
-
   switch (mode) {
     case HWC2::PowerMode::Off:
       // During power off, all of the buffers are released.
