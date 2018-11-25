@@ -138,7 +138,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual DisplayError ControlPartialUpdate(bool enable, uint32_t *pending) {
     return kErrorNotSupported;
   }
-  virtual HWC2::PowerMode GetLastPowerMode();
+  virtual HWC2::PowerMode GetCurrentPowerMode();
   virtual HWC2::Vsync GetLastVsyncMode();
   virtual int SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels);
   virtual void GetFrameBufferResolution(uint32_t *x_pixels, uint32_t *y_pixels);
@@ -281,8 +281,8 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error SetQSyncMode(QSyncMode qsync_mode) {
     return HWC2::Error::Unsupported;
   }
-  virtual HWC2::Error ControlIdlePowerCollapse(bool enable, bool synchronous) {
-    return HWC2::Error::Unsupported;
+  virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) {
+    return kErrorNone;
   }
 
  protected:
@@ -341,7 +341,7 @@ class HWCDisplay : public DisplayEventHandler {
   uint32_t dump_frame_count_ = 0;
   uint32_t dump_frame_index_ = 0;
   bool dump_input_layers_ = false;
-  HWC2::PowerMode last_power_mode_ = HWC2::PowerMode::Off;
+  HWC2::PowerMode current_power_mode_ = HWC2::PowerMode::Off;
   HWC2::Vsync last_vsync_mode_ = HWC2::Vsync::Invalid;
   bool swap_interval_zero_ = false;
   bool display_paused_ = false;
@@ -365,8 +365,6 @@ class HWCDisplay : public DisplayEventHandler {
   HWCToneMapper *tone_mapper_ = nullptr;
   uint32_t num_configs_ = 0;
   int disable_hdr_handling_ = 0;  // disables HDR handling.
-  uint32_t display_config_ = 0;
-  bool config_pending_ = false;
   bool pending_commit_ = false;
   bool is_cmd_mode_ = false;
   bool partial_update_enabled_ = false;

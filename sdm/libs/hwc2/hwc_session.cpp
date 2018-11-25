@@ -73,6 +73,7 @@ Locker HWCSession::locker_[kNumDisplays];
 bool HWCSession::power_on_pending_[kNumDisplays];
 
 static const int kSolidFillDelay = 100 * 1000;
+int HWCSession::null_display_mode_ = 0;
 
 // Map the known color modes to dataspace.
 static int32_t GetDataspace(ColorMode mode) {
@@ -475,6 +476,14 @@ void HWCSession::Dump(hwc2_device_t *device, uint32_t *out_size, char *out_buffe
   }
 }
 
+uint32_t HWCSession::GetMaxVirtualDisplayCount(hwc2_device_t *device) {
+  if (device == nullptr) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  return null_display_mode_ ? 0 : 1;
+}
+
 static int32_t GetActiveConfig(hwc2_device_t *device, hwc2_display_t display,
                                hwc2_config_t *out_config) {
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::GetActiveConfig, out_config);
@@ -632,13 +641,6 @@ static int32_t GetHdrCapabilities(hwc2_device_t* device, hwc2_display_t display,
                                          out_max_average_luminance, out_min_luminance);
 }
 
-static uint32_t GetMaxVirtualDisplayCount(hwc2_device_t *device) {
-  if (device == nullptr) {
-    return HWC2_ERROR_BAD_PARAMETER;
-  }
-
-  return 1;
-}
 
 static int32_t GetReleaseFences(hwc2_device_t *device, hwc2_display_t display,
                                 uint32_t *out_num_elements, hwc2_layer_t *out_layers,
@@ -686,7 +688,7 @@ int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display
   // Handle pending builtin/pluggable display connections
   if (!hwc_session->primary_ready_ && (display == HWC_DISPLAY_PRIMARY)) {
     hwc_session->primary_ready_ = true;
-    hwc_session->CreateBuiltInDisplays();
+    hwc_session->HandleBuiltInDisplays();
     hwc_session->HandlePluggableDisplays(false);
   }
 
@@ -1023,7 +1025,7 @@ hwc2_function_pointer_t HWCSession::GetFunction(struct hwc2_device *device,
     case HWC2::FunctionDescriptor::GetDozeSupport:
       return AsFP<HWC2_PFN_GET_DOZE_SUPPORT>(GetDozeSupport);
     case HWC2::FunctionDescriptor::GetMaxVirtualDisplayCount:
-      return AsFP<HWC2_PFN_GET_MAX_VIRTUAL_DISPLAY_COUNT>(GetMaxVirtualDisplayCount);
+      return AsFP<HWC2_PFN_GET_MAX_VIRTUAL_DISPLAY_COUNT>(HWCSession::GetMaxVirtualDisplayCount);
     case HWC2::FunctionDescriptor::GetReleaseFences:
       return AsFP<HWC2_PFN_GET_RELEASE_FENCES>(GetReleaseFences);
     case HWC2::FunctionDescriptor::PresentDisplay:
@@ -1101,6 +1103,12 @@ hwc2_function_pointer_t HWCSession::GetFunction(struct hwc2_device *device,
 
 HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height, int32_t *format,
                                                 hwc2_display_t *out_display_id) {
+  if (null_display_mode_) {
+    DLOGW("Virtual display creation attempted. Not supported in null-display mode."
+          " display_id is not set, and no real display object was created");
+    return HWC2::Error::None;
+  }
+
   if (!client_connected_) {
     DLOGE("Client is not ready yet.");
     return HWC2::Error::BadDisplay;
@@ -1191,7 +1199,7 @@ bool HWCSession::GetFirstNonPrimaryBuiltinStatus() {
   }
   auto &hwc_display = hwc_display_[builtin_id];
   if (hwc_display) {
-    return hwc_display->GetLastPowerMode() != HWC2::PowerMode::Off;
+    return hwc_display->GetCurrentPowerMode() != HWC2::PowerMode::Off;
   }
   return false;
 }
@@ -2154,10 +2162,20 @@ int HWCSession::CreatePrimaryDisplay() {
   int status = -EINVAL;
   HWDisplaysInfo hw_displays_info = {};
 
-  DisplayError error = core_intf_->GetDisplaysStatus(&hw_displays_info);
-  if (error != kErrorNone) {
-    DLOGE("Failed to get connected display list. Error = %d", error);
-    return status;
+  if (null_display_mode_) {
+    HWDisplayInfo hw_info = {};
+    hw_info.display_type = kBuiltIn;
+    hw_info.is_connected = 1;
+    hw_info.is_primary = 1;
+    hw_info.is_wb_ubwc_supported = 0;
+    hw_info.display_id = 1;
+    hw_displays_info[hw_info.display_id] = hw_info;
+  } else {
+    DisplayError error = core_intf_->GetDisplaysStatus(&hw_displays_info);
+    if (error != kErrorNone) {
+      DLOGE("Failed to get connected display list. Error = %d", error);
+      return status;
+    }
   }
 
   for (auto &iter : hw_displays_info) {
@@ -2211,9 +2229,13 @@ int HWCSession::CreatePrimaryDisplay() {
   return status;
 }
 
-int HWCSession::CreateBuiltInDisplays() {
-  HWDisplaysInfo hw_displays_info = {};
+int HWCSession::HandleBuiltInDisplays() {
+  if (null_display_mode_) {
+    DLOGW("Skipped BuiltIn display handling in null-display mode");
+    return 0;
+  }
 
+  HWDisplaysInfo hw_displays_info = {};
   DisplayError error = core_intf_->GetDisplaysStatus(&hw_displays_info);
   if (error != kErrorNone) {
     DLOGE("Failed to get connected display list. Error = %d", error);
@@ -2263,13 +2285,17 @@ int HWCSession::CreateBuiltInDisplays() {
 }
 
 int HWCSession::HandlePluggableDisplays(bool delay_hotplug) {
+  if (null_display_mode_) {
+    DLOGW("Skipped pluggable display handling in null-display mode");
+    return 0;
+  }
+
   if (!primary_ready_) {
     DLOGI("Primary display is not ready. Connect displays later if any.");
     return 0;
   }
 
   HWDisplaysInfo hw_displays_info = {};
-
   DisplayError error = core_intf_->GetDisplaysStatus(&hw_displays_info);
   if (error != kErrorNone) {
     DLOGE("Failed to get connected display list. Error = %d", error);
@@ -2515,38 +2541,49 @@ HWC2::Error HWCSession::PresentDisplayInternal(hwc2_display_t display, int32_t *
 }
 
 void HWCSession::DisplayPowerReset() {
-  Locker::ScopeLock lock_p(locker_[HWC_DISPLAY_PRIMARY]);
-  Locker::ScopeLock lock_b2(locker_[HWC_DISPLAY_BUILTIN_2]);
-  Locker::ScopeLock lock_e(locker_[HWC_DISPLAY_EXTERNAL]);
-  Locker::ScopeLock lock_e2(locker_[HWC_DISPLAY_EXTERNAL_2]);
-  Locker::ScopeLock lock_v(locker_[HWC_DISPLAY_VIRTUAL]);
+  {
+    Locker::ScopeLock lock_p(locker_[HWC_DISPLAY_PRIMARY]);
+    Locker::ScopeLock lock_b2(locker_[HWC_DISPLAY_BUILTIN_2]);
+    Locker::ScopeLock lock_e(locker_[HWC_DISPLAY_EXTERNAL]);
+    Locker::ScopeLock lock_e2(locker_[HWC_DISPLAY_EXTERNAL_2]);
+    Locker::ScopeLock lock_v(locker_[HWC_DISPLAY_VIRTUAL]);
 
-  HWC2::Error status = HWC2::Error::None;
+    HWC2::Error status = HWC2::Error::None;
+    HWC2::PowerMode last_power_mode[HWC_NUM_DISPLAY_TYPES] = {};
 
-  for (hwc2_display_t display = HWC_DISPLAY_PRIMARY; display < HWC_NUM_DISPLAY_TYPES; display++) {
-    if (hwc_display_[display] != NULL) {
-      DLOGI("Powering off display = %d", display);
-      status = hwc_display_[display]->SetPowerMode(HWC2::PowerMode::Off,
-                                                   true /* teardown */);
-      if (status != HWC2::Error::None) {
-        DLOGE("Power off for display = %d failed with error = %d", display, status);
+    for (hwc2_display_t display = HWC_DISPLAY_PRIMARY; display < HWC_NUM_DISPLAY_TYPES; display++) {
+      if (hwc_display_[display] != NULL) {
+        last_power_mode[display] = hwc_display_[display]->GetCurrentPowerMode();
+        DLOGI("Powering off display = %d", display);
+        status = hwc_display_[display]->SetPowerMode(HWC2::PowerMode::Off,
+                                                     true /* teardown */);
+        if (status != HWC2::Error::None) {
+          DLOGE("Power off for display = %d failed with error = %d", display, status);
+        }
       }
     }
-  }
-  for (hwc2_display_t display = HWC_DISPLAY_PRIMARY; display < HWC_NUM_DISPLAY_TYPES; display++) {
-    if (hwc_display_[display] != NULL) {
-      DLOGI("Powering on display = %d", display);
-      status = hwc_display_[display]->SetPowerMode(HWC2::PowerMode::On, false /* teardown */);
-      if (status != HWC2::Error::None) {
-        DLOGE("Power on for display = %d failed with error = %d", display, status);
+    for (hwc2_display_t display = HWC_DISPLAY_PRIMARY; display < HWC_NUM_DISPLAY_TYPES; display++) {
+      if (hwc_display_[display] != NULL) {
+        HWC2::PowerMode mode = last_power_mode[display];
+        DLOGI("Setting display %d to mode = %d", display, mode);
+        status = hwc_display_[display]->SetPowerMode(mode, false /* teardown */);
+        if (status != HWC2::Error::None) {
+          DLOGE("%d mode for display = %d failed with error = %d", mode, display, status);
+        }
+        ColorMode color_mode = hwc_display_[display]->GetCurrentColorMode();
+        status = hwc_display_[display]->SetColorMode(color_mode);
+        if (status != HWC2::Error::None) {
+          DLOGE("SetColorMode failed for display = %d error = %d", display, status);
+        }
       }
     }
-  }
 
-  status = hwc_display_[HWC_DISPLAY_PRIMARY]->SetVsyncEnabled(HWC2::Vsync::Enable);
-  if (status != HWC2::Error::None) {
-    DLOGE("Enabling vsync failed for primary with error = %d", status);
+    status = hwc_display_[HWC_DISPLAY_PRIMARY]->SetVsyncEnabled(HWC2::Vsync::Enable);
+    if (status != HWC2::Error::None) {
+      DLOGE("Enabling vsync failed for primary with error = %d", status);
+    }
   }
+  Refresh(HWC_DISPLAY_PRIMARY);
 }
 
 void HWCSession::HandleSecureSession(hwc2_display_t disp_id) {
@@ -2740,7 +2777,7 @@ void HWCSession::UpdateVsyncSource() {
   }
 
   callbacks_.SetSwapVsync(next_vsync_source, HWC_DISPLAY_PRIMARY);
-  HWC2::PowerMode power_mode = hwc_display_[next_vsync_source]->GetLastPowerMode();
+  HWC2::PowerMode power_mode = hwc_display_[next_vsync_source]->GetCurrentPowerMode();
 
   // Skip enabling vsync if display is Off, happens only for default source ie; primary.
   if (power_mode == HWC2::PowerMode::Off) {
@@ -2768,7 +2805,7 @@ hwc2_display_t HWCSession::GetNextVsyncSource() {
       continue;
     }
 
-    if (hwc_display->GetLastPowerMode() != HWC2::PowerMode::Off) {
+    if (hwc_display->GetCurrentPowerMode() != HWC2::PowerMode::Off) {
       return info.client_id;
     }
   }
@@ -2791,8 +2828,8 @@ android::status_t HWCSession::SetIdlePC(const android::Parcel *input_parcel) {
       return -EINVAL;
     }
     auto error = hwc_display_[HWC_DISPLAY_PRIMARY]->ControlIdlePowerCollapse(enable, synchronous);
-    if (error != HWC2::Error::None) {
-      return -EINVAL;
+    if (error != kErrorNone) {
+      return (error == kErrorNotSupported) ? 0 : -EINVAL;
     }
     if (!enable) {
       Refresh(HWC_DISPLAY_PRIMARY);

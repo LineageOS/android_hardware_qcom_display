@@ -141,6 +141,7 @@ class HWDeviceDRM : public HWInterface {
   void UpdateMixerAttributes();
   void SetSolidfillStages();
   void AddSolidfillStage(const HWSolidfillStage &sf, uint32_t plane_alpha);
+  void ClearSolidfillStages();
   void SetBlending(const LayerBlending &source, sde_drm::DRMBlendType *target);
   void SetSrcConfig(const LayerBuffer &input_buffer, const HWRotatorMode &mode, uint32_t *config);
   void SelectCscType(const LayerBuffer &input_buffer, sde_drm::DRMCscType *type);
