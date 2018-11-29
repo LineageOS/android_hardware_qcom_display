@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-2017, 2018 The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -131,8 +131,6 @@ struct HWRotatorInfo {
   std::string device_path = "";
   float min_downscale = 2.0f;
   bool downscale_compression = false;
-
-  void Reset() { *this = HWRotatorInfo(); }
 };
 
 struct HWDestScalarInfo {
@@ -199,7 +197,6 @@ struct HWResourceInfo {
   bool has_avr = false;
   bool has_hdr = false;
   SmartDMARevision smart_dma_rev = SmartDMARevision::V1;
-  void Reset() { *this = HWResourceInfo(); }
 };
 
 struct HWSplitInfo {
@@ -295,8 +292,8 @@ struct HWPanelInfo {
 };
 
 struct HWSessionConfig {
-  LayerRect src_rect;
-  LayerRect dst_rect;
+  LayerRect src_rect {};
+  LayerRect dst_rect {};
   uint32_t buffer_count = 0;
   bool secure = false;
   uint32_t frame_rate = 0;
@@ -321,21 +318,19 @@ struct HWSessionConfig {
 struct HWRotateInfo {
   int pipe_id = -1;  // Not actual pipe id, but the relative DMA id
   int writeback_id = -1;  // Writeback block id, but this is the same as DMA id
-  LayerRect src_roi;  // Source crop of each split
-  LayerRect dst_roi;  // Destination crop of each split
+  LayerRect src_roi {};  // Source crop of each split
+  LayerRect dst_roi {};  // Destination crop of each split
   bool valid = false;
   int rotate_id = -1;  // Actual rotator session id with driver
-
-  void Reset() { *this = HWRotateInfo(); }
 };
 
 struct HWRotatorSession {
-  HWRotateInfo hw_rotate_info[kMaxRotatePerLayer];
+  HWRotateInfo hw_rotate_info[kMaxRotatePerLayer] {};
   uint32_t hw_block_count = 0;  // number of rotator hw blocks used by rotator session
   int session_id = -1;  // A handle with Session Manager
-  HWSessionConfig hw_session_config;
-  LayerBuffer input_buffer;  // Input to rotator
-  LayerBuffer output_buffer;  // Output of rotator, crop width and stride are same
+  HWSessionConfig hw_session_config {};
+  LayerBuffer input_buffer {};  // Input to rotator
+  LayerBuffer output_buffer {};  // Output of rotator, crop width and stride are same
   float input_compression = 1.0f;
   float output_compression = 1.0f;
   bool is_buffer_cached = false;
@@ -374,10 +369,10 @@ struct HWPlane {
   int32_t phase_step_x = 0;
   int32_t init_phase_y = 0;
   int32_t phase_step_y = 0;
-  HWPixelExtension left;
-  HWPixelExtension top;
-  HWPixelExtension right;
-  HWPixelExtension bottom;
+  HWPixelExtension left {};
+  HWPixelExtension top {};
+  HWPixelExtension right {};
+  HWPixelExtension bottom {};
   uint32_t roi_width = 0;
   int32_t preload_x = 0;
   int32_t preload_y = 0;
@@ -393,7 +388,7 @@ struct HWScaleData {
   } enable;
   uint32_t dst_width = 0;
   uint32_t dst_height = 0;
-  HWPlane plane[MAX_PLANES];
+  HWPlane plane[MAX_PLANES] {};
   // scale_v2_data fields
   ScalingFilterConfig y_rgb_filter_cfg = kFilterEdgeDirected;
   ScalingFilterConfig uv_filter_cfg = kFilterEdgeDirected;
@@ -415,8 +410,7 @@ struct HWScaleData {
   uint32_t uv_cir_lut_idx = 0;
   uint32_t y_rgb_sep_lut_idx = 0;
   uint32_t uv_sep_lut_idx = 0;
-
-  HWDetailEnhanceData detail_enhance;
+  HWDetailEnhanceData detail_enhance {};
 };
 
 struct HWDestScaleInfo {
@@ -438,25 +432,21 @@ struct HWPipeInfo {
   uint8_t rect = 255;
   uint32_t pipe_id = 0;
   HWSubBlockType sub_block_type = kHWSubBlockMax;
-  LayerRect src_roi;
-  LayerRect dst_roi;
+  LayerRect src_roi {};
+  LayerRect dst_roi {};
   uint8_t horizontal_decimation = 0;
   uint8_t vertical_decimation = 0;
-  HWScaleData scale_data;
+  HWScaleData scale_data {};
   uint32_t z_order = 0;
   uint8_t flags = 0;
   bool valid = false;
-
-  void Reset() { *this = HWPipeInfo(); }
 };
 
 struct HWLayerConfig {
-  HWPipeInfo left_pipe;           // pipe for left side of output
-  HWPipeInfo right_pipe;          // pipe for right side of output
-  HWRotatorSession hw_rotator_session;
+  HWPipeInfo left_pipe {};           // pipe for left side of output
+  HWPipeInfo right_pipe {};          // pipe for right side of output
+  HWRotatorSession hw_rotator_session {};
   float compression = 1.0f;
-
-  void Reset() { *this = HWLayerConfig(); }
 };
 
 struct HWHDRLayerInfo {
@@ -498,8 +488,8 @@ struct HWLayersInfo {
 };
 
 struct HWLayers {
-  HWLayersInfo info;
-  HWLayerConfig config[kMaxSDELayers];
+  HWLayersInfo info {};
+  HWLayerConfig config[kMaxSDELayers] {};
   float output_compression = 1.0f;
   uint32_t bandwidth = 0;
   uint32_t clock = 0;
@@ -513,9 +503,7 @@ struct HWDisplayAttributes : DisplayConfigVariableInfo {
   uint32_t v_pulse_width = 0;  //!< Vertical pulse width of panel
   uint32_t h_total = 0;        //!< Total width of panel (hActive + hFP + hBP + hPulseWidth)
   uint32_t v_total = 0;        //!< Total height of panel (vActive + vFP + vBP + vPulseWidth)
-  std::bitset<32> s3d_config;  //!< Stores the bit mask of S3D modes
-
-  void Reset() { *this = HWDisplayAttributes(); }
+  std::bitset<32> s3d_config {}; //!< Stores the bit mask of S3D modes
 
   bool operator !=(const HWDisplayAttributes &display_attributes) {
     return ((is_device_split != display_attributes.is_device_split) ||
