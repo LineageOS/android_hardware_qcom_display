@@ -1886,6 +1886,7 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
   PPPendingParams pending_action;
   PPDisplayAPIPayload resp_payload, req_payload;
   uint8_t *disp_id = NULL;
+  bool invalidate_needed = true;
 
   if (!color_mgr_) {
     DLOGW("color_mgr_ not initialized.");
@@ -1922,7 +1923,10 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
       DLOGV_IF(kTagQDCM, "pending action = %d, display_id = %d", BITMAP(count), display_id);
       switch (BITMAP(count)) {
         case kInvalidating:
-          Refresh(display_id);
+          {
+            invalidate_needed = false;
+            Refresh(display_id);
+          }
           break;
         case kEnterQDCMMode:
           ret = color_mgr_->EnableQDCMMode(true, hwc_display_[display_id]);
@@ -2026,7 +2030,9 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
   resp_payload.DestroyPayload();
 
   SEQUENCE_WAIT_SCOPE_LOCK(locker_[display_id]);
-  hwc_display_[display_id]->ResetValidation();
+  if (invalidate_needed) {
+    hwc_display_[display_id]->ResetValidation();
+  }
 
   return ret;
 }
