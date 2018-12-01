@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2016, 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -478,7 +478,7 @@ DisplayError ResourceDefault::SrcSplitConfig(DisplayResourceContext *display_res
     left_pipe->src_roi = src_rect;
     left_pipe->dst_roi = dst_rect;
     left_pipe->valid = true;
-    right_pipe->Reset();
+    *right_pipe = {};
   }
 
   return kErrorNone;
@@ -515,8 +515,8 @@ DisplayError ResourceDefault::DisplaySplitConfig(DisplayResourceContext *display
   }
 
   // Reset left_pipe and right_pipe to invalid by default
-  left_pipe->Reset();
-  right_pipe->Reset();
+  *left_pipe = {};
+  *right_pipe = {};
 
   if (crop_left_valid) {
     // assign left pipe
