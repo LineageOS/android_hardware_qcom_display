@@ -84,6 +84,17 @@ DisplayError DisplayPluggable::Init() {
   }
 
   error = DisplayBase::Init();
+  if (error == kErrorResources) {
+    DLOGI("Reattempting display creation for Pluggable %d", display_id_);
+    uint32_t default_mode_index = 0;
+    error = hw_intf_->GetDefaultConfig(&default_mode_index);
+    if (error == kErrorNone) {
+      hw_intf_->SetDisplayAttributes(default_mode_index);
+      error = DisplayBase::Init();
+    } else {
+      DLOGE("640x480 default mode not found, failing creation!");
+    }
+  }
   if (error != kErrorNone) {
     HWInterface::Destroy(hw_intf_);
     return error;
