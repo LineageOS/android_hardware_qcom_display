@@ -53,8 +53,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.enable_default_color_mode=1
 
 # This matrix should be in column major order, per SurfaceFlinger requirement
-#  1.16868   -0.16868    0.00000
-# -0.03155    1.03155    0.00000
-# -0.01473   -0.05899    1.07372
+#  1.0   0.0   0.0
+#  0.0   1.0   0.0
+#  0.0   0.0   1.0
 PRODUCT_PROPERTY_OVERRIDES += \
-    vendor.display.dataspace_saturation_matrix=1.16868,-0.03155,-0.01473,-0.16868,1.03155,-0.05899,0.00000,0.00000,1.07372
+    vendor.display.dataspace_saturation_matrix=1.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,1.0
