@@ -771,23 +771,12 @@ void HWDeviceDRM::GetHWPanelMaxBrightness() {
 }
 
 DisplayError HWDeviceDRM::GetActiveConfig(uint32_t *active_config) {
-  if (IsResolutionSwitchEnabled()) {
-    *active_config = current_mode_index_;
-  } else {
-    *active_config = 0;
-  }
+  *active_config = current_mode_index_;
   return kErrorNone;
 }
 
 DisplayError HWDeviceDRM::GetNumDisplayAttributes(uint32_t *count) {
-  if (IsResolutionSwitchEnabled()) {
-    *count = UINT32(display_attributes_.size());
-    if (*count <= 0) {
-       return kErrorHardware;
-    }
-  } else {
-    *count = 1;
-  }
+  *count = UINT32(display_attributes_.size());
   return kErrorNone;
 }
 
@@ -796,11 +785,7 @@ DisplayError HWDeviceDRM::GetDisplayAttributes(uint32_t index,
   if (index >= display_attributes_.size()) {
     return kErrorParameters;
   }
-  if (IsResolutionSwitchEnabled()) {
-    *display_attributes = display_attributes_[index];
-  } else {
-    *display_attributes = display_attributes_[current_mode_index_];
-  }
+  *display_attributes = display_attributes_[index];
   return kErrorNone;
 }
 
@@ -810,10 +795,6 @@ DisplayError HWDeviceDRM::GetHWPanelInfo(HWPanelInfo *panel_info) {
 }
 
 DisplayError HWDeviceDRM::SetDisplayAttributes(uint32_t index) {
-  if (!IsResolutionSwitchEnabled()) {
-    return kErrorNotSupported;
-  }
-
   if (index >= display_attributes_.size()) {
     DLOGE("Invalid mode index %d mode size %d", index, UINT32(display_attributes_.size()));
     return kErrorParameters;
@@ -1128,6 +1109,8 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
   }
 
   if (first_cycle_) {
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_TOPOLOGY_CONTROL, token_.conn_id,
+                              topology_control_);
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
@@ -1186,6 +1169,11 @@ void HWDeviceDRM::SetSolidfillStages() {
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_SOLIDFILL_STAGES, token_.crtc_id,
                               reinterpret_cast<uint64_t> (&solid_fills_));
   }
+}
+
+void HWDeviceDRM::ClearSolidfillStages() {
+  solid_fills_.clear();
+  SetSolidfillStages();
 }
 
 DisplayError HWDeviceDRM::Validate(HWLayers *hw_layers) {
@@ -1327,6 +1315,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
 }
 
 DisplayError HWDeviceDRM::Flush(HWLayers *hw_layers) {
+  ClearSolidfillStages();
   int ret = NullCommit(secure_display_active_ /* synchronous */, false /* retain_planes*/);
   if (ret) {
     DLOGE("failed with error %d", ret);
@@ -1529,6 +1518,9 @@ DisplayError HWDeviceDRM::SetRefreshRate(uint32_t refresh_rate) {
         (refresh_rate == connector_info_.modes[mode_index].mode.vrefresh)) {
       vrefresh_ = refresh_rate;
       DLOGV_IF(kTagDriverConfig, "Set refresh rate to %d", refresh_rate);
+      SetDisplayAttributes(mode_index);
+      UpdateMixerAttributes();
+
       return kErrorNone;
     }
   }
@@ -1629,10 +1621,6 @@ DisplayError HWDeviceDRM::UnsetScaleLutConfig() {
 }
 
 DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attributes) {
-  if (IsResolutionSwitchEnabled()) {
-    return kErrorNotSupported;
-  }
-
   if (!hw_resource_.hw_dest_scalar_info.count) {
     return kErrorNotSupported;
   }

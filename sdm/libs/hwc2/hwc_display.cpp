@@ -435,7 +435,7 @@ int HWCDisplay::Init() {
   DisplayConfigFixedInfo fixed_info = {};
   display_intf_->GetConfig(&fixed_info);
   is_cmd_mode_ = fixed_info.is_cmdmode;
-  partial_update_enabled_ = fixed_info.partial_update;
+  partial_update_enabled_ = fixed_info.partial_update || (!fixed_info.is_cmdmode);
   client_target_->SetPartialUpdate(partial_update_enabled_);
 
   DLOGI("Display created with id: %d", id_);
@@ -592,12 +592,8 @@ void HWCDisplay::BuildLayerStack() {
     bool hdr_layer = layer->input_buffer.color_metadata.colorPrimaries == ColorPrimaries_BT2020 &&
                      (layer->input_buffer.color_metadata.transfer == Transfer_SMPTE_ST2084 ||
                      layer->input_buffer.color_metadata.transfer == Transfer_HLG);
-    if (hdr_layer && !disable_hdr_handling_  &&
-        GetCurrentColorMode() != ColorMode::NATIVE) {
+    if (hdr_layer && !disable_hdr_handling_) {
       // Dont honor HDR when its handling is disabled
-      // Also, when the color mode is native, it implies that
-      // SF has not correctly set the mode to BT2100_PQ in the presence of an HDR layer
-      // In such cases, we should not handle HDR as the HDR mode isn't applied
       layer->input_buffer.flags.hdr = true;
       layer_stack_.flags.hdr_present = true;
     }
@@ -749,11 +745,6 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
     return HWC2::Error::None;
   }
 
-  if (active_secure_sessions_[kSecureDisplay]) {
-    DLOGW("Changing display power mode not allowed during secure display session");
-    return HWC2::Error::Unsupported;
-  }
-
   switch (mode) {
     case HWC2::PowerMode::Off:
       // During power off, all of the buffers are released.
@@ -763,19 +754,15 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
       if (tone_mapper_) {
         tone_mapper_->Terminate();
       }
-      last_power_mode_ = HWC2::PowerMode::Off;
       break;
     case HWC2::PowerMode::On:
       state = kStateOn;
-      last_power_mode_ = HWC2::PowerMode::On;
       break;
     case HWC2::PowerMode::Doze:
       state = kStateDoze;
-      last_power_mode_ = HWC2::PowerMode::Doze;
       break;
     case HWC2::PowerMode::DozeSuspend:
       state = kStateDozeSuspend;
-      last_power_mode_ = HWC2::PowerMode::DozeSuspend;
       break;
     default:
       return HWC2::Error::BadParameter;
@@ -811,6 +798,7 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
     }
     ::close(release_fence);
   }
+  current_power_mode_ = mode;
   return HWC2::Error::None;
 }
 
@@ -878,18 +866,9 @@ HWC2::Error HWCDisplay::GetDisplayConfigs(uint32_t *out_num_configs, hwc2_config
 HWC2::Error HWCDisplay::GetDisplayAttribute(hwc2_config_t config, HWC2::Attribute attribute,
                                             int32_t *out_value) {
   DisplayConfigVariableInfo variable_config;
-  // Get display attributes from config index only if resolution switch is supported.
-  // Otherwise always send mixer attributes. This is to support destination scaler.
-  if (num_configs_ > 1) {
-    if (GetDisplayAttributesForConfig(INT(config), &variable_config) != kErrorNone) {
-      DLOGE("Get variable config failed");
-      return HWC2::Error::BadDisplay;
-    }
-  } else {
-    if (display_intf_->GetFrameBufferConfig(&variable_config) != kErrorNone) {
-      DLOGV("Get variable config failed");
-      return HWC2::Error::BadDisplay;
-    }
+  if (GetDisplayAttributesForConfig(INT(config), &variable_config) != kErrorNone) {
+    DLOGE("Get variable config failed");
+    return HWC2::Error::BadDisplay;
   }
 
   switch (attribute) {
@@ -992,13 +971,7 @@ HWC2::Error HWCDisplay::GetActiveConfig(hwc2_config_t *out_config) {
     return HWC2::Error::BadDisplay;
   }
 
-  uint32_t active_index = 0;
-  if (GetActiveDisplayConfig(&active_index) != kErrorNone) {
-    return HWC2::Error::BadConfig;
-  }
-
-  *out_config = active_index;
-
+  GetActiveDisplayConfig(out_config);
   return HWC2::Error::None;
 }
 
@@ -1060,8 +1033,8 @@ HWC2::Error HWCDisplay::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_lay
   return HWC2::Error::None;
 }
 
-HWC2::PowerMode HWCDisplay::GetLastPowerMode() {
-  return last_power_mode_;
+HWC2::PowerMode HWCDisplay::GetCurrentPowerMode() {
+  return current_power_mode_;
 }
 
 HWC2::Vsync HWCDisplay::GetLastVsyncMode() {
@@ -1090,7 +1063,7 @@ DisplayError HWCDisplay::CECMessage(char *message) {
 DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
   switch (event) {
     case kIdleTimeout: {
-      SCOPE_LOCK(HWCSession::locker_[type_]);
+      SCOPE_LOCK(HWCSession::locker_[id_]);
       if (pending_commit_) {
         // If idle timeout event comes in between prepare
         // and commit, drop it since device is not really
@@ -1101,18 +1074,18 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
       break;
     }
     case kThermalEvent:
-    case kIdlePowerCollapse:
-    case kPanelDeadEvent: {
-      SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[type_]);
+    case kIdlePowerCollapse: {
+      SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[id_]);
       validated_ = false;
     } break;
+    case kPanelDeadEvent:
     case kDisplayPowerResetEvent: {
       validated_ = false;
       if (event_handler_) {
         event_handler_->DisplayPowerReset();
       } else {
-        DLOGI("Cannot process kDisplayPowerEventReset (display = %d), event_handler_ is nullptr",
-              type_);
+        DLOGW("Cannot execute DisplayPowerReset (client_id = %d), event_handler_ is nullptr",
+              id_);
       }
     } break;
     default:
@@ -1444,7 +1417,6 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
     dump_frame_count_--;
     dump_frame_index_++;
   }
-  config_pending_ = false;
 
   geometry_changes_ = GeometryChanges::kNone;
   flush_ = false;
@@ -1476,8 +1448,8 @@ void HWCDisplay::DumpInputBuffers() {
   }
 
   DLOGI("dump_frame_count %d dump_input_layers %d", dump_frame_count_, dump_input_layers_);
-  snprintf(dir_path, sizeof(dir_path), "%s/frame_dump_%s", HWCDebugHandler::DumpDir(),
-           GetDisplayString());
+  snprintf(dir_path, sizeof(dir_path), "%s/frame_dump_disp_id_%02u_%s", HWCDebugHandler::DumpDir(),
+           UINT32(id_), GetDisplayString());
 
   status = mkdir(dir_path, 777);
   if ((status != 0) && errno != EEXIST) {
@@ -1549,8 +1521,8 @@ void HWCDisplay::DumpOutputBuffer(const BufferInfo &buffer_info, void *base, int
   char dir_path[PATH_MAX];
   int  status;
 
-  snprintf(dir_path, sizeof(dir_path), "%s/frame_dump_%s", HWCDebugHandler::DumpDir(),
-           GetDisplayString());
+  snprintf(dir_path, sizeof(dir_path), "%s/frame_dump_disp_id_%02u_%s", HWCDebugHandler::DumpDir(),
+           UINT32(id_), GetDisplayString());
 
   status = mkdir(dir_path, 777);
   if ((status != 0) && errno != EEXIST) {
@@ -1593,10 +1565,10 @@ void HWCDisplay::DumpOutputBuffer(const BufferInfo &buffer_info, void *base, int
 
 const char *HWCDisplay::GetDisplayString() {
   switch (type_) {
-    case kPrimary:
-      return "primary";
-    case kHDMI:
-      return "hdmi";
+    case kBuiltIn:
+      return "builtin";
+    case kPluggable:
+      return "pluggable";
     case kVirtual:
       return "virtual";
     default:
@@ -1697,11 +1669,15 @@ int HWCDisplay::SetDisplayStatus(DisplayStatus display_status) {
   switch (display_status) {
     case kDisplayStatusResume:
       display_paused_ = false;
+      status = INT32(SetPowerMode(HWC2::PowerMode::On, false /* teardown */));
+      break;
     case kDisplayStatusOnline:
       status = INT32(SetPowerMode(HWC2::PowerMode::On, false /* teardown */));
       break;
     case kDisplayStatusPause:
       display_paused_ = true;
+      status = INT32(SetPowerMode(HWC2::PowerMode::Off, false /* teardown */));
+      break;
     case kDisplayStatusOffline:
       status = INT32(SetPowerMode(HWC2::PowerMode::Off, false /* teardown */));
       break;
@@ -1953,23 +1929,20 @@ int HWCDisplay::GetActiveSecureSession(std::bitset<kSecureMax> *secure_sessions)
 }
 
 int HWCDisplay::SetActiveDisplayConfig(uint32_t config) {
-  if (display_config_ == config) {
+  uint32_t current_config = 0;
+  display_intf_->GetActiveConfig(&current_config);
+  if (config == current_config) {
     return 0;
   }
-  display_config_ = config;
-  config_pending_ = true;
-  validated_ = false;
 
+  validated_ = false;
+  display_intf_->SetActiveConfig(config);
   callbacks_->Refresh(id_);
 
   return 0;
 }
 
 int HWCDisplay::GetActiveDisplayConfig(uint32_t *config) {
-  if (config_pending_) {
-    *config = display_config_;
-    return 0;
-  }
   return display_intf_->GetActiveConfig(config) == kErrorNone ? 0 : -1;
 }
 

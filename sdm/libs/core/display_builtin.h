@@ -91,13 +91,11 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
 
  private:
   bool NeedsAVREnable();
-  void ResetPanel();
 
   std::vector<HWEvent> event_list_;
   bool avr_prop_disabled_ = false;
   bool switch_to_cmd_ = false;
   bool handle_idle_timeout_ = false;
-  bool reset_panel_ = false;
   bool commit_event_enabled_ = false;
   DppsInfo dpps_info_ = {};
   QSyncMode qsync_mode_ = kQSyncModeNone;

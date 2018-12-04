@@ -600,10 +600,9 @@ Return<int32_t> HWCSession::controlIdlePowerCollapse(bool enable, bool synchrono
   if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
     if (!enable) {
       if (!idle_pc_ref_cnt_) {
-        HWC2::Error err =
-            hwc_display_[HWC_DISPLAY_PRIMARY]->ControlIdlePowerCollapse(enable, synchronous);
-        if (err == HWC2::Error::Unsupported) {
-          return 0;
+        auto err = hwc_display_[HWC_DISPLAY_PRIMARY]->ControlIdlePowerCollapse(enable, synchronous);
+        if (err != kErrorNone) {
+          return (err == kErrorNotSupported) ? 0 : -EINVAL;
         }
         Refresh(HWC_DISPLAY_PRIMARY);
         int32_t error = locker_[HWC_DISPLAY_PRIMARY].WaitFinite(kCommitDoneTimeoutMs);
@@ -616,10 +615,9 @@ Return<int32_t> HWCSession::controlIdlePowerCollapse(bool enable, bool synchrono
       idle_pc_ref_cnt_++;
     } else if (idle_pc_ref_cnt_ > 0) {
       if (!(idle_pc_ref_cnt_ - 1)) {
-        HWC2::Error err =
-            hwc_display_[HWC_DISPLAY_PRIMARY]->ControlIdlePowerCollapse(enable, synchronous);
-        if (err == HWC2::Error::Unsupported) {
-          return 0;
+        auto err = hwc_display_[HWC_DISPLAY_PRIMARY]->ControlIdlePowerCollapse(enable, synchronous);
+        if (err != kErrorNone) {
+          return (err == kErrorNotSupported) ? 0 : -EINVAL;
         }
         DLOGI("Idle PC enabled!!");
       }

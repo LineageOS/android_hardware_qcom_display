@@ -1,20 +1,31 @@
 #Common headers
 display_top := $(call my-dir)
-display_config_version := $(shell \
-    if [ -d "$(TOP)/vendor/qcom/opensource/interfaces/display/config/1.1" ];\
-    then echo DISPLAY_CONFIG_1_1; fi)
-display_config_version := $(shell \
-    if [ -d "$(TOP)/vendor/qcom/opensource/interfaces/display/config/1.2" ];\
-    then echo DISPLAY_CONFIG_1_2; fi)
-display_config_version := $(shell \
-    if [ -d "$(TOP)/vendor/qcom/opensource/interfaces/display/config/1.3" ];\
-    then echo DISPLAY_CONFIG_1_3; fi)
-display_config_version := $(shell \
-    if [ -d "$(TOP)/vendor/qcom/opensource/interfaces/display/config/1.4" ];\
-    then echo DISPLAY_CONFIG_1_4; fi)
+
+#Get the highest display config version available
 display_config_version := $(shell \
     if [ -d "$(TOP)/vendor/qcom/opensource/interfaces/display/config/1.5" ];\
     then echo DISPLAY_CONFIG_1_5; fi)
+ifeq ($(display_config_version),)
+display_config_version := $(shell \
+    if [ -d "$(TOP)/vendor/qcom/opensource/interfaces/display/config/1.4" ];\
+    then echo DISPLAY_CONFIG_1_4; fi)
+endif
+ifeq ($(display_config_version),)
+display_config_version := $(shell \
+    if [ -d "$(TOP)/vendor/qcom/opensource/interfaces/display/config/1.3" ];\
+    then echo DISPLAY_CONFIG_1_3; fi)
+endif
+ifeq ($(display_config_version),)
+display_config_version := $(shell \
+    if [ -d "$(TOP)/vendor/qcom/opensource/interfaces/display/config/1.2" ];\
+    then echo DISPLAY_CONFIG_1_2; fi)
+endif
+ifeq ($(display_config_version),)
+display_config_version := $(shell \
+    if [ -d "$(TOP)/vendor/qcom/opensource/interfaces/display/config/1.1" ];\
+    then echo DISPLAY_CONFIG_1_1; fi)
+endif
+
 #Common C flags
 common_flags := -Wno-missing-field-initializers
 common_flags += -Wconversion -Wall -Werror -std=c++14

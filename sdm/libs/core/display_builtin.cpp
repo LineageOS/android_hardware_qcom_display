@@ -128,12 +128,6 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
   uint32_t display_width = display_attributes_.x_pixels;
   uint32_t display_height = display_attributes_.y_pixels;
 
-  if (reset_panel_) {
-    DLOGW("panel is in bad state, resetting the panel");
-    ResetPanel();
-    reset_panel_ = false;
-  }
-
   if (NeedsMixerReconfiguration(layer_stack, &new_mixer_width, &new_mixer_height)) {
     error = ReconfigureMixer(new_mixer_width, new_mixer_height);
     if (error != kErrorNone) {
@@ -354,13 +348,6 @@ void DisplayBuiltIn::IdlePowerCollapse() {
 
 void DisplayBuiltIn::PanelDead() {
   event_handler_->HandleEvent(kPanelDeadEvent);
-  event_handler_->Refresh();
-  {
-    lock_guard<recursive_mutex> obj(recursive_mutex_);
-    reset_panel_ = true;
-    // Handle IPC is clearing scalar and sspp luts, call same here.
-    comp_manager_->ProcessIdlePowerCollapse(display_comp_ctx_);
-  }
 }
 
 // HWEventHandler overload, not DisplayBase
@@ -421,33 +408,6 @@ bool DisplayBuiltIn::NeedsAVREnable() {
   return (hw_panel_info_.mode == kModeVideo &&
           ((hw_panel_info_.dynamic_fps && hw_panel_info_.dfps_porch_mode) ||
            (!hw_panel_info_.dynamic_fps && hw_panel_info_.min_fps != hw_panel_info_.max_fps)));
-}
-
-void DisplayBuiltIn::ResetPanel() {
-  DisplayError status = kErrorNone;
-  int release_fence = -1;
-
-  DLOGI("Powering off built-in/primary %d", display_id_);
-  status = SetDisplayState(kStateOff, true /* teardown */, &release_fence);
-  if (status != kErrorNone) {
-    DLOGE("power-off on built-in/primary %d failed with error = %d", display_id_, status);
-  }
-  CloseFd(&release_fence);
-
-  DLOGI("Restoring power mode on built-in/primary %d", display_id_);
-  DisplayState mode = GetLastPowerMode();
-  status = SetDisplayState(mode, false /* teardown */, &release_fence);
-  if (status != kErrorNone) {
-    DLOGE("Setting power mode = %d on built-in/primary %d failed with error = %d", mode,
-          display_id_, status);
-  }
-  CloseFd(&release_fence);
-
-  DLOGI("Enabling HWVsync");
-  status = SetVSyncState(true);
-  if (status != kErrorNone) {
-    DLOGE("enabling vsync failed for built-in/primary %d with error = %d", display_id_, status);
-  }
 }
 
 DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size_t size) {

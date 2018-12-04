@@ -125,20 +125,18 @@ HWC2::Error HWCDisplayPluggable::Validate(uint32_t *out_num_types, uint32_t *out
     return status;
   }
 
-  if (config_pending_) {
-    if (display_intf_->SetActiveConfig(display_config_) != kErrorNone) {
-      DLOGW("Invalid display config %d", display_config_);
-      // Reset the display config with active config
-      display_intf_->GetActiveConfig(&display_config_);
-    }
-  }
-
   BuildLayerStack();
 
   if (layer_set_.empty()) {
     flush_ = true;
     validated_ = true;
     return status;
+  }
+
+  // Apply current Color Mode and Render Intent.
+  if (color_mode_->ApplyCurrentColorModeWithRenderIntent() != HWC2::Error::None) {
+    // Fallback to GPU Composition, if Color Mode can't be applied.
+    MarkLayersForClientComposition();
   }
 
   // TODO(user): SetRefreshRate need to follow new interface when added.
@@ -317,13 +315,13 @@ HWC2::Error HWCDisplayPluggable::SetColorMode(ColorMode mode) {
 }
 
 HWC2::Error HWCDisplayPluggable::SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
-  auto status = color_mode_->SetColorModeWithRenderIntent(mode, intent);
+  auto status = color_mode_->CacheColorModeWithRenderIntent(mode, intent);
   if (status != HWC2::Error::None) {
     DLOGE("failed for mode = %d intent = %d", mode, intent);
     return status;
   }
 
-  callbacks_->Refresh(HWC_DISPLAY_EXTERNAL);
+  callbacks_->Refresh(id_);
   validated_ = false;
 
   return status;

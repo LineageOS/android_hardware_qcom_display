@@ -182,13 +182,6 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
     MarkLayersForClientComposition();
   }
 
-  if (config_pending_) {
-    if (display_intf_->SetActiveConfig(display_config_) != kErrorNone) {
-      DLOGW("Invalid display config %d", display_config_);
-      // Reset the display config with active config
-      display_intf_->GetActiveConfig(&display_config_);
-    }
-  }
   // Fill in the remaining blanks in the layers and add them to the SDM layerstack
   BuildLayerStack();
   // Checks and replaces layer stack for solid fill
@@ -762,15 +755,14 @@ HWC2::Error HWCDisplayBuiltIn::SetQSyncMode(QSyncMode qsync_mode) {
   return HWC2::Error::None;
 }
 
-HWC2::Error HWCDisplayBuiltIn::ControlIdlePowerCollapse(bool enable, bool synchronous) {
+DisplayError HWCDisplayBuiltIn::ControlIdlePowerCollapse(bool enable, bool synchronous) {
   DisplayError error = kErrorNone;
 
   if (display_intf_) {
     error = display_intf_->ControlIdlePowerCollapse(enable, synchronous);
     validated_ = false;
   }
-
-  return (error != kErrorNone) ?  HWC2::Error::Unsupported : HWC2::Error::None;
+  return error;
 }
 
 }  // namespace sdm
