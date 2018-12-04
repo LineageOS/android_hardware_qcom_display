@@ -68,6 +68,7 @@ class ResourceInterface {
   virtual DisplayError SetDetailEnhancerData(Handle display_ctx,
                                              const DisplayDetailEnhancerData &de_data) = 0;
   virtual DisplayError Perform(int cmd, ...) = 0;
+  virtual DisplayError SetDisplayState(int32_t display_id, DisplayState state) = 0;
   virtual ~ResourceInterface() { }
 };
 
