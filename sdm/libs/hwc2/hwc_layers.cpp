@@ -913,7 +913,8 @@ void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
     }
   }
 
-  if (IsBT2020(layer_buffer->color_metadata.colorPrimaries)) {
+  // Only Video module populates the Color Metadata in handle.
+  if (layer_buffer->flags.video && IsBT2020(layer_buffer->color_metadata.colorPrimaries)) {
      // android_dataspace_t doesnt support mastering display and light levels
      // so retrieve it from metadata for BT2020(HDR)
      use_color_metadata = true;
