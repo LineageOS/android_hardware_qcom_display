@@ -38,6 +38,12 @@ LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.6 vendor.display.config
                                  vendor.display.config@1.4 vendor.display.config@1.3 \
                                  vendor.display.config@1.2 vendor.display.config@1.1
 endif
+ifeq ($(display_config_version), DISPLAY_CONFIG_1_7)
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.7 \
+                                 vendor.display.config@1.6 vendor.display.config@1.5 \
+                                 vendor.display.config@1.4 vendor.display.config@1.3 \
+                                 vendor.display.config@1.2 vendor.display.config@1.1
+endif
 
 LOCAL_SRC_FILES               := hwc_session.cpp \
                                  hwc_session_services.cpp \
