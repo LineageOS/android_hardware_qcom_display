@@ -393,9 +393,14 @@ int HWCDisplay::Init() {
   } else {
     error = core_intf_->CreateDisplay(sdm_id_, this, &display_intf_);
     if (error != kErrorNone) {
-      DLOGE("Display create failed. Error = %d display_id = %d event_handler = %p disp_intf = %p",
-            error, sdm_id_, this, &display_intf_);
-      return -EINVAL;
+      if (kErrorDeviceRemoved == error) {
+        DLOGW("Display creation cancelled. Display %d-%d removed.", sdm_id_, type_);
+        return -ENODEV;
+      } else {
+        DLOGE("Display create failed. Error = %d display_id = %d event_handler = %p disp_intf = %p",
+              error, sdm_id_, this, &display_intf_);
+        return -EINVAL;
+      }
     }
   }
 

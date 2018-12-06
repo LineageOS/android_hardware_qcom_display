@@ -466,12 +466,14 @@ DisplayError HWDeviceDRM::Init() {
     return kErrorHardware;
   }
 
-  if (connector_info_.modes.empty()) {
-    DLOGE("Critical error: Zero modes on connector id %u.", token_.conn_id);
+  if (!connector_info_.is_connected || connector_info_.modes.empty()) {
+    DLOGW("Device removal detected on connector id %u. Connector status %s and %d modes.",
+          token_.conn_id, connector_info_.is_connected ? "connected":"disconnected",
+          connector_info_.modes.size());
     drm_mgr_intf_->DestroyAtomicReq(drm_atomic_intf_);
     drm_atomic_intf_ = {};
     drm_mgr_intf_->UnregisterDisplay(token_);
-    return kErrorHardware;
+    return kErrorDeviceRemoved;
   }
 
   hw_info_intf_->GetHWResourceInfo(&hw_resource_);
@@ -493,16 +495,23 @@ DisplayError HWDeviceDRM::Init() {
 
 DisplayError HWDeviceDRM::Deinit() {
   DisplayError err = kErrorNone;
-  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, 0);
-  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::OFF);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, nullptr);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
-  int ret = NullCommit(true /* synchronous */, false /* retain_planes */);
-  if (ret) {
-    DLOGE("Commit failed with error: %d", ret);
-    err = kErrorHardware;
+  if (!first_cycle_) {
+    // A null-commit is needed only if the first commit had gone through. e.g., If a pluggable
+    // display is plugged in and plugged out immediately, HWDeviceDRM::Deinit() may be called
+    // before any commit happened on the device. The driver may have removed any not-in-use
+    // connector (i.e., any connector which did not have a display commit on it and a crtc path
+    // setup), so token_.conn_id may have been removed if there was no commit, resulting in
+    // drmModeAtomicCommit() failure with ENOENT, 'No such file or directory'.
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, 0);
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::OFF);
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, nullptr);
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
+    int ret = NullCommit(true /* synchronous */, false /* retain_planes */);
+    if (ret) {
+      DLOGE("Commit failed with error: %d", ret);
+      err = kErrorHardware;
+    }
   }
-
   delete hw_scale_;
   registry_.Clear();
   display_attributes_ = {};
