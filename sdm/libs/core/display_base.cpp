@@ -1693,9 +1693,11 @@ void DisplayBase::HwRecovery(const HWRecoveryEvent sdm_event_code) {
         hw_intf_->DumpDebugData();
         hw_recovery_logs_captured_ = true;
         DLOGI("Captured debugfs data for display = %d", display_type_);
-      } else {
+      } else if (!disable_hw_recovery_dump_) {
         DLOGI("Multiple capture events without intermediate success event, skipping debugfs"
               "capture for display = %d", display_type_);
+      } else {
+        DLOGI("Debugfs data dumping is disabled for display = %d", display_type_);
       }
       break;
     case HWRecoveryEvent::kDisplayPowerReset:
