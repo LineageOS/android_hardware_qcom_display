@@ -20,7 +20,11 @@
 #ifndef __HWC_SESSION_H__
 #define __HWC_SESSION_H__
 
-#ifdef DISPLAY_CONFIG_1_5
+#ifdef DISPLAY_CONFIG_1_7
+#include <vendor/display/config/1.7/IDisplayConfig.h>
+#elif DISPLAY_CONFIG_1_6
+#include <vendor/display/config/1.6/IDisplayConfig.h>
+#elif DISPLAY_CONFIG_1_5
 #include <vendor/display/config/1.5/IDisplayConfig.h>
 #elif DISPLAY_CONFIG_1_4
 #include <vendor/display/config/1.4/IDisplayConfig.h>
@@ -53,20 +57,25 @@
 
 namespace sdm {
 
-#ifdef DISPLAY_CONFIG_1_5
+#ifdef DISPLAY_CONFIG_1_7
+using vendor::display::config::V1_7::IDisplayConfig;
+#elif DISPLAY_CONFIG_1_6
+using vendor::display::config::V1_6::IDisplayConfig;
+#elif DISPLAY_CONFIG_1_5
 using vendor::display::config::V1_5::IDisplayConfig;
 #elif DISPLAY_CONFIG_1_4
 using vendor::display::config::V1_4::IDisplayConfig;
-#elif  DISPLAY_CONFIG_1_3
+#elif DISPLAY_CONFIG_1_3
 using vendor::display::config::V1_3::IDisplayConfig;
 #elif DISPLAY_CONFIG_1_2
 using vendor::display::config::V1_2::IDisplayConfig;
 #elif DISPLAY_CONFIG_1_1
 using vendor::display::config::V1_1::IDisplayConfig;
 #else
-using ::vendor::display::config::V1_0::IDisplayConfig;
+using vendor::display::config::V1_0::IDisplayConfig;
 #endif
 using ::android::hardware::Return;
+using ::android::hardware::hidl_string;
 
 // Create a singleton uevent listener thread valid for life of hardware composer process.
 // This thread blocks on uevents poll inside uevent library implementation. This poll exits
@@ -310,6 +319,19 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   Return<int32_t> SetDisplayDppsAdROI(uint32_t dispaly_id, uint32_t h_start, uint32_t h_end,
                                       uint32_t v_start, uint32_t v_end, uint32_t factor_in,
                                       uint32_t factor_out) override;
+#endif
+#ifdef DISPLAY_CONFIG_1_6
+  Return<int32_t> updateVSyncSourceOnPowerModeOff() override;
+  Return<int32_t> updateVSyncSourceOnPowerModeDoze() override;
+#endif
+#ifdef DISPLAY_CONFIG_1_7
+  Return<int32_t> setPowerMode(uint32_t disp_id, PowerMode power_mode) override;
+  Return<bool> isPowerModeOverrideSupported(uint32_t disp_id) override;
+  Return<bool> isHDRSupported(uint32_t disp_id) override;
+  Return<bool> isWCGSupported(uint32_t disp_id) override;
+  Return<int32_t> setLayerAsMask(uint32_t disp_id, uint64_t layer_id) override;
+  Return<void> getDebugProperty(const hidl_string &prop_name,
+                                getDebugProperty_cb _hidl_cb) override;
 #endif
 
   // QClient methods
