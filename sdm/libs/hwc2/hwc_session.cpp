@@ -676,7 +676,9 @@ int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display
   auto status = HWC2::Error::BadDisplay;
   DTRACE_SCOPED();
 
-  if (display >= kNumDisplays) {
+  if ((display >= HWCSession::kNumDisplays) || (hwc_session->hwc_display_[display] == nullptr)) {
+    DLOGE("Invalid Display %d Handle %s ", display, hwc_session->hwc_display_[display] ?
+          "Valid" : "NULL");
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
@@ -693,7 +695,7 @@ int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display
 
     if (power_on_pending_[display]) {
       status = HWC2::Error::None;
-    } else if (hwc_session->hwc_display_[display]) {
+    } else {
       status = hwc_session->PresentDisplayInternal(display, out_retire_fence);
     }
   }
@@ -921,7 +923,12 @@ int32_t HWCSession::SetPowerMode(hwc2_device_t *device, hwc2_display_t display, 
 
   //  all displays support on/off. Check for doze modes
   int support = 0;
-  hwc_session->GetDozeSupport(device, display, &support);
+  auto status = hwc_session->GetDozeSupport(device, display, &support);
+  if (status != HWC2_ERROR_NONE) {
+    DLOGE("Failed to get doze support Error = %d", status);
+    return INT32(status);
+  }
+
   if (!support && (mode == HWC2::PowerMode::Doze || mode == HWC2::PowerMode::DozeSuspend)) {
     return HWC2_ERROR_UNSUPPORTED;
   }
@@ -962,11 +969,13 @@ int32_t HWCSession::GetDozeSupport(hwc2_device_t *device, hwc2_display_t display
     return HWC2_ERROR_BAD_PARAMETER;
   }
 
-  if (display >= HWCSession::kNumDisplays) {
+  HWCSession *hwc_session = static_cast<HWCSession *>(device);
+  if (display >= HWCSession::kNumDisplays || (hwc_session->hwc_display_[display] == nullptr)) {
+    DLOGE("Invalid Display %d Handle %s ", display, hwc_session->hwc_display_[display] ?
+          "Valid" : "NULL");
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
-  HWCSession *hwc_session = static_cast<HWCSession *>(device);
   *out_support = 0;
   if (hwc_session->GetDisplayClass(display) == DISPLAY_CLASS_BUILTIN) {
     *out_support = 1;
