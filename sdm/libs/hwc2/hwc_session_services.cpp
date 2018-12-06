@@ -34,6 +34,7 @@
 
 #include "hwc_buffer_sync_handler.h"
 #include "hwc_session.h"
+#include "hwc_debugger.h"
 
 #define __CLASS__ "HWCSession"
 
@@ -495,5 +496,114 @@ Return<void> HWCSession::displayBWTransactionPending(displayBWTransactionPending
 
   return Void();
 }
+
+#ifdef DISPLAY_CONFIG_1_1
+Return<int32_t> HWCSession::setDisplayAnimating(uint64_t display_id, bool animating ) {
+  return CallDisplayFunction(static_cast<hwc2_device_t *>(this), display_id,
+                             &HWCDisplay::SetDisplayAnimating, animating);
+}
+#endif
+
+#ifdef DISPLAY_CONFIG_1_2
+Return<int32_t> HWCSession::setDisplayIndex(IDisplayConfig::DisplayTypeExt disp_type,
+                                            uint32_t base, uint32_t count) {
+  DLOGW("Not implemented.");
+  return 0;
+}
+#endif
+
+#ifdef DISPLAY_CONFIG_1_3
+Return<int32_t> HWCSession::controlIdlePowerCollapse(bool enable, bool synchronous) {
+  DLOGW("Not implemented.");
+  return 0;
+}
+#endif
+
+#ifdef DISPLAY_CONFIG_1_4
+Return<void> HWCSession::getWriteBackCapabilities(getWriteBackCapabilities_cb _hidl_cb) {
+  DLOGW("Not implemented.");
+  return Void();
+}
+#endif
+
+#ifdef DISPLAY_CONFIG_1_5
+Return<int32_t> HWCSession::SetDisplayDppsAdROI(uint32_t display_id, uint32_t h_start,
+                                                uint32_t h_end, uint32_t v_start, uint32_t v_end,
+                                                uint32_t factor_in, uint32_t factor_out) {
+  DLOGW("Not implemented.");
+  return 0;
+}
+#endif
+
+#ifdef DISPLAY_CONFIG_1_6
+Return<int32_t> HWCSession::updateVSyncSourceOnPowerModeOff() {
+  DLOGW("Not implemented.");
+  return 0;
+}
+
+Return<int32_t> HWCSession::updateVSyncSourceOnPowerModeDoze() {
+  DLOGW("Not implemented.");
+  return 0;
+}
+#endif
+
+#ifdef DISPLAY_CONFIG_1_7
+Return<int32_t> HWCSession::setPowerMode(uint32_t disp_id, PowerMode power_mode) {
+  return 0;
+}
+
+Return<bool> HWCSession::isPowerModeOverrideSupported(uint32_t disp_id) {
+  return false;
+}
+
+Return<bool> HWCSession::isHDRSupported(uint32_t disp_id) {
+  SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_id]);
+  HWCDisplay *hwc_display = hwc_display_[disp_id];
+  if (!hwc_display) {
+    DLOGW("Display = %d is not connected.", disp_id);
+    return false;
+  }
+
+  // query number of hdr types
+  uint32_t out_num_types = 0;
+  if (hwc_display->GetHdrCapabilities(&out_num_types, nullptr, nullptr, nullptr, nullptr)
+      != HWC2::Error::None) {
+    return false;
+  }
+
+  if (!out_num_types) {
+    return false;
+  }
+
+  return true;
+}
+
+Return<bool> HWCSession::isWCGSupported(uint32_t disp_id) {
+  // todo(user): Query wcg from sdm. For now assume them same.
+  return isHDRSupported(disp_id);
+}
+
+Return<int32_t> HWCSession::setLayerAsMask(uint32_t disp_id, uint64_t layer_id) {
+  return 0;
+}
+
+Return<void> HWCSession::getDebugProperty(const hidl_string &prop_name,
+                                          getDebugProperty_cb _hidl_cb) {
+  std::string vendor_prop_name = DISP_PROP_PREFIX;
+  char value[64] = {};
+  hidl_string result = "";
+  int32_t error = -EINVAL;
+
+  vendor_prop_name += prop_name.c_str();
+  if (HWCDebugHandler::Get()->GetProperty(vendor_prop_name.c_str(), value) != kErrorNone) {
+    result = value;
+    error = 0;
+  }
+
+  _hidl_cb(result, error);
+
+  return Void();
+}
+#endif
 
 }  // namespace sdm
