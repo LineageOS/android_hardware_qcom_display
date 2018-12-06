@@ -148,7 +148,7 @@ void DRMConnectorManager::Init(drmModeRes *resource) {
       conn->InitAndParse(libdrm_conn);
       connector_pool_[resource->connectors[i]] = std::move(conn);
     } else {
-      DRM_LOGE("Critical error: drmModeGetConnector() failed for connector %d.",
+      DRM_LOGE("Critical error: drmModeGetConnector() failed for connector %u.",
                resource->connectors[i]);
     }
   }
@@ -175,13 +175,13 @@ void DRMConnectorManager::Update() {
     if (drmconn == drm_connectors.end()) {
       // A DRM Connector in our pool was deleted.
       if (conn->second->GetStatus() == DRMStatus::FREE) {
-        DRM_LOGD("Removing connector id %d from pool.", conn->first);
+        DRM_LOGD("Removing connector id %u from pool.", conn->first);
         conn = connector_pool_.erase(conn);
       } else {
         // Physically removed DRM Connectors (displays) first go to disconnected state. When its
         // reserved resources are freed up, they are removed from the driver's connector list. Do
         // not remove DRM Connectors that are DRMStatus::BUSY.
-        DRM_LOGW("In-use connector id %d removed by DRM.", conn->first);
+        DRM_LOGW("In-use connector id %u removed by DRM.", conn->first);
         conn++;
       }
     } else {
@@ -193,14 +193,15 @@ void DRMConnectorManager::Update() {
 
   // Add new connectors in connector pool.
   for (auto &drmconn : drm_connectors) {
-    DRM_LOGD("Adding connector id %d to pool.", drmconn.first);
+    DRM_LOGD("Adding connector id %u to pool.", drmconn.first);
     unique_ptr<DRMConnector> conn(new DRMConnector(fd_));
     drmModeConnector *libdrm_conn = drmModeGetConnector(fd_, drmconn.first);
     if (libdrm_conn) {
       conn->InitAndParse(libdrm_conn);
+      conn->SetSkipConnectorReload(true);
       connector_pool_[drmconn.first] = std::move(conn);
     } else {
-      DRM_LOGE("Critical error: drmModeGetConnector() failed for connector %d.", drmconn.first);
+      DRM_LOGE("Critical error: drmModeGetConnector() failed for connector %u.", drmconn.first);
     }
   }
 
@@ -563,23 +564,26 @@ void DRMConnector::ParseCapabilities(uint64_t blob_id, std::vector<uint8_t> *edi
 }
 
 int DRMConnector::GetInfo(DRMConnectorInfo *info) {
-  // Reload each time since for some connectors like Virtual, modes may change
   uint32_t conn_id = drm_connector_->connector_id;
-  drmModeConnectorPtr drm_connector = drmModeGetConnector(fd_, conn_id);
-  if (!drm_connector) {
-    // Connector resource not found. This could happen if a connector is removed before a commit was
-    // done on it. Mark the connector as disconnected for graceful teardown. Update 'info' with
-    // basic information from previously initialized drm_connector_ for graceful teardown.
-    info->is_connected = false;
-    info->modes.clear();
-    info->type = drm_connector_->connector_type;
-    DLOGW("Connector %u not found. Possibly removed.", conn_id);
-    return 0;
+  if (!skip_connector_reload_ && (IsTVConnector(drm_connector_->connector_type)
+      || (DRM_MODE_CONNECTOR_VIRTUAL == drm_connector_->connector_type))) {
+    // Reload since for some connectors like Virtual and DP, modes may change.
+    drmModeConnectorPtr drm_connector = drmModeGetConnector(fd_, conn_id);
+    if (!drm_connector) {
+      // Connector resource not found. This could happen if a connector is removed before a commit
+      // was done on it. Mark the connector as disconnected for graceful teardown. Update 'info'
+      // with basic information from previously initialized drm_connector_ for graceful teardown.
+      info->is_connected = false;
+      info->modes.clear();
+      info->type = drm_connector_->connector_type;
+      DLOGW("Connector %u not found. Possibly removed.", conn_id);
+      return 0;
+    }
+    drmModeFreeConnector(drm_connector_);
+    drm_connector_ = drm_connector;
   }
 
-  drmModeFreeConnector(drm_connector_);
-  drm_connector_ = drm_connector;
-
+  SetSkipConnectorReload(false);  // Reset skip_connector_reload_ setting.
   info->modes.clear();
   if (!drm_connector_->count_modes) {
     DRM_LOGW("Zero modes on connector %u.", conn_id);
