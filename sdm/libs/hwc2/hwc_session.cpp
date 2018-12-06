@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -1922,6 +1922,7 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
   PPDisplayAPIPayload resp_payload, req_payload;
   uint8_t *disp_id = NULL;
   bool invalidate_needed = true;
+  int32_t *mode_id = NULL;
 
   if (!color_mgr_) {
     DLOGW("color_mgr_ not initialized.");
@@ -2050,6 +2051,21 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
                 disp_id[id] = (uint8_t)id;
               }
             }
+          }
+          break;
+        case kSetModeFromClient:
+          {
+            SCOPE_LOCK(locker_[display_id]);
+            mode_id = reinterpret_cast<int32_t *>(resp_payload.payload);
+            if (mode_id) {
+              ret = static_cast<int>(hwc_display_[display_id]->SetColorModeFromClientApi(*mode_id));
+            } else {
+              DLOGE("mode_id is Null");
+              ret = -EINVAL;
+            }
+          }
+          if (!ret) {
+            Refresh(display_id);
           }
           break;
         default:
