@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -78,16 +78,16 @@ class HWCColorMode {
   HWC2::Error GetRenderIntents(ColorMode mode, uint32_t *out_num_intents, RenderIntent *out_modes);
   HWC2::Error SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
   HWC2::Error SetColorModeById(int32_t color_mode_id);
+  HWC2::Error SetColorModeFromClientApi(std::string mode_string);
   HWC2::Error SetColorTransform(const float *matrix, android_color_transform_t hint);
   HWC2::Error RestoreColorTransform();
   ColorMode GetCurrentColorMode() { return current_color_mode_; }
-  HWC2::Error ApplyCurrentColorModeWithRenderIntent();
+  HWC2::Error ApplyCurrentColorModeWithRenderIntent(bool hdr_present);
   HWC2::Error CacheColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
 
  private:
   static const uint32_t kColorTransformMatrixCount = 16;
   void PopulateColorModes();
-  void FindRenderIntent(const ColorMode &mode, const std::string &mode_string);
   template <class T>
   void CopyColorTransformMatrix(const T *input_matrix, double *output_matrix) {
     for (uint32_t i = 0; i < kColorTransformMatrixCount; i++) {
@@ -96,18 +96,23 @@ class HWCColorMode {
   }
   HWC2::Error ApplyDefaultColorMode();
   HWC2::Error ValidateColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
+  HWC2::Error SetPreferredColorModeInternal(const std::string &mode_string, bool from_client,
+    ColorMode *color_mode, DynamicRangeType *dynamic_range);
 
   DisplayInterface *display_intf_ = NULL;
   bool apply_mode_ = false;
   ColorMode current_color_mode_ = ColorMode::NATIVE;
   RenderIntent current_render_intent_ = RenderIntent::COLORIMETRIC;
-  typedef std::map<RenderIntent, std::string> RenderIntentMap;
-  // Initialize supported mode/render intent combination
+  DynamicRangeType curr_dynamic_range_ = kSdrType;
+  typedef std::map<DynamicRangeType, std::string> DynamicRangeMap;
+  typedef std::map<RenderIntent, DynamicRangeMap> RenderIntentMap;
+  // Initialize supported mode/render intent/dynamic range combination
   std::map<ColorMode, RenderIntentMap> color_mode_map_ = {};
   double color_matrix_[kColorTransformMatrixCount] = { 1.0, 0.0, 0.0, 0.0, \
                                                        0.0, 1.0, 0.0, 0.0, \
                                                        0.0, 0.0, 1.0, 0.0, \
                                                        0.0, 0.0, 0.0, 1.0 };
+  std::map<ColorMode, DynamicRangeMap> preferred_mode_ = {};
 };
 
 class HWCDisplay : public DisplayEventHandler {
@@ -218,6 +223,9 @@ class HWCDisplay : public DisplayEventHandler {
   }
   bool HWCClientNeedsValidate() {
     return (has_client_composition_ || layer_stack_.flags.single_buffered_layer_present);
+  }
+  virtual HWC2::Error SetColorModeFromClientApi(int32_t color_mode_id) {
+    return HWC2::Error::Unsupported;
   }
 
   // HWC2 APIs
