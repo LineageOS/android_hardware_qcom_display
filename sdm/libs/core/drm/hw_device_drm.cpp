@@ -785,7 +785,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::Flush() {
+DisplayError HWDeviceDRM::Flush(bool secure) {
   return kErrorNone;
 }
 

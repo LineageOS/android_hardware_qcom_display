@@ -177,7 +177,7 @@ void HWCDisplayExternal::SetSecureDisplay(bool secure_display_active) {
     secure_display_active_ = secure_display_active;
 
     if (secure_display_active_) {
-      DisplayError error = display_intf_->Flush();
+      DisplayError error = display_intf_->Flush(true);
       validated_.reset();
       if (error != kErrorNone) {
         DLOGE("Flush failed. Error = %d", error);

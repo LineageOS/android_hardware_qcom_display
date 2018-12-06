@@ -1233,7 +1233,8 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
 
   // Do no call flush on errors, if a successful buffer is never submitted.
   if (flush_ && flush_on_error_) {
-    display_intf_->Flush();
+    display_intf_->Flush(secure_display_transition_);
+    secure_display_transition_ = false;
     validated_.reset();
   }
 
@@ -1900,6 +1901,7 @@ void HWCDisplay::SetSecureDisplay(bool secure_display_active) {
     DLOGI("SecureDisplay state changed from %d to %d Needs Flush!!", secure_display_active_,
           secure_display_active);
     secure_display_active_ = secure_display_active;
+    secure_display_transition_ = true;
     skip_prepare_ = true;
   }
   return;
