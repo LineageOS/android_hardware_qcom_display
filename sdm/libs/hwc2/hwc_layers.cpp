@@ -182,6 +182,10 @@ int32_t TranslateFromLegacyDataspace(const int32_t &legacy_ds) {
     }
   }
 
+  if (dataspace == HAL_DATASPACE_UNKNOWN) {
+    dataspace = HAL_DATASPACE_V0_SRGB;
+  }
+
   return dataspace;
 }
 

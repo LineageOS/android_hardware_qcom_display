@@ -77,7 +77,7 @@ static const int kSolidFillDelay = 100 * 1000;
 int HWCSession::null_display_mode_ = 0;
 
 // Map the known color modes to dataspace.
-static int32_t GetDataspace(ColorMode mode) {
+int32_t GetDataspaceFromColorMode(ColorMode mode) {
   switch (mode) {
     case ColorMode::SRGB:
     case ColorMode::NATIVE:
@@ -2750,7 +2750,7 @@ int32_t HWCSession::GetReadbackBufferAttributes(hwc2_device_t *device, hwc2_disp
 
   if (hwc_display) {
     *format = HAL_PIXEL_FORMAT_RGB_888;
-    *dataspace = GetDataspace(hwc_display->GetCurrentColorMode());
+    *dataspace = GetDataspaceFromColorMode(hwc_display->GetCurrentColorMode());
     return HWC2_ERROR_NONE;
   }
 
