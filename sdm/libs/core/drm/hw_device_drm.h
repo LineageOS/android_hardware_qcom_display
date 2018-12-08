@@ -72,6 +72,7 @@ class HWDeviceDRM : public HWInterface {
   // From HWInterface
   virtual DisplayError GetDisplayId(int32_t *display_id);
   virtual DisplayError GetActiveConfig(uint32_t *active_config);
+  virtual DisplayError GetDefaultConfig(uint32_t *default_config) { return kErrorNotSupported; }
   virtual DisplayError GetNumDisplayAttributes(uint32_t *count);
   virtual DisplayError GetDisplayAttributes(uint32_t index,
                                             HWDisplayAttributes *display_attributes);
@@ -141,6 +142,7 @@ class HWDeviceDRM : public HWInterface {
   void UpdateMixerAttributes();
   void SetSolidfillStages();
   void AddSolidfillStage(const HWSolidfillStage &sf, uint32_t plane_alpha);
+  void ClearSolidfillStages();
   void SetBlending(const LayerBlending &source, sde_drm::DRMBlendType *target);
   void SetSrcConfig(const LayerBuffer &input_buffer, const HWRotatorMode &mode, uint32_t *config);
   void SelectCscType(const LayerBuffer &input_buffer, sde_drm::DRMCscType *type);
@@ -215,6 +217,7 @@ class HWDeviceDRM : public HWInterface {
   bool secure_display_active_ = false;
   uint64_t debug_dump_count_ = 0;
   bool synchronous_commit_ = false;
+  uint32_t topology_control_ = 0;
 
  private:
   std::string interface_str_ = "DSI";

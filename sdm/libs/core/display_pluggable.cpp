@@ -57,7 +57,11 @@ DisplayError DisplayPluggable::Init() {
   DisplayError error = HWInterface::Create(display_id_, kPluggable, hw_info_intf_,
                                            buffer_sync_handler_, buffer_allocator_, &hw_intf_);
   if (error != kErrorNone) {
-    DLOGE("Failed to create hardware interface. Error = %d", error);
+    if (kErrorDeviceRemoved == error) {
+      DLOGW("Aborted creating hardware interface. Device removed.");
+    } else {
+      DLOGE("Failed to create hardware interface. Error = %d", error);
+    }
     return error;
   }
 
@@ -84,6 +88,17 @@ DisplayError DisplayPluggable::Init() {
   }
 
   error = DisplayBase::Init();
+  if (error == kErrorResources) {
+    DLOGI("Reattempting display creation for Pluggable %d", display_id_);
+    uint32_t default_mode_index = 0;
+    error = hw_intf_->GetDefaultConfig(&default_mode_index);
+    if (error == kErrorNone) {
+      hw_intf_->SetDisplayAttributes(default_mode_index);
+      error = DisplayBase::Init();
+    } else {
+      DLOGE("640x480 default mode not found, failing creation!");
+    }
+  }
   if (error != kErrorNone) {
     HWInterface::Destroy(hw_intf_);
     return error;
@@ -304,17 +319,21 @@ DisplayError DisplayPluggable::VSync(int64_t timestamp) {
 DisplayError DisplayPluggable::InitializeColorModes() {
   PrimariesTransfer pt = {};
   AttrVal var = {};
-  color_modes_cs_.push_back(pt);
-  var.push_back(std::make_pair(kColorGamutAttribute, kSrgb));
-  var.push_back(std::make_pair(kDynamicRangeAttribute, kSdr));
-  var.push_back(std::make_pair(kPictureQualityAttribute, kStandard));
-  color_mode_attr_map_.insert(std::make_pair(kSrgb, var));
-  current_color_mode_ = kSrgb;
-  pt.primaries = ColorPrimaries_BT2020;
   if (!hw_panel_info_.hdr_enabled) {
-    UpdateColorModes();
     return kErrorNone;
   } else {
+    color_modes_cs_.push_back(pt);
+    var.push_back(std::make_pair(kColorGamutAttribute, kSrgb));
+    var.push_back(std::make_pair(kDynamicRangeAttribute, kSdr));
+    var.push_back(std::make_pair(kPictureQualityAttribute, kStandard));
+    color_mode_attr_map_.insert(std::make_pair(kSrgb, var));
+
+    // native mode
+    color_modes_cs_.push_back(pt);
+    var.clear();
+    color_mode_attr_map_.insert(std::make_pair("hal_native", var));
+
+    pt.primaries = ColorPrimaries_BT2020;
     pt.transfer = Transfer_Gamma2_2;
     color_modes_cs_.push_back(pt);
     var.clear();
@@ -338,6 +357,7 @@ DisplayError DisplayPluggable::InitializeColorModes() {
     color_modes_cs_.push_back(pt);
     color_mode_attr_map_.insert(std::make_pair(kBt2020Hlg, var));
   }
+  current_color_mode_ = kSrgb;
   UpdateColorModes();
 
   return kErrorNone;

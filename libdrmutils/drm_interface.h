@@ -389,6 +389,12 @@ enum struct DRMOps {
    *     uint32_t - qsync mode
    */
   CONNECTOR_SET_QSYNC_MODE,
+  /*
+   * Op: Sets topology control on this connector
+   * Arg: uint32_t - Connector ID
+   *      uint32_t - Topology control bit-mask
+   */
+  CONNECTOR_SET_TOPOLOGY_CONTROL,
 };
 
 enum struct DRMRotation {
@@ -603,6 +609,7 @@ struct DRMConnectorInfo {
   // Connection status of this connector
   bool is_connected;
   bool is_wb_ubwc_supported;
+  uint32_t topology_control;
 };
 
 // All DRM Connectors as map<Connector_id , connector_info>
@@ -763,6 +770,14 @@ enum struct DRMCWbCaptureMode {
 enum struct DRMQsyncMode {
   NONE = 0,
   CONTINUOUS,
+};
+
+enum struct DRMTopologyControl {
+  NONE          = 0,
+  RESERVE_LOCK  = 1 << 0,
+  RESERVE_CLEAR = 1 << 1,
+  DSPP          = 1 << 2,
+  DEST_SCALER   = 1 << 3,
 };
 
 struct DRMSolidfillStage {

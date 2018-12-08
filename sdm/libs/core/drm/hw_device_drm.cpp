@@ -466,12 +466,14 @@ DisplayError HWDeviceDRM::Init() {
     return kErrorHardware;
   }
 
-  if (connector_info_.modes.empty()) {
-    DLOGE("Critical error: Zero modes on connector id %u.", token_.conn_id);
+  if (!connector_info_.is_connected || connector_info_.modes.empty()) {
+    DLOGW("Device removal detected on connector id %u. Connector status %s and %d modes.",
+          token_.conn_id, connector_info_.is_connected ? "connected":"disconnected",
+          connector_info_.modes.size());
     drm_mgr_intf_->DestroyAtomicReq(drm_atomic_intf_);
     drm_atomic_intf_ = {};
     drm_mgr_intf_->UnregisterDisplay(token_);
-    return kErrorHardware;
+    return kErrorDeviceRemoved;
   }
 
   hw_info_intf_->GetHWResourceInfo(&hw_resource_);
@@ -493,16 +495,23 @@ DisplayError HWDeviceDRM::Init() {
 
 DisplayError HWDeviceDRM::Deinit() {
   DisplayError err = kErrorNone;
-  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, 0);
-  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::OFF);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, nullptr);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
-  int ret = NullCommit(true /* synchronous */, false /* retain_planes */);
-  if (ret) {
-    DLOGE("Commit failed with error: %d", ret);
-    err = kErrorHardware;
+  if (!first_cycle_) {
+    // A null-commit is needed only if the first commit had gone through. e.g., If a pluggable
+    // display is plugged in and plugged out immediately, HWDeviceDRM::Deinit() may be called
+    // before any commit happened on the device. The driver may have removed any not-in-use
+    // connector (i.e., any connector which did not have a display commit on it and a crtc path
+    // setup), so token_.conn_id may have been removed if there was no commit, resulting in
+    // drmModeAtomicCommit() failure with ENOENT, 'No such file or directory'.
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, 0);
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::OFF);
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, nullptr);
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
+    int ret = NullCommit(true /* synchronous */, false /* retain_planes */);
+    if (ret) {
+      DLOGE("Commit failed with error: %d", ret);
+      err = kErrorHardware;
+    }
   }
-
   delete hw_scale_;
   registry_.Clear();
   display_attributes_ = {};
@@ -771,23 +780,12 @@ void HWDeviceDRM::GetHWPanelMaxBrightness() {
 }
 
 DisplayError HWDeviceDRM::GetActiveConfig(uint32_t *active_config) {
-  if (IsResolutionSwitchEnabled()) {
-    *active_config = current_mode_index_;
-  } else {
-    *active_config = 0;
-  }
+  *active_config = current_mode_index_;
   return kErrorNone;
 }
 
 DisplayError HWDeviceDRM::GetNumDisplayAttributes(uint32_t *count) {
-  if (IsResolutionSwitchEnabled()) {
-    *count = UINT32(display_attributes_.size());
-    if (*count <= 0) {
-       return kErrorHardware;
-    }
-  } else {
-    *count = 1;
-  }
+  *count = UINT32(display_attributes_.size());
   return kErrorNone;
 }
 
@@ -796,11 +794,7 @@ DisplayError HWDeviceDRM::GetDisplayAttributes(uint32_t index,
   if (index >= display_attributes_.size()) {
     return kErrorParameters;
   }
-  if (IsResolutionSwitchEnabled()) {
-    *display_attributes = display_attributes_[index];
-  } else {
-    *display_attributes = display_attributes_[current_mode_index_];
-  }
+  *display_attributes = display_attributes_[index];
   return kErrorNone;
 }
 
@@ -810,10 +804,6 @@ DisplayError HWDeviceDRM::GetHWPanelInfo(HWPanelInfo *panel_info) {
 }
 
 DisplayError HWDeviceDRM::SetDisplayAttributes(uint32_t index) {
-  if (!IsResolutionSwitchEnabled()) {
-    return kErrorNotSupported;
-  }
-
   if (index >= display_attributes_.size()) {
     DLOGE("Invalid mode index %d mode size %d", index, UINT32(display_attributes_.size()));
     return kErrorParameters;
@@ -1128,6 +1118,8 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
   }
 
   if (first_cycle_) {
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_TOPOLOGY_CONTROL, token_.conn_id,
+                              topology_control_);
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
@@ -1186,6 +1178,11 @@ void HWDeviceDRM::SetSolidfillStages() {
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_SOLIDFILL_STAGES, token_.crtc_id,
                               reinterpret_cast<uint64_t> (&solid_fills_));
   }
+}
+
+void HWDeviceDRM::ClearSolidfillStages() {
+  solid_fills_.clear();
+  SetSolidfillStages();
 }
 
 DisplayError HWDeviceDRM::Validate(HWLayers *hw_layers) {
@@ -1327,6 +1324,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
 }
 
 DisplayError HWDeviceDRM::Flush(HWLayers *hw_layers) {
+  ClearSolidfillStages();
   int ret = NullCommit(secure_display_active_ /* synchronous */, false /* retain_planes*/);
   if (ret) {
     DLOGE("failed with error %d", ret);

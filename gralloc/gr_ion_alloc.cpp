@@ -95,7 +95,8 @@ int IonAlloc::AllocBuffer(AllocData *data) {
   err = ion_alloc_fd(ion_dev_fd_, data->size, data->align, data->heap_id, flags, &fd);
   ATRACE_END();
   if (err) {
-    ALOGE("libion alloc failed");
+    ALOGE("libion alloc failed ion_fd %d size %d align %d heap_id %x flags %x",
+          ion_dev_fd_, data->size, data->align, data->heap_id, flags);
     return err;
   }
 

@@ -106,6 +106,7 @@ DisplayError DisplayBase::Init() {
   error = Debug::GetMixerResolution(&mixer_attributes_.width, &mixer_attributes_.height);
   if (error == kErrorNone) {
     hw_intf_->SetMixerAttributes(mixer_attributes_);
+    custom_mixer_resolution_ = true;
   }
 
   error = hw_intf_->GetMixerAttributes(&mixer_attributes_);
@@ -144,6 +145,7 @@ DisplayError DisplayBase::Init() {
                                          hw_panel_info_, mixer_attributes_, fb_config_,
                                          &display_comp_ctx_, &(default_qos_data_.clock_hz));
   if (error != kErrorNone) {
+    DLOGW("Display %d comp manager registration failed!", display_id_);
     goto CleanupOnError;
   }
 
@@ -439,6 +441,10 @@ DisplayError DisplayBase::GetConfig(uint32_t index, DisplayConfigVariableInfo *v
   HWDisplayAttributes attrib;
   if (hw_intf_->GetDisplayAttributes(index, &attrib) == kErrorNone) {
     *variable_info = attrib;
+    if (custom_mixer_resolution_) {
+      variable_info->x_pixels = fb_config_.x_pixels;
+      variable_info->y_pixels = fb_config_.y_pixels;
+    }
     return kErrorNone;
   }
 
@@ -486,10 +492,6 @@ DisplayError DisplayBase::GetVSyncState(bool *enabled) {
   return kErrorNone;
 }
 
-DisplayState DisplayBase::GetLastPowerMode() {
-  return last_power_mode_;
-}
-
 DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
                                           int *release_fence) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
@@ -527,13 +529,11 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     }
 
     active = true;
-    last_power_mode_ = kStateOn;
     break;
 
   case kStateDoze:
     error = hw_intf_->Doze(default_qos_data_, release_fence);
     active = true;
-    last_power_mode_ = kStateDoze;
     break;
 
   case kStateDozeSuspend:
@@ -541,12 +541,10 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     if (display_type_ != kBuiltIn) {
       active = true;
     }
-    last_power_mode_ = kStateDozeSuspend;
     break;
 
   case kStateStandby:
     error = hw_intf_->Standby();
-    last_power_mode_ = kStateStandby;
     break;
 
   default:
@@ -1060,7 +1058,7 @@ DisplayError DisplayBase::SetVSyncState(bool enable) {
     error = hw_intf_->SetVSyncState(enable);
     if (error == kErrorNotSupported) {
       if (drop_skewed_vsync_ && (hw_panel_info_.mode == kModeVideo) &&
-        enable && (current_refresh_rate_ == hw_panel_info_.min_fps)) {
+        enable && (current_refresh_rate_ < hw_panel_info_.max_fps)) {
         drop_hw_vsync_ = true;
       }
       error = hw_events_intf_->SetEventState(HWEvent::VSYNC, enable);

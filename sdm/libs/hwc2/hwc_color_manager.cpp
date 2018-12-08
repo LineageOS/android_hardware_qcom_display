@@ -82,6 +82,14 @@ int HWCColorManager::CreatePayloadFromParcel(const android::Parcel &in, uint32_t
 
 void HWCColorManager::MarshallStructIntoParcel(const PPDisplayAPIPayload &data,
                                                android::Parcel *out_parcel) {
+  if (data.fd > 0) {
+    int err = out_parcel->writeDupFileDescriptor(data.fd);
+    if (err) {
+      DLOGE("writeDupFileDescriptor status = %d", err);
+    }
+    close(data.fd);
+  }
+
   out_parcel->writeInt32(INT32(data.size));
   if (data.payload)
     out_parcel->write(data.payload, data.size);
