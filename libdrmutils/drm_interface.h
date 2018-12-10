@@ -483,6 +483,7 @@ struct DRMModeInfo {
   int wmin;
   int hmin;
   bool roi_merge;
+  uint64_t bit_clk_rate;
 };
 
 /* Per Connector Info*/
@@ -506,6 +507,7 @@ struct DRMConnectorInfo {
   drm_msm_ext_hdr_properties ext_hdr_prop;
   // Connection status of this connector
   bool is_connected;
+  bool dyn_bitclk_support;
 };
 
 // All DRM Connectors as map<Connector_id , connector_info>

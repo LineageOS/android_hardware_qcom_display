@@ -784,8 +784,9 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
     GetUBWCStatsFromMetaData(&cr_stats[0], &(layer_buffer->ubwc_crstats[0]));
   }  // if (getMetaData)
 
-  single_buffer_ = false;
-  getMetaData(const_cast<private_handle_t *>(handle), GET_SINGLE_BUFFER_MODE, &single_buffer_);
+  uint32_t single_buffer = 0;
+  getMetaData(const_cast<private_handle_t *>(handle), GET_SINGLE_BUFFER_MODE, &single_buffer);
+  single_buffer_ = (single_buffer == 1);
 
   return kErrorNone;
 }

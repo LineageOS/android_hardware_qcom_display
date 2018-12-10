@@ -596,4 +596,34 @@ Return<int32_t> HWCSession::controlIdlePowerCollapse(bool enable, bool synchrono
 }
 #endif
 
+#ifdef DISPLAY_CONFIG_1_4
+Return<void> HWCSession::getWriteBackCapabilities(getWriteBackCapabilities_cb _hidl_cb) {
+  DLOGW("Not implemented.");
+  return Void();
+}
+#endif
+
+#ifdef DISPLAY_CONFIG_1_5
+Return<int32_t> HWCSession::SetDisplayDppsAdROI(uint32_t display_id, uint32_t h_start,
+                                                uint32_t h_end, uint32_t v_start, uint32_t v_end,
+                                                uint32_t factor_in, uint32_t factor_out) {
+    DLOGW("Not implemented.");
+    return 0;
+}
+#endif
+
+#ifdef DISPLAY_CONFIG_1_6
+Return<int32_t> HWCSession::updateVSyncSourceOnPowerModeOff() {
+  update_vsync_on_power_off_ = true;
+
+  return 0;
+}
+
+Return<int32_t> HWCSession::updateVSyncSourceOnPowerModeDoze() {
+  update_vsync_on_doze_ = true;
+
+  return 0;
+}
+#endif
+
 }  // namespace sdm

@@ -113,6 +113,8 @@ class HWInterface {
   virtual DisplayError SetMixerAttributes(const HWMixerAttributes &mixer_attributes) = 0;
   virtual DisplayError GetMixerAttributes(HWMixerAttributes *mixer_attributes) = 0;
   virtual DisplayError DumpDebugData() = 0;
+  virtual DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate) = 0;
+  virtual DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate) = 0;
 
  protected:
   virtual ~HWInterface() { }

@@ -100,6 +100,10 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(GetClientTargetSupport(uint32_t, uint32_t, LayerBufferFormat,
                                     const ColorMetaData &))
   std::string Dump() { return ""; }
+  MAKE_NO_OP(SetDynamicDSIClock(uint64_t bit_clk_rate))
+  MAKE_NO_OP(GetDynamicDSIClock(uint64_t *bit_clk_rate))
+  MAKE_NO_OP(GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates))
+
 
  private:
   bool active_ = false;
