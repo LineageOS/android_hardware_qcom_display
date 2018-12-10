@@ -48,13 +48,14 @@ namespace sdm {
 
 int HWCDisplayBuiltIn::Create(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
                               HWCCallbacks *callbacks, qService::QService *qservice,
-                              hwc2_display_t id, int32_t sdm_id, HWCDisplay **hwc_display) {
+                              hwc2_display_t id, int32_t sdm_id, bool is_primary,
+                              HWCDisplay **hwc_display) {
   int status = 0;
   uint32_t builtin_width = 0;
   uint32_t builtin_height = 0;
 
-  HWCDisplay *hwc_display_builtin =
-      new HWCDisplayBuiltIn(core_intf, buffer_allocator, callbacks, qservice, id, sdm_id);
+  HWCDisplay *hwc_display_builtin = new HWCDisplayBuiltIn(core_intf, buffer_allocator, callbacks,
+                                                          qservice, id, sdm_id, is_primary);
   status = hwc_display_builtin->Init();
   if (status) {
     delete hwc_display_builtin;
@@ -88,11 +89,12 @@ void HWCDisplayBuiltIn::Destroy(HWCDisplay *hwc_display) {
 
 HWCDisplayBuiltIn::HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
                                      HWCCallbacks *callbacks, qService::QService *qservice,
-                                     hwc2_display_t id, int32_t sdm_id)
+                                     hwc2_display_t id, int32_t sdm_id, bool is_primary)
     : HWCDisplay(core_intf, buffer_allocator, callbacks, qservice, kBuiltIn, id, sdm_id, true,
                  DISPLAY_CLASS_BUILTIN),
       buffer_allocator_(buffer_allocator),
-      cpu_hint_(NULL) {
+      cpu_hint_(NULL),
+      is_primary_(is_primary) {
 }
 
 int HWCDisplayBuiltIn::Init() {
@@ -116,6 +118,13 @@ int HWCDisplayBuiltIn::Init() {
   color_mode_ = new HWCColorMode(display_intf_);
   color_mode_->Init();
   HWCDebugHandler::Get()->GetProperty(ENABLE_DEFAULT_COLOR_MODE, &default_mode_status_);
+
+  if (is_primary_) {
+    Debug::GetWindowRect(&window_rect_.left, &window_rect_.top,
+                         &window_rect_.right, &window_rect_.bottom);
+    DLOGI("Window rect :[%f %f %f %f]", window_rect_.left, window_rect_.top,
+           window_rect_.right, window_rect_.bottom);
+  }
 
   return status;
 }

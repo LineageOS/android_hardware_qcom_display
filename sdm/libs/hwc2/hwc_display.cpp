@@ -359,12 +359,6 @@ HWCDisplay::HWCDisplay(CoreInterface *core_intf, BufferAllocator *buffer_allocat
 }
 
 int HWCDisplay::Init() {
-  Debug::GetWindowRect(&window_rect_.left, &window_rect_.top,
-                                 &window_rect_.right, &window_rect_.bottom);
-
-  DLOGI("Window rect : [%f %f %f %f]",window_rect_.left, window_rect_.top,
-         window_rect_.right, window_rect_.bottom);
-
   DisplayError error = core_intf_->CreateDisplay(sdm_id_, this, &display_intf_);
   if (error != kErrorNone) {
     DLOGE("Display create failed. Error = %d display_id = %d event_handler = %p disp_intf = %p",

@@ -2106,7 +2106,7 @@ int HWCSession::CreatePrimaryDisplay() {
                                                                     info.display_id, client_id);
     if (info.display_type == kBuiltIn) {
       status = HWCDisplayBuiltIn::Create(core_intf_, &buffer_allocator_, &callbacks_, qservice_,
-                                         client_id, info.display_id, hwc_display);
+                                         client_id, info.display_id, info.is_primary, hwc_display);
     } else if (info.display_type == kPluggable) {
       status = HWCDisplayPluggable::Create(core_intf_, &buffer_allocator_, &callbacks_, qservice_,
                                            client_id, info.display_id, 0, 0, false, hwc_display);
@@ -2158,7 +2158,7 @@ int HWCSession::CreateBuiltInDisplays() {
 
     DLOGI("Create builtin display, sdm id = %d, client id = %d", info.display_id, client_id);
     status = HWCDisplayBuiltIn::Create(core_intf_, &buffer_allocator_, &callbacks_, qservice_,
-                                       client_id, info.display_id,
+                                       client_id, info.display_id, info.is_primary,
                                        &hwc_display_builtin_[client_id]);
     if (status) {
       DLOGE("Builtin display creation failed.");

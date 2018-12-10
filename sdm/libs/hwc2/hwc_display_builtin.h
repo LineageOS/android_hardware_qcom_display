@@ -50,7 +50,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
 
   static int Create(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
                     HWCCallbacks *callbacks, qService::QService *qservice,
-                    hwc2_display_t id, int32_t sdm_id, HWCDisplay **hwc_display);
+                    hwc2_display_t id, int32_t sdm_id, bool is_primary, HWCDisplay **hwc_display);
   static void Destroy(HWCDisplay *hwc_display);
   virtual int Init();
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests);
@@ -76,7 +76,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
                     HWCCallbacks *callbacks, qService::QService *qservice, hwc2_display_t id,
-                    int32_t sdm_id);
+                    int32_t sdm_id, bool is_primary);
   void SetMetaDataRefreshRateFlag(bool enable);
   virtual DisplayError SetDisplayMode(uint32_t mode);
   virtual DisplayError DisablePartialUpdateOneFrame();
@@ -107,6 +107,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   BufferInfo output_buffer_info_ = {};
   void *output_buffer_base_ = nullptr;
   int default_mode_status_ = 0;
+  bool is_primary_ = false;
 };
 
 }  // namespace sdm
