@@ -72,6 +72,7 @@ class HWDeviceDRM : public HWInterface {
   // From HWInterface
   virtual DisplayError GetDisplayId(int32_t *display_id);
   virtual DisplayError GetActiveConfig(uint32_t *active_config);
+  virtual DisplayError GetDefaultConfig(uint32_t *default_config) { return kErrorNotSupported; }
   virtual DisplayError GetNumDisplayAttributes(uint32_t *count);
   virtual DisplayError GetDisplayAttributes(uint32_t index,
                                             HWDisplayAttributes *display_attributes);

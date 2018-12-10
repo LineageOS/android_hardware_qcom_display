@@ -57,7 +57,11 @@ DisplayError DisplayPluggable::Init() {
   DisplayError error = HWInterface::Create(display_id_, kPluggable, hw_info_intf_,
                                            buffer_sync_handler_, buffer_allocator_, &hw_intf_);
   if (error != kErrorNone) {
-    DLOGE("Failed to create hardware interface. Error = %d", error);
+    if (kErrorDeviceRemoved == error) {
+      DLOGW("Aborted creating hardware interface. Device removed.");
+    } else {
+      DLOGE("Failed to create hardware interface. Error = %d", error);
+    }
     return error;
   }
 
@@ -84,6 +88,17 @@ DisplayError DisplayPluggable::Init() {
   }
 
   error = DisplayBase::Init();
+  if (error == kErrorResources) {
+    DLOGI("Reattempting display creation for Pluggable %d", display_id_);
+    uint32_t default_mode_index = 0;
+    error = hw_intf_->GetDefaultConfig(&default_mode_index);
+    if (error == kErrorNone) {
+      hw_intf_->SetDisplayAttributes(default_mode_index);
+      error = DisplayBase::Init();
+    } else {
+      DLOGE("640x480 default mode not found, failing creation!");
+    }
+  }
   if (error != kErrorNone) {
     HWInterface::Destroy(hw_intf_);
     return error;

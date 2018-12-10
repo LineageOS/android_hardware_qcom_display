@@ -36,6 +36,7 @@ TARGET_HAS_WIDE_COLOR_DISPLAY := true
 
 PRODUCT_PROPERTY_OVERRIDES += \
     persist.demo.hdmirotationlock=false \
+    persist.sys.sf.color_saturation=1.0 \
     debug.sf.hw=0 \
     debug.egl.hw=0 \
     debug.sf.latch_unsignaled=1 \
