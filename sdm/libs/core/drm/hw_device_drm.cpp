@@ -1652,6 +1652,12 @@ DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attr
     return kErrorNotSupported;
   }
 
+  if (static_cast<int>(mixer_attributes.width) < hw_panel_info_.min_roi_width) {
+    DLOGW("Input width less than panel min_roi_width! input_width %d min_roi_width %d",
+          mixer_attributes.width, hw_panel_info_.min_roi_width);
+    return kErrorNotSupported;
+  }
+
   float mixer_aspect_ratio = FLOAT(mixer_attributes.width) / FLOAT(mixer_attributes.height);
   float display_aspect_ratio =
       FLOAT(display_attributes_[index].x_pixels) / FLOAT(display_attributes_[index].y_pixels);
