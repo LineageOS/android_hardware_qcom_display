@@ -555,7 +555,24 @@ int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display
     hwc_session->CreatePluggableDisplays(false);
   }
 
+  hwc_session->HandlePendingRefresh();
+
   return INT32(status);
+}
+
+void HWCSession::HandlePendingRefresh() {
+  if (pending_refresh_.none()) {
+    return;
+  }
+
+  for (size_t i = 0; i < pending_refresh_.size(); i++) {
+    if (pending_refresh_.test(i)) {
+      Refresh(i);
+      // SF refreshes all displays on refresh request.
+      break;
+    }
+  }
+  pending_refresh_.reset();
 }
 
 void HWCSession::MapBuiltInDisplays() {
@@ -796,9 +813,11 @@ int32_t HWCSession::SetPowerMode(hwc2_device_t *device, hwc2_display_t display, 
   hwc_session->UpdateVsyncSource();
   hwc_session->HandleConcurrency(display);
 
-  // Trigger refresh for doze mode to take effect.
   if (mode == HWC2::PowerMode::Doze) {
+    // Trigger refresh for doze mode to take effect.
     hwc_session->Refresh(display);
+    // Trigger one more refresh for PP features to take effect.
+    hwc_session->pending_refresh_.set(UINT32(display));
   }
 
   return HWC2_ERROR_NONE;

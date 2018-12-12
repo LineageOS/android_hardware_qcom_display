@@ -325,6 +325,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   void ActivateDisplay(hwc2_display_t disp, bool enable);
   void NonBuiltinConcurrency(hwc2_display_t disp, bool is_built_in_2_on);
   void MapBuiltInDisplays();
+  void HandlePendingRefresh();
   bool GetSecondBuiltinStatus();
   hwc2_display_t GetNextBuiltinIndex();
   hwc2_display_t GetNextVsyncSource();
@@ -356,6 +357,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   Locker callbacks_lock_;
   int hpd_bpp_ = 0;
   int hpd_pattern_ = 0;
+  std::bitset<kNumDisplays> pending_refresh_;
 };
 
 }  // namespace sdm
