@@ -196,7 +196,6 @@ class HWDeviceDRM : public HWInterface {
   std::vector<sde_drm::DRMSolidfillStage> solid_fills_ {};
   bool resolution_switch_enabled_ = false;
   bool autorefresh_ = false;
-  bool builtin_mirroring_enabled_ = false;
   bool pending_doze_ = false;
 };
 
