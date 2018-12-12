@@ -287,7 +287,7 @@ HWC2::Error HWCDisplayBuiltIn::SetColorModeWithRenderIntent(ColorMode mode, Rend
     DLOGE("failed for mode = %d intent = %d", mode, intent);
     return status;
   }
-  callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
+  callbacks_->Refresh(id_);
   validated_ = false;
   return status;
 }
@@ -299,7 +299,7 @@ HWC2::Error HWCDisplayBuiltIn::SetColorModeById(int32_t color_mode_id) {
     return status;
   }
 
-  callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
+  callbacks_->Refresh(id_);
   validated_ = false;
 
   return status;
@@ -331,7 +331,7 @@ HWC2::Error HWCDisplayBuiltIn::RestoreColorTransform() {
     return status;
   }
 
-  callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
+  callbacks_->Refresh(id_);
 
   return status;
 }
@@ -349,7 +349,7 @@ HWC2::Error HWCDisplayBuiltIn::SetColorTransform(const float *matrix,
     return status;
   }
 
-  callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
+  callbacks_->Refresh(id_);
   color_tranform_failed_ = false;
   validated_ = false;
 
@@ -459,7 +459,7 @@ HWC2::Error HWCDisplayBuiltIn::SetDisplayDppsAdROI(uint32_t h_start, uint32_t h_
   if (error)
     return HWC2::Error::BadConfig;
 
-  callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
+  callbacks_->Refresh(id_);
 
   return HWC2::Error::None;
 }
@@ -560,6 +560,10 @@ int HWCDisplayBuiltIn::HandleSecureSession(const std::bitset<kSecureMax> &secure
     return -EINVAL;
   }
 
+  if (current_power_mode_ != HWC2::PowerMode::On) {
+    return 0;
+  }
+
   if (active_secure_sessions_[kSecureDisplay] != secure_sessions[kSecureDisplay]) {
     SecureEvent secure_event =
         secure_sessions.test(kSecureDisplay) ? kSecureDisplayStart : kSecureDisplayEnd;
@@ -587,7 +591,7 @@ void HWCDisplayBuiltIn::ForceRefreshRate(uint32_t refresh_rate) {
 
   force_refresh_rate_ = refresh_rate;
 
-  callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
+  callbacks_->Refresh(id_);
 
   return;
 }
@@ -605,7 +609,7 @@ uint32_t HWCDisplayBuiltIn::GetOptimalRefreshRate(bool one_updating_layer) {
 DisplayError HWCDisplayBuiltIn::Refresh() {
   DisplayError error = kErrorNone;
 
-  callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
+  callbacks_->Refresh(id_);
 
   return error;
 }

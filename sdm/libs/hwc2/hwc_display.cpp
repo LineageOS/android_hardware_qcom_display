@@ -1844,11 +1844,6 @@ int HWCDisplay::SetDisplayStatus(DisplayStatus display_status) {
       return -EINVAL;
   }
 
-  if (display_status == kDisplayStatusResume || display_status == kDisplayStatusPause) {
-    callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
-    validated_ = false;
-  }
-
   return status;
 }
 

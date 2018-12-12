@@ -126,7 +126,21 @@ int32_t HWCSession::SetSecondaryDisplayStatus(int disp_id, HWCDisplay::DisplaySt
   } else if (!hwc_display_[disp_idx]) {
     DLOGW("Display is not connected");
   } else {
-    return hwc_display_[disp_idx]->SetDisplayStatus(status);
+    int err = hwc_display_[disp_idx]->SetDisplayStatus(status);
+    if (err != 0) {
+      return err;
+    }
+
+    if (status == HWCDisplay::kDisplayStatusResume || status == HWCDisplay::kDisplayStatusPause) {
+      hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
+      if (active_builtin_disp_id < kNumDisplays) {
+        {
+          SEQUENCE_WAIT_SCOPE_LOCK(locker_[active_builtin_disp_id]);
+          hwc_display_[active_builtin_disp_id]->ResetValidation();
+        }
+        callbacks_.Refresh(active_builtin_disp_id);
+      }
+    }
   }
 
   return -EINVAL;
@@ -465,7 +479,12 @@ Return<void> HWCSession::getHDRCapabilities(IDisplayConfig::DisplayType dpy,
 }
 
 Return<int32_t> HWCSession::setCameraLaunchStatus(uint32_t on) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
+  hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
+  if (active_builtin_disp_id >= kNumDisplays) {
+    DLOGE("No active displays");
+    return -EINVAL;
+  }
+  SEQUENCE_WAIT_SCOPE_LOCK(locker_[active_builtin_disp_id]);
 
   if (null_display_mode_) {
     return 0;
@@ -476,15 +495,15 @@ Return<int32_t> HWCSession::setCameraLaunchStatus(uint32_t on) {
     return -ENOENT;
   }
 
-  if (!hwc_display_[HWC_DISPLAY_PRIMARY]) {
-    DLOGW("Display = %d is not connected.", HWC_DISPLAY_PRIMARY);
+  if (!hwc_display_[active_builtin_disp_id]) {
+    DLOGW("Display = %d is not connected.", active_builtin_disp_id);
     return -ENODEV;
   }
 
   HWBwModes mode = on > 0 ? kBwCamera : kBwDefault;
 
   // trigger invalidate to apply new bw caps.
-  Refresh(HWC_DISPLAY_PRIMARY);
+  Refresh(active_builtin_disp_id);
 
   if (core_intf_->SetMaxBandwidthMode(mode) != kErrorNone) {
     return -EINVAL;
@@ -492,7 +511,7 @@ Return<int32_t> HWCSession::setCameraLaunchStatus(uint32_t on) {
 
   new_bw_mode_ = true;
   need_invalidate_ = true;
-  hwc_display_[HWC_DISPLAY_PRIMARY]->ResetValidation();
+  hwc_display_[active_builtin_disp_id]->ResetValidation();
 
   return 0;
 }
@@ -597,17 +616,23 @@ Return<int32_t> HWCSession::setDisplayIndex(IDisplayConfig::DisplayTypeExt disp_
 
 #ifdef DISPLAY_CONFIG_1_3
 Return<int32_t> HWCSession::controlIdlePowerCollapse(bool enable, bool synchronous) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
+  hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
+  if (active_builtin_disp_id >= kNumDisplays) {
+    DLOGE("No active displays");
+    return -EINVAL;
+  }
+  SEQUENCE_WAIT_SCOPE_LOCK(locker_[active_builtin_disp_id]);
 
-  if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
+  if (hwc_display_[active_builtin_disp_id]) {
     if (!enable) {
       if (!idle_pc_ref_cnt_) {
-        auto err = hwc_display_[HWC_DISPLAY_PRIMARY]->ControlIdlePowerCollapse(enable, synchronous);
+        auto err = hwc_display_[active_builtin_disp_id]->ControlIdlePowerCollapse(enable,
+                                                                                  synchronous);
         if (err != kErrorNone) {
           return (err == kErrorNotSupported) ? 0 : -EINVAL;
         }
-        Refresh(HWC_DISPLAY_PRIMARY);
-        int32_t error = locker_[HWC_DISPLAY_PRIMARY].WaitFinite(kCommitDoneTimeoutMs);
+        Refresh(active_builtin_disp_id);
+        int32_t error = locker_[active_builtin_disp_id].WaitFinite(kCommitDoneTimeoutMs);
         if (error == ETIMEDOUT) {
           DLOGE("Timed out!! Next frame commit done event not received!!");
           return error;
@@ -617,7 +642,8 @@ Return<int32_t> HWCSession::controlIdlePowerCollapse(bool enable, bool synchrono
       idle_pc_ref_cnt_++;
     } else if (idle_pc_ref_cnt_ > 0) {
       if (!(idle_pc_ref_cnt_ - 1)) {
-        auto err = hwc_display_[HWC_DISPLAY_PRIMARY]->ControlIdlePowerCollapse(enable, synchronous);
+        auto err = hwc_display_[active_builtin_disp_id]->ControlIdlePowerCollapse(enable,
+                                                                                  synchronous);
         if (err != kErrorNone) {
           return (err == kErrorNotSupported) ? 0 : -EINVAL;
         }
@@ -628,7 +654,7 @@ Return<int32_t> HWCSession::controlIdlePowerCollapse(bool enable, bool synchrono
     return 0;
   }
 
-  DLOGW("Display = %d is not connected.", HWC_DISPLAY_PRIMARY);
+  DLOGW("Display = %d is not connected.", active_builtin_disp_id);
   return -ENODEV;
 }
 #endif  // DISPLAY_CONFIG_1_3
@@ -741,5 +767,42 @@ Return<void> HWCSession::getDebugProperty(const hidl_string &prop_name,
   return Void();
 }
 #endif
+
+#ifdef DISPLAY_CONFIG_1_8
+Return<void> HWCSession::getActiveBuiltinDisplayAttributes(
+                                          getDisplayAttributes_cb _hidl_cb) {
+  int32_t error = -EINVAL;
+  IDisplayConfig::DisplayAttributes display_attributes = {};
+  hwc2_display_t disp_id = GetActiveBuiltinDisplay();
+
+  if (disp_id >= kNumDisplays) {
+    DLOGE("Invalid display = %d", disp_id);
+  } else {
+    if (hwc_display_[disp_id]) {
+      uint32_t config_index = 0;
+      HWC2::Error ret = hwc_display_[disp_id]->GetActiveConfig(&config_index);
+      if (ret != HWC2::Error::None) {
+        goto err;
+      }
+      DisplayConfigVariableInfo var_info;
+      error = hwc_display_[disp_id]->GetDisplayAttributesForConfig(INT(config_index), &var_info);
+      if (!error) {
+        display_attributes.vsyncPeriod = var_info.vsync_period_ns;
+        display_attributes.xRes = var_info.x_pixels;
+        display_attributes.yRes = var_info.y_pixels;
+        display_attributes.xDpi = var_info.x_dpi;
+        display_attributes.yDpi = var_info.y_dpi;
+        display_attributes.panelType = IDisplayConfig::DisplayPortType::DISPLAY_PORT_DEFAULT;
+        display_attributes.isYuv = var_info.is_yuv;
+      }
+    }
+  }
+
+err:
+  _hidl_cb(error, display_attributes);
+
+  return Void();
+}
+#endif  // DISPLAY_CONFIG_1_8
 
 }  // namespace sdm
