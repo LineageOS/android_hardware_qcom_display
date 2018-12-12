@@ -275,13 +275,7 @@ int HWCColorManager::SetFrameCapture(void *params, bool enable, HWCDisplay *hwc_
       }
     }
   } else {
-    ret = -EAGAIN;
-    int fence_fd = -1;
-    if (hwc_display->GetFrameCaptureFence(&fence_fd) && (fence_fd >= 0)) {
-      ret = sync_wait(fence_fd, 1000);
-      ::close(fence_fd);
-    }
-
+    ret = hwc_display->GetFrameCaptureStatus();
     if (!ret) {
       if (frame_capture_data->buffer != NULL) {
         if (munmap(frame_capture_data->buffer, buffer_info.alloc_buffer_info.size) != 0) {
@@ -296,7 +290,7 @@ int HWCColorManager::SetFrameCapture(void *params, bool enable, HWCDisplay *hwc_
         }
       }
     } else {
-      DLOGE("GetFrameCaptureFence failed. ret = %d", ret);
+      DLOGE("GetFrameCaptureStatus failed. ret = %d", ret);
     }
   }
   return ret;

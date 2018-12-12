@@ -72,7 +72,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
                                          int32_t format, bool post_processed);
   virtual int FrameCaptureAsync(const BufferInfo &output_buffer_info, bool post_processed);
-  virtual bool GetFrameCaptureFence(int32_t *release_fence);
+  virtual int GetFrameCaptureStatus() { return frame_capture_status_; }
   virtual DisplayError SetDetailEnhancerConfig(const DisplayDetailEnhancerData &de_data);
   virtual DisplayError ControlPartialUpdate(bool enable, uint32_t *pending);
   virtual HWC2::Error SetReadbackBuffer(const native_handle_t *buffer, int32_t acquire_fence,
@@ -97,6 +97,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   uint32_t GetOptimalRefreshRate(bool one_updating_layer);
   void HandleFrameOutput();
   void HandleFrameDump();
+  void HandleFrameCapture();
   DisplayError SetMixerResolution(uint32_t width, uint32_t height);
   DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
 
@@ -114,6 +115,10 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   BufferInfo output_buffer_info_ = {};
   void *output_buffer_base_ = nullptr;
   int default_mode_status_ = 0;
+
+  // Members for 1 frame capture in a client provided buffer
+  bool frame_capture_buffer_queued_ = false;
+  int frame_capture_status_ = -EAGAIN;
 };
 
 }  // namespace sdm
