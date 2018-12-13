@@ -165,6 +165,20 @@ void HWCDebugHandler::DebugDisplay(bool enable, int verbose_level) {
   DebugHandler::SetLogMask(debug_handler_.log_mask_);
 }
 
+void HWCDebugHandler::DebugQos(bool enable, int verbose_level) {
+  if (enable) {
+    debug_handler_.log_mask_[kTagQOSClient] = 1;
+    // TODO(user): add qos impl log mask when logging available
+    debug_handler_.verbose_level_ = verbose_level;
+  } else {
+    debug_handler_.log_mask_[kTagQOSClient] = 0;
+    // TODO(user): add qos impl log mask when logging available
+    debug_handler_.verbose_level_ = 0;
+  }
+
+  DebugHandler::SetLogMask(debug_handler_.log_mask_);
+}
+
 void HWCDebugHandler::Error(const char *format, ...) {
   va_list list;
   va_start(list, format);
