@@ -1849,6 +1849,7 @@ void HWCSession::DynamicDebug(const android::Parcel *input_parcel) {
 
     case qService::IQService::DEBUG_PIPE_LIFECYCLE:
       HWCDebugHandler::DebugResources(enable, verbose_level);
+      HWCDebugHandler::DebugQos(enable, verbose_level);
       break;
 
     case qService::IQService::DEBUG_DRIVER_CONFIG:
@@ -1859,6 +1860,7 @@ void HWCSession::DynamicDebug(const android::Parcel *input_parcel) {
       HWCDebugHandler::DebugResources(enable, verbose_level);
       HWCDebugHandler::DebugDriverConfig(enable, verbose_level);
       HWCDebugHandler::DebugRotator(enable, verbose_level);
+      HWCDebugHandler::DebugQos(enable, verbose_level);
       break;
 
     case qService::IQService::DEBUG_QDCM:
