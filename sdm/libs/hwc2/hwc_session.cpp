@@ -206,6 +206,27 @@ int HWCSession::Init() {
       return -EINVAL;
     }
 
+    error = core_intf_->GetMaxDisplaysSupported(kPluggable, &max_sde_pluggable_displays_);
+    if (kErrorNone == error) {
+      if (max_sde_pluggable_displays_ && (kPluggable == hw_disp_info.type)) {
+        // If primary is a pluggable display, we have already used one pluggable display interface.
+        max_sde_pluggable_displays_--;
+      }
+    } else {
+      DLOGE("Could not find maximum pluggable displays supported. Error = %d", error);
+    }
+
+    error = core_intf_->GetMaxDisplaysSupported(kBuiltIn, &max_sde_builtin_displays_);
+    if (kErrorNone == error) {
+      if (max_sde_builtin_displays_ && (kBuiltIn == hw_disp_info.type)) {
+        // If primary is not a pluggable display, we have already used one built-in display
+        // interface.
+        max_sde_builtin_displays_--;
+      }
+    } else {
+      DLOGE("Could not find maximum built-in displays supported. Error = %d", error);
+    }
+
     g_hwc_uevent_.Register(this);
   }
 
@@ -218,26 +239,6 @@ int HWCSession::Init() {
   }
 
   is_composer_up_ = true;
-
-  error = core_intf_->GetMaxDisplaysSupported(kPluggable, &max_sde_pluggable_displays_);
-  if (kErrorNone == error) {
-    if (max_sde_pluggable_displays_ && (kPluggable == map_info_primary_.disp_type)) {
-      // If primary is a pluggable display, we have already used one pluggable display interface.
-      max_sde_pluggable_displays_--;
-    }
-  } else {
-    DLOGE("Could not find maximum pluggable displays supported. Error = %d", error);
-  }
-
-  error = core_intf_->GetMaxDisplaysSupported(kBuiltIn, &max_sde_builtin_displays_);
-  if (kErrorNone == error) {
-    if (max_sde_builtin_displays_ && (kBuiltIn == map_info_primary_.disp_type)) {
-      // If primary is not a pluggable display, we have already used one built-in display interface.
-      max_sde_builtin_displays_--;
-    }
-  } else {
-    DLOGE("Could not find maximum built-in displays supported. Error = %d", error);
-  }
 
   return 0;
 }
