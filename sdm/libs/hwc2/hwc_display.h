@@ -210,12 +210,14 @@ class HWCDisplay : public DisplayEventHandler {
   void ResetValidation() { validated_ = false; }
   uint32_t GetGeometryChanges() { return geometry_changes_; }
   bool CanSkipValidate();
-  bool HasClientComposition() { return has_client_composition_; }
   bool IsSkipValidateState() { return (validate_state_ == kSkipValidate); }
   bool IsInternalValidateState() { return (validated_ && (validate_state_ == kInternalValidate)); }
   void SetValidationState(DisplayValidateState state) { validate_state_ = state; }
   ColorMode GetCurrentColorMode() {
     return (color_mode_ ? color_mode_->GetCurrentColorMode() : ColorMode::SRGB);
+  }
+  bool HWCClientNeedsValidate() {
+    return (has_client_composition_ || layer_stack_.flags.single_buffered_layer_present);
   }
 
   // HWC2 APIs

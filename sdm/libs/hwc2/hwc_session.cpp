@@ -2576,7 +2576,7 @@ HWC2::Error HWCSession::PresentDisplayInternal(hwc2_display_t display, int32_t *
   if (hwc_display->IsSkipValidateState() && !hwc_display->CanSkipValidate()) {
     uint32_t out_num_types = 0, out_num_requests = 0;
     HWC2::Error error = ValidateDisplayInternal(display, &out_num_types, &out_num_requests);
-    if ((error != HWC2::Error::None) || hwc_display->HasClientComposition()) {
+    if ((error != HWC2::Error::None) || hwc_display->HWCClientNeedsValidate()) {
       hwc_display->SetValidationState(HWCDisplay::kInternalValidate);
       return HWC2::Error::NotValidated;
     }
