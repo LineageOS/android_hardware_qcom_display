@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -2318,46 +2318,69 @@ int HWCSession::HandleDisconnectedDisplays(HWDisplaysInfo *hw_displays_info) {
 }
 
 void HWCSession::DestroyDisplay(DisplayMapInfo *map_info) {
-  hwc2_display_t client_id = map_info->client_id;
-  int notify_hotplug = false;
+  switch (map_info->disp_type) {
+    case kPluggable:
+      DestroyPluggableDisplay(map_info);
+      break;
+    default:
+      DestroyNonPluggableDisplay(map_info);
+      break;
+    }
+}
 
-  // Lock confined to this scope. Do not notify hotplug while holding a lock.
+void HWCSession::DestroyPluggableDisplay(DisplayMapInfo *map_info) {
+  hwc2_display_t client_id = map_info->client_id;
+
+  DLOGI("Notify hotplug display disconnected: client id = %d", client_id);
+  callbacks_.Hotplug(client_id, HWC2::Connection::Disconnected);
+  Refresh(0);
+  // wait for sufficient time to ensure sufficient resources are available to process
+  // connection.
+  usleep(UINT32(GetVsyncPeriod(HWC_DISPLAY_PRIMARY)) * 2 / 1000);
+
   {
     SCOPE_LOCK(locker_[client_id]);
-
     auto &hwc_display = hwc_display_[client_id];
     if (!hwc_display) {
       return;
     }
+    DLOGI("Destroy display %d-%d, client id = %d", map_info->sdm_id, map_info->disp_type,
+         client_id);
 
-    DLOGI("Destroy display type = %d, client id = %d", map_info->disp_type, client_id);
-    switch (map_info->disp_type) {
-      case kBuiltIn:
-        HWCDisplayBuiltIn::Destroy(hwc_display);
-        break;
-
-      case kPluggable:
-        if (!map_info->test_pattern) {
-          HWCDisplayPluggable::Destroy(hwc_display);
-        } else {
-          HWCDisplayPluggableTest::Destroy(hwc_display);
-        }
-        notify_hotplug = true;
-        break;
-
-      default:
-        HWCDisplayVirtual::Destroy(hwc_display);
-        break;
+    if (!map_info->test_pattern) {
+      HWCDisplayPluggable::Destroy(hwc_display);
+    } else {
+      HWCDisplayPluggableTest::Destroy(hwc_display);
     }
+
     hwc_display = nullptr;
     map_info->Reset();
     HandleConcurrency(client_id);
     UpdateVsyncSource();
   }
+}
 
-  if (notify_hotplug) {
-    callbacks_.Hotplug(client_id, HWC2::Connection::Disconnected);
+void HWCSession::DestroyNonPluggableDisplay(DisplayMapInfo *map_info) {
+  hwc2_display_t client_id = map_info->client_id;
+
+  SCOPE_LOCK(locker_[client_id]);
+  auto &hwc_display = hwc_display_[client_id];
+  if (!hwc_display) {
+    return;
   }
+  DLOGI("Destroy display %d-%d, client id = %d", map_info->sdm_id, map_info->disp_type,
+        client_id);
+  switch (map_info->disp_type) {
+    case kBuiltIn:
+      HWCDisplayBuiltIn::Destroy(hwc_display);
+      break;
+    default:
+      HWCDisplayVirtual::Destroy(hwc_display);
+      break;
+    }
+
+    hwc_display = nullptr;
+    map_info->Reset();
 }
 
 void HWCSession::UpdateVsyncSource() {
