@@ -317,7 +317,7 @@ bool HDMIDisplay::readResolution()
         return false;
     } else {
         len = read(hdmiEDIDFile, edidStr, sizeof(edidStr)-1);
-        ALOGD_IF(DEBUG, "%s: EDID string: %s length = %zd",
+        ALOGD_IF(DEBUG, "%s: EDID string: %s length = %ld",
                  __FUNCTION__, edidStr, len);
         if (len <= 0) {
             ALOGE("%s: edid_modes file empty", __FUNCTION__);
