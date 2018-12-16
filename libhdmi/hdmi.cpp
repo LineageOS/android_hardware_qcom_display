@@ -193,7 +193,7 @@ void HDMIDisplay::readCEUnderscanInfo()
         return;
     } else {
         len = read(hdmiScanInfoFile, scanInfo, sizeof(scanInfo)-1);
-        ALOGD("%s: Scan Info string: %s length = %zd",
+        ALOGD("%s: Scan Info string: %s length = %ld",
                  __FUNCTION__, scanInfo, len);
         if (len <= 0) {
             close(hdmiScanInfoFile);
