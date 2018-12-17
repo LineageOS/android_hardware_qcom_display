@@ -145,6 +145,7 @@ DisplayError DisplayBase::Init() {
                                          hw_panel_info_, mixer_attributes_, fb_config_,
                                          &display_comp_ctx_, &(default_qos_data_.clock_hz));
   if (error != kErrorNone) {
+    DLOGW("Display %d comp manager registration failed!", display_id_);
     goto CleanupOnError;
   }
 

@@ -353,7 +353,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   void HandleHotplugPending(hwc2_display_t disp_id, int retire_fence);
   void UpdateVsyncSource();
   hwc2_display_t GetNextVsyncSource();
-  bool GetFirstNonPrimaryBuiltinStatus();
   DisplayClass GetDisplayClass(hwc2_display_t display_id);
   bool IsPluggableDisplayConnected();
 
@@ -368,7 +367,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   std::vector<DisplayMapInfo> map_info_pluggable_;  // Pluggable displays excluding primary
   std::vector<DisplayMapInfo> map_info_virtual_;    // Virtual displays
   bool reset_panel_ = false;
-  bool primary_ready_ = false;
   bool client_connected_ = false;
   bool new_bw_mode_ = false;
   bool need_invalidate_ = false;
@@ -385,6 +383,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   HotPlugEvent hotplug_pending_event_ = kHotPlugNone;
   bool destroy_virtual_disp_pending_ = false;
   uint32_t idle_pc_ref_cnt_ = 0;
+  int32_t max_sde_pluggable_displays_ = 0;
+  int32_t max_sde_builtin_displays_ = 0;
+  int32_t registered_builtin_displays_ = 0;
 };
 
 }  // namespace sdm

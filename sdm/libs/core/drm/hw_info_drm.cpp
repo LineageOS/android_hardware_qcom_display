@@ -795,6 +795,10 @@ DisplayError HWInfoDRM::GetDisplaysStatus(HWDisplaysInfo *hw_displays_info) {
       case DRM_MODE_CONNECTOR_VIRTUAL:
         hw_info.display_type = kVirtual;
         break;
+      default:
+        DLOGE("Unknown display type = %d on connector id %u.", iter.second.type,
+              hw_info.display_id);
+        break;
     }
     hw_info.is_connected = iter.second.is_connected ? 1 : 0;
     hw_info.is_primary = iter.second.is_primary ? 1 : 0;

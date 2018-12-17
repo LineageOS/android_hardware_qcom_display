@@ -80,6 +80,7 @@ class HWInterface {
   virtual DisplayError Deinit() = 0;
   virtual DisplayError GetDisplayId(int32_t *display_id) = 0;
   virtual DisplayError GetActiveConfig(uint32_t *active_config) = 0;
+  virtual DisplayError GetDefaultConfig(uint32_t *default_config) = 0;
   virtual DisplayError GetNumDisplayAttributes(uint32_t *count) = 0;
   virtual DisplayError GetDisplayAttributes(uint32_t index,
                                             HWDisplayAttributes *display_attributes) = 0;
