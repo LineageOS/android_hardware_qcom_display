@@ -303,13 +303,13 @@ void HWDeviceDRM::Registry::Register(HWLayers *hw_layers) {
     }
 
     // layer input buffer map to fb id also applies for inline rot
-    MapBufferToFbId(&layer, input_buffer);
-
     if (hw_rotator_session->mode == kRotatorInline && hw_rotate_info->valid &&
         hw_rotator_session->output_buffer.planes[0].fd >= 0) {
       fbid_cache_limit_ += 1;  // account for inline rot scratch buffer
       MapBufferToFbId(&layer, &hw_rotator_session->output_buffer);
     }
+
+    MapBufferToFbId(&layer, input_buffer);
   }
 }
 
