@@ -58,8 +58,20 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.enable_null_display=0 \
     vendor.display.disable_excl_rect=0 \
     vendor.display.comp_mask=0 \
-    vendor.display.disable_hw_recovery=0 \
     vendor.display.enable_default_color_mode=1
+
+ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
+# Recovery is enabled, logging is enabled
+PRODUCT_PROPERTY_OVERRIDES += \
+    vendor.display.disable_hw_recovery_dump=0
+else
+# Recovery is enabled, logging is disabled
+PRODUCT_PROPERTY_OVERRIDES += \
+    vendor.display.disable_hw_recovery_dump=1
+endif
+
+# Properties using default value:
+#    vendor.display.disable_hw_recovery=0
 
 # This matrix should be in column major order, per SurfaceFlinger requirement
 #  1.0   0.0   0.0

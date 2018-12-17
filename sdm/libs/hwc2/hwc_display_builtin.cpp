@@ -577,9 +577,25 @@ void HWCDisplayBuiltIn::HandleFrameOutput() {
     validated_ = false;
   }
 
-  if (dump_output_to_file_) {
+  if (frame_capture_buffer_queued_) {
+    HandleFrameCapture();
+  } else if (dump_output_to_file_) {
     HandleFrameDump();
   }
+}
+
+void HWCDisplayBuiltIn::HandleFrameCapture() {
+  if (readback_configured_ && (output_buffer_.release_fence_fd >= 0)) {
+    frame_capture_status_ = sync_wait(output_buffer_.release_fence_fd, 1000);
+    ::close(output_buffer_.release_fence_fd);
+    output_buffer_.release_fence_fd = -1;
+  }
+
+  frame_capture_buffer_queued_ = false;
+  readback_buffer_queued_ = false;
+  post_processed_output_ = false;
+  readback_configured_ = false;
+  output_buffer_ = {};
 }
 
 void HWCDisplayBuiltIn::HandleFrameDump() {
@@ -694,12 +710,10 @@ int HWCDisplayBuiltIn::FrameCaptureAsync(const BufferInfo &output_buffer_info,
 
   const native_handle_t *buffer = static_cast<native_handle_t *>(output_buffer_info.private_data);
   SetReadbackBuffer(buffer, -1, post_processed_output);
+  frame_capture_buffer_queued_ = true;
+  frame_capture_status_ = -EAGAIN;
 
   return 0;
-}
-
-bool HWCDisplayBuiltIn::GetFrameCaptureFence(int32_t *release_fence) {
-  return (GetReadbackBufferFence(release_fence) == HWC2::Error::None);
 }
 
 DisplayError HWCDisplayBuiltIn::SetDetailEnhancerConfig
