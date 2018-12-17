@@ -164,6 +164,9 @@ int clearMetaDataVa(MetaData_t *data, DispParamType paramType) {
             data->s3dComp.displayId = -1;
             data->s3dComp.s3dMode = 0;
             break;
+        case SET_VIDEO_PERF_MODE:
+            data->isVideoPerfMode = 0;
+            break;
         default:
             ALOGE("Unknown paramType %d", paramType);
             break;
