@@ -471,13 +471,23 @@ DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   HWResourceInfo hw_resource_info = HWResourceInfo();
   hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
   bool hdr_supported = hw_resource_info.has_hdr;
+  bool hdr_plus_supported = false;
   HWDisplayInterfaceInfo hw_disp_info = {};
   hw_info_intf_->GetFirstDisplayInterfaceType(&hw_disp_info);
   if (hw_disp_info.type == kHDMI) {
     hdr_supported = (hdr_supported && hw_panel_info_.hdr_enabled);
   }
 
+  // Built-in displays always support HDR10+ when the target supports HDR. For non-builtins, check
+  // panel capability.
+  if (kBuiltIn == display_type_) {
+    hdr_plus_supported = hdr_supported;
+  } else if (hdr_supported && hw_panel_info_.hdr_plus_enabled) {
+    hdr_plus_supported = true;
+  }
+
   fixed_info->hdr_supported = hdr_supported;
+  fixed_info->hdr_plus_supported = hdr_plus_supported;
   // Populate luminance values only if hdr will be supported on that display
   fixed_info->max_luminance = fixed_info->hdr_supported ? hw_panel_info_.peak_luminance: 0;
   fixed_info->average_luminance = fixed_info->hdr_supported ? hw_panel_info_.average_luminance : 0;

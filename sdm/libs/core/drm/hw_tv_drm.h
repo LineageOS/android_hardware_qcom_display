@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -55,6 +55,7 @@ class HWTVDRM : public HWDeviceDRM {
  private:
   DisplayError UpdateHDRMetaData(HWLayers *hw_layers);
   void DumpHDRMetaData(HWHDRLayerInfo::HDROperation operation);
+  void InitMaxHDRMetaData();
 
   static const int kBitRGB  = 20;
   static const int kBitYUV  = 21;
@@ -63,6 +64,10 @@ class HWTVDRM : public HWDeviceDRM {
   const float kMinPeakLuminance = 300.0f;
   const float kMaxPeakLuminance = 1000.0f;
   drm_msm_ext_hdr_metadata hdr_metadata_ = {};
+  struct timeval hdr_reset_start_ = {};
+  struct timeval hdr_reset_end_ = {};
+  bool reset_hdr_flag_ = false;
+  bool in_multiset_ = false;
 };
 
 }  // namespace sdm

@@ -191,7 +191,8 @@ struct DisplayConfigFixedInfo {
   bool underscan = false;              //!< If display support CE underscan.
   bool secure = false;                 //!< If this display is capable of handling secure content.
   bool is_cmdmode = false;             //!< If panel is command mode panel.
-  bool hdr_supported = false;          //!< if HDR is enabled
+  bool hdr_supported = false;          //!< If HDR10 is supported.
+  bool hdr_plus_supported = false;     //!< If HDR10+ is supported.
   bool hdr_metadata_type_one = false;  //!< Metadata type one obtained from HDR sink
   uint32_t hdr_eotf = 0;               //!< Electro optical transfer function
   float max_luminance = 0.0f;          //!< From Panel's peak luminance
