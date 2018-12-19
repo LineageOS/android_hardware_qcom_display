@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -61,6 +61,7 @@ class HWPeripheralDRM : public HWDeviceDRM {
   virtual DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate);
   virtual DisplayError SetDisplayAttributes(uint32_t index);
   virtual DisplayError TeardownConcurrentWriteback(void);
+  virtual DisplayError SetFrameTrigger(FrameTriggerMode mode);
 
  private:
   void SetDestScalarData(HWLayersInfo hw_layer_info, bool validate);
