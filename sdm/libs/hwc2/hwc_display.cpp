@@ -430,6 +430,8 @@ int HWCDisplay::Init() {
     return -EINVAL;
   }
 
+  UpdateConfigs();
+
   tone_mapper_ = new HWCToneMapper(buffer_allocator_);
 
   display_intf_->GetRefreshRateRange(&min_refresh_rate_, &max_refresh_rate_);
@@ -446,6 +448,36 @@ int HWCDisplay::Init() {
   DLOGI("Display created with id: %d", id_);
 
   return 0;
+}
+
+void HWCDisplay::UpdateConfigs() {
+  // SF doesnt care about dynamic bit clk support.
+  // Exposing all configs will result in getting/setting of redundant configs.
+
+  // For each config store the corresponding index which client understands.
+  hwc_config_map_.resize(num_configs_);
+
+  for (uint32_t i = 0; i < num_configs_; i++) {
+    DisplayConfigVariableInfo info = {};
+    GetDisplayAttributesForConfig(INT(i), &info);
+    bool config_exists = false;
+    for (auto &config : variable_config_map_) {
+      if (config.second == info) {
+        config_exists = true;
+        hwc_config_map_.at(i) = config.first;
+        break;
+      }
+    }
+
+    if (!config_exists) {
+      variable_config_map_[i] = info;
+      hwc_config_map_.at(i) = i;
+    }
+  }
+
+  // Update num config count.
+  num_configs_ = UINT32(variable_config_map_.size());
+  DLOGI("num_configs = %d", num_configs_);
 }
 
 int HWCDisplay::Deinit() {
@@ -863,8 +895,14 @@ HWC2::Error HWCDisplay::GetDisplayConfigs(uint32_t *out_num_configs, hwc2_config
   }
 
   *out_num_configs = std::min(*out_num_configs, num_configs_);
-  for (uint32_t i = 0; i < *out_num_configs; i++) {
-    out_configs[i] = i;
+
+  // Expose all unique config ids to cleint.
+  uint32_t i = 0;
+  for (auto &info : variable_config_map_) {
+    if (i == *out_num_configs) {
+      break;
+    }
+    out_configs[i++] = info.first;
   }
 
   return HWC2::Error::None;
@@ -872,12 +910,12 @@ HWC2::Error HWCDisplay::GetDisplayConfigs(uint32_t *out_num_configs, hwc2_config
 
 HWC2::Error HWCDisplay::GetDisplayAttribute(hwc2_config_t config, HWC2::Attribute attribute,
                                             int32_t *out_value) {
-  DisplayConfigVariableInfo variable_config;
-  if (GetDisplayAttributesForConfig(INT(config), &variable_config) != kErrorNone) {
+  if (variable_config_map_.find(config) == variable_config_map_.end()) {
     DLOGE("Get variable config failed");
     return HWC2::Error::BadDisplay;
   }
 
+  DisplayConfigVariableInfo variable_config = variable_config_map_.at(config);
   switch (attribute) {
     case HWC2::Attribute::VsyncPeriod:
       *out_value = INT32(variable_config.vsync_period_ns);
@@ -979,6 +1017,9 @@ HWC2::Error HWCDisplay::GetActiveConfig(hwc2_config_t *out_config) {
   }
 
   GetActiveDisplayConfig(out_config);
+  if (*out_config < hwc_config_map_.size()) {
+    *out_config = hwc_config_map_.at(*out_config);
+  }
   return HWC2::Error::None;
 }
 

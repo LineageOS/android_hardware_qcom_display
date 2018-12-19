@@ -41,6 +41,7 @@
 
 #include "hwc_display_builtin.h"
 #include "hwc_debugger.h"
+#include "hwc_session.h"
 
 #define __CLASS__ "HWCDisplayBuiltIn"
 
@@ -777,6 +778,39 @@ DisplayError HWCDisplayBuiltIn::ControlIdlePowerCollapse(bool enable, bool synch
     validated_ = false;
   }
   return error;
+}
+
+DisplayError HWCDisplayBuiltIn::SetDynamicDSIClock(uint64_t bitclk) {
+  {
+    SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[type_]);
+    DisplayError error = display_intf_->SetDynamicDSIClock(bitclk);
+    if (error != kErrorNone) {
+      DLOGE(" failed: Clk: %llu Error: %d", bitclk, error);
+      return error;
+    }
+  }
+
+  callbacks_->Refresh(id_);
+  validated_ = false;
+
+  return kErrorNone;
+}
+
+DisplayError HWCDisplayBuiltIn::GetDynamicDSIClock(uint64_t *bitclk) {
+  SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[type_]);
+  if (display_intf_) {
+    return display_intf_->GetDynamicDSIClock(bitclk);
+  }
+
+  return kErrorNotSupported;
+}
+
+DisplayError HWCDisplayBuiltIn::GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates) {
+  if (display_intf_) {
+    return display_intf_->GetSupportedDSIClock(bitclk_rates);
+  }
+
+  return kErrorNotSupported;
 }
 
 }  // namespace sdm
