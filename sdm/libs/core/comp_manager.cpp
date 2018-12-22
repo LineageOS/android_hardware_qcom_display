@@ -545,6 +545,12 @@ bool CompManager::SetDisplayState(Handle display_ctx, DisplayState state) {
   DisplayCompositionContext *display_comp_ctx =
       reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
+  DisplayError error = kErrorNone;
+  error = resource_intf_->SetDisplayState(display_comp_ctx->display_id, state);
+  if (error != kErrorNone) {
+    DLOGE("Failed to set display power state, display id = %d state = %d",
+           display_comp_ctx->display_id, state);
+  }
   switch (state) {
   case kStateOff:
     Purge(display_ctx);
