@@ -677,16 +677,17 @@ int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display
   auto status = HWC2::Error::BadDisplay;
   DTRACE_SCOPED();
 
-  if ((display >= HWCSession::kNumDisplays) || (hwc_session->hwc_display_[display] == nullptr)) {
-    DLOGE("Invalid Display %d Handle %s ", display, hwc_session->hwc_display_[display] ?
-          "Valid" : "NULL");
+  if (!hwc_session || (display >= HWCSession::kNumDisplays)) {
+    DLOGW("Invalid Display : hwc session = %s display = %" PRIu64,
+          hwc_session ? "Valid" : "NULL", display);
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
   hwc_session->HandleSecureSession(display);
   {
     SEQUENCE_EXIT_SCOPE_LOCK(locker_[display]);
-    if (!device) {
+    if (!hwc_session->hwc_display_[display]) {
+      DLOGW("Removed Display : display = %" PRIu64, display);
       return HWC2_ERROR_BAD_DISPLAY;
     }
 
