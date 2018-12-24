@@ -15,8 +15,7 @@ PRODUCT_PACKAGES += \
     hwcomposer.sdm845 \
     memtrack.sdm845 \
     libqdutils \
-    libqdMetaData \
-    libqdMetaData.system
+    libqdMetaData
 
 #Qdcm calibration xml file for 2k panel
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml
