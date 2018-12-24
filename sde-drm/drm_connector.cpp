@@ -71,6 +71,10 @@ static uint8_t SECURE = 1;
 static uint8_t QSYNC_MODE_NONE = 0;
 static uint8_t QSYNC_MODE_CONTINUOUS = 1;
 
+static uint8_t FRAME_TRIGGER_DEFAULT = 0;
+static uint8_t FRAME_TRIGGER_SERIALIZE = 1;
+static uint8_t FRAME_TRIGGER_POSTED_START = 2;
+
 static void PopulatePowerModes(drmModePropertyRes *prop) {
   for (auto i = 0; i < prop->count_enums; i++) {
     string enum_name(prop->enums[i].name);
@@ -116,6 +120,19 @@ static void PopulateQsyncModes(drmModePropertyRes *prop) {
       QSYNC_MODE_NONE = prop->enums[i].value;
     } else if (enum_name == "continuous") {
       QSYNC_MODE_CONTINUOUS = prop->enums[i].value;
+    }
+  }
+}
+
+static void PopulateFrameTriggerModes(drmModePropertyRes *prop) {
+  for (auto i = 0; i < prop->count_enums; i++) {
+    string enum_name(prop->enums[i].name);
+    if (enum_name == "default") {
+      FRAME_TRIGGER_DEFAULT = prop->enums[i].value;
+    } else if (enum_name == "serilize_frame_trigger") {
+      FRAME_TRIGGER_SERIALIZE = prop->enums[i].value;
+    } else if (enum_name == "posted_start") {
+      FRAME_TRIGGER_POSTED_START = prop->enums[i].value;
     }
   }
 }
@@ -348,6 +365,8 @@ void DRMConnector::ParseProperties() {
       PopulateSecureModes(info);
     } else if (prop_enum == DRMProperty::QSYNC_MODE) {
       PopulateQsyncModes(info);
+    } else if (prop_enum == DRMProperty::FRAME_TRIGGER) {
+      PopulateFrameTriggerModes(info);
     }
 
     prop_mgr_.SetPropertyId(prop_enum, info->prop_id);
@@ -752,6 +771,40 @@ void DRMConnector::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
       uint32_t topology_control = va_arg(args, uint32_t);
       drmModeAtomicAddProperty(req, obj_id, prop_mgr_.GetPropertyId(DRMProperty::TOPOLOGY_CONTROL),
                                topology_control);
+    } break;
+
+    case DRMOps::CONNECTOR_SET_FRAME_TRIGGER: {
+      if (!prop_mgr_.IsPropertyAvailable(DRMProperty::FRAME_TRIGGER)) {
+        return;
+      }
+      int drm_frame_trigger_mode = va_arg(args, int);
+      DRMFrameTriggerMode mode = static_cast<DRMFrameTriggerMode>(drm_frame_trigger_mode);
+      int32_t frame_trigger_mode = -1;
+      switch (mode) {
+        case (DRMFrameTriggerMode::FRAME_DONE_WAIT_DEFAULT):
+          frame_trigger_mode = FRAME_TRIGGER_DEFAULT;
+          break;
+        case (DRMFrameTriggerMode::FRAME_DONE_WAIT_SERIALIZE):
+          frame_trigger_mode = FRAME_TRIGGER_SERIALIZE;
+          break;
+        case (DRMFrameTriggerMode::FRAME_DONE_WAIT_POSTED_START):
+          frame_trigger_mode = FRAME_TRIGGER_POSTED_START;
+          break;
+        default:
+          DRM_LOGE("Invalid frame trigger mode %d to set on connector %d",
+                   drm_frame_trigger_mode, obj_id);
+          break;
+      }
+      if (frame_trigger_mode >= 0) {
+        uint32_t prop_id = prop_mgr_.GetPropertyId(DRMProperty::FRAME_TRIGGER);
+        int ret = drmModeAtomicAddProperty(req, obj_id, prop_id, frame_trigger_mode);
+        if (ret) {
+          DRM_LOGE("AtomicAddProperty failed obj_id 0x%x, prop_id %d mode %d ret %d",
+                   obj_id, prop_id, frame_trigger_mode, ret);
+        } else {
+          DRM_LOGD("Connector %d: Setting frame trigger mode %d", obj_id, frame_trigger_mode);
+        }
+      }
     } break;
 
     default:
