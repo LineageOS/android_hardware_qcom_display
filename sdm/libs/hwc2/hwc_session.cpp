@@ -1569,6 +1569,14 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       status = SetColorModeFromClient(input_parcel);
       break;
 
+    case qService::IQService::SET_FRAME_TRIGGER_MODE:
+      if (!input_parcel) {
+        DLOGE("QService command = %d: input_parcel needed.", command);
+        break;
+      }
+      status = SetFrameTriggerMode(input_parcel);
+      break;
+
     default:
       DLOGW("QService command = %d is not supported.", command);
       break;
@@ -1796,6 +1804,25 @@ android::status_t HWCSession::SetAd4RoiConfig(const android::Parcel *input_parce
 
   return 0;
 #endif
+}
+
+android::status_t HWCSession::SetFrameTriggerMode(const android::Parcel *input_parcel) {
+  auto display_id = static_cast<int>(input_parcel->readInt32());
+  auto mode = static_cast<uint32_t>(input_parcel->readInt32());
+
+  int disp_idx = GetDisplayIndex(display_id);
+  if (disp_idx == -1) {
+    DLOGE("Invalid display = %d", display_id);
+    return -EINVAL;
+  }
+
+  auto err = CallDisplayFunction(static_cast<hwc2_device_t *>(this),
+                                 static_cast<hwc2_display_t>(disp_idx),
+                                 &HWCDisplay::SetFrameTriggerMode, mode);
+  if (err != HWC2_ERROR_NONE)
+    return -EINVAL;
+
+  return 0;
 }
 
 android::status_t HWCSession::SetColorModeWithRenderIntentOverride(

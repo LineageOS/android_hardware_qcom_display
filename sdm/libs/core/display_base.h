@@ -147,6 +147,9 @@ class DisplayBase : public DisplayInterface {
   virtual bool IsSupportSsppTonemap();
   virtual DisplayError GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
                                                     uint8_t *out_data);
+  virtual DisplayError SetFrameTriggerMode(FrameTriggerMode mode) {
+    return kErrorNotSupported;
+  }
 
  protected:
   const char *kBt2020Pq = "bt2020_pq";

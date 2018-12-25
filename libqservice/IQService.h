@@ -85,6 +85,7 @@ public:
         GET_DSI_CLK = 43, // Get DSI Clk.
         GET_SUPPORTED_DSI_CLK = 44, // Get supported DSI Clk.
         SET_COLOR_MODE_FROM_CLIENT = 45, // Overrides the QDCM mode using the given mode ID
+        SET_FRAME_TRIGGER_MODE = 46, // Set frame trigger mode for debug
         COMMAND_LIST_END = 400,
     };
 
