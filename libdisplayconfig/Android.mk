@@ -1,6 +1,5 @@
 LOCAL_PATH := $(call my-dir)
 
-ifneq ($(TARGET_BOARD_PLATFORM),kona)
 display_config_version := $(shell \
     if [ -d "$(TOP)/vendor/qcom/opensource/interfaces/display/config/1.4" ];\
     then echo DISPLAY_CONFIG_1_4; fi)
@@ -25,4 +24,3 @@ ifeq ($(LLVM_SA), true)
 endif
 
 include $(BUILD_SHARED_LIBRARY)
-endif
