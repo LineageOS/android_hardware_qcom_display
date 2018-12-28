@@ -112,6 +112,7 @@ class HWDevice : public HWInterface {
   virtual DisplayError SetDisplayDppsAdROI(void *payload) { return kErrorNotSupported; }
   virtual DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate);
   virtual DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate);
+  virtual DisplayError TeardownConcurrentWriteback(void) { return kErrorNotSupported; }
 
   enum {
     kHWEventVSync,

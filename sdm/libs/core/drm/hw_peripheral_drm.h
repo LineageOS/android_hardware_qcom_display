@@ -60,6 +60,7 @@ class HWPeripheralDRM : public HWDeviceDRM {
   virtual DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate);
   virtual DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate);
   virtual DisplayError SetDisplayAttributes(uint32_t index);
+  virtual DisplayError TeardownConcurrentWriteback(void);
 
  private:
   void SetDestScalarData(HWLayersInfo hw_layer_info, bool validate);

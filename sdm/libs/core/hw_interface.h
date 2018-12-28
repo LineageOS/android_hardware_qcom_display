@@ -123,6 +123,7 @@ class HWInterface {
   virtual DisplayError SetDisplayDppsAdROI(void *payload) = 0;
   virtual DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate) = 0;
   virtual DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate) = 0;
+  virtual DisplayError TeardownConcurrentWriteback(void) = 0;
 
  protected:
   virtual ~HWInterface() { }

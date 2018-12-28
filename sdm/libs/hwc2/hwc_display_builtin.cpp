@@ -402,6 +402,28 @@ HWC2::Error HWCDisplayBuiltIn::GetReadbackBufferFence(int32_t *release_fence) {
   return status;
 }
 
+DisplayError HWCDisplayBuiltIn::TeardownConcurrentWriteback(void) {
+  DisplayError error = kErrorNotSupported;
+
+  if (output_buffer_.release_fence_fd >= 0) {
+    int32_t release_fence_fd = dup(output_buffer_.release_fence_fd);
+    int ret = sync_wait(output_buffer_.release_fence_fd, 1000);
+    if (ret < 0) {
+      DLOGE("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
+    }
+
+    ::close(release_fence_fd);
+    if (ret)
+      return kErrorResources;
+  }
+
+  if (display_intf_) {
+    error = display_intf_->TeardownConcurrentWriteback();
+  }
+
+  return error;
+}
+
 HWC2::Error HWCDisplayBuiltIn::SetDisplayDppsAdROI(uint32_t h_start, uint32_t h_end,
                                                    uint32_t v_start, uint32_t v_end,
                                                    uint32_t factor_in, uint32_t factor_out) {

@@ -1156,8 +1156,8 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
     return HWC2::Error::NoResources;
   }
 
+  SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
   if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
-    SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
     std::bitset<kSecureMax> secure_sessions = 0;
     hwc_display_[HWC_DISPLAY_PRIMARY]->GetActiveSecureSession(&secure_sessions);
     if (secure_sessions.any()) {
@@ -1195,6 +1195,13 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
         continue;
       }
 
+    if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
+      error = hwc_display_[HWC_DISPLAY_PRIMARY]->TeardownConcurrentWriteback();
+      if (error) {
+        return HWC2::Error::NoResources;
+      }
+    }
+
       status = HWCDisplayVirtual::Create(core_intf_, &buffer_allocator_, &callbacks_, client_id,
                                          info.display_id, width, height, format, &hwc_display);
       // TODO(user): validate width and height support
@@ -1209,11 +1216,10 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
     }
 
     if (status) {
-      return HWC2::Error::BadDisplay;
+      return HWC2::Error::NoResources;
     }
   }
 
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
   hwc_display_[HWC_DISPLAY_PRIMARY]->ResetValidation();
 
   return HWC2::Error::None;
