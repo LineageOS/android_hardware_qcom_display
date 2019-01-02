@@ -50,11 +50,12 @@ class HWCDisplayBuiltIn : public HWCDisplay {
 
   static int Create(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
                     HWCCallbacks *callbacks, qService::QService *qservice,
-                    hwc2_display_t id, int32_t sdm_id, HWCDisplay **hwc_display);
+                    hwc2_display_t id, int32_t sdm_id, bool is_primary, HWCDisplay **hwc_display);
   static void Destroy(HWCDisplay *hwc_display);
   virtual int Init();
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests);
   virtual HWC2::Error Present(int32_t *out_retire_fence);
+  virtual HWC2::Error CommitLayerStack();
   virtual HWC2::Error GetColorModes(uint32_t *out_num_modes, android_color_mode_t *out_modes);
   virtual HWC2::Error SetColorMode(android_color_mode_t mode);
   virtual HWC2::Error SetColorModeById(int32_t color_mode_id);
@@ -72,11 +73,13 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   virtual DisplayError SetDynamicDSIClock(uint64_t bitclk);
   virtual DisplayError GetDynamicDSIClock(uint64_t *bitclk);
   virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates);
+  virtual HWC2::Error UpdateDisplayId(hwc2_display_t id);
+  virtual HWC2::Error SetPendingRefresh();
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
                     HWCCallbacks *callbacks, qService::QService *qservice, hwc2_display_t id,
-                    int32_t sdm_id);
+                    int32_t sdm_id, bool is_primary);
   void SetMetaDataRefreshRateFlag(bool enable);
   virtual DisplayError SetDisplayMode(uint32_t mode);
   virtual DisplayError DisablePartialUpdateOneFrame();
@@ -88,6 +91,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   void HandleFrameOutput();
   void HandleFrameCapture();
   void HandleFrameDump();
+  bool CanSkipCommit();
   DisplayError SetMixerResolution(uint32_t width, uint32_t height);
   DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
 
@@ -107,6 +111,9 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   BufferInfo output_buffer_info_ = {};
   void *output_buffer_base_ = nullptr;
   int default_mode_status_ = 0;
+  bool is_primary_ = false;
+  bool pending_refresh_ = true;
+  bool enable_drop_refresh_ = false;
 };
 
 }  // namespace sdm

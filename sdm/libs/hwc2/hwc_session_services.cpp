@@ -552,8 +552,8 @@ Return<int32_t> HWCSession::setDisplayIndex(IDisplayConfig::DisplayTypeExt disp_
   DLOGI("%s display: base = %d, count = %d", GetDisplayTypeName(disp_type), base, count);
 
   // Is display slots capacity smaller than what client can support?
-  if ((base + count) > kNumDisplays) {
-    DLOGE("Exceeds max supported display slots = %d", kNumDisplays);
+  if ((base + count) > HWCCallbacks::kNumDisplays) {
+    DLOGE("Exceeds max supported display slots = %d", HWCCallbacks::kNumDisplays);
     return -1;
   }
 

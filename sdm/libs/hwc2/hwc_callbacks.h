@@ -40,6 +40,12 @@ namespace sdm {
 
 class HWCCallbacks {
  public:
+  static const int kNumBuiltIn = 4;
+  static const int kNumPluggable = 4;
+  static const int kNumVirtual = 4;
+  // Add 1 primary display which can be either a builtin or pluggable.
+  static const int kNumDisplays = 1 + kNumBuiltIn + kNumPluggable + kNumVirtual;
+
   HWC2::Error Hotplug(hwc2_display_t display, HWC2::Connection state);
   HWC2::Error Refresh(hwc2_display_t display);
   HWC2::Error Vsync(hwc2_display_t display, int64_t timestamp);
@@ -51,8 +57,9 @@ class HWCCallbacks {
   }
   bool IsVsyncSwapped() { return (vsync_from_ != vsync_to_); }
   hwc2_display_t GetVsyncSource() { return vsync_from_; }
-
   bool VsyncCallbackRegistered() { return (vsync_ != nullptr && vsync_data_ != nullptr); }
+  bool NeedsRefresh(hwc2_display_t display) { return pending_refresh_.test(UINT32(display)); }
+  void ResetRefresh(hwc2_display_t display) { pending_refresh_.reset(UINT32(display)); }
 
  private:
   hwc2_callback_data_t hotplug_data_ = nullptr;
@@ -64,6 +71,7 @@ class HWCCallbacks {
   HWC2_PFN_VSYNC vsync_ = nullptr;
   hwc2_display_t vsync_from_ = HWC_DISPLAY_PRIMARY;   // hw vsync is active on this display
   hwc2_display_t vsync_to_ = HWC_DISPLAY_PRIMARY;     // vsync will be reported as this display
+  std::bitset<kNumDisplays> pending_refresh_;         // Displays waiting to get refreshed
 };
 
 }  // namespace sdm

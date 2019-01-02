@@ -47,6 +47,7 @@ HWC2::Error HWCCallbacks::Refresh(hwc2_display_t display) {
     return HWC2::Error::NoResources;
   }
   refresh_(refresh_data_, display);
+  pending_refresh_.set(UINT32(display));
   return HWC2::Error::None;
 }
 

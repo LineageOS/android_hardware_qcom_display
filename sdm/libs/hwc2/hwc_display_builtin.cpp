@@ -48,13 +48,14 @@ namespace sdm {
 
 int HWCDisplayBuiltIn::Create(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
                               HWCCallbacks *callbacks, qService::QService *qservice,
-                              hwc2_display_t id, int32_t sdm_id, HWCDisplay **hwc_display) {
+                              hwc2_display_t id, int32_t sdm_id, bool is_primary,
+                              HWCDisplay **hwc_display) {
   int status = 0;
   uint32_t builtin_width = 0;
   uint32_t builtin_height = 0;
 
-  HWCDisplay *hwc_display_builtin =
-      new HWCDisplayBuiltIn(core_intf, buffer_allocator, callbacks, qservice, id, sdm_id);
+  HWCDisplay *hwc_display_builtin = new HWCDisplayBuiltIn(core_intf, buffer_allocator, callbacks,
+                                                          qservice, id, sdm_id, is_primary);
   status = hwc_display_builtin->Init();
   if (status) {
     delete hwc_display_builtin;
@@ -88,11 +89,12 @@ void HWCDisplayBuiltIn::Destroy(HWCDisplay *hwc_display) {
 
 HWCDisplayBuiltIn::HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
                                      HWCCallbacks *callbacks, qService::QService *qservice,
-                                     hwc2_display_t id, int32_t sdm_id)
+                                     hwc2_display_t id, int32_t sdm_id, bool is_primary)
     : HWCDisplay(core_intf, buffer_allocator, callbacks, qservice, kBuiltIn, id, sdm_id, true,
                  DISPLAY_CLASS_BUILTIN),
       buffer_allocator_(buffer_allocator),
-      cpu_hint_(NULL) {
+      cpu_hint_(NULL),
+      is_primary_(is_primary) {
 }
 
 int HWCDisplayBuiltIn::Init() {
@@ -116,6 +118,20 @@ int HWCDisplayBuiltIn::Init() {
   color_mode_ = new HWCColorMode(display_intf_);
   color_mode_->Init();
   HWCDebugHandler::Get()->GetProperty(ENABLE_DEFAULT_COLOR_MODE, &default_mode_status_);
+
+  if (is_primary_) {
+    Debug::GetWindowRect(&window_rect_.left, &window_rect_.top,
+                         &window_rect_.right, &window_rect_.bottom);
+    DLOGI("Window rect :[%f %f %f %f]", window_rect_.left, window_rect_.top,
+           window_rect_.right, window_rect_.bottom);
+  }
+
+  int drop_refresh = 0;
+  HWCDebugHandler::Get()->GetProperty(ENABLE_DROP_REFRESH, &drop_refresh);
+  enable_drop_refresh_ = (drop_refresh == 1);
+  if (enable_drop_refresh_) {
+    DLOGI("Drop redundant drawcycles %d", id_);
+  }
 
   return status;
 }
@@ -227,6 +243,34 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
   return status;
 }
 
+HWC2::Error HWCDisplayBuiltIn::CommitLayerStack() {
+  skip_commit_ = CanSkipCommit();
+  return HWCDisplay::CommitLayerStack();
+}
+
+bool HWCDisplayBuiltIn::CanSkipCommit() {
+  if (layer_stack_invalid_) {
+    return false;
+  }
+
+  // Reject repeated drawcycle requests if it satisfies all conditions.
+  // 1. None of the layerstack attributes changed.
+  // 2. No new buffer latched.
+  // 3. No refresh request triggered by HWC.
+  // 4. This display is not source of vsync.
+  bool buffers_latched = false;
+  for (auto &hwc_layer : layer_set_) {
+    buffers_latched |= hwc_layer->BufferLatched();
+    hwc_layer->ResetBufferFlip();
+  }
+
+  bool skip_commit = enable_drop_refresh_ && !pending_commit_ && !buffers_latched &&
+                     !pending_refresh_ && !vsync_source_;
+  pending_refresh_ = false;
+
+  return skip_commit;
+}
+
 HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
   auto status = HWC2::Error::None;
   if (display_paused_) {
@@ -239,7 +283,7 @@ HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
       DLOGE("Flush failed. Error = %d", error);
     }
   } else {
-    status = HWCDisplay::CommitLayerStack();
+    status = CommitLayerStack();
     if (status == HWC2::Error::None) {
       HandleFrameOutput();
       SolidFillCommit();
@@ -268,7 +312,7 @@ HWC2::Error HWCDisplayBuiltIn::SetColorMode(android_color_mode_t mode) {
     return status;
   }
 
-  callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
+  callbacks_->Refresh(id_);
   validated_ = false;
 
   return status;
@@ -281,7 +325,7 @@ HWC2::Error HWCDisplayBuiltIn::SetColorModeById(int32_t color_mode_id) {
     return status;
   }
 
-  callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
+  callbacks_->Refresh(id_);
   validated_ = false;
 
   return status;
@@ -294,7 +338,7 @@ HWC2::Error HWCDisplayBuiltIn::RestoreColorTransform() {
     return status;
   }
 
-  callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
+  callbacks_->Refresh(id_);
 
   return status;
 }
@@ -312,7 +356,7 @@ HWC2::Error HWCDisplayBuiltIn::SetColorTransform(const float *matrix,
     return status;
   }
 
-  callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
+  callbacks_->Refresh(id_);
   color_tranform_failed_ = false;
   validated_ = false;
 
@@ -422,7 +466,7 @@ void HWCDisplayBuiltIn::ForceRefreshRate(uint32_t refresh_rate) {
 
   force_refresh_rate_ = refresh_rate;
 
-  callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
+  callbacks_->Refresh(id_);
 
   return;
 }
@@ -620,7 +664,6 @@ DisplayError HWCDisplayBuiltIn::DisablePartialUpdateOneFrame() {
   return error;
 }
 
-
 DisplayError HWCDisplayBuiltIn::SetMixerResolution(uint32_t width, uint32_t height) {
   DisplayError error = display_intf_->SetMixerResolution(width, height);
   validated_ = false;
@@ -660,6 +703,16 @@ DisplayError HWCDisplayBuiltIn::GetSupportedDSIClock(std::vector<uint64_t> *bitc
   }
 
   return kErrorNotSupported;
+}
+
+HWC2::Error HWCDisplayBuiltIn::UpdateDisplayId(hwc2_display_t id) {
+  id_ = id;
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayBuiltIn::SetPendingRefresh() {
+  pending_refresh_ = true;
+  return HWC2::Error::None;
 }
 
 }  // namespace sdm

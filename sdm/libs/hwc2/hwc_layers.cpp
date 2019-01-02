@@ -263,6 +263,7 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
   layer_buffer->planes[0].offset = handle->offset;
   layer_buffer->planes[0].stride = UINT32(handle->width);
   layer_buffer->size = handle->size;
+  buffer_flipped_ = reinterpret_cast<uint64_t>(handle) != layer_buffer->buffer_id;
   layer_buffer->buffer_id = reinterpret_cast<uint64_t>(handle);
   layer_buffer->handle_id = handle->id;
 
@@ -320,7 +321,10 @@ HWC2::Error HWCLayer::SetLayerColor(hwc_color_t color) {
   if (client_requested_ != HWC2::Composition::SolidColor) {
     return HWC2::Error::None;
   }
-  layer_->solid_fill_color = GetUint32Color(color);
+  if (layer_->solid_fill_color != GetUint32Color(color)) {
+    layer_->solid_fill_color = GetUint32Color(color);
+    needs_validate_ = true;
+  }
   layer_->input_buffer.format = kFormatARGB8888;
   DLOGV_IF(kTagClient, "[%" PRIu64 "][%" PRIu64 "] Layer color set to %x", display_id_, id_,
            layer_->solid_fill_color);
