@@ -73,6 +73,7 @@ endif
 # Properties using default value:
 #    vendor.display.disable_hw_recovery=0
 
+QMAA_ENABLED_HAL_MODULES += display
 ifeq ($(TARGET_USES_QMAA),true)
 ifeq ($(TARGET_USES_QMAA_OVERRIDE_DISPLAY),true)
 PRODUCT_PROPERTY_OVERRIDES += \
