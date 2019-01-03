@@ -318,7 +318,7 @@ DisplayError DisplayPluggable::VSync(int64_t timestamp) {
 
 DisplayError DisplayPluggable::InitializeColorModes() {
   PrimariesTransfer pt = {};
-  AttrVal var = {};
+  AttrVal var;
   if (!hw_panel_info_.hdr_enabled) {
     return kErrorNone;
   } else {

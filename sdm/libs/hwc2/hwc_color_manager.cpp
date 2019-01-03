@@ -297,7 +297,7 @@ int HWCColorManager::SetFrameCapture(void *params, bool enable, HWCDisplay *hwc_
 }
 
 int HWCColorManager::SetHWDetailedEnhancerConfig(void *params, HWCDisplay *hwc_display) {
-  int err = -1;
+  int err = 0;
   DisplayDetailEnhancerData de_data;
 
   PPDETuningCfgData *de_tuning_cfg_data = reinterpret_cast<PPDETuningCfgData*>(params);
