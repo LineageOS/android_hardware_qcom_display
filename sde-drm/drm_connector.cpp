@@ -373,7 +373,6 @@ void DRMConnector::ParseCapabilities(uint64_t blob_id, DRMConnectorInfo *info) {
   const string pixel_formats = "pixel_formats=";
   const string max_linewidth = "maxlinewidth=";
   const string panel_orientation = "panel orientation=";
-  const string mdp_transfer_time_us = "mdp_transfer_time_us=";
   const string qsync_support = "qsync support=";
   const string wb_ubwc = "wb_ubwc";
   const string dyn_bitclk_support = "dyn bitclk support=";
@@ -402,8 +401,6 @@ void DRMConnector::ParseCapabilities(uint64_t blob_id, DRMConnectorInfo *info) {
       } else if (string(line, panel_orientation.length()) == "horz & vert flip") {
         info->panel_orientation = DRMRotation::ROT_180;
       }
-    } else if (line.find(mdp_transfer_time_us) != string::npos) {
-      info->transfer_time_us = std::stoi(string(line, mdp_transfer_time_us.length()));
     } else if (line.find(qsync_support) != string::npos) {
       info->qsync_support = (string(line, qsync_support.length()) == "true");
     } else if (line.find(wb_ubwc) != string::npos) {
@@ -455,6 +452,7 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
   const string pu_hmin = "partial_update_hmin=";
   const string pu_roimerge = "partial_update_roimerge=";
   const string bit_clk_rate = "bit_clk_rate=";
+  const string mdp_transfer_time_us = "mdp_transfer_time_us=";
 
   // Map of parsed mode_name to mode_properties
   map<string, DRMModeInfo> mode_props_map {};
@@ -483,6 +481,8 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
       it->second.roi_merge = std::stoi(string(line, pu_roimerge.length()));
     } else if (line.find(bit_clk_rate) != string::npos) {
       it->second.bit_clk_rate = std::stoi(string(line, bit_clk_rate.length()));
+    } else if (line.find(mdp_transfer_time_us) != string::npos) {
+      it->second.transfer_time_us = std::stoi(string(line, mdp_transfer_time_us.length()));
     }
   }
 
@@ -500,6 +500,7 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
       mode_item.walign = it->second.walign;
       mode_item.halign = it->second.halign;
       mode_item.bit_clk_rate = it->second.bit_clk_rate;
+      mode_item.transfer_time_us = it->second.transfer_time_us;
     }
   }
 
