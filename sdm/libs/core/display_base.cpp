@@ -1421,7 +1421,12 @@ DisplayError DisplayBase::HandleHDR(LayerStack *layer_stack) {
       if (color_mgr_ && !disable_hdr_lut_gen_) {
         // Do not apply HDR Mode when hdr lut generation is disabled
         DLOGI("Setting color mode = %s", current_color_mode_.c_str());
-        // HDR playback off - set prev mode
+        // HDR playback off - set hdr_off mode, if existent,
+        // before setting previous display mode
+        error = SetColorModeInternal("hal_hdr_off");
+        if (error == kErrorNone) {
+            DLOGI("Successfully cleared hdr mode with hal_hdr_off");
+        }
         error = SetColorModeInternal(current_color_mode_);
       }
       comp_manager_->ControlDpps(true);  // Enable Dpps
