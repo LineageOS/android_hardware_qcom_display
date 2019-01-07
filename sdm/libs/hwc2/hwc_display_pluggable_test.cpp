@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -87,7 +87,7 @@ HWCDisplayPluggableTest::HWCDisplayPluggableTest(CoreInterface *core_intf,
                                                  int32_t sdm_id, uint32_t panel_bpp,
                                                  uint32_t pattern_type)
   : HWCDisplay(core_intf, buffer_allocator, callbacks, event_handler, qservice, kPluggable, id,
-               sdm_id, false, DISPLAY_CLASS_PLUGGABLE),
+               sdm_id, DISPLAY_CLASS_PLUGGABLE),
     panel_bpp_(panel_bpp), pattern_type_(pattern_type) {
 }
 

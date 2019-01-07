@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -93,7 +93,7 @@ HWCDisplayBuiltIn::HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *
                                      qService::QService *qservice, hwc2_display_t id,
                                      int32_t sdm_id)
     : HWCDisplay(core_intf, buffer_allocator, callbacks, event_handler, qservice, kBuiltIn, id,
-                 sdm_id, true, DISPLAY_CLASS_BUILTIN),
+                 sdm_id, DISPLAY_CLASS_BUILTIN),
       buffer_allocator_(buffer_allocator),
       cpu_hint_(NULL) {
 }

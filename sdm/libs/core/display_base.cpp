@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -354,19 +354,6 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     DLOGE("Commit: Corresponding Prepare() is not called for display %d-%d", display_id_,
           display_type_);
     return kErrorNotValidated;
-  }
-
-  // Layer stack attributes has changed, need to Reconfigure, currently in use for Hybrid Comp
-  if (layer_stack->flags.attributes_changed) {
-    error = comp_manager_->ReConfigure(display_comp_ctx_, &hw_layers_);
-    if (error != kErrorNone) {
-      return error;
-    }
-
-    error = hw_intf_->Validate(&hw_layers_);
-    if (error != kErrorNone) {
-        return error;
-    }
   }
 
   DLOGI_IF(kTagDisplay, "Entering commit for display: %d-%d", display_id_, display_type_);
@@ -799,10 +786,7 @@ const char * DisplayBase::GetName(const LayerComposition &composition) {
   case kCompositionGPU:         return "GPU";
   case kCompositionSDE:         return "SDE";
   case kCompositionCursor:      return "CURSOR";
-  case kCompositionHybrid:      return "HYBRID";
-  case kCompositionBlit:        return "BLIT";
   case kCompositionGPUTarget:   return "GPU_TARGET";
-  case kCompositionBlitTarget:  return "BLIT_TARGET";
   default:                      return "UNKNOWN";
   }
 }
