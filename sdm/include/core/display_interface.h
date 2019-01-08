@@ -204,6 +204,12 @@ struct DisplayConfigVariableInfo {
   uint32_t fps = 0;               //!< Frame rate per second.
   uint32_t vsync_period_ns = 0;   //!< VSync period in nanoseconds.
   bool is_yuv = false;            //!< If the display output is in YUV format.
+
+  bool operator==(const DisplayConfigVariableInfo& info) const {
+    return ((x_pixels == info.x_pixels) && (y_pixels == info.y_pixels) && (x_dpi == info.x_dpi) &&
+            (y_dpi == info.y_dpi) && (fps == info.fps) && (vsync_period_ns == info.vsync_period_ns)
+            && (is_yuv == info.is_yuv));
+  }
 };
 
 /*! @brief Event data associated with VSync event.
@@ -780,6 +786,30 @@ class DisplayInterface {
    * as programmed to driver
   */
   virtual std::string Dump() = 0;
+
+  /*! @brief Method to dynamically set DSI clock rate.
+
+    @param[in] bit_clk_rate DSI bit clock rate in HZ.
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate) = 0;
+
+  /*! @brief Method to get the current DSI clock rate
+
+    @param[out] bit_clk_rate DSI bit clock rate in HZ
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate) = 0;
+
+  /*! @brief Method to get the supported DSI clock rates
+
+      @param[out] bitclk DSI bit clock in HZ
+
+      @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates) = 0;
 
  protected:
   virtual ~DisplayInterface() { }

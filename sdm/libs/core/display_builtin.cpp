@@ -294,6 +294,9 @@ DisplayError DisplayBuiltIn::SetRefreshRate(uint32_t refresh_rate, bool final_ra
   if ((current_refresh_rate_ != refresh_rate) || handle_idle_timeout_) {
     DisplayError error = hw_intf_->SetRefreshRate(refresh_rate);
     if (error != kErrorNone) {
+      // Attempt to update refresh rate can fail if rf interfenence is detected.
+      // Just drop min fps settting for now.
+      handle_idle_timeout_ = false;
       return error;
     }
   }
@@ -564,5 +567,41 @@ DisplayError DisplayBuiltIn::ControlIdlePowerCollapse(bool enable, bool synchron
   return hw_intf_->ControlIdlePowerCollapse(enable, synchronous);
 }
 
+DisplayError DisplayBuiltIn::GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (!hw_panel_info_.dyn_bitclk_support) {
+    return kErrorNotSupported;
+  }
+
+  *bitclk_rates = hw_panel_info_.bitclk_rates;
+  return kErrorNone;
+}
+
+DisplayError DisplayBuiltIn::SetDynamicDSIClock(uint64_t bit_clk_rate) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (!hw_panel_info_.dyn_bitclk_support) {
+    return kErrorNotSupported;
+  }
+
+  uint64_t current_clk = 0;
+  std::vector<uint64_t> &clk_rates = hw_panel_info_.bitclk_rates;
+  GetDynamicDSIClock(&current_clk);
+  bool valid = std::find(clk_rates.begin(), clk_rates.end(), bit_clk_rate) != clk_rates.end();
+  if (current_clk == bit_clk_rate || !valid) {
+    DLOGI("Invalid setting %d, Clk. already set %d", !valid, (current_clk == bit_clk_rate));
+    return kErrorNone;
+  }
+
+  return hw_intf_->SetDynamicDSIClock(bit_clk_rate);
+}
+
+DisplayError DisplayBuiltIn::GetDynamicDSIClock(uint64_t *bit_clk_rate) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (!hw_panel_info_.dyn_bitclk_support) {
+    return kErrorNotSupported;
+  }
+
+  return hw_intf_->GetDynamicDSIClock(bit_clk_rate);
+}
 
 }  // namespace sdm

@@ -98,6 +98,9 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(SetQSyncMode(QSyncMode))
   MAKE_NO_OP(ControlIdlePowerCollapse(bool, bool))
   MAKE_NO_OP(SetDisplayDppsAdROI(void *))
+  MAKE_NO_OP(SetDynamicDSIClock(uint64_t bit_clk_rate))
+  MAKE_NO_OP(GetDynamicDSIClock(uint64_t *bit_clk_rate))
+  MAKE_NO_OP(GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates))
 
   DisplayConfigVariableInfo default_variable_config_ = {};
   DisplayConfigFixedInfo default_fixed_config_ = {};

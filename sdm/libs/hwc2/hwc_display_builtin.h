@@ -31,6 +31,7 @@
 #define __HWC_DISPLAY_BUILTIN_H__
 
 #include <string>
+#include <vector>
 
 #include "cpuhint.h"
 #include "hwc_display.h"
@@ -82,6 +83,9 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous);
   virtual HWC2::Error SetDisplayDppsAdROI(uint32_t h_start, uint32_t h_end, uint32_t v_start,
                                           uint32_t v_end, uint32_t factor_in, uint32_t factor_out);
+  virtual DisplayError SetDynamicDSIClock(uint64_t bitclk);
+  virtual DisplayError GetDynamicDSIClock(uint64_t *bitclk);
+  virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates);
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
