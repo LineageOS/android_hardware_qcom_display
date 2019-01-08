@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -254,18 +254,12 @@ struct InlineRotationInfo {
 
 struct HWResourceInfo {
   uint32_t hw_version = 0;
-  uint32_t hw_revision = 0;
   uint32_t num_dma_pipe = 0;
   uint32_t num_vig_pipe = 0;
   uint32_t num_rgb_pipe = 0;
   uint32_t num_cursor_pipe = 0;
   uint32_t num_blending_stages = 0;
   uint32_t num_solidfill_stages = 0;
-  uint32_t num_control = 0;
-  uint32_t num_mixer_to_disp = 0;
-  uint32_t smp_total = 0;
-  uint32_t smp_size = 0;
-  uint32_t num_smp_per_pipe = 0;
   uint32_t max_scale_up = 1;
   uint32_t max_scale_down = 1;
   uint64_t max_bandwidth_low = 0;
@@ -285,10 +279,8 @@ struct HWResourceInfo {
   uint32_t extra_fudge_factor = 0;
   uint32_t amortizable_threshold = 0;
   uint32_t system_overhead_lines = 0;
-  bool has_bwc = false;
   bool has_ubwc = false;
   bool has_decimation = false;
-  bool has_macrotile = false;
   bool has_non_scalar_rgb = false;
   bool is_src_split = false;
   bool has_dyn_bw_support = false;
@@ -303,7 +295,6 @@ struct HWResourceInfo {
   FormatsMap supported_formats_map;
   HWRotatorInfo hw_rot_info;
   HWDestScalarInfo hw_dest_scalar_info;
-  bool has_avr = false;
   bool has_hdr = false;
   SmartDMARevision smart_dma_rev = SmartDMARevision::V1;
   float ib_fudge_factor = 1.0f;

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -113,7 +113,7 @@ DisplayError HWInfo::GetHWResourceInfo(HWResourceInfo *hw_resource) {
     // parse the line and update information accordingly
     if (!ParseString(line.c_str(), tokens, max_count, ":, =\n", &token_count)) {
       if (!strncmp(tokens[0], "hw_rev", strlen("hw_rev"))) {
-        hw_resource_->hw_revision = UINT32(atoi(tokens[1]));  // HW Rev, v1/v2
+        hw_resource_->hw_version = UINT32(atoi(tokens[1]));  // HW Rev, v1/v2
 
       } else if (!strncmp(tokens[0], "pipe_count", strlen("pipe_count"))) {
         uint32_t pipe_count = UINT8(atoi(tokens[1]));

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2016, 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2016, 2018-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -110,7 +110,7 @@ DisplayError ResourceDefault::Init() {
     src_pipes_[i].priority = INT(i);
   }
 
-  DLOGI("hw_rev=%x, DMA=%d RGB=%d VIG=%d", hw_res_info_.hw_revision, hw_res_info_.num_dma_pipe,
+  DLOGI("hw_ver=%x, DMA=%d RGB=%d VIG=%d", hw_res_info_.hw_version, hw_res_info_.num_dma_pipe,
     hw_res_info_.num_rgb_pipe, hw_res_info_.num_vig_pipe);
 
   if (hw_res_info_.max_scale_down < 1 || hw_res_info_.max_scale_up < 1) {
