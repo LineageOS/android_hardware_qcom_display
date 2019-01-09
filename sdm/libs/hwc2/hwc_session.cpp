@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -954,6 +954,10 @@ int32_t HWCSession::SetVsyncEnabled(hwc2_device_t *device, hwc2_display_t displa
   //  avoid undefined behavior in cast to HWC2::Vsync
   if (int_enabled < HWC2_VSYNC_INVALID || int_enabled > HWC2_VSYNC_DISABLE) {
     return HWC2_ERROR_BAD_PARAMETER;
+  }
+  // already mapping taken care by HAL and SF. No need to react for other display.
+  if (display != HWC_DISPLAY_PRIMARY) {
+    return HWC2_ERROR_NONE;
   }
 
   auto enabled = static_cast<HWC2::Vsync>(int_enabled);
