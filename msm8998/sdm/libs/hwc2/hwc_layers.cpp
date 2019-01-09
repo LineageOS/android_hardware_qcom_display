@@ -187,6 +187,9 @@ HWCLayer::~HWCLayer() {
   }
   close(ion_fd_);
   if (layer_) {
+    if (layer_->input_buffer.acquire_fence_fd >= 0) {
+      close(layer_->input_buffer.acquire_fence_fd);
+    }
     delete layer_;
   }
 }

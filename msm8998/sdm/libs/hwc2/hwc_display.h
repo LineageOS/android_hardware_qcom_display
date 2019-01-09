@@ -237,7 +237,6 @@ class HWCDisplay : public DisplayEventHandler {
   bool IsSurfaceUpdated(const std::vector<LayerRect> &dirty_regions);
   bool IsLayerUpdating(const Layer *layer);
   uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate);
-  virtual void CloseAcquireFds();
   virtual void GetUnderScanConfig() { }
 
   enum {
