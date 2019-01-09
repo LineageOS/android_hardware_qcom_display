@@ -25,6 +25,7 @@
 #include <gr.h>
 #endif
 #include <utils/debug.h>
+#include <utils/utils.h>
 #include <cmath>
 
 #define __CLASS__ "HWCLayer"
@@ -254,6 +255,7 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
   layer_buffer->planes[0].fd = ion_fd_;
   layer_buffer->planes[0].offset = handle->offset;
   layer_buffer->planes[0].stride = UINT32(handle->width);
+  CloseFd(&layer_buffer->acquire_fence_fd);
   layer_buffer->acquire_fence_fd = acquire_fence;
   layer_buffer->size = handle->size;
   layer_buffer->buffer_id = reinterpret_cast<uint64_t>(handle);

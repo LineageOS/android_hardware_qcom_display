@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, 2018 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -94,6 +94,8 @@ DisplayError HWDevice::Init() {
 
   // Populate Panel Info (Used for Partial Update)
   PopulateHWPanelInfo();
+  // Populate Bit clk levels.
+  PopulateBitClkRates();
   // Populate HW Capabilities
   hw_resource_ = HWResourceInfo();
   hw_info_intf_->GetHWResourceInfo(&hw_resource_);
@@ -793,6 +795,52 @@ void HWDevice::PopulateHWPanelInfo() {
         hw_panel_info_.split_info.right_split);
 }
 
+void HWDevice::PopulateBitClkRates() {
+  if (!hw_panel_info_.bitclk_update) {
+    return;
+  }
+
+  char bitclk_str[kMaxStringLength] = {'\0'};
+  char bitclk_path[kMaxStringLength] = {'\0'};
+  snprintf(bitclk_path, sizeof(bitclk_path), "%s%d/supported_bitclk", fb_path_, fb_node_index_);
+  int fd = Sys::open_(bitclk_path, O_RDONLY);
+  if (fd < 0) {
+    DLOGE("BitClk file open failed.");
+    return;
+  }
+
+  ssize_t length = Sys::pread_(fd, bitclk_str, sizeof(bitclk_str) - 1, 0);
+  if (length <= 0) {
+    DLOGE("%s: bitclk_modes file empty");
+    Sys::close_(fd);
+    return;
+  }
+  Sys::close_(fd);
+
+  DLOGI("Bit Clk string: %s", bitclk_str);
+  bitclk_str[length] = '\0';
+  while (length > 1 && isspace(bitclk_str[length - 1])) {
+     --length;
+  }
+  bitclk_str[length] = '\0';
+
+  if (length > 0) {
+    // Parse supported clk. levels.
+    const uint32_t max_levels = 32;
+    char *ptr = bitclk_str;
+    char *tokens[max_levels] = { NULL };
+    const char *delim = ",\n";
+    uint32_t clk_levels = 0;
+
+    ParseLine(ptr, delim, tokens, max_levels, &clk_levels);
+
+    for (uint32_t i = 0; i < clk_levels; i++) {
+      hw_panel_info_.bitclk_rates.push_back(UINT64(atoi(tokens[i])));
+    }
+  }
+
+}
+
 void HWDevice::GetHWPanelNameByNode(int device_node, HWPanelInfo *panel_info) {
   string file_name = fb_path_ + to_string(device_node) + "/msm_fb_panel_info";
 
@@ -893,6 +941,8 @@ void HWDevice::GetHWPanelInfoByNode(int device_node, HWPanelInfo *panel_info) {
         panel_info->panel_orientation.flip_horizontal = ((panel_orient & MDP_FLIP_LR) > 0);
         panel_info->panel_orientation.flip_vertical = ((panel_orient & MDP_FLIP_UD) > 0);
         panel_info->panel_orientation.rotation = ((panel_orient & MDP_ROT_90) > 0);
+      } else if (!strncmp(tokens[0], "dyn_bitclk_en", strlen("dyn_bitclk_en"))) {
+        panel_info->bitclk_update = atoi(tokens[1]);
       }
     }
   }
@@ -1349,6 +1399,14 @@ DisplayError HWDevice::GetMixerAttributes(HWMixerAttributes *mixer_attributes) {
   *mixer_attributes = mixer_attributes_;
 
   return kErrorNone;
+}
+
+DisplayError HWDevice::SetDynamicDSIClock(uint64_t bitclk) {
+  return kErrorNotSupported;
+}
+
+DisplayError HWDevice::GetDynamicDSIClock(uint64_t *bitclk) {
+  return kErrorNotSupported;
 }
 
 }  // namespace sdm

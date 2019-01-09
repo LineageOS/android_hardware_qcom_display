@@ -118,6 +118,13 @@ class AdrenoMemInfo {
    */
   ADRENOPIXELFORMAT GetGpuPixelFormat(int hal_format);
 
+   /*
+   * Function to query whether GPU supports secureContext
+   * @return > 1 : supported
+   *           0 : not supported
+   */
+  bool isSecureContextSupportedByGpu();
+
   static AdrenoMemInfo *GetInstance();
 
  private:
@@ -135,6 +142,7 @@ class AdrenoMemInfo {
       int *aligned_w, int *aligned_h, int *bpp) = NULL;
   int (*LINK_adreno_isUBWCSupportedByGpu)(ADRENOPIXELFORMAT format) = NULL;
   unsigned int (*LINK_adreno_get_gpu_pixel_alignment)() = NULL;
+  int (*LINK_adreno_isSecureContextSupportedByGpu) () = NULL;
 
   bool gfx_ubwc_disable_ = false;
   bool map_fb_ = false;

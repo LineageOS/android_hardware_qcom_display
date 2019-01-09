@@ -87,7 +87,14 @@ inline int roundUpToPageSize(int x) {
 #define GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY GRALLOC1_CONSUMER_USAGE_PRIVATE_SECURE_DISPLAY
 #define GRALLOC_USAGE_PRIVATE_MM_HEAP 0x0
 
-
+/* HARDWAREBUFFER flags used by GPU to check secure  secure context support */
+#define GRALLOC1_PRODUCER_USAGE_GPU_SAMPLED_IMAGE                   1UL << 8
+/* The buffer will be used as a shader storage or uniform buffer object. */
+#define GRALLOC1_PRODUCER_USAGE_GPU_DATA_BUFFER                     1UL << 24
+/* The buffer will be used as a cube map texture. */
+#define GRALLOC1_PRODUCER_USAGE_GPU_CUBE_MAP                        1UL << 25
+/* The buffer contains a complete mipmap hierarchy. */
+#define GRALLOC1_PRODUCER_USAGE_GPU_MIPMAP_COMPLETE                 1UL << 26
 
 // for PERFORM API :
 #define GRALLOC_MODULE_PERFORM_CREATE_HANDLE_FROM_BUFFER 1
