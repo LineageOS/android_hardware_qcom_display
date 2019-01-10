@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -593,11 +593,21 @@ class DisplayInterface {
 
   /*! @brief Method to set the color mode by ID. This method is used for debugging only.
 
-  @param[in] mode_name Mode ID which needs to be set
+  @param[in] Mode ID which needs to be set
 
   @return \link DisplayError \endlink
   */
   virtual DisplayError SetColorModeById(int32_t color_mode_id) = 0;
+
+  /*! @brief Method to get the color mode name.
+
+  @param[in] Mode ID
+  @param[out] Mode name
+
+  @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetColorModeName(int32_t mode_id, std::string *mode_name) = 0;
+
   /*! @brief Method to set the color transform
 
     @param[in] length Mode name which needs to be set
@@ -780,6 +790,12 @@ class DisplayInterface {
     @return \link DisplayError \endlink
   */
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) = 0;
+
+  /*! @brief Method to query whether it is supprt sspp tonemap.
+
+    @return true if support sspp tonemap.
+  */
+  virtual bool IsSupportSsppTonemap() = 0;
 
   /*
    * Returns a string consisting of a dump of SDM's display and layer related state
