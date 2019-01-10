@@ -32,7 +32,6 @@ NUM_FRAMEBUFFER_SURFACE_BUFFERS := 3
 TARGET_USES_HWC2 := true
 TARGET_USES_QCOM_DISPLAY_BSP := true
 TARGET_USES_COLOR_METADATA := true
-TARGET_HAS_WIDE_COLOR_DISPLAY := true
 
 PRODUCT_PROPERTY_OVERRIDES += \
     persist.demo.hdmirotationlock=false \
@@ -41,7 +40,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
     debug.egl.hw=0 \
     debug.sf.latch_unsignaled=1 \
     debug.mdpcomp.logs=0 \
-    debug.sf.enable_hwc_vds=1 \
     ro.vendor.display.cabl=2 \
     vendor.gralloc.disable_ubwc=0 \
     vendor.display.disable_scaler=0 \
@@ -50,7 +48,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.enable_null_display=0 \
     vendor.display.disable_excl_rect=0 \
     vendor.display.comp_mask=0 \
-    vendor.display.disable_hw_recovery=1 \
     vendor.display.enable_default_color_mode=1
 
 # This matrix should be in column major order, per SurfaceFlinger requirement
