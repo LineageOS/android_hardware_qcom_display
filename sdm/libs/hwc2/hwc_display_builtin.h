@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,6 +31,7 @@
 #define __HWC_DISPLAY_BUILTIN_H__
 
 #include <string>
+#include <vector>
 
 #include "cpuhint.h"
 #include "hwc_display.h"
@@ -62,6 +63,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
                                        RenderIntent *out_intents);
   virtual HWC2::Error SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
   virtual HWC2::Error SetColorModeById(int32_t color_mode_id);
+  virtual HWC2::Error SetColorModeFromClientApi(int32_t color_mode_id);
   virtual HWC2::Error SetColorTransform(const float *matrix, android_color_transform_t hint);
   virtual HWC2::Error RestoreColorTransform();
   virtual int Perform(uint32_t operation, ...);
@@ -72,7 +74,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
                                          int32_t format, bool post_processed);
   virtual int FrameCaptureAsync(const BufferInfo &output_buffer_info, bool post_processed);
-  virtual bool GetFrameCaptureFence(int32_t *release_fence);
+  virtual int GetFrameCaptureStatus() { return frame_capture_status_; }
   virtual DisplayError SetDetailEnhancerConfig(const DisplayDetailEnhancerData &de_data);
   virtual DisplayError ControlPartialUpdate(bool enable, uint32_t *pending);
   virtual HWC2::Error SetReadbackBuffer(const native_handle_t *buffer, int32_t acquire_fence,
@@ -82,6 +84,9 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous);
   virtual HWC2::Error SetDisplayDppsAdROI(uint32_t h_start, uint32_t h_end, uint32_t v_start,
                                           uint32_t v_end, uint32_t factor_in, uint32_t factor_out);
+  virtual DisplayError SetDynamicDSIClock(uint64_t bitclk);
+  virtual DisplayError GetDynamicDSIClock(uint64_t *bitclk);
+  virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates);
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
@@ -97,6 +102,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   uint32_t GetOptimalRefreshRate(bool one_updating_layer);
   void HandleFrameOutput();
   void HandleFrameDump();
+  void HandleFrameCapture();
   DisplayError SetMixerResolution(uint32_t width, uint32_t height);
   DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
 
@@ -114,6 +120,10 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   BufferInfo output_buffer_info_ = {};
   void *output_buffer_base_ = nullptr;
   int default_mode_status_ = 0;
+
+  // Members for 1 frame capture in a client provided buffer
+  bool frame_capture_buffer_queued_ = false;
+  int frame_capture_status_ = -EAGAIN;
 };
 
 }  // namespace sdm

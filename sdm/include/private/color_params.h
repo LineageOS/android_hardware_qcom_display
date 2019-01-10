@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2018, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015-2019, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -57,6 +57,7 @@ enum PendingAction {
   kModeSet = BITMAP(10),
   kMultiDispProc = BITMAP(11),
   kMultiDispGetId = BITMAP(12),
+  kSetModeFromClient = BITMAP(13),
   kGetDetailedEnhancerData = BITMAP(21),
   kNoAction = BITMAP(31),
 };

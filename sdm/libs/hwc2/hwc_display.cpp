@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -133,7 +133,7 @@ HWC2::Error HWCColorMode::SetColorModeWithRenderIntent(ColorMode mode, RenderInt
     return HWC2::Error::None;
   }
 
-  auto mode_string = color_mode_map_[mode][intent];
+  auto mode_string = color_mode_map_[mode][intent][kSdrType];
   DisplayError error = display_intf_->SetColorMode(mode_string);
   if (error != kErrorNone) {
     DLOGE("failed for mode = %d intent = %d name = %s", mode, intent, mode_string.c_str());
@@ -166,26 +166,37 @@ HWC2::Error HWCColorMode::CacheColorModeWithRenderIntent(ColorMode mode, RenderI
   return HWC2::Error::None;
 }
 
-HWC2::Error HWCColorMode::ApplyCurrentColorModeWithRenderIntent() {
+HWC2::Error HWCColorMode::ApplyCurrentColorModeWithRenderIntent(bool hdr_present) {
   if (!apply_mode_) {
-    return HWC2::Error::None;
+    if ((hdr_present && curr_dynamic_range_ == kHdrType) ||
+      (!hdr_present && curr_dynamic_range_ == kSdrType))
+      return HWC2::Error::None;
   }
 
   apply_mode_ = false;
-  auto mode_string = color_mode_map_[current_color_mode_][current_render_intent_];
-  DisplayError error = display_intf_->SetColorMode(mode_string);
-  if (error != kErrorNone) {
-    DLOGE("Failed for mode = %d intent = %d name = %s", current_color_mode_,
-          current_render_intent_, mode_string.c_str());
-    return HWC2::Error::Unsupported;
+  curr_dynamic_range_ = (hdr_present)? kHdrType : kSdrType;
+
+  // select mode according to the blend space and dynamic range
+  std::string mode_string = preferred_mode_[current_color_mode_][curr_dynamic_range_];
+  if (mode_string.empty()) {
+    mode_string = color_mode_map_[current_color_mode_][current_render_intent_][curr_dynamic_range_];
+    if (mode_string.empty() &&
+      current_color_mode_ == ColorMode::DISPLAY_P3 &&
+      curr_dynamic_range_ == kHdrType) {
+      // fall back to display_p3 SDR mode if there is no HDR mode
+      mode_string = color_mode_map_[current_color_mode_][current_render_intent_][kSdrType];
+    }
   }
 
-  // The mode does not have the PCC configured, restore the transform
-  RestoreColorTransform();
-  DLOGV_IF(kTagClient, "Successfully applied mode = %d intent = %d name = %s",
-           current_color_mode_, current_render_intent_, mode_string.c_str());
+  auto error = SetPreferredColorModeInternal(mode_string, false, NULL, NULL);
+  if (error == HWC2::Error::None) {
+    // The mode does not have the PCC configured, restore the transform
+    RestoreColorTransform();
+    DLOGV_IF(kTagClient, "Successfully applied mode = %d intent = %d range = %d name = %s",
+             current_color_mode_, current_render_intent_, curr_dynamic_range_, mode_string.c_str());
+  }
 
-  return HWC2::Error::None;
+  return error;
 }
 
 HWC2::Error HWCColorMode::SetColorModeById(int32_t color_mode_id) {
@@ -196,6 +207,84 @@ HWC2::Error HWCColorMode::SetColorModeById(int32_t color_mode_id) {
     return HWC2::Error::BadParameter;
   }
   return HWC2::Error::None;
+}
+
+HWC2::Error HWCColorMode::SetPreferredColorModeInternal(const std::string &mode_string,
+              bool from_client, ColorMode *color_mode, DynamicRangeType *dynamic_range) {
+  DisplayError error = kErrorNone;
+  ColorMode mode = ColorMode::NATIVE;
+  DynamicRangeType range = kSdrType;
+
+  if (from_client) {
+    // get blend space and dynamic range of the mode
+    AttrVal attr;
+    std::string color_gamut_string, dynamic_range_string;
+    error = display_intf_->GetColorModeAttr(mode_string, &attr);
+    if (error) {
+      DLOGE("Failed to get mode attributes for mode %d", mode_string.c_str());
+      return HWC2::Error::BadParameter;
+    }
+
+    if (!attr.empty()) {
+      for (auto &it : attr) {
+        if (it.first.find(kColorGamutAttribute) != std::string::npos) {
+          color_gamut_string = it.second;
+        } else if (it.first.find(kDynamicRangeAttribute) != std::string::npos) {
+          dynamic_range_string = it.second;
+        }
+      }
+    }
+
+    if (color_gamut_string.empty() || dynamic_range_string.empty()) {
+      DLOGE("Invalid attributes for mode %s: color_gamut = %s, dynamic_range = %s",
+            mode_string.c_str(), color_gamut_string.c_str(), dynamic_range_string.c_str());
+      return HWC2::Error::BadParameter;
+    }
+
+    if (color_gamut_string == kDcip3) {
+      mode = ColorMode::DISPLAY_P3;
+    } else if (color_gamut_string == kSrgb) {
+      mode = ColorMode::SRGB;
+    }
+    if (dynamic_range_string == kHdr) {
+      range = kHdrType;
+    }
+
+    if (color_mode) {
+      *color_mode = mode;
+    }
+    if (dynamic_range) {
+      *dynamic_range = range;
+    }
+  }
+
+  // apply the mode from client if it matches
+  // the current blend space and dynamic range,
+  // skip the check for the mode from SF.
+  if ((!from_client) || (current_color_mode_ == mode && curr_dynamic_range_ == range)) {
+    DLOGI("Applying mode: %s", mode_string.c_str());
+    error = display_intf_->SetColorMode(mode_string);
+    if (error != kErrorNone) {
+      DLOGE("Failed to apply mode: %s", mode_string.c_str());
+      return HWC2::Error::BadParameter;
+    }
+  }
+
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCColorMode::SetColorModeFromClientApi(std::string mode_string) {
+  ColorMode mode = ColorMode::NATIVE;
+  DynamicRangeType range = kSdrType;
+
+  auto error = SetPreferredColorModeInternal(mode_string, true, &mode, &range);
+  if (error == HWC2::Error::None) {
+    preferred_mode_[mode][range] = mode_string;
+    DLOGV_IF(kTagClient, "Put mode %s(mode %d, range %d) into preferred_mode",
+             mode_string.c_str(), mode, range);
+  }
+
+  return error;
 }
 
 HWC2::Error HWCColorMode::RestoreColorTransform() {
@@ -224,21 +313,14 @@ HWC2::Error HWCColorMode::SetColorTransform(const float *matrix,
   return status;
 }
 
-void HWCColorMode::FindRenderIntent(const ColorMode &mode, const std::string &mode_string) {
-  auto intent = RenderIntent::COLORIMETRIC;
-  if (mode_string.find("enhanced") != std::string::npos) {
-    intent = RenderIntent::ENHANCE;
-  }
-  color_mode_map_[mode][intent] = mode_string;
-}
-
 void HWCColorMode::PopulateColorModes() {
   uint32_t color_mode_count = 0;
   // SDM returns modes which have attributes defining mode and rendering intent
   DisplayError error = display_intf_->GetColorModeCount(&color_mode_count);
   if (error != kErrorNone || (color_mode_count == 0)) {
     DLOGW("GetColorModeCount failed, use native color mode");
-    color_mode_map_[ColorMode::NATIVE][RenderIntent::COLORIMETRIC] = "hal_native_identity";
+    color_mode_map_[ColorMode::NATIVE][RenderIntent::COLORIMETRIC]
+                   [kSdrType] = "hal_native_identity";
     return;
   }
 
@@ -268,42 +350,55 @@ void HWCColorMode::PopulateColorModes() {
       DLOGV_IF(kTagClient, "color_gamut : %s, dynamic_range : %s, pic_quality : %s",
                color_gamut.c_str(), dynamic_range.c_str(), pic_quality.c_str());
       if (color_gamut == kNative) {
-        color_mode_map_[ColorMode::NATIVE][RenderIntent::COLORIMETRIC] = mode_string;
+        color_mode_map_[ColorMode::NATIVE][RenderIntent::COLORIMETRIC][kSdrType] = mode_string;
       }
 
       if (color_gamut == kSrgb && dynamic_range == kSdr) {
         if (pic_quality == kStandard) {
-          color_mode_map_[ColorMode::SRGB][RenderIntent::COLORIMETRIC] = mode_string;
+          color_mode_map_[ColorMode::SRGB][RenderIntent::COLORIMETRIC][kSdrType] = mode_string;
         }
         if (pic_quality == kEnhanced) {
-          color_mode_map_[ColorMode::SRGB][RenderIntent::ENHANCE] = mode_string;
+          color_mode_map_[ColorMode::SRGB][RenderIntent::ENHANCE][kSdrType] = mode_string;
         }
       }
 
       if (color_gamut == kDcip3 && dynamic_range == kSdr) {
         if (pic_quality == kStandard) {
-          color_mode_map_[ColorMode::DISPLAY_P3][RenderIntent::COLORIMETRIC] = mode_string;
+          color_mode_map_[ColorMode::DISPLAY_P3][RenderIntent::COLORIMETRIC]
+                         [kSdrType] = mode_string;
         }
         if (pic_quality == kEnhanced) {
-          color_mode_map_[ColorMode::DISPLAY_P3][RenderIntent::ENHANCE] = mode_string;
+          color_mode_map_[ColorMode::DISPLAY_P3][RenderIntent::ENHANCE]
+                         [kSdrType] = mode_string;
         }
       }
       if (color_gamut == kDcip3 && pic_quality == kStandard && dynamic_range == kHdr) {
-        color_mode_map_[ColorMode::BT2100_PQ][RenderIntent::TONE_MAP_COLORIMETRIC] = mode_string;
-        color_mode_map_[ColorMode::BT2100_HLG][RenderIntent::TONE_MAP_COLORIMETRIC] = mode_string;
+        if (display_intf_->IsSupportSsppTonemap()) {
+          color_mode_map_[ColorMode::DISPLAY_P3][RenderIntent::COLORIMETRIC]
+                         [kHdrType] = mode_string;
+        } else {
+          color_mode_map_[ColorMode::BT2100_PQ][RenderIntent::TONE_MAP_COLORIMETRIC]
+                         [kHdrType] = mode_string;
+          color_mode_map_[ColorMode::BT2100_HLG][RenderIntent::TONE_MAP_COLORIMETRIC]
+                         [kHdrType] = mode_string;
+        }
       } else if (color_gamut == kBt2020) {
         if (transfer == kSt2084) {
-          color_mode_map_[ColorMode::BT2100_PQ][RenderIntent::COLORIMETRIC] = mode_string;
+          color_mode_map_[ColorMode::BT2100_PQ][RenderIntent::COLORIMETRIC]
+                         [kHdrType] = mode_string;
         } else if (transfer == kHlg) {
-          color_mode_map_[ColorMode::BT2100_HLG][RenderIntent::COLORIMETRIC] = mode_string;
+          color_mode_map_[ColorMode::BT2100_HLG][RenderIntent::COLORIMETRIC]
+                         [kHdrType] = mode_string;
         } else if (transfer == kGamma2_2) {
-          color_mode_map_[ColorMode::BT2020][RenderIntent::COLORIMETRIC] = mode_string;
+          color_mode_map_[ColorMode::BT2020][RenderIntent::COLORIMETRIC]
+                         [kHdrType] = mode_string;
         }
       }
     } else {
       // Look at the mode names, if no attributes are found
       if (mode_string.find("hal_native") != std::string::npos) {
-        color_mode_map_[ColorMode::NATIVE][RenderIntent::COLORIMETRIC] = mode_string;
+        color_mode_map_[ColorMode::NATIVE][RenderIntent::COLORIMETRIC]
+                       [kSdrType] = mode_string;
       }
     }
   }
@@ -321,9 +416,11 @@ HWC2::Error HWCColorMode::ApplyDefaultColorMode() {
       // get the default mode corresponding android_color_mode_t
       for (auto &it_mode : color_mode_map_) {
         for (auto &it : it_mode.second) {
-          if (it.second == default_color_mode) {
-            found = true;
-            break;
+          for (auto &it_range : it.second) {
+            if (it_range.second == default_color_mode) {
+              found = true;
+              break;
+            }
           }
         }
         if (found) {
@@ -345,13 +442,22 @@ void HWCColorMode::Dump(std::ostringstream* os) {
   *os << "color modes supported: \n";
   for (auto it : color_mode_map_) {
     *os << "mode: " << static_cast<int32_t>(it.first) << " RIs { ";
-    for (auto rit : color_mode_map_[it.first]) {
-      *os << static_cast<int32_t>(rit.first) << " ";
+    for (auto render_intent_it : color_mode_map_[it.first]) {
+      *os << static_cast<int32_t>(render_intent_it.first) << " dynamic_range [ ";
+      for (auto range_it : color_mode_map_[it.first][render_intent_it.first]) {
+        *os << static_cast<int32_t>(range_it.first) << " ";
+      }
+      *os << "] ";
     }
     *os << "} \n";
   }
   *os << "current mode: " << static_cast<uint32_t>(current_color_mode_) << std::endl;
   *os << "current render_intent: " << static_cast<uint32_t>(current_render_intent_) << std::endl;
+  if (curr_dynamic_range_ == kHdrType) {
+    *os << "current dynamic_range: HDR" << std::endl;
+  } else {
+    *os << "current dynamic_range: SDR" << std::endl;
+  }
   *os << "current transform: ";
   for (uint32_t i = 0; i < kColorTransformMatrixCount; i++) {
     if (i % 4 == 0) {
@@ -393,9 +499,14 @@ int HWCDisplay::Init() {
   } else {
     error = core_intf_->CreateDisplay(sdm_id_, this, &display_intf_);
     if (error != kErrorNone) {
-      DLOGE("Display create failed. Error = %d display_id = %d event_handler = %p disp_intf = %p",
-            error, sdm_id_, this, &display_intf_);
-      return -EINVAL;
+      if (kErrorDeviceRemoved == error) {
+        DLOGW("Display creation cancelled. Display %d-%d removed.", sdm_id_, type_);
+        return -ENODEV;
+      } else {
+        DLOGE("Display create failed. Error = %d display_id = %d event_handler = %p disp_intf = %p",
+              error, sdm_id_, this, &display_intf_);
+        return -EINVAL;
+      }
     }
   }
 
@@ -425,6 +536,8 @@ int HWCDisplay::Init() {
     return -EINVAL;
   }
 
+  UpdateConfigs();
+
   tone_mapper_ = new HWCToneMapper(buffer_allocator_);
 
   display_intf_->GetRefreshRateRange(&min_refresh_rate_, &max_refresh_rate_);
@@ -441,6 +554,36 @@ int HWCDisplay::Init() {
   DLOGI("Display created with id: %d", id_);
 
   return 0;
+}
+
+void HWCDisplay::UpdateConfigs() {
+  // SF doesnt care about dynamic bit clk support.
+  // Exposing all configs will result in getting/setting of redundant configs.
+
+  // For each config store the corresponding index which client understands.
+  hwc_config_map_.resize(num_configs_);
+
+  for (uint32_t i = 0; i < num_configs_; i++) {
+    DisplayConfigVariableInfo info = {};
+    GetDisplayAttributesForConfig(INT(i), &info);
+    bool config_exists = false;
+    for (auto &config : variable_config_map_) {
+      if (config.second == info) {
+        config_exists = true;
+        hwc_config_map_.at(i) = config.first;
+        break;
+      }
+    }
+
+    if (!config_exists) {
+      variable_config_map_[i] = info;
+      hwc_config_map_.at(i) = i;
+    }
+  }
+
+  // Update num config count.
+  num_configs_ = UINT32(variable_config_map_.size());
+  DLOGI("num_configs = %d", num_configs_);
 }
 
 int HWCDisplay::Deinit() {
@@ -535,7 +678,9 @@ void HWCDisplay::BuildLayerStack() {
 
     Layer *layer = hwc_layer->GetSDMLayer();
     layer->flags = {};   // Reset earlier flags
-    if (hwc_layer->GetClientRequestedCompositionType() == HWC2::Composition::Client) {
+    // Mark all layers to skip, when client target handle is NULL
+    if (hwc_layer->GetClientRequestedCompositionType() == HWC2::Composition::Client ||
+        !client_target_->GetSDMLayer()->input_buffer.buffer_id) {
       layer->flags.skip = true;
     } else if (hwc_layer->GetClientRequestedCompositionType() == HWC2::Composition::SolidColor) {
       layer->flags.solid_fill = true;
@@ -856,8 +1001,14 @@ HWC2::Error HWCDisplay::GetDisplayConfigs(uint32_t *out_num_configs, hwc2_config
   }
 
   *out_num_configs = std::min(*out_num_configs, num_configs_);
-  for (uint32_t i = 0; i < *out_num_configs; i++) {
-    out_configs[i] = i;
+
+  // Expose all unique config ids to cleint.
+  uint32_t i = 0;
+  for (auto &info : variable_config_map_) {
+    if (i == *out_num_configs) {
+      break;
+    }
+    out_configs[i++] = info.first;
   }
 
   return HWC2::Error::None;
@@ -865,12 +1016,12 @@ HWC2::Error HWCDisplay::GetDisplayConfigs(uint32_t *out_num_configs, hwc2_config
 
 HWC2::Error HWCDisplay::GetDisplayAttribute(hwc2_config_t config, HWC2::Attribute attribute,
                                             int32_t *out_value) {
-  DisplayConfigVariableInfo variable_config;
-  if (GetDisplayAttributesForConfig(INT(config), &variable_config) != kErrorNone) {
+  if (variable_config_map_.find(config) == variable_config_map_.end()) {
     DLOGE("Get variable config failed");
     return HWC2::Error::BadDisplay;
   }
 
+  DisplayConfigVariableInfo variable_config = variable_config_map_.at(config);
   switch (attribute) {
     case HWC2::Attribute::VsyncPeriod:
       *out_value = INT32(variable_config.vsync_period_ns);
@@ -972,6 +1123,9 @@ HWC2::Error HWCDisplay::GetActiveConfig(hwc2_config_t *out_config) {
   }
 
   GetActiveDisplayConfig(out_config);
+  if (*out_config < hwc_config_map_.size()) {
+    *out_config = hwc_config_map_.at(*out_config);
+  }
   return HWC2::Error::None;
 }
 
@@ -1473,7 +1627,7 @@ void HWCDisplay::DumpInputBuffers() {
       int error = sync_wait(acquire_fence_fd, 1000);
       if (error < 0) {
         DLOGW("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
-        return;
+        continue;
       }
     }
 
@@ -1482,14 +1636,14 @@ void HWCDisplay::DumpInputBuffers() {
 
     if (!pvt_handle) {
       DLOGE("Buffer handle is null");
-      return;
+      continue;
     }
 
     if (!pvt_handle->base) {
       DisplayError error = buffer_allocator_->MapBuffer(pvt_handle, -1);
       if (error != kErrorNone) {
         DLOGE("Failed to map buffer, error = %d", error);
-        return;
+        continue;
       }
     }
 
@@ -1510,7 +1664,7 @@ void HWCDisplay::DumpInputBuffers() {
     DisplayError error = buffer_allocator_->UnmapBuffer(pvt_handle, &release_fence);
     if (error != kErrorNone) {
       DLOGE("Failed to unmap buffer, error = %d", error);
-      return;
+      continue;
     }
 
     DLOGI("Frame Dump %s: is %s", dump_file_name, result ? "Successful" : "Failed");

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -56,6 +56,7 @@ class DisplayNull : public DisplayInterface {
   virtual bool IsUnderscanSupported() { return true; }
   virtual void SetIdleTimeoutMs(uint32_t active_ms) { }
   virtual std::string Dump() { return ""; }
+  virtual bool IsSupportSsppTonemap() { return false; }
 
   MAKE_NO_OP(Commit(LayerStack *))
   MAKE_NO_OP(GetDisplayState(DisplayState *))
@@ -79,6 +80,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(GetColorModeAttr(const std::string &, AttrVal *))
   MAKE_NO_OP(SetColorMode(const std::string &))
   MAKE_NO_OP(SetColorModeById(int32_t))
+  MAKE_NO_OP(GetColorModeName(int32_t, std::string *))
   MAKE_NO_OP(SetColorTransform(const uint32_t, const double *))
   MAKE_NO_OP(GetDefaultColorMode(std::string *))
   MAKE_NO_OP(ApplyDefaultDisplayMode())
@@ -98,6 +100,9 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(SetQSyncMode(QSyncMode))
   MAKE_NO_OP(ControlIdlePowerCollapse(bool, bool))
   MAKE_NO_OP(SetDisplayDppsAdROI(void *))
+  MAKE_NO_OP(SetDynamicDSIClock(uint64_t bit_clk_rate))
+  MAKE_NO_OP(GetDynamicDSIClock(uint64_t *bit_clk_rate))
+  MAKE_NO_OP(GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates))
 
   DisplayConfigVariableInfo default_variable_config_ = {};
   DisplayConfigFixedInfo default_fixed_config_ = {};

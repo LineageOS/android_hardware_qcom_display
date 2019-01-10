@@ -121,6 +121,8 @@ class HWInterface {
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event, HWLayers *hw_layers) = 0;
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) = 0;
   virtual DisplayError SetDisplayDppsAdROI(void *payload) = 0;
+  virtual DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate) = 0;
+  virtual DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate) = 0;
 
  protected:
   virtual ~HWInterface() { }
