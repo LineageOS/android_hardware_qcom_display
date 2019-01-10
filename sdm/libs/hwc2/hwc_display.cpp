@@ -359,12 +359,6 @@ HWCDisplay::HWCDisplay(CoreInterface *core_intf, BufferAllocator *buffer_allocat
 }
 
 int HWCDisplay::Init() {
-  Debug::GetWindowRect(&window_rect_.left, &window_rect_.top,
-                                 &window_rect_.right, &window_rect_.bottom);
-
-  DLOGI("Window rect : [%f %f %f %f]",window_rect_.left, window_rect_.top,
-         window_rect_.right, window_rect_.bottom);
-
   DisplayError error = core_intf_->CreateDisplay(sdm_id_, this, &display_intf_);
   if (error != kErrorNone) {
     DLOGE("Display create failed. Error = %d display_id = %d event_handler = %p disp_intf = %p",
@@ -1100,15 +1094,16 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
     if (error != kErrorNone) {
       if (error == kErrorShutDown) {
         shutdown_pending_ = true;
-      } else if (error != kErrorPermission) {
+      } else if (error == kErrorPermission) {
+        WaitOnPreviousFence();
+        MarkLayersForGPUBypass();
+      } else {
         DLOGE("Prepare failed. Error = %d", error);
         // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
         // so that previous buffer and fences are released, and override the error.
         flush_ = true;
-      } else {
-        WaitOnPreviousFence();
+        return HWC2::Error::BadDisplay;
       }
-      return HWC2::Error::BadDisplay;
     } else {
       validated_ = true;
     }
@@ -1294,10 +1289,9 @@ HWC2::Error HWCDisplay::GetHdrCapabilities(uint32_t *out_num_types, int32_t *out
   return HWC2::Error::None;
 }
 
-
 HWC2::Error HWCDisplay::CommitLayerStack(void) {
   if (flush_) {
-     return HWC2::Error::None;
+    return HWC2::Error::None;
   }
 
   if (skip_validate_ && !CanSkipValidate()) {
@@ -1310,6 +1304,11 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
   }
 
   if (shutdown_pending_ || layer_set_.empty() || !active_) {
+    return HWC2::Error::None;
+  }
+
+  if (skip_commit_) {
+    DLOGV_IF(kTagClient, "Skipping Refresh on display %d", id_);
     return HWC2::Error::None;
   }
 
@@ -1394,9 +1393,9 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
         hwc_layer->PushBackReleaseFence(-1);
       }
     } else {
-      // In case of flush, we don't return an error to f/w, so it will get a release fence out of
-      // the hwc_layer's release fence queue. We should push a -1 to preserve release fence
-      // circulation semantics.
+      // In case of flush or display paused, we don't return an error to f/w, so it will
+      // get a release fence out of the hwc_layer's release fence queue.
+      // We should push a -1 to preserve release fence circulation semantics.
       hwc_layer->PushBackReleaseFence(-1);
     }
 
@@ -1427,6 +1426,7 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
 
   geometry_changes_ = GeometryChanges::kNone;
   flush_ = false;
+  skip_commit_ = false;
 
   return status;
 }
@@ -1839,7 +1839,7 @@ int HWCDisplay::SetDisplayStatus(DisplayStatus display_status) {
   }
 
   if (display_status == kDisplayStatusResume || display_status == kDisplayStatusPause) {
-    callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
+    callbacks_->Refresh(id_);
     validated_ = false;
   }
 
@@ -1947,7 +1947,7 @@ int HWCDisplay::GetPanelBrightness(int *level) {
 
 int HWCDisplay::ToggleScreenUpdates(bool enable) {
   display_paused_ = enable ? false : true;
-  callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
+  callbacks_->Refresh(id_);
   validated_ = false;
   return 0;
 }

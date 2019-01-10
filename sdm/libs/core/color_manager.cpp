@@ -186,9 +186,8 @@ bool ColorManagerProxy::NeedsPartialUpdateDisable() {
 }
 
 DisplayError ColorManagerProxy::Commit() {
-  static bool first_cycle = true;
-  if (first_cycle) {
-    first_cycle = false;
+  if (first_cycle_) {
+    first_cycle_ = false;
     return kErrorNone;
   }
 

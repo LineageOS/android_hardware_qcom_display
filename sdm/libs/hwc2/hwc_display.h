@@ -206,6 +206,12 @@ class HWCDisplay : public DisplayEventHandler {
   virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk) {
     return kErrorNotSupported;
   }
+  virtual HWC2::Error UpdateDisplayId(hwc2_display_t id) {
+    return HWC2::Error::Unsupported;
+  }
+  virtual HWC2::Error SetPendingRefresh() {
+    return HWC2::Error::Unsupported;
+  }
   virtual HWC2::Error GetDisplayConfigs(uint32_t *out_num_configs, hwc2_config_t *out_configs);
   virtual HWC2::Error GetDisplayAttribute(hwc2_config_t config, HWC2::Attribute attribute,
                                           int32_t *out_value);
@@ -242,6 +248,7 @@ class HWCDisplay : public DisplayEventHandler {
     validated_ = false;
   }
   virtual DisplayError Refresh();
+  virtual void SetVsyncSource(bool enable) { vsync_source_ = enable; }
 
  protected:
   // Maximum number of layers supported by display manager.
@@ -328,6 +335,8 @@ class HWCDisplay : public DisplayEventHandler {
   bool config_pending_ = false;
   bool pending_commit_ = false;
   LayerRect window_rect_ = {};
+  bool vsync_source_ = false;
+  bool skip_commit_ = false;
 
  private:
   void DumpInputBuffers(void);
