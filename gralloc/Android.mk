@@ -22,6 +22,11 @@ LOCAL_SRC_FILES               := gr_ion_alloc.cpp \
                                  gr_device_impl.cpp
 LOCAL_COPY_HEADERS_TO         := $(common_header_export_path)
 LOCAL_COPY_HEADERS            := gr_device_impl.h gralloc_priv.h gr_priv_handle.h
+
+ifeq ($(call is-board-platform-in-list, msm8909), true)
+    LOCAL_CFLAGS += -DUSE_SECURE_HEAP
+endif
+
 include $(BUILD_SHARED_LIBRARY)
 
 #libgrallocutils

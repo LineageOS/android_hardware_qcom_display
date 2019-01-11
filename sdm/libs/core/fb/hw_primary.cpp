@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -675,6 +675,61 @@ void HWPrimary::SetAVRFlags(const HWAVRInfo &hw_avr_info, uint32_t *avr_flags) {
   if (hw_avr_info.mode == kOneShotMode) {
     *avr_flags |= MDP_COMMIT_AVR_ONE_SHOT_MODE;
   }
+}
+
+DisplayError HWPrimary::SetDynamicDSIClock(uint64_t bitclk) {
+  if (!hw_panel_info_.bitclk_update) {
+    return kErrorNotSupported;
+  }
+
+  char node_path[kMaxStringLength] = {0};
+  snprintf(node_path, sizeof(node_path), "%s%d/dynamic_bitclk", fb_path_, fb_node_index_);
+
+  int fd = Sys::open_(node_path, O_WRONLY);
+  if (fd < 0) {
+    DLOGE("Failed to open %s with error %s", node_path, strerror(errno));
+    return kErrorFileDescriptor;
+  }
+
+  char bitclk_string[kMaxStringLength];
+  snprintf(bitclk_string, sizeof(bitclk_string), "%" PRIu64, bitclk);
+  DLOGI_IF(kTagDriverConfig, "Setting bit clk to" "%" PRIu64, bitclk);
+  ssize_t len = Sys::pwrite_(fd, bitclk_string, strlen(bitclk_string), 0);
+  if (len < 0) {
+    DLOGE("Failed to write %d with error %s", bitclk, strerror(errno));
+    Sys::close_(fd);
+    return kErrorUndefined;
+  }
+  Sys::close_(fd);
+
+  return kErrorNone;
+}
+
+DisplayError HWPrimary::GetDynamicDSIClock(uint64_t *bitclk) {
+  if (!hw_panel_info_.bitclk_update) {
+    return kErrorNotSupported;
+  }
+
+  char node_path[kMaxStringLength] = {0};
+  snprintf(node_path, sizeof(node_path), "%s%d/dynamic_bitclk", fb_path_, fb_node_index_);
+
+  int fd = Sys::open_(node_path, O_RDONLY);
+  if (fd < 0) {
+    DLOGE("Failed to open %s with error %s", node_path, strerror(errno));
+    return kErrorFileDescriptor;
+  }
+
+  char dsi_clk[64] = {0};
+  ssize_t len = Sys::pread_(fd, dsi_clk, sizeof(dsi_clk), 0);
+  if (len < 0) {
+    DLOGE("Failed to read bit clk with error %s", strerror(errno));
+    Sys::close_(fd);
+    return kErrorUndefined;
+  }
+
+  *bitclk = UINT64(atoi(dsi_clk));
+  Sys::close_(fd);
+  return kErrorNone;
 }
 
 }  // namespace sdm

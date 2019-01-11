@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -265,16 +265,9 @@ void CompManager::PrepareStrategyConstraints(Handle comp_handle, HWLayers *hw_la
   // Set use_cursor constraint to Strategy
   constraints->use_cursor = display_comp_ctx->valid_cursor;
 
-  // TODO(user): App layer count will change for hybrid composition
-  uint32_t app_layer_count = UINT32(hw_layers->info.stack->layers.size()) - 1;
   if (display_comp_ctx->idle_fallback || display_comp_ctx->thermal_fallback_) {
     // Handle the idle timeout by falling back
     constraints->safe_mode = true;
-  }
-
-  // Avoid safe mode, if there is only one app layer.
-  if (app_layer_count == 1) {
-     constraints->safe_mode = false;
   }
 }
 
