@@ -383,6 +383,7 @@ void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
         if (!hw_resource->num_vig_pipe) {
           PopulatePipeCaps(pipe_obj.second, hw_resource);
           PopulateSupportedFmts(kHWVIGPipe, pipe_obj.second, hw_resource);
+          PopulateSupportedInlineFmts(pipe_obj.second, hw_resource);
         }
         hw_resource->num_vig_pipe++;
         break;
@@ -454,7 +455,7 @@ void HWInfoDRM::PopulatePipeCaps(const sde_drm::DRMPlaneTypeInfo &info,
   hw_resource->cache_size = info.cache_size;
   hw_resource->pipe_qseed3_version = GetQseedStepVersion(info.qseed3_version);
   hw_resource->inline_rot_info.inrot_version = GetInRotVersion(info.inrot_version);
-  // TODO(user): Populate formats, scale ratios, width limits
+  hw_resource->inline_rot_info.max_downscale_rt = info.true_inline_dwnscale_rt;
 }
 
 void HWInfoDRM::PopulateSupportedFmts(HWSubBlockType sub_blk_type,
@@ -469,6 +470,15 @@ void HWInfoDRM::PopulateSupportedFmts(HWSubBlockType sub_blk_type,
     }
 
     fmts_map.insert(make_pair(sub_blk_type, sdm_formats));
+  }
+}
+
+void HWInfoDRM::PopulateSupportedInlineFmts(const sde_drm::DRMPlaneTypeInfo &info,
+                                 HWResourceInfo *hw_resource) {
+  vector<LayerBufferFormat> *inrot_fmts = &hw_resource->inline_rot_info.inrot_fmts_supported;
+
+  for (auto &fmts : info.inrot_fmts_supported) {
+    GetSDMFormat(fmts.first, fmts.second, inrot_fmts);
   }
 }
 
