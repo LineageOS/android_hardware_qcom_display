@@ -1410,7 +1410,8 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
   uint32_t hw_layers_count = UINT32(hw_layers_.info.hw_layers.size());
 
   for (uint32_t i = 0; i < hw_layers_count; i++) {
-    Layer *sdm_layer = layer_stack->layers.at(hw_layers_.info.index.at(i));
+    uint32_t sdm_layer_index = hw_layers_.info.index.at(i);
+    Layer *sdm_layer = layer_stack->layers.at(sdm_layer_index);
     Layer &hw_layer = hw_layers_.info.hw_layers.at(i);
 
     hw_layer.input_buffer.planes[0].fd = sdm_layer->input_buffer.planes[0].fd;
@@ -1419,6 +1420,12 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
     hw_layer.input_buffer.size = sdm_layer->input_buffer.size;
     hw_layer.input_buffer.acquire_fence_fd = sdm_layer->input_buffer.acquire_fence_fd;
     hw_layer.input_buffer.handle_id = sdm_layer->input_buffer.handle_id;
+    // TODO(user): Other FBT layer attributes like surface damage, dataspace, secure camera and
+    // secure display flags are also updated during SetClientTarget() called between validate and
+    // commit. Need to revist this and update it accordingly for FBT layer.
+    if (hw_layers_.info.gpu_target_index == sdm_layer_index) {
+      hw_layer.input_buffer.flags.secure = sdm_layer->input_buffer.flags.secure;
+    }
   }
 
   return;
