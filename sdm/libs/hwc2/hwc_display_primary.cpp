@@ -617,4 +617,20 @@ DisplayError HWCDisplayPrimary::GetMixerResolution(uint32_t *width, uint32_t *he
   return display_intf_->GetMixerResolution(width, height);
 }
 
+DisplayError HWCDisplayPrimary::SetDynamicDSIClock(uint64_t bitclk) {
+  if (display_intf_) {
+    return display_intf_->SetDynamicDSIClock(bitclk);
+  }
+
+  return kErrorNotSupported;
+}
+
+DisplayError HWCDisplayPrimary::GetDynamicDSIClock(uint64_t *bitclk) {
+  if (display_intf_) {
+    return display_intf_->GetDynamicDSIClock(bitclk);
+  }
+
+  return kErrorNotSupported;
+}
+
 }  // namespace sdm

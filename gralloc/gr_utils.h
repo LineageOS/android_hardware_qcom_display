@@ -91,6 +91,8 @@ unsigned int GetUBwcSize(int width, int height, int format, unsigned int aligned
                          unsigned int alignedh);
 int GetBufferLayout(private_handle_t *hnd, uint32_t stride[4],
                     uint32_t offset[4], uint32_t *num_planes);
+bool IsGPUSupportedHwBuffer(gralloc1_producer_usage_t prod_usage);
+
 }  // namespace gralloc1
 
 #endif  // __GR_UTILS_H__

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -327,6 +327,42 @@ bool DisplayPrimary::NeedsAVREnable() {
   return (hw_panel_info_.mode == kModeVideo && ((hw_panel_info_.dynamic_fps &&
           hw_panel_info_.dfps_porch_mode) || (!hw_panel_info_.dynamic_fps &&
           hw_panel_info_.min_fps != hw_panel_info_.max_fps)));
+}
+
+DisplayError DisplayPrimary::SetDynamicDSIClock(uint64_t bitclk) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (!hw_panel_info_.bitclk_update) {
+    DLOGI("BitClk update is not supported for display=%d", display_type_);
+    return kErrorNotSupported;
+  }
+
+  std::vector<uint64_t> &bitclk_rates = hw_panel_info_.bitclk_rates;
+  bool valid = std::find(bitclk_rates.begin(), bitclk_rates.end(), bitclk) != bitclk_rates.end();
+  if (bitclk == bitclk_ || !valid) {
+    DLOGI("Invalid setting %d, Clk. already set %d", (bitclk == bitclk_), !valid);
+    return kErrorNone;
+  }
+
+  DisplayError error = hw_intf_->SetDynamicDSIClock(bitclk);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  bitclk_ = bitclk;
+  return kErrorNone;
+}
+
+DisplayError DisplayPrimary::GetDynamicDSIClock(uint64_t *bitclk) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+
+  return hw_intf_->GetDynamicDSIClock(bitclk);
+}
+
+DisplayError DisplayPrimary::GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+
+  *bitclk_rates = hw_panel_info_.bitclk_rates;
+  return kErrorNone;
 }
 
 }  // namespace sdm

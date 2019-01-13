@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, 2018 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -108,6 +108,8 @@ class HWInterface {
   virtual DisplayError SetScaleLutConfig(HWScaleLutInfo *lut_info) = 0;
   virtual DisplayError SetMixerAttributes(const HWMixerAttributes &mixer_attributes) = 0;
   virtual DisplayError GetMixerAttributes(HWMixerAttributes *mixer_attributes) = 0;
+  virtual DisplayError SetDynamicDSIClock(uint64_t bitclk) = 0;
+  virtual DisplayError GetDynamicDSIClock(uint64_t *bitclk) = 0;
 
  protected:
   virtual ~HWInterface() { }
