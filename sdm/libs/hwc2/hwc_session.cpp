@@ -1545,6 +1545,14 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       status = GetSupportedDsiClk(input_parcel, output_parcel);
       break;
 
+    case qService::IQService::SET_COLOR_MODE_FROM_CLIENT:
+      if (!input_parcel) {
+        DLOGE("QService command = %d: input_parcel needed.", command);
+        break;
+      }
+      status = SetColorModeFromClient(input_parcel);
+      break;
+
     default:
       DLOGW("QService command = %d is not supported.", command);
       break;
@@ -1813,6 +1821,27 @@ android::status_t HWCSession::SetColorModeById(const android::Parcel *input_parc
                                  &HWCDisplay::SetColorModeById, mode);
   if (err != HWC2_ERROR_NONE)
     return -EINVAL;
+
+  return 0;
+}
+
+android::status_t HWCSession::SetColorModeFromClient(const android::Parcel *input_parcel) {
+  int display = input_parcel->readInt32();
+  auto mode = input_parcel->readInt32();
+  auto device = static_cast<hwc2_device_t *>(this);
+
+  int disp_idx = GetDisplayIndex(display);
+  if (disp_idx == -1) {
+    DLOGE("Invalid display = %d", display);
+    return -EINVAL;
+  }
+
+  auto err = CallDisplayFunction(device, static_cast<hwc2_display_t>(disp_idx),
+                                 &HWCDisplay::SetColorModeFromClientApi, mode);
+  if (err != HWC2_ERROR_NONE)
+    return -EINVAL;
+
+  Refresh(static_cast<hwc2_display_t>(disp_idx));
 
   return 0;
 }
