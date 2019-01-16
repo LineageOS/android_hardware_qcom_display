@@ -222,16 +222,6 @@ DisplayError CompManager::ReconfigureDisplay(Handle comp_handle,
     }
   }
 
-  // For HDMI S3D mode, set max_layers_ to 0 so that primary display would fall back
-  // to GPU composition to release pipes for HDMI.
-  if (display_comp_ctx->display_type == kPluggable) {
-    if (hw_panel_info.s3d_mode != kS3DModeNone) {
-      max_layers_ = 0;
-    } else {
-      max_layers_ = kMaxSDELayers;
-    }
-  }
-
   // Update new resolution.
   display_comp_ctx->fb_config = fb_config;
   return error;

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -73,13 +73,11 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
  private:
   DisplayError GetOverrideConfig(uint32_t *mode_index);
   void GetScanSupport();
-  void SetS3DMode(LayerStack *layer_stack);
 
   static const int kPropertyMax = 256;
 
   bool underscan_supported_ = false;
   HWScanSupport scan_support_;
-  std::map<LayerBufferS3DFormat, HWS3DMode> s3d_format_to_mode_;
   std::vector<HWEvent> event_list_ = {HWEvent::VSYNC, HWEvent::IDLE_NOTIFY, HWEvent::EXIT,
                                       HWEvent::CEC_READ_MESSAGE, HWEvent::HW_RECOVERY};
   uint32_t current_refresh_rate_ = 0;

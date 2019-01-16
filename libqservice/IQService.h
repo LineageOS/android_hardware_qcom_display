@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 The Android Open Source Project
- * Copyright (C) 2012-2014, 2016-2018 The Linux Foundation. All rights reserved.
+ * Copyright (C) 2012-2014, 2016-2019, The Linux Foundation. All rights reserved.
  *
  * Not a Contribution, Apache license notifications and license are
  * retained for attribution purposes only.
@@ -61,7 +61,7 @@ public:
         CONTROL_PARTIAL_UPDATE = 19,   // Provides ability to enable/disable partial update
         TOGGLE_SCREEN_UPDATES = 20, // Provides ability to set the panel brightness
         SET_FRAME_DUMP_CONFIG = 21,  // Provides ability to set the frame dump config
-        SET_S3D_MODE = 22, // Set the 3D mode as specified in msm_hdmi_modes.h
+        DISP_PARAM_TYPE_NOTUSED_5 = 22,  // Not used
         CONNECT_HDMI_CLIENT = 23,  // Connect HDMI CEC HAL Client
         QDCM_SVC_CMDS = 24,        // request QDCM services.
         SET_ACTIVE_CONFIG = 25, //Set a specified display config

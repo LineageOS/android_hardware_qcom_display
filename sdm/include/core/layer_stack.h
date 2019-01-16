@@ -79,12 +79,6 @@ enum LayerComposition {
                             //!< This composition type is used only if GPUTarget layer is provided
                             //!< in a composition cycle.
 
-  kCompositionGPUS3D,       //!< This layer will be drawn onto the target buffer in s3d mode by GPU.
-                            //!< Display device will mark the layer for GPU composition if it can
-                            //!< not handle composition for it.
-                            //!< This composition type is used only if GPUTarget layer is provided
-                            //!< in a composition cycle.
-
   kCompositionSDE,          //!< This layer will be composed by SDE. It must not be composed by
                             //!< GPU or Blit.
 

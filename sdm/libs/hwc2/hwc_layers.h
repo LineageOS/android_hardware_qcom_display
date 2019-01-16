@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -141,7 +141,6 @@ class HWCLayer {
   void SetRect(const hwc_rect_t &source, LayerRect *target);
   void SetRect(const hwc_frect_t &source, LayerRect *target);
   uint32_t GetUint32Color(const hwc_color_t &source);
-  LayerBufferS3DFormat GetS3DFormat(uint32_t s3d_format);
   void GetUBWCStatsFromMetaData(UBWCStats *cr_stats, UbwcCrStatsVector *cr_vec);
   DisplayError SetMetaData(const private_handle_t *pvt_handle, Layer *layer);
   DisplayError SetIGC(IGC_t source, LayerIGC *target);

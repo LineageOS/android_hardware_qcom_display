@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -1588,10 +1588,6 @@ DisplayError HWDeviceDRM::GetMaxCEAFormat(uint32_t *max_cea_format) {
 }
 
 DisplayError HWDeviceDRM::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
-  return kErrorNotSupported;
-}
-
-DisplayError HWDeviceDRM::SetS3DMode(HWS3DMode s3d_mode) {
   return kErrorNotSupported;
 }
 

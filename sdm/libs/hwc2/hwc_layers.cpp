@@ -751,27 +751,6 @@ LayerBufferFormat HWCLayer::GetSDMFormat(const int32_t &source, const int flags)
   return format;
 }
 
-LayerBufferS3DFormat HWCLayer::GetS3DFormat(uint32_t s3d_format) {
-  LayerBufferS3DFormat sdm_s3d_format = kS3dFormatNone;
-  switch (s3d_format) {
-    case HAL_NO_3D:
-      sdm_s3d_format = kS3dFormatNone;
-      break;
-    case HAL_3D_SIDE_BY_SIDE_L_R:
-      sdm_s3d_format = kS3dFormatLeftRight;
-      break;
-    case HAL_3D_SIDE_BY_SIDE_R_L:
-      sdm_s3d_format = kS3dFormatRightLeft;
-      break;
-    case HAL_3D_TOP_BOTTOM:
-      sdm_s3d_format = kS3dFormatTopBottom;
-      break;
-    default:
-      DLOGW("Invalid S3D format %d", s3d_format);
-  }
-  return sdm_s3d_format;
-}
-
 void HWCLayer::GetUBWCStatsFromMetaData(UBWCStats *cr_stats, UbwcCrStatsVector *cr_vec) {
   // TODO(user): Check if we can use UBWCStats directly
   // in layer_buffer or copy directly to Vector
@@ -827,19 +806,12 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
     layer_buffer->format = GetSDMFormat(INT32(linear_format), 0);
   }
 
-  uint32_t s3d = 0;
-  LayerBufferS3DFormat s3d_format = layer_buffer->s3d_format;
-  if (getMetaData(handle, GET_S3D_FORMAT, &s3d) == 0) {
-    s3d_format = GetS3DFormat(s3d);
-  }
-
   if ((layer_igc != layer_buffer->igc) || (interlace != layer_buffer->flags.interlace) ||
-      (frame_rate != layer->frame_rate) || (s3d_format != layer_buffer->s3d_format)) {
+      (frame_rate != layer->frame_rate)) {
     // Layer buffer metadata has changed.
     needs_validate_ = true;
     layer_buffer->igc = layer_igc;
     layer->frame_rate = frame_rate;
-    layer_buffer->s3d_format = s3d_format;
     layer_buffer->flags.interlace = interlace;
   }
 

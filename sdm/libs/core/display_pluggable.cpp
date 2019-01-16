@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -107,17 +107,6 @@ DisplayError DisplayPluggable::Init() {
   GetScanSupport();
   underscan_supported_ = (scan_support_ == kScanAlwaysUnderscanned) || (scan_support_ == kScanBoth);
 
-  s3d_format_to_mode_.insert(
-      std::pair<LayerBufferS3DFormat, HWS3DMode>(kS3dFormatNone, kS3DModeNone));
-  s3d_format_to_mode_.insert(
-      std::pair<LayerBufferS3DFormat, HWS3DMode>(kS3dFormatLeftRight, kS3DModeLR));
-  s3d_format_to_mode_.insert(
-      std::pair<LayerBufferS3DFormat, HWS3DMode>(kS3dFormatRightLeft, kS3DModeRL));
-  s3d_format_to_mode_.insert(
-      std::pair<LayerBufferS3DFormat, HWS3DMode>(kS3dFormatTopBottom, kS3DModeTB));
-  s3d_format_to_mode_.insert(
-      std::pair<LayerBufferS3DFormat, HWS3DMode>(kS3dFormatFramePacking, kS3DModeFP));
-
   error = HWEventsInterface::Create(display_id_, kPluggable, this, event_list_, hw_intf_,
                                     &hw_events_intf_);
   if (error != kErrorNone) {
@@ -147,8 +136,6 @@ DisplayError DisplayPluggable::Prepare(LayerStack *layer_stack) {
       ReconfigureMixer(display_width, display_height);
     }
   }
-
-  SetS3DMode(layer_stack);
 
   // Clean hw layers for reuse.
   hw_layers_ = HWLayers();
@@ -207,8 +194,6 @@ DisplayError DisplayPluggable::GetOverrideConfig(uint32_t *mode_index) {
     return kErrorParameters;
   }
 
-  // TODO(user): Need to add support for S3D modes based on HDMI_S3D_MODE_PROP property.
-
   char val[kPropertyMax] = {};
   // Used for changing HDMI Resolution - Override the preferred mode with user set config.
   bool user_config = Debug::GetExternalResolution(val);
@@ -255,46 +240,6 @@ void DisplayPluggable::GetScanSupport() {
   } else {
     scan_support_ = scan_info.it_scan_support;
   }
-}
-
-void DisplayPluggable::SetS3DMode(LayerStack *layer_stack) {
-  uint32_t s3d_layer_count = 0;
-  HWS3DMode s3d_mode = kS3DModeNone;
-  uint32_t layer_count = UINT32(layer_stack->layers.size());
-
-  // S3D mode is supported for the following scenarios:
-  // 1. Layer stack containing only one s3d layer which is not skip
-  // 2. Layer stack containing only one secure layer along with one s3d layer
-  for (uint32_t i = 0; i < layer_count; i++) {
-    Layer *layer = layer_stack->layers.at(i);
-    LayerBuffer &layer_buffer = layer->input_buffer;
-
-    if (layer_buffer.s3d_format != kS3dFormatNone) {
-      s3d_layer_count++;
-      if (s3d_layer_count > 1 || layer->flags.skip) {
-        s3d_mode = kS3DModeNone;
-        break;
-      }
-
-      std::map<LayerBufferS3DFormat, HWS3DMode>::iterator it =
-          s3d_format_to_mode_.find(layer_buffer.s3d_format);
-      if (it != s3d_format_to_mode_.end()) {
-        s3d_mode = it->second;
-      }
-    } else if (layer_buffer.flags.secure && layer_count > 2) {
-      s3d_mode = kS3DModeNone;
-      break;
-    }
-  }
-
-  if (hw_intf_->SetS3DMode(s3d_mode) != kErrorNone) {
-    hw_intf_->SetS3DMode(kS3DModeNone);
-    layer_stack->flags.s3d_mode_present = false;
-  } else if (s3d_mode != kS3DModeNone) {
-    layer_stack->flags.s3d_mode_present = true;
-  }
-
-  DisplayBase::ReconfigureDisplay();
 }
 
 void DisplayPluggable::CECMessage(char *message) {

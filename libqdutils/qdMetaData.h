@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -93,11 +93,6 @@ struct UBWCStats {
     };
 };
 
-struct S3DGpuComp_t {
-    int32_t displayId; /* on which display S3D is composed by client */
-    uint32_t s3dMode; /* the S3D format of this layer to be accessed by client */
-};
-
 typedef struct GraphicsMetadata {
     uint32_t size;
     uint32_t data[GRAPHICS_METADATA_SIZE];
@@ -119,14 +114,11 @@ struct MetaData_t {
     int32_t mapSecureBuffer;
     /* The supported formats are defined in gralloc_priv.h to
      * support legacy code*/
-    uint32_t s3dFormat;
     /* VENUS output buffer is linear for UBWC Interlaced video */
     uint32_t linearFormat;
     /* Set by graphics to indicate that this buffer will be written to but not
      * swapped out */
     uint32_t isSingleBufferMode;
-    /* Indicate GPU to draw S3D layer on dedicate display device */
-    struct S3DGpuComp_t s3dComp;
 
     /* Set by camera to program the VT Timestamp */
     uint64_t vtTimeStamp;
@@ -160,11 +152,11 @@ enum DispParamType {
     UPDATE_REFRESH_RATE        = 0x0100,
     UPDATE_COLOR_SPACE         = 0x0200,
     MAP_SECURE_BUFFER          = 0x0400,
-    S3D_FORMAT                 = 0x0800,
+    DISP_PARAM_TYPE_NOTUSED_1  = 0x0800,
     LINEAR_FORMAT              = 0x1000,
     SET_IGC                    = 0x2000,
     SET_SINGLE_BUFFER_MODE     = 0x4000,
-    SET_S3D_COMP               = 0x8000,
+    DISP_PARAM_TYPE_NOTUSED_2  = 0x8000,
 };
 
 enum DispFetchParamType {
@@ -179,11 +171,11 @@ enum DispFetchParamType {
     GET_REFRESH_RATE          = 0x0100,
     GET_COLOR_SPACE           = 0x0200,
     GET_MAP_SECURE_BUFFER     = 0x0400,
-    GET_S3D_FORMAT            = 0x0800,
+    DISP_PARAM_TYPE_NOTUSED_3 = 0x0800,
     GET_LINEAR_FORMAT         = 0x1000,
     GET_IGC                   = 0x2000,
     GET_SINGLE_BUFFER_MODE    = 0x4000,
-    GET_S3D_COMP              = 0x8000,
+    DISP_PARAM_TYPE_NOTUSED_4 = 0x8000,
 };
 
 struct private_handle_t;

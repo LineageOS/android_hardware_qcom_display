@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -110,7 +110,6 @@ class HWInterface {
   virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) = 0;
   virtual DisplayError GetPanelBrightness(int *level) = 0;
   virtual DisplayError SetAutoRefresh(bool enable) = 0;
-  virtual DisplayError SetS3DMode(HWS3DMode s3d_mode) = 0;
   virtual DisplayError SetScaleLutConfig(HWScaleLutInfo *lut_info) = 0;
   virtual DisplayError UnsetScaleLutConfig() = 0;
   virtual DisplayError SetMixerAttributes(const HWMixerAttributes &mixer_attributes) = 0;

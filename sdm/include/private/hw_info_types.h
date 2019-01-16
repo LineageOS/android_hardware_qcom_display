@@ -322,15 +322,6 @@ struct HWSplitInfo {
   }
 };
 
-enum HWS3DMode {
-  kS3DModeNone,
-  kS3DModeLR,
-  kS3DModeRL,
-  kS3DModeTB,
-  kS3DModeFP,
-  kS3DModeMax,
-};
-
 struct HWColorPrimaries {
   uint32_t white_point[2] = {};       // White point
   uint32_t red[2] = {};               // Red color primary
@@ -364,7 +355,6 @@ struct HWPanelInfo {
   bool is_pluggable = false;          // Panel is pluggable
   HWSplitInfo split_info;             // Panel split configuration
   char panel_name[256] = {0};         // Panel name
-  HWS3DMode s3d_mode = kS3DModeNone;  // Panel's current s3d mode.
   int panel_max_brightness = 0;       // Max panel brightness
   uint32_t left_roi_count = 1;        // Number if ROI supported on left panel
   uint32_t right_roi_count = 1;       // Number if ROI supported on right panel
@@ -391,7 +381,7 @@ struct HWPanelInfo {
             (dfps_porch_mode != panel_info.dfps_porch_mode) ||
             (ping_pong_split != panel_info.ping_pong_split) ||
             (max_fps != panel_info.max_fps) || (is_primary_panel != panel_info.is_primary_panel) ||
-            (split_info != panel_info.split_info) || (s3d_mode != panel_info.s3d_mode) ||
+            (split_info != panel_info.split_info) ||
             (left_roi_count != panel_info.left_roi_count) ||
             (right_roi_count != panel_info.right_roi_count) ||
             (transfer_time_us != panel_info.transfer_time_us) ||
@@ -679,7 +669,6 @@ struct HWDisplayAttributes : DisplayConfigVariableInfo {
   uint32_t v_pulse_width = 0;  //!< Vertical pulse width of panel
   uint32_t h_total = 0;        //!< Total width of panel (hActive + hFP + hBP + hPulseWidth)
   uint32_t v_total = 0;        //!< Total height of panel (vActive + vFP + vBP + vPulseWidth)
-  std::bitset<32> s3d_config {};  //!< Stores the bit mask of S3D modes
   uint32_t clock_khz = 0;      //!< Stores the pixel clock of panel in khz
   HWTopology topology = kUnknown;  //!< Stores the topology information.
 
@@ -696,7 +685,6 @@ struct HWDisplayAttributes : DisplayConfigVariableInfo {
             (v_pulse_width != display_attributes.v_pulse_width) ||
             (h_total != display_attributes.h_total) ||
             (is_yuv != display_attributes.is_yuv) ||
-            (s3d_config != display_attributes.s3d_config) ||
             (clock_khz != display_attributes.clock_khz) ||
             (topology != display_attributes.topology));
   }

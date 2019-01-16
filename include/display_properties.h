@@ -72,7 +72,6 @@
 #define FB_HEIGHT_PROP                       DISPLAY_PROP("fb_height")
 #define DISABLE_METADATA_DYNAMIC_FPS_PROP    DISPLAY_PROP("disable_metadata_dynamic_fps")
 #define DISABLE_SKIP_VALIDATE_PROP           DISPLAY_PROP("disable_skip_validate")
-#define HDMI_S3D_MODE_PROP                   DISPLAY_PROP("hdmi_s3d_mode")
 #define DISABLE_DESTINATION_SCALER_PROP      DISPLAY_PROP("disable_dest_scaler")
 #define ENABLE_PARTIAL_UPDATE_PROP           DISPLAY_PROP("enable_partial_update")
 #define DISABLE_UBWC_PROP                    GRALLOC_PROP("disable_ubwc")

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014, 2016-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014, 2016-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -166,19 +166,6 @@ enum LayerBufferFormat {
   kFormatInvalid = 0xFFFFFFFF,
 };
 
-
-/*! @brief This enum represents different types of 3D formats supported.
-
-  @sa LayerBufferS3DFormat
-*/
-enum LayerBufferS3DFormat {
-  kS3dFormatNone,            //!< Layer buffer content is not 3D content.
-  kS3dFormatLeftRight,       //!< Left and Right view of a 3D content stitched left and right.
-  kS3dFormatRightLeft,       //!< Right and Left view of a 3D content stitched left and right.
-  kS3dFormatTopBottom,       //!< Left and RightView of a 3D content stitched top and bottom.
-  kS3dFormatFramePacking     //!< Left and right view of 3D content coded in consecutive frames.
-};
-
 /*! @brief This structure defines a color sample plane belonging to a buffer format. RGB buffer
   formats have 1 plane whereas YUV buffer formats may have upto 4 planes.
 
@@ -277,9 +264,6 @@ struct LayerBuffer {
 
   LayerBufferFlags flags;       //!< Flags associated with this buffer.
 
-  LayerBufferS3DFormat s3d_format = kS3dFormatNone;
-                                //!< Represents the format of the buffer content in 3D. This field
-                                //!< could be modified by both client and SDM.
   uint64_t buffer_id __attribute__((aligned(8))) = 0;
                                 //!< Specifies the buffer id.
   UbwcCrStatsVector  ubwc_crstats[NUM_UBWC_CR_STATS_LAYERS] = {};
