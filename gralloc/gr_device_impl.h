@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -60,73 +60,73 @@ class GrallocImpl : public gralloc1_device_t {
   }
 
  private:
-  static inline gralloc1_error_t Dump(gralloc1_device_t *device, uint32_t *out_size,
+  static inline void Dump(gralloc1_device_t *device, uint32_t *out_size,
                                       char *out_buffer);
   static inline gralloc1_error_t CheckDeviceAndHandle(gralloc1_device_t *device,
                                                       buffer_handle_t buffer);
-  static gralloc1_error_t CreateBufferDescriptor(gralloc1_device_t *device,
-                                                 gralloc1_buffer_descriptor_t *out_descriptor);
-  static gralloc1_error_t DestroyBufferDescriptor(gralloc1_device_t *device,
-                                                  gralloc1_buffer_descriptor_t descriptor);
-  static gralloc1_error_t SetConsumerUsage(gralloc1_device_t *device,
-                                           gralloc1_buffer_descriptor_t descriptor,
-                                           gralloc1_consumer_usage_t usage);
-  static gralloc1_error_t SetBufferDimensions(gralloc1_device_t *device,
-                                              gralloc1_buffer_descriptor_t descriptor,
-                                              uint32_t width, uint32_t height);
-  static gralloc1_error_t SetColorFormat(gralloc1_device_t *device,
-                                         gralloc1_buffer_descriptor_t descriptor, int32_t format);
-  static gralloc1_error_t SetLayerCount(gralloc1_device_t *device,
-                                        gralloc1_buffer_descriptor_t descriptor,
-                                        uint32_t layer_count);
-  static gralloc1_error_t SetProducerUsage(gralloc1_device_t *device,
-                                           gralloc1_buffer_descriptor_t descriptor,
-                                           gralloc1_producer_usage_t usage);
-  static gralloc1_error_t GetBackingStore(gralloc1_device_t *device, buffer_handle_t buffer,
-                                          gralloc1_backing_store_t *out_store);
-  static gralloc1_error_t GetConsumerUsage(gralloc1_device_t *device, buffer_handle_t buffer,
-                                           gralloc1_consumer_usage_t *out_usage);
-  static gralloc1_error_t GetBufferDimensions(gralloc1_device_t *device, buffer_handle_t buffer,
-                                              uint32_t *out_width, uint32_t *out_height);
-  static gralloc1_error_t GetColorFormat(gralloc1_device_t *device, buffer_handle_t descriptor,
-                                         int32_t *outFormat);
-  static gralloc1_error_t GetLayerCount(gralloc1_device_t *device, buffer_handle_t buffer,
-                                        uint32_t *out_layer_count);
-  static gralloc1_error_t GetProducerUsage(gralloc1_device_t *device, buffer_handle_t buffer,
-                                           gralloc1_producer_usage_t *out_usage);
-  static gralloc1_error_t GetBufferStride(gralloc1_device_t *device, buffer_handle_t buffer,
-                                          uint32_t *out_stride);
-  static gralloc1_error_t AllocateBuffers(gralloc1_device_t *device, uint32_t num_dptors,
-                                          const gralloc1_buffer_descriptor_t *descriptors,
-                                          buffer_handle_t *out_buffers);
-  static gralloc1_error_t RetainBuffer(gralloc1_device_t *device, buffer_handle_t buffer);
-  static gralloc1_error_t ReleaseBuffer(gralloc1_device_t *device, buffer_handle_t buffer);
-  static gralloc1_error_t GetNumFlexPlanes(gralloc1_device_t *device, buffer_handle_t buffer,
+  static int32_t CreateBufferDescriptor(gralloc1_device_t *device,
+                                        gralloc1_buffer_descriptor_t *out_descriptor);
+  static int32_t DestroyBufferDescriptor(gralloc1_device_t *device,
+                                         gralloc1_buffer_descriptor_t descriptor);
+  static int32_t SetConsumerUsage(gralloc1_device_t *device,
+                                  gralloc1_buffer_descriptor_t descriptor,
+                                  gralloc1_consumer_usage_t usage);
+  static int32_t SetBufferDimensions(gralloc1_device_t *device,
+                                     gralloc1_buffer_descriptor_t descriptor,
+                                     uint32_t width, uint32_t height);
+  static int32_t SetColorFormat(gralloc1_device_t *device,
+                                gralloc1_buffer_descriptor_t descriptor, int32_t format);
+  static int32_t SetLayerCount(gralloc1_device_t *device,
+                               gralloc1_buffer_descriptor_t descriptor,
+                               uint32_t layer_count);
+  static int32_t SetProducerUsage(gralloc1_device_t *device,
+                                  gralloc1_buffer_descriptor_t descriptor,
+                                  gralloc1_producer_usage_t usage);
+  static int32_t GetBackingStore(gralloc1_device_t *device, buffer_handle_t buffer,
+                                 gralloc1_backing_store_t *out_store);
+  static int32_t GetConsumerUsage(gralloc1_device_t *device, buffer_handle_t buffer,
+                                  gralloc1_consumer_usage_t *out_usage);
+  static int32_t GetBufferDimensions(gralloc1_device_t *device, buffer_handle_t buffer,
+                                     uint32_t *out_width, uint32_t *out_height);
+  static int32_t GetColorFormat(gralloc1_device_t *device, buffer_handle_t descriptor,
+                                int32_t *outFormat);
+  static int32_t GetLayerCount(gralloc1_device_t *device, buffer_handle_t buffer,
+                               uint32_t *out_layer_count);
+  static int32_t GetProducerUsage(gralloc1_device_t *device, buffer_handle_t buffer,
+                                  gralloc1_producer_usage_t *out_usage);
+  static int32_t GetBufferStride(gralloc1_device_t *device, buffer_handle_t buffer,
+                                 uint32_t *out_stride);
+  static int32_t AllocateBuffers(gralloc1_device_t *device, uint32_t num_dptors,
+                                 const gralloc1_buffer_descriptor_t *descriptors,
+                                 buffer_handle_t *out_buffers);
+  static int32_t RetainBuffer(gralloc1_device_t *device, buffer_handle_t buffer);
+  static int32_t ReleaseBuffer(gralloc1_device_t *device, buffer_handle_t buffer);
+  static int32_t GetNumFlexPlanes(gralloc1_device_t *device, buffer_handle_t buffer,
                                            uint32_t *out_num_planes);
-  static gralloc1_error_t LockBuffer(gralloc1_device_t *device, buffer_handle_t buffer,
-                                     gralloc1_producer_usage_t prod_usage,
-                                     gralloc1_consumer_usage_t cons_usage,
-                                     const gralloc1_rect_t *region, void **out_data,
-                                     int32_t acquire_fence);
-  static gralloc1_error_t LockFlex(gralloc1_device_t *device, buffer_handle_t buffer,
-                                   gralloc1_producer_usage_t prod_usage,
-                                   gralloc1_consumer_usage_t cons_usage,
-                                   const gralloc1_rect_t *region,
-                                   struct android_flex_layout *out_flex_layout,
-                                   int32_t acquire_fence);
+  static int32_t LockBuffer(gralloc1_device_t *device, buffer_handle_t buffer,
+                            gralloc1_producer_usage_t prod_usage,
+                            gralloc1_consumer_usage_t cons_usage,
+                            const gralloc1_rect_t *region, void **out_data,
+                            int32_t acquire_fence);
+  static int32_t LockFlex(gralloc1_device_t *device, buffer_handle_t buffer,
+                          gralloc1_producer_usage_t prod_usage,
+                          gralloc1_consumer_usage_t cons_usage,
+                          const gralloc1_rect_t *region,
+                          struct android_flex_layout *out_flex_layout,
+                          int32_t acquire_fence);
 
-  static gralloc1_error_t UnlockBuffer(gralloc1_device_t *device, buffer_handle_t buffer,
-                                       int32_t *release_fence);
-  static gralloc1_error_t Gralloc1Perform(gralloc1_device_t *device, int operation, ...);
+  static int32_t UnlockBuffer(gralloc1_device_t *device, buffer_handle_t buffer,
+                              int32_t *release_fence);
+  static int32_t Gralloc1Perform(gralloc1_device_t *device, int operation, ...);
 
   gralloc1_error_t CreateBufferDescriptorLocked(gralloc1_buffer_descriptor_t *descriptor_id);
   gralloc1_error_t DestroyBufferDescriptorLocked(gralloc1_buffer_descriptor_t descriptor_id);
   gralloc1_error_t AllocateBuffer(const gralloc1_buffer_descriptor_t *descriptor_ids,
-                                  buffer_handle_t *out_buffers);
-  gralloc1_error_t GetFlexLayout(const private_handle_t *hnd, struct android_flex_layout *layout);
+                         buffer_handle_t *out_buffers);
+  int32_t GetFlexLayout(const private_handle_t *hnd, struct android_flex_layout *layout);
 
   template <typename... Args>
-  gralloc1_error_t CallBufferDescriptorFunction(gralloc1_buffer_descriptor_t descriptor_id,
+  int32_t CallBufferDescriptorFunction(gralloc1_buffer_descriptor_t descriptor_id,
                                                 void (BufferDescriptor::*member)(Args...),
                                                 Args... args) {
     std::lock_guard<std::mutex> lock(descriptor_lock_);
