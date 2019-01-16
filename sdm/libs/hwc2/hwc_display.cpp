@@ -50,6 +50,8 @@
 
 namespace sdm {
 
+uint32_t HWCDisplay::throttling_refresh_rate_ = 60;
+
 bool NeedsToneMap(const LayerStack &layer_stack) {
   for (Layer *layer : layer_stack.layers) {
     if (layer->request.flags.tone_map) {
@@ -1145,7 +1147,7 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, int32_t acquire_
   }
 
   Layer *sdm_layer = client_target_->GetSDMLayer();
-  sdm_layer->frame_rate = current_refresh_rate_;
+  sdm_layer->frame_rate = std::min(current_refresh_rate_, HWCDisplay::GetThrottlingRefreshRate());
   client_target_->SetLayerSurfaceDamage(damage);
   if (client_target_->GetLayerDataspace() != dataspace) {
     client_target_->SetLayerDataspace(dataspace);
@@ -2294,7 +2296,7 @@ void HWCDisplay::UpdateRefreshRate() {
       continue;
     }
     auto layer = hwc_layer->GetSDMLayer();
-    layer->frame_rate = current_refresh_rate_;
+    layer->frame_rate = std::min(current_refresh_rate_, HWCDisplay::GetThrottlingRefreshRate());
   }
 }
 
