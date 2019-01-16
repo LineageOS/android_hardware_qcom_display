@@ -297,7 +297,7 @@ void DRMDppsManagerImp::CommitDppsFeatures(drmModeAtomicReq *req, const DRMDispl
     for (auto it = dpps_dirty_prop_.begin(); it != dpps_dirty_prop_.end();) {
       if (it->obj_id == tok.crtc_id || it->obj_id == tok.conn_id) {
         drmModeAtomicAddProperty(req, it->obj_id, it->prop_id, it->value);
-        dpps_dirty_prop_.erase(it);
+        it = dpps_dirty_prop_.erase(it);
       } else {
         it++;
       }
@@ -324,7 +324,7 @@ void DRMDppsManagerImp::CommitDppsFeatures(drmModeAtomicReq *req, const DRMDispl
         if (ret)
           DRM_LOGE("Failed to set event 0x%x, object_id %u, object_type 0x%x, enable %d",
               event_req.event, event_req.object_id, info.object_type, info.enable);
-        dpps_dirty_event_.erase(it);
+        it = dpps_dirty_event_.erase(it);
       } else {
         it++;
       }
