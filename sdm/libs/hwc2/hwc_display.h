@@ -334,6 +334,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool IsLayerUpdating(HWCLayer *layer);
   uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate);
   virtual void GetUnderScanConfig() { }
+  int32_t SetClientTargetDataSpace(int32_t dataspace);
 
   enum {
     INPUT_LAYER_DUMP,

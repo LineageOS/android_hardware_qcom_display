@@ -78,6 +78,8 @@ using vendor::display::config::V1_0::IDisplayConfig;
 using ::android::hardware::Return;
 using ::android::hardware::hidl_string;
 
+int32_t GetDataspaceFromColorMode(ColorMode mode);
+
 // Create a singleton uevent listener thread valid for life of hardware composer process.
 // This thread blocks on uevents poll inside uevent library implementation. This poll exits
 // only when there is a valid uevent, it can not be interrupted otherwise. Tieing life cycle
