@@ -9,10 +9,10 @@ PRODUCT_PACKAGES += \
     android.hardware.memtrack@1.0-service \
     android.hardware.light@2.0-impl \
     android.hardware.light@2.0-service \
-    gralloc.trinket \
-    lights.trinket \
-    hwcomposer.trinket \
-    memtrack.trinket \
+    gralloc.qcom \
+    lights.qcom \
+    hwcomposer.qcom \
+    memtrack.qcom \
     libqdutils \
     libqdMetaData \
     libqdMetaData.system \
