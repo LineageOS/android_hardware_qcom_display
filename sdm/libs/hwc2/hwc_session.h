@@ -54,6 +54,7 @@
 #include "hwc_color_manager.h"
 #include "hwc_socket_handler.h"
 #include "hwc_display_event_handler.h"
+#include "hwc_buffer_sync_handler.h"
 
 namespace sdm {
 
@@ -76,6 +77,8 @@ using vendor::display::config::V1_0::IDisplayConfig;
 #endif
 using ::android::hardware::Return;
 using ::android::hardware::hidl_string;
+
+int32_t GetDataspaceFromColorMode(ColorMode mode);
 
 // Create a singleton uevent listener thread valid for life of hardware composer process.
 // This thread blocks on uevents poll inside uevent library implementation. This poll exits
@@ -271,6 +274,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int32_t GetPanelBrightness(int *level);
   int32_t MinHdcpEncryptionLevelChanged(int disp_id, uint32_t min_enc_level);
   int32_t IsWbUbwcSupported(int *value);
+  int32_t SetDynamicDSIClock(int64_t disp_id, uint32_t bitrate);
 
   // service methods
   void StartServices();
@@ -362,6 +366,10 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   android::status_t SetIdlePC(const android::Parcel *input_parcel);
   android::status_t RefreshScreen(const android::Parcel *input_parcel);
   android::status_t SetAd4RoiConfig(const android::Parcel *input_parcel);
+  android::status_t SetDsiClk(const android::Parcel *input_parcel);
+  android::status_t GetDsiClk(const android::Parcel *input_parcel, android::Parcel *output_parcel);
+  android::status_t GetSupportedDsiClk(const android::Parcel *input_parcel,
+                                       android::Parcel *output_parcel);
 
   void Refresh(hwc2_display_t display);
   void HotPlug(hwc2_display_t display, HWC2::Connection state);

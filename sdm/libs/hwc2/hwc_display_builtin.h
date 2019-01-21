@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,6 +31,7 @@
 #define __HWC_DISPLAY_BUILTIN_H__
 
 #include <string>
+#include <vector>
 
 #include "cpuhint.h"
 #include "hwc_display.h"
@@ -62,6 +63,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
                                        RenderIntent *out_intents);
   virtual HWC2::Error SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
   virtual HWC2::Error SetColorModeById(int32_t color_mode_id);
+  virtual HWC2::Error SetColorModeFromClientApi(int32_t color_mode_id);
   virtual HWC2::Error SetColorTransform(const float *matrix, android_color_transform_t hint);
   virtual HWC2::Error RestoreColorTransform();
   virtual int Perform(uint32_t operation, ...);
@@ -82,6 +84,9 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous);
   virtual HWC2::Error SetDisplayDppsAdROI(uint32_t h_start, uint32_t h_end, uint32_t v_start,
                                           uint32_t v_end, uint32_t factor_in, uint32_t factor_out);
+  virtual DisplayError SetDynamicDSIClock(uint64_t bitclk);
+  virtual DisplayError GetDynamicDSIClock(uint64_t *bitclk);
+  virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates);
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,

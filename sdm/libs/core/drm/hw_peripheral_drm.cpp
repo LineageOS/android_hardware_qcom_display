@@ -62,11 +62,48 @@ DisplayError HWPeripheralDRM::Init() {
 
   scalar_data_.resize(hw_resource_.hw_dest_scalar_info.count);
   dest_scalar_cache_.resize(hw_resource_.hw_dest_scalar_info.count);
+  PopulateBitClkRates();
 
   topology_control_ = UINT32(sde_drm::DRMTopologyControl::DSPP);
   if (hw_panel_info_.is_primary_panel) {
     topology_control_ |= UINT32(sde_drm::DRMTopologyControl::DEST_SCALER);
   }
+
+  return kErrorNone;
+}
+
+void HWPeripheralDRM::PopulateBitClkRates() {
+  if (!hw_panel_info_.dyn_bitclk_support) {
+    return;
+  }
+
+  // Group all bit_clk_rates corresponding to DRM_PREFERRED mode.
+  uint32_t width = connector_info_.modes[current_mode_index_].mode.hdisplay;
+  uint32_t height = connector_info_.modes[current_mode_index_].mode.vdisplay;
+
+  for (auto &mode_info : connector_info_.modes) {
+    auto &mode = mode_info.mode;
+    if (mode.hdisplay == width && mode.vdisplay == height) {
+      bitclk_rates_.push_back(mode_info.bit_clk_rate);
+      DLOGI("Possible bit_clk_rates %d", mode_info.bit_clk_rate);
+    }
+  }
+
+  hw_panel_info_.bitclk_rates = bitclk_rates_;
+  DLOGI("bit_clk_rates Size %d", bitclk_rates_.size());
+}
+
+DisplayError HWPeripheralDRM::SetDynamicDSIClock(uint64_t bit_clk_rate) {
+  bit_clk_rate_ = bit_clk_rate;
+  update_mode_ = true;
+
+  return kErrorNone;
+}
+
+DisplayError HWPeripheralDRM::GetDynamicDSIClock(uint64_t *bit_clk_rate) {
+  // Update bit_rate corresponding to current refresh rate.
+  *bit_clk_rate = (uint32_t)connector_info_.modes[current_mode_index_].bit_clk_rate;
+
   return kErrorNone;
 }
 
@@ -290,6 +327,9 @@ void HWPeripheralDRM::SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info
         drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE,
                                   cwb_config_.token.conn_id, fence);
       }
+    } else {
+      // Tear down the Concurrent Writeback topology.
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, cwb_config_.token.conn_id, 0);
     }
   }
 }
@@ -361,9 +401,7 @@ void HWPeripheralDRM::ConfigureConcurrentWriteback(LayerStack *layer_stack) {
 void HWPeripheralDRM::PostCommitConcurrentWriteback(LayerBuffer *output_buffer) {
   bool enabled = hw_resource_.has_concurrent_writeback && output_buffer;
 
-  if (enabled) {
-    // Tear down the Concurrent Writeback topology.
-    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, cwb_config_.token.conn_id, 0);
+  if (!enabled) {
     drm_mgr_intf_->UnregisterDisplay(cwb_config_.token);
     cwb_config_.enabled = false;
     registry_.Clear();
@@ -400,6 +438,14 @@ DisplayError HWPeripheralDRM::PowerOn(const HWQosData &qos_data, int *release_fe
     return err;
   }
   idle_pc_state_ = sde_drm::DRMIdlePCState::ENABLE;
+
+  return kErrorNone;
+}
+
+DisplayError HWPeripheralDRM::SetDisplayAttributes(uint32_t index) {
+  HWDeviceDRM::SetDisplayAttributes(index);
+  // update bit clk rates.
+  hw_panel_info_.bitclk_rates = bitclk_rates_;
 
   return kErrorNone;
 }

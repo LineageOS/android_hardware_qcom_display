@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -41,6 +41,7 @@
 
 #include "hwc_display_builtin.h"
 #include "hwc_debugger.h"
+#include "hwc_session.h"
 
 #define __CLASS__ "HWCDisplayBuiltIn"
 
@@ -188,7 +189,8 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
   SolidFillPrepare();
 
   // Apply current Color Mode and Render Intent.
-  if (color_mode_->ApplyCurrentColorModeWithRenderIntent() != HWC2::Error::None) {
+  if (color_mode_->ApplyCurrentColorModeWithRenderIntent(
+      static_cast<bool>(layer_stack_.flags.hdr_present)) != HWC2::Error::None) {
     // Fallback to GPU Composition, if Color Mode can't be applied.
     MarkLayersForClientComposition();
   }
@@ -299,6 +301,25 @@ HWC2::Error HWCDisplayBuiltIn::SetColorModeById(int32_t color_mode_id) {
 
   callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
   validated_ = false;
+
+  return status;
+}
+
+HWC2::Error HWCDisplayBuiltIn::SetColorModeFromClientApi(int32_t color_mode_id) {
+  DisplayError error = kErrorNone;
+  std::string mode_string;
+
+  error = display_intf_->GetColorModeName(color_mode_id, &mode_string);
+  if (error) {
+    DLOGE("Failed to get mode name for mode %d", color_mode_id);
+    return HWC2::Error::BadParameter;
+  }
+
+  auto status = color_mode_->SetColorModeFromClientApi(mode_string);
+  if (status != HWC2::Error::None) {
+    DLOGE("Failed to set mode = %d", color_mode_id);
+    return status;
+  }
 
   return status;
 }
@@ -777,6 +798,39 @@ DisplayError HWCDisplayBuiltIn::ControlIdlePowerCollapse(bool enable, bool synch
     validated_ = false;
   }
   return error;
+}
+
+DisplayError HWCDisplayBuiltIn::SetDynamicDSIClock(uint64_t bitclk) {
+  {
+    SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[type_]);
+    DisplayError error = display_intf_->SetDynamicDSIClock(bitclk);
+    if (error != kErrorNone) {
+      DLOGE(" failed: Clk: %llu Error: %d", bitclk, error);
+      return error;
+    }
+  }
+
+  callbacks_->Refresh(id_);
+  validated_ = false;
+
+  return kErrorNone;
+}
+
+DisplayError HWCDisplayBuiltIn::GetDynamicDSIClock(uint64_t *bitclk) {
+  SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[type_]);
+  if (display_intf_) {
+    return display_intf_->GetDynamicDSIClock(bitclk);
+  }
+
+  return kErrorNotSupported;
+}
+
+DisplayError HWCDisplayBuiltIn::GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates) {
+  if (display_intf_) {
+    return display_intf_->GetSupportedDSIClock(bitclk_rates);
+  }
+
+  return kErrorNotSupported;
 }
 
 }  // namespace sdm

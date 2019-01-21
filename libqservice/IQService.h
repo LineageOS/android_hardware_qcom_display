@@ -81,6 +81,9 @@ public:
         SET_COLOR_MODE_WITH_RENDER_INTENT = 39,
         SET_IDLE_PC = 40, // Enable/disable Idle power collapse
         SET_DPPS_AD4_ROI_CONFIG = 41, // Set ad4 roi config for debug
+        SET_DSI_CLK = 42, // Set DSI Clk.
+        GET_DSI_CLK = 43, // Get DSI Clk.
+        GET_SUPPORTED_DSI_CLK = 44, // Get supported DSI Clk.
         COMMAND_LIST_END = 400,
     };
 

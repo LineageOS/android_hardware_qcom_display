@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -923,6 +923,22 @@ DisplayError DisplayBase::SetColorModeInternal(const std::string &color_mode) {
   return error;
 }
 
+DisplayError DisplayBase::GetColorModeName(int32_t mode_id, std::string *mode_name) {
+  if (!mode_name) {
+    DLOGE("Invalid parameters");
+    return kErrorParameters;
+  }
+  for (uint32_t i = 0; i < num_color_modes_; i++) {
+    if (color_modes_[i].id == mode_id) {
+      *mode_name = color_modes_[i].name;
+      return kErrorNone;
+    }
+  }
+
+  DLOGE("Failed to get color mode name for mode id = %d", mode_id);
+  return kErrorUndefined;
+}
+
 DisplayError DisplayBase::GetValueOfModeAttribute(const AttrVal &attr, const std::string &type,
                                                   std::string *value) {
   if (!value) {
@@ -1394,7 +1410,8 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
   uint32_t hw_layers_count = UINT32(hw_layers_.info.hw_layers.size());
 
   for (uint32_t i = 0; i < hw_layers_count; i++) {
-    Layer *sdm_layer = layer_stack->layers.at(hw_layers_.info.index.at(i));
+    uint32_t sdm_layer_index = hw_layers_.info.index.at(i);
+    Layer *sdm_layer = layer_stack->layers.at(sdm_layer_index);
     Layer &hw_layer = hw_layers_.info.hw_layers.at(i);
 
     hw_layer.input_buffer.planes[0].fd = sdm_layer->input_buffer.planes[0].fd;
@@ -1403,6 +1420,12 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
     hw_layer.input_buffer.size = sdm_layer->input_buffer.size;
     hw_layer.input_buffer.acquire_fence_fd = sdm_layer->input_buffer.acquire_fence_fd;
     hw_layer.input_buffer.handle_id = sdm_layer->input_buffer.handle_id;
+    // TODO(user): Other FBT layer attributes like surface damage, dataspace, secure camera and
+    // secure display flags are also updated during SetClientTarget() called between validate and
+    // commit. Need to revist this and update it accordingly for FBT layer.
+    if (hw_layers_.info.gpu_target_index == sdm_layer_index) {
+      hw_layer.input_buffer.flags.secure = sdm_layer->input_buffer.flags.secure;
+    }
   }
 
   return;
@@ -1553,6 +1576,14 @@ DisplayError DisplayBase::GetClientTargetSupport(uint32_t width, uint32_t height
   }
 
   return kErrorNone;
+}
+
+bool DisplayBase::IsSupportSsppTonemap() {
+  if (hw_resource_info_.src_tone_map.none()) {
+    return false;
+  } else {
+    return true;
+  }
 }
 
 DisplayError DisplayBase::ValidateScaling(uint32_t width, uint32_t height) {
@@ -1766,7 +1797,7 @@ PrimariesTransfer DisplayBase::GetBlendSpaceFromColorMode() {
     } else {
       pt.transfer = Transfer_SMPTE_ST2084;
     }
-  } else if ((color_gamut == kDcip3 && dynamic_range == kSdr)) {
+  } else if (color_gamut == kDcip3) {
     pt.primaries = GetColorPrimariesFromAttribute(color_gamut);
     pt.transfer = Transfer_Gamma2_2;
   }
