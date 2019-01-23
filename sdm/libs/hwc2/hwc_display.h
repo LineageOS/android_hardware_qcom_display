@@ -34,7 +34,7 @@
 #include <utility>
 #include <vector>
 #include <bitset>
-
+#include <algorithm>
 #include "hwc_buffer_allocator.h"
 #include "hwc_callbacks.h"
 #include "hwc_layers.h"
@@ -188,6 +188,9 @@ class HWCDisplay : public DisplayEventHandler {
   }
 
   // Display Configurations
+  static uint32_t GetThrottlingRefreshRate() { return HWCDisplay::throttling_refresh_rate_; }
+  static void SetThrottlingRefreshRate(uint32_t newRefreshRate)
+              { HWCDisplay::throttling_refresh_rate_ = newRefreshRate; }
   virtual int SetActiveDisplayConfig(uint32_t config);
   virtual int GetActiveDisplayConfig(uint32_t *config);
   virtual int GetDisplayConfigCount(uint32_t *count);
@@ -200,6 +203,7 @@ class HWCDisplay : public DisplayEventHandler {
     return kErrorNotSupported;
   }
 
+  uint32_t GetMaxRefreshRate() { return max_refresh_rate_; }
   int SetPanelBrightness(int level);
   int GetPanelBrightness(int *level);
   int ToggleScreenUpdates(bool enable);
@@ -306,9 +310,9 @@ class HWCDisplay : public DisplayEventHandler {
   }
 
  protected:
+  static uint32_t throttling_refresh_rate_;
   // Maximum number of layers supported by display manager.
   static const uint32_t kMaxLayerCount = 32;
-
   HWCDisplay(CoreInterface *core_intf, BufferAllocator *buffer_allocator, HWCCallbacks *callbacks,
              HWCDisplayEventHandler *event_handler, qService::QService *qservice, DisplayType type,
              hwc2_display_t id, int32_t sdm_id, bool needs_blit, DisplayClass display_class);

@@ -34,6 +34,7 @@
 #include <QService.h>
 #include <utils/utils.h>
 #include <algorithm>
+#include <utility>
 #include <bitset>
 #include <iterator>
 #include <memory>
@@ -182,7 +183,6 @@ int HWCSession::Init() {
   }
 
   StartServices();
-
   HWCDebugHandler::Get()->GetProperty(ENABLE_NULL_DISPLAY_PROP, &null_display_mode_);
   DisplayError error = kErrorNone;
 
@@ -945,7 +945,7 @@ int32_t HWCSession::SetPowerMode(hwc2_device_t *device, hwc2_display_t display, 
   }
 
   hwc_session->UpdateVsyncSource();
-
+  hwc_session->UpdateThrottlingRate();
   return HWC2_ERROR_NONE;
 }
 
@@ -2970,6 +2970,28 @@ hwc2_display_t HWCSession::GetNextVsyncSource() {
 
   // No Vsync source found. Default to main display.
   return HWC_DISPLAY_PRIMARY;
+}
+
+void HWCSession::UpdateThrottlingRate() {
+  uint32_t new_min = 0;
+
+  for (int i=0; i < kNumDisplays; i++) {
+    auto &display = hwc_display_[i];
+    if (!display)
+      continue;
+    if (display->GetCurrentPowerMode() != HWC2::PowerMode::Off)
+      new_min = (new_min == 0) ? display->GetMaxRefreshRate() :
+        std::min(new_min, display->GetMaxRefreshRate());
+  }
+
+  SetNewThrottlingRate(new_min);
+}
+
+void HWCSession::SetNewThrottlingRate(const uint32_t new_rate) {
+  if (new_rate !=0 && throttling_refresh_rate_ != new_rate) {
+    HWCDisplay::SetThrottlingRefreshRate(new_rate);
+    throttling_refresh_rate_ = new_rate;
+  }
 }
 
 android::status_t HWCSession::SetIdlePC(const android::Parcel *input_parcel) {
