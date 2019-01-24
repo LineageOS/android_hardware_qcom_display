@@ -35,6 +35,7 @@
 #define SZ_2M 0x200000
 #define SZ_1M 0x100000
 #define SZ_4K 0x1000
+#define SZ_8K 0x2000
 
 #define SIZE_4K 4096
 #define SIZE_8K 4096
