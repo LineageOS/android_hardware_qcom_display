@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -91,16 +91,6 @@ enum LayerComposition {
   kCompositionCursor,       // This cursor layer can receive async position updates irrespective of
                             // dedicated h/w cursor usage. It must not be composed by GPU or Blit
 
-  kCompositionHybrid,       //!< This layer will be drawn by a blit engine and SDE together.
-                            //!< Display device will split the layer, update the blit rectangle
-                            //!< that need to be composed by a blit engine and update original
-                            //!< source rectangle that will be composed by SDE.
-                            //!< This composition type is used only if GPUTarget and BlitTarget
-                            //!< layers are provided in a composition cycle.
-
-  kCompositionBlit,         //!< This layer will be composed using Blit Engine.
-                            //!< This composition type is used only if BlitTarget layer is provided
-                            //!< in a composition cycle.
   kCompositionNone,         //!< This layer will not be composed by any hardware.
 
   /* === List of composition types set by Client === */
@@ -119,14 +109,6 @@ enum LayerComposition {
                             //!< Only one layer shall be marked as target buffer by the caller.
                             //!< GPU target layer shall be placed after all application layers
                             //!< in the layer stack.
-
-  kCompositionBlitTarget,   //!< This layer will hold result of composition for blit rectangles
-                            //!< from the layers marked for hybrid composition. Nth blit rectangle
-                            //!< in a layer shall be composed onto Nth blit target.
-                            //!< If display device does not set any layer for hybrid composition
-                            //!< then this would be ignored.
-                            //!< Blit target layers shall be placed after GPUTarget in the layer
-                            //!< stack.
 };
 
 /*! @brief This structure defines rotation and flip values for a display layer.
@@ -353,13 +335,6 @@ struct Layer {
   std::vector<LayerRect> dirty_regions = {};       //!< Rectangular areas in the current frames
                                                    //!< that have changed in comparison to
                                                    //!< previous frame.
-
-  std::vector<LayerRect> blit_regions = {};        //!< Rectangular areas of this layer which need
-                                                   //!< to be composed to blit target. Display
-                                                   //!< device will update blit rectangles if a
-                                                   //!< layer composition is set as hybrid. Nth blit
-                                                   //!< rectangle shall be composed onto Nth blit
-                                                   //!< target.
 
   LayerBlending blending = kBlendingPremultiplied;  //!< Blending operation which need to be
                                                     //!< applied on the layer buffer during

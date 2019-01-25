@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -71,7 +71,6 @@
 #define FB_WIDTH_PROP                        DISPLAY_PROP("fb_width")
 #define FB_HEIGHT_PROP                       DISPLAY_PROP("fb_height")
 #define DISABLE_METADATA_DYNAMIC_FPS_PROP    DISPLAY_PROP("disable_metadata_dynamic_fps")
-#define DISABLE_BLIT_COMPOSITION_PROP        DISPLAY_PROP("disable_blit_comp")
 #define DISABLE_SKIP_VALIDATE_PROP           DISPLAY_PROP("disable_skip_validate")
 #define HDMI_S3D_MODE_PROP                   DISPLAY_PROP("hdmi_s3d_mode")
 #define DISABLE_DESTINATION_SCALER_PROP      DISPLAY_PROP("disable_dest_scaler")

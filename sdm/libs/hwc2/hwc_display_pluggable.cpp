@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -114,7 +114,7 @@ HWCDisplayPluggable::HWCDisplayPluggable(CoreInterface *core_intf,
                                          hwc2_display_t id,
                                          int32_t sdm_id)
     : HWCDisplay(core_intf, buffer_allocator, callbacks, event_handler, qservice, kPluggable, id,
-                 sdm_id, false, DISPLAY_CLASS_PLUGGABLE) {
+                 sdm_id, DISPLAY_CLASS_PLUGGABLE) {
 }
 
 HWC2::Error HWCDisplayPluggable::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {

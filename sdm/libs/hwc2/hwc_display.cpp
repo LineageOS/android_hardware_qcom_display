@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -366,14 +366,13 @@ void HWCColorMode::Dump(std::ostringstream* os) {
 HWCDisplay::HWCDisplay(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
                        HWCCallbacks *callbacks, HWCDisplayEventHandler* event_handler,
                        qService::QService *qservice, DisplayType type, hwc2_display_t id,
-                       int32_t sdm_id, bool needs_blit, DisplayClass display_class)
+                       int32_t sdm_id, DisplayClass display_class)
     : core_intf_(core_intf),
       callbacks_(callbacks),
       event_handler_(event_handler),
       type_(type),
       id_(id),
       sdm_id_(sdm_id),
-      needs_blit_(needs_blit),
       qservice_(qservice),
       display_class_(display_class) {
   buffer_allocator_ = static_cast<HWCBufferAllocator *>(buffer_allocator);
@@ -417,12 +416,6 @@ int HWCDisplay::Init() {
   }
 
   client_target_ = new HWCLayer(id_, buffer_allocator_);
-
-  int blit_enabled = 0;
-  HWCDebugHandler::Get()->GetProperty(DISABLE_BLIT_COMPOSITION_PROP, &blit_enabled);
-  if (needs_blit_ && blit_enabled) {
-    // TODO(user): Add blit engine when needed
-  }
 
   error = display_intf_->GetNumVariableInfoConfigs(&num_configs_);
   if (error != kErrorNone) {
@@ -538,7 +531,6 @@ void HWCDisplay::BuildLayerStack() {
   layer_stack_.flags.fast_path = fast_path_enabled_ && fast_path_composition_;
 
   // Add one layer for fb target
-  // TODO(user): Add blit target layers
   for (auto hwc_layer : layer_set_) {
     // Reset layer data which SDM may change
     hwc_layer->ResetPerFrameData();
@@ -1143,8 +1135,7 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
     Layer *layer = hwc_layer->GetSDMLayer();
     LayerComposition &composition = layer->composition;
 
-    if ((composition == kCompositionSDE) || (composition == kCompositionHybrid) ||
-        (composition == kCompositionBlit)) {
+    if (composition == kCompositionSDE) {
       layer_requests_[hwc_layer->GetId()] = HWC2::LayerRequest::ClearClientTarget;
     }
 
@@ -1156,7 +1147,6 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
       has_client_composition_ = true;
     }
     // Update the changes list only if the requested composition is different from SDM comp type
-    // TODO(user): Take Care of other comptypes(BLIT)
     if (requested_composition != device_composition) {
       layer_changes_[hwc_layer->GetId()] = device_composition;
     }
