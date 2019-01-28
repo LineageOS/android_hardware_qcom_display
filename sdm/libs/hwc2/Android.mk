@@ -4,7 +4,7 @@ include $(LOCAL_PATH)/../../../common.mk
 
 ifeq ($(use_hwc2),true)
 
-LOCAL_MODULE                  := hwcomposer.$(TARGET_BOARD_PLATFORM)
+LOCAL_MODULE                  := hwcomposer.qcom
 LOCAL_VENDOR_MODULE           := true
 LOCAL_MODULE_RELATIVE_PATH    := hw
 LOCAL_MODULE_TAGS             := optional
@@ -52,6 +52,24 @@ LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.3
 LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.4
 LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.5
 endif
+ifeq ($(display_config_version), DISPLAY_CONFIG_1_6)
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.1
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.2
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.3
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.4
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.5
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.6
+endif
+ifeq ($(display_config_version), DISPLAY_CONFIG_1_7)
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.1
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.2
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.3
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.4
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.5
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.6
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.7
+endif
+
 
 LOCAL_SRC_FILES               := hwc_session.cpp \
                                  hwc_session_services.cpp \

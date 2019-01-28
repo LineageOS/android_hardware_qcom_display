@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -923,6 +923,22 @@ DisplayError DisplayBase::SetColorModeInternal(const std::string &color_mode) {
   return error;
 }
 
+DisplayError DisplayBase::GetColorModeName(int32_t mode_id, std::string *mode_name) {
+  if (!mode_name) {
+    DLOGE("Invalid parameters");
+    return kErrorParameters;
+  }
+  for (uint32_t i = 0; i < num_color_modes_; i++) {
+    if (color_modes_[i].id == mode_id) {
+      *mode_name = color_modes_[i].name;
+      return kErrorNone;
+    }
+  }
+
+  DLOGE("Failed to get color mode name for mode id = %d", mode_id);
+  return kErrorUndefined;
+}
+
 DisplayError DisplayBase::GetValueOfModeAttribute(const AttrVal &attr, const std::string &type,
                                                   std::string *value) {
   if (!value) {
@@ -1555,6 +1571,14 @@ DisplayError DisplayBase::GetClientTargetSupport(uint32_t width, uint32_t height
   return kErrorNone;
 }
 
+bool DisplayBase::IsSupportSsppTonemap() {
+  if (hw_resource_info_.src_tone_map.none()) {
+    return false;
+  } else {
+    return true;
+  }
+}
+
 DisplayError DisplayBase::ValidateScaling(uint32_t width, uint32_t height) {
   uint32_t display_width = display_attributes_.x_pixels;
   uint32_t display_height = display_attributes_.y_pixels;
@@ -1693,9 +1717,11 @@ void DisplayBase::HwRecovery(const HWRecoveryEvent sdm_event_code) {
         hw_intf_->DumpDebugData();
         hw_recovery_logs_captured_ = true;
         DLOGI("Captured debugfs data for display = %d", display_type_);
-      } else {
+      } else if (!disable_hw_recovery_dump_) {
         DLOGI("Multiple capture events without intermediate success event, skipping debugfs"
               "capture for display = %d", display_type_);
+      } else {
+        DLOGI("Debugfs data dumping is disabled for display = %d", display_type_);
       }
       break;
     case HWRecoveryEvent::kDisplayPowerReset:
@@ -1764,7 +1790,7 @@ PrimariesTransfer DisplayBase::GetBlendSpaceFromColorMode() {
     } else {
       pt.transfer = Transfer_SMPTE_ST2084;
     }
-  } else if ((color_gamut == kDcip3 && dynamic_range == kSdr)) {
+  } else if (color_gamut == kDcip3) {
     pt.primaries = GetColorPrimariesFromAttribute(color_gamut);
     pt.transfer = Transfer_Gamma2_2;
   }

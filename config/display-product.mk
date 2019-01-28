@@ -1,5 +1,4 @@
-#Display related packages and configuration
-
+# Display product definitions
 PRODUCT_PACKAGES += \
     android.hardware.graphics.composer@2.2-impl \
     android.hardware.graphics.composer@2.2-service \
@@ -13,9 +12,13 @@ PRODUCT_PACKAGES += \
     lights.qcom \
     hwcomposer.qcom \
     memtrack.qcom \
-    libqdutils \
-    libqdMetaData \
-    libqdMetaData.system \
+    libqdMetaData.vendor \
+    vendor.display.config@1.0.vendor \
+    vendor.display.config@1.1.vendor \
+    vendor.display.config@1.2.vendor \
+    vendor.display.config@1.3.vendor \
+    vendor.display.config@1.4.vendor \
+    vendor.display.config@1.5.vendor \
     modetest
 
 #QDCM calibration xml file for 2k panel
@@ -27,21 +30,6 @@ PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_Sharp_4k_cmd_
 #QDCM calibration xml file for amoled panel
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_sw43404_amoled_cmd_mode_dsi_boe_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_sw43404_amoled_cmd_mode_dsi_boe_panel_with_DSC.xml
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_sw43404_amoled_cmd_mode_dsi_boe_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_sw43404_amoled_video_mode_dsi_boe_panel_with_DSC.xml
-
-#Enable Charging Icon
-TARGET_RECOVERY_PIXEL_FORMAT := RGBX_8888
-
-TARGET_USES_GRALLOC1 := true
-TARGET_USES_DRM_PP := true
-TARGET_FORCE_HWC_FOR_VIRTUAL_DISPLAYS := true
-MAX_VIRTUAL_DISPLAY_DIMENSION := 4096
-NUM_FRAMEBUFFER_SURFACE_BUFFERS := 3
-TARGET_USES_HWC2 := true
-TARGET_USES_QCOM_DISPLAY_BSP := true
-TARGET_USES_COLOR_METADATA := true
-TARGET_HAS_WIDE_COLOR_DISPLAY := true
-TARGET_HAS_HDR_DISPLAY := true
-TARGET_USES_DISPLAY_RENDER_INTENTS := true
 
 PRODUCT_PROPERTY_OVERRIDES += \
     persist.demo.hdmirotationlock=false \

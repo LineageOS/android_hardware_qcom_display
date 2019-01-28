@@ -9,10 +9,10 @@ PRODUCT_PACKAGES += \
     android.hardware.memtrack@1.0-service \
     android.hardware.light@2.0-impl \
     android.hardware.light@2.0-service \
-    gralloc.talos \
-    lights.talos \
-    hwcomposer.talos \
-    memtrack.talos \
+    gralloc.qcom \
+    lights.qcom \
+    hwcomposer.qcom \
+    memtrack.qcom \
     libqdutils \
     libqdMetaData \
     libqdMetaData.system \
@@ -56,11 +56,9 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_inline_rotator=1 \
     vendor.display.disable_decimation=1 \
     vendor.display.disable_excl_rect_partial_fb=1 \
-    vendor.display.enable_rotator_ui=1 \
     vendor.display.enable_null_display=0 \
     vendor.display.disable_excl_rect=0 \
     vendor.display.comp_mask=0 \
-    vendor.display.disable_hw_recovery=1 \
     vendor.display.enable_default_color_mode=1
 
 # This matrix should be in column major order, per SurfaceFlinger requirement

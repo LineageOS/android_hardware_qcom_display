@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -204,6 +204,12 @@ struct DisplayConfigVariableInfo {
   uint32_t fps = 0;               //!< Frame rate per second.
   uint32_t vsync_period_ns = 0;   //!< VSync period in nanoseconds.
   bool is_yuv = false;            //!< If the display output is in YUV format.
+
+  bool operator==(const DisplayConfigVariableInfo& info) const {
+    return ((x_pixels == info.x_pixels) && (y_pixels == info.y_pixels) && (x_dpi == info.x_dpi) &&
+            (y_dpi == info.y_dpi) && (fps == info.fps) && (vsync_period_ns == info.vsync_period_ns)
+            && (is_yuv == info.is_yuv));
+  }
 };
 
 /*! @brief Event data associated with VSync event.
@@ -587,11 +593,21 @@ class DisplayInterface {
 
   /*! @brief Method to set the color mode by ID. This method is used for debugging only.
 
-  @param[in] mode_name Mode ID which needs to be set
+  @param[in] Mode ID which needs to be set
 
   @return \link DisplayError \endlink
   */
   virtual DisplayError SetColorModeById(int32_t color_mode_id) = 0;
+
+  /*! @brief Method to get the color mode name.
+
+  @param[in] Mode ID
+  @param[out] Mode name
+
+  @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetColorModeName(int32_t mode_id, std::string *mode_name) = 0;
+
   /*! @brief Method to set the color transform
 
     @param[in] length Mode name which needs to be set
@@ -775,11 +791,41 @@ class DisplayInterface {
   */
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) = 0;
 
+  /*! @brief Method to query whether it is supprt sspp tonemap.
+
+    @return true if support sspp tonemap.
+  */
+  virtual bool IsSupportSsppTonemap() = 0;
+
   /*
    * Returns a string consisting of a dump of SDM's display and layer related state
    * as programmed to driver
   */
   virtual std::string Dump() = 0;
+
+  /*! @brief Method to dynamically set DSI clock rate.
+
+    @param[in] bit_clk_rate DSI bit clock rate in HZ.
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate) = 0;
+
+  /*! @brief Method to get the current DSI clock rate
+
+    @param[out] bit_clk_rate DSI bit clock rate in HZ
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate) = 0;
+
+  /*! @brief Method to get the supported DSI clock rates
+
+      @param[out] bitclk DSI bit clock in HZ
+
+      @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates) = 0;
 
  protected:
   virtual ~DisplayInterface() { }

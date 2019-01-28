@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -94,11 +94,21 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError ColorSVCRequestRoute(const PPDisplayAPIPayload &in_payload,
                                             PPDisplayAPIPayload *out_payload,
                                             PPPendingParams *pending_action);
+  virtual DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate) {
+    return kErrorNotSupported;
+  }
+  virtual DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate) {
+    return kErrorNotSupported;
+  }
+  virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates) {
+    return kErrorNotSupported;
+  }
   virtual DisplayError GetColorModeCount(uint32_t *mode_count);
   virtual DisplayError GetColorModes(uint32_t *mode_count, std::vector<std::string> *color_modes);
   virtual DisplayError GetColorModeAttr(const std::string &color_mode, AttrVal *attr);
   virtual DisplayError SetColorMode(const std::string &color_mode);
   virtual DisplayError SetColorModeById(int32_t color_mode_id);
+  virtual DisplayError GetColorModeName(int32_t mode_id, std::string *mode_name);
   virtual DisplayError SetColorTransform(const uint32_t length, const double *color_transform);
   virtual DisplayError GetDefaultColorMode(std::string *color_mode);
   virtual DisplayError ApplyDefaultDisplayMode(void);
@@ -134,6 +144,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) {
     return kErrorNotSupported;
   }
+  virtual bool IsSupportSsppTonemap();
 
  protected:
   const char *kBt2020Pq = "bt2020_pq";

@@ -120,6 +120,8 @@ class HWDeviceDRM : public HWInterface {
     return kErrorNotSupported;
   }
   virtual DisplayError SetDisplayDppsAdROI(void *payload) { return kErrorNotSupported; }
+  virtual DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate);
+  virtual DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate);
 
   enum {
     kHWEventVSync,
@@ -218,14 +220,15 @@ class HWDeviceDRM : public HWInterface {
   uint64_t debug_dump_count_ = 0;
   bool synchronous_commit_ = false;
   uint32_t topology_control_ = 0;
+  uint32_t vrefresh_ = 0;
+  uint64_t bit_clk_rate_ = 0;
+  bool update_mode_ = false;
 
  private:
   std::string interface_str_ = "DSI";
   bool resolution_switch_enabled_ = false;
-  uint32_t vrefresh_ = 0;
   bool autorefresh_ = false;
   std::unique_ptr<HWColorManagerDrm> hw_color_mgr_ = {};
-  bool update_mode_ = false;
 };
 
 }  // namespace sdm

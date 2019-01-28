@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -42,7 +42,6 @@
 #include <vector>
 
 #include "hwc_buffer_allocator.h"
-#include "hwc_buffer_sync_handler.h"
 #include "hwc_session.h"
 #include "hwc_debugger.h"
 
@@ -206,6 +205,27 @@ int HWCSession::Init() {
       return -EINVAL;
     }
 
+    error = core_intf_->GetMaxDisplaysSupported(kPluggable, &max_sde_pluggable_displays_);
+    if (kErrorNone == error) {
+      if (max_sde_pluggable_displays_ && (kPluggable == hw_disp_info.type)) {
+        // If primary is a pluggable display, we have already used one pluggable display interface.
+        max_sde_pluggable_displays_--;
+      }
+    } else {
+      DLOGE("Could not find maximum pluggable displays supported. Error = %d", error);
+    }
+
+    error = core_intf_->GetMaxDisplaysSupported(kBuiltIn, &max_sde_builtin_displays_);
+    if (kErrorNone == error) {
+      if (max_sde_builtin_displays_ && (kBuiltIn == hw_disp_info.type)) {
+        // If primary is not a pluggable display, we have already used one built-in display
+        // interface.
+        max_sde_builtin_displays_--;
+      }
+    } else {
+      DLOGE("Could not find maximum built-in displays supported. Error = %d", error);
+    }
+
     g_hwc_uevent_.Register(this);
   }
 
@@ -218,26 +238,6 @@ int HWCSession::Init() {
   }
 
   is_composer_up_ = true;
-
-  error = core_intf_->GetMaxDisplaysSupported(kPluggable, &max_sde_pluggable_displays_);
-  if (kErrorNone == error) {
-    if (max_sde_pluggable_displays_ && (kPluggable == map_info_primary_.disp_type)) {
-      // If primary is a pluggable display, we have already used one pluggable display interface.
-      max_sde_pluggable_displays_--;
-    }
-  } else {
-    DLOGE("Could not find maximum pluggable displays supported. Error = %d", error);
-  }
-
-  error = core_intf_->GetMaxDisplaysSupported(kBuiltIn, &max_sde_builtin_displays_);
-  if (kErrorNone == error) {
-    if (max_sde_builtin_displays_ && (kBuiltIn == map_info_primary_.disp_type)) {
-      // If primary is not a pluggable display, we have already used one built-in display interface.
-      max_sde_builtin_displays_--;
-    }
-  } else {
-    DLOGE("Could not find maximum built-in displays supported. Error = %d", error);
-  }
 
   return 0;
 }
@@ -676,16 +676,17 @@ int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display
   auto status = HWC2::Error::BadDisplay;
   DTRACE_SCOPED();
 
-  if ((display >= HWCSession::kNumDisplays) || (hwc_session->hwc_display_[display] == nullptr)) {
-    DLOGE("Invalid Display %d Handle %s ", display, hwc_session->hwc_display_[display] ?
-          "Valid" : "NULL");
+  if (!hwc_session || (display >= HWCSession::kNumDisplays)) {
+    DLOGW("Invalid Display : hwc session = %s display = %" PRIu64,
+          hwc_session ? "Valid" : "NULL", display);
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
   hwc_session->HandleSecureSession(display);
   {
     SEQUENCE_EXIT_SCOPE_LOCK(locker_[display]);
-    if (!device) {
+    if (!hwc_session->hwc_display_[display]) {
+      DLOGW("Removed Display : display = %" PRIu64, display);
       return HWC2_ERROR_BAD_DISPLAY;
     }
 
@@ -953,6 +954,10 @@ int32_t HWCSession::SetVsyncEnabled(hwc2_device_t *device, hwc2_display_t displa
   //  avoid undefined behavior in cast to HWC2::Vsync
   if (int_enabled < HWC2_VSYNC_INVALID || int_enabled > HWC2_VSYNC_DISABLE) {
     return HWC2_ERROR_BAD_PARAMETER;
+  }
+  // already mapping taken care by HAL and SF. No need to react for other display.
+  if (display != HWC_DISPLAY_PRIMARY) {
+    return HWC2_ERROR_NONE;
   }
 
   auto enabled = static_cast<HWC2::Vsync>(int_enabled);
@@ -1516,6 +1521,30 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       status = SetAd4RoiConfig(input_parcel);
       break;
 
+    case qService::IQService::SET_DSI_CLK:
+      if (!input_parcel) {
+        DLOGE("QService command = %d: input_parcel needed.", command);
+        break;
+      }
+      status = SetDsiClk(input_parcel);
+      break;
+
+    case qService::IQService::GET_DSI_CLK:
+      if (!input_parcel || !output_parcel) {
+        DLOGE("QService command = %d: input_parcel and output_parcel needed.", command);
+        break;
+      }
+      status = GetDsiClk(input_parcel, output_parcel);
+      break;
+
+    case qService::IQService::GET_SUPPORTED_DSI_CLK:
+      if (!input_parcel || !output_parcel) {
+        DLOGE("QService command = %d: input_parcel and output_parcel needed.", command);
+        break;
+      }
+      status = GetSupportedDsiClk(input_parcel, output_parcel);
+      break;
+
     default:
       DLOGW("QService command = %d is not supported.", command);
       break;
@@ -1820,6 +1849,7 @@ void HWCSession::DynamicDebug(const android::Parcel *input_parcel) {
 
     case qService::IQService::DEBUG_PIPE_LIFECYCLE:
       HWCDebugHandler::DebugResources(enable, verbose_level);
+      HWCDebugHandler::DebugQos(enable, verbose_level);
       break;
 
     case qService::IQService::DEBUG_DRIVER_CONFIG:
@@ -1830,6 +1860,7 @@ void HWCSession::DynamicDebug(const android::Parcel *input_parcel) {
       HWCDebugHandler::DebugResources(enable, verbose_level);
       HWCDebugHandler::DebugDriverConfig(enable, verbose_level);
       HWCDebugHandler::DebugRotator(enable, verbose_level);
+      HWCDebugHandler::DebugQos(enable, verbose_level);
       break;
 
     case qService::IQService::DEBUG_QDCM:
@@ -1897,6 +1928,7 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
   PPDisplayAPIPayload resp_payload, req_payload;
   uint8_t *disp_id = NULL;
   bool invalidate_needed = true;
+  int32_t *mode_id = NULL;
 
   if (!color_mgr_) {
     DLOGW("color_mgr_ not initialized.");
@@ -2027,6 +2059,21 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
             }
           }
           break;
+        case kSetModeFromClient:
+          {
+            SCOPE_LOCK(locker_[display_id]);
+            mode_id = reinterpret_cast<int32_t *>(resp_payload.payload);
+            if (mode_id) {
+              ret = static_cast<int>(hwc_display_[display_id]->SetColorModeFromClientApi(*mode_id));
+            } else {
+              DLOGE("mode_id is Null");
+              ret = -EINVAL;
+            }
+          }
+          if (!ret) {
+            Refresh(display_id);
+          }
+          break;
         default:
           DLOGW("Invalid pending action = %d!", pending_action.action);
           break;
@@ -2075,6 +2122,47 @@ const char *GetTokenValue(const char *uevent_data, int length, const char *token
     pstr = pstr+strlen(token);
 
   return pstr;
+}
+
+android::status_t HWCSession::SetDsiClk(const android::Parcel *input_parcel) {
+  int disp_id = input_parcel->readInt32();
+  uint64_t clk = UINT64(input_parcel->readInt64());
+  if (disp_id < 0 || !hwc_display_[disp_id]) {
+    return -EINVAL;
+  }
+
+  return hwc_display_[disp_id]->SetDynamicDSIClock(clk);
+}
+
+android::status_t HWCSession::GetDsiClk(const android::Parcel *input_parcel,
+                                        android::Parcel *output_parcel) {
+  int disp_id = input_parcel->readInt32();
+  if (disp_id < 0 || !hwc_display_[disp_id]) {
+    return -EINVAL;
+  }
+
+  uint64_t bitrate = 0;
+  hwc_display_[disp_id]->GetDynamicDSIClock(&bitrate);
+  output_parcel->writeUint64(bitrate);
+
+  return 0;
+}
+
+android::status_t HWCSession::GetSupportedDsiClk(const android::Parcel *input_parcel,
+                                                 android::Parcel *output_parcel) {
+  int disp_id = input_parcel->readInt32();
+  if (disp_id < 0 || !hwc_display_[disp_id]) {
+    return -EINVAL;
+  }
+
+  std::vector<uint64_t> bit_rates;
+  hwc_display_[disp_id]->GetSupportedDSIClock(&bit_rates);
+  output_parcel->writeInt32(INT32(bit_rates.size()));
+  for (auto &bit_rate : bit_rates) {
+    output_parcel->writeUint64(bit_rate);
+  }
+
+  return 0;
 }
 
 void HWCSession::UEventHandler(const char *uevent_data, int length) {
@@ -2575,7 +2663,7 @@ HWC2::Error HWCSession::PresentDisplayInternal(hwc2_display_t display, int32_t *
   if (hwc_display->IsSkipValidateState() && !hwc_display->CanSkipValidate()) {
     uint32_t out_num_types = 0, out_num_requests = 0;
     HWC2::Error error = ValidateDisplayInternal(display, &out_num_types, &out_num_requests);
-    if ((error != HWC2::Error::None) || hwc_display->HasClientComposition()) {
+    if ((error != HWC2::Error::None) || hwc_display->HWCClientNeedsValidate()) {
       hwc_display->SetValidationState(HWCDisplay::kInternalValidate);
       return HWC2::Error::NotValidated;
     }
