@@ -89,6 +89,7 @@ enum DebugTag {
   kTagQOSClient,        //!< Debug log is tagged for Qos client.
   kTagDisplay,          //!< Debug log is tagged for display core logs.
   kTagClient,           //!< Debug log is tagged for SDM client.
+  kTagQOSImpl,          //!< Debug log is tagged for Qos library Implementation.
 };
 
 }  // namespace sdm
