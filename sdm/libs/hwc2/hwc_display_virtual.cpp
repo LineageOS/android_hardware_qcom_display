@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -104,6 +104,9 @@ int HWCDisplayVirtual::Init() {
 int HWCDisplayVirtual::Deinit() {
   int status = 0;
   if (output_buffer_) {
+    if (output_buffer_->acquire_fence_fd >= 0) {
+      close(output_buffer_->acquire_fence_fd);
+    }
     delete output_buffer_;
     output_buffer_ = nullptr;
   }
@@ -190,10 +193,6 @@ HWC2::Error HWCDisplayVirtual::Present(int32_t *out_retire_fence) {
 
   status = HWCDisplay::PostCommitLayerStack(out_retire_fence);
 
-  if (output_buffer_->acquire_fence_fd >= 0) {
-    close(output_buffer_->acquire_fence_fd);
-    output_buffer_->acquire_fence_fd = -1;
-  }
   return status;
 }
 
@@ -216,6 +215,11 @@ HWC2::Error HWCDisplayVirtual::SetOutputBuffer(buffer_handle_t buf, int32_t rele
   }
   const private_handle_t *output_handle = static_cast<const private_handle_t *>(buf);
 
+  // Close the previous acquire fence and update with the latest release fence to avoid fence leak
+  // in case if this function gets invoked multiple times from the client.
+  if (output_buffer_->acquire_fence_fd >= 0) {
+    close(output_buffer_->acquire_fence_fd);
+  }
   // Fill output buffer parameters (width, height, format, plane information, fence)
   output_buffer_->acquire_fence_fd = dup(release_fence);
 
