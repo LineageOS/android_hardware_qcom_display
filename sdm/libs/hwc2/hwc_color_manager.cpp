@@ -301,7 +301,7 @@ int HWCColorManager::SetHWDetailedEnhancerConfig(void *params, HWCDisplay *hwc_d
   DisplayDetailEnhancerData de_data;
 
   PPDETuningCfgData *de_tuning_cfg_data = reinterpret_cast<PPDETuningCfgData*>(params);
-  if (de_tuning_cfg_data->cfg_pending == true) {
+  if (de_tuning_cfg_data->cfg_pending) {
     if (!de_tuning_cfg_data->cfg_en) {
       de_data.enable = 0;
     } else {
