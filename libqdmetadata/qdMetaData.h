@@ -38,6 +38,7 @@ extern "C" {
 
 #define MAX_UBWC_STATS_LENGTH 32
 #define GRAPHICS_METADATA_SIZE 4096
+#define CVP_METADATA_SIZE 1024
 
 enum ColorSpace_t{
     ITU_R_601,
@@ -105,6 +106,11 @@ typedef struct GraphicsMetadata {
     uint32_t data[GRAPHICS_METADATA_SIZE];
 } GraphicsMetadata;
 
+typedef struct CVPMetadata {
+    uint32_t size; /* payload size in bytes */
+    uint8_t payload[CVP_METADATA_SIZE];
+} CVPMetadata;
+
 struct MetaData_t {
     int32_t operation;
     int32_t interlaced;
@@ -148,6 +154,11 @@ struct MetaData_t {
     /* Populated and used by adreno during buffer size calculation.
      * Set only for RGB formats. */
     GraphicsMetadata graphics_metadata;
+    /*
+     * Producer (camera) will set cvp metadata and consumer (video) will
+     * use it. The format of metadata is known to producer and consumer.
+     */
+    CVPMetadata cvpMetadata;
 };
 
 enum DispParamType {
@@ -167,6 +178,7 @@ enum DispParamType {
     SET_IGC                    = 0x2000,
     SET_SINGLE_BUFFER_MODE     = 0x4000,
     SET_S3D_COMP               = 0x8000,
+    SET_CVP_METADATA           = 0x00010000,
 };
 
 enum DispFetchParamType {
@@ -186,6 +198,7 @@ enum DispFetchParamType {
     GET_IGC                   = 0x2000,
     GET_SINGLE_BUFFER_MODE    = 0x4000,
     GET_S3D_COMP              = 0x8000,
+    GET_CVP_METADATA          = 0x00010000,
 };
 
 struct private_handle_t;
