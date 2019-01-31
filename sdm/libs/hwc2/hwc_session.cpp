@@ -34,6 +34,7 @@
 #include <QService.h>
 #include <utils/utils.h>
 #include <algorithm>
+#include <utility>
 #include <bitset>
 #include <iterator>
 #include <memory>
@@ -182,7 +183,6 @@ int HWCSession::Init() {
   }
 
   StartServices();
-
   HWCDebugHandler::Get()->GetProperty(ENABLE_NULL_DISPLAY_PROP, &null_display_mode_);
   DisplayError error = kErrorNone;
 
@@ -945,7 +945,7 @@ int32_t HWCSession::SetPowerMode(hwc2_device_t *device, hwc2_display_t display, 
   }
 
   hwc_session->UpdateVsyncSource();
-
+  hwc_session->UpdateThrottlingRate();
   return HWC2_ERROR_NONE;
 }
 
@@ -1156,8 +1156,8 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
     return HWC2::Error::NoResources;
   }
 
+  SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
   if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
-    SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
     std::bitset<kSecureMax> secure_sessions = 0;
     hwc_display_[HWC_DISPLAY_PRIMARY]->GetActiveSecureSession(&secure_sessions);
     if (secure_sessions.any()) {
@@ -1195,6 +1195,13 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
         continue;
       }
 
+    if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
+      error = hwc_display_[HWC_DISPLAY_PRIMARY]->TeardownConcurrentWriteback();
+      if (error) {
+        return HWC2::Error::NoResources;
+      }
+    }
+
       status = HWCDisplayVirtual::Create(core_intf_, &buffer_allocator_, &callbacks_, client_id,
                                          info.display_id, width, height, format, &hwc_display);
       // TODO(user): validate width and height support
@@ -1209,11 +1216,10 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
     }
 
     if (status) {
-      return HWC2::Error::BadDisplay;
+      return HWC2::Error::NoResources;
     }
   }
 
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
   hwc_display_[HWC_DISPLAY_PRIMARY]->ResetValidation();
 
   return HWC2::Error::None;
@@ -1545,6 +1551,14 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       status = GetSupportedDsiClk(input_parcel, output_parcel);
       break;
 
+    case qService::IQService::SET_COLOR_MODE_FROM_CLIENT:
+      if (!input_parcel) {
+        DLOGE("QService command = %d: input_parcel needed.", command);
+        break;
+      }
+      status = SetColorModeFromClient(input_parcel);
+      break;
+
     default:
       DLOGW("QService command = %d is not supported.", command);
       break;
@@ -1817,6 +1831,27 @@ android::status_t HWCSession::SetColorModeById(const android::Parcel *input_parc
   return 0;
 }
 
+android::status_t HWCSession::SetColorModeFromClient(const android::Parcel *input_parcel) {
+  int display = input_parcel->readInt32();
+  auto mode = input_parcel->readInt32();
+  auto device = static_cast<hwc2_device_t *>(this);
+
+  int disp_idx = GetDisplayIndex(display);
+  if (disp_idx == -1) {
+    DLOGE("Invalid display = %d", display);
+    return -EINVAL;
+  }
+
+  auto err = CallDisplayFunction(device, static_cast<hwc2_display_t>(disp_idx),
+                                 &HWCDisplay::SetColorModeFromClientApi, mode);
+  if (err != HWC2_ERROR_NONE)
+    return -EINVAL;
+
+  Refresh(static_cast<hwc2_display_t>(disp_idx));
+
+  return 0;
+}
+
 android::status_t HWCSession::RefreshScreen(const android::Parcel *input_parcel) {
   int display = input_parcel->readInt32();
 
@@ -1849,6 +1884,7 @@ void HWCSession::DynamicDebug(const android::Parcel *input_parcel) {
 
     case qService::IQService::DEBUG_PIPE_LIFECYCLE:
       HWCDebugHandler::DebugResources(enable, verbose_level);
+      HWCDebugHandler::DebugQos(enable, verbose_level);
       break;
 
     case qService::IQService::DEBUG_DRIVER_CONFIG:
@@ -1859,6 +1895,7 @@ void HWCSession::DynamicDebug(const android::Parcel *input_parcel) {
       HWCDebugHandler::DebugResources(enable, verbose_level);
       HWCDebugHandler::DebugDriverConfig(enable, verbose_level);
       HWCDebugHandler::DebugRotator(enable, verbose_level);
+      HWCDebugHandler::DebugQos(enable, verbose_level);
       break;
 
     case qService::IQService::DEBUG_QDCM:
@@ -2939,6 +2976,28 @@ hwc2_display_t HWCSession::GetNextVsyncSource() {
 
   // No Vsync source found. Default to main display.
   return HWC_DISPLAY_PRIMARY;
+}
+
+void HWCSession::UpdateThrottlingRate() {
+  uint32_t new_min = 0;
+
+  for (int i=0; i < kNumDisplays; i++) {
+    auto &display = hwc_display_[i];
+    if (!display)
+      continue;
+    if (display->GetCurrentPowerMode() != HWC2::PowerMode::Off)
+      new_min = (new_min == 0) ? display->GetMaxRefreshRate() :
+        std::min(new_min, display->GetMaxRefreshRate());
+  }
+
+  SetNewThrottlingRate(new_min);
+}
+
+void HWCSession::SetNewThrottlingRate(const uint32_t new_rate) {
+  if (new_rate !=0 && throttling_refresh_rate_ != new_rate) {
+    HWCDisplay::SetThrottlingRefreshRate(new_rate);
+    throttling_refresh_rate_ = new_rate;
+  }
 }
 
 android::status_t HWCSession::SetIdlePC(const android::Parcel *input_parcel) {

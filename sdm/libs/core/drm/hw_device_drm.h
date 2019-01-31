@@ -113,6 +113,7 @@ class HWDeviceDRM : public HWInterface {
   virtual void PopulateHWPanelInfo();
   virtual DisplayError SetDppsFeature(void *payload, size_t size) { return kErrorNotSupported; }
   virtual DisplayError GetDppsFeatureInfo(void *payload, size_t size) { return kErrorNotSupported; }
+  virtual DisplayError TeardownConcurrentWriteback(void) { return kErrorNotSupported; }
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event, HWLayers *hw_layers) {
     return kErrorNotSupported;
   }

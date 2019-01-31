@@ -1940,6 +1940,11 @@ void HWDeviceDRM::AddDimLayerIfNeeded() {
     AddSolidfillStage(sf, 0xFF);
     SetSolidfillStages();
   }
+
+  if (!secure_display_active_) {
+    DRMSecurityLevel crtc_security_level = DRMSecurityLevel::SECURE_NON_SECURE;
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_SECURITY_LEVEL, token_.crtc_id, crtc_security_level);
+  }
 }
 
 DisplayError HWDeviceDRM::NullCommit(bool synchronous, bool retain_planes) {

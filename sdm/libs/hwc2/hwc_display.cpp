@@ -50,6 +50,8 @@
 
 namespace sdm {
 
+uint32_t HWCDisplay::throttling_refresh_rate_ = 60;
+
 bool NeedsToneMap(const LayerStack &layer_stack) {
   for (Layer *layer : layer_stack.layers) {
     if (layer->request.flags.tone_map) {
@@ -822,7 +824,7 @@ void HWCDisplay::BuildSolidFillStack() {
 HWC2::Error HWCDisplay::SetLayerZOrder(hwc2_layer_t layer_id, uint32_t z) {
   const auto map_layer = layer_map_.find(layer_id);
   if (map_layer == layer_map_.end()) {
-    DLOGE("[%" PRIu64 "] updateLayerZ failed to find layer", id_);
+    DLOGW("[%" PRIu64 "] updateLayerZ failed to find layer", id_);
     return HWC2::Error::BadLayer;
   }
 
@@ -1148,7 +1150,7 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, int32_t acquire_
   }
 
   Layer *sdm_layer = client_target_->GetSDMLayer();
-  sdm_layer->frame_rate = current_refresh_rate_;
+  sdm_layer->frame_rate = std::min(current_refresh_rate_, HWCDisplay::GetThrottlingRefreshRate());
   client_target_->SetLayerSurfaceDamage(damage);
   int translated_dataspace = TranslateFromLegacyDataspace(dataspace);
   if (client_target_->GetLayerDataspace() != translated_dataspace) {
@@ -2296,7 +2298,7 @@ void HWCDisplay::UpdateRefreshRate() {
       continue;
     }
     auto layer = hwc_layer->GetSDMLayer();
-    layer->frame_rate = current_refresh_rate_;
+    layer->frame_rate = std::min(current_refresh_rate_, HWCDisplay::GetThrottlingRefreshRate());
   }
 }
 
