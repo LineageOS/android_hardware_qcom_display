@@ -74,6 +74,9 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   virtual DisplayError SetDisplayDppsAdROI(void *payload);
   virtual DisplayError SetQSyncMode(QSyncMode qsync_mode);
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous);
+  virtual DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate);
+  virtual DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate);
+  virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates);
 
   // Implement the HWEventHandlers
   virtual DisplayError VSync(int64_t timestamp);
@@ -85,6 +88,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   virtual void PingPongTimeout();
   virtual void PanelDead();
   virtual void HwRecovery(const HWRecoveryEvent sdm_event_code);
+  virtual DisplayError TeardownConcurrentWriteback(void);
 
   // Implement the DppsPropIntf
   virtual DisplayError DppsProcessOps(enum DppsOps op, void *payload, size_t size);

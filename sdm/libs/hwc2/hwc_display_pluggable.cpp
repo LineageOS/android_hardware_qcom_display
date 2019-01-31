@@ -134,7 +134,8 @@ HWC2::Error HWCDisplayPluggable::Validate(uint32_t *out_num_types, uint32_t *out
   }
 
   // Apply current Color Mode and Render Intent.
-  if (color_mode_->ApplyCurrentColorModeWithRenderIntent() != HWC2::Error::None) {
+  if (color_mode_->ApplyCurrentColorModeWithRenderIntent(
+      static_cast<bool>(layer_stack_.flags.hdr_present)) != HWC2::Error::None) {
     // Fallback to GPU Composition, if Color Mode can't be applied.
     MarkLayersForClientComposition();
   }

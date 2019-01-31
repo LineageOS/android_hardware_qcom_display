@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -579,6 +579,8 @@ struct DRMModeInfo {
   int wmin;
   int hmin;
   bool roi_merge;
+  uint64_t bit_clk_rate;
+  uint32_t transfer_time_us;
 };
 
 /* Per Connector Info*/
@@ -598,13 +600,14 @@ struct DRMConnectorInfo {
   uint32_t max_linewidth;
   DRMRotation panel_orientation;
   drm_panel_hdr_properties panel_hdr_prop;
-  uint32_t transfer_time_us;
   drm_msm_ext_hdr_properties ext_hdr_prop;
+  uint32_t transfer_time_us;
   bool qsync_support;
   // Connection status of this connector
   bool is_connected;
   bool is_wb_ubwc_supported;
   uint32_t topology_control;
+  bool dyn_bitclk_support;
 };
 
 // All DRM Connectors as map<Connector_id , connector_info>

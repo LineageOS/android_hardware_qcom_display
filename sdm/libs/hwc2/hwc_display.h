@@ -34,7 +34,7 @@
 #include <utility>
 #include <vector>
 #include <bitset>
-
+#include <algorithm>
 #include "hwc_buffer_allocator.h"
 #include "hwc_callbacks.h"
 #include "hwc_layers.h"
@@ -77,16 +77,16 @@ class HWCColorMode {
   HWC2::Error GetRenderIntents(ColorMode mode, uint32_t *out_num_intents, RenderIntent *out_modes);
   HWC2::Error SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
   HWC2::Error SetColorModeById(int32_t color_mode_id);
+  HWC2::Error SetColorModeFromClientApi(std::string mode_string);
   HWC2::Error SetColorTransform(const float *matrix, android_color_transform_t hint);
   HWC2::Error RestoreColorTransform();
   ColorMode GetCurrentColorMode() { return current_color_mode_; }
-  HWC2::Error ApplyCurrentColorModeWithRenderIntent();
+  HWC2::Error ApplyCurrentColorModeWithRenderIntent(bool hdr_present);
   HWC2::Error CacheColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
 
  private:
   static const uint32_t kColorTransformMatrixCount = 16;
   void PopulateColorModes();
-  void FindRenderIntent(const ColorMode &mode, const std::string &mode_string);
   template <class T>
   void CopyColorTransformMatrix(const T *input_matrix, double *output_matrix) {
     for (uint32_t i = 0; i < kColorTransformMatrixCount; i++) {
@@ -95,18 +95,23 @@ class HWCColorMode {
   }
   HWC2::Error ApplyDefaultColorMode();
   HWC2::Error ValidateColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
+  HWC2::Error SetPreferredColorModeInternal(const std::string &mode_string, bool from_client,
+    ColorMode *color_mode, DynamicRangeType *dynamic_range);
 
   DisplayInterface *display_intf_ = NULL;
   bool apply_mode_ = false;
   ColorMode current_color_mode_ = ColorMode::NATIVE;
   RenderIntent current_render_intent_ = RenderIntent::COLORIMETRIC;
-  typedef std::map<RenderIntent, std::string> RenderIntentMap;
-  // Initialize supported mode/render intent combination
+  DynamicRangeType curr_dynamic_range_ = kSdrType;
+  typedef std::map<DynamicRangeType, std::string> DynamicRangeMap;
+  typedef std::map<RenderIntent, DynamicRangeMap> RenderIntentMap;
+  // Initialize supported mode/render intent/dynamic range combination
   std::map<ColorMode, RenderIntentMap> color_mode_map_ = {};
   double color_matrix_[kColorTransformMatrixCount] = { 1.0, 0.0, 0.0, 0.0, \
                                                        0.0, 1.0, 0.0, 0.0, \
                                                        0.0, 0.0, 1.0, 0.0, \
                                                        0.0, 0.0, 0.0, 1.0 };
+  std::map<ColorMode, DynamicRangeMap> preferred_mode_ = {};
 };
 
 class HWCDisplay : public DisplayEventHandler {
@@ -151,6 +156,9 @@ class HWCDisplay : public DisplayEventHandler {
   virtual DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
   virtual void GetPanelResolution(uint32_t *width, uint32_t *height);
   virtual std::string Dump();
+  virtual DisplayError TeardownConcurrentWriteback(void) {
+    return kErrorNotSupported;
+  }
 
   // Captures frame output in the buffer specified by output_buffer_info. The API is
   // non-blocking and the client is expected to check operation status later on.
@@ -158,10 +166,11 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int FrameCaptureAsync(const BufferInfo &output_buffer_info, bool post_processed) {
     return -1;
   }
-  // Client gets release fence of the frame capture, requested with FrameCaptureAsync().
-  // True : Frame capture configured and client gets release fence.
-  // False: Frame capture is not valid and has not been configured.
-  virtual bool GetFrameCaptureFence(int32_t *release_fence) { return false; }
+  // Returns the status of frame capture operation requested with FrameCaptureAsync().
+  // -EAGAIN : No status obtain yet, call API again after another frame.
+  // < 0 : Operation happened but failed.
+  // 0 : Success.
+  virtual int GetFrameCaptureStatus() { return -EAGAIN; }
 
   virtual DisplayError SetDetailEnhancerConfig(const DisplayDetailEnhancerData &de_data) {
     return kErrorNotSupported;
@@ -181,6 +190,9 @@ class HWCDisplay : public DisplayEventHandler {
   }
 
   // Display Configurations
+  static uint32_t GetThrottlingRefreshRate() { return HWCDisplay::throttling_refresh_rate_; }
+  static void SetThrottlingRefreshRate(uint32_t newRefreshRate)
+              { HWCDisplay::throttling_refresh_rate_ = newRefreshRate; }
   virtual int SetActiveDisplayConfig(uint32_t config);
   virtual int GetActiveDisplayConfig(uint32_t *config);
   virtual int GetDisplayConfigCount(uint32_t *count);
@@ -193,6 +205,7 @@ class HWCDisplay : public DisplayEventHandler {
     return kErrorNotSupported;
   }
 
+  uint32_t GetMaxRefreshRate() { return max_refresh_rate_; }
   int SetPanelBrightness(int level);
   int GetPanelBrightness(int *level);
   int ToggleScreenUpdates(bool enable);
@@ -208,7 +221,6 @@ class HWCDisplay : public DisplayEventHandler {
   void ResetValidation() { validated_ = false; }
   uint32_t GetGeometryChanges() { return geometry_changes_; }
   bool CanSkipValidate();
-  bool HasClientComposition() { return has_client_composition_; }
   bool IsSkipValidateState() { return (validate_state_ == kSkipValidate); }
   bool IsInternalValidateState() { return (validated_ && (validate_state_ == kInternalValidate)); }
   void SetValidationState(DisplayValidateState state) { validate_state_ = state; }
@@ -216,6 +228,12 @@ class HWCDisplay : public DisplayEventHandler {
     return (color_mode_ ? color_mode_->GetCurrentColorMode() : ColorMode::SRGB);
   }
   void SetFastPathComposition(bool enable) { fast_path_composition_ = enable; }
+  bool HWCClientNeedsValidate() {
+    return (has_client_composition_ || layer_stack_.flags.single_buffered_layer_present);
+  }
+  virtual HWC2::Error SetColorModeFromClientApi(int32_t color_mode_id) {
+    return HWC2::Error::Unsupported;
+  }
 
   // HWC2 APIs
   virtual HWC2::Error AcceptDisplayChanges(void);
@@ -240,6 +258,15 @@ class HWCDisplay : public DisplayEventHandler {
                                                android_color_transform_t hint,
                                                const double *matrix) {
     return HWC2::Error::Unsupported;
+  }
+  virtual DisplayError SetDynamicDSIClock(uint64_t bitclk) {
+    return kErrorNotSupported;
+  }
+  virtual DisplayError GetDynamicDSIClock(uint64_t *bitclk) {
+    return kErrorNotSupported;
+  }
+  virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk) {
+    return kErrorNotSupported;
   }
   virtual HWC2::Error GetDisplayConfigs(uint32_t *out_num_configs, hwc2_config_t *out_configs);
   virtual HWC2::Error GetDisplayAttribute(hwc2_config_t config, HWC2::Attribute attribute,
@@ -286,9 +313,9 @@ class HWCDisplay : public DisplayEventHandler {
   }
 
  protected:
+  static uint32_t throttling_refresh_rate_;
   // Maximum number of layers supported by display manager.
   static const uint32_t kMaxLayerCount = 32;
-
   HWCDisplay(CoreInterface *core_intf, BufferAllocator *buffer_allocator, HWCCallbacks *callbacks,
              HWCDisplayEventHandler *event_handler, qService::QService *qservice, DisplayType type,
              hwc2_display_t id, int32_t sdm_id, DisplayClass display_class);
@@ -308,11 +335,13 @@ class HWCDisplay : public DisplayEventHandler {
   const char *GetDisplayString();
   void MarkLayersForGPUBypass(void);
   void MarkLayersForClientComposition(void);
+  void UpdateConfigs();
   virtual void ApplyScanAdjustment(hwc_rect_t *display_frame);
   uint32_t GetUpdatingLayersCount(void);
   bool IsLayerUpdating(HWCLayer *layer);
   uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate);
   virtual void GetUnderScanConfig() { }
+  int32_t SetClientTargetDataSpace(int32_t dataspace);
 
   enum {
     INPUT_LAYER_DUMP,
@@ -367,6 +396,8 @@ class HWCDisplay : public DisplayEventHandler {
   bool is_cmd_mode_ = false;
   bool partial_update_enabled_ = false;
   bool fast_path_composition_ = false;
+  std::map<uint32_t, DisplayConfigVariableInfo> variable_config_map_;
+  std::vector<uint32_t> hwc_config_map_;
 
  private:
   void DumpInputBuffers(void);

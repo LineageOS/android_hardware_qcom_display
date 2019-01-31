@@ -41,6 +41,7 @@
 
 #include "hwc_display_builtin.h"
 #include "hwc_debugger.h"
+#include "hwc_session.h"
 
 #define __CLASS__ "HWCDisplayBuiltIn"
 
@@ -188,7 +189,8 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
   SolidFillPrepare();
 
   // Apply current Color Mode and Render Intent.
-  if (color_mode_->ApplyCurrentColorModeWithRenderIntent() != HWC2::Error::None) {
+  if (color_mode_->ApplyCurrentColorModeWithRenderIntent(
+      static_cast<bool>(layer_stack_.flags.hdr_present)) != HWC2::Error::None) {
     // Fallback to GPU Composition, if Color Mode can't be applied.
     MarkLayersForClientComposition();
   }
@@ -303,6 +305,25 @@ HWC2::Error HWCDisplayBuiltIn::SetColorModeById(int32_t color_mode_id) {
   return status;
 }
 
+HWC2::Error HWCDisplayBuiltIn::SetColorModeFromClientApi(int32_t color_mode_id) {
+  DisplayError error = kErrorNone;
+  std::string mode_string;
+
+  error = display_intf_->GetColorModeName(color_mode_id, &mode_string);
+  if (error) {
+    DLOGE("Failed to get mode name for mode %d", color_mode_id);
+    return HWC2::Error::BadParameter;
+  }
+
+  auto status = color_mode_->SetColorModeFromClientApi(mode_string);
+  if (status != HWC2::Error::None) {
+    DLOGE("Failed to set mode = %d", color_mode_id);
+    return status;
+  }
+
+  return status;
+}
+
 HWC2::Error HWCDisplayBuiltIn::RestoreColorTransform() {
   auto status = color_mode_->RestoreColorTransform();
   if (status != HWC2::Error::None) {
@@ -379,6 +400,28 @@ HWC2::Error HWCDisplayBuiltIn::GetReadbackBufferFence(int32_t *release_fence) {
   output_buffer_ = {};
 
   return status;
+}
+
+DisplayError HWCDisplayBuiltIn::TeardownConcurrentWriteback(void) {
+  DisplayError error = kErrorNotSupported;
+
+  if (output_buffer_.release_fence_fd >= 0) {
+    int32_t release_fence_fd = dup(output_buffer_.release_fence_fd);
+    int ret = sync_wait(output_buffer_.release_fence_fd, 1000);
+    if (ret < 0) {
+      DLOGE("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
+    }
+
+    ::close(release_fence_fd);
+    if (ret)
+      return kErrorResources;
+  }
+
+  if (display_intf_) {
+    error = display_intf_->TeardownConcurrentWriteback();
+  }
+
+  return error;
 }
 
 HWC2::Error HWCDisplayBuiltIn::SetDisplayDppsAdROI(uint32_t h_start, uint32_t h_end,
@@ -577,9 +620,25 @@ void HWCDisplayBuiltIn::HandleFrameOutput() {
     validated_ = false;
   }
 
-  if (dump_output_to_file_) {
+  if (frame_capture_buffer_queued_) {
+    HandleFrameCapture();
+  } else if (dump_output_to_file_) {
     HandleFrameDump();
   }
+}
+
+void HWCDisplayBuiltIn::HandleFrameCapture() {
+  if (readback_configured_ && (output_buffer_.release_fence_fd >= 0)) {
+    frame_capture_status_ = sync_wait(output_buffer_.release_fence_fd, 1000);
+    ::close(output_buffer_.release_fence_fd);
+    output_buffer_.release_fence_fd = -1;
+  }
+
+  frame_capture_buffer_queued_ = false;
+  readback_buffer_queued_ = false;
+  post_processed_output_ = false;
+  readback_configured_ = false;
+  output_buffer_ = {};
 }
 
 void HWCDisplayBuiltIn::HandleFrameDump() {
@@ -694,12 +753,10 @@ int HWCDisplayBuiltIn::FrameCaptureAsync(const BufferInfo &output_buffer_info,
 
   const native_handle_t *buffer = static_cast<native_handle_t *>(output_buffer_info.private_data);
   SetReadbackBuffer(buffer, -1, post_processed_output);
+  frame_capture_buffer_queued_ = true;
+  frame_capture_status_ = -EAGAIN;
 
   return 0;
-}
-
-bool HWCDisplayBuiltIn::GetFrameCaptureFence(int32_t *release_fence) {
-  return (GetReadbackBufferFence(release_fence) == HWC2::Error::None);
 }
 
 DisplayError HWCDisplayBuiltIn::SetDetailEnhancerConfig
@@ -763,6 +820,39 @@ DisplayError HWCDisplayBuiltIn::ControlIdlePowerCollapse(bool enable, bool synch
     validated_ = false;
   }
   return error;
+}
+
+DisplayError HWCDisplayBuiltIn::SetDynamicDSIClock(uint64_t bitclk) {
+  {
+    SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[type_]);
+    DisplayError error = display_intf_->SetDynamicDSIClock(bitclk);
+    if (error != kErrorNone) {
+      DLOGE(" failed: Clk: %llu Error: %d", bitclk, error);
+      return error;
+    }
+  }
+
+  callbacks_->Refresh(id_);
+  validated_ = false;
+
+  return kErrorNone;
+}
+
+DisplayError HWCDisplayBuiltIn::GetDynamicDSIClock(uint64_t *bitclk) {
+  SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[type_]);
+  if (display_intf_) {
+    return display_intf_->GetDynamicDSIClock(bitclk);
+  }
+
+  return kErrorNotSupported;
+}
+
+DisplayError HWCDisplayBuiltIn::GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates) {
+  if (display_intf_) {
+    return display_intf_->GetSupportedDSIClock(bitclk_rates);
+  }
+
+  return kErrorNotSupported;
 }
 
 }  // namespace sdm

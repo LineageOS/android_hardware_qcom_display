@@ -56,6 +56,7 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
   virtual DisplayError SetColorTransform(const uint32_t length, const double *color_transform) {
     return kErrorNone;
   }
+  virtual DisplayError TeardownConcurrentWriteback(void) { return kErrorNotSupported; }
 
   // Implement the HWEventHandlers
   virtual DisplayError VSync(int64_t timestamp);
