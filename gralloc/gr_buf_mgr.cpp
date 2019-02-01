@@ -203,11 +203,12 @@ gralloc1_error_t BufferManager::FreeBuffer(std::shared_ptr<Buffer> buf) {
                              hnd->fd, buf->ion_handle_main) != 0) {
     return GRALLOC1_ERROR_BAD_HANDLE;
   }
-
-  unsigned int meta_size = ALIGN((unsigned int)sizeof(MetaData_t), PAGE_SIZE);
-  if (allocator_->FreeBuffer(reinterpret_cast<void *>(hnd->base_metadata), meta_size,
-                             hnd->offset_metadata, hnd->fd_metadata, buf->ion_handle_meta) != 0) {
-    return GRALLOC1_ERROR_BAD_HANDLE;
+  if (hnd->fd_metadata >= 0) {
+    unsigned int meta_size = ALIGN((unsigned int)sizeof(MetaData_t), PAGE_SIZE);
+    if (allocator_->FreeBuffer(reinterpret_cast<void *>(hnd->base_metadata), meta_size,
+                    hnd->offset_metadata, hnd->fd_metadata, buf->ion_handle_meta) != 0) {
+      return GRALLOC1_ERROR_BAD_HANDLE;
+    }
   }
 
   private_handle_t * handle = const_cast<private_handle_t *>(hnd);
@@ -232,16 +233,23 @@ gralloc1_error_t BufferManager::ImportHandleLocked(private_handle_t *hnd) {
     return GRALLOC1_ERROR_BAD_HANDLE;
   }
   ALOGD_IF(DEBUG, "Importing handle:%p id: %" PRIu64, hnd, hnd->id);
+  int ion_handle_meta = -1;
   int ion_handle = allocator_->ImportBuffer(hnd->fd);
   if (ion_handle < 0) {
     ALOGE("Failed to import ion buffer: hnd: %p, fd:%d, id:%" PRIu64, hnd, hnd->fd, hnd->id);
     return GRALLOC1_ERROR_BAD_HANDLE;
   }
-  int ion_handle_meta = allocator_->ImportBuffer(hnd->fd_metadata);
-  if (ion_handle_meta < 0) {
-    ALOGE("Failed to import ion metadata buffer: hnd: %p, fd:%d, id:%" PRIu64, hnd,
-          hnd->fd, hnd->id);
-    return GRALLOC1_ERROR_BAD_HANDLE;
+  if (hnd->fd_metadata >= 0) {
+    ion_handle_meta = allocator_->ImportBuffer(hnd->fd_metadata);
+    if (ion_handle_meta < 0) {
+      ALOGE("Failed to import ion metadata buffer: hnd: %p, fd:%d, meta_fd:%d, id:%" PRIu64,
+          hnd, hnd->fd, hnd->fd_metadata, hnd->id);
+      allocator_->FreeBuffer(NULL, hnd->size, hnd->offset, hnd->fd, ion_handle);
+      close(hnd->fd_metadata);
+      hnd->fd = -1;
+      hnd->fd_metadata = -1;
+      return GRALLOC1_ERROR_BAD_HANDLE;
+    }
   }
   // Set base pointers to NULL since the data here was received over binder
   hnd->base = 0;
