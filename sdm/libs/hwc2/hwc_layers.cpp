@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -368,7 +368,13 @@ HWC2::Error HWCLayer::SetLayerColor(hwc_color_t color) {
   if (client_requested_ != HWC2::Composition::SolidColor) {
     return HWC2::Error::None;
   }
-  layer_->solid_fill_color = GetUint32Color(color);
+  if (layer_->solid_fill_color != GetUint32Color(color)) {
+    layer_->solid_fill_color = GetUint32Color(color);
+    surface_updated_ = true;
+  } else {
+    surface_updated_ = false;
+  }
+
   layer_->input_buffer.format = kFormatARGB8888;
   DLOGV_IF(kTagClient, "[%" PRIu64 "][%" PRIu64 "] Layer color set to %x", display_id_, id_,
            layer_->solid_fill_color);
