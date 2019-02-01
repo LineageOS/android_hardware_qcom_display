@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -95,7 +95,6 @@ using sde_drm::DRMBlendType;
 using sde_drm::DRMSrcConfig;
 using sde_drm::DRMOps;
 using sde_drm::DRMTopology;
-using sde_drm::DRMPowerMode;
 using sde_drm::DRMSecureMode;
 using sde_drm::DRMSecurityLevel;
 using sde_drm::DRMCscType;
@@ -781,6 +780,7 @@ DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, int *release_fence)
   }
 
   if (first_cycle_) {
+    last_power_mode_ = DRMPowerMode::ON;
     return kErrorNone;
   }
 
@@ -796,6 +796,8 @@ DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, int *release_fence)
   drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, release_fence);
 
   pending_doze_ = false;
+  last_power_mode_ = DRMPowerMode::ON;
+
   return kErrorNone;
 }
 
@@ -817,14 +819,16 @@ DisplayError HWDeviceDRM::PowerOff() {
     return kErrorHardware;
   }
 
+  last_power_mode_ = DRMPowerMode::OFF;
   pending_doze_ = false;
+
   return kErrorNone;
 }
 
 DisplayError HWDeviceDRM::Doze(const HWQosData &qos_data, int *release_fence) {
   DTRACE_SCOPED();
 
-  if (!first_cycle_) {
+  if (first_cycle_ || last_power_mode_ != DRMPowerMode::OFF) {
     pending_doze_ = true;
     return kErrorNone;
   }
@@ -843,6 +847,8 @@ DisplayError HWDeviceDRM::Doze(const HWQosData &qos_data, int *release_fence) {
   }
 
   drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, release_fence);
+
+  last_power_mode_ = DRMPowerMode::DOZE;
 
   return kErrorNone;
 }
@@ -869,6 +875,8 @@ DisplayError HWDeviceDRM::DozeSuspend(const HWQosData &qos_data, int *release_fe
   drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, release_fence);
 
   pending_doze_ = false;
+  last_power_mode_ = DRMPowerMode::DOZE_SUSPEND;
+
   return kErrorNone;
 }
 
