@@ -210,6 +210,14 @@ int clearMetaDataVa(struct MetaData_t *data, enum DispParamType paramType);
 
 unsigned long getMetaDataSize();
 
+// Map, access metadata and unmap. Used by clients that do not import/free but
+//  clone and delete native_handle
+int setMetaDataAndUnmap(struct private_handle_t *handle, enum DispParamType paramType,
+                        void *param);
+int getMetaDataAndUnmap(struct private_handle_t *handle,
+                        enum DispFetchParamType paramType,
+                        void *param);
+
 #ifdef __cplusplus
 }
 #endif

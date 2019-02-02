@@ -64,6 +64,13 @@ static int validateAndMap(private_handle_t* handle) {
     return 0;
 }
 
+static void unmapAndReset(private_handle_t *handle) {
+    if (private_handle_t::validate(handle) == 0 && handle->base_metadata) {
+        munmap(reinterpret_cast<void *>(handle->base_metadata), getMetaDataSize());
+        handle->base_metadata = 0;
+    }
+}
+
 int setMetaData(private_handle_t *handle, DispParamType paramType,
                 void *param) {
     auto err = validateAndMap(handle);
@@ -349,3 +356,17 @@ int copyMetaDataVaToVa(MetaData_t *src_data, MetaData_t *dst_data) {
     return 0;
 }
 
+int setMetaDataAndUnmap(struct private_handle_t *handle, enum DispParamType paramType,
+                        void *param) {
+    auto ret = setMetaData(handle, paramType, param);
+    unmapAndReset(handle);
+    return ret;
+}
+
+int getMetaDataAndUnmap(struct private_handle_t *handle,
+                        enum DispFetchParamType paramType,
+                        void *param) {
+    auto ret = getMetaData(handle, paramType, param);
+    unmapAndReset(handle);
+    return ret;
+}
