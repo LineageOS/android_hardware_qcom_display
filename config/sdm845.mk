@@ -10,10 +10,10 @@ PRODUCT_PACKAGES += \
     android.hardware.light@2.0-impl \
     android.hardware.light@2.0-service \
     modetest \
-    gralloc.sdm845 \
-    lights.sdm845 \
-    hwcomposer.sdm845 \
-    memtrack.sdm845 \
+    gralloc.qcom \
+    lights.qcom \
+    hwcomposer.qcom \
+    memtrack.qcom \
     libqdutils \
     libqdMetaData \
     libqdMetaData.system

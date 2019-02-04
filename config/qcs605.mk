@@ -10,10 +10,10 @@ PRODUCT_PACKAGES += \
     android.hardware.light@2.0-impl \
     android.hardware.light@2.0-service \
     modetest \
-    gralloc.qcs605 \
-    lights.qcs605 \
-    hwcomposer.qcs605 \
-    memtrack.qcs605 \
+    gralloc.qcom \
+    lights.qcom \
+    hwcomposer.qcom \
+    memtrack.qcom \
     libqdutils \
     libqdMetaData \
     libqdMetaData.system
