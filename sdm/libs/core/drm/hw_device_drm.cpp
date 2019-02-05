@@ -1228,6 +1228,7 @@ DisplayError HWDeviceDRM::Validate(HWLayers *hw_layers) {
   int ret = drm_atomic_intf_->Validate();
   if (ret) {
     DLOGE("failed with error %d for %s", ret, device_name_);
+    DumpHWLayers(hw_layers);
     vrefresh_ = 0;
     err = kErrorHardware;
   }
@@ -1309,6 +1310,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   int retire_fence = INT(retire_fence_);
   if (ret) {
     DLOGE("%s failed with error %d crtc %d", __FUNCTION__, ret, token_.crtc_id);
+    DumpHWLayers(hw_layers);
     vrefresh_ = 0;
     CloseFd(&release_fence);
     CloseFd(&retire_fence);
@@ -2005,6 +2007,110 @@ DisplayError HWDeviceDRM::SetDynamicDSIClock(uint64_t bit_clk_rate) {
 
 DisplayError HWDeviceDRM::GetDynamicDSIClock(uint64_t *bit_clk_rate) {
   return kErrorNotSupported;
+}
+
+void HWDeviceDRM::DumpHWLayers(HWLayers *hw_layers) {
+  HWLayersInfo &hw_layer_info = hw_layers->info;
+  DestScaleInfoMap &dest_scale_info_map = hw_layer_info.dest_scale_info_map;
+  LayerStack *stack = hw_layer_info.stack;
+  uint32_t hw_layer_count = UINT32(hw_layer_info.hw_layers.size());
+  std::vector<LayerRect> &left_frame_roi = hw_layer_info.left_frame_roi;
+  std::vector<LayerRect> &right_frame_roi = hw_layer_info.right_frame_roi;
+  DLOGI("HWLayers Stack: layer_count: %d, app_layer_count: %d, gpu_target_index: %d",
+         hw_layer_count, hw_layer_info.app_layer_count, hw_layer_info.gpu_target_index);
+  DLOGI("LayerStackFlags = 0x%X,  blend_cs = {primaries = %d, transfer = %d}",
+         stack->flags, stack->blend_cs.primaries, stack->blend_cs.transfer);
+  for (uint32_t i = 0; i < left_frame_roi.size(); i++) {
+  DLOGI("left_frame_roi: x = %d, y = %d, w = %d, h = %d", INT(left_frame_roi[i].left),
+        INT(left_frame_roi[i].top), INT(left_frame_roi[i].right), INT(left_frame_roi[i].bottom));
+  }
+  for (uint32_t i = 0; i < right_frame_roi.size(); i++) {
+  DLOGI("right_frame_roi: x = %d, y = %d, w = %d h = %d", INT(right_frame_roi[i].left),
+        INT(right_frame_roi[i].top), INT(right_frame_roi[i].right),
+        INT(right_frame_roi[i].bottom));
+  }
+
+  for (uint32_t i = 0; i < dest_scale_info_map.size(); i++) {
+    HWDestScaleInfo *dest_scalar_data = dest_scale_info_map[i];
+    if (dest_scalar_data->scale_data.enable.scale) {
+      HWScaleData &scale_data = dest_scalar_data->scale_data;
+      DLOGI("Dest scalar index %d Mixer WxH %dx%d", i,
+            dest_scalar_data->mixer_width, dest_scalar_data->mixer_height);
+      DLOGI("Panel ROI [%d, %d, %d, %d]", INT(dest_scalar_data->panel_roi.left),
+           INT(dest_scalar_data->panel_roi.top), INT(dest_scalar_data->panel_roi.right),
+           INT(dest_scalar_data->panel_roi.bottom));
+      DLOGI("Dest scalar Dst WxH %dx%d", scale_data.dst_width, scale_data.dst_height);
+    }
+  }
+
+  for (uint32_t i = 0; i < hw_layer_count; i++) {
+    HWLayerConfig &hw_config = hw_layers->config[i];
+    HWRotatorSession &hw_rotator_session = hw_config.hw_rotator_session;
+    HWSessionConfig &hw_session_config = hw_rotator_session.hw_session_config;
+    DLOGI("========================= HW_layer: %d =========================", i);
+    DLOGI("src_width = %d, src_height = %d, src_format = %d, src_LayerBufferFlags = 0x%X",
+             hw_layer_info.hw_layers[i].input_buffer.width,
+             hw_layer_info.hw_layers[i].input_buffer.height,
+             hw_layer_info.hw_layers[i].input_buffer.format,
+             hw_layer_info.hw_layers[i].input_buffer.flags);
+    if (hw_config.use_inline_rot) {
+      DLOGI("rotator = %s, rotation = %d, flip_horizontal = %s, flip_vertical = %s",
+            "inline rotator", INT(hw_session_config.transform.rotation),
+            hw_session_config.transform.flip_horizontal ? "true" : "false",
+            hw_session_config.transform.flip_vertical ? "true" : "false");
+    } else if (hw_rotator_session.mode == kRotatorOffline) {
+      DLOGI("rotator = %s, rotation = %d, flip_horizontal = %s, flip_vertical = %s",
+            "offline rotator", INT(hw_session_config.transform.rotation),
+            hw_session_config.transform.flip_horizontal ? "true" : "false",
+            hw_session_config.transform.flip_vertical ? "true" : "false");
+    }
+    if (hw_config.use_solidfill_stage) {
+      HWSolidfillStage &hw_solidfill_stage = hw_config.hw_solidfill_stage;
+      LayerSolidFill &solid_fill_info = hw_solidfill_stage.solid_fill_info;
+      DLOGI("HW Solid fill info: z_order = %d, color = %d", hw_solidfill_stage.z_order,
+            hw_solidfill_stage.color);
+      DLOGI("bit_depth = %d, red = %d, green = %d, blue = %d, alpha = %d",
+            solid_fill_info.bit_depth, solid_fill_info.red, solid_fill_info.green,
+            solid_fill_info.blue, solid_fill_info.alpha);
+    }
+    for (uint32_t count = 0; count < 2; count++) {
+      HWPipeInfo &left_pipe = hw_config.left_pipe;
+      HWPipeInfo &right_pipe = hw_config.right_pipe;
+      HWPipeInfo &pipe_info = (count == 0) ? left_pipe : right_pipe;
+      HWScaleData &scale_data = pipe_info.scale_data;
+      if (!pipe_info.valid) {
+        continue;
+      }
+      std::string pipe = (count == 0) ? "left_pipe" : "right_pipe";
+      DLOGI("pipe = %s, pipe_id = %d, z_order = %d, flags = 0x%X",
+           pipe.c_str(), pipe_info.pipe_id, pipe_info.z_order, pipe_info.flags);
+      DLOGI("src_rect: x = %d, y = %d, w = %d, h = %d", INT(pipe_info.src_roi.left),
+            INT(pipe_info.src_roi.top), INT(pipe_info.src_roi.right - pipe_info.src_roi.left),
+            INT(pipe_info.src_roi.bottom - pipe_info.src_roi.top));
+      DLOGI("dst_rect: x = %d, y = %d, w = %d, h = %d", INT(pipe_info.dst_roi.left),
+            INT(pipe_info.dst_roi.top), INT(pipe_info.dst_roi.right - pipe_info.dst_roi.left),
+            INT(pipe_info.dst_roi.bottom - pipe_info.dst_roi.top));
+      DLOGI("excl_rect: left = %d, top = %d, right = %d, bottom = %d",
+            INT(pipe_info.excl_rect.left), INT(pipe_info.excl_rect.top),
+            INT(pipe_info.excl_rect.right), INT(pipe_info.excl_rect.bottom));
+      if (scale_data.enable.scale) {
+      DLOGI("HWScaleData enable flags: scale = %s, direction_detection = %s, detail_enhance = %s,"
+            " dyn_exp_disable = %s", scale_data.enable.scale ? "true" : "false",
+            scale_data.enable.direction_detection ? "true" : "false",
+            scale_data.enable.detail_enhance ? "true" : "false",
+            scale_data.enable.dyn_exp_disable ? "true" : "false");
+      DLOGI("lut_flags: lut_swap = 0x%X, lut_dir_wr = 0x%X, lut_y_cir_wr = 0x%X, "
+            "lut_uv_cir_wr = 0x%X, lut_y_sep_wr = 0x%X, lut_uv_sep_wr = 0x%X",
+            scale_data.lut_flag.lut_swap, scale_data.lut_flag.lut_dir_wr,
+            scale_data.lut_flag.lut_y_cir_wr, scale_data.lut_flag.lut_uv_cir_wr,
+            scale_data.lut_flag.lut_y_sep_wr, scale_data.lut_flag.lut_uv_sep_wr);
+      DLOGI("dir_lut_idx = %d, y_rgb_cir_lut_idx = %d, uv_cir_lut_idx = %d, "
+            "y_rgb_sep_lut_idx = %d, uv_sep_lut_idx = %d", scale_data.dir_lut_idx,
+            scale_data.y_rgb_cir_lut_idx, scale_data.uv_cir_lut_idx,
+            scale_data.y_rgb_sep_lut_idx, scale_data.uv_sep_lut_idx);
+      }
+    }
+  }
 }
 
 }  // namespace sdm
