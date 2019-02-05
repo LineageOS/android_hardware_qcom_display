@@ -420,3 +420,25 @@ extern "C" int controlPartialUpdate(int dpy, int mode) {
     return err;
 }
 
+// returns 0 if composer is up
+extern "C" int waitForComposerInit() {
+    int status = false;
+    sp<IQService> binder = getBinder();
+    if (binder == NULL) {
+        sleep(2);
+        binder = getBinder();
+    }
+
+    if (binder != NULL) {
+        Parcel inParcel, outParcel;
+        binder->dispatch(IQService::GET_COMPOSER_STATUS, &inParcel, &outParcel);
+        status = !!outParcel.readInt32();
+        if (!status) {
+            sleep(2);
+            binder->dispatch(IQService::GET_COMPOSER_STATUS, &inParcel, &outParcel);
+            status = !!outParcel.readInt32();
+        }
+    }
+
+    return !status;
+}

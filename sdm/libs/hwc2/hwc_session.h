@@ -240,6 +240,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   android::status_t GetDsiClk(const android::Parcel *input_parcel, android::Parcel *output_parcel);
   android::status_t GetSupportedDsiClk(const android::Parcel *input_parcel,
                                        android::Parcel *output_parcel);
+  android::status_t getComposerStatus();
 
   void Refresh(hwc2_display_t display);
   void HotPlug(hwc2_display_t display, HWC2::Connection state);
@@ -262,6 +263,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   qService::QService *qservice_ = nullptr;
   HWCSocketHandler socket_handler_;
   bool hdmi_is_primary_ = false;
+  bool is_composer_up_ = false;
   Locker callbacks_lock_;
 };
 
