@@ -334,6 +334,16 @@ void HWPeripheralDRM::SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info
   }
 }
 
+DisplayError HWPeripheralDRM::TeardownConcurrentWriteback(void) {
+  if (cwb_config_.enabled) {
+    drm_mgr_intf_->UnregisterDisplay(cwb_config_.token);
+    cwb_config_.enabled = false;
+    registry_.Clear();
+  }
+
+  return kErrorNone;
+}
+
 DisplayError HWPeripheralDRM::SetupConcurrentWritebackModes() {
   // To setup Concurrent Writeback topology, get the Connector ID of Virtual display
   if (drm_mgr_intf_->RegisterDisplay(DRMDisplayType::VIRTUAL, &cwb_config_.token)) {
@@ -402,9 +412,7 @@ void HWPeripheralDRM::PostCommitConcurrentWriteback(LayerBuffer *output_buffer) 
   bool enabled = hw_resource_.has_concurrent_writeback && output_buffer;
 
   if (!enabled) {
-    drm_mgr_intf_->UnregisterDisplay(cwb_config_.token);
-    cwb_config_.enabled = false;
-    registry_.Clear();
+    TeardownConcurrentWriteback();
   }
 }
 

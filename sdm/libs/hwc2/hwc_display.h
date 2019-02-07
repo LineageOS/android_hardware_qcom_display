@@ -157,6 +157,9 @@ class HWCDisplay : public DisplayEventHandler {
   virtual DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
   virtual void GetPanelResolution(uint32_t *width, uint32_t *height);
   virtual std::string Dump();
+  virtual DisplayError TeardownConcurrentWriteback(void) {
+    return kErrorNotSupported;
+  }
 
   // Captures frame output in the buffer specified by output_buffer_info. The API is
   // non-blocking and the client is expected to check operation status later on.
@@ -339,6 +342,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool IsLayerUpdating(HWCLayer *layer);
   uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate);
   virtual void GetUnderScanConfig() { }
+  int32_t SetClientTargetDataSpace(int32_t dataspace);
 
   enum {
     INPUT_LAYER_DUMP,

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -648,6 +648,7 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   hw_panel_info_.min_roi_width = connector_info_.modes[index].wmin;
   hw_panel_info_.min_roi_height = connector_info_.modes[index].hmin;
   hw_panel_info_.needs_roi_merge = connector_info_.modes[index].roi_merge;
+  hw_panel_info_.transfer_time_us = connector_info_.modes[index].transfer_time_us;
   hw_panel_info_.dynamic_fps = connector_info_.dynamic_fps;
   hw_panel_info_.qsync_support = connector_info_.qsync_support;
   drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
@@ -686,7 +687,6 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   hw_panel_info_.primaries.green[1] = connector_info_.panel_hdr_prop.display_primaries[5];
   hw_panel_info_.primaries.blue[0] = connector_info_.panel_hdr_prop.display_primaries[6];
   hw_panel_info_.primaries.blue[1] = connector_info_.panel_hdr_prop.display_primaries[7];
-  hw_panel_info_.transfer_time_us = connector_info_.transfer_time_us;
   hw_panel_info_.dyn_bitclk_support = connector_info_.dyn_bitclk_support;
 
   // no supprt for 90 rotation only flips or 180 supported
@@ -1939,6 +1939,11 @@ void HWDeviceDRM::AddDimLayerIfNeeded() {
     solid_fills_.clear();
     AddSolidfillStage(sf, 0xFF);
     SetSolidfillStages();
+  }
+
+  if (!secure_display_active_) {
+    DRMSecurityLevel crtc_security_level = DRMSecurityLevel::SECURE_NON_SECURE;
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_SECURITY_LEVEL, token_.crtc_id, crtc_security_level);
   }
 }
 
