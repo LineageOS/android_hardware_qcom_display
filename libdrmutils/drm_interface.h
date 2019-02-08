@@ -540,6 +540,7 @@ struct DRMPlaneTypeInfo {
   bool multirect_prop_present = false;
   InlineRotationVersion inrot_version;  // inline rotation version
   std::vector<std::pair<uint32_t, uint64_t>> inrot_fmts_supported;
+  float true_inline_dwnscale_rt;
   bool inverse_pma = false;
   uint32_t dgm_csc_version = 0;  // csc used with DMA
   std::map<DRMTonemapLutType, uint32_t> tonemap_lut_version_map = {};

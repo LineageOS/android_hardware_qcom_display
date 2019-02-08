@@ -65,6 +65,8 @@ class HWInfoDRM: public HWInfoInterface {
   DisplayError GetRotatorSupportedFormats(uint32_t v4l2_index, HWResourceInfo *hw_resource);
   void PopulateSupportedFmts(HWSubBlockType sub_blk_type, const sde_drm::DRMPlaneTypeInfo  &info,
                              HWResourceInfo *hw_resource);
+  void PopulateSupportedInlineFmts(const sde_drm::DRMPlaneTypeInfo &info,
+                                   HWResourceInfo *hw_resource);
   void PopulatePipeCaps(const sde_drm::DRMPlaneTypeInfo &info, HWResourceInfo *hw_resource);
 
   sde_drm::DRMManagerInterface *drm_mgr_intf_ = {};

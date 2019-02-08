@@ -379,7 +379,6 @@ void DRMPlane::GetTypeInfo(const PropertyMap &prop_map) {
   const char *fmt_str = reinterpret_cast<const char *>(blob->data);
   info->max_linewidth = 2560;
   info->max_scaler_linewidth = 2560;
-  info->max_rotation_linewidth = 1088;
   info->max_upscale = 1;
   info->max_downscale = 1;
   info->max_horizontal_deci = 0;
@@ -408,6 +407,8 @@ void DRMPlane::GetTypeInfo(const PropertyMap &prop_map) {
   string block_sec_ui = "block_sec_ui=";
   string true_inline_rot_rev = "true_inline_rot_rev=";
   string inline_rot_pixel_formats = "inline_rot_pixel_formats=";
+  string true_inline_dwnscale_rt = "true_inline_dwnscale_rt=";
+  string true_inline_max_height = "true_inline_max_height=";
 
   while (std::getline(stream, line)) {
     if (line.find(inline_rot_pixel_formats) != string::npos) {
@@ -441,6 +442,10 @@ void DRMPlane::GetTypeInfo(const PropertyMap &prop_map) {
     } else if (line.find(true_inline_rot_rev) != string::npos) {
       info->inrot_version =
         PopulateInlineRotationVersion(std::stoi(line.erase(0, true_inline_rot_rev.length())));
+    } else if (line.find(true_inline_dwnscale_rt) != string::npos) {
+      info->true_inline_dwnscale_rt = std::stof(line.erase(0, true_inline_dwnscale_rt.length()));
+    } else if (line.find(true_inline_max_height) != string::npos) {
+      info->max_rotation_linewidth = std::stoi(line.erase(0, true_inline_max_height.length()));
     }
   }
 

@@ -249,7 +249,6 @@ struct InlineRotationInfo {
   InlineRotationVersion inrot_version = kInlineRotationNone;
   std::vector<LayerBufferFormat> inrot_fmts_supported;
   float max_downscale_rt = 2.2f;    // max downscale real time display
-  float max_downscale_nrt = 4.0f;   // max downsscale non-real time display
 };
 
 struct HWResourceInfo {
