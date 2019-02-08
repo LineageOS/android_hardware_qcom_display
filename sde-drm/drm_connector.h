@@ -38,6 +38,7 @@
 #include <memory>
 #include <drm/msm_drm.h>
 #include <mutex>
+#include <set>
 #include "drm_pp_manager.h"
 
 #include "drm_utils.h"
@@ -57,6 +58,7 @@ class DRMConnector {
   void GetType(uint32_t *conn_type) { *conn_type = drm_connector_->connector_type; }
   void Perform(DRMOps code, drmModeAtomicReq *req, va_list args);
   int IsConnected() { return (DRM_MODE_CONNECTED == drm_connector_->connection); }
+  int GetPossibleEncoders(std::set<uint32_t> *possible_encoders);
   void Dump();
 
  private:
@@ -65,6 +67,7 @@ class DRMConnector {
   void ParseCapabilities(uint64_t blob_id, drm_panel_hdr_properties *hdr_info);
   void ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info);
   void ParseCapabilities(uint64_t blob_id, drm_msm_ext_hdr_properties *hdr_info);
+  void ParseCapabilities(uint64_t blob_id, std::vector<uint8_t> *edid);
   void SetROI(drmModeAtomicReq *req, uint32_t obj_id, uint32_t num_roi,
               DRMRect *conn_rois);
 
@@ -85,10 +88,12 @@ class DRMConnectorManager {
   void DumpByID(uint32_t id);
   int Reserve(DRMDisplayType disp_type, DRMDisplayToken *token);
   int Reserve(uint32_t conn_id, DRMDisplayToken *token);
-  void Free(const DRMDisplayToken &token);
+  void Free(DRMDisplayToken *token);
   void Perform(DRMOps code, uint32_t obj_id, drmModeAtomicReq *req, va_list args);
   int GetConnectorInfo(uint32_t conn_id, DRMConnectorInfo *info);
   void GetConnectorList(std::vector<uint32_t> *conn_ids);
+  int GetPossibleEncoders(uint32_t connector_id, std::set<uint32_t> *possible_encoders);
+
   ~DRMConnectorManager() {}
 
  private:

@@ -35,6 +35,8 @@
 #include <map>
 #include <memory>
 #include <vector>
+#include <utility>
+#include <set>
 
 #include "drm_interface.h"
 #include "drm_utils.h"
@@ -44,10 +46,18 @@ namespace sde_drm {
 class DRMEncoder {
  public:
   explicit DRMEncoder(int fd) : fd_(fd) {}
+  DRMEncoder(int fd, uint32_t id, uint32_t type) : fd_(fd), fake_id_(id), fake_type_(type) {}
   void InitAndParse(drmModeEncoder *encoder);
   DRMStatus GetStatus() { return status_; }
   void GetInfo(DRMEncoderInfo *info);
-  void GetType(uint32_t *encoder_type) { *encoder_type = drm_encoder_->encoder_type; }
+  void GetType(uint32_t *encoder_type) {
+    drm_encoder_ ? *encoder_type = drm_encoder_->encoder_type
+      : *encoder_type = fake_type_;
+  }
+  void GetId(uint32_t *encoder_id) {
+   drm_encoder_ ? *encoder_id = drm_encoder_->encoder_id
+      : *encoder_id = fake_id_;
+  }
   void Dump();
   void Lock();
   void Unlock();
@@ -58,6 +68,10 @@ class DRMEncoder {
   drmModeEncoder *drm_encoder_ = {};
   DRMStatus status_ = DRMStatus::FREE;
   DRMEncoderInfo encoder_info_ = {};
+
+  // Userspace injected data, only used for creating object not reported by the driver
+  uint32_t fake_id_;
+  uint32_t fake_type_;
 };
 
 class DRMEncoderManager {
@@ -65,12 +79,12 @@ class DRMEncoderManager {
   explicit DRMEncoderManager(int fd) : fd_(fd) {}
   ~DRMEncoderManager();
   void Init(drmModeRes *res);
+  void InsertSecondaryDSI();
   void DeInit() {}
   void DumpAll();
   void DumpByID(uint32_t id);
-  int Reserve(DRMDisplayType disp_type, DRMDisplayToken *token);
-  int Reserve(int32_t display_id, DRMDisplayToken *token);
-  void Free(const DRMDisplayToken &token);
+  int Reserve(std::set<uint32_t> possible_encoders, DRMDisplayToken *token);
+  void Free(DRMDisplayToken *token);
   int GetEncoderInfo(uint32_t encoder_id, DRMEncoderInfo *info);
   int GetEncoderList(std::vector<uint32_t> *encoder_ids);
 

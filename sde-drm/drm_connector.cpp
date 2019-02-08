@@ -57,6 +57,7 @@ using std::unique_ptr;
 using std::map;
 using std::mutex;
 using std::lock_guard;
+using std::set;
 
 static uint8_t ON = 0;
 static uint8_t DOZE = 1;
@@ -295,9 +296,16 @@ int DRMConnectorManager::Reserve(uint32_t conn_id, DRMDisplayToken *token) {
   return ret;
 }
 
-void DRMConnectorManager::Free(const DRMDisplayToken &token) {
+int DRMConnectorManager::GetPossibleEncoders(uint32_t connector_id,
+                                             set<uint32_t> *possible_encoders) {
   lock_guard<mutex> lock(lock_);
-  connector_pool_[token.conn_id]->Unlock();
+  return connector_pool_[connector_id]->GetPossibleEncoders(possible_encoders);
+}
+
+void DRMConnectorManager::Free(DRMDisplayToken *token) {
+  lock_guard<mutex> lock(lock_);
+  connector_pool_.at(token->conn_id)->Unlock();
+  token->conn_id = 0;
 }
 
 // ==============================================================================================//
@@ -514,6 +522,19 @@ void DRMConnector::ParseCapabilities(uint64_t blob_id, drm_msm_ext_hdr_propertie
   drmModeFreePropertyBlob(blob);
 }
 
+void DRMConnector::ParseCapabilities(uint64_t blob_id, std::vector<uint8_t> *edid) {
+  drmModePropertyBlobRes *blob = drmModeGetPropertyBlob(fd_, blob_id);
+  if (!blob) {
+    return;
+  }
+
+  uint8_t *edid_blob = (uint8_t*)(blob->data);
+  uint32_t length = blob->length;
+  (*edid).assign(edid_blob, edid_blob + length);
+
+  drmModeFreePropertyBlob(blob);
+}
+
 int DRMConnector::GetInfo(DRMConnectorInfo *info) {
   // Reload each time since for some connectors like Virtual, modes may change
   uint32_t conn_id = drm_connector_->connector_id;
@@ -592,6 +613,12 @@ int DRMConnector::GetInfo(DRMConnectorInfo *info) {
                           std::find(props->props, props->props + props->count_props,
                                     prop_mgr_.GetPropertyId(DRMProperty::TOPOLOGY_CONTROL)));
     info->topology_control = props->prop_values[index];
+  }
+  if (prop_mgr_.IsPropertyAvailable(DRMProperty::EDID)) {
+    index = std::distance(props->props,
+                          std::find(props->props, props->props + props->count_props,
+                                    prop_mgr_.GetPropertyId(DRMProperty::EDID)));
+    ParseCapabilities(props->prop_values[index], &info->edid);
   }
 
   drmModeFreeObjectProperties(props);
@@ -747,6 +774,24 @@ void DRMConnector::SetROI(drmModeAtomicReq *req, uint32_t obj_id, uint32_t num_r
   drmModeAtomicAddProperty(req, obj_id, prop_mgr_.GetPropertyId(DRMProperty::ROI_V1),
                            reinterpret_cast<uint64_t>(&roi_v1));
 #endif
+}
+
+int DRMConnector::GetPossibleEncoders(set<uint32_t> *possible_encoders) {
+  if (!possible_encoders) {
+    return -EINVAL;
+  }
+
+  uint32_t count_enc = drm_connector_->count_encoders;
+  if (count_enc == 0) {
+    DRM_LOGW("No possible encoders for connector %u", drm_connector_->connector_id);
+  }
+
+  (*possible_encoders).clear();
+  for (uint32_t i = 0; i < count_enc; i++) {
+    (*possible_encoders).insert(drm_connector_->encoders[i]);
+  }
+
+  return 0;
 }
 
 void DRMConnector::Dump() {

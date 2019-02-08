@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -336,7 +336,7 @@ void HWPeripheralDRM::SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info
 
 DisplayError HWPeripheralDRM::TeardownConcurrentWriteback(void) {
   if (cwb_config_.enabled) {
-    drm_mgr_intf_->UnregisterDisplay(cwb_config_.token);
+    drm_mgr_intf_->UnregisterDisplay(&(cwb_config_.token));
     cwb_config_.enabled = false;
     registry_.Clear();
   }
@@ -369,7 +369,7 @@ DisplayError HWPeripheralDRM::SetupConcurrentWritebackModes() {
   ret = drmIoctl(dev_fd_, DRM_IOCTL_SDE_WB_CONFIG, &cwb_cfg);
 #endif
   if (ret) {
-    drm_mgr_intf_->UnregisterDisplay(cwb_config_.token);
+    drm_mgr_intf_->UnregisterDisplay(&(cwb_config_.token));
     DLOGE("Dump CWBConfig: mode_count %d flags %x", cwb_cfg.count_modes, cwb_cfg.flags);
     DumpConnectorModeInfo();
     return kErrorHardware;

@@ -103,7 +103,7 @@ class DRMCrtcManager {
   void DumpByID(uint32_t id);
   int Reserve(DRMDisplayType disp_type, DRMDisplayToken *token);
   int Reserve(int32_t display_id, DRMDisplayToken *token);
-  void Free(const DRMDisplayToken &token);
+  void Free(DRMDisplayToken *token);
   void Perform(DRMOps code, uint32_t obj_id, drmModeAtomicReq *req, va_list args);
   int GetCrtcInfo(uint32_t crtc_id, DRMCrtcInfo *info);
   void SetScalerLUT(const DRMScalerLUTInfo &lut_info);
