@@ -1122,14 +1122,17 @@ hwc2_function_pointer_t HWCSession::GetFunction(struct hwc2_device *device,
     case HWC2::FunctionDescriptor::GetRenderIntents:
       return AsFP<HWC2_PFN_GET_RENDER_INTENTS>(GetRenderIntents);
     case HWC2::FunctionDescriptor::SetColorModeWithRenderIntent:
-      return AsFP<HWC2_PFN_SET_COLOR_MODE_WITH_RENDER_INTENT>(
-          HWCSession::SetColorModeWithRenderIntent);
+      return AsFP<HWC2_PFN_SET_COLOR_MODE_WITH_RENDER_INTENT>
+             (HWCSession::SetColorModeWithRenderIntent);
     case HWC2::FunctionDescriptor::GetDataspaceSaturationMatrix:
       return AsFP<HWC2_PFN_GET_DATASPACE_SATURATION_MATRIX>(GetDataspaceSaturationMatrix);
     case HWC2::FunctionDescriptor::GetPerFrameMetadataKeys:
       return AsFP<HWC2_PFN_GET_PER_FRAME_METADATA_KEYS>(GetPerFrameMetadataKeys);
     case HWC2::FunctionDescriptor::SetLayerPerFrameMetadata:
       return AsFP<HWC2_PFN_SET_LAYER_PER_FRAME_METADATA>(SetLayerPerFrameMetadata);
+    case HWC2::FunctionDescriptor::GetDisplayIdentificationData:
+      return AsFP<HWC2_PFN_GET_DISPLAY_IDENTIFICATION_DATA>
+             (HWCSession::GetDisplayIdentificationData);
     default:
       DLOGD("Unknown/Unimplemented function descriptor: %d (%s)", int_descriptor,
             to_string(descriptor).c_str());
@@ -2930,6 +2933,21 @@ int32_t HWCSession::GetReadbackBufferFence(hwc2_device_t *device, hwc2_display_t
   }
 
   return CallDisplayFunction(device, display, &HWCDisplay::GetReadbackBufferFence, release_fence);
+}
+
+int32_t HWCSession::GetDisplayIdentificationData(hwc2_device_t *device, hwc2_display_t display,
+                                                 uint8_t *outPort, uint32_t *outDataSize,
+                                                 uint8_t *outData) {
+  if (!outPort || !outDataSize) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (display >= kNumDisplays) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  return CallDisplayFunction(device, display, &HWCDisplay::GetDisplayIdentificationData, outPort,
+                             outDataSize, outData);
 }
 
 android::status_t HWCSession::SetQSyncMode(const android::Parcel *input_parcel) {

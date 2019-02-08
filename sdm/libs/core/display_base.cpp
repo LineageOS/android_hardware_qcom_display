@@ -1564,6 +1564,15 @@ DisplayError DisplayBase::InitializeColorModes() {
   return kErrorNone;
 }
 
+DisplayError DisplayBase::GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
+                                                       uint8_t *out_data) {
+  if (!out_port || !out_data_size) {
+    return kErrorParameters;
+  }
+
+  return hw_intf_->GetDisplayIdentificationData(out_port, out_data_size, out_data);
+}
+
 DisplayError DisplayBase::GetClientTargetSupport(uint32_t width, uint32_t height,
                                                  LayerBufferFormat format,
                                                  const ColorMetaData &color_metadata) {

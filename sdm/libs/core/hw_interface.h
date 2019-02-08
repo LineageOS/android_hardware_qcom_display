@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -124,6 +124,8 @@ class HWInterface {
   virtual DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate) = 0;
   virtual DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate) = 0;
   virtual DisplayError TeardownConcurrentWriteback(void) = 0;
+  virtual DisplayError GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
+                                                    uint8_t *out_data) = 0;
 
  protected:
   virtual ~HWInterface() { }
