@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -426,7 +426,7 @@ Return<void> HWCSession::getHDRCapabilities(IDisplayConfig::DisplayType dpy,
       break;
     }
 
-    SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_idx]);
+    SCOPE_LOCK(locker_[disp_id]);
     HWCDisplay *hwc_display = hwc_display_[disp_idx];
     if (!hwc_display) {
       DLOGW("Display = %d is not connected.", disp_idx);
@@ -436,11 +436,14 @@ Return<void> HWCSession::getHDRCapabilities(IDisplayConfig::DisplayType dpy,
 
     // query number of hdr types
     uint32_t out_num_types = 0;
-    if (hwc_display->GetHdrCapabilities(&out_num_types, nullptr, nullptr, nullptr, nullptr)
-        != HWC2::Error::None) {
+    float out_max_luminance = 0.0f;
+    float out_max_average_luminance = 0.0f;
+    float out_min_luminance = 0.0f;
+    if (hwc_display->GetHdrCapabilities(&out_num_types, nullptr, &out_max_luminance,
+                                        &out_max_average_luminance, &out_min_luminance)
+                                        != HWC2::Error::None) {
       break;
     }
-
     if (!out_num_types) {
       error = 0;
       break;
@@ -449,9 +452,6 @@ Return<void> HWCSession::getHDRCapabilities(IDisplayConfig::DisplayType dpy,
     // query hdr caps
     hdr_caps.supportedHdrTypes.resize(out_num_types);
 
-    float out_max_luminance = 0.0f;
-    float out_max_average_luminance = 0.0f;
-    float out_min_luminance = 0.0f;
     if (hwc_display->GetHdrCapabilities(&out_num_types, hdr_caps.supportedHdrTypes.data(),
                                         &out_max_luminance, &out_max_average_luminance,
                                         &out_min_luminance) == HWC2::Error::None) {
@@ -638,7 +638,7 @@ Return<bool> HWCSession::isPowerModeOverrideSupported(uint32_t disp_id) {
 }
 
 Return<bool> HWCSession::isHDRSupported(uint32_t disp_id) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_id]);
+  SCOPE_LOCK(locker_[disp_id]);
   HWCDisplay *hwc_display = hwc_display_[disp_id];
   if (!hwc_display) {
     DLOGW("Display = %d is not connected.", disp_id);
@@ -647,8 +647,12 @@ Return<bool> HWCSession::isHDRSupported(uint32_t disp_id) {
 
   // query number of hdr types
   uint32_t out_num_types = 0;
-  if (hwc_display->GetHdrCapabilities(&out_num_types, nullptr, nullptr, nullptr, nullptr)
-      != HWC2::Error::None) {
+  float out_max_luminance = 0.0f;
+  float out_max_average_luminance = 0.0f;
+  float out_min_luminance = 0.0f;
+  if (hwc_display->GetHdrCapabilities(&out_num_types, nullptr, &out_max_luminance,
+                                      &out_max_average_luminance, &out_min_luminance)
+                                      != HWC2::Error::None) {
     return false;
   }
 
