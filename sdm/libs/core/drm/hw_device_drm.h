@@ -122,6 +122,8 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError SetDisplayDppsAdROI(void *payload) { return kErrorNotSupported; }
   virtual DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate);
   virtual DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate);
+  virtual DisplayError GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
+                                                    uint8_t *out_data);
 
   enum {
     kHWEventVSync,

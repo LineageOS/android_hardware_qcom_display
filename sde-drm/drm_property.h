@@ -151,6 +151,7 @@ enum struct DRMProperty {
   QSYNC_MODE,
   IDLE_PC_STATE,
   TOPOLOGY_CONTROL,
+  EDID,
 
   // Insert above
   MAX

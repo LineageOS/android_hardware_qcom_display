@@ -39,6 +39,7 @@
 #include <set>
 #include <utility>
 #include <vector>
+#include <iterator>
 
 #include "drm_encoder.h"
 #include "drm_utils.h"
@@ -47,17 +48,18 @@ namespace sde_drm {
 
 using std::unique_ptr;
 using std::map;
+using std::pair;
+using std::make_pair;
+using std::set;
+using std::distance;
 
 #define __CLASS__ "DRMEncoderManager"
 
 DRMEncoderManager::~DRMEncoderManager() {}
 
 void DRMEncoderManager::Init(drmModeRes *resource) {
-  std::set<uint32_t> tmds_encoders;
-  std::set<uint32_t> dpmst_encoders;
   for (int i = 0; i < resource->count_encoders; i++) {
     unique_ptr<DRMEncoder> encoder(new DRMEncoder(fd_));
-    uint32_t encoder_type;
     drmModeEncoder *libdrm_encoder = drmModeGetEncoder(fd_, resource->encoders[i]);
     if (!libdrm_encoder) {
       DRM_LOGE("Critical error: drmModeGetEncoder() failed for encoder %d.", resource->encoders[i]);
@@ -65,36 +67,50 @@ void DRMEncoderManager::Init(drmModeRes *resource) {
     }
     encoder->InitAndParse(libdrm_encoder);
     encoder_pool_[resource->encoders[i]] = std::move(encoder);
-    encoder_pool_[resource->encoders[i]]->GetType(&encoder_type);
-    switch (encoder_type) {
-      case DRM_MODE_ENCODER_TMDS:
-        tmds_encoders.insert(resource->encoders[i]);
-        break;
-      case DRM_MODE_ENCODER_DPMST:
-        dpmst_encoders.insert(resource->encoders[i]);
-        break;
-      default:
-        break;
+  }
+
+  // TODO(user): Remove call when driver reporting of encoders is consistent across all use cases
+  InsertSecondaryDSI();
+}
+
+/*
+ * This API is a workaround for maintaining appropriate HW port numbers for displays on platforms
+ * that can dynamically change between single panel and secondary panel uses cases. It is required
+ * that the port # for a pixel stream remains consistent, so userspace must account for the
+ * possiblility of the secondary panel use case, even during single panel use case.
+
+ * Driver rearchitecture for encoder creation is under discussion for future chipsets to avoid the
+ * need of this function.
+*/
+void DRMEncoderManager::InsertSecondaryDSI() {
+  uint32_t first_dsi_id = 0;
+  bool second_dsi_found = false;
+  bool first_dsi_found = false;
+
+  for (auto encoder = encoder_pool_.begin(); encoder != encoder_pool_.end(); encoder++) {
+    std::unique_ptr<DRMEncoder> &encoder_ptr = encoder->second;
+    uint32_t encoder_type;
+    encoder_ptr->GetType(&encoder_type);
+    if (encoder_type == DRM_MODE_ENCODER_DSI) {
+      if (!first_dsi_found) {
+        encoder_ptr->GetId(&first_dsi_id);
+        first_dsi_found = true;
+      } else if (first_dsi_found) {
+      // Secondary panel use case is active, below logic is skipped
+      second_dsi_found = true;
+      break;
+      }
     }
   }
-  DRM_LOGI("Found %d TMDS encoders and %d DPMST encoders.", tmds_encoders.size(),
-           dpmst_encoders.size());
-  // DRM_MODE_ENCODER_TMDS type is for DVI, HDMI and (embedded) DisplayPort.
-  // DRM_MODE_ENCODER_DPMST type is for special fake encoders used to allow mutliple DP MST streams
-  // to share one physical encoder.
-  // Maximum number of DRMDisplayType::TV displays supported is maximum of TMDS and DPMST encoders.
-  // DRMEncoderManager is used only for discovering number of display interfaces supported and for
-  // keeping track of display interfaces used/available. Reserving DRMDisplayType::TV does not
-  // distinguish between TMDS and DPMST encoders. So remove TMDS/DPMST encoders of the type with
-  // the least encoders. This will ensure HWInfoDRM::GetMaxDisplaysSupported() still works right.
-  if (tmds_encoders.size() < dpmst_encoders.size()) {
-    for (auto iter : tmds_encoders) {
-      encoder_pool_.erase(iter);
-    }
+
+  if (first_dsi_found && !second_dsi_found) {
+    // Single panel use case is active, inject new DSI encoder
+    uint32_t enc_id = first_dsi_id + 1;
+    unique_ptr<DRMEncoder> sec_dsi_enc(new DRMEncoder(fd_, enc_id, DRM_MODE_ENCODER_DSI));
+    encoder_pool_[enc_id] = std::move(sec_dsi_enc);
+    DRM_LOGI("Userspace has inserted secondary panel DSI encoder!");
   } else {
-    for (auto iter : dpmst_encoders) {
-      encoder_pool_.erase(iter);
-    }
+    DRM_LOGI("Userspace did not need to insert secondary panel DSI encoder, it is present.");
   }
 }
 
@@ -130,21 +146,19 @@ int DRMEncoderManager::GetEncoderList(std::vector<uint32_t> *encoder_ids) {
   return 0;
 }
 
-static bool IsTVEncoder(uint32_t type) {
-  return (type == DRM_MODE_ENCODER_TMDS || type == DRM_MODE_ENCODER_DPMST);
-}
-
-int DRMEncoderManager::Reserve(DRMDisplayType disp_type, DRMDisplayToken *token) {
+int DRMEncoderManager::Reserve(set<uint32_t> possible_encoders, DRMDisplayToken *token) {
   int ret = -ENODEV;
-  for (auto &encoder : encoder_pool_) {
-    if (encoder.second->GetStatus() == DRMStatus::FREE) {
-      uint32_t encoder_type;
-      encoder.second->GetType(&encoder_type);
-      if ((disp_type == DRMDisplayType::PERIPHERAL && encoder_type == DRM_MODE_ENCODER_DSI) ||
-          (disp_type == DRMDisplayType::VIRTUAL && encoder_type == DRM_MODE_ENCODER_VIRTUAL) ||
-          (disp_type == DRMDisplayType::TV && IsTVEncoder(encoder_type))) {
-        encoder.second->Lock();
-        token->encoder_id = encoder.first;
+  for (auto encoder = encoder_pool_.begin(); encoder != encoder_pool_.end(); encoder++) {
+    const uint32_t &encoder_id = encoder->first;
+    std::unique_ptr<DRMEncoder> &encoder_ptr = encoder->second;
+    if (encoder_ptr->GetStatus() == DRMStatus::FREE) {
+      // If encoder is found in the set, the encoder is a candidate for selection and the encoder
+      // type for display's connector and encoder-this-iteration are already matched implicitly
+      const bool is_in = possible_encoders.find(encoder_id) != possible_encoders.end();
+      if (is_in) {
+        encoder->second->Lock();
+        token->encoder_id = encoder_id;
+        token->hw_port = distance(encoder_pool_.begin(), encoder) + 1; // 1-indexed port
         ret = 0;
         break;
       }
@@ -153,18 +167,10 @@ int DRMEncoderManager::Reserve(DRMDisplayType disp_type, DRMDisplayToken *token)
   return ret;
 }
 
-int DRMEncoderManager::Reserve(int32_t display_id, DRMDisplayToken *token) {
-  int ret = -ENODEV;
-  return ret;
-}
-
-void DRMEncoderManager::Free(const DRMDisplayToken &token) {
-  auto iter = encoder_pool_.find(token.encoder_id);
-  if (iter != encoder_pool_.end()) {
-    iter->second->Unlock();
-  } else {
-    DRM_LOGW("Failed! encoder_id %u not found!", token.encoder_id);
-  }
+void DRMEncoderManager::Free(DRMDisplayToken *token) {
+  encoder_pool_.at(token->encoder_id)->Unlock();
+  token->encoder_id = 0;
+  token->hw_port = 0;
 }
 
 // ==============================================================================================//
@@ -196,8 +202,14 @@ void DRMEncoder::InitAndParse(drmModeEncoder *encoder) {
 }
 
 void DRMEncoder::Dump() {
-  DRM_LOGI("id: %d\tencoder_type: %d fd = %d\n", drm_encoder_->encoder_id,
-           drm_encoder_->encoder_type, fd_);
+  if (drm_encoder_) {
+    DRM_LOGI("[driver-reported] id: %u encoder_type: %u crtc id: %u possible_crtcs: %u"
+             "possible_clones: %u fd = %d",
+             drm_encoder_->encoder_id, drm_encoder_->encoder_type, drm_encoder_->crtc_id,
+             drm_encoder_->possible_crtcs, drm_encoder_->possible_clones, fd_);
+  } else {
+    DRM_LOGI("[userspace-only] id: %u encoder_type: %u fd = %d ", fake_id_, fake_type_, fd_);
+  }
 }
 
 }  // namespace sde_drm

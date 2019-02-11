@@ -146,6 +146,7 @@ DRMProperty DRMPropertyManager::GetPropertyEnum(const std::string &name) const {
   if (name == "qsync_mode") { return DRMProperty::QSYNC_MODE; }
   if (name == "idle_pc_state") { return DRMProperty::IDLE_PC_STATE; }
   if (name == "topology_control") { return DRMProperty::TOPOLOGY_CONTROL; }
+  if (name == "EDID") { return DRMProperty::EDID; }
 
   return DRMProperty::INVALID;
 }

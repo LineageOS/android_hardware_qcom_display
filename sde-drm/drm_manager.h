@@ -50,7 +50,7 @@ class DRMManager : public DRMManagerInterface {
   virtual ~DRMManager();
   virtual int RegisterDisplay(DRMDisplayType disp_type, DRMDisplayToken *token);
   virtual int RegisterDisplay(int32_t display_id, DRMDisplayToken *token);
-  virtual void UnregisterDisplay(const DRMDisplayToken &token);
+  virtual void UnregisterDisplay(DRMDisplayToken *token);
   virtual void GetPlanesInfo(DRMPlanesInfo *info);
   virtual int GetCrtcInfo(uint32_t crtc_id, DRMCrtcInfo *info);
   virtual int GetConnectorInfo(uint32_t conn_id, DRMConnectorInfo *info);

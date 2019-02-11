@@ -236,8 +236,10 @@ int DRMCrtcManager::Reserve(int32_t display_id, DRMDisplayToken *token) {
   return Reserve(DRMDisplayType::PERIPHERAL, token);
 }
 
-void DRMCrtcManager::Free(const DRMDisplayToken &token) {
-  crtc_pool_.at(token.crtc_id)->Unlock();
+void DRMCrtcManager::Free(DRMDisplayToken *token) {
+  crtc_pool_.at(token->crtc_id)->Unlock();
+  token->crtc_id = 0;
+  token->crtc_index = 0;
 }
 
 void DRMCrtcManager::PostValidate(uint32_t crtc_id, bool success) {
