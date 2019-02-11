@@ -299,7 +299,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   }
   // TODO(user): Temporary changes, to be removed when DRM driver supports
   // Partial update with Destination scaler enabled.
-  if (partial_update_control_ == false || disable_pu_one_frame_ ||
+  if (!partial_update_control_ || disable_pu_one_frame_ ||
       disable_pu_on_dest_scaler_) {
     comp_manager_->ControlPartialUpdate(display_comp_ctx_, false /* enable */);
     disable_pu_one_frame_ = false;
