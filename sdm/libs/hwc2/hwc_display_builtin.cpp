@@ -225,7 +225,7 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
 
   if (layer_set_.empty()) {
     // Avoid flush for Command mode panel.
-    flush_ = !IsDisplayCommandMode();
+    flush_ = !(IsDisplayCommandMode() && active_secure_sessions_[kSecureDisplay]);
     validated_ = true;
     return status;
   }
