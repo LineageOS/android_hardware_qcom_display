@@ -8,7 +8,7 @@ LOCAL_VENDOR_MODULE           := true
 LOCAL_C_INCLUDES              := $(common_includes)
 LOCAL_SHARED_LIBRARIES        := $(common_libs) libqdutils libmemalloc \
                                  libsync libdl
-LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdoverlay\"
+LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdoverlay\" -Wno-sign-conversion
 LOCAL_HEADER_LIBRARIES        := generated_kernel_headers
 LOCAL_SRC_FILES := \
       overlay.cpp \

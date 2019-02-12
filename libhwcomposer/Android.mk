@@ -21,7 +21,7 @@ ifeq ($(GET_DISPLAY_SECURE_STATUS_FROM_HWC),true)
 endif
 endif #TARGET_USES_QCOM_BSP
 
-LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdhwcomposer\"
+LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdhwcomposer\" -Wno-sign-conversion -Wno-shorten-64-to-32 -Wno-float-conversion
 LOCAL_HEADER_LIBRARIES        := generated_kernel_headers
 LOCAL_SRC_FILES               := hwc.cpp          \
                                  hwc_utils.cpp    \

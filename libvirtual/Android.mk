@@ -7,7 +7,7 @@ LOCAL_MODULE_TAGS             := optional
 LOCAL_VENDOR_MODULE           := true
 LOCAL_C_INCLUDES              := $(common_includes)
 LOCAL_SHARED_LIBRARIES        := $(common_libs) liboverlay libqdutils libmedia
-LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdvirtual\"
+LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdvirtual\" -Wno-sign-conversion
 LOCAL_HEADER_LIBRARIES        := generated_kernel_headers
 LOCAL_SRC_FILES               := virtual.cpp
 LOCAL_STATIC_LIBRARIES        := libbase
