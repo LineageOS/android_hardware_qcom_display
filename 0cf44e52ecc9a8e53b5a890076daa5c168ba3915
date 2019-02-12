@@ -22,6 +22,30 @@
       "revId": "0cf44e52ecc9a8e53b5a890076daa5c168ba3915",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "38da7698_1efc582b",
+        "filename": "libmemtrack/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 22,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2019-02-12T14:33:59Z",
+      "side": 1,
+      "message": "Belongs to the follow-up change: https://review.lineageos.org/c/LineageOS/android_hardware_qcom_display/+/241196",
+      "parentUuid": "42bb0e91_14050628",
+      "range": {
+        "startLine": 22,
+        "startChar": 0,
+        "endLine": 22,
+        "endChar": 27
+      },
+      "revId": "0cf44e52ecc9a8e53b5a890076daa5c168ba3915",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
     }
   ]
 }
