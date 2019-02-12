@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "42bb0e91_14050628",
+        "filename": "libmemtrack/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 22,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2019-02-12T14:33:02Z",
+      "side": 1,
+      "message": "This belongs to another commit: https://github.com/LineageOS/android_hardware_qcom_display/commit/99236273f5399e65e558e2a0a0a94462045138e0",
+      "range": {
+        "startLine": 22,
+        "startChar": 0,
+        "endLine": 22,
+        "endChar": 27
+      },
+      "revId": "0cf44e52ecc9a8e53b5a890076daa5c168ba3915",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
