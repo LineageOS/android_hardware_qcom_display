@@ -78,7 +78,7 @@ public:
         SET_COLOR_MODE_BY_ID = 36, // Overrides the QDCM mode using the given mode ID
         GET_COMPOSER_STATUS = 37, // Get composer init status-true if primary display init is done
         SET_QSYNC_MODE = 38, // Set qsync mode. 0 - (none)disable qsync, 1 - continuous mode.
-        SET_COLOR_MODE_WITH_RENDER_INTENT = 39,
+        SET_COLOR_MODE_WITH_RENDER_INTENT = 39,  // Overrides the QDCM mode with render intent
         SET_IDLE_PC = 40, // Enable/disable Idle power collapse
         SET_DPPS_AD4_ROI_CONFIG = 41, // Set ad4 roi config for debug
         SET_DSI_CLK = 42, // Set DSI Clk.

@@ -88,6 +88,7 @@ static const std::string kDynamicRangeAttribute = "DynamicRange";
 static const std::string kColorGamutAttribute = "ColorGamut";
 static const std::string kPictureQualityAttribute = "PictureQuality";
 static const std::string kGammaTransferAttribute = "GammaTransfer";
+static const std::string kRenderIntentAttribute = "RenderIntent";
 
 static const std::string kHdr = "hdr";
 static const std::string kSdr = "sdr";

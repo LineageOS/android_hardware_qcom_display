@@ -820,12 +820,13 @@ int32_t HWCSession::SetColorModeWithRenderIntent(hwc2_device_t *device, hwc2_dis
   if (mode < ColorMode::NATIVE || mode > ColorMode::DISPLAY_BT2020) {
     return HWC2_ERROR_BAD_PARAMETER;
   }
-  auto render_intent = static_cast<RenderIntent>(int_render_intent);
-  if ((render_intent < RenderIntent::COLORIMETRIC) ||
-      (render_intent > RenderIntent::TONE_MAP_ENHANCE)) {
-    DLOGE("Invalid RenderIntent: %d", render_intent);
+
+  if ((int_render_intent < 0) || (int_render_intent > MAX_EXTENDED_RENDER_INTENT)) {
+    DLOGE("Invalid RenderIntent: %d", int_render_intent);
     return HWC2_ERROR_BAD_PARAMETER;
   }
+
+  auto render_intent = static_cast<RenderIntent>(int_render_intent);
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::SetColorModeWithRenderIntent,
                                          mode, render_intent);
 }
@@ -1863,7 +1864,7 @@ android::status_t HWCSession::SetColorModeWithRenderIntentOverride(
     const android::Parcel *input_parcel) {
   auto display = static_cast<hwc2_display_t>(input_parcel->readInt32());
   auto mode = static_cast<ColorMode>(input_parcel->readInt32());
-  auto intent = static_cast<RenderIntent>(input_parcel->readInt32());
+  auto int_intent = static_cast<int>(input_parcel->readInt32());
   auto device = static_cast<hwc2_device_t *>(this);
 
   if (mode < ColorMode::NATIVE || mode > ColorMode::DISPLAY_BT2020) {
@@ -1871,11 +1872,12 @@ android::status_t HWCSession::SetColorModeWithRenderIntentOverride(
     return HWC2_ERROR_BAD_PARAMETER;
   }
 
-  if (intent < RenderIntent::COLORIMETRIC || intent > RenderIntent::TONE_MAP_ENHANCE) {
-    DLOGE("Invalid RenderIntent: %d", intent);
+  if ((int_intent < 0) || (int_intent > MAX_EXTENDED_RENDER_INTENT)) {
+    DLOGE("Invalid RenderIntent: %d", int_intent);
     return HWC2_ERROR_BAD_PARAMETER;
   }
 
+  auto intent = static_cast<RenderIntent>(int_intent);
   auto err =
       CallDisplayFunction(device, display, &HWCDisplay::SetColorModeWithRenderIntent, mode, intent);
   if (err != HWC2_ERROR_NONE)
