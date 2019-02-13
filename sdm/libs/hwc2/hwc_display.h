@@ -414,6 +414,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool has_client_composition_ = false;
   DisplayValidateState validate_state_ = kNormalValidate;
   bool first_cycle_ = true;  // false if a display commit has succeeded on the device.
+  int fbt_release_fence_ = -1;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {
