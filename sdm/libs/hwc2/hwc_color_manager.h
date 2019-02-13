@@ -49,9 +49,9 @@ namespace sdm {
 #define INIT_QDCM_DIAG_CLIENT_NAME "QDCMDiagInit"
 #define DEINIT_QDCM_DIAG_CLIENT_NAME "QDCMDiagDeInit"
 
-typedef int (*QDCMDiagInit)(void *ftables);
+typedef void (*QDCMDiagInit)(void *ftables);
 
-typedef int (*QDCMDiagDeInit)(void);
+typedef void (*QDCMDiagDeInit)(void);
 
 // Class to encapsulte all details of managing QDCM operating mode.
 class HWCQDCMModeManager {
