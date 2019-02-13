@@ -874,6 +874,8 @@ DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, int *release_fence)
     *release_fence = static_cast<int>(release_fence_t);
     DLOGD_IF(kTagDriverConfig, "RELEASE fence created: fd:%d", *release_fence);
   }
+  pending_doze_ = false;
+
   return kErrorNone;
 }
 
@@ -898,6 +900,7 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
   }
+  pending_doze_ = false;
 
   return kErrorNone;
 }
@@ -905,15 +908,19 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown) {
 DisplayError HWDeviceDRM::Doze(const HWQosData &qos_data, int *release_fence) {
   DTRACE_SCOPED();
 
+  if (!first_cycle_) {
+    pending_doze_ = true;
+    return kErrorNone;
+  }
+
   SetQOSData(qos_data);
 
   int64_t release_fence_t = -1;
 
-  if (first_cycle_) {
-    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
-    drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
-    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
-  }
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
+  drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
+
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::DOZE);
   if (release_fence) {
@@ -960,6 +967,8 @@ DisplayError HWDeviceDRM::DozeSuspend(const HWQosData &qos_data, int *release_fe
     *release_fence = static_cast<int>(release_fence_t);
     DLOGD_IF(kTagDriverConfig, "RELEASE fence created: fd:%d", *release_fence);
   }
+  pending_doze_ = false;
+
   return kErrorNone;
 }
 
@@ -1180,6 +1189,13 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
   if (first_cycle_) {
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_TOPOLOGY_CONTROL, token_.conn_id,
                               topology_control_);
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
+  } else if (pending_doze_ && !validate) {
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::DOZE);
+    pending_doze_ = false;
   }
 
   // Set CRTC mode, only if display config changes
