@@ -974,6 +974,12 @@ int32_t HWCSession::SetPowerMode(hwc2_device_t *device, hwc2_display_t display, 
 
   hwc_session->UpdateVsyncSource();
   hwc_session->UpdateThrottlingRate();
+
+  // Trigger refresh for doze mode to take effect.
+  if (mode == HWC2::PowerMode::Doze) {
+    hwc_session->Refresh(display);
+  }
+
   return HWC2_ERROR_NONE;
 }
 

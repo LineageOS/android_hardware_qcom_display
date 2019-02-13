@@ -25,6 +25,7 @@
 #include <sys/stat.h>
 #include <utils/constants.h>
 #include <utils/debug.h>
+#include <utils/utils.h>
 #include <utils/formats.h>
 #include <utils/rect.h>
 #include <qd_utils.h>
@@ -951,7 +952,10 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
       }
       hwc_layer->PushBackReleaseFence(merged_fence);
     }
-    ::close(release_fence);
+
+    // Add this release fence onto fbt_release fence.
+    CloseFd(&fbt_release_fence_);
+    fbt_release_fence_ = release_fence;
   }
   current_power_mode_ = mode;
   return HWC2::Error::None;
@@ -1533,6 +1537,10 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
   int32_t &client_target_release_fence =
       client_target_->GetSDMLayer()->input_buffer.release_fence_fd;
   if (client_target_release_fence >= 0) {
+    // Close cached release fence.
+    close(fbt_release_fence_);
+    fbt_release_fence_ = dup(client_target_release_fence);
+    // Close fence returned by driver.
     close(client_target_release_fence);
     client_target_release_fence = -1;
   }
@@ -2346,6 +2354,14 @@ void HWCDisplay::WaitOnPreviousFence() {
       }
     }
     hwc_layer->PushBackReleaseFence(fence);
+  }
+
+  if (fbt_release_fence_ >= 0) {
+    int error = sync_wait(fbt_release_fence_, 1000);
+    if (error < 0) {
+      DLOGW("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
+      return;
+    }
   }
 }
 
