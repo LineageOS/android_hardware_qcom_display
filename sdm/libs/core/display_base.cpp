@@ -686,6 +686,7 @@ std::string DisplayBase::Dump() {
     const char *comp_type = GetName(sdm_layer->composition);
     const char *buffer_format = GetFormatString(input_buffer->format);
     const char *pipe_split[2] = { "Pipe-1", "Pipe-2" };
+    const char *rot_pipe[2] = { "Rot-inl-1", "Rot-inl-2" };
     char idx[8];
 
     snprintf(idx, sizeof(idx), "%d", layer_index);
@@ -743,6 +744,7 @@ std::string DisplayBase::Dump() {
       char z_order[8] = { 0 };
       char color_primary[8] = { 0 };
       char range[8] = { 0 };
+      bool rot = layer_config.use_inline_rot;
 
       HWPipeInfo &pipe = (count == 0) ? layer_config.left_pipe : layer_config.right_pipe;
 
@@ -762,7 +764,7 @@ std::string DisplayBase::Dump() {
       snprintf(range, sizeof(range), "%d", color_metadata.range);
 
       char row[1024];
-      snprintf(row, sizeof(row), format, idx, comp_type, pipe_split[count],
+      snprintf(row, sizeof(row), format, idx, comp_type, rot ? rot_pipe[count] : pipe_split[count],
                pipe.pipe_id, input_buffer->width, input_buffer->height,
                buffer_format, INT(src_roi.left), INT(src_roi.top),
                INT(src_roi.right), INT(src_roi.bottom), INT(dst_roi.left),
