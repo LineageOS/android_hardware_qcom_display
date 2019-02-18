@@ -20,7 +20,9 @@
 #ifndef __HWC_SESSION_H__
 #define __HWC_SESSION_H__
 
-#ifdef DISPLAY_CONFIG_1_7
+#ifdef DISPLAY_CONFIG_1_8
+#include <vendor/display/config/1.8/IDisplayConfig.h>
+#elif DISPLAY_CONFIG_1_7
 #include <vendor/display/config/1.7/IDisplayConfig.h>
 #elif DISPLAY_CONFIG_1_6
 #include <vendor/display/config/1.6/IDisplayConfig.h>
@@ -59,7 +61,9 @@
 
 namespace sdm {
 
-#ifdef DISPLAY_CONFIG_1_7
+#ifdef DISPLAY_CONFIG_1_8
+using vendor::display::config::V1_8::IDisplayConfig;
+#elif DISPLAY_CONFIG_1_7
 using vendor::display::config::V1_7::IDisplayConfig;
 #elif DISPLAY_CONFIG_1_6
 using vendor::display::config::V1_6::IDisplayConfig;
@@ -341,6 +345,10 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
                                 getDebugProperty_cb _hidl_cb) override;
 #endif
 
+#ifdef DISPLAY_CONFIG_1_8
+  Return<void> getActiveBuiltinDisplayAttributes(getDisplayAttributes_cb _hidl_cb) override;
+#endif
+
   // QClient methods
   virtual android::status_t notifyCallback(uint32_t command, const android::Parcel *input_parcel,
                                            android::Parcel *output_parcel);
@@ -382,13 +390,14 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   HWC2::Error ValidateDisplayInternal(hwc2_display_t display, uint32_t *out_num_types,
                                       uint32_t *out_num_requests);
   HWC2::Error PresentDisplayInternal(hwc2_display_t display, int32_t *out_retire_fence);
-  void HandleSecureSession(hwc2_display_t display);
+  void HandleSecureSession();
   void HandlePowerOnPending(hwc2_display_t display, int retire_fence);
   void HandleHotplugPending(hwc2_display_t disp_id, int retire_fence);
   void UpdateVsyncSource();
   hwc2_display_t GetNextVsyncSource();
   DisplayClass GetDisplayClass(hwc2_display_t display_id);
   bool IsPluggableDisplayConnected();
+  hwc2_display_t GetActiveBuiltinDisplay();
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[kNumDisplays] = {nullptr};
@@ -415,11 +424,13 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   static bool power_on_pending_[kNumDisplays];
   static int null_display_mode_;
   HotPlugEvent hotplug_pending_event_ = kHotPlugNone;
+  Locker pluggable_handler_lock_;
   bool destroy_virtual_disp_pending_ = false;
   uint32_t idle_pc_ref_cnt_ = 0;
   int32_t max_sde_pluggable_displays_ = 0;
   int32_t max_sde_builtin_displays_ = 0;
   int32_t registered_builtin_displays_ = 0;
+  int32_t disable_hotplug_bwcheck_ = 0;
 };
 
 }  // namespace sdm
