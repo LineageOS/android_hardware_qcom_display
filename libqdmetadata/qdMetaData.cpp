@@ -64,6 +64,13 @@ static int validateAndMap(private_handle_t* handle) {
     return 0;
 }
 
+static void unmapAndReset(private_handle_t *handle) {
+    if (private_handle_t::validate(handle) == 0 && handle->base_metadata) {
+        munmap(reinterpret_cast<void *>(handle->base_metadata), getMetaDataSize());
+        handle->base_metadata = 0;
+    }
+}
+
 int setMetaData(private_handle_t *handle, DispParamType paramType,
                 void *param) {
     auto err = validateAndMap(handle);
@@ -140,6 +147,20 @@ int setMetaDataVa(MetaData_t *data, DispParamType paramType,
                     sizeof(data->graphics_metadata.data));
              break;
         }
+        case SET_CVP_METADATA: {
+             struct CVPMetadata *cvpMetadata = (struct CVPMetadata *)param;
+             if (cvpMetadata->size < CVP_METADATA_SIZE) {
+                 data->cvpMetadata.size = cvpMetadata->size;
+                 memcpy(data->cvpMetadata.payload, cvpMetadata->payload,
+                        cvpMetadata->size);
+             } else {
+                 data->operation &= ~(paramType);
+                 ALOGE("%s: cvp metadata length %d is more than max size %d",
+                     __func__, cvpMetadata->size, CVP_METADATA_SIZE);
+                 return -EINVAL;
+             }
+             break;
+        }
         default:
             ALOGE("Unknown paramType %d", paramType);
             break;
@@ -166,6 +187,9 @@ int clearMetaDataVa(MetaData_t *data, DispParamType paramType) {
             break;
         case SET_VIDEO_PERF_MODE:
             data->isVideoPerfMode = 0;
+            break;
+        case SET_CVP_METADATA:
+            data->cvpMetadata.size = 0;
             break;
         default:
             ALOGE("Unknown paramType %d", paramType);
@@ -287,6 +311,18 @@ int getMetaDataVa(MetaData_t *data, DispFetchParamType paramType,
                 ret = 0;
             }
             break;
+        case GET_CVP_METADATA:
+            if (data->operation & SET_CVP_METADATA) {
+                struct CVPMetadata *cvpMetadata = (struct CVPMetadata *)param;
+                cvpMetadata->size = 0;
+                if (data->cvpMetadata.size < CVP_METADATA_SIZE) {
+                    cvpMetadata->size = data->cvpMetadata.size;
+                    memcpy(cvpMetadata->payload, data->cvpMetadata.payload,
+                           data->cvpMetadata.size);
+                    ret = 0;
+                }
+            }
+            break;
         default:
             ALOGE("Unknown paramType %d", paramType);
             break;
@@ -349,3 +385,17 @@ int copyMetaDataVaToVa(MetaData_t *src_data, MetaData_t *dst_data) {
     return 0;
 }
 
+int setMetaDataAndUnmap(struct private_handle_t *handle, enum DispParamType paramType,
+                        void *param) {
+    auto ret = setMetaData(handle, paramType, param);
+    unmapAndReset(handle);
+    return ret;
+}
+
+int getMetaDataAndUnmap(struct private_handle_t *handle,
+                        enum DispFetchParamType paramType,
+                        void *param) {
+    auto ret = getMetaData(handle, paramType, param);
+    unmapAndReset(handle);
+    return ret;
+}
