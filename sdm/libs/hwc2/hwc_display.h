@@ -34,7 +34,7 @@
 #include <utility>
 #include <vector>
 #include <bitset>
-
+#include <algorithm>
 #include "hwc_buffer_allocator.h"
 #include "hwc_callbacks.h"
 #include "hwc_layers.h"
@@ -157,6 +157,9 @@ class HWCDisplay : public DisplayEventHandler {
   virtual DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
   virtual void GetPanelResolution(uint32_t *width, uint32_t *height);
   virtual std::string Dump();
+  virtual DisplayError TeardownConcurrentWriteback(void) {
+    return kErrorNotSupported;
+  }
 
   // Captures frame output in the buffer specified by output_buffer_info. The API is
   // non-blocking and the client is expected to check operation status later on.
@@ -188,6 +191,9 @@ class HWCDisplay : public DisplayEventHandler {
   }
 
   // Display Configurations
+  static uint32_t GetThrottlingRefreshRate() { return HWCDisplay::throttling_refresh_rate_; }
+  static void SetThrottlingRefreshRate(uint32_t newRefreshRate)
+              { HWCDisplay::throttling_refresh_rate_ = newRefreshRate; }
   virtual int SetActiveDisplayConfig(uint32_t config);
   virtual int GetActiveDisplayConfig(uint32_t *config);
   virtual int GetDisplayConfigCount(uint32_t *count);
@@ -200,6 +206,7 @@ class HWCDisplay : public DisplayEventHandler {
     return kErrorNotSupported;
   }
 
+  uint32_t GetMaxRefreshRate() { return max_refresh_rate_; }
   int SetPanelBrightness(int level);
   int GetPanelBrightness(int *level);
   int ToggleScreenUpdates(bool enable);
@@ -227,6 +234,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error SetColorModeFromClientApi(int32_t color_mode_id) {
     return HWC2::Error::Unsupported;
   }
+  void SetFastPathComposition(bool enable) { fast_path_composition_ = enable; }
 
   // HWC2 APIs
   virtual HWC2::Error AcceptDisplayChanges(void);
@@ -304,11 +312,13 @@ class HWCDisplay : public DisplayEventHandler {
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) {
     return kErrorNone;
   }
+  virtual HWC2::Error GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
+                                                   uint8_t *out_data);
 
  protected:
+  static uint32_t throttling_refresh_rate_;
   // Maximum number of layers supported by display manager.
   static const uint32_t kMaxLayerCount = 32;
-
   HWCDisplay(CoreInterface *core_intf, BufferAllocator *buffer_allocator, HWCCallbacks *callbacks,
              HWCDisplayEventHandler *event_handler, qService::QService *qservice, DisplayType type,
              hwc2_display_t id, int32_t sdm_id, bool needs_blit, DisplayClass display_class);
@@ -334,6 +344,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool IsLayerUpdating(HWCLayer *layer);
   uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate);
   virtual void GetUnderScanConfig() { }
+  int32_t SetClientTargetDataSpace(int32_t dataspace);
 
   enum {
     INPUT_LAYER_DUMP,
@@ -391,6 +402,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool partial_update_enabled_ = false;
   std::map<uint32_t, DisplayConfigVariableInfo> variable_config_map_;
   std::vector<uint32_t> hwc_config_map_;
+  bool fast_path_composition_ = false;
 
  private:
   void DumpInputBuffers(void);
@@ -403,6 +415,7 @@ class HWCDisplay : public DisplayEventHandler {
   int null_display_mode_ = 0;
   bool has_client_composition_ = false;
   DisplayValidateState validate_state_ = kNormalValidate;
+  bool fast_path_enabled_ = true;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -20,7 +20,9 @@
 #ifndef __HWC_SESSION_H__
 #define __HWC_SESSION_H__
 
-#ifdef DISPLAY_CONFIG_1_7
+#ifdef DISPLAY_CONFIG_1_8
+#include <vendor/display/config/1.8/IDisplayConfig.h>
+#elif DISPLAY_CONFIG_1_7
 #include <vendor/display/config/1.7/IDisplayConfig.h>
 #elif DISPLAY_CONFIG_1_6
 #include <vendor/display/config/1.6/IDisplayConfig.h>
@@ -43,6 +45,7 @@
 #include <qd_utils.h>
 #include <display_config.h>
 #include <vector>
+#include <utility>
 
 #include "hwc_callbacks.h"
 #include "hwc_layers.h"
@@ -58,7 +61,9 @@
 
 namespace sdm {
 
-#ifdef DISPLAY_CONFIG_1_7
+#ifdef DISPLAY_CONFIG_1_8
+using vendor::display::config::V1_8::IDisplayConfig;
+#elif DISPLAY_CONFIG_1_7
 using vendor::display::config::V1_7::IDisplayConfig;
 #elif DISPLAY_CONFIG_1_6
 using vendor::display::config::V1_6::IDisplayConfig;
@@ -77,6 +82,8 @@ using vendor::display::config::V1_0::IDisplayConfig;
 #endif
 using ::android::hardware::Return;
 using ::android::hardware::hidl_string;
+
+int32_t GetDataspaceFromColorMode(ColorMode mode);
 
 // Create a singleton uevent listener thread valid for life of hardware composer process.
 // This thread blocks on uevents poll inside uevent library implementation. This poll exits
@@ -214,6 +221,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   static int32_t GetReadbackBufferFence(hwc2_device_t *device, hwc2_display_t display,
                                         int32_t *release_fence);
   static uint32_t GetMaxVirtualDisplayCount(hwc2_device_t *device);
+  static int32_t GetDisplayIdentificationData(hwc2_device_t *device, hwc2_display_t display,
+                                              uint8_t *outPort, uint32_t *outDataSize,
+                                              uint8_t *outData);
 
   // HWCDisplayEventHandler
   virtual void DisplayPowerReset();
@@ -241,7 +251,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
 
   static const int kExternalConnectionTimeoutMs = 500;
   static const int kCommitDoneTimeoutMs = 100;
-
+  uint32_t throttling_refresh_rate_ = 60;
+  void UpdateThrottlingRate();
+  void SetNewThrottlingRate(uint32_t new_rate);
   // hwc methods
   static int Open(const hw_module_t *module, const char *name, hw_device_t **device);
   static int Close(hw_device_t *device);
@@ -336,6 +348,10 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
                                 getDebugProperty_cb _hidl_cb) override;
 #endif
 
+#ifdef DISPLAY_CONFIG_1_8
+  Return<void> getActiveBuiltinDisplayAttributes(getDisplayAttributes_cb _hidl_cb) override;
+#endif
+
   // QClient methods
   virtual android::status_t notifyCallback(uint32_t command, const android::Parcel *input_parcel,
                                            android::Parcel *output_parcel);
@@ -359,6 +375,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   android::status_t SetColorModeWithRenderIntentOverride(const android::Parcel *input_parcel);
 
   android::status_t SetColorModeById(const android::Parcel *input_parcel);
+  android::status_t SetColorModeFromClient(const android::Parcel *input_parcel);
   android::status_t getComposerStatus();
   android::status_t SetQSyncMode(const android::Parcel *input_parcel);
   android::status_t SetIdlePC(const android::Parcel *input_parcel);
@@ -376,13 +393,14 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   HWC2::Error ValidateDisplayInternal(hwc2_display_t display, uint32_t *out_num_types,
                                       uint32_t *out_num_requests);
   HWC2::Error PresentDisplayInternal(hwc2_display_t display, int32_t *out_retire_fence);
-  void HandleSecureSession(hwc2_display_t display);
+  void HandleSecureSession();
   void HandlePowerOnPending(hwc2_display_t display, int retire_fence);
   void HandleHotplugPending(hwc2_display_t disp_id, int retire_fence);
   void UpdateVsyncSource();
   hwc2_display_t GetNextVsyncSource();
   DisplayClass GetDisplayClass(hwc2_display_t display_id);
   bool IsPluggableDisplayConnected();
+  hwc2_display_t GetActiveBuiltinDisplay();
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[kNumDisplays] = {nullptr};

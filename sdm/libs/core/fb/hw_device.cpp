@@ -767,7 +767,7 @@ int HWDevice::GetFBNodeIndex(HWDeviceType device_type) {
         }
         break;
       case kDevicePluggable:
-        if (panel_info.is_pluggable == true) {
+        if (panel_info.is_pluggable) {
           if (IsFBNodeConnected(i)) {
             return i;
           }
@@ -1055,7 +1055,7 @@ bool HWDevice::EnableHotPlugDetection(int enable) {
   for (int i = 0; i < kFBNodeMax; i++) {
     HWPanelInfo panel_info;
     GetHWPanelInfoByNode(i, &panel_info);
-    if (panel_info.is_pluggable == true) {
+    if (panel_info.is_pluggable) {
       snprintf(hpdpath , sizeof(hpdpath), "%s%d/hpd", fb_path_, i);
 
       ssize_t length = SysFsWrite(hpdpath, value, 1);

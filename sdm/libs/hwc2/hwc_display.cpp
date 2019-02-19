@@ -50,6 +50,8 @@
 
 namespace sdm {
 
+uint32_t HWCDisplay::throttling_refresh_rate_ = 60;
+
 bool NeedsToneMap(const LayerStack &layer_stack) {
   for (Layer *layer : layer_stack.layers) {
     if (layer->request.flags.tone_map) {
@@ -551,6 +553,10 @@ int HWCDisplay::Init() {
   partial_update_enabled_ = fixed_info.partial_update || (!fixed_info.is_cmdmode);
   client_target_->SetPartialUpdate(partial_update_enabled_);
 
+  int disable_fast_path = 0;
+  HWCDebugHandler::Get()->GetProperty(DISABLE_FAST_PATH, &disable_fast_path);
+  fast_path_enabled_ = !(disable_fast_path == 1);
+
   DLOGI("Display created with id: %d", id_);
 
   return 0;
@@ -669,6 +675,7 @@ void HWCDisplay::BuildLayerStack() {
   display_rect_ = LayerRect();
   metadata_refresh_rate_ = 0;
   layer_stack_.flags.animating = animating_;
+  layer_stack_.flags.fast_path = fast_path_enabled_ && fast_path_composition_;
 
   // Add one layer for fb target
   // TODO(user): Add blit target layers
@@ -795,6 +802,9 @@ void HWCDisplay::BuildLayerStack() {
   // Append client target to the layer stack
   Layer *sdm_client_target = client_target_->GetSDMLayer();
   sdm_client_target->flags.updating = IsLayerUpdating(client_target_);
+  // Derive client target dataspace based on the color mode - bug/115482728
+  int32_t client_target_dataspace = GetDataspaceFromColorMode(GetCurrentColorMode());
+  SetClientTargetDataSpace(client_target_dataspace);
   layer_stack_.layers.push_back(sdm_client_target);
 
   // fall back frame composition to GPU when client target is 10bit
@@ -819,7 +829,7 @@ void HWCDisplay::BuildSolidFillStack() {
 HWC2::Error HWCDisplay::SetLayerZOrder(hwc2_layer_t layer_id, uint32_t z) {
   const auto map_layer = layer_map_.find(layer_id);
   if (map_layer == layer_map_.end()) {
-    DLOGE("[%" PRIu64 "] updateLayerZ failed to find layer", id_);
+    DLOGW("[%" PRIu64 "] updateLayerZ failed to find layer", id_);
     return HWC2::Error::BadLayer;
   }
 
@@ -1145,14 +1155,13 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, int32_t acquire_
   }
 
   Layer *sdm_layer = client_target_->GetSDMLayer();
-  sdm_layer->frame_rate = current_refresh_rate_;
+  sdm_layer->frame_rate = std::min(current_refresh_rate_, HWCDisplay::GetThrottlingRefreshRate());
   client_target_->SetLayerSurfaceDamage(damage);
-  if (client_target_->GetLayerDataspace() != dataspace) {
-    client_target_->SetLayerDataspace(dataspace);
-    Layer *sdm_layer = client_target_->GetSDMLayer();
-    // Data space would be validated at GetClientTargetSupport, so just use here.
-    sdm::GetSDMColorSpace(client_target_->GetLayerDataspace(),
-                          &sdm_layer->input_buffer.color_metadata);
+  int translated_dataspace = TranslateFromLegacyDataspace(dataspace);
+  if (client_target_->GetLayerDataspace() != translated_dataspace) {
+    DLOGW("New Dataspace = %d not matching Dataspace from color mode = %d",
+           translated_dataspace, client_target_->GetLayerDataspace());
+    return HWC2::Error::BadParameter;
   }
   client_target_->SetLayerBuffer(target, acquire_fence);
 
@@ -1840,11 +1849,6 @@ int HWCDisplay::SetDisplayStatus(DisplayStatus display_status) {
       return -EINVAL;
   }
 
-  if (display_status == kDisplayStatusResume || display_status == kDisplayStatusPause) {
-    callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
-    validated_ = false;
-  }
-
   return status;
 }
 
@@ -2251,6 +2255,16 @@ HWC2::Error HWCDisplay::GetValidateDisplayOutput(uint32_t *out_num_types,
   return ((*out_num_types > 0) ? HWC2::Error::HasChanges : HWC2::Error::None);
 }
 
+HWC2::Error HWCDisplay::GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
+                                                     uint8_t *out_data) {
+  DisplayError ret = display_intf_->GetDisplayIdentificationData(out_port, out_data_size, out_data);
+  if (ret != kErrorNone) {
+    DLOGE("GetDisplayIdentificationData failed due to SDM/Driver (err = %d, disp id = %" PRIu64
+          " %d-%d", ret, id_, sdm_id_, type_);
+  }
+  return HWC2::Error::None;
+}
+
 bool HWCDisplay::IsDisplayCommandMode() {
   return is_cmd_mode_;
 }
@@ -2294,8 +2308,20 @@ void HWCDisplay::UpdateRefreshRate() {
       continue;
     }
     auto layer = hwc_layer->GetSDMLayer();
-    layer->frame_rate = current_refresh_rate_;
+    layer->frame_rate = std::min(current_refresh_rate_, HWCDisplay::GetThrottlingRefreshRate());
   }
+}
+
+int32_t HWCDisplay::SetClientTargetDataSpace(int32_t dataspace) {
+  if (client_target_->GetLayerDataspace() != dataspace) {
+    client_target_->SetLayerDataspace(dataspace);
+    Layer *sdm_layer = client_target_->GetSDMLayer();
+    // Data space would be validated at GetClientTargetSupport, so just use here.
+    sdm::GetSDMColorSpace(client_target_->GetLayerDataspace(),
+                          &sdm_layer->input_buffer.color_metadata);
+  }
+
+  return 0;
 }
 
 }  // namespace sdm

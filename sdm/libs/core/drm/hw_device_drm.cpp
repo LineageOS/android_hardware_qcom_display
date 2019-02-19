@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -444,7 +444,7 @@ DisplayError HWDeviceDRM::Init() {
 
   if (token_.conn_id > INT32_MAX) {
     DLOGE("Connector id %u beyond supported range", token_.conn_id);
-    drm_mgr_intf_->UnregisterDisplay(token_);
+    drm_mgr_intf_->UnregisterDisplay(&token_);
     return kErrorNotSupported;
   }
 
@@ -453,7 +453,7 @@ DisplayError HWDeviceDRM::Init() {
   ret = drm_mgr_intf_->CreateAtomicReq(token_, &drm_atomic_intf_);
   if (ret) {
     DLOGE("Failed creating atomic request for connector id %u. Error: %d.", token_.conn_id, ret);
-    drm_mgr_intf_->UnregisterDisplay(token_);
+    drm_mgr_intf_->UnregisterDisplay(&token_);
     return kErrorResources;
   }
 
@@ -462,7 +462,7 @@ DisplayError HWDeviceDRM::Init() {
     DLOGE("Failed getting info for connector id %u. Error: %d.", token_.conn_id, ret);
     drm_mgr_intf_->DestroyAtomicReq(drm_atomic_intf_);
     drm_atomic_intf_ = {};
-    drm_mgr_intf_->UnregisterDisplay(token_);
+    drm_mgr_intf_->UnregisterDisplay(&token_);
     return kErrorHardware;
   }
 
@@ -472,7 +472,7 @@ DisplayError HWDeviceDRM::Init() {
           connector_info_.modes.size());
     drm_mgr_intf_->DestroyAtomicReq(drm_atomic_intf_);
     drm_atomic_intf_ = {};
-    drm_mgr_intf_->UnregisterDisplay(token_);
+    drm_mgr_intf_->UnregisterDisplay(&token_);
     return kErrorDeviceRemoved;
   }
 
@@ -517,7 +517,7 @@ DisplayError HWDeviceDRM::Deinit() {
   display_attributes_ = {};
   drm_mgr_intf_->DestroyAtomicReq(drm_atomic_intf_);
   drm_atomic_intf_ = {};
-  drm_mgr_intf_->UnregisterDisplay(token_);
+  drm_mgr_intf_->UnregisterDisplay(&token_);
   return err;
 }
 
@@ -648,6 +648,7 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   hw_panel_info_.min_roi_width = connector_info_.modes[index].wmin;
   hw_panel_info_.min_roi_height = connector_info_.modes[index].hmin;
   hw_panel_info_.needs_roi_merge = connector_info_.modes[index].roi_merge;
+  hw_panel_info_.transfer_time_us = connector_info_.modes[index].transfer_time_us;
   hw_panel_info_.dynamic_fps = connector_info_.dynamic_fps;
   hw_panel_info_.qsync_support = connector_info_.qsync_support;
   drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
@@ -686,7 +687,6 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   hw_panel_info_.primaries.green[1] = connector_info_.panel_hdr_prop.display_primaries[5];
   hw_panel_info_.primaries.blue[0] = connector_info_.panel_hdr_prop.display_primaries[6];
   hw_panel_info_.primaries.blue[1] = connector_info_.panel_hdr_prop.display_primaries[7];
-  hw_panel_info_.transfer_time_us = connector_info_.transfer_time_us;
   hw_panel_info_.dyn_bitclk_support = connector_info_.dyn_bitclk_support;
 
   // no supprt for 90 rotation only flips or 180 supported
@@ -716,6 +716,25 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
         hw_panel_info_.split_info.right_split);
   DLOGI("Panel Transfer time = %d us", hw_panel_info_.transfer_time_us);
   DLOGI("Dynamic Bit Clk Support = %d", hw_panel_info_.dyn_bitclk_support);
+}
+
+DisplayError HWDeviceDRM::GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
+                                                       uint8_t *out_data) {
+  *out_port = token_.hw_port;
+  std::vector<uint8_t> &edid = connector_info_.edid;
+
+  if (out_data == nullptr) {
+    *out_data_size = (uint32_t)(edid.size());
+    if (*out_data_size == 0) {
+      DLOGE("EDID blob is empty, no data to return");
+      return kErrorDriverData;
+    }
+  } else {
+    *out_data_size = std::min(*out_data_size, (uint32_t)(edid.size()));
+    memcpy(out_data, edid.data(), *out_data_size);
+  }
+
+  return kErrorNone;
 }
 
 void HWDeviceDRM::GetHWDisplayPortAndMode() {
@@ -1939,6 +1958,11 @@ void HWDeviceDRM::AddDimLayerIfNeeded() {
     solid_fills_.clear();
     AddSolidfillStage(sf, 0xFF);
     SetSolidfillStages();
+  }
+
+  if (!secure_display_active_) {
+    DRMSecurityLevel crtc_security_level = DRMSecurityLevel::SECURE_NON_SECURE;
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_SECURITY_LEVEL, token_.crtc_id, crtc_security_level);
   }
 }
 

@@ -126,7 +126,14 @@ class Locker {
   };
 
   Locker() : sequence_wait_(0) {
+#ifdef SDM_VIRTUAL_DRIVER
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_setrobust(&attr, PTHREAD_MUTEX_ROBUST);
+    pthread_mutex_init(&mutex_, &attr);
+#else
     pthread_mutex_init(&mutex_, 0);
+#endif
     pthread_condattr_init(&cond_attr_);
     pthread_condattr_setclock(&cond_attr_, CLOCK_MONOTONIC);
     pthread_cond_init(&condition_, &cond_attr_);

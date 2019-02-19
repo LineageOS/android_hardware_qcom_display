@@ -1,8 +1,8 @@
 #Display related packages and configuration
 
 PRODUCT_PACKAGES += \
-    android.hardware.graphics.composer@2.2-impl \
-    android.hardware.graphics.composer@2.2-service \
+    android.hardware.graphics.composer@2.3-impl \
+    android.hardware.graphics.composer@2.3-service \
     android.hardware.graphics.mapper@2.0-impl-qti-display \
     vendor.qti.hardware.display.allocator@1.0-service \
     android.hardware.memtrack@1.0-impl \
@@ -15,7 +15,6 @@ PRODUCT_PACKAGES += \
     memtrack.qcom \
     libqdutils \
     libqdMetaData \
-    libqdMetaData.system \
     modetest
 
 #QDCM calibration xml file for 2k panel
@@ -27,6 +26,13 @@ PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_Sharp_4k_cmd_
 #QDCM calibration xml file for amoled panel
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_sw43404_amoled_cmd_mode_dsi_boe_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_sw43404_amoled_cmd_mode_dsi_boe_panel_with_DSC.xml
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_sw43404_amoled_cmd_mode_dsi_boe_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_sw43404_amoled_video_mode_dsi_boe_panel_with_DSC.xml
+
+#QDCM calibration xml file for primary panel sharp 1080p
+PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_sharp_1080p_cmd_mode_dsi_panel.xml
+
+#QDCM calibration xml file for secondary panel nt35695b
+PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_nt35695b_truly_fhd_command_mode_dsi_panel.xml
+PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_nt35695b_truly_fhd_video_mode_dsi_panel.xml
 
 #Enable Charging Icon
 TARGET_RECOVERY_PIXEL_FORMAT := RGBX_8888

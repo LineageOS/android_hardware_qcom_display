@@ -501,7 +501,7 @@ void HWInfoDRM::GetWBInfo(HWResourceInfo *hw_resource) {
   ret = drm_mgr_intf_->GetConnectorInfo(token.conn_id, &connector_info);
   if (ret) {
     DLOGE("Failed getting info for connector id %u. Error: %d.", token.conn_id, ret);
-    drm_mgr_intf_->UnregisterDisplay(token);
+    drm_mgr_intf_->UnregisterDisplay(&token);
     return;
   }
   for (auto &fmts : connector_info.formats_supported) {
@@ -511,7 +511,7 @@ void HWInfoDRM::GetWBInfo(HWResourceInfo *hw_resource) {
   hw_resource->supported_formats_map.erase(sub_blk_type);
   hw_resource->supported_formats_map.insert(make_pair(sub_blk_type, supported_sdm_formats));
 
-  drm_mgr_intf_->UnregisterDisplay(token);
+  drm_mgr_intf_->UnregisterDisplay(&token);
 }
 
 void HWInfoDRM::GetSDMFormat(uint32_t v4l2_format, LayerBufferFormat *sdm_format) {

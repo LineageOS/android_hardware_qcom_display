@@ -388,7 +388,7 @@ DisplayError HWInfo::GetV4L2RotatorInfo(HWResourceInfo *hw_resource) {
   const uint32_t kMaxV4L2Nodes = 64;
   bool found = false;
 
-  for (uint32_t i = 0; (i < kMaxV4L2Nodes) && (false == found); i++) {
+  for (uint32_t i = 0; (i < kMaxV4L2Nodes) && (!found); i++) {
     string path = v4l2_path + to_string(i) + "/name";
     Sys::fstream fs(path, fstream::in);
     if (!fs.is_open()) {

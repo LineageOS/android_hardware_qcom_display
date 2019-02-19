@@ -299,7 +299,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   }
   // TODO(user): Temporary changes, to be removed when DRM driver supports
   // Partial update with Destination scaler enabled.
-  if (partial_update_control_ == false || disable_pu_one_frame_ ||
+  if (!partial_update_control_ || disable_pu_one_frame_ ||
       disable_pu_on_dest_scaler_) {
     comp_manager_->ControlPartialUpdate(display_comp_ctx_, false /* enable */);
     disable_pu_one_frame_ = false;
@@ -309,6 +309,13 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   while (true) {
     error = comp_manager_->Prepare(display_comp_ctx_, &hw_layers_);
     if (error != kErrorNone) {
+      break;
+    }
+
+    if (layer_stack->flags.fast_path && hw_layers_.info.fast_path_composition) {
+      // In Fast Path, driver validation happens in COMMIT Phase.
+      DLOGI_IF(kTagDisplay, "Draw cycle qualifies for Fast Path!");
+      needs_validate_ = false;
       break;
     }
 
@@ -380,6 +387,12 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
 
   error = hw_intf_->Commit(&hw_layers_);
   if (error != kErrorNone) {
+    if (layer_stack->flags.fast_path && hw_layers_.info.fast_path_composition) {
+      // If COMMIT fails on the Fast Path, set Safe Mode.
+      DLOGE("COMMIT failed in Fast Path, set Safe Mode!");
+      comp_manager_->SetSafeMode(true);
+      error = kErrorNotValidated;
+    }
     return error;
   }
 
@@ -1410,7 +1423,8 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
   uint32_t hw_layers_count = UINT32(hw_layers_.info.hw_layers.size());
 
   for (uint32_t i = 0; i < hw_layers_count; i++) {
-    Layer *sdm_layer = layer_stack->layers.at(hw_layers_.info.index.at(i));
+    uint32_t sdm_layer_index = hw_layers_.info.index.at(i);
+    Layer *sdm_layer = layer_stack->layers.at(sdm_layer_index);
     Layer &hw_layer = hw_layers_.info.hw_layers.at(i);
 
     hw_layer.input_buffer.planes[0].fd = sdm_layer->input_buffer.planes[0].fd;
@@ -1419,6 +1433,12 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
     hw_layer.input_buffer.size = sdm_layer->input_buffer.size;
     hw_layer.input_buffer.acquire_fence_fd = sdm_layer->input_buffer.acquire_fence_fd;
     hw_layer.input_buffer.handle_id = sdm_layer->input_buffer.handle_id;
+    // TODO(user): Other FBT layer attributes like surface damage, dataspace, secure camera and
+    // secure display flags are also updated during SetClientTarget() called between validate and
+    // commit. Need to revist this and update it accordingly for FBT layer.
+    if (hw_layers_.info.gpu_target_index == sdm_layer_index) {
+      hw_layer.input_buffer.flags.secure = sdm_layer->input_buffer.flags.secure;
+    }
   }
 
   return;
@@ -1542,6 +1562,15 @@ DisplayError DisplayBase::InitializeColorModes() {
   }
 
   return kErrorNone;
+}
+
+DisplayError DisplayBase::GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
+                                                       uint8_t *out_data) {
+  if (!out_port || !out_data_size) {
+    return kErrorParameters;
+  }
+
+  return hw_intf_->GetDisplayIdentificationData(out_port, out_data_size, out_data);
 }
 
 DisplayError DisplayBase::GetClientTargetSupport(uint32_t width, uint32_t height,
