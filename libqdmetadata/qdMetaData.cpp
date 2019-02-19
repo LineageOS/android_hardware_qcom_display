@@ -147,6 +147,20 @@ int setMetaDataVa(MetaData_t *data, DispParamType paramType,
                     sizeof(data->graphics_metadata.data));
              break;
         }
+        case SET_CVP_METADATA: {
+             struct CVPMetadata *cvpMetadata = (struct CVPMetadata *)param;
+             if (cvpMetadata->size < CVP_METADATA_SIZE) {
+                 data->cvpMetadata.size = cvpMetadata->size;
+                 memcpy(data->cvpMetadata.payload, cvpMetadata->payload,
+                        cvpMetadata->size);
+             } else {
+                 data->operation &= ~(paramType);
+                 ALOGE("%s: cvp metadata length %d is more than max size %d",
+                     __func__, cvpMetadata->size, CVP_METADATA_SIZE);
+                 return -EINVAL;
+             }
+             break;
+        }
         default:
             ALOGE("Unknown paramType %d", paramType);
             break;
@@ -173,6 +187,9 @@ int clearMetaDataVa(MetaData_t *data, DispParamType paramType) {
             break;
         case SET_VIDEO_PERF_MODE:
             data->isVideoPerfMode = 0;
+            break;
+        case SET_CVP_METADATA:
+            data->cvpMetadata.size = 0;
             break;
         default:
             ALOGE("Unknown paramType %d", paramType);
@@ -292,6 +309,18 @@ int getMetaDataVa(MetaData_t *data, DispFetchParamType paramType,
             if (data->operation & SET_GRAPHICS_METADATA) {
                 memcpy(param, data->graphics_metadata.data, sizeof(data->graphics_metadata.data));
                 ret = 0;
+            }
+            break;
+        case GET_CVP_METADATA:
+            if (data->operation & SET_CVP_METADATA) {
+                struct CVPMetadata *cvpMetadata = (struct CVPMetadata *)param;
+                cvpMetadata->size = 0;
+                if (data->cvpMetadata.size < CVP_METADATA_SIZE) {
+                    cvpMetadata->size = data->cvpMetadata.size;
+                    memcpy(cvpMetadata->payload, data->cvpMetadata.payload,
+                           data->cvpMetadata.size);
+                    ret = 0;
+                }
             }
             break;
         default:
