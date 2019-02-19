@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -127,6 +127,11 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
   uint32_t new_mixer_height = 0;
   uint32_t display_width = display_attributes_.x_pixels;
   uint32_t display_height = display_attributes_.y_pixels;
+  if (reset_panel_) {
+    DLOGW("panel is in bad state, resetting the panel");
+    ResetPanel();
+    reset_panel_ = false;
+  }
 
   if (NeedsMixerReconfiguration(layer_stack, &new_mixer_width, &new_mixer_height)) {
     error = ReconfigureMixer(new_mixer_width, new_mixer_height);
@@ -357,6 +362,11 @@ void DisplayBuiltIn::IdlePowerCollapse() {
 
 void DisplayBuiltIn::PanelDead() {
   event_handler_->HandleEvent(kPanelDeadEvent);
+  event_handler_->Refresh();
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  {
+    reset_panel_ = true;
+  }
 }
 
 // HWEventHandler overload, not DisplayBase
@@ -602,6 +612,39 @@ DisplayError DisplayBuiltIn::GetDynamicDSIClock(uint64_t *bit_clk_rate) {
   }
 
   return hw_intf_->GetDynamicDSIClock(bit_clk_rate);
+}
+
+void DisplayBuiltIn::ResetPanel() {
+  DisplayError status = kErrorNone;
+  int release_fence = -1;
+  DisplayState last_display_state = {};
+
+  GetDisplayState(&last_display_state);
+  DLOGI("Power off display id = %d", display_id_);
+
+  status = SetDisplayState(kStateOff, true /* teardown */, &release_fence);
+  if (status != kErrorNone) {
+    DLOGE("Power off for display id = %d failed with error = %d", display_id_, status);
+  }
+  CloseFd(&release_fence);
+
+  DLOGI("Set display %d to state = %d", display_id_, last_display_state);
+  status = SetDisplayState(last_display_state, false /* teardown */, &release_fence);
+  if (status != kErrorNone) {
+     DLOGE("%d state for display id = %d failed with error = %d", last_display_state, display_id_,
+           status);
+  }
+  CloseFd(&release_fence);
+
+  status = SetColorMode(current_color_mode_);
+  if (status != kErrorNone) {
+    DLOGE("SetColorMode failed for display id = %d error = %d", display_id_, status);
+  }
+
+  status = SetVSyncState(true);
+  if (status != kErrorNone) {
+    DLOGE("Enable vsync failed for display id = %d with error = %d", display_id_, status);
+  }
 }
 
 }  // namespace sdm

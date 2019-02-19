@@ -1233,11 +1233,11 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
       break;
     }
     case kThermalEvent:
-    case kIdlePowerCollapse: {
+    case kIdlePowerCollapse:
+    case kPanelDeadEvent: {
       SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[id_]);
       validated_ = false;
     } break;
-    case kPanelDeadEvent:
     case kDisplayPowerResetEvent: {
       validated_ = false;
       if (event_handler_) {

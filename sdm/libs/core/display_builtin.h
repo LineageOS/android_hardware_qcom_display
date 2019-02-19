@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -92,6 +92,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
 
   // Implement the DppsPropIntf
   virtual DisplayError DppsProcessOps(enum DppsOps op, void *payload, size_t size);
+  void ResetPanel();
 
  private:
   bool NeedsAVREnable();
@@ -101,6 +102,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   bool switch_to_cmd_ = false;
   bool handle_idle_timeout_ = false;
   bool commit_event_enabled_ = false;
+  bool reset_panel_ = false;
   DppsInfo dpps_info_ = {};
   QSyncMode qsync_mode_ = kQSyncModeNone;
 };
