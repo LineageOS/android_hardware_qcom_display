@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -126,7 +126,7 @@ DisplayError DisplayPluggable::Init() {
     DLOGE("Failed to create hardware events interface. Error = %d", error);
   }
 
-  InitializeColorModes();
+  InitializeColorModes(false);
 
   current_refresh_rate_ = hw_panel_info_.max_fps;
 
@@ -316,7 +316,7 @@ DisplayError DisplayPluggable::VSync(int64_t timestamp) {
   return kErrorNone;
 }
 
-DisplayError DisplayPluggable::InitializeColorModes() {
+DisplayError DisplayPluggable::InitializeColorModes(bool enum_user_modes) {
   PrimariesTransfer pt = {};
   AttrVal var;
   if (!hw_panel_info_.hdr_enabled) {
