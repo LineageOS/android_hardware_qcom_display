@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -40,7 +40,7 @@ namespace qti {
 namespace hardware {
 namespace display {
 namespace mapper {
-namespace V1_0 {
+namespace V1_1 {
 namespace implementation {
 
 using gralloc::BufferInfo;
@@ -264,7 +264,6 @@ Return<void> QtiMapper::createDescriptor_2_1(const BufferDescriptorInfo_2_1& des
   return Void();
 }
 
-#ifdef ENABLE_QTI_MAPPER_EXTENSION
 Return<void> QtiMapper::getMapSecureBufferFlag(void *buffer, getMapSecureBufferFlag_cb hidl_cb) {
   auto err = Error::BAD_BUFFER;
   auto hnd = static_cast<private_handle_t *>(buffer);
@@ -381,7 +380,159 @@ Return<Error> QtiMapper::setSingleBufferMode(void *buffer, bool enable) {
   }
   return err;
 }
-#endif
+
+Return<void> QtiMapper::getCustomFormatFlags(int32_t format, uint64_t /*usage*/,
+                                             getCustomFormatFlags_cb hidl_cb) {
+  uint64_t priv_flags = 0;
+  auto err = Error::UNSUPPORTED;
+  int32_t custom_format = format;
+  hidl_cb(err, custom_format, priv_flags);
+  return Void();
+}
+
+Return<void> QtiMapper::getFd(void *buffer, getFd_cb hidl_cb) {
+  auto err = Error::BAD_BUFFER;
+  int fd = 0;
+  auto hnd = static_cast<private_handle_t *>(buffer);
+  if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
+    err = Error::NONE;
+    fd = hnd->fd;
+  }
+  hidl_cb(err, fd);
+  return Void();
+}
+
+Return<void> QtiMapper::getWidth(void *buffer, getWidth_cb hidl_cb) {
+  auto err = Error::BAD_BUFFER;
+  int width = 0;
+  auto hnd = static_cast<private_handle_t *>(buffer);
+  if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
+    err = Error::NONE;
+    width = hnd->width;
+  }
+  hidl_cb(err, width);
+  return Void();
+}
+
+Return<void> QtiMapper::getHeight(void *buffer, getHeight_cb hidl_cb) {
+  auto err = Error::BAD_BUFFER;
+  int height = 0;
+  auto hnd = static_cast<private_handle_t *>(buffer);
+  if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
+    err = Error::NONE;
+    height = hnd->height;
+  }
+  hidl_cb(err, height);
+  return Void();
+}
+
+Return<void> QtiMapper::getFormat(void *buffer, getFormat_cb hidl_cb) {
+  auto err = Error::BAD_BUFFER;
+  int format = 0;
+  auto hnd = static_cast<private_handle_t *>(buffer);
+  if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
+    err = Error::NONE;
+    format = hnd->format;
+  }
+  hidl_cb(err, format);
+  return Void();
+}
+
+Return<void> QtiMapper::getPrivateFlags(void *buffer, getPrivateFlags_cb hidl_cb) {
+  auto err = Error::BAD_BUFFER;
+  int flags = 0;
+  auto hnd = static_cast<private_handle_t *>(buffer);
+  if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
+    err = Error::NONE;
+    flags = hnd->flags;
+  }
+  hidl_cb(err, flags);
+  return Void();
+}
+
+Return<void> QtiMapper::getUnalignedWidth(void *buffer, getUnalignedWidth_cb hidl_cb) {
+  auto err = Error::BAD_BUFFER;
+  int unaligned_width = 0;
+  auto hnd = static_cast<private_handle_t *>(buffer);
+  if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
+    err = Error::NONE;
+    unaligned_width = hnd->unaligned_width;
+  }
+  hidl_cb(err, unaligned_width);
+  return Void();
+}
+
+Return<void> QtiMapper::getUnalignedHeight(void *buffer, getUnalignedHeight_cb hidl_cb) {
+  auto err = Error::BAD_BUFFER;
+  int unaligned_height = 0;
+  auto hnd = static_cast<private_handle_t *>(buffer);
+  if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
+    err = Error::NONE;
+    unaligned_height = hnd->unaligned_height;
+  }
+  hidl_cb(err, unaligned_height);
+  return Void();
+}
+
+Return<void> QtiMapper::getLayerCount(void *buffer, getLayerCount_cb hidl_cb) {
+  auto err = Error::BAD_BUFFER;
+  unsigned int layer_count = 0;
+  auto hnd = static_cast<private_handle_t *>(buffer);
+  if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
+    err = Error::NONE;
+    layer_count = hnd->layer_count;
+  }
+  hidl_cb(err, layer_count);
+  return Void();
+}
+
+Return<void> QtiMapper::getId(void *buffer, getId_cb hidl_cb) {
+  auto err = Error::BAD_BUFFER;
+  uint64_t id = 0;
+  auto hnd = static_cast<private_handle_t *>(buffer);
+  if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
+    err = Error::NONE;
+    id = hnd->id;
+  }
+  hidl_cb(err, id);
+  return Void();
+}
+
+Return<void> QtiMapper::getUsageFlags(void *buffer, getUsageFlags_cb hidl_cb) {
+  auto err = Error::BAD_BUFFER;
+  uint64_t usage = 0;
+  auto hnd = static_cast<private_handle_t *>(buffer);
+  if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
+    err = Error::NONE;
+    usage = hnd->usage;
+  }
+  hidl_cb(err, usage);
+  return Void();
+}
+
+Return<void> QtiMapper::getSize(void *buffer, getSize_cb hidl_cb) {
+  auto err = Error::BAD_BUFFER;
+  unsigned int size = 0;
+  auto hnd = static_cast<private_handle_t *>(buffer);
+  if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
+    err = Error::NONE;
+    size = hnd->size;
+  }
+  hidl_cb(err, size);
+  return Void();
+}
+
+Return<void> QtiMapper::getOffset(void *buffer, getOffset_cb hidl_cb) {
+  auto err = Error::BAD_BUFFER;
+  unsigned int offset = 0;
+  auto hnd = static_cast<private_handle_t *>(buffer);
+  if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
+    err = Error::NONE;
+    offset = hnd->offset;
+  }
+  hidl_cb(err, offset);
+  return Void();
+}
 
 // Methods from ::android::hidl::base::V1_0::IBase follow.
 
@@ -393,8 +544,13 @@ IMapper_2_1 *HIDL_FETCH_IMapper(const char * /* name */) {
   return static_cast<IMapper_2_1 *>(mapper);
 }
 
+IQtiMapper *HIDL_FETCH_IQtiMapper(const char * /* name */) {
+  ALOGD_IF(DEBUG, "Fetching QtiMapper");
+  return new QtiMapper();
+}
+
 }  // namespace implementation
-}  // namespace V1_0
+}  // namespace V1_1
 }  // namespace mapper
 }  // namespace display
 }  // namespace hardware
