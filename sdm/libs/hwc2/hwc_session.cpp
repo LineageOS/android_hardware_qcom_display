@@ -3116,8 +3116,15 @@ hwc2_display_t HWCSession::GetNextVsyncSource() {
       continue;
     }
 
-    if (hwc_display->GetCurrentPowerMode() == HWC2::PowerMode::On) {
-      return info.client_id;
+    HWC2::PowerMode current_mode = hwc_display->GetCurrentPowerMode();
+    if (update_vsync_on_doze_) {
+      if (current_mode == HWC2::PowerMode::On) {
+        return info.client_id;
+      }
+    } else if (update_vsync_on_power_off_) {
+      if (current_mode != HWC2::PowerMode::Off) {
+        return info.client_id;
+      }
     }
   }
 

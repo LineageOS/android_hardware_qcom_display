@@ -710,10 +710,14 @@ Return<int32_t> HWCSession::SetDisplayDppsAdROI(uint32_t display_id, uint32_t h_
 
 #ifdef DISPLAY_CONFIG_1_6
 Return<int32_t> HWCSession::updateVSyncSourceOnPowerModeOff() {
+  update_vsync_on_power_off_ = true;
+
   return 0;
 }
 
 Return<int32_t> HWCSession::updateVSyncSourceOnPowerModeDoze() {
+  update_vsync_on_doze_ = true;
+
   return 0;
 }
 #endif
