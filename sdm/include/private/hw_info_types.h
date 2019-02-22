@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -309,6 +309,8 @@ struct HWResourceInfo {
   InlineRotationVersion inrot_version = kInlineRotationNone;
   std::bitset<32> src_tone_map = 0;  //!< Stores the bit mask of src tone map capability
   int secure_disp_blend_stage = -1;
+  uint32_t num_mnocports = 2;
+  uint32_t mnoc_bus_width = 32;
 };
 
 struct HWSplitInfo {
