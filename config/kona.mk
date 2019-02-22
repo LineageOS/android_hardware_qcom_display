@@ -50,6 +50,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
     debug.sf.hw=0 \
     debug.egl.hw=0 \
     debug.sf.latch_unsignaled=1 \
+    debug.sf.enable_hwc_vds=1 \
     debug.mdpcomp.logs=0 \
     ro.vendor.display.cabl=2 \
     vendor.gralloc.disable_ubwc=0 \
