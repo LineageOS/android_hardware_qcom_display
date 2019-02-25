@@ -2631,6 +2631,10 @@ void HWCSession::DestroyPluggableDisplay(DisplayMapInfo *map_info) {
 
   DLOGI("Notify hotplug display disconnected: client id = %d", client_id);
   callbacks_.Hotplug(client_id, HWC2::Connection::Disconnected);
+
+  // Trigger refresh to make sure disconnect event received/updated properly by SurfaceFlinger.
+  Refresh(HWC_DISPLAY_PRIMARY);
+
   // wait for sufficient time to ensure sufficient resources are available to process
   // connection.
   usleep(UINT32(GetVsyncPeriod(HWC_DISPLAY_PRIMARY)) * 2 / 1000);
