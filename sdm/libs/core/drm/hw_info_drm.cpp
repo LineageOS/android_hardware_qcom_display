@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -337,6 +337,9 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   hw_resource->min_prefill_lines = info.min_prefill_lines;
   hw_resource->secure_disp_blend_stage = info.secure_disp_blend_stage;
   hw_resource->has_concurrent_writeback = info.concurrent_writeback;
+  // In case driver doesn't report bus width default to 256 bit bus.
+  hw_resource->num_mnocports = info.num_mnocports ? info.num_mnocports : 2;
+  hw_resource->mnoc_bus_width = info.mnoc_bus_width ? info.mnoc_bus_width : 32;
 }
 
 void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
