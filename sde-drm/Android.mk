@@ -32,5 +32,5 @@ ifeq ($(LLVM_SA), true)
 LOCAL_CFLAGS += --compile-and-analyze --analyzer-perf
 endif
 
-LOCAL_PROPRIETARY_MODULE  := true
+LOCAL_VENDOR_MODULE       := true
 include $(BUILD_SHARED_LIBRARY)
