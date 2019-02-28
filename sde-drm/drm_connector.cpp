@@ -376,6 +376,7 @@ void DRMConnector::ParseCapabilities(uint64_t blob_id, DRMConnectorInfo *info) {
   const string mdp_transfer_time_us = "mdp_transfer_time_us=";
   const string qsync_support = "qsync support=";
   const string wb_ubwc = "wb_ubwc";
+  const string dyn_bitclk_support = "dyn bitclk support=";
 
   while (std::getline(stream, line)) {
     if (line.find(pixel_formats) != string::npos) {
@@ -407,6 +408,8 @@ void DRMConnector::ParseCapabilities(uint64_t blob_id, DRMConnectorInfo *info) {
       info->qsync_support = (string(line, qsync_support.length()) == "true");
     } else if (line.find(wb_ubwc) != string::npos) {
       info->is_wb_ubwc_supported = true;
+    } else if (line.find(dyn_bitclk_support) != string::npos) {
+      info->dyn_bitclk_support = (string(line, dyn_bitclk_support.length()) == "true");
     }
   }
 
@@ -451,6 +454,7 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
   const string pu_wmin = "partial_update_wmin=";
   const string pu_hmin = "partial_update_hmin=";
   const string pu_roimerge = "partial_update_roimerge=";
+  const string bit_clk_rate = "bit_clk_rate=";
 
   // Map of parsed mode_name to mode_properties
   map<string, DRMModeInfo> mode_props_map {};
@@ -477,6 +481,8 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
       it->second.hmin = std::stoi(string(line, pu_hmin.length()));
     } else if (line.find(pu_roimerge) != string::npos) {
       it->second.roi_merge = std::stoi(string(line, pu_roimerge.length()));
+    } else if (line.find(bit_clk_rate) != string::npos) {
+      it->second.bit_clk_rate = std::stoi(string(line, bit_clk_rate.length()));
     }
   }
 
@@ -493,6 +499,7 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
       mode_item.hmin = it->second.hmin;
       mode_item.walign = it->second.walign;
       mode_item.halign = it->second.halign;
+      mode_item.bit_clk_rate = it->second.bit_clk_rate;
     }
   }
 
