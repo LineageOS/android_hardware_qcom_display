@@ -88,6 +88,9 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   virtual DisplayError GetDynamicDSIClock(uint64_t *bitclk);
   virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates);
   virtual DisplayError TeardownConcurrentWriteback(void);
+  virtual void SetFastPathComposition(bool enable) {
+    fast_path_composition_ = enable && !readback_buffer_queued_;
+  }
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,

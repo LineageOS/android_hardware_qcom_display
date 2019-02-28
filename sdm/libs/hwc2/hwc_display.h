@@ -227,10 +227,10 @@ class HWCDisplay : public DisplayEventHandler {
   ColorMode GetCurrentColorMode() {
     return (color_mode_ ? color_mode_->GetCurrentColorMode() : ColorMode::SRGB);
   }
-  void SetFastPathComposition(bool enable) { fast_path_composition_ = enable; }
   bool HWCClientNeedsValidate() {
     return (has_client_composition_ || layer_stack_.flags.single_buffered_layer_present);
   }
+  virtual void SetFastPathComposition(bool enable) { fast_path_composition_ = enable; }
   virtual HWC2::Error SetColorModeFromClientApi(int32_t color_mode_id) {
     return HWC2::Error::Unsupported;
   }
