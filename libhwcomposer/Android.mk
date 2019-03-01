@@ -12,7 +12,7 @@ LOCAL_C_INCLUDES              := $(common_includes) \
 LOCAL_SHARED_LIBRARIES        := $(common_libs) libEGL liboverlay \
                                  libhdmi libqdutils libhardware_legacy \
                                  libdl libmemalloc libqservice libsync \
-                                 libbinder libmedia libvirtual libbfqio_vendor
+                                 libbinder libmedia libvirtual libbfqio
 
 ifeq ($(TARGET_USES_QCOM_BSP),true)
 LOCAL_SHARED_LIBRARIES += libhwui
