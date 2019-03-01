@@ -43,10 +43,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
     debug.mdpcomp.logs=0 \
     ro.vendor.display.cabl=2 \
     vendor.gralloc.disable_ubwc=0 \
-    vendor.display.disable_scaler=0 \
-    vendor.display.disable_inline_rotator=1 \
-    vendor.display.disable_decimation=1 \
-    vendor.display.enable_null_display=0 \
+    vendor.display.disable_scaler=1 \
+    vendor.display.disable_offline_rotator=1 \
     vendor.display.disable_excl_rect=0 \
     vendor.display.comp_mask=0 \
     vendor.display.enable_default_color_mode=1
@@ -59,6 +57,17 @@ else
 # Recovery is enabled, logging is disabled
 PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_hw_recovery_dump=1
+endif
+
+QMAA_ENABLED_HAL_MODULES += display
+ifeq ($(TARGET_USES_QMAA),true)
+ifeq ($(TARGET_USES_QMAA_OVERRIDE_DISPLAY),true)
+PRODUCT_PROPERTY_OVERRIDES += \
+    vendor.display.enable_null_display=0
+else
+PRODUCT_PROPERTY_OVERRIDES += \
+    vendor.display.enable_null_display=1
+endif
 endif
 
 # Properties using default value:
