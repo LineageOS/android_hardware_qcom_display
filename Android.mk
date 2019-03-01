@@ -10,6 +10,7 @@ ifneq ($(TARGET_IS_HEADLESS), true)
 endif
 
 display-hals += gralloc
+display-hals += commonsys-intf/libdisplayconfig
 
 ifneq ($(TARGET_PROVIDES_LIBLIGHT),true)
     display-hals += liblight
