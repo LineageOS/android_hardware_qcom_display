@@ -26,7 +26,7 @@ LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware li
                                  libutils libcutils libsync libqdutils libqdMetaData libdl libdrmutils \
                                  libsdmutils libc++ liblog libgrallocutils libdl \
                                  vendor.display.config@1.0 libhidlbase libhidltransport \
-                                 libui libgpu_tonemapper libbfqio_vendor
+                                 libui libgpu_tonemapper libbfqio
 
 ifneq ($(TARGET_USES_GRALLOC1), true)
     LOCAL_SHARED_LIBRARIES += libmemalloc
