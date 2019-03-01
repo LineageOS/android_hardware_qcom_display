@@ -1111,20 +1111,14 @@ HWC2::Error HWCDisplay::GetPerFrameMetadataKeys(uint32_t *out_num_keys,
   if (out_num_keys == nullptr) {
     return HWC2::Error::BadParameter;
   }
-  *out_num_keys = UINT32(PerFrameMetadataKey::MAX_FRAME_AVERAGE_LIGHT_LEVEL) + 1;
-  if (out_keys != nullptr) {
-    out_keys[0] = PerFrameMetadataKey::DISPLAY_RED_PRIMARY_X;
-    out_keys[1] = PerFrameMetadataKey::DISPLAY_RED_PRIMARY_Y;
-    out_keys[2] = PerFrameMetadataKey::DISPLAY_GREEN_PRIMARY_X;
-    out_keys[3] = PerFrameMetadataKey::DISPLAY_GREEN_PRIMARY_Y;
-    out_keys[4] = PerFrameMetadataKey::DISPLAY_BLUE_PRIMARY_X;
-    out_keys[5] = PerFrameMetadataKey::DISPLAY_BLUE_PRIMARY_Y;
-    out_keys[6] = PerFrameMetadataKey::WHITE_POINT_X;
-    out_keys[7] = PerFrameMetadataKey::WHITE_POINT_Y;
-    out_keys[8] = PerFrameMetadataKey::MAX_LUMINANCE;
-    out_keys[9] = PerFrameMetadataKey::MIN_LUMINANCE;
-    out_keys[10] = PerFrameMetadataKey::MAX_CONTENT_LIGHT_LEVEL;
-    out_keys[11] = PerFrameMetadataKey::MAX_FRAME_AVERAGE_LIGHT_LEVEL;
+  const uint32_t num_keys = UINT32(PerFrameMetadataKey::HDR10_PLUS_SEI) + 1;
+  if (out_keys == nullptr) {
+    *out_num_keys = num_keys;
+  } else {
+    uint32_t max_out_key_elements = std::min(*out_num_keys, num_keys);
+    for (int32_t i = 0; i < max_out_key_elements; i++) {
+      out_keys[i] = static_cast<PerFrameMetadataKey>(i);
+    }
   }
   return HWC2::Error::None;
 }
@@ -1474,12 +1468,13 @@ HWC2::Error HWCDisplay::GetHdrCapabilities(uint32_t *out_num_types, int32_t *out
   }
 
   if (out_types == nullptr) {
-    // We support HDR10 and HLG
-    *out_num_types = 2;
+    // We support HDR10, HLG and HDR10_PLUS.
+    *out_num_types = 3;
   } else {
-    // HDR10 and HLG are supported
+    // HDR10, HLG and HDR10_PLUS are supported.
     out_types[0] = HAL_HDR_HDR10;
     out_types[1] = HAL_HDR_HLG;
+    out_types[2] = HAL_HDR_HDR10_PLUS;
     *out_max_luminance = fixed_info.max_luminance;
     *out_max_average_luminance = fixed_info.average_luminance;
     *out_min_luminance = fixed_info.min_luminance;
