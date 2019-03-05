@@ -139,7 +139,7 @@ int32_t HWCSession::SetSecondaryDisplayStatus(int disp_id, HWCDisplay::DisplaySt
 
   if (status == HWCDisplay::kDisplayStatusResume || status == HWCDisplay::kDisplayStatusPause) {
     hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
-    if (active_builtin_disp_id < kNumDisplays) {
+    if (active_builtin_disp_id < HWCCallbacks::kNumDisplays) {
       {
         SEQUENCE_WAIT_SCOPE_LOCK(locker_[active_builtin_disp_id]);
         hwc_display_[active_builtin_disp_id]->ResetValidation();
@@ -489,7 +489,7 @@ Return<void> HWCSession::getHDRCapabilities(IDisplayConfig::DisplayType dpy,
 
 Return<int32_t> HWCSession::setCameraLaunchStatus(uint32_t on) {
   hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
-  if (active_builtin_disp_id >= kNumDisplays) {
+  if (active_builtin_disp_id >= HWCCallbacks::kNumDisplays) {
     DLOGE("No active displays");
     return -EINVAL;
   }
@@ -584,8 +584,8 @@ Return<int32_t> HWCSession::setDisplayIndex(IDisplayConfig::DisplayTypeExt disp_
   DLOGI("%s display: base = %d, count = %d", GetDisplayTypeName(disp_type), base, count);
 
   // Is display slots capacity smaller than what client can support?
-  if ((base + count) > kNumDisplays) {
-    DLOGE("Exceeds max supported display slots = %d", kNumDisplays);
+  if ((base + count) > HWCCallbacks::kNumDisplays) {
+    DLOGE("Exceeds max supported display slots = %d", HWCCallbacks::kNumDisplays);
     return -1;
   }
 
@@ -626,7 +626,7 @@ Return<int32_t> HWCSession::setDisplayIndex(IDisplayConfig::DisplayTypeExt disp_
 #ifdef DISPLAY_CONFIG_1_3
 Return<int32_t> HWCSession::controlIdlePowerCollapse(bool enable, bool synchronous) {
   hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
-  if (active_builtin_disp_id >= kNumDisplays) {
+  if (active_builtin_disp_id >= HWCCallbacks::kNumDisplays) {
     DLOGE("No active displays");
     return -EINVAL;
   }
@@ -807,7 +807,7 @@ Return<void> HWCSession::getActiveBuiltinDisplayAttributes(
   IDisplayConfig::DisplayAttributes display_attributes = {};
   hwc2_display_t disp_id = GetActiveBuiltinDisplay();
 
-  if (disp_id >= kNumDisplays) {
+  if (disp_id >= HWCCallbacks::kNumDisplays) {
     DLOGE("Invalid display = %d", disp_id);
   } else {
     if (hwc_display_[disp_id]) {
