@@ -401,6 +401,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   DisplayClass GetDisplayClass(hwc2_display_t display_id);
   bool IsPluggableDisplayConnected();
   hwc2_display_t GetActiveBuiltinDisplay();
+  void HandlePendingRefresh();
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[kNumDisplays] = {nullptr};
@@ -437,6 +438,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int32_t registered_builtin_displays_ = 0;
   int32_t disable_hotplug_bwcheck_ = 0;
   int32_t disable_mask_layer_hint_ = 0;
+  std::bitset<kNumDisplays> pending_refresh_;
 };
 
 }  // namespace sdm
