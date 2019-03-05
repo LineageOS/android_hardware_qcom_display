@@ -37,6 +37,7 @@
 #include <vector>
 #include <string>
 #include <set>
+#include <mutex>
 
 #include "drm_interface.h"
 #include "drm_utils.h"
@@ -119,6 +120,7 @@ class DRMCrtcManager {
   uint32_t dir_lut_blob_id_ = 0;
   uint32_t cir_lut_blob_id_ = 0;
   uint32_t sep_lut_blob_id_ = 0;
+  std::mutex lock_;
 };
 
 }  // namespace sde_drm
