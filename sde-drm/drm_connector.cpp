@@ -320,6 +320,7 @@ int DRMConnectorManager::GetPossibleEncoders(uint32_t connector_id,
   return connector_pool_[connector_id]->GetPossibleEncoders(possible_encoders);
 }
 
+
 void DRMConnectorManager::Free(DRMDisplayToken *token) {
   lock_guard<mutex> lock(lock_);
   connector_pool_.at(token->conn_id)->Unlock();

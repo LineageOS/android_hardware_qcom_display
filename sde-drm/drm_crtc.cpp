@@ -218,22 +218,20 @@ void DRMCrtcManager::GetPPInfo(uint32_t crtc_id, DRMPPFeatureInfo *info) {
   it->second->GetPPInfo(info);
 }
 
-int DRMCrtcManager::Reserve(DRMDisplayType disp_type, DRMDisplayToken *token) {
+int DRMCrtcManager::Reserve(const std::set<uint32_t> &possible_crtc_indices,
+                             DRMDisplayToken *token) {
   for (auto &item : crtc_pool_) {
     if (item.second->GetStatus() == DRMStatus::FREE) {
-      item.second->Lock();
-      token->crtc_id = item.first;
-      token->crtc_index = item.second->GetIndex();
-      return 0;
+      if (possible_crtc_indices.find(item.second->GetIndex()) != possible_crtc_indices.end()) {
+        item.second->Lock();
+        token->crtc_id = item.first;
+        token->crtc_index = item.second->GetIndex();
+        return 0;
+      }
     }
   }
 
   return -ENODEV;
-}
-
-int DRMCrtcManager::Reserve(int32_t display_id, DRMDisplayToken *token) {
-  // Neither display type nor display id is currently used in CRTC reservation.
-  return Reserve(DRMDisplayType::PERIPHERAL, token);
 }
 
 void DRMCrtcManager::Free(DRMDisplayToken *token) {

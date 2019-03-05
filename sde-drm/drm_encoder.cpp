@@ -146,16 +146,14 @@ int DRMEncoderManager::GetEncoderList(std::vector<uint32_t> *encoder_ids) {
   return 0;
 }
 
-int DRMEncoderManager::Reserve(set<uint32_t> possible_encoders, DRMDisplayToken *token) {
+int DRMEncoderManager::Reserve(const std::set<uint32_t> &possible_encoders, DRMDisplayToken *token) {
   int ret = -ENODEV;
   for (auto encoder = encoder_pool_.begin(); encoder != encoder_pool_.end(); encoder++) {
     const uint32_t &encoder_id = encoder->first;
-    std::unique_ptr<DRMEncoder> &encoder_ptr = encoder->second;
-    if (encoder_ptr->GetStatus() == DRMStatus::FREE) {
+    if ((encoder->second)->GetStatus() == DRMStatus::FREE) {
       // If encoder is found in the set, the encoder is a candidate for selection and the encoder
       // type for display's connector and encoder-this-iteration are already matched implicitly
-      const bool is_in = possible_encoders.find(encoder_id) != possible_encoders.end();
-      if (is_in) {
+      if (possible_encoders.find(encoder_id) != possible_encoders.end()) {
         encoder->second->Lock();
         token->encoder_id = encoder_id;
         int encoder_index = distance(encoder_pool_.begin(), encoder) + 1;  // 1-indexed port
@@ -192,9 +190,19 @@ int DRMEncoderManager::GetDisplayTypeCode(uint32_t encoder_type) {
 }
 
 void DRMEncoderManager::Free(DRMDisplayToken *token) {
-  encoder_pool_.at(token->encoder_id)->Unlock();
+  auto iter = encoder_pool_.find(token->encoder_id);
+  if (iter != encoder_pool_.end()) {
+    iter->second->Unlock();
+  } else {
+    DRM_LOGW("Failed! encoder_id %u not found! Cleaning up token anyway...", token->encoder_id);
+  }
   token->encoder_id = 0;
   token->hw_port = 0;
+}
+
+int DRMEncoderManager::GetPossibleCrtcIndices(uint32_t encoder_id,
+                                  std::set<uint32_t> *possible_crtc_indices) {
+  return encoder_pool_[encoder_id]->GetPossibleCrtcIndices(possible_crtc_indices);
 }
 
 // ==============================================================================================//
@@ -223,6 +231,22 @@ void DRMEncoder::Unlock() {
 void DRMEncoder::InitAndParse(drmModeEncoder *encoder) {
   drm_encoder_ = encoder;
   encoder_info_.type = drm_encoder_->encoder_type;
+}
+
+int DRMEncoder::GetPossibleCrtcIndices(std::set<uint32_t> *possible_crtc_indices) {
+  if (!possible_crtc_indices) {
+    return -EINVAL;
+  }
+
+  (*possible_crtc_indices).clear();
+  std::bitset<32> possible_crtcs = drm_encoder_->possible_crtcs;
+  for (uint32_t i = 0; i < possible_crtcs.size(); i++) {
+    if (possible_crtcs[i]) {
+      (*possible_crtc_indices).insert(i);
+    }
+  }
+
+  return 0;
 }
 
 void DRMEncoder::Dump() {

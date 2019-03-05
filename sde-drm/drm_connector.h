@@ -95,7 +95,6 @@ class DRMConnectorManager {
   int GetConnectorInfo(uint32_t conn_id, DRMConnectorInfo *info);
   void GetConnectorList(std::vector<uint32_t> *conn_ids);
   int GetPossibleEncoders(uint32_t connector_id, std::set<uint32_t> *possible_encoders);
-
   ~DRMConnectorManager() {}
 
  private:
