@@ -2724,6 +2724,10 @@ HWC2::Error HWCSession::PresentDisplayInternal(hwc2_display_t display, int32_t *
 }
 
 void HWCSession::DisplayPowerReset() {
+  hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
+  if (active_builtin_disp_id >= kNumDisplays) {
+    active_builtin_disp_id = HWC_DISPLAY_PRIMARY;
+  }
   // Acquire lock on all displays.
   for (hwc2_display_t display = HWC_DISPLAY_PRIMARY; display < kNumDisplays; display++) {
     locker_[display].Lock();
@@ -2759,16 +2763,17 @@ void HWCSession::DisplayPowerReset() {
     }
   }
 
-  status = hwc_display_[HWC_DISPLAY_PRIMARY]->SetVsyncEnabled(HWC2::Vsync::Enable);
+  status = hwc_display_[active_builtin_disp_id]->SetVsyncEnabled(HWC2::Vsync::Enable);
   if (status != HWC2::Error::None) {
-    DLOGE("Enabling vsync failed for primary with error = %d", status);
+    DLOGE("Enabling vsync failed for built-in %" PRIu64 " with error = %d", active_builtin_disp_id,
+          status);
   }
 
   // Release lock on all displays.
   for (hwc2_display_t display = HWC_DISPLAY_PRIMARY; display < kNumDisplays; display++) {
     locker_[display].Unlock();
   }
-  Refresh(HWC_DISPLAY_PRIMARY);
+  Refresh(active_builtin_disp_id);
 }
 
 void HWCSession::HandleSecureSession() {
@@ -2851,7 +2856,7 @@ void HWCSession::HandleHotplugPending(hwc2_display_t disp_id, int retire_fence) 
     hwc_display_[active_builtin_disp_id]->GetActiveSecureSession(&secure_sessions);
   }
 
-  if (secure_sessions.any() || active_builtin_disp_id == kNumDisplays) {
+  if (secure_sessions.any() || active_builtin_disp_id >= kNumDisplays) {
     return;
   }
 
@@ -3077,15 +3082,19 @@ android::status_t HWCSession::SetIdlePC(const android::Parcel *input_parcel) {
 
 hwc2_display_t HWCSession::GetActiveBuiltinDisplay() {
   hwc2_display_t disp_id = kNumDisplays;
-  Locker::ScopeLock lock_p(locker_[HWC_DISPLAY_PRIMARY]);
-  Locker::ScopeLock lock_b2(locker_[HWC_DISPLAY_BUILTIN_2]);
-  if (hwc_display_[HWC_DISPLAY_PRIMARY] &&
-      hwc_display_[HWC_DISPLAY_PRIMARY]->GetCurrentPowerMode() == HWC2::PowerMode::On) {
-    disp_id = HWC_DISPLAY_PRIMARY;
-  } else if (hwc_display_[HWC_DISPLAY_BUILTIN_2] &&
-      hwc_display_[HWC_DISPLAY_BUILTIN_2]->GetCurrentPowerMode() == HWC2::PowerMode::On) {
-    disp_id = HWC_DISPLAY_BUILTIN_2;
+  // Get first active display among primary and built-in displays.
+  std::vector<DisplayMapInfo> map_info = {map_info_primary_};
+  std::copy(map_info_builtin_.begin(), map_info_builtin_.end(), std::back_inserter(map_info));
+
+  for (auto &info : map_info) {
+    SCOPE_LOCK(locker_[info.client_id]);
+    auto &hwc_display = hwc_display_[info.client_id];
+    if (hwc_display && hwc_display->GetCurrentPowerMode() != HWC2::PowerMode::Off) {
+      disp_id = info.client_id;
+      break;
+    }
   }
+
   return disp_id;
 }
 
