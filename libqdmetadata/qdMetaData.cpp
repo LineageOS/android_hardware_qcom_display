@@ -149,7 +149,7 @@ int setMetaDataVa(MetaData_t *data, DispParamType paramType,
         }
         case SET_CVP_METADATA: {
              struct CVPMetadata *cvpMetadata = (struct CVPMetadata *)param;
-             if (cvpMetadata->size < CVP_METADATA_SIZE) {
+             if (cvpMetadata->size <= CVP_METADATA_SIZE) {
                  data->cvpMetadata.size = cvpMetadata->size;
                  memcpy(data->cvpMetadata.payload, cvpMetadata->payload,
                         cvpMetadata->size);
@@ -315,7 +315,7 @@ int getMetaDataVa(MetaData_t *data, DispFetchParamType paramType,
             if (data->operation & SET_CVP_METADATA) {
                 struct CVPMetadata *cvpMetadata = (struct CVPMetadata *)param;
                 cvpMetadata->size = 0;
-                if (data->cvpMetadata.size < CVP_METADATA_SIZE) {
+                if (data->cvpMetadata.size <= CVP_METADATA_SIZE) {
                     cvpMetadata->size = data->cvpMetadata.size;
                     memcpy(cvpMetadata->payload, data->cvpMetadata.payload,
                            data->cvpMetadata.size);
