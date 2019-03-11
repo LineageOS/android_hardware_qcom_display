@@ -731,7 +731,8 @@ bool HWCLayer::SupportLocalConversion(ColorPrimaries working_primaries) {
 
 bool HWCLayer::ValidateAndSetCSC() {
   if (client_requested_ != HWC2::Composition::Device &&
-      client_requested_ != HWC2::Composition::Cursor) {
+      client_requested_ != HWC2::Composition::Cursor &&
+      client_requested_ != HWC2::Composition::SolidColor) {
     // Check the layers which are configured to Device
     return true;
   }
