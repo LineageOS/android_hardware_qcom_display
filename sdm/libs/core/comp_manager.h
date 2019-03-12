@@ -109,6 +109,7 @@ class CompManager {
                                         // mode, where strategy manager chooses the best strategy
                                         // that uses optimal number of pipes for each display
   bool secure_external_layer_ = false;
+  bool secure_external_transition_ = false;
   HWResourceInfo hw_res_info_;
   BufferAllocator *buffer_allocator_ = NULL;
   ExtensionInterface *extension_intf_ = NULL;
