@@ -1446,6 +1446,11 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
     // commit. Need to revist this and update it accordingly for FBT layer.
     if (hw_layers_.info.gpu_target_index == sdm_layer_index) {
       hw_layer.input_buffer.flags.secure = sdm_layer->input_buffer.flags.secure;
+      hw_layer.input_buffer.format = sdm_layer->input_buffer.format;
+      hw_layer.input_buffer.width = sdm_layer->input_buffer.width;
+      hw_layer.input_buffer.height = sdm_layer->input_buffer.height;
+      hw_layer.input_buffer.unaligned_width = sdm_layer->input_buffer.unaligned_width;
+      hw_layer.input_buffer.unaligned_height = sdm_layer->input_buffer.unaligned_height;
     }
   }
 
