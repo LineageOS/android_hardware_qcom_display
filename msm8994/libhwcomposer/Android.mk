@@ -2,9 +2,6 @@ LOCAL_PATH := $(call my-dir)
 include $(LOCAL_PATH)/../common.mk
 include $(CLEAR_VARS)
 
-# b/24171136 many files not compiling with clang/llvm yet
-LOCAL_CLANG := false
-
 LOCAL_MODULE                  := hwcomposer.$(TARGET_BOARD_PLATFORM)
 LOCAL_MODULE_RELATIVE_PATH    := hw
 LOCAL_PROPRIETARY_MODULE      := true
@@ -22,7 +19,8 @@ LOCAL_SHARED_LIBRARIES += libskia
 endif #TARGET_USES_QCOM_BSP
 
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdhwcomposer\" \
-                                 -std=c++11
+                                 -std=c++11 -Wno-sign-conversion -Wno-float-conversion -Wno-sizeof-array-argument -Wno-pointer-bool-conversion
+
 #Enable Dynamic FPS if PHASE_OFFSET is not set
 ifeq ($(VSYNC_EVENT_PHASE_OFFSET_NS),)
     LOCAL_CFLAGS += -DDYNAMIC_FPS
