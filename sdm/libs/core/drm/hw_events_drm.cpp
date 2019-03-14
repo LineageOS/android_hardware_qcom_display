@@ -222,8 +222,6 @@ DisplayError HWEventsDRM::Init(int display_id, DisplayType display_type,
     return kErrorResources;
   }
 
-  RegisterVSync();
-  vsync_registered_ = true;
   RegisterPanelDead(true);
   RegisterIdleNotify(true);
   RegisterIdlePowerCollapse(true);
