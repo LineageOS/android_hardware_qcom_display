@@ -741,7 +741,6 @@ int HDMIDisplay::setActiveConfig(int newConfig) {
 // returns false if the xres or yres of the new config do
 // not match the current config
 bool HDMIDisplay::isValidConfigChange(int newConfig) {
-    int newMode = mEDIDModes[newConfig];
     uint32_t width = 0, height = 0, refresh = 0;
     getAttrForConfig(newConfig, width, height, refresh);
     return ((mXres == width) && (mYres == height)) || mEnableResolutionChange;
