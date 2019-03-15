@@ -1,8 +1,8 @@
 #Display related packages and configuration
 
 PRODUCT_PACKAGES += \
-    android.hardware.graphics.composer@2.2-impl \
-    android.hardware.graphics.composer@2.2-service \
+    android.hardware.graphics.composer@2.3-impl \
+    android.hardware.graphics.composer@2.3-service \
     android.hardware.graphics.mapper@2.0-impl-qti-display \
     vendor.qti.hardware.display.allocator@1.0-service \
     android.hardware.memtrack@1.0-impl \
@@ -64,6 +64,19 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_excl_rect=0 \
     vendor.display.comp_mask=0 \
     vendor.display.enable_default_color_mode=1
+
+ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
+# Recovery is enabled, logging is enabled
+PRODUCT_PROPERTY_OVERRIDES += \
+    vendor.display.disable_hw_recovery_dump=0
+else
+# Recovery is enabled, logging is disabled
+PRODUCT_PROPERTY_OVERRIDES += \
+    vendor.display.disable_hw_recovery_dump=1
+endif
+
+# Properties using default value:
+#    vendor.display.disable_hw_recovery=0
 
 # This matrix should be in column major order, per SurfaceFlinger requirement
 #  1.0   0.0   0.0
