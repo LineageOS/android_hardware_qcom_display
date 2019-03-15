@@ -328,6 +328,8 @@ void DRMDppsManagerImp::CacheDppsFeature(uint32_t obj_id, va_list args) {
 }
 
 void DRMDppsManagerImp::CommitDppsFeatures(drmModeAtomicReq *req, const DRMDisplayToken &tok) {
+  int ret = 0;
+
   if (!req)
     return;
 
@@ -335,8 +337,12 @@ void DRMDppsManagerImp::CommitDppsFeatures(drmModeAtomicReq *req, const DRMDispl
   if (!dpps_dirty_prop_.empty()) {
     for (auto it = dpps_dirty_prop_.begin(); it != dpps_dirty_prop_.end();) {
       if (it->obj_id == tok.crtc_id || it->obj_id == tok.conn_id) {
-        drmModeAtomicAddProperty(req, it->obj_id, it->prop_id, it->value);
-        it = dpps_dirty_prop_.erase(it);
+        ret = drmModeAtomicAddProperty(req, it->obj_id, it->prop_id, it->value);
+        if (ret < 0)
+          DRM_LOGE("AtomicAddProperty failed obj_id 0x%x, prop_id %d ret %d ", it->obj_id,
+                   it->prop_id, ret);
+        else
+          it = dpps_dirty_prop_.erase(it);
       } else {
         it++;
       }
