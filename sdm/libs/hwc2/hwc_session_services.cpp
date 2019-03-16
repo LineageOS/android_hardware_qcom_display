@@ -113,37 +113,42 @@ Return<void> HWCSession::isDisplayConnected(IDisplayConfig::DisplayType dpy,
 
 int32_t HWCSession::SetSecondaryDisplayStatus(int disp_id, HWCDisplay::DisplayStatus status) {
   int disp_idx = GetDisplayIndex(disp_id);
+  int err = -EINVAL;
   if (disp_idx == -1) {
     DLOGE("Invalid display = %d", disp_id);
     return -EINVAL;
   }
 
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_idx]);
-  DLOGI("Display = %d, Status = %d", disp_idx, status);
-
   if (disp_idx == qdutils::DISPLAY_PRIMARY) {
     DLOGE("Not supported for this display");
-  } else if (!hwc_display_[disp_idx]) {
-    DLOGW("Display is not connected");
-  } else {
-    int err = hwc_display_[disp_idx]->SetDisplayStatus(status);
+    return err;
+  }
+
+  {
+    SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_idx]);
+    if (!hwc_display_[disp_idx]) {
+      DLOGW("Display is not connected");
+      return err;
+    }
+    DLOGI("Display = %d, Status = %d", disp_idx, status);
+    err = hwc_display_[disp_idx]->SetDisplayStatus(status);
     if (err != 0) {
       return err;
     }
+  }
 
-    if (status == HWCDisplay::kDisplayStatusResume || status == HWCDisplay::kDisplayStatusPause) {
-      hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
-      if (active_builtin_disp_id < kNumDisplays) {
-        {
-          SEQUENCE_WAIT_SCOPE_LOCK(locker_[active_builtin_disp_id]);
-          hwc_display_[active_builtin_disp_id]->ResetValidation();
-        }
-        callbacks_.Refresh(active_builtin_disp_id);
+  if (status == HWCDisplay::kDisplayStatusResume || status == HWCDisplay::kDisplayStatusPause) {
+    hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
+    if (active_builtin_disp_id < kNumDisplays) {
+      {
+        SEQUENCE_WAIT_SCOPE_LOCK(locker_[active_builtin_disp_id]);
+        hwc_display_[active_builtin_disp_id]->ResetValidation();
       }
+      callbacks_.Refresh(active_builtin_disp_id);
     }
   }
 
-  return -EINVAL;
+  return err;
 }
 
 Return<int32_t> HWCSession::setSecondayDisplayStatus(IDisplayConfig::DisplayType dpy,
