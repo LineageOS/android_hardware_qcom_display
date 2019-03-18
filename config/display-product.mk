@@ -53,6 +53,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_excl_rect=0 \
     vendor.display.comp_mask=0 \
     vendor.display.enable_posted_start_dyn=1 \
+    vendor.display.enable_optimize_refresh=1 \
     vendor.display.use_smooth_motion=1 \
     debug.sf.early_phase_offset_ns=500000 \
     debug.sf.early_app_phase_offset_ns=500000 \

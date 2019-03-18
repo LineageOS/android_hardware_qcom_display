@@ -56,7 +56,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_scaler=0 \
     vendor.display.disable_offline_rotator=1 \
     vendor.display.disable_excl_rect=0 \
-    vendor.display.comp_mask=0
+    vendor.display.comp_mask=0 \
+    vendor.display.enable_optimize_refresh=1
 
 ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
 # Recovery is enabled, logging is enabled
