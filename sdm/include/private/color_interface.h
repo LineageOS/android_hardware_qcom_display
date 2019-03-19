@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2018, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015-2019, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -84,11 +84,12 @@ class ColorInterface {
                                              uint32_t disp_id, int32_t mode_id) = 0;
 
   virtual DisplayError ColorIntfGetNumDisplayModes(PPFeaturesConfig *out_features,
-                                                 uint32_t disp_id, uint32_t *mode_cnt) = 0;
+                                                 uint32_t disp_id, bool enum_user_modes,
+                                                 uint32_t *mode_cnt) = 0;
 
   virtual DisplayError ColorIntfEnumerateDisplayModes(PPFeaturesConfig *out_features,
-                                                uint32_t disp_id, SDEDisplayMode *modes,
-                                                uint32_t *mode_cnt) = 0;
+                                                uint32_t disp_id, bool enum_user_modes,
+                                                SDEDisplayMode *modes, uint32_t *mode_cnt) = 0;
   virtual DisplayError ColorIntfGetModeInfo(PPFeaturesConfig *out_features,
                                             uint32_t disp_id, int32_t mode_id,
                                             AttrVal *query) = 0;
