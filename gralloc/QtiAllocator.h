@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,7 +32,7 @@
 
 #include <hidl/MQDescriptor.h>
 #include <hidl/Status.h>
-#include <android/hardware/graphics/allocator/2.0/IAllocator.h>
+#include <vendor/qti/hardware/display/allocator/1.0/IQtiAllocator.h>
 
 #include "gr_buf_mgr.h"
 
@@ -55,9 +55,10 @@ using ::android::hardware::hidl_vec;
 using ::android::hidl::base::V1_0::DebugInfo;
 using ::android::hidl::base::V1_0::IBase;
 using ::android::sp;
+using ::vendor::qti::hardware::display::allocator::V1_0::IQtiAllocator;
 using gralloc::BufferManager;
 
-class QtiAllocator : public IAllocator {
+class QtiAllocator : public IQtiAllocator {
  public:
   QtiAllocator();
   // Methods from ::android::hardware::graphics::allocator::V2_0::IAllocator follow.
@@ -70,7 +71,7 @@ class QtiAllocator : public IAllocator {
   BufferManager *buf_mgr_ = nullptr;
 };
 
-extern "C" IAllocator *HIDL_FETCH_IAllocator(const char *name);
+extern "C" IQtiAllocator *HIDL_FETCH_IQtiAllocator(const char *name);
 
 }  // namespace implementation
 }  // namespace V1_0
