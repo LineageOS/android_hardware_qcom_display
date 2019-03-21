@@ -134,10 +134,13 @@ DisplayError DisplayBase::Init() {
     color_mgr_ = ColorManagerProxy::CreateColorManagerProxy(display_type_, hw_intf_,
                                                             display_attributes_, hw_panel_info_);
 
-    if (!color_mgr_) {
+    if (color_mgr_) {
+      if (InitializeColorModes(false) != kErrorNone) {
+        DLOGW("InitColorModes failed for display %d-%d", display_id_, display_type_);
+      }
+      color_mgr_->ColorMgrCombineColorModes();
+    } else {
       DLOGW("Unable to create ColorManagerProxy for display %d-%d", display_id_, display_type_);
-    } else if (InitializeColorModes(false) != kErrorNone) {
-      DLOGW("InitColorModes failed for display %d-%d", display_id_, display_type_);
     }
   }
 

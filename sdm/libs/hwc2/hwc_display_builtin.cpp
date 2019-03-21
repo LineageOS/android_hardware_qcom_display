@@ -125,53 +125,9 @@ int HWCDisplayBuiltIn::Init() {
   return status;
 }
 
-void HWCDisplayBuiltIn::ProcessBootAnimCompleted() {
-  bool bootanim_exit = false;
-
-  /* All other checks namely "init.svc.bootanim" or
-  * HWC_GEOMETRY_CHANGED fail in correctly identifying the
-  * exact bootup transition to homescreen
-  */
-  char property[PROPERTY_VALUE_MAX];
-  bool isEncrypted = false;
-  bool main_class_services_started = false;
-  property_get("ro.crypto.state", property, "unencrypted");
-  if (!strcmp(property, "encrypted")) {
-    property_get("ro.crypto.type", property, "block");
-    if (!strcmp(property, "block")) {
-      isEncrypted = true;
-      property_get("vold.decrypt", property, "");
-      if (!strcmp(property, "trigger_restart_framework")) {
-        main_class_services_started = true;
-      }
-    }
-  }
-
-  property_get("service.bootanim.exit", property, "0");
-  if (!strcmp(property, "1")) {
-    bootanim_exit = true;
-  }
-
-  if ((!isEncrypted || (isEncrypted && main_class_services_started)) &&
-      bootanim_exit) {
-    DLOGI("Applying default mode for display %d", sdm_id_);
-    boot_animation_completed_ = true;
-    // Applying default mode after bootanimation is finished And
-    // If Data is Encrypted, it is ready for access.
-    if (display_intf_) {
-      display_intf_->ApplyDefaultDisplayMode();
-      RestoreColorTransform();
-    }
-  }
-}
-
 HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
   auto status = HWC2::Error::None;
   DisplayError error = kErrorNone;
-
-  if (default_mode_status_ && !boot_animation_completed_) {
-    ProcessBootAnimCompleted();
-  }
 
   if (display_paused_) {
     MarkLayersForGPUBypass();

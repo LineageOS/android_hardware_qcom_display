@@ -95,6 +95,7 @@ class ColorInterface {
                                             AttrVal *query) = 0;
   virtual DisplayError ColorIntfGetDefaultModeID(PPFeaturesConfig *out_features,
                                                  uint32_t disp_id, int32_t *mode_id) = 0;
+  virtual DisplayError ColorIntfCombineColorModes() = 0;
 
  protected:
   virtual ~ColorInterface() {}

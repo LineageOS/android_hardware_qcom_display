@@ -72,6 +72,7 @@ class ColorManagerProxy {
   DisplayError ColorMgrGetModeInfo(int32_t mode_id, AttrVal *query);
   DisplayError ColorMgrSetColorTransform(uint32_t length, const double *trans_data);
   DisplayError ColorMgrGetDefaultModeID(int32_t *mode_id);
+  DisplayError ColorMgrCombineColorModes();
   bool NeedsPartialUpdateDisable();
   DisplayError Commit();
 
