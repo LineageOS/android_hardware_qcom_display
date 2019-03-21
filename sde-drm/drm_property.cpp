@@ -141,7 +141,7 @@ DRMProperty DRMPropertyManager::GetPropertyEnum(const std::string &name) const {
   if (name == "SDE_DSPP_HIST_IRQ_V1") { return DRMProperty::SDE_DSPP_ABA_HIST_IRQ; }
   if (name == "SDE_DSPP_VLUT_V1") { return DRMProperty::SDE_DSPP_ABA_LUT; }
   if (name == "bl_scale") { return DRMProperty::SDE_DSPP_BL_SCALE; }
-  if (name == "ad_bl_scale") { return DRMProperty::SDE_DSPP_AD4_BL_SCALE; }
+  if (name == "sv_bl_scale") { return DRMProperty::SDE_DSPP_SV_BL_SCALE; }
   if (name == "capture_mode") { return DRMProperty::CAPTURE_MODE; }
   if (name == "qsync_mode") { return DRMProperty::QSYNC_MODE; }
   if (name == "idle_pc_state") { return DRMProperty::IDLE_PC_STATE; }

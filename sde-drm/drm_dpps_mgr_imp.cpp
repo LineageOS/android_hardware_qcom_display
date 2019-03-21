@@ -262,8 +262,8 @@ void DRMDppsManagerImp::Init(int fd, drmModeRes* res) {
   dpps_feature_[kFeatureAbaLut] = DRMDppsPropInfo {1 /* version */,
     DRMProperty::SDE_DSPP_ABA_LUT, prop_mgr_.GetPropertyId(DRMProperty::SDE_DSPP_ABA_LUT),
     false /* is_event */};
-  dpps_feature_[kFeatureAd4BlScale] = DRMDppsPropInfo {1 /* version */,
-    DRMProperty::SDE_DSPP_AD4_BL_SCALE, prop_mgr_.GetPropertyId(DRMProperty::SDE_DSPP_AD4_BL_SCALE),
+  dpps_feature_[kFeatureSvBlScale] = DRMDppsPropInfo {1 /* version */,
+    DRMProperty::SDE_DSPP_SV_BL_SCALE, prop_mgr_.GetPropertyId(DRMProperty::SDE_DSPP_SV_BL_SCALE),
     false /* is_event */};
   dpps_feature_[kFeatureBacklightScale] = DRMDppsPropInfo {1 /* version */,
     DRMProperty::SDE_DSPP_BL_SCALE, prop_mgr_.GetPropertyId(DRMProperty::SDE_DSPP_BL_SCALE),

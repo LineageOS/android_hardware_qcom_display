@@ -686,7 +686,7 @@ enum DRMDPPSFeatureID {
   kFeatureAbaHistIRQ,
   kFeatureAbaLut,
   // BL scale properties
-  kFeatureAd4BlScale,
+  kFeatureSvBlScale,
   kFeatureBacklightScale,
   // Events
   kFeaturePowerEvent,
