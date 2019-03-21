@@ -523,12 +523,12 @@ void DRMPlane::ParseProperties() {
          ((uint32_t)prop_enum - (uint32_t)DRMProperty::SDE_DGM_1D_LUT_GC_V5 + 5);
     }
     if ((uint32_t)prop_enum >= (uint32_t)DRMProperty::SDE_VIG_1D_LUT_IGC_V5 &&
-        (uint32_t)prop_enum <= (uint32_t)DRMProperty::SDE_VIG_1D_LUT_IGC_V5) {
+        (uint32_t)prop_enum <= (uint32_t)DRMProperty::SDE_VIG_1D_LUT_IGC_V6) {
       plane_type_info_.tonemap_lut_version_map[DRMTonemapLutType::VIG_1D_IGC] =
           ((uint32_t)prop_enum - (uint32_t)DRMProperty::SDE_VIG_1D_LUT_IGC_V5 + 5);
     }
     if ((uint32_t)prop_enum >= (uint32_t)DRMProperty::SDE_VIG_3D_LUT_GAMUT_V5 &&
-        (uint32_t)prop_enum <= (uint32_t)DRMProperty::SDE_VIG_3D_LUT_GAMUT_V5) {
+        (uint32_t)prop_enum <= (uint32_t)DRMProperty::SDE_VIG_3D_LUT_GAMUT_V6) {
       plane_type_info_.tonemap_lut_version_map[DRMTonemapLutType::VIG_3D_GAMUT] =
           ((uint32_t)prop_enum - (uint32_t)DRMProperty::SDE_VIG_3D_LUT_GAMUT_V5 + 5);
     }
