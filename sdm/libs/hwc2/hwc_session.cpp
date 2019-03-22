@@ -3078,6 +3078,11 @@ void HWCSession::UpdateVsyncSource() {
   HWC2::Vsync vsync_mode = hwc_display_[active_source] ?
                            hwc_display_[active_source]->GetLastVsyncMode() : HWC2::Vsync::Enable;
   hwc_display_[next_vsync_source]->SetVsyncEnabled(vsync_mode);
+  // Disable Vsync on previous display.
+  if (hwc_display_[active_source]) {
+    hwc_display_[active_source]->SetVsyncEnabled(HWC2::Vsync::Disable);
+  }
+
   DLOGI("active_source %d next_vsync_source %d", active_source, next_vsync_source);
 }
 
