@@ -1494,6 +1494,7 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
   if (error == kErrorNone) {
     // A commit is successfully submitted, start flushing on failure now onwards.
     flush_on_error_ = true;
+    first_cycle_ = false;
   } else {
     if (error == kErrorShutDown) {
       shutdown_pending_ = true;

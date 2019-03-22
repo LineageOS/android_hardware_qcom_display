@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, 2018 The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2016, 2018 - 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -146,6 +146,7 @@ class Locker {
   }
 
   void Lock() { pthread_mutex_lock(&mutex_); }
+  int32_t TryLock() { return pthread_mutex_trylock(&mutex_); }
   void Unlock() { pthread_mutex_unlock(&mutex_); }
   void Signal() { pthread_cond_signal(&condition_); }
   void Broadcast() { pthread_cond_broadcast(&condition_); }

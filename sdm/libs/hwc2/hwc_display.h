@@ -235,6 +235,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error SetColorModeFromClientApi(int32_t color_mode_id) {
     return HWC2::Error::Unsupported;
   }
+  bool IsFirstCommitDone() { return !first_cycle_; }
 
   // HWC2 APIs
   virtual HWC2::Error AcceptDisplayChanges(void);
@@ -416,6 +417,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool has_client_composition_ = false;
   DisplayValidateState validate_state_ = kNormalValidate;
   bool fast_path_enabled_ = true;
+  bool first_cycle_ = true;  // false if a display commit has succeeded on the device.
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {
