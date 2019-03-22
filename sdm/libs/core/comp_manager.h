@@ -110,6 +110,7 @@ class CompManager {
     bool is_primary_panel = false;
     PUConstraints pu_constraints = {};
     DisplayConfigVariableInfo fb_config = {};
+    bool first_cycle_ = true;
   };
 
   Locker locker_;

@@ -312,7 +312,12 @@ DisplayError CompManager::Prepare(Handle display_ctx, HWLayers *hw_layers) {
 
   if (error != kErrorNone) {
     resource_intf_->Stop(display_resource_ctx, hw_layers);
-    DLOGE("Composition strategies exhausted for display = %d", display_comp_ctx->display_type);
+    if (safe_mode_ && display_comp_ctx->first_cycle_) {
+      DLOGW("Composition strategies exhausted for display = %d on first cycle",
+            display_comp_ctx->display_type);
+    } else {
+      DLOGE("Composition strategies exhausted for display = %d", display_comp_ctx->display_type);
+    }
     return error;
   }
 
@@ -390,6 +395,7 @@ DisplayError CompManager::PostCommit(Handle display_ctx, HWLayers *hw_layers) {
   }
 
   display_comp_ctx->idle_fallback = false;
+  display_comp_ctx->first_cycle_ = false;
 
   DLOGV_IF(kTagCompManager, "Registered displays [%s], configured displays [%s], display %d-%d",
            StringDisplayList(registered_displays_), StringDisplayList(configured_displays_),
