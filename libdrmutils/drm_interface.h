@@ -507,6 +507,8 @@ struct DRMCrtcInfo {
   uint32_t min_prefill_lines = 0;
   int secure_disp_blend_stage = -1;
   bool concurrent_writeback = false;
+  uint32_t num_mnocports;
+  uint32_t mnoc_bus_width;
 };
 
 enum struct DRMPlaneType {
