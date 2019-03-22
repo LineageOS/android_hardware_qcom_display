@@ -2641,7 +2641,7 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
   hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
   if (active_builtin_disp_id < kNumDisplays) {
     {
-      SCOPE_LOCK(locker_[active_builtin_disp_id]);
+      SEQUENCE_WAIT_SCOPE_LOCK(locker_[active_builtin_disp_id]);
       hwc_display_[active_builtin_disp_id]->ResetValidation();
     }
 
