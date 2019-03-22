@@ -169,6 +169,29 @@ int HWCSession::Init() {
 
   InitDisplaySlots();
 
+#if defined(DISPLAY_CONFIG_1_2) && defined(CONFIG_BASEID_FROM_PROP)
+  char indices[kPropertyMax];
+  uint32_t index_start, index_size;
+  if (Debug::Get()->GetProperty(BUILTIN_BASEID_AND_SIZE_PROP, indices) == kErrorNone) {
+    if (std::sscanf(indices, "%d,%d", &index_start, &index_size) == 2) {
+      setDisplayIndex(IDisplayConfig::DisplayTypeExt::DISPLAY_BUILTIN,
+               index_start, index_size);
+    }
+  }
+  if (Debug::Get()->GetProperty(PLUGGABLE_BASEID_AND_SIZE_PROP, indices) == kErrorNone) {
+    if (std::sscanf(indices, "%d,%d", &index_start, &index_size) == 2) {
+      setDisplayIndex(IDisplayConfig::DisplayTypeExt::DISPLAY_PLUGGABLE,
+               index_start, index_size);
+    }
+  }
+  if (Debug::Get()->GetProperty(VIRTUAL_BASEID_AND_SIZE_PROP, indices) == kErrorNone) {
+    if (std::sscanf(indices, "%d,%d", &index_start, &index_size) == 2) {
+      setDisplayIndex(IDisplayConfig::DisplayTypeExt::DISPLAY_VIRTUAL,
+               index_start, index_size);
+    }
+  }
+#endif
+
   // Start QService and connect to it.
   qService::QService::init();
   android::sp<qService::IQService> iqservice = android::interface_cast<qService::IQService>(
