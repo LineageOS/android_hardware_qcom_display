@@ -78,6 +78,11 @@ namespace sdm {
   const int kPageSize = 4096;
   const uint32_t kGridSize = 129;  // size used for non-linear transformation before Tone-mapping
   const uint32_t kLutDim = 17;  // Dim of the 3d LUT for tone-mapping.
+  const int kColorTransformMatrixSize = 16;
+  const float kIdentityMatrix[kColorTransformMatrixSize] = { 1.0, 0.0, 0.0, 0.0,
+                                                             0.0, 1.0, 0.0, 0.0,
+                                                             0.0, 0.0, 1.0, 0.0,
+                                                             0.0, 0.0, 0.0, 1.0 };
 
   typedef void * Handle;
 

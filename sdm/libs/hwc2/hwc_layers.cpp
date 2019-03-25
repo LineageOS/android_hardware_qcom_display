@@ -534,6 +534,20 @@ HWC2::Error HWCLayer::SetLayerZOrder(uint32_t z) {
     geometry_changes_ |= kZOrder;
     z_ = z;
   }
+
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCLayer::SetLayerColorTransform(const float *matrix) {
+  std::memcpy(layer_->color_transform_matrix, matrix, sizeof(layer_->color_transform_matrix));
+  needs_validate_ = true;
+
+  if (!std::memcmp(matrix, kIdentityMatrix, sizeof(kIdentityMatrix))) {
+    color_transform_matrix_set_ = false;
+  } else {
+    color_transform_matrix_set_ = true;
+  }
+
   return HWC2::Error::None;
 }
 
