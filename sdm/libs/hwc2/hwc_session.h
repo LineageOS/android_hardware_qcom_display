@@ -217,7 +217,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   // Uevent handler
   virtual void UEventHandler(const char *uevent_data, int length);
   void ResetPanel();
-  void InitDisplaySlots();
+  void InitSupportedDisplaySlots();
   int GetDisplayIndex(int dpy);
   int CreatePrimaryDisplay();
   void CreateNullDisplay();
@@ -337,7 +337,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   void HandleConcurrency(hwc2_display_t disp);
   void ActivateDisplay(hwc2_display_t disp, bool enable);
   void NonBuiltinConcurrency(hwc2_display_t disp, bool is_built_in_2_on);
-  void MapBuiltInDisplays();
+  void HandleBuiltInDisplays();
   void HandlePendingRefresh();
   bool GetSecondBuiltinStatus();
   hwc2_display_t GetNextBuiltinIndex();
