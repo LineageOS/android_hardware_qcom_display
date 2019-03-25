@@ -167,7 +167,6 @@ int HWCSession::Init() {
     return status;
   }
 
-  InitDisplaySlots();
 
 #if defined(DISPLAY_CONFIG_1_2) && defined(CONFIG_BASEID_FROM_PROP)
   char indices[kPropertyMax];
@@ -209,51 +208,12 @@ int HWCSession::Init() {
   HWCDebugHandler::Get()->GetProperty(ENABLE_NULL_DISPLAY_PROP, &null_display_mode_);
   HWCDebugHandler::Get()->GetProperty(DISABLE_HOTPLUG_BWCHECK, &disable_hotplug_bwcheck_);
   HWCDebugHandler::Get()->GetProperty(DISABLE_MASK_LAYER_HINT, &disable_mask_layer_hint_);
-  DisplayError error = kErrorNone;
 
-  HWDisplayInterfaceInfo hw_disp_info = {};
-  if (null_display_mode_) {
-    hw_disp_info.type = kPrimary;
-    hw_disp_info.is_connected = true;
-  } else {
-    error = CoreInterface::CreateCore(&buffer_allocator_, &buffer_sync_handler_, &socket_handler_,
-                                      &core_intf_);
-    if (error != kErrorNone) {
-      DLOGE("Failed to create CoreInterface");
-      return -EOWNERDEAD;
-    }
-
-    error = core_intf_->GetFirstDisplayInterfaceType(&hw_disp_info);
-    if (error != kErrorNone) {
-      CoreInterface::DestroyCore();
-      DLOGE("Primary display type not recognized. Error = %d", error);
-      return -EINVAL;
-    }
-
-    error = core_intf_->GetMaxDisplaysSupported(kPluggable, &max_sde_pluggable_displays_);
-    if (kErrorNone == error) {
-      if (max_sde_pluggable_displays_ && (kPluggable == hw_disp_info.type)) {
-        // If primary is a pluggable display, we have already used one pluggable display interface.
-        max_sde_pluggable_displays_--;
-      }
-    } else {
-      DLOGE("Could not find maximum pluggable displays supported. Error = %d", error);
-    }
-
-    error = core_intf_->GetMaxDisplaysSupported(kBuiltIn, &max_sde_builtin_displays_);
-    if (kErrorNone == error) {
-      if (max_sde_builtin_displays_ && (kBuiltIn == hw_disp_info.type)) {
-        // If primary is not a pluggable display, we have already used one built-in display
-        // interface.
-        max_sde_builtin_displays_--;
-      }
-    } else {
-      DLOGE("Could not find maximum built-in displays supported. Error = %d", error);
-    }
-
+  if (!null_display_mode_) {
     g_hwc_uevent_.Register(this);
   }
 
+  InitSupportedDisplaySlots();
   // Create primary display here. Remaining builtin displays will be created after client has set
   // display indexes which may happen sometime before callback is registered.
   status = CreatePrimaryDisplay();
@@ -299,33 +259,87 @@ int HWCSession::Deinit() {
   return 0;
 }
 
-void HWCSession::InitDisplaySlots() {
+void HWCSession::InitSupportedDisplaySlots() {
   // Default slots:
-  //    Primary = 0, External = 1, Virtual = 2 (legacy IDs)
-  //    Additional builtin displays 3, 4 ... x
-  //    Additional external displays x+1, x+2 ... y
-  //    Additional virtual displays y+1, y+2 ... z
-  // If client does not support additional displays, hotplug for such displays
-  //    will be disregarded by the client.
-  // If client supports different range of ids for additional displays, those
-  //    will be set and overridden by an explicit call to set display indexes.
-  hwc2_display_t additional_base_id = qdutils::DISPLAY_VIRTUAL + 1;
+  //    Primary = 0, External = 1
+  //    Additional external displays 2,3,...max_pluggable_count.
+  //    Additional builtin displays max_pluggable_count + 1, max_pluggable_count + 2,...
+  //    Last slots for virtual displays.
+  // Virtual display id is only for SF <--> HWC communication.
+  // It need not align with hwccomposer_defs
 
   map_info_primary_.client_id = qdutils::DISPLAY_PRIMARY;
 
-  map_info_builtin_.resize(HWCCallbacks::kNumBuiltIn);
-  for (size_t i = 0; i < HWCCallbacks::kNumBuiltIn; i++) {
-    map_info_builtin_[i].client_id = additional_base_id++;
+  if (null_display_mode_) {
+    // Skip display slot initialization.
+    return;
   }
 
-  map_info_pluggable_.resize(HWCCallbacks::kNumPluggable);
-  for (size_t i = 0; i < HWCCallbacks::kNumPluggable; i++) {
-    map_info_pluggable_[i].client_id = i ? additional_base_id++ : qdutils::DISPLAY_EXTERNAL;
+  DisplayError error = CoreInterface::CreateCore(&buffer_allocator_, &buffer_sync_handler_,
+                                                 &socket_handler_, &core_intf_);
+  if (error != kErrorNone) {
+    DLOGE("Failed to create CoreInterface");
+    return;
   }
 
-  map_info_virtual_.resize(HWCCallbacks::kNumVirtual);
-  for (size_t i = 0; i < HWCCallbacks::kNumVirtual; i++) {
-    map_info_virtual_[i].client_id = i ? additional_base_id++ : qdutils::DISPLAY_VIRTUAL;
+  HWDisplayInterfaceInfo hw_disp_info = {};
+  error = core_intf_->GetFirstDisplayInterfaceType(&hw_disp_info);
+  if (error != kErrorNone) {
+    CoreInterface::DestroyCore();
+    DLOGE("Primary display type not recognized. Error = %d", error);
+    return;
+  }
+
+  int max_builtin = 0;
+  int max_pluggable = 0;
+  int max_virtual = 0;
+
+  error = core_intf_->GetMaxDisplaysSupported(kBuiltIn, &max_builtin);
+  if (error != kErrorNone) {
+    CoreInterface::DestroyCore();
+    DLOGE("Could not find maximum built-in displays supported. Error = %d", error);
+    return;
+  }
+
+  error = core_intf_->GetMaxDisplaysSupported(kPluggable, &max_pluggable);
+  if (error != kErrorNone) {
+    CoreInterface::DestroyCore();
+    DLOGE("Could not find maximum pluggable displays supported. Error = %d", error);
+    return;
+  }
+
+  error = core_intf_->GetMaxDisplaysSupported(kVirtual, &max_virtual);
+  if (error != kErrorNone) {
+    CoreInterface::DestroyCore();
+    DLOGE("Could not find maximum virtual displays supported. Error = %d", error);
+    return;
+  }
+
+  if (kPluggable == hw_disp_info.type) {
+    // If primary is a pluggable display, we have already used one pluggable display interface.
+    max_pluggable--;
+  } else {
+    max_builtin--;
+  }
+
+  // Init slots in accordance to h/w capability.
+  uint32_t disp_count = UINT32(std::min(max_pluggable, HWCCallbacks::kNumPluggable));
+  hwc2_display_t base_id = qdutils::DISPLAY_EXTERNAL;
+  map_info_pluggable_.resize(disp_count);
+  for (auto &map_info : map_info_pluggable_) {
+    map_info.client_id = base_id++;
+  }
+
+  disp_count = UINT32(std::min(max_builtin, HWCCallbacks::kNumBuiltIn));
+  map_info_builtin_.resize(disp_count);
+  for (auto &map_info : map_info_builtin_) {
+    map_info.client_id = base_id++;
+  }
+
+  disp_count = UINT32(std::min(max_virtual, HWCCallbacks::kNumVirtual));
+  map_info_virtual_.resize(disp_count);
+  for (auto &map_info : map_info_virtual_) {
+    map_info.client_id = base_id++;
   }
 }
 
@@ -527,7 +541,7 @@ uint32_t HWCSession::GetMaxVirtualDisplayCount(hwc2_device_t *device) {
     return HWC2_ERROR_BAD_PARAMETER;
   }
 
-  return null_display_mode_ ? 0 : 1;
+  return 1;
 }
 
 static int32_t GetActiveConfig(hwc2_device_t *device, hwc2_display_t display,
@@ -1035,14 +1049,15 @@ int32_t HWCSession::GetDozeSupport(hwc2_device_t *device, hwc2_display_t display
   }
 
   HWCSession *hwc_session = static_cast<HWCSession *>(device);
-  if (display >= HWCCallbacks::kNumDisplays || (hwc_session->hwc_display_[display] == nullptr)) {
-    DLOGE("Invalid Display %d Handle %s ", display, hwc_session->hwc_display_[display] ?
+  HWCDisplay *hwc_display = hwc_session->hwc_display_[display];;
+  if (display >= HWCCallbacks::kNumDisplays || (hwc_display == nullptr)) {
+    DLOGE("Invalid Display %d Handle %s ", display, hwc_display ?
           "Valid" : "NULL");
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
   *out_support = 0;
-  if (hwc_session->GetDisplayClass(display) == DISPLAY_CLASS_BUILTIN) {
+  if (hwc_display->GetDisplayClass() == DISPLAY_CLASS_BUILTIN) {
     *out_support = 1;
   }
 
@@ -1203,21 +1218,9 @@ hwc2_function_pointer_t HWCSession::GetFunction(struct hwc2_device *device,
 
 HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height, int32_t *format,
                                                 hwc2_display_t *out_display_id) {
-  if (null_display_mode_) {
-    DLOGW("Virtual display creation attempted. Not supported in null-display mode."
-          " display_id is not set, and no real display object was created");
-    return HWC2::Error::None;
-  }
-
   if (!client_connected_) {
     DLOGE("Client is not ready yet.");
     return HWC2::Error::BadDisplay;
-  }
-
-  // Use first virtual display only for now.
-  if (!map_info_virtual_.size()) {
-    DLOGE("Virtual display is not supported");
-    return HWC2::Error::NoResources;
   }
 
   hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
@@ -1236,6 +1239,13 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
     }
   }
 
+  if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
+    DisplayError error = hwc_display_[HWC_DISPLAY_PRIMARY]->TeardownConcurrentWriteback();
+    if (error) {
+      return HWC2::Error::NoResources;
+    }
+  }
+
   HWDisplaysInfo hw_displays_info = {};
   DisplayError error = core_intf_->GetDisplaysStatus(&hw_displays_info);
   if (error != kErrorNone) {
@@ -1243,47 +1253,37 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
     return HWC2::Error::BadDisplay;
   }
 
-  auto &map_info = map_info_virtual_[0];
-  hwc2_display_t client_id = map_info.client_id;
-
   // Lock confined to this scope
   int status = -EINVAL;
-  {
-    SCOPE_LOCK(locker_[client_id]);
-    auto &hwc_display = hwc_display_[client_id];
-    if (hwc_display) {
-      DLOGE("Virtual display is already created.");
-      return HWC2::Error::NoResources;
+  for (auto &iter : hw_displays_info) {
+    auto &info = iter.second;
+    if (info.display_type != kVirtual) {
+      continue;
     }
 
-    for (auto &iter : hw_displays_info) {
-      auto &info = iter.second;
-      if (info.display_type != kVirtual) {
-        continue;
-      }
+    for (auto &map_info : map_info_virtual_) {
+      hwc2_display_t client_id = map_info.client_id;
+      {
+        SCOPE_LOCK(locker_[client_id]);
+        auto &hwc_display = hwc_display_[client_id];
+        if (hwc_display) {
+          continue;
+        }
 
-    if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
-      error = hwc_display_[HWC_DISPLAY_PRIMARY]->TeardownConcurrentWriteback();
-      if (error) {
-        return HWC2::Error::NoResources;
-      }
-    }
+        status = HWCDisplayVirtual::Create(core_intf_, &buffer_allocator_, &callbacks_, client_id,
+                                           info.display_id, width, height, format, &hwc_display);
+        // TODO(user): validate width and height support
+        if (status) {
+          return HWC2::Error::NoResources;
+        }
 
-      status = HWCDisplayVirtual::Create(core_intf_, &buffer_allocator_, &callbacks_, client_id,
-                                         info.display_id, width, height, format, &hwc_display);
-      // TODO(user): validate width and height support
-      if (!status) {
         DLOGI("Created virtual display id:% " PRIu64 " with res: %dx%d", client_id, width, height);
 
         *out_display_id = client_id;
         map_info.disp_type = info.display_type;
         map_info.sdm_id = info.display_id;
+        break;
       }
-      break;
-    }
-
-    if (status) {
-      return HWC2::Error::NoResources;
     }
   }
 
@@ -1293,18 +1293,6 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
   }
 
   return HWC2::Error::None;
-}
-
-DisplayClass HWCSession::GetDisplayClass(hwc2_display_t display) {
-  if (display >= HWCCallbacks::kNumDisplays) {
-    DLOGE("display = %d beyond max supported display slots = %d",
-      display, HWCCallbacks::kNumDisplays);
-    return DISPLAY_CLASS_NULL;
-  } else if (!hwc_display_[display]) {
-    DLOGE("display = %d slot empty.", display);
-    return DISPLAY_CLASS_NULL;
-  }
-  return hwc_display_[display]->GetDisplayClass();
 }
 
 bool HWCSession::IsPluggableDisplayConnected() {
@@ -2476,41 +2464,33 @@ int HWCSession::HandleBuiltInDisplays() {
       continue;
     }
 
-    if (registered_builtin_displays_ >= max_sde_builtin_displays_) {
-      DLOGI("Maximum supported built-in displays (= %d) created.", max_sde_builtin_displays_);
-      break;
-    }
+    for (auto &map_info : map_info_builtin_) {
+      hwc2_display_t client_id = map_info.client_id;
 
-    if (registered_builtin_displays_ >= INT32(map_info_builtin_.size())) {
-      DLOGW("Insufficient builtin display slots. All displays could not be created.");
-      return 0;
-    }
+      {
+        SCOPE_LOCK(locker_[client_id]);
+        // Lock confined to this scope
+        if (hwc_display_[client_id]) {
+          continue;
+        }
 
-    DisplayMapInfo &map_info = map_info_builtin_[UINT32(registered_builtin_displays_)];
-    hwc2_display_t client_id = map_info.client_id;
-
-    // Lock confined to this scope
-    {
-      SCOPE_LOCK(locker_[client_id]);
-
-      DLOGI("Create builtin display, sdm id = %d, client id = %d", info.display_id, client_id);
-      status = HWCDisplayBuiltIn::Create(core_intf_, &buffer_allocator_, &callbacks_, this,
-                                         qservice_, client_id, info.display_id,
-                                         &hwc_display_[client_id]);
-      if (!status) {
+        DLOGI("Create builtin display, sdm id = %d, client id = %d", info.display_id, client_id);
+        status = HWCDisplayBuiltIn::Create(core_intf_, &buffer_allocator_, &callbacks_, this,
+                                           qservice_, client_id, info.display_id,
+                                           &hwc_display_[client_id]);
+        if (status) {
+          DLOGE("Builtin display creation failed.");
+          break;
+        }
         DLOGI("Builtin display created: sdm id = %d, client id = %d", info.display_id, client_id);
         map_info.disp_type = info.display_type;
         map_info.sdm_id = info.display_id;
-        registered_builtin_displays_++;
-      } else {
-        DLOGE("Builtin display creation failed.");
-        // Attempt creating remaining builtin displays.
-        continue;
       }
-    }
 
-    DLOGI("Hotplugging builtin display, sdm id = %d, client id = %d", info.display_id, client_id);
-    callbacks_.Hotplug(client_id, HWC2::Connection::Connected);
+      DLOGI("Hotplugging builtin display, sdm id = %d, client id = %d", info.display_id, client_id);
+      callbacks_.Hotplug(client_id, HWC2::Connection::Connected);
+      break;
+    }
   }
 
   return status;
@@ -2585,13 +2565,11 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
     }
 
     // Count active pluggable display slots and slots with no commits.
-    int32_t display_slots_used = 0;
     bool first_commit_pending = false;
     std::for_each(map_info_pluggable_.begin(), map_info_pluggable_.end(),
                    [&](auto &p) {
                      SCOPE_LOCK(locker_[p.client_id]);
                      if (hwc_display_[p.client_id]) {
-                       display_slots_used++;
                        if (!hwc_display_[p.client_id]->IsFirstCommitDone()) {
                          DLOGI("Display commit pending on display %d-1", p.sdm_id);
                          first_commit_pending = true;
@@ -2599,11 +2577,6 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
                      }
                    });
 
-    if (display_slots_used >= max_sde_pluggable_displays_) {
-      DLOGW("Pluggable display instance limit reached. %d pluggable displays connected.",
-            display_slots_used);
-      break;
-    }
     if (!disable_hotplug_bwcheck_ && first_commit_pending) {
       // Hotplug bandwidth check is accomplished by creating and hotplugging a new display after
       // a display commit has happened on previous hotplugged displays. This allows the driver to
@@ -2787,9 +2760,6 @@ void HWCSession::DestroyNonPluggableDisplay(DisplayMapInfo *map_info) {
   switch (map_info->disp_type) {
     case kBuiltIn:
       HWCDisplayBuiltIn::Destroy(hwc_display);
-      if (registered_builtin_displays_) {
-        registered_builtin_displays_--;
-      }
       break;
     default:
       HWCDisplayVirtual::Destroy(hwc_display);
@@ -2845,10 +2815,6 @@ HWC2::Error HWCSession::PresentDisplayInternal(hwc2_display_t display, int32_t *
 }
 
 void HWCSession::DisplayPowerReset() {
-  hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
-  if (active_builtin_disp_id >= HWCCallbacks::kNumDisplays) {
-    active_builtin_disp_id = HWC_DISPLAY_PRIMARY;
-  }
   // Acquire lock on all displays.
   for (hwc2_display_t display = HWC_DISPLAY_PRIMARY;
     display < HWCCallbacks::kNumDisplays; display++) {
@@ -2887,10 +2853,10 @@ void HWCSession::DisplayPowerReset() {
     }
   }
 
-  status = hwc_display_[active_builtin_disp_id]->SetVsyncEnabled(HWC2::Vsync::Enable);
+  hwc2_display_t vsync_source = GetNextVsyncSource();
+  status = hwc_display_[vsync_source]->SetVsyncEnabled(HWC2::Vsync::Enable);
   if (status != HWC2::Error::None) {
-    DLOGE("Enabling vsync failed for built-in %" PRIu64 " with error = %d", active_builtin_disp_id,
-          status);
+    DLOGE("Enabling vsync failed for disp: %" PRIu64 " with error = %d", vsync_source, status);
   }
 
   // Release lock on all displays.
@@ -2898,7 +2864,8 @@ void HWCSession::DisplayPowerReset() {
     display < HWCCallbacks::kNumDisplays; display++) {
     locker_[display].Unlock();
   }
-  Refresh(active_builtin_disp_id);
+
+  Refresh(vsync_source);
 }
 
 void HWCSession::HandleSecureSession() {
@@ -3055,8 +3022,17 @@ int32_t HWCSession::SetReadbackBuffer(hwc2_device_t *device, hwc2_display_t disp
   }
 
   HWCSession *hwc_session = static_cast<HWCSession *>(device);
-  if (hwc_session->hwc_display_[HWC_DISPLAY_EXTERNAL] ||
-      hwc_session->hwc_display_[HWC_DISPLAY_VIRTUAL]) {
+  hwc2_display_t external_display_index =
+        (hwc2_display_t)hwc_session->GetDisplayIndex(qdutils::DISPLAY_EXTERNAL);
+  hwc2_display_t virtual_display_index =
+        (hwc2_display_t)hwc_session->GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
+
+  if ((external_display_index == -1) || (virtual_display_index == -1)) {
+    return HWC2_ERROR_UNSUPPORTED;
+  }
+
+  if (hwc_session->hwc_display_[external_display_index] ||
+      hwc_session->hwc_display_[virtual_display_index]) {
     return HWC2_ERROR_UNSUPPORTED;
   }
 

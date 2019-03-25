@@ -2292,9 +2292,10 @@ HWC2::Error HWCDisplay::GetDisplayIdentificationData(uint8_t *out_port, uint32_t
                                                      uint8_t *out_data) {
   DisplayError ret = display_intf_->GetDisplayIdentificationData(out_port, out_data_size, out_data);
   if (ret != kErrorNone) {
-    DLOGE("GetDisplayIdentificationData failed due to SDM/Driver (err = %d, disp id = %" PRIu64
+    DLOGE("Failed due to SDM/Driver (err = %d, disp id = %" PRIu64
           " %d-%d", ret, id_, sdm_id_, type_);
   }
+
   return HWC2::Error::None;
 }
 
