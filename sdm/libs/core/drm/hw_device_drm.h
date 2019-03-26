@@ -170,6 +170,7 @@ class HWDeviceDRM : public HWInterface {
   void DumpConnectorModeInfo();
   void SetFullROI();
   void SetQOSData(const HWQosData &qos_data);
+  void DumpHWLayers(HWLayers *hw_layers);
 
   class Registry {
    public:
