@@ -1276,6 +1276,10 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
       // so that previous buffer and fences are released, and override the error.
       flush_ = true;
       validated_ = false;
+      // Prepare cycle can fail on a newly connected display if insufficient pipes
+      // are available at this moment. Trigger refresh so that the other displays
+      // can free up pipes and a valid content can be attached to virtual display.
+      callbacks_->Refresh(id_);
       return HWC2::Error::BadDisplay;
     }
   }
