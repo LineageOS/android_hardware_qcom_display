@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, 2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, 2018, 2019 The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -35,6 +35,7 @@
 #include "hwc_display_primary.h"
 #include "hwc_display_external.h"
 #include "hwc_display_virtual.h"
+#include "hwc_display_dummy.h"
 #include "hwc_color_manager.h"
 #include "hwc_socket_handler.h"
 
@@ -184,7 +185,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int32_t CreateExternalDisplay(int disp, uint32_t primary_width = 0,
                                  uint32_t primary_height = 0,
                                  bool use_primary_res  = false);
-
+  void CreateNullDisplay();
   // service methods
   void StartServices();
 
@@ -264,6 +265,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   HWCSocketHandler socket_handler_;
   bool hdmi_is_primary_ = false;
   bool is_composer_up_ = false;
+  bool null_display_active_ = false;
   Locker callbacks_lock_;
 };
 
