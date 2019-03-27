@@ -86,6 +86,8 @@ class QtiMapperExtensions : public IQtiMapperExtensions {
   Return<void> getId(void *buffer, getId_cb _hidl_cb) override;
   Return<void> getUsageFlags(void *buffer, getUsageFlags_cb _hidl_cb) override;
   Return<void> getSurfaceMetadata(void *buffer, getSurfaceMetadata_cb _hidl_cb) override;
+  Return<void> getFormatLayout(int32_t format, uint64_t usage, int32_t flags, int32_t width,
+                               int32_t height, getFormatLayout_cb hidl_cb) override;
 };
 
 }  // namespace implementation
