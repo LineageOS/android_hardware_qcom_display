@@ -2238,7 +2238,11 @@ android::status_t HWCSession::GetSupportedDsiClk(const android::Parcel *input_pa
 }
 
 void HWCSession::UEventHandler(const char *uevent_data, int length) {
-  if (strcasestr(uevent_data, HWC_UEVENT_DRM_EXT_HOTPLUG)) {
+  // Drop hotplug uevents until SurfaceFlinger (the client) is connected. The equivalent of hotplug
+  // uevent handling will be done once when SurfaceFlinger connects, at RegisterCallback(). Since
+  // HandlePluggableDisplays() reads the latest connection states of all displays, no uevent is
+  // lost.
+  if (client_connected_ && strcasestr(uevent_data, HWC_UEVENT_DRM_EXT_HOTPLUG)) {
     // MST hotplug will not carry connection status/test pattern etc.
     // Pluggable display handler will check all connection status' and take action accordingly.
     const char *str_status = GetTokenValue(uevent_data, length, "status=");
