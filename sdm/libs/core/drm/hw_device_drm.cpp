@@ -1522,7 +1522,7 @@ DisplayError HWDeviceDRM::SetPPFeatures(PPFeaturesConfig *feature_list) {
     bool crtc_feature = true;
 
     ret = feature_list->RetrieveNextFeature(&feature);
-    if (ret)
+    if (ret || !feature)
       break;
 
     hw_color_mgr_->ToDrmFeatureId(kDSPP, feature->feature_id_, &drm_id);
@@ -1531,26 +1531,25 @@ DisplayError HWDeviceDRM::SetPPFeatures(PPFeaturesConfig *feature_list) {
 
     kernel_params.id = drm_id.at(0);
     drm_mgr_intf_->GetCrtcPPInfo(token_.crtc_id, &kernel_params);
-    if (kernel_params.version == std::numeric_limits<uint32_t>::max())
+    if (kernel_params.version == std::numeric_limits<uint32_t>::max()) {
       crtc_feature = false;
-    if (feature) {
-      DLOGV_IF(kTagDriverConfig, "feature_id = %d", feature->feature_id_);
-      for (DRMPPFeatureID id : drm_id) {
-        if (id >= kPPFeaturesMax) {
-          DLOGE("Invalid feature id %d", id);
-          continue;
-        }
-        kernel_params.id = id;
-        ret = hw_color_mgr_->GetDrmFeature(feature, &kernel_params);
-        if (!ret && crtc_feature)
-          drm_atomic_intf_->Perform(DRMOps::CRTC_SET_POST_PROC,
-                                    token_.crtc_id, &kernel_params);
-        else if (!ret && !crtc_feature)
-          drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POST_PROC,
-                                    token_.conn_id, &kernel_params);
-
-        hw_color_mgr_->FreeDrmFeatureData(&kernel_params);
+    }
+    DLOGV_IF(kTagDriverConfig, "feature_id = %d", feature->feature_id_);
+    for (DRMPPFeatureID id : drm_id) {
+      if (id >= kPPFeaturesMax) {
+        DLOGE("Invalid feature id %d", id);
+        continue;
       }
+      kernel_params.id = id;
+      ret = hw_color_mgr_->GetDrmFeature(feature, &kernel_params);
+      if (!ret && crtc_feature)
+        drm_atomic_intf_->Perform(DRMOps::CRTC_SET_POST_PROC,
+                                  token_.crtc_id, &kernel_params);
+      else if (!ret && !crtc_feature)
+        drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POST_PROC,
+                                  token_.conn_id, &kernel_params);
+
+      hw_color_mgr_->FreeDrmFeatureData(&kernel_params);
     }
   }
 
