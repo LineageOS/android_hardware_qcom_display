@@ -80,6 +80,10 @@ LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.7
 LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.8
 endif
 
+ifeq ($(TARGET_BOARD_AUTO), true)
+LOCAL_CFLAGS                  += -DCONFIG_BASEID_FROM_PROP
+endif
+
 LOCAL_SRC_FILES               := hwc_session.cpp \
                                  hwc_session_services.cpp \
                                  hwc_display.cpp \

@@ -25,6 +25,7 @@
 #include <sys/stat.h>
 #include <utils/constants.h>
 #include <utils/debug.h>
+#include <utils/utils.h>
 #include <utils/formats.h>
 #include <utils/rect.h>
 #include <qd_utils.h>
@@ -946,7 +947,10 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
       }
       hwc_layer->PushBackReleaseFence(merged_fence);
     }
-    ::close(release_fence);
+
+    // Add this release fence onto fbt_release fence.
+    CloseFd(&fbt_release_fence_);
+    fbt_release_fence_ = release_fence;
   }
   current_power_mode_ = mode;
   return HWC2::Error::None;
@@ -1273,14 +1277,17 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
   if (error != kErrorNone) {
     if (error == kErrorShutDown) {
       shutdown_pending_ = true;
-    } else if (error != kErrorPermission) {
+    } else if (error == kErrorPermission) {
+      WaitOnPreviousFence();
+      MarkLayersForGPUBypass();
+    } else {
       DLOGE("Prepare failed. Error = %d", error);
       // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
       // so that previous buffer and fences are released, and override the error.
       flush_ = true;
+      validated_ = false;
+      return HWC2::Error::BadDisplay;
     }
-    validated_ = false;
-    return HWC2::Error::BadDisplay;
   }
 
   for (auto hwc_layer : layer_set_) {
@@ -1470,6 +1477,11 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
     return HWC2::Error::None;
   }
 
+  if (skip_commit_) {
+    DLOGV_IF(kTagClient, "Skipping Refresh on display %d", id_);
+    return HWC2::Error::None;
+  }
+
   DumpInputBuffers();
 
   DisplayError error = kErrorUndefined;
@@ -1526,6 +1538,10 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
   int32_t &client_target_release_fence =
       client_target_->GetSDMLayer()->input_buffer.release_fence_fd;
   if (client_target_release_fence >= 0) {
+    // Close cached release fence.
+    close(fbt_release_fence_);
+    fbt_release_fence_ = dup(client_target_release_fence);
+    // Close fence returned by driver.
     close(client_target_release_fence);
     client_target_release_fence = -1;
   }
@@ -1547,9 +1563,9 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
         hwc_layer->PushBackReleaseFence(-1);
       }
     } else {
-      // In case of flush, we don't return an error to f/w, so it will get a release fence out of
-      // the hwc_layer's release fence queue. We should push a -1 to preserve release fence
-      // circulation semantics.
+      // In case of flush or display paused, we don't return an error to f/w, so it will
+      // get a release fence out of the hwc_layer's release fence queue
+      // We should push a -1 to preserve release fence circulation semantics.
       hwc_layer->PushBackReleaseFence(-1);
     }
 
@@ -1579,6 +1595,7 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
 
   geometry_changes_ = GeometryChanges::kNone;
   flush_ = false;
+  skip_commit_ = false;
 
   return status;
 }
@@ -1948,7 +1965,7 @@ int HWCDisplay::GetPanelBrightness(int *level) {
 
 int HWCDisplay::ToggleScreenUpdates(bool enable) {
   display_paused_ = enable ? false : true;
-  callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
+  callbacks_->Refresh(id_);
   validated_ = false;
   return 0;
 }
@@ -2308,6 +2325,36 @@ int32_t HWCDisplay::SetClientTargetDataSpace(int32_t dataspace) {
   }
 
   return 0;
+}
+
+void HWCDisplay::WaitOnPreviousFence() {
+  DisplayConfigFixedInfo display_config;
+  display_intf_->GetConfig(&display_config);
+  if (!display_config.is_cmdmode) {
+    return;
+  }
+
+  // Since prepare failed commit would follow the same.
+  // Wait for previous rel fence.
+  for (auto hwc_layer : layer_set_) {
+    auto fence = hwc_layer->PopBackReleaseFence();
+    if (fence >= 0) {
+      int error = sync_wait(fence, 1000);
+      if (error < 0) {
+        DLOGW("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
+        return;
+      }
+    }
+    hwc_layer->PushBackReleaseFence(fence);
+  }
+
+  if (fbt_release_fence_ >= 0) {
+    int error = sync_wait(fbt_release_fence_, 1000);
+    if (error < 0) {
+      DLOGW("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
+      return;
+    }
+  }
 }
 
 }  // namespace sdm

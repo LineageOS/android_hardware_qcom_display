@@ -96,6 +96,7 @@
 #define DISABLE_EXCl_RECT_PARTIAL_FB         DISPLAY_PROP("disable_excl_rect_partial_fb")
 #define DISABLE_FBID_CACHE                   DISPLAY_PROP("disable_fbid_cache")
 #define DISABLE_HOTPLUG_BWCHECK              DISPLAY_PROP("disable_hotplug_bwcheck")
+#define DISABLE_MASK_LAYER_HINT              DISPLAY_PROP("disable_mask_layer_hint")
 
 #define DISABLE_HDR_LUT_GEN                  DISPLAY_PROP("disable_hdr_lut_gen")
 #define ENABLE_DEFAULT_COLOR_MODE            DISPLAY_PROP("enable_default_color_mode")
@@ -114,7 +115,11 @@
 #define QDCM_MODE_COMBINE_PROP               DISPLAY_PROP("qdcm.mode_combine")
 #define PREFER_MULTIRECT_PROP                DISPLAY_PROP("prefer_multirect")
 #define DROP_SKEWED_VSYNC                    DISPLAY_PROP("drop_skewed_vsync")
+#define BUILTIN_BASEID_AND_SIZE_PROP         DISPLAY_PROP("builtin_baseid_and_size")
+#define PLUGGABLE_BASEID_AND_SIZE_PROP       DISPLAY_PROP("pluggable_baseid_and_size")
+#define VIRTUAL_BASEID_AND_SIZE_PROP         DISPLAY_PROP("virtual_baseid_and_size")
 
 #define ZERO_SWAP_INTERVAL                   "vendor.debug.egl.swapinterval"
+#define ENABLE_DROP_REFRESH                  DISPLAY_PROP("enable_drop_refresh")
 
 #endif  // __DISPLAY_PROPERTIES_H__

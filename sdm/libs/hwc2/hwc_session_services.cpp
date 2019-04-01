@@ -139,7 +139,7 @@ int32_t HWCSession::SetSecondaryDisplayStatus(int disp_id, HWCDisplay::DisplaySt
 
   if (status == HWCDisplay::kDisplayStatusResume || status == HWCDisplay::kDisplayStatusPause) {
     hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
-    if (active_builtin_disp_id < kNumDisplays) {
+    if (active_builtin_disp_id < HWCCallbacks::kNumDisplays) {
       {
         SEQUENCE_WAIT_SCOPE_LOCK(locker_[active_builtin_disp_id]);
         hwc_display_[active_builtin_disp_id]->ResetValidation();
@@ -330,17 +330,19 @@ Return<void> HWCSession::getPanelBrightness(getPanelBrightness_cb _hidl_cb) {
 int32_t HWCSession::MinHdcpEncryptionLevelChanged(int disp_id, uint32_t min_enc_level) {
   DLOGI("Display %d", disp_id);
 
-  if (disp_id < 0) {
+  int disp_idx = GetDisplayIndex(disp_id);
+  if (disp_idx == -1) {
+    DLOGE("Invalid display = %d", disp_id);
     return -EINVAL;
   }
 
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_id]);
-  if (disp_id != HWC_DISPLAY_EXTERNAL) {
+  SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_idx]);
+  if (disp_idx != HWC_DISPLAY_EXTERNAL) {
     DLOGE("Not supported for display");
-  } else if (!hwc_display_[disp_id]) {
+  } else if (!hwc_display_[disp_idx]) {
     DLOGW("Display is not connected");
   } else {
-    return hwc_display_[disp_id]->OnMinHdcpEncryptionLevelChange(min_enc_level);
+    return hwc_display_[disp_idx]->OnMinHdcpEncryptionLevelChange(min_enc_level);
   }
 
   return -EINVAL;
@@ -359,16 +361,18 @@ Return<int32_t> HWCSession::refreshScreen() {
 }
 
 int32_t HWCSession::ControlPartialUpdate(int disp_id, bool enable) {
-  if (disp_id < 0) {
+  int disp_idx = GetDisplayIndex(disp_id);
+  if (disp_idx == -1) {
+    DLOGE("Invalid display = %d", disp_id);
     return -EINVAL;
   }
 
-  if (disp_id != HWC_DISPLAY_PRIMARY) {
-    DLOGW("CONTROL_PARTIAL_UPDATE is not applicable for display = %d", disp_id);
+  if (disp_idx != HWC_DISPLAY_PRIMARY) {
+    DLOGW("CONTROL_PARTIAL_UPDATE is not applicable for display = %d", disp_idx);
     return -EINVAL;
   }
 
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_id]);
+  SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_idx]);
   HWCDisplay *hwc_display = hwc_display_[HWC_DISPLAY_PRIMARY];
   if (!hwc_display) {
     DLOGE("primary display object is not instantiated");
@@ -392,7 +396,7 @@ int32_t HWCSession::ControlPartialUpdate(int disp_id, bool enable) {
   Refresh(HWC_DISPLAY_PRIMARY);
 
   // Wait until partial update control is complete
-  int32_t error = locker_[disp_id].WaitFinite(kCommitDoneTimeoutMs);
+  int32_t error = locker_[disp_idx].WaitFinite(kCommitDoneTimeoutMs);
 
   return error;
 }
@@ -485,7 +489,7 @@ Return<void> HWCSession::getHDRCapabilities(IDisplayConfig::DisplayType dpy,
 
 Return<int32_t> HWCSession::setCameraLaunchStatus(uint32_t on) {
   hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
-  if (active_builtin_disp_id >= kNumDisplays) {
+  if (active_builtin_disp_id >= HWCCallbacks::kNumDisplays) {
     DLOGE("No active displays");
     return -EINVAL;
   }
@@ -580,8 +584,8 @@ Return<int32_t> HWCSession::setDisplayIndex(IDisplayConfig::DisplayTypeExt disp_
   DLOGI("%s display: base = %d, count = %d", GetDisplayTypeName(disp_type), base, count);
 
   // Is display slots capacity smaller than what client can support?
-  if ((base + count) > kNumDisplays) {
-    DLOGE("Exceeds max supported display slots = %d", kNumDisplays);
+  if ((base + count) > HWCCallbacks::kNumDisplays) {
+    DLOGE("Exceeds max supported display slots = %d", HWCCallbacks::kNumDisplays);
     return -1;
   }
 
@@ -622,7 +626,7 @@ Return<int32_t> HWCSession::setDisplayIndex(IDisplayConfig::DisplayTypeExt disp_
 #ifdef DISPLAY_CONFIG_1_3
 Return<int32_t> HWCSession::controlIdlePowerCollapse(bool enable, bool synchronous) {
   hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
-  if (active_builtin_disp_id >= kNumDisplays) {
+  if (active_builtin_disp_id >= HWCCallbacks::kNumDisplays) {
     DLOGE("No active displays");
     return -EINVAL;
   }
@@ -706,10 +710,14 @@ Return<int32_t> HWCSession::SetDisplayDppsAdROI(uint32_t display_id, uint32_t h_
 
 #ifdef DISPLAY_CONFIG_1_6
 Return<int32_t> HWCSession::updateVSyncSourceOnPowerModeOff() {
+  update_vsync_on_power_off_ = true;
+
   return 0;
 }
 
 Return<int32_t> HWCSession::updateVSyncSourceOnPowerModeDoze() {
+  update_vsync_on_doze_ = true;
+
   return 0;
 }
 #endif
@@ -751,6 +759,25 @@ Return<bool> HWCSession::isWCGSupported(uint32_t disp_id) {
 }
 
 Return<int32_t> HWCSession::setLayerAsMask(uint32_t disp_id, uint64_t layer_id) {
+  SCOPE_LOCK(locker_[disp_id]);
+  HWCDisplay *hwc_display = hwc_display_[disp_id];
+  if (!hwc_display) {
+    DLOGW("Display = %d is not connected.", disp_id);
+    return -EINVAL;
+  }
+
+  if (disable_mask_layer_hint_) {
+    DLOGW("Mask layer hint is disabled!");
+    return -EINVAL;
+  }
+
+  auto hwc_layer = hwc_display->GetHWCLayer(layer_id);
+  if (hwc_layer == nullptr) {
+    return -EINVAL;
+  }
+
+  hwc_layer->SetLayerAsMask();
+
   return 0;
 }
 
@@ -780,7 +807,7 @@ Return<void> HWCSession::getActiveBuiltinDisplayAttributes(
   IDisplayConfig::DisplayAttributes display_attributes = {};
   hwc2_display_t disp_id = GetActiveBuiltinDisplay();
 
-  if (disp_id >= kNumDisplays) {
+  if (disp_id >= HWCCallbacks::kNumDisplays) {
     DLOGE("Invalid display = %d", disp_id);
   } else {
     if (hwc_display_[disp_id]) {
