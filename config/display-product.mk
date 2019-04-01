@@ -12,7 +12,7 @@ PRODUCT_PACKAGES += \
     lights.qcom \
     hwcomposer.qcom \
     memtrack.qcom \
-    libqdMetaData.vendor \
+    libqdMetaData \
     vendor.display.config@1.0.vendor \
     vendor.display.config@1.1.vendor \
     vendor.display.config@1.2.vendor \
