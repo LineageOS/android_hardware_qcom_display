@@ -106,6 +106,20 @@ typedef struct GraphicsMetadata {
     uint32_t data[GRAPHICS_METADATA_SIZE];
 } GraphicsMetadata;
 
+#define VIDEO_HISTOGRAM_STATS_SIZE (4 * 1024)
+/* Frame type bit mask */
+#define QD_SYNC_FRAME (0x1 << 0)
+struct VideoHistogramMetadata {
+    uint32_t stats_info[1024]; /* video stats payload */
+    uint32_t stat_len; /* Payload size in bytes */
+    uint32_t frame_type; /* bit mask to indicate frame type */
+    uint32_t display_width;
+    uint32_t display_height;
+    uint32_t decode_width;
+    uint32_t decode_height;
+    uint32_t reserved[12];
+};
+
 typedef struct CVPMetadata {
     uint32_t size; /* payload size in bytes */
     uint8_t payload[CVP_METADATA_SIZE];
@@ -154,6 +168,8 @@ struct MetaData_t {
     /* Populated and used by adreno during buffer size calculation.
      * Set only for RGB formats. */
     GraphicsMetadata graphics_metadata;
+    /* Video hisogram stats populated by video decoder */
+    struct VideoHistogramMetadata video_histogram_stats;
     /*
      * Producer (camera) will set cvp metadata and consumer (video) will
      * use it. The format of metadata is known to producer and consumer.
@@ -179,6 +195,7 @@ enum DispParamType {
     SET_SINGLE_BUFFER_MODE     = 0x4000,
     SET_S3D_COMP               = 0x8000,
     SET_CVP_METADATA           = 0x00010000,
+    SET_VIDEO_HISTOGRAM_STATS  = 0x00020000
 };
 
 enum DispFetchParamType {
@@ -199,6 +216,7 @@ enum DispFetchParamType {
     GET_SINGLE_BUFFER_MODE    = 0x4000,
     GET_S3D_COMP              = 0x8000,
     GET_CVP_METADATA          = 0x00010000,
+    GET_VIDEO_HISTOGRAM_STATS = 0x00020000
 };
 
 struct private_handle_t;
