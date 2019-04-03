@@ -455,7 +455,11 @@ void HWInfoDRM::PopulatePipeCaps(const sde_drm::DRMPlaneTypeInfo &info,
   hw_resource->cache_size = info.cache_size;
   hw_resource->pipe_qseed3_version = GetQseedStepVersion(info.qseed3_version);
   hw_resource->inline_rot_info.inrot_version = GetInRotVersion(info.inrot_version);
-  hw_resource->inline_rot_info.max_downscale_rt = info.true_inline_dwnscale_rt;
+  if (info.true_inline_dwnscale_rt_denom > 0 && info.true_inline_dwnscale_rt_num > 0 &&
+       info.true_inline_dwnscale_rt_num >= info.true_inline_dwnscale_rt_denom) {
+    hw_resource->inline_rot_info.max_downscale_rt =
+      info.true_inline_dwnscale_rt_num / info.true_inline_dwnscale_rt_denom;
+  }
 }
 
 void HWInfoDRM::PopulateSupportedFmts(HWSubBlockType sub_blk_type,
