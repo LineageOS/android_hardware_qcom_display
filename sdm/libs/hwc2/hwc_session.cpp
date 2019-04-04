@@ -1010,7 +1010,6 @@ int32_t HWCSession::SetPowerMode(hwc2_device_t *device, hwc2_display_t display, 
     hwc_session->idle_pc_ref_cnt_ = 0;
   }
 
-  hwc_session->UpdateVsyncSource();
   hwc_session->UpdateThrottlingRate();
 
   // Trigger refresh for doze mode to take effect.
@@ -1029,15 +1028,14 @@ int32_t HWCSession::SetVsyncEnabled(hwc2_device_t *device, hwc2_display_t displa
   if (int_enabled < HWC2_VSYNC_INVALID || int_enabled > HWC2_VSYNC_DISABLE) {
     return HWC2_ERROR_BAD_PARAMETER;
   }
-  // already mapping taken care by HAL and SF. No need to react for other display.
-  if (display != HWC_DISPLAY_PRIMARY) {
-    return HWC2_ERROR_NONE;
-  }
 
   auto enabled = static_cast<HWC2::Vsync>(int_enabled);
 
   HWCSession *hwc_session = static_cast<HWCSession *>(device);
-  display = hwc_session->callbacks_.GetVsyncSource();
+
+  if (int_enabled == HWC2_VSYNC_ENABLE) {
+    hwc_session->callbacks_.UpdateVsyncSource(display);
+  }
 
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::SetVsyncEnabled, enabled);
 }
@@ -2429,8 +2427,6 @@ int HWCSession::CreatePrimaryDisplay() {
       if (!color_mgr_) {
         DLOGW("Failed to load HWCColorManager.");
       }
-      // This display is the source of vsync events.
-      (*hwc_display)->SetVsyncSource(true);
     } else {
       DLOGE("Primary display creation failed.");
     }
@@ -2672,7 +2668,6 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
   for (auto client_id : pending_hotplugs) {
     DLOGI("Notify hotplug display connected: client id = %d", client_id);
     callbacks_.Hotplug(client_id, HWC2::Connection::Connected);
-    UpdateVsyncSource();
   }
 
   return status;
@@ -2743,7 +2738,6 @@ void HWCSession::DestroyPluggableDisplay(DisplayMapInfo *map_info) {
 
     hwc_display = nullptr;
     map_info->Reset();
-    UpdateVsyncSource();
   }
 }
 
@@ -2853,7 +2847,7 @@ void HWCSession::DisplayPowerReset() {
     }
   }
 
-  hwc2_display_t vsync_source = GetNextVsyncSource();
+  hwc2_display_t vsync_source = callbacks_.GetVsyncSource();
   status = hwc_display_[vsync_source]->SetVsyncEnabled(HWC2::Vsync::Enable);
   if (status != HWC2::Error::None) {
     DLOGE("Enabling vsync failed for disp: %" PRIu64 " with error = %d", vsync_source, status);
@@ -3088,67 +3082,6 @@ android::status_t HWCSession::SetQSyncMode(const android::Parcel *input_parcel) 
       return -EINVAL;
   }
   return CallDisplayFunction(device, HWC_DISPLAY_PRIMARY, &HWCDisplay::SetQSyncMode, qsync_mode);
-}
-
-void HWCSession::UpdateVsyncSource() {
-  hwc2_display_t active_source = callbacks_.GetVsyncSource();
-  hwc2_display_t next_vsync_source = GetNextVsyncSource();
-  if (active_source == next_vsync_source) {
-    return;
-  }
-
-  callbacks_.SetSwapVsync(next_vsync_source, HWC_DISPLAY_PRIMARY);
-  hwc_display_[next_vsync_source]->SetVsyncSource(true);
-  if (hwc_display_[active_source]) {
-    hwc_display_[active_source]->SetVsyncSource(false);
-  }
-
-  HWC2::PowerMode power_mode = hwc_display_[next_vsync_source]->GetCurrentPowerMode();
-  // Skip enabling vsync if display is Off, happens only for default source ie; primary.
-  if (power_mode == HWC2::PowerMode::Off) {
-    return;
-  }
-
-  HWC2::Vsync vsync_mode = hwc_display_[active_source] ?
-                           hwc_display_[active_source]->GetLastVsyncMode() : HWC2::Vsync::Enable;
-  hwc_display_[next_vsync_source]->SetVsyncEnabled(vsync_mode);
-  // Disable Vsync on previous display.
-  if (hwc_display_[active_source]) {
-    hwc_display_[active_source]->SetVsyncEnabled(HWC2::Vsync::Disable);
-  }
-
-  DLOGI("active_source %d next_vsync_source %d", active_source, next_vsync_source);
-}
-
-hwc2_display_t HWCSession::GetNextVsyncSource() {
-  // If primary display is powered off, change vsync source to next builtin display.
-  // If primary display is powerd on, change vsync source back to primary display.
-  // First check for active builtins. If not found switch to pluggable displays.
-
-  std::vector<DisplayMapInfo> map_info = {map_info_primary_};
-  std::copy(map_info_builtin_.begin(), map_info_builtin_.end(), std::back_inserter(map_info));
-  std::copy(map_info_pluggable_.begin(), map_info_pluggable_.end(), std::back_inserter(map_info));
-
-  for (auto &info : map_info) {
-    auto &hwc_display = hwc_display_[info.client_id];
-    if (!hwc_display) {
-      continue;
-    }
-
-    HWC2::PowerMode current_mode = hwc_display->GetCurrentPowerMode();
-    if (update_vsync_on_doze_) {
-      if (current_mode == HWC2::PowerMode::On) {
-        return info.client_id;
-      }
-    } else if (update_vsync_on_power_off_) {
-      if (current_mode != HWC2::PowerMode::Off) {
-        return info.client_id;
-      }
-    }
-  }
-
-  // No Vsync source found. Default to main display.
-  return HWC_DISPLAY_PRIMARY;
 }
 
 void HWCSession::UpdateThrottlingRate() {

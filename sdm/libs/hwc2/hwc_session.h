@@ -390,8 +390,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   void HandleSecureSession();
   void HandlePowerOnPending(hwc2_display_t display, int retire_fence);
   void HandleHotplugPending(hwc2_display_t disp_id, int retire_fence);
-  void UpdateVsyncSource();
-  hwc2_display_t GetNextVsyncSource();
   bool IsPluggableDisplayConnected();
   hwc2_display_t GetActiveBuiltinDisplay();
   void HandlePendingRefresh();
@@ -406,8 +404,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   std::vector<DisplayMapInfo> map_info_builtin_;    // Builtin displays excluding primary
   std::vector<DisplayMapInfo> map_info_pluggable_;  // Pluggable displays excluding primary
   std::vector<DisplayMapInfo> map_info_virtual_;    // Virtual displays
-  bool update_vsync_on_power_off_ = false;
-  bool update_vsync_on_doze_ = false;
   bool reset_panel_ = false;
   bool client_connected_ = false;
   bool new_bw_mode_ = false;

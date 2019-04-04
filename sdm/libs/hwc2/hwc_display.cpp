@@ -896,8 +896,6 @@ HWC2::Error HWCDisplay::SetVsyncEnabled(HWC2::Vsync enabled) {
     return HWC2::Error::BadDisplay;
   }
 
-  last_vsync_mode_ = enabled;
-
   return HWC2::Error::None;
 }
 
@@ -1213,10 +1211,6 @@ HWC2::Error HWCDisplay::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_lay
 
 HWC2::PowerMode HWCDisplay::GetCurrentPowerMode() {
   return current_power_mode_;
-}
-
-HWC2::Vsync HWCDisplay::GetLastVsyncMode() {
-  return last_vsync_mode_;
 }
 
 DisplayError HWCDisplay::VSync(const DisplayEventVSync &vsync) {
