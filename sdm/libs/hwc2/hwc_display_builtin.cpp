@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -264,8 +264,9 @@ bool HWCDisplayBuiltIn::CanSkipCommit() {
     hwc_layer->ResetBufferFlip();
   }
 
+  bool vsync_source = (callbacks_->GetVsyncSource() == id_);
   bool skip_commit = enable_drop_refresh_ && !pending_commit_ && !buffers_latched &&
-                     !pending_refresh_ && !vsync_source_;
+                     !pending_refresh_ && !vsync_source;
   pending_refresh_ = false;
 
   return skip_commit;

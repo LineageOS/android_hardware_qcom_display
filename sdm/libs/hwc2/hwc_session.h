@@ -333,7 +333,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
 
   void Refresh(hwc2_display_t display);
   void HotPlug(hwc2_display_t display, HWC2::Connection state);
-  void UpdateVsyncSource();
   void HandleConcurrency(hwc2_display_t disp);
   void ActivateDisplay(hwc2_display_t disp, bool enable);
   void NonBuiltinConcurrency(hwc2_display_t disp, bool is_built_in_2_on);
@@ -341,7 +340,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   void HandlePendingRefresh();
   bool GetSecondBuiltinStatus();
   hwc2_display_t GetNextBuiltinIndex();
-  hwc2_display_t GetNextVsyncSource();
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};
@@ -354,8 +352,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   std::vector<DisplayMapInfo> map_info_builtin_;    // Builtin displays excluding primary
   std::vector<DisplayMapInfo> map_info_pluggable_;  // Pluggable displays excluding primary
   std::vector<DisplayMapInfo> map_info_virtual_;    // Virtual displays
-  bool update_vsync_on_power_off_ = false;
-  bool update_vsync_on_doze_ = false;
   bool reset_panel_ = false;
   bool secure_display_active_ = false;
   bool primary_ready_ = false;
