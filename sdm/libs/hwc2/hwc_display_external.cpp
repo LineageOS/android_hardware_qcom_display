@@ -277,4 +277,10 @@ void HWCDisplayExternal::GetUnderScanConfig() {
   }
 }
 
+DisplayError HWCDisplayExternal::SetMixerResolution(uint32_t width, uint32_t height) {
+  DisplayError error = display_intf_->SetMixerResolution(width, height);
+  validated_.reset();
+  return error;
+}
+
 }  // namespace sdm
