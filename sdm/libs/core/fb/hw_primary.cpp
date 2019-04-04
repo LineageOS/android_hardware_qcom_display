@@ -652,7 +652,7 @@ DisplayError HWPrimary::SetPPFeatures(PPFeaturesConfig *feature_list) {
   return kErrorNone;
 }
 
-DisplayError HWPrimary::SetMixerAttributes(const HWMixerAttributes &mixer_attributes) {
+DisplayError HWPrimary::SetMixerAttributes(HWMixerAttributes &mixer_attributes) {
   if (IsResolutionSwitchEnabled()) {
     return kErrorNotSupported;
   }
@@ -729,6 +729,11 @@ DisplayError HWPrimary::GetDynamicDSIClock(uint64_t *bitclk) {
 
   *bitclk = UINT64(atoi(dsi_clk));
   Sys::close_(fd);
+  return kErrorNone;
+}
+
+DisplayError HWPrimary::SetActiveConfig(uint32_t active_config) {
+  active_config_index_ = active_config;
   return kErrorNone;
 }
 

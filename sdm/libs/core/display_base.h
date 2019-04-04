@@ -146,6 +146,7 @@ class DisplayBase : public DisplayInterface {
                                        std::string *value);
   DisplayError GetHdrColorMode(std::string *color_mode, bool *found_hdr);
   bool IsSupportColorModeAttribute(const std::string &color_mode);
+  void CheckMinMixerResolution(uint32_t *width, uint32_t *height);
 
   recursive_mutex recursive_mutex_;
   DisplayType display_type_;
@@ -183,6 +184,9 @@ class DisplayBase : public DisplayInterface {
   std::string current_color_mode_ = "hal_native";
   bool hdr_playback_mode_ = false;
   int disable_hdr_lut_gen_ = 0;
+  uint32_t panel_config_index_ = 0;
+  uint32_t mixer_config_index_ = 0;
+  bool dest_scale_enabled_ = false;
 };
 
 }  // namespace sdm

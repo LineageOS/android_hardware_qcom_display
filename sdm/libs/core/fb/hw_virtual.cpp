@@ -82,5 +82,10 @@ DisplayError HWVirtual::GetDisplayAttributes(uint32_t index,
 }
 
 
+DisplayError HWVirtual::SetActiveConfig(uint32_t active_config) {
+
+  return kErrorNone;
+}
+
 }  // namespace sdm
 
