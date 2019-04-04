@@ -148,7 +148,6 @@ void HWScaleV2::SetHWScaleData(const HWScaleData &scale_data, uint32_t index,
       reinterpret_cast<mdp_destination_scaler_data *>(mdp_commit->dest_scaler);
 
     mdp_dest_scalar[index].flags = mdp_scale->enable ? MDP_DESTSCALER_ENABLE : 0;
-
     if (scale_data.enable.detail_enhance) {
       mdp_dest_scalar[index].flags |= MDP_DESTSCALER_ENHANCER_UPDATE;
     }
