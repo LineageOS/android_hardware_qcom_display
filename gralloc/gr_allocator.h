@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2019, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,16 +30,11 @@
 #ifndef __GR_ALLOCATOR_H__
 #define __GR_ALLOCATOR_H__
 
-#ifdef MASTER_SIDE_CP
-#define SECURE_ALIGN SZ_4K
-#else
-#define SECURE_ALIGN SZ_1M
-#endif
-
 #include <vector>
 
 #include "gr_buf_descriptor.h"
 #include "gr_ion_alloc.h"
+#include "gr_utils.h"
 #include "gralloc_priv.h"
 
 namespace gralloc {

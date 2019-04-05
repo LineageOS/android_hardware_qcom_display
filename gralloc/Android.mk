@@ -11,7 +11,8 @@ LOCAL_C_INCLUDES              := $(common_includes)
 
 LOCAL_HEADER_LIBRARIES        := display_headers
 LOCAL_SHARED_LIBRARIES        := $(common_libs) libqdMetaData libsync libgrallocutils \
-                                  libgralloccore android.hardware.graphics.mapper@2.0
+                                  libgralloccore android.hardware.graphics.mapper@2.0 \
+                                 android.hardware.graphics.mapper@2.1
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdgralloc\" -Wall -std=c++14 -Werror
 LOCAL_CFLAGS                  += -isystem  $(kernel_includes)
 LOCAL_CLANG                   := true
@@ -27,7 +28,8 @@ LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes)
 LOCAL_HEADER_LIBRARIES        := display_headers
 LOCAL_SHARED_LIBRARIES        := $(common_libs) libqdMetaData libdl  \
-                                  android.hardware.graphics.mapper@2.0
+                                  android.hardware.graphics.mapper@2.0 \
+                                  android.hardware.graphics.mapper@2.1
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdgralloc\" -Wno-sign-conversion
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
 LOCAL_SRC_FILES               := gr_utils.cpp gr_adreno_info.cpp
@@ -41,7 +43,8 @@ LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes)
 LOCAL_HEADER_LIBRARIES        := display_headers
 LOCAL_SHARED_LIBRARIES        := $(common_libs) libqdMetaData libdl libgrallocutils \
-                                  android.hardware.graphics.mapper@2.0
+                                  android.hardware.graphics.mapper@2.0 \
+                                  android.hardware.graphics.mapper@2.1
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdgralloc\" -Wno-sign-conversion
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
 LOCAL_SRC_FILES               := gr_allocator.cpp gr_buf_mgr.cpp gr_ion_alloc.cpp
@@ -72,7 +75,8 @@ LOCAL_SHARED_LIBRARIES        := $(common_libs) \
                                   libgrallocutils \
                                   libgralloccore \
                                   libsync \
-                                  android.hardware.graphics.mapper@2.0
+                                  android.hardware.graphics.mapper@2.0 \
+                                  android.hardware.graphics.mapper@2.1
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdgralloc\" -Wno-sign-conversion
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
 LOCAL_SRC_FILES               := QtiMapper.cpp
@@ -90,6 +94,7 @@ LOCAL_SHARED_LIBRARIES        := $(common_libs) \
                                  libqdMetaData \
                                  libgrallocutils \
                                  libgralloccore \
+                                 android.hardware.graphics.mapper@2.1 \
                                  android.hardware.graphics.allocator@2.0
 LOCAL_CFLAGS                  := -DLOG_TAG=\"qdgralloc\" $(common_flags)
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
