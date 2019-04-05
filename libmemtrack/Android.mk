@@ -26,5 +26,5 @@ LOCAL_CLANG  := true
 LOCAL_SHARED_LIBRARIES := liblog
 LOCAL_HEADER_LIBRARIES := libhardware_headers
 LOCAL_SRC_FILES := memtrack_msm.c kgsl.c
-LOCAL_MODULE := memtrack.$(TARGET_BOARD_PLATFORM)
+LOCAL_MODULE := memtrack.qcom
 include $(BUILD_SHARED_LIBRARY)
