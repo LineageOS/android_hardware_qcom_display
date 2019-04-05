@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2018, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015-2019, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -36,7 +36,6 @@
 #include <utils/constants.h>
 #include <core/sdm_types.h>
 #include <core/display_interface.h>
-#include <hardware/hwcomposer_defs.h>
 
 #include <string>
 
@@ -82,6 +81,7 @@ static const uint32_t kPaFoliageEnable = BITMAP(11);
 static const uint32_t kLeftSplitMode = BITMAP(28);   // 0x10000000
 static const uint32_t kRightSplitMode = BITMAP(29);  // 0x20000000
 
+static const int kNumDisplays = 16;
 static const int32_t kInvalidModeId = -1;
 
 static const std::string kDynamicRangeAttribute = "DynamicRange";
@@ -653,7 +653,7 @@ class PPFeaturesConfig {
 // Struct disp_id_config -- structure for storing display IDs
 struct disp_id_config {
   uint32_t flags;
-  uint64_t disp_id[HWC_NUM_DISPLAY_TYPES];
+  uint64_t disp_id[kNumDisplays];
 };
 
 #define INVALID_DISPLAY 0xffffffff
