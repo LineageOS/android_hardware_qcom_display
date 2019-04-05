@@ -80,10 +80,18 @@ DisplayError Strategy::Deinit() {
   return kErrorNone;
 }
 
-DisplayError Strategy::Start(HWLayersInfo *hw_layers_info, uint32_t *max_attempts,
-                             const PUConstraints &pu_constraints) {
-  DisplayError error = kErrorNone;
+void Strategy::GenerateROI(HWLayersInfo *hw_layers_info, const PUConstraints &pu_constraints) {
+  hw_layers_info_ = hw_layers_info;
 
+  if (partial_update_intf_) {
+    partial_update_intf_->Start(pu_constraints);
+  }
+
+  return GenerateROI();
+}
+
+DisplayError Strategy::Start(HWLayersInfo *hw_layers_info, uint32_t *max_attempts) {
+  DisplayError error = kErrorNone;
   hw_layers_info_ = hw_layers_info;
   extn_start_success_ = false;
 
@@ -91,11 +99,6 @@ DisplayError Strategy::Start(HWLayersInfo *hw_layers_info, uint32_t *max_attempt
     DLOGE("GPU composition is enabled and GPU target buffer not provided.");
     return kErrorNotSupported;
   }
-
-  if (partial_update_intf_) {
-    partial_update_intf_->Start(pu_constraints);
-  }
-  GenerateROI();
 
   if (strategy_intf_) {
     error = strategy_intf_->Start(hw_layers_info_, max_attempts);

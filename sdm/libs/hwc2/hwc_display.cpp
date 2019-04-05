@@ -796,11 +796,19 @@ void HWCDisplay::BuildLayerStack() {
       layer->flags.updating = IsLayerUpdating(hwc_layer);
     }
 
+    if ((hwc_layer->GetDeviceSelectedCompositionType() != HWC2::Composition::Device) ||
+        (hwc_layer->GetClientRequestedCompositionType() != HWC2::Composition::Device) ||
+        layer->flags.skip) {
+      layer->update_mask.set(kClientCompRequest);
+    }
+
     layer_stack_.layers.push_back(layer);
   }
 
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
   layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0);
+  layer_stack_.flags.config_changed = !validated_;
+
   // Append client target to the layer stack
   Layer *sdm_client_target = client_target_->GetSDMLayer();
   sdm_client_target->flags.updating = IsLayerUpdating(client_target_);
