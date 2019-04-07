@@ -427,11 +427,13 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   static bool power_on_pending_[kNumDisplays];
   static int null_display_mode_;
   HotPlugEvent hotplug_pending_event_ = kHotPlugNone;
+  Locker pluggable_handler_lock_;
   bool destroy_virtual_disp_pending_ = false;
   uint32_t idle_pc_ref_cnt_ = 0;
   int32_t max_sde_pluggable_displays_ = 0;
   int32_t max_sde_builtin_displays_ = 0;
   int32_t registered_builtin_displays_ = 0;
+  int32_t disable_hotplug_bwcheck_ = 0;
 };
 
 }  // namespace sdm

@@ -231,10 +231,11 @@ class HWCDisplay : public DisplayEventHandler {
   bool HWCClientNeedsValidate() {
     return (has_client_composition_ || layer_stack_.flags.single_buffered_layer_present);
   }
+  virtual void SetFastPathComposition(bool enable) { fast_path_composition_ = enable; }
   virtual HWC2::Error SetColorModeFromClientApi(int32_t color_mode_id) {
     return HWC2::Error::Unsupported;
   }
-  void SetFastPathComposition(bool enable) { fast_path_composition_ = enable; }
+  bool IsFirstCommitDone() { return !first_cycle_; }
 
   // HWC2 APIs
   virtual HWC2::Error AcceptDisplayChanges(void);
@@ -416,6 +417,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool has_client_composition_ = false;
   DisplayValidateState validate_state_ = kNormalValidate;
   bool fast_path_enabled_ = true;
+  bool first_cycle_ = true;  // false if a display commit has succeeded on the device.
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {

@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2018, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015-2019, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -66,12 +66,13 @@ class ColorManagerProxy {
                                     PPDisplayAPIPayload *out_payload,
                                     PPPendingParams *pending_action);
   DisplayError ApplyDefaultDisplayMode();
-  DisplayError ColorMgrGetNumOfModes(uint32_t *mode_cnt);
-  DisplayError ColorMgrGetModes(uint32_t *mode_cnt, SDEDisplayMode *modes);
+  DisplayError ColorMgrGetNumOfModes(bool enum_user_modes, uint32_t *mode_cnt);
+  DisplayError ColorMgrGetModes(bool enum_user_modes, uint32_t *mode_cnt, SDEDisplayMode *modes);
   DisplayError ColorMgrSetMode(int32_t color_mode_id);
   DisplayError ColorMgrGetModeInfo(int32_t mode_id, AttrVal *query);
   DisplayError ColorMgrSetColorTransform(uint32_t length, const double *trans_data);
   DisplayError ColorMgrGetDefaultModeID(int32_t *mode_id);
+  DisplayError ColorMgrCombineColorModes();
   bool NeedsPartialUpdateDisable();
   DisplayError Commit();
 
@@ -87,6 +88,7 @@ class ColorManagerProxy {
   static HWResourceInfo hw_res_info_;
 
   int32_t display_id_;
+  bool first_cycle_ = true;
   DisplayType device_type_;
   PPHWAttributes pp_hw_attributes_;
   HWInterface *hw_intf_;

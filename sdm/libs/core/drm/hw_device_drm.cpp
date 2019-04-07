@@ -881,6 +881,10 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown) {
     return kErrorUndefined;
   }
 
+  if (first_cycle_) {
+    return kErrorNone;
+  }
+
   SetFullROI();
   drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);

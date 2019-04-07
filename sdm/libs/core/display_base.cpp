@@ -134,10 +134,13 @@ DisplayError DisplayBase::Init() {
     color_mgr_ = ColorManagerProxy::CreateColorManagerProxy(display_type_, hw_intf_,
                                                             display_attributes_, hw_panel_info_);
 
-    if (!color_mgr_) {
+    if (color_mgr_) {
+      if (InitializeColorModes(false) != kErrorNone) {
+        DLOGW("InitColorModes failed for display %d-%d", display_id_, display_type_);
+      }
+      color_mgr_->ColorMgrCombineColorModes();
+    } else {
       DLOGW("Unable to create ColorManagerProxy for display %d-%d", display_id_, display_type_);
-    } else if (InitializeColorModes() != kErrorNone) {
-      DLOGW("InitColorModes failed for display %d-%d", display_id_, display_type_);
     }
   }
 
@@ -910,7 +913,12 @@ DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
 }
 
 DisplayError DisplayBase::SetColorModeById(int32_t color_mode_id) {
-  return color_mgr_->ColorMgrSetMode(color_mode_id);
+  for (auto it : color_mode_map_) {
+    if (it.second->id == color_mode_id)
+      return SetColorMode(it.first);
+  }
+
+  return kErrorNotSupported;
 }
 
 DisplayError DisplayBase::SetColorModeInternal(const std::string &color_mode) {
@@ -1029,7 +1037,7 @@ DisplayError DisplayBase::ApplyDefaultDisplayMode() {
     // where mode files is present, ColorManager will not find any modes.
     // Once boot animation is complete we re-try to apply the modes, since
     // file system should be mounted. InitColorModes needs to called again
-    error = InitializeColorModes();
+    error = InitializeColorModes(true);
     if (error != kErrorNone) {
       DLOGE("failed to initial modes\n");
       return error;
@@ -1438,6 +1446,11 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
     // commit. Need to revist this and update it accordingly for FBT layer.
     if (hw_layers_.info.gpu_target_index == sdm_layer_index) {
       hw_layer.input_buffer.flags.secure = sdm_layer->input_buffer.flags.secure;
+      hw_layer.input_buffer.format = sdm_layer->input_buffer.format;
+      hw_layer.input_buffer.width = sdm_layer->input_buffer.width;
+      hw_layer.input_buffer.height = sdm_layer->input_buffer.height;
+      hw_layer.input_buffer.unaligned_width = sdm_layer->input_buffer.unaligned_width;
+      hw_layer.input_buffer.unaligned_height = sdm_layer->input_buffer.unaligned_height;
     }
   }
 
@@ -1484,12 +1497,12 @@ void DisplayBase::PostCommitLayerParams(LayerStack *layer_stack) {
   return;
 }
 
-DisplayError DisplayBase::InitializeColorModes() {
+DisplayError DisplayBase::InitializeColorModes(bool enum_user_modes) {
   if (!color_mgr_) {
     return kErrorNotSupported;
   }
 
-  DisplayError error = color_mgr_->ColorMgrGetNumOfModes(&num_color_modes_);
+  DisplayError error = color_mgr_->ColorMgrGetNumOfModes(enum_user_modes, &num_color_modes_);
   if (error != kErrorNone || !num_color_modes_) {
     DLOGV_IF(kTagQDCM, "GetNumModes failed = %d count = %d", error, num_color_modes_);
     return kErrorNotSupported;
@@ -1499,7 +1512,8 @@ DisplayError DisplayBase::InitializeColorModes() {
   if (!color_modes_.size()) {
     color_modes_.resize(num_color_modes_);
 
-    DisplayError error = color_mgr_->ColorMgrGetModes(&num_color_modes_, color_modes_.data());
+    DisplayError error = color_mgr_->ColorMgrGetModes(enum_user_modes,
+                                         &num_color_modes_, color_modes_.data());
     if (error != kErrorNone) {
       color_modes_.clear();
       DLOGE("Failed");

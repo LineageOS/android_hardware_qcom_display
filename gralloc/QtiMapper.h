@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,6 +32,7 @@
 
 #include <hidl/MQDescriptor.h>
 #include <hidl/Status.h>
+#include <vendor/qti/hardware/display/mapper/1.0/IQtiMapper.h>
 
 #include "gr_buf_mgr.h"
 namespace vendor {
@@ -56,6 +57,7 @@ using ::android::hardware::hidl_vec;
 using ::android::hidl::base::V1_0::DebugInfo;
 using ::android::hidl::base::V1_0::IBase;
 using ::android::sp;
+using ::vendor::qti::hardware::display::mapper::V1_0::IQtiMapper;
 using gralloc::BufferManager;
 
 using IMapper_2_1 = android::hardware::graphics::mapper::V2_1::IMapper;
@@ -65,7 +67,7 @@ using BufferDescriptorInfo_2_1 =
 android::hardware::graphics::mapper::V2_1::IMapper::BufferDescriptorInfo;
 using IMapperBufferDescriptor = android::hardware::graphics::mapper::V2_0::BufferDescriptor;
 
-class QtiMapper : public IMapper_2_1 {
+class QtiMapper : public IQtiMapper {
  public:
   QtiMapper();
   // Methods from ::android::hardware::graphics::mapper::V2_0::IMapper follow.
@@ -86,7 +88,6 @@ class QtiMapper : public IMapper_2_1 {
   Return<void> getTransportSize(void* buffer, IMapper_2_1::getTransportSize_cb hidl_cb) override;
   Return<void> createDescriptor_2_1(const BufferDescriptorInfo_2_1& descriptorInfo,
                                     createDescriptor_2_1_cb _hidl_cb) override;
-#ifdef ENABLE_QTI_MAPPER_EXTENSION
   Return<void> getMapSecureBufferFlag(void *buffer, getMapSecureBufferFlag_cb _hidl_cb) override;
   Return<void> getInterlacedFlag(void *buffer, getInterlacedFlag_cb _hidl_cb) override;
   Return<void> getCustomDimensions(void *buffer, getCustomDimensions_cb _hidl_cb) override;
@@ -99,7 +100,6 @@ class QtiMapper : public IMapper_2_1 {
   Return<void> getColorSpace(void *buffer, getColorSpace_cb _hidl_cb) override;
   Return<void> getYuvPlaneInfo(void *buffer, getYuvPlaneInfo_cb _hidl_cb) override;
   Return<Error> setSingleBufferMode(void *buffer, bool enable) override;
-#endif
 
  private:
   BufferManager *buf_mgr_ = nullptr;
@@ -112,6 +112,8 @@ class QtiMapper : public IMapper_2_1 {
 };
 
 extern "C" IMapper_2_1 *HIDL_FETCH_IMapper(const char *name);
+extern "C" IQtiMapper *HIDL_FETCH_IQtiMapper(const char *name);
+
 }  // namespace implementation
 }  // namespace V1_0
 }  // namespace mapper
