@@ -1,5 +1,4 @@
-#Display related packages and configuration
-
+# Display product definitions
 PRODUCT_PACKAGES += \
     android.hardware.graphics.composer@2.1-impl \
     android.hardware.graphics.composer@2.1-service \
@@ -14,31 +13,30 @@ PRODUCT_PACKAGES += \
     lights.qcom \
     hwcomposer.qcom \
     memtrack.qcom \
-    libqdutils \
-    libqdMetaData
+    libqdMetaData.vendor \
+    vendor.display.config@1.0.vendor \
+    vendor.display.config@1.1.vendor \
+    vendor.display.config@1.2.vendor \
+    vendor.display.config@1.3.vendor \
+    vendor.display.config@1.4.vendor \
+    vendor.display.config@1.5.vendor \
+    vendor.display.config@1.6.vendor \
+    vendor.display.config@1.7.vendor
 
 #Qdcm calibration xml file for 2k panel
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml
+#Qdcm calibration xml file for 4k panel
+PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_Sharp_4k_cmd_mode_dsc_dsi_panel.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_Sharp_4k_cmd_mode_dsc_dsi_panel.xml
 #Qdcm calibration xml file for 2k video panel
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_Dual_nt35597_video_mode_dsi_truly_panel_without_DSC.xml
-
-TARGET_FORCE_HWC_FOR_VIRTUAL_DISPLAYS := true
-MAX_VIRTUAL_DISPLAY_DIMENSION := 4096
-NUM_FRAMEBUFFER_SURFACE_BUFFERS := 2
-#Enable Charging Icon
-TARGET_RECOVERY_PIXEL_FORMAT := RGBX_8888
-TARGET_USES_GRALLOC1 := true
-TARGET_USES_HWC2 := true
-TARGET_USES_QCOM_DISPLAY_BSP := true
-TARGET_USES_COLOR_METADATA := true
-TARGET_USES_DRM_PP := true
-TARGET_HAS_WIDE_COLOR_DISPLAY := true
+PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_nt35597_video_mode_dsi_truly_panel_with_DSC.xml
 
 PRODUCT_PROPERTY_OVERRIDES += \
     persist.demo.hdmirotationlock=false \
-    persist.sys.sf.color_saturation=1.0 \
     ro.vendor.display.cabl=2 \
     debug.sf.hw=0 \
     debug.egl.hw=0 \
     debug.sf.latch_unsignaled=1 \
-    vendor.display.enable_default_color_mode=1
+    vendor.display.enable_default_color_mode=1 \
+    persist.sys.sf.native_mode=0
+

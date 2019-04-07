@@ -30,7 +30,7 @@
 #ifndef __GR_UTILS_H__
 #define __GR_UTILS_H__
 
-#include <android/hardware/graphics/common/1.0/types.h>
+#include <android/hardware/graphics/common/1.1/types.h>
 #include "gralloc_priv.h"
 #include "qdMetaData.h"
 
@@ -41,18 +41,25 @@
 #define SIZE_4K 4096
 #define SIZE_8K 4096
 
+#ifdef MASTER_SIDE_CP
+#define SECURE_ALIGN SZ_4K
+#else
+#define SECURE_ALIGN SZ_1M
+#endif
+
 #define INT(exp) static_cast<int>(exp)
 #define UINT(exp) static_cast<unsigned int>(exp)
 
-using android::hardware::graphics::common::V1_0::BufferUsage;
+using android::hardware::graphics::common::V1_1::BufferUsage;
 
 namespace gralloc {
 struct BufferInfo {
   BufferInfo(int w, int h, int f, uint64_t usage = 0)
-      : width(w), height(h), format(f), usage(usage) {}
+      : width(w), height(h), format(f), layer_count(1), usage(usage) {}
   int width;
   int height;
   int format;
+  int layer_count;
   uint64_t usage;
 };
 
@@ -94,11 +101,13 @@ unsigned int GetUBwcSize(int width, int height, int format, unsigned int aligned
                          unsigned int alignedh);
 int GetBufferLayout(private_handle_t *hnd, uint32_t stride[4], uint32_t offset[4],
                     uint32_t *num_planes);
+uint32_t GetDataAlignment(int format, uint64_t usage);
 
 void GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
                                      unsigned int *alignedw, unsigned int *alignedh,
                                      GraphicsMetadata *graphics_metadata);
 bool GetAdrenoSizeAPIStatus();
+bool IsGPUFlagSupported(uint64_t usage);
 }  // namespace gralloc
 
 #endif  // __GR_UTILS_H__

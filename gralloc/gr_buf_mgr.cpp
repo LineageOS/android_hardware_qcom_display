@@ -27,7 +27,6 @@
 #include "gr_buf_descriptor.h"
 #include "gr_buf_mgr.h"
 #include "gr_priv_handle.h"
-#include "gr_utils.h"
 #include "qdMetaData.h"
 #include "qd_utils.h"
 
@@ -84,6 +83,17 @@ Error BufferManager::FreeBuffer(std::shared_ptr<Buffer> buf) {
   return Error::NONE;
 }
 
+Error BufferManager::ValidateBufferSize(private_handle_t const *hnd, BufferInfo info) {
+  unsigned int size, alignedw, alignedh;
+  info.format = allocator_->GetImplDefinedFormat(info.usage, info.format);
+  GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh);
+  auto ion_fd_size = static_cast<unsigned int>(lseek(hnd->fd, 0, SEEK_END));
+  if (size != ion_fd_size) {
+    return Error::BAD_VALUE;
+  }
+  return Error::NONE;
+}
+
 void BufferManager::RegisterHandleLocked(const private_handle_t *hnd, int ion_handle,
                                          int ion_handle_meta) {
   auto buffer = std::make_shared<Buffer>(hnd, ion_handle, ion_handle_meta);
@@ -107,9 +117,13 @@ Error BufferManager::ImportHandleLocked(private_handle_t *hnd) {
           hnd->id);
     return Error::BAD_BUFFER;
   }
-  // Set base pointers to NULL since the data here was received over binder
+  // Initialize members that aren't transported
+  hnd->size = static_cast<unsigned int>(lseek(hnd->fd, 0, SEEK_END));
+  hnd->offset = 0;
+  hnd->offset_metadata = 0;
   hnd->base = 0;
   hnd->base_metadata = 0;
+  hnd->gpuaddr = 0;
   RegisterHandleLocked(hnd, ion_handle, ion_handle_meta);
   return Error::NONE;
 }
@@ -134,6 +148,15 @@ Error BufferManager::MapBuffer(private_handle_t const *handle) {
     return Error::BAD_BUFFER;
   }
   return Error::NONE;
+}
+
+Error BufferManager::IsBufferImported(const private_handle_t *hnd) {
+  std::lock_guard<std::mutex> lock(buffer_lock_);
+  auto buf = GetBufferFromHandleLocked(hnd);
+  if (buf != nullptr) {
+    return Error::NONE;
+  }
+  return Error::BAD_BUFFER;
 }
 
 Error BufferManager::RetainBuffer(private_handle_t const *hnd) {
@@ -230,24 +253,6 @@ Error BufferManager::UnlockBuffer(const private_handle_t *handle) {
   return status;
 }
 
-uint32_t BufferManager::GetDataAlignment(int format, uint64_t usage) {
-  uint32_t align = UINT(getpagesize());
-  if (format == HAL_PIXEL_FORMAT_YCbCr_420_SP_TILED) {
-    align = 8192;
-  }
-
-  if (usage & BufferUsage::PROTECTED) {
-    if ((usage & BufferUsage::CAMERA_OUTPUT) || (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY)) {
-      // The alignment here reflects qsee mmu V7L/V8L requirement
-      align = SZ_2M;
-    } else {
-      align = SECURE_ALIGN;
-    }
-  }
-
-  return align;
-}
-
 int BufferManager::GetHandleFlags(int format, uint64_t usage) {
   int flags = 0;
   if (usage & BufferUsage::VIDEO_ENCODER) {
@@ -320,6 +325,7 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   int buffer_type = GetBufferType(format);
   BufferInfo info = GetBufferInfo(descriptor);
   info.format = format;
+  info.layer_count = layer_count;
 
   bool use_adreno_for_size = false;
   GraphicsMetadata graphics_metadata = {};
@@ -337,7 +343,6 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   auto page_size = UINT(getpagesize());
   AllocData data;
   data.align = GetDataAlignment(format, usage);
-  size = ALIGN(size, data.align) * layer_count;
   data.size = size;
   data.handle = (uintptr_t)handle;
   data.uncached = allocator_->UseUncached(usage);

@@ -87,6 +87,11 @@ AdrenoMemInfo::AdrenoMemInfo() {
     gfx_ubwc_disable_ = true;
   }
 
+  property_get(DISABLE_AHARDWAREBUFFER_PROP, property, "0");
+  if (!(strncmp(property, "1", PROPERTY_VALUE_MAX)) ||
+      !(strncmp(property, "true", PROPERTY_VALUE_MAX))) {
+    gfx_ahardware_buffer_disable_ = true;
+  }
 }
 
 AdrenoMemInfo::~AdrenoMemInfo() {
@@ -221,13 +226,11 @@ ADRENOPIXELFORMAT AdrenoMemInfo::GetGpuPixelFormat(int hal_format) {
     case HAL_PIXEL_FORMAT_DEPTH_16:
       return ADRENO_PIXELFORMAT_D16_UNORM;
     case HAL_PIXEL_FORMAT_DEPTH_24:
-      return ADRENO_PIXELFORMAT_D24_UNORM;
+      return ADRENO_PIXELFORMAT_D24_UNORM_X8_UINT;
     case HAL_PIXEL_FORMAT_DEPTH_24_STENCIL_8:
       return ADRENO_PIXELFORMAT_D24_UNORM_S8_UINT;
     case HAL_PIXEL_FORMAT_DEPTH_32F:
       return ADRENO_PIXELFORMAT_D32_FLOAT;
-    case HAL_PIXEL_FORMAT_DEPTH_32F_STENCIL_8:
-      return ADRENO_PIXELFORMAT_D32_FLOAT_X24S8_UINT;
     case HAL_PIXEL_FORMAT_STENCIL_8:
       return ADRENO_PIXELFORMAT_S8_UINT;
     default:
@@ -264,6 +267,10 @@ uint32_t AdrenoMemInfo::AdrenoGetAlignedGpuBufferSize(void *metadata_blob) {
 }
 
 bool AdrenoMemInfo::AdrenoSizeAPIAvaliable() {
+  if (gfx_ahardware_buffer_disable_) {
+    return false;
+  }
+
   return (LINK_adreno_get_metadata_blob_size && LINK_adreno_init_memory_layout &&
           LINK_adreno_get_aligned_gpu_buffer_size);
 }

@@ -306,17 +306,19 @@ Return<void> HWCSession::getPanelBrightness(getPanelBrightness_cb _hidl_cb) {
 int32_t HWCSession::MinHdcpEncryptionLevelChanged(int disp_id, uint32_t min_enc_level) {
   DLOGI("Display %d", disp_id);
 
-  if (disp_id < 0) {
+  int disp_idx = GetDisplayIndex(disp_id);
+  if (disp_idx == -1) {
+    DLOGE("Invalid display = %d", disp_id);
     return -EINVAL;
   }
 
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_id]);
-  if (disp_id != HWC_DISPLAY_EXTERNAL) {
+  SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_idx]);
+  if (disp_idx != HWC_DISPLAY_EXTERNAL) {
     DLOGE("Not supported for display");
-  } else if (!hwc_display_[disp_id]) {
+  } else if (!hwc_display_[disp_idx]) {
     DLOGW("Display is not connected");
   } else {
-    return hwc_display_[disp_id]->OnMinHdcpEncryptionLevelChange(min_enc_level);
+    return hwc_display_[disp_idx]->OnMinHdcpEncryptionLevelChange(min_enc_level);
   }
 
   return -EINVAL;
@@ -340,16 +342,18 @@ Return<int32_t> HWCSession::refreshScreen() {
 }
 
 int32_t HWCSession::ControlPartialUpdate(int disp_id, bool enable) {
-  if (disp_id < 0) {
+  int disp_idx = GetDisplayIndex(disp_id);
+  if (disp_idx == -1) {
+    DLOGE("Invalid display = %d", disp_id);
     return -EINVAL;
   }
 
-  if (disp_id != HWC_DISPLAY_PRIMARY) {
-    DLOGW("CONTROL_PARTIAL_UPDATE is not applicable for display = %d", disp_id);
+  if (disp_idx != HWC_DISPLAY_PRIMARY) {
+    DLOGW("CONTROL_PARTIAL_UPDATE is not applicable for display = %d", disp_idx);
     return -EINVAL;
   }
 
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_id]);
+  SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_idx]);
   HWCDisplay *hwc_display = hwc_display_[HWC_DISPLAY_PRIMARY];
   if (!hwc_display) {
     DLOGE("primary display object is not instantiated");
@@ -373,7 +377,7 @@ int32_t HWCSession::ControlPartialUpdate(int disp_id, bool enable) {
   Refresh(HWC_DISPLAY_PRIMARY);
 
   // Wait until partial update control is complete
-  int32_t error = locker_[disp_id].WaitFinite(kPartialUpdateControlTimeoutMs);
+  int32_t error = locker_[disp_idx].WaitFinite(kPartialUpdateControlTimeoutMs);
 
   return error;
 }

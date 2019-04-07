@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution
  *
  * Copyright (C) 2008 The Android Open Source Project
@@ -27,6 +27,7 @@
 #include <utility>
 
 #include "gr_allocator.h"
+#include "gr_utils.h"
 #include "gr_buf_descriptor.h"
 #include "gralloc_priv.h"
 
@@ -45,13 +46,14 @@ class BufferManager {
   Error LockBuffer(const private_handle_t *hnd, uint64_t usage);
   Error UnlockBuffer(const private_handle_t *hnd);
   Error Dump(std::ostringstream *os);
+  Error ValidateBufferSize(private_handle_t const *hnd, BufferInfo info);
+  Error IsBufferImported(const private_handle_t *hnd);
   static BufferManager *GetInstance();
 
  private:
   BufferManager();
   Error MapBuffer(private_handle_t const *hnd);
   int GetBufferType(int format);
-  uint32_t GetDataAlignment(int format, uint64_t usage);
   int GetHandleFlags(int format, uint64_t usage);
 
   // Imports the ion fds into the current process. Returns an error for invalid handles

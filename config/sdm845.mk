@@ -10,13 +10,12 @@ PRODUCT_PACKAGES += \
     android.hardware.light@2.0-impl \
     android.hardware.light@2.0-service \
     modetest \
-    gralloc.sdm845 \
-    lights.sdm845 \
-    hwcomposer.sdm845 \
-    memtrack.sdm845 \
+    gralloc.qcom \
+    lights.qcom \
+    hwcomposer.qcom \
+    memtrack.qcom \
     libqdutils \
-    libqdMetaData \
-    libqdMetaData.system
+    libqdMetaData
 
 #Qdcm calibration xml file for 2k panel
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml

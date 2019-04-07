@@ -63,6 +63,7 @@ typedef enum {
   ADRENO_PIXELFORMAT_A2B10G10R10_UNORM = 532,
   // Vertex, Normalized GL_UNSIGNED_INT_10_10_10_2_OES
   ADRENO_PIXELFORMAT_R10G10B10X2_UNORM = 537,
+  ADRENO_PIXELFORMAT_D24_UNORM_X8_UINT = 548,
   ADRENO_PIXELFORMAT_D24_UNORM = 549,
   ADRENO_PIXELFORMAT_D32_FLOAT_X24S8_UINT = 551,
   ADRENO_PIXELFORMAT_S8_UINT = 552,
@@ -187,6 +188,7 @@ class AdrenoMemInfo {
   uint32_t (*LINK_adreno_get_aligned_gpu_buffer_size)(void* metadata_blob) = NULL;
 
   bool gfx_ubwc_disable_ = false;
+  bool gfx_ahardware_buffer_disable_ = false;
   void *libadreno_utils_ = NULL;
 
   static AdrenoMemInfo *s_instance;
