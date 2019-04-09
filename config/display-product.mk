@@ -8,10 +8,10 @@ PRODUCT_PACKAGES += \
     android.hardware.memtrack@1.0-service \
     android.hardware.light@2.0-impl \
     android.hardware.light@2.0-service \
-    gralloc.qcom \
-    lights.qcom \
-    hwcomposer.qcom \
-    memtrack.qcom \
+    gralloc.qti \
+    lights.qti \
+    hwcomposer.qti \
+    memtrack.qti \
     libqdMetaData.vendor \
     vendor.display.config@1.0.vendor \
     vendor.display.config@1.1.vendor \
