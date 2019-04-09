@@ -1783,31 +1783,41 @@ DisplayError HWDeviceDRM::DumpDebugData() {
 
   string filename = dir_path+device_str+"_HWR_"+to_string(debug_dump_count_);
   ofstream dst(filename);
-  ifstream src;
   debug_dump_count_++;
 
-  src.open("/sys/kernel/debug/dri/0/debug/dump");
-  dst << "---- Event Logs ----" << std::endl;
-  dst << src.rdbuf() << std::endl;
-  src.close();
+  {
+    ifstream src;
+    src.open("/sys/kernel/debug/dri/0/debug/dump");
+    dst << "---- Event Logs ----" << std::endl;
+    dst << src.rdbuf() << std::endl;
+    src.close();
+  }
 
-  src.open("/sys/kernel/debug/dri/0/debug/recovery_reg");
-  dst << "---- All Registers ----" << std::endl;
-  dst << src.rdbuf() << std::endl;
-  src.close();
+  {
+    ifstream src;
+    src.open("/sys/kernel/debug/dri/0/debug/recovery_reg");
+    dst << "---- All Registers ----" << std::endl;
+    dst << src.rdbuf() << std::endl;
+    src.close();
+  }
 
-  src.open("/sys/kernel/debug/dri/0/debug/recovery_dbgbus");
-  dst << "---- Debug Bus ----" << std::endl;
-  dst << src.rdbuf() << std::endl;
-  src.close();
+  {
+    ifstream src;
+    src.open("/sys/kernel/debug/dri/0/debug/recovery_dbgbus");
+    dst << "---- Debug Bus ----" << std::endl;
+    dst << src.rdbuf() << std::endl;
+    src.close();
+  }
 
-  src.open("/sys/kernel/debug/dri/0/debug/recovery_vbif_dbgbus");
-  dst << "---- VBIF Debug Bus ----" << std::endl;
-  dst << src.rdbuf() << std::endl;
-  src.close();
+  {
+    ifstream src;
+    src.open("/sys/kernel/debug/dri/0/debug/recovery_vbif_dbgbus");
+    dst << "---- VBIF Debug Bus ----" << std::endl;
+    dst << src.rdbuf() << std::endl;
+    src.close();
+  }
 
   dst.close();
-
   DLOGI("Wrote hw_recovery file %s", filename.c_str());
 
   return kErrorNone;
