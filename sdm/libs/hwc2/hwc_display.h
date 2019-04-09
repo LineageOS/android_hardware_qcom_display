@@ -409,6 +409,7 @@ class HWCDisplay : public DisplayEventHandler {
   void DumpInputBuffers(void);
   bool CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests);
   void UpdateRefreshRate();
+  void WaitOnPreviousFence();
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
   uint32_t geometry_changes_ = GeometryChanges::kNone;
@@ -418,6 +419,7 @@ class HWCDisplay : public DisplayEventHandler {
   DisplayValidateState validate_state_ = kNormalValidate;
   bool fast_path_enabled_ = true;
   bool first_cycle_ = true;  // false if a display commit has succeeded on the device.
+  int fbt_release_fence_ = -1;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {

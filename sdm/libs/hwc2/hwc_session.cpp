@@ -208,6 +208,7 @@ int HWCSession::Init() {
   StartServices();
   HWCDebugHandler::Get()->GetProperty(ENABLE_NULL_DISPLAY_PROP, &null_display_mode_);
   HWCDebugHandler::Get()->GetProperty(DISABLE_HOTPLUG_BWCHECK, &disable_hotplug_bwcheck_);
+  HWCDebugHandler::Get()->GetProperty(DISABLE_MASK_LAYER_HINT, &disable_mask_layer_hint_);
   DisplayError error = kErrorNone;
 
   HWDisplayInterfaceInfo hw_disp_info = {};
@@ -973,6 +974,12 @@ int32_t HWCSession::SetPowerMode(hwc2_device_t *device, hwc2_display_t display, 
 
   hwc_session->UpdateVsyncSource();
   hwc_session->UpdateThrottlingRate();
+
+  // Trigger refresh for doze mode to take effect.
+  if (mode == HWC2::PowerMode::Doze) {
+    hwc_session->Refresh(display);
+  }
+
   return HWC2_ERROR_NONE;
 }
 
@@ -3109,8 +3116,15 @@ hwc2_display_t HWCSession::GetNextVsyncSource() {
       continue;
     }
 
-    if (hwc_display->GetCurrentPowerMode() != HWC2::PowerMode::Off) {
-      return info.client_id;
+    HWC2::PowerMode current_mode = hwc_display->GetCurrentPowerMode();
+    if (update_vsync_on_doze_) {
+      if (current_mode == HWC2::PowerMode::On) {
+        return info.client_id;
+      }
+    } else if (update_vsync_on_power_off_) {
+      if (current_mode != HWC2::PowerMode::Off) {
+        return info.client_id;
+      }
     }
   }
 
