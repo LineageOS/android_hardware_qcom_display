@@ -983,6 +983,7 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
     return;
   }
 
+  DTRACE_SCOPED();
   HWLayersInfo &hw_layer_info = hw_layers->info;
   uint32_t hw_layer_count = UINT32(hw_layer_info.hw_layers.size());
   HWQosData &qos_data = hw_layers->qos_data;

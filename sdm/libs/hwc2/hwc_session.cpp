@@ -2774,6 +2774,8 @@ void HWCSession::DestroyNonPluggableDisplay(DisplayMapInfo *map_info) {
 HWC2::Error HWCSession::ValidateDisplayInternal(hwc2_display_t display, uint32_t *out_num_types,
                                                 uint32_t *out_num_requests) {
   HWCDisplay *hwc_display = hwc_display_[display];
+
+  DTRACE_SCOPED();
   if (hwc_display->IsInternalValidateState()) {
     // Internal Validation has already been done on display, get the Output params.
     return hwc_display->GetValidateDisplayOutput(out_num_types, out_num_requests);
@@ -2796,6 +2798,8 @@ HWC2::Error HWCSession::ValidateDisplayInternal(hwc2_display_t display, uint32_t
 
 HWC2::Error HWCSession::PresentDisplayInternal(hwc2_display_t display, int32_t *out_retire_fence) {
   HWCDisplay *hwc_display = hwc_display_[display];
+
+  DTRACE_SCOPED();
   // If display is in Skip-Validate state and Validate cannot be skipped, do Internal
   // Validation to optimize for the frames which don't require the Client composition.
   if (hwc_display->IsSkipValidateState() && !hwc_display->CanSkipValidate()) {
