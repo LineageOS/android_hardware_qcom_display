@@ -340,6 +340,8 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   // In case driver doesn't report bus width default to 256 bit bus.
   hw_resource->num_mnocports = info.num_mnocports ? info.num_mnocports : 2;
   hw_resource->mnoc_bus_width = info.mnoc_bus_width ? info.mnoc_bus_width : 32;
+  // Use fudge factor as 1.5 if not reported
+  hw_resource->vbif_cmd_ff = (info.vbif_cmd_ff > 0.0f) ? info.vbif_cmd_ff : 1.5f;
 }
 
 void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
