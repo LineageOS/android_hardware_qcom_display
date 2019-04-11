@@ -90,6 +90,7 @@ class HWCLayer {
   HWC2::Error SetLayerPerFrameMetadata(uint32_t num_elements, const PerFrameMetadataKey *keys,
                                        const float *metadata);
   HWC2::Error SetLayerZOrder(uint32_t z);
+  HWC2::Error SetLayerColorTransform(const float *matrix);
   void SetComposition(const LayerComposition &sdm_composition);
   HWC2::Composition GetClientRequestedCompositionType() { return client_requested_; }
   void UpdateClientCompositionType(HWC2::Composition type) { client_requested_ = type; }
@@ -111,6 +112,7 @@ class HWCLayer {
   void SetPartialUpdate(bool enabled) { partial_update_enabled_ = enabled; }
   bool IsNonIntegralSourceCrop() { return non_integral_source_crop_; }
   bool HasMetaDataRefreshRate() { return has_metadata_refresh_rate_; }
+  bool IsColorTransformSet() { return color_transform_matrix_set_; }
 
  private:
   Layer *layer_ = nullptr;
@@ -131,6 +133,7 @@ class HWCLayer {
   bool surface_updated_ = true;
   bool non_integral_source_crop_ = false;
   bool has_metadata_refresh_rate_ = false;
+  bool color_transform_matrix_set_ = false;
 
   // Composition requested by client(SF)
   HWC2::Composition client_requested_ = HWC2::Composition::Device;

@@ -152,6 +152,9 @@ struct LayerFlags {
 
       uint32_t single_buffer : 1;  //!< This flag shall be set by client to indicate that the layer
                                    //!< uses only a single buffer that will not be swapped out
+
+      uint32_t color_transform : 1;  //!< This flag will be set by SDM when the layer
+                                     //!< has a custom matrix
     };
 
     uint32_t flags = 0;       //!< For initialization purpose only.
@@ -361,6 +364,10 @@ struct Layer {
                                                    //!< needed on this layer.
   LayerSolidFill solid_fill_info = {};             //!< solid fill info along with depth.
   std::shared_ptr<LayerBufferMap> buffer_map = nullptr;  //!< Map of handle_id and fb_id.
+  float color_transform_matrix[kColorTransformMatrixSize] = { 1.0, 0.0, 0.0, 0.0,
+                                                              0.0, 1.0, 0.0, 0.0,
+                                                              0.0, 0.0, 1.0, 0.0,
+                                                              0.0, 0.0, 0.0, 1.0 };
 };
 
 /*! @brief This structure defines the color space + transfer of a given layer.

@@ -669,7 +669,6 @@ void HWCDisplay::BuildLayerStack() {
   metadata_refresh_rate_ = 0;
   layer_stack_.flags.animating = animating_;
   layer_stack_.flags.fast_path = fast_path_enabled_ && fast_path_composition_;
-
   // Add one layer for fb target
   for (auto hwc_layer : layer_set_) {
     // Reset layer data which SDM may change
@@ -788,6 +787,10 @@ void HWCDisplay::BuildLayerStack() {
     layer->flags.updating = true;
     if (layer_set_.size() <= kMaxLayerCount) {
       layer->flags.updating = IsLayerUpdating(hwc_layer);
+    }
+
+    if (hwc_layer->IsColorTransformSet()) {
+      layer->flags.color_transform = true;
     }
 
     layer_stack_.layers.push_back(layer);
