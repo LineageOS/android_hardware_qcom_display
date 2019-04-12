@@ -48,9 +48,14 @@ CoreImpl::CoreImpl(BufferAllocator *buffer_allocator,
 DisplayError CoreImpl::Init() {
   SCOPE_LOCK(locker_);
   DisplayError error = kErrorNone;
+  bool skip_extension_intf = false;
+  int value = 0;
+  if (Debug::Get()->GetProperty(SKIP_EXTENSION_INTF, &value) == kErrorNone) {
+    skip_extension_intf = (value == 1);
+  }
 
   // Try to load extension library & get handle to its interface.
-  if (extension_lib_.Open(EXTENSION_LIBRARY_NAME)) {
+  if (!skip_extension_intf && extension_lib_.Open(EXTENSION_LIBRARY_NAME)) {
     if (!extension_lib_.Sym(CREATE_EXTENSION_INTERFACE_NAME,
                             reinterpret_cast<void **>(&create_extension_intf_)) ||
         !extension_lib_.Sym(DESTROY_EXTENSION_INTERFACE_NAME,
