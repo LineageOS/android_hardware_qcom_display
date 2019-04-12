@@ -79,6 +79,7 @@
 #define DISABLE_UBWC_PROP                    GRALLOC_PROP("disable_ubwc")
 #define ENABLE_FB_UBWC_PROP                  GRALLOC_PROP("enable_fb_ubwc")
 #define MAP_FB_MEMORY_PROP                   GRALLOC_PROP("map_fb_memory")
+#define SKIP_EXTENSION_INTF                  DISPLAY_PROP("skip_extension_intf")
 
 #define MAX_BLIT_FACTOR_PROP                 DISPLAY_PROP("max_blit_factor")
 #define DISABLE_SECURE_INLINE_ROTATOR_PROP   DISPLAY_PROP("disable_secure_inline_rotator")
