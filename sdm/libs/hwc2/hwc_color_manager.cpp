@@ -370,6 +370,7 @@ void HWCColorManager::SetColorModeDetailEnhancer(HWCDisplay *hwc_display) {
   int err = -1;
   PPPendingParams pending_action;
   PPDisplayAPIPayload req_payload;
+  DTRACE_SCOPED();
 
   pending_action.action = kGetDetailedEnhancerData;
   pending_action.params = NULL;

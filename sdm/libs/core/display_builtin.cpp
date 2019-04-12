@@ -133,6 +133,7 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
     reset_panel_ = false;
   }
 
+  DTRACE_SCOPED();
   if (NeedsMixerReconfiguration(layer_stack, &new_mixer_width, &new_mixer_height)) {
     error = ReconfigureMixer(new_mixer_width, new_mixer_height);
     if (error != kErrorNone) {
@@ -151,6 +152,8 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
   uint32_t app_layer_count = hw_layers_.info.app_layer_count;
+
+  DTRACE_SCOPED();
 
   // Enabling auto refresh is async and needs to happen before commit ioctl
   if (hw_panel_info_.mode == kModeCommand) {
