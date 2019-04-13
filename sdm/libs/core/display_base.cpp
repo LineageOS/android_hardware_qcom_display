@@ -1228,14 +1228,26 @@ bool DisplayBase::NeedsDownScale(const LayerRect &src_rect, const LayerRect &dst
 bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *new_mixer_width,
                                             uint32_t *new_mixer_height) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-  uint32_t layer_count = UINT32(layer_stack->layers.size());
+  uint32_t mixer_width = mixer_attributes_.width;
+  uint32_t mixer_height = mixer_attributes_.height;
 
+  if (req_mixer_width_ && req_mixer_height_) {
+    DLOGD_IF(kTagDisplay, "Required mixer width : %d, height : %d",
+             req_mixer_width_, req_mixer_height_);
+    *new_mixer_width = req_mixer_width_;
+    *new_mixer_height = req_mixer_height_;
+    return (req_mixer_width_ != mixer_width || req_mixer_height_ != mixer_height);
+  }
+
+  if (!custom_mixer_resolution_) {
+    return false;
+  }
+
+  uint32_t layer_count = UINT32(layer_stack->layers.size());
   uint32_t fb_width  = fb_config_.x_pixels;
   uint32_t fb_height  = fb_config_.y_pixels;
   uint32_t fb_area = fb_width * fb_height;
   LayerRect fb_rect = (LayerRect) {0.0f, 0.0f, FLOAT(fb_width), FLOAT(fb_height)};
-  uint32_t mixer_width = mixer_attributes_.width;
-  uint32_t mixer_height = mixer_attributes_.height;
   uint32_t display_width = display_attributes_.x_pixels;
   uint32_t display_height = display_attributes_.y_pixels;
 
@@ -1245,14 +1257,6 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
   std::vector<Layer *> layers = layer_stack->layers;
   uint32_t align_x = display_attributes_.is_device_split ? 4 : 2;
   uint32_t align_y = 2;
-
-  if (req_mixer_width_ && req_mixer_height_) {
-    DLOGD_IF(kTagDisplay, "Required mixer width : %d, height : %d",
-             req_mixer_width_, req_mixer_height_);
-    *new_mixer_width = req_mixer_width_;
-    *new_mixer_height = req_mixer_height_;
-    return (req_mixer_width_ != mixer_width || req_mixer_height_ != mixer_height);
-  }
 
   for (uint32_t i = 0; i < layer_count; i++) {
     Layer *layer = layers.at(i);
@@ -1302,7 +1306,7 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
       *new_mixer_width = display_width;
       *new_mixer_height = display_height;
     }
-    return true;
+    return ((*new_mixer_width != mixer_width) || (*new_mixer_height != mixer_height));
   }
 
   return false;
