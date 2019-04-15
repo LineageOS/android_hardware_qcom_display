@@ -9,10 +9,10 @@ PRODUCT_PACKAGES += \
     android.hardware.memtrack@1.0-service \
     android.hardware.light@2.0-impl \
     android.hardware.light@2.0-service \
-    gralloc.qti \
-    lights.qti \
-    hwcomposer.qti \
-    memtrack.qti \
+    gralloc.talos \
+    lights.talos \
+    hwcomposer.talos \
+    memtrack.talos \
     libqdutils \
     libqdMetaData \
     libqdMetaData.system \
