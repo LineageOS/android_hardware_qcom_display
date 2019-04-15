@@ -18,9 +18,11 @@ PRODUCT_PACKAGES += \
     libqdMetaData.system \
     modetest
 
-#QDCM calibration xml file
+#QDCM calibration xml file base on td4330
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_trinket_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_td4330_cmd_mode_dsi_truly_panel.xml
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_trinket_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_td4330_video_mode_dsi_truly_panel.xml
+#QDCM calibration xml file base on nt36672
+PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_trinket_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_nt36672_truly_fhd_video_mode_dsi_panel.xml
 
 #Enable Charging Icon
 TARGET_RECOVERY_PIXEL_FORMAT := RGBX_8888
