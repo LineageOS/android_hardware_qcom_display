@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -26,6 +26,7 @@
 #include <gralloc_priv.h>
 #include <qdMetaData.h>
 #include <core/layer_stack.h>
+#include <core/layer_buffer.h>
 #include <utils/utils.h>
 #define HWC2_INCLUDE_STRINGIFICATION
 #define HWC2_USE_CPP11
@@ -111,6 +112,7 @@ class HWCLayer {
   void SetPartialUpdate(bool enabled) { partial_update_enabled_ = enabled; }
   bool IsNonIntegralSourceCrop() { return non_integral_source_crop_; }
   bool HasMetaDataRefreshRate() { return has_metadata_refresh_rate_; }
+  void SetLayerAsMask();
 
  private:
   Layer *layer_ = nullptr;

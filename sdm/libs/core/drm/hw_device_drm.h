@@ -232,6 +232,7 @@ class HWDeviceDRM : public HWInterface {
   bool resolution_switch_enabled_ = false;
   bool autorefresh_ = false;
   std::unique_ptr<HWColorManagerDrm> hw_color_mgr_ = {};
+  bool pending_doze_ = false;
 };
 
 }  // namespace sdm

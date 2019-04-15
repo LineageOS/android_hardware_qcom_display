@@ -412,6 +412,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   std::vector<DisplayMapInfo> map_info_builtin_;    // Builtin displays excluding primary
   std::vector<DisplayMapInfo> map_info_pluggable_;  // Pluggable displays excluding primary
   std::vector<DisplayMapInfo> map_info_virtual_;    // Virtual displays
+  bool update_vsync_on_power_off_ = false;
+  bool update_vsync_on_doze_ = false;
   bool reset_panel_ = false;
   bool client_connected_ = false;
   bool new_bw_mode_ = false;
@@ -434,6 +436,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int32_t max_sde_builtin_displays_ = 0;
   int32_t registered_builtin_displays_ = 0;
   int32_t disable_hotplug_bwcheck_ = 0;
+  int32_t disable_mask_layer_hint_ = 0;
 };
 
 }  // namespace sdm

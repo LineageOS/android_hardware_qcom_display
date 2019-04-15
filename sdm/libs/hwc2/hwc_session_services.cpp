@@ -710,10 +710,14 @@ Return<int32_t> HWCSession::SetDisplayDppsAdROI(uint32_t display_id, uint32_t h_
 
 #ifdef DISPLAY_CONFIG_1_6
 Return<int32_t> HWCSession::updateVSyncSourceOnPowerModeOff() {
+  update_vsync_on_power_off_ = true;
+
   return 0;
 }
 
 Return<int32_t> HWCSession::updateVSyncSourceOnPowerModeDoze() {
+  update_vsync_on_doze_ = true;
+
   return 0;
 }
 #endif
@@ -755,6 +759,25 @@ Return<bool> HWCSession::isWCGSupported(uint32_t disp_id) {
 }
 
 Return<int32_t> HWCSession::setLayerAsMask(uint32_t disp_id, uint64_t layer_id) {
+  SCOPE_LOCK(locker_[disp_id]);
+  HWCDisplay *hwc_display = hwc_display_[disp_id];
+  if (!hwc_display) {
+    DLOGW("Display = %d is not connected.", disp_id);
+    return -EINVAL;
+  }
+
+  if (disable_mask_layer_hint_) {
+    DLOGW("Mask layer hint is disabled!");
+    return -EINVAL;
+  }
+
+  auto hwc_layer = hwc_display->GetHWCLayer(layer_id);
+  if (hwc_layer == nullptr) {
+    return -EINVAL;
+  }
+
+  hwc_layer->SetLayerAsMask();
+
   return 0;
 }
 
