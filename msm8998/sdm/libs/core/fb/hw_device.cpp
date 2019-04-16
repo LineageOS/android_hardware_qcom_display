@@ -445,6 +445,11 @@ DisplayError HWDevice::Commit(HWLayers *hw_layers) {
         mdp_buffer.fence = input_buffer->acquire_fence_fd;
         mdp_layer_index++;
 
+        if (input_buffer->flags.secure) {
+          mdp_layer.flags |= MDP_LAYER_SECURE_SESSION;
+        } else {
+          mdp_layer.flags &= UINT32(~MDP_LAYER_SECURE_SESSION);
+        }
         DLOGV_IF(kTagDriverConfig, "****************** Layer[%d] %s pipe Input *******************",
                  i, count ? "Right" : "Left");
         DLOGI_IF(kTagDriverConfig, "in_w %d, in_h %d, in_f %d, horz_deci %d, vert_deci %d",
