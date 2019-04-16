@@ -309,6 +309,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
     disable_pu_one_frame_ = false;
   }
 
+  hw_layers_.updates_mask.set(kUpdateResources);
   comp_manager_->PrePrepare(display_comp_ctx_, &hw_layers_);
   while (true) {
     error = comp_manager_->Prepare(display_comp_ctx_, &hw_layers_);
