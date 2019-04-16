@@ -678,6 +678,7 @@ void HWCDisplay::BuildLayerStack() {
   layer_stack_.flags.animating = animating_;
   layer_stack_.flags.fast_path = fast_path_enabled_ && fast_path_composition_;
 
+  DTRACE_SCOPED();
   // Add one layer for fb target
   // TODO(user): Add blit target layers
   for (auto hwc_layer : layer_set_) {
@@ -1173,6 +1174,8 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, int32_t acquire_
 }
 
 HWC2::Error HWCDisplay::SetActiveConfig(hwc2_config_t config) {
+  DTRACE_SCOPED();
+
   if (SetActiveDisplayConfig(config) != kErrorNone) {
     return HWC2::Error::BadConfig;
   }
@@ -1268,6 +1271,7 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
   layer_requests_.clear();
   has_client_composition_ = false;
 
+  DTRACE_SCOPED();
   if (shutdown_pending_) {
     validated_ = false;
     return HWC2::Error::BadDisplay;
@@ -1471,6 +1475,8 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
   if (flush_) {
     return HWC2::Error::None;
   }
+
+  DTRACE_SCOPED();
 
   if (!validated_) {
     DLOGV_IF(kTagClient, "Display %d is not validated", id_);

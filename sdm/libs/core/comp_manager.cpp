@@ -193,6 +193,7 @@ DisplayError CompManager::ReconfigureDisplay(Handle comp_handle,
                                              const DisplayConfigVariableInfo &fb_config,
                                              uint32_t *default_clk_hz) {
   SCOPE_LOCK(locker_);
+  DTRACE_SCOPED();
 
   DisplayError error = kErrorNone;
   DisplayCompositionContext *display_comp_ctx =
@@ -285,6 +286,7 @@ void CompManager::PrePrepare(Handle display_ctx, HWLayers *hw_layers) {
 DisplayError CompManager::Prepare(Handle display_ctx, HWLayers *hw_layers) {
   SCOPE_LOCK(locker_);
 
+  DTRACE_SCOPED();
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
   Handle &display_resource_ctx = display_comp_ctx->display_resource_ctx;
@@ -353,6 +355,7 @@ DisplayError CompManager::Commit(Handle display_ctx, HWLayers *hw_layers) {
 DisplayError CompManager::ReConfigure(Handle display_ctx, HWLayers *hw_layers) {
   SCOPE_LOCK(locker_);
 
+  DTRACE_SCOPED();
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
   Handle &display_resource_ctx = display_comp_ctx->display_resource_ctx;
