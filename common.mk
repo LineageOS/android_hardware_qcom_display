@@ -48,7 +48,7 @@ endif
 
 #Common C flags
 common_flags := -Wno-missing-field-initializers
-common_flags += -Wconversion -Wall -Werror -std=c++14
+common_flags += -Wall -Werror -std=c++14
 common_flags += -DUSE_GRALLOC1
 ifeq ($(TARGET_IS_HEADLESS), true)
     common_flags += -DTARGET_HEADLESS
