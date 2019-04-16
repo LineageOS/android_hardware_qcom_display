@@ -587,6 +587,9 @@ void DisplayBase::AppendDump(char *buffer, uint32_t length) {
   for (uint32_t i = 0; i < num_hw_layers; i++) {
     uint32_t layer_index = hw_layers_.info.index[i];
     // sdm-layer from client layer stack
+    if (layer_index >= hw_layers_.info.stack->layers.size()) {
+      break;
+    }
     Layer *sdm_layer = hw_layers_.info.stack->layers.at(layer_index);
     // hw-layer from hw layers info
     Layer &hw_layer = hw_layers_.info.hw_layers.at(i);
