@@ -2095,7 +2095,6 @@ int HWCDisplay::SetActiveDisplayConfig(uint32_t config) {
 
   validated_ = false;
   display_intf_->SetActiveConfig(config);
-  callbacks_->Refresh(id_);
 
   return 0;
 }
