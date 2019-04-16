@@ -26,7 +26,7 @@ ifeq ($(LLVM_SA), true)
     LOCAL_CFLAGS += --compile-and-analyze --analyzer-perf --analyzer-Werror
 endif
 LOCAL_CLANG  := true
-LOCAL_MODULE := lights.qcom
+LOCAL_MODULE := lights.qti
 LOCAL_MODULE_TAGS := optional
 LOCAL_VENDOR_MODULE := true
 
