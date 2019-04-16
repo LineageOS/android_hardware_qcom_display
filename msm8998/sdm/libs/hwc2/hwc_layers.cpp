@@ -760,7 +760,7 @@ bool HWCLayer::ValidateAndSetCSC() {
      use_color_metadata = true;
   }
 
-  if (use_color_metadata) {
+  if (use_color_metadata && client_requested_ != HWC2::Composition::SolidColor) {
     const private_handle_t *handle =
       reinterpret_cast<const private_handle_t *>(layer_buffer->buffer_id);
     if (sdm::SetCSC(handle, &layer_buffer->color_metadata) != kErrorNone) {
