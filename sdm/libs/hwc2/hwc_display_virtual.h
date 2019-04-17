@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -50,6 +50,7 @@ class HWCDisplayVirtual : public HWCDisplay {
   virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
                                          int32_t format, bool post_processed);
   virtual HWC2::Error GetDisplayType(int32_t *out_type);
+  virtual HWC2::Error SetColorMode(ColorMode mode);
   HWC2::Error SetOutputBuffer(buffer_handle_t buf, int32_t release_fence);
 
  private:
