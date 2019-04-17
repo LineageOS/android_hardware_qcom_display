@@ -9,10 +9,10 @@ PRODUCT_PACKAGES += \
     android.hardware.light@2.0-impl \
     android.hardware.light@2.0-service \
     modetest \
-    gralloc.qcom \
-    lights.qcom \
-    hwcomposer.qcom \
-    memtrack.qcom \
+    gralloc.$(TARGET_BOARD_PLATFORM) \
+    lights.$(TARGET_BOARD_PLATFORM) \
+    hwcomposer.$(TARGET_BOARD_PLATFORM) \
+    memtrack.$(TARGET_BOARD_PLATFORM) \
     libqdMetaData.vendor \
     vendor.display.config@1.0.vendor \
     vendor.display.config@1.1.vendor \
