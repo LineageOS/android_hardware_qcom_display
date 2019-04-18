@@ -1185,7 +1185,7 @@ HWC2::Error HWCDisplay::SetActiveConfig(hwc2_config_t config) {
   if (SetActiveDisplayConfig(config) != kErrorNone) {
     return HWC2::Error::BadConfig;
   }
-
+  DLOGI("Active configuration changed to: %d", config);
   validated_ = false;
   return HWC2::Error::None;
 }

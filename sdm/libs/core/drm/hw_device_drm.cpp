@@ -702,21 +702,23 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   GetHWDisplayPortAndMode();
   GetHWPanelMaxBrightness();
 
-  DLOGI("%s, Panel Interface = %s, Panel Mode = %s, Is Primary = %d", device_name_,
+  DLOGI_IF(kTagDisplay, "%s, Panel Interface = %s, Panel Mode = %s, Is Primary = %d", device_name_,
         interface_str_.c_str(), hw_panel_info_.mode == kModeVideo ? "Video" : "Command",
         hw_panel_info_.is_primary_panel);
-  DLOGI("Partial Update = %d, Dynamic FPS = %d, HDR Panel = %d QSync = %d",
+  DLOGI_IF(kTagDisplay, "Partial Update = %d, Dynamic FPS = %d, HDR Panel = %d QSync = %d",
         hw_panel_info_.partial_update, hw_panel_info_.dynamic_fps, hw_panel_info_.hdr_enabled,
         hw_panel_info_.qsync_support);
-  DLOGI("Align: left = %d, width = %d, top = %d, height = %d", hw_panel_info_.left_align,
-        hw_panel_info_.width_align, hw_panel_info_.top_align, hw_panel_info_.height_align);
-  DLOGI("ROI: min_width = %d, min_height = %d, need_merge = %d", hw_panel_info_.min_roi_width,
-        hw_panel_info_.min_roi_height, hw_panel_info_.needs_roi_merge);
-  DLOGI("FPS: min = %d, max = %d", hw_panel_info_.min_fps, hw_panel_info_.max_fps);
-  DLOGI("Left Split = %d, Right Split = %d", hw_panel_info_.split_info.left_split,
+  DLOGI_IF(kTagDisplay, "Align: left = %d, width = %d, top = %d, height = %d",
+           hw_panel_info_.left_align, hw_panel_info_.width_align, hw_panel_info_.top_align,
+           hw_panel_info_.height_align);
+  DLOGI_IF(kTagDisplay, "ROI: min_width = %d, min_height = %d, need_merge = %d",
+           hw_panel_info_.min_roi_width, hw_panel_info_.min_roi_height,
+           hw_panel_info_.needs_roi_merge);
+  DLOGI_IF(kTagDisplay, "FPS: min = %d, max = %d", hw_panel_info_.min_fps, hw_panel_info_.max_fps);
+  DLOGI_IF(kTagDisplay, "Left Split = %d, Right Split = %d", hw_panel_info_.split_info.left_split,
         hw_panel_info_.split_info.right_split);
-  DLOGI("Panel Transfer time = %d us", hw_panel_info_.transfer_time_us);
-  DLOGI("Dynamic Bit Clk Support = %d", hw_panel_info_.dyn_bitclk_support);
+  DLOGI_IF(kTagDisplay, "Panel Transfer time = %d us", hw_panel_info_.transfer_time_us);
+  DLOGI_IF(kTagDisplay, "Dynamic Bit Clk Support = %d", hw_panel_info_.dyn_bitclk_support);
 }
 
 DisplayError HWDeviceDRM::GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
@@ -793,7 +795,7 @@ void HWDeviceDRM::GetHWPanelMaxBrightness() {
 
   if (Sys::pread_(fd, brightness, sizeof(brightness), 0) > 0) {
     hw_panel_info_.panel_max_brightness = atoi(brightness);
-    DLOGI("Max brightness level = %d", hw_panel_info_.panel_max_brightness);
+    DLOGI_IF(kTagDisplay, "Max brightness level = %d", hw_panel_info_.panel_max_brightness);
   } else {
     DLOGW("Failed to read max brightness level. error = %s", strerror(errno));
   }
@@ -835,15 +837,17 @@ DisplayError HWDeviceDRM::SetDisplayAttributes(uint32_t index) {
   PopulateHWPanelInfo();
   UpdateMixerAttributes();
 
-  DLOGI("Display attributes[%d]: WxH: %dx%d, DPI: %fx%f, FPS: %d, LM_SPLIT: %d, V_BACK_PORCH: %d," \
-        " V_FRONT_PORCH: %d, V_PULSE_WIDTH: %d, V_TOTAL: %d, H_TOTAL: %d, CLK: %dKHZ, TOPOLOGY: %d",
-        index, display_attributes_[index].x_pixels, display_attributes_[index].y_pixels,
-        display_attributes_[index].x_dpi, display_attributes_[index].y_dpi,
-        display_attributes_[index].fps, display_attributes_[index].is_device_split,
-        display_attributes_[index].v_back_porch, display_attributes_[index].v_front_porch,
-        display_attributes_[index].v_pulse_width, display_attributes_[index].v_total,
-        display_attributes_[index].h_total, display_attributes_[index].clock_khz,
-        display_attributes_[index].topology);
+  DLOGI_IF(
+      kTagDisplay,
+      "Display attributes[%d]: WxH: %dx%d, DPI: %fx%f, FPS: %d, LM_SPLIT: %d, V_BACK_PORCH: %d,"
+      " V_FRONT_PORCH: %d, V_PULSE_WIDTH: %d, V_TOTAL: %d, H_TOTAL: %d, CLK: %dKHZ, TOPOLOGY: %d",
+      index, display_attributes_[index].x_pixels, display_attributes_[index].y_pixels,
+      display_attributes_[index].x_dpi, display_attributes_[index].y_dpi,
+      display_attributes_[index].fps, display_attributes_[index].is_device_split,
+      display_attributes_[index].v_back_porch, display_attributes_[index].v_front_porch,
+      display_attributes_[index].v_pulse_width, display_attributes_[index].v_total,
+      display_attributes_[index].h_total, display_attributes_[index].clock_khz,
+      display_attributes_[index].topology);
 
   return kErrorNone;
 }
