@@ -115,6 +115,8 @@
 #define DISABLE_FAST_PATH                    DISPLAY_PROP("disable_fast_path")
 // Disable microidle condition
 #define DISABLE_SINGLE_LM_SPLIT_PROP         DISPLAY_PROP("disable_single_lm_split")
+// Enable posted start dynamic
+#define ENABLE_POSTED_START_DYN_PROP         DISPLAY_PROP("enable_posted_start_dyn")
 
 #define ZERO_SWAP_INTERVAL                   "vendor.debug.egl.swapinterval"
 

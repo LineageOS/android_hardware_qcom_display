@@ -390,6 +390,12 @@ enum struct DRMOps {
    *      uint32_t - Topology control bit-mask
    */
   CONNECTOR_SET_TOPOLOGY_CONTROL,
+  /*
+   * Op: Sets frame trigger mode on this connector
+   * Arg: uint32_t - Connector ID
+   *      uint32_t - Frame trigger mode
+   */
+  CONNECTOR_SET_FRAME_TRIGGER,
 };
 
 enum struct DRMRotation {
@@ -815,6 +821,12 @@ struct DRMSolidfillStage {
   uint32_t color_bit_depth = 0;
   uint32_t z_order = 0;
   uint32_t plane_alpha = 0xff;
+};
+
+enum struct DRMFrameTriggerMode {
+  FRAME_DONE_WAIT_DEFAULT = 0,
+  FRAME_DONE_WAIT_SERIALIZE,
+  FRAME_DONE_WAIT_POSTED_START,
 };
 
 /* DRM Atomic Request Property Set.

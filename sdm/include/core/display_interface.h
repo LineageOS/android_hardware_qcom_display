@@ -174,6 +174,14 @@ struct DisplayDppsAd4RoiCfg {
   uint32_t factor_out;  //!< the strength factor of outside ROI region
 };
 
+/*! @brief This enum defines frame trigger modes. */
+enum FrameTriggerMode {
+  kFrameTriggerDefault,      //!< Wait for pp_done of previous frame to trigger new frame
+  kFrameTriggerSerialize,    //!< Trigger new frame and wait for pp_done of this frame
+  kFrameTriggerPostedStart,  //!< Posted start mode, trigger new frame without pp_done
+  kFrameTriggerMax,
+};
+
 /*! @brief This structure defines configuration for fixed properties of a display device.
 
   @sa DisplayInterface::GetConfig
