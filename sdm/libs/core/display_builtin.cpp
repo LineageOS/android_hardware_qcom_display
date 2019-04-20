@@ -779,4 +779,9 @@ void DisplayBuiltIn::ResetPanel() {
   }
 }
 
+DisplayError DisplayBuiltIn::GetRefreshRate(uint32_t *refresh_rate) {
+  *refresh_rate = current_refresh_rate_;
+  return kErrorNone;
+}
+
 }  // namespace sdm
