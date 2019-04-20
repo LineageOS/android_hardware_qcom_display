@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -608,6 +608,11 @@ DisplayError DisplayBuiltIn::GetDynamicDSIClock(uint64_t *bit_clk_rate) {
   }
 
   return hw_intf_->GetDynamicDSIClock(bit_clk_rate);
+}
+
+DisplayError DisplayBuiltIn::GetRefreshRate(uint32_t *refresh_rate) {
+  *refresh_rate = current_refresh_rate_;
+  return kErrorNone;
 }
 
 }  // namespace sdm
