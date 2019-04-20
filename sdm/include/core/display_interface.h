@@ -812,6 +812,14 @@ class DisplayInterface {
   */
   virtual DisplayError TeardownConcurrentWriteback(void) = 0;
 
+  /*! @brief Method to set frame trigger mode for primary display.
+
+    @param[in] frame trigger mode
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError SetFrameTriggerMode(FrameTriggerMode mode) = 0;
+
   /*
    * Returns a string consisting of a dump of SDM's display and layer related state
    * as programmed to driver

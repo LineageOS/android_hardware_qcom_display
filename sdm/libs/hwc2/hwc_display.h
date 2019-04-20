@@ -188,6 +188,9 @@ class HWCDisplay : public DisplayEventHandler {
                                           uint32_t factor_in, uint32_t factor_out) {
     return HWC2::Error::Unsupported;
   }
+  virtual HWC2::Error SetFrameTriggerMode(uint32_t mode) {
+    return HWC2::Error::Unsupported;
+  }
 
   // Display Configurations
   static uint32_t GetThrottlingRefreshRate() { return HWCDisplay::throttling_refresh_rate_; }
