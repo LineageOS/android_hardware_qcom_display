@@ -773,6 +773,8 @@ void HWCDisplay::BuildLayerStack() {
       layer->update_mask.set(kClientCompRequest);
     }
 
+    layer_stack_.flags.mask_present |= layer->input_buffer.flags.mask_layer;
+
     layer_stack_.layers.push_back(layer);
   }
 
@@ -1549,10 +1551,11 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
       // release fences and discard fences from driver
       if (swap_interval_zero_ || layer->flags.single_buffer) {
         close(layer_buffer->release_fence_fd);
-      } else if (layer->composition != kCompositionGPU) {
-        hwc_layer->PushBackReleaseFence(layer_buffer->release_fence_fd);
       } else {
-        hwc_layer->PushBackReleaseFence(-1);
+        // It may so happen that layer gets marked to GPU & app layer gets queued
+        // to MDP for composition. In those scenarios, release fence of buffer should
+        // have mdp and gpu sync points merged.
+        hwc_layer->PushBackReleaseFence(layer_buffer->release_fence_fd);
       }
     } else {
       // In case of flush or display paused, we don't return an error to f/w, so it will
@@ -2247,6 +2250,10 @@ bool HWCDisplay::CanSkipValidate() {
                (layer->composition == kCompositionGPU) ? "GPU composed": "Dropped");
       return false;
     }
+  }
+
+  if (!layer_set_.empty() && !display_intf_->CanSkipValidate()) {
+    return false;
   }
 
   return true;

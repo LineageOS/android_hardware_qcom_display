@@ -846,6 +846,12 @@ class DisplayInterface {
   */
   virtual DisplayError SetPanelLuminanceAttributes(float min_lum, float max_lum) = 0;
 
+  /*! @brief Method to query if there is a need to validate.
+
+      @return \link boolean \endlink
+  */
+  virtual bool CanSkipValidate() = 0;
+
  protected:
   virtual ~DisplayInterface() { }
 };

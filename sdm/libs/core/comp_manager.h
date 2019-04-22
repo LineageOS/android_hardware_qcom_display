@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -85,6 +85,7 @@ class CompManager {
   void SetSafeMode(bool enable) { safe_mode_ = enable; }
   bool IsSafeMode() { return safe_mode_; }
   void GenerateROI(Handle display_ctx, HWLayers *hw_layers);
+  bool CanSkipValidate(Handle display_ctx);
 
  private:
   static const int kMaxThermalLevel = 3;
