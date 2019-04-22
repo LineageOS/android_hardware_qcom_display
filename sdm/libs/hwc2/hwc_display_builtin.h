@@ -57,6 +57,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   virtual int Init();
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests);
   virtual HWC2::Error Present(int32_t *out_retire_fence);
+  virtual HWC2::Error CommitLayerStack();
   virtual HWC2::Error GetColorModes(uint32_t *out_num_modes, ColorMode *out_modes);
   virtual HWC2::Error SetColorMode(ColorMode mode);
   virtual HWC2::Error GetRenderIntents(ColorMode mode, uint32_t *out_num_intents,
@@ -87,6 +88,8 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   virtual DisplayError SetDynamicDSIClock(uint64_t bitclk);
   virtual DisplayError GetDynamicDSIClock(uint64_t *bitclk);
   virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates);
+  virtual HWC2::Error UpdateDisplayId(hwc2_display_t id);
+  virtual HWC2::Error SetPendingRefresh();
   virtual DisplayError TeardownConcurrentWriteback(void);
   virtual void SetFastPathComposition(bool enable) {
     fast_path_composition_ = enable && !readback_buffer_queued_;
@@ -107,6 +110,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   void HandleFrameOutput();
   void HandleFrameDump();
   void HandleFrameCapture();
+  bool CanSkipCommit();
   DisplayError SetMixerResolution(uint32_t width, uint32_t height);
   DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
 
@@ -124,6 +128,8 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   BufferInfo output_buffer_info_ = {};
   void *output_buffer_base_ = nullptr;
   int default_mode_status_ = 0;
+  bool pending_refresh_ = true;
+  bool enable_drop_refresh_ = false;
 
   // Members for 1 frame capture in a client provided buffer
   bool frame_capture_buffer_queued_ = false;

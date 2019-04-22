@@ -121,5 +121,6 @@
 #define VIRTUAL_BASEID_AND_SIZE_PROP         DISPLAY_PROP("virtual_baseid_and_size")
 
 #define ZERO_SWAP_INTERVAL                   "vendor.debug.egl.swapinterval"
+#define ENABLE_DROP_REFRESH                  DISPLAY_PROP("enable_drop_refresh")
 
 #endif  // __DISPLAY_PROPERTIES_H__

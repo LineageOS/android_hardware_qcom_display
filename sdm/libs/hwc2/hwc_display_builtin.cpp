@@ -122,6 +122,13 @@ int HWCDisplayBuiltIn::Init() {
   HWCDebugHandler::Get()->GetProperty(ENABLE_DEFAULT_COLOR_MODE,
                                       &default_mode_status_);
 
+  int drop_refresh = 0;
+  HWCDebugHandler::Get()->GetProperty(ENABLE_DROP_REFRESH, &drop_refresh);
+  enable_drop_refresh_ = (drop_refresh == 1);
+  if (enable_drop_refresh_) {
+    DLOGI("Drop redundant drawcycles %d", id_);
+  }
+
   return status;
 }
 
@@ -192,6 +199,34 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
   return status;
 }
 
+HWC2::Error HWCDisplayBuiltIn::CommitLayerStack() {
+  skip_commit_ = CanSkipCommit();
+  return HWCDisplay::CommitLayerStack();
+}
+
+bool HWCDisplayBuiltIn::CanSkipCommit() {
+  if (layer_stack_invalid_) {
+    return false;
+  }
+
+  // Reject repeated drawcycle requests if it satisfies all conditions.
+  // 1. None of the layerstack attributes changed.
+  // 2. No new buffer latched.
+  // 3. No refresh request triggered by HWC.
+  // 4. This display is not source of vsync.
+  bool buffers_latched = false;
+  for (auto &hwc_layer : layer_set_) {
+    buffers_latched |= hwc_layer->BufferLatched();
+    hwc_layer->ResetBufferFlip();
+  }
+
+  bool skip_commit = enable_drop_refresh_ && !pending_commit_ && !buffers_latched &&
+                     !pending_refresh_ && !vsync_source_;
+  pending_refresh_ = false;
+
+  return skip_commit;
+}
+
 HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
   auto status = HWC2::Error::None;
 
@@ -203,7 +238,7 @@ HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
       DLOGE("Flush failed. Error = %d", error);
     }
   } else {
-    status = HWCDisplay::CommitLayerStack();
+    status = CommitLayerStack();
     if (status == HWC2::Error::None) {
       HandleFrameOutput();
       SolidFillCommit();
@@ -817,6 +852,16 @@ DisplayError HWCDisplayBuiltIn::GetSupportedDSIClock(std::vector<uint64_t> *bitc
   }
 
   return kErrorNotSupported;
+}
+
+HWC2::Error HWCDisplayBuiltIn::UpdateDisplayId(hwc2_display_t id) {
+  id_ = id;
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayBuiltIn::SetPendingRefresh() {
+  pending_refresh_ = true;
+  return HWC2::Error::None;
 }
 
 }  // namespace sdm
