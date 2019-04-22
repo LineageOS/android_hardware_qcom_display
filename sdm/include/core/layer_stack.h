@@ -243,6 +243,8 @@ struct LayerStackFlags {
       uint32_t hdr_present : 1;  //!< Set if stack has HDR content
 
       uint32_t fast_path : 1;    //!< Preference for fast/slow path draw-cycle, set by client.
+
+      uint32_t mask_present : 1;  //!< Set if layer stack has mask layers.
     };
 
     uint32_t flags = 0;               //!< For initialization purpose only.

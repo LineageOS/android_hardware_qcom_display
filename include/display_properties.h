@@ -103,6 +103,7 @@
 // Disable deferring power state request to first draw cycle
 #define DISABLE_DEFER_POWER_STATE            DISPLAY_PROP("disable_defer_power_state")
 #define ENABLE_DROP_REFRESH                  DISPLAY_PROP("enable_drop_refresh")
+#define DISABLE_PARALLEL_CACHE               DISPLAY_PROP("disable_parallel_cache")
 
 // Add all vendor.display properties above
 

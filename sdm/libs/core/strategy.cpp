@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -268,6 +268,13 @@ DisplayError Strategy::SetBlendSpace(const PrimariesTransfer &blend_space) {
     return strategy_intf_->SetBlendSpace(blend_space);
   }
   return kErrorNotSupported;
+}
+
+bool Strategy::CanSkipValidate() {
+  if (strategy_intf_) {
+    return strategy_intf_->CanSkipValidate();
+  }
+  return true;
 }
 
 }  // namespace sdm

@@ -62,6 +62,7 @@ class DisplayNull : public DisplayInterface {
                                                     uint8_t *out_data);
   virtual string Dump() { return ""; }
   virtual bool IsSupportSsppTonemap() { return false; }
+  virtual bool CanSkipValidate() { return true; }
 
   MAKE_NO_OP(TeardownConcurrentWriteback(void))
   MAKE_NO_OP(Commit(LayerStack *))
