@@ -91,6 +91,7 @@ class DRMEncoderManager {
  private:
   int fd_ = -1;
   std::map<uint32_t, std::unique_ptr<DRMEncoder>> encoder_pool_{};
+  int GetDisplayTypeCode(uint32_t encoder_type);
 };
 
 }  // namespace sde_drm

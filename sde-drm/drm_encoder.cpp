@@ -158,13 +158,37 @@ int DRMEncoderManager::Reserve(set<uint32_t> possible_encoders, DRMDisplayToken 
       if (is_in) {
         encoder->second->Lock();
         token->encoder_id = encoder_id;
-        token->hw_port = distance(encoder_pool_.begin(), encoder) + 1; // 1-indexed port
+        int encoder_index = distance(encoder_pool_.begin(), encoder) + 1;  // 1-indexed port
+        // Port id format.
+        // Bit 7   --> Display type 0: Pluggable 1: BuiltIn X:Virtual.
+        // Bit 6   --> Pluggable: 0 for TMDS encoder, 1 for DPMST encoder.
+        //             Builtin Or Virtual: X
+        // Bit 5-0 --> Encoder index.
+        uint32_t encoder_type;
+        encoder->second->GetType(&encoder_type);
+        token->hw_port = GetDisplayTypeCode(encoder_type) | encoder_index;
         ret = 0;
         break;
       }
     }
   }
   return ret;
+}
+
+int DRMEncoderManager::GetDisplayTypeCode(uint32_t encoder_type) {
+  int disp_info = 0x2;
+  switch (encoder_type) {
+    case DRM_MODE_ENCODER_TMDS:
+      disp_info = 0x0;
+      break;
+    case DRM_MODE_ENCODER_DPMST:
+      disp_info = 0x1;
+      break;
+    default:
+      break;
+  }
+
+  return (disp_info << 6);
 }
 
 void DRMEncoderManager::Free(DRMDisplayToken *token) {
