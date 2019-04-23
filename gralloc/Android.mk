@@ -16,7 +16,7 @@ LOCAL_SHARED_LIBRARIES        := $(common_libs) libqdMetaData libsync libgralloc
                                  android.hardware.graphics.mapper@2.1
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdgralloc\" -Wall -Werror
 LOCAL_CLANG                   := true
-LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps) $(kernel_deps)
+LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
 LOCAL_SRC_FILES               := gr_device_impl.cpp
 include $(BUILD_SHARED_LIBRARY)
 
@@ -49,7 +49,7 @@ LOCAL_HEADER_LIBRARIES        := display_headers
 LOCAL_SHARED_LIBRARIES        := $(common_libs) libqdMetaData libdl libgrallocutils libion \
                                   android.hardware.graphics.mapper@2.1
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdgralloc\" -Wno-sign-conversion
-LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps) $(kernel_deps)
+LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
 LOCAL_SRC_FILES               := gr_allocator.cpp gr_buf_mgr.cpp gr_ion_alloc.cpp
 include $(BUILD_SHARED_LIBRARY)
 
