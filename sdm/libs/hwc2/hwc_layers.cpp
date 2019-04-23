@@ -1021,4 +1021,9 @@ void HWCLayer::SetDirtyRegions(hwc_region_t surface_damage) {
   }
 }
 
+void HWCLayer::SetLayerAsMask() {
+  layer_->input_buffer.flags.mask_layer = true;
+  DLOGV_IF(kTagClient, " Layer Id: ""[%" PRIu64 "]", id_);
+}
+
 }  // namespace sdm
