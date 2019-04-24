@@ -833,6 +833,18 @@ DisplayError HWDeviceDRM::SetDisplayAttributes(uint32_t index) {
     return kErrorParameters;
   }
 
+  drmModeModeInfo to_set = connector_info_.modes[index].mode;
+  uint64_t current_bit_clk = connector_info_.modes[current_mode_index_].bit_clk_rate;
+  for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
+    if ((to_set.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
+        (to_set.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
+        (to_set.vrefresh == connector_info_.modes[mode_index].mode.vrefresh) &&
+        (current_bit_clk == connector_info_.modes[mode_index].bit_clk_rate)) {
+      index = mode_index;
+      break;
+    }
+  }
+
   current_mode_index_ = index;
   PopulateHWPanelInfo();
   UpdateMixerAttributes();
