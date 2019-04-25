@@ -137,7 +137,10 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
   }
 
   // Clean hw layers for reuse.
+  DTRACE_BEGIN("PrepareHWLayers");
   hw_layers_ = HWLayers();
+  DTRACE_END();
+
   hw_layers_.hw_avr_info.enable = NeedsAVREnable();
 
   return DisplayBase::Prepare(layer_stack);

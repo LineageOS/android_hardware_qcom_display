@@ -290,6 +290,7 @@ void HWDeviceDRM::Registry::Register(HWLayers *hw_layers) {
   HWLayersInfo &hw_layer_info = hw_layers->info;
   uint32_t hw_layer_count = UINT32(hw_layer_info.hw_layers.size());
 
+  DTRACE_SCOPED();
   for (uint32_t i = 0; i < hw_layer_count; i++) {
     Layer &layer = hw_layer_info.hw_layers.at(i);
     LayerBuffer *input_buffer = &layer.input_buffer;

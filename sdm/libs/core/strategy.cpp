@@ -119,6 +119,8 @@ DisplayError Strategy::Stop() {
 }
 
 DisplayError Strategy::GetNextStrategy(StrategyConstraints *constraints) {
+  DTRACE_SCOPED();
+
   if (extn_start_success_) {
     return strategy_intf_->GetNextStrategy(constraints);
   }
