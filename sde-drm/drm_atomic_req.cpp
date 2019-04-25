@@ -155,6 +155,7 @@ int DRMAtomicReq::Validate() {
 }
 
 int DRMAtomicReq::Commit(bool synchronous, bool retain_planes) {
+  DTRACE_SCOPED();
   if (retain_planes) {
     // It is not enough to simply avoid calling UnsetUnusedPlanes, since state transitons have to
     // be correct when CommitPlaneState is called
