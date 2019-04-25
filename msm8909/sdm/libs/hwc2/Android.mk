@@ -37,7 +37,7 @@ LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.1
 endif
 
 # Allow implicit fallthroughs in hwc_display.cpp until they are fixed.
-LOCAL_CFLAGS                  += -Wno-error=implicit-fallthrough
+LOCAL_CFLAGS                  += -Wno-implicit-fallthrough
 
 LOCAL_SRC_FILES               := hwc_session.cpp \
                                  hwc_session_services.cpp \
