@@ -88,6 +88,7 @@ class HWPeripheralDRM : public HWDeviceDRM {
   std::vector<SDEScaler> scalar_data_ = {};
   CWBConfig cwb_config_ = {};
   sde_drm::DRMIdlePCState idle_pc_state_ = sde_drm::DRMIdlePCState::NONE;
+  bool idle_pc_enabled_ = true;
   std::vector<DestScalarCache> dest_scalar_cache_ = {};
   drm_msm_ad4_roi_cfg ad4_roi_cfg_ = {};
   bool needs_ds_update_ = false;
