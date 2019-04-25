@@ -1008,7 +1008,7 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
   bool update_config = resource_update || hw_layer_info.stack->flags.geometry_changed;
 
   // TODO(user): Once destination scalar is enabled we can always send ROIs if driver allows
-  if (hw_panel_info_.partial_update && update_config) {
+  if (hw_panel_info_.partial_update && update_config && !IsDestScalingNeeded()) {
     const int kNumMaxROIs = 4;
     DRMRect crtc_rects[kNumMaxROIs] = {{0, 0, mixer_attributes_.width, mixer_attributes_.height}};
     DRMRect conn_rects[kNumMaxROIs] = {{0, 0, display_attributes_[index].x_pixels,
@@ -1747,12 +1747,6 @@ DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attr
   if (mixer_attributes.width > max_input_width) {
     DLOGW("Input width exceeds width limit! input_width %d width_limit %d", mixer_attributes.width,
           max_input_width);
-    return kErrorNotSupported;
-  }
-
-  if (static_cast<int>(mixer_attributes.width) < hw_panel_info_.min_roi_width) {
-    DLOGW("Input width less than panel min_roi_width! input_width %d min_roi_width %d",
-          mixer_attributes.width, hw_panel_info_.min_roi_width);
     return kErrorNotSupported;
   }
 
