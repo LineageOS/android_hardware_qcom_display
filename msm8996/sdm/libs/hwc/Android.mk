@@ -19,7 +19,7 @@ LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware li
                                  libpowermanager libsdmutils libc++
 
 # Allow implicit fallthroughs in hwc_display.cpp until they are fixed.
-LOCAL_CFLAGS                  += -Wno-error=implicit-fallthrough
+LOCAL_CFLAGS                  += -Wno-implicit-fallthrough
 
 LOCAL_SRC_FILES               := hwc_session.cpp \
                                  hwc_display.cpp \
