@@ -3,7 +3,7 @@ LOCAL_PATH := $(call my-dir)
 include $(LOCAL_PATH)/../common.mk
 include $(CLEAR_VARS)
 
-LOCAL_MODULE                  := gralloc.qcom
+LOCAL_MODULE                  := gralloc.$(TARGET_BOARD_PLATFORM)
 LOCAL_VENDOR_MODULE           := true
 LOCAL_MODULE_RELATIVE_PATH    := hw
 LOCAL_MODULE_TAGS             := optional
@@ -53,6 +53,10 @@ LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps) $(kernel_deps)
 LOCAL_SRC_FILES               := gr_allocator.cpp gr_buf_mgr.cpp gr_ion_alloc.cpp
 include $(BUILD_SHARED_LIBRARY)
 
+#Get the display mapper version available
+qti_mapper1_1_version := $(shell \
+    if [ -d "$(TOP)/vendor/qcom/opensource/interfaces/display/mapper/1.1" ];\
+    then echo QTI_MAPPER_1_1; fi)
 
 qti_mapper_version := $(shell \
     if [ -d "$(TOP)/vendor/qcom/opensource/interfaces/display/mapper/1.0" ];\
@@ -82,6 +86,10 @@ LOCAL_SHARED_LIBRARIES        := $(common_libs) \
                                   android.hardware.graphics.mapper@2.0 \
                                   android.hardware.graphics.mapper@2.1
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdgralloc\" -Wno-sign-conversion
+ifeq ($(qti_mapper1_1_version), QTI_MAPPER_1_1)
+LOCAL_SHARED_LIBRARIES        += vendor.qti.hardware.display.mapper@1.1
+LOCAL_CFLAGS                  += -DQTI_MAPPER_1_1
+endif
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
 LOCAL_SRC_FILES               := QtiMapper.cpp
 include $(BUILD_SHARED_LIBRARY)

@@ -983,6 +983,7 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
     return;
   }
 
+  DTRACE_SCOPED();
   HWLayersInfo &hw_layer_info = hw_layers->info;
   uint32_t hw_layer_count = UINT32(hw_layer_info.hw_layers.size());
   HWQosData &qos_data = hw_layers->qos_data;
@@ -992,9 +993,11 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
   uint64_t current_bit_clk = connector_info_.modes[index].bit_clk_rate;
 
   solid_fills_.clear();
+  bool resource_update = hw_layers->updates_mask.test(kUpdateResources);
+  bool update_config = resource_update || hw_layer_info.stack->flags.geometry_changed;
 
   // TODO(user): Once destination scalar is enabled we can always send ROIs if driver allows
-  if (hw_panel_info_.partial_update) {
+  if (hw_panel_info_.partial_update && update_config) {
     const int kNumMaxROIs = 4;
     DRMRect crtc_rects[kNumMaxROIs] = {{0, 0, mixer_attributes_.width, mixer_attributes_.height}};
     DRMRect conn_rects[kNumMaxROIs] = {{0, 0, display_attributes_[index].x_pixels,
@@ -1048,84 +1051,103 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
 
       if (pipe_info->valid && fb_id) {
         uint32_t pipe_id = pipe_info->pipe_id;
-        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ALPHA, pipe_id, layer.plane_alpha);
 
-        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ZORDER, pipe_id, pipe_info->z_order);
-        DRMBlendType blending = {};
-        SetBlending(layer.blending, &blending);
-        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_BLEND_TYPE, pipe_id, blending);
-        DRMRect src = {};
-        SetRect(pipe_info->src_roi, &src);
-        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_SRC_RECT, pipe_id, src);
-        DRMRect rot_dst = {0, 0, 0, 0};
-        if (hw_rotator_session->mode == kRotatorInline && hw_rotate_info->valid) {
-          SetRect(hw_rotate_info->dst_roi, &rot_dst);
-          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ROTATION_DST_RECT, pipe_id, rot_dst);
-          if (hw_rotator_session->output_buffer.planes[0].fd >= 0) {
-            uint32_t rot_fb_id = registry_.GetFbId(&layer,
-                                                   hw_rotator_session->output_buffer.handle_id);
-            if (rot_fb_id) {
-              drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ROT_FB_ID, pipe_id, rot_fb_id);
+        if (update_config) {
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ALPHA, pipe_id, layer.plane_alpha);
+
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ZORDER, pipe_id, pipe_info->z_order);
+
+          DRMBlendType blending = {};
+          SetBlending(layer.blending, &blending);
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_BLEND_TYPE, pipe_id, blending);
+
+          DRMRect src = {};
+          SetRect(pipe_info->src_roi, &src);
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_SRC_RECT, pipe_id, src);
+
+          DRMRect rot_dst = {0, 0, 0, 0};
+          if (hw_rotator_session->mode == kRotatorInline && hw_rotate_info->valid) {
+            SetRect(hw_rotate_info->dst_roi, &rot_dst);
+            drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ROTATION_DST_RECT, pipe_id, rot_dst);
+            if (hw_rotator_session->output_buffer.planes[0].fd >= 0) {
+              uint32_t rot_fb_id = registry_.GetFbId(&layer,
+                                                     hw_rotator_session->output_buffer.handle_id);
+              if (rot_fb_id) {
+                drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ROT_FB_ID, pipe_id, rot_fb_id);
+              }
             }
           }
-        }
-        DRMRect dst = {};
-        SetRect(pipe_info->dst_roi, &dst);
-        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_DST_RECT, pipe_id, dst);
-        DRMRect excl = {};
-        SetRect(pipe_info->excl_rect, &excl);
-        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_EXCL_RECT, pipe_id, excl);
-        uint32_t rot_bit_mask = 0;
-        SetRotation(layer.transform, hw_rotator_session->mode, &rot_bit_mask);
-        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ROTATION, pipe_id, rot_bit_mask);
-        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_H_DECIMATION, pipe_id,
-                                  pipe_info->horizontal_decimation);
-        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_V_DECIMATION, pipe_id,
-                                  pipe_info->vertical_decimation);
 
-        DRMSecureMode fb_secure_mode;
-        DRMSecurityLevel security_level;
-        SetSecureConfig(layer.input_buffer, &fb_secure_mode, &security_level);
-        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_FB_SECURE_MODE, pipe_id, fb_secure_mode);
-        if (security_level > crtc_security_level) {
-          crtc_security_level = security_level;
+          DRMRect dst = {};
+          SetRect(pipe_info->dst_roi, &dst);
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_DST_RECT, pipe_id, dst);
+
+          DRMRect excl = {};
+          SetRect(pipe_info->excl_rect, &excl);
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_EXCL_RECT, pipe_id, excl);
+
+          uint32_t rot_bit_mask = 0;
+          SetRotation(layer.transform, hw_rotator_session->mode, &rot_bit_mask);
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ROTATION, pipe_id, rot_bit_mask);
+
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_H_DECIMATION, pipe_id,
+                                    pipe_info->horizontal_decimation);
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_V_DECIMATION, pipe_id,
+                                    pipe_info->vertical_decimation);
+
+          DRMSecureMode fb_secure_mode;
+          DRMSecurityLevel security_level;
+          SetSecureConfig(layer.input_buffer, &fb_secure_mode, &security_level);
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_FB_SECURE_MODE, pipe_id, fb_secure_mode);
+          if (security_level > crtc_security_level) {
+            crtc_security_level = security_level;
+          }
+
+          uint32_t config = 0;
+          SetSrcConfig(layer.input_buffer, hw_rotator_session->mode, &config);
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_SRC_CONFIG, pipe_id, config);
+
+          if (hw_scale_) {
+            SDEScaler scaler_output = {};
+            hw_scale_->SetScaler(pipe_info->scale_data, &scaler_output);
+            // TODO(user): Remove qseed3 and add version check, then send appropriate scaler object
+            if (hw_resource_.has_qseed3) {
+              drm_atomic_intf_->Perform(DRMOps::PLANE_SET_SCALER_CONFIG, pipe_id,
+                                        reinterpret_cast<uint64_t>(&scaler_output.scaler_v2));
+            }
+          }
+
+          DRMCscType csc_type = DRMCscType::kCscTypeMax;
+          SelectCscType(layer.input_buffer, &csc_type);
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_CSC_CONFIG, pipe_id, &csc_type);
+
+          DRMMultiRectMode multirect_mode;
+          SetMultiRectMode(pipe_info->flags, &multirect_mode);
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_MULTIRECT_MODE, pipe_id, multirect_mode);
+
+          SetSsppTonemapFeatures(pipe_info);
         }
 
-        uint32_t config = 0;
-        SetSrcConfig(layer.input_buffer, hw_rotator_session->mode, &config);
-        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_SRC_CONFIG, pipe_id, config);;
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_FB_ID, pipe_id, fb_id);
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_CRTC, pipe_id, token_.crtc_id);
+
         if (!validate && input_buffer->acquire_fence_fd >= 0) {
           drm_atomic_intf_->Perform(DRMOps::PLANE_SET_INPUT_FENCE, pipe_id,
                                     input_buffer->acquire_fence_fd);
         }
-        if (hw_scale_) {
-          SDEScaler scaler_output = {};
-          hw_scale_->SetScaler(pipe_info->scale_data, &scaler_output);
-          // TODO(user): Remove qseed3 and add version check, then send appropriate scaler object
-          if (hw_resource_.has_qseed3) {
-            drm_atomic_intf_->Perform(DRMOps::PLANE_SET_SCALER_CONFIG, pipe_id,
-                                      reinterpret_cast<uint64_t>(&scaler_output.scaler_v2));
-          }
-        }
-
-        DRMCscType csc_type = DRMCscType::kCscTypeMax;
-        SelectCscType(layer.input_buffer, &csc_type);
-        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_CSC_CONFIG, pipe_id, &csc_type);
-
-        DRMMultiRectMode multirect_mode;
-        SetMultiRectMode(pipe_info->flags, &multirect_mode);
-        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_MULTIRECT_MODE, pipe_id, multirect_mode);
-
-        SetSsppTonemapFeatures(pipe_info);
       }
     }
   }
 
-  SetSolidfillStages();
-  SetQOSData(qos_data);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_SECURITY_LEVEL, token_.crtc_id, crtc_security_level);
+  if (update_config) {
+    SetSolidfillStages();
+    SetQOSData(qos_data);
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_SECURITY_LEVEL, token_.crtc_id, crtc_security_level);
+    sde_drm::DRMQsyncMode mode = hw_layers->hw_avr_info.enable ? sde_drm::DRMQsyncMode::CONTINUOUS :
+                                                                 sde_drm::DRMQsyncMode::NONE;
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_QSYNC_MODE, token_.conn_id, mode);
+  }
+
   drm_atomic_intf_->Perform(DRMOps::DPPS_COMMIT_FEATURE, 0 /* argument is not used */);
 
   if (!validate) {
@@ -1170,7 +1192,8 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
                               topology_control_);
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
-    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
+    DRMPowerMode power_mode = pending_doze_ ? DRMPowerMode::DOZE : DRMPowerMode::ON;
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, power_mode);
   } else if (pending_doze_ && !validate) {
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::DOZE);
@@ -1192,10 +1215,6 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
   if (hw_panel_info_.mode == kModeCommand) {
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_AUTOREFRESH, token_.conn_id, autorefresh_);
   }
-
-  sde_drm::DRMQsyncMode mode = hw_layers->hw_avr_info.enable ? sde_drm::DRMQsyncMode::CONTINUOUS :
-                                                               sde_drm::DRMQsyncMode::NONE;
-  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_QSYNC_MODE, token_.conn_id, mode);
 }
 
 void HWDeviceDRM::AddSolidfillStage(const HWSolidfillStage &sf, uint32_t plane_alpha) {
@@ -1388,6 +1407,8 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
 
   first_cycle_ = false;
   update_mode_ = false;
+  hw_layers->updates_mask = 0;
+  pending_doze_ = false;
 
   return kErrorNone;
 }
@@ -1525,6 +1546,11 @@ DisplayError HWDeviceDRM::GetPPFeaturesVersion(PPFeatureVersion *vers) {
 }
 
 DisplayError HWDeviceDRM::SetPPFeatures(PPFeaturesConfig *feature_list) {
+  if (pending_doze_) {
+    DLOGI("Doze state pending!! Skip for now");
+    return kErrorNone;
+  }
+
   int ret = 0;
   PPFeatureInfo *feature = NULL;
 

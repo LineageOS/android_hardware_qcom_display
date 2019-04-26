@@ -8,10 +8,10 @@ PRODUCT_PACKAGES += \
     android.hardware.memtrack@1.0-service \
     android.hardware.light@2.0-impl \
     android.hardware.light@2.0-service \
-    gralloc.qcom \
-    lights.qcom \
-    hwcomposer.qcom \
-    memtrack.qcom \
+    gralloc.$(TARGET_BOARD_PLATFORM) \
+    lights.$(TARGET_BOARD_PLATFORM) \
+    hwcomposer.$(TARGET_BOARD_PLATFORM) \
+    memtrack.$(TARGET_BOARD_PLATFORM) \
     libqdMetaData.vendor \
     vendor.display.config@1.0.vendor \
     vendor.display.config@1.1.vendor \
@@ -19,6 +19,9 @@ PRODUCT_PACKAGES += \
     vendor.display.config@1.3.vendor \
     vendor.display.config@1.4.vendor \
     vendor.display.config@1.5.vendor \
+    vendor.display.config@1.6.vendor \
+    vendor.display.config@1.7.vendor \
+    vendor.display.config@1.8.vendor \
     modetest
 
 #QDCM calibration xml file for 2k panel

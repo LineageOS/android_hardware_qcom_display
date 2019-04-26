@@ -670,12 +670,18 @@ struct HWQosData {
   uint32_t rot_clock_hz = 0;
 };
 
+enum UpdateType {
+  kUpdateResources,  // Indicates Strategy & RM execution, which can update resources.
+  kUpdateMax,
+};
+
 struct HWLayers {
   HWLayersInfo info {};
   HWLayerConfig config[kMaxSDELayers] {};
   float output_compression = 1.0f;
   HWQosData qos_data = {};
   HWAVRInfo hw_avr_info = {};
+  std::bitset<kUpdateMax> updates_mask = 0;
 };
 
 struct HWDisplayAttributes : DisplayConfigVariableInfo {

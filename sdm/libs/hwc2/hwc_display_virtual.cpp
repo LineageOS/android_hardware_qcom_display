@@ -311,4 +311,8 @@ HWC2::Error HWCDisplayVirtual::GetDisplayType(int32_t *out_type) {
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCDisplayVirtual::SetColorMode(ColorMode mode) {
+  return HWC2::Error::None;
+}
+
 }  // namespace sdm

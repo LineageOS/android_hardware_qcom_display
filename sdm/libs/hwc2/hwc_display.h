@@ -270,6 +270,12 @@ class HWCDisplay : public DisplayEventHandler {
   virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk) {
     return kErrorNotSupported;
   }
+  virtual HWC2::Error UpdateDisplayId(hwc2_display_t id) {
+    return HWC2::Error::Unsupported;
+  }
+  virtual HWC2::Error SetPendingRefresh() {
+    return HWC2::Error::Unsupported;
+  }
   virtual HWC2::Error GetDisplayConfigs(uint32_t *out_num_configs, hwc2_config_t *out_configs);
   virtual HWC2::Error GetDisplayAttribute(hwc2_config_t config, HWC2::Attribute attribute,
                                           int32_t *out_value);
@@ -315,6 +321,7 @@ class HWCDisplay : public DisplayEventHandler {
   }
   virtual HWC2::Error GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
                                                    uint8_t *out_data);
+  virtual void SetVsyncSource(bool enable) { vsync_source_ = enable; }
 
  protected:
   static uint32_t throttling_refresh_rate_;
@@ -401,6 +408,8 @@ class HWCDisplay : public DisplayEventHandler {
   bool pending_commit_ = false;
   bool is_cmd_mode_ = false;
   bool partial_update_enabled_ = false;
+  bool vsync_source_ = false;
+  bool skip_commit_ = false;
   std::map<uint32_t, DisplayConfigVariableInfo> variable_config_map_;
   std::vector<uint32_t> hwc_config_map_;
   bool fast_path_composition_ = false;

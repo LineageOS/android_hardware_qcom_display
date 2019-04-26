@@ -283,6 +283,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   DisplayError error = kErrorNone;
   needs_validate_ = true;
 
+  DTRACE_SCOPED();
   if (!active_) {
     return kErrorPermission;
   }
@@ -308,6 +309,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
     disable_pu_one_frame_ = false;
   }
 
+  hw_layers_.updates_mask.set(kUpdateResources);
   comp_manager_->PrePrepare(display_comp_ctx_, &hw_layers_);
   while (true) {
     error = comp_manager_->Prepare(display_comp_ctx_, &hw_layers_);
@@ -1116,6 +1118,8 @@ DisplayError DisplayBase::ReconfigureDisplay() {
   HWPanelInfo hw_panel_info;
   uint32_t active_index = 0;
 
+  DTRACE_SCOPED();
+
   error = hw_intf_->GetActiveConfig(&active_index);
   if (error != kErrorNone) {
     return error;
@@ -1202,6 +1206,7 @@ DisplayError DisplayBase::ReconfigureMixer(uint32_t width, uint32_t height) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
 
+  DTRACE_SCOPED();
   if (!width || !height) {
     return kErrorParameters;
   }
