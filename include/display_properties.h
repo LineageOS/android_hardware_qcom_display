@@ -123,5 +123,6 @@
 #define DISABLE_DEFER_POWER_STATE            DISPLAY_PROP("disable_defer_power_state")
 
 #define ZERO_SWAP_INTERVAL                   "vendor.debug.egl.swapinterval"
+#define ENABLE_DROP_REFRESH                  DISPLAY_PROP("enable_drop_refresh")
 
 #endif  // __DISPLAY_PROPERTIES_H__
