@@ -89,7 +89,6 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(GetColorModeName(int32_t, string *))
   MAKE_NO_OP(SetColorTransform(const uint32_t, const double *))
   MAKE_NO_OP(GetDefaultColorMode(string *))
-  MAKE_NO_OP(ApplyDefaultDisplayMode())
   MAKE_NO_OP(SetCursorPosition(int, int))
   MAKE_NO_OP(SetRefreshRate(uint32_t, bool))
   MAKE_NO_OP(GetPanelBrightness(int *))

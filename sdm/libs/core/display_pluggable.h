@@ -48,7 +48,7 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate);
   virtual bool IsUnderscanSupported();
   virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
-  virtual DisplayError InitializeColorModes(bool enum_user_modes);
+  virtual DisplayError InitializeColorModes();
   virtual DisplayError SetColorMode(const std::string &color_mode);
   virtual DisplayError GetColorModeCount(uint32_t *mode_count);
   virtual DisplayError GetColorModes(uint32_t *mode_count, std::vector<std::string> *color_modes);

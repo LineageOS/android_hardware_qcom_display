@@ -65,9 +65,8 @@ class ColorManagerProxy {
   DisplayError ColorSVCRequestRoute(const PPDisplayAPIPayload &in_payload,
                                     PPDisplayAPIPayload *out_payload,
                                     PPPendingParams *pending_action);
-  DisplayError ApplyDefaultDisplayMode();
-  DisplayError ColorMgrGetNumOfModes(bool enum_user_modes, uint32_t *mode_cnt);
-  DisplayError ColorMgrGetModes(bool enum_user_modes, uint32_t *mode_cnt, SDEDisplayMode *modes);
+  DisplayError ColorMgrGetNumOfModes(uint32_t *mode_cnt);
+  DisplayError ColorMgrGetModes(uint32_t *mode_cnt, SDEDisplayMode *modes);
   DisplayError ColorMgrSetMode(int32_t color_mode_id);
   DisplayError ColorMgrGetModeInfo(int32_t mode_id, AttrVal *query);
   DisplayError ColorMgrSetColorTransform(uint32_t length, const double *trans_data);

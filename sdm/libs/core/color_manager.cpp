@@ -168,15 +168,6 @@ DisplayError ColorManagerProxy::ColorSVCRequestRoute(const PPDisplayAPIPayload &
   return ret;
 }
 
-DisplayError ColorManagerProxy::ApplyDefaultDisplayMode(void) {
-  DisplayError ret = kErrorNone;
-
-  // On POR, will be invoked from prepare<> request once bootanimation is done.
-  ret = color_intf_->ApplyDefaultDisplayMode(&pp_features_);
-
-  return ret;
-}
-
 bool ColorManagerProxy::NeedsPartialUpdateDisable() {
   Locker &locker(pp_features_.GetLocker());
   SCOPE_LOCK(locker);
@@ -224,15 +215,13 @@ void PPHWAttributes::Set(const HWResourceInfo &hw_res,
   }
 }
 
-DisplayError ColorManagerProxy::ColorMgrGetNumOfModes(bool enum_user_modes,
-                                                      uint32_t *mode_cnt) {
-  return color_intf_->ColorIntfGetNumDisplayModes(&pp_features_, 0, enum_user_modes, mode_cnt);
+DisplayError ColorManagerProxy::ColorMgrGetNumOfModes(uint32_t *mode_cnt) {
+  return color_intf_->ColorIntfGetNumDisplayModes(&pp_features_, 0, mode_cnt);
 }
 
-DisplayError ColorManagerProxy::ColorMgrGetModes(bool enum_user_modes, uint32_t *mode_cnt,
+DisplayError ColorManagerProxy::ColorMgrGetModes(uint32_t *mode_cnt,
                                                  SDEDisplayMode *modes) {
-  return color_intf_->ColorIntfEnumerateDisplayModes(&pp_features_, 0, enum_user_modes,
-                                                     modes, mode_cnt);
+  return color_intf_->ColorIntfEnumerateDisplayModes(&pp_features_, 0, modes, mode_cnt);
 }
 
 DisplayError ColorManagerProxy::ColorMgrSetMode(int32_t color_mode_id) {

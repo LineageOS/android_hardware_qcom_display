@@ -407,40 +407,6 @@ void HWCColorMode::PopulateColorModes() {
   }
 }
 
-HWC2::Error HWCColorMode::ApplyDefaultColorMode() {
-  auto color_mode = ColorMode::NATIVE;
-  if (color_mode_map_.size() == 1U) {
-    color_mode = color_mode_map_.begin()->first;
-  } else if (color_mode_map_.size() > 1U) {
-    std::string default_color_mode;
-    bool found = false;
-    DisplayError error = display_intf_->GetDefaultColorMode(&default_color_mode);
-    if (error == kErrorNone) {
-      // get the default mode corresponding android_color_mode_t
-      for (auto &it_mode : color_mode_map_) {
-        for (auto &it : it_mode.second) {
-          for (auto &it_range : it.second) {
-            if (it_range.second == default_color_mode) {
-              found = true;
-              break;
-            }
-          }
-        }
-        if (found) {
-          color_mode = it_mode.first;
-          break;
-        }
-      }
-    }
-
-    // return the first color mode we encounter if not found
-    if (!found) {
-      color_mode = color_mode_map_.begin()->first;
-    }
-  }
-  return SetColorModeWithRenderIntent(color_mode, RenderIntent::COLORIMETRIC);
-}
-
 void HWCColorMode::Dump(std::ostringstream* os) {
   *os << "color modes supported: \n";
   for (auto it : color_mode_map_) {
