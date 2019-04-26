@@ -446,6 +446,7 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
   DisplayError error = kErrorNone;
   uint32_t pending;
   bool enable = false;
+  DppsDisplayInfo *info;
 
   switch (op) {
     case kDppsSetFeature:
@@ -489,6 +490,16 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
         lock_guard<recursive_mutex> obj(recursive_mutex_);
         commit_event_enabled_ = *(reinterpret_cast<bool *>(payload));
       }
+      break;
+    case kDppsGetDisplayInfo:
+      if (!payload) {
+        DLOGE("Invalid payload parameter for op %d", op);
+        error = kErrorParameters;
+        break;
+      }
+      info = reinterpret_cast<DppsDisplayInfo *>(payload);
+      info->width = display_attributes_.x_pixels;
+      info->height = display_attributes_.y_pixels;
       break;
     default:
       DLOGE("Invalid input op %d", op);
