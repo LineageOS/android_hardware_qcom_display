@@ -15,7 +15,6 @@ PRODUCT_PACKAGES += \
     memtrack.qcom \
     libqdutils \
     libqdMetaData \
-    libqdMetaData.system \
     modetest
 
 #QDCM calibration xml file for 2k panel
