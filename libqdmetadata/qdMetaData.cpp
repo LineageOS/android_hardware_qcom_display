@@ -149,7 +149,7 @@ int setMetaDataVa(MetaData_t *data, DispParamType paramType,
         }
         case SET_CVP_METADATA: {
              struct CVPMetadata *cvpMetadata = (struct CVPMetadata *)param;
-             if (cvpMetadata->size < CVP_METADATA_SIZE) {
+             if (cvpMetadata->size <= CVP_METADATA_SIZE) {
                  data->cvpMetadata.size = cvpMetadata->size;
                  memcpy(data->cvpMetadata.payload, cvpMetadata->payload,
                         cvpMetadata->size);
@@ -161,7 +161,26 @@ int setMetaDataVa(MetaData_t *data, DispParamType paramType,
              }
              break;
         }
-        default:
+        case SET_VIDEO_HISTOGRAM_STATS: {
+            struct VideoHistogramMetadata *vidstats = (struct VideoHistogramMetadata *)param;
+            if (vidstats->stat_len <= VIDEO_HISTOGRAM_STATS_SIZE) {
+                memcpy(data->video_histogram_stats.stats_info,
+                    vidstats->stats_info, VIDEO_HISTOGRAM_STATS_SIZE);
+                data->video_histogram_stats.stat_len = vidstats->stat_len;
+                data->video_histogram_stats.frame_type = vidstats->frame_type;
+                data->video_histogram_stats.display_width = vidstats->display_width;
+                data->video_histogram_stats.display_height = vidstats->display_height;
+                data->video_histogram_stats.decode_width = vidstats->decode_width;
+                data->video_histogram_stats.decode_height = vidstats->decode_height;
+            } else {
+                 data->operation &= ~(paramType);
+                 ALOGE("%s: video stats length %u is more than max size %u",
+                     __func__, vidstats->stat_len, VIDEO_HISTOGRAM_STATS_SIZE);
+                 return -EINVAL;
+            }
+            break;
+         }
+         default:
             ALOGE("Unknown paramType %d", paramType);
             break;
     }
@@ -190,6 +209,9 @@ int clearMetaDataVa(MetaData_t *data, DispParamType paramType) {
             break;
         case SET_CVP_METADATA:
             data->cvpMetadata.size = 0;
+            break;
+        case SET_VIDEO_HISTOGRAM_STATS:
+            data->video_histogram_stats.stat_len = 0;
             break;
         default:
             ALOGE("Unknown paramType %d", paramType);
@@ -315,10 +337,27 @@ int getMetaDataVa(MetaData_t *data, DispFetchParamType paramType,
             if (data->operation & SET_CVP_METADATA) {
                 struct CVPMetadata *cvpMetadata = (struct CVPMetadata *)param;
                 cvpMetadata->size = 0;
-                if (data->cvpMetadata.size < CVP_METADATA_SIZE) {
+                if (data->cvpMetadata.size <= CVP_METADATA_SIZE) {
                     cvpMetadata->size = data->cvpMetadata.size;
                     memcpy(cvpMetadata->payload, data->cvpMetadata.payload,
                            data->cvpMetadata.size);
+                    ret = 0;
+                }
+            }
+            break;
+        case GET_VIDEO_HISTOGRAM_STATS:
+            if (data->operation & SET_VIDEO_HISTOGRAM_STATS) {
+                struct VideoHistogramMetadata *vidstats = (struct VideoHistogramMetadata *)param;
+                vidstats->stat_len = 0;
+                if (data->video_histogram_stats.stat_len <= VIDEO_HISTOGRAM_STATS_SIZE) {
+                    memcpy(vidstats->stats_info,
+                        data->video_histogram_stats.stats_info, VIDEO_HISTOGRAM_STATS_SIZE);
+                    vidstats->stat_len = data->video_histogram_stats.stat_len;
+                    vidstats->frame_type = data->video_histogram_stats.frame_type;
+                    vidstats->display_width = data->video_histogram_stats.display_width;
+                    vidstats->display_height = data->video_histogram_stats.display_height;
+                    vidstats->decode_width = data->video_histogram_stats.decode_width;
+                    vidstats->decode_height = data->video_histogram_stats.decode_height;
                     ret = 0;
                 }
             }
