@@ -1052,7 +1052,7 @@ static void delete_handle(private_handle_t *handle)
     }
 }
 
-static bool need_to_execute_draw(struct copybit_context_t* ctx,
+static bool need_to_execute_draw(__attribute__((unused)) struct copybit_context_t* ctx,
                                           eC2DFlags flags)
 {
     if (flags & FLAGS_TEMP_SRC_DST) {
@@ -1372,8 +1372,8 @@ static int stretch_copybit_internal(
     return status;
 }
 
-static int set_sync_copybit(struct copybit_device_t *dev,
-    int acquireFenceFd)
+static int set_sync_copybit(__attribute__((unused)) struct copybit_device_t *dev,
+                            __attribute__((unused)) int acquireFenceFd)
 {
     return 0;
 }
@@ -1414,10 +1414,10 @@ static int blit_copybit(
 }
 
 /** Fill the rect on dst with RGBA color **/
-static int fill_color(struct copybit_device_t *dev,
-                      struct copybit_image_t const *dst,
-                      struct copybit_rect_t const *rect,
-                      uint32_t color)
+static int fill_color(__attribute__((unused)) struct copybit_device_t *dev,
+                      __attribute__((unused)) struct copybit_image_t const *dst,
+                      __attribute__((unused)) struct copybit_rect_t const *rect,
+                      __attribute__((unused)) uint32_t color)
 {
     // TODO: Implement once c2d driver supports color fill
     return -EINVAL;
@@ -1483,7 +1483,8 @@ static int close_copybit(struct hw_device_t *dev)
 }
 
 /** Open a new instance of a copybit device using name */
-static int open_copybit(const struct hw_module_t* module, const char* name,
+static int open_copybit(const struct hw_module_t* module,
+                        __attribute__((unused)) const char* name,
                         struct hw_device_t** device)
 {
     int status = COPYBIT_SUCCESS;

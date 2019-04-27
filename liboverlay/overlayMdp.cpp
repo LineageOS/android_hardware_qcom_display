@@ -265,7 +265,7 @@ void MdpCtrl3D::dump() const {
     ALOGE("== Dump MdpCtrl end ==");
 }
 
-bool MdpCtrl::setVisualParams(const MetaData_t& data) {
+bool MdpCtrl::setVisualParams(__attribute__((unused)) const MetaData_t& data) {
     bool needUpdate = false;
 #ifdef USES_POST_PROCESSING
     /* calculate the data */
