@@ -211,6 +211,8 @@ void HWCColorMode::PopulateColorModes() {
     return;
   }
 
+  // Client expects native color mode to be supported by default
+  PopulateTransform(HAL_COLOR_MODE_NATIVE, "native", "identity");
   DLOGV_IF(kTagClient, "Color Modes supported count = %d", color_mode_count);
 
   const std::string color_transform = "identity";

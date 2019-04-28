@@ -37,6 +37,8 @@
 #include "hwc_callbacks.h"
 #include "hwc_layers.h"
 
+using android::hardware::graphics::common::V1_1::RenderIntent;
+
 namespace sdm {
 
 class BlitEngine;
