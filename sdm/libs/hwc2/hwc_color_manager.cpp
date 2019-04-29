@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -115,24 +115,28 @@ HWCColorManager *HWCColorManager::CreateColorManager(HWCBufferAllocator * buffer
     }
     DLOGI("Successfully loaded %s", DISPLAY_API_INTERFACE_LIBRARY_NAME);
 
-    // Load diagclient library and invokes its entry point to pass in display APIs.
-    DynLib &diag_client_lib = color_mgr->diag_client_lib_;
-    if (diag_client_lib.Open(QDCM_DIAG_CLIENT_LIBRARY_NAME)) {
-      if (!diag_client_lib.Sym(INIT_QDCM_DIAG_CLIENT_NAME,
-                               reinterpret_cast<void **>(&color_mgr->qdcm_diag_init_)) ||
-        !diag_client_lib.Sym(DEINIT_QDCM_DIAG_CLIENT_NAME,
-                               reinterpret_cast<void **>(&color_mgr->qdcm_diag_deinit_))) {
-        DLOGE("Fail to retrieve = %s from %s", INIT_QDCM_DIAG_CLIENT_NAME,
-              QDCM_DIAG_CLIENT_LIBRARY_NAME);
+    int enable_qdcm_diag = 0;
+    HWCDebugHandler::Get()->GetProperty(ENABLE_QDCM_DIAG, &enable_qdcm_diag);
+    if (enable_qdcm_diag) {
+      // Load diagclient library and invokes its entry point to pass in display APIs.
+      DynLib &diag_client_lib = color_mgr->diag_client_lib_;
+      if (diag_client_lib.Open(QDCM_DIAG_CLIENT_LIBRARY_NAME)) {
+        if (!diag_client_lib.Sym(INIT_QDCM_DIAG_CLIENT_NAME,
+                                 reinterpret_cast<void **>(&color_mgr->qdcm_diag_init_)) ||
+          !diag_client_lib.Sym(DEINIT_QDCM_DIAG_CLIENT_NAME,
+                                 reinterpret_cast<void **>(&color_mgr->qdcm_diag_deinit_))) {
+          DLOGE("Fail to retrieve = %s from %s", INIT_QDCM_DIAG_CLIENT_NAME,
+                QDCM_DIAG_CLIENT_LIBRARY_NAME);
+        } else {
+          // invoke Diag Client entry point to initialize.
+          color_mgr->qdcm_diag_init_(color_mgr->color_apis_);
+          DLOGI("Successfully loaded %s and %s and diag_init'ed",
+                DISPLAY_API_INTERFACE_LIBRARY_NAME, QDCM_DIAG_CLIENT_LIBRARY_NAME);
+        }
       } else {
-        // invoke Diag Client entry point to initialize.
-        color_mgr->qdcm_diag_init_(color_mgr->color_apis_);
-        DLOGI("Successfully loaded %s and %s and diag_init'ed", DISPLAY_API_INTERFACE_LIBRARY_NAME,
-              QDCM_DIAG_CLIENT_LIBRARY_NAME);
+        DLOGW("Unable to load = %s", QDCM_DIAG_CLIENT_LIBRARY_NAME);
+        // only QDCM Diag client failed to be loaded and system still should function.
       }
-    } else {
-      DLOGW("Unable to load = %s", QDCM_DIAG_CLIENT_LIBRARY_NAME);
-      // only QDCM Diag client failed to be loaded and system still should function.
     }
   } else {
     DLOGE("Unable to create HWCColorManager");
