@@ -288,6 +288,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
     power_state_pending_ = kStateOff;
   }
 
+  DTRACE_SCOPED();
   if (!active_) {
     return kErrorPermission;
   }
@@ -1124,6 +1125,8 @@ DisplayError DisplayBase::ReconfigureDisplay() {
   HWPanelInfo hw_panel_info;
   uint32_t active_index = 0;
 
+  DTRACE_SCOPED();
+
   error = hw_intf_->GetActiveConfig(&active_index);
   if (error != kErrorNone) {
     return error;
@@ -1210,6 +1213,7 @@ DisplayError DisplayBase::ReconfigureMixer(uint32_t width, uint32_t height) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
 
+  DTRACE_SCOPED();
   if (!width || !height) {
     return kErrorParameters;
   }

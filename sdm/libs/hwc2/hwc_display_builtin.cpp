@@ -169,6 +169,8 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
   auto status = HWC2::Error::None;
   DisplayError error = kErrorNone;
 
+  DTRACE_SCOPED();
+
   if (default_mode_status_ && !boot_animation_completed_) {
     ProcessBootAnimCompleted();
   }
@@ -237,6 +239,8 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
 
 HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
   auto status = HWC2::Error::None;
+
+  DTRACE_SCOPED();
   if (display_paused_) {
     DisplayError error = display_intf_->Flush(&layer_stack_);
     validated_ = false;
