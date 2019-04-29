@@ -109,7 +109,7 @@ ColorManagerProxy::ColorManagerProxy(int32_t id, DisplayType type, HWInterface *
                                      const HWPanelInfo &info)
     : display_id_(id), device_type_(type), pp_hw_attributes_(), hw_intf_(intf),
       color_intf_(NULL), pp_features_(), feature_intf_(NULL) {
-  int32_t enable_posted_start_dyn;
+  int32_t enable_posted_start_dyn = 0;
   Debug::Get()->GetProperty(ENABLE_POSTED_START_DYN_PROP, &enable_posted_start_dyn);
   if (enable_posted_start_dyn && info.mode == kModeCommand) {
     feature_intf_ = GetPostedStartFeatureCheckIntf(intf, &pp_features_);
