@@ -280,6 +280,10 @@ DisplayError ColorManagerProxy::ColorMgrGetDefaultModeID(int32_t *mode_id) {
   return color_intf_->ColorIntfGetDefaultModeID(&pp_features_, 0, mode_id);
 }
 
+DisplayError ColorManagerProxy::ColorMgrCombineColorModes() {
+  return color_intf_->ColorIntfCombineColorModes();
+}
+
 ColorFeatureCheckingImpl::ColorFeatureCheckingImpl(HWInterface *hw_intf,
                                                    PPFeaturesConfig *pp_features)
   : hw_intf_(hw_intf), pp_features_(pp_features) {}
