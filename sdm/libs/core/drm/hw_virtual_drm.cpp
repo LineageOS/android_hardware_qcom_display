@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -232,6 +232,14 @@ void HWVirtualDRM::GetModeIndex(const HWDisplayAttributes &display_attributes, i
       break;
     }
   }
+}
+
+DisplayError HWVirtualDRM::GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
+                                                        uint8_t *out_data) {
+  *out_data_size = 0;
+  *out_port = token_.hw_port;
+
+  return kErrorNone;
 }
 
 }  // namespace sdm

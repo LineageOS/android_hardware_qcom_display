@@ -180,6 +180,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
                               int32_t /*android_color_mode_t*/ int_mode);
   static int32_t SetColorTransform(hwc2_device_t *device, hwc2_display_t display,
                                    const float *matrix, int32_t /*android_color_transform_t*/ hint);
+  static int32_t GetDisplayIdentificationData(hwc2_device_t *device, hwc2_display_t display,
+                                              uint8_t *outPort, uint32_t *outDataSize,
+                                              uint8_t *outData);
   static int32_t SetVsyncEnabled(hwc2_device_t *device, hwc2_display_t display,
                                  int32_t int_enabled);
   static int32_t GetDozeSupport(hwc2_device_t *device, hwc2_display_t display,

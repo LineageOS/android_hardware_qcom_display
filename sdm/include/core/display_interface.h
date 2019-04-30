@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -740,6 +740,17 @@ class DisplayInterface {
       @return \link DisplayError \endlink
   */
   virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates) = 0;
+
+  /*! @brief Method to retrieve the EDID information and HW port ID for display
+
+    @param[out] HW port ID
+    @param[out] size of EDID blob data
+    @param[out] EDID blob
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
+                                                    uint8_t *out_data) = 0;
 
  protected:
   virtual ~DisplayInterface() { }
