@@ -243,6 +243,8 @@ class DisplayBase : public DisplayInterface {
  private:
   bool StartDisplayPowerReset();
   void EndDisplayPowerReset();
+  void SetLutSwapFlag();
+  bool lut_swap_ = false;
 };
 
 }  // namespace sdm
