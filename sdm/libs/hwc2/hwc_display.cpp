@@ -2225,6 +2225,11 @@ bool HWCDisplay::CanSkipValidate() {
     }
   }
 
+  if (!display_intf_->CanSkipValidate()) {
+    DLOGV_IF(kTagClient, "Display needs validation %d", id_);
+    return false;
+  }
+
   return true;
 }
 

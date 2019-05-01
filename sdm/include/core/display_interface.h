@@ -752,6 +752,8 @@ class DisplayInterface {
   virtual DisplayError GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
                                                     uint8_t *out_data) = 0;
 
+  virtual bool CanSkipValidate() = 0;
+
  protected:
   virtual ~DisplayInterface() { }
 };
