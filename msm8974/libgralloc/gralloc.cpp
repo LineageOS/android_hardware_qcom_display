@@ -83,6 +83,8 @@ struct private_module_t HAL_MODULE_INFO_SYM = {
         unlock: gralloc_unlock,
         perform: gralloc_perform,
         lock_ycbcr: gralloc_lock_ycbcr,
+        validateBufferSize: NULL,
+        getTransportSize: NULL,
     },
     framebuffer: 0,
     fbFormat: 0,
