@@ -183,6 +183,10 @@ HWC2::Error HWCColorMode::ApplyCurrentColorModeWithRenderIntent(bool hdr_present
   std::string mode_string = preferred_mode_[current_color_mode_][curr_dynamic_range_];
   if (mode_string.empty()) {
     mode_string = color_mode_map_[current_color_mode_][current_render_intent_][curr_dynamic_range_];
+    if (mode_string.empty() && hdr_present) {
+      // Use the colorimetric HDR mode, if an HDR mode with the current render intent is not present
+      mode_string = color_mode_map_[current_color_mode_][RenderIntent::COLORIMETRIC][kHdrType];
+    }
     if (mode_string.empty() &&
       current_color_mode_ == ColorMode::DISPLAY_P3 &&
       curr_dynamic_range_ == kHdrType) {
