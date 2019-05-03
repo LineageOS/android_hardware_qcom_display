@@ -283,7 +283,7 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
   if (secure != layer_buffer->flags.secure || secure_camera != layer_buffer->flags.secure_camera ||
       secure_display != layer_buffer->flags.secure_display) {
     // Secure attribute of layer buffer has changed.
-    needs_validate_ = true;
+    layer_->update_mask.set(kSecurity);
   }
 
   layer_buffer->flags.secure = secure;
@@ -316,7 +316,7 @@ HWC2::Error HWCLayer::SetLayerSurfaceDamage(hwc_region_t damage) {
   }
 
   if (!layer_->flags.updating && surface_updated_) {
-    needs_validate_ = true;
+    layer_->update_mask.set(kSurfaceInvalidate);
   }
 
   if (!partial_update_enabled_) {
@@ -326,13 +326,13 @@ HWC2::Error HWCLayer::SetLayerSurfaceDamage(hwc_region_t damage) {
 
   // Check if there is an update in SurfaceDamage rects.
   if (layer_->dirty_regions.size() != damage.numRects) {
-    needs_validate_ = true;
+    layer_->update_mask.set(kSurfaceInvalidate);
   } else {
     for (uint32_t j = 0; j < damage.numRects; j++) {
       LayerRect damage_rect;
       SetRect(damage.rects[j], &damage_rect);
       if (damage_rect != layer_->dirty_regions.at(j)) {
-        needs_validate_ = true;
+        layer_->update_mask.set(kSurfaceDamage);
         break;
       }
     }
@@ -371,8 +371,8 @@ HWC2::Error HWCLayer::SetLayerColor(hwc_color_t color) {
   }
   if (layer_->solid_fill_color != GetUint32Color(color)) {
     layer_->solid_fill_color = GetUint32Color(color);
+    layer_->update_mask.set(kSurfaceInvalidate);
     surface_updated_ = true;
-    needs_validate_ = true;
   } else {
     surface_updated_ = false;
   }
@@ -386,7 +386,7 @@ HWC2::Error HWCLayer::SetLayerColor(hwc_color_t color) {
 HWC2::Error HWCLayer::SetLayerCompositionType(HWC2::Composition type) {
   // Validation is required when the client changes the composition type
   if (client_requested_ != type) {
-    needs_validate_ = true;
+    layer_->update_mask.set(kClientCompRequest);
   }
   client_requested_ = type;
   switch (type) {
@@ -847,11 +847,11 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
   if ((layer_igc != layer_buffer->igc) || (interlace != layer_buffer->flags.interlace) ||
       (frame_rate != layer->frame_rate) || (s3d_format != layer_buffer->s3d_format)) {
     // Layer buffer metadata has changed.
-    needs_validate_ = true;
     layer_buffer->igc = layer_igc;
     layer->frame_rate = frame_rate;
     layer_buffer->s3d_format = s3d_format;
     layer_buffer->flags.interlace = interlace;
+    layer_->update_mask.set(kMetadataUpdate);
   }
 
   // Check if metadata is set
@@ -918,7 +918,7 @@ void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
        layer_buffer->color_metadata.colorPrimaries != csc.colorPrimaries ||
        layer_buffer->color_metadata.range != csc.range) {
         // ColorMetadata updated. Needs validate.
-        needs_validate_ = true;
+        layer_->update_mask.set(kMetadataUpdate);
         // if we are here here, update the sdm layer csc.
         layer_buffer->color_metadata.transfer = csc.transfer;
         layer_buffer->color_metadata.colorPrimaries = csc.colorPrimaries;
@@ -939,12 +939,12 @@ void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
       if ((layer_buffer->color_metadata.colorPrimaries != old_meta_data.colorPrimaries) ||
           (layer_buffer->color_metadata.transfer != old_meta_data.transfer) ||
           (layer_buffer->color_metadata.range != old_meta_data.range)) {
-        needs_validate_ = true;
+        layer_->update_mask.set(kMetadataUpdate);
       }
       if (layer_buffer->color_metadata.dynamicMetaDataValid &&
           !SameConfig(layer_buffer->color_metadata.dynamicMetaDataPayload,
           old_meta_data.dynamicMetaDataPayload, HDR_DYNAMIC_META_DATA_SZ)) {
-        needs_validate_ = true;
+        layer_->update_mask.set(kMetadataUpdate);
       }
     } else {
       dataspace_supported_ = false;

@@ -95,6 +95,8 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
 
  private:
   bool NeedsAVREnable();
+  bool CanCompareFrameROI(LayerStack *layer_stack);
+  bool CanSkipDisplayPrepare(LayerStack *layer_stack);
 
   std::vector<HWEvent> event_list_;
   bool avr_prop_disabled_ = false;
@@ -103,6 +105,8 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   bool commit_event_enabled_ = false;
   DppsInfo dpps_info_ = {};
   QSyncMode qsync_mode_ = kQSyncModeNone;
+  LayerRect left_frame_roi_ = {};
+  LayerRect right_frame_roi_ = {};
 };
 
 }  // namespace sdm

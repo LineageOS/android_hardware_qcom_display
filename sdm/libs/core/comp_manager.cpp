@@ -274,12 +274,18 @@ void CompManager::PrepareStrategyConstraints(Handle comp_handle, HWLayers *hw_la
   }
 }
 
+void CompManager::GenerateROI(Handle display_ctx, HWLayers *hw_layers) {
+  SCOPE_LOCK(locker_);
+  DisplayCompositionContext *disp_comp_ctx =
+                             reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+  return disp_comp_ctx->strategy->GenerateROI(&hw_layers->info, disp_comp_ctx->pu_constraints);
+}
+
 void CompManager::PrePrepare(Handle display_ctx, HWLayers *hw_layers) {
   SCOPE_LOCK(locker_);
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
-  display_comp_ctx->strategy->Start(&hw_layers->info, &display_comp_ctx->max_strategies,
-                                    display_comp_ctx->pu_constraints);
+  display_comp_ctx->strategy->Start(&hw_layers->info, &display_comp_ctx->max_strategies);
   display_comp_ctx->remaining_strategies = display_comp_ctx->max_strategies;
 }
 

@@ -204,6 +204,7 @@ DisplayError DisplayBase::Deinit() {
 DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
   std::vector<Layer *> &layers = layer_stack->layers;
   HWLayersInfo &hw_layers_info = hw_layers_.info;
+  hw_layers_info.app_layer_count = 0;
 
   hw_layers_info.stack = layer_stack;
 
@@ -310,7 +311,9 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   }
 
   hw_layers_.updates_mask.set(kUpdateResources);
+  comp_manager_->GenerateROI(display_comp_ctx_, &hw_layers_);
   comp_manager_->PrePrepare(display_comp_ctx_, &hw_layers_);
+
   while (true) {
     error = comp_manager_->Prepare(display_comp_ctx_, &hw_layers_);
     if (error != kErrorNone) {
