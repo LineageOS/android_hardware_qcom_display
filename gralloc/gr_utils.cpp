@@ -35,10 +35,6 @@
 
 #define ASTC_BLOCK_SIZE 16
 
-#ifndef COLOR_FMT_P010_UBWC
-#define COLOR_FMT_P010_UBWC 9
-#endif
-
 namespace gralloc {
 
 bool IsYuvFormat(int format) {
