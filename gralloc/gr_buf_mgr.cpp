@@ -299,16 +299,6 @@ int BufferManager::GetHandleFlags(int format, uint64_t usage) {
   return flags;
 }
 
-int BufferManager::GetBufferType(int inputFormat) {
-  int buffer_type = BUFFER_TYPE_UI;
-  if (IsYuvFormat(inputFormat)) {
-    // Video format
-    buffer_type = BUFFER_TYPE_VIDEO;
-  }
-
-  return buffer_type;
-}
-
 Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_handle_t *handle,
                                     unsigned int bufferSize) {
   if (!handle)
@@ -327,15 +317,8 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   info.format = format;
   info.layer_count = layer_count;
 
-  bool use_adreno_for_size = false;
   GraphicsMetadata graphics_metadata = {};
-
-  use_adreno_for_size = ((buffer_type != BUFFER_TYPE_VIDEO) && GetAdrenoSizeAPIStatus());
-  if (use_adreno_for_size) {
-    GetGpuResourceSizeAndDimensions(info, &size, &alignedw, &alignedh, &graphics_metadata);
-  } else {
-    GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh);
-  }
+  GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh, &graphics_metadata);
 
   size = (bufferSize >= size) ? bufferSize : size;
   int err = 0;
@@ -382,6 +365,7 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   ColorSpace_t colorSpace = (buffer_type == BUFFER_TYPE_VIDEO) ? ITU_R_601 : ITU_R_709;
   setMetaData(hnd, UPDATE_COLOR_SPACE, reinterpret_cast<void *>(&colorSpace));
 
+  bool use_adreno_for_size = CanUseAdrenoForSize(buffer_type, usage);
   if (use_adreno_for_size) {
     setMetaData(hnd, SET_GRAPHICS_METADATA, reinterpret_cast<void *>(&graphics_metadata));
   }
