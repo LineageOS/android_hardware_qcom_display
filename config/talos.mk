@@ -9,10 +9,10 @@ PRODUCT_PACKAGES += \
     android.hardware.memtrack@1.0-service \
     android.hardware.light@2.0-impl \
     android.hardware.light@2.0-service \
-    gralloc.talos \
-    lights.talos \
-    hwcomposer.talos \
-    memtrack.talos \
+    gralloc.sm6150 \
+    lights.sm6150 \
+    hwcomposer.sm6150 \
+    memtrack.sm6150 \
     libqdutils \
     libqdMetaData \
     libqdMetaData.system \
@@ -58,7 +58,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
     debug.egl.hw=0 \
     debug.sf.latch_unsignaled=1 \
     debug.mdpcomp.logs=0 \
-    ro.vendor.display.cabl=2 \
     vendor.gralloc.disable_ubwc=0 \
     vendor.display.disable_scaler=0 \
     vendor.display.disable_inline_rotator=1 \
