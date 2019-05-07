@@ -359,7 +359,7 @@ DisplayError HWDevice::Validate(HWLayers *hw_layers) {
 #endif
     DLOGD_IF(kTagDriverConfig, "*****************************************************************");
   }
-  mdp_commit.dest_scaler_cnt = UINT32(hw_layer_info.dest_scale_info_map.size());
+  mdp_commit.dest_scaler_cnt = UINT32(display_attributes_.is_device_split ? 2 : 1);
 
   mdp_commit.flags |= MDP_VALIDATE_LAYER;
 #ifdef MDP_COMMIT_RECT_NUM
@@ -1375,7 +1375,7 @@ DisplayError HWDevice::SetMixerAttributes(HWMixerAttributes &mixer_attributes) {
   }
   if(mixer_attributes.height > display_attributes_.y_pixels) {
     mixer_attributes.height = display_attributes_.y_pixels;
-    DLOGW_IF(kTagDriverConfig, "Input mixer width exceeds display width! input: res %d "\
+    DLOGW_IF(kTagDriverConfig, "Input mixer height exceeds display height! input: res %d "\
              "display: res %d", mixer_attributes.height, display_attributes_.y_pixels);
   }
 

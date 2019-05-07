@@ -526,7 +526,7 @@ DisplayError DisplayBase::SetActiveConfig(uint32_t index) {
   if (error != kErrorNone) {
     return error;
   }
-
+  panel_config_index_ = index;
   return ReconfigureDisplay();
 }
 
@@ -1042,7 +1042,6 @@ DisplayError DisplayBase::ReconfigureDisplay() {
     if (active_index != mixer_config_index_) {
       // we are here because Client of SDM has changed the active config
       error = hw_intf_->GetDisplayAttributes(active_index, &display_attributes);
-      mixer_config_index_ = active_index;
     } else {
       error = hw_intf_->GetDisplayAttributes(panel_config_index_, &display_attributes);
     }
