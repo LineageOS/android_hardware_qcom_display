@@ -266,30 +266,30 @@ Return<void> QtiMapper::createDescriptor_2_1(const BufferDescriptorInfo_2_1& des
 Return<void> QtiMapper::getMapSecureBufferFlag(void *buffer, getMapSecureBufferFlag_cb hidl_cb) {
   auto err = Error::BAD_BUFFER;
   auto hnd = static_cast<private_handle_t *>(buffer);
-  int *map_secure_buffer = 0;
+  int map_secure_buffer = 0;
   if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
-    if (getMetaData(hnd, GET_MAP_SECURE_BUFFER, map_secure_buffer) != 0) {
-      *map_secure_buffer = 0;
+    if (getMetaData(hnd, GET_MAP_SECURE_BUFFER, &map_secure_buffer) != 0) {
+      map_secure_buffer = 0;
     } else {
       err = Error::NONE;
     }
   }
-  hidl_cb(err, *map_secure_buffer != 0);
+  hidl_cb(err, map_secure_buffer != 0);
   return Void();
 }
 
 Return<void> QtiMapper::getInterlacedFlag(void *buffer, getInterlacedFlag_cb hidl_cb) {
   auto err = Error::BAD_BUFFER;
   auto hnd = static_cast<private_handle_t *>(buffer);
-  int *interlaced_flag = nullptr;
+  int interlaced_flag = 0;
   if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
-    if (getMetaData(hnd, GET_PP_PARAM_INTERLACED, interlaced_flag) != 0) {
-      *interlaced_flag = 0;
+    if (getMetaData(hnd, GET_PP_PARAM_INTERLACED, &interlaced_flag) != 0) {
+      interlaced_flag = 0;
     } else {
       err = Error::NONE;
     }
   }
-  hidl_cb(err, *interlaced_flag != 0);
+  hidl_cb(err, interlaced_flag != 0);
   return Void();
 }
 
