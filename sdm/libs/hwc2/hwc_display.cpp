@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -2209,6 +2209,16 @@ bool HWCDisplay::CanSkipValidate() {
   }
 
   return true;
+}
+
+HWC2::Error HWCDisplay::GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
+                                                     uint8_t *out_data) {
+  DisplayError ret = display_intf_->GetDisplayIdentificationData(out_port, out_data_size, out_data);
+  if (ret != kErrorNone) {
+    DLOGE("GetDisplayIdentificationData failed due to SDM/Driver (err = %d, disp id = %" PRIu64
+          " %d-%d", ret, id_, sdm_id_, type_);
+  }
+  return HWC2::Error::None;
 }
 
 void HWCDisplay::UpdateRefreshRate() {

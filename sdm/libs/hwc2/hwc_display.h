@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -249,6 +249,8 @@ class HWCDisplay : public DisplayEventHandler {
   }
   virtual DisplayError Refresh();
   virtual void SetVsyncSource(bool enable) { vsync_source_ = enable; }
+  virtual HWC2::Error GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
+                                                   uint8_t *out_data);
 
  protected:
   // Maximum number of layers supported by display manager.
