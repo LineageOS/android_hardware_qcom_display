@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -31,11 +31,15 @@
 #include <hardware/hwcomposer2.h>
 #undef HWC2_INCLUDE_STRINGIFICATION
 #undef HWC2_USE_CPP11
-#include <map>
+#include <android/hardware/graphics/composer/2.2/IComposerClient.h>
 #include <deque>
+#include <map>
 #include <set>
 #include "core/buffer_allocator.h"
 #include "hwc_buffer_allocator.h"
+
+using PerFrameMetadataKey =
+    android::hardware::graphics::composer::V2_2::IComposerClient::PerFrameMetadataKey;
 
 namespace sdm {
 
@@ -80,6 +84,8 @@ class HWCLayer {
   HWC2::Error SetLayerSurfaceDamage(hwc_region_t damage);
   HWC2::Error SetLayerTransform(HWC2::Transform transform);
   HWC2::Error SetLayerVisibleRegion(hwc_region_t visible);
+  HWC2::Error SetLayerPerFrameMetadata(uint32_t num_elements, const PerFrameMetadataKey *keys,
+                                       const float *metadata);
   HWC2::Error SetLayerZOrder(uint32_t z);
   void SetComposition(const LayerComposition &sdm_composition);
   HWC2::Composition GetClientRequestedCompositionType() { return client_requested_; }

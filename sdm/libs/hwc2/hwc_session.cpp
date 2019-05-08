@@ -487,6 +487,21 @@ static int32_t GetColorModes(hwc2_device_t *device, hwc2_display_t display, uint
                                          out_modes);
 }
 
+static int32_t GetPerFrameMetadataKeys(hwc2_device_t *device, hwc2_display_t display,
+                                       uint32_t *out_num_keys, int32_t *int_out_keys) {
+  auto out_keys = reinterpret_cast<PerFrameMetadataKey *>(int_out_keys);
+  return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::GetPerFrameMetadataKeys,
+                                         out_num_keys, out_keys);
+}
+
+static int32_t SetLayerPerFrameMetadata(hwc2_device_t *device, hwc2_display_t display,
+                                        hwc2_layer_t layer, uint32_t num_elements,
+                                        const int32_t *int_keys, const float *metadata) {
+  auto keys = reinterpret_cast<const PerFrameMetadataKey *>(int_keys);
+  return HWCSession::CallLayerFunction(device, display, layer, &HWCLayer::SetLayerPerFrameMetadata,
+                                       num_elements, keys, metadata);
+}
+
 static int32_t GetDisplayAttribute(hwc2_device_t *device, hwc2_display_t display,
                                    hwc2_config_t config, int32_t int_attribute,
                                    int32_t *out_value) {
@@ -705,6 +720,22 @@ int32_t HWCSession::SetColorMode(hwc2_device_t *device, hwc2_display_t display,
     return HWC2_ERROR_BAD_PARAMETER;
   }
   auto mode = static_cast<android_color_mode_t>(int_mode);
+  return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::SetColorMode, mode);
+}
+
+int32_t HWCSession::SetColorModeWithRenderIntent(hwc2_device_t *device, hwc2_display_t display,
+                                                 int32_t /*ColorMode*/ int_mode,
+                                                 int32_t /*RenderIntent*/ int_render_intent) {
+  auto mode = static_cast<android_color_mode_t>(int_mode);
+  if (mode < HAL_COLOR_MODE_NATIVE || mode > HAL_COLOR_MODE_DISPLAY_P3) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+  auto render_intent = static_cast<RenderIntent>(int_render_intent);
+  if ((render_intent < RenderIntent::COLORIMETRIC) ||
+      (render_intent > RenderIntent::TONE_MAP_ENHANCE)) {
+    DLOGE("Invalid RenderIntent: %d", render_intent);
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::SetColorMode, mode);
 }
 
@@ -1042,6 +1073,16 @@ hwc2_function_pointer_t HWCSession::GetFunction(struct hwc2_device *device,
     case HWC2::FunctionDescriptor::GetDisplayIdentificationData:
       return AsFP<HWC2_PFN_GET_DISPLAY_IDENTIFICATION_DATA>
              (HWCSession::GetDisplayIdentificationData);
+    case HWC2::FunctionDescriptor::GetPerFrameMetadataKeys:
+      return AsFP<HWC2_PFN_GET_PER_FRAME_METADATA_KEYS>(GetPerFrameMetadataKeys);
+    case HWC2::FunctionDescriptor::SetLayerPerFrameMetadata:
+      return AsFP<HWC2_PFN_SET_LAYER_PER_FRAME_METADATA>(SetLayerPerFrameMetadata);
+    case HWC2::FunctionDescriptor::GetRenderIntents:
+      return AsFP<HWC2_PFN_GET_RENDER_INTENTS>(HWCSession::GetRenderIntents);
+    case HWC2::FunctionDescriptor::SetColorModeWithRenderIntent:
+      return AsFP<HWC2_PFN_SET_COLOR_MODE_WITH_RENDER_INTENT>
+             (HWCSession::SetColorModeWithRenderIntent);
+
     default:
       DLOGD("Unknown/Unimplemented function descriptor: %d (%s)", int_descriptor,
             to_string(descriptor).c_str());
@@ -2395,6 +2436,35 @@ int32_t HWCSession::GetDisplayIdentificationData(hwc2_device_t *device, hwc2_dis
   return CallDisplayFunction(device, display, &HWCDisplay::GetDisplayIdentificationData, outPort,
                              outDataSize, outData);
 }
+
+int32_t HWCSession::GetRenderIntents(hwc2_device_t *device, hwc2_display_t display,
+                                int32_t /*ColorMode*/ int_mode, uint32_t *out_num_intents,
+                                int32_t /*RenderIntent*/ *int_out_intents) {
+  auto mode = static_cast<android_color_mode_t>(int_mode);
+  auto out_intents = reinterpret_cast<RenderIntent *>(int_out_intents);
+  if (out_num_intents == nullptr) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (!device || display >= HWCCallbacks::kNumDisplays) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  if (mode < HAL_COLOR_MODE_NATIVE || mode > HAL_COLOR_MODE_DISPLAY_P3) {
+    DLOGE("Invalid ColorMode: %d", mode);
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (out_intents == nullptr) {
+    *out_num_intents = 1;
+  } else if (out_intents && *out_num_intents > 0) {
+    *out_num_intents = 1;
+    out_intents[0] = RenderIntent::COLORIMETRIC;
+  }
+
+  return HWC2_ERROR_NONE;
+}
+
 
 void HWCSession::ActivateDisplay(hwc2_display_t disp, bool enable) {
   if (!hwc_display_[disp]) {

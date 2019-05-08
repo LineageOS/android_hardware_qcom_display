@@ -37,6 +37,8 @@
 #include "hwc_callbacks.h"
 #include "hwc_layers.h"
 
+using android::hardware::graphics::common::V1_1::RenderIntent;
+
 namespace sdm {
 
 class BlitEngine;
@@ -237,6 +239,8 @@ class HWCDisplay : public DisplayEventHandler {
                                          float* out_max_luminance,
                                          float* out_max_average_luminance,
                                          float* out_min_luminance);
+  virtual HWC2::Error GetPerFrameMetadataKeys(uint32_t *out_num_keys,
+                                              PerFrameMetadataKey *out_keys);
   virtual HWC2::Error SetDisplayAnimating(bool animating) {
     animating_ = animating;
     validated_ = false;
