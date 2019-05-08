@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, 2019 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -56,9 +56,6 @@ HWC2::Error HWCCallbacks::Vsync(hwc2_display_t display, int64_t timestamp) {
     return HWC2::Error::NoResources;
   }
   DTRACE_SCOPED();
-  if (IsVsyncSwapped() && display == vsync_from_) {
-    display = vsync_to_;
-  }
   vsync_(vsync_data_, display, timestamp);
   return HWC2::Error::None;
 }
