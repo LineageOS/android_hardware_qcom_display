@@ -802,7 +802,7 @@ void DRMConnector::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
       if (frame_trigger_mode >= 0) {
         uint32_t prop_id = prop_mgr_.GetPropertyId(DRMProperty::FRAME_TRIGGER);
         int ret = drmModeAtomicAddProperty(req, obj_id, prop_id, frame_trigger_mode);
-        if (ret) {
+        if (ret < 0) {
           DRM_LOGE("AtomicAddProperty failed obj_id 0x%x, prop_id %d mode %d ret %d",
                    obj_id, prop_id, frame_trigger_mode, ret);
         } else {
