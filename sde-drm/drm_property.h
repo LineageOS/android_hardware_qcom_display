@@ -165,6 +165,8 @@ enum struct DRMProperty {
   SDE_LTM_QUEUE_BUFFER3,
   SDE_LTM_VLUT,
   FRAME_TRIGGER,
+  COLORSPACE,
+  SUPPORTED_COLORSPACES,
 
   // Insert above
   MAX

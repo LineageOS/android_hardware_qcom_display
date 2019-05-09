@@ -160,6 +160,8 @@ DRMProperty DRMPropertyManager::GetPropertyEnum(const std::string &name) const {
   if (name == "SDE_VIG_1D_LUT_IGC_V6") { return DRMProperty::SDE_VIG_1D_LUT_IGC_V6; }
   if (name == "SDE_VIG_3D_LUT_GAMUT_V6") { return DRMProperty::SDE_VIG_3D_LUT_GAMUT_V6; }
   if (name == "frame_trigger_mode") { return DRMProperty::FRAME_TRIGGER; }
+  if (name == "Colorspace") { return DRMProperty::COLORSPACE; }
+  if (name == "supported_colorspaces") { return DRMProperty::SUPPORTED_COLORSPACES; }
 
   return DRMProperty::INVALID;
 }

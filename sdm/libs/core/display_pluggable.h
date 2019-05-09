@@ -70,6 +70,7 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
   virtual void HwRecovery(const HWRecoveryEvent sdm_event_code);
 
   void UpdateColorModes();
+  void InitializeColorModesFromColorspace();
 
  private:
   DisplayError GetOverrideConfig(uint32_t *mode_index);

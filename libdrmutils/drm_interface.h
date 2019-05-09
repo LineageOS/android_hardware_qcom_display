@@ -396,6 +396,12 @@ enum struct DRMOps {
    *      uint32_t - Frame trigger mode
    */
   CONNECTOR_SET_FRAME_TRIGGER,
+  /*
+   * Op: Sets colorspace on DP connector
+   * Arg: uint32_t - Connector ID
+   *      uint32_t - colorspace value bit-mask
+   */
+  CONNECTOR_SET_COLORSPACE,
 };
 
 enum struct DRMRotation {
@@ -620,6 +626,7 @@ struct DRMConnectorInfo {
   uint32_t topology_control;
   bool dyn_bitclk_support;
   std::vector<uint8_t> edid;
+  uint32_t supported_colorspaces;
 };
 
 // All DRM Connectors as map<Connector_id , connector_info>
@@ -833,6 +840,23 @@ enum struct DRMFrameTriggerMode {
   FRAME_DONE_WAIT_DEFAULT = 0,
   FRAME_DONE_WAIT_SERIALIZE,
   FRAME_DONE_WAIT_POSTED_START,
+};
+
+/* DRM Color spaces exposed by the DP connector */
+enum struct DRMColorspace {
+  DEFAULT = 0,
+  SMPTE_170M_YCC,
+  BT709_YCC,
+  XVYCC_601,
+  XVYCC_709,
+  SYCC_601,
+  OPYCC_601,
+  OPRGB,
+  BT2020_CYCC,
+  BT2020_RGB,
+  BT2020_YCC,
+  DCI_P3_RGB_D65,
+  DCI_P3_RGB_THEATER,
 };
 
 /* DRM Atomic Request Property Set.
