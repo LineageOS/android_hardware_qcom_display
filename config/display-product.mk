@@ -46,7 +46,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_offline_rotator=1 \
     vendor.display.disable_excl_rect=0 \
     vendor.display.comp_mask=0 \
-    vendor.display.enable_default_color_mode=1
+    vendor.display.enable_default_color_mode=1 \
+    vendor.display.enable_posted_start_dyn=1
 
 #Set WCG properties
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.has_wide_color_display=true
