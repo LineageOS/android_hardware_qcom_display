@@ -673,9 +673,12 @@ void DisplayBuiltIn::ResetPanel() {
   }
   CloseFd(&release_fence);
 
-  status = SetColorMode(current_color_mode_);
-  if (status != kErrorNone) {
-    DLOGE("SetColorMode failed for display id = %d error = %d", display_id_, status);
+  // If panel does not support color modes, do not set color mode.
+  if (color_mode_map_.size() > 0) {
+    status = SetColorMode(current_color_mode_);
+    if (status != kErrorNone) {
+      DLOGE("SetColorMode failed for display id = %d error = %d", display_id_, status);
+    }
   }
 
   status = SetVSyncState(true);
