@@ -1,6 +1,6 @@
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
-include $(LOCAL_PATH)/../../../common.mk
+include $(LOCAL_PATH)/../common.mk
 
 ifeq ($(use_hwc2),true)
 
