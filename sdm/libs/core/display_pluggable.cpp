@@ -285,12 +285,12 @@ DisplayError DisplayPluggable::InitializeColorModes() {
     color_mode_attr_map_.insert(std::make_pair("hal_native", var));
 
     pt.primaries = ColorPrimaries_BT2020;
-    pt.transfer = Transfer_Gamma2_2;
+    pt.transfer = Transfer_sRGB;
     color_modes_cs_.push_back(pt);
     var.clear();
     var.push_back(std::make_pair(kColorGamutAttribute, kBt2020));
-    var.push_back(std::make_pair(kGammaTransferAttribute, kGamma2_2));
-    color_mode_attr_map_.insert(std::make_pair(kBt2020, var));
+    var.push_back(std::make_pair(kGammaTransferAttribute, kSrgb));
+    color_mode_attr_map_.insert(std::make_pair(kDisplayBt2020, var));
   }
 
   var.clear();
