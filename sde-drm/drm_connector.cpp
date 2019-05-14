@@ -579,6 +579,7 @@ int DRMConnector::GetInfo(DRMConnectorInfo *info) {
       info->is_connected = false;
       info->modes.clear();
       info->type = drm_connector_->connector_type;
+      info->type_id = drm_connector_->connector_type_id;
       DLOGW("Connector %u not found. Possibly removed.", conn_id);
       return 0;
     }
@@ -599,6 +600,7 @@ int DRMConnector::GetInfo(DRMConnectorInfo *info) {
   info->mmWidth = drm_connector_->mmWidth;
   info->mmHeight = drm_connector_->mmHeight;
   info->type = drm_connector_->connector_type;
+  info->type_id = drm_connector_->connector_type_id;
   info->is_connected = IsConnected();
 
   drmModeObjectProperties *props =

@@ -31,6 +31,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define __HW_PERIPHERAL_DRM_H__
 
 #include <vector>
+#include <string>
 #include "hw_device_drm.h"
 
 namespace sdm {
@@ -62,6 +63,9 @@ class HWPeripheralDRM : public HWDeviceDRM {
   virtual DisplayError SetDisplayAttributes(uint32_t index);
   virtual DisplayError TeardownConcurrentWriteback(void);
   virtual DisplayError SetFrameTrigger(FrameTriggerMode mode);
+  virtual DisplayError SetPanelBrightness(int level);
+  virtual DisplayError GetPanelBrightness(int *level);
+  virtual void GetHWPanelMaxBrightness();
 
  private:
   void SetDestScalarData(HWLayersInfo hw_layer_info, bool validate);
@@ -90,6 +94,7 @@ class HWPeripheralDRM : public HWDeviceDRM {
   bool needs_ds_update_ = false;
   void PopulateBitClkRates();
   std::vector<uint64_t> bitclk_rates_;
+  std::string brightness_base_path_ = "";
 };
 
 }  // namespace sdm

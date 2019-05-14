@@ -76,7 +76,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(ControlPartialUpdate(bool, uint32_t *))
   MAKE_NO_OP(DisablePartialUpdateOneFrame())
   MAKE_NO_OP(SetDisplayMode(uint32_t))
-  MAKE_NO_OP(SetPanelBrightness(int))
+  MAKE_NO_OP(SetPanelBrightness(float))
   MAKE_NO_OP(CachePanelBrightness(int))
   MAKE_NO_OP(OnMinHdcpEncryptionLevelChange(uint32_t))
   MAKE_NO_OP(ColorSVCRequestRoute(const PPDisplayAPIPayload &, PPDisplayAPIPayload *,
@@ -92,7 +92,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(ApplyDefaultDisplayMode())
   MAKE_NO_OP(SetCursorPosition(int, int))
   MAKE_NO_OP(SetRefreshRate(uint32_t, bool))
-  MAKE_NO_OP(GetPanelBrightness(int *))
+  MAKE_NO_OP(GetPanelBrightness(float *))
   MAKE_NO_OP(SetVSyncState(bool))
   MAKE_NO_OP(SetMixerResolution(uint32_t, uint32_t))
   MAKE_NO_OP(SetDetailEnhancerData(const DisplayDetailEnhancerData &))

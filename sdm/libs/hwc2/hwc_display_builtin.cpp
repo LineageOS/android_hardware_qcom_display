@@ -886,4 +886,21 @@ HWC2::Error HWCDisplayBuiltIn::SetPendingRefresh() {
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCDisplayBuiltIn::SetPanelBrightness(float brightness) {
+  DisplayError ret = display_intf_->SetPanelBrightness(brightness);
+  if (ret != kErrorNone) {
+    return HWC2::Error::NoResources;
+  }
+
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayBuiltIn::GetPanelBrightness(float *brightness) {
+  DisplayError ret = display_intf_->GetPanelBrightness(brightness);
+  if (ret != kErrorNone) {
+    return HWC2::Error::NoResources;
+  }
+
+  return HWC2::Error::None;
+}
 }  // namespace sdm
