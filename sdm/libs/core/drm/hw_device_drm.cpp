@@ -1669,7 +1669,7 @@ void HWDeviceDRM::SetIdleTimeoutMs(uint32_t timeout_ms) {
 }
 
 DisplayError HWDeviceDRM::SetDisplayMode(const HWDisplayMode hw_display_mode) {
-  uint32_t mode_flag;
+  uint32_t mode_flag = 0;
 
   if (hw_display_mode == kModeCommand) {
     mode_flag = DRM_MODE_FLAG_CMD_MODE_PANEL;
