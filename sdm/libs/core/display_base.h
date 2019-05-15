@@ -131,8 +131,6 @@ class DisplayBase : public DisplayInterface {
                                               LayerBufferFormat format,
                                               const ColorMetaData &color_metadata);
   virtual std::string Dump();
-  virtual DisplayError GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
-                                                    uint8_t *out_data);
 
  protected:
   DisplayError BuildLayerStackStats(LayerStack *layer_stack);

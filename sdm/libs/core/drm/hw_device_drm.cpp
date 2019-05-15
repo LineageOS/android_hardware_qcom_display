@@ -439,7 +439,7 @@ DisplayError HWDeviceDRM::Deinit() {
   display_attributes_ = {};
   drm_mgr_intf_->DestroyAtomicReq(drm_atomic_intf_);
   drm_atomic_intf_ = {};
-  drm_mgr_intf_->UnregisterDisplay(&token_);
+  drm_mgr_intf_->UnregisterDisplay(token_);
   return err;
 }
 
@@ -633,25 +633,6 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
         hw_panel_info_.split_info.right_split);
   DLOGI("Panel Transfer time = %d us", hw_panel_info_.transfer_time_us);
   DLOGI("Dynamic Bit Clk Support = %d", hw_panel_info_.dyn_bitclk_support);
-}
-
-DisplayError HWDeviceDRM::GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
-                                                       uint8_t *out_data) {
-  *out_port = token_.hw_port;
-  std::vector<uint8_t> &edid = connector_info_.edid;
-
-  if (out_data == nullptr) {
-    *out_data_size = (uint32_t)(edid.size());
-    if (*out_data_size == 0) {
-      DLOGE("EDID blob is empty, no data to return");
-      return kErrorDriverData;
-    }
-  } else {
-    *out_data_size = std::min(*out_data_size, (uint32_t)(edid.size()));
-    memcpy(out_data, edid.data(), *out_data_size);
-  }
-
-  return kErrorNone;
 }
 
 void HWDeviceDRM::GetHWDisplayPortAndMode() {
