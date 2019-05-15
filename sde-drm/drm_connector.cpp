@@ -537,15 +537,18 @@ void DRMConnector::ParseCapabilities(uint64_t blob_id, drm_msm_ext_hdr_propertie
 
   if(hdr_cdata) {
    hdr_info->hdr_supported = hdr_cdata->hdr_supported;
+   hdr_info->hdr_plus_supported = hdr_cdata->hdr_plus_supported;
    hdr_info->hdr_eotf = hdr_cdata->hdr_eotf;
    hdr_info->hdr_metadata_type_one = hdr_cdata->hdr_metadata_type_one;
    hdr_info->hdr_max_luminance = hdr_cdata->hdr_max_luminance;
    hdr_info->hdr_avg_luminance = hdr_cdata->hdr_avg_luminance;
    hdr_info->hdr_min_luminance = hdr_cdata->hdr_min_luminance;
-   DRM_LOGI("hdr_supported=%d , hdr_eotf= %d , hdr_metadata_type_one= %d,"
-            "hdr_max_luminance= %d , hdr_avg_luminance= %d , hdr_min_luminance %d\n",
-            hdr_info->hdr_supported,hdr_info->hdr_eotf, hdr_info->hdr_metadata_type_one,
-            hdr_info->hdr_max_luminance, hdr_info->hdr_avg_luminance, hdr_info->hdr_min_luminance);
+   DRM_LOGI("hdr_supported = %d, hdr_plus_supported = %d, hdr_eotf = %d, "
+            "hdr_metadata_type_one = %d, hdr_max_luminance = %d, hdr_avg_luminance = %d, "
+            "hdr_min_luminance = %d\n", hdr_info->hdr_supported,
+            hdr_info->hdr_plus_supported,
+            hdr_info->hdr_eotf, hdr_info->hdr_metadata_type_one, hdr_info->hdr_max_luminance,
+            hdr_info->hdr_avg_luminance, hdr_info->hdr_min_luminance);
   }
   drmModeFreePropertyBlob(blob);
 }
