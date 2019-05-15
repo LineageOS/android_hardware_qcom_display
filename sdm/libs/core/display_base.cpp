@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -1638,6 +1638,15 @@ DisplayError DisplayBase::ValidateHDR(LayerStack *layer_stack) {
   }
 
   return kErrorNone;
+}
+
+DisplayError DisplayBase::GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
+                                                       uint8_t *out_data) {
+  if (!out_port || !out_data_size) {
+    return kErrorParameters;
+  }
+
+  return hw_intf_->GetDisplayIdentificationData(out_port, out_data_size, out_data);
 }
 
 DisplayError DisplayBase::GetClientTargetSupport(uint32_t width, uint32_t height,

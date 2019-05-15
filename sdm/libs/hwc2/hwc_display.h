@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -36,6 +36,8 @@
 #include "hwc_buffer_allocator.h"
 #include "hwc_callbacks.h"
 #include "hwc_layers.h"
+
+using android::hardware::graphics::common::V1_1::RenderIntent;
 
 namespace sdm {
 
@@ -115,7 +117,6 @@ class HWCDisplay : public DisplayEventHandler {
     return kErrorNotSupported;
   }
   virtual HWC2::PowerMode GetLastPowerMode();
-  virtual HWC2::Vsync GetLastVsyncMode();
   virtual int SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels);
   virtual void GetFrameBufferResolution(uint32_t *x_pixels, uint32_t *y_pixels);
   virtual int SetDisplayStatus(DisplayStatus display_status);
@@ -238,6 +239,8 @@ class HWCDisplay : public DisplayEventHandler {
                                          float* out_max_luminance,
                                          float* out_max_average_luminance,
                                          float* out_min_luminance);
+  virtual HWC2::Error GetPerFrameMetadataKeys(uint32_t *out_num_keys,
+                                              PerFrameMetadataKey *out_keys);
   virtual HWC2::Error SetDisplayAnimating(bool animating) {
     animating_ = animating;
     validated_ = false;
@@ -248,7 +251,8 @@ class HWCDisplay : public DisplayEventHandler {
     validated_ = false;
   }
   virtual DisplayError Refresh();
-  virtual void SetVsyncSource(bool enable) { vsync_source_ = enable; }
+  virtual HWC2::Error GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
+                                                   uint8_t *out_data);
 
  protected:
   // Maximum number of layers supported by display manager.
@@ -307,7 +311,6 @@ class HWCDisplay : public DisplayEventHandler {
   uint32_t dump_frame_index_ = 0;
   bool dump_input_layers_ = false;
   HWC2::PowerMode last_power_mode_ = HWC2::PowerMode::Off;
-  HWC2::Vsync last_vsync_mode_ = HWC2::Vsync::Invalid;
   bool swap_interval_zero_ = false;
   bool display_paused_ = false;
   uint32_t min_refresh_rate_ = 0;
@@ -335,7 +338,6 @@ class HWCDisplay : public DisplayEventHandler {
   bool config_pending_ = false;
   bool pending_commit_ = false;
   LayerRect window_rect_ = {};
-  bool vsync_source_ = false;
   bool skip_commit_ = false;
 
  private:

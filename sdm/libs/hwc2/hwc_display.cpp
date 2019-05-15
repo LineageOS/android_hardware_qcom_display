@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -211,6 +211,8 @@ void HWCColorMode::PopulateColorModes() {
     return;
   }
 
+  // Client expects native color mode to be supported by default
+  PopulateTransform(HAL_COLOR_MODE_NATIVE, "native", "identity");
   DLOGV_IF(kTagClient, "Color Modes supported count = %d", color_mode_count);
 
   const std::string color_transform = "identity";
@@ -735,8 +737,6 @@ HWC2::Error HWCDisplay::SetVsyncEnabled(HWC2::Vsync enabled) {
     return HWC2::Error::BadDisplay;
   }
 
-  last_vsync_mode_ = enabled;
-
   return HWC2::Error::None;
 }
 
@@ -955,6 +955,29 @@ HWC2::Error HWCDisplay::GetDisplayType(int32_t *out_type) {
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCDisplay::GetPerFrameMetadataKeys(uint32_t *out_num_keys,
+                                                PerFrameMetadataKey *out_keys) {
+  if (out_num_keys == nullptr) {
+    return HWC2::Error::BadParameter;
+  }
+  *out_num_keys = UINT32(PerFrameMetadataKey::MAX_FRAME_AVERAGE_LIGHT_LEVEL) + 1;
+  if (out_keys != nullptr) {
+    out_keys[0] = PerFrameMetadataKey::DISPLAY_RED_PRIMARY_X;
+    out_keys[1] = PerFrameMetadataKey::DISPLAY_RED_PRIMARY_Y;
+    out_keys[2] = PerFrameMetadataKey::DISPLAY_GREEN_PRIMARY_X;
+    out_keys[3] = PerFrameMetadataKey::DISPLAY_GREEN_PRIMARY_Y;
+    out_keys[4] = PerFrameMetadataKey::DISPLAY_BLUE_PRIMARY_X;
+    out_keys[5] = PerFrameMetadataKey::DISPLAY_BLUE_PRIMARY_Y;
+    out_keys[6] = PerFrameMetadataKey::WHITE_POINT_X;
+    out_keys[7] = PerFrameMetadataKey::WHITE_POINT_Y;
+    out_keys[8] = PerFrameMetadataKey::MAX_LUMINANCE;
+    out_keys[9] = PerFrameMetadataKey::MIN_LUMINANCE;
+    out_keys[10] = PerFrameMetadataKey::MAX_CONTENT_LIGHT_LEVEL;
+    out_keys[11] = PerFrameMetadataKey::MAX_FRAME_AVERAGE_LIGHT_LEVEL;
+  }
+  return HWC2::Error::None;
+}
+
 HWC2::Error HWCDisplay::GetActiveConfig(hwc2_config_t *out_config) {
   if (out_config == nullptr) {
     return HWC2::Error::BadDisplay;
@@ -1028,10 +1051,6 @@ HWC2::Error HWCDisplay::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_lay
 
 HWC2::PowerMode HWCDisplay::GetLastPowerMode() {
   return last_power_mode_;
-}
-
-HWC2::Vsync HWCDisplay::GetLastVsyncMode() {
-  return last_vsync_mode_;
 }
 
 DisplayError HWCDisplay::VSync(const DisplayEventVSync &vsync) {
@@ -2209,6 +2228,17 @@ bool HWCDisplay::CanSkipValidate() {
   }
 
   return true;
+}
+
+HWC2::Error HWCDisplay::GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
+                                                     uint8_t *out_data) {
+  DisplayError ret = display_intf_->GetDisplayIdentificationData(out_port, out_data_size, out_data);
+  if (ret != kErrorNone) {
+    DLOGE("Failed due to SDM/Driver (err = %d, disp id = %" PRIu64
+          " %d-%d", ret, id_, sdm_id_, type_);
+  }
+
+  return HWC2::Error::None;
 }
 
 void HWCDisplay::UpdateRefreshRate() {
