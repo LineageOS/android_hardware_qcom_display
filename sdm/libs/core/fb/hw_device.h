@@ -100,6 +100,10 @@ class HWDevice : public HWInterface {
   virtual DisplayError DumpDebugData();
   virtual DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate);
   virtual DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate);
+  virtual DisplayError GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
+                                                    uint8_t *out_data) {
+    return kErrorNotSupported;
+  }
 
   enum {
     kHWEventVSync,

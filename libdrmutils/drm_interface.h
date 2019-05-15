@@ -508,6 +508,7 @@ struct DRMConnectorInfo {
   // Connection status of this connector
   bool is_connected;
   bool dyn_bitclk_support;
+  std::vector<uint8_t> edid;
   bool is_wb_ubwc_supported;
 };
 
@@ -528,6 +529,7 @@ struct DRMDisplayToken {
   uint32_t crtc_id;
   uint32_t crtc_index;
   uint32_t encoder_id;
+  uint8_t hw_port;
 };
 
 enum DRMPPFeatureID {
@@ -735,12 +737,12 @@ class DRMManagerInterface {
    * [output]: DRMDisplayToken - CRTC and Connector id's for the display
    * [return]: 0 on success, a negative error value otherwise
    */
-  virtual int RegisterDisplay(int32_t display_id, DRMDisplayToken *tok) = 0;
+  virtual int RegisterDisplay(int32_t display_id, DRMDisplayToken *token) = 0;
 
   /* Client should invoke this interface on display disconnect.
    * [input]: DRMDisplayToken - identifier for the display.
    */
-  virtual void UnregisterDisplay(const DRMDisplayToken &token) = 0;
+  virtual void UnregisterDisplay(DRMDisplayToken *token) = 0;
 
   /*
    * Creates and returns an instance of DRMAtomicReqInterface corresponding to a display token

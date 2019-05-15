@@ -234,5 +234,13 @@ void HWVirtualDRM::GetModeIndex(const HWDisplayAttributes &display_attributes, i
   }
 }
 
+DisplayError HWVirtualDRM::GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
+                                                        uint8_t *out_data) {
+  *out_data_size = 0;
+  *out_port = token_.hw_port;
+
+  return kErrorNone;
+}
+
 }  // namespace sdm
 
