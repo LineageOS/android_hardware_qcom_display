@@ -53,6 +53,8 @@ class HWVirtualDRM : public HWDeviceDRM {
   virtual DisplayError Commit(HWLayers *hw_layers);
   virtual DisplayError Flush(HWLayers *hw_layers);
   virtual DisplayError GetPPFeaturesVersion(PPFeatureVersion *vers);
+  virtual DisplayError GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
+                                                    uint8_t *out_data);
 
  private:
   void ConfigureWbConnectorFbId(uint32_t fb_id);

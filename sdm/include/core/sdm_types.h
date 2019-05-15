@@ -59,6 +59,8 @@ enum DisplayError {
   kErrorNotValidated,     //!< Draw cycle has not been validated.
   kErrorCriticalResource,   //!< Critical resource allocation has failed.
   kErrorNoDevice,           //!< Display device is not present.
+  kErrorDeviceRemoved,    //!< A device was removed unexpectedly.
+  kErrorDriverData,       //!< Expected information from the driver is missing
 };
 
 /*! @brief This structure is defined for client and library compatibility check purpose only. This
