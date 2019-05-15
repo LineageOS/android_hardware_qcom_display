@@ -568,8 +568,8 @@ bool CompManager::SetDisplayState(Handle display_ctx, DisplayState state) {
 
   case kStateOn:
   case kStateDoze:
-    // Get active display count.
-    if (powered_on_displays_.size()) {
+    // Setting safe mode if there are multiple displays and one of display is already active.
+    if ((registered_displays_.size() > 1) && powered_on_displays_.size()) {
       safe_mode_ = true;
       DLOGV_IF(kTagCompManager, "safe_mode = %d", safe_mode_);
     }
