@@ -104,6 +104,8 @@
 #define DISABLE_DEFER_POWER_STATE            DISPLAY_PROP("disable_defer_power_state")
 #define ENABLE_DROP_REFRESH                  DISPLAY_PROP("enable_drop_refresh")
 #define DISABLE_PARALLEL_CACHE               DISPLAY_PROP("disable_parallel_cache")
+// Disable 3d tonemap support for UI layers
+#define DISABLE_UI_3D_TONEMAP                DISPLAY_PROP("disable_ui_3d_tonemap")
 
 // Add all vendor.display properties above
 

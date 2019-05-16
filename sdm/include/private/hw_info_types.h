@@ -153,6 +153,7 @@ enum HwHdrEotf {
 };
 
 enum HWSrcTonemap {
+  kSrcTonemapNone,
   kSrcTonemap1d,  // DMA
   kSrcTonemap3d,  // VIG
 };
@@ -588,6 +589,7 @@ struct HWPipeInfo {
   HWPipeCscInfo dgm_csc_info = {};
   std::vector<HWPipeTonemapLutInfo> lut_info = {};
   LayerTransform transform;
+  HWSrcTonemap tonemap = kSrcTonemapNone;
 };
 
 struct HWSolidfillStage {
