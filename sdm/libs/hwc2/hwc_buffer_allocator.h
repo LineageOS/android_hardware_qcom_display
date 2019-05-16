@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -33,12 +33,15 @@
 #include <sys/mman.h>
 
 #include <android/hardware/graphics/allocator/2.0/IAllocator.h>
+#include <android/hardware/graphics/allocator/3.0/IAllocator.h>
 #include <android/hardware/graphics/mapper/2.1/IMapper.h>
+#include <android/hardware/graphics/mapper/3.0/IMapper.h>
 #include "gralloc_priv.h"
 
-using android::hardware::graphics::allocator::V2_0::IAllocator;
-using android::hardware::graphics::mapper::V2_0::IMapper;
-
+using IAllocatorV3 = android::hardware::graphics::allocator::V3_0::IAllocator;
+using IAllocatorV2 = android::hardware::graphics::allocator::V2_0::IAllocator;
+using IMapperV3 = android::hardware::graphics::mapper::V3_0::IMapper;
+using IMapperV2 = android::hardware::graphics::mapper::V2_0::IMapper;
 namespace sdm {
 
 template <class Type>
@@ -65,8 +68,10 @@ class HWCBufferAllocator : public BufferAllocator {
 
  private:
   DisplayError GetGrallocInstance();
-  android::sp<IMapper> mapper_;
-  android::sp<IAllocator> allocator_;
+  android::sp<IMapperV2> mapper_V2_;
+  android::sp<IMapperV3> mapper_V3_;
+  android::sp<IAllocatorV2> allocator_V2_;
+  android::sp<IAllocatorV3> allocator_V3_;
 };
 
 }  // namespace sdm
