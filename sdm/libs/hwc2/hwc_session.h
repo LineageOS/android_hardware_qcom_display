@@ -258,7 +258,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   // Uevent handler
   virtual void UEventHandler(const char *uevent_data, int length);
   void ResetPanel();
-  void InitDisplaySlots();
+  void InitSupportedDisplaySlots();
   int GetDisplayIndex(int dpy);
   int CreatePrimaryDisplay();
   int HandleBuiltInDisplays();
@@ -390,9 +390,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   void HandleSecureSession();
   void HandlePowerOnPending(hwc2_display_t display, int retire_fence);
   void HandleHotplugPending(hwc2_display_t disp_id, int retire_fence);
-  void UpdateVsyncSource();
-  hwc2_display_t GetNextVsyncSource();
-  DisplayClass GetDisplayClass(hwc2_display_t display_id);
   bool IsPluggableDisplayConnected();
   hwc2_display_t GetActiveBuiltinDisplay();
   void HandlePendingRefresh();
@@ -407,8 +404,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   std::vector<DisplayMapInfo> map_info_builtin_;    // Builtin displays excluding primary
   std::vector<DisplayMapInfo> map_info_pluggable_;  // Pluggable displays excluding primary
   std::vector<DisplayMapInfo> map_info_virtual_;    // Virtual displays
-  bool update_vsync_on_power_off_ = false;
-  bool update_vsync_on_doze_ = false;
   bool reset_panel_ = false;
   bool client_connected_ = false;
   bool new_bw_mode_ = false;
@@ -427,9 +422,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   Locker pluggable_handler_lock_;
   bool destroy_virtual_disp_pending_ = false;
   uint32_t idle_pc_ref_cnt_ = 0;
-  int32_t max_sde_pluggable_displays_ = 0;
-  int32_t max_sde_builtin_displays_ = 0;
-  int32_t registered_builtin_displays_ = 0;
   int32_t disable_hotplug_bwcheck_ = 0;
   int32_t disable_mask_layer_hint_ = 0;
   std::bitset<HWCCallbacks::kNumDisplays> pending_refresh_;

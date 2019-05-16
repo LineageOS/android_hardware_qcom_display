@@ -134,13 +134,34 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
     if (error != kErrorNone) {
       ReconfigureMixer(display_width, display_height);
     }
+  } else {
+    if (CanSkipDisplayPrepare(layer_stack)) {
+      hw_layers_.hw_avr_info.enable = NeedsAVREnable();
+      return kErrorNone;
+    }
   }
 
   // Clean hw layers for reuse.
+  DTRACE_BEGIN("PrepareHWLayers");
   hw_layers_ = HWLayers();
+  DTRACE_END();
+
   hw_layers_.hw_avr_info.enable = NeedsAVREnable();
 
-  return DisplayBase::Prepare(layer_stack);
+  left_frame_roi_ = {};
+  right_frame_roi_ = {};
+
+  error = DisplayBase::Prepare(layer_stack);
+
+  // Cache the Frame ROI.
+  if (error == kErrorNone) {
+    if (hw_layers_.info.left_frame_roi.size() && hw_layers_.info.right_frame_roi.size()) {
+      left_frame_roi_ = hw_layers_.info.left_frame_roi.at(0);
+      right_frame_roi_ = hw_layers_.info.right_frame_roi.at(0);
+    }
+  }
+
+  return error;
 }
 
 DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
@@ -611,6 +632,92 @@ DisplayError DisplayBuiltIn::GetDynamicDSIClock(uint64_t *bit_clk_rate) {
   }
 
   return hw_intf_->GetDynamicDSIClock(bit_clk_rate);
+}
+
+bool DisplayBuiltIn::CanCompareFrameROI(LayerStack *layer_stack) {
+  // Check Display validation and safe-mode states.
+  if (needs_validate_ || comp_manager_->IsSafeMode()) {
+    return false;
+  }
+
+  // Check Panel and Layer Stack attributes.
+  if (!hw_panel_info_.partial_update || (hw_panel_info_.left_roi_count != 1) ||
+      layer_stack->flags.geometry_changed || layer_stack->flags.config_changed ||
+      (layer_stack->layers.size() != (hw_layers_.info.app_layer_count + 1))) {
+    return false;
+  }
+
+  // Check for Partial Update disable requests/scenarios.
+  if (color_mgr_ && color_mgr_->NeedsPartialUpdateDisable()) {
+    DisablePartialUpdateOneFrame();
+  }
+
+  if (!partial_update_control_ || disable_pu_one_frame_ || disable_pu_on_dest_scaler_) {
+    return false;
+  }
+
+  bool surface_damage = false;
+  uint32_t surface_damage_mask_value = (1 << kSurfaceDamage);
+  for (uint32_t i = 0; i < layer_stack->layers.size(); i++) {
+    Layer *layer = layer_stack->layers.at(i);
+    if (layer->update_mask.none()) {
+      continue;
+    }
+    // Only kSurfaceDamage bit should be set in layer's update-mask.
+    if (layer->update_mask.to_ulong() == surface_damage_mask_value) {
+      surface_damage = true;
+    } else {
+      return false;
+    }
+  }
+
+  return surface_damage;
+}
+
+bool DisplayBuiltIn::CanSkipDisplayPrepare(LayerStack *layer_stack) {
+  if (!CanCompareFrameROI(layer_stack)) {
+    return false;
+  }
+
+  DisplayError error = BuildLayerStackStats(layer_stack);
+  if (error != kErrorNone) {
+    return false;
+  }
+
+  hw_layers_.info.left_frame_roi.clear();
+  hw_layers_.info.right_frame_roi.clear();
+  hw_layers_.info.dest_scale_info_map.clear();
+  comp_manager_->GenerateROI(display_comp_ctx_, &hw_layers_);
+
+  if (!hw_layers_.info.left_frame_roi.size() || !hw_layers_.info.right_frame_roi.size()) {
+    return false;
+  }
+
+  // Compare the cached and calculated Frame ROIs.
+  bool same_roi = IsCongruent(left_frame_roi_, hw_layers_.info.left_frame_roi.at(0)) &&
+                  IsCongruent(right_frame_roi_, hw_layers_.info.right_frame_roi.at(0));
+
+  if (same_roi) {
+    // Update Surface Damage rectangle(s) in HW layers.
+    uint32_t hw_layer_count = UINT32(hw_layers_.info.hw_layers.size());
+    for (uint32_t j = 0; j < hw_layer_count; j++) {
+      Layer &hw_layer = hw_layers_.info.hw_layers.at(j);
+      Layer *sdm_layer = layer_stack->layers.at(hw_layers_.info.index.at(j));
+      if (hw_layer.dirty_regions.size() != sdm_layer->dirty_regions.size()) {
+        return false;
+      }
+      for (uint32_t k = 0; k < hw_layer.dirty_regions.size(); k++) {
+        hw_layer.dirty_regions.at(k) = sdm_layer->dirty_regions.at(k);
+      }
+    }
+
+    // Set the composition type for SDM layers.
+    for (uint32_t i = 0; i < (layer_stack->layers.size() - 1); i++) {
+      layer_stack->layers.at(i)->composition = kCompositionSDE;
+    }
+  }
+
+  return same_roi;
 }
 
 }  // namespace sdm

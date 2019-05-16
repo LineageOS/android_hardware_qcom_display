@@ -51,12 +51,10 @@ class HWCCallbacks {
   HWC2::Error Vsync(hwc2_display_t display, int64_t timestamp);
   HWC2::Error Register(HWC2::Callback, hwc2_callback_data_t callback_data,
                        hwc2_function_pointer_t pointer);
-  void SetSwapVsync(hwc2_display_t from, hwc2_display_t to) {
-    vsync_from_ = from;
-    vsync_to_ = to;
+  void UpdateVsyncSource(hwc2_display_t from) {
+    vsync_source_ = from;
   }
-  bool IsVsyncSwapped() { return (vsync_from_ != vsync_to_); }
-  hwc2_display_t GetVsyncSource() { return vsync_from_; }
+  hwc2_display_t GetVsyncSource() { return vsync_source_; }
 
   bool VsyncCallbackRegistered() { return (vsync_ != nullptr && vsync_data_ != nullptr); }
   bool NeedsRefresh(hwc2_display_t display) { return pending_refresh_.test(UINT32(display)); }
@@ -70,8 +68,7 @@ class HWCCallbacks {
   HWC2_PFN_HOTPLUG hotplug_ = nullptr;
   HWC2_PFN_REFRESH refresh_ = nullptr;
   HWC2_PFN_VSYNC vsync_ = nullptr;
-  hwc2_display_t vsync_from_ = HWC_DISPLAY_PRIMARY;   // hw vsync is active on this display
-  hwc2_display_t vsync_to_ = HWC_DISPLAY_PRIMARY;     // vsync will be reported as this display
+  hwc2_display_t vsync_source_ = HWC_DISPLAY_PRIMARY;   // hw vsync is active on this display
   std::bitset<kNumDisplays> pending_refresh_;         // Displays waiting to get refreshed
 };
 

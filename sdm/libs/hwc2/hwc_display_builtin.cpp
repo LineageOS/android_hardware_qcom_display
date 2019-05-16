@@ -220,8 +220,9 @@ bool HWCDisplayBuiltIn::CanSkipCommit() {
     hwc_layer->ResetBufferFlip();
   }
 
+  bool vsync_source = (callbacks_->GetVsyncSource() == id_);
   bool skip_commit = enable_drop_refresh_ && !pending_commit_ && !buffers_latched &&
-                     !pending_refresh_ && !vsync_source_;
+                     !pending_refresh_ && !vsync_source;
   pending_refresh_ = false;
 
   return skip_commit;
@@ -231,6 +232,12 @@ HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
   auto status = HWC2::Error::None;
 
   DTRACE_SCOPED();
+  ATRACE_INT("PartialUpdate", partial_update_enabled_);
+  ATRACE_INT("FastPath", layer_stack_.flags.fast_path);
+  ATRACE_INT("GeometryChanged", layer_stack_.flags.geometry_changed);
+  ATRACE_INT("NumLayers", static_cast <int32_t> (layer_stack_.layers.size()));
+  ATRACE_INT("HasClientComposition", HasClientComposition());
+
   if (display_paused_) {
     DisplayError error = display_intf_->Flush(&layer_stack_);
     validated_ = false;

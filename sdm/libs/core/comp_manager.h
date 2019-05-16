@@ -83,6 +83,8 @@ class CompManager {
   DisplayError SetBlendSpace(Handle display_ctx, const PrimariesTransfer &blend_space);
   void HandleSecureEvent(Handle display_ctx, SecureEvent secure_event);
   void SetSafeMode(bool enable) { safe_mode_ = enable; }
+  bool IsSafeMode() { return safe_mode_; }
+  void GenerateROI(Handle display_ctx, HWLayers *hw_layers);
 
  private:
   static const int kMaxThermalLevel = 3;

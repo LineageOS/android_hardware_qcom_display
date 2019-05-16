@@ -564,62 +564,9 @@ Return<int32_t> HWCSession::setDisplayAnimating(uint64_t display_id, bool animat
 #endif
 
 #ifdef DISPLAY_CONFIG_1_2
-static const char * GetDisplayTypeName(IDisplayConfig::DisplayTypeExt disp_type) {
-  switch (disp_type) {
-    case IDisplayConfig::DisplayTypeExt::DISPLAY_BUILTIN:   return "Built-in";
-    case IDisplayConfig::DisplayTypeExt::DISPLAY_PLUGGABLE: return "Pluggable";
-    case IDisplayConfig::DisplayTypeExt::DISPLAY_VIRTUAL:   return "Virtual";
-    case IDisplayConfig::DisplayTypeExt::DISPLAY_PRIMARY:   return "Primary";
-    default:                                                return "Unknown";
-  }
-}
-
 Return<int32_t> HWCSession::setDisplayIndex(IDisplayConfig::DisplayTypeExt disp_type,
                                             uint32_t base, uint32_t count) {
-  if (client_connected_) {
-    DLOGW("Not supported after client connection is completed.");
-    return -1;
-  }
-
-  DLOGI("%s display: base = %d, count = %d", GetDisplayTypeName(disp_type), base, count);
-
-  // Is display slots capacity smaller than what client can support?
-  if ((base + count) > HWCCallbacks::kNumDisplays) {
-    DLOGE("Exceeds max supported display slots = %d", HWCCallbacks::kNumDisplays);
-    return -1;
-  }
-
-  std::vector<DisplayMapInfo> *map_info_v = nullptr;
-  switch (disp_type) {
-    case IDisplayConfig::DisplayTypeExt::DISPLAY_BUILTIN:
-      map_info_v = &map_info_builtin_;
-      break;
-    case IDisplayConfig::DisplayTypeExt::DISPLAY_PLUGGABLE:
-      map_info_v = &map_info_pluggable_;
-      break;
-    case IDisplayConfig::DisplayTypeExt::DISPLAY_VIRTUAL:
-      map_info_v = &map_info_virtual_;
-      break;
-    case IDisplayConfig::DisplayTypeExt::DISPLAY_PRIMARY:
-      // nothing to do
-      return 0;
-    default:
-      return -1;
-  }
-
-  // Reset default client id for each display with a new client id in given range.
-  // Remove remaining elements as client as client can not handle these displays.
-  DLOGI("Change %s display capacity to %d", GetDisplayTypeName(disp_type), count);
-  map_info_v->resize(count);
-
-  uint32_t idx = 0;
-  for (auto &map_info : *map_info_v) {
-    map_info.client_id = base++;
-    DLOGI("Override: %s display: Index = %d, Client ID = %d",
-                  GetDisplayTypeName(disp_type), idx++, map_info.client_id);
-  }
-
-  return 0;
+  return -1;
 }
 #endif  // DISPLAY_CONFIG_1_2
 
@@ -710,14 +657,10 @@ Return<int32_t> HWCSession::SetDisplayDppsAdROI(uint32_t display_id, uint32_t h_
 
 #ifdef DISPLAY_CONFIG_1_6
 Return<int32_t> HWCSession::updateVSyncSourceOnPowerModeOff() {
-  update_vsync_on_power_off_ = true;
-
   return 0;
 }
 
 Return<int32_t> HWCSession::updateVSyncSourceOnPowerModeDoze() {
-  update_vsync_on_doze_ = true;
-
   return 0;
 }
 #endif

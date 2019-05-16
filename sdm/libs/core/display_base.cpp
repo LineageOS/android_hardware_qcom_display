@@ -204,6 +204,7 @@ DisplayError DisplayBase::Deinit() {
 DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
   std::vector<Layer *> &layers = layer_stack->layers;
   HWLayersInfo &hw_layers_info = hw_layers_.info;
+  hw_layers_info.app_layer_count = 0;
 
   hw_layers_info.stack = layer_stack;
 
@@ -310,7 +311,9 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   }
 
   hw_layers_.updates_mask.set(kUpdateResources);
+  comp_manager_->GenerateROI(display_comp_ctx_, &hw_layers_);
   comp_manager_->PrePrepare(display_comp_ctx_, &hw_layers_);
+
   while (true) {
     error = comp_manager_->Prepare(display_comp_ctx_, &hw_layers_);
     if (error != kErrorNone) {
@@ -625,9 +628,45 @@ std::string DisplayBase::Dump() {
   hw_intf_->GetDisplayAttributes(active_index, &attrib);
 
   os << "device type:" << display_type_;
-  os << "\nstate: " << state_ << " vsync on: " << vsync_enable_ << " max. mixer stages: "
-    << max_mixer_stages_;
+  os << "\nstate: " << state_ << " vsync on: " << vsync_enable_
+     << " max. mixer stages: " << max_mixer_stages_;
   os << "\nnum configs: " << num_modes << " active config index: " << active_index;
+  os << "\nDisplay Attributes:";
+  os << "\n Mode:" << (hw_panel_info_.mode == kModeVideo ? "Video" : "Command");
+  os << std::boolalpha;
+  os << " Primary:" << hw_panel_info_.is_primary_panel;
+  os << " DynFPS:" << hw_panel_info_.dynamic_fps;
+  os << "\n HDR Panel:" << hw_panel_info_.hdr_enabled;
+  os << " QSync:" << hw_panel_info_.qsync_support;
+  os << " DynBitclk:" << hw_panel_info_.dyn_bitclk_support;
+  os << "\n Left Split:" << hw_panel_info_.split_info.left_split << " Right Split:"
+     << hw_panel_info_.split_info.right_split;
+  os << "\n PartialUpdate:" << hw_panel_info_.partial_update;
+  if (hw_panel_info_.partial_update) {
+    os << "\n ROI Min w:" << hw_panel_info_.min_roi_width;
+    os << " Min h:" << hw_panel_info_.min_roi_height;
+    os << " NeedsMerge: " << hw_panel_info_.needs_roi_merge;
+    os << " Alignment: l:" << hw_panel_info_.left_align << " w:" << hw_panel_info_.width_align;
+    os << " t:" << hw_panel_info_.top_align << " b:" << hw_panel_info_.height_align;
+  }
+  os << "\n FPS min:" << hw_panel_info_.min_fps << " max:" << hw_panel_info_.max_fps
+     << " cur:" << display_attributes_.fps;
+  os << " TransferTime: " << hw_panel_info_.transfer_time_us <<"us";
+  os << " MaxBrightness:" << hw_panel_info_.panel_max_brightness;
+  os << "\n Display WxH: " << display_attributes_.x_pixels << "x"
+     << display_attributes_.y_pixels;
+  os << " MixerWxH: " << mixer_attributes_.width << "x" << mixer_attributes_.height;
+  os << " DPI: " << display_attributes_.x_dpi << "x" << display_attributes_.y_dpi;
+  os << " LM_Split: " << display_attributes_.is_device_split;
+  os << "\n vsync_period " << display_attributes_.vsync_period_ns;
+  os << " v_back_porch: " << display_attributes_.v_back_porch;
+  os << " v_front_porch: " << display_attributes_.v_front_porch;
+  os << " v_pulse_width: " << display_attributes_.v_pulse_width;
+  os << "\n v_total: " << display_attributes_.v_total;
+  os << " h_total: " << display_attributes_.h_total;
+  os << " clk: " << display_attributes_.clock_khz;
+  os << " Topology: " << display_attributes_.topology;
+  os << std::noboolalpha;
 
   os << "\nCurrent Color Mode: " << current_color_mode_.c_str();
   os << "\nAvailable Color Modes:\n";
@@ -640,7 +679,6 @@ std::string DisplayBase::Dump() {
     }
     os << "\n";
   }
-  DisplayConfigVariableInfo &info = attrib;
 
   uint32_t num_hw_layers = 0;
   if (hw_layers_.info.stack) {
@@ -654,15 +692,9 @@ std::string DisplayBase::Dump() {
 
   LayerBuffer *out_buffer = hw_layers_.info.stack->output_buffer;
   if (out_buffer) {
-    os << "\nres: " << out_buffer->width << "x" << out_buffer->height << " format: "
+    os << "\n Output buffer res: " << out_buffer->width << "x" << out_buffer->height << " format: "
       << GetFormatString(out_buffer->format);
-  } else {
-    os.precision(2);
-    os << "\nres: " << info.x_pixels << "x" << info.y_pixels << " dpi: " << std::fixed <<
-      info.x_dpi << "x" << std::fixed << info.y_dpi << " fps: " << info.fps <<
-      " vsync period: " << info.vsync_period_ns;
   }
-
   HWLayersInfo &layer_info = hw_layers_.info;
   for (uint32_t i = 0; i < layer_info.left_frame_roi.size(); i++) {
     LayerRect &l_roi = layer_info.left_frame_roi.at(i);
