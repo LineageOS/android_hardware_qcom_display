@@ -94,7 +94,6 @@ class HWCColorMode {
       output_matrix[i] = static_cast<double>(input_matrix[i]);
     }
   }
-  HWC2::Error ApplyDefaultColorMode();
   HWC2::Error ValidateColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
   HWC2::Error SetPreferredColorModeInternal(const std::string &mode_string, bool from_client,
     ColorMode *color_mode, DynamicRangeType *dynamic_range);

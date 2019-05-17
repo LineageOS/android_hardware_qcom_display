@@ -625,12 +625,6 @@ class DisplayInterface {
   */
   virtual DisplayError GetDefaultColorMode(std::string *color_mode) = 0;
 
-  /*! @brief Method to request applying default display mode.
-
-    @return \link DisplayError \endlink
-  */
-  virtual DisplayError ApplyDefaultDisplayMode() = 0;
-
   /*! @brief Method to set the position of the hw cursor.
 
     @param[in] x \link x position \endlink

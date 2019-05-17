@@ -135,7 +135,7 @@ DisplayError DisplayBase::Init() {
                                                             display_attributes_, hw_panel_info_);
 
     if (color_mgr_) {
-      if (InitializeColorModes(false) != kErrorNone) {
+      if (InitializeColorModes() != kErrorNone) {
         DLOGW("InitColorModes failed for display %d-%d", display_id_, display_type_);
       }
       color_mgr_->ColorMgrCombineColorModes();
@@ -1056,38 +1056,6 @@ DisplayError DisplayBase::GetDefaultColorMode(std::string *color_mode) {
   return kErrorNotSupported;
 }
 
-DisplayError DisplayBase::ApplyDefaultDisplayMode() {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
-  DisplayError error = kErrorNone;
-  if (color_mgr_) {
-    error = color_mgr_->ApplyDefaultDisplayMode();
-    // Apply default mode failed
-    if (error != kErrorNone) {
-      DLOGI("default mode not found");
-      return error;
-    }
-    DeInitializeColorModes();
-    // Default mode apply is called during first frame, if file system
-    // where mode files is present, ColorManager will not find any modes.
-    // Once boot animation is complete we re-try to apply the modes, since
-    // file system should be mounted. InitColorModes needs to called again
-    error = InitializeColorModes(true);
-    if (error != kErrorNone) {
-      DLOGE("failed to initial modes\n");
-      return error;
-    }
-    if (color_modes_cs_.size() > 0) {
-      error = comp_manager_->SetColorModesInfo(display_comp_ctx_, color_modes_cs_);
-      if (error) {
-        DLOGW("SetColorModesInfo failed on display = %d", display_type_);
-      }
-    }
-  } else {
-    return kErrorParameters;
-  }
-  return kErrorNone;
-}
-
 DisplayError DisplayBase::SetCursorPosition(int x, int y) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   if (state_ != kStateOn) {
@@ -1549,12 +1517,12 @@ void DisplayBase::PostCommitLayerParams(LayerStack *layer_stack) {
   return;
 }
 
-DisplayError DisplayBase::InitializeColorModes(bool enum_user_modes) {
+DisplayError DisplayBase::InitializeColorModes() {
   if (!color_mgr_) {
     return kErrorNotSupported;
   }
 
-  DisplayError error = color_mgr_->ColorMgrGetNumOfModes(enum_user_modes, &num_color_modes_);
+  DisplayError error = color_mgr_->ColorMgrGetNumOfModes(&num_color_modes_);
   if (error != kErrorNone || !num_color_modes_) {
     DLOGV_IF(kTagQDCM, "GetNumModes failed = %d count = %d", error, num_color_modes_);
     return kErrorNotSupported;
@@ -1564,8 +1532,7 @@ DisplayError DisplayBase::InitializeColorModes(bool enum_user_modes) {
   if (!color_modes_.size()) {
     color_modes_.resize(num_color_modes_);
 
-    DisplayError error = color_mgr_->ColorMgrGetModes(enum_user_modes,
-                                         &num_color_modes_, color_modes_.data());
+    DisplayError error = color_mgr_->ColorMgrGetModes(&num_color_modes_, color_modes_.data());
     if (error != kErrorNone) {
       color_modes_.clear();
       DLOGE("Failed");
