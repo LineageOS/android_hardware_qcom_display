@@ -50,7 +50,7 @@ QtiMapper::QtiMapper() {
   ALOGD_IF(DEBUG, "Created QtiMapper instance");
 }
 
-bool QtiMapper::ValidDescriptor(const BufferDescriptorInfo_2_1 &bd) {
+bool QtiMapper::ValidDescriptor(const BufferDescriptorInfo_3_0 &bd) {
   if (bd.width == 0 || bd.height == 0 || (static_cast<int32_t>(bd.format) <= 0) ||
       bd.layerCount <= 0) {
     return false;
@@ -59,7 +59,7 @@ bool QtiMapper::ValidDescriptor(const BufferDescriptorInfo_2_1 &bd) {
   return true;
 }
 
-Error QtiMapper::CreateDescriptor(const BufferDescriptorInfo_2_1& descriptor_info,
+Error QtiMapper::CreateDescriptor(const BufferDescriptorInfo_3_0 &descriptor_info,
                                   IMapperBufferDescriptor *descriptor) {
   ALOGD_IF(DEBUG,
            "BufferDescriptorInfo: wxh: %dx%d usage: 0x%" PRIu64 " format: %d layer_count: %d",
@@ -76,17 +76,17 @@ Error QtiMapper::CreateDescriptor(const BufferDescriptorInfo_2_1& descriptor_inf
 }
 
 // Methods from ::android::hardware::graphics::mapper::V2_0::IMapper follow.
-Return<void> QtiMapper::createDescriptor(const BufferDescriptorInfo_2_0 &descriptor_info,
+Return<void> QtiMapper::createDescriptor(const BufferDescriptorInfo_3_0 &descriptor_info,
                                          createDescriptor_cb hidl_cb) {
   IMapperBufferDescriptor descriptor;
-  auto info_2_1 = BufferDescriptorInfo_2_1 {
+  auto info_3_0 = BufferDescriptorInfo_3_0{
       descriptor_info.width,
       descriptor_info.height,
       descriptor_info.layerCount,
       static_cast<PixelFormat>(descriptor_info.format),
       descriptor_info.usage,
   };
-  auto err = CreateDescriptor(info_2_1, &descriptor);
+  auto err = CreateDescriptor(info_3_0, &descriptor);
   hidl_cb(err, descriptor);
   return Void();
 }
@@ -177,13 +177,13 @@ Return<void> QtiMapper::lock(void *buffer, uint64_t cpu_usage,
                              const hidl_handle &acquire_fence, lock_cb hidl_cb) {
   auto err = LockBuffer(buffer, cpu_usage, acquire_fence);
   if (err != Error::NONE) {
-    hidl_cb(err, nullptr);
+    hidl_cb(err, nullptr, -1, -1);
     return Void();
   }
 
   auto hnd = PRIV_HANDLE_CONST(buffer);
   auto *out_data = reinterpret_cast<void *>(hnd->base);
-  hidl_cb(Error::NONE, out_data);
+  hidl_cb(err, out_data, gralloc::GetBpp(hnd->format), hnd->width);
   return Void();
 }
 
@@ -222,8 +222,8 @@ Return<void> QtiMapper::unlock(void *buffer, unlock_cb hidl_cb) {
   return Void();
 }
 
-Return<Error> QtiMapper::validateBufferSize(void* buffer,
-                                            const BufferDescriptorInfo_2_1& descriptor_info,
+Return<Error> QtiMapper::validateBufferSize(void *buffer,
+                                            const BufferDescriptorInfo_3_0 &descriptor_info,
                                             uint32_t /*stride*/) {
   auto err = Error::BAD_BUFFER;
   auto hnd = static_cast<private_handle_t *>(buffer);
@@ -240,8 +240,7 @@ Return<Error> QtiMapper::validateBufferSize(void* buffer,
   return err;
 }
 
-Return<void> QtiMapper::getTransportSize(void *buffer,
-                                         IMapper_2_1::getTransportSize_cb hidl_cb) {
+Return<void> QtiMapper::getTransportSize(void *buffer, IMapper_3_0::getTransportSize_cb hidl_cb) {
   auto err = Error::BAD_BUFFER;
   auto hnd = static_cast<private_handle_t *>(buffer);
   uint32_t num_fds = 0, num_ints = 0;
@@ -256,11 +255,30 @@ Return<void> QtiMapper::getTransportSize(void *buffer,
   return Void();
 }
 
-Return<void> QtiMapper::createDescriptor_2_1(const BufferDescriptorInfo_2_1& descriptor_info,
-                                             IMapper_2_1::createDescriptor_2_1_cb hidl_cb) {
+Return<void> QtiMapper::isSupported(const BufferDescriptorInfo_3_0 &descriptor_info,
+                                    IMapper_3_0::isSupported_cb hidl_cb) {
   IMapperBufferDescriptor descriptor;
   auto err = CreateDescriptor(descriptor_info, &descriptor);
-  hidl_cb(err, descriptor);
+  if (err != Error::NONE) {
+    hidl_cb(err, false);
+    return Void();
+  }
+
+  gralloc::BufferDescriptor desc;
+  err = desc.Decode(descriptor);
+  if (err != Error::NONE) {
+    hidl_cb(err, false);
+    return Void();
+  }
+
+  buffer_handle_t buffer;
+  err = buf_mgr_->AllocateBuffer(desc, &buffer, 0, true);
+  if (err != Error::NONE) {
+    hidl_cb(err, false);
+  } else {
+    hidl_cb(err, true);
+  }
+
   return Void();
 }
 
@@ -277,10 +295,10 @@ Return<void> QtiMapper::getMapperExtensions(QtiMapper::getMapperExtensions_cb hi
 
 // When we are in passthrough mode, this method is used
 // by hidl to obtain the SP HAL object
-IMapper_2_1 *HIDL_FETCH_IMapper(const char * /* name */) {
+IMapper_3_0 *HIDL_FETCH_IMapper(const char * /* name */) {
   ALOGD_IF(DEBUG, "Fetching IMapper from QtiMapper");
   auto mapper = new QtiMapper();
-  return static_cast<IMapper_2_1 *>(mapper);
+  return static_cast<IMapper_3_0 *>(mapper);
 }
 
 IQtiMapper *HIDL_FETCH_IQtiMapper(const char * /* name */) {
