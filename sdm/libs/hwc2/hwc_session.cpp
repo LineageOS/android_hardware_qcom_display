@@ -1070,9 +1070,6 @@ hwc2_function_pointer_t HWCSession::GetFunction(struct hwc2_device *device,
       return AsFP<HWC2_PFN_SET_VSYNC_ENABLED>(SetVsyncEnabled);
     case HWC2::FunctionDescriptor::ValidateDisplay:
       return AsFP<HWC2_PFN_VALIDATE_DISPLAY>(HWCSession::ValidateDisplay);
-    case HWC2::FunctionDescriptor::GetDisplayIdentificationData:
-      return AsFP<HWC2_PFN_GET_DISPLAY_IDENTIFICATION_DATA>
-             (HWCSession::GetDisplayIdentificationData);
     case HWC2::FunctionDescriptor::GetPerFrameMetadataKeys:
       return AsFP<HWC2_PFN_GET_PER_FRAME_METADATA_KEYS>(GetPerFrameMetadataKeys);
     case HWC2::FunctionDescriptor::SetLayerPerFrameMetadata:
@@ -2420,21 +2417,6 @@ void HWCSession::DestroyNonPluggableDisplay(DisplayMapInfo *map_info) {
 
     hwc_display = nullptr;
     map_info->Reset();
-}
-
-int32_t HWCSession::GetDisplayIdentificationData(hwc2_device_t *device, hwc2_display_t display,
-                                                 uint8_t *outPort, uint32_t *outDataSize,
-                                                 uint8_t *outData) {
-  if (!outPort || !outDataSize) {
-    return HWC2_ERROR_BAD_PARAMETER;
-  }
-
-  if (display >= HWCCallbacks::kNumDisplays) {
-    return HWC2_ERROR_BAD_DISPLAY;
-  }
-
-  return CallDisplayFunction(device, display, &HWCDisplay::GetDisplayIdentificationData, outPort,
-                             outDataSize, outData);
 }
 
 int32_t HWCSession::GetRenderIntents(hwc2_device_t *device, hwc2_display_t display,

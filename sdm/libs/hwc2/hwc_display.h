@@ -251,8 +251,6 @@ class HWCDisplay : public DisplayEventHandler {
     validated_ = false;
   }
   virtual DisplayError Refresh();
-  virtual HWC2::Error GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
-                                                   uint8_t *out_data);
 
  protected:
   // Maximum number of layers supported by display manager.

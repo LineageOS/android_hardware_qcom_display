@@ -27,7 +27,6 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <algorithm>
 #include "display_null.h"
 
 #define __CLASS__ "DisplayNull"
@@ -63,19 +62,6 @@ DisplayError DisplayNull::SetFrameBufferConfig(const DisplayConfigVariableInfo &
 
 DisplayError DisplayNull::GetFrameBufferConfig(DisplayConfigVariableInfo *variable_info) {
   *variable_info = fb_config_;
-  return kErrorNone;
-}
-
-DisplayError DisplayNull::GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
-                                                       uint8_t *out_data) {
-  *out_port = 1;  // DSI0 Encoder Index
-  if (out_data == nullptr) {
-    *out_data_size = (uint32_t)(edid_.size());
-  } else {
-    *out_data_size = std::min(*out_data_size, (uint32_t)(edid_.size()));
-    memcpy(out_data, edid_.data(), *out_data_size);
-  }
-
   return kErrorNone;
 }
 
