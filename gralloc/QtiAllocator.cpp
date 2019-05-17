@@ -40,7 +40,7 @@ namespace qti {
 namespace hardware {
 namespace display {
 namespace allocator {
-namespace V1_0 {
+namespace V3_0 {
 namespace implementation {
 
 using android::hardware::hidl_handle;
@@ -105,7 +105,7 @@ IQtiAllocator *HIDL_FETCH_IQtiAllocator(const char * /* name */) {
 }
 
 }  // namespace implementation
-}  // namespace V1_0
+}  // namespace V3_0
 }  // namespace allocator
 }  // namespace display
 }  // namespace hardware
