@@ -121,6 +121,13 @@ DisplayError DisplayVirtual::SetActiveConfig(DisplayConfigVariableInfo *variable
 
   hw_intf_->GetHWPanelInfo(&hw_panel_info);
 
+  if (set_max_lum_ != -1.0 || set_min_lum_ != -1.0) {
+    hw_panel_info.peak_luminance = set_max_lum_;
+    hw_panel_info.blackness_level = set_min_lum_;
+    DLOGI("set peak_luminance %f blackness_level %f", hw_panel_info.peak_luminance,
+          hw_panel_info.blackness_level);
+  }
+
   error = hw_intf_->GetMixerAttributes(&mixer_attributes);
   if (error != kErrorNone) {
     return error;
@@ -171,6 +178,12 @@ DisplayError DisplayVirtual::GetColorModeCount(uint32_t *mode_count) {
   // Color Manager isn't supported for virtual displays.
   *mode_count = 1;
 
+  return kErrorNone;
+}
+
+DisplayError DisplayVirtual::SetPanelLuminanceAttributes(float min_lum, float max_lum) {
+  set_max_lum_ = max_lum;
+  set_min_lum_ = min_lum;
   return kErrorNone;
 }
 

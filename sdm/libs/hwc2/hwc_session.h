@@ -20,7 +20,9 @@
 #ifndef __HWC_SESSION_H__
 #define __HWC_SESSION_H__
 
-#ifdef DISPLAY_CONFIG_1_8
+#ifdef DISPLAY_CONFIG_1_9
+#include <vendor/display/config/1.9/IDisplayConfig.h>
+#elif DISPLAY_CONFIG_1_8
 #include <vendor/display/config/1.8/IDisplayConfig.h>
 #elif DISPLAY_CONFIG_1_7
 #include <vendor/display/config/1.7/IDisplayConfig.h>
@@ -61,7 +63,9 @@
 
 namespace sdm {
 
-#ifdef DISPLAY_CONFIG_1_8
+#ifdef DISPLAY_CONFIG_1_9
+using vendor::display::config::V1_9::IDisplayConfig;
+#elif DISPLAY_CONFIG_1_8
 using vendor::display::config::V1_8::IDisplayConfig;
 #elif DISPLAY_CONFIG_1_7
 using vendor::display::config::V1_7::IDisplayConfig;
@@ -351,6 +355,12 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   Return<void> getActiveBuiltinDisplayAttributes(getDisplayAttributes_cb _hidl_cb) override;
 #endif
 
+#ifdef DISPLAY_CONFIG_1_9
+  Return<int32_t> setPanelLuminanceAttributes(uint32_t disp_id, float min_lum,
+                                              float max_lum) override;
+  Return<bool> isBuiltInDisplay(uint32_t disp_id) override;
+#endif
+
   // QClient methods
   virtual android::status_t notifyCallback(uint32_t command, const android::Parcel *input_parcel,
                                            android::Parcel *output_parcel);
@@ -384,6 +394,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   android::status_t GetDsiClk(const android::Parcel *input_parcel, android::Parcel *output_parcel);
   android::status_t GetSupportedDsiClk(const android::Parcel *input_parcel,
                                        android::Parcel *output_parcel);
+  android::status_t SetPanelLuminanceAttributes(const android::Parcel *input_parcel);
 
   void Refresh(hwc2_display_t display);
   void HotPlug(hwc2_display_t display, HWC2::Connection state);
@@ -420,6 +431,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   bool hdmi_is_primary_ = false;
   bool is_composer_up_ = false;
   Locker callbacks_lock_;
+  std::mutex mutex_lum_;
   int hpd_bpp_ = 0;
   int hpd_pattern_ = 0;
   static bool power_on_pending_[HWCCallbacks::kNumDisplays];
@@ -430,6 +442,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   uint32_t idle_pc_ref_cnt_ = 0;
   int32_t disable_hotplug_bwcheck_ = 0;
   int32_t disable_mask_layer_hint_ = 0;
+  float set_max_lum_ = -1.0;
+  float set_min_lum_ = -1.0;
   std::bitset<HWCCallbacks::kNumDisplays> pending_refresh_;
 };
 
