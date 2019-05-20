@@ -308,6 +308,23 @@ int getSupportedBitClk(int dpy, std::vector<uint64_t>& bit_rates) {
     return 0;
 }
 
+int setPanelLuminanceAttributes(int dpy, float min_lum, float max_lum) {
+    status_t err = (status_t) FAILED_TRANSACTION;
+    sp<IQService> binder = getBinder();
+    Parcel inParcel, outParcel;
+
+    if(binder != NULL) {
+        inParcel.writeInt32(dpy);
+        inParcel.writeFloat(min_lum);
+        inParcel.writeFloat(max_lum);
+        status_t err = binder->dispatch(IQService::SET_PANEL_LUMINANCE, &inParcel, &outParcel);
+        if(err) {
+            ALOGE("%s() failed with err %d", __FUNCTION__, err);
+        }
+    }
+    return err;
+}
+
 }// namespace
 
 // ----------------------------------------------------------------------------

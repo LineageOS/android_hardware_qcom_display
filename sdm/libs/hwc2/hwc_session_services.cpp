@@ -802,4 +802,35 @@ int32_t HWCSession::setDisplayBrightness(uint32_t display, float brightness) {
   return SetDisplayBrightness(static_cast<hwc2_device_t *>(this),
                               static_cast<hwc2_display_t>(display), brightness);
 }
+
+#ifdef DISPLAY_CONFIG_1_9
+Return<int32_t> HWCSession::setPanelLuminanceAttributes(uint32_t disp_id, float pan_min_lum,
+                                                        float pan_max_lum) {
+  // currently doing only for virtual display
+  if (disp_id != qdutils::DISPLAY_VIRTUAL) {
+    return -EINVAL;
+  }
+
+  std::lock_guard<std::mutex> obj(mutex_lum_);
+  set_min_lum_ = pan_min_lum;
+  set_max_lum_ = pan_max_lum;
+  DLOGI("set max_lum %f, min_lum %f", set_max_lum_, set_min_lum_);
+
+  return 0;
+}
+
+Return<bool> HWCSession::isBuiltInDisplay(uint32_t disp_id) {
+  if ((map_info_primary_.client_id == disp_id) && (map_info_primary_.disp_type == kBuiltIn))
+    return true;
+
+  for (auto &info : map_info_builtin_) {
+    if (disp_id == info.client_id) {
+      return true;
+    }
+  }
+
+  return false;
+}
+#endif  // DISPLAY_CONFIG_1_9
+
 }  // namespace sdm

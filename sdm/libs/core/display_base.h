@@ -103,6 +103,9 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates) {
     return kErrorNotSupported;
   }
+  virtual DisplayError SetPanelLuminanceAttributes(float min_lum, float max_lum) {
+    return kErrorNotSupported;
+  }
   virtual DisplayError GetColorModeCount(uint32_t *mode_count);
   virtual DisplayError GetColorModes(uint32_t *mode_count, std::vector<std::string> *color_modes);
   virtual DisplayError GetColorModeAttr(const std::string &color_mode, AttrVal *attr);
