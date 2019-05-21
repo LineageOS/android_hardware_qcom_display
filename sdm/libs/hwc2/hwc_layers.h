@@ -26,6 +26,7 @@
 #include <gralloc_priv.h>
 #include <qdMetaData.h>
 #include <core/layer_stack.h>
+#include <core/layer_buffer.h>
 #include <utils/utils.h>
 #define HWC2_INCLUDE_STRINGIFICATION
 #define HWC2_USE_CPP11
@@ -113,6 +114,9 @@ class HWCLayer {
   bool IsNonIntegralSourceCrop() { return non_integral_source_crop_; }
   bool HasMetaDataRefreshRate() { return has_metadata_refresh_rate_; }
   bool IsColorTransformSet() { return color_transform_matrix_set_; }
+  void SetLayerAsMask();
+  bool BufferLatched() { return buffer_flipped_; }
+  void ResetBufferFlip() { buffer_flipped_ = false; }
 
  private:
   Layer *layer_ = nullptr;
@@ -134,6 +138,7 @@ class HWCLayer {
   bool non_integral_source_crop_ = false;
   bool has_metadata_refresh_rate_ = false;
   bool color_transform_matrix_set_ = false;
+  bool buffer_flipped_ = false;
 
   // Composition requested by client(SF)
   HWC2::Composition client_requested_ = HWC2::Composition::Device;

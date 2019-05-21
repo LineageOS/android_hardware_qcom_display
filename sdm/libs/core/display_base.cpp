@@ -134,10 +134,13 @@ DisplayError DisplayBase::Init() {
     color_mgr_ = ColorManagerProxy::CreateColorManagerProxy(display_type_, hw_intf_,
                                                             display_attributes_, hw_panel_info_);
 
-    if (!color_mgr_) {
+    if (color_mgr_) {
+      if (InitializeColorModes() != kErrorNone) {
+        DLOGW("InitColorModes failed for display %d-%d", display_id_, display_type_);
+      }
+      color_mgr_->ColorMgrCombineColorModes();
+    } else {
       DLOGW("Unable to create ColorManagerProxy for display %d-%d", display_id_, display_type_);
-    } else if (InitializeColorModes() != kErrorNone) {
-      DLOGW("InitColorModes failed for display %d-%d", display_id_, display_type_);
     }
   }
 
@@ -279,7 +282,16 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
   needs_validate_ = true;
+  if (defer_power_state_ && power_state_pending_ != kStateOff) {
+    defer_power_state_ = false;
+    error = SetDisplayState(power_state_pending_, false, NULL);
+    if (error != kErrorNone) {
+      return error;
+    }
+    power_state_pending_ = kStateOff;
+  }
 
+  DTRACE_SCOPED();
   if (!active_) {
     return kErrorPermission;
   }
@@ -459,13 +471,23 @@ DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   HWResourceInfo hw_resource_info = HWResourceInfo();
   hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
   bool hdr_supported = hw_resource_info.has_hdr;
+  bool hdr_plus_supported = false;
   HWDisplayInterfaceInfo hw_disp_info = {};
   hw_info_intf_->GetFirstDisplayInterfaceType(&hw_disp_info);
   if (hw_disp_info.type == kHDMI) {
     hdr_supported = (hdr_supported && hw_panel_info_.hdr_enabled);
   }
 
+  // Built-in displays always support HDR10+ when the target supports HDR. For non-builtins, check
+  // panel capability.
+  if (kBuiltIn == display_type_) {
+    hdr_plus_supported = hdr_supported;
+  } else if (hdr_supported && hw_panel_info_.hdr_plus_enabled) {
+    hdr_plus_supported = true;
+  }
+
   fixed_info->hdr_supported = hdr_supported;
+  fixed_info->hdr_plus_supported = hdr_plus_supported;
   // Populate luminance values only if hdr will be supported on that display
   fixed_info->max_luminance = fixed_info->hdr_supported ? hw_panel_info_.peak_luminance: 0;
   fixed_info->average_luminance = fixed_info->hdr_supported ? hw_panel_info_.average_luminance : 0;
@@ -496,6 +518,14 @@ DisplayError DisplayBase::GetVSyncState(bool *enabled) {
 DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
                                           int *release_fence) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (defer_power_state_) {
+    if (state == kStateOff) {
+      DLOGE("State cannot be PowerOff on first cycle");
+      return kErrorParameters;
+    }
+    power_state_pending_ = state;
+    return kErrorNone;
+  }
   DisplayError error = kErrorNone;
   bool active = false;
 
@@ -559,6 +589,14 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     active_ = active;
     state_ = state;
     comp_manager_->SetDisplayState(display_comp_ctx_, state);
+  }
+
+  if (vsync_state_change_pending_ && (state_ != kStateOff || state_ != kStateStandby)) {
+    error = SetVSyncState(requested_vsync_state_);
+    if (error != kErrorNone) {
+      return error;
+    }
+    vsync_state_change_pending_ = false;
   }
 
   return error;
@@ -894,7 +932,13 @@ DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
 }
 
 DisplayError DisplayBase::SetColorModeById(int32_t color_mode_id) {
-  return color_mgr_->ColorMgrSetMode(color_mode_id);
+  for (auto it : color_mode_map_) {
+    if (it.second->id == color_mode_id) {
+      return SetColorMode(it.first);
+    }
+  }
+
+  return kErrorNotSupported;
 }
 
 DisplayError DisplayBase::SetColorModeInternal(const std::string &color_mode) {
@@ -1066,6 +1110,14 @@ DisplayError DisplayBase::GetRefreshRateRange(uint32_t *min_refresh_rate,
 
 DisplayError DisplayBase::SetVSyncState(bool enable) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (state_ == kStateOff) {
+    DLOGW("Can't %s vsync when power state is off for display %d-%d," \
+          "Defer it when display is active", enable ? "enable":"disable",
+          display_id_, display_type_);
+    vsync_state_change_pending_ = true;
+    requested_vsync_state_ = enable;
+    return kErrorNone;
+  }
   DisplayError error = kErrorNone;
   if (vsync_enable_ != enable) {
     error = hw_intf_->SetVSyncState(enable);
@@ -1091,6 +1143,8 @@ DisplayError DisplayBase::ReconfigureDisplay() {
   HWMixerAttributes mixer_attributes;
   HWPanelInfo hw_panel_info;
   uint32_t active_index = 0;
+
+  DTRACE_SCOPED();
 
   error = hw_intf_->GetActiveConfig(&active_index);
   if (error != kErrorNone) {
@@ -1178,6 +1232,7 @@ DisplayError DisplayBase::ReconfigureMixer(uint32_t width, uint32_t height) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
 
+  DTRACE_SCOPED();
   if (!width || !height) {
     return kErrorParameters;
   }
@@ -1216,14 +1271,26 @@ bool DisplayBase::NeedsDownScale(const LayerRect &src_rect, const LayerRect &dst
 bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *new_mixer_width,
                                             uint32_t *new_mixer_height) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-  uint32_t layer_count = UINT32(layer_stack->layers.size());
+  uint32_t mixer_width = mixer_attributes_.width;
+  uint32_t mixer_height = mixer_attributes_.height;
 
+  if (req_mixer_width_ && req_mixer_height_) {
+    DLOGD_IF(kTagDisplay, "Required mixer width : %d, height : %d",
+             req_mixer_width_, req_mixer_height_);
+    *new_mixer_width = req_mixer_width_;
+    *new_mixer_height = req_mixer_height_;
+    return (req_mixer_width_ != mixer_width || req_mixer_height_ != mixer_height);
+  }
+
+  if (!custom_mixer_resolution_) {
+    return false;
+  }
+
+  uint32_t layer_count = UINT32(layer_stack->layers.size());
   uint32_t fb_width  = fb_config_.x_pixels;
   uint32_t fb_height  = fb_config_.y_pixels;
   uint32_t fb_area = fb_width * fb_height;
   LayerRect fb_rect = (LayerRect) {0.0f, 0.0f, FLOAT(fb_width), FLOAT(fb_height)};
-  uint32_t mixer_width = mixer_attributes_.width;
-  uint32_t mixer_height = mixer_attributes_.height;
   uint32_t display_width = display_attributes_.x_pixels;
   uint32_t display_height = display_attributes_.y_pixels;
 
@@ -1233,14 +1300,6 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
   std::vector<Layer *> layers = layer_stack->layers;
   uint32_t align_x = display_attributes_.is_device_split ? 4 : 2;
   uint32_t align_y = 2;
-
-  if (req_mixer_width_ && req_mixer_height_) {
-    DLOGD_IF(kTagDisplay, "Required mixer width : %d, height : %d",
-             req_mixer_width_, req_mixer_height_);
-    *new_mixer_width = req_mixer_width_;
-    *new_mixer_height = req_mixer_height_;
-    return (req_mixer_width_ != mixer_width || req_mixer_height_ != mixer_height);
-  }
 
   for (uint32_t i = 0; i < layer_count; i++) {
     Layer *layer = layers.at(i);
@@ -1290,7 +1349,7 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
       *new_mixer_width = display_width;
       *new_mixer_height = display_height;
     }
-    return true;
+    return ((*new_mixer_width != mixer_width) || (*new_mixer_height != mixer_height));
   }
 
   return false;

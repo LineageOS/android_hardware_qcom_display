@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2018, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015-2019, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -36,9 +36,28 @@
 #include <private/color_interface.h>
 #include <utils/sys.h>
 #include <utils/debug.h>
+#include <array>
+#include <vector>
 #include "hw_interface.h"
 
 namespace sdm {
+
+enum FeatureOps {
+  kFeatureSwitchMode,
+  kFeatureOpsMax,
+};
+
+class FeatureInterface {
+ public:
+  virtual ~FeatureInterface() {}
+  virtual DisplayError Init() = 0;
+  virtual DisplayError Deinit() = 0;
+  virtual DisplayError SetParams(FeatureOps param_type, void *payload) = 0;
+  virtual DisplayError GetParams(FeatureOps param_type, void *payload) = 0;
+};
+
+FeatureInterface* GetPostedStartFeatureCheckIntf(HWInterface *intf,
+                                                 PPFeaturesConfig *config);
 
 /*
  * ColorManager proxy to maintain necessary information to interact with underlying color service.
@@ -72,6 +91,7 @@ class ColorManagerProxy {
   DisplayError ColorMgrGetModeInfo(int32_t mode_id, AttrVal *query);
   DisplayError ColorMgrSetColorTransform(uint32_t length, const double *trans_data);
   DisplayError ColorMgrGetDefaultModeID(int32_t *mode_id);
+  DisplayError ColorMgrCombineColorModes();
   bool NeedsPartialUpdateDisable();
   DisplayError Commit();
 
@@ -87,11 +107,78 @@ class ColorManagerProxy {
   static HWResourceInfo hw_res_info_;
 
   int32_t display_id_;
+  bool first_cycle_ = true;
   DisplayType device_type_;
   PPHWAttributes pp_hw_attributes_;
   HWInterface *hw_intf_;
   ColorInterface *color_intf_;
   PPFeaturesConfig pp_features_;
+  FeatureInterface *feature_intf_;
+};
+
+class ColorFeatureCheckingImpl : public FeatureInterface {
+ public:
+  explicit ColorFeatureCheckingImpl(HWInterface *hw_intf, PPFeaturesConfig *pp_features);
+  virtual ~ColorFeatureCheckingImpl() { }
+
+  DisplayError Init();
+  DisplayError Deinit();
+  DisplayError SetParams(FeatureOps param_type, void *payload);
+  DisplayError GetParams(FeatureOps param_type, void *payload);
+
+ private:
+  friend class FeatureStatePostedStart;
+  friend class FeatureStateDefaultTrigger;
+  friend class FeatureStateSerializedTrigger;
+
+  HWInterface *hw_intf_;
+  PPFeaturesConfig *pp_features_;
+  std::array<FeatureInterface*, kFrameTriggerMax> states_ = {{NULL}};
+  FeatureInterface *curr_state_ = NULL;
+  std::vector<PPGlobalColorFeatureID> single_buffer_feature_;
+  void CheckColorFeature(FrameTriggerMode *mode);
+};
+
+class FeatureStatePostedStart : public FeatureInterface {
+ public:
+  explicit FeatureStatePostedStart(ColorFeatureCheckingImpl *obj);
+  virtual ~FeatureStatePostedStart() {}
+
+  DisplayError Init();
+  DisplayError Deinit();
+  DisplayError SetParams(FeatureOps param_type, void *payload);
+  DisplayError GetParams(FeatureOps param_type, void *payload);
+
+ private:
+  ColorFeatureCheckingImpl *obj_;
+};
+
+class FeatureStateDefaultTrigger : public FeatureInterface {
+ public:
+  explicit FeatureStateDefaultTrigger(ColorFeatureCheckingImpl *obj);
+  virtual ~FeatureStateDefaultTrigger() {}
+
+  DisplayError Init();
+  DisplayError Deinit();
+  DisplayError SetParams(FeatureOps param_type, void *payload);
+  DisplayError GetParams(FeatureOps param_type, void *payload);
+
+ private:
+  ColorFeatureCheckingImpl *obj_;
+};
+
+class FeatureStateSerializedTrigger : public FeatureInterface {
+ public:
+  explicit FeatureStateSerializedTrigger(ColorFeatureCheckingImpl *obj);
+  virtual ~FeatureStateSerializedTrigger() {}
+
+  DisplayError Init();
+  DisplayError Deinit();
+  DisplayError SetParams(FeatureOps param_type, void *payload);
+  DisplayError GetParams(FeatureOps param_type, void *payload);
+
+ private:
+  ColorFeatureCheckingImpl *obj_;
 };
 
 }  // namespace sdm

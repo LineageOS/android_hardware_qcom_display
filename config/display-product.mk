@@ -12,7 +12,7 @@ PRODUCT_PACKAGES += \
     lights.qcom \
     hwcomposer.qcom \
     memtrack.qcom \
-    libqdMetaData.vendor \
+    libqdMetaData \
     vendor.display.config@1.0.vendor \
     vendor.display.config@1.1.vendor \
     vendor.display.config@1.2.vendor \
@@ -41,13 +41,13 @@ PRODUCT_PROPERTY_OVERRIDES += \
     debug.egl.hw=0 \
     debug.sf.latch_unsignaled=1 \
     debug.mdpcomp.logs=0 \
-    ro.vendor.display.cabl=2 \
     vendor.gralloc.disable_ubwc=0 \
     vendor.display.disable_scaler=0 \
     vendor.display.disable_offline_rotator=1 \
     vendor.display.disable_excl_rect=0 \
     vendor.display.comp_mask=0 \
-    vendor.display.enable_default_color_mode=1
+    vendor.display.enable_default_color_mode=1 \
+    vendor.display.enable_posted_start_dyn=1
 
 #Set WCG properties
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.has_wide_color_display=true

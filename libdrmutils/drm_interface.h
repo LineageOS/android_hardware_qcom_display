@@ -390,6 +390,12 @@ enum struct DRMOps {
    *      uint32_t - Topology control bit-mask
    */
   CONNECTOR_SET_TOPOLOGY_CONTROL,
+  /*
+   * Op: Sets frame trigger mode on this connector
+   * Arg: uint32_t - Connector ID
+   *      uint32_t - Frame trigger mode
+   */
+  CONNECTOR_SET_FRAME_TRIGGER,
 };
 
 enum struct DRMRotation {
@@ -541,7 +547,8 @@ struct DRMPlaneTypeInfo {
   bool multirect_prop_present = false;
   InlineRotationVersion inrot_version;  // inline rotation version
   std::vector<std::pair<uint32_t, uint64_t>> inrot_fmts_supported;
-  float true_inline_dwnscale_rt;
+  float true_inline_dwnscale_rt_num = 11.0;
+  float true_inline_dwnscale_rt_denom = 5.0;
   bool inverse_pma = false;
   uint32_t dgm_csc_version = 0;  // csc used with DMA
   std::map<DRMTonemapLutType, uint32_t> tonemap_lut_version_map = {};
@@ -815,6 +822,12 @@ struct DRMSolidfillStage {
   uint32_t color_bit_depth = 0;
   uint32_t z_order = 0;
   uint32_t plane_alpha = 0xff;
+};
+
+enum struct DRMFrameTriggerMode {
+  FRAME_DONE_WAIT_DEFAULT = 0,
+  FRAME_DONE_WAIT_SERIALIZE,
+  FRAME_DONE_WAIT_POSTED_START,
 };
 
 /* DRM Atomic Request Property Set.

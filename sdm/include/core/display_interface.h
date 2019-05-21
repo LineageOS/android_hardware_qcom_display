@@ -174,6 +174,14 @@ struct DisplayDppsAd4RoiCfg {
   uint32_t factor_out;  //!< the strength factor of outside ROI region
 };
 
+/*! @brief This enum defines frame trigger modes. */
+enum FrameTriggerMode {
+  kFrameTriggerDefault,      //!< Wait for pp_done of previous frame to trigger new frame
+  kFrameTriggerSerialize,    //!< Trigger new frame and wait for pp_done of this frame
+  kFrameTriggerPostedStart,  //!< Posted start mode, trigger new frame without pp_done
+  kFrameTriggerMax,
+};
+
 /*! @brief This structure defines configuration for fixed properties of a display device.
 
   @sa DisplayInterface::GetConfig
@@ -183,7 +191,8 @@ struct DisplayConfigFixedInfo {
   bool underscan = false;              //!< If display support CE underscan.
   bool secure = false;                 //!< If this display is capable of handling secure content.
   bool is_cmdmode = false;             //!< If panel is command mode panel.
-  bool hdr_supported = false;          //!< if HDR is enabled
+  bool hdr_supported = false;          //!< If HDR10 is supported.
+  bool hdr_plus_supported = false;     //!< If HDR10+ is supported.
   bool hdr_metadata_type_one = false;  //!< Metadata type one obtained from HDR sink
   uint32_t hdr_eotf = 0;               //!< Electro optical transfer function
   float max_luminance = 0.0f;          //!< From Panel's peak luminance
@@ -803,6 +812,14 @@ class DisplayInterface {
     @return \link DisplayError \endlink
   */
   virtual DisplayError TeardownConcurrentWriteback(void) = 0;
+
+  /*! @brief Method to set frame trigger mode for primary display.
+
+    @param[in] frame trigger mode
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError SetFrameTriggerMode(FrameTriggerMode mode) = 0;
 
   /*
    * Returns a string consisting of a dump of SDM's display and layer related state

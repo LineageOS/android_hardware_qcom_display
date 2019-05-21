@@ -71,6 +71,10 @@ static uint8_t SECURE = 1;
 static uint8_t QSYNC_MODE_NONE = 0;
 static uint8_t QSYNC_MODE_CONTINUOUS = 1;
 
+static uint8_t FRAME_TRIGGER_DEFAULT = 0;
+static uint8_t FRAME_TRIGGER_SERIALIZE = 1;
+static uint8_t FRAME_TRIGGER_POSTED_START = 2;
+
 static void PopulatePowerModes(drmModePropertyRes *prop) {
   for (auto i = 0; i < prop->count_enums; i++) {
     string enum_name(prop->enums[i].name);
@@ -120,6 +124,19 @@ static void PopulateQsyncModes(drmModePropertyRes *prop) {
   }
 }
 
+static void PopulateFrameTriggerModes(drmModePropertyRes *prop) {
+  for (auto i = 0; i < prop->count_enums; i++) {
+    string enum_name(prop->enums[i].name);
+    if (enum_name == "default") {
+      FRAME_TRIGGER_DEFAULT = prop->enums[i].value;
+    } else if (enum_name == "serilize_frame_trigger") {
+      FRAME_TRIGGER_SERIALIZE = prop->enums[i].value;
+    } else if (enum_name == "posted_start") {
+      FRAME_TRIGGER_POSTED_START = prop->enums[i].value;
+    }
+  }
+}
+
 #define __CLASS__ "DRMConnectorManager"
 
 void DRMConnectorManager::Init(drmModeRes *resource) {
@@ -131,7 +148,7 @@ void DRMConnectorManager::Init(drmModeRes *resource) {
       conn->InitAndParse(libdrm_conn);
       connector_pool_[resource->connectors[i]] = std::move(conn);
     } else {
-      DRM_LOGE("Critical error: drmModeGetConnector() failed for connector %d.",
+      DRM_LOGE("Critical error: drmModeGetConnector() failed for connector %u.",
                resource->connectors[i]);
     }
   }
@@ -158,13 +175,13 @@ void DRMConnectorManager::Update() {
     if (drmconn == drm_connectors.end()) {
       // A DRM Connector in our pool was deleted.
       if (conn->second->GetStatus() == DRMStatus::FREE) {
-        DRM_LOGD("Removing connector id %d from pool.", conn->first);
+        DRM_LOGD("Removing connector id %u from pool.", conn->first);
         conn = connector_pool_.erase(conn);
       } else {
         // Physically removed DRM Connectors (displays) first go to disconnected state. When its
         // reserved resources are freed up, they are removed from the driver's connector list. Do
         // not remove DRM Connectors that are DRMStatus::BUSY.
-        DRM_LOGW("In-use connector id %d removed by DRM.", conn->first);
+        DRM_LOGW("In-use connector id %u removed by DRM.", conn->first);
         conn++;
       }
     } else {
@@ -176,14 +193,15 @@ void DRMConnectorManager::Update() {
 
   // Add new connectors in connector pool.
   for (auto &drmconn : drm_connectors) {
-    DRM_LOGD("Adding connector id %d to pool.", drmconn.first);
+    DRM_LOGD("Adding connector id %u to pool.", drmconn.first);
     unique_ptr<DRMConnector> conn(new DRMConnector(fd_));
     drmModeConnector *libdrm_conn = drmModeGetConnector(fd_, drmconn.first);
     if (libdrm_conn) {
       conn->InitAndParse(libdrm_conn);
+      conn->SetSkipConnectorReload(true);
       connector_pool_[drmconn.first] = std::move(conn);
     } else {
-      DRM_LOGE("Critical error: drmModeGetConnector() failed for connector %d.", drmconn.first);
+      DRM_LOGE("Critical error: drmModeGetConnector() failed for connector %u.", drmconn.first);
     }
   }
 
@@ -348,6 +366,8 @@ void DRMConnector::ParseProperties() {
       PopulateSecureModes(info);
     } else if (prop_enum == DRMProperty::QSYNC_MODE) {
       PopulateQsyncModes(info);
+    } else if (prop_enum == DRMProperty::FRAME_TRIGGER) {
+      PopulateFrameTriggerModes(info);
     }
 
     prop_mgr_.SetPropertyId(prop_enum, info->prop_id);
@@ -517,15 +537,18 @@ void DRMConnector::ParseCapabilities(uint64_t blob_id, drm_msm_ext_hdr_propertie
 
   if(hdr_cdata) {
    hdr_info->hdr_supported = hdr_cdata->hdr_supported;
+   hdr_info->hdr_plus_supported = hdr_cdata->hdr_plus_supported;
    hdr_info->hdr_eotf = hdr_cdata->hdr_eotf;
    hdr_info->hdr_metadata_type_one = hdr_cdata->hdr_metadata_type_one;
    hdr_info->hdr_max_luminance = hdr_cdata->hdr_max_luminance;
    hdr_info->hdr_avg_luminance = hdr_cdata->hdr_avg_luminance;
    hdr_info->hdr_min_luminance = hdr_cdata->hdr_min_luminance;
-   DRM_LOGI("hdr_supported=%d , hdr_eotf= %d , hdr_metadata_type_one= %d,"
-            "hdr_max_luminance= %d , hdr_avg_luminance= %d , hdr_min_luminance %d\n",
-            hdr_info->hdr_supported,hdr_info->hdr_eotf, hdr_info->hdr_metadata_type_one,
-            hdr_info->hdr_max_luminance, hdr_info->hdr_avg_luminance, hdr_info->hdr_min_luminance);
+   DRM_LOGI("hdr_supported = %d, hdr_plus_supported = %d, hdr_eotf = %d, "
+            "hdr_metadata_type_one = %d, hdr_max_luminance = %d, hdr_avg_luminance = %d, "
+            "hdr_min_luminance = %d\n", hdr_info->hdr_supported,
+            hdr_info->hdr_plus_supported,
+            hdr_info->hdr_eotf, hdr_info->hdr_metadata_type_one, hdr_info->hdr_max_luminance,
+            hdr_info->hdr_avg_luminance, hdr_info->hdr_min_luminance);
   }
   drmModeFreePropertyBlob(blob);
 }
@@ -544,23 +567,26 @@ void DRMConnector::ParseCapabilities(uint64_t blob_id, std::vector<uint8_t> *edi
 }
 
 int DRMConnector::GetInfo(DRMConnectorInfo *info) {
-  // Reload each time since for some connectors like Virtual, modes may change
   uint32_t conn_id = drm_connector_->connector_id;
-  drmModeConnectorPtr drm_connector = drmModeGetConnector(fd_, conn_id);
-  if (!drm_connector) {
-    // Connector resource not found. This could happen if a connector is removed before a commit was
-    // done on it. Mark the connector as disconnected for graceful teardown. Update 'info' with
-    // basic information from previously initialized drm_connector_ for graceful teardown.
-    info->is_connected = false;
-    info->modes.clear();
-    info->type = drm_connector_->connector_type;
-    DLOGW("Connector %u not found. Possibly removed.", conn_id);
-    return 0;
+  if (!skip_connector_reload_ && (IsTVConnector(drm_connector_->connector_type)
+      || (DRM_MODE_CONNECTOR_VIRTUAL == drm_connector_->connector_type))) {
+    // Reload since for some connectors like Virtual and DP, modes may change.
+    drmModeConnectorPtr drm_connector = drmModeGetConnector(fd_, conn_id);
+    if (!drm_connector) {
+      // Connector resource not found. This could happen if a connector is removed before a commit
+      // was done on it. Mark the connector as disconnected for graceful teardown. Update 'info'
+      // with basic information from previously initialized drm_connector_ for graceful teardown.
+      info->is_connected = false;
+      info->modes.clear();
+      info->type = drm_connector_->connector_type;
+      DLOGW("Connector %u not found. Possibly removed.", conn_id);
+      return 0;
+    }
+    drmModeFreeConnector(drm_connector_);
+    drm_connector_ = drm_connector;
   }
 
-  drmModeFreeConnector(drm_connector_);
-  drm_connector_ = drm_connector;
-
+  SetSkipConnectorReload(false);  // Reset skip_connector_reload_ setting.
   info->modes.clear();
   if (!drm_connector_->count_modes) {
     DRM_LOGW("Zero modes on connector %u.", conn_id);
@@ -752,6 +778,40 @@ void DRMConnector::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
       uint32_t topology_control = va_arg(args, uint32_t);
       drmModeAtomicAddProperty(req, obj_id, prop_mgr_.GetPropertyId(DRMProperty::TOPOLOGY_CONTROL),
                                topology_control);
+    } break;
+
+    case DRMOps::CONNECTOR_SET_FRAME_TRIGGER: {
+      if (!prop_mgr_.IsPropertyAvailable(DRMProperty::FRAME_TRIGGER)) {
+        return;
+      }
+      int drm_frame_trigger_mode = va_arg(args, int);
+      DRMFrameTriggerMode mode = static_cast<DRMFrameTriggerMode>(drm_frame_trigger_mode);
+      int32_t frame_trigger_mode = -1;
+      switch (mode) {
+        case (DRMFrameTriggerMode::FRAME_DONE_WAIT_DEFAULT):
+          frame_trigger_mode = FRAME_TRIGGER_DEFAULT;
+          break;
+        case (DRMFrameTriggerMode::FRAME_DONE_WAIT_SERIALIZE):
+          frame_trigger_mode = FRAME_TRIGGER_SERIALIZE;
+          break;
+        case (DRMFrameTriggerMode::FRAME_DONE_WAIT_POSTED_START):
+          frame_trigger_mode = FRAME_TRIGGER_POSTED_START;
+          break;
+        default:
+          DRM_LOGE("Invalid frame trigger mode %d to set on connector %d",
+                   drm_frame_trigger_mode, obj_id);
+          break;
+      }
+      if (frame_trigger_mode >= 0) {
+        uint32_t prop_id = prop_mgr_.GetPropertyId(DRMProperty::FRAME_TRIGGER);
+        int ret = drmModeAtomicAddProperty(req, obj_id, prop_id, frame_trigger_mode);
+        if (ret < 0) {
+          DRM_LOGE("AtomicAddProperty failed obj_id 0x%x, prop_id %d mode %d ret %d",
+                   obj_id, prop_id, frame_trigger_mode, ret);
+        } else {
+          DRM_LOGD("Connector %d: Setting frame trigger mode %d", obj_id, frame_trigger_mode);
+        }
+      }
     } break;
 
     default:

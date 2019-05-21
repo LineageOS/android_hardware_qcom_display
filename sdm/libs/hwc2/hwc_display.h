@@ -143,7 +143,6 @@ class HWCDisplay : public DisplayEventHandler {
     return kErrorNotSupported;
   }
   virtual HWC2::PowerMode GetCurrentPowerMode();
-  virtual HWC2::Vsync GetLastVsyncMode();
   virtual int SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels);
   virtual void GetFrameBufferResolution(uint32_t *x_pixels, uint32_t *y_pixels);
   virtual int SetDisplayStatus(DisplayStatus display_status);
@@ -186,6 +185,9 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error SetDisplayDppsAdROI(uint32_t h_start, uint32_t h_end,
                                           uint32_t v_start, uint32_t v_end,
                                           uint32_t factor_in, uint32_t factor_out) {
+    return HWC2::Error::Unsupported;
+  }
+  virtual HWC2::Error SetFrameTriggerMode(uint32_t mode) {
     return HWC2::Error::Unsupported;
   }
 
@@ -234,6 +236,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error SetColorModeFromClientApi(int32_t color_mode_id) {
     return HWC2::Error::Unsupported;
   }
+  bool IsFirstCommitDone() { return !first_cycle_; }
 
   // HWC2 APIs
   virtual HWC2::Error AcceptDisplayChanges(void);
@@ -267,6 +270,12 @@ class HWCDisplay : public DisplayEventHandler {
   }
   virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk) {
     return kErrorNotSupported;
+  }
+  virtual HWC2::Error UpdateDisplayId(hwc2_display_t id) {
+    return HWC2::Error::Unsupported;
+  }
+  virtual HWC2::Error SetPendingRefresh() {
+    return HWC2::Error::Unsupported;
   }
   virtual HWC2::Error GetDisplayConfigs(uint32_t *out_num_configs, hwc2_config_t *out_configs);
   virtual HWC2::Error GetDisplayAttribute(hwc2_config_t config, HWC2::Attribute attribute,
@@ -372,7 +381,6 @@ class HWCDisplay : public DisplayEventHandler {
   uint32_t dump_frame_index_ = 0;
   bool dump_input_layers_ = false;
   HWC2::PowerMode current_power_mode_ = HWC2::PowerMode::Off;
-  HWC2::Vsync last_vsync_mode_ = HWC2::Vsync::Invalid;
   bool swap_interval_zero_ = false;
   bool display_paused_ = false;
   uint32_t min_refresh_rate_ = 0;
@@ -398,6 +406,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool is_cmd_mode_ = false;
   bool partial_update_enabled_ = false;
   bool fast_path_composition_ = false;
+  bool skip_commit_ = false;
   std::map<uint32_t, DisplayConfigVariableInfo> variable_config_map_;
   std::vector<uint32_t> hwc_config_map_;
 
@@ -405,6 +414,7 @@ class HWCDisplay : public DisplayEventHandler {
   void DumpInputBuffers(void);
   bool CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests);
   void UpdateRefreshRate();
+  void WaitOnPreviousFence();
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
   uint32_t geometry_changes_ = GeometryChanges::kNone;
@@ -413,6 +423,8 @@ class HWCDisplay : public DisplayEventHandler {
   bool has_client_composition_ = false;
   DisplayValidateState validate_state_ = kNormalValidate;
   bool fast_path_enabled_ = true;
+  bool first_cycle_ = true;  // false if a display commit has succeeded on the device.
+  int fbt_release_fence_ = -1;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {

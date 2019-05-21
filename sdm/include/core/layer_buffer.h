@@ -210,6 +210,10 @@ struct LayerBufferFlags {
 
       uint32_t ubwc_pi : 1;         //!< This flag shall be set by the client to indicate that the
                                     //!< buffer has PI content.
+
+      uint32_t mask_layer : 1;      //!< This flag shall be set by client to indicate that the layer
+                                    //!< is union of solid fill regions typically transparent pixels
+                                    //!< and black pixels.
     };
 
     uint32_t flags = 0;             //!< For initialization purpose only.

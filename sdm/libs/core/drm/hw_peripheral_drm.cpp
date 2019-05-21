@@ -133,6 +133,7 @@ DisplayError HWPeripheralDRM::Commit(HWLayers *hw_layers) {
 
   // Initialize to default after successful commit
   synchronous_commit_ = false;
+  idle_pc_state_ = sde_drm::DRMIdlePCState::NONE;
 
   return error;
 }
@@ -417,15 +418,14 @@ void HWPeripheralDRM::PostCommitConcurrentWriteback(LayerBuffer *output_buffer) 
 }
 
 DisplayError HWPeripheralDRM::ControlIdlePowerCollapse(bool enable, bool synchronous) {
-  sde_drm::DRMIdlePCState idle_pc_state =
-    enable ? sde_drm::DRMIdlePCState::ENABLE : sde_drm::DRMIdlePCState::DISABLE;
-  if (idle_pc_state == idle_pc_state_) {
+  if (enable == idle_pc_enabled_) {
     return kErrorNone;
   }
+  idle_pc_state_ = enable ? sde_drm::DRMIdlePCState::ENABLE : sde_drm::DRMIdlePCState::DISABLE;
   // As idle PC is disabled after subsequent commit, Make sure to have synchrounous commit and
   // ensure TA accesses the display_cc registers after idle PC is disabled.
-  idle_pc_state_ = idle_pc_state;
   synchronous_commit_ = !enable ? synchronous : false;
+  idle_pc_enabled_ = enable;
   return kErrorNone;
 }
 
@@ -436,16 +436,16 @@ DisplayError HWPeripheralDRM::PowerOn(const HWQosData &qos_data, int *release_fe
     return kErrorUndefined;
   }
 
-  if (first_cycle_) {
-    return kErrorNone;
+  if (!idle_pc_enabled_) {
+    drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_IDLE_PC_STATE, token_.crtc_id,
+                              sde_drm::DRMIdlePCState::ENABLE);
   }
-  drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_IDLE_PC_STATE, token_.crtc_id,
-                            sde_drm::DRMIdlePCState::ENABLE);
   DisplayError err = HWDeviceDRM::PowerOn(qos_data, release_fence);
   if (err != kErrorNone) {
     return err;
   }
-  idle_pc_state_ = sde_drm::DRMIdlePCState::ENABLE;
+  idle_pc_state_ = sde_drm::DRMIdlePCState::NONE;
+  idle_pc_enabled_ = true;
 
   return kErrorNone;
 }
@@ -478,6 +478,32 @@ DisplayError HWPeripheralDRM::SetDisplayDppsAdROI(void *payload) {
   }
 
   return err;
+}
+
+DisplayError HWPeripheralDRM::SetFrameTrigger(FrameTriggerMode mode) {
+  sde_drm::DRMFrameTriggerMode drm_mode = sde_drm::DRMFrameTriggerMode::FRAME_DONE_WAIT_DEFAULT;
+  switch (mode) {
+  case kFrameTriggerDefault:
+    drm_mode = sde_drm::DRMFrameTriggerMode::FRAME_DONE_WAIT_DEFAULT;
+    break;
+  case kFrameTriggerSerialize:
+    drm_mode = sde_drm::DRMFrameTriggerMode::FRAME_DONE_WAIT_SERIALIZE;
+    break;
+  case kFrameTriggerPostedStart:
+    drm_mode = sde_drm::DRMFrameTriggerMode::FRAME_DONE_WAIT_POSTED_START;
+    break;
+  default:
+    DLOGE("Invalid frame trigger mode %d", (int32_t)mode);
+    return kErrorParameters;
+  }
+
+  int ret = drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_FRAME_TRIGGER,
+                                      token_.conn_id, drm_mode);
+  if (ret) {
+    DLOGE("Failed to perform CONNECTOR_SET_FRAME_TRIGGER, drm_mode %d, ret %d", drm_mode, ret);
+    return kErrorUndefined;
+  }
+  return kErrorNone;
 }
 
 }  // namespace sdm

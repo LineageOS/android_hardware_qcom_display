@@ -1,4 +1,4 @@
-/* Copyright (c) 2015 - 2018, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015 - 2019, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -31,6 +31,7 @@
 #include <private/color_interface.h>
 #include <utils/constants.h>
 #include <utils/debug.h>
+#include <algorithm>
 #include "color_manager.h"
 
 #define __CLASS__ "ColorManager"
@@ -75,6 +76,10 @@ DisplayError PPFeaturesConfig::RetrieveNextFeature(PPFeatureInfo **feature) {
   return ret;
 }
 
+FeatureInterface* GetPostedStartFeatureCheckIntf(HWInterface *intf, PPFeaturesConfig *config) {
+  return new ColorFeatureCheckingImpl(intf, config);
+}
+
 DisplayError ColorManagerProxy::Init(const HWResourceInfo &hw_res_info) {
   DisplayError error = kErrorNone;
 
@@ -103,7 +108,23 @@ ColorManagerProxy::ColorManagerProxy(int32_t id, DisplayType type, HWInterface *
                                      const HWDisplayAttributes &attr,
                                      const HWPanelInfo &info)
     : display_id_(id), device_type_(type), pp_hw_attributes_(), hw_intf_(intf),
-      color_intf_(NULL), pp_features_() {}
+      color_intf_(NULL), pp_features_(), feature_intf_(NULL) {
+  int32_t enable_posted_start_dyn = 0;
+  Debug::Get()->GetProperty(ENABLE_POSTED_START_DYN_PROP, &enable_posted_start_dyn);
+  if (enable_posted_start_dyn && info.mode == kModeCommand) {
+    feature_intf_ = GetPostedStartFeatureCheckIntf(intf, &pp_features_);
+    if (!feature_intf_) {
+      DLOGI("Failed to create feature interface");
+    } else {
+      DisplayError err = feature_intf_->Init();
+      if (err) {
+        DLOGE("Failed to init feature interface");
+        delete feature_intf_;
+        feature_intf_ = NULL;
+      }
+    }
+  }
+}
 
 ColorManagerProxy *ColorManagerProxy::CreateColorManagerProxy(DisplayType type,
                                                               HWInterface *hw_intf,
@@ -154,6 +175,11 @@ ColorManagerProxy::~ColorManagerProxy() {
   if (destroy_intf_)
     destroy_intf_(display_id_);
   color_intf_ = NULL;
+  if (feature_intf_) {
+    feature_intf_->Deinit();
+    delete feature_intf_;
+    feature_intf_ = NULL;
+  }
 }
 
 DisplayError ColorManagerProxy::ColorSVCRequestRoute(const PPDisplayAPIPayload &in_payload,
@@ -185,9 +211,8 @@ bool ColorManagerProxy::NeedsPartialUpdateDisable() {
 }
 
 DisplayError ColorManagerProxy::Commit() {
-  static bool first_cycle = true;
-  if (first_cycle) {
-    first_cycle = false;
+  if (first_cycle_) {
+    first_cycle_ = false;
     return kErrorNone;
   }
 
@@ -195,7 +220,11 @@ DisplayError ColorManagerProxy::Commit() {
   SCOPE_LOCK(locker);
 
   DisplayError ret = kErrorNone;
-  if (pp_features_.IsDirty()) {
+  bool is_dirty = pp_features_.IsDirty();
+  if (feature_intf_) {
+    feature_intf_->SetParams(kFeatureSwitchMode, &is_dirty);
+  }
+  if (is_dirty) {
     ret = hw_intf_->SetPPFeatures(&pp_features_);
   }
 
@@ -249,6 +278,380 @@ DisplayError ColorManagerProxy::ColorMgrSetColorTransform(uint32_t length,
 
 DisplayError ColorManagerProxy::ColorMgrGetDefaultModeID(int32_t *mode_id) {
   return color_intf_->ColorIntfGetDefaultModeID(&pp_features_, 0, mode_id);
+}
+
+DisplayError ColorManagerProxy::ColorMgrCombineColorModes() {
+  return color_intf_->ColorIntfCombineColorModes();
+}
+
+ColorFeatureCheckingImpl::ColorFeatureCheckingImpl(HWInterface *hw_intf,
+                                                   PPFeaturesConfig *pp_features)
+  : hw_intf_(hw_intf), pp_features_(pp_features) {}
+
+DisplayError ColorFeatureCheckingImpl::Init() {
+  states_.at(kFrameTriggerDefault) = new FeatureStateDefaultTrigger(this);
+  states_.at(kFrameTriggerSerialize) = new FeatureStateSerializedTrigger(this);
+  states_.at(kFrameTriggerPostedStart) = new FeatureStatePostedStart(this);
+
+  if (std::any_of(states_.begin(), states_.end(),
+      [](const FeatureInterface *p) {
+      if (!p) {
+        return true;
+      } else {
+        return false;
+      }})) {
+    std::all_of(states_.begin(), states_.end(),
+      [](const FeatureInterface *p) {
+      if (p) {delete p;} return true;});
+    states_.fill(NULL);
+    curr_state_ = NULL;
+  } else {
+    curr_state_ = states_.at(kFrameTriggerDefault);
+  }
+
+  if (curr_state_) {
+    single_buffer_feature_.clear();
+    single_buffer_feature_.push_back(kGlobalColorFeatureIgc);
+    single_buffer_feature_.push_back(kGlobalColorFeatureGamut);
+  } else {
+    DLOGE("Failed to create curr_state_");
+    return kErrorMemory;
+  }
+  return kErrorNone;
+}
+
+DisplayError ColorFeatureCheckingImpl::Deinit() {
+  std::all_of(states_.begin(), states_.end(),
+    [](const FeatureInterface *p)
+    {if (p) {delete p;} return true;});
+  states_.fill(NULL);
+  curr_state_ = NULL;
+  single_buffer_feature_.clear();
+  return kErrorNone;
+}
+
+DisplayError ColorFeatureCheckingImpl::SetParams(FeatureOps param_type,
+                                                 void *payload) {
+  DisplayError error = kErrorNone;
+  FrameTriggerMode mode = kFrameTriggerDefault;
+
+  if (!payload) {
+    DLOGE("Invalid input payload");
+    return kErrorParameters;
+  }
+
+  if (!curr_state_) {
+    DLOGE("Invalid curr state");
+    return kErrorParameters;
+  }
+
+  bool is_dirty = *reinterpret_cast<bool *>(payload);
+  switch (param_type) {
+  case kFeatureSwitchMode:
+    if (is_dirty) {
+      CheckColorFeature(&mode);
+    } else {
+      mode = kFrameTriggerPostedStart;
+    }
+    DLOGV_IF(kTagQDCM, "Set frame trigger mode %d", mode);
+    error = curr_state_->SetParams(param_type, &mode);
+    if (error) {
+      DLOGE_IF(kTagQDCM, "Failed to set params to state, error %d", error);
+    }
+    break;
+  default:
+    DLOGW("unhandled param_type %d", param_type);
+    error = kErrorNotSupported;
+    break;
+  }
+  return error;
+}
+
+DisplayError ColorFeatureCheckingImpl::GetParams(FeatureOps param_type,
+                                                 void *payload) {
+  DisplayError error = kErrorNone;
+
+  if (!payload) {
+    DLOGE("Invalid input payload");
+    return kErrorParameters;
+  }
+
+  if (!curr_state_) {
+    DLOGE("Invalid curr state");
+    return kErrorParameters;
+  }
+
+  switch (param_type) {
+  case kFeatureSwitchMode:
+    if (curr_state_) {
+      curr_state_->GetParams(param_type, payload);
+    } else {
+      DLOGE_IF(kTagQDCM, "curr_state_ NULL");
+      error = kErrorUndefined;
+    }
+    break;
+  default:
+    DLOGW("unhandled param_type %d", param_type);
+    error = kErrorNotSupported;
+    break;
+  }
+  return error;
+}
+
+// This function checks through the feature list for the single buffer features.
+// If there is single buffer feature existed in the feature list, the posted start
+// should be disabled.
+void ColorFeatureCheckingImpl::CheckColorFeature(FrameTriggerMode *mode) {
+  PPFeatureInfo *feature = NULL;
+  PPGlobalColorFeatureID id = kMaxNumPPFeatures;
+
+  if (!pp_features_) {
+    DLOGW("Invalid pp features");
+    *mode = kFrameTriggerPostedStart;
+    return;
+  }
+
+  for (uint32_t i = 0; i < single_buffer_feature_.size(); i++) {
+    id = single_buffer_feature_[i];
+    feature = pp_features_->GetFeature(id);
+    if (feature && (feature->enable_flags_ & kOpsEnable)) {
+      *mode = kFrameTriggerDefault;
+      return;
+    }
+  }
+
+  *mode = kFrameTriggerPostedStart;
+}
+
+FeatureStatePostedStart::FeatureStatePostedStart(ColorFeatureCheckingImpl *obj)
+  : obj_(obj) {}
+
+DisplayError FeatureStatePostedStart::Init() {
+  return kErrorNone;
+}
+
+DisplayError FeatureStatePostedStart::Deinit() {
+  return kErrorNone;
+}
+
+DisplayError FeatureStatePostedStart::SetParams(FeatureOps param_type,
+                                                void *payload) {
+  DisplayError error = kErrorNone;
+  FrameTriggerMode mode = kFrameTriggerPostedStart;
+
+  if (!obj_) {
+    DLOGE("Invalid param obj_");
+    return kErrorParameters;
+  }
+
+  if (!payload) {
+    DLOGE("Invalid payload");
+    return kErrorParameters;
+  }
+
+  switch (param_type) {
+  case kFeatureSwitchMode:
+    mode = *(reinterpret_cast<FrameTriggerMode *>(payload));
+    if (mode >= kFrameTriggerMax) {
+      DLOGE("Invalid mode %d", mode);
+      return kErrorParameters;
+    }
+    if (mode != kFrameTriggerPostedStart) {
+      error = obj_->hw_intf_->SetFrameTrigger(mode);
+      if (!error) {
+        obj_->curr_state_ = obj_->states_.at(mode);
+      }
+    } else {
+      DLOGV_IF(kTagQDCM, "Already in posted start mode");
+    }
+    break;
+  default:
+    DLOGW("unhandled param_type %d", param_type);
+    error = kErrorNotSupported;
+    break;
+  }
+  return error;
+}
+
+DisplayError FeatureStatePostedStart::GetParams(FeatureOps param_type,
+                                                void *payload) {
+  DisplayError error = kErrorNone;
+
+  if (!obj_) {
+    DLOGE("Invalid param obj_");
+    return kErrorParameters;
+  }
+
+  if (!payload) {
+    DLOGE("Invalid payload");
+    return kErrorParameters;
+  }
+
+  switch (param_type) {
+  case kFeatureSwitchMode:
+    *(reinterpret_cast<FrameTriggerMode *>(payload)) = kFrameTriggerPostedStart;
+    break;
+  default:
+    DLOGW("unhandled param_type %d", param_type);
+    error = kErrorNotSupported;
+    break;
+  }
+
+  return error;
+}
+
+FeatureStateDefaultTrigger::FeatureStateDefaultTrigger(ColorFeatureCheckingImpl *obj)
+  : obj_(obj) {}
+
+DisplayError FeatureStateDefaultTrigger::Init() {
+  return kErrorNone;
+}
+
+DisplayError FeatureStateDefaultTrigger::Deinit() {
+  return kErrorNone;
+}
+
+DisplayError FeatureStateDefaultTrigger::SetParams(FeatureOps param_type,
+                                                   void *payload) {
+  DisplayError error = kErrorNone;
+  FrameTriggerMode mode = kFrameTriggerDefault;
+
+  if (!obj_) {
+    DLOGE("Invalid param obj_");
+    return kErrorParameters;
+  }
+
+  if (!payload) {
+    DLOGE("Invalid payload");
+    return kErrorParameters;
+  }
+
+  switch (param_type) {
+  case kFeatureSwitchMode:
+    mode = *(reinterpret_cast<FrameTriggerMode *>(payload));
+    if (mode >= kFrameTriggerMax) {
+      DLOGE("Invalid mode %d", mode);
+      return kErrorParameters;
+    }
+    if (mode != kFrameTriggerDefault) {
+      error = obj_->hw_intf_->SetFrameTrigger(mode);
+      if (!error) {
+        obj_->curr_state_ = obj_->states_.at(mode);
+      }
+    } else {
+      DLOGV_IF(kTagQDCM, "Already in default trigger mode");
+    }
+    break;
+  default:
+    DLOGW("unhandled param_type %d", param_type);
+    error = kErrorNotSupported;
+    break;
+  }
+  return error;
+}
+
+DisplayError FeatureStateDefaultTrigger::GetParams(FeatureOps param_type,
+                                                   void *payload) {
+  DisplayError error = kErrorNone;
+
+  if (!obj_) {
+    DLOGE("Invalid param obj_");
+    return kErrorParameters;
+  }
+
+  if (!payload) {
+    DLOGE("Invalid payload");
+    return kErrorParameters;
+  }
+
+  switch (param_type) {
+  case kFeatureSwitchMode:
+    *(reinterpret_cast<FrameTriggerMode *>(payload)) = kFrameTriggerDefault;
+    break;
+  default:
+    DLOGW("unhandled param_type %d", param_type);
+    error = kErrorNotSupported;
+    break;
+  }
+
+  return error;
+}
+
+FeatureStateSerializedTrigger::FeatureStateSerializedTrigger(ColorFeatureCheckingImpl *obj)
+  : obj_(obj) {}
+
+DisplayError FeatureStateSerializedTrigger::Init() {
+  return kErrorNone;
+}
+
+DisplayError FeatureStateSerializedTrigger::Deinit() {
+  return kErrorNone;
+}
+
+DisplayError FeatureStateSerializedTrigger::SetParams(FeatureOps param_type,
+                                                      void *payload) {
+  DisplayError error = kErrorNone;
+  FrameTriggerMode mode = kFrameTriggerSerialize;
+
+  if (!obj_) {
+    DLOGE("Invalid param obj_");
+    return kErrorParameters;
+  }
+
+  if (!payload) {
+    DLOGE("Invalid payload");
+    return kErrorParameters;
+  }
+
+  switch (param_type) {
+  case kFeatureSwitchMode:
+    mode = *(reinterpret_cast<FrameTriggerMode *>(payload));
+    if (mode >= kFrameTriggerMax) {
+      DLOGE("Invalid mode %d", mode);
+      return kErrorParameters;
+    }
+    if (mode != kFrameTriggerSerialize) {
+      error = obj_->hw_intf_->SetFrameTrigger(mode);
+      if (!error) {
+        obj_->curr_state_ = obj_->states_.at(mode);
+      }
+    } else {
+      DLOGV_IF(kTagQDCM, "Already in serialized trigger mode");
+    }
+    break;
+  default:
+    DLOGW("unhandled param_type %d", param_type);
+    error = kErrorNotSupported;
+    break;
+  }
+  return error;
+}
+
+DisplayError FeatureStateSerializedTrigger::GetParams(FeatureOps param_type,
+                                                      void *payload) {
+  DisplayError error = kErrorNone;
+
+  if (!obj_) {
+    DLOGE("Invalid param obj_");
+    return kErrorParameters;
+  }
+
+  if (!payload) {
+    DLOGE("Invalid payload");
+    return kErrorParameters;
+  }
+
+  switch (param_type) {
+  case kFeatureSwitchMode:
+    *(reinterpret_cast<FrameTriggerMode *>(payload)) = kFrameTriggerSerialize;
+    break;
+  default:
+    DLOGW("unhandled param_type %d", param_type);
+    error = kErrorNotSupported;
+    break;
+  }
+
+  return error;
 }
 
 }  // namespace sdm

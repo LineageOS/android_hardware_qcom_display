@@ -122,56 +122,21 @@ int HWCDisplayBuiltIn::Init() {
   HWCDebugHandler::Get()->GetProperty(ENABLE_DEFAULT_COLOR_MODE,
                                       &default_mode_status_);
 
+  int drop_refresh = 0;
+  HWCDebugHandler::Get()->GetProperty(ENABLE_DROP_REFRESH, &drop_refresh);
+  enable_drop_refresh_ = (drop_refresh == 1);
+  if (enable_drop_refresh_) {
+    DLOGI("Drop redundant drawcycles %d", id_);
+  }
+
   return status;
-}
-
-void HWCDisplayBuiltIn::ProcessBootAnimCompleted() {
-  bool bootanim_exit = false;
-
-  /* All other checks namely "init.svc.bootanim" or
-  * HWC_GEOMETRY_CHANGED fail in correctly identifying the
-  * exact bootup transition to homescreen
-  */
-  char property[PROPERTY_VALUE_MAX];
-  bool isEncrypted = false;
-  bool main_class_services_started = false;
-  property_get("ro.crypto.state", property, "unencrypted");
-  if (!strcmp(property, "encrypted")) {
-    property_get("ro.crypto.type", property, "block");
-    if (!strcmp(property, "block")) {
-      isEncrypted = true;
-      property_get("vold.decrypt", property, "");
-      if (!strcmp(property, "trigger_restart_framework")) {
-        main_class_services_started = true;
-      }
-    }
-  }
-
-  property_get("service.bootanim.exit", property, "0");
-  if (!strcmp(property, "1")) {
-    bootanim_exit = true;
-  }
-
-  if ((!isEncrypted || (isEncrypted && main_class_services_started)) &&
-      bootanim_exit) {
-    DLOGI("Applying default mode for display %d", sdm_id_);
-    boot_animation_completed_ = true;
-    // Applying default mode after bootanimation is finished And
-    // If Data is Encrypted, it is ready for access.
-    if (display_intf_) {
-      display_intf_->ApplyDefaultDisplayMode();
-      RestoreColorTransform();
-    }
-  }
 }
 
 HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
   auto status = HWC2::Error::None;
   DisplayError error = kErrorNone;
 
-  if (default_mode_status_ && !boot_animation_completed_) {
-    ProcessBootAnimCompleted();
-  }
+  DTRACE_SCOPED();
 
   if (display_paused_) {
     MarkLayersForGPUBypass();
@@ -235,8 +200,39 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
   return status;
 }
 
+HWC2::Error HWCDisplayBuiltIn::CommitLayerStack() {
+  skip_commit_ = CanSkipCommit();
+  return HWCDisplay::CommitLayerStack();
+}
+
+bool HWCDisplayBuiltIn::CanSkipCommit() {
+  if (layer_stack_invalid_) {
+    return false;
+  }
+
+  // Reject repeated drawcycle requests if it satisfies all conditions.
+  // 1. None of the layerstack attributes changed.
+  // 2. No new buffer latched.
+  // 3. No refresh request triggered by HWC.
+  // 4. This display is not source of vsync.
+  bool buffers_latched = false;
+  for (auto &hwc_layer : layer_set_) {
+    buffers_latched |= hwc_layer->BufferLatched();
+    hwc_layer->ResetBufferFlip();
+  }
+
+  bool vsync_source = (callbacks_->GetVsyncSource() == id_);
+  bool skip_commit = enable_drop_refresh_ && !pending_commit_ && !buffers_latched &&
+                     !pending_refresh_ && !vsync_source;
+  pending_refresh_ = false;
+
+  return skip_commit;
+}
+
 HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
   auto status = HWC2::Error::None;
+
+  DTRACE_SCOPED();
   if (display_paused_) {
     DisplayError error = display_intf_->Flush(&layer_stack_);
     validated_ = false;
@@ -244,7 +240,7 @@ HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
       DLOGE("Flush failed. Error = %d", error);
     }
   } else {
-    status = HWCDisplay::CommitLayerStack();
+    status = CommitLayerStack();
     if (status == HWC2::Error::None) {
       HandleFrameOutput();
       SolidFillCommit();
@@ -460,6 +456,26 @@ HWC2::Error HWCDisplayBuiltIn::SetDisplayDppsAdROI(uint32_t h_start, uint32_t h_
     return HWC2::Error::BadConfig;
 
   callbacks_->Refresh(id_);
+
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayBuiltIn::SetFrameTriggerMode(uint32_t mode) {
+  DisplayError error = kErrorNone;
+  FrameTriggerMode trigger_mode = kFrameTriggerDefault;
+
+  if (mode >= kFrameTriggerMax) {
+    DLOGE("Invalid input mode %d", mode);
+    return HWC2::Error::BadParameter;
+  }
+
+  trigger_mode = static_cast<FrameTriggerMode>(mode);
+  error = display_intf_->SetFrameTriggerMode(trigger_mode);
+  if (error)
+    return HWC2::Error::BadConfig;
+
+  callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
+  validated_ = false;
 
   return HWC2::Error::None;
 }
@@ -858,6 +874,16 @@ DisplayError HWCDisplayBuiltIn::GetSupportedDSIClock(std::vector<uint64_t> *bitc
   }
 
   return kErrorNotSupported;
+}
+
+HWC2::Error HWCDisplayBuiltIn::UpdateDisplayId(hwc2_display_t id) {
+  id_ = id;
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayBuiltIn::SetPendingRefresh() {
+  pending_refresh_ = true;
+  return HWC2::Error::None;
 }
 
 }  // namespace sdm

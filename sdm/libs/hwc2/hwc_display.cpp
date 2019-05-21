@@ -25,6 +25,7 @@
 #include <sys/stat.h>
 #include <utils/constants.h>
 #include <utils/debug.h>
+#include <utils/utils.h>
 #include <utils/formats.h>
 #include <utils/rect.h>
 #include <qd_utils.h>
@@ -65,7 +66,7 @@ HWCColorMode::HWCColorMode(DisplayInterface *display_intf) : display_intf_(displ
 
 HWC2::Error HWCColorMode::Init() {
   PopulateColorModes();
-  return ApplyDefaultColorMode();
+  return HWC2::Error::None;
 }
 
 HWC2::Error HWCColorMode::DeInit() {
@@ -669,6 +670,8 @@ void HWCDisplay::BuildLayerStack() {
   metadata_refresh_rate_ = 0;
   layer_stack_.flags.animating = animating_;
   layer_stack_.flags.fast_path = fast_path_enabled_ && fast_path_composition_;
+
+  DTRACE_SCOPED();
   // Add one layer for fb target
   for (auto hwc_layer : layer_set_) {
     // Reset layer data which SDM may change
@@ -885,8 +888,6 @@ HWC2::Error HWCDisplay::SetVsyncEnabled(HWC2::Vsync enabled) {
     return HWC2::Error::BadDisplay;
   }
 
-  last_vsync_mode_ = enabled;
-
   return HWC2::Error::None;
 }
 
@@ -950,7 +951,10 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
       }
       hwc_layer->PushBackReleaseFence(merged_fence);
     }
-    ::close(release_fence);
+
+    // Add this release fence onto fbt_release fence.
+    CloseFd(&fbt_release_fence_);
+    fbt_release_fence_ = release_fence;
   }
   current_power_mode_ = mode;
   return HWC2::Error::None;
@@ -1168,6 +1172,8 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, int32_t acquire_
 }
 
 HWC2::Error HWCDisplay::SetActiveConfig(hwc2_config_t config) {
+  DTRACE_SCOPED();
+
   if (SetActiveDisplayConfig(config) != kErrorNone) {
     return HWC2::Error::BadConfig;
   }
@@ -1197,10 +1203,6 @@ HWC2::Error HWCDisplay::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_lay
 
 HWC2::PowerMode HWCDisplay::GetCurrentPowerMode() {
   return current_power_mode_;
-}
-
-HWC2::Vsync HWCDisplay::GetLastVsyncMode() {
-  return last_vsync_mode_;
 }
 
 DisplayError HWCDisplay::VSync(const DisplayEventVSync &vsync) {
@@ -1263,6 +1265,7 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
   layer_requests_.clear();
   has_client_composition_ = false;
 
+  DTRACE_SCOPED();
   if (shutdown_pending_) {
     validated_ = false;
     return HWC2::Error::BadDisplay;
@@ -1277,14 +1280,17 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
   if (error != kErrorNone) {
     if (error == kErrorShutDown) {
       shutdown_pending_ = true;
-    } else if (error != kErrorPermission) {
+    } else if (error == kErrorPermission) {
+      WaitOnPreviousFence();
+      MarkLayersForGPUBypass();
+    } else {
       DLOGE("Prepare failed. Error = %d", error);
       // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
       // so that previous buffer and fences are released, and override the error.
       flush_ = true;
+      validated_ = false;
+      return HWC2::Error::BadDisplay;
     }
-    validated_ = false;
-    return HWC2::Error::BadDisplay;
   }
 
   for (auto hwc_layer : layer_set_) {
@@ -1463,12 +1469,19 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
     return HWC2::Error::None;
   }
 
+  DTRACE_SCOPED();
+
   if (!validated_) {
     DLOGV_IF(kTagClient, "Display %d is not validated", id_);
     return HWC2::Error::NotValidated;
   }
 
   if (shutdown_pending_ || layer_set_.empty()) {
+    return HWC2::Error::None;
+  }
+
+  if (skip_commit_) {
+    DLOGV_IF(kTagClient, "Skipping Refresh on display %d", id_);
     return HWC2::Error::None;
   }
 
@@ -1491,6 +1504,7 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
   if (error == kErrorNone) {
     // A commit is successfully submitted, start flushing on failure now onwards.
     flush_on_error_ = true;
+    first_cycle_ = false;
   } else {
     if (error == kErrorShutDown) {
       shutdown_pending_ = true;
@@ -1527,6 +1541,10 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
   int32_t &client_target_release_fence =
       client_target_->GetSDMLayer()->input_buffer.release_fence_fd;
   if (client_target_release_fence >= 0) {
+    // Close cached release fence.
+    close(fbt_release_fence_);
+    fbt_release_fence_ = dup(client_target_release_fence);
+    // Close fence returned by driver.
     close(client_target_release_fence);
     client_target_release_fence = -1;
   }
@@ -1548,9 +1566,9 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
         hwc_layer->PushBackReleaseFence(-1);
       }
     } else {
-      // In case of flush, we don't return an error to f/w, so it will get a release fence out of
-      // the hwc_layer's release fence queue. We should push a -1 to preserve release fence
-      // circulation semantics.
+      // In case of flush or display paused, we don't return an error to f/w, so it will
+      // get a release fence out of the hwc_layer's release fence queue
+      // We should push a -1 to preserve release fence circulation semantics.
       hwc_layer->PushBackReleaseFence(-1);
     }
 
@@ -1581,6 +1599,7 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
   layer_stack_.flags.geometry_changed = false;
   geometry_changes_ = GeometryChanges::kNone;
   flush_ = false;
+  skip_commit_ = false;
 
   return status;
 }
@@ -1950,7 +1969,7 @@ int HWCDisplay::GetPanelBrightness(int *level) {
 
 int HWCDisplay::ToggleScreenUpdates(bool enable) {
   display_paused_ = enable ? false : true;
-  callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
+  callbacks_->Refresh(id_);
   validated_ = false;
   return 0;
 }
@@ -2257,9 +2276,10 @@ HWC2::Error HWCDisplay::GetDisplayIdentificationData(uint8_t *out_port, uint32_t
                                                      uint8_t *out_data) {
   DisplayError ret = display_intf_->GetDisplayIdentificationData(out_port, out_data_size, out_data);
   if (ret != kErrorNone) {
-    DLOGE("GetDisplayIdentificationData failed due to SDM/Driver (err = %d, disp id = %" PRIu64
+    DLOGE("Failed due to SDM/Driver (err = %d, disp id = %" PRIu64
           " %d-%d", ret, id_, sdm_id_, type_);
   }
+
   return HWC2::Error::None;
 }
 
@@ -2320,6 +2340,36 @@ int32_t HWCDisplay::SetClientTargetDataSpace(int32_t dataspace) {
   }
 
   return 0;
+}
+
+void HWCDisplay::WaitOnPreviousFence() {
+  DisplayConfigFixedInfo display_config;
+  display_intf_->GetConfig(&display_config);
+  if (!display_config.is_cmdmode) {
+    return;
+  }
+
+  // Since prepare failed commit would follow the same.
+  // Wait for previous rel fence.
+  for (auto hwc_layer : layer_set_) {
+    auto fence = hwc_layer->PopBackReleaseFence();
+    if (fence >= 0) {
+      int error = sync_wait(fence, 1000);
+      if (error < 0) {
+        DLOGW("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
+        return;
+      }
+    }
+    hwc_layer->PushBackReleaseFence(fence);
+  }
+
+  if (fbt_release_fence_ >= 0) {
+    int error = sync_wait(fbt_release_fence_, 1000);
+    if (error < 0) {
+      DLOGW("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
+      return;
+    }
+  }
 }
 
 }  // namespace sdm

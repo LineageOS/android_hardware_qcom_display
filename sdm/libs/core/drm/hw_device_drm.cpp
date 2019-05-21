@@ -694,6 +694,12 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   GetHWDisplayPortAndMode();
   GetHWPanelMaxBrightness();
 
+  if (current_mode.flags & DRM_MODE_FLAG_CMD_MODE_PANEL) {
+    hw_panel_info_.mode = kModeCommand;
+  }
+  if (current_mode.flags & DRM_MODE_FLAG_VID_MODE_PANEL) {
+    hw_panel_info_.mode = kModeVideo;
+  }
   DLOGI("%s, Panel Interface = %s, Panel Mode = %s, Is Primary = %d", device_name_,
         interface_str_.c_str(), hw_panel_info_.mode == kModeVideo ? "Video" : "Command",
         hw_panel_info_.is_primary_panel);
@@ -853,17 +859,29 @@ DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, int *release_fence)
 
   int64_t release_fence_t = -1;
   update_mode_ = true;
+
+  if (first_cycle_) {
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
+    drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
+  }
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_t);
+  if (release_fence) {
+    drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_t);
+  }
   int ret = NullCommit(true /* synchronous */, true /* retain_planes */);
   if (ret) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
   }
 
-  *release_fence = static_cast<int>(release_fence_t);
-  DLOGD_IF(kTagDriverConfig, "RELEASE fence created: fd:%d", *release_fence);
+  if (release_fence) {
+    *release_fence = static_cast<int>(release_fence_t);
+    DLOGD_IF(kTagDriverConfig, "RELEASE fence created: fd:%d", *release_fence);
+  }
+  pending_doze_ = false;
+
   return kErrorNone;
 }
 
@@ -872,6 +890,10 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown) {
   if (!drm_atomic_intf_) {
     DLOGE("DRM Atomic Interface is null!");
     return kErrorUndefined;
+  }
+
+  if (first_cycle_) {
+    return kErrorNone;
   }
 
   SetFullROI();
@@ -884,6 +906,7 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
   }
+  pending_doze_ = false;
 
   return kErrorNone;
 }
@@ -891,26 +914,34 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown) {
 DisplayError HWDeviceDRM::Doze(const HWQosData &qos_data, int *release_fence) {
   DTRACE_SCOPED();
 
+  if (!first_cycle_) {
+    pending_doze_ = true;
+    return kErrorNone;
+  }
+
   SetQOSData(qos_data);
 
   int64_t release_fence_t = -1;
 
-  if (first_cycle_) {
-    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
-    drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
-    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
-  }
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
+  drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
+
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::DOZE);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_t);
+  if (release_fence) {
+    drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_t);
+  }
   int ret = NullCommit(true /* synchronous */, true /* retain_planes */);
   if (ret) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
   }
 
-  *release_fence = static_cast<int>(release_fence_t);
-  DLOGD_IF(kTagDriverConfig, "RELEASE fence created: fd:%d", *release_fence);
+  if (release_fence) {
+    *release_fence = static_cast<int>(release_fence_t);
+    DLOGD_IF(kTagDriverConfig, "RELEASE fence created: fd:%d", *release_fence);
+  }
   return kErrorNone;
 }
 
@@ -929,15 +960,21 @@ DisplayError HWDeviceDRM::DozeSuspend(const HWQosData &qos_data, int *release_fe
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id,
                             DRMPowerMode::DOZE_SUSPEND);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_t);
+  if (release_fence) {
+    drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_t);
+  }
   int ret = NullCommit(true /* synchronous */, true /* retain_planes */);
   if (ret) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
   }
 
-  *release_fence = static_cast<int>(release_fence_t);
-  DLOGD_IF(kTagDriverConfig, "RELEASE fence created: fd:%d", *release_fence);
+  if (release_fence) {
+    *release_fence = static_cast<int>(release_fence_t);
+    DLOGD_IF(kTagDriverConfig, "RELEASE fence created: fd:%d", *release_fence);
+  }
+  pending_doze_ = false;
+
   return kErrorNone;
 }
 
@@ -963,6 +1000,7 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
     return;
   }
 
+  DTRACE_SCOPED();
   HWLayersInfo &hw_layer_info = hw_layers->info;
   uint32_t hw_layer_count = UINT32(hw_layer_info.hw_layers.size());
   HWQosData &qos_data = hw_layers->qos_data;
@@ -976,7 +1014,7 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
   bool update_config = resource_update || hw_layer_info.stack->flags.geometry_changed;
 
   // TODO(user): Once destination scalar is enabled we can always send ROIs if driver allows
-  if (hw_panel_info_.partial_update && update_config) {
+  if (hw_panel_info_.partial_update && update_config && !IsDestScalingNeeded()) {
     const int kNumMaxROIs = 4;
     DRMRect crtc_rects[kNumMaxROIs] = {{0, 0, mixer_attributes_.width, mixer_attributes_.height}};
     DRMRect conn_rects[kNumMaxROIs] = {{0, 0, display_attributes_[index].x_pixels,
@@ -1117,6 +1155,31 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
   }
 
   drm_atomic_intf_->Perform(DRMOps::DPPS_COMMIT_FEATURE, 0 /* argument is not used */);
+
+  if (reset_output_fence_offset_ && !validate) {
+    // Change back the fence_offset
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_OUTPUT_FENCE_OFFSET, token_.crtc_id, 0);
+    reset_output_fence_offset_ = false;
+  }
+
+  // Set panel mode
+  if (panel_mode_changed_) {
+    for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
+      if ((current_mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
+         (current_mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
+         (current_mode.vrefresh == connector_info_.modes[mode_index].mode.vrefresh) &&
+         (current_bit_clk == connector_info_.modes[mode_index].bit_clk_rate) &&
+         (panel_mode_changed_ & connector_info_.modes[mode_index].mode.flags)) {
+        current_mode = connector_info_.modes[mode_index].mode;
+        if ((current_mode.flags & DRM_MODE_FLAG_VID_MODE_PANEL) && !validate) {
+          // Switch to video mode, corresponding change the fence_offset
+          drm_atomic_intf_->Perform(DRMOps::CRTC_SET_OUTPUT_FENCE_OFFSET, token_.crtc_id, 1);
+        }
+        break;
+      }
+    }
+  }
+
   if (!validate) {
     drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_);
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence_);
@@ -1135,6 +1198,7 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
       if ((current_mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
           (current_mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
           (current_bit_clk == connector_info_.modes[mode_index].bit_clk_rate) &&
+          (current_mode.flags == connector_info_.modes[mode_index].mode.flags) &&
           (vrefresh_ == connector_info_.modes[mode_index].mode.vrefresh)) {
         current_mode = connector_info_.modes[mode_index].mode;
         break;
@@ -1147,6 +1211,7 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
       if ((current_mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
           (current_mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
           (current_mode.vrefresh == connector_info_.modes[mode_index].mode.vrefresh) &&
+          (current_mode.flags == connector_info_.modes[mode_index].mode.flags) &&
           (bit_clk_rate_ == connector_info_.modes[mode_index].bit_clk_rate)) {
         current_mode = connector_info_.modes[mode_index].mode;
         break;
@@ -1160,10 +1225,14 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
+  } else if (pending_doze_ && !validate) {
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::DOZE);
+    pending_doze_ = false;
   }
 
   // Set CRTC mode, only if display config changes
-  if (vrefresh_ || first_cycle_ || update_mode_) {
+  if (vrefresh_ || update_mode_ || panel_mode_changed_) {
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
   }
 
@@ -1230,6 +1299,7 @@ DisplayError HWDeviceDRM::Validate(HWLayers *hw_layers) {
     DLOGE("failed with error %d for %s", ret, device_name_);
     DumpHWLayers(hw_layers);
     vrefresh_ = 0;
+    panel_mode_changed_ = 0;
     err = kErrorHardware;
   }
 
@@ -1312,6 +1382,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
     DLOGE("%s failed with error %d crtc %d", __FUNCTION__, ret, token_.crtc_id);
     DumpHWLayers(hw_layers);
     vrefresh_ = 0;
+    panel_mode_changed_ = 0;
     CloseFd(&release_fence);
     CloseFd(&retire_fence);
     release_fence_ = -1;
@@ -1367,6 +1438,31 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
       }
     }
     bit_clk_rate_ = 0;
+  }
+
+  if (panel_mode_changed_) {
+    drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
+    for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
+      if ((current_mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
+          (current_mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
+          (current_mode.vrefresh & connector_info_.modes[mode_index].mode.vrefresh) &&
+          (panel_mode_changed_ & connector_info_.modes[mode_index].mode.flags)) {
+        if (connector_info_.modes[mode_index].mode.flags & DRM_MODE_FLAG_CMD_MODE_PANEL) {
+          hw_panel_info_.mode = kModeCommand;
+          DLOGV_IF(kTagDriverConfig, "switch to command mode done, mode_index = %d\n",
+                   mode_index);
+        }
+        if (connector_info_.modes[mode_index].mode.flags & DRM_MODE_FLAG_VID_MODE_PANEL) {
+          hw_panel_info_.mode = kModeVideo;
+          reset_output_fence_offset_ = true;
+          DLOGV_IF(kTagDriverConfig, "switch to video mode done, mode_index = %d\n", mode_index);
+        }
+        current_mode_index_ = mode_index;
+        break;
+      }
+    }
+    panel_mode_changed_ = 0;
+    synchronous_commit_ = false;
   }
 
   first_cycle_ = false;
@@ -1510,6 +1606,11 @@ DisplayError HWDeviceDRM::GetPPFeaturesVersion(PPFeatureVersion *vers) {
 }
 
 DisplayError HWDeviceDRM::SetPPFeatures(PPFeaturesConfig *feature_list) {
+  if (pending_doze_) {
+    DLOGI("Doze state pending!! Skip for now");
+    return kErrorNone;
+  }
+
   int ret = 0;
   PPFeatureInfo *feature = NULL;
 
@@ -1568,6 +1669,30 @@ void HWDeviceDRM::SetIdleTimeoutMs(uint32_t timeout_ms) {
 }
 
 DisplayError HWDeviceDRM::SetDisplayMode(const HWDisplayMode hw_display_mode) {
+  uint32_t mode_flag = 0;
+
+  if (hw_display_mode == kModeCommand) {
+    mode_flag = DRM_MODE_FLAG_CMD_MODE_PANEL;
+    DLOGI_IF(kTagDriverConfig, "switch panel mode to command");
+  } else if (hw_display_mode == kModeVideo) {
+    mode_flag = DRM_MODE_FLAG_VID_MODE_PANEL;
+    DLOGI_IF(kTagDriverConfig, "switch panel mode to video");
+  }
+
+  drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
+  uint64_t current_bit_clk = connector_info_.modes[current_mode_index_].bit_clk_rate;
+  for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
+    if ((current_mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
+        (current_mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
+        (current_mode.vrefresh == connector_info_.modes[mode_index].mode.vrefresh) &&
+        (current_bit_clk == connector_info_.modes[mode_index].bit_clk_rate) &&
+        (mode_flag & connector_info_.modes[mode_index].mode.flags)) {
+      panel_mode_changed_ = mode_flag;
+      synchronous_commit_ = true;
+      return kErrorNone;
+    }
+  }
+
   return kErrorNotSupported;
 }
 
@@ -1585,6 +1710,7 @@ DisplayError HWDeviceDRM::SetRefreshRate(uint32_t refresh_rate) {
     if ((current_mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
         (current_mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
         (current_bit_clk == connector_info_.modes[mode_index].bit_clk_rate) &&
+        (current_mode.flags == connector_info_.modes[mode_index].mode.flags) &&
         (refresh_rate == connector_info_.modes[mode_index].mode.vrefresh)) {
       vrefresh_ = refresh_rate;
       DLOGV_IF(kTagDriverConfig, "Set refresh rate to %d", refresh_rate);
@@ -1684,6 +1810,10 @@ DisplayError HWDeviceDRM::UnsetScaleLutConfig() {
 }
 
 DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attributes) {
+  if (IsResolutionSwitchEnabled()) {
+    return kErrorNotSupported;
+  }
+
   if (!hw_resource_.hw_dest_scalar_info.count) {
     return kErrorNotSupported;
   }
@@ -1706,12 +1836,6 @@ DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attr
   if (mixer_attributes.width > max_input_width) {
     DLOGW("Input width exceeds width limit! input_width %d width_limit %d", mixer_attributes.width,
           max_input_width);
-    return kErrorNotSupported;
-  }
-
-  if (static_cast<int>(mixer_attributes.width) < hw_panel_info_.min_roi_width) {
-    DLOGW("Input width less than panel min_roi_width! input_width %d min_roi_width %d",
-          mixer_attributes.width, hw_panel_info_.min_roi_width);
     return kErrorNotSupported;
   }
 

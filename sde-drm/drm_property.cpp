@@ -157,6 +157,7 @@ DRMProperty DRMPropertyManager::GetPropertyEnum(const std::string &name) const {
   if (name == "SDE_DSPP_LTM_VLUT_V1") { return DRMProperty::SDE_LTM_VLUT; }
   if (name == "SDE_VIG_1D_LUT_IGC_V6") { return DRMProperty::SDE_VIG_1D_LUT_IGC_V6; }
   if (name == "SDE_VIG_3D_LUT_GAMUT_V6") { return DRMProperty::SDE_VIG_3D_LUT_GAMUT_V6; }
+  if (name == "frame_trigger_mode") { return DRMProperty::FRAME_TRIGGER; }
 
   return DRMProperty::INVALID;
 }

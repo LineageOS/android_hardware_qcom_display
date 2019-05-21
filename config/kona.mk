@@ -15,7 +15,6 @@ PRODUCT_PACKAGES += \
     memtrack.qcom \
     libqdutils \
     libqdMetaData \
-    libqdMetaData.system \
     modetest
 
 #QDCM calibration xml file for 2k panel
@@ -53,7 +52,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
     debug.sf.latch_unsignaled=1 \
     debug.sf.enable_hwc_vds=1 \
     debug.mdpcomp.logs=0 \
-    ro.vendor.display.cabl=2 \
     vendor.gralloc.disable_ubwc=0 \
     vendor.display.disable_scaler=0 \
     vendor.display.disable_offline_rotator=1 \

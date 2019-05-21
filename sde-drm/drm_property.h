@@ -162,6 +162,7 @@ enum struct DRMProperty {
   SDE_LTM_BUFFER_CTRL,
   SDE_LTM_QUEUE_BUFFER,
   SDE_LTM_VLUT,
+  FRAME_TRIGGER,
 
   // Insert above
   MAX

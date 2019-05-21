@@ -56,6 +56,7 @@ DisplayBuiltIn::DisplayBuiltIn(int32_t display_id, DisplayEventHandler *event_ha
 
 DisplayError DisplayBuiltIn::Init() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
+  int32_t disable_defer_power_state = 0;
 
   DisplayError error = HWInterface::Create(display_id_, kBuiltIn, hw_info_intf_,
                                            buffer_sync_handler_, buffer_allocator_, &hw_intf_);
@@ -110,6 +111,11 @@ DisplayError DisplayBuiltIn::Init() {
 
   current_refresh_rate_ = hw_panel_info_.max_fps;
 
+  Debug::GetProperty(DISABLE_DEFER_POWER_STATE, &disable_defer_power_state);
+  defer_power_state_ = !disable_defer_power_state;
+
+  DLOGI("defer_power_state %d", defer_power_state_);
+
   return error;
 }
 
@@ -133,6 +139,7 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
     reset_panel_ = false;
   }
 
+  DTRACE_SCOPED();
   if (NeedsMixerReconfiguration(layer_stack, &new_mixer_width, &new_mixer_height)) {
     error = ReconfigureMixer(new_mixer_width, new_mixer_height);
     if (error != kErrorNone) {
@@ -152,6 +159,8 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
   DisplayError error = kErrorNone;
   uint32_t app_layer_count = hw_layers_.info.app_layer_count;
 
+  DTRACE_SCOPED();
+
   // Enabling auto refresh is async and needs to happen before commit ioctl
   if (hw_panel_info_.mode == kModeCommand) {
     bool enable = (app_layer_count == 1) && layer_stack->flags.single_buffered_layer_present;
@@ -160,6 +169,16 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
     hw_intf_->SetAutoRefresh(enable);
     if (need_refresh) {
       event_handler_->Refresh();
+    }
+  }
+
+  if (trigger_mode_debug_ != kFrameTriggerMax) {
+    error = hw_intf_->SetFrameTrigger(trigger_mode_debug_);
+    if (error != kErrorNone) {
+      DLOGE("Failed to set frame trigger mode %d, err %d", (int)trigger_mode_debug_, error);
+    } else {
+      DLOGV_IF(kTagDisplay, "Set frame trigger mode %d", trigger_mode_debug_);
+      trigger_mode_debug_ = kFrameTriggerMax;
     }
   }
 
@@ -427,6 +446,7 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
   DisplayError error = kErrorNone;
   uint32_t pending;
   bool enable = false;
+  DppsDisplayInfo *info;
 
   switch (op) {
     case kDppsSetFeature:
@@ -471,6 +491,16 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
         commit_event_enabled_ = *(reinterpret_cast<bool *>(payload));
       }
       break;
+    case kDppsGetDisplayInfo:
+      if (!payload) {
+        DLOGE("Invalid payload parameter for op %d", op);
+        error = kErrorParameters;
+        break;
+      }
+      info = reinterpret_cast<DppsDisplayInfo *>(payload);
+      info->width = display_attributes_.x_pixels;
+      info->height = display_attributes_.y_pixels;
+      break;
     default:
       DLOGE("Invalid input op %d", op);
       error = kErrorParameters;
@@ -488,6 +518,13 @@ DisplayError DisplayBuiltIn::SetDisplayDppsAdROI(void *payload) {
     DLOGE("Failed to set ad roi config, err %d", err);
 
   return err;
+}
+
+DisplayError DisplayBuiltIn::SetFrameTriggerMode(FrameTriggerMode mode) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+
+  trigger_mode_debug_ = mode;
+  return kErrorNone;
 }
 
 void DppsInfo::Init(DppsPropIntf *intf, const std::string &panel_name) {
@@ -636,9 +673,12 @@ void DisplayBuiltIn::ResetPanel() {
   }
   CloseFd(&release_fence);
 
-  status = SetColorMode(current_color_mode_);
-  if (status != kErrorNone) {
-    DLOGE("SetColorMode failed for display id = %d error = %d", display_id_, status);
+  // If panel does not support color modes, do not set color mode.
+  if (color_mode_map_.size() > 0) {
+    status = SetColorMode(current_color_mode_);
+    if (status != kErrorNone) {
+      DLOGE("SetColorMode failed for display id = %d error = %d", display_id_, status);
+    }
   }
 
   status = SetVSyncState(true);

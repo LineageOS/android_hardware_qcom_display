@@ -124,6 +124,7 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate);
   virtual DisplayError GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
                                                     uint8_t *out_data);
+  virtual DisplayError SetFrameTrigger(FrameTriggerMode mode) { return kErrorNotSupported; }
 
   enum {
     kHWEventVSync,
@@ -171,6 +172,11 @@ class HWDeviceDRM : public HWInterface {
   void SetFullROI();
   void SetQOSData(const HWQosData &qos_data);
   void DumpHWLayers(HWLayers *hw_layers);
+  bool IsDestScalingNeeded() {
+    return (mixer_attributes_.width != display_attributes_[current_mode_index_].x_pixels ||
+           mixer_attributes_.height != display_attributes_[current_mode_index_].y_pixels);
+  }
+
 
   class Registry {
    public:
@@ -225,6 +231,8 @@ class HWDeviceDRM : public HWInterface {
   bool synchronous_commit_ = false;
   uint32_t topology_control_ = 0;
   uint32_t vrefresh_ = 0;
+  uint32_t panel_mode_changed_ = 0;
+  bool reset_output_fence_offset_ = false;
   uint64_t bit_clk_rate_ = 0;
   bool update_mode_ = false;
 
@@ -233,6 +241,7 @@ class HWDeviceDRM : public HWInterface {
   bool resolution_switch_enabled_ = false;
   bool autorefresh_ = false;
   std::unique_ptr<HWColorManagerDrm> hw_color_mgr_ = {};
+  bool pending_doze_ = false;
 };
 
 }  // namespace sdm

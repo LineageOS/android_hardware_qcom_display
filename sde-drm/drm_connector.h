@@ -59,6 +59,7 @@ class DRMConnector {
   void Perform(DRMOps code, drmModeAtomicReq *req, va_list args);
   int IsConnected() { return (DRM_MODE_CONNECTED == drm_connector_->connection); }
   int GetPossibleEncoders(std::set<uint32_t> *possible_encoders);
+  void SetSkipConnectorReload(bool skip_reload) { skip_connector_reload_ = skip_reload; };
   void Dump();
 
  private:
@@ -74,6 +75,7 @@ class DRMConnector {
   int fd_ = -1;
   drmModeConnector *drm_connector_ = {};
   DRMPropertyManager prop_mgr_ {};
+  bool skip_connector_reload_ = false; //  Usually set to true for new TV/pluggable displays.
   DRMStatus status_ = DRMStatus::FREE;
   std::unique_ptr<DRMPPManager> pp_mgr_{};
 };

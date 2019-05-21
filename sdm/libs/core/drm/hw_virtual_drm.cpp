@@ -233,10 +233,6 @@ DisplayError HWVirtualDRM::PowerOn(const HWQosData &qos_data, int *release_fence
     return kErrorUndefined;
   }
 
-  if (first_cycle_) {
-    return kErrorNone;
-  }
-
   DisplayError err = HWDeviceDRM::PowerOn(qos_data, release_fence);
   if (err != kErrorNone) {
     return err;
