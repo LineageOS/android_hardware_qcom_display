@@ -154,6 +154,8 @@ DRMProperty DRMPropertyManager::GetPropertyEnum(const std::string &name) const {
   if (name == "SDE_DSPP_LTM_HIST_CTRL_V1") { return DRMProperty::SDE_LTM_HIST_CTRL; }
   if (name == "SDE_DSPP_LTM_SET_BUF_V1") { return DRMProperty::SDE_LTM_BUFFER_CTRL; }
   if (name == "SDE_DSPP_LTM_QUEUE_BUF_V1") { return DRMProperty::SDE_LTM_QUEUE_BUFFER; }
+  if (name == "SDE_DSPP_LTM_QUEUE_BUF2_V1") { return DRMProperty::SDE_LTM_QUEUE_BUFFER2; }
+  if (name == "SDE_DSPP_LTM_QUEUE_BUF3_V1") { return DRMProperty::SDE_LTM_QUEUE_BUFFER3; }
   if (name == "SDE_DSPP_LTM_VLUT_V1") { return DRMProperty::SDE_LTM_VLUT; }
   if (name == "SDE_VIG_1D_LUT_IGC_V6") { return DRMProperty::SDE_VIG_1D_LUT_IGC_V6; }
   if (name == "SDE_VIG_3D_LUT_GAMUT_V6") { return DRMProperty::SDE_VIG_3D_LUT_GAMUT_V6; }
