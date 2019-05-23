@@ -46,6 +46,30 @@
       "revId": "3749ad5ed6f5962fe3c3b061f86073d43acfa1e9",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "30b0ee8d_af884984",
+        "filename": "Android.mk",
+        "patchSetId": 2
+      },
+      "lineNbr": 19,
+      "author": {
+        "id": 15525
+      },
+      "writtenOn": "2019-05-23T02:14:14Z",
+      "side": 1,
+      "message": "Thanks, I got it. I misread the `else` in line 17.",
+      "parentUuid": "249d9072_b0b92eed",
+      "range": {
+        "startLine": 19,
+        "startChar": 17,
+        "endLine": 19,
+        "endChar": 19
+      },
+      "revId": "3749ad5ed6f5962fe3c3b061f86073d43acfa1e9",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
