@@ -246,6 +246,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int32_t MinHdcpEncryptionLevelChanged(int disp_id, uint32_t min_enc_level);
   int32_t SetDynamicDSIClock(int64_t disp_id, uint32_t bitrate);
   int32_t IsWbUbwcSupported(int *value);
+  bool HasHDRSupport(HWCDisplay *hwc_display);
 
   // service methods
   void StartServices();
@@ -360,6 +361,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   std::vector<DisplayMapInfo> map_info_builtin_;    // Builtin displays excluding primary
   std::vector<DisplayMapInfo> map_info_pluggable_;  // Pluggable displays excluding primary
   std::vector<DisplayMapInfo> map_info_virtual_;    // Virtual displays
+  std::vector<bool> is_hdr_display_;    // info on HDR supported
   bool reset_panel_ = false;
   bool secure_display_active_ = false;
   bool primary_ready_ = false;
