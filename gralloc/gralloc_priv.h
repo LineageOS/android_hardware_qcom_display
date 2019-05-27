@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution
  *
  * Copyright (C) 2008 The Android Open Source Project
@@ -217,5 +217,12 @@ enum {
 };
 
 enum { BUFFER_TYPE_UI = 0, BUFFER_TYPE_VIDEO };
+
+/* Flag to determine interlaced content
+ * Value maps to Flags presents in types.hal of QtiMapperextensions
+ */
+enum {
+  LAYOUT_INTERLACED_FLAG = 1 << 0,
+};
 
 #endif  // __GRALLOC_PRIV_H__
