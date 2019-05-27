@@ -341,6 +341,9 @@ void HWCSession::InitSupportedDisplaySlots() {
   for (auto &map_info : map_info_virtual_) {
     map_info.client_id = base_id++;
   }
+
+  // resize HDR supported map to total number of displays.
+  is_hdr_display_.resize(UINT32(base_id));
 }
 
 int HWCSession::GetDisplayIndex(int dpy) {
@@ -1275,6 +1278,7 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
           return HWC2::Error::NoResources;
         }
 
+        is_hdr_display_[UINT32(client_id)] = HasHDRSupport(hwc_display);
         DLOGI("Created virtual display id:% " PRIu64 " with res: %dx%d", client_id, width, height);
 
         *out_display_id = client_id;
@@ -2419,6 +2423,7 @@ int HWCSession::CreatePrimaryDisplay() {
     }
 
     if (!status) {
+      is_hdr_display_[UINT32(client_id)] = HasHDRSupport(*hwc_display);
       DLOGI("Primary display created.");
       map_info_primary_.disp_type = info.display_type;
       map_info_primary_.sdm_id = info.display_id;
@@ -2478,6 +2483,7 @@ int HWCSession::HandleBuiltInDisplays() {
           DLOGE("Builtin display creation failed.");
           break;
         }
+        is_hdr_display_[UINT32(client_id)] = HasHDRSupport(hwc_display_[client_id]);
         DLOGI("Builtin display created: sdm id = %d, client id = %d", info.display_id, client_id);
         map_info.disp_type = info.display_type;
         map_info.sdm_id = info.display_id;
@@ -2627,6 +2633,7 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
           break;
         }
 
+        is_hdr_display_[UINT32(client_id)] = HasHDRSupport(hwc_display);
         DLOGI("Created pluggable display successfully: sdm id = %d, client id = %d",
               info.display_id, client_id);
       }
@@ -2671,6 +2678,21 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
   }
 
   return status;
+}
+
+bool HWCSession::HasHDRSupport(HWCDisplay *hwc_display) {
+  // query number of hdr types
+  uint32_t out_num_types = 0;
+  float out_max_luminance = 0.0f;
+  float out_max_average_luminance = 0.0f;
+  float out_min_luminance = 0.0f;
+  if (hwc_display->GetHdrCapabilities(&out_num_types, nullptr, &out_max_luminance,
+                                      &out_max_average_luminance, &out_min_luminance)
+                                      != HWC2::Error::None) {
+    return false;
+  }
+
+  return (out_num_types > 0);
 }
 
 int HWCSession::HandleDisconnectedDisplays(HWDisplaysInfo *hw_displays_info) {
@@ -2730,6 +2752,7 @@ void HWCSession::DestroyPluggableDisplay(DisplayMapInfo *map_info) {
     DLOGI("Destroy display %d-%d, client id = %d", map_info->sdm_id, map_info->disp_type,
          client_id);
 
+    is_hdr_display_[UINT32(client_id)] = false;
     if (!map_info->test_pattern) {
       HWCDisplayPluggable::Destroy(hwc_display);
     } else {
@@ -2751,6 +2774,7 @@ void HWCSession::DestroyNonPluggableDisplay(DisplayMapInfo *map_info) {
   }
   DLOGI("Destroy display %d-%d, client id = %d", map_info->sdm_id, map_info->disp_type,
         client_id);
+  is_hdr_display_[UINT32(client_id)] = false;
   switch (map_info->disp_type) {
     case kBuiltIn:
       HWCDisplayBuiltIn::Destroy(hwc_display);
