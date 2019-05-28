@@ -590,7 +590,9 @@ bool IsUBwcEnabled(int format, uint64_t usage) {
   // Allow UBWC, if an OpenGL client sets UBWC usage flag and GPU plus MDP
   // support the format. OR if a non-OpenGL client like Rotator, sets UBWC
   // usage flag and MDP supports the format.
-  if ((usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC) && IsUBwcSupported(format)) {
+  if (((usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC) ||
+      (usage & BufferUsage::COMPOSER_CLIENT_TARGET))
+      && IsUBwcSupported(format)) {
     bool enable = true;
     // Query GPU for UBWC only if buffer is intended to be used by GPU.
     if ((usage & BufferUsage::GPU_TEXTURE) || (usage & BufferUsage::GPU_RENDER_TARGET)) {
@@ -999,6 +1001,8 @@ void GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
   int is_ubwc_enabled = IsUBwcEnabled(info.format, info.usage);
   if (!is_ubwc_enabled) {
     adreno_usage &= ~(GRALLOC_USAGE_PRIVATE_ALLOC_UBWC);
+  } else {
+    adreno_usage |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
   }
 
   // Call adreno api for populating metadata blob

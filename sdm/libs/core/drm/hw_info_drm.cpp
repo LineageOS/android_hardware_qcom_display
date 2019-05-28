@@ -711,11 +711,13 @@ DisplayError HWInfoDRM::GetDisplaysStatus(HWDisplaysInfo *hw_displays_info) {
       }
       hw_info.is_connected = iter.second.is_connected;
       hw_info.is_primary = iter.second.is_primary;
+      hw_info.is_wb_ubwc_supported = iter.second.is_wb_ubwc_supported;
       if (hw_info.display_id >= 0) {
         (*hw_displays_info)[hw_info.display_id] = hw_info;
       }
-      DLOGI("display: %d-%d, connected: %s, primary: %s", hw_info.display_id, hw_info.display_type,
-            hw_info.is_connected? "true": "false", hw_info.is_primary? "true": "false");
+      DLOGI("display: %d-%d, connected: %s, primary: %s wb_ubwc: %s", hw_info.display_id,
+            hw_info.display_type, hw_info.is_connected? "true": "false",
+            hw_info.is_primary? "true": "false", hw_info.is_wb_ubwc_supported? "true": "false");
     }
   } else {
     DLOGE("DRM Driver error %d while getting displays' status!", drm_err);

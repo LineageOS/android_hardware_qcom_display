@@ -108,6 +108,7 @@ struct HWDisplayInfo {
   DisplayType display_type;   //!< Type of display: BuiltIn/Pluggable/Virtual
   bool is_connected;          //!< Connection status of the display.
   bool is_primary;            //!< True if this is the main display of the device.
+  bool is_wb_ubwc_supported = true;            //!< check hardware wb ubwc support
 };
 
 /*! @brief Information on all displays as a map with display_id as key.
