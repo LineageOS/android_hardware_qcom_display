@@ -217,15 +217,13 @@ DisplayError DisplayHDMI::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level)
 }
 
 uint32_t DisplayHDMI::GetClosestConfig(uint32_t width, uint32_t height) {
-  if ((UINT32_MAX / width > height) || (UINT32_MAX / height > width)) {
+  if ((UINT32_MAX / width < height) || (UINT32_MAX / height < width)) {
     //uint overflow
     return panel_config_index_;
   }
   uint32_t num_modes = 0, index = 0;
   hw_intf_->GetNumDisplayAttributes(&num_modes);
   uint32_t area = width * height;
-  float display_aspect_ratio =
-  FLOAT(display_attributes_.x_pixels) / FLOAT(display_attributes_.y_pixels);
   std::vector<uint32_t> area_modes(num_modes);
   // Get display attribute for each mode
   std::vector<HWDisplayAttributes> attrib(num_modes);
@@ -233,13 +231,9 @@ uint32_t DisplayHDMI::GetClosestConfig(uint32_t width, uint32_t height) {
     hw_intf_->GetDisplayAttributes(index, &attrib[index]);
     area_modes[index] = attrib[index].y_pixels * attrib[index].x_pixels;
   }
-  uint32_t least_area_diff = UINT32_MAX;
+  uint32_t least_area_diff = display_attributes_.x_pixels*display_attributes_.y_pixels;
   uint32_t least_diff_index = panel_config_index_;
   for (index = 0; index < num_modes; index++) {
-    float aspect_ratio = FLOAT(attrib[index].x_pixels) / FLOAT(attrib[index].y_pixels);
-    if (aspect_ratio != display_aspect_ratio) {
-      continue;
-    }
     if (abs(INT(area_modes[index]) - INT(area)) < INT(least_area_diff)) {
       least_diff_index = index;
       least_area_diff = UINT32(abs(INT(area_modes[index]) - INT(area)));
