@@ -50,6 +50,7 @@
 #define VIDEO_FBID_LIMIT 16
 #define OFFLINE_ROTATOR_FBID_LIMIT 2
 
+using sde_drm::DRMPowerMode;
 namespace sdm {
 class HWInfoInterface;
 
@@ -226,6 +227,7 @@ class HWDeviceDRM : public HWInterface {
   uint32_t vrefresh_ = 0;
   uint64_t bit_clk_rate_ = 0;
   bool update_mode_ = false;
+  DRMPowerMode last_power_mode_ = DRMPowerMode::OFF;
 
  private:
   std::string interface_str_ = "DSI";
