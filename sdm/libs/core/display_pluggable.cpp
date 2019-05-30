@@ -126,7 +126,7 @@ DisplayError DisplayPluggable::Init() {
     DLOGE("Failed to create hardware events interface. Error = %d", error);
   }
 
-  InitializeColorModes(false);
+  InitializeColorModes();
 
   current_refresh_rate_ = hw_panel_info_.max_fps;
 
@@ -316,7 +316,7 @@ DisplayError DisplayPluggable::VSync(int64_t timestamp) {
   return kErrorNone;
 }
 
-DisplayError DisplayPluggable::InitializeColorModes(bool enum_user_modes) {
+DisplayError DisplayPluggable::InitializeColorModes() {
   PrimariesTransfer pt = {};
   AttrVal var;
   if (!hw_panel_info_.hdr_enabled) {

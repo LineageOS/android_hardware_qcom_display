@@ -111,7 +111,6 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError GetColorModeName(int32_t mode_id, std::string *mode_name);
   virtual DisplayError SetColorTransform(const uint32_t length, const double *color_transform);
   virtual DisplayError GetDefaultColorMode(std::string *color_mode);
-  virtual DisplayError ApplyDefaultDisplayMode(void);
   virtual DisplayError SetCursorPosition(int x, int y);
   virtual DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate, uint32_t *max_refresh_rate);
   virtual DisplayError GetPanelBrightness(int *level) {
@@ -140,7 +139,7 @@ class DisplayBase : public DisplayInterface {
   }
   virtual DisplayError SetQSyncMode(QSyncMode qsync_mode) { return kErrorNotSupported; }
   virtual std::string Dump();
-  virtual DisplayError InitializeColorModes(bool enum_user_modes);
+  virtual DisplayError InitializeColorModes();
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) {
     return kErrorNotSupported;
   }

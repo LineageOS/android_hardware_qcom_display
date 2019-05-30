@@ -102,7 +102,6 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   void SetMetaDataRefreshRateFlag(bool enable);
   virtual DisplayError SetDisplayMode(uint32_t mode);
   virtual DisplayError DisablePartialUpdateOneFrame();
-  void ProcessBootAnimCompleted(void);
   void SetQDCMSolidFillInfo(bool enable, const LayerSolidFill &color);
   void ToggleCPUHint(bool set);
   void ForceRefreshRate(uint32_t refresh_rate);

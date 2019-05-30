@@ -74,8 +74,6 @@ class ColorInterface {
                                             PPFeaturesConfig *out_features,
                                             PPPendingParams *pending_action) = 0;
 
-  virtual DisplayError ApplyDefaultDisplayMode(PPFeaturesConfig *out_features) = 0;
-
   virtual DisplayError ColorIntfSetColorTransform(PPFeaturesConfig *out_features,
                                                 uint32_t disp_id, uint32_t length,
                                                 const double *trans_data) = 0;
@@ -84,12 +82,11 @@ class ColorInterface {
                                              uint32_t disp_id, int32_t mode_id) = 0;
 
   virtual DisplayError ColorIntfGetNumDisplayModes(PPFeaturesConfig *out_features,
-                                                 uint32_t disp_id, bool enum_user_modes,
-                                                 uint32_t *mode_cnt) = 0;
+                                                 uint32_t disp_id, uint32_t *mode_cnt) = 0;
 
   virtual DisplayError ColorIntfEnumerateDisplayModes(PPFeaturesConfig *out_features,
-                                                uint32_t disp_id, bool enum_user_modes,
-                                                SDEDisplayMode *modes, uint32_t *mode_cnt) = 0;
+                                                uint32_t disp_id, SDEDisplayMode *modes,
+                                                uint32_t *mode_cnt) = 0;
   virtual DisplayError ColorIntfGetModeInfo(PPFeaturesConfig *out_features,
                                             uint32_t disp_id, int32_t mode_id,
                                             AttrVal *query) = 0;
