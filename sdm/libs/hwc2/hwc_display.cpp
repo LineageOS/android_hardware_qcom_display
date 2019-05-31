@@ -170,6 +170,10 @@ HWC2::Error HWCColorMode::CacheColorModeWithRenderIntent(ColorMode mode, RenderI
 }
 
 HWC2::Error HWCColorMode::ApplyCurrentColorModeWithRenderIntent(bool hdr_present) {
+  // If panel does not support color modes, do not set color mode.
+  if (color_mode_map_.size() <= 1) {
+    return HWC2::Error::None;
+  }
   if (!apply_mode_) {
     if ((hdr_present && curr_dynamic_range_ == kHdrType) ||
       (!hdr_present && curr_dynamic_range_ == kSdrType))
