@@ -90,6 +90,8 @@ int32_t GetDataspaceFromColorMode(ColorMode mode) {
       return HAL_DATASPACE_BT2020_PQ;
     case ColorMode::BT2100_HLG:
       return HAL_DATASPACE_BT2020_HLG;
+    case ColorMode::DISPLAY_BT2020:
+      return HAL_DATASPACE_DISPLAY_BT2020;
     default:
       return HAL_DATASPACE_UNKNOWN;
   }
@@ -562,7 +564,7 @@ static int32_t GetRenderIntents(hwc2_device_t *device, hwc2_display_t display,
     return HWC2_ERROR_BAD_PARAMETER;
   }
 
-  if (mode < ColorMode::NATIVE || mode > ColorMode::BT2100_HLG) {
+  if (mode < ColorMode::NATIVE || mode > ColorMode::DISPLAY_BT2020) {
     DLOGE("Invalid ColorMode: %d", mode);
     return HWC2_ERROR_BAD_PARAMETER;
   }
@@ -805,7 +807,7 @@ static int32_t SetClientTarget(hwc2_device_t *device, hwc2_display_t display,
 int32_t HWCSession::SetColorMode(hwc2_device_t *device, hwc2_display_t display,
                                  int32_t /*ColorMode*/ int_mode) {
   auto mode = static_cast<ColorMode>(int_mode);
-  if (mode < ColorMode::NATIVE || mode > ColorMode::BT2100_HLG) {
+  if (mode < ColorMode::NATIVE || mode > ColorMode::DISPLAY_BT2020) {
     return HWC2_ERROR_BAD_PARAMETER;
   }
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::SetColorMode, mode);
@@ -815,7 +817,7 @@ int32_t HWCSession::SetColorModeWithRenderIntent(hwc2_device_t *device, hwc2_dis
                                                  int32_t /*ColorMode*/ int_mode,
                                                  int32_t /*RenderIntent*/ int_render_intent) {
   auto mode = static_cast<ColorMode>(int_mode);
-  if (mode < ColorMode::NATIVE || mode > ColorMode::BT2100_HLG) {
+  if (mode < ColorMode::NATIVE || mode > ColorMode::DISPLAY_BT2020) {
     return HWC2_ERROR_BAD_PARAMETER;
   }
   auto render_intent = static_cast<RenderIntent>(int_render_intent);
@@ -1803,7 +1805,7 @@ android::status_t HWCSession::SetColorModeOverride(const android::Parcel *input_
     return -EINVAL;
   }
 
-  if (mode < ColorMode::NATIVE || mode > ColorMode::BT2100_HLG) {
+  if (mode < ColorMode::NATIVE || mode > ColorMode::DISPLAY_BT2020) {
     DLOGE("Invalid ColorMode: %d", mode);
     return HWC2_ERROR_BAD_PARAMETER;
   }
@@ -1864,7 +1866,7 @@ android::status_t HWCSession::SetColorModeWithRenderIntentOverride(
   auto intent = static_cast<RenderIntent>(input_parcel->readInt32());
   auto device = static_cast<hwc2_device_t *>(this);
 
-  if (mode < ColorMode::NATIVE || mode > ColorMode::BT2100_HLG) {
+  if (mode < ColorMode::NATIVE || mode > ColorMode::DISPLAY_BT2020) {
     DLOGE("Invalid ColorMode: %d", mode);
     return HWC2_ERROR_BAD_PARAMETER;
   }

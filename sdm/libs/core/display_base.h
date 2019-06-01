@@ -154,6 +154,7 @@ class DisplayBase : public DisplayInterface {
  protected:
   const char *kBt2020Pq = "bt2020_pq";
   const char *kBt2020Hlg = "bt2020_hlg";
+  const char *kDisplayBt2020 = "display_bt2020";
   DisplayError BuildLayerStackStats(LayerStack *layer_stack);
   virtual DisplayError ValidateGPUTargetParams();
   void CommitLayerParams(LayerStack *layer_stack);

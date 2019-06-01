@@ -111,7 +111,7 @@ HWC2::Error HWCColorMode::GetRenderIntents(ColorMode mode, uint32_t *out_num_int
 }
 
 HWC2::Error HWCColorMode::ValidateColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
-  if (mode < ColorMode::NATIVE || mode > ColorMode::BT2100_HLG) {
+  if (mode < ColorMode::NATIVE || mode > ColorMode::DISPLAY_BT2020) {
     DLOGE("Could not find mode: %d", mode);
     return HWC2::Error::BadParameter;
   }
@@ -392,9 +392,9 @@ void HWCColorMode::PopulateColorModes() {
         } else if (transfer == kHlg) {
           color_mode_map_[ColorMode::BT2100_HLG][RenderIntent::COLORIMETRIC]
                          [kHdrType] = mode_string;
-        } else if (transfer == kGamma2_2) {
-          color_mode_map_[ColorMode::BT2020][RenderIntent::COLORIMETRIC]
-                         [kHdrType] = mode_string;
+        } else if (transfer == kSrgb) {
+          color_mode_map_[ColorMode::DISPLAY_BT2020][RenderIntent::COLORIMETRIC]
+                         [kSdrType] = mode_string;
         }
       }
     } else {
