@@ -537,6 +537,15 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     return kErrorNone;
   }
 
+  // If vsync is enabled, disable vsync before power off/Doze suspend
+  if (vsync_enable_ && (state == kStateOff || state == kStateDozeSuspend)) {
+    error = SetVSyncState(false);
+    if (error == kErrorNone) {
+      vsync_state_change_pending_ = true;
+      requested_vsync_state_ = true;
+    }
+  }
+
   switch (state) {
   case kStateOff:
     hw_layers_.info.hw_layers.clear();
@@ -591,7 +600,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     comp_manager_->SetDisplayState(display_comp_ctx_, state);
   }
 
-  if (vsync_state_change_pending_ && (state_ != kStateOff || state_ != kStateStandby)) {
+  if (vsync_state_change_pending_ && (state_ == kStateOn || state_ == kStateDoze)) {
     error = SetVSyncState(requested_vsync_state_);
     if (error != kErrorNone) {
       return error;

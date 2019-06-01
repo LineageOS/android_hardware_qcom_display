@@ -233,6 +233,7 @@ class DisplayBase : public DisplayInterface {
   bool custom_mixer_resolution_ = false;
   DisplayState power_state_pending_ = kStateOff;
   bool vsync_state_change_pending_ = false;
+  // requested_vsync_state: true -> enable vsync, false -> disable vsync
   bool requested_vsync_state_ = false;
   bool defer_power_state_ = false;
 
