@@ -249,6 +249,8 @@ int HWCDisplay::Init() {
 
   display_intf_->GetRefreshRateRange(&min_refresh_rate_, &max_refresh_rate_);
   current_refresh_rate_ = max_refresh_rate_;
+
+  GetUnderScanConfig();
   DLOGI("Display created with id: %d", id_);
   return 0;
 }
@@ -309,6 +311,7 @@ HWC2::Error HWCDisplay::DestroyLayer(hwc2_layer_t layer_id) {
   }
 
   geometry_changes_ |= GeometryChanges::kRemoved;
+  validated_ = false;
   return HWC2::Error::None;
 }
 
@@ -849,10 +852,12 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
   }
 
   if (!validated_) {
+    DLOGV_IF(kTagCompManager, "Display %d is not validated", id_);
     return HWC2::Error::NotValidated;
   }
 
   if (skip_validate_ && !CanSkipValidate()) {
+    DLOGV_IF(kTagCompManager, "Cannot skip validate on display: %d", id_);
     validated_ = false;
     return HWC2::Error::NotValidated;
   }
