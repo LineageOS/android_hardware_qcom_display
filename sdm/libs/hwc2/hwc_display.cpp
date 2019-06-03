@@ -869,6 +869,29 @@ HWC2::Error HWCDisplay::SetVsyncEnabled(HWC2::Vsync enabled) {
   return HWC2::Error::None;
 }
 
+void HWCDisplay::PostPowerMode() {
+  if (release_fence_ < 0) {
+    return;
+  }
+
+  for (auto hwc_layer : layer_set_) {
+    auto fence = hwc_layer->PopBackReleaseFence();
+    auto merged_fence = -1;
+    if (fence >= 0) {
+      merged_fence = sync_merge("sync_merge", release_fence_, fence);
+      ::close(fence);
+    } else {
+      merged_fence = ::dup(release_fence_);
+    }
+    hwc_layer->PushBackReleaseFence(merged_fence);
+  }
+
+  // Add this release fence onto fbt_release fence.
+  CloseFd(&fbt_release_fence_);
+  fbt_release_fence_ = release_fence_;
+  release_fence_ = -1;
+}
+
 HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
   DLOGV("display = %d, mode = %s", id_, to_string(mode).c_str());
   DisplayState state = kStateOff;
@@ -917,23 +940,8 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
     return HWC2::Error::BadParameter;
   }
 
-  if (release_fence >= 0) {
-    for (auto hwc_layer : layer_set_) {
-      auto fence = hwc_layer->PopBackReleaseFence();
-      auto merged_fence = -1;
-      if (fence >= 0) {
-        merged_fence = sync_merge("sync_merge", release_fence, fence);
-        ::close(fence);
-      } else {
-        merged_fence = ::dup(release_fence);
-      }
-      hwc_layer->PushBackReleaseFence(merged_fence);
-    }
-
-    // Add this release fence onto fbt_release fence.
-    CloseFd(&fbt_release_fence_);
-    fbt_release_fence_ = release_fence;
-  }
+  // Update release fence.
+  release_fence_ = release_fence;
   current_power_mode_ = mode;
   return HWC2::Error::None;
 }
@@ -2349,6 +2357,18 @@ void HWCDisplay::WaitOnPreviousFence() {
       return;
     }
   }
+}
+
+void HWCDisplay::GetLayerStack(HWCLayerStack *stack) {
+  stack->client_target = client_target_;
+  stack->layer_map = layer_map_;
+  stack->layer_set = layer_set_;
+}
+
+void HWCDisplay::SetLayerStack(HWCLayerStack *stack) {
+  client_target_ = stack->client_target;
+  layer_map_ = stack->layer_map;
+  layer_set_ = stack->layer_set;
 }
 
 }  // namespace sdm

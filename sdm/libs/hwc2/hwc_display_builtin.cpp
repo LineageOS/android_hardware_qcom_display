@@ -871,4 +871,10 @@ HWC2::Error HWCDisplayBuiltIn::SetPendingRefresh() {
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCDisplayBuiltIn::UpdatePowerMode(HWC2::PowerMode mode) {
+  current_power_mode_ = mode;
+  validated_ = false;
+  return HWC2::Error::None;
+}
+
 }  // namespace sdm

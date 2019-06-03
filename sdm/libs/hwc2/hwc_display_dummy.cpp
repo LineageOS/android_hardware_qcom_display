@@ -28,6 +28,7 @@
 */
 
 #include "hwc_display_dummy.h"
+#include "utils/debug.h"
 
 #define __CLASS__ "HWCDisplayDummy"
 
@@ -43,12 +44,18 @@ int HWCDisplayDummy::Create(CoreInterface *core_intf, BufferAllocator *buffer_al
   return kErrorNone;
 }
 
+void HWCDisplayDummy::Destroy(HWCDisplay *hwc_display) {
+  delete hwc_display;
+}
 
 HWC2::Error HWCDisplayDummy::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
   return HWC2::Error::None;
 }
 
 HWC2::Error HWCDisplayDummy::Present(int32_t *out_retire_fence) {
+  for (auto hwc_layer : layer_set_) {
+    hwc_layer->PushBackReleaseFence(-1);
+  }
   return HWC2::Error::None;
 }
 
@@ -68,6 +75,11 @@ HWCDisplayDummy::HWCDisplayDummy(CoreInterface *core_intf, BufferAllocator *buff
   display_null_.SetFrameBufferConfig(config);
   num_configs_ = 1;
   display_intf_ = &display_null_;
+}
+
+HWC2::Error HWCDisplayDummy::GetActiveConfig(hwc2_config_t *out_config) {
+  *out_config = 0;
+  return HWC2::Error::None;
 }
 
 }  // namespace sdm
