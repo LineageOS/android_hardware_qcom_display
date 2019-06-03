@@ -95,8 +95,8 @@ DisplayError DisplayBase::Init() {
   }
 
   registered_displays_[display_type_] = 1;
-  if (!hw_panel_info_.is_primary_panel) {
-    AllDisplaysNeedValidate();
+  if (!IsPrimaryDisplay()) {
+    needs_validate_.set();
   }
 
   if (hw_info_intf_) {
@@ -256,8 +256,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
       error = hw_intf_->Validate(&hw_layers_);
       if (error == kErrorNone) {
         // Strategy is successful now, wait for Commit().
-        pending_commit_ = true;
-        needs_validate_[display_type_] = 0;
+        needs_validate_.reset(display_type_);
         break;
       }
       if (error == kErrorShutDown) {
@@ -277,8 +276,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
   DisplayError error = kErrorNone;
 
   if (!active_) {
-    pending_commit_ = false;
-    needs_validate_[display_type_] = 1;
+    needs_validate_.set(display_type_);
     return kErrorPermission;
   }
 
@@ -286,12 +284,10 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     return kErrorParameters;
   }
 
-  if (!pending_commit_ && needs_validate_[display_type_]) {
+  if (needs_validate_.test(display_type_)) {
     DLOGE("Commit: Corresponding Prepare() is not called for display = %d", display_type_);
     return kErrorNotValidated;
   }
-
-  pending_commit_ = false;
 
   // Layer stack attributes has changed, need to Reconfigure, currently in use for Hybrid Comp
   if (layer_stack->flags.attributes_changed) {
@@ -366,13 +362,11 @@ DisplayError DisplayBase::Flush() {
     }
 
     comp_manager_->Purge(display_comp_ctx_);
-
-    pending_commit_ = false;
   } else {
     DLOGW("Unable to flush display = %d", display_type_);
   }
 
-  needs_validate_[display_type_] = 1;
+  needs_validate_.set(display_type_);
   return error;
 }
 
@@ -430,7 +424,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state) {
     return kErrorNone;
   }
 
-  needs_validate_[display_type_] = 1;
+  needs_validate_.set(display_type_);
 
   switch (state) {
   case kStateOff:
@@ -1066,11 +1060,10 @@ DisplayError DisplayBase::SetDetailEnhancerData(const DisplayDetailEnhancerData 
   return kErrorNone;
 }
 
-void DisplayBase::AllDisplaysNeedValidate() {
-  for (size_t type = kPrimary; type < kDisplayMax; type++) {
-    if (registered_displays_[type]) {
-      needs_validate_[type] = 1;
-    }
-  }
+bool DisplayBase::IsPrimaryDisplay() {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+
+  return hw_panel_info_.is_primary_panel;
 }
+
 }  // namespace sdm
