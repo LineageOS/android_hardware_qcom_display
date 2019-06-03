@@ -172,6 +172,11 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
       layer_stack_.flags.post_processed_output = post_processed_output_;
     }
   }
+  // Todo: relook this case
+  if (layer_stack_.flags.hdr_present != hdr_present_) {
+    error = display_intf_->ControlIdlePowerCollapse(!layer_stack_.flags.hdr_present, true);
+    hdr_present_ = layer_stack_.flags.hdr_present;
+  }
 
   uint32_t num_updating_layers = GetUpdatingLayersCount();
   bool one_updating_layer = (num_updating_layers == 1);
