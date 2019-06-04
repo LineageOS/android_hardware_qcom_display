@@ -109,7 +109,7 @@ DisplayError HWPeripheralDRM::GetDynamicDSIClock(uint64_t *bit_clk_rate) {
 
 DisplayError HWPeripheralDRM::Validate(HWLayers *hw_layers) {
   HWLayersInfo &hw_layer_info = hw_layers->info;
-  SetDestScalarData(hw_layer_info, true);
+  SetDestScalarData(hw_layer_info);
   SetupConcurrentWriteback(hw_layer_info, true);
   SetIdlePCState();
 
@@ -118,7 +118,7 @@ DisplayError HWPeripheralDRM::Validate(HWLayers *hw_layers) {
 
 DisplayError HWPeripheralDRM::Commit(HWLayers *hw_layers) {
   HWLayersInfo &hw_layer_info = hw_layers->info;
-  SetDestScalarData(hw_layer_info, false);
+  SetDestScalarData(hw_layer_info);
   SetupConcurrentWriteback(hw_layer_info, false);
   SetIdlePCState();
 
@@ -127,6 +127,7 @@ DisplayError HWPeripheralDRM::Commit(HWLayers *hw_layers) {
     return error;
   }
 
+  CacheDestScalarData(hw_layer_info);
   if (cwb_config_.enabled && (error == kErrorNone)) {
     PostCommitConcurrentWriteback(hw_layer_info.stack->output_buffer);
   }
@@ -146,13 +147,13 @@ void HWPeripheralDRM::ResetDisplayParams() {
   }
 }
 
-void HWPeripheralDRM::SetDestScalarData(HWLayersInfo hw_layer_info, bool validate) {
+void HWPeripheralDRM::SetDestScalarData(const HWLayersInfo &hw_layer_info) {
   if (!hw_scale_ || !hw_resource_.hw_dest_scalar_info.count) {
     return;
   }
 
-  for (uint32_t i = 0; i < hw_resource_.hw_dest_scalar_info.count && validate; i++) {
-    DestScaleInfoMap::iterator it = hw_layer_info.dest_scale_info_map.find(i);
+  for (uint32_t i = 0; i < hw_resource_.hw_dest_scalar_info.count; i++) {
+    auto it = hw_layer_info.dest_scale_info_map.find(i);
 
     if (it == hw_layer_info.dest_scale_info_map.end()) {
       continue;
@@ -188,21 +189,24 @@ void HWPeripheralDRM::SetDestScalarData(HWLayersInfo hw_layer_info, bool validat
   }
 
   if (needs_ds_update_) {
-    if (!validate) {
-      // Cache the destination scalar data during commit
-      for (uint32_t i = 0; i < hw_resource_.hw_dest_scalar_info.count; i++) {
-        DestScaleInfoMap::iterator it = hw_layer_info.dest_scale_info_map.find(i);
-        if (it == hw_layer_info.dest_scale_info_map.end()) {
-          continue;
-        }
-        dest_scalar_cache_[i].flags = sde_dest_scalar_data_.ds_cfg[i].flags;
-        dest_scalar_cache_[i].scalar_data = scalar_data_[i];
-      }
-      needs_ds_update_ = false;
-    }
     sde_dest_scalar_data_.num_dest_scaler = UINT32(hw_layer_info.dest_scale_info_map.size());
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_DEST_SCALER_CONFIG, token_.crtc_id,
                               reinterpret_cast<uint64_t>(&sde_dest_scalar_data_));
+  }
+}
+
+void HWPeripheralDRM::CacheDestScalarData(const HWLayersInfo &hw_layer_info) {
+  if (needs_ds_update_) {
+    // Cache the destination scalar data during commit
+    for (uint32_t i = 0; i < hw_resource_.hw_dest_scalar_info.count; i++) {
+      auto it = hw_layer_info.dest_scale_info_map.find(i);
+      if (it == hw_layer_info.dest_scale_info_map.end()) {
+        continue;
+      }
+      dest_scalar_cache_[i].flags = sde_dest_scalar_data_.ds_cfg[i].flags;
+      dest_scalar_cache_[i].scalar_data = scalar_data_[i];
+    }
+    needs_ds_update_ = false;
   }
 }
 
