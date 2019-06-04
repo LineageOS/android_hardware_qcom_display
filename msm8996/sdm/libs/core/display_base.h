@@ -109,6 +109,7 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   virtual DisplayError SetFrameBufferConfig(const DisplayConfigVariableInfo &variable_info);
   virtual DisplayError GetFrameBufferConfig(DisplayConfigVariableInfo *variable_info);
   virtual DisplayError SetDetailEnhancerData(const DisplayDetailEnhancerData &de_data);
+  virtual bool IsPrimaryDisplay();
 
  protected:
   // DumpImpl method
@@ -140,7 +141,6 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   Handle display_comp_ctx_ = 0;
   Handle display_rotator_ctx_ = 0;
   HWLayers hw_layers_;
-  bool pending_commit_ = false;
   bool vsync_enable_ = false;
   uint32_t max_mixer_stages_ = 0;
   HWInfoInterface *hw_info_intf_ = NULL;
