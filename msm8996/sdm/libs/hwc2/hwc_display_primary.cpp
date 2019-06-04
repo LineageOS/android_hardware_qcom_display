@@ -396,6 +396,7 @@ DisplayError HWCDisplayPrimary::Refresh() {
 
   callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
   handle_idle_timeout_ = true;
+  validated_ = false;
 
   return error;
 }
@@ -556,6 +557,7 @@ DisplayError HWCDisplayPrimary::DisablePartialUpdateOneFrame() {
 
 
 DisplayError HWCDisplayPrimary::SetMixerResolution(uint32_t width, uint32_t height) {
+  validated_ = false;
   return display_intf_->SetMixerResolution(width, height);
 }
 

@@ -50,6 +50,7 @@ enum GeometryChanges {
   kZOrder       = 0x040,
   kAdded        = 0x080,
   kRemoved      = 0x100,
+  kBufferGeometry = 0x200,
 };
 
 class HWCLayer {
@@ -81,7 +82,7 @@ class HWCLayer {
   void PushReleaseFence(int32_t fence);
   int32_t PopReleaseFence(void);
   void ResetValidation() { needs_validate_ = false; }
-  bool NeedsValidation() { return geometry_changes_ || needs_validate_; }
+  bool NeedsValidation() { return (needs_validate_ || geometry_changes_); }
 
  private:
   Layer *layer_ = nullptr;
