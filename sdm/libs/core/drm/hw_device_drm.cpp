@@ -1179,7 +1179,6 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
       if ((current_mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
          (current_mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
          (current_mode.vrefresh == connector_info_.modes[mode_index].mode.vrefresh) &&
-         (current_bit_clk == connector_info_.modes[mode_index].bit_clk_rate) &&
          (panel_mode_changed_ & connector_info_.modes[mode_index].mode.flags)) {
         current_mode = connector_info_.modes[mode_index].mode;
         if ((current_mode.flags & DRM_MODE_FLAG_VID_MODE_PANEL) && !validate) {
@@ -1693,12 +1692,10 @@ DisplayError HWDeviceDRM::SetDisplayMode(const HWDisplayMode hw_display_mode) {
   }
 
   drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
-  uint64_t current_bit_clk = connector_info_.modes[current_mode_index_].bit_clk_rate;
   for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
     if ((current_mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
         (current_mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
         (current_mode.vrefresh == connector_info_.modes[mode_index].mode.vrefresh) &&
-        (current_bit_clk == connector_info_.modes[mode_index].bit_clk_rate) &&
         (mode_flag & connector_info_.modes[mode_index].mode.flags)) {
       panel_mode_changed_ = mode_flag;
       synchronous_commit_ = true;
