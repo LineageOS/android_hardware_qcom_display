@@ -846,6 +846,8 @@ DisplayError HWCDisplayBuiltIn::ControlIdlePowerCollapse(bool enable, bool synch
 DisplayError HWCDisplayBuiltIn::SetDynamicDSIClock(uint64_t bitclk) {
   {
     SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[type_]);
+    DisablePartialUpdateOneFrame();
+
     DisplayError error = display_intf_->SetDynamicDSIClock(bitclk);
     if (error != kErrorNone) {
       DLOGE(" failed: Clk: %llu Error: %d", bitclk, error);
