@@ -68,8 +68,8 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   virtual DisplayError SetDisplayMode(uint32_t mode);
   virtual DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate, uint32_t *max_refresh_rate);
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate);
-  virtual DisplayError SetPanelBrightness(int level);
-  virtual DisplayError GetPanelBrightness(int *level);
+  virtual DisplayError SetPanelBrightness(float brightness);
+  virtual DisplayError GetPanelBrightness(float *brightness);
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event, LayerStack *layer_stack);
   virtual DisplayError SetDisplayDppsAdROI(void *payload);
   virtual DisplayError SetQSyncMode(QSyncMode qsync_mode);
@@ -107,6 +107,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DppsInfo dpps_info_ = {};
   QSyncMode qsync_mode_ = kQSyncModeNone;
   FrameTriggerMode trigger_mode_debug_ = kFrameTriggerMax;
+  float level_remainder_ = 0.0f;
 };
 
 }  // namespace sdm

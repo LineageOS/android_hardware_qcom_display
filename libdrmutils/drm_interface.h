@@ -597,6 +597,7 @@ struct DRMConnectorInfo {
   uint32_t mmWidth;
   uint32_t mmHeight;
   uint32_t type;
+  uint32_t type_id;
   std::vector<DRMModeInfo> modes;
   std::string panel_name;
   DRMPanelMode panel_mode;

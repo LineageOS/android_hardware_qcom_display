@@ -90,6 +90,8 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates);
   virtual HWC2::Error UpdateDisplayId(hwc2_display_t id);
   virtual HWC2::Error SetPendingRefresh();
+  virtual HWC2::Error SetPanelBrightness(float brightness);
+  virtual HWC2::Error GetPanelBrightness(float *brightness);
   virtual DisplayError TeardownConcurrentWriteback(void);
   virtual void SetFastPathComposition(bool enable) {
     fast_path_composition_ = enable && !readback_buffer_queued_;

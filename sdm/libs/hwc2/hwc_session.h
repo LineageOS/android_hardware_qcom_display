@@ -218,6 +218,12 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   static int32_t GetDisplayIdentificationData(hwc2_device_t *device, hwc2_display_t display,
                                               uint8_t *outPort, uint32_t *outDataSize,
                                               uint8_t *outData);
+  static int32_t GetDisplayCapabilities(hwc2_device_t *device, hwc2_display_t display,
+                                        uint32_t *outNumCapabilities, uint32_t *outCapabilities);
+  static int32_t GetDisplayBrightnessSupport(hwc2_device_t *device, hwc2_display_t display,
+                                             bool *outSupport);
+  static int32_t SetDisplayBrightness(hwc2_device_t *device, hwc2_display_t display,
+                                      float brightness);
 
   // HWCDisplayEventHandler
   virtual void DisplayPowerReset();
@@ -275,10 +281,11 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int32_t ControlPartialUpdate(int dpy, bool enable);
   int32_t DisplayBWTransactionPending(bool *status);
   int32_t SetSecondaryDisplayStatus(int disp_id, HWCDisplay::DisplayStatus status);
-  int32_t GetPanelBrightness(int *level);
   int32_t MinHdcpEncryptionLevelChanged(int disp_id, uint32_t min_enc_level);
   int32_t IsWbUbwcSupported(int *value);
   int32_t SetDynamicDSIClock(int64_t disp_id, uint32_t bitrate);
+  int32_t getDisplayBrightness(uint32_t display, float *brightness);
+  int32_t setDisplayBrightness(uint32_t display, float brightness);
 
   // service methods
   void StartServices();
