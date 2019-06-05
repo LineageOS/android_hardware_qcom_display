@@ -287,6 +287,10 @@ DisplayError DisplayBuiltIn::SetPanelBrightness(float brightness) {
     return kErrorParameters;
   }
 
+  if (state_ == kStateOff) {
+    return kErrorNone;
+  }
+
   // -1.0f = off, 0.0f = min, 1.0f = max
   level_remainder_ = 0.0f;
   int level = 0;
