@@ -500,6 +500,9 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
       info = reinterpret_cast<DppsDisplayInfo *>(payload);
       info->width = display_attributes_.x_pixels;
       info->height = display_attributes_.y_pixels;
+      info->is_primary = IsPrimaryDisplay();
+      info->display_id = display_id_;
+      info->display_type = display_type_;
       break;
     default:
       DLOGE("Invalid input op %d", op);
@@ -527,55 +530,74 @@ DisplayError DisplayBuiltIn::SetFrameTriggerMode(FrameTriggerMode mode) {
   return kErrorNone;
 }
 
+DppsInterface* DppsInfo::dpps_intf_ = NULL;
+std::vector<int32_t> DppsInfo::display_id_ = {};
+
 void DppsInfo::Init(DppsPropIntf *intf, const std::string &panel_name) {
+  std::lock_guard<std::mutex> guard(lock_);
   int error = 0;
 
-  if (dpps_initialized_) {
+  if (!intf) {
+    DLOGE("Invalid intf is null");
     return;
   }
 
-  if (!dpps_impl_lib.Open(kDppsLib)) {
-    DLOGW("Failed to load Dpps lib %s", kDppsLib);
-    goto exit;
-  }
-
-  if (!dpps_impl_lib.Sym("GetDppsInterface", reinterpret_cast<void **>(&GetDppsInterface))) {
-    DLOGE("GetDppsInterface not found!, err %s", dlerror());
-    goto exit;
-  }
-
-  dpps_intf = GetDppsInterface();
-  if (!dpps_intf) {
-    DLOGE("Failed to get Dpps Interface!");
-    goto exit;
-  }
-
-  error = dpps_intf->Init(intf, panel_name);
-  if (!error) {
-    DLOGI("DPPS Interface init successfully");
-    dpps_initialized_ = true;
+  DppsDisplayInfo info_payload = {};
+  DisplayError ret = intf->DppsProcessOps(kDppsGetDisplayInfo, &info_payload, sizeof(info_payload));
+  if (ret != kErrorNone) {
+    DLOGE("Get display information failed, ret %d", ret);
     return;
-  } else {
+  }
+
+  if (std::find(display_id_.begin(), display_id_.end(), info_payload.display_id)
+    != display_id_.end()) {
+    return;
+  }
+  DLOGI("Ready to register display id %d ", info_payload.display_id);
+
+  if (!dpps_intf_) {
+    if (!dpps_impl_lib_.Open(kDppsLib_)) {
+      DLOGW("Failed to load Dpps lib %s", kDppsLib_);
+      goto exit;
+    }
+
+    if (!dpps_impl_lib_.Sym("GetDppsInterface", reinterpret_cast<void **>(&GetDppsInterface))) {
+      DLOGE("GetDppsInterface not found!, err %s", dlerror());
+      goto exit;
+    }
+
+    dpps_intf_ = GetDppsInterface();
+    if (!dpps_intf_) {
+      DLOGE("Failed to get Dpps Interface!");
+      goto exit;
+    }
+  }
+  error = dpps_intf_->Init(intf, panel_name);
+  if (error) {
     DLOGE("DPPS Interface init failure with err %d", error);
+    goto exit;
   }
+
+  display_id_.push_back(info_payload.display_id);
+  DLOGI("Register display id %d successfully", info_payload.display_id);
+  return;
 
 exit:
   Deinit();
-  dpps_intf = new DppsDummyImpl();
-  dpps_initialized_ = true;
+  dpps_intf_ = new DppsDummyImpl();
 }
 
 void DppsInfo::Deinit() {
-  if (dpps_intf) {
-    dpps_intf->Deinit();
-    dpps_intf = NULL;
+  if (dpps_intf_) {
+    dpps_intf_->Deinit();
+    dpps_intf_ = NULL;
   }
-  dpps_impl_lib.~DynLib();
+  dpps_impl_lib_.~DynLib();
 }
 
 void DppsInfo::DppsNotifyOps(enum DppsNotifyOps op, void *payload, size_t size) {
   int ret = 0;
-  ret = dpps_intf->DppsNotifyOps(op, payload, size);
+  ret = dpps_intf_->DppsNotifyOps(op, payload, size);
   if (ret)
     DLOGE("DppsNotifyOps op %d error %d", op, ret);
 }

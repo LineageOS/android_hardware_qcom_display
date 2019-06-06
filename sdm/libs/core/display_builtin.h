@@ -41,11 +41,12 @@ class DppsInfo {
   void DppsNotifyOps(enum DppsNotifyOps op, void *payload, size_t size);
 
  private:
-  const char *kDppsLib = "libdpps.so";
-  DynLib dpps_impl_lib;
-  DppsInterface *dpps_intf = NULL;
+  const char *kDppsLib_ = "libdpps.so";
+  DynLib dpps_impl_lib_;
+  static DppsInterface *dpps_intf_;
+  static std::vector<int32_t> display_id_;
+  std::mutex lock_;
   DppsInterface *(*GetDppsInterface)() = NULL;
-  bool dpps_initialized_ = false;
 };
 
 class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
