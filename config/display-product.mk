@@ -23,6 +23,7 @@ PRODUCT_PACKAGES += \
     vendor.display.config@1.6.vendor \
     vendor.display.config@1.7.vendor \
     vendor.display.config@1.8.vendor \
+    vendor.display.config@1.9.vendor \
     modetest
 
 #QDCM calibration xml file for 2k panel

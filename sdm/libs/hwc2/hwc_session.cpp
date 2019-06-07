@@ -1276,7 +1276,8 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
         }
 
         status = HWCDisplayVirtual::Create(core_intf_, &buffer_allocator_, &callbacks_, client_id,
-                                           info.display_id, width, height, format, &hwc_display);
+                                           info.display_id, width, height, format, &hwc_display,
+                                           set_min_lum_, set_max_lum_);
         // TODO(user): validate width and height support
         if (status) {
           return HWC2::Error::NoResources;
@@ -1614,6 +1615,14 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
         break;
       }
       status = GetSupportedDsiClk(input_parcel, output_parcel);
+      break;
+
+    case qService::IQService::SET_PANEL_LUMINANCE:
+      if (!input_parcel) {
+        DLOGE("QService command = %d: input_parcel needed.", command);
+        break;
+      }
+      status = SetPanelLuminanceAttributes(input_parcel);
       break;
 
     case qService::IQService::SET_COLOR_MODE_FROM_CLIENT:
@@ -2261,6 +2270,22 @@ android::status_t HWCSession::GetSupportedDsiClk(const android::Parcel *input_pa
   for (auto &bit_rate : bit_rates) {
     output_parcel->writeUint64(bit_rate);
   }
+
+  return 0;
+}
+
+android::status_t HWCSession::SetPanelLuminanceAttributes(const android::Parcel *input_parcel) {
+  int disp_id = input_parcel->readInt32();
+
+  // currently doing only for virtual display
+  if (disp_id != qdutils::DISPLAY_VIRTUAL) {
+    return -EINVAL;
+  }
+
+  std::lock_guard<std::mutex> obj(mutex_lum_);
+  set_min_lum_ = input_parcel->readFloat();
+  set_max_lum_ = input_parcel->readFloat();
+  DLOGI("set max_lum %f, min_lum %f", set_max_lum_, set_min_lum_);
 
   return 0;
 }

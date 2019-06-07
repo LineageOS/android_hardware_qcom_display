@@ -837,6 +837,15 @@ class DisplayInterface {
   virtual DisplayError GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
                                                     uint8_t *out_data) = 0;
 
+  /*! @brief Method to set min/max luminance for dynamic tonemapping of external device over WFD.
+
+    @param[in] min_lum min luminance supported by external device.
+    @param[in] max_lum max luminance supported by external device.
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError SetPanelLuminanceAttributes(float min_lum, float max_lum) = 0;
+
  protected:
   virtual ~DisplayInterface() { }
 };
