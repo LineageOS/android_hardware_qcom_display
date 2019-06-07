@@ -7,5 +7,6 @@ PRODUCT_PACKAGES += libdisplayconfig \
                     vendor.display.config@1.2 \
                     vendor.display.config@1.3 \
                     vendor.display.config@1.4 \
-                    vendor.display.config@1.5
+                    vendor.display.config@1.5 \
+                    libsmomo.qti
 
