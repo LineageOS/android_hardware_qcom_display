@@ -276,6 +276,7 @@ DisplayError HWPeripheralDRM::GetDppsFeatureInfo(void *payload, size_t size) {
     return kErrorParameters;
   }
   DRMDppsFeatureInfo *feature_info = reinterpret_cast<DRMDppsFeatureInfo *>(payload);
+  feature_info->obj_id = token_.crtc_id;
   drm_mgr_intf_->GetDppsFeatureInfo(feature_info);
   return kErrorNone;
 }

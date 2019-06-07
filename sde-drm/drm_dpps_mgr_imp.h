@@ -71,8 +71,8 @@ class DRMDppsManagerImp : public DRMDppsManagerIntf {
   int conn_id_ = -1;
   int crtc_id_ = -1;
   int drm_fd_ = -1;
-  struct drm_msm_ltm_buffers_ctrl ltm_buffers_ctrl_ = {};
-  struct DRMDppsLtmBuffers ltm_buffers_ = {};
+  std::vector<std::pair<uint32_t, drm_msm_ltm_buffers_ctrl>> ltm_buffers_ctrl_map_;
+  std::vector<std::pair<uint32_t, DRMDppsLtmBuffers>> ltm_buffers_map_;
 };
 
 class DRMDppsManagerDummyImp : public DRMDppsManagerIntf {
