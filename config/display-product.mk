@@ -14,6 +14,7 @@ PRODUCT_PACKAGES += \
     hwcomposer.$(TARGET_BOARD_PLATFORM) \
     memtrack.$(TARGET_BOARD_PLATFORM) \
     libqdMetaData.vendor \
+    libdisplayconfig.vendor \
     vendor.display.config@1.0.vendor \
     vendor.display.config@1.1.vendor \
     vendor.display.config@1.2.vendor \
@@ -36,7 +37,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
     ro.vendor.display.cabl=2 \
     debug.sf.hw=0 \
     debug.egl.hw=0 \
-    debug.sf.latch_unsignaled=1 \
     vendor.display.enable_default_color_mode=1 \
     persist.sys.sf.native_mode=0
 
