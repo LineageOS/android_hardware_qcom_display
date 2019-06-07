@@ -815,6 +815,7 @@ DisplayError HWCDisplayBuiltIn::DisablePartialUpdateOneFrame() {
 
 DisplayError HWCDisplayBuiltIn::SetMixerResolution(uint32_t width, uint32_t height) {
   DisplayError error = display_intf_->SetMixerResolution(width, height);
+  callbacks_->Refresh(id_);
   validated_ = false;
   return error;
 }
