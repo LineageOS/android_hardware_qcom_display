@@ -710,6 +710,8 @@ enum DRMDPPSFeatureID {
   kFeatureLtmNoiseThresh,
   kFeatureLtmBufferCtrl,
   kFeatureLtmQueueBuffer,
+  kFeatureLtmQueueBuffer2,
+  kFeatureLtmQueueBuffer3,
   kFeatureLtmHistCtrl,
   kFeatureLtmVlut,
   // Insert features above

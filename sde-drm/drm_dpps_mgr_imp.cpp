@@ -286,6 +286,12 @@ void DRMDppsManagerImp::Init(int fd, drmModeRes* res) {
   dpps_feature_[kFeatureLtmQueueBuffer] = DRMDppsPropInfo {1 /* version */,
     DRMProperty::SDE_LTM_QUEUE_BUFFER, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_QUEUE_BUFFER),
     false /* is_event */};
+  dpps_feature_[kFeatureLtmQueueBuffer2] = DRMDppsPropInfo {1 /* version */,
+    DRMProperty::SDE_LTM_QUEUE_BUFFER2, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_QUEUE_BUFFER2),
+    false /* is_event */};
+  dpps_feature_[kFeatureLtmQueueBuffer3] = DRMDppsPropInfo {1 /* version */,
+    DRMProperty::SDE_LTM_QUEUE_BUFFER3, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_QUEUE_BUFFER3),
+    false /* is_event */};
   dpps_feature_[kFeatureLtmHistCtrl] = DRMDppsPropInfo {1 /* version */,
     DRMProperty::SDE_LTM_HIST_CTRL, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_HIST_CTRL),
     false /* is_event */};
