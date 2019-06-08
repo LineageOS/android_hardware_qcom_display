@@ -489,7 +489,8 @@ DisplayError CompManager::ValidateAndSetCursorPosition(Handle display_ctx, HWLay
 }
 
 DisplayError CompManager::SetMaxBandwidthMode(HWBwModes mode) {
-  if ((!hw_res_info_.has_dyn_bw_support) || (mode >= kBwModeMax)) {
+  SCOPE_LOCK(locker_);
+  if (mode >= kBwModeMax) {
     return kErrorNotSupported;
   }
 

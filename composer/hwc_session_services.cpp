@@ -477,13 +477,6 @@ Return<void> HWCSession::getHDRCapabilities(IDisplayConfig::DisplayType dpy,
 }
 
 Return<int32_t> HWCSession::setCameraLaunchStatus(uint32_t on) {
-  hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
-  if (active_builtin_disp_id >= HWCCallbacks::kNumDisplays) {
-    DLOGE("No active displays");
-    return -EINVAL;
-  }
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[active_builtin_disp_id]);
-
   if (null_display_mode_) {
     return 0;
   }
@@ -493,23 +486,14 @@ Return<int32_t> HWCSession::setCameraLaunchStatus(uint32_t on) {
     return -ENOENT;
   }
 
-  if (!hwc_display_[active_builtin_disp_id]) {
-    DLOGW("Display = %d is not connected.", active_builtin_disp_id);
-    return -ENODEV;
-  }
-
-  HWBwModes mode = on > 0 ? kBwCamera : kBwDefault;
-
-  // trigger invalidate to apply new bw caps.
-  Refresh(active_builtin_disp_id);
+  HWBwModes mode = on > 0 ? kBwVFEOn : kBwVFEOff;
 
   if (core_intf_->SetMaxBandwidthMode(mode) != kErrorNone) {
     return -EINVAL;
   }
 
-  new_bw_mode_ = true;
-  need_invalidate_ = true;
-  hwc_display_[active_builtin_disp_id]->ResetValidation();
+  // trigger invalidate to apply new bw caps.
+  Refresh(0);
 
   return 0;
 }

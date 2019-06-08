@@ -160,8 +160,13 @@ HWInfoDRM::~HWInfoDRM() {
 DisplayError HWInfoDRM::GetDynamicBWLimits(HWResourceInfo *hw_resource) {
   HWDynBwLimitInfo* bw_info = &hw_resource->dyn_bw_info;
   for (int index = 0; index < kBwModeMax; index++) {
-    bw_info->total_bw_limit[index] = hw_resource->max_bandwidth_low;
-    bw_info->pipe_bw_limit[index] = hw_resource->max_pipe_bw;
+    if (index == kBwVFEOn) {
+      bw_info->total_bw_limit[index] = hw_resource->max_bandwidth_low;
+      bw_info->pipe_bw_limit[index] = hw_resource->max_pipe_bw;
+    } else if (index == kBwVFEOff) {
+      bw_info->total_bw_limit[index] = hw_resource->max_bandwidth_high;
+      bw_info->pipe_bw_limit[index] = hw_resource->max_pipe_bw_high;
+    }
   }
 
   return kErrorNone;
@@ -196,7 +201,6 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
   hw_resource->hw_dest_scalar_info.max_input_width = 0;
   hw_resource->hw_dest_scalar_info.max_output_width = 0;
   hw_resource->is_src_split = true;
-  hw_resource->has_dyn_bw_support = false;
   hw_resource->has_qseed3 = false;
   hw_resource->has_concurrent_writeback = false;
 
@@ -236,9 +240,10 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
   DLOGI("Has UBWC = %d", hw_resource->has_ubwc);
   DLOGI("Has Concurrent Writeback = %d", hw_resource->has_concurrent_writeback);
   DLOGI("Has Src Tonemap = %d", hw_resource->src_tone_map);
-  DLOGI("Max Low Bw = %" PRIu64 "", hw_resource->max_bandwidth_low);
-  DLOGI("Max High Bw = % " PRIu64 "", hw_resource->max_bandwidth_high);
-  DLOGI("Max Pipe Bw = %" PRIu64 " KBps", hw_resource->max_pipe_bw);
+  DLOGI("Max Low Bw = %" PRIu64 "", hw_resource->dyn_bw_info.total_bw_limit[kBwVFEOn]);
+  DLOGI("Max High Bw = % " PRIu64 "", hw_resource->dyn_bw_info.total_bw_limit[kBwVFEOff]);
+  DLOGI("Max Pipe Bw = %" PRIu64 " KBps", hw_resource->dyn_bw_info.pipe_bw_limit[kBwVFEOn]);
+  DLOGI("Max Pipe Bw High= %" PRIu64 " KBps", hw_resource->dyn_bw_info.pipe_bw_limit[kBwVFEOff]);
   DLOGI("MaxSDEClock = % " PRIu64 " Hz", hw_resource->max_sde_clk);
   DLOGI("Clock Fudge Factor = %f", hw_resource->clk_fudge_factor);
   DLOGI("Prefill factors:");
@@ -253,19 +258,11 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
     GetHWRotatorInfo(hw_resource);
   }
 
-  if (hw_resource->has_dyn_bw_support) {
-    DisplayError ret = GetDynamicBWLimits(hw_resource);
-    if (ret != kErrorNone) {
-      DLOGE("Failed to read dynamic band width info");
-      return ret;
-    }
-
-    DLOGI("Has Support for multiple bw limits shown below");
-    for (int index = 0; index < kBwModeMax; index++) {
-      DLOGI("Mode-index=%d  total_bw_limit=%d and pipe_bw_limit=%d", index,
-            hw_resource->dyn_bw_info.total_bw_limit[index],
-            hw_resource->dyn_bw_info.pipe_bw_limit[index]);
-    }
+  DLOGI("Has Support for multiple bw limits shown below");
+  for (int index = 0; index < kBwModeMax; index++) {
+    DLOGI("Mode-index=%d  total_bw_limit=%d and pipe_bw_limit=%d", index,
+          hw_resource->dyn_bw_info.total_bw_limit[index],
+          hw_resource->dyn_bw_info.pipe_bw_limit[index]);
   }
 
   if (!hw_resource_) {
@@ -296,8 +293,15 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   hw_resource->scale_factor = info.downscale_prefill_lines;
   hw_resource->extra_fudge_factor = info.extra_prefill_lines;
   hw_resource->amortizable_threshold = info.amortized_threshold;
-  hw_resource->max_bandwidth_low = info.max_bandwidth_low / kKiloUnit;
-  hw_resource->max_bandwidth_high = info.max_bandwidth_high / kKiloUnit;
+
+  for (int index = 0; index < kBwModeMax; index++) {
+    if (index == kBwVFEOn) {
+      hw_resource->dyn_bw_info.total_bw_limit[index] = info.max_bandwidth_low / kKiloUnit;
+    } else if (index == kBwVFEOff) {
+      hw_resource->dyn_bw_info.total_bw_limit[index] = info.max_bandwidth_high / kKiloUnit;
+    }
+  }
+
   hw_resource->max_sde_clk = info.max_sde_clk;
   hw_resource->hw_version = info.hw_version;
 
@@ -366,6 +370,8 @@ void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
       }
     }
 
+    // TODO(user): Move pipe caps to pipe_caps structure per pipe. Set default for now.
+    // currently copying values to hw_resource!
     HWPipeCaps pipe_caps;
     string name = {};
     switch (pipe_obj.second.type) {
@@ -374,6 +380,7 @@ void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
         pipe_caps.type = kPipeTypeDMA;
         if (!hw_resource->num_dma_pipe) {
           PopulateSupportedFmts(kHWDMAPipe, pipe_obj.second, hw_resource);
+          PopulatePipeBWCaps(pipe_obj.second, hw_resource);
         }
         hw_resource->num_dma_pipe++;
         break;
@@ -451,7 +458,9 @@ void HWInfoDRM::PopulatePipeCaps(const sde_drm::DRMPlaneTypeInfo &info,
   hw_resource->max_scale_down = info.max_downscale;
   hw_resource->max_scale_up = info.max_upscale;
   hw_resource->has_decimation = info.max_horizontal_deci > 0 && info.max_vertical_deci > 0;
-  hw_resource->max_pipe_bw = info.max_pipe_bandwidth / kKiloUnit;
+
+  PopulatePipeBWCaps(info, hw_resource);
+
   hw_resource->cache_size = info.cache_size;
   hw_resource->pipe_qseed3_version = GetQseedStepVersion(info.qseed3_version);
   hw_resource->inline_rot_info.inrot_version = GetInRotVersion(info.inrot_version);
@@ -459,6 +468,17 @@ void HWInfoDRM::PopulatePipeCaps(const sde_drm::DRMPlaneTypeInfo &info,
        info.true_inline_dwnscale_rt_num >= info.true_inline_dwnscale_rt_denom) {
     hw_resource->inline_rot_info.max_downscale_rt =
       info.true_inline_dwnscale_rt_num / info.true_inline_dwnscale_rt_denom;
+  }
+}
+
+void HWInfoDRM::PopulatePipeBWCaps(const sde_drm::DRMPlaneTypeInfo &info,
+                                    HWResourceInfo *hw_resource) {
+  for (int index = 0; index < kBwModeMax; index++) {
+    if (index == kBwVFEOn) {
+      hw_resource->dyn_bw_info.pipe_bw_limit[index] = info.max_pipe_bandwidth / kKiloUnit;
+    } else if (index == kBwVFEOff) {
+      hw_resource->dyn_bw_info.pipe_bw_limit[index] = info.max_pipe_bandwidth_high / kKiloUnit;
+    }
   }
 }
 
