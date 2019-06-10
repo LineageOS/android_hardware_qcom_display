@@ -675,25 +675,11 @@ Return<bool> HWCSession::isPowerModeOverrideSupported(uint32_t disp_id) {
 }
 
 Return<bool> HWCSession::isHDRSupported(uint32_t disp_id) {
-  SCOPE_LOCK(locker_[disp_id]);
-  HWCDisplay *hwc_display = hwc_display_[disp_id];
-  if (!hwc_display) {
-    DLOGW("Display = %d is not connected.", disp_id);
+  if (disp_id < 0 || disp_id >= HWCCallbacks::kNumDisplays) {
+    DLOGE("Not valid display");
     return false;
   }
-
-  // query number of hdr types
-  uint32_t out_num_types = 0;
-  float out_max_luminance = 0.0f;
-  float out_max_average_luminance = 0.0f;
-  float out_min_luminance = 0.0f;
-  if (hwc_display->GetHdrCapabilities(&out_num_types, nullptr, &out_max_luminance,
-                                      &out_max_average_luminance, &out_min_luminance)
-                                      != HWC2::Error::None) {
-    return false;
-  }
-
-  return (out_num_types > 0);
+  return static_cast<bool>(is_hdr_display_[disp_id]);
 }
 
 Return<bool> HWCSession::isWCGSupported(uint32_t disp_id) {
