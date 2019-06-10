@@ -224,7 +224,6 @@ class DisplayBase : public DisplayInterface {
   uint32_t req_mixer_width_ = 0;
   uint32_t req_mixer_height_ = 0;
   std::string current_color_mode_ = "hal_native";
-  int disable_hdr_lut_gen_ = 0;
   bool hw_recovery_logs_captured_ = false;
   int disable_hw_recovery_dump_ = 0;
   HWQosData default_qos_data_;

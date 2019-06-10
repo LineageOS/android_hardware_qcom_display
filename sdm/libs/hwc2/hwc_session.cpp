@@ -585,30 +585,6 @@ static int32_t GetDataspaceSaturationMatrix(hwc2_device_t *device,
                                                                0.0, 0.0, 1.0, 0.0, \
                                                                0.0, 0.0, 0.0, 1.0 };
 
-  // TODO(user): This value should ideally be retrieved from a QDCM configuration file
-  char value[kPropertyMax] = {};
-  if (Debug::Get()->GetProperty(DATASPACE_SATURATION_MATRIX_PROP, value) != kErrorNone) {
-    DLOGW("Undefined saturation matrix");
-    return HWC2_ERROR_BAD_CONFIG;
-  }
-  std::string value_string(value);
-  std::size_t start = 0, end = 0;
-  int index = 0;
-  while ((end = value_string.find(",", start)) != std::string::npos) {
-    saturation_matrix[index] = std::stof(value_string.substr(start, end - start));
-    start = end + 1;
-    index++;
-    // We expect a 3x3, SF needs 4x4, keep the last row/column identity
-    if ((index + 1) % 4 == 0) {
-      index++;
-    }
-  }
-  saturation_matrix[index] = std::stof(value_string.substr(start, end - start));
-  if (index < kDataspaceSaturationPropertyElements - 1) {
-    // The property must have kDataspaceSaturationPropertyElements delimited by commas
-    DLOGW("Invalid saturation matrix defined");
-    return HWC2_ERROR_BAD_CONFIG;
-  }
   for (int32_t i = 0; i < kDataspaceSaturationMatrixCount; i += 4) {
     DLOGD("%f %f %f %f", saturation_matrix[i], saturation_matrix[i + 1], saturation_matrix[i + 2],
           saturation_matrix[i + 3]);
@@ -1370,10 +1346,6 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
         break;
       }
       status = ConfigureRefreshRate(input_parcel);
-      break;
-
-    case qService::IQService::SET_VIEW_FRAME:
-      status = 0;
       break;
 
     case qService::IQService::TOGGLE_SCREEN_UPDATES: {

@@ -32,19 +32,17 @@
 
 #define DISP_PROP_PREFIX                     "vendor.display."
 #define GRALLOC_PROP_PREFIX                  "vendor.gralloc."
-#define RO_DISP_PROP_PREFIX                  "ro.vendor.display."
 #define PERSIST_DISP_PROP_PREFIX             "persist.vendor.display."
 
 #define DISPLAY_PROP(prop_name)              DISP_PROP_PREFIX prop_name
 #define GRALLOC_PROP(prop_name)              GRALLOC_PROP_PREFIX prop_name
-#define RO_DISPLAY_PROP(prop_name)           RO_DISP_PROP_PREFIX prop_name
 #define PERSIST_DISPLAY_PROP(prop_name)      PERSIST_DISP_PROP_PREFIX prop_name
 
+// Start of property
 #define COMPOSITION_MASK_PROP                DISPLAY_PROP("comp_mask")
 #define HDMI_CONFIG_INDEX_PROP               DISPLAY_PROP("hdmi_cfg_idx")
 #define IDLE_TIME_PROP                       DISPLAY_PROP("idle_time")
 #define IDLE_TIME_INACTIVE_PROP              DISPLAY_PROP("idle_time_inactive")
-#define BOOT_ANIMATION_LAYER_COUNT_PROP      DISPLAY_PROP("boot_anim_layer_count")
 #define DISABLE_ROTATOR_DOWNSCALE_PROP       DISPLAY_PROP("disable_rotator_downscale")
 // Enables rotator for UI
 #define ENABLE_ROTATOR_UI_PROP               DISPLAY_PROP("enable_rotator_ui")
@@ -73,12 +71,6 @@
 #define DISABLE_METADATA_DYNAMIC_FPS_PROP    DISPLAY_PROP("disable_metadata_dynamic_fps")
 #define DISABLE_SKIP_VALIDATE_PROP           DISPLAY_PROP("disable_skip_validate")
 #define DISABLE_DESTINATION_SCALER_PROP      DISPLAY_PROP("disable_dest_scaler")
-#define ENABLE_PARTIAL_UPDATE_PROP           DISPLAY_PROP("enable_partial_update")
-#define DISABLE_UBWC_PROP                    GRALLOC_PROP("disable_ubwc")
-#define ENABLE_FB_UBWC_PROP                  GRALLOC_PROP("enable_fb_ubwc")
-#define MAP_FB_MEMORY_PROP                   GRALLOC_PROP("map_fb_memory")
-
-#define MAX_BLIT_FACTOR_PROP                 DISPLAY_PROP("max_blit_factor")
 #define DISABLE_SECURE_INLINE_ROTATOR_PROP   DISPLAY_PROP("disable_secure_inline_rotator")
 #define DISABLE_MULTIRECT_PROP               DISPLAY_PROP("disable_multirect")
 #define DISABLE_UBWC_FF_VOTING_PROP          DISPLAY_PROP("disable_ubwc_ff_voting")
@@ -96,21 +88,10 @@
 #define DISABLE_FBID_CACHE                   DISPLAY_PROP("disable_fbid_cache")
 #define DISABLE_HOTPLUG_BWCHECK              DISPLAY_PROP("disable_hotplug_bwcheck")
 #define DISABLE_MASK_LAYER_HINT              DISPLAY_PROP("disable_mask_layer_hint")
-
 #define DISABLE_HDR_LUT_GEN                  DISPLAY_PROP("disable_hdr_lut_gen")
-#define ENABLE_DEFAULT_COLOR_MODE            DISPLAY_PROP("enable_default_color_mode")
 #define DISABLE_HDR                          DISPLAY_PROP("hwc_disable_hdr")
-#define DATASPACE_SATURATION_MATRIX_PROP     DISPLAY_PROP("dataspace_saturation_matrix")
-#define DISABLE_QTI_BSP                      DISPLAY_PROP("disable_qti_bsp")
-#define UPDATE_VSYNC_ON_DOZE                 DISPLAY_PROP("update_vsync_on_doze")
-#define PANEL_MOUNTFLIP                      DISPLAY_PROP("panel_mountflip")
-#define VDS_ALLOW_HWC                        DISPLAY_PROP("vds_allow_hwc")
-#define QDFRAMEWORK_LOGS                     DISPLAY_PROP("qdframework_logs")
-
-#define HDR_CONFIG_PROP                      RO_DISPLAY_PROP("hdr.config")
 #define QDCM_PCC_TRANS_PROP                  DISPLAY_PROP("qdcm.pcc_for_trans")
 #define QDCM_DIAGONAL_MATRIXMODE_PROP        DISPLAY_PROP("qdcm.diagonal_matrix_mode")
-#define QDCM_DISABLE_TIMEOUT_PROP            PERSIST_DISPLAY_PROP("qdcm.disable_timeout")
 #define QDCM_MODE_COMBINE_PROP               DISPLAY_PROP("qdcm.mode_combine")
 #define PREFER_MULTIRECT_PROP                DISPLAY_PROP("prefer_multirect")
 #define DROP_SKEWED_VSYNC                    DISPLAY_PROP("drop_skewed_vsync")
@@ -121,8 +102,20 @@
 #define ENABLE_POSTED_START_DYN_PROP         DISPLAY_PROP("enable_posted_start_dyn")
 // Disable deferring power state request to first draw cycle
 #define DISABLE_DEFER_POWER_STATE            DISPLAY_PROP("disable_defer_power_state")
-
-#define ZERO_SWAP_INTERVAL                   "vendor.debug.egl.swapinterval"
 #define ENABLE_DROP_REFRESH                  DISPLAY_PROP("enable_drop_refresh")
 
+// Add all vendor.display properties above
+
+#define DISABLE_UBWC_PROP                    GRALLOC_PROP("disable_ubwc")
+
+// Add all vendor.gralloc.properties above
+
+#define QDCM_DISABLE_TIMEOUT_PROP            PERSIST_DISPLAY_PROP("qdcm.disable_timeout")
+
+// Add all persist.vendor.display.properties above
+
+#define ZERO_SWAP_INTERVAL                   "vendor.debug.egl.swapinterval"
+
+// Add all other.properties above
+// End of property
 #endif  // __DISPLAY_PROPERTIES_H__
