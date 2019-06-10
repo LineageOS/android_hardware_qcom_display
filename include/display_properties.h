@@ -123,5 +123,6 @@
 
 #define ZERO_SWAP_INTERVAL                   "vendor.debug.egl.swapinterval"
 #define ENABLE_DROP_REFRESH                  DISPLAY_PROP("enable_drop_refresh")
+#define ENABLE_ASYNC_POWERMODE               DISPLAY_PROP("enable_async_powermode")
 
 #endif  // __DISPLAY_PROPERTIES_H__
