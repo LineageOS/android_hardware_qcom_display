@@ -32,12 +32,9 @@
 
 #include <hidl/MQDescriptor.h>
 #include <hidl/Status.h>
-#ifdef QTI_MAPPER_1_1
-#include <vendor/qti/hardware/display/mapper/1.1/IQtiMapper.h>
-#else
-#include <vendor/qti/hardware/display/mapper/1.0/IQtiMapper.h>
-#endif
+#include <vendor/qti/hardware/display/mapper/2.0/IQtiMapper.h>
 
+#include "QtiMapperExtensions.h"
 #include "gr_buf_mgr.h"
 namespace vendor {
 namespace qti {
@@ -46,26 +43,24 @@ namespace display {
 namespace mapper {
 namespace implementation {
 
-using ::android::hardware::Return;
-using ::android::hardware::Void;
-using ::android::hardware::graphics::mapper::V2_0::IMapper;
-using ::android::hardware::graphics::mapper::V2_0::Error;
-using ::android::hardware::graphics::mapper::V2_0::YCbCrLayout;
-using ::android::hardware::graphics::common::V1_1::PixelFormat;
+using ::android::sp;
 using ::android::hardware::hidl_array;
 using ::android::hardware::hidl_handle;
 using ::android::hardware::hidl_memory;
 using ::android::hardware::hidl_string;
 using ::android::hardware::hidl_vec;
+using ::android::hardware::Return;
+using ::android::hardware::Void;
+using ::android::hardware::graphics::common::V1_1::PixelFormat;
+using ::android::hardware::graphics::mapper::V2_0::Error;
+using ::android::hardware::graphics::mapper::V2_0::IMapper;
+using ::android::hardware::graphics::mapper::V2_0::YCbCrLayout;
 using ::android::hidl::base::V1_0::DebugInfo;
 using ::android::hidl::base::V1_0::IBase;
-using ::android::sp;
-#ifdef QTI_MAPPER_1_1
-using ::vendor::qti::hardware::display::mapper::V1_1::IQtiMapper;
-#else
-using ::vendor::qti::hardware::display::mapper::V1_0::IQtiMapper;
-#endif
 using gralloc::BufferManager;
+using ::vendor::qti::hardware::display::mapper::V2_0::IQtiMapper;
+using ::vendor::qti::hardware::display::mapperextensions::V1_0::IQtiMapperExtensions;
+using ::vendor::qti::hardware::display::mapperextensions::V1_0::implementation::QtiMapperExtensions;
 
 using IMapper_2_1 = android::hardware::graphics::mapper::V2_1::IMapper;
 using BufferDescriptorInfo_2_0 =
@@ -95,34 +90,9 @@ class QtiMapper : public IQtiMapper {
   Return<void> getTransportSize(void* buffer, IMapper_2_1::getTransportSize_cb hidl_cb) override;
   Return<void> createDescriptor_2_1(const BufferDescriptorInfo_2_1& descriptorInfo,
                                     createDescriptor_2_1_cb _hidl_cb) override;
-  Return<void> getMapSecureBufferFlag(void *buffer, getMapSecureBufferFlag_cb _hidl_cb) override;
-  Return<void> getInterlacedFlag(void *buffer, getInterlacedFlag_cb _hidl_cb) override;
-  Return<void> getCustomDimensions(void *buffer, getCustomDimensions_cb _hidl_cb) override;
-  Return<void> getRgbDataAddress(void *buffer, getRgbDataAddress_cb _hidl_cb) override;
-  Return<void> calculateBufferAttributes(int32_t width, int32_t height, int32_t format,
-                                         uint64_t usage,
-                                         calculateBufferAttributes_cb _hidl_cb) override;
-  Return<void> getCustomFormatFlags(int32_t format, uint64_t usage,
-                                    getCustomFormatFlags_cb _hidl_cb) override;
-  Return<void> getColorSpace(void *buffer, getColorSpace_cb _hidl_cb) override;
-  Return<void> getYuvPlaneInfo(void *buffer, getYuvPlaneInfo_cb _hidl_cb) override;
-  Return<Error> setSingleBufferMode(void *buffer, bool enable) override;
 
-#ifdef QTI_MAPPER_1_1
-  // Getters for fields present in private handle structure.
-  Return<void> getFd(void *buffer, getFd_cb _hidl_cb) override;
-  Return<void> getWidth(void *buffer, getWidth_cb _hidl_cb) override;
-  Return<void> getHeight(void *buffer, getHeight_cb _hidl_cb) override;
-  Return<void> getOffset(void *buffer, getOffset_cb _hidl_cb) override;
-  Return<void> getSize(void *buffer, getSize_cb _hidl_cb) override;
-  Return<void> getFormat(void *buffer, getFormat_cb _hidl_cb) override;
-  Return<void> getPrivateFlags(void *buffer, getPrivateFlags_cb _hidl_cb) override;
-  Return<void> getUnalignedWidth(void *buffer, getUnalignedWidth_cb _hidl_cb) override;
-  Return<void> getUnalignedHeight(void *buffer, getUnalignedHeight_cb _hidl_cb) override;
-  Return<void> getLayerCount(void *buffer, getLayerCount_cb _hidl_cb) override;
-  Return<void> getId(void *buffer, getId_cb _hidl_cb) override;
-  Return<void> getUsageFlags(void *buffer, getUsageFlags_cb _hidl_cb) override;
-#endif
+  Return<void> getMapperExtensions(getMapperExtensions_cb hidl_cb);
+  sp<mapperextensions::V1_0::IQtiMapperExtensions> extensions_ = nullptr;
 
  private:
   BufferManager *buf_mgr_ = nullptr;
