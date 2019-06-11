@@ -20,7 +20,7 @@
 #ifndef __QTICOMPOSERCLIENT_H__
 #define __QTICOMPOSERCLIENT_H__
 
-#include <vendor/qti/hardware/display/composer/1.0/IQtiComposerClient.h>
+#include <vendor/qti/hardware/display/composer/2.0/IQtiComposerClient.h>
 #include <hidl/MQDescriptor.h>
 #include <hidl/Status.h>
 #include <log/log.h>
@@ -36,7 +36,7 @@ namespace qti {
 namespace hardware {
 namespace display {
 namespace composer {
-namespace V1_0 {
+namespace V2_0 {
 namespace implementation {
 
 namespace common_V1_0 = ::android::hardware::graphics::common::V1_0;
@@ -313,7 +313,7 @@ class QtiComposerClient : public IQtiComposerClient {
 extern "C" IQtiComposerClient* HIDL_FETCH_IQtiComposerClient(const char* name);
 
 }  // namespace implementation
-}  // namespace V1_0
+}  // namespace V2_0
 }  // namespace composer
 }  // namespace display
 }  // namespace hardware

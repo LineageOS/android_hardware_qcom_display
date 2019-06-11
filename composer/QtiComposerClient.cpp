@@ -26,7 +26,7 @@ namespace qti {
 namespace hardware {
 namespace display {
 namespace composer {
-namespace V1_0 {
+namespace V2_0 {
 namespace implementation {
 
 ComposerHandleImporter mHandleImporter;
@@ -181,7 +181,9 @@ hidl_handle QtiComposerClient::getFenceHandle(const android::base::unique_fd& fe
   native_handle_t* handle = nullptr;
   if (fenceFd >= 0) {
     handle = native_handle_init(handleStorage, 1, 0);
-    handle->data[0] = fenceFd;
+    if (handle) {
+      handle->data[0] = fenceFd;
+    }
   }
 
   return hidl_handle(handle);
@@ -1833,7 +1835,7 @@ IQtiComposerClient* HIDL_FETCH_IQtiComposerClient(const char* /* name */) {
 }
 
 }  // namespace implementation
-}  // namespace V1_0
+}  // namespace V2_0
 }  // namespace composer
 }  // namespace display
 }  // namespace hardware

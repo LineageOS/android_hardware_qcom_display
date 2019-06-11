@@ -28,7 +28,7 @@ namespace qti {
 namespace hardware {
 namespace display {
 namespace composer {
-namespace V1_0 {
+namespace V2_0 {
 
 using ::android::hardware::graphics::mapper::V2_0::IMapper;
 using ::android::sp;
@@ -53,7 +53,7 @@ class ComposerHandleImporter {
   sp<IMapper> mMapper;
 };
 
-}  // namespace V1_0
+}  // namespace V2_0
 }  // namespace composer
 }  // namespace display
 }  // namespace hardware

@@ -35,7 +35,7 @@ namespace qti {
 namespace hardware {
 namespace display {
 namespace composer {
-namespace V1_0 {
+namespace V2_0 {
 namespace implementation {
 
 QtiComposer::QtiComposer() {
@@ -139,7 +139,7 @@ IQtiComposer* HIDL_FETCH_IQtiComposer(const char* /* name */) {
 }
 
 }  // namespace implementation
-}  // namespace V1_0
+}  // namespace V2_0
 }  // namespace composer
 }  // namespace display
 }  // namespace hardware

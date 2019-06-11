@@ -31,7 +31,7 @@
 #ifndef __QTICOMPOSER_H__
 #define __QTICOMPOSER_H__
 
-#include <vendor/qti/hardware/display/composer/1.0/IQtiComposer.h>
+#include <vendor/qti/hardware/display/composer/2.0/IQtiComposer.h>
 #include <log/log.h>
 #include <unordered_set>
 #include <QtiComposerClient.h>
@@ -45,10 +45,10 @@ namespace qti {
 namespace hardware {
 namespace display {
 namespace composer {
-namespace V1_0 {
+namespace V2_0 {
 namespace implementation {
 
-using ::vendor::qti::hardware::display::composer::V1_0::IQtiComposer;
+using ::vendor::qti::hardware::display::composer::V2_0::IQtiComposer;
 
 class QtiComposer : public IQtiComposer {
  public:
@@ -73,7 +73,7 @@ class QtiComposer : public IQtiComposer {
 extern "C" IQtiComposer* HIDL_FETCH_IQtiComposer(const char* name);
 
 }  // namespace implementation
-}  // namespace V1_0
+}  // namespace V2_0
 }  // namespace composer
 }  // namespace display
 }  // namespace hardware
