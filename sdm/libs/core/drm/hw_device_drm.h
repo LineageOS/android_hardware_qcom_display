@@ -167,14 +167,10 @@ class HWDeviceDRM : public HWInterface {
   void AddDimLayerIfNeeded();
   DisplayError NullCommit(bool synchronous, bool retain_planes);
   void DumpConnectorModeInfo();
-  void SetFullROI();
+  void ResetROI();
   void SetQOSData(const HWQosData &qos_data);
   void DumpHWLayers(HWLayers *hw_layers);
-  bool IsDestScalingNeeded() {
-    return (mixer_attributes_.width != display_attributes_[current_mode_index_].x_pixels ||
-           mixer_attributes_.height != display_attributes_[current_mode_index_].y_pixels);
-  }
-
+  bool IsFullFrameUpdate(const HWLayersInfo &hw_layer_info);
 
   class Registry {
    public:

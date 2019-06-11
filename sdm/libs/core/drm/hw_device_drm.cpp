@@ -874,7 +874,7 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown) {
     return kErrorNone;
   }
 
-  SetFullROI();
+  ResetROI();
   drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::OFF);
@@ -991,34 +991,32 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
   bool resource_update = hw_layers->updates_mask.test(kUpdateResources);
   bool update_config = resource_update || hw_layer_info.stack->flags.geometry_changed;
 
-  // TODO(user): Once destination scalar is enabled we can always send ROIs if driver allows
-  if (hw_panel_info_.partial_update && update_config && !IsDestScalingNeeded()) {
-    const int kNumMaxROIs = 4;
-    DRMRect crtc_rects[kNumMaxROIs] = {{0, 0, mixer_attributes_.width, mixer_attributes_.height}};
-    DRMRect conn_rects[kNumMaxROIs] = {{0, 0, display_attributes_[index].x_pixels,
-                                        display_attributes_[index].y_pixels}};
+  if (hw_panel_info_.partial_update && update_config) {
+    if (IsFullFrameUpdate(hw_layer_info)) {
+      ResetROI();
+    } else {
+      const int kNumMaxROIs = 4;
+      DRMRect crtc_rects[kNumMaxROIs] = {{0, 0, mixer_attributes_.width, mixer_attributes_.height}};
+      DRMRect conn_rects[kNumMaxROIs] = {{0, 0, display_attributes_[index].x_pixels,
+                                          display_attributes_[index].y_pixels}};
 
-    for (uint32_t i = 0; i < hw_layer_info.left_frame_roi.size(); i++) {
-      auto &roi = hw_layer_info.left_frame_roi.at(i);
-      // TODO(user): In multi PU, stitch ROIs vertically adjacent and upate plane destination
-      crtc_rects[i].left = UINT32(roi.left);
-      crtc_rects[i].right = UINT32(roi.right);
-      crtc_rects[i].top = UINT32(roi.top);
-      crtc_rects[i].bottom = UINT32(roi.bottom);
-      // TODO(user): In Dest scaler + PU, populate from HWDestScaleInfo->panel_roi
-      // TODO(user): panel_roi need to be made as a vector in HWLayersInfo and
-      // needs to be removed from  HWDestScaleInfo.
-      conn_rects[i].left = UINT32(roi.left);
-      conn_rects[i].right = UINT32(roi.right);
-      conn_rects[i].top = UINT32(roi.top);
-      conn_rects[i].bottom = UINT32(roi.bottom);
+      for (uint32_t i = 0; i < hw_layer_info.left_frame_roi.size(); i++) {
+        auto &roi = hw_layer_info.left_frame_roi.at(i);
+        // TODO(user): In multi PU, stitch ROIs vertically adjacent and upate plane destination
+        crtc_rects[i].left = UINT32(roi.left);
+        crtc_rects[i].right = UINT32(roi.right);
+        crtc_rects[i].top = UINT32(roi.top);
+        crtc_rects[i].bottom = UINT32(roi.bottom);
+        conn_rects[i].left = UINT32(roi.left);
+        conn_rects[i].right = UINT32(roi.right);
+        conn_rects[i].top = UINT32(roi.top);
+        conn_rects[i].bottom = UINT32(roi.bottom);
+      }
+
+      uint32_t num_rects = std::max(1u, static_cast<uint32_t>(hw_layer_info.left_frame_roi.size()));
+      drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ROI, token_.crtc_id, num_rects, crtc_rects);
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_ROI, token_.conn_id, num_rects, conn_rects);
     }
-
-    uint32_t num_rects = std::max(1u, static_cast<uint32_t>(hw_layer_info.left_frame_roi.size()));
-    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ROI, token_.crtc_id,
-                              num_rects, crtc_rects);
-    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_ROI, token_.conn_id,
-                              num_rects, conn_rects);
   }
 
   for (uint32_t i = 0; i < hw_layer_count; i++) {
@@ -2047,17 +2045,22 @@ void HWDeviceDRM::DumpConnectorModeInfo() {
   }
 }
 
-void HWDeviceDRM::SetFullROI() {
-  // Reset the CRTC ROI and connector ROI only for the panel that supports partial update
-  if (!hw_panel_info_.partial_update) {
-    return;
+void HWDeviceDRM::ResetROI() {
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ROI, token_.crtc_id, 0, nullptr);
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_ROI, token_.conn_id, 0, nullptr);
+}
+
+bool HWDeviceDRM::IsFullFrameUpdate(const HWLayersInfo &hw_layer_info) {
+  LayerRect full_frame = {0, 0, FLOAT(mixer_attributes_.width), FLOAT(mixer_attributes_.height)};
+
+  const LayerRect &frame_roi = hw_layer_info.left_frame_roi.at(0);
+  // If multiple ROIs are present, then it's not fullscreen update.
+  if (hw_layer_info.left_frame_roi.size() > 1 ||
+      (IsValid(frame_roi) && !IsCongruent(full_frame, frame_roi))) {
+    return false;
   }
-  uint32_t index = current_mode_index_;
-  DRMRect crtc_rects = {0, 0, mixer_attributes_.width, mixer_attributes_.height};
-  DRMRect conn_rects = {0, 0, display_attributes_[index].x_pixels,
-                         display_attributes_[index].y_pixels};
-  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ROI, token_.crtc_id, 1, &crtc_rects);
-  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_ROI, token_.conn_id, 1, &conn_rects);
+
+  return true;
 }
 
 DisplayError HWDeviceDRM::SetDynamicDSIClock(uint64_t bit_clk_rate) {
