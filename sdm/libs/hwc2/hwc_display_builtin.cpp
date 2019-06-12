@@ -119,8 +119,6 @@ int HWCDisplayBuiltIn::Init() {
   }
   color_mode_ = new HWCColorMode(display_intf_);
   color_mode_->Init();
-  HWCDebugHandler::Get()->GetProperty(ENABLE_DEFAULT_COLOR_MODE,
-                                      &default_mode_status_);
 
   int drop_refresh = 0;
   HWCDebugHandler::Get()->GetProperty(ENABLE_DROP_REFRESH, &drop_refresh);

@@ -56,8 +56,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_scaler=0 \
     vendor.display.disable_offline_rotator=1 \
     vendor.display.disable_excl_rect=0 \
-    vendor.display.comp_mask=0 \
-    vendor.display.enable_default_color_mode=1
+    vendor.display.comp_mask=0
 
 ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
 # Recovery is enabled, logging is enabled
@@ -82,10 +81,3 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.enable_null_display=1
 endif
 endif
-
-# This matrix should be in column major order, per SurfaceFlinger requirement
-#  1.0   0.0   0.0
-#  0.0   1.0   0.0
-#  0.0   0.0   1.0
-PRODUCT_PROPERTY_OVERRIDES += \
-    vendor.display.dataspace_saturation_matrix=1.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,1.0

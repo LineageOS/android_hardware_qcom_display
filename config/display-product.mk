@@ -50,7 +50,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_offline_rotator=1 \
     vendor.display.disable_excl_rect=0 \
     vendor.display.comp_mask=0 \
-    vendor.display.enable_default_color_mode=1 \
     vendor.display.enable_posted_start_dyn=1 \
     vendor.display.use_smooth_motion=1
 
@@ -83,10 +82,3 @@ endif
 
 # Properties using default value:
 #    vendor.display.disable_hw_recovery=0
-
-# This matrix should be in column major order, per SurfaceFlinger requirement
-#  1.0   0.0   0.0
-#  0.0   1.0   0.0
-#  0.0   0.0   1.0
-PRODUCT_PROPERTY_OVERRIDES += \
-    vendor.display.dataspace_saturation_matrix=1.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,1.0
