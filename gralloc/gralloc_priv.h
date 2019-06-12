@@ -223,4 +223,11 @@ enum {
 
 enum { BUFFER_TYPE_UI = 0, BUFFER_TYPE_VIDEO };
 
+/* Flag to determine interlaced content
+ * Value maps to Flags presents in types.hal of QtiMapperextensions
+ */
+enum {
+  LAYOUT_INTERLACED_FLAG = 1 << 0,
+};
+
 #endif  // __GRALLOC_PRIV_H__
