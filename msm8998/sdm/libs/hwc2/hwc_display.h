@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, 2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -235,7 +235,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual void ApplyScanAdjustment(hwc_rect_t *display_frame);
   bool SingleLayerUpdating(void);
   bool IsSurfaceUpdated(const std::vector<LayerRect> &dirty_regions);
-  bool IsLayerUpdating(const Layer *layer);
+  bool IsLayerUpdating(HWCLayer *layer);
   uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate);
   virtual void GetUnderScanConfig() { }
 
@@ -291,6 +291,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool CanSkipValidate();
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
+  bool partial_update_enabled_ = false;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {
