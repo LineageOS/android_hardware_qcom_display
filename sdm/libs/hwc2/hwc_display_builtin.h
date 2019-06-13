@@ -130,6 +130,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   int default_mode_status_ = 0;
   bool pending_refresh_ = true;
   bool enable_drop_refresh_ = false;
+  bool hdr_present_ = false;
 
   // Members for 1 frame capture in a client provided buffer
   bool frame_capture_buffer_queued_ = false;
