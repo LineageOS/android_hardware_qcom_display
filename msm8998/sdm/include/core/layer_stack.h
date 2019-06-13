@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2016, 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -98,6 +98,7 @@ enum LayerComposition {
   kCompositionBlit,         //!< This layer will be composed using Blit Engine.
                             //!< This composition type is used only if BlitTarget layer is provided
                             //!< in a composition cycle.
+  kCompositionNone,         //!< This layer will not be composed by any hardware.
 
   /* === List of composition types set by Client === */
   /* These composition types represent target buffer layers onto which GPU or Blit will draw if SDM
