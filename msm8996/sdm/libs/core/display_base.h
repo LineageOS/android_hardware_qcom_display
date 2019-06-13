@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2016, 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -63,6 +63,7 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   virtual DisplayError GetDisplayState(DisplayState *state);
   virtual DisplayError GetNumVariableInfoConfigs(uint32_t *count);
   virtual DisplayError GetConfig(uint32_t index, DisplayConfigVariableInfo *variable_info);
+  virtual DisplayError GetConfig(DisplayConfigFixedInfo *fixed_info);
   virtual DisplayError GetActiveConfig(uint32_t *index);
   virtual DisplayError GetVSyncState(bool *enabled);
   virtual DisplayError SetDisplayState(DisplayState state);
@@ -156,11 +157,6 @@ class DisplayBase : public DisplayInterface, DumpImpl {
   HWMixerAttributes mixer_attributes_ = {};
   DisplayConfigVariableInfo fb_config_ = {};
 
- private:
-  // Unused
-  virtual DisplayError GetConfig(DisplayConfigFixedInfo *variable_info) {
-    return kErrorNone;
-  }
 };
 
 }  // namespace sdm
