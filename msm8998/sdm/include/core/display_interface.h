@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -148,6 +148,7 @@ struct DisplayConfigFixedInfo {
   uint32_t max_luminance = 0;  //!< From Panel's peak luminance
   uint32_t average_luminance = 0;  //!< From Panel's average luminance
   uint32_t min_luminance = 0;  //!< From Panel's blackness level
+  bool partial_update = false;  //!< If display supports Partial Update.
 };
 
 /*! @brief This structure defines configuration for variable properties of a display device.
