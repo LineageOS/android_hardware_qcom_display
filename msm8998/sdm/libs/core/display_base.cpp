@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2017, 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -392,6 +392,7 @@ DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   fixed_info->max_luminance = fixed_info->hdr_supported ? hw_panel_info_.peak_luminance: 0;
   fixed_info->average_luminance = fixed_info->hdr_supported ? hw_panel_info_.average_luminance : 0;
   fixed_info->min_luminance = fixed_info->hdr_supported ?  hw_panel_info_.blackness_level: 0;
+  fixed_info->partial_update = hw_panel_info_.partial_update;
 
   return kErrorNone;
 }
