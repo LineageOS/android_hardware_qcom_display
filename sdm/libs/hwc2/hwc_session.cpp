@@ -1176,6 +1176,11 @@ void HWCSession::HandleConcurrency(hwc2_display_t disp) {
     return;
   }
 
+  if (!map_info_pluggable_.size() || !map_info_virtual_.size()) {
+    DLOGI("One or both pluggable/virtual display map is empty");
+    return;
+  }
+
   hwc2_display_t virtual_display_index = (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
   hwc2_display_t external_display_index =
     (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_EXTERNAL);
