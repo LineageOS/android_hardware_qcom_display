@@ -186,6 +186,7 @@ class DisplayBase : public DisplayInterface {
   PrimariesTransfer GetBlendSpaceFromColorMode();
   bool IsHdrMode(const AttrVal &attr);
   void InsertBT2020PqHlgModes();
+  DisplayError HandlePendingVSyncEnable(int32_t retire_fence);
 
   recursive_mutex recursive_mutex_;
   int32_t display_id_ = -1;
@@ -235,9 +236,7 @@ class DisplayBase : public DisplayInterface {
   bool drop_skewed_vsync_ = false;
   bool custom_mixer_resolution_ = false;
   DisplayState power_state_pending_ = kStateOff;
-  bool vsync_state_change_pending_ = false;
-  // requested_vsync_state: true -> enable vsync, false -> disable vsync
-  bool requested_vsync_state_ = false;
+  bool vsync_enable_pending_ = false;
   bool defer_power_state_ = false;
 
   static Locker display_power_reset_lock_;
