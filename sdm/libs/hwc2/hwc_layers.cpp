@@ -416,6 +416,9 @@ HWC2::Error HWCLayer::SetLayerDataspace(int32_t dataspace) {
   if (dataspace_ != dataspace) {
     geometry_changes_ |= kDataspace;
     dataspace_ = dataspace;
+    if (layer_->input_buffer.buffer_id) {
+      ValidateAndSetCSC(reinterpret_cast<private_handle_t *>(layer_->input_buffer.buffer_id));
+    }
   }
   return HWC2::Error::None;
 }
