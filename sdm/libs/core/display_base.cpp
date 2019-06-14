@@ -435,7 +435,8 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
 
   DLOGI_IF(kTagDisplay, "Exiting commit for display: %d-%d", display_id_, display_type_);
 
-  return kErrorNone;
+  // Handle pending vsync enable if any after the commit
+  return HandlePendingVSyncEnable(layer_stack->retire_fence_fd);
 }
 
 DisplayError DisplayBase::Flush(LayerStack *layer_stack) {
@@ -553,10 +554,9 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
 
   // If vsync is enabled, disable vsync before power off/Doze suspend
   if (vsync_enable_ && (state == kStateOff || state == kStateDozeSuspend)) {
-    error = SetVSyncState(false);
+    error = SetVSyncState(false /* enable */);
     if (error == kErrorNone) {
-      vsync_state_change_pending_ = true;
-      requested_vsync_state_ = true;
+      vsync_enable_pending_ = true;
     }
   }
 
@@ -614,12 +614,10 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     comp_manager_->SetDisplayState(display_comp_ctx_, state, release_fence ? *release_fence : -1);
   }
 
-  if (vsync_state_change_pending_ && (state_ == kStateOn || state_ == kStateDoze)) {
-    error = SetVSyncState(requested_vsync_state_);
-    if (error != kErrorNone) {
-      return error;
-    }
-    vsync_state_change_pending_ = false;
+  // Handle vsync pending on resume, Since the power on commit is synchronous we pass -1 as retire
+  // fence otherwise pass valid retire fence
+  if (state_ == kStateOn) {
+    return HandlePendingVSyncEnable(-1 /* retire fence */);
   }
 
   return error;
@@ -1135,14 +1133,27 @@ DisplayError DisplayBase::GetRefreshRateRange(uint32_t *min_refresh_rate,
   return error;
 }
 
+DisplayError DisplayBase::HandlePendingVSyncEnable(int32_t retire_fence) {
+  if (vsync_enable_pending_) {
+    // Retire fence signalling confirms that CRTC enabled, hence wait for retire fence before
+    // we enable vsync
+    buffer_sync_handler_->SyncWait(retire_fence);
+
+    DisplayError error = SetVSyncState(true /* enable */);
+    if (error != kErrorNone) {
+      return error;
+    }
+    vsync_enable_pending_ = false;
+  }
+  return kErrorNone;
+}
+
 DisplayError DisplayBase::SetVSyncState(bool enable) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-  if (state_ == kStateOff) {
-    DLOGW("Can't %s vsync when power state is off for display %d-%d," \
-          "Defer it when display is active", enable ? "enable":"disable",
-          display_id_, display_type_);
-    vsync_state_change_pending_ = true;
-    requested_vsync_state_ = enable;
+  if (state_ == kStateOff && enable) {
+    DLOGW("Can't enable vsync when power state is off for display %d-%d," \
+          "Defer it when display is active", display_id_, display_type_);
+    vsync_enable_pending_ = true;
     return kErrorNone;
   }
   DisplayError error = kErrorNone;
@@ -1159,6 +1170,7 @@ DisplayError DisplayBase::SetVSyncState(bool enable) {
       vsync_enable_ = enable;
     }
   }
+  vsync_enable_pending_ = !enable ? false : vsync_enable_pending_;
 
   return error;
 }
