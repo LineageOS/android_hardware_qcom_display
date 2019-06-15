@@ -1266,6 +1266,9 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
               id_);
       }
     } break;
+    case kInvalidateDisplay:
+      validated_ = false;
+      break;
     default:
       DLOGW("Unknown event: %d", event);
       break;
