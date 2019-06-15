@@ -42,7 +42,7 @@ namespace sdm {
 int HWCDisplayVirtual::Create(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
                               HWCCallbacks *callbacks, hwc2_display_t id, int32_t sdm_id,
                               uint32_t width, uint32_t height, int32_t *format,
-                              HWCDisplay **hwc_display) {
+                              HWCDisplay **hwc_display, float min_lum, float max_lum) {
   int status = 0;
   HWCDisplayVirtual *hwc_display_virtual = new HWCDisplayVirtual(core_intf, buffer_allocator,
                                                                  callbacks, id, sdm_id);
@@ -55,6 +55,10 @@ int HWCDisplayVirtual::Create(CoreInterface *core_intf, HWCBufferAllocator *buff
     DLOGW("Failed to initialize virtual display");
     delete hwc_display_virtual;
     return status;
+  }
+
+  if (max_lum != -1.0 || min_lum != -1.0) {
+    hwc_display_virtual->SetPanelLuminanceAttributes(min_lum, max_lum);
   }
 
   status = hwc_display_virtual->SetConfig(width, height);
@@ -212,6 +216,15 @@ int HWCDisplayVirtual::SetConfig(uint32_t width, uint32_t height) {
     return -EINVAL;
   }
   return 0;
+}
+
+
+HWC2::Error HWCDisplayVirtual::SetPanelLuminanceAttributes(float min_lum, float max_lum) {
+  DisplayError err = display_intf_->SetPanelLuminanceAttributes(min_lum, max_lum);
+  if (err != kErrorNone) {
+    return HWC2::Error::BadParameter;
+  }
+  return HWC2::Error::None;
 }
 
 HWC2::Error HWCDisplayVirtual::SetOutputBuffer(buffer_handle_t buf, int32_t release_fence) {

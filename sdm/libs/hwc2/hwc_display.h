@@ -240,6 +240,9 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error AcceptDisplayChanges(void);
   virtual HWC2::Error GetActiveConfig(hwc2_config_t *out_config);
   virtual HWC2::Error SetActiveConfig(hwc2_config_t config);
+  virtual HWC2::Error SetPanelLuminanceAttributes(float min_lum, float max_lum) {
+    return HWC2::Error::Unsupported;
+  }
   virtual HWC2::Error SetClientTarget(buffer_handle_t target, int32_t acquire_fence,
                                       int32_t dataspace, hwc_region_t damage);
   virtual HWC2::Error SetColorMode(ColorMode mode) { return HWC2::Error::Unsupported; }
