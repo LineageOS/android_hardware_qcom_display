@@ -186,6 +186,11 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
   if (error != kErrorNone) {
     return error;
   }
+  if (pending_brightness_) {
+    buffer_sync_handler_->SyncWait(layer_stack->retire_fence_fd);
+    SetPanelBrightness(cached_brightness_);
+    pending_brightness_ = false;
+  }
 
   if (commit_event_enabled_) {
     dpps_info_.DppsNotifyOps(kDppsCommitEvent, &display_type_, sizeof(display_type_));
@@ -292,7 +297,7 @@ DisplayError DisplayBuiltIn::SetPanelBrightness(float brightness) {
   }
 
   // -1.0f = off, 0.0f = min, 1.0f = max
-  level_remainder_ = 0.0f;
+  float level_remainder = 0.0f;
   int level = 0;
   if (brightness == -1.0f) {
     level = 0;
@@ -306,13 +311,21 @@ DisplayError DisplayBuiltIn::SetPanelBrightness(float brightness) {
     }
     float t = (brightness * (max - min)) + min;
     level = static_cast<int>(t);
-    level_remainder_ = t - level;
+    level_remainder = t - level;
   }
 
-  DisplayError err = kErrorNone;
-  if ((err = hw_intf_->SetPanelBrightness(level)) == kErrorNone) {
+  DisplayError err = hw_intf_->SetPanelBrightness(level);
+  if (err == kErrorNone) {
+    level_remainder_ = level_remainder;
     DLOGI_IF(kTagDisplay, "Setting brightness to level %d (%f percent)", level,
              brightness * 100);
+  } else if (err == kErrorDeferred) {
+    // TODO(user): I8508d64a55c3b30239c6ed2886df391407d22f25 causes mismatch between perceived
+    // power state and actual panel power state. Requires a rework. Below check will set up
+    // deferment of brightness operation if DAL reports defer use case.
+    cached_brightness_ = brightness;
+    pending_brightness_ = true;
+    return kErrorNone;
   }
 
   return err;

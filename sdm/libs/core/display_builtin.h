@@ -108,6 +108,8 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   QSyncMode qsync_mode_ = kQSyncModeNone;
   FrameTriggerMode trigger_mode_debug_ = kFrameTriggerMax;
   float level_remainder_ = 0.0f;
+  float cached_brightness_ = 0.0f;
+  bool pending_brightness_ = false;
 };
 
 }  // namespace sdm

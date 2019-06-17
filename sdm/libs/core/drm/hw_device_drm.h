@@ -229,13 +229,13 @@ class HWDeviceDRM : public HWInterface {
   bool reset_output_fence_offset_ = false;
   uint64_t bit_clk_rate_ = 0;
   bool update_mode_ = false;
+  bool pending_doze_ = false;
 
  private:
   std::string interface_str_ = "DSI";
   bool resolution_switch_enabled_ = false;
   bool autorefresh_ = false;
   std::unique_ptr<HWColorManagerDrm> hw_color_mgr_ = {};
-  bool pending_doze_ = false;
 };
 
 }  // namespace sdm
