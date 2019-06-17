@@ -159,6 +159,8 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DeferFpsConfig deferred_config_ = {};
   float level_remainder_ = 0.0f;
   recursive_mutex brightness_lock_;
+  float cached_brightness_ = 0.0f;
+  bool pending_brightness_ = false;
 };
 
 }  // namespace sdm
