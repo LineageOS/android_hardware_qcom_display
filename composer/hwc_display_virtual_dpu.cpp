@@ -136,6 +136,13 @@ HWC2::Error HWCDisplayVirtualDPU::Validate(uint32_t *out_num_types, uint32_t *ou
   }
 
   BuildLayerStack();
+
+  // Client(SurfaceFlinger) doesn't retain framebuffer post GPU composition.
+  // This can result in flickers in cached framebuffer is used.
+  for (auto &layer : layer_stack_.layers) {
+    layer->flags.updating = true;
+  }
+
   layer_stack_.output_buffer = &output_buffer_;
   // If Output buffer of Virtual Display is not secure, set SKIP flag on the secure layers.
   if (!output_buffer_.flags.secure && layer_stack_.flags.secure_present) {
