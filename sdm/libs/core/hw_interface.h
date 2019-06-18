@@ -81,6 +81,7 @@ class HWInterface {
                                             HWDisplayAttributes *display_attributes) = 0;
   virtual DisplayError GetHWPanelInfo(HWPanelInfo *panel_info) = 0;
   virtual DisplayError SetDisplayAttributes(uint32_t index) = 0;
+  virtual DisplayError SetConfigAttributes(uint32_t index, uint32_t w, uint32_t h) = 0;
   virtual DisplayError SetDisplayAttributes(const HWDisplayAttributes &display_attributes) = 0;
   virtual DisplayError GetConfigIndex(uint32_t mode, uint32_t *index) = 0;
   virtual DisplayError GetConfigIndex(uint32_t width, uint32_t height, uint32_t *index) = 0;

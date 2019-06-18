@@ -1071,4 +1071,9 @@ DisplayError HWDeviceDRM::GetConfigIndex(uint32_t width, uint32_t height, uint32
 }
 
 
+DisplayError HWDeviceDRM::SetConfigAttributes(uint32_t index, uint32_t width, uint32_t height) {
+  return kErrorNone;
+}
+
+
 }  // namespace sdm

@@ -435,6 +435,27 @@ DisplayError HWHDMI::SetDisplayAttributes(uint32_t index) {
   return kErrorNone;
 }
 
+DisplayError HWHDMI::SetConfigAttributes(uint32_t index, uint32_t width, uint32_t height)
+{
+    if (index >= hdmi_modes_.size()) {
+    return kErrorNotSupported;
+  }
+
+  // Get the resolution info from the look up table
+  msm_hdmi_mode_timing_info *timing_mode = &supported_video_modes_[0];
+  for (uint32_t i = 0; i < hdmi_modes_.size(); i++) {
+    msm_hdmi_mode_timing_info *cur = &supported_video_modes_[i];
+    if (cur->video_format == hdmi_modes_[index]) {
+      timing_mode = cur;
+      break;
+    }
+  }
+
+  timing_mode->active_h = width;
+  timing_mode->active_v = height;
+  return kErrorNone;
+}
+
 DisplayError HWHDMI::GetConfigIndex(uint32_t width, uint32_t height, uint32_t *index) {
   // Get the resolution info from the look up table
   for (uint32_t i = 0; i < hdmi_modes_.size(); i++) {
