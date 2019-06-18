@@ -110,6 +110,8 @@ DisplayError DisplayHDMI::Init() {
       mixer_attributes_.width = display_attributes.x_pixels;
       mixer_attributes_.height = display_attributes.y_pixels;
       hw_intf_->SetMixerAttributes(mixer_attributes_);
+      hw_intf_->SetConfigAttributes(mixer_config_index_, mixer_attributes_.width,
+                                    mixer_attributes_.height);
     } else {
       hw_intf_->SetActiveConfig(index);
       mixer_config_index_ = index;

@@ -1461,6 +1461,10 @@ DisplayError HWDevice::SetDynamicDSIClock(uint64_t bitclk) {
   return kErrorNotSupported;
 }
 
+DisplayError HWDevice::SetConfigAttributes(uint32_t index, uint32_t width, uint32_t height) {
+  return kErrorNone;
+}
+
 DisplayError HWDevice::GetDynamicDSIClock(uint64_t *bitclk) {
   return kErrorNotSupported;
 }
