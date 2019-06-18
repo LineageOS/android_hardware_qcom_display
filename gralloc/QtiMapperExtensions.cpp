@@ -339,6 +339,18 @@ Return<void> QtiMapperExtensions::getSurfaceMetadata(void *buffer, getSurfaceMet
   return Void();
 }
 
+Return<void> QtiMapperExtensions::getFormatLayout(int32_t format, uint64_t usage, int32_t flags,
+                                                  int32_t width, int32_t height,
+                                                  getFormatLayout_cb hidl_cb) {
+  ALOGD_IF(DEBUG, "%s: Input parameters - wxh: %dx%d usage: 0x%" PRIu64 " format: %d flags: %d",
+           __FUNCTION__, width, height, usage, format, flags);
+  auto err = Error::NONE;
+  hidl_vec<PlaneLayout> plane_info;
+  uint64_t size = 0;
+  hidl_cb(err, size, plane_info);
+  return Void();
+}
+
 }  // namespace implementation
 }  // namespace V1_0
 }  // namespace mapperextensions
