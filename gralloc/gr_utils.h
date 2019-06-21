@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016,2018-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016,2018, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -152,7 +152,6 @@ bool IsUBwcFormat(int format);
 bool IsUBwcSupported(int format);
 bool IsUBwcPISupported(int format, uint64_t usage);
 bool IsUBwcEnabled(int format, uint64_t usage);
-bool IsCameraCustomFormat(int format);
 void GetYuvUBwcWidthAndHeight(int width, int height, int format, unsigned int *aligned_w,
                               unsigned int *aligned_h);
 void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint32_t height,
