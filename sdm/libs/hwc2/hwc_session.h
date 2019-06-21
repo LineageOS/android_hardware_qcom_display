@@ -20,7 +20,9 @@
 #ifndef __HWC_SESSION_H__
 #define __HWC_SESSION_H__
 
-#ifdef DISPLAY_CONFIG_1_9
+#ifdef DISPLAY_CONFIG_1_10
+#include <vendor/display/config/1.10/IDisplayConfig.h>
+#elif DISPLAY_CONFIG_1_9
 #include <vendor/display/config/1.9/IDisplayConfig.h>
 #elif DISPLAY_CONFIG_1_8
 #include <vendor/display/config/1.8/IDisplayConfig.h>
@@ -65,7 +67,9 @@
 
 namespace sdm {
 
-#ifdef DISPLAY_CONFIG_1_9
+#ifdef DISPLAY_CONFIG_1_10
+using vendor::display::config::V1_10::IDisplayConfig;
+#elif DISPLAY_CONFIG_1_9
 using vendor::display::config::V1_9::IDisplayConfig;
 #elif DISPLAY_CONFIG_1_8
 using vendor::display::config::V1_8::IDisplayConfig;
@@ -86,8 +90,16 @@ using vendor::display::config::V1_1::IDisplayConfig;
 #else
 using vendor::display::config::V1_0::IDisplayConfig;
 #endif
+
+#ifdef DISPLAY_CONFIG_1_10
+// Need to be declarated for any version 10 or above.
+using vendor::display::config::V1_10::IDisplayCWBCallback;
+#endif
+
 using ::android::hardware::Return;
 using ::android::hardware::hidl_string;
+using android::hardware::hidl_handle;
+using ::android::hardware::hidl_vec;
 
 int32_t GetDataspaceFromColorMode(ColorMode mode);
 
@@ -380,6 +392,16 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   Return<int32_t> setPanelLuminanceAttributes(uint32_t disp_id, float min_lum,
                                               float max_lum) override;
   Return<bool> isBuiltInDisplay(uint32_t disp_id) override;
+#endif
+
+#ifdef DISPLAY_CONFIG_1_10
+  Return<void> getSupportedDSIBitClks(uint32_t disp_id,
+                                      getSupportedDSIBitClks_cb _hidl_cb) override;
+  Return<uint64_t> getDSIClk(uint32_t disp_id) override;
+  Return<int32_t> setDSIClk(uint32_t disp_id, uint64_t bit_clk) override;
+  Return<int32_t> setCWBOutputBuffer(const ::android::sp<IDisplayCWBCallback> &callback,
+                                     uint32_t disp_id, const Rect &rect, bool post_processed,
+                                     const hidl_handle& buffer) override;
 #endif
 
   // QClient methods
