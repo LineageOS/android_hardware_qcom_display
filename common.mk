@@ -3,8 +3,14 @@ display_top := $(call my-dir)
 
 #Get the highest display config version available
 display_config_version := $(shell \
+    if [ -d "$(TOP)/vendor/qcom/opensource/interfaces/display/config/1.10" ];\
+    then echo DISPLAY_CONFIG_1_10; fi)
+
+ifeq ($(display_config_version),)
+display_config_version := $(shell \
     if [ -d "$(TOP)/vendor/qcom/opensource/interfaces/display/config/1.9" ];\
     then echo DISPLAY_CONFIG_1_9; fi)
+endif
 ifeq ($(display_config_version),)
 display_config_version := $(shell \
     if [ -d "$(TOP)/vendor/qcom/opensource/interfaces/display/config/1.8" ];\
@@ -90,6 +96,12 @@ ifeq ($(display_config_version), DISPLAY_CONFIG_1_9)
     common_flags += -DDISPLAY_CONFIG_1_1 -DDISPLAY_CONFIG_1_2 -DDISPLAY_CONFIG_1_3
     common_flags += -DDISPLAY_CONFIG_1_4 -DDISPLAY_CONFIG_1_5 -DDISPLAY_CONFIG_1_6
     common_flags += -DDISPLAY_CONFIG_1_7 -DDISPLAY_CONFIG_1_8 -DDISPLAY_CONFIG_1_9
+endif
+ifeq ($(display_config_version), DISPLAY_CONFIG_1_10)
+    common_flags += -DDISPLAY_CONFIG_1_1 -DDISPLAY_CONFIG_1_2 -DDISPLAY_CONFIG_1_3
+    common_flags += -DDISPLAY_CONFIG_1_4 -DDISPLAY_CONFIG_1_5 -DDISPLAY_CONFIG_1_6
+    common_flags += -DDISPLAY_CONFIG_1_7 -DDISPLAY_CONFIG_1_8 -DDISPLAY_CONFIG_1_9
+    common_flags += -DDISPLAY_CONFIG_1_10
 endif
 
 ifeq ($(TARGET_USES_COLOR_METADATA), true)
