@@ -134,7 +134,7 @@ void HWCUEvent::Register(HWCUEventListener *uevent_listener) {
   uevent_listener_ = uevent_listener;
 }
 
-HWCSession::HWCSession() {}
+HWCSession::HWCSession() : cwb_(this) {}
 
 HWCSession *HWCSession::GetInstance() {
   // executed only once for the very first call.
@@ -630,6 +630,7 @@ int32_t HWCSession::PresentDisplay(hwc2_display_t display, int32_t *out_retire_f
   HandlePowerOnPending(display, *out_retire_fence);
   HandleHotplugPending(display, *out_retire_fence);
   HandlePendingRefresh();
+  cwb_.PresentDisplayDone(display);
 
   return INT32(status);
 }
@@ -2806,7 +2807,7 @@ int32_t HWCSession::SetReadbackBuffer(hwc2_display_t display, const native_handl
   }
 
   return CallDisplayFunction(display, &HWCDisplay::SetReadbackBuffer, buffer, acquire_fence,
-                             false);
+                             false, kCWBClientComposer);
 }
 
 int32_t HWCSession::GetReadbackBufferFence(hwc2_display_t display, int32_t *release_fence) {

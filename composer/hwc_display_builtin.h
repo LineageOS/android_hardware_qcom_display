@@ -79,7 +79,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   virtual DisplayError SetDetailEnhancerConfig(const DisplayDetailEnhancerData &de_data);
   virtual DisplayError ControlPartialUpdate(bool enable, uint32_t *pending);
   virtual HWC2::Error SetReadbackBuffer(const native_handle_t *buffer, int32_t acquire_fence,
-                                        bool post_processed_output);
+                                        bool post_processed_output, CWBClient client);
   virtual HWC2::Error GetReadbackBufferFence(int32_t *release_fence);
   virtual HWC2::Error SetQSyncMode(QSyncMode qsync_mode);
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous);
@@ -119,6 +119,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
 
   BufferAllocator *buffer_allocator_ = nullptr;
   CPUHint *cpu_hint_ = nullptr;
+  CWBClient cwb_client_ = kCWBClientNone;
 
   // Builtin readback buffer configuration
   LayerBuffer output_buffer_ = {};

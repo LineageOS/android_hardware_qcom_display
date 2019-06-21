@@ -49,7 +49,9 @@
 #include <qd_utils.h>
 #include <display_config.h>
 #include <vector>
+#include <queue>
 #include <utility>
+#include <future>   // NOLINT
 
 #include "hwc_callbacks.h"
 #include "hwc_layers.h"
@@ -98,6 +100,7 @@ using ::android::hardware::Return;
 using ::android::hardware::hidl_string;
 using android::hardware::hidl_handle;
 using ::android::hardware::hidl_vec;
+using ::android::sp;
 
 int32_t GetDataspaceFromColorMode(ColorMode mode);
 
@@ -279,6 +282,38 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   static Locker locker_[HWCCallbacks::kNumDisplays];
 
  private:
+  class CWB {
+   public:
+    explicit CWB(HWCSession *hwc_session) : hwc_session_(hwc_session) { }
+    void PresentDisplayDone(hwc2_display_t disp_id);
+
+#ifdef DISPLAY_CONFIG_1_10
+    int32_t PostBuffer(const sp<IDisplayCWBCallback> &callback, bool post_processed,
+                       const hidl_handle& buffer);
+
+   private:
+    struct QueueNode {
+      QueueNode(const sp<IDisplayCWBCallback> &cb, bool pp, const hidl_handle& buf)
+        : callback(cb), post_processed(pp), buffer(buf) { }
+
+      const android::sp<IDisplayCWBCallback> callback;
+      bool post_processed = false;
+      const hidl_handle buffer;
+    };
+
+    void ProcessRequests();
+    static void AsyncTask(CWB *cwb);
+
+    std::queue<QueueNode *> queue_;
+#endif  // DISPLAY_CONFIG_1_10
+
+    std::future<void> future_;
+    Locker queue_lock_;
+    std::mutex mutex_;
+    std::condition_variable cv_;
+    HWCSession *hwc_session_ = nullptr;
+  };
+
   struct DisplayMapInfo {
     hwc2_display_t client_id = HWCCallbacks::kNumDisplays;        // mapped sf id for this display
     int32_t sdm_id = -1;                                         // sdm id for this display
@@ -401,7 +436,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
                                       getSupportedDSIBitClks_cb _hidl_cb) override;
   Return<uint64_t> getDSIClk(uint32_t disp_id) override;
   Return<int32_t> setDSIClk(uint32_t disp_id, uint64_t bit_clk) override;
-  Return<int32_t> setCWBOutputBuffer(const ::android::sp<IDisplayCWBCallback> &callback,
+  Return<int32_t> setCWBOutputBuffer(const sp<IDisplayCWBCallback> &callback,
                                      uint32_t disp_id, const Rect &rect, bool post_processed,
                                      const hidl_handle& buffer) override;
 #endif
@@ -492,6 +527,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   float set_max_lum_ = -1.0;
   float set_min_lum_ = -1.0;
   std::bitset<HWCCallbacks::kNumDisplays> pending_refresh_;
+  CWB cwb_;
 };
 }  // namespace sdm
 
