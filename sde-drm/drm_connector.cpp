@@ -579,6 +579,7 @@ int DRMConnector::GetInfo(DRMConnectorInfo *info) {
       info->is_connected = false;
       info->modes.clear();
       info->type = drm_connector_->connector_type;
+      info->type_id = drm_connector_->connector_type_id;
       DLOGW("Connector %u not found. Possibly removed.", conn_id);
       return 0;
     }
@@ -599,6 +600,7 @@ int DRMConnector::GetInfo(DRMConnectorInfo *info) {
   info->mmWidth = drm_connector_->mmWidth;
   info->mmHeight = drm_connector_->mmHeight;
   info->type = drm_connector_->connector_type;
+  info->type_id = drm_connector_->connector_type_id;
   info->is_connected = IsConnected();
 
   drmModeObjectProperties *props =
@@ -823,8 +825,12 @@ void DRMConnector::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
 void DRMConnector::SetROI(drmModeAtomicReq *req, uint32_t obj_id, uint32_t num_roi,
                           DRMRect *conn_rois) {
 #ifdef SDE_MAX_ROI_V1
-  if (!num_roi || num_roi > SDE_MAX_ROI_V1 ||
-      !prop_mgr_.IsPropertyAvailable(DRMProperty::ROI_V1)) {
+  if (num_roi > SDE_MAX_ROI_V1 || !prop_mgr_.IsPropertyAvailable(DRMProperty::ROI_V1)) {
+    return;
+  }
+  if (!num_roi || !conn_rois) {
+    drmModeAtomicAddProperty(req, obj_id, prop_mgr_.GetPropertyId(DRMProperty::ROI_V1), 0);
+    DRM_LOGD("Connector ROI is set to NULL to indicate full frame update");
     return;
   }
 

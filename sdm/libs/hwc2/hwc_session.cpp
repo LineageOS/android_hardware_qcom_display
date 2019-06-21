@@ -90,6 +90,8 @@ int32_t GetDataspaceFromColorMode(ColorMode mode) {
       return HAL_DATASPACE_BT2020_PQ;
     case ColorMode::BT2100_HLG:
       return HAL_DATASPACE_BT2020_HLG;
+    case ColorMode::DISPLAY_BT2020:
+      return HAL_DATASPACE_DISPLAY_BT2020;
     default:
       return HAL_DATASPACE_UNKNOWN;
   }
@@ -562,7 +564,7 @@ static int32_t GetRenderIntents(hwc2_device_t *device, hwc2_display_t display,
     return HWC2_ERROR_BAD_PARAMETER;
   }
 
-  if (mode < ColorMode::NATIVE || mode > ColorMode::BT2100_HLG) {
+  if (mode < ColorMode::NATIVE || mode > ColorMode::DISPLAY_BT2020) {
     DLOGE("Invalid ColorMode: %d", mode);
     return HWC2_ERROR_BAD_PARAMETER;
   }
@@ -583,30 +585,6 @@ static int32_t GetDataspaceSaturationMatrix(hwc2_device_t *device,
                                                                0.0, 0.0, 1.0, 0.0, \
                                                                0.0, 0.0, 0.0, 1.0 };
 
-  // TODO(user): This value should ideally be retrieved from a QDCM configuration file
-  char value[kPropertyMax] = {};
-  if (Debug::Get()->GetProperty(DATASPACE_SATURATION_MATRIX_PROP, value) != kErrorNone) {
-    DLOGW("Undefined saturation matrix");
-    return HWC2_ERROR_BAD_CONFIG;
-  }
-  std::string value_string(value);
-  std::size_t start = 0, end = 0;
-  int index = 0;
-  while ((end = value_string.find(",", start)) != std::string::npos) {
-    saturation_matrix[index] = std::stof(value_string.substr(start, end - start));
-    start = end + 1;
-    index++;
-    // We expect a 3x3, SF needs 4x4, keep the last row/column identity
-    if ((index + 1) % 4 == 0) {
-      index++;
-    }
-  }
-  saturation_matrix[index] = std::stof(value_string.substr(start, end - start));
-  if (index < kDataspaceSaturationPropertyElements - 1) {
-    // The property must have kDataspaceSaturationPropertyElements delimited by commas
-    DLOGW("Invalid saturation matrix defined");
-    return HWC2_ERROR_BAD_CONFIG;
-  }
   for (int32_t i = 0; i < kDataspaceSaturationMatrixCount; i += 4) {
     DLOGD("%f %f %f %f", saturation_matrix[i], saturation_matrix[i + 1], saturation_matrix[i + 2],
           saturation_matrix[i + 3]);
@@ -805,7 +783,7 @@ static int32_t SetClientTarget(hwc2_device_t *device, hwc2_display_t display,
 int32_t HWCSession::SetColorMode(hwc2_device_t *device, hwc2_display_t display,
                                  int32_t /*ColorMode*/ int_mode) {
   auto mode = static_cast<ColorMode>(int_mode);
-  if (mode < ColorMode::NATIVE || mode > ColorMode::BT2100_HLG) {
+  if (mode < ColorMode::NATIVE || mode > ColorMode::DISPLAY_BT2020) {
     return HWC2_ERROR_BAD_PARAMETER;
   }
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::SetColorMode, mode);
@@ -815,15 +793,16 @@ int32_t HWCSession::SetColorModeWithRenderIntent(hwc2_device_t *device, hwc2_dis
                                                  int32_t /*ColorMode*/ int_mode,
                                                  int32_t /*RenderIntent*/ int_render_intent) {
   auto mode = static_cast<ColorMode>(int_mode);
-  if (mode < ColorMode::NATIVE || mode > ColorMode::BT2100_HLG) {
+  if (mode < ColorMode::NATIVE || mode > ColorMode::DISPLAY_BT2020) {
     return HWC2_ERROR_BAD_PARAMETER;
   }
+
+  if ((int_render_intent < 0) || (int_render_intent > MAX_EXTENDED_RENDER_INTENT)) {
+    DLOGE("Invalid RenderIntent: %d", int_render_intent);
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
   auto render_intent = static_cast<RenderIntent>(int_render_intent);
-  if ((render_intent < RenderIntent::COLORIMETRIC) ||
-      (render_intent > RenderIntent::TONE_MAP_ENHANCE)) {
-    DLOGE("Invalid RenderIntent: %d", render_intent);
-    return HWC2_ERROR_BAD_PARAMETER;
-  }
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::SetColorModeWithRenderIntent,
                                          mode, render_intent);
 }
@@ -1191,6 +1170,12 @@ hwc2_function_pointer_t HWCSession::GetFunction(struct hwc2_device *device,
              (HWCSession::GetDisplayIdentificationData);
     case HWC2::FunctionDescriptor::SetLayerColorTransform:
       return AsFP<HWC2_PFN_SET_LAYER_COLOR_TRANSFORM>(SetLayerColorTransform);
+    case HWC2::FunctionDescriptor::GetDisplayCapabilities:
+      return AsFP<HWC2_PFN_GET_DISPLAY_CAPABILITIES>(HWCSession::GetDisplayCapabilities);
+    case HWC2::FunctionDescriptor::GetDisplayBrightnessSupport:
+      return AsFP<HWC2_PFN_GET_DISPLAY_BRIGHTNESS_SUPPORT>(HWCSession::GetDisplayBrightnessSupport);
+    case HWC2::FunctionDescriptor::SetDisplayBrightness:
+      return AsFP<HWC2_PFN_SET_DISPLAY_BRIGHTNESS>(HWCSession::SetDisplayBrightness);
     default:
       DLOGD("Unknown/Unimplemented function descriptor: %d (%s)", int_descriptor,
             to_string(descriptor).c_str());
@@ -1254,7 +1239,8 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
         }
 
         status = HWCDisplayVirtual::Create(core_intf_, &buffer_allocator_, &callbacks_, client_id,
-                                           info.display_id, width, height, format, &hwc_display);
+                                           info.display_id, width, height, format, &hwc_display,
+                                           set_min_lum_, set_max_lum_);
         // TODO(user): validate width and height support
         if (status) {
           return HWC2::Error::NoResources;
@@ -1363,10 +1349,6 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       status = ConfigureRefreshRate(input_parcel);
       break;
 
-    case qService::IQService::SET_VIEW_FRAME:
-      status = 0;
-      break;
-
     case qService::IQService::TOGGLE_SCREEN_UPDATES: {
         if (!input_parcel || !output_parcel) {
           DLOGE("QService command = %d: input_parcel and output_parcel needed.", command);
@@ -1458,9 +1440,14 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
           DLOGE("QService command = %d: output_parcel needed.", command);
           break;
         }
-        int level = 0;
-        status = GetPanelBrightness(&level);
-        output_parcel->writeInt32(level);
+        float brightness = -1.0f;
+        uint32_t display = input_parcel->readUint32();
+        status = getDisplayBrightness(display, &brightness);
+        if (brightness == -1.0f) {
+          output_parcel->writeInt32(0);
+        } else {
+          output_parcel->writeInt32(INT32(brightness*254 + 1));
+        }
       }
       break;
 
@@ -1469,8 +1456,13 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
           DLOGE("QService command = %d: input_parcel and output_parcel needed.", command);
           break;
         }
-        uint32_t level = UINT32(input_parcel->readInt32());
-        status = setPanelBrightness(level);
+        int level = input_parcel->readInt32();
+        hwc2_device_t *device = static_cast<hwc2_device_t *>(this);
+        if (level == 0) {
+          status = SetDisplayBrightness(device, HWC_DISPLAY_PRIMARY, -1.0f);
+        } else {
+          status = SetDisplayBrightness(device, HWC_DISPLAY_PRIMARY, (level - 1)/254.0f);
+        }
         output_parcel->writeInt32(status);
       }
       break;
@@ -1591,6 +1583,14 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
         break;
       }
       status = GetSupportedDsiClk(input_parcel, output_parcel);
+      break;
+
+    case qService::IQService::SET_PANEL_LUMINANCE:
+      if (!input_parcel) {
+        DLOGE("QService command = %d: input_parcel needed.", command);
+        break;
+      }
+      status = SetPanelLuminanceAttributes(input_parcel);
       break;
 
     case qService::IQService::SET_COLOR_MODE_FROM_CLIENT:
@@ -1803,7 +1803,7 @@ android::status_t HWCSession::SetColorModeOverride(const android::Parcel *input_
     return -EINVAL;
   }
 
-  if (mode < ColorMode::NATIVE || mode > ColorMode::BT2100_HLG) {
+  if (mode < ColorMode::NATIVE || mode > ColorMode::DISPLAY_BT2020) {
     DLOGE("Invalid ColorMode: %d", mode);
     return HWC2_ERROR_BAD_PARAMETER;
   }
@@ -1861,19 +1861,20 @@ android::status_t HWCSession::SetColorModeWithRenderIntentOverride(
     const android::Parcel *input_parcel) {
   auto display = static_cast<hwc2_display_t>(input_parcel->readInt32());
   auto mode = static_cast<ColorMode>(input_parcel->readInt32());
-  auto intent = static_cast<RenderIntent>(input_parcel->readInt32());
+  auto int_intent = static_cast<int>(input_parcel->readInt32());
   auto device = static_cast<hwc2_device_t *>(this);
 
-  if (mode < ColorMode::NATIVE || mode > ColorMode::BT2100_HLG) {
+  if (mode < ColorMode::NATIVE || mode > ColorMode::DISPLAY_BT2020) {
     DLOGE("Invalid ColorMode: %d", mode);
     return HWC2_ERROR_BAD_PARAMETER;
   }
 
-  if (intent < RenderIntent::COLORIMETRIC || intent > RenderIntent::TONE_MAP_ENHANCE) {
-    DLOGE("Invalid RenderIntent: %d", intent);
+  if ((int_intent < 0) || (int_intent > MAX_EXTENDED_RENDER_INTENT)) {
+    DLOGE("Invalid RenderIntent: %d", int_intent);
     return HWC2_ERROR_BAD_PARAMETER;
   }
 
+  auto intent = static_cast<RenderIntent>(int_intent);
   auto err =
       CallDisplayFunction(device, display, &HWCDisplay::SetColorModeWithRenderIntent, mode, intent);
   if (err != HWC2_ERROR_NONE)
@@ -2026,7 +2027,7 @@ android::status_t HWCSession::QdcmCMDDispatch(uint32_t display_id,
 android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel,
                                              android::Parcel *output_parcel) {
   int ret = 0;
-  int32_t *brightness_value = NULL;
+  float *brightness = NULL;
   uint32_t display_id(0);
   PPPendingParams pending_action;
   PPDisplayAPIPayload resp_payload, req_payload;
@@ -2099,12 +2100,13 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
           usleep(kSolidFillDelay);
           break;
         case kSetPanelBrightness:
-          brightness_value = reinterpret_cast<int32_t *>(resp_payload.payload);
-          if (brightness_value == NULL) {
-            DLOGE("Brightness value is Null");
-            ret = -EINVAL;
+          ret = -EINVAL;
+          brightness = reinterpret_cast<float *>(resp_payload.payload);
+          if (brightness == NULL) {
+            DLOGE("Brightness payload is Null");
           } else {
-            ret = hwc_display_[display_id]->SetPanelBrightness(*brightness_value);
+            ret = INT(SetDisplayBrightness(static_cast<hwc2_device_t *>(this),
+                      static_cast<hwc2_display_t>(display_id), *brightness));
           }
           break;
         case kEnableFrameCapture:
@@ -2265,6 +2267,22 @@ android::status_t HWCSession::GetSupportedDsiClk(const android::Parcel *input_pa
   for (auto &bit_rate : bit_rates) {
     output_parcel->writeUint64(bit_rate);
   }
+
+  return 0;
+}
+
+android::status_t HWCSession::SetPanelLuminanceAttributes(const android::Parcel *input_parcel) {
+  int disp_id = input_parcel->readInt32();
+
+  // currently doing only for virtual display
+  if (disp_id != qdutils::DISPLAY_VIRTUAL) {
+    return -EINVAL;
+  }
+
+  std::lock_guard<std::mutex> obj(mutex_lum_);
+  set_min_lum_ = input_parcel->readFloat();
+  set_max_lum_ = input_parcel->readFloat();
+  DLOGI("set max_lum %f, min_lum %f", set_max_lum_, set_min_lum_);
 
   return 0;
 }
@@ -3063,6 +3081,67 @@ int32_t HWCSession::GetDisplayIdentificationData(hwc2_device_t *device, hwc2_dis
 
   return CallDisplayFunction(device, display, &HWCDisplay::GetDisplayIdentificationData, outPort,
                              outDataSize, outData);
+}
+
+int32_t HWCSession::GetDisplayCapabilities(hwc2_device_t *device, hwc2_display_t display,
+                                           uint32_t *outNumCapabilities,
+                                           uint32_t *outCapabilities) {
+  if (!outNumCapabilities || !device) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (display >= HWCCallbacks::kNumDisplays) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  HWCSession *hwc_session = static_cast<HWCSession *>(device);
+  HWCDisplay *hwc_display = hwc_session->hwc_display_[display];
+  if (!hwc_display) {
+    DLOGE("Expected valid hwc_display");
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+  bool isBuiltin = (hwc_display->GetDisplayClass() == DISPLAY_CLASS_BUILTIN);
+  if (!outCapabilities) {
+    *outNumCapabilities = 0;
+    if (isBuiltin) {
+      *outNumCapabilities = 3;
+    }
+    return HWC2_ERROR_NONE;
+  } else {
+    if (isBuiltin) {
+      // TODO(user): Handle SKIP_CLIENT_COLOR_TRANSFORM based on DSPP availability
+      outCapabilities[0] = HWC2_DISPLAY_CAPABILITY_SKIP_CLIENT_COLOR_TRANSFORM;
+      outCapabilities[1] = HWC2_DISPLAY_CAPABILITY_DOZE;
+      outCapabilities[2] = HWC2_DISPLAY_CAPABILITY_BRIGHTNESS;
+      *outNumCapabilities = 3;
+    }
+    return HWC2_ERROR_NONE;
+  }
+}
+
+int32_t HWCSession::GetDisplayBrightnessSupport(hwc2_device_t *device, hwc2_display_t display,
+                                                bool *outSupport) {
+  if (!device || !outSupport) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (display >= HWCCallbacks::kNumDisplays) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  HWCSession *hwc_session = static_cast<HWCSession *>(device);
+  HWCDisplay *hwc_display = hwc_session->hwc_display_[display];
+  if (!hwc_display) {
+    DLOGE("Expected valid hwc_display");
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+  *outSupport = (hwc_display->GetDisplayClass() == DISPLAY_CLASS_BUILTIN);
+  return HWC2_ERROR_NONE;
+}
+
+int32_t HWCSession::SetDisplayBrightness(hwc2_device_t *device, hwc2_display_t display,
+                                         float brightness) {
+  return CallDisplayFunction(device, display, &HWCDisplay::SetPanelBrightness, brightness);
 }
 
 android::status_t HWCSession::SetQSyncMode(const android::Parcel *input_parcel) {

@@ -21,7 +21,7 @@
 #define __HWC_DISPLAY_H__
 
 #include <QService.h>
-#include <android/hardware/graphics/common/1.1/types.h>
+#include <android/hardware/graphics/common/1.2/types.h>
 #include <core/core_interface.h>
 #include <hardware/hwcomposer.h>
 #include <private/color_params.h>
@@ -41,13 +41,16 @@
 #include "display_null.h"
 #include "hwc_display_event_handler.h"
 
-using android::hardware::graphics::common::V1_1::ColorMode;
+using android::hardware::graphics::common::V1_2::ColorMode;
 using android::hardware::graphics::common::V1_1::Dataspace;
 using android::hardware::graphics::common::V1_1::RenderIntent;
 
 namespace sdm {
 
 class HWCToneMapper;
+
+/* max customer extended render intent */
+#define MAX_EXTENDED_RENDER_INTENT    0x1ff
 
 // Subclasses set this to their type. This has to be different from DisplayType.
 // This is to avoid RTTI and dynamic_cast
@@ -208,8 +211,6 @@ class HWCDisplay : public DisplayEventHandler {
   }
 
   uint32_t GetMaxRefreshRate() { return max_refresh_rate_; }
-  int SetPanelBrightness(int level);
-  int GetPanelBrightness(int *level);
   int ToggleScreenUpdates(bool enable);
   int ColorSVCRequestRoute(const PPDisplayAPIPayload &in_payload, PPDisplayAPIPayload *out_payload,
                            PPPendingParams *pending_action);
@@ -242,6 +243,9 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error AcceptDisplayChanges(void);
   virtual HWC2::Error GetActiveConfig(hwc2_config_t *out_config);
   virtual HWC2::Error SetActiveConfig(hwc2_config_t config);
+  virtual HWC2::Error SetPanelLuminanceAttributes(float min_lum, float max_lum) {
+    return HWC2::Error::Unsupported;
+  }
   virtual HWC2::Error SetClientTarget(buffer_handle_t target, int32_t acquire_fence,
                                       int32_t dataspace, hwc_region_t damage);
   virtual HWC2::Error SetColorMode(ColorMode mode) { return HWC2::Error::Unsupported; }
@@ -275,6 +279,12 @@ class HWCDisplay : public DisplayEventHandler {
     return HWC2::Error::Unsupported;
   }
   virtual HWC2::Error SetPendingRefresh() {
+    return HWC2::Error::Unsupported;
+  }
+  virtual HWC2::Error SetPanelBrightness(float brightness) {
+    return HWC2::Error::Unsupported;
+  }
+  virtual HWC2::Error GetPanelBrightness(float *brightness) {
     return HWC2::Error::Unsupported;
   }
   virtual HWC2::Error GetDisplayConfigs(uint32_t *out_num_configs, hwc2_config_t *out_configs);

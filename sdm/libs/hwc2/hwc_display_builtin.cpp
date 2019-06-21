@@ -119,8 +119,6 @@ int HWCDisplayBuiltIn::Init() {
   }
   color_mode_ = new HWCColorMode(display_intf_);
   color_mode_->Init();
-  HWCDebugHandler::Get()->GetProperty(ENABLE_DEFAULT_COLOR_MODE,
-                                      &default_mode_status_);
 
   int drop_refresh = 0;
   HWCDebugHandler::Get()->GetProperty(ENABLE_DROP_REFRESH, &drop_refresh);
@@ -815,6 +813,7 @@ DisplayError HWCDisplayBuiltIn::DisablePartialUpdateOneFrame() {
 
 DisplayError HWCDisplayBuiltIn::SetMixerResolution(uint32_t width, uint32_t height) {
   DisplayError error = display_intf_->SetMixerResolution(width, height);
+  callbacks_->Refresh(id_);
   validated_ = false;
   return error;
 }
@@ -846,6 +845,8 @@ DisplayError HWCDisplayBuiltIn::ControlIdlePowerCollapse(bool enable, bool synch
 DisplayError HWCDisplayBuiltIn::SetDynamicDSIClock(uint64_t bitclk) {
   {
     SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[type_]);
+    DisablePartialUpdateOneFrame();
+
     DisplayError error = display_intf_->SetDynamicDSIClock(bitclk);
     if (error != kErrorNone) {
       DLOGE(" failed: Clk: %llu Error: %d", bitclk, error);
@@ -886,4 +887,21 @@ HWC2::Error HWCDisplayBuiltIn::SetPendingRefresh() {
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCDisplayBuiltIn::SetPanelBrightness(float brightness) {
+  DisplayError ret = display_intf_->SetPanelBrightness(brightness);
+  if (ret != kErrorNone) {
+    return HWC2::Error::NoResources;
+  }
+
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayBuiltIn::GetPanelBrightness(float *brightness) {
+  DisplayError ret = display_intf_->GetPanelBrightness(brightness);
+  if (ret != kErrorNone) {
+    return HWC2::Error::NoResources;
+  }
+
+  return HWC2::Error::None;
+}
 }  // namespace sdm

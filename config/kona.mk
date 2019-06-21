@@ -4,15 +4,15 @@ PRODUCT_PACKAGES += \
     android.hardware.graphics.composer@2.3-impl \
     android.hardware.graphics.composer@2.3-service \
     android.hardware.graphics.mapper@2.0-impl-qti-display \
-    vendor.qti.hardware.display.allocator@1.0-service \
+    vendor.qti.hardware.display.allocator-service \
     android.hardware.memtrack@1.0-impl \
     android.hardware.memtrack@1.0-service \
     android.hardware.light@2.0-impl \
     android.hardware.light@2.0-service \
-    gralloc.qcom \
-    lights.qcom \
-    hwcomposer.qcom \
-    memtrack.qcom \
+    gralloc.kona \
+    lights.kona \
+    hwcomposer.kona \
+    memtrack.kona \
     libqdutils \
     libqdMetaData \
     modetest
@@ -41,7 +41,7 @@ TARGET_USES_COLOR_METADATA := true
 TARGET_HAS_WIDE_COLOR_DISPLAY := true
 TARGET_HAS_HDR_DISPLAY := true
 TARGET_USES_DISPLAY_RENDER_INTENTS := true
-TARGET_USES_QTI_MAPPER_1_1 := true
+TARGET_USES_QTI_MAPPER_2_0 := true
 
 PRODUCT_PROPERTY_OVERRIDES += \
     persist.demo.hdmirotationlock=false \
@@ -56,8 +56,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_scaler=0 \
     vendor.display.disable_offline_rotator=1 \
     vendor.display.disable_excl_rect=0 \
-    vendor.display.comp_mask=0 \
-    vendor.display.enable_default_color_mode=1
+    vendor.display.comp_mask=0
 
 ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
 # Recovery is enabled, logging is enabled
@@ -82,10 +81,3 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.enable_null_display=1
 endif
 endif
-
-# This matrix should be in column major order, per SurfaceFlinger requirement
-#  1.0   0.0   0.0
-#  0.0   1.0   0.0
-#  0.0   0.0   1.0
-PRODUCT_PROPERTY_OVERRIDES += \
-    vendor.display.dataspace_saturation_matrix=1.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,1.0

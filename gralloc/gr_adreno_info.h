@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2019, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,7 +32,16 @@
 
 #include <media/msm_media_info.h>
 
-namespace gralloc {
+typedef enum {
+  SURFACE_TILE_MODE_DISABLE    = 0x0,    // used for linear surface
+  SURFACE_TILE_MODE_ENABLE     = 0x1     // used for tiled surface
+} surface_tile_mode_t;
+
+typedef enum {
+  SURFACE_RASTER_MODE_UNKNOWN = 0x0,      // used when we don't know the raster mode to be used
+  SURFACE_RASTER_MODE_TW      = 0x1,      // raster_mode = TypeWriter (TW)
+  SURFACE_RASTER_MODE_CB      = 0x2,      // raster_mode = CheckerBoard (CB)
+} surface_rastermode_t;
 
 // Adreno Pixel Formats
 typedef enum {
@@ -106,10 +115,9 @@ typedef enum {
   ADRENO_PIXELFORMAT_TP10 = 654,      // YUV 4:2:0 planar 10 bits/comp (2 planes)
 } ADRENOPIXELFORMAT;
 
-typedef enum {
-  SURFACE_TILE_MODE_DISABLE    = 0x0,    // used for linear surface
-  SURFACE_TILE_MODE_ENABLE     = 0x1     // used for tiled surface
-} surface_tile_mode_t;
+
+
+namespace gralloc {
 
 class AdrenoMemInfo {
  public:
@@ -197,27 +205,32 @@ class AdrenoMemInfo {
   ~AdrenoMemInfo();
   // link(s)to adreno surface padding library.
   int (*LINK_adreno_compute_padding)(int width, int bpp, int surface_tile_height,
-                                     int screen_tile_height, int padding_threshold) = NULL;
+                                     surface_rastermode_t raster_mode,
+                                     int padding_threshold) = NULL;
   void (*LINK_adreno_compute_aligned_width_and_height)(int width, int height, int bpp,
-                                                       int tile_mode, int raster_mode,
+                                                       surface_tile_mode_t tile_mode,
+                                                       surface_rastermode_t raster_mode,
                                                        int padding_threshold, int *aligned_w,
                                                        int *aligned_h) = NULL;
   void (*LINK_adreno_compute_fmt_aligned_width_and_height)(int width, int height, int plane_id,
-                                                           int format, int num_samples,
-                                                           int tile_mode, int raster_mode,
+                                                           ADRENOPIXELFORMAT format,
+                                                           uint32_t num_samples,
+                                                           surface_tile_mode_t tile_mode,
+                                                           surface_rastermode_t raster_mode,
                                                            int padding_threshold, int *aligned_w,
                                                            int *aligned_h) = NULL;
   void (*LINK_adreno_compute_compressedfmt_aligned_width_and_height)(
-      int width, int height, int format, int tile_mode, int raster_mode, int padding_threshold,
+      int width, int height, int format, surface_tile_mode_t tile_mode,
+      surface_rastermode_t raster_mode, int padding_threshold,
       int *aligned_w, int *aligned_h, int *bpp) = NULL;
   int (*LINK_adreno_isUBWCSupportedByGpu)(ADRENOPIXELFORMAT format) = NULL;
-  unsigned int (*LINK_adreno_get_gpu_pixel_alignment)() = NULL;
+  unsigned int (*LINK_adreno_get_gpu_pixel_alignment)(void) = NULL;
 
-  uint32_t (*LINK_adreno_get_metadata_blob_size)() = NULL;
+  uint32_t (*LINK_adreno_get_metadata_blob_size)(void) = NULL;
   int (*LINK_adreno_init_memory_layout)(void* metadata_blob, int width, int height, int depth,
-       ADRENOPIXELFORMAT format, int num_samples, surface_tile_mode_t tile_mode,
+       ADRENOPIXELFORMAT format, uint32_t num_samples, surface_tile_mode_t tile_mode,
        uint64_t usage, uint32_t num_planes) = NULL;
-  uint32_t (*LINK_adreno_get_aligned_gpu_buffer_size)(void* metadata_blob) = NULL;
+  uint64_t (*LINK_adreno_get_aligned_gpu_buffer_size)(void* metadata_blob) = NULL;
   int (*LINK_adreno_isPISupportedByGpu)(int format, uint64_t usage) = NULL;
 
   bool gfx_ubwc_disable_ = false;

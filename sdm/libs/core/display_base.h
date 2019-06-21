@@ -85,7 +85,7 @@ class DisplayBase : public DisplayInterface {
   virtual bool IsUnderscanSupported() {
     return false;
   }
-  virtual DisplayError SetPanelBrightness(int level) {
+  virtual DisplayError SetPanelBrightness(float brightness) {
     return kErrorNotSupported;
   }
   virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
@@ -103,6 +103,9 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates) {
     return kErrorNotSupported;
   }
+  virtual DisplayError SetPanelLuminanceAttributes(float min_lum, float max_lum) {
+    return kErrorNotSupported;
+  }
   virtual DisplayError GetColorModeCount(uint32_t *mode_count);
   virtual DisplayError GetColorModes(uint32_t *mode_count, std::vector<std::string> *color_modes);
   virtual DisplayError GetColorModeAttr(const std::string &color_mode, AttrVal *attr);
@@ -114,7 +117,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError ApplyDefaultDisplayMode(void);
   virtual DisplayError SetCursorPosition(int x, int y);
   virtual DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate, uint32_t *max_refresh_rate);
-  virtual DisplayError GetPanelBrightness(int *level) {
+  virtual DisplayError GetPanelBrightness(float *brightness) {
     return kErrorNotSupported;
   }
   virtual DisplayError SetVSyncState(bool enable);
@@ -154,6 +157,7 @@ class DisplayBase : public DisplayInterface {
  protected:
   const char *kBt2020Pq = "bt2020_pq";
   const char *kBt2020Hlg = "bt2020_hlg";
+  const char *kDisplayBt2020 = "display_bt2020";
   DisplayError BuildLayerStackStats(LayerStack *layer_stack);
   virtual DisplayError ValidateGPUTargetParams();
   void CommitLayerParams(LayerStack *layer_stack);
@@ -223,7 +227,6 @@ class DisplayBase : public DisplayInterface {
   uint32_t req_mixer_width_ = 0;
   uint32_t req_mixer_height_ = 0;
   std::string current_color_mode_ = "hal_native";
-  int disable_hdr_lut_gen_ = 0;
   bool hw_recovery_logs_captured_ = false;
   int disable_hw_recovery_dump_ = 0;
   HWQosData default_qos_data_;
@@ -233,6 +236,7 @@ class DisplayBase : public DisplayInterface {
   bool custom_mixer_resolution_ = false;
   DisplayState power_state_pending_ = kStateOff;
   bool vsync_state_change_pending_ = false;
+  // requested_vsync_state: true -> enable vsync, false -> disable vsync
   bool requested_vsync_state_ = false;
   bool defer_power_state_ = false;
 

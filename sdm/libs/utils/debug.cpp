@@ -63,13 +63,6 @@ void Debug::GetIdleTimeoutMs(uint32_t *active_ms, uint32_t *inactive_ms) {
   *inactive_ms = UINT32(inactive_val);
 }
 
-int Debug::GetBootAnimLayerCount() {
-  int value = 0;
-  DebugHandler::Get()->GetProperty(BOOT_ANIMATION_LAYER_COUNT_PROP, &value);
-
-  return value;
-}
-
 bool Debug::IsRotatorDownScaleDisabled() {
   int value = 0;
   DebugHandler::Get()->GetProperty(DISABLE_ROTATOR_DOWNSCALE_PROP, &value);
@@ -140,15 +133,10 @@ bool Debug::IsScalarDisabled() {
 
 bool Debug::IsUbwcTiledFrameBuffer() {
   int ubwc_disabled = 0;
-  int ubwc_framebuffer = 0;
 
   DebugHandler::Get()->GetProperty(DISABLE_UBWC_PROP, &ubwc_disabled);
 
-  if (!ubwc_disabled) {
-    DebugHandler::Get()->GetProperty(ENABLE_FB_UBWC_PROP, &ubwc_framebuffer);
-  }
-
-  return (ubwc_framebuffer == 1);
+  return (ubwc_disabled == 0);
 }
 
 bool Debug::IsAVRDisabled() {

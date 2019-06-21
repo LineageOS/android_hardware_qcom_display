@@ -111,14 +111,16 @@ HWC2::Error HWCColorMode::GetRenderIntents(ColorMode mode, uint32_t *out_num_int
 }
 
 HWC2::Error HWCColorMode::ValidateColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
-  if (mode < ColorMode::NATIVE || mode > ColorMode::BT2100_HLG) {
-    DLOGE("Could not find mode: %d", mode);
+  if (mode < ColorMode::NATIVE || mode > ColorMode::DISPLAY_BT2020) {
+    DLOGE("Invalid mode: %d", mode);
     return HWC2::Error::BadParameter;
   }
   if (color_mode_map_.find(mode) == color_mode_map_.end()) {
+    DLOGE("Could not find mode: %d", mode);
     return HWC2::Error::Unsupported;
   }
   if (color_mode_map_[mode].find(intent) == color_mode_map_[mode].end()) {
+    DLOGE("Could not find render intent %d in mode %d", intent, mode);
     return HWC2::Error::Unsupported;
   }
 
@@ -337,6 +339,7 @@ void HWCColorMode::PopulateColorModes() {
     AttrVal attr;
     error = display_intf_->GetColorModeAttr(mode_string, &attr);
     std::string color_gamut = kNative, dynamic_range = kSdr, pic_quality = kStandard, transfer;
+    int int_render_intent = -1;
     if (!attr.empty()) {
       for (auto &it : attr) {
         if (it.first.find(kColorGamutAttribute) != std::string::npos) {
@@ -347,39 +350,35 @@ void HWCColorMode::PopulateColorModes() {
           pic_quality = it.second;
         } else if (it.first.find(kGammaTransferAttribute) != std::string::npos) {
           transfer = it.second;
+        } else if (it.first.find(kRenderIntentAttribute) != std::string::npos) {
+          int_render_intent = std::stoi(it.second);
         }
       }
 
-      DLOGV_IF(kTagClient, "color_gamut : %s, dynamic_range : %s, pic_quality : %s",
-               color_gamut.c_str(), dynamic_range.c_str(), pic_quality.c_str());
+      if (int_render_intent < 0 || int_render_intent > MAX_EXTENDED_RENDER_INTENT) {
+        DLOGW("Invalid render intent %d for mode %s", int_render_intent, mode_string.c_str());
+        continue;
+      }
+      DLOGV_IF(kTagClient, "color_gamut : %s, dynamic_range : %s, pic_quality : %s, "
+               "render_intent : %d", color_gamut.c_str(), dynamic_range.c_str(),
+               pic_quality.c_str(), int_render_intent);
+
+      auto render_intent = static_cast<RenderIntent>(int_render_intent);
       if (color_gamut == kNative) {
-        color_mode_map_[ColorMode::NATIVE][RenderIntent::COLORIMETRIC][kSdrType] = mode_string;
+        color_mode_map_[ColorMode::NATIVE][render_intent][kSdrType] = mode_string;
       }
 
       if (color_gamut == kSrgb && dynamic_range == kSdr) {
-        if (pic_quality == kStandard) {
-          color_mode_map_[ColorMode::SRGB][RenderIntent::COLORIMETRIC][kSdrType] = mode_string;
-        }
-        if (pic_quality == kEnhanced) {
-          color_mode_map_[ColorMode::SRGB][RenderIntent::ENHANCE][kSdrType] = mode_string;
-        }
+        color_mode_map_[ColorMode::SRGB][render_intent][kSdrType] = mode_string;
       }
 
       if (color_gamut == kDcip3 && dynamic_range == kSdr) {
-        if (pic_quality == kStandard) {
-          color_mode_map_[ColorMode::DISPLAY_P3][RenderIntent::COLORIMETRIC]
-                         [kSdrType] = mode_string;
-        }
-        if (pic_quality == kEnhanced) {
-          color_mode_map_[ColorMode::DISPLAY_P3][RenderIntent::ENHANCE]
-                         [kSdrType] = mode_string;
-        }
+        color_mode_map_[ColorMode::DISPLAY_P3][render_intent][kSdrType] = mode_string;
       }
-      if (color_gamut == kDcip3 && pic_quality == kStandard && dynamic_range == kHdr) {
+      if (color_gamut == kDcip3 && dynamic_range == kHdr) {
         if (display_intf_->IsSupportSsppTonemap()) {
-          color_mode_map_[ColorMode::DISPLAY_P3][RenderIntent::COLORIMETRIC]
-                         [kHdrType] = mode_string;
-        } else {
+          color_mode_map_[ColorMode::DISPLAY_P3][render_intent][kHdrType] = mode_string;
+        } else if (pic_quality == kStandard) {
           color_mode_map_[ColorMode::BT2100_PQ][RenderIntent::TONE_MAP_COLORIMETRIC]
                          [kHdrType] = mode_string;
           color_mode_map_[ColorMode::BT2100_HLG][RenderIntent::TONE_MAP_COLORIMETRIC]
@@ -392,9 +391,9 @@ void HWCColorMode::PopulateColorModes() {
         } else if (transfer == kHlg) {
           color_mode_map_[ColorMode::BT2100_HLG][RenderIntent::COLORIMETRIC]
                          [kHdrType] = mode_string;
-        } else if (transfer == kGamma2_2) {
-          color_mode_map_[ColorMode::BT2020][RenderIntent::COLORIMETRIC]
-                         [kHdrType] = mode_string;
+        } else if (transfer == kSrgb) {
+          color_mode_map_[ColorMode::DISPLAY_BT2020][RenderIntent::COLORIMETRIC]
+                         [kSdrType] = mode_string;
         }
       }
     } else {
@@ -1949,22 +1948,6 @@ void HWCDisplay::MarkLayersForClientComposition() {
 }
 
 void HWCDisplay::ApplyScanAdjustment(hwc_rect_t *display_frame) {
-}
-
-int HWCDisplay::SetPanelBrightness(int level) {
-  int ret = 0;
-  if (display_intf_) {
-    ret = display_intf_->SetPanelBrightness(level);
-    validated_ = false;
-  } else {
-    ret = -EINVAL;
-  }
-
-  return ret;
-}
-
-int HWCDisplay::GetPanelBrightness(int *level) {
-  return display_intf_->GetPanelBrightness(level);
 }
 
 int HWCDisplay::ToggleScreenUpdates(bool enable) {

@@ -683,11 +683,15 @@ void DRMCrtc::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
 void DRMCrtc::SetROI(drmModeAtomicReq *req, uint32_t obj_id, uint32_t num_roi,
                      DRMRect *crtc_rois) {
 #ifdef SDE_MAX_ROI_V1
-  if (!num_roi || num_roi > SDE_MAX_ROI_V1 ||
-      !prop_mgr_.IsPropertyAvailable(DRMProperty::ROI_V1)) {
+  if (num_roi > SDE_MAX_ROI_V1 || !prop_mgr_.IsPropertyAvailable(DRMProperty::ROI_V1)) {
     return;
   }
-
+  if (!num_roi || !crtc_rois) {
+    AddProperty(req, obj_id, prop_mgr_.GetPropertyId(DRMProperty::ROI_V1),
+                0, false /* cache */, tmp_prop_val_map_);
+    DRM_LOGD("CRTC ROI is set to NULL to indicate full frame update");
+    return;
+  }
   static struct sde_drm_roi_v1 roi_v1 {};
   roi_v1.num_rects = num_roi;
 

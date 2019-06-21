@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2013-2014, 2016, 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2013-2014, 2016, 2018-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -46,60 +46,15 @@ namespace qdutils {
 // do a binder call to HWC to get/set data.
 
 int isExternalConnected(void) {
-    int ret;
-    status_t err = (status_t) FAILED_TRANSACTION;
-    sp<IQService> binder = getBinder();
-    Parcel inParcel, outParcel;
-    if(binder != NULL) {
-        err = binder->dispatch(IQService::CHECK_EXTERNAL_STATUS,
-                &inParcel , &outParcel);
-    }
-    if(err) {
-        ALOGE("%s: Failed to get external status err=%d", __FUNCTION__, err);
-        ret = err;
-    } else {
-        ret = outParcel.readInt32();
-    }
-    return ret;
+    return FAILED_TRANSACTION;
 }
 
-int getDisplayAttributes(int dpy, DisplayAttributes_t& dpyattr) {
-    status_t err = (status_t) FAILED_TRANSACTION;
-    sp<IQService> binder = getBinder();
-    Parcel inParcel, outParcel;
-    inParcel.writeInt32(dpy);
-    if(binder != NULL) {
-        err = binder->dispatch(IQService::GET_DISPLAY_ATTRIBUTES,
-                &inParcel, &outParcel);
-    }
-    if(!err) {
-        dpyattr.vsync_period = outParcel.readInt32();
-        dpyattr.xres = outParcel.readInt32();
-        dpyattr.yres = outParcel.readInt32();
-        dpyattr.xdpi = outParcel.readFloat();
-        dpyattr.ydpi = outParcel.readFloat();
-        dpyattr.panel_type = outParcel.readInt32();
-    } else {
-        ALOGE("%s() failed with err %d", __FUNCTION__, err);
-    }
-    return err;
+int getDisplayAttributes(int /* dpy */, DisplayAttributes_t& /* dpyattr */) {
+    return FAILED_TRANSACTION;
 }
 
-int setHSIC(int dpy, const HSICData_t& hsic_data) {
-    status_t err = (status_t) FAILED_TRANSACTION;
-    sp<IQService> binder = getBinder();
-    Parcel inParcel, outParcel;
-    inParcel.writeInt32(dpy);
-    inParcel.writeInt32(hsic_data.hue);
-    inParcel.writeFloat(hsic_data.saturation);
-    inParcel.writeInt32(hsic_data.intensity);
-    inParcel.writeFloat(hsic_data.contrast);
-    if(binder != NULL) {
-        err = binder->dispatch(IQService::SET_HSIC_DATA, &inParcel, &outParcel);
-    }
-    if(err)
-        ALOGE("%s: Failed to get external status err=%d", __FUNCTION__, err);
-    return err;
+int setHSIC(int /* dpy */, const HSICData_t& /* hsic_data */) {
+    return FAILED_TRANSACTION;
 }
 
 int getDisplayVisibleRegion(int dpy, hwc_rect_t &rect) {
@@ -123,25 +78,8 @@ int getDisplayVisibleRegion(int dpy, hwc_rect_t &rect) {
     return err;
 }
 
-int setViewFrame(int dpy, int l, int t, int r, int b) {
-    status_t err = (status_t) FAILED_TRANSACTION;
-    sp<IQService> binder = getBinder();
-    Parcel inParcel, outParcel;
-    inParcel.writeInt32(dpy);
-    inParcel.writeInt32(l);
-    inParcel.writeInt32(t);
-    inParcel.writeInt32(r);
-    inParcel.writeInt32(b);
-
-    if(binder != NULL) {
-        err = binder->dispatch(IQService::SET_VIEW_FRAME,
-                &inParcel, &outParcel);
-    }
-    if(err)
-        ALOGE("%s: Failed to set view frame for dpy %d err=%d",
-                            __FUNCTION__, dpy, err);
-
-    return err;
+int setViewFrame(int /* dpy */, int /* l */, int /* t */, int /* r */, int /* b */) {
+    return FAILED_TRANSACTION;
 }
 
 int setSecondaryDisplayStatus(int dpy, uint32_t status) {
@@ -368,6 +306,23 @@ int getSupportedBitClk(int dpy, std::vector<uint64_t>& bit_rates) {
       clk_levels--;
     }
     return 0;
+}
+
+int setPanelLuminanceAttributes(int dpy, float min_lum, float max_lum) {
+    status_t err = (status_t) FAILED_TRANSACTION;
+    sp<IQService> binder = getBinder();
+    Parcel inParcel, outParcel;
+
+    if(binder != NULL) {
+        inParcel.writeInt32(dpy);
+        inParcel.writeFloat(min_lum);
+        inParcel.writeFloat(max_lum);
+        status_t err = binder->dispatch(IQService::SET_PANEL_LUMINANCE, &inParcel, &outParcel);
+        if(err) {
+            ALOGE("%s() failed with err %d", __FUNCTION__, err);
+        }
+    }
+    return err;
 }
 
 }// namespace

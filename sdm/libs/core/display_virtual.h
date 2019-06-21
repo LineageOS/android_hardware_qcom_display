@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -52,6 +52,7 @@ class DisplayVirtual : public DisplayBase {
   virtual DisplayError SetMixerResolution(uint32_t width, uint32_t height) {
     return kErrorNotSupported;
   }
+  virtual DisplayError SetPanelLuminanceAttributes(float min_lum, float max_lum);
   virtual DisplayError SetVSyncState(bool enable) {
     return kErrorNotSupported;
   }
@@ -71,6 +72,10 @@ class DisplayVirtual : public DisplayBase {
   }
   virtual DisplayError TeardownConcurrentWriteback(void) { return kErrorNotSupported; }
   virtual DisplayError GetColorModeCount(uint32_t *mode_count);
+
+ protected:
+  float set_max_lum_ = -1.0;
+  float set_min_lum_ = -1.0;
 };
 
 }  // namespace sdm

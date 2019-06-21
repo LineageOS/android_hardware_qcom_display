@@ -95,13 +95,14 @@ class HWDeviceDRM : public HWInterface {
   virtual void SetIdleTimeoutMs(uint32_t timeout_ms);
   virtual DisplayError SetDisplayMode(const HWDisplayMode hw_display_mode);
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate);
-  virtual DisplayError SetPanelBrightness(int level);
+  virtual DisplayError SetPanelBrightness(int level) { return kErrorNotSupported; }
   virtual DisplayError GetHWScanInfo(HWScanInfo *scan_info);
   virtual DisplayError GetVideoFormat(uint32_t config_index, uint32_t *video_format);
   virtual DisplayError GetMaxCEAFormat(uint32_t *max_cea_format);
   virtual DisplayError SetCursorPosition(HWLayers *hw_layers, int x, int y);
   virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
-  virtual DisplayError GetPanelBrightness(int *level);
+  virtual DisplayError GetPanelBrightness(int *level) { return kErrorNotSupported; }
+  virtual void GetHWPanelMaxBrightness() { return; }
   virtual DisplayError SetAutoRefresh(bool enable) { autorefresh_ = enable; return kErrorNone; }
   virtual DisplayError SetScaleLutConfig(HWScaleLutInfo *lut_info);
   virtual DisplayError UnsetScaleLutConfig();
@@ -134,15 +135,12 @@ class HWDeviceDRM : public HWInterface {
   static const int kMaxStringLength = 1024;
   static const int kNumPhysicalDisplays = 2;
   static const int kMaxSysfsCommandLength = 12;
-  static constexpr const char *kBrightnessNode =
-    "/sys/class/backlight/panel0-backlight/brightness";
 
   DisplayError SetFormat(const LayerBufferFormat &source, uint32_t *target);
   DisplayError SetStride(HWDeviceType device_type, LayerBufferFormat format, uint32_t width,
                          uint32_t *target);
   DisplayError PopulateDisplayAttributes(uint32_t index);
   void GetHWDisplayPortAndMode();
-  void GetHWPanelMaxBrightness();
   bool EnableHotPlugDetection(int enable);
   void UpdateMixerAttributes();
   void SetSolidfillStages();
@@ -169,14 +167,10 @@ class HWDeviceDRM : public HWInterface {
   void AddDimLayerIfNeeded();
   DisplayError NullCommit(bool synchronous, bool retain_planes);
   void DumpConnectorModeInfo();
-  void SetFullROI();
+  void ResetROI();
   void SetQOSData(const HWQosData &qos_data);
   void DumpHWLayers(HWLayers *hw_layers);
-  bool IsDestScalingNeeded() {
-    return (mixer_attributes_.width != display_attributes_[current_mode_index_].x_pixels ||
-           mixer_attributes_.height != display_attributes_[current_mode_index_].y_pixels);
-  }
-
+  bool IsFullFrameUpdate(const HWLayersInfo &hw_layer_info);
 
   class Registry {
    public:

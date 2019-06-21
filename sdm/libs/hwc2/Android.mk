@@ -4,7 +4,7 @@ include $(LOCAL_PATH)/../../../common.mk
 
 ifeq ($(use_hwc2),true)
 
-LOCAL_MODULE                  := hwcomposer.qcom
+LOCAL_MODULE                  := hwcomposer.$(TARGET_BOARD_PLATFORM)
 LOCAL_VENDOR_MODULE           := true
 LOCAL_MODULE_RELATIVE_PATH    := hw
 LOCAL_MODULE_TAGS             := optional
@@ -25,7 +25,9 @@ LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware li
                                  vendor.display.config@1.0 \
                                  android.hardware.graphics.mapper@2.0 \
                                  android.hardware.graphics.mapper@2.1 \
+                                 android.hardware.graphics.mapper@3.0 \
                                  android.hardware.graphics.allocator@2.0 \
+                                 android.hardware.graphics.allocator@3.0 \
                                  android.hardware.graphics.composer@2.2 \
 
 $(info IDisplayConfig version: $(display_config_version))
@@ -79,6 +81,17 @@ LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.5
 LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.6
 LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.7
 LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.8
+endif
+ifeq ($(display_config_version), DISPLAY_CONFIG_1_9)
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.1
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.2
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.3
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.4
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.5
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.6
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.7
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.8
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.9
 endif
 
 LOCAL_SRC_FILES               := hwc_session.cpp \

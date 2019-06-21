@@ -44,24 +44,15 @@ public:
         SET_PANEL_BRIGHTNESS = 3, // Provides ability to get the panel brightness
         CONNECT_HWC_CLIENT = 4, // Connect to qservice
         SCREEN_REFRESH = 5,     // Refresh screen through SF invalidate
-        EXTERNAL_ORIENTATION = 6,// Set external orientation
-        BUFFER_MIRRORMODE = 7,  // Buffer mirrormode
-        CHECK_EXTERNAL_STATUS = 8,// Check status of external display
-        GET_DISPLAY_ATTRIBUTES = 9,// Get display attributes
-        SET_HSIC_DATA = 10,     // Set HSIC on dspp
         GET_DISPLAY_VISIBLE_REGION = 11,// Get the visibleRegion for dpy
         SET_SECONDARY_DISPLAY_STATUS = 12,// Sets secondary display status
         SET_MAX_PIPES_PER_MIXER = 13,// Set max pipes per mixer for MDPComp
-        SET_VIEW_FRAME = 14,    // Set view frame of display
         DYNAMIC_DEBUG = 15,     // Enable more logging on the fly
         SET_IDLE_TIMEOUT = 16,  // Set idle timeout for GPU fallback
-        TOGGLE_BWC = 17,           // Toggle BWC On/Off on targets that support
-        /* Enable/Disable/Set refresh rate dynamically */
-        CONFIGURE_DYN_REFRESH_RATE = 18,
+        CONFIGURE_DYN_REFRESH_RATE = 18, //  Enable/Disable/Set refresh rate dynamically
         CONTROL_PARTIAL_UPDATE = 19,   // Provides ability to enable/disable partial update
         TOGGLE_SCREEN_UPDATES = 20, // Provides ability to set the panel brightness
         SET_FRAME_DUMP_CONFIG = 21,  // Provides ability to set the frame dump config
-        DISP_PARAM_TYPE_NOTUSED_5 = 22,  // Not used
         CONNECT_HDMI_CLIENT = 23,  // Connect HDMI CEC HAL Client
         QDCM_SVC_CMDS = 24,        // request QDCM services.
         SET_ACTIVE_CONFIG = 25, //Set a specified display config
@@ -74,11 +65,10 @@ public:
         GET_BW_TRANSACTION_STATUS = 32, //Client can query BW transaction status.
         SET_LAYER_MIXER_RESOLUTION = 33, // Enables client to set layer mixer resolution.
         SET_COLOR_MODE = 34, // Overrides the QDCM mode on the display
-        GET_HDR_CAPABILITIES = 35, // Get HDR capabilities for legacy HWC interface
         SET_COLOR_MODE_BY_ID = 36, // Overrides the QDCM mode using the given mode ID
         GET_COMPOSER_STATUS = 37, // Get composer init status-true if primary display init is done
         SET_QSYNC_MODE = 38, // Set qsync mode. 0 - (none)disable qsync, 1 - continuous mode.
-        SET_COLOR_MODE_WITH_RENDER_INTENT = 39,
+        SET_COLOR_MODE_WITH_RENDER_INTENT = 39,  // Overrides the QDCM mode with render intent
         SET_IDLE_PC = 40, // Enable/disable Idle power collapse
         SET_DPPS_AD4_ROI_CONFIG = 41, // Set ad4 roi config for debug
         SET_DSI_CLK = 42, // Set DSI Clk.
@@ -86,6 +76,7 @@ public:
         GET_SUPPORTED_DSI_CLK = 44, // Get supported DSI Clk.
         SET_COLOR_MODE_FROM_CLIENT = 45, // Overrides the QDCM mode using the given mode ID
         SET_FRAME_TRIGGER_MODE = 46, // Set frame trigger mode for debug
+        SET_PANEL_LUMINANCE = 47, // Set Panel Luminance attributes.
         COMMAND_LIST_END = 400,
     };
 

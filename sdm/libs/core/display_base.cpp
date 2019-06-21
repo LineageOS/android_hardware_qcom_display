@@ -164,7 +164,6 @@ DisplayError DisplayBase::Init() {
   }
   DisplayBase::SetMaxMixerStages(max_mixer_stages);
 
-  Debug::GetProperty(DISABLE_HDR_LUT_GEN, &disable_hdr_lut_gen_);
   // TODO(user): Temporary changes, to be removed when DRM driver supports
   // Partial update with Destination scaler enabled.
   SetPUonDestScaler();
@@ -537,6 +536,15 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     return kErrorNone;
   }
 
+  // If vsync is enabled, disable vsync before power off/Doze suspend
+  if (vsync_enable_ && (state == kStateOff || state == kStateDozeSuspend)) {
+    error = SetVSyncState(false);
+    if (error == kErrorNone) {
+      vsync_state_change_pending_ = true;
+      requested_vsync_state_ = true;
+    }
+  }
+
   switch (state) {
   case kStateOff:
     hw_layers_.info.hw_layers.clear();
@@ -591,7 +599,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     comp_manager_->SetDisplayState(display_comp_ctx_, state);
   }
 
-  if (vsync_state_change_pending_ && (state_ != kStateOff || state_ != kStateStandby)) {
+  if (vsync_state_change_pending_ && (state_ == kStateOn || state_ == kStateDoze)) {
     error = SetVSyncState(requested_vsync_state_);
     if (error != kErrorNone) {
       return error;
@@ -1238,6 +1246,15 @@ DisplayError DisplayBase::ReconfigureMixer(uint32_t width, uint32_t height) {
   }
 
   DLOGD_IF(kTagQDCM, "Reconfiguring mixer with width : %d, height : %d", width, height);
+
+  LayerRect fb_rect = { 0.0f, 0.0f, FLOAT(fb_config_.x_pixels), FLOAT(fb_config_.y_pixels) };
+  LayerRect mixer_rect = { 0.0f, 0.0f, FLOAT(width), FLOAT(height) };
+
+  error = comp_manager_->ValidateScaling(fb_rect, mixer_rect, false /* rotate90 */);
+  if (error != kErrorNone) {
+    return error;
+  }
+
   HWMixerAttributes mixer_attributes;
   mixer_attributes.width = width;
   mixer_attributes.height = height;

@@ -70,15 +70,6 @@ inline android::status_t toggleScreenUpdate(uint32_t on) {
     return sendSingleParam(qService::IQService::TOGGLE_SCREEN_UPDATES, on);
 }
 
-inline android::status_t setExtOrientation(uint32_t orientation) {
-    return sendSingleParam(qService::IQService::EXTERNAL_ORIENTATION,
-            orientation);
-}
-
-inline android::status_t setBufferMirrorMode(uint32_t enable) {
-    return sendSingleParam(qService::IQService::BUFFER_MIRRORMODE, enable);
-}
-
 inline android::status_t setCameraLaunchStatus(uint32_t on) {
     return sendSingleParam(qService::IQService::SET_CAMERA_STATUS, on);
 }

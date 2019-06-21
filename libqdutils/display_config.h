@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 - 2016, 2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013 - 2016, 2018, 2019, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -170,6 +170,9 @@ uint64_t getDsiClk(int dpy);
 
 // Get supported bit clk values.
 int getSupportedBitClk(int dpy, std::vector<uint64_t>& bit_rates);
+
+// Sets the specified min and max luminance values.
+int setPanelLuminanceAttributes(int dpy, float min_lum, float max_lum);
 
 }; //namespace
 
