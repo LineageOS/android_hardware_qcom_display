@@ -92,6 +92,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(GetDefaultColorMode(string *))
   MAKE_NO_OP(SetCursorPosition(int, int))
   MAKE_NO_OP(SetRefreshRate(uint32_t, bool))
+  MAKE_NO_OP(GetRefreshRate(uint32_t *))
   MAKE_NO_OP(GetPanelBrightness(int *))
   MAKE_NO_OP(SetVSyncState(bool))
   MAKE_NO_OP(SetMixerResolution(uint32_t, uint32_t))

@@ -242,10 +242,23 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
   }
 
   uint32_t refresh_rate = GetOptimalRefreshRate(one_updating_layer);
-  bool final_rate = force_refresh_rate_ ? true : false;
-  error = display_intf_->SetRefreshRate(refresh_rate, final_rate);
+  error = display_intf_->SetRefreshRate(refresh_rate, force_refresh_rate_);
+
+  // Get the refresh rate set.
+  display_intf_->GetRefreshRate(&refresh_rate);
+  bool vsync_source = (callbacks_->GetVsyncSource() == id_);
+
   if (error == kErrorNone) {
-    // On success, set current refresh rate to new refresh rate
+    if (vsync_source && (current_refresh_rate_ < refresh_rate)) {
+      DTRACE_BEGIN("HWC2::Vsync::Enable");
+      // Display is ramping up from idle.
+      // Client realizes need for resync upon change in config.
+      // Since we know config has changed, triggering vsync proactively
+      // can help in reducing pipeline delays to enable events.
+      SetVsyncEnabled(HWC2::Vsync::Enable);
+      DTRACE_END();
+    }
+    // On success, set current refresh rate to new refresh rate.
     current_refresh_rate_ = refresh_rate;
   }
 

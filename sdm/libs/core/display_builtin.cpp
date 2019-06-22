@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -718,6 +718,11 @@ bool DisplayBuiltIn::CanSkipDisplayPrepare(LayerStack *layer_stack) {
   }
 
   return same_roi;
+}
+
+DisplayError DisplayBuiltIn::GetRefreshRate(uint32_t *refresh_rate) {
+  *refresh_rate = current_refresh_rate_;
+  return kErrorNone;
 }
 
 }  // namespace sdm
