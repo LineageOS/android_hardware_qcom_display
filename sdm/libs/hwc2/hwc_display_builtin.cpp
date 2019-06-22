@@ -166,10 +166,10 @@ int HWCDisplayBuiltIn::Init() {
   HWCDebugHandler::Get()->GetProperty(ENABLE_DEFAULT_COLOR_MODE,
                                       &default_mode_status_);
 
-  int drop_refresh = 0;
-  HWCDebugHandler::Get()->GetProperty(ENABLE_DROP_REFRESH, &drop_refresh);
-  enable_drop_refresh_ = (drop_refresh == 1);
-  if (enable_drop_refresh_) {
+  int optimize_refresh = 0;
+  HWCDebugHandler::Get()->GetProperty(ENABLE_OPTIMIZE_REFRESH, &optimize_refresh);
+  enable_optimize_refresh_ = (optimize_refresh == 1);
+  if (enable_optimize_refresh_) {
     DLOGI("Drop redundant drawcycles %d", id_);
   }
   pmic_intf_ = new PMICInterface();
@@ -283,7 +283,7 @@ bool HWCDisplayBuiltIn::CanSkipCommit() {
   }
 
   bool vsync_source = (callbacks_->GetVsyncSource() == id_);
-  bool skip_commit = enable_drop_refresh_ && !pending_commit_ && !buffers_latched &&
+  bool skip_commit = enable_optimize_refresh_ && !pending_commit_ && !buffers_latched &&
                      !pending_refresh_ && !vsync_source;
   pending_refresh_ = false;
 
