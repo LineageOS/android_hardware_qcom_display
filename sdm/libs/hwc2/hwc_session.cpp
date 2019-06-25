@@ -1597,7 +1597,10 @@ android::status_t HWCSession::SetMaxMixerStages(const android::Parcel *input_par
   uint32_t max_mixer_stages = UINT32(input_parcel->readInt32());
   android::status_t status = 0;
 
-  for (uint32_t i = 0; i < 32 && bit_mask_display_type[i]; i++) {
+  for (uint32_t i = 0; i < 32; i++) {
+    if (!bit_mask_display_type.test(i)) {
+      continue;
+    }
     int disp_idx = GetDisplayIndex(INT(i));
     if (disp_idx == -1) {
       continue;
@@ -1625,7 +1628,10 @@ android::status_t HWCSession::SetFrameDumpConfig(const android::Parcel *input_pa
   uint32_t bit_mask_layer_type = UINT32(input_parcel->readInt32());
   android::status_t status = 0;
 
-  for (uint32_t i = 0; i < 32 && bit_mask_display_type[i]; i++) {
+  for (uint32_t i = 0; i < 32; i++) {
+    if (!bit_mask_display_type.test(i)) {
+      continue;
+    }
     int disp_idx = GetDisplayIndex(INT(i));
     if (disp_idx == -1) {
       continue;
