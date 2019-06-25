@@ -295,11 +295,10 @@ Return<int32_t> HWCSession::setPanelBrightness(uint32_t level) {
     return -EINVAL;
   }
 
-  hwc2_device_t *device = static_cast<hwc2_device_t *>(this);
   if (level == 0) {
-    return INT32(SetDisplayBrightness(device, HWC_DISPLAY_PRIMARY, -1.0f));
+    return INT32(SetDisplayBrightness(HWC_DISPLAY_PRIMARY, -1.0f));
   } else {
-    return INT32(SetDisplayBrightness(device, HWC_DISPLAY_PRIMARY, (level - 1)/254.0f));
+    return INT32(SetDisplayBrightness(HWC_DISPLAY_PRIMARY, (level - 1)/254.0f));
   }
 }
 
@@ -548,7 +547,7 @@ Return<void> HWCSession::displayBWTransactionPending(displayBWTransactionPending
 
 #ifdef DISPLAY_CONFIG_1_1
 Return<int32_t> HWCSession::setDisplayAnimating(uint64_t display_id, bool animating ) {
-  return CallDisplayFunction(static_cast<hwc2_device_t *>(this), display_id,
+  return CallDisplayFunction(display_id,
                              &HWCDisplay::SetDisplayAnimating, animating);
 }
 #endif
@@ -639,7 +638,7 @@ Return<void> HWCSession::getWriteBackCapabilities(getWriteBackCapabilities_cb _h
 Return<int32_t> HWCSession::SetDisplayDppsAdROI(uint32_t display_id, uint32_t h_start,
                                                 uint32_t h_end, uint32_t v_start, uint32_t v_end,
                                                 uint32_t factor_in, uint32_t factor_out) {
-  return CallDisplayFunction(static_cast<hwc2_device_t *>(this), display_id,
+  return CallDisplayFunction(display_id,
                              &HWCDisplay::SetDisplayDppsAdROI, h_start, h_end, v_start, v_end,
                              factor_in, factor_out);
 }
@@ -799,8 +798,7 @@ int32_t HWCSession::getDisplayBrightness(uint32_t display, float *brightness) {
 }
 
 int32_t HWCSession::setDisplayBrightness(uint32_t display, float brightness) {
-  return SetDisplayBrightness(static_cast<hwc2_device_t *>(this),
-                              static_cast<hwc2_display_t>(display), brightness);
+  return SetDisplayBrightness(static_cast<hwc2_display_t>(display), brightness);
 }
 
 #ifdef DISPLAY_CONFIG_1_9
