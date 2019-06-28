@@ -725,6 +725,7 @@ void HWCDisplay::BuildLayerStack() {
     }
 
     if (layer->input_buffer.flags.secure_display) {
+      layer_stack_.flags.secure_present = true;
       is_secure = true;
     }
 
