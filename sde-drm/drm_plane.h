@@ -73,6 +73,7 @@ class DRMPlane {
   void PostValidate(uint32_t crtc_id, bool success);
   void PostCommit(uint32_t crtc_id, bool success);
   bool SetDgmCscConfig(drmModeAtomicReq *req, uint64_t handle);
+  void UpdatePPLutFeatureInuse(DRMPPFeatureInfo *data);
 
  private:
   typedef std::map<DRMProperty, std::tuple<uint64_t, drmModePropertyRes *>> PropertyMap;
@@ -97,6 +98,13 @@ class DRMPlane {
   sde_drm_scaler_v2 scaler_v2_config_copy_ = {};
   sde_drm_csc_v1 csc_config_copy_ = {};
   bool is_lut_configured_ = false;
+
+  // SSPP tone-mapping properties
+  bool dgm_csc_in_use_ = false;
+  bool dgm_1d_lut_igc_in_use_ = false;
+  bool dgm_1d_lut_gc_in_use_ = false;
+  bool vig_1d_lut_igc_in_use_ = false;
+  bool vig_3d_lut_gamut_in_use_ = false;
 };
 
 class DRMPlaneManager {

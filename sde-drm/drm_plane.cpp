@@ -226,6 +226,27 @@ static void PopulateMultiRectModes(drmModePropertyRes *prop) {
 
 #define __CLASS__ "DRMPlaneManager"
 
+static bool GetDRMonemapLutTypeFromPPFeatureID(DRMPPFeatureID id, DRMTonemapLutType *lut_type) {
+  switch (id) {
+    case kFeatureDgmIgc:
+      *lut_type = DRMTonemapLutType::DMA_1D_IGC;
+      break;
+    case kFeatureDgmGc:
+      *lut_type = DRMTonemapLutType::DMA_1D_GC;
+      break;
+    case kFeatureVigIgc:
+      *lut_type = DRMTonemapLutType::VIG_1D_IGC;
+      break;
+    case kFeatureVigGamut:
+      *lut_type = DRMTonemapLutType::VIG_3D_GAMUT;
+      break;
+    default:
+      DRM_LOGE("Invalid DRMPPFeature id = %d", id);
+      return false;
+  }
+  return true;
+}
+
 DRMPlaneManager::DRMPlaneManager(int fd) : fd_(fd) {}
 
 void DRMPlaneManager::Init() {
@@ -916,16 +937,44 @@ void DRMPlane::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
     } break;
 
     case DRMOps::PLANE_SET_POST_PROC: {
-       DRMPPFeatureInfo *data = va_arg(args, DRMPPFeatureInfo*);
-       if (data) {
-         DRM_LOGD("Plane %d: Set post proc", obj_id);
-         pp_mgr_->SetPPFeature(req, obj_id, *data);
-       }
-     } break;
+      DRMPPFeatureInfo *data = va_arg(args, DRMPPFeatureInfo*);
+      if (data) {
+        DRM_LOGD("Plane %d: Set post proc", obj_id);
+        pp_mgr_->SetPPFeature(req, obj_id, *data);
+        UpdatePPLutFeatureInuse(data);
+      }
+    } break;
 
     default:
       DRM_LOGE("Invalid opcode %d for DRM Plane %d", code, obj_id);
   }
+}
+
+void DRMPlane::UpdatePPLutFeatureInuse(DRMPPFeatureInfo *data) {
+  DRMTonemapLutType lut_type = {};
+  bool ret = GetDRMonemapLutTypeFromPPFeatureID(data->id, &lut_type);
+  if (ret == false) {
+    DRM_LOGE("Failed to get the lut type from PPFeatureID = %d", data->id);
+    return;
+  }
+  bool in_use = data->payload ? true : false;  // valid payload indicates the property is set
+  switch (lut_type) {
+    case DRMTonemapLutType::DMA_1D_GC:
+      dgm_1d_lut_gc_in_use_ = in_use;
+      break;
+    case DRMTonemapLutType::DMA_1D_IGC:
+      dgm_1d_lut_igc_in_use_ = in_use;
+      break;
+    case DRMTonemapLutType::VIG_1D_IGC:
+      vig_1d_lut_igc_in_use_ = in_use;
+      break;
+    case DRMTonemapLutType::VIG_3D_GAMUT:
+      vig_3d_lut_gamut_in_use_ = in_use;
+      break;
+    default:
+      DRM_LOGE("Invalid lut_type = %d in_use = %d", lut_type, in_use);
+  }
+  return;
 }
 
 void DRMPlane::PerformWrapper(DRMOps code, drmModeAtomicReq *req, ...) {
@@ -983,6 +1032,36 @@ void DRMPlane::Unset(drmModeAtomicReq *req) {
   if (plane_type_info_.inverse_pma) {
     PerformWrapper(DRMOps::PLANE_SET_INVERSE_PMA, req, 0);
   }
+
+  DRMPPFeatureInfo pp_feature_info = {};
+  pp_feature_info.type = kPropBlob;
+  pp_feature_info.payload = nullptr;
+  // Reset the sspp tonemap properties if they were set
+  if (plane_type_info_.type == DRMPlaneType::DMA) {
+    if (dgm_csc_in_use_) {
+     sde_drm_csc_v1 csc_v1 = {};
+     PerformWrapper(DRMOps::PLANE_SET_DGM_CSC_CONFIG, req, &csc_v1);
+    }
+    if (dgm_1d_lut_igc_in_use_) {
+      pp_feature_info.id = kFeatureDgmIgc;
+      PerformWrapper(DRMOps::PLANE_SET_POST_PROC, req, &pp_feature_info);
+    }
+    if (dgm_1d_lut_gc_in_use_) {
+      pp_feature_info.id = kFeatureDgmGc;
+      PerformWrapper(DRMOps::PLANE_SET_POST_PROC, req, &pp_feature_info);
+    }
+  }
+  if (plane_type_info_.type == DRMPlaneType::VIG) {
+    if (vig_1d_lut_igc_in_use_) {
+      pp_feature_info.id = kFeatureVigIgc;
+      PerformWrapper(DRMOps::PLANE_SET_POST_PROC, req, &pp_feature_info);
+    }
+    if (vig_3d_lut_gamut_in_use_) {
+      pp_feature_info.id = kFeatureVigGamut;
+      PerformWrapper(DRMOps::PLANE_SET_POST_PROC, req, &pp_feature_info);
+    }
+  }
+
   tmp_prop_val_map_.clear();
   committed_prop_val_map_.clear();
 }
@@ -998,10 +1077,11 @@ bool DRMPlane::SetDgmCscConfig(drmModeAtomicReq *req, uint64_t handle) {
     if (std::memcmp(&csc_config_copy_, &csc_v1_tmp, sizeof(sde_drm_csc_v1)) != 0) {
       csc_v1_data = reinterpret_cast<uint64_t>(&csc_config_copy_);
     }
-    DRM_LOGV("Dgm CSC = %d", csc_v1_data);
+    DRM_LOGV("Dgm CSC = %lld", csc_v1_data);
     AddProperty(req, drm_plane_->plane_id, prop_id,
                 reinterpret_cast<uint64_t>(csc_v1_data), false /* cache */,
                 tmp_prop_val_map_);
+    dgm_csc_in_use_ = csc_v1_data ? true: false;
 
     return true;
   }
