@@ -65,6 +65,7 @@ enum GeometryChanges {
   kAdded        = 0x080,
   kRemoved      = 0x100,
   kBufferGeometry = 0x200,
+  kConfigChanged = 0x400,
 };
 
 class HWCLayer {
