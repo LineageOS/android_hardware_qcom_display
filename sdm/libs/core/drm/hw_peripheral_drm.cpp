@@ -514,6 +514,11 @@ DisplayError HWPeripheralDRM::SetFrameTrigger(FrameTriggerMode mode) {
 }
 
 DisplayError HWPeripheralDRM::SetPanelBrightness(int level) {
+  if (pending_doze_) {
+    DLOGI("Doze state pending!! Skip for now");
+    return kErrorDeferred;
+  }
+
   char buffer[kMaxSysfsCommandLength] = {0};
 
   if (brightness_base_path_.empty()) {
