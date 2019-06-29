@@ -735,6 +735,7 @@ struct DRMDppsLtmBuffers {
 
 struct DRMDppsFeatureInfo {
   DRMDPPSFeatureID id;
+  uint32_t obj_id;
   uint32_t version;
   uint32_t payload_size;
   void *payload;
