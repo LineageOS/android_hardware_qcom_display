@@ -33,6 +33,7 @@
 #include <drm/sde_drm.h>
 #include <drm_logger.h>
 #include <drm/drm_fourcc.h>
+#include <string.h>
 
 #include <algorithm>
 #include <map>
@@ -693,6 +694,7 @@ void DRMCrtc::SetROI(drmModeAtomicReq *req, uint32_t obj_id, uint32_t num_roi,
     return;
   }
   static struct sde_drm_roi_v1 roi_v1 {};
+  memset(&roi_v1, 0, sizeof(roi_v1));
   roi_v1.num_rects = num_roi;
 
   for (uint32_t i = 0; i < num_roi; i++) {
@@ -712,6 +714,7 @@ void DRMCrtc::SetSolidfillStages(drmModeAtomicReq *req, uint32_t obj_id,
                                  const std::vector<DRMSolidfillStage> *solid_fills) {
 #if defined  SDE_MAX_DIM_LAYERS
   static struct sde_drm_dim_layer_v1  drm_dim_layer_v1 {};
+  memset(&drm_dim_layer_v1, 0, sizeof(drm_dim_layer_v1));
   uint32_t shift;
 
   drm_dim_layer_v1.num_layers = solid_fills->size();

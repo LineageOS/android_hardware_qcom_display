@@ -34,6 +34,8 @@
 #include <drm/msm_drm.h>
 #include <drm_logger.h>
 #include <errno.h>
+#include <string.h>
+
 #include <algorithm>
 #include <map>
 #include <memory>
@@ -835,6 +837,7 @@ void DRMConnector::SetROI(drmModeAtomicReq *req, uint32_t obj_id, uint32_t num_r
   }
 
   static struct sde_drm_roi_v1 roi_v1 {};
+  memset(&roi_v1, 0, sizeof(roi_v1));
   roi_v1.num_rects = num_roi;
 
   for (uint32_t i = 0; i < num_roi; i++) {
