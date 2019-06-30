@@ -225,7 +225,6 @@ int DRMManager::RegisterDisplay(DRMDisplayType disp_type, DRMDisplayToken *token
     return ret;
   }
 
-
   std::set<uint32_t> possible_encoders;
   ret = conn_mgr_->GetPossibleEncoders(token->conn_id, &possible_encoders);
   if (ret) {
@@ -242,7 +241,15 @@ int DRMManager::RegisterDisplay(DRMDisplayType disp_type, DRMDisplayToken *token
     return ret;
   }
 
-  ret = crtc_mgr_->Reserve(disp_type, token);
+  std::set<uint32_t> possible_crtc_indices;
+  ret = encoder_mgr_->GetPossibleCrtcIndices(token->encoder_id, &possible_crtc_indices);
+  if (ret) {
+    DRM_LOGE("Error retreiving possible crtcs for display type %d. Error = %d (%s)", disp_type,
+             ret, strerror(abs(ret)));
+    return ret;
+  }
+
+  ret = crtc_mgr_->Reserve(possible_crtc_indices, token);
   if (ret) {
     DRM_LOGE("Error reserving crtc for display type %d. Error = %d (%s)", disp_type, ret,
              strerror(abs(ret)));
@@ -271,16 +278,25 @@ int DRMManager::RegisterDisplay(int32_t display_id, DRMDisplayToken *token) {
 
   ret = encoder_mgr_->Reserve(possible_encoders, token);
   if (ret) {
-    DRM_LOGE("Error reserving encoder for display %d. Error: %d (%s)", display_id,
+    DRM_LOGE("Error reserving encoder for display %d. Error: %d (%s)", display_id, ret,
              strerror(abs(ret)));
+    return ret;
+  }
+
+  std::set<uint32_t> possible_crtc_indices;
+  ret = encoder_mgr_->GetPossibleCrtcIndices(token->encoder_id, &possible_crtc_indices);
+  if (ret) {
+    DRM_LOGE("Error retreiving possible crtcs for display id %d. Error = %d (%s)", display_id,
+             ret, strerror(abs(ret)));
+    encoder_mgr_->Free(token);
     conn_mgr_->Free(token);
     return ret;
   }
 
-  ret = crtc_mgr_->Reserve(display_id, token);
+  ret = crtc_mgr_->Reserve(possible_crtc_indices, token);
   if (ret) {
     DRM_LOGE("Error reserving crtc for display %d. Error: %d (%s)", display_id,
-             strerror(abs(ret)));
+             ret, strerror(abs(ret)));
     encoder_mgr_->Free(token);
     conn_mgr_->Free(token);
     return ret;
