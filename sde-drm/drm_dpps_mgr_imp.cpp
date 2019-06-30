@@ -228,6 +228,7 @@ void DRMDppsManagerImp::Init(int fd, drmModeRes* res) {
     }
   }
 
+  memset(&dpps_feature_, 0, sizeof(dpps_feature_));
   dpps_feature_[kFeatureAd4Mode] = DRMDppsPropInfo {
     (prop_mgr_.GetPropertyId(DRMProperty::SDE_DSPP_AD4_MODE) == 0 ? 0U : 4U) /* version */,
     DRMProperty::SDE_DSPP_AD4_MODE, prop_mgr_.GetPropertyId(DRMProperty::SDE_DSPP_AD4_MODE),
@@ -268,36 +269,41 @@ void DRMDppsManagerImp::Init(int fd, drmModeRes* res) {
   dpps_feature_[kFeatureBacklightScale] = DRMDppsPropInfo {1 /* version */,
     DRMProperty::SDE_DSPP_BL_SCALE, prop_mgr_.GetPropertyId(DRMProperty::SDE_DSPP_BL_SCALE),
     false /* is_event */};
-  dpps_feature_[kFeatureLtm] = DRMDppsPropInfo {1 /* version */,
-    DRMProperty::SDE_LTM_VERSION, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_VERSION),
-    false /* is_event */};
-  dpps_feature_[kFeatureLtmInit] = DRMDppsPropInfo {1 /* version */,
-    DRMProperty::SDE_LTM_INIT, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_INIT),
-    false /* is_event */};
-  dpps_feature_[kFeatureLtmCfg] = DRMDppsPropInfo {1 /* version */,
-    DRMProperty::SDE_LTM_CFG, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_CFG),
-    false /* is_event */};
-  dpps_feature_[kFeatureLtmNoiseThresh] = DRMDppsPropInfo {1 /* version */,
-    DRMProperty::SDE_LTM_NOISE_THRESH, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_NOISE_THRESH),
-    false /* is_event */};
-  dpps_feature_[kFeatureLtmBufferCtrl] = DRMDppsPropInfo {1 /* version */,
-    DRMProperty::SDE_LTM_BUFFER_CTRL, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_BUFFER_CTRL),
-    false /* is_event */};
-  dpps_feature_[kFeatureLtmQueueBuffer] = DRMDppsPropInfo {1 /* version */,
-    DRMProperty::SDE_LTM_QUEUE_BUFFER, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_QUEUE_BUFFER),
-    false /* is_event */};
-  dpps_feature_[kFeatureLtmQueueBuffer2] = DRMDppsPropInfo {1 /* version */,
-    DRMProperty::SDE_LTM_QUEUE_BUFFER2, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_QUEUE_BUFFER2),
-    false /* is_event */};
-  dpps_feature_[kFeatureLtmQueueBuffer3] = DRMDppsPropInfo {1 /* version */,
-    DRMProperty::SDE_LTM_QUEUE_BUFFER3, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_QUEUE_BUFFER3),
-    false /* is_event */};
-  dpps_feature_[kFeatureLtmHistCtrl] = DRMDppsPropInfo {1 /* version */,
-    DRMProperty::SDE_LTM_HIST_CTRL, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_HIST_CTRL),
-    false /* is_event */};
-  dpps_feature_[kFeatureLtmVlut] = DRMDppsPropInfo {1 /* version */,
-    DRMProperty::SDE_LTM_VLUT, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_VLUT),
-    false /* is_event */};
+
+  if (prop_mgr_.IsPropertyAvailable(DRMProperty::SDE_LTM_VERSION)) {
+    dpps_feature_[kFeatureLtm] = DRMDppsPropInfo {1 /* version */,
+      DRMProperty::SDE_LTM_VERSION, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_VERSION),
+      false /* is_event */};
+    dpps_feature_[kFeatureLtmInit] = DRMDppsPropInfo {1 /* version */,
+      DRMProperty::SDE_LTM_INIT, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_INIT),
+      false /* is_event */};
+    dpps_feature_[kFeatureLtmCfg] = DRMDppsPropInfo {1 /* version */,
+      DRMProperty::SDE_LTM_CFG, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_CFG),
+      false /* is_event */};
+    dpps_feature_[kFeatureLtmNoiseThresh] = DRMDppsPropInfo {1 /* version */,
+      DRMProperty::SDE_LTM_NOISE_THRESH, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_NOISE_THRESH),
+      false /* is_event */};
+    dpps_feature_[kFeatureLtmBufferCtrl] = DRMDppsPropInfo {1 /* version */,
+      DRMProperty::SDE_LTM_BUFFER_CTRL, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_BUFFER_CTRL),
+      false /* is_event */};
+    dpps_feature_[kFeatureLtmQueueBuffer] = DRMDppsPropInfo {1 /* version */,
+      DRMProperty::SDE_LTM_QUEUE_BUFFER, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_QUEUE_BUFFER),
+      false /* is_event */};
+    dpps_feature_[kFeatureLtmQueueBuffer2] = DRMDppsPropInfo {1 /* version */,
+      DRMProperty::SDE_LTM_QUEUE_BUFFER2, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_QUEUE_BUFFER2),
+      false /* is_event */};
+    dpps_feature_[kFeatureLtmQueueBuffer3] = DRMDppsPropInfo {1 /* version */,
+      DRMProperty::SDE_LTM_QUEUE_BUFFER3, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_QUEUE_BUFFER3),
+      false /* is_event */};
+    dpps_feature_[kFeatureLtmHistCtrl] = DRMDppsPropInfo {1 /* version */,
+      DRMProperty::SDE_LTM_HIST_CTRL, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_HIST_CTRL),
+      false /* is_event */};
+    dpps_feature_[kFeatureLtmVlut] = DRMDppsPropInfo {1 /* version */,
+      DRMProperty::SDE_LTM_VLUT, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_VLUT),
+      false /* is_event */};
+  } else {
+    DRM_LOGI("LTM properties are not available");
+  }
 
   dpps_feature_[kFeaturePowerEvent] = DRMDppsPropInfo{1, DRMProperty::INVALID, 0, true /* is_event */};
   dpps_feature_[kFeatureAbaHistEvent] = DRMDppsPropInfo{1, DRMProperty::INVALID, 0, true /* is_event */};
