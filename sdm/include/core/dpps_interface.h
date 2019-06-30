@@ -31,6 +31,7 @@
 #define __DPPS_INTERFACE_H__
 
 #include <core/sdm_types.h>
+#include <core/display_interface.h>
 #include <string>
 
 namespace sdm {
@@ -53,6 +54,9 @@ enum DppsNotifyOps {
 struct DppsDisplayInfo {
   uint32_t width;
   uint32_t height;
+  bool is_primary;
+  int32_t display_id;
+  DisplayType display_type;
 };
 
 class DppsPropIntf {
