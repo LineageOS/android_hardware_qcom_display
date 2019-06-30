@@ -122,6 +122,9 @@
 #define ENABLE_QDCM_DIAG                     DISPLAY_PROP("enable_qdcm_diag")
 
 #define ZERO_SWAP_INTERVAL                   "vendor.debug.egl.swapinterval"
-#define ENABLE_DROP_REFRESH                  DISPLAY_PROP("enable_drop_refresh")
+#define ENABLE_OPTIMIZE_REFRESH              DISPLAY_PROP("enable_optimize_refresh")
+#define ENABLE_ASYNC_POWERMODE               DISPLAY_PROP("enable_async_powermode")
+#define DISABLE_UI_3D_TONEMAP                DISPLAY_PROP("disable_ui_3d_tonemap")
+#define DISABLE_PARALLEL_CACHE               DISPLAY_PROP("disable_parallel_cache")
 
 #endif  // __DISPLAY_PROPERTIES_H__

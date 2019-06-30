@@ -48,12 +48,14 @@
 #include <display_config.h>
 #include <vector>
 #include <utility>
+#include <map>
 
 #include "hwc_callbacks.h"
 #include "hwc_layers.h"
 #include "hwc_display.h"
 #include "hwc_display_builtin.h"
 #include "hwc_display_pluggable.h"
+#include "hwc_display_dummy.h"
 #include "hwc_display_virtual.h"
 #include "hwc_display_pluggable_test.h"
 #include "hwc_color_manager.h"
@@ -147,8 +149,16 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
       return HWC2_ERROR_BAD_DISPLAY;
     }
 
-    SCOPE_LOCK(locker_[display]);
     HWCSession *hwc_session = static_cast<HWCSession *>(device);
+    {
+      // Power state transition start.
+      SCOPE_LOCK(power_state_[display]);
+      if (hwc_session->power_state_transition_[display]) {
+        display = hwc_session->map_hwc_display_.find(display)->second;
+      }
+    }
+
+    SCOPE_LOCK(locker_[display]);
     auto status = HWC2::Error::BadDisplay;
     if (hwc_session->hwc_display_[display]) {
       auto hwc_display = hwc_session->hwc_display_[display];
@@ -169,8 +179,16 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
       return HWC2_ERROR_BAD_DISPLAY;
     }
 
-    SCOPE_LOCK(locker_[display]);
     HWCSession *hwc_session = static_cast<HWCSession *>(device);
+    {
+      // Power state transition start.
+      SCOPE_LOCK(power_state_[display]);
+      if (hwc_session->power_state_transition_[display]) {
+        display = hwc_session->map_hwc_display_.find(display)->second;
+      }
+    }
+
+    SCOPE_LOCK(locker_[display]);
     auto status = HWC2::Error::BadDisplay;
     if (hwc_session->hwc_display_[display]) {
       status = HWC2::Error::BadLayer;
@@ -236,6 +254,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
                                 int32_t *out_support);
 
   static Locker locker_[HWCCallbacks::kNumDisplays];
+  static Locker power_state_[HWCCallbacks::kNumDisplays];
+  static Locker display_config_locker_;
 
  private:
   struct DisplayMapInfo {
@@ -269,6 +289,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   void InitSupportedDisplaySlots();
   int GetDisplayIndex(int dpy);
   int CreatePrimaryDisplay();
+  void CreateDummyDisplay(hwc2_display_t client_id);
   int HandleBuiltInDisplays();
   int HandlePluggableDisplays(bool delay_hotplug);
   int HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool delay_hotplug);
@@ -421,6 +442,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   std::vector<DisplayMapInfo> map_info_pluggable_;  // Pluggable displays excluding primary
   std::vector<DisplayMapInfo> map_info_virtual_;    // Virtual displays
   std::vector<bool> is_hdr_display_;    // info on HDR supported
+  std::map <hwc2_display_t, hwc2_display_t> map_hwc_display_;  // Real and dummy display pairs.
   bool reset_panel_ = false;
   bool client_connected_ = false;
   bool new_bw_mode_ = false;
@@ -445,6 +467,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   float set_max_lum_ = -1.0;
   float set_min_lum_ = -1.0;
   std::bitset<HWCCallbacks::kNumDisplays> pending_refresh_;
+  bool async_powermode_ = false;
+  bool power_state_transition_[HWCCallbacks::kNumDisplays] = {};  // +1 to account for primary.
+  std::bitset<HWCCallbacks::kNumDisplays> display_ready_;
 };
 
 }  // namespace sdm

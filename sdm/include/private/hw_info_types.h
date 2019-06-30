@@ -150,6 +150,7 @@ enum HwHdrEotf {
 };
 
 enum HWSrcTonemap {
+  kSrcTonemapNone,
   kSrcTonemap1d,  // DMA
   kSrcTonemap3d,  // VIG
 };
@@ -598,6 +599,7 @@ struct HWPipeInfo {
   HWPipeTonemapInversePma inverse_pma_info = {};
   HWPipeCscInfo dgm_csc_info = {};
   std::vector<HWPipeTonemapLutInfo> lut_info = {};
+  HWSrcTonemap tonemap = kSrcTonemapNone;
 };
 
 struct HWSolidfillStage {

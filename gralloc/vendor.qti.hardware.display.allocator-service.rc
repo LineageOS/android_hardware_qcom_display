@@ -1,4 +1,4 @@
-service vendor.qti.hardware.display.allocator /vendor/bin/hw/vendor.qti.hardware.display.allocator@1.0-service
+service vendor.qti.hardware.display.allocator /vendor/bin/hw/vendor.qti.hardware.display.allocator-service
     class hal animation
     user system
     group graphics drmrpc
