@@ -267,7 +267,7 @@ int32_t HWCSession::DestroyVirtualDisplay(hwc2_device_t *device, hwc2_display_t 
   DLOGI("Destroying virtual display id:%" PRIu64, display);
   auto *hwc_session = static_cast<HWCSession *>(device);
 
-  if (hwc_session->hwc_display_[display]) {
+  if (display < HWC_NUM_DISPLAY_TYPES && hwc_session->hwc_display_[display]) {
     HWCDisplayVirtual::Destroy(hwc_session->hwc_display_[display]);
     hwc_session->hwc_display_[display] = nullptr;
     return HWC2_ERROR_NONE;
@@ -359,7 +359,11 @@ static int32_t GetDisplayType(hwc2_device_t *device, hwc2_display_t display, int
   return HWCSession::CallDisplayFunction(device, display, &HWCDisplay::GetDisplayType, out_type);
 }
 
-static int32_t GetDozeSupport(hwc2_device_t *device, hwc2_display_t display, int32_t *out_support) {
+int32_t HWCSession::GetDozeSupport(hwc2_device_t *device, hwc2_display_t display, int32_t *out_support) {
+  HWCSession * hwc_session = static_cast<HWCSession *>(device);
+  if (display >= HWC_NUM_DISPLAY_TYPES || !hwc_session->hwc_display_[display]) {
+      return HWC2_ERROR_BAD_DISPLAY;
+  }
   // TODO(user): Check if it is an HDMI as primary display and disable support for it
   if (display == HWC_DISPLAY_PRIMARY) {
     *out_support = 1;
@@ -399,7 +403,7 @@ int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display
 
   auto status = HWC2::Error::BadDisplay;
   // TODO(user): Handle virtual display/HDMI concurrency
-  if (hwc_session->hwc_display_[display]) {
+  if (display < HWC_NUM_DISPLAY_TYPES && hwc_session->hwc_display_[display]) {
     status = hwc_session->hwc_display_[display]->Present(out_retire_fence);
     // This is only indicative of how many times SurfaceFlinger posts
     // frames to the display.
@@ -568,7 +572,7 @@ int32_t HWCSession::ValidateDisplay(hwc2_device_t *device, hwc2_display_t displa
   // TODO(user): Handle secure session, handle QDCM solid fill
   // Handle external_pending_connect_ in CreateVirtualDisplay
   auto status = HWC2::Error::BadDisplay;
-  if (hwc_session->hwc_display_[display]) {
+  if (display < HWC_NUM_DISPLAY_TYPES && hwc_session->hwc_display_[display]) {
     SEQUENCE_ENTRY_SCOPE_LOCK(locker_);
     if (display == HWC_DISPLAY_PRIMARY) {
       // TODO(user): This can be moved to HWCDisplayPrimary

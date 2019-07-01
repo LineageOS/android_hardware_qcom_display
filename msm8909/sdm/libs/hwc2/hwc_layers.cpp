@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -412,6 +412,13 @@ HWC2::Error HWCLayer::SetLayerPlaneAlpha(float alpha) {
 HWC2::Error HWCLayer::SetLayerSourceCrop(hwc_frect_t crop) {
   LayerRect src_rect = {};
   SetRect(crop, &src_rect);
+  non_integral_source_crop_ = ((crop.left != roundf(crop.left)) ||
+                              (crop.top != roundf(crop.top)) ||
+                              (crop.right != roundf(crop.right)) ||
+                              (crop.bottom != roundf(crop.bottom)));
+  if (non_integral_source_crop_) {
+    DLOGV_IF(kTagClient, "Crop: LRTB %f %f %f %f", crop.left, crop.top, crop.right, crop.bottom);
+  }
   if (layer_->src_rect != src_rect) {
     geometry_changes_ |= kSourceCrop;
     layer_->src_rect = src_rect;

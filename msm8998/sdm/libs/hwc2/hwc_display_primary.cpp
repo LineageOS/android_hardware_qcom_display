@@ -202,6 +202,7 @@ HWC2::Error HWCDisplayPrimary::Validate(uint32_t *out_num_types, uint32_t *out_n
 
   if (layer_set_.empty()) {
     flush_ = true;
+    validated_ = true;
     return status;
   }
 
@@ -228,7 +229,6 @@ HWC2::Error HWCDisplayPrimary::Present(int32_t *out_retire_fence) {
     }
   }
 
-  CloseAcquireFds();
   return status;
 }
 

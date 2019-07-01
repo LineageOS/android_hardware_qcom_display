@@ -65,10 +65,10 @@ inline int roundUpToPageSize(int x) {
 /* Consumer flags */
 /* TODO(user): Fix when producer and consumer flags are actually separated */
 /* This flag is set for WFD usecase */
-#define GRALLOC1_CONSUMER_USAGE_PRIVATE_WFD            0x00200000
+#define GRALLOC1_CONSUMER_USAGE_PRIVATE_WFD            (UINT32_C(1) << 21)
 
 /* This flag is used for SECURE display usecase */
-#define GRALLOC1_CONSUMER_USAGE_PRIVATE_SECURE_DISPLAY 0x02000000
+#define GRALLOC1_CONSUMER_USAGE_PRIVATE_SECURE_DISPLAY (UINT32_C(1) << 31)
 
 /* Buffer content should be displayed on a primary display only */
 #define GRALLOC1_CONSUMER_USAGE_PRIVATE_INTERNAL_ONLY  0x04000000

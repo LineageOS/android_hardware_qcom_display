@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, 2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -92,6 +92,8 @@ class HWCLayer {
   bool SupportLocalConversion(ColorPrimaries working_primaries);
   void ResetValidation() { needs_validate_ = false; }
   bool NeedsValidation() { return (needs_validate_ || geometry_changes_); }
+  bool IsSurfaceUpdated() { return surface_updated_; }
+  void SetPartialUpdate(bool enabled) { partial_update_enabled_ = enabled; }
 
  private:
   Layer *layer_ = nullptr;
@@ -104,6 +106,8 @@ class HWCLayer {
   HWCBufferAllocator *buffer_allocator_ = NULL;
   int32_t dataspace_ =  HAL_DATASPACE_UNKNOWN;
   bool needs_validate_ = true;
+  bool partial_update_enabled_ = false;
+  bool surface_updated_ = true;
 
   // Composition requested by client(SF)
   HWC2::Composition client_requested_ = HWC2::Composition::Device;
@@ -119,6 +123,7 @@ class HWCLayer {
   DisplayError SetMetaData(const private_handle_t *pvt_handle, Layer *layer);
   DisplayError SetIGC(IGC_t source, LayerIGC *target);
   uint32_t RoundToStandardFPS(float fps);
+  void SetDirtyRegions(hwc_region_t surface_damage);
 };
 
 struct SortLayersByZ {
