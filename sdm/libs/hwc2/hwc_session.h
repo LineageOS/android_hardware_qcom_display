@@ -190,6 +190,10 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   static int32_t GetRenderIntents(hwc2_device_t *device, hwc2_display_t display,
                                 int32_t /*ColorMode*/ int_mode, uint32_t *out_num_intents,
                                 int32_t /*RenderIntent*/ *int_out_intents);
+  static int32_t GetDisplayCapabilities(hwc2_device_t *device, hwc2_display_t display,
+                                        uint32_t *outNumCapabilities, uint32_t *outCapabilities);
+  static int32_t GetDisplayBrightnessSupport(hwc2_device_t *device, hwc2_display_t display,
+                                             bool *outSupport);
   static int32_t SetVsyncEnabled(hwc2_device_t *device, hwc2_display_t display,
                                  int32_t int_enabled);
   static int32_t GetDozeSupport(hwc2_device_t *device, hwc2_display_t display,

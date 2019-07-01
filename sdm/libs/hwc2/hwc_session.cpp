@@ -1085,7 +1085,10 @@ hwc2_function_pointer_t HWCSession::GetFunction(struct hwc2_device *device,
     case HWC2::FunctionDescriptor::SetColorModeWithRenderIntent:
       return AsFP<HWC2_PFN_SET_COLOR_MODE_WITH_RENDER_INTENT>
              (HWCSession::SetColorModeWithRenderIntent);
-
+    case HWC2::FunctionDescriptor::GetDisplayCapabilities:
+      return AsFP<HWC2_PFN_GET_DISPLAY_CAPABILITIES>(HWCSession::GetDisplayCapabilities);
+    case HWC2::FunctionDescriptor::GetDisplayBrightnessSupport:
+      return AsFP<HWC2_PFN_GET_DISPLAY_BRIGHTNESS_SUPPORT>(HWCSession::GetDisplayBrightnessSupport);
     default:
       DLOGD("Unknown/Unimplemented function descriptor: %d (%s)", int_descriptor,
             to_string(descriptor).c_str());
@@ -2489,13 +2492,69 @@ int32_t HWCSession::GetRenderIntents(hwc2_device_t *device, hwc2_display_t displ
   return HWC2_ERROR_NONE;
 }
 
-
 void HWCSession::ActivateDisplay(hwc2_display_t disp, bool enable) {
   if (!hwc_display_[disp]) {
     return;
   }
   hwc_display_[disp]->ActivateDisplay(enable);
   DLOGI("Disp: %d, Active: %d", disp, enable);
+}
+
+int32_t HWCSession::GetDisplayCapabilities(hwc2_device_t *device, hwc2_display_t display,
+                                           uint32_t *outNumCapabilities,
+                                           uint32_t *outCapabilities) {
+  if (!outNumCapabilities || !device) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (display >= HWCCallbacks::kNumDisplays) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  HWCSession *hwc_session = static_cast<HWCSession *>(device);
+  HWCDisplay *hwc_display = hwc_session->hwc_display_[display];
+  if (!hwc_display) {
+    DLOGE("Expected valid hwc_display");
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+  bool isBuiltin = (hwc_display->GetDisplayClass() == DISPLAY_CLASS_BUILTIN);
+  if (!outCapabilities) {
+    *outNumCapabilities = 0;
+    if (isBuiltin) {
+      *outNumCapabilities = 2;
+    }
+    return HWC2_ERROR_NONE;
+  } else {
+    if (isBuiltin) {
+      // TODO(user): Handle SKIP_CLIENT_COLOR_TRANSFORM based on DSPP availability
+      outCapabilities[0] = HWC2_DISPLAY_CAPABILITY_SKIP_CLIENT_COLOR_TRANSFORM;
+      outCapabilities[1] = HWC2_DISPLAY_CAPABILITY_DOZE;
+      *outNumCapabilities = 2;
+    }
+    return HWC2_ERROR_NONE;
+  }
+}
+
+int32_t HWCSession::GetDisplayBrightnessSupport(hwc2_device_t *device, hwc2_display_t display,
+                                                bool *outSupport) {
+  if (!device || !outSupport) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (display >= HWCCallbacks::kNumDisplays) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  HWCSession *hwc_session = static_cast<HWCSession *>(device);
+  HWCDisplay *hwc_display = hwc_session->hwc_display_[display];
+  if (!hwc_display) {
+    DLOGE("Expected valid hwc_display");
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+  // This function isn't actually used in the framework
+  // The capability is used instead
+  *outSupport = false;
+  return HWC2_ERROR_NONE;
 }
 
 }  // namespace sdm
