@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution
  *
  * Copyright (C) 2008 The Android Open Source Project
@@ -155,6 +155,11 @@ inline int roundUpToPageSize(int x) {
 
 #define HAL_PIXEL_FORMAT_INTERLACE 0x180
 
+// Camera utils format
+#define HAL_PIXEL_FORMAT_NV12_LINEAR_FLEX  0x125
+#define HAL_PIXEL_FORMAT_NV12_UBWC_FLEX 0x126
+#define HAL_PIXEL_FORMAT_MULTIPLANAR_FLEX 0x127
+
 // v4l2_fourcc('Y', 'U', 'Y', 'L'). 24 bpp YUYV 4:2:2 10 bit per component
 #define HAL_PIXEL_FORMAT_YCbCr_422_I_10BIT 0x4C595559
 
@@ -217,5 +222,12 @@ enum {
 };
 
 enum { BUFFER_TYPE_UI = 0, BUFFER_TYPE_VIDEO };
+
+/* Flag to determine interlaced content
+ * Value maps to Flags presents in types.hal of QtiMapperextensions
+ */
+enum {
+  LAYOUT_INTERLACED_FLAG = 1 << 0,
+};
 
 #endif  // __GRALLOC_PRIV_H__

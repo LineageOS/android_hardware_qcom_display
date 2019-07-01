@@ -23,7 +23,9 @@
 #include <log/log.h>
 #include <hardware/gralloc.h>
 #include <hardware/gralloc1.h>
+#ifdef __cplusplus
 #include <cinttypes>
+#endif
 
 #define GRALLOC1_FUNCTION_PERFORM 0x00001000
 
@@ -34,7 +36,12 @@ typedef gralloc1_error_t (*GRALLOC1_PFN_PERFORM)(gralloc1_device_t *device, int 
 #define PRIV_HANDLE_CONST(exp) static_cast<const private_handle_t *>(exp)
 
 #pragma pack(push, 4)
+#ifdef __cplusplus
 struct private_handle_t : public native_handle_t {
+#else
+struct private_handle_t {
+        native_handle_t nativeHandle;
+#endif
   enum {
     PRIV_FLAGS_FRAMEBUFFER = 0x00000001,
     PRIV_FLAGS_USES_ION = 0x00000008,
@@ -85,7 +92,7 @@ struct private_handle_t : public native_handle_t {
   uint64_t base;
   uint64_t base_metadata;
   uint64_t gpuaddr;
-
+#ifdef __cplusplus
   static const int kNumFds = 2;
   static const int kMagic = 'gmsm';
 
@@ -175,6 +182,7 @@ struct private_handle_t : public native_handle_t {
   uint64_t GetUsage() const { return usage; }
 
   uint64_t GetBackingstore() const { return id; }
+#endif
 };
 #pragma pack(pop)
 
