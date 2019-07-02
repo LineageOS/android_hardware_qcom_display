@@ -403,6 +403,7 @@ void DRMPlane::GetTypeInfo(const PropertyMap &prop_map) {
   string max_vertical_deci = "max_vertical_deci=";
   string master_plane_id = "primary_smart_plane_id=";
   string max_pipe_bw = "max_per_pipe_bw=";
+  string max_pipe_bw_high = "max_per_pipe_bw_high=";
   string scaler_version = "scaler_step_ver=";
   string block_sec_ui = "block_sec_ui=";
   string true_inline_rot_rev = "true_inline_rot_rev=";
@@ -435,6 +436,8 @@ void DRMPlane::GetTypeInfo(const PropertyMap &prop_map) {
       DRM_LOGI("info->master_plane_id: detected master_plane=%d", info->master_plane_id);
     } else if (line.find(max_pipe_bw) != string::npos) {
       info->max_pipe_bandwidth = std::stoull(line.erase(0, max_pipe_bw.length()));
+    } else if (line.find(max_pipe_bw_high) != string::npos) {
+      info->max_pipe_bandwidth_high = std::stoull(line.erase(0, max_pipe_bw_high.length()));
     } else if (line.find(scaler_version) != string::npos) {
       info->qseed3_version =
         PopulateQseedStepVersion(std::stoi(line.erase(0, scaler_version.length())));
