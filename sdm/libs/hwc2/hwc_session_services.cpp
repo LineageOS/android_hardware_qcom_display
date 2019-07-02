@@ -844,4 +844,49 @@ Return<bool> HWCSession::isBuiltInDisplay(uint32_t disp_id) {
 }
 #endif  // DISPLAY_CONFIG_1_9
 
+#ifdef DISPLAY_CONFIG_1_10
+Return<void> HWCSession::getSupportedDSIBitClks(uint32_t disp_id,
+                                                getSupportedDSIBitClks_cb _hidl_cb) {
+  SCOPE_LOCK(locker_[disp_id]);
+  if (!hwc_display_[disp_id]) {
+    return Void();
+  }
+
+  std::vector<uint64_t> bit_clks;
+  hwc_display_[disp_id]->GetSupportedDSIClock(&bit_clks);
+
+  hidl_vec<uint64_t> hidl_bit_clks = bit_clks;
+  _hidl_cb(hidl_bit_clks);
+
+  return Void();
+}
+
+Return<uint64_t> HWCSession::getDSIClk(uint32_t disp_id) {
+  SCOPE_LOCK(locker_[disp_id]);
+  if (!hwc_display_[disp_id]) {
+    return 0;
+  }
+
+  uint64_t bit_clk = 0;
+  hwc_display_[disp_id]->GetDynamicDSIClock(&bit_clk);
+
+  return bit_clk;
+}
+
+Return<int32_t> HWCSession::setDSIClk(uint32_t disp_id, uint64_t bit_clk) {
+  SCOPE_LOCK(locker_[disp_id]);
+  if (!hwc_display_[disp_id]) {
+    return -1;
+  }
+
+  return hwc_display_[disp_id]->SetDynamicDSIClock(bit_clk);
+}
+
+Return<int32_t> HWCSession::setCWBOutputBuffer(const ::android::sp<IDisplayCWBCallback> &callback,
+                                               uint32_t disp_id, const Rect &rect,
+                                               bool post_processed, const hidl_handle& buffer) {
+  return -1;
+}
+#endif  // DISPLAY_CONFIG_1_10
+
 }  // namespace sdm
