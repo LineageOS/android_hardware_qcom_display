@@ -44,6 +44,7 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+#include <algorithm>
 
 #include "drm_utils.h"
 #include "drm_plane.h"
@@ -61,6 +62,8 @@ using std::tuple;
 using std::stringstream;
 using std::mutex;
 using std::lock_guard;
+
+#define MAX_SCALER_LINEWIDTH 2560
 
 static struct sde_drm_csc_v1 csc_10bit_convert[kCscTypeMax] = {
   [kCscYuv2Rgb601L] = {
@@ -384,7 +387,7 @@ void DRMPlane::GetTypeInfo(const PropertyMap &prop_map) {
 
   const char *fmt_str = reinterpret_cast<const char *>(blob->data);
   info->max_linewidth = 2560;
-  info->max_scaler_linewidth = 2560;
+  info->max_scaler_linewidth = MAX_SCALER_LINEWIDTH;
   info->max_upscale = 1;
   info->max_downscale = 1;
   info->max_horizontal_deci = 0;
@@ -463,8 +466,11 @@ void DRMPlane::GetTypeInfo(const PropertyMap &prop_map) {
     }
   }
 
-  info->max_scaler_linewidth = (QSEEDStepVersion::V4 == info->qseed3_version) ? 2560 :
-                                info->max_linewidth;
+// TODO(user): Get max_scaler_linewidth and non_scaler_linewidth from driver
+// max_linewidth can be smaller than 2560 for few target, so make sure to assign the minimum of both
+  info->max_scaler_linewidth = (info->qseed3_version < QSEEDStepVersion::V4) ? info->max_linewidth :
+                               std::min((uint32_t)MAX_SCALER_LINEWIDTH, info->max_linewidth);
+
   drmModeFreePropertyBlob(blob);
 }
 
