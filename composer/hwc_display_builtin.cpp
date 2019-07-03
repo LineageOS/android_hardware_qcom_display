@@ -940,7 +940,12 @@ HWC2::Error HWCDisplayBuiltIn::SetBLScale(uint32_t level) {
   if (ret != kErrorNone) {
     return HWC2::Error::NoResources;
   }
+  return HWC2::Error::None;
+}
 
+HWC2::Error HWCDisplayBuiltIn::UpdatePowerMode(HWC2::PowerMode mode) {
+  current_power_mode_ = mode;
+  validated_ = false;
   return HWC2::Error::None;
 }
 

@@ -98,6 +98,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   }
   virtual HWC2::Error SetFrameTriggerMode(uint32_t mode);
   virtual HWC2::Error SetBLScale(uint32_t level);
+  virtual HWC2::Error UpdatePowerMode(HWC2::PowerMode mode);
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
