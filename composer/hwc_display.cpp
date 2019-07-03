@@ -801,9 +801,11 @@ void HWCDisplay::BuildLayerStack() {
   bool enforce_geometry_change = (validate_state_ == kInternalValidate) && !validated_;
 
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
-  layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0) || enforce_geometry_change;
-  layer_stack_.flags.config_changed = !validated_;
 
+  layer_stack_.flags.geometry_changed = UINT32((geometry_changes_ || enforce_geometry_change ||
+                                                geometry_changes_on_doze_suspend_) > 0);
+  geometry_changes_on_doze_suspend_ = GeometryChanges::kNone;
+  layer_stack_.flags.config_changed = !validated_;
   // Append client target to the layer stack
   Layer *sdm_client_target = client_target_->GetSDMLayer();
   sdm_client_target->flags.updating = IsLayerUpdating(client_target_);
@@ -1337,6 +1339,7 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
     } else if (error == kErrorPermission) {
       WaitOnPreviousFence();
       MarkLayersForGPUBypass();
+      geometry_changes_on_doze_suspend_ |= geometry_changes_;
     } else {
       DLOGW("Prepare failed. Error = %d", error);
       // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
