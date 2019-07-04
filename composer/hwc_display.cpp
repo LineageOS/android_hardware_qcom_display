@@ -2079,6 +2079,7 @@ int HWCDisplay::HandleSecureSession(const std::bitset<kSecureMax> &secure_sessio
 
   if (active_secure_sessions_[kSecureDisplay] != secure_sessions[kSecureDisplay]) {
     if (secure_sessions[kSecureDisplay]) {
+      pending_power_mode_ = current_power_mode_;
       HWC2::Error error = SetPowerMode(HWC2::PowerMode::Off, true /* teardown */);
       if (error != HWC2::Error::None) {
         DLOGE("SetPowerMode failed. Error = %d", error);
@@ -2087,9 +2088,9 @@ int HWCDisplay::HandleSecureSession(const std::bitset<kSecureMax> &secure_sessio
       *power_on_pending = true;
     }
 
-    DLOGI("SecureDisplay state changed from %d to %d for display %d",
+    DLOGI("SecureDisplay state changed from %d to %d for display %d-%d",
           active_secure_sessions_.test(kSecureDisplay), secure_sessions.test(kSecureDisplay),
-          type_);
+          id_, type_);
   }
   active_secure_sessions_ = secure_sessions;
   return 0;

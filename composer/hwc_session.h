@@ -434,8 +434,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
                                       uint32_t *out_num_requests);
   HWC2::Error PresentDisplayInternal(hwc2_display_t display, int32_t *out_retire_fence);
   void HandleSecureSession();
-  void HandlePowerOnPending(hwc2_display_t display, int retire_fence);
-  void HandleHotplugPending(hwc2_display_t disp_id, int retire_fence);
+  void HandlePendingPowerMode(hwc2_display_t display, int retire_fence);
+  void HandlePendingHotplug(hwc2_display_t disp_id, int retire_fence);
   bool IsPluggableDisplayConnected();
   hwc2_display_t GetActiveBuiltinDisplay();
   void HandlePendingRefresh();
@@ -467,9 +467,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   std::mutex mutex_lum_;
   int hpd_bpp_ = 0;
   int hpd_pattern_ = 0;
-  static bool power_on_pending_[HWCCallbacks::kNumDisplays];
+  static bool pending_power_mode_[HWCCallbacks::kNumDisplays];
   static int null_display_mode_;
-  HotPlugEvent hotplug_pending_event_ = kHotPlugNone;
+  HotPlugEvent pending_hotplug_event_ = kHotPlugNone;
   Locker pluggable_handler_lock_;
   bool destroy_virtual_disp_pending_ = false;
   uint32_t idle_pc_ref_cnt_ = 0;
@@ -482,6 +482,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   bool async_powermode_ = false;
   bool power_state_transition_[HWCCallbacks::kNumDisplays] = {};
   std::bitset<HWCCallbacks::kNumDisplays> display_ready_;
+  bool secure_session_active_ = false;
 };
 }  // namespace sdm
 

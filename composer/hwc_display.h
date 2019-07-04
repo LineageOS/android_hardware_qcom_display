@@ -356,6 +356,12 @@ class HWCDisplay : public DisplayEventHandler {
   virtual void GetLayerStack(HWCLayerStack *stack);
   virtual void SetLayerStack(HWCLayerStack *stack);
   virtual void PostPowerMode();
+  virtual HWC2::PowerMode GetPendingPowerMode() {
+    return pending_power_mode_;
+  };
+  virtual void ClearPendingPowerMode() {
+    pending_power_mode_ = current_power_mode_;
+  };
 
  protected:
   static uint32_t throttling_refresh_rate_;
@@ -415,6 +421,7 @@ class HWCDisplay : public DisplayEventHandler {
   uint32_t dump_frame_index_ = 0;
   bool dump_input_layers_ = false;
   HWC2::PowerMode current_power_mode_ = HWC2::PowerMode::Off;
+  HWC2::PowerMode pending_power_mode_ = HWC2::PowerMode::Off;
   bool swap_interval_zero_ = false;
   bool display_paused_ = false;
   uint32_t min_refresh_rate_ = 0;

@@ -659,6 +659,7 @@ Return<int32_t> HWCSession::setPowerMode(uint32_t disp_id, PowerMode power_mode)
     hwc_display_[disp_id]->GetLayerStack(&stack);
     // Update the same stack onto dummy display.
     hwc_display_[dummy_disp_id]->SetLayerStack(&stack);
+    hwc_display_[dummy_disp_id]->UpdatePowerMode(hwc_display_[disp_id]->GetCurrentPowerMode());
   }
 
   {

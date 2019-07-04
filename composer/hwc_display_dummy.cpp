@@ -82,4 +82,9 @@ HWC2::Error HWCDisplayDummy::GetActiveConfig(hwc2_config_t *out_config) {
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCDisplayDummy::UpdatePowerMode(HWC2::PowerMode mode) {
+  current_power_mode_ = mode;
+  return HWC2::Error::None;
+}
+
 }  // namespace sdm
