@@ -2194,8 +2194,7 @@ std::string HWCDisplay::Dump() {
 }
 
 bool HWCDisplay::CanSkipValidate() {
-  if (solid_fill_enable_) {
-    DLOGV_IF(kTagClient, "Solid fill is enabled. Returning false.");
+  if (!validated_ || solid_fill_enable_) {
     return false;
   }
 
