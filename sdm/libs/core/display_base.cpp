@@ -612,7 +612,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
   if (error == kErrorNone) {
     active_ = active;
     state_ = state;
-    comp_manager_->SetDisplayState(display_comp_ctx_, state);
+    comp_manager_->SetDisplayState(display_comp_ctx_, state, release_fence ? *release_fence : -1);
   }
 
   // Handle vsync pending on resume, Since the power on commit is synchronous we pass -1 as retire
