@@ -146,7 +146,7 @@ bool IsCompressedRGBFormat(int format) {
 bool IsCameraCustomFormat(int format) {
   switch (format) {
     case HAL_PIXEL_FORMAT_NV21_ZSL:
-    case HAL_PIXEL_FORMAT_NV12_LINEAR_FLEX :
+    case HAL_PIXEL_FORMAT_NV12_LINEAR_FLEX:
     case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX:
     case HAL_PIXEL_FORMAT_MULTIPLANAR_FLEX:
     case HAL_PIXEL_FORMAT_RAW_OPAQUE:
@@ -263,15 +263,12 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
     return 0;
   }
 
-  if (IsCameraCustomFormat(format)) {
-    if (CameraInfo::GetInstance() == nullptr) {
-      ALOGE("%s: Failed to get the camera library instance - %s", __FUNCTION__, strerror(errno));
-      return 0;
-    }
+  if (IsCameraCustomFormat(format) && CameraInfo::GetInstance()) {
     int result = CameraInfo::GetInstance()->GetBufferSize(format, width, height, &size);
     if (result != 0) {
       ALOGE("%s: Failed to get the buffer size through camera library. Error code: %d",
             __FUNCTION__, result);
+      return 0;
     }
   } else if (IsUBwcEnabled(format, usage)) {
     size = GetUBwcSize(width, height, format, alignedw, alignedh);
@@ -344,16 +341,11 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
         size = VENUS_BUFFER_SIZE(COLOR_FMT_NV21, width, height);
         break;
       case HAL_PIXEL_FORMAT_BLOB:
-      case HAL_PIXEL_FORMAT_RAW_OPAQUE:
         if (height != 1) {
           ALOGE("%s: Buffers with HAL_PIXEL_FORMAT_BLOB must have height 1 ", __FUNCTION__);
           return 0;
         }
         size = (unsigned int) width;
-        break;
-      case HAL_PIXEL_FORMAT_NV21_ZSL:
-        size = ALIGN((alignedw * alignedh) + (alignedw * alignedh) / 2,
-                     SIZE_4K);
         break;
       case HAL_PIXEL_FORMAT_NV12_HEIF:
         size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12_512, width, height);
@@ -464,7 +456,9 @@ void GetYuvUbwcInterlacedSPPlaneInfo(uint32_t width, uint32_t height,
   GetYuvUbwcSPPlaneInfo(width, height, COLOR_FMT_NV12_UBWC, &plane_info[4]);
 }
 
-// This API gets information about 2 planes (Y_Plane & UV_Plane)
+// This API gets information about 2 planes (Y_Plane & UV_Plane).
+// Here width and height are aligned width and aligned height.
+// bpp: bits per pixel.
 void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint32_t height,
                        uint32_t bpp, PlaneLayoutInfo *plane_info) {
   int unaligned_width = info.width;
@@ -507,10 +501,6 @@ void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint3
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
       c_height = VENUS_UV_SCANLINES(COLOR_FMT_NV21, height);
       c_size = c_stride * c_height;
-      break;
-    case HAL_PIXEL_FORMAT_NV21_ZSL:
-      c_size = (width * height) / 2;
-      c_height = height >> 1;
       break;
     case HAL_PIXEL_FORMAT_RAW16:
     case HAL_PIXEL_FORMAT_Y16:
@@ -915,9 +905,35 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
   // Use of aligned width and aligned height is to calculate the size of buffer,
   // but in case of camera custom format size is being calculated from given width
   // and given height.
-  if (IsCameraCustomFormat(format)) {
-    *alignedw = width;
-    *alignedh = height;
+  if (IsCameraCustomFormat(format) && CameraInfo::GetInstance()) {
+    float aligned_w = static_cast<float>(width);
+    int aligned_h = height;
+    int result = CameraInfo::GetInstance()->GetStrideInPixels(
+        format, (PlaneComponent)PLANE_COMPONENT_Y, width, &aligned_w);
+    if (result != 0) {
+      ALOGE(
+          "%s: Failed to get the aligned width for camera custom format. width: %d, height: %d,"
+          "format: %d, Error code: %d",
+          __FUNCTION__, width, height, format, result);
+      *alignedw = width;
+      *alignedh = aligned_h;
+      return;
+    }
+
+    result = CameraInfo::GetInstance()->GetScanline(format, (PlaneComponent)PLANE_COMPONENT_Y,
+                                                    height, &aligned_h);
+    if (result != 0) {
+      ALOGE(
+          "%s: Failed to get the aligned height for camera custom format. width: %d,"
+          "height: %d, format: %d, Error code: %d",
+          __FUNCTION__, width, height, format, result);
+      *alignedw = static_cast<int>(aligned_w);
+      *alignedh = height;
+      return;
+    }
+
+    *alignedw = static_cast<int>(aligned_w);
+    *alignedh = aligned_h;
     return;
   }
 
@@ -997,11 +1013,6 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       aligned_h = INT(VENUS_Y_SCANLINES(COLOR_FMT_NV21, height));
       break;
     case HAL_PIXEL_FORMAT_BLOB:
-    case HAL_PIXEL_FORMAT_RAW_OPAQUE:
-      break;
-    case HAL_PIXEL_FORMAT_NV21_ZSL:
-      aligned_w = ALIGN(width, 64);
-      aligned_h = ALIGN(height, 64);
       break;
     case HAL_PIXEL_FORMAT_NV12_HEIF:
       aligned_w = INT(VENUS_Y_STRIDE(COLOR_FMT_NV12_512, width));
@@ -1277,24 +1288,36 @@ int GetBufferType(int inputFormat) {
   return IsYuvFormat(inputFormat) ? BUFFER_TYPE_VIDEO : BUFFER_TYPE_UI;
 }
 
+// Here width and height are aligned width and aligned height.
 int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32_t height,
                     int32_t flags, int *plane_count, PlaneLayoutInfo *plane_info) {
   int err = 0;
   unsigned int y_stride, c_stride, y_height, c_height, y_size, c_size;
   uint64_t yOffset, cOffset, crOffset, cbOffset;
   int h_subsampling = 0, v_subsampling = 0;
+  if (IsCameraCustomFormat(format) && CameraInfo::GetInstance()) {
+    int result = CameraInfo::GetInstance()->GetCameraFormatPlaneInfo(
+        format, info.width, info.height, plane_count, plane_info);
+    if (result != 0) {
+      ALOGE(
+          "%s: Failed to get the plane info through camera library. width: %d, height: %d,"
+          "format: %d, Error code: %d",
+          __FUNCTION__, width, height, format, result);
+    }
+    return result;
+  }
+
   switch (format) {
     // Semiplanar
     case HAL_PIXEL_FORMAT_YCbCr_420_SP:
     case HAL_PIXEL_FORMAT_YCbCr_422_SP:
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
-    case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
-    case HAL_PIXEL_FORMAT_NV12_HEIF:  // Same as YCbCr_420_SP_VENUS
+    case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:  // Same as YCbCr_420_SP_VENUS
+    case HAL_PIXEL_FORMAT_NV12_HEIF:
     case HAL_PIXEL_FORMAT_YCrCb_420_SP:
     case HAL_PIXEL_FORMAT_YCrCb_422_SP:
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
-    case HAL_PIXEL_FORMAT_NV21_ZSL:
       *plane_count = 2;
       GetYuvSPPlaneInfo(info, format, width, height, 1, plane_info);
       GetYuvSubSamplingFactor(format, &h_subsampling, &v_subsampling);
@@ -1520,7 +1543,6 @@ void GetYuvSubSamplingFactor(int32_t format, int *h_subsampling, int *v_subsampl
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
     case HAL_PIXEL_FORMAT_YCrCb_420_SP:
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:  // Same as YCbCr_420_SP_VENUS
-    case HAL_PIXEL_FORMAT_NV21_ZSL:
     case HAL_PIXEL_FORMAT_YV12:
       *h_subsampling = 1;
       *v_subsampling = 1;
@@ -1537,7 +1559,6 @@ void GetYuvSubSamplingFactor(int32_t format, int *h_subsampling, int *v_subsampl
     case HAL_PIXEL_FORMAT_RAW10:
     case HAL_PIXEL_FORMAT_Y8:
     case HAL_PIXEL_FORMAT_BLOB:
-    case HAL_PIXEL_FORMAT_RAW_OPAQUE:
     case HAL_PIXEL_FORMAT_NV12_HEIF:
     default:
       *h_subsampling = 0;
