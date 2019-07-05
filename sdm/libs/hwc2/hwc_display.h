@@ -105,6 +105,12 @@ class HWCDisplay : public DisplayEventHandler {
     kDisplayStatusResume,
   };
 
+  enum DisplayValidateState {
+    kNormalValidate,
+    kInternalValidate,
+    kSkipValidate,
+  };
+
   virtual ~HWCDisplay() {}
   virtual int Init();
   virtual int Deinit();
@@ -174,6 +180,11 @@ class HWCDisplay : public DisplayEventHandler {
   android_color_mode_t GetCurrentColorMode() {
     return (color_mode_ ? color_mode_->GetCurrentColorMode() : HAL_COLOR_MODE_SRGB);
   }
+  bool CanSkipValidate();
+  bool HasClientComposition() { return has_client_composition_; }
+  bool IsSkipValidateState() { return (validate_state_ == kSkipValidate); }
+  bool IsInternalValidateState() { return (validated_ && (validate_state_ == kInternalValidate)); }
+  void SetValidationState(DisplayValidateState state) { validate_state_ = state; }
 
   // HWC2 APIs
   virtual HWC2::Error AcceptDisplayChanges(void);
@@ -253,6 +264,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual DisplayError Refresh();
   virtual HWC2::Error GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
                                                    uint8_t *out_data);
+  virtual HWC2::Error GetValidateDisplayOutput(uint32_t *out_num_types, uint32_t *out_num_requests);
 
  protected:
   // Maximum number of layers supported by display manager.
@@ -342,17 +354,17 @@ class HWCDisplay : public DisplayEventHandler {
 
  private:
   void DumpInputBuffers(void);
-  bool CanSkipValidate();
   void UpdateRefreshRate();
   void WaitOnPreviousFence();
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
   uint32_t geometry_changes_ = GeometryChanges::kNone;
-  bool skip_validate_ = false;
   bool animating_ = false;
   bool active_ = true;
   bool layers_bypassed_ = false;
   int fbt_release_fence_ = -1;
+  bool has_client_composition_ = false;
+  DisplayValidateState validate_state_ = kNormalValidate;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {
