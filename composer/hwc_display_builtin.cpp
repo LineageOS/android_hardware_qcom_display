@@ -912,4 +912,14 @@ HWC2::Error HWCDisplayBuiltIn::GetPanelBrightness(float *brightness) {
 
   return HWC2::Error::None;
 }
+
+HWC2::Error HWCDisplayBuiltIn::SetBLScale(uint32_t level) {
+  DisplayError ret = display_intf_->SetBLScale(level);
+  if (ret != kErrorNone) {
+    return HWC2::Error::NoResources;
+  }
+
+  return HWC2::Error::None;
+}
+
 }  // namespace sdm

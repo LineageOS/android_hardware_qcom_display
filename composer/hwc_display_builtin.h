@@ -97,6 +97,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
     fast_path_composition_ = enable && !readback_buffer_queued_;
   }
   virtual HWC2::Error SetFrameTriggerMode(uint32_t mode);
+  virtual HWC2::Error SetBLScale(uint32_t level);
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,

@@ -332,6 +332,9 @@ class HWCDisplay : public DisplayEventHandler {
   }
   virtual HWC2::Error GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
                                                    uint8_t *out_data);
+  virtual HWC2::Error SetBLScale(uint32_t level) {
+    return HWC2::Error::Unsupported;
+  }
 
  protected:
   static uint32_t throttling_refresh_rate_;

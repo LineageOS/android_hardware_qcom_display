@@ -113,6 +113,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(GetSupportedDSIClock(vector<uint64_t> *bitclk_rates))
   MAKE_NO_OP(SetFrameTriggerMode(FrameTriggerMode))
   MAKE_NO_OP(SetPanelLuminanceAttributes(float min_lum, float max_lum))
+  MAKE_NO_OP(SetBLScale(uint32_t))
 
  protected:
   DisplayConfigVariableInfo default_variable_config_ = {};

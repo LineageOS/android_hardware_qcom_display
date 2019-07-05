@@ -80,6 +80,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   virtual DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate);
   virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates);
   virtual DisplayError SetFrameTriggerMode(FrameTriggerMode mode);
+  virtual DisplayError SetBLScale(uint32_t level);
 
   // Implement the HWEventHandlers
   virtual DisplayError VSync(int64_t timestamp);

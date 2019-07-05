@@ -784,4 +784,16 @@ DisplayError DisplayBuiltIn::GetRefreshRate(uint32_t *refresh_rate) {
   return kErrorNone;
 }
 
+DisplayError DisplayBuiltIn::SetBLScale(uint32_t level) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+
+  DisplayError err = hw_intf_->SetBLScale(level);
+  if (err) {
+    DLOGE("Failed to set backlight scale to level %d", level);
+  } else {
+    DLOGI_IF(kTagDisplay, "Setting backlight scale to level %d", level);
+  }
+  return err;
+}
+
 }  // namespace sdm
