@@ -277,6 +277,7 @@ DisplayError DisplayPluggable::InitializeColorModes() {
     var.push_back(std::make_pair(kColorGamutAttribute, kSrgb));
     var.push_back(std::make_pair(kDynamicRangeAttribute, kSdr));
     var.push_back(std::make_pair(kPictureQualityAttribute, kStandard));
+    var.push_back(std::make_pair(kRenderIntentAttribute, "0"));
     color_mode_attr_map_.insert(std::make_pair(kSrgb, var));
 
     // native mode
@@ -290,11 +291,15 @@ DisplayError DisplayPluggable::InitializeColorModes() {
     var.clear();
     var.push_back(std::make_pair(kColorGamutAttribute, kBt2020));
     var.push_back(std::make_pair(kGammaTransferAttribute, kSrgb));
+    var.push_back(std::make_pair(kPictureQualityAttribute, kStandard));
+    var.push_back(std::make_pair(kRenderIntentAttribute, "0"));
     color_mode_attr_map_.insert(std::make_pair(kDisplayBt2020, var));
   }
 
   var.clear();
   var.push_back(std::make_pair(kColorGamutAttribute, kBt2020));
+  var.push_back(std::make_pair(kPictureQualityAttribute, kStandard));
+  var.push_back(std::make_pair(kRenderIntentAttribute, "0"));
   if (hw_panel_info_.hdr_eotf & kHdrEOTFHDR10) {
     pt.transfer = Transfer_SMPTE_ST2084;
     var.push_back(std::make_pair(kGammaTransferAttribute, kSt2084));
