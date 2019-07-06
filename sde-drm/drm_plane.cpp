@@ -59,6 +59,8 @@ using std::vector;
 using std::unique_ptr;
 using std::tuple;
 using std::stringstream;
+using std::mutex;
+using std::lock_guard;
 
 static struct sde_drm_csc_v1 csc_10bit_convert[kCscTypeMax] = {
   [kCscYuv2Rgb601L] = {
@@ -266,6 +268,7 @@ void DRMPlaneManager::Perform(DRMOps code, uint32_t obj_id, drmModeAtomicReq *re
 }
 
 void DRMPlaneManager::Perform(DRMOps code, drmModeAtomicReq *req, uint32_t obj_id, ...) {
+  lock_guard<mutex> lock(lock_);
   va_list args;
   va_start(args, obj_id);
   Perform(code, obj_id, req, args);
@@ -287,6 +290,7 @@ void DRMPlaneManager::GetPlanesInfo(DRMPlanesInfo *info) {
 void DRMPlaneManager::UnsetUnusedPlanes(uint32_t crtc_id, drmModeAtomicReq *req) {
   // Unset planes that were assigned to the crtc referred to by crtc_id but are not requested
   // in this round
+  lock_guard<mutex> lock(lock_);
   for (auto &plane : plane_pool_) {
     uint32_t assigned_crtc = 0;
     uint32_t requested_crtc = 0;
@@ -312,12 +316,14 @@ void DRMPlaneManager::RetainPlanes(uint32_t crtc_id) {
 }
 
 void DRMPlaneManager::PostValidate(uint32_t crtc_id, bool success) {
+  lock_guard<mutex> lock(lock_);
   for (auto &plane : plane_pool_) {
     plane.second->PostValidate(crtc_id, success);
   }
 }
 
 void DRMPlaneManager::PostCommit(uint32_t crtc_id, bool success) {
+  lock_guard<mutex> lock(lock_);
   DRM_LOGD("crtc %d", crtc_id);
   for (auto &plane : plane_pool_) {
     plane.second->PostCommit(crtc_id, success);

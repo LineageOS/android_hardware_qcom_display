@@ -52,6 +52,8 @@ using std::string;
 using std::stringstream;
 using std::unique_ptr;
 using std::map;
+using std::mutex;
+using std::lock_guard;
 
 // CRTC Security Levels
 static uint8_t SECURE_NON_SECURE = 0;
@@ -140,6 +142,7 @@ void DRMCrtcManager::DumpAll() {
 
 void DRMCrtcManager::Perform(DRMOps code, uint32_t obj_id, drmModeAtomicReq *req,
                              va_list args) {
+  lock_guard<mutex> lock(lock_);
   auto it = crtc_pool_.find(obj_id);
   if (it == crtc_pool_.end()) {
     DRM_LOGE("Invalid crtc id %d", obj_id);
@@ -236,16 +239,19 @@ int DRMCrtcManager::Reserve(const std::set<uint32_t> &possible_crtc_indices,
 }
 
 void DRMCrtcManager::Free(DRMDisplayToken *token) {
+  lock_guard<mutex> lock(lock_);
   crtc_pool_.at(token->crtc_id)->Unlock();
   token->crtc_id = 0;
   token->crtc_index = 0;
 }
 
 void DRMCrtcManager::PostValidate(uint32_t crtc_id, bool success) {
+  lock_guard<mutex> lock(lock_);
   crtc_pool_.at(crtc_id)->PostValidate(success);
 }
 
 void DRMCrtcManager::PostCommit(uint32_t crtc_id, bool success) {
+  lock_guard<mutex> lock(lock_);
   crtc_pool_.at(crtc_id)->PostCommit(success);
 }
 
