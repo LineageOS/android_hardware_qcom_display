@@ -1172,6 +1172,7 @@ HWC2::Error HWCDisplay::SetActiveConfig(hwc2_config_t config) {
   }
   DLOGI("Active configuration changed to: %d", config);
   validated_ = false;
+  geometry_changes_ |= kConfigChanged;
   return HWC2::Error::None;
 }
 
