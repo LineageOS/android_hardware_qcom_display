@@ -2039,4 +2039,8 @@ DisplayError DisplayBase::ResetPendingDoze(int32_t retire_fence) {
   return kErrorNone;
 }
 
+bool DisplayBase::CheckResourceState() {
+  return comp_manager_->CheckResourceState(display_comp_ctx_);
+}
+
 }  // namespace sdm

@@ -895,6 +895,11 @@ class DisplayInterface {
     @return \link DisplayError \endlink
   */
   virtual DisplayError SetBLScale(uint32_t level) = 0;
+  /*! @brief Method to check if the Default resources are freed for display
+
+    @return \link bool \endlink
+  */
+  virtual bool CheckResourceState() = 0;
 
  protected:
   virtual ~DisplayInterface() { }

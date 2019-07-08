@@ -39,6 +39,8 @@ class ResourceInterface {
     kCmdSetDisplayState,
     kCmdUpdateSyncHandle,
     kCmdCheckEnforceSplit,
+    kCmdDedicatePipes,
+    kCmdGetResourceStatus,
     kCmdMax,
   };
 
