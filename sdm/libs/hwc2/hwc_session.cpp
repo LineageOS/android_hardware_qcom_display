@@ -593,7 +593,7 @@ int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display
         hwc_session->hwc_display_[display]->SetPendingRefresh();
         hwc_session->callbacks_.ResetRefresh(display);
       }
-      status = hwc_session->hwc_display_[display]->Present(out_retire_fence);
+      status = hwc_session->PresentDisplayInternal(display, out_retire_fence);
     }
   }
 
@@ -953,24 +953,7 @@ int32_t HWCSession::ValidateDisplay(hwc2_device_t *device, hwc2_display_t displa
   {
     SEQUENCE_ENTRY_SCOPE_LOCK(locker_[display]);
     if (hwc_session->hwc_display_[display]) {
-      if (display == HWC_DISPLAY_PRIMARY) {
-        // TODO(user): This can be moved to HWCDisplayBuiltIn
-        if (hwc_session->reset_panel_) {
-          DLOGW("panel is in bad state, resetting the panel");
-          hwc_session->ResetPanel();
-        }
-
-        if (hwc_session->need_invalidate_) {
-          hwc_session->Refresh(display);
-          hwc_session->need_invalidate_ = false;
-        }
-
-        if (hwc_session->color_mgr_) {
-          hwc_session->color_mgr_->SetColorModeDetailEnhancer(hwc_session->hwc_display_[display]);
-        }
-      }
-
-      status = hwc_session->hwc_display_[display]->Validate(out_num_types, out_num_requests);
+      status = hwc_session->ValidateDisplayInternal(display, out_num_types, out_num_requests);
     }
   }
 
@@ -1176,6 +1159,11 @@ bool HWCSession::GetSecondBuiltinStatus() {
 void HWCSession::HandleConcurrency(hwc2_display_t disp) {
   if (!primary_ready_) {
     DLOGI("Primary isnt ready yet!!");
+    return;
+  }
+
+  if (!map_info_pluggable_.size() || !map_info_virtual_.size()) {
+    DLOGI("One or both pluggable/virtual display map is empty");
     return;
   }
 
@@ -1597,7 +1585,10 @@ android::status_t HWCSession::SetMaxMixerStages(const android::Parcel *input_par
   uint32_t max_mixer_stages = UINT32(input_parcel->readInt32());
   android::status_t status = 0;
 
-  for (uint32_t i = 0; i < 32 && bit_mask_display_type[i]; i++) {
+  for (uint32_t i = 0; i < 32; i++) {
+    if (!bit_mask_display_type.test(i)) {
+      continue;
+    }
     int disp_idx = GetDisplayIndex(INT(i));
     if (disp_idx == -1) {
       continue;
@@ -1625,7 +1616,10 @@ android::status_t HWCSession::SetFrameDumpConfig(const android::Parcel *input_pa
   uint32_t bit_mask_layer_type = UINT32(input_parcel->readInt32());
   android::status_t status = 0;
 
-  for (uint32_t i = 0; i < 32 && bit_mask_display_type[i]; i++) {
+  for (uint32_t i = 0; i < 32; i++) {
+    if (!bit_mask_display_type.test(i)) {
+      continue;
+    }
     int disp_idx = GetDisplayIndex(INT(i));
     if (disp_idx == -1) {
       continue;
@@ -2555,6 +2549,50 @@ int32_t HWCSession::GetDisplayBrightnessSupport(hwc2_device_t *device, hwc2_disp
   // The capability is used instead
   *outSupport = false;
   return HWC2_ERROR_NONE;
+}
+
+HWC2::Error HWCSession::ValidateDisplayInternal(hwc2_display_t display, uint32_t *out_num_types,
+                                                uint32_t *out_num_requests) {
+  HWCDisplay *hwc_display = hwc_display_[display];
+  if (hwc_display->IsInternalValidateState()) {
+    // Internal Validation has already been done on display, get the Output params.
+    return hwc_display->GetValidateDisplayOutput(out_num_types, out_num_requests);
+  }
+
+  if (display == HWC_DISPLAY_PRIMARY) {
+    // TODO(user): This can be moved to HWCDisplayPrimary
+    if (reset_panel_) {
+      DLOGW("panel is in bad state, resetting the panel");
+      ResetPanel();
+    }
+
+    if (need_invalidate_) {
+      Refresh(display);
+      need_invalidate_ = false;
+    }
+
+    if (color_mgr_) {
+      color_mgr_->SetColorModeDetailEnhancer(hwc_display_[display]);
+    }
+  }
+
+  return hwc_display->Validate(out_num_types, out_num_requests);
+}
+
+HWC2::Error HWCSession::PresentDisplayInternal(hwc2_display_t display, int32_t *out_retire_fence) {
+  HWCDisplay *hwc_display = hwc_display_[display];
+  // If display is in Skip-Validate state and Validate cannot be skipped, do Internal
+  // Validation to optimize for the frames which don't require the Client composition.
+  if (hwc_display->IsSkipValidateState() && !hwc_display->CanSkipValidate()) {
+    uint32_t out_num_types = 0, out_num_requests = 0;
+    HWC2::Error error = ValidateDisplayInternal(display, &out_num_types, &out_num_requests);
+    if ((error != HWC2::Error::None) || hwc_display->HasClientComposition()) {
+      hwc_display->SetValidationState(HWCDisplay::kInternalValidate);
+      return HWC2::Error::NotValidated;
+    }
+  }
+
+  return hwc_display->Present(out_retire_fence);
 }
 
 }  // namespace sdm
