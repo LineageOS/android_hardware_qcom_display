@@ -408,10 +408,22 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
 
   // Stop dropping vsync when first commit is received after idle fallback.
   drop_hw_vsync_ = false;
-  DLOGI_IF(kTagDisplay, "Exiting commit for display: %d-%d", display_id_, display_type_);
 
   // Handle pending vsync enable if any after the commit
-  return HandlePendingVSyncEnable(layer_stack->retire_fence_fd);
+  error = HandlePendingVSyncEnable(layer_stack->retire_fence_fd);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  // Reset pending vsync enable if any after the commit
+  error = ResetPendingDoze(layer_stack->retire_fence_fd);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  DLOGI_IF(kTagDisplay, "Exiting commit for display: %d-%d", display_id_, display_type_);
+
+  return error;
 }
 
 DisplayError DisplayBase::Flush(LayerStack *layer_stack) {
@@ -572,6 +584,10 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
 
   case kStateDoze:
     error = hw_intf_->Doze(default_qos_data_, release_fence);
+    if (error == kErrorDeferred) {
+      pending_doze_ = true;
+      error = kErrorNone;
+    }
     active = true;
     break;
 
@@ -1131,9 +1147,11 @@ DisplayError DisplayBase::HandlePendingVSyncEnable(int32_t retire_fence) {
 
 DisplayError DisplayBase::SetVSyncState(bool enable) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-  if (state_ == kStateOff && enable) {
-    DLOGW("Can't enable vsync when power state is off for display %d-%d," \
-          "Defer it when display is active", display_id_, display_type_);
+
+  if ((state_ == kStateOff || pending_doze_) && enable) {
+    DLOGW("Can't enable vsync when power state is off or doze pending for display %d-%d," \
+          "Defer it when display is active state %d pending_doze_ %d", display_id_, display_type_,
+          state_, pending_doze_);
     vsync_enable_pending_ = true;
     return kErrorNone;
   }
@@ -1934,6 +1952,17 @@ bool DisplayBase::IsHdrMode(const AttrVal &attr) {
 
 bool DisplayBase::CanSkipValidate() {
   return comp_manager_->CanSkipValidate(display_comp_ctx_);
+}
+
+DisplayError DisplayBase::ResetPendingDoze(int32_t retire_fence) {
+  if (pending_doze_) {
+    // Retire fence signalling confirms that CRTC enabled, hence wait for retire fence before
+    // we enable vsync
+    buffer_sync_handler_->SyncWait(retire_fence);
+
+    pending_doze_ = false;
+  }
+  return kErrorNone;
 }
 
 }  // namespace sdm
