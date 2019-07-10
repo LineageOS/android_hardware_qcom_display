@@ -969,7 +969,7 @@ DisplayError HWDeviceDRM::Doze(const HWQosData &qos_data, int *release_fence) {
 
   if (first_cycle_ || last_power_mode_ != DRMPowerMode::OFF) {
     pending_doze_ = true;
-    return kErrorNone;
+    return kErrorDeferred;
   }
 
   SetQOSData(qos_data);
