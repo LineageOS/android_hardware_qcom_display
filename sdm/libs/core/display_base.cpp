@@ -792,7 +792,7 @@ std::string DisplayBase::Dump() {
                0, input_buffer->width, input_buffer->height, buffer_format,
                INT(src_roi.left), INT(src_roi.top), INT(src_roi.right), INT(src_roi.bottom),
                INT(dst_roi.left), INT(dst_roi.top), INT(dst_roi.right), INT(dst_roi.bottom),
-               "-", "-    ", "-    ", "-", "-");
+               "-", "-    ", "-    ", "-", "-", "-");
       os << row;
       // print the below only once per layer block, fill with spaces for rest.
       idx[0] = 0;
