@@ -317,6 +317,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   bool is_composer_up_ = false;
   bool null_display_active_ = false;
   Locker callbacks_lock_;
+  bool callback_reg_ = false;
 };
 
 }  // namespace sdm
