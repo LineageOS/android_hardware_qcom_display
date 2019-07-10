@@ -414,10 +414,10 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
         // In case of rotation, rotator handles flips
         if (!needs_rotation) {
           if (layer.transform.flip_horizontal) {
-            rot_bit_mask |= 1 << DRM_REFLECT_X;
+            rot_bit_mask |= DRM_MODE_REFLECT_X;
           }
           if (layer.transform.flip_vertical) {
-            rot_bit_mask |= 1 << DRM_REFLECT_Y;
+            rot_bit_mask |= DRM_MODE_REFLECT_Y;
           }
         }
 
