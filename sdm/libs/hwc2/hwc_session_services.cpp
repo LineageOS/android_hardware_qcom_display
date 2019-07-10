@@ -458,7 +458,9 @@ Return<int32_t> HWCSession::setCameraLaunchStatus(uint32_t on) {
   HWBwModes mode = on > 0 ? kBwCamera : kBwDefault;
 
   // trigger invalidate to apply new bw caps.
-  Refresh(HWC_DISPLAY_PRIMARY);
+  if (callback_reg_) {
+    Refresh(HWC_DISPLAY_PRIMARY);
+  }
 
   if (core_intf_->SetMaxBandwidthMode(mode) != kErrorNone) {
     return -EINVAL;
