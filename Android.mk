@@ -15,11 +15,10 @@ display-hals += commonsys-intf/libdisplayconfig
 ifneq ($(TARGET_PROVIDES_LIBLIGHT),true)
     display-hals += liblight
 endif
-else
-ifneq ($(TARGET_IS_HEADLESS), true)
-    display-hals := libcopybit
-endif
 endif #TARGET_DISABLE_DISPLAY
+ifneq ($(TARGET_IS_HEADLESS), true)
+    display-hals += libcopybit
+endif
 
 ifeq ($(call is-vendor-board-platform,QCOM),true)
     include $(call all-named-subdir-makefiles,$(display-hals))
