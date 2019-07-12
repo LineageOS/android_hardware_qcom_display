@@ -78,6 +78,7 @@ class DisplayPrimary : public DisplayBase, HWEventHandler {
   bool handle_idle_timeout_ = false;
   bool reset_panel_ = false;
   float level_remainder_ = 0.0f;
+  recursive_mutex brightness_lock_;
 };
 
 }  // namespace sdm

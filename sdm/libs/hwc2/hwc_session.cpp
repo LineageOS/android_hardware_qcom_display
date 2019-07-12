@@ -2627,7 +2627,22 @@ int32_t HWCSession::GetDisplayBrightnessSupport(hwc2_device_t *device, hwc2_disp
 
 int32_t HWCSession::SetDisplayBrightness(hwc2_device_t *device, hwc2_display_t display,
                                          float brightness) {
-  return CallDisplayFunction(device, display, &HWCDisplay::SetPanelBrightness, brightness);
+  if (!device) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (display >= HWCCallbacks::kNumDisplays) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  HWCSession *hwc_session = static_cast<HWCSession *>(device);
+  HWCDisplay *hwc_display = hwc_session->hwc_display_[display];
+
+  if (!hwc_display) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  return INT32(hwc_display->SetPanelBrightness(brightness));
 }
 
 HWC2::Error HWCSession::ValidateDisplayInternal(hwc2_display_t display, uint32_t *out_num_types,

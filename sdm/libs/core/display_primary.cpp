@@ -246,7 +246,7 @@ DisplayError DisplayPrimary::SetDisplayMode(uint32_t mode) {
 }
 
 DisplayError DisplayPrimary::SetPanelBrightness(float brightness) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  lock_guard<recursive_mutex> obj(brightness_lock_);
 
   if (brightness != -1.0f && !(0.0f <= brightness && brightness <= 1.0f)) {
     DLOGE("Bad brightness value = %f", brightness);
@@ -383,7 +383,7 @@ void DisplayPrimary::PanelDead() {
 }
 
 DisplayError DisplayPrimary::GetPanelBrightness(float *brightness) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  lock_guard<recursive_mutex> obj(brightness_lock_);
 
   DisplayError err = kErrorNone;
   int level = 0;
