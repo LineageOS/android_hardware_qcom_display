@@ -84,6 +84,7 @@ class HWCColorMode {
   ColorMode GetCurrentColorMode() { return current_color_mode_; }
   HWC2::Error ApplyCurrentColorModeWithRenderIntent(bool hdr_present);
   HWC2::Error CacheColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
+  RenderIntent GetCurrentRenderIntent() { return current_render_intent_; }
 
  private:
   static const uint32_t kColorTransformMatrixCount = 16;
@@ -231,6 +232,9 @@ class HWCDisplay : public DisplayEventHandler {
   void SetValidationState(DisplayValidateState state) { validate_state_ = state; }
   ColorMode GetCurrentColorMode() {
     return (color_mode_ ? color_mode_->GetCurrentColorMode() : ColorMode::SRGB);
+  }
+  RenderIntent GetCurrentRenderIntent() {
+    return (color_mode_ ? color_mode_->GetCurrentRenderIntent() : RenderIntent::COLORIMETRIC);
   }
   bool HasClientComposition() { return has_client_composition_; }
   bool HWCClientNeedsValidate() {

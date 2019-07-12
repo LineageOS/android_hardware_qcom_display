@@ -2990,7 +2990,8 @@ void HWCSession::DisplayPowerReset() {
         DLOGE("%d mode for display = %d failed with error = %d", mode, display, status);
       }
       ColorMode color_mode = hwc_display_[display]->GetCurrentColorMode();
-      status = hwc_display_[display]->SetColorMode(color_mode);
+      RenderIntent intent = hwc_display_[display]->GetCurrentRenderIntent();
+      status = hwc_display_[display]->SetColorModeWithRenderIntent(color_mode, intent);
       if (status != HWC2::Error::None) {
         DLOGE("SetColorMode failed for display = %d error = %d", display, status);
       }

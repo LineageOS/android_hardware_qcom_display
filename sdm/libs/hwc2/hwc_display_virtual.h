@@ -52,6 +52,9 @@ class HWCDisplayVirtual : public HWCDisplay {
                                          int32_t format, bool post_processed);
   virtual HWC2::Error GetDisplayType(int32_t *out_type);
   virtual HWC2::Error SetColorMode(ColorMode mode);
+  virtual HWC2::Error SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
+    return HWC2::Error::None;
+  }
   virtual HWC2::Error SetPanelLuminanceAttributes(float min_lum, float max_lum);
   HWC2::Error SetOutputBuffer(buffer_handle_t buf, int32_t release_fence);
 

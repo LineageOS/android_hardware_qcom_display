@@ -158,10 +158,6 @@ HWC2::Error HWCColorMode::CacheColorModeWithRenderIntent(ColorMode mode, RenderI
     return error;
   }
 
-  if (current_color_mode_ == mode && current_render_intent_ == intent) {
-    return HWC2::Error::None;
-  }
-
   current_color_mode_ = mode;
   current_render_intent_ = intent;
   apply_mode_ = true;
