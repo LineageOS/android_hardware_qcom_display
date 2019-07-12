@@ -285,7 +285,7 @@ DisplayError DisplayBuiltIn::SetDisplayMode(uint32_t mode) {
 }
 
 DisplayError DisplayBuiltIn::SetPanelBrightness(float brightness) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  lock_guard<recursive_mutex> obj(brightness_lock_);
 
   if (brightness != -1.0f && !(0.0f <= brightness && brightness <= 1.0f)) {
     DLOGE("Bad brightness value = %f", brightness);
@@ -441,7 +441,7 @@ void DisplayBuiltIn::HwRecovery(const HWRecoveryEvent sdm_event_code) {
 }
 
 DisplayError DisplayBuiltIn::GetPanelBrightness(float *brightness) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  lock_guard<recursive_mutex> obj(brightness_lock_);
 
   DisplayError err = kErrorNone;
   int level = 0;

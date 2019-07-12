@@ -2910,7 +2910,15 @@ int32_t HWCSession::GetDisplayBrightnessSupport(hwc2_display_t display, bool *ou
 }
 
 int32_t HWCSession::SetDisplayBrightness(hwc2_display_t display, float brightness) {
-  return CallDisplayFunction(display, &HWCDisplay::SetPanelBrightness, brightness);
+  if (display >= HWCCallbacks::kNumDisplays) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  if (!hwc_display_[display]) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  return INT32(hwc_display_[display]->SetPanelBrightness(brightness));
 }
 
 android::status_t HWCSession::SetQSyncMode(const android::Parcel *input_parcel) {
