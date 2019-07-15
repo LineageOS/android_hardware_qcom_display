@@ -110,6 +110,8 @@ static InlineRotationVersion GetInRotVersion(sde_drm::InlineRotationVersion drm_
   switch (drm_version) {
     case sde_drm::InlineRotationVersion::kInlineRotationV1:
       return InlineRotationVersion::kInlineRotationV1;
+    case sde_drm::InlineRotationVersion::kInlineRotationV2:
+      return InlineRotationVersion::kInlineRotationV2;
     default:
       return kInlineRotationNone;
   }
