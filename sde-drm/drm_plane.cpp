@@ -193,6 +193,7 @@ static InlineRotationVersion PopulateInlineRotationVersion(uint32_t ver) {
     case 0x0000: return InlineRotationVersion::kInlineRotationNone;
     case 0x0001:
     case 0x0100: return InlineRotationVersion::kInlineRotationV1;
+    case 0x0200: return InlineRotationVersion::kInlineRotationV2;
     default: return InlineRotationVersion::kInlineRotationNone;
   }
 }
