@@ -792,7 +792,7 @@ void HWDeviceDRM::GetHWDisplayPortAndMode() {
       interface_str_ = "Virtual";
       break;
     case DRM_MODE_CONNECTOR_DisplayPort:
-      // TODO(user): Add when available
+      hw_panel_info_.port = kPortDP;
       interface_str_ = "DisplayPort";
       break;
   }

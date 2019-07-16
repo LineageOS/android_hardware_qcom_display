@@ -152,6 +152,18 @@ enum HwHdrEotf {
   kHdrEOTFHLG = 0x8,
 };
 
+enum HwColorspace {
+  kColorspaceXvycc601     = (1 << 0),
+  kColorspaceXvycc709     = (1 << 1),
+  kColorspaceSycc601      = (1 << 2),
+  kColorspaceAdobeycc601  = (1 << 3),
+  kColorspaceAdobergb     = (1 << 4),
+  kColorspaceBt2020cycc   = (1 << 5),
+  kColorspaceBt2020ycc    = (1 << 6),
+  kColorspaceBt2020rgb    = (1 << 7),
+  kColorspaceDcip3        = (1 << 15)
+};
+
 enum HWSrcTonemap {
   kSrcTonemapNone,
   kSrcTonemap1d,  // DMA
@@ -373,6 +385,7 @@ struct HWPanelInfo {
   bool qsync_support = false;          // Specifies panel supports qsync feature or not.
   bool dyn_bitclk_support = false;     // Bit clk can be updated to avoid RF interference.
   std::vector<uint64_t> bitclk_rates;  // Supported bit clk levels.
+  uint32_t supported_colorspaces = 0;  // supported_colorspaces for DP displays.
 
   bool operator !=(const HWPanelInfo &panel_info) {
     return ((port != panel_info.port) || (mode != panel_info.mode) ||

@@ -77,6 +77,20 @@ static uint8_t FRAME_TRIGGER_DEFAULT = 0;
 static uint8_t FRAME_TRIGGER_SERIALIZE = 1;
 static uint8_t FRAME_TRIGGER_POSTED_START = 2;
 
+static uint8_t DRM_MODE_COLORIMETRY_DEFAULT            = 0;
+static uint8_t DRM_MODE_COLORIMETRY_SMPTE_170M_YCC     = 1;
+static uint8_t DRM_MODE_COLORIMETRY_BT709_YCC          = 2;
+static uint8_t DRM_MODE_COLORIMETRY_XVYCC_601          = 3;
+static uint8_t DRM_MODE_COLORIMETRY_XVYCC_709          = 4;
+static uint8_t DRM_MODE_COLORIMETRY_SYCC_601           = 5;
+static uint8_t DRM_MODE_COLORIMETRY_OPYCC_601          = 6;
+static uint8_t DRM_MODE_COLORIMETRY_OPRGB              = 7;
+static uint8_t DRM_MODE_COLORIMETRY_BT2020_CYCC        = 8;
+static uint8_t DRM_MODE_COLORIMETRY_BT2020_RGB         = 9;
+static uint8_t DRM_MODE_COLORIMETRY_BT2020_YCC         = 10;
+static uint8_t DRM_MODE_COLORIMETRY_DCI_P3_RGB_D65     = 11;
+static uint8_t DRM_MODE_COLORIMETRY_DCI_P3_RGB_THEATER = 12;
+
 static void PopulatePowerModes(drmModePropertyRes *prop) {
   for (auto i = 0; i < prop->count_enums; i++) {
     string enum_name(prop->enums[i].name);
@@ -99,6 +113,39 @@ static void PopulateSecureModes(drmModePropertyRes *prop) {
       NON_SECURE = prop->enums[i].value;
     } else if (enum_name == "sec") {
       SECURE = prop->enums[i].value;
+    }
+  }
+}
+
+static void PopulateSupportedColorspaces(drmModePropertyRes *prop) {
+  for (auto i = 0; i < prop->count_enums; i++) {
+    string enum_name(prop->enums[i].name);
+    if (enum_name == "Default") {
+      DRM_MODE_COLORIMETRY_DEFAULT = prop->enums[i].value;
+    } else if (enum_name == "SMPTE_170M_YCC") {
+      DRM_MODE_COLORIMETRY_SMPTE_170M_YCC = prop->enums[i].value;
+    } else if (enum_name == "BT709_YCC") {
+      DRM_MODE_COLORIMETRY_BT709_YCC = prop->enums[i].value;
+    } else if (enum_name == "XVYCC_601") {
+      DRM_MODE_COLORIMETRY_XVYCC_601 = prop->enums[i].value;
+    } else if (enum_name == "XVYCC_709") {
+      DRM_MODE_COLORIMETRY_XVYCC_709 = prop->enums[i].value;
+    } else if (enum_name == "SYCC_601") {
+      DRM_MODE_COLORIMETRY_SYCC_601 = prop->enums[i].value;
+    } else if (enum_name == "opYCC_601") {
+      DRM_MODE_COLORIMETRY_OPYCC_601 = prop->enums[i].value;
+    } else if (enum_name == "opRGB") {
+      DRM_MODE_COLORIMETRY_OPRGB = prop->enums[i].value;
+    } else if (enum_name == "BT2020_CYCC") {
+      DRM_MODE_COLORIMETRY_BT2020_CYCC = prop->enums[i].value;
+    } else if (enum_name == "BT2020_RGB") {
+      DRM_MODE_COLORIMETRY_BT2020_RGB = prop->enums[i].value;
+    } else if (enum_name == "BT2020_YCC") {
+      DRM_MODE_COLORIMETRY_BT2020_YCC = prop->enums[i].value;
+    } else if (enum_name == "DCI_P3_RGB_D65") {
+      DRM_MODE_COLORIMETRY_DCI_P3_RGB_D65 = prop->enums[i].value;
+    } else if (enum_name == "DCI_P3_RGB_Theater") {
+      DRM_MODE_COLORIMETRY_DCI_P3_RGB_THEATER = prop->enums[i].value;
     }
   }
 }
@@ -137,6 +184,55 @@ static void PopulateFrameTriggerModes(drmModePropertyRes *prop) {
       FRAME_TRIGGER_POSTED_START = prop->enums[i].value;
     }
   }
+}
+
+static int32_t GetColorspace(DRMColorspace drm_colorspace) {
+  uint32_t colorspace = 0;
+  switch (drm_colorspace) {
+    case (DRMColorspace::DEFAULT):
+      colorspace = DRM_MODE_COLORIMETRY_DEFAULT;
+      break;
+    case (DRMColorspace::SMPTE_170M_YCC):
+      colorspace = DRM_MODE_COLORIMETRY_SMPTE_170M_YCC;
+      break;
+    case (DRMColorspace::BT709_YCC):
+      colorspace = DRM_MODE_COLORIMETRY_BT709_YCC;
+      break;
+    case (DRMColorspace::XVYCC_601):
+      colorspace = DRM_MODE_COLORIMETRY_XVYCC_601;
+      break;
+    case (DRMColorspace::XVYCC_709):
+      colorspace = DRM_MODE_COLORIMETRY_XVYCC_709;
+      break;
+     case (DRMColorspace::SYCC_601):
+      colorspace = DRM_MODE_COLORIMETRY_SYCC_601;
+      break;
+    case (DRMColorspace::OPYCC_601):
+      colorspace = DRM_MODE_COLORIMETRY_OPYCC_601;
+      break;
+    case (DRMColorspace::OPRGB):
+      colorspace = DRM_MODE_COLORIMETRY_OPRGB;
+      break;
+    case (DRMColorspace::BT2020_CYCC):
+      colorspace = DRM_MODE_COLORIMETRY_BT2020_CYCC;
+      break;
+    case (DRMColorspace::BT2020_RGB):
+      colorspace = DRM_MODE_COLORIMETRY_BT2020_RGB;
+      break;
+    case (DRMColorspace::BT2020_YCC):
+      colorspace = DRM_MODE_COLORIMETRY_BT2020_YCC;
+      break;
+    case (DRMColorspace::DCI_P3_RGB_D65):
+      colorspace = DRM_MODE_COLORIMETRY_DCI_P3_RGB_D65;
+      break;
+    case (DRMColorspace::DCI_P3_RGB_THEATER):
+      colorspace = DRM_MODE_COLORIMETRY_DCI_P3_RGB_THEATER;
+      break;
+    default:
+      colorspace = -1;
+      break;
+  }
+  return colorspace;
 }
 
 #define __CLASS__ "DRMConnectorManager"
@@ -371,6 +467,8 @@ void DRMConnector::ParseProperties() {
       PopulateQsyncModes(info);
     } else if (prop_enum == DRMProperty::FRAME_TRIGGER) {
       PopulateFrameTriggerModes(info);
+    } else if (prop_enum == DRMProperty::COLORSPACE) {
+      PopulateSupportedColorspaces(info);
     }
 
     prop_mgr_.SetPropertyId(prop_enum, info->prop_id);
@@ -538,20 +636,20 @@ void DRMConnector::ParseCapabilities(uint64_t blob_id, drm_msm_ext_hdr_propertie
 
   struct drm_msm_ext_hdr_properties *hdr_cdata = (struct drm_msm_ext_hdr_properties*)(blob->data);
 
-  if(hdr_cdata) {
-   hdr_info->hdr_supported = hdr_cdata->hdr_supported;
-   hdr_info->hdr_plus_supported = hdr_cdata->hdr_plus_supported;
-   hdr_info->hdr_eotf = hdr_cdata->hdr_eotf;
-   hdr_info->hdr_metadata_type_one = hdr_cdata->hdr_metadata_type_one;
-   hdr_info->hdr_max_luminance = hdr_cdata->hdr_max_luminance;
-   hdr_info->hdr_avg_luminance = hdr_cdata->hdr_avg_luminance;
-   hdr_info->hdr_min_luminance = hdr_cdata->hdr_min_luminance;
-   DRM_LOGI("hdr_supported = %d, hdr_plus_supported = %d, hdr_eotf = %d, "
-            "hdr_metadata_type_one = %d, hdr_max_luminance = %d, hdr_avg_luminance = %d, "
-            "hdr_min_luminance = %d\n", hdr_info->hdr_supported,
-            hdr_info->hdr_plus_supported,
-            hdr_info->hdr_eotf, hdr_info->hdr_metadata_type_one, hdr_info->hdr_max_luminance,
-            hdr_info->hdr_avg_luminance, hdr_info->hdr_min_luminance);
+  if (hdr_cdata) {
+    hdr_info->hdr_supported = hdr_cdata->hdr_supported;
+    hdr_info->hdr_plus_supported = hdr_cdata->hdr_plus_supported;
+    hdr_info->hdr_eotf = hdr_cdata->hdr_eotf;
+    hdr_info->hdr_metadata_type_one = hdr_cdata->hdr_metadata_type_one;
+    hdr_info->hdr_max_luminance = hdr_cdata->hdr_max_luminance;
+    hdr_info->hdr_avg_luminance = hdr_cdata->hdr_avg_luminance;
+    hdr_info->hdr_min_luminance = hdr_cdata->hdr_min_luminance;
+    DRM_LOGI("hdr_supported = %d, hdr_plus_supported = %d, hdr_eotf = %d, "
+             "hdr_metadata_type_one = %d, hdr_max_luminance = %d, hdr_avg_luminance = %d, "
+             "hdr_min_luminance = %d\n", hdr_info->hdr_supported,
+             hdr_info->hdr_plus_supported,
+             hdr_info->hdr_eotf, hdr_info->hdr_metadata_type_one, hdr_info->hdr_max_luminance,
+             hdr_info->hdr_avg_luminance, hdr_info->hdr_min_luminance);
   }
   drmModeFreePropertyBlob(blob);
 }
@@ -658,6 +756,13 @@ int DRMConnector::GetInfo(DRMConnectorInfo *info) {
                           std::find(props->props, props->props + props->count_props,
                                     prop_mgr_.GetPropertyId(DRMProperty::EDID)));
     ParseCapabilities(props->prop_values[index], &info->edid);
+  }
+
+  if (prop_mgr_.IsPropertyAvailable(DRMProperty::SUPPORTED_COLORSPACES)) {
+    index = std::distance(props->props,
+                          std::find(props->props, props->props + props->count_props,
+                                    prop_mgr_.GetPropertyId(DRMProperty::SUPPORTED_COLORSPACES)));
+    info->supported_colorspaces = props->prop_values[index];
   }
 
   drmModeFreeObjectProperties(props);
@@ -816,6 +921,27 @@ void DRMConnector::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
         } else {
           DRM_LOGD("Connector %d: Setting frame trigger mode %d", obj_id, frame_trigger_mode);
         }
+      }
+    } break;
+
+    case DRMOps::CONNECTOR_SET_COLORSPACE: {
+      if (!prop_mgr_.IsPropertyAvailable(DRMProperty::COLORSPACE)) {
+        return;
+      }
+      DRMColorspace drm_colorspace = static_cast<DRMColorspace>(va_arg(args, uint32_t));
+      int32_t colorspace = 0;
+      colorspace = GetColorspace(drm_colorspace);
+      if (colorspace >= 0) {
+        uint32_t prop_id = prop_mgr_.GetPropertyId(DRMProperty::COLORSPACE);
+        int ret = drmModeAtomicAddProperty(req, obj_id, prop_id, colorspace);
+        if (ret < 0) {
+          DRM_LOGE("AtomicAddProperty failed obj_id 0x%x, prop_id %d mode %d ret %d",
+                   obj_id, prop_id, colorspace, ret);
+        } else {
+          DRM_LOGD("Connector %d: Setting colorspace %d", obj_id, colorspace);
+        }
+      } else {
+        DRM_LOGE("Invalid colorspace %d", colorspace);
       }
     } break;
 
