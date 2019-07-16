@@ -837,7 +837,9 @@ int32_t HWCSession::RegisterCallback(hwc2_device_t *device, int32_t descriptor,
             strerror(abs(err)), hwc_session->hotplug_pending_event_ == kHotPlugEvent ? "deferred" :
             "dropped");
     }
-    hwc_session->client_connected_ = true;
+    hwc_session->client_connected_ = !!pointer;
+    // Notfify all displays.
+    hwc_session->NotifyClientStatus(hwc_session->client_connected_);
   }
   hwc_session->need_invalidate_ = false;
   hwc_session->callbacks_lock_.Broadcast();
@@ -3330,6 +3332,16 @@ hwc2_display_t HWCSession::GetActiveBuiltinDisplay() {
   }
 
   return disp_id;
+}
+
+void HWCSession::NotifyClientStatus(bool connected) {
+  for (uint32_t i = 0; i < HWCCallbacks::kNumDisplays; i++) {
+    if (!hwc_display_[i]) {
+      continue;
+    }
+    SCOPE_LOCK(locker_[i]);
+    hwc_display_[i]->NotifyClientStatus(connected);
+  }
 }
 
 }  // namespace sdm
