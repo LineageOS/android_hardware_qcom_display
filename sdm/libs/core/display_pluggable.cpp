@@ -270,13 +270,12 @@ DisplayError DisplayPluggable::VSync(int64_t timestamp) {
 DisplayError DisplayPluggable::InitializeColorModes() {
   PrimariesTransfer pt = {};
   AttrVal var = {};
-  if (hw_panel_info_.supported_colorspaces) {
-    InitializeColorModesFromColorspace();
-  }
-
-  if (!hw_panel_info_.hdr_enabled) {
+  if (!hw_panel_info_.hdr_enabled && !hw_panel_info_.supported_colorspaces) {
     return kErrorNone;
   } else {
+    if (hw_panel_info_.supported_colorspaces) {
+      InitializeColorModesFromColorspace();
+    }
     color_modes_cs_.push_back(pt);
     var.push_back(std::make_pair(kColorGamutAttribute, kSrgb));
     var.push_back(std::make_pair(kDynamicRangeAttribute, kSdr));
