@@ -1487,6 +1487,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
 
 DisplayError HWDeviceDRM::Flush(HWLayers *hw_layers) {
   ClearSolidfillStages();
+  ResetROI();
   int ret = NullCommit(secure_display_active_ /* synchronous */, false /* retain_planes*/);
   if (ret) {
     DLOGE("failed with error %d", ret);
