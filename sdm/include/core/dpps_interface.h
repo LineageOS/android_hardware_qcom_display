@@ -31,7 +31,10 @@
 #define __DPPS_INTERFACE_H__
 
 #include <core/sdm_types.h>
+#if !defined(LINUX_COMPILE) && !defined(WIN32) && !defined(_WIN64) && !defined(__APPLE__)
 #include <core/display_interface.h>
+#endif
+
 #include <string>
 
 namespace sdm {
@@ -56,7 +59,9 @@ struct DppsDisplayInfo {
   uint32_t height;
   bool is_primary;
   int32_t display_id;
+#if !defined(LINUX_COMPILE) && !defined(WIN32) && !defined(_WIN64) && !defined(__APPLE__)
   DisplayType display_type;
+#endif
 };
 
 class DppsPropIntf {
