@@ -71,7 +71,7 @@ class CompManager {
   void ControlPartialUpdate(Handle display_ctx, bool enable);
   DisplayError ValidateScaling(const LayerRect &crop, const LayerRect &dst, bool rotate90);
   DisplayError ValidateAndSetCursorPosition(Handle display_ctx, HWLayers *hw_layers, int x, int y);
-  bool SetDisplayState(Handle display_ctx, DisplayState state);
+  bool SetDisplayState(Handle display_ctx, DisplayState state, int sync_handle);
   DisplayError SetMaxBandwidthMode(HWBwModes mode);
   DisplayError GetScaleLutConfig(HWScaleLutInfo *lut_info);
   DisplayError SetDetailEnhancerData(Handle display_ctx, const DisplayDetailEnhancerData &de_data);
