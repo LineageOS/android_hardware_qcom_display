@@ -31,6 +31,7 @@
 #include <algorithm>
 
 #include "gr_adreno_info.h"
+#include "gr_camera_info.h"
 #include "gr_utils.h"
 
 #define ASTC_BLOCK_SIZE 16
@@ -64,6 +65,9 @@ bool IsYuvFormat(int format) {
     case HAL_PIXEL_FORMAT_RAW_OPAQUE:
     case HAL_PIXEL_FORMAT_NV12_HEIF:
     case HAL_PIXEL_FORMAT_CbYCrY_422_I:
+    case HAL_PIXEL_FORMAT_NV12_LINEAR_FLEX :
+    case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX:
+    case HAL_PIXEL_FORMAT_MULTIPLANAR_FLEX:
       return true;
     default:
       return false;
@@ -131,6 +135,21 @@ bool IsCompressedRGBFormat(int format) {
     case HAL_PIXEL_FORMAT_COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR:
     case HAL_PIXEL_FORMAT_COMPRESSED_RGBA_ASTC_12x12_KHR:
     case HAL_PIXEL_FORMAT_COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR:
+      return true;
+    default:
+      break;
+  }
+
+  return false;
+}
+
+bool IsCameraCustomFormat(int format) {
+  switch (format) {
+    case HAL_PIXEL_FORMAT_NV21_ZSL:
+    case HAL_PIXEL_FORMAT_NV12_LINEAR_FLEX :
+    case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX:
+    case HAL_PIXEL_FORMAT_MULTIPLANAR_FLEX:
+    case HAL_PIXEL_FORMAT_RAW_OPAQUE:
       return true;
     default:
       break;
@@ -244,7 +263,17 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
     return 0;
   }
 
-  if (IsUBwcEnabled(format, usage)) {
+  if (IsCameraCustomFormat(format)) {
+    if (CameraInfo::GetInstance() == nullptr) {
+      ALOGE("%s: Failed to get the camera library instance - %s", __FUNCTION__, strerror(errno));
+      return 0;
+    }
+    int result = CameraInfo::GetInstance()->GetBufferSize(format, width, height, &size);
+    if (result != 0) {
+      ALOGE("%s: Failed to get the buffer size through camera library. Error code: %d",
+            __FUNCTION__, result);
+    }
+  } else if (IsUBwcEnabled(format, usage)) {
     size = GetUBwcSize(width, height, format, alignedw, alignedh);
   } else if (IsUncompressedRGBFormat(format)) {
     uint32_t bpp = GetBppForUncompressedRGB(format);
@@ -880,6 +909,15 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
   // Currently surface padding is only computed for RGB* surfaces.
   bool ubwc_enabled = IsUBwcEnabled(format, usage);
   int tile = ubwc_enabled;
+
+  // Use of aligned width and aligned height is to calculate the size of buffer,
+  // but in case of camera custom format size is being calculated from given width
+  // and given height.
+  if (IsCameraCustomFormat(format)) {
+    *alignedw = width;
+    *alignedh = height;
+    return;
+  }
 
   if (IsUncompressedRGBFormat(format)) {
     if (AdrenoMemInfo::GetInstance()) {
