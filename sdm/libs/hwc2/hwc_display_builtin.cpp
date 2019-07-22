@@ -660,40 +660,40 @@ void HWCDisplayBuiltIn::HandleFrameCapture() {
 }
 
 void HWCDisplayBuiltIn::HandleFrameDump() {
-  if (dump_frame_count_) {
-    int ret = 0;
-    if (output_buffer_.release_fence_fd >= 0) {
-      ret = sync_wait(output_buffer_.release_fence_fd, 1000);
-      if (ret < 0) {
-        DLOGE("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
-      }
-      ::close(output_buffer_.release_fence_fd);
-      output_buffer_.release_fence_fd = -1;
-    }
+  if (!readback_configured_) {
+    dump_frame_count_ = 0;
+  }
 
-    if (!ret) {
-       DumpOutputBuffer(output_buffer_info_, output_buffer_base_, layer_stack_.retire_fence_fd);
-       validated_ = false;
-     }
-
-    if (0 == (dump_frame_count_ - 1)) {
-      dump_output_to_file_ = false;
-      // Unmap and Free buffer
-      if (munmap(output_buffer_base_, output_buffer_info_.alloc_buffer_info.size) != 0) {
-        DLOGE("unmap failed with err %d", errno);
-      }
-      if (buffer_allocator_->FreeBuffer(&output_buffer_info_) != 0) {
-        DLOGE("FreeBuffer failed");
-      }
-
+  if (dump_frame_count_ && output_buffer_.release_fence_fd >= 0) {
+    int ret = sync_wait(output_buffer_.release_fence_fd, 1000);
+    ::close(output_buffer_.release_fence_fd);
+    output_buffer_.release_fence_fd = -1;
+    if (ret < 0) {
+      DLOGE("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
+    } else {
+      DumpOutputBuffer(output_buffer_info_, output_buffer_base_, layer_stack_.retire_fence_fd);
       readback_buffer_queued_ = false;
-      post_processed_output_ = false;
-      readback_configured_ = false;
-
-      output_buffer_ = {};
-      output_buffer_info_ = {};
-      output_buffer_base_ = nullptr;
+      validated_ = false;
     }
+  }
+
+  if (0 == dump_frame_count_) {
+    dump_output_to_file_ = false;
+    // Unmap and Free buffer
+    if (munmap(output_buffer_base_, output_buffer_info_.alloc_buffer_info.size) != 0) {
+      DLOGE("unmap failed with err %d", errno);
+    }
+    if (buffer_allocator_->FreeBuffer(&output_buffer_info_) != 0) {
+      DLOGE("FreeBuffer failed");
+    }
+
+    readback_buffer_queued_ = false;
+    post_processed_output_ = false;
+    readback_configured_ = false;
+
+    output_buffer_ = {};
+    output_buffer_info_ = {};
+    output_buffer_base_ = nullptr;
   }
 }
 
