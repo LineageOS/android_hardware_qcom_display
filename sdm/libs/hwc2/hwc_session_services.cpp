@@ -766,7 +766,7 @@ Return<void> HWCSession::getDebugProperty(const hidl_string &prop_name,
   int32_t error = -EINVAL;
 
   vendor_prop_name += prop_name.c_str();
-  if (HWCDebugHandler::Get()->GetProperty(vendor_prop_name.c_str(), value) != kErrorNone) {
+  if (HWCDebugHandler::Get()->GetProperty(vendor_prop_name.c_str(), value) == kErrorNone) {
     result = value;
     error = 0;
   }

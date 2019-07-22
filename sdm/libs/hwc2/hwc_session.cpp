@@ -1056,6 +1056,9 @@ int32_t HWCSession::SetPowerMode(hwc2_device_t *device, hwc2_display_t display, 
     hwc_session->Refresh(display);
     // Trigger one more refresh for PP features to take effect.
     hwc_session->pending_refresh_.set(UINT32(display));
+  } else {
+    // Reset the pending refresh bit
+    hwc_session->pending_refresh_.reset(UINT32(display));
   }
 
   return HWC2_ERROR_NONE;
@@ -3166,17 +3169,14 @@ int32_t HWCSession::SetReadbackBuffer(hwc2_device_t *device, hwc2_display_t disp
   }
 
   HWCSession *hwc_session = static_cast<HWCSession *>(device);
-  hwc2_display_t external_display_index =
-        (hwc2_display_t)hwc_session->GetDisplayIndex(qdutils::DISPLAY_EXTERNAL);
-  hwc2_display_t virtual_display_index =
-        (hwc2_display_t)hwc_session->GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
 
-  if ((external_display_index == -1) || (virtual_display_index == -1)) {
+  int external_display_index = hwc_session->GetDisplayIndex(qdutils::DISPLAY_EXTERNAL);
+  if ((external_display_index >=0) && (hwc_session->hwc_display_[external_display_index])) {
     return HWC2_ERROR_UNSUPPORTED;
   }
 
-  if (hwc_session->hwc_display_[external_display_index] ||
-      hwc_session->hwc_display_[virtual_display_index]) {
+  int virtual_display_index = hwc_session->GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
+  if ((virtual_display_index >=0) && (hwc_session->hwc_display_[virtual_display_index])) {
     return HWC2_ERROR_UNSUPPORTED;
   }
 
