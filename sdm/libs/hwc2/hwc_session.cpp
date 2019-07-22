@@ -893,6 +893,9 @@ int32_t HWCSession::SetPowerMode(hwc2_device_t *device, hwc2_display_t display, 
     hwc_session->Refresh(display);
     // Trigger one more refresh for PP features to take effect.
     hwc_session->pending_refresh_.set(UINT32(display));
+  } else {
+    // Reset the pending refresh bit
+    hwc_session->pending_refresh_.reset(UINT32(display));
   }
 
   return HWC2_ERROR_NONE;
@@ -1162,16 +1165,14 @@ void HWCSession::HandleConcurrency(hwc2_display_t disp) {
     return;
   }
 
-  if (!map_info_pluggable_.size() || !map_info_virtual_.size()) {
-    DLOGI("One or both pluggable/virtual display map is empty");
-    return;
-  }
-
-  hwc2_display_t virtual_display_index = (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
-  hwc2_display_t external_display_index =
-    (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_EXTERNAL);
+  hwc2_display_t vir_disp_idx = (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
+  hwc2_display_t ext_disp_idx = (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_EXTERNAL);
+  bool vir_disp_present = (vir_disp_idx < HWCCallbacks::kNumDisplays) &&
+                          hwc_display_[vir_disp_idx];
+  bool ext_disp_present = (ext_disp_idx < HWCCallbacks::kNumDisplays) &&
+                          hwc_display_[ext_disp_idx];
   // Valid Concurrencies
-  // For two builtins   --> Builtin + Builtin OR Builtin + External OR Builtin + Virtual
+  // For two builtins   --> Builtin + Builtin
   // For Single Builtin --> Builtin + Virtual OR Builtin + External
 
   bool sec_builtin_active = GetSecondBuiltinStatus();
@@ -1180,14 +1181,18 @@ void HWCSession::HandleConcurrency(hwc2_display_t disp) {
   if (disp == GetNextBuiltinIndex()) {
     // Activate non-built_in displays if any.
     if (sec_builtin_active) {
-      ActivateDisplay(external_display_index, false);
-      ActivateDisplay(virtual_display_index, false);
+      if (ext_disp_present) {
+        ActivateDisplay(ext_disp_idx, false);
+      }
+      if (vir_disp_present) {
+        ActivateDisplay(vir_disp_idx, false);
+      }
     } else {
       // Activate One of the two connected displays.
-      if (hwc_display_[external_display_index]) {
-        ActivateDisplay(external_display_index, true);
-      } else if (hwc_display_[virtual_display_index]) {
-        ActivateDisplay(virtual_display_index, true);
+      if (ext_disp_present) {
+        ActivateDisplay(ext_disp_idx, true);
+      } else if (vir_disp_present) {
+        ActivateDisplay(vir_disp_idx, true);
       }
     }
     return;
@@ -1197,25 +1202,27 @@ void HWCSession::HandleConcurrency(hwc2_display_t disp) {
 }
 
 void HWCSession::NonBuiltinConcurrency(hwc2_display_t disp, bool builtin_active) {
-  hwc2_display_t virtual_display_index = (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
-  hwc2_display_t external_display_index =
-    (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_EXTERNAL);
-  if (disp != external_display_index && disp != virtual_display_index) {
+  hwc2_display_t vir_disp_idx = (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
+  hwc2_display_t ext_disp_idx = (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_EXTERNAL);
+
+  if ((disp != ext_disp_idx) && (disp != vir_disp_idx)) {
     return;
   }
 
   bool display_created = hwc_display_[disp];
   // Virtual and External cant be active at the same time.
-  hwc2_display_t cocu_disp = (disp == external_display_index) ? virtual_display_index
-                             : external_display_index;
+  hwc2_display_t cocu_disp = (disp == ext_disp_idx) ? vir_disp_idx
+                             : ext_disp_idx;
+  bool cocu_disp_present = (cocu_disp < HWCCallbacks::kNumDisplays) &&
+                            hwc_display_[cocu_disp];
   DLOGI("Disp: %d created: %d cocu_disp %d", disp, display_created, cocu_disp);
   if (display_created) {
-    if (builtin_active || hwc_display_[cocu_disp]) {
+    if (builtin_active || cocu_disp_present) {
       ActivateDisplay(disp, false);
     }
   } else {
     // Activate pending Virtual Display if any.
-    if (!builtin_active) {
+    if (!builtin_active && cocu_disp_present) {
       ActivateDisplay(cocu_disp, true);
     }
   }
