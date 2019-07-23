@@ -66,6 +66,7 @@ class HWPeripheralDRM : public HWDeviceDRM {
   virtual DisplayError SetPanelBrightness(int level);
   virtual DisplayError GetPanelBrightness(int *level);
   virtual void GetHWPanelMaxBrightness();
+  virtual DisplayError SetBLScale(uint32_t level);
 
  private:
   void SetDestScalarData(const HWLayersInfo &hw_layer_info);

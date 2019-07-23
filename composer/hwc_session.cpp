@@ -59,6 +59,8 @@ bool HWCSession::power_on_pending_[HWCCallbacks::kNumDisplays];
 
 static const int kSolidFillDelay = 100 * 1000;
 int HWCSession::null_display_mode_ = 0;
+static const uint32_t kBrightnessScaleMax = 100;
+static const uint32_t kSvBlScaleMax = 65535;
 
 // Map the known color modes to dataspace.
 int32_t GetDataspaceFromColorMode(ColorMode mode) {
@@ -1364,6 +1366,14 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
         break;
       }
       status = SetFrameTriggerMode(input_parcel);
+      break;
+
+    case qService::IQService::SET_BRIGHTNESS_SCALE:
+      if (!input_parcel) {
+        DLOGE("QService command = %d: input_parcel needed.", command);
+        break;
+      }
+      status = SetDisplayBrightnessScale(input_parcel);
       break;
 
     default:
@@ -3016,6 +3026,22 @@ hwc2_display_t HWCSession::GetActiveBuiltinDisplay() {
   }
 
   return disp_id;
+}
+
+int32_t HWCSession::SetDisplayBrightnessScale(const android::Parcel *input_parcel) {
+  auto display = input_parcel->readInt32();
+  auto level = input_parcel->readInt32();
+  if (level < 0 || level > kBrightnessScaleMax) {
+    DLOGE("Invalid backlight scale level %d", level);
+    return -EINVAL;
+  }
+  auto bl_scale = level * kSvBlScaleMax / kBrightnessScaleMax;
+  auto error = CallDisplayFunction(display, &HWCDisplay::SetBLScale, (uint32_t)bl_scale);
+  if (INT32(error) == HWC2_ERROR_NONE) {
+    callbacks_.Refresh(display);
+  }
+
+  return INT32(error);
 }
 
 }  // namespace sdm

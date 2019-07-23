@@ -126,6 +126,7 @@ class HWInterface {
   virtual DisplayError GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
                                                     uint8_t *out_data) = 0;
   virtual DisplayError SetFrameTrigger(FrameTriggerMode mode) = 0;
+  virtual DisplayError SetBLScale(uint32_t level) = 0;
 
  protected:
   virtual ~HWInterface() { }
