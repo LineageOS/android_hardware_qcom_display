@@ -364,8 +364,13 @@ HWC2::Error HWCDisplayBuiltIn::SetColorTransform(const float *matrix,
 }
 
 HWC2::Error HWCDisplayBuiltIn::SetReadbackBuffer(const native_handle_t *buffer,
-                                                 int32_t acquire_fence,
-                                                 bool post_processed_output) {
+                                                 int32_t acquire_fence, bool post_processed_output,
+                                                 CWBClient client) {
+  if (cwb_client_ != client && cwb_client_ != kCWBClientNone) {
+    DLOGE("CWB is in use with client = %d", cwb_client_);
+    return HWC2::Error::NoResources;
+  }
+
   const private_handle_t *handle = reinterpret_cast<const private_handle_t *>(buffer);
   if (!handle || (handle->fd < 0)) {
     return HWC2::Error::BadParameter;
@@ -387,6 +392,7 @@ HWC2::Error HWCDisplayBuiltIn::SetReadbackBuffer(const native_handle_t *buffer,
   readback_buffer_queued_ = true;
   readback_configured_ = false;
   validated_ = false;
+  cwb_client_ = client;
 
   return HWC2::Error::None;
 }
@@ -405,6 +411,7 @@ HWC2::Error HWCDisplayBuiltIn::GetReadbackBufferFence(int32_t *release_fence) {
   readback_buffer_queued_ = false;
   readback_configured_ = false;
   output_buffer_ = {};
+  cwb_client_ = kCWBClientNone;
 
   return status;
 }
@@ -670,6 +677,7 @@ void HWCDisplayBuiltIn::HandleFrameCapture() {
   post_processed_output_ = false;
   readback_configured_ = false;
   output_buffer_ = {};
+  cwb_client_ = kCWBClientNone;
 }
 
 void HWCDisplayBuiltIn::HandleFrameDump() {
@@ -706,6 +714,7 @@ void HWCDisplayBuiltIn::HandleFrameDump() {
       output_buffer_ = {};
       output_buffer_info_ = {};
       output_buffer_base_ = nullptr;
+      cwb_client_ = kCWBClientNone;
     }
   }
 }
@@ -715,6 +724,14 @@ HWC2::Error HWCDisplayBuiltIn::SetFrameDumpConfig(uint32_t count, uint32_t bit_m
   HWCDisplay::SetFrameDumpConfig(count, bit_mask_layer_type, format, post_processed);
   dump_output_to_file_ = bit_mask_layer_type & (1 << OUTPUT_LAYER_DUMP);
   DLOGI("output_layer_dump_enable %d", dump_output_to_file_);
+
+  if (dump_output_to_file_) {
+    if (cwb_client_ != kCWBClientNone) {
+      DLOGE("CWB is in use with client = %d", cwb_client_);
+      dump_output_to_file_ = false;
+      return HWC2::Error::NoResources;
+    }
+  }
 
   if (!count || !dump_output_to_file_ || (output_buffer_info_.alloc_buffer_info.fd >= 0)) {
     return HWC2::Error::None;
@@ -751,13 +768,18 @@ HWC2::Error HWCDisplayBuiltIn::SetFrameDumpConfig(uint32_t count, uint32_t bit_m
 
   output_buffer_base_ = buffer;
   const native_handle_t *handle = static_cast<native_handle_t *>(output_buffer_info_.private_data);
-  SetReadbackBuffer(handle, -1, post_processed);
+  SetReadbackBuffer(handle, -1, post_processed, kCWBClientFrameDump);
 
   return HWC2::Error::None;
 }
 
 int HWCDisplayBuiltIn::FrameCaptureAsync(const BufferInfo &output_buffer_info,
                                          bool post_processed_output) {
+  if (cwb_client_ != kCWBClientNone) {
+    DLOGE("CWB is in use with client = %d", cwb_client_);
+    return -1;
+  }
+
   // Note: This function is called in context of a binder thread and a lock is already held
   if (output_buffer_info.alloc_buffer_info.fd < 0) {
     DLOGE("Invalid fd %d", output_buffer_info.alloc_buffer_info.fd);
@@ -783,7 +805,7 @@ int HWCDisplayBuiltIn::FrameCaptureAsync(const BufferInfo &output_buffer_info,
   }
 
   const native_handle_t *buffer = static_cast<native_handle_t *>(output_buffer_info.private_data);
-  SetReadbackBuffer(buffer, -1, post_processed_output);
+  SetReadbackBuffer(buffer, -1, post_processed_output, kCWBClientColor);
   frame_capture_buffer_queued_ = true;
   frame_capture_status_ = -EAGAIN;
 

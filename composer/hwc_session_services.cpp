@@ -839,11 +839,152 @@ Return<int32_t> HWCSession::setDSIClk(uint32_t disp_id, uint64_t bit_clk) {
   return hwc_display_[disp_id]->SetDynamicDSIClock(bit_clk);
 }
 
-Return<int32_t> HWCSession::setCWBOutputBuffer(const ::android::sp<IDisplayCWBCallback> &callback,
+Return<int32_t> HWCSession::setCWBOutputBuffer(const sp<IDisplayCWBCallback> &callback,
                                                uint32_t disp_id, const Rect &rect,
                                                bool post_processed, const hidl_handle& buffer) {
-  return -1;
+  if (!callback || !buffer.getNativeHandle()) {
+    DLOGE("Invalid parameters");
+    return -1;
+  }
+
+  if (disp_id != qdutils::DISPLAY_PRIMARY) {
+    DLOGE("Only supported for primary display at present.");
+    return -1;
+  }
+
+  if (rect.left || rect.top || rect.right || rect.bottom) {
+    DLOGE("Cropping rectangle is not supported.");
+    return -1;
+  }
+
+  // Mutex scope
+  {
+    SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
+    if (!hwc_display_[disp_id]) {
+      DLOGE("Display is not created yet.");
+      return -1;
+    }
+  }
+
+  return cwb_.PostBuffer(callback, post_processed, buffer);
 }
+
+int32_t HWCSession::CWB::PostBuffer(const sp<IDisplayCWBCallback> &callback, bool post_processed,
+                                    const hidl_handle& buffer) {
+  SCOPE_LOCK(queue_lock_);
+
+  // Ensure that async task runs only until all queued CWB requests have been fulfilled.
+  // If cwb queue is empty, async task has not either started or async task has finished
+  // processing previously queued cwb requests. Start new async task on such a case as
+  // currently running async task will automatically desolve without processing more requests.
+  bool post_future = !queue_.size();
+
+  QueueNode *node = new QueueNode(callback, post_processed, buffer);
+  queue_.push(node);
+
+  if (post_future) {
+    // No need to do future.get() here for previously running async task. Async method will
+    // guarantee to exit after cwb for all queued requests is indeed complete i.e. the respective
+    // fences have signaled and client is notified through registered callbacks. This will make
+    // sure that the new async task does not concurrently work with previous task. Let async running
+    // thread dissolve on its own.
+    future_ = std::async(HWCSession::CWB::AsyncTask, this);
+  }
+
+  return 0;
+}
+
+void HWCSession::CWB::ProcessRequests() {
+  HWCDisplay *hwc_display = hwc_session_->hwc_display_[HWC_DISPLAY_PRIMARY];
+  Locker &locker = hwc_session_->locker_[HWC_DISPLAY_PRIMARY];
+
+  while (true) {
+    QueueNode *node = nullptr;
+    int status = 0;
+
+    // Mutex scope
+    // Just check if there is a next cwb request queued, exit the thread if nothing is pending.
+    // Do not keep mutex locked so that client can freely queue more jobs to the current thread.
+    {
+      SCOPE_LOCK(queue_lock_);
+      if (!queue_.size()) {
+        break;
+      }
+
+      node = queue_.front();
+    }
+
+    // Configure cwb parameters, trigger refresh, wait for commit, get the release fence and
+    // wait for fence to signal.
+
+    // Mutex scope
+    // Wait for previous commit to finish before configuring next buffer.
+    {
+      SEQUENCE_WAIT_SCOPE_LOCK(locker);
+      if (hwc_display->SetReadbackBuffer(node->buffer.getNativeHandle(), -1, node->post_processed,
+                                            kCWBClientExternal) != HWC2::Error::None) {
+        DLOGE("CWB buffer could not be set.");
+        status = -1;
+      }
+    }
+
+    if (!status) {
+      hwc_session_->Refresh(HWC_DISPLAY_PRIMARY);
+
+      std::unique_lock<std::mutex> lock(mutex_);
+      cv_.wait(lock);
+
+      int release_fence = -1;
+      // Mutex scope
+      {
+        SCOPE_LOCK(locker);
+        hwc_display->GetReadbackBufferFence(&release_fence);
+      }
+
+      if (release_fence >= 0) {
+        status = sync_wait(release_fence, 1000);
+      } else {
+        DLOGE("CWB release fence could not be retrieved.");
+        status = -1;
+      }
+    }
+
+    // Notify client about buffer status and erase the node from pending request queue.
+    if (!status) {
+      node->callback->onBufferReady(node->buffer);
+    } else {
+      node->callback->onBufferError(node->buffer);
+    }
+
+    delete node;
+
+    // Mutex scope
+    // Make sure to exit here, if queue becomes empty after erasing current node from queue,
+    // so that the current async task does not operate concurrently with a new future task.
+    {
+      SCOPE_LOCK(queue_lock_);
+      queue_.pop();
+
+      if (!queue_.size()) {
+        break;
+      }
+    }
+  }
+}
+
+void HWCSession::CWB::AsyncTask(CWB *cwb) {
+  cwb->ProcessRequests();
+}
+
 #endif  // DISPLAY_CONFIG_1_10
+
+void HWCSession::CWB::PresentDisplayDone(hwc2_display_t disp_id) {
+  if (disp_id != HWC_DISPLAY_PRIMARY) {
+    return;
+  }
+
+  std::unique_lock<std::mutex> lock(mutex_);
+  cv_.notify_one();
+}
 
 }  // namespace sdm

@@ -67,6 +67,15 @@ enum SecureSessionType {
   kSecureMax,
 };
 
+// CWB client currently using the block
+enum CWBClient {
+  kCWBClientNone,       // No client connected
+  kCWBClientFrameDump,  // Dump to file
+  kCWBClientColor,      // Internal client i.e. Color Manager
+  kCWBClientExternal,   // External client calling through private APIs
+  kCWBClientComposer,   // Client to HWC i.e. SurfaceFlinger
+};
+
 class HWCColorMode {
  public:
   explicit HWCColorMode(DisplayInterface *display_intf);
@@ -178,7 +187,7 @@ class HWCDisplay : public DisplayEventHandler {
     return kErrorNotSupported;
   }
   virtual HWC2::Error SetReadbackBuffer(const native_handle_t *buffer, int32_t acquire_fence,
-                                        bool post_processed_output) {
+                                        bool post_processed_output, CWBClient client) {
     return HWC2::Error::Unsupported;
   }
   virtual HWC2::Error GetReadbackBufferFence(int32_t *release_fence) {
