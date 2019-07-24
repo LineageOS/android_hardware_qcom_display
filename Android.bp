@@ -11,6 +11,9 @@ cc_defaults {
     }) + select(soong_config_variable("qtidisplay", "master_side_cp"), {
         "true": ["-DMASTER_SIDE_CP"],
         default: [],
+    }) + select(soong_config_variable("qtidisplay", "display_config_variable_info_has_pixel_formats"), {
+        "true": ["-DDISPLAY_CONFIG_VARIABLE_INFO_HAS_PIXEL_FORMATS"],
+        default: [],
     }),
     shared_libs: [
         "liblog",
