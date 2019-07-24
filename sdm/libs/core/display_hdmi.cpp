@@ -35,6 +35,10 @@
 
 #define __CLASS__ "DisplayHDMI"
 
+#define FMT_RGB 1
+#define FMT_ONLY_YUV 2
+#define FMT_RGB_YUV 3
+
 namespace sdm {
 
 DisplayHDMI::DisplayHDMI(DisplayEventHandler *event_handler, HWInfoInterface *hw_info_intf,
@@ -269,16 +273,30 @@ uint32_t DisplayHDMI::GetBestConfig(HWS3DMode s3d_mode) {
       if (!attrib[index].s3d_config[s3d_mode])
         continue;
 
-      // From the available configs, select the best
-      // Ex: 1920x1080@60Hz is better than 1920x1080@30 and 1920x1080@30 is better than 1280x720@60
-      if (attrib[index].y_pixels > attrib[best_index].y_pixels) {
+      uint32_t best_clock_khz = attrib[best_index].pixel_formats == FMT_ONLY_YUV ?
+               attrib[best_index].clock_khz/2 : attrib[best_index].clock_khz;
+      uint32_t current_clock_khz = attrib[index].pixel_formats == FMT_ONLY_YUV ?
+               attrib[index].clock_khz/2 : attrib[index].clock_khz;
+      if (current_clock_khz > best_clock_khz) {
+        DLOGI("Best index = %d .Best pixel clock = %d .Previous best was %d",
+              index,current_clock_khz,best_clock_khz);
         best_index = UINT32(index);
-      } else if (attrib[index].y_pixels == attrib[best_index].y_pixels) {
+      } else if (current_clock_khz == best_clock_khz) {
         if (attrib[index].x_pixels > attrib[best_index].x_pixels) {
+          DLOGI("Best index = %d .Best xpixel  = %d .Previous best was %d",
+                index,attrib[index].x_pixels,attrib[best_index].x_pixels);
           best_index = UINT32(index);
         } else if (attrib[index].x_pixels == attrib[best_index].x_pixels) {
-          if (attrib[index].vsync_period_ns < attrib[best_index].vsync_period_ns) {
+          if (attrib[index].y_pixels > attrib[best_index].y_pixels) {
+            DLOGI("Best index = %d .Best ypixel  = %d .Previous best was %d",
+                   index,attrib[index].y_pixels,attrib[best_index].y_pixels);
             best_index = UINT32(index);
+          } else if (attrib[index].y_pixels == attrib[best_index].y_pixels) {
+            if (attrib[index].vsync_period_ns < attrib[best_index].vsync_period_ns) {
+              DLOGI("Best index = %d .Best vsync_period  = %d .Previous best was %d",
+                    index,attrib[index].vsync_period_ns,attrib[best_index].vsync_period_ns);
+              best_index = UINT32(index);
+            }
           }
         }
       }
