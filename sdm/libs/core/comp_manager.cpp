@@ -489,7 +489,8 @@ DisplayError CompManager::ValidateAndSetCursorPosition(Handle display_ctx, HWLay
 }
 
 DisplayError CompManager::SetMaxBandwidthMode(HWBwModes mode) {
-  if ((!hw_res_info_.has_dyn_bw_support) || (mode >= kBwModeMax)) {
+  SCOPE_LOCK(locker_);
+  if (mode >= kBwModeMax) {
     return kErrorNotSupported;
   }
 
@@ -551,8 +552,8 @@ bool CompManager::SetDisplayState(Handle display_ctx, DisplayState state) {
 
   case kStateOn:
   case kStateDoze:
-    // Get active display count.
-    if (powered_on_displays_.size()) {
+    // Setting safe mode if there are multiple displays and one of display is already active.
+    if ((registered_displays_.size() > 1) && powered_on_displays_.size()) {
       safe_mode_ = true;
       DLOGV_IF(kTagCompManager, "safe_mode = %d", safe_mode_);
     }
@@ -626,6 +627,13 @@ void CompManager::UpdateStrategyConstraints(bool is_primary, bool disabled) {
   // Allow builtin display to use all pipes when primary is suspended.
   // Restore it back to 2 after primary poweron.
   max_sde_builtin_layers_ = (disabled && (powered_on_displays_.size() <= 1)) ? kMaxSDELayers : 2;
+}
+
+bool CompManager::CanSkipValidate(Handle display_ctx) {
+  DisplayCompositionContext *display_comp_ctx =
+      reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+
+  return display_comp_ctx->strategy->CanSkipValidate();
 }
 
 }  // namespace sdm

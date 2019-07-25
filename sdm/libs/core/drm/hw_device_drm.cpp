@@ -261,7 +261,9 @@ static void GetDRMFormat(LayerBufferFormat format, uint32_t *drm_format,
 
 class FrameBufferObject : public LayerBufferObject {
  public:
-  explicit FrameBufferObject(uint32_t fb_id) : fb_id_(fb_id) {
+  explicit FrameBufferObject(uint32_t fb_id, LayerBufferFormat format,
+                             uint32_t width, uint32_t height)
+    :fb_id_(fb_id), format_(format), width_(width), height_(height) {
   }
 
   ~FrameBufferObject() {
@@ -273,9 +275,15 @@ class FrameBufferObject : public LayerBufferObject {
     }
   }
   uint32_t GetFbId() { return fb_id_; }
+  bool IsEqual(LayerBufferFormat format, uint32_t width, uint32_t height) {
+    return (format == format_ && width == width_ && height == height_);
+  }
 
  private:
   uint32_t fb_id_;
+  LayerBufferFormat format_;
+  uint32_t width_;
+  uint32_t height_;
 };
 
 HWDeviceDRM::Registry::Registry(BufferAllocator *buffer_allocator) :
@@ -343,9 +351,16 @@ void HWDeviceDRM::Registry::MapBufferToFbId(Layer* layer, LayerBuffer* buffer) {
     // In legacy path, clear fb_id map in each frame.
     layer->buffer_map->buffer_map.clear();
   } else {
-    if (layer->buffer_map->buffer_map.find(handle_id) != layer->buffer_map->buffer_map.end()) {
-      // Found fb_id for given handle_id key
-      return;
+    auto it = layer->buffer_map->buffer_map.find(handle_id);
+    if (it != layer->buffer_map->buffer_map.end()) {
+      FrameBufferObject *fb_obj = static_cast<FrameBufferObject*>(it->second.get());
+      if (fb_obj->IsEqual(buffer->format, buffer->width, buffer->height)) {
+        // Found fb_id for given handle_id key
+        return;
+      } else {
+        // Erase from fb_id map if format or size have been modified
+        layer->buffer_map->buffer_map.erase(it);
+      }
     }
 
     if (layer->buffer_map->buffer_map.size() >= fbid_cache_limit_) {
@@ -357,7 +372,8 @@ void HWDeviceDRM::Registry::MapBufferToFbId(Layer* layer, LayerBuffer* buffer) {
   uint32_t fb_id = 0;
   if (CreateFbId(buffer, &fb_id) >= 0) {
     // Create and cache the fb_id in map
-    layer->buffer_map->buffer_map[handle_id] = std::make_shared<FrameBufferObject>(fb_id);
+    layer->buffer_map->buffer_map[handle_id] = std::make_shared<FrameBufferObject>(fb_id,
+        buffer->format, buffer->width, buffer->height);
   }
 }
 
@@ -371,8 +387,14 @@ void HWDeviceDRM::Registry::MapOutputBufferToFbId(LayerBuffer *output_buffer) {
     // In legacy path, clear output buffer map in each frame.
     output_buffer_map_.clear();
   } else {
-    if (output_buffer_map_.find(handle_id) != output_buffer_map_.end()) {
-      return;
+    auto it = output_buffer_map_.find(handle_id);
+    if (it != output_buffer_map_.end()) {
+      FrameBufferObject *fb_obj = static_cast<FrameBufferObject*>(it->second.get());
+      if (fb_obj->IsEqual(output_buffer->format, output_buffer->width, output_buffer->height)) {
+        return;
+      } else {
+        output_buffer_map_.erase(it);
+      }
     }
 
     if (output_buffer_map_.size() >= UI_FBID_LIMIT) {
@@ -383,7 +405,8 @@ void HWDeviceDRM::Registry::MapOutputBufferToFbId(LayerBuffer *output_buffer) {
 
   uint32_t fb_id = 0;
   if (CreateFbId(output_buffer, &fb_id) >= 0) {
-    output_buffer_map_[handle_id] = std::make_shared<FrameBufferObject>(fb_id);
+    output_buffer_map_[handle_id] = std::make_shared<FrameBufferObject>(fb_id,
+        output_buffer->format, output_buffer->width, output_buffer->height);
   }
 }
 
@@ -769,7 +792,7 @@ void HWDeviceDRM::GetHWDisplayPortAndMode() {
       interface_str_ = "Virtual";
       break;
     case DRM_MODE_CONNECTOR_DisplayPort:
-      // TODO(user): Add when available
+      hw_panel_info_.port = kPortDP;
       interface_str_ = "DisplayPort";
       break;
   }
@@ -805,6 +828,18 @@ DisplayError HWDeviceDRM::SetDisplayAttributes(uint32_t index) {
   if (index >= display_attributes_.size()) {
     DLOGE("Invalid mode index %d mode size %d", index, UINT32(display_attributes_.size()));
     return kErrorParameters;
+  }
+
+  drmModeModeInfo to_set = connector_info_.modes[index].mode;
+  uint64_t current_bit_clk = connector_info_.modes[current_mode_index_].bit_clk_rate;
+  for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
+    if ((to_set.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
+        (to_set.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
+        (to_set.vrefresh == connector_info_.modes[mode_index].mode.vrefresh) &&
+        (current_bit_clk == connector_info_.modes[mode_index].bit_clk_rate)) {
+      index = mode_index;
+      break;
+    }
   }
 
   current_mode_index_ = index;
@@ -894,7 +929,7 @@ DisplayError HWDeviceDRM::Doze(const HWQosData &qos_data, int *release_fence) {
 
   if (!first_cycle_) {
     pending_doze_ = true;
-    return kErrorNone;
+    return kErrorDeferred;
   }
 
   SetQOSData(qos_data);
@@ -1200,7 +1235,8 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
                               topology_control_);
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
-    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
+    DRMPowerMode power_mode = pending_doze_ ? DRMPowerMode::DOZE : DRMPowerMode::ON;
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, power_mode);
   } else if (pending_doze_ && !validate) {
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::DOZE);
@@ -1444,12 +1480,14 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   first_cycle_ = false;
   update_mode_ = false;
   hw_layers->updates_mask = 0;
+  pending_doze_ = false;
 
   return kErrorNone;
 }
 
 DisplayError HWDeviceDRM::Flush(HWLayers *hw_layers) {
   ClearSolidfillStages();
+  ResetROI();
   int ret = NullCommit(secure_display_active_ /* synchronous */, false /* retain_planes*/);
   if (ret) {
     DLOGE("failed with error %d", ret);

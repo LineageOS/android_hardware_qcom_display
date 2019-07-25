@@ -152,7 +152,20 @@ enum HwHdrEotf {
   kHdrEOTFHLG = 0x8,
 };
 
+enum HwColorspace {
+  kColorspaceXvycc601     = (1 << 0),
+  kColorspaceXvycc709     = (1 << 1),
+  kColorspaceSycc601      = (1 << 2),
+  kColorspaceAdobeycc601  = (1 << 3),
+  kColorspaceAdobergb     = (1 << 4),
+  kColorspaceBt2020cycc   = (1 << 5),
+  kColorspaceBt2020ycc    = (1 << 6),
+  kColorspaceBt2020rgb    = (1 << 7),
+  kColorspaceDcip3        = (1 << 15)
+};
+
 enum HWSrcTonemap {
+  kSrcTonemapNone,
   kSrcTonemap1d,  // DMA
   kSrcTonemap3d,  // VIG
 };
@@ -194,7 +207,7 @@ class PPFeatureInfo {
 };
 
 struct HWDynBwLimitInfo {
-  uint32_t cur_mode = kBwDefault;
+  uint32_t cur_mode = kBwVFEOn;
   uint64_t total_bw_limit[kBwModeMax] = { 0 };
   uint64_t pipe_bw_limit[kBwModeMax] = { 0 };
 };
@@ -270,6 +283,7 @@ struct HWResourceInfo {
   uint32_t max_rotation_pipe_width = 1088;
   uint32_t max_cursor_size = 0;
   uint64_t max_pipe_bw =  0;
+  uint64_t max_pipe_bw_high = 0;
   uint32_t max_sde_clk = 0;
   float clk_fudge_factor = 1.0f;
   uint32_t macrotile_nv12_factor = 0;
@@ -283,7 +297,6 @@ struct HWResourceInfo {
   bool has_decimation = false;
   bool has_non_scalar_rgb = false;
   bool is_src_split = false;
-  bool has_dyn_bw_support = false;
   bool separate_rotator = false;
   bool has_qseed3 = false;
   bool has_concurrent_writeback = false;
@@ -372,6 +385,7 @@ struct HWPanelInfo {
   bool qsync_support = false;          // Specifies panel supports qsync feature or not.
   bool dyn_bitclk_support = false;     // Bit clk can be updated to avoid RF interference.
   std::vector<uint64_t> bitclk_rates;  // Supported bit clk levels.
+  uint32_t supported_colorspaces = 0;  // supported_colorspaces for DP displays.
 
   bool operator !=(const HWPanelInfo &panel_info) {
     return ((port != panel_info.port) || (mode != panel_info.mode) ||
@@ -588,6 +602,7 @@ struct HWPipeInfo {
   HWPipeCscInfo dgm_csc_info = {};
   std::vector<HWPipeTonemapLutInfo> lut_info = {};
   LayerTransform transform;
+  HWSrcTonemap tonemap = kSrcTonemapNone;
 };
 
 struct HWSolidfillStage {

@@ -276,6 +276,7 @@ DisplayError HWPeripheralDRM::GetDppsFeatureInfo(void *payload, size_t size) {
     return kErrorParameters;
   }
   DRMDppsFeatureInfo *feature_info = reinterpret_cast<DRMDppsFeatureInfo *>(payload);
+  feature_info->obj_id = token_.crtc_id;
   drm_mgr_intf_->GetDppsFeatureInfo(feature_info);
   return kErrorNone;
 }
@@ -514,6 +515,11 @@ DisplayError HWPeripheralDRM::SetFrameTrigger(FrameTriggerMode mode) {
 }
 
 DisplayError HWPeripheralDRM::SetPanelBrightness(int level) {
+  if (pending_doze_) {
+    DLOGI("Doze state pending!! Skip for now");
+    return kErrorDeferred;
+  }
+
   char buffer[kMaxSysfsCommandLength] = {0};
 
   if (brightness_base_path_.empty()) {

@@ -36,6 +36,8 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <set>
+#include <mutex>
 
 #include "drm_interface.h"
 #include "drm_utils.h"
@@ -101,8 +103,7 @@ class DRMCrtcManager {
   void DeInit() {}
   void DumpAll();
   void DumpByID(uint32_t id);
-  int Reserve(DRMDisplayType disp_type, DRMDisplayToken *token);
-  int Reserve(int32_t display_id, DRMDisplayToken *token);
+  int Reserve(const std::set<uint32_t> &possible_crtc_indices, DRMDisplayToken *token);
   void Free(DRMDisplayToken *token);
   void Perform(DRMOps code, uint32_t obj_id, drmModeAtomicReq *req, va_list args);
   int GetCrtcInfo(uint32_t crtc_id, DRMCrtcInfo *info);
@@ -119,6 +120,7 @@ class DRMCrtcManager {
   uint32_t dir_lut_blob_id_ = 0;
   uint32_t cir_lut_blob_id_ = 0;
   uint32_t sep_lut_blob_id_ = 0;
+  std::mutex lock_;
 };
 
 }  // namespace sde_drm

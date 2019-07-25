@@ -186,6 +186,11 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
   if (error != kErrorNone) {
     return error;
   }
+  if (pending_brightness_) {
+    buffer_sync_handler_->SyncWait(layer_stack->retire_fence_fd);
+    SetPanelBrightness(cached_brightness_);
+    pending_brightness_ = false;
+  }
 
   if (commit_event_enabled_) {
     dpps_info_.DppsNotifyOps(kDppsCommitEvent, &display_type_, sizeof(display_type_));
@@ -280,7 +285,7 @@ DisplayError DisplayBuiltIn::SetDisplayMode(uint32_t mode) {
 }
 
 DisplayError DisplayBuiltIn::SetPanelBrightness(float brightness) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  lock_guard<recursive_mutex> obj(brightness_lock_);
 
   if (brightness != -1.0f && !(0.0f <= brightness && brightness <= 1.0f)) {
     DLOGE("Bad brightness value = %f", brightness);
@@ -292,7 +297,7 @@ DisplayError DisplayBuiltIn::SetPanelBrightness(float brightness) {
   }
 
   // -1.0f = off, 0.0f = min, 1.0f = max
-  level_remainder_ = 0.0f;
+  float level_remainder = 0.0f;
   int level = 0;
   if (brightness == -1.0f) {
     level = 0;
@@ -306,13 +311,21 @@ DisplayError DisplayBuiltIn::SetPanelBrightness(float brightness) {
     }
     float t = (brightness * (max - min)) + min;
     level = static_cast<int>(t);
-    level_remainder_ = t - level;
+    level_remainder = t - level;
   }
 
-  DisplayError err = kErrorNone;
-  if ((err = hw_intf_->SetPanelBrightness(level)) == kErrorNone) {
+  DisplayError err = hw_intf_->SetPanelBrightness(level);
+  if (err == kErrorNone) {
+    level_remainder_ = level_remainder;
     DLOGI_IF(kTagDisplay, "Setting brightness to level %d (%f percent)", level,
              brightness * 100);
+  } else if (err == kErrorDeferred) {
+    // TODO(user): I8508d64a55c3b30239c6ed2886df391407d22f25 causes mismatch between perceived
+    // power state and actual panel power state. Requires a rework. Below check will set up
+    // deferment of brightness operation if DAL reports defer use case.
+    cached_brightness_ = brightness;
+    pending_brightness_ = true;
+    return kErrorNone;
   }
 
   return err;
@@ -428,7 +441,7 @@ void DisplayBuiltIn::HwRecovery(const HWRecoveryEvent sdm_event_code) {
 }
 
 DisplayError DisplayBuiltIn::GetPanelBrightness(float *brightness) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  lock_guard<recursive_mutex> obj(brightness_lock_);
 
   DisplayError err = kErrorNone;
   int level = 0;
@@ -557,6 +570,9 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
       info = reinterpret_cast<DppsDisplayInfo *>(payload);
       info->width = display_attributes_.x_pixels;
       info->height = display_attributes_.y_pixels;
+      info->is_primary = IsPrimaryDisplay();
+      info->display_id = display_id_;
+      info->display_type = display_type_;
       break;
     default:
       DLOGE("Invalid input op %d", op);
@@ -584,55 +600,74 @@ DisplayError DisplayBuiltIn::SetFrameTriggerMode(FrameTriggerMode mode) {
   return kErrorNone;
 }
 
+DppsInterface* DppsInfo::dpps_intf_ = NULL;
+std::vector<int32_t> DppsInfo::display_id_ = {};
+
 void DppsInfo::Init(DppsPropIntf *intf, const std::string &panel_name) {
+  std::lock_guard<std::mutex> guard(lock_);
   int error = 0;
 
-  if (dpps_initialized_) {
+  if (!intf) {
+    DLOGE("Invalid intf is null");
     return;
   }
 
-  if (!dpps_impl_lib.Open(kDppsLib)) {
-    DLOGW("Failed to load Dpps lib %s", kDppsLib);
-    goto exit;
-  }
-
-  if (!dpps_impl_lib.Sym("GetDppsInterface", reinterpret_cast<void **>(&GetDppsInterface))) {
-    DLOGE("GetDppsInterface not found!, err %s", dlerror());
-    goto exit;
-  }
-
-  dpps_intf = GetDppsInterface();
-  if (!dpps_intf) {
-    DLOGE("Failed to get Dpps Interface!");
-    goto exit;
-  }
-
-  error = dpps_intf->Init(intf, panel_name);
-  if (!error) {
-    DLOGI("DPPS Interface init successfully");
-    dpps_initialized_ = true;
+  DppsDisplayInfo info_payload = {};
+  DisplayError ret = intf->DppsProcessOps(kDppsGetDisplayInfo, &info_payload, sizeof(info_payload));
+  if (ret != kErrorNone) {
+    DLOGE("Get display information failed, ret %d", ret);
     return;
-  } else {
+  }
+
+  if (std::find(display_id_.begin(), display_id_.end(), info_payload.display_id)
+    != display_id_.end()) {
+    return;
+  }
+  DLOGI("Ready to register display id %d ", info_payload.display_id);
+
+  if (!dpps_intf_) {
+    if (!dpps_impl_lib_.Open(kDppsLib_)) {
+      DLOGW("Failed to load Dpps lib %s", kDppsLib_);
+      goto exit;
+    }
+
+    if (!dpps_impl_lib_.Sym("GetDppsInterface", reinterpret_cast<void **>(&GetDppsInterface))) {
+      DLOGE("GetDppsInterface not found!, err %s", dlerror());
+      goto exit;
+    }
+
+    dpps_intf_ = GetDppsInterface();
+    if (!dpps_intf_) {
+      DLOGE("Failed to get Dpps Interface!");
+      goto exit;
+    }
+  }
+  error = dpps_intf_->Init(intf, panel_name);
+  if (error) {
     DLOGE("DPPS Interface init failure with err %d", error);
+    goto exit;
   }
+
+  display_id_.push_back(info_payload.display_id);
+  DLOGI("Register display id %d successfully", info_payload.display_id);
+  return;
 
 exit:
   Deinit();
-  dpps_intf = new DppsDummyImpl();
-  dpps_initialized_ = true;
+  dpps_intf_ = new DppsDummyImpl();
 }
 
 void DppsInfo::Deinit() {
-  if (dpps_intf) {
-    dpps_intf->Deinit();
-    dpps_intf = NULL;
+  if (dpps_intf_) {
+    dpps_intf_->Deinit();
+    dpps_intf_ = NULL;
   }
-  dpps_impl_lib.~DynLib();
+  dpps_impl_lib_.~DynLib();
 }
 
 void DppsInfo::DppsNotifyOps(enum DppsNotifyOps op, void *payload, size_t size) {
   int ret = 0;
-  ret = dpps_intf->DppsNotifyOps(op, payload, size);
+  ret = dpps_intf_->DppsNotifyOps(op, payload, size);
   if (ret)
     DLOGE("DppsNotifyOps op %d error %d", op, ret);
 }
@@ -742,6 +777,11 @@ void DisplayBuiltIn::ResetPanel() {
   if (status != kErrorNone) {
     DLOGE("Enable vsync failed for display id = %d with error = %d", display_id_, status);
   }
+}
+
+DisplayError DisplayBuiltIn::GetRefreshRate(uint32_t *refresh_rate) {
+  *refresh_rate = current_refresh_rate_;
+  return kErrorNone;
 }
 
 }  // namespace sdm

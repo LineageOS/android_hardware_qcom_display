@@ -44,6 +44,7 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+#include <algorithm>
 
 #include "drm_utils.h"
 #include "drm_plane.h"
@@ -59,6 +60,10 @@ using std::vector;
 using std::unique_ptr;
 using std::tuple;
 using std::stringstream;
+using std::mutex;
+using std::lock_guard;
+
+#define MAX_SCALER_LINEWIDTH 2560
 
 static struct sde_drm_csc_v1 csc_10bit_convert[kCscTypeMax] = {
   [kCscYuv2Rgb601L] = {
@@ -266,6 +271,7 @@ void DRMPlaneManager::Perform(DRMOps code, uint32_t obj_id, drmModeAtomicReq *re
 }
 
 void DRMPlaneManager::Perform(DRMOps code, drmModeAtomicReq *req, uint32_t obj_id, ...) {
+  lock_guard<mutex> lock(lock_);
   va_list args;
   va_start(args, obj_id);
   Perform(code, obj_id, req, args);
@@ -287,6 +293,7 @@ void DRMPlaneManager::GetPlanesInfo(DRMPlanesInfo *info) {
 void DRMPlaneManager::UnsetUnusedPlanes(uint32_t crtc_id, drmModeAtomicReq *req) {
   // Unset planes that were assigned to the crtc referred to by crtc_id but are not requested
   // in this round
+  lock_guard<mutex> lock(lock_);
   for (auto &plane : plane_pool_) {
     uint32_t assigned_crtc = 0;
     uint32_t requested_crtc = 0;
@@ -312,12 +319,14 @@ void DRMPlaneManager::RetainPlanes(uint32_t crtc_id) {
 }
 
 void DRMPlaneManager::PostValidate(uint32_t crtc_id, bool success) {
+  lock_guard<mutex> lock(lock_);
   for (auto &plane : plane_pool_) {
     plane.second->PostValidate(crtc_id, success);
   }
 }
 
 void DRMPlaneManager::PostCommit(uint32_t crtc_id, bool success) {
+  lock_guard<mutex> lock(lock_);
   DRM_LOGD("crtc %d", crtc_id);
   for (auto &plane : plane_pool_) {
     plane.second->PostCommit(crtc_id, success);
@@ -378,7 +387,7 @@ void DRMPlane::GetTypeInfo(const PropertyMap &prop_map) {
 
   const char *fmt_str = reinterpret_cast<const char *>(blob->data);
   info->max_linewidth = 2560;
-  info->max_scaler_linewidth = 2560;
+  info->max_scaler_linewidth = MAX_SCALER_LINEWIDTH;
   info->max_upscale = 1;
   info->max_downscale = 1;
   info->max_horizontal_deci = 0;
@@ -403,6 +412,7 @@ void DRMPlane::GetTypeInfo(const PropertyMap &prop_map) {
   string max_vertical_deci = "max_vertical_deci=";
   string master_plane_id = "primary_smart_plane_id=";
   string max_pipe_bw = "max_per_pipe_bw=";
+  string max_pipe_bw_high = "max_per_pipe_bw_high=";
   string scaler_version = "scaler_step_ver=";
   string block_sec_ui = "block_sec_ui=";
   string true_inline_rot_rev = "true_inline_rot_rev=";
@@ -435,6 +445,8 @@ void DRMPlane::GetTypeInfo(const PropertyMap &prop_map) {
       DRM_LOGI("info->master_plane_id: detected master_plane=%d", info->master_plane_id);
     } else if (line.find(max_pipe_bw) != string::npos) {
       info->max_pipe_bandwidth = std::stoull(line.erase(0, max_pipe_bw.length()));
+    } else if (line.find(max_pipe_bw_high) != string::npos) {
+      info->max_pipe_bandwidth_high = std::stoull(line.erase(0, max_pipe_bw_high.length()));
     } else if (line.find(scaler_version) != string::npos) {
       info->qseed3_version =
         PopulateQseedStepVersion(std::stoi(line.erase(0, scaler_version.length())));
@@ -454,8 +466,11 @@ void DRMPlane::GetTypeInfo(const PropertyMap &prop_map) {
     }
   }
 
-  info->max_scaler_linewidth = (QSEEDStepVersion::V4 == info->qseed3_version) ? 2560 :
-                                info->max_linewidth;
+// TODO(user): Get max_scaler_linewidth and non_scaler_linewidth from driver
+// max_linewidth can be smaller than 2560 for few target, so make sure to assign the minimum of both
+  info->max_scaler_linewidth = (info->qseed3_version < QSEEDStepVersion::V4) ? info->max_linewidth :
+                               std::min((uint32_t)MAX_SCALER_LINEWIDTH, info->max_linewidth);
+
   drmModeFreePropertyBlob(blob);
 }
 

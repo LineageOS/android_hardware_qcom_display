@@ -58,6 +58,7 @@ class DRMEncoder {
    drm_encoder_ ? *encoder_id = drm_encoder_->encoder_id
       : *encoder_id = fake_id_;
   }
+  int GetPossibleCrtcIndices(std::set<uint32_t> *possible_crtc_indices);
   void Dump();
   void Lock();
   void Unlock();
@@ -83,10 +84,11 @@ class DRMEncoderManager {
   void DeInit() {}
   void DumpAll();
   void DumpByID(uint32_t id);
-  int Reserve(std::set<uint32_t> possible_encoders, DRMDisplayToken *token);
+  int Reserve(const std::set<uint32_t> &possible_encoders, DRMDisplayToken *token);
   void Free(DRMDisplayToken *token);
   int GetEncoderInfo(uint32_t encoder_id, DRMEncoderInfo *info);
   int GetEncoderList(std::vector<uint32_t> *encoder_ids);
+  int GetPossibleCrtcIndices(uint32_t encoder_id, std::set<uint32_t> *possible_crtc_indices);
 
  private:
   int fd_ = -1;

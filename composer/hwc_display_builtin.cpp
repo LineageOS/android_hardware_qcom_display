@@ -120,10 +120,10 @@ int HWCDisplayBuiltIn::Init() {
   color_mode_ = new HWCColorMode(display_intf_);
   color_mode_->Init();
 
-  int drop_refresh = 0;
-  HWCDebugHandler::Get()->GetProperty(ENABLE_DROP_REFRESH, &drop_refresh);
-  enable_drop_refresh_ = (drop_refresh == 1);
-  if (enable_drop_refresh_) {
+  int optimize_refresh = 0;
+  HWCDebugHandler::Get()->GetProperty(ENABLE_OPTIMIZE_REFRESH, &optimize_refresh);
+  enable_optimize_refresh_ = (optimize_refresh == 1);
+  if (enable_optimize_refresh_) {
     DLOGI("Drop redundant drawcycles %d", id_);
   }
 
@@ -179,10 +179,23 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
   }
 
   uint32_t refresh_rate = GetOptimalRefreshRate(one_updating_layer);
-  bool final_rate = force_refresh_rate_ ? true : false;
-  error = display_intf_->SetRefreshRate(refresh_rate, final_rate);
+  error = display_intf_->SetRefreshRate(refresh_rate, force_refresh_rate_);
+
+  // Get the refresh rate set.
+  display_intf_->GetRefreshRate(&refresh_rate);
+  bool vsync_source = (callbacks_->GetVsyncSource() == id_);
+
   if (error == kErrorNone) {
-    // On success, set current refresh rate to new refresh rate
+    if (vsync_source && (current_refresh_rate_ < refresh_rate)) {
+      DTRACE_BEGIN("HWC2::Vsync::Enable");
+      // Display is ramping up from idle.
+      // Client realizes need for resync upon change in config.
+      // Since we know config has changed, triggering vsync proactively
+      // can help in reducing pipeline delays to enable events.
+      SetVsyncEnabled(HWC2::Vsync::Enable);
+      DTRACE_END();
+    }
+    // On success, set current refresh rate to new refresh rate.
     current_refresh_rate_ = refresh_rate;
   }
 
@@ -220,7 +233,7 @@ bool HWCDisplayBuiltIn::CanSkipCommit() {
   }
 
   bool vsync_source = (callbacks_->GetVsyncSource() == id_);
-  bool skip_commit = enable_drop_refresh_ && !pending_commit_ && !buffers_latched &&
+  bool skip_commit = enable_optimize_refresh_ && !pending_commit_ && !buffers_latched &&
                      !pending_refresh_ && !vsync_source;
   pending_refresh_ = false;
 
@@ -660,40 +673,40 @@ void HWCDisplayBuiltIn::HandleFrameCapture() {
 }
 
 void HWCDisplayBuiltIn::HandleFrameDump() {
-  if (!readback_configured_) {
-    dump_frame_count_ = 0;
-  }
+  if (dump_frame_count_) {
+    int ret = 0;
+    if (output_buffer_.release_fence_fd >= 0) {
+      ret = sync_wait(output_buffer_.release_fence_fd, 1000);
+      if (ret < 0) {
+        DLOGE("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
+      }
+      ::close(output_buffer_.release_fence_fd);
+      output_buffer_.release_fence_fd = -1;
+    }
 
-  if (dump_frame_count_ && output_buffer_.release_fence_fd >= 0) {
-    int ret = sync_wait(output_buffer_.release_fence_fd, 1000);
-    ::close(output_buffer_.release_fence_fd);
-    output_buffer_.release_fence_fd = -1;
-    if (ret < 0) {
-      DLOGE("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
-    } else {
-      DumpOutputBuffer(output_buffer_info_, output_buffer_base_, layer_stack_.retire_fence_fd);
+    if (!ret) {
+       DumpOutputBuffer(output_buffer_info_, output_buffer_base_, layer_stack_.retire_fence_fd);
+       validated_ = false;
+     }
+
+    if (0 == (dump_frame_count_ - 1)) {
+      dump_output_to_file_ = false;
+      // Unmap and Free buffer
+      if (munmap(output_buffer_base_, output_buffer_info_.alloc_buffer_info.size) != 0) {
+        DLOGE("unmap failed with err %d", errno);
+      }
+      if (buffer_allocator_->FreeBuffer(&output_buffer_info_) != 0) {
+        DLOGE("FreeBuffer failed");
+      }
+
       readback_buffer_queued_ = false;
-      validated_ = false;
-    }
-  }
+      post_processed_output_ = false;
+      readback_configured_ = false;
 
-  if (0 == dump_frame_count_) {
-    dump_output_to_file_ = false;
-    // Unmap and Free buffer
-    if (munmap(output_buffer_base_, output_buffer_info_.alloc_buffer_info.size) != 0) {
-      DLOGE("unmap failed with err %d", errno);
+      output_buffer_ = {};
+      output_buffer_info_ = {};
+      output_buffer_base_ = nullptr;
     }
-    if (buffer_allocator_->FreeBuffer(&output_buffer_info_) != 0) {
-      DLOGE("FreeBuffer failed");
-    }
-
-    readback_buffer_queued_ = false;
-    post_processed_output_ = false;
-    readback_configured_ = false;
-
-    output_buffer_ = {};
-    output_buffer_info_ = {};
-    output_buffer_base_ = nullptr;
   }
 }
 
@@ -843,15 +856,11 @@ DisplayError HWCDisplayBuiltIn::ControlIdlePowerCollapse(bool enable, bool synch
 }
 
 DisplayError HWCDisplayBuiltIn::SetDynamicDSIClock(uint64_t bitclk) {
-  {
-    SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[type_]);
-    DisablePartialUpdateOneFrame();
-
-    DisplayError error = display_intf_->SetDynamicDSIClock(bitclk);
-    if (error != kErrorNone) {
-      DLOGE(" failed: Clk: %llu Error: %d", bitclk, error);
-      return error;
-    }
+  DisablePartialUpdateOneFrame();
+  DisplayError error = display_intf_->SetDynamicDSIClock(bitclk);
+  if (error != kErrorNone) {
+    DLOGE(" failed: Clk: %llu Error: %d", bitclk, error);
+    return error;
   }
 
   callbacks_->Refresh(id_);
@@ -861,7 +870,6 @@ DisplayError HWCDisplayBuiltIn::SetDynamicDSIClock(uint64_t bitclk) {
 }
 
 DisplayError HWCDisplayBuiltIn::GetDynamicDSIClock(uint64_t *bitclk) {
-  SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[type_]);
   if (display_intf_) {
     return display_intf_->GetDynamicDSIClock(bitclk);
   }

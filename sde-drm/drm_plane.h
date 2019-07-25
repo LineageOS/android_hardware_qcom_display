@@ -38,6 +38,7 @@
 #include <memory>
 #include <string>
 #include <tuple>
+#include <mutex>
 
 #include "drm_property.h"
 #include "drm_pp_manager.h"
@@ -124,6 +125,7 @@ class DRMPlaneManager {
   uint32_t dir_lut_blob_id_ = 0;
   uint32_t cir_lut_blob_id_ = 0;
   uint32_t sep_lut_blob_id_ = 0;
+  std::mutex lock_;
 };
 
 }  // namespace sde_drm

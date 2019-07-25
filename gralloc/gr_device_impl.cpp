@@ -112,7 +112,7 @@ inline gralloc1_error_t ToError(Error error) {
   }
 }
 
-static uint64_t ProducerUsageToBufferUsage(gralloc1_producer_usage_t producer_usage) {
+static uint64_t ProducerUsageToBufferUsage(uint64_t /*gralloc1_producer_usage_t*/ producer_usage) {
   uint64_t usage = producer_usage & ~(GRALLOC1_PRODUCER_USAGE_CPU_READ_OFTEN |
                                       GRALLOC1_PRODUCER_USAGE_CPU_WRITE_OFTEN);
   if ((producer_usage & GRALLOC1_PRODUCER_USAGE_CPU_READ_OFTEN) ==
@@ -133,7 +133,7 @@ static uint64_t ProducerUsageToBufferUsage(gralloc1_producer_usage_t producer_us
   return usage;
 }
 
-static uint64_t ConsumerUsageToBufferUsage(gralloc1_consumer_usage_t consumer_usage) {
+static uint64_t ConsumerUsageToBufferUsage(uint64_t /*gralloc1_consumer_usage_t*/ consumer_usage) {
   uint64_t usage = consumer_usage & ~(GRALLOC1_CONSUMER_USAGE_CPU_READ_OFTEN);
   if ((consumer_usage & GRALLOC1_CONSUMER_USAGE_CPU_READ_OFTEN) ==
       GRALLOC1_CONSUMER_USAGE_CPU_READ_OFTEN) {
@@ -305,7 +305,7 @@ int32_t GrallocImpl::DestroyBufferDescriptor(gralloc1_device_t *device,
 
 int32_t GrallocImpl::SetConsumerUsage(gralloc1_device_t *device,
                                                gralloc1_buffer_descriptor_t descriptor,
-                                               gralloc1_consumer_usage_t usage) {
+                                               uint64_t /*gralloc1_consumer_usage_t*/ usage) {
   if (!device) {
     return static_cast<int32_t>(GRALLOC1_ERROR_BAD_DESCRIPTOR);
   } else {
@@ -355,7 +355,7 @@ int32_t GrallocImpl::SetLayerCount(gralloc1_device_t *device,
 
 int32_t GrallocImpl::SetProducerUsage(gralloc1_device_t *device,
                                                gralloc1_buffer_descriptor_t descriptor,
-                                               gralloc1_producer_usage_t usage) {
+                                               uint64_t /*gralloc1_producer_usage_t*/ usage) {
   if (!device) {
     return static_cast<int32_t>(GRALLOC1_ERROR_BAD_DESCRIPTOR);
   } else {
@@ -381,14 +381,14 @@ int32_t GrallocImpl::GetBackingStore(gralloc1_device_t *device, buffer_handle_t 
 }
 
 int32_t GrallocImpl::GetConsumerUsage(gralloc1_device_t *device, buffer_handle_t buffer,
-                                               gralloc1_consumer_usage_t *outUsage) {
+                                               uint64_t /*gralloc1_consumer_usage_t*/ *outUsage) {
   if (!outUsage) {
     return static_cast<int32_t>(GRALLOC1_ERROR_BAD_VALUE);
   }
 
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
   if (status == GRALLOC1_ERROR_NONE) {
-    *outUsage = static_cast<gralloc1_consumer_usage_t>(PRIV_HANDLE_CONST(buffer)->GetUsage());
+    *outUsage = static_cast<uint64_t>(PRIV_HANDLE_CONST(buffer)->GetUsage());
   }
 
   return static_cast<int32_t>(status);
@@ -439,14 +439,14 @@ int32_t GrallocImpl::GetLayerCount(gralloc1_device_t *device, buffer_handle_t bu
 }
 
 int32_t GrallocImpl::GetProducerUsage(gralloc1_device_t *device, buffer_handle_t buffer,
-                                               gralloc1_producer_usage_t *outUsage) {
+                                               uint64_t /*gralloc1_producer_usage_t*/ *outUsage) {
   if (!outUsage) {
     return static_cast<int32_t>(GRALLOC1_ERROR_BAD_VALUE);
   }
 
   gralloc1_error_t status = CheckDeviceAndHandle(device, buffer);
   if (status == GRALLOC1_ERROR_NONE) {
-    *outUsage = static_cast<gralloc1_producer_usage_t>(PRIV_HANDLE_CONST(buffer)->GetUsage());
+    *outUsage = static_cast<uint64_t>(PRIV_HANDLE_CONST(buffer)->GetUsage());
   }
 
   return static_cast<int32_t>(status);
@@ -598,8 +598,8 @@ static inline void CloseFdIfValid(int fd) {
 }
 
 int32_t GrallocImpl::LockBuffer(gralloc1_device_t *device, buffer_handle_t buffer,
-                                         gralloc1_producer_usage_t prod_usage,
-                                         gralloc1_consumer_usage_t cons_usage,
+                                         uint64_t /*gralloc1_producer_usage_t*/ prod_usage,
+                                         uint64_t /*gralloc1_consumer_usage_t*/ cons_usage,
                                          const gralloc1_rect_t *region, void **out_data,
                                          int32_t acquire_fence) {
   ATRACE_CALL();
@@ -640,8 +640,8 @@ int32_t GrallocImpl::LockBuffer(gralloc1_device_t *device, buffer_handle_t buffe
 }
 
 int32_t GrallocImpl::LockFlex(gralloc1_device_t *device, buffer_handle_t buffer,
-                                       gralloc1_producer_usage_t prod_usage,
-                                       gralloc1_consumer_usage_t cons_usage,
+                                       uint64_t /*gralloc1_producer_usage_t*/ prod_usage,
+                                       uint64_t /*gralloc1_consumer_usage_t*/ cons_usage,
                                        const gralloc1_rect_t *region,
                                        struct android_flex_layout *out_flex_layout,
                                        int32_t acquire_fence) {

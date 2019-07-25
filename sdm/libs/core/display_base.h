@@ -153,6 +153,8 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError SetFrameTriggerMode(FrameTriggerMode mode) {
     return kErrorNotSupported;
   }
+  virtual DisplayError GetRefreshRate(uint32_t *refresh_rate) { return kErrorNotSupported; }
+  virtual bool CanSkipValidate();
 
  protected:
   const char *kBt2020Pq = "bt2020_pq";
@@ -187,6 +189,7 @@ class DisplayBase : public DisplayInterface {
   bool IsHdrMode(const AttrVal &attr);
   void InsertBT2020PqHlgModes();
   DisplayError HandlePendingVSyncEnable(int32_t retire_fence);
+  DisplayError ResetPendingDoze(int32_t retire_fence);
 
   recursive_mutex recursive_mutex_;
   int32_t display_id_ = -1;
@@ -238,6 +241,7 @@ class DisplayBase : public DisplayInterface {
   DisplayState power_state_pending_ = kStateOff;
   bool vsync_enable_pending_ = false;
   bool defer_power_state_ = false;
+  bool pending_doze_ = false;
 
   static Locker display_power_reset_lock_;
   static bool display_power_reset_pending_;

@@ -269,7 +269,11 @@ DisplayError DisplayPluggable::VSync(int64_t timestamp) {
 
 DisplayError DisplayPluggable::InitializeColorModes() {
   PrimariesTransfer pt = {};
-  AttrVal var;
+  AttrVal var = {};
+  if (hw_panel_info_.supported_colorspaces) {
+    InitializeColorModesFromColorspace();
+  }
+
   if (!hw_panel_info_.hdr_enabled) {
     return kErrorNone;
   } else {
@@ -277,24 +281,19 @@ DisplayError DisplayPluggable::InitializeColorModes() {
     var.push_back(std::make_pair(kColorGamutAttribute, kSrgb));
     var.push_back(std::make_pair(kDynamicRangeAttribute, kSdr));
     var.push_back(std::make_pair(kPictureQualityAttribute, kStandard));
+    var.push_back(std::make_pair(kRenderIntentAttribute, "0"));
     color_mode_attr_map_.insert(std::make_pair(kSrgb, var));
 
     // native mode
     color_modes_cs_.push_back(pt);
     var.clear();
     color_mode_attr_map_.insert(std::make_pair("hal_native", var));
-
-    pt.primaries = ColorPrimaries_BT2020;
-    pt.transfer = Transfer_sRGB;
-    color_modes_cs_.push_back(pt);
-    var.clear();
-    var.push_back(std::make_pair(kColorGamutAttribute, kBt2020));
-    var.push_back(std::make_pair(kGammaTransferAttribute, kSrgb));
-    color_mode_attr_map_.insert(std::make_pair(kDisplayBt2020, var));
   }
 
   var.clear();
   var.push_back(std::make_pair(kColorGamutAttribute, kBt2020));
+  var.push_back(std::make_pair(kPictureQualityAttribute, kStandard));
+  var.push_back(std::make_pair(kRenderIntentAttribute, "0"));
   if (hw_panel_info_.hdr_eotf & kHdrEOTFHDR10) {
     pt.transfer = Transfer_SMPTE_ST2084;
     var.push_back(std::make_pair(kGammaTransferAttribute, kSt2084));
@@ -314,6 +313,33 @@ DisplayError DisplayPluggable::InitializeColorModes() {
   return kErrorNone;
 }
 
+void DisplayPluggable::InitializeColorModesFromColorspace() {
+  PrimariesTransfer pt = {};
+  AttrVal var = {};
+  if (hw_panel_info_.supported_colorspaces & kColorspaceDcip3) {
+    pt.primaries = ColorPrimaries_DCIP3;
+    pt.transfer = Transfer_sRGB;
+    var.clear();
+    var.push_back(std::make_pair(kColorGamutAttribute, kDcip3));
+    var.push_back(std::make_pair(kGammaTransferAttribute, kSrgb));
+    var.push_back(std::make_pair(kPictureQualityAttribute, kStandard));
+    var.push_back(std::make_pair(kRenderIntentAttribute, "0"));
+    color_modes_cs_.push_back(pt);
+    color_mode_attr_map_.insert(std::make_pair(kDisplayP3, var));
+  }
+  if (hw_panel_info_.supported_colorspaces & kColorspaceBt2020rgb) {
+    pt.primaries = ColorPrimaries_BT2020;
+    pt.transfer = Transfer_sRGB;
+    var.clear();
+    var.push_back(std::make_pair(kColorGamutAttribute, kBt2020));
+    var.push_back(std::make_pair(kGammaTransferAttribute, kSrgb));
+    var.push_back(std::make_pair(kPictureQualityAttribute, kStandard));
+    var.push_back(std::make_pair(kRenderIntentAttribute, "0"));
+    color_modes_cs_.push_back(pt);
+    color_mode_attr_map_.insert(std::make_pair(kDisplayBt2020, var));
+  }
+}
+
 static PrimariesTransfer GetBlendSpaceFromAttributes(const std::string &color_gamut,
                                                      const std::string &transfer) {
   PrimariesTransfer blend_space_ = {};
@@ -326,6 +352,9 @@ static PrimariesTransfer GetBlendSpaceFromAttributes(const std::string &color_ga
     } else if (transfer == kGamma2_2) {
       blend_space_.transfer = Transfer_Gamma2_2;
     }
+  } else if (color_gamut == kDcip3) {
+    blend_space_.primaries = ColorPrimaries_DCIP3;
+    blend_space_.transfer = Transfer_sRGB;
   } else if (color_gamut == kSrgb) {
     blend_space_.primaries = ColorPrimaries_BT709_5;
     blend_space_.transfer = Transfer_sRGB;

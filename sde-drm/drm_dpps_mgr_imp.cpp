@@ -228,6 +228,7 @@ void DRMDppsManagerImp::Init(int fd, drmModeRes* res) {
     }
   }
 
+  memset(&dpps_feature_, 0, sizeof(dpps_feature_));
   dpps_feature_[kFeatureAd4Mode] = DRMDppsPropInfo {
     (prop_mgr_.GetPropertyId(DRMProperty::SDE_DSPP_AD4_MODE) == 0 ? 0U : 4U) /* version */,
     DRMProperty::SDE_DSPP_AD4_MODE, prop_mgr_.GetPropertyId(DRMProperty::SDE_DSPP_AD4_MODE),
@@ -268,36 +269,41 @@ void DRMDppsManagerImp::Init(int fd, drmModeRes* res) {
   dpps_feature_[kFeatureBacklightScale] = DRMDppsPropInfo {1 /* version */,
     DRMProperty::SDE_DSPP_BL_SCALE, prop_mgr_.GetPropertyId(DRMProperty::SDE_DSPP_BL_SCALE),
     false /* is_event */};
-  dpps_feature_[kFeatureLtm] = DRMDppsPropInfo {1 /* version */,
-    DRMProperty::SDE_LTM_VERSION, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_VERSION),
-    false /* is_event */};
-  dpps_feature_[kFeatureLtmInit] = DRMDppsPropInfo {1 /* version */,
-    DRMProperty::SDE_LTM_INIT, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_INIT),
-    false /* is_event */};
-  dpps_feature_[kFeatureLtmCfg] = DRMDppsPropInfo {1 /* version */,
-    DRMProperty::SDE_LTM_CFG, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_CFG),
-    false /* is_event */};
-  dpps_feature_[kFeatureLtmNoiseThresh] = DRMDppsPropInfo {1 /* version */,
-    DRMProperty::SDE_LTM_NOISE_THRESH, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_NOISE_THRESH),
-    false /* is_event */};
-  dpps_feature_[kFeatureLtmBufferCtrl] = DRMDppsPropInfo {1 /* version */,
-    DRMProperty::SDE_LTM_BUFFER_CTRL, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_BUFFER_CTRL),
-    false /* is_event */};
-  dpps_feature_[kFeatureLtmQueueBuffer] = DRMDppsPropInfo {1 /* version */,
-    DRMProperty::SDE_LTM_QUEUE_BUFFER, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_QUEUE_BUFFER),
-    false /* is_event */};
-  dpps_feature_[kFeatureLtmQueueBuffer2] = DRMDppsPropInfo {1 /* version */,
-    DRMProperty::SDE_LTM_QUEUE_BUFFER2, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_QUEUE_BUFFER2),
-    false /* is_event */};
-  dpps_feature_[kFeatureLtmQueueBuffer3] = DRMDppsPropInfo {1 /* version */,
-    DRMProperty::SDE_LTM_QUEUE_BUFFER3, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_QUEUE_BUFFER3),
-    false /* is_event */};
-  dpps_feature_[kFeatureLtmHistCtrl] = DRMDppsPropInfo {1 /* version */,
-    DRMProperty::SDE_LTM_HIST_CTRL, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_HIST_CTRL),
-    false /* is_event */};
-  dpps_feature_[kFeatureLtmVlut] = DRMDppsPropInfo {1 /* version */,
-    DRMProperty::SDE_LTM_VLUT, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_VLUT),
-    false /* is_event */};
+
+  if (prop_mgr_.IsPropertyAvailable(DRMProperty::SDE_LTM_VERSION)) {
+    dpps_feature_[kFeatureLtm] = DRMDppsPropInfo {1 /* version */,
+      DRMProperty::SDE_LTM_VERSION, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_VERSION),
+      false /* is_event */};
+    dpps_feature_[kFeatureLtmInit] = DRMDppsPropInfo {1 /* version */,
+      DRMProperty::SDE_LTM_INIT, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_INIT),
+      false /* is_event */};
+    dpps_feature_[kFeatureLtmCfg] = DRMDppsPropInfo {1 /* version */,
+      DRMProperty::SDE_LTM_CFG, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_CFG),
+      false /* is_event */};
+    dpps_feature_[kFeatureLtmNoiseThresh] = DRMDppsPropInfo {1 /* version */,
+      DRMProperty::SDE_LTM_NOISE_THRESH, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_NOISE_THRESH),
+      false /* is_event */};
+    dpps_feature_[kFeatureLtmBufferCtrl] = DRMDppsPropInfo {1 /* version */,
+      DRMProperty::SDE_LTM_BUFFER_CTRL, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_BUFFER_CTRL),
+      false /* is_event */};
+    dpps_feature_[kFeatureLtmQueueBuffer] = DRMDppsPropInfo {1 /* version */,
+      DRMProperty::SDE_LTM_QUEUE_BUFFER, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_QUEUE_BUFFER),
+      false /* is_event */};
+    dpps_feature_[kFeatureLtmQueueBuffer2] = DRMDppsPropInfo {1 /* version */,
+      DRMProperty::SDE_LTM_QUEUE_BUFFER2, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_QUEUE_BUFFER2),
+      false /* is_event */};
+    dpps_feature_[kFeatureLtmQueueBuffer3] = DRMDppsPropInfo {1 /* version */,
+      DRMProperty::SDE_LTM_QUEUE_BUFFER3, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_QUEUE_BUFFER3),
+      false /* is_event */};
+    dpps_feature_[kFeatureLtmHistCtrl] = DRMDppsPropInfo {1 /* version */,
+      DRMProperty::SDE_LTM_HIST_CTRL, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_HIST_CTRL),
+      false /* is_event */};
+    dpps_feature_[kFeatureLtmVlut] = DRMDppsPropInfo {1 /* version */,
+      DRMProperty::SDE_LTM_VLUT, prop_mgr_.GetPropertyId(DRMProperty::SDE_LTM_VLUT),
+      false /* is_event */};
+  } else {
+    DRM_LOGI("LTM properties are not available");
+  }
 
   dpps_feature_[kFeaturePowerEvent] = DRMDppsPropInfo{1, DRMProperty::INVALID, 0, true /* is_event */};
   dpps_feature_[kFeatureAbaHistEvent] = DRMDppsPropInfo{1, DRMProperty::INVALID, 0, true /* is_event */};
@@ -408,8 +414,11 @@ void DRMDppsManagerImp::GetDppsFeatureInfo(DRMDppsFeatureInfo *info)
       return;
     } else {
       prop_info = &dpps_feature_[kFeatureLtmBufferCtrl];
-      prop_info->obj_id = crtc_id_;
-      prop_info->value = (uint64_t)&ltm_buffers_ctrl_;
+      prop_info->obj_id = info->obj_id;
+      for (const auto& it : ltm_buffers_ctrl_map_) {
+        if (it.first == info->obj_id)
+          prop_info->value = (uint64_t)&(it.second);
+      }
       dpps_dirty_prop_.push_back(*prop_info);
     }
   }
@@ -420,6 +429,8 @@ int DRMDppsManagerImp::InitLtmBuffers(struct DRMDppsFeatureInfo *info) {
   uint32_t buffer_size, i = 0, bpp = 0;
   void* uva;
   struct DRMDppsLtmBuffers *buffers;
+  DRMDppsLtmBuffers ltm_buffers = {};
+  drm_msm_ltm_buffers_ctrl ltm_buffers_ctrl = {};
   struct drm_prime_handle prime_req;
   struct drm_mode_fb_cmd2 fb_obj;
   struct drm_gem_close gem_close;
@@ -429,9 +440,11 @@ int DRMDppsManagerImp::InitLtmBuffers(struct DRMDppsFeatureInfo *info) {
     return -EINVAL;
   }
 
-  if (ltm_buffers_.num_of_buffers != 0) {
-    DRM_LOGE("LTM buffer already initialized");
-    return -EALREADY;
+  for (const auto& it : ltm_buffers_map_) {
+    if (it.first == info->obj_id) {
+      DRM_LOGE("LTM buffer already initialized, obj id %d", info->obj_id);
+      return -EALREADY;
+    }
   }
 
   if (!info->payload || info->payload_size != sizeof(struct DRMDppsLtmBuffers)) {
@@ -446,7 +459,10 @@ int DRMDppsManagerImp::InitLtmBuffers(struct DRMDppsFeatureInfo *info) {
     return -EINVAL;
   }
 
-  ltm_buffers_.num_of_buffers = buffers->num_of_buffers;
+  std::memset(&ltm_buffers, 0, sizeof(ltm_buffers));
+  std::memset(&ltm_buffers_ctrl, 0, sizeof(ltm_buffers_ctrl));
+
+  ltm_buffers.num_of_buffers = buffers->num_of_buffers;
 
   buffer_size = sizeof(struct drm_msm_ltm_stats_data) + LTM_GUARD_BYTES;
   std::memset(&fb_obj, 0, sizeof(drm_mode_fb_cmd2));
@@ -469,7 +485,7 @@ int DRMDppsManagerImp::InitLtmBuffers(struct DRMDppsFeatureInfo *info) {
       DRM_LOGE("failed get prime handle: %d", ret);
       break;
     }
-    ltm_buffers_.ion_buffer_fd[i] = buffers->ion_buffer_fd[i];
+    ltm_buffers.ion_buffer_fd[i] = buffers->ion_buffer_fd[i];
 
     fb_obj.handles[0] = prime_req.handle;
     ret = drmIoctl(drm_fd_, DRM_IOCTL_MODE_ADDFB2, &fb_obj);
@@ -478,8 +494,8 @@ int DRMDppsManagerImp::InitLtmBuffers(struct DRMDppsFeatureInfo *info) {
       DRM_LOGE("return value from addFB2: %d", ret);
       break;
     }
-    ltm_buffers_.drm_fb_id[i] = buffers->drm_fb_id[i] = fb_obj.fb_id;
-    ltm_buffers_ctrl_.fds[i] = ltm_buffers_.drm_fb_id[i];
+    ltm_buffers.drm_fb_id[i] = buffers->drm_fb_id[i] = fb_obj.fb_id;
+    ltm_buffers_ctrl.fds[i] = ltm_buffers.drm_fb_id[i];
 
     /**
      * ADDFB2 will take reference to GEM handles,
@@ -501,19 +517,22 @@ int DRMDppsManagerImp::InitLtmBuffers(struct DRMDppsFeatureInfo *info) {
       DRM_LOGE("failed to get uva: %d", ret);
       break;
     }
-    ltm_buffers_.uva[i] = buffers->uva[i] = uva;
+    ltm_buffers.uva[i] = buffers->uva[i] = uva;
   }
 
   if (!ret) {
     buffers->status = 0;
-    ltm_buffers_.buffer_size = buffers->buffer_size;
-    ltm_buffers_ctrl_.num_of_buffers = ltm_buffers_.num_of_buffers;
+    ltm_buffers.buffer_size = buffers->buffer_size;
+    ltm_buffers_ctrl.num_of_buffers = ltm_buffers.num_of_buffers;
     DRM_LOGV("InitLtmBuffers return successful");
   } else {
     DeInitLtmBuffers();
     buffers->status = ret;
+    return ret;
   }
 
+  ltm_buffers_map_.push_back(std::make_pair(info->obj_id, std::move(ltm_buffers)));
+  ltm_buffers_ctrl_map_.push_back(std::make_pair(info->obj_id, std::move(ltm_buffers_ctrl)));
   return ret;
 }
 
@@ -525,28 +544,38 @@ int DRMDppsManagerImp::DeInitLtmBuffers() {
     return -EINVAL;
   }
 
-  for (i = 0; i < ltm_buffers_.num_of_buffers; i++) {
-    if (ltm_buffers_.uva[i]) {
-      drm_munmap(ltm_buffers_.uva[i], ltm_buffers_.buffer_size);
-      ltm_buffers_.uva[i] = NULL;
+  for (auto& it : ltm_buffers_map_) {
+    DRMDppsLtmBuffers& ltm_buffers = it.second;
+    for (i = 0; i < ltm_buffers.num_of_buffers; i++) {
+      if (ltm_buffers.uva[i]) {
+        drm_munmap(ltm_buffers.uva[i], ltm_buffers.buffer_size);
+        ltm_buffers.uva[i] = NULL;
+      }
+
+      if (ltm_buffers.drm_fb_id[i] >= 0) {
+#ifdef DRM_IOCTL_MSM_RMFB2
+        ret = drmIoctl(drm_fd_, DRM_IOCTL_MSM_RMFB2, &ltm_buffers.drm_fb_id[i]);
+        if (ret) {
+          ret = errno;
+          DRM_LOGE("RMFB2 failed for fb_id %d with error %d", ltm_buffers.drm_fb_id[i], ret);
+        }
+#endif
+        ltm_buffers.drm_fb_id[i] = -1;
+      }
+      ltm_buffers.ion_buffer_fd[i] = -1;
     }
 
-    if (ltm_buffers_.drm_fb_id[i] >= 0) {
-#ifdef DRM_IOCTL_MSM_RMFB2
-      ret = drmIoctl(drm_fd_, DRM_IOCTL_MSM_RMFB2, &ltm_buffers_.drm_fb_id[i]);
-      if (ret) {
-        ret = errno;
-        DRM_LOGE("RMFB2 failed for fb_id %d with error %d", ltm_buffers_.drm_fb_id[i], ret);
-      }
-#endif
-      ltm_buffers_.drm_fb_id[i] = -1;
-    }
-    ltm_buffers_.ion_buffer_fd[i] = -1;
+    ltm_buffers.num_of_buffers = 0;
+    ltm_buffers.buffer_size = 0;
   }
 
-  ltm_buffers_.num_of_buffers = 0;
-  ltm_buffers_.buffer_size = 0;
-  std::memset(&ltm_buffers_ctrl_, 0, sizeof(ltm_buffers_ctrl_));
+  for (auto& it : ltm_buffers_ctrl_map_) {
+    drm_msm_ltm_buffers_ctrl& ltm_buffers_ctrl = it.second;
+    std::memset(&ltm_buffers_ctrl, 0, sizeof(ltm_buffers_ctrl));
+  }
+
+  ltm_buffers_map_.clear();
+  ltm_buffers_ctrl_map_.clear();
   return 0;
 }
 

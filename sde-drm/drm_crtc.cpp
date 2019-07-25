@@ -33,6 +33,7 @@
 #include <drm/sde_drm.h>
 #include <drm_logger.h>
 #include <drm/drm_fourcc.h>
+#include <string.h>
 
 #include <algorithm>
 #include <map>
@@ -51,6 +52,8 @@ using std::string;
 using std::stringstream;
 using std::unique_ptr;
 using std::map;
+using std::mutex;
+using std::lock_guard;
 
 // CRTC Security Levels
 static uint8_t SECURE_NON_SECURE = 0;
@@ -139,6 +142,7 @@ void DRMCrtcManager::DumpAll() {
 
 void DRMCrtcManager::Perform(DRMOps code, uint32_t obj_id, drmModeAtomicReq *req,
                              va_list args) {
+  lock_guard<mutex> lock(lock_);
   auto it = crtc_pool_.find(obj_id);
   if (it == crtc_pool_.end()) {
     DRM_LOGE("Invalid crtc id %d", obj_id);
@@ -218,35 +222,36 @@ void DRMCrtcManager::GetPPInfo(uint32_t crtc_id, DRMPPFeatureInfo *info) {
   it->second->GetPPInfo(info);
 }
 
-int DRMCrtcManager::Reserve(DRMDisplayType disp_type, DRMDisplayToken *token) {
+int DRMCrtcManager::Reserve(const std::set<uint32_t> &possible_crtc_indices,
+                             DRMDisplayToken *token) {
   for (auto &item : crtc_pool_) {
     if (item.second->GetStatus() == DRMStatus::FREE) {
-      item.second->Lock();
-      token->crtc_id = item.first;
-      token->crtc_index = item.second->GetIndex();
-      return 0;
+      if (possible_crtc_indices.find(item.second->GetIndex()) != possible_crtc_indices.end()) {
+        item.second->Lock();
+        token->crtc_id = item.first;
+        token->crtc_index = item.second->GetIndex();
+        return 0;
+      }
     }
   }
 
   return -ENODEV;
 }
 
-int DRMCrtcManager::Reserve(int32_t display_id, DRMDisplayToken *token) {
-  // Neither display type nor display id is currently used in CRTC reservation.
-  return Reserve(DRMDisplayType::PERIPHERAL, token);
-}
-
 void DRMCrtcManager::Free(DRMDisplayToken *token) {
+  lock_guard<mutex> lock(lock_);
   crtc_pool_.at(token->crtc_id)->Unlock();
   token->crtc_id = 0;
   token->crtc_index = 0;
 }
 
 void DRMCrtcManager::PostValidate(uint32_t crtc_id, bool success) {
+  lock_guard<mutex> lock(lock_);
   crtc_pool_.at(crtc_id)->PostValidate(success);
 }
 
 void DRMCrtcManager::PostCommit(uint32_t crtc_id, bool success) {
+  lock_guard<mutex> lock(lock_);
   crtc_pool_.at(crtc_id)->PostCommit(success);
 }
 
@@ -693,6 +698,7 @@ void DRMCrtc::SetROI(drmModeAtomicReq *req, uint32_t obj_id, uint32_t num_roi,
     return;
   }
   static struct sde_drm_roi_v1 roi_v1 {};
+  memset(&roi_v1, 0, sizeof(roi_v1));
   roi_v1.num_rects = num_roi;
 
   for (uint32_t i = 0; i < num_roi; i++) {
@@ -712,6 +718,7 @@ void DRMCrtc::SetSolidfillStages(drmModeAtomicReq *req, uint32_t obj_id,
                                  const std::vector<DRMSolidfillStage> *solid_fills) {
 #if defined  SDE_MAX_DIM_LAYERS
   static struct sde_drm_dim_layer_v1  drm_dim_layer_v1 {};
+  memset(&drm_dim_layer_v1, 0, sizeof(drm_dim_layer_v1));
   uint32_t shift;
 
   drm_dim_layer_v1.num_layers = solid_fills->size();

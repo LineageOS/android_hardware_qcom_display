@@ -295,11 +295,10 @@ Return<int32_t> HWCSession::setPanelBrightness(uint32_t level) {
     return -EINVAL;
   }
 
-  hwc2_device_t *device = static_cast<hwc2_device_t *>(this);
   if (level == 0) {
-    return INT32(SetDisplayBrightness(device, HWC_DISPLAY_PRIMARY, -1.0f));
+    return INT32(SetDisplayBrightness(HWC_DISPLAY_PRIMARY, -1.0f));
   } else {
-    return INT32(SetDisplayBrightness(device, HWC_DISPLAY_PRIMARY, (level - 1)/254.0f));
+    return INT32(SetDisplayBrightness(HWC_DISPLAY_PRIMARY, (level - 1)/254.0f));
   }
 }
 
@@ -478,13 +477,6 @@ Return<void> HWCSession::getHDRCapabilities(IDisplayConfig::DisplayType dpy,
 }
 
 Return<int32_t> HWCSession::setCameraLaunchStatus(uint32_t on) {
-  hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
-  if (active_builtin_disp_id >= HWCCallbacks::kNumDisplays) {
-    DLOGE("No active displays");
-    return -EINVAL;
-  }
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[active_builtin_disp_id]);
-
   if (null_display_mode_) {
     return 0;
   }
@@ -494,23 +486,14 @@ Return<int32_t> HWCSession::setCameraLaunchStatus(uint32_t on) {
     return -ENOENT;
   }
 
-  if (!hwc_display_[active_builtin_disp_id]) {
-    DLOGW("Display = %d is not connected.", active_builtin_disp_id);
-    return -ENODEV;
-  }
-
-  HWBwModes mode = on > 0 ? kBwCamera : kBwDefault;
-
-  // trigger invalidate to apply new bw caps.
-  Refresh(active_builtin_disp_id);
+  HWBwModes mode = on > 0 ? kBwVFEOn : kBwVFEOff;
 
   if (core_intf_->SetMaxBandwidthMode(mode) != kErrorNone) {
     return -EINVAL;
   }
 
-  new_bw_mode_ = true;
-  need_invalidate_ = true;
-  hwc_display_[active_builtin_disp_id]->ResetValidation();
+  // trigger invalidate to apply new bw caps.
+  Refresh(0);
 
   return 0;
 }
@@ -548,7 +531,7 @@ Return<void> HWCSession::displayBWTransactionPending(displayBWTransactionPending
 
 #ifdef DISPLAY_CONFIG_1_1
 Return<int32_t> HWCSession::setDisplayAnimating(uint64_t display_id, bool animating ) {
-  return CallDisplayFunction(static_cast<hwc2_device_t *>(this), display_id,
+  return CallDisplayFunction(display_id,
                              &HWCDisplay::SetDisplayAnimating, animating);
 }
 #endif
@@ -639,7 +622,7 @@ Return<void> HWCSession::getWriteBackCapabilities(getWriteBackCapabilities_cb _h
 Return<int32_t> HWCSession::SetDisplayDppsAdROI(uint32_t display_id, uint32_t h_start,
                                                 uint32_t h_end, uint32_t v_start, uint32_t v_end,
                                                 uint32_t factor_in, uint32_t factor_out) {
-  return CallDisplayFunction(static_cast<hwc2_device_t *>(this), display_id,
+  return CallDisplayFunction(display_id,
                              &HWCDisplay::SetDisplayDppsAdROI, h_start, h_end, v_start, v_end,
                              factor_in, factor_out);
 }
@@ -669,25 +652,11 @@ Return<bool> HWCSession::isPowerModeOverrideSupported(uint32_t disp_id) {
 }
 
 Return<bool> HWCSession::isHDRSupported(uint32_t disp_id) {
-  SCOPE_LOCK(locker_[disp_id]);
-  HWCDisplay *hwc_display = hwc_display_[disp_id];
-  if (!hwc_display) {
-    DLOGW("Display = %d is not connected.", disp_id);
+  if (disp_id < 0 || disp_id >= HWCCallbacks::kNumDisplays) {
+    DLOGE("Not valid display");
     return false;
   }
-
-  // query number of hdr types
-  uint32_t out_num_types = 0;
-  float out_max_luminance = 0.0f;
-  float out_max_average_luminance = 0.0f;
-  float out_min_luminance = 0.0f;
-  if (hwc_display->GetHdrCapabilities(&out_num_types, nullptr, &out_max_luminance,
-                                      &out_max_average_luminance, &out_min_luminance)
-                                      != HWC2::Error::None) {
-    return false;
-  }
-
-  return (out_num_types > 0);
+  return static_cast<bool>(is_hdr_display_[disp_id]);
 }
 
 Return<bool> HWCSession::isWCGSupported(uint32_t disp_id) {
@@ -799,8 +768,7 @@ int32_t HWCSession::getDisplayBrightness(uint32_t display, float *brightness) {
 }
 
 int32_t HWCSession::setDisplayBrightness(uint32_t display, float brightness) {
-  return SetDisplayBrightness(static_cast<hwc2_device_t *>(this),
-                              static_cast<hwc2_display_t>(display), brightness);
+  return SetDisplayBrightness(static_cast<hwc2_display_t>(display), brightness);
 }
 
 #ifdef DISPLAY_CONFIG_1_9
@@ -832,5 +800,50 @@ Return<bool> HWCSession::isBuiltInDisplay(uint32_t disp_id) {
   return false;
 }
 #endif  // DISPLAY_CONFIG_1_9
+
+#ifdef DISPLAY_CONFIG_1_10
+Return<void> HWCSession::getSupportedDSIBitClks(uint32_t disp_id,
+                                                getSupportedDSIBitClks_cb _hidl_cb) {
+  SCOPE_LOCK(locker_[disp_id]);
+  if (!hwc_display_[disp_id]) {
+    return Void();
+  }
+
+  std::vector<uint64_t> bit_clks;
+  hwc_display_[disp_id]->GetSupportedDSIClock(&bit_clks);
+
+  hidl_vec<uint64_t> hidl_bit_clks = bit_clks;
+  _hidl_cb(hidl_bit_clks);
+
+  return Void();
+}
+
+Return<uint64_t> HWCSession::getDSIClk(uint32_t disp_id) {
+  SCOPE_LOCK(locker_[disp_id]);
+  if (!hwc_display_[disp_id]) {
+    return 0;
+  }
+
+  uint64_t bit_clk = 0;
+  hwc_display_[disp_id]->GetDynamicDSIClock(&bit_clk);
+
+  return bit_clk;
+}
+
+Return<int32_t> HWCSession::setDSIClk(uint32_t disp_id, uint64_t bit_clk) {
+  SCOPE_LOCK(locker_[disp_id]);
+  if (!hwc_display_[disp_id]) {
+    return -1;
+  }
+
+  return hwc_display_[disp_id]->SetDynamicDSIClock(bit_clk);
+}
+
+Return<int32_t> HWCSession::setCWBOutputBuffer(const ::android::sp<IDisplayCWBCallback> &callback,
+                                               uint32_t disp_id, const Rect &rect,
+                                               bool post_processed, const hidl_handle& buffer) {
+  return -1;
+}
+#endif  // DISPLAY_CONFIG_1_10
 
 }  // namespace sdm
