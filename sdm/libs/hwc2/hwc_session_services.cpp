@@ -556,21 +556,16 @@ Return<void> HWCSession::displayBWTransactionPending(displayBWTransactionPending
   return Void();
 }
 
-#ifdef DISPLAY_CONFIG_1_1
 Return<int32_t> HWCSession::setDisplayAnimating(uint64_t display_id, bool animating ) {
   return CallDisplayFunction(static_cast<hwc2_device_t *>(this), display_id,
                              &HWCDisplay::SetDisplayAnimating, animating);
 }
-#endif
 
-#ifdef DISPLAY_CONFIG_1_2
 Return<int32_t> HWCSession::setDisplayIndex(IDisplayConfig::DisplayTypeExt disp_type,
                                             uint32_t base, uint32_t count) {
   return -1;
 }
-#endif  // DISPLAY_CONFIG_1_2
 
-#ifdef DISPLAY_CONFIG_1_3
 Return<int32_t> HWCSession::controlIdlePowerCollapse(bool enable, bool synchronous) {
   hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
   if (active_builtin_disp_id >= HWCCallbacks::kNumDisplays) {
@@ -613,8 +608,6 @@ Return<int32_t> HWCSession::controlIdlePowerCollapse(bool enable, bool synchrono
   DLOGW("Display = %d is not connected.", active_builtin_disp_id);
   return -ENODEV;
 }
-#endif  // DISPLAY_CONFIG_1_3
-
 
 int32_t HWCSession::IsWbUbwcSupported(int *value) {
   HWDisplaysInfo hw_displays_info = {};
@@ -633,7 +626,6 @@ int32_t HWCSession::IsWbUbwcSupported(int *value) {
   return error;
 }
 
-#ifdef DISPLAY_CONFIG_1_4
 Return<void> HWCSession::getWriteBackCapabilities(getWriteBackCapabilities_cb _hidl_cb) {
   int value = 0;
   IDisplayConfig::WriteBackCapabilities wb_caps = {};
@@ -643,9 +635,7 @@ Return<void> HWCSession::getWriteBackCapabilities(getWriteBackCapabilities_cb _h
 
   return Void();
 }
-#endif  // DISPLAY_CONFIG_1_4
 
-#ifdef DISPLAY_CONFIG_1_5
 Return<int32_t> HWCSession::SetDisplayDppsAdROI(uint32_t display_id, uint32_t h_start,
                                                 uint32_t h_end, uint32_t v_start, uint32_t v_end,
                                                 uint32_t factor_in, uint32_t factor_out) {
@@ -653,9 +643,7 @@ Return<int32_t> HWCSession::SetDisplayDppsAdROI(uint32_t display_id, uint32_t h_
                              &HWCDisplay::SetDisplayDppsAdROI, h_start, h_end, v_start, v_end,
                              factor_in, factor_out);
 }
-#endif  // DISPLAY_CONFIG_1_5
 
-#ifdef DISPLAY_CONFIG_1_6
 Return<int32_t> HWCSession::updateVSyncSourceOnPowerModeOff() {
   return 0;
 }
@@ -663,9 +651,7 @@ Return<int32_t> HWCSession::updateVSyncSourceOnPowerModeOff() {
 Return<int32_t> HWCSession::updateVSyncSourceOnPowerModeDoze() {
   return 0;
 }
-#endif
 
-#ifdef DISPLAY_CONFIG_1_7
 Return<bool> HWCSession::isPowerModeOverrideSupported(uint32_t disp_id) {
   if (!async_powermode_ || (disp_id > HWCCallbacks::kNumRealDisplays)) {
     return false;
@@ -775,9 +761,7 @@ Return<void> HWCSession::getDebugProperty(const hidl_string &prop_name,
 
   return Void();
 }
-#endif
 
-#ifdef DISPLAY_CONFIG_1_8
 Return<void> HWCSession::getActiveBuiltinDisplayAttributes(
                                           getDisplayAttributes_cb _hidl_cb) {
   int32_t error = -EINVAL;
@@ -812,9 +796,7 @@ err:
 
   return Void();
 }
-#endif  // DISPLAY_CONFIG_1_8
 
-#ifdef DISPLAY_CONFIG_1_9
 Return<int32_t> HWCSession::setPanelLuminanceAttributes(uint32_t disp_id, float pan_min_lum,
                                                         float pan_max_lum) {
   // currently doing only for virtual display
@@ -842,9 +824,7 @@ Return<bool> HWCSession::isBuiltInDisplay(uint32_t disp_id) {
 
   return false;
 }
-#endif  // DISPLAY_CONFIG_1_9
 
-#ifdef DISPLAY_CONFIG_1_10
 Return<void> HWCSession::getSupportedDSIBitClks(uint32_t disp_id,
                                                 getSupportedDSIBitClks_cb _hidl_cb) {
   SCOPE_LOCK(locker_[disp_id]);
@@ -887,6 +867,5 @@ Return<int32_t> HWCSession::setCWBOutputBuffer(const ::android::sp<IDisplayCWBCa
                                                bool post_processed, const hidl_handle& buffer) {
   return -1;
 }
-#endif  // DISPLAY_CONFIG_1_10
 
 }  // namespace sdm

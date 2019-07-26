@@ -1896,18 +1896,8 @@ android::status_t HWCSession::SetAd4RoiConfig(const android::Parcel *input_parce
   auto f_in = static_cast<uint32_t>(input_parcel->readInt32());
   auto f_out = static_cast<uint32_t>(input_parcel->readInt32());
 
-#ifdef DISPLAY_CONFIG_1_5
   return static_cast<android::status_t>(SetDisplayDppsAdROI(display_id, h_s, h_e, v_s,
                                                             v_e, f_in, f_out));
-#else
-  auto err = CallDisplayFunction(static_cast<hwc2_device_t *>(this), display_id,
-                                 &HWCDisplay::SetDisplayDppsAdROI, h_s, h_e, v_s, v_e,
-                                 f_in, f_out);
-  if (err != HWC2_ERROR_NONE)
-    return -EINVAL;
-
-  return 0;
-#endif
 }
 
 android::status_t HWCSession::SetColorModeWithRenderIntentOverride(
@@ -3318,36 +3308,7 @@ android::status_t HWCSession::SetIdlePC(const android::Parcel *input_parcel) {
   auto enable = input_parcel->readInt32();
   auto synchronous = input_parcel->readInt32();
 
-#ifdef DISPLAY_CONFIG_1_3
   return static_cast<android::status_t>(controlIdlePowerCollapse(enable, synchronous));
-#else
-  {
-    hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
-    if (active_builtin_disp_id >= HWCCallbacks::kNumDisplays) {
-      DLOGE("No active displays");
-      return -EINVAL;
-    }
-    SEQUENCE_WAIT_SCOPE_LOCK(locker_[active_builtin_disp_id]);
-    if (hwc_display_[active_builtin_disp_id]) {
-      DLOGE("Primary display is not ready");
-      return -EINVAL;
-    }
-    auto err = hwc_display_[active_builtin_disp_id]->ControlIdlePowerCollapse(enable, synchronous);
-    if (err != kErrorNone) {
-      return (err == kErrorNotSupported) ? 0 : -EINVAL;
-    }
-    if (!enable) {
-      Refresh(active_builtin_disp_id);
-      int32_t error = locker_[active_builtin_disp_id].WaitFinite(kCommitDoneTimeoutMs);
-      if (error == ETIMEDOUT) {
-        DLOGE("Timed out!! Next frame commit done event not received!!");
-        return error;
-      }
-    }
-    DLOGI("Idle PC %s!!", enable ? "enabled" : "disabled");
-  }
-  return 0;
-#endif
 }
 
 hwc2_display_t HWCSession::GetActiveBuiltinDisplay() {
