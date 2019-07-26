@@ -652,6 +652,7 @@ bool IsUBwcSupported(int format) {
     case HAL_PIXEL_FORMAT_DEPTH_24_STENCIL_8:
     case HAL_PIXEL_FORMAT_DEPTH_32F:
     case HAL_PIXEL_FORMAT_STENCIL_8:
+    case HAL_PIXEL_FORMAT_RGBA_FP16:
       return true;
     default:
       break;
@@ -797,6 +798,7 @@ unsigned int GetUBwcSize(int width, int height, int format, unsigned int aligned
     case HAL_PIXEL_FORMAT_RGBX_8888:
     case HAL_PIXEL_FORMAT_RGBA_1010102:
     case HAL_PIXEL_FORMAT_RGBX_1010102:
+    case HAL_PIXEL_FORMAT_RGBA_FP16:
       bpp = GetBppForUncompressedRGB(format);
       size = alignedw * alignedh * bpp;
       size += GetRgbUBwcMetaBufferSize(width, height, bpp);
@@ -842,6 +844,7 @@ int GetRgbDataAddress(private_handle_t *hnd, void **rgb_data) {
     case HAL_PIXEL_FORMAT_RGBX_8888:
     case HAL_PIXEL_FORMAT_RGBA_1010102:
     case HAL_PIXEL_FORMAT_RGBX_1010102:
+    case HAL_PIXEL_FORMAT_RGBA_FP16:
       meta_size = GetRgbUBwcMetaBufferSize(hnd->width, hnd->height, bpp);
       break;
     default:
@@ -1021,36 +1024,10 @@ int GetBufferLayout(private_handle_t *hnd, uint32_t stride[4], uint32_t offset[4
 
   struct android_ycbcr yuvPlaneInfo[2] = {};
   *num_planes = 1;
-  stride[0] = 0;
 
-  switch (hnd->format) {
-    case HAL_PIXEL_FORMAT_RGB_565:
-    case HAL_PIXEL_FORMAT_BGR_565:
-    case HAL_PIXEL_FORMAT_RGBA_5551:
-    case HAL_PIXEL_FORMAT_RGBA_4444:
-      stride[0] = static_cast<uint32_t>(hnd->width * 2);
-      break;
-    case HAL_PIXEL_FORMAT_RGB_888:
-      stride[0] = static_cast<uint32_t>(hnd->width * 3);
-      break;
-    case HAL_PIXEL_FORMAT_RGBA_8888:
-    case HAL_PIXEL_FORMAT_BGRA_8888:
-    case HAL_PIXEL_FORMAT_RGBX_8888:
-    case HAL_PIXEL_FORMAT_BGRX_8888:
-    case HAL_PIXEL_FORMAT_RGBA_1010102:
-    case HAL_PIXEL_FORMAT_ARGB_2101010:
-    case HAL_PIXEL_FORMAT_RGBX_1010102:
-    case HAL_PIXEL_FORMAT_XRGB_2101010:
-    case HAL_PIXEL_FORMAT_BGRA_1010102:
-    case HAL_PIXEL_FORMAT_ABGR_2101010:
-    case HAL_PIXEL_FORMAT_BGRX_1010102:
-    case HAL_PIXEL_FORMAT_XBGR_2101010:
-      stride[0] = static_cast<uint32_t>(hnd->width * 4);
-      break;
-  }
-
-  // Format is RGB
-  if (stride[0]) {
+  if (IsUncompressedRGBFormat(hnd->format)) {
+    uint32_t bpp = GetBppForUncompressedRGB(hnd->format);
+    stride[0] = static_cast<uint32_t>(hnd->width * bpp);
     return 0;
   }
 
