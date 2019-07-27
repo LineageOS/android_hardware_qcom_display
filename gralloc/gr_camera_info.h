@@ -58,7 +58,7 @@ class CameraInfo {
 
   int GetPixelIncrement(int format, int plane_type, int *pixel_increment);
 
-  int GetPlaneOffset(int format, int plane_type, int *offset);
+  int GetPlaneOffset(int format, int plane_type, int width, int height, int *offset);
 
   int GetSubsamplingFactor(int format, int plane_type, bool isHorizontal, int *subsampling_factor);
 
@@ -109,7 +109,7 @@ class CameraInfo {
                                                       unsigned int *alignment) = nullptr;
 
   CamxFormatResult (*LINK_camera_get_plane_offset)(CamxPixelFormat format, CamxPlaneType plane_type,
-                                                   int *offset) = nullptr;
+                                                   int *offset, int width, int height) = nullptr;
 
   CamxFormatResult (*LINK_camera_get_plane_types)(CamxPixelFormat format,
                                                   CamxPlaneType *plane_types_array,

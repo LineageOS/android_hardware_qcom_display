@@ -185,11 +185,11 @@ int CameraInfo::GetPixelIncrement(int format, int plane_type, int *pixel_increme
   return result;
 }
 
-int CameraInfo::GetPlaneOffset(int format, int plane_type, int *offset) {
+int CameraInfo::GetPlaneOffset(int format, int plane_type, int width, int height, int *offset) {
   CamxFormatResult result = (CamxFormatResult)-1;
   if (LINK_camera_get_plane_offset) {
     result = LINK_camera_get_plane_offset(GetCameraPixelFormat(format),
-                                          GetCamxPlaneType(plane_type), offset);
+                                          GetCamxPlaneType(plane_type), offset, width, height);
     if (result != 0) {
       ALOGE("%s: Failed to get the plane offset. Error code: %d", __FUNCTION__, result);
     }
@@ -306,7 +306,7 @@ int CameraInfo::GetCameraFormatPlaneInfo(int format, int width, int height, int 
     }
     plane_info[i].v_subsampling = (uint32_t)v_subsampling;
 
-    result = GetPlaneOffset(format, plane_type[i], &offset);
+    result = GetPlaneOffset(format, plane_type[i], width, height, &offset);
     if (result != 0) {
       ALOGE("%s: Failed to get plane offset. plane_type = %d, Error code : %d", __FUNCTION__,
             plane_type[i], result);
