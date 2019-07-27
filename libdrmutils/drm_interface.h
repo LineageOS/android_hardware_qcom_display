@@ -618,7 +618,6 @@ struct DRMConnectorInfo {
   DRMRotation panel_orientation;
   drm_panel_hdr_properties panel_hdr_prop;
   drm_msm_ext_hdr_properties ext_hdr_prop;
-  uint32_t transfer_time_us;
   bool qsync_support;
   // Connection status of this connector
   bool is_connected;
