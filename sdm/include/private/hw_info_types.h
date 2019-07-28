@@ -344,6 +344,7 @@ struct HWResourceInfo {
   vector< pair <uint32_t, uint32_t> > line_width_constraints;
   uint32_t num_mnocports = 2;
   uint32_t mnoc_bus_width = 32;
+  bool use_baselayer_for_stage = false;
 };
 
 struct HWSplitInfo {
