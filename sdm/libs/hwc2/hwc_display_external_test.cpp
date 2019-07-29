@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017 - 2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -197,7 +197,7 @@ void HWCDisplayExternalTest::SetSecureDisplay(bool secure_display_active) {
     secure_display_active_ = secure_display_active;
 
     if (secure_display_active_) {
-      DisplayError error = display_intf_->Flush();
+      DisplayError error = display_intf_->Flush(true);
       if (error != kErrorNone) {
         DLOGE("Flush failed. Error = %d", error);
       }
@@ -727,7 +727,7 @@ HWC2::Error HWCDisplayExternalTest::PostCommit(int32_t *out_retire_fence) {
   auto status = HWC2::Error::None;
   // Do no call flush on errors, if a successful buffer is never submitted.
   if (flush_ && flush_on_error_) {
-    display_intf_->Flush();
+    display_intf_->Flush(false);
   }
   if (!flush_) {
     for (size_t i = 0; i < layer_stack_.layers.size(); i++) {

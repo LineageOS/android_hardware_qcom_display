@@ -171,4 +171,6 @@ int getSupportedBitClk(int dpy, std::vector<uint64_t>& bit_rates);
 
 }; //namespace
 
+
+extern "C" int waitForComposerInit();
 #endif

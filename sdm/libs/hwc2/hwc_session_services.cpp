@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -116,7 +116,8 @@ Return<void> HWCSession::isDisplayConnected(IDisplayConfig::DisplayType dpy,
 }
 
 int32_t HWCSession::SetSecondaryDisplayStatus(int disp_id, HWCDisplay::DisplayStatus status) {
-  if (disp_id < 0) {
+  if (disp_id < HWC_DISPLAY_PRIMARY || disp_id >= HWC_NUM_DISPLAY_TYPES) {
+    DLOGE("Invalid display = %d", disp_id);
     return -EINVAL;
   }
 
@@ -163,7 +164,8 @@ Return<int32_t> HWCSession::configureDynRefeshRate(IDisplayConfig::DisplayDynRef
 }
 
 int32_t HWCSession::GetConfigCount(int disp_id, uint32_t *count) {
-  if (disp_id < 0) {
+  if (disp_id < HWC_DISPLAY_PRIMARY || disp_id >= HWC_NUM_DISPLAY_TYPES) {
+    DLOGE("Invalid display = %d", disp_id);
     return -EINVAL;
   }
 
@@ -187,7 +189,8 @@ Return<void> HWCSession::getConfigCount(IDisplayConfig::DisplayType dpy,
 }
 
 int32_t HWCSession::GetActiveConfigIndex(int disp_id, uint32_t *config) {
-  if (disp_id < 0) {
+  if (disp_id < HWC_DISPLAY_PRIMARY || disp_id >= HWC_NUM_DISPLAY_TYPES) {
+    DLOGE("Invalid display = %d", disp_id);
     return -EINVAL;
   }
 
@@ -211,7 +214,8 @@ Return<void> HWCSession::getActiveConfig(IDisplayConfig::DisplayType dpy,
 }
 
 int32_t HWCSession::SetActiveConfigIndex(int disp_id, uint32_t config) {
-  if (disp_id < 0) {
+  if (disp_id < HWC_DISPLAY_PRIMARY || disp_id >= HWC_NUM_DISPLAY_TYPES) {
+    DLOGE("Invalid display = %d", disp_id);
     return -EINVAL;
   }
 
@@ -300,7 +304,8 @@ Return<void> HWCSession::getPanelBrightness(getPanelBrightness_cb _hidl_cb) {
 int32_t HWCSession::MinHdcpEncryptionLevelChanged(int disp_id, uint32_t min_enc_level) {
   DLOGI("Display %d", disp_id);
 
-  if (disp_id < 0) {
+  if (disp_id < HWC_DISPLAY_PRIMARY || disp_id >= HWC_NUM_DISPLAY_TYPES) {
+    DLOGE("Invalid display = %d", disp_id);
     return -EINVAL;
   }
 
@@ -329,7 +334,8 @@ Return<int32_t> HWCSession::refreshScreen() {
 }
 
 int32_t HWCSession::ControlPartialUpdate(int disp_id, bool enable) {
-  if (disp_id < 0) {
+  if (disp_id < HWC_DISPLAY_PRIMARY || disp_id >= HWC_NUM_DISPLAY_TYPES) {
+    DLOGE("Invalid display = %d", disp_id);
     return -EINVAL;
   }
 

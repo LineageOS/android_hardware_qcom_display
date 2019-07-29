@@ -266,6 +266,11 @@ DisplayError HWHDMI::GetActiveConfig(uint32_t *active_config_index) {
   return kErrorNone;
 }
 
+DisplayError HWHDMI::SetActiveConfig(uint32_t active_config) {
+  active_config_index_ = active_config;
+  return kErrorNone;
+}
+
 DisplayError HWHDMI::ReadEDIDInfo() {
   ssize_t length = -1;
   char edid_str[kPageSize] = {'\0'};
@@ -329,6 +334,7 @@ DisplayError HWHDMI::GetDisplayAttributes(uint32_t index,
   }
   display_attributes->x_pixels = timing_mode->active_h;
   display_attributes->y_pixels = timing_mode->active_v;
+  DLOGV("index = %d. x = %d. y=%d",index,timing_mode->active_h,timing_mode->active_v);
   display_attributes->v_front_porch = timing_mode->front_porch_v;
   display_attributes->v_back_porch = timing_mode->back_porch_v;
   display_attributes->v_pulse_width = timing_mode->pulse_width_v;
@@ -423,6 +429,18 @@ DisplayError HWHDMI::SetDisplayAttributes(uint32_t index) {
   SetS3DMode(kS3DModeNone);
 
   return kErrorNone;
+}
+
+DisplayError HWHDMI::GetConfigIndex(uint32_t width, uint32_t height, uint32_t *index) {
+  // Get the resolution info from the look up table
+  for (uint32_t i = 0; i < hdmi_modes_.size(); i++) {
+    msm_hdmi_mode_timing_info *cur = &supported_video_modes_[i];
+    if (cur->active_h == width && cur->active_v == height) {
+      *index = i;
+      return kErrorNone;
+    }
+  }
+  return kErrorNotSupported;
 }
 
 DisplayError HWHDMI::GetConfigIndex(uint32_t mode, uint32_t *index) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -27,43 +27,30 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __HWC_DISPLAY_EXTERNAL_H__
-#define __HWC_DISPLAY_EXTERNAL_H__
+#ifndef __HWC_DISPLAY_DUMMY_H__
+#define __HWC_DISPLAY_DUMMY_H__
 
 #include "hwc_display.h"
 #include "display_null.h"
 
 namespace sdm {
 
-class HWCDisplayExternal : public HWCDisplay {
+class HWCDisplayDummy : public HWCDisplay {
  public:
-  static int Create(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
-                    HWCCallbacks *callbacks, uint32_t primary_width,
-                    uint32_t primary_height, qService::QService *qservice, bool use_primary_res,
-                    HWCDisplay **hwc_display);
-  static int Create(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
+  static int Create(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
                     HWCCallbacks *callbacks, qService::QService *qservice,
                     HWCDisplay **hwc_display);
-  static void Destroy(HWCDisplay *hwc_display);
+
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests);
+
   virtual HWC2::Error Present(int32_t *out_retire_fence);
-  virtual void SetSecureDisplay(bool secure_display_active);
-  virtual int SetState(bool connected);
 
  private:
-  HWCDisplayExternal(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
-                     HWCCallbacks *callbacks, qService::QService *qservice);
-  void ApplyScanAdjustment(hwc_rect_t *display_frame);
-  void GetUnderScanConfig();
-  static void GetDownscaleResolution(uint32_t primary_width, uint32_t primary_height,
-                                     uint32_t *virtual_width, uint32_t *virtual_height);
-  DisplayError SetMixerResolution(uint32_t width, uint32_t height);
-
+  HWCDisplayDummy(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
+                  HWCCallbacks *callbacks, qService::QService *qservice);
   DisplayNull display_null_;
-  int underscan_width_ = 0;
-  int underscan_height_ = 0;
 };
 
 }  // namespace sdm
 
-#endif  // __HWC_DISPLAY_EXTERNAL_H__
+#endif  // __HWC_DISPLAY_DUMMY_H__

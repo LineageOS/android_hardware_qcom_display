@@ -42,6 +42,7 @@ LOCAL_SRC_FILES               := hwc_session.cpp \
                                  hwc_display_primary.cpp \
                                  hwc_display_external.cpp \
                                  hwc_display_virtual.cpp \
+                                 hwc_display_dummy.cpp \
                                  ../hwc/hwc_debugger.cpp \
                                  ../hwc/hwc_buffer_sync_handler.cpp \
                                  hwc_color_manager.cpp \

@@ -27,6 +27,7 @@
 #include <map>
 #include <utility>
 #include <vector>
+#include <cmath>
 
 #include "display_hdmi.h"
 #include "hw_interface.h"
@@ -66,12 +67,60 @@ DisplayError DisplayHDMI::Init() {
   if (error != kErrorNone) {
     HWInterface::Destroy(hw_intf_);
   }
-
+  panel_config_index_ = active_mode_index;
   error = DisplayBase::Init();
   if (error != kErrorNone) {
+    DisplayBase::Deinit();
     HWInterface::Destroy(hw_intf_);
     return error;
   }
+
+  HWDisplayAttributes display_attributes = {};
+  hw_intf_->GetDisplayAttributes(active_mode_index, &display_attributes);
+
+  uint32_t display_width = display_attributes.x_pixels;
+  uint32_t display_height = display_attributes.y_pixels;
+  uint32_t index = 0;
+  bool dest_scale = false;
+  HWDisplayInterfaceInfo hw_disp_info = {};
+  hw_info_intf_->GetFirstDisplayInterfaceType(&hw_disp_info);
+  if (hw_disp_info.type == kHDMI) {
+    dest_scale = (mixer_attributes_.width != display_width ||
+                  mixer_attributes_.height != display_height);
+  }
+
+  if (dest_scale) {
+    // When DS is enabled SDM clients should see active config equal to mixer resolution.
+    // active config = mixer config  // if DS is enabled
+    error = hw_intf_->GetConfigIndex(mixer_attributes_.width, mixer_attributes_.height, &index);
+    if (error !=kErrorNone) {
+      // If mixer resolution does not match with any display resolution supported by TV,
+      // then use second best config as mixer resolution.
+      uint32_t closest_config_index = GetClosestConfig(mixer_attributes_.width,
+                                                       mixer_attributes_.height);
+      if (active_mode_index == closest_config_index) {
+        dest_scale_enabled_ = false;
+      } else {
+        dest_scale_enabled_ = true;
+      }
+      hw_intf_->SetActiveConfig(closest_config_index);
+      mixer_config_index_ = closest_config_index;
+      HWDisplayAttributes display_attributes = {};
+      hw_intf_->GetDisplayAttributes(closest_config_index, &display_attributes);
+      mixer_attributes_.width = display_attributes.x_pixels;
+      mixer_attributes_.height = display_attributes.y_pixels;
+      hw_intf_->SetMixerAttributes(mixer_attributes_);
+    } else {
+      hw_intf_->SetActiveConfig(index);
+      mixer_config_index_ = index;
+      dest_scale_enabled_ = true;
+    }
+  }
+  if (dest_scale_enabled_) {
+    DLOGI("DS enabled. User config = %d",mixer_config_index_);
+  }
+  DLOGI("Mixer wxh = %dx%d Display wxh= %dx%d",mixer_attributes_.width, mixer_attributes_.height,
+         display_width,display_height);
 
   GetScanSupport();
   underscan_supported_ = (scan_support_ == kScanAlwaysUnderscanned) || (scan_support_ == kScanBoth);
@@ -106,6 +155,9 @@ DisplayError DisplayHDMI::Prepare(LayerStack *layer_stack) {
   uint32_t display_height = display_attributes_.y_pixels;
 
   if (NeedsMixerReconfiguration(layer_stack, &new_mixer_width, &new_mixer_height)) {
+    if (dest_scale_enabled_) {
+      CheckMinMixerResolution(&new_mixer_width, &new_mixer_height);
+    }
     error = ReconfigureMixer(new_mixer_width, new_mixer_height);
     if (error != kErrorNone) {
       ReconfigureMixer(display_width, display_height);
@@ -160,16 +212,44 @@ DisplayError DisplayHDMI::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level)
   return hw_intf_->OnMinHdcpEncryptionLevelChange(min_enc_level);
 }
 
+uint32_t DisplayHDMI::GetClosestConfig(uint32_t width, uint32_t height) {
+  if ((UINT32_MAX / width < height) || (UINT32_MAX / height < width)) {
+    //uint overflow
+    return panel_config_index_;
+  }
+  uint32_t num_modes = 0, index = 0;
+  hw_intf_->GetNumDisplayAttributes(&num_modes);
+  uint32_t area = width * height;
+  std::vector<uint32_t> area_modes(num_modes);
+  // Get display attribute for each mode
+  std::vector<HWDisplayAttributes> attrib(num_modes);
+  for (index = 0; index < num_modes; index++) {
+    hw_intf_->GetDisplayAttributes(index, &attrib[index]);
+    area_modes[index] = attrib[index].y_pixels * attrib[index].x_pixels;
+  }
+  uint32_t least_area_diff = display_attributes_.x_pixels*display_attributes_.y_pixels;
+  uint32_t least_diff_index = panel_config_index_;
+  for (index = 0; index < num_modes; index++) {
+    if (abs(INT(area_modes[index]) - INT(area)) < INT(least_area_diff)) {
+      least_diff_index = index;
+      least_area_diff = UINT32(abs(INT(area_modes[index]) - INT(area)));
+    }
+  }
+  DLOGV("Closest config index = %d",least_diff_index);
+  return least_diff_index;
+}
+
 uint32_t DisplayHDMI::GetBestConfig(HWS3DMode s3d_mode) {
   uint32_t best_index = 0, index;
   uint32_t num_modes = 0;
 
   hw_intf_->GetNumDisplayAttributes(&num_modes);
-
+  DLOGI("Number of modes = %d",num_modes);
   // Get display attribute for each mode
   std::vector<HWDisplayAttributes> attrib(num_modes);
   for (index = 0; index < num_modes; index++) {
     hw_intf_->GetDisplayAttributes(index, &attrib[index]);
+    DLOGI("Index = %d. wxh = %dx%d",index, attrib[index].x_pixels, attrib[index].y_pixels);
   }
 
   // Select best config for s3d_mode. If s3d is not enabled, s3d_mode is kS3DModeNone

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2017, 2018 The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -55,7 +55,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError Deinit();
   DisplayError Prepare(LayerStack *layer_stack);
   DisplayError Commit(LayerStack *layer_stack);
-  virtual DisplayError Flush();
+  virtual DisplayError Flush(bool secure);
   virtual DisplayError GetDisplayState(DisplayState *state);
   virtual DisplayError GetNumVariableInfoConfigs(uint32_t *count);
   virtual DisplayError GetConfig(uint32_t index, DisplayConfigVariableInfo *variable_info);
@@ -146,6 +146,7 @@ class DisplayBase : public DisplayInterface {
                                        std::string *value);
   DisplayError GetHdrColorMode(std::string *color_mode, bool *found_hdr);
   bool IsSupportColorModeAttribute(const std::string &color_mode);
+  void CheckMinMixerResolution(uint32_t *width, uint32_t *height);
 
   recursive_mutex recursive_mutex_;
   DisplayType display_type_;
@@ -183,6 +184,9 @@ class DisplayBase : public DisplayInterface {
   std::string current_color_mode_ = "hal_native";
   bool hdr_playback_mode_ = false;
   int disable_hdr_lut_gen_ = 0;
+  uint32_t panel_config_index_ = 0;
+  uint32_t mixer_config_index_ = 0;
+  bool dest_scale_enabled_ = false;
 };
 
 }  // namespace sdm

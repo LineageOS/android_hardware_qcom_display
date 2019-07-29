@@ -258,7 +258,11 @@ static int cec_send_message(const struct hdmi_cec_device* dev,
     ssize_t err = 0;
     //HAL spec requires us to retry at least once.
     while (true) {
-        err = write_node(write_msg_path.c_str(), write_msg, sizeof(write_msg));
+        if (msg->initiator == msg->destination) {
+            err = -ENXIO;
+        } else {
+            err = write_node(write_msg_path.c_str(), write_msg, sizeof(write_msg));
+        }
         retry_count++;
         if (err == -EAGAIN && retry_count <= MAX_SEND_MESSAGE_RETRIES) {
             ALOGE("%s: CEC line busy, retrying", __FUNCTION__);
@@ -453,7 +457,7 @@ static void cec_init_context(cec_context_t *ctx)
     cec_get_physical_address((hdmi_cec_device *) ctx,
             &ctx->port_info[0].physical_address );
 
-    ctx->version = 0x4;
+    ctx->version = 0x6;
     ctx->vendor_id = 0xA47733;
     cec_clear_logical_address((hdmi_cec_device_t*)ctx);
 
@@ -581,7 +585,7 @@ static int populate_event_data(cec_context_t* ctx, std::vector<eventData> *event
 }
 
 static int set_event_params(cec_context_t* ctx, uint32_t node_event, eventData *event_data) {
-    pollfd poll_fd;
+    pollfd poll_fd = {0};
     poll_fd.fd = -EINVAL;
 
     if (!strncmp(event_data->event_name, "cec_msg_event", strlen("cec_msg_event"))) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -1233,8 +1233,10 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
 
   // Do no call flush on errors, if a successful buffer is never submitted.
   if (flush_ && flush_on_error_) {
-    display_intf_->Flush();
-    validated_.reset();
+    display_intf_->Flush(secure_display_transition_);
+    secure_display_transition_ = false;
+    validated_.reset(type_);
+    flush_on_error_ = false;
   }
 
   if (tone_mapper_ && tone_mapper_->IsActive()) {
@@ -1686,11 +1688,15 @@ int HWCDisplay::SetDisplayStatus(DisplayStatus display_status) {
     case kDisplayStatusResume:
       display_paused_ = false;
       fbt_valid_ = false;
+      status = INT32(SetPowerMode(HWC2::PowerMode::On));
+      break;
     case kDisplayStatusOnline:
       status = INT32(SetPowerMode(HWC2::PowerMode::On));
       break;
     case kDisplayStatusPause:
       display_paused_ = true;
+      status = INT32(SetPowerMode(HWC2::PowerMode::Off));
+      break;
     case kDisplayStatusOffline:
       status = INT32(SetPowerMode(HWC2::PowerMode::Off));
       break;
@@ -1710,6 +1716,11 @@ int HWCDisplay::SetDisplayStatus(DisplayStatus display_status) {
 HWC2::Error HWCDisplay::SetCursorPosition(hwc2_layer_t layer, int x, int y) {
   if (shutdown_pending_) {
     return HWC2::Error::None;
+  }
+
+  if (!layer_stack_.flags.cursor_present) {
+    DLOGW("Cursor layer not present");
+    return HWC2::Error::BadLayer;
   }
 
   HWCLayer *hwc_layer = GetHWCLayer(layer);
@@ -1900,6 +1911,7 @@ void HWCDisplay::SetSecureDisplay(bool secure_display_active) {
     DLOGI("SecureDisplay state changed from %d to %d Needs Flush!!", secure_display_active_,
           secure_display_active);
     secure_display_active_ = secure_display_active;
+    secure_display_transition_ = true;
     skip_prepare_ = true;
   }
   return;

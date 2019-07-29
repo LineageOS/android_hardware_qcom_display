@@ -295,6 +295,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool shutdown_pending_ = false;
   bool use_blit_comp_ = false;
   bool secure_display_active_ = false;
+  bool secure_display_transition_ = false;
   bool skip_prepare_ = false;
   bool solid_fill_enable_ = false;
   Layer *solid_fill_layer_ = NULL;
