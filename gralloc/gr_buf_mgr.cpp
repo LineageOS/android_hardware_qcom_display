@@ -251,9 +251,13 @@ gralloc1_error_t BufferManager::ImportHandleLocked(private_handle_t *hnd) {
       return GRALLOC1_ERROR_BAD_HANDLE;
     }
   }
-  // Set base pointers to NULL since the data here was received over binder
+  // Initialize members that aren't transported
+  hnd->size = static_cast<unsigned int>(lseek(hnd->fd, 0, SEEK_END));
+  hnd->offset = 0;
+  hnd->offset_metadata = 0;
   hnd->base = 0;
   hnd->base_metadata = 0;
+  hnd->gpuaddr = 0;
   RegisterHandleLocked(hnd, ion_handle, ion_handle_meta);
   return GRALLOC1_ERROR_NONE;
 }
@@ -949,4 +953,25 @@ gralloc1_error_t BufferManager::Dump(std::ostringstream *os) {
   }
   return GRALLOC1_ERROR_NONE;
 }
+
+gralloc1_error_t BufferManager::IsBufferImported(const private_handle_t *hnd) {
+  std::lock_guard<std::mutex> lock(buffer_lock_);
+  auto buf = GetBufferFromHandleLocked(hnd);
+  if (buf != nullptr) {
+    return GRALLOC1_ERROR_NONE;
+  }
+  return GRALLOC1_ERROR_BAD_VALUE;
+}
+
+gralloc1_error_t BufferManager::ValidateBufferSize(private_handle_t const *hnd, BufferInfo info) {
+  unsigned int size, alignedw, alignedh;
+  info.format = allocator_->GetImplDefinedFormat(info.prod_usage, info.cons_usage, info.format);
+  GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh);
+  auto ion_fd_size = static_cast<unsigned int>(lseek(hnd->fd, 0, SEEK_END));
+  if (size != ion_fd_size) {
+    return GRALLOC1_ERROR_BAD_VALUE;
+  }
+  return GRALLOC1_ERROR_NONE;
+}
+
 }  //  namespace gralloc1
