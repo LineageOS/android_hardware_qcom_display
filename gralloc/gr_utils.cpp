@@ -893,7 +893,7 @@ void GetColorSpaceFromMetadata(private_handle_t *hnd, int *color_space) {
         *color_space = (color_metadata.range) ? HAL_CSC_ITU_R_2020_FR : HAL_CSC_ITU_R_2020;
         break;
       default:
-        ALOGE("Unknown Color Space = %d", color_metadata.colorPrimaries);
+        ALOGW("Unknown Color primary = %d", color_metadata.colorPrimaries);
         break;
     }
   } else if (getMetaData(hnd, GET_COLOR_SPACE, color_space) != 0) {
