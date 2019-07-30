@@ -18,4 +18,10 @@ cc_library_shared {
         "qd_utils.cpp",
         "display_config.cpp",
     ],
+    sanitize: {
+        misc_undefined: [
+        "signed-integer-overflow",
+        "unsigned-integer-overflow",
+        ],
+    }
 }
