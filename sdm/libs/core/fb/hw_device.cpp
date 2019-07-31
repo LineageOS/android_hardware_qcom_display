@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -359,7 +359,7 @@ DisplayError HWDevice::Validate(HWLayers *hw_layers) {
 #endif
     DLOGD_IF(kTagDriverConfig, "*****************************************************************");
   }
-  mdp_commit.dest_scaler_cnt = UINT32(display_attributes_.is_device_split ? 2 : 1);
+  mdp_commit.dest_scaler_cnt = UINT32(hw_layer_info.dest_scale_info_map.size());
 
   mdp_commit.flags |= MDP_VALIDATE_LAYER;
 #ifdef MDP_COMMIT_RECT_NUM
