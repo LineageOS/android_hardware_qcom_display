@@ -246,6 +246,10 @@ Return<void> QtiMapper::getTransportSize(void *buffer,
   auto hnd = static_cast<private_handle_t *>(buffer);
   uint32_t num_fds = 0, num_ints = 0;
   if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
+    if (buf_mgr_->IsBufferImported(hnd) != Error::NONE) {
+      hidl_cb(err, num_fds, num_ints);
+      return Void();
+    }
     num_fds = 2;
     // TODO(user): reduce to transported values;
     num_ints = static_cast<uint32_t >(hnd->numInts);
