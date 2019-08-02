@@ -514,15 +514,19 @@ void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint3
       break;
     case HAL_PIXEL_FORMAT_RAW16:
     case HAL_PIXEL_FORMAT_Y16:
-      c_size = width * height;
-      c_height = height;
+      c_size = c_stride = 0;
+      c_height = 0;
       break;
     case HAL_PIXEL_FORMAT_RAW10:
-      c_size = 0;
+    case HAL_PIXEL_FORMAT_RAW12:
+      y_size = ALIGN(y_size, SIZE_4K);
+      c_size = c_stride = 0;
+      c_height = 0;
       break;
     case HAL_PIXEL_FORMAT_RAW8:
     case HAL_PIXEL_FORMAT_Y8:
-      c_size = 0;
+      c_size = c_stride = 0;
+      c_height = 0;
       break;
     case HAL_PIXEL_FORMAT_YCbCr_420_P010:
       c_size = (width * height) + 1;
@@ -613,11 +617,6 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]) 
         case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
         case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
         case HAL_PIXEL_FORMAT_NV21_ZSL:
-        case HAL_PIXEL_FORMAT_RAW16:
-        case HAL_PIXEL_FORMAT_Y16:
-        case HAL_PIXEL_FORMAT_RAW10:
-        case HAL_PIXEL_FORMAT_RAW8:
-        case HAL_PIXEL_FORMAT_Y8:
           std::swap(ycbcr->cb, ycbcr->cr);
       }
     }
@@ -1296,11 +1295,6 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
     case HAL_PIXEL_FORMAT_NV21_ZSL:
-    case HAL_PIXEL_FORMAT_RAW16:
-    case HAL_PIXEL_FORMAT_Y16:
-    case HAL_PIXEL_FORMAT_RAW10:
-    case HAL_PIXEL_FORMAT_RAW8:
-    case HAL_PIXEL_FORMAT_Y8:
       *plane_count = 2;
       GetYuvSPPlaneInfo(info, format, width, height, 1, plane_info);
       GetYuvSubSamplingFactor(format, &h_subsampling, &v_subsampling);
@@ -1308,6 +1302,26 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
       plane_info[0].v_subsampling = 0;
       plane_info[1].h_subsampling = h_subsampling;
       plane_info[1].v_subsampling = v_subsampling;
+      break;
+
+    case HAL_PIXEL_FORMAT_RAW10:
+    case HAL_PIXEL_FORMAT_RAW8:
+    case HAL_PIXEL_FORMAT_Y8:
+    case HAL_PIXEL_FORMAT_RAW12:
+      *plane_count = 1;
+      GetYuvSPPlaneInfo(info, format, width, height, 1, plane_info);
+      GetYuvSubSamplingFactor(format, &h_subsampling, &v_subsampling);
+      plane_info[0].h_subsampling = h_subsampling;
+      plane_info[0].v_subsampling = v_subsampling;
+      break;
+
+    case HAL_PIXEL_FORMAT_RAW16:
+    case HAL_PIXEL_FORMAT_Y16:
+      *plane_count = 1;
+      GetYuvSPPlaneInfo(info, format, width, height, 2, plane_info);
+      GetYuvSubSamplingFactor(format, &h_subsampling, &v_subsampling);
+      plane_info[0].h_subsampling = h_subsampling;
+      plane_info[0].v_subsampling = v_subsampling;
       break;
 
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
