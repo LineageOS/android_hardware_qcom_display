@@ -194,9 +194,10 @@ HWC2::Error HWCColorMode::ApplyCurrentColorModeWithRenderIntent(bool hdr_present
       mode_string = color_mode_map_[current_color_mode_][RenderIntent::COLORIMETRIC][kHdrType];
     }
     if (mode_string.empty() &&
-      current_color_mode_ == ColorMode::DISPLAY_P3 &&
-      curr_dynamic_range_ == kHdrType) {
-      // fall back to display_p3 SDR mode if there is no HDR mode
+       (current_color_mode_ == ColorMode::DISPLAY_P3 ||
+       current_color_mode_ == ColorMode::DISPLAY_BT2020) &&
+       curr_dynamic_range_ == kHdrType) {
+      // fall back to display_p3/display_bt2020 SDR mode if there is no HDR mode
       mode_string = color_mode_map_[current_color_mode_][current_render_intent_][kSdrType];
     }
   }
