@@ -141,7 +141,9 @@ int DRMAtomicReq::Perform(DRMOps opcode, uint32_t obj_id, ...) {
 int DRMAtomicReq::Validate() {
   // Call UnsetUnusedPlanes to find planes that need to be unset. Do not call CommitPlaneState,
   // because we just want to validate, not actually mark planes as removed
-  drm_mgr_->GetPlaneMgr()->UnsetUnusedPlanes(token_.crtc_id, drm_atomic_req_);
+  drm_mgr_->GetPlaneMgr()->UnsetUnusedResources(token_.crtc_id, false/*is_commit*/,
+                                                drm_atomic_req_);
+
   int ret = drmModeAtomicCommit(fd_, drm_atomic_req_,
                                 DRM_MODE_ATOMIC_ALLOW_MODESET | DRM_MODE_ATOMIC_TEST_ONLY, nullptr);
   if (ret) {
@@ -163,7 +165,8 @@ int DRMAtomicReq::Commit(bool synchronous, bool retain_planes) {
     drm_mgr_->GetPlaneMgr()->RetainPlanes(token_.crtc_id);
   }
 
-  drm_mgr_->GetPlaneMgr()->UnsetUnusedPlanes(token_.crtc_id, drm_atomic_req_);
+  drm_mgr_->GetPlaneMgr()->UnsetUnusedResources(token_.crtc_id, true/*is_commit*/, drm_atomic_req_);
+
   uint32_t flags = DRM_MODE_ATOMIC_ALLOW_MODESET;
 
   if (!synchronous) {
