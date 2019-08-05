@@ -1544,6 +1544,7 @@ void GetYuvSubSamplingFactor(int32_t format, int *h_subsampling, int *v_subsampl
     case HAL_PIXEL_FORMAT_YCrCb_420_SP:
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:  // Same as YCbCr_420_SP_VENUS
     case HAL_PIXEL_FORMAT_YV12:
+    case HAL_PIXEL_FORMAT_NV12_HEIF:
       *h_subsampling = 1;
       *v_subsampling = 1;
       break;
@@ -1559,7 +1560,7 @@ void GetYuvSubSamplingFactor(int32_t format, int *h_subsampling, int *v_subsampl
     case HAL_PIXEL_FORMAT_RAW10:
     case HAL_PIXEL_FORMAT_Y8:
     case HAL_PIXEL_FORMAT_BLOB:
-    case HAL_PIXEL_FORMAT_NV12_HEIF:
+    case HAL_PIXEL_FORMAT_RAW8:
     default:
       *h_subsampling = 0;
       *v_subsampling = 0;
