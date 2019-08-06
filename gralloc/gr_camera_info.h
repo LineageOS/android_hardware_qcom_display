@@ -30,9 +30,53 @@
 #ifndef __GR_CAMERA_INFO_H__
 #define __GR_CAMERA_INFO_H__
 
-#include <camx/camxformatutilexternal.h>
-
 #include "gr_utils.h"
+
+// Plane types supported by the camera format
+typedef enum {
+  CAMERA_PLANE_TYPE_RAW,  // RAW plane for Single planar formats including UYVY and thier variants
+  CAMERA_PLANE_TYPE_Y,    // Y only
+  CAMERA_PLANE_TYPE_UV,   // UV, VU, Cb, Cr planes for YUV variants
+  CAMERA_PLANE_TYPE_U,    // U plane only
+  CAMERA_PLANE_TYPE_V,    // V plane only
+  CAMERA_PLANE_TYPE_META_Y,   // Metadata plane for Y
+  CAMERA_PLANE_TYPE_META_VU,  // Metadata plane for VU and UV
+} CamxPlaneType;
+
+// External camera pixel formats that are allocated by gralloc
+typedef enum : unsigned int {
+  CAMERA_PIXEL_FORMAT_NV21_ZSL = 0x113,  // NV21 format with alignment requirements for
+                                         // YUV reprocessing
+  CAMERA_PIXEL_FORMAT_YUV_FLEX = 0x125,  // YUV format with fliexible alignment defined by
+                                         // individual APIs
+  CAMERA_PIXEL_FORMAT_UBWC_FLEX = 0x126,  // YUV format with fliexible alignment defined by
+                                          // individual APIs
+  CAMERA_PIXEL_FORMAT_MULTIPLANAR_FLEX = 0x127,  // YUV format with fliexible alignment defined by
+                                                 // individual APIs
+  CAMERA_PIXEL_FORMAT_NV12_VENUS = 0x7FA30C04,           // NV12 video format
+  CAMERA_PIXEL_FORMAT_NV12_HEIF = 0x00000116,            // HEIF video YUV420 format
+  CAMERA_PIXEL_FORMAT_YCbCr_420_SP_UBWC = 0x7FA30C06,    // 8 bit YUV 420 semi-planar UBWC format
+  CAMERA_PIXEL_FORMAT_YCbCr_420_TP10_UBWC = 0x7FA30C09,  // TP10 YUV 420 semi-planar UBWC format
+  CAMERA_PIXEL_FORMAT_YCbCr_420_P010_UBWC = 0x124,       // P010 YUV 420 semi-planar UBWC format
+  CAMERA_PIXEL_FORMAT_RAW_OPAQUE = 0x24,                 // Opaque RAW format
+} CamxPixelFormat;
+
+// Camera Result Codes
+typedef enum : int {
+  CamxFormatResultSuccess = 0,           // Operation was successful
+  CamxFormatResultEFailed = 1,           // Operation encountered unspecified error
+  CamxFormatResultEUnsupported = 2,      // Operation is not supported
+  CamxFormatResultEInvalidState = 3,     // Invalid state
+  CamxFormatResultEInvalidArg = 4,       // Invalid argument
+  CamxFormatResultEInvalidPointer = 5,   // Invalid memory pointer
+  CamxFormatResultENoSuch = 6,           // No such item exists or is valid
+  CamxFormatResultEOutOfBounds = 7,      // Out of bounds
+  CamxFormatResultENoMemory = 8,         // Out of memory
+  CamxFormatResultENoMore = 10,          // No more items available
+  CamxFormatResultENeedMore = 11,        // Operation requires more
+  CamxFormatResultEPrivLevel = 13,       // Privileges are insufficient for requested operation
+  CamxFormatResultENotImplemented = 26,  // Function or method is not implemented
+} CamxFormatResult;
 
 namespace gralloc {
 
