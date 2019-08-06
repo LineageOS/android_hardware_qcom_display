@@ -50,6 +50,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
     debug.mdpcomp.logs=0 \
     vendor.gralloc.disable_ubwc=0 \
     vendor.display.disable_scaler=0 \
+    vendor.display.disable_offline_rotator=1 \
     vendor.display.disable_excl_rect=0 \
     vendor.display.comp_mask=0 \
     vendor.display.enable_posted_start_dyn=1 \
