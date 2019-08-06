@@ -40,7 +40,7 @@ namespace qti {
 namespace hardware {
 namespace display {
 namespace mapperextensions {
-namespace V1_0 {
+namespace V1_1 {
 namespace implementation {
 
 using gralloc::BufferInfo;
@@ -351,8 +351,23 @@ Return<void> QtiMapperExtensions::getFormatLayout(int32_t format, uint64_t usage
   return Void();
 }
 
+Return<Error> QtiMapperExtensions::getSurfaceMetadata_V1(void *buffer, void *metadata) {
+  auto err = Error::BAD_BUFFER;
+  auto hnd = static_cast<private_handle_t *>(buffer);
+  if (metadata != nullptr && buffer != nullptr && private_handle_t::validate(hnd) == 0) {
+    if (getMetaData(hnd, GET_GRAPHICS_METADATA, metadata) == 0) {
+      err = Error::NONE;
+    } else {
+      err = Error::UNSUPPORTED;
+    }
+  } else {
+    ALOGE("%s: buffer pointer: %p, metadata pointer: %p ", __FUNCTION__, buffer, metadata);
+  }
+  return err;
+}
+
 }  // namespace implementation
-}  // namespace V1_0
+}  // namespace V1_1
 }  // namespace mapperextensions
 }  // namespace display
 }  // namespace hardware
