@@ -32,7 +32,7 @@
 
 #include <hidl/MQDescriptor.h>
 #include <hidl/Status.h>
-#include <vendor/qti/hardware/display/mapperextensions/1.0/IQtiMapperExtensions.h>
+#include <vendor/qti/hardware/display/mapperextensions/1.1/IQtiMapperExtensions.h>
 
 #include "gr_buf_mgr.h"
 namespace vendor {
@@ -40,7 +40,7 @@ namespace qti {
 namespace hardware {
 namespace display {
 namespace mapperextensions {
-namespace V1_0 {
+namespace V1_1 {
 namespace implementation {
 
 using ::android::sp;
@@ -56,7 +56,10 @@ using ::android::hardware::graphics::mapper::V2_0::IMapper;
 using ::android::hidl::base::V1_0::DebugInfo;
 using ::android::hidl::base::V1_0::IBase;
 using gralloc::BufferManager;
-using ::vendor::qti::hardware::display::mapperextensions::V1_0::IQtiMapperExtensions;
+using ::vendor::qti::hardware::display::mapperextensions::V1_1::IQtiMapperExtensions;
+using ::vendor::qti::hardware::display::mapperextensions::V1_0::Error;
+using ::vendor::qti::hardware::display::mapperextensions::V1_0::PlaneLayout;
+using ::vendor::qti::hardware::display::mapperextensions::V1_0::YCbCrLayout;
 
 class QtiMapperExtensions : public IQtiMapperExtensions {
  public:
@@ -88,10 +91,11 @@ class QtiMapperExtensions : public IQtiMapperExtensions {
   Return<void> getSurfaceMetadata(void *buffer, getSurfaceMetadata_cb _hidl_cb) override;
   Return<void> getFormatLayout(int32_t format, uint64_t usage, int32_t flags, int32_t width,
                                int32_t height, getFormatLayout_cb hidl_cb) override;
+  Return<Error> getSurfaceMetadata_V1(void *buffer, void *metadata) override;
 };
 
 }  // namespace implementation
-}  // namespace V1_0
+}  // namespace V1_1
 }  // namespace mapperextensions
 }  // namespace display
 }  // namespace hardware
