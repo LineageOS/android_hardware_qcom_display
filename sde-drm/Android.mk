@@ -4,7 +4,6 @@ include $(CLEAR_VARS)
 common_header_export_path := qcom/display
 
 LOCAL_MODULE              := libsdedrm
-LOCAL_SANITIZE            := integer_overflow
 LOCAL_MODULE_TAGS         := optional
 LOCAL_SHARED_LIBRARIES    := libdrm libdrmutils libdisplaydebug
 LOCAL_HEADER_LIBRARIES    := display_headers

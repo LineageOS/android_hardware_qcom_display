@@ -27,7 +27,6 @@ ifeq ($(LLVM_SA), true)
 endif
 LOCAL_CLANG  := true
 LOCAL_MODULE := lights.$(TARGET_BOARD_PLATFORM)
-LOCAL_SANITIZE := integer_overflow
 LOCAL_MODULE_TAGS := optional
 LOCAL_VENDOR_MODULE := true
 
