@@ -578,7 +578,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
   if (error == kErrorNone) {
     active_ = active;
     state_ = state;
-    comp_manager_->SetDisplayState(display_comp_ctx_, state, *release_fence);
+    comp_manager_->SetDisplayState(display_comp_ctx_, state, release_fence ? *release_fence : -1);
   }
 
   return error;
