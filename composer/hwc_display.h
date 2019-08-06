@@ -502,6 +502,7 @@ class HWCDisplay : public DisplayEventHandler {
   hwc2_config_t pending_config_index_ = 0;
   bool game_supported_ = false;
   uint64_t elapse_timestamp_ = 0;
+  int async_power_mode_ = 0;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {
