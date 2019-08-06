@@ -679,7 +679,7 @@ void HWCSession::HandlePendingRefresh() {
 
   for (size_t i = 0; i < pending_refresh_.size(); i++) {
     if (pending_refresh_.test(i)) {
-      Refresh(i);
+      callbacks_.Refresh(i);
     }
     break;
   }
@@ -689,14 +689,13 @@ void HWCSession::HandlePendingRefresh() {
 
 void HWCSession::RegisterCallback(int32_t descriptor, hwc2_callback_data_t callback_data,
                                   hwc2_function_pointer_t pointer) {
-  SCOPE_LOCK(callbacks_lock_);
   auto desc = static_cast<HWC2::Callback>(descriptor);
   auto error = callbacks_.Register(desc, callback_data, pointer);
   if (error != HWC2::Error::None) {
     return;
   }
 
-  DLOGD("%s callback: %s", pointer ? "Registering" : "Deregistering", to_string(desc).c_str());
+  DLOGI("%s callback: %s", pointer ? "Registering" : "Deregistering", to_string(desc).c_str());
   if (descriptor == HWC2_CALLBACK_HOTPLUG) {
     if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
       DLOGI("Hotplugging primary...");
@@ -714,10 +713,8 @@ void HWCSession::RegisterCallback(int32_t descriptor, hwc2_callback_data_t callb
             strerror(abs(err)), pending_hotplug_event_ == kHotPlugEvent ? "deferred" :
             "dropped");
     }
-    client_connected_ = true;
   }
   need_invalidate_ = false;
-  callbacks_lock_.Broadcast();
 }
 
 int32_t HWCSession::SetActiveConfig(hwc2_display_t display, hwc2_config_t config) {
@@ -913,7 +910,7 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
 
   // Trigger refresh for doze mode to take effect.
   if (mode == HWC2::PowerMode::Doze) {
-    Refresh(display);
+    callbacks_.Refresh(display);
     // Trigger one more refresh for PP features to take effect.
     pending_refresh_.set(UINT32(display));
   }
@@ -1001,11 +998,6 @@ int32_t HWCSession::ValidateDisplay(hwc2_display_t display, uint32_t *out_num_ty
 
 HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height, int32_t *format,
                                                 hwc2_display_t *out_display_id) {
-  if (!client_connected_) {
-    DLOGE("Client is not ready yet.");
-    return HWC2::Error::BadDisplay;
-  }
-
   hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
   if (active_builtin_disp_id < HWCCallbacks::kNumDisplays) {
     SEQUENCE_WAIT_SCOPE_LOCK(locker_[active_builtin_disp_id]);
@@ -1725,7 +1717,7 @@ android::status_t HWCSession::SetColorModeFromClient(const android::Parcel *inpu
   if (err != HWC2_ERROR_NONE)
     return -EINVAL;
 
-  Refresh(static_cast<hwc2_display_t>(disp_idx));
+  callbacks_.Refresh(static_cast<hwc2_display_t>(disp_idx));
 
   return 0;
 }
@@ -1739,7 +1731,7 @@ android::status_t HWCSession::RefreshScreen(const android::Parcel *input_parcel)
     return -EINVAL;
   }
 
-  Refresh(static_cast<hwc2_display_t>(disp_idx));
+  callbacks_.Refresh(static_cast<hwc2_display_t>(disp_idx));
 
   return 0;
 }
@@ -1878,7 +1870,7 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
         case kInvalidating:
           {
             invalidate_needed = false;
-            Refresh(display_id);
+            callbacks_.Refresh(display_id);
           }
           break;
         case kEnterQDCMMode:
@@ -1893,7 +1885,7 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
             ret = color_mgr_->SetSolidFill(pending_action.params,
                                            true, hwc_display_[display_id]);
           }
-          Refresh(display_id);
+          callbacks_.Refresh(display_id);
           usleep(kSolidFillDelay);
           break;
         case kDisableSolidFill:
@@ -1902,7 +1894,7 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
             ret = color_mgr_->SetSolidFill(pending_action.params,
                                            false, hwc_display_[display_id]);
           }
-          Refresh(display_id);
+          callbacks_.Refresh(display_id);
           usleep(kSolidFillDelay);
           break;
         case kSetPanelBrightness:
@@ -1916,7 +1908,7 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
           break;
         case kEnableFrameCapture:
           ret = color_mgr_->SetFrameCapture(pending_action.params, true, hwc_display_[display_id]);
-          Refresh(display_id);
+          callbacks_.Refresh(display_id);
           break;
         case kDisableFrameCapture:
           ret = color_mgr_->SetFrameCapture(pending_action.params, false,
@@ -1924,12 +1916,12 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
           break;
         case kConfigureDetailedEnhancer:
           ret = color_mgr_->SetDetailedEnhancer(pending_action.params, hwc_display_[display_id]);
-          Refresh(display_id);
+          callbacks_.Refresh(display_id);
           break;
         case kModeSet:
           ret = static_cast<int>
                   (hwc_display_[display_id]->RestoreColorTransform());
-          Refresh(display_id);
+          callbacks_.Refresh(display_id);
           break;
         case kNoAction:
           break;
@@ -1979,7 +1971,7 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
             }
           }
           if (!ret) {
-            Refresh(display_id);
+            callbacks_.Refresh(display_id);
           }
           break;
         default:
@@ -2109,7 +2101,7 @@ void HWCSession::UEventHandler(const char *uevent_data, int length) {
   // uevent handling will be done once when SurfaceFlinger connects, at RegisterCallback(). Since
   // HandlePluggableDisplays() reads the latest connection states of all displays, no uevent is
   // lost.
-  if (client_connected_ && strcasestr(uevent_data, HWC_UEVENT_DRM_EXT_HOTPLUG)) {
+  if (callbacks_.IsClientConnected() && strcasestr(uevent_data, HWC_UEVENT_DRM_EXT_HOTPLUG)) {
     // MST hotplug will not carry connection status/test pattern etc.
     // Pluggable display handler will check all connection status' and take action accordingly.
     const char *str_status = GetTokenValue(uevent_data, length, "status=");
@@ -2194,24 +2186,6 @@ android::status_t HWCSession::GetVisibleDisplayRect(const android::Parcel *input
   output_parcel->writeInt32(visible_rect.bottom);
 
   return android::NO_ERROR;
-}
-
-void HWCSession::Refresh(hwc2_display_t display) {
-  SCOPE_LOCK(callbacks_lock_);
-  HWC2::Error err = callbacks_.Refresh(display);
-  while (err != HWC2::Error::None) {
-    callbacks_lock_.Wait();
-    err = callbacks_.Refresh(display);
-  }
-}
-
-void HWCSession::HotPlug(hwc2_display_t display, HWC2::Connection state) {
-  SCOPE_LOCK(callbacks_lock_);
-  HWC2::Error err = callbacks_.Hotplug(display, state);
-  while (err != HWC2::Error::None) {
-    callbacks_lock_.Wait();
-    err = callbacks_.Hotplug(display, state);
-  }
 }
 
 int HWCSession::CreatePrimaryDisplay() {
@@ -2444,13 +2418,13 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
       // return updated modes for the new display based on available link bandwidth.
       DLOGI("Pending display commit on one of the displays. Deferring display creation.");
       status = -EAGAIN;
-      if (client_connected_) {
+      if (callbacks_.IsClientConnected()) {
         // Trigger a display refresh since we depend on PresentDisplay() to handle pending hotplugs.
         hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
         if (active_builtin_disp_id >= HWCCallbacks::kNumDisplays) {
           active_builtin_disp_id = HWC_DISPLAY_PRIMARY;
         }
-        Refresh(active_builtin_disp_id);
+        callbacks_.Refresh(active_builtin_disp_id);
       }
       break;
     }
@@ -2521,8 +2495,8 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
       hwc_display_[active_builtin_disp_id]->ResetValidation();
     }
 
-    if (client_connected_) {
-      Refresh(active_builtin_disp_id);
+    if (callbacks_.IsClientConnected()) {
+      callbacks_.Refresh(active_builtin_disp_id);
     }
 
     // Do not sleep if this method is called from client thread.
@@ -2597,7 +2571,7 @@ void HWCSession::DestroyPluggableDisplay(DisplayMapInfo *map_info) {
   callbacks_.Hotplug(client_id, HWC2::Connection::Disconnected);
 
   // Trigger refresh to make sure disconnect event received/updated properly by SurfaceFlinger.
-  Refresh(HWC_DISPLAY_PRIMARY);
+  callbacks_.Refresh(HWC_DISPLAY_PRIMARY);
 
   // wait for sufficient time to ensure sufficient resources are available to process
   // connection.
@@ -2681,7 +2655,7 @@ HWC2::Error HWCSession::ValidateDisplayInternal(hwc2_display_t display, uint32_t
   if (display == HWC_DISPLAY_PRIMARY) {
     // TODO(user): This can be moved to HWCDisplayPrimary
     if (need_invalidate_) {
-      Refresh(display);
+      callbacks_.Refresh(display);
       need_invalidate_ = false;
     }
 
@@ -2763,7 +2737,7 @@ void HWCSession::DisplayPowerReset() {
     locker_[display].Unlock();
   }
 
-  Refresh(vsync_source);
+  callbacks_.Refresh(vsync_source);
 }
 
 void HWCSession::HandleSecureSession() {

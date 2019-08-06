@@ -1231,7 +1231,8 @@ DisplayError HWCDisplay::VSync(const DisplayEventVSync &vsync) {
 }
 
 DisplayError HWCDisplay::Refresh() {
-  return kErrorNotSupported;
+  callbacks_->Refresh(id_);
+  return kErrorNone;
 }
 
 DisplayError HWCDisplay::CECMessage(char *message) {

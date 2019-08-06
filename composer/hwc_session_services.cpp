@@ -248,7 +248,7 @@ int32_t HWCSession::SetActiveConfigIndex(int disp_id, uint32_t config) {
   if (hwc_display_[disp_idx]) {
     error = hwc_display_[disp_idx]->SetActiveDisplayConfig(config);
     if (!error) {
-      Refresh(0);
+      callbacks_.Refresh(0);
     }
   }
 
@@ -344,7 +344,7 @@ Return<int32_t> HWCSession::minHdcpEncryptionLevelChanged(IDisplayConfig::Displa
 
 Return<int32_t> HWCSession::refreshScreen() {
   SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
-  Refresh(HWC_DISPLAY_PRIMARY);
+  callbacks_.Refresh(HWC_DISPLAY_PRIMARY);
 
   return 0;
 }
@@ -382,7 +382,7 @@ int32_t HWCSession::ControlPartialUpdate(int disp_id, bool enable) {
   }
 
   // Todo(user): Unlock it before sending events to client. It may cause deadlocks in future.
-  Refresh(HWC_DISPLAY_PRIMARY);
+  callbacks_.Refresh(HWC_DISPLAY_PRIMARY);
 
   // Wait until partial update control is complete
   int32_t error = locker_[disp_idx].WaitFinite(kCommitDoneTimeoutMs);
@@ -493,7 +493,7 @@ Return<int32_t> HWCSession::setCameraLaunchStatus(uint32_t on) {
   }
 
   // trigger invalidate to apply new bw caps.
-  Refresh(0);
+  callbacks_.Refresh(0);
 
   return 0;
 }
@@ -555,7 +555,7 @@ Return<int32_t> HWCSession::controlIdlePowerCollapse(bool enable, bool synchrono
         if (err != kErrorNone) {
           return (err == kErrorNotSupported) ? 0 : -EINVAL;
         }
-        Refresh(active_builtin_disp_id);
+        callbacks_.Refresh(active_builtin_disp_id);
         int32_t error = locker_[active_builtin_disp_id].WaitFinite(kCommitDoneTimeoutMs);
         if (error == ETIMEDOUT) {
           DLOGE("Timed out!! Next frame commit done event not received!!");
@@ -958,7 +958,7 @@ void HWCSession::CWB::ProcessRequests() {
     }
 
     if (!status) {
-      hwc_session_->Refresh(HWC_DISPLAY_PRIMARY);
+      hwc_session_->callbacks_.Refresh(HWC_DISPLAY_PRIMARY);
 
       std::unique_lock<std::mutex> lock(mutex_);
       cv_.wait(lock);
