@@ -105,8 +105,9 @@ DisplayError DisplayBase::Init() {
 
   error = Debug::GetMixerResolution(&mixer_attributes_.width, &mixer_attributes_.height);
   if (error == kErrorNone) {
-    hw_intf_->SetMixerAttributes(mixer_attributes_);
-    custom_mixer_resolution_ = true;
+    if (hw_intf_->SetMixerAttributes(mixer_attributes_) == kErrorNone) {
+      custom_mixer_resolution_ = true;
+    }
   }
 
   error = hw_intf_->GetMixerAttributes(&mixer_attributes_);
