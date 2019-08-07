@@ -23,6 +23,7 @@
 #include <utility>
 #include <cmath>
 #include <qdMetaData.h>
+#include <qd_utils.h>
 
 #define __CLASS__ "HWCLayer"
 
@@ -665,7 +666,7 @@ LayerBufferFormat HWCLayer::GetSDMFormat(const int32_t &source, const int flags)
         format = kFormatYCbCr420P010Ubwc;
         break;
       default:
-        DLOGE("Unsupported format type for UBWC %d", source);
+        DLOGW("Unsupported format type for UBWC %s", qdutils::GetHALPixelFormatString(source));
         return kFormatInvalid;
     }
     return format;
@@ -770,7 +771,7 @@ LayerBufferFormat HWCLayer::GetSDMFormat(const int32_t &source, const int flags)
       format = kFormatInvalid;
       break;
     default:
-      DLOGW("Unsupported format type = %d", source);
+      DLOGW("Unsupported format type = %s", qdutils::GetHALPixelFormatString(source));
       return kFormatInvalid;
   }
 
