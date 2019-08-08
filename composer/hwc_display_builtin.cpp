@@ -127,6 +127,8 @@ int HWCDisplayBuiltIn::Init() {
     DLOGI("Drop redundant drawcycles %d", id_);
   }
 
+  is_primary_ = display_intf_->IsPrimaryDisplay();
+
   return status;
 }
 
@@ -136,7 +138,7 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
 
   DTRACE_SCOPED();
 
-  if (display_paused_) {
+  if (display_paused_ || (!is_primary_ && active_secure_sessions_[kSecureDisplay])) {
     MarkLayersForGPUBypass();
     return status;
   }
@@ -244,7 +246,10 @@ HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
   auto status = HWC2::Error::None;
 
   DTRACE_SCOPED();
-  if (display_paused_) {
+
+  if (!is_primary_ && active_secure_sessions_[kSecureDisplay]) {
+      return status;
+  } else if (display_paused_) {
     DisplayError error = display_intf_->Flush(&layer_stack_);
     validated_ = false;
     if (error != kErrorNone) {
@@ -594,6 +599,10 @@ int HWCDisplayBuiltIn::HandleSecureSession(const std::bitset<kSecureMax> &secure
     return -EINVAL;
   }
 
+  if (!is_primary_) {
+    return HWCDisplay::HandleSecureSession(secure_sessions, power_on_pending);
+  }
+
   if (current_power_mode_ != HWC2::PowerMode::On) {
     return 0;
   }
@@ -607,9 +616,9 @@ int HWCDisplayBuiltIn::HandleSecureSession(const std::bitset<kSecureMax> &secure
       return err;
     }
 
-    DLOGI("SecureDisplay state changed from %d to %d for display %d",
+    DLOGI("SecureDisplay state changed from %d to %d for display %d-%d",
           active_secure_sessions_.test(kSecureDisplay), secure_sessions.test(kSecureDisplay),
-          type_);
+          id_, type_);
   }
   active_secure_sessions_ = secure_sessions;
   *power_on_pending = false;
@@ -940,7 +949,12 @@ HWC2::Error HWCDisplayBuiltIn::SetBLScale(uint32_t level) {
   if (ret != kErrorNone) {
     return HWC2::Error::NoResources;
   }
+  return HWC2::Error::None;
+}
 
+HWC2::Error HWCDisplayBuiltIn::UpdatePowerMode(HWC2::PowerMode mode) {
+  current_power_mode_ = mode;
+  validated_ = false;
   return HWC2::Error::None;
 }
 

@@ -98,6 +98,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   }
   virtual HWC2::Error SetFrameTriggerMode(uint32_t mode);
   virtual HWC2::Error SetBLScale(uint32_t level);
+  virtual HWC2::Error UpdatePowerMode(HWC2::PowerMode mode);
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
@@ -138,6 +139,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   // Members for 1 frame capture in a client provided buffer
   bool frame_capture_buffer_queued_ = false;
   int frame_capture_status_ = -EAGAIN;
+  bool is_primary_ = false;
 };
 
 }  // namespace sdm

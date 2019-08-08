@@ -328,4 +328,10 @@ HWC2::Error HWCDisplayPluggable::SetColorModeWithRenderIntent(ColorMode mode, Re
   return status;
 }
 
+HWC2::Error HWCDisplayPluggable::UpdatePowerMode(HWC2::PowerMode mode) {
+  current_power_mode_ = mode;
+  validated_ = false;
+  return HWC2::Error::None;
+}
+
 }  // namespace sdm

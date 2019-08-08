@@ -142,6 +142,12 @@ class HWCDisplay : public DisplayEventHandler {
     kSkipValidate,
   };
 
+  struct HWCLayerStack {
+    HWCLayer *client_target = nullptr;                   // Also known as framebuffer target
+    std::map<hwc2_layer_t, HWCLayer *> layer_map;        // Look up by Id - TODO
+    std::multiset<HWCLayer *, SortLayersByZ> layer_set;  // Maintain a set sorted by Z
+  };
+
   virtual ~HWCDisplay() {}
   virtual int Init();
   virtual int Deinit();
@@ -313,6 +319,9 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error SetCursorPosition(hwc2_layer_t layer, int x, int y);
   virtual HWC2::Error SetVsyncEnabled(HWC2::Vsync enabled);
   virtual HWC2::Error SetPowerMode(HWC2::PowerMode mode, bool teardown);
+  virtual HWC2::Error UpdatePowerMode(HWC2::PowerMode mode) {
+    return HWC2::Error::None;
+  }
   virtual HWC2::Error CreateLayer(hwc2_layer_t *out_layer_id);
   virtual HWC2::Error DestroyLayer(hwc2_layer_t layer_id);
   virtual HWC2::Error SetLayerZOrder(hwc2_layer_t layer_id, uint32_t z);
@@ -344,6 +353,15 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error SetBLScale(uint32_t level) {
     return HWC2::Error::Unsupported;
   }
+  virtual void GetLayerStack(HWCLayerStack *stack);
+  virtual void SetLayerStack(HWCLayerStack *stack);
+  virtual void PostPowerMode();
+  virtual HWC2::PowerMode GetPendingPowerMode() {
+    return pending_power_mode_;
+  };
+  virtual void ClearPendingPowerMode() {
+    pending_power_mode_ = current_power_mode_;
+  };
 
  protected:
   static uint32_t throttling_refresh_rate_;
@@ -403,6 +421,7 @@ class HWCDisplay : public DisplayEventHandler {
   uint32_t dump_frame_index_ = 0;
   bool dump_input_layers_ = false;
   HWC2::PowerMode current_power_mode_ = HWC2::PowerMode::Off;
+  HWC2::PowerMode pending_power_mode_ = HWC2::PowerMode::Off;
   bool swap_interval_zero_ = false;
   bool display_paused_ = false;
   uint32_t min_refresh_rate_ = 0;
@@ -447,6 +466,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool fast_path_enabled_ = true;
   bool first_cycle_ = true;  // false if a display commit has succeeded on the device.
   int fbt_release_fence_ = -1;
+  int release_fence_ = -1;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {
