@@ -78,6 +78,7 @@ LOCAL_SHARED_LIBRARIES        := $(common_libs) \
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdgralloc\" -Wno-sign-conversion
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
 LOCAL_SRC_FILES               := QtiMapper.cpp QtiMapperExtensions.cpp
+LOCAL_VINTF_FRAGMENTS         := android.hardware.graphics.mapper-impl-qti-display.xml
 include $(BUILD_SHARED_LIBRARY)
 
 #allocator
@@ -100,4 +101,5 @@ LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
 LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes)
 LOCAL_SRC_FILES               := QtiAllocator.cpp service.cpp
 LOCAL_INIT_RC                 := vendor.qti.hardware.display.allocator-service.rc
+LOCAL_VINTF_FRAGMENTS         := vendor.qti.hardware.display.allocator-service.xml
 include $(BUILD_EXECUTABLE)
