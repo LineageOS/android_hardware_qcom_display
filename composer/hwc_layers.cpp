@@ -945,8 +945,8 @@ void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
 
 
 uint32_t HWCLayer::RoundToStandardFPS(float fps) {
-  static const uint32_t standard_fps[4] = {24, 30, 48, 60};
-  uint32_t frame_rate = (uint32_t)(fps);
+  static const int32_t standard_fps[4] = {24, 30, 48, 60};
+  int32_t frame_rate = (uint32_t)(fps);
 
   int count = INT(sizeof(standard_fps) / sizeof(standard_fps[0]));
   for (int i = 0; i < count; i++) {
