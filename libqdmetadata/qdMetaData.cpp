@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -153,6 +153,8 @@ int setMetaDataVa(MetaData_t *data, DispParamType paramType,
                  data->cvpMetadata.size = cvpMetadata->size;
                  memcpy(data->cvpMetadata.payload, cvpMetadata->payload,
                         cvpMetadata->size);
+                 data->cvpMetadata.capture_frame_rate = cvpMetadata->capture_frame_rate;
+                 data->cvpMetadata.cvp_frame_rate = cvpMetadata->cvp_frame_rate;
              } else {
                  data->operation &= ~(paramType);
                  ALOGE("%s: cvp metadata length %d is more than max size %d",
@@ -341,6 +343,8 @@ int getMetaDataVa(MetaData_t *data, DispFetchParamType paramType,
                     cvpMetadata->size = data->cvpMetadata.size;
                     memcpy(cvpMetadata->payload, data->cvpMetadata.payload,
                            data->cvpMetadata.size);
+                    cvpMetadata->capture_frame_rate = data->cvpMetadata.capture_frame_rate;
+                    cvpMetadata->cvp_frame_rate = data->cvpMetadata.cvp_frame_rate;
                     ret = 0;
                 }
             }
