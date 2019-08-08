@@ -69,6 +69,7 @@ LOCAL_SRC_FILES               := QtiComposer.cpp QtiComposerClient.cpp service.c
                                  hwc_buffer_allocator.cpp
 
 LOCAL_INIT_RC                 := vendor.qti.hardware.display.composer-service.rc
+LOCAL_VINTF_FRAGMENTS         := vendor.qti.hardware.display.composer-service.xml
 
 include $(BUILD_EXECUTABLE)
 endif
