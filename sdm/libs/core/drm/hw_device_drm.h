@@ -127,6 +127,9 @@ class HWDeviceDRM : public HWInterface {
                                                     uint8_t *out_data);
   virtual DisplayError SetFrameTrigger(FrameTriggerMode mode) { return kErrorNotSupported; }
   virtual DisplayError SetBLScale(uint32_t level) { return kErrorNotSupported; }
+  virtual DisplayError GetPanelBrightnessBasePath(std::string *base_path) {
+    return kErrorNotSupported;
+  }
 
   enum {
     kHWEventVSync,

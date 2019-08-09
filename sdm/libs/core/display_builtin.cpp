@@ -573,6 +573,11 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
       info->is_primary = IsPrimaryDisplay();
       info->display_id = display_id_;
       info->display_type = display_type_;
+
+      error = hw_intf_->GetPanelBrightnessBasePath(&(info->brightness_base_path));
+      if (error != kErrorNone) {
+        DLOGE("Failed to get brightness base path %d", error);
+      }
       break;
     default:
       DLOGE("Invalid input op %d", op);
