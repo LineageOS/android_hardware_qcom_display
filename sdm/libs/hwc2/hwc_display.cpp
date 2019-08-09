@@ -1124,7 +1124,12 @@ HWC2::Error HWCDisplay::GetActiveConfig(hwc2_config_t *out_config) {
     return HWC2::Error::BadDisplay;
   }
 
-  GetActiveDisplayConfig(out_config);
+  if (pending_config_) {
+    *out_config = pending_config_index_;
+  } else {
+    GetActiveDisplayConfig(out_config);
+  }
+
   if (*out_config < hwc_config_map_.size()) {
     *out_config = hwc_config_map_.at(*out_config);
   }
@@ -1162,13 +1167,22 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, int32_t acquire_
 
 HWC2::Error HWCDisplay::SetActiveConfig(hwc2_config_t config) {
   DTRACE_SCOPED();
-
-  if (SetActiveDisplayConfig(config) != kErrorNone) {
-    return HWC2::Error::BadConfig;
+  hwc2_config_t current_config = 0;
+  GetActiveConfig(&current_config);
+  if (current_config == config) {
+    return HWC2::Error::None;
   }
-  DLOGI("Active configuration changed to: %d", config);
+
+  // Store config index to be applied upon refresh.
+  pending_config_ = true;
+  pending_config_index_ = config;
+
   validated_ = false;
   geometry_changes_ |= kConfigChanged;
+
+  // Trigger refresh. This config gets applied on next commit.
+  callbacks_->Refresh(id_);
+
   return HWC2::Error::None;
 }
 
@@ -1267,6 +1281,7 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
   }
 
   UpdateRefreshRate();
+  UpdateActiveConfig();
   DisplayError error = display_intf_->Prepare(&layer_stack_);
   if (error != kErrorNone) {
     if (error == kErrorShutDown) {
@@ -2383,6 +2398,19 @@ void HWCDisplay::SetLayerStack(HWCLayerStack *stack) {
   client_target_ = stack->client_target;
   layer_map_ = stack->layer_map;
   layer_set_ = stack->layer_set;
+}
+void HWCDisplay::UpdateActiveConfig() {
+  if (!pending_config_) {
+    return;
+  }
+
+  DisplayError error = display_intf_->SetActiveConfig(pending_config_index_);
+  if (error != kErrorNone) {
+    DLOGI("Failed to set %d config", INT(pending_config_index_));
+  }
+
+  // Reset pending config.
+  pending_config_ = false;
 }
 
 }  // namespace sdm
