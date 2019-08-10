@@ -28,6 +28,7 @@
  */
 #include <utils/constants.h>
 #include <utils/debug.h>
+#include <utils/locker.h>
 #include "hwc_callbacks.h"
 
 #define __CLASS__ "HWCCallbacks"
@@ -35,14 +36,34 @@
 namespace sdm {
 
 HWC2::Error HWCCallbacks::Hotplug(hwc2_display_t display, HWC2::Connection state) {
-  if (!hotplug_) {
-    return HWC2::Error::NoResources;
+  SCOPE_LOCK(callbacks_lock_);
+  DTRACE_SCOPED();
+
+  // If client has not registered hotplug, wait for it finitely:
+  //   1. spurious wake up (!hotplug_), wait again
+  //   2. error = ETIMEDOUT, return with warning 1
+  //   3. error != ETIMEDOUT, return with warning 2
+  //   4. error == NONE and no spurious wake up, then !hotplug_ is false, exit loop
+  while (!hotplug_) {
+    DLOGW("Attempting to send client a hotplug too early Display = %" PRIu64 " state = %d", display,
+          state);
+    int ret = callbacks_lock_.WaitFinite(5000);
+    if (ret == ETIMEDOUT) {
+      DLOGW("Client didn't connect on time, dropping hotplug!");
+      return HWC2::Error::None;
+    } else if (ret != 0) {
+      DLOGW("Failed client connection wait. Error %s, dropping hotplug!", strerror(ret));
+      return HWC2::Error::None;
+    }
   }
   hotplug_(hotplug_data_, display, INT32(state));
   return HWC2::Error::None;
 }
 
 HWC2::Error HWCCallbacks::Refresh(hwc2_display_t display) {
+  // Do not lock, will cause hotplug deadlock
+  DTRACE_SCOPED();
+  // If client has not registered refresh, drop it
   if (!refresh_) {
     return HWC2::Error::NoResources;
   }
@@ -52,20 +73,25 @@ HWC2::Error HWCCallbacks::Refresh(hwc2_display_t display) {
 }
 
 HWC2::Error HWCCallbacks::Vsync(hwc2_display_t display, int64_t timestamp) {
+  // Do not lock, may cause hotplug deadlock
+  DTRACE_SCOPED();
+  // If client has not registered vsync, drop it
   if (!vsync_) {
     return HWC2::Error::NoResources;
   }
-  DTRACE_SCOPED();
   vsync_(vsync_data_, display, timestamp);
   return HWC2::Error::None;
 }
 
 HWC2::Error HWCCallbacks::Register(HWC2::Callback descriptor, hwc2_callback_data_t callback_data,
                                    hwc2_function_pointer_t pointer) {
+  SCOPE_LOCK(callbacks_lock_);
   switch (descriptor) {
     case HWC2::Callback::Hotplug:
       hotplug_data_ = callback_data;
       hotplug_ = reinterpret_cast<HWC2_PFN_HOTPLUG>(pointer);
+      client_connected_ = true;
+      callbacks_lock_.Broadcast();
       break;
     case HWC2::Callback::Refresh:
       refresh_data_ = callback_data;

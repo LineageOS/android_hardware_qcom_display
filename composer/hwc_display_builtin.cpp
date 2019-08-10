@@ -649,14 +649,6 @@ uint32_t HWCDisplayBuiltIn::GetOptimalRefreshRate(bool one_updating_layer) {
   return max_refresh_rate_;
 }
 
-DisplayError HWCDisplayBuiltIn::Refresh() {
-  DisplayError error = kErrorNone;
-
-  callbacks_->Refresh(id_);
-
-  return error;
-}
-
 void HWCDisplayBuiltIn::SetIdleTimeoutMs(uint32_t timeout_ms) {
   display_intf_->SetIdleTimeoutMs(timeout_ms);
   validated_ = false;
