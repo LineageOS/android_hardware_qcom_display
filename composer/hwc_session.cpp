@@ -690,6 +690,28 @@ void HWCSession::HandlePendingRefresh() {
 void HWCSession::RegisterCallback(int32_t descriptor, hwc2_callback_data_t callback_data,
                                   hwc2_function_pointer_t pointer) {
   auto desc = static_cast<HWC2::Callback>(descriptor);
+
+  // Detect if client died and now is back
+  bool already_connected = false;
+  vector<hwc2_display_t> pending_hotplugs;
+  if (descriptor == HWC2_CALLBACK_HOTPLUG) {
+    already_connected = callbacks_.IsClientConnected();
+    if (already_connected) {
+      for (auto& map_info : map_info_builtin_) {
+        SCOPE_LOCK(locker_[map_info.client_id]);
+        if (hwc_display_[map_info.client_id]) {
+          pending_hotplugs.push_back(static_cast<hwc2_display_t>(map_info.client_id));
+        }
+      }
+      for (auto& map_info : map_info_pluggable_) {
+        SCOPE_LOCK(locker_[map_info.client_id]);
+        if (hwc_display_[map_info.client_id]) {
+          pending_hotplugs.push_back(static_cast<hwc2_display_t>(map_info.client_id));
+        }
+      }
+    }
+  }
+
   auto error = callbacks_.Register(desc, callback_data, pointer);
   if (error != HWC2::Error::None) {
     return;
@@ -712,6 +734,18 @@ void HWCSession::RegisterCallback(int32_t descriptor, hwc2_callback_data_t callb
       DLOGW("All displays could not be created. Error %d '%s'. Hotplug handling %s.", err,
             strerror(abs(err)), pending_hotplug_event_ == kHotPlugEvent ? "deferred" :
             "dropped");
+    }
+
+    // If previously registered, call hotplug for all connected displays to refresh
+    if (already_connected) {
+      for (auto client_id : pending_hotplugs) {
+        SCOPE_LOCK(locker_[client_id]);
+        // Notify hotplug if the display is still connected
+        if (hwc_display_[client_id]) {
+          DLOGI("Re-hotplug display connected: client id = %d", client_id);
+          callbacks_.Hotplug(client_id, HWC2::Connection::Connected);
+        }
+      }
     }
   }
   need_invalidate_ = false;
