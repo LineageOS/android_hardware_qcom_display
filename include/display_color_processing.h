@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -35,6 +35,7 @@ extern "C" {
 #endif
 
 #define LUT3D_ENTRIES_SIZE (17 * 17 * 17)
+#define LUT3D_GC_ENTRIES_SIZE 1024
 
 struct rgb {
   uint32_t r;
