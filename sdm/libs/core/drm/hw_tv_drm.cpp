@@ -264,24 +264,9 @@ DisplayError HWTVDRM::Commit(HWLayers *hw_layers) {
 }
 
 DisplayError HWTVDRM::UpdateHDRMetaData(HWLayers *hw_layers) {
-  const HWHDRLayerInfo &hdr_layer_info = hw_layers->info.hdr_layer_info;
-  if (!hw_panel_info_.hdr_enabled) {
-    return kErrorNone;
-  }
-
-  DisplayError error = kErrorNone;
-  HWHDRLayerInfo::HDROperation hdr_op = hdr_layer_info.operation;
-
-  Layer hdr_layer = {};
-  if (hdr_op == HWHDRLayerInfo::kSet && hdr_layer_info.layer_index > -1) {
-    hdr_layer = *(hw_layers->info.stack->layers.at(UINT32(hdr_layer_info.layer_index)));
-  }
-
-  const LayerBuffer *layer_buffer = &hdr_layer.input_buffer;
-  const MasteringDisplay &mastering_display = layer_buffer->color_metadata.masteringDisplayInfo;
-  const ContentLightLevel &light_level = layer_buffer->color_metadata.contentLightLevel;
-  const Primaries &primaries = mastering_display.primaries;
-  // Set colorspace on external displays.
+  // Set colorspace on external DP when DP supports colorspace.
+  // For P3 use case set colorspace only.
+  // For HDR use case set both hdr metadata and colorspace.
   if (hw_panel_info_.port == kPortDP && hw_panel_info_.supported_colorspaces) {
     LayerStack *stack = hw_layers->info.stack;
     sde_drm::DRMColorspace colorspace = sde_drm::DRMColorspace::DEFAULT;
@@ -298,6 +283,24 @@ DisplayError HWTVDRM::UpdateHDRMetaData(HWLayers *hw_layers) {
     DLOGV_IF(kTagDriverConfig, "Set colorspace = %d", colorspace);
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_COLORSPACE, token_.conn_id, colorspace);
   }
+
+  if (!hw_panel_info_.hdr_enabled) {
+    return kErrorNone;
+  }
+
+  const HWHDRLayerInfo &hdr_layer_info = hw_layers->info.hdr_layer_info;
+  DisplayError error = kErrorNone;
+  HWHDRLayerInfo::HDROperation hdr_op = hdr_layer_info.operation;
+
+  Layer hdr_layer = {};
+  if (hdr_op == HWHDRLayerInfo::kSet && hdr_layer_info.layer_index > -1) {
+    hdr_layer = *(hw_layers->info.stack->layers.at(UINT32(hdr_layer_info.layer_index)));
+  }
+
+  const LayerBuffer *layer_buffer = &hdr_layer.input_buffer;
+  const MasteringDisplay &mastering_display = layer_buffer->color_metadata.masteringDisplayInfo;
+  const ContentLightLevel &light_level = layer_buffer->color_metadata.contentLightLevel;
+  const Primaries &primaries = mastering_display.primaries;
 
   if (hdr_op == HWHDRLayerInfo::kSet && hdr_layer_info.hdr_layers.size() == 1) {
     // Reset reset_hdr_flag_ to handle where there are two consecutive HDR video playbacks with not

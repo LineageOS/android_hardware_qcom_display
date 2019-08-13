@@ -102,10 +102,12 @@
 #define ENABLE_POSTED_START_DYN_PROP         DISPLAY_PROP("enable_posted_start_dyn")
 // Disable deferring power state request to first draw cycle
 #define DISABLE_DEFER_POWER_STATE            DISPLAY_PROP("disable_defer_power_state")
-#define ENABLE_OPTIMIZE_REFRESH                  DISPLAY_PROP("enable_optimize_refresh")
+#define ENABLE_OPTIMIZE_REFRESH              DISPLAY_PROP("enable_optimize_refresh")
 #define DISABLE_PARALLEL_CACHE               DISPLAY_PROP("disable_parallel_cache")
 // Disable 3d tonemap support for UI layers
 #define DISABLE_UI_3D_TONEMAP                DISPLAY_PROP("disable_ui_3d_tonemap")
+#define QDCM_DISABLE_FACTORY_MODE_PROP       DISPLAY_PROP("qdcm.disable_factory_mode")
+#define ENABLE_ASYNC_POWERMODE               DISPLAY_PROP("enable_async_powermode")
 
 // Add all vendor.display properties above
 

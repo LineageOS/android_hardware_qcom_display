@@ -105,8 +105,9 @@ DisplayError DisplayBase::Init() {
 
   error = Debug::GetMixerResolution(&mixer_attributes_.width, &mixer_attributes_.height);
   if (error == kErrorNone) {
-    hw_intf_->SetMixerAttributes(mixer_attributes_);
-    custom_mixer_resolution_ = true;
+    if (hw_intf_->SetMixerAttributes(mixer_attributes_) == kErrorNone) {
+      custom_mixer_resolution_ = true;
+    }
   }
 
   error = hw_intf_->GetMixerAttributes(&mixer_attributes_);
@@ -612,7 +613,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
   if (error == kErrorNone) {
     active_ = active;
     state_ = state;
-    comp_manager_->SetDisplayState(display_comp_ctx_, state);
+    comp_manager_->SetDisplayState(display_comp_ctx_, state, release_fence ? *release_fence : -1);
   }
 
   // Handle vsync pending on resume, Since the power on commit is synchronous we pass -1 as retire

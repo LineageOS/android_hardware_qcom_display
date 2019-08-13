@@ -194,9 +194,10 @@ HWC2::Error HWCColorMode::ApplyCurrentColorModeWithRenderIntent(bool hdr_present
       mode_string = color_mode_map_[current_color_mode_][RenderIntent::COLORIMETRIC][kHdrType];
     }
     if (mode_string.empty() &&
-      current_color_mode_ == ColorMode::DISPLAY_P3 &&
-      curr_dynamic_range_ == kHdrType) {
-      // fall back to display_p3 SDR mode if there is no HDR mode
+       (current_color_mode_ == ColorMode::DISPLAY_P3 ||
+       current_color_mode_ == ColorMode::DISPLAY_BT2020) &&
+       curr_dynamic_range_ == kHdrType) {
+      // fall back to display_p3/display_bt2020 SDR mode if there is no HDR mode
       mode_string = color_mode_map_[current_color_mode_][current_render_intent_][kSdrType];
     }
   }
@@ -902,6 +903,29 @@ HWC2::Error HWCDisplay::SetVsyncEnabled(HWC2::Vsync enabled) {
   return HWC2::Error::None;
 }
 
+void HWCDisplay::PostPowerMode() {
+  if (release_fence_ < 0) {
+    return;
+  }
+
+  for (auto hwc_layer : layer_set_) {
+    auto fence = hwc_layer->PopBackReleaseFence();
+    auto merged_fence = -1;
+    if (fence >= 0) {
+      merged_fence = sync_merge("sync_merge", release_fence_, fence);
+      ::close(fence);
+    } else {
+      merged_fence = ::dup(release_fence_);
+    }
+    hwc_layer->PushBackReleaseFence(merged_fence);
+  }
+
+  // Add this release fence onto fbt_release fence.
+  CloseFd(&fbt_release_fence_);
+  fbt_release_fence_ = release_fence_;
+  release_fence_ = -1;
+}
+
 HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
   DLOGV("display = %d, mode = %s", id_, to_string(mode).c_str());
   DisplayState state = kStateOff;
@@ -950,23 +974,8 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
     return HWC2::Error::BadParameter;
   }
 
-  if (release_fence >= 0) {
-    for (auto hwc_layer : layer_set_) {
-      auto fence = hwc_layer->PopBackReleaseFence();
-      auto merged_fence = -1;
-      if (fence >= 0) {
-        merged_fence = sync_merge("sync_merge", release_fence, fence);
-        ::close(fence);
-      } else {
-        merged_fence = ::dup(release_fence);
-      }
-      hwc_layer->PushBackReleaseFence(merged_fence);
-    }
-
-    // Add this release fence onto fbt_release fence.
-    CloseFd(&fbt_release_fence_);
-    fbt_release_fence_ = release_fence;
-  }
+  // Update release fence.
+  release_fence_ = release_fence;
   current_power_mode_ = mode;
   return HWC2::Error::None;
 }
@@ -2070,6 +2079,7 @@ int HWCDisplay::HandleSecureSession(const std::bitset<kSecureMax> &secure_sessio
 
   if (active_secure_sessions_[kSecureDisplay] != secure_sessions[kSecureDisplay]) {
     if (secure_sessions[kSecureDisplay]) {
+      pending_power_mode_ = current_power_mode_;
       HWC2::Error error = SetPowerMode(HWC2::PowerMode::Off, true /* teardown */);
       if (error != HWC2::Error::None) {
         DLOGE("SetPowerMode failed. Error = %d", error);
@@ -2078,9 +2088,9 @@ int HWCDisplay::HandleSecureSession(const std::bitset<kSecureMax> &secure_sessio
       *power_on_pending = true;
     }
 
-    DLOGI("SecureDisplay state changed from %d to %d for display %d",
+    DLOGI("SecureDisplay state changed from %d to %d for display %d-%d",
           active_secure_sessions_.test(kSecureDisplay), secure_sessions.test(kSecureDisplay),
-          type_);
+          id_, type_);
   }
   active_secure_sessions_ = secure_sessions;
   return 0;
@@ -2373,6 +2383,18 @@ void HWCDisplay::WaitOnPreviousFence() {
       return;
     }
   }
+}
+
+void HWCDisplay::GetLayerStack(HWCLayerStack *stack) {
+  stack->client_target = client_target_;
+  stack->layer_map = layer_map_;
+  stack->layer_set = layer_set_;
+}
+
+void HWCDisplay::SetLayerStack(HWCLayerStack *stack) {
+  client_target_ = stack->client_target;
+  layer_map_ = stack->layer_map;
+  layer_set_ = stack->layer_set;
 }
 
 }  // namespace sdm

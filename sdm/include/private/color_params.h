@@ -279,6 +279,7 @@ static const uint32_t kDeTuningFlagThrDieout = 0x08;
 static const uint32_t kDeTuningFlagThrLow = 0x10;
 static const uint32_t kDeTuningFlagThrHigh = 0x20;
 static const uint32_t kDeTuningFlagContentQualLevel = 0x40;
+static const uint32_t kDeTuningFlagDeBlend = 0x80;
 
 typedef enum {
   kDeContentQualUnknown,
@@ -305,6 +306,7 @@ struct PPDETuningCfg {
   uint16_t clip = 0;
   PPDEContentQualLevel quality = kDeContentQualUnknown;
   PPDEContentType content_type = kDeContentTypeUnknown;
+  uint32_t de_blend = 0;
 };
 
 struct PPDETuningCfgData {

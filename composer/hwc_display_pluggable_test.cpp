@@ -364,7 +364,7 @@ int HWCDisplayPluggableTest::GetStride(LayerBufferFormat format, uint32_t width,
     *stride = width * 3;
     break;
   default:
-    DLOGE("Unsupported format type %d", format);
+    DLOGW("Unsupported format type %d", format);
     return -EINVAL;
   }
 

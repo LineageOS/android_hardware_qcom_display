@@ -79,7 +79,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   virtual DisplayError SetDetailEnhancerConfig(const DisplayDetailEnhancerData &de_data);
   virtual DisplayError ControlPartialUpdate(bool enable, uint32_t *pending);
   virtual HWC2::Error SetReadbackBuffer(const native_handle_t *buffer, int32_t acquire_fence,
-                                        bool post_processed_output);
+                                        bool post_processed_output, CWBClient client);
   virtual HWC2::Error GetReadbackBufferFence(int32_t *release_fence);
   virtual HWC2::Error SetQSyncMode(QSyncMode qsync_mode);
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous);
@@ -97,6 +97,8 @@ class HWCDisplayBuiltIn : public HWCDisplay {
     fast_path_composition_ = enable && !readback_buffer_queued_;
   }
   virtual HWC2::Error SetFrameTriggerMode(uint32_t mode);
+  virtual HWC2::Error SetBLScale(uint32_t level);
+  virtual HWC2::Error UpdatePowerMode(HWC2::PowerMode mode);
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
@@ -119,6 +121,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
 
   BufferAllocator *buffer_allocator_ = nullptr;
   CPUHint *cpu_hint_ = nullptr;
+  CWBClient cwb_client_ = kCWBClientNone;
 
   // Builtin readback buffer configuration
   LayerBuffer output_buffer_ = {};
@@ -136,6 +139,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   // Members for 1 frame capture in a client provided buffer
   bool frame_capture_buffer_queued_ = false;
   int frame_capture_status_ = -EAGAIN;
+  bool is_primary_ = false;
 };
 
 }  // namespace sdm

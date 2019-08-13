@@ -885,6 +885,14 @@ class DisplayInterface {
   */
   virtual bool CanSkipValidate() = 0;
 
+  /*! @brief Method to set display backlight scale ratio.
+
+    @param[in] backlight scale ratio.
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError SetBLScale(uint32_t level) = 0;
+
  protected:
   virtual ~DisplayInterface() { }
 };

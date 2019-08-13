@@ -610,4 +610,15 @@ void HWPeripheralDRM::GetHWPanelMaxBrightness() {
   Sys::close_(fd);
   return;
 }
+
+DisplayError HWPeripheralDRM::SetBLScale(uint32_t level) {
+  int ret = drm_atomic_intf_->Perform(DRMOps::DPPS_CACHE_FEATURE,
+              token_.conn_id, sde_drm::kFeatureSvBlScale, level);
+  if (ret) {
+    DLOGE("Failed to set backlight scale level %d, ret %d", level, ret);
+    return kErrorUndefined;
+  }
+  return kErrorNone;
+}
+
 }  // namespace sdm

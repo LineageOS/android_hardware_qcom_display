@@ -355,6 +355,11 @@ int HWCColorManager::SetHWDetailedEnhancerConfig(void *params, HWCDisplay *hwc_d
             break;
         }
       }
+
+      if (de_tuning_cfg_data->params.flags & kDeTuningFlagDeBlend) {
+        de_data.override_flags |= kOverrideDEBlend;
+        de_data.de_blend = de_tuning_cfg_data->params.de_blend;
+      }
     }
     err = hwc_display->SetDetailEnhancerConfig(de_data);
     if (err) {

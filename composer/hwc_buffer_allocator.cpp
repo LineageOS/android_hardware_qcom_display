@@ -405,7 +405,7 @@ int HWCBufferAllocator::SetBufferInfo(LayerBufferFormat format, int *target, uin
       *flags |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
       break;
     default:
-      DLOGE("Unsupported format = 0x%x", format);
+      DLOGW("Unsupported format = 0x%x", format);
       return -EINVAL;
   }
   return 0;

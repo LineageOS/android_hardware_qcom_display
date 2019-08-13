@@ -534,7 +534,7 @@ DisplayError CompManager::ControlDpps(bool enable) {
   return kErrorNone;
 }
 
-bool CompManager::SetDisplayState(Handle display_ctx, DisplayState state) {
+bool CompManager::SetDisplayState(Handle display_ctx, DisplayState state, int sync_handle) {
   DisplayCompositionContext *display_comp_ctx =
       reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
@@ -572,6 +572,8 @@ bool CompManager::SetDisplayState(Handle display_ctx, DisplayState state) {
   bool inactive = (state == kStateOff) || (state == kStateDozeSuspend);
   UpdateStrategyConstraints(display_comp_ctx->is_primary_panel, inactive);
 
+  resource_intf_->Perform(ResourceInterface::kCmdUpdateSyncHandle,
+                          display_comp_ctx->display_resource_ctx, sync_handle);
   return true;
 }
 

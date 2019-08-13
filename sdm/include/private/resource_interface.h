@@ -37,6 +37,7 @@ class ResourceInterface {
     kCmdGetDefaultClk,
     kCmdDisableRotatorOneFrame,
     kCmdSetDisplayState,
+    kCmdUpdateSyncHandle,
     kCmdMax,
   };
 
