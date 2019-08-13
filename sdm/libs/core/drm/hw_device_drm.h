@@ -137,6 +137,12 @@ class HWDeviceDRM : public HWInterface {
   static const int kNumPhysicalDisplays = 2;
   static const int kMaxSysfsCommandLength = 12;
 
+  // Max tolerable power-state-change wait-times in milliseconds.
+  static const int kTimeoutMsPowerOn = 5000;
+  static const int kTimeoutMsPowerOff = 3000;
+  static const int kTimeoutMsDoze = kTimeoutMsPowerOff;
+  static const int kTimeoutMsDozeSuspend = kTimeoutMsPowerOff;
+
   DisplayError SetFormat(const LayerBufferFormat &source, uint32_t *target);
   DisplayError SetStride(HWDeviceType device_type, LayerBufferFormat format, uint32_t width,
                          uint32_t *target);

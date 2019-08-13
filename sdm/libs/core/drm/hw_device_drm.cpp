@@ -907,7 +907,7 @@ DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, int *release_fence)
   }
   pending_doze_ = false;
 
-  buffer_sync_handler_->SyncWait(INT(retire_fence_t));
+  buffer_sync_handler_->SyncWait(INT(retire_fence_t), kTimeoutMsPowerOn);
   Sys::close_(INT(retire_fence_t));
 
   return kErrorNone;
@@ -940,7 +940,7 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown) {
   pending_doze_ = false;
 
   int release_fence = static_cast<int>(release_fence_t);
-  buffer_sync_handler_->SyncWait(release_fence);
+  buffer_sync_handler_->SyncWait(release_fence, kTimeoutMsPowerOff);
   Sys::close_(release_fence);
 
   return kErrorNone;
@@ -982,7 +982,7 @@ DisplayError HWDeviceDRM::Doze(const HWQosData &qos_data, int *release_fence) {
   }
 
   int retire_fence = static_cast<int>(retire_fence_t);
-  buffer_sync_handler_->SyncWait(retire_fence);
+  buffer_sync_handler_->SyncWait(retire_fence, kTimeoutMsDoze);
   Sys::close_(retire_fence);
 
   return kErrorNone;
@@ -1022,7 +1022,7 @@ DisplayError HWDeviceDRM::DozeSuspend(const HWQosData &qos_data, int *release_fe
   pending_doze_ = false;
 
   int retire_fence = static_cast<int>(retire_fence_t);
-  buffer_sync_handler_->SyncWait(retire_fence);
+  buffer_sync_handler_->SyncWait(retire_fence, kTimeoutMsDozeSuspend);
   Sys::close_(retire_fence);
 
   return kErrorNone;
