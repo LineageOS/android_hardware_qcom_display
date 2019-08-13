@@ -26,6 +26,10 @@
 #define __DISPLAY_BUILTIN_H__
 
 #include <core/dpps_interface.h>
+#include <private/extension_interface.h>
+#include <private/spr_intf.h>
+#include <private/panel_feature_property_intf.h>
+#include <private/panel_feature_factory_intf.h>
 #include <string>
 #include <vector>
 
@@ -74,6 +78,8 @@ struct DeferFpsConfig {
     apply = false;
   }
 };
+
+typedef PanelFeatureFactoryIntf* (*GetPanelFeatureFactoryIntfType)();
 
 class DppsInfo {
  public:
@@ -160,6 +166,10 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   void SetDeferredFpsConfig();
   void GetFpsConfig(HWDisplayAttributes *display_attributes, HWPanelInfo *panel_info);
   PrimariesTransfer GetBlendSpaceFromStcColorMode(const snapdragoncolor::ColorMode &color_mode);
+  DisplayError SetupPanelfeatures();
+  DisplayError SetupSPR(PanelFeatureFactoryIntf *factory, PanelFeaturePropertyIntf *prop_intf);
+  DisplayError SetupDemura(PanelFeatureFactoryIntf *factory, PanelFeaturePropertyIntf *prop_intf);
+  DisplayError SetupRC(PanelFeatureFactoryIntf *factory, PanelFeaturePropertyIntf *prop_intf);
 
   const uint32_t kPuTimeOutMs = 1000;
   std::vector<HWEvent> event_list_;
@@ -168,6 +178,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   bool handle_idle_timeout_ = false;
   bool commit_event_enabled_ = false;
   bool reset_panel_ = false;
+  bool panel_feature_init_ = false;
   DppsInfo dpps_info_ = {};
   FrameTriggerMode trigger_mode_debug_ = kFrameTriggerMax;
   float level_remainder_ = 0.0f;

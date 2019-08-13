@@ -235,6 +235,73 @@ DisplayError DisplayBuiltIn::colorSamplingOff() {
   return setColorSamplingState(SamplingState::Off);
 }
 
+DisplayError DisplayBuiltIn::SetupSPR(PanelFeatureFactoryIntf *factory,
+                                      PanelFeaturePropertyIntf *prop_intf) {
+  SPRInputConfig spr_cfg;
+
+  spr_cfg.panel_name = std::string(hw_panel_info_.panel_name);
+  std::shared_ptr<SPRIntf> spr = factory->CreateSPRIntf(spr_cfg, prop_intf);
+  if (spr == nullptr) {
+    DLOGE("Failed to create SPR interface");
+    return kErrorResources;
+  }
+
+  if (spr->Init() != 0) {
+    DLOGE("Failed to initialize SPR");
+    return kErrorResources;
+  }
+
+  return kErrorNone;
+}
+
+DisplayError DisplayBuiltIn::SetupDemura(PanelFeatureFactoryIntf *factory,
+                                         PanelFeaturePropertyIntf *prop_intf) {
+  (void)factory;
+  (void)prop_intf;
+  return kErrorNone;
+}
+
+DisplayError DisplayBuiltIn::SetupRC(PanelFeatureFactoryIntf *factory,
+                                     PanelFeaturePropertyIntf *prop_intf) {
+  (void)factory;
+  (void)prop_intf;
+  return kErrorNone;
+}
+
+DisplayError DisplayBuiltIn::SetupPanelfeatures() {
+  DynLib feature_impl_lib;
+  GetPanelFeatureFactoryIntfType GetPanelFeatureFactoryIntfFunc = nullptr;
+  if (feature_impl_lib.Open(EXTENSION_LIBRARY_NAME)) {
+    if (!feature_impl_lib.Sym("GetPanelFeatureFactoryIntf",
+                            reinterpret_cast<void **>(&GetPanelFeatureFactoryIntfFunc))) {
+      DLOGE("Unable to load symbols, error = %s", feature_impl_lib.Error());
+      return kErrorUndefined;
+    }
+  } else {
+    DLOGW("Panel features are not supported");
+    return kErrorNone;
+  }
+
+  PanelFeatureFactoryIntf *factory = GetPanelFeatureFactoryIntfFunc();
+  if (!factory) {
+    DLOGE("Failed to get Panel feature factory interface");
+    return kErrorResources;
+  }
+
+  PanelFeaturePropertyIntf *prop_intf = hw_intf_->GetPanelFeaturePropertyIntf();
+  if (!prop_intf) {
+    DLOGE("Failed to get panel feature property interface");
+    return kErrorResources;
+  }
+
+  DisplayError ret = kErrorNone;
+  if ((ret = SetupSPR(factory, prop_intf)) != kErrorNone) return ret;
+  if ((ret = SetupDemura(factory, prop_intf)) != kErrorNone) return ret;
+  if ((ret = SetupRC(factory, prop_intf)) != kErrorNone) return ret;
+
+  return ret;
+}
+
 DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
@@ -356,6 +423,14 @@ DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
 
   if (pending_doze_ || pending_power_on_) {
     event_handler_->Refresh();
+  }
+
+  if (!panel_feature_init_ && state != kStateOff && state != kStateStandby) {
+    error = SetupPanelfeatures();
+    panel_feature_init_ = true;
+    if (error != kErrorNone) {
+      DLOGE("SetupPanelfeatures failed with error :%d, ignoring!", error);
+    }
   }
 
   return kErrorNone;

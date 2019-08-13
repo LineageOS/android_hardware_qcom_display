@@ -30,6 +30,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __HW_PERIPHERAL_DRM_H__
 #define __HW_PERIPHERAL_DRM_H__
 
+#include <map>
 #include <vector>
 #include <string>
 #include "hw_device_drm.h"
@@ -47,11 +48,14 @@ enum SelfRefreshState {
   kSelfRefreshDisable,
 };
 
-class HWPeripheralDRM : public HWDeviceDRM {
+class HWPeripheralDRM : public HWDeviceDRM, public PanelFeaturePropertyIntf {
  public:
   explicit HWPeripheralDRM(int32_t display_id, BufferAllocator *buffer_allocator,
                            HWInfoInterface *hw_info_intf);
   virtual ~HWPeripheralDRM() {}
+  virtual PanelFeaturePropertyIntf *GetPanelFeaturePropertyIntf() { return this; }
+  virtual int GetPanelFeature(PanelFeaturePropertyInfo *feature_info);
+  virtual int SetPanelFeature(const PanelFeaturePropertyInfo &feature_info);
 
  protected:
   virtual DisplayError Init();
@@ -86,6 +90,7 @@ class HWPeripheralDRM : public HWDeviceDRM {
                                 int64_t *release_fence_fd);
   void ConfigureConcurrentWriteback(LayerStack *stack);
   void PostCommitConcurrentWriteback(LayerBuffer *output_buffer);
+  void CreatePanelFeaturePropertyMap();
   void SetIdlePCState() {
     drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_IDLE_PC_STATE, token_.crtc_id,
                               idle_pc_state_);
@@ -130,6 +135,7 @@ class HWPeripheralDRM : public HWDeviceDRM {
   std::string brightness_base_path_ = "";
   SelfRefreshState self_refresh_state_ = kSelfRefreshNone;
   bool ltm_hist_en_ = false;
+  std::map<PanelFeaturePropertyID, sde_drm::DRMPanelFeatureID> panel_feature_property_map_ {};
 };
 
 }  // namespace sdm

@@ -29,6 +29,7 @@
 #include <core/display_interface.h>
 #include <private/hw_info_types.h>
 #include <private/color_interface.h>
+#include <private/panel_feature_property_intf.h>
 #include <utils/constants.h>
 #include <string>
 
@@ -131,6 +132,7 @@ class HWInterface {
   virtual DisplayError GetPanelBrightnessBasePath(std::string *base_path) = 0;
   virtual DisplayError SetBlendSpace(const PrimariesTransfer &blend_space) = 0;
   virtual DisplayError EnableSelfRefresh() = 0;
+  virtual PanelFeaturePropertyIntf *GetPanelFeaturePropertyIntf() = 0;
 
  protected:
   virtual ~HWInterface() { }

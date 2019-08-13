@@ -27,38 +27,43 @@
 *
 */
 
-#ifndef __PANEL_FEATURE_PROPERTY_INTF_H__
-#define __PANEL_FEATURE_PROPERTY_INTF_H__
+#ifndef __DRM_PANEL_FEATURE_MGR_H__
+#define __DRM_PANEL_FEATURE_MGR_H__
 
-namespace sdm {
+#include <vector>
+#include <mutex>
 
-/* enumeration of all panel feature related properties */
-enum PanelFeaturePropertyID {
-  kPanelFeatureDsppIndex,
-  kPanelFeatureDsppSPRInfo,
-  kPanelFeatureDsppDemuraInfo,
-  kPanelFeatureDsppRCInfo,
-  kPanelFeatureSPRInitCfg,
-  kPanelFeatureSPRPackType,
-  kPanelFeatureDemuraInitCfg,
-  kPanelFeaturePropertyIDMax,
-};
+#include "drm_interface.h"
+#include "drm_property.h"
+#include "drm_panel_feature_mgr_intf.h"
 
-struct PanelFeaturePropertyInfo {
-  PanelFeaturePropertyID prop_id = kPanelFeaturePropertyIDMax;
-  uint64_t prop_ptr = 0;  // Pointer to property data structure
-  uint32_t prop_size = 0;  // Size of the property in bytes
-  uint32_t version = 0;
-};
+namespace sde_drm {
 
-class PanelFeaturePropertyIntf {
+class DRMPanelFeatureMgr : public DRMPanelFeatureMgrIntf {
  public:
-  virtual ~PanelFeaturePropertyIntf() {}
-  virtual int GetPanelFeature(PanelFeaturePropertyInfo *feature_info) = 0;
-  virtual int SetPanelFeature(const PanelFeaturePropertyInfo &feature_info) = 0;
+  virtual ~DRMPanelFeatureMgr() {}
+  void Init(int fd, drmModeRes* res);
+  void GetPanelFeatureInfo(DRMPanelFeatureInfo *info);
+  void CachePanelFeature(const DRMPanelFeatureInfo &info);
+  void CommitPanelFeatures(drmModeAtomicReq *req, const DRMDisplayToken &tok);
+
+ private:
+  int InitObjectProps(int obj_id, int obj_type);
+  void ParseCapabilities(uint32_t blob_id, char* value, uint32_t max_len, const std::string str);
+
+  std::mutex lock_;
+  int dev_fd_ = -1;
+  drmModeRes* drm_res_ = nullptr;
+  DRMPropertyManager prop_mgr_ {};
+  std::array<std::pair<bool, struct DRMPanelFeatureInfo>,
+          kDRMPanelFeatureMax> dirty_features_ {};
+  std::map<DRMPanelFeatureID, DRMProperty> drm_property_map_ {};
+  std::map<DRMPanelFeatureID, DRMPropType> drm_prop_type_map_ {};
+  std::map<DRMPanelFeatureID, uint32_t> drm_prop_blob_ids_map_ {};
+  std::array<DRMPanelFeatureInfo, kDRMPanelFeatureMax> feature_info_tbl_ {};
 };
 
-}  // namespace sdm
+}  // namespace sde_drm
 
-#endif  // __PANEL_FEATURE_PROPERTY_INTF_H__
+#endif  // __DRM_PANEL_FEATURE_MGR_H__
 

@@ -402,6 +402,11 @@ enum struct DRMOps {
    */
   DPPS_COMMIT_FEATURE,
   /*
+   * Op: Commit panel features.
+   * Arg: drmModeAtomicReq - Atomic request
+   */
+  COMMIT_PANEL_FEATURES,
+  /*
    * Op: Sets qsync mode on connector
    * Arg: uint32_t - Connector ID
    *     uint32_t - qsync mode
@@ -717,7 +722,7 @@ enum DRMPPFeatureID {
   kPPFeaturesMax,
 };
 
-enum DRMPPPropType {
+enum DRMPropType {
   kPropEnum,
   kPropRange,
   kPropBlob,
@@ -726,7 +731,7 @@ enum DRMPPPropType {
 
 struct DRMPPFeatureInfo {
   DRMPPFeatureID id;
-  DRMPPPropType type;
+  DRMPropType type;
   uint32_t version;
   uint32_t payload_size;
   void *payload;
@@ -794,6 +799,26 @@ struct DRMDppsFeatureInfo {
   uint32_t version;
   uint32_t payload_size;
   void *payload;
+};
+
+enum DRMPanelFeatureID {
+  kDRMPanelFeatureDsppIndex,
+  kDRMPanelFeatureDsppSPRInfo,
+  kDRMPanelFeatureDsppDemuraInfo,
+  kDRMPanelFeatureDsppRCInfo,
+  kDRMPanelFeatureSPRInit,
+  kDRMPanelFeatureSPRPackType,
+  kDRMPanelFeatureDemuraInit,
+  kDRMPanelFeatureMax,
+};
+
+struct DRMPanelFeatureInfo  {
+  DRMPanelFeatureID prop_id;
+  uint32_t obj_type;
+  uint32_t obj_id;
+  uint32_t version;
+  uint32_t prop_size;
+  uint64_t prop_ptr;
 };
 
 enum AD4Modes {
@@ -1082,6 +1107,19 @@ class DRMManagerInterface {
    * [output]: Dpps feature version, info->version
    */
   virtual void GetDppsFeatureInfo(DRMDppsFeatureInfo *info) = 0;
+
+  /*
+   * Get the Panel feature info
+   * [output]: panel feature info data
+   */
+  virtual void GetPanelFeature(DRMPanelFeatureInfo *info) = 0;
+
+  /*
+   * Set the Panel feature
+   * [input]: panel feature info data
+   */
+  virtual void SetPanelFeature(const DRMPanelFeatureInfo &info) = 0;
+
 };
 
 }  // namespace sde_drm
