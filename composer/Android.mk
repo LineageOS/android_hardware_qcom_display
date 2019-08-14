@@ -46,7 +46,8 @@ LOCAL_SHARED_LIBRARIES        := libbinder libhardware libutils libcutils libsyn
                                  vendor.display.config@1.7 \
                                  vendor.display.config@1.8 \
                                  vendor.display.config@1.9 \
-                                 vendor.display.config@1.10
+                                 vendor.display.config@1.10 \
+                                 vendor.display.config@1.11
 
 LOCAL_SRC_FILES               := QtiComposer.cpp QtiComposerClient.cpp service.cpp \
                                  QtiComposerHandleImporter.cpp \

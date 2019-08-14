@@ -99,9 +99,10 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   void ResetPanel();
 
  private:
-  bool NeedsAVREnable();
   bool CanCompareFrameROI(LayerStack *layer_stack);
   bool CanSkipDisplayPrepare(LayerStack *layer_stack);
+  HWAVRModes GetAvrMode(QSyncMode mode);
+
   const uint32_t kPuTimeOutMs = 1000;
   std::vector<HWEvent> event_list_;
   bool avr_prop_disabled_ = false;
@@ -110,7 +111,6 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   bool commit_event_enabled_ = false;
   bool reset_panel_ = false;
   DppsInfo dpps_info_ = {};
-  QSyncMode qsync_mode_ = kQSyncModeNone;
   FrameTriggerMode trigger_mode_debug_ = kFrameTriggerMax;
   float level_remainder_ = 0.0f;
   float cached_brightness_ = 0.0f;
@@ -120,6 +120,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   LayerRect right_frame_roi_ = {};
   Locker dpps_pu_lock_;
   bool dpps_pu_nofiy_pending_ = false;
+  bool first_cycle_ = true;
 };
 
 }  // namespace sdm

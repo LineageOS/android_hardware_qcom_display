@@ -451,6 +451,7 @@ class HWCDisplay : public DisplayEventHandler {
   std::map<uint32_t, DisplayConfigVariableInfo> variable_config_map_;
   std::vector<uint32_t> hwc_config_map_;
   bool client_connected_ = true;
+  bool pending_config_ = false;
 
  private:
   void DumpInputBuffers(void);
@@ -469,7 +470,6 @@ class HWCDisplay : public DisplayEventHandler {
   bool first_cycle_ = true;  // false if a display commit has succeeded on the device.
   int fbt_release_fence_ = -1;
   int release_fence_ = -1;
-  bool pending_config_ = false;
   hwc2_config_t pending_config_index_ = 0;
 };
 
