@@ -776,6 +776,7 @@ enum struct DRMCWbCaptureMode {
 enum struct DRMQsyncMode {
   NONE = 0,
   CONTINUOUS,
+  ONESHOT,
 };
 
 enum struct DRMTopologyControl {
