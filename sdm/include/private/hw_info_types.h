@@ -125,6 +125,7 @@ enum HWPipeFlags {
 };
 
 enum HWAVRModes {
+  kQsyncNone,       // Disables Qsync.
   kContinuousMode,  // Mode to enable AVR feature for every frame.
   kOneShotMode,     // Mode to enable AVR feature for particular frame.
 };
@@ -572,7 +573,7 @@ struct HWDestScaleInfo {
 typedef std::map<uint32_t, HWDestScaleInfo *> DestScaleInfoMap;
 
 struct HWAVRInfo {
-  bool enable = false;                // Flag to Enable AVR feature
+  bool update = false;                // Update avr setting.
   HWAVRModes mode = kContinuousMode;  // Specifies the AVR mode
 };
 
