@@ -3141,6 +3141,9 @@ int32_t HWCSession::GetReadbackBufferAttributes(hwc2_device_t *device, hwc2_disp
   HWCDisplay *hwc_display = hwc_session->hwc_display_[display];
 
   if (hwc_display) {
+    if (!hwc_display->IsDisplayCommandMode()) {
+      return HWC2_ERROR_UNSUPPORTED;
+    }
     *format = HAL_PIXEL_FORMAT_RGB_888;
     *dataspace = GetDataspaceFromColorMode(hwc_display->GetCurrentColorMode());
     return HWC2_ERROR_NONE;
