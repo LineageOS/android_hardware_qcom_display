@@ -304,10 +304,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   void UpdateThrottlingRate();
   void SetNewThrottlingRate(uint32_t new_rate);
 
-  // Uevent handler
-  virtual void UEventHandler(const char *uevent_data, int length);
   void ResetPanel();
   void InitSupportedDisplaySlots();
+  void InitSupportedNullDisplaySlots();
   int GetDisplayIndex(int dpy);
   int CreatePrimaryDisplay();
   void CreateDummyDisplay(hwc2_display_t client_id);
@@ -331,6 +330,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int32_t getDisplayBrightness(uint32_t display, float *brightness);
   int32_t setDisplayBrightness(uint32_t display, float brightness);
   bool HasHDRSupport(HWCDisplay *hwc_display);
+
+  // Uevent handler
+  virtual void UEventHandler(const char *uevent_data, int length);
 
   // service methods
   void StartServices();
