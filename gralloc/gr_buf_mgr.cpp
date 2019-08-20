@@ -929,6 +929,7 @@ gralloc1_error_t BufferManager::GetFlexLayout(const private_handle_t *hnd,
 }
 
 gralloc1_error_t BufferManager::Dump(std::ostringstream *os) {
+  std::lock_guard<std::mutex> buffer_lock(buffer_lock_);
   for (auto it : handles_map_) {
     auto buf = it.second;
     auto hnd = buf->handle;
