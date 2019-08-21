@@ -482,7 +482,8 @@ int BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_han
   uint32_t layer_count = descriptor.GetLayerCount();
 
   // Check if GPU supports requested hardware buffer usage
-  if (!IsGPUSupportedHwBuffer(prod_usage)) {
+  if (!(prod_usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY) &&
+        !IsGPUSupportedHwBuffer(prod_usage)) {
     ALOGE("AllocateBuffer - Requested HW Buffer usage not supported by GPU");
     return GRALLOC1_ERROR_UNSUPPORTED;
   }
