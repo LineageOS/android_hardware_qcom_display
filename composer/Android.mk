@@ -6,6 +6,7 @@ ifeq ($(use_hwc2),true)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE                  := vendor.qti.hardware.display.composer-service
+LOCAL_SANITIZE                := integer_overflow
 LOCAL_VENDOR_MODULE           := true
 LOCAL_MODULE_RELATIVE_PATH    := hw
 LOCAL_MODULE_TAGS             := optional
