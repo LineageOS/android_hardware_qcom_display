@@ -2195,6 +2195,10 @@ int HWCSession::GetVsyncPeriod(int disp) {
   return vsync_period;
 }
 
+void HWCSession::Refresh(hwc2_display_t display) {
+  callbacks_.Refresh(display);
+}
+
 android::status_t HWCSession::GetVisibleDisplayRect(const android::Parcel *input_parcel,
                                                     android::Parcel *output_parcel) {
   int disp_idx = GetDisplayIndex(input_parcel->readInt32());
@@ -2603,13 +2607,6 @@ void HWCSession::DestroyPluggableDisplay(DisplayMapInfo *map_info) {
 
   DLOGI("Notify hotplug display disconnected: client id = %d", client_id);
   callbacks_.Hotplug(client_id, HWC2::Connection::Disconnected);
-
-  // Trigger refresh to make sure disconnect event received/updated properly by SurfaceFlinger.
-  callbacks_.Refresh(HWC_DISPLAY_PRIMARY);
-
-  // wait for sufficient time to ensure sufficient resources are available to process
-  // connection.
-  usleep(UINT32(GetVsyncPeriod(HWC_DISPLAY_PRIMARY)) * 2 / 1000);
 
   {
     SCOPE_LOCK(locker_[client_id]);

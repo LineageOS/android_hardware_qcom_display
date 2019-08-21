@@ -249,6 +249,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int32_t GetDozeSupport(hwc2_display_t display, int32_t *out_support);
   int32_t GetDisplayConfigs(hwc2_display_t display, uint32_t *out_num_configs,
                             hwc2_config_t *out_configs);
+  int GetVsyncPeriod(int disp);
+  void Refresh(hwc2_display_t display);
 
   static Locker locker_[HWCCallbacks::kNumDisplays];
   static Locker power_state_[HWCCallbacks::kNumDisplays];
@@ -318,7 +320,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   void DestroyDisplay(DisplayMapInfo *map_info);
   void DestroyPluggableDisplay(DisplayMapInfo *map_info);
   void DestroyNonPluggableDisplay(DisplayMapInfo *map_info);
-  int GetVsyncPeriod(int disp);
   int32_t GetConfigCount(int disp_id, uint32_t *count);
   int32_t GetActiveConfigIndex(int disp_id, uint32_t *config);
   int32_t SetActiveConfigIndex(int disp_id, uint32_t config);
