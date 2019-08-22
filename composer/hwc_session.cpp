@@ -242,7 +242,7 @@ void HWCSession::InitSupportedDisplaySlots() {
   map_info_primary_.client_id = qdutils::DISPLAY_PRIMARY;
 
   if (null_display_mode_) {
-    // Skip display slot initialization.
+    InitSupportedNullDisplaySlots();
     return;
   }
 
@@ -330,6 +330,26 @@ void HWCSession::InitSupportedDisplaySlots() {
   }
 }
 
+void HWCSession::InitSupportedNullDisplaySlots() {
+  if (!null_display_mode_) {
+    DLOGE("Should only be invoked during null display");
+    return;
+  }
+
+  map_info_primary_.client_id = 0;
+  // Resize HDR supported map to total number of displays
+  is_hdr_display_.resize(1);
+
+  if (!async_powermode_) {
+    return;
+  }
+
+  DLOGI("Display Pairs: map.client_id: %d, start_index: %d", map_info_primary_.client_id,
+                                                             HWCCallbacks::kNumRealDisplays);
+  map_hwc_display_.insert(std::make_pair(map_info_primary_.client_id,
+                                         HWCCallbacks::kNumRealDisplays));
+}
+
 int HWCSession::GetDisplayIndex(int dpy) {
   DisplayMapInfo *map_info = nullptr;
   switch (dpy) {
@@ -410,6 +430,10 @@ int32_t HWCSession::CreateVirtualDisplay(uint32_t width, uint32_t height, int32_
 
   if (!out_display_id || !width || !height || !format) {
     return  HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (null_display_mode_) {
+    return 0;
   }
 
   auto status = CreateVirtualDisplayObj(width, height, format, out_display_id);
@@ -2259,8 +2283,6 @@ int HWCSession::CreatePrimaryDisplay() {
     auto hwc_display = &hwc_display_[HWC_DISPLAY_PRIMARY];
     hwc2_display_t client_id = map_info_primary_.client_id;
 
-    DLOGI("Create primary display type = %d, sdm id = %d, client id = %d", info.display_type,
-                                                                    info.display_id, client_id);
     if (info.display_type == kBuiltIn) {
       status = HWCDisplayBuiltIn::Create(core_intf_, &buffer_allocator_, &callbacks_, this,
                                          qservice_, client_id, info.display_id, hwc_display);
@@ -2274,18 +2296,18 @@ int HWCSession::CreatePrimaryDisplay() {
     }
 
     if (!status) {
+      DLOGI("Created primary display type = %d, sdm id = %d, client id = %d", info.display_type,
+                                                                    info.display_id, client_id);
       is_hdr_display_[UINT32(client_id)] = HasHDRSupport(*hwc_display);
-      DLOGI("Primary display created.");
       map_info_primary_.disp_type = info.display_type;
       map_info_primary_.sdm_id = info.display_id;
-
       CreateDummyDisplay(HWC_DISPLAY_PRIMARY);
       color_mgr_ = HWCColorManager::CreateColorManager(&buffer_allocator_);
       if (!color_mgr_) {
         DLOGW("Failed to load HWCColorManager.");
       }
     } else {
-      DLOGE("Primary display creation failed.");
+      DLOGE("Primary display creation has failed! status = %d", status);
     }
 
     // Primary display is found, no need to parse more.
