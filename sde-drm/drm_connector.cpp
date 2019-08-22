@@ -72,6 +72,7 @@ static uint8_t SECURE = 1;
 
 static uint8_t QSYNC_MODE_NONE = 0;
 static uint8_t QSYNC_MODE_CONTINUOUS = 1;
+static uint8_t QSYNC_MODE_ONESHOT = 2;
 
 static uint8_t FRAME_TRIGGER_DEFAULT = 0;
 static uint8_t FRAME_TRIGGER_SERIALIZE = 1;
@@ -169,6 +170,8 @@ static void PopulateQsyncModes(drmModePropertyRes *prop) {
       QSYNC_MODE_NONE = prop->enums[i].value;
     } else if (enum_name == "continuous") {
       QSYNC_MODE_CONTINUOUS = prop->enums[i].value;
+    } else if (enum_name == "one_shot") {
+      QSYNC_MODE_ONESHOT = prop->enums[i].value;
     }
   }
 }
@@ -875,8 +878,7 @@ void DRMConnector::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
         return;
       }
       int drm_qsync_mode = va_arg(args, int);
-      uint32_t qsync_mode =
-        (drm_qsync_mode == (int)DRMQsyncMode::NONE) ? QSYNC_MODE_NONE : QSYNC_MODE_CONTINUOUS;
+      uint32_t qsync_mode = static_cast<uint32_t>(drm_qsync_mode);
       drmModeAtomicAddProperty(req, obj_id, prop_mgr_.GetPropertyId(DRMProperty::QSYNC_MODE),
                                qsync_mode);
       DRM_LOGD("Connector %d: Setting Qsync mode %d", obj_id, qsync_mode);
