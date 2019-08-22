@@ -559,7 +559,15 @@ DisplayError CompManager::ControlDpps(bool enable) {
   // DPPS feature and HDR using SSPP tone mapping can co-exist
   // DPPS feature and HDR using DSPP tone mapping are mutually exclusive
   if (dpps_ctrl_intf_ && hw_res_info_.src_tone_map.none()) {
-    return enable ? dpps_ctrl_intf_->On() : dpps_ctrl_intf_->Off();
+    int err = 0;
+    if (enable) {
+      err = dpps_ctrl_intf_->On();
+    } else {
+      err = dpps_ctrl_intf_->Off();
+    }
+    if (err) {
+      return kErrorUndefined;
+    }
   }
 
   return kErrorNone;

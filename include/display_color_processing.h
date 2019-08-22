@@ -84,6 +84,52 @@ struct lut1d_info {
   struct rgb entries[LUT1D_ENTRIES_SIZE];
 };
 
+static const uint32_t kDeTuningFlagSharpFactor = 0x01;
+static const uint32_t kDeTuningFlagClip = 0x02;
+static const uint32_t kDeTuningFlagThrQuiet = 0x04;
+static const uint32_t kDeTuningFlagThrDieout = 0x08;
+static const uint32_t kDeTuningFlagThrLow = 0x10;
+static const uint32_t kDeTuningFlagThrHigh = 0x20;
+static const uint32_t kDeTuningFlagContentQualLevel = 0x40;
+static const uint32_t kDeTuningFlagDeBlend = 0x80;
+
+typedef enum {
+  kDeContentQualUnknown,
+  kDeContentQualLow,
+  kDeContentQualMedium,
+  kDeContentQualHigh,
+  kDeContentQualMax,
+} PPDEContentQualLevel;
+
+typedef enum {
+  kDeContentTypeUnknown,
+  kDeContentTypeVideo,
+  kDeContentTypeGraphics,
+  kDeContentTypeMax,
+} PPDEContentType;
+
+/*
+struct PPDETuningCfg
+*/
+struct PPDETuningCfg {
+  uint32_t flags;
+  int32_t sharp_factor;
+  uint16_t thr_quiet;
+  uint16_t thr_dieout;
+  uint16_t thr_low;
+  uint16_t thr_high;
+  uint16_t clip;
+  PPDEContentQualLevel quality;
+  PPDEContentType content_type;
+  uint32_t de_blend;
+};
+
+struct PPDETuningCfgData {
+  uint32_t cfg_en;
+  struct PPDETuningCfg params;
+  bool cfg_pending;
+};
+
 #ifdef __cplusplus
 }
 #endif

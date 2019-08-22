@@ -252,7 +252,8 @@ ColorManagerProxy::ColorManagerProxy(int32_t id, DisplayType type, HWInterface *
 ColorManagerProxy *ColorManagerProxy::CreateColorManagerProxy(DisplayType type,
                                                               HWInterface *hw_intf,
                                                               const HWDisplayAttributes &attribute,
-                                                              const HWPanelInfo &panel_info) {
+                                                              const HWPanelInfo &panel_info,
+                                                              DppsControlInterface *dpps_intf) {
   DisplayError error = kErrorNone;
   PPFeatureVersion versions;
   int32_t display_id = -1;
@@ -274,7 +275,7 @@ ColorManagerProxy *ColorManagerProxy::CreateColorManagerProxy(DisplayType type,
     if (error != kErrorNone) {
       DLOGW("Fail to get DSPP feature versions");
     } else {
-      hw_attr.Set(hw_res_info_, panel_info, attribute, versions);
+      hw_attr.Set(hw_res_info_, panel_info, attribute, versions, dpps_intf);
       DLOGI("PAV2 version is versions = %d, version = %d ",
             hw_attr.version.version[kGlobalColorFeaturePaV2],
             versions.version[kGlobalColorFeaturePaV2]);
@@ -371,7 +372,8 @@ DisplayError ColorManagerProxy::Commit() {
 void PPHWAttributes::Set(const HWResourceInfo &hw_res,
                          const HWPanelInfo &panel_info,
                          const DisplayConfigVariableInfo &attr,
-                         const PPFeatureVersion &feature_ver) {
+                         const PPFeatureVersion &feature_ver,
+                         DppsControlInterface *intf) {
   HWResourceInfo &res = *this;
   res = hw_res;
   HWPanelInfo &panel = *this;
@@ -379,6 +381,7 @@ void PPHWAttributes::Set(const HWResourceInfo &hw_res,
   DisplayConfigVariableInfo &attributes = *this;
   attributes = attr;
   version = feature_ver;
+  dpps_intf = intf;
 
   if (strlen(panel_info.panel_name)) {
     snprintf(&panel_name[0], sizeof(panel_name), "%s", &panel_info.panel_name[0]);

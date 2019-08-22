@@ -132,8 +132,10 @@ DisplayError DisplayBase::Init() {
 
   // ColorManager supported for built-in display.
   if (kBuiltIn == display_type_) {
+    DppsControlInterface *dpps_intf = comp_manager_->GetDppsControlIntf();
     color_mgr_ = ColorManagerProxy::CreateColorManagerProxy(display_type_, hw_intf_,
-                                                            display_attributes_, hw_panel_info_);
+                                                            display_attributes_, hw_panel_info_,
+                                                            dpps_intf);
 
     if (color_mgr_) {
       if (InitializeColorModes() != kErrorNone) {
