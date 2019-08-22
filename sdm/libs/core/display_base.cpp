@@ -283,6 +283,14 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
   needs_validate_ = true;
+  if (defer_power_state_ && power_state_pending_ != kStateOff) {
+    defer_power_state_ = false;
+    error = SetDisplayState(power_state_pending_, false, NULL);
+    if (error != kErrorNone) {
+      return error;
+    }
+    power_state_pending_ = kStateOff;
+  }
 
   DTRACE_SCOPED();
   if (!active_) {
@@ -516,6 +524,14 @@ DisplayError DisplayBase::GetVSyncState(bool *enabled) {
 DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
                                           int *release_fence) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (defer_power_state_) {
+    if (state == kStateOff) {
+      DLOGE("State cannot be PowerOff on first cycle");
+      return kErrorParameters;
+    }
+    power_state_pending_ = state;
+    return kErrorNone;
+  }
   DisplayError error = kErrorNone;
   bool active = false;
 
@@ -578,7 +594,15 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
   if (error == kErrorNone) {
     active_ = active;
     state_ = state;
-    comp_manager_->SetDisplayState(display_comp_ctx_, state, *release_fence);
+    comp_manager_->SetDisplayState(display_comp_ctx_, state, release_fence ? *release_fence : -1);
+  }
+
+  if (vsync_state_change_pending_ && (state_ != kStateOff || state_ != kStateStandby)) {
+    error = SetVSyncState(requested_vsync_state_);
+    if (error != kErrorNone) {
+      return error;
+    }
+    vsync_state_change_pending_ = false;
   }
 
   return error;
@@ -1092,6 +1116,14 @@ DisplayError DisplayBase::GetRefreshRateRange(uint32_t *min_refresh_rate,
 
 DisplayError DisplayBase::SetVSyncState(bool enable) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (state_ == kStateOff) {
+    DLOGW("Can't %s vsync when power state is off for display %d-%d," \
+          "Defer it when display is active", enable ? "enable":"disable",
+          display_id_, display_type_);
+    vsync_state_change_pending_ = true;
+    requested_vsync_state_ = enable;
+    return kErrorNone;
+  }
   DisplayError error = kErrorNone;
   if (vsync_enable_ != enable) {
     error = hw_intf_->SetVSyncState(enable);

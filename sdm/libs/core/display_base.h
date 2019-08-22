@@ -232,6 +232,10 @@ class DisplayBase : public DisplayInterface {
   uint32_t current_refresh_rate_ = 0;
   bool drop_skewed_vsync_ = false;
   bool custom_mixer_resolution_ = false;
+  DisplayState power_state_pending_ = kStateOff;
+  bool vsync_state_change_pending_ = false;
+  bool requested_vsync_state_ = false;
+  bool defer_power_state_ = false;
 
   static Locker display_power_reset_lock_;
   static bool display_power_reset_pending_;

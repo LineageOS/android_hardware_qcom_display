@@ -22,89 +22,23 @@ LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware li
                                  libutils libcutils libsync libqdutils libqdMetaData \
                                  libdisplaydebug libsdmutils libc++ liblog libgrallocutils libui \
                                  libgpu_tonemapper libhidlbase libhidltransport \
-                                 vendor.display.config@1.0 \
                                  android.hardware.graphics.mapper@2.0 \
                                  android.hardware.graphics.mapper@2.1 \
                                  android.hardware.graphics.mapper@3.0 \
                                  android.hardware.graphics.allocator@2.0 \
                                  android.hardware.graphics.allocator@3.0 \
                                  android.hardware.graphics.composer@2.2 \
-
-$(info IDisplayConfig version: $(display_config_version))
-ifeq ($(display_config_version), DISPLAY_CONFIG_1_1)
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.1
-endif
-ifeq ($(display_config_version), DISPLAY_CONFIG_1_2)
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.2 vendor.display.config@1.1
-endif
-ifeq ($(display_config_version), DISPLAY_CONFIG_1_3)
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.1
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.2
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.3
-endif
-ifeq ($(display_config_version), DISPLAY_CONFIG_1_4)
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.1
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.2
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.3
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.4
-endif
-ifeq ($(display_config_version), DISPLAY_CONFIG_1_5)
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.1
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.2
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.3
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.4
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.5
-endif
-ifeq ($(display_config_version), DISPLAY_CONFIG_1_6)
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.1
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.2
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.3
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.4
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.5
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.6
-endif
-ifeq ($(display_config_version), DISPLAY_CONFIG_1_7)
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.1
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.2
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.3
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.4
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.5
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.6
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.7
-endif
-ifeq ($(display_config_version), DISPLAY_CONFIG_1_8)
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.1
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.2
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.3
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.4
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.5
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.6
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.7
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.8
-endif
-ifeq ($(display_config_version), DISPLAY_CONFIG_1_9)
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.1
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.2
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.3
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.4
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.5
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.6
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.7
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.8
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.9
-endif
-ifeq ($(display_config_version), DISPLAY_CONFIG_1_10)
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.1
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.2
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.3
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.4
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.5
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.6
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.7
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.8
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.9
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.10
-endif
+                                 vendor.display.config@1.0 \
+                                 vendor.display.config@1.1 \
+                                 vendor.display.config@1.2 \
+                                 vendor.display.config@1.3 \
+                                 vendor.display.config@1.4 \
+                                 vendor.display.config@1.5 \
+                                 vendor.display.config@1.6 \
+                                 vendor.display.config@1.7 \
+                                 vendor.display.config@1.8 \
+                                 vendor.display.config@1.9 \
+                                 vendor.display.config@1.10
 
 ifeq ($(TARGET_BOARD_AUTO), true)
 LOCAL_CFLAGS                  += -DCONFIG_BASEID_FROM_PROP

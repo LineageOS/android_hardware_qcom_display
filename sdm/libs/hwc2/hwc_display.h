@@ -84,6 +84,7 @@ class HWCColorMode {
   ColorMode GetCurrentColorMode() { return current_color_mode_; }
   HWC2::Error ApplyCurrentColorModeWithRenderIntent(bool hdr_present);
   HWC2::Error CacheColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
+  RenderIntent GetCurrentRenderIntent() { return current_render_intent_; }
 
  private:
   static const uint32_t kColorTransformMatrixCount = 16;
@@ -231,6 +232,9 @@ class HWCDisplay : public DisplayEventHandler {
   void SetValidationState(DisplayValidateState state) { validate_state_ = state; }
   ColorMode GetCurrentColorMode() {
     return (color_mode_ ? color_mode_->GetCurrentColorMode() : ColorMode::SRGB);
+  }
+  RenderIntent GetCurrentRenderIntent() {
+    return (color_mode_ ? color_mode_->GetCurrentRenderIntent() : RenderIntent::COLORIMETRIC);
   }
   bool HasClientComposition() { return has_client_composition_; }
   bool HWCClientNeedsValidate() {
@@ -430,6 +434,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests);
   void UpdateRefreshRate();
   void WaitOnPreviousFence();
+  void UpdateActiveConfig();
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
   uint32_t geometry_changes_ = GeometryChanges::kNone;
@@ -441,6 +446,8 @@ class HWCDisplay : public DisplayEventHandler {
   bool first_cycle_ = true;  // false if a display commit has succeeded on the device.
   int fbt_release_fence_ = -1;
   int release_fence_ = -1;
+  bool pending_config_ = false;
+  hwc2_config_t pending_config_index_ = 0;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {
