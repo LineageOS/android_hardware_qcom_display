@@ -123,6 +123,15 @@ struct VideoHistogramMetadata {
 typedef struct CVPMetadata {
     uint32_t size; /* payload size in bytes */
     uint8_t payload[CVP_METADATA_SIZE];
+    uint32_t capture_frame_rate;
+    /* Frame rate in Q16 format.
+            Eg: fps = 7.5, then
+            capture_frame_rate = 7 << 16 --> Upper 16 bits to represent 7
+            capture_frame_rate |= 5 -------> Lower 16 bits to represent 5
+
+       If size > 0, framerate is valid
+       If size = 0, invalid data, so ignore all parameters */
+    uint32_t cvp_frame_rate;
 } CVPMetadata;
 
 struct MetaData_t {
