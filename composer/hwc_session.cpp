@@ -1601,6 +1601,18 @@ android::status_t HWCSession::SetFrameDumpConfig(const android::Parcel *input_pa
   int32_t output_format = HAL_PIXEL_FORMAT_RGB_888;
   bool post_processed = true;
 
+  // Output buffer dump is not supported, if External or Virtual display is present.
+  bool output_buffer_dump = bit_mask_layer_type & (1 << OUTPUT_LAYER_DUMP);
+  if (output_buffer_dump) {
+    int external_dpy_index = GetDisplayIndex(qdutils::DISPLAY_EXTERNAL);
+    int virtual_dpy_index = GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
+    if (((external_dpy_index != -1) && hwc_display_[external_dpy_index]) ||
+        ((virtual_dpy_index != -1) && hwc_display_[virtual_dpy_index])) {
+      DLOGW("Output buffer dump is not supported with External or Virtual display!");
+      return -EINVAL;
+    }
+  }
+
   // Read optional user preferences: output_format and post_processed.
   if (input_parcel->dataPosition() != input_parcel->dataSize()) {
     // HAL Pixel Format for output buffer
@@ -2969,8 +2981,10 @@ int32_t HWCSession::SetReadbackBuffer(hwc2_display_t display, const native_handl
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
-  if (hwc_display_[HWC_DISPLAY_EXTERNAL] ||
-      hwc_display_[qdutils::DISPLAY_VIRTUAL]) {
+  int external_dpy_index = GetDisplayIndex(qdutils::DISPLAY_EXTERNAL);
+  int virtual_dpy_index = GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
+  if (((external_dpy_index != -1) && hwc_display_[external_dpy_index]) ||
+      ((virtual_dpy_index != -1) && hwc_display_[virtual_dpy_index])) {
     return HWC2_ERROR_UNSUPPORTED;
   }
 

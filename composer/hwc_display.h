@@ -61,6 +61,11 @@ enum DisplayClass {
   DISPLAY_CLASS_NULL
 };
 
+enum {
+  INPUT_LAYER_DUMP,
+  OUTPUT_LAYER_DUMP,
+};
+
 enum SecureSessionType {
   kSecureDisplay,
   kSecureCamera,
@@ -393,11 +398,6 @@ class HWCDisplay : public DisplayEventHandler {
   uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate);
   virtual void GetUnderScanConfig() { }
   int32_t SetClientTargetDataSpace(int32_t dataspace);
-
-  enum {
-    INPUT_LAYER_DUMP,
-    OUTPUT_LAYER_DUMP,
-  };
 
   bool validated_ = false;
   bool layer_stack_invalid_ = true;
