@@ -710,11 +710,13 @@ void HWCDisplay::BuildLayerStack() {
     }
 
     bool is_secure = false;
+    bool is_video = false;
     const private_handle_t *handle =
         reinterpret_cast<const private_handle_t *>(layer->input_buffer.buffer_id);
     if (handle) {
       if (handle->buffer_type == BUFFER_TYPE_VIDEO) {
         layer_stack_.flags.video_present = true;
+        is_video = true;
       }
       // TZ Protected Buffer - L1
       // Gralloc Usage Protected Buffer - L3 - which needs to be treated as Secure & avoid fallback
@@ -750,7 +752,7 @@ void HWCDisplay::BuildLayerStack() {
     }
 
     if (hwc_layer->IsNonIntegralSourceCrop() && !is_secure && !hdr_layer &&
-        !layer->flags.single_buffer && !layer->flags.solid_fill) {
+        !layer->flags.single_buffer && !layer->flags.solid_fill && !is_video) {
       layer->flags.skip = true;
     }
 
@@ -808,11 +810,19 @@ void HWCDisplay::BuildLayerStack() {
 
     layer_stack_.flags.mask_present |= layer->input_buffer.flags.mask_layer;
 
+    if ((hwc_layer->GetDeviceSelectedCompositionType() != HWC2::Composition::Device) ||
+        (hwc_layer->GetClientRequestedCompositionType() != HWC2::Composition::Device) ||
+        layer->flags.skip) {
+      layer->update_mask.set(kClientCompRequest);
+    }
+
     layer_stack_.layers.push_back(layer);
   }
 
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
   layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0);
+  layer_stack_.flags.config_changed = !validated_;
+
   // Append client target to the layer stack
   Layer *sdm_client_target = client_target_->GetSDMLayer();
   sdm_client_target->flags.updating = IsLayerUpdating(client_target_);
@@ -1231,7 +1241,8 @@ DisplayError HWCDisplay::VSync(const DisplayEventVSync &vsync) {
 }
 
 DisplayError HWCDisplay::Refresh() {
-  return kErrorNotSupported;
+  callbacks_->Refresh(id_);
+  return kErrorNone;
 }
 
 DisplayError HWCDisplay::CECMessage(char *message) {

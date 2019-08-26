@@ -100,6 +100,8 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
 
  private:
   bool NeedsAVREnable();
+  bool CanCompareFrameROI(LayerStack *layer_stack);
+  bool CanSkipDisplayPrepare(LayerStack *layer_stack);
 
   std::vector<HWEvent> event_list_;
   bool avr_prop_disabled_ = false;
@@ -114,6 +116,8 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   float cached_brightness_ = 0.0f;
   bool pending_brightness_ = false;
   recursive_mutex brightness_lock_;
+  LayerRect left_frame_roi_ = {};
+  LayerRect right_frame_roi_ = {};
 };
 
 }  // namespace sdm

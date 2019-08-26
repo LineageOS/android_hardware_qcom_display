@@ -426,9 +426,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   android::status_t SetFrameTriggerMode(const android::Parcel *input_parcel);
   android::status_t SetPanelLuminanceAttributes(const android::Parcel *input_parcel);
 
-  void Refresh(hwc2_display_t display);
-  void HotPlug(hwc2_display_t display, HWC2::Connection state);
-
   // Internal methods
   HWC2::Error ValidateDisplayInternal(hwc2_display_t display, uint32_t *out_num_types,
                                       uint32_t *out_num_requests);
@@ -463,7 +460,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   HWCSocketHandler socket_handler_;
   bool hdmi_is_primary_ = false;
   bool is_composer_up_ = false;
-  Locker callbacks_lock_;
   std::mutex mutex_lum_;
   int hpd_bpp_ = 0;
   int hpd_pattern_ = 0;
