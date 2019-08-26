@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015, 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -53,8 +53,8 @@ class BufferSyncHandler {
  public:
   /*! @brief Method to wait for ouput buffer to be released.
 
-    @details This method waits for fd to be signaled by the producer/consumer.
-    It is responsibility of the caller to close file descriptor.
+    @details This method waits for fd to be signaled by the producer/consumer with a default
+    timeout. It is the responsibility of the caller to close the file descriptor.
 
     @param[in] fd
 
@@ -62,6 +62,18 @@ class BufferSyncHandler {
   */
 
   virtual DisplayError SyncWait(int fd) = 0;
+
+  /*! @brief Method to wait specified time for ouput buffer to be released.
+
+    @details This method waits for fd to be signaled by the producer/consumer with a specified
+    timeout in milliseconds. It is the responsibility of the caller to close the file descriptor.
+
+    @param[in] fd
+
+    @return \link DisplayError \endlink
+  */
+
+  virtual DisplayError SyncWait(int fd, int timeout) = 0;
 
   /*! @brief Method to merge two sync fds into one sync fd
 

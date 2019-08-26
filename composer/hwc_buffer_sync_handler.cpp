@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015, 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -40,12 +40,17 @@
 namespace sdm {
 
 DisplayError HWCBufferSyncHandler::SyncWait(int fd) {
+  return SyncWait(fd, 1000);
+}
+
+DisplayError HWCBufferSyncHandler::SyncWait(int fd, int timeout) {
   int error = 0;
 
   if (fd >= 0) {
-    error = sync_wait(fd, 1000);
+    error = sync_wait(fd, timeout);
     if (error < 0) {
-      DLOGE("sync_wait error errno = %d, desc = %s", errno,  strerror(errno));
+      DLOGE("sync_wait() error on fd = %d, timeout = %dms. (errno = %d \"%s\")", fd, timeout, errno,
+            strerror(errno));
       return kErrorTimeOut;
     }
   }
