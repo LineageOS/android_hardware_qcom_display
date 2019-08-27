@@ -621,4 +621,19 @@ DisplayError HWPeripheralDRM::SetBLScale(uint32_t level) {
   return kErrorNone;
 }
 
+DisplayError HWPeripheralDRM::GetPanelBrightnessBasePath(std::string *base_path) {
+  if (!base_path) {
+    DLOGE("Invalid base_path is null pointer");
+    return kErrorParameters;
+  }
+
+  if (brightness_base_path_.empty()) {
+    DLOGE("brightness_base_path_ is empty");
+    return kErrorHardware;
+  }
+
+  *base_path = brightness_base_path_;
+  return kErrorNone;
+}
+
 }  // namespace sdm
