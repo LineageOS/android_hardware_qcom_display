@@ -151,7 +151,7 @@ void QtiComposerClient::onVsync(hwc2_callback_data_t callbackData, hwc2_display_
                                   int64_t timestamp) {
   auto client = reinterpret_cast<QtiComposerClient*>(callbackData);
   auto ret = client->mCallback->onVsync(display, timestamp);
-  ALOGE_IF(!ret.isOk(), "failed to send onVsync: %s", ret.description().c_str());
+  ALOGI_IF(!ret.isOk(), "failed to send onVsync: %s", ret.description().c_str());
 }
 
 // convert fenceFd to or from hidl_handle
