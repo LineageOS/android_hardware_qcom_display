@@ -648,40 +648,41 @@ Return<int32_t> HWCSession::setPowerMode(uint32_t disp_id, PowerMode power_mode)
   HWCDisplay::HWCLayerStack stack = {};
   hwc2_display_t dummy_disp_id = map_hwc_display_.at(disp_id);
 
-  {
-    // Power state transition start.
-    Locker::ScopeLock lock_power(power_state_[disp_id]);
-    Locker::ScopeLock lock_primary(locker_[disp_id]);
-    Locker::ScopeLock lock_dummy(locker_[dummy_disp_id]);
+  // Power state transition start.
+  power_state_[disp_id].Lock();   // Acquire the display's power-state transition var read lock.
+  power_state_transition_[disp_id] = true;
+  locker_[disp_id].Lock();        // Lock the real display.
+  locker_[dummy_disp_id].Lock();  // Lock the corresponding dummy display.
 
-    power_state_transition_[disp_id] = true;
-    // Pass on the complete stack to dummy display.
-    hwc_display_[disp_id]->GetLayerStack(&stack);
-    // Update the same stack onto dummy display.
-    hwc_display_[dummy_disp_id]->SetLayerStack(&stack);
-    hwc_display_[dummy_disp_id]->UpdatePowerMode(hwc_display_[disp_id]->GetCurrentPowerMode());
-  }
+  // Place the real display's layer-stack on the dummy display.
+  hwc_display_[disp_id]->GetLayerStack(&stack);
+  hwc_display_[dummy_disp_id]->SetLayerStack(&stack);
+  hwc_display_[dummy_disp_id]->UpdatePowerMode(hwc_display_[disp_id]->GetCurrentPowerMode());
 
-  {
-    SCOPE_LOCK(locker_[disp_id]);
-    auto mode = static_cast<HWC2::PowerMode>(power_mode);
-    hwc_display_[disp_id]->SetPowerMode(mode, false /* teardown */);
-  }
+  locker_[dummy_disp_id].Unlock();  // Release the dummy display.
+  power_state_[disp_id].Unlock();   // Release the display's power-state transition var read lock.
 
-  {
-    // Power state transition end.
-    Locker::ScopeLock lock_power(power_state_[disp_id]);
-    Locker::ScopeLock lock_primary(locker_[disp_id]);
-    Locker::ScopeLock lock_dummy(locker_[dummy_disp_id]);
-    // Pass on the layer stack to real display.
-    hwc_display_[dummy_disp_id]->GetLayerStack(&stack);
-    // Update the same stack onto real display.
-    hwc_display_[disp_id]->SetLayerStack(&stack);
-    // Read display has got layerstack. Update the fences.
-    hwc_display_[disp_id]->PostPowerMode();
+  // From now, till power-state transition ends, for operations that need to be non-blocking, do
+  // those operations on the dummy display.
 
-    power_state_transition_[disp_id] = false;
-  }
+  // Perform the actual [synchronous] power-state change.
+  hwc_display_[disp_id]->SetPowerMode(static_cast<HWC2::PowerMode>(power_mode),
+                                      false /* teardown */);
+
+  // Power state transition end.
+  power_state_[disp_id].Lock();   // Acquire the display's power-state transition var read lock.
+  power_state_transition_[disp_id] = false;
+  locker_[dummy_disp_id].Lock();  // Lock the dummy display.
+
+  // Retrieve the real display's layer-stack from the dummy display.
+  hwc_display_[dummy_disp_id]->GetLayerStack(&stack);
+  hwc_display_[disp_id]->SetLayerStack(&stack);
+  // Read display has got layerstack. Update the fences.
+  hwc_display_[disp_id]->PostPowerMode();
+
+  locker_[dummy_disp_id].Unlock();  // Release the dummy display.
+  locker_[disp_id].Unlock();        // Release the real display.
+  power_state_[disp_id].Unlock();   // Release the display's power-state transition var read lock.
 
   return 0;
 }
