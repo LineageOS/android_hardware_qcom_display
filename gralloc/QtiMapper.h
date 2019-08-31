@@ -59,8 +59,8 @@ using ::android::hidl::base::V1_0::DebugInfo;
 using ::android::hidl::base::V1_0::IBase;
 using gralloc::BufferManager;
 using ::vendor::qti::hardware::display::mapper::V2_0::IQtiMapper;
-using ::vendor::qti::hardware::display::mapperextensions::V1_0::IQtiMapperExtensions;
-using ::vendor::qti::hardware::display::mapperextensions::V1_0::implementation::QtiMapperExtensions;
+using ::vendor::qti::hardware::display::mapperextensions::V1_1::IQtiMapperExtensions;
+using ::vendor::qti::hardware::display::mapperextensions::V1_1::implementation::QtiMapperExtensions;
 
 using IMapper_2_1 = android::hardware::graphics::mapper::V2_1::IMapper;
 using BufferDescriptorInfo_2_0 =
@@ -92,7 +92,7 @@ class QtiMapper : public IQtiMapper {
                                     createDescriptor_2_1_cb _hidl_cb) override;
 
   Return<void> getMapperExtensions(getMapperExtensions_cb hidl_cb);
-  sp<mapperextensions::V1_0::IQtiMapperExtensions> extensions_ = nullptr;
+  sp<mapperextensions::V1_1::IQtiMapperExtensions> extensions_ = nullptr;
 
  private:
   BufferManager *buf_mgr_ = nullptr;

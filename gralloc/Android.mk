@@ -71,7 +71,8 @@ LOCAL_SHARED_LIBRARIES        := $(common_libs) \
                                   vendor.qti.hardware.display.mapper@2.0 \
                                   vendor.qti.hardware.display.mapperextensions@1.0 \
                                   android.hardware.graphics.mapper@2.0 \
-                                  android.hardware.graphics.mapper@2.1
+                                  android.hardware.graphics.mapper@2.1 \
+                                  vendor.qti.hardware.display.mapperextensions@1.1
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdgralloc\" -Wno-sign-conversion
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
 LOCAL_SRC_FILES               := QtiMapper.cpp QtiMapperExtensions.cpp
