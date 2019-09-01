@@ -92,10 +92,12 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_ui_3d_tonemap=1
 
 #Set WCG properties
+ifeq ($(TARGET_BOARD_PLATFORM), sm8150)
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.has_wide_color_display=true
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.has_HDR_display=true
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.use_color_management=true
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.wcg_composition_dataspace=143261696
+endif
 
 ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
 # Recovery is enabled, logging is enabled
