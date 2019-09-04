@@ -260,6 +260,7 @@ class QtiComposerClient : public IQtiComposerClient {
     bool parseSetLayerTransform(uint16_t length);
     bool parseSetLayerVisibleRegion(uint16_t length);
     bool parseSetLayerZOrder(uint16_t length);
+    bool parseSetLayerType(uint16_t length);
 
     // Commands from ::android::hardware::graphics::composer::V2_2::IComposerClient follow.
     bool parseSetLayerPerFrameMetadata(uint16_t length);
@@ -268,6 +269,8 @@ class QtiComposerClient : public IQtiComposerClient {
     // Commands from ::android::hardware::graphics::composer::V2_3::IComposerClient follow.
     bool parseSetLayerColorTransform(uint16_t length);
     bool parseSetLayerPerFrameMetadataBlobs(uint16_t length);
+
+    bool parseCommonCmd(IComposerClient::Command command, uint16_t length);
 
     hwc_rect_t readRect();
     std::vector<hwc_rect_t> readRegion(size_t count);

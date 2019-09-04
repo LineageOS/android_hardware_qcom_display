@@ -221,11 +221,16 @@ DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
       hw_layers_info.wide_color_primaries.push_back(
           layer->input_buffer.color_metadata.colorPrimaries);
     }
+    if (layer->flags.is_game) {
+        hw_layers_info.game_present = true;
+    }
   }
 
   DLOGD_IF(kTagDisplay,
-           "LayerStack layer_count: %d, app_layer_count: %d, gpu_target_index: %d, display: %d-%d",
-           layers.size(), hw_layers_info.app_layer_count, hw_layers_info.gpu_target_index,
+           "LayerStack layer_count: %d, app_layer_count: %d, "
+           "gpu_target_index: %d, game_present: %d, display: %d-%d",
+           layers.size(), hw_layers_info.app_layer_count,
+           hw_layers_info.gpu_target_index, hw_layers_info.game_present,
            display_id_, display_type_);
 
   if (!hw_layers_info.app_layer_count) {

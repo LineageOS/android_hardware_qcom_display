@@ -785,6 +785,11 @@ void HWCDisplay::BuildLayerStack() {
       layer->update_mask.set(kClientCompRequest);
     }
 
+    if (hwc_layer->GetType() == kLayerGame) {
+      layer->flags.is_game = true;
+      layer->input_buffer.flags.game = true;
+    }
+
     layer_stack_.layers.push_back(layer);
   }
 
@@ -822,6 +827,18 @@ void HWCDisplay::BuildSolidFillStack() {
   layer_stack_.flags.geometry_changed = 1U;
   // Append client target to the layer stack
   layer_stack_.layers.push_back(client_target_->GetSDMLayer());
+}
+
+HWC2::Error HWCDisplay::SetLayerType(hwc2_layer_t layer_id, IQtiComposerClient::LayerType type) {
+  const auto map_layer = layer_map_.find(layer_id);
+  if (map_layer == layer_map_.end()) {
+    DLOGE("[%" PRIu64 "] SetLayerType failed to find layer", id_);
+    return HWC2::Error::BadLayer;
+  }
+
+  const auto layer = map_layer->second;
+  layer->SetLayerType(type);
+  return HWC2::Error::None;
 }
 
 HWC2::Error HWCDisplay::SetLayerZOrder(hwc2_layer_t layer_id, uint32_t z) {

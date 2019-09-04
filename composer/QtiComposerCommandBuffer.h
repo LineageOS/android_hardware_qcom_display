@@ -411,6 +411,13 @@ class CommandWriter {
     endCommand();
   }
 
+  static constexpr uint16_t kSetLayerTypeLength = 1;
+  void setLayerType(uint32_t z) {
+    beginCommand(IQtiComposerClient::Command::SET_LAYER_TYPE, kSetLayerTypeLength);
+    write(z);
+    endCommand();
+  }
+
   // Commands from ::android::hardware::graphics::composer::V2_2::IComposerClient follow.
   static constexpr uint16_t kSetLayerFloatColorLength = 4;
   void setLayerFloatColor(IQtiComposerClient::FloatColor color) {

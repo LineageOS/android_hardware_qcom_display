@@ -21,6 +21,7 @@
 #define __HWC_SESSION_H__
 
 #include <vendor/display/config/1.12/IDisplayConfig.h>
+#include <vendor/qti/hardware/display/composer/2.0/IQtiComposerClient.h>
 
 #include <core/core_interface.h>
 #include <utils/locker.h>
@@ -55,6 +56,8 @@ using ::android::hardware::hidl_string;
 using android::hardware::hidl_handle;
 using ::android::hardware::hidl_vec;
 using ::android::sp;
+
+using vendor::qti::hardware::display::composer::V2_0::IQtiComposerClient;
 
 int32_t GetDataspaceFromColorMode(ColorMode mode);
 
@@ -232,6 +235,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int32_t SetLayerSourceCrop(hwc2_display_t display, hwc2_layer_t layer, hwc_frect_t crop);
   int32_t SetLayerTransform(hwc2_display_t display, hwc2_layer_t layer, int32_t int_transform);
   int32_t SetLayerZOrder(hwc2_display_t display, hwc2_layer_t layer, uint32_t z);
+  int32_t SetLayerType(hwc2_display_t display, hwc2_layer_t layer,
+                       IQtiComposerClient::LayerType type);
   int32_t SetLayerSurfaceDamage(hwc2_display_t display, hwc2_layer_t layer, hwc_region_t damage);
   int32_t SetLayerVisibleRegion(hwc2_display_t display, hwc2_layer_t layer, hwc_region_t damage);
   int32_t SetLayerCompositionType(hwc2_display_t display, hwc2_layer_t layer, int32_t int_type);

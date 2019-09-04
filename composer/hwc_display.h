@@ -333,6 +333,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error CreateLayer(hwc2_layer_t *out_layer_id);
   virtual HWC2::Error DestroyLayer(hwc2_layer_t layer_id);
   virtual HWC2::Error SetLayerZOrder(hwc2_layer_t layer_id, uint32_t z);
+  virtual HWC2::Error SetLayerType(hwc2_layer_t layer_id, IQtiComposerClient::LayerType type);
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests) = 0;
   virtual HWC2::Error GetReleaseFences(uint32_t *out_num_elements, hwc2_layer_t *out_layers,
                                        int32_t *out_fences);

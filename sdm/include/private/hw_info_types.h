@@ -667,6 +667,7 @@ struct HWLayersInfo {
   DestScaleInfoMap dest_scale_info_map = {};
   HWHDRLayerInfo hdr_layer_info = {};
   Handle pvt_data = NULL;   // Private data used by sdm extension only.
+  bool game_present = false;  // Indicates there is game layer or not
 };
 
 struct HWQosData {
