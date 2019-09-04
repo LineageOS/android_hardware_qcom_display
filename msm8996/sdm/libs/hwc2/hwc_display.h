@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2016, 2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -79,10 +79,7 @@ class HWCColorMode {
   android_color_transform_t current_color_transform_ = HAL_COLOR_TRANSFORM_IDENTITY;
   typedef std::map<android_color_transform_t, std::string> TransformMap;
   std::map<android_color_mode_t, TransformMap> color_mode_transform_map_ = {};
-  double color_matrix_[kColorTransformMatrixCount] = { 1.0, 0.0, 0.0, 0.0, \
-                                                       0.0, 1.0, 0.0, 0.0, \
-                                                       0.0, 0.0, 1.0, 0.0, \
-                                                       0.0, 0.0, 0.0, 1.0 };
+  double color_matrix_[kColorTransformMatrixCount] = {0};
 };
 
 class HWCDisplay : public DisplayEventHandler {
@@ -219,10 +216,10 @@ class HWCDisplay : public DisplayEventHandler {
   void MarkLayersForClientComposition(void);
   virtual void ApplyScanAdjustment(hwc_rect_t *display_frame);
   bool SingleLayerUpdating(void);
-  bool IsSurfaceUpdated(const std::vector<LayerRect> &dirty_regions);
-  bool IsLayerUpdating(const Layer *layer);
+  bool IsLayerUpdating(HWCLayer *layer);
   uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate);
   virtual void CloseAcquireFds();
+  virtual void GetUnderScanConfig() { }
 
   enum {
     INPUT_LAYER_DUMP,
@@ -274,6 +271,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool CanSkipValidate();
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
+  bool partial_update_enabled_ = false;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {

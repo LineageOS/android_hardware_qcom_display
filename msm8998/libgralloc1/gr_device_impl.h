@@ -119,6 +119,15 @@ class GrallocImpl : public gralloc1_device_t {
                                        int32_t *release_fence);
   static gralloc1_error_t Gralloc1Perform(gralloc1_device_t *device, int operation, ...);
 
+  static gralloc1_error_t validateBufferSize(gralloc1_device_t *device,
+                                             buffer_handle_t bufferHandle,
+                                             const gralloc1_buffer_descriptor_info_t *info,
+                                             uint32_t stride);
+  static gralloc1_error_t getTransportSize(gralloc1_device_t* /*device*/,
+                                           buffer_handle_t buffer, uint32_t *outNumFds,
+                                           uint32_t *outNumInts);
+  static gralloc1_error_t importBuffer(gralloc1_device_t *device, buffer_handle_t raw_handle,
+                                       buffer_handle_t *outBufferHandle);
   explicit GrallocImpl(const hw_module_t *module);
   ~GrallocImpl();
   bool Init();

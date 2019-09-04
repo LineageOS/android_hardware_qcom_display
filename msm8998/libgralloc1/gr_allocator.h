@@ -76,6 +76,8 @@ class Allocator {
   bool IsUBwcSupported(int format);
   bool IsUBwcEnabled(int format, gralloc1_producer_usage_t prod_usage,
                      gralloc1_consumer_usage_t cons_usage);
+  uint32_t GetDataAlignment(int format, gralloc1_producer_usage_t prod_usage,
+                            gralloc1_consumer_usage_t cons_usage);
 
  private:
   void GetYuvUBwcWidthAndHeight(int width, int height, int format, unsigned int *aligned_w,

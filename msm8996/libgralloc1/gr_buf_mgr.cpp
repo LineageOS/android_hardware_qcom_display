@@ -374,26 +374,6 @@ gralloc1_error_t BufferManager::UnlockBuffer(const private_handle_t *handle) {
   return status;
 }
 
-uint32_t BufferManager::GetDataAlignment(int format, gralloc1_producer_usage_t prod_usage,
-                                    gralloc1_consumer_usage_t cons_usage) {
-  uint32_t align = UINT(getpagesize());
-  if (format == HAL_PIXEL_FORMAT_YCbCr_420_SP_TILED) {
-    align = 8192;
-  }
-
-  if (prod_usage & GRALLOC1_PRODUCER_USAGE_PROTECTED) {
-    if ((prod_usage & GRALLOC1_PRODUCER_USAGE_CAMERA) ||
-        (cons_usage & GRALLOC1_CONSUMER_USAGE_PRIVATE_SECURE_DISPLAY)) {
-      // The alignment here reflects qsee mmu V7L/V8L requirement
-      align = SZ_2M;
-    } else {
-      align = SECURE_ALIGN;
-    }
-  }
-
-  return align;
-}
-
 int BufferManager::GetHandleFlags(int format, gralloc1_producer_usage_t prod_usage,
                                   gralloc1_consumer_usage_t cons_usage) {
   int flags = 0;
@@ -488,8 +468,7 @@ int BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_han
   int flags = 0;
   auto page_size = UINT(getpagesize());
   AllocData data;
-  data.align = GetDataAlignment(format, prod_usage, cons_usage);
-  size = ALIGN(size, data.align) * layer_count;
+  data.align = allocator_->GetDataAlignment(format, prod_usage, cons_usage);
   data.size = size;
   data.handle = (uintptr_t) handle;
   data.uncached = allocator_->UseUncached(prod_usage, cons_usage);
@@ -736,9 +715,6 @@ gralloc1_error_t BufferManager::Perform(int operation, va_list args) {
       uint32_t *size = va_arg(args, uint32_t *);
       auto descriptor = BufferDescriptor(width, height, format, producer_usage, consumer_usage);
       allocator_->GetBufferSizeAndDimensions(descriptor, size, aligned_width, aligned_height);
-      // Align size
-      auto align = GetDataAlignment(format, producer_usage, consumer_usage);
-      *size = ALIGN(*size, align);
     } break;
 
       // TODO(user): Break out similar functionality, preferably moving to a common lib.
@@ -855,6 +831,31 @@ gralloc1_error_t BufferManager::Dump(std::ostringstream *os) {
     // TODO(user): get format string from qdutils
     *os << " format: "     << "0x" << std::setw(8) << hnd->format;
     *os << std::dec  << std::setfill(' ') << std::endl;
+  }
+  return GRALLOC1_ERROR_NONE;
+}
+
+gralloc1_error_t BufferManager::IsBufferImported(const private_handle_t *hnd) {
+  std::lock_guard<std::mutex> lock(buffer_lock_);
+  auto buf = GetBufferFromHandleLocked(hnd);
+  if (buf != NULL) {
+    return GRALLOC1_ERROR_NONE;
+  }
+  return GRALLOC1_ERROR_BAD_HANDLE;
+}
+
+gralloc1_error_t BufferManager::ValidateBufferSize(private_handle_t const *hnd,
+                                                   BufferDescriptor descriptor) {
+  unsigned int size, alignedw, alignedh;
+  const int format = allocator_->GetImplDefinedFormat(descriptor.GetProducerUsage(),
+                                                      descriptor.GetConsumerUsage(),
+                                                      descriptor.GetFormat());
+  descriptor.SetColorFormat(format);
+  allocator_->GetBufferSizeAndDimensions(descriptor, &size, &alignedw, &alignedh);
+
+  auto ion_fd_size = static_cast<unsigned int>(lseek(hnd->fd, 0, SEEK_END));
+  if (size != ion_fd_size) {
+    return GRALLOC1_ERROR_BAD_VALUE;
   }
   return GRALLOC1_ERROR_NONE;
 }

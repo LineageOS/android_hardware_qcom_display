@@ -24,7 +24,7 @@
 
 #include <utils/constants.h>
 #include <utils/debug.h>
-
+#include <algorithm>
 #include "display_virtual.h"
 #include "hw_interface.h"
 #include "hw_info_interface.h"
@@ -49,11 +49,25 @@ DisplayError DisplayVirtual::Init() {
     return error;
   }
 
-  hw_intf_->GetDisplayAttributes(0 /* active_index */, &display_attributes_);
+  HWScaleLutInfo lut_info = {};
+  error = comp_manager_->GetScaleLutConfig(&lut_info);
+  if (error == kErrorNone) {
+    error = hw_intf_->SetScaleLutConfig(&lut_info);
+    if (error != kErrorNone) {
+      HWInterface::Destroy(hw_intf_);
+      return error;
+    }
+  }
 
-  error = DisplayBase::Init();
-  if (error != kErrorNone) {
-    HWInterface::Destroy(hw_intf_);
+  if (hw_info_intf_) {
+    HWResourceInfo hw_resource_info = HWResourceInfo();
+    hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
+    auto max_mixer_stages = hw_resource_info.num_blending_stages;
+    int property_value = Debug::GetMaxPipesPerMixer(display_type_);
+    if (property_value >= 0) {
+      max_mixer_stages = std::min(UINT32(property_value), hw_resource_info.num_blending_stages);
+    }
+    DisplayBase::SetMaxMixerStages(max_mixer_stages);
   }
 
   return error;
@@ -87,6 +101,8 @@ DisplayError DisplayVirtual::SetActiveConfig(DisplayConfigVariableInfo *variable
   DisplayError error = kErrorNone;
   HWDisplayAttributes display_attributes;
   HWMixerAttributes mixer_attributes;
+  HWPanelInfo hw_panel_info = {};
+  DisplayConfigVariableInfo fb_config = fb_config_;
 
   display_attributes.x_pixels = variable_info->x_pixels;
   display_attributes.y_pixels = variable_info->y_pixels;
@@ -101,9 +117,16 @@ DisplayError DisplayVirtual::SetActiveConfig(DisplayConfigVariableInfo *variable
     return error;
   }
 
+  hw_intf_->GetHWPanelInfo(&hw_panel_info);
+
   error = hw_intf_->GetMixerAttributes(&mixer_attributes);
   if (error != kErrorNone) {
     return error;
+  }
+
+  // fb_config will be updated only once after creation of virtual display
+  if (fb_config.x_pixels == 0 || fb_config.y_pixels == 0) {
+    fb_config = display_attributes;
   }
 
   // if display is already connected, unregister display from composition manager and register
@@ -112,14 +135,16 @@ DisplayError DisplayVirtual::SetActiveConfig(DisplayConfigVariableInfo *variable
     comp_manager_->UnregisterDisplay(display_comp_ctx_);
   }
 
-  error = comp_manager_->RegisterDisplay(display_type_, display_attributes, hw_panel_info_,
-                                         mixer_attributes, fb_config_, &display_comp_ctx_);
+  error = comp_manager_->RegisterDisplay(display_type_, display_attributes, hw_panel_info,
+                                         mixer_attributes, fb_config, &display_comp_ctx_);
   if (error != kErrorNone) {
     return error;
   }
 
   display_attributes_ = display_attributes;
   mixer_attributes_ = mixer_attributes;
+  hw_panel_info_ = hw_panel_info;
+  fb_config_ = fb_config;
 
   DLOGI("Virtual display resolution changed to[%dx%d]", display_attributes_.x_pixels,
         display_attributes_.y_pixels);
