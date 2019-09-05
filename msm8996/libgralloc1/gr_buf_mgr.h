@@ -49,6 +49,8 @@ class BufferManager {
   gralloc1_error_t GetFlexLayout(const private_handle_t *hnd, struct android_flex_layout *layout);
   gralloc1_error_t GetNumFlexPlanes(const private_handle_t *hnd, uint32_t *out_num_planes);
   gralloc1_error_t Dump(std::ostringstream *os);
+  gralloc1_error_t IsBufferImported(const private_handle_t *hnd);
+  gralloc1_error_t ValidateBufferSize(private_handle_t const *hnd, BufferDescriptor descriptor);
 
   template <typename... Args>
   gralloc1_error_t CallBufferDescriptorFunction(gralloc1_buffer_descriptor_t descriptor_id,
@@ -75,8 +77,6 @@ class BufferManager {
   int GetBufferType(int format);
   int AllocateBuffer(const BufferDescriptor &descriptor, buffer_handle_t *handle,
                      unsigned int bufferSize = 0);
-  uint32_t GetDataAlignment(int format, gralloc1_producer_usage_t prod_usage,
-                       gralloc1_consumer_usage_t cons_usage);
   int GetHandleFlags(int format, gralloc1_producer_usage_t prod_usage,
                      gralloc1_consumer_usage_t cons_usage);
   void CreateSharedHandle(buffer_handle_t inbuffer, const BufferDescriptor &descriptor,

@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2017, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015-2018, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -58,7 +58,6 @@ enum PendingAction {
   kEnableFrameCapture = BITMAP(6),
   kDisableFrameCapture = BITMAP(7),
   kConfigureDetailedEnhancer = BITMAP(8),
-  kInvalidatingAndkSetPanelBrightness = BITMAP(9),
   kModeSet = BITMAP(10),
   kGetDetailedEnhancerData = BITMAP(21),
   kNoAction = BITMAP(31),

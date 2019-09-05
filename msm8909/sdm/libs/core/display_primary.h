@@ -51,7 +51,6 @@ class DisplayPrimary : public DisplayBase, HWEventHandler {
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate);
   virtual DisplayError SetPanelBrightness(int level);
   virtual DisplayError GetPanelBrightness(int *level);
-  virtual DisplayError CachePanelBrightness(int level);
 
   // Implement the HWEventHandlers
   virtual DisplayError VSync(int64_t timestamp);

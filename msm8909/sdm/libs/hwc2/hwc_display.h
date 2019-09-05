@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -246,7 +246,6 @@ class HWCDisplay : public DisplayEventHandler {
   bool IsLayerUpdating(const Layer *layer);
   uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate);
   virtual void CloseAcquireFds();
-  virtual void ClearRequestFlags();
   virtual void GetUnderScanConfig() { }
 
   enum {
@@ -255,6 +254,7 @@ class HWCDisplay : public DisplayEventHandler {
   };
 
   static std::bitset<kDisplayMax> validated_;
+  bool layer_stack_invalid_ = true;
   CoreInterface *core_intf_ = nullptr;
   HWCCallbacks *callbacks_  = nullptr;
   HWCBufferAllocator *buffer_allocator_ = NULL;

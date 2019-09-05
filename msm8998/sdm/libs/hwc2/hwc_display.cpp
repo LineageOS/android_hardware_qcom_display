@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, 2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -379,6 +379,12 @@ int HWCDisplay::Init() {
   current_refresh_rate_ = max_refresh_rate_;
 
   GetUnderScanConfig();
+
+  DisplayConfigFixedInfo fixed_info = {};
+  display_intf_->GetConfig(&fixed_info);
+  partial_update_enabled_ = fixed_info.partial_update;
+  client_target_->SetPartialUpdate(partial_update_enabled_);
+
   DLOGI("Display created with id: %d", id_);
   return 0;
 }
@@ -410,6 +416,7 @@ HWC2::Error HWCDisplay::CreateLayer(hwc2_layer_t *out_layer_id) {
   *out_layer_id = layer->GetId();
   geometry_changes_ |= GeometryChanges::kAdded;
   validated_ = false;
+  layer->SetPartialUpdate(partial_update_enabled_);
   return HWC2::Error::None;
 }
 
@@ -552,7 +559,7 @@ void HWCDisplay::BuildLayerStack() {
 
     layer->flags.updating = true;
     if (layer_set_.size() <= kMaxLayerCount) {
-      layer->flags.updating = IsLayerUpdating(layer);
+      layer->flags.updating = IsLayerUpdating(hwc_layer);
     }
 
     layer_stack_.layers.push_back(layer);
@@ -576,6 +583,7 @@ void HWCDisplay::BuildLayerStack() {
   layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0);
   // Append client target to the layer stack
   Layer *sdm_client_target = client_target_->GetSDMLayer();
+  sdm_client_target->flags.updating = IsLayerUpdating(client_target_);
   layer_stack_.layers.push_back(sdm_client_target);
   // fall back frame composition to GPU when client target is 10bit
   // TODO(user): clarify the behaviour from Client(SF) and SDM Extn -
@@ -1798,22 +1806,15 @@ bool HWCDisplay::SingleLayerUpdating(void) {
   return (updating_count == 1);
 }
 
-bool HWCDisplay::IsLayerUpdating(const Layer *layer) {
+bool HWCDisplay::IsLayerUpdating(HWCLayer *hwc_layer) {
+  auto layer = hwc_layer->GetSDMLayer();
   // Layer should be considered updating if
   //   a) layer is in single buffer mode, or
   //   b) valid dirty_regions(android specific hint for updating status), or
   //   c) layer stack geometry has changed (TODO(user): Remove when SDM accepts
   //      geometry_changed as bit fields).
-  return (layer->flags.single_buffer || IsSurfaceUpdated(layer->dirty_regions) ||
+  return (layer->flags.single_buffer || hwc_layer->IsSurfaceUpdated() ||
           geometry_changes_);
-}
-
-bool HWCDisplay::IsSurfaceUpdated(const std::vector<LayerRect> &dirty_regions) {
-  // based on dirty_regions determine if its updating
-  // dirty_rect count = 0 - whole layer - updating.
-  // dirty_rect count = 1 or more valid rects - updating.
-  // dirty_rect count = 1 with (0,0,0,0) - not updating.
-  return (dirty_regions.empty() || IsValid(dirty_regions.at(0)));
 }
 
 uint32_t HWCDisplay::SanitizeRefreshRate(uint32_t req_refresh_rate) {
@@ -1835,22 +1836,6 @@ uint32_t HWCDisplay::SanitizeRefreshRate(uint32_t req_refresh_rate) {
 
 DisplayClass HWCDisplay::GetDisplayClass() {
   return display_class_;
-}
-
-void HWCDisplay::CloseAcquireFds() {
-  for (auto hwc_layer : layer_set_) {
-    auto layer = hwc_layer->GetSDMLayer();
-    if (layer->input_buffer.acquire_fence_fd >= 0) {
-      close(layer->input_buffer.acquire_fence_fd);
-      layer->input_buffer.acquire_fence_fd = -1;
-    }
-  }
-  int32_t &client_target_acquire_fence =
-      client_target_->GetSDMLayer()->input_buffer.acquire_fence_fd;
-  if (client_target_acquire_fence >= 0) {
-    close(client_target_acquire_fence);
-    client_target_acquire_fence = -1;
-  }
 }
 
 std::string HWCDisplay::Dump() {
@@ -1897,12 +1882,15 @@ bool HWCDisplay::CanSkipValidate() {
   }
 
   for (auto hwc_layer : layer_set_) {
+    Layer *layer = hwc_layer->GetSDMLayer();
     if (hwc_layer->NeedsValidation()) {
       return false;
     }
 
     // Do not allow Skip Validate, if any layer needs GPU Composition.
-    if (hwc_layer->GetDeviceSelectedCompositionType() == HWC2::Composition::Client) {
+    if (layer->composition == kCompositionGPU || layer->composition == kCompositionNone) {
+      DLOGV_IF(kTagClient, "hwc_layer[%d] is %s. Returning false.", hwc_layer->GetId(),
+             (layer->composition == kCompositionGPU) ? "GPU composed": "Dropped");
       return false;
     }
   }

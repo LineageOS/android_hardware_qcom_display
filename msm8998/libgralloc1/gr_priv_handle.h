@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution
  *
  * Copyright (C) 2008 The Android Open Source Project
@@ -145,19 +145,25 @@ struct private_handle_t : public native_handle_t {
     ALOGE_IF(DBG_HANDLE, "Deleting buffer handle %p", this);
   }
 
+  static inline char clean_magic_byte(int b) {
+    return (b & 0xff) ? (b & 0xff) : '-';
+  }
+
   static int validate(const native_handle *h) {
     const private_handle_t *hnd = (const private_handle_t *)h;
     if (!h || h->version != sizeof(native_handle) || h->numInts != NumInts() ||
-        h->numFds != kNumFds || hnd->magic != kMagic) {
-      ALOGE(
-          "Invalid gralloc handle (at %p): ver(%d/%zu) ints(%d/%d) fds(%d/%d) "
-          "magic(%c%c%c%c/%c%c%c%c)",
+        h->numFds != kNumFds) {
+      ALOGE("Invalid gralloc handle (at %p): ver(%d/%zu) ints(%d/%d) fds(%d/%d) ",
           h, h ? h->version : -1, sizeof(native_handle), h ? h->numInts : -1, NumInts(),
-          h ? h->numFds : -1, kNumFds,
-          hnd ? (((hnd->magic >> 24) & 0xFF) ? ((hnd->magic >> 24) & 0xFF) : '-') : '?',
-          hnd ? (((hnd->magic >> 16) & 0xFF) ? ((hnd->magic >> 16) & 0xFF) : '-') : '?',
-          hnd ? (((hnd->magic >> 8) & 0xFF) ? ((hnd->magic >> 8) & 0xFF) : '-') : '?',
-          hnd ? (((hnd->magic >> 0) & 0xFF) ? ((hnd->magic >> 0) & 0xFF) : '-') : '?',
+          h ? h->numFds : -1, kNumFds);
+      return -EINVAL;
+    }
+    if (hnd->magic != kMagic) {
+       ALOGE("magic(%c%c%c%c/%c%c%c%c)",
+          clean_magic_byte(hnd->magic >> 24),
+          clean_magic_byte(hnd->magic >> 16),
+          clean_magic_byte(hnd->magic >> 8),
+          clean_magic_byte(hnd->magic >> 0),
           (kMagic >> 24) & 0xFF, (kMagic >> 16) & 0xFF, (kMagic >> 8) & 0xFF, (kMagic >> 0) & 0xFF);
       return -EINVAL;
     }

@@ -53,7 +53,7 @@ class HWCSession : hwc2_device_t, public qClient::BnQClient {
 
     HWCSession *hwc_session = static_cast<HWCSession *>(device);
     auto status = HWC2::Error::BadDisplay;
-    if (hwc_session->hwc_display_[display]) {
+    if (display < HWC_NUM_DISPLAY_TYPES && hwc_session->hwc_display_[display]) {
       auto hwc_display = hwc_session->hwc_display_[display];
       status = (hwc_display->*member)(std::forward<Args>(args)...);
     }
@@ -70,7 +70,7 @@ class HWCSession : hwc2_device_t, public qClient::BnQClient {
 
     HWCSession *hwc_session = static_cast<HWCSession *>(device);
     auto status = HWC2::Error::BadDisplay;
-    if (hwc_session->hwc_display_[display]) {
+    if (display < HWC_NUM_DISPLAY_TYPES && hwc_session->hwc_display_[display]) {
       status = HWC2::Error::BadLayer;
       auto hwc_layer = hwc_session->hwc_display_[display]->GetHWCLayer(layer);
       if (hwc_layer != nullptr) {
@@ -109,6 +109,8 @@ class HWCSession : hwc2_device_t, public qClient::BnQClient {
                               int32_t /*android_color_mode_t*/ int_mode);
   static int32_t SetColorTransform(hwc2_device_t *device, hwc2_display_t display,
                                    const float *matrix, int32_t /*android_color_transform_t*/ hint);
+  static int32_t GetDozeSupport(hwc2_device_t *device, hwc2_display_t display,
+                                int32_t *outSupported);
 
  private:
   static const int kExternalConnectionTimeoutMs = 500;

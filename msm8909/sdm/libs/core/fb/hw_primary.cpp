@@ -570,12 +570,6 @@ DisplayError HWPrimary::GetPanelBrightness(int *level) {
   return kErrorNone;
 }
 
-DisplayError HWPrimary::CachePanelBrightness(int level) {
-  bl_level_update_commit = level;
-  bl_update_commit = true;
-  return kErrorNone;
-}
-
 DisplayError HWPrimary::SetAutoRefresh(bool enable) {
   const int kWriteLength = 2;
   char buffer[kWriteLength] = {'\0'};
