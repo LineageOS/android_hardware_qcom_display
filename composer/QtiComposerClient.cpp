@@ -134,7 +134,8 @@ void QtiComposerClient::onHotplug(hwc2_callback_data_t callbackData, hwc2_displa
   }
 
   auto ret = client->mCallback->onHotplug(display, connect);
-  ALOGE_IF(!ret.isOk(), "failed to send onHotplug: %s", ret.description().c_str());
+  ALOGW_IF(!ret.isOk(), "failed to send onHotplug: %s. SF likely unavailable.",
+           ret.description().c_str());
 
   if (connect == composer_V2_1::IComposerCallback::Connection::DISCONNECTED) {
     // Trigger refresh to make sure disconnect event received/updated properly by SurfaceFlinger.
@@ -152,14 +153,16 @@ void QtiComposerClient::onHotplug(hwc2_callback_data_t callbackData, hwc2_displa
 void QtiComposerClient::onRefresh(hwc2_callback_data_t callbackData, hwc2_display_t display) {
   auto client = reinterpret_cast<QtiComposerClient*>(callbackData);
   auto ret = client->mCallback->onRefresh(display);
-  ALOGE_IF(!ret.isOk(), "failed to send onRefresh: %s", ret.description().c_str());
+  ALOGW_IF(!ret.isOk(), "failed to send onRefresh: %s. SF likely unavailable.",
+           ret.description().c_str());
 }
 
 void QtiComposerClient::onVsync(hwc2_callback_data_t callbackData, hwc2_display_t display,
                                   int64_t timestamp) {
   auto client = reinterpret_cast<QtiComposerClient*>(callbackData);
   auto ret = client->mCallback->onVsync(display, timestamp);
-  ALOGI_IF(!ret.isOk(), "failed to send onVsync: %s", ret.description().c_str());
+  ALOGW_IF(!ret.isOk(), "failed to send onVsync: %s. SF likely unavailable.",
+           ret.description().c_str());
 }
 
 // convert fenceFd to or from hidl_handle
