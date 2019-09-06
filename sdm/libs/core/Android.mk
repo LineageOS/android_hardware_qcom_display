@@ -5,8 +5,8 @@ include $(LOCAL_PATH)/../../../common.mk
 LOCAL_MODULE                  := libsdmcore
 LOCAL_VENDOR_MODULE           := true
 LOCAL_MODULE_TAGS             := optional
-LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes)
-LOCAL_HEADER_LIBRARIES        := display_headers
+LOCAL_C_INCLUDES              := $(common_includes)
+LOCAL_HEADER_LIBRARIES        := display_headers generated_kernel_headers
 LOCAL_CFLAGS                  := -Wno-unused-parameter -DLOG_TAG=\"SDM\" \
                                  $(common_flags)
 LOCAL_HW_INTF_PATH_1          := fb
@@ -22,7 +22,6 @@ ifeq ($(TARGET_USES_DRM_PP),true)
     LOCAL_CFLAGS              += -DPP_DRM_ENABLE
 endif
 
-LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps) $(kernel_deps)
 LOCAL_SRC_FILES               := core_interface.cpp \
                                  core_impl.cpp \
                                  display_base.cpp \
