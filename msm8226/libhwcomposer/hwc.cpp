@@ -465,6 +465,7 @@ static int hwc_setPowerMode(struct hwc_composer_device_1* dev, int dpy,
         ctx->dpyAttr[dpy].isActive = not(mode == HWC_POWER_MODE_OFF);
         //Deliberate fall through since there is no explicit power mode for
         //virtual displays.
+        [[fallthrough]];
     case HWC_DISPLAY_VIRTUAL:
         if(ctx->dpyAttr[HWC_DISPLAY_VIRTUAL].connected) {
             const int dpy = HWC_DISPLAY_VIRTUAL;
