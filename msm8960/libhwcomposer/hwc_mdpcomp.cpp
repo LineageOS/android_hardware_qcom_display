@@ -321,6 +321,7 @@ ovutils::eDest MDPComp::getMdpPipe(hwc_context_t *ctx, ePipeType type) {
             ctx->mDMAInUse = true;
             return mdp_pipe;
         }
+        [[fallthrough]];
     case MDPCOMP_OV_ANY:
     case MDPCOMP_OV_RGB:
         mdp_pipe = ov.nextPipe(ovutils::OV_MDP_PIPE_RGB, mDpy);
@@ -332,6 +333,7 @@ ovutils::eDest MDPComp::getMdpPipe(hwc_context_t *ctx, ePipeType type) {
             //Requested only for RGB pipe
             break;
         }
+        [[fallthrough]];
     case  MDPCOMP_OV_VG:
         return ov.nextPipe(ovutils::OV_MDP_PIPE_VG, mDpy);
     default:
