@@ -419,6 +419,7 @@ static int hwc_setPowerMode(struct hwc_composer_device_1* dev, int dpy,
         }
         //Deliberate fall through since there is no explicit power mode for
         //virtual displays.
+        [[fallthrough]];
     case HWC_DISPLAY_VIRTUAL:
         /* There are two ways to reach this block of code.
 
