@@ -1050,6 +1050,9 @@ DisplayError HWDeviceDRM::DozeSuspend(const HWQosData &qos_data,
 }
 
 void HWDeviceDRM::SetQOSData(const HWQosData &qos_data) {
+  if (!qos_data.valid) {
+    return;
+  }
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_CLK, token_.crtc_id, qos_data.clock_hz);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_AB, token_.crtc_id, qos_data.core_ab_bps);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CORE_IB, token_.crtc_id, qos_data.core_ib_bps);

@@ -705,6 +705,7 @@ struct HWLayersInfo {
 };
 
 struct HWQosData {
+  bool valid = false;
   uint64_t core_ab_bps = 0;
   uint64_t core_ib_bps = 0;
   uint64_t llcc_ab_bps = 0;
