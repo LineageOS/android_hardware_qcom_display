@@ -4,6 +4,7 @@ include $(LOCAL_PATH)/../common.mk
 include $(CLEAR_VARS)
 
 LOCAL_MODULE                  := gralloc.$(TARGET_BOARD_PLATFORM)
+LOCAL_SANITIZE                := integer_overflow
 LOCAL_VENDOR_MODULE           := true
 LOCAL_MODULE_RELATIVE_PATH    := hw
 LOCAL_MODULE_TAGS             := optional
@@ -24,6 +25,7 @@ include $(BUILD_SHARED_LIBRARY)
 include $(CLEAR_VARS)
 LOCAL_MODULE                  := libgrallocutils
 LOCAL_VENDOR_MODULE           := true
+LOCAL_SANITIZE                := integer_overflow
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes)
 LOCAL_HEADER_LIBRARIES        := display_headers
@@ -38,6 +40,7 @@ include $(BUILD_SHARED_LIBRARY)
 #libgralloccore
 include $(CLEAR_VARS)
 LOCAL_MODULE                  := libgralloccore
+LOCAL_SANITIZE                := integer_overflow
 LOCAL_VENDOR_MODULE           := true
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes) \
@@ -56,6 +59,7 @@ include $(BUILD_SHARED_LIBRARY)
 #mapper
 include $(CLEAR_VARS)
 LOCAL_MODULE                  := android.hardware.graphics.mapper@2.0-impl-qti-display
+LOCAL_SANITIZE                := integer_overflow
 LOCAL_VENDOR_MODULE           := true
 LOCAL_MODULE_RELATIVE_PATH    := hw
 LOCAL_MODULE_TAGS             := optional
@@ -75,11 +79,13 @@ LOCAL_SHARED_LIBRARIES        := $(common_libs) \
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdgralloc\" -Wno-sign-conversion
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
 LOCAL_SRC_FILES               := QtiMapper.cpp QtiMapperExtensions.cpp
+LOCAL_VINTF_FRAGMENTS         := android.hardware.graphics.mapper-impl-qti-display.xml
 include $(BUILD_SHARED_LIBRARY)
 
 #allocator
 include $(CLEAR_VARS)
 LOCAL_MODULE                  := vendor.qti.hardware.display.allocator-service
+LOCAL_SANITIZE                := integer_overflow
 LOCAL_VENDOR_MODULE           := true
 LOCAL_MODULE_RELATIVE_PATH    := hw
 LOCAL_MODULE_TAGS             := optional
@@ -98,4 +104,5 @@ LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
 LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes)
 LOCAL_SRC_FILES               := QtiAllocator.cpp service.cpp
 LOCAL_INIT_RC                 := vendor.qti.hardware.display.allocator-service.rc
+LOCAL_VINTF_FRAGMENTS         := vendor.qti.hardware.display.allocator-service.xml
 include $(BUILD_EXECUTABLE)

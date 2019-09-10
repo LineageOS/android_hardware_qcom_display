@@ -9,6 +9,7 @@ include $(BUILD_COPY_HEADERS)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE              := libgpu_tonemapper
+LOCAL_SANITIZE            := integer_overflow
 LOCAL_VENDOR_MODULE       := true
 LOCAL_MODULE_TAGS         := optional
 LOCAL_HEADER_LIBRARIES    := display_headers

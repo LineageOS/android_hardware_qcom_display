@@ -127,6 +127,9 @@ class HWDeviceDRM : public HWInterface {
                                                     uint8_t *out_data);
   virtual DisplayError SetFrameTrigger(FrameTriggerMode mode) { return kErrorNotSupported; }
   virtual DisplayError SetBLScale(uint32_t level) { return kErrorNotSupported; }
+  virtual DisplayError GetPanelBrightnessBasePath(std::string *base_path) {
+    return kErrorNotSupported;
+  }
 
   enum {
     kHWEventVSync,
@@ -136,6 +139,12 @@ class HWDeviceDRM : public HWInterface {
   static const int kMaxStringLength = 1024;
   static const int kNumPhysicalDisplays = 2;
   static const int kMaxSysfsCommandLength = 12;
+
+  // Max tolerable power-state-change wait-times in milliseconds.
+  static const int kTimeoutMsPowerOn = 5000;
+  static const int kTimeoutMsPowerOff = 3000;
+  static const int kTimeoutMsDoze = kTimeoutMsPowerOff;
+  static const int kTimeoutMsDozeSuspend = kTimeoutMsPowerOff;
 
   DisplayError SetFormat(const LayerBufferFormat &source, uint32_t *target);
   DisplayError SetStride(HWDeviceType device_type, LayerBufferFormat format, uint32_t width,

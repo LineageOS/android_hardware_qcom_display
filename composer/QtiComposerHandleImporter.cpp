@@ -28,7 +28,8 @@ namespace display {
 namespace composer {
 namespace V2_0 {
 
-using MapperError = android::hardware::graphics::mapper::V2_0::Error;
+using MapperV2Error = android::hardware::graphics::mapper::V2_0::Error;
+using MapperV3Error = android::hardware::graphics::mapper::V3_0::Error;
 
 ComposerHandleImporter::ComposerHandleImporter() : mInitialized(false) {}
 
@@ -38,10 +39,13 @@ void ComposerHandleImporter::initialize() {
     return;
   }
 
-  mMapper = IMapper::getService();
-  if (mMapper == nullptr) {
-    ALOGE("%s: cannnot acccess graphics mapper HAL!", __FUNCTION__);
-    return;
+  mMapper_V3 = IMapperV3::getService();
+  if (mMapper_V3 == nullptr) {
+    mMapper_V2 = IMapperV2::getService();
+    if (mMapper_V2 == nullptr) {
+      ALOGE("%s: cannnot acccess graphics mapper HAL!", __FUNCTION__);
+      return;
+    }
   }
 
   mInitialized = true;
@@ -49,7 +53,11 @@ void ComposerHandleImporter::initialize() {
 }
 
 void ComposerHandleImporter::cleanup() {
-  mMapper.clear();
+  if (mMapper_V3 != nullptr) {
+    mMapper_V3.clear();
+  } else {
+    mMapper_V2.clear();
+  }
   mInitialized = false;
 }
 
@@ -71,30 +79,54 @@ bool ComposerHandleImporter::importBuffer(buffer_handle_t& handle) {
     initialize();
   }
 
-  if (mMapper == nullptr) {
+  if (mMapper_V3 == nullptr && mMapper_V2 == nullptr) {
     ALOGE("%s: mMapper is null!", __FUNCTION__);
     return false;
   }
 
-  MapperError error;
-  buffer_handle_t importedHandle;
-  auto ret = mMapper->importBuffer(
-    hidl_handle(handle),
-    [&](const auto& tmpError, const auto& tmpBufferHandle) {
-      error = tmpError;
-      importedHandle = static_cast<buffer_handle_t>(tmpBufferHandle);
-    });
+  if (mMapper_V3 != nullptr) {
+    MapperV3Error error;
+    buffer_handle_t importedHandle;
 
-  if (!ret.isOk()) {
-    ALOGE("%s: mapper importBuffer failed: %s", __FUNCTION__, ret.description().c_str());
-    return false;
+    auto ret = mMapper_V3->importBuffer(
+        hidl_handle(handle),
+        [&](const auto &tmpError, const auto &tmpBufferHandle) {
+          error = tmpError;
+          importedHandle = static_cast<buffer_handle_t>(tmpBufferHandle);
+        });
+
+    if (!ret.isOk()) {
+      ALOGE("%s: mapper importBuffer failed: %s", __FUNCTION__, ret.description().c_str());
+      return false;
+    }
+
+    if (error != MapperV3Error::NONE) {
+      return false;
+    }
+
+    handle = importedHandle;
+  } else {
+    MapperV2Error error;
+    buffer_handle_t importedHandle;
+
+    auto ret = mMapper_V2->importBuffer(
+        hidl_handle(handle),
+        [&](const auto &tmpError, const auto &tmpBufferHandle) {
+          error = tmpError;
+          importedHandle = static_cast<buffer_handle_t>(tmpBufferHandle);
+        });
+
+    if (!ret.isOk()) {
+      ALOGE("%s: mapper importBuffer failed: %s", __FUNCTION__, ret.description().c_str());
+      return false;
+    }
+
+    if (error != MapperV2Error::NONE) {
+      return false;
+    }
+
+    handle = importedHandle;
   }
-
-  if (error != MapperError::NONE) {
-    return false;
-  }
-
-  handle = importedHandle;
 
   return true;
 }
@@ -105,14 +137,21 @@ void ComposerHandleImporter::freeBuffer(buffer_handle_t handle) {
   }
 
   Mutex::Autolock lock(mLock);
-  if (mMapper == nullptr) {
+
+  if (mMapper_V3 == nullptr && mMapper_V2 == nullptr) {
     ALOGE("%s: mMapper is null!", __FUNCTION__);
     return;
   }
 
-  auto ret = mMapper->freeBuffer(const_cast<native_handle_t*>(handle));
-  if (!ret.isOk()) {
-    ALOGE("%s: mapper freeBuffer failed: %s", __FUNCTION__, ret.description().c_str());
+  if (mMapper_V3 != nullptr) {
+    auto ret = mMapper_V3->freeBuffer(const_cast<native_handle_t *>(handle));
+    if (!ret.isOk()) {
+      ALOGE("%s: mapper freeBuffer failed: %s", __FUNCTION__, ret.description().c_str());
+    }
+  } else {
+    auto ret = mMapper_V2->freeBuffer(const_cast<native_handle_t *>(handle));
+    if (!ret.isOk()) {
+      ALOGE("%s: mapper freeBuffer failed: %s", __FUNCTION__, ret.description().c_str()); }
   }
 }
 

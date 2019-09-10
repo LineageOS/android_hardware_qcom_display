@@ -1201,10 +1201,9 @@ uint64_t GetHandleFlags(int format, uint64_t usage) {
   }
 
   if (IsUBwcEnabled(format, usage)) {
+    priv_flags |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
     if (IsUBwcPISupported(format, usage)) {
       priv_flags |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED_PI;
-    } else {
-      priv_flags |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
     }
   }
 

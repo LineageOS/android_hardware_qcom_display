@@ -6,6 +6,7 @@ ifeq ($(use_hwc2),true)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE                  := vendor.qti.hardware.display.composer-service
+LOCAL_SANITIZE                := integer_overflow
 LOCAL_VENDOR_MODULE           := true
 LOCAL_MODULE_RELATIVE_PATH    := hw
 LOCAL_MODULE_TAGS             := optional
@@ -16,7 +17,7 @@ LOCAL_HEADER_LIBRARIES        := display_headers
 
 LOCAL_CFLAGS                  := -Wno-missing-field-initializers -Wno-unused-parameter \
                                  -std=c++11 -fcolor-diagnostics \
-                                 -DLOG_TAG=\"QtiComposer\" $(common_flags)
+                                 -DLOG_TAG=\"SDM\" $(common_flags)
 LOCAL_CLANG                   := true
 
 LOCAL_SHARED_LIBRARIES        := libbinder libhardware libutils libcutils libsync \
@@ -69,6 +70,7 @@ LOCAL_SRC_FILES               := QtiComposer.cpp QtiComposerClient.cpp service.c
                                  hwc_buffer_allocator.cpp
 
 LOCAL_INIT_RC                 := vendor.qti.hardware.display.composer-service.rc
+LOCAL_VINTF_FRAGMENTS         := vendor.qti.hardware.display.composer-service.xml
 
 include $(BUILD_EXECUTABLE)
 endif

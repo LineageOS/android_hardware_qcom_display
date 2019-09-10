@@ -86,6 +86,7 @@ DisplayError DisplayBuiltIn::Init() {
   if (hw_panel_info_.mode == kModeCommand) {
     event_list_ = {HWEvent::VSYNC,
                    HWEvent::EXIT,
+                   HWEvent::IDLE_NOTIFY,
                    HWEvent::SHOW_BLANK_EVENT,
                    HWEvent::THERMAL_LEVEL,
                    HWEvent::IDLE_POWER_COLLAPSE,
@@ -285,6 +286,8 @@ DisplayError DisplayBuiltIn::SetDisplayMode(uint32_t mode) {
             hw_display_mode);
       return error;
     }
+
+    DisplayBase::ReconfigureDisplay();
 
     if (mode == kModeVideo) {
       ControlPartialUpdate(false /* enable */, &pending);
@@ -591,6 +594,11 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
       info->is_primary = IsPrimaryDisplay();
       info->display_id = display_id_;
       info->display_type = display_type_;
+
+      error = hw_intf_->GetPanelBrightnessBasePath(&(info->brightness_base_path));
+      if (error != kErrorNone) {
+        DLOGE("Failed to get brightness base path %d", error);
+      }
       break;
     default:
       DLOGE("Invalid input op %d", op);

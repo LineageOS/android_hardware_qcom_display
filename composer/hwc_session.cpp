@@ -242,7 +242,7 @@ void HWCSession::InitSupportedDisplaySlots() {
   map_info_primary_.client_id = qdutils::DISPLAY_PRIMARY;
 
   if (null_display_mode_) {
-    // Skip display slot initialization.
+    InitSupportedNullDisplaySlots();
     return;
   }
 
@@ -330,6 +330,26 @@ void HWCSession::InitSupportedDisplaySlots() {
   }
 }
 
+void HWCSession::InitSupportedNullDisplaySlots() {
+  if (!null_display_mode_) {
+    DLOGE("Should only be invoked during null display");
+    return;
+  }
+
+  map_info_primary_.client_id = 0;
+  // Resize HDR supported map to total number of displays
+  is_hdr_display_.resize(1);
+
+  if (!async_powermode_) {
+    return;
+  }
+
+  DLOGI("Display Pairs: map.client_id: %d, start_index: %d", map_info_primary_.client_id,
+                                                             HWCCallbacks::kNumRealDisplays);
+  map_hwc_display_.insert(std::make_pair(map_info_primary_.client_id,
+                                         HWCCallbacks::kNumRealDisplays));
+}
+
 int HWCSession::GetDisplayIndex(int dpy) {
   DisplayMapInfo *map_info = nullptr;
   switch (dpy) {
@@ -410,6 +430,10 @@ int32_t HWCSession::CreateVirtualDisplay(uint32_t width, uint32_t height, int32_
 
   if (!out_display_id || !width || !height || !format) {
     return  HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (null_display_mode_) {
+    return 0;
   }
 
   auto status = CreateVirtualDisplayObj(width, height, format, out_display_id);
@@ -1577,6 +1601,18 @@ android::status_t HWCSession::SetFrameDumpConfig(const android::Parcel *input_pa
   int32_t output_format = HAL_PIXEL_FORMAT_RGB_888;
   bool post_processed = true;
 
+  // Output buffer dump is not supported, if External or Virtual display is present.
+  bool output_buffer_dump = bit_mask_layer_type & (1 << OUTPUT_LAYER_DUMP);
+  if (output_buffer_dump) {
+    int external_dpy_index = GetDisplayIndex(qdutils::DISPLAY_EXTERNAL);
+    int virtual_dpy_index = GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
+    if (((external_dpy_index != -1) && hwc_display_[external_dpy_index]) ||
+        ((virtual_dpy_index != -1) && hwc_display_[virtual_dpy_index])) {
+      DLOGW("Output buffer dump is not supported with External or Virtual display!");
+      return -EINVAL;
+    }
+  }
+
   // Read optional user preferences: output_format and post_processed.
   if (input_parcel->dataPosition() != input_parcel->dataSize()) {
     // HAL Pixel Format for output buffer
@@ -2195,6 +2231,10 @@ int HWCSession::GetVsyncPeriod(int disp) {
   return vsync_period;
 }
 
+void HWCSession::Refresh(hwc2_display_t display) {
+  callbacks_.Refresh(display);
+}
+
 android::status_t HWCSession::GetVisibleDisplayRect(const android::Parcel *input_parcel,
                                                     android::Parcel *output_parcel) {
   int disp_idx = GetDisplayIndex(input_parcel->readInt32());
@@ -2259,8 +2299,6 @@ int HWCSession::CreatePrimaryDisplay() {
     auto hwc_display = &hwc_display_[HWC_DISPLAY_PRIMARY];
     hwc2_display_t client_id = map_info_primary_.client_id;
 
-    DLOGI("Create primary display type = %d, sdm id = %d, client id = %d", info.display_type,
-                                                                    info.display_id, client_id);
     if (info.display_type == kBuiltIn) {
       status = HWCDisplayBuiltIn::Create(core_intf_, &buffer_allocator_, &callbacks_, this,
                                          qservice_, client_id, info.display_id, hwc_display);
@@ -2274,18 +2312,18 @@ int HWCSession::CreatePrimaryDisplay() {
     }
 
     if (!status) {
+      DLOGI("Created primary display type = %d, sdm id = %d, client id = %d", info.display_type,
+                                                                    info.display_id, client_id);
       is_hdr_display_[UINT32(client_id)] = HasHDRSupport(*hwc_display);
-      DLOGI("Primary display created.");
       map_info_primary_.disp_type = info.display_type;
       map_info_primary_.sdm_id = info.display_id;
-
       CreateDummyDisplay(HWC_DISPLAY_PRIMARY);
       color_mgr_ = HWCColorManager::CreateColorManager(&buffer_allocator_);
       if (!color_mgr_) {
         DLOGW("Failed to load HWCColorManager.");
       }
     } else {
-      DLOGE("Primary display creation failed.");
+      DLOGE("Primary display creation has failed! status = %d", status);
     }
 
     // Primary display is found, no need to parse more.
@@ -2603,13 +2641,6 @@ void HWCSession::DestroyPluggableDisplay(DisplayMapInfo *map_info) {
 
   DLOGI("Notify hotplug display disconnected: client id = %d", client_id);
   callbacks_.Hotplug(client_id, HWC2::Connection::Disconnected);
-
-  // Trigger refresh to make sure disconnect event received/updated properly by SurfaceFlinger.
-  callbacks_.Refresh(HWC_DISPLAY_PRIMARY);
-
-  // wait for sufficient time to ensure sufficient resources are available to process
-  // connection.
-  usleep(UINT32(GetVsyncPeriod(HWC_DISPLAY_PRIMARY)) * 2 / 1000);
 
   {
     SCOPE_LOCK(locker_[client_id]);
@@ -2950,8 +2981,10 @@ int32_t HWCSession::SetReadbackBuffer(hwc2_display_t display, const native_handl
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
-  if (hwc_display_[HWC_DISPLAY_EXTERNAL] ||
-      hwc_display_[qdutils::DISPLAY_VIRTUAL]) {
+  int external_dpy_index = GetDisplayIndex(qdutils::DISPLAY_EXTERNAL);
+  int virtual_dpy_index = GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
+  if (((external_dpy_index != -1) && hwc_display_[external_dpy_index]) ||
+      ((virtual_dpy_index != -1) && hwc_display_[virtual_dpy_index])) {
     return HWC2_ERROR_UNSUPPORTED;
   }
 

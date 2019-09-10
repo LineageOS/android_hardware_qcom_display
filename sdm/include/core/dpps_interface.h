@@ -59,6 +59,7 @@ struct DppsDisplayInfo {
   uint32_t height;
   bool is_primary;
   int32_t display_id;
+  std::string brightness_base_path;
 #if !defined(LINUX_COMPILE) && !defined(WIN32) && !defined(_WIN64) && !defined(__APPLE__)
   DisplayType display_type;
 #endif
