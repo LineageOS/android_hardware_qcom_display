@@ -471,6 +471,7 @@ status_t QClient::notifyCallback(uint32_t command, const Parcel* inParcel,
             break;
         case IQService::CONFIGURE_DYN_REFRESH_RATE:
             configureDynRefreshRate(mHwcContext, inParcel);
+            break;
         case IQService::QDCM_SVC_CMDS:
             qdcmCmdsHandler(mHwcContext, inParcel, outParcel);
             break;
