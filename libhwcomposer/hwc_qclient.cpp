@@ -234,14 +234,17 @@ static void toggleDynamicDebug(hwc_context_t* ctx, const Parcel* inParcel) {
             qhwc::MDPComp::dynamicDebug(enable);
             if (debug_type != IQService::DEBUG_ALL)
                 break;
+            FALLTHROUGH_INTENDED;
         case IQService::DEBUG_VSYNC:
             ctx->vstate.debug = enable;
             if (debug_type != IQService::DEBUG_ALL)
                 break;
+            FALLTHROUGH_INTENDED;
         case IQService::DEBUG_VD:
             HWCVirtualVDS::dynamicDebug(enable);
             if (debug_type != IQService::DEBUG_ALL)
                 break;
+            FALLTHROUGH_INTENDED;
         case IQService::DEBUG_PIPE_LIFECYCLE:
             Overlay::debugPipeLifecycle(enable);
             if (debug_type != IQService::DEBUG_ALL)
@@ -468,6 +471,7 @@ status_t QClient::notifyCallback(uint32_t command, const Parcel* inParcel,
             break;
         case IQService::CONFIGURE_DYN_REFRESH_RATE:
             configureDynRefreshRate(mHwcContext, inParcel);
+            FALLTHROUGH_INTENDED;
         case IQService::QDCM_SVC_CMDS:
             qdcmCmdsHandler(mHwcContext, inParcel, outParcel);
             break;
