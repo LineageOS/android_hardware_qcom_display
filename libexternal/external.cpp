@@ -479,6 +479,7 @@ bool ExternalDisplay::isInterlacedMode(int ID) {
         case HDMI_VFRMT_1440x576i50_16_9:
         case HDMI_VFRMT_1920x1080i60_16_9:
             interlaced = true;
+            break;
         default:
             interlaced = false;
     }
