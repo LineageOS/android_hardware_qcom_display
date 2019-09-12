@@ -1316,7 +1316,7 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
       WaitOnPreviousFence();
       MarkLayersForGPUBypass();
     } else {
-      DLOGE("Prepare failed. Error = %d", error);
+      DLOGW("Prepare failed. Error = %d", error);
       // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
       // so that previous buffer and fences are released, and override the error.
       flush_ = true;
