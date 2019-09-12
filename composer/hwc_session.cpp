@@ -2162,9 +2162,17 @@ android::status_t HWCSession::SetPanelLuminanceAttributes(const android::Parcel 
     return -EINVAL;
   }
 
+  float min_lum = input_parcel->readFloat();
+  float max_lum = input_parcel->readFloat();
+
+  // check for out of range luminance values
+  if (min_lum <= 0.0f || min_lum >= 1.0f || max_lum <= 100.0f || max_lum >= 1000.0f) {
+    return -EINVAL;
+  }
+
   std::lock_guard<std::mutex> obj(mutex_lum_);
-  set_min_lum_ = input_parcel->readFloat();
-  set_max_lum_ = input_parcel->readFloat();
+  set_min_lum_ = min_lum;
+  set_max_lum_ = max_lum;
   DLOGI("set max_lum %f, min_lum %f", set_max_lum_, set_min_lum_);
 
   return 0;
