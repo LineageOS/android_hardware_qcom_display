@@ -233,14 +233,6 @@ HWC2::Error HWCDisplayVirtual::SetOutputBuffer(buffer_handle_t buf, int32_t rele
   }
   const private_handle_t *output_handle = static_cast<const private_handle_t *>(buf);
 
-  // Close the previous acquire fence and update with the latest release fence to avoid fence leak
-  // in case if this function gets invoked multiple times from the client.
-  if (output_buffer_->acquire_fence_fd >= 0) {
-    close(output_buffer_->acquire_fence_fd);
-  }
-  // Fill output buffer parameters (width, height, format, plane information, fence)
-  output_buffer_->acquire_fence_fd = dup(release_fence);
-
   if (output_handle) {
     int output_handle_format = output_handle->format;
     int active_aligned_w, active_aligned_h;
@@ -301,6 +293,16 @@ HWC2::Error HWCDisplayVirtual::SetOutputBuffer(buffer_handle_t buf, int32_t rele
     output_buffer_->planes[0].offset = output_handle->offset;
     output_buffer_->planes[0].stride = UINT32(output_handle->width);
   }
+
+  // Close the previous acquire fence and update with the latest release fence to avoid fence leak
+  // in case if this function gets invoked multiple times from the client.
+  if (output_buffer_->acquire_fence_fd >= 0) {
+    close(output_buffer_->acquire_fence_fd);
+  }
+  // Fill output buffer parameters (width, height, format, plane information, fence)
+  // release_fence will be closed by QtiComposerClient::CommandReader::parseSetOutputBuffer() if
+  // this::SetOutputBuffer() fails.
+  output_buffer_->acquire_fence_fd = release_fence;
 
   return HWC2::Error::None;
 }
