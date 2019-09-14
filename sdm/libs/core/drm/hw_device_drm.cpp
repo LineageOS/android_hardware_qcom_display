@@ -938,12 +938,12 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown) {
   }
 
   ResetROI();
-  int64_t release_fence_t = -1;
+  int64_t retire_fence_t = -1;
   drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::OFF);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_t);
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence_t);
 
   int ret = NullCommit(false /* asynchronous */, false /* retain_planes */);
   if (ret) {
@@ -952,9 +952,9 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown) {
   }
   pending_doze_ = false;
 
-  int release_fence = static_cast<int>(release_fence_t);
-  buffer_sync_handler_->SyncWait(release_fence, kTimeoutMsPowerOff);
-  Sys::close_(release_fence);
+  int retire_fence = static_cast<int>(retire_fence_t);
+  buffer_sync_handler_->SyncWait(retire_fence, kTimeoutMsPowerOff);
+  Sys::close_(retire_fence);
 
   return kErrorNone;
 }
