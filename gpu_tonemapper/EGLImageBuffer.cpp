@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, 2019 The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -97,11 +97,11 @@ int EGLImageBuffer::getHeight()
 }
 
 //-----------------------------------------------------------------------------
-unsigned int EGLImageBuffer::getTexture()
+unsigned int EGLImageBuffer::getTexture(int target)
 //-----------------------------------------------------------------------------
 {
   if (textureID == 0) {
-    bindAsTexture();
+    bindAsTexture(target);
   }
 
   return textureID;
@@ -119,22 +119,21 @@ unsigned int EGLImageBuffer::getFramebuffer()
 }
 
 //-----------------------------------------------------------------------------
-void EGLImageBuffer::bindAsTexture()
+void EGLImageBuffer::bindAsTexture(int target)
 //-----------------------------------------------------------------------------
 {
   if (textureID == 0) {
     GL(glGenTextures(1, &textureID));
-    int target = 0x8D65;
     GL(glBindTexture(target, textureID));
     GL(glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
     GL(glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
     GL(glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
     GL(glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
 
-    GL(glEGLImageTargetTexture2DOES(0x8D65, eglImageID));
+    GL(glEGLImageTargetTexture2DOES(target, eglImageID));
   }
 
-  GL(glBindTexture(0x8D65, textureID));
+  GL(glBindTexture(target, textureID));
 }
 
 //-----------------------------------------------------------------------------
