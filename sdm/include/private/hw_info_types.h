@@ -206,6 +206,8 @@ struct HWPipeCaps {
   uint32_t dgm_csc_version = 0;
   std::map<HWToneMapLut, uint32_t> tm_lut_version_map = {};
   bool block_sec_ui = false;
+  // Allow all pipelines to be usable on all displays by default
+  std::bitset<32> hw_block_mask = std::bitset<32>().set();
 };
 
 struct HWRotatorInfo {
@@ -743,6 +745,7 @@ struct HWMixerAttributes {
   uint32_t height = 0;                                 // Layer mixer height
   uint32_t split_left = 0;
   LayerBufferFormat output_format = kFormatRGB101010;  // Layer mixer output format
+  uint32_t mixer_index = 0;
 
   bool operator !=(const HWMixerAttributes &mixer_attributes) {
     return ((width != mixer_attributes.width) ||
