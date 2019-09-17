@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017, 2019, The Linux Foundation. All rights reserved.
  * Not a Contribution
  *
  * Copyright (C) 2008 The Android Open Source Project
@@ -28,6 +28,7 @@
 
 #include "gralloc_priv.h"
 #include "gr_allocator.h"
+#include "gr_utils.h"
 #include "gr_buf_descriptor.h"
 
 namespace gralloc1 {
@@ -49,6 +50,8 @@ class BufferManager {
   gralloc1_error_t GetFlexLayout(const private_handle_t *hnd, struct android_flex_layout *layout);
   gralloc1_error_t GetNumFlexPlanes(const private_handle_t *hnd, uint32_t *out_num_planes);
   gralloc1_error_t Dump(std::ostringstream *os);
+  gralloc1_error_t IsBufferImported(const private_handle_t *hnd);
+  gralloc1_error_t ValidateBufferSize(private_handle_t const *hnd, BufferInfo info);
 
   template <typename... Args>
   gralloc1_error_t CallBufferDescriptorFunction(gralloc1_buffer_descriptor_t descriptor_id,

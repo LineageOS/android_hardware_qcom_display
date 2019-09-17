@@ -174,6 +174,28 @@ bool CpuCanWrite(gralloc1_producer_usage_t prod_usage) {
   return false;
 }
 
+uint32_t GetDataAlignment(int format, gralloc1_producer_usage_t prod_usage,
+                       gralloc1_consumer_usage_t cons_usage) {
+  uint32_t align = UINT(getpagesize());
+  if (format == HAL_PIXEL_FORMAT_YCbCr_420_SP_TILED) {
+    align = 8192;
+  }
+
+if (prod_usage & GRALLOC1_PRODUCER_USAGE_PROTECTED) {
+    if ((prod_usage & GRALLOC1_PRODUCER_USAGE_CAMERA) ||
+        (cons_usage & GRALLOC1_CONSUMER_USAGE_PRIVATE_SECURE_DISPLAY)) {
+      // The alignment here reflects qsee mmu V7L/V8L requirement
+      align = SZ_2M;
+    } else {
+      align = SECURE_ALIGN;
+    }
+  }
+
+  return align;
+}
+
+// Returns the final buffer size meant to be allocated with ion
+
 unsigned int GetSize(const BufferInfo &info, unsigned int alignedw,
                      unsigned int alignedh) {
   unsigned int size = 0;
@@ -184,20 +206,13 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw,
   gralloc1_consumer_usage_t cons_usage = info.cons_usage;
 
   if (IsUBwcEnabled(format, prod_usage, cons_usage)) {
-    return GetUBwcSize(width, height, format, alignedw, alignedh);
-  }
-
-  if (IsUncompressedRGBFormat(format)) {
+    size = GetUBwcSize(width, height, format, alignedw, alignedh);
+  } else if (IsUncompressedRGBFormat(format)) {
     uint32_t bpp = GetBppForUncompressedRGB(format);
     size = alignedw * alignedh * bpp;
-    return size;
-  }
-
-  if (IsCompressedRGBFormat(format)) {
+  } else if (IsCompressedRGBFormat(format)) {
     size = alignedw * alignedh * ASTC_BLOCK_SIZE;
-    return size;
-  }
-
+  } else {
   // Below switch should be for only YUV/custom formats
   switch (format) {
     case HAL_PIXEL_FORMAT_RAW16:
@@ -212,7 +227,6 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw,
     case HAL_PIXEL_FORMAT_Y8:
       size = alignedw * alignedh * 1;
       break;
-
       // adreno formats
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:  // NV21
       size = ALIGN(alignedw * alignedh, SIZE_4K);
@@ -272,8 +286,11 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw,
     default:
       ALOGE("%s: Unrecognized pixel format: 0x%x", __FUNCTION__, format);
       return 0;
+      }
   }
 
+  auto align = GetDataAlignment(format, prod_usage, cons_usage);
+  size = ALIGN(size, align) * info.layer_count;
   return size;
 }
 
