@@ -200,6 +200,7 @@ void Allocator::GetIonHeapInfo(uint64_t usage, unsigned int *ion_heap_id, unsign
   unsigned int heap_id = 0;
   unsigned int type = 0;
   uint32_t flags = 0;
+#ifndef QMAA
   if (usage & GRALLOC_USAGE_PROTECTED) {
     if (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY) {
       heap_id = ION_HEAP(SD_HEAP_ID);
@@ -245,6 +246,7 @@ void Allocator::GetIonHeapInfo(uint64_t usage, unsigned int *ion_heap_id, unsign
   if (!heap_id) {
     heap_id = ION_HEAP(ION_SYSTEM_HEAP_ID);
   }
+#endif
 
   *alloc_type = type;
   *ion_flags = flags;

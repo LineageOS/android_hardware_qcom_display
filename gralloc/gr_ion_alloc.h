@@ -30,7 +30,9 @@
 #ifndef __GR_ION_ALLOC_H__
 #define __GR_ION_ALLOC_H__
 
+#ifndef QMAA
 #include <linux/msm_ion.h>
+#endif
 
 #define FD_INIT -1
 

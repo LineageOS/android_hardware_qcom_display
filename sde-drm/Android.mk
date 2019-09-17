@@ -1,3 +1,4 @@
+ifneq ($(TARGET_IS_HEADLESS), true)
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
@@ -35,3 +36,4 @@ endif
 
 LOCAL_VENDOR_MODULE       := true
 include $(BUILD_SHARED_LIBRARY)
+endif
