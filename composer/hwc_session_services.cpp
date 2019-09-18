@@ -811,6 +811,12 @@ Return<int32_t> HWCSession::setPanelLuminanceAttributes(uint32_t disp_id, float 
     return -EINVAL;
   }
 
+  // check for out of range luminance values
+  if (pan_min_lum <= 0.0f || pan_min_lum >= 1.0f ||
+      pan_max_lum <= 100.0f || pan_max_lum >= 1000.0f) {
+    return -EINVAL;
+  }
+
   std::lock_guard<std::mutex> obj(mutex_lum_);
   set_min_lum_ = pan_min_lum;
   set_max_lum_ = pan_max_lum;
