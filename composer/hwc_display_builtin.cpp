@@ -163,7 +163,7 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
 
   DTRACE_SCOPED();
 
-  if (display_paused_ || (!is_primary_ && active_secure_sessions_[kSecureDisplay])) {
+  if (display_paused_) {
     MarkLayersForGPUBypass();
     return status;
   }
@@ -358,7 +358,7 @@ HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
 
   DTRACE_SCOPED();
 
-  if ((!is_primary_ && active_secure_sessions_[kSecureDisplay]) || display_paused_) {
+  if (display_paused_) {
     return status;
   } else {
     CacheAvrStatus();
@@ -731,13 +731,16 @@ void HWCDisplayBuiltIn::ToggleCPUHint(bool set) {
 }
 
 int HWCDisplayBuiltIn::HandleSecureSession(const std::bitset<kSecureMax> &secure_sessions,
-                                           bool *power_on_pending) {
+                                           bool *power_on_pending, bool is_active_secure_display) {
   if (!power_on_pending) {
     return -EINVAL;
   }
 
-  if (!is_primary_) {
-    return HWCDisplay::HandleSecureSession(secure_sessions, power_on_pending);
+  if (!is_active_secure_display) {
+    // Do handling as done on non-primary displays.
+    DLOGI("Default handling for display %" PRIu64 " %d-%d", id_, sdm_id_, type_);
+    return HWCDisplay::HandleSecureSession(secure_sessions, power_on_pending,
+                                           is_active_secure_display);
   }
 
   if (current_power_mode_ != HWC2::PowerMode::On) {
@@ -753,9 +756,9 @@ int HWCDisplayBuiltIn::HandleSecureSession(const std::bitset<kSecureMax> &secure
       return err;
     }
 
-    DLOGI("SecureDisplay state changed from %d to %d for display %d-%d",
+    DLOGI("SecureDisplay state changed from %d to %d for display %" PRIu64 " %d-%d",
           active_secure_sessions_.test(kSecureDisplay), secure_sessions.test(kSecureDisplay),
-          id_, type_);
+          id_, sdm_id_, type_);
   }
   active_secure_sessions_ = secure_sessions;
   *power_on_pending = false;

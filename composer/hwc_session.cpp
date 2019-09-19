@@ -3090,12 +3090,24 @@ void HWCSession::HandleSecureSession() {
 
   // If it is called during primary prepare/commit, we need to pause any ongoing commit on
   // external/virtual display.
+  bool found_active_secure_display = false;
   for (hwc2_display_t display = HWC_DISPLAY_PRIMARY;
-    display < HWCCallbacks::kNumDisplays; display++) {
+       display < HWCCallbacks::kNumRealDisplays; display++) {
     Locker::ScopeLock lock_d(locker_[display]);
-    if (hwc_display_[display]) {
-      hwc_display_[display]->HandleSecureSession(secure_sessions, &pending_power_mode_[display]);
+    HWCDisplay *hwc_display = hwc_display_[display];
+    if (!hwc_display || hwc_display->GetDisplayClass() != DISPLAY_CLASS_BUILTIN) {
+      continue;
     }
+
+    bool is_active_secure_display = false;
+    // The first On/Doze/DozeSuspend built-in display is taken as the secure display.
+    if (!found_active_secure_display &&
+        hwc_display->GetCurrentPowerMode() != HWC2::PowerMode::Off) {
+      is_active_secure_display = true;
+      found_active_secure_display = true;
+    }
+    hwc_display->HandleSecureSession(secure_sessions, &pending_power_mode_[display],
+                                     is_active_secure_display);
   }
 }
 
