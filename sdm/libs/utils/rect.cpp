@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -263,10 +263,11 @@ void MapRect(const LayerRect &src_domain, const LayerRect &dst_domain, const Lay
   float width_ratio = dst_domain_width / src_domain_width;
   float height_ratio = dst_domain_height / src_domain_height;
 
-  out_rect->left = dst_domain.left + (width_ratio * modified_in_rect.left);
-  out_rect->top = dst_domain.top + (height_ratio * modified_in_rect.top);
-  out_rect->right = dst_domain.left + (width_ratio * modified_in_rect.right);
-  out_rect->bottom = dst_domain.top + (height_ratio * modified_in_rect.bottom);
+  // using floorf for all since ceilf on float will round to next int value.
+  out_rect->left = floorf(dst_domain.left + (width_ratio * modified_in_rect.left));
+  out_rect->top = floorf(dst_domain.top + (height_ratio * modified_in_rect.top));
+  out_rect->right = floorf(dst_domain.left + (width_ratio * modified_in_rect.right));
+  out_rect->bottom = floorf(dst_domain.top + (height_ratio * modified_in_rect.bottom));
 }
 
 void TransformHV(const LayerRect &src_domain, const LayerRect &in_rect,
