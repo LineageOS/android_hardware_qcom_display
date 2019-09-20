@@ -718,7 +718,7 @@ void HWCSession::RegisterCallback(int32_t descriptor, hwc2_callback_data_t callb
   // Detect if client died and now is back
   bool already_connected = false;
   vector<hwc2_display_t> pending_hotplugs;
-  if (descriptor == HWC2_CALLBACK_HOTPLUG && pointer) {
+  if (descriptor == HWC2_CALLBACK_HOTPLUG) {
     already_connected = callbacks_.IsClientConnected();
     if (already_connected) {
       for (auto& map_info : map_info_builtin_) {
@@ -742,7 +742,7 @@ void HWCSession::RegisterCallback(int32_t descriptor, hwc2_callback_data_t callb
   }
 
   DLOGI("%s callback: %s", pointer ? "Registering" : "Deregistering", to_string(desc).c_str());
-  if (descriptor == HWC2_CALLBACK_HOTPLUG && pointer) {
+  if (descriptor == HWC2_CALLBACK_HOTPLUG) {
     if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
       DLOGI("Hotplugging primary...");
       callbacks_.Hotplug(HWC_DISPLAY_PRIMARY, HWC2::Connection::Connected);
@@ -762,17 +762,13 @@ void HWCSession::RegisterCallback(int32_t descriptor, hwc2_callback_data_t callb
 
     // If previously registered, call hotplug for all connected displays to refresh
     if (already_connected) {
-      std::vector<hwc2_display_t> updated_pending_hotplugs;
       for (auto client_id : pending_hotplugs) {
         SCOPE_LOCK(locker_[client_id]);
-        // check if the display is unregistered
+        // Notify hotplug if the display is still connected
         if (hwc_display_[client_id]) {
-          updated_pending_hotplugs.push_back(client_id);
+          DLOGI("Re-hotplug display connected: client id = %d", client_id);
+          callbacks_.Hotplug(client_id, HWC2::Connection::Connected);
         }
-      }
-      for (auto client_id : updated_pending_hotplugs) {
-        DLOGI("Re-hotplug display connected: client id = %d", client_id);
-        callbacks_.Hotplug(client_id, HWC2::Connection::Connected);
       }
     }
   }
