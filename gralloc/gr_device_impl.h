@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, 2019, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -118,6 +118,19 @@ class GrallocImpl : public gralloc1_device_t {
   static gralloc1_error_t UnlockBuffer(gralloc1_device_t *device, buffer_handle_t buffer,
                                        int32_t *release_fence);
   static gralloc1_error_t Gralloc1Perform(gralloc1_device_t *device, int operation, ...);
+  static gralloc1_error_t ValidateBufferSize(gralloc1_device_t *device,
+                                             buffer_handle_t buffer,
+                                             gralloc1_buffer_descriptor_info_t &descriptor_info,
+                                             int32_t stride);
+  static gralloc1_error_t GetTransportSize(gralloc1_device_t *device,
+                                           buffer_handle_t buffer,
+                                           uint32_t *outNumFds,
+                                           uint32_t *outNumInts);
+  static gralloc1_error_t ImportBuffer(gralloc1_device_t *device __unused,
+                                       const native_handle_t* rawHandle,
+                                       const native_handle_t** outBufferHandle);
+
+
 
   explicit GrallocImpl(const hw_module_t *module);
   ~GrallocImpl();
