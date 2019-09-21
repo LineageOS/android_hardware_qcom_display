@@ -38,6 +38,7 @@ class ResourceInterface {
     kCmdDisableRotatorOneFrame,
     kCmdSetDisplayState,
     kCmdUpdateSyncHandle,
+    kCmdCheckEnforceSplit,
     kCmdMax,
   };
 
