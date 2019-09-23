@@ -15,6 +15,11 @@ LOCAL_SHARED_LIBRARIES        := $(common_libs) libqdMetaData libsync libgralloc
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdgralloc\" -Wall -Werror
 LOCAL_CFLAGS                  += -isystem  $(kernel_includes)
 LOCAL_CLANG                   := true
+
+ifeq ($(TARGET_USES_YCRCB_CAMERA_PREVIEW),true)
+    LOCAL_CFLAGS              += -DUSE_YCRCB_CAMERA_PREVIEW
+endif
+
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps) $(kernel_deps)
 LOCAL_SRC_FILES               := gr_ion_alloc.cpp \
                                  gr_allocator.cpp \
