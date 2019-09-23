@@ -130,6 +130,7 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError GetPanelBrightnessBasePath(std::string *base_path) {
     return kErrorNotSupported;
   }
+  DisplayError SetBlendSpace(const PrimariesTransfer &blend_space);
 
   enum {
     kHWEventVSync,
@@ -240,6 +241,7 @@ class HWDeviceDRM : public HWInterface {
   uint64_t bit_clk_rate_ = 0;
   bool update_mode_ = false;
   bool pending_doze_ = false;
+  PrimariesTransfer blend_space_ = {};
 
  private:
   std::string interface_str_ = "DSI";
