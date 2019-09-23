@@ -44,6 +44,11 @@ LOCAL_SHARED_LIBRARIES        := $(common_libs) libqdMetaData libdl  \
                                   android.hardware.graphics.mapper@2.1 \
                                   android.hardware.graphics.mapper@3.0
 LOCAL_CFLAGS                  := $(common_flags) $(qmaa_flags) -DLOG_TAG=\"qdgralloc\" -Wno-sign-conversion
+
+ifeq ($(TARGET_USES_YCRCB_CAMERA_PREVIEW),true)
+    LOCAL_CFLAGS              += -DUSE_YCRCB_CAMERA_PREVIEW
+endif
+
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
 LOCAL_SRC_FILES               := gr_utils.cpp gr_adreno_info.cpp gr_camera_info.cpp
 include $(BUILD_SHARED_LIBRARY)
