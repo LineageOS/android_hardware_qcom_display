@@ -2190,7 +2190,8 @@ std::string HWCDisplay::Dump() {
        << layer->GetLayerDataspace() << std::dec << std::setfill(' ');
     os << " transform: " << transform.rotation << "/" << transform.flip_horizontal <<
           "/"<< transform.flip_vertical;
-    os << " buffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec
+    os << " buffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec;
+    os << " secure: " << layer->IsProtected()
        << std::endl;
   }
 
@@ -2200,7 +2201,8 @@ std::string HWCDisplay::Dump() {
     os << "format: " << std::setw(14) << GetFormatString(sdm_layer->input_buffer.format);
     os << " dataspace:" << std::hex << "0x" << std::setw(8) << std::setfill('0')
        << client_target_->GetLayerDataspace() << std::dec << std::setfill(' ');
-    os << "  buffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec
+    os << "  buffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec;
+    os << " secure: " << client_target_->IsProtected()
        << std::endl;
   }
 

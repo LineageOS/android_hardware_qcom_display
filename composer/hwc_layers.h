@@ -108,6 +108,7 @@ class HWCLayer {
   bool IsScalingPresent();
   bool IsRotationPresent();
   bool IsDataSpaceSupported();
+  bool IsProtected() { return secure_; }
   static LayerBufferFormat GetSDMFormat(const int32_t &source, const int flags);
   bool IsSurfaceUpdated() { return surface_updated_; }
   void SetPartialUpdate(bool enabled) { partial_update_enabled_ = enabled; }
@@ -138,6 +139,7 @@ class HWCLayer {
   bool has_metadata_refresh_rate_ = false;
   bool color_transform_matrix_set_ = false;
   bool buffer_flipped_ = false;
+  bool secure_ = false;
 
   // Composition requested by client(SF)
   HWC2::Composition client_requested_ = HWC2::Composition::Device;

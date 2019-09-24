@@ -277,16 +277,16 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
   }
 
   // TZ Protected Buffer - L1
-  bool secure = (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER);
-  bool secure_camera = secure && (handle->flags & private_handle_t::PRIV_FLAGS_CAMERA_WRITE);
+  secure_ = (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER);
+  bool secure_camera = secure_ && (handle->flags & private_handle_t::PRIV_FLAGS_CAMERA_WRITE);
   bool secure_display = (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_DISPLAY);
-  if (secure != layer_buffer->flags.secure || secure_camera != layer_buffer->flags.secure_camera ||
+  if (secure_ != layer_buffer->flags.secure || secure_camera != layer_buffer->flags.secure_camera ||
       secure_display != layer_buffer->flags.secure_display) {
     // Secure attribute of layer buffer has changed.
     layer_->update_mask.set(kSecurity);
   }
 
-  layer_buffer->flags.secure = secure;
+  layer_buffer->flags.secure = secure_;
   layer_buffer->flags.secure_camera = secure_camera;
   layer_buffer->flags.secure_display = secure_display;
 
