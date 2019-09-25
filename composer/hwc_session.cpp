@@ -718,7 +718,7 @@ void HWCSession::RegisterCallback(int32_t descriptor, hwc2_callback_data_t callb
   // Detect if client died and now is back
   bool already_connected = false;
   vector<hwc2_display_t> pending_hotplugs;
-  if (descriptor == HWC2_CALLBACK_HOTPLUG) {
+  if (descriptor == HWC2_CALLBACK_HOTPLUG && pointer) {
     already_connected = callbacks_.IsClientConnected();
     if (already_connected) {
       for (auto& map_info : map_info_builtin_) {
@@ -742,7 +742,7 @@ void HWCSession::RegisterCallback(int32_t descriptor, hwc2_callback_data_t callb
   }
 
   DLOGI("%s callback: %s", pointer ? "Registering" : "Deregistering", to_string(desc).c_str());
-  if (descriptor == HWC2_CALLBACK_HOTPLUG) {
+  if (descriptor == HWC2_CALLBACK_HOTPLUG && pointer) {
     if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
       DLOGI("Hotplugging primary...");
       callbacks_.Hotplug(HWC_DISPLAY_PRIMARY, HWC2::Connection::Connected);
@@ -762,13 +762,17 @@ void HWCSession::RegisterCallback(int32_t descriptor, hwc2_callback_data_t callb
 
     // If previously registered, call hotplug for all connected displays to refresh
     if (already_connected) {
+      std::vector<hwc2_display_t> updated_pending_hotplugs;
       for (auto client_id : pending_hotplugs) {
         SCOPE_LOCK(locker_[client_id]);
-        // Notify hotplug if the display is still connected
+        // check if the display is unregistered
         if (hwc_display_[client_id]) {
-          DLOGI("Re-hotplug display connected: client id = %d", client_id);
-          callbacks_.Hotplug(client_id, HWC2::Connection::Connected);
+          updated_pending_hotplugs.push_back(client_id);
         }
+      }
+      for (auto client_id : updated_pending_hotplugs) {
+        DLOGI("Re-hotplug display connected: client id = %d", client_id);
+        callbacks_.Hotplug(client_id, HWC2::Connection::Connected);
       }
     }
   }
@@ -2158,9 +2162,17 @@ android::status_t HWCSession::SetPanelLuminanceAttributes(const android::Parcel 
     return -EINVAL;
   }
 
+  float min_lum = input_parcel->readFloat();
+  float max_lum = input_parcel->readFloat();
+
+  // check for out of range luminance values
+  if (min_lum <= 0.0f || min_lum >= 1.0f || max_lum <= 100.0f || max_lum >= 1000.0f) {
+    return -EINVAL;
+  }
+
   std::lock_guard<std::mutex> obj(mutex_lum_);
-  set_min_lum_ = input_parcel->readFloat();
-  set_max_lum_ = input_parcel->readFloat();
+  set_min_lum_ = min_lum;
+  set_max_lum_ = max_lum;
   DLOGI("set max_lum %f, min_lum %f", set_max_lum_, set_min_lum_);
 
   return 0;

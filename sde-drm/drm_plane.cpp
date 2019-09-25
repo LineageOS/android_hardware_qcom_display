@@ -424,7 +424,10 @@ void DRMPlane::GetTypeInfo(const PropertyMap &prop_map) {
     return;
   }
 
-  const char *fmt_str = reinterpret_cast<const char *>(blob->data);
+  char *fmt_str = new char[blob->length + 1];
+  memcpy (fmt_str, blob->data, blob->length);
+  fmt_str[blob->length] = '\0';
+
   info->max_linewidth = 2560;
   info->max_scaler_linewidth = MAX_SCALER_LINEWIDTH;
   info->max_upscale = 1;
@@ -442,6 +445,9 @@ void DRMPlane::GetTypeInfo(const PropertyMap &prop_map) {
   // We may have multiple lines with each one dedicated for something specific
   // like formats etc
   stringstream stream(fmt_str);
+  DRM_LOGI("stream str %s len %d blob str %s len %d", stream.str().c_str(), stream.str().length(),
+           blob->data, blob->length);
+
   string line = {};
   string pixel_formats = "pixel_formats=";
   string max_linewidth = "max_linewidth=";

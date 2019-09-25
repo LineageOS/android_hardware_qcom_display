@@ -640,7 +640,7 @@ HWC2::Error HWCDisplay::CreateLayer(hwc2_layer_t *out_layer_id) {
 HWCLayer *HWCDisplay::GetHWCLayer(hwc2_layer_t layer_id) {
   const auto map_layer = layer_map_.find(layer_id);
   if (map_layer == layer_map_.end()) {
-    DLOGE("[%" PRIu64 "] GetLayer(%" PRIu64 ") failed: no such layer", id_, layer_id);
+    DLOGW("[%" PRIu64 "] GetLayer(%" PRIu64 ") failed: no such layer", id_, layer_id);
     return nullptr;
   } else {
     return map_layer->second;
@@ -650,7 +650,7 @@ HWCLayer *HWCDisplay::GetHWCLayer(hwc2_layer_t layer_id) {
 HWC2::Error HWCDisplay::DestroyLayer(hwc2_layer_t layer_id) {
   const auto map_layer = layer_map_.find(layer_id);
   if (map_layer == layer_map_.end()) {
-    DLOGE("[%" PRIu64 "] destroyLayer(%" PRIu64 ") failed: no such layer", id_, layer_id);
+    DLOGW("[%" PRIu64 "] destroyLayer(%" PRIu64 ") failed: no such layer", id_, layer_id);
     return HWC2::Error::BadLayer;
   }
   const auto layer = map_layer->second;
@@ -819,8 +819,13 @@ void HWCDisplay::BuildLayerStack() {
     layer_stack_.layers.push_back(layer);
   }
 
+  // If layer stack needs Client composition, HWC display gets into InternalValidate state. If
+  // validation gets reset by any other thread in this state, enforce Geometry change to ensure
+  // that Client target gets composed by SF.
+  bool enforce_geometry_change = (validate_state_ == kInternalValidate) && !validated_;
+
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
-  layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0);
+  layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0) || enforce_geometry_change;
   layer_stack_.flags.config_changed = !validated_;
 
   // Append client target to the layer stack
@@ -853,7 +858,7 @@ void HWCDisplay::BuildSolidFillStack() {
 HWC2::Error HWCDisplay::SetLayerZOrder(hwc2_layer_t layer_id, uint32_t z) {
   const auto map_layer = layer_map_.find(layer_id);
   if (map_layer == layer_map_.end()) {
-    DLOGE("[%" PRIu64 "] updateLayerZ failed to find layer", id_);
+    DLOGW("[%" PRIu64 "] updateLayerZ failed to find layer", id_);
     return HWC2::Error::BadLayer;
   }
 
@@ -1316,7 +1321,7 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
       WaitOnPreviousFence();
       MarkLayersForGPUBypass();
     } else {
-      DLOGE("Prepare failed. Error = %d", error);
+      DLOGW("Prepare failed. Error = %d", error);
       // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
       // so that previous buffer and fences are released, and override the error.
       flush_ = true;

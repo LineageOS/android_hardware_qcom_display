@@ -1327,6 +1327,8 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   uint32_t mixer_width = mixer_attributes_.width;
   uint32_t mixer_height = mixer_attributes_.height;
+  uint32_t fb_width = fb_config_.x_pixels;
+  uint32_t fb_height = fb_config_.y_pixels;
 
   if (req_mixer_width_ && req_mixer_height_) {
     DLOGD_IF(kTagDisplay, "Required mixer width : %d, height : %d",
@@ -1336,13 +1338,11 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
     return (req_mixer_width_ != mixer_width || req_mixer_height_ != mixer_height);
   }
 
-  if (!custom_mixer_resolution_) {
+  if (!custom_mixer_resolution_ && mixer_width == fb_width && mixer_height == fb_height) {
     return false;
   }
 
   uint32_t layer_count = UINT32(layer_stack->layers.size());
-  uint32_t fb_width  = fb_config_.x_pixels;
-  uint32_t fb_height  = fb_config_.y_pixels;
   uint32_t fb_area = fb_width * fb_height;
   LayerRect fb_rect = (LayerRect) {0.0f, 0.0f, FLOAT(fb_width), FLOAT(fb_height)};
   uint32_t display_width = display_attributes_.x_pixels;
@@ -1825,7 +1825,7 @@ void DisplayBase::GetColorPrimaryTransferFromAttributes(const AttrVal &attr,
         pt.transfer = Transfer_sRGB;
         supported_pt->push_back(pt);
       } else if (pt.primaries == ColorPrimaries_DCIP3) {
-        pt.transfer = Transfer_Gamma2_2;
+        pt.transfer = Transfer_sRGB;
         supported_pt->push_back(pt);
       } else if (pt.primaries == ColorPrimaries_BT2020) {
         pt.transfer = Transfer_SMPTE_ST2084;
@@ -1927,7 +1927,7 @@ PrimariesTransfer DisplayBase::GetBlendSpaceFromColorMode() {
     }
   } else if (color_gamut == kDcip3) {
     pt.primaries = GetColorPrimariesFromAttribute(color_gamut);
-    pt.transfer = Transfer_Gamma2_2;
+    pt.transfer = Transfer_sRGB;
   }
 
   return pt;
