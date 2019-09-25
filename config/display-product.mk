@@ -92,6 +92,7 @@ ifeq ($(TARGET_USES_QMAA_OVERRIDE_DISPLAY),true)
 PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.enable_null_display=0
 else
+TARGET_IS_HEADLESS := true
 PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.enable_null_display=1
 endif

@@ -30,14 +30,21 @@
 #include <utils/utils.h>
 
 #include "hw_info_interface.h"
+#ifndef TARGET_HEADLESS
 #include "drm/hw_info_drm.h"
+#endif
 
 #define __CLASS__ "HWInfoInterface"
 
 namespace sdm {
 
 DisplayError HWInfoInterface::Create(HWInfoInterface **intf) {
-    *intf = new HWInfoDRM();
+#ifndef TARGET_HEADLESS
+
+  *intf = new HWInfoDRM();
+#else
+  *intf = nullptr;
+#endif
 
   DisplayError error = kErrorNone;
   if (*intf) {
