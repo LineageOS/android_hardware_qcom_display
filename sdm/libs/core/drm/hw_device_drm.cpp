@@ -2238,4 +2238,9 @@ void HWDeviceDRM::DumpHWLayers(HWLayers *hw_layers) {
   }
 }
 
+DisplayError HWDeviceDRM::SetBlendSpace(const PrimariesTransfer &blend_space) {
+  blend_space_ = blend_space;
+  return kErrorNone;
+}
+
 }  // namespace sdm
