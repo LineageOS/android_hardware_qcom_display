@@ -78,6 +78,7 @@ class HWEventsDRM : public HWEventsInterface {
   void HandleIdlePowerCollapse(char *data);
   void HandlePanelDead(char *data);
   void HandleHwRecovery(char *data);
+  void HandleHistogram(char *data);
   int SetHwRecoveryEvent(const uint32_t hw_event_code, HWRecoveryEvent *sdm_event_code);
   void PopulateHWEventData(const vector<HWEvent> &event_list);
   void WakeUpEventThread();
@@ -89,6 +90,7 @@ class HWEventsDRM : public HWEventsInterface {
   DisplayError RegisterIdleNotify(bool enable);
   DisplayError RegisterIdlePowerCollapse(bool enable);
   DisplayError RegisterHwRecovery(bool enable);
+  DisplayError RegisterHistogram(bool enable);
 
   HWEventHandler *event_handler_{};
   vector<HWEventData> event_data_list_{};
@@ -97,6 +99,7 @@ class HWEventsDRM : public HWEventsInterface {
   std::string event_thread_name_ = "SDM_EventThread";
   bool exit_threads_ = false;
   uint32_t vsync_index_ = UINT32_MAX;
+  uint32_t histogram_index_ = UINT32_MAX;
   bool vsync_enabled_ = false;
   bool vsync_registered_ = false;
   std::mutex vsync_mutex_;  // To protect vsync_enabled_ and vsync_registered_

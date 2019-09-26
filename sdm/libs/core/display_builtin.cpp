@@ -87,20 +87,17 @@ DisplayError DisplayBuiltIn::Init() {
   }
 
   if (hw_panel_info_.mode == kModeCommand) {
-    event_list_ = {HWEvent::VSYNC,
-                   HWEvent::EXIT,
-                   HWEvent::IDLE_NOTIFY,
-                   HWEvent::SHOW_BLANK_EVENT,
-                   HWEvent::THERMAL_LEVEL,
-                   HWEvent::IDLE_POWER_COLLAPSE,
-                   HWEvent::PINGPONG_TIMEOUT,
-                   HWEvent::PANEL_DEAD,
-                   HWEvent::HW_RECOVERY};
+    event_list_ = {HWEvent::VSYNC, HWEvent::EXIT,
+                   /*HWEvent::IDLE_NOTIFY, */
+                   HWEvent::SHOW_BLANK_EVENT, HWEvent::THERMAL_LEVEL, HWEvent::IDLE_POWER_COLLAPSE,
+                   HWEvent::PINGPONG_TIMEOUT, HWEvent::PANEL_DEAD, HWEvent::HW_RECOVERY,
+                   HWEvent::HISTOGRAM};
   } else {
     event_list_ = {HWEvent::VSYNC,         HWEvent::EXIT,
                    HWEvent::IDLE_NOTIFY,   HWEvent::SHOW_BLANK_EVENT,
                    HWEvent::THERMAL_LEVEL, HWEvent::PINGPONG_TIMEOUT,
-                   HWEvent::PANEL_DEAD,    HWEvent::HW_RECOVERY};
+                   HWEvent::PANEL_DEAD,    HWEvent::HW_RECOVERY,
+                   HWEvent::HISTOGRAM};
   }
 
   avr_prop_disabled_ = Debug::IsAVRDisabled();

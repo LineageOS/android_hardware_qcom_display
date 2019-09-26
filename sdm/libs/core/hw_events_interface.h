@@ -46,6 +46,7 @@ enum HWEvent {
   PINGPONG_TIMEOUT,
   PANEL_DEAD,
   HW_RECOVERY,
+  HISTOGRAM,
 };
 
 class HWEventsInterface {
