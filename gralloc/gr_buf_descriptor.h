@@ -30,13 +30,13 @@
 #ifndef __GR_BUF_DESCRIPTOR_H__
 #define __GR_BUF_DESCRIPTOR_H__
 
-#include <android/hardware/graphics/mapper/2.1/IMapper.h>
+#include <android/hardware/graphics/mapper/3.0/IMapper.h>
 #include <atomic>
 
 namespace gralloc {
-using android::hardware::graphics::mapper::V2_0::Error;
-using android::hardware::graphics::mapper::V2_1::IMapper;
 using android::hardware::hidl_vec;
+using android::hardware::graphics::mapper::V3_0::Error;
+using android::hardware::graphics::mapper::V3_0::IMapper;
 
 const uint32_t kBufferDescriptorSize = 7;
 const uint32_t kMagicVersion = 0x76312E30;  // v1.0

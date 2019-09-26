@@ -30,7 +30,7 @@
 #ifndef __GR_UTILS_H__
 #define __GR_UTILS_H__
 
-#include <android/hardware/graphics/common/1.1/types.h>
+#include <android/hardware/graphics/common/1.2/types.h>
 #include "gralloc_priv.h"
 #include "qdMetaData.h"
 
@@ -132,6 +132,7 @@ uint32_t GetBppForUncompressedRGB(int format);
 bool CpuCanAccess(uint64_t usage);
 bool CpuCanRead(uint64_t usage);
 bool CpuCanWrite(uint64_t usage);
+int GetBpp(int format);
 unsigned int GetSize(const BufferInfo &d, unsigned int alignedw, unsigned int alignedh);
 int GetBufferSizeAndDimensions(const BufferInfo &d, unsigned int *size, unsigned int *alignedw,
                                unsigned int *alignedh);

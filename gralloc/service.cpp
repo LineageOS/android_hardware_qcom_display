@@ -31,8 +31,8 @@
 
 using android::hardware::configureRpcThreadpool;
 using android::hardware::joinRpcThreadpool;
-using vendor::qti::hardware::display::allocator::V1_0::IQtiAllocator;
-using vendor::qti::hardware::display::allocator::V1_0::implementation::QtiAllocator;
+using vendor::qti::hardware::display::allocator::V3_0::IQtiAllocator;
+using vendor::qti::hardware::display::allocator::V3_0::implementation::QtiAllocator;
 
 int main(int, char **) {
   android::sp<IQtiAllocator> service = new QtiAllocator();
