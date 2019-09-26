@@ -30,6 +30,7 @@
 #include <vector>
 
 #include "display_base.h"
+#include "drm_interface.h"
 #include "hw_events_interface.h"
 
 namespace sdm {
@@ -86,6 +87,8 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   virtual DisplayError SetFrameTriggerMode(FrameTriggerMode mode);
   virtual DisplayError SetBLScale(uint32_t level);
   virtual DisplayError GetQSyncMode(QSyncMode *qsync_mode);
+  virtual DisplayError colorSamplingOn();
+  virtual DisplayError colorSamplingOff();
 
   // Implement the HWEventHandlers
   virtual DisplayError VSync(int64_t timestamp);
@@ -128,6 +131,13 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   bool dpps_pu_nofiy_pending_ = false;
   bool first_cycle_ = true;
   int previous_retire_fence_ = -1;
+  enum class SamplingState { Off, On } samplingState = SamplingState::Off;
+  DisplayError setColorSamplingState(SamplingState state);
+
+  bool histogramSetup = false;
+  sde_drm::DppsFeaturePayload histogramCtrl;
+  sde_drm::DppsFeaturePayload histogramIRQ;
+  void initColorSamplingState();
 };
 
 }  // namespace sdm

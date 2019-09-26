@@ -456,4 +456,12 @@ void DisplayPluggable::UpdateColorModes() {
   return;
 }
 
+DisplayError DisplayPluggable::colorSamplingOn() {
+    return kErrorNone;
+}
+
+DisplayError DisplayPluggable::colorSamplingOff() {
+    return kErrorNone;
+}
+
 }  // namespace sdm

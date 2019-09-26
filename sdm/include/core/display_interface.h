@@ -883,6 +883,11 @@ class DisplayInterface {
   */
   virtual DisplayError GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
                                                     uint8_t *out_data) = 0;
+  /*! @brief Method to turn on histogram events. */
+  virtual DisplayError colorSamplingOn() = 0;
+
+  /*! @brief Method to turn off histogram events. */
+  virtual DisplayError colorSamplingOff() = 0;
 
   /*! @brief Method to set min/max luminance for dynamic tonemapping of external device over WFD.
 

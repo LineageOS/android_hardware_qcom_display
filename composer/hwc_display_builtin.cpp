@@ -963,7 +963,9 @@ HWC2::Error HWCDisplayBuiltIn::SetDisplayedContentSamplingEnabledVndService(bool
   vndservice_sampling_vote = enabled;
   if (api_sampling_vote || vndservice_sampling_vote) {
     histogram.start();
+    display_intf_->colorSamplingOn();
   } else {
+    display_intf_->colorSamplingOff();
     histogram.stop();
   }
   return HWC2::Error::None;
@@ -986,9 +988,12 @@ HWC2::Error HWCDisplayBuiltIn::SetDisplayedContentSamplingEnabled(int32_t enable
   auto start = api_sampling_vote || vndservice_sampling_vote;
   if (start && max_frames == 0) {
     histogram.start();
+    display_intf_->colorSamplingOn();
   } else if (start) {
     histogram.start(max_frames);
+    display_intf_->colorSamplingOn();
   } else {
+    display_intf_->colorSamplingOff();
     histogram.stop();
   }
   return HWC2::Error::None;

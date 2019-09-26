@@ -2072,6 +2072,13 @@ DisplayError DisplayBase::HandlePendingPowerState(int32_t retire_fence) {
 bool DisplayBase::CheckResourceState() {
   return comp_manager_->CheckResourceState(display_comp_ctx_);
 }
+DisplayError DisplayBase::colorSamplingOn() {
+  return kErrorNone;
+}
+
+DisplayError DisplayBase::colorSamplingOff() {
+  return kErrorNone;
+}
 
 bool DisplayBase::GameEnhanceSupported() {
   if (color_mgr_) {

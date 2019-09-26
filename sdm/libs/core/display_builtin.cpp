@@ -34,6 +34,8 @@
 #include <vector>
 
 #include "display_builtin.h"
+#include "drm_interface.h"
+#include "drm_master.h"
 #include "hw_info_interface.h"
 #include "hw_interface.h"
 
@@ -112,6 +114,8 @@ DisplayError DisplayBuiltIn::Init() {
 
   current_refresh_rate_ = hw_panel_info_.max_fps;
 
+  initColorSamplingState();
+
   return error;
 }
 
@@ -180,6 +184,46 @@ HWAVRModes DisplayBuiltIn::GetAvrMode(QSyncMode mode) {
   }
 }
 
+void DisplayBuiltIn::initColorSamplingState() {
+  samplingState = SamplingState::Off;
+  histogramCtrl.object_type = DRM_MODE_OBJECT_CRTC;
+  histogramCtrl.feature_id = sde_drm::DRMDPPSFeatureID::kFeatureAbaHistCtrl;
+  histogramCtrl.value = sde_drm::HistModes::kHistDisabled;
+
+  histogramIRQ.object_type = DRM_MODE_OBJECT_CRTC;
+  histogramIRQ.feature_id = sde_drm::DRMDPPSFeatureID::kFeatureAbaHistIRQ;
+  histogramIRQ.value = sde_drm::HistModes::kHistDisabled;
+  histogramSetup = true;
+}
+
+DisplayError DisplayBuiltIn::setColorSamplingState(SamplingState state) {
+  samplingState = state;
+  if (samplingState == SamplingState::On) {
+    histogramCtrl.value = sde_drm::HistModes::kHistEnabled;
+    histogramIRQ.value = sde_drm::HistModes::kHistEnabled;
+  } else {
+    histogramCtrl.value = sde_drm::HistModes::kHistDisabled;
+    histogramIRQ.value = sde_drm::HistModes::kHistDisabled;
+  }
+
+  // effectively drmModeAtomicAddProperty for the SDE_DSPP_HIST_CTRL_V1
+  return DppsProcessOps(kDppsSetFeature, &histogramCtrl, sizeof(histogramCtrl));
+}
+
+DisplayError DisplayBuiltIn::colorSamplingOn() {
+  if (!histogramSetup) {
+    return kErrorParameters;
+  }
+  return setColorSamplingState(SamplingState::On);
+}
+
+DisplayError DisplayBuiltIn::colorSamplingOff() {
+  if (!histogramSetup) {
+    return kErrorParameters;
+  }
+  return setColorSamplingState(SamplingState::Off);
+}
+
 DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
@@ -216,6 +260,10 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
     // Register for vsync and then commit the frame.
     hw_events_intf_->SetEventState(HWEvent::VSYNC, true);
     DTRACE_END();
+  }
+  // effectively drmModeAtomicAddProperty for SDE_DSPP_HIST_IRQ_V1
+  if (histogramSetup) {
+    DppsProcessOps(kDppsSetFeature, &histogramIRQ, sizeof(histogramIRQ));
   }
 
   error = DisplayBase::Commit(layer_stack);
