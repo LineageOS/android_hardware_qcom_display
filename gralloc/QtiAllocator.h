@@ -32,7 +32,7 @@
 
 #include <hidl/MQDescriptor.h>
 #include <hidl/Status.h>
-#include <vendor/qti/hardware/display/allocator/1.0/IQtiAllocator.h>
+#include <vendor/qti/hardware/display/allocator/3.0/IQtiAllocator.h>
 
 #include "gr_buf_mgr.h"
 
@@ -41,22 +41,22 @@ namespace qti {
 namespace hardware {
 namespace display {
 namespace allocator {
-namespace V1_0 {
+namespace V3_0 {
 namespace implementation {
 
-using ::android::hardware::Return;
-using ::android::hardware::Void;
-using ::android::hardware::graphics::allocator::V2_0::IAllocator;
-using ::android::hardware::graphics::mapper::V2_0::Error;
+using ::android::sp;
 using ::android::hardware::hidl_array;
 using ::android::hardware::hidl_memory;
 using ::android::hardware::hidl_string;
 using ::android::hardware::hidl_vec;
+using ::android::hardware::Return;
+using ::android::hardware::Void;
+using ::android::hardware::graphics::allocator::V3_0::IAllocator;
+using ::android::hardware::graphics::mapper::V3_0::Error;
 using ::android::hidl::base::V1_0::DebugInfo;
 using ::android::hidl::base::V1_0::IBase;
-using ::android::sp;
-using ::vendor::qti::hardware::display::allocator::V1_0::IQtiAllocator;
 using gralloc::BufferManager;
+using ::vendor::qti::hardware::display::allocator::V3_0::IQtiAllocator;
 
 class QtiAllocator : public IQtiAllocator {
  public:
@@ -74,7 +74,7 @@ class QtiAllocator : public IQtiAllocator {
 extern "C" IQtiAllocator *HIDL_FETCH_IQtiAllocator(const char *name);
 
 }  // namespace implementation
-}  // namespace V1_0
+}  // namespace V3_0
 }  // namespace allocator
 }  // namespace display
 }  // namespace hardware

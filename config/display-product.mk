@@ -2,7 +2,7 @@
 PRODUCT_PACKAGES += \
     android.hardware.graphics.composer@2.3-impl \
     android.hardware.graphics.composer@2.3-service \
-    android.hardware.graphics.mapper@2.0-impl-qti-display \
+    android.hardware.graphics.mapper@3.0-impl-qti-display \
     vendor.qti.hardware.display.allocator-service \
     android.hardware.memtrack@1.0-impl \
     android.hardware.memtrack@1.0-service \
@@ -25,8 +25,7 @@ PRODUCT_PACKAGES += \
     vendor.display.config@1.8.vendor \
     vendor.display.config@1.9.vendor \
     vendor.display.config@1.10.vendor \
-    vendor.qti.hardware.display.mapper@2.0.vendor \
-    vendor.qti.hardware.display.mapper@3.0.vendor \
+    vendor.qti.hardware.display.mapper@3.0 \
     modetest
 
 #QDCM calibration xml file for 2k panel
