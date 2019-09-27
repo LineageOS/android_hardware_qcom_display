@@ -577,6 +577,9 @@ int HWCDisplay::Deinit() {
     delete hwc_layer;
   }
 
+  // Close fbt release fence.
+  close(fbt_release_fence_);
+
   if (color_mode_) {
     color_mode_->DeInit();
     delete color_mode_;
