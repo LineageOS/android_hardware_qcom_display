@@ -775,6 +775,9 @@ void HWCSession::RegisterCallback(int32_t descriptor, hwc2_callback_data_t callb
         callbacks_.Hotplug(client_id, HWC2::Connection::Connected);
       }
     }
+    client_connected_ = !!pointer;
+    // Notfify all displays.
+    NotifyClientStatus(client_connected_);
   }
   need_invalidate_ = false;
 }
@@ -3180,6 +3183,16 @@ int32_t HWCSession::SetDisplayBrightnessScale(const android::Parcel *input_parce
   }
 
   return INT32(error);
+}
+
+void HWCSession::NotifyClientStatus(bool connected) {
+  for (uint32_t i = 0; i < HWCCallbacks::kNumDisplays; i++) {
+    if (!hwc_display_[i]) {
+      continue;
+    }
+    SCOPE_LOCK(locker_[i]);
+    hwc_display_[i]->NotifyClientStatus(connected);
+  }
 }
 
 }  // namespace sdm
