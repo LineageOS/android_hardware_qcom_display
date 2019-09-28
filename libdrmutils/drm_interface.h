@@ -510,6 +510,7 @@ struct DRMCrtcInfo {
   bool concurrent_writeback = false;
   uint32_t num_mnocports;
   uint32_t mnoc_bus_width;
+  bool use_baselayer_for_stage = false;
 };
 
 enum struct DRMPlaneType {

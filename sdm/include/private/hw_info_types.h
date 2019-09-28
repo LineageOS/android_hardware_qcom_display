@@ -323,6 +323,7 @@ struct HWResourceInfo {
   int secure_disp_blend_stage = -1;
   uint32_t num_mnocports = 2;
   uint32_t mnoc_bus_width = 32;
+  bool use_baselayer_for_stage = false;
 };
 
 struct HWSplitInfo {
