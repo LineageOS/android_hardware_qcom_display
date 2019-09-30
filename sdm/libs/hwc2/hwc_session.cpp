@@ -321,10 +321,10 @@ void HWCSession::InitSupportedDisplaySlots() {
     return;
   }
 
-  if (kPluggable == hw_disp_info.type) {
+  if (kPluggable == hw_disp_info.type && max_pluggable != 0) {
     // If primary is a pluggable display, we have already used one pluggable display interface.
     max_pluggable--;
-  } else {
+  } else if (max_builtin != 0) {
     max_builtin--;
   }
 
