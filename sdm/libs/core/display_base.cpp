@@ -416,17 +416,18 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
   // Stop dropping vsync when first commit is received after idle fallback.
   drop_hw_vsync_ = false;
 
+  // Reset pending doze if any after the commit
+  error = ResetPendingDoze(layer_stack->retire_fence_fd);
+  if (error != kErrorNone) {
+    return error;
+  }
+
   // Handle pending vsync enable if any after the commit
   error = HandlePendingVSyncEnable(layer_stack->retire_fence_fd);
   if (error != kErrorNone) {
     return error;
   }
 
-  // Reset pending vsync enable if any after the commit
-  error = ResetPendingDoze(layer_stack->retire_fence_fd);
-  if (error != kErrorNone) {
-    return error;
-  }
 
   DLOGI_IF(kTagDisplay, "Exiting commit for display: %d-%d", display_id_, display_type_);
 
