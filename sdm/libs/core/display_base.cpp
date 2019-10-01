@@ -433,7 +433,11 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     safe_mode_in_fast_path_ = false;
   }
 
-  DLOGI_IF(kTagDisplay, "Exiting commit for display: %d-%d", display_id_, display_type_);
+  // Reset pending doze if any after the commit
+  error = ResetPendingDoze(layer_stack->retire_fence_fd);
+  if (error != kErrorNone) {
+    return error;
+  }
 
   // Handle pending vsync enable if any after the commit
   error = HandlePendingVSyncEnable(layer_stack->retire_fence_fd);
@@ -441,11 +445,6 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     return error;
   }
 
-  // Reset pending vsync enable if any after the commit
-  error = ResetPendingDoze(layer_stack->retire_fence_fd);
-  if (error != kErrorNone) {
-    return error;
-  }
 
   DLOGI_IF(kTagDisplay, "Exiting commit for display: %d-%d", display_id_, display_type_);
 
