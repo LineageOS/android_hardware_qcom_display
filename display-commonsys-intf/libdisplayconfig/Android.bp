@@ -8,7 +8,6 @@ cc_library_shared {
     ],
     shared_libs: [
         "libhidlbase",
-        "libhidltransport",
         "libutils",
         "vendor.display.config@1.0",
         "vendor.display.config@1.4"
