@@ -130,7 +130,7 @@ DisplayError HWPeripheralDRM::Commit(HWLayers *hw_layers) {
     return error;
   }
 
-  CacheDestScalarData(hw_layer_info);
+  CacheDestScalarData();
   if (cwb_config_.enabled && (error == kErrorNone)) {
     PostCommitConcurrentWriteback(hw_layer_info.stack->output_buffer);
   }
@@ -142,10 +142,8 @@ DisplayError HWPeripheralDRM::Commit(HWLayers *hw_layers) {
   return error;
 }
 
-void HWPeripheralDRM::ResetDisplayParams() {
-  sde_dest_scalar_data_ = {};
+void HWPeripheralDRM::ResetDestScalarCache() {
   for (uint32_t j = 0; j < scalar_data_.size(); j++) {
-    scalar_data_[j] = {};
     dest_scalar_cache_[j] = {};
   }
 }
@@ -198,14 +196,10 @@ void HWPeripheralDRM::SetDestScalarData(const HWLayersInfo &hw_layer_info) {
   }
 }
 
-void HWPeripheralDRM::CacheDestScalarData(const HWLayersInfo &hw_layer_info) {
+void HWPeripheralDRM::CacheDestScalarData() {
   if (needs_ds_update_) {
     // Cache the destination scalar data during commit
-    for (uint32_t i = 0; i < hw_resource_.hw_dest_scalar_info.count; i++) {
-      auto it = hw_layer_info.dest_scale_info_map.find(i);
-      if (it == hw_layer_info.dest_scale_info_map.end()) {
-        continue;
-      }
+    for (uint32_t i = 0; i < sde_dest_scalar_data_.num_dest_scaler; i++) {
       dest_scalar_cache_[i].flags = sde_dest_scalar_data_.ds_cfg[i].flags;
       dest_scalar_cache_[i].scalar_data = scalar_data_[i];
     }
@@ -219,7 +213,7 @@ DisplayError HWPeripheralDRM::Flush(HWLayers *hw_layers) {
     return err;
   }
 
-  ResetDisplayParams();
+  ResetDestScalarCache();
   return kErrorNone;
 }
 
@@ -448,12 +442,21 @@ DisplayError HWPeripheralDRM::PowerOn(const HWQosData &qos_data, int *release_fe
     drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_IDLE_PC_STATE, token_.crtc_id,
                               sde_drm::DRMIdlePCState::ENABLE);
   }
+
+  if (sde_dest_scalar_data_.num_dest_scaler) {
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_DEST_SCALER_CONFIG, token_.crtc_id,
+                              reinterpret_cast<uint64_t>(&sde_dest_scalar_data_));
+    needs_ds_update_ = true;
+  }
+
   DisplayError err = HWDeviceDRM::PowerOn(qos_data, release_fence);
   if (err != kErrorNone) {
     return err;
   }
   idle_pc_state_ = sde_drm::DRMIdlePCState::NONE;
   idle_pc_enabled_ = true;
+
+  CacheDestScalarData();
 
   return kErrorNone;
 }
