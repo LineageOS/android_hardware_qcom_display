@@ -46,6 +46,30 @@
       "revId": "072402691b53d8386939c6dccf64a68e97d116fa",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "f0ab3f40_71abdff4",
+        "filename": "libhwcomposer/hwc_mdpcomp.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 429,
+      "author": {
+        "id": 18205
+      },
+      "writtenOn": "2019-10-02T22:18:53Z",
+      "side": 1,
+      "message": "I\u0027d keep the original behaviour.",
+      "parentUuid": "cb975128_8dcfa71e",
+      "range": {
+        "startLine": 429,
+        "startChar": 0,
+        "endLine": 429,
+        "endChar": 24
+      },
+      "revId": "072402691b53d8386939c6dccf64a68e97d116fa",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
     }
   ]
 }
