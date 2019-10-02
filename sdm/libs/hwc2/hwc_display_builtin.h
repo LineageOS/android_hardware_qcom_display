@@ -99,6 +99,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   }
   virtual HWC2::Error UpdatePowerMode(HWC2::PowerMode mode);
   virtual HWC2::Error PostCommitLayerStack(int32_t *out_retire_fence);
+  virtual bool IsSmartPanelConfig(uint32_t config_id);
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,

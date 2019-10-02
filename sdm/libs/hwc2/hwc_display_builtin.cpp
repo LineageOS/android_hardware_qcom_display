@@ -1001,4 +1001,14 @@ HWC2::Error HWCDisplayBuiltIn::GetPanelBrightness(float *brightness) {
 
   return HWC2::Error::None;
 }
+
+bool HWCDisplayBuiltIn::IsSmartPanelConfig(uint32_t config_id) {
+  if (config_id < hwc_config_map_.size()) {
+    uint32_t index = hwc_config_map_.at(config_id);
+    return variable_config_map_.at(index).smart_panel;
+  }
+
+  return false;
+}
+
 }  // namespace sdm

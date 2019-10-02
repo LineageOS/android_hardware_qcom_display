@@ -351,6 +351,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   bool HasHDRSupport(HWCDisplay *hwc_display);
   int32_t getDisplayBrightness(uint32_t display, float *brightness);
   int32_t setDisplayBrightness(uint32_t display, float brightness);
+  bool isSmartPanelConfig(uint32_t disp_id, uint32_t config_id);
 
   // service methods
   void StartServices();

@@ -595,6 +595,9 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
     mm_width = connector_info_.mmWidth;
     mm_height = connector_info_.mmHeight;
     topology = connector_info_.modes[index].topology;
+    if (mode.flags & DRM_MODE_FLAG_CMD_MODE_PANEL) {
+      display_attributes_[index].smart_panel = true;
+    }
   }
 
   display_attributes_[index].x_pixels = mode.hdisplay;
