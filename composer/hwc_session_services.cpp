@@ -923,6 +923,20 @@ Return<int32_t> HWCSession::setCWBOutputBuffer(const sp<IDisplayCWBCallback> &ca
   return cwb_.PostBuffer(callback, post_processed, buffer);
 }
 
+Return<bool> HWCSession::isSmartPanelConfig(uint32_t disp_id, uint32_t config_id) {
+  if (disp_id != qdutils::DISPLAY_PRIMARY) {
+    return false;
+  }
+
+  SCOPE_LOCK(locker_[disp_id]);
+  if (!hwc_display_[disp_id]) {
+    DLOGE("Display %d is not created yet.", disp_id);
+    return false;
+  }
+
+  return hwc_display_[disp_id]->IsSmartPanelConfig(config_id);
+}
+
 int32_t HWCSession::CWB::PostBuffer(const sp<IDisplayCWBCallback> &callback, bool post_processed,
                                     const hidl_handle& buffer) {
   SCOPE_LOCK(queue_lock_);
