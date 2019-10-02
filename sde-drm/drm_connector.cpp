@@ -562,12 +562,17 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
     return;
   }
 
+  if (!info->modes.size()) {
+    return;
+  }
+
   char *fmt_str = new char[blob->length + 1];
   memcpy (fmt_str, blob->data, blob->length);
   fmt_str[blob->length] = '\0';
   stringstream stream(fmt_str);
   DRM_LOGI("stream str %s len %d blob str %s len %d", stream.str().c_str(), stream.str().length(),
            blob->data, blob->length);
+
   string line = {};
   const string mode_name = "mode_name=";
   const string topology = "topology=";
@@ -582,53 +587,39 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
   const string bit_clk_rate = "bit_clk_rate=";
   const string mdp_transfer_time_us = "mdp_transfer_time_us=";
 
-  // Map of parsed mode_name to mode_properties
-  map<string, DRMModeInfo> mode_props_map {};
-  auto it = mode_props_map.end();
+  DRMModeInfo *mode_item = &info->modes.at(0);
+  unsigned int index = 0;
+
   while (std::getline(stream, line)) {
     if (line.find(mode_name) != string::npos) {
       string name(line, mode_name.length());
-      it = mode_props_map.insert(make_pair(name, DRMModeInfo())).first;
+      if (index >= info->modes.size()) {
+        break;
+      }
+      // Move to the next mode_item
+      mode_item = &info->modes.at(index++);
     } else if (line.find(topology) != string::npos) {
-      it->second.topology = GetTopologyEnum(string(line, topology.length()));
+      mode_item->topology = GetTopologyEnum(string(line, topology.length()));;
     } else if (line.find(pu_num_roi) != string::npos) {
-      it->second.num_roi = std::stoi(string(line, pu_num_roi.length()));
+      mode_item->num_roi = std::stoi(string(line, pu_num_roi.length()));
     } else if (line.find(pu_xstart) != string::npos) {
-      it->second.xstart = std::stoi(string(line, pu_xstart.length()));
+      mode_item->xstart = std::stoi(string(line, pu_xstart.length()));
     } else if (line.find(pu_ystart) != string::npos) {
-      it->second.ystart = std::stoi(string(line, pu_ystart.length()));
+      mode_item->ystart = std::stoi(string(line, pu_ystart.length()));
     } else if (line.find(pu_walign) != string::npos) {
-      it->second.walign = std::stoi(string(line, pu_walign.length()));
+      mode_item->walign = std::stoi(string(line, pu_walign.length()));
     } else if (line.find(pu_halign) != string::npos) {
-      it->second.halign = std::stoi(string(line, pu_halign.length()));
+      mode_item->halign = std::stoi(string(line, pu_halign.length()));
     } else if (line.find(pu_wmin) != string::npos) {
-      it->second.wmin = std::stoi(string(line, pu_wmin.length()));
+      mode_item->wmin = std::stoi(string(line, pu_wmin.length()));
     } else if (line.find(pu_hmin) != string::npos) {
-      it->second.hmin = std::stoi(string(line, pu_hmin.length()));
+      mode_item->hmin = std::stoi(string(line, pu_hmin.length()));
     } else if (line.find(pu_roimerge) != string::npos) {
-      it->second.roi_merge = std::stoi(string(line, pu_roimerge.length()));
+      mode_item->roi_merge = std::stoi(string(line, pu_roimerge.length()));
     } else if (line.find(bit_clk_rate) != string::npos) {
-      it->second.bit_clk_rate = std::stoi(string(line, bit_clk_rate.length()));
+      mode_item->bit_clk_rate = std::stoi(string(line, bit_clk_rate.length()));
     } else if (line.find(mdp_transfer_time_us) != string::npos) {
-      it->second.transfer_time_us = std::stoi(string(line, mdp_transfer_time_us.length()));
-    }
-  }
-
-  for (uint32_t i = 0; i < info->modes.size(); i++) {
-    DRMModeInfo &mode_item = info->modes.at(i);
-    auto it = mode_props_map.find(string(mode_item.mode.name));
-    if (it != mode_props_map.end()) {
-      mode_item.topology = it->second.topology;
-      mode_item.num_roi = it->second.num_roi;
-      mode_item.roi_merge = it->second.roi_merge;
-      mode_item.xstart = it->second.xstart;
-      mode_item.ystart = it->second.ystart;
-      mode_item.wmin = it->second.wmin;
-      mode_item.hmin = it->second.hmin;
-      mode_item.walign = it->second.walign;
-      mode_item.halign = it->second.halign;
-      mode_item.bit_clk_rate = it->second.bit_clk_rate;
-      mode_item.transfer_time_us = it->second.transfer_time_us;
+      mode_item->transfer_time_us = std::stoi(string(line, mdp_transfer_time_us.length()));
     }
   }
 
