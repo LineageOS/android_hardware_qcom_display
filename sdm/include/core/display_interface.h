@@ -148,6 +148,7 @@ enum DisplayEvent {
   kIdlePowerCollapse,       // Event triggered by Idle Power Collapse.
   kPanelDeadEvent,          // Event triggered by ESD.
   kDisplayPowerResetEvent,  // Event triggered by Hardware Recovery.
+  kInvalidateDisplay,       // Event triggered to Invalidate display.
 };
 
 /*! @brief This enum represents the secure events received by Display HAL. */
