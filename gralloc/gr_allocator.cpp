@@ -214,6 +214,8 @@ int Allocator::GetImplDefinedFormat(gralloc1_producer_usage_t prod_usage,
       } else {
 #ifdef USE_YCRCB_CAMERA_PREVIEW
         gr_format = HAL_PIXEL_FORMAT_YCrCb_420_SP;  // NV21 preview
+#elif USE_YCRCB_CAMERA_PREVIEW_VENUS
+        gr_format = HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS;  // NV21 preview
 #else
         gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS;  // NV12 preview
 #endif

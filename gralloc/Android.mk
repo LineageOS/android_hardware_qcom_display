@@ -18,6 +18,8 @@ LOCAL_CLANG                   := true
 
 ifeq ($(TARGET_USES_YCRCB_CAMERA_PREVIEW),true)
     LOCAL_CFLAGS              += -DUSE_YCRCB_CAMERA_PREVIEW
+else ifeq ($(TARGET_USES_YCRCB_VENUS_CAMERA_PREVIEW),true)
+    LOCAL_CFLAGS              += -DUSE_YCRCB_CAMERA_PREVIEW_VENUS
 endif
 
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps) $(kernel_deps)
