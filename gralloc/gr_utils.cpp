@@ -1389,6 +1389,8 @@ int GetImplDefinedFormat(uint64_t usage, int format) {
       } else {
 #ifdef USE_YCRCB_CAMERA_PREVIEW
         gr_format = HAL_PIXEL_FORMAT_YCrCb_420_SP;  // NV21 preview
+#elif USE_YCRCB_CAMERA_PREVIEW_VENUS
+        gr_format = HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS;  // NV21 preview
 #else
         gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS;  // NV12 preview
 #endif
