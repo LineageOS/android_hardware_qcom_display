@@ -25,6 +25,8 @@ PRODUCT_PACKAGES += \
     vendor.display.config@1.8.vendor \
     vendor.display.config@1.9.vendor \
     vendor.display.config@1.10.vendor \
+    vendor.qti.hardware.display.mapper@2.0.vendor \
+    vendor.qti.hardware.display.mapper@3.0.vendor \
     modetest
 
 #QDCM calibration xml file for 2k panel
