@@ -1206,9 +1206,15 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
     SetSolidfillStages();
     SetQOSData(qos_data);
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_SECURITY_LEVEL, token_.crtc_id, crtc_security_level);
-    sde_drm::DRMQsyncMode mode = hw_layers->hw_avr_info.enable ? sde_drm::DRMQsyncMode::CONTINUOUS :
-                                                                 sde_drm::DRMQsyncMode::NONE;
-    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_QSYNC_MODE, token_.conn_id, mode);
+    if (hw_layers->hw_avr_info.update) {
+      sde_drm::DRMQsyncMode mode = sde_drm::DRMQsyncMode::NONE;
+      if (hw_layers->hw_avr_info.mode == kContinuousMode) {
+        mode = sde_drm::DRMQsyncMode::CONTINUOUS;
+      } else if (hw_layers->hw_avr_info.mode == kOneShotMode) {
+        mode = sde_drm::DRMQsyncMode::ONESHOT;
+      }
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_QSYNC_MODE, token_.conn_id, mode);
+    }
   }
 
   drm_atomic_intf_->Perform(DRMOps::DPPS_COMMIT_FEATURE, 0 /* argument is not used */);
