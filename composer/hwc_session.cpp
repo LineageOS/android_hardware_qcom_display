@@ -483,7 +483,7 @@ void HWCSession::Dump(uint32_t *out_size, char *out_buffer) {
     return;
   }
 
-  const size_t max_dump_size = 8192;
+  const size_t max_dump_size = 16384;  // 16 kB
 
   if (out_buffer == nullptr) {
     *out_size = max_dump_size;
