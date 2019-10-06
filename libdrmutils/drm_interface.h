@@ -710,6 +710,7 @@ enum DRMDPPSFeatureID {
   kFeatureAdAttBlEvent,
   kFeatureLtmHistEvent,
   kFeatureLtmWbPbEvent,
+  kFeatureLtmOffEvent,
   // LTM properties
   kFeatureLtm,
   kFeatureLtmInit,
