@@ -379,9 +379,15 @@ void DRMDppsManagerImp::CommitDppsFeatures(drmModeAtomicReq *req, const DRMDispl
           ret = drmIoctl(info.drm_fd, DRM_IOCTL_MSM_REGISTER_EVENT, &event_req);
         else
           ret = drmIoctl(info.drm_fd, DRM_IOCTL_MSM_DEREGISTER_EVENT, &event_req);
-        if (ret)
-          DRM_LOGE("Failed to set event 0x%x, object_id %u, object_type 0x%x, enable %d",
-              event_req.event, event_req.object_id, info.object_type, info.enable);
+        if (ret) {
+          if (ret == -EALREADY) {
+            DRM_LOGI("Duplicated request to set event 0x%x, object_id %u, object_type 0x%x, enable %d",
+                      event_req.event, event_req.object_id, info.object_type, info.enable);
+          } else {
+            DRM_LOGE("Failed to set event 0x%x, object_id %u, object_type 0x%x, enable %d, ret %d",
+                      event_req.event, event_req.object_id, info.object_type, info.enable, ret);
+          }
+        }
         it = dpps_dirty_event_.erase(it);
       } else {
         it++;
