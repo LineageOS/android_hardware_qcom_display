@@ -340,6 +340,7 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   // In case driver doesn't report bus width default to 256 bit bus.
   hw_resource->num_mnocports = info.num_mnocports ? info.num_mnocports : 2;
   hw_resource->mnoc_bus_width = info.mnoc_bus_width ? info.mnoc_bus_width : 32;
+  hw_resource->use_baselayer_for_stage = info.use_baselayer_for_stage;
 }
 
 void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
@@ -418,9 +419,10 @@ void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
     pipe_caps.id = pipe_obj.first;
     pipe_caps.master_pipe_id = pipe_obj.second.master_plane_id;
     pipe_caps.block_sec_ui = pipe_obj.second.block_sec_ui;
-    DLOGI("Adding %s Pipe : Id %d, master_pipe_id : Id %d block_sec_ui: %d",
+    pipe_caps.hw_block_mask = pipe_obj.second.hw_block_mask;
+    DLOGI("Adding %s Pipe : Id %d, master_pipe_id : Id %d block_sec_ui: %d hw_block_mask: 0x%x",
           name.c_str(), pipe_obj.first, pipe_obj.second.master_plane_id,
-          pipe_obj.second.block_sec_ui);
+          pipe_obj.second.block_sec_ui, pipe_obj.second.hw_block_mask.to_ulong());
     pipe_caps.inverse_pma = pipe_obj.second.inverse_pma;
     pipe_caps.dgm_csc_version = pipe_obj.second.dgm_csc_version;
     // disable src tonemap feature if its disabled using property.

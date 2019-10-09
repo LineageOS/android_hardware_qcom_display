@@ -175,6 +175,15 @@ enum class HWRecoveryEvent : uint32_t {
   kDisplayPowerReset,  // driver requesting display power cycle
 };
 
+enum SDMVersion {
+  kVersionSDM855V1 = SDEVERSION(5, 0, 0),
+  kVersionSDM855V2 = SDEVERSION(5, 0, 1),
+  kVersionSM6150V1 = SDEVERSION(5, 3, 0),
+  kVersionSM8250V1 = SDEVERSION(6, 0, 0),
+  kVersionSM7250V1 = SDEVERSION(6, 1, 0),
+  kVersionSM6250V1 = SDEVERSION(6, 2, 0),
+};
+
 typedef std::map<HWSubBlockType, std::vector<LayerBufferFormat>> FormatsMap;
 typedef std::map<LayerBufferFormat, float> CompRatioMap;
 
@@ -206,6 +215,8 @@ struct HWPipeCaps {
   uint32_t dgm_csc_version = 0;
   std::map<HWToneMapLut, uint32_t> tm_lut_version_map = {};
   bool block_sec_ui = false;
+  // Allow all pipelines to be usable on all displays by default
+  std::bitset<32> hw_block_mask = std::bitset<32>().set();
 };
 
 struct HWRotatorInfo {
@@ -312,6 +323,7 @@ struct HWResourceInfo {
   int secure_disp_blend_stage = -1;
   uint32_t num_mnocports = 2;
   uint32_t mnoc_bus_width = 32;
+  bool use_baselayer_for_stage = false;
 };
 
 struct HWSplitInfo {
@@ -743,6 +755,7 @@ struct HWMixerAttributes {
   uint32_t height = 0;                                 // Layer mixer height
   uint32_t split_left = 0;
   LayerBufferFormat output_format = kFormatRGB101010;  // Layer mixer output format
+  uint32_t mixer_index = 0;
 
   bool operator !=(const HWMixerAttributes &mixer_attributes) {
     return ((width != mixer_attributes.width) ||

@@ -34,6 +34,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <bitset>
 
 #include "xf86drm.h"
 #include "xf86drmMode.h"
@@ -509,6 +510,7 @@ struct DRMCrtcInfo {
   bool concurrent_writeback = false;
   uint32_t num_mnocports;
   uint32_t mnoc_bus_width;
+  bool use_baselayer_for_stage = false;
 };
 
 enum struct DRMPlaneType {
@@ -551,6 +553,8 @@ struct DRMPlaneTypeInfo {
   uint32_t dgm_csc_version = 0;  // csc used with DMA
   std::map<DRMTonemapLutType, uint32_t> tonemap_lut_version_map = {};
   bool block_sec_ui = false;
+  // Allow all planes to be usable on all displays by default
+  std::bitset<32> hw_block_mask = std::bitset<32>().set();
 };
 
 // All DRM Planes as map<Plane_id , plane_type_info> listed from highest to lowest priority

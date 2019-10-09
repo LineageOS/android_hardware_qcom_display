@@ -380,6 +380,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   bool IsPluggableDisplayConnected();
   hwc2_display_t GetActiveBuiltinDisplay();
   void HandlePendingRefresh();
+  void NotifyClientStatus(bool connected);
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};

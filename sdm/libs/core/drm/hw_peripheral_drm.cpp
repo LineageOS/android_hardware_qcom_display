@@ -436,6 +436,10 @@ DisplayError HWPeripheralDRM::PowerOn(const HWQosData &qos_data, int *release_fe
     return kErrorUndefined;
   }
 
+  if (first_cycle_) {
+    last_power_mode_ = DRMPowerMode::ON;
+    return kErrorNone;
+  }
   drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_IDLE_PC_STATE, token_.crtc_id,
                             sde_drm::DRMIdlePCState::ENABLE);
   DisplayError err = HWDeviceDRM::PowerOn(qos_data, release_fence);
