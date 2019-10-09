@@ -901,6 +901,16 @@ Return<int32_t> HWCSession::setCWBOutputBuffer(const sp<IDisplayCWBCallback> &ca
     return -1;
   }
 
+  // Output buffer dump is not supported, if External or Virtual display is present.
+  int external_dpy_index = GetDisplayIndex(qdutils::DISPLAY_EXTERNAL);
+  int virtual_dpy_index = GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
+
+  if (((external_dpy_index != -1) && hwc_display_[external_dpy_index]) ||
+      ((virtual_dpy_index != -1) && hwc_display_[virtual_dpy_index])) {
+    DLOGW("Output buffer dump is not supported with External or Virtual display!");
+    return -1;
+  }
+
   // Mutex scope
   {
     SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
