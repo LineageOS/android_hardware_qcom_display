@@ -268,16 +268,15 @@ DisplayError HWTVDRM::UpdateHDRMetaData(HWLayers *hw_layers) {
   // For P3 use case set colorspace only.
   // For HDR use case set both hdr metadata and colorspace.
   if (hw_panel_info_.port == kPortDP && hw_panel_info_.supported_colorspaces) {
-    LayerStack *stack = hw_layers->info.stack;
     sde_drm::DRMColorspace colorspace = sde_drm::DRMColorspace::DEFAULT;
-    if (stack->blend_cs.primaries == ColorPrimaries_DCIP3 &&
-        stack->blend_cs.transfer == Transfer_sRGB) {
+    if (blend_space_.primaries == ColorPrimaries_DCIP3 &&
+        blend_space_.transfer == Transfer_sRGB) {
       colorspace = sde_drm::DRMColorspace::DCI_P3_RGB_D65;
     /* In case of BT2020_YCC, BT2020_RGB is not set based on the layer format. We set it based on
        the final output of display port controller. Here even though the layer as YUV , it will be
        color converted to RGB using SSPP and the format going out of DP will be RGB. Hence we
        should set BT2020_RGB. */
-    } else if (stack->blend_cs.primaries == ColorPrimaries_BT2020) {
+    } else if (blend_space_.primaries == ColorPrimaries_BT2020) {
       colorspace = sde_drm::DRMColorspace::BT2020_RGB;
     }
     DLOGV_IF(kTagDriverConfig, "Set colorspace = %d", colorspace);

@@ -176,7 +176,9 @@ class DisplayBase : public DisplayInterface {
   DisplayError ReconfigureMixer(uint32_t width, uint32_t height);
   bool NeedsDownScale(const LayerRect &src_rect, const LayerRect &dst_rect, bool needs_rotation);
   void DeInitializeColorModes();
-  DisplayError SetColorModeInternal(const std::string &color_mode);
+  DisplayError SetColorModeInternal(const std::string &color_mode,
+                                    const std::string &str_render_intent,
+                                    const PrimariesTransfer &pt);
   DisplayError GetValueOfModeAttribute(const AttrVal &attr, const std::string &type,
                                        std::string *value);
   bool IsSupportColorModeAttribute(const std::string &color_mode);
@@ -188,7 +190,7 @@ class DisplayBase : public DisplayInterface {
   bool SetHdrModeAtStart(LayerStack *layer_stack);
   PrimariesTransfer GetBlendSpaceFromColorMode();
   bool IsHdrMode(const AttrVal &attr);
-  void InsertBT2020PqHlgModes();
+  void InsertBT2020PqHlgModes(const std::string &str_render_intent);
   DisplayError HandlePendingVSyncEnable(int32_t retire_fence);
   DisplayError ResetPendingDoze(int32_t retire_fence);
 

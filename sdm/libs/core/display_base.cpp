@@ -347,6 +347,9 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
     }
   }
 
+  if (color_mgr_)
+    color_mgr_->Validate(&hw_layers_);
+
   comp_manager_->PostPrepare(display_comp_ctx_, &hw_layers_);
 
   DLOGI_IF(kTagDisplay, "Exiting Prepare for display type : %d error: %d", display_type_, error);
@@ -413,17 +416,18 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
   // Stop dropping vsync when first commit is received after idle fallback.
   drop_hw_vsync_ = false;
 
+  // Reset pending doze if any after the commit
+  error = ResetPendingDoze(layer_stack->retire_fence_fd);
+  if (error != kErrorNone) {
+    return error;
+  }
+
   // Handle pending vsync enable if any after the commit
   error = HandlePendingVSyncEnable(layer_stack->retire_fence_fd);
   if (error != kErrorNone) {
     return error;
   }
 
-  // Reset pending vsync enable if any after the commit
-  error = ResetPendingDoze(layer_stack->retire_fence_fd);
-  if (error != kErrorNone) {
-    return error;
-  }
 
   DLOGI_IF(kTagDisplay, "Exiting commit for display: %d-%d", display_id_, display_type_);
 
@@ -936,26 +940,32 @@ DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
   }
 
   DisplayError error = kErrorNone;
-  error = SetColorModeInternal(color_mode);
-  if (error != kErrorNone) {
-    return error;
-  }
-
-  std::string dynamic_range = kSdr;
+  std::string dynamic_range = kSdr, str_render_intent;
   if (IsSupportColorModeAttribute(color_mode)) {
     auto it_mode = color_mode_attr_map_.find(color_mode);
     GetValueOfModeAttribute(it_mode->second, kDynamicRangeAttribute, &dynamic_range);
+    GetValueOfModeAttribute(it_mode->second, kRenderIntentAttribute, &str_render_intent);
   }
-
-  comp_manager_->ControlDpps(dynamic_range != kHdr);
 
   current_color_mode_ = color_mode;
   PrimariesTransfer blend_space = {};
   blend_space = GetBlendSpaceFromColorMode();
   error = comp_manager_->SetBlendSpace(display_comp_ctx_, blend_space);
   if (error != kErrorNone) {
-    DLOGE("SetBlendSpace failed, error = %d display_type_= %d", error, display_type_);
+    DLOGE("SetBlendSpace failed, error = %d display_type_ = %d", error, display_type_);
   }
+
+  error = hw_intf_->SetBlendSpace(blend_space);
+  if (error != kErrorNone) {
+    DLOGE("Failed to pass blend space, error = %d display_type_ = %d", error, display_type_);
+  }
+
+  error = SetColorModeInternal(color_mode, str_render_intent,  blend_space);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  comp_manager_->ControlDpps(dynamic_range != kHdr);
 
   return error;
 }
@@ -970,7 +980,9 @@ DisplayError DisplayBase::SetColorModeById(int32_t color_mode_id) {
   return kErrorNotSupported;
 }
 
-DisplayError DisplayBase::SetColorModeInternal(const std::string &color_mode) {
+DisplayError DisplayBase::SetColorModeInternal(const std::string &color_mode,
+                                               const std::string &str_render_intent,
+                                               const PrimariesTransfer &pt) {
   DLOGV_IF(kTagQDCM, "Color Mode = %s", color_mode.c_str());
 
   ColorModeMap::iterator it = color_mode_map_.find(color_mode);
@@ -984,7 +996,11 @@ DisplayError DisplayBase::SetColorModeInternal(const std::string &color_mode) {
   DLOGV_IF(kTagQDCM, "Color Mode Name = %s corresponding mode_id = %d", sde_display_mode->name,
            sde_display_mode->id);
   DisplayError error = kErrorNone;
-  error = color_mgr_->ColorMgrSetMode(sde_display_mode->id);
+  uint32_t render_intent = 0;
+  if (!str_render_intent.empty()) {
+    render_intent = std::stoi(str_render_intent);
+  }
+  error = color_mgr_->ColorMgrSetModeWithRenderIntent(sde_display_mode->id, pt, render_intent);
   if (error != kErrorNone) {
     DLOGE("Failed for mode id = %d", sde_display_mode->id);
     return error;
@@ -1614,17 +1630,12 @@ DisplayError DisplayBase::InitializeColorModes() {
       DLOGE("Failed");
       return error;
     }
-    int32_t default_id = kInvalidModeId;
-    error = color_mgr_->ColorMgrGetDefaultModeID(&default_id);
 
     AttrVal var;
+    uint32_t num_insert_color_modes = 0;
     for (uint32_t i = 0; i < num_color_modes_; i++) {
       DLOGV_IF(kTagQDCM, "Color Mode[%d]: Name = %s mode_id = %d", i, color_modes_[i].name,
                color_modes_[i].id);
-      // get the name of default color mode
-      if (color_modes_[i].id == default_id) {
-        current_color_mode_ = color_modes_[i].name;
-      }
       auto it = color_mode_map_.find(color_modes_[i].name);
       if (it != color_mode_map_.end()) {
         if (it->second->id < color_modes_[i].id) {
@@ -1648,9 +1659,12 @@ DisplayError DisplayBase::InitializeColorModes() {
           // If target doesn't support SSPP tone maping and color mode is HDR,
           // add bt2020pq and bt2020hlg color modes.
           if (hw_resource_info_.src_tone_map.none() && IsHdrMode(var)) {
+            std::string str_render_intent;
+            GetValueOfModeAttribute(var, kRenderIntentAttribute, &str_render_intent);
             color_mode_map_.insert(std::make_pair(kBt2020Pq, &color_modes_[i]));
             color_mode_map_.insert(std::make_pair(kBt2020Hlg, &color_modes_[i]));
-            InsertBT2020PqHlgModes();
+            num_insert_color_modes = 2;
+            InsertBT2020PqHlgModes(str_render_intent);
           }
         }
         std::vector<PrimariesTransfer> pt_list = {};
@@ -1668,6 +1682,8 @@ DisplayError DisplayBase::InitializeColorModes() {
         color_modes_cs_.end()) {
       color_modes_cs_.push_back(pt);
     }
+
+    num_color_modes_ += num_insert_color_modes;
   }
 
   return kErrorNone;
@@ -1933,10 +1949,13 @@ PrimariesTransfer DisplayBase::GetBlendSpaceFromColorMode() {
   return pt;
 }
 
-void DisplayBase::InsertBT2020PqHlgModes() {
+void DisplayBase::InsertBT2020PqHlgModes(const std::string &str_render_intent) {
   AttrVal hdr_var = {};
   hdr_var.push_back(std::make_pair(kColorGamutAttribute, kBt2020));
   hdr_var.push_back(std::make_pair(kPictureQualityAttribute, kStandard));
+  if (!str_render_intent.empty()) {
+    hdr_var.push_back(std::make_pair(kRenderIntentAttribute, str_render_intent));
+  }
   hdr_var.push_back(std::make_pair(kGammaTransferAttribute, kSt2084));
   color_mode_attr_map_.insert(std::make_pair(kBt2020Pq, hdr_var));
   hdr_var.pop_back();

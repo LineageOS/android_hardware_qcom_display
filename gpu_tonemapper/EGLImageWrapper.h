@@ -21,7 +21,9 @@
 #define __TONEMAPPER_EGLIMAGEWRAPPER_H__
 
 #include <utils/LruCache.h>
+#ifndef TARGET_HEADLESS
 #include <linux/msm_ion.h>
+#endif
 #include <string>
 #include <map>
 #include "EGLImageBuffer.h"

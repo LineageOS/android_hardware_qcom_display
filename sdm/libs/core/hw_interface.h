@@ -129,6 +129,7 @@ class HWInterface {
   virtual DisplayError SetFrameTrigger(FrameTriggerMode mode) = 0;
   virtual DisplayError SetBLScale(uint32_t level) = 0;
   virtual DisplayError GetPanelBrightnessBasePath(std::string *base_path) = 0;
+  virtual DisplayError SetBlendSpace(const PrimariesTransfer &blend_space) = 0;
 
  protected:
   virtual ~HWInterface() { }

@@ -31,9 +31,11 @@
 #include <utils/utils.h>
 
 #include "hw_interface.h"
+#ifndef TARGET_HEADLESS
 #include "drm/hw_peripheral_drm.h"
 #include "drm/hw_virtual_drm.h"
 #include "drm/hw_tv_drm.h"
+#endif
 
 #define __CLASS__ "HWInterface"
 
@@ -47,6 +49,7 @@ DisplayError HWInterface::Create(int32_t display_id, DisplayType type,
   HWInterface *hw = nullptr;
 
   switch (type) {
+#ifndef TARGET_HEADLESS
     case kBuiltIn:
         hw = new HWPeripheralDRM(display_id, buffer_sync_handler, buffer_allocator, hw_info_intf);
       break;
@@ -56,6 +59,7 @@ DisplayError HWInterface::Create(int32_t display_id, DisplayType type,
     case kVirtual:
         hw = new HWVirtualDRM(display_id, buffer_sync_handler, buffer_allocator, hw_info_intf);
       break;
+#endif
     default:
       DLOGE("Undefined display type");
       return kErrorUndefined;

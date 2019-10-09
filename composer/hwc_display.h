@@ -110,7 +110,6 @@ class HWCColorMode {
       output_matrix[i] = static_cast<double>(input_matrix[i]);
     }
   }
-  HWC2::Error ApplyDefaultColorMode();
   HWC2::Error ValidateColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
   HWC2::Error SetPreferredColorModeInternal(const std::string &mode_string, bool from_client,
     ColorMode *color_mode, DynamicRangeType *dynamic_range);
@@ -367,6 +366,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual void ClearPendingPowerMode() {
     pending_power_mode_ = current_power_mode_;
   };
+  virtual void NotifyClientStatus(bool connected) { client_connected_ = connected; }
 
  protected:
   static uint32_t throttling_refresh_rate_;
@@ -450,6 +450,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool skip_commit_ = false;
   std::map<uint32_t, DisplayConfigVariableInfo> variable_config_map_;
   std::vector<uint32_t> hwc_config_map_;
+  bool client_connected_ = true;
 
  private:
   void DumpInputBuffers(void);

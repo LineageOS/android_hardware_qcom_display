@@ -33,14 +33,14 @@
 
 namespace gralloc {
 
-using android::hardware::graphics::mapper::V2_0::Error;
+using android::hardware::graphics::mapper::V3_0::Error;
 
 class BufferManager {
  public:
   ~BufferManager();
 
   Error AllocateBuffer(const BufferDescriptor &descriptor, buffer_handle_t *handle,
-                       unsigned int bufferSize = 0);
+                       unsigned int bufferSize = 0, bool testAlloc = false);
   Error RetainBuffer(private_handle_t const *hnd);
   Error ReleaseBuffer(private_handle_t const *hnd);
   Error LockBuffer(const private_handle_t *hnd, uint64_t usage);

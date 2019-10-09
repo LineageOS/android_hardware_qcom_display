@@ -386,11 +386,17 @@ DisplayError DisplayPluggable::SetColorMode(const std::string &color_mode) {
   }
 
   DisplayError error = kErrorNone;
-  error = comp_manager_->SetBlendSpace(display_comp_ctx_,
-                                       GetBlendSpaceFromAttributes(color_gamut, transfer));
+  PrimariesTransfer blend_space = GetBlendSpaceFromAttributes(color_gamut, transfer);
+  error = comp_manager_->SetBlendSpace(display_comp_ctx_, blend_space);
   if (error != kErrorNone) {
-    DLOGE("Failed Set blend space, error = %d display_type_=%d", error, display_type_);
+    DLOGE("Failed Set blend space, error = %d display_type_ = %d", error, display_type_);
   }
+
+  error = hw_intf_->SetBlendSpace(blend_space);
+  if (error != kErrorNone) {
+    DLOGE("Failed to pass blend space, error = %d display_type_ = %d", error, display_type_);
+  }
+
   current_color_mode_ = color_mode;
 
   return kErrorNone;
