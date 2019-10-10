@@ -513,6 +513,12 @@ struct DRMCrtcInfo {
   uint32_t min_prefill_lines = 0;
   int secure_disp_blend_stage = -1;
   bool concurrent_writeback = false;
+  uint32_t vig_limit_index = 0;
+  uint32_t dma_limit_index = 0;
+  uint32_t scaling_limit_index = 0;
+  uint32_t rotation_limit_index = 0;
+  uint32_t line_width_constraints_count = 0;
+  std::vector< std::pair <uint32_t, uint32_t> > line_width_limits;
 };
 
 enum struct DRMPlaneType {
