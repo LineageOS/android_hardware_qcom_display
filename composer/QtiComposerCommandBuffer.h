@@ -20,14 +20,14 @@
 #ifndef __QTICOMPOSERCOMMANDBUFFER_H__
 #define __QTICOMPOSERCOMMANDBUFFER_H__
 
-#include <limits>
-#include <algorithm>
-#include <vector>
-
 #include <log/log.h>
 #include <sync/sync.h>
 #include <fmq/MessageQueue.h>
 #include <hidl/MQDescriptor.h>
+
+#include <limits>
+#include <algorithm>
+#include <vector>
 
 namespace vendor {
 namespace qti {
@@ -52,7 +52,7 @@ using CommandQueueType = MessageQueue<uint32_t, ::android::hardware::kSynchroniz
 // This class helps build a command queue.  Note that all sizes/lengths are in units of uint32_t's.
 class CommandWriter {
  public:
-  CommandWriter(uint32_t initialMaxSize) : mDataMaxSize(initialMaxSize) {
+  explicit CommandWriter(uint32_t initialMaxSize) : mDataMaxSize(initialMaxSize) {
     mData = std::make_unique<uint32_t[]>(mDataMaxSize);
     reset();
   }

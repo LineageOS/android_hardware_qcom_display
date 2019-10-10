@@ -362,10 +362,10 @@ class HWCDisplay : public DisplayEventHandler {
   virtual void PostPowerMode();
   virtual HWC2::PowerMode GetPendingPowerMode() {
     return pending_power_mode_;
-  };
+  }
   virtual void ClearPendingPowerMode() {
     pending_power_mode_ = current_power_mode_;
-  };
+  }
   virtual void NotifyClientStatus(bool connected) { client_connected_ = connected; }
 
  protected:

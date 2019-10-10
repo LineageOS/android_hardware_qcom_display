@@ -18,12 +18,12 @@
  */
 
 #include "hwc_layers.h"
+#include <qdMetaData.h>
+#include <qd_utils.h>
 #include <utils/debug.h>
 #include <stdint.h>
 #include <utility>
 #include <cmath>
-#include <qdMetaData.h>
-#include <qd_utils.h>
 
 #define __CLASS__ "HWCLayer"
 

@@ -31,14 +31,13 @@
 #ifndef __QTICOMPOSER_H__
 #define __QTICOMPOSER_H__
 
-#include <vendor/qti/hardware/display/composer/2.0/IQtiComposer.h>
-#include <log/log.h>
-#include <unordered_set>
 #include <QtiComposerClient.h>
 
 // TODO(user): recheck on this header inclusion
 #include <hardware/hwcomposer2.h>
-
+#include <vendor/qti/hardware/display/composer/2.0/IQtiComposer.h>
+#include <log/log.h>
+#include <unordered_set>
 
 namespace vendor {
 namespace qti {
