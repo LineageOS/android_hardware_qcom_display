@@ -341,6 +341,15 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   hw_resource->num_mnocports = info.num_mnocports ? info.num_mnocports : 2;
   hw_resource->mnoc_bus_width = info.mnoc_bus_width ? info.mnoc_bus_width : 32;
   hw_resource->use_baselayer_for_stage = info.use_baselayer_for_stage;
+  hw_resource->line_width_constraints_count = info.line_width_constraints_count;
+  if (info.line_width_constraints_count) {
+    auto &width_constraints = hw_resource->line_width_constraints;
+    hw_resource->line_width_limits = std::move(info.line_width_limits);
+    width_constraints.push_back(std::make_pair(kPipeVigLimit, info.vig_limit_index));
+    width_constraints.push_back(std::make_pair(kPipeDmaLimit, info.dma_limit_index));
+    width_constraints.push_back(std::make_pair(kPipeScalingLimit, info.scaling_limit_index));
+    width_constraints.push_back(std::make_pair(kPipeRotationLimit, info.rotation_limit_index));
+  }
 }
 
 void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
