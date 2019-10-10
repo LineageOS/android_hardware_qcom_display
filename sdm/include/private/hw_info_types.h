@@ -35,9 +35,12 @@
 #include <string>
 #include <bitset>
 #include <memory>
+#include <utility>
 
 namespace sdm {
 using std::string;
+using std::pair;
+using std::vector;
 
 const int kMaxSDELayers = 16;   // Maximum number of layers that can be handled by MDP5 hardware
                                 // in a given layer stack.
@@ -259,6 +262,11 @@ enum InlineRotationVersion {
   kInlineRotationV1p1,
 };
 
+const int  kPipeVigLimit      = (1 << 0);
+const int  kPipeDmaLimit      = (1 << 1);
+const int  kPipeScalingLimit  = (1 << 2);
+const int  kPipeRotationLimit = (1 << 3);
+
 struct HWResourceInfo {
   uint32_t hw_version = 0;
   uint32_t hw_revision = 0;
@@ -325,6 +333,9 @@ struct HWResourceInfo {
   uint32_t num_mnocports = 2;
   uint32_t mnoc_bus_width = 32;
   bool use_baselayer_for_stage = false;
+  uint32_t line_width_constraints_count = 0;
+  vector< pair <uint32_t, uint32_t> > line_width_limits;
+  vector< pair <uint32_t, uint32_t> > line_width_constraints;
 };
 
 struct HWSplitInfo {
