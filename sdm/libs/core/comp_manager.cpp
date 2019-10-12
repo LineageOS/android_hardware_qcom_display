@@ -351,12 +351,13 @@ DisplayError CompManager::PostPrepare(Handle display_ctx, HWLayers *hw_layers) {
   Handle &display_resource_ctx = display_comp_ctx->display_resource_ctx;
 
   DisplayError error = kErrorNone;
+
+  display_comp_ctx->strategy->Stop();
+
   error = resource_intf_->PostPrepare(display_resource_ctx, hw_layers);
   if (error != kErrorNone) {
     return error;
   }
-
-  display_comp_ctx->strategy->Stop();
 
   return kErrorNone;
 }
