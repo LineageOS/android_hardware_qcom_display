@@ -1016,15 +1016,16 @@ QtiComposerClient::CommandReader::CommandReader(QtiComposerClient& client)
 }
 
 Error QtiComposerClient::CommandReader::parse() {
-  IComposerClient::Command command;
+  IQtiComposerClient::Command qticommand;
   uint16_t length;
 
   while (!isEmpty()) {
-    if (!beginCommand(command, length)) {
+    if (!beginCommand(qticommand, length)) {
       break;
     }
 
     bool parsed = false;
+    IComposerClient::Command command = static_cast<IComposerClient::Command>(qticommand);
     switch (command) {
     // Commands from ::android::hardware::graphics::composer::V2_1::IComposerClient follow.
     case IComposerClient::Command::SELECT_DISPLAY:
