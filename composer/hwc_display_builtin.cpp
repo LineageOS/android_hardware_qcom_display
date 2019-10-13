@@ -965,8 +965,17 @@ HWC2::Error HWCDisplayBuiltIn::SetClientTarget(buffer_handle_t target, int32_t a
   }
 
   Layer *sdm_layer = client_target_->GetSDMLayer();
-  SetFrameBufferResolution(sdm_layer->input_buffer.unaligned_width,
-                           sdm_layer->input_buffer.unaligned_height);
+  uint32_t fb_width = 0, fb_height = 0;
+
+  GetFrameBufferResolution(&fb_width, &fb_height);
+
+  if (fb_width != sdm_layer->input_buffer.unaligned_width ||
+      fb_height != sdm_layer->input_buffer.unaligned_height) {
+    if (SetFrameBufferConfig(sdm_layer->input_buffer.unaligned_width,
+                             sdm_layer->input_buffer.unaligned_height)) {
+      return HWC2::Error::BadParameter;
+    }
+  }
 
   return HWC2::Error::None;
 }
