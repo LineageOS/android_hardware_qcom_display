@@ -1785,7 +1785,7 @@ const char *HWCDisplay::GetDisplayString() {
   }
 }
 
-int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
+int HWCDisplay::SetFrameBufferConfig(uint32_t x_pixels, uint32_t y_pixels) {
   if (x_pixels <= 0 || y_pixels <= 0) {
     DLOGW("Unsupported config: x_pixels=%d, y_pixels=%d", x_pixels, y_pixels);
     return -EINVAL;
@@ -1810,12 +1810,25 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
   // Create rects to represent the new source and destination crops
   LayerRect crop = LayerRect(0, 0, FLOAT(x_pixels), FLOAT(y_pixels));
   hwc_rect_t scaled_display_frame = {0, 0, INT(x_pixels), INT(y_pixels)};
+  auto client_target_layer = client_target_->GetSDMLayer();
+  client_target_layer->src_rect = crop;
   ApplyScanAdjustment(&scaled_display_frame);
   client_target_->SetLayerDisplayFrame(scaled_display_frame);
   client_target_->ResetPerFrameData();
 
+  DLOGI("New framebuffer resolution (%dx%d)", fb_config.x_pixels, fb_config.y_pixels);
+
+  return 0;
+}
+
+int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
+  int error = SetFrameBufferConfig(x_pixels, y_pixels);
+  if (error < 0) {
+    DLOGV("SetFrameBufferConfig failed. Error = %d", error);
+    return error;
+  }
+
   auto client_target_layer = client_target_->GetSDMLayer();
-  client_target_layer->src_rect = crop;
 
   int aligned_width;
   int aligned_height;
@@ -1843,8 +1856,6 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
   client_target_layer->input_buffer.unaligned_width = x_pixels;
   client_target_layer->input_buffer.unaligned_height = y_pixels;
   client_target_layer->plane_alpha = 255;
-
-  DLOGI("New framebuffer resolution (%dx%d)", fb_config.x_pixels, fb_config.y_pixels);
 
   return 0;
 }

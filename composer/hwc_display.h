@@ -402,6 +402,7 @@ class HWCDisplay : public DisplayEventHandler {
   uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate);
   virtual void GetUnderScanConfig() { }
   int32_t SetClientTargetDataSpace(int32_t dataspace);
+  int SetFrameBufferConfig(uint32_t x_pixels, uint32_t y_pixels);
 
   bool validated_ = false;
   bool layer_stack_invalid_ = true;
