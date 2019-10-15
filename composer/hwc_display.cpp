@@ -1259,12 +1259,13 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
       break;
     }
     case kInvalidateDisplay:
-    case kThermalEvent:
-    case kPanelDeadEvent: {
+    case kThermalEvent: {
       SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[id_]);
       validated_ = false;
     } break;
+    case kPanelDeadEvent:
     case kDisplayPowerResetEvent: {
+      SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[id_]);
       validated_ = false;
       if (event_handler_) {
         event_handler_->DisplayPowerReset();
