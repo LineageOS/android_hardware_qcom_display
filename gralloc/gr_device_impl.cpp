@@ -555,9 +555,9 @@ gralloc1_error_t GrallocImpl::ValidateBufferSize(gralloc1_device_t *device,
                                     static_cast<int>(descriptor_info.format),
                                     static_cast<gralloc1_producer_usage_t>(descriptor_info.producerUsage),
                                     static_cast<gralloc1_consumer_usage_t>(descriptor_info.consumerUsage));
+    info.layer_count = static_cast<int>(descriptor_info.layerCount);
     err = dev->buf_mgr_->ValidateBufferSize(hnd, info);
   }
-
   return err;
 }
 

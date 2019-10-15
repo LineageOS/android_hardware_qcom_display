@@ -499,6 +499,7 @@ int BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_han
   unsigned int alignedw, alignedh;
   int buffer_type = GetBufferType(gralloc_format);
   BufferInfo info = GetBufferInfo(descriptor);
+  info.layer_count = static_cast<int>(layer_count);
   GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh);
   size = (bufferSize >= size) ? bufferSize : size;
 
