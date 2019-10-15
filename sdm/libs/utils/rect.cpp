@@ -255,19 +255,19 @@ void MapRect(const LayerRect &src_domain, const LayerRect &dst_domain, const Lay
   int y_offset = INT(src_domain.top);
 
   LayerRect modified_in_rect = Reposition(in_rect, -x_offset, -y_offset);
-  float src_domain_width = src_domain.right - src_domain.left;
-  float src_domain_height = src_domain.bottom - src_domain.top;
-  float dst_domain_width = dst_domain.right - dst_domain.left;
-  float dst_domain_height = dst_domain.bottom - dst_domain.top;
+  double src_domain_width = DOUBLE(src_domain.right - src_domain.left);
+  double src_domain_height = DOUBLE(src_domain.bottom - src_domain.top);
+  double dst_domain_width = DOUBLE(dst_domain.right - dst_domain.left);
+  double dst_domain_height = DOUBLE(dst_domain.bottom - dst_domain.top);
 
-  float width_ratio = dst_domain_width / src_domain_width;
-  float height_ratio = dst_domain_height / src_domain_height;
+  double width_ratio = DOUBLE(dst_domain_width / src_domain_width);
+  double height_ratio = DOUBLE(dst_domain_height / src_domain_height);
 
   // using floorf for all since ceilf on float will round to next int value.
-  out_rect->left = floorf(dst_domain.left + (width_ratio * modified_in_rect.left));
-  out_rect->top = floorf(dst_domain.top + (height_ratio * modified_in_rect.top));
-  out_rect->right = floorf(dst_domain.left + (width_ratio * modified_in_rect.right));
-  out_rect->bottom = floorf(dst_domain.top + (height_ratio * modified_in_rect.bottom));
+  out_rect->left = floor(dst_domain.left + (width_ratio * modified_in_rect.left));
+  out_rect->top = floor(dst_domain.top + (height_ratio * modified_in_rect.top));
+  out_rect->right = floor(dst_domain.left + (width_ratio * modified_in_rect.right));
+  out_rect->bottom = floor(dst_domain.top + (height_ratio * modified_in_rect.bottom));
 }
 
 void TransformHV(const LayerRect &src_domain, const LayerRect &in_rect,
