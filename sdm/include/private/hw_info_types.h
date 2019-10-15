@@ -624,6 +624,7 @@ struct HWPipeInfo {
   HWPipeCscInfo dgm_csc_info = {};
   std::vector<HWPipeTonemapLutInfo> lut_info = {};
   HWSrcTonemap tonemap = kSrcTonemapNone;
+  LayerTransform transform;
 };
 
 struct HWSolidfillStage {
