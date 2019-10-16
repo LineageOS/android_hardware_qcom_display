@@ -1064,8 +1064,10 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
     case HAL_PIXEL_FORMAT_RAW_OPAQUE:
       break;
     case HAL_PIXEL_FORMAT_NV21_ZSL:
+#ifndef USE_UNALIGNED_NV21_ZSL
       aligned_w = ALIGN(width, 64);
       aligned_h = ALIGN(height, 64);
+#endif
       break;
     case HAL_PIXEL_FORMAT_NV12_HEIF:
       aligned_w = INT(VENUS_Y_STRIDE(COLOR_FMT_NV12_512, width));
