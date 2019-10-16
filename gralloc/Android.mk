@@ -46,6 +46,10 @@ else ifeq ($(TARGET_USES_YCRCB_VENUS_CAMERA_PREVIEW),true)
     LOCAL_CFLAGS              += -DUSE_YCRCB_CAMERA_PREVIEW_VENUS
 endif
 
+ifeq ($(TARGET_USES_UNALIGNED_NV21_ZSL),true)
+    LOCAL_CFLAGS              += -DUSE_UNALIGNED_NV21_ZSL
+endif
+
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
 LOCAL_SRC_FILES               := gr_utils.cpp gr_adreno_info.cpp
 include $(BUILD_SHARED_LIBRARY)
