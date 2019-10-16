@@ -118,3 +118,14 @@ endif
 #  0.0   0.0   1.0
 PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.dataspace_saturation_matrix=1.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,1.0
+
+ifneq ($(TARGET_HAS_LOW_RAM),true)
+PRODUCT_PACKAGES += vendor.display.color@1.0.vendor \
+                    vendor.display.color@1.1.vendor \
+                    vendor.display.color@1.2.vendor \
+                    vendor.display.color@1.3.vendor \
+                    vendor.display.postproc@1.0.vendor \
+                    vendor.display.color@1.0-service \
+                    vendor.display.color@1.0-service.rc \
+                    ppd
+endif
