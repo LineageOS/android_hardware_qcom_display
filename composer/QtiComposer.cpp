@@ -38,6 +38,8 @@ namespace composer {
 namespace V2_0 {
 namespace implementation {
 
+QtiComposerClient* QtiComposerClient::qti_composerclient_instance_ = nullptr;
+
 QtiComposer::QtiComposer() {
   hwc_session_ = HWCSession::GetInstance();
 }
@@ -99,7 +101,7 @@ Return<void> QtiComposer::dumpDebugInfo(dumpDebugInfo_cb _hidl_cb) {
 
 Return<void> QtiComposer::createClient(createClient_cb _hidl_cb) {
   // TODO(user): Implement combinedly w.r.t createClient_2_3
-  sp<IQtiComposerClient> composer_client = new QtiComposerClient();
+  sp<QtiComposerClient> composer_client = QtiComposerClient::CreateQtiComposerClientInstance();
   if (!composer_client) {
     _hidl_cb(Error::NO_RESOURCES, nullptr);
     return Void();
@@ -112,7 +114,7 @@ Return<void> QtiComposer::createClient(createClient_cb _hidl_cb) {
 
 // Methods from ::android::hardware::graphics::composer::V2_3::IComposer follow.
 Return<void> QtiComposer::createClient_2_3(createClient_2_3_cb _hidl_cb) {
-  sp<IQtiComposerClient> composer_client = new QtiComposerClient();
+  sp<QtiComposerClient> composer_client = QtiComposerClient::CreateQtiComposerClientInstance();
   if (!composer_client) {
     _hidl_cb(Error::NO_RESOURCES, nullptr);
     return Void();
