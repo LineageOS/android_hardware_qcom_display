@@ -134,11 +134,6 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
   uint32_t new_mixer_height = 0;
   uint32_t display_width = display_attributes_.x_pixels;
   uint32_t display_height = display_attributes_.y_pixels;
-  if (reset_panel_) {
-    DLOGW("panel is in bad state, resetting the panel");
-    ResetPanel();
-    reset_panel_ = false;
-  }
 
   DTRACE_SCOPED();
   if (NeedsMixerReconfiguration(layer_stack, &new_mixer_width, &new_mixer_height)) {
