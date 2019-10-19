@@ -903,6 +903,11 @@ int32_t HWCSession::SetLayerZOrder(hwc2_display_t display, hwc2_layer_t layer, u
   return CallDisplayFunction(display, &HWCDisplay::SetLayerZOrder, layer, z);
 }
 
+int32_t HWCSession::SetLayerType(hwc2_display_t display, hwc2_layer_t layer,
+                                 IQtiComposerClient::LayerType type) {
+  return CallDisplayFunction(display, &HWCDisplay::SetLayerType, layer, type);
+}
+
 int32_t HWCSession::SetLayerColorTransform(hwc2_display_t display, hwc2_layer_t layer,
                                            const float *matrix) {
   return CallLayerFunction(display, layer, &HWCLayer::SetLayerColorTransform, matrix);
@@ -1907,7 +1912,6 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
   PPPendingParams pending_action;
   PPDisplayAPIPayload resp_payload, req_payload;
   uint8_t *disp_id = NULL;
-  bool invalidate_needed = true;
   int32_t *mode_id = NULL;
 
   if (!color_mgr_) {
@@ -1945,10 +1949,7 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
       DLOGV_IF(kTagQDCM, "pending action = %d, display_id = %d", BITMAP(count), display_id);
       switch (BITMAP(count)) {
         case kInvalidating:
-          {
-            invalidate_needed = false;
-            callbacks_.Refresh(display_id);
-          }
+          callbacks_.Refresh(display_id);
           break;
         case kEnterQDCMMode:
           ret = color_mgr_->EnableQDCMMode(true, hwc_display_[display_id]);
@@ -2064,9 +2065,7 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
   resp_payload.DestroyPayload();
 
   SEQUENCE_WAIT_SCOPE_LOCK(locker_[display_id]);
-  if (invalidate_needed) {
-    hwc_display_[display_id]->ResetValidation();
-  }
+  hwc_display_[display_id]->ResetValidation();
 
   return ret;
 }
