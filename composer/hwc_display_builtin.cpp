@@ -203,7 +203,7 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
 
   if (layer_set_.empty()) {
     // Avoid flush for Command mode panel.
-    flush_ = !IsDisplayCommandMode();
+    flush_ = !client_connected_;
     validated_ = true;
     return status;
   }
@@ -950,4 +950,17 @@ HWC2::Error HWCDisplayBuiltIn::UpdatePowerMode(HWC2::PowerMode mode) {
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCDisplayBuiltIn::SetClientTarget(buffer_handle_t target, int32_t acquire_fence,
+                                               int32_t dataspace, hwc_region_t damage) {
+  HWC2::Error error = HWCDisplay::SetClientTarget(target, acquire_fence, dataspace, damage);
+  if (error != HWC2::Error::None) {
+    return error;
+  }
+
+  Layer *sdm_layer = client_target_->GetSDMLayer();
+  SetFrameBufferResolution(sdm_layer->input_buffer.unaligned_width,
+                           sdm_layer->input_buffer.unaligned_height);
+
+  return HWC2::Error::None;
+}
 }  // namespace sdm

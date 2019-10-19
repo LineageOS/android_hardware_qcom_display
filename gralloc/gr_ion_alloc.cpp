@@ -31,7 +31,11 @@
 #define ATRACE_TAG (ATRACE_TAG_GRAPHICS | ATRACE_TAG_HAL)
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <linux/ion.h>
+#ifndef QMAA
 #include <linux/msm_ion.h>
+#endif
+
 #if TARGET_ION_ABI_VERSION >= 2
 #include <linux/dma-buf.h>
 #include <ion/ion.h>
@@ -255,6 +259,7 @@ int IonAlloc::CleanBuffer(void *base, unsigned int size, unsigned int offset, in
     return 0;
   }
 
+#ifndef QMAA
   ATRACE_CALL();
   ATRACE_INT("operation id", op);
   struct ion_flush_data flush_data;
@@ -285,7 +290,7 @@ int IonAlloc::CleanBuffer(void *base, unsigned int size, unsigned int offset, in
     ALOGE("%s: ION_IOC_CLEAN_INV_CACHES failed with error - %s", __FUNCTION__, strerror(errno));
     return err;
   }
-
+#endif
   return 0;
 }
 

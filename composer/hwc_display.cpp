@@ -388,9 +388,9 @@ void HWCColorMode::PopulateColorModes() {
         if (display_intf_->IsSupportSsppTonemap()) {
           color_mode_map_[ColorMode::DISPLAY_P3][render_intent][kHdrType] = mode_string;
         } else if (pic_quality == kStandard) {
-          color_mode_map_[ColorMode::BT2100_PQ][RenderIntent::TONE_MAP_COLORIMETRIC]
+          color_mode_map_[ColorMode::BT2100_PQ][render_intent]
                          [kHdrType] = mode_string;
-          color_mode_map_[ColorMode::BT2100_HLG][RenderIntent::TONE_MAP_COLORIMETRIC]
+          color_mode_map_[ColorMode::BT2100_HLG][render_intent]
                          [kHdrType] = mode_string;
         }
       } else if (color_gamut == kBt2020) {
@@ -413,40 +413,6 @@ void HWCColorMode::PopulateColorModes() {
       }
     }
   }
-}
-
-HWC2::Error HWCColorMode::ApplyDefaultColorMode() {
-  auto color_mode = ColorMode::NATIVE;
-  if (color_mode_map_.size() == 1U) {
-    color_mode = color_mode_map_.begin()->first;
-  } else if (color_mode_map_.size() > 1U) {
-    std::string default_color_mode;
-    bool found = false;
-    DisplayError error = display_intf_->GetDefaultColorMode(&default_color_mode);
-    if (error == kErrorNone) {
-      // get the default mode corresponding android_color_mode_t
-      for (auto &it_mode : color_mode_map_) {
-        for (auto &it : it_mode.second) {
-          for (auto &it_range : it.second) {
-            if (it_range.second == default_color_mode) {
-              found = true;
-              break;
-            }
-          }
-        }
-        if (found) {
-          color_mode = it_mode.first;
-          break;
-        }
-      }
-    }
-
-    // return the first color mode we encounter if not found
-    if (!found) {
-      color_mode = color_mode_map_.begin()->first;
-    }
-  }
-  return SetColorModeWithRenderIntent(color_mode, RenderIntent::COLORIMETRIC);
 }
 
 void HWCColorMode::Dump(std::ostringstream* os) {
@@ -611,6 +577,9 @@ int HWCDisplay::Deinit() {
     delete hwc_layer;
   }
 
+  // Close fbt release fence.
+  close(fbt_release_fence_);
+
   if (color_mode_) {
     color_mode_->DeInit();
     delete color_mode_;
@@ -640,7 +609,7 @@ HWC2::Error HWCDisplay::CreateLayer(hwc2_layer_t *out_layer_id) {
 HWCLayer *HWCDisplay::GetHWCLayer(hwc2_layer_t layer_id) {
   const auto map_layer = layer_map_.find(layer_id);
   if (map_layer == layer_map_.end()) {
-    DLOGE("[%" PRIu64 "] GetLayer(%" PRIu64 ") failed: no such layer", id_, layer_id);
+    DLOGW("[%" PRIu64 "] GetLayer(%" PRIu64 ") failed: no such layer", id_, layer_id);
     return nullptr;
   } else {
     return map_layer->second;
@@ -650,7 +619,7 @@ HWCLayer *HWCDisplay::GetHWCLayer(hwc2_layer_t layer_id) {
 HWC2::Error HWCDisplay::DestroyLayer(hwc2_layer_t layer_id) {
   const auto map_layer = layer_map_.find(layer_id);
   if (map_layer == layer_map_.end()) {
-    DLOGE("[%" PRIu64 "] destroyLayer(%" PRIu64 ") failed: no such layer", id_, layer_id);
+    DLOGW("[%" PRIu64 "] destroyLayer(%" PRIu64 ") failed: no such layer", id_, layer_id);
     return HWC2::Error::BadLayer;
   }
   const auto layer = map_layer->second;
@@ -710,11 +679,13 @@ void HWCDisplay::BuildLayerStack() {
     }
 
     bool is_secure = false;
+    bool is_video = false;
     const private_handle_t *handle =
         reinterpret_cast<const private_handle_t *>(layer->input_buffer.buffer_id);
     if (handle) {
       if (handle->buffer_type == BUFFER_TYPE_VIDEO) {
         layer_stack_.flags.video_present = true;
+        is_video = true;
       }
       // TZ Protected Buffer - L1
       // Gralloc Usage Protected Buffer - L3 - which needs to be treated as Secure & avoid fallback
@@ -750,7 +721,7 @@ void HWCDisplay::BuildLayerStack() {
     }
 
     if (hwc_layer->IsNonIntegralSourceCrop() && !is_secure && !hdr_layer &&
-        !layer->flags.single_buffer && !layer->flags.solid_fill) {
+        !layer->flags.single_buffer && !layer->flags.solid_fill && !is_video) {
       layer->flags.skip = true;
     }
 
@@ -808,11 +779,24 @@ void HWCDisplay::BuildLayerStack() {
 
     layer_stack_.flags.mask_present |= layer->input_buffer.flags.mask_layer;
 
+    if ((hwc_layer->GetDeviceSelectedCompositionType() != HWC2::Composition::Device) ||
+        (hwc_layer->GetClientRequestedCompositionType() != HWC2::Composition::Device) ||
+        layer->flags.skip) {
+      layer->update_mask.set(kClientCompRequest);
+    }
+
     layer_stack_.layers.push_back(layer);
   }
 
+  // If layer stack needs Client composition, HWC display gets into InternalValidate state. If
+  // validation gets reset by any other thread in this state, enforce Geometry change to ensure
+  // that Client target gets composed by SF.
+  bool enforce_geometry_change = (validate_state_ == kInternalValidate) && !validated_;
+
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
-  layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0);
+  layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0) || enforce_geometry_change;
+  layer_stack_.flags.config_changed = !validated_;
+
   // Append client target to the layer stack
   Layer *sdm_client_target = client_target_->GetSDMLayer();
   sdm_client_target->flags.updating = IsLayerUpdating(client_target_);
@@ -843,7 +827,7 @@ void HWCDisplay::BuildSolidFillStack() {
 HWC2::Error HWCDisplay::SetLayerZOrder(hwc2_layer_t layer_id, uint32_t z) {
   const auto map_layer = layer_map_.find(layer_id);
   if (map_layer == layer_map_.end()) {
-    DLOGE("[%" PRIu64 "] updateLayerZ failed to find layer", id_);
+    DLOGW("[%" PRIu64 "] updateLayerZ failed to find layer", id_);
     return HWC2::Error::BadLayer;
   }
 
@@ -1259,7 +1243,6 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
       break;
     }
     case kThermalEvent:
-    case kIdlePowerCollapse:
     case kPanelDeadEvent: {
       SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[id_]);
       validated_ = false;
@@ -1273,6 +1256,8 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
               id_);
       }
     } break;
+    case kIdlePowerCollapse:
+      break;
     default:
       DLOGW("Unknown event: %d", event);
       break;
@@ -1305,7 +1290,7 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
       WaitOnPreviousFence();
       MarkLayersForGPUBypass();
     } else {
-      DLOGE("Prepare failed. Error = %d", error);
+      DLOGW("Prepare failed. Error = %d", error);
       // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
       // so that previous buffer and fences are released, and override the error.
       flush_ = true;

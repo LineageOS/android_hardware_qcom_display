@@ -102,8 +102,8 @@ class HWCLayer {
   void PushBackReleaseFence(int32_t fence);
   int32_t PopBackReleaseFence(void);
   int32_t PopFrontReleaseFence(void);
-  void ResetValidation() { needs_validate_ = false; }
-  bool NeedsValidation() { return (needs_validate_ || geometry_changes_); }
+  void ResetValidation() { layer_->update_mask.reset(); }
+  bool NeedsValidation() { return (geometry_changes_ || layer_->update_mask.any()); }
   bool IsSingleBuffered() { return single_buffer_; }
   bool IsScalingPresent();
   bool IsRotationPresent();
@@ -129,7 +129,6 @@ class HWCLayer {
   int32_t dataspace_ =  HAL_DATASPACE_UNKNOWN;
   LayerTransform layer_transform_ = {};
   LayerRect dst_rect_ = {};
-  bool needs_validate_ = true;
   bool single_buffer_ = false;
   int buffer_fd_ = -1;
   bool dataspace_supported_ = false;

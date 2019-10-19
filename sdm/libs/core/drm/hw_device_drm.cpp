@@ -831,13 +831,25 @@ DisplayError HWDeviceDRM::SetDisplayAttributes(uint32_t index) {
   }
 
   uint32_t mode_flag = 0;
+  uint32_t curr_mode_flag = 0;
   drmModeModeInfo to_set = connector_info_.modes[index].mode;
+  drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
   uint64_t current_bit_clk = connector_info_.modes[current_mode_index_].bit_clk_rate;
 
   if (to_set.flags & DRM_MODE_FLAG_CMD_MODE_PANEL) {
     mode_flag = DRM_MODE_FLAG_CMD_MODE_PANEL;
   } else if (to_set.flags & DRM_MODE_FLAG_VID_MODE_PANEL) {
     mode_flag = DRM_MODE_FLAG_VID_MODE_PANEL;
+  }
+
+  if (current_mode.flags & DRM_MODE_FLAG_CMD_MODE_PANEL) {
+    curr_mode_flag = DRM_MODE_FLAG_CMD_MODE_PANEL;
+  } else if (current_mode.flags & DRM_MODE_FLAG_VID_MODE_PANEL) {
+    curr_mode_flag = DRM_MODE_FLAG_VID_MODE_PANEL;
+  }
+
+  if (curr_mode_flag != mode_flag) {
+    panel_mode_changed_ = mode_flag;
   }
 
   for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
@@ -856,14 +868,15 @@ DisplayError HWDeviceDRM::SetDisplayAttributes(uint32_t index) {
   UpdateMixerAttributes();
 
   DLOGI("Display attributes[%d]: WxH: %dx%d, DPI: %fx%f, FPS: %d, LM_SPLIT: %d, V_BACK_PORCH: %d," \
-        " V_FRONT_PORCH: %d, V_PULSE_WIDTH: %d, V_TOTAL: %d, H_TOTAL: %d, CLK: %dKHZ, TOPOLOGY: %d",
-        index, display_attributes_[index].x_pixels, display_attributes_[index].y_pixels,
-        display_attributes_[index].x_dpi, display_attributes_[index].y_dpi,
-        display_attributes_[index].fps, display_attributes_[index].is_device_split,
-        display_attributes_[index].v_back_porch, display_attributes_[index].v_front_porch,
-        display_attributes_[index].v_pulse_width, display_attributes_[index].v_total,
-        display_attributes_[index].h_total, display_attributes_[index].clock_khz,
-        display_attributes_[index].topology);
+        " V_FRONT_PORCH: %d, V_PULSE_WIDTH: %d, V_TOTAL: %d, H_TOTAL: %d, CLK: %dKHZ, " \
+        "TOPOLOGY: %d, PanelMode %s", index, display_attributes_[index].x_pixels,
+        display_attributes_[index].y_pixels, display_attributes_[index].x_dpi,
+        display_attributes_[index].y_dpi, display_attributes_[index].fps,
+        display_attributes_[index].is_device_split, display_attributes_[index].v_back_porch,
+        display_attributes_[index].v_front_porch, display_attributes_[index].v_pulse_width,
+        display_attributes_[index].v_total, display_attributes_[index].h_total,
+        display_attributes_[index].clock_khz, display_attributes_[index].topology,
+        (mode_flag & DRM_MODE_FLAG_VID_MODE_PANEL) ? "Video" : "Command");
 
   return kErrorNone;
 }
@@ -907,7 +920,7 @@ DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, int *release_fence)
   }
   pending_doze_ = false;
 
-  buffer_sync_handler_->SyncWait(INT(retire_fence_t));
+  buffer_sync_handler_->SyncWait(INT(retire_fence_t), kTimeoutMsPowerOn);
   Sys::close_(INT(retire_fence_t));
 
   return kErrorNone;
@@ -925,12 +938,12 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown) {
   }
 
   ResetROI();
-  int64_t release_fence_t = -1;
+  int64_t retire_fence_t = -1;
   drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::OFF);
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
-  drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_t);
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence_t);
 
   int ret = NullCommit(false /* asynchronous */, false /* retain_planes */);
   if (ret) {
@@ -939,9 +952,9 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown) {
   }
   pending_doze_ = false;
 
-  int release_fence = static_cast<int>(release_fence_t);
-  buffer_sync_handler_->SyncWait(release_fence);
-  Sys::close_(release_fence);
+  int retire_fence = static_cast<int>(retire_fence_t);
+  buffer_sync_handler_->SyncWait(retire_fence, kTimeoutMsPowerOff);
+  Sys::close_(retire_fence);
 
   return kErrorNone;
 }
@@ -982,7 +995,7 @@ DisplayError HWDeviceDRM::Doze(const HWQosData &qos_data, int *release_fence) {
   }
 
   int retire_fence = static_cast<int>(retire_fence_t);
-  buffer_sync_handler_->SyncWait(retire_fence);
+  buffer_sync_handler_->SyncWait(retire_fence, kTimeoutMsDoze);
   Sys::close_(retire_fence);
 
   return kErrorNone;
@@ -1022,7 +1035,7 @@ DisplayError HWDeviceDRM::DozeSuspend(const HWQosData &qos_data, int *release_fe
   pending_doze_ = false;
 
   int retire_fence = static_cast<int>(retire_fence_t);
-  buffer_sync_handler_->SyncWait(retire_fence);
+  buffer_sync_handler_->SyncWait(retire_fence, kTimeoutMsDozeSuspend);
   Sys::close_(retire_fence);
 
   return kErrorNone;
@@ -1211,20 +1224,12 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
   }
 
   // Set panel mode
-  if (panel_mode_changed_) {
-    for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
-      if ((current_mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
-         (current_mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
-         (current_mode.vrefresh == connector_info_.modes[mode_index].mode.vrefresh) &&
-         (panel_mode_changed_ & connector_info_.modes[mode_index].mode.flags)) {
-        current_mode = connector_info_.modes[mode_index].mode;
-        if ((current_mode.flags & DRM_MODE_FLAG_VID_MODE_PANEL) && !validate) {
-          // Switch to video mode, corresponding change the fence_offset
-          drm_atomic_intf_->Perform(DRMOps::CRTC_SET_OUTPUT_FENCE_OFFSET, token_.crtc_id, 1);
-        }
-        break;
-      }
+  if (panel_mode_changed_ & DRM_MODE_FLAG_VID_MODE_PANEL)  {
+    if (!validate) {
+      // Switch to video mode, corresponding change the fence_offset
+      drm_atomic_intf_->Perform(DRMOps::CRTC_SET_OUTPUT_FENCE_OFFSET, token_.crtc_id, 1);
     }
+    ResetROI();
   }
 
   if (!validate) {
@@ -1488,29 +1493,13 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
     bit_clk_rate_ = 0;
   }
 
-  if (panel_mode_changed_) {
-    drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
-    for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
-      if ((current_mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
-          (current_mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
-          (current_mode.vrefresh & connector_info_.modes[mode_index].mode.vrefresh) &&
-          (panel_mode_changed_ & connector_info_.modes[mode_index].mode.flags)) {
-        if (connector_info_.modes[mode_index].mode.flags & DRM_MODE_FLAG_CMD_MODE_PANEL) {
-          hw_panel_info_.mode = kModeCommand;
-          DLOGV_IF(kTagDriverConfig, "switch to command mode done, mode_index = %d\n",
-                   mode_index);
-        }
-        if (connector_info_.modes[mode_index].mode.flags & DRM_MODE_FLAG_VID_MODE_PANEL) {
-          hw_panel_info_.mode = kModeVideo;
-          reset_output_fence_offset_ = true;
-          DLOGV_IF(kTagDriverConfig, "switch to video mode done, mode_index = %d\n", mode_index);
-        }
-        current_mode_index_ = mode_index;
-        break;
-      }
-    }
+  if (panel_mode_changed_ & DRM_MODE_FLAG_CMD_MODE_PANEL) {
     panel_mode_changed_ = 0;
     synchronous_commit_ = false;
+  } else if (panel_mode_changed_ & DRM_MODE_FLAG_VID_MODE_PANEL) {
+    panel_mode_changed_ = 0;
+    synchronous_commit_ = false;
+    reset_output_fence_offset_ = true;
   }
 
   first_cycle_ = false;
@@ -1735,6 +1724,8 @@ DisplayError HWDeviceDRM::SetDisplayMode(const HWDisplayMode hw_display_mode) {
         (current_mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
         (current_mode.vrefresh == connector_info_.modes[mode_index].mode.vrefresh) &&
         (mode_flag & connector_info_.modes[mode_index].mode.flags)) {
+      current_mode_index_ = mode_index;
+      PopulateHWPanelInfo();
       panel_mode_changed_ = mode_flag;
       synchronous_commit_ = true;
       return kErrorNone;
@@ -2245,6 +2236,11 @@ void HWDeviceDRM::DumpHWLayers(HWLayers *hw_layers) {
       }
     }
   }
+}
+
+DisplayError HWDeviceDRM::SetBlendSpace(const PrimariesTransfer &blend_space) {
+  blend_space_ = blend_space;
+  return kErrorNone;
 }
 
 }  // namespace sdm

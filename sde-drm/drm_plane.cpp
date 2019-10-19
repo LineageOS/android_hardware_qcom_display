@@ -224,7 +224,43 @@ static void PopulateMultiRectModes(drmModePropertyRes *prop) {
   }
 }
 
+static const char *GetColorLutString(DRMTonemapLutType lut_type) {
+  switch (lut_type) {
+    case DRMTonemapLutType::DMA_1D_IGC:
+      return "DMA IGC";
+    case DRMTonemapLutType::DMA_1D_GC:
+      return "DMA GC";
+    case DRMTonemapLutType::VIG_1D_IGC:
+      return "VIG IGC";
+    case DRMTonemapLutType::VIG_3D_GAMUT:
+      return "VIG 3D";
+    default:
+      return "Unknown Lut";
+   }
+}
+
 #define __CLASS__ "DRMPlaneManager"
+
+static bool GetDRMonemapLutTypeFromPPFeatureID(DRMPPFeatureID id, DRMTonemapLutType *lut_type) {
+  switch (id) {
+    case kFeatureDgmIgc:
+      *lut_type = DRMTonemapLutType::DMA_1D_IGC;
+      break;
+    case kFeatureDgmGc:
+      *lut_type = DRMTonemapLutType::DMA_1D_GC;
+      break;
+    case kFeatureVigIgc:
+      *lut_type = DRMTonemapLutType::VIG_1D_IGC;
+      break;
+    case kFeatureVigGamut:
+      *lut_type = DRMTonemapLutType::VIG_3D_GAMUT;
+      break;
+    default:
+      DRM_LOGE("Invalid DRMPPFeature id = %d", id);
+      return false;
+  }
+  return true;
+}
 
 DRMPlaneManager::DRMPlaneManager(int fd) : fd_(fd) {}
 
@@ -290,7 +326,7 @@ void DRMPlaneManager::GetPlanesInfo(DRMPlanesInfo *info) {
   }
 }
 
-void DRMPlaneManager::UnsetUnusedPlanes(uint32_t crtc_id, drmModeAtomicReq *req) {
+void DRMPlaneManager::UnsetUnusedResources(uint32_t crtc_id, bool is_commit, drmModeAtomicReq *req) {
   // Unset planes that were assigned to the crtc referred to by crtc_id but are not requested
   // in this round
   lock_guard<mutex> lock(lock_);
@@ -300,7 +336,10 @@ void DRMPlaneManager::UnsetUnusedPlanes(uint32_t crtc_id, drmModeAtomicReq *req)
     plane.second->GetAssignedCrtc(&assigned_crtc);
     plane.second->GetRequestedCrtc(&requested_crtc);
     if (assigned_crtc == crtc_id && requested_crtc == 0) {
-      plane.second->Unset(req);
+      plane.second->Unset(is_commit, req);
+    } else if (requested_crtc == crtc_id) {
+      // Plane is acquired, call reset color luts, which will reset if needed
+      plane.second->ResetColorLUTs(is_commit, req);
     }
   }
 }
@@ -385,7 +424,10 @@ void DRMPlane::GetTypeInfo(const PropertyMap &prop_map) {
     return;
   }
 
-  const char *fmt_str = reinterpret_cast<const char *>(blob->data);
+  char *fmt_str = new char[blob->length + 1];
+  memcpy (fmt_str, blob->data, blob->length);
+  fmt_str[blob->length] = '\0';
+
   info->max_linewidth = 2560;
   info->max_scaler_linewidth = MAX_SCALER_LINEWIDTH;
   info->max_upscale = 1;
@@ -403,6 +445,9 @@ void DRMPlane::GetTypeInfo(const PropertyMap &prop_map) {
   // We may have multiple lines with each one dedicated for something specific
   // like formats etc
   stringstream stream(fmt_str);
+  DRM_LOGI("stream str %s len %d blob str %s len %d", stream.str().c_str(), stream.str().length(),
+           blob->data, blob->length);
+
   string line = {};
   string pixel_formats = "pixel_formats=";
   string max_linewidth = "max_linewidth=";
@@ -916,16 +961,46 @@ void DRMPlane::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
     } break;
 
     case DRMOps::PLANE_SET_POST_PROC: {
-       DRMPPFeatureInfo *data = va_arg(args, DRMPPFeatureInfo*);
-       if (data) {
-         DRM_LOGD("Plane %d: Set post proc", obj_id);
-         pp_mgr_->SetPPFeature(req, obj_id, *data);
-       }
-     } break;
+      DRMPPFeatureInfo *data = va_arg(args, DRMPPFeatureInfo*);
+      if (data) {
+        DRM_LOGD("Plane %d: Set post proc feature id - %d", obj_id, data->id);
+        pp_mgr_->SetPPFeature(req, obj_id, *data);
+        UpdatePPLutFeatureInuse(data);
+      }
+    } break;
 
     default:
       DRM_LOGE("Invalid opcode %d for DRM Plane %d", code, obj_id);
   }
+}
+
+void DRMPlane::UpdatePPLutFeatureInuse(DRMPPFeatureInfo *data) {
+  DRMTonemapLutType lut_type = {};
+  bool ret = GetDRMonemapLutTypeFromPPFeatureID(data->id, &lut_type);
+  if (ret == false) {
+    DRM_LOGE("Failed to get the lut type from PPFeatureID = %d", data->id);
+    return;
+  }
+
+  const auto state = data->payload ? kActive : kInactive;
+
+  switch (lut_type) {
+    case DRMTonemapLutType::DMA_1D_GC:
+      dgm_1d_lut_gc_state_ = state;
+      break;
+    case DRMTonemapLutType::DMA_1D_IGC:
+      dgm_1d_lut_igc_state_ = state;
+      break;
+    case DRMTonemapLutType::VIG_1D_IGC:
+      vig_1d_lut_igc_state_ = state;
+      break;
+    case DRMTonemapLutType::VIG_3D_GAMUT:
+      vig_3d_lut_gamut_state_ = state;
+      break;
+    default:
+      DRM_LOGE("Invalid lut_type = %d state = %d", lut_type, state);
+  }
+  return;
 }
 
 void DRMPlane::PerformWrapper(DRMOps code, drmModeAtomicReq *req, ...) {
@@ -972,7 +1047,7 @@ void DRMPlane::SetMultiRectMode(drmModeAtomicReq *req, DRMMultiRectMode drm_mult
     DRM_LOGD("Plane %d: Setting multirect_mode %d", obj_id, multirect_mode);
 }
 
-void DRMPlane::Unset(drmModeAtomicReq *req) {
+void DRMPlane::Unset(bool is_commit, drmModeAtomicReq *req) {
   DRM_LOGD("Plane %d: Unsetting from crtc %d", drm_plane_->plane_id, assigned_crtc_id_);
   PerformWrapper(DRMOps::PLANE_SET_FB_ID, req, 0);
   PerformWrapper(DRMOps::PLANE_SET_CRTC, req, 0);
@@ -983,6 +1058,18 @@ void DRMPlane::Unset(drmModeAtomicReq *req) {
   if (plane_type_info_.inverse_pma) {
     PerformWrapper(DRMOps::PLANE_SET_INVERSE_PMA, req, 0);
   }
+
+  // Reset the sspp tonemap properties if they were set and update the in-use only if
+  // its a Commit as Unset is called in Validate as well.
+  if (dgm_csc_in_use_) {
+    auto prop_id = prop_mgr_.GetPropertyId(DRMProperty::CSC_DMA_V1);
+    uint64_t csc_v1 = 0;
+    AddProperty(req, drm_plane_->plane_id, prop_id, csc_v1, false /* cache */, tmp_prop_val_map_);
+    DRM_LOGV("Plane %d Clearing DGM CSC", drm_plane_->plane_id);
+    dgm_csc_in_use_ = !is_commit;
+  }
+  ResetColorLUTs(is_commit, req);
+
   tmp_prop_val_map_.clear();
   committed_prop_val_map_.clear();
 }
@@ -998,15 +1085,91 @@ bool DRMPlane::SetDgmCscConfig(drmModeAtomicReq *req, uint64_t handle) {
     if (std::memcmp(&csc_config_copy_, &csc_v1_tmp, sizeof(sde_drm_csc_v1)) != 0) {
       csc_v1_data = reinterpret_cast<uint64_t>(&csc_config_copy_);
     }
-    DRM_LOGV("Dgm CSC = %d", csc_v1_data);
     AddProperty(req, drm_plane_->plane_id, prop_id,
                 reinterpret_cast<uint64_t>(csc_v1_data), false /* cache */,
                 tmp_prop_val_map_);
+    dgm_csc_in_use_ = (csc_v1_data != 0);
+    DRM_LOGV("Plane %d Dgm CSC = %lld in_use = %d", drm_plane_->plane_id, csc_v1_data,
+             dgm_csc_in_use_);
 
     return true;
   }
 
   return false;
+}
+
+void DRMPlane::ResetColorLUTs(bool is_commit, drmModeAtomicReq *req) {
+  // Reset the color luts if they were set and update the state only if its a Commit as Unset
+  // is called in Validate as well.
+  for (int i = 0; i <= (int32_t)(DRMTonemapLutType::VIG_3D_GAMUT); i++) {
+    auto itr = plane_type_info_.tonemap_lut_version_map.find(static_cast<DRMTonemapLutType>(i));
+    if (itr != plane_type_info_.tonemap_lut_version_map.end()) {
+      ResetColorLUTState(static_cast<DRMTonemapLutType>(i), is_commit, req);
+    }
+  }
+}
+
+void DRMPlane::ResetColorLUTState(DRMTonemapLutType lut_type, bool is_commit,
+                                  drmModeAtomicReq *req) {
+  DRMPlaneLutState *lut_state = nullptr;
+  DRMPPFeatureID feature_id = {};
+  switch (lut_type) {
+    case DRMTonemapLutType::DMA_1D_GC:
+      lut_state = &dgm_1d_lut_gc_state_;
+      feature_id = kFeatureDgmGc;
+      break;
+    case DRMTonemapLutType::DMA_1D_IGC:
+      lut_state = &dgm_1d_lut_igc_state_;
+      feature_id = kFeatureDgmIgc;
+      break;
+    case DRMTonemapLutType::VIG_1D_IGC:
+      lut_state = &vig_1d_lut_igc_state_;
+      feature_id = kFeatureVigIgc;
+      break;
+    case DRMTonemapLutType::VIG_3D_GAMUT:
+      lut_state = &vig_3d_lut_gamut_state_;
+      feature_id = kFeatureVigGamut;
+      break;
+    default:
+      DLOGE("Invalid lut type = %d", lut_type);
+      return;
+  }
+
+  if (*lut_state == kInactive) {
+    DRM_LOGV("Plane %d %s Lut not used", drm_plane_->plane_id, GetColorLutString(lut_type));
+    return;
+  }
+
+  DRMPlaneLutState target_state;
+  // If plane is getting unset, clearing of LUT will not be applied in hw.
+  // In that case, mark LUT as dirty and make sure that these are cleared the
+  // next time the plane gets used
+  if (*lut_state == kActive && requested_crtc_id_ == 0) {
+    target_state = kDirty;
+  } else if (*lut_state == kDirty && requested_crtc_id_ != 0) {
+    // If plane is getting activated while LUT is in dirty state, the new state
+    // should be inactive but still need to clear exiting LUT config in hw
+    target_state = kInactive;
+  } else {
+    return;
+  }
+
+  if (is_commit) {
+    DRM_LOGD("Plane %d Clearing %s Lut, moving from (%d) -> (%d)", drm_plane_->plane_id,
+              GetColorLutString(lut_type), *lut_state, target_state);
+
+    *lut_state = target_state;
+  }
+
+  ResetColorLUT(feature_id, req);
+}
+
+void DRMPlane::ResetColorLUT(DRMPPFeatureID id, drmModeAtomicReq *req) {
+  DRMPPFeatureInfo pp_feature_info = {};
+  pp_feature_info.type = kPropBlob;
+  pp_feature_info.payload = nullptr;
+  pp_feature_info.id = id;
+  pp_mgr_->SetPPFeature(req, drm_plane_->plane_id, pp_feature_info);
 }
 
 }  // namespace sde_drm

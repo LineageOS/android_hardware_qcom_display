@@ -128,17 +128,25 @@ void QtiComposerClient::onHotplug(hwc2_callback_data_t callbackData, hwc2_displa
                                     int32_t connected) {
   auto client = reinterpret_cast<QtiComposerClient*>(callbackData);
   auto connect = static_cast<composer_V2_1::IComposerCallback::Connection>(connected);
-  {
-    std::lock_guard<std::mutex> lock(client->mDisplayDataMutex);
-    if (connect == composer_V2_1::IComposerCallback::Connection::CONNECTED) {
-      client->mDisplayData.emplace(display, DisplayData(false));
-    } else if (connect == composer_V2_1::IComposerCallback::Connection::DISCONNECTED) {
-      client->mDisplayData.erase(display);
-    }
+  if (connect == composer_V2_1::IComposerCallback::Connection::CONNECTED) {
+    std::lock_guard<std::mutex> lock_d(client->mDisplayDataMutex);
+    client->mDisplayData.emplace(display, DisplayData(false));
   }
 
   auto ret = client->mCallback->onHotplug(display, connect);
   ALOGE_IF(!ret.isOk(), "failed to send onHotplug: %s", ret.description().c_str());
+
+  if (connect == composer_V2_1::IComposerCallback::Connection::DISCONNECTED) {
+    // Trigger refresh to make sure disconnect event received/updated properly by SurfaceFlinger.
+    client->hwc_session_->Refresh(HWC_DISPLAY_PRIMARY);
+    // Wait for sufficient time to ensure sufficient resources are available to process connection.
+    usleep(UINT32(client->hwc_session_->GetVsyncPeriod(HWC_DISPLAY_PRIMARY)) * 2 / 1000);
+
+    // Wait for the input command message queue to process before destroying the local display data.
+    std::lock_guard<std::mutex> lock(client->mCommandMutex);
+    std::lock_guard<std::mutex> lock_d(client->mDisplayDataMutex);
+    client->mDisplayData.erase(display);
+  }
 }
 
 void QtiComposerClient::onRefresh(hwc2_callback_data_t callbackData, hwc2_display_t display) {
@@ -151,7 +159,7 @@ void QtiComposerClient::onVsync(hwc2_callback_data_t callbackData, hwc2_display_
                                   int64_t timestamp) {
   auto client = reinterpret_cast<QtiComposerClient*>(callbackData);
   auto ret = client->mCallback->onVsync(display, timestamp);
-  ALOGE_IF(!ret.isOk(), "failed to send onVsync: %s", ret.description().c_str());
+  ALOGI_IF(!ret.isOk(), "failed to send onVsync: %s", ret.description().c_str());
 }
 
 // convert fenceFd to or from hidl_handle
@@ -1021,6 +1029,11 @@ Error QtiComposerClient::CommandReader::parse() {
     // Commands from ::android::hardware::graphics::composer::V2_1::IComposerClient follow.
     case IComposerClient::Command::SELECT_DISPLAY:
       parsed = parseSelectDisplay(length);
+      // Displays will not be removed while processing the command queue.
+      if (parsed && mClient.mDisplayData.find(mDisplay) == mClient.mDisplayData.end()) {
+        ALOGW("Command::SELECT_DISPLAY: Display %lu not found. Dropping commands.", mDisplay);
+        mDisplay = sdm::HWCCallbacks::kNumDisplays;
+      }
       break;
     case IComposerClient::Command::SELECT_LAYER:
       parsed = parseSelectLayer(length);

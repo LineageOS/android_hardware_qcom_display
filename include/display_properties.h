@@ -108,6 +108,7 @@
 #define DISABLE_UI_3D_TONEMAP                DISPLAY_PROP("disable_ui_3d_tonemap")
 #define QDCM_DISABLE_FACTORY_MODE_PROP       DISPLAY_PROP("qdcm.disable_factory_mode")
 #define ENABLE_ASYNC_POWERMODE               DISPLAY_PROP("enable_async_powermode")
+#define ENABLE_GPU_TONEMAPPER_PROP           DISPLAY_PROP("enable_gpu_tonemapper")
 
 // Add all vendor.display properties above
 

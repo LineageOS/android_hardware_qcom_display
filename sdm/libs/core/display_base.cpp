@@ -204,6 +204,7 @@ DisplayError DisplayBase::Deinit() {
 DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
   std::vector<Layer *> &layers = layer_stack->layers;
   HWLayersInfo &hw_layers_info = hw_layers_.info;
+  hw_layers_info.app_layer_count = 0;
 
   hw_layers_info.stack = layer_stack;
 
@@ -318,7 +319,9 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   }
 
   hw_layers_.updates_mask.set(kUpdateResources);
+  comp_manager_->GenerateROI(display_comp_ctx_, &hw_layers_);
   comp_manager_->PrePrepare(display_comp_ctx_, &hw_layers_);
+
   while (true) {
     error = comp_manager_->Prepare(display_comp_ctx_, &hw_layers_);
     if (error != kErrorNone) {
@@ -343,6 +346,9 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
       return error;
     }
   }
+
+  if (color_mgr_)
+    color_mgr_->Validate(&hw_layers_);
 
   comp_manager_->PostPrepare(display_comp_ctx_, &hw_layers_);
 
@@ -726,9 +732,9 @@ std::string DisplayBase::Dump() {
       INT(fb_roi.right) << " " << INT(fb_roi.bottom) << ")";
   }
 
-  const char *header  = "\n| Idx |  Comp Type |   Split   | Pipe |    W x H    |          Format          |  Src Rect (L T R B) |  Dst Rect (L T R B) |  Z | Pipe Flags | Deci(HxV) | CS | Rng |";  //NOLINT
-  const char *newline = "\n|-----|------------|-----------|------|-------------|--------------------------|---------------------|---------------------|----|------------|-----------|----|-----|";  //NOLINT
-  const char *format  = "\n| %3s | %10s | %9s | %4d | %4d x %4d | %24s | %4d %4d %4d %4d | %4d %4d %4d %4d | %2s | %10s | %9s | %2s | %3s |";  //NOLINT
+  const char *header  = "\n| Idx |  Comp Type |   Split   | Pipe |    W x H    |          Format          |  Src Rect (L T R B) |  Dst Rect (L T R B) |  Z | Pipe Flags | Deci(HxV) | CS | Rng | Tr |";  //NOLINT
+  const char *newline = "\n|-----|------------|-----------|------|-------------|--------------------------|---------------------|---------------------|----|------------|-----------|----|-----|----|";  //NOLINT
+  const char *format  = "\n| %3s | %10s | %9s | %4d | %4d x %4d | %24s | %4d %4d %4d %4d | %4d %4d %4d %4d | %2s | %10s | %9s | %2s | %3s | %2s |";  //NOLINT
 
   os << "\n";
   os << newline;
@@ -767,7 +773,7 @@ std::string DisplayBase::Dump() {
                0, input_buffer->width, input_buffer->height, buffer_format,
                INT(src_roi.left), INT(src_roi.top), INT(src_roi.right), INT(src_roi.bottom),
                INT(dst_roi.left), INT(dst_roi.top), INT(dst_roi.right), INT(dst_roi.bottom),
-               "-", "-    ", "-    ", "-", "-");
+               "-", "-    ", "-    ", "-", "-", "-");
       os << row;
       // print the below only once per layer block, fill with spaces for rest.
       idx[0] = 0;
@@ -786,6 +792,7 @@ std::string DisplayBase::Dump() {
       char z_order[8] = { 0 };
       const char *color_primary = "";
       const char *range = "";
+      const char *transfer = "";
       char row[1024] = { 0 };
 
       snprintf(z_order, sizeof(z_order), "%d", layer_config.hw_solidfill_stage.z_order);
@@ -795,7 +802,7 @@ std::string DisplayBase::Dump() {
                buffer_format, INT(src_roi.left), INT(src_roi.top),
                INT(src_roi.right), INT(src_roi.bottom), INT(src_roi.left),
                INT(src_roi.top), INT(src_roi.right), INT(src_roi.bottom),
-               z_order, flags, decimation, color_primary, range);
+               z_order, flags, decimation, color_primary, range, transfer);
       os << row;
       continue;
     }
@@ -806,6 +813,7 @@ std::string DisplayBase::Dump() {
       char z_order[8] = { 0 };
       char color_primary[8] = { 0 };
       char range[8] = { 0 };
+      char transfer[8] = { 0 };
       bool rot = layer_config.use_inline_rot;
 
       HWPipeInfo &pipe = (count == 0) ? layer_config.left_pipe : layer_config.right_pipe;
@@ -824,6 +832,7 @@ std::string DisplayBase::Dump() {
       ColorMetaData &color_metadata = hw_layer.input_buffer.color_metadata;
       snprintf(color_primary, sizeof(color_primary), "%d", color_metadata.colorPrimaries);
       snprintf(range, sizeof(range), "%d", color_metadata.range);
+      snprintf(transfer, sizeof(transfer), "%d", color_metadata.transfer);
 
       char row[1024];
       snprintf(row, sizeof(row), format, idx, comp_type, rot ? rot_pipe[count] : pipe_split[count],
@@ -831,7 +840,7 @@ std::string DisplayBase::Dump() {
                buffer_format, INT(src_roi.left), INT(src_roi.top),
                INT(src_roi.right), INT(src_roi.bottom), INT(dst_roi.left),
                INT(dst_roi.top), INT(dst_roi.right), INT(dst_roi.bottom),
-               z_order, flags, decimation, color_primary, range);
+               z_order, flags, decimation, color_primary, range, transfer);
 
       os << row;
       // print the below only once per layer block, fill with spaces for rest.
@@ -930,26 +939,32 @@ DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
   }
 
   DisplayError error = kErrorNone;
-  error = SetColorModeInternal(color_mode);
-  if (error != kErrorNone) {
-    return error;
-  }
-
-  std::string dynamic_range = kSdr;
+  std::string dynamic_range = kSdr, str_render_intent;
   if (IsSupportColorModeAttribute(color_mode)) {
     auto it_mode = color_mode_attr_map_.find(color_mode);
     GetValueOfModeAttribute(it_mode->second, kDynamicRangeAttribute, &dynamic_range);
+    GetValueOfModeAttribute(it_mode->second, kRenderIntentAttribute, &str_render_intent);
   }
-
-  comp_manager_->ControlDpps(dynamic_range != kHdr);
 
   current_color_mode_ = color_mode;
   PrimariesTransfer blend_space = {};
   blend_space = GetBlendSpaceFromColorMode();
   error = comp_manager_->SetBlendSpace(display_comp_ctx_, blend_space);
   if (error != kErrorNone) {
-    DLOGE("SetBlendSpace failed, error = %d display_type_= %d", error, display_type_);
+    DLOGE("SetBlendSpace failed, error = %d display_type_ = %d", error, display_type_);
   }
+
+  error = hw_intf_->SetBlendSpace(blend_space);
+  if (error != kErrorNone) {
+    DLOGE("Failed to pass blend space, error = %d display_type_ = %d", error, display_type_);
+  }
+
+  error = SetColorModeInternal(color_mode, str_render_intent,  blend_space);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  comp_manager_->ControlDpps(dynamic_range != kHdr);
 
   return error;
 }
@@ -964,7 +979,9 @@ DisplayError DisplayBase::SetColorModeById(int32_t color_mode_id) {
   return kErrorNotSupported;
 }
 
-DisplayError DisplayBase::SetColorModeInternal(const std::string &color_mode) {
+DisplayError DisplayBase::SetColorModeInternal(const std::string &color_mode,
+                                               const std::string &str_render_intent,
+                                               const PrimariesTransfer &pt) {
   DLOGV_IF(kTagQDCM, "Color Mode = %s", color_mode.c_str());
 
   ColorModeMap::iterator it = color_mode_map_.find(color_mode);
@@ -978,7 +995,11 @@ DisplayError DisplayBase::SetColorModeInternal(const std::string &color_mode) {
   DLOGV_IF(kTagQDCM, "Color Mode Name = %s corresponding mode_id = %d", sde_display_mode->name,
            sde_display_mode->id);
   DisplayError error = kErrorNone;
-  error = color_mgr_->ColorMgrSetMode(sde_display_mode->id);
+  uint32_t render_intent = 0;
+  if (!str_render_intent.empty()) {
+    render_intent = std::stoi(str_render_intent);
+  }
+  error = color_mgr_->ColorMgrSetModeWithRenderIntent(sde_display_mode->id, pt, render_intent);
   if (error != kErrorNone) {
     DLOGE("Failed for mode id = %d", sde_display_mode->id);
     return error;
@@ -1321,6 +1342,8 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   uint32_t mixer_width = mixer_attributes_.width;
   uint32_t mixer_height = mixer_attributes_.height;
+  uint32_t fb_width = fb_config_.x_pixels;
+  uint32_t fb_height = fb_config_.y_pixels;
 
   if (req_mixer_width_ && req_mixer_height_) {
     DLOGD_IF(kTagDisplay, "Required mixer width : %d, height : %d",
@@ -1330,13 +1353,11 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
     return (req_mixer_width_ != mixer_width || req_mixer_height_ != mixer_height);
   }
 
-  if (!custom_mixer_resolution_) {
+  if (!custom_mixer_resolution_ && mixer_width == fb_width && mixer_height == fb_height) {
     return false;
   }
 
   uint32_t layer_count = UINT32(layer_stack->layers.size());
-  uint32_t fb_width  = fb_config_.x_pixels;
-  uint32_t fb_height  = fb_config_.y_pixels;
   uint32_t fb_area = fb_width * fb_height;
   LayerRect fb_rect = (LayerRect) {0.0f, 0.0f, FLOAT(fb_width), FLOAT(fb_height)};
   uint32_t display_width = display_attributes_.x_pixels;
@@ -1608,17 +1629,12 @@ DisplayError DisplayBase::InitializeColorModes() {
       DLOGE("Failed");
       return error;
     }
-    int32_t default_id = kInvalidModeId;
-    error = color_mgr_->ColorMgrGetDefaultModeID(&default_id);
 
     AttrVal var;
+    uint32_t num_insert_color_modes = 0;
     for (uint32_t i = 0; i < num_color_modes_; i++) {
       DLOGV_IF(kTagQDCM, "Color Mode[%d]: Name = %s mode_id = %d", i, color_modes_[i].name,
                color_modes_[i].id);
-      // get the name of default color mode
-      if (color_modes_[i].id == default_id) {
-        current_color_mode_ = color_modes_[i].name;
-      }
       auto it = color_mode_map_.find(color_modes_[i].name);
       if (it != color_mode_map_.end()) {
         if (it->second->id < color_modes_[i].id) {
@@ -1642,9 +1658,12 @@ DisplayError DisplayBase::InitializeColorModes() {
           // If target doesn't support SSPP tone maping and color mode is HDR,
           // add bt2020pq and bt2020hlg color modes.
           if (hw_resource_info_.src_tone_map.none() && IsHdrMode(var)) {
+            std::string str_render_intent;
+            GetValueOfModeAttribute(var, kRenderIntentAttribute, &str_render_intent);
             color_mode_map_.insert(std::make_pair(kBt2020Pq, &color_modes_[i]));
             color_mode_map_.insert(std::make_pair(kBt2020Hlg, &color_modes_[i]));
-            InsertBT2020PqHlgModes();
+            num_insert_color_modes = 2;
+            InsertBT2020PqHlgModes(str_render_intent);
           }
         }
         std::vector<PrimariesTransfer> pt_list = {};
@@ -1662,6 +1681,8 @@ DisplayError DisplayBase::InitializeColorModes() {
         color_modes_cs_.end()) {
       color_modes_cs_.push_back(pt);
     }
+
+    num_color_modes_ += num_insert_color_modes;
   }
 
   return kErrorNone;
@@ -1819,7 +1840,7 @@ void DisplayBase::GetColorPrimaryTransferFromAttributes(const AttrVal &attr,
         pt.transfer = Transfer_sRGB;
         supported_pt->push_back(pt);
       } else if (pt.primaries == ColorPrimaries_DCIP3) {
-        pt.transfer = Transfer_Gamma2_2;
+        pt.transfer = Transfer_sRGB;
         supported_pt->push_back(pt);
       } else if (pt.primaries == ColorPrimaries_BT2020) {
         pt.transfer = Transfer_SMPTE_ST2084;
@@ -1921,16 +1942,19 @@ PrimariesTransfer DisplayBase::GetBlendSpaceFromColorMode() {
     }
   } else if (color_gamut == kDcip3) {
     pt.primaries = GetColorPrimariesFromAttribute(color_gamut);
-    pt.transfer = Transfer_Gamma2_2;
+    pt.transfer = Transfer_sRGB;
   }
 
   return pt;
 }
 
-void DisplayBase::InsertBT2020PqHlgModes() {
+void DisplayBase::InsertBT2020PqHlgModes(const std::string &str_render_intent) {
   AttrVal hdr_var = {};
   hdr_var.push_back(std::make_pair(kColorGamutAttribute, kBt2020));
   hdr_var.push_back(std::make_pair(kPictureQualityAttribute, kStandard));
+  if (!str_render_intent.empty()) {
+    hdr_var.push_back(std::make_pair(kRenderIntentAttribute, str_render_intent));
+  }
   hdr_var.push_back(std::make_pair(kGammaTransferAttribute, kSt2084));
   color_mode_attr_map_.insert(std::make_pair(kBt2020Pq, hdr_var));
   hdr_var.pop_back();

@@ -31,7 +31,9 @@
 #include <vector>
 
 #include "hw_events_interface.h"
+#ifndef TARGET_HEADLESS
 #include "drm/hw_events_drm.h"
+#endif
 
 #define __CLASS__ "HWEventsInterface"
 
@@ -42,9 +44,8 @@ DisplayError HWEventsInterface::Create(int display_id, DisplayType display_type,
                                        const std::vector<HWEvent> &event_list,
                                        const HWInterface *hw_intf, HWEventsInterface **intf) {
   DisplayError error = kErrorNone;
-  HWEventsInterface *hw_events = nullptr;
-
-  hw_events = new HWEventsDRM();
+#ifndef TARGET_HEADLESS
+  HWEventsInterface *hw_events = new HWEventsDRM();
 
   error = hw_events->Init(display_id, display_type, event_handler, event_list, hw_intf);
   if (error != kErrorNone) {
@@ -52,6 +53,7 @@ DisplayError HWEventsInterface::Create(int display_id, DisplayType display_type,
   } else {
     *intf = hw_events;
   }
+#endif
 
   return error;
 }

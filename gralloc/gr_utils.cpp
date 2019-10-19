@@ -27,7 +27,10 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef QMAA
 #include <media/msm_media_info.h>
+#endif
+
 #include <algorithm>
 
 #include "gr_adreno_info.h"
@@ -250,6 +253,32 @@ bool IsGPUFlagSupported(uint64_t usage) {
   return ret;
 }
 
+int GetBpp(int format) {
+  if (IsUncompressedRGBFormat(format)) {
+    return GetBppForUncompressedRGB(format);
+  }
+  switch (format) {
+    case HAL_PIXEL_FORMAT_COMPRESSED_RGBA_ASTC_4x4_KHR:
+    case HAL_PIXEL_FORMAT_COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR:
+    case HAL_PIXEL_FORMAT_RAW8:
+    case HAL_PIXEL_FORMAT_Y8:
+      return 1;
+    case HAL_PIXEL_FORMAT_RAW16:
+    case HAL_PIXEL_FORMAT_Y16:
+    case HAL_PIXEL_FORMAT_YCbCr_422_SP:
+    case HAL_PIXEL_FORMAT_YCrCb_422_SP:
+    case HAL_PIXEL_FORMAT_YCbCr_422_I:
+    case HAL_PIXEL_FORMAT_YCrCb_422_I:
+    case HAL_PIXEL_FORMAT_CbYCrY_422_I:
+      return 2;
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010:
+      return 3;
+    default:
+      return -1;
+  }
+}
+
 // Returns the final buffer size meant to be allocated with ion
 unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int alignedh) {
   unsigned int size = 0;
@@ -316,6 +345,7 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
       case HAL_PIXEL_FORMAT_YCbCr_420_P010:
         size = ALIGN((alignedw * alignedh * 2) + (alignedw * alignedh) + 1, SIZE_4K);
         break;
+#ifndef QMAA
       case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
         size = VENUS_BUFFER_SIZE(COLOR_FMT_P010,
                                  width,
@@ -350,6 +380,7 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
       case HAL_PIXEL_FORMAT_NV12_HEIF:
         size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12_512, width, height);
         break;
+#endif
       default:ALOGE("%s: Unrecognized pixel format: 0x%x", __FUNCTION__, format);
         return 0;
     }
@@ -381,13 +412,14 @@ void GetYuvUbwcSPPlaneInfo(uint32_t width, uint32_t height, int color_format,
                            PlaneLayoutInfo *plane_info) {
   // UBWC buffer has these 4 planes in the following sequence:
   // Y_Plane, UV_Plane, Y_Meta_Plane, UV_Meta_Plane
-  unsigned int y_meta_stride, y_meta_height, y_meta_size;
-  unsigned int y_stride, y_height, y_size;
-  unsigned int c_meta_stride, c_meta_height, c_meta_size;
+  unsigned int y_meta_stride = 0, y_meta_height = 0, y_meta_size = 0;
+  unsigned int y_stride = 0, y_height = 0, y_size = 0;
+  unsigned int c_meta_stride = 0, c_meta_height = 0, c_meta_size = 0;
   unsigned int alignment = 4096;
-  unsigned int c_stride, c_height, c_size;
-  uint64_t yOffset, cOffset, yMetaOffset, cMetaOffset;
+  unsigned int c_stride = 0, c_height = 0, c_size = 0;
+  uint64_t yOffset = 0, cOffset = 0, yMetaOffset = 0, cMetaOffset = 0;
 
+#ifndef QMAA
   y_meta_stride = VENUS_Y_META_STRIDE(color_format, INT(width));
   y_meta_height = VENUS_Y_META_SCANLINES(color_format, INT(height));
   y_meta_size = ALIGN((y_meta_stride * y_meta_height), alignment);
@@ -403,7 +435,7 @@ void GetYuvUbwcSPPlaneInfo(uint32_t width, uint32_t height, int color_format,
   c_stride = VENUS_UV_STRIDE(color_format, INT(width));
   c_height = VENUS_UV_SCANLINES(color_format, INT(height));
   c_size = ALIGN((c_stride * c_height), alignment);
-
+#endif
   yMetaOffset = 0;
   yOffset = y_meta_size;
   cMetaOffset = y_meta_size + y_size;
@@ -451,9 +483,11 @@ void GetYuvUbwcInterlacedSPPlaneInfo(uint32_t width, uint32_t height,
   // Plane info to be filled for each field separately.
   height = (height + 1) >> 1;
 
+#ifndef QMAA
   GetYuvUbwcSPPlaneInfo(width, height, COLOR_FMT_NV12_UBWC, &plane_info[0]);
 
   GetYuvUbwcSPPlaneInfo(width, height, COLOR_FMT_NV12_UBWC, &plane_info[4]);
+#endif
 }
 
 // This API gets information about 2 planes (Y_Plane & UV_Plane).
@@ -485,6 +519,7 @@ void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint3
       c_size = width * height;
       c_height = height;
       break;
+#ifndef QMAA
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
       c_height = VENUS_UV_SCANLINES(COLOR_FMT_NV12, height);
@@ -502,6 +537,7 @@ void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint3
       c_height = VENUS_UV_SCANLINES(COLOR_FMT_NV21, height);
       c_size = c_stride * c_height;
       break;
+#endif
     case HAL_PIXEL_FORMAT_RAW16:
     case HAL_PIXEL_FORMAT_Y16:
       c_size = c_stride = 0;
@@ -589,12 +625,14 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]) 
   if (err == 0) {
     if (interlaced && format == HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC) {
       CopyPlaneLayoutInfotoAndroidYcbcr(hnd->base, plane_count, &plane_info[0], &ycbcr[0]);
-      unsigned int uv_stride, uv_height, uv_size;
+      unsigned int uv_stride = 0, uv_height = 0, uv_size = 0;
       unsigned int alignment = 4096;
       uint64_t field_base;
       height = (height + 1) >> 1;
+#ifndef QMAA
       uv_stride = VENUS_UV_STRIDE(COLOR_FMT_NV12_UBWC, INT(width));
       uv_height = VENUS_UV_SCANLINES(COLOR_FMT_NV12_UBWC, INT(height));
+#endif
       uv_size = ALIGN((uv_stride * uv_height), alignment);
       field_base = hnd->base + plane_info[1].offset + uv_size;
       memset(ycbcr[1].reserved, 0, sizeof(ycbcr[1].reserved));
@@ -706,6 +744,7 @@ bool IsUBwcEnabled(int format, uint64_t usage) {
 void GetYuvUBwcWidthAndHeight(int width, int height, int format, unsigned int *aligned_w,
                               unsigned int *aligned_h) {
   switch (format) {
+#ifndef QMAA
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
@@ -722,6 +761,7 @@ void GetYuvUBwcWidthAndHeight(int width, int height, int format, unsigned int *a
       *aligned_w = (VENUS_Y_STRIDE(COLOR_FMT_P010_UBWC, width) / 2);
       *aligned_h = VENUS_Y_SCANLINES(COLOR_FMT_P010_UBWC, height);
       break;
+#endif
     default:
       ALOGE("%s: Unsupported pixel format: 0x%x", __FUNCTION__, format);
       *aligned_w = 0;
@@ -792,6 +832,7 @@ unsigned int GetUBwcSize(int width, int height, int format, unsigned int aligned
       size = alignedw * alignedh * bpp;
       size += GetRgbUBwcMetaBufferSize(width, height, bpp);
       break;
+#ifndef QMAA
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
@@ -803,6 +844,7 @@ unsigned int GetUBwcSize(int width, int height, int format, unsigned int aligned
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
       size = VENUS_BUFFER_SIZE(COLOR_FMT_P010_UBWC, width, height);
       break;
+#endif
     default:
       ALOGE("%s: Unsupported pixel format: 0x%x", __FUNCTION__, format);
       break;
@@ -999,6 +1041,7 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
     case HAL_PIXEL_FORMAT_YCbCr_420_P010:
       aligned_w = ALIGN(width, 16);
       break;
+#ifndef QMAA
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
       aligned_w = INT(VENUS_Y_STRIDE(COLOR_FMT_P010, width) / 2);
       aligned_h = INT(VENUS_Y_SCANLINES(COLOR_FMT_P010, height));
@@ -1018,6 +1061,7 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       aligned_w = INT(VENUS_Y_STRIDE(COLOR_FMT_NV12_512, width));
       aligned_h = INT(VENUS_Y_SCANLINES(COLOR_FMT_NV12_512, height));
       break;
+#endif
     default:
       break;
   }
@@ -1201,10 +1245,9 @@ uint64_t GetHandleFlags(int format, uint64_t usage) {
   }
 
   if (IsUBwcEnabled(format, usage)) {
+    priv_flags |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
     if (IsUBwcPISupported(format, usage)) {
       priv_flags |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED_PI;
-    } else {
-      priv_flags |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
     }
   }
 
@@ -1347,6 +1390,7 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
       plane_info[0].v_subsampling = v_subsampling;
       break;
 
+#ifndef QMAA
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
       GetYuvSubSamplingFactor(format, &h_subsampling, &v_subsampling);
       if (flags & LAYOUT_INTERLACED_FLAG) {
@@ -1451,7 +1495,7 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
       plane_info[1].h_subsampling = h_subsampling;
       plane_info[1].v_subsampling = v_subsampling;
       break;
-
+#endif
       // Planar
     case HAL_PIXEL_FORMAT_YV12:
       if ((info.width & 1) || (info.height & 1)) {

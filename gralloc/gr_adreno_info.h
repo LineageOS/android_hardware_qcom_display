@@ -30,7 +30,9 @@
 #ifndef __GR_ADRENO_INFO_H__
 #define __GR_ADRENO_INFO_H__
 
+#ifndef QMAA
 #include <media/msm_media_info.h>
+#endif
 
 typedef enum {
   SURFACE_TILE_MODE_DISABLE    = 0x0,    // used for linear surface

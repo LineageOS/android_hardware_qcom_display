@@ -38,6 +38,7 @@
 #include <utility>
 #include <unordered_map>
 #include <memory>
+#include <bitset>
 
 #include "layer_buffer.h"
 #include "sdm_types.h"
@@ -103,6 +104,16 @@ enum LayerComposition {
                             //!< Only one layer shall be marked as target buffer by the caller.
                             //!< GPU target layer shall be placed after all application layers
                             //!< in the layer stack.
+};
+
+enum LayerUpdate {
+  kSecurity,
+  kMetadataUpdate,
+  kSurfaceDamage,
+  kSurfaceInvalidate,
+  kClientCompRequest,
+  kColorTransformUpdate,
+  kLayerUpdateMax,
 };
 
 /*! @brief This structure defines rotation and flip values for a display layer.
@@ -243,6 +254,8 @@ struct LayerStackFlags {
       uint32_t fast_path : 1;    //!< Preference for fast/slow path draw-cycle, set by client.
 
       uint32_t mask_present : 1;  //!< Set if layer stack has mask layers.
+
+      uint32_t config_changed : 1;  //!< This flag indicates Display config must be validated.
     };
 
     uint32_t flags = 0;               //!< For initialization purpose only.
@@ -368,6 +381,7 @@ struct Layer {
                                                               0.0, 1.0, 0.0, 0.0,
                                                               0.0, 0.0, 1.0, 0.0,
                                                               0.0, 0.0, 0.0, 1.0 };
+  std::bitset<kLayerUpdateMax> update_mask = 0;
 };
 
 /*! @brief This structure defines the color space + transfer of a given layer.

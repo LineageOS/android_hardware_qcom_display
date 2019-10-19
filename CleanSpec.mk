@@ -48,3 +48,6 @@ $(call add-clean-step, rm -rf $(PRODUCT_OUT)/obj/include/qcom/display)
 
 # Clean old allocator rc file
 $(call add-clean-step, rm -rf $(PRODUCT_OUT)/vendor/etc/init/vendor.qti.hardware.display.allocator@1.0-service.rc)
+
+$(call add-clean-step, rm -rf $(PRODUCT_OUT)/vendor/lib/hw/android.hardware.graphics.mapper@2.0-impl-qti-display.so)
+$(call add-clean-step, rm -rf $(PRODUCT_OUT)/vendor/lib64/hw/android.hardware.graphics.mapper@2.0-impl-qti-display.so)

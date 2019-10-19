@@ -31,6 +31,7 @@
 #include <private/hw_info_types.h>
 #include <private/color_interface.h>
 #include <utils/constants.h>
+#include <string>
 
 #include "hw_info_interface.h"
 
@@ -127,6 +128,8 @@ class HWInterface {
                                                     uint8_t *out_data) = 0;
   virtual DisplayError SetFrameTrigger(FrameTriggerMode mode) = 0;
   virtual DisplayError SetBLScale(uint32_t level) = 0;
+  virtual DisplayError GetPanelBrightnessBasePath(std::string *base_path) = 0;
+  virtual DisplayError SetBlendSpace(const PrimariesTransfer &blend_space) = 0;
 
  protected:
   virtual ~HWInterface() { }

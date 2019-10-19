@@ -47,6 +47,13 @@ namespace sde_drm {
 
 class DRMPlaneManager;
 
+enum DRMPlaneLutState {
+  kInactive,  //  Lut is not in use, default
+  kActive,    //  Lut is in use
+  kDirty,     //  Plane was unset while being LUT was active, mark LUT as dirty
+              //  to make sure it's cleared the next time plane is used
+};
+
 class DRMPlane {
  public:
   explicit DRMPlane(int fd, uint32_t priority);
@@ -69,10 +76,14 @@ class DRMPlane {
   void Perform(DRMOps code, drmModeAtomicReq *req, va_list args);
   void Dump();
   void SetMultiRectMode(drmModeAtomicReq *req, DRMMultiRectMode drm_multirect_mode);
-  void Unset(drmModeAtomicReq *req);
+  void Unset(bool is_commit, drmModeAtomicReq *req);
   void PostValidate(uint32_t crtc_id, bool success);
   void PostCommit(uint32_t crtc_id, bool success);
   bool SetDgmCscConfig(drmModeAtomicReq *req, uint64_t handle);
+  void UpdatePPLutFeatureInuse(DRMPPFeatureInfo *data);
+  void ResetColorLUTs(bool is_commit, drmModeAtomicReq *req);
+  void ResetColorLUTState(DRMTonemapLutType lut_type, bool is_commit, drmModeAtomicReq *req);
+  void ResetColorLUT(DRMPPFeatureID id, drmModeAtomicReq *req);
 
  private:
   typedef std::map<DRMProperty, std::tuple<uint64_t, drmModePropertyRes *>> PropertyMap;
@@ -97,6 +108,13 @@ class DRMPlane {
   sde_drm_scaler_v2 scaler_v2_config_copy_ = {};
   sde_drm_csc_v1 csc_config_copy_ = {};
   bool is_lut_configured_ = false;
+
+  bool dgm_csc_in_use_ = false;
+  // Tone-mapping lut properties
+  DRMPlaneLutState dgm_1d_lut_igc_state_ = kInactive;
+  DRMPlaneLutState dgm_1d_lut_gc_state_ = kInactive;
+  DRMPlaneLutState vig_1d_lut_igc_state_ = kInactive;
+  DRMPlaneLutState vig_3d_lut_gamut_state_ = kInactive;
 };
 
 class DRMPlaneManager {
@@ -108,7 +126,8 @@ class DRMPlaneManager {
   void DumpAll();
   void DumpByID(uint32_t id);
   void Perform(DRMOps code, uint32_t obj_id, drmModeAtomicReq *req, va_list args);
-  void UnsetUnusedPlanes(uint32_t crtc_id, drmModeAtomicReq *req);
+  void UnsetUnusedResources(uint32_t crtc_id, bool is_commit, drmModeAtomicReq *req);
+  void ResetColorLutsOnUsedPlanes(uint32_t crtc_id, bool is_commit, drmModeAtomicReq *req);
   void RetainPlanes(uint32_t crtc_id);
   void SetScalerLUT(const DRMScalerLUTInfo &lut_info);
   void UnsetScalerLUT();
