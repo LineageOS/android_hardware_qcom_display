@@ -82,10 +82,11 @@ class BufferCacheEntry {
 };
 
 class QtiComposerClient : public IQtiComposerClient {
- public:
   QtiComposerClient();
   virtual ~QtiComposerClient();
+  static QtiComposerClient* qti_composerclient_instance_;
 
+ public:
   // Methods from ::android::hardware::graphics::composer::V2_1::IComposerClient follow.
   Return<void> registerCallback(const sp<composer_V2_1::IComposerCallback>& callback) override;
   Return<uint32_t> getMaxVirtualDisplayCount() override;
@@ -204,6 +205,20 @@ class QtiComposerClient : public IQtiComposerClient {
   void getCapabilities();
   bool hasCapability(hwc2_capability_t capability) {
     return (mCapabilities.count(capability) > 0);
+  }
+
+  static QtiComposerClient* CreateQtiComposerClientInstance() {
+    if (!qti_composerclient_instance_) {
+      qti_composerclient_instance_ = new QtiComposerClient();
+      return qti_composerclient_instance_;
+    }
+    return nullptr;
+  }
+
+  void onLastStrongRef(const void* id) {
+    if (qti_composerclient_instance_) {
+      qti_composerclient_instance_ = nullptr;
+    }
   }
 
  private:
