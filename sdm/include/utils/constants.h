@@ -43,6 +43,7 @@
 #define UINT32(exp) static_cast<uint32_t>(exp)
 #define INT32(exp) static_cast<int32_t>(exp)
 #define UINT64(exp) static_cast<uint64_t>(exp)
+#define DOUBLE(exp) static_cast<double>(exp)
 
 #define ROUND_UP(number, step) ((((number) + ((step) - 1)) / (step)) * (step))
 
