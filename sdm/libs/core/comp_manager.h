@@ -86,7 +86,6 @@ class CompManager {
   bool IsSafeMode() { return safe_mode_; }
   void GenerateROI(Handle display_ctx, HWLayers *hw_layers);
   bool CanSkipValidate(Handle display_ctx);
-  DisplayError CheckEnforceSplit(Handle comp_handle, uint32_t new_refresh_rate);
 
  private:
   static const int kMaxThermalLevel = 3;

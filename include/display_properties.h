@@ -128,6 +128,5 @@
 #define ENABLE_ASYNC_POWERMODE               DISPLAY_PROP("enable_async_powermode")
 #define DISABLE_UI_3D_TONEMAP                DISPLAY_PROP("disable_ui_3d_tonemap")
 #define DISABLE_PARALLEL_CACHE               DISPLAY_PROP("disable_parallel_cache")
-#define ENABLE_FORCE_SPLIT                   DISPLAY_PROP("enable_force_split")
 
 #endif  // __DISPLAY_PROPERTIES_H__

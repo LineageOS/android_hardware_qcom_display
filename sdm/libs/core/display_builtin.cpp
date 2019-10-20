@@ -335,11 +335,6 @@ DisplayError DisplayBuiltIn::SetRefreshRate(uint32_t refresh_rate, bool final_ra
       handle_idle_timeout_ = false;
       return error;
     }
-
-    error = comp_manager_->CheckEnforceSplit(display_comp_ctx_, refresh_rate);
-    if (error != kErrorNone) {
-      return error;
-    }
   }
 
   // On success, set current refresh rate to new refresh rate
