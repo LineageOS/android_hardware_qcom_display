@@ -461,17 +461,13 @@ DisplayError ColorManagerProxy::Validate(HWLayers *hw_layers) {
     }
   }
 
-  if (apply_mode_ || updates) {
+  if (apply_mode_) {
     update_mode_Hwassets = true;
-    if (apply_mode_) {
-      apply_mode_ = false;
-      ret = color_intf_->ColorIntfSetDisplayMode(&pp_features_,
-                     static_cast<uint32_t>(display_id_), cur_mode_id_);
-      if (ret != kErrorNone) {
-        DLOGE("ApplyDisplayMode(mode_id = %d) failed, ret = %d.", cur_mode_id_, ret);
-        return kErrorNone;
-      }
-    }
+    apply_mode_ = false;
+  }
+
+  if (updates) {
+    update_mode_Hwassets = true;
   }
 
   if (hdr_present || hdr_plus_present) {

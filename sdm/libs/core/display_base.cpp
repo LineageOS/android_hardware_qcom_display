@@ -1041,6 +1041,13 @@ DisplayError DisplayBase::SetColorModeInternal(const std::string &color_mode,
   if (!str_render_intent.empty()) {
     render_intent = std::stoi(str_render_intent);
   }
+
+  error = color_mgr_->ColorMgrSetMode(sde_display_mode->id);
+  if (error != kErrorNone) {
+    DLOGE("Failed for mode id = %d", sde_display_mode->id);
+    return error;
+  }
+
   error = color_mgr_->ColorMgrSetModeWithRenderIntent(sde_display_mode->id, pt, render_intent);
   if (error != kErrorNone) {
     DLOGE("Failed for mode id = %d", sde_display_mode->id);
