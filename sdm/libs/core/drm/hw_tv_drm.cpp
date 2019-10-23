@@ -341,6 +341,7 @@ DisplayError HWTVDRM::UpdateHDRMetaData(HWLayers *hw_layers) {
     // will cause flicker.
     InitMaxHDRMetaData();
     in_multiset_ = true;
+    reset_hdr_flag_ = false;
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_HDR_METADATA, token_.conn_id, &hdr_metadata_);
     DumpHDRMetaData(hdr_op);
   } else if (hdr_op == HWHDRLayerInfo::kReset) {
