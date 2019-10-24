@@ -1724,10 +1724,45 @@ bool QtiComposerClient::CommandReader::parseSetLayerPerFrameMetadataBlobs(uint16
     return false;
   }
 
-  // SetLayerPerFrameMetadataBlobs is not supported
-  auto err = Error::UNSUPPORTED;
-  mWriter.setError(getCommandLoc(), static_cast<Error>(err));
+  uint32_t numBlobs = read();
+  length--;
+  std::vector<IComposerClient::PerFrameMetadataBlob> metadata;
 
+  for (size_t i = 0; i < numBlobs; i++) {
+    IComposerClient::PerFrameMetadataKey key =
+      static_cast<IComposerClient::PerFrameMetadataKey>(readSigned());
+    uint32_t blobSize = read();
+    length -= 2;
+
+    if (length * sizeof(uint32_t) < blobSize) {
+      return false;
+    }
+
+    metadata.push_back({key, std::vector<uint8_t>()});
+    IComposerClient::PerFrameMetadataBlob& metadataBlob = metadata.back();
+    metadataBlob.blob.resize(blobSize);
+    readBlob(blobSize, metadataBlob.blob.data());
+  }
+
+  std::vector<int32_t> keys;
+  std::vector<uint32_t> sizes_of_metablob_;
+  std::vector<uint8_t> blob_of_data_;
+  keys.reserve(metadata.size());
+  sizes_of_metablob_.reserve(metadata.size());
+  for (const auto& m : metadata) {
+    keys.push_back(static_cast<int32_t>(m.key));
+    sizes_of_metablob_.push_back(m.blob.size());
+    for (uint8_t i = 0; i < m.blob.size(); i++) {
+      blob_of_data_.push_back(m.blob[i]);
+    }
+  }
+  auto err = mClient.hwc_session_->SetLayerPerFrameMetadataBlobs(mDisplay, mLayer, metadata.size(),
+                                                                 keys.data(),
+                                                                 sizes_of_metablob_.data(),
+                                                                 blob_of_data_.data());
+  if (static_cast<Error>(err) != Error::NONE) {
+    mWriter.setError(getCommandLoc(), static_cast<Error>(err));
+  }
   return true;
 }
 
