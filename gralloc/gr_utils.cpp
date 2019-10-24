@@ -1001,6 +1001,9 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
   // Below should be only YUV family
   switch (format) {
     case HAL_PIXEL_FORMAT_YCrCb_420_SP:
+#ifdef USE_UNALIGNED_YCRCB
+      break;
+#endif
     case HAL_PIXEL_FORMAT_YCbCr_420_SP:
       if (AdrenoMemInfo::GetInstance() == nullptr) {
         return;
