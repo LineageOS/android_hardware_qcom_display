@@ -863,11 +863,13 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
   switch (format) {
     case HAL_PIXEL_FORMAT_YCrCb_420_SP:
     case HAL_PIXEL_FORMAT_YCbCr_420_SP:
+#ifnedf USE_UNALIGNED_YCRCB
       if (AdrenoMemInfo::GetInstance() == nullptr) {
         return;
       }
       alignment = AdrenoMemInfo::GetInstance()->GetGpuPixelAlignment();
       aligned_w = ALIGN(width, alignment);
+#endif
       break;
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
       aligned_w = ALIGN(width, alignment);
