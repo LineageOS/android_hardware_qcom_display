@@ -588,6 +588,9 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
     mm_width = connector_info_.mmWidth;
     mm_height = connector_info_.mmHeight;
     topology = connector_info_.modes[index].topology;
+    if (mode.flags & DRM_MODE_FLAG_CMD_MODE_PANEL) {
+      display_attributes_[index].smart_panel = true;
+    }
   }
 
   display_attributes_[index].x_pixels = mode.hdisplay;
@@ -723,21 +726,26 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   if (current_mode.flags & DRM_MODE_FLAG_VID_MODE_PANEL) {
     hw_panel_info_.mode = kModeVideo;
   }
-  DLOGI("%s, Panel Interface = %s, Panel Mode = %s, Is Primary = %d", device_name_,
-        interface_str_.c_str(), hw_panel_info_.mode == kModeVideo ? "Video" : "Command",
-        hw_panel_info_.is_primary_panel);
-  DLOGI("Partial Update = %d, Dynamic FPS = %d, HDR Panel = %d QSync = %d",
-        hw_panel_info_.partial_update, hw_panel_info_.dynamic_fps, hw_panel_info_.hdr_enabled,
-        hw_panel_info_.qsync_support);
-  DLOGI("Align: left = %d, width = %d, top = %d, height = %d", hw_panel_info_.left_align,
-        hw_panel_info_.width_align, hw_panel_info_.top_align, hw_panel_info_.height_align);
-  DLOGI("ROI: min_width = %d, min_height = %d, need_merge = %d", hw_panel_info_.min_roi_width,
-        hw_panel_info_.min_roi_height, hw_panel_info_.needs_roi_merge);
-  DLOGI("FPS: min = %d, max = %d", hw_panel_info_.min_fps, hw_panel_info_.max_fps);
-  DLOGI("Left Split = %d, Right Split = %d", hw_panel_info_.split_info.left_split,
-        hw_panel_info_.split_info.right_split);
-  DLOGI("Panel Transfer time = %d us", hw_panel_info_.transfer_time_us);
-  DLOGI("Dynamic Bit Clk Support = %d", hw_panel_info_.dyn_bitclk_support);
+
+  DLOGI_IF(kTagDriverConfig, "%s, Panel Interface = %s, Panel Mode = %s, Is Primary = %d",
+           device_name_, interface_str_.c_str(),
+           hw_panel_info_.mode == kModeVideo ? "Video" : "Command",
+           hw_panel_info_.is_primary_panel);
+  DLOGI_IF(kTagDriverConfig, "Partial Update = %d, Dynamic FPS = %d, HDR Panel = %d QSync = %d",
+           hw_panel_info_.partial_update, hw_panel_info_.dynamic_fps, hw_panel_info_.hdr_enabled,
+           hw_panel_info_.qsync_support);
+  DLOGI_IF(kTagDriverConfig, "Align: left = %d, width = %d, top = %d, height = %d",
+           hw_panel_info_.left_align, hw_panel_info_.width_align, hw_panel_info_.top_align,
+           hw_panel_info_.height_align);
+  DLOGI_IF(kTagDriverConfig, "ROI: min_width = %d, min_height = %d, need_merge = %d",
+           hw_panel_info_.min_roi_width, hw_panel_info_.min_roi_height,
+           hw_panel_info_.needs_roi_merge);
+  DLOGI_IF(kTagDriverConfig, "FPS: min = %d, max = %d", hw_panel_info_.min_fps,
+           hw_panel_info_.max_fps);
+  DLOGI_IF(kTagDriverConfig, "Left Split = %d, Right Split = %d",
+           hw_panel_info_.split_info.left_split, hw_panel_info_.split_info.right_split);
+  DLOGI_IF(kTagDriverConfig, "Panel Transfer time = %d us", hw_panel_info_.transfer_time_us);
+  DLOGI_IF(kTagDriverConfig, "Dynamic Bit Clk Support = %d", hw_panel_info_.dyn_bitclk_support);
 }
 
 DisplayError HWDeviceDRM::GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
@@ -867,7 +875,8 @@ DisplayError HWDeviceDRM::SetDisplayAttributes(uint32_t index) {
   PopulateHWPanelInfo();
   UpdateMixerAttributes();
 
-  DLOGI("Display attributes[%d]: WxH: %dx%d, DPI: %fx%f, FPS: %d, LM_SPLIT: %d, V_BACK_PORCH: %d," \
+  DLOGI_IF(kTagDriverConfig,
+        "Display attributes[%d]: WxH: %dx%d, DPI: %fx%f, FPS: %d, LM_SPLIT: %d, V_BACK_PORCH: %d," \
         " V_FRONT_PORCH: %d, V_PULSE_WIDTH: %d, V_TOTAL: %d, H_TOTAL: %d, CLK: %dKHZ, " \
         "TOPOLOGY: %d, PanelMode %s", index, display_attributes_[index].x_pixels,
         display_attributes_[index].y_pixels, display_attributes_[index].x_dpi,
@@ -1209,10 +1218,15 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
     SetSolidfillStages();
     SetQOSData(qos_data);
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_SECURITY_LEVEL, token_.crtc_id, crtc_security_level);
-
-    sde_drm::DRMQsyncMode mode = hw_layers->hw_avr_info.enable ? sde_drm::DRMQsyncMode::CONTINUOUS :
-                                                                 sde_drm::DRMQsyncMode::NONE;
-    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_QSYNC_MODE, token_.conn_id, mode);
+    if (hw_layers->hw_avr_info.update) {
+      sde_drm::DRMQsyncMode mode = sde_drm::DRMQsyncMode::NONE;
+      if (hw_layers->hw_avr_info.mode == kContinuousMode) {
+        mode = sde_drm::DRMQsyncMode::CONTINUOUS;
+      } else if (hw_layers->hw_avr_info.mode == kOneShotMode) {
+        mode = sde_drm::DRMQsyncMode::ONESHOT;
+      }
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_QSYNC_MODE, token_.conn_id, mode);
+    }
   }
 
   drm_atomic_intf_->Perform(DRMOps::DPPS_COMMIT_FEATURE, 0 /* argument is not used */);

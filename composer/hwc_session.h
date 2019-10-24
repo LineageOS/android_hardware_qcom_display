@@ -20,7 +20,7 @@
 #ifndef __HWC_SESSION_H__
 #define __HWC_SESSION_H__
 
-#include <vendor/display/config/1.10/IDisplayConfig.h>
+#include <vendor/display/config/1.12/IDisplayConfig.h>
 
 #include <core/core_interface.h>
 #include <utils/locker.h>
@@ -47,7 +47,7 @@
 
 namespace sdm {
 
-using vendor::display::config::V1_10::IDisplayConfig;
+using vendor::display::config::V1_12::IDisplayConfig;
 using vendor::display::config::V1_10::IDisplayCWBCallback;
 
 using ::android::hardware::Return;
@@ -392,6 +392,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   Return<int32_t> setCWBOutputBuffer(const sp<IDisplayCWBCallback> &callback,
                                      uint32_t disp_id, const Rect &rect, bool post_processed,
                                      const hidl_handle& buffer) override;
+  Return<int32_t> setQsyncMode(uint32_t disp_id, IDisplayConfig::QsyncMode mode) override;
+  Return<bool> isSmartPanelConfig(uint32_t disp_id, uint32_t config_id) override;
 
   // QClient methods
   virtual android::status_t notifyCallback(uint32_t command, const android::Parcel *input_parcel,

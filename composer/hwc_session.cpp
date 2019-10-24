@@ -170,7 +170,6 @@ int HWCSession::Init() {
     return -EINVAL;
   }
 
-  StartServices();
   HWCDebugHandler::Get()->GetProperty(ENABLE_NULL_DISPLAY_PROP, &null_display_mode_);
   HWCDebugHandler::Get()->GetProperty(DISABLE_HOTPLUG_BWCHECK, &disable_hotplug_bwcheck_);
   HWCDebugHandler::Get()->GetProperty(DISABLE_MASK_LAYER_HINT, &disable_mask_layer_hint_);
@@ -194,6 +193,7 @@ int HWCSession::Init() {
   }
 
   is_composer_up_ = true;
+  StartServices();
 
   return 0;
 }
@@ -483,7 +483,7 @@ void HWCSession::Dump(uint32_t *out_size, char *out_buffer) {
     return;
   }
 
-  const size_t max_dump_size = 8192;
+  const size_t max_dump_size = 16384;  // 16 kB
 
   if (out_buffer == nullptr) {
     *out_size = max_dump_size;

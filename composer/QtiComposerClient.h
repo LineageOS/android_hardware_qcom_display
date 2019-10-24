@@ -221,12 +221,12 @@ class QtiComposerClient : public IQtiComposerClient {
 
     std::unordered_map<Layer, LayerBuffers> Layers;
 
-    DisplayData(bool isVirtual) : IsVirtual(isVirtual) {}
+    explicit DisplayData(bool isVirtual) : IsVirtual(isVirtual) {}
   };
 
   class CommandReader : public CommandReaderBase {
    public:
-    CommandReader(QtiComposerClient& client);
+    explicit CommandReader(QtiComposerClient& client);
     Error parse();
     Error validateDisplay(Display display, std::vector<Layer>& changedLayers,
                           std::vector<IComposerClient::Composition>& compositionTypes,

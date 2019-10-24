@@ -692,6 +692,14 @@ Return<bool> HWCSession::isHDRSupported(uint32_t disp_id) {
     DLOGE("Not valid display");
     return false;
   }
+  SCOPE_LOCK(locker_[disp_id]);
+
+  if (is_hdr_display_.size() <= disp_id) {
+    DLOGW("is_hdr_display_ is not initialized for display %d!! Reporting it as HDR not supported",
+          disp_id);
+    return false;
+  }
+
   return static_cast<bool>(is_hdr_display_[disp_id]);
 }
 
@@ -893,6 +901,16 @@ Return<int32_t> HWCSession::setCWBOutputBuffer(const sp<IDisplayCWBCallback> &ca
     return -1;
   }
 
+  // Output buffer dump is not supported, if External or Virtual display is present.
+  int external_dpy_index = GetDisplayIndex(qdutils::DISPLAY_EXTERNAL);
+  int virtual_dpy_index = GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
+
+  if (((external_dpy_index != -1) && hwc_display_[external_dpy_index]) ||
+      ((virtual_dpy_index != -1) && hwc_display_[virtual_dpy_index])) {
+    DLOGW("Output buffer dump is not supported with External or Virtual display!");
+    return -1;
+  }
+
   // Mutex scope
   {
     SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
@@ -903,6 +921,20 @@ Return<int32_t> HWCSession::setCWBOutputBuffer(const sp<IDisplayCWBCallback> &ca
   }
 
   return cwb_.PostBuffer(callback, post_processed, buffer);
+}
+
+Return<bool> HWCSession::isSmartPanelConfig(uint32_t disp_id, uint32_t config_id) {
+  if (disp_id != qdutils::DISPLAY_PRIMARY) {
+    return false;
+  }
+
+  SCOPE_LOCK(locker_[disp_id]);
+  if (!hwc_display_[disp_id]) {
+    DLOGE("Display %d is not created yet.", disp_id);
+    return false;
+  }
+
+  return hwc_display_[disp_id]->IsSmartPanelConfig(config_id);
 }
 
 int32_t HWCSession::CWB::PostBuffer(const sp<IDisplayCWBCallback> &callback, bool post_processed,
@@ -1019,6 +1051,32 @@ void HWCSession::CWB::PresentDisplayDone(hwc2_display_t disp_id) {
 
   std::unique_lock<std::mutex> lock(mutex_);
   cv_.notify_one();
+}
+
+Return<int32_t> HWCSession::setQsyncMode(uint32_t disp_id, IDisplayConfig::QsyncMode mode) {
+  SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_id]);
+  if (!hwc_display_[disp_id]) {
+    return -1;
+  }
+
+  QSyncMode qsync_mode = kQSyncModeNone;
+  switch (mode) {
+    case IDisplayConfig::QsyncMode::NONE:
+      qsync_mode = kQSyncModeNone;
+      break;
+    case IDisplayConfig::QsyncMode::WAIT_FOR_FENCES_ONE_FRAME:
+      qsync_mode = kQsyncModeOneShot;
+      break;
+    case IDisplayConfig::QsyncMode::WAIT_FOR_FENCES_EACH_FRAME:
+      qsync_mode = kQsyncModeOneShotContinuous;
+      break;
+    case IDisplayConfig::QsyncMode::WAIT_FOR_COMMIT_EACH_FRAME:
+      qsync_mode = kQSyncModeContinuous;
+      break;
+  }
+
+  hwc_display_[disp_id]->SetQSyncMode(qsync_mode);
+  return 0;
 }
 
 }  // namespace sdm

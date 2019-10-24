@@ -213,6 +213,10 @@ class HWCDisplay : public DisplayEventHandler {
     return HWC2::Error::Unsupported;
   }
 
+  virtual bool IsSmartPanelConfig(uint32_t config_id) {
+    return false;
+  }
+
   // Display Configurations
   static uint32_t GetThrottlingRefreshRate() { return HWCDisplay::throttling_refresh_rate_; }
   static void SetThrottlingRefreshRate(uint32_t newRefreshRate)
@@ -362,10 +366,10 @@ class HWCDisplay : public DisplayEventHandler {
   virtual void PostPowerMode();
   virtual HWC2::PowerMode GetPendingPowerMode() {
     return pending_power_mode_;
-  };
+  }
   virtual void ClearPendingPowerMode() {
     pending_power_mode_ = current_power_mode_;
-  };
+  }
   virtual void NotifyClientStatus(bool connected) { client_connected_ = connected; }
 
  protected:
@@ -451,12 +455,14 @@ class HWCDisplay : public DisplayEventHandler {
   std::map<uint32_t, DisplayConfigVariableInfo> variable_config_map_;
   std::vector<uint32_t> hwc_config_map_;
   bool client_connected_ = true;
+  bool pending_config_ = false;
 
  private:
   void DumpInputBuffers(void);
   bool CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests);
   void UpdateRefreshRate();
   void WaitOnPreviousFence();
+  void UpdateActiveConfig();
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
   uint32_t geometry_changes_ = GeometryChanges::kNone;
@@ -468,6 +474,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool first_cycle_ = true;  // false if a display commit has succeeded on the device.
   int fbt_release_fence_ = -1;
   int release_fence_ = -1;
+  hwc2_config_t pending_config_index_ = 0;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {

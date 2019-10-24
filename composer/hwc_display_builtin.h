@@ -100,6 +100,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   virtual HWC2::Error UpdatePowerMode(HWC2::PowerMode mode);
   virtual HWC2::Error SetClientTarget(buffer_handle_t target, int32_t acquire_fence,
                                       int32_t dataspace, hwc_region_t damage);
+  virtual bool IsSmartPanelConfig(uint32_t config_id);
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,

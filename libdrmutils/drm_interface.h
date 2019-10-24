@@ -710,6 +710,7 @@ enum DRMDPPSFeatureID {
   kFeatureAdAttBlEvent,
   kFeatureLtmHistEvent,
   kFeatureLtmWbPbEvent,
+  kFeatureLtmOffEvent,
   // LTM properties
   kFeatureLtm,
   kFeatureLtmInit,
@@ -812,6 +813,7 @@ enum struct DRMCWbCaptureMode {
 enum struct DRMQsyncMode {
   NONE = 0,
   CONTINUOUS,
+  ONESHOT,
 };
 
 enum struct DRMTopologyControl {

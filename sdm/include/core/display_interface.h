@@ -148,6 +148,7 @@ enum DisplayEvent {
   kIdlePowerCollapse,       // Event triggered by Idle Power Collapse.
   kPanelDeadEvent,          // Event triggered by ESD.
   kDisplayPowerResetEvent,  // Event triggered by Hardware Recovery.
+  kInvalidateDisplay,       // Event triggered to Invalidate display.
 };
 
 /*! @brief This enum represents the secure events received by Display HAL. */
@@ -159,9 +160,10 @@ enum SecureEvent {
 
 /*! @brief This enum represents the QSync modes supported by the hardware. */
 enum QSyncMode {
-  kQSyncModeNone,        // This is set by the client to disable qsync
-  kQSyncModeContinuous,  // This is set by the client to enable qsync forever
-  kQsyncModeOneShot,     // This is set by client to enable qsync only for current frame.
+  kQSyncModeNone,               // This is set by the client to disable qsync
+  kQSyncModeContinuous,         // This is set by the client to enable qsync forever
+  kQsyncModeOneShot,            // This is set by client to enable qsync only for current frame.
+  kQsyncModeOneShotContinuous,  // This is set by client to enable qsync only for every commit.
 };
 
 /*! @brief This structure defines configuration for display dpps ad4 region of interest. */
@@ -214,11 +216,12 @@ struct DisplayConfigVariableInfo {
   uint32_t fps = 0;               //!< Frame rate per second.
   uint32_t vsync_period_ns = 0;   //!< VSync period in nanoseconds.
   bool is_yuv = false;            //!< If the display output is in YUV format.
+  bool smart_panel = false;       //!< If the display config has smart panel.
 
   bool operator==(const DisplayConfigVariableInfo& info) const {
     return ((x_pixels == info.x_pixels) && (y_pixels == info.y_pixels) && (x_dpi == info.x_dpi) &&
             (y_dpi == info.y_dpi) && (fps == info.fps) && (vsync_period_ns == info.vsync_period_ns)
-            && (is_yuv == info.is_yuv));
+            && (is_yuv == info.is_yuv) && (smart_panel == info.smart_panel));
   }
 };
 
