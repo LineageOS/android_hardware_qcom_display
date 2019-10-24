@@ -35,6 +35,9 @@ LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdgralloc\" -Wno-si
 ifeq ($(TARGET_USES_UNALIGNED_NV21_ZSL),true)
     LOCAL_CFLAGS              += -DUSE_UNALIGNED_NV21_ZSL
 endif
+ifeq ($(TARGET_USES_UNALIGNED_YCRCB),true)
+    LOCAL_CFLAGS              += -DUSE_UNALIGNED_YCRCB
+endif
 
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
 LOCAL_SRC_FILES               := gr_utils.cpp gr_adreno_info.cpp
