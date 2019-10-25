@@ -45,6 +45,7 @@
 #include "hwc_socket_handler.h"
 #include "hwc_display_event_handler.h"
 #include "hwc_buffer_sync_handler.h"
+#include "hwc_display_virtual_factory.h"
 
 namespace sdm {
 
@@ -453,6 +454,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   HWCCallbacks callbacks_;
   HWCBufferAllocator buffer_allocator_;
   HWCBufferSyncHandler buffer_sync_handler_;
+  HWCVirtualDisplayFactory virtual_display_factory_;
   HWCColorManager *color_mgr_ = nullptr;
   DisplayMapInfo map_info_primary_;                 // Primary display (either builtin or pluggable)
   std::vector<DisplayMapInfo> map_info_builtin_;    // Builtin displays excluding primary

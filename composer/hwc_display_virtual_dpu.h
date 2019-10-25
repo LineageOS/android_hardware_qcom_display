@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -27,43 +27,31 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __HWC_DISPLAY_VIRTUAL_H__
-#define __HWC_DISPLAY_VIRTUAL_H__
+#ifndef __HWC_DISPLAY_VIRTUAL_DPU_H__
+#define __HWC_DISPLAY_VIRTUAL_DPU_H__
 
-#include <qdMetaData.h>
-#include <gralloc_priv.h>
-#include "hwc_display.h"
-#include "hwc_display_event_handler.h"
+#include "hwc_display_virtual.h"
 
 namespace sdm {
 
-class HWCDisplayVirtual : public HWCDisplay {
+class HWCDisplayVirtualDPU : public HWCDisplayVirtual {
  public:
-  static void Destroy(HWCDisplay *hwc_display);
+  HWCDisplayVirtualDPU(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
+                       HWCCallbacks *callbacks, hwc2_display_t id, int32_t sdm_id,
+                       uint32_t width, uint32_t height, float min_lum, float max_lum);
   virtual int Init();
-  virtual int Deinit();
+  virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests);
   virtual HWC2::Error Present(int32_t *out_retire_fence);
-  virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
-                                         int32_t format, bool post_processed);
-  virtual HWC2::Error GetDisplayType(int32_t *out_type);
-  virtual HWC2::Error SetColorMode(ColorMode mode);
   virtual HWC2::Error SetOutputBuffer(buffer_handle_t buf, int32_t release_fence);
-  virtual HWC2::Error DumpVDSBuffer();
-  bool NeedsGPUBypass();
-  HWCDisplayVirtual(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
-                    HWCCallbacks *callbacks, hwc2_display_t id, int32_t sdm_id,
-                    uint32_t width, uint32_t height);
-
- protected:
-  uint32_t width_ = 0;
-  uint32_t height_ = 0;
-  LayerBuffer output_buffer_ = {};
-  const private_handle_t *output_handle_ = nullptr;
+  virtual HWC2::Error SetPanelLuminanceAttributes(float min_lum, float max_lum);
 
  private:
-  bool dump_output_layer_ = false;
+  int SetConfig(uint32_t width, uint32_t height);
+
+  float min_lum_ = 0.0f;
+  float max_lum_ = 0.0f;
 };
 
 }  // namespace sdm
 
-#endif  // __HWC_DISPLAY_VIRTUAL_H__
+#endif  // __HWC_DISPLAY_VIRTUAL_DPU_H__

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -27,43 +27,37 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __HWC_DISPLAY_VIRTUAL_H__
-#define __HWC_DISPLAY_VIRTUAL_H__
+#ifndef __GL_COLOR_CONVERT_H__
+#define __GL_COLOR_CONVERT_H__
 
-#include <qdMetaData.h>
 #include <gralloc_priv.h>
-#include "hwc_display.h"
-#include "hwc_display_event_handler.h"
 
 namespace sdm {
 
-class HWCDisplayVirtual : public HWCDisplay {
+enum GLRenderTarget {
+  kTargetRGBA,
+  kTargetYUV,
+};
+
+struct GLRect {
+  float left = 0.0f;
+  float top = 0.0f;
+  float right = 0.0f;
+  float bottom = 0.0f;
+};
+
+class GLColorConvert {
  public:
-  static void Destroy(HWCDisplay *hwc_display);
-  virtual int Init();
-  virtual int Deinit();
-  virtual HWC2::Error Present(int32_t *out_retire_fence);
-  virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
-                                         int32_t format, bool post_processed);
-  virtual HWC2::Error GetDisplayType(int32_t *out_type);
-  virtual HWC2::Error SetColorMode(ColorMode mode);
-  virtual HWC2::Error SetOutputBuffer(buffer_handle_t buf, int32_t release_fence);
-  virtual HWC2::Error DumpVDSBuffer();
-  bool NeedsGPUBypass();
-  HWCDisplayVirtual(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
-                    HWCCallbacks *callbacks, hwc2_display_t id, int32_t sdm_id,
-                    uint32_t width, uint32_t height);
+  static GLColorConvert* GetInstance(GLRenderTarget target, bool secure);
+  static void Destroy(GLColorConvert* intf);
 
+  virtual int Blit(const private_handle_t *src_hnd, const private_handle_t *dst_hnd,
+                   const GLRect &src_rect, const GLRect &dst_rect, int src_acquire_fence_fd,
+                   int dst_acquire_fence_fd, int *release_fence_fd) = 0;
  protected:
-  uint32_t width_ = 0;
-  uint32_t height_ = 0;
-  LayerBuffer output_buffer_ = {};
-  const private_handle_t *output_handle_ = nullptr;
-
- private:
-  bool dump_output_layer_ = false;
+  virtual ~GLColorConvert() { }
 };
 
 }  // namespace sdm
 
-#endif  // __HWC_DISPLAY_VIRTUAL_H__
+#endif  // __GL_COLOR_CONVERT_H__

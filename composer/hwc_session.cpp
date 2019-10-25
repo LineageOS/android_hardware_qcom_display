@@ -286,6 +286,11 @@ void HWCSession::InitSupportedDisplaySlots() {
     return;
   }
 
+  if (max_virtual == 0) {
+    // Check if WB using GPU is supported.
+    max_virtual += virtual_display_factory_.IsGPUColorConvertSupported() ? 1 : 0;
+  }
+
   if (kPluggable == hw_disp_info.type) {
     // If primary is a pluggable display, we have already used one pluggable display interface.
     max_pluggable--;
@@ -1115,9 +1120,9 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
           continue;
         }
 
-        status = HWCDisplayVirtual::Create(core_intf_, &buffer_allocator_, &callbacks_, client_id,
-                                           info.display_id, width, height, format, &hwc_display,
-                                           set_min_lum_, set_max_lum_);
+        status = virtual_display_factory_.Create(core_intf_, &buffer_allocator_, &callbacks_,
+                                                 client_id, info.display_id, width, height,
+                                                 format, set_min_lum_, set_max_lum_, &hwc_display);
         // TODO(user): validate width and height support
         if (status) {
           return HWC2::Error::NoResources;
@@ -2703,7 +2708,7 @@ void HWCSession::DestroyNonPluggableDisplay(DisplayMapInfo *map_info) {
       HWCDisplayBuiltIn::Destroy(hwc_display);
       break;
     default:
-      HWCDisplayVirtual::Destroy(hwc_display);
+      virtual_display_factory_.Destroy(hwc_display);
       break;
     }
 
