@@ -327,6 +327,15 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   hw_resource->min_prefill_lines = info.min_prefill_lines;
   hw_resource->secure_disp_blend_stage = info.secure_disp_blend_stage;
   hw_resource->has_concurrent_writeback = info.concurrent_writeback;
+  hw_resource->line_width_constraints_count = info.line_width_constraints_count;
+  if (info.line_width_constraints_count) {
+    auto &width_constraints = hw_resource->line_width_constraints;
+    hw_resource->line_width_limits = std::move(info.line_width_limits);
+    width_constraints.push_back(std::make_pair(kPipeVigLimit, info.vig_limit_index));
+    width_constraints.push_back(std::make_pair(kPipeDmaLimit, info.dma_limit_index));
+    width_constraints.push_back(std::make_pair(kPipeScalingLimit, info.scaling_limit_index));
+    width_constraints.push_back(std::make_pair(kPipeRotationLimit, info.rotation_limit_index));
+  }
 }
 
 void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
