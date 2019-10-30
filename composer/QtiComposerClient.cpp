@@ -1015,116 +1015,127 @@ QtiComposerClient::CommandReader::CommandReader(QtiComposerClient& client)
   : mClient(client), mWriter(client.mWriter) {
 }
 
+bool QtiComposerClient::CommandReader::parseCommonCmd(
+    IComposerClient::Command command, uint16_t length) {
+  bool parsed = false;
+
+  switch (command) {
+  // Commands from ::android::hardware::graphics::composer::V2_1::IComposerClient follow.
+  case IComposerClient::Command::SELECT_DISPLAY:
+    parsed = parseSelectDisplay(length);
+    break;
+  case IComposerClient::Command::SELECT_LAYER:
+    parsed = parseSelectLayer(length);
+    break;
+  case IComposerClient::Command::SET_COLOR_TRANSFORM:
+    parsed = parseSetColorTransform(length);
+    break;
+  case IComposerClient::Command::SET_CLIENT_TARGET:
+    parsed = parseSetClientTarget(length);
+    break;
+  case IComposerClient::Command::SET_OUTPUT_BUFFER:
+    parsed = parseSetOutputBuffer(length);
+    break;
+  case IComposerClient::Command::VALIDATE_DISPLAY:
+    parsed = parseValidateDisplay(length);
+    break;
+  case IComposerClient::Command::ACCEPT_DISPLAY_CHANGES:
+    parsed = parseAcceptDisplayChanges(length);
+    break;
+  case IComposerClient::Command::PRESENT_DISPLAY:
+    parsed = parsePresentDisplay(length);
+    break;
+  case IComposerClient::Command::PRESENT_OR_VALIDATE_DISPLAY:
+    parsed = parsePresentOrValidateDisplay(length);
+    break;
+  case IComposerClient::Command::SET_LAYER_CURSOR_POSITION:
+    parsed = parseSetLayerCursorPosition(length);
+    break;
+  case IComposerClient::Command::SET_LAYER_BUFFER:
+    parsed = parseSetLayerBuffer(length);
+    break;
+  case IComposerClient::Command::SET_LAYER_SURFACE_DAMAGE:
+    parsed = parseSetLayerSurfaceDamage(length);
+    break;
+  case IComposerClient::Command::SET_LAYER_BLEND_MODE:
+    parsed = parseSetLayerBlendMode(length);
+    break;
+  case IComposerClient::Command::SET_LAYER_COLOR:
+    parsed = parseSetLayerColor(length);
+    break;
+  case IComposerClient::Command::SET_LAYER_COMPOSITION_TYPE:
+    parsed = parseSetLayerCompositionType(length);
+    break;
+  case IComposerClient::Command::SET_LAYER_DATASPACE:
+    parsed = parseSetLayerDataspace(length);
+    break;
+  case IComposerClient::Command::SET_LAYER_DISPLAY_FRAME:
+    parsed = parseSetLayerDisplayFrame(length);
+    break;
+  case IComposerClient::Command::SET_LAYER_PLANE_ALPHA:
+    parsed = parseSetLayerPlaneAlpha(length);
+    break;
+  case IComposerClient::Command::SET_LAYER_SIDEBAND_STREAM:
+    parsed = parseSetLayerSidebandStream(length);
+    break;
+  case IComposerClient::Command::SET_LAYER_SOURCE_CROP:
+    parsed = parseSetLayerSourceCrop(length);
+    break;
+  case IComposerClient::Command::SET_LAYER_TRANSFORM:
+    parsed = parseSetLayerTransform(length);
+    break;
+  case IComposerClient::Command::SET_LAYER_VISIBLE_REGION:
+    parsed = parseSetLayerVisibleRegion(length);
+    break;
+  case IComposerClient::Command::SET_LAYER_Z_ORDER:
+    parsed = parseSetLayerZOrder(length);
+    break;
+  // Commands from ::android::hardware::graphics::composer::V2_2::IComposerClient follow.
+  case IComposerClient::Command::SET_LAYER_PER_FRAME_METADATA:
+    parsed = parseSetLayerPerFrameMetadata(length);
+    break;
+  case IComposerClient::Command::SET_LAYER_FLOAT_COLOR:
+    parsed = parseSetLayerFloatColor(length);
+    break;
+  // Commands from ::android::hardware::graphics::composer::V2_3::IComposerClient follow.
+  case IComposerClient::Command::SET_LAYER_COLOR_TRANSFORM:
+    parsed = parseSetLayerColorTransform(length);
+    break;
+  case IComposerClient::Command::SET_LAYER_PER_FRAME_METADATA_BLOBS:
+    parsed = parseSetLayerPerFrameMetadataBlobs(length);
+    break;
+  default:
+    parsed = false;
+    break;
+  }
+
+  return parsed;
+}
+
 Error QtiComposerClient::CommandReader::parse() {
-  IComposerClient::Command command;
+  IQtiComposerClient::Command qticommand;
   uint16_t length;
 
   while (!isEmpty()) {
-    if (!beginCommand(command, length)) {
+    if (!beginCommand(qticommand, length)) {
       break;
     }
 
     bool parsed = false;
-    switch (command) {
-    // Commands from ::android::hardware::graphics::composer::V2_1::IComposerClient follow.
-    case IComposerClient::Command::SELECT_DISPLAY:
-      parsed = parseSelectDisplay(length);
-      // Displays will not be removed while processing the command queue.
-      if (parsed && mClient.mDisplayData.find(mDisplay) == mClient.mDisplayData.end()) {
-        ALOGW("Command::SELECT_DISPLAY: Display %lu not found. Dropping commands.", mDisplay);
-        mDisplay = sdm::HWCCallbacks::kNumDisplays;
-      }
-      break;
-    case IComposerClient::Command::SELECT_LAYER:
-      parsed = parseSelectLayer(length);
-      break;
-    case IComposerClient::Command::SET_COLOR_TRANSFORM:
-      parsed = parseSetColorTransform(length);
-      break;
-    case IComposerClient::Command::SET_CLIENT_TARGET:
-      parsed = parseSetClientTarget(length);
-      break;
-    case IComposerClient::Command::SET_OUTPUT_BUFFER:
-      parsed = parseSetOutputBuffer(length);
-      break;
-    case IComposerClient::Command::VALIDATE_DISPLAY:
-      parsed = parseValidateDisplay(length);
-      break;
-    case IComposerClient::Command::ACCEPT_DISPLAY_CHANGES:
-      parsed = parseAcceptDisplayChanges(length);
-      break;
-    case IComposerClient::Command::PRESENT_DISPLAY:
-      parsed = parsePresentDisplay(length);
-      break;
-    case IComposerClient::Command::PRESENT_OR_VALIDATE_DISPLAY:
-      parsed = parsePresentOrValidateDisplay(length);
-      break;
-    case IComposerClient::Command::SET_LAYER_CURSOR_POSITION:
-      parsed = parseSetLayerCursorPosition(length);
-      break;
-    case IComposerClient::Command::SET_LAYER_BUFFER:
-      parsed = parseSetLayerBuffer(length);
-      break;
-    case IComposerClient::Command::SET_LAYER_SURFACE_DAMAGE:
-      parsed = parseSetLayerSurfaceDamage(length);
-      break;
-    case IComposerClient::Command::SET_LAYER_BLEND_MODE:
-      parsed = parseSetLayerBlendMode(length);
-      break;
-    case IComposerClient::Command::SET_LAYER_COLOR:
-      parsed = parseSetLayerColor(length);
-      break;
-    case IComposerClient::Command::SET_LAYER_COMPOSITION_TYPE:
-      parsed = parseSetLayerCompositionType(length);
-      break;
-    case IComposerClient::Command::SET_LAYER_DATASPACE:
-      parsed = parseSetLayerDataspace(length);
-      break;
-    case IComposerClient::Command::SET_LAYER_DISPLAY_FRAME:
-      parsed = parseSetLayerDisplayFrame(length);
-      break;
-    case IComposerClient::Command::SET_LAYER_PLANE_ALPHA:
-      parsed = parseSetLayerPlaneAlpha(length);
-      break;
-    case IComposerClient::Command::SET_LAYER_SIDEBAND_STREAM:
-      parsed = parseSetLayerSidebandStream(length);
-      break;
-    case IComposerClient::Command::SET_LAYER_SOURCE_CROP:
-      parsed = parseSetLayerSourceCrop(length);
-      break;
-    case IComposerClient::Command::SET_LAYER_TRANSFORM:
-      parsed = parseSetLayerTransform(length);
-      break;
-    case IComposerClient::Command::SET_LAYER_VISIBLE_REGION:
-      parsed = parseSetLayerVisibleRegion(length);
-      break;
-    case IComposerClient::Command::SET_LAYER_Z_ORDER:
-      parsed = parseSetLayerZOrder(length);
-      break;
-    // Commands from ::android::hardware::graphics::composer::V2_2::IComposerClient follow.
-    case IComposerClient::Command::SET_LAYER_PER_FRAME_METADATA:
-      parsed = parseSetLayerPerFrameMetadata(length);
-      break;
-    case IComposerClient::Command::SET_LAYER_FLOAT_COLOR:
-      parsed = parseSetLayerFloatColor(length);
-      break;
-    // Commands from ::android::hardware::graphics::composer::V2_3::IComposerClient follow.
-    case IComposerClient::Command::SET_LAYER_COLOR_TRANSFORM:
-      parsed = parseSetLayerColorTransform(length);
-      break;
-    case IComposerClient::Command::SET_LAYER_PER_FRAME_METADATA_BLOBS:
-      parsed = parseSetLayerPerFrameMetadataBlobs(length);
-      break;
-    default:
-      parsed = false;
-      break;
+    switch (qticommand) {
+      case IQtiComposerClient::Command::SET_LAYER_TYPE:
+        parsed = parseSetLayerType(length);
+        break;
+      default:
+        parsed = parseCommonCmd(static_cast<IComposerClient::Command>(qticommand), length);
+        break;
     }
 
     endCommand();
 
     if (!parsed) {
       ALOGE("failed to parse command 0x%x, length %" PRIu16,
-          command, length);
+          qticommand, length);
       break;
     }
   }
@@ -1629,6 +1640,20 @@ bool QtiComposerClient::CommandReader::parseSetLayerZOrder(uint16_t length) {
   return true;
 }
 
+bool QtiComposerClient::CommandReader::parseSetLayerType(uint16_t length) {
+  if (length != CommandWriter::kSetLayerTypeLength) {
+    return false;
+  }
+
+  auto err = mClient.hwc_session_->SetLayerType(mDisplay, mLayer,
+            static_cast<IQtiComposerClient::LayerType>(read()));
+  if (static_cast<Error>(err) != Error::NONE) {
+    mWriter.setError(getCommandLoc(), static_cast<Error>(err));
+  }
+
+  return true;
+}
+
 bool QtiComposerClient::CommandReader::parseSetLayerPerFrameMetadata(uint16_t length) {
   // (key, value) pairs
   if (length % 2 != 0) {
@@ -1844,7 +1869,7 @@ Error QtiComposerClient::CommandReader::updateBuffer(BufferCache cache, uint32_t
 // Methods from ::android::hidl::base::V1_0::IBase follow.
 
 IQtiComposerClient* HIDL_FETCH_IQtiComposerClient(const char* /* name */) {
-  return new QtiComposerClient();
+  return QtiComposerClient::CreateQtiComposerClientInstance();
 }
 
 }  // namespace implementation

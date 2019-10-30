@@ -213,6 +213,10 @@ class HWCDisplay : public DisplayEventHandler {
     return HWC2::Error::Unsupported;
   }
 
+  virtual bool IsSmartPanelConfig(uint32_t config_id) {
+    return false;
+  }
+
   // Display Configurations
   static uint32_t GetThrottlingRefreshRate() { return HWCDisplay::throttling_refresh_rate_; }
   static void SetThrottlingRefreshRate(uint32_t newRefreshRate)
@@ -329,6 +333,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error CreateLayer(hwc2_layer_t *out_layer_id);
   virtual HWC2::Error DestroyLayer(hwc2_layer_t layer_id);
   virtual HWC2::Error SetLayerZOrder(hwc2_layer_t layer_id, uint32_t z);
+  virtual HWC2::Error SetLayerType(hwc2_layer_t layer_id, IQtiComposerClient::LayerType type);
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests) = 0;
   virtual HWC2::Error GetReleaseFences(uint32_t *out_num_elements, hwc2_layer_t *out_layers,
                                        int32_t *out_fences);
@@ -362,10 +367,10 @@ class HWCDisplay : public DisplayEventHandler {
   virtual void PostPowerMode();
   virtual HWC2::PowerMode GetPendingPowerMode() {
     return pending_power_mode_;
-  };
+  }
   virtual void ClearPendingPowerMode() {
     pending_power_mode_ = current_power_mode_;
-  };
+  }
   virtual void NotifyClientStatus(bool connected) { client_connected_ = connected; }
 
  protected:
@@ -398,6 +403,7 @@ class HWCDisplay : public DisplayEventHandler {
   uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate);
   virtual void GetUnderScanConfig() { }
   int32_t SetClientTargetDataSpace(int32_t dataspace);
+  int SetFrameBufferConfig(uint32_t x_pixels, uint32_t y_pixels);
 
   bool validated_ = false;
   bool layer_stack_invalid_ = true;
@@ -451,23 +457,26 @@ class HWCDisplay : public DisplayEventHandler {
   std::map<uint32_t, DisplayConfigVariableInfo> variable_config_map_;
   std::vector<uint32_t> hwc_config_map_;
   bool client_connected_ = true;
+  bool pending_config_ = false;
+  bool has_client_composition_ = false;
 
  private:
   void DumpInputBuffers(void);
   bool CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests);
   void UpdateRefreshRate();
   void WaitOnPreviousFence();
+  void UpdateActiveConfig();
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
   uint32_t geometry_changes_ = GeometryChanges::kNone;
   bool animating_ = false;
   int null_display_mode_ = 0;
-  bool has_client_composition_ = false;
   DisplayValidateState validate_state_ = kNormalValidate;
   bool fast_path_enabled_ = true;
   bool first_cycle_ = true;  // false if a display commit has succeeded on the device.
   int fbt_release_fence_ = -1;
   int release_fence_ = -1;
+  hwc2_config_t pending_config_index_ = 0;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {

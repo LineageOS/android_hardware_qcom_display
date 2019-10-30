@@ -82,10 +82,11 @@ class BufferCacheEntry {
 };
 
 class QtiComposerClient : public IQtiComposerClient {
- public:
   QtiComposerClient();
   virtual ~QtiComposerClient();
+  static QtiComposerClient* qti_composerclient_instance_;
 
+ public:
   // Methods from ::android::hardware::graphics::composer::V2_1::IComposerClient follow.
   Return<void> registerCallback(const sp<composer_V2_1::IComposerCallback>& callback) override;
   Return<uint32_t> getMaxVirtualDisplayCount() override;
@@ -206,6 +207,20 @@ class QtiComposerClient : public IQtiComposerClient {
     return (mCapabilities.count(capability) > 0);
   }
 
+  static QtiComposerClient* CreateQtiComposerClientInstance() {
+    if (!qti_composerclient_instance_) {
+      qti_composerclient_instance_ = new QtiComposerClient();
+      return qti_composerclient_instance_;
+    }
+    return nullptr;
+  }
+
+  void onLastStrongRef(const void* id) {
+    if (qti_composerclient_instance_) {
+      qti_composerclient_instance_ = nullptr;
+    }
+  }
+
  private:
   struct LayerBuffers {
     std::vector<BufferCacheEntry> Buffers;
@@ -221,12 +236,12 @@ class QtiComposerClient : public IQtiComposerClient {
 
     std::unordered_map<Layer, LayerBuffers> Layers;
 
-    DisplayData(bool isVirtual) : IsVirtual(isVirtual) {}
+    explicit DisplayData(bool isVirtual) : IsVirtual(isVirtual) {}
   };
 
   class CommandReader : public CommandReaderBase {
    public:
-    CommandReader(QtiComposerClient& client);
+    explicit CommandReader(QtiComposerClient& client);
     Error parse();
     Error validateDisplay(Display display, std::vector<Layer>& changedLayers,
                           std::vector<IComposerClient::Composition>& compositionTypes,
@@ -260,6 +275,7 @@ class QtiComposerClient : public IQtiComposerClient {
     bool parseSetLayerTransform(uint16_t length);
     bool parseSetLayerVisibleRegion(uint16_t length);
     bool parseSetLayerZOrder(uint16_t length);
+    bool parseSetLayerType(uint16_t length);
 
     // Commands from ::android::hardware::graphics::composer::V2_2::IComposerClient follow.
     bool parseSetLayerPerFrameMetadata(uint16_t length);
@@ -268,6 +284,8 @@ class QtiComposerClient : public IQtiComposerClient {
     // Commands from ::android::hardware::graphics::composer::V2_3::IComposerClient follow.
     bool parseSetLayerColorTransform(uint16_t length);
     bool parseSetLayerPerFrameMetadataBlobs(uint16_t length);
+
+    bool parseCommonCmd(IComposerClient::Command command, uint16_t length);
 
     hwc_rect_t readRect();
     std::vector<hwc_rect_t> readRegion(size_t count);

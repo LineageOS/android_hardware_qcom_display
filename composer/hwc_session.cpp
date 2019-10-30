@@ -170,7 +170,6 @@ int HWCSession::Init() {
     return -EINVAL;
   }
 
-  StartServices();
   HWCDebugHandler::Get()->GetProperty(ENABLE_NULL_DISPLAY_PROP, &null_display_mode_);
   HWCDebugHandler::Get()->GetProperty(DISABLE_HOTPLUG_BWCHECK, &disable_hotplug_bwcheck_);
   HWCDebugHandler::Get()->GetProperty(DISABLE_MASK_LAYER_HINT, &disable_mask_layer_hint_);
@@ -194,6 +193,7 @@ int HWCSession::Init() {
   }
 
   is_composer_up_ = true;
+  StartServices();
 
   return 0;
 }
@@ -284,6 +284,11 @@ void HWCSession::InitSupportedDisplaySlots() {
     CoreInterface::DestroyCore();
     DLOGE("Could not find maximum virtual displays supported. Error = %d", error);
     return;
+  }
+
+  if (max_virtual == 0) {
+    // Check if WB using GPU is supported.
+    max_virtual += virtual_display_factory_.IsGPUColorConvertSupported() ? 1 : 0;
   }
 
   if (kPluggable == hw_disp_info.type) {
@@ -483,7 +488,7 @@ void HWCSession::Dump(uint32_t *out_size, char *out_buffer) {
     return;
   }
 
-  const size_t max_dump_size = 8192;
+  const size_t max_dump_size = 16384;  // 16 kB
 
   if (out_buffer == nullptr) {
     *out_size = max_dump_size;
@@ -903,6 +908,11 @@ int32_t HWCSession::SetLayerZOrder(hwc2_display_t display, hwc2_layer_t layer, u
   return CallDisplayFunction(display, &HWCDisplay::SetLayerZOrder, layer, z);
 }
 
+int32_t HWCSession::SetLayerType(hwc2_display_t display, hwc2_layer_t layer,
+                                 IQtiComposerClient::LayerType type) {
+  return CallDisplayFunction(display, &HWCDisplay::SetLayerType, layer, type);
+}
+
 int32_t HWCSession::SetLayerColorTransform(hwc2_display_t display, hwc2_layer_t layer,
                                            const float *matrix) {
   return CallLayerFunction(display, layer, &HWCLayer::SetLayerColorTransform, matrix);
@@ -1110,9 +1120,9 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
           continue;
         }
 
-        status = HWCDisplayVirtual::Create(core_intf_, &buffer_allocator_, &callbacks_, client_id,
-                                           info.display_id, width, height, format, &hwc_display,
-                                           set_min_lum_, set_max_lum_);
+        status = virtual_display_factory_.Create(core_intf_, &buffer_allocator_, &callbacks_,
+                                                 client_id, info.display_id, width, height,
+                                                 format, set_min_lum_, set_max_lum_, &hwc_display);
         // TODO(user): validate width and height support
         if (status) {
           return HWC2::Error::NoResources;
@@ -1907,7 +1917,6 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
   PPPendingParams pending_action;
   PPDisplayAPIPayload resp_payload, req_payload;
   uint8_t *disp_id = NULL;
-  bool invalidate_needed = true;
   int32_t *mode_id = NULL;
 
   if (!color_mgr_) {
@@ -1945,10 +1954,7 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
       DLOGV_IF(kTagQDCM, "pending action = %d, display_id = %d", BITMAP(count), display_id);
       switch (BITMAP(count)) {
         case kInvalidating:
-          {
-            invalidate_needed = false;
-            callbacks_.Refresh(display_id);
-          }
+          callbacks_.Refresh(display_id);
           break;
         case kEnterQDCMMode:
           ret = color_mgr_->EnableQDCMMode(true, hwc_display_[display_id]);
@@ -2064,9 +2070,7 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
   resp_payload.DestroyPayload();
 
   SEQUENCE_WAIT_SCOPE_LOCK(locker_[display_id]);
-  if (invalidate_needed) {
-    hwc_display_[display_id]->ResetValidation();
-  }
+  hwc_display_[display_id]->ResetValidation();
 
   return ret;
 }
@@ -2704,7 +2708,7 @@ void HWCSession::DestroyNonPluggableDisplay(DisplayMapInfo *map_info) {
       HWCDisplayBuiltIn::Destroy(hwc_display);
       break;
     default:
-      HWCDisplayVirtual::Destroy(hwc_display);
+      virtual_display_factory_.Destroy(hwc_display);
       break;
     }
 

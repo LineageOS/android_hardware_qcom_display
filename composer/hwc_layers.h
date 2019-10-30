@@ -34,6 +34,7 @@
 #undef HWC2_INCLUDE_STRINGIFICATION
 #undef HWC2_USE_CPP11
 #include <android/hardware/graphics/composer/2.2/IComposerClient.h>
+#include <vendor/qti/hardware/display/composer/2.0/IQtiComposerClient.h>
 #include <deque>
 #include <map>
 #include <set>
@@ -42,6 +43,7 @@
 
 using PerFrameMetadataKey =
     android::hardware::graphics::composer::V2_2::IComposerClient::PerFrameMetadataKey;
+using vendor::qti::hardware::display::composer::V2_0::IQtiComposerClient;
 
 namespace sdm {
 
@@ -67,12 +69,20 @@ enum GeometryChanges {
   kBufferGeometry = 0x200,
 };
 
+enum LayerTypes {
+  kLayerUnknown = 0,
+  kLayerApp = 1,
+  kLayerGame = 2,
+  kLayerBrowser = 3,
+};
+
 class HWCLayer {
  public:
   explicit HWCLayer(hwc2_display_t display_id, HWCBufferAllocator *buf_allocator);
   ~HWCLayer();
   uint32_t GetZ() const { return z_; }
   hwc2_layer_t GetId() const { return id_; }
+  LayerTypes GetType() const { return type_; }
   Layer *GetSDMLayer() { return layer_; }
   void ResetPerFrameData();
 
@@ -91,6 +101,7 @@ class HWCLayer {
   HWC2::Error SetLayerPerFrameMetadata(uint32_t num_elements, const PerFrameMetadataKey *keys,
                                        const float *metadata);
   HWC2::Error SetLayerZOrder(uint32_t z);
+  HWC2::Error SetLayerType(IQtiComposerClient::LayerType type);
   HWC2::Error SetLayerColorTransform(const float *matrix);
   void SetComposition(const LayerComposition &sdm_composition);
   HWC2::Composition GetClientRequestedCompositionType() { return client_requested_; }
@@ -108,6 +119,7 @@ class HWCLayer {
   bool IsScalingPresent();
   bool IsRotationPresent();
   bool IsDataSpaceSupported();
+  bool IsProtected() { return secure_; }
   static LayerBufferFormat GetSDMFormat(const int32_t &source, const int flags);
   bool IsSurfaceUpdated() { return surface_updated_; }
   void SetPartialUpdate(bool enabled) { partial_update_enabled_ = enabled; }
@@ -120,6 +132,7 @@ class HWCLayer {
 
  private:
   Layer *layer_ = nullptr;
+  LayerTypes type_ = kLayerUnknown;
   uint32_t z_ = 0;
   const hwc2_layer_t id_;
   const hwc2_display_t display_id_;
@@ -138,6 +151,7 @@ class HWCLayer {
   bool has_metadata_refresh_rate_ = false;
   bool color_transform_matrix_set_ = false;
   bool buffer_flipped_ = false;
+  bool secure_ = false;
 
   // Composition requested by client(SF)
   HWC2::Composition client_requested_ = HWC2::Composition::Device;

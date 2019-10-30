@@ -166,6 +166,9 @@ struct LayerFlags {
 
       uint32_t color_transform : 1;  //!< This flag will be set by SDM when the layer
                                      //!< has a custom matrix
+
+      uint32_t is_game : 1;  //!< This flag shall be set by client to indicate that this layer
+                             //!< is a game layer.
     };
 
     uint32_t flags = 0;       //!< For initialization purpose only.

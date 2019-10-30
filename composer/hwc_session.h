@@ -20,7 +20,8 @@
 #ifndef __HWC_SESSION_H__
 #define __HWC_SESSION_H__
 
-#include <vendor/display/config/1.10/IDisplayConfig.h>
+#include <vendor/display/config/1.12/IDisplayConfig.h>
+#include <vendor/qti/hardware/display/composer/2.0/IQtiComposerClient.h>
 
 #include <core/core_interface.h>
 #include <utils/locker.h>
@@ -44,10 +45,11 @@
 #include "hwc_socket_handler.h"
 #include "hwc_display_event_handler.h"
 #include "hwc_buffer_sync_handler.h"
+#include "hwc_display_virtual_factory.h"
 
 namespace sdm {
 
-using vendor::display::config::V1_10::IDisplayConfig;
+using vendor::display::config::V1_12::IDisplayConfig;
 using vendor::display::config::V1_10::IDisplayCWBCallback;
 
 using ::android::hardware::Return;
@@ -55,6 +57,8 @@ using ::android::hardware::hidl_string;
 using android::hardware::hidl_handle;
 using ::android::hardware::hidl_vec;
 using ::android::sp;
+
+using vendor::qti::hardware::display::composer::V2_0::IQtiComposerClient;
 
 int32_t GetDataspaceFromColorMode(ColorMode mode);
 
@@ -232,6 +236,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int32_t SetLayerSourceCrop(hwc2_display_t display, hwc2_layer_t layer, hwc_frect_t crop);
   int32_t SetLayerTransform(hwc2_display_t display, hwc2_layer_t layer, int32_t int_transform);
   int32_t SetLayerZOrder(hwc2_display_t display, hwc2_layer_t layer, uint32_t z);
+  int32_t SetLayerType(hwc2_display_t display, hwc2_layer_t layer,
+                       IQtiComposerClient::LayerType type);
   int32_t SetLayerSurfaceDamage(hwc2_display_t display, hwc2_layer_t layer, hwc_region_t damage);
   int32_t SetLayerVisibleRegion(hwc2_display_t display, hwc2_layer_t layer, hwc_region_t damage);
   int32_t SetLayerCompositionType(hwc2_display_t display, hwc2_layer_t layer, int32_t int_type);
@@ -392,6 +398,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   Return<int32_t> setCWBOutputBuffer(const sp<IDisplayCWBCallback> &callback,
                                      uint32_t disp_id, const Rect &rect, bool post_processed,
                                      const hidl_handle& buffer) override;
+  Return<int32_t> setQsyncMode(uint32_t disp_id, IDisplayConfig::QsyncMode mode) override;
+  Return<bool> isSmartPanelConfig(uint32_t disp_id, uint32_t config_id) override;
 
   // QClient methods
   virtual android::status_t notifyCallback(uint32_t command, const android::Parcel *input_parcel,
@@ -446,6 +454,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   HWCCallbacks callbacks_;
   HWCBufferAllocator buffer_allocator_;
   HWCBufferSyncHandler buffer_sync_handler_;
+  HWCVirtualDisplayFactory virtual_display_factory_;
   HWCColorManager *color_mgr_ = nullptr;
   DisplayMapInfo map_info_primary_;                 // Primary display (either builtin or pluggable)
   std::vector<DisplayMapInfo> map_info_builtin_;    // Builtin displays excluding primary

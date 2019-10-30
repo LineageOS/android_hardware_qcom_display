@@ -186,6 +186,18 @@ DisplayError CompManager::UnregisterDisplay(Handle display_ctx) {
   return kErrorNone;
 }
 
+DisplayError CompManager::CheckEnforceSplit(Handle comp_handle,
+                                            uint32_t new_refresh_rate) {
+  SCOPE_LOCK(locker_);
+  DisplayError error = kErrorNone;
+  DisplayCompositionContext *display_comp_ctx =
+                             reinterpret_cast<DisplayCompositionContext *>(comp_handle);
+
+  error = resource_intf_->Perform(ResourceInterface::kCmdCheckEnforceSplit,
+                                  display_comp_ctx->display_resource_ctx, new_refresh_rate);
+  return error;
+}
+
 DisplayError CompManager::ReconfigureDisplay(Handle comp_handle,
                                              const HWDisplayAttributes &display_attributes,
                                              const HWPanelInfo &hw_panel_info,
@@ -207,6 +219,12 @@ DisplayError CompManager::ReconfigureDisplay(Handle comp_handle,
 
   error = resource_intf_->Perform(ResourceInterface::kCmdGetDefaultClk,
                                   display_comp_ctx->display_resource_ctx, default_clk_hz);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  error = resource_intf_->Perform(ResourceInterface::kCmdCheckEnforceSplit,
+                                  display_comp_ctx->display_resource_ctx, display_attributes.fps);
   if (error != kErrorNone) {
     return error;
   }
@@ -333,12 +351,13 @@ DisplayError CompManager::PostPrepare(Handle display_ctx, HWLayers *hw_layers) {
   Handle &display_resource_ctx = display_comp_ctx->display_resource_ctx;
 
   DisplayError error = kErrorNone;
+
+  display_comp_ctx->strategy->Stop();
+
   error = resource_intf_->PostPrepare(display_resource_ctx, hw_layers);
   if (error != kErrorNone) {
     return error;
   }
-
-  display_comp_ctx->strategy->Stop();
 
   return kErrorNone;
 }
@@ -540,7 +559,15 @@ DisplayError CompManager::ControlDpps(bool enable) {
   // DPPS feature and HDR using SSPP tone mapping can co-exist
   // DPPS feature and HDR using DSPP tone mapping are mutually exclusive
   if (dpps_ctrl_intf_ && hw_res_info_.src_tone_map.none()) {
-    return enable ? dpps_ctrl_intf_->On() : dpps_ctrl_intf_->Off();
+    int err = 0;
+    if (enable) {
+      err = dpps_ctrl_intf_->On();
+    } else {
+      err = dpps_ctrl_intf_->Off();
+    }
+    if (err) {
+      return kErrorUndefined;
+    }
   }
 
   return kErrorNone;

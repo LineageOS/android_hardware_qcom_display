@@ -859,6 +859,13 @@ DisplayError HWCDisplayBuiltIn::GetMixerResolution(uint32_t *width, uint32_t *he
 }
 
 HWC2::Error HWCDisplayBuiltIn::SetQSyncMode(QSyncMode qsync_mode) {
+  // Client needs to ensure that config change and qsync mode change
+  // are not triggered in the same drawcycle.
+  if (pending_config_) {
+    DLOGE("Failed to set qsync mode. Pending active config transition");
+    return HWC2::Error::Unsupported;
+  }
+
   auto err = display_intf_->SetQSyncMode(qsync_mode);
   if (err != kErrorNone) {
     return HWC2::Error::Unsupported;
@@ -958,9 +965,28 @@ HWC2::Error HWCDisplayBuiltIn::SetClientTarget(buffer_handle_t target, int32_t a
   }
 
   Layer *sdm_layer = client_target_->GetSDMLayer();
-  SetFrameBufferResolution(sdm_layer->input_buffer.unaligned_width,
-                           sdm_layer->input_buffer.unaligned_height);
+  uint32_t fb_width = 0, fb_height = 0;
+
+  GetFrameBufferResolution(&fb_width, &fb_height);
+
+  if (fb_width != sdm_layer->input_buffer.unaligned_width ||
+      fb_height != sdm_layer->input_buffer.unaligned_height) {
+    if (SetFrameBufferConfig(sdm_layer->input_buffer.unaligned_width,
+                             sdm_layer->input_buffer.unaligned_height)) {
+      return HWC2::Error::BadParameter;
+    }
+  }
 
   return HWC2::Error::None;
 }
+
+bool HWCDisplayBuiltIn::IsSmartPanelConfig(uint32_t config_id) {
+  if (config_id < hwc_config_map_.size()) {
+    uint32_t index = hwc_config_map_.at(config_id);
+    return variable_config_map_.at(index).smart_panel;
+  }
+
+  return false;
+}
+
 }  // namespace sdm

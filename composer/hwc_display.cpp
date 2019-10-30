@@ -785,6 +785,11 @@ void HWCDisplay::BuildLayerStack() {
       layer->update_mask.set(kClientCompRequest);
     }
 
+    if (hwc_layer->GetType() == kLayerGame) {
+      layer->flags.is_game = true;
+      layer->input_buffer.flags.game = true;
+    }
+
     layer_stack_.layers.push_back(layer);
   }
 
@@ -822,6 +827,18 @@ void HWCDisplay::BuildSolidFillStack() {
   layer_stack_.flags.geometry_changed = 1U;
   // Append client target to the layer stack
   layer_stack_.layers.push_back(client_target_->GetSDMLayer());
+}
+
+HWC2::Error HWCDisplay::SetLayerType(hwc2_layer_t layer_id, IQtiComposerClient::LayerType type) {
+  const auto map_layer = layer_map_.find(layer_id);
+  if (map_layer == layer_map_.end()) {
+    DLOGE("[%" PRIu64 "] SetLayerType failed to find layer", id_);
+    return HWC2::Error::BadLayer;
+  }
+
+  const auto layer = map_layer->second;
+  layer->SetLayerType(type);
+  return HWC2::Error::None;
 }
 
 HWC2::Error HWCDisplay::SetLayerZOrder(hwc2_layer_t layer_id, uint32_t z) {
@@ -1139,7 +1156,12 @@ HWC2::Error HWCDisplay::GetActiveConfig(hwc2_config_t *out_config) {
     return HWC2::Error::BadDisplay;
   }
 
-  GetActiveDisplayConfig(out_config);
+  if (pending_config_) {
+    *out_config = pending_config_index_;
+  } else {
+    GetActiveDisplayConfig(out_config);
+  }
+
   if (*out_config < hwc_config_map_.size()) {
     *out_config = hwc_config_map_.at(*out_config);
   }
@@ -1178,11 +1200,22 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, int32_t acquire_
 HWC2::Error HWCDisplay::SetActiveConfig(hwc2_config_t config) {
   DTRACE_SCOPED();
 
-  if (SetActiveDisplayConfig(config) != kErrorNone) {
-    return HWC2::Error::BadConfig;
+  hwc2_config_t current_config = 0;
+  GetActiveConfig(&current_config);
+  if (current_config == config) {
+    return HWC2::Error::None;
   }
+  DLOGI("Active configuration changed to: %d", config);
+
+  // Store config index to be applied upon refresh.
+  pending_config_ = true;
+  pending_config_index_ = config;
 
   validated_ = false;
+
+  // Trigger refresh. This config gets applied on next commit.
+  callbacks_->Refresh(id_);
+
   return HWC2::Error::None;
 }
 
@@ -1242,12 +1275,14 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
       validated_ = false;
       break;
     }
-    case kThermalEvent:
-    case kPanelDeadEvent: {
+    case kInvalidateDisplay:
+    case kThermalEvent: {
       SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[id_]);
       validated_ = false;
     } break;
+    case kPanelDeadEvent:
     case kDisplayPowerResetEvent: {
+      SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[id_]);
       validated_ = false;
       if (event_handler_) {
         event_handler_->DisplayPowerReset();
@@ -1282,6 +1317,7 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
   }
 
   UpdateRefreshRate();
+  UpdateActiveConfig();
   DisplayError error = display_intf_->Prepare(&layer_stack_);
   if (error != kErrorNone) {
     if (error == kErrorShutDown) {
@@ -1767,7 +1803,7 @@ const char *HWCDisplay::GetDisplayString() {
   }
 }
 
-int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
+int HWCDisplay::SetFrameBufferConfig(uint32_t x_pixels, uint32_t y_pixels) {
   if (x_pixels <= 0 || y_pixels <= 0) {
     DLOGW("Unsupported config: x_pixels=%d, y_pixels=%d", x_pixels, y_pixels);
     return -EINVAL;
@@ -1792,12 +1828,25 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
   // Create rects to represent the new source and destination crops
   LayerRect crop = LayerRect(0, 0, FLOAT(x_pixels), FLOAT(y_pixels));
   hwc_rect_t scaled_display_frame = {0, 0, INT(x_pixels), INT(y_pixels)};
+  auto client_target_layer = client_target_->GetSDMLayer();
+  client_target_layer->src_rect = crop;
   ApplyScanAdjustment(&scaled_display_frame);
   client_target_->SetLayerDisplayFrame(scaled_display_frame);
   client_target_->ResetPerFrameData();
 
+  DLOGI("New framebuffer resolution (%dx%d)", fb_config.x_pixels, fb_config.y_pixels);
+
+  return 0;
+}
+
+int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
+  int error = SetFrameBufferConfig(x_pixels, y_pixels);
+  if (error < 0) {
+    DLOGV("SetFrameBufferConfig failed. Error = %d", error);
+    return error;
+  }
+
   auto client_target_layer = client_target_->GetSDMLayer();
-  client_target_layer->src_rect = crop;
 
   int aligned_width;
   int aligned_height;
@@ -1825,8 +1874,6 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
   client_target_layer->input_buffer.unaligned_width = x_pixels;
   client_target_layer->input_buffer.unaligned_height = y_pixels;
   client_target_layer->plane_alpha = 255;
-
-  DLOGI("New framebuffer resolution (%dx%d)", fb_config.x_pixels, fb_config.y_pixels);
 
   return 0;
 }
@@ -2189,7 +2236,8 @@ std::string HWCDisplay::Dump() {
        << layer->GetLayerDataspace() << std::dec << std::setfill(' ');
     os << " transform: " << transform.rotation << "/" << transform.flip_horizontal <<
           "/"<< transform.flip_vertical;
-    os << " buffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec
+    os << " buffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec;
+    os << " secure: " << layer->IsProtected()
        << std::endl;
   }
 
@@ -2199,7 +2247,8 @@ std::string HWCDisplay::Dump() {
     os << "format: " << std::setw(14) << GetFormatString(sdm_layer->input_buffer.format);
     os << " dataspace:" << std::hex << "0x" << std::setw(8) << std::setfill('0')
        << client_target_->GetLayerDataspace() << std::dec << std::setfill(' ');
-    os << "  buffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec
+    os << "  buffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec;
+    os << " secure: " << client_target_->IsProtected()
        << std::endl;
   }
 
@@ -2381,6 +2430,20 @@ void HWCDisplay::SetLayerStack(HWCLayerStack *stack) {
   client_target_ = stack->client_target;
   layer_map_ = stack->layer_map;
   layer_set_ = stack->layer_set;
+}
+
+void HWCDisplay::UpdateActiveConfig() {
+  if (!pending_config_) {
+    return;
+  }
+
+  DisplayError error = display_intf_->SetActiveConfig(pending_config_index_);
+  if (error != kErrorNone) {
+    DLOGI("Failed to set %d config", INT(pending_config_index_));
+  }
+
+  // Reset pending config.
+  pending_config_ = false;
 }
 
 }  // namespace sdm

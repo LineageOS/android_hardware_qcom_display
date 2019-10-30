@@ -134,11 +134,6 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
   uint32_t new_mixer_height = 0;
   uint32_t display_width = display_attributes_.x_pixels;
   uint32_t display_height = display_attributes_.y_pixels;
-  if (reset_panel_) {
-    DLOGW("panel is in bad state, resetting the panel");
-    ResetPanel();
-    reset_panel_ = false;
-  }
 
   DTRACE_SCOPED();
   if (NeedsMixerReconfiguration(layer_stack, &new_mixer_width, &new_mixer_height)) {
@@ -148,14 +143,17 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
     }
   } else {
     if (CanSkipDisplayPrepare(layer_stack)) {
-      hw_layers_.hw_avr_info.enable = NeedsAVREnable();
+      hw_layers_.hw_avr_info.update = needs_avr_update_;
+      hw_layers_.hw_avr_info.mode = GetAvrMode(qsync_mode_);
       return kErrorNone;
     }
   }
 
   // Clean hw layers for reuse.
   hw_layers_ = HWLayers();
-  hw_layers_.hw_avr_info.enable = NeedsAVREnable();
+
+  hw_layers_.hw_avr_info.update = needs_avr_update_;
+  hw_layers_.hw_avr_info.mode = GetAvrMode(qsync_mode_);
 
   left_frame_roi_ = {};
   right_frame_roi_ = {};
@@ -171,6 +169,20 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
   }
 
   return error;
+}
+
+HWAVRModes DisplayBuiltIn::GetAvrMode(QSyncMode mode) {
+  switch (mode) {
+     case kQSyncModeNone:
+       return kQsyncNone;
+     case kQSyncModeContinuous:
+       return kContinuousMode;
+     case kQsyncModeOneShot:
+     case kQsyncModeOneShotContinuous:
+       return kOneShotMode;
+     default:
+       return kQsyncNone;
+  }
 }
 
 DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
@@ -228,7 +240,24 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
     ControlPartialUpdate(true /* enable */, &pending);
   }
 
+  if (dpps_pu_nofiy_pending_) {
+    dpps_pu_nofiy_pending_ = false;
+    dpps_pu_lock_.Broadcast();
+  }
   dpps_info_.Init(this, hw_panel_info_.panel_name);
+
+  if (qsync_mode_ == kQsyncModeOneShot) {
+    // Reset qsync mode.
+    SetQSyncMode(kQSyncModeNone);
+  } else if (qsync_mode_ == kQsyncModeOneShotContinuous) {
+    // No action needed.
+  } else if (qsync_mode_ == kQSyncModeContinuous) {
+    needs_avr_update_ = false;
+  } else if (qsync_mode_ == kQSyncModeNone) {
+    needs_avr_update_ = false;
+  }
+
+  first_cycle_ = false;
 
   return error;
 }
@@ -376,7 +405,7 @@ DisplayError DisplayBuiltIn::TeardownConcurrentWriteback(void) {
 DisplayError DisplayBuiltIn::SetRefreshRate(uint32_t refresh_rate, bool final_rate) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
-  if (!active_ || !hw_panel_info_.dynamic_fps) {
+  if (!active_ || !hw_panel_info_.dynamic_fps || qsync_mode_ != kQSyncModeNone) {
     return kErrorNotSupported;
   }
 
@@ -395,6 +424,11 @@ DisplayError DisplayBuiltIn::SetRefreshRate(uint32_t refresh_rate, bool final_ra
       // Attempt to update refresh rate can fail if rf interfenence is detected.
       // Just drop min fps settting for now.
       handle_idle_timeout_ = false;
+      return error;
+    }
+
+    error = comp_manager_->CheckEnforceSplit(display_comp_ctx_, refresh_rate);
+    if (error != kErrorNone) {
       return error;
     }
   }
@@ -525,14 +559,6 @@ DisplayError DisplayBuiltIn::DisablePartialUpdateOneFrame() {
   return kErrorNone;
 }
 
-bool DisplayBuiltIn::NeedsAVREnable() {
-  if (avr_prop_disabled_ || qsync_mode_ == kQSyncModeNone) {
-    return false;
-  }
-
-  return hw_panel_info_.qsync_support;
-}
-
 DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size_t size) {
   DisplayError error = kErrorNone;
   uint32_t pending;
@@ -562,7 +588,8 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
     case kDppsScreenRefresh:
       event_handler_->Refresh();
       break;
-    case kDppsPartialUpdate:
+    case kDppsPartialUpdate: {
+      int ret;
       if (!payload) {
         DLOGE("Invalid payload parameter for op %d", op);
         error = kErrorParameters;
@@ -570,7 +597,19 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
       }
       enable = *(reinterpret_cast<bool *>(payload));
       ControlPartialUpdate(enable, &pending);
+      event_handler_->HandleEvent(kInvalidateDisplay);
+      event_handler_->Refresh();
+      {
+         lock_guard<recursive_mutex> obj(recursive_mutex_);
+         dpps_pu_nofiy_pending_ = true;
+      }
+      ret = dpps_pu_lock_.WaitFinite(kPuTimeOutMs);
+      if (ret) {
+        DLOGE("failed to %s partial update ret %d", ((enable) ? "enable" : "disable"), ret);
+        error = kErrorTimeOut;
+      }
       break;
+    }
     case kDppsRequestCommit:
       if (!payload) {
         DLOGE("Invalid payload parameter for op %d", op);
@@ -711,10 +750,15 @@ DisplayError DisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event, LayerSt
 
 DisplayError DisplayBuiltIn::SetQSyncMode(QSyncMode qsync_mode) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-  if (qsync_mode == kQsyncModeOneShot) {
+  if (!hw_panel_info_.qsync_support || qsync_mode_ == qsync_mode || first_cycle_) {
+    DLOGE("Failed: qsync_support: %d first_cycle %d mode: %d -> %d", hw_panel_info_.qsync_support,
+          first_cycle_, qsync_mode_, qsync_mode);
     return kErrorNotSupported;
   }
+
   qsync_mode_ = qsync_mode;
+  needs_avr_update_ = true;
+  event_handler_->Refresh();
 
   return kErrorNone;
 }

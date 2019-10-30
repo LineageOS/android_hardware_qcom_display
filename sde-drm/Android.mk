@@ -13,7 +13,7 @@ LOCAL_C_INCLUDES          := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/
                              -isystem external/libdrm
 LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 LOCAL_CFLAGS              := -Wno-missing-field-initializers -Wall -Werror -fno-operator-names \
-                             -Wno-unused-parameter -std=c++11 -DLOG_TAG=\"SDE_DRM\"
+                             -Wno-unused-parameter -DLOG_TAG=\"SDE_DRM\"
 LOCAL_CLANG               := true
 LOCAL_SRC_FILES           := drm_manager.cpp \
                              drm_connector.cpp \

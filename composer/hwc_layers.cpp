@@ -18,12 +18,12 @@
  */
 
 #include "hwc_layers.h"
+#include <qdMetaData.h>
+#include <qd_utils.h>
 #include <utils/debug.h>
 #include <stdint.h>
 #include <utility>
 #include <cmath>
-#include <qdMetaData.h>
-#include <qd_utils.h>
 
 #define __CLASS__ "HWCLayer"
 
@@ -277,16 +277,16 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
   }
 
   // TZ Protected Buffer - L1
-  bool secure = (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER);
-  bool secure_camera = secure && (handle->flags & private_handle_t::PRIV_FLAGS_CAMERA_WRITE);
+  secure_ = (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER);
+  bool secure_camera = secure_ && (handle->flags & private_handle_t::PRIV_FLAGS_CAMERA_WRITE);
   bool secure_display = (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_DISPLAY);
-  if (secure != layer_buffer->flags.secure || secure_camera != layer_buffer->flags.secure_camera ||
+  if (secure_ != layer_buffer->flags.secure || secure_camera != layer_buffer->flags.secure_camera ||
       secure_display != layer_buffer->flags.secure_display) {
     // Secure attribute of layer buffer has changed.
     layer_->update_mask.set(kSecurity);
   }
 
-  layer_buffer->flags.secure = secure;
+  layer_buffer->flags.secure = secure_;
   layer_buffer->flags.secure_camera = secure_camera;
   layer_buffer->flags.secure_display = secure_display;
 
@@ -546,16 +546,39 @@ HWC2::Error HWCLayer::SetLayerZOrder(uint32_t z) {
   return HWC2::Error::None;
 }
 
-HWC2::Error HWCLayer::SetLayerColorTransform(const float *matrix) {
-  std::memcpy(layer_->color_transform_matrix, matrix, sizeof(layer_->color_transform_matrix));
-  layer_->update_mask.set(kColorTransformUpdate);
-
-  if (!std::memcmp(matrix, kIdentityMatrix, sizeof(kIdentityMatrix))) {
-    color_transform_matrix_set_ = false;
-  } else {
-    color_transform_matrix_set_ = true;
+HWC2::Error HWCLayer::SetLayerType(IQtiComposerClient::LayerType type) {
+  LayerTypes layer_type = kLayerUnknown;
+  switch (type) {
+    case IQtiComposerClient::LayerType::UNKNOWN:
+      layer_type = kLayerUnknown;
+      break;
+    case IQtiComposerClient::LayerType::APP:
+      layer_type = kLayerApp;
+      break;
+    case IQtiComposerClient::LayerType::GAME:
+      layer_type = kLayerGame;
+      break;
+    case IQtiComposerClient::LayerType::BROWSER:
+      layer_type = kLayerBrowser;
+      break;
+    default:
+      DLOGW("Unsupported layer type %d", layer_type);
+      break;
   }
 
+  type_ = layer_type;
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCLayer::SetLayerColorTransform(const float *matrix) {
+  if (std::memcmp(matrix, layer_->color_transform_matrix, sizeof(layer_->color_transform_matrix))) {
+    std::memcpy(layer_->color_transform_matrix, matrix, sizeof(layer_->color_transform_matrix));
+    layer_->update_mask.set(kColorTransformUpdate);
+    color_transform_matrix_set_ = true;
+    if (!std::memcmp(matrix, kIdentityMatrix, sizeof(kIdentityMatrix))) {
+      color_transform_matrix_set_ = false;
+    }
+  }
   return HWC2::Error::None;
 }
 

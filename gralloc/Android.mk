@@ -5,6 +5,7 @@ qmaa_flags := ""
 ifeq ($(TARGET_USES_QMAA),true)
 ifeq ($(TARGET_USES_QMAA_OVERRIDE_DISPLAY),false)
 qmaa_flags := -DQMAA -Wno-unused-parameter -Wno-unused-variable
+qmaa_flags += -DTARGET_ION_ABI_VERSION=2
 endif
 endif
 
