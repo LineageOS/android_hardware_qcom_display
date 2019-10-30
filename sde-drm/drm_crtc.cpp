@@ -359,7 +359,7 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
   string vig = "vig=";
   string dma = "dma=";
   string scaling = "scale=";
-  string rotation = "rotation=";
+  string rotation = "inline_rot=";
   string linewidth_constraints = "sspp_linewidth_usecases=";
   string linewidth_values = "sspp_linewidth_values=";
   string limit_constraint = "limit_usecase=";
