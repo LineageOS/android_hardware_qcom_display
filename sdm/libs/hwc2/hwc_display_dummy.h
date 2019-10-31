@@ -44,7 +44,10 @@ class HWCDisplayDummy : public HWCDisplay {
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests);
 
   virtual HWC2::Error Present(int32_t *out_retire_fence);
-
+  virtual HWC2::Error GetDisplayRequests(int32_t *out_display_requests,
+                                           uint32_t *out_num_elements, hwc2_layer_t *out_layers,
+                                           int32_t *out_layer_requests);
+  static void Destroy(HWCDisplay *hwc_display);
  private:
   HWCDisplayDummy(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
                   HWCCallbacks *callbacks, qService::QService *qservice,
