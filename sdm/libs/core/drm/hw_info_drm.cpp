@@ -341,6 +341,15 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   hw_resource->num_mnocports = info.num_mnocports ? info.num_mnocports : 2;
   hw_resource->mnoc_bus_width = info.mnoc_bus_width ? info.mnoc_bus_width : 32;
   hw_resource->use_baselayer_for_stage = info.use_baselayer_for_stage;
+  hw_resource->line_width_constraints_count = info.line_width_constraints_count;
+  if (info.line_width_constraints_count) {
+    auto &width_constraints = hw_resource->line_width_constraints;
+    hw_resource->line_width_limits = std::move(info.line_width_limits);
+    width_constraints.push_back(std::make_pair(kPipeVigLimit, info.vig_limit_index));
+    width_constraints.push_back(std::make_pair(kPipeDmaLimit, info.dma_limit_index));
+    width_constraints.push_back(std::make_pair(kPipeScalingLimit, info.scaling_limit_index));
+    width_constraints.push_back(std::make_pair(kPipeRotationLimit, info.rotation_limit_index));
+  }
 }
 
 void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
@@ -755,10 +764,25 @@ void HWInfoDRM::GetSDMFormat(uint32_t drm_format, uint64_t drm_format_modifier,
 }
 
 DisplayError HWInfoDRM::GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_disp_info) {
+  HWDisplaysInfo hw_displays_info;
+  DisplayError error = kErrorNone;
+
   hw_disp_info->type = kBuiltIn;
   hw_disp_info->is_connected = true;
 
-  return kErrorNone;
+  error = GetDisplaysStatus(&hw_displays_info);
+  if (error == kErrorNone) {
+    for (auto &iter : hw_displays_info) {
+      auto &info = iter.second;
+      if (info.is_primary) {
+        hw_disp_info->type = info.display_type;
+        hw_disp_info->is_connected = info.is_connected;
+        break;
+      }
+    }
+  }
+
+  return error;
 }
 
 DisplayError HWInfoDRM::GetDisplaysStatus(HWDisplaysInfo *hw_displays_info) {

@@ -868,4 +868,30 @@ Return<int32_t> HWCSession::setCWBOutputBuffer(const ::android::sp<IDisplayCWBCa
   return -1;
 }
 
+Return<int32_t> HWCSession::setQsyncMode(uint32_t disp_id, IDisplayConfig::QsyncMode mode) {
+  SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_id]);
+  if (!hwc_display_[disp_id]) {
+    return -1;
+  }
+
+  QSyncMode qsync_mode = kQSyncModeNone;
+  switch (mode) {
+    case IDisplayConfig::QsyncMode::NONE:
+      qsync_mode = kQSyncModeNone;
+      break;
+    case IDisplayConfig::QsyncMode::WAIT_FOR_FENCES_ONE_FRAME:
+      qsync_mode = kQsyncModeOneShot;
+      break;
+    case IDisplayConfig::QsyncMode::WAIT_FOR_FENCES_EACH_FRAME:
+      qsync_mode = kQsyncModeOneShotContinuous;
+      break;
+    case IDisplayConfig::QsyncMode::WAIT_FOR_COMMIT_EACH_FRAME:
+      qsync_mode = kQSyncModeContinuous;
+      break;
+  }
+
+  hwc_display_[disp_id]->SetQSyncMode(qsync_mode);
+  return 0;
+}
+
 }  // namespace sdm

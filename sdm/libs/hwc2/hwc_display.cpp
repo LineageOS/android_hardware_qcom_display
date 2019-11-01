@@ -1250,7 +1250,8 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
       validated_ = false;
       break;
     }
-    case kThermalEvent: {
+    case kThermalEvent:
+    case kIdlePowerCollapse: {
       SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[id_]);
       validated_ = false;
     } break;
@@ -1264,8 +1265,6 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
               id_);
       }
     } break;
-    case kIdlePowerCollapse:
-      break;
     default:
       DLOGW("Unknown event: %d", event);
       break;
