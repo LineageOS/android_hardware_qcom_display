@@ -63,6 +63,7 @@ ToneMapSession::~ToneMapSession() {
 void ToneMapSession::OnTask(const ToneMapTaskCode &task_code,
                             SyncTask<ToneMapTaskCode>::TaskContext *task_context) {
   switch (task_code) {
+#ifndef TARGET_HEADLESS
     case ToneMapTaskCode::kCodeGetInstance: {
         ToneMapGetInstanceContext *ctx = static_cast<ToneMapGetInstanceContext *>(task_context);
         Lut3d &lut_3d = ctx->layer->lut_3d;
@@ -95,6 +96,7 @@ void ToneMapSession::OnTask(const ToneMapTaskCode &task_code,
       }
       break;
 
+#endif
     default:
       break;
   }
