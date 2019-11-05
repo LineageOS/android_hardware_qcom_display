@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -57,6 +57,7 @@ class EGLImageWrapper {
   EGLImageWrapper();
   ~EGLImageWrapper();
   EGLImageBuffer* wrap(const void *pvt_handle);
+  void Deinit();
 };
 
 #endif  // __TONEMAPPER_EGLIMAGEWRAPPER_H__
