@@ -1845,7 +1845,7 @@ Error QtiComposerClient::CommandReader::updateBuffer(BufferCache cache, uint32_t
 // Methods from ::android::hidl::base::V1_0::IBase follow.
 
 IQtiComposerClient* HIDL_FETCH_IQtiComposerClient(const char* /* name */) {
-  return QtiComposerClient::CreateQtiComposerClientInstance();
+  return new QtiComposerClient();
 }
 
 }  // namespace implementation
