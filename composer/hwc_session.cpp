@@ -1026,9 +1026,7 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
 
   UpdateThrottlingRate();
 
-  // Trigger refresh for doze mode to take effect.
   if (mode == HWC2::PowerMode::Doze) {
-    callbacks_.Refresh(display);
     // Trigger one more refresh for PP features to take effect.
     pending_refresh_.set(UINT32(display));
   }

@@ -101,8 +101,6 @@
 #define DISABLE_SINGLE_LM_SPLIT_PROP         DISPLAY_PROP("disable_single_lm_split")
 // Enable posted start dynamic
 #define ENABLE_POSTED_START_DYN_PROP         DISPLAY_PROP("enable_posted_start_dyn")
-// Disable deferring power state request to first draw cycle
-#define DISABLE_DEFER_POWER_STATE            DISPLAY_PROP("disable_defer_power_state")
 #define ENABLE_OPTIMIZE_REFRESH              DISPLAY_PROP("enable_optimize_refresh")
 #define DISABLE_PARALLEL_CACHE               DISPLAY_PROP("disable_parallel_cache")
 #define DISABLE_LAYER_STITCH                 DISPLAY_PROP("disable_layer_stitch")
