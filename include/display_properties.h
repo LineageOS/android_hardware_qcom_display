@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2018 - 2020 The Linux Foundation. All rights reserved.
+* Copyright (c) 2018 - 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -121,7 +121,6 @@
 #define VIRTUAL_BASEID_AND_SIZE_PROP         DISPLAY_PROP("virtual_baseid_and_size")
 #define ENABLE_QDCM_DIAG                     DISPLAY_PROP("enable_qdcm_diag")
 #define QDCM_DISABLE_FACTORY_MODE_PROP       DISPLAY_PROP("qdcm.disable_factory_mode")
-#define DISABLE_DEFER_POWER_STATE            DISPLAY_PROP("disable_defer_power_state")
 
 #define ZERO_SWAP_INTERVAL                   "vendor.debug.egl.swapinterval"
 #define ENABLE_OPTIMIZE_REFRESH              DISPLAY_PROP("enable_optimize_refresh")

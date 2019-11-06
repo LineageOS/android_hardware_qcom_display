@@ -460,8 +460,9 @@ DisplayError HWPeripheralDRM::PowerOn(const HWQosData &qos_data, int *release_fe
   }
 
   if (first_cycle_) {
-    return kErrorNone;
+    return kErrorDeferred;
   }
+
   if (!idle_pc_enabled_) {
     drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_IDLE_PC_STATE, token_.crtc_id,
                               sde_drm::DRMIdlePCState::ENABLE);

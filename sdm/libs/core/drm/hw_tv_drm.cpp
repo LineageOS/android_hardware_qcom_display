@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -358,6 +358,12 @@ DisplayError HWTVDRM::PowerOn(const HWQosData &qos_data, int *release_fence) {
   if (!drm_atomic_intf_) {
     DLOGE("DRM Atomic Interface is null!");
     return kErrorUndefined;
+  }
+
+  if (first_cycle_) {
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
+    drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
   }
 
   return HWDeviceDRM::PowerOn(qos_data, release_fence);
