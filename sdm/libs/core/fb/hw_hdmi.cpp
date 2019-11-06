@@ -491,9 +491,8 @@ DisplayError HWHDMI::GetMaxCEAFormat(uint32_t *max_cea_format) {
 DisplayError HWHDMI::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
   DisplayError error = kErrorNone;
   int fd = -1;
-  char data[kMaxStringLength] = {'\0'};
+  char data[kMaxStringLength] = "/sys/devices/virtual/hdcp/msm_hdcp/min_level_change";
 
-  snprintf(data, sizeof(data), "%s%d/hdcp2p2/min_level_change", fb_path_, fb_node_index_);
 
   fd = Sys::open_(data, O_WRONLY);
   if (fd < 0) {
