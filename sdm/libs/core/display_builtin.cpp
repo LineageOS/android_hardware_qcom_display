@@ -134,11 +134,6 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
   uint32_t new_mixer_height = 0;
   uint32_t display_width = display_attributes_.x_pixels;
   uint32_t display_height = display_attributes_.y_pixels;
-  if (reset_panel_) {
-    DLOGW("panel is in bad state, resetting the panel");
-    ResetPanel();
-    reset_panel_ = false;
-  }
 
   DTRACE_SCOPED();
   if (NeedsMixerReconfiguration(layer_stack, &new_mixer_width, &new_mixer_height)) {
@@ -793,6 +788,11 @@ DisplayError DisplayBuiltIn::GetSupportedDSIClock(std::vector<uint64_t> *bitclk_
 
 DisplayError DisplayBuiltIn::SetDynamicDSIClock(uint64_t bit_clk_rate) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (!active_) {
+    DLOGW("Invalid display state = %d. Panel must be on.", state_);
+    return kErrorNotSupported;
+  }
+
   if (!hw_panel_info_.dyn_bitclk_support) {
     return kErrorNotSupported;
   }

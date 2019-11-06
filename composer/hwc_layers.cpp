@@ -546,6 +546,30 @@ HWC2::Error HWCLayer::SetLayerZOrder(uint32_t z) {
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCLayer::SetLayerType(IQtiComposerClient::LayerType type) {
+  LayerTypes layer_type = kLayerUnknown;
+  switch (type) {
+    case IQtiComposerClient::LayerType::UNKNOWN:
+      layer_type = kLayerUnknown;
+      break;
+    case IQtiComposerClient::LayerType::APP:
+      layer_type = kLayerApp;
+      break;
+    case IQtiComposerClient::LayerType::GAME:
+      layer_type = kLayerGame;
+      break;
+    case IQtiComposerClient::LayerType::BROWSER:
+      layer_type = kLayerBrowser;
+      break;
+    default:
+      DLOGW("Unsupported layer type %d", layer_type);
+      break;
+  }
+
+  type_ = layer_type;
+  return HWC2::Error::None;
+}
+
 HWC2::Error HWCLayer::SetLayerColorTransform(const float *matrix) {
   if (std::memcmp(matrix, layer_->color_transform_matrix, sizeof(layer_->color_transform_matrix))) {
     std::memcpy(layer_->color_transform_matrix, matrix, sizeof(layer_->color_transform_matrix));

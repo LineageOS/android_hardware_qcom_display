@@ -133,6 +133,17 @@ DisplayError CompManager::RegisterDisplay(int32_t display_id, DisplayType type,
     return error;
   }
 
+  error = resource_intf_->Perform(ResourceInterface::kCmdDedicatePipes,
+                                  display_comp_ctx->display_resource_ctx);
+  if (error != kErrorNone) {
+    strategy->Deinit();
+    delete strategy;
+    resource_intf_->UnregisterDisplay(display_comp_ctx->display_resource_ctx);
+    delete display_comp_ctx;
+    display_comp_ctx = NULL;
+    return error;
+  }
+
   registered_displays_.insert(display_id);
   display_comp_ctx->is_primary_panel = hw_panel_info.is_primary_panel;
   display_comp_ctx->display_id = display_id;
@@ -142,13 +153,12 @@ DisplayError CompManager::RegisterDisplay(int32_t display_id, DisplayType type,
   // New non-primary display device has been added, so move the composition mode to safe mode until
   // resources for the added display is configured properly.
   if (!display_comp_ctx->is_primary_panel) {
-    safe_mode_ = true;
     max_sde_ext_layers_ = UINT32(Debug::GetExtMaxlayers());
   }
 
-  DLOGV_IF(kTagCompManager, "Registered displays [%s], configured displays [%s], display %d-%d",
-           StringDisplayList(registered_displays_), StringDisplayList(configured_displays_),
-           display_comp_ctx->display_id, display_comp_ctx->display_type);
+  DLOGV_IF(kTagCompManager, "Registered displays [%s], display %d-%d",
+           StringDisplayList(registered_displays_), display_comp_ctx->display_id,
+           display_comp_ctx->display_type);
 
   return kErrorNone;
 }
@@ -170,16 +180,15 @@ DisplayError CompManager::UnregisterDisplay(Handle display_ctx) {
   delete strategy;
 
   registered_displays_.erase(display_comp_ctx->display_id);
-  configured_displays_.erase(display_comp_ctx->display_id);
   powered_on_displays_.erase(display_comp_ctx->display_id);
 
   if (display_comp_ctx->display_type == kPluggable) {
     max_layers_ = kMaxSDELayers;
   }
 
-  DLOGV_IF(kTagCompManager, "Registered displays [%s], configured displays [%s], display %d-%d",
-           StringDisplayList(registered_displays_), StringDisplayList(configured_displays_),
-           display_comp_ctx->display_id, display_comp_ctx->display_type);
+  DLOGV_IF(kTagCompManager, "Registered displays [%s], display %d-%d",
+           StringDisplayList(registered_displays_), display_comp_ctx->display_id,
+           display_comp_ctx->display_type);
 
   delete display_comp_ctx;
   display_comp_ctx = NULL;
@@ -401,12 +410,6 @@ DisplayError CompManager::PostCommit(Handle display_ctx, HWLayers *hw_layers) {
   DisplayError error = kErrorNone;
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
-  configured_displays_.insert(display_comp_ctx->display_id);
-
-  // Check if all poweredon displays are in the configured display list.
-  if ((powered_on_displays_.size() == configured_displays_.size())) {
-    safe_mode_ = false;
-  }
 
   error = resource_intf_->PostCommit(display_comp_ctx->display_resource_ctx, hw_layers);
   if (error != kErrorNone) {
@@ -416,9 +419,9 @@ DisplayError CompManager::PostCommit(Handle display_ctx, HWLayers *hw_layers) {
   display_comp_ctx->idle_fallback = false;
   display_comp_ctx->first_cycle_ = false;
 
-  DLOGV_IF(kTagCompManager, "Registered displays [%s], configured displays [%s], display %d-%d",
-           StringDisplayList(registered_displays_), StringDisplayList(configured_displays_),
-           display_comp_ctx->display_id, display_comp_ctx->display_type);
+  DLOGV_IF(kTagCompManager, "Registered displays [%s], display %d-%d",
+           StringDisplayList(registered_displays_), display_comp_ctx->display_id,
+           display_comp_ctx->display_type);
 
   return kErrorNone;
 }
@@ -559,7 +562,15 @@ DisplayError CompManager::ControlDpps(bool enable) {
   // DPPS feature and HDR using SSPP tone mapping can co-exist
   // DPPS feature and HDR using DSPP tone mapping are mutually exclusive
   if (dpps_ctrl_intf_ && hw_res_info_.src_tone_map.none()) {
-    return enable ? dpps_ctrl_intf_->On() : dpps_ctrl_intf_->Off();
+    int err = 0;
+    if (enable) {
+      err = dpps_ctrl_intf_->On();
+    } else {
+      err = dpps_ctrl_intf_->Off();
+    }
+    if (err) {
+      return kErrorUndefined;
+    }
   }
 
   return kErrorNone;
@@ -575,24 +586,17 @@ bool CompManager::SetDisplayState(Handle display_ctx, DisplayState state, int sy
   switch (state) {
   case kStateOff:
     Purge(display_ctx);
-    configured_displays_.erase(display_comp_ctx->display_id);
-    DLOGV_IF(kTagCompManager, "Configured displays = [%s]",
-             StringDisplayList(configured_displays_));
     powered_on_displays_.erase(display_comp_ctx->display_id);
     break;
 
   case kStateOn:
   case kStateDoze:
-    // Setting safe mode if there are multiple displays and one of display is already active.
-    if ((registered_displays_.size() > 1) && powered_on_displays_.size()) {
-      safe_mode_ = true;
-      DLOGV_IF(kTagCompManager, "safe_mode = %d", safe_mode_);
-    }
+    resource_intf_->Perform(ResourceInterface::kCmdDedicatePipes,
+                            display_comp_ctx->display_resource_ctx);
     powered_on_displays_.insert(display_comp_ctx->display_id);
     break;
 
   case kStateDozeSuspend:
-    configured_displays_.erase(display_comp_ctx->display_id);
     powered_on_displays_.erase(display_comp_ctx->display_id);
     break;
 
@@ -667,6 +671,17 @@ bool CompManager::CanSkipValidate(Handle display_ctx) {
       reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
   return display_comp_ctx->strategy->CanSkipValidate();
+}
+
+bool CompManager::CheckResourceState(Handle display_ctx) {
+  SCOPE_LOCK(locker_);
+  DisplayCompositionContext *display_comp_ctx =
+      reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+  bool res_wait_needed = false;
+
+  resource_intf_->Perform(ResourceInterface::kCmdGetResourceStatus,
+                          display_comp_ctx->display_resource_ctx, &res_wait_needed);
+  return res_wait_needed;
 }
 
 }  // namespace sdm

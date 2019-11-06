@@ -256,6 +256,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool HWCClientNeedsValidate() {
     return (has_client_composition_ || layer_stack_.flags.single_buffered_layer_present);
   }
+  bool CheckResourceState();
   virtual void SetFastPathComposition(bool enable) { fast_path_composition_ = enable; }
   virtual HWC2::Error SetColorModeFromClientApi(int32_t color_mode_id) {
     return HWC2::Error::Unsupported;
@@ -333,6 +334,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error CreateLayer(hwc2_layer_t *out_layer_id);
   virtual HWC2::Error DestroyLayer(hwc2_layer_t layer_id);
   virtual HWC2::Error SetLayerZOrder(hwc2_layer_t layer_id, uint32_t z);
+  virtual HWC2::Error SetLayerType(hwc2_layer_t layer_id, IQtiComposerClient::LayerType type);
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests) = 0;
   virtual HWC2::Error GetReleaseFences(uint32_t *out_num_elements, hwc2_layer_t *out_layers,
                                        int32_t *out_fences);
@@ -402,6 +404,7 @@ class HWCDisplay : public DisplayEventHandler {
   uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate);
   virtual void GetUnderScanConfig() { }
   int32_t SetClientTargetDataSpace(int32_t dataspace);
+  int SetFrameBufferConfig(uint32_t x_pixels, uint32_t y_pixels);
 
   bool validated_ = false;
   bool layer_stack_invalid_ = true;
@@ -456,6 +459,7 @@ class HWCDisplay : public DisplayEventHandler {
   std::vector<uint32_t> hwc_config_map_;
   bool client_connected_ = true;
   bool pending_config_ = false;
+  bool has_client_composition_ = false;
 
  private:
   void DumpInputBuffers(void);
@@ -468,7 +472,6 @@ class HWCDisplay : public DisplayEventHandler {
   uint32_t geometry_changes_ = GeometryChanges::kNone;
   bool animating_ = false;
   int null_display_mode_ = 0;
-  bool has_client_composition_ = false;
   DisplayValidateState validate_state_ = kNormalValidate;
   bool fast_path_enabled_ = true;
   bool first_cycle_ = true;  // false if a display commit has succeeded on the device.

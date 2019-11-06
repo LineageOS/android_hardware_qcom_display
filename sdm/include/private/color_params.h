@@ -32,6 +32,8 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <display_color_processing.h>
+#include <dpps_control_interface.h>
 #include <utils/locker.h>
 #include <utils/constants.h>
 #include <core/sdm_types.h>
@@ -186,9 +188,11 @@ struct PPFeatureVersion {
 struct PPHWAttributes : HWResourceInfo, HWPanelInfo, DisplayConfigVariableInfo {
   char panel_name[256] = "generic_panel";
   PPFeatureVersion version;
+  DppsControlInterface *dpps_intf = NULL;
 
   void Set(const HWResourceInfo &hw_res, const HWPanelInfo &panel_info,
-           const DisplayConfigVariableInfo &attr, const PPFeatureVersion &feature_ver);
+           const DisplayConfigVariableInfo &attr, const PPFeatureVersion &feature_ver,
+           DppsControlInterface *dpps_intf);
 };
 
 struct PPDisplayAPIPayload {
@@ -270,49 +274,6 @@ struct PPFrameCaptureData {
   uint8_t *buffer;
   uint32_t buffer_stride;
   uint32_t buffer_size;
-};
-
-static const uint32_t kDeTuningFlagSharpFactor = 0x01;
-static const uint32_t kDeTuningFlagClip = 0x02;
-static const uint32_t kDeTuningFlagThrQuiet = 0x04;
-static const uint32_t kDeTuningFlagThrDieout = 0x08;
-static const uint32_t kDeTuningFlagThrLow = 0x10;
-static const uint32_t kDeTuningFlagThrHigh = 0x20;
-static const uint32_t kDeTuningFlagContentQualLevel = 0x40;
-static const uint32_t kDeTuningFlagDeBlend = 0x80;
-
-typedef enum {
-  kDeContentQualUnknown,
-  kDeContentQualLow,
-  kDeContentQualMedium,
-  kDeContentQualHigh,
-  kDeContentQualMax,
-} PPDEContentQualLevel;
-
-typedef enum {
-  kDeContentTypeUnknown,
-  kDeContentTypeVideo,
-  kDeContentTypeGraphics,
-  kDeContentTypeMax,
-} PPDEContentType;
-
-struct PPDETuningCfg {
-  uint32_t flags = 0;
-  int32_t sharp_factor = 0;
-  uint16_t thr_quiet = 0;
-  uint16_t thr_dieout = 0;
-  uint16_t thr_low = 0;
-  uint16_t thr_high = 0;
-  uint16_t clip = 0;
-  PPDEContentQualLevel quality = kDeContentQualUnknown;
-  PPDEContentType content_type = kDeContentTypeUnknown;
-  uint32_t de_blend = 0;
-};
-
-struct PPDETuningCfgData {
-  uint32_t cfg_en = 0;
-  PPDETuningCfg params;
-  bool cfg_pending = false;
 };
 
 struct SDEGamutCfg {

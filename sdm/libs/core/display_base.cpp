@@ -132,8 +132,10 @@ DisplayError DisplayBase::Init() {
 
   // ColorManager supported for built-in display.
   if (kBuiltIn == display_type_) {
+    DppsControlInterface *dpps_intf = comp_manager_->GetDppsControlIntf();
     color_mgr_ = ColorManagerProxy::CreateColorManagerProxy(display_type_, hw_intf_,
-                                                            display_attributes_, hw_panel_info_);
+                                                            display_attributes_, hw_panel_info_,
+                                                            dpps_intf);
 
     if (color_mgr_) {
       if (InitializeColorModes() != kErrorNone) {
@@ -221,11 +223,16 @@ DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
       hw_layers_info.wide_color_primaries.push_back(
           layer->input_buffer.color_metadata.colorPrimaries);
     }
+    if (layer->flags.is_game) {
+        hw_layers_info.game_present = true;
+    }
   }
 
   DLOGD_IF(kTagDisplay,
-           "LayerStack layer_count: %d, app_layer_count: %d, gpu_target_index: %d, display: %d-%d",
-           layers.size(), hw_layers_info.app_layer_count, hw_layers_info.gpu_target_index,
+           "LayerStack layer_count: %d, app_layer_count: %d, "
+           "gpu_target_index: %d, game_present: %d, display: %d-%d",
+           layers.size(), hw_layers_info.app_layer_count,
+           hw_layers_info.gpu_target_index, hw_layers_info.game_present,
            display_id_, display_type_);
 
   if (!hw_layers_info.app_layer_count) {
@@ -1034,6 +1041,13 @@ DisplayError DisplayBase::SetColorModeInternal(const std::string &color_mode,
   if (!str_render_intent.empty()) {
     render_intent = std::stoi(str_render_intent);
   }
+
+  error = color_mgr_->ColorMgrSetMode(sde_display_mode->id);
+  if (error != kErrorNone) {
+    DLOGE("Failed for mode id = %d", sde_display_mode->id);
+    return error;
+  }
+
   error = color_mgr_->ColorMgrSetModeWithRenderIntent(sde_display_mode->id, pt, render_intent);
   if (error != kErrorNone) {
     DLOGE("Failed for mode id = %d", sde_display_mode->id);
@@ -2023,6 +2037,10 @@ DisplayError DisplayBase::ResetPendingDoze(int32_t retire_fence) {
     pending_doze_ = false;
   }
   return kErrorNone;
+}
+
+bool DisplayBase::CheckResourceState() {
+  return comp_manager_->CheckResourceState(display_comp_ctx_);
 }
 
 }  // namespace sdm

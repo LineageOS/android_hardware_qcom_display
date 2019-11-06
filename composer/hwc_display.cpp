@@ -785,6 +785,11 @@ void HWCDisplay::BuildLayerStack() {
       layer->update_mask.set(kClientCompRequest);
     }
 
+    if (hwc_layer->GetType() == kLayerGame) {
+      layer->flags.is_game = true;
+      layer->input_buffer.flags.game = true;
+    }
+
     layer_stack_.layers.push_back(layer);
   }
 
@@ -822,6 +827,18 @@ void HWCDisplay::BuildSolidFillStack() {
   layer_stack_.flags.geometry_changed = 1U;
   // Append client target to the layer stack
   layer_stack_.layers.push_back(client_target_->GetSDMLayer());
+}
+
+HWC2::Error HWCDisplay::SetLayerType(hwc2_layer_t layer_id, IQtiComposerClient::LayerType type) {
+  const auto map_layer = layer_map_.find(layer_id);
+  if (map_layer == layer_map_.end()) {
+    DLOGE("[%" PRIu64 "] SetLayerType failed to find layer", id_);
+    return HWC2::Error::BadLayer;
+  }
+
+  const auto layer = map_layer->second;
+  layer->SetLayerType(type);
+  return HWC2::Error::None;
 }
 
 HWC2::Error HWCDisplay::SetLayerZOrder(hwc2_layer_t layer_id, uint32_t z) {
@@ -1259,12 +1276,13 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
       break;
     }
     case kInvalidateDisplay:
-    case kThermalEvent:
-    case kPanelDeadEvent: {
+    case kThermalEvent: {
       SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[id_]);
       validated_ = false;
     } break;
+    case kPanelDeadEvent:
     case kDisplayPowerResetEvent: {
+      SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[id_]);
       validated_ = false;
       if (event_handler_) {
         event_handler_->DisplayPowerReset();
@@ -1785,7 +1803,7 @@ const char *HWCDisplay::GetDisplayString() {
   }
 }
 
-int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
+int HWCDisplay::SetFrameBufferConfig(uint32_t x_pixels, uint32_t y_pixels) {
   if (x_pixels <= 0 || y_pixels <= 0) {
     DLOGW("Unsupported config: x_pixels=%d, y_pixels=%d", x_pixels, y_pixels);
     return -EINVAL;
@@ -1810,12 +1828,25 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
   // Create rects to represent the new source and destination crops
   LayerRect crop = LayerRect(0, 0, FLOAT(x_pixels), FLOAT(y_pixels));
   hwc_rect_t scaled_display_frame = {0, 0, INT(x_pixels), INT(y_pixels)};
+  auto client_target_layer = client_target_->GetSDMLayer();
+  client_target_layer->src_rect = crop;
   ApplyScanAdjustment(&scaled_display_frame);
   client_target_->SetLayerDisplayFrame(scaled_display_frame);
   client_target_->ResetPerFrameData();
 
+  DLOGI("New framebuffer resolution (%dx%d)", fb_config.x_pixels, fb_config.y_pixels);
+
+  return 0;
+}
+
+int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
+  int error = SetFrameBufferConfig(x_pixels, y_pixels);
+  if (error < 0) {
+    DLOGV("SetFrameBufferConfig failed. Error = %d", error);
+    return error;
+  }
+
   auto client_target_layer = client_target_->GetSDMLayer();
-  client_target_layer->src_rect = crop;
 
   int aligned_width;
   int aligned_height;
@@ -1843,8 +1874,6 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
   client_target_layer->input_buffer.unaligned_width = x_pixels;
   client_target_layer->input_buffer.unaligned_height = y_pixels;
   client_target_layer->plane_alpha = 255;
-
-  DLOGI("New framebuffer resolution (%dx%d)", fb_config.x_pixels, fb_config.y_pixels);
 
   return 0;
 }
@@ -2401,6 +2430,14 @@ void HWCDisplay::SetLayerStack(HWCLayerStack *stack) {
   client_target_ = stack->client_target;
   layer_map_ = stack->layer_map;
   layer_set_ = stack->layer_set;
+}
+
+bool HWCDisplay::CheckResourceState() {
+  if (display_intf_) {
+    return display_intf_->CheckResourceState();
+  }
+
+  return false;
 }
 
 void HWCDisplay::UpdateActiveConfig() {

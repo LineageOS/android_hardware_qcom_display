@@ -111,6 +111,8 @@
 #define ENABLE_ASYNC_POWERMODE               DISPLAY_PROP("enable_async_powermode")
 #define ENABLE_GPU_TONEMAPPER_PROP           DISPLAY_PROP("enable_gpu_tonemapper")
 #define ENABLE_FORCE_SPLIT                   DISPLAY_PROP("enable_force_split")
+#define DISABLE_GPU_COLOR_CONVERT            DISPLAY_PROP("disable_gpu_color_convert")
+#define ENABLE_ASYNC_VDS_CREATION            DISPLAY_PROP("enable_async_vds_creation")
 
 // Add all vendor.display properties above
 
