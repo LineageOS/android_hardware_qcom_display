@@ -33,6 +33,7 @@
 #include "drm_interface.h"
 #include "drm_property.h"
 #include "drm_dpps_mgr_intf.h"
+#include <mutex>
 
 namespace sde_drm {
 
@@ -73,6 +74,7 @@ class DRMDppsManagerImp : public DRMDppsManagerIntf {
   int drm_fd_ = -1;
   std::vector<std::pair<uint32_t, drm_msm_ltm_buffers_ctrl>> ltm_buffers_ctrl_map_;
   std::vector<std::pair<uint32_t, DRMDppsLtmBuffers>> ltm_buffers_map_;
+  std::mutex api_lock_;
 };
 
 class DRMDppsManagerDummyImp : public DRMDppsManagerIntf {
