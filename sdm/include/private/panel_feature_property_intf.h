@@ -30,6 +30,8 @@
 #ifndef __PANEL_FEATURE_PROPERTY_INTF_H__
 #define __PANEL_FEATURE_PROPERTY_INTF_H__
 
+#include <utils/constants.h>
+
 namespace sdm {
 
 /* enumeration of all panel feature related properties */
@@ -41,6 +43,7 @@ enum PanelFeaturePropertyID {
   kPanelFeatureSPRInitCfg,
   kPanelFeatureSPRPackType,
   kPanelFeatureDemuraInitCfg,
+  kPanelFeatureRCInitCfg,
   kPanelFeaturePropertyIDMax,
 };
 

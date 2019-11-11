@@ -29,8 +29,10 @@
 
 #include <sstream>
 #include <errno.h>
+#include <string>
 #include <drm_logger.h>
 #include <cstring>
+#include <regex>
 
 #include "drm_panel_feature_mgr.h"
 
@@ -88,8 +90,10 @@ void DRMPanelFeatureMgr::Init(int fd, drmModeRes* res) {
   drm_property_map_[kDRMPanelFeatureDsppSPRInfo] = DRMProperty::DSPP_CAPABILITIES;
   drm_property_map_[kDRMPanelFeatureDsppDemuraInfo] = DRMProperty::DSPP_CAPABILITIES;
   drm_property_map_[kDRMPanelFeatureDsppRCInfo] = DRMProperty::DSPP_CAPABILITIES;
+  drm_property_map_[kDRMPanelFeatureRCInit] = DRMProperty::DSPP_RC_MASK_V1;
 
   drm_prop_type_map_[kDRMPanelFeatureSPRInit] = DRMPropType::kPropBlob;
+  drm_prop_type_map_[kDRMPanelFeatureRCInit] = DRMPropType::kPropBlob;
   drm_prop_type_map_[kDRMPanelFeatureSPRPackType] = DRMPropType::kPropBlob;
   drm_prop_type_map_[kDRMPanelFeatureDsppIndex] = DRMPropType::kPropRange;
   drm_prop_type_map_[kDRMPanelFeatureDsppSPRInfo] = DRMPropType::kPropRange;
@@ -98,6 +102,8 @@ void DRMPanelFeatureMgr::Init(int fd, drmModeRes* res) {
 
   feature_info_tbl_[kDRMPanelFeatureSPRInit] = DRMPanelFeatureInfo {kDRMPanelFeatureSPRInit,
       DRM_MODE_OBJECT_CRTC, UINT32_MAX, 1, sizeof(drm_msm_spr_init_cfg), 0};
+  feature_info_tbl_[kDRMPanelFeatureRCInit] = DRMPanelFeatureInfo {
+      kDRMPanelFeatureRCInit, DRM_MODE_OBJECT_CRTC, UINT32_MAX, 1, sizeof(drm_msm_rc_mask_cfg), 0};
   feature_info_tbl_[kDRMPanelFeatureSPRPackType] = DRMPanelFeatureInfo {kDRMPanelFeatureSPRPackType,
       DRM_MODE_OBJECT_CONNECTOR, UINT32_MAX, 1, 64, 0};
   feature_info_tbl_[kDRMPanelFeatureDsppIndex] = DRMPanelFeatureInfo {kDRMPanelFeatureDsppIndex,
@@ -162,6 +168,36 @@ int DRMPanelFeatureMgr::InitObjectProps(int obj_id, int obj_type) {
   return 0;
 }
 
+void DRMPanelFeatureMgr::ParseDsppCapabilities(uint32_t blob_id, std::vector<int> *values,
+                                            uint32_t *size, const std::string str) {
+  drmModePropertyBlobRes *blob = drmModeGetPropertyBlob(dev_fd_, blob_id);
+  if (!blob) {
+    return;
+  }
+
+  char *fmt_str = new char[blob->length + 1];
+  std::memcpy(fmt_str, blob->data, blob->length);
+  fmt_str[blob->length] = '\0';
+  std::stringstream stream(fmt_str);
+  std::string line = {};
+  std::string val = {};
+  // Search for panel feature property pattern. Which is defined as rc0=1, rc1=1
+  const std::regex exp(str + "(\\d+)=1");
+  std::smatch sm;
+  while (std::getline(stream, line)) {
+    std::regex_match(line, sm, exp);
+    // smatch shall include full line as a match followed by the hw block # as a match
+    if (sm.size() == 2) {
+      std::string tmpstr(sm[1]);
+      int temp = atoi(tmpstr.c_str());  // atoi safe to use due to regex success
+      values->push_back(temp);
+    }
+  }
+
+  *size = sizeof(int) * values->size();
+  delete[] fmt_str;
+}
+
 void DRMPanelFeatureMgr::ParseCapabilities(uint32_t blob_id, char* value, uint32_t max_len,
                                            const std::string str) {
   drmModePropertyBlobRes *blob = drmModeGetPropertyBlob(dev_fd_, blob_id);
@@ -192,9 +228,9 @@ void DRMPanelFeatureMgr::ParseCapabilities(uint32_t blob_id, char* value, uint32
     DRM_LOGW("Insufficient size max_len: %d actual size: %d", max_len, val.size());
     return;
   }
-
   std::copy(val.begin(), val.end(), value);
   value[val.size()] = '\0';
+  delete[] fmt_str;
 }
 
 void DRMPanelFeatureMgr::GetPanelFeatureInfo(DRMPanelFeatureInfo *info) {
@@ -256,8 +292,8 @@ void DRMPanelFeatureMgr::GetPanelFeatureInfo(DRMPanelFeatureInfo *info) {
       ParseCapabilities(props->prop_values[j],
               reinterpret_cast<char *> (info->prop_ptr), info->prop_size, "demura");
     } else if (info->prop_id == kDRMPanelFeatureDsppRCInfo) {
-      ParseCapabilities(props->prop_values[j],
-              reinterpret_cast<char *> (info->prop_ptr), info->prop_size, "rc");
+      ParseDsppCapabilities(props->prop_values[j],
+              reinterpret_cast<std::vector<int> *> (info->prop_ptr), &(info->prop_size), "rc");
     } else if (drm_prop_type_map_[info->prop_id] == DRMPropType::kPropBlob) {
       drmModePropertyBlobRes *blob = drmModeGetPropertyBlob(dev_fd_, props->prop_values[j]);
       if (!blob) {
@@ -283,7 +319,7 @@ void DRMPanelFeatureMgr::GetPanelFeatureInfo(DRMPanelFeatureInfo *info) {
 void DRMPanelFeatureMgr::CachePanelFeature(const DRMPanelFeatureInfo &info) {
   lock_guard<mutex> lock(lock_);
 
-  if (info.prop_id >= kDRMPanelFeatureMax || !info.prop_ptr || info.obj_id == UINT32_MAX) {
+  if (info.prop_id >= kDRMPanelFeatureMax || info.obj_id == UINT32_MAX) {
     DRM_LOGE("invalid property info to set id %d value ptr 0x%x", info.prop_id, info.prop_ptr);
     return;
   }
@@ -313,16 +349,26 @@ void DRMPanelFeatureMgr::CommitPanelFeatures(drmModeAtomicReq *req, const DRMDis
     }
 
     uint32_t prop_id = prop_mgr_.GetPropertyId(drm_property_map_[info.prop_id]);
-
     uint64_t value = 0;
+
     if (DRMPropType::kPropBlob == drm_prop_type_map_[info.prop_id]) {
       uint32_t blob_id = 0;
+      if (!info.prop_ptr) {
+        // Reset the feature.
+        ret = drmModeAtomicAddProperty(req, info.obj_id, prop_id, 0);
+        if (ret < 0) {
+          DRM_LOGE("failed to add property ret:%d, obj_id:%d prop_id:%u value:%llu",
+                    ret, info.obj_id, prop_id, value);
+          return;
+        }
+        continue;
+      }
 
       ret = drmModeCreatePropertyBlob(dev_fd_, reinterpret_cast<void *> (info.prop_ptr),
               info.prop_size, &blob_id);
       if (ret || blob_id == 0) {
         DRM_LOGE("failed to create blob ret %d, id = %d prop_ptr:%x prop_sz:%d",
-                ret, blob_id, info.prop_size, info.prop_ptr);
+                ret, blob_id, info.prop_ptr, info.prop_size);
         return;
       }
 
@@ -342,7 +388,11 @@ void DRMPanelFeatureMgr::CommitPanelFeatures(drmModeAtomicReq *req, const DRMDis
       DRM_LOGE("Unsupported property type id = %d size:%d", info.prop_id, info.prop_size);
     }
 
-    drmModeAtomicAddProperty(req, info.obj_id, prop_id, value);
+    ret = drmModeAtomicAddProperty(req, info.obj_id, prop_id, value);
+    if (ret < 0) {
+      DRM_LOGE("failed to add property ret:%d, obj_id:%d prop_id:%x value:%llu",
+                ret, info.obj_id, prop_id, value);
+    }
     *it = {};
   }
 }

@@ -560,6 +560,7 @@ struct DRMCrtcInfo {
   bool has_micro_idle = false;
   uint32_t ubwc_version = 1;
   bool has_spr = false;
+  uint64_t rc_total_mem_size = 0;
 };
 
 enum struct DRMPlaneType {
@@ -809,6 +810,7 @@ enum DRMPanelFeatureID {
   kDRMPanelFeatureSPRInit,
   kDRMPanelFeatureSPRPackType,
   kDRMPanelFeatureDemuraInit,
+  kDRMPanelFeatureRCInit,
   kDRMPanelFeatureMax,
 };
 

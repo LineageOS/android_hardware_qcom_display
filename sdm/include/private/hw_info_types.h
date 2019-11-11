@@ -351,6 +351,7 @@ struct HWResourceInfo {
   bool use_baselayer_for_stage = false;
   bool has_micro_idle = false;
   uint32_t ubwc_version = 1;
+  uint32_t rc_total_mem_size = 0;
 };
 
 struct HWSplitInfo {
@@ -674,6 +675,13 @@ struct HWHDRLayerInfo {
   std::vector<uint8_t> dyn_hdr_vsif_payload;  // Dynamic HDR VSIF data.
 };
 
+struct RCLayersInfo {
+  int top_width = 0;
+  int top_height = 0;
+  int bottom_width = 0;
+  int bottom_height = 0;
+};
+
 struct LayerExt {
   std::vector<LayerRect> excl_rects = {};  // list of exclusion rects
 };
@@ -704,6 +712,9 @@ struct HWLayersInfo {
   HWHDRLayerInfo hdr_layer_info = {};
   Handle pvt_data = NULL;   // Private data used by sdm extension only.
   bool game_present = false;  // Indicates there is game layer or not
+  bool rc_config = false;
+  RCLayersInfo rc_layers_info = {};
+  bool spr_enable = false;
 };
 
 struct HWQosData {

@@ -125,6 +125,28 @@ DisplayError DisplayBuiltIn::Init() {
   Debug::Get()->GetProperty(DEFER_FPS_FRAME_COUNT, &value);
   deferred_config_.frame_count = (value > 0) ? UINT32(value) : 0;
 
+  spr_prop_value_ = 0;
+  // Enable SPR as default is disabled.
+  Debug::GetProperty(ENABLE_SPR, &spr_prop_value_);
+
+  error = CreatePanelfeatures();
+  if (error != kErrorNone) {
+    DLOGE("Failed to setup panel feature factory, error: %d", error);
+  } else {
+    // RC
+    int rc_prop_value = 0;
+    // Enable Rounded Corner as default is disabled.
+    Debug::GetProperty(ENABLE_ROUNDED_CORNER, &rc_prop_value);
+    if (rc_prop_value) {
+      error = DisplayBase::SetupRC(pf_factory_, prop_intf_);
+      if (error == kErrorNone) {
+        rc_panel_feature_init_ = true;
+      } else {
+        DLOGW("RC feature not supported");
+      }
+    }
+  }
+
   return error;
 }
 
@@ -135,6 +157,43 @@ DisplayError DisplayBuiltIn::Deinit() {
     dpps_info_.Deinit();
   }
   return DisplayBase::Deinit();
+}
+
+// Create instance for RC, SPR and demura feature.
+DisplayError DisplayBuiltIn::CreatePanelfeatures() {
+  if (pf_factory_ && prop_intf_) {
+    return kErrorNone;
+  }
+
+  if (!GetPanelFeatureFactoryIntfFunc_) {
+    DynLib feature_impl_lib;
+    if (feature_impl_lib.Open(EXTENSION_LIBRARY_NAME)) {
+      if (!feature_impl_lib.Sym("GetPanelFeatureFactoryIntf",
+                                reinterpret_cast<void **>(&GetPanelFeatureFactoryIntfFunc_))) {
+        DLOGE("Unable to load symbols, error = %s", feature_impl_lib.Error());
+        return kErrorUndefined;
+      }
+    } else {
+      DLOGW("Unable to load = %s, error = %s", EXTENSION_LIBRARY_NAME, feature_impl_lib.Error());
+      DLOGW("Panel features are not supported");
+      return kErrorNotSupported;
+    }
+  }
+
+  pf_factory_ = GetPanelFeatureFactoryIntfFunc_();
+  if (!pf_factory_) {
+    DLOGE("Failed to create PanelFeatureFactoryIntf");
+    return kErrorResources;
+  }
+
+  prop_intf_ = hw_intf_->GetPanelFeaturePropertyIntf();
+  if (!prop_intf_) {
+    DLOGE("Failed to create PanelFeaturePropertyIntf");
+    pf_factory_ = nullptr;
+    return kErrorResources;
+  }
+
+  return kErrorNone;
 }
 
 DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
@@ -167,6 +226,22 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
 
   left_frame_roi_ = {};
   right_frame_roi_ = {};
+
+  if (spr_) {
+    GenericPayload out;
+    uint32_t *enable = nullptr;
+    int ret = out.CreatePayload<uint32_t>(enable);
+    if (ret) {
+      DLOGE("Failed to create the payload. Error:%d", ret);
+      return kErrorUndefined;
+    }
+    ret = spr_->GetParameter(kSPRFeatureEnable, &out);
+    if (ret) {
+      DLOGE("Failed to get the spr status. Error:%d", ret);
+      return kErrorUndefined;
+    }
+    spr_enable_ = *enable;
+  }
 
   error = DisplayBase::Prepare(layer_stack);
 
@@ -235,18 +310,11 @@ DisplayError DisplayBuiltIn::colorSamplingOff() {
   return setColorSamplingState(SamplingState::Off);
 }
 
-DisplayError DisplayBuiltIn::SetupSPR(PanelFeatureFactoryIntf *factory,
-                                      PanelFeaturePropertyIntf *prop_intf) {
+DisplayError DisplayBuiltIn::SetupSPR() {
   SPRInputConfig spr_cfg;
-
   spr_cfg.panel_name = std::string(hw_panel_info_.panel_name);
-  std::shared_ptr<SPRIntf> spr = factory->CreateSPRIntf(spr_cfg, prop_intf);
-  if (spr == nullptr) {
-    DLOGE("Failed to create SPR interface");
-    return kErrorResources;
-  }
-
-  if (spr->Init() != 0) {
+  spr_ = pf_factory_->CreateSPRIntf(spr_cfg, prop_intf_);
+  if (!spr_ || spr_->Init() != 0) {
     DLOGE("Failed to initialize SPR");
     return kErrorResources;
   }
@@ -254,50 +322,19 @@ DisplayError DisplayBuiltIn::SetupSPR(PanelFeatureFactoryIntf *factory,
   return kErrorNone;
 }
 
-DisplayError DisplayBuiltIn::SetupDemura(PanelFeatureFactoryIntf *factory,
-                                         PanelFeaturePropertyIntf *prop_intf) {
-  (void)factory;
-  (void)prop_intf;
-  return kErrorNone;
-}
-
-DisplayError DisplayBuiltIn::SetupRC(PanelFeatureFactoryIntf *factory,
-                                     PanelFeaturePropertyIntf *prop_intf) {
-  (void)factory;
-  (void)prop_intf;
+DisplayError DisplayBuiltIn::SetupDemura() {
   return kErrorNone;
 }
 
 DisplayError DisplayBuiltIn::SetupPanelfeatures() {
-  DynLib feature_impl_lib;
-  GetPanelFeatureFactoryIntfType GetPanelFeatureFactoryIntfFunc = nullptr;
-  if (feature_impl_lib.Open(EXTENSION_LIBRARY_NAME)) {
-    if (!feature_impl_lib.Sym("GetPanelFeatureFactoryIntf",
-                            reinterpret_cast<void **>(&GetPanelFeatureFactoryIntfFunc))) {
-      DLOGE("Unable to load symbols, error = %s", feature_impl_lib.Error());
-      return kErrorUndefined;
-    }
-  } else {
-    DLOGW("Panel features are not supported");
-    return kErrorNone;
-  }
-
-  PanelFeatureFactoryIntf *factory = GetPanelFeatureFactoryIntfFunc();
-  if (!factory) {
-    DLOGE("Failed to get Panel feature factory interface");
-    return kErrorResources;
-  }
-
-  PanelFeaturePropertyIntf *prop_intf = hw_intf_->GetPanelFeaturePropertyIntf();
-  if (!prop_intf) {
-    DLOGE("Failed to get panel feature property interface");
+  if (!pf_factory_ || !prop_intf_) {
+    DLOGE("Failed to create PanelFeatures");
     return kErrorResources;
   }
 
   DisplayError ret = kErrorNone;
-  if ((ret = SetupSPR(factory, prop_intf)) != kErrorNone) return ret;
-  if ((ret = SetupDemura(factory, prop_intf)) != kErrorNone) return ret;
-  if ((ret = SetupRC(factory, prop_intf)) != kErrorNone) return ret;
+  if ((ret = SetupSPR()) != kErrorNone) return ret;
+  if ((ret = SetupDemura()) != kErrorNone) return ret;
 
   return ret;
 }
@@ -425,7 +462,7 @@ DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
     event_handler_->Refresh();
   }
 
-  if (!panel_feature_init_ && state != kStateOff && state != kStateStandby) {
+  if (spr_prop_value_ && !panel_feature_init_ && state != kStateOff && state != kStateStandby) {
     error = SetupPanelfeatures();
     panel_feature_init_ = true;
     if (error != kErrorNone) {

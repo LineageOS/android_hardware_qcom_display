@@ -423,6 +423,7 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
   string use_baselayer_for_stage = "use_baselayer_for_stage=";
   string ubwc_version = "UBWC version=";
   string spr = "spr=";
+  string rc_total_mem_size = "rc_mem_size=";
 
   while (std::getline(stream, line)) {
     if (line.find(max_blendstages) != string::npos) {
@@ -541,6 +542,8 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
       crtc_info_.ubwc_version = (std::stoi(string(line, ubwc_version.length()))) >> 28;
     } else if (line.find(spr) != string::npos) {
       crtc_info_.has_spr = std::stoi(string(line, spr.length())) == -1 ? false: true;
+    } else if (line.find(rc_total_mem_size) != string::npos) {
+      crtc_info_.rc_total_mem_size = std::stoi(string(line, rc_total_mem_size.length()));
     }
   }
   drmModeFreePropertyBlob(blob);

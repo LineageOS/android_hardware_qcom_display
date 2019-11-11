@@ -35,6 +35,7 @@
 
 #include "spr_intf.h"
 #include "panel_feature_property_intf.h"
+#include "rc_intf.h"
 
 namespace sdm {
 
@@ -50,6 +51,8 @@ class PanelFeatureFactoryIntf {
 
   virtual std::shared_ptr<SPRIntf>
     CreateSPRIntf(const SPRInputConfig &input_cfg, PanelFeaturePropertyIntf *prop_intf) = 0;
+  virtual std::unique_ptr<RCIntf> CreateRCIntf(const RCInputConfig &input_cfg,
+                                               PanelFeaturePropertyIntf *prop_intf) = 0;
 };
 
 extern "C" PanelFeatureFactoryIntf *GetPanelFeatureFactoryIntf();

@@ -781,6 +781,7 @@ void HWPeripheralDRM::CreatePanelFeaturePropertyMap() {
   panel_feature_property_map_[kPanelFeatureDsppRCInfo] = sde_drm::kDRMPanelFeatureDsppRCInfo;
   panel_feature_property_map_[kPanelFeatureDsppDemuraInfo] =
     sde_drm::kDRMPanelFeatureDsppDemuraInfo;
+  panel_feature_property_map_[kPanelFeatureRCInitCfg] = sde_drm::kDRMPanelFeatureRCInit;
 }
 
 int HWPeripheralDRM::GetPanelFeature(PanelFeaturePropertyInfo *feature_info) {
@@ -808,6 +809,7 @@ int HWPeripheralDRM::GetPanelFeature(PanelFeaturePropertyInfo *feature_info) {
     case kPanelFeatureDsppSPRInfo:
     case kPanelFeatureDsppDemuraInfo:
     case kPanelFeatureDsppRCInfo:
+    case kPanelFeatureRCInitCfg:
       drm_feature.obj_type = DRM_MODE_OBJECT_CRTC;
       drm_feature.obj_id =  token_.crtc_id;
      break;
@@ -838,6 +840,7 @@ int HWPeripheralDRM::SetPanelFeature(const PanelFeaturePropertyInfo &feature_inf
 
   switch (feature_info.prop_id) {
     case kPanelFeatureSPRInitCfg:
+    case kPanelFeatureRCInitCfg:
       drm_feature.obj_type = DRM_MODE_OBJECT_CRTC;
       drm_feature.obj_id =  token_.crtc_id;
      break;

@@ -51,6 +51,8 @@ class DRMPanelFeatureMgr : public DRMPanelFeatureMgrIntf {
  private:
   int InitObjectProps(int obj_id, int obj_type);
   void ParseCapabilities(uint32_t blob_id, char* value, uint32_t max_len, const std::string str);
+  void ParseDsppCapabilities(uint32_t blob_id, std::vector<int> *values, uint32_t *size,
+                             const std::string str);
 
   std::mutex lock_;
   int dev_fd_ = -1;

@@ -157,6 +157,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   void ResetPanel();
   DisplayError SetActiveConfig(uint32_t index) override;
   DisplayError ReconfigureDisplay() override;
+  DisplayError CreatePanelfeatures();
 
  private:
   bool CanCompareFrameROI(LayerStack *layer_stack);
@@ -167,9 +168,8 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   void GetFpsConfig(HWDisplayAttributes *display_attributes, HWPanelInfo *panel_info);
   PrimariesTransfer GetBlendSpaceFromStcColorMode(const snapdragoncolor::ColorMode &color_mode);
   DisplayError SetupPanelfeatures();
-  DisplayError SetupSPR(PanelFeatureFactoryIntf *factory, PanelFeaturePropertyIntf *prop_intf);
-  DisplayError SetupDemura(PanelFeatureFactoryIntf *factory, PanelFeaturePropertyIntf *prop_intf);
-  DisplayError SetupRC(PanelFeatureFactoryIntf *factory, PanelFeaturePropertyIntf *prop_intf);
+  DisplayError SetupSPR();
+  DisplayError SetupDemura();
 
   const uint32_t kPuTimeOutMs = 1000;
   std::vector<HWEvent> event_list_;
@@ -202,6 +202,12 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
 
   snapdragoncolor::ColorMode current_color_mode_ = {};
   snapdragoncolor::ColorModeList stc_color_modes_ = {};
+
+  std::shared_ptr<SPRIntf> spr_;
+  GetPanelFeatureFactoryIntfType GetPanelFeatureFactoryIntfFunc_ = nullptr;
+  PanelFeatureFactoryIntf *pf_factory_ = nullptr;
+  PanelFeaturePropertyIntf *prop_intf_ = nullptr;
+  int spr_prop_value_ = 0;
 };
 
 }  // namespace sdm

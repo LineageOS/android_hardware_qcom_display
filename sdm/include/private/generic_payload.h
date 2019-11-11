@@ -31,7 +31,12 @@
 #define __GENERIC_PAYLOAD_H__
 
 #include <errno.h>
+#include <debug_handler.h>
+#include <assert.h>
 #include <functional>
+#include <cstring>
+
+// Do not define __CLASS__ for logging in shared utility header like this one
 
 namespace sdm {
 
@@ -39,6 +44,49 @@ struct GenericPayload {
  public:
   GenericPayload():
     type_size(0), payload(nullptr), array_size(0) {}
+
+  GenericPayload(const GenericPayload &in) {
+    type_size = 0;
+    payload = nullptr;
+    array_size = 0;
+    if (in.payload) {
+      display::DebugHandler::Get()->Error("GenericPayload::%s:New GenericPayload will not copy"
+               "payload data! Use CopyPayload on a new GenericPayload instance.", __FUNCTION__);
+    }
+    copy_constructed = true;
+  }
+
+  GenericPayload& operator=(const GenericPayload &) = delete;
+
+  template<typename A> int CopyPayload(const GenericPayload &in) {
+    if (sizeof(A) != in.type_size) {
+      return -EINVAL;
+    }
+    A* p = reinterpret_cast<A *>(in.payload);
+    type_size = sizeof(A);
+    array_size = in.array_size;
+
+    if (payload != nullptr) {
+      release();
+    }
+    A* p2 = nullptr;
+    if (array_size > 1) {
+      p2 = new A[array_size];
+    } else {
+      p2 = new A();
+    }
+    if (p2 == nullptr) {
+      return -ENOMEM;
+    }
+    *p2 = *p;
+    payload = reinterpret_cast<uint8_t *>(p2);
+    if (array_size > 1) {
+      release = std::function<void(void)>([p2]() -> void {delete [] p2;});
+    } else {
+      release = std::function<void(void)>([p2]() -> void {delete p2;});
+    }
+    return 0;
+  }
 
   template<typename A> int CreatePayload(A *&p) {
     if (payload) {
@@ -89,6 +137,16 @@ struct GenericPayload {
     }
 
     p = reinterpret_cast<A *>(payload);
+    *sz = 0;
+    if (p == nullptr && copy_constructed) {
+      display::DebugHandler::Get()->Error("GenericPayload::%s:Payload was not properly"
+                                          "copied via CopyPayload", __FUNCTION__);
+      return -ENOMEM;
+    } else if (p == nullptr) {
+      display::DebugHandler::Get()->Error("GenericPayload::%s:Payload was not properly"
+                                          "created via CreatePayload", __FUNCTION__);
+      return -ENOMEM;
+    }
     *sz = array_size;
 
     return 0;
@@ -113,6 +171,7 @@ struct GenericPayload {
   uint8_t *payload;
   uint32_t array_size;
   std::function<void(void)> release;
+  bool copy_constructed = false;
 };
 
 }  // namespace sdm

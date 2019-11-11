@@ -172,6 +172,7 @@ enum struct DRMProperty {
   VM_REQ_STATE,
   DSPP_CAPABILITIES,
   SPR_INIT_CFG_V1,
+  DSPP_RC_MASK_V1,
 
   // Insert above
   MAX
