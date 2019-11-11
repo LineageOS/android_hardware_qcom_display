@@ -30,10 +30,6 @@
 #ifndef __GR_ION_ALLOC_H__
 #define __GR_ION_ALLOC_H__
 
-#ifndef QMAA
-#include <linux/msm_ion.h>
-#endif
-
 #define FD_INIT -1
 
 namespace gralloc {
@@ -74,9 +70,6 @@ class IonAlloc {
   int CleanBuffer(void *base, unsigned int size, unsigned int offset, int handle, int op, int fd);
 
  private:
-#ifndef TARGET_ION_ABI_VERSION
-  const char *kIonDevice = "/dev/ion";
-#endif
 
   int OpenIonDevice();
   void CloseIonDevice();

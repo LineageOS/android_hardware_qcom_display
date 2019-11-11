@@ -32,6 +32,10 @@
 #include <algorithm>
 #include <vector>
 
+#ifndef QMAA
+#include <linux/msm_ion.h>
+#endif
+
 #include "gr_allocator.h"
 #include "gr_utils.h"
 #include "gralloc_priv.h"
