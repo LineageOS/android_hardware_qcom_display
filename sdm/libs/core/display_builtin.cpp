@@ -90,6 +90,7 @@ DisplayError DisplayBuiltIn::Init() {
   if (hw_panel_info_.mode == kModeCommand) {
     event_list_ = {HWEvent::VSYNC,
                    HWEvent::EXIT,
+                   HWEvent::IDLE_NOTIFY,
                    HWEvent::SHOW_BLANK_EVENT,
                    HWEvent::THERMAL_LEVEL,
                    HWEvent::IDLE_POWER_COLLAPSE,
@@ -329,6 +330,8 @@ DisplayError DisplayBuiltIn::SetDisplayMode(uint32_t mode) {
             hw_display_mode);
       return error;
     }
+
+    DisplayBase::ReconfigureDisplay();
 
     if (mode == kModeVideo) {
       ControlPartialUpdate(false /* enable */, &pending);
