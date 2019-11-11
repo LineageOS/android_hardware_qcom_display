@@ -841,13 +841,22 @@ DisplayError HWDeviceDRM::SetDisplayAttributes(uint32_t index) {
     return kErrorParameters;
   }
 
+  uint32_t mode_flag = 0;
   drmModeModeInfo to_set = connector_info_.modes[index].mode;
   uint64_t current_bit_clk = connector_info_.modes[current_mode_index_].bit_clk_rate;
+
+  if (to_set.flags & DRM_MODE_FLAG_CMD_MODE_PANEL) {
+    mode_flag = DRM_MODE_FLAG_CMD_MODE_PANEL;
+  } else if (to_set.flags & DRM_MODE_FLAG_VID_MODE_PANEL) {
+    mode_flag = DRM_MODE_FLAG_VID_MODE_PANEL;
+  }
+
   for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
     if ((to_set.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
         (to_set.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
         (to_set.vrefresh == connector_info_.modes[mode_index].mode.vrefresh) &&
-        (current_bit_clk == connector_info_.modes[mode_index].bit_clk_rate)) {
+        (current_bit_clk == connector_info_.modes[mode_index].bit_clk_rate) &&
+	(mode_flag & connector_info_.modes[mode_index].mode.flags)) {
       index = mode_index;
       break;
     }
