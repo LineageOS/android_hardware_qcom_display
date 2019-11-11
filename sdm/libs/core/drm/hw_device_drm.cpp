@@ -842,13 +842,25 @@ DisplayError HWDeviceDRM::SetDisplayAttributes(uint32_t index) {
   }
 
   uint32_t mode_flag = 0;
+  uint32_t curr_mode_flag = 0;
   drmModeModeInfo to_set = connector_info_.modes[index].mode;
+  drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
   uint64_t current_bit_clk = connector_info_.modes[current_mode_index_].bit_clk_rate;
 
   if (to_set.flags & DRM_MODE_FLAG_CMD_MODE_PANEL) {
     mode_flag = DRM_MODE_FLAG_CMD_MODE_PANEL;
   } else if (to_set.flags & DRM_MODE_FLAG_VID_MODE_PANEL) {
     mode_flag = DRM_MODE_FLAG_VID_MODE_PANEL;
+  }
+
+  if (current_mode.flags & DRM_MODE_FLAG_CMD_MODE_PANEL) {
+    curr_mode_flag = DRM_MODE_FLAG_CMD_MODE_PANEL;
+  } else if (current_mode.flags & DRM_MODE_FLAG_VID_MODE_PANEL) {
+    curr_mode_flag = DRM_MODE_FLAG_VID_MODE_PANEL;
+  }
+
+  if (curr_mode_flag != mode_flag) {
+    panel_mode_changed_ = mode_flag;
   }
 
   for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
@@ -869,14 +881,15 @@ DisplayError HWDeviceDRM::SetDisplayAttributes(uint32_t index) {
   DLOGI_IF(
       kTagDisplay,
       "Display attributes[%d]: WxH: %dx%d, DPI: %fx%f, FPS: %d, LM_SPLIT: %d, V_BACK_PORCH: %d,"
-      " V_FRONT_PORCH: %d, V_PULSE_WIDTH: %d, V_TOTAL: %d, H_TOTAL: %d, CLK: %dKHZ, TOPOLOGY: %d",
-      index, display_attributes_[index].x_pixels, display_attributes_[index].y_pixels,
-      display_attributes_[index].x_dpi, display_attributes_[index].y_dpi,
-      display_attributes_[index].fps, display_attributes_[index].is_device_split,
-      display_attributes_[index].v_back_porch, display_attributes_[index].v_front_porch,
-      display_attributes_[index].v_pulse_width, display_attributes_[index].v_total,
-      display_attributes_[index].h_total, display_attributes_[index].clock_khz,
-      display_attributes_[index].topology);
+      " V_FRONT_PORCH: %d, V_PULSE_WIDTH: %d, V_TOTAL: %d, H_TOTAL: %d, CLK: %dKHZ,"
+      "TOPOLOGY: %d, PanelMode %s", index, display_attributes_[index].x_pixels,
+      display_attributes_[index].y_pixels, display_attributes_[index].x_dpi,
+      display_attributes_[index].y_dpi, display_attributes_[index].fps,
+      display_attributes_[index].is_device_split, display_attributes_[index].v_back_porch,
+      display_attributes_[index].v_front_porch, display_attributes_[index].v_pulse_width,
+      display_attributes_[index].v_total, display_attributes_[index].h_total,
+      display_attributes_[index].clock_khz, display_attributes_[index].topology,
+      (mode_flag & DRM_MODE_FLAG_VID_MODE_PANEL) ? "Video" : "Command");
 
   return kErrorNone;
 }
@@ -1210,9 +1223,12 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
   }
 
   // Set panel mode
-  if ((panel_mode_changed_ & DRM_MODE_FLAG_VID_MODE_PANEL) && !validate) {
-    // Switch to video mode, corresponding change the fence_offset
-    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_OUTPUT_FENCE_OFFSET, token_.crtc_id, 1);
+  if (panel_mode_changed_ & DRM_MODE_FLAG_VID_MODE_PANEL) {
+    if (!validate) {
+      // Switch to video mode, corresponding change the fence_offset
+      drm_atomic_intf_->Perform(DRMOps::CRTC_SET_OUTPUT_FENCE_OFFSET, token_.crtc_id, 1);
+    }
+    SetFullROI();
   }
 
   if (hw_layers->hw_avr_info.update) {
@@ -2117,7 +2133,7 @@ void HWDeviceDRM::DumpConnectorModeInfo() {
 
 void HWDeviceDRM::SetFullROI() {
   // Reset the CRTC ROI and connector ROI only for the panel that supports partial update
-  if (!hw_panel_info_.partial_update) {
+  if (!hw_panel_info_.partial_update && !panel_mode_changed_) {
     return;
   }
   uint32_t index = current_mode_index_;
