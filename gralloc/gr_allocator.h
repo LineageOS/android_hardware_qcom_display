@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2011-2017,2019, The Linux Foundation. All rights reserved.
-
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
@@ -47,7 +46,7 @@ class Allocator {
   int MapBuffer(void **base, unsigned int size, unsigned int offset, int fd);
   int ImportBuffer(int fd);
   int FreeBuffer(void *base, unsigned int size, unsigned int offset, int fd, int handle);
-  int CleanBuffer(void *base, unsigned int size, unsigned int offset, int handle, int op);
+  int CleanBuffer(void *base, unsigned int size, unsigned int offset, int handle, int op, int fd);
   int AllocateMem(AllocData *data, gralloc1_producer_usage_t prod_usage,
                   gralloc1_consumer_usage_t cons_usage);
   // @return : index of the descriptor with maximum buffer size req
