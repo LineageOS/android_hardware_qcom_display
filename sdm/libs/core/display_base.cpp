@@ -980,6 +980,10 @@ DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
     return kErrorNotSupported;
   }
 
+  if (color_mode.empty()) {
+    return kErrorParameters;
+  }
+
   DisplayError error = kErrorNone;
   std::string dynamic_range = kSdr, str_render_intent;
   if (IsSupportColorModeAttribute(color_mode)) {
@@ -1963,6 +1967,11 @@ bool DisplayBase::SetHdrModeAtStart(LayerStack *layer_stack) {
 PrimariesTransfer DisplayBase::GetBlendSpaceFromColorMode() {
   PrimariesTransfer pt = {};
   auto current_color_attr_ = color_mode_attr_map_.find(current_color_mode_);
+  if (current_color_attr_ == color_mode_attr_map_.end()) {
+    DLOGE("The attritbutes is not present in color mode: %s", current_color_mode_.c_str());
+    return pt;
+  }
+
   AttrVal attr = current_color_attr_->second;
   std::string color_gamut = kNative, dynamic_range = kSdr, pic_quality = kStandard;
   std::string transfer = {};
