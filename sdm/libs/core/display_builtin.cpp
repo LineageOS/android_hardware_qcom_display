@@ -523,6 +523,20 @@ DisplayError DisplayBuiltIn::GetPanelBrightness(float *brightness) {
   return kErrorNone;
 }
 
+DisplayError DisplayBuiltIn::GetPanelMaxBrightness(uint32_t *max_brightness_level) {
+  lock_guard<recursive_mutex> obj(brightness_lock_);
+
+  if (!max_brightness_level) {
+    DLOGE("Invalid input pointer is null");
+    return kErrorParameters;
+  }
+
+  *max_brightness_level = static_cast<uint32_t>(hw_panel_info_.panel_max_brightness);
+
+  DLOGI_IF(kTagDisplay, "Get panel max_brightness_level %u", *max_brightness_level);
+  return kErrorNone;
+}
+
 DisplayError DisplayBuiltIn::ControlPartialUpdate(bool enable, uint32_t *pending) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   if (!pending) {

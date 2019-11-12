@@ -120,6 +120,9 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError GetPanelBrightness(float *brightness) {
     return kErrorNotSupported;
   }
+  virtual DisplayError GetPanelMaxBrightness(uint32_t *max_brightness_level) {
+    return kErrorNotSupported;
+  }
   virtual DisplayError SetVSyncState(bool enable);
   virtual void SetIdleTimeoutMs(uint32_t active_ms) {}
   virtual DisplayError SetMixerResolution(uint32_t width, uint32_t height);

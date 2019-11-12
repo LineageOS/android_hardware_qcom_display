@@ -1323,13 +1323,23 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
           DLOGE("QService command = %d: output_parcel needed.", command);
           break;
         }
-        float brightness = -1.0f;
+
         uint32_t display = input_parcel->readUint32();
-        status = getDisplayBrightness(display, &brightness);
-        if (brightness == -1.0f) {
+        uint32_t max_brightness_level = 0;
+        status = getDisplayMaxBrightness(display, &max_brightness_level);
+        if (status || !max_brightness_level) {
+          output_parcel->writeInt32(max_brightness_level);
+          DLOGE("Failed to get max brightness %u,  status %d", max_brightness_level, status);
+          break;
+        }
+        DLOGV("Panel Max brightness is %u", max_brightness_level);
+
+        float brightness_precent = -1.0f;
+        status = getDisplayBrightness(display, &brightness_precent);
+        if (brightness_precent == -1.0f) {
           output_parcel->writeInt32(0);
         } else {
-          output_parcel->writeInt32(INT32(brightness*254 + 1));
+          output_parcel->writeInt32(INT32(brightness_precent*(max_brightness_level - 1) + 1));
         }
       }
       break;
@@ -1339,11 +1349,23 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
           DLOGE("QService command = %d: input_parcel and output_parcel needed.", command);
           break;
         }
+
+        uint32_t max_brightness_level = 0;
+        uint32_t display = HWC_DISPLAY_PRIMARY;
+        status = getDisplayMaxBrightness(display, &max_brightness_level);
+        if (status || max_brightness_level <= 1) {
+          output_parcel->writeInt32(max_brightness_level);
+          DLOGE("Failed to get max brightness %u, status %d", max_brightness_level, status);
+          break;
+        }
+        DLOGV("Panel Max brightness is %u", max_brightness_level);
+
         int level = input_parcel->readInt32();
         if (level == 0) {
-          status = SetDisplayBrightness(HWC_DISPLAY_PRIMARY, -1.0f);
+          status = SetDisplayBrightness(display, -1.0f);
         } else {
-          status = SetDisplayBrightness(HWC_DISPLAY_PRIMARY, (level - 1)/254.0f);
+          status = SetDisplayBrightness(display,
+                    (level - 1)/(static_cast<float>(max_brightness_level - 1)));
         }
         output_parcel->writeInt32(status);
       }

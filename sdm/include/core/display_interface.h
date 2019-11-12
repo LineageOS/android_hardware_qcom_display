@@ -670,6 +670,14 @@ class DisplayInterface {
   */
   virtual DisplayError GetPanelBrightness(float *brightness) = 0;
 
+  /*! @brief Method to get the max brightness level of the display
+
+    @param[out] max_brightness level
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetPanelMaxBrightness(uint32_t *max_brightness_level) = 0;
+
   /*! @brief Method to set layer mixer resolution.
 
     @param[in] width layer mixer width
