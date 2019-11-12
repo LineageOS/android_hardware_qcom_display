@@ -939,25 +939,34 @@ void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
     }
   }
 
-  // Only Video module populates the Color Metadata in handle.
-  if (layer_buffer->flags.video && IsBT2020(layer_buffer->color_metadata.colorPrimaries)) {
+  if (IsBT2020(layer_buffer->color_metadata.colorPrimaries)) {
      // android_dataspace_t doesnt support mastering display and light levels
      // so retrieve it from metadata for BT2020(HDR)
      use_color_metadata = true;
   }
 
   if (use_color_metadata) {
-    ColorMetaData old_meta_data = layer_buffer->color_metadata;
-    if (sdm::SetCSC(handle, &layer_buffer->color_metadata) == kErrorNone) {
-      if ((layer_buffer->color_metadata.colorPrimaries != old_meta_data.colorPrimaries) ||
-          (layer_buffer->color_metadata.transfer != old_meta_data.transfer) ||
-          (layer_buffer->color_metadata.range != old_meta_data.range)) {
+    ColorMetaData new_metadata = {};
+    if (sdm::SetCSC(handle, &new_metadata) == kErrorNone) {
+      // If dataspace is KNOWN, overwrite the gralloc metadata CSC using the previously derived CSC
+      // from dataspace.
+      if (dataspace_ != HAL_DATASPACE_UNKNOWN) {
+        new_metadata.colorPrimaries = layer_buffer->color_metadata.colorPrimaries;
+        new_metadata.transfer = layer_buffer->color_metadata.transfer;
+        new_metadata.range = layer_buffer->color_metadata.range;
+      }
+      if ((layer_buffer->color_metadata.colorPrimaries != new_metadata.colorPrimaries) ||
+          (layer_buffer->color_metadata.transfer != new_metadata.transfer) ||
+          (layer_buffer->color_metadata.range != new_metadata.range)) {
         layer_->update_mask.set(kMetadataUpdate);
       }
-      if (layer_buffer->color_metadata.dynamicMetaDataValid &&
+      if (new_metadata.dynamicMetaDataValid &&
           !SameConfig(layer_buffer->color_metadata.dynamicMetaDataPayload,
-          old_meta_data.dynamicMetaDataPayload, HDR_DYNAMIC_META_DATA_SZ)) {
+          new_metadata.dynamicMetaDataPayload, HDR_DYNAMIC_META_DATA_SZ)) {
         layer_->update_mask.set(kMetadataUpdate);
+      }
+      if (layer_->update_mask.test(kMetadataUpdate)) {
+        layer_buffer->color_metadata = new_metadata;
       }
     } else {
       dataspace_supported_ = false;
