@@ -201,8 +201,8 @@ DisplayError DisplayBase::ValidateGPUTargetParams() {
   auto gpu_target_layer_dst_xpixels = out_rect.right - out_rect.left;
   auto gpu_target_layer_dst_ypixels = out_rect.bottom - out_rect.top;
 
-  if (gpu_target_layer_dst_xpixels > mixer_attributes_.width ||
-    gpu_target_layer_dst_ypixels > mixer_attributes_.height) {
+  if (gpu_target_layer_dst_xpixels > layer_mixer_width ||
+    gpu_target_layer_dst_ypixels > layer_mixer_height) {
     DLOGE("GPU target layer dst rect is not with in limits gpu wxh %fx%f, mixer wxh %dx%d",
                   gpu_target_layer_dst_xpixels, gpu_target_layer_dst_ypixels,
                   mixer_attributes_.width, mixer_attributes_.height);
@@ -1179,7 +1179,7 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
 
     // Align the width and height according to fb's aspect ratio
     *new_mixer_width = FloorToMultipleOf(UINT32((FLOAT(fb_width) / FLOAT(fb_height)) *
-                                         layer_height), align_x);
+                                         FLOAT(layer_height)), align_x);
     *new_mixer_height = FloorToMultipleOf(layer_height, align_y);
 
     LayerRect dst_domain = {0.0f, 0.0f, FLOAT(*new_mixer_width), FLOAT(*new_mixer_height)};

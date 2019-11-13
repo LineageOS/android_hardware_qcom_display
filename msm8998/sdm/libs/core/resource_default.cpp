@@ -469,7 +469,7 @@ DisplayError ResourceDefault::SrcSplitConfig(DisplayResourceContext *display_res
   float dst_width = dst_rect.right - dst_rect.left;
 
   // Layer cannot qualify for SrcSplit if source or destination width exceeds max pipe width.
-  if ((src_width > hw_res_info_.max_pipe_width) || (dst_width > hw_res_info_.max_pipe_width)) {
+  if ((src_width > FLOAT(hw_res_info_.max_pipe_width)) || (dst_width > FLOAT(hw_res_info_.max_pipe_width))) {
     SplitRect(src_rect, dst_rect, &left_pipe->src_roi, &left_pipe->dst_roi, &right_pipe->src_roi,
               &right_pipe->dst_roi);
     left_pipe->valid = true;
