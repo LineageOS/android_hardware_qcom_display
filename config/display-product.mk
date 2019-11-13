@@ -28,6 +28,7 @@ PRODUCT_PACKAGES += \
     vendor.display.config@1.10.vendor \
     vendor.display.config@1.11.vendor \
     vendor.display.config@1.12.vendor \
+    vendor.display.config@1.13.vendor \
     vendor.qti.hardware.display.mapper@2.0.vendor \
     vendor.qti.hardware.display.mapper@3.0.vendor \
     modetest
@@ -76,12 +77,15 @@ PRODUCT_PROPERTY_OVERRIDES += \
     debug.sf.phase_offset_threshold_for_next_vsync_ns=6100000
 endif
 
+ifneq ($(PLATFORM_VERSION), 10)
+    PRODUCT_PROPERTY_OVERRIDES +=  vendor.display.enable_async_powermode=0
+endif
+
 #Set WCG properties
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.has_wide_color_display=true
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.has_HDR_display=true
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.use_color_management=true
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.wcg_composition_dataspace=143261696
-PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.protected_contents=true
 
 ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
 # Recovery is enabled, logging is enabled

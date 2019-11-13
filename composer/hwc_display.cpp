@@ -2432,6 +2432,14 @@ void HWCDisplay::SetLayerStack(HWCLayerStack *stack) {
   layer_set_ = stack->layer_set;
 }
 
+bool HWCDisplay::CheckResourceState() {
+  if (display_intf_) {
+    return display_intf_->CheckResourceState();
+  }
+
+  return false;
+}
+
 void HWCDisplay::UpdateActiveConfig() {
   if (!pending_config_) {
     return;

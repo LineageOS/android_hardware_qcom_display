@@ -183,6 +183,11 @@ int HWCSession::Init() {
   async_powermode_ = (value == 1);
   DLOGI("builtin_powermode_override: %d", async_powermode_);
 
+  value = 0;
+  Debug::Get()->GetProperty(ENABLE_ASYNC_VDS_CREATION, &value);
+  async_vds_creation_ = (value == 1);
+  DLOGI("async_vds_creation: %d", async_vds_creation_);
+
   InitSupportedDisplaySlots();
   // Create primary display here. Remaining builtin displays will be created after client has set
   // display indexes which may happen sometime before callback is registered.
@@ -441,6 +446,11 @@ int32_t HWCSession::CreateVirtualDisplay(uint32_t width, uint32_t height, int32_
     return 0;
   }
 
+  if (async_vds_creation_ && virtual_id_ != HWCCallbacks::kNumDisplays) {
+    *out_display_id = virtual_id_;
+    return HWC2_ERROR_NONE;
+  }
+
   auto status = CreateVirtualDisplayObj(width, height, format, out_display_id);
   if (status == HWC2::Error::None) {
     DLOGI("Created virtual display id:% " PRIu64 ", res: %dx%d", *out_display_id, width, height);
@@ -479,6 +489,7 @@ int32_t HWCSession::DestroyVirtualDisplay(hwc2_display_t display) {
       break;
     }
   }
+  virtual_id_ = HWCCallbacks::kNumDisplays;
 
   return HWC2_ERROR_NONE;
 }
@@ -697,6 +708,10 @@ int32_t HWCSession::PresentDisplay(hwc2_display_t display, int32_t *out_retire_f
   HandlePendingRefresh();
   cwb_.PresentDisplayDone(display);
   display_ready_.set(UINT32(display));
+  {
+    std::unique_lock<std::mutex> caller_lock(hotplug_mutex_);
+    hotplug_cv_.notify_one();
+  }
 
   return INT32(status);
 }
@@ -1074,6 +1089,7 @@ int32_t HWCSession::ValidateDisplay(hwc2_display_t display, uint32_t *out_num_ty
 HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height, int32_t *format,
                                                 hwc2_display_t *out_display_id) {
   hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
+  hwc2_display_t client_id = HWCCallbacks::kNumDisplays;
   if (active_builtin_disp_id < HWCCallbacks::kNumDisplays) {
     SEQUENCE_WAIT_SCOPE_LOCK(locker_[active_builtin_disp_id]);
     std::bitset<kSecureMax> secure_sessions = 0;
@@ -1112,7 +1128,7 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
     }
 
     for (auto &map_info : map_info_virtual_) {
-      hwc2_display_t client_id = map_info.client_id;
+      client_id = map_info.client_id;
       {
         SCOPE_LOCK(locker_[client_id]);
         auto &hwc_display = hwc_display_[client_id];
@@ -1139,7 +1155,8 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
     }
   }
 
-  if (active_builtin_disp_id < HWCCallbacks::kNumDisplays) {
+  // Active builtin display needs revalidation
+  if (!async_vds_creation_ && active_builtin_disp_id < HWCCallbacks::kNumRealDisplays) {
     SEQUENCE_WAIT_SCOPE_LOCK(locker_[active_builtin_disp_id]);
     hwc_display_[active_builtin_disp_id]->ResetValidation();
   }
@@ -2471,6 +2488,7 @@ int HWCSession::HandlePluggableDisplays(bool delay_hotplug) {
 int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool delay_hotplug) {
   int status = 0;
   std::vector<hwc2_display_t> pending_hotplugs = {};
+  hwc2_display_t client_id = 0;
 
   for (auto &iter : *hw_displays_info) {
     auto &info = iter.second;
@@ -2522,7 +2540,7 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
 
     // find an empty slot to create display.
     for (auto &map_info : map_info_pluggable_) {
-      hwc2_display_t client_id = map_info.client_id;
+      client_id = map_info.client_id;
 
       // Lock confined to this scope
       {
@@ -2581,20 +2599,7 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
   // Active builtin display needs revalidation
   hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
   if (active_builtin_disp_id < HWCCallbacks::kNumDisplays) {
-    {
-      SEQUENCE_WAIT_SCOPE_LOCK(locker_[active_builtin_disp_id]);
-      hwc_display_[active_builtin_disp_id]->ResetValidation();
-    }
-
-    if (callbacks_.IsClientConnected()) {
-      callbacks_.Refresh(active_builtin_disp_id);
-    }
-
-    // Do not sleep if this method is called from client thread.
-    if (delay_hotplug) {
-      // wait sufficient time to ensure resources are available for new display connection.
-      usleep(UINT32(GetVsyncPeriod(INT32(active_builtin_disp_id))) * 2 / 1000);
-    }
+    WaitForResources(delay_hotplug, active_builtin_disp_id, client_id);
   }
 
   for (auto client_id : pending_hotplugs) {
@@ -2947,6 +2952,7 @@ void HWCSession::HandlePendingHotplug(hwc2_display_t disp_id, int retire_fence) 
       for (auto &map_info : map_info_virtual_) {
         DestroyDisplay(&map_info);
         destroy_virtual_disp_pending_ = false;
+        virtual_id_ = HWCCallbacks::kNumDisplays;
       }
     }
     // Handle connect/disconnect hotplugs if secure session is not present.
@@ -3199,4 +3205,25 @@ void HWCSession::NotifyClientStatus(bool connected) {
   }
 }
 
+void HWCSession::WaitForResources(bool wait_for_resources, hwc2_display_t active_builtin_id,
+                                  hwc2_display_t display_id) {
+  {
+    SEQUENCE_WAIT_SCOPE_LOCK(locker_[active_builtin_id]);
+    hwc_display_[active_builtin_id]->ResetValidation();
+  }
+
+  if (wait_for_resources) {
+    bool res_wait = true;
+    do {
+      if (client_connected_) {
+        Refresh(active_builtin_id);
+      }
+      {
+        std::unique_lock<std::mutex> caller_lock(hotplug_mutex_);
+        hotplug_cv_.wait(caller_lock);
+      }
+      res_wait = hwc_display_[display_id]->CheckResourceState();
+    } while (res_wait);
+  }
+}
 }  // namespace sdm

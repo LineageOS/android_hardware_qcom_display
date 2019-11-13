@@ -2,9 +2,6 @@ LOCAL_PATH := $(call my-dir)
 include $(LOCAL_PATH)/../common.mk
 include $(CLEAR_VARS)
 
-ifeq ($(use_hwc2),true)
-include $(CLEAR_VARS)
-
 LOCAL_MODULE                  := vendor.qti.hardware.display.composer-service
 LOCAL_SANITIZE                := integer_overflow
 LOCAL_VENDOR_MODULE           := true
@@ -24,7 +21,6 @@ LOCAL_SHARED_LIBRARIES        := libbinder libhardware libutils libcutils libsyn
                                  liblog libfmq libhardware_legacy \
                                  libsdmcore libqservice libqdutils libqdMetaData \
                                  libdisplaydebug libsdmutils libgrallocutils libui \
-                                 libgpu_tonemapper \
                                  libEGL libGLESv2 libGLESv3 \
                                  vendor.qti.hardware.display.composer@1.0 \
                                  vendor.qti.hardware.display.composer@2.0 \
@@ -48,7 +44,13 @@ LOCAL_SHARED_LIBRARIES        := libbinder libhardware libutils libcutils libsyn
                                  vendor.display.config@1.9 \
                                  vendor.display.config@1.10 \
                                  vendor.display.config@1.11 \
-                                 vendor.display.config@1.12
+                                 vendor.display.config@1.12 \
+                                 vendor.display.config@1.13
+
+ifneq ($(TARGET_IS_HEADLESS), true)
+    LOCAL_SHARED_LIBRARIES += libgpu_tonemapper
+endif
+
 
 LOCAL_SRC_FILES               := QtiComposer.cpp QtiComposerClient.cpp service.cpp \
                                  QtiComposerHandleImporter.cpp \
@@ -81,4 +83,3 @@ LOCAL_INIT_RC                 := vendor.qti.hardware.display.composer-service.rc
 LOCAL_VINTF_FRAGMENTS         := vendor.qti.hardware.display.composer-service.xml
 
 include $(BUILD_EXECUTABLE)
-endif

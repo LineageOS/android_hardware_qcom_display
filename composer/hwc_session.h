@@ -20,7 +20,7 @@
 #ifndef __HWC_SESSION_H__
 #define __HWC_SESSION_H__
 
-#include <vendor/display/config/1.12/IDisplayConfig.h>
+#include <vendor/display/config/1.13/IDisplayConfig.h>
 #include <vendor/qti/hardware/display/composer/2.0/IQtiComposerClient.h>
 
 #include <core/core_interface.h>
@@ -49,7 +49,7 @@
 
 namespace sdm {
 
-using vendor::display::config::V1_12::IDisplayConfig;
+using vendor::display::config::V1_13::IDisplayConfig;
 using vendor::display::config::V1_10::IDisplayCWBCallback;
 
 using ::android::hardware::Return;
@@ -195,6 +195,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
                                  uint32_t *outCapabilities);
   int32_t GetDisplayBrightnessSupport(hwc2_display_t display, bool *outSupport);
   int32_t SetDisplayBrightness(hwc2_display_t display, float brightness);
+  void WaitForResources(bool wait_for_resources, hwc2_display_t active_builtin_id,
+                        hwc2_display_t display_id);
 
   // newly added
   int32_t GetDisplayType(hwc2_display_t display, int32_t *out_type);
@@ -309,6 +311,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   static const int kExternalConnectionTimeoutMs = 500;
   static const int kCommitDoneTimeoutMs = 100;
   uint32_t throttling_refresh_rate_ = 60;
+  std::mutex hotplug_mutex_;
+  std::condition_variable hotplug_cv_;
   void UpdateThrottlingRate();
   void SetNewThrottlingRate(uint32_t new_rate);
 
@@ -391,6 +395,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   Return<int32_t> setPanelLuminanceAttributes(uint32_t disp_id, float min_lum,
                                               float max_lum) override;
   Return<bool> isBuiltInDisplay(uint32_t disp_id) override;
+  Return<bool> isAsyncVDSCreationSupported() override;
+  Return<int32_t> createVirtualDisplay(uint32_t width, uint32_t height, int32_t format) override;
   Return<void> getSupportedDSIBitClks(uint32_t disp_id,
                                       getSupportedDSIBitClks_cb _hidl_cb) override;
   Return<uint64_t> getDSIClk(uint32_t disp_id) override;
@@ -479,6 +485,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   static bool pending_power_mode_[HWCCallbacks::kNumDisplays];
   static int null_display_mode_;
   HotPlugEvent pending_hotplug_event_ = kHotPlugNone;
+  hwc2_display_t virtual_id_ = HWCCallbacks::kNumDisplays;
   Locker pluggable_handler_lock_;
   bool destroy_virtual_disp_pending_ = false;
   uint32_t idle_pc_ref_cnt_ = 0;
@@ -489,6 +496,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   std::bitset<HWCCallbacks::kNumDisplays> pending_refresh_;
   CWB cwb_;
   bool async_powermode_ = false;
+  bool async_vds_creation_ = false;
   bool power_state_transition_[HWCCallbacks::kNumDisplays] = {};
   std::bitset<HWCCallbacks::kNumDisplays> display_ready_;
   bool secure_session_active_ = false;

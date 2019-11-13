@@ -54,6 +54,8 @@ using std::unique_ptr;
 using std::map;
 using std::mutex;
 using std::lock_guard;
+using std::pair;
+using std::vector;
 
 // CRTC Security Levels
 static uint8_t SECURE_NON_SECURE = 0;
@@ -354,6 +356,14 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
   string max_dest_scaler_input_width = "max_dest_scaler_input_width=";
   string max_dest_scaler_output_width = "max_dest_scaler_output_width=";
   string sec_ui_blendstage = "sec_ui_blendstage=";
+  string vig = "vig=";
+  string dma = "dma=";
+  string scaling = "scale=";
+  string rotation = "inline_rot=";
+  string linewidth_constraints = "sspp_linewidth_usecases=";
+  string linewidth_values = "sspp_linewidth_values=";
+  string limit_constraint = "limit_usecase=";
+  string limit_value = "limit_value=";
 
   while (std::getline(stream, line)) {
     if (line.find(max_blendstages) != string::npos) {
@@ -429,6 +439,36 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
       crtc_info_.min_prefill_lines = std::stoi(string(line, min_prefill_lines.length()));
     } else if (line.find(sec_ui_blendstage) != string::npos) {
       crtc_info_.secure_disp_blend_stage = std::stoi(string(line, (sec_ui_blendstage).length()));
+    } else if (line.find(linewidth_constraints) != string::npos) {
+      crtc_info_.line_width_constraints_count =
+                            std::stoi(string(line, (linewidth_constraints).length()));
+    } else if (line.find(vig) != string::npos) {
+      crtc_info_.vig_limit_index = std::stoi(string(line, (vig).length()));
+    } else if (line.find(dma) != string::npos) {
+      crtc_info_.dma_limit_index = std::stoi(string(line, (dma).length()));
+    } else if (line.find(scaling) != string::npos) {
+      crtc_info_.scaling_limit_index = std::stoi(string(line, (scaling).length()));
+    } else if (line.find(rotation) != string::npos) {
+      crtc_info_.rotation_limit_index = std::stoi(string(line, (rotation).length()));
+    } else if (line.find(linewidth_values) != string::npos) {
+      uint32_t num_linewidth_values = std::stoi(string(line, (linewidth_values).length()));
+      vector< pair <uint32_t,uint32_t> > constraint_vector;
+      for (uint32_t i = 0; i < num_linewidth_values; i++) {
+        uint32_t constraint = 0;
+        uint32_t value  = 0;
+        std::getline(stream, line);
+        if (line.find(limit_constraint) != string::npos) {
+          constraint = std::stoi(string(line, (limit_constraint).length()));
+        }
+        std::getline(stream, line);
+        if (line.find(limit_value) != string::npos) {
+          value = std::stoi(string(line, (limit_value).length()));
+        }
+        if (value) {
+          constraint_vector.push_back(std::make_pair(constraint,value));
+        }
+      }
+      crtc_info_.line_width_limits = std::move(constraint_vector);
     }
   }
   drmModeFreePropertyBlob(blob);

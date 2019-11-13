@@ -71,6 +71,10 @@ HWCDisplayVirtualGPU::HWCDisplayVirtualGPU(CoreInterface *core_intf, HWCBufferAl
 HWC2::Error HWCDisplayVirtualGPU::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
   DTRACE_SCOPED();
 
+  // Reset previous changes.
+  layer_changes_.clear();
+  layer_requests_.clear();
+
   // Mark all layers to GPU if there is no need to bypass.
   bool needs_gpu_bypass = NeedsGPUBypass();
   for (auto hwc_layer : layer_set_) {

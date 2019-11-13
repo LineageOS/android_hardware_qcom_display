@@ -88,6 +88,7 @@ class CompManager {
   void GenerateROI(Handle display_ctx, HWLayers *hw_layers);
   DisplayError CheckEnforceSplit(Handle comp_handle, uint32_t new_refresh_rate);
   DppsControlInterface* GetDppsControlIntf() { return dpps_ctrl_intf_; }
+  bool CheckResourceState(Handle display_ctx);
 
  private:
   static const int kMaxThermalLevel = 3;

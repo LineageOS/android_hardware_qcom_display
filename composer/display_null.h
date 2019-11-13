@@ -60,6 +60,7 @@ class DisplayNull : public DisplayInterface {
   virtual void SetIdleTimeoutMs(uint32_t active_ms) { }
   virtual DisplayError GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
                                                     uint8_t *out_data);
+  virtual bool CheckResourceState() { return false; }
   virtual string Dump() { return ""; }
   virtual bool IsSupportSsppTonemap() { return false; }
   virtual bool CanSkipValidate() { return true; }
