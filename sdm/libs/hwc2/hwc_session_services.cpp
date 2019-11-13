@@ -647,4 +647,62 @@ Return<void> HWCSession::getWriteBackCapabilities(getWriteBackCapabilities_cb _h
 }
 #endif  // DISPLAY_CONFIG_1_4
 
+#ifdef DISPLAY_CONFIG_1_8
+Return<void> HWCSession::getActiveBuiltinDisplayAttributes(
+                                          getDisplayAttributes_cb _hidl_cb) {
+  int32_t error = -EINVAL;
+  IDisplayConfig::DisplayAttributes display_attributes = {};
+  hwc2_display_t disp_id = GetActiveBuiltinDisplay();
+
+  if (disp_id >= HWCCallbacks::kNumDisplays) {
+    DLOGE("Invalid display = %d", disp_id);
+  } else {
+    if (hwc_display_[disp_id]) {
+      uint32_t config_index = 0;
+      HWC2::Error ret = hwc_display_[disp_id]->GetActiveConfig(&config_index);
+      if (ret != HWC2::Error::None) {
+        goto err;
+      }
+      DisplayConfigVariableInfo var_info;
+      error = hwc_display_[disp_id]->GetDisplayAttributesForConfig(INT(config_index), &var_info);
+      if (!error) {
+        display_attributes.vsyncPeriod = var_info.vsync_period_ns;
+        display_attributes.xRes = var_info.x_pixels;
+        display_attributes.yRes = var_info.y_pixels;
+        display_attributes.xDpi = var_info.x_dpi;
+        display_attributes.yDpi = var_info.y_dpi;
+        display_attributes.panelType = IDisplayConfig::DisplayPortType::DISPLAY_PORT_DEFAULT;
+        display_attributes.isYuv = var_info.is_yuv;
+      }
+    }
+  }
+
+err:
+  _hidl_cb(error, display_attributes);
+
+  return Void();
+}
+#endif  // DISPLAY_CONFIG_1_8
+
+#ifdef DISPLAY_CONFIG_1_9
+Return<int32_t> HWCSession::setPanelLuminanceAttributes(uint32_t disp_id, float pan_min_lum,
+                                                        float pan_max_lum) {
+  DLOGE("Not supported at present");
+  return -1;
+}
+
+Return<bool> HWCSession::isBuiltInDisplay(uint32_t disp_id) {
+  if ((map_info_primary_.client_id == disp_id) && (map_info_primary_.disp_type == kBuiltIn))
+    return true;
+
+  for (auto &info : map_info_builtin_) {
+    if (disp_id == info.client_id) {
+      return true;
+    }
+  }
+
+  return false;
+}
+#endif  // DISPLAY_CONFIG_1_9
+
 }  // namespace sdm

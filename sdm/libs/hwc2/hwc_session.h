@@ -20,7 +20,11 @@
 #ifndef __HWC_SESSION_H__
 #define __HWC_SESSION_H__
 
-#ifdef DISPLAY_CONFIG_1_7
+#ifdef DISPLAY_CONFIG_1_9
+#include <vendor/display/config/1.9/IDisplayConfig.h>
+#elif DISPLAY_CONFIG_1_8
+#include <vendor/display/config/1.8/IDisplayConfig.h>
+#elif DISPLAY_CONFIG_1_7
 #include <vendor/display/config/1.7/IDisplayConfig.h>
 #elif DISPLAY_CONFIG_1_6
 #include <vendor/display/config/1.6/IDisplayConfig.h>
@@ -54,7 +58,11 @@
 
 namespace sdm {
 
-#ifdef DISPLAY_CONFIG_1_7
+#ifdef DISPLAY_CONFIG_1_9
+using vendor::display::config::V1_9::IDisplayConfig;
+#elif DISPLAY_CONFIG_1_8
+using vendor::display::config::V1_8::IDisplayConfig;
+#elif DISPLAY_CONFIG_1_7
 using vendor::display::config::V1_7::IDisplayConfig;
 #elif DISPLAY_CONFIG_1_6
 using vendor::display::config::V1_6::IDisplayConfig;
@@ -314,6 +322,15 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   Return<void> getDebugProperty(const hidl_string &prop_name,
                                 getDebugProperty_cb _hidl_cb) override;
 #endif
+#ifdef DISPLAY_CONFIG_1_8
+  Return<void> getActiveBuiltinDisplayAttributes(getDisplayAttributes_cb _hidl_cb) override;
+#endif
+
+#ifdef DISPLAY_CONFIG_1_9
+  Return<int32_t> setPanelLuminanceAttributes(uint32_t disp_id, float min_lum,
+                                              float max_lum) override;
+  Return<bool> isBuiltInDisplay(uint32_t disp_id) override;
+#endif
 
   // QClient methods
   virtual android::status_t notifyCallback(uint32_t command, const android::Parcel *input_parcel,
@@ -356,6 +373,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   HWC2::Error ValidateDisplayInternal(hwc2_display_t display, uint32_t *out_num_types,
                                       uint32_t *out_num_requests);
   HWC2::Error PresentDisplayInternal(hwc2_display_t display, int32_t *out_retire_fence);
+  hwc2_display_t GetActiveBuiltinDisplay();
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};

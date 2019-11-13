@@ -2602,4 +2602,22 @@ HWC2::Error HWCSession::PresentDisplayInternal(hwc2_display_t display, int32_t *
   return hwc_display->Present(out_retire_fence);
 }
 
+hwc2_display_t HWCSession::GetActiveBuiltinDisplay() {
+  hwc2_display_t disp_id = HWCCallbacks::kNumDisplays;
+  // Get first active display among primary and built-in displays.
+  std::vector<DisplayMapInfo> map_info = {map_info_primary_};
+  std::copy(map_info_builtin_.begin(), map_info_builtin_.end(), std::back_inserter(map_info));
+
+  for (auto &info : map_info) {
+    SCOPE_LOCK(locker_[info.client_id]);
+    auto &hwc_display = hwc_display_[info.client_id];
+    if (hwc_display && hwc_display->GetLastPowerMode() != HWC2::PowerMode::Off) {
+      disp_id = info.client_id;
+      break;
+    }
+  }
+
+  return disp_id;
+}
+
 }  // namespace sdm
