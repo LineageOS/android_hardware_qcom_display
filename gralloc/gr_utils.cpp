@@ -794,6 +794,28 @@ unsigned int GetUBwcSize(int width, int height, int format, unsigned int aligned
   return size;
 }
 
+unsigned int GetRgbMetaSize(int format, uint32_t width, uint32_t height, uint64_t usage) {
+  unsigned int meta_size = 0;
+  if (!IsUBwcEnabled(format, usage)) {
+    return meta_size;
+  }
+  uint32_t bpp = GetBppForUncompressedRGB(format);
+  switch (format) {
+    case HAL_PIXEL_FORMAT_BGR_565:
+    case HAL_PIXEL_FORMAT_RGBA_8888:
+    case HAL_PIXEL_FORMAT_RGBX_8888:
+    case HAL_PIXEL_FORMAT_RGBA_1010102:
+    case HAL_PIXEL_FORMAT_RGBX_1010102:
+    case HAL_PIXEL_FORMAT_RGBA_FP16:
+      meta_size = GetRgbUBwcMetaBufferSize(width, height, bpp);
+      break;
+    default:
+      ALOGE("%s:Unsupported RGB format: 0x%x", __FUNCTION__, format);
+      break;
+  }
+  return meta_size;
+}
+
 int GetRgbDataAddress(private_handle_t *hnd, void **rgb_data) {
   int err = 0;
 
@@ -807,22 +829,8 @@ int GetRgbDataAddress(private_handle_t *hnd, void **rgb_data) {
     *rgb_data = reinterpret_cast<void *>(hnd->base);
     return err;
   }
+  unsigned int meta_size = GetRgbMetaSize(hnd->format, hnd->width, hnd->height, hnd->usage);
 
-  unsigned int meta_size = 0;
-  uint32_t bpp = GetBppForUncompressedRGB(hnd->format);
-  switch (hnd->format) {
-    case HAL_PIXEL_FORMAT_BGR_565:
-    case HAL_PIXEL_FORMAT_RGBA_8888:
-    case HAL_PIXEL_FORMAT_RGBX_8888:
-    case HAL_PIXEL_FORMAT_RGBA_1010102:
-    case HAL_PIXEL_FORMAT_RGBX_1010102:
-      meta_size = GetRgbUBwcMetaBufferSize(hnd->width, hnd->height, bpp);
-      break;
-    default:
-      ALOGE("%s:Unsupported RGB format: 0x%x", __FUNCTION__, hnd->format);
-      err = -EINVAL;
-      break;
-  }
   *rgb_data = reinterpret_cast<void *>(hnd->base + meta_size);
 
   return err;
@@ -1558,6 +1566,46 @@ void CopyPlaneLayoutInfotoAndroidYcbcr(uint64_t base, int plane_count, PlaneLayo
     ycbcr->cstride = plane_info[1].stride_bytes;
     ycbcr->chroma_step = plane_info[1].step;
   }
+}
+
+bool HasAlphaComponent(int32_t format) {
+  switch (format) {
+    case HAL_PIXEL_FORMAT_RGBA_8888:
+    case HAL_PIXEL_FORMAT_BGRA_8888:
+    case HAL_PIXEL_FORMAT_RGBA_5551:
+    case HAL_PIXEL_FORMAT_RGBA_4444:
+    case HAL_PIXEL_FORMAT_RGBA_1010102:
+    case HAL_PIXEL_FORMAT_ARGB_2101010:
+    case HAL_PIXEL_FORMAT_BGRA_1010102:
+    case HAL_PIXEL_FORMAT_ABGR_2101010:
+    case HAL_PIXEL_FORMAT_RGBA_FP16:
+      return true;
+    default:
+      return false;
+  }
+}
+
+void GetRGBPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32_t height,
+                     int32_t /* flags */, int *plane_count, PlaneLayoutInfo *plane_info) {
+  uint64_t usage = info.usage;
+  *plane_count = 1;
+  uint32_t bpp = 0;
+  if (IsUncompressedRGBFormat(format)) {
+    bpp = GetBppForUncompressedRGB(format);
+  }
+  plane_info->component =
+      (PlaneComponent)(PLANE_COMPONENT_R | PLANE_COMPONENT_G | PLANE_COMPONENT_B);
+  if (HasAlphaComponent(format)) {
+    plane_info->component = (PlaneComponent)(plane_info->component | PLANE_COMPONENT_A);
+  }
+  plane_info->size = GetSize(info, width, height);
+  plane_info->step = bpp;
+  plane_info->offset = GetRgbMetaSize(format, width, height, usage);
+  plane_info->h_subsampling = 0;
+  plane_info->v_subsampling = 0;
+  plane_info->stride = width;
+  plane_info->stride_bytes = width * plane_info->step;
+  plane_info->scanlines = height;
 }
 
 }  // namespace gralloc
