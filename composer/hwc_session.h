@@ -249,7 +249,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
                                    uint32_t num_elements, const int32_t *int_keys,
                                    const float *metadata);
   int32_t SetLayerColorTransform(hwc2_display_t display, hwc2_layer_t layer, const float *matrix);
-
+  int32_t SetLayerPerFrameMetadataBlobs(hwc2_display_t display, hwc2_layer_t layer,
+                                        uint32_t num_elements, const int32_t *int_keys,
+                                        const uint32_t *sizes, const uint8_t *metadata);
   // HWCDisplayEventHandler
   virtual void DisplayPowerReset();
 
