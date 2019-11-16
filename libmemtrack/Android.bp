@@ -1,0 +1,19 @@
+cc_library_shared {
+    name: "memtrack.qcom",
+    relative_install_path: "hw",
+    vendor: true,
+    include_dirs: ["hardware/libhardware/include"],
+    cflags: [
+        "-Wconversion",
+        "-Wall",
+        "-Werror",
+        "-Wno-sign-conversion",
+    ],
+    clang: true,
+    shared_libs: ["liblog"],
+    header_libs: ["libhardware_headers"],
+    srcs: [
+        "memtrack_msm.c",
+        "kgsl.c",
+    ],
+}
