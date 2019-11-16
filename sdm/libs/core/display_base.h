@@ -134,6 +134,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
                                                     uint8_t *out_data);
 
+  virtual bool CanSkipValidate();
  protected:
   DisplayError BuildLayerStackStats(LayerStack *layer_stack);
   virtual DisplayError ValidateGPUTargetParams();
@@ -163,6 +164,7 @@ class DisplayBase : public DisplayInterface {
   void ClearColorInfo();
   bool NeedsGpuFallback(const Layer *layer);
   bool NeedsHdrHandling();
+  void SetLutSwapFlag();
   void CopyColorTransformMatrix(const double *input_matrix) {
     for (uint32_t i = 0; i < kColorTransformlength_; i++) {
       color_transform_[i] = input_matrix[i];
@@ -220,6 +222,7 @@ class DisplayBase : public DisplayInterface {
   bool color_transform_active_ = false;
   bool gpu_fallback_ = false;
   HWQosData default_qos_data_;
+  bool lut_swap_ = false;
 };
 
 }  // namespace sdm
