@@ -640,6 +640,11 @@ DisplayError DisplayBuiltIn::GetSupportedDSIClock(std::vector<uint64_t> *bitclk_
 
 DisplayError DisplayBuiltIn::SetDynamicDSIClock(uint64_t bit_clk_rate) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (!active_) {
+    DLOGW("Invalid display state = %d. Panel must be on.", state_);
+    return kErrorNotSupported;
+  }
+
   if (!hw_panel_info_.dyn_bitclk_support) {
     return kErrorNotSupported;
   }
