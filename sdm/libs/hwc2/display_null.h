@@ -53,6 +53,7 @@ class DisplayNull : public DisplayInterface {
   virtual bool IsUnderscanSupported() { return true; }
   virtual void SetIdleTimeoutMs(uint32_t active_ms) { }
   virtual bool IsPrimaryDisplay() { return true; }
+  virtual bool CanSkipValidate() { return true; }
 
   void SetActive(bool active) {
     active_ = active;
