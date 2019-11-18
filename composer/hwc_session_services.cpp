@@ -708,7 +708,7 @@ Return<bool> HWCSession::isHDRSupported(uint32_t disp_id) {
     DLOGE("Not valid display");
     return false;
   }
-  SCOPE_LOCK(locker_[disp_id]);
+  SCOPE_LOCK(hdr_locker_[disp_id]);
 
   if (is_hdr_display_.size() <= disp_id) {
     DLOGW("is_hdr_display_ is not initialized for display %d!! Reporting it as HDR not supported",

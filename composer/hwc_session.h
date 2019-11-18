@@ -264,6 +264,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
 
   static Locker locker_[HWCCallbacks::kNumDisplays];
   static Locker power_state_[HWCCallbacks::kNumDisplays];
+  static Locker hdr_locker_[HWCCallbacks::kNumDisplays];
   static Locker display_config_locker_;
 
  private:

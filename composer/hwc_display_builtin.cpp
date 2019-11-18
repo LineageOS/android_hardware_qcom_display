@@ -47,6 +47,13 @@
 
 namespace sdm {
 
+static void SetRect(LayerRect &src_rect, GLRect *target) {
+  target->left = src_rect.left;
+  target->top = src_rect.top;
+  target->right = src_rect.right;
+  target->bottom = src_rect.bottom;
+}
+
 int HWCDisplayBuiltIn::Create(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
                               HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
                               qService::QService *qservice, hwc2_display_t id, int32_t sdm_id,
@@ -96,7 +103,7 @@ HWCDisplayBuiltIn::HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *
     : HWCDisplay(core_intf, buffer_allocator, callbacks, event_handler, qservice, kBuiltIn, id,
                  sdm_id, DISPLAY_CLASS_BUILTIN),
       buffer_allocator_(buffer_allocator),
-      cpu_hint_(NULL) {
+      cpu_hint_(NULL), layer_stitch_task_(*this) {
 }
 
 int HWCDisplayBuiltIn::Init() {
@@ -129,6 +136,10 @@ int HWCDisplayBuiltIn::Init() {
 
   is_primary_ = display_intf_->IsPrimaryDisplay();
 
+  if (!InitLayerStitch()) {
+    DLOGW("Failed to initialize Layer Stitch context");
+  }
+
   return status;
 }
 
@@ -150,6 +161,10 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
 
   // Fill in the remaining blanks in the layers and add them to the SDM layerstack
   BuildLayerStack();
+
+  // Add stitch layer to layer stack.
+  AppendStitchLayer();
+
   // Checks and replaces layer stack for solid fill
   SolidFillPrepare();
 
@@ -242,13 +257,52 @@ bool HWCDisplayBuiltIn::CanSkipCommit() {
   return skip_commit;
 }
 
+HWC2::Error HWCDisplayBuiltIn::CommitStitchLayers() {
+  if (!validated_ || skip_commit_) {
+    return HWC2::Error::None;
+  }
+
+  if (disable_layer_stitch_) {
+    return HWC2::Error::None;
+  }
+
+  for (auto &layer : layer_stack_.layers) {
+    LayerComposition &composition = layer->composition;
+    if (composition != kCompositionStitch) {
+      continue;
+    }
+
+    LayerStitchStitchContext ctx = {};
+    // Stitch target doesn't have an input fence.
+    // Render all layers at specified destination.
+    LayerBuffer &input_buffer = layer->input_buffer;
+    ctx.src_hnd = reinterpret_cast<const private_handle_t *>(input_buffer.buffer_id);
+    Layer *stitch_layer = stitch_target_->GetSDMLayer();
+    LayerBuffer &output_buffer = stitch_layer->input_buffer;
+    ctx.dst_hnd = reinterpret_cast<const private_handle_t *>(output_buffer.buffer_id);
+    SetRect(layer->stitch_dst_rect, &ctx.dst_rect);
+    ctx.src_acquire_fence_fd = input_buffer.acquire_fence_fd;
+
+    layer_stitch_task_.PerformTask(LayerStitchTaskCode::kCodeStitch, &ctx);
+
+    // Merge with current fence and close previous one.
+    int acquire_fence = sync_merge(__CLASS__, output_buffer.acquire_fence_fd, ctx.release_fence_fd);
+    CloseFd(&output_buffer.acquire_fence_fd);
+    CloseFd(&ctx.release_fence_fd);
+
+    output_buffer.acquire_fence_fd = acquire_fence;
+  }
+
+  return HWC2::Error::None;
+}
+
 HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
   auto status = HWC2::Error::None;
 
   DTRACE_SCOPED();
 
   if (!is_primary_ && active_secure_sessions_[kSecureDisplay]) {
-      return status;
+    return status;
   } else if (display_paused_) {
     DisplayError error = display_intf_->Flush(&layer_stack_);
     validated_ = false;
@@ -256,11 +310,25 @@ HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
       DLOGE("Flush failed. Error = %d", error);
     }
   } else {
+    status = CommitStitchLayers();
+    if (status != HWC2::Error::None) {
+      DLOGE("Stitch failed: %d", status);
+      return status;
+    }
+
     status = CommitLayerStack();
     if (status == HWC2::Error::None) {
       HandleFrameOutput();
       SolidFillCommit();
       status = HWCDisplay::PostCommitLayerStack(out_retire_fence);
+    }
+
+    if (stitch_target_) {
+      // Close Stitch buffer acquire fence.
+      Layer *stitch_layer = stitch_target_->GetSDMLayer();
+      LayerBuffer &output_buffer = stitch_layer->input_buffer;
+      CloseFd(&output_buffer.acquire_fence_fd);
+      CloseFd(&output_buffer.release_fence_fd);
     }
   }
 
@@ -987,6 +1055,143 @@ bool HWCDisplayBuiltIn::IsSmartPanelConfig(uint32_t config_id) {
   }
 
   return false;
+}
+
+int HWCDisplayBuiltIn::Deinit() {
+  // Destory color convert instance. This destroys thread and underlying GL resources.
+  if (gl_layer_stitch_) {
+    layer_stitch_task_.PerformTask(LayerStitchTaskCode::kCodeDestroyInstance, nullptr);
+  }
+
+  return HWCDisplay::Deinit();
+}
+
+void HWCDisplayBuiltIn::OnTask(const LayerStitchTaskCode &task_code,
+                               SyncTask<LayerStitchTaskCode>::TaskContext *task_context) {
+  switch (task_code) {
+    case LayerStitchTaskCode::kCodeGetInstance: {
+        gl_layer_stitch_ = GLLayerStitch::GetInstance(false /* Non-secure */);
+      }
+      break;
+    case LayerStitchTaskCode::kCodeStitch: {
+        DTRACE_SCOPED();
+        LayerStitchStitchContext* ctx = reinterpret_cast<LayerStitchStitchContext*>(task_context);
+        gl_layer_stitch_->Blit(ctx->src_hnd, ctx->dst_hnd, ctx->src_rect, ctx->dst_rect,
+                               ctx->src_acquire_fence_fd, ctx->dst_acquire_fence_fd,
+                               &(ctx->release_fence_fd));
+      }
+      break;
+    case LayerStitchTaskCode::kCodeDestroyInstance: {
+        if (gl_layer_stitch_) {
+          GLLayerStitch::Destroy(gl_layer_stitch_);
+        }
+      }
+      break;
+  }
+}
+
+bool HWCDisplayBuiltIn::InitLayerStitch() {
+  if (!is_primary_) {
+    // Disable on all non-primary builtins.
+    DLOGI("Non-primary builtin.");
+    return true;
+  }
+
+  // Disable by default.
+  int value = 1;
+  Debug::Get()->GetProperty(DISABLE_LAYER_STITCH, &value);
+  disable_layer_stitch_ = (value == 1);
+
+  if (disable_layer_stitch_) {
+    DLOGI("Layer Stitch Disabled !!!");
+    return true;
+  }
+
+  // Initialize stitch context. This will be non-secure.
+  layer_stitch_task_.PerformTask(LayerStitchTaskCode::kCodeGetInstance, nullptr);
+  if (gl_layer_stitch_ == nullptr) {
+    DLOGE("Failed to get LayerStitch Instance");
+    return false;
+  }
+
+  if (!AllocateStitchBuffer()) {
+    return true;
+  }
+
+  stitch_target_ = new HWCLayer(id_, static_cast<HWCBufferAllocator *>(buffer_allocator_));
+
+  // Populate buffer params and pvt handle.
+  InitStitchTarget();
+
+  DLOGI("Created LayerStitch instance: %p", gl_layer_stitch_);
+
+  return true;
+}
+
+bool HWCDisplayBuiltIn::AllocateStitchBuffer() {
+  // Buffer dimensions: FB width * (1.5 * height)
+
+  DisplayError error = display_intf_->GetFrameBufferConfig(&fb_config_);
+  if (error != kErrorNone) {
+    DLOGE("Get frame buffer config failed. Error = %d", error);
+    return false;
+  }
+
+  BufferConfig &config = buffer_info_.buffer_config;
+  config.width = fb_config_.x_pixels;
+  config.height = fb_config_.y_pixels * kBufferHeightFactor;
+
+  // By default UBWC is enabled and below property is global enable/disable for all
+  // buffers allocated through gralloc , including framebuffer targets.
+  int ubwc_disabled = 0;
+  HWCDebugHandler::Get()->GetProperty(DISABLE_UBWC_PROP, &ubwc_disabled);
+  config.format = ubwc_disabled ? kFormatRGBA8888 : kFormatRGBA8888Ubwc;
+
+  config.gfx_client = true;
+
+  // Populate default params.
+  config.secure = false;
+  config.cache = false;
+  config.secure_camera = false;
+
+  error = buffer_allocator_->AllocateBuffer(&buffer_info_);
+
+  if (error != kErrorNone) {
+    DLOGE("Failed to allocate buffer. Error: %d", error);
+    return false;
+  }
+
+  return true;
+}
+
+void HWCDisplayBuiltIn::InitStitchTarget() {
+  LayerBuffer buffer = {};
+  buffer.planes[0].fd = buffer_info_.alloc_buffer_info.fd;
+  buffer.planes[0].offset = 0;
+  buffer.planes[0].stride = buffer_info_.alloc_buffer_info.stride;
+  buffer.size = buffer_info_.alloc_buffer_info.size;
+  buffer.handle_id = buffer_info_.alloc_buffer_info.id;
+  buffer.width = buffer_info_.alloc_buffer_info.aligned_width;
+  buffer.height = buffer_info_.alloc_buffer_info.aligned_height;
+  buffer.unaligned_width = fb_config_.x_pixels;
+  buffer.unaligned_height = fb_config_.y_pixels;
+  buffer.format = buffer_info_.alloc_buffer_info.format;
+
+  Layer *sdm_stitch_target = stitch_target_->GetSDMLayer();
+  sdm_stitch_target->composition = kCompositionStitchTarget;
+  sdm_stitch_target->input_buffer = buffer;
+  sdm_stitch_target->input_buffer.buffer_id = reinterpret_cast<uint64_t>(buffer_info_.private_data);
+}
+
+void HWCDisplayBuiltIn::AppendStitchLayer() {
+  if (disable_layer_stitch_) {
+    return;
+  }
+
+  // Append stitch target buffer to layer stack.
+  Layer *sdm_stitch_target = stitch_target_->GetSDMLayer();
+  sdm_stitch_target->composition = kCompositionStitchTarget;
+  layer_stack_.layers.push_back(sdm_stitch_target);
 }
 
 }  // namespace sdm

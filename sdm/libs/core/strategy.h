@@ -35,6 +35,7 @@ namespace sdm {
 class Strategy {
  public:
   Strategy(ExtensionInterface *extension_intf, BufferAllocator *buffer_allocator,
+           BufferSyncHandler *buffer_sync_handler,
            int32_t display_id, DisplayType type, const HWResourceInfo &hw_resource_info,
            const HWPanelInfo &hw_panel_info, const HWMixerAttributes &mixer_attributes,
            const HWDisplayAttributes &display_attributes,
@@ -75,6 +76,7 @@ class Strategy {
   bool extn_start_success_ = false;
   bool disable_gpu_comp_ = false;
   BufferAllocator *buffer_allocator_ = NULL;
+  BufferSyncHandler *sync_handler_ = NULL;
 };
 
 }  // namespace sdm
