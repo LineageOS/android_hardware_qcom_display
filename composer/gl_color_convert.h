@@ -31,19 +31,13 @@
 #define __GL_COLOR_CONVERT_H__
 
 #include <gralloc_priv.h>
+#include "gl_common.h"
 
 namespace sdm {
 
 enum GLRenderTarget {
   kTargetRGBA,
   kTargetYUV,
-};
-
-struct GLRect {
-  float left = 0.0f;
-  float top = 0.0f;
-  float right = 0.0f;
-  float bottom = 0.0f;
 };
 
 class GLColorConvert {

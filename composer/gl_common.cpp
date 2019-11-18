@@ -97,17 +97,19 @@ void GLCommon::SetSourceBuffer(const private_handle_t *src_hnd) {
   }
 }
 
-void GLCommon::SetDestinationBuffer(const private_handle_t *dst_hnd) {
+void GLCommon::SetDestinationBuffer(const private_handle_t *dst_hnd, const GLRect &dst_rect) {
   DTRACE_SCOPED();
   EGLImageBuffer *dst_buffer = image_wrapper_.wrap(reinterpret_cast<const void *>(dst_hnd));
 
   if (dst_buffer) {
     GL(glBindFramebuffer(GL_FRAMEBUFFER, dst_buffer->getFramebuffer()));
-    GL(glViewport(0, 0, dst_buffer->getWidth(), dst_buffer->getHeight()));
+    float width = dst_rect.right - dst_rect.left;
+    float height = dst_rect.bottom - dst_rect.top;
+    GL(glViewport(dst_rect.left, dst_rect.top, width, height));
   }
 }
 
-int GLCommon::WaitOnInputFence(const int in_fence_fd) {
+int GLCommon::WaitOnInputFence(int in_fence_fd) {
   DTRACE_SCOPED();
   EGLint attribs[] = {EGL_SYNC_NATIVE_FENCE_FD_ANDROID, in_fence_fd, EGL_NONE};
   EGLSyncKHR sync = eglCreateSyncKHR(eglGetCurrentDisplay(), EGL_SYNC_NATIVE_FENCE_ANDROID,

@@ -162,7 +162,7 @@ int GLColorConvertImpl::Blit(const private_handle_t *src_hnd, const private_hand
   SetProgram(ctx_.program_id);
 
   SetSourceBuffer(src_hnd);
-  SetDestinationBuffer(dst_hnd);
+  SetDestinationBuffer(dst_hnd, dst_rect);
 
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, kFullScreenVertices);
