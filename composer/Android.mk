@@ -77,7 +77,9 @@ LOCAL_SRC_FILES               := QtiComposer.cpp QtiComposerClient.cpp service.c
                                  hwc_display_virtual_gpu.cpp \
                                  gl_common.cpp \
                                  gl_color_convert.cpp \
-                                 gl_color_convert_impl.cpp
+                                 gl_color_convert_impl.cpp \
+                                 gl_layer_stitch.cpp \
+                                 gl_layer_stitch_impl.cpp
 
 LOCAL_INIT_RC                 := vendor.qti.hardware.display.composer-service.rc
 LOCAL_VINTF_FRAGMENTS         := vendor.qti.hardware.display.composer-service.xml
