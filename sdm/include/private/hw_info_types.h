@@ -337,6 +337,7 @@ struct HWResourceInfo {
   uint32_t line_width_constraints_count = 0;
   vector< pair <uint32_t, uint32_t> > line_width_limits;
   vector< pair <uint32_t, uint32_t> > line_width_constraints;
+  float vbif_cmd_ff = 0.0f;
 };
 
 struct HWSplitInfo {
