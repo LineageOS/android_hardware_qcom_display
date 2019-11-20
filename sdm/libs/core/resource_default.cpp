@@ -195,8 +195,6 @@ DisplayError ResourceDefault::ReconfigureDisplay(Handle display_ctx,
                                                  const HWDisplayAttributes &display_attributes,
                                                  const HWPanelInfo &hw_panel_info,
                                                  const HWMixerAttributes &mixer_attributes) {
-  SCOPE_LOCK(locker_);
-
   DisplayResourceContext *display_resource_ctx =
                           reinterpret_cast<DisplayResourceContext *>(display_ctx);
 
@@ -207,14 +205,10 @@ DisplayError ResourceDefault::ReconfigureDisplay(Handle display_ctx,
 }
 
 DisplayError ResourceDefault::Start(Handle display_ctx) {
-  locker_.Lock();
-
   return kErrorNone;
 }
 
 DisplayError ResourceDefault::Stop(Handle display_ctx, HWLayers *hw_layers) {
-  locker_.Unlock();
-
   return kErrorNone;
 }
 
@@ -323,19 +317,14 @@ CleanupOnError:
 }
 
 DisplayError ResourceDefault::PostPrepare(Handle display_ctx, HWLayers *hw_layers) {
-  SCOPE_LOCK(locker_);
-
   return kErrorNone;
 }
 
 DisplayError ResourceDefault::Commit(Handle display_ctx, HWLayers *hw_layers) {
-  SCOPE_LOCK(locker_);
-
   return kErrorNone;
 }
 
 DisplayError ResourceDefault::PostCommit(Handle display_ctx, HWLayers *hw_layers) {
-  SCOPE_LOCK(locker_);
   DisplayResourceContext *display_resource_ctx =
                           reinterpret_cast<DisplayResourceContext *>(display_ctx);
   HWBlockType hw_block_type = display_resource_ctx->hw_block_type;
@@ -363,8 +352,6 @@ DisplayError ResourceDefault::PostCommit(Handle display_ctx, HWLayers *hw_layers
 }
 
 void ResourceDefault::Purge(Handle display_ctx) {
-  SCOPE_LOCK(locker_);
-
   DisplayResourceContext *display_resource_ctx =
                           reinterpret_cast<DisplayResourceContext *>(display_ctx);
   HWBlockType hw_block_type = display_resource_ctx->hw_block_type;
@@ -378,8 +365,6 @@ void ResourceDefault::Purge(Handle display_ctx) {
 }
 
 DisplayError ResourceDefault::SetMaxMixerStages(Handle display_ctx, uint32_t max_mixer_stages) {
-  SCOPE_LOCK(locker_);
-
   return kErrorNone;
 }
 
