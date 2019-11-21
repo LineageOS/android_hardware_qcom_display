@@ -1,7 +1,6 @@
 LOCAL_PATH := $(call my-dir)
 include $(LOCAL_PATH)/../common.mk
 
-ifneq ($(TARGET_IS_HEADLESS), true)
 include $(CLEAR_VARS)
 LOCAL_COPY_HEADERS_TO     := $(common_header_export_path)
 LOCAL_COPY_HEADERS        := TonemapFactory.h Tonemapper.h
@@ -28,4 +27,3 @@ LOCAL_SRC_FILES           := TonemapFactory.cpp \
                              Tonemapper.cpp
 
 include $(BUILD_SHARED_LIBRARY)
-endif
