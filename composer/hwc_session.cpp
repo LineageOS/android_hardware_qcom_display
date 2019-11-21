@@ -205,7 +205,20 @@ int HWCSession::Init() {
   is_composer_up_ = true;
   StartServices();
 
+  PostInit();
+
   return 0;
+}
+
+void HWCSession::PostInit() {
+  if (null_display_mode_) {
+    return;
+  }
+
+  // Start services which need IDisplayConfig to be up.
+  // This avoids deadlock between composer and its clients.
+  auto hwc_display = hwc_display_[HWC_DISPLAY_PRIMARY];
+  hwc_display->PostInit();
 }
 
 int HWCSession::Deinit() {

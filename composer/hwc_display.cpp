@@ -916,7 +916,7 @@ void HWCDisplay::PostPowerMode() {
     auto fence = hwc_layer->PopBackReleaseFence();
     auto merged_fence = -1;
     if (fence >= 0) {
-      merged_fence = sync_merge("sync_merge", release_fence_, fence);
+      buffer_sync_handler_.SyncMerge(release_fence_, fence, &merged_fence);
       ::close(fence);
     } else {
       merged_fence = ::dup(release_fence_);

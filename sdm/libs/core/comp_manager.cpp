@@ -672,11 +672,11 @@ void CompManager::UpdateStrategyConstraints(bool is_primary, bool disabled) {
   max_sde_builtin_layers_ = (disabled && (powered_on_displays_.size() <= 1)) ? kMaxSDELayers : 2;
 }
 
-bool CompManager::CanSkipValidate(Handle display_ctx) {
+bool CompManager::CanSkipValidate(Handle display_ctx, bool *needs_buffer_swap) {
   DisplayCompositionContext *display_comp_ctx =
       reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
-  return display_comp_ctx->strategy->CanSkipValidate();
+  return display_comp_ctx->strategy->CanSkipValidate(needs_buffer_swap);
 }
 
 bool CompManager::CheckResourceState(Handle display_ctx) {
@@ -696,6 +696,14 @@ bool CompManager::IsRotatorSupportedFormat(LayerBufferFormat format) {
   }
 
   return false;
+}
+
+DisplayError CompManager::SwapBuffers(Handle display_ctx) {
+  SCOPE_LOCK(locker_);
+  DisplayCompositionContext *display_comp_ctx =
+      reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+
+  return display_comp_ctx->strategy->SwapBuffers();
 }
 
 }  // namespace sdm

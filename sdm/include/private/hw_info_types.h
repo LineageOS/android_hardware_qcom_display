@@ -709,6 +709,7 @@ struct HWQosData {
 
 enum UpdateType {
   kUpdateResources,  // Indicates Strategy & RM execution, which can update resources.
+  kSwapBuffers,      // Indicates Strategy & RM execution, which can update buffer handler and crop.
   kUpdateMax,
 };
 

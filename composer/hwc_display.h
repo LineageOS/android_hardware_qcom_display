@@ -41,6 +41,7 @@
 #include "hwc_callbacks.h"
 #include "hwc_display_event_handler.h"
 #include "hwc_layers.h"
+#include "hwc_buffer_sync_handler.h"
 
 using android::hardware::graphics::common::V1_2::ColorMode;
 using android::hardware::graphics::common::V1_1::Dataspace;
@@ -382,6 +383,7 @@ class HWCDisplay : public DisplayEventHandler {
                                      int32_t *qsync_refresh_rate) {
     return false;
   }
+  virtual int PostInit() { return 0; }
 
   virtual HWC2::Error SetDisplayedContentSamplingEnabledVndService(bool enabled);
   virtual HWC2::Error SetDisplayedContentSamplingEnabled(int32_t enabled, uint8_t component_mask,
@@ -481,6 +483,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool client_connected_ = true;
   bool pending_config_ = false;
   bool has_client_composition_ = false;
+  HWCBufferSyncHandler buffer_sync_handler_ = {};
 
  private:
   void DumpInputBuffers(void);

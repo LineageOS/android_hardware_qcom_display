@@ -366,6 +366,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int32_t setDisplayBrightness(uint32_t display, float brightness);
   int32_t getDisplayMaxBrightness(uint32_t display, uint32_t *max_brightness_level);
   bool HasHDRSupport(HWCDisplay *hwc_display);
+  void PostInit();
 
   // Uevent handler
   virtual void UEventHandler(const char *uevent_data, int length);

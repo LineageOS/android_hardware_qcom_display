@@ -785,9 +785,9 @@ std::string DisplayBase::Dump() {
       INT(fb_roi.right) << " " << INT(fb_roi.bottom) << ")";
   }
 
-  const char *header  = "\n| Idx |  Comp Type |   Split   | Pipe |    W x H    |          Format          |  Src Rect (L T R B) |  Dst Rect (L T R B) |  Z | Pipe Flags | Deci(HxV) | CS | Rng | Tr |";  //NOLINT
-  const char *newline = "\n|-----|------------|-----------|------|-------------|--------------------------|---------------------|---------------------|----|------------|-----------|----|-----|----|";  //NOLINT
-  const char *format  = "\n| %3s | %10s | %9s | %4d | %4d x %4d | %24s | %4d %4d %4d %4d | %4d %4d %4d %4d | %2s | %10s | %9s | %2s | %3s | %2s |";  //NOLINT
+  const char *header  = "\n| Idx |   Comp Type   |   Split   | Pipe |    W x H    |          Format          |  Src Rect (L T R B) |  Dst Rect (L T R B) |  Z | Pipe Flags | Deci(HxV) | CS | Rng | Tr |";  //NOLINT
+  const char *newline = "\n|-----|---------------|-----------|------|-------------|--------------------------|---------------------|---------------------|----|------------|-----------|----|-----|----|";  //NOLINT
+  const char *format  = "\n| %3s | %13s | %9s | %4d | %4d x %4d | %24s | %4d %4d %4d %4d | %4d %4d %4d %4d | %2s | %10s | %9s | %2s | %3s | %2s |";  //NOLINT
 
   os << "\n";
   os << newline;
@@ -2050,7 +2050,19 @@ bool DisplayBase::IsHdrMode(const AttrVal &attr) {
 }
 
 bool DisplayBase::CanSkipValidate() {
-  return comp_manager_->CanSkipValidate(display_comp_ctx_);
+  bool needs_buffer_swap = false;
+  bool skip_validate = comp_manager_->CanSkipValidate(display_comp_ctx_, &needs_buffer_swap);
+
+  if (needs_buffer_swap) {
+    hw_layers_.updates_mask.set(kSwapBuffers);
+    DisplayError error = comp_manager_->SwapBuffers(display_comp_ctx_);
+    if (error != kErrorNone) {
+      // Buffers couldn't be swapped.
+      skip_validate = false;
+    }
+  }
+
+  return skip_validate;
 }
 
 DisplayError DisplayBase::HandlePendingPowerState(int32_t retire_fence) {

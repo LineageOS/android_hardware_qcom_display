@@ -136,10 +136,6 @@ int HWCDisplayBuiltIn::Init() {
 
   is_primary_ = display_intf_->IsPrimaryDisplay();
 
-  if (!InitLayerStitch()) {
-    DLOGW("Failed to initialize Layer Stitch context");
-  }
-
   return status;
 }
 
@@ -262,11 +258,11 @@ bool HWCDisplayBuiltIn::CanSkipCommit() {
 }
 
 HWC2::Error HWCDisplayBuiltIn::CommitStitchLayers() {
-  if (!validated_ || skip_commit_) {
+  if (disable_layer_stitch_) {
     return HWC2::Error::None;
   }
 
-  if (disable_layer_stitch_) {
+  if (!validated_ || skip_commit_) {
     return HWC2::Error::None;
   }
 
@@ -276,7 +272,7 @@ HWC2::Error HWCDisplayBuiltIn::CommitStitchLayers() {
       continue;
     }
 
-    LayerStitchStitchContext ctx = {};
+    LayerStitchContext ctx = {};
     // Stitch target doesn't have an input fence.
     // Render all layers at specified destination.
     LayerBuffer &input_buffer = layer->input_buffer;
@@ -290,7 +286,9 @@ HWC2::Error HWCDisplayBuiltIn::CommitStitchLayers() {
     layer_stitch_task_.PerformTask(LayerStitchTaskCode::kCodeStitch, &ctx);
 
     // Merge with current fence and close previous one.
-    int acquire_fence = sync_merge(__CLASS__, output_buffer.acquire_fence_fd, ctx.release_fence_fd);
+    int acquire_fence = -1;
+    buffer_sync_handler_.SyncMerge(output_buffer.acquire_fence_fd, ctx.release_fence_fd,
+                                   &acquire_fence);
     CloseFd(&output_buffer.acquire_fence_fd);
     CloseFd(&ctx.release_fence_fd);
 
@@ -364,21 +362,34 @@ HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
     if (status == HWC2::Error::None) {
       HandleFrameOutput();
       SolidFillCommit();
+      PostCommitStitchLayers();
       status = HWCDisplay::PostCommitLayerStack(out_retire_fence);
-    }
-
-    if (stitch_target_) {
-      // Close Stitch buffer acquire fence.
-      Layer *stitch_layer = stitch_target_->GetSDMLayer();
-      LayerBuffer &output_buffer = stitch_layer->input_buffer;
-      CloseFd(&output_buffer.acquire_fence_fd);
-      CloseFd(&output_buffer.release_fence_fd);
     }
   }
 
   CloseFd(&output_buffer_.acquire_fence_fd);
   pending_commit_ = false;
   return status;
+}
+
+void HWCDisplayBuiltIn::PostCommitStitchLayers() {
+  if (disable_layer_stitch_) {
+    return;
+  }
+
+  // Close Stitch buffer acquire fence.
+  Layer *stitch_layer = stitch_target_->GetSDMLayer();
+  LayerBuffer &output_buffer = stitch_layer->input_buffer;
+  for (auto &layer : layer_stack_.layers) {
+    LayerComposition &composition = layer->composition;
+    if (composition != kCompositionStitch) {
+      continue;
+    }
+    LayerBuffer &input_buffer = layer->input_buffer;
+    input_buffer.release_fence_fd = Sys::dup_(output_buffer.acquire_fence_fd);
+  }
+  CloseFd(&output_buffer.acquire_fence_fd);
+  CloseFd(&output_buffer.release_fence_fd);
 }
 
 HWC2::Error HWCDisplayBuiltIn::GetColorModes(uint32_t *out_num_modes, ColorMode *out_modes) {
@@ -1182,7 +1193,7 @@ void HWCDisplayBuiltIn::OnTask(const LayerStitchTaskCode &task_code,
       break;
     case LayerStitchTaskCode::kCodeStitch: {
         DTRACE_SCOPED();
-        LayerStitchStitchContext* ctx = reinterpret_cast<LayerStitchStitchContext*>(task_context);
+        LayerStitchContext* ctx = reinterpret_cast<LayerStitchContext*>(task_context);
         gl_layer_stitch_->Blit(ctx->src_hnd, ctx->dst_hnd, ctx->src_rect, ctx->dst_rect,
                                ctx->src_acquire_fence_fd, ctx->dst_acquire_fence_fd,
                                &(ctx->release_fence_fd));
@@ -1282,7 +1293,7 @@ void HWCDisplayBuiltIn::InitStitchTarget() {
   buffer.width = buffer_info_.alloc_buffer_info.aligned_width;
   buffer.height = buffer_info_.alloc_buffer_info.aligned_height;
   buffer.unaligned_width = fb_config_.x_pixels;
-  buffer.unaligned_height = fb_config_.y_pixels;
+  buffer.unaligned_height = fb_config_.y_pixels * kBufferHeightFactor;
   buffer.format = buffer_info_.alloc_buffer_info.format;
 
   Layer *sdm_stitch_target = stitch_target_->GetSDMLayer();
@@ -1299,6 +1310,7 @@ void HWCDisplayBuiltIn::AppendStitchLayer() {
   // Append stitch target buffer to layer stack.
   Layer *sdm_stitch_target = stitch_target_->GetSDMLayer();
   sdm_stitch_target->composition = kCompositionStitchTarget;
+  sdm_stitch_target->dst_rect = {0, 0, FLOAT(fb_config_.x_pixels), FLOAT(fb_config_.y_pixels)};
   layer_stack_.layers.push_back(sdm_stitch_target);
 }
 
@@ -1306,4 +1318,16 @@ DisplayError HWCDisplayBuiltIn::HistogramEvent(int fd, uint32_t blob_id) {
   histogram.notify_histogram_event(fd, blob_id);
   return kErrorNone;
 }
+
+int HWCDisplayBuiltIn::PostInit() {
+  auto status = InitLayerStitch();
+  if (!status) {
+    DLOGW("Failed to initialize Layer Stitch context");
+    // Disable layer stitch.
+    disable_layer_stitch_ = true;
+  }
+
+  return 0;
+}
+
 }  // namespace sdm

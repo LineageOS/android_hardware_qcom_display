@@ -1081,7 +1081,9 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
 
   solid_fills_.clear();
   bool resource_update = hw_layers->updates_mask.test(kUpdateResources);
-  bool update_config = resource_update || hw_layer_info.stack->flags.geometry_changed;
+  bool buffer_update = hw_layers->updates_mask.test(kSwapBuffers);
+  bool update_config = resource_update || buffer_update ||
+                       hw_layer_info.stack->flags.geometry_changed;
 
   if (hw_panel_info_.partial_update && update_config) {
     if (IsFullFrameUpdate(hw_layer_info)) {

@@ -54,7 +54,7 @@ struct LayerStitchGetInstanceContext : public SyncTask<LayerStitchTaskCode>::Tas
   LayerBuffer *output_buffer = NULL;
 };
 
-struct LayerStitchStitchContext : public SyncTask<LayerStitchTaskCode>::TaskContext {
+struct LayerStitchContext : public SyncTask<LayerStitchTaskCode>::TaskContext {
   const private_handle_t* src_hnd = nullptr;
   const private_handle_t* dst_hnd = nullptr;
   GLRect src_rect = {};
@@ -131,6 +131,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual int Deinit();
   virtual bool IsQsyncCallbackNeeded(bool *qsync_enabled, int32_t *refresh_rate,
                                      int32_t *qsync_refresh_rate);
+  virtual int PostInit();
 
   virtual HWC2::Error SetDisplayedContentSamplingEnabledVndService(bool enabled);
   virtual HWC2::Error SetDisplayedContentSamplingEnabled(int32_t enabled, uint8_t component_mask,
@@ -167,6 +168,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   void InitStitchTarget();
   bool AllocateStitchBuffer();
   void CacheAvrStatus();
+  void PostCommitStitchLayers();
 
   // SyncTask methods.
   void OnTask(const LayerStitchTaskCode &task_code,
