@@ -203,6 +203,7 @@ int DRMDppsManagerImp::InitConnProps()
 }
 
 void DRMDppsManagerImp::Init(int fd, drmModeRes* res) {
+  std::lock_guard<std::mutex> guard(api_lock_);
   int ret = 0;
 
   if (fd < 0 || !res) {
@@ -315,6 +316,7 @@ void DRMDppsManagerImp::Init(int fd, drmModeRes* res) {
 }
 
 void DRMDppsManagerImp::CacheDppsFeature(uint32_t obj_id, va_list args) {
+  std::lock_guard<std::mutex> guard(api_lock_);
   uint32_t feature_id = va_arg(args, uint32_t);
   uint64_t value = va_arg(args, uint64_t);
   struct DRMDppsPropInfo* info;
@@ -341,6 +343,7 @@ void DRMDppsManagerImp::CacheDppsFeature(uint32_t obj_id, va_list args) {
 }
 
 void DRMDppsManagerImp::CommitDppsFeatures(drmModeAtomicReq *req, const DRMDisplayToken &tok) {
+  std::lock_guard<std::mutex> guard(api_lock_);
   int ret = 0;
 
   if (!req)
@@ -398,6 +401,7 @@ void DRMDppsManagerImp::CommitDppsFeatures(drmModeAtomicReq *req, const DRMDispl
 
 void DRMDppsManagerImp::GetDppsFeatureInfo(DRMDppsFeatureInfo *info)
 {
+  std::lock_guard<std::mutex> guard(api_lock_);
   int ret = 0;
   struct DRMDppsPropInfo* prop_info;
 
