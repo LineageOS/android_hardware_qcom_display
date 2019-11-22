@@ -161,6 +161,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError SetBLScale(uint32_t level) { return kErrorNotSupported; }
   virtual bool CheckResourceState();
   virtual bool GameEnhanceSupported();
+  virtual DisplayError GetQSyncMode(QSyncMode *qsync_mode) { return kErrorNotSupported; }
 
  protected:
   const char *kBt2020Pq = "bt2020_pq";

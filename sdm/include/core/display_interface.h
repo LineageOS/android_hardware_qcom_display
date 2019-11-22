@@ -916,6 +916,12 @@ class DisplayInterface {
   */
   virtual bool GameEnhanceSupported() = 0;
 
+  /*! @brief Method to get the current qsync mode used.
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetQSyncMode(QSyncMode *qsync_mode) = 0;
+
  protected:
   virtual ~DisplayInterface() { }
 };

@@ -786,6 +786,11 @@ DisplayError DisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event, LayerSt
   return kErrorNone;
 }
 
+DisplayError DisplayBuiltIn::GetQSyncMode(QSyncMode *qsync_mode) {
+  *qsync_mode = qsync_mode_;
+  return kErrorNone;
+}
+
 DisplayError DisplayBuiltIn::SetQSyncMode(QSyncMode qsync_mode) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   if (!hw_panel_info_.qsync_support || qsync_mode_ == qsync_mode || first_cycle_) {
