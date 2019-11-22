@@ -83,7 +83,8 @@ int DRMAtomicReq::Perform(DRMOps opcode, uint32_t obj_id, ...) {
     case DRMOps::PLANE_SET_EXCL_RECT:
     case DRMOps::PLANE_SET_INVERSE_PMA:
     case DRMOps::PLANE_SET_DGM_CSC_CONFIG:
-    case DRMOps::PLANE_SET_POST_PROC: {
+    case DRMOps::PLANE_SET_POST_PROC:
+    case DRMOps::PLANE_SET_SSPP_LAYOUT: {
       drm_mgr_->GetPlaneMgr()->Perform(opcode, obj_id, drm_atomic_req_, args);
     } break;
     case DRMOps::CRTC_SET_POST_PROC:

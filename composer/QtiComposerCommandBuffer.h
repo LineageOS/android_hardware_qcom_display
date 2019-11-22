@@ -763,6 +763,13 @@ class CommandReaderBase {
     return (static_cast<uint64_t>(hi) << 32) | lo;
   }
 
+  void readBlob(uint32_t size, void* blob) {
+    memcpy(blob, &mData[mDataRead], size);
+    uint32_t numElements = size / sizeof(uint32_t);
+    mDataRead += numElements;
+    mDataRead += (size - numElements * sizeof(uint32_t) != 0) ? 1 : 0;
+  }
+
   IQtiComposerClient::Color readColor() {
     uint32_t val = read();
     return IQtiComposerClient::Color{

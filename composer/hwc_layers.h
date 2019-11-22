@@ -33,7 +33,7 @@
 #include <hardware/hwcomposer2.h>
 #undef HWC2_INCLUDE_STRINGIFICATION
 #undef HWC2_USE_CPP11
-#include <android/hardware/graphics/composer/2.2/IComposerClient.h>
+#include <android/hardware/graphics/composer/2.3/IComposerClient.h>
 #include <vendor/qti/hardware/display/composer/2.0/IQtiComposerClient.h>
 #include <deque>
 #include <map>
@@ -42,7 +42,7 @@
 #include "hwc_buffer_allocator.h"
 
 using PerFrameMetadataKey =
-    android::hardware::graphics::composer::V2_2::IComposerClient::PerFrameMetadataKey;
+    android::hardware::graphics::composer::V2_3::IComposerClient::PerFrameMetadataKey;
 using vendor::qti::hardware::display::composer::V2_0::IQtiComposerClient;
 
 namespace sdm {
@@ -100,6 +100,8 @@ class HWCLayer {
   HWC2::Error SetLayerVisibleRegion(hwc_region_t visible);
   HWC2::Error SetLayerPerFrameMetadata(uint32_t num_elements, const PerFrameMetadataKey *keys,
                                        const float *metadata);
+  HWC2::Error SetLayerPerFrameMetadataBlobs(uint32_t num_elements, const PerFrameMetadataKey *keys,
+                                            const uint32_t *sizes, const uint8_t* metadata);
   HWC2::Error SetLayerZOrder(uint32_t z);
   HWC2::Error SetLayerType(IQtiComposerClient::LayerType type);
   HWC2::Error SetLayerColorTransform(const float *matrix);
@@ -152,6 +154,7 @@ class HWCLayer {
   bool color_transform_matrix_set_ = false;
   bool buffer_flipped_ = false;
   bool secure_ = false;
+  bool per_frame_hdr_metadata_ = false;  // used to track if perframe metadata and blob is set.
 
   // Composition requested by client(SF)
   HWC2::Composition client_requested_ = HWC2::Composition::Device;
