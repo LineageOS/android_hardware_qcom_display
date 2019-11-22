@@ -39,6 +39,7 @@ class DppsInfo {
   void Init(DppsPropIntf *intf, const std::string &panel_name);
   void Deinit();
   void DppsNotifyOps(enum DppsNotifyOps op, void *payload, size_t size);
+  bool disable_pu_ = false;
 
  private:
   const char *kDppsLib_ = "libdpps.so";
