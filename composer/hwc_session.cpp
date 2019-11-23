@@ -603,6 +603,15 @@ int32_t HWCSession::SetLayerPerFrameMetadata(hwc2_display_t display, hwc2_layer_
                            keys, metadata);
 }
 
+int32_t HWCSession:: SetLayerPerFrameMetadataBlobs(hwc2_display_t display,
+                                                   hwc2_layer_t layer, uint32_t num_elements,
+                                                   const int32_t *int_keys, const uint32_t *sizes,
+                                                   const uint8_t *metadata) {
+  auto keys = reinterpret_cast<const PerFrameMetadataKey *>(int_keys);
+  return CallLayerFunction(display, layer, &HWCLayer::SetLayerPerFrameMetadataBlobs,
+                           num_elements, keys, sizes, metadata);
+}
+
 int32_t HWCSession::GetDisplayAttribute(hwc2_display_t display, hwc2_config_t config,
                                         int32_t int_attribute, int32_t *out_value) {
   if (out_value == nullptr || int_attribute < HWC2_ATTRIBUTE_INVALID ||

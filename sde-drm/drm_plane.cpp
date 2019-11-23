@@ -969,6 +969,18 @@ void DRMPlane::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
       }
     } break;
 
+    case DRMOps::PLANE_SET_SSPP_LAYOUT: {
+      if (!prop_mgr_.IsPropertyAvailable(DRMProperty::SDE_SSPP_LAYOUT)) {
+        DRM_LOGD("SSPP_LAYOUT property isn't exposed");
+        break;
+      }
+      DRMSSPPLayoutIndex layout_index = (DRMSSPPLayoutIndex) va_arg(args, uint32_t);
+      prop_id = prop_mgr_.GetPropertyId(DRMProperty::SDE_SSPP_LAYOUT);
+      AddProperty(req, obj_id, prop_id, (uint32_t)layout_index , true /* cache */,
+                  tmp_prop_val_map_);
+      DRM_LOGD("Plane %d: Setting SSPP Layout to %d", obj_id, layout_index);
+    } break;
+
     default:
       DRM_LOGE("Invalid opcode %d for DRM Plane %d", code, obj_id);
   }

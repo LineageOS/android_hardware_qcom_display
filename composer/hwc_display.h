@@ -44,6 +44,7 @@
 using android::hardware::graphics::common::V1_2::ColorMode;
 using android::hardware::graphics::common::V1_1::Dataspace;
 using android::hardware::graphics::common::V1_1::RenderIntent;
+using android::hardware::graphics::common::V1_2::Hdr;
 
 namespace sdm {
 

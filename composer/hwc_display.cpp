@@ -1133,20 +1133,22 @@ HWC2::Error HWCDisplay::GetPerFrameMetadataKeys(uint32_t *out_num_keys,
   if (out_num_keys == nullptr) {
     return HWC2::Error::BadParameter;
   }
-  *out_num_keys = UINT32(PerFrameMetadataKey::MAX_FRAME_AVERAGE_LIGHT_LEVEL) + 1;
-  if (out_keys != nullptr) {
-    out_keys[0] = PerFrameMetadataKey::DISPLAY_RED_PRIMARY_X;
-    out_keys[1] = PerFrameMetadataKey::DISPLAY_RED_PRIMARY_Y;
-    out_keys[2] = PerFrameMetadataKey::DISPLAY_GREEN_PRIMARY_X;
-    out_keys[3] = PerFrameMetadataKey::DISPLAY_GREEN_PRIMARY_Y;
-    out_keys[4] = PerFrameMetadataKey::DISPLAY_BLUE_PRIMARY_X;
-    out_keys[5] = PerFrameMetadataKey::DISPLAY_BLUE_PRIMARY_Y;
-    out_keys[6] = PerFrameMetadataKey::WHITE_POINT_X;
-    out_keys[7] = PerFrameMetadataKey::WHITE_POINT_Y;
-    out_keys[8] = PerFrameMetadataKey::MAX_LUMINANCE;
-    out_keys[9] = PerFrameMetadataKey::MIN_LUMINANCE;
-    out_keys[10] = PerFrameMetadataKey::MAX_CONTENT_LIGHT_LEVEL;
-    out_keys[11] = PerFrameMetadataKey::MAX_FRAME_AVERAGE_LIGHT_LEVEL;
+
+  DisplayConfigFixedInfo fixed_info = {};
+  display_intf_->GetConfig(&fixed_info);
+  uint32_t num_keys = 0;
+  if (fixed_info.hdr_plus_supported) {
+    num_keys = UINT32(PerFrameMetadataKey::HDR10_PLUS_SEI) + 1;
+  } else {
+    num_keys = UINT32(PerFrameMetadataKey::MAX_FRAME_AVERAGE_LIGHT_LEVEL) + 1;
+  }
+  if (out_keys == nullptr) {
+    *out_num_keys = num_keys;
+  } else {
+    uint32_t max_out_key_elements = std::min(*out_num_keys, num_keys);
+    for (int32_t i = 0; i < max_out_key_elements; i++) {
+      out_keys[i] = static_cast<PerFrameMetadataKey>(i);
+    }
   }
   return HWC2::Error::None;
 }
@@ -1282,8 +1284,16 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
     } break;
     case kPanelDeadEvent:
     case kDisplayPowerResetEvent: {
-      SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[id_]);
-      validated_ = false;
+      // Mutex scope
+      {
+        SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[id_]);
+        validated_ = false;
+      }
+      // TODO(user): Following scenario need to be addressed
+      // If panel or HW is in bad state for either ESD or HWR, there is no acquired lock between
+      // this scope and call to DisplayPowerReset.
+      // Prepare or commit could operate on the display since locker_[id_] is free and most likely
+      // result in a failure since ESD/HWR has been requested during this time period.
       if (event_handler_) {
         event_handler_->DisplayPowerReset();
       } else {
@@ -1494,13 +1504,29 @@ HWC2::Error HWCDisplay::GetHdrCapabilities(uint32_t *out_num_types, int32_t *out
     return HWC2::Error::None;
   }
 
-  if (out_types == nullptr) {
-    // We support HDR10 and HLG
-    *out_num_types = 2;
+  uint32_t num_types = 0;
+  if (fixed_info.hdr_plus_supported) {
+    num_types = UINT32(Hdr::HDR10_PLUS) - 1;
   } else {
-    // HDR10 and HLG are supported
-    out_types[0] = HAL_HDR_HDR10;
-    out_types[1] = HAL_HDR_HLG;
+    num_types = UINT32(Hdr::HLG) - 1;
+  }
+
+  // We support HDR10, HLG and HDR10_PLUS.
+  if (out_types == nullptr) {
+    *out_num_types = num_types;
+  } else {
+    uint32_t max_out_types = std::min(*out_num_types, num_types);
+    int32_t type = static_cast<int32_t>(Hdr::DOLBY_VISION);
+    for (int32_t i = 0; i < max_out_types; i++) {
+      while (type == static_cast<int32_t>(Hdr::DOLBY_VISION) /* Skip list */) {
+        // Skip the type
+        type++;
+      }
+      if (type > (num_types + 1)) {
+        break;
+      }
+      out_types[i] = type++;
+    }
     *out_max_luminance = fixed_info.max_luminance;
     *out_max_average_luminance = fixed_info.average_luminance;
     *out_min_luminance = fixed_info.min_luminance;

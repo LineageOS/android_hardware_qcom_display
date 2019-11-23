@@ -416,6 +416,9 @@ HWC2::Error HWCLayer::SetLayerDataspace(int32_t dataspace) {
   if (dataspace_ != dataspace) {
     geometry_changes_ |= kDataspace;
     dataspace_ = dataspace;
+    if (layer_->input_buffer.buffer_id) {
+      ValidateAndSetCSC(reinterpret_cast<private_handle_t *>(layer_->input_buffer.buffer_id));
+    }
   }
   return HWC2::Error::None;
 }
@@ -585,6 +588,8 @@ HWC2::Error HWCLayer::SetLayerColorTransform(const float *matrix) {
 HWC2::Error HWCLayer::SetLayerPerFrameMetadata(uint32_t num_elements,
                                                const PerFrameMetadataKey *keys,
                                                const float *metadata) {
+  auto old_mastering_display = layer_->input_buffer.color_metadata.masteringDisplayInfo;
+  auto old_content_light = layer_->input_buffer.color_metadata.contentLightLevel;
   auto &mastering_display = layer_->input_buffer.color_metadata.masteringDisplayInfo;
   auto &content_light = layer_->input_buffer.color_metadata.contentLightLevel;
   for (uint32_t i = 0; i < num_elements; i++) {
@@ -627,6 +632,51 @@ HWC2::Error HWCLayer::SetLayerPerFrameMetadata(uint32_t num_elements,
       case PerFrameMetadataKey::MAX_FRAME_AVERAGE_LIGHT_LEVEL:
         content_light.minPicAverageLightLevel = UINT32(metadata[i] * 10000);
         break;
+      default:
+       break;
+    }
+  }
+  if ((!SameConfig(&old_mastering_display, &mastering_display, UINT32(sizeof(MasteringDisplay)))) ||
+      (!SameConfig(&old_content_light, &content_light, UINT32(sizeof(ContentLightLevel))))) {
+    per_frame_hdr_metadata_ = true;
+    layer_->update_mask.set(kMetadataUpdate);
+    geometry_changes_ |= kDataspace;
+  }
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCLayer::SetLayerPerFrameMetadataBlobs(uint32_t num_elements,
+                                                    const PerFrameMetadataKey *keys,
+                                                    const uint32_t *sizes,
+                                                    const uint8_t* metadata) {
+  if (!keys || !sizes || !metadata) {
+    DLOGE("metadata or sizes or keys is null");
+    return HWC2::Error::BadParameter;
+  }
+
+  ColorMetaData &color_metadata = layer_->input_buffer.color_metadata;
+  for (uint32_t i = 0; i < num_elements; i++) {
+    switch (keys[i]) {
+      case PerFrameMetadataKey::HDR10_PLUS_SEI:
+        if (sizes[i] > HDR_DYNAMIC_META_DATA_SZ) {
+          DLOGE("Size of HDR10_PLUS_SEI = %d", sizes[i]);
+          return HWC2::Error::BadParameter;
+        }
+        per_frame_hdr_metadata_ = false;
+        // if dynamic metadata changes, store and set needs validate
+        if (!SameConfig(static_cast<const uint8_t*>(color_metadata.dynamicMetaDataPayload),
+                        metadata, sizes[i])) {
+          geometry_changes_ |= kDataspace;
+          color_metadata.dynamicMetaDataValid = true;
+          color_metadata.dynamicMetaDataLen = sizes[i];
+          std::memcpy(color_metadata.dynamicMetaDataPayload, metadata, sizes[i]);
+          per_frame_hdr_metadata_ = true;
+          layer_->update_mask.set(kMetadataUpdate);
+        }
+        break;
+      default:
+        DLOGW("Invalid key = %d", keys[i]);
+        return HWC2::Error::BadParameter;
     }
   }
   return HWC2::Error::None;
@@ -913,6 +963,11 @@ bool HWCLayer::IsDataSpaceSupported() {
 }
 
 void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
+  if (per_frame_hdr_metadata_) {
+    // Since client has set PerFrameMetadata, dataspace will be valid
+    // so we can skip reading from ColorMetaData.
+    return;
+  }
   LayerBuffer *layer_buffer = &layer_->input_buffer;
   bool use_color_metadata = true;
   ColorMetaData csc = {};
@@ -936,25 +991,37 @@ void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
     }
   }
 
-  // Only Video module populates the Color Metadata in handle.
-  if (layer_buffer->flags.video && IsBT2020(layer_buffer->color_metadata.colorPrimaries)) {
+  if (IsBT2020(layer_buffer->color_metadata.colorPrimaries)) {
      // android_dataspace_t doesnt support mastering display and light levels
      // so retrieve it from metadata for BT2020(HDR)
      use_color_metadata = true;
   }
 
   if (use_color_metadata) {
-    ColorMetaData old_meta_data = layer_buffer->color_metadata;
-    if (sdm::SetCSC(handle, &layer_buffer->color_metadata) == kErrorNone) {
-      if ((layer_buffer->color_metadata.colorPrimaries != old_meta_data.colorPrimaries) ||
-          (layer_buffer->color_metadata.transfer != old_meta_data.transfer) ||
-          (layer_buffer->color_metadata.range != old_meta_data.range)) {
+    ColorMetaData new_metadata = {};
+    if (sdm::SetCSC(handle, &new_metadata) == kErrorNone) {
+      // If dataspace is KNOWN, overwrite the gralloc metadata CSC using the previously derived CSC
+      // from dataspace.
+      if (dataspace_ != HAL_DATASPACE_UNKNOWN) {
+        new_metadata.colorPrimaries = layer_buffer->color_metadata.colorPrimaries;
+        new_metadata.transfer = layer_buffer->color_metadata.transfer;
+        new_metadata.range = layer_buffer->color_metadata.range;
+      }
+      if ((layer_buffer->color_metadata.colorPrimaries != new_metadata.colorPrimaries) ||
+          (layer_buffer->color_metadata.transfer != new_metadata.transfer) ||
+          (layer_buffer->color_metadata.range != new_metadata.range)) {
         layer_->update_mask.set(kMetadataUpdate);
       }
+      DLOGV_IF(kTagClient, "Dynamic Metadata valid = %d size = %d",
+               layer_buffer->color_metadata.dynamicMetaDataValid,
+               layer_buffer->color_metadata.dynamicMetaDataLen);
       if (layer_buffer->color_metadata.dynamicMetaDataValid &&
           !SameConfig(layer_buffer->color_metadata.dynamicMetaDataPayload,
-          old_meta_data.dynamicMetaDataPayload, HDR_DYNAMIC_META_DATA_SZ)) {
+          new_metadata.dynamicMetaDataPayload, HDR_DYNAMIC_META_DATA_SZ)) {
         layer_->update_mask.set(kMetadataUpdate);
+      }
+      if (layer_->update_mask.test(kMetadataUpdate)) {
+        layer_buffer->color_metadata = new_metadata;
       }
     } else {
       dataspace_supported_ = false;
