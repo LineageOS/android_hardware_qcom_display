@@ -155,6 +155,9 @@ int setMetaDataVa(MetaData_t *data, DispParamType paramType,
                         cvpMetadata->size);
                  data->cvpMetadata.capture_frame_rate = cvpMetadata->capture_frame_rate;
                  data->cvpMetadata.cvp_frame_rate = cvpMetadata->cvp_frame_rate;
+                 data->cvpMetadata.flags = cvpMetadata->flags;
+                 memcpy(data->cvpMetadata.reserved, cvpMetadata->reserved,
+                        (8 * sizeof(uint32_t)));
              } else {
                  data->operation &= ~(paramType);
                  ALOGE("%s: cvp metadata length %d is more than max size %d",
@@ -345,6 +348,9 @@ int getMetaDataVa(MetaData_t *data, DispFetchParamType paramType,
                            data->cvpMetadata.size);
                     cvpMetadata->capture_frame_rate = data->cvpMetadata.capture_frame_rate;
                     cvpMetadata->cvp_frame_rate = data->cvpMetadata.cvp_frame_rate;
+                    cvpMetadata->flags = data->cvpMetadata.flags;
+                    memcpy(cvpMetadata->reserved, data->cvpMetadata.reserved,
+                           (8 * sizeof(uint32_t)));
                     ret = 0;
                 }
             }
