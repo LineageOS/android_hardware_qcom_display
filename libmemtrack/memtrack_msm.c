@@ -59,7 +59,7 @@ static int memtrack_open(__attribute__((unused)) const hw_module_t* module, cons
             /* Common hw_device_t fields */
             dev->common.tag = HARDWARE_DEVICE_TAG;
             dev->common.module_api_version = MEMTRACK_MODULE_API_VERSION_0_1;
-            dev->common.module_api_version = HARDWARE_HAL_API_VERSION;
+            dev->common.hal_api_version = HARDWARE_HAL_API_VERSION;
 
             dev->init = msm_memtrack_init;
             dev->getMemory = msm_memtrack_get_memory;
