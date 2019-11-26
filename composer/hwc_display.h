@@ -312,6 +312,9 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error GetPanelBrightness(float *brightness) {
     return HWC2::Error::Unsupported;
   }
+  virtual HWC2::Error GetPanelMaxBrightness(uint32_t *max_brightness_level) {
+    return HWC2::Error::Unsupported;
+  }
   virtual HWC2::Error GetDisplayConfigs(uint32_t *out_num_configs, hwc2_config_t *out_configs);
   virtual HWC2::Error GetDisplayAttribute(hwc2_config_t config, HWC2::Attribute attribute,
                                           int32_t *out_value);

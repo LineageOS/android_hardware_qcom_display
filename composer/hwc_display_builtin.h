@@ -116,6 +116,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual HWC2::Error SetPendingRefresh();
   virtual HWC2::Error SetPanelBrightness(float brightness);
   virtual HWC2::Error GetPanelBrightness(float *brightness);
+  virtual HWC2::Error GetPanelMaxBrightness(uint32_t *max_brightness_level);
   virtual DisplayError TeardownConcurrentWriteback(void);
   virtual void SetFastPathComposition(bool enable) {
     fast_path_composition_ = enable && !readback_buffer_queued_;
