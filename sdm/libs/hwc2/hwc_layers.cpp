@@ -912,7 +912,9 @@ void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
      use_color_metadata = true;
   }
 
-  if (use_color_metadata) {
+  // Since client has set PerFrameMetadata, dataspace will be valid
+  // so we can skip reading from ColorMetaData.
+  if (use_color_metadata && !per_frame_hdr_metadata_) {
     ColorMetaData old_meta_data = layer_buffer->color_metadata;
     if (sdm::SetCSC(handle, &layer_buffer->color_metadata) == kErrorNone) {
       if ((layer_buffer->color_metadata.colorPrimaries != old_meta_data.colorPrimaries) ||
