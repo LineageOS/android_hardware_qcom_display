@@ -64,6 +64,7 @@ class DisplayNull : public DisplayInterface {
   virtual string Dump() { return ""; }
   virtual bool IsSupportSsppTonemap() { return false; }
   virtual bool CanSkipValidate() { return true; }
+  virtual bool GameEnhanceSupported() { return false; }
 
   MAKE_NO_OP(TeardownConcurrentWriteback(void))
   MAKE_NO_OP(Commit(LayerStack *))

@@ -2063,4 +2063,11 @@ bool DisplayBase::CheckResourceState() {
   return comp_manager_->CheckResourceState(display_comp_ctx_);
 }
 
+bool DisplayBase::GameEnhanceSupported() {
+  if (color_mgr_) {
+    return color_mgr_->GameEnhanceSupported();
+  }
+  return false;
+}
+
 }  // namespace sdm
