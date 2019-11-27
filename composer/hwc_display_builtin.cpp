@@ -1103,6 +1103,7 @@ bool HWCDisplayBuiltIn::InitLayerStitch() {
   if (!is_primary_) {
     // Disable on all non-primary builtins.
     DLOGI("Non-primary builtin.");
+    disable_layer_stitch_ = true;
     return true;
   }
 
