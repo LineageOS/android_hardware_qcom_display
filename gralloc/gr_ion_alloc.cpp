@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2019, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,15 +31,9 @@
 #define ATRACE_TAG (ATRACE_TAG_GRAPHICS | ATRACE_TAG_HAL)
 #include <sys/ioctl.h>
 #include <sys/mman.h>
-#include <linux/ion.h>
-#ifndef QMAA
-#include <linux/msm_ion.h>
-#endif
 
-#if TARGET_ION_ABI_VERSION >= 2
 #include <linux/dma-buf.h>
 #include <ion/ion.h>
-#endif
 #include <stdlib.h>
 #include <fcntl.h>
 #include <log/log.h>
@@ -67,8 +61,6 @@ bool IonAlloc::Init() {
 
   return true;
 }
-
-#if TARGET_ION_ABI_VERSION >= 2  // Use libion APIs for new ion
 
 int IonAlloc::OpenIonDevice() {
   return ion_open();
@@ -161,169 +153,6 @@ int IonAlloc::CleanBuffer(void */*base*/, unsigned int /*size*/, unsigned int /*
 
   return 0;
 }
-
-#else
-#ifndef TARGET_ION_ABI_VERSION  // Use old ion apis directly
-
-int IonAlloc::OpenIonDevice() {
-  return open(kIonDevice, O_RDONLY);
-}
-
-void IonAlloc::CloseIonDevice() {
-  if (ion_dev_fd_ > FD_INIT) {
-    close(ion_dev_fd_);
-  }
-
-  ion_dev_fd_ = FD_INIT;
-}
-
-int IonAlloc::AllocBuffer(AllocData *data) {
-  ATRACE_CALL();
-  int err = 0;
-  struct ion_handle_data handle_data;
-  struct ion_fd_data fd_data;
-  struct ion_allocation_data ion_alloc_data;
-
-  ion_alloc_data.len = data->size;
-  ion_alloc_data.align = data->align;
-  ion_alloc_data.heap_id_mask = data->heap_id;
-  ion_alloc_data.flags = data->flags;
-  ion_alloc_data.flags |= data->uncached ? 0 : ION_FLAG_CACHED;
-  std::string tag_name{};
-  if (ATRACE_ENABLED()) {
-    tag_name = "ION_IOC_ALLOC size: " + std::to_string(data->size);
-  }
-
-  ATRACE_BEGIN(tag_name.c_str());
-  if (ioctl(ion_dev_fd_, INT(ION_IOC_ALLOC), &ion_alloc_data)) {
-    err = -errno;
-    ALOGE("ION_IOC_ALLOC failed with error - %s", strerror(errno));
-    return err;
-  }
-  ATRACE_END();
-
-  fd_data.handle = ion_alloc_data.handle;
-  handle_data.handle = ion_alloc_data.handle;
-  ATRACE_BEGIN("ION_IOC_MAP");
-  if (ioctl(ion_dev_fd_, INT(ION_IOC_MAP), &fd_data)) {
-    err = -errno;
-    ALOGE("%s: ION_IOC_MAP failed with error - %s", __FUNCTION__, strerror(errno));
-    ioctl(ion_dev_fd_, INT(ION_IOC_FREE), &handle_data);
-    return err;
-  }
-  ATRACE_END();
-
-  data->fd = fd_data.fd;
-  data->ion_handle = handle_data.handle;
-  ALOGD_IF(DEBUG, "ion: Allocated buffer size:%zu fd:%d handle:0x%x", ion_alloc_data.len, data->fd,
-           data->ion_handle);
-
-  return 0;
-}
-
-int IonAlloc::FreeBuffer(void *base, unsigned int size, unsigned int offset, int fd,
-                         int ion_handle) {
-  ATRACE_CALL();
-  int err = 0;
-  ALOGD_IF(DEBUG, "ion: Freeing buffer base:%p size:%u fd:%d handle:0x%x", base, size, fd,
-           ion_handle);
-
-  if (base) {
-    err = UnmapBuffer(base, size, offset);
-  }
-
-  if (ion_handle > 0) {
-    struct ion_handle_data handle_data;
-    handle_data.handle = ion_handle;
-    ioctl(ion_dev_fd_, INT(ION_IOC_FREE), &handle_data);
-  }
-  close(fd);
-  return err;
-}
-
-int IonAlloc::ImportBuffer(int fd) {
-  struct ion_fd_data fd_data;
-  int err = 0;
-  fd_data.fd = fd;
-  if (ioctl(ion_dev_fd_, INT(ION_IOC_IMPORT), &fd_data)) {
-    err = -errno;
-    ALOGE("%s: ION_IOC_IMPORT failed with error - %s", __FUNCTION__, strerror(errno));
-    return err;
-  }
-  return fd_data.handle;
-}
-
-int IonAlloc::CleanBuffer(void *base, unsigned int size, unsigned int offset, int handle, int op,
-                          int /*fd*/) {
-  if (op == CACHE_READ_DONE)  {
-    return 0;
-  }
-
-#ifndef QMAA
-  ATRACE_CALL();
-  ATRACE_INT("operation id", op);
-  struct ion_flush_data flush_data;
-  int err = 0;
-
-  flush_data.handle = handle;
-  flush_data.vaddr = base;
-  // offset and length are unsigned int
-  flush_data.offset = offset;
-  flush_data.length = size;
-
-  struct ion_custom_data d;
-  switch (op) {
-    case CACHE_CLEAN:
-      d.cmd = ION_IOC_CLEAN_CACHES;
-      break;
-    case CACHE_INVALIDATE:
-      d.cmd = ION_IOC_INV_CACHES;
-      break;
-    case CACHE_CLEAN_AND_INVALIDATE:
-    default:
-      d.cmd = ION_IOC_CLEAN_INV_CACHES;
-  }
-
-  d.arg = (unsigned long)(&flush_data);  // NOLINT
-  if (ioctl(ion_dev_fd_, INT(ION_IOC_CUSTOM), &d)) {
-    err = -errno;
-    ALOGE("%s: ION_IOC_CLEAN_INV_CACHES failed with error - %s", __FUNCTION__, strerror(errno));
-    return err;
-  }
-#endif
-  return 0;
-}
-
-#else  // This ion version is not supported
-
-int IonAlloc::OpenIonDevice() {
-  return -EINVAL;
-}
-
-void IonAlloc::CloseIonDevice() {
-}
-
-int IonAlloc::AllocBuffer(AllocData * /*data*/) {
-  return -EINVAL;
-}
-
-int IonAlloc::FreeBuffer(void * /*base*/, unsigned int /*size*/, unsigned int /*offset*/,
-                         int /*fd*/, int /*ion_handle*/) {
-  return -EINVAL;
-}
-
-int IonAlloc::ImportBuffer(int /*fd*/) {
-  return -EINVAL;
-}
-
-int IonAlloc::CleanBuffer(void * /*base*/, unsigned int /*size*/, unsigned int /*offset*/,
-                          int /*handle*/, int /*op*/, int /*fd*/) {
-  return -EINVAL;
-}
-
-#endif
-#endif  // TARGET_ION_ABI_VERSION
-
 
 int IonAlloc::MapBuffer(void **base, unsigned int size, unsigned int offset, int fd) {
   ATRACE_CALL();

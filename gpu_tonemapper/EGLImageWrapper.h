@@ -21,9 +21,6 @@
 #define __TONEMAPPER_EGLIMAGEWRAPPER_H__
 
 #include <utils/LruCache.h>
-#ifndef TARGET_HEADLESS
-#include <linux/msm_ion.h>
-#endif
 #include <string>
 #include <map>
 #include "EGLImageBuffer.h"
@@ -39,19 +36,12 @@ class EGLImageWrapper {
      void operator()(int& buffInt, EGLImageBuffer*& eglImage);
      map<string, int>* buffStrbuffIntMapPtr = nullptr;
      bool mapClearPending = false;
-   #ifndef TARGET_ION_ABI_VERSION
-     int ion_fd = -1;
-   #endif
   };
 
   android::LruCache<int, EGLImageBuffer *>* eglImageBufferCache;
   map<string, int> buffStrbuffIntMap = {};
   DeleteEGLImageCallback* callback = 0;
- #ifndef TARGET_ION_ABI_VERSION
-   int ion_fd = -1;
- #else
-   uint64_t buffInt = 0;
- #endif
+  uint64_t buffInt = 0;
 
  public:
   EGLImageWrapper();
