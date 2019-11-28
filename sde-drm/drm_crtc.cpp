@@ -349,6 +349,8 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
   string solidfill_stages = "dim_layer_v1_max_layers=";
   string has_hdr = "has_hdr=";
   string min_prefill_lines = "min_prefill_lines=";
+  string num_mnocports = "num_mnoc_ports=";
+  string mnoc_bus_width = "axi_bus_width=";
 
   crtc_info_.max_solidfill_stages = 0;  // default _
   string dest_scaler_count = "dest_scaler_count=";
@@ -439,6 +441,10 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
       crtc_info_.min_prefill_lines = std::stoi(string(line, min_prefill_lines.length()));
     } else if (line.find(sec_ui_blendstage) != string::npos) {
       crtc_info_.secure_disp_blend_stage = std::stoi(string(line, (sec_ui_blendstage).length()));
+    } else if (line.find(num_mnocports) != string::npos) {
+      crtc_info_.num_mnocports = std::stoi(string(line, num_mnocports.length()));
+    } else if (line.find(mnoc_bus_width) != string::npos) {
+      crtc_info_.mnoc_bus_width = std::stoi(string(line, mnoc_bus_width.length()));
     } else if (line.find(linewidth_constraints) != string::npos) {
       crtc_info_.line_width_constraints_count =
                             std::stoi(string(line, (linewidth_constraints).length()));
