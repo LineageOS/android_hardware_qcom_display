@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, 2018, 2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019 The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -20,7 +20,9 @@
 #ifndef __HWC_SESSION_H__
 #define __HWC_SESSION_H__
 
-#ifdef DISPLAY_CONFIG_1_1
+#ifdef DISPLAY_CONFIG_1_7
+#include <vendor/display/config/1.7/IDisplayConfig.h>
+#elif DISPLAY_CONFIG_1_1
 #include <vendor/display/config/1.1/IDisplayConfig.h>
 #else
 #include <vendor/display/config/1.0/IDisplayConfig.h>
@@ -41,12 +43,15 @@
 
 namespace sdm {
 
-#ifdef DISPLAY_CONFIG_1_1
+#ifdef DISPLAY_CONFIG_1_7
+using vendor::display::config::V1_7::IDisplayConfig;
+#elif DISPLAY_CONFIG_1_1
 using vendor::display::config::V1_1::IDisplayConfig;
 #else
-using ::vendor::display::config::V1_0::IDisplayConfig;
+using vendor::display::config::V1_0::IDisplayConfig;
 #endif
 using ::android::hardware::Return;
+using ::android::hardware::hidl_string;
 
 // Create a singleton uevent listener thread valid for life of hardware composer process.
 // This thread blocks on uevents poll inside uevent library implementation. This poll exits
@@ -216,9 +221,37 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   Return<int32_t> setCameraLaunchStatus(uint32_t on) override;
   Return<void> displayBWTransactionPending(displayBWTransactionPending_cb _hidl_cb) override;
 
-  // Methods from ::android::hardware::display::config::V1_1::IDisplayConfig follow.
+  // Methods from ::android::hardware::display::config::V1_7::IDisplayConfig follow.
 #ifdef DISPLAY_CONFIG_1_1
   Return<int32_t> setDisplayAnimating(uint64_t display_id, bool animating) override;
+#endif
+#ifdef DISPLAY_CONFIG_1_2
+  Return<int32_t> setDisplayIndex(IDisplayConfig::DisplayTypeExt disp_type,
+                                  uint32_t base, uint32_t count) override;
+#endif
+#ifdef DISPLAY_CONFIG_1_3
+  Return<int32_t> controlIdlePowerCollapse(bool enable, bool synchronous) override;
+#endif
+#ifdef DISPLAY_CONFIG_1_4
+  Return<void> getWriteBackCapabilities(getWriteBackCapabilities_cb _hidl_cb) override;
+#endif
+#ifdef DISPLAY_CONFIG_1_5
+  Return<int32_t> SetDisplayDppsAdROI(uint32_t display_id, uint32_t h_start, uint32_t h_end,
+                                      uint32_t v_start, uint32_t v_end, uint32_t factor_in,
+                                      uint32_t factor_out) override;
+#endif
+#ifdef DISPLAY_CONFIG_1_6
+  Return<int32_t> updateVSyncSourceOnPowerModeOff() override;
+  Return<int32_t> updateVSyncSourceOnPowerModeDoze() override;
+#endif
+#ifdef DISPLAY_CONFIG_1_7
+  Return<int32_t> setPowerMode(uint32_t disp_id, PowerMode power_mode) override;
+  Return<bool> isPowerModeOverrideSupported(uint32_t disp_id) override;
+  Return<bool> isHDRSupported(uint32_t disp_id) override;
+  Return<bool> isWCGSupported(uint32_t disp_id) override;
+  Return<int32_t> setLayerAsMask(uint32_t disp_id, uint64_t layer_id) override;
+  Return<void> getDebugProperty(const hidl_string &prop_name,
+                                getDebugProperty_cb _hidl_cb) override;
 #endif
 
   // QClient methods
