@@ -606,4 +606,31 @@ Return<void> HWCSession::getDebugProperty(const hidl_string &prop_name,
 }
 #endif
 
+
+#ifdef DISPLAY_CONFIG_1_8
+Return<void> HWCSession::getActiveBuiltinDisplayAttributes(
+                                          getDisplayAttributes_cb _hidl_cb) {
+  DLOGE("Not supported at present");
+  return Void();
+}
+#endif  // DISPLAY_CONFIG_1_8
+
+#ifdef DISPLAY_CONFIG_1_9
+Return<int32_t> HWCSession::setPanelLuminanceAttributes(uint32_t disp_id, float pan_min_lum,
+                                                        float pan_max_lum) {
+  DLOGE("Not supported at present");
+  return -1;
+}
+
+Return<bool> HWCSession::isBuiltInDisplay(uint32_t disp_id) {
+  if ((HWC_DISPLAY_PRIMARY == disp_id) || (HWC_DISPLAY_BUILTIN_2 == disp_id) ||
+      (HWC_DISPLAY_BUILTIN_3 == disp_id) || (HWC_DISPLAY_BUILTIN_4 == disp_id)) {
+    return true;
+  }
+  else {
+   return false;
+  }
+}
+#endif  // DISPLAY_CONFIG_1_9
+
 }  // namespace sdm
