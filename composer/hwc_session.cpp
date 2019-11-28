@@ -805,6 +805,9 @@ void HWCSession::RegisterCallback(int32_t descriptor, hwc2_callback_data_t callb
         callbacks_.Hotplug(client_id, HWC2::Connection::Connected);
       }
     }
+  }
+
+  if (descriptor == HWC2_CALLBACK_HOTPLUG) {
     client_connected_ = !!pointer;
     // Notfify all displays.
     NotifyClientStatus(client_connected_);

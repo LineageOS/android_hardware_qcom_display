@@ -105,9 +105,6 @@ HWC2::Error HWCCallbacks::Register(HWC2::Callback descriptor, hwc2_callback_data
       return HWC2::Error::BadParameter;
   }
 
-  if (!pointer) {
-    return HWC2::Error::NoResources;
-  }
   return HWC2::Error::None;
 }
 
