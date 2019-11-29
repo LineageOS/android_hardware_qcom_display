@@ -1048,6 +1048,7 @@ void HWCSession::CWB::ProcessRequests() {
 
       if (release_fence >= 0) {
         status = sync_wait(release_fence, 1000);
+        close(release_fence);
       } else {
         DLOGE("CWB release fence could not be retrieved.");
         status = -1;
