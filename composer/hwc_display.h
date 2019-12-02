@@ -341,7 +341,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests) = 0;
   virtual HWC2::Error GetReleaseFences(uint32_t *out_num_elements, hwc2_layer_t *out_layers,
                                        int32_t *out_fences);
-  virtual HWC2::Error Present(int32_t *out_retire_fence) = 0;
+  virtual HWC2::Error Present(shared_ptr<Fence> *out_retire_fence) = 0;
   virtual HWC2::Error GetHdrCapabilities(uint32_t *out_num_types, int32_t* out_types,
                                          float* out_max_luminance,
                                          float* out_max_average_luminance,
@@ -407,10 +407,11 @@ class HWCDisplay : public DisplayEventHandler {
   virtual DisplayError CECMessage(char *message);
   virtual DisplayError HistogramEvent(int source_fd, uint32_t blob_id);
   virtual DisplayError HandleEvent(DisplayEvent event);
-  virtual void DumpOutputBuffer(const BufferInfo &buffer_info, void *base, int fence);
+  virtual void DumpOutputBuffer(const BufferInfo &buffer_info, void *base,
+                                shared_ptr<Fence> &retire_fence);
   virtual HWC2::Error PrepareLayerStack(uint32_t *out_num_types, uint32_t *out_num_requests);
   virtual HWC2::Error CommitLayerStack(void);
-  virtual HWC2::Error PostCommitLayerStack(int32_t *out_retire_fence);
+  virtual HWC2::Error PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence);
   virtual DisplayError DisablePartialUpdateOneFrame() {
     return kErrorNotSupported;
   }

@@ -150,7 +150,7 @@ HWC2::Error HWCDisplayVirtualDPU::Validate(uint32_t *out_num_types, uint32_t *ou
   return PrepareLayerStack(out_num_types, out_num_requests);
 }
 
-HWC2::Error HWCDisplayVirtualDPU::Present(int32_t *out_retire_fence) {
+HWC2::Error HWCDisplayVirtualDPU::Present(shared_ptr<Fence> *out_retire_fence) {
   auto status = HWC2::Error::None;
 
   if (!output_buffer_.buffer_id) {

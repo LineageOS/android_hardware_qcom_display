@@ -247,8 +247,8 @@ class QtiComposerClient : public IQtiComposerClient {
                           std::vector<IComposerClient::Composition>& compositionTypes,
                           uint32_t& displayRequestMask, std::vector<Layer>& requestedLayers,
                           std::vector<uint32_t>& requestMasks);
-    Error presentDisplay(Display display, int32_t& presentFence, std::vector<Layer>& layers,
-                         std::vector<int32_t>& releaseFences);
+    Error presentDisplay(Display display, shared_ptr<Fence> *presentFence,
+                         std::vector<Layer>& layers, std::vector<int32_t>& releaseFences);
 
    private:
     // Commands from ::android::hardware::graphics::composer::V2_1::IComposerClient follow.

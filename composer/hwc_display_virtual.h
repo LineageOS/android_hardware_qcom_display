@@ -42,7 +42,7 @@ class HWCDisplayVirtual : public HWCDisplay {
   static void Destroy(HWCDisplay *hwc_display);
   virtual int Init();
   virtual int Deinit();
-  virtual HWC2::Error Present(int32_t *out_retire_fence);
+  virtual HWC2::Error Present(shared_ptr<Fence> *out_retire_fence);
   virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
                                          int32_t format, bool post_processed);
   virtual HWC2::Error GetDisplayType(int32_t *out_type);

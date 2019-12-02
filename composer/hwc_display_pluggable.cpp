@@ -146,7 +146,7 @@ HWC2::Error HWCDisplayPluggable::Validate(uint32_t *out_num_types, uint32_t *out
   return status;
 }
 
-HWC2::Error HWCDisplayPluggable::Present(int32_t *out_retire_fence) {
+HWC2::Error HWCDisplayPluggable::Present(shared_ptr<Fence> *out_retire_fence) {
   auto status = HWC2::Error::None;
 
   if (!active_secure_sessions_[kSecureDisplay]) {

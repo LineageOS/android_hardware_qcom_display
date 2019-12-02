@@ -1626,7 +1626,7 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
   return HWC2::Error::None;
 }
 
-HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
+HWC2::Error HWCDisplay::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence) {
   auto status = HWC2::Error::None;
 
   // Do no call flush on errors, if a successful buffer is never submitted.
@@ -1685,14 +1685,10 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(int32_t *out_retire_fence) {
   }
 
   client_target_->GetSDMLayer()->request.flags = {};
-  *out_retire_fence = -1;
   // if swapinterval property is set to 0 then close and reset the list retire fence
-  if (swap_interval_zero_) {
-    close(layer_stack_.retire_fence_fd);
-    layer_stack_.retire_fence_fd = -1;
+  if (!swap_interval_zero_) {
+    *out_retire_fence = layer_stack_.retire_fence;
   }
-  *out_retire_fence = layer_stack_.retire_fence_fd;
-  layer_stack_.retire_fence_fd = -1;
 
   if (dump_frame_count_) {
     dump_frame_count_--;
@@ -1800,7 +1796,8 @@ void HWCDisplay::DumpInputBuffers() {
   }
 }
 
-void HWCDisplay::DumpOutputBuffer(const BufferInfo &buffer_info, void *base, int fence) {
+void HWCDisplay::DumpOutputBuffer(const BufferInfo &buffer_info, void *base,
+                                  shared_ptr<Fence> &retire_fence) {
   char dir_path[PATH_MAX];
   int  status;
 
@@ -1823,12 +1820,9 @@ void HWCDisplay::DumpOutputBuffer(const BufferInfo &buffer_info, void *base, int
     char dump_file_name[PATH_MAX];
     size_t result = 0;
 
-    if (fence >= 0) {
-      int error = sync_wait(fence, 1000);
-      if (error < 0) {
-        DLOGW("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
-        return;
-      }
+    if (Fence::Wait(retire_fence) != kErrorNone) {
+      DLOGW("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
+      return;
     }
 
     snprintf(dump_file_name, sizeof(dump_file_name), "%s/output_layer_%dx%d_%s_frame%d.raw",
@@ -2155,10 +2149,6 @@ void HWCDisplay::SolidFillCommit() {
     if (layer_buffer->release_fence_fd > 0) {
       close(layer_buffer->release_fence_fd);
       layer_buffer->release_fence_fd = -1;
-    }
-    if (layer_stack_.retire_fence_fd > 0) {
-      close(layer_stack_.retire_fence_fd);
-      layer_stack_.retire_fence_fd = -1;
     }
   }
 }

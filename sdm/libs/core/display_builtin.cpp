@@ -57,7 +57,6 @@ DisplayBuiltIn::DisplayBuiltIn(int32_t display_id, DisplayEventHandler *event_ha
                 buffer_allocator, comp_manager, hw_info_intf) {}
 
 DisplayBuiltIn::~DisplayBuiltIn() {
-  CloseFd(&previous_retire_fence_);
 }
 
 DisplayError DisplayBuiltIn::Init() {
@@ -259,7 +258,7 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
   if (vsync_enable_) {
     DTRACE_BEGIN("RegisterVsync");
     // wait for previous frame's retire fence to signal.
-    buffer_sync_handler_->SyncWait(previous_retire_fence_);
+    Fence::Wait(previous_retire_fence_);
 
     // Register for vsync and then commit the frame.
     hw_events_intf_->SetEventState(HWEvent::VSYNC, true);
@@ -275,7 +274,7 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
     return error;
   }
   if (pending_brightness_) {
-    buffer_sync_handler_->SyncWait(layer_stack->retire_fence_fd);
+    Fence::Wait(layer_stack->retire_fence);
     SetPanelBrightness(cached_brightness_);
     pending_brightness_ = false;
   }
@@ -323,8 +322,7 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
 
   first_cycle_ = false;
 
-  CloseFd(&previous_retire_fence_);
-  previous_retire_fence_ = Sys::dup_(layer_stack->retire_fence_fd);
+  previous_retire_fence_ = layer_stack->retire_fence;
 
   return error;
 }

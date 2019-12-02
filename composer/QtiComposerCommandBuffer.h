@@ -24,6 +24,7 @@
 #include <sync/sync.h>
 #include <fmq/MessageQueue.h>
 #include <hidl/MQDescriptor.h>
+#include <utils/fence.h>
 
 #include <limits>
 #include <algorithm>
@@ -48,6 +49,9 @@ using ::android::hardware::hidl_vec;
 using ::android::hardware::hidl_handle;
 
 using CommandQueueType = MessageQueue<uint32_t, ::android::hardware::kSynchronizedReadWrite>;
+
+using std::shared_ptr;
+using sdm::Fence;
 
 // This class helps build a command queue.  Note that all sizes/lengths are in units of uint32_t's.
 class CommandWriter {
@@ -206,9 +210,9 @@ class CommandWriter {
   }
 
   static constexpr uint16_t kSetPresentFenceLength = 1;
-  void setPresentFence(int presentFence) {
+  void setPresentFence(const shared_ptr<Fence> &presentFence) {
     beginCommand(IQtiComposerClient::Command::SET_PRESENT_FENCE, kSetPresentFenceLength);
-    writeFence(presentFence);
+    writeFence(Fence::Dup(presentFence));
     endCommand();
   }
 

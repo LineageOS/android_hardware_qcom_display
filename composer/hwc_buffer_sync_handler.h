@@ -40,7 +40,7 @@ namespace sdm {
 
 class HWCBufferSyncHandler : public BufferSyncHandler {
  public:
-  HWCBufferSyncHandler() { }
+  HWCBufferSyncHandler();
 
   virtual DisplayError SyncWait(int fd);
   virtual DisplayError SyncWait(int fd, int timeout);

@@ -41,7 +41,7 @@ class HWCDisplayVirtualDPU : public HWCDisplayVirtual {
                        uint32_t width, uint32_t height, float min_lum, float max_lum);
   virtual int Init();
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests);
-  virtual HWC2::Error Present(int32_t *out_retire_fence);
+  virtual HWC2::Error Present(shared_ptr<Fence> *out_retire_fence);
   virtual HWC2::Error SetOutputBuffer(buffer_handle_t buf, int32_t release_fence);
   virtual HWC2::Error SetPanelLuminanceAttributes(float min_lum, float max_lum);
 

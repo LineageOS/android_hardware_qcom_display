@@ -132,7 +132,7 @@ HWC2::Error HWCDisplayVirtualGPU::SetOutputBuffer(buffer_handle_t buf, int32_t r
   return HWC2::Error::None;
 }
 
-HWC2::Error HWCDisplayVirtualGPU::Present(int32_t *out_retire_fence) {
+HWC2::Error HWCDisplayVirtualGPU::Present(shared_ptr<Fence> *out_retire_fence) {
   DTRACE_SCOPED();
 
   auto status = HWC2::Error::None;
@@ -184,7 +184,7 @@ HWC2::Error HWCDisplayVirtualGPU::Present(int32_t *out_retire_fence) {
   // todo blit
   DumpVDSBuffer();
 
-  *out_retire_fence = ctx.release_fence_fd;
+  *out_retire_fence = Fence::Create(ctx.release_fence_fd);
 
   return status;
 }

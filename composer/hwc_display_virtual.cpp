@@ -68,7 +68,7 @@ bool HWCDisplayVirtual::NeedsGPUBypass() {
   return display_paused_ || active_secure_sessions_.any() || layer_set_.empty();
 }
 
-HWC2::Error HWCDisplayVirtual::Present(int32_t *out_retire_fence) {
+HWC2::Error HWCDisplayVirtual::Present(shared_ptr<Fence> *out_retire_fence) {
   return HWC2::Error::None;
 }
 
@@ -92,7 +92,7 @@ HWC2::Error HWCDisplayVirtual::DumpVDSBuffer() {
       HWCLayer::GetSDMFormat(output_handle->format, output_handle->flags);
       buffer_info.alloc_buffer_info.size = static_cast<uint32_t>(output_handle->size);
       DumpOutputBuffer(buffer_info, reinterpret_cast<void *>(output_handle->base),
-                       layer_stack_.retire_fence_fd);
+                       layer_stack_.retire_fence);
 
       int release_fence = -1;
       error = buffer_allocator_->UnmapBuffer(output_handle, &release_fence);
