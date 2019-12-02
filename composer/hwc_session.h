@@ -180,7 +180,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
                                hwc2_display_t *out_display_id);
   int32_t DestroyLayer(hwc2_display_t display, hwc2_layer_t layer);
   int32_t DestroyVirtualDisplay(hwc2_display_t display);
-  int32_t PresentDisplay(hwc2_display_t display, int32_t *out_retire_fence);
+  int32_t PresentDisplay(hwc2_display_t display, shared_ptr<Fence> *out_retire_fence);
   void RegisterCallback(int32_t descriptor, hwc2_callback_data_t callback_data,
                         hwc2_function_pointer_t pointer);
   int32_t SetOutputBuffer(hwc2_display_t display, buffer_handle_t buffer, int32_t releaseFence);
@@ -479,10 +479,10 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   // Internal methods
   HWC2::Error ValidateDisplayInternal(hwc2_display_t display, uint32_t *out_num_types,
                                       uint32_t *out_num_requests);
-  HWC2::Error PresentDisplayInternal(hwc2_display_t display, int32_t *out_retire_fence);
+  HWC2::Error PresentDisplayInternal(hwc2_display_t display);
   void HandleSecureSession();
-  void HandlePendingPowerMode(hwc2_display_t display, int retire_fence);
-  void HandlePendingHotplug(hwc2_display_t disp_id, int retire_fence);
+  void HandlePendingPowerMode(hwc2_display_t display, const shared_ptr<Fence> &retire_fence);
+  void HandlePendingHotplug(hwc2_display_t disp_id, const shared_ptr<Fence> &retire_fence);
   bool IsPluggableDisplayConnected();
   hwc2_display_t GetActiveBuiltinDisplay();
   void HandlePendingRefresh();

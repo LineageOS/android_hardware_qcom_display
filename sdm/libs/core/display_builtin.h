@@ -175,7 +175,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   Locker dpps_pu_lock_;
   bool dpps_pu_nofiy_pending_ = false;
   bool first_cycle_ = true;
-  int previous_retire_fence_ = -1;
+  shared_ptr<Fence> previous_retire_fence_ = nullptr;
   enum class SamplingState { Off, On } samplingState = SamplingState::Off;
   DisplayError setColorSamplingState(SamplingState state);
 
