@@ -70,7 +70,6 @@ class IonAlloc {
   int CleanBuffer(void *base, unsigned int size, unsigned int offset, int handle, int op, int fd);
 
  private:
-
   int OpenIonDevice();
   void CloseIonDevice();
 
