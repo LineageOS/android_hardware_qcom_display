@@ -1313,6 +1313,10 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
   return kErrorNone;
 }
 
+DisplayError HWCDisplay::HistogramEvent(int /* fd */, uint32_t /* blob_fd */) {
+  return kErrorNone;
+}
+
 HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out_num_requests) {
   layer_changes_.clear();
   layer_requests_.clear();

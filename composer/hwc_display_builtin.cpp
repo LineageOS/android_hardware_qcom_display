@@ -1297,4 +1297,8 @@ void HWCDisplayBuiltIn::AppendStitchLayer() {
   layer_stack_.layers.push_back(sdm_stitch_target);
 }
 
+DisplayError HWCDisplayBuiltIn::HistogramEvent(int fd, uint32_t blob_id) {
+  histogram.notify_histogram_event(fd, blob_id);
+  return kErrorNone;
+}
 }  // namespace sdm

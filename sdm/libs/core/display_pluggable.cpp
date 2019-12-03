@@ -251,6 +251,8 @@ void DisplayPluggable::HwRecovery(const HWRecoveryEvent sdm_event_code) {
   DisplayBase::HwRecovery(sdm_event_code);
 }
 
+void DisplayPluggable::Histogram(int /* histogram_fd */, uint32_t /* blob_id */) {}
+
 DisplayError DisplayPluggable::VSync(int64_t timestamp) {
   if (vsync_enable_) {
     DisplayEventVSync vsync;

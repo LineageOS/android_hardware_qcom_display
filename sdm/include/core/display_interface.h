@@ -306,6 +306,9 @@ class DisplayEventHandler {
   */
   virtual DisplayError CECMessage(char *message) = 0;
 
+  /*! @brief Event handler for Histogram messages received by Display HAL. */
+  virtual DisplayError HistogramEvent(int source_fd, uint32_t blob_id) = 0;
+
   /*! @brief Event handler for events received by Display HAL. */
   virtual DisplayError HandleEvent(DisplayEvent event) = 0;
 

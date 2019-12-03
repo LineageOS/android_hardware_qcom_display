@@ -773,7 +773,7 @@ void HWEventsDRM::HandleHistogram(char * /*data*/) {
 
   auto msm_event = reinterpret_cast<struct drm_msm_event_resp *>(event_data.data());
   auto blob_id = reinterpret_cast<uint32_t *>(msm_event->data);
-  DLOGI("Received histogram event %i", *blob_id);
+  event_handler_->Histogram(poll_fds_[histogram_index_].fd, *blob_id);
 }
 
 int HWEventsDRM::SetHwRecoveryEvent(const uint32_t hw_event_code, HWRecoveryEvent *sdm_event_code) {
