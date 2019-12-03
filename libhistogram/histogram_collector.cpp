@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (c) 2020 The Linux Foundation. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,8 +33,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <drm/msm_drm.h>
-#include <drm/msm_drm_pp.h>
+#include <display/drm/msm_drm_pp.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 

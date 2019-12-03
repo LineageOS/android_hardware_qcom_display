@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -30,7 +30,7 @@
 #ifdef PP_DRM_ENABLE
 #include <xf86drm.h>
 #include <xf86drmMode.h>
-#include <drm/msm_drm_pp.h>
+#include <display/drm/msm_drm_pp.h>
 #endif
 #include <drm_logger.h>
 #include <cstring>

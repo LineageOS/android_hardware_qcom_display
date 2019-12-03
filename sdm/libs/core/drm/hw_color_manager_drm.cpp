@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2018, 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -35,7 +35,7 @@
 #include <vector>
 
 #ifdef PP_DRM_ENABLE
-#include <drm/msm_drm_pp.h>
+#include <display/drm/msm_drm_pp.h>
 #endif
 #include <utils/debug.h>
 #include "hw_color_manager_drm.h"
