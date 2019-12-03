@@ -1630,6 +1630,10 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
     }
   }
 
+  if (layer_stack->elapse_timestamp) {
+    hw_layers_.elapse_timestamp = layer_stack->elapse_timestamp;
+  }
+
   return;
 }
 

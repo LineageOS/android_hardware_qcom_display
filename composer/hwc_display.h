@@ -392,6 +392,7 @@ class HWCDisplay : public DisplayEventHandler {
       uint64_t max_frames, uint64_t timestamp, uint64_t *numFrames,
       int32_t samples_size[NUM_HISTOGRAM_COLOR_COMPONENTS],
       uint64_t *samples[NUM_HISTOGRAM_COLOR_COMPONENTS]);
+  HWC2::Error SetDisplayElapseTime(uint64_t time);
 
  protected:
   static uint32_t throttling_refresh_rate_;
@@ -500,6 +501,7 @@ class HWCDisplay : public DisplayEventHandler {
   int release_fence_ = -1;
   hwc2_config_t pending_config_index_ = 0;
   bool game_supported_ = false;
+  uint64_t elapse_timestamp_ = 0;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {

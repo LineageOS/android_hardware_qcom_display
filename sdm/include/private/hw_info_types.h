@@ -718,6 +718,7 @@ struct HWLayers {
   HWQosData qos_data = {};
   HWAVRInfo hw_avr_info = {};
   std::bitset<kUpdateMax> updates_mask = 0;
+  uint64_t elapse_timestamp = 0;
 };
 
 struct HWDisplayAttributes : DisplayConfigVariableInfo {

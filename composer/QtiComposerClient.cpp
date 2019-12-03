@@ -26,7 +26,7 @@ namespace qti {
 namespace hardware {
 namespace display {
 namespace composer {
-namespace V2_0 {
+namespace V2_1 {
 namespace implementation {
 
 ComposerHandleImporter mHandleImporter;
@@ -1129,6 +1129,9 @@ Error QtiComposerClient::CommandReader::parse() {
       case IQtiComposerClient::Command::SET_LAYER_TYPE:
         parsed = parseSetLayerType(length);
         break;
+      case IQtiComposerClient::Command::SET_DISPLAY_ELAPSE_TIME:
+        parsed = parseSetDisplayElapseTime(length);
+        break;
       default:
         parsed = parseCommonCmd(static_cast<IComposerClient::Command>(qticommand), length);
         break;
@@ -1769,6 +1772,20 @@ bool QtiComposerClient::CommandReader::parseSetLayerPerFrameMetadataBlobs(uint16
   return true;
 }
 
+bool QtiComposerClient::CommandReader::parseSetDisplayElapseTime(uint16_t length) {
+  if (length < CommandWriter::kSetDisplayElapseTime) {
+    return false;
+  }
+  uint64_t time = read64();
+
+  auto err = mClient.hwc_session_->SetDisplayElapseTime(mDisplay, time);
+  if (static_cast<Error>(err) != Error::NONE) {
+    mWriter.setError(getCommandLoc(), static_cast<Error>(err));
+  }
+
+  return true;
+}
+
 hwc_rect_t QtiComposerClient::CommandReader::readRect() {
   return hwc_rect_t{
     readSigned(),
@@ -1911,7 +1928,7 @@ IQtiComposerClient* HIDL_FETCH_IQtiComposerClient(const char* /* name */) {
 }
 
 }  // namespace implementation
-}  // namespace V2_0
+}  // namespace V2_1
 }  // namespace composer
 }  // namespace display
 }  // namespace hardware
