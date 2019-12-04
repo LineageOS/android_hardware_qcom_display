@@ -27,51 +27,39 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __GL_COMMON_H__
-#define __GL_COMMON_H__
+#include "gl_layer_stitch_impl.h"
+#include "gl_layer_stitch.h"
 
-#include <utils/debug.h>
-
-#include "glengine.h"
-#include "EGLImageWrapper.h"
+#define __CLASS__ "GLLayerStitch"
 
 namespace sdm {
 
-struct GLRect {
-  float left = 0.0f;
-  float top = 0.0f;
-  float right = 0.0f;
-  float bottom = 0.0f;
-};
+GLLayerStitch* GLLayerStitch::GetInstance(bool secure) {
+  GLLayerStitchImpl *layer_stitch = new GLLayerStitchImpl(secure);
+  if (layer_stitch == nullptr) {
+    DLOGE("Failed to create layer stitch instance. secure: %d", secure);
+    return nullptr;
+  }
 
-struct GLContext {
-  EGLDisplay egl_display = EGL_NO_DISPLAY;
-  EGLContext egl_context = EGL_NO_CONTEXT;
-  EGLSurface egl_surface = EGL_NO_SURFACE;
-  uint32_t program_id = 0;
-};
+  int status = layer_stitch->Init();
+  if (status != 0) {
+    DLOGE("Failed to initialize GL layer stitch instance %d", status);
+    delete layer_stitch;
+    return nullptr;
+  }
 
-class GLCommon {
- public:
-  virtual GLuint LoadProgram(int vertex_entries, const char **vertex, int fragment_entries,
-                             const char **fragment);
-  virtual void DumpShaderLog(int shader);
-  virtual void MakeCurrent(const GLContext *ctx);
-  virtual void SetProgram(uint32_t id);
-  virtual void SetDestinationBuffer(const private_handle_t *dst_hnd, const GLRect &dst_rect);
-  virtual void SetSourceBuffer(const private_handle_t *src_hnd);
-  virtual void DestroyContext(const GLContext *ctx);
-  virtual void DeleteProgram(uint32_t id);
-  virtual int WaitOnInputFence(int in_fence_fd);
-  virtual int CreateOutputFence();
+  DLOGI("Created instance successfully");
 
- protected:
-  virtual ~GLCommon() { }
+  return layer_stitch;
+}
 
- private:
-  EGLImageWrapper image_wrapper_;
-};
+void GLLayerStitch::Destroy(GLLayerStitch *intf) {
+  GLLayerStitchImpl *layer_stitch = static_cast<GLLayerStitchImpl *>(intf);
+  if (layer_stitch->Deinit() != 0) {
+    DLOGE("De Init failed");
+  }
+
+  delete layer_stitch;
+}
 
 }  // namespace sdm
-
-#endif  // __GL_COMMON_H__

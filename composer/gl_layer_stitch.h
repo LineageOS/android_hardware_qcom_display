@@ -27,51 +27,26 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __GL_COMMON_H__
-#define __GL_COMMON_H__
+#ifndef __GL_LAYER_STITCH_H__
+#define __GL_LAYER_STITCH_H__
 
-#include <utils/debug.h>
-
-#include "glengine.h"
-#include "EGLImageWrapper.h"
+#include <gralloc_priv.h>
+#include "gl_common.h"
 
 namespace sdm {
 
-struct GLRect {
-  float left = 0.0f;
-  float top = 0.0f;
-  float right = 0.0f;
-  float bottom = 0.0f;
-};
-
-struct GLContext {
-  EGLDisplay egl_display = EGL_NO_DISPLAY;
-  EGLContext egl_context = EGL_NO_CONTEXT;
-  EGLSurface egl_surface = EGL_NO_SURFACE;
-  uint32_t program_id = 0;
-};
-
-class GLCommon {
+class GLLayerStitch {
  public:
-  virtual GLuint LoadProgram(int vertex_entries, const char **vertex, int fragment_entries,
-                             const char **fragment);
-  virtual void DumpShaderLog(int shader);
-  virtual void MakeCurrent(const GLContext *ctx);
-  virtual void SetProgram(uint32_t id);
-  virtual void SetDestinationBuffer(const private_handle_t *dst_hnd, const GLRect &dst_rect);
-  virtual void SetSourceBuffer(const private_handle_t *src_hnd);
-  virtual void DestroyContext(const GLContext *ctx);
-  virtual void DeleteProgram(uint32_t id);
-  virtual int WaitOnInputFence(int in_fence_fd);
-  virtual int CreateOutputFence();
+  static GLLayerStitch* GetInstance(bool secure);
+  static void Destroy(GLLayerStitch *intf);
 
+  virtual int Blit(const private_handle_t *src_hnd, const private_handle_t *dst_hnd,
+                   const GLRect &src_rect, const GLRect &dst_rect, int src_acquire_fence_fd,
+                   int dst_acquire_fence_fd, int *release_fence_fd) = 0;
  protected:
-  virtual ~GLCommon() { }
-
- private:
-  EGLImageWrapper image_wrapper_;
+  virtual ~GLLayerStitch() { }
 };
 
 }  // namespace sdm
 
-#endif  // __GL_COMMON_H__
+#endif  // __GL_LAYER_STITCH_H__

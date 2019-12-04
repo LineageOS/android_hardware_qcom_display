@@ -57,6 +57,7 @@ static HWCUEvent g_hwc_uevent_;
 Locker HWCSession::locker_[HWCCallbacks::kNumDisplays];
 bool HWCSession::pending_power_mode_[HWCCallbacks::kNumDisplays];
 Locker HWCSession::power_state_[HWCCallbacks::kNumDisplays];
+Locker HWCSession::hdr_locker_[HWCCallbacks::kNumDisplays];
 Locker HWCSession::display_config_locker_;
 static const int kSolidFillDelay = 100 * 1000;
 int HWCSession::null_display_mode_ = 0;
@@ -1153,7 +1154,11 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
           return HWC2::Error::NoResources;
         }
 
-        is_hdr_display_[UINT32(client_id)] = HasHDRSupport(hwc_display);
+        {
+          SCOPE_LOCK(hdr_locker_[client_id]);
+          is_hdr_display_[UINT32(client_id)] = HasHDRSupport(hwc_display);
+        }
+
         DLOGI("Created virtual display id:% " PRIu64 " with res: %dx%d", client_id, width, height);
 
         *out_display_id = client_id;
@@ -2358,8 +2363,12 @@ int HWCSession::CreatePrimaryDisplay() {
 
     if (!status) {
       DLOGI("Created primary display type = %d, sdm id = %d, client id = %d", info.display_type,
-                                                                    info.display_id, client_id);
-      is_hdr_display_[UINT32(client_id)] = HasHDRSupport(*hwc_display);
+             info.display_id, client_id);
+      {
+         SCOPE_LOCK(hdr_locker_[client_id]);
+         is_hdr_display_[UINT32(client_id)] = HasHDRSupport(*hwc_display);
+      }
+
       map_info_primary_.disp_type = info.display_type;
       map_info_primary_.sdm_id = info.display_id;
       CreateDummyDisplay(HWC_DISPLAY_PRIMARY);
@@ -2432,7 +2441,12 @@ int HWCSession::HandleBuiltInDisplays() {
           DLOGE("Builtin display creation failed.");
           break;
         }
-        is_hdr_display_[UINT32(client_id)] = HasHDRSupport(hwc_display_[client_id]);
+
+        {
+          SCOPE_LOCK(hdr_locker_[client_id]);
+          is_hdr_display_[UINT32(client_id)] = HasHDRSupport(hwc_display_[client_id]);
+        }
+
         DLOGI("Builtin display created: sdm id = %d, client id = %d", info.display_id, client_id);
         map_info.disp_type = info.display_type;
         map_info.sdm_id = info.display_id;
@@ -2584,7 +2598,11 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
           break;
         }
 
-        is_hdr_display_[UINT32(client_id)] = HasHDRSupport(hwc_display);
+        {
+          SCOPE_LOCK(hdr_locker_[client_id]);
+          is_hdr_display_[UINT32(client_id)] = HasHDRSupport(hwc_display);
+        }
+
         DLOGI("Created pluggable display successfully: sdm id = %d, client id = %d",
               info.display_id, client_id);
         CreateDummyDisplay(client_id);
@@ -2683,8 +2701,11 @@ void HWCSession::DestroyPluggableDisplay(DisplayMapInfo *map_info) {
     }
     DLOGI("Destroy display %d-%d, client id = %d", map_info->sdm_id, map_info->disp_type,
          client_id);
+    {
+      SCOPE_LOCK(hdr_locker_[client_id]);
+      is_hdr_display_[UINT32(client_id)] = false;
+    }
 
-    is_hdr_display_[UINT32(client_id)] = false;
     if (!map_info->test_pattern) {
       HWCDisplayPluggable::Destroy(hwc_display);
     } else {
@@ -2716,7 +2737,11 @@ void HWCSession::DestroyNonPluggableDisplay(DisplayMapInfo *map_info) {
   }
   DLOGI("Destroy display %d-%d, client id = %d", map_info->sdm_id, map_info->disp_type,
         client_id);
-  is_hdr_display_[UINT32(client_id)] = false;
+  {
+    SCOPE_LOCK(hdr_locker_[client_id]);
+    is_hdr_display_[UINT32(client_id)] = false;
+  }
+
   switch (map_info->disp_type) {
     case kBuiltIn:
       HWCDisplayBuiltIn::Destroy(hwc_display);
