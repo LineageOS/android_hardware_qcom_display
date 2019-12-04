@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2019, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -47,6 +47,12 @@
 
 #ifndef ION_FLAG_CP_CAMERA_PREVIEW
 #define ION_FLAG_CP_CAMERA_PREVIEW 0
+#endif
+
+#if TARGET_ION_ABI_VERSION >= 2
+#ifndef ION_SECURE
+#define ION_SECURE ION_FLAG_SECURE
+#endif
 #endif
 
 #ifdef MASTER_SIDE_CP
@@ -141,9 +147,10 @@ int Allocator::FreeBuffer(void *base, unsigned int size, unsigned int offset, in
   return -EINVAL;
 }
 
-int Allocator::CleanBuffer(void *base, unsigned int size, unsigned int offset, int handle, int op) {
+int Allocator::CleanBuffer(void *base, unsigned int size, unsigned int offset, int handle, int op,
+                           int fd) {
   if (ion_allocator_) {
-    return ion_allocator_->CleanBuffer(base, size, offset, handle, op);
+    return ion_allocator_->CleanBuffer(base, size, offset, handle, op, fd);
   }
 
   return -EINVAL;
