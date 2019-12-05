@@ -76,6 +76,9 @@ PRODUCT_PROPERTY_OVERRIDES += \
 ifneq ($(TARGET_BOARD_PLATFORM),bengal)
 PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_offline_rotator=1
+else
+PRODUCT_PROPERTY_OVERRIDES += \
+    vendor.display.disable_rotator_ubwc=1
 endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),kona)
