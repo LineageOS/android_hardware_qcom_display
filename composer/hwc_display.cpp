@@ -464,12 +464,6 @@ HWCDisplay::HWCDisplay(CoreInterface *core_intf, BufferAllocator *buffer_allocat
 int HWCDisplay::Init() {
   DisplayError error = kErrorNone;
 
-  Debug::GetWindowRect(&window_rect_.left, &window_rect_.top,
-                                 &window_rect_.right, &window_rect_.bottom);
-
-  DLOGI("Window rect : [%f %f %f %f]", window_rect_.left, window_rect_.top,
-         window_rect_.right, window_rect_.bottom);
-
   HWCDebugHandler::Get()->GetProperty(ENABLE_NULL_DISPLAY_PROP, &null_display_mode_);
   HWCDebugHandler::Get()->GetProperty(ENABLE_ASYNC_POWERMODE, &async_power_mode_);
 

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -136,6 +136,12 @@ int HWCDisplayBuiltIn::Init() {
 
   is_primary_ = display_intf_->IsPrimaryDisplay();
 
+  if (is_primary_) {
+    Debug::GetWindowRect(&window_rect_.left, &window_rect_.top,
+                                 &window_rect_.right, &window_rect_.bottom);
+    DLOGI("Window rect : [%f %f %f %f]", window_rect_.left, window_rect_.top,
+           window_rect_.right, window_rect_.bottom);
+  }
   return status;
 }
 
