@@ -1169,5 +1169,11 @@ DisplayError HWHDMI::UpdateHDRMetaData(HWLayers *hw_layers) {
   return error;
 }
 
+DisplayError HWHDMI::GetHdmiMode(std::vector<uint32_t> &hdmi_modes) {
+  hdmi_modes = hdmi_modes_;
+  return kErrorNone;
+}
+
+
 }  // namespace sdm
 

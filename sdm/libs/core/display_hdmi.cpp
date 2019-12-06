@@ -38,6 +38,7 @@
 #define FMT_RGB 1
 #define FMT_ONLY_YUV 2
 #define FMT_RGB_YUV 3
+#define STANDARD_VIC 127  // 1-127 are standard vic-ids
 
 namespace sdm {
 
@@ -252,6 +253,15 @@ uint32_t DisplayHDMI::GetBestConfig(HWS3DMode s3d_mode) {
   uint32_t best_index = 0, index;
   uint32_t num_modes = 0;
 
+  std::vector<uint32_t> hdmi_modes;
+
+  hw_intf_->GetHdmiMode(hdmi_modes);
+
+  for(uint32_t i =0;i < hdmi_modes.size();i++)
+  {
+    DLOGI("hdmi_modes val = %u", hdmi_modes[i]);
+  }
+
   hw_intf_->GetNumDisplayAttributes(&num_modes);
   DLOGI("Number of modes = %d",num_modes);
   // Get display attribute for each mode
@@ -282,6 +292,18 @@ uint32_t DisplayHDMI::GetBestConfig(HWS3DMode s3d_mode) {
               index,current_clock_khz,best_clock_khz);
         best_index = UINT32(index);
       } else if (current_clock_khz == best_clock_khz) {
+         DLOGI("Same pix clock. clock = %d . v1 = %d.. v2 = %d",
+         current_clock_khz,hdmi_modes[best_index],hdmi_modes[index]);
+        if ((hdmi_modes[index] > STANDARD_VIC && hdmi_modes[best_index] <= STANDARD_VIC)) {
+          // we should not select the non-standard vic-id.
+          DLOGI("Standard vic already selected");
+          continue;
+        } else if((hdmi_modes[index] <= STANDARD_VIC && hdmi_modes[best_index] > STANDARD_VIC)) {
+          // select the standard vic-id
+          best_index = UINT32(index);
+          DLOGI("Selecting Standard vic now. Best index = %d", best_index);
+          continue;
+        }
         if (attrib[index].x_pixels > attrib[best_index].x_pixels) {
           DLOGI("Best index = %d .Best xpixel  = %d .Previous best was %d",
                 index,attrib[index].x_pixels,attrib[best_index].x_pixels);
