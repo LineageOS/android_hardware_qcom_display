@@ -1075,5 +1075,8 @@ DisplayError HWDeviceDRM::SetConfigAttributes(uint32_t index, uint32_t width, ui
   return kErrorNone;
 }
 
+DisplayError HWDeviceDRM::GetHdmiMode(std::vector<uint32_t> &hdmi_modes) {
+  return kErrorNone;
+}
 
 }  // namespace sdm
