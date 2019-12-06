@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2019, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -68,10 +68,11 @@ class IonAlloc {
   int MapBuffer(void **base, unsigned int size, unsigned int offset, int fd);
   int ImportBuffer(int fd);
   int UnmapBuffer(void *base, unsigned int size, unsigned int offset);
-  int CleanBuffer(void *base, unsigned int size, unsigned int offset, int handle, int op);
-
+  int CleanBuffer(void *base, unsigned int size, unsigned int offset, int handle, int op, int fd);
  private:
+#ifndef TARGET_ION_ABI_VERSION
   const char *kIonDevice = "/dev/ion";
+#endif
 
   int OpenIonDevice();
   void CloseIonDevice();

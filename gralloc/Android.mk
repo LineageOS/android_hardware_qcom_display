@@ -8,12 +8,21 @@ LOCAL_VENDOR_MODULE           := true
 LOCAL_MODULE_RELATIVE_PATH    := hw
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes)
-
-LOCAL_HEADER_LIBRARIES        := display_headers
+LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdgralloc\" -Wall -Werror
 LOCAL_SHARED_LIBRARIES        := $(common_libs) libqdMetaData libsync libgrallocutils \
                                  android.hardware.graphics.common@1.1
-LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdgralloc\" -Wall -Werror
+ifeq ($(TARGET_KERNEL_VERSION), 4.14)
+LOCAL_C_INCLUDES              += external/libcxx/include \
+                                 system/core/libion/include/ \
+                                 system/core/libion/kernel-headers/ \
+                                 $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_SHARED_LIBRARIES        += libion
+LOCAL_CFLAGS                  += -std=c++14
+endif
+LOCAL_HEADER_LIBRARIES        := display_headers
+ifneq ($(TARGET_KERNEL_VERSION), 4.14)
 LOCAL_CFLAGS                  += -isystem  $(kernel_includes)
+endif
 LOCAL_CLANG                   := true
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps) $(kernel_deps)
 LOCAL_SRC_FILES               := gr_ion_alloc.cpp \
@@ -35,6 +44,10 @@ LOCAL_MODULE                  := libgrallocutils
 LOCAL_VENDOR_MODULE           := true
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes)
+ifeq ($(TARGET_KERNEL_VERSION), 4.14)
+LOCAL_C_INCLUDES              += system/core/libion/include \
+                                 system/core/libion/kernel-headers
+endif
 LOCAL_HEADER_LIBRARIES        := display_headers
 LOCAL_SHARED_LIBRARIES        := $(common_libs) libqdMetaData libdl android.hardware.graphics.common@1.1
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"grallocutils\" -Wno-sign-conversion
