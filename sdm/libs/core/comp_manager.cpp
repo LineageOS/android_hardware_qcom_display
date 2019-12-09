@@ -690,4 +690,12 @@ bool CompManager::CheckResourceState(Handle display_ctx) {
   return res_wait_needed;
 }
 
+bool CompManager::IsRotatorSupportedFormat(LayerBufferFormat format) {
+  if (resource_intf_) {
+    return resource_intf_->IsRotatorSupportedFormat(format);
+  }
+
+  return false;
+}
+
 }  // namespace sdm
