@@ -350,6 +350,8 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
     width_constraints.push_back(std::make_pair(kPipeScalingLimit, info.scaling_limit_index));
     width_constraints.push_back(std::make_pair(kPipeRotationLimit, info.rotation_limit_index));
   }
+  // Use fudge factor as 1.5 if not reported
+  hw_resource->vbif_cmd_ff = (info.vbif_cmd_ff > 0.0f) ? info.vbif_cmd_ff : 1.5f;
 }
 
 void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
