@@ -12,6 +12,7 @@ LOCAL_CFLAGS                  := -DLOG_TAG=\"SDM\" $(common_flags)
 LOCAL_SRC_FILES               := debug.cpp \
                                  rect.cpp \
                                  sys.cpp \
+                                 fence.cpp \
                                  formats.cpp \
                                  utils.cpp
 
@@ -30,6 +31,7 @@ LOCAL_COPY_HEADERS             = $(SDM_HEADER_PATH)/utils/constants.h \
                                  $(SDM_HEADER_PATH)/utils/sys.h \
                                  $(SDM_HEADER_PATH)/utils/sync_task.h \
                                  $(SDM_HEADER_PATH)/utils/utils.h \
+                                 $(SDM_HEADER_PATH)/utils/fence.h \
                                  $(SDM_HEADER_PATH)/utils/factory.h
 
 include $(BUILD_COPY_HEADERS)
