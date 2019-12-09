@@ -75,6 +75,7 @@
 #define DRM_FORMAT_MOD_QCOM_TIGHT fourcc_mod_code(QCOM, 0x4)
 #endif
 
+
 using std::string;
 using std::to_string;
 using std::fstream;
@@ -490,6 +491,7 @@ void HWDeviceDRM::InitializeConfigs() {
     }
     PopulateDisplayAttributes(i);
   }
+
 }
 
 DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
@@ -515,6 +517,7 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
     topology = connector_info_.modes[index].topology;
   }
 
+  display_attributes_[index].vic = connector_info_.modes[index].vic;
   display_attributes_[index].x_pixels = mode.hdisplay;
   display_attributes_[index].y_pixels = mode.vdisplay;
   display_attributes_[index].fps = mode.vrefresh;
@@ -553,15 +556,29 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
   display_attributes_[index].y_dpi = (FLOAT(mode.vdisplay) * 25.4f) / FLOAT(mm_height);
   SetTopology(topology, &display_attributes_[index].topology);
 
+  if (mode.flags & DRM_MODE_FLAG_SUPPORTS_RGB) {
+    display_attributes_[index].pixel_formats = 1;
+  }
+  if (mode.flags & DRM_MODE_FLAG_SUPPORTS_YUV422) {
+    display_attributes_[index].pixel_formats |= (1<<1);
+    display_attributes_[index].is_yuv = true;
+  }
+  if (mode.flags & DRM_MODE_FLAG_SUPPORTS_YUV420) {
+    display_attributes_[index].pixel_formats |= (1<<2);
+    display_attributes_[index].is_yuv = true;
+  }
+
   DLOGI("Display attributes[%d]: WxH: %dx%d, DPI: %fx%f, FPS: %d, LM_SPLIT: %d, V_BACK_PORCH: %d," \
-        " V_FRONT_PORCH: %d, V_PULSE_WIDTH: %d, V_TOTAL: %d, H_TOTAL: %d, CLK: %dKHZ, TOPOLOGY: %d",
+        " V_FRONT_PORCH: %d, V_PULSE_WIDTH: %d, V_TOTAL: %d, H_TOTAL: %d, CLK: %dKHZ," \
+        " TOPOLOGY: %d, PIXEL_FORMATS: %d, VIC: %d",
         index, display_attributes_[index].x_pixels, display_attributes_[index].y_pixels,
         display_attributes_[index].x_dpi, display_attributes_[index].y_dpi,
         display_attributes_[index].fps, display_attributes_[index].is_device_split,
         display_attributes_[index].v_back_porch, display_attributes_[index].v_front_porch,
         display_attributes_[index].v_pulse_width, display_attributes_[index].v_total,
         display_attributes_[index].h_total, display_attributes_[index].clock_khz,
-        display_attributes_[index].topology);
+        display_attributes_[index].topology, display_attributes_[index].pixel_formats,
+        display_attributes_[index].vic);
 
   return kErrorNone;
 }
@@ -777,6 +794,19 @@ DisplayError HWDeviceDRM::GetHWPanelInfo(HWPanelInfo *panel_info) {
   return kErrorNone;
 }
 
+DisplayError HWDeviceDRM::SetDisplayFormat(uint32_t index, DisplayInterfaceFormat fmt) {
+  if (!IsResolutionSwitchEnabled()) {
+    return kErrorNotSupported;
+  }
+
+  if (index >= display_attributes_.size()) {
+    DLOGE("Invalid mode index %d mode size %d", index, UINT32(display_attributes_.size()));
+    return kErrorParameters;
+  }
+  display_attributes_[index].pref_fmt = fmt;
+  return kErrorNone;
+}
+
 DisplayError HWDeviceDRM::SetDisplayAttributes(uint32_t index) {
   if (!IsResolutionSwitchEnabled()) {
     return kErrorNotSupported;
@@ -792,14 +822,16 @@ DisplayError HWDeviceDRM::SetDisplayAttributes(uint32_t index) {
   UpdateMixerAttributes();
 
   DLOGI("Display attributes[%d]: WxH: %dx%d, DPI: %fx%f, FPS: %d, LM_SPLIT: %d, V_BACK_PORCH: %d," \
-        " V_FRONT_PORCH: %d, V_PULSE_WIDTH: %d, V_TOTAL: %d, H_TOTAL: %d, CLK: %dKHZ, TOPOLOGY: %d",
+        " V_FRONT_PORCH: %d, V_PULSE_WIDTH: %d, V_TOTAL: %d, H_TOTAL: %d, CLK: %dKHZ," \
+        " TOPOLOGY: %d, PIXEL_FORMATS: %d, VIC: %d",
         index, display_attributes_[index].x_pixels, display_attributes_[index].y_pixels,
         display_attributes_[index].x_dpi, display_attributes_[index].y_dpi,
         display_attributes_[index].fps, display_attributes_[index].is_device_split,
         display_attributes_[index].v_back_porch, display_attributes_[index].v_front_porch,
         display_attributes_[index].v_pulse_width, display_attributes_[index].v_total,
         display_attributes_[index].h_total, display_attributes_[index].clock_khz,
-        display_attributes_[index].topology);
+        display_attributes_[index].topology, display_attributes_[index].pixel_formats,
+        display_attributes_[index].vic);
 
   return kErrorNone;
 }
@@ -1117,7 +1149,15 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::DOZE);
     pending_doze_ = false;
   }
-
+  if(display_attributes_[index].pref_fmt == DisplayInterfaceFormat::kFormatRGB) {
+    current_mode.flags |= DRM_MODE_FLAG_SUPPORTS_RGB;
+  } else if (display_attributes_[index].pref_fmt == DisplayInterfaceFormat::kFormatYCbCr422 ||
+             display_attributes_[index].pref_fmt == DisplayInterfaceFormat::kFormatYCbCr422d) {
+    current_mode.flags |= DRM_MODE_FLAG_SUPPORTS_YUV422;
+  } else if (display_attributes_[index].pref_fmt == DisplayInterfaceFormat::kFormatYCbCr420 ||
+             display_attributes_[index].pref_fmt == DisplayInterfaceFormat::kFormatYCbCr420d){
+    current_mode.flags |= DRM_MODE_FLAG_SUPPORTS_YUV420;
+  }
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
 
   if (!validate && (hw_layer_info.set_idle_time_ms >= 0)) {

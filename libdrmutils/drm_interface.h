@@ -484,6 +484,7 @@ struct DRMModeInfo {
   int hmin;
   bool roi_merge;
   uint64_t bit_clk_rate;
+  uint32_t vic = 0;
 };
 
 /* Per Connector Info*/
