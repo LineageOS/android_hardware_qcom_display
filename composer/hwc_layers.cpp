@@ -234,7 +234,7 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
   if (!buffer) {
     if (client_requested_ == HWC2::Composition::Device ||
         client_requested_ == HWC2::Composition::Cursor) {
-      DLOGE("Invalid buffer handle: %p on layer: %d client requested comp type %d", buffer, id_,
+      DLOGW("Invalid buffer handle: %p on layer: %d client requested comp type %d", buffer, id_,
             client_requested_);
       ::close(acquire_fence);
       return HWC2::Error::BadParameter;
