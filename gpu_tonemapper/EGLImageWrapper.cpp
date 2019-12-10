@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -32,36 +32,6 @@ using std::pair;
 
 static string pidString = std::to_string(getpid());
 
-#ifndef TARGET_ION_ABI_VERSION
-//-----------------------------------------------------------------------------
-static void free_ion_cookie(int ion_fd, int cookie)
-//-----------------------------------------------------------------------------
-{
-  if (ion_fd && !ioctl(ion_fd, ION_IOC_FREE, &cookie)) {
-  } else {
-      ALOGE("ION_IOC_FREE failed: ion_fd = %d, cookie = %d", ion_fd, cookie);
-  }
-}
-
-//-----------------------------------------------------------------------------
-static int get_ion_cookie(int ion_fd, int fd)
-//-----------------------------------------------------------------------------
-{
-  int cookie = fd;
-
-  struct ion_fd_data fdData;
-  memset(&fdData, 0, sizeof(fdData));
-  fdData.fd = fd;
-
-  if (ion_fd && !ioctl(ion_fd, ION_IOC_IMPORT, &fdData)) {
-       cookie = fdData.handle;
-  } else {
-       ALOGE("ION_IOC_IMPORT failed: ion_fd = %d, fd = %d", ion_fd, fd);
-  }
-
-  return cookie;
-}
-#else
 //-----------------------------------------------------------------------------
 static string get_ion_buff_str(int buff_fd)
 //-----------------------------------------------------------------------------
@@ -80,7 +50,6 @@ static string get_ion_buff_str(int buff_fd)
 
   return retStr;
 }
-#endif
 
 //-----------------------------------------------------------------------------
 void EGLImageWrapper::DeleteEGLImageCallback::operator()(int& buffInt, EGLImageBuffer*& eglImage)
@@ -90,9 +59,6 @@ void EGLImageWrapper::DeleteEGLImageCallback::operator()(int& buffInt, EGLImageB
     delete eglImage;
   }
 
-#ifndef TARGET_ION_ABI_VERSION
-  free_ion_cookie(ion_fd, buffInt /* cookie */);
-#else
   if (!mapClearPending) {
     for (auto it = buffStrbuffIntMapPtr->begin(); it != buffStrbuffIntMapPtr->end(); it++) {
       if (it->second == buffInt /* counter */) {
@@ -101,7 +67,6 @@ void EGLImageWrapper::DeleteEGLImageCallback::operator()(int& buffInt, EGLImageB
       }
     }
   }
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -111,15 +76,17 @@ EGLImageWrapper::EGLImageWrapper()
   eglImageBufferCache = new android::LruCache<int, EGLImageBuffer*>(32);
   callback = new DeleteEGLImageCallback(&buffStrbuffIntMap);
   eglImageBufferCache->setOnEntryRemovedListener(callback);
-
-#ifndef TARGET_ION_ABI_VERSION
-  ion_fd = open("/dev/ion", O_RDONLY);
-  callback->ion_fd = ion_fd;
-#endif
 }
 
 //-----------------------------------------------------------------------------
 EGLImageWrapper::~EGLImageWrapper()
+//-----------------------------------------------------------------------------
+{
+  Deinit();
+}
+
+//-----------------------------------------------------------------------------
+void EGLImageWrapper::Deinit()
 //-----------------------------------------------------------------------------
 {
   if (eglImageBufferCache != 0) {
@@ -137,12 +104,6 @@ EGLImageWrapper::~EGLImageWrapper()
     callback = 0;
   }
 
-#ifndef TARGET_ION_ABI_VERSION
-  if (ion_fd > 0) {
-    close(ion_fd);
-    ion_fd = -1;
-  }
-#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -180,17 +141,6 @@ EGLImageBuffer *EGLImageWrapper::wrap(const void *pvt_handle)
 {
   const private_handle_t *src = static_cast<const private_handle_t *>(pvt_handle);
 
-#ifndef TARGET_ION_ABI_VERSION
-  int ion_cookie = get_ion_cookie(ion_fd, src->fd);
-  EGLImageBuffer* eglImage = nullptr;
-  eglImage = eglImageBufferCache->get(ion_cookie);
-  if (eglImage == 0) {
-    eglImage = L_wrap(src);
-    eglImageBufferCache->put(ion_cookie, eglImage);
-  } else {
-    free_ion_cookie(ion_fd, ion_cookie);
-  }
-#else
   string buffStr = get_ion_buff_str(src->fd);
   EGLImageBuffer* eglImage = nullptr;
   if (!buffStr.empty()) {
@@ -206,7 +156,6 @@ EGLImageBuffer *EGLImageWrapper::wrap(const void *pvt_handle)
   } else {
     ALOGE("Could not provide an eglImage for fd = %d, EGLImageWrapper = %p", src->fd, this);
   }
-#endif
 
   return eglImage;
 }

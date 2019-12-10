@@ -57,6 +57,7 @@ static HWCUEvent g_hwc_uevent_;
 Locker HWCSession::locker_[HWCCallbacks::kNumDisplays];
 bool HWCSession::pending_power_mode_[HWCCallbacks::kNumDisplays];
 Locker HWCSession::power_state_[HWCCallbacks::kNumDisplays];
+Locker HWCSession::hdr_locker_[HWCCallbacks::kNumDisplays];
 Locker HWCSession::display_config_locker_;
 static const int kSolidFillDelay = 100 * 1000;
 int HWCSession::null_display_mode_ = 0;
@@ -804,6 +805,9 @@ void HWCSession::RegisterCallback(int32_t descriptor, hwc2_callback_data_t callb
         callbacks_.Hotplug(client_id, HWC2::Connection::Connected);
       }
     }
+  }
+
+  if (descriptor == HWC2_CALLBACK_HOTPLUG) {
     client_connected_ = !!pointer;
     // Notfify all displays.
     NotifyClientStatus(client_connected_);
@@ -1153,7 +1157,11 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
           return HWC2::Error::NoResources;
         }
 
-        is_hdr_display_[UINT32(client_id)] = HasHDRSupport(hwc_display);
+        {
+          SCOPE_LOCK(hdr_locker_[client_id]);
+          is_hdr_display_[UINT32(client_id)] = HasHDRSupport(hwc_display);
+        }
+
         DLOGI("Created virtual display id:% " PRIu64 " with res: %dx%d", client_id, width, height);
 
         *out_display_id = client_id;
@@ -1349,13 +1357,23 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
           DLOGE("QService command = %d: output_parcel needed.", command);
           break;
         }
-        float brightness = -1.0f;
+
         uint32_t display = input_parcel->readUint32();
-        status = getDisplayBrightness(display, &brightness);
-        if (brightness == -1.0f) {
+        uint32_t max_brightness_level = 0;
+        status = getDisplayMaxBrightness(display, &max_brightness_level);
+        if (status || !max_brightness_level) {
+          output_parcel->writeInt32(max_brightness_level);
+          DLOGE("Failed to get max brightness %u,  status %d", max_brightness_level, status);
+          break;
+        }
+        DLOGV("Panel Max brightness is %u", max_brightness_level);
+
+        float brightness_precent = -1.0f;
+        status = getDisplayBrightness(display, &brightness_precent);
+        if (brightness_precent == -1.0f) {
           output_parcel->writeInt32(0);
         } else {
-          output_parcel->writeInt32(INT32(brightness*254 + 1));
+          output_parcel->writeInt32(INT32(brightness_precent*(max_brightness_level - 1) + 1));
         }
       }
       break;
@@ -1365,11 +1383,23 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
           DLOGE("QService command = %d: input_parcel and output_parcel needed.", command);
           break;
         }
+
+        uint32_t max_brightness_level = 0;
+        uint32_t display = HWC_DISPLAY_PRIMARY;
+        status = getDisplayMaxBrightness(display, &max_brightness_level);
+        if (status || max_brightness_level <= 1) {
+          output_parcel->writeInt32(max_brightness_level);
+          DLOGE("Failed to get max brightness %u, status %d", max_brightness_level, status);
+          break;
+        }
+        DLOGV("Panel Max brightness is %u", max_brightness_level);
+
         int level = input_parcel->readInt32();
         if (level == 0) {
-          status = SetDisplayBrightness(HWC_DISPLAY_PRIMARY, -1.0f);
+          status = SetDisplayBrightness(display, -1.0f);
         } else {
-          status = SetDisplayBrightness(HWC_DISPLAY_PRIMARY, (level - 1)/254.0f);
+          status = SetDisplayBrightness(display,
+                    (level - 1)/(static_cast<float>(max_brightness_level - 1)));
         }
         output_parcel->writeInt32(status);
       }
@@ -2358,8 +2388,12 @@ int HWCSession::CreatePrimaryDisplay() {
 
     if (!status) {
       DLOGI("Created primary display type = %d, sdm id = %d, client id = %d", info.display_type,
-                                                                    info.display_id, client_id);
-      is_hdr_display_[UINT32(client_id)] = HasHDRSupport(*hwc_display);
+             info.display_id, client_id);
+      {
+         SCOPE_LOCK(hdr_locker_[client_id]);
+         is_hdr_display_[UINT32(client_id)] = HasHDRSupport(*hwc_display);
+      }
+
       map_info_primary_.disp_type = info.display_type;
       map_info_primary_.sdm_id = info.display_id;
       CreateDummyDisplay(HWC_DISPLAY_PRIMARY);
@@ -2432,7 +2466,12 @@ int HWCSession::HandleBuiltInDisplays() {
           DLOGE("Builtin display creation failed.");
           break;
         }
-        is_hdr_display_[UINT32(client_id)] = HasHDRSupport(hwc_display_[client_id]);
+
+        {
+          SCOPE_LOCK(hdr_locker_[client_id]);
+          is_hdr_display_[UINT32(client_id)] = HasHDRSupport(hwc_display_[client_id]);
+        }
+
         DLOGI("Builtin display created: sdm id = %d, client id = %d", info.display_id, client_id);
         map_info.disp_type = info.display_type;
         map_info.sdm_id = info.display_id;
@@ -2584,7 +2623,11 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
           break;
         }
 
-        is_hdr_display_[UINT32(client_id)] = HasHDRSupport(hwc_display);
+        {
+          SCOPE_LOCK(hdr_locker_[client_id]);
+          is_hdr_display_[UINT32(client_id)] = HasHDRSupport(hwc_display);
+        }
+
         DLOGI("Created pluggable display successfully: sdm id = %d, client id = %d",
               info.display_id, client_id);
         CreateDummyDisplay(client_id);
@@ -2683,8 +2726,11 @@ void HWCSession::DestroyPluggableDisplay(DisplayMapInfo *map_info) {
     }
     DLOGI("Destroy display %d-%d, client id = %d", map_info->sdm_id, map_info->disp_type,
          client_id);
+    {
+      SCOPE_LOCK(hdr_locker_[client_id]);
+      is_hdr_display_[UINT32(client_id)] = false;
+    }
 
-    is_hdr_display_[UINT32(client_id)] = false;
     if (!map_info->test_pattern) {
       HWCDisplayPluggable::Destroy(hwc_display);
     } else {
@@ -2716,7 +2762,11 @@ void HWCSession::DestroyNonPluggableDisplay(DisplayMapInfo *map_info) {
   }
   DLOGI("Destroy display %d-%d, client id = %d", map_info->sdm_id, map_info->disp_type,
         client_id);
-  is_hdr_display_[UINT32(client_id)] = false;
+  {
+    SCOPE_LOCK(hdr_locker_[client_id]);
+    is_hdr_display_[UINT32(client_id)] = false;
+  }
+
   switch (map_info->disp_type) {
     case kBuiltIn:
       HWCDisplayBuiltIn::Destroy(hwc_display);

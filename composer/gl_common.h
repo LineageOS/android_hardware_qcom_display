@@ -37,6 +37,13 @@
 
 namespace sdm {
 
+struct GLRect {
+  float left = 0.0f;
+  float top = 0.0f;
+  float right = 0.0f;
+  float bottom = 0.0f;
+};
+
 struct GLContext {
   EGLDisplay egl_display = EGL_NO_DISPLAY;
   EGLContext egl_context = EGL_NO_CONTEXT;
@@ -51,11 +58,11 @@ class GLCommon {
   virtual void DumpShaderLog(int shader);
   virtual void MakeCurrent(const GLContext *ctx);
   virtual void SetProgram(uint32_t id);
-  virtual void SetDestinationBuffer(const private_handle_t *dst_hnd);
+  virtual void SetDestinationBuffer(const private_handle_t *dst_hnd, const GLRect &dst_rect);
   virtual void SetSourceBuffer(const private_handle_t *src_hnd);
-  virtual void DestroyContext(const GLContext *ctx);
+  virtual void DestroyContext(GLContext *ctx);
   virtual void DeleteProgram(uint32_t id);
-  virtual int WaitOnInputFence(const int in_fence_fd);
+  virtual int WaitOnInputFence(int in_fence_fd);
   virtual int CreateOutputFence();
 
  protected:

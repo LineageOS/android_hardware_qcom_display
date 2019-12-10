@@ -36,6 +36,7 @@
 #include "gr_utils.h"
 #include "hwc_buffer_allocator.h"
 #include "hwc_debugger.h"
+#include "hwc_layers.h"
 
 #define __CLASS__ "HWCBufferAllocator"
 
@@ -209,6 +210,7 @@ DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
   alloc_buffer_info->aligned_height = UINT32(hnd->height);
   alloc_buffer_info->size = hnd->size;
   alloc_buffer_info->id = hnd->id;
+  alloc_buffer_info->format = HWCLayer::GetSDMFormat(hnd->format, hnd->flags);
 
   buffer_info->private_data = reinterpret_cast<void *>(hnd);
   return kErrorNone;

@@ -336,6 +336,9 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
     width_constraints.push_back(std::make_pair(kPipeScalingLimit, info.scaling_limit_index));
     width_constraints.push_back(std::make_pair(kPipeRotationLimit, info.rotation_limit_index));
   }
+  // In case driver doesn't report bus width default to 256 bit bus.
+  hw_resource->num_mnocports = info.num_mnocports ? info.num_mnocports : 2;
+  hw_resource->mnoc_bus_width = info.mnoc_bus_width ? info.mnoc_bus_width : 32;
 }
 
 void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {

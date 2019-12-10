@@ -27,31 +27,39 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __GL_COLOR_CONVERT_H__
-#define __GL_COLOR_CONVERT_H__
+#include "gl_layer_stitch_impl.h"
+#include "gl_layer_stitch.h"
 
-#include <gralloc_priv.h>
-#include "gl_common.h"
+#define __CLASS__ "GLLayerStitch"
 
 namespace sdm {
 
-enum GLRenderTarget {
-  kTargetRGBA,
-  kTargetYUV,
-};
+GLLayerStitch* GLLayerStitch::GetInstance(bool secure) {
+  GLLayerStitchImpl *layer_stitch = new GLLayerStitchImpl(secure);
+  if (layer_stitch == nullptr) {
+    DLOGE("Failed to create layer stitch instance. secure: %d", secure);
+    return nullptr;
+  }
 
-class GLColorConvert {
- public:
-  static GLColorConvert* GetInstance(GLRenderTarget target, bool secure);
-  static void Destroy(GLColorConvert* intf);
+  int status = layer_stitch->Init();
+  if (status != 0) {
+    DLOGE("Failed to initialize GL layer stitch instance %d", status);
+    delete layer_stitch;
+    return nullptr;
+  }
 
-  virtual int Blit(const private_handle_t *src_hnd, const private_handle_t *dst_hnd,
-                   const GLRect &src_rect, const GLRect &dst_rect, int src_acquire_fence_fd,
-                   int dst_acquire_fence_fd, int *release_fence_fd) = 0;
- protected:
-  virtual ~GLColorConvert() { }
-};
+  DLOGI("Created instance successfully");
+
+  return layer_stitch;
+}
+
+void GLLayerStitch::Destroy(GLLayerStitch *intf) {
+  GLLayerStitchImpl *layer_stitch = static_cast<GLLayerStitchImpl *>(intf);
+  if (layer_stitch->Deinit() != 0) {
+    DLOGE("De Init failed");
+  }
+
+  delete layer_stitch;
+}
 
 }  // namespace sdm
-
-#endif  // __GL_COLOR_CONVERT_H__

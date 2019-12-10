@@ -27,9 +27,9 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "gl_color_convert_impl.h"
+#include "gl_layer_stitch_impl.h"
 
-#define __CLASS__ "GLColorConvertImpl"
+#define __CLASS__ "GLLayerStitchImpl"
 
 namespace sdm {
 
@@ -45,7 +45,7 @@ const float kFullScreenTexCoords[] = {
   2.0f, 0.0f
 };
 
-const char* kVertexShader = ""
+const char *kVertexShader1 = ""
   "#version 300 es                                                       \n"
   "precision highp float;                                                \n"
   "layout(location = 0) in vec2 in_pos;                                  \n"
@@ -59,27 +59,20 @@ const char* kVertexShader = ""
   "    uv = in_uv;                                                       \n"
   "}                                                                     \n";
 
-const char* kConvertRgbToYuvShader = ""
-  "#extension GL_EXT_YUV_target : require                                \n"
+const char *kConvertRenderRGBShader = ""
   "precision highp float;                                                \n"
   "                                                                      \n"
   "layout(binding = 0) uniform sampler2D u_sTexture;                     \n"
   "                                                                      \n"
   "in vec2 uv;                                                           \n"
-  "layout (yuv) out vec4 color;                                          \n"
+  "out vec4 color;                                                       \n"
   "                                                                      \n"
   "void main()                                                           \n"
   "{                                                                     \n"
-  "    vec3 rgbColor = texture(u_sTexture, uv).rgb;                      \n"
-  "    color = vec4(rgb_2_yuv(rgbColor, itu_601_full_range), 1.0);       \n"
+  "    color = texture(u_sTexture, uv);                                  \n"
   "}                                                                     \n";
 
-int GLColorConvertImpl::CreateContext(GLRenderTarget target, bool secure) {
-  if (target != kTargetRGBA && target != kTargetYUV) {
-    DLOGE("Invalid GLRenderTarget: %d", target);
-    return -1;
-  }
-
+int GLLayerStitchImpl::CreateContext(bool secure) {
   ctx_.egl_display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
   EGL(eglBindAPI(EGL_OPENGL_ES_API));
 
@@ -90,27 +83,13 @@ int GLColorConvertImpl::CreateContext(GLRenderTarget target, bool secure) {
   // Describes Framebuffer attributes like buffer depth, color space etc;
   EGLConfig eglConfig;
   int numConfig = 0;
-  if (target == kTargetRGBA) {
-    EGLint eglConfigAttribList[] = {EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
-                                    EGL_RED_SIZE,     8,
-                                    EGL_GREEN_SIZE,   8,
-                                    EGL_BLUE_SIZE,    8,
-                                    EGL_ALPHA_SIZE,   8,
-                                    EGL_NONE};
-    EGL(eglChooseConfig(ctx_.egl_display, eglConfigAttribList, &eglConfig, 1, &numConfig));
-  } else {
-    EGLint eglConfigAttribList[] = {EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
-                                    EGL_RENDERABLE_TYPE,           EGL_OPENGL_ES2_BIT,
-                                    EGL_COLOR_BUFFER_TYPE,         EGL_YUV_BUFFER_EXT,
-                                    EGL_YUV_ORDER_EXT,             EGL_YUV_ORDER_YUV_EXT,
-                                    EGL_YUV_NUMBER_OF_PLANES_EXT,  2,
-                                    EGL_YUV_SUBSAMPLE_EXT,         EGL_YUV_SUBSAMPLE_4_2_0_EXT,
-                                    EGL_YUV_DEPTH_RANGE_EXT,       EGL_YUV_DEPTH_RANGE_LIMITED_EXT,
-                                    EGL_YUV_CSC_STANDARD_EXT,      EGL_YUV_CSC_STANDARD_601_EXT,
-                                    EGL_YUV_PLANE_BPP_EXT,         EGL_YUV_PLANE_BPP_8_EXT,
-                                    EGL_NONE};
-    EGL(eglChooseConfig(ctx_.egl_display, eglConfigAttribList, &eglConfig, 1, &numConfig));
-  }
+  EGLint eglConfigAttribList[] = {EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
+                                  EGL_RED_SIZE,     8,
+                                  EGL_GREEN_SIZE,   8,
+                                  EGL_BLUE_SIZE,    8,
+                                  EGL_ALPHA_SIZE,   8,
+                                  EGL_NONE};
+  EGL(eglChooseConfig(ctx_.egl_display, eglConfigAttribList, &eglConfig, 1, &numConfig));
 
   // When GPU runs in protected context it can read from
   //  - Protected sources
@@ -144,17 +123,17 @@ int GLColorConvertImpl::CreateContext(GLRenderTarget target, bool secure) {
   fragment_shaders[count++] = version;
 
   // ToDo: Add support to yuv_to_rgb shader.
-  fragment_shaders[count++] = kConvertRgbToYuvShader;
+  fragment_shaders[count++] = kConvertRenderRGBShader;
 
-  ctx_.program_id = LoadProgram(1, &kVertexShader, count, fragment_shaders);
+  ctx_.program_id = LoadProgram(1, &kVertexShader1, count, fragment_shaders);
 
   return 0;
 }
 
-int GLColorConvertImpl::Blit(const private_handle_t *src_hnd, const private_handle_t *dst_hnd,
-                             const GLRect &src_rect, const GLRect &dst_rect,
-                             int src_acquire_fence_fd, int dst_acquire_fence_fd,
-                             int *release_fence_fd) {
+int GLLayerStitchImpl::Blit(const private_handle_t *src_hnd, const private_handle_t *dst_hnd,
+                            const GLRect &src_rect, const GLRect &dst_rect,
+                            int src_acquire_fence_fd, int dst_acquire_fence_fd,
+                            int *release_fence_fd) {
   DTRACE_SCOPED();
   // eglMakeCurrent attaches rendering context to rendering surface.
   MakeCurrent(&ctx_);
@@ -181,21 +160,20 @@ int GLColorConvertImpl::Blit(const private_handle_t *src_hnd, const private_hand
   return 0;
 }
 
-int GLColorConvertImpl::Init() {
-  return CreateContext(target_, secure_);
+int GLLayerStitchImpl::Init() {
+  return CreateContext(secure_);
 }
 
-int GLColorConvertImpl::Deinit() {
+int GLLayerStitchImpl::Deinit() {
   MakeCurrent(&ctx_);
   DestroyContext(&ctx_);
 
   return 0;
 }
 
-GLColorConvertImpl::~GLColorConvertImpl() {}
+GLLayerStitchImpl::~GLLayerStitchImpl() {}
 
-GLColorConvertImpl::GLColorConvertImpl(GLRenderTarget target, bool secure) {
-  target_ = target;
+GLLayerStitchImpl::GLLayerStitchImpl(bool secure) {
   secure_ = secure;
 }
 

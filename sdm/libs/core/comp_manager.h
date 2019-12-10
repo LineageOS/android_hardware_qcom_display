@@ -131,6 +131,7 @@ class CompManager {
   uint32_t max_sde_ext_layers_ = 0;
   uint32_t max_sde_builtin_layers_ = 2;
   DppsControlInterface *dpps_ctrl_intf_ = NULL;
+  BufferSyncHandler *sync_handler_ = NULL;
 };
 
 }  // namespace sdm

@@ -1353,7 +1353,7 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
     Layer *layer = hwc_layer->GetSDMLayer();
     LayerComposition &composition = layer->composition;
 
-    if (composition == kCompositionSDE) {
+    if (composition == kCompositionSDE || composition == kCompositionStitch) {
       layer_requests_[hwc_layer->GetId()] = HWC2::LayerRequest::ClearClientTarget;
     }
 

@@ -216,24 +216,27 @@ DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
     }
     if (layer->composition == kCompositionGPUTarget) {
       hw_layers_info.gpu_target_index = hw_layers_info.app_layer_count;
+    } else if (layer->composition == kCompositionStitchTarget) {
+      hw_layers_info.stitch_target_index = hw_layers_info.gpu_target_index + 1;
       break;
+    } else {
+      hw_layers_info.app_layer_count++;
     }
-    hw_layers_info.app_layer_count++;
     if (IsWideColor(layer->input_buffer.color_metadata.colorPrimaries)) {
       hw_layers_info.wide_color_primaries.push_back(
           layer->input_buffer.color_metadata.colorPrimaries);
     }
     if (layer->flags.is_game) {
-        hw_layers_info.game_present = true;
+      hw_layers_info.game_present = true;
     }
   }
 
-  DLOGD_IF(kTagDisplay,
-           "LayerStack layer_count: %d, app_layer_count: %d, "
-           "gpu_target_index: %d, game_present: %d, display: %d-%d",
-           layers.size(), hw_layers_info.app_layer_count,
-           hw_layers_info.gpu_target_index, hw_layers_info.game_present,
-           display_id_, display_type_);
+  hw_layers_info.stitch_target_index = hw_layers_info.gpu_target_index + 1;
+  DLOGD_IF(kTagDisplay, "LayerStack layer_count: %d, app_layer_count: %d, "
+                        "gpu_target_index: %d, stitch_index: %d game_present: %d, display: %d-%d",
+                        layers.size(), hw_layers_info.app_layer_count,
+                        hw_layers_info.gpu_target_index, hw_layers_info.stitch_target_index,
+                        hw_layers_info.game_present, display_id_, display_type_);
 
   if (!hw_layers_info.app_layer_count) {
     DLOGW("Layer count is zero");
@@ -628,6 +631,11 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     active_ = active;
     state_ = state;
     comp_manager_->SetDisplayState(display_comp_ctx_, state, release_fence ? *release_fence : -1);
+    // If previously requested doze state is still pending reset it on any new display state request
+    // and handle the new request.
+    if (state_ != kStateDoze) {
+      pending_doze_ = false;
+    }
   }
 
   // Handle vsync pending on resume, Since the power on commit is synchronous we pass -1 as retire
@@ -898,11 +906,13 @@ std::string DisplayBase::Dump() {
 
 const char * DisplayBase::GetName(const LayerComposition &composition) {
   switch (composition) {
-  case kCompositionGPU:         return "GPU";
-  case kCompositionSDE:         return "SDE";
-  case kCompositionCursor:      return "CURSOR";
-  case kCompositionGPUTarget:   return "GPU_TARGET";
-  default:                      return "UNKNOWN";
+  case kCompositionGPU:           return "GPU";
+  case kCompositionSDE:           return "SDE";
+  case kCompositionCursor:        return "CURSOR";
+  case kCompositionStitch:        return "STITCH";
+  case kCompositionGPUTarget:     return "GPU_TARGET";
+  case kCompositionStitchTarget:  return "STITCH_TARGET";
+  default:                        return "UNKNOWN";
   }
 }
 

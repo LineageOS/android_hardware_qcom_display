@@ -33,12 +33,37 @@
 #include <string>
 #include <vector>
 
+#include "utils/sync_task.h"
+#include "utils/constants.h"
 #include "cpuhint.h"
 #include "hwc_display.h"
+#include "hwc_layers.h"
+
+#include "gl_layer_stitch.h"
 
 namespace sdm {
 
-class HWCDisplayBuiltIn : public HWCDisplay {
+enum class LayerStitchTaskCode : int32_t {
+  kCodeGetInstance,
+  kCodeStitch,
+  kCodeDestroyInstance,
+};
+
+struct LayerStitchGetInstanceContext : public SyncTask<LayerStitchTaskCode>::TaskContext {
+  LayerBuffer *output_buffer = NULL;
+};
+
+struct LayerStitchStitchContext : public SyncTask<LayerStitchTaskCode>::TaskContext {
+  const private_handle_t* src_hnd = nullptr;
+  const private_handle_t* dst_hnd = nullptr;
+  GLRect src_rect = {};
+  GLRect dst_rect = {};
+  int src_acquire_fence_fd = -1;
+  int dst_acquire_fence_fd = -1;
+  int release_fence_fd = -1;
+};
+
+class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode>::TaskHandler {
  public:
   enum {
     SET_METADATA_DYN_REFRESH_RATE,
@@ -91,6 +116,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   virtual HWC2::Error SetPendingRefresh();
   virtual HWC2::Error SetPanelBrightness(float brightness);
   virtual HWC2::Error GetPanelBrightness(float *brightness);
+  virtual HWC2::Error GetPanelMaxBrightness(uint32_t *max_brightness_level);
   virtual DisplayError TeardownConcurrentWriteback(void);
   virtual void SetFastPathComposition(bool enable) {
     fast_path_composition_ = enable && !readback_buffer_queued_;
@@ -101,6 +127,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   virtual HWC2::Error SetClientTarget(buffer_handle_t target, int32_t acquire_fence,
                                       int32_t dataspace, hwc_region_t damage);
   virtual bool IsSmartPanelConfig(uint32_t config_id);
+  virtual int Deinit();
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
@@ -120,6 +147,15 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   bool CanSkipCommit();
   DisplayError SetMixerResolution(uint32_t width, uint32_t height);
   DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
+  HWC2::Error CommitStitchLayers();
+  void AppendStitchLayer();
+  bool InitLayerStitch();
+  void InitStitchTarget();
+  bool AllocateStitchBuffer();
+
+  // SyncTask methods.
+  void OnTask(const LayerStitchTaskCode &task_code,
+              SyncTask<LayerStitchTaskCode>::TaskContext *task_context);
 
   BufferAllocator *buffer_allocator_ = nullptr;
   CPUHint *cpu_hint_ = nullptr;
@@ -142,6 +178,12 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   bool frame_capture_buffer_queued_ = false;
   int frame_capture_status_ = -EAGAIN;
   bool is_primary_ = false;
+  bool disable_layer_stitch_ = false;
+  HWCLayer* stitch_target_ = nullptr;
+  SyncTask<LayerStitchTaskCode> layer_stitch_task_;
+  GLLayerStitch* gl_layer_stitch_ = nullptr;
+  BufferInfo buffer_info_ = {};
+  DisplayConfigVariableInfo fb_config_ = {};
 };
 
 }  // namespace sdm

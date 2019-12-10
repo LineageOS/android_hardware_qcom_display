@@ -27,31 +27,26 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __GL_COLOR_CONVERT_H__
-#define __GL_COLOR_CONVERT_H__
+#ifndef __GL_LAYER_STITCH_H__
+#define __GL_LAYER_STITCH_H__
 
 #include <gralloc_priv.h>
 #include "gl_common.h"
 
 namespace sdm {
 
-enum GLRenderTarget {
-  kTargetRGBA,
-  kTargetYUV,
-};
-
-class GLColorConvert {
+class GLLayerStitch {
  public:
-  static GLColorConvert* GetInstance(GLRenderTarget target, bool secure);
-  static void Destroy(GLColorConvert* intf);
+  static GLLayerStitch* GetInstance(bool secure);
+  static void Destroy(GLLayerStitch *intf);
 
   virtual int Blit(const private_handle_t *src_hnd, const private_handle_t *dst_hnd,
                    const GLRect &src_rect, const GLRect &dst_rect, int src_acquire_fence_fd,
                    int dst_acquire_fence_fd, int *release_fence_fd) = 0;
  protected:
-  virtual ~GLColorConvert() { }
+  virtual ~GLLayerStitch() { }
 };
 
 }  // namespace sdm
 
-#endif  // __GL_COLOR_CONVERT_H__
+#endif  // __GL_LAYER_STITCH_H__

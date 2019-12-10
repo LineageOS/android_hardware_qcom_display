@@ -342,6 +342,8 @@ struct HWResourceInfo {
   uint32_t line_width_constraints_count = 0;
   vector< pair <uint32_t, uint32_t> > line_width_limits;
   vector< pair <uint32_t, uint32_t> > line_width_constraints;
+  uint32_t num_mnocports = 2;
+  uint32_t mnoc_bus_width = 32;
 };
 
 struct HWSplitInfo {
@@ -665,9 +667,10 @@ struct LayerExt {
 };
 
 struct HWLayersInfo {
-  LayerStack *stack = NULL;        // Input layer stack. Set by the caller.
-  uint32_t app_layer_count = 0;    // Total number of app layers. Must not be 0.
-  uint32_t gpu_target_index = 0;   // GPU target layer index. 0 if not present.
+  LayerStack *stack = NULL;          // Input layer stack. Set by the caller.
+  uint32_t app_layer_count = 0;      // Total number of app layers. Must not be 0.
+  uint32_t gpu_target_index = 0;     // GPU target layer index. 0 if not present.
+  uint32_t stitch_target_index = 0;  // Blit target layer index. 0 if not present.
   std::vector<ColorPrimaries> wide_color_primaries = {};  // list of wide color primaries
 
   std::vector<Layer> hw_layers = {};  // Layers which need to be programmed on the HW

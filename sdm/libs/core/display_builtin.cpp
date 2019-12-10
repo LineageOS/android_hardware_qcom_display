@@ -523,6 +523,20 @@ DisplayError DisplayBuiltIn::GetPanelBrightness(float *brightness) {
   return kErrorNone;
 }
 
+DisplayError DisplayBuiltIn::GetPanelMaxBrightness(uint32_t *max_brightness_level) {
+  lock_guard<recursive_mutex> obj(brightness_lock_);
+
+  if (!max_brightness_level) {
+    DLOGE("Invalid input pointer is null");
+    return kErrorParameters;
+  }
+
+  *max_brightness_level = static_cast<uint32_t>(hw_panel_info_.panel_max_brightness);
+
+  DLOGI_IF(kTagDisplay, "Get panel max_brightness_level %u", *max_brightness_level);
+  return kErrorNone;
+}
+
 DisplayError DisplayBuiltIn::ControlPartialUpdate(bool enable, uint32_t *pending) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   if (!pending) {
@@ -532,6 +546,12 @@ DisplayError DisplayBuiltIn::ControlPartialUpdate(bool enable, uint32_t *pending
   if (!hw_panel_info_.partial_update) {
     // Nothing to be done.
     DLOGI("partial update is not applicable for display id = %d", display_id_);
+    return kErrorNotSupported;
+  }
+
+  if (dpps_info_.disable_pu_ && enable) {
+    // Nothing to be done.
+    DLOGI("partial update is disabled by DPPS for display id = %d", display_id_);
     return kErrorNotSupported;
   }
 
@@ -596,6 +616,7 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
         break;
       }
       enable = *(reinterpret_cast<bool *>(payload));
+      dpps_info_.disable_pu_ = !enable;
       ControlPartialUpdate(enable, &pending);
       event_handler_->HandleEvent(kInvalidateDisplay);
       event_handler_->Refresh();

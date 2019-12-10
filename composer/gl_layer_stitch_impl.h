@@ -27,31 +27,31 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __GL_COLOR_CONVERT_H__
-#define __GL_COLOR_CONVERT_H__
+#ifndef __GL_LAYER_STITCH_IMPL_H__
+#define __GL_LAYER_STITCH_IMPL_H__
 
-#include <gralloc_priv.h>
+#include <sync/sync.h>
+
+#include "gl_layer_stitch.h"
 #include "gl_common.h"
 
 namespace sdm {
 
-enum GLRenderTarget {
-  kTargetRGBA,
-  kTargetYUV,
-};
-
-class GLColorConvert {
+class GLLayerStitchImpl : public GLLayerStitch, public GLCommon {
  public:
-  static GLColorConvert* GetInstance(GLRenderTarget target, bool secure);
-  static void Destroy(GLColorConvert* intf);
-
+  explicit GLLayerStitchImpl(bool secure);
+  virtual ~GLLayerStitchImpl();
   virtual int Blit(const private_handle_t *src_hnd, const private_handle_t *dst_hnd,
-                   const GLRect &src_rect, const GLRect &dst_rect, int src_acquire_fence_fd,
-                   int dst_acquire_fence_fd, int *release_fence_fd) = 0;
- protected:
-  virtual ~GLColorConvert() { }
+                   const GLRect &src_rect, const GLRect &dst_rect,
+                   int src_acquire_fence_fd, int dst_acquire_fence_fd, int *release_fence_fd);
+  virtual int CreateContext(bool secure);
+  virtual int Init();
+  virtual int Deinit();
+ private:
+  bool secure_ = false;
+  GLContext ctx_;
 };
 
 }  // namespace sdm
 
-#endif  // __GL_COLOR_CONVERT_H__
+#endif  // __GL_LAYER_STITCH_IMPL_H__

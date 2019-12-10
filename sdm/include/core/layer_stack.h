@@ -80,6 +80,9 @@ enum LayerComposition {
                             //!< This composition type is used only if GPUTarget layer is provided
                             //!< in a composition cycle.
 
+  kCompositionStitch,       //!< This layer will be drawn onto the target buffer by GPU. No blend
+                            //!< required.
+
   kCompositionSDE,          //!< This layer will be composed by SDE. It must not be composed by
                             //!< GPU or Blit.
 
@@ -104,6 +107,9 @@ enum LayerComposition {
                             //!< Only one layer shall be marked as target buffer by the caller.
                             //!< GPU target layer shall be placed after all application layers
                             //!< in the layer stack.
+
+  kCompositionStitchTarget,  //!< This layer will hold result of composition for layers marked fo
+                             //!< Blit composition.
 };
 
 enum LayerUpdate {
@@ -340,6 +346,9 @@ struct Layer {
                                                    //!< displayed. Cropping rectangle is scaled to
                                                    //!< fit into this rectangle. The origin is the
                                                    //!< top-left corner of the screen.
+
+  LayerRect stitch_dst_rect = {};                  //!< The target position where the frame will be
+                                                   //!< rendered onto internal FrameBuffer.
 
   std::vector<LayerRect> visible_regions = {};     //!< Visible rectangular areas in screen space.
                                                    //!< The visible region includes areas overlapped

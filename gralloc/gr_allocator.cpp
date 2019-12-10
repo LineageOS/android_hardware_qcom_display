@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2019, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,6 +31,10 @@
 #include <cutils/properties.h>
 #include <algorithm>
 #include <vector>
+
+#ifndef QMAA
+#include <linux/msm_ion.h>
+#endif
 
 #include "gr_allocator.h"
 #include "gr_utils.h"

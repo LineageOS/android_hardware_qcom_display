@@ -21,7 +21,7 @@ LOCAL_SHARED_LIBRARIES        := libbinder libhardware libutils libcutils libsyn
                                  liblog libfmq libhardware_legacy \
                                  libsdmcore libqservice libqdutils libqdMetaData \
                                  libdisplaydebug libsdmutils libgrallocutils libui \
-                                 libEGL libGLESv2 libGLESv3 \
+                                 libgpu_tonemapper libEGL libGLESv2 libGLESv3 \
                                  vendor.qti.hardware.display.composer@1.0 \
                                  vendor.qti.hardware.display.composer@2.0 \
                                  android.hardware.graphics.composer@2.1 \
@@ -46,11 +46,6 @@ LOCAL_SHARED_LIBRARIES        := libbinder libhardware libutils libcutils libsyn
                                  vendor.display.config@1.11 \
                                  vendor.display.config@1.12 \
                                  vendor.display.config@1.13
-
-ifneq ($(TARGET_IS_HEADLESS), true)
-    LOCAL_SHARED_LIBRARIES += libgpu_tonemapper
-endif
-
 
 LOCAL_SRC_FILES               := QtiComposer.cpp QtiComposerClient.cpp service.cpp \
                                  QtiComposerHandleImporter.cpp \
@@ -77,7 +72,9 @@ LOCAL_SRC_FILES               := QtiComposer.cpp QtiComposerClient.cpp service.c
                                  hwc_display_virtual_gpu.cpp \
                                  gl_common.cpp \
                                  gl_color_convert.cpp \
-                                 gl_color_convert_impl.cpp
+                                 gl_color_convert_impl.cpp \
+                                 gl_layer_stitch.cpp \
+                                 gl_layer_stitch_impl.cpp
 
 LOCAL_INIT_RC                 := vendor.qti.hardware.display.composer-service.rc
 LOCAL_VINTF_FRAGMENTS         := vendor.qti.hardware.display.composer-service.xml

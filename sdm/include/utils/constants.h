@@ -84,6 +84,7 @@ namespace sdm {
                                                              0.0, 1.0, 0.0, 0.0,
                                                              0.0, 0.0, 1.0, 0.0,
                                                              0.0, 0.0, 0.0, 1.0 };
+  const float kBufferHeightFactor = 1.5f;
 
   typedef void * Handle;
 

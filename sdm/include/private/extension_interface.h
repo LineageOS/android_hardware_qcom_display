@@ -63,6 +63,7 @@ class ExtensionInterface {
 
   virtual DisplayError CreateStrategyExtn(int32_t display_id, DisplayType type,
                                           BufferAllocator *buffer_allocator,
+                                          BufferSyncHandler *buffer_sync_handler,
                                           const HWResourceInfo &hw_resource_info,
                                           const HWPanelInfo &hw_panel_info,
                                           const HWMixerAttributes &mixer_attributes,
