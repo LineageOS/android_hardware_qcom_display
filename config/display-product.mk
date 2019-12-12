@@ -68,12 +68,20 @@ PRODUCT_PROPERTY_OVERRIDES += \
     debug.mdpcomp.logs=0 \
     vendor.gralloc.disable_ubwc=0 \
     vendor.display.disable_scaler=0 \
-    vendor.display.disable_offline_rotator=1 \
     vendor.display.disable_excl_rect=0 \
     vendor.display.comp_mask=0 \
     vendor.display.enable_posted_start_dyn=1 \
     vendor.display.enable_optimize_refresh=1 \
     vendor.display.use_smooth_motion=1
+
+# Enable offline rotator for Bengal.
+ifneq ($(TARGET_BOARD_PLATFORM),bengal)
+PRODUCT_PROPERTY_OVERRIDES += \
+    vendor.display.disable_offline_rotator=1
+else
+PRODUCT_PROPERTY_OVERRIDES += \
+    vendor.display.disable_rotator_ubwc=1
+endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),kona)
 PRODUCT_PROPERTY_OVERRIDES += \
