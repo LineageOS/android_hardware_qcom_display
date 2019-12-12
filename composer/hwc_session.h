@@ -459,6 +459,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   hwc2_display_t GetActiveBuiltinDisplay();
   void HandlePendingRefresh();
   void NotifyClientStatus(bool connected);
+  int32_t GetVirtualDisplayId();
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};
