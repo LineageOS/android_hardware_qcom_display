@@ -3,7 +3,7 @@ display-hals := include $(sdm-libs)/utils $(sdm-libs)/core libdebug gpu_tonemapp
 
 ifneq ($(TARGET_IS_HEADLESS), true)
     display-hals += libcopybit liblight libmemtrack hdmi_cec \
-                    libdrmutils
+                    libdrmutils libhistogram drm.vendor
 endif
 
 display-hals += gralloc

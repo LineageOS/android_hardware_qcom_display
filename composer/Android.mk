@@ -47,7 +47,8 @@ LOCAL_SHARED_LIBRARIES        := libbinder libhardware libutils libcutils libsyn
                                  vendor.display.config@1.12 \
                                  vendor.display.config@1.13 \
                                  vendor.display.config@1.14 \
-                                 vendor.display.config@1.15
+                                 vendor.display.config@1.15 \
+                                 libdrm
 
 LOCAL_SRC_FILES               := QtiComposer.cpp QtiComposerClient.cpp service.cpp \
                                  QtiComposerHandleImporter.cpp \
@@ -80,5 +81,6 @@ LOCAL_SRC_FILES               := QtiComposer.cpp QtiComposerClient.cpp service.c
 
 LOCAL_INIT_RC                 := vendor.qti.hardware.display.composer-service.rc
 LOCAL_VINTF_FRAGMENTS         := vendor.qti.hardware.display.composer-service.xml
+LOCAL_STATIC_LIBRARIES        := libhistogram
 
 include $(BUILD_EXECUTABLE)

@@ -27,19 +27,20 @@
 #include <private/color_params.h>
 #include <qdMetaData.h>
 #include <sys/stat.h>
+#include <algorithm>
+#include <bitset>
 #include <map>
 #include <queue>
 #include <set>
 #include <string>
 #include <utility>
 #include <vector>
-#include <bitset>
-#include <algorithm>
+#include "display_null.h"
+#include "histogram_collector.h"
 #include "hwc_buffer_allocator.h"
 #include "hwc_callbacks.h"
-#include "hwc_layers.h"
-#include "display_null.h"
 #include "hwc_display_event_handler.h"
+#include "hwc_layers.h"
 
 using android::hardware::graphics::common::V1_2::ColorMode;
 using android::hardware::graphics::common::V1_1::Dataspace;
@@ -381,6 +382,16 @@ class HWCDisplay : public DisplayEventHandler {
                                      int32_t *qsync_refresh_rate) {
     return false;
   }
+
+  virtual HWC2::Error SetDisplayedContentSamplingEnabledVndService(bool enabled);
+  virtual HWC2::Error SetDisplayedContentSamplingEnabled(int32_t enabled, uint8_t component_mask,
+                                                         uint64_t max_frames);
+  virtual HWC2::Error GetDisplayedContentSamplingAttributes(int32_t *format, int32_t *dataspace,
+                                                            uint8_t *supported_components);
+  virtual HWC2::Error GetDisplayedContentSample(
+      uint64_t max_frames, uint64_t timestamp, uint64_t *numFrames,
+      int32_t samples_size[NUM_HISTOGRAM_COLOR_COMPONENTS],
+      uint64_t *samples[NUM_HISTOGRAM_COLOR_COMPONENTS]);
 
  protected:
   static uint32_t throttling_refresh_rate_;

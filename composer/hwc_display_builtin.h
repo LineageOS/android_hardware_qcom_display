@@ -30,6 +30,7 @@
 #ifndef __HWC_DISPLAY_BUILTIN_H__
 #define __HWC_DISPLAY_BUILTIN_H__
 
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -131,6 +132,17 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual bool IsQsyncCallbackNeeded(bool *qsync_enabled, int32_t *refresh_rate,
                                      int32_t *qsync_refresh_rate);
 
+  virtual HWC2::Error SetDisplayedContentSamplingEnabledVndService(bool enabled);
+  virtual HWC2::Error SetDisplayedContentSamplingEnabled(int32_t enabled, uint8_t component_mask,
+                                                         uint64_t max_frames);
+  virtual HWC2::Error GetDisplayedContentSamplingAttributes(int32_t *format, int32_t *dataspace,
+                                                            uint8_t *supported_components);
+  virtual HWC2::Error GetDisplayedContentSample(
+      uint64_t max_frames, uint64_t timestamp, uint64_t *numFrames,
+      int32_t samples_size[NUM_HISTOGRAM_COLOR_COMPONENTS],
+      uint64_t *samples[NUM_HISTOGRAM_COLOR_COMPONENTS]);
+  std::string Dump() override;
+
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
                     HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
@@ -190,6 +202,11 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
 
   bool qsync_enabled_ = false;
   bool qsync_reconfigured_ = false;
+  // Members for Color sampling feature
+  histogram::HistogramCollector histogram;
+  std::mutex sampling_mutex;
+  bool api_sampling_vote = false;
+  bool vndservice_sampling_vote = false;
 };
 
 }  // namespace sdm

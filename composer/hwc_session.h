@@ -253,6 +253,14 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int32_t SetLayerPerFrameMetadataBlobs(hwc2_display_t display, hwc2_layer_t layer,
                                         uint32_t num_elements, const int32_t *int_keys,
                                         const uint32_t *sizes, const uint8_t *metadata);
+  int32_t SetDisplayedContentSamplingEnabled(hwc2_display_t display, int32_t enabled,
+                                             uint8_t component_mask, uint64_t max_frames);
+  int32_t GetDisplayedContentSamplingAttributes(hwc2_display_t display, int32_t *format,
+                                                int32_t *dataspace, uint8_t *supported_components);
+  int32_t GetDisplayedContentSample(hwc2_display_t display, uint64_t max_frames, uint64_t timestamp,
+                                    uint64_t *numFrames,
+                                    int32_t samples_size[NUM_HISTOGRAM_COLOR_COMPONENTS],
+                                    uint64_t *samples[NUM_HISTOGRAM_COLOR_COMPONENTS]);
   // HWCDisplayEventHandler
   virtual void DisplayPowerReset();
 
@@ -449,6 +457,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
                                        android::Parcel *output_parcel);
   android::status_t SetFrameTriggerMode(const android::Parcel *input_parcel);
   android::status_t SetPanelLuminanceAttributes(const android::Parcel *input_parcel);
+  android::status_t setColorSamplingEnabled(const android::Parcel *input_parcel);
 
   // Internal methods
   HWC2::Error ValidateDisplayInternal(hwc2_display_t display, uint32_t *out_num_types,

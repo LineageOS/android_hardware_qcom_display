@@ -143,6 +143,10 @@ int HWCDisplayBuiltIn::Init() {
   return status;
 }
 
+std::string HWCDisplayBuiltIn::Dump() {
+  return HWCDisplay::Dump() + histogram.Dump();
+}
+
 HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
   auto status = HWC2::Error::None;
   DisplayError error = kErrorNone;
@@ -954,6 +958,54 @@ DisplayError HWCDisplayBuiltIn::DisablePartialUpdateOneFrame() {
   return error;
 }
 
+HWC2::Error HWCDisplayBuiltIn::SetDisplayedContentSamplingEnabledVndService(bool enabled) {
+  std::unique_lock<decltype(sampling_mutex)> lk(sampling_mutex);
+  vndservice_sampling_vote = enabled;
+  if (api_sampling_vote || vndservice_sampling_vote) {
+    histogram.start();
+  } else {
+    histogram.stop();
+  }
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayBuiltIn::SetDisplayedContentSamplingEnabled(int32_t enabled,
+                                                                  uint8_t component_mask,
+                                                                  uint64_t max_frames) {
+  if ((enabled != HWC2_DISPLAYED_CONTENT_SAMPLING_ENABLE) &&
+      (enabled != HWC2_DISPLAYED_CONTENT_SAMPLING_DISABLE))
+    return HWC2::Error::BadParameter;
+
+  std::unique_lock<decltype(sampling_mutex)> lk(sampling_mutex);
+  if (enabled == HWC2_DISPLAYED_CONTENT_SAMPLING_ENABLE) {
+    api_sampling_vote = true;
+  } else {
+    api_sampling_vote = false;
+  }
+
+  auto start = api_sampling_vote || vndservice_sampling_vote;
+  if (start && max_frames == 0) {
+    histogram.start();
+  } else if (start) {
+    histogram.start(max_frames);
+  } else {
+    histogram.stop();
+  }
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayBuiltIn::GetDisplayedContentSamplingAttributes(
+    int32_t *format, int32_t *dataspace, uint8_t *supported_components) {
+  return histogram.getAttributes(format, dataspace, supported_components);
+}
+
+HWC2::Error HWCDisplayBuiltIn::GetDisplayedContentSample(
+    uint64_t max_frames, uint64_t timestamp, uint64_t *numFrames,
+    int32_t samples_size[NUM_HISTOGRAM_COLOR_COMPONENTS],
+    uint64_t *samples[NUM_HISTOGRAM_COLOR_COMPONENTS]) {
+  histogram.collect(max_frames, timestamp, samples_size, samples, numFrames);
+  return HWC2::Error::None;
+}
 
 DisplayError HWCDisplayBuiltIn::SetMixerResolution(uint32_t width, uint32_t height) {
   DisplayError error = display_intf_->SetMixerResolution(width, height);
@@ -1112,6 +1164,7 @@ int HWCDisplayBuiltIn::Deinit() {
     layer_stitch_task_.PerformTask(LayerStitchTaskCode::kCodeDestroyInstance, nullptr);
   }
 
+  histogram.stop();
   return HWCDisplay::Deinit();
 }
 
