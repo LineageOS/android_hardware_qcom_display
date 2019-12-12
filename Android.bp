@@ -6,5 +6,6 @@ cc_library_headers {
         "include",
         "libdisplayconfig",
         "libqdmetadata",
+        "services",
     ],
 }
