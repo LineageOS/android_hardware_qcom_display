@@ -620,6 +620,12 @@ DisplayError DisplayBase::SetActiveConfig(uint32_t index) {
     return kErrorNone;
   }
 
+  // Reject active config changes if qsync is in use.
+  if (needs_avr_update_ || qsync_mode_ != kQSyncModeNone) {
+    DLOGE("Failed: needs_avr_update_: %d, qsync_mode_: %d", needs_avr_update_, qsync_mode_);
+    return kErrorNotSupported;
+  }
+
   error = hw_intf_->SetDisplayAttributes(index);
   if (error != kErrorNone) {
     return error;
