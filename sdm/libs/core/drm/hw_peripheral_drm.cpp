@@ -94,6 +94,10 @@ void HWPeripheralDRM::PopulateBitClkRates() {
 }
 
 DisplayError HWPeripheralDRM::SetDynamicDSIClock(uint64_t bit_clk_rate) {
+  if (last_power_mode_ == DRMPowerMode::DOZE_SUSPEND || last_power_mode_ == DRMPowerMode::OFF) {
+    return kErrorNotSupported;
+  }
+
   bit_clk_rate_ = bit_clk_rate;
   update_mode_ = true;
 
@@ -436,6 +440,9 @@ DisplayError HWPeripheralDRM::PowerOn(const HWQosData &qos_data, int *release_fe
     return kErrorUndefined;
   }
 
+  if (first_cycle_) {
+    return kErrorNone;
+  }
   drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_IDLE_PC_STATE, token_.crtc_id,
                             sde_drm::DRMIdlePCState::ENABLE);
   DisplayError err = HWDeviceDRM::PowerOn(qos_data, release_fence);
