@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -39,6 +39,7 @@ namespace sdm {
 enum class ColorConvertTaskCode : int32_t {
   kCodeGetInstance,
   kCodeBlit,
+  kCodeReset,
   kCodeDestroyInstance,
 };
 
@@ -66,6 +67,7 @@ class HWCDisplayVirtualGPU : public HWCDisplayVirtual,
   virtual int Deinit();
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests);
   virtual HWC2::Error Present(int32_t *out_retire_fence);
+  virtual HWC2::Error SetOutputBuffer(buffer_handle_t buf, int32_t release_fence);
 
  private:
   // SyncTask methods.

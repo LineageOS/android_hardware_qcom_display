@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -158,6 +158,12 @@ void GLCommon::DestroyContext(GLContext* ctx) {
   EGL(eglDestroySurface(ctx->egl_display, ctx->egl_surface));
   EGL(eglDestroyContext(ctx->egl_display, ctx->egl_context));
   EGL(eglTerminate(ctx->egl_display));
+}
+
+void GLCommon::ClearCache() {
+  // Clear cached handles.
+  image_wrapper_.Deinit();
+  image_wrapper_.Init();
 }
 
 }  // namespace sdm
