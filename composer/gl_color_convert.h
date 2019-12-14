@@ -50,6 +50,7 @@ class GLColorConvert {
                    const shared_ptr<Fence> &src_acquire_fence,
                    const shared_ptr<Fence> &dst_acquire_fence,
                    shared_ptr<Fence> *release_fence) = 0;
+  virtual void Reset() = 0;
  protected:
   virtual ~GLColorConvert() { }
 };

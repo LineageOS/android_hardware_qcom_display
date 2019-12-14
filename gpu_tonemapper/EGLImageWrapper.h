@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -23,6 +23,7 @@
 #include <utils/LruCache.h>
 #include <string>
 #include <map>
+#include <gr_utils.h>
 #include "EGLImageBuffer.h"
 
 using std::string;
@@ -47,6 +48,7 @@ class EGLImageWrapper {
   EGLImageWrapper();
   ~EGLImageWrapper();
   EGLImageBuffer* wrap(const void *pvt_handle);
+  void Init();
   void Deinit();
 };
 

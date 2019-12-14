@@ -200,5 +200,9 @@ GLColorConvertImpl::GLColorConvertImpl(GLRenderTarget target, bool secure) {
   secure_ = secure;
 }
 
+void GLColorConvertImpl::Reset() {
+  ClearCache();
+}
+
 }  // namespace sdm
 
