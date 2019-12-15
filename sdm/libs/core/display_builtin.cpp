@@ -626,7 +626,7 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
       }
       ret = dpps_pu_lock_.WaitFinite(kPuTimeOutMs);
       if (ret) {
-        DLOGE("failed to %s partial update ret %d", ((enable) ? "enable" : "disable"), ret);
+        DLOGW("failed to %s partial update ret %d", ((enable) ? "enable" : "disable"), ret);
         error = kErrorTimeOut;
       }
       break;
