@@ -152,6 +152,7 @@ class ColorManagerProxy {
                                                uint32_t intent);
   DisplayError Validate(HWLayers *hw_layers);
   bool IsSupportStcTonemap();
+  bool GameEnhanceSupported();
 
  protected:
   ColorManagerProxy() {}
