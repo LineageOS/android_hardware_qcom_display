@@ -234,7 +234,7 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
   if (!buffer) {
     if (client_requested_ == HWC2::Composition::Device ||
         client_requested_ == HWC2::Composition::Cursor) {
-      DLOGE("Invalid buffer handle: %p on layer: %d client requested comp type %d", buffer, id_,
+      DLOGW("Invalid buffer handle: %p on layer: %d client requested comp type %d", buffer, id_,
             client_requested_);
       ::close(acquire_fence);
       return HWC2::Error::BadParameter;
@@ -963,11 +963,6 @@ bool HWCLayer::IsDataSpaceSupported() {
 }
 
 void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
-  if (per_frame_hdr_metadata_) {
-    // Since client has set PerFrameMetadata, dataspace will be valid
-    // so we can skip reading from ColorMetaData.
-    return;
-  }
   LayerBuffer *layer_buffer = &layer_->input_buffer;
   bool use_color_metadata = true;
   ColorMetaData csc = {};
@@ -997,7 +992,9 @@ void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
      use_color_metadata = true;
   }
 
-  if (use_color_metadata) {
+  // Since client has set PerFrameMetadata, dataspace will be valid
+  // so we can skip reading from ColorMetaData.
+  if (use_color_metadata && !per_frame_hdr_metadata_) {
     ColorMetaData new_metadata = {};
     if (sdm::SetCSC(handle, &new_metadata) == kErrorNone) {
       // If dataspace is KNOWN, overwrite the gralloc metadata CSC using the previously derived CSC

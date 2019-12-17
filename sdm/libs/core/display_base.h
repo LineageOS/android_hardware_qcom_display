@@ -120,6 +120,9 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError GetPanelBrightness(float *brightness) {
     return kErrorNotSupported;
   }
+  virtual DisplayError GetPanelMaxBrightness(uint32_t *max_brightness_level) {
+    return kErrorNotSupported;
+  }
   virtual DisplayError SetVSyncState(bool enable);
   virtual void SetIdleTimeoutMs(uint32_t active_ms) {}
   virtual DisplayError SetMixerResolution(uint32_t width, uint32_t height);
@@ -157,6 +160,7 @@ class DisplayBase : public DisplayInterface {
   virtual bool CanSkipValidate();
   virtual DisplayError SetBLScale(uint32_t level) { return kErrorNotSupported; }
   virtual bool CheckResourceState();
+  virtual bool GameEnhanceSupported();
 
  protected:
   const char *kBt2020Pq = "bt2020_pq";

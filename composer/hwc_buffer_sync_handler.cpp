@@ -49,7 +49,7 @@ DisplayError HWCBufferSyncHandler::SyncWait(int fd, int timeout) {
   if (fd >= 0) {
     error = sync_wait(fd, timeout);
     if (error < 0) {
-      DLOGE("sync_wait() error on fd = %d, timeout = %dms. (errno = %d \"%s\")", fd, timeout, errno,
+      DLOGW("sync_wait() error on fd = %d, timeout = %dms. (errno = %d \"%s\")", fd, timeout, errno,
             strerror(errno));
       return kErrorTimeOut;
     }

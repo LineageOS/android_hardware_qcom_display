@@ -438,6 +438,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     return error;
   }
 
+  comp_manager_->SetSafeMode(false);
 
   DLOGI_IF(kTagDisplay, "Exiting commit for display: %d-%d", display_id_, display_type_);
 
@@ -631,6 +632,11 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     active_ = active;
     state_ = state;
     comp_manager_->SetDisplayState(display_comp_ctx_, state, release_fence ? *release_fence : -1);
+    // If previously requested doze state is still pending reset it on any new display state request
+    // and handle the new request.
+    if (state_ != kStateDoze) {
+      pending_doze_ = false;
+    }
   }
 
   // Handle vsync pending on resume, Since the power on commit is synchronous we pass -1 as retire
@@ -2055,6 +2061,13 @@ DisplayError DisplayBase::ResetPendingDoze(int32_t retire_fence) {
 
 bool DisplayBase::CheckResourceState() {
   return comp_manager_->CheckResourceState(display_comp_ctx_);
+}
+
+bool DisplayBase::GameEnhanceSupported() {
+  if (color_mgr_) {
+    return color_mgr_->GameEnhanceSupported();
+  }
+  return false;
 }
 
 }  // namespace sdm

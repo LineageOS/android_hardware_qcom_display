@@ -21,7 +21,7 @@ LOCAL_SHARED_LIBRARIES        := libbinder libhardware libutils libcutils libsyn
                                  liblog libfmq libhardware_legacy \
                                  libsdmcore libqservice libqdutils libqdMetaData \
                                  libdisplaydebug libsdmutils libgrallocutils libui \
-                                 libEGL libGLESv2 libGLESv3 \
+                                 libgpu_tonemapper libEGL libGLESv2 libGLESv3 \
                                  vendor.qti.hardware.display.composer@1.0 \
                                  vendor.qti.hardware.display.composer@2.0 \
                                  android.hardware.graphics.composer@2.1 \
@@ -45,12 +45,8 @@ LOCAL_SHARED_LIBRARIES        := libbinder libhardware libutils libcutils libsyn
                                  vendor.display.config@1.10 \
                                  vendor.display.config@1.11 \
                                  vendor.display.config@1.12 \
-                                 vendor.display.config@1.13
-
-ifneq ($(TARGET_IS_HEADLESS), true)
-    LOCAL_SHARED_LIBRARIES += libgpu_tonemapper
-endif
-
+                                 vendor.display.config@1.13 \
+                                 vendor.display.config@1.14
 
 LOCAL_SRC_FILES               := QtiComposer.cpp QtiComposerClient.cpp service.cpp \
                                  QtiComposerHandleImporter.cpp \

@@ -54,6 +54,10 @@ DisplayBuiltIn::DisplayBuiltIn(int32_t display_id, DisplayEventHandler *event_ha
   : DisplayBase(display_id, kBuiltIn, event_handler, kDeviceBuiltIn, buffer_sync_handler,
                 buffer_allocator, comp_manager, hw_info_intf) {}
 
+DisplayBuiltIn::~DisplayBuiltIn() {
+  CloseFd(&previous_retire_fence_);
+}
+
 DisplayError DisplayBuiltIn::Init() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   int32_t disable_defer_power_state = 0;
@@ -213,6 +217,16 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
     }
   }
 
+  if (vsync_enable_) {
+    DTRACE_BEGIN("RegisterVsync");
+    // wait for previous frame's retire fence to signal.
+    buffer_sync_handler_->SyncWait(previous_retire_fence_);
+
+    // Register for vsync and then commit the frame.
+    hw_events_intf_->SetEventState(HWEvent::VSYNC, true);
+    DTRACE_END();
+  }
+
   error = DisplayBase::Commit(layer_stack);
   if (error != kErrorNone) {
     return error;
@@ -258,6 +272,9 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
   }
 
   first_cycle_ = false;
+
+  CloseFd(&previous_retire_fence_);
+  previous_retire_fence_ = Sys::dup_(layer_stack->retire_fence_fd);
 
   return error;
 }
@@ -523,6 +540,20 @@ DisplayError DisplayBuiltIn::GetPanelBrightness(float *brightness) {
   return kErrorNone;
 }
 
+DisplayError DisplayBuiltIn::GetPanelMaxBrightness(uint32_t *max_brightness_level) {
+  lock_guard<recursive_mutex> obj(brightness_lock_);
+
+  if (!max_brightness_level) {
+    DLOGE("Invalid input pointer is null");
+    return kErrorParameters;
+  }
+
+  *max_brightness_level = static_cast<uint32_t>(hw_panel_info_.panel_max_brightness);
+
+  DLOGI_IF(kTagDisplay, "Get panel max_brightness_level %u", *max_brightness_level);
+  return kErrorNone;
+}
+
 DisplayError DisplayBuiltIn::ControlPartialUpdate(bool enable, uint32_t *pending) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   if (!pending) {
@@ -532,6 +563,12 @@ DisplayError DisplayBuiltIn::ControlPartialUpdate(bool enable, uint32_t *pending
   if (!hw_panel_info_.partial_update) {
     // Nothing to be done.
     DLOGI("partial update is not applicable for display id = %d", display_id_);
+    return kErrorNotSupported;
+  }
+
+  if (dpps_info_.disable_pu_ && enable) {
+    // Nothing to be done.
+    DLOGI("partial update is disabled by DPPS for display id = %d", display_id_);
     return kErrorNotSupported;
   }
 
@@ -596,6 +633,7 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
         break;
       }
       enable = *(reinterpret_cast<bool *>(payload));
+      dpps_info_.disable_pu_ = !enable;
       ControlPartialUpdate(enable, &pending);
       event_handler_->HandleEvent(kInvalidateDisplay);
       event_handler_->Refresh();
@@ -605,7 +643,7 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
       }
       ret = dpps_pu_lock_.WaitFinite(kPuTimeOutMs);
       if (ret) {
-        DLOGE("failed to %s partial update ret %d", ((enable) ? "enable" : "disable"), ret);
+        DLOGW("failed to %s partial update ret %d", ((enable) ? "enable" : "disable"), ret);
         error = kErrorTimeOut;
       }
       break;

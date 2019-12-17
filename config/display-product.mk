@@ -29,6 +29,7 @@ PRODUCT_PACKAGES += \
     vendor.display.config@1.11.vendor \
     vendor.display.config@1.12.vendor \
     vendor.display.config@1.13.vendor \
+    vendor.display.config@1.14.vendor \
     vendor.qti.hardware.display.mapper@2.0.vendor \
     vendor.qti.hardware.display.mapper@3.0.vendor \
     modetest
@@ -49,6 +50,12 @@ PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_default.xml:$
 #QDCM calibration xml file for td4330 panel
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_bengal_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_td4330_v2_cmd_mode_dsi_truly_panel.xml
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_bengal_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_td4330_v2_video_mode_dsi_truly_panel.xml
+#QDCM calibration xml file for Sharp fhd panel
+PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_Sharp_fhd_cmd_mode_qsync_dsi_panel.xml
+PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_Sharp_fhd_video_mode_qsync_dsi_panel.xml
+#QDCM calibration xml file for Sharp 2k panel
+PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_Sharp_2k_cmd_mode_qsync_dsi_panel.xml
+PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_Sharp_2k_video_mode_qsync_dsi_panel.xml
 
 PRODUCT_PROPERTY_OVERRIDES += \
     persist.demo.hdmirotationlock=false \
@@ -57,26 +64,34 @@ PRODUCT_PROPERTY_OVERRIDES += \
     debug.sf.hw=0 \
     debug.egl.hw=0 \
     debug.sf.latch_unsignaled=1 \
-    debug.sf.enable_gl_backpressure=1 \
+    debug.sf.high_fps_late_app_phase_offset_ns=1000000 \
     debug.mdpcomp.logs=0 \
     vendor.gralloc.disable_ubwc=0 \
     vendor.display.disable_scaler=0 \
-    vendor.display.disable_offline_rotator=1 \
     vendor.display.disable_excl_rect=0 \
     vendor.display.comp_mask=0 \
     vendor.display.enable_posted_start_dyn=1 \
     vendor.display.enable_optimize_refresh=1 \
     vendor.display.use_smooth_motion=1
 
+# Enable offline rotator for Bengal.
+ifneq ($(TARGET_BOARD_PLATFORM),bengal)
+PRODUCT_PROPERTY_OVERRIDES += \
+    vendor.display.disable_offline_rotator=1
+else
+PRODUCT_PROPERTY_OVERRIDES += \
+    vendor.display.disable_rotator_ubwc=1
+endif
+
 ifeq ($(TARGET_BOARD_PLATFORM),kona)
 PRODUCT_PROPERTY_OVERRIDES += \
+    debug.sf.enable_gl_backpressure=1 \
     debug.sf.early_phase_offset_ns=500000 \
     debug.sf.early_app_phase_offset_ns=500000 \
     debug.sf.early_gl_phase_offset_ns=3000000 \
     debug.sf.early_gl_app_phase_offset_ns=15000000 \
     debug.sf.high_fps_early_phase_offset_ns=6100000 \
     debug.sf.high_fps_early_gl_phase_offset_ns=6500000 \
-    debug.sf.high_fps_late_app_phase_offset_ns=1000000 \
     debug.sf.phase_offset_threshold_for_next_vsync_ns=6100000
 endif
 

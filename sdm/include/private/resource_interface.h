@@ -73,6 +73,7 @@ class ResourceInterface {
   virtual DisplayError SetDetailEnhancerData(Handle display_ctx,
                                              const DisplayDetailEnhancerData &de_data) = 0;
   virtual DisplayError Perform(int cmd, ...) = 0;
+  virtual bool IsRotatorSupportedFormat(LayerBufferFormat format) = 0;
   virtual ~ResourceInterface() { }
 };
 

@@ -1011,6 +1011,15 @@ HWC2::Error HWCDisplayBuiltIn::GetPanelBrightness(float *brightness) {
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCDisplayBuiltIn::GetPanelMaxBrightness(uint32_t *max_brightness_level) {
+  DisplayError ret = display_intf_->GetPanelMaxBrightness(max_brightness_level);
+  if (ret != kErrorNone) {
+    return HWC2::Error::NoResources;
+  }
+
+  return HWC2::Error::None;
+}
+
 HWC2::Error HWCDisplayBuiltIn::SetBLScale(uint32_t level) {
   DisplayError ret = display_intf_->SetBLScale(level);
   if (ret != kErrorNone) {
@@ -1094,6 +1103,7 @@ bool HWCDisplayBuiltIn::InitLayerStitch() {
   if (!is_primary_) {
     // Disable on all non-primary builtins.
     DLOGI("Non-primary builtin.");
+    disable_layer_stitch_ = true;
     return true;
   }
 

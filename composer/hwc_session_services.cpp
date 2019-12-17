@@ -824,6 +824,27 @@ int32_t HWCSession::getDisplayBrightness(uint32_t display, float *brightness) {
   return error;
 }
 
+int32_t HWCSession::getDisplayMaxBrightness(uint32_t display, uint32_t *max_brightness_level) {
+  if (!max_brightness_level) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (display >= HWCCallbacks::kNumDisplays) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  int32_t error = -EINVAL;
+  HWCDisplay *hwc_display = hwc_display_[display];
+  if (hwc_display && hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN) {
+    error = INT32(hwc_display_[display]->GetPanelMaxBrightness(max_brightness_level));
+    if (error) {
+      DLOGE("Failed to get the panel max brightness, display %u error %d", display, error);
+    }
+  }
+
+  return error;
+}
+
 int32_t HWCSession::setDisplayBrightness(uint32_t display, float brightness) {
   return SetDisplayBrightness(static_cast<hwc2_display_t>(display), brightness);
 }
@@ -1027,6 +1048,7 @@ void HWCSession::CWB::ProcessRequests() {
 
       if (release_fence >= 0) {
         status = sync_wait(release_fence, 1000);
+        close(release_fence);
       } else {
         DLOGE("CWB release fence could not be retrieved.");
         status = -1;
@@ -1124,6 +1146,18 @@ Return<int32_t> HWCSession::createVirtualDisplay(uint32_t width, uint32_t height
   }
 
   return INT32(status);
+}
+
+Return<bool> HWCSession::isRotatorSupportedFormat(int hal_format, bool ubwc) {
+  if (!core_intf_) {
+    DLOGW("core_intf_ not initialized.");
+    return false;
+  }
+  int flag = ubwc ? private_handle_t::PRIV_FLAGS_UBWC_ALIGNED : 0;
+
+  LayerBufferFormat sdm_format = HWCLayer::GetSDMFormat(hal_format, flag);
+
+  return core_intf_->IsRotatorSupportedFormat(sdm_format);
 }
 
 }  // namespace sdm
