@@ -20,7 +20,11 @@
 #ifndef __HWC_SESSION_H__
 #define __HWC_SESSION_H__
 
+#ifndef DISPLAY_CONFIG_VERSION_OPTIMAL
 #include <vendor/display/config/1.15/IDisplayConfig.h>
+#else
+#include <vendor/display/config/1.0/IDisplayConfig.h>
+#endif
 #include <vendor/qti/hardware/display/composer/2.0/IQtiComposerClient.h>
 
 #include <core/core_interface.h>
@@ -49,9 +53,13 @@
 
 namespace sdm {
 
+#ifndef DISPLAY_CONFIG_VERSION_OPTIMAL
 using vendor::display::config::V1_15::IDisplayConfig;
 using vendor::display::config::V1_10::IDisplayCWBCallback;
 using vendor::display::config::V1_15::IDisplayQsyncCallback;
+#else
+using vendor::display::config::V1_0::IDisplayConfig;
+#endif
 
 using ::android::hardware::Return;
 using ::android::hardware::hidl_string;
@@ -277,6 +285,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   static Locker display_config_locker_;
 
  private:
+#ifndef DISPLAY_CONFIG_VERSION_OPTIMAL
   class CWB {
    public:
     explicit CWB(HWCSession *hwc_session) : hwc_session_(hwc_session) { }
@@ -306,6 +315,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
     std::condition_variable cv_;
     HWCSession *hwc_session_ = nullptr;
   };
+#endif
 
   struct DisplayMapInfo {
     hwc2_display_t client_id = HWCCallbacks::kNumDisplays;        // mapped sf id for this display
@@ -387,6 +397,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
                                   getHDRCapabilities_cb _hidl_cb) override;
   Return<int32_t> setCameraLaunchStatus(uint32_t on) override;
   Return<void> displayBWTransactionPending(displayBWTransactionPending_cb _hidl_cb) override;
+  Return<int32_t> IdlePowerCollapse(bool enable, bool synchronous);
+
+#ifndef DISPLAY_CONFIG_VERSION_OPTIMAL
   Return<int32_t> setDisplayAnimating(uint64_t display_id, bool animating) override;
   Return<int32_t> setDisplayIndex(IDisplayConfig::DisplayTypeExt disp_type,
                                   uint32_t base, uint32_t count) override;
@@ -408,8 +421,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   Return<int32_t> setPanelLuminanceAttributes(uint32_t disp_id, float min_lum,
                                               float max_lum) override;
   Return<bool> isBuiltInDisplay(uint32_t disp_id) override;
-  Return<bool> isAsyncVDSCreationSupported() override;
-  Return<int32_t> createVirtualDisplay(uint32_t width, uint32_t height, int32_t format) override;
   Return<void> getSupportedDSIBitClks(uint32_t disp_id,
                                       getSupportedDSIBitClks_cb _hidl_cb) override;
   Return<uint64_t> getDSIClk(uint32_t disp_id) override;
@@ -419,8 +430,11 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
                                      const hidl_handle& buffer) override;
   Return<int32_t> setQsyncMode(uint32_t disp_id, IDisplayConfig::QsyncMode mode) override;
   Return<bool> isSmartPanelConfig(uint32_t disp_id, uint32_t config_id) override;
+  Return<bool> isAsyncVDSCreationSupported() override;
+  Return<int32_t> createVirtualDisplay(uint32_t width, uint32_t height, int32_t format) override;
   Return<bool> isRotatorSupportedFormat(int hal_format, bool ubwc) override;
   Return<int32_t> registerQsyncCallback(const sp<IDisplayQsyncCallback> &callback) override;
+#endif
 
   // QClient methods
   virtual android::status_t notifyCallback(uint32_t command, const android::Parcel *input_parcel,
@@ -512,8 +526,10 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   float set_max_lum_ = -1.0;
   float set_min_lum_ = -1.0;
   std::bitset<HWCCallbacks::kNumDisplays> pending_refresh_;
+#ifndef DISPLAY_CONFIG_VERSION_OPTIMAL
   CWB cwb_;
   android::sp<IDisplayQsyncCallback> qsync_callback_ = nullptr;
+#endif
   bool async_powermode_ = false;
   bool async_vds_creation_ = false;
   bool power_state_transition_[HWCCallbacks::kNumDisplays] = {};

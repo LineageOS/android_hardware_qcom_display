@@ -534,17 +534,7 @@ Return<void> HWCSession::displayBWTransactionPending(displayBWTransactionPending
   return Void();
 }
 
-Return<int32_t> HWCSession::setDisplayAnimating(uint64_t display_id, bool animating ) {
-  return CallDisplayFunction(display_id,
-                             &HWCDisplay::SetDisplayAnimating, animating);
-}
-
-Return<int32_t> HWCSession::setDisplayIndex(IDisplayConfig::DisplayTypeExt disp_type,
-                                            uint32_t base, uint32_t count) {
-  return -1;
-}
-
-Return<int32_t> HWCSession::controlIdlePowerCollapse(bool enable, bool synchronous) {
+Return<int32_t> HWCSession::IdlePowerCollapse(bool enable, bool synchronous) {
   hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
   if (active_builtin_disp_id >= HWCCallbacks::kNumDisplays) {
     DLOGE("No active displays");
@@ -602,6 +592,70 @@ int32_t HWCSession::IsWbUbwcSupported(int *value) {
   }
 
   return error;
+}
+
+int32_t HWCSession::getDisplayBrightness(uint32_t display, float *brightness) {
+  if (!brightness) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (display >= HWCCallbacks::kNumDisplays) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
+  int32_t error = -EINVAL;
+  *brightness = -1.0f;
+
+  HWCDisplay *hwc_display = hwc_display_[display];
+  if (hwc_display && hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN) {
+    error = INT32(hwc_display_[display]->GetPanelBrightness(brightness));
+    if (error) {
+      DLOGE("Failed to get the panel brightness. Error = %d", error);
+    }
+  }
+
+  return error;
+}
+
+int32_t HWCSession::getDisplayMaxBrightness(uint32_t display, uint32_t *max_brightness_level) {
+  if (!max_brightness_level) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (display >= HWCCallbacks::kNumDisplays) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  int32_t error = -EINVAL;
+  HWCDisplay *hwc_display = hwc_display_[display];
+  if (hwc_display && hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN) {
+    error = INT32(hwc_display_[display]->GetPanelMaxBrightness(max_brightness_level));
+    if (error) {
+      DLOGE("Failed to get the panel max brightness, display %u error %d", display, error);
+    }
+  }
+
+  return error;
+}
+
+int32_t HWCSession::setDisplayBrightness(uint32_t display, float brightness) {
+  return SetDisplayBrightness(static_cast<hwc2_display_t>(display), brightness);
+}
+
+#ifndef DISPLAY_CONFIG_VERSION_OPTIMAL
+Return<int32_t> HWCSession::setDisplayAnimating(uint64_t display_id, bool animating ) {
+  return CallDisplayFunction(display_id,
+                             &HWCDisplay::SetDisplayAnimating, animating);
+}
+
+Return<int32_t> HWCSession::setDisplayIndex(IDisplayConfig::DisplayTypeExt disp_type,
+                                            uint32_t base, uint32_t count) {
+  return -1;
+}
+
+Return<int32_t> HWCSession::controlIdlePowerCollapse(bool enable, bool synchronous) {
+  return IdlePowerCollapse(enable, synchronous);
 }
 
 Return<void> HWCSession::getWriteBackCapabilities(getWriteBackCapabilities_cb _hidl_cb) {
@@ -800,55 +854,6 @@ err:
   return Void();
 }
 
-int32_t HWCSession::getDisplayBrightness(uint32_t display, float *brightness) {
-  if (!brightness) {
-    return HWC2_ERROR_BAD_PARAMETER;
-  }
-
-  if (display >= HWCCallbacks::kNumDisplays) {
-    return HWC2_ERROR_BAD_DISPLAY;
-  }
-
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
-  int32_t error = -EINVAL;
-  *brightness = -1.0f;
-
-  HWCDisplay *hwc_display = hwc_display_[display];
-  if (hwc_display && hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN) {
-    error = INT32(hwc_display_[display]->GetPanelBrightness(brightness));
-    if (error) {
-      DLOGE("Failed to get the panel brightness. Error = %d", error);
-    }
-  }
-
-  return error;
-}
-
-int32_t HWCSession::getDisplayMaxBrightness(uint32_t display, uint32_t *max_brightness_level) {
-  if (!max_brightness_level) {
-    return HWC2_ERROR_BAD_PARAMETER;
-  }
-
-  if (display >= HWCCallbacks::kNumDisplays) {
-    return HWC2_ERROR_BAD_DISPLAY;
-  }
-
-  int32_t error = -EINVAL;
-  HWCDisplay *hwc_display = hwc_display_[display];
-  if (hwc_display && hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN) {
-    error = INT32(hwc_display_[display]->GetPanelMaxBrightness(max_brightness_level));
-    if (error) {
-      DLOGE("Failed to get the panel max brightness, display %u error %d", display, error);
-    }
-  }
-
-  return error;
-}
-
-int32_t HWCSession::setDisplayBrightness(uint32_t display, float brightness) {
-  return SetDisplayBrightness(static_cast<hwc2_display_t>(display), brightness);
-}
-
 Return<int32_t> HWCSession::setPanelLuminanceAttributes(uint32_t disp_id, float pan_min_lum,
                                                         float pan_max_lum) {
   // currently doing only for virtual display
@@ -958,20 +963,6 @@ Return<int32_t> HWCSession::setCWBOutputBuffer(const sp<IDisplayCWBCallback> &ca
   }
 
   return cwb_.PostBuffer(callback, post_processed, buffer);
-}
-
-Return<bool> HWCSession::isSmartPanelConfig(uint32_t disp_id, uint32_t config_id) {
-  if (disp_id != qdutils::DISPLAY_PRIMARY) {
-    return false;
-  }
-
-  SCOPE_LOCK(locker_[disp_id]);
-  if (!hwc_display_[disp_id]) {
-    DLOGE("Display %d is not created yet.", disp_id);
-    return false;
-  }
-
-  return hwc_display_[disp_id]->IsSmartPanelConfig(config_id);
 }
 
 int32_t HWCSession::CWB::PostBuffer(const sp<IDisplayCWBCallback> &callback, bool post_processed,
@@ -1117,14 +1108,18 @@ Return<int32_t> HWCSession::setQsyncMode(uint32_t disp_id, IDisplayConfig::Qsync
   return 0;
 }
 
-Return<int32_t> HWCSession::registerQsyncCallback(const sp<IDisplayQsyncCallback> &callback) {
-  if (qsync_callback_ != nullptr) {
-    DLOGE("Qsync callback already registered, rejecting new request");
-    return -1;
+Return<bool> HWCSession::isSmartPanelConfig(uint32_t disp_id, uint32_t config_id) {
+  if (disp_id != qdutils::DISPLAY_PRIMARY) {
+    return false;
   }
-  qsync_callback_ = callback;
 
-  return 0;
+  SCOPE_LOCK(locker_[disp_id]);
+  if (!hwc_display_[disp_id]) {
+    DLOGE("Display %d is not created yet.", disp_id);
+    return false;
+  }
+
+  return hwc_display_[disp_id]->IsSmartPanelConfig(config_id);
 }
 
 Return<bool> HWCSession::isAsyncVDSCreationSupported() {
@@ -1169,5 +1164,16 @@ Return<bool> HWCSession::isRotatorSupportedFormat(int hal_format, bool ubwc) {
 
   return core_intf_->IsRotatorSupportedFormat(sdm_format);
 }
+
+Return<int32_t> HWCSession::registerQsyncCallback(const sp<IDisplayQsyncCallback> &callback) {
+  if (qsync_callback_ != nullptr) {
+    DLOGE("Qsync callback already registered, rejecting new request");
+    return -1;
+  }
+  qsync_callback_ = callback;
+
+  return 0;
+}
+#endif
 
 }  // namespace sdm

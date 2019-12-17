@@ -138,7 +138,11 @@ void HWCUEvent::Register(HWCUEventListener *uevent_listener) {
   uevent_listener_ = uevent_listener;
 }
 
+#ifndef DISPLAY_CONFIG_VERSION_OPTIMAL
 HWCSession::HWCSession() : cwb_(this) {}
+#else
+HWCSession::HWCSession() {}
+#endif
 
 HWCSession *HWCSession::GetInstance() {
   // executed only once for the very first call.
@@ -702,6 +706,7 @@ int32_t HWCSession::GetReleaseFences(hwc2_display_t display, uint32_t *out_num_e
                              out_fences);
 }
 
+#ifndef DISPLAY_CONFIG_VERSION_OPTIMAL
 void HWCSession::PerformQsyncCallback(hwc2_display_t display) {
   if (qsync_callback_ == nullptr) {
     return;
@@ -714,6 +719,10 @@ void HWCSession::PerformQsyncCallback(hwc2_display_t display) {
     qsync_callback_->onQsyncReconfigured(qsync_enabled, refresh_rate, qsync_refresh_rate);
   }
 }
+#else
+void HWCSession::PerformQsyncCallback(hwc2_display_t display) {
+}
+#endif
 
 int32_t HWCSession::PresentDisplay(hwc2_display_t display, int32_t *out_retire_fence) {
   auto status = HWC2::Error::BadDisplay;
@@ -773,7 +782,9 @@ int32_t HWCSession::PresentDisplay(hwc2_display_t display, int32_t *out_retire_f
   HandlePendingPowerMode(display, *out_retire_fence);
   HandlePendingHotplug(display, *out_retire_fence);
   HandlePendingRefresh();
+#ifndef DISPLAY_CONFIG_VERSION_OPTIMAL
   cwb_.PresentDisplayDone(display);
+#endif
   display_ready_.set(UINT32(display));
   {
     std::unique_lock<std::mutex> caller_lock(hotplug_mutex_);
@@ -1849,8 +1860,8 @@ android::status_t HWCSession::SetAd4RoiConfig(const android::Parcel *input_parce
   auto f_in = static_cast<uint32_t>(input_parcel->readInt32());
   auto f_out = static_cast<uint32_t>(input_parcel->readInt32());
 
-  return static_cast<android::status_t>(SetDisplayDppsAdROI(display_id, h_s, h_e, v_s,
-                                                            v_e, f_in, f_out));
+  return CallDisplayFunction(display_id, &HWCDisplay::SetDisplayDppsAdROI,
+                             h_s, h_e, v_s, v_e, f_in, f_out);
 }
 
 android::status_t HWCSession::SetFrameTriggerMode(const android::Parcel *input_parcel) {
@@ -3281,7 +3292,7 @@ android::status_t HWCSession::SetIdlePC(const android::Parcel *input_parcel) {
   auto enable = input_parcel->readInt32();
   auto synchronous = input_parcel->readInt32();
 
-  return static_cast<android::status_t>(controlIdlePowerCollapse(enable, synchronous));
+  return static_cast<android::status_t>(IdlePowerCollapse(enable, synchronous));
 }
 
 hwc2_display_t HWCSession::GetActiveBuiltinDisplay() {
