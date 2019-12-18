@@ -112,6 +112,9 @@
 #define ENABLE_FORCE_SPLIT                   DISPLAY_PROP("enable_force_split")
 #define DISABLE_GPU_COLOR_CONVERT            DISPLAY_PROP("disable_gpu_color_convert")
 #define ENABLE_ASYNC_VDS_CREATION            DISPLAY_PROP("enable_async_vds_creation")
+// MMNOC efficiency factor for Camera and Non-Camera cases
+#define NORMAL_NOC_EFFICIENCY_FACTOR         DISPLAY_PROP("normal_noc_efficiency_factor")
+#define CAMERA_NOC_EFFICIENCY_FACTOR         DISPLAY_PROP("camera_noc_efficiency_factor")
 
 // Add all vendor.display properties above
 
