@@ -348,6 +348,7 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
   string hw_version = "hw_version=";
   string solidfill_stages = "dim_layer_v1_max_layers=";
   string has_hdr = "has_hdr=";
+  string has_micro_idle = "has_uidle=";
   string min_prefill_lines = "min_prefill_lines=";
   string num_mnocports = "num_mnoc_ports=";
   string mnoc_bus_width = "axi_bus_width=";
@@ -475,6 +476,8 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
         }
       }
       crtc_info_.line_width_limits = std::move(constraint_vector);
+    } else if (line.find(has_micro_idle) != string::npos) {
+      crtc_info_.has_micro_idle = std::stoi(string(line, (has_micro_idle).length()));
     }
   }
   drmModeFreePropertyBlob(blob);
