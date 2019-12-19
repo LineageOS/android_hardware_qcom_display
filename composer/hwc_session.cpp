@@ -2763,6 +2763,7 @@ void HWCSession::DestroyPluggableDisplay(DisplayMapInfo *map_info) {
       }
     }
     display_ready_.reset(UINT32(client_id));
+    pending_power_mode_[client_id] = false;
     hwc_display = nullptr;
     map_info->Reset();
   }
@@ -2801,6 +2802,7 @@ void HWCSession::DestroyNonPluggableDisplay(DisplayMapInfo *map_info) {
         hwc_display_dummy = nullptr;
       }
     }
+    pending_power_mode_[client_id] = false;
     hwc_display = nullptr;
     display_ready_.reset(UINT32(client_id));
     map_info->Reset();
