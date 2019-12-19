@@ -1117,6 +1117,16 @@ Return<int32_t> HWCSession::setQsyncMode(uint32_t disp_id, IDisplayConfig::Qsync
   return 0;
 }
 
+Return<int32_t> HWCSession::registerQsyncCallback(const sp<IDisplayQsyncCallback> &callback) {
+  if (qsync_callback_ != nullptr) {
+    DLOGE("Qsync callback already registered, rejecting new request");
+    return -1;
+  }
+  qsync_callback_ = callback;
+
+  return 0;
+}
+
 Return<bool> HWCSession::isAsyncVDSCreationSupported() {
   if (!async_vds_creation_) {
     return false;
