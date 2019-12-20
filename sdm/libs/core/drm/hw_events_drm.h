@@ -109,6 +109,7 @@ class HWEventsDRM : public HWEventsInterface {
   uint32_t panel_dead_index_ = UINT32_MAX;
   uint32_t idle_pc_index_ = UINT32_MAX;
   bool disable_hw_recovery_ = false;
+  bool enable_hist_interrupt_ = false;
   uint32_t hw_recovery_index_ = UINT32_MAX;
 };
 

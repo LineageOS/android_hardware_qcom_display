@@ -247,19 +247,28 @@ DisplayError HWEventsDRM::Init(int display_id, DisplayType display_type,
   if (!disable_hw_recovery_) {
     RegisterHwRecovery(true);
   }
-  RegisterHistogram(true);
+
+  if (Debug::Get()->GetProperty(ENABLE_HISTOGRAM_INTR, &value) == kErrorNone) {
+    enable_hist_interrupt_ = (value == 1);
+  }
+  DLOGI("enable_hist_interrupt_ set to %d", enable_hist_interrupt_);
+  if (enable_hist_interrupt_) {
+    RegisterHistogram(true);
+  }
 
   return kErrorNone;
 }
 
 DisplayError HWEventsDRM::Deinit() {
   exit_threads_ = true;
-  RegisterHistogram(false);
   RegisterPanelDead(false);
   RegisterIdleNotify(false);
   RegisterIdlePowerCollapse(false);
   if (!disable_hw_recovery_) {
     RegisterHwRecovery(false);
+  }
+  if (enable_hist_interrupt_) {
+    RegisterHistogram(false);
   }
   Sys::pthread_cancel_(event_thread_);
   WakeUpEventThread();

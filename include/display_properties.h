@@ -115,6 +115,7 @@
 // MMNOC efficiency factor for Camera and Non-Camera cases
 #define NORMAL_NOC_EFFICIENCY_FACTOR         DISPLAY_PROP("normal_noc_efficiency_factor")
 #define CAMERA_NOC_EFFICIENCY_FACTOR         DISPLAY_PROP("camera_noc_efficiency_factor")
+#define ENABLE_HISTOGRAM_INTR                DISPLAY_PROP("enable_hist_intr")
 
 // Add all vendor.display properties above
 
