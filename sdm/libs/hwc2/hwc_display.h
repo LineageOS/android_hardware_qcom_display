@@ -321,6 +321,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool animating_ = false;
   bool fbt_valid_ = false;
   bool is_primary_ = false;
+  uint32_t min_enc_level_ = UINT32_MAX;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {

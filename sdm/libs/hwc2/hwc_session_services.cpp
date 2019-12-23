@@ -308,16 +308,15 @@ int32_t HWCSession::MinHdcpEncryptionLevelChanged(int disp_id, uint32_t min_enc_
     DLOGE("Invalid display = %d", disp_id);
     return -EINVAL;
   }
-
+  if (hdmi_is_primary_) {
+    disp_id = HWC_DISPLAY_PRIMARY;
+  }
   SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_id]);
-  if (disp_id != HWC_DISPLAY_EXTERNAL) {
+  if (!hdmi_is_primary_ && disp_id != HWC_DISPLAY_EXTERNAL) {
     DLOGE("Not supported for display");
   } else if (!hwc_display_[disp_id] && !hdmi_is_primary_) {
     DLOGW("Display is not connected");
   } else {
-    if (hdmi_is_primary_) {
-      disp_id = HWC_DISPLAY_PRIMARY;
-    }
     return hwc_display_[disp_id]->OnMinHdcpEncryptionLevelChange(min_enc_level);
   }
 
