@@ -117,6 +117,7 @@ class CompManager {
     PUConstraints pu_constraints = {};
     DisplayConfigVariableInfo fb_config = {};
     bool first_cycle_ = true;
+    uint32_t dest_scaler_blocks_used = 0;
   };
 
   Locker locker_;
