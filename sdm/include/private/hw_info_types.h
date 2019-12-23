@@ -789,13 +789,15 @@ struct HWMixerAttributes {
   uint32_t split_left = 0;                             // Left portion of layer mixer
   HWMixerSplit split_type = kNoSplit;                  // Mixer topology
   LayerBufferFormat output_format = kFormatRGB101010;  // Layer mixer output format
+  uint32_t dest_scaler_blocks_used = 0;                // Count of dest scaler blocks used
 
   bool operator !=(const HWMixerAttributes &mixer_attributes) {
     return ((width != mixer_attributes.width) ||
             (height != mixer_attributes.height) ||
             (split_type != mixer_attributes.split_type) ||
             (output_format != mixer_attributes.output_format) ||
-            (split_left != mixer_attributes.split_left));
+            (split_left != mixer_attributes.split_left) ||
+            (dest_scaler_blocks_used != mixer_attributes.dest_scaler_blocks_used));
   }
 
   bool operator ==(const HWMixerAttributes &mixer_attributes) {

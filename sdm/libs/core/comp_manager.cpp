@@ -148,6 +148,7 @@ DisplayError CompManager::RegisterDisplay(int32_t display_id, DisplayType type,
   display_comp_ctx->display_id = display_id;
   display_comp_ctx->display_type = type;
   display_comp_ctx->fb_config = fb_config;
+  display_comp_ctx->dest_scaler_blocks_used = mixer_attributes.dest_scaler_blocks_used;
   *display_ctx = display_comp_ctx;
   // New non-primary display device has been added, so move the composition mode to safe mode until
   // resources for the added display is configured properly.
@@ -541,12 +542,13 @@ DisplayError CompManager::GetScaleLutConfig(HWScaleLutInfo *lut_info) {
 DisplayError CompManager::SetDetailEnhancerData(Handle display_ctx,
                                                 const DisplayDetailEnhancerData &de_data) {
   SCOPE_LOCK(locker_);
-  if (!hw_res_info_.hw_dest_scalar_info.count) {
-    return kErrorResources;
-  }
 
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+
+  if (!display_comp_ctx->dest_scaler_blocks_used) {
+    return kErrorResources;
+  }
 
   return resource_intf_->SetDetailEnhancerData(display_comp_ctx->display_resource_ctx, de_data);
 }
