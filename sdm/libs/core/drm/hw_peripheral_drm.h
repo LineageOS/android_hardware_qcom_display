@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -71,6 +71,7 @@ class HWPeripheralDRM : public HWDeviceDRM {
   virtual DisplayError GetPanelBrightnessBasePath(std::string *base_path);
 
  private:
+  void InitDestScaler();
   void SetDestScalarData(const HWLayersInfo &hw_layer_info);
   void ResetDestScalarCache();
   DisplayError SetupConcurrentWritebackModes();
