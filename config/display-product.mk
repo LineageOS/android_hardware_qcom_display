@@ -29,6 +29,8 @@ PRODUCT_PACKAGES += \
     vendor.display.config@1.11.vendor \
     vendor.display.config@1.12.vendor \
     vendor.display.config@1.13.vendor \
+    vendor.display.config@1.14.vendor \
+    vendor.display.config@1.15.vendor \
     vendor.qti.hardware.display.mapper@2.0.vendor \
     vendor.qti.hardware.display.mapper@3.0.vendor \
     modetest
@@ -63,15 +65,26 @@ PRODUCT_PROPERTY_OVERRIDES += \
     debug.sf.hw=0 \
     debug.egl.hw=0 \
     debug.sf.latch_unsignaled=1 \
+    debug.sf.high_fps_late_app_phase_offset_ns=1000000 \
     debug.mdpcomp.logs=0 \
     vendor.gralloc.disable_ubwc=0 \
     vendor.display.disable_scaler=0 \
-    vendor.display.disable_offline_rotator=1 \
     vendor.display.disable_excl_rect=0 \
     vendor.display.comp_mask=0 \
     vendor.display.enable_posted_start_dyn=1 \
     vendor.display.enable_optimize_refresh=1 \
     vendor.display.use_smooth_motion=1
+
+# Enable offline rotator for Bengal.
+ifneq ($(TARGET_BOARD_PLATFORM),bengal)
+PRODUCT_PROPERTY_OVERRIDES += \
+    vendor.display.disable_offline_rotator=1 \
+    vendor.display.normal_noc_efficiency_factor=0.85 \
+    vendor.display.camera_noc_efficiency_factor=0.70
+else
+PRODUCT_PROPERTY_OVERRIDES += \
+    vendor.display.disable_rotator_ubwc=1
+endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),kona)
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -82,7 +95,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
     debug.sf.early_gl_app_phase_offset_ns=15000000 \
     debug.sf.high_fps_early_phase_offset_ns=6100000 \
     debug.sf.high_fps_early_gl_phase_offset_ns=6500000 \
-    debug.sf.high_fps_late_app_phase_offset_ns=1000000 \
     debug.sf.phase_offset_threshold_for_next_vsync_ns=6100000
 endif
 

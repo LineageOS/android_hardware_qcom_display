@@ -89,6 +89,7 @@ class CompManager {
   DisplayError CheckEnforceSplit(Handle comp_handle, uint32_t new_refresh_rate);
   DppsControlInterface* GetDppsControlIntf() { return dpps_ctrl_intf_; }
   bool CheckResourceState(Handle display_ctx);
+  bool IsRotatorSupportedFormat(LayerBufferFormat format);
 
  private:
   static const int kMaxThermalLevel = 3;

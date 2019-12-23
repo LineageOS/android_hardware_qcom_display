@@ -903,11 +903,24 @@ class DisplayInterface {
     @return \link DisplayError \endlink
   */
   virtual DisplayError SetBLScale(uint32_t level) = 0;
+
   /*! @brief Method to check if the Default resources are freed for display
 
     @return \link bool \endlink
   */
   virtual bool CheckResourceState() = 0;
+
+  /*! @brief Method to check if game enhance feature is supported for display
+
+    @return \link bool \endlink
+  */
+  virtual bool GameEnhanceSupported() = 0;
+
+  /*! @brief Method to get the current qsync mode used.
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetQSyncMode(QSyncMode *qsync_mode) = 0;
 
  protected:
   virtual ~DisplayInterface() { }

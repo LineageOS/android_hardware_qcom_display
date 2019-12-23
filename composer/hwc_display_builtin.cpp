@@ -296,6 +296,44 @@ HWC2::Error HWCDisplayBuiltIn::CommitStitchLayers() {
   return HWC2::Error::None;
 }
 
+void HWCDisplayBuiltIn::CacheAvrStatus() {
+  QSyncMode qsync_mode = kQSyncModeNone;
+
+  DisplayError error = display_intf_->GetQSyncMode(&qsync_mode);
+  if (error != kErrorNone) {
+    return;
+  }
+
+  bool qsync_enabled = (qsync_mode != kQSyncModeNone);
+  if (qsync_enabled_ != qsync_enabled) {
+    qsync_reconfigured_ = true;
+    qsync_enabled_ = qsync_enabled;
+  } else {
+    qsync_reconfigured_ = false;
+  }
+}
+
+bool HWCDisplayBuiltIn::IsQsyncCallbackNeeded(bool *qsync_enabled, int32_t *refresh_rate,
+                           int32_t *qsync_refresh_rate) {
+  if (!qsync_reconfigured_) {
+    return false;
+  }
+
+  bool vsync_source = (callbacks_->GetVsyncSource() == id_);
+  // Qsync callback not needed if this display is not the source of vsync
+  if (!vsync_source) {
+    return false;
+  }
+
+  *qsync_enabled = qsync_enabled_;
+  uint32_t current_rate = 0;
+  display_intf_->GetRefreshRate(&current_rate);
+  *refresh_rate = INT32(current_rate);
+  *qsync_refresh_rate = min_refresh_rate_;
+
+  return true;
+}
+
 HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
   auto status = HWC2::Error::None;
 
@@ -310,6 +348,8 @@ HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
       DLOGE("Flush failed. Error = %d", error);
     }
   } else {
+    CacheAvrStatus();
+
     status = CommitStitchLayers();
     if (status != HWC2::Error::None) {
       DLOGE("Stitch failed: %d", status);

@@ -1117,6 +1117,16 @@ Return<int32_t> HWCSession::setQsyncMode(uint32_t disp_id, IDisplayConfig::Qsync
   return 0;
 }
 
+Return<int32_t> HWCSession::registerQsyncCallback(const sp<IDisplayQsyncCallback> &callback) {
+  if (qsync_callback_ != nullptr) {
+    DLOGE("Qsync callback already registered, rejecting new request");
+    return -1;
+  }
+  qsync_callback_ = callback;
+
+  return 0;
+}
+
 Return<bool> HWCSession::isAsyncVDSCreationSupported() {
   if (!async_vds_creation_) {
     return false;
@@ -1146,6 +1156,18 @@ Return<int32_t> HWCSession::createVirtualDisplay(uint32_t width, uint32_t height
   }
 
   return INT32(status);
+}
+
+Return<bool> HWCSession::isRotatorSupportedFormat(int hal_format, bool ubwc) {
+  if (!core_intf_) {
+    DLOGW("core_intf_ not initialized.");
+    return false;
+  }
+  int flag = ubwc ? private_handle_t::PRIV_FLAGS_UBWC_ALIGNED : 0;
+
+  LayerBufferFormat sdm_format = HWCLayer::GetSDMFormat(hal_format, flag);
+
+  return core_intf_->IsRotatorSupportedFormat(sdm_format);
 }
 
 }  // namespace sdm

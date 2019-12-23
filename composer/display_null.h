@@ -64,6 +64,7 @@ class DisplayNull : public DisplayInterface {
   virtual string Dump() { return ""; }
   virtual bool IsSupportSsppTonemap() { return false; }
   virtual bool CanSkipValidate() { return true; }
+  virtual bool GameEnhanceSupported() { return false; }
 
   MAKE_NO_OP(TeardownConcurrentWriteback(void))
   MAKE_NO_OP(Commit(LayerStack *))
@@ -116,6 +117,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(SetFrameTriggerMode(FrameTriggerMode))
   MAKE_NO_OP(SetPanelLuminanceAttributes(float min_lum, float max_lum))
   MAKE_NO_OP(SetBLScale(uint32_t))
+  MAKE_NO_OP(GetQSyncMode(QSyncMode *))
 
  protected:
   DisplayConfigVariableInfo default_variable_config_ = {};

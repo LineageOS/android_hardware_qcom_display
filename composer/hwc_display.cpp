@@ -525,7 +525,9 @@ int HWCDisplay::Init() {
   HWCDebugHandler::Get()->GetProperty(DISABLE_FAST_PATH, &disable_fast_path);
   fast_path_enabled_ = !(disable_fast_path == 1);
 
-  DLOGI("Display created with id: %d", id_);
+  game_supported_ = display_intf_->GameEnhanceSupported();
+
+  DLOGI("Display created with id: %d, game_supported_: %d", id_, game_supported_);
 
   return 0;
 }
@@ -785,7 +787,7 @@ void HWCDisplay::BuildLayerStack() {
       layer->update_mask.set(kClientCompRequest);
     }
 
-    if (hwc_layer->GetType() == kLayerGame) {
+    if (game_supported_ && (hwc_layer->GetType() == kLayerGame)) {
       layer->flags.is_game = true;
       layer->input_buffer.flags.game = true;
     }

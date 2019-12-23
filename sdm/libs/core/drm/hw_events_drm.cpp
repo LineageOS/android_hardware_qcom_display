@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -331,6 +331,11 @@ void *HWEventsDRM::DisplayEventHandler() {
 
   prctl(PR_SET_NAME, event_thread_name_.c_str(), 0, 0, 0);
   setpriority(PRIO_PROCESS, 0, kThreadPriorityUrgent);
+
+  // Real Time task with lowest priority.
+  struct sched_param param = {0};
+  param.sched_priority = sched_get_priority_min(SCHED_FIFO);
+  sched_setscheduler(0, SCHED_FIFO, &param);
 
   while (!exit_threads_) {
     int error = Sys::poll_(poll_fds_.data(), UINT32(poll_fds_.size()), -1);

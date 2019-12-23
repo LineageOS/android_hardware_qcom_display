@@ -48,7 +48,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     <hal format="hidl">
         <name>vendor.display.config</name>
         <transport>hwbinder</transport>
-        <version>1.13</version>
+        <version>1.15</version>
         <interface>
             <name>IDisplayConfig</name>
             <instance>default</instance>

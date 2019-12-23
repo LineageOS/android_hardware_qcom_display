@@ -495,6 +495,21 @@ int32_t HWCSession::DestroyVirtualDisplay(hwc2_display_t display) {
   return HWC2_ERROR_NONE;
 }
 
+int32_t HWCSession::GetVirtualDisplayId() {
+  HWDisplaysInfo hw_displays_info = {};
+  core_intf_->GetDisplaysStatus(&hw_displays_info);
+  for (auto &iter : hw_displays_info) {
+    auto &info = iter.second;
+    if (info.display_type != kVirtual) {
+      continue;
+    }
+
+    return info.display_id;
+  }
+
+  return -1;
+}
+
 void HWCSession::Dump(uint32_t *out_size, char *out_buffer) {
   if (!out_size) {
     return;
@@ -518,7 +533,7 @@ void HWCSession::Dump(uint32_t *out_size, char *out_buffer) {
 }
 
 uint32_t HWCSession::GetMaxVirtualDisplayCount() {
-  return 1;
+  return map_info_virtual_.size();
 }
 
 int32_t HWCSession::GetActiveConfig(hwc2_display_t display, hwc2_config_t *out_config) {
@@ -661,6 +676,19 @@ int32_t HWCSession::GetReleaseFences(hwc2_display_t display, uint32_t *out_num_e
                              out_fences);
 }
 
+void HWCSession::PerformQsyncCallback(hwc2_display_t display) {
+  if (qsync_callback_ == nullptr) {
+    return;
+  }
+
+  bool qsync_enabled = 0;
+  int32_t refresh_rate = 0, qsync_refresh_rate = 0;
+  if (hwc_display_[display]->IsQsyncCallbackNeeded(&qsync_enabled,
+      &refresh_rate, &qsync_refresh_rate)) {
+    qsync_callback_->onQsyncReconfigured(qsync_enabled, refresh_rate, qsync_refresh_rate);
+  }
+}
+
 int32_t HWCSession::PresentDisplay(hwc2_display_t display, int32_t *out_retire_fence) {
   auto status = HWC2::Error::BadDisplay;
   DTRACE_SCOPED();
@@ -705,6 +733,9 @@ int32_t HWCSession::PresentDisplay(hwc2_display_t display, int32_t *out_retire_f
           callbacks_.ResetRefresh(display);
         }
         status = hwc_display_[target_display]->Present(out_retire_fence);
+        if (status == HWC2::Error::None) {
+          PerformQsyncCallback(target_display);
+        }
       }
     }
   }
@@ -1011,9 +1042,7 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
 
   UpdateThrottlingRate();
 
-  // Trigger refresh for doze mode to take effect.
   if (mode == HWC2::PowerMode::Doze) {
-    callbacks_.Refresh(display);
     // Trigger one more refresh for PP features to take effect.
     pending_refresh_.set(UINT32(display));
   }
@@ -1125,50 +1154,37 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
     }
   }
 
-  HWDisplaysInfo hw_displays_info = {};
-  DisplayError error = core_intf_->GetDisplaysStatus(&hw_displays_info);
-  if (error != kErrorNone) {
-    DLOGE("Failed to get connected display list. Error = %d", error);
-    return HWC2::Error::BadDisplay;
-  }
-
   // Lock confined to this scope
   int status = -EINVAL;
-  for (auto &iter : hw_displays_info) {
-    auto &info = iter.second;
-    if (info.display_type != kVirtual) {
-      continue;
-    }
-
-    for (auto &map_info : map_info_virtual_) {
-      client_id = map_info.client_id;
-      {
-        SCOPE_LOCK(locker_[client_id]);
-        auto &hwc_display = hwc_display_[client_id];
-        if (hwc_display) {
-          continue;
-        }
-
-        status = virtual_display_factory_.Create(core_intf_, &buffer_allocator_, &callbacks_,
-                                                 client_id, info.display_id, width, height,
-                                                 format, set_min_lum_, set_max_lum_, &hwc_display);
-        // TODO(user): validate width and height support
-        if (status) {
-          return HWC2::Error::NoResources;
-        }
-
-        {
-          SCOPE_LOCK(hdr_locker_[client_id]);
-          is_hdr_display_[UINT32(client_id)] = HasHDRSupport(hwc_display);
-        }
-
-        DLOGI("Created virtual display id:% " PRIu64 " with res: %dx%d", client_id, width, height);
-
-        *out_display_id = client_id;
-        map_info.disp_type = info.display_type;
-        map_info.sdm_id = info.display_id;
-        break;
+  for (auto &map_info : map_info_virtual_) {
+    client_id = map_info.client_id;
+    {
+      SCOPE_LOCK(locker_[client_id]);
+      auto &hwc_display = hwc_display_[client_id];
+      if (hwc_display) {
+        continue;
       }
+
+      int32_t display_id = GetVirtualDisplayId();
+      status = virtual_display_factory_.Create(core_intf_, &buffer_allocator_, &callbacks_,
+                                               client_id, display_id, width, height,
+                                               format, set_min_lum_, set_max_lum_, &hwc_display);
+      // TODO(user): validate width and height support
+      if (status) {
+        return HWC2::Error::NoResources;
+      }
+
+      {
+        SCOPE_LOCK(hdr_locker_[client_id]);
+        is_hdr_display_[UINT32(client_id)] = HasHDRSupport(hwc_display);
+      }
+
+      DLOGI("Created virtual display id:% " PRIu64 " with res: %dx%d", client_id, width, height);
+
+      *out_display_id = client_id;
+      map_info.disp_type = kVirtual;
+      map_info.sdm_id = display_id;
+      break;
     }
   }
 
@@ -2747,6 +2763,7 @@ void HWCSession::DestroyPluggableDisplay(DisplayMapInfo *map_info) {
       }
     }
     display_ready_.reset(UINT32(client_id));
+    pending_power_mode_[client_id] = false;
     hwc_display = nullptr;
     map_info->Reset();
   }
@@ -2785,6 +2802,7 @@ void HWCSession::DestroyNonPluggableDisplay(DisplayMapInfo *map_info) {
         hwc_display_dummy = nullptr;
       }
     }
+    pending_power_mode_[client_id] = false;
     hwc_display = nullptr;
     display_ready_.reset(UINT32(client_id));
     map_info->Reset();

@@ -234,7 +234,7 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
   if (!buffer) {
     if (client_requested_ == HWC2::Composition::Device ||
         client_requested_ == HWC2::Composition::Cursor) {
-      DLOGE("Invalid buffer handle: %p on layer: %d client requested comp type %d", buffer, id_,
+      DLOGW("Invalid buffer handle: %p on layer: %d client requested comp type %d", buffer, id_,
             client_requested_);
       ::close(acquire_fence);
       return HWC2::Error::BadParameter;
@@ -638,7 +638,6 @@ HWC2::Error HWCLayer::SetLayerPerFrameMetadata(uint32_t num_elements,
   }
   if ((!SameConfig(&old_mastering_display, &mastering_display, UINT32(sizeof(MasteringDisplay)))) ||
       (!SameConfig(&old_content_light, &content_light, UINT32(sizeof(ContentLightLevel))))) {
-    per_frame_hdr_metadata_ = true;
     layer_->update_mask.set(kMetadataUpdate);
     geometry_changes_ |= kDataspace;
   }
@@ -662,7 +661,6 @@ HWC2::Error HWCLayer::SetLayerPerFrameMetadataBlobs(uint32_t num_elements,
           DLOGE("Size of HDR10_PLUS_SEI = %d", sizes[i]);
           return HWC2::Error::BadParameter;
         }
-        per_frame_hdr_metadata_ = false;
         // if dynamic metadata changes, store and set needs validate
         if (!SameConfig(static_cast<const uint8_t*>(color_metadata.dynamicMetaDataPayload),
                         metadata, sizes[i])) {
@@ -670,9 +668,11 @@ HWC2::Error HWCLayer::SetLayerPerFrameMetadataBlobs(uint32_t num_elements,
           color_metadata.dynamicMetaDataValid = true;
           color_metadata.dynamicMetaDataLen = sizes[i];
           std::memcpy(color_metadata.dynamicMetaDataPayload, metadata, sizes[i]);
-          per_frame_hdr_metadata_ = true;
           layer_->update_mask.set(kMetadataUpdate);
         }
+        // once blob data is set by FW, we should not read from gralloc metadata as video HAL
+        // is setting thru gralloc metadata OR native window API (TODO(user): Revisit).
+        per_frame_hdr_metadata_blob_ = true;
         break;
       default:
         DLOGW("Invalid key = %d", keys[i]);
@@ -992,9 +992,9 @@ void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
      use_color_metadata = true;
   }
 
-  // Since client has set PerFrameMetadata, dataspace will be valid
+  // Since client has set PerFrameMetadatablobs its dataspace and hdr10+ data will be updated
   // so we can skip reading from ColorMetaData.
-  if (use_color_metadata && !per_frame_hdr_metadata_) {
+  if (use_color_metadata && !per_frame_hdr_metadata_blob_) {
     ColorMetaData new_metadata = {};
     if (sdm::SetCSC(handle, &new_metadata) == kErrorNone) {
       // If dataspace is KNOWN, overwrite the gralloc metadata CSC using the previously derived CSC
@@ -1009,10 +1009,10 @@ void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
           (layer_buffer->color_metadata.range != new_metadata.range)) {
         layer_->update_mask.set(kMetadataUpdate);
       }
-      DLOGV_IF(kTagClient, "Dynamic Metadata valid = %d size = %d",
-               layer_buffer->color_metadata.dynamicMetaDataValid,
-               layer_buffer->color_metadata.dynamicMetaDataLen);
-      if (layer_buffer->color_metadata.dynamicMetaDataValid &&
+      DLOGV_IF(kTagClient, "Layer id =%lld Dynamic Metadata valid = %d size = %d", id_,
+               new_metadata.dynamicMetaDataValid,
+               new_metadata.dynamicMetaDataLen);
+      if (new_metadata.dynamicMetaDataValid &&
           !SameConfig(layer_buffer->color_metadata.dynamicMetaDataPayload,
           new_metadata.dynamicMetaDataPayload, HDR_DYNAMIC_META_DATA_SZ)) {
         layer_->update_mask.set(kMetadataUpdate);

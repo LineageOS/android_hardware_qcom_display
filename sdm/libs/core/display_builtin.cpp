@@ -60,7 +60,6 @@ DisplayBuiltIn::~DisplayBuiltIn() {
 
 DisplayError DisplayBuiltIn::Init() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-  int32_t disable_defer_power_state = 0;
 
   DisplayError error = HWInterface::Create(display_id_, kBuiltIn, hw_info_intf_,
                                            buffer_sync_handler_, buffer_allocator_, &hw_intf_);
@@ -115,11 +114,6 @@ DisplayError DisplayBuiltIn::Init() {
   }
 
   current_refresh_rate_ = hw_panel_info_.max_fps;
-
-  Debug::GetProperty(DISABLE_DEFER_POWER_STATE, &disable_defer_power_state);
-  defer_power_state_ = !disable_defer_power_state;
-
-  DLOGI("defer_power_state %d", defer_power_state_);
 
   return error;
 }
@@ -291,6 +285,10 @@ DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
   // Set vsync enable state to false, as driver disables vsync during display power off.
   if (state == kStateOff) {
     vsync_enable_ = false;
+  }
+
+  if (pending_doze_ || pending_power_on_) {
+    event_handler_->Refresh();
   }
 
   return kErrorNone;
@@ -643,7 +641,7 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
       }
       ret = dpps_pu_lock_.WaitFinite(kPuTimeOutMs);
       if (ret) {
-        DLOGE("failed to %s partial update ret %d", ((enable) ? "enable" : "disable"), ret);
+        DLOGW("failed to %s partial update ret %d", ((enable) ? "enable" : "disable"), ret);
         error = kErrorTimeOut;
       }
       break;
@@ -783,6 +781,11 @@ DisplayError DisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event, LayerSt
   }
   comp_manager_->HandleSecureEvent(display_comp_ctx_, secure_event);
 
+  return kErrorNone;
+}
+
+DisplayError DisplayBuiltIn::GetQSyncMode(QSyncMode *qsync_mode) {
+  *qsync_mode = qsync_mode_;
   return kErrorNone;
 }
 

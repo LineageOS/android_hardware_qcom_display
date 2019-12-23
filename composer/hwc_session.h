@@ -20,7 +20,7 @@
 #ifndef __HWC_SESSION_H__
 #define __HWC_SESSION_H__
 
-#include <vendor/display/config/1.13/IDisplayConfig.h>
+#include <vendor/display/config/1.15/IDisplayConfig.h>
 #include <vendor/qti/hardware/display/composer/2.0/IQtiComposerClient.h>
 
 #include <core/core_interface.h>
@@ -49,8 +49,9 @@
 
 namespace sdm {
 
-using vendor::display::config::V1_13::IDisplayConfig;
+using vendor::display::config::V1_15::IDisplayConfig;
 using vendor::display::config::V1_10::IDisplayCWBCallback;
+using vendor::display::config::V1_15::IDisplayQsyncCallback;
 
 using ::android::hardware::Return;
 using ::android::hardware::hidl_string;
@@ -410,6 +411,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
                                      const hidl_handle& buffer) override;
   Return<int32_t> setQsyncMode(uint32_t disp_id, IDisplayConfig::QsyncMode mode) override;
   Return<bool> isSmartPanelConfig(uint32_t disp_id, uint32_t config_id) override;
+  Return<bool> isRotatorSupportedFormat(int hal_format, bool ubwc) override;
+  Return<int32_t> registerQsyncCallback(const sp<IDisplayQsyncCallback> &callback) override;
 
   // QClient methods
   virtual android::status_t notifyCallback(uint32_t command, const android::Parcel *input_parcel,
@@ -458,6 +461,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   hwc2_display_t GetActiveBuiltinDisplay();
   void HandlePendingRefresh();
   void NotifyClientStatus(bool connected);
+  int32_t GetVirtualDisplayId();
+  void PerformQsyncCallback(hwc2_display_t display);
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};
@@ -499,6 +504,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   float set_min_lum_ = -1.0;
   std::bitset<HWCCallbacks::kNumDisplays> pending_refresh_;
   CWB cwb_;
+  android::sp<IDisplayQsyncCallback> qsync_callback_ = nullptr;
   bool async_powermode_ = false;
   bool async_vds_creation_ = false;
   bool power_state_transition_[HWCCallbacks::kNumDisplays] = {};
