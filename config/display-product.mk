@@ -78,12 +78,12 @@ PRODUCT_PROPERTY_OVERRIDES += \
 # Enable offline rotator for Bengal.
 ifneq ($(TARGET_BOARD_PLATFORM),bengal)
 PRODUCT_PROPERTY_OVERRIDES += \
-    vendor.display.disable_offline_rotator=1 \
-    vendor.display.normal_noc_efficiency_factor=0.85 \
-    vendor.display.camera_noc_efficiency_factor=0.70
+    vendor.display.disable_offline_rotator=1
 else
 PRODUCT_PROPERTY_OVERRIDES += \
-    vendor.display.disable_rotator_ubwc=1
+    vendor.display.disable_rotator_ubwc=1 \
+    vendor.display.normal_noc_efficiency_factor=0.85 \
+    vendor.display.camera_noc_efficiency_factor=0.70
 endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),kona)
