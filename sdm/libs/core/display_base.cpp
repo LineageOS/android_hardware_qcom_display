@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -1054,9 +1054,14 @@ DisplayError DisplayBase::SetColorModeInternal(const std::string &color_mode,
   DLOGV_IF(kTagQDCM, "Color Mode Name = %s corresponding mode_id = %d", sde_display_mode->name,
            sde_display_mode->id);
   DisplayError error = kErrorNone;
-  uint32_t render_intent = 0;
+  int32_t render_intent = 0;
   if (!str_render_intent.empty()) {
     render_intent = std::stoi(str_render_intent);
+  }
+
+  if (render_intent < 0 || render_intent > MAX_EXTENDED_RENDER_INTENT) {
+    DLOGW("Invalid render intent %d for mode id = %d", render_intent, sde_display_mode->id);
+    return kErrorNotSupported;
   }
 
   error = color_mgr_->ColorMgrSetMode(sde_display_mode->id);
