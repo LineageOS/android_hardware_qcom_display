@@ -57,9 +57,6 @@ namespace sdm {
 
 class HWCToneMapper;
 
-/* max customer extended render intent */
-#define MAX_EXTENDED_RENDER_INTENT    0x1ff
-
 // Subclasses set this to their type. This has to be different from DisplayType.
 // This is to avoid RTTI and dynamic_cast
 enum DisplayClass {
