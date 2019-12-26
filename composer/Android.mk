@@ -16,7 +16,7 @@ LOCAL_CFLAGS                  := -Wno-missing-field-initializers -Wno-unused-par
                                  -DLOG_TAG=\"SDM\" $(common_flags) -fcolor-diagnostics
 LOCAL_CLANG                   := true
 
-LOCAL_SHARED_LIBRARIES        := libbinder libhardware libutils libcutils libsync \
+LOCAL_SHARED_LIBRARIES        := libhistogram libbinder libhardware libutils libcutils libsync \
                                  libc++ liblog libhidlbase libhidltransport \
                                  liblog libfmq libhardware_legacy \
                                  libsdmcore libqservice libqdutils libqdMetaData \
@@ -84,6 +84,5 @@ LOCAL_SRC_FILES               := QtiComposer.cpp QtiComposerClient.cpp service.c
 
 LOCAL_INIT_RC                 := vendor.qti.hardware.display.composer-service.rc
 LOCAL_VINTF_FRAGMENTS         := vendor.qti.hardware.display.composer-service.xml
-LOCAL_STATIC_LIBRARIES        := libhistogram
 
 include $(BUILD_EXECUTABLE)

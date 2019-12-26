@@ -18,30 +18,28 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := libhistogram
 LOCAL_VENDOR_MODULE := true
 LOCAL_MODULE_TAGS := optional
-LOCAL_C_INCLUDES  := external/libdrm \
-                     $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 LOCAL_HEADER_LIBRARIES := display_headers
 LOCAL_SHARED_LIBRARIES := libdrm liblog libcutils libutils libbase
+LOCAL_C_INCLUDES          := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/ \
+                             -isystem external/libdrm
+LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 LOCAL_CFLAGS := -DLOG_TAG=\"SDM-histogram\" -Wall -std=c++14 -Werror -fno-operator-names \
 	-Wthread-safety
 LOCAL_CLANG  := true
-LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 LOCAL_SRC_FILES := histogram_collector.cpp ringbuffer.cpp
 
-include $(BUILD_STATIC_LIBRARY)
+include $(BUILD_SHARED_LIBRARY)
 
 
 include $(CLEAR_VARS)
 
 LOCAL_HEADER_LIBRARIES := display_headers
-LOCAL_C_INCLUDES  := external/libdrm \
-                     $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
-LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 LOCAL_MODULE := color_sampling_tool
 LOCAL_SRC_FILES := color_sampling_tool.cpp
-
-LOCAL_STATIC_LIBRARIES := libhistogram
-LOCAL_SHARED_LIBRARIES := libdrm liblog libcutils libutils libbase
+LOCAL_SHARED_LIBRARIES := libhistogram libdrm liblog libcutils libutils libbase
+LOCAL_C_INCLUDES          := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/ \
+                             -isystem external/libdrm
+LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 LOCAL_CFLAGS := -DLOG_TAG=\"SDM-histogram\" -Wall -std=c++14 -Werror -fno-operator-names \
 	-Wthread-safety
 LOCAL_CLANG  := true
@@ -53,14 +51,13 @@ include $(BUILD_EXECUTABLE)
 include $(CLEAR_VARS)
 
 LOCAL_HEADER_LIBRARIES := display_headers
-LOCAL_C_INCLUDES  := external/libdrm \
-                     $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
-LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 LOCAL_MODULE := color_sampling_test
 LOCAL_SRC_FILES := ringbuffer_test.cpp
-
-LOCAL_STATIC_LIBRARIES := libhistogram libgtest libgmock
-LOCAL_SHARED_LIBRARIES := libdrm liblog libcutils libutils libbase
+LOCAL_STATIC_LIBRARIES := libgtest libgmock
+LOCAL_SHARED_LIBRARIES := libhistogram libdrm liblog libcutils libutils libbase
+LOCAL_C_INCLUDES          := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/ \
+                             -isystem external/libdrm
+LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 LOCAL_CFLAGS := -DLOG_TAG=\"SDM-histogram\" -Wall -std=c++14 -Werror -fno-operator-names \
 	-Wthread-safety
 LOCAL_CLANG  := true
