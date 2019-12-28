@@ -120,6 +120,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(GetQSyncMode(QSyncMode *))
   MAKE_NO_OP(colorSamplingOn());
   MAKE_NO_OP(colorSamplingOff());
+  MAKE_NO_OP(SetDisplayElapseTime(uint64_t))
 
  protected:
   DisplayConfigVariableInfo default_variable_config_ = {};

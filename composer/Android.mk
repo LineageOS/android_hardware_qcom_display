@@ -24,6 +24,7 @@ LOCAL_SHARED_LIBRARIES        := libhistogram libbinder libhardware libutils lib
                                  libgpu_tonemapper libEGL libGLESv2 libGLESv3 \
                                  vendor.qti.hardware.display.composer@1.0 \
                                  vendor.qti.hardware.display.composer@2.0 \
+                                 vendor.qti.hardware.display.composer@2.1 \
                                  android.hardware.graphics.composer@2.1 \
                                  android.hardware.graphics.composer@2.2 \
                                  android.hardware.graphics.composer@2.3 \

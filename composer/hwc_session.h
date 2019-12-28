@@ -269,6 +269,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
                                     uint64_t *numFrames,
                                     int32_t samples_size[NUM_HISTOGRAM_COLOR_COMPONENTS],
                                     uint64_t *samples[NUM_HISTOGRAM_COLOR_COMPONENTS]);
+  int32_t SetDisplayElapseTime(hwc2_display_t display, uint64_t time);
+
   // HWCDisplayEventHandler
   virtual void DisplayPowerReset();
 

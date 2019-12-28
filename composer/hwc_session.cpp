@@ -1014,6 +1014,10 @@ int32_t HWCSession::SetLayerColorTransform(hwc2_display_t display, hwc2_layer_t 
   return CallLayerFunction(display, layer, &HWCLayer::SetLayerColorTransform, matrix);
 }
 
+int32_t HWCSession::SetDisplayElapseTime(hwc2_display_t display, uint64_t time) {
+  return CallDisplayFunction(display, &HWCDisplay::SetDisplayElapseTime, time);
+}
+
 int32_t HWCSession::SetOutputBuffer(hwc2_display_t display, buffer_handle_t buffer,
                                     int32_t releaseFence) {
   if (INT32(display) != GetDisplayIndex(qdutils::DISPLAY_VIRTUAL)) {

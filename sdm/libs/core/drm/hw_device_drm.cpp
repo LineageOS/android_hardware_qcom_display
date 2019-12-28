@@ -30,6 +30,7 @@
 #define __STDC_FORMAT_MACROS
 
 #include <ctype.h>
+#include <time.h>
 #include <drm/drm_fourcc.h>
 #include <drm_lib_loader.h>
 #include <drm_master.h>
@@ -1465,6 +1466,15 @@ DisplayError HWDeviceDRM::DefaultCommit(HWLayers *hw_layers) {
 DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   DTRACE_SCOPED();
   SetupAtomic(hw_layers, false /* validate */);
+
+  if (hw_layers->elapse_timestamp > 0) {
+    struct timespec t = {0, 0};
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    uint64_t current_time = (UINT64(t.tv_sec) * 1000000000LL + t.tv_nsec);
+    if (current_time < hw_layers->elapse_timestamp) {
+      usleep(UINT32((hw_layers->elapse_timestamp - current_time) / 1000));
+    }
+  }
 
   int ret = drm_atomic_intf_->Commit(synchronous_commit_, false /* retain_planes*/);
   int release_fence = INT(release_fence_);

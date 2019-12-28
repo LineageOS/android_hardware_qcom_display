@@ -1582,6 +1582,11 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
       tone_mapper_->Terminate();
     }
   }
+
+  if (elapse_timestamp_) {
+    layer_stack_.elapse_timestamp = elapse_timestamp_;
+  }
+
   error = display_intf_->Commit(&layer_stack_);
 
   if (error == kErrorNone) {
@@ -2365,6 +2370,11 @@ HWC2::Error HWCDisplay::GetDisplayIdentificationData(uint8_t *out_port, uint32_t
           " %d-%d", ret, id_, sdm_id_, type_);
   }
 
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplay::SetDisplayElapseTime(uint64_t time) {
+  elapse_timestamp_ = time;
   return HWC2::Error::None;
 }
 
