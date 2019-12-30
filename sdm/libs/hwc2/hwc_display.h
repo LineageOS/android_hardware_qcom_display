@@ -36,6 +36,7 @@
 #include "hwc_buffer_allocator.h"
 #include "hwc_callbacks.h"
 #include "hwc_layers.h"
+#include "display_null.h"
 
 using android::hardware::graphics::common::V1_1::RenderIntent;
 
@@ -351,6 +352,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool pending_commit_ = false;
   LayerRect window_rect_ = {};
   bool skip_commit_ = false;
+  DisplayNull display_null_;
 
  private:
   void DumpInputBuffers(void);

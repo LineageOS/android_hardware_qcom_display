@@ -581,8 +581,8 @@ Return<bool> HWCSession::isPowerModeOverrideSupported(uint32_t disp_id) {
 }
 
 Return<bool> HWCSession::isHDRSupported(uint32_t disp_id) {
-  if (disp_id < 0 || disp_id >= HWCCallbacks::kNumDisplays) {
-    DLOGW("Not valid display");
+  if ((is_hdr_display_.size()==0) || (disp_id > (is_hdr_display_.size()-1))) {
+    DLOGW("Not valid display. Id = %d",disp_id);
     return false;
   }
 
