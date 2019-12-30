@@ -328,7 +328,7 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
 }
 
 DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
-                                             int *release_fence) {
+                                             shared_ptr<Fence> *release_fence) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
 
@@ -925,7 +925,7 @@ DisplayError DisplayBuiltIn::GetDynamicDSIClock(uint64_t *bit_clk_rate) {
 
 void DisplayBuiltIn::ResetPanel() {
   DisplayError status = kErrorNone;
-  int release_fence = -1;
+  shared_ptr<Fence> release_fence = nullptr;
   DisplayState last_display_state = {};
 
   GetDisplayState(&last_display_state);
@@ -935,7 +935,6 @@ void DisplayBuiltIn::ResetPanel() {
   if (status != kErrorNone) {
     DLOGE("Power off for display id = %d failed with error = %d", display_id_, status);
   }
-  CloseFd(&release_fence);
 
   DLOGI("Set display %d to state = %d", display_id_, last_display_state);
   status = SetDisplayState(last_display_state, false /* teardown */, &release_fence);
@@ -943,7 +942,6 @@ void DisplayBuiltIn::ResetPanel() {
      DLOGE("%d state for display id = %d failed with error = %d", last_display_state, display_id_,
            status);
   }
-  CloseFd(&release_fence);
 
   // If panel does not support color modes, do not set color mode.
   if (color_mode_map_.size() > 0) {

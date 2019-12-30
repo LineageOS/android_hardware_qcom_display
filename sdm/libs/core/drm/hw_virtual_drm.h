@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -53,7 +53,7 @@ class HWVirtualDRM : public HWDeviceDRM {
   virtual DisplayError Commit(HWLayers *hw_layers);
   virtual DisplayError Flush(HWLayers *hw_layers);
   virtual DisplayError GetPPFeaturesVersion(PPFeatureVersion *vers);
-  virtual DisplayError PowerOn(const HWQosData &qos_data, int *release_fence);
+  virtual DisplayError PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
   virtual DisplayError SetScaleLutConfig(HWScaleLutInfo *lut_info) {
     return kErrorNotSupported;
   }

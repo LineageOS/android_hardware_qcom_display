@@ -69,7 +69,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(TeardownConcurrentWriteback(void))
   MAKE_NO_OP(Commit(LayerStack *))
   MAKE_NO_OP(GetDisplayState(DisplayState *))
-  MAKE_NO_OP(SetDisplayState(DisplayState, bool, int*))
+  MAKE_NO_OP(SetDisplayState(DisplayState, bool, shared_ptr<Fence> *))
   MAKE_NO_OP(SetFrameBufferConfig(const DisplayConfigVariableInfo &))
   MAKE_NO_OP(Flush(LayerStack *))
   MAKE_NO_OP(GetVSyncState(bool *))
@@ -144,7 +144,7 @@ class DisplayNullExternal : public DisplayNull {
   virtual DisplayError Commit(LayerStack *layer_stack);
   virtual DisplayError GetDisplayState(DisplayState *state);
   virtual DisplayError SetDisplayState(DisplayState state, bool teardown,
-                                       int *release_fence);
+                                       shared_ptr<Fence> *release_fence);
   virtual DisplayError SetFrameBufferConfig(const DisplayConfigVariableInfo &variable_info);
   virtual DisplayError GetFrameBufferConfig(DisplayConfigVariableInfo *variable_info);
   virtual DisplayError GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,

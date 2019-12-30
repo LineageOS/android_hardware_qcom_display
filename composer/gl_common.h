@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -62,8 +62,8 @@ class GLCommon {
   virtual void SetSourceBuffer(const private_handle_t *src_hnd);
   virtual void DestroyContext(GLContext *ctx);
   virtual void DeleteProgram(uint32_t id);
-  virtual int WaitOnInputFence(int in_fence_fd);
-  virtual int CreateOutputFence();
+  virtual int WaitOnInputFence(const shared_ptr<Fence> &in_fence);
+  virtual int CreateOutputFence(shared_ptr<Fence> *out_fence);
 
  protected:
   virtual ~GLCommon() { }

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -90,10 +90,11 @@ class HWInterface {
   virtual DisplayError SetDisplayAttributes(uint32_t index) = 0;
   virtual DisplayError SetDisplayAttributes(const HWDisplayAttributes &display_attributes) = 0;
   virtual DisplayError GetConfigIndex(char *mode, uint32_t *index) = 0;
-  virtual DisplayError PowerOn(const HWQosData &qos_data, int *release_fence) = 0;
+  virtual DisplayError PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *release_fence) = 0;
   virtual DisplayError PowerOff(bool teardown) = 0;
-  virtual DisplayError Doze(const HWQosData &qos_data, int *release_fence) = 0;
-  virtual DisplayError DozeSuspend(const HWQosData &qos_data, int *release_fence) = 0;
+  virtual DisplayError Doze(const HWQosData &qos_data, shared_ptr<Fence> *release_fence) = 0;
+  virtual DisplayError DozeSuspend(const HWQosData &qos_data,
+                                   shared_ptr<Fence> *release_fence) = 0;
   virtual DisplayError Standby() = 0;
   virtual DisplayError Validate(HWLayers *hw_layers) = 0;
   virtual DisplayError Commit(HWLayers *hw_layers) = 0;

@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -150,8 +150,6 @@ DisplayError HWVirtualDRM::Flush(HWLayers *hw_layers) {
     return err;
   }
 
-  // Close the sync_handle
-  CloseFd(&hw_layers->info.sync_handle);
   return kErrorNone;
 }
 
@@ -226,7 +224,7 @@ void HWVirtualDRM::GetModeIndex(const HWDisplayAttributes &display_attributes, i
   }
 }
 
-DisplayError HWVirtualDRM::PowerOn(const HWQosData &qos_data, int *release_fence) {
+DisplayError HWVirtualDRM::PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *release_fence) {
   DTRACE_SCOPED();
   if (!drm_atomic_intf_) {
     DLOGE("DRM Atomic Interface is null!");

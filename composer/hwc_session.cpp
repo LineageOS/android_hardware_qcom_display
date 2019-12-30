@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -714,7 +714,8 @@ int32_t HWCSession::GetHdrCapabilities(hwc2_display_t display, uint32_t* out_num
 
 
 int32_t HWCSession::GetReleaseFences(hwc2_display_t display, uint32_t *out_num_elements,
-                                     hwc2_layer_t *out_layers, int32_t *out_fences) {
+                                     hwc2_layer_t *out_layers,
+                                     std::vector<shared_ptr<Fence>> *out_fences) {
   return CallDisplayFunction(display, &HWCDisplay::GetReleaseFences, out_num_elements, out_layers,
                              out_fences);
 }
@@ -901,7 +902,7 @@ int32_t HWCSession::SetActiveConfig(hwc2_display_t display, hwc2_config_t config
 }
 
 int32_t HWCSession::SetClientTarget(hwc2_display_t display, buffer_handle_t target,
-                                    int32_t acquire_fence, int32_t dataspace,
+                                    const shared_ptr<Fence> acquire_fence, int32_t dataspace,
                                     hwc_region_t damage) {
   return CallDisplayFunction(display, &HWCDisplay::SetClientTarget, target, acquire_fence,
                              dataspace, damage);
@@ -964,7 +965,8 @@ int32_t HWCSession::SetLayerBlendMode(hwc2_display_t display, hwc2_layer_t layer
 }
 
 int32_t HWCSession::SetLayerBuffer(hwc2_display_t display, hwc2_layer_t layer,
-                                   buffer_handle_t buffer, int32_t acquire_fence) {
+                                   buffer_handle_t buffer,
+                                   const shared_ptr<Fence> &acquire_fence) {
   return CallLayerFunction(display, layer, &HWCLayer::SetLayerBuffer, buffer, acquire_fence);
 }
 
@@ -1032,7 +1034,7 @@ int32_t HWCSession::SetDisplayElapseTime(hwc2_display_t display, uint64_t time) 
 }
 
 int32_t HWCSession::SetOutputBuffer(hwc2_display_t display, buffer_handle_t buffer,
-                                    int32_t releaseFence) {
+                                    const shared_ptr<Fence> &release_fence) {
   if (INT32(display) != GetDisplayIndex(qdutils::DISPLAY_VIRTUAL)) {
     return HWC2_ERROR_UNSUPPORTED;
   }
@@ -1040,7 +1042,7 @@ int32_t HWCSession::SetOutputBuffer(hwc2_display_t display, buffer_handle_t buff
   SCOPE_LOCK(locker_[display]);
   if (hwc_display_[display]) {
     auto vds = reinterpret_cast<HWCDisplayVirtual *>(hwc_display_[display]);
-    auto status = vds->SetOutputBuffer(buffer, releaseFence);
+    auto status = vds->SetOutputBuffer(buffer, release_fence);
     return INT32(status);
   } else {
     return HWC2_ERROR_BAD_DISPLAY;
@@ -3150,7 +3152,7 @@ int32_t HWCSession::GetReadbackBufferAttributes(hwc2_display_t display, int32_t 
 }
 
 int32_t HWCSession::SetReadbackBuffer(hwc2_display_t display, const native_handle_t *buffer,
-                                      int32_t acquire_fence) {
+                                      const shared_ptr<Fence> &acquire_fence) {
   if (!buffer) {
     return HWC2_ERROR_BAD_PARAMETER;
   }
@@ -3170,7 +3172,8 @@ int32_t HWCSession::SetReadbackBuffer(hwc2_display_t display, const native_handl
                              false, kCWBClientComposer);
 }
 
-int32_t HWCSession::GetReadbackBufferFence(hwc2_display_t display, int32_t *release_fence) {
+int32_t HWCSession::GetReadbackBufferFence(hwc2_display_t display,
+                                           shared_ptr<Fence> *release_fence) {
   if (!release_fence) {
     return HWC2_ERROR_BAD_PARAMETER;
   }

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014, 2016-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014, 2016-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -29,11 +29,11 @@
 #ifndef __LAYER_BUFFER_H__
 #define __LAYER_BUFFER_H__
 
+#include <utils/fence.h>
 #include <stdint.h>
 #include <color_metadata.h>
 #include <utility>
 #include <vector>
-
 #include "sdm_types.h"
 
 namespace sdm {
@@ -247,7 +247,8 @@ struct LayerBuffer {
                                 //!< Total number of planes for the buffer will be interpreted based
                                 //!< on the buffer format specified.
 
-  int acquire_fence_fd = -1;    //!< File descriptor referring to a sync fence object which will be
+  shared_ptr<Fence> acquire_fence = nullptr;
+                                //!< File descriptor referring to a sync fence object which will be
                                 //!< signaled when buffer can be read/write by display manager.
                                 //!< This fence object is set by the client during Commit(). For
                                 //!< input buffers client shall signal this fence when buffer
@@ -258,7 +259,8 @@ struct LayerBuffer {
                                 //!< This field is used only during Commit() and shall be set to -1
                                 //!< by the client when buffer is already available for read/write.
 
-  int release_fence_fd = -1;    //!< File descriptor referring to a sync fence object which will be
+  shared_ptr<Fence> release_fence = nullptr;
+                                //!< File descriptor referring to a sync fence object which will be
                                 //!< signaled when buffer has been read/written by display manager.
                                 //!< This fence object is set by display manager during Commit().
                                 //!< For input buffers display manager will signal this fence when

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -109,26 +109,28 @@ void GLCommon::SetDestinationBuffer(const private_handle_t *dst_hnd, const GLRec
   }
 }
 
-int GLCommon::WaitOnInputFence(int in_fence_fd) {
+int GLCommon::WaitOnInputFence(const shared_ptr<Fence> &in_fence) {
   DTRACE_SCOPED();
-  EGLint attribs[] = {EGL_SYNC_NATIVE_FENCE_FD_ANDROID, in_fence_fd, EGL_NONE};
+
+  int fd = Fence::Dup(in_fence);
+  EGLint attribs[] = {EGL_SYNC_NATIVE_FENCE_FD_ANDROID, fd, EGL_NONE};
   EGLSyncKHR sync = eglCreateSyncKHR(eglGetCurrentDisplay(), EGL_SYNC_NATIVE_FENCE_ANDROID,
                                      attribs);
 
   if (sync == EGL_NO_SYNC_KHR) {
-    DLOGE("Failed to create sync from source fd: %d", in_fence_fd);
+    DLOGE("Failed to create sync from source fd: %s", Fence::GetStr(in_fence).c_str());
+    close(fd);
     return -1;
-  } else {
-    EGL(eglWaitSyncKHR(eglGetCurrentDisplay(), sync, 0));
-    EGL(eglDestroySyncKHR(eglGetCurrentDisplay(), sync));
   }
+
+  EGL(eglWaitSyncKHR(eglGetCurrentDisplay(), sync, 0));
+  EGL(eglDestroySyncKHR(eglGetCurrentDisplay(), sync));
 
   return 0;
 }
 
-int GLCommon::CreateOutputFence() {
+int GLCommon::CreateOutputFence(shared_ptr<Fence> *out_fence) {
   DTRACE_SCOPED();
-  int fd = -1;
   EGLSyncKHR sync = eglCreateSyncKHR(eglGetCurrentDisplay(), EGL_SYNC_NATIVE_FENCE_ANDROID, NULL);
 
   // Swap buffer.
@@ -136,15 +138,20 @@ int GLCommon::CreateOutputFence() {
 
   if (sync == EGL_NO_SYNC_KHR) {
     DLOGE("Failed to create egl sync fence");
-  } else {
-    fd = eglDupNativeFenceFDANDROID(eglGetCurrentDisplay(), sync);
-    if (fd == EGL_NO_NATIVE_FENCE_FD_ANDROID) {
-      DLOGE("Failed to dup sync");
-    }
-    EGL(eglDestroySyncKHR(eglGetCurrentDisplay(), sync));
+    return -1;
   }
 
-  return fd;
+  int status = 0;
+  int fd = eglDupNativeFenceFDANDROID(eglGetCurrentDisplay(), sync);
+  if (fd == EGL_NO_NATIVE_FENCE_FD_ANDROID) {
+    status = -1;
+    DLOGE("Failed to dup sync");
+  } else {
+    *out_fence = Fence::Create(fd); 
+  }
+  EGL(eglDestroySyncKHR(eglGetCurrentDisplay(), sync));
+
+  return status;
 }
 
 void GLCommon::DestroyContext(GLContext* ctx) {

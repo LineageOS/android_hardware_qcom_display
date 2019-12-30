@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -144,7 +144,7 @@ DisplayError DisplayNullExternal::Commit(LayerStack *layer_stack) {
   for (Layer *layer : layer_stack->layers) {
     if (layer->composition != kCompositionGPUTarget) {
       layer->composition = kCompositionSDE;
-      layer->input_buffer.release_fence_fd = -1;
+      layer->input_buffer.release_fence = nullptr;
     }
   }
 
@@ -161,7 +161,7 @@ DisplayError DisplayNullExternal::GetDisplayState(DisplayState *state) {
 }
 
 DisplayError DisplayNullExternal::SetDisplayState(DisplayState state, bool teardown,
-                                                  int *release_fence) {
+                                                  shared_ptr<Fence> *release_fence) {
   state_ = state;
   return kErrorNone;
 }

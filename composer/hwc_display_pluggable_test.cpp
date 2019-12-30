@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -727,15 +727,6 @@ HWC2::Error HWCDisplayPluggableTest::PostCommit(shared_ptr<Fence> *out_retire_fe
   // Do no call flush on errors, if a successful buffer is never submitted.
   if (flush_ && flush_on_error_) {
     display_intf_->Flush(&layer_stack_);
-  }
-  if (!flush_) {
-    for (size_t i = 0; i < layer_stack_.layers.size(); i++) {
-      Layer *layer = layer_stack_.layers.at(i);
-      LayerBuffer &layer_buffer = layer->input_buffer;
-
-      close(layer_buffer.release_fence_fd);
-      layer_buffer.release_fence_fd = -1;
-    }
   }
   flush_ = false;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -51,9 +51,9 @@ struct ColorConvertBlitContext : public SyncTask<ColorConvertTaskCode>::TaskCont
   const private_handle_t* dst_hnd = nullptr;
   GLRect src_rect = {};
   GLRect dst_rect = {};
-  int src_acquire_fence_fd = -1;
-  int dst_acquire_fence_fd = -1;
-  int release_fence_fd = -1;
+  shared_ptr<Fence> src_acquire_fence = nullptr;
+  shared_ptr<Fence> dst_acquire_fence = nullptr;
+  shared_ptr<Fence> release_fence = nullptr;
 };
 
 class HWCDisplayVirtualGPU : public HWCDisplayVirtual,
