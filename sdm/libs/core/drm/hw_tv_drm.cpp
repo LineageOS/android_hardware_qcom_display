@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -204,11 +204,11 @@ DisplayError HWTVDRM::PowerOff(bool teardown) {
   return kErrorNone;
 }
 
-DisplayError HWTVDRM::Doze(const HWQosData &qos_data, int *release_fence) {
+DisplayError HWTVDRM::Doze(const HWQosData &qos_data, shared_ptr<Fence> *release_fence) {
   return kErrorNone;
 }
 
-DisplayError HWTVDRM::DozeSuspend(const HWQosData &qos_data, int *release_fence) {
+DisplayError HWTVDRM::DozeSuspend(const HWQosData &qos_data, shared_ptr<Fence> *release_fence) {
   return kErrorNone;
 }
 
@@ -423,7 +423,7 @@ void HWTVDRM::InitMaxHDRMetaData() {
   hdr_metadata_.max_average_light_level = 100000000;  // 10000 nits brightest frame in content
 }
 
-DisplayError HWTVDRM::PowerOn(const HWQosData &qos_data, int *release_fence) {
+DisplayError HWTVDRM::PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *release_fence) {
   DTRACE_SCOPED();
   if (!drm_atomic_intf_) {
     DLOGE("DRM Atomic Interface is null!");

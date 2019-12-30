@@ -46,8 +46,10 @@ class GLColorConvert {
   static void Destroy(GLColorConvert* intf);
 
   virtual int Blit(const private_handle_t *src_hnd, const private_handle_t *dst_hnd,
-                   const GLRect &src_rect, const GLRect &dst_rect, int src_acquire_fence_fd,
-                   int dst_acquire_fence_fd, int *release_fence_fd) = 0;
+                   const GLRect &src_rect, const GLRect &dst_rect,
+                   const shared_ptr<Fence> &src_acquire_fence,
+                   const shared_ptr<Fence> &dst_acquire_fence,
+                   shared_ptr<Fence> *release_fence) = 0;
   virtual void Reset() = 0;
  protected:
   virtual ~GLColorConvert() { }

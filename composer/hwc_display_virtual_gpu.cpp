@@ -109,7 +109,8 @@ HWC2::Error HWCDisplayVirtualGPU::Validate(uint32_t *out_num_types, uint32_t *ou
   return ((*out_num_types > 0) ? HWC2::Error::HasChanges : HWC2::Error::None);
 }
 
-HWC2::Error HWCDisplayVirtualGPU::SetOutputBuffer(buffer_handle_t buf, int32_t release_fence) {
+HWC2::Error HWCDisplayVirtualGPU::SetOutputBuffer(buffer_handle_t buf,
+                                                  shared_ptr<Fence> release_fence) {
   HWC2::Error error = HWCDisplayVirtual::SetOutputBuffer(buf, release_fence);
   if (error != HWC2::Error::None) {
     return error;
@@ -175,16 +176,15 @@ HWC2::Error HWCDisplayVirtualGPU::Present(shared_ptr<Fence> *out_retire_fence) {
   ctx.dst_hnd = reinterpret_cast<const private_handle_t *>(output_handle_);
   ctx.dst_rect = {0, 0, FLOAT(output_buffer_.unaligned_width),
                   FLOAT(output_buffer_.unaligned_height)};
-  ctx.src_acquire_fence_fd = input_buffer.acquire_fence_fd;
-  ctx.dst_acquire_fence_fd = output_buffer_.acquire_fence_fd;
-  ctx.release_fence_fd = -1;
+  ctx.src_acquire_fence = input_buffer.acquire_fence;
+  ctx.dst_acquire_fence = output_buffer_.acquire_fence;
 
   color_convert_task_.PerformTask(ColorConvertTaskCode::kCodeBlit, &ctx);
 
   // todo blit
   DumpVDSBuffer();
 
-  *out_retire_fence = Fence::Create(ctx.release_fence_fd);
+  *out_retire_fence = ctx.release_fence;
 
   return status;
 }
@@ -200,8 +200,8 @@ void HWCDisplayVirtualGPU::OnTask(const ColorConvertTaskCode &task_code,
         DTRACE_SCOPED();
         ColorConvertBlitContext* ctx = reinterpret_cast<ColorConvertBlitContext*>(task_context);
         gl_color_convert_->Blit(ctx->src_hnd, ctx->dst_hnd, ctx->src_rect, ctx->dst_rect,
-                                ctx->src_acquire_fence_fd, ctx->dst_acquire_fence_fd,
-                                &(ctx->release_fence_fd));
+                                ctx->src_acquire_fence, ctx->dst_acquire_fence,
+                                &(ctx->release_fence));
       }
       break;
     case ColorConvertTaskCode::kCodeReset: {

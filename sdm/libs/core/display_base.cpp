@@ -541,7 +541,7 @@ DisplayError DisplayBase::GetVSyncState(bool *enabled) {
 }
 
 DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
-                                          int *release_fence) {
+                                          shared_ptr<Fence> *release_fence) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
   bool active = false;
@@ -628,7 +628,9 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
       active_ = active;
       state_ = state;
     }
-    comp_manager_->SetDisplayState(display_comp_ctx_, state, release_fence ? *release_fence : -1);
+    comp_manager_->SetDisplayState(display_comp_ctx_, state,
+                            release_fence ? *release_fence : nullptr);
+
     // If previously requested doze state is still pending reset it on any new display state request
     // and handle the new request.
     if (state != kStateDoze) {
@@ -1622,7 +1624,7 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
     hw_layer.input_buffer.planes[0].offset = sdm_layer->input_buffer.planes[0].offset;
     hw_layer.input_buffer.planes[0].stride = sdm_layer->input_buffer.planes[0].stride;
     hw_layer.input_buffer.size = sdm_layer->input_buffer.size;
-    hw_layer.input_buffer.acquire_fence_fd = sdm_layer->input_buffer.acquire_fence_fd;
+    hw_layer.input_buffer.acquire_fence = sdm_layer->input_buffer.acquire_fence;
     hw_layer.input_buffer.handle_id = sdm_layer->input_buffer.handle_id;
     // TODO(user): Other FBT layer attributes like surface damage, dataspace, secure camera and
     // secure display flags are also updated during SetClientTarget() called between validate and
@@ -1660,24 +1662,11 @@ void DisplayBase::PostCommitLayerParams(LayerStack *layer_stack) {
     // output fence fd and assign it to layer's input buffer release fence fd.
     if (std::find(fence_dup_flag.begin(), fence_dup_flag.end(), sdm_layer_index) ==
         fence_dup_flag.end()) {
-      sdm_layer->input_buffer.release_fence_fd = hw_layer.input_buffer.release_fence_fd;
+      sdm_layer->input_buffer.release_fence = hw_layer.input_buffer.release_fence;
       fence_dup_flag.push_back(sdm_layer_index);
     } else {
-      int temp = -1;
-      buffer_sync_handler_->SyncMerge(hw_layer.input_buffer.release_fence_fd,
-                                      sdm_layer->input_buffer.release_fence_fd, &temp);
-
-      if (hw_layer.input_buffer.release_fence_fd >= 0) {
-        Sys::close_(hw_layer.input_buffer.release_fence_fd);
-        hw_layer.input_buffer.release_fence_fd = -1;
-      }
-
-      if (sdm_layer->input_buffer.release_fence_fd >= 0) {
-        Sys::close_(sdm_layer->input_buffer.release_fence_fd);
-        sdm_layer->input_buffer.release_fence_fd = -1;
-      }
-
-      sdm_layer->input_buffer.release_fence_fd = temp;
+      sdm_layer->input_buffer.release_fence = Fence::Merge(
+              hw_layer.input_buffer.release_fence, sdm_layer->input_buffer.release_fence);
     }
   }
 

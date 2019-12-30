@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -29,6 +29,7 @@
 #include <core/display_interface.h>
 #include <core/core_interface.h>
 #include <utils/locker.h>
+#include <utils/fence.h>
 #include <utils/debug.h>
 #include <bitset>
 #include <map>
@@ -681,7 +682,7 @@ struct HWLayersInfo {
   std::vector<uint32_t> index {};   // Indexes of the layers from the layer stack which need to
                                  // be programmed on hardware.
   std::vector<uint32_t> roi_index {};  // Stores the ROI index where the layers are visible.
-  int sync_handle = -1;         // Release fence id for current draw cycle.
+  shared_ptr<Fence> sync_handle = nullptr;  // Release fence id for current draw cycle.
   int set_idle_time_ms = -1;    // Set idle time to the new specified value.
                                 //    -1 indicates no change in idle time since last set value.
   std::vector<LayerRect> left_frame_roi = {};   // Left ROI.

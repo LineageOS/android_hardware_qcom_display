@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016 - 2017, 2020 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -87,7 +87,8 @@ void ToneMapSession::OnTask(const ToneMapTaskCode &task_code,
                                 (buffer_info_[buffer_index].private_data);
         const void *src_hnd = reinterpret_cast<const void *>
                                 (ctx->layer->input_buffer.buffer_id);
-        ctx->fence_fd = gpu_tone_mapper_->blit(dst_hnd, src_hnd, ctx->merged_fd);
+        int fence = gpu_tone_mapper_->blit(dst_hnd, src_hnd, Fence::Dup(ctx->merged));
+        ctx->fence = Fence::Create(fence);
       }
       break;
 
@@ -123,10 +124,6 @@ DisplayError ToneMapSession::AllocateIntermediateBuffers(const Layer *layer) {
 
 void ToneMapSession::FreeIntermediateBuffers() {
   for (uint8_t i = 0; i < kNumIntermediateBuffers; i++) {
-    // Free the valid fence
-    if (release_fence_fd_[i] >= 0) {
-      CloseFd(&release_fence_fd_[i]);
-    }
     BufferInfo &buffer_info = buffer_info_[i];
     if (buffer_info.private_data) {
       buffer_allocator_->FreeBuffer(&buffer_info);
@@ -134,19 +131,17 @@ void ToneMapSession::FreeIntermediateBuffers() {
   }
 }
 
-void ToneMapSession::UpdateBuffer(int acquire_fence, LayerBuffer *buffer) {
+void ToneMapSession::UpdateBuffer(const shared_ptr<Fence> &acquire_fence, LayerBuffer *buffer) {
   // Acquire fence will be closed by HWC Display.
   // Fence returned by GPU will be closed in PostCommit.
-  buffer->acquire_fence_fd = acquire_fence;
+  buffer->acquire_fence = acquire_fence;
   buffer->size = buffer_info_[current_buffer_index_].alloc_buffer_info.size;
   buffer->planes[0].fd = buffer_info_[current_buffer_index_].alloc_buffer_info.fd;
   buffer->handle_id = buffer_info_[current_buffer_index_].alloc_buffer_info.id;
 }
 
-void ToneMapSession::SetReleaseFence(int fd) {
-  CloseFd(&release_fence_fd_[current_buffer_index_]);
-  // Used to give to GPU tonemapper along with input layer fd
-  release_fence_fd_[current_buffer_index_] = dup(fd);
+void ToneMapSession::SetReleaseFence(const shared_ptr<Fence> &fd) {
+  release_fence_[current_buffer_index_] = fd;
 }
 
 void ToneMapSession::SetToneMapConfig(Layer *layer, PrimariesTransfer blend_cs) {
@@ -194,7 +189,7 @@ int HWCToneMapper::HandleToneMap(LayerStack *layer_stack) {
           // No ToneMap/Blit is required. Just update the buffer & acquire fence fd of FB layer.
           if (!tone_map_sessions_.empty() && (fb_session_index_ >= 0)) {
             ToneMapSession *fb_tone_map_session = tone_map_sessions_.at(UINT32(fb_session_index_));
-            fb_tone_map_session->UpdateBuffer(-1 /* acquire_fence */, &layer->input_buffer);
+            fb_tone_map_session->UpdateBuffer(nullptr /* acquire_fence */, &layer->input_buffer);
             fb_tone_map_session->layer_index_ = INT(i);
             fb_tone_map_session->acquired_ = true;
             return 0;
@@ -228,26 +223,18 @@ void HWCToneMapper::ToneMap(Layer* layer, ToneMapSession *session) {
   ctx.layer = layer;
 
   uint8_t buffer_index = session->current_buffer_index_;
-  int &release_fence_fd = session->release_fence_fd_[buffer_index];
 
   // use and close the layer->input_buffer acquire fence fd.
-  int acquire_fd = layer->input_buffer.acquire_fence_fd;
-  buffer_sync_handler_.SyncMerge(release_fence_fd, acquire_fd, &ctx.merged_fd);
-
-  if (acquire_fd >= 0) {
-    CloseFd(&acquire_fd);
-  }
-
-  if (release_fence_fd >= 0) {
-    CloseFd(&release_fence_fd);
-  }
+  // remove create when rf made it as a shared_ptr
+  ctx.merged = Fence::Merge(session->release_fence_[buffer_index],
+                            layer->input_buffer.acquire_fence);
 
   DTRACE_BEGIN("GPU_TM_BLIT");
   session->tone_map_task_.PerformTask(ToneMapTaskCode::kCodeBlit, &ctx);
   DTRACE_END();
 
-  DumpToneMapOutput(session, &ctx.fence_fd);
-  session->UpdateBuffer(ctx.fence_fd, &layer->input_buffer);
+  DumpToneMapOutput(session, ctx.fence);
+  session->UpdateBuffer(ctx.fence, &layer->input_buffer);
 }
 
 void HWCToneMapper::PostCommit(LayerStack *layer_stack) {
@@ -259,8 +246,7 @@ void HWCToneMapper::PostCommit(LayerStack *layer_stack) {
       Layer *layer = layer_stack->layers.at(UINT32(session->layer_index_));
       // Close the fd returned by GPU ToneMapper and set release fence.
       LayerBuffer &layer_buffer = layer->input_buffer;
-      CloseFd(&layer_buffer.acquire_fence_fd);
-      session->SetReleaseFence(layer_buffer.release_fence_fd);
+      session->SetReleaseFence(layer_buffer.release_fence);
       session->acquired_ = false;
       it++;
     } else {
@@ -294,7 +280,7 @@ void HWCToneMapper::SetFrameDumpConfig(uint32_t count) {
   dump_frame_index_ = 0;
 }
 
-void HWCToneMapper::DumpToneMapOutput(ToneMapSession *session, int *acquire_fd) {
+void HWCToneMapper::DumpToneMapOutput(ToneMapSession *session, shared_ptr<Fence> acquire_fd) {
   DisplayError error = kErrorNone;
   if (!dump_frame_count_) {
     return;
@@ -302,16 +288,9 @@ void HWCToneMapper::DumpToneMapOutput(ToneMapSession *session, int *acquire_fd) 
 
   BufferInfo &buffer_info = session->buffer_info_[session->current_buffer_index_];
   private_handle_t *target_buffer = static_cast<private_handle_t *>(buffer_info.private_data);
+  Fence::Wait(acquire_fd);
 
-  if (*acquire_fd >= 0) {
-    int error = sync_wait(*acquire_fd, 1000);
-    if (error < 0) {
-      DLOGW("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
-      return;
-    }
-  }
-
-  error = buffer_allocator_->MapBuffer(target_buffer, *acquire_fd);
+  error = buffer_allocator_->MapBuffer(target_buffer, acquire_fd);
   if (error != kErrorNone) {
     DLOGE("MapBuffer failed, base addr = %x", target_buffer->base);
     return;
@@ -331,7 +310,6 @@ void HWCToneMapper::DumpToneMapOutput(ToneMapSession *session, int *acquire_fd) 
   }
   dump_frame_count_--;
   dump_frame_index_++;
-  CloseFd(acquire_fd);
 }
 
 DisplayError HWCToneMapper::AcquireToneMapSession(Layer *layer, uint32_t *session_index,

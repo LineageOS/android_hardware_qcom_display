@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -582,7 +582,8 @@ DisplayError CompManager::ControlDpps(bool enable) {
   return kErrorNone;
 }
 
-bool CompManager::SetDisplayState(Handle display_ctx, DisplayState state, int sync_handle) {
+bool CompManager::SetDisplayState(Handle display_ctx, DisplayState state,
+                                  const shared_ptr<Fence> &sync_handle) {
   DisplayCompositionContext *display_comp_ctx =
       reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
@@ -613,8 +614,8 @@ bool CompManager::SetDisplayState(Handle display_ctx, DisplayState state, int sy
   bool inactive = (state == kStateOff) || (state == kStateDozeSuspend);
   UpdateStrategyConstraints(display_comp_ctx->is_primary_panel, inactive);
 
-  resource_intf_->Perform(ResourceInterface::kCmdUpdateSyncHandle,
-                          display_comp_ctx->display_resource_ctx, sync_handle);
+  resource_intf_->UpdateSyncHandle(display_comp_ctx->display_resource_ctx, sync_handle);
+
   return true;
 }
 

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -455,7 +455,7 @@ class DisplayInterface {
     @sa SetDisplayState
   */
   virtual DisplayError SetDisplayState(DisplayState state, bool teardown,
-                                       int *release_fence) = 0;
+                                       shared_ptr<Fence> *release_fence) = 0;
 
   /*! @brief Method to set active configuration for variable properties of the display device.
 

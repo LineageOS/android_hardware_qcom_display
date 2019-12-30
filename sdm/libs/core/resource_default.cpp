@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2016, 2018-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2016, 2018-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -342,9 +342,6 @@ DisplayError ResourceDefault::PostCommit(Handle display_ctx, HWLayers *hw_layers
       }
     }
   }
-
-  if (hw_layers->info.sync_handle >= 0)
-    Sys::close_(hw_layers->info.sync_handle);
 
   display_resource_ctx->frame_count++;
 
@@ -931,6 +928,11 @@ DisplayError ResourceDefault::GetScaleLutConfig(HWScaleLutInfo *lut_info) {
 
 DisplayError ResourceDefault::SetDetailEnhancerData(Handle display_ctx,
                                                     const DisplayDetailEnhancerData &de_data) {
+  return kErrorNotSupported;
+}
+
+DisplayError ResourceDefault::UpdateSyncHandle(Handle display_ctx,
+                                               const shared_ptr<Fence> &sync_handle) {
   return kErrorNotSupported;
 }
 

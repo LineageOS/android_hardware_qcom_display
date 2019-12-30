@@ -62,8 +62,8 @@ class GLCommon {
   virtual void SetSourceBuffer(const private_handle_t *src_hnd);
   virtual void DestroyContext(GLContext *ctx);
   virtual void DeleteProgram(uint32_t id);
-  virtual int WaitOnInputFence(int in_fence_fd);
-  virtual int CreateOutputFence();
+  virtual int WaitOnInputFence(const shared_ptr<Fence> &in_fence);
+  virtual int CreateOutputFence(shared_ptr<Fence> *out_fence);
   virtual void ClearCache();
 
  protected:

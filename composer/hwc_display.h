@@ -196,11 +196,12 @@ class HWCDisplay : public DisplayEventHandler {
   virtual DisplayError SetDetailEnhancerConfig(const DisplayDetailEnhancerData &de_data) {
     return kErrorNotSupported;
   }
-  virtual HWC2::Error SetReadbackBuffer(const native_handle_t *buffer, int32_t acquire_fence,
+  virtual HWC2::Error SetReadbackBuffer(const native_handle_t *buffer,
+                                        shared_ptr<Fence> acquire_fence,
                                         bool post_processed_output, CWBClient client) {
     return HWC2::Error::Unsupported;
   }
-  virtual HWC2::Error GetReadbackBufferFence(int32_t *release_fence) {
+  virtual HWC2::Error GetReadbackBufferFence(shared_ptr<Fence> *release_fence) {
     return HWC2::Error::Unsupported;
   }
 
@@ -238,7 +239,6 @@ class HWCDisplay : public DisplayEventHandler {
   int ColorSVCRequestRoute(const PPDisplayAPIPayload &in_payload, PPDisplayAPIPayload *out_payload,
                            PPPendingParams *pending_action);
   void SolidFillPrepare();
-  void SolidFillCommit();
   DisplayClass GetDisplayClass();
   int GetVisibleDisplayRect(hwc_rect_t *rect);
   void BuildLayerStack(void);
@@ -270,7 +270,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error SetPanelLuminanceAttributes(float min_lum, float max_lum) {
     return HWC2::Error::Unsupported;
   }
-  virtual HWC2::Error SetClientTarget(buffer_handle_t target, int32_t acquire_fence,
+  virtual HWC2::Error SetClientTarget(buffer_handle_t target, shared_ptr<Fence> acquire_fence,
                                       int32_t dataspace, hwc_region_t damage);
   virtual HWC2::Error SetColorMode(ColorMode mode) { return HWC2::Error::Unsupported; }
   virtual HWC2::Error SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
@@ -340,7 +340,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error SetLayerType(hwc2_layer_t layer_id, IQtiComposerClient::LayerType type);
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests) = 0;
   virtual HWC2::Error GetReleaseFences(uint32_t *out_num_elements, hwc2_layer_t *out_layers,
-                                       int32_t *out_fences);
+                                       std::vector<shared_ptr<Fence>> *out_fences);
   virtual HWC2::Error Present(shared_ptr<Fence> *out_retire_fence) = 0;
   virtual HWC2::Error GetHdrCapabilities(uint32_t *out_num_types, int32_t* out_types,
                                          float* out_max_luminance,
@@ -500,8 +500,8 @@ class HWCDisplay : public DisplayEventHandler {
   DisplayValidateState validate_state_ = kNormalValidate;
   bool fast_path_enabled_ = true;
   bool first_cycle_ = true;  // false if a display commit has succeeded on the device.
-  int fbt_release_fence_ = -1;
-  int release_fence_ = -1;
+  shared_ptr<Fence> fbt_release_fence_ = nullptr;
+  shared_ptr<Fence> release_fence_ = nullptr;
   hwc2_config_t pending_config_index_ = 0;
   bool game_supported_ = false;
   uint64_t elapse_timestamp_ = 0;

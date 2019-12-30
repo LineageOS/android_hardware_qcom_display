@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -65,6 +65,8 @@ class ResourceDefault : public ResourceInterface {
   DisplayError SetMaxBandwidthMode(HWBwModes mode);
   virtual DisplayError SetDetailEnhancerData(Handle display_ctx,
                                              const DisplayDetailEnhancerData &de_data);
+  virtual DisplayError UpdateSyncHandle(Handle display_ctx,
+                                        const shared_ptr<Fence> &sync_handle);
   virtual DisplayError Perform(int cmd, ...) { return kErrorNone; }
   DisplayError SetDisplayState(int32_t display_id, DisplayState state) { return kErrorNone; }
   virtual bool IsRotatorSupportedFormat(LayerBufferFormat format) { return false; }
