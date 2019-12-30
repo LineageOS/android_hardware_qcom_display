@@ -676,10 +676,26 @@ void HWInfoDRM::GetSDMFormat(uint32_t drm_format, uint64_t drm_format_modifier,
 }
 
 DisplayError HWInfoDRM::GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_disp_info) {
-  hw_disp_info->type = kPrimary;
+
+  HWDisplaysInfo hw_displays_info;
+  DisplayError error = kErrorNone;
+
+  hw_disp_info->type = kBuiltIn;
   hw_disp_info->is_connected = true;
 
-  return kErrorNone;
+  error = GetDisplaysStatus(&hw_displays_info);
+  if (error == kErrorNone) {
+    for (auto &iter : hw_displays_info) {
+      auto &info = iter.second;
+      if (info.is_primary) {
+        hw_disp_info->type = info.display_type;
+        hw_disp_info->is_connected = info.is_connected;
+        break;
+      }
+    }
+  }
+
+  return error;
 }
 
 DisplayError HWInfoDRM::GetDisplaysStatus(HWDisplaysInfo *hw_displays_info) {
