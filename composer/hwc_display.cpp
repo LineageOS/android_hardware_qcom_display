@@ -465,6 +465,7 @@ int HWCDisplay::Init() {
   DisplayError error = kErrorNone;
 
   HWCDebugHandler::Get()->GetProperty(ENABLE_NULL_DISPLAY_PROP, &null_display_mode_);
+  HWCDebugHandler::Get()->GetProperty(ENABLE_ASYNC_POWERMODE, &async_power_mode_);
 
   if (null_display_mode_) {
     DisplayNull *disp_null = new DisplayNull();
@@ -981,6 +982,11 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
   // Update release fence.
   release_fence_ = release_fence;
   current_power_mode_ = mode;
+
+  // Close the release fences in synchronous power updates
+  if (!async_power_mode_) {
+    PostPowerMode();
+  }
   return HWC2::Error::None;
 }
 
