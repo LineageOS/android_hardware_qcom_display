@@ -441,3 +441,22 @@ extern "C" int setStandByMode(int mode) {
     }
     return err;
 }
+
+extern "C"  int getPanelResolution(int *width, int *height) {
+    status_t err = (status_t) FAILED_TRANSACTION;
+    sp<IQService> binder = getBinder();
+    Parcel inParcel, outParcel;
+
+    if(binder != NULL) {
+        err = binder->dispatch(IQService::GET_PANEL_RESOLUTION,
+              &inParcel, &outParcel);
+        if(err != 0) {
+            ALOGE_IF(getBinder(), "%s() failed with err %d", __FUNCTION__, err);
+        } else {
+            *width = outParcel.readInt32();
+            *height = outParcel.readInt32();
+        }
+    }
+
+    return err;
+}
