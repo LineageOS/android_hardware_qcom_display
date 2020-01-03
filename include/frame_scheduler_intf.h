@@ -30,11 +30,13 @@
 #ifndef __FRAME_SCHEDULER_INTF_H__
 #define __FRAME_SCHEDULER_INTF_H__
 
+#include <utils/Timers.h>
+
 namespace composer {
 
 class FrameSchedulerIntf {
  public:
-  virtual int UpdateFrame() = 0;
+  virtual int UpdateFrameScheduling(int fenceFd, nsecs_t *timeStamp) = 0;
  protected:
   virtual ~FrameSchedulerIntf() { }
 };
