@@ -83,13 +83,14 @@ class CompManager {
   DisplayError SetBlendSpace(Handle display_ctx, const PrimariesTransfer &blend_space);
   void HandleSecureEvent(Handle display_ctx, SecureEvent secure_event);
   void SetSafeMode(bool enable) { safe_mode_ = enable; }
-  bool CanSkipValidate(Handle display_ctx);
+  bool CanSkipValidate(Handle display_ctx, bool *needs_buffer_swap);
   bool IsSafeMode() { return safe_mode_; }
   void GenerateROI(Handle display_ctx, HWLayers *hw_layers);
   DisplayError CheckEnforceSplit(Handle comp_handle, uint32_t new_refresh_rate);
   DppsControlInterface* GetDppsControlIntf() { return dpps_ctrl_intf_; }
   bool CheckResourceState(Handle display_ctx);
   bool IsRotatorSupportedFormat(LayerBufferFormat format);
+  DisplayError SwapBuffers(Handle display_ctx);
 
  private:
   static const int kMaxThermalLevel = 3;

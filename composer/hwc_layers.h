@@ -154,7 +154,7 @@ class HWCLayer {
   bool color_transform_matrix_set_ = false;
   bool buffer_flipped_ = false;
   bool secure_ = false;
-  bool per_frame_hdr_metadata_ = false;  // used to track if perframe metadata and blob is set.
+  bool per_frame_hdr_metadata_blob_ = false;  // used to track if perframe metadata blob is set
 
   // Composition requested by client(SF)
   HWC2::Composition client_requested_ = HWC2::Composition::Device;

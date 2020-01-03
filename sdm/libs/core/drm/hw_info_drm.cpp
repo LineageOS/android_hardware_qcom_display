@@ -238,6 +238,7 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
   DLOGI("Has Source Split = %d", hw_resource->is_src_split);
   DLOGI("Has QSEED3 = %d", hw_resource->has_qseed3);
   DLOGI("Has UBWC = %d", hw_resource->has_ubwc);
+  DLOGI("Has Micro Idle = %d", hw_resource->has_micro_idle);
   DLOGI("Has Concurrent Writeback = %d", hw_resource->has_concurrent_writeback);
   DLOGI("Has Src Tonemap = %d", hw_resource->src_tone_map);
   DLOGI("Max Low Bw = %" PRIu64 "", hw_resource->dyn_bw_info.total_bw_limit[kBwVFEOn]);
@@ -293,6 +294,7 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   hw_resource->scale_factor = info.downscale_prefill_lines;
   hw_resource->extra_fudge_factor = info.extra_prefill_lines;
   hw_resource->amortizable_threshold = info.amortized_threshold;
+  hw_resource->has_micro_idle = info.has_micro_idle;
 
   for (int index = 0; index < kBwModeMax; index++) {
     if (index == kBwVFEOn) {
@@ -339,6 +341,7 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   // In case driver doesn't report bus width default to 256 bit bus.
   hw_resource->num_mnocports = info.num_mnocports ? info.num_mnocports : 2;
   hw_resource->mnoc_bus_width = info.mnoc_bus_width ? info.mnoc_bus_width : 32;
+  hw_resource->use_baselayer_for_stage = info.use_baselayer_for_stage;
 }
 
 void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {

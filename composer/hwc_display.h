@@ -27,19 +27,21 @@
 #include <private/color_params.h>
 #include <qdMetaData.h>
 #include <sys/stat.h>
+#include <algorithm>
+#include <bitset>
 #include <map>
 #include <queue>
 #include <set>
 #include <string>
 #include <utility>
 #include <vector>
-#include <bitset>
-#include <algorithm>
+#include "display_null.h"
+#include "histogram_collector.h"
 #include "hwc_buffer_allocator.h"
 #include "hwc_callbacks.h"
-#include "hwc_layers.h"
-#include "display_null.h"
 #include "hwc_display_event_handler.h"
+#include "hwc_layers.h"
+#include "hwc_buffer_sync_handler.h"
 
 using android::hardware::graphics::common::V1_2::ColorMode;
 using android::hardware::graphics::common::V1_1::Dataspace;
@@ -377,6 +379,22 @@ class HWCDisplay : public DisplayEventHandler {
     pending_power_mode_ = current_power_mode_;
   }
   virtual void NotifyClientStatus(bool connected) { client_connected_ = connected; }
+  virtual bool IsQsyncCallbackNeeded(bool *qsync_enabled, int32_t *refresh_rate,
+                                     int32_t *qsync_refresh_rate) {
+    return false;
+  }
+  virtual int PostInit() { return 0; }
+
+  virtual HWC2::Error SetDisplayedContentSamplingEnabledVndService(bool enabled);
+  virtual HWC2::Error SetDisplayedContentSamplingEnabled(int32_t enabled, uint8_t component_mask,
+                                                         uint64_t max_frames);
+  virtual HWC2::Error GetDisplayedContentSamplingAttributes(int32_t *format, int32_t *dataspace,
+                                                            uint8_t *supported_components);
+  virtual HWC2::Error GetDisplayedContentSample(
+      uint64_t max_frames, uint64_t timestamp, uint64_t *numFrames,
+      int32_t samples_size[NUM_HISTOGRAM_COLOR_COMPONENTS],
+      uint64_t *samples[NUM_HISTOGRAM_COLOR_COMPONENTS]);
+  HWC2::Error SetDisplayElapseTime(uint64_t time);
 
  protected:
   static uint32_t throttling_refresh_rate_;
@@ -390,6 +408,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual DisplayError VSync(const DisplayEventVSync &vsync);
   virtual DisplayError Refresh();
   virtual DisplayError CECMessage(char *message);
+  virtual DisplayError HistogramEvent(int source_fd, uint32_t blob_id);
   virtual DisplayError HandleEvent(DisplayEvent event);
   virtual void DumpOutputBuffer(const BufferInfo &buffer_info, void *base, int fence);
   virtual HWC2::Error PrepareLayerStack(uint32_t *out_num_types, uint32_t *out_num_requests);
@@ -464,6 +483,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool client_connected_ = true;
   bool pending_config_ = false;
   bool has_client_composition_ = false;
+  HWCBufferSyncHandler buffer_sync_handler_ = {};
 
  private:
   void DumpInputBuffers(void);
@@ -474,6 +494,7 @@ class HWCDisplay : public DisplayEventHandler {
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
   uint32_t geometry_changes_ = GeometryChanges::kNone;
+  uint32_t geometry_changes_on_doze_suspend_ = GeometryChanges::kNone;
   bool animating_ = false;
   int null_display_mode_ = 0;
   DisplayValidateState validate_state_ = kNormalValidate;
@@ -483,6 +504,8 @@ class HWCDisplay : public DisplayEventHandler {
   int release_fence_ = -1;
   hwc2_config_t pending_config_index_ = 0;
   bool game_supported_ = false;
+  uint64_t elapse_timestamp_ = 0;
+  int async_power_mode_ = 0;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {

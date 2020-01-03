@@ -30,6 +30,7 @@
 #define __STDC_FORMAT_MACROS
 
 #include <ctype.h>
+#include <time.h>
 #include <drm/drm_fourcc.h>
 #include <drm_lib_loader.h>
 #include <drm_master.h>
@@ -906,13 +907,7 @@ DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, int *release_fence)
 
   int64_t release_fence_t = -1;
   int64_t retire_fence_t = -1;
-  update_mode_ = true;
 
-  if (first_cycle_) {
-    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
-    drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
-    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
-  }
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
   if (release_fence) {
@@ -1086,7 +1081,9 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
 
   solid_fills_.clear();
   bool resource_update = hw_layers->updates_mask.test(kUpdateResources);
-  bool update_config = resource_update || hw_layer_info.stack->flags.geometry_changed;
+  bool buffer_update = hw_layers->updates_mask.test(kSwapBuffers);
+  bool update_config = resource_update || buffer_update ||
+                       hw_layer_info.stack->flags.geometry_changed;
 
   if (hw_panel_info_.partial_update && update_config) {
     if (IsFullFrameUpdate(hw_layer_info)) {
@@ -1320,18 +1317,16 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
                               topology_control_);
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
-    DRMPowerMode power_mode = pending_doze_ ? DRMPowerMode::DOZE : DRMPowerMode::ON;
-    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, power_mode);
-    last_power_mode_ = power_mode;
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
+    last_power_mode_ = DRMPowerMode::ON;
   } else if (pending_doze_ && !validate) {
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::DOZE);
-    pending_doze_ = false;
     last_power_mode_ = DRMPowerMode::DOZE;
   }
 
   // Set CRTC mode, only if display config changes
-  if (vrefresh_ || update_mode_ || panel_mode_changed_) {
+  if (first_cycle_ || vrefresh_ || update_mode_ || panel_mode_changed_) {
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
   }
 
@@ -1473,6 +1468,15 @@ DisplayError HWDeviceDRM::DefaultCommit(HWLayers *hw_layers) {
 DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   DTRACE_SCOPED();
   SetupAtomic(hw_layers, false /* validate */);
+
+  if (hw_layers->elapse_timestamp > 0) {
+    struct timespec t = {0, 0};
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    uint64_t current_time = (UINT64(t.tv_sec) * 1000000000LL + t.tv_nsec);
+    if (current_time < hw_layers->elapse_timestamp) {
+      usleep(UINT32((hw_layers->elapse_timestamp - current_time) / 1000));
+    }
+  }
 
   int ret = drm_atomic_intf_->Commit(synchronous_commit_, false /* retain_planes*/);
   int release_fence = INT(release_fence_);

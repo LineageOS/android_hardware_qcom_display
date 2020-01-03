@@ -161,6 +161,10 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError SetBLScale(uint32_t level) { return kErrorNotSupported; }
   virtual bool CheckResourceState();
   virtual bool GameEnhanceSupported();
+  virtual DisplayError GetQSyncMode(QSyncMode *qsync_mode) { return kErrorNotSupported; }
+  virtual DisplayError colorSamplingOn();
+  virtual DisplayError colorSamplingOff();
+  virtual DisplayError ReconfigureDisplay();
 
  protected:
   const char *kBt2020Pq = "bt2020_pq";
@@ -175,7 +179,6 @@ class DisplayBase : public DisplayInterface {
   void HwRecovery(const HWRecoveryEvent sdm_event_code);
 
   const char *GetName(const LayerComposition &composition);
-  DisplayError ReconfigureDisplay();
   bool NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *new_mixer_width,
                                  uint32_t *new_mixer_height);
   DisplayError ReconfigureMixer(uint32_t width, uint32_t height);
@@ -197,7 +200,7 @@ class DisplayBase : public DisplayInterface {
   bool IsHdrMode(const AttrVal &attr);
   void InsertBT2020PqHlgModes(const std::string &str_render_intent);
   DisplayError HandlePendingVSyncEnable(int32_t retire_fence);
-  DisplayError ResetPendingDoze(int32_t retire_fence);
+  DisplayError HandlePendingPowerState(int32_t retire_fence);
 
   recursive_mutex recursive_mutex_;
   int32_t display_id_ = -1;
@@ -246,10 +249,9 @@ class DisplayBase : public DisplayInterface {
   uint32_t current_refresh_rate_ = 0;
   bool drop_skewed_vsync_ = false;
   bool custom_mixer_resolution_ = false;
-  DisplayState power_state_pending_ = kStateOff;
   bool vsync_enable_pending_ = false;
-  bool defer_power_state_ = false;
   bool pending_doze_ = false;
+  bool pending_power_on_ = false;
   QSyncMode qsync_mode_ = kQSyncModeNone;
   bool needs_avr_update_ = false;
 

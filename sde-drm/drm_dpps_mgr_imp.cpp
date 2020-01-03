@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -383,6 +383,7 @@ void DRMDppsManagerImp::CommitDppsFeatures(drmModeAtomicReq *req, const DRMDispl
         else
           ret = drmIoctl(info.drm_fd, DRM_IOCTL_MSM_DEREGISTER_EVENT, &event_req);
         if (ret) {
+          ret = -errno;
           if (ret == -EALREADY) {
             DRM_LOGI("Duplicated request to set event 0x%x, object_id %u, object_type 0x%x, enable %d",
                       event_req.event, event_req.object_id, info.object_type, info.enable);
@@ -391,7 +392,8 @@ void DRMDppsManagerImp::CommitDppsFeatures(drmModeAtomicReq *req, const DRMDispl
                       event_req.event, event_req.object_id, info.object_type, info.enable, ret);
           }
         }
-        it = dpps_dirty_event_.erase(it);
+        if (ret != -ENODEV)
+          it = dpps_dirty_event_.erase(it);
       } else {
         it++;
       }

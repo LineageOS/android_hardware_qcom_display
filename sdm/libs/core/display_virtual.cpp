@@ -187,5 +187,13 @@ DisplayError DisplayVirtual::SetPanelLuminanceAttributes(float min_lum, float ma
   return kErrorNone;
 }
 
+DisplayError DisplayVirtual::colorSamplingOn() {
+    return kErrorNone;
+}
+
+DisplayError DisplayVirtual::colorSamplingOff() {
+    return kErrorNone;
+}
+
 }  // namespace sdm
 

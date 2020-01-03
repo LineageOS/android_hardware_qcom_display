@@ -465,6 +465,7 @@ int HWCDisplay::Init() {
   DisplayError error = kErrorNone;
 
   HWCDebugHandler::Get()->GetProperty(ENABLE_NULL_DISPLAY_PROP, &null_display_mode_);
+  HWCDebugHandler::Get()->GetProperty(ENABLE_ASYNC_POWERMODE, &async_power_mode_);
 
   if (null_display_mode_) {
     DisplayNull *disp_null = new DisplayNull();
@@ -801,9 +802,10 @@ void HWCDisplay::BuildLayerStack() {
   bool enforce_geometry_change = (validate_state_ == kInternalValidate) && !validated_;
 
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
-  layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0) || enforce_geometry_change;
-  layer_stack_.flags.config_changed = !validated_;
 
+  layer_stack_.flags.geometry_changed = UINT32((geometry_changes_ || enforce_geometry_change ||
+                                                geometry_changes_on_doze_suspend_) > 0);
+  layer_stack_.flags.config_changed = !validated_;
   // Append client target to the layer stack
   Layer *sdm_client_target = client_target_->GetSDMLayer();
   sdm_client_target->flags.updating = IsLayerUpdating(client_target_);
@@ -915,7 +917,7 @@ void HWCDisplay::PostPowerMode() {
     auto fence = hwc_layer->PopBackReleaseFence();
     auto merged_fence = -1;
     if (fence >= 0) {
-      merged_fence = sync_merge("sync_merge", release_fence_, fence);
+      buffer_sync_handler_.SyncMerge(release_fence_, fence, &merged_fence);
       ::close(fence);
     } else {
       merged_fence = ::dup(release_fence_);
@@ -980,6 +982,11 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
   // Update release fence.
   release_fence_ = release_fence;
   current_power_mode_ = mode;
+
+  // Close the release fences in synchronous power updates
+  if (!async_power_mode_) {
+    PostPowerMode();
+  }
   return HWC2::Error::None;
 }
 
@@ -1313,6 +1320,10 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
   return kErrorNone;
 }
 
+DisplayError HWCDisplay::HistogramEvent(int /* fd */, uint32_t /* blob_fd */) {
+  return kErrorNone;
+}
+
 HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out_num_requests) {
   layer_changes_.clear();
   layer_requests_.clear();
@@ -1337,6 +1348,7 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
     } else if (error == kErrorPermission) {
       WaitOnPreviousFence();
       MarkLayersForGPUBypass();
+      geometry_changes_on_doze_suspend_ |= geometry_changes_;
     } else {
       DLOGW("Prepare failed. Error = %d", error);
       // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
@@ -1349,6 +1361,9 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
       callbacks_->Refresh(id_);
       return HWC2::Error::BadDisplay;
     }
+  } else {
+    // clear geometry_changes_on_doze_suspend_ on successful prepare.
+    geometry_changes_on_doze_suspend_ = GeometryChanges::kNone;
   }
 
   for (auto hwc_layer : layer_set_) {
@@ -1573,6 +1588,11 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
       tone_mapper_->Terminate();
     }
   }
+
+  if (elapse_timestamp_) {
+    layer_stack_.elapse_timestamp = elapse_timestamp_;
+  }
+
   error = display_intf_->Commit(&layer_stack_);
 
   if (error == kErrorNone) {
@@ -2359,8 +2379,35 @@ HWC2::Error HWCDisplay::GetDisplayIdentificationData(uint8_t *out_port, uint32_t
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCDisplay::SetDisplayElapseTime(uint64_t time) {
+  elapse_timestamp_ = time;
+  return HWC2::Error::None;
+}
+
 bool HWCDisplay::IsDisplayCommandMode() {
   return is_cmd_mode_;
+}
+
+HWC2::Error HWCDisplay::SetDisplayedContentSamplingEnabledVndService(bool enabled) {
+  return HWC2::Error::Unsupported;
+}
+
+HWC2::Error HWCDisplay::SetDisplayedContentSamplingEnabled(int32_t enabled, uint8_t component_mask,
+                                                           uint64_t max_frames) {
+  DLOGV("Request to start/stop histogram thread not supported on this display");
+  return HWC2::Error::Unsupported;
+}
+
+HWC2::Error HWCDisplay::GetDisplayedContentSamplingAttributes(int32_t *format, int32_t *dataspace,
+                                                              uint8_t *supported_components) {
+  return HWC2::Error::Unsupported;
+}
+
+HWC2::Error HWCDisplay::GetDisplayedContentSample(
+    uint64_t max_frames, uint64_t timestamp, uint64_t *numFrames,
+    int32_t samples_size[NUM_HISTOGRAM_COLOR_COMPONENTS],
+    uint64_t *samples[NUM_HISTOGRAM_COLOR_COMPONENTS]) {
+  return HWC2::Error::Unsupported;
 }
 
 // Skip SDM prepare if all the layers in the current draw cycle are marked as Skip and
