@@ -1144,9 +1144,9 @@ int32_t HWCSession::GetDozeSupport(hwc2_device_t *device, hwc2_display_t display
   }
 
   *out_support = 0;
-  if (hwc_display->GetDisplayClass() == DISPLAY_CLASS_BUILTIN) {
-    *out_support = 1;
-  }
+  uint32_t config = 0;
+  hwc_session->GetActiveConfigIndex(INT(display), &config);
+  *out_support = hwc_session->isSmartPanelConfig(UINT32(display), config) ? 1 : 0;
 
   return HWC2_ERROR_NONE;
 }
@@ -3305,10 +3305,15 @@ int32_t HWCSession::GetDisplayCapabilities(hwc2_device_t *device, hwc2_display_t
   } else {
     if (isBuiltin) {
       // TODO(user): Handle SKIP_CLIENT_COLOR_TRANSFORM based on DSPP availability
-      outCapabilities[0] = HWC2_DISPLAY_CAPABILITY_SKIP_CLIENT_COLOR_TRANSFORM;
-      outCapabilities[1] = HWC2_DISPLAY_CAPABILITY_DOZE;
-      outCapabilities[2] = HWC2_DISPLAY_CAPABILITY_BRIGHTNESS;
-      *outNumCapabilities = 3;
+      uint32_t index = 0;
+      outCapabilities[index++] = HWC2_DISPLAY_CAPABILITY_SKIP_CLIENT_COLOR_TRANSFORM;
+      int32_t has_doze_support = 0;
+      GetDozeSupport(device, display, &has_doze_support);
+      if (has_doze_support) {
+        outCapabilities[index++] = HWC2_DISPLAY_CAPABILITY_DOZE;
+      }
+      outCapabilities[index++] = HWC2_DISPLAY_CAPABILITY_BRIGHTNESS;
+      *outNumCapabilities = index;
     }
     return HWC2_ERROR_NONE;
   }
