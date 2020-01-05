@@ -35,6 +35,7 @@ cc_library_headers {
         "gpu_tonemapper",
         "sdm/include",
         "gralloc",
+        "libhistogram",
     ],
     header_libs: ["libhardware_headers", "display_intf_headers", "debug_headers"],
     export_header_lib_headers: ["libhardware_headers", "display_intf_headers", "debug_headers"],

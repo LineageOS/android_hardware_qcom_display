@@ -344,6 +344,8 @@ struct HWResourceInfo {
   vector< pair <uint32_t, uint32_t> > line_width_constraints;
   uint32_t num_mnocports = 2;
   uint32_t mnoc_bus_width = 32;
+  bool use_baselayer_for_stage = false;
+  bool has_micro_idle = false;
 };
 
 struct HWSplitInfo {
@@ -708,6 +710,7 @@ struct HWQosData {
 
 enum UpdateType {
   kUpdateResources,  // Indicates Strategy & RM execution, which can update resources.
+  kSwapBuffers,      // Indicates Strategy & RM execution, which can update buffer handler and crop.
   kUpdateMax,
 };
 
@@ -718,6 +721,7 @@ struct HWLayers {
   HWQosData qos_data = {};
   HWAVRInfo hw_avr_info = {};
   std::bitset<kUpdateMax> updates_mask = 0;
+  uint64_t elapse_timestamp = 0;
 };
 
 struct HWDisplayAttributes : DisplayConfigVariableInfo {

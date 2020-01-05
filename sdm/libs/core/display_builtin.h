@@ -30,9 +30,50 @@
 #include <vector>
 
 #include "display_base.h"
+#include "drm_interface.h"
 #include "hw_events_interface.h"
 
 namespace sdm {
+
+struct DeferFpsConfig {
+  uint32_t frame_count = 0;
+  uint32_t frames_to_defer = 0;
+  uint32_t fps = 0;
+  uint32_t vsync_period_ns = 0;
+  uint32_t transfer_time_us = 0;
+  bool dirty = false;
+  bool apply = false;
+
+  void Init(uint32_t refresh_rate, uint32_t vsync_period, uint32_t transfer_time) {
+    fps = refresh_rate;
+    vsync_period_ns = vsync_period;
+    transfer_time_us = transfer_time;
+    frames_to_defer = frame_count;
+    dirty = false;
+    apply = false;
+  }
+
+  bool IsDeferredState() { return (frames_to_defer != 0); }
+
+  bool CanApplyDeferredState() { return apply; }
+
+  bool IsDirty() { return dirty; }
+
+  void MarkDirty() { dirty = IsDeferredState(); }
+
+  void UpdateDeferCount() {
+    if (frames_to_defer > 0) {
+      frames_to_defer--;
+      apply = (frames_to_defer == 0);
+    }
+  }
+
+  void Clear() {
+    frames_to_defer = 0;
+    dirty = false;
+    apply = false;
+  }
+};
 
 class DppsInfo {
  public:
@@ -86,6 +127,8 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   virtual DisplayError SetFrameTriggerMode(FrameTriggerMode mode);
   virtual DisplayError SetBLScale(uint32_t level);
   virtual DisplayError GetQSyncMode(QSyncMode *qsync_mode);
+  virtual DisplayError colorSamplingOn();
+  virtual DisplayError colorSamplingOff();
 
   // Implement the HWEventHandlers
   virtual DisplayError VSync(int64_t timestamp);
@@ -98,15 +141,21 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   virtual void PanelDead();
   virtual void HwRecovery(const HWRecoveryEvent sdm_event_code);
   virtual DisplayError TeardownConcurrentWriteback(void);
+  void Histogram(int histogram_fd, uint32_t blob_id) override;
 
   // Implement the DppsPropIntf
   virtual DisplayError DppsProcessOps(enum DppsOps op, void *payload, size_t size);
   void ResetPanel();
+  virtual DisplayError SetActiveConfig(uint32_t index);
+  virtual DisplayError ReconfigureDisplay();
 
  private:
   bool CanCompareFrameROI(LayerStack *layer_stack);
   bool CanSkipDisplayPrepare(LayerStack *layer_stack);
   HWAVRModes GetAvrMode(QSyncMode mode);
+  bool CanDeferFpsConfig(uint32_t fps);
+  void SetDeferredFpsConfig();
+  void GetFpsConfig(HWDisplayAttributes *display_attributes, HWPanelInfo *panel_info);
 
   const uint32_t kPuTimeOutMs = 1000;
   std::vector<HWEvent> event_list_;
@@ -127,6 +176,14 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   bool dpps_pu_nofiy_pending_ = false;
   bool first_cycle_ = true;
   int previous_retire_fence_ = -1;
+  enum class SamplingState { Off, On } samplingState = SamplingState::Off;
+  DisplayError setColorSamplingState(SamplingState state);
+
+  bool histogramSetup = false;
+  sde_drm::DppsFeaturePayload histogramCtrl;
+  sde_drm::DppsFeaturePayload histogramIRQ;
+  void initColorSamplingState();
+  DeferFpsConfig deferred_config_ = {};
 };
 
 }  // namespace sdm

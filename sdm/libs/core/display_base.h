@@ -162,6 +162,9 @@ class DisplayBase : public DisplayInterface {
   virtual bool CheckResourceState();
   virtual bool GameEnhanceSupported();
   virtual DisplayError GetQSyncMode(QSyncMode *qsync_mode) { return kErrorNotSupported; }
+  virtual DisplayError colorSamplingOn();
+  virtual DisplayError colorSamplingOff();
+  virtual DisplayError ReconfigureDisplay();
 
  protected:
   const char *kBt2020Pq = "bt2020_pq";
@@ -176,7 +179,6 @@ class DisplayBase : public DisplayInterface {
   void HwRecovery(const HWRecoveryEvent sdm_event_code);
 
   const char *GetName(const LayerComposition &composition);
-  DisplayError ReconfigureDisplay();
   bool NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *new_mixer_width,
                                  uint32_t *new_mixer_height);
   DisplayError ReconfigureMixer(uint32_t width, uint32_t height);

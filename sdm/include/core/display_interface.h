@@ -306,6 +306,9 @@ class DisplayEventHandler {
   */
   virtual DisplayError CECMessage(char *message) = 0;
 
+  /*! @brief Event handler for Histogram messages received by Display HAL. */
+  virtual DisplayError HistogramEvent(int source_fd, uint32_t blob_id) = 0;
+
   /*! @brief Event handler for events received by Display HAL. */
   virtual DisplayError HandleEvent(DisplayEvent event) = 0;
 
@@ -880,6 +883,11 @@ class DisplayInterface {
   */
   virtual DisplayError GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
                                                     uint8_t *out_data) = 0;
+  /*! @brief Method to turn on histogram events. */
+  virtual DisplayError colorSamplingOn() = 0;
+
+  /*! @brief Method to turn off histogram events. */
+  virtual DisplayError colorSamplingOff() = 0;
 
   /*! @brief Method to set min/max luminance for dynamic tonemapping of external device over WFD.
 

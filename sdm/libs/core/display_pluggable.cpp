@@ -251,6 +251,8 @@ void DisplayPluggable::HwRecovery(const HWRecoveryEvent sdm_event_code) {
   DisplayBase::HwRecovery(sdm_event_code);
 }
 
+void DisplayPluggable::Histogram(int /* histogram_fd */, uint32_t /* blob_id */) {}
+
 DisplayError DisplayPluggable::VSync(int64_t timestamp) {
   if (vsync_enable_) {
     DisplayEventVSync vsync;
@@ -452,6 +454,14 @@ void DisplayPluggable::UpdateColorModes() {
     DLOGI("Color mode = %s", color_modes_[i].name);
   }
   return;
+}
+
+DisplayError DisplayPluggable::colorSamplingOn() {
+    return kErrorNone;
+}
+
+DisplayError DisplayPluggable::colorSamplingOff() {
+    return kErrorNone;
 }
 
 }  // namespace sdm

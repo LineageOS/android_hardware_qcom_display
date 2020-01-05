@@ -118,6 +118,9 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(SetPanelLuminanceAttributes(float min_lum, float max_lum))
   MAKE_NO_OP(SetBLScale(uint32_t))
   MAKE_NO_OP(GetQSyncMode(QSyncMode *))
+  MAKE_NO_OP(colorSamplingOn());
+  MAKE_NO_OP(colorSamplingOff());
+  MAKE_NO_OP(SetDisplayElapseTime(uint64_t))
 
  protected:
   DisplayConfigVariableInfo default_variable_config_ = {};

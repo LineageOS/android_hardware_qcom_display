@@ -56,8 +56,9 @@ class Strategy {
   DisplayError SetIdleTimeoutMs(uint32_t active_ms);
   DisplayError SetColorModesInfo(const std::vector<PrimariesTransfer> &colormodes_cs);
   DisplayError SetBlendSpace(const PrimariesTransfer &blend_space);
-  bool CanSkipValidate();
+  bool CanSkipValidate(bool *needs_buffer_swap);
   void GenerateROI(HWLayersInfo *hw_layers_info, const PUConstraints &pu_constraints);
+  DisplayError SwapBuffers();
 
  private:
   void GenerateROI();
