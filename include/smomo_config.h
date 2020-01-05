@@ -32,9 +32,15 @@
 #ifndef __SMOMO_CONFIG_H__
 #define __SMOMO_CONFIG_H__
 
+#include <cstdint>
+
 namespace smomoconfig {
 
 int EnableSmomo(bool enable);
+
+int GetSmomoMode(uint32_t *mode_idx);
+
+int SetSmomoMode(uint32_t mode_idx);
 
 }  // namespace smomoconfig
 
