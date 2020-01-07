@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -137,10 +137,14 @@ int Tonemapper::blit(const void *dst, const void *src, int srcFenceFd)
   }
 
   // set destination
-  engine_setDestination(dst_buffer->getFramebuffer(), 0, 0, dst_buffer->getWidth(),
-                        dst_buffer->getHeight());
+  if (dst_buffer) {
+    engine_setDestination(dst_buffer->getFramebuffer(), 0, 0, dst_buffer->getWidth(),
+                          dst_buffer->getHeight());
+  }
   // set source
-  engine_setExternalInputBuffer(0, src_buffer->getTexture());
+  if (src_buffer) {
+    engine_setExternalInputBuffer(0, src_buffer->getTexture());
+  }
   // set 3d lut
   engine_set3DInputBuffer(1, tonemapTexture);
   // set non-uniform xform
