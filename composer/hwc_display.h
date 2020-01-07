@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -484,6 +484,8 @@ class HWCDisplay : public DisplayEventHandler {
   bool pending_config_ = false;
   bool has_client_composition_ = false;
   HWCBufferSyncHandler buffer_sync_handler_ = {};
+  LayerRect window_rect_ = {};
+  bool windowed_display_ = true;
 
  private:
   void DumpInputBuffers(void);
