@@ -1,6 +1,7 @@
 PRODUCT_PACKAGES += libdisplayconfig \
                     libqdMetaData \
                     libqdMetaData.system \
+                    libgralloc.qti \
                     libdrm \
                     vendor.display.config@1.0 \
                     vendor.display.config@1.1 \
