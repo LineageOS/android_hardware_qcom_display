@@ -31,8 +31,13 @@
 #include "QtiAllocator.h"
 
 #include <log/log.h>
+#include <vendor/qti/hardware/display/mapper/3.0/IQtiMapper.h>
+#include <vendor/qti/hardware/display/mapper/4.0/IQtiMapper.h>
+
 #include <vector>
 
+#include "QtiMapper.h"
+#include "QtiMapper4.h"
 #include "gr_utils.h"
 
 namespace vendor {
@@ -45,6 +50,8 @@ namespace implementation {
 
 using android::hardware::hidl_handle;
 using gralloc::BufferDescriptor;
+using IMapper_3_0_Error = android::hardware::graphics::mapper::V3_0::Error;
+using gralloc::Error;
 
 QtiAllocator::QtiAllocator() {
   buf_mgr_ = BufferManager::GetInstance();
@@ -65,9 +72,10 @@ Return<void> QtiAllocator::allocate(const hidl_vec<uint32_t> &descriptor, uint32
   ALOGD_IF(DEBUG, "Allocating buffers count: %d", count);
   gralloc::BufferDescriptor desc;
 
-  auto err = desc.Decode(descriptor);
+  auto err = ::vendor::qti::hardware::display::mapper::V3_0::implementation::QtiMapper::Decode(
+      descriptor, &desc);
   if (err != Error::NONE) {
-    hidl_cb(err, 0, hidl_vec<hidl_handle>());
+    hidl_cb(static_cast<IMapper_3_0_Error>(err), 0, hidl_vec<hidl_handle>());
     return Void();
   }
 
@@ -89,7 +97,7 @@ Return<void> QtiAllocator::allocate(const hidl_vec<uint32_t> &descriptor, uint32
     stride = static_cast<uint32_t>(PRIV_HANDLE_CONST(buffers[0].getNativeHandle())->width);
     hidl_buffers.setToExternal(buffers.data(), buffers.size());
   }
-  hidl_cb(err, stride, hidl_buffers);
+  hidl_cb(static_cast<IMapper_3_0_Error>(err), stride, hidl_buffers);
 
   for (const auto &b : buffers) {
     buf_mgr_->ReleaseBuffer(PRIV_HANDLE_CONST(b.getNativeHandle()));
@@ -98,14 +106,75 @@ Return<void> QtiAllocator::allocate(const hidl_vec<uint32_t> &descriptor, uint32
   return Void();
 }
 
-// Methods from ::android::hidl::base::V1_0::IBase follow.
+}  // namespace implementation
+}  // namespace V3_0
+}  // namespace allocator
+}  // namespace display
+}  // namespace hardware
+}  // namespace qti
+}  // namespace vendor
 
-IQtiAllocator *HIDL_FETCH_IQtiAllocator(const char * /* name */) {
-  return new QtiAllocator();
+namespace vendor {
+namespace qti {
+namespace hardware {
+namespace display {
+namespace allocator {
+namespace V4_0 {
+namespace implementation {
+
+using android::hardware::hidl_handle;
+using gralloc::BufferDescriptor;
+using IMapper_4_0_Error = android::hardware::graphics::mapper::V4_0::Error;
+using gralloc::Error;
+
+QtiAllocator::QtiAllocator() {
+  gralloc::GrallocProperties properties;
+  get_properties(&properties);
+  buf_mgr_ = BufferManager::GetInstance();
+  buf_mgr_->SetGrallocDebugProperties(properties);
+}
+
+Return<void> QtiAllocator::allocate(const hidl_vec<uint8_t> &descriptor, uint32_t count,
+                                    allocate_cb hidl_cb) {
+  ALOGD_IF(DEBUG, "Allocating buffers count: %d", count);
+  gralloc::BufferDescriptor desc;
+
+  auto err = ::vendor::qti::hardware::display::mapper::V4_0::implementation::QtiMapper::Decode(
+      descriptor, &desc);
+  if (err != Error::NONE) {
+    hidl_cb(static_cast<IMapper_4_0_Error>(err), 0, hidl_vec<hidl_handle>());
+    return Void();
+  }
+
+  std::vector<hidl_handle> buffers;
+  buffers.reserve(count);
+  for (uint32_t i = 0; i < count; i++) {
+    buffer_handle_t buffer;
+    ALOGD_IF(DEBUG, "buffer: %p", &buffer);
+    err = buf_mgr_->AllocateBuffer(desc, &buffer);
+    if (err != Error::NONE) {
+      break;
+    }
+    buffers.emplace_back(hidl_handle(buffer));
+  }
+
+  uint32_t stride = 0;
+  hidl_vec<hidl_handle> hidl_buffers;
+  if (err == Error::NONE && buffers.size() > 0) {
+    stride = static_cast<uint32_t>(PRIV_HANDLE_CONST(buffers[0].getNativeHandle())->width);
+    hidl_buffers.setToExternal(buffers.data(), buffers.size());
+  }
+  hidl_cb(static_cast<IMapper_4_0_Error>(err), stride, hidl_buffers);
+
+  for (const auto &b : buffers) {
+    buf_mgr_->ReleaseBuffer(PRIV_HANDLE_CONST(b.getNativeHandle()));
+  }
+
+  return Void();
 }
 
 }  // namespace implementation
-}  // namespace V3_0
+}  // namespace V4_0
 }  // namespace allocator
 }  // namespace display
 }  // namespace hardware

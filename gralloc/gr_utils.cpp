@@ -28,6 +28,9 @@
  */
 
 #include <media/msm_media_info.h>
+
+#include <drm/drm_fourcc.h>
+
 #include <algorithm>
 
 #include "gr_adreno_info.h"
@@ -1638,6 +1641,126 @@ void GetRGBPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int3
   plane_info->stride = width;
   plane_info->stride_bytes = width * plane_info->step;
   plane_info->scanlines = height;
+}
+
+// TODO(tbalacha): tile vs ubwc -- may need to find a diff way to differentiate
+void GetDRMFormat(uint32_t format, uint32_t flags, uint32_t *drm_format,
+                  uint64_t *drm_format_modifier) {
+  bool compressed = (flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED) ? true : false;
+  switch (format) {
+    case HAL_PIXEL_FORMAT_RGBA_8888:
+      *drm_format = DRM_FORMAT_ABGR8888;
+      break;
+    case HAL_PIXEL_FORMAT_RGBA_5551:
+      *drm_format = DRM_FORMAT_ABGR1555;
+      break;
+    case HAL_PIXEL_FORMAT_RGBA_4444:
+      *drm_format = DRM_FORMAT_ABGR4444;
+      break;
+    case HAL_PIXEL_FORMAT_BGRA_8888:
+      *drm_format = DRM_FORMAT_ARGB8888;
+      break;
+    case HAL_PIXEL_FORMAT_RGBX_8888:
+      *drm_format = DRM_FORMAT_XBGR8888;
+      if (compressed)
+        *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED;
+      break;
+    case HAL_PIXEL_FORMAT_BGRX_8888:
+      *drm_format = DRM_FORMAT_XRGB8888;
+      break;
+    case HAL_PIXEL_FORMAT_RGB_888:
+      *drm_format = DRM_FORMAT_BGR888;
+      break;
+    case HAL_PIXEL_FORMAT_RGB_565:
+      *drm_format = DRM_FORMAT_BGR565;
+      break;
+    case HAL_PIXEL_FORMAT_BGR_565:
+      *drm_format = DRM_FORMAT_BGR565;
+      if (compressed)
+        *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED;
+      break;
+    case HAL_PIXEL_FORMAT_RGBA_1010102:
+      *drm_format = DRM_FORMAT_ABGR2101010;
+      if (compressed)
+        *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED;
+      break;
+    case HAL_PIXEL_FORMAT_ARGB_2101010:
+      *drm_format = DRM_FORMAT_BGRA1010102;
+      break;
+    case HAL_PIXEL_FORMAT_RGBX_1010102:
+      *drm_format = DRM_FORMAT_XBGR2101010;
+      if (compressed)
+        *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED;
+      break;
+    case HAL_PIXEL_FORMAT_XRGB_2101010:
+      *drm_format = DRM_FORMAT_BGRX1010102;
+      break;
+    case HAL_PIXEL_FORMAT_BGRA_1010102:
+      *drm_format = DRM_FORMAT_ARGB2101010;
+      break;
+    case HAL_PIXEL_FORMAT_ABGR_2101010:
+      *drm_format = DRM_FORMAT_RGBA1010102;
+      break;
+    case HAL_PIXEL_FORMAT_BGRX_1010102:
+      *drm_format = DRM_FORMAT_XRGB2101010;
+      break;
+    case HAL_PIXEL_FORMAT_XBGR_2101010:
+      *drm_format = DRM_FORMAT_RGBX1010102;
+      break;
+    case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
+      *drm_format = DRM_FORMAT_NV12;
+      break;
+    case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
+      *drm_format = DRM_FORMAT_NV12;
+      if (compressed) {
+        *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED;
+      } else {
+        *drm_format_modifier = DRM_FORMAT_MOD_QCOM_TILE;
+      }
+      break;
+    case HAL_PIXEL_FORMAT_YCrCb_420_SP:
+      *drm_format = DRM_FORMAT_NV21;
+      break;
+    case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
+      *drm_format = DRM_FORMAT_NV21;
+      break;
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010:
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
+      *drm_format = DRM_FORMAT_NV12;
+      *drm_format_modifier = DRM_FORMAT_MOD_QCOM_DX;
+      break;
+    case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
+      *drm_format = DRM_FORMAT_NV12;
+      if (compressed) {
+        *drm_format_modifier = DRM_FORMAT_MOD_QCOM_COMPRESSED | DRM_FORMAT_MOD_QCOM_DX;
+      } else {
+        *drm_format_modifier = DRM_FORMAT_MOD_QCOM_TILE | DRM_FORMAT_MOD_QCOM_DX;
+      }
+      break;
+    case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
+      *drm_format = DRM_FORMAT_NV12;
+      if (compressed) {
+        *drm_format_modifier =
+            DRM_FORMAT_MOD_QCOM_COMPRESSED | DRM_FORMAT_MOD_QCOM_DX | DRM_FORMAT_MOD_QCOM_TIGHT;
+      } else {
+        *drm_format_modifier =
+            DRM_FORMAT_MOD_QCOM_TILE | DRM_FORMAT_MOD_QCOM_DX | DRM_FORMAT_MOD_QCOM_TIGHT;
+      }
+      break;
+    case HAL_PIXEL_FORMAT_YCbCr_422_SP:
+      *drm_format = DRM_FORMAT_NV16;
+      break;
+      /*
+    TODO: No HAL_PIXEL_FORMAT equivalent?
+    case kFormatYCrCb422H2V1SemiPlanar:
+      *drm_format = DRM_FORMAT_NV61;
+      break;*/
+    case HAL_PIXEL_FORMAT_YV12:
+      *drm_format = DRM_FORMAT_YVU420;
+      break;
+    default:
+      ALOGE("Unsupported format %d", format);
+  }
 }
 
 }  // namespace gralloc
