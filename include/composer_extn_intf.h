@@ -31,10 +31,19 @@
 #define __COMPOSER_EXTN_INTF_H__
 
 #include <dlfcn.h>
+#include "frame_scheduler_intf.h"
+
+#define COMPOSER_EXTN_REV_MAJOR (1)
+#define COMPOSER_EXTN_REV_MINOR (0)
+#define COMPOSER_EXTN_VERSION_TAG ((uint16_t) ((COMPOSER_EXTN_REV_MAJOR << 8) \
+                                              | COMPOSER_EXTN_REV_MINOR))
 
 namespace composer {
 
 class ComposerExtnIntf {
+ public:
+  virtual int CreateFrameScheduler(FrameSchedulerIntf **intf) = 0;
+  virtual void DestroyFrameScheduler(FrameSchedulerIntf *intf) = 0;
  protected:
   virtual ~ComposerExtnIntf() { }
 };
@@ -48,8 +57,8 @@ class ComposerExtnLib {
  private:
   const char *lib_name = "libcomposerextn.qti.so";
 
-  typedef int (*CreateComposerExtnIntf)(ComposerExtnIntf **intf);
-  typedef void (*DestroyComposerExtnIntf)(ComposerExtnIntf *intf);
+  typedef int (*CreateComposerExtn)(uint16_t version, ComposerExtnIntf **intf);
+  typedef void (*DestroyComposerExtn)(ComposerExtnIntf *intf);
 
   ComposerExtnLib() {
     lib_obj_ = ::dlopen(lib_name, RTLD_NOW);
@@ -57,18 +66,18 @@ class ComposerExtnLib {
       return;
     }
 
-    create_composer_ext_intf_ = reinterpret_cast<CreateComposerExtnIntf>(
-                                    ::dlsym(lib_obj_, "CreateComposerExtnIntf"));
-    destroy_composer_ext_intf_ = reinterpret_cast<DestroyComposerExtnIntf>(
-                                    ::dlsym(lib_obj_, "DestroyComposerExtnIntf"));
-    if (create_composer_ext_intf_ && destroy_composer_ext_intf_) {
-      create_composer_ext_intf_(&composer_ext_intf_);
+    create_composer_ext_fn_ = reinterpret_cast<CreateComposerExtn>(
+                                    ::dlsym(lib_obj_, "CreateComposerExtn"));
+    destroy_composer_ext_fn_ = reinterpret_cast<DestroyComposerExtn>(
+                                    ::dlsym(lib_obj_, "DestroyComposerExtn"));
+    if (create_composer_ext_fn_ && destroy_composer_ext_fn_) {
+      create_composer_ext_fn_(COMPOSER_EXTN_VERSION_TAG, &composer_ext_intf_);
     }
   }
 
   ~ComposerExtnLib() {
     if (composer_ext_intf_) {
-      destroy_composer_ext_intf_(composer_ext_intf_);
+      destroy_composer_ext_fn_(composer_ext_intf_);
     }
 
     if (lib_obj_) {
@@ -78,8 +87,8 @@ class ComposerExtnLib {
 
   static ComposerExtnLib g_composer_ext_lib_;
   void *lib_obj_ = nullptr;
-  CreateComposerExtnIntf create_composer_ext_intf_ = nullptr;
-  DestroyComposerExtnIntf destroy_composer_ext_intf_ = nullptr;
+  CreateComposerExtn create_composer_ext_fn_ = nullptr;
+  DestroyComposerExtn destroy_composer_ext_fn_ = nullptr;
   ComposerExtnIntf *composer_ext_intf_ = nullptr;
 };
 
