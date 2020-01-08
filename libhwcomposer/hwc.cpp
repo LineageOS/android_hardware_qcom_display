@@ -305,13 +305,13 @@ static int hwc_eventControl(struct hwc_composer_device_1* dev, int dpy,
     int ret = 0;
     hwc_context_t* ctx = (hwc_context_t*)(dev);
 
-    if(!ctx->dpyAttr[dpy].isActive) {
-        ALOGE("Display is blanked - Cannot %s vsync",
-              enable ? "enable" : "disable");
+    if(!validDisplay(dpy)) {
         return -EINVAL;
     }
 
-    if(!validDisplay(dpy)) {
+    if(!ctx->dpyAttr[dpy].isActive) {
+        ALOGE("Display is blanked - Cannot %s vsync",
+              enable ? "enable" : "disable");
         return -EINVAL;
     }
 
@@ -348,16 +348,16 @@ static int hwc_setPowerMode(struct hwc_composer_device_1* dev, int dpy,
     int ret = 0, value = 0;
 
     Locker::Autolock _l(ctx->mDrawLock);
+    if(!validDisplay(dpy)) {
+        return -EINVAL;
+    }
+
     /* In case of non-hybrid WFD session, we are fooling SF by
      * piggybacking on HDMI display ID for virtual.
      * TODO: Not needed once we have WFD client working on top
      * of Google API's.
      */
     dpy = getDpyforExternalDisplay(ctx,dpy);
-
-    if(!validDisplay(dpy)) {
-        return -EINVAL;
-    }
 
     ALOGD_IF(POWER_MODE_DEBUG, "%s: Setting mode %d on display: %d",
             __FUNCTION__, mode, dpy);
@@ -730,12 +730,13 @@ int hwc_getDisplayConfigs(struct hwc_composer_device_1* dev, int disp,
         uint32_t* configs, size_t* numConfigs) {
     int ret = 0;
     hwc_context_t* ctx = (hwc_context_t*)(dev);
-    disp = getDpyforExternalDisplay(ctx, disp);
     Locker::Autolock _l(ctx->mDrawLock);
 
     if(!validDisplay(disp)) {
         return -EINVAL;
     }
+
+    disp = getDpyforExternalDisplay(ctx, disp);
 
     //Currently we allow only 1 config, reported as config id # 0
     //This config is passed in to getDisplayAttributes. Ignored for now.
@@ -766,12 +767,13 @@ int hwc_getDisplayAttributes(struct hwc_composer_device_1* dev, int disp,
         uint32_t config, const uint32_t* attributes, int32_t* values) {
 
     hwc_context_t* ctx = (hwc_context_t*)(dev);
-    disp = getDpyforExternalDisplay(ctx, disp);
     Locker::Autolock _l(ctx->mDrawLock);
 
     if(!validDisplay(disp)) {
         return -EINVAL;
     }
+
+    disp = getDpyforExternalDisplay(ctx, disp);
 
     //If hotpluggable displays(i.e, HDMI, WFD) are inactive return error
     if( (disp != HWC_DISPLAY_PRIMARY) && !ctx->dpyAttr[disp].connected) {
