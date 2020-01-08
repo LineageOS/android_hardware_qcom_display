@@ -52,7 +52,6 @@ using ::android::hardware::hidl_vec;
 using ::android::hardware::Return;
 using ::android::hardware::Void;
 using ::android::hardware::graphics::common::V1_2::PixelFormat;
-using ::android::hardware::graphics::mapper::V3_0::IMapper;
 using ::android::hidl::base::V1_0::DebugInfo;
 using ::android::hidl::base::V1_0::IBase;
 using gralloc::BufferManager;

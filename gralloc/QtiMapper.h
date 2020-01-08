@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -36,11 +36,14 @@
 
 #include "QtiMapperExtensions.h"
 #include "gr_buf_mgr.h"
+#include "gr_utils.h"
+
 namespace vendor {
 namespace qti {
 namespace hardware {
 namespace display {
 namespace mapper {
+namespace V3_0 {
 namespace implementation {
 
 using ::android::sp;
@@ -66,6 +69,7 @@ using IMapper_3_0 = android::hardware::graphics::mapper::V3_0::IMapper;
 using BufferDescriptorInfo_3_0 =
     android::hardware::graphics::mapper::V3_0::IMapper::BufferDescriptorInfo;
 using IMapperBufferDescriptor = android::hardware::graphics::mapper::V3_0::BufferDescriptor;
+using IMapper_3_0_Error = ::android::hardware::graphics::mapper::V3_0::Error;
 
 class QtiMapper : public IQtiMapper {
  public:
@@ -91,6 +95,34 @@ class QtiMapper : public IQtiMapper {
 
   Return<void> getMapperExtensions(getMapperExtensions_cb hidl_cb);
   sp<mapperextensions::V1_1::IQtiMapperExtensions> extensions_ = nullptr;
+  hidl_vec<uint32_t> Encode(const IMapper_3_0::BufferDescriptorInfo &bd_info) {
+    hidl_vec<uint32_t> out;
+    out.resize(gralloc::kBufferDescriptorSize);
+    out[0] = gralloc::kMagicVersion;
+    out[1] = bd_info.width;
+    out[2] = bd_info.height;
+    out[3] = bd_info.layerCount;
+    out[4] = static_cast<uint32_t>(bd_info.format);
+    out[5] = static_cast<uint32_t>(bd_info.usage);
+    out[6] = static_cast<uint32_t>(bd_info.usage >> 32);
+    return out;
+  }
+  static gralloc::Error Decode(const hidl_vec<uint32_t> &in,
+                               gralloc::BufferDescriptor *buf_descriptor) {
+    if (in.size() != gralloc::kBufferDescriptorSize || in[0] != gralloc::kMagicVersion) {
+      return gralloc::Error::BAD_DESCRIPTOR;
+    }
+    uint32_t width = static_cast<int32_t>(in[1]);
+    uint32_t height = static_cast<int32_t>(in[2]);
+    buf_descriptor->SetDimensions(width, height);
+    uint32_t layer_count = in[3];
+    buf_descriptor->SetLayerCount(layer_count);
+    uint32_t format = static_cast<int32_t>(in[4]);
+    buf_descriptor->SetColorFormat(format);
+    uint64_t usage = static_cast<uint64_t>(in[6]) << 32 | in[5];
+    buf_descriptor->SetUsage(usage);
+    return gralloc::Error::NONE;
+  }
 
  private:
   BufferManager *buf_mgr_ = nullptr;
@@ -102,10 +134,8 @@ class QtiMapper : public IQtiMapper {
   Error LockBuffer(void *buffer, uint64_t usage, const hidl_handle &acquire_fence);
 };
 
-extern "C" IMapper_3_0 *HIDL_FETCH_IMapper(const char *name);
-extern "C" IQtiMapper *HIDL_FETCH_IQtiMapper(const char *name);
-
 }  // namespace implementation
+}  // namespace V3_0
 }  // namespace mapper
 }  // namespace display
 }  // namespace hardware
