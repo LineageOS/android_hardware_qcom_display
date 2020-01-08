@@ -74,6 +74,33 @@ inline Type1 ALIGN(Type1 x, Type2 align) {
   return (Type1)((x + (Type1)align - 1) & ~((Type1)align - 1));
 }
 
+enum class Error : int32_t {
+  /**
+   * No error.
+   */
+  NONE = 0,
+  /**
+   * Invalid BufferDescriptor.
+   */
+  BAD_DESCRIPTOR = 1,
+  /**
+   * Invalid buffer handle.
+   */
+  BAD_BUFFER = 2,
+  /**
+   * Invalid HardwareBufferDescription.
+   */
+  BAD_VALUE = 3,
+  /**
+   * Resource unavailable.
+   */
+  NO_RESOURCES = 5,
+  /**
+   * Permanent failure.
+   */
+  UNSUPPORTED = 7,
+};
+
 enum PlaneComponent {
   /* luma */
   PLANE_COMPONENT_Y = 1 << 0,
@@ -190,6 +217,9 @@ int GetCustomFormatFlags(int format, uint64_t usage, int *custom_format, uint64_
 int GetBufferType(int inputFormat);
 bool IsGPUFlagSupported(uint64_t usage);
 bool HasAlphaComponent(int32_t format);
+
+void GetDRMFormat(uint32_t format, uint32_t flags, uint32_t *drm_format,
+                  uint64_t *drm_format_modifier);
 }  // namespace gralloc
 
 #endif  // __GR_UTILS_H__
