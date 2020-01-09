@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -195,7 +195,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   bool frame_capture_buffer_queued_ = false;
   int frame_capture_status_ = -EAGAIN;
   bool is_primary_ = false;
-  bool disable_layer_stitch_ = false;
+  bool disable_layer_stitch_ = true;
   HWCLayer* stitch_target_ = nullptr;
   SyncTask<LayerStitchTaskCode> layer_stitch_task_;
   GLLayerStitch* gl_layer_stitch_ = nullptr;
