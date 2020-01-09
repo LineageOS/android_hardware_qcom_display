@@ -196,7 +196,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   bool frame_capture_buffer_queued_ = false;
   int frame_capture_status_ = -EAGAIN;
   bool is_primary_ = false;
-  bool disable_layer_stitch_ = false;
+  bool disable_layer_stitch_ = true;
   HWCLayer* stitch_target_ = nullptr;
   SyncTask<LayerStitchTaskCode> layer_stitch_task_;
   GLLayerStitch* gl_layer_stitch_ = nullptr;
