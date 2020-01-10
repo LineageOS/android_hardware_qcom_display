@@ -54,6 +54,7 @@
 namespace sdm {
 
 using drm_utils::DRMMaster;
+HWEventsDRM* HWEventsDRM::hw_events_drm_ = nullptr;
 
 DisplayError HWEventsDRM::InitializePollFd() {
   for (uint32_t i = 0; i < event_data_list_.size(); i++) {
@@ -191,6 +192,7 @@ DisplayError HWEventsDRM::Init(int display_id, DisplayType display_type,
 
   PopulateHWEventData(event_list);
 
+  hw_events_drm_ = this;
   if (pthread_create(&event_thread_, NULL, &DisplayEventThread, this) < 0) {
     DLOGE("Failed to start %s, error = %s", event_thread_name_.c_str());
     return kErrorResources;
@@ -347,9 +349,6 @@ DisplayError HWEventsDRM::RegisterVSync() {
   vblank.request.type = (drmVBlankSeqType)(DRM_VBLANK_RELATIVE | DRM_VBLANK_EVENT |
                                            (high_crtc & DRM_VBLANK_HIGH_CRTC_MASK));
   vblank.request.sequence = 1;
-  // DRM hack to pass in context to unused field signal. Driver will write this to the node being
-  // polled on, and will be read as part of drm event handling and sent to handler
-  vblank.request.signal = reinterpret_cast<unsigned long>(this);  // NOLINT
   int error = drmWaitVBlank(poll_fds_[vsync_index_].fd, &vblank);
   if (error < 0) {
     DLOGE("drmWaitVBlank failed with err %d", errno);
@@ -519,7 +518,7 @@ void HWEventsDRM::HandlePanelDead(char *data) {
 void HWEventsDRM::VSyncHandlerCallback(int fd, unsigned int sequence, unsigned int tv_sec,
                                        unsigned int tv_usec, void *data) {
   int64_t timestamp = (int64_t)(tv_sec)*1000000000 + (int64_t)(tv_usec)*1000;
-  reinterpret_cast<HWEventsDRM *>(data)->event_handler_->VSync(timestamp);
+  hw_events_drm_->event_handler_->VSync(timestamp);
 }
 
 void HWEventsDRM::HandleIdleTimeout(char *data) {

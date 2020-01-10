@@ -101,6 +101,7 @@ class HWEventsDRM : public HWEventsInterface {
   bool is_primary_ = false;
   uint32_t panel_dead_index_ = 0;
   uint32_t idle_pc_index_ = 0;
+  static HWEventsDRM *hw_events_drm_;
 };
 
 }  // namespace sdm
