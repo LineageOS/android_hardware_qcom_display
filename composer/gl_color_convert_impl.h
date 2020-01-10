@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -34,6 +34,7 @@
 
 #include "gl_color_convert.h"
 #include "gl_common.h"
+#include "hwc_buffer_sync_handler.h"
 
 namespace sdm {
 
@@ -47,7 +48,9 @@ class GLColorConvertImpl : public GLColorConvert, public GLCommon {
   virtual int CreateContext(GLRenderTarget target, bool secure);
   virtual int Init();
   virtual int Deinit();
+  virtual void Reset();
  private:
+  HWCBufferSyncHandler buffer_sync_handler_ = {};
   GLRenderTarget target_ = kTargetRGBA;
   bool secure_ = false;
   GLContext ctx_;

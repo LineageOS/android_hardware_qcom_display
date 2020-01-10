@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -465,6 +465,7 @@ int HWCDisplay::Init() {
   DisplayError error = kErrorNone;
 
   HWCDebugHandler::Get()->GetProperty(ENABLE_NULL_DISPLAY_PROP, &null_display_mode_);
+  HWCDebugHandler::Get()->GetProperty(ENABLE_ASYNC_POWERMODE, &async_power_mode_);
 
   if (null_display_mode_) {
     DisplayNull *disp_null = new DisplayNull();
@@ -525,7 +526,9 @@ int HWCDisplay::Init() {
   HWCDebugHandler::Get()->GetProperty(DISABLE_FAST_PATH, &disable_fast_path);
   fast_path_enabled_ = !(disable_fast_path == 1);
 
-  DLOGI("Display created with id: %d", id_);
+  game_supported_ = display_intf_->GameEnhanceSupported();
+
+  DLOGI("Display created with id: %d, game_supported_: %d", id_, game_supported_);
 
   return 0;
 }
@@ -785,7 +788,7 @@ void HWCDisplay::BuildLayerStack() {
       layer->update_mask.set(kClientCompRequest);
     }
 
-    if (hwc_layer->GetType() == kLayerGame) {
+    if (game_supported_ && (hwc_layer->GetType() == kLayerGame)) {
       layer->flags.is_game = true;
       layer->input_buffer.flags.game = true;
     }
@@ -799,9 +802,10 @@ void HWCDisplay::BuildLayerStack() {
   bool enforce_geometry_change = (validate_state_ == kInternalValidate) && !validated_;
 
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
-  layer_stack_.flags.geometry_changed = UINT32(geometry_changes_ > 0) || enforce_geometry_change;
-  layer_stack_.flags.config_changed = !validated_;
 
+  layer_stack_.flags.geometry_changed = UINT32((geometry_changes_ || enforce_geometry_change ||
+                                                geometry_changes_on_doze_suspend_) > 0);
+  layer_stack_.flags.config_changed = !validated_;
   // Append client target to the layer stack
   Layer *sdm_client_target = client_target_->GetSDMLayer();
   sdm_client_target->flags.updating = IsLayerUpdating(client_target_);
@@ -913,7 +917,7 @@ void HWCDisplay::PostPowerMode() {
     auto fence = hwc_layer->PopBackReleaseFence();
     auto merged_fence = -1;
     if (fence >= 0) {
-      merged_fence = sync_merge("sync_merge", release_fence_, fence);
+      buffer_sync_handler_.SyncMerge(release_fence_, fence, &merged_fence);
       ::close(fence);
     } else {
       merged_fence = ::dup(release_fence_);
@@ -978,6 +982,11 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
   // Update release fence.
   release_fence_ = release_fence;
   current_power_mode_ = mode;
+
+  // Close the release fences in synchronous power updates
+  if (!async_power_mode_) {
+    PostPowerMode();
+  }
   return HWC2::Error::None;
 }
 
@@ -1056,6 +1065,14 @@ HWC2::Error HWCDisplay::GetDisplayAttribute(hwc2_config_t config, HWC2::Attribut
   }
 
   DisplayConfigVariableInfo variable_config = variable_config_map_.at(config);
+
+  variable_config.x_pixels -= UINT32(window_rect_.right + window_rect_.left);
+  variable_config.y_pixels -= UINT32(window_rect_.bottom + window_rect_.top);
+  if (variable_config.x_pixels <= 0 || variable_config.y_pixels <= 0) {
+    DLOGE("window rects are not within the supported range");
+    return HWC2::Error::BadDisplay;
+  }
+
   switch (attribute) {
     case HWC2::Attribute::VsyncPeriod:
       *out_value = INT32(variable_config.vsync_period_ns);
@@ -1311,6 +1328,10 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
   return kErrorNone;
 }
 
+DisplayError HWCDisplay::HistogramEvent(int /* fd */, uint32_t /* blob_fd */) {
+  return kErrorNone;
+}
+
 HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out_num_requests) {
   layer_changes_.clear();
   layer_requests_.clear();
@@ -1335,6 +1356,7 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
     } else if (error == kErrorPermission) {
       WaitOnPreviousFence();
       MarkLayersForGPUBypass();
+      geometry_changes_on_doze_suspend_ |= geometry_changes_;
     } else {
       DLOGW("Prepare failed. Error = %d", error);
       // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
@@ -1347,6 +1369,9 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
       callbacks_->Refresh(id_);
       return HWC2::Error::BadDisplay;
     }
+  } else {
+    // clear geometry_changes_on_doze_suspend_ on successful prepare.
+    geometry_changes_on_doze_suspend_ = GeometryChanges::kNone;
   }
 
   for (auto hwc_layer : layer_set_) {
@@ -1571,6 +1596,11 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
       tone_mapper_->Terminate();
     }
   }
+
+  if (elapse_timestamp_) {
+    layer_stack_.elapse_timestamp = elapse_timestamp_;
+  }
+
   error = display_intf_->Commit(&layer_stack_);
 
   if (error == kErrorNone) {
@@ -1851,6 +1881,19 @@ int HWCDisplay::SetFrameBufferConfig(uint32_t x_pixels, uint32_t y_pixels) {
     return -EINVAL;
   }
 
+  // Reduce the src_rect and dst_rect as per FBT config.
+  // SF sending reduced FBT but here the src_rect is equal to mixer which is
+  // higher than allocated buffer of FBT.
+  if (windowed_display_) {
+    x_pixels -= UINT32(window_rect_.right + window_rect_.left);
+    y_pixels -= UINT32(window_rect_.bottom + window_rect_.top);
+  }
+
+  if (x_pixels <= 0 || y_pixels <= 0) {
+    DLOGE("window rects are not within the supported range");
+    return -EINVAL;
+  }
+
   // Create rects to represent the new source and destination crops
   LayerRect crop = LayerRect(0, 0, FLOAT(x_pixels), FLOAT(y_pixels));
   hwc_rect_t scaled_display_frame = {0, 0, INT(x_pixels), INT(y_pixels)};
@@ -1872,6 +1915,11 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
     return error;
   }
 
+  if (windowed_display_) {
+    x_pixels -= UINT32(window_rect_.right + window_rect_.left);
+    y_pixels -= UINT32(window_rect_.bottom + window_rect_.top);
+    windowed_display_ = false;
+  }
   auto client_target_layer = client_target_->GetSDMLayer();
 
   int aligned_width;
@@ -2357,8 +2405,35 @@ HWC2::Error HWCDisplay::GetDisplayIdentificationData(uint8_t *out_port, uint32_t
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCDisplay::SetDisplayElapseTime(uint64_t time) {
+  elapse_timestamp_ = time;
+  return HWC2::Error::None;
+}
+
 bool HWCDisplay::IsDisplayCommandMode() {
   return is_cmd_mode_;
+}
+
+HWC2::Error HWCDisplay::SetDisplayedContentSamplingEnabledVndService(bool enabled) {
+  return HWC2::Error::Unsupported;
+}
+
+HWC2::Error HWCDisplay::SetDisplayedContentSamplingEnabled(int32_t enabled, uint8_t component_mask,
+                                                           uint64_t max_frames) {
+  DLOGV("Request to start/stop histogram thread not supported on this display");
+  return HWC2::Error::Unsupported;
+}
+
+HWC2::Error HWCDisplay::GetDisplayedContentSamplingAttributes(int32_t *format, int32_t *dataspace,
+                                                              uint8_t *supported_components) {
+  return HWC2::Error::Unsupported;
+}
+
+HWC2::Error HWCDisplay::GetDisplayedContentSample(
+    uint64_t max_frames, uint64_t timestamp, uint64_t *numFrames,
+    int32_t samples_size[NUM_HISTOGRAM_COLOR_COMPONENTS],
+    uint64_t *samples[NUM_HISTOGRAM_COLOR_COMPONENTS]) {
+  return HWC2::Error::Unsupported;
 }
 
 // Skip SDM prepare if all the layers in the current draw cycle are marked as Skip and

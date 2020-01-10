@@ -276,11 +276,18 @@ DisplayError Strategy::SetBlendSpace(const PrimariesTransfer &blend_space) {
   return kErrorNotSupported;
 }
 
-bool Strategy::CanSkipValidate() {
+bool Strategy::CanSkipValidate(bool *need_buffer_swap) {
   if (strategy_intf_) {
-    return strategy_intf_->CanSkipValidate();
+    return strategy_intf_->CanSkipValidate(need_buffer_swap);
   }
   return true;
+}
+
+DisplayError Strategy::SwapBuffers() {
+  if (strategy_intf_) {
+    return strategy_intf_->SwapBuffers();
+  }
+  return kErrorNone;
 }
 
 }  // namespace sdm

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, 2020 The Linux Foundation. All rights reserved.
+* Copyright (c) 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -27,47 +27,51 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef __DEBUG_H__
-#define __DEBUG_H__
+#ifndef __FENCE_H__
+#define __FENCE_H__
 
-#include <stdint.h>
-#include <debug_handler.h>
-#include <core/sdm_types.h>
-#include <core/display_interface.h>
-#include <display_properties.h>
+#include <core/buffer_sync_handler.h>
+#include <unistd.h>
+#include <utility>
+#include <memory>
+#include <string>
 
 namespace sdm {
 
-using display::DebugHandler;
+using std::shared_ptr;
+using std::string;
 
-class Debug {
+class Fence {
  public:
-  static inline DebugHandler* Get() { return DebugHandler::Get(); }
-  static int GetSimulationFlag();
-  static bool GetExternalResolution(char *val);
-  static void GetIdleTimeoutMs(uint32_t *active_ms, uint32_t *inactive_ms);
-  static bool IsRotatorDownScaleDisabled();
-  static bool IsDecimationDisabled();
-  static int GetMaxPipesPerMixer(DisplayType display_type);
-  static int GetMaxUpscale();
-  static bool IsVideoModeEnabled();
-  static bool IsRotatorUbwcDisabled();
-  static bool IsRotatorSplitDisabled();
-  static bool IsScalarDisabled();
-  static bool IsUbwcTiledFrameBuffer();
-  static bool IsAVRDisabled();
-  static bool IsExtAnimDisabled();
-  static bool IsPartialSplitDisabled();
-  static bool IsSrcSplitPreferred();
-  static DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
-  static DisplayError GetWindowRect(float *left, float *top, float *right, float *bottom);
-  static DisplayError GetReducedConfig(uint32_t *num_vig_pipes, uint32_t *num_dma_pipes);
-  static int GetExtMaxlayers();
-  static DisplayError GetProperty(const char *property_name, char *value);
-  static DisplayError GetProperty(const char *property_name, int *value);
+  ~Fence();
+
+  static void Set(BufferSyncHandler *buffer_sync_handler);
+
+  // Ownership of the file descriptor is transferred to this method.
+  // Client must not close the file descriptor anymore regardless of the object creation status.
+  // nullptr will be retured for invalid fd i.e. -1.
+  static shared_ptr<Fence> Create(int fd);
+
+  // Ownership of returned fd lies with caller. Caller must explicitly close the fd.
+  static int Dup(const shared_ptr<Fence> &fence);
+
+  static shared_ptr<Fence> Merge(const shared_ptr<Fence> &fence1, const shared_ptr<Fence> &fence2);
+  static DisplayError Wait(const shared_ptr<Fence> &fence);
+  static DisplayError Wait(const shared_ptr<Fence> &fence, int timeout);
+  static string GetStr(const shared_ptr<Fence> &fence);
+
+ private:
+  explicit Fence(int fd);
+  Fence(const Fence &fence) = delete;
+  Fence& operator=(const Fence &fence) = delete;
+  Fence(Fence &&fence) = delete;
+  Fence& operator=(Fence &&fence) = delete;
+  static int Get(const shared_ptr<Fence> &fence);
+
+  static BufferSyncHandler *buffer_sync_handler_;
+  int fd_ = -1;
 };
 
 }  // namespace sdm
 
-#endif  // __DEBUG_H__
-
+#endif  // __FENCE_H__

@@ -62,6 +62,7 @@ class CoreImpl : public CoreInterface {
   virtual DisplayError GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_disp_info);
   virtual DisplayError GetDisplaysStatus(HWDisplaysInfo *hw_displays_info);
   virtual DisplayError GetMaxDisplaysSupported(DisplayType type, int32_t *max_displays);
+  virtual bool IsRotatorSupportedFormat(LayerBufferFormat format);
 
  protected:
   Locker locker_;

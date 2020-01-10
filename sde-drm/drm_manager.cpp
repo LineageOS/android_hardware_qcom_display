@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -220,8 +220,12 @@ DRMDppsManagerIntf *DRMManager::GetDppsMgrIntf() {
 int DRMManager::RegisterDisplay(DRMDisplayType disp_type, DRMDisplayToken *token) {
   int ret = conn_mgr_->Reserve(disp_type, token);
   if (ret) {
-    DRM_LOGE("Error reserving connector for display type %d. Error = %d (%s)", disp_type, ret,
-             strerror(abs(ret)));
+    if (ret == -ENODEV) {
+      DRM_LOGI("display type %d is not present", disp_type);
+    } else {
+      DRM_LOGE("Error reserving connector for display type %d. Error = %d (%s)", disp_type, ret,
+               strerror(abs(ret)));
+    }
     return ret;
   }
 

@@ -145,6 +145,9 @@ void GetAlignedWidthAndHeight(const BufferInfo &d, unsigned int *aligned_w,
 int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]);
 int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32_t height,
                     int32_t flags, int *plane_count, PlaneLayoutInfo plane_info[8]);
+void GetRGBPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32_t height,
+                     int32_t flags, int *plane_count, PlaneLayoutInfo *plane_info);
+unsigned int GetRgbMetaSize(int format, uint32_t width, uint32_t height, uint64_t usage);
 void GetYuvSubSamplingFactor(int32_t format, int *h_subsampling, int *v_subsampling);
 void CopyPlaneLayoutInfotoAndroidYcbcr(uint64_t base, int plane_count, PlaneLayoutInfo *plane_info,
                                        struct android_ycbcr *ycbcr);
@@ -180,6 +183,7 @@ int GetImplDefinedFormat(uint64_t usage, int format);
 int GetCustomFormatFlags(int format, uint64_t usage, int *custom_format, uint64_t *priv_flags);
 int GetBufferType(int inputFormat);
 bool IsGPUFlagSupported(uint64_t usage);
+bool HasAlphaComponent(int32_t format);
 }  // namespace gralloc
 
 #endif  // __GR_UTILS_H__

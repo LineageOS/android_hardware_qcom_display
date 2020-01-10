@@ -57,6 +57,8 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
     return kErrorNone;
   }
   virtual DisplayError TeardownConcurrentWriteback(void) { return kErrorNotSupported; }
+  virtual DisplayError colorSamplingOn();
+  virtual DisplayError colorSamplingOff();
 
   // Implement the HWEventHandlers
   virtual DisplayError VSync(int64_t timestamp);
@@ -68,6 +70,7 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
   virtual void PingPongTimeout() {}
   virtual void PanelDead() {}
   virtual void HwRecovery(const HWRecoveryEvent sdm_event_code);
+  void Histogram(int histogram_fd, uint32_t blob_id) override;
 
   void UpdateColorModes();
   void InitializeColorModesFromColorspace();

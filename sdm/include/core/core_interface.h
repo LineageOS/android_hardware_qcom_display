@@ -258,6 +258,14 @@ class CoreInterface {
   */
   virtual DisplayError GetMaxDisplaysSupported(DisplayType type, int32_t *max_displays) = 0;
 
+  /*! @brief Method which returns true if the given format is supported by rotator otherwise false
+
+    @param[in] \link LayerBufferFormat \endlink
+
+    @return returns true if the given format is supported by rotator otherwise false
+  */
+  virtual bool IsRotatorSupportedFormat(LayerBufferFormat format) = 0;
+
  protected:
   virtual ~CoreInterface() { }
 };

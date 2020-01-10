@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -170,7 +170,8 @@ int GLColorConvertImpl::Blit(const private_handle_t *src_hnd, const private_hand
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, kFullScreenTexCoords);
   glDrawArrays(GL_TRIANGLES, 0, 3);
 
-  int in_fence_fd = sync_merge(__CLASS__, src_acquire_fence_fd, dst_acquire_fence_fd);
+  int in_fence_fd = -1;
+  buffer_sync_handler_.SyncMerge(src_acquire_fence_fd, dst_acquire_fence_fd, &in_fence_fd);
   if (in_fence_fd >= 0) {
     WaitOnInputFence(in_fence_fd);
   }
@@ -197,6 +198,10 @@ GLColorConvertImpl::~GLColorConvertImpl() {}
 GLColorConvertImpl::GLColorConvertImpl(GLRenderTarget target, bool secure) {
   target_ = target;
   secure_ = secure;
+}
+
+void GLColorConvertImpl::Reset() {
+  ClearCache();
 }
 
 }  // namespace sdm

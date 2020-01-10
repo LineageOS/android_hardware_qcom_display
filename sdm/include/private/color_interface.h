@@ -99,6 +99,7 @@ class ColorInterface {
   virtual DisplayError ColorIntfConvertToPPFeature(PPFeaturesConfig *out_features,
                                                   uint32_t disp_id, bool enable,
                                                   const std::string &hw_asset, void *in_data) = 0;
+  virtual DisplayError ColorIntfGameEnhancementSupported(bool *supported) = 0;
 
  protected:
   virtual ~ColorInterface() {}

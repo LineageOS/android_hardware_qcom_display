@@ -306,6 +306,9 @@ class DisplayEventHandler {
   */
   virtual DisplayError CECMessage(char *message) = 0;
 
+  /*! @brief Event handler for Histogram messages received by Display HAL. */
+  virtual DisplayError HistogramEvent(int source_fd, uint32_t blob_id) = 0;
+
   /*! @brief Event handler for events received by Display HAL. */
   virtual DisplayError HandleEvent(DisplayEvent event) = 0;
 
@@ -670,6 +673,14 @@ class DisplayInterface {
   */
   virtual DisplayError GetPanelBrightness(float *brightness) = 0;
 
+  /*! @brief Method to get the max brightness level of the display
+
+    @param[out] max_brightness level
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetPanelMaxBrightness(uint32_t *max_brightness_level) = 0;
+
   /*! @brief Method to set layer mixer resolution.
 
     @param[in] width layer mixer width
@@ -872,6 +883,11 @@ class DisplayInterface {
   */
   virtual DisplayError GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
                                                     uint8_t *out_data) = 0;
+  /*! @brief Method to turn on histogram events. */
+  virtual DisplayError colorSamplingOn() = 0;
+
+  /*! @brief Method to turn off histogram events. */
+  virtual DisplayError colorSamplingOff() = 0;
 
   /*! @brief Method to set min/max luminance for dynamic tonemapping of external device over WFD.
 
@@ -895,11 +911,24 @@ class DisplayInterface {
     @return \link DisplayError \endlink
   */
   virtual DisplayError SetBLScale(uint32_t level) = 0;
+
   /*! @brief Method to check if the Default resources are freed for display
 
     @return \link bool \endlink
   */
   virtual bool CheckResourceState() = 0;
+
+  /*! @brief Method to check if game enhance feature is supported for display
+
+    @return \link bool \endlink
+  */
+  virtual bool GameEnhanceSupported() = 0;
+
+  /*! @brief Method to get the current qsync mode used.
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetQSyncMode(QSyncMode *qsync_mode) = 0;
 
  protected:
   virtual ~DisplayInterface() { }

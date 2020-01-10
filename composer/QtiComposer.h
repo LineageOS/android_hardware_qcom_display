@@ -35,7 +35,7 @@
 
 // TODO(user): recheck on this header inclusion
 #include <hardware/hwcomposer2.h>
-#include <vendor/qti/hardware/display/composer/2.0/IQtiComposer.h>
+#include <vendor/qti/hardware/display/composer/2.1/IQtiComposer.h>
 #include <log/log.h>
 #include <unordered_set>
 
@@ -44,10 +44,10 @@ namespace qti {
 namespace hardware {
 namespace display {
 namespace composer {
-namespace V2_0 {
+namespace V2_1 {
 namespace implementation {
 
-using ::vendor::qti::hardware::display::composer::V2_0::IQtiComposer;
+using ::vendor::qti::hardware::display::composer::V2_1::IQtiComposer;
 
 class QtiComposer : public IQtiComposer {
  public:
@@ -72,7 +72,7 @@ class QtiComposer : public IQtiComposer {
 extern "C" IQtiComposer* HIDL_FETCH_IQtiComposer(const char* name);
 
 }  // namespace implementation
-}  // namespace V2_0
+}  // namespace V2_1
 }  // namespace composer
 }  // namespace display
 }  // namespace hardware

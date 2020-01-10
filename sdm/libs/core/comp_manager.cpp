@@ -411,6 +411,12 @@ DisplayError CompManager::PostCommit(Handle display_ctx, HWLayers *hw_layers) {
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
+  Handle &display_resource_ctx = display_comp_ctx->display_resource_ctx;
+  error = resource_intf_->Stop(display_resource_ctx, hw_layers);
+  if (error != kErrorNone) {
+    DLOGE("Resource stop failed for display = %d", display_comp_ctx->display_type);
+  }
+
   error = resource_intf_->PostCommit(display_comp_ctx->display_resource_ctx, hw_layers);
   if (error != kErrorNone) {
     return error;
@@ -419,14 +425,11 @@ DisplayError CompManager::PostCommit(Handle display_ctx, HWLayers *hw_layers) {
   display_comp_ctx->idle_fallback = false;
   display_comp_ctx->first_cycle_ = false;
 
-  Handle &display_resource_ctx = display_comp_ctx->display_resource_ctx;
-  error = resource_intf_->Stop(display_resource_ctx, hw_layers);
-
   DLOGV_IF(kTagCompManager, "Registered displays [%s], display %d-%d",
            StringDisplayList(registered_displays_), display_comp_ctx->display_id,
            display_comp_ctx->display_type);
 
-  return error;
+  return kErrorNone;
 }
 
 void CompManager::Purge(Handle display_ctx) {
@@ -669,11 +672,11 @@ void CompManager::UpdateStrategyConstraints(bool is_primary, bool disabled) {
   max_sde_builtin_layers_ = (disabled && (powered_on_displays_.size() <= 1)) ? kMaxSDELayers : 2;
 }
 
-bool CompManager::CanSkipValidate(Handle display_ctx) {
+bool CompManager::CanSkipValidate(Handle display_ctx, bool *needs_buffer_swap) {
   DisplayCompositionContext *display_comp_ctx =
       reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
-  return display_comp_ctx->strategy->CanSkipValidate();
+  return display_comp_ctx->strategy->CanSkipValidate(needs_buffer_swap);
 }
 
 bool CompManager::CheckResourceState(Handle display_ctx) {
@@ -685,6 +688,22 @@ bool CompManager::CheckResourceState(Handle display_ctx) {
   resource_intf_->Perform(ResourceInterface::kCmdGetResourceStatus,
                           display_comp_ctx->display_resource_ctx, &res_wait_needed);
   return res_wait_needed;
+}
+
+bool CompManager::IsRotatorSupportedFormat(LayerBufferFormat format) {
+  if (resource_intf_) {
+    return resource_intf_->IsRotatorSupportedFormat(format);
+  }
+
+  return false;
+}
+
+DisplayError CompManager::SwapBuffers(Handle display_ctx) {
+  SCOPE_LOCK(locker_);
+  DisplayCompositionContext *display_comp_ctx =
+      reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+
+  return display_comp_ctx->strategy->SwapBuffers();
 }
 
 }  // namespace sdm

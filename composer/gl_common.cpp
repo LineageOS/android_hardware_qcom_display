@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -147,13 +147,23 @@ int GLCommon::CreateOutputFence() {
   return fd;
 }
 
-void GLCommon::DestroyContext(const GLContext* ctx) {
+void GLCommon::DestroyContext(GLContext* ctx) {
   DTRACE_SCOPED();
+
+  // Clear egl image buffers.
+  image_wrapper_.Deinit();
+
+  EGL(DeleteProgram(ctx->program_id));
   EGL(eglMakeCurrent(ctx->egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT));
   EGL(eglDestroySurface(ctx->egl_display, ctx->egl_surface));
   EGL(eglDestroyContext(ctx->egl_display, ctx->egl_context));
-  EGL(DeleteProgram(ctx->program_id));
   EGL(eglTerminate(ctx->egl_display));
+}
+
+void GLCommon::ClearCache() {
+  // Clear cached handles.
+  image_wrapper_.Deinit();
+  image_wrapper_.Init();
 }
 
 }  // namespace sdm

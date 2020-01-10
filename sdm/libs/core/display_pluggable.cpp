@@ -119,12 +119,6 @@ DisplayError DisplayPluggable::Init() {
 
   current_refresh_rate_ = hw_panel_info_.max_fps;
 
-  if (IsPrimaryDisplay()) {
-    int32_t disable_defer_power_state = 0;
-    Debug::GetProperty(DISABLE_DEFER_POWER_STATE, &disable_defer_power_state);
-    defer_power_state_ = !disable_defer_power_state;
-  }
-
   return error;
 }
 
@@ -256,6 +250,8 @@ void DisplayPluggable::CECMessage(char *message) {
 void DisplayPluggable::HwRecovery(const HWRecoveryEvent sdm_event_code) {
   DisplayBase::HwRecovery(sdm_event_code);
 }
+
+void DisplayPluggable::Histogram(int /* histogram_fd */, uint32_t /* blob_id */) {}
 
 DisplayError DisplayPluggable::VSync(int64_t timestamp) {
   if (vsync_enable_) {
@@ -458,6 +454,14 @@ void DisplayPluggable::UpdateColorModes() {
     DLOGI("Color mode = %s", color_modes_[i].name);
   }
   return;
+}
+
+DisplayError DisplayPluggable::colorSamplingOn() {
+    return kErrorNone;
+}
+
+DisplayError DisplayPluggable::colorSamplingOff() {
+    return kErrorNone;
 }
 
 }  // namespace sdm

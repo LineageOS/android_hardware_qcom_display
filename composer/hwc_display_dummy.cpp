@@ -59,6 +59,10 @@ HWC2::Error HWCDisplayDummy::Present(int32_t *out_retire_fence) {
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCDisplayDummy::SetColorMode(ColorMode mode) {
+  return HWC2::Error::None;
+}
+
 HWCDisplayDummy::HWCDisplayDummy(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
                                  HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
                                  qService::QService *qservice, hwc2_display_t id,
