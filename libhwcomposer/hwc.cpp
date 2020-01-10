@@ -117,7 +117,7 @@ static void reset(hwc_context_t *ctx, int numDisplays,
                   hwc_display_contents_1_t** displays) {
     ctx->isPaddingRound = false;
     memset(ctx->listStats, 0, sizeof(ctx->listStats));
-    for(int i = 0; i < HWC_NUM_DISPLAY_TYPES; i++) {
+    for(int i = 0; i < numDisplays; i++) {
         hwc_display_contents_1_t *list = displays[i];
         // XXX:SurfaceFlinger no longer guarantees that this
         // value is reset on every prepare. However, for the layer
