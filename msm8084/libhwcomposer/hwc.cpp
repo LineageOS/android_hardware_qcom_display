@@ -198,8 +198,8 @@ static void setNumActiveDisplays(hwc_context_t *ctx, int numDisplays,
 
 static void reset(hwc_context_t *ctx, int numDisplays,
                   hwc_display_contents_1_t** displays) {
-
-
+    ctx->isPaddingRound = false;
+    memset(ctx->listStats, 0, sizeof(ctx->listStats));
     for(int i = 0; i < numDisplays; i++) {
         hwc_display_contents_1_t *list = displays[i];
         // XXX:SurfaceFlinger no longer guarantees that this
