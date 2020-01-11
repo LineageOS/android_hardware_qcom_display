@@ -279,12 +279,16 @@ DisplayError HWEventsDRM::Deinit() {
 }
 
 DisplayError HWEventsDRM::SetEventState(HWEvent event, bool enable, void *arg) {
+  DisplayError error = kErrorNone;
   switch (event) {
     case HWEvent::VSYNC: {
       std::lock_guard<std::mutex> lock(vsync_mutex_);
       vsync_enabled_ = enable;
       if (vsync_enabled_ && !vsync_registered_) {
-        RegisterVSync();
+        error = RegisterVSync();
+        if (error != kErrorNone) {
+          return error;
+        }
         vsync_registered_ = true;
       }
     } break;
@@ -558,11 +562,12 @@ DisplayError HWEventsDRM::RegisterHwRecovery(bool enable) {
 
 void HWEventsDRM::HandleVSync(char *data) {
   {
+    DisplayError ret = kErrorNone;
     std::lock_guard<std::mutex> lock(vsync_mutex_);
     vsync_registered_ = false;
     if (vsync_enabled_) {
-      RegisterVSync();
-      vsync_registered_ = true;
+      ret = RegisterVSync();
+      vsync_registered_ = (ret == kErrorNone);
     }
   }
 
