@@ -1199,6 +1199,8 @@ DisplayError DisplayBase::SetVSyncState(bool enable) {
     }
     if (error == kErrorNone) {
       vsync_enable_ = enable;
+    } else {
+      vsync_enable_pending_ = true;
     }
   }
   vsync_enable_pending_ = !enable ? false : vsync_enable_pending_;
