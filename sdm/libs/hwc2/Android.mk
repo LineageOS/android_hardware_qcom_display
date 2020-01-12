@@ -8,7 +8,8 @@ LOCAL_MODULE                  := hwcomposer.$(TARGET_BOARD_PLATFORM)
 LOCAL_VENDOR_MODULE           := true
 LOCAL_MODULE_RELATIVE_PATH    := hw
 LOCAL_MODULE_TAGS             := optional
-LOCAL_C_INCLUDES              := $(common_includes)
+LOCAL_C_INCLUDES              := $(common_includes) \
+                                 $(kernel_includes)
 LOCAL_HEADER_LIBRARIES        := display_headers
 
 LOCAL_CFLAGS                  := -Wno-missing-field-initializers -Wno-unused-parameter \
@@ -34,6 +35,26 @@ endif
 
 ifeq ($(display_config_version), DISPLAY_CONFIG_1_1)
 LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.1
+endif
+
+ifeq ($(display_config_version), DISPLAY_CONFIG_1_7)
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.7 \
+                                 vendor.display.config@1.6 vendor.display.config@1.5 \
+                                 vendor.display.config@1.4 vendor.display.config@1.3 \
+                                 vendor.display.config@1.2 vendor.display.config@1.1
+endif
+ifeq ($(display_config_version), DISPLAY_CONFIG_1_8)
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.1 vendor.display.config@1.2 \
+                                 vendor.display.config@1.3 vendor.display.config@1.4 \
+                                 vendor.display.config@1.5 vendor.display.config@1.6 \
+                                 vendor.display.config@1.7 vendor.display.config@1.8
+endif
+ifeq ($(display_config_version), DISPLAY_CONFIG_1_9)
+LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.1 vendor.display.config@1.2 \
+                                 vendor.display.config@1.3 vendor.display.config@1.4 \
+                                 vendor.display.config@1.5 vendor.display.config@1.6 \
+                                 vendor.display.config@1.7 vendor.display.config@1.8 \
+                                 vendor.display.config@1.9
 endif
 
 LOCAL_SRC_FILES               := hwc_session.cpp \
