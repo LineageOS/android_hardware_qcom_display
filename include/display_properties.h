@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -91,6 +91,11 @@
 #define DISABLE_HDR_LUT_GEN                  DISPLAY_PROP("disable_hdr_lut_gen")
 #define ENABLE_DEFAULT_COLOR_MODE            DISPLAY_PROP("enable_default_color_mode")
 #define DISABLE_HDR                          DISPLAY_PROP("hwc_disable_hdr")
+#define DISABLE_QTI_BSP                      DISPLAY_PROP("disable_qti_bsp")
+#define UPDATE_VSYNC_ON_DOZE                 DISPLAY_PROP("update_vsync_on_doze")
+#define PANEL_MOUNTFLIP                      DISPLAY_PROP("panel_mountflip")
+#define VDS_ALLOW_HWC                        DISPLAY_PROP("vds_allow_hwc")
+#define QDFRAMEWORK_LOGS                     DISPLAY_PROP("qdframework_logs")
 
 #define HDR_CONFIG_PROP                      RO_DISPLAY_PROP("hdr.config")
 #define QDCM_PCC_TRANS_PROP                  DISPLAY_PROP("qdcm.pcc_for_trans")

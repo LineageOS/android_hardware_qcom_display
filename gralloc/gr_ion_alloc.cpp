@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2019, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,6 +32,11 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <linux/msm_ion.h>
+#if TARGET_ION_ABI_VERSION >= 2
+#include <ion/ion.h>
+#include <linux/dma-buf.h>
+#endif
 #include <stdlib.h>
 #include <fcntl.h>
 #include <log/log.h>
@@ -46,7 +51,7 @@ namespace gralloc1 {
 
 bool IonAlloc::Init() {
   if (ion_dev_fd_ == FD_INIT) {
-    ion_dev_fd_ = open(kIonDevice, O_RDONLY);
+    ion_dev_fd_ = OpenIonDevice();
   }
 
   if (ion_dev_fd_ < 0) {
@@ -56,6 +61,103 @@ bool IonAlloc::Init() {
   }
 
   return true;
+}
+
+#if TARGET_ION_ABI_VERSION >= 2  // Use libion APIs for new ion
+
+int IonAlloc::OpenIonDevice() {
+  return ion_open();
+}
+
+void IonAlloc::CloseIonDevice() {
+  if (ion_dev_fd_ > FD_INIT) {
+    ion_close(ion_dev_fd_);
+  }
+
+  ion_dev_fd_ = FD_INIT;
+}
+
+int IonAlloc::AllocBuffer(AllocData *data) {
+  ATRACE_CALL();
+  int err = 0;
+  int fd = -1;
+  unsigned int flags = data->flags;
+
+  flags |= data->uncached ? 0 : ION_FLAG_CACHED;
+
+  std::string tag_name{};
+  if (ATRACE_ENABLED()) {
+    tag_name = "libion alloc size: " + std::to_string(data->size);
+  }
+
+  ATRACE_BEGIN(tag_name.c_str());
+  err = ion_alloc_fd(ion_dev_fd_, data->size, data->align, data->heap_id, flags, &fd);
+  ATRACE_END();
+  if (err) {
+    ALOGE("libion alloc failed");
+    return err;
+  }
+
+  data->fd = fd;
+  data->ion_handle = fd;  // For new ion api ion_handle does not exists so reusing fd for now
+  ALOGD_IF(DEBUG, "libion: Allocated buffer size:%u fd:%d", data->size, data->fd);
+
+  return 0;
+}
+
+int IonAlloc::FreeBuffer(void *base, unsigned int size, unsigned int offset, int fd,
+                         int /*ion_handle*/) {
+  ATRACE_CALL();
+  int err = 0;
+  ALOGD_IF(DEBUG, "libion: Freeing buffer base:%p size:%u fd:%d", base, size, fd);
+
+  if (base) {
+    err = UnmapBuffer(base, size, offset);
+  }
+
+  close(fd);
+  return err;
+}
+
+int IonAlloc::ImportBuffer(int fd) {
+  // For new ion api ion_handle does not exists so reusing fd for now
+  return fd;
+}
+
+int IonAlloc::CleanBuffer(void */*base*/, unsigned int /*size*/, unsigned int /*offset*/,
+                          int /*handle*/, int op, int dma_buf_fd) {
+  ATRACE_CALL();
+  ATRACE_INT("operation id", op);
+
+  struct dma_buf_sync sync;
+  int err = 0;
+
+  switch (op) {
+    case CACHE_CLEAN:
+      sync.flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_RW;
+      break;
+    case CACHE_INVALIDATE:
+      sync.flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_RW;
+      break;
+    default:
+      ALOGE("%s: Invalid operation %d", __FUNCTION__, op);
+      return -1;
+  }
+
+  if (ioctl(dma_buf_fd, INT(DMA_BUF_IOCTL_SYNC), &sync)) {
+    err = -errno;
+    ALOGE("%s: DMA_BUF_IOCTL_SYNC failed with error - %s", __FUNCTION__, strerror(errno));
+    return err;
+  }
+
+  return 0;
+}
+
+#else
+#ifndef TARGET_ION_ABI_VERSION  // Use old ion apis directly
+
+int IonAlloc::OpenIonDevice() {
+  return open(kIonDevice, O_RDONLY);
 }
 
 void IonAlloc::CloseIonDevice() {
@@ -122,25 +224,6 @@ int IonAlloc::FreeBuffer(void *base, unsigned int size, unsigned int offset, int
   return err;
 }
 
-int IonAlloc::MapBuffer(void **base, unsigned int size, unsigned int offset, int fd) {
-  ATRACE_CALL();
-  int err = 0;
-  void *addr = 0;
-
-  // It is a (quirky) requirement of ION to have opened the
-  // ion fd in the process that is doing the mapping
-  addr = mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-  *base = addr;
-  if (addr == MAP_FAILED) {
-    err = -errno;
-    ALOGE("ion: Failed to map memory in the client: %s", strerror(errno));
-  } else {
-    ALOGD_IF(DEBUG, "ion: Mapped buffer base:%p size:%u offset:%u fd:%d", addr, size, offset, fd);
-  }
-
-  return err;
-}
-
 int IonAlloc::ImportBuffer(int fd) {
   struct ion_fd_data fd_data;
   int err = 0;
@@ -153,20 +236,8 @@ int IonAlloc::ImportBuffer(int fd) {
   return fd_data.handle;
 }
 
-int IonAlloc::UnmapBuffer(void *base, unsigned int size, unsigned int /*offset*/) {
-  ATRACE_CALL();
-  ALOGD_IF(DEBUG, "ion: Unmapping buffer  base:%p size:%u", base, size);
-
-  int err = 0;
-  if (munmap(base, size)) {
-    err = -errno;
-    ALOGE("ion: Failed to unmap memory at %p : %s", base, strerror(errno));
-  }
-
-  return err;
-}
-
-int IonAlloc::CleanBuffer(void *base, unsigned int size, unsigned int offset, int handle, int op) {
+int IonAlloc::CleanBuffer(void *base, unsigned int size, unsigned int offset, int handle, int op,
+                          int /*fd*/) {
   ATRACE_CALL();
   ATRACE_INT("operation id", op);
   struct ion_flush_data flush_data;
@@ -199,6 +270,67 @@ int IonAlloc::CleanBuffer(void *base, unsigned int size, unsigned int offset, in
   }
 
   return 0;
+}
+
+#else  // This ion version is not supported
+
+int IonAlloc::OpenIonDevice() {
+  return -EINVAL;
+}
+
+void IonAlloc::CloseIonDevice() {
+}
+
+int IonAlloc::AllocBuffer(AllocData * /*data*/) {
+  return -EINVAL;
+}
+
+int IonAlloc::FreeBuffer(void * /*base*/, unsigned int /*size*/, unsigned int /*offset*/,
+                         int /*fd*/, int /*ion_handle*/) {
+  return -EINVAL;
+}
+
+int IonAlloc::ImportBuffer(int /*fd*/) {
+  return -EINVAL;
+}
+
+int IonAlloc::CleanBuffer(void * /*base*/, unsigned int /*size*/, unsigned int /*offset*/,
+                          int /*handle*/, int /*op*/, int /*fd*/) {
+  return -EINVAL;
+}
+
+#endif
+#endif  // TARGET_ION_ABI_VERSION
+
+
+int IonAlloc::MapBuffer(void **base, unsigned int size, unsigned int offset, int fd) {
+  ATRACE_CALL();
+  int err = 0;
+  void *addr = 0;
+
+  addr = mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+  *base = addr;
+  if (addr == MAP_FAILED) {
+    err = -errno;
+    ALOGE("ion: Failed to map memory in the client: %s", strerror(errno));
+  } else {
+    ALOGD_IF(DEBUG, "ion: Mapped buffer base:%p size:%u offset:%u fd:%d", addr, size, offset, fd);
+  }
+
+  return err;
+}
+
+int IonAlloc::UnmapBuffer(void *base, unsigned int size, unsigned int /*offset*/) {
+  ATRACE_CALL();
+  ALOGD_IF(DEBUG, "ion: Unmapping buffer  base:%p size:%u", base, size);
+
+  int err = 0;
+  if (munmap(base, size)) {
+    err = -errno;
+    ALOGE("ion: Failed to unmap memory at %p : %s", base, strerror(errno));
+  }
+
+  return err;
 }
 
 }  // namespace gralloc1
