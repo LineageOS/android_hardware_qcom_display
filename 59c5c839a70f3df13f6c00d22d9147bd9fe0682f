@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "8e74efe1_d106f4c3",
+        "filename": "msm8084/libhwcomposer/hwc.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 202,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2020-01-13T18:35:06Z",
+      "side": 1,
+      "message": "?!?",
+      "range": {
+        "startLine": 201,
+        "startChar": 0,
+        "endLine": 202,
+        "endChar": 54
+      },
+      "revId": "59c5c839a70f3df13f6c00d22d9147bd9fe0682f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
