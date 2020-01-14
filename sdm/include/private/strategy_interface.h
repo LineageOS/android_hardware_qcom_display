@@ -53,7 +53,7 @@ class StrategyInterface {
                                    const DisplayConfigVariableInfo &fb_config) = 0;
   virtual DisplayError SetCompositionState(LayerComposition composition_type, bool enable) = 0;
   virtual DisplayError Purge() = 0;
-  virtual DisplayError SetIdleTimeoutMs(uint32_t active_ms) = 0;
+  virtual DisplayError SetIdleTimeoutMs(uint32_t active_ms, uint32_t inactive_ms) = 0;
   /* Sets the list of color modes supported on a display */
   virtual DisplayError SetColorModesInfo(const std::vector<PrimariesTransfer> &colormodes_cs) = 0;
   virtual DisplayError SetBlendSpace(const PrimariesTransfer &blend_space) = 0;

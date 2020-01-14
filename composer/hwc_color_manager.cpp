@@ -409,8 +409,10 @@ int HWCQDCMModeManager::EnableQDCMMode(bool enable, HWCDisplay *hwc_display) {
 
   // if enter QDCM mode, disable GPU fallback idle timeout.
   if (hwc_display) {
+    int inactive_ms = IDLE_TIMEOUT_INACTIVE_MS;
+    Debug::Get()->GetProperty(IDLE_TIME_INACTIVE_PROP, &inactive_ms);
     uint32_t timeout = enable ? 0 : entry_timeout_;
-    hwc_display->SetIdleTimeoutMs(timeout);
+    hwc_display->SetIdleTimeoutMs(timeout, inactive_ms);
   }
 
   return ret;

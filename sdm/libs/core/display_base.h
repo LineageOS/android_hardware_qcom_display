@@ -124,7 +124,7 @@ class DisplayBase : public DisplayInterface {
     return kErrorNotSupported;
   }
   virtual DisplayError SetVSyncState(bool enable);
-  virtual void SetIdleTimeoutMs(uint32_t active_ms) {}
+  virtual void SetIdleTimeoutMs(uint32_t active_ms, uint32_t inactive_ms) {}
   virtual DisplayError SetMixerResolution(uint32_t width, uint32_t height);
   virtual DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
   virtual DisplayError SetFrameBufferConfig(const DisplayConfigVariableInfo &variable_info);
