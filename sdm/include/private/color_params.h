@@ -117,6 +117,7 @@ static const std::string kEnhanced = "enhanced";
 
 // Color feature flags
 #define SDM_DITHER_LUMA_MODE 0x1
+#define SDM_PCC_BEFORE_POS 0x1
 
 // Enum to identify type of dynamic range of color mode.
 enum DynamicRangeType {
@@ -316,6 +317,7 @@ struct SDEPccCfg {
 
   static SDEPccCfg *Init(uint32_t arg __attribute__((__unused__)));
   SDEPccCfg *GetConfig() { return this; }
+  uint64_t flags = 0;
 };
 
 struct SDEPccV4Coeff {
@@ -339,6 +341,7 @@ struct SDEPccV4Cfg {
 
   static SDEPccV4Cfg *Init(uint32_t arg __attribute__((__unused__)));
   SDEPccV4Cfg *GetConfig() { return this; }
+  uint64_t flags = 0;
 };
 
 struct SDEDitherCfg {

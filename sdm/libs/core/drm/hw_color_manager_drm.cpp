@@ -370,6 +370,10 @@ DisplayError HWColorManagerDrm::GetDrmPCC(const PPFeatureInfo &in_data,
   }
 
   mdp_pcc->flags = 0;
+#ifdef PCC_BEFORE
+  if (sde_pcc->flags & SDM_PCC_BEFORE_POS)
+    mdp_pcc->flags |= PCC_BEFORE;
+#endif
 
   for (i = 0; i < kMaxPCCChanel; i++) {
     switch (i) {
