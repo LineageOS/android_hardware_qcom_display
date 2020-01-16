@@ -139,7 +139,6 @@ class HWCLayer {
   bool non_integral_source_crop_ = false;
   bool has_metadata_refresh_rate_ = false;
   bool buffer_flipped_ = false;
-  bool per_frame_hdr_metadata_blob_ = false;  // used to track if perframe metadata blob is set
 
   // Composition requested by client(SF) Original
   HWC2::Composition client_requested_orig_ = HWC2::Composition::Device;
