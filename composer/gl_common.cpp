@@ -147,12 +147,16 @@ int GLCommon::CreateOutputFence() {
   return fd;
 }
 
-void GLCommon::DestroyContext(const GLContext* ctx) {
+void GLCommon::DestroyContext(GLContext* ctx) {
   DTRACE_SCOPED();
+
+  // Clear egl image buffers.
+  image_wrapper_.Deinit();
+
+  EGL(DeleteProgram(ctx->program_id));
   EGL(eglMakeCurrent(ctx->egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT));
   EGL(eglDestroySurface(ctx->egl_display, ctx->egl_surface));
   EGL(eglDestroyContext(ctx->egl_display, ctx->egl_context));
-  EGL(DeleteProgram(ctx->program_id));
   EGL(eglTerminate(ctx->egl_display));
 }
 

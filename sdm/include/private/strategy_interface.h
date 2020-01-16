@@ -57,7 +57,8 @@ class StrategyInterface {
   /* Sets the list of color modes supported on a display */
   virtual DisplayError SetColorModesInfo(const std::vector<PrimariesTransfer> &colormodes_cs) = 0;
   virtual DisplayError SetBlendSpace(const PrimariesTransfer &blend_space) = 0;
-  virtual bool CanSkipValidate() = 0;
+  virtual bool CanSkipValidate(bool *needs_buffer_swap) = 0;
+  virtual DisplayError SwapBuffers() = 0;
 
   virtual ~StrategyInterface() { }
 };

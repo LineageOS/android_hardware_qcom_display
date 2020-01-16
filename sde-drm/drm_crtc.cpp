@@ -348,7 +348,10 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
   string hw_version = "hw_version=";
   string solidfill_stages = "dim_layer_v1_max_layers=";
   string has_hdr = "has_hdr=";
+  string has_micro_idle = "has_uidle=";
   string min_prefill_lines = "min_prefill_lines=";
+  string num_mnocports = "num_mnoc_ports=";
+  string mnoc_bus_width = "axi_bus_width=";
 
   crtc_info_.max_solidfill_stages = 0;  // default _
   string dest_scaler_count = "dest_scaler_count=";
@@ -364,6 +367,7 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
   string linewidth_values = "sspp_linewidth_values=";
   string limit_constraint = "limit_usecase=";
   string limit_value = "limit_value=";
+  string use_baselayer_for_stage = "use_baselayer_for_stage=";
 
   while (std::getline(stream, line)) {
     if (line.find(max_blendstages) != string::npos) {
@@ -439,6 +443,10 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
       crtc_info_.min_prefill_lines = std::stoi(string(line, min_prefill_lines.length()));
     } else if (line.find(sec_ui_blendstage) != string::npos) {
       crtc_info_.secure_disp_blend_stage = std::stoi(string(line, (sec_ui_blendstage).length()));
+    } else if (line.find(num_mnocports) != string::npos) {
+      crtc_info_.num_mnocports = std::stoi(string(line, num_mnocports.length()));
+    } else if (line.find(mnoc_bus_width) != string::npos) {
+      crtc_info_.mnoc_bus_width = std::stoi(string(line, mnoc_bus_width.length()));
     } else if (line.find(linewidth_constraints) != string::npos) {
       crtc_info_.line_width_constraints_count =
                             std::stoi(string(line, (linewidth_constraints).length()));
@@ -469,6 +477,11 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
         }
       }
       crtc_info_.line_width_limits = std::move(constraint_vector);
+    } else if (line.find(has_micro_idle) != string::npos) {
+      crtc_info_.has_micro_idle = std::stoi(string(line, (has_micro_idle).length()));
+    } else if (line.find(use_baselayer_for_stage) != string::npos) {
+      crtc_info_.use_baselayer_for_stage =
+                         std::stoi(string(line, use_baselayer_for_stage.length()));
     }
   }
   drmModeFreePropertyBlob(blob);

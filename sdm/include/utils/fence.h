@@ -27,56 +27,51 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef __FENCE_H__
+#define __FENCE_H__
 
-#ifndef __QTICOMPOSER_H__
-#define __QTICOMPOSER_H__
+#include <core/buffer_sync_handler.h>
+#include <unistd.h>
+#include <utility>
+#include <memory>
+#include <string>
 
-#include <QtiComposerClient.h>
+namespace sdm {
 
-// TODO(user): recheck on this header inclusion
-#include <hardware/hwcomposer2.h>
-#include <vendor/qti/hardware/display/composer/2.1/IQtiComposer.h>
-#include <log/log.h>
-#include <unordered_set>
+using std::shared_ptr;
+using std::string;
 
-namespace vendor {
-namespace qti {
-namespace hardware {
-namespace display {
-namespace composer {
-namespace V2_1 {
-namespace implementation {
-
-using ::vendor::qti::hardware::display::composer::V2_1::IQtiComposer;
-
-class QtiComposer : public IQtiComposer {
+class Fence {
  public:
-  QtiComposer();
-  virtual ~QtiComposer();
-  // Methods from ::android::hardware::graphics::composer::V2_1::IComposer follow.
-  Return<void> getCapabilities(getCapabilities_cb _hidl_cb) override;
-  Return<void> dumpDebugInfo(dumpDebugInfo_cb _hidl_cb) override;
-  Return<void> createClient(createClient_cb _hidl_cb) override;
+  ~Fence();
 
-  // Methods from ::android::hardware::graphics::composer::V2_3::IComposer follow.
-  Return<void> createClient_2_3(createClient_2_3_cb _hidl_cb) override;
+  static void Set(BufferSyncHandler *buffer_sync_handler);
 
-  // Methods from ::android::hidl::base::V1_0::IBase follow.
+  // Ownership of the file descriptor is transferred to this method.
+  // Client must not close the file descriptor anymore regardless of the object creation status.
+  // nullptr will be retured for invalid fd i.e. -1.
+  static shared_ptr<Fence> Create(int fd);
 
-  static QtiComposer *initialize();
+  // Ownership of returned fd lies with caller. Caller must explicitly close the fd.
+  static int Dup(const shared_ptr<Fence> &fence);
+
+  static shared_ptr<Fence> Merge(const shared_ptr<Fence> &fence1, const shared_ptr<Fence> &fence2);
+  static DisplayError Wait(const shared_ptr<Fence> &fence);
+  static DisplayError Wait(const shared_ptr<Fence> &fence, int timeout);
+  static string GetStr(const shared_ptr<Fence> &fence);
 
  private:
-    HWCSession *hwc_session_ = nullptr;
+  explicit Fence(int fd);
+  Fence(const Fence &fence) = delete;
+  Fence& operator=(const Fence &fence) = delete;
+  Fence(Fence &&fence) = delete;
+  Fence& operator=(Fence &&fence) = delete;
+  static int Get(const shared_ptr<Fence> &fence);
+
+  static BufferSyncHandler *buffer_sync_handler_;
+  int fd_ = -1;
 };
 
-extern "C" IQtiComposer* HIDL_FETCH_IQtiComposer(const char* name);
+}  // namespace sdm
 
-}  // namespace implementation
-}  // namespace V2_1
-}  // namespace composer
-}  // namespace display
-}  // namespace hardware
-}  // namespace qti
-}  // namespace vendor
-
-#endif  // __QTICOMPOSER_H__
+#endif  // __FENCE_H__

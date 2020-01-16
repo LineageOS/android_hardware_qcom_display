@@ -34,7 +34,7 @@ namespace qti {
 namespace hardware {
 namespace display {
 namespace composer {
-namespace V2_0 {
+namespace V2_1 {
 
 using ::android::hardware::graphics::common::V1_0::ColorTransform;
 using ::android::hardware::graphics::common::V1_0::Dataspace;
@@ -487,6 +487,13 @@ class CommandWriter {
     endCommand();
   }
 
+  static constexpr uint16_t kSetDisplayElapseTime = 2;
+  void setDisplayElapseTime(uint64_t time) {
+    beginCommand(IQtiComposerClient::Command::SET_DISPLAY_ELAPSE_TIME, kSetDisplayElapseTime);
+    write64(time);
+    endCommand();
+  }
+
  protected:
   // Commands from ::android::hardware::graphics::composer::V2_1::IComposerClient follow.
   void beginCommand(IQtiComposerClient::Command command, uint16_t length) {
@@ -847,7 +854,7 @@ class CommandReaderBase {
   hidl_vec<hidl_handle> mDataHandles;
 };
 
-}  // namespace V2_0
+}  // namespace V2_1
 }  // namespace composer
 }  // namespace display
 }  // namespace hardware

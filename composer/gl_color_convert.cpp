@@ -35,7 +35,7 @@
 namespace sdm {
 
 GLColorConvert* GLColorConvert::GetInstance(GLRenderTarget target, bool secure) {
-  GLColorConvertImpl* color_convert =  new GLColorConvertImpl(target, secure);
+  GLColorConvertImpl* color_convert = new GLColorConvertImpl(target, secure);
   if (color_convert == nullptr) {
     DLOGE("Failed to create color convert instance for %d target %d secure", target, secure);
     return nullptr;

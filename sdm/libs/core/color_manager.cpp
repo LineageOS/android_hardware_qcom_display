@@ -490,6 +490,16 @@ bool ColorManagerProxy::IsSupportStcTonemap() {
   return support_stc_tonemap_;
 }
 
+bool ColorManagerProxy::GameEnhanceSupported() {
+  bool supported = false;
+
+  if (color_intf_) {
+    color_intf_->ColorIntfGameEnhancementSupported(&supported);
+  }
+
+  return supported;
+}
+
 DisplayError ColorManagerProxy::ConvertToPPFeatures(HwConfigOutputParams *params,
                                                     PPFeaturesConfig *out_data) {
   if (!params || !out_data) {

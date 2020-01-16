@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -44,6 +44,7 @@
 #include <drm/msm_drm.h>
 
 #include <algorithm>
+#include <array>
 #include <map>
 #include <utility>
 #include <vector>
@@ -136,6 +137,15 @@ DisplayError HWEventsDRM::InitializePollFd() {
         poll_fds_[i].events = POLLIN | POLLPRI | POLLERR;
         hw_recovery_index_ = i;
       } break;
+      case HWEvent::HISTOGRAM: {
+        poll_fds_[i].fd = drmOpen("msm_drm", nullptr);
+        if (poll_fds_[i].fd < 0) {
+          DLOGE("drmOpen failed with error %d", poll_fds_[i].fd);
+          return kErrorResources;
+        }
+        poll_fds_[i].events = POLLIN | POLLPRI | POLLERR;
+        histogram_index_ = i;
+      } break;
       case HWEvent::CEC_READ_MESSAGE:
       case HWEvent::SHOW_BLANK_EVENT:
       case HWEvent::THERMAL_LEVEL:
@@ -178,6 +188,9 @@ DisplayError HWEventsDRM::SetEventParser() {
         break;
       case HWEvent::HW_RECOVERY:
         event_data.event_parser = &HWEventsDRM::HandleHwRecovery;
+        break;
+      case HWEvent::HISTOGRAM:
+        event_data.event_parser = &HWEventsDRM::HandleHistogram;
         break;
       default:
         error = kErrorParameters;
@@ -235,6 +248,14 @@ DisplayError HWEventsDRM::Init(int display_id, DisplayType display_type,
     RegisterHwRecovery(true);
   }
 
+  if (Debug::Get()->GetProperty(ENABLE_HISTOGRAM_INTR, &value) == kErrorNone) {
+    enable_hist_interrupt_ = (value == 1);
+  }
+  DLOGI("enable_hist_interrupt_ set to %d", enable_hist_interrupt_);
+  if (enable_hist_interrupt_) {
+    RegisterHistogram(true);
+  }
+
   return kErrorNone;
 }
 
@@ -245,6 +266,9 @@ DisplayError HWEventsDRM::Deinit() {
   RegisterIdlePowerCollapse(false);
   if (!disable_hw_recovery_) {
     RegisterHwRecovery(false);
+  }
+  if (enable_hist_interrupt_) {
+    RegisterHistogram(false);
   }
   Sys::pthread_cancel_(event_thread_);
   WakeUpEventThread();
@@ -332,6 +356,11 @@ void *HWEventsDRM::DisplayEventHandler() {
   prctl(PR_SET_NAME, event_thread_name_.c_str(), 0, 0, 0);
   setpriority(PRIO_PROCESS, 0, kThreadPriorityUrgent);
 
+  // Real Time task with lowest priority.
+  struct sched_param param = {0};
+  param.sched_priority = sched_get_priority_min(SCHED_FIFO);
+  sched_setscheduler(0, SCHED_FIFO, &param);
+
   while (!exit_threads_) {
     int error = Sys::poll_(poll_fds_.data(), UINT32(poll_fds_.size()), -1);
     if (error <= 0) {
@@ -351,6 +380,7 @@ void *HWEventsDRM::DisplayEventHandler() {
         case HWEvent::IDLE_NOTIFY:
         case HWEvent::IDLE_POWER_COLLAPSE:
         case HWEvent::HW_RECOVERY:
+        case HWEvent::HISTOGRAM:
           if (poll_fd.revents & (POLLIN | POLLPRI | POLLERR)) {
             (this->*(event_data_list_[i]).event_parser)(nullptr);
           }
@@ -380,6 +410,7 @@ void *HWEventsDRM::DisplayEventHandler() {
 }
 
 DisplayError HWEventsDRM::RegisterVSync() {
+  DTRACE_SCOPED();
   drmVBlank vblank {};
   uint32_t high_crtc = token_.crtc_index << DRM_VBLANK_HIGH_CRTC_SHIFT;
   vblank.request.type = (drmVBlankSeqType)(DRM_VBLANK_RELATIVE | DRM_VBLANK_EVENT |
@@ -417,6 +448,31 @@ DisplayError HWEventsDRM::RegisterPanelDead(bool enable) {
 
   if (ret) {
     DLOGE("register panel dead enable:%d failed", enable);
+    return kErrorResources;
+  }
+
+  return kErrorNone;
+}
+
+DisplayError HWEventsDRM::RegisterHistogram(bool enable) {
+  if (histogram_index_ == UINT32_MAX) {
+    DLOGI("histogram is not supported event");
+    return kErrorNone;
+  }
+  struct drm_msm_event_req req = {};
+  int ret = 0;
+
+  req.object_id = token_.crtc_id;
+  req.object_type = DRM_MODE_OBJECT_CRTC;
+  req.event = DRM_EVENT_HISTOGRAM;
+  if (enable) {
+    ret = drmIoctl(poll_fds_[histogram_index_].fd, DRM_IOCTL_MSM_REGISTER_EVENT, &req);
+  } else {
+    ret = drmIoctl(poll_fds_[histogram_index_].fd, DRM_IOCTL_MSM_DEREGISTER_EVENT, &req);
+  }
+
+  if (ret) {
+    DLOGE("register idle notify enable:%d failed", enable);
     return kErrorResources;
   }
 
@@ -501,19 +557,21 @@ DisplayError HWEventsDRM::RegisterHwRecovery(bool enable) {
 }
 
 void HWEventsDRM::HandleVSync(char *data) {
+  {
+    std::lock_guard<std::mutex> lock(vsync_mutex_);
+    vsync_registered_ = false;
+    if (vsync_enabled_) {
+      RegisterVSync();
+      vsync_registered_ = true;
+    }
+  }
+
   drmEventContext event = {};
   event.version = DRM_EVENT_CONTEXT_VERSION;
   event.vblank_handler = &HWEventsDRM::VSyncHandlerCallback;
   int error = drmHandleEvent(poll_fds_[vsync_index_].fd, &event);
   if (error != 0) {
     DLOGE("drmHandleEvent failed: %i", error);
-  }
-
-  std::lock_guard<std::mutex> lock(vsync_mutex_);
-  vsync_registered_ = false;
-  if (vsync_enabled_) {
-    RegisterVSync();
-    vsync_registered_ = true;
   }
 }
 
@@ -561,6 +619,7 @@ void HWEventsDRM::HandlePanelDead(char *data) {
 void HWEventsDRM::VSyncHandlerCallback(int fd, unsigned int sequence, unsigned int tv_sec,
                                        unsigned int tv_usec, void *data) {
   int64_t timestamp = (int64_t)(tv_sec)*1000000000 + (int64_t)(tv_usec)*1000;
+  DTRACE_SCOPED();
   reinterpret_cast<HWEventsDRM *>(data)->event_handler_->VSync(timestamp);
 }
 
@@ -710,6 +769,20 @@ void HWEventsDRM::HandleHwRecovery(char *data) {
   }
 
   return;
+}
+
+void HWEventsDRM::HandleHistogram(char * /*data*/) {
+  auto constexpr expected_size = sizeof(drm_msm_event_resp) + sizeof(uint32_t);
+  std::array<char, expected_size> event_data{'\0'};
+  auto size = Sys::pread_(poll_fds_[histogram_index_].fd, event_data.data(), event_data.size(), 0);
+  if (size != expected_size) {
+    DLOGE("event size %d is unexpected. skipping this histogram event", size);
+    return;
+  }
+
+  auto msm_event = reinterpret_cast<struct drm_msm_event_resp *>(event_data.data());
+  auto blob_id = reinterpret_cast<uint32_t *>(msm_event->data);
+  event_handler_->Histogram(poll_fds_[histogram_index_].fd, *blob_id);
 }
 
 int HWEventsDRM::SetHwRecoveryEvent(const uint32_t hw_event_code, HWRecoveryEvent *sdm_event_code) {

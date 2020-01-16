@@ -60,7 +60,7 @@ class GLCommon {
   virtual void SetProgram(uint32_t id);
   virtual void SetDestinationBuffer(const private_handle_t *dst_hnd, const GLRect &dst_rect);
   virtual void SetSourceBuffer(const private_handle_t *src_hnd);
-  virtual void DestroyContext(const GLContext *ctx);
+  virtual void DestroyContext(GLContext *ctx);
   virtual void DeleteProgram(uint32_t id);
   virtual int WaitOnInputFence(int in_fence_fd);
   virtual int CreateOutputFence();

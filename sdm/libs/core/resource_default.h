@@ -67,6 +67,7 @@ class ResourceDefault : public ResourceInterface {
                                              const DisplayDetailEnhancerData &de_data);
   virtual DisplayError Perform(int cmd, ...) { return kErrorNone; }
   DisplayError SetDisplayState(int32_t display_id, DisplayState state) { return kErrorNone; }
+  virtual bool IsRotatorSupportedFormat(LayerBufferFormat format) { return false; }
 
  private:
   enum PipeOwner {

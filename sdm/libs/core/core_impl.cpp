@@ -254,5 +254,10 @@ DisplayError CoreImpl::GetMaxDisplaysSupported(DisplayType type, int32_t *max_di
   return hw_info_intf_->GetMaxDisplaysSupported(type, max_displays);
 }
 
+bool CoreImpl::IsRotatorSupportedFormat(LayerBufferFormat format) {
+  SCOPE_LOCK(locker_);
+  return comp_mgr_.IsRotatorSupportedFormat(format);
+}
+
 }  // namespace sdm
 

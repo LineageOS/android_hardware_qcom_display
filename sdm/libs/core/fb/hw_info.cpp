@@ -126,7 +126,7 @@ DisplayError HWInfo::GetHWResourceInfo(HWResourceInfo *hw_resource) {
               if (!strncmp(tokens[j], "fmts_supported", strlen("fmts_supported"))) {
                 char *tokens_fmt[max_count] = { NULL };
                 // uint32_t token_fmt_count = 0;
-                if (tokens_fmt == NULL) {}
+                if (&tokens_fmt[0] == NULL) {}
               }
             }
             hw_resource_->hw_pipes.push_back(pipe_caps);

@@ -34,6 +34,7 @@
 
 #include "gl_color_convert.h"
 #include "gl_common.h"
+#include "hwc_buffer_sync_handler.h"
 
 namespace sdm {
 
@@ -48,6 +49,7 @@ class GLColorConvertImpl : public GLColorConvert, public GLCommon {
   virtual int Init();
   virtual int Deinit();
  private:
+  HWCBufferSyncHandler buffer_sync_handler_ = {};
   GLRenderTarget target_ = kTargetRGBA;
   bool secure_ = false;
   GLContext ctx_;
