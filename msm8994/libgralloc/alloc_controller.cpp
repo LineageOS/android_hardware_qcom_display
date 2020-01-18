@@ -71,9 +71,9 @@ static bool canFallback(int usage, bool triedSystem)
         return false;
     if(triedSystem)
         return false;
-    if(usage & (GRALLOC_HEAP_MASK | GRALLOC_USAGE_PROTECTED))
+    if((unsigned int)usage & (GRALLOC_HEAP_MASK | GRALLOC_USAGE_PROTECTED))
         return false;
-    if(usage & (GRALLOC_HEAP_MASK | GRALLOC_USAGE_PRIVATE_EXTERNAL_ONLY))
+    if((unsigned int)usage & (GRALLOC_HEAP_MASK | GRALLOC_USAGE_PRIVATE_EXTERNAL_ONLY))
         return false;
     //Return true by default
     return true;
@@ -84,10 +84,10 @@ static bool canFallback(int usage, bool triedSystem)
  * read or written in software. Any combination with a _RARELY_ flag will be
  * treated as uncached. */
 static bool useUncached(const int& usage) {
-    if ((usage & GRALLOC_USAGE_PROTECTED) or
-       (usage & GRALLOC_USAGE_PRIVATE_UNCACHED) or
-       ((usage & GRALLOC_USAGE_SW_WRITE_MASK) == GRALLOC_USAGE_SW_WRITE_RARELY) or
-       ((usage & GRALLOC_USAGE_SW_READ_MASK) == GRALLOC_USAGE_SW_READ_RARELY))
+    if (((unsigned int)usage & GRALLOC_USAGE_PROTECTED) or
+       ((unsigned int)usage & GRALLOC_USAGE_PRIVATE_UNCACHED) or
+       (((unsigned int)usage & GRALLOC_USAGE_SW_WRITE_MASK) == GRALLOC_USAGE_SW_WRITE_RARELY) or
+       (((unsigned int)usage & GRALLOC_USAGE_SW_READ_MASK) == GRALLOC_USAGE_SW_READ_RARELY))
         return true;
 
     return false;

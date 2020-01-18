@@ -35,7 +35,7 @@ struct private_module_t;
 struct private_handle_t;
 
 inline unsigned int roundUpToPageSize(unsigned int x) {
-    return (x + (PAGE_SIZE-1)) & ~(PAGE_SIZE-1);
+    return (x + ((unsigned int)PAGE_SIZE-1)) & ~((unsigned int)PAGE_SIZE-1);
 }
 
 template <class Type>

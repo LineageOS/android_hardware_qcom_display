@@ -30,8 +30,8 @@
 
 #include <cutils/log.h>
 
-#define ROUND_UP_PAGESIZE(x) ( (((unsigned long)(x)) + PAGE_SIZE-1)  & \
-                               (~(PAGE_SIZE-1)) )
+#define ROUND_UP_PAGESIZE(x) ( (((unsigned long)(x)) + (unsigned long)PAGE_SIZE-1)  & \
+                               (~((unsigned long)PAGE_SIZE-1)) )
 
 enum {
     /* gralloc usage bits indicating the type

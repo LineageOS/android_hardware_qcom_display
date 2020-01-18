@@ -240,11 +240,11 @@ void  MDPVersion::updatePanelInfo() {
                                             "Enabled" : "Disabled");
                 }
                 if(!strncmp(tokens[0], "min_fps", strlen("min_fps"))) {
-                    mPanelInfo.mMinFps = atoi(tokens[1]);
+                    mPanelInfo.mMinFps = (uint32_t)atoi(tokens[1]);
                     ALOGI("Min Panel fps: %d", mPanelInfo.mMinFps);
                 }
                 if(!strncmp(tokens[0], "max_fps", strlen("max_fps"))) {
-                    mPanelInfo.mMaxFps = atoi(tokens[1]);
+                    mPanelInfo.mMaxFps = (uint32_t)atoi(tokens[1]);
                     ALOGI("Max Panel fps: %d", mPanelInfo.mMaxFps);
                 }
             }
@@ -298,7 +298,7 @@ bool MDPVersion::updateSysFsInfo() {
             // parse the line and update information accordingly
             if(!tokenizeParams(line, TOKEN_PARAMS_DELIM, tokens, &index)) {
                 if(!strncmp(tokens[0], "hw_rev", strlen("hw_rev"))) {
-                    mMdpRev = atoi(tokens[1]);
+                    mMdpRev = (uint32_t)atoi(tokens[1]);
                 }
                 else if(!strncmp(tokens[0], "rgb_pipes", strlen("rgb_pipes"))) {
                     mRGBPipes = (uint8_t)atoi(tokens[1]);
@@ -315,23 +315,23 @@ bool MDPVersion::updateSysFsInfo() {
                 }
                 else if(!strncmp(tokens[0], "max_downscale_ratio",
                                 strlen("max_downscale_ratio"))) {
-                    mMDPDownscale = atoi(tokens[1]);
+                    mMDPDownscale = (uint32_t)atoi(tokens[1]);
                 }
                 else if(!strncmp(tokens[0], "max_upscale_ratio",
                                 strlen("max_upscale_ratio"))) {
-                    mMDPUpscale = atoi(tokens[1]);
+                    mMDPUpscale = (uint32_t)atoi(tokens[1]);
                 } else if(!strncmp(tokens[0], "max_bandwidth_low",
                         strlen("max_bandwidth_low"))) {
-                    mLowBw = atol(tokens[1]);
+                    mLowBw = (unsigned long)atol(tokens[1]);
                 } else if(!strncmp(tokens[0], "max_bandwidth_high",
                         strlen("max_bandwidth_high"))) {
-                    mHighBw = atol(tokens[1]);
+                    mHighBw = (unsigned long)atol(tokens[1]);
                 } else if(!strncmp(tokens[0], "max_mixer_width",
                         strlen("max_mixer_width"))) {
-                    mMaxMixerWidth = atoi(tokens[1]);
+                    mMaxMixerWidth = (uint32_t)atoi(tokens[1]);
                 } else if(!strncmp(tokens[0], "max_pipe_width",
                         strlen("max_pipe_width"))) {
-                    mMaxPipeWidth = atoi(tokens[1]);
+                    mMaxPipeWidth = (uint32_t)atoi(tokens[1]);
                 } else if(!strncmp(tokens[0], "features", strlen("features"))) {
                     for(int i=1; i<index;i++) {
                         if(!strncmp(tokens[i], "bwc", strlen("bwc"))) {

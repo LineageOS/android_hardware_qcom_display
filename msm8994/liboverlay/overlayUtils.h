@@ -525,7 +525,7 @@ inline void ScreenInfo::dump(const char* const s) const {
 
 inline bool openDev(OvFD& fd, int fbnum,
     const char* const devpath, int flags) {
-    return overlay::open(fd, fbnum, devpath, flags);
+    return overlay::open(fd, (uint32_t)fbnum, devpath, flags);
 }
 
 template <class T>

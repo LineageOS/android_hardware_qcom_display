@@ -2943,7 +2943,7 @@ int ColorMode::getModeForIndex(int index) {
 }
 
 int ColorMode::getIndexForMode(int mode) {
-    if(mModeList) {
+    if(mModeList[0] != 0) {
         for(int32_t i = 0; i < mNumModes; i++)
             if(mModeList[i] == mode)
                 return i;

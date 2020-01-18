@@ -49,7 +49,7 @@ int setMetaData(private_handle_t *handle, DispParamType paramType,
         ALOGE("%s: input param is null!", __func__);
         return -1;
     }
-    unsigned long size = ROUND_UP_PAGESIZE(sizeof(MetaData_t));
+    unsigned long size = (unsigned long)ROUND_UP_PAGESIZE((unsigned long)sizeof(MetaData_t));
     void *base = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED,
         handle->fd_metadata, 0);
     if (base == reinterpret_cast<void*>(MAP_FAILED)) {
