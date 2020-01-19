@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "ed607315_4e6fa15a",
+        "filename": "msm8084/libgralloc/ionalloc.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 33,
+      "author": {
+        "id": 23573
+      },
+      "writtenOn": "2020-01-19T22:05:22Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "a425f383_225247b0",
+      "revId": "e2f6e1ec69092f3a62d94194be5abb03a34d43fe",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "ab816830_7358414e",
         "filename": "msm8084/libqdutils/comptype.h",
         "patchSetId": 1
@@ -36,6 +54,24 @@
     },
     {
       "key": {
+        "uuid": "ad382a00_1e35bf05",
+        "filename": "msm8084/libqdutils/comptype.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 34,
+      "author": {
+        "id": 23573
+      },
+      "writtenOn": "2020-01-19T22:05:22Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "ab816830_7358414e",
+      "revId": "e2f6e1ec69092f3a62d94194be5abb03a34d43fe",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "df85884d_5dc011ad",
         "filename": "msm8084/libqdutils/mdp_version.cpp",
         "patchSetId": 1
@@ -50,6 +86,24 @@
       "revId": "e2f6e1ec69092f3a62d94194be5abb03a34d43fe",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "3cb8be65_41790e3c",
+        "filename": "msm8084/libqdutils/mdp_version.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 30,
+      "author": {
+        "id": 23573
+      },
+      "writtenOn": "2020-01-19T22:05:22Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "df85884d_5dc011ad",
+      "revId": "e2f6e1ec69092f3a62d94194be5abb03a34d43fe",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
