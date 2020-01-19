@@ -1,0 +1,55 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "a425f383_225247b0",
+        "filename": "msm8084/libgralloc/ionalloc.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 33,
+      "author": {
+        "id": 444
+      },
+      "writtenOn": "2020-01-19T18:15:55Z",
+      "side": 1,
+      "message": "Already included below.",
+      "revId": "e2f6e1ec69092f3a62d94194be5abb03a34d43fe",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "ab816830_7358414e",
+        "filename": "msm8084/libqdutils/comptype.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 34,
+      "author": {
+        "id": 444
+      },
+      "writtenOn": "2020-01-19T18:15:55Z",
+      "side": 1,
+      "message": "Already included below.",
+      "revId": "e2f6e1ec69092f3a62d94194be5abb03a34d43fe",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "df85884d_5dc011ad",
+        "filename": "msm8084/libqdutils/mdp_version.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 30,
+      "author": {
+        "id": 444
+      },
+      "writtenOn": "2020-01-19T18:15:55Z",
+      "side": 1,
+      "message": "Already included below.",
+      "revId": "e2f6e1ec69092f3a62d94194be5abb03a34d43fe",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
