@@ -22,6 +22,23 @@
       "revId": "82c747efdf7efe4aef8ee7ce2f2807d7706789ee",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "c45e1595_cbc1cf15",
+        "filename": "msm8994/common.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 17,
+      "author": {
+        "id": 11801
+      },
+      "writtenOn": "2020-01-19T12:48:30Z",
+      "side": 1,
+      "message": "Why not just...fix the errors?",
+      "revId": "82c747efdf7efe4aef8ee7ce2f2807d7706789ee",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
     }
   ]
 }
