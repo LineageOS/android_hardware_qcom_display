@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -35,11 +35,10 @@ class HWVirtualInterface;
 class DisplayVirtual : public DisplayBase {
  public:
   DisplayVirtual(DisplayEventHandler *event_handler, HWInfoInterface *hw_info_intf,
-                 BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
-                 CompManager *comp_manager);
-  DisplayVirtual(int32_t display_id, DisplayEventHandler *event_handler,
-                 HWInfoInterface *hw_info_intf, BufferSyncHandler *buffer_sync_handler,
                  BufferAllocator *buffer_allocator, CompManager *comp_manager);
+  DisplayVirtual(int32_t display_id, DisplayEventHandler *event_handler,
+                 HWInfoInterface *hw_info_intf, BufferAllocator *buffer_allocator,
+                 CompManager *comp_manager);
   virtual DisplayError Init();
   virtual DisplayError Prepare(LayerStack *layer_stack);
   virtual DisplayError GetNumVariableInfoConfigs(uint32_t *count);

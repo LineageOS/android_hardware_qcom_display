@@ -437,10 +437,8 @@ uint32_t HWDeviceDRM::Registry::GetOutputFbId(uint64_t handle_id) {
   return 0;
 }
 
-HWDeviceDRM::HWDeviceDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
-                         HWInfoInterface *hw_info_intf)
-    : hw_info_intf_(hw_info_intf), buffer_sync_handler_(buffer_sync_handler),
-      registry_(buffer_allocator) {
+HWDeviceDRM::HWDeviceDRM(BufferAllocator *buffer_allocator, HWInfoInterface *hw_info_intf)
+    : hw_info_intf_(hw_info_intf), registry_(buffer_allocator) {
   hw_info_intf_ = hw_info_intf;
 }
 

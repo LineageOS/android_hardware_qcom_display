@@ -61,8 +61,7 @@ struct SDECsc {
 
 class HWDeviceDRM : public HWInterface {
  public:
-  HWDeviceDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
-                       HWInfoInterface *hw_info_intf);
+  HWDeviceDRM(BufferAllocator *buffer_allocator, HWInfoInterface *hw_info_intf);
   virtual ~HWDeviceDRM() {}
   virtual DisplayError Init();
   virtual DisplayError Deinit();
@@ -216,7 +215,6 @@ class HWDeviceDRM : public HWInterface {
   int32_t display_id_ = -1;
   sde_drm::DRMDisplayType disp_type_ = {};
   HWInfoInterface *hw_info_intf_ = {};
-  BufferSyncHandler *buffer_sync_handler_ = {};
   int dev_fd_ = -1;
   Registry registry_;
   sde_drm::DRMDisplayToken token_ = {};

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -39,23 +39,21 @@ namespace sdm {
 
 DisplayPluggable::DisplayPluggable(DisplayEventHandler *event_handler,
                                    HWInfoInterface *hw_info_intf,
-                                   BufferSyncHandler *buffer_sync_handler,
                                    BufferAllocator *buffer_allocator, CompManager *comp_manager)
-  : DisplayBase(kPluggable, event_handler, kDevicePluggable, buffer_sync_handler, buffer_allocator,
+  : DisplayBase(kPluggable, event_handler, kDevicePluggable, buffer_allocator,
                 comp_manager, hw_info_intf) {}
 
 DisplayPluggable::DisplayPluggable(int32_t display_id, DisplayEventHandler *event_handler,
                                    HWInfoInterface *hw_info_intf,
-                                   BufferSyncHandler *buffer_sync_handler,
                                    BufferAllocator *buffer_allocator, CompManager *comp_manager)
-  : DisplayBase(display_id, kPluggable, event_handler, kDevicePluggable, buffer_sync_handler,
+  : DisplayBase(display_id, kPluggable, event_handler, kDevicePluggable,
                 buffer_allocator, comp_manager, hw_info_intf) {}
 
 DisplayError DisplayPluggable::Init() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
   DisplayError error = HWInterface::Create(display_id_, kPluggable, hw_info_intf_,
-                                           buffer_sync_handler_, buffer_allocator_, &hw_intf_);
+                                           buffer_allocator_, &hw_intf_);
   if (error != kErrorNone) {
     if (kErrorDeviceRemoved == error) {
       DLOGW("Aborted creating hardware interface. Device removed.");

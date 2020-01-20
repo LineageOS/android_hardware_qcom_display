@@ -94,11 +94,10 @@ class DppsInfo {
 class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
  public:
   DisplayBuiltIn(DisplayEventHandler *event_handler, HWInfoInterface *hw_info_intf,
-                 BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
-                 CompManager *comp_manager);
-  DisplayBuiltIn(int32_t display_id, DisplayEventHandler *event_handler,
-                 HWInfoInterface *hw_info_intf, BufferSyncHandler *buffer_sync_handler,
                  BufferAllocator *buffer_allocator, CompManager *comp_manager);
+  DisplayBuiltIn(int32_t display_id, DisplayEventHandler *event_handler,
+                 HWInfoInterface *hw_info_intf, BufferAllocator *buffer_allocator,
+                 CompManager *comp_manager);
   virtual ~DisplayBuiltIn();
 
   virtual DisplayError Init();

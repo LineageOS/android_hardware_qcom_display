@@ -26,7 +26,6 @@
 #define __HW_INTERFACE_H__
 
 #include <core/buffer_allocator.h>
-#include <core/buffer_sync_handler.h>
 #include <core/display_interface.h>
 #include <private/hw_info_types.h>
 #include <private/color_interface.h>
@@ -74,7 +73,6 @@ class HWEventHandler {
 class HWInterface {
  public:
   static DisplayError Create(int32_t display_id, DisplayType type, HWInfoInterface *hw_info_intf,
-                             BufferSyncHandler *buffer_sync_handler,
                              BufferAllocator *buffer_allocator, HWInterface **intf);
   static DisplayError Destroy(HWInterface *intf);
 
