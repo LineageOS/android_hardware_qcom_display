@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2013-2014, 2016, 2018-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2013-2014, 2016, 2018-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -50,10 +50,6 @@ int isExternalConnected(void) {
 }
 
 int getDisplayAttributes(int /* dpy */, DisplayAttributes_t& /* dpyattr */) {
-    return FAILED_TRANSACTION;
-}
-
-int setHSIC(int /* dpy */, const HSICData_t& /* hsic_data */) {
     return FAILED_TRANSACTION;
 }
 
