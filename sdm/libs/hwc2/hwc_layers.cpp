@@ -812,13 +812,6 @@ void HWCLayer::GetUBWCStatsFromMetaData(UBWCStats *cr_stats, UbwcCrStatsVector *
 DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *layer) {
   LayerBuffer *layer_buffer = &layer->input_buffer;
   private_handle_t *handle = const_cast<private_handle_t *>(pvt_handle);
-  IGC_t igc = {};
-  LayerIGC layer_igc = layer_buffer->igc;
-  if (getMetaData(handle, GET_IGC, &igc) == 0) {
-    if (SetIGC(igc, &layer_igc) != kErrorNone) {
-      return kErrorNotSupported;
-    }
-  }
 
   float fps = 0;
   uint32_t frame_rate = layer->frame_rate;
@@ -847,10 +840,9 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
     s3d_format = GetS3DFormat(s3d);
   }
 
-  if ((layer_igc != layer_buffer->igc) || (interlace != layer_buffer->flags.interlace) ||
+  if ((interlace != layer_buffer->flags.interlace) ||
       (frame_rate != layer->frame_rate) || (s3d_format != layer_buffer->s3d_format)) {
     // Layer buffer metadata has changed.
-    layer_buffer->igc = layer_igc;
     layer->frame_rate = frame_rate;
     layer_buffer->s3d_format = s3d_format;
     layer_buffer->flags.interlace = interlace;
@@ -875,22 +867,6 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
 
   // Handle colorMetaData / Dataspace handling now
   ValidateAndSetCSC(handle);
-
-  return kErrorNone;
-}
-
-DisplayError HWCLayer::SetIGC(IGC_t source, LayerIGC *target) {
-  switch (source) {
-    case IGC_NotSpecified:
-      *target = kIGCNotSpecified;
-      break;
-    case IGC_sRGB:
-      *target = kIGCsRGB;
-      break;
-    default:
-      DLOGE("Unsupported IGC: %d", source);
-      return kErrorNotSupported;
-  }
 
   return kErrorNone;
 }
