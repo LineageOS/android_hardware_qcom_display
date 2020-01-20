@@ -120,7 +120,6 @@ class HWCLayer {
   LayerBufferFormat GetSDMFormat(const int32_t &source, const int flags);
   LayerBufferS3DFormat GetS3DFormat(uint32_t s3d_format);
   DisplayError SetMetaData(const private_handle_t *pvt_handle, Layer *layer);
-  DisplayError SetIGC(IGC_t source, LayerIGC *target);
   uint32_t RoundToStandardFPS(float fps);
 };
 
