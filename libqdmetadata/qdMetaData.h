@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -48,18 +48,6 @@ enum ColorSpace_t{
     ITU_R_2020_FR,
 };
 
-enum IGC_t {
-    IGC_NotSpecified,
-    IGC_sRGB,
-};
-
-struct HSICData_t {
-    int32_t hue;
-    float   saturation;
-    int32_t intensity;
-    float   contrast;
-};
-
 struct BufferDim_t {
     int32_t sliceWidth;
     int32_t sliceHeight;
@@ -94,11 +82,6 @@ struct UBWCStats {
         struct UBWC_2_0_Stats ubwc_stats;
         uint32_t reserved[MAX_UBWC_STATS_LENGTH]; /* This is for future */
     };
-};
-
-struct S3DGpuComp_t {
-    int32_t displayId; /* on which display S3D is composed by client */
-    uint32_t s3dMode; /* the S3D format of this layer to be accessed by client */
 };
 
 typedef struct GraphicsMetadata {
@@ -147,8 +130,6 @@ struct MetaData_t {
     int32_t interlaced;
     struct BufferDim_t bufferDim;
     float refreshrate;
-    enum ColorSpace_t colorSpace;
-    enum IGC_t igc;
      /* Gralloc sets PRIV_SECURE_BUFFER flag to inform that the buffers are from
       * ION_SECURE. which should not be mapped. However, for GPU post proc
       * feature, GFX needs to map this buffer, in the client context and in SF
@@ -164,9 +145,6 @@ struct MetaData_t {
     /* Set by graphics to indicate that this buffer will be written to but not
      * swapped out */
     uint32_t isSingleBufferMode;
-    /* Indicate GPU to draw S3D layer on dedicate display device */
-    struct S3DGpuComp_t s3dComp;
-
     /* Set by camera to program the VT Timestamp */
     uint64_t vtTimeStamp;
     /* Color Aspects + HDR info */

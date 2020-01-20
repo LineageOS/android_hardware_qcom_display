@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -35,6 +35,61 @@
 #include <gralloc_priv.h>
 #include "qdMetaData.h"
 
+static int colorMetaDataToColorSpace(ColorMetaData in, ColorSpace_t *out) {
+  if (in.colorPrimaries == ColorPrimaries_BT601_6_525 ||
+      in.colorPrimaries == ColorPrimaries_BT601_6_625) {
+    if (in.range == Range_Full) {
+      *out = ITU_R_601_FR;
+    } else {
+      *out = ITU_R_601;
+    }
+  } else if (in.colorPrimaries == ColorPrimaries_BT2020) {
+    if (in.range == Range_Full) {
+      *out = ITU_R_2020_FR;
+    } else {
+      *out = ITU_R_2020;
+    }
+  } else if (in.colorPrimaries == ColorPrimaries_BT709_5) {
+    *out = ITU_R_709;
+  } else {
+    ALOGE("Cannot convert ColorMetaData to ColorSpace_t");
+    return -1;
+  }
+
+  return 0;
+}
+
+static int colorSpaceToColorMetadata(ColorSpace_t in, ColorMetaData *out) {
+  out->transfer = Transfer_sRGB;
+  switch (in) {
+    case ITU_R_601:
+      out->colorPrimaries = ColorPrimaries_BT601_6_525;
+      out->range = Range_Limited;
+      break;
+    case ITU_R_601_FR:
+      out->colorPrimaries = ColorPrimaries_BT601_6_525;
+      out->range = Range_Full;
+      break;
+    case ITU_R_709:
+      out->colorPrimaries = ColorPrimaries_BT709_5;
+      out->range = Range_Limited;
+      break;
+    case ITU_R_2020:
+      out->colorPrimaries = ColorPrimaries_BT2020;
+      out->range = Range_Limited;
+      break;
+    case ITU_R_2020_FR:
+      out->colorPrimaries = ColorPrimaries_BT2020;
+      out->range = Range_Full;
+      break;
+    default:
+      ALOGE("Cannot convert ColorSpace_t to ColorMetaData");
+      return -1;
+      break;
+  }
+
+  return 0;
+}
 unsigned long getMetaDataSize() {
     return static_cast<unsigned long>(ROUND_UP_PAGESIZE(sizeof(MetaData_t)));
 }
@@ -102,9 +157,13 @@ int setMetaDataVa(MetaData_t *data, DispParamType paramType,
         case UPDATE_REFRESH_RATE:
             data->refreshrate = *((float *)param);
             break;
-        case UPDATE_COLOR_SPACE:
-            data->colorSpace = *((ColorSpace_t *)param);
-            break;
+        case UPDATE_COLOR_SPACE: {
+          ColorMetaData color;
+          if (!colorSpaceToColorMetadata(*((ColorSpace_t *)param), &color)) {
+            data->color = color;
+          }
+          break;
+        }
         case MAP_SECURE_BUFFER:
             data->mapSecureBuffer = *((int32_t *)param);
             break;
@@ -114,14 +173,8 @@ int setMetaDataVa(MetaData_t *data, DispParamType paramType,
         case LINEAR_FORMAT:
             data->linearFormat = *((uint32_t *)param);
             break;
-        case SET_IGC:
-            data->igc = *((IGC_t *)param);
-            break;
         case SET_SINGLE_BUFFER_MODE:
             data->isSingleBufferMode = *((uint32_t *)param);
-            break;
-        case SET_S3D_COMP:
-            data->s3dComp = *((S3DGpuComp_t *)param);
             break;
         case SET_VT_TIMESTAMP:
             data->vtTimeStamp = *((uint64_t *)param);
@@ -205,10 +258,6 @@ int clearMetaDataVa(MetaData_t *data, DispParamType paramType) {
         return -EINVAL;
     data->operation &= ~paramType;
     switch (paramType) {
-        case SET_S3D_COMP:
-            data->s3dComp.displayId = -1;
-            data->s3dComp.s3dMode = 0;
-            break;
         case SET_VIDEO_PERF_MODE:
             data->isVideoPerfMode = 0;
             break;
@@ -264,7 +313,10 @@ int getMetaDataVa(MetaData_t *data, DispFetchParamType paramType,
             break;
         case GET_COLOR_SPACE:
             if (data->operation & UPDATE_COLOR_SPACE) {
-                *((ColorSpace_t *)param) = data->colorSpace;
+              ColorSpace_t color_space;
+              if (!colorMetaDataToColorSpace(data->color, &color_space)) {
+                *((ColorSpace_t *)param) = color_space;
+              }
                 ret = 0;
             }
             break;
@@ -286,21 +338,9 @@ int getMetaDataVa(MetaData_t *data, DispFetchParamType paramType,
                 ret = 0;
             }
             break;
-        case GET_IGC:
-            if (data->operation & SET_IGC) {
-                *((IGC_t *)param) = data->igc;
-                ret = 0;
-            }
-            break;
         case GET_SINGLE_BUFFER_MODE:
             if (data->operation & SET_SINGLE_BUFFER_MODE) {
                 *((uint32_t *)param) = data->isSingleBufferMode;
-                ret = 0;
-            }
-            break;
-        case GET_S3D_COMP:
-            if (data->operation & SET_S3D_COMP) {
-                *((S3DGpuComp_t *)param) = data->s3dComp;
                 ret = 0;
             }
             break;
