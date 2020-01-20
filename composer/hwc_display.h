@@ -484,7 +484,6 @@ class HWCDisplay : public DisplayEventHandler {
   bool client_connected_ = true;
   bool pending_config_ = false;
   bool has_client_composition_ = false;
-  HWCBufferSyncHandler buffer_sync_handler_ = {};
 
  private:
   void DumpInputBuffers(void);

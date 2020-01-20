@@ -51,9 +51,9 @@ using sde_drm::DRMSecureMode;
 
 namespace sdm {
 
-HWVirtualDRM::HWVirtualDRM(int32_t display_id, BufferSyncHandler *buffer_sync_handler,
-                           BufferAllocator *buffer_allocator, HWInfoInterface *hw_info_intf)
-  : HWDeviceDRM(buffer_sync_handler, buffer_allocator, hw_info_intf) {
+HWVirtualDRM::HWVirtualDRM(int32_t display_id, BufferAllocator *buffer_allocator,
+                           HWInfoInterface *hw_info_intf)
+  : HWDeviceDRM(buffer_allocator, hw_info_intf) {
   HWDeviceDRM::device_name_ = "Virtual";
   HWDeviceDRM::disp_type_ = DRMDisplayType::VIRTUAL;
   HWDeviceDRM::display_id_ = display_id;

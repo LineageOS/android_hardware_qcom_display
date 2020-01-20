@@ -65,23 +65,20 @@ static ColorPrimaries GetColorPrimariesFromAttribute(const std::string &gamut) {
 
 // TODO(user): Have a single structure handle carries all the interface pointers and variables.
 DisplayBase::DisplayBase(DisplayType display_type, DisplayEventHandler *event_handler,
-                         HWDeviceType hw_device_type, BufferSyncHandler *buffer_sync_handler,
-                         BufferAllocator *buffer_allocator, CompManager *comp_manager,
-                         HWInfoInterface *hw_info_intf)
+                         HWDeviceType hw_device_type, BufferAllocator *buffer_allocator,
+                         CompManager *comp_manager, HWInfoInterface *hw_info_intf)
   : display_type_(display_type), event_handler_(event_handler), hw_device_type_(hw_device_type),
-    buffer_sync_handler_(buffer_sync_handler), buffer_allocator_(buffer_allocator),
-    comp_manager_(comp_manager), hw_info_intf_(hw_info_intf) {
+    buffer_allocator_(buffer_allocator), comp_manager_(comp_manager), hw_info_intf_(hw_info_intf) {
 }
 
 DisplayBase::DisplayBase(int32_t display_id, DisplayType display_type,
                          DisplayEventHandler *event_handler, HWDeviceType hw_device_type,
-                         BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
-                         CompManager *comp_manager, HWInfoInterface *hw_info_intf)
+                         BufferAllocator *buffer_allocator, CompManager *comp_manager,
+                         HWInfoInterface *hw_info_intf)
   : display_id_(display_id),
     display_type_(display_type),
     event_handler_(event_handler),
     hw_device_type_(hw_device_type),
-    buffer_sync_handler_(buffer_sync_handler),
     buffer_allocator_(buffer_allocator),
     comp_manager_(comp_manager),
     hw_info_intf_(hw_info_intf) {}

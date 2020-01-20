@@ -47,13 +47,11 @@ using std::lock_guard;
 class DisplayBase : public DisplayInterface {
  public:
   DisplayBase(DisplayType display_type, DisplayEventHandler *event_handler,
-              HWDeviceType hw_device_type, BufferSyncHandler *buffer_sync_handler,
-              BufferAllocator *buffer_allocator, CompManager *comp_manager,
-              HWInfoInterface *hw_info_intf);
+              HWDeviceType hw_device_type, BufferAllocator *buffer_allocator,
+              CompManager *comp_manager, HWInfoInterface *hw_info_intf);
   DisplayBase(int32_t display_id, DisplayType display_type, DisplayEventHandler *event_handler,
-              HWDeviceType hw_device_type, BufferSyncHandler *buffer_sync_handler,
-              BufferAllocator *buffer_allocator, CompManager *comp_manager,
-              HWInfoInterface *hw_info_intf);
+              HWDeviceType hw_device_type, BufferAllocator *buffer_allocator,
+              CompManager *comp_manager, HWInfoInterface *hw_info_intf);
   virtual ~DisplayBase() { }
   virtual DisplayError Init();
   virtual DisplayError Deinit();
@@ -210,7 +208,6 @@ class DisplayBase : public DisplayInterface {
   HWInterface *hw_intf_ = NULL;
   HWPanelInfo hw_panel_info_;
   HWResourceInfo hw_resource_info_ = {};
-  BufferSyncHandler *buffer_sync_handler_ = NULL;
   BufferAllocator *buffer_allocator_ {};
   CompManager *comp_manager_ = NULL;
   DisplayState state_ = kStateOff;

@@ -99,9 +99,9 @@ static float GetMinLuminance(float luminance, float max_luminance) {
   return (max_luminance * ((luminance / 255.0f) * (luminance / 255.0f)) / 100.0f);
 }
 
-HWTVDRM::HWTVDRM(int32_t display_id, BufferSyncHandler *buffer_sync_handler,
-                 BufferAllocator *buffer_allocator, HWInfoInterface *hw_info_intf)
-  : HWDeviceDRM(buffer_sync_handler, buffer_allocator, hw_info_intf) {
+HWTVDRM::HWTVDRM(int32_t display_id, BufferAllocator *buffer_allocator,
+                 HWInfoInterface *hw_info_intf)
+  : HWDeviceDRM(buffer_allocator, hw_info_intf) {
   disp_type_ = DRMDisplayType::TV;
   device_name_ = "TV";
   display_id_ = display_id;

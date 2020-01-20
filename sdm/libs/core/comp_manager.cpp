@@ -39,15 +39,13 @@ namespace sdm {
 DisplayError CompManager::Init(const HWResourceInfo &hw_res_info,
                                ExtensionInterface *extension_intf,
                                BufferAllocator *buffer_allocator,
-                               BufferSyncHandler *buffer_sync_handler,
                                SocketHandler *socket_handler) {
   SCOPE_LOCK(locker_);
 
   DisplayError error = kErrorNone;
 
   if (extension_intf) {
-    error = extension_intf->CreateResourceExtn(hw_res_info, buffer_allocator, buffer_sync_handler,
-                                               &resource_intf_);
+    error = extension_intf->CreateResourceExtn(hw_res_info, buffer_allocator, &resource_intf_);
     extension_intf->CreateDppsControlExtn(&dpps_ctrl_intf_, socket_handler);
   } else {
     error = ResourceDefault::CreateResourceDefault(hw_res_info, &resource_intf_);
@@ -63,7 +61,6 @@ DisplayError CompManager::Init(const HWResourceInfo &hw_res_info,
   hw_res_info_ = hw_res_info;
   buffer_allocator_ = buffer_allocator;
   extension_intf_ = extension_intf;
-  sync_handler_ = buffer_sync_handler;
 
   return error;
 }
@@ -97,7 +94,7 @@ DisplayError CompManager::RegisterDisplay(int32_t display_id, DisplayType type,
   }
 
   Strategy *&strategy = display_comp_ctx->strategy;
-  strategy = new Strategy(extension_intf_, buffer_allocator_, sync_handler_, display_id, type,
+  strategy = new Strategy(extension_intf_, buffer_allocator_, display_id, type,
                           hw_res_info_, hw_panel_info, mixer_attributes, display_attributes,
                           fb_config);
   if (!strategy) {

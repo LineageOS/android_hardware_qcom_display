@@ -41,8 +41,7 @@ namespace sdm {
 class CompManager {
  public:
   DisplayError Init(const HWResourceInfo &hw_res_info_, ExtensionInterface *extension_intf,
-                    BufferAllocator *buffer_allocator, BufferSyncHandler *buffer_sync_handler,
-                    SocketHandler *socket_handler);
+                    BufferAllocator *buffer_allocator, SocketHandler *socket_handler);
   DisplayError Deinit();
   DisplayError RegisterDisplay(int32_t display_id, DisplayType type,
                                const HWDisplayAttributes &display_attributes,
@@ -134,7 +133,6 @@ class CompManager {
   uint32_t max_sde_ext_layers_ = 0;
   uint32_t max_sde_builtin_layers_ = 2;
   DppsControlInterface *dpps_ctrl_intf_ = NULL;
-  BufferSyncHandler *sync_handler_ = NULL;
 };
 
 }  // namespace sdm

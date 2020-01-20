@@ -51,7 +51,6 @@ class GLColorConvertImpl : public GLColorConvert, public GLCommon {
   virtual int Init();
   virtual int Deinit();
  private:
-  HWCBufferSyncHandler buffer_sync_handler_ = {};
   GLRenderTarget target_ = kTargetRGBA;
   bool secure_ = false;
   GLContext ctx_;

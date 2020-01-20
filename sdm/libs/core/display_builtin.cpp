@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -44,16 +44,14 @@
 namespace sdm {
 
 DisplayBuiltIn::DisplayBuiltIn(DisplayEventHandler *event_handler, HWInfoInterface *hw_info_intf,
-                               BufferSyncHandler *buffer_sync_handler,
                                BufferAllocator *buffer_allocator, CompManager *comp_manager)
-  : DisplayBase(kBuiltIn, event_handler, kDeviceBuiltIn, buffer_sync_handler, buffer_allocator,
+  : DisplayBase(kBuiltIn, event_handler, kDeviceBuiltIn, buffer_allocator,
                 comp_manager, hw_info_intf) {}
 
 DisplayBuiltIn::DisplayBuiltIn(int32_t display_id, DisplayEventHandler *event_handler,
                                HWInfoInterface *hw_info_intf,
-                               BufferSyncHandler *buffer_sync_handler,
                                BufferAllocator *buffer_allocator, CompManager *comp_manager)
-  : DisplayBase(display_id, kBuiltIn, event_handler, kDeviceBuiltIn, buffer_sync_handler,
+  : DisplayBase(display_id, kBuiltIn, event_handler, kDeviceBuiltIn,
                 buffer_allocator, comp_manager, hw_info_intf) {}
 
 DisplayBuiltIn::~DisplayBuiltIn() {
@@ -63,7 +61,7 @@ DisplayError DisplayBuiltIn::Init() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
   DisplayError error = HWInterface::Create(display_id_, kBuiltIn, hw_info_intf_,
-                                           buffer_sync_handler_, buffer_allocator_, &hw_intf_);
+                                           buffer_allocator_, &hw_intf_);
   if (error != kErrorNone) {
     DLOGE("Failed to create hardware interface on. Error = %d", error);
     return error;

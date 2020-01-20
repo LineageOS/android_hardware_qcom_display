@@ -39,8 +39,8 @@ namespace sdm {
 
 class HWVirtualDRM : public HWDeviceDRM {
  public:
-  HWVirtualDRM(int32_t display_id, BufferSyncHandler *buffer_sync_handler,
-               BufferAllocator *buffer_allocator, HWInfoInterface *hw_info_intf);
+  HWVirtualDRM(int32_t display_id, BufferAllocator *buffer_allocator,
+               HWInfoInterface *hw_info_intf);
   virtual ~HWVirtualDRM() {}
   virtual DisplayError SetVSyncState(bool enable) { return kErrorNotSupported; }
   virtual DisplayError SetMixerAttributes(const HWMixerAttributes &mixer_attributes) {

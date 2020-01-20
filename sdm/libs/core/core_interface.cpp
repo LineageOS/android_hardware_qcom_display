@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2015, 2018 The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2015, 2018, 2020 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -57,7 +57,7 @@ DisplayError CoreInterface::CreateCore(BufferAllocator *buffer_allocator,
                                        CoreInterface **interface, uint32_t client_version) {
   SCOPE_LOCK(g_core.locker);
 
-  if (!buffer_allocator || !buffer_sync_handler || !interface) {
+  if (!buffer_allocator || !interface) {
     return kErrorParameters;
   }
 
@@ -78,7 +78,7 @@ DisplayError CoreInterface::CreateCore(BufferAllocator *buffer_allocator,
 
   // Create appropriate CoreImpl object based on client version.
   if (GET_REVISION(client_version) == CoreImpl::kRevision) {
-    core_impl = new CoreImpl(buffer_allocator, buffer_sync_handler, socket_handler);
+    core_impl = new CoreImpl(buffer_allocator, socket_handler);
   } else {
     return kErrorNotSupported;
   }

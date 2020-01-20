@@ -269,7 +269,7 @@ void HWCSession::InitSupportedDisplaySlots() {
     return;
   }
 
-  DisplayError error = CoreInterface::CreateCore(&buffer_allocator_, &buffer_sync_handler_,
+  DisplayError error = CoreInterface::CreateCore(&buffer_allocator_, nullptr,
                                                  &socket_handler_, &core_intf_);
   if (error != kErrorNone) {
     DLOGE("Failed to create CoreInterface");

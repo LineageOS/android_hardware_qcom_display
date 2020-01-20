@@ -114,7 +114,6 @@ class HWCToneMapper {
   void DumpToneMapOutput(ToneMapSession *session, shared_ptr<sdm::Fence> acquire_fence);
 
   std::vector<ToneMapSession*> tone_map_sessions_;
-  HWCBufferSyncHandler buffer_sync_handler_ = {};
   HWCBufferAllocator *buffer_allocator_ = nullptr;
   uint32_t dump_frame_count_ = 0;
   uint32_t dump_frame_index_ = 0;
