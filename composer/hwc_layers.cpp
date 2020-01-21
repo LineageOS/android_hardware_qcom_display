@@ -40,6 +40,7 @@ DisplayError SetCSC(const private_handle_t *pvt_handle, ColorMetaData *color_met
       if (csc == ITU_R_601_FR || csc == ITU_R_2020_FR) {
         color_metadata->range = Range_Full;
       }
+      color_metadata->transfer = Transfer_sRGB;
 
       switch (csc) {
         case ITU_R_601:
@@ -995,7 +996,7 @@ void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
   // Since client has set PerFrameMetadatablobs its dataspace and hdr10+ data will be updated
   // so we can skip reading from ColorMetaData.
   if (use_color_metadata && !per_frame_hdr_metadata_blob_) {
-    ColorMetaData new_metadata = {};
+    ColorMetaData new_metadata = layer_buffer->color_metadata;
     if (sdm::SetCSC(handle, &new_metadata) == kErrorNone) {
       // If dataspace is KNOWN, overwrite the gralloc metadata CSC using the previously derived CSC
       // from dataspace.

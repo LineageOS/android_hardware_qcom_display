@@ -367,6 +367,7 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
   string linewidth_values = "sspp_linewidth_values=";
   string limit_constraint = "limit_usecase=";
   string limit_value = "limit_value=";
+  string use_baselayer_for_stage = "use_baselayer_for_stage=";
 
   while (std::getline(stream, line)) {
     if (line.find(max_blendstages) != string::npos) {
@@ -478,6 +479,9 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
       crtc_info_.line_width_limits = std::move(constraint_vector);
     } else if (line.find(has_micro_idle) != string::npos) {
       crtc_info_.has_micro_idle = std::stoi(string(line, (has_micro_idle).length()));
+    } else if (line.find(use_baselayer_for_stage) != string::npos) {
+      crtc_info_.use_baselayer_for_stage =
+                         std::stoi(string(line, use_baselayer_for_stage.length()));
     }
   }
   drmModeFreePropertyBlob(blob);

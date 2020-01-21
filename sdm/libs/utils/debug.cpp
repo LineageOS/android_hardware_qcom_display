@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, 2020 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -179,6 +179,30 @@ DisplayError Debug::GetMixerResolution(uint32_t *width, uint32_t *height) {
 
   *width = UINT32(stoi(str));
   *height = UINT32(stoi(str.substr(str.find('x') + 1)));
+
+  return kErrorNone;
+}
+
+DisplayError Debug::GetWindowRect(float *left, float *top, float *right, float *bottom) {
+  char value[64] = {};
+
+  int error = DebugHandler::Get()->GetProperty(WINDOW_RECT_PROP, value);
+  if (error != 0) {
+    return kErrorUndefined;
+  }
+
+  std::string str(value);
+  *left = FLOAT(stof(str));
+  str = (str.substr(str.find(',') + 1));
+  *top = FLOAT(stof(str));
+  str = (str.substr(str.find(',') + 1));
+  *right = FLOAT(stof(str));
+  str = (str.substr(str.find(',') + 1));
+  *bottom = FLOAT(stof(str));
+
+  if (*left < 0 || *top < 0 || *right < 0 || *bottom < 0) {
+    *left = *top = *right = *bottom = 0;
+  }
 
   return kErrorNone;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -51,9 +51,6 @@ using android::hardware::graphics::common::V1_2::Hdr;
 namespace sdm {
 
 class HWCToneMapper;
-
-/* max customer extended render intent */
-#define MAX_EXTENDED_RENDER_INTENT    0x1ff
 
 // Subclasses set this to their type. This has to be different from DisplayType.
 // This is to avoid RTTI and dynamic_cast
@@ -484,6 +481,8 @@ class HWCDisplay : public DisplayEventHandler {
   bool pending_config_ = false;
   bool has_client_composition_ = false;
   HWCBufferSyncHandler buffer_sync_handler_ = {};
+  LayerRect window_rect_ = {};
+  bool windowed_display_ = true;
 
  private:
   void DumpInputBuffers(void);
