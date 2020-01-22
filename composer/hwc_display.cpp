@@ -1251,6 +1251,20 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, shared_ptr<Fence
     return HWC2::Error::BadParameter;
   }
   client_target_->SetLayerBuffer(target, acquire_fence);
+  client_target_handle_ = target;
+  client_acquire_fence_ = acquire_fence;
+  client_dataspace_     = dataspace;
+  client_damage_region_ = damage;
+
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplay::GetClientTarget(buffer_handle_t target, shared_ptr<Fence> acquire_fence,
+                                        int32_t dataspace, hwc_region_t damage) {
+  target        = client_target_handle_;
+  acquire_fence = client_acquire_fence_;
+  dataspace     = client_dataspace_;
+  damage        = client_damage_region_;
 
   return HWC2::Error::None;
 }
