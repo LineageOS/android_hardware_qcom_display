@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -529,6 +529,7 @@ struct DRMCrtcInfo {
   uint32_t mnoc_bus_width;
   bool use_baselayer_for_stage = false;
   bool has_micro_idle = false;
+  uint32_t ubwc_version = 1;
 };
 
 enum struct DRMPlaneType {
