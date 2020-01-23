@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018, 2020 The Linux Foundation. All rights reserved.
  * Not a Contribution
  *
  * Copyright (C) 2008 The Android Open Source Project
@@ -56,6 +56,7 @@ class BufferManager {
   Error FlushBuffer(const private_handle_t *handle);
   Error RereadBuffer(const private_handle_t *handle);
   Error GetAllHandles(std::vector<const private_handle_t *> *out_handle_list);
+  void SetGrallocDebugProperties(gralloc::GrallocProperties props);
 
  private:
   BufferManager();
