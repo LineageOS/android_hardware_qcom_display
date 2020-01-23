@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -198,6 +198,7 @@ int HWCSession::Init() {
       CreateNullDisplay();
       null_display_active_ = true;
     }
+    hwc_display_[HWC_DISPLAY_PRIMARY]->SetIsPrimaryPanel(true);
   } else {
     // Create and power on primary display
     status = HWCDisplayPrimary::Create(core_intf_, &buffer_allocator_, &callbacks_, qservice_,

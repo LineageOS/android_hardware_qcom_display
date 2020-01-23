@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -953,6 +953,10 @@ HWC2::PowerMode HWCDisplay::GetLastPowerMode() {
 }
 
 DisplayError HWCDisplay::VSync(const DisplayEventVSync &vsync) {
+  if (is_primary_) {
+    callbacks_->Vsync(HWC_DISPLAY_PRIMARY, vsync.timestamp);
+    return kErrorNone;
+  }
   callbacks_->Vsync(id_, vsync.timestamp);
   return kErrorNone;
 }
