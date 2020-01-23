@@ -94,7 +94,7 @@ class Fence {
   Fence& operator=(Fence &&fence) = delete;
   static int Get(const shared_ptr<Fence> &fence);
 
-  static BufferSyncHandler *buffer_sync_handler_;
+  static BufferSyncHandler *g_buffer_sync_handler_;
   int fd_ = -1;
 };
 

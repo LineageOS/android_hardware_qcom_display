@@ -40,6 +40,8 @@
 
 namespace sdm {
 
+HWCBufferSyncHandler HWCBufferSyncHandler::g_hwc_buffer_sync_handler_;
+
 HWCBufferSyncHandler::HWCBufferSyncHandler() {
   Fence::Set(this);
 }

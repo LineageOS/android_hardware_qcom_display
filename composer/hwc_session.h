@@ -496,7 +496,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};
   HWCCallbacks callbacks_;
   HWCBufferAllocator buffer_allocator_;
-  HWCBufferSyncHandler buffer_sync_handler_;
   HWCVirtualDisplayFactory virtual_display_factory_;
   HWCColorManager *color_mgr_ = nullptr;
   DisplayMapInfo map_info_primary_;                 // Primary display (either builtin or pluggable)
