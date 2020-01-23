@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -33,6 +33,8 @@
 #ifndef QMAA
 #include <media/msm_media_info.h>
 #endif
+
+#include "gr_utils.h"
 
 typedef enum {
   SURFACE_TILE_MODE_DISABLE    = 0x0,    // used for linear surface
@@ -199,6 +201,8 @@ class AdrenoMemInfo {
    *         false : Unavaliable
   */
   bool AdrenoSizeAPIAvaliable();
+
+  void AdrenoSetProperties(gralloc::GrallocProperties props);
 
   static AdrenoMemInfo *GetInstance();
 
