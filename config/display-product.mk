@@ -9,7 +9,7 @@ PRODUCT_PACKAGES += \
     android.hardware.light@2.0-service \
     lights.$(TARGET_BOARD_PLATFORM) \
     hwcomposer.$(TARGET_BOARD_PLATFORM) \
-    memtrack.$(TARGET_BOARD_PLATFORM) \
+    memtrack.qcom \
     libsdmcore \
     libsdmutils \
     libqdMetaData \
