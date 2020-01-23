@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -631,7 +631,7 @@ HWC2::Error HWCLayer::SetLayerPerFrameMetadata(uint32_t num_elements,
         content_light.maxContentLightLevel = UINT32(metadata[i]);
         break;
       case PerFrameMetadataKey::MAX_FRAME_AVERAGE_LIGHT_LEVEL:
-        content_light.minPicAverageLightLevel = UINT32(metadata[i] * 10000);
+        content_light.minPicAverageLightLevel = UINT32(metadata[i]);
         break;
       default:
        break;
@@ -671,9 +671,6 @@ HWC2::Error HWCLayer::SetLayerPerFrameMetadataBlobs(uint32_t num_elements,
           std::memcpy(color_metadata.dynamicMetaDataPayload, metadata, sizes[i]);
           layer_->update_mask.set(kMetadataUpdate);
         }
-        // once blob data is set by FW, we should not read from gralloc metadata as video HAL
-        // is setting thru gralloc metadata OR native window API (TODO(user): Revisit).
-        per_frame_hdr_metadata_blob_ = true;
         break;
       default:
         DLOGW("Invalid key = %d", keys[i]);
@@ -993,9 +990,7 @@ void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
      use_color_metadata = true;
   }
 
-  // Since client has set PerFrameMetadatablobs its dataspace and hdr10+ data will be updated
-  // so we can skip reading from ColorMetaData.
-  if (use_color_metadata && !per_frame_hdr_metadata_blob_) {
+  if (use_color_metadata) {
     ColorMetaData new_metadata = layer_buffer->color_metadata;
     if (sdm::SetCSC(handle, &new_metadata) == kErrorNone) {
       // If dataspace is KNOWN, overwrite the gralloc metadata CSC using the previously derived CSC
@@ -1008,18 +1003,49 @@ void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
       if ((layer_buffer->color_metadata.colorPrimaries != new_metadata.colorPrimaries) ||
           (layer_buffer->color_metadata.transfer != new_metadata.transfer) ||
           (layer_buffer->color_metadata.range != new_metadata.range)) {
+        layer_buffer->color_metadata.colorPrimaries = new_metadata.colorPrimaries;
+        layer_buffer->color_metadata.transfer = new_metadata.transfer;
+        layer_buffer->color_metadata.range = new_metadata.range;
         layer_->update_mask.set(kMetadataUpdate);
       }
-      DLOGV_IF(kTagClient, "Layer id =%lld Dynamic Metadata valid = %d size = %d", id_,
-               new_metadata.dynamicMetaDataValid,
+      if (layer_buffer->color_metadata.matrixCoefficients != new_metadata.matrixCoefficients) {
+        layer_buffer->color_metadata.matrixCoefficients = new_metadata.matrixCoefficients;
+        layer_->update_mask.set(kMetadataUpdate);
+      }
+      DLOGV_IF(kTagClient, "Layer id = %lld ColorVolEnabled = %d ContentLightLevelEnabled = %d "
+               "cRIEnabled = %d Dynamic Metadata valid = %d size = %d", id_,
+               new_metadata.masteringDisplayInfo.colorVolumeSEIEnabled,
+               new_metadata.contentLightLevel.lightLevelSEIEnabled,
+               new_metadata.cRI.criEnabled, new_metadata.dynamicMetaDataValid,
                new_metadata.dynamicMetaDataLen);
+      // Read color metadata from gralloc handle if it's enabled by clients, this will override the
+      // values set using the Composer API's(SetLayerPerFrameMetaData)
+      if (new_metadata.masteringDisplayInfo.colorVolumeSEIEnabled &&
+          !SameConfig(&new_metadata.masteringDisplayInfo,
+          &layer_buffer->color_metadata.masteringDisplayInfo, UINT32(sizeof(MasteringDisplay)))) {
+        layer_buffer->color_metadata.masteringDisplayInfo = new_metadata.masteringDisplayInfo;
+        layer_->update_mask.set(kMetadataUpdate);
+      }
+      if (new_metadata.contentLightLevel.lightLevelSEIEnabled &&
+          !SameConfig(&new_metadata.contentLightLevel,
+          &layer_buffer->color_metadata.contentLightLevel, UINT32(sizeof(ContentLightLevel)))) {
+        layer_buffer->color_metadata.contentLightLevel = new_metadata.contentLightLevel;
+        layer_->update_mask.set(kMetadataUpdate);
+      }
+      if (new_metadata.cRI.criEnabled &&
+          !SameConfig(&new_metadata.cRI, &layer_buffer->color_metadata.cRI,
+          UINT32(sizeof(ColorRemappingInfo)))) {
+        layer_buffer->color_metadata.cRI = new_metadata.cRI;
+        layer_->update_mask.set(kMetadataUpdate);
+      }
       if (new_metadata.dynamicMetaDataValid &&
           !SameConfig(layer_buffer->color_metadata.dynamicMetaDataPayload,
           new_metadata.dynamicMetaDataPayload, HDR_DYNAMIC_META_DATA_SZ)) {
+          layer_buffer->color_metadata.dynamicMetaDataValid = true;
+          layer_buffer->color_metadata.dynamicMetaDataLen = new_metadata.dynamicMetaDataLen;
+          std::memcpy(layer_buffer->color_metadata.dynamicMetaDataPayload,
+                      new_metadata.dynamicMetaDataPayload, new_metadata.dynamicMetaDataLen);
         layer_->update_mask.set(kMetadataUpdate);
-      }
-      if (layer_->update_mask.test(kMetadataUpdate)) {
-        layer_buffer->color_metadata = new_metadata;
       }
     } else {
       dataspace_supported_ = false;
