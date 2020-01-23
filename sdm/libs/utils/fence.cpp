@@ -28,6 +28,7 @@
 */
 
 #include <utils/fence.h>
+#include <debug_handler.h>
 #include <assert.h>
 #include <string>
 
@@ -37,7 +38,7 @@ namespace sdm {
 
 #define ASSERT_IF_NO_BUFFER_SYNC(x) if (!x) { assert(false); }
 
-BufferSyncHandler* Fence::buffer_sync_handler_ = nullptr;
+BufferSyncHandler* Fence::g_buffer_sync_handler_ = nullptr;
 
 Fence::Fence(int fd) : fd_(fd) {
 }
@@ -47,7 +48,7 @@ Fence::~Fence() {
 }
 
 void Fence::Set(BufferSyncHandler *buffer_sync_handler) {
-  buffer_sync_handler_ = buffer_sync_handler;
+  g_buffer_sync_handler_ = buffer_sync_handler;
 }
 
 shared_ptr<Fence> Fence::Create(int fd) {
@@ -73,39 +74,39 @@ int Fence::Get(const shared_ptr<Fence> &fence) {
 }
 
 shared_ptr<Fence> Fence::Merge(const shared_ptr<Fence> &fence1, const shared_ptr<Fence> &fence2) {
-  ASSERT_IF_NO_BUFFER_SYNC(buffer_sync_handler_);
+  ASSERT_IF_NO_BUFFER_SYNC(g_buffer_sync_handler_);
 
   // Sync merge will return a new unique fd if source fds are same.
   int fd1 = fence1 ? fence1->fd_ : -1;
   int fd2 = fence2 ? fence2->fd_ : -1;
   int merged = -1;
 
-  buffer_sync_handler_->SyncMerge(fd1, fd2, &merged);
+  g_buffer_sync_handler_->SyncMerge(fd1, fd2, &merged);
 
   return Create(merged);
 }
 
 DisplayError Fence::Wait(const shared_ptr<Fence> &fence) {
-  ASSERT_IF_NO_BUFFER_SYNC(buffer_sync_handler_);
+  ASSERT_IF_NO_BUFFER_SYNC(g_buffer_sync_handler_);
 
-  return buffer_sync_handler_->SyncWait(Fence::Get(fence), 1000);
+  return g_buffer_sync_handler_->SyncWait(Fence::Get(fence), 1000);
 }
 
 DisplayError Fence::Wait(const shared_ptr<Fence> &fence, int timeout) {
-  ASSERT_IF_NO_BUFFER_SYNC(buffer_sync_handler_);
+  ASSERT_IF_NO_BUFFER_SYNC(g_buffer_sync_handler_);
 
-  return buffer_sync_handler_->SyncWait(Fence::Get(fence), timeout);
+  return g_buffer_sync_handler_->SyncWait(Fence::Get(fence), timeout);
 }
 
 Fence::Status Fence::GetStatus(const shared_ptr<Fence> &fence) {
-  ASSERT_IF_NO_BUFFER_SYNC(buffer_sync_handler_);
+  ASSERT_IF_NO_BUFFER_SYNC(g_buffer_sync_handler_);
 
   if (!fence) {
     return Fence::Status::kSignaled;
   }
 
   // Treat only timeout error as pending, assume other errors as signaled.
-  return (buffer_sync_handler_->SyncWait(Fence::Get(fence), 0) == kErrorTimeOut ?
+  return (g_buffer_sync_handler_->SyncWait(Fence::Get(fence), 0) == kErrorTimeOut ?
                                     Fence::Status::kPending : Fence::Status::kSignaled);
 }
 
