@@ -201,7 +201,7 @@ bool Allocator::CheckForBufferSharing(uint32_t num_descriptors,
 
 void Allocator::GetIonHeapInfo(uint64_t usage, unsigned int *ion_heap_id, unsigned int *alloc_type,
                                unsigned int *ion_flags) {
-  unsigned int heap_id = 0;
+  unsigned int heap_id = 1;
   unsigned int type = 0;
   uint32_t flags = 0;
 #ifndef QMAA
