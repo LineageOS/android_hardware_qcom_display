@@ -347,6 +347,7 @@ struct HWResourceInfo {
   uint32_t mnoc_bus_width = 32;
   bool use_baselayer_for_stage = false;
   bool has_micro_idle = false;
+  uint32_t ubwc_version = 1;
 };
 
 struct HWSplitInfo {
