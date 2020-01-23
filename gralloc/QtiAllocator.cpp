@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,10 +30,31 @@
 #define DEBUG 0
 #include "QtiAllocator.h"
 
+#include <cutils/properties.h>
 #include <log/log.h>
 #include <vector>
 
 #include "gr_utils.h"
+
+static void get_properties(gralloc::GrallocProperties *props) {
+  char property[PROPERTY_VALUE_MAX];
+  property_get("vendor.gralloc.use_system_heap_for_sensors", property, "1");
+  if (!(strncmp(property, "0", PROPERTY_VALUE_MAX))) {
+    props->use_system_heap_for_sensors = false;
+  }
+
+  property_get("vendor.gralloc.disable_ubwc", property, "0");
+  if (!(strncmp(property, "1", PROPERTY_VALUE_MAX)) ||
+      !(strncmp(property, "true", PROPERTY_VALUE_MAX))) {
+    props->ubwc_disable = true;
+  }
+
+  property_get("vendor.gralloc.disable_ahardware_buffer", property, "0");
+  if (!(strncmp(property, "1", PROPERTY_VALUE_MAX)) ||
+      !(strncmp(property, "true", PROPERTY_VALUE_MAX))) {
+    props->ahardware_buffer_disable = true;
+  }
+}
 
 namespace vendor {
 namespace qti {
@@ -47,7 +68,10 @@ using android::hardware::hidl_handle;
 using gralloc::BufferDescriptor;
 
 QtiAllocator::QtiAllocator() {
+  gralloc::GrallocProperties properties;
+  get_properties(&properties);
   buf_mgr_ = BufferManager::GetInstance();
+  buf_mgr_->SetGrallocDebugProperties(properties);
 }
 
 // Methods from ::android::hardware::graphics::allocator::V2_0::IAllocator follow.

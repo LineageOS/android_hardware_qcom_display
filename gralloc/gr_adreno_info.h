@@ -34,6 +34,8 @@
 #include <display/media/mmm_color_fmt.h>
 #endif
 
+#include "gr_utils.h"
+
 typedef enum {
   SURFACE_TILE_MODE_DISABLE    = 0x0,    // used for linear surface
   SURFACE_TILE_MODE_ENABLE     = 0x1     // used for tiled surface
@@ -199,6 +201,8 @@ class AdrenoMemInfo {
    *         false : Unavaliable
   */
   bool AdrenoSizeAPIAvaliable();
+
+  void AdrenoSetProperties(gralloc::GrallocProperties props);
 
   static AdrenoMemInfo *GetInstance();
 
