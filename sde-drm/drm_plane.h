@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -30,7 +30,7 @@
 #ifndef __DRM_PLANE_H__
 #define __DRM_PLANE_H__
 
-#include <drm/sde_drm.h>
+#include <display/drm/sde_drm.h>
 #include <drm_interface.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>

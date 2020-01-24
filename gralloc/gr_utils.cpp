@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -28,7 +28,7 @@
  */
 
 #ifndef QMAA
-#include <media/msm_media_info.h>
+#include <display/media/mmm_color_fmt.h>
 #endif
 
 #include <algorithm>
@@ -349,7 +349,7 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
         break;
 #ifndef QMAA
       case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
-        size = VENUS_BUFFER_SIZE(COLOR_FMT_P010,
+        size = MMM_COLOR_FMT_BUFFER_SIZE(MMM_COLOR_FMT_P010,
                                  width,
                                  height);
         break;
@@ -366,11 +366,11 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
         break;
       case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
       case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
-        size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12, width, height);
+        size = MMM_COLOR_FMT_BUFFER_SIZE(MMM_COLOR_FMT_NV12, width, height);
         break;
       case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
       case HAL_PIXEL_FORMAT_NV21_ENCODEABLE:
-        size = VENUS_BUFFER_SIZE(COLOR_FMT_NV21, width, height);
+        size = MMM_COLOR_FMT_BUFFER_SIZE(MMM_COLOR_FMT_NV21, width, height);
         break;
       case HAL_PIXEL_FORMAT_BLOB:
         if (height != 1) {
@@ -380,7 +380,7 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
         size = (unsigned int) width;
         break;
       case HAL_PIXEL_FORMAT_NV12_HEIF:
-        size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12_512, width, height);
+        size = MMM_COLOR_FMT_BUFFER_SIZE(MMM_COLOR_FMT_NV12_512, width, height);
         break;
 #endif
       default:ALOGE("%s: Unrecognized pixel format: 0x%x", __FUNCTION__, format);
@@ -422,20 +422,20 @@ void GetYuvUbwcSPPlaneInfo(uint32_t width, uint32_t height, int color_format,
   uint64_t yOffset = 0, cOffset = 0, yMetaOffset = 0, cMetaOffset = 0;
 
 #ifndef QMAA
-  y_meta_stride = VENUS_Y_META_STRIDE(color_format, INT(width));
-  y_meta_height = VENUS_Y_META_SCANLINES(color_format, INT(height));
+  y_meta_stride = MMM_COLOR_FMT_Y_META_STRIDE(color_format, INT(width));
+  y_meta_height = MMM_COLOR_FMT_Y_META_SCANLINES(color_format, INT(height));
   y_meta_size = ALIGN((y_meta_stride * y_meta_height), alignment);
 
-  y_stride = VENUS_Y_STRIDE(color_format, INT(width));
-  y_height = VENUS_Y_SCANLINES(color_format, INT(height));
+  y_stride = MMM_COLOR_FMT_Y_STRIDE(color_format, INT(width));
+  y_height = MMM_COLOR_FMT_Y_SCANLINES(color_format, INT(height));
   y_size = ALIGN((y_stride * y_height), alignment);
 
-  c_meta_stride = VENUS_UV_META_STRIDE(color_format, INT(width));
-  c_meta_height = VENUS_UV_META_SCANLINES(color_format, INT(height));
+  c_meta_stride = MMM_COLOR_FMT_UV_META_STRIDE(color_format, INT(width));
+  c_meta_height = MMM_COLOR_FMT_UV_META_SCANLINES(color_format, INT(height));
   c_meta_size = ALIGN((c_meta_stride * c_meta_height), alignment);
 
-  c_stride = VENUS_UV_STRIDE(color_format, INT(width));
-  c_height = VENUS_UV_SCANLINES(color_format, INT(height));
+  c_stride = MMM_COLOR_FMT_UV_STRIDE(color_format, INT(width));
+  c_height = MMM_COLOR_FMT_UV_SCANLINES(color_format, INT(height));
   c_size = ALIGN((c_stride * c_height), alignment);
 #endif
   yMetaOffset = 0;
@@ -486,9 +486,9 @@ void GetYuvUbwcInterlacedSPPlaneInfo(uint32_t width, uint32_t height,
   height = (height + 1) >> 1;
 
 #ifndef QMAA
-  GetYuvUbwcSPPlaneInfo(width, height, COLOR_FMT_NV12_UBWC, &plane_info[0]);
+  GetYuvUbwcSPPlaneInfo(width, height, MMM_COLOR_FMT_NV12_UBWC, &plane_info[0]);
 
-  GetYuvUbwcSPPlaneInfo(width, height, COLOR_FMT_NV12_UBWC, &plane_info[4]);
+  GetYuvUbwcSPPlaneInfo(width, height, MMM_COLOR_FMT_NV12_UBWC, &plane_info[4]);
 #endif
 }
 
@@ -524,11 +524,11 @@ void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint3
 #ifndef QMAA
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
-      c_height = VENUS_UV_SCANLINES(COLOR_FMT_NV12, height);
+      c_height = MMM_COLOR_FMT_UV_SCANLINES(MMM_COLOR_FMT_NV12, height);
       c_size = c_stride * c_height;
       break;
     case HAL_PIXEL_FORMAT_NV12_HEIF:
-      c_height = VENUS_UV_SCANLINES(COLOR_FMT_NV12_512, height);
+      c_height = MMM_COLOR_FMT_UV_SCANLINES(MMM_COLOR_FMT_NV12_512, height);
       c_size = c_stride * c_height;
       break;
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
@@ -536,7 +536,7 @@ void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint3
       c_size = ALIGN(2 * ALIGN(unaligned_width / 2, 32) * ALIGN(unaligned_height / 2, 32), 4096);
       break;
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
-      c_height = VENUS_UV_SCANLINES(COLOR_FMT_NV21, height);
+      c_height = MMM_COLOR_FMT_UV_SCANLINES(MMM_COLOR_FMT_NV21, height);
       c_size = c_stride * c_height;
       break;
 #endif
@@ -632,8 +632,8 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]) 
       uint64_t field_base;
       height = (height + 1) >> 1;
 #ifndef QMAA
-      uv_stride = VENUS_UV_STRIDE(COLOR_FMT_NV12_UBWC, INT(width));
-      uv_height = VENUS_UV_SCANLINES(COLOR_FMT_NV12_UBWC, INT(height));
+      uv_stride = MMM_COLOR_FMT_UV_STRIDE(MMM_COLOR_FMT_NV12_UBWC, INT(width));
+      uv_height = MMM_COLOR_FMT_UV_SCANLINES(MMM_COLOR_FMT_NV12_UBWC, INT(height));
 #endif
       uv_size = ALIGN((uv_stride * uv_height), alignment);
       field_base = hnd->base + plane_info[1].offset + uv_size;
@@ -750,18 +750,18 @@ void GetYuvUBwcWidthAndHeight(int width, int height, int format, unsigned int *a
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
-      *aligned_w = VENUS_Y_STRIDE(COLOR_FMT_NV12_UBWC, width);
-      *aligned_h = VENUS_Y_SCANLINES(COLOR_FMT_NV12_UBWC, height);
+      *aligned_w = MMM_COLOR_FMT_Y_STRIDE(MMM_COLOR_FMT_NV12_UBWC, width);
+      *aligned_h = MMM_COLOR_FMT_Y_SCANLINES(MMM_COLOR_FMT_NV12_UBWC, height);
       break;
     case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
       // The macro returns the stride which is 4/3 times the width, hence * 3/4
-      *aligned_w = (VENUS_Y_STRIDE(COLOR_FMT_NV12_BPP10_UBWC, width) * 3) / 4;
-      *aligned_h = VENUS_Y_SCANLINES(COLOR_FMT_NV12_BPP10_UBWC, height);
+      *aligned_w = (MMM_COLOR_FMT_Y_STRIDE(MMM_COLOR_FMT_NV12_BPP10_UBWC, width) * 3) / 4;
+      *aligned_h = MMM_COLOR_FMT_Y_SCANLINES(MMM_COLOR_FMT_NV12_BPP10_UBWC, height);
       break;
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
       // The macro returns the stride which is 2 times the width, hence / 2
-      *aligned_w = (VENUS_Y_STRIDE(COLOR_FMT_P010_UBWC, width) / 2);
-      *aligned_h = VENUS_Y_SCANLINES(COLOR_FMT_P010_UBWC, height);
+      *aligned_w = (MMM_COLOR_FMT_Y_STRIDE(MMM_COLOR_FMT_P010_UBWC, width) / 2);
+      *aligned_h = MMM_COLOR_FMT_Y_SCANLINES(MMM_COLOR_FMT_P010_UBWC, height);
       break;
 #endif
     default:
@@ -838,13 +838,13 @@ unsigned int GetUBwcSize(int width, int height, int format, unsigned int aligned
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
-      size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12_UBWC, width, height);
+      size = MMM_COLOR_FMT_BUFFER_SIZE(MMM_COLOR_FMT_NV12_UBWC, width, height);
       break;
     case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
-      size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12_BPP10_UBWC, width, height);
+      size = MMM_COLOR_FMT_BUFFER_SIZE(MMM_COLOR_FMT_NV12_BPP10_UBWC, width, height);
       break;
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
-      size = VENUS_BUFFER_SIZE(COLOR_FMT_P010_UBWC, width, height);
+      size = MMM_COLOR_FMT_BUFFER_SIZE(MMM_COLOR_FMT_P010_UBWC, width, height);
       break;
 #endif
     default:
@@ -1052,23 +1052,23 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       break;
 #ifndef QMAA
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
-      aligned_w = INT(VENUS_Y_STRIDE(COLOR_FMT_P010, width) / 2);
-      aligned_h = INT(VENUS_Y_SCANLINES(COLOR_FMT_P010, height));
+      aligned_w = INT(MMM_COLOR_FMT_Y_STRIDE(MMM_COLOR_FMT_P010, width) / 2);
+      aligned_h = INT(MMM_COLOR_FMT_Y_SCANLINES(MMM_COLOR_FMT_P010, height));
       break;
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
-      aligned_w = INT(VENUS_Y_STRIDE(COLOR_FMT_NV12, width));
-      aligned_h = INT(VENUS_Y_SCANLINES(COLOR_FMT_NV12, height));
+      aligned_w = INT(MMM_COLOR_FMT_Y_STRIDE(MMM_COLOR_FMT_NV12, width));
+      aligned_h = INT(MMM_COLOR_FMT_Y_SCANLINES(MMM_COLOR_FMT_NV12, height));
       break;
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
-      aligned_w = INT(VENUS_Y_STRIDE(COLOR_FMT_NV21, width));
-      aligned_h = INT(VENUS_Y_SCANLINES(COLOR_FMT_NV21, height));
+      aligned_w = INT(MMM_COLOR_FMT_Y_STRIDE(MMM_COLOR_FMT_NV21, width));
+      aligned_h = INT(MMM_COLOR_FMT_Y_SCANLINES(MMM_COLOR_FMT_NV21, height));
       break;
     case HAL_PIXEL_FORMAT_BLOB:
       break;
     case HAL_PIXEL_FORMAT_NV12_HEIF:
-      aligned_w = INT(VENUS_Y_STRIDE(COLOR_FMT_NV12_512, width));
-      aligned_h = INT(VENUS_Y_SCANLINES(COLOR_FMT_NV12_512, height));
+      aligned_w = INT(MMM_COLOR_FMT_Y_STRIDE(MMM_COLOR_FMT_NV12_512, width));
+      aligned_h = INT(MMM_COLOR_FMT_Y_SCANLINES(MMM_COLOR_FMT_NV12_512, height));
       break;
 #endif
     default:
@@ -1419,7 +1419,7 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
         plane_info[6].step = plane_info[7].step = 0;
       } else {
         *plane_count = 4;
-        GetYuvUbwcSPPlaneInfo(width, height, COLOR_FMT_NV12_UBWC, plane_info);
+        GetYuvUbwcSPPlaneInfo(width, height, MMM_COLOR_FMT_NV12_UBWC, plane_info);
         plane_info[0].h_subsampling = 0;
         plane_info[0].v_subsampling = 0;
         plane_info[0].step = 1;
@@ -1444,7 +1444,7 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
 
     case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
       *plane_count = 4;
-      GetYuvUbwcSPPlaneInfo(width, height, COLOR_FMT_NV12_BPP10_UBWC, plane_info);
+      GetYuvUbwcSPPlaneInfo(width, height, MMM_COLOR_FMT_NV12_BPP10_UBWC, plane_info);
       GetYuvSubSamplingFactor(format, &h_subsampling, &v_subsampling);
       plane_info[0].h_subsampling = 0;
       plane_info[0].v_subsampling = 0;
@@ -1459,7 +1459,7 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
 
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_UBWC:
       *plane_count = 4;
-      GetYuvUbwcSPPlaneInfo(width, height, COLOR_FMT_P010_UBWC, plane_info);
+      GetYuvUbwcSPPlaneInfo(width, height, MMM_COLOR_FMT_P010_UBWC, plane_info);
       GetYuvSubSamplingFactor(format, &h_subsampling, &v_subsampling);
       plane_info[0].h_subsampling = 0;
       plane_info[0].v_subsampling = 0;
@@ -1474,13 +1474,13 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
 
     case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
       *plane_count = 2;
-      y_stride = VENUS_Y_STRIDE(COLOR_FMT_P010, width);
-      c_stride = VENUS_UV_STRIDE(COLOR_FMT_P010, width);
-      y_height = VENUS_Y_SCANLINES(COLOR_FMT_P010, height);
+      y_stride = MMM_COLOR_FMT_Y_STRIDE(MMM_COLOR_FMT_P010, width);
+      c_stride = MMM_COLOR_FMT_UV_STRIDE(MMM_COLOR_FMT_P010, width);
+      y_height = MMM_COLOR_FMT_Y_SCANLINES(MMM_COLOR_FMT_P010, height);
       y_size = y_stride * y_height;
       yOffset = 0;
       cOffset = y_size;
-      c_height = VENUS_UV_SCANLINES(COLOR_FMT_P010, INT(height));
+      c_height = MMM_COLOR_FMT_UV_SCANLINES(MMM_COLOR_FMT_P010, INT(height));
       c_size = c_stride * c_height;
       GetYuvSubSamplingFactor(format, &h_subsampling, &v_subsampling);
 
