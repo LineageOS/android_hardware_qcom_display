@@ -45,7 +45,7 @@ class HWCDisplayPluggableTest : public HWCDisplay {
                     uint32_t panel_bpp, uint32_t pattern_type, HWCDisplay **hwc_display);
   static void Destroy(HWCDisplay *hwc_display);
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests);
-  virtual HWC2::Error Present(int32_t *out_retire_fence);
+  virtual HWC2::Error Present(shared_ptr<Fence> *out_retire_fence);
   virtual int Perform(uint32_t operation, ...);
 
  protected:
@@ -97,7 +97,7 @@ class HWCDisplayPluggableTest : public HWCDisplay {
   int DeinitLayer(Layer *layer);
   int CreateLayerStack();
   int DestroyLayerStack();
-  HWC2::Error PostCommit(int32_t *out_retire_fence);
+  HWC2::Error PostCommit(shared_ptr<Fence> *out_retire_fence);
 
   static const uint32_t kTestLayerCnt = 1;
 };

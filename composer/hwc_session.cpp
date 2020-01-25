@@ -737,7 +737,7 @@ void HWCSession::PerformQsyncCallback(hwc2_display_t display) {
 }
 #endif
 
-int32_t HWCSession::PresentDisplay(hwc2_display_t display, int32_t *out_retire_fence) {
+int32_t HWCSession::PresentDisplay(hwc2_display_t display, shared_ptr<Fence> *out_retire_fence) {
   auto status = HWC2::Error::BadDisplay;
   DTRACE_SCOPED();
 
@@ -773,7 +773,7 @@ int32_t HWCSession::PresentDisplay(hwc2_display_t display, int32_t *out_retire_f
     if (pending_power_mode_[display]) {
       status = HWC2::Error::None;
     } else {
-      status = PresentDisplayInternal(target_display, out_retire_fence);
+      status = PresentDisplayInternal(target_display);
       if (status == HWC2::Error::None) {
         // Check if hwc's refresh trigger is getting exercised.
         if (callbacks_.NeedsRefresh(display)) {
@@ -2913,7 +2913,7 @@ HWC2::Error HWCSession::ValidateDisplayInternal(hwc2_display_t display, uint32_t
   return hwc_display->Validate(out_num_types, out_num_requests);
 }
 
-HWC2::Error HWCSession::PresentDisplayInternal(hwc2_display_t display, int32_t *out_retire_fence) {
+HWC2::Error HWCSession::PresentDisplayInternal(hwc2_display_t display) {
   HWCDisplay *hwc_display = hwc_display_[display];
 
   DTRACE_SCOPED();
@@ -3021,7 +3021,8 @@ void HWCSession::HandleSecureSession() {
   }
 }
 
-void HWCSession::HandlePendingPowerMode(hwc2_display_t disp_id, int retire_fence) {
+void HWCSession::HandlePendingPowerMode(hwc2_display_t disp_id,
+                                        const shared_ptr<Fence> &retire_fence) {
   if (!secure_session_active_) {
     // No secure session active. Skip remaining steps.
     return;
@@ -3031,7 +3032,6 @@ void HWCSession::HandlePendingPowerMode(hwc2_display_t disp_id, int retire_fence
   if (disp_id != active_builtin_disp_id) {
     return;
   }
-
 
   Locker::ScopeLock lock_d(locker_[active_builtin_disp_id]);
   bool pending_power_mode = false;
@@ -3045,20 +3045,19 @@ void HWCSession::HandlePendingPowerMode(hwc2_display_t disp_id, int retire_fence
       }
     }
   }
-  if (pending_power_mode) {
-    // retire fence is set only after successful primary commit, So check for retire fence to know
-    // non secure commit went through to notify driver to change the CRTC mode to non secure.
-    // Otherwise any commit to non-primary display would fail.
-    if (retire_fence < 0) {
-      return;
-    }
-    int error = sync_wait(retire_fence, 1000);
-    if (error < 0) {
-      DLOGE("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
-    }
-  } else {
+
+  if (!pending_power_mode) {
     return;
   }
+
+  // retire fence is set only after successful primary commit, So check for retire fence to know
+  // non secure commit went through to notify driver to change the CRTC mode to non secure.
+  // Otherwise any commit to non-primary display would fail.
+  if (retire_fence == nullptr) {
+    return;
+  }
+
+  Fence::Wait(retire_fence);
 
   for (hwc2_display_t display = HWC_DISPLAY_PRIMARY + 1;
     display < HWCCallbacks::kNumDisplays; display++) {
@@ -3080,7 +3079,8 @@ void HWCSession::HandlePendingPowerMode(hwc2_display_t disp_id, int retire_fence
   secure_session_active_ = false;
 }
 
-void HWCSession::HandlePendingHotplug(hwc2_display_t disp_id, int retire_fence) {
+void HWCSession::HandlePendingHotplug(hwc2_display_t disp_id,
+                                      const shared_ptr<Fence> &retire_fence) {
   hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
   if (disp_id != active_builtin_disp_id ||
       (kHotPlugNone == pending_hotplug_event_ && !destroy_virtual_disp_pending_)) {
@@ -3098,12 +3098,8 @@ void HWCSession::HandlePendingHotplug(hwc2_display_t disp_id, int retire_fence) 
   }
 
   if (destroy_virtual_disp_pending_ || kHotPlugEvent == pending_hotplug_event_) {
-    if (retire_fence >= 0) {
-      int error = sync_wait(retire_fence, 1000);
-      if (error < 0) {
-        DLOGE("sync_wait error errno = %d, desc = %s", errno,  strerror(errno));
-      }
-    }
+    Fence::Wait(retire_fence);
+
     // Destroy the pending virtual display if secure session not present.
     if (destroy_virtual_disp_pending_) {
       for (auto &map_info : map_info_virtual_) {

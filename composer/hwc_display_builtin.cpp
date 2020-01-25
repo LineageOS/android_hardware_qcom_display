@@ -336,7 +336,7 @@ bool HWCDisplayBuiltIn::IsQsyncCallbackNeeded(bool *qsync_enabled, int32_t *refr
   return true;
 }
 
-HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
+HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
   auto status = HWC2::Error::None;
 
   DTRACE_SCOPED();
@@ -817,9 +817,9 @@ void HWCDisplayBuiltIn::HandleFrameDump() {
     }
 
     if (!ret) {
-       DumpOutputBuffer(output_buffer_info_, output_buffer_base_, layer_stack_.retire_fence_fd);
-       validated_ = false;
-     }
+      DumpOutputBuffer(output_buffer_info_, output_buffer_base_, layer_stack_.retire_fence);
+      validated_ = false;
+    }
 
     if (0 == (dump_frame_count_ - 1)) {
       dump_output_to_file_ = false;

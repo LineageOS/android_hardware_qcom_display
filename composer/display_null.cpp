@@ -147,7 +147,7 @@ DisplayError DisplayNullExternal::Commit(LayerStack *layer_stack) {
       layer->input_buffer.release_fence_fd = -1;
     }
   }
-  layer_stack->retire_fence_fd = -1;
+
   return kErrorNone;
 }
 
