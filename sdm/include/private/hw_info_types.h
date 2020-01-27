@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -396,7 +396,8 @@ struct HWPanelInfo {
   HWSplitInfo split_info;             // Panel split configuration
   char panel_name[256] = {0};         // Panel name
   HWS3DMode s3d_mode = kS3DModeNone;  // Panel's current s3d mode.
-  int panel_max_brightness = 0;       // Max panel brightness
+  float panel_max_brightness = 255.0f;  // Max panel brightness
+  float panel_min_brightness = 1.0f;  // Min panel brightness
   uint32_t left_roi_count = 1;        // Number if ROI supported on left panel
   uint32_t right_roi_count = 1;       // Number if ROI supported on right panel
   bool hdr_enabled = false;           // HDR feature supported

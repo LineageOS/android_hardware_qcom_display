@@ -1,4 +1,4 @@
-/* Copyright (c) 2015 - 2019, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015 - 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -203,7 +203,6 @@ void PPHWAttributes::Set(const HWResourceInfo &hw_res,
   DisplayConfigVariableInfo &attributes = *this;
   attributes = attr;
   version = feature_ver;
-  panel_max_brightness = panel_info.panel_max_brightness;
 
   if (strlen(panel_info.panel_name)) {
     snprintf(&panel_name[0], sizeof(panel_name), "%s", &panel_info.panel_name[0]);
