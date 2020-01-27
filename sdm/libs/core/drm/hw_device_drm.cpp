@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -109,6 +109,8 @@ using sde_drm::DRMMultiRectMode;
 using sde_drm::DRMSSPPLayoutIndex;
 
 namespace sdm {
+
+std::atomic<uint32_t> HWDeviceDRM::hw_dest_scaler_blocks_used_(0);
 
 static PPBlock GetPPBlock(const HWToneMapLut &lut_type) {
   PPBlock pp_block = kPPBlockMax;
@@ -536,6 +538,7 @@ DisplayError HWDeviceDRM::Deinit() {
   drm_mgr_intf_->DestroyAtomicReq(drm_atomic_intf_);
   drm_atomic_intf_ = {};
   drm_mgr_intf_->UnregisterDisplay(&token_);
+  hw_dest_scaler_blocks_used_ -= dest_scaler_blocks_used_;
   return err;
 }
 
@@ -1851,7 +1854,7 @@ DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attr
     return kErrorNotSupported;
   }
 
-  if (!hw_resource_.hw_dest_scalar_info.count) {
+  if (!dest_scaler_blocks_used_) {
     return kErrorNotSupported;
   }
 
@@ -1903,6 +1906,7 @@ DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attr
   mixer_attributes_ = mixer_attributes;
   mixer_attributes_.split_left = mixer_attributes_.width;
   mixer_attributes_.split_type = kNoSplit;
+  mixer_attributes_.dest_scaler_blocks_used = dest_scaler_blocks_used_;  // No change.
   if (display_attributes_[index].is_device_split) {
     mixer_attributes_.split_left = UINT32(FLOAT(mixer_attributes.width) * mixer_split_ratio);
     mixer_attributes_.split_type = kDualSplit;

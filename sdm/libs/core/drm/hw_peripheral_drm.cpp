@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -64,16 +64,39 @@ DisplayError HWPeripheralDRM::Init() {
     return ret;
   }
 
-  scalar_data_.resize(hw_resource_.hw_dest_scalar_info.count);
-  dest_scalar_cache_.resize(hw_resource_.hw_dest_scalar_info.count);
+  InitDestScaler();
+
   PopulateBitClkRates();
 
-  topology_control_ = UINT32(sde_drm::DRMTopologyControl::DSPP);
-  if (hw_panel_info_.is_primary_panel) {
-    topology_control_ |= UINT32(sde_drm::DRMTopologyControl::DEST_SCALER);
+  return kErrorNone;
+}
+
+void HWPeripheralDRM::InitDestScaler() {
+  if (hw_panel_info_.is_primary_panel && hw_resource_.hw_dest_scalar_info.count) {
+    // Do all destination scaler block resource allocations here.
+    dest_scaler_blocks_used_ = 1;
+    if (kQuadSplit == mixer_attributes_.split_type) {
+      dest_scaler_blocks_used_ = 4;
+    } else if (kDualSplit == mixer_attributes_.split_type) {
+      dest_scaler_blocks_used_ = 2;
+    }
+    if (hw_resource_.hw_dest_scalar_info.count >=
+        (hw_dest_scaler_blocks_used_ + dest_scaler_blocks_used_)) {
+      // Enough destination scaler blocks available so update the static counter.
+      hw_dest_scaler_blocks_used_ += dest_scaler_blocks_used_;
+    } else {
+      dest_scaler_blocks_used_ = 0;
+    }
+    scalar_data_.resize(dest_scaler_blocks_used_);
+    dest_scalar_cache_.resize(dest_scaler_blocks_used_);
+    // Update crtc (layer-mixer) configuration info.
+    mixer_attributes_.dest_scaler_blocks_used = dest_scaler_blocks_used_;
   }
 
-  return kErrorNone;
+  topology_control_ = UINT32(sde_drm::DRMTopologyControl::DSPP);
+  if (dest_scaler_blocks_used_) {
+    topology_control_ |= UINT32(sde_drm::DRMTopologyControl::DEST_SCALER);
+  }
 }
 
 void HWPeripheralDRM::PopulateBitClkRates() {
@@ -169,11 +192,11 @@ void HWPeripheralDRM::ResetDestScalarCache() {
 }
 
 void HWPeripheralDRM::SetDestScalarData(const HWLayersInfo &hw_layer_info) {
-  if (!hw_scale_ || !hw_resource_.hw_dest_scalar_info.count) {
+  if (!hw_scale_ || !dest_scaler_blocks_used_) {
     return;
   }
 
-  for (uint32_t i = 0; i < hw_resource_.hw_dest_scalar_info.count; i++) {
+  for (uint32_t i = 0; i < dest_scaler_blocks_used_; i++) {
     auto it = hw_layer_info.dest_scale_info_map.find(i);
 
     if (it == hw_layer_info.dest_scale_info_map.end()) {

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -116,6 +116,7 @@ class CompManager {
     PUConstraints pu_constraints = {};
     DisplayConfigVariableInfo fb_config = {};
     bool first_cycle_ = true;
+    uint32_t dest_scaler_blocks_used = 0;
   };
 
   Locker locker_;
