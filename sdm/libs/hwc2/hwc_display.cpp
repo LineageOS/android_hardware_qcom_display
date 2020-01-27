@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -1955,22 +1955,6 @@ void HWCDisplay::MarkLayersForClientComposition() {
 }
 
 void HWCDisplay::ApplyScanAdjustment(hwc_rect_t *display_frame) {
-}
-
-int HWCDisplay::SetPanelBrightness(int level) {
-  int ret = 0;
-  if (display_intf_) {
-    ret = display_intf_->SetPanelBrightness(level);
-    validated_ = false;
-  } else {
-    ret = -EINVAL;
-  }
-
-  return ret;
-}
-
-int HWCDisplay::GetPanelBrightness(int *level) {
-  return display_intf_->GetPanelBrightness(level);
 }
 
 int HWCDisplay::ToggleScreenUpdates(bool enable) {

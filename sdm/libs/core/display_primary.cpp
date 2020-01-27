@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2018, 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -245,9 +245,39 @@ DisplayError DisplayPrimary::SetDisplayMode(uint32_t mode) {
   return error;
 }
 
-DisplayError DisplayPrimary::SetPanelBrightness(int level) {
+DisplayError DisplayPrimary::SetPanelBrightness(float brightness) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-  return hw_intf_->SetPanelBrightness(level);
+
+  if (brightness != -1.0f && !(0.0f <= brightness && brightness <= 1.0f)) {
+    DLOGE("Bad brightness value = %f", brightness);
+    return kErrorParameters;
+  }
+
+  // -1.0f = off, 0.0f = min, 1.0f = max
+  level_remainder_ = 0.0f;
+  int level = 0;
+  if (brightness == -1.0f) {
+    level = 0;
+  } else {
+    // Node only supports int level, so store the float remainder for accurate GetPanelBrightness
+    float max = hw_panel_info_.panel_max_brightness;
+    float min = hw_panel_info_.panel_min_brightness;
+    if (min >= max) {
+      DLOGE("Minimum brightness is greater than or equal to maximum brightness");
+      return kErrorDriverData;
+    }
+    float t = (brightness * (max - min)) + min;
+    level = static_cast<int>(t);
+    level_remainder_ = t - level;
+  }
+
+  DisplayError err = kErrorNone;
+  if ((err = hw_intf_->SetPanelBrightness(level)) == kErrorNone) {
+    DLOGI_IF(kTagDisplay, "Setting brightness to level %d (%f percent)", level,
+             brightness * 100);
+  }
+
+  return err;
 }
 
 DisplayError DisplayPrimary::GetRefreshRateRange(uint32_t *min_refresh_rate,
@@ -348,9 +378,32 @@ void DisplayPrimary::PanelDead() {
   }
 }
 
-DisplayError DisplayPrimary::GetPanelBrightness(int *level) {
+DisplayError DisplayPrimary::GetPanelBrightness(float *brightness) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-  return hw_intf_->GetPanelBrightness(level);
+
+  DisplayError err = kErrorNone;
+  int level = 0;
+  if ((err = hw_intf_->GetPanelBrightness(&level)) != kErrorNone) {
+    return err;
+  }
+
+  // -1.0f = off, 0.0f = min, 1.0f = max
+  float max = hw_panel_info_.panel_max_brightness;
+  float min = hw_panel_info_.panel_min_brightness;
+  if (level == 0) {
+    *brightness = -1.0f;
+  } else if ((max > min) && (min <= level && level <= max)) {
+    *brightness = (static_cast<float>(level) + level_remainder_ - min) / (max - min);
+  } else {
+    min >= max ? DLOGE("Minimum brightness is greater than or equal to maximum brightness") :
+                 DLOGE("Invalid brightness level %d", level);
+    return kErrorDriverData;
+  }
+
+
+  DLOGI_IF(kTagDisplay, "Received level %d (%f percent)", level, *brightness * 100);
+
+  return kErrorNone;
 }
 
 DisplayError DisplayPrimary::ControlPartialUpdate(bool enable, uint32_t *pending) {

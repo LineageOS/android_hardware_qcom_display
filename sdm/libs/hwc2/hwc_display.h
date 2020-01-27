@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, 2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -164,8 +164,6 @@ class HWCDisplay : public DisplayEventHandler {
     return kErrorNotSupported;
   }
 
-  int SetPanelBrightness(int level);
-  int GetPanelBrightness(int *level);
   int ToggleScreenUpdates(bool enable);
   int ColorSVCRequestRoute(const PPDisplayAPIPayload &in_payload, PPDisplayAPIPayload *out_payload,
                            PPPendingParams *pending_action);
@@ -223,6 +221,12 @@ class HWCDisplay : public DisplayEventHandler {
     return HWC2::Error::Unsupported;
   }
   virtual HWC2::Error SetPendingRefresh() {
+    return HWC2::Error::Unsupported;
+  }
+  virtual HWC2::Error SetPanelBrightness(float brightness) {
+    return HWC2::Error::Unsupported;
+  }
+  virtual HWC2::Error GetPanelBrightness(float *brightness) {
     return HWC2::Error::Unsupported;
   }
   virtual HWC2::Error GetDisplayConfigs(uint32_t *out_num_configs, hwc2_config_t *out_configs);

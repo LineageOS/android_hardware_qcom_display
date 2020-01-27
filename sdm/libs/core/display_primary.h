@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2018, 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -52,8 +52,8 @@ class DisplayPrimary : public DisplayBase, HWEventHandler {
   virtual DisplayError SetDisplayMode(uint32_t mode);
   virtual DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate, uint32_t *max_refresh_rate);
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate);
-  virtual DisplayError SetPanelBrightness(int level);
-  virtual DisplayError GetPanelBrightness(int *level);
+  virtual DisplayError SetPanelBrightness(float brightness);
+  virtual DisplayError GetPanelBrightness(float *brightness);
   virtual DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate);
   virtual DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate);
   virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates);
@@ -77,6 +77,7 @@ class DisplayPrimary : public DisplayBase, HWEventHandler {
   bool switch_to_cmd_ = false;
   bool handle_idle_timeout_ = false;
   bool reset_panel_ = false;
+  float level_remainder_ = 0.0f;
 };
 
 }  // namespace sdm
