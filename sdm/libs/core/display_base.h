@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -85,7 +85,7 @@ class DisplayBase : public DisplayInterface {
   virtual bool IsUnderscanSupported() {
     return false;
   }
-  virtual DisplayError SetPanelBrightness(int level) {
+  virtual DisplayError SetPanelBrightness(float brightness) {
     return kErrorNotSupported;
   }
   virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
@@ -116,7 +116,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError GetDefaultColorMode(std::string *color_mode);
   virtual DisplayError SetCursorPosition(int x, int y);
   virtual DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate, uint32_t *max_refresh_rate);
-  virtual DisplayError GetPanelBrightness(int *level) {
+  virtual DisplayError GetPanelBrightness(float *brightness) {
     return kErrorNotSupported;
   }
   virtual DisplayError SetVSyncState(bool enable);

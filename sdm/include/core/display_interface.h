@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -537,13 +537,13 @@ class DisplayInterface {
   */
   virtual bool IsUnderscanSupported() = 0;
 
-  /*! @brief Method to set brightness of the primary display.
+  /*! @brief Method to set brightness of the builtin display.
 
-    @param[in] level the new backlight level.
+    @param[in] brightness the new backlight level 0.0f(min) to 1.0f(max) where -1.0f represents off.
 
     @return \link DisplayError \endlink
   */
-  virtual DisplayError SetPanelBrightness(int level) = 0;
+  virtual DisplayError SetPanelBrightness(float brightness) = 0;
 
   /*! @brief Method to notify display about change in min HDCP encryption level.
 
@@ -646,11 +646,11 @@ class DisplayInterface {
 
   /*! @brief Method to get the brightness level of the display
 
-    @param[out] level brightness level
+    @param[out] brightness brightness percentage
 
     @return \link DisplayError \endlink
   */
-  virtual DisplayError GetPanelBrightness(int *level) = 0;
+  virtual DisplayError GetPanelBrightness(float *brightness) = 0;
 
   /*! @brief Method to set layer mixer resolution.
 
