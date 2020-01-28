@@ -158,7 +158,8 @@ void QtiComposerClient::onVsync(hwc2_callback_data_t callbackData, hwc2_display_
 
 // convert fenceFd to or from hidl_handle
 // Handle would still own original fence. Hence create a Fence object on duped fd.
-Error QtiComposerClient::getFence(const hidl_handle& fenceHandle, shared_ptr<Fence>* outFence) {
+Error QtiComposerClient::getFence(const hidl_handle& fenceHandle, shared_ptr<Fence>* outFence,
+                                  const string& name) {
   auto handle = fenceHandle.getNativeHandle();
   if (handle && handle->numFds > 1) {
     ALOGE("invalid fence handle with %d fds", handle->numFds);
@@ -166,7 +167,7 @@ Error QtiComposerClient::getFence(const hidl_handle& fenceHandle, shared_ptr<Fen
   }
 
   int fenceFd = (handle && handle->numFds == 1) ? handle->data[0] : -1;
-  *outFence = Fence::Create(dup(fenceFd));
+  *outFence = Fence::Create(dup(fenceFd), name);
 
   return Error::NONE;
 }
@@ -598,7 +599,7 @@ Return<void> QtiComposerClient::getReadbackBufferFence(uint64_t display,
 Return<Error> QtiComposerClient::setReadbackBuffer(uint64_t display, const hidl_handle& buffer,
                                                    const hidl_handle& releaseFence) {
   shared_ptr<Fence> fence = nullptr;
-  Error error = getFence(releaseFence, &fence);
+  Error error = getFence(releaseFence, &fence, "read_back");
   if (error != Error::NONE) {
     return error;
   }
@@ -1182,7 +1183,7 @@ bool QtiComposerClient::CommandReader::parseSetClientTarget(uint16_t length) {
   auto slot = read();
   auto clientTarget = readHandle(useCache);
   shared_ptr<Fence> fence = nullptr;
-  readFence(&fence);
+  readFence(&fence, "fbt");
   auto dataspace = readSigned();
   auto damage = readRegion((length - 4) / 4);
   hwc_region region = {damage.size(), damage.data()};
@@ -1213,7 +1214,7 @@ bool QtiComposerClient::CommandReader::parseSetOutputBuffer(uint16_t length) {
   auto slot = read();
   auto outputBuffer = readHandle(useCache);
   shared_ptr<Fence> fence = nullptr;
-  readFence(&fence);
+  readFence(&fence, "outbuf");
   auto err = lookupBuffer(BufferCache::OUTPUT_BUFFERS, slot, useCache, outputBuffer, &outputBuffer);
   if (err == Error::NONE) {
     auto error = mClient.hwc_session_->SetOutputBuffer(mDisplay, outputBuffer, fence);
@@ -1440,7 +1441,7 @@ bool QtiComposerClient::CommandReader::parseSetLayerBuffer(uint16_t length) {
   auto slot = read();
   auto buffer = readHandle(useCache);
   shared_ptr<Fence> fence = nullptr;
-  readFence(&fence);
+  readFence(&fence, "layer");
   auto error = lookupBuffer(BufferCache::LAYER_BUFFERS, slot, useCache, buffer, &buffer);
   if (error == Error::NONE) {
     auto err = mClient.hwc_session_->SetLayerBuffer(mDisplay, mLayer, buffer, fence);

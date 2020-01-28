@@ -197,7 +197,8 @@ class QtiComposerClient : public IQtiComposerClient {
 
   // Methods for ConcurrentWriteBack
   hidl_handle getFenceHandle(const shared_ptr<Fence>& fence, char* handleStorage);
-  Error getFence(const hidl_handle& fenceHandle, shared_ptr<sdm::Fence>* outFence);
+  Error getFence(const hidl_handle& fenceHandle, shared_ptr<sdm::Fence>* outFence,
+                 const string& name);
   Error getDisplayReadbackBuffer(Display display, const native_handle_t* rawHandle,
                                  const native_handle_t** outHandle);
 

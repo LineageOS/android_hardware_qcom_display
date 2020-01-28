@@ -145,8 +145,9 @@ int HWCDisplayBuiltIn::Init() {
   return status;
 }
 
-std::string HWCDisplayBuiltIn::Dump() {
-  return HWCDisplay::Dump() + histogram.Dump();
+void HWCDisplayBuiltIn::Dump(std::ostringstream *os) {
+  HWCDisplay::Dump(os);
+  *os << histogram.Dump();
 }
 
 HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
