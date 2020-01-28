@@ -575,6 +575,7 @@ struct HWDisplayAttributes : DisplayConfigVariableInfo {
   std::bitset<32> s3d_config {};  //!< Stores the bit mask of S3D modes
   uint32_t clock_khz = 0;      //!< Stores the pixel clock of panel in khz
   HWTopology topology = kUnknown;  //!< Stores the topology information.
+  uint32_t vic = 0;            //!< Video identification code
 
   bool operator !=(const HWDisplayAttributes &display_attributes) {
     return ((is_device_split != display_attributes.is_device_split) ||
