@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015, 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015, 2019-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -37,6 +37,7 @@
 #ifndef __BUFFER_SYNC_HANDLER_H__
 #define __BUFFER_SYNC_HANDLER_H__
 
+#include <sstream>
 #include "sdm_types.h"
 
 namespace sdm {
@@ -56,7 +57,7 @@ class BufferSyncHandler {
     @details This method waits for fd to be signaled by the producer/consumer with a default
     timeout. It is the responsibility of the caller to close the file descriptor.
 
-    @param[in] fd
+    @param[in] fd file descriptor
 
     @return \link DisplayError \endlink
   */
@@ -68,7 +69,7 @@ class BufferSyncHandler {
     @details This method waits for fd to be signaled by the producer/consumer with a specified
     timeout in milliseconds. It is the responsibility of the caller to close the file descriptor.
 
-    @param[in] fd
+    @param[in] fd file descriptor
 
     @return \link DisplayError \endlink
   */
@@ -81,8 +82,8 @@ class BufferSyncHandler {
     requires to wait for more than one sync fds. It is responsibility of the caller to close file
     descriptor.
 
-    @param[in] fd1
-    @param[in] fd2
+    @param[in] fd1 file descriptor 1
+    @param[in] fd2 file descriptor 2
     @param[out] merged_fd
 
     @return \link DisplayError \endlink
@@ -95,11 +96,21 @@ class BufferSyncHandler {
     @details This method detects if sync fd is signaled. It is responsibility of the caller to
     close file descriptor.
 
-    @param[in] fd
+    @param[in] fd file descriptor
 
-    @return \link Tue if fd has been signaled \endlink
+    @return True if fd has been signaled.
  */
   virtual bool IsSyncSignaled(int fd) = 0;
+
+  /*! @brief Method to get fence info associated to given file descriptor
+
+    @details This method writes fence info such as driver name, status etc associated to given
+    file descriptor into output stream.
+
+    @param[in] fd file descriptor
+    @param[in] os output stream
+ */
+  virtual void GetSyncInfo(int fd, std::ostringstream *os) = 0;
 
  protected:
   virtual ~BufferSyncHandler() { }
@@ -108,4 +119,3 @@ class BufferSyncHandler {
 }  // namespace sdm
 
 #endif  // __BUFFER_SYNC_HANDLER_H__
-

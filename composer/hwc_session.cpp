@@ -533,13 +533,16 @@ void HWCSession::Dump(uint32_t *out_size, char *out_buffer) {
   if (out_buffer == nullptr) {
     *out_size = max_dump_size;
   } else {
-    std::string s {};
+    std::ostringstream os;
     for (int id = 0; id < HWCCallbacks::kNumRealDisplays; id++) {
       SCOPE_LOCK(locker_[id]);
       if (hwc_display_[id]) {
-        s += hwc_display_[id]->Dump();
+        hwc_display_[id]->Dump(&os);
       }
     }
+    Fence::Dump(&os);
+
+    std::string s = os.str();
     auto copied = s.copy(out_buffer, std::min(s.size(), max_dump_size), 0);
     *out_size = UINT32(copied);
   }

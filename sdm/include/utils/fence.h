@@ -41,6 +41,7 @@ namespace sdm {
 
 using std::shared_ptr;
 using std::string;
+using std::to_string;
 
 class Fence {
  public:
@@ -70,7 +71,7 @@ class Fence {
   // Ownership of the file descriptor is transferred to this method.
   // Client must not close the file descriptor anymore regardless of the object creation status.
   // nullptr will be retured for invalid fd i.e. -1.
-  static shared_ptr<Fence> Create(int fd);
+  static shared_ptr<Fence> Create(int fd, const string &name);
 
   // Ownership of returned fd lies with caller. Caller must explicitly close the fd.
   static int Dup(const shared_ptr<Fence> &fence);
@@ -86,8 +87,11 @@ class Fence {
 
   static string GetStr(const shared_ptr<Fence> &fence);
 
+  // Write all fences info to the output stream.
+  static void Dump(std::ostringstream *os);
+
  private:
-  explicit Fence(int fd);
+  explicit Fence(int fd, const string &name);
   Fence(const Fence &fence) = delete;
   Fence& operator=(const Fence &fence) = delete;
   Fence(Fence &&fence) = delete;
@@ -95,7 +99,9 @@ class Fence {
   static int Get(const shared_ptr<Fence> &fence);
 
   static BufferSyncHandler *g_buffer_sync_handler_;
+  static std::vector<std::weak_ptr<Fence>> wps_;
   int fd_ = -1;
+  string name_ = "";
 };
 
 }  // namespace sdm

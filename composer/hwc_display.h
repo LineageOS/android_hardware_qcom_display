@@ -179,7 +179,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual DisplayError SetMixerResolution(uint32_t width, uint32_t height);
   virtual DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
   virtual void GetPanelResolution(uint32_t *width, uint32_t *height);
-  virtual std::string Dump();
+  virtual void Dump(std::ostringstream *os);
   virtual DisplayError TeardownConcurrentWriteback(void) {
     return kErrorNotSupported;
   }
