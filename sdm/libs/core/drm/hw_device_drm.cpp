@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -1155,6 +1155,11 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::DOZE);
     pending_doze_ = false;
   }
+
+  // Reset mode flag before setting the preferred format
+  current_mode.flags &= UINT32(~(DRM_MODE_FLAG_SUPPORTS_RGB | DRM_MODE_FLAG_SUPPORTS_YUV422 |
+                               DRM_MODE_FLAG_SUPPORTS_YUV420));
+
   if(display_attributes_[index].pref_fmt == DisplayInterfaceFormat::kFormatRGB) {
     current_mode.flags |= DRM_MODE_FLAG_SUPPORTS_RGB;
   } else if (display_attributes_[index].pref_fmt == DisplayInterfaceFormat::kFormatYCbCr422 ||

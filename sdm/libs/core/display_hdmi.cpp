@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, 2020 The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -320,6 +320,7 @@ uint32_t DisplayHDMI::GetBestConfigFromFile(std::ifstream &res_file, DisplayInte
 uint32_t DisplayHDMI::GetBestConfig(HWS3DMode s3d_mode) {
   uint32_t best_index = 0, index;
   uint32_t num_modes = 0;
+  DisplayError error = kErrorNone;
 
   hw_intf_->GetNumDisplayAttributes(&num_modes);
 
@@ -363,7 +364,53 @@ uint32_t DisplayHDMI::GetBestConfig(HWS3DMode s3d_mode) {
     // For the config, get the corresponding index
     DisplayError error = hw_intf_->GetConfigIndex(val, &config_index);
     if (error == kErrorNone)
-      return config_index;
+      best_index = config_index;
+  }
+
+  if (hw_panel_info_.hdr_enabled) {
+    if (attrib[best_index].pixel_formats & (1<<1)) {
+      error = hw_intf_->SetDisplayFormat(UINT32(best_index),
+                                         DisplayInterfaceFormat::kFormatYCbCr422);
+      if (error == kErrorNone) {
+        DLOGI("YUV422 is supported by Display attributes[%d]", best_index);
+      }
+    } else if (attrib[best_index].pixel_formats & (1<<2)) {
+      error = hw_intf_->SetDisplayFormat(UINT32(best_index),
+                                         DisplayInterfaceFormat::kFormatYCbCr420);
+      if (error == kErrorNone) {
+        DLOGI("YUV420 is supported by Display attributes[%d]", best_index);
+      }
+    } else if (attrib[best_index].pixel_formats & (1)) {
+      error = hw_intf_->SetDisplayFormat(UINT32(best_index),
+                                         DisplayInterfaceFormat::kFormatRGB);
+      if (error == kErrorNone) {
+        DLOGI("RGB is supported by Display attributes[%d]", best_index);
+      }
+    } else {
+      DLOGE("No format supported with HDR enabled[%d]", best_index);
+    }
+  } else {
+    if (attrib[best_index].pixel_formats & (1)) {
+      error = hw_intf_->SetDisplayFormat(UINT32(best_index),
+                                         DisplayInterfaceFormat::kFormatRGB);
+      if (error == kErrorNone) {
+        DLOGI("RGB is supported by Display attributes[%d]", best_index);
+      }
+    } else if (attrib[best_index].pixel_formats & (1<<2)) {
+      error = hw_intf_->SetDisplayFormat(UINT32(best_index),
+                                         DisplayInterfaceFormat::kFormatYCbCr420);
+      if (error == kErrorNone) {
+        DLOGI("YUV420 is supported by Display attributes[%d]", best_index);
+      }
+    } else if (attrib[best_index].pixel_formats & (1<<1)) {
+      error = hw_intf_->SetDisplayFormat(UINT32(best_index),
+                                         DisplayInterfaceFormat::kFormatYCbCr422);
+      if (error == kErrorNone) {
+        DLOGI("YUV422 is supported by Display attributes[%d]", best_index);
+      }
+    } else {
+      DLOGE("No format supported with HDR disabled[%d]", best_index);
+    }
   }
 
   return best_index;
