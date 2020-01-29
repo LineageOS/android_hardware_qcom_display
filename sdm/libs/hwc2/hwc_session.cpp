@@ -583,6 +583,7 @@ int32_t HWCSession::RegisterCallback(hwc2_device_t *device, int32_t descriptor,
     }
   }
   hwc_session->need_invalidate_ = false;
+  hwc_session->callback_reg_ = true;
   return INT32(error);
 }
 
