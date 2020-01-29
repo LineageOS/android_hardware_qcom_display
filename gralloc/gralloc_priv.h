@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution
  *
  * Copyright (C) 2008 The Android Open Source Project
@@ -67,13 +67,9 @@ inline int roundUpToPageSize(int x) {
 #define GRALLOC_USAGE_PRIVATE_MM_HEAP 0
 #define GRALLOC_USAGE_PRIVATE_IOMMU_HEAP 0
 
-/* TODO(user): move these to use sanctioned vendor bits
- * once end to end 64-bit support is available */
 /* This flag is set for WFD usecase */
-#define GRALLOC_USAGE_PRIVATE_WFD (UINT32_C(1) << 21)
+#define GRALLOC_USAGE_PRIVATE_WFD 1ULL << 51
 
-/* TODO(user): move these to use sanctioned vendor bits
- * once end to end 64-bit support is available */
 /* This flag is set for HEIF usecase */
 #define GRALLOC_USAGE_PRIVATE_HEIF (UINT32_C(1) << 27)
 
