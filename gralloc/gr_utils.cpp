@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -957,9 +957,9 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
   // but in case of camera custom format size is being calculated from given width
   // and given height.
   if (IsCameraCustomFormat(format) && CameraInfo::GetInstance()) {
-    float aligned_w = static_cast<float>(width);
+    int aligned_w = width;
     int aligned_h = height;
-    int result = CameraInfo::GetInstance()->GetStrideInPixels(
+    int result = CameraInfo::GetInstance()->GetStrideInBytes(
         format, (PlaneComponent)PLANE_COMPONENT_Y, width, &aligned_w);
     if (result != 0) {
       ALOGE(
@@ -978,12 +978,12 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
           "%s: Failed to get the aligned height for camera custom format. width: %d,"
           "height: %d, format: %d, Error code: %d",
           __FUNCTION__, width, height, format, result);
-      *alignedw = static_cast<int>(aligned_w);
+      *alignedw = aligned_w;
       *alignedh = height;
       return;
     }
 
-    *alignedw = static_cast<int>(aligned_w);
+    *alignedw = aligned_w;
     *alignedh = aligned_h;
     return;
   }
