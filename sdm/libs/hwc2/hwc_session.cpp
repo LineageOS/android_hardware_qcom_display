@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -1075,6 +1075,8 @@ hwc2_function_pointer_t HWCSession::GetFunction(struct hwc2_device *device,
       return AsFP<HWC2_PFN_GET_DISPLAY_CAPABILITIES>(HWCSession::GetDisplayCapabilities);
     case HWC2::FunctionDescriptor::GetDisplayBrightnessSupport:
       return AsFP<HWC2_PFN_GET_DISPLAY_BRIGHTNESS_SUPPORT>(HWCSession::GetDisplayBrightnessSupport);
+    case HWC2::FunctionDescriptor::SetDisplayBrightness:
+      return AsFP<HWC2_PFN_SET_DISPLAY_BRIGHTNESS>(SetDisplayBrightness);
     default:
       DLOGD("Unknown/Unimplemented function descriptor: %d (%s)", int_descriptor,
             to_string(descriptor).c_str());
@@ -2522,7 +2524,7 @@ int32_t HWCSession::GetDisplayCapabilities(hwc2_device_t *device, hwc2_display_t
   if (!outCapabilities) {
     *outNumCapabilities = 0;
     if (isBuiltin) {
-      *outNumCapabilities = 2;
+      *outNumCapabilities = 3;
     }
     return HWC2_ERROR_NONE;
   } else {
@@ -2530,10 +2532,16 @@ int32_t HWCSession::GetDisplayCapabilities(hwc2_device_t *device, hwc2_display_t
       // TODO(user): Handle SKIP_CLIENT_COLOR_TRANSFORM based on DSPP availability
       outCapabilities[0] = HWC2_DISPLAY_CAPABILITY_SKIP_CLIENT_COLOR_TRANSFORM;
       outCapabilities[1] = HWC2_DISPLAY_CAPABILITY_DOZE;
-      *outNumCapabilities = 2;
+      outCapabilities[2] = HWC2_DISPLAY_CAPABILITY_BRIGHTNESS;
+      *outNumCapabilities = 3;
     }
     return HWC2_ERROR_NONE;
   }
+}
+
+int32_t HWCSession::SetDisplayBrightness(hwc2_device_t *device, hwc2_display_t display,
+                                         float brightness) {
+  return INT32(HWC2::Error::None);
 }
 
 int32_t HWCSession::GetDisplayBrightnessSupport(hwc2_device_t *device, hwc2_display_t display,
@@ -2554,7 +2562,7 @@ int32_t HWCSession::GetDisplayBrightnessSupport(hwc2_device_t *device, hwc2_disp
   }
   // This function isn't actually used in the framework
   // The capability is used instead
-  *outSupport = false;
+  *outSupport = (hwc_display->GetDisplayClass() == DISPLAY_CLASS_BUILTIN);
   return HWC2_ERROR_NONE;
 }
 
