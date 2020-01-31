@@ -1983,6 +1983,14 @@ DisplayError HWDeviceDRM::DumpDebugData() {
     src.close();
   }
 
+  {
+    ifstream src;
+    src.open("/sys/kernel/debug/dri/0/debug/recovery_dsi_dbgbus");
+    dst << "---- DSI Debug Bus ----" << std::endl;
+    dst << src.rdbuf() << std::endl;
+    src.close();
+  }
+
   dst.close();
   DLOGI("Wrote hw_recovery file %s", filename.c_str());
 
