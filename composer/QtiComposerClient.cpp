@@ -1193,7 +1193,7 @@ bool QtiComposerClient::CommandReader::parseCommonCmd(
     std::lock_guard<std::mutex> lock(mClient.mDisplayDataMutex);
     // Displays will not be removed while processing the command queue.
     if (parsed && mClient.mDisplayData.find(mDisplay) == mClient.mDisplayData.end()) {
-      ALOGW("Command::SELECT_DISPLAY: Display %lu not found. Dropping commands.", mDisplay);
+      ALOGW("Command::SELECT_DISPLAY: Display %" PRId64 "not found. Dropping commands.", mDisplay);
       mDisplay = sdm::HWCCallbacks::kNumDisplays;
     }
     break;
