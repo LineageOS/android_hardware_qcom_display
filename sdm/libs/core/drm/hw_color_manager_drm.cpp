@@ -909,6 +909,10 @@ DisplayError HWColorManagerDrm::GetDrmDither(const PPFeatureInfo &in_data,
   }
 
   mdp_dither->flags = 0;
+#ifdef DITHER_LUMA_MODE
+  if (sde_dither->flags & SDM_DITHER_LUMA_MODE)
+    mdp_dither->flags |= DITHER_LUMA_MODE;
+#endif
   std::memcpy(mdp_dither->matrix, sde_dither->dither_matrix,
                 sizeof(sde_dither->dither_matrix));
   mdp_dither->temporal_en = sde_dither->temporal_en;

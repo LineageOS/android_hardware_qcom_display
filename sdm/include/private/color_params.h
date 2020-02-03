@@ -115,6 +115,9 @@ static const std::string kAmazon = "amazon";
 static const std::string kNetflix = "netflix";
 static const std::string kEnhanced = "enhanced";
 
+// Color feature flags
+#define SDM_DITHER_LUMA_MODE 0x1
+
 // Enum to identify type of dynamic range of color mode.
 enum DynamicRangeType {
   kSdrType,
@@ -345,6 +348,7 @@ struct SDEDitherCfg {
   uint32_t length;
   uint32_t dither_matrix[16];
   uint32_t temporal_en;
+  uint32_t flags;
 
   static SDEDitherCfg *Init(uint32_t arg __attribute__((__unused__)));
   SDEDitherCfg *GetConfig() { return this; }
