@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -57,10 +57,6 @@ int HWCDisplayVirtual::Init() {
 }
 
 int HWCDisplayVirtual::Deinit() {
-  if (output_buffer_.acquire_fence_fd >= 0) {
-    close(output_buffer_.acquire_fence_fd);
-  }
-
   return HWCDisplay::Deinit();
 }
 
@@ -80,7 +76,7 @@ HWC2::Error HWCDisplayVirtual::DumpVDSBuffer() {
         reinterpret_cast<const private_handle_t *>(output_buffer_.buffer_id);
       DisplayError error = kErrorNone;
       if (!output_handle->base) {
-        error = buffer_allocator_->MapBuffer(output_handle, -1);
+        error = buffer_allocator_->MapBuffer(output_handle, nullptr);
         if (error != kErrorNone) {
           DLOGE("Failed to map output buffer, error = %d", error);
           return HWC2::Error::BadParameter;
@@ -106,8 +102,9 @@ HWC2::Error HWCDisplayVirtual::DumpVDSBuffer() {
   return HWC2::Error::None;
 }
 
-HWC2::Error HWCDisplayVirtual::SetOutputBuffer(buffer_handle_t buf, int32_t release_fence) {
-  if (buf == nullptr || release_fence == 0) {
+HWC2::Error HWCDisplayVirtual::SetOutputBuffer(buffer_handle_t buf,
+                                               shared_ptr<Fence> release_fence) {
+  if (buf == nullptr) {
     return HWC2::Error::BadParameter;
   }
   const private_handle_t *output_handle = static_cast<const private_handle_t *>(buf);
@@ -154,15 +151,7 @@ HWC2::Error HWCDisplayVirtual::SetOutputBuffer(buffer_handle_t buf, int32_t rele
     output_buffer_.planes[0].stride = UINT32(output_handle->width);
   }
 
-  // Close the previous acquire fence and update with the latest release fence to avoid fence leak
-  // in case if this function gets invoked multiple times from the client.
-  if (output_buffer_.acquire_fence_fd >= 0) {
-    close(output_buffer_.acquire_fence_fd);
-  }
-  // Fill output buffer parameters (width, height, format, plane information, fence)
-  // release_fence will be closed by QtiComposerClient::CommandReader::parseSetOutputBuffer() if
-  // this::SetOutputBuffer() fails.
-  output_buffer_.acquire_fence_fd = release_fence;
+  output_buffer_.acquire_fence = release_fence;
 
   return HWC2::Error::None;
 }

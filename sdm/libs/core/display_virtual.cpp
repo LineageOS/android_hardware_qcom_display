@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -34,24 +34,23 @@
 namespace sdm {
 
 DisplayVirtual::DisplayVirtual(DisplayEventHandler *event_handler, HWInfoInterface *hw_info_intf,
-                               BufferSyncHandler *buffer_sync_handler,
                                BufferAllocator *buffer_allocator, CompManager *comp_manager)
-  : DisplayBase(kVirtual, event_handler, kDeviceVirtual, buffer_sync_handler, buffer_allocator,
+  : DisplayBase(kVirtual, event_handler, kDeviceVirtual, buffer_allocator,
                 comp_manager, hw_info_intf) {
 }
 
 DisplayVirtual::DisplayVirtual(int32_t display_id, DisplayEventHandler *event_handler,
                                HWInfoInterface *hw_info_intf,
-                               BufferSyncHandler *buffer_sync_handler,
                                BufferAllocator *buffer_allocator, CompManager *comp_manager)
-  : DisplayBase(display_id, kVirtual, event_handler, kDeviceVirtual, buffer_sync_handler,
-                buffer_allocator, comp_manager, hw_info_intf) {}
+  : DisplayBase(display_id, kVirtual, event_handler, kDeviceVirtual,
+                buffer_allocator, comp_manager, hw_info_intf) {
+}
 
 DisplayError DisplayVirtual::Init() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
   DisplayError error = HWInterface::Create(display_id_, kVirtual, hw_info_intf_,
-                                           buffer_sync_handler_, buffer_allocator_, &hw_intf_);
+                                           buffer_allocator_, &hw_intf_);
 
   if (error != kErrorNone) {
     return error;

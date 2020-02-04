@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -36,21 +36,21 @@ using std::vector;
 
 class HWTVDRM : public HWDeviceDRM {
  public:
-  explicit HWTVDRM(int32_t display_id, BufferSyncHandler *buffer_sync_handler,
-                   BufferAllocator *buffer_allocator, HWInfoInterface *hw_info_intf);
+  explicit HWTVDRM(int32_t display_id, BufferAllocator *buffer_allocator,
+                   HWInfoInterface *hw_info_intf);
 
  protected:
   virtual DisplayError SetDisplayAttributes(uint32_t index);
   virtual DisplayError GetConfigIndex(char *mode, uint32_t *index);
   virtual DisplayError PowerOff(bool teardown);
-  virtual DisplayError Doze(const HWQosData &qos_data, int *release_fence);
-  virtual DisplayError DozeSuspend(const HWQosData &qos_data, int *release_fence);
+  virtual DisplayError Doze(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
+  virtual DisplayError DozeSuspend(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
   virtual DisplayError Standby();
   virtual DisplayError Commit(HWLayers *hw_layers);
   virtual void PopulateHWPanelInfo();
   virtual DisplayError GetDefaultConfig(uint32_t *default_config);
   virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
-  virtual DisplayError PowerOn(const HWQosData &qos_data, int *release_fence);
+  virtual DisplayError PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
 
  private:
   DisplayError UpdateHDRMetaData(HWLayers *hw_layers);

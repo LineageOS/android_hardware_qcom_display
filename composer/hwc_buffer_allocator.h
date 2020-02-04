@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -63,7 +63,7 @@ class HWCBufferAllocator : public BufferAllocator {
   DisplayError GetBufferLayout(const AllocatedBufferInfo &buf_info, uint32_t stride[4],
                                uint32_t offset[4], uint32_t *num_planes);
   int SetBufferInfo(LayerBufferFormat format, int *target, uint64_t *flags);
-  DisplayError MapBuffer(const private_handle_t *handle, int acquire_fence);
+  DisplayError MapBuffer(const private_handle_t *handle, shared_ptr<Fence> acquire_fence);
   DisplayError UnmapBuffer(const private_handle_t *handle, int *release_fence);
 
  private:

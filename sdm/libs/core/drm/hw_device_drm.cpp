@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -53,6 +53,7 @@
 #include <private/color_params.h>
 #include <utils/rect.h>
 #include <utils/utils.h>
+#include <utils/fence.h>
 
 #include <sstream>
 #include <ctime>
@@ -436,10 +437,8 @@ uint32_t HWDeviceDRM::Registry::GetOutputFbId(uint64_t handle_id) {
   return 0;
 }
 
-HWDeviceDRM::HWDeviceDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
-                         HWInfoInterface *hw_info_intf)
-    : hw_info_intf_(hw_info_intf), buffer_sync_handler_(buffer_sync_handler),
-      registry_(buffer_allocator) {
+HWDeviceDRM::HWDeviceDRM(BufferAllocator *buffer_allocator, HWInfoInterface *hw_info_intf)
+    : hw_info_intf_(hw_info_intf), registry_(buffer_allocator) {
   hw_info_intf_ = hw_info_intf;
 }
 
@@ -902,16 +901,16 @@ DisplayError HWDeviceDRM::GetConfigIndex(char *mode, uint32_t *index) {
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, int *release_fence) {
+DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *release_fence) {
   SetQOSData(qos_data);
 
-  int64_t release_fence_t = -1;
+  int64_t release_fence_fd = -1;
   int64_t retire_fence_fd = -1;
 
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
   if (release_fence) {
-    drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_t);
+    drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_fd);
   }
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence_fd);
 
@@ -924,8 +923,8 @@ DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, int *release_fence)
   shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_fd));
 
   if (release_fence) {
-    *release_fence = static_cast<int>(release_fence_t);
-    DLOGD_IF(kTagDriverConfig, "RELEASE fence created: fd:%d", *release_fence);
+    *release_fence = Fence::Create(INT(release_fence_fd));
+    DLOGD_IF(kTagDriverConfig, "RELEASE fence: fd: %s", Fence::GetStr(*release_fence).c_str());
   }
   pending_doze_ = false;
 
@@ -967,7 +966,7 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown) {
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::Doze(const HWQosData &qos_data, int *release_fence) {
+DisplayError HWDeviceDRM::Doze(const HWQosData &qos_data, shared_ptr<Fence> *release_fence) {
   DTRACE_SCOPED();
 
   if (!first_cycle_) {
@@ -977,7 +976,7 @@ DisplayError HWDeviceDRM::Doze(const HWQosData &qos_data, int *release_fence) {
 
   SetQOSData(qos_data);
 
-  int64_t release_fence_t = -1;
+  int64_t release_fence_fd = -1;
   int64_t retire_fence_fd = -1;
 
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
@@ -987,7 +986,7 @@ DisplayError HWDeviceDRM::Doze(const HWQosData &qos_data, int *release_fence) {
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::DOZE);
   if (release_fence) {
-    drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_t);
+    drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_fd);
   }
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence_fd);
 
@@ -1000,8 +999,8 @@ DisplayError HWDeviceDRM::Doze(const HWQosData &qos_data, int *release_fence) {
   shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_fd));
 
   if (release_fence) {
-    *release_fence = static_cast<int>(release_fence_t);
-    DLOGD_IF(kTagDriverConfig, "RELEASE fence created: fd:%d", *release_fence);
+    *release_fence = Fence::Create(release_fence_fd);
+    DLOGD_IF(kTagDriverConfig, "RELEASE fence: fd: %s", Fence::GetStr(*release_fence).c_str());
   }
 
   Fence::Wait(retire_fence, kTimeoutMsDoze);
@@ -1009,12 +1008,13 @@ DisplayError HWDeviceDRM::Doze(const HWQosData &qos_data, int *release_fence) {
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::DozeSuspend(const HWQosData &qos_data, int *release_fence) {
+DisplayError HWDeviceDRM::DozeSuspend(const HWQosData &qos_data,
+                                      shared_ptr<Fence> *release_fence) {
   DTRACE_SCOPED();
 
   SetQOSData(qos_data);
 
-  int64_t release_fence_t = -1;
+  int64_t release_fence_fd = -1;
   int64_t retire_fence_fd = -1;
 
   if (first_cycle_) {
@@ -1026,7 +1026,7 @@ DisplayError HWDeviceDRM::DozeSuspend(const HWQosData &qos_data, int *release_fe
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id,
                             DRMPowerMode::DOZE_SUSPEND);
   if (release_fence) {
-    drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_t);
+    drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_fd);
   }
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence_fd);
 
@@ -1039,8 +1039,8 @@ DisplayError HWDeviceDRM::DozeSuspend(const HWQosData &qos_data, int *release_fe
   shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_fd));
 
   if (release_fence) {
-    *release_fence = static_cast<int>(release_fence_t);
-    DLOGD_IF(kTagDriverConfig, "RELEASE fence created: fd:%d", *release_fence);
+    *release_fence = Fence::Create(release_fence_fd);
+    DLOGD_IF(kTagDriverConfig, "RELEASE fence: fd: %s", Fence::GetStr(*release_fence).c_str());
   }
   pending_doze_ = false;
 
@@ -1066,7 +1066,8 @@ DisplayError HWDeviceDRM::Standby() {
   return kErrorNone;
 }
 
-void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
+void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayers *hw_layers, bool validate,
+                              int64_t *release_fence_fd, int64_t *retire_fence_fd) {
   if (default_mode_) {
     return;
   }
@@ -1233,9 +1234,9 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_FB_ID, pipe_id, fb_id);
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_CRTC, pipe_id, token_.crtc_id);
 
-        if (!validate && input_buffer->acquire_fence_fd >= 0) {
+        if (!validate && input_buffer->acquire_fence) {
           drm_atomic_intf_->Perform(DRMOps::PLANE_SET_INPUT_FENCE, pipe_id,
-                                    input_buffer->acquire_fence_fd);
+                                    scoped_ref.Get(input_buffer->acquire_fence));
         }
       }
     }
@@ -1274,9 +1275,9 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
     ResetROI();
   }
 
-  if (!validate) {
-    drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_);
-    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence_);
+  if (!validate && release_fence_fd && retire_fence_fd) {
+    drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, release_fence_fd);
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, retire_fence_fd);
   }
 
   DLOGI_IF(kTagDriverConfig, "%s::%s System Clock=%d Hz, Core: AB=%llu Bps, IB=%llu Bps, " \
@@ -1387,7 +1388,9 @@ DisplayError HWDeviceDRM::Validate(HWLayers *hw_layers) {
 
   DisplayError err = kErrorNone;
   registry_.Register(hw_layers);
-  SetupAtomic(hw_layers, true /* validate */);
+
+  Fence::ScopedRef scoped_ref;
+  SetupAtomic(scoped_ref, hw_layers, true /* validate */, nullptr, nullptr);
 
   int ret = drm_atomic_intf_->Validate();
   if (ret) {
@@ -1422,7 +1425,7 @@ DisplayError HWDeviceDRM::DefaultCommit(HWLayers *hw_layers) {
   HWLayersInfo &hw_layer_info = hw_layers->info;
 
   for (Layer &layer : hw_layer_info.hw_layers) {
-    layer.input_buffer.release_fence_fd = -1;
+    layer.input_buffer.release_fence = nullptr;
   }
 
   DRMMaster *master = nullptr;
@@ -1466,7 +1469,14 @@ DisplayError HWDeviceDRM::DefaultCommit(HWLayers *hw_layers) {
 
 DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   DTRACE_SCOPED();
-  SetupAtomic(hw_layers, false /* validate */);
+
+  int64_t release_fence_fd = -1;
+  int64_t retire_fence_fd = -1;
+
+  // scoped fence fds will be automatically closed when function scope ends,
+  // atomic commit will have these fds already set on kernel by then.
+  Fence::ScopedRef scoped_ref;
+  SetupAtomic(scoped_ref, hw_layers, false /* validate */, &release_fence_fd, &retire_fence_fd);
 
   if (hw_layers->elapse_timestamp > 0) {
     struct timespec t = {0, 0};
@@ -1478,20 +1488,18 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   }
 
   int ret = drm_atomic_intf_->Commit(synchronous_commit_, false /* retain_planes*/);
-  int release_fence = INT(release_fence_);
-  shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_));
+  shared_ptr<Fence> release_fence = Fence::Create(INT(release_fence_fd));
+  shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_fd));
   if (ret) {
     DLOGE("%s failed with error %d crtc %d", __FUNCTION__, ret, token_.crtc_id);
     DumpHWLayers(hw_layers);
     vrefresh_ = 0;
     panel_mode_changed_ = 0;
-    CloseFd(&release_fence);
-    release_fence_ = -1;
     return kErrorHardware;
   }
 
-  DLOGD_IF(kTagDriverConfig, "RELEASE fence created: fd: %d", release_fence);
-  DLOGD_IF(kTagDriverConfig, "RETIRE fence created: fd: %s", Fence::GetStr(retire_fence).c_str());
+  DLOGD_IF(kTagDriverConfig, "RELEASE fence: fd: %s", Fence::GetStr(release_fence).c_str());
+  DLOGD_IF(kTagDriverConfig, "RETIRE fence: fd: %s", Fence::GetStr(retire_fence).c_str());
 
   HWLayersInfo &hw_layer_info = hw_layers->info;
   LayerStack *stack = hw_layer_info.stack;
@@ -1501,9 +1509,9 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
     Layer &layer = hw_layer_info.hw_layers.at(i);
     HWRotatorSession *hw_rotator_session = &hw_layers->config[i].hw_rotator_session;
     if (hw_rotator_session->mode == kRotatorOffline) {
-      hw_rotator_session->output_buffer.release_fence_fd = Sys::dup_(release_fence);
+      hw_rotator_session->output_buffer.release_fence = release_fence;
     } else {
-      layer.input_buffer.release_fence_fd = Sys::dup_(release_fence);
+      layer.input_buffer.release_fence = release_fence;
     }
   }
 

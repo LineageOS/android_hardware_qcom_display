@@ -40,15 +40,16 @@ namespace sdm {
 
 class HWCBufferSyncHandler : public BufferSyncHandler {
  public:
-  HWCBufferSyncHandler();
-
   virtual DisplayError SyncWait(int fd);
   virtual DisplayError SyncWait(int fd, int timeout);
   virtual DisplayError SyncMerge(int fd1, int fd2, int *merged_fd);
   virtual bool IsSyncSignaled(int fd);
+
+ private:
+  HWCBufferSyncHandler();
+
+  static HWCBufferSyncHandler g_hwc_buffer_sync_handler_;
 };
 
 }  // namespace sdm
 #endif  // __HWC_BUFFER_SYNC_HANDLER_H__
-
-

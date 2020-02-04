@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016 - 2018, 2020 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -58,8 +58,8 @@ struct ToneMapGetInstanceContext : public SyncTask<ToneMapTaskCode>::TaskContext
 
 struct ToneMapBlitContext : public SyncTask<ToneMapTaskCode>::TaskContext {
   Layer *layer = nullptr;
-  int merged_fd = -1;
-  int fence_fd = -1;
+  shared_ptr<Fence> merged = nullptr;
+  shared_ptr<Fence> fence = nullptr;
 };
 
 struct ToneMapConfig {
@@ -76,8 +76,8 @@ class ToneMapSession : public SyncTask<ToneMapTaskCode>::TaskHandler {
   ~ToneMapSession();
   DisplayError AllocateIntermediateBuffers(const Layer *layer);
   void FreeIntermediateBuffers();
-  void UpdateBuffer(int acquire_fence, LayerBuffer *buffer);
-  void SetReleaseFence(int fd);
+  void UpdateBuffer(const shared_ptr<Fence> &acquire_fence, LayerBuffer *buffer);
+  void SetReleaseFence(const shared_ptr<Fence> &fd);
   void SetToneMapConfig(Layer *layer, PrimariesTransfer blend_cs);
   bool IsSameToneMapConfig(Layer *layer, PrimariesTransfer blend_cs);
 
@@ -92,7 +92,7 @@ class ToneMapSession : public SyncTask<ToneMapTaskCode>::TaskHandler {
   ToneMapConfig tone_map_config_ = {};
   uint8_t current_buffer_index_ = 0;
   std::vector<BufferInfo> buffer_info_ = {};
-  int release_fence_fd_[kNumIntermediateBuffers] = {-1, -1};
+  shared_ptr<Fence> release_fence_[kNumIntermediateBuffers] = {nullptr, nullptr};
   bool acquired_ = false;
   int layer_index_ = -1;
 };
@@ -111,10 +111,9 @@ class HWCToneMapper {
  private:
   void ToneMap(Layer *layer, ToneMapSession *session);
   DisplayError AcquireToneMapSession(Layer *layer, uint32_t *sess_idx, PrimariesTransfer blend_cs);
-  void DumpToneMapOutput(ToneMapSession *session, int *acquire_fence);
+  void DumpToneMapOutput(ToneMapSession *session, shared_ptr<sdm::Fence> acquire_fence);
 
   std::vector<ToneMapSession*> tone_map_sessions_;
-  HWCBufferSyncHandler buffer_sync_handler_ = {};
   HWCBufferAllocator *buffer_allocator_ = nullptr;
   uint32_t dump_frame_count_ = 0;
   uint32_t dump_frame_index_ = 0;

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -1017,8 +1017,9 @@ void HWCSession::CWB::ProcessRequests() {
     // Wait for previous commit to finish before configuring next buffer.
     {
       SEQUENCE_WAIT_SCOPE_LOCK(locker);
-      if (hwc_display->SetReadbackBuffer(node->buffer.getNativeHandle(), -1, node->post_processed,
-                                            kCWBClientExternal) != HWC2::Error::None) {
+      if (hwc_display->SetReadbackBuffer(node->buffer.getNativeHandle(), nullptr,
+                                         node->post_processed,
+                                         kCWBClientExternal) != HWC2::Error::None) {
         DLOGE("CWB buffer could not be set.");
         status = -1;
       }
@@ -1030,7 +1031,7 @@ void HWCSession::CWB::ProcessRequests() {
       std::unique_lock<std::mutex> lock(mutex_);
       cv_.wait(lock);
 
-      int release_fence = -1;
+      shared_ptr<Fence> release_fence = nullptr;
       // Mutex scope
       {
         SCOPE_LOCK(locker);
@@ -1038,8 +1039,7 @@ void HWCSession::CWB::ProcessRequests() {
       }
 
       if (release_fence >= 0) {
-        status = sync_wait(release_fence, 1000);
-        close(release_fence);
+        status = Fence::Wait(release_fence);
       } else {
         DLOGE("CWB release fence could not be retrieved.");
         status = -1;

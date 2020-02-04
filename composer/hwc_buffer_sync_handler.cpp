@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015, 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015, 2019-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -40,63 +40,59 @@
 
 namespace sdm {
 
+HWCBufferSyncHandler HWCBufferSyncHandler::g_hwc_buffer_sync_handler_;
+
 HWCBufferSyncHandler::HWCBufferSyncHandler() {
   Fence::Set(this);
 }
 
-DisplayError HWCBufferSyncHandler::SyncWait(int fd) {
-  return SyncWait(fd, 1000);
+DisplayError HWCBufferSyncHandler::SyncWait(int fd, int timeout) {
+  // Assume invalid fd as signaled.
+  if (fd < 0) {
+    return kErrorNone;
+  }
+
+  int error = sync_wait(fd, timeout);
+  if (!error) {
+    return kErrorNone;
+  }
+
+  // Fence is not signaled yet.
+  if (errno == ETIME) {
+    return kErrorTimeOut;
+  }
+
+  DLOGW("sync_wait fd = %d, timeout = %d ms, err = %d : %s", fd, timeout, errno, strerror(errno));
+
+  return kErrorUndefined;
 }
 
-DisplayError HWCBufferSyncHandler::SyncWait(int fd, int timeout) {
-  int error = 0;
-
-  if (fd >= 0) {
-    error = sync_wait(fd, timeout);
-    if (error < 0) {
-      DLOGW("sync_wait() error on fd = %d, timeout = %dms. (errno = %d \"%s\")", fd, timeout, errno,
-            strerror(errno));
-      return kErrorTimeOut;
-    }
+DisplayError HWCBufferSyncHandler::SyncMerge(int fd1, int fd2, int *merged_fd) {
+  // Caller owns fds, hence, if
+  //  one of the fence fd is invalid, create dup of valid fd and set to merged fd.
+  //  both fence fds are same, create dup of one of the fd and set to merged fd.
+  *merged_fd = -1;
+  if (fd1 < 0) {
+    *merged_fd = dup(fd2);
+  } else if ((fd2 < 0) || (fd1 == fd2)) {
+    *merged_fd = dup(fd1);
+  } else {
+    *merged_fd = sync_merge("SyncMerge", fd1, fd2);
   }
 
   return kErrorNone;
 }
 
-DisplayError HWCBufferSyncHandler::SyncMerge(int fd1, int fd2, int *merged_fd) {
-  DisplayError error = kErrorNone;
-
-  // Merge the two fences.  In the case where one of the fences is not a
-  // valid fence (e.g. NO_FENCE) merge the one valid fence with itself so
-  // that a new fence with the given name is created.
-  // TODO(user): "SyncMerge"string should be replaced with user-defined string to represent
-  // why it is merged.
-  if (fd1 >= 0 && fd2 >= 0) {
-    *merged_fd = sync_merge("SyncMerge", fd1, fd2);
-  } else if (fd1 >= 0) {
-    *merged_fd = sync_merge("SyncMerge", fd1, fd1);
-  } else if (fd2 >= 0) {
-    *merged_fd = sync_merge("SyncMerge", fd2, fd2);
-  } else {
-    *merged_fd = -1;
-    return kErrorNone;
-  }
-
-  if (*merged_fd == -1) {
-    DLOGE("Sync merge error! fd1 %d fd2 %d", fd1, fd2);
-    error = kErrorFileDescriptor;
-  }
-
-  return error;
+DisplayError HWCBufferSyncHandler::SyncWait(int fd) {
+  // Deprecated.
+  assert(false);
+  return kErrorUndefined;
 }
 
 bool HWCBufferSyncHandler::IsSyncSignaled(int fd) {
-  if (sync_wait(fd, 0) < 0) {
-    return false;
-  } else {
-    return true;
-  }
+  // Deprecated.
+  assert(false);
+  return false;
 }
 
 }  // namespace sdm
-

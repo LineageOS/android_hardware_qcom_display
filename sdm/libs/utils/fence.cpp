@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -28,13 +28,17 @@
 */
 
 #include <utils/fence.h>
+#include <debug_handler.h>
+#include <assert.h>
 #include <string>
 
 #define __CLASS__ "Fence"
 
 namespace sdm {
 
-BufferSyncHandler* Fence::buffer_sync_handler_ = nullptr;
+#define ASSERT_IF_NO_BUFFER_SYNC(x) if (!x) { assert(false); }
+
+BufferSyncHandler* Fence::g_buffer_sync_handler_ = nullptr;
 
 Fence::Fence(int fd) : fd_(fd) {
 }
@@ -44,7 +48,7 @@ Fence::~Fence() {
 }
 
 void Fence::Set(BufferSyncHandler *buffer_sync_handler) {
-  buffer_sync_handler_ = buffer_sync_handler;
+  g_buffer_sync_handler_ = buffer_sync_handler;
 }
 
 shared_ptr<Fence> Fence::Create(int fd) {
@@ -62,49 +66,67 @@ shared_ptr<Fence> Fence::Create(int fd) {
 }
 
 int Fence::Dup(const shared_ptr<Fence> &fence) {
-  if (!fence) {
-    return -1;
-  }
+  return (fence ? dup(fence->fd_) : -1);
+}
 
-  return dup(fence->fd_);
+int Fence::Get(const shared_ptr<Fence> &fence) {
+  return (fence ? fence->fd_ : -1);
 }
 
 shared_ptr<Fence> Fence::Merge(const shared_ptr<Fence> &fence1, const shared_ptr<Fence> &fence2) {
-  if (!buffer_sync_handler_) {
-    return nullptr;
-  }
+  ASSERT_IF_NO_BUFFER_SYNC(g_buffer_sync_handler_);
 
+  // Sync merge will return a new unique fd if source fds are same.
   int fd1 = fence1 ? fence1->fd_ : -1;
   int fd2 = fence2 ? fence2->fd_ : -1;
   int merged = -1;
 
-  buffer_sync_handler_->SyncMerge(fd1, fd2, &merged);
+  g_buffer_sync_handler_->SyncMerge(fd1, fd2, &merged);
 
   return Create(merged);
 }
 
 DisplayError Fence::Wait(const shared_ptr<Fence> &fence) {
-  if (!buffer_sync_handler_) {
-    return kErrorUndefined;
-  }
+  ASSERT_IF_NO_BUFFER_SYNC(g_buffer_sync_handler_);
 
-  return buffer_sync_handler_->SyncWait(Fence::Get(fence));
+  return g_buffer_sync_handler_->SyncWait(Fence::Get(fence), 1000);
 }
 
 DisplayError Fence::Wait(const shared_ptr<Fence> &fence, int timeout) {
-  if (!buffer_sync_handler_) {
-    return kErrorUndefined;
+  ASSERT_IF_NO_BUFFER_SYNC(g_buffer_sync_handler_);
+
+  return g_buffer_sync_handler_->SyncWait(Fence::Get(fence), timeout);
+}
+
+Fence::Status Fence::GetStatus(const shared_ptr<Fence> &fence) {
+  ASSERT_IF_NO_BUFFER_SYNC(g_buffer_sync_handler_);
+
+  if (!fence) {
+    return Fence::Status::kSignaled;
   }
 
-  return buffer_sync_handler_->SyncWait(Fence::Get(fence), timeout);
+  // Treat only timeout error as pending, assume other errors as signaled.
+  return (g_buffer_sync_handler_->SyncWait(Fence::Get(fence), 0) == kErrorTimeOut ?
+                                    Fence::Status::kPending : Fence::Status::kSignaled);
 }
 
 string Fence::GetStr(const shared_ptr<Fence> &fence) {
   return std::to_string(Fence::Get(fence));
 }
 
-int Fence::Get(const shared_ptr<Fence> &fence) {
-  return (fence ? fence->fd_ : -1);
+Fence::ScopedRef::~ScopedRef() {
+  for (int dup_fd : dup_fds_) {
+    close(dup_fd);
+  }
+}
+
+int Fence::ScopedRef::Get(const shared_ptr<Fence> &fence) {
+  int dup_fd = Fence::Dup(fence);
+  if (dup_fd >= 0) {
+    dup_fds_.push_back(dup_fd);
+  }
+
+  return dup_fd;
 }
 
 }  // namespace sdm

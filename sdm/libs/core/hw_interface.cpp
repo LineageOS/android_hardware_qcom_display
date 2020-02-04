@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2018, 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -43,7 +43,6 @@ namespace sdm {
 
 DisplayError HWInterface::Create(int32_t display_id, DisplayType type,
                                  HWInfoInterface *hw_info_intf,
-                                 BufferSyncHandler *buffer_sync_handler,
                                  BufferAllocator *buffer_allocator, HWInterface **intf) {
   DisplayError error = kErrorNone;
   HWInterface *hw = nullptr;
@@ -51,13 +50,13 @@ DisplayError HWInterface::Create(int32_t display_id, DisplayType type,
   switch (type) {
 #ifndef TARGET_HEADLESS
     case kBuiltIn:
-        hw = new HWPeripheralDRM(display_id, buffer_sync_handler, buffer_allocator, hw_info_intf);
+        hw = new HWPeripheralDRM(display_id, buffer_allocator, hw_info_intf);
       break;
     case kPluggable:
-        hw = new HWTVDRM(display_id, buffer_sync_handler, buffer_allocator, hw_info_intf);
+        hw = new HWTVDRM(display_id, buffer_allocator, hw_info_intf);
       break;
     case kVirtual:
-        hw = new HWVirtualDRM(display_id, buffer_sync_handler, buffer_allocator, hw_info_intf);
+        hw = new HWVirtualDRM(display_id, buffer_allocator, hw_info_intf);
       break;
 #endif
     default:

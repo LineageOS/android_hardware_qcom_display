@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2017 The Android Open Source Project
@@ -61,6 +61,7 @@ using ::android::hardware::hidl_bitfield;
 using ::android::hardware::graphics::composer::V2_1::Error;
 
 using sdm::HWCSession;
+using sdm::Fence;
 
 class BufferCacheEntry {
  public:
@@ -195,8 +196,8 @@ class QtiComposerClient : public IQtiComposerClient {
                         int64_t timestamp);
 
   // Methods for ConcurrentWriteBack
-  hidl_handle getFenceHandle(const android::base::unique_fd& fenceFd, char* handleStorage);
-  Error getFenceFd(const hidl_handle& fenceHandle, android::base::unique_fd* outFenceFd);
+  hidl_handle getFenceHandle(const shared_ptr<Fence>& fence, char* handleStorage);
+  Error getFence(const hidl_handle& fenceHandle, shared_ptr<sdm::Fence>* outFence);
   Error getDisplayReadbackBuffer(Display display, const native_handle_t* rawHandle,
                                  const native_handle_t** outHandle);
 
@@ -247,8 +248,9 @@ class QtiComposerClient : public IQtiComposerClient {
                           std::vector<IComposerClient::Composition>& compositionTypes,
                           uint32_t& displayRequestMask, std::vector<Layer>& requestedLayers,
                           std::vector<uint32_t>& requestMasks);
-    Error presentDisplay(Display display, shared_ptr<Fence> *presentFence,
-                         std::vector<Layer>& layers, std::vector<int32_t>& releaseFences);
+    Error presentDisplay(Display display, shared_ptr<Fence>* presentFence,
+                         std::vector<Layer>& layers,
+                         std::vector<shared_ptr<Fence>>& releaseFences);
 
    private:
     // Commands from ::android::hardware::graphics::composer::V2_1::IComposerClient follow.

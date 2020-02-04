@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -183,7 +183,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int32_t PresentDisplay(hwc2_display_t display, shared_ptr<Fence> *out_retire_fence);
   void RegisterCallback(int32_t descriptor, hwc2_callback_data_t callback_data,
                         hwc2_function_pointer_t pointer);
-  int32_t SetOutputBuffer(hwc2_display_t display, buffer_handle_t buffer, int32_t releaseFence);
+  int32_t SetOutputBuffer(hwc2_display_t display, buffer_handle_t buffer,
+                          const shared_ptr<Fence> &release_fence);
   int32_t SetPowerMode(hwc2_display_t display, int32_t int_mode);
   int32_t ValidateDisplay(hwc2_display_t display, uint32_t *out_num_types,
                           uint32_t *out_num_requests);
@@ -195,8 +196,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int32_t GetReadbackBufferAttributes(hwc2_display_t display,
                                       int32_t *format, int32_t *dataspace);
   int32_t SetReadbackBuffer(hwc2_display_t display, const native_handle_t *buffer,
-                            int32_t acquire_fence);
-  int32_t GetReadbackBufferFence(hwc2_display_t display, int32_t *release_fence);
+                            const shared_ptr<Fence> &acquire_fence);
+  int32_t GetReadbackBufferFence(hwc2_display_t display, shared_ptr<Fence> *release_fence);
   uint32_t GetMaxVirtualDisplayCount();
   int32_t GetDisplayIdentificationData(hwc2_display_t display, uint8_t *outPort,
                                        uint32_t *outDataSize, uint8_t *outData);
@@ -231,8 +232,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
                              uint32_t *out_num_elements, hwc2_layer_t *out_layers,
                              int32_t *out_layer_requests);
   int32_t GetReleaseFences(hwc2_display_t display, uint32_t *out_num_elements,
-                           hwc2_layer_t *out_layers, int32_t *out_fences);
-  int32_t SetClientTarget(hwc2_display_t display, buffer_handle_t target, int32_t acquire_fence,
+                           hwc2_layer_t *out_layers, std::vector<shared_ptr<Fence>> *out_fences);
+  int32_t SetClientTarget(hwc2_display_t display, buffer_handle_t target,
+                          shared_ptr<Fence> acquire_fence,
                           int32_t dataspace, hwc_region_t damage);
   int32_t SetCursorPosition(hwc2_display_t display, hwc2_layer_t layer, int32_t x, int32_t y);
   int32_t GetDataspaceSaturationMatrix(int32_t /*Dataspace*/ int_dataspace, float *out_matrix);
@@ -240,7 +242,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
 
   // Layer functions
   int32_t SetLayerBuffer(hwc2_display_t display, hwc2_layer_t layer, buffer_handle_t buffer,
-                         int32_t acquire_fence);
+                         const shared_ptr<Fence> &acquire_fence);
   int32_t SetLayerBlendMode(hwc2_display_t display, hwc2_layer_t layer, int32_t int_mode);
   int32_t SetLayerDisplayFrame(hwc2_display_t display, hwc2_layer_t layer, hwc_rect_t frame);
   int32_t SetLayerPlaneAlpha(hwc2_display_t display, hwc2_layer_t layer, float alpha);
@@ -494,7 +496,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};
   HWCCallbacks callbacks_;
   HWCBufferAllocator buffer_allocator_;
-  HWCBufferSyncHandler buffer_sync_handler_;
   HWCVirtualDisplayFactory virtual_display_factory_;
   HWCColorManager *color_mgr_ = nullptr;
   DisplayMapInfo map_info_primary_;                 // Primary display (either builtin or pluggable)

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -26,7 +26,6 @@
 #define __HW_INTERFACE_H__
 
 #include <core/buffer_allocator.h>
-#include <core/buffer_sync_handler.h>
 #include <core/display_interface.h>
 #include <private/hw_info_types.h>
 #include <private/color_interface.h>
@@ -74,7 +73,6 @@ class HWEventHandler {
 class HWInterface {
  public:
   static DisplayError Create(int32_t display_id, DisplayType type, HWInfoInterface *hw_info_intf,
-                             BufferSyncHandler *buffer_sync_handler,
                              BufferAllocator *buffer_allocator, HWInterface **intf);
   static DisplayError Destroy(HWInterface *intf);
 
@@ -90,10 +88,11 @@ class HWInterface {
   virtual DisplayError SetDisplayAttributes(uint32_t index) = 0;
   virtual DisplayError SetDisplayAttributes(const HWDisplayAttributes &display_attributes) = 0;
   virtual DisplayError GetConfigIndex(char *mode, uint32_t *index) = 0;
-  virtual DisplayError PowerOn(const HWQosData &qos_data, int *release_fence) = 0;
+  virtual DisplayError PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *release_fence) = 0;
   virtual DisplayError PowerOff(bool teardown) = 0;
-  virtual DisplayError Doze(const HWQosData &qos_data, int *release_fence) = 0;
-  virtual DisplayError DozeSuspend(const HWQosData &qos_data, int *release_fence) = 0;
+  virtual DisplayError Doze(const HWQosData &qos_data, shared_ptr<Fence> *release_fence) = 0;
+  virtual DisplayError DozeSuspend(const HWQosData &qos_data,
+                                   shared_ptr<Fence> *release_fence) = 0;
   virtual DisplayError Standby() = 0;
   virtual DisplayError Validate(HWLayers *hw_layers) = 0;
   virtual DisplayError Commit(HWLayers *hw_layers) = 0;

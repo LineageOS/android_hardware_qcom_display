@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -35,6 +35,7 @@
 #include <utility>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace sdm {
 
@@ -43,8 +44,27 @@ using std::string;
 
 class Fence {
  public:
+  enum class Status : int32_t {
+    kSignaled = 0,
+    kPending
+  };
+
+  // This class methods allow client to get access to the native file descriptor of fence object
+  // during the scope of this class object. Underlying file descriptor is duped and returned to
+  // the client. Duped file descriptors are closed as soon as scope ends. Client can get access
+  // to multiple fences using the same scoped reference.
+  class ScopedRef {
+   public:
+    ~ScopedRef();
+    int Get(const shared_ptr<Fence> &fence);
+
+   private:
+    std::vector<int> dup_fds_ = {};
+  };
+
   ~Fence();
 
+  // Must be set once before using any other method of this class.
   static void Set(BufferSyncHandler *buffer_sync_handler);
 
   // Ownership of the file descriptor is transferred to this method.
@@ -56,8 +76,14 @@ class Fence {
   static int Dup(const shared_ptr<Fence> &fence);
 
   static shared_ptr<Fence> Merge(const shared_ptr<Fence> &fence1, const shared_ptr<Fence> &fence2);
+
+  // Wait on null fence will return success.
   static DisplayError Wait(const shared_ptr<Fence> &fence);
   static DisplayError Wait(const shared_ptr<Fence> &fence, int timeout);
+
+  // Status check on null fence will return signaled.
+  static Status GetStatus(const shared_ptr<Fence> &fence);
+
   static string GetStr(const shared_ptr<Fence> &fence);
 
  private:
@@ -68,7 +94,7 @@ class Fence {
   Fence& operator=(Fence &&fence) = delete;
   static int Get(const shared_ptr<Fence> &fence);
 
-  static BufferSyncHandler *buffer_sync_handler_;
+  static BufferSyncHandler *g_buffer_sync_handler_;
   int fd_ = -1;
 };
 

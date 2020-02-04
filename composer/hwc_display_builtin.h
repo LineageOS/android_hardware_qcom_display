@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -59,9 +59,9 @@ struct LayerStitchContext : public SyncTask<LayerStitchTaskCode>::TaskContext {
   const private_handle_t* dst_hnd = nullptr;
   GLRect src_rect = {};
   GLRect dst_rect = {};
-  int src_acquire_fence_fd = -1;
-  int dst_acquire_fence_fd = -1;
-  int release_fence_fd = -1;
+  shared_ptr<Fence> src_acquire_fence = nullptr;
+  shared_ptr<Fence> dst_acquire_fence = nullptr;
+  shared_ptr<Fence> release_fence = nullptr;
 };
 
 class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode>::TaskHandler {
@@ -103,9 +103,10 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual int GetFrameCaptureStatus() { return frame_capture_status_; }
   virtual DisplayError SetDetailEnhancerConfig(const DisplayDetailEnhancerData &de_data);
   virtual DisplayError ControlPartialUpdate(bool enable, uint32_t *pending);
-  virtual HWC2::Error SetReadbackBuffer(const native_handle_t *buffer, int32_t acquire_fence,
+  virtual HWC2::Error SetReadbackBuffer(const native_handle_t *buffer,
+                                        shared_ptr<Fence> acquire_fence,
                                         bool post_processed_output, CWBClient client);
-  virtual HWC2::Error GetReadbackBufferFence(int32_t *release_fence);
+  virtual HWC2::Error GetReadbackBufferFence(shared_ptr<Fence> *release_fence);
   virtual HWC2::Error SetQSyncMode(QSyncMode qsync_mode);
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous);
   virtual HWC2::Error SetDisplayDppsAdROI(uint32_t h_start, uint32_t h_end, uint32_t v_start,
@@ -125,7 +126,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual HWC2::Error SetFrameTriggerMode(uint32_t mode);
   virtual HWC2::Error SetBLScale(uint32_t level);
   virtual HWC2::Error UpdatePowerMode(HWC2::PowerMode mode);
-  virtual HWC2::Error SetClientTarget(buffer_handle_t target, int32_t acquire_fence,
+  virtual HWC2::Error SetClientTarget(buffer_handle_t target, shared_ptr<Fence> acquire_fence,
                                       int32_t dataspace, hwc_region_t damage);
   virtual bool IsSmartPanelConfig(uint32_t config_id);
   virtual int Deinit();

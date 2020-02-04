@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, 2018 The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2016, 2018, 2020 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -41,10 +41,8 @@
 namespace sdm {
 
 CoreImpl::CoreImpl(BufferAllocator *buffer_allocator,
-                   BufferSyncHandler *buffer_sync_handler,
                    SocketHandler *socket_handler)
-  : buffer_allocator_(buffer_allocator), buffer_sync_handler_(buffer_sync_handler),
-    socket_handler_(socket_handler) {
+  : buffer_allocator_(buffer_allocator), socket_handler_(socket_handler) {
 }
 
 DisplayError CoreImpl::Init() {
@@ -80,8 +78,7 @@ DisplayError CoreImpl::Init() {
     goto CleanupOnError;
   }
 
-  error = comp_mgr_.Init(hw_resource_, extension_intf_, buffer_allocator_,
-                         buffer_sync_handler_, socket_handler_);
+  error = comp_mgr_.Init(hw_resource_, extension_intf_, buffer_allocator_, socket_handler_);
 
   if (error != kErrorNone) {
     goto CleanupOnError;
@@ -133,16 +130,16 @@ DisplayError CoreImpl::CreateDisplay(DisplayType type, DisplayEventHandler *even
 
   switch (type) {
     case kBuiltIn:
-      display_base = new DisplayBuiltIn(event_handler, hw_info_intf_, buffer_sync_handler_,
-                                        buffer_allocator_, &comp_mgr_);
+      display_base = new DisplayBuiltIn(event_handler, hw_info_intf_, buffer_allocator_,
+                                        &comp_mgr_);
       break;
     case kPluggable:
-      display_base = new DisplayPluggable(event_handler, hw_info_intf_, buffer_sync_handler_,
-                                          buffer_allocator_, &comp_mgr_);
+      display_base = new DisplayPluggable(event_handler, hw_info_intf_, buffer_allocator_,
+                                          &comp_mgr_);
       break;
     case kVirtual:
-      display_base = new DisplayVirtual(event_handler, hw_info_intf_, buffer_sync_handler_,
-                                        buffer_allocator_, &comp_mgr_);
+      display_base = new DisplayVirtual(event_handler, hw_info_intf_, buffer_allocator_,
+                                        &comp_mgr_);
       break;
     default:
       DLOGE("Spurious display type %d", type);
@@ -184,15 +181,15 @@ DisplayError CoreImpl::CreateDisplay(int32_t display_id, DisplayEventHandler *ev
   switch (display_type) {
     case kBuiltIn:
       display_base = new DisplayBuiltIn(display_id, event_handler, hw_info_intf_,
-                                        buffer_sync_handler_, buffer_allocator_, &comp_mgr_);
+                                        buffer_allocator_, &comp_mgr_);
       break;
     case kPluggable:
       display_base = new DisplayPluggable(display_id, event_handler, hw_info_intf_,
-                                          buffer_sync_handler_, buffer_allocator_, &comp_mgr_);
+                                          buffer_allocator_, &comp_mgr_);
       break;
     case kVirtual:
       display_base = new DisplayVirtual(display_id, event_handler, hw_info_intf_,
-                                        buffer_sync_handler_, buffer_allocator_, &comp_mgr_);
+                                        buffer_allocator_, &comp_mgr_);
       break;
     default:
       DLOGE("Spurious display type %d", display_type);

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -54,7 +54,7 @@ HWC2::Error HWCDisplayDummy::Validate(uint32_t *out_num_types, uint32_t *out_num
 
 HWC2::Error HWCDisplayDummy::Present(shared_ptr<Fence> *out_retire_fence) {
   for (auto hwc_layer : layer_set_) {
-    hwc_layer->PushBackReleaseFence(-1);
+    hwc_layer->PushBackReleaseFence(nullptr);
   }
   return HWC2::Error::None;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -132,8 +132,9 @@ int GLLayerStitchImpl::CreateContext(bool secure) {
 
 int GLLayerStitchImpl::Blit(const private_handle_t *src_hnd, const private_handle_t *dst_hnd,
                             const GLRect &src_rect, const GLRect &dst_rect,
-                            int src_acquire_fence_fd, int dst_acquire_fence_fd,
-                            int *release_fence_fd) {
+                            const shared_ptr<Fence> &src_acquire_fence,
+                            const shared_ptr<Fence> &dst_acquire_fence,
+                            shared_ptr<Fence> *release_fence) {
   DTRACE_SCOPED();
   // eglMakeCurrent attaches rendering context to rendering surface.
   MakeCurrent(&ctx_);
@@ -150,13 +151,10 @@ int GLLayerStitchImpl::Blit(const private_handle_t *src_hnd, const private_handl
   glDrawArrays(GL_TRIANGLES, 0, 3);
 
   // Dst. is always guaranteed to be signaled.
-  int in_fence_fd = dup(src_acquire_fence_fd);
-  if (in_fence_fd >= 0) {
-    WaitOnInputFence(in_fence_fd);
-  }
+  WaitOnInputFence(src_acquire_fence);
 
   // Create output fence for client to wait on.
-  *release_fence_fd = CreateOutputFence();
+  CreateOutputFence(release_fence);
 
   return 0;
 }

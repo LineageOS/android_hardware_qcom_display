@@ -17,7 +17,7 @@ LOCAL_CFLAGS                  := -Wno-missing-field-initializers -Wno-unused-par
 LOCAL_CLANG                   := true
 
 LOCAL_SHARED_LIBRARIES        := libhistogram libbinder libhardware libutils libcutils libsync \
-                                 libc++ liblog libhidlbase libhidltransport \
+                                 libc++ liblog libhidlbase \
                                  liblog libfmq libhardware_legacy \
                                  libsdmcore libqservice libqdutils libqdMetaData \
                                  libdisplaydebug libsdmutils libgrallocutils libui \

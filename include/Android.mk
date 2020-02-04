@@ -7,8 +7,7 @@ include $(CLEAR_VARS)
 # LOCAL_HEADER_LIBRARIES := display_headers
 LOCAL_VENDOR_MODULE           := true
 LOCAL_COPY_HEADERS_TO         := $(common_header_export_path)
-LOCAL_COPY_HEADERS            := display_color_processing.h \
-                                 display_properties.h \
+LOCAL_COPY_HEADERS            := display_properties.h \
                                  dpps_control_interface.h \
                                  ../libqdutils/qd_utils.h \
                                  ../libqdutils/display_config.h \

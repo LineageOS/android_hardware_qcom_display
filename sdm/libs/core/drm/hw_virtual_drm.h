@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -39,8 +39,8 @@ namespace sdm {
 
 class HWVirtualDRM : public HWDeviceDRM {
  public:
-  HWVirtualDRM(int32_t display_id, BufferSyncHandler *buffer_sync_handler,
-               BufferAllocator *buffer_allocator, HWInfoInterface *hw_info_intf);
+  HWVirtualDRM(int32_t display_id, BufferAllocator *buffer_allocator,
+               HWInfoInterface *hw_info_intf);
   virtual ~HWVirtualDRM() {}
   virtual DisplayError SetVSyncState(bool enable) { return kErrorNotSupported; }
   virtual DisplayError SetMixerAttributes(const HWMixerAttributes &mixer_attributes) {
@@ -53,7 +53,7 @@ class HWVirtualDRM : public HWDeviceDRM {
   virtual DisplayError Commit(HWLayers *hw_layers);
   virtual DisplayError Flush(HWLayers *hw_layers);
   virtual DisplayError GetPPFeaturesVersion(PPFeatureVersion *vers);
-  virtual DisplayError PowerOn(const HWQosData &qos_data, int *release_fence);
+  virtual DisplayError PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
   virtual DisplayError SetScaleLutConfig(HWScaleLutInfo *lut_info) {
     return kErrorNotSupported;
   }

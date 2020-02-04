@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -61,8 +61,7 @@ struct SDECsc {
 
 class HWDeviceDRM : public HWInterface {
  public:
-  HWDeviceDRM(BufferSyncHandler *buffer_sync_handler, BufferAllocator *buffer_allocator,
-                       HWInfoInterface *hw_info_intf);
+  HWDeviceDRM(BufferAllocator *buffer_allocator, HWInfoInterface *hw_info_intf);
   virtual ~HWDeviceDRM() {}
   virtual DisplayError Init();
   virtual DisplayError Deinit();
@@ -81,10 +80,10 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError SetDisplayAttributes(uint32_t index);
   virtual DisplayError SetDisplayAttributes(const HWDisplayAttributes &display_attributes);
   virtual DisplayError GetConfigIndex(char *mode, uint32_t *index);
-  virtual DisplayError PowerOn(const HWQosData &qos_data, int *release_fence);
+  virtual DisplayError PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
   virtual DisplayError PowerOff(bool teardown);
-  virtual DisplayError Doze(const HWQosData &qos_data, int *release_fence);
-  virtual DisplayError DozeSuspend(const HWQosData &qos_data, int *release_fence);
+  virtual DisplayError Doze(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
+  virtual DisplayError DozeSuspend(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
   virtual DisplayError Standby();
   virtual DisplayError Validate(HWLayers *hw_layers);
   virtual DisplayError Commit(HWLayers *hw_layers);
@@ -166,7 +165,8 @@ class HWDeviceDRM : public HWInterface {
                    uint32_t* rot_bit_mask);
   DisplayError DefaultCommit(HWLayers *hw_layers);
   DisplayError AtomicCommit(HWLayers *hw_layers);
-  void SetupAtomic(HWLayers *hw_layers, bool validate);
+  void SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayers *hw_layers, bool validate,
+                   int64_t *release_fence_fd, int64_t *retire_fence_fd);
   void SetSecureConfig(const LayerBuffer &input_buffer, sde_drm::DRMSecureMode *fb_secure_mode,
                        sde_drm::DRMSecurityLevel *security_level);
   bool IsResolutionSwitchEnabled() const { return resolution_switch_enabled_; }
@@ -215,7 +215,6 @@ class HWDeviceDRM : public HWInterface {
   int32_t display_id_ = -1;
   sde_drm::DRMDisplayType disp_type_ = {};
   HWInfoInterface *hw_info_intf_ = {};
-  BufferSyncHandler *buffer_sync_handler_ = {};
   int dev_fd_ = -1;
   Registry registry_;
   sde_drm::DRMDisplayToken token_ = {};
@@ -228,8 +227,6 @@ class HWDeviceDRM : public HWInterface {
   uint32_t current_mode_index_ = 0;
   sde_drm::DRMConnectorInfo connector_info_ = {};
   bool first_cycle_ = true;
-  int64_t release_fence_ = -1;
-  int64_t retire_fence_ = -1;
   HWMixerAttributes mixer_attributes_ = {};
   std::vector<sde_drm::DRMSolidfillStage> solid_fills_ {};
   bool secure_display_active_ = false;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -580,9 +580,6 @@ int HWCDisplay::Deinit() {
     delete hwc_layer;
   }
 
-  // Close fbt release fence.
-  close(fbt_release_fence_);
-
   if (color_mode_) {
     color_mode_->DeInit();
     delete color_mode_;
@@ -675,10 +672,7 @@ void HWCDisplay::BuildLayerStack() {
     layer->composition = kCompositionGPU;
 
     if (swap_interval_zero_) {
-      if (layer->input_buffer.acquire_fence_fd >= 0) {
-        close(layer->input_buffer.acquire_fence_fd);
-        layer->input_buffer.acquire_fence_fd = -1;
-      }
+      layer->input_buffer.acquire_fence = nullptr;
     }
 
     bool is_secure = false;
@@ -756,8 +750,6 @@ void HWCDisplay::BuildLayerStack() {
       layer_buffer->height = UINT32(layer->dst_rect.bottom - layer->dst_rect.top);
       layer_buffer->unaligned_width = layer_buffer->width;
       layer_buffer->unaligned_height = layer_buffer->height;
-      layer_buffer->acquire_fence_fd = -1;
-      layer_buffer->release_fence_fd = -1;
       layer->src_rect.left = 0;
       layer->src_rect.top = 0;
       layer->src_rect.right = layer_buffer->width;
@@ -909,26 +901,24 @@ HWC2::Error HWCDisplay::SetVsyncEnabled(HWC2::Vsync enabled) {
 }
 
 void HWCDisplay::PostPowerMode() {
-  if (release_fence_ < 0) {
+  if (release_fence_ == nullptr) {
     return;
   }
 
   for (auto hwc_layer : layer_set_) {
-    auto fence = hwc_layer->PopBackReleaseFence();
-    auto merged_fence = -1;
-    if (fence >= 0) {
-      buffer_sync_handler_.SyncMerge(release_fence_, fence, &merged_fence);
-      ::close(fence);
+    shared_ptr<Fence> fence = nullptr;
+    shared_ptr<Fence> merged_fence = nullptr;
+
+    hwc_layer->PopBackReleaseFence(&fence);
+    if (fence) {
+      merged_fence = Fence::Merge(release_fence_, fence);
     } else {
-      merged_fence = ::dup(release_fence_);
+      merged_fence = release_fence_;
     }
     hwc_layer->PushBackReleaseFence(merged_fence);
   }
 
-  // Add this release fence onto fbt_release fence.
-  CloseFd(&fbt_release_fence_);
   fbt_release_fence_ = release_fence_;
-  release_fence_ = -1;
 }
 
 HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
@@ -962,7 +952,7 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
     default:
       return HWC2::Error::BadParameter;
   }
-  int release_fence = -1;
+  shared_ptr<Fence> release_fence = nullptr;
 
   ATRACE_INT("SetPowerMode ", state);
   DisplayError error = display_intf_->SetDisplayState(state, teardown, &release_fence);
@@ -1179,7 +1169,7 @@ HWC2::Error HWCDisplay::GetActiveConfig(hwc2_config_t *out_config) {
   return HWC2::Error::None;
 }
 
-HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, int32_t acquire_fence,
+HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, shared_ptr<Fence> acquire_fence,
                                         int32_t dataspace, hwc_region_t damage) {
   // TODO(user): SurfaceFlinger gives us a null pointer here when doing full SDE composition
   // The error is problematic for layer caching as it would overwrite our cached client target.
@@ -1189,7 +1179,7 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, int32_t acquire_
     return HWC2::Error::None;
   }
 
-  if (acquire_fence == 0) {
+  if (acquire_fence == nullptr) {
     DLOGW("acquire_fence is zero");
     return HWC2::Error::BadParameter;
   }
@@ -1443,7 +1433,7 @@ HWC2::Error HWCDisplay::GetChangedCompositionTypes(uint32_t *out_num_elements,
 }
 
 HWC2::Error HWCDisplay::GetReleaseFences(uint32_t *out_num_elements, hwc2_layer_t *out_layers,
-                                         int32_t *out_fences) {
+                                         std::vector<shared_ptr<Fence>> *out_fences) {
   if (out_num_elements == nullptr) {
     return HWC2::Error::BadParameter;
   }
@@ -1454,7 +1444,9 @@ HWC2::Error HWCDisplay::GetReleaseFences(uint32_t *out_num_elements, hwc2_layer_
     for (uint32_t i = 0; i < *out_num_elements; i++, it++) {
       auto hwc_layer = *it;
       out_layers[i] = hwc_layer->GetId();
-      out_fences[i] = hwc_layer->PopFrontReleaseFence();
+
+      shared_ptr<Fence> &fence = (*out_fences)[i];
+      hwc_layer->PopFrontReleaseFence(&fence);
     }
   } else {
     *out_num_elements = UINT32(layer_set_.size());
@@ -1632,15 +1624,10 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence
   }
 
   // TODO(user): No way to set the client target release fence on SF
-  int32_t &client_target_release_fence =
-      client_target_->GetSDMLayer()->input_buffer.release_fence_fd;
-  if (client_target_release_fence >= 0) {
-    // Close cached release fence.
-    close(fbt_release_fence_);
-    fbt_release_fence_ = dup(client_target_release_fence);
-    // Close fence returned by driver.
-    close(client_target_release_fence);
-    client_target_release_fence = -1;
+  shared_ptr<Fence> client_target_release_fence =
+      client_target_->GetSDMLayer()->input_buffer.release_fence;
+  if (client_target_release_fence) {
+    fbt_release_fence_ = client_target_release_fence;
   }
   client_target_->ResetGeometryChanges();
 
@@ -1652,25 +1639,17 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence
     if (!flush_) {
       // If swapinterval property is set to 0 or for single buffer layers, do not update f/w
       // release fences and discard fences from driver
-      if (swap_interval_zero_ || layer->flags.single_buffer) {
-        close(layer_buffer->release_fence_fd);
-      } else {
+      if (!swap_interval_zero_ && !layer->flags.single_buffer) {
         // It may so happen that layer gets marked to GPU & app layer gets queued
         // to MDP for composition. In those scenarios, release fence of buffer should
         // have mdp and gpu sync points merged.
-        hwc_layer->PushBackReleaseFence(layer_buffer->release_fence_fd);
+        hwc_layer->PushBackReleaseFence(layer_buffer->release_fence);
       }
     } else {
       // In case of flush or display paused, we don't return an error to f/w, so it will
       // get a release fence out of the hwc_layer's release fence queue
       // We should push a -1 to preserve release fence circulation semantics.
-      hwc_layer->PushBackReleaseFence(-1);
-    }
-
-    layer_buffer->release_fence_fd = -1;
-    if (layer_buffer->acquire_fence_fd >= 0) {
-      close(layer_buffer->acquire_fence_fd);
-      layer_buffer->acquire_fence_fd = -1;
+      hwc_layer->PushBackReleaseFence(nullptr);
     }
 
     layer->request.flags = {};
@@ -1738,15 +1717,7 @@ void HWCDisplay::DumpInputBuffers() {
     auto layer = layer_stack_.layers.at(i);
     const private_handle_t *pvt_handle =
         reinterpret_cast<const private_handle_t *>(layer->input_buffer.buffer_id);
-    auto acquire_fence_fd = layer->input_buffer.acquire_fence_fd;
-
-    if (acquire_fence_fd >= 0) {
-      int error = sync_wait(acquire_fence_fd, 1000);
-      if (error < 0) {
-        DLOGW("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
-        continue;
-      }
-    }
+    Fence::Wait(layer->input_buffer.acquire_fence);
 
     DLOGI("Dump layer[%d] of %d pvt_handle %x pvt_handle->base %x", i, layer_stack_.layers.size(),
           pvt_handle, pvt_handle? pvt_handle->base : 0);
@@ -1757,7 +1728,7 @@ void HWCDisplay::DumpInputBuffers() {
     }
 
     if (!pvt_handle->base) {
-      DisplayError error = buffer_allocator_->MapBuffer(pvt_handle, -1);
+      DisplayError error = buffer_allocator_->MapBuffer(pvt_handle, nullptr);
       if (error != kErrorNone) {
         DLOGE("Failed to map buffer, error = %d", error);
         continue;
@@ -2085,8 +2056,6 @@ void HWCDisplay::SolidFillPrepare() {
     layer_buffer->height = primary_height;
     layer_buffer->unaligned_width = primary_width;
     layer_buffer->unaligned_height = primary_height;
-    layer_buffer->acquire_fence_fd = -1;
-    layer_buffer->release_fence_fd = -1;
 
     solid_fill_layer_->composition = kCompositionGPU;
     solid_fill_layer_->src_rect = solid_fill_rect_;
@@ -2115,16 +2084,6 @@ void HWCDisplay::SolidFillPrepare() {
   }
 
   return;
-}
-
-void HWCDisplay::SolidFillCommit() {
-  if (solid_fill_enable_ && solid_fill_layer_) {
-    LayerBuffer *layer_buffer = &solid_fill_layer_->input_buffer;
-    if (layer_buffer->release_fence_fd > 0) {
-      close(layer_buffer->release_fence_fd);
-      layer_buffer->release_fence_fd = -1;
-    }
-  }
 }
 
 int HWCDisplay::GetVisibleDisplayRect(hwc_rect_t *visible_rect) {
@@ -2465,23 +2424,19 @@ void HWCDisplay::WaitOnPreviousFence() {
   // Since prepare failed commit would follow the same.
   // Wait for previous rel fence.
   for (auto hwc_layer : layer_set_) {
-    auto fence = hwc_layer->PopBackReleaseFence();
-    if (fence >= 0) {
-      int error = sync_wait(fence, 1000);
-      if (error < 0) {
-        DLOGW("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
-        return;
-      }
+    shared_ptr<Fence> fence = nullptr;
+
+    hwc_layer->PopBackReleaseFence(&fence);
+    if (Fence::Wait(fence) != kErrorNone) {
+      DLOGW("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
+      return;
     }
     hwc_layer->PushBackReleaseFence(fence);
   }
 
-  if (fbt_release_fence_ >= 0) {
-    int error = sync_wait(fbt_release_fence_, 1000);
-    if (error < 0) {
-      DLOGW("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
-      return;
-    }
+  if (Fence::Wait(fbt_release_fence_) != kErrorNone) {
+    DLOGW("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
+    return;
   }
 }
 
