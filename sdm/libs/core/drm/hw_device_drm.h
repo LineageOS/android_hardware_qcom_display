@@ -95,6 +95,7 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError SetDynamicDSIClock(uint64_t bitclk);
   virtual DisplayError GetDynamicDSIClock(uint64_t *bitclk);
   virtual DisplayError GetConfigIndex(uint32_t width, uint32_t height, uint32_t *index);
+  virtual DisplayError SetConfigAttributes(uint32_t index, uint32_t width, uint32_t height);
 
   enum {
     kHWEventVSync,
