@@ -190,7 +190,7 @@ struct DisplayConfigVariableInfo {
   uint32_t vsync_period_ns = 0;   //!< VSync period in nanoseconds.
   bool is_yuv = false;            //!< If the display output is in YUV format.
   uint32_t pixel_formats = 0;     //!< RGB bit 1 is set, YUV422 bit 2 is set, YUV420 bit 3.
-  DisplayInterfaceFormat pref_fmt = kFormatRGB;
+  DisplayInterfaceFormat pref_fmt = DisplayInterfaceFormat::kFormatNone;
 };
 
 /*! @brief Event data associated with VSync event.
