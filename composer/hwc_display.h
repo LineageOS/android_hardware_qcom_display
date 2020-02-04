@@ -429,6 +429,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual void GetUnderScanConfig() { }
   int32_t SetClientTargetDataSpace(int32_t dataspace);
   int SetFrameBufferConfig(uint32_t x_pixels, uint32_t y_pixels);
+  int32_t GetDisplayConfigGroup(DisplayConfigGroupInfo variable_config);
 
   bool validated_ = false;
   bool layer_stack_invalid_ = true;
