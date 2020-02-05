@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -88,9 +88,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError SetPanelBrightness(float brightness) {
     return kErrorNotSupported;
   }
-  virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
-    return kErrorNotSupported;
-  }
+  virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
   virtual DisplayError ColorSVCRequestRoute(const PPDisplayAPIPayload &in_payload,
                                             PPDisplayAPIPayload *out_payload,
                                             PPPendingParams *pending_action);

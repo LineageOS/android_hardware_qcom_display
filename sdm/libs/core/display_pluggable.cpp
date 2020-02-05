@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -179,11 +179,6 @@ DisplayError DisplayPluggable::SetRefreshRate(uint32_t refresh_rate, bool final_
 bool DisplayPluggable::IsUnderscanSupported() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   return underscan_supported_;
-}
-
-DisplayError DisplayPluggable::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
-  return hw_intf_->OnMinHdcpEncryptionLevelChange(min_enc_level);
 }
 
 DisplayError DisplayPluggable::GetOverrideConfig(uint32_t *mode_index) {
