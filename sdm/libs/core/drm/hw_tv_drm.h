@@ -49,7 +49,6 @@ class HWTVDRM : public HWDeviceDRM {
   virtual DisplayError Commit(HWLayers *hw_layers);
   virtual void PopulateHWPanelInfo();
   virtual DisplayError GetDefaultConfig(uint32_t *default_config);
-  virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
   virtual DisplayError PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
 
  private:
