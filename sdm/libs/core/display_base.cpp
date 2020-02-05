@@ -2452,4 +2452,9 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
   return kErrorNone;
 }
 
+DisplayError DisplayBase::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  return hw_intf_->OnMinHdcpEncryptionLevelChange(min_enc_level);
+}
+
 }  // namespace sdm
