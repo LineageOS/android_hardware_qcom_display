@@ -532,6 +532,7 @@ struct DRMCrtcInfo {
   bool use_baselayer_for_stage = false;
   bool has_micro_idle = false;
   uint32_t ubwc_version = 1;
+  bool has_spr = false;
 };
 
 enum struct DRMPlaneType {
@@ -677,6 +678,7 @@ enum DRMPPFeatureID {
   kFeatureMixerGc,
   kFeaturePaV2,
   kFeatureDither,
+  kFeatureSprDither,
   kFeatureGamut,
   kFeaturePADither,
   kFeaturePAHsic,

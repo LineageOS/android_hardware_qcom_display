@@ -125,6 +125,7 @@ DisplayError (*HWColorManagerDrm::pp_features_[])(const PPFeatureInfo &,
   [kFeatureMixerGc] = &HWColorManagerDrm::GetDrmMixerGC,
   [kFeaturePaV2] = NULL,
   [kFeatureDither] = &HWColorManagerDrm::GetDrmDither,
+  [kFeatureSprDither] = &HWColorManagerDrm::GetDrmDither,
   [kFeatureGamut] = &HWColorManagerDrm::GetDrmGamut,
   [kFeaturePADither] = &HWColorManagerDrm::GetDrmPADither,
   [kFeaturePAHsic] = &HWColorManagerDrm::GetDrmPAHsic,
@@ -171,6 +172,7 @@ uint32_t HWColorManagerDrm::GetFeatureVersion(const DRMPPFeatureInfo &feature) {
         version = PPFeatureVersion::kSDEPaV17;
       break;
     case kFeatureDither:
+    case kFeatureSprDither:
         version = PPFeatureVersion::kSDEDitherV17;
       break;
     case kFeatureGamut:
@@ -271,7 +273,8 @@ void HWColorManagerDrm::FreeDrmFeatureData(DRMPPFeatureInfo *feature) {
 #endif
         break;
       }
-      case kFeatureDither: {
+      case kFeatureDither:
+      case kFeatureSprDither: {
 #ifdef PP_DRM_ENABLE
         drm_msm_dither *dither = reinterpret_cast<drm_msm_dither *>(ptr);
         delete dither;
@@ -886,6 +889,7 @@ DisplayError HWColorManagerDrm::GetDrmDither(const PPFeatureInfo &in_data,
                                              DRMPPFeatureInfo *out_data) {
   DisplayError ret = kErrorNone;
 #ifdef PP_DRM_ENABLE
+  // Programming is the same for PP dither vs SPR dither
   struct SDEDitherCfg *sde_dither = NULL;
   struct drm_msm_dither *mdp_dither = NULL;
 
