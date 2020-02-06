@@ -193,9 +193,9 @@ class HWDeviceDRM : public HWInterface {
     // Called on display disconnect to clear output buffer map and remove fb_ids.
     void Clear();
     // Create the fd_id for the given buffer.
-    int CreateFbId(LayerBuffer *buffer, uint32_t *fb_id);
+    int CreateFbId(const LayerBuffer &buffer, uint32_t *fb_id);
     // Find handle_id in the layer map. Else create fb_id and add <handle_id,fb_id> in map.
-    void MapBufferToFbId(Layer* layer, LayerBuffer* buffer);
+    void MapBufferToFbId(Layer* layer, const LayerBuffer &buffer);
     // Find handle_id in output buffer map. Else create fb_id and add <handle_id,fb_id> in map.
     void MapOutputBufferToFbId(LayerBuffer* buffer);
     // Find fb_id for given handle_id in the layer map.
