@@ -4,7 +4,6 @@ cc_library_headers {
     export_include_dirs: [
         "gralloc",
         "include",
-        "libdisplayconfig",
         "libqdmetadata",
         "services",
     ],
