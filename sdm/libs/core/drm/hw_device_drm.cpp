@@ -563,14 +563,14 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
   SetTopology(topology, &display_attributes_[index].topology);
 
   if (mode.flags & DRM_MODE_FLAG_SUPPORTS_RGB) {
-    display_attributes_[index].pixel_formats = 1;
+    display_attributes_[index].pixel_formats = DisplayInterfaceFormat::kFormatRGB;
   }
   if (mode.flags & DRM_MODE_FLAG_SUPPORTS_YUV422) {
-    display_attributes_[index].pixel_formats |= (1<<1);
+    display_attributes_[index].pixel_formats |= DisplayInterfaceFormat::kFormatYCbCr422;
     display_attributes_[index].is_yuv = true;
   }
   if (mode.flags & DRM_MODE_FLAG_SUPPORTS_YUV420) {
-    display_attributes_[index].pixel_formats |= (1<<2);
+    display_attributes_[index].pixel_formats |= DisplayInterfaceFormat::kFormatYCbCr420;
     display_attributes_[index].is_yuv = true;
   }
 
