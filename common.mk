@@ -9,10 +9,6 @@ ifeq ($(TARGET_IS_HEADLESS), true)
     common_flags += -DTARGET_HEADLESS
 endif
 
-ifeq ($(DISPLAY_CONFIG_VERSION), DISPLAY_CONFIG_VERSION_OPTIMAL)
-    common_flags += -DDISPLAY_CONFIG_VERSION_OPTIMAL
-endif
-
 ifeq ($(TARGET_USES_COLOR_METADATA), true)
     common_flags += -DUSE_COLOR_METADATA
 endif
