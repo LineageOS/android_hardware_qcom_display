@@ -1932,7 +1932,6 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
   if (windowed_display_) {
     x_pixels -= UINT32(window_rect_.right + window_rect_.left);
     y_pixels -= UINT32(window_rect_.bottom + window_rect_.top);
-    windowed_display_ = false;
   }
   auto client_target_layer = client_target_->GetSDMLayer();
 
