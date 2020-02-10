@@ -187,6 +187,7 @@ struct PPFeatureVersion {
   static const uint32_t kSDEIgcV30 = 17;
   static const uint32_t kSDEGamutV4 = 18;
   static const uint32_t kSDEPccV4 = 19;
+  static const uint32_t kSDEIgcV40 = 20;
 
   uint32_t version[kMaxNumPPFeatures];
   PPFeatureVersion() { memset(version, 0, sizeof(version)); }
@@ -412,7 +413,7 @@ struct SDEPaData {
 };
 
 struct SDEIgcLUTData {
-  static const int kMaxIgcLUTEntries = 256;
+  static const int kMaxIgcLUTEntries = 257;
   uint32_t table_fmt = 0;
   uint32_t len = 0;
   uint32_t *c0_c1_data = NULL;
@@ -420,7 +421,7 @@ struct SDEIgcLUTData {
 };
 
 struct SDEIgcV30LUTData {
-  static const int kMaxIgcLUTEntries = 256;
+  static const int kMaxIgcLUTEntries = 257;
   uint32_t table_fmt = 0;
   uint32_t len = 0;
   uint64_t c0_c1_data = 0;

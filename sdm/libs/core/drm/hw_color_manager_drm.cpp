@@ -152,8 +152,11 @@ uint32_t HWColorManagerDrm::GetFeatureVersion(const DRMPPFeatureInfo &feature) {
       }
       break;
     case kFeatureIgc:
-      if (feature.version == 3)
+      if (feature.version == 3) {
         version = PPFeatureVersion::kSDEIgcV30;
+      } else if (feature.version == 4) {
+        version = PPFeatureVersion::kSDEIgcV40;
+      }
       break;
     case kFeaturePgc:
       if (feature.version == 1)
@@ -424,6 +427,7 @@ DisplayError HWColorManagerDrm::GetDrmIGC(const PPFeatureInfo &in_data,
 
   switch (in_data.feature_version_) {
   case PPFeatureVersion::kSDEIgcV30:
+  case PPFeatureVersion::kSDEIgcV40:
   case kSourceFeatureV5:
     sde_igc = (struct SDEIgcV30LUTData *) in_data.GetConfigData();
     break;
@@ -464,11 +468,16 @@ DisplayError HWColorManagerDrm::GetDrmIGC(const PPFeatureInfo &in_data,
     return kErrorParameters;
   }
 
-  for (int i = 0; i < IGC_TBL_LEN; i++) {
+  int i;
+  for (i = 0; i < IGC_TBL_LEN; i++) {
     mdp_igc->c0[i] = c0_c1_data_ptr[i] & kIgcDataMask;
     mdp_igc->c1[i] = (c0_c1_data_ptr[i] >> kIgcShift) & kIgcDataMask;
     mdp_igc->c2[i] = c2_data_ptr[i] & kIgcDataMask;
   }
+  mdp_igc->c0_last = c0_c1_data_ptr[i] & kIgcDataMask;
+  mdp_igc->c1_last = (c0_c1_data_ptr[i] >> kIgcShift) & kIgcDataMask;
+  mdp_igc->c2_last = c2_data_ptr[i] & kIgcDataMask;
+
   out_data->payload = mdp_igc;
 #endif
   return ret;

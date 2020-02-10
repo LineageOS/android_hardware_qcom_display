@@ -198,7 +198,7 @@ struct PostBlendGammaHwConfig {
 
 struct PostBlendInverseGammaHwConfig {
   uint32_t inverse_gamma_version = sizeof(struct GammaPostBlendConfig);
-  uint32_t num_of_entries = 256;
+  uint32_t num_of_entries = 257;
   uint32_t entries_width = 12;
 };
 
