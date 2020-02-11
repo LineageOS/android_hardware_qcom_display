@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2018, 2020 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -101,6 +101,7 @@ class HWEventsDRM : public HWEventsInterface {
   bool is_primary_ = false;
   uint32_t panel_dead_index_ = 0;
   uint32_t idle_pc_index_ = 0;
+  std::mutex hw_events_mutex_; // To protect hw_events_drm_
   static HWEventsDRM *hw_events_drm_;
 };
 

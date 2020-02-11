@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2018, 2020 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -192,6 +192,7 @@ DisplayError HWEventsDRM::Init(int display_id, DisplayType display_type,
 
   PopulateHWEventData(event_list);
 
+  std::lock_guard<std::mutex> lock(hw_events_mutex_);
   hw_events_drm_ = this;
   if (pthread_create(&event_thread_, NULL, &DisplayEventThread, this) < 0) {
     DLOGE("Failed to start %s, error = %s", event_thread_name_.c_str());
@@ -208,7 +209,9 @@ DisplayError HWEventsDRM::Init(int display_id, DisplayType display_type,
 }
 
 DisplayError HWEventsDRM::Deinit() {
+  std::lock_guard<std::mutex> lock(hw_events_mutex_);
   exit_threads_ = true;
+  hw_events_drm_ = NULL;
   RegisterPanelDead(false);
   RegisterIdleNotify(false);
   RegisterIdlePowerCollapse(false);
@@ -316,6 +319,7 @@ void *HWEventsDRM::DisplayEventHandler() {
         case HWEvent::IDLE_NOTIFY:
         case HWEvent::IDLE_POWER_COLLAPSE:
           if (poll_fd.revents & (POLLIN | POLLPRI | POLLERR)) {
+            std::lock_guard<std::mutex> lock(hw_events_mutex_);
             (this->*(event_data_list_[i]).event_parser)(nullptr);
           }
           break;
@@ -518,7 +522,9 @@ void HWEventsDRM::HandlePanelDead(char *data) {
 void HWEventsDRM::VSyncHandlerCallback(int fd, unsigned int sequence, unsigned int tv_sec,
                                        unsigned int tv_usec, void *data) {
   int64_t timestamp = (int64_t)(tv_sec)*1000000000 + (int64_t)(tv_usec)*1000;
-  hw_events_drm_->event_handler_->VSync(timestamp);
+  if (hw_events_drm_) {
+    hw_events_drm_->event_handler_->VSync(timestamp);
+  }
 }
 
 void HWEventsDRM::HandleIdleTimeout(char *data) {
