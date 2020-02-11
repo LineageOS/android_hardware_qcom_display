@@ -37,6 +37,7 @@
 #include <memory>
 #include <memory>
 #include <drm/msm_drm.h>
+#include <display/drm/sde_drm.h>
 #include <mutex>
 #include <set>
 #include "drm_pp_manager.h"

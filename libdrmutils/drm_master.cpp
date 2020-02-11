@@ -37,6 +37,7 @@
 // that doesn't use keyword "virtual" for a variable name. Not doing so leads to the kernel version
 // of drm.h being included causing compilation to fail
 #include <drm/msm_drm.h>
+#include <display/drm/sde_drm.h>
 #include <algorithm>
 #include <iterator>
 
@@ -137,6 +138,7 @@ int DRMMaster::RemoveFbId(uint32_t fb_id) {
     DRM_LOGE("drmIoctl::DRM_IOCTL_MSM_RMFB2 failed for fb_id %d with error %d", fb_id, errno);
   }
 #else
+  DRM_LOGW("Upstream remove fb id is being used.");
   ret = drmModeRmFB(dev_fd_, fb_id);
   if (ret) {
     DRM_LOGE("drmModeRmFB failed for fb_id %d with error %d", fb_id, ret);
