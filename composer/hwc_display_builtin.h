@@ -30,6 +30,7 @@
 #ifndef __HWC_DISPLAY_BUILTIN_H__
 #define __HWC_DISPLAY_BUILTIN_H__
 
+#include <thermal_client.h>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -177,6 +178,8 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   bool AllocateStitchBuffer();
   void CacheAvrStatus();
   void PostCommitStitchLayers();
+  int GetBwCode(const DisplayConfigVariableInfo &attr);
+  void SetBwLimitHint(bool enable);
   void SetCpuPerfHintLargeCompCycle();
   void SetPartialUpdate(DisplayConfigFixedInfo fixed_info);
   void ValidateUiScaling();
@@ -187,6 +190,10 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
               SyncTask<LayerStitchTaskCode>::TaskContext *task_context);
 
   const int kPerfHintLargeCompCycle = 0x00001097;
+  constexpr static int kBwLow = 2;
+  constexpr static int kBwMedium = 3;
+  constexpr static int kBwHigh = 4;
+
   BufferAllocator *buffer_allocator_ = nullptr;
   CPUHint *cpu_hint_ = nullptr;
   CWBClient cwb_client_ = kCWBClientNone;
@@ -224,6 +231,10 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   std::mutex sampling_mutex;
   bool api_sampling_vote = false;
   bool vndservice_sampling_vote = false;
+  int curr_refresh_rate_ = 0;
+  bool is_smart_panel_ = false;
+  const char *kDisplayBwName = "display_bw";
+  bool enable_bw_limits_ = false;
   int perf_hint_window_ = 0;
   int perf_hint_large_comp_cycle_ = 0;
   bool force_reset_validate_ = false;
