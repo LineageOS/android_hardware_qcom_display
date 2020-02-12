@@ -575,7 +575,7 @@ Return<int32_t> HWCSession::IdlePowerCollapse(bool enable, bool synchronous) {
     return 0;
   }
 
-  DLOGW("Display = %d is not connected.", active_builtin_disp_id);
+  DLOGW("Display = %d is not connected.", UINT32(active_builtin_disp_id));
   return -ENODEV;
 }
 
@@ -828,7 +828,7 @@ Return<void> HWCSession::getActiveBuiltinDisplayAttributes(
   hwc2_display_t disp_id = GetActiveBuiltinDisplay();
 
   if (disp_id >= HWCCallbacks::kNumDisplays) {
-    DLOGE("Invalid display = %d", disp_id);
+    DLOGE("Invalid display = %d", UINT32(disp_id));
   } else {
     if (hwc_display_[disp_id]) {
       uint32_t config_index = 0;
@@ -1144,7 +1144,7 @@ Return<int32_t> HWCSession::createVirtualDisplay(uint32_t width, uint32_t height
   hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
   auto status = CreateVirtualDisplayObj(width, height, &format, &virtual_id_);
   if (status == HWC2::Error::None) {
-    DLOGI("Created virtual display id:% " PRIu64 ", res: %dx%d", virtual_id_, width, height);
+    DLOGI("Created virtual display id:%" PRIu64 ", res: %dx%d", virtual_id_, width, height);
     if (active_builtin_disp_id < HWCCallbacks::kNumRealDisplays) {
       WaitForResources(true, active_builtin_disp_id, virtual_id_);
     }

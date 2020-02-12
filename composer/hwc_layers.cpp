@@ -235,8 +235,8 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
   if (!buffer) {
     if (client_requested_ == HWC2::Composition::Device ||
         client_requested_ == HWC2::Composition::Cursor) {
-      DLOGW("Invalid buffer handle: %p on layer: %d client requested comp type %d", buffer, id_,
-            client_requested_);
+      DLOGW("Invalid buffer handle: %p on layer: %d client requested comp type %d", buffer,
+            UINT32(id_), client_requested_);
       ::close(acquire_fence);
       return HWC2::Error::BadParameter;
     } else {
@@ -1012,8 +1012,8 @@ void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
         layer_buffer->color_metadata.matrixCoefficients = new_metadata.matrixCoefficients;
         layer_->update_mask.set(kMetadataUpdate);
       }
-      DLOGV_IF(kTagClient, "Layer id = %lld ColorVolEnabled = %d ContentLightLevelEnabled = %d "
-               "cRIEnabled = %d Dynamic Metadata valid = %d size = %d", id_,
+      DLOGV_IF(kTagClient, "Layer id = %d ColorVolEnabled = %d ContentLightLevelEnabled = %d "
+               "cRIEnabled = %d Dynamic Metadata valid = %d size = %d", UINT32(id_),
                new_metadata.masteringDisplayInfo.colorVolumeSEIEnabled,
                new_metadata.contentLightLevel.lightLevelSEIEnabled,
                new_metadata.cRI.criEnabled, new_metadata.dynamicMetaDataValid,
