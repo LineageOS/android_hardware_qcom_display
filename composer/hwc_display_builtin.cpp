@@ -131,7 +131,7 @@ int HWCDisplayBuiltIn::Init() {
   HWCDebugHandler::Get()->GetProperty(ENABLE_OPTIMIZE_REFRESH, &optimize_refresh);
   enable_optimize_refresh_ = (optimize_refresh == 1);
   if (enable_optimize_refresh_) {
-    DLOGI("Drop redundant drawcycles %d", id_);
+    DLOGI("Drop redundant drawcycles %" PRIu64 , id_);
   }
 
   int vsyncs = 0;
@@ -147,7 +147,7 @@ int HWCDisplayBuiltIn::Init() {
     HWCDebugHandler::Get()->GetProperty(ENABLE_BW_LIMITS, &enable_bw_limits);
     enable_bw_limits_ = (enable_bw_limits == 1);
     if (enable_bw_limits_) {
-      DLOGI("Enable BW Limits %d", id_);
+      DLOGI("Enable BW Limits %" PRIu64, id_);
     }
     windowed_display_ = Debug::GetWindowRect(&window_rect_.left, &window_rect_.top,
                       &window_rect_.right, &window_rect_.bottom) != kErrorUndefined;
@@ -792,7 +792,7 @@ int HWCDisplayBuiltIn::HandleSecureSession(const std::bitset<kSecureMax> &secure
       return err;
     }
 
-    DLOGI("SecureDisplay state changed from %d to %d for display %d-%d",
+    DLOGI("SecureDisplay state changed from %d to %d for display %" PRIu64 "-%d",
           active_secure_sessions_.test(kSecureDisplay), secure_sessions.test(kSecureDisplay),
           id_, type_);
   }
@@ -1112,7 +1112,7 @@ DisplayError HWCDisplayBuiltIn::SetDynamicDSIClock(uint64_t bitclk) {
   DisablePartialUpdateOneFrame();
   DisplayError error = display_intf_->SetDynamicDSIClock(bitclk);
   if (error != kErrorNone) {
-    DLOGE(" failed: Clk: %llu Error: %d", bitclk, error);
+    DLOGE(" failed: Clk: %" PRIu64 " Error: %d", bitclk, error);
     return error;
   }
 

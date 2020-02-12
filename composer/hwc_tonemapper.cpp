@@ -292,7 +292,7 @@ void HWCToneMapper::DumpToneMapOutput(ToneMapSession *session, shared_ptr<Fence>
 
   error = buffer_allocator_->MapBuffer(target_buffer, acquire_fd);
   if (error != kErrorNone) {
-    DLOGE("MapBuffer failed, base addr = %x", target_buffer->base);
+    DLOGE("MapBuffer failed, base addr = %" PRIx64, target_buffer->base);
     return;
   }
 
@@ -304,7 +304,7 @@ void HWCToneMapper::DumpToneMapOutput(ToneMapSession *session, shared_ptr<Fence>
 
   FILE* fp = fopen(dump_file_name, "w+");
   if (fp) {
-    DLOGI("base addr = %x", target_buffer->base);
+    DLOGI("base addr = %" PRIx64, target_buffer->base);
     result = fwrite(reinterpret_cast<void *>(target_buffer->base), target_buffer->size, 1, fp);
     fclose(fp);
   }
