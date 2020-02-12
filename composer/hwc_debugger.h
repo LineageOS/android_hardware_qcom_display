@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, 2020 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -61,11 +61,11 @@ class HWCDebugHandler : public DebugHandler {
   static void DebugDisplay(bool enable, int verbose_level);
   static int  GetIdleTimeoutMs();
 
-  virtual void Error(const char *format, ...);
-  virtual void Warning(const char *format, ...);
-  virtual void Info(const char *format, ...);
-  virtual void Debug(const char *format, ...);
-  virtual void Verbose(const char *format, ...);
+  virtual void Error(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
+  virtual void Warning(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
+  virtual void Info(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
+  virtual void Debug(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
+  virtual void Verbose(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
   virtual void BeginTrace(const char *class_name, const char *function_name,
                           const char *custom_string);
   virtual void EndTrace();

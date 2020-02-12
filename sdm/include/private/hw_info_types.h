@@ -252,7 +252,7 @@ struct HWRotatorInfo {
   std::string device_path = "";
   float min_downscale = 2.0f;
   bool downscale_compression = false;
-  uint64_t max_line_width = 0;
+  uint32_t max_line_width = 0;
 };
 
 enum HWQseedStepVersion {

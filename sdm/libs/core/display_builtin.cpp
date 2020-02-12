@@ -832,7 +832,7 @@ void DisplayBuiltIn::Histogram(int histogram_fd, uint32_t blob_id) {
 }
 
 void DisplayBuiltIn::HandleBacklightEvent(float brightness_level) {
-  DLOGI("backlight event occurred %f ipc_intf %x", brightness_level, ipc_intf_.get());
+  DLOGI("backlight event occurred %f ipc_intf %p", brightness_level, ipc_intf_.get());
   if (ipc_intf_) {
     GenericPayload in;
     IPCBacklightParams *backlight_params = nullptr;
@@ -877,11 +877,11 @@ DisplayError DisplayBuiltIn::GetPanelBrightnessFromLevel(float level, float *bri
     *brightness = (static_cast<float>(level) + level_remainder_ - min) / (max - min);
   } else {
     min >= max ? DLOGE("Minimum brightness is greater than or equal to maximum brightness") :
-                 DLOGE("Invalid brightness level %d", level);
+                 DLOGE("Invalid brightness level %f", level);
     return kErrorDriverData;
   }
 
-  DLOGI_IF(kTagDisplay, "Received level %d (%f percent)", level, *brightness * 100);
+  DLOGI_IF(kTagDisplay, "Received level %f (%f percent)", level, *brightness * 100);
 
   return kErrorNone;
 }
