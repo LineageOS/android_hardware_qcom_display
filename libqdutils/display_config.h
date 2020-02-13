@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 - 2016, 2018, 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013 - 2016, 2018 - 2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -115,10 +115,6 @@ int isExternalConnected(void);
 // i.e vsync_period = 1000000000l / fps
 // Returns 0 on success, negative values on errors
 int getDisplayAttributes(int dpy, DisplayAttributes_t& dpyattr);
-
-// Set HSIC data on a given display ID
-// Returns 0 on success, negative values on errors
-int setHSIC(int dpy, const HSICData_t& hsic_data);
 
 // get the active visible region for the display
 // Returns 0 on success, negative values on errors
