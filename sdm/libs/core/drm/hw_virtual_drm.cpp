@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -123,6 +123,10 @@ DisplayError HWVirtualDRM::SetWbConfigs(const HWDisplayAttributes &display_attri
 }
 
 DisplayError HWVirtualDRM::Commit(HWLayers *hw_layers) {
+  if (!hw_layers->info.stack) {
+    return kErrorNone;
+  }
+
   LayerBuffer *output_buffer = hw_layers->info.stack->output_buffer;
   DisplayError err = kErrorNone;
 
