@@ -520,6 +520,7 @@ DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   fixed_info->hdr_eotf = hw_panel_info_.hdr_eotf;
   fixed_info->hdr_metadata_type_one = hw_panel_info_.hdr_metadata_type_one;
   fixed_info->partial_update = hw_panel_info_.partial_update;
+  fixed_info->readback_supported = hw_resource_info.has_concurrent_writeback;
 
   return kErrorNone;
 }
@@ -1259,6 +1260,8 @@ DisplayError DisplayBase::SetVSyncState(bool enable) {
     }
     if (error == kErrorNone) {
       vsync_enable_ = enable;
+    } else {
+      vsync_enable_pending_ = true;
     }
   }
   vsync_enable_pending_ = !enable ? false : vsync_enable_pending_;
@@ -2106,6 +2109,11 @@ bool DisplayBase::GameEnhanceSupported() {
     return color_mgr_->GameEnhanceSupported();
   }
   return false;
+}
+
+DisplayError DisplayBase::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  return hw_intf_->OnMinHdcpEncryptionLevelChange(min_enc_level);
 }
 
 }  // namespace sdm

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -109,6 +109,8 @@ using sde_drm::DRMMultiRectMode;
 using sde_drm::DRMSSPPLayoutIndex;
 
 namespace sdm {
+
+std::atomic<uint32_t> HWDeviceDRM::hw_dest_scaler_blocks_used_(0);
 
 static PPBlock GetPPBlock(const HWToneMapLut &lut_type) {
   PPBlock pp_block = kPPBlockMax;
@@ -536,6 +538,7 @@ DisplayError HWDeviceDRM::Deinit() {
   drm_mgr_intf_->DestroyAtomicReq(drm_atomic_intf_);
   drm_atomic_intf_ = {};
   drm_mgr_intf_->UnregisterDisplay(&token_);
+  hw_dest_scaler_blocks_used_ -= dest_scaler_blocks_used_;
   return err;
 }
 
@@ -1824,7 +1827,29 @@ DisplayError HWDeviceDRM::GetMaxCEAFormat(uint32_t *max_cea_format) {
 }
 
 DisplayError HWDeviceDRM::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
-  return kErrorNotSupported;
+  DisplayError error = kErrorNone;
+  int fd = -1;
+  char data[kMaxStringLength] = {'\0'};
+
+  snprintf(data, sizeof(data), "/sys/devices/virtual/hdcp/msm_hdcp/min_level_change");
+
+  fd = Sys::open_(data, O_WRONLY);
+  if (fd < 0) {
+    DLOGE("File '%s' could not be opened. errno = %d, desc = %s", data, errno, strerror(errno));
+    return kErrorHardware;
+  }
+
+  snprintf(data, sizeof(data), "%d", min_enc_level);
+
+  ssize_t err = Sys::pwrite_(fd, data, strlen(data), 0);
+  if (err <= 0) {
+    DLOGE("Write failed, Error = %s", strerror(errno));
+    error = kErrorHardware;
+  }
+
+  Sys::close_(fd);
+
+  return error;
 }
 
 DisplayError HWDeviceDRM::SetScaleLutConfig(HWScaleLutInfo *lut_info) {
@@ -1851,7 +1876,7 @@ DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attr
     return kErrorNotSupported;
   }
 
-  if (!hw_resource_.hw_dest_scalar_info.count) {
+  if (!dest_scaler_blocks_used_) {
     return kErrorNotSupported;
   }
 
@@ -1903,6 +1928,7 @@ DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attr
   mixer_attributes_ = mixer_attributes;
   mixer_attributes_.split_left = mixer_attributes_.width;
   mixer_attributes_.split_type = kNoSplit;
+  mixer_attributes_.dest_scaler_blocks_used = dest_scaler_blocks_used_;  // No change.
   if (display_attributes_[index].is_device_split) {
     mixer_attributes_.split_left = UINT32(FLOAT(mixer_attributes.width) * mixer_split_ratio);
     mixer_attributes_.split_type = kDualSplit;

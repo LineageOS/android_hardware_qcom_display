@@ -392,6 +392,7 @@ class HWCDisplay : public DisplayEventHandler {
       int32_t samples_size[NUM_HISTOGRAM_COLOR_COMPONENTS],
       uint64_t *samples[NUM_HISTOGRAM_COLOR_COMPONENTS]);
   HWC2::Error SetDisplayElapseTime(uint64_t time);
+  virtual bool HasReadBackBufferSupport() { return false; }
 
  protected:
   static uint32_t throttling_refresh_rate_;

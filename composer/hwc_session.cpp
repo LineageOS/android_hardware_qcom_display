@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -183,7 +183,7 @@ int HWCSession::Init() {
     g_hwc_uevent_.Register(this);
   }
 
-  int value = 1;  // Default value when property is not present.
+  int value = 0;  // Default value when property is not present.
   Debug::Get()->GetProperty(ENABLE_ASYNC_POWERMODE, &value);
   async_powermode_ = (value == 1);
   DLOGI("builtin_powermode_override: %d", async_powermode_);
@@ -1131,9 +1131,9 @@ int32_t HWCSession::GetDozeSupport(hwc2_display_t display, int32_t *out_support)
   }
 
   *out_support = 0;
-  if (hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN) {
-    *out_support = 1;
-  }
+  uint32_t config = 0;
+  GetActiveConfigIndex(display, &config);
+  *out_support = isSmartPanelConfig(display, config) ? 1 : 0;
 
   return HWC2_ERROR_NONE;
 }
@@ -3143,14 +3143,16 @@ int32_t HWCSession::GetReadbackBufferAttributes(hwc2_display_t display, int32_t 
   }
 
   HWCDisplay *hwc_display = hwc_display_[display];
-
-  if (hwc_display) {
-    *format = HAL_PIXEL_FORMAT_RGB_888;
-    *dataspace = GetDataspaceFromColorMode(hwc_display->GetCurrentColorMode());
-    return HWC2_ERROR_NONE;
+  if (hwc_display == nullptr) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  } else if (!hwc_display->HasReadBackBufferSupport()) {
+    return HWC2_ERROR_UNSUPPORTED;
   }
 
-  return HWC2_ERROR_BAD_DISPLAY;
+  *format = HAL_PIXEL_FORMAT_RGB_888;
+  *dataspace = GetDataspaceFromColorMode(hwc_display->GetCurrentColorMode());
+
+  return HWC2_ERROR_NONE;
 }
 
 int32_t HWCSession::SetReadbackBuffer(hwc2_display_t display, const native_handle_t *buffer,
@@ -3224,10 +3226,15 @@ int32_t HWCSession::GetDisplayCapabilities(hwc2_display_t display, uint32_t *out
   } else {
     if (isBuiltin) {
       // TODO(user): Handle SKIP_CLIENT_COLOR_TRANSFORM based on DSPP availability
-      outCapabilities[0] = HWC2_DISPLAY_CAPABILITY_SKIP_CLIENT_COLOR_TRANSFORM;
-      outCapabilities[1] = HWC2_DISPLAY_CAPABILITY_DOZE;
-      outCapabilities[2] = HWC2_DISPLAY_CAPABILITY_BRIGHTNESS;
-      *outNumCapabilities = 3;
+      uint32_t index = 0;
+      outCapabilities[index++] = HWC2_DISPLAY_CAPABILITY_SKIP_CLIENT_COLOR_TRANSFORM;
+      int32_t has_doze_support = 0;
+      GetDozeSupport(display, &has_doze_support);
+      if (has_doze_support) {
+        outCapabilities[index++] = HWC2_DISPLAY_CAPABILITY_DOZE;
+      }
+      outCapabilities[index++] = HWC2_DISPLAY_CAPABILITY_BRIGHTNESS;
+      *outNumCapabilities = index;
     }
     return HWC2_ERROR_NONE;
   }

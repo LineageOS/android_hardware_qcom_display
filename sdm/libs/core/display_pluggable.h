@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -47,7 +47,6 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
   virtual DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate, uint32_t *max_refresh_rate);
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate);
   virtual bool IsUnderscanSupported();
-  virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
   virtual DisplayError InitializeColorModes();
   virtual DisplayError SetColorMode(const std::string &color_mode);
   virtual DisplayError GetColorModeCount(uint32_t *mode_count);
