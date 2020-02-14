@@ -24,6 +24,7 @@
 #include <config/device_interface.h>
 
 #include <core/core_interface.h>
+#include <core/ipc_interface.h>
 #include <utils/locker.h>
 #include <qd_utils.h>
 #include <display_config.h>
@@ -33,6 +34,7 @@
 #include <future>   // NOLINT
 #include <map>
 #include <string>
+#include <memory>
 
 #include "hwc_callbacks.h"
 #include "hwc_layers.h"
@@ -568,6 +570,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   bool power_state_transition_[HWCCallbacks::kNumDisplays] = {};
   std::bitset<HWCCallbacks::kNumDisplays> display_ready_;
   bool secure_session_active_ = false;
+  std::shared_ptr<IPCIntf> ipc_intf_ = nullptr;
 };
 }  // namespace sdm
 

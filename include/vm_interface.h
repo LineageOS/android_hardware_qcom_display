@@ -36,6 +36,7 @@
 
 enum CommandId {
   kCmdExportDemuraBuffers = 0,
+  kCmdSetBacklight = 1,
   kCmdMax,
 };
 
@@ -74,10 +75,28 @@ typedef struct {
   };
 } RspExportDemuraBuffer;
 
+// Command and Response structure definitions to set backlight for a specified display
+typedef struct {
+  union {
+    struct {
+      float brightness;
+      DisplayType disp_type;
+    };
+    uint32_t reserve[128] = { 0 };
+  };
+} CmdSetBacklight;
+
+typedef struct {
+  union {
+    uint32_t reserve[128] = { 0 };
+  };
+} RspSetBacklight;
+
 struct Command : CommandHeader {
   Command() {}
   union {
     CmdExportDemuraBuffer cmd_export_demura_buf;
+    CmdSetBacklight cmd_set_backlight;
   };
 };
 
@@ -85,6 +104,7 @@ struct Response : ResponseHeader {
   Response() {}
   union {
     RspExportDemuraBuffer rsp_export_demura_buf;
+    RspSetBacklight rsp_set_backlight;
   };
 };
 

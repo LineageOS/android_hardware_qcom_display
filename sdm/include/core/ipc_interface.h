@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2018, 2020 The Linux Foundation. All rights reserved.
+* Copyright (c) 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -22,51 +22,30 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef __HW_EVENTS_INTERFACE_H__
-#define __HW_EVENTS_INTERFACE_H__
+#ifndef __IPC_INTERFACE_H__
+#define __IPC_INTERFACE_H__
 
-#include <private/hw_info_types.h>
-#include <inttypes.h>
-#include <utility>
-#include <vector>
+#include "private/generic_intf.h"
+#include "private/generic_payload.h"
 
 namespace sdm {
 
-class HWEventHandler;
-class HWInterface;
-
-enum HWEvent {
-  VSYNC = 0,
-  EXIT,
-  IDLE_NOTIFY,
-  CEC_READ_MESSAGE,
-  SHOW_BLANK_EVENT,
-  THERMAL_LEVEL,
-  IDLE_POWER_COLLAPSE,
-  PINGPONG_TIMEOUT,
-  PANEL_DEAD,
-  HW_RECOVERY,
-  HISTOGRAM,
-  BACKLIGHT_EVENT,
+enum IPCParams {
+  kIpcParamSetBacklight,
+  kIPCParamMax,
 };
 
-class HWEventsInterface {
- public:
-  virtual DisplayError Init(int display_id, DisplayType display_type, HWEventHandler *event_handler,
-                            const std::vector<HWEvent> &event_list, const HWInterface *hw_intf) = 0;
-  virtual DisplayError Deinit() = 0;
-  virtual DisplayError SetEventState(HWEvent event, bool enable, void *aux = nullptr) = 0;
-
-  static DisplayError Create(int display_id, DisplayType display_type,
-                             HWEventHandler *event_handler, const std::vector<HWEvent> &event_list,
-                             const HWInterface *hw_intf, HWEventsInterface **intf);
-  static DisplayError Destroy(HWEventsInterface *intf);
-
- protected:
-  virtual ~HWEventsInterface() { }
+enum IPCOps {
+  kIPCOpMax
 };
+
+struct IPCBacklightParams {
+  float brightness = 0.0f;
+  bool is_primary = false;
+};
+
+using IPCIntf = sdm::GenericIntf<IPCParams, IPCOps, GenericPayload>;
 
 }  // namespace sdm
 
-#endif  // __HW_EVENTS_INTERFACE_H__
-
+#endif  // __IPC_INTERFACE_H__

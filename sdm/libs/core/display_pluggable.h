@@ -71,6 +71,7 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
   void PingPongTimeout() override {}
   void PanelDead() override {}
   void HwRecovery(const HWRecoveryEvent sdm_event_code) override;
+  void HandleBacklightEvent(float brightness_level) override;
   void Histogram(int histogram_fd, uint32_t blob_id) override;
 
   void UpdateColorModes();

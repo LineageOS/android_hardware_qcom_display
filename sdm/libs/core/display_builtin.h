@@ -26,6 +26,7 @@
 #define __DISPLAY_BUILTIN_H__
 
 #include <core/dpps_interface.h>
+#include <core/ipc_interface.h>
 #include <private/extension_interface.h>
 #include <private/spr_intf.h>
 #include <private/panel_feature_property_intf.h>
@@ -100,10 +101,11 @@ class DppsInfo {
 class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
  public:
   DisplayBuiltIn(DisplayEventHandler *event_handler, HWInfoInterface *hw_info_intf,
-                 BufferAllocator *buffer_allocator, CompManager *comp_manager);
+                 BufferAllocator *buffer_allocator, CompManager *comp_manager,
+                 std::shared_ptr<IPCIntf> ipc_intf);
   DisplayBuiltIn(int32_t display_id, DisplayEventHandler *event_handler,
                  HWInfoInterface *hw_info_intf, BufferAllocator *buffer_allocator,
-                 CompManager *comp_manager);
+                 CompManager *comp_manager, std::shared_ptr<IPCIntf> ipc_intf);
   virtual ~DisplayBuiltIn();
 
   DisplayError Init() override;
@@ -121,6 +123,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate) override;
   DisplayError SetPanelBrightness(float brightness) override;
   DisplayError GetPanelBrightness(float *brightness) override;
+  DisplayError GetPanelBrightnessFromLevel(float level, float *brightness);
   DisplayError GetPanelMaxBrightness(uint32_t *max_brightness_level) override;
   DisplayError GetRefreshRate(uint32_t *refresh_rate) override;
   DisplayError SetDisplayDppsAdROI(void *payload) override;
@@ -152,6 +155,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError TeardownConcurrentWriteback(void) override;
   DisplayError ClearLUTs() override;
   void Histogram(int histogram_fd, uint32_t blob_id) override;
+  void HandleBacklightEvent(float brightness_level) override;
 
   // Implement the DppsPropIntf
   DisplayError DppsProcessOps(enum DppsOps op, void *payload, size_t size) override;
@@ -215,6 +219,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   bool enable_qsync_idle_ = false;
   bool pending_vsync_enable_ = false;
   QSyncMode active_qsync_mode_ = kQSyncModeNone;
+  std::shared_ptr<IPCIntf> ipc_intf_ = nullptr;
 };
 
 }  // namespace sdm

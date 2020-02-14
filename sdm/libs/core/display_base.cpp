@@ -2403,6 +2403,10 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
     }
     *needs_refresh = (hw_panel_info_.mode == kModeCommand);
     DisablePartialUpdateOneFrame();
+    err = hw_events_intf_->SetEventState(HWEvent::BACKLIGHT_EVENT, true);
+    if (err != kErrorNone) {
+      return err;
+    }
   } else if (secure_event == kTUITransitionPrepare) {
     DisplayState state = state_;
     err = SetDisplayState(kStateOff, true /* teardown */, &release_fence);
@@ -2435,6 +2439,10 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
     }
     *needs_refresh = (hw_panel_info_.mode == kModeCommand);
     DisablePartialUpdateOneFrame();
+    err = hw_events_intf_->SetEventState(HWEvent::BACKLIGHT_EVENT, false);
+    if (err != kErrorNone) {
+      return err;
+    }
   } else if (secure_event == kTUITransitionUnPrepare) {
     DisplayState state = kStateOff;
     if (GetPendingDisplayState(&state) == kErrorNone) {

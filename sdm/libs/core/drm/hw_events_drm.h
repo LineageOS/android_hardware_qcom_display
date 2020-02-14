@@ -32,6 +32,7 @@
 
 #include <drm_interface.h>
 #include <sys/poll.h>
+#include <sys/inotify.h>
 #include <map>
 #include <mutex>
 #include <string>
@@ -56,6 +57,7 @@ class HWEventsDRM : public HWEventsInterface {
 
  private:
   static const int kMaxStringLength = 1024;
+  static const int kMaxEventBufferLength = (kMaxStringLength * (sizeof(struct inotify_event) + 16));
 
   typedef void (HWEventsDRM::*EventParser)(char *);
 
@@ -79,6 +81,7 @@ class HWEventsDRM : public HWEventsInterface {
   void HandlePanelDead(char *data);
   void HandleHwRecovery(char *data);
   void HandleHistogram(char *data);
+  void HandleBacklightEvent(char *data);
   int SetHwRecoveryEvent(const uint32_t hw_event_code, HWRecoveryEvent *sdm_event_code);
   void PopulateHWEventData(const vector<HWEvent> &event_list);
   void WakeUpEventThread();
@@ -112,6 +115,10 @@ class HWEventsDRM : public HWEventsInterface {
   bool disable_hw_recovery_ = false;
   bool enable_hist_interrupt_ = false;
   uint32_t hw_recovery_index_ = UINT32_MAX;
+  std::mutex backlight_mutex_;
+  uint32_t backlight_event_index_ = UINT32_MAX;
+  std::string brightness_node_ = {};
+  int backlight_wd_ = -1;
 };
 
 }  // namespace sdm

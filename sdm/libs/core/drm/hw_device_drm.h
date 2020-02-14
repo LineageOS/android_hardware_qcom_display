@@ -69,6 +69,9 @@ class HWDeviceDRM : public HWInterface {
   void GetDRMDisplayToken(sde_drm::DRMDisplayToken *token) const;
   bool IsPrimaryDisplay() const { return hw_panel_info_.is_primary_panel; }
   virtual PanelFeaturePropertyIntf *GetPanelFeaturePropertyIntf() { return nullptr; }
+  virtual DisplayError GetPanelBrightnessBasePath(std::string *base_path) const {
+    return kErrorNotSupported;
+  }
 
  protected:
   // From HWInterface
@@ -145,9 +148,6 @@ class HWDeviceDRM : public HWInterface {
                                                     uint8_t *out_data);
   virtual DisplayError SetFrameTrigger(FrameTriggerMode mode) { return kErrorNotSupported; }
   virtual DisplayError SetBLScale(uint32_t level) { return kErrorNotSupported; }
-  virtual DisplayError GetPanelBrightnessBasePath(std::string *base_path) {
-    return kErrorNotSupported;
-  }
   virtual DisplayError SetBlendSpace(const PrimariesTransfer &blend_space);
   virtual DisplayError EnableSelfRefresh() { return kErrorNotSupported; }
   virtual DisplayError GetSupportedModeSwitch(uint32_t *allowed_mode_switch) {

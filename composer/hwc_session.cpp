@@ -45,6 +45,7 @@
 #include "hwc_buffer_allocator.h"
 #include "hwc_session.h"
 #include "hwc_debugger.h"
+#include "ipc_impl.h"
 
 #define __CLASS__ "HWCSession"
 
@@ -294,8 +295,11 @@ void HWCSession::InitSupportedDisplaySlots() {
     return;
   }
 
+  ipc_intf_ = std::make_shared<IPCImpl>(IPCImpl());
+  ipc_intf_->Init();
+
   DisplayError error = CoreInterface::CreateCore(&buffer_allocator_, nullptr,
-                                                 &socket_handler_, &core_intf_);
+                                                 &socket_handler_, ipc_intf_, &core_intf_);
   if (error != kErrorNone) {
     DLOGE("Failed to create CoreInterface");
     return;

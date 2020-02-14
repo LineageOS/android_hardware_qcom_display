@@ -246,6 +246,8 @@ void DisplayPluggable::HwRecovery(const HWRecoveryEvent sdm_event_code) {
 
 void DisplayPluggable::Histogram(int /* histogram_fd */, uint32_t /* blob_id */) {}
 
+void DisplayPluggable::HandleBacklightEvent(float /* brightness_level */) {}
+
 DisplayError DisplayPluggable::VSync(int64_t timestamp) {
   if (vsync_enable_) {
     DisplayEventVSync vsync;
