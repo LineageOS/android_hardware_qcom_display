@@ -10,7 +10,7 @@ LOCAL_HEADER_LIBRARIES        := display_headers
 LOCAL_CFLAGS                  := -fno-operator-names -fexceptions -Wno-unused-parameter -DLOG_TAG=\"SDM\" \
                                  $(common_flags)
 LOCAL_HW_INTF_PATH_1          := fb
-LOCAL_SHARED_LIBRARIES        := libdl libdisplaydebug libsdmutils
+LOCAL_SHARED_LIBRARIES        := libdl libdisplaydebug libsdmutils libutils
 
 ifneq ($(TARGET_IS_HEADLESS), true)
     LOCAL_CFLAGS              += -isystem external/libdrm

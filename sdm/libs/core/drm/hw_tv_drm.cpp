@@ -31,6 +31,7 @@
 #include <sys/time.h>
 #include <utils/debug.h>
 #include <utils/sys.h>
+#include <utils/Timers.h>
 #include <utils/formats.h>
 #include <drm_lib_loader.h>
 #include <drm_master.h>
@@ -54,7 +55,6 @@
 
 #define HDR_DISABLE 0
 #define HDR_ENABLE 1
-#define MIN_HDR_RESET_WAITTIME 2
 
 using drm_utils::DRMMaster;
 using drm_utils::DRMResMgr;
@@ -205,7 +205,7 @@ DisplayError HWTVDRM::Commit(HWLayers *hw_layers) {
 }
 
 DisplayError HWTVDRM::UpdateHDRMetaData(HWLayers *hw_layers) {
-  static struct timeval hdr_reset_start, hdr_reset_end;
+  static nsecs_t hdr_reset_start = 0;
   static bool reset_hdr_flag = false;
   const HWHDRLayerInfo &hdr_layer_info = hw_layers->info.hdr_layer_info;
   if (!hw_panel_info_.hdr_enabled) {
@@ -249,11 +249,11 @@ DisplayError HWTVDRM::UpdateHDRMetaData(HWLayers *hw_layers) {
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_HDR_METADATA, token_.conn_id, &hdr_metadata_);
     DumpHDRMetaData(hdr_layer_info.operation);
   } else if (hdr_layer_info.operation == HWHDRLayerInfo::kReset) {
+    hdr_reset_start = systemTime(SYSTEM_TIME_MONOTONIC);
     memset(&hdr_metadata_, 0, sizeof(hdr_metadata_));
     hdr_metadata_.hdr_supported = 1;
     hdr_metadata_.hdr_state = HDR_ENABLE;
     reset_hdr_flag = true;
-    gettimeofday(&hdr_reset_start, NULL);
 
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_HDR_METADATA, token_.conn_id, &hdr_metadata_);
     DumpHDRMetaData(hdr_layer_info.operation);
@@ -263,16 +263,13 @@ DisplayError HWTVDRM::UpdateHDRMetaData(HWLayers *hw_layers) {
     // playback. This timer calculates the 2 sec window after playback stops to stop sending HDR
     // metadata. This will be replaced with an idle timer implementation in the future.
     if (reset_hdr_flag) {
-      gettimeofday(&hdr_reset_end, NULL);
-      float hdr_reset_time_start = ((hdr_reset_start.tv_sec*1000) + (hdr_reset_start.tv_usec/1000));
-      float hdr_reset_time_end = ((hdr_reset_end.tv_sec*1000) + (hdr_reset_end.tv_usec/1000));
-
-      if (((hdr_reset_time_end-hdr_reset_time_start)/1000) >= MIN_HDR_RESET_WAITTIME) {
+      nsecs_t now = systemTime(SYSTEM_TIME_MONOTONIC);
+      static const nsecs_t kMaxWaitTime = us2ns(2000000);
+      if (((now - hdr_reset_start)) >= kMaxWaitTime) {
         memset(&hdr_metadata_, 0, sizeof(hdr_metadata_));
         hdr_metadata_.hdr_supported = 1;
         hdr_metadata_.hdr_state = HDR_DISABLE;
         reset_hdr_flag = false;
-
         drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_HDR_METADATA, token_.conn_id,
                                   &hdr_metadata_);
       }
