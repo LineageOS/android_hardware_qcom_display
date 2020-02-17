@@ -3253,7 +3253,7 @@ int32_t HWCSession::GetReadbackBufferAttributes(hwc2_display_t display, int32_t 
   }
 
   if (display != HWC_DISPLAY_PRIMARY) {
-    return HWC2_ERROR_BAD_DISPLAY;
+    return HWC2_ERROR_UNSUPPORTED;
   }
 
   HWCDisplay *hwc_display = hwc_display_[display];
@@ -3280,7 +3280,7 @@ int32_t HWCSession::SetReadbackBuffer(hwc2_display_t display, const native_handl
   }
 
   if (display != HWC_DISPLAY_PRIMARY) {
-    return HWC2_ERROR_BAD_DISPLAY;
+    return HWC2_ERROR_UNSUPPORTED;
   }
 
   int external_dpy_index = GetDisplayIndex(qdutils::DISPLAY_EXTERNAL);
@@ -3305,7 +3305,7 @@ int32_t HWCSession::GetReadbackBufferFence(hwc2_display_t display,
   }
 
   if (display != HWC_DISPLAY_PRIMARY) {
-    return HWC2_ERROR_BAD_DISPLAY;
+    return HWC2_ERROR_UNSUPPORTED;
   }
 
   return CallDisplayFunction(display, &HWCDisplay::GetReadbackBufferFence, release_fence);
