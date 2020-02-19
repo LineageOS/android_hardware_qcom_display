@@ -31,6 +31,8 @@
 #include <debug_handler.h>
 #include <assert.h>
 #include <string>
+#include <vector>
+#include <algorithm>
 
 #define __CLASS__ "Fence"
 
@@ -39,28 +41,36 @@ namespace sdm {
 #define ASSERT_IF_NO_BUFFER_SYNC(x) if (!x) { assert(false); }
 
 BufferSyncHandler* Fence::g_buffer_sync_handler_ = nullptr;
+std::vector<std::weak_ptr<Fence>> Fence::wps_;
 
-Fence::Fence(int fd) : fd_(fd) {
+Fence::Fence(int fd, const string &name) : fd_(fd), name_(name) {
 }
 
 Fence::~Fence() {
   close(fd_);
+
+  // erase all expired weak references.
+  wps_.erase(std::remove_if(wps_.begin(), wps_.end(), [](const std::weak_ptr<Fence> &wp) {
+    return wp.expired();
+  }), wps_.end());
 }
 
 void Fence::Set(BufferSyncHandler *buffer_sync_handler) {
   g_buffer_sync_handler_ = buffer_sync_handler;
 }
 
-shared_ptr<Fence> Fence::Create(int fd) {
+shared_ptr<Fence> Fence::Create(int fd, const string &name) {
   // Do not create Fence object for invalid fd, so that nullptr can be used for invalid fences.
   if (fd < 0) {
     return nullptr;
   }
 
-  shared_ptr<Fence> fence(new Fence(fd));
+  shared_ptr<Fence> fence(new Fence(fd, name));
   if (!fence) {
     close(fd);
   }
+
+  wps_.push_back(fence);
 
   return fence;
 }
@@ -80,10 +90,11 @@ shared_ptr<Fence> Fence::Merge(const shared_ptr<Fence> &fence1, const shared_ptr
   int fd1 = fence1 ? fence1->fd_ : -1;
   int fd2 = fence2 ? fence2->fd_ : -1;
   int merged = -1;
+  std::string name = "merged[" + to_string(fd1) + ", " + to_string(fd2) + "]";
 
   g_buffer_sync_handler_->SyncMerge(fd1, fd2, &merged);
 
-  return Create(merged);
+  return Create(merged, name);
 }
 
 DisplayError Fence::Wait(const shared_ptr<Fence> &fence) {
@@ -112,6 +123,25 @@ Fence::Status Fence::GetStatus(const shared_ptr<Fence> &fence) {
 
 string Fence::GetStr(const shared_ptr<Fence> &fence) {
   return std::to_string(Fence::Get(fence));
+}
+
+void Fence::Dump(std::ostringstream *os) {
+  ASSERT_IF_NO_BUFFER_SYNC(g_buffer_sync_handler_);
+
+  *os << "\n------------Active Fences Info---------";
+  for (auto &wp : wps_) {
+    *os << "\n";
+    shared_ptr<Fence> fence = wp.lock();
+    if (!fence) {
+      continue;
+    }
+    *os << "FD: " << fence->fd_;
+    *os << ", name: " << fence->name_;
+    *os << ", use_count: " << fence.use_count() - 1;   // Do not count wp lock reference
+    *os << ", ";
+    g_buffer_sync_handler_->GetSyncInfo(fence->fd_, os);
+  }
+  *os << "\n---------------------------------------\n";
 }
 
 Fence::ScopedRef::~ScopedRef() {
