@@ -25,7 +25,7 @@
 #else
 #include <vendor/display/config/1.0/IDisplayConfig.h>
 #endif
-#include <vendor/qti/hardware/display/composer/2.0/IQtiComposerClient.h>
+#include <vendor/qti/hardware/display/composer/3.0/IQtiComposerClient.h>
 
 #include <core/core_interface.h>
 #include <utils/locker.h>
@@ -51,6 +51,16 @@
 #include "hwc_buffer_sync_handler.h"
 #include "hwc_display_virtual_factory.h"
 
+using ::android::hardware::Return;
+using ::android::hardware::hidl_string;
+using android::hardware::hidl_handle;
+using ::android::hardware::hidl_vec;
+using ::android::sp;
+using ::android::hardware::Void;
+namespace composer_V2_4 = ::android::hardware::graphics::composer::V2_4;
+using HwcDisplayCapability = composer_V2_4::IComposerClient::DisplayCapability;
+using HwcDisplayConnectionType = composer_V2_4::IComposerClient::DisplayConnectionType;
+
 namespace sdm {
 
 #ifndef DISPLAY_CONFIG_VERSION_OPTIMAL
@@ -61,13 +71,7 @@ using vendor::display::config::V1_15::IDisplayQsyncCallback;
 using vendor::display::config::V1_0::IDisplayConfig;
 #endif
 
-using ::android::hardware::Return;
-using ::android::hardware::hidl_string;
-using android::hardware::hidl_handle;
-using ::android::hardware::hidl_vec;
-using ::android::sp;
-
-using vendor::qti::hardware::display::composer::V2_0::IQtiComposerClient;
+using vendor::qti::hardware::display::composer::V3_0::IQtiComposerClient;
 
 int32_t GetDataspaceFromColorMode(ColorMode mode);
 
@@ -201,8 +205,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   uint32_t GetMaxVirtualDisplayCount();
   int32_t GetDisplayIdentificationData(hwc2_display_t display, uint8_t *outPort,
                                        uint32_t *outDataSize, uint8_t *outData);
-  int32_t GetDisplayCapabilities(hwc2_display_t display, uint32_t *outNumCapabilities,
-                                 uint32_t *outCapabilities);
+  int32_t GetDisplayCapabilities(hwc2_display_t display,
+                                 hidl_vec<HwcDisplayCapability> *capabilities);
   int32_t GetDisplayBrightnessSupport(hwc2_display_t display, bool *outSupport);
   int32_t SetDisplayBrightness(hwc2_display_t display, float brightness);
   void WaitForResources(bool wait_for_resources, hwc2_display_t active_builtin_id,
@@ -210,8 +214,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
 
   // newly added
   int32_t GetDisplayType(hwc2_display_t display, int32_t *out_type);
-  int32_t GetDisplayAttribute(hwc2_display_t display, hwc2_config_t config,
-                              int32_t int_attribute, int32_t *out_value);
+  int32_t GetDisplayAttribute(hwc2_display_t display, hwc2_config_t config, HwcAttribute attribute,
+                              int32_t *out_value);
   int32_t GetActiveConfig(hwc2_display_t display, hwc2_config_t *out_config);
   int32_t GetColorModes(hwc2_display_t display, uint32_t *out_num_modes,
                         int32_t /*ColorMode*/ *int_out_modes);
@@ -239,6 +243,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int32_t SetCursorPosition(hwc2_display_t display, hwc2_layer_t layer, int32_t x, int32_t y);
   int32_t GetDataspaceSaturationMatrix(int32_t /*Dataspace*/ int_dataspace, float *out_matrix);
   int32_t SetDisplayBrightnessScale(const android::Parcel *input_parcel);
+  int32_t GetDisplayConnectionType(hwc2_display_t display, HwcDisplayConnectionType *type);
 
   // Layer functions
   int32_t SetLayerBuffer(hwc2_display_t display, hwc2_layer_t layer, buffer_handle_t buffer,
@@ -280,7 +285,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int32_t GetDozeSupport(hwc2_display_t display, int32_t *out_support);
   int32_t GetDisplayConfigs(hwc2_display_t display, uint32_t *out_num_configs,
                             hwc2_config_t *out_configs);
-  int GetVsyncPeriod(int disp);
+  int32_t GetVsyncPeriod(hwc2_display_t disp, uint32_t *vsync_period);
   void Refresh(hwc2_display_t display);
 
   static Locker locker_[HWCCallbacks::kNumDisplays];

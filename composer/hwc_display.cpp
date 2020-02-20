@@ -29,6 +29,7 @@
 #include <utils/formats.h>
 #include <utils/rect.h>
 #include <qd_utils.h>
+#include <vendor/qti/hardware/display/composer/3.0/IQtiComposerClient.h>
 
 #include <algorithm>
 #include <iomanip>
@@ -1047,7 +1048,7 @@ HWC2::Error HWCDisplay::GetDisplayConfigs(uint32_t *out_num_configs, hwc2_config
   return HWC2::Error::None;
 }
 
-HWC2::Error HWCDisplay::GetDisplayAttribute(hwc2_config_t config, HWC2::Attribute attribute,
+HWC2::Error HWCDisplay::GetDisplayAttribute(hwc2_config_t config, HwcAttribute attribute,
                                             int32_t *out_value) {
   if (variable_config_map_.find(config) == variable_config_map_.end()) {
     DLOGE("Get variable config failed");
@@ -1064,28 +1065,28 @@ HWC2::Error HWCDisplay::GetDisplayAttribute(hwc2_config_t config, HWC2::Attribut
   }
 
   switch (attribute) {
-    case HWC2::Attribute::VsyncPeriod:
+    case HwcAttribute::VSYNC_PERIOD:
       *out_value = INT32(variable_config.vsync_period_ns);
       break;
-    case HWC2::Attribute::Width:
+    case HwcAttribute::WIDTH:
       *out_value = INT32(variable_config.x_pixels);
       break;
-    case HWC2::Attribute::Height:
+    case HwcAttribute::HEIGHT:
       *out_value = INT32(variable_config.y_pixels);
       break;
-    case HWC2::Attribute::DpiX:
+    case HwcAttribute::DPI_X:
       *out_value = INT32(variable_config.x_dpi * 1000.0f);
       break;
-    case HWC2::Attribute::DpiY:
+    case HwcAttribute::DPI_Y:
       *out_value = INT32(variable_config.y_dpi * 1000.0f);
       break;
-    case HWC2::Attribute::ConfigGroup:
+    case HwcAttribute::CONFIG_GROUP:
       *out_value = GetDisplayConfigGroup(variable_config);
       break;
     default:
-      DLOGW("Spurious attribute type = %s", to_string(attribute).c_str());
+      DLOGW("Spurious attribute type = %s", composer_V2_4::toString(attribute).c_str());
       *out_value = -1;
-      return HWC2::Error::BadConfig;
+      return HWC2::Error::BadParameter;
   }
 
   return HWC2::Error::None;
