@@ -75,13 +75,16 @@ class HWInterface {
   virtual DisplayError Init() = 0;
   virtual DisplayError Deinit() = 0;
   virtual DisplayError GetActiveConfig(uint32_t *active_config) = 0;
+  virtual DisplayError SetActiveConfig(uint32_t active_config) = 0;
   virtual DisplayError GetNumDisplayAttributes(uint32_t *count) = 0;
   virtual DisplayError GetDisplayAttributes(uint32_t index,
                                             HWDisplayAttributes *display_attributes) = 0;
   virtual DisplayError GetHWPanelInfo(HWPanelInfo *panel_info) = 0;
   virtual DisplayError SetDisplayAttributes(uint32_t index) = 0;
+  virtual DisplayError SetConfigAttributes(uint32_t index, uint32_t w, uint32_t h) = 0;
   virtual DisplayError SetDisplayAttributes(const HWDisplayAttributes &display_attributes) = 0;
   virtual DisplayError GetConfigIndex(uint32_t mode, uint32_t *index) = 0;
+  virtual DisplayError GetConfigIndex(uint32_t width, uint32_t height, uint32_t *index) = 0;
   virtual DisplayError PowerOn() = 0;
   virtual DisplayError PowerOff() = 0;
   virtual DisplayError Doze() = 0;
@@ -106,7 +109,7 @@ class HWInterface {
   virtual DisplayError SetAutoRefresh(bool enable) = 0;
   virtual DisplayError SetS3DMode(HWS3DMode s3d_mode) = 0;
   virtual DisplayError SetScaleLutConfig(HWScaleLutInfo *lut_info) = 0;
-  virtual DisplayError SetMixerAttributes(const HWMixerAttributes &mixer_attributes) = 0;
+  virtual DisplayError SetMixerAttributes(HWMixerAttributes &mixer_attributes) = 0;
   virtual DisplayError GetMixerAttributes(HWMixerAttributes *mixer_attributes) = 0;
   virtual DisplayError SetDynamicDSIClock(uint64_t bitclk) = 0;
   virtual DisplayError GetDynamicDSIClock(uint64_t *bitclk) = 0;

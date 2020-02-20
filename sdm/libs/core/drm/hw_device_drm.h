@@ -58,6 +58,7 @@ class HWDeviceDRM : public HWInterface {
  protected:
   // From HWInterface
   virtual DisplayError GetActiveConfig(uint32_t *active_config);
+  virtual DisplayError SetActiveConfig(uint32_t active_config);
   virtual DisplayError GetNumDisplayAttributes(uint32_t *count);
   virtual DisplayError GetDisplayAttributes(uint32_t index,
                                             HWDisplayAttributes *display_attributes);
@@ -89,10 +90,12 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError SetAutoRefresh(bool enable) { return kErrorNone; }
   virtual DisplayError SetS3DMode(HWS3DMode s3d_mode);
   virtual DisplayError SetScaleLutConfig(HWScaleLutInfo *lut_info);
-  virtual DisplayError SetMixerAttributes(const HWMixerAttributes &mixer_attributes);
+  virtual DisplayError SetMixerAttributes(HWMixerAttributes &mixer_attributes);
   virtual DisplayError GetMixerAttributes(HWMixerAttributes *mixer_attributes);
   virtual DisplayError SetDynamicDSIClock(uint64_t bitclk);
   virtual DisplayError GetDynamicDSIClock(uint64_t *bitclk);
+  virtual DisplayError GetConfigIndex(uint32_t width, uint32_t height, uint32_t *index);
+  virtual DisplayError SetConfigAttributes(uint32_t index, uint32_t width, uint32_t height);
 
   enum {
     kHWEventVSync,

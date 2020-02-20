@@ -76,6 +76,7 @@ class HWHDMI : public HWDevice {
   virtual DisplayError GetNumDisplayAttributes(uint32_t *count);
   // Requirement to call this only after the first config has been explicitly set by client
   virtual DisplayError GetActiveConfig(uint32_t *active_config);
+  virtual DisplayError SetActiveConfig(uint32_t active_config);
   virtual DisplayError GetDisplayAttributes(uint32_t index,
                                             HWDisplayAttributes *display_attributes);
   virtual DisplayError GetHWScanInfo(HWScanInfo *scan_info);
@@ -84,6 +85,8 @@ class HWHDMI : public HWDevice {
   virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
   virtual DisplayError SetDisplayAttributes(uint32_t index);
   virtual DisplayError GetConfigIndex(uint32_t mode, uint32_t *index);
+  virtual DisplayError GetConfigIndex(uint32_t width, uint32_t height, uint32_t *index);
+  virtual DisplayError SetConfigAttributes(uint32_t index, uint32_t width, uint32_t height);
   virtual DisplayError Validate(HWLayers *hw_layers);
   virtual DisplayError Commit(HWLayers *hw_layers);
   virtual DisplayError SetS3DMode(HWS3DMode s3d_mode);

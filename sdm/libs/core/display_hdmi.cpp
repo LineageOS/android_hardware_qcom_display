@@ -27,12 +27,17 @@
 #include <map>
 #include <utility>
 #include <vector>
+#include <cmath>
 
 #include "display_hdmi.h"
 #include "hw_interface.h"
 #include "hw_info_interface.h"
 
 #define __CLASS__ "DisplayHDMI"
+
+#define FMT_RGB 1
+#define FMT_ONLY_YUV 2
+#define FMT_RGB_YUV 3
 
 namespace sdm {
 
@@ -66,12 +71,62 @@ DisplayError DisplayHDMI::Init() {
   if (error != kErrorNone) {
     HWInterface::Destroy(hw_intf_);
   }
-
+  panel_config_index_ = active_mode_index;
   error = DisplayBase::Init();
   if (error != kErrorNone) {
+    DisplayBase::Deinit();
     HWInterface::Destroy(hw_intf_);
     return error;
   }
+
+  HWDisplayAttributes display_attributes = {};
+  hw_intf_->GetDisplayAttributes(active_mode_index, &display_attributes);
+
+  uint32_t display_width = display_attributes.x_pixels;
+  uint32_t display_height = display_attributes.y_pixels;
+  uint32_t index = 0;
+  bool dest_scale = false;
+  HWDisplayInterfaceInfo hw_disp_info = {};
+  hw_info_intf_->GetFirstDisplayInterfaceType(&hw_disp_info);
+  if (hw_disp_info.type == kHDMI) {
+    dest_scale = (mixer_attributes_.width != display_width ||
+                  mixer_attributes_.height != display_height);
+  }
+
+  if (dest_scale) {
+    // When DS is enabled SDM clients should see active config equal to mixer resolution.
+    // active config = mixer config  // if DS is enabled
+    error = hw_intf_->GetConfigIndex(mixer_attributes_.width, mixer_attributes_.height, &index);
+    if (error !=kErrorNone) {
+      // If mixer resolution does not match with any display resolution supported by TV,
+      // then use second best config as mixer resolution.
+      uint32_t closest_config_index = GetClosestConfig(mixer_attributes_.width,
+                                                       mixer_attributes_.height);
+      if (active_mode_index == closest_config_index) {
+        dest_scale_enabled_ = false;
+      } else {
+        dest_scale_enabled_ = true;
+      }
+      hw_intf_->SetActiveConfig(closest_config_index);
+      mixer_config_index_ = closest_config_index;
+      HWDisplayAttributes display_attributes = {};
+      hw_intf_->GetDisplayAttributes(closest_config_index, &display_attributes);
+      mixer_attributes_.width = display_attributes.x_pixels;
+      mixer_attributes_.height = display_attributes.y_pixels;
+      hw_intf_->SetMixerAttributes(mixer_attributes_);
+      hw_intf_->SetConfigAttributes(mixer_config_index_, mixer_attributes_.width,
+                                    mixer_attributes_.height);
+    } else {
+      hw_intf_->SetActiveConfig(index);
+      mixer_config_index_ = index;
+      dest_scale_enabled_ = true;
+    }
+  }
+  if (dest_scale_enabled_) {
+    DLOGI("DS enabled. User config = %d",mixer_config_index_);
+  }
+  DLOGI("Mixer wxh = %dx%d Display wxh= %dx%d",mixer_attributes_.width, mixer_attributes_.height,
+         display_width,display_height);
 
   GetScanSupport();
   underscan_supported_ = (scan_support_ == kScanAlwaysUnderscanned) || (scan_support_ == kScanBoth);
@@ -87,7 +142,12 @@ DisplayError DisplayHDMI::Init() {
   s3d_format_to_mode_.insert(std::pair<LayerBufferS3DFormat, HWS3DMode>
                             (kS3dFormatFramePacking, kS3DModeFP));
 
-  error = HWEventsInterface::Create(INT(display_type_), this, event_list_, &hw_events_intf_);
+  if (hw_disp_info.type == kHDMI) {
+    error = HWEventsInterface::Create(kPrimary, this, event_list_, &hw_events_intf_);
+  } else {
+    error = HWEventsInterface::Create(INT(display_type_), this, event_list_, &hw_events_intf_);
+  }
+
   if (error != kErrorNone) {
     DisplayBase::Deinit();
     HWInterface::Destroy(hw_intf_);
@@ -105,7 +165,9 @@ DisplayError DisplayHDMI::Prepare(LayerStack *layer_stack) {
   uint32_t display_width = display_attributes_.x_pixels;
   uint32_t display_height = display_attributes_.y_pixels;
 
-  if (NeedsMixerReconfiguration(layer_stack, &new_mixer_width, &new_mixer_height)) {
+  if (dest_scale_enabled_ && NeedsMixerReconfiguration(layer_stack, &new_mixer_width,
+      &new_mixer_height)) {
+    CheckMinMixerResolution(&new_mixer_width, &new_mixer_height);
     error = ReconfigureMixer(new_mixer_width, new_mixer_height);
     if (error != kErrorNone) {
       ReconfigureMixer(display_width, display_height);
@@ -160,16 +222,44 @@ DisplayError DisplayHDMI::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level)
   return hw_intf_->OnMinHdcpEncryptionLevelChange(min_enc_level);
 }
 
+uint32_t DisplayHDMI::GetClosestConfig(uint32_t width, uint32_t height) {
+  if ((UINT32_MAX / width < height) || (UINT32_MAX / height < width)) {
+    //uint overflow
+    return panel_config_index_;
+  }
+  uint32_t num_modes = 0, index = 0;
+  hw_intf_->GetNumDisplayAttributes(&num_modes);
+  uint32_t area = width * height;
+  std::vector<uint32_t> area_modes(num_modes);
+  // Get display attribute for each mode
+  std::vector<HWDisplayAttributes> attrib(num_modes);
+  for (index = 0; index < num_modes; index++) {
+    hw_intf_->GetDisplayAttributes(index, &attrib[index]);
+    area_modes[index] = attrib[index].y_pixels * attrib[index].x_pixels;
+  }
+  uint32_t least_area_diff = display_attributes_.x_pixels*display_attributes_.y_pixels;
+  uint32_t least_diff_index = panel_config_index_;
+  for (index = 0; index < num_modes; index++) {
+    if (abs(INT(area_modes[index]) - INT(area)) < INT(least_area_diff)) {
+      least_diff_index = index;
+      least_area_diff = UINT32(abs(INT(area_modes[index]) - INT(area)));
+    }
+  }
+  DLOGV("Closest config index = %d",least_diff_index);
+  return least_diff_index;
+}
+
 uint32_t DisplayHDMI::GetBestConfig(HWS3DMode s3d_mode) {
   uint32_t best_index = 0, index;
   uint32_t num_modes = 0;
 
   hw_intf_->GetNumDisplayAttributes(&num_modes);
-
+  DLOGI("Number of modes = %d",num_modes);
   // Get display attribute for each mode
   std::vector<HWDisplayAttributes> attrib(num_modes);
   for (index = 0; index < num_modes; index++) {
     hw_intf_->GetDisplayAttributes(index, &attrib[index]);
+    DLOGI("Index = %d. wxh = %dx%d",index, attrib[index].x_pixels, attrib[index].y_pixels);
   }
 
   // Select best config for s3d_mode. If s3d is not enabled, s3d_mode is kS3DModeNone
@@ -184,16 +274,30 @@ uint32_t DisplayHDMI::GetBestConfig(HWS3DMode s3d_mode) {
       if (!attrib[index].s3d_config[s3d_mode])
         continue;
 
-      // From the available configs, select the best
-      // Ex: 1920x1080@60Hz is better than 1920x1080@30 and 1920x1080@30 is better than 1280x720@60
-      if (attrib[index].y_pixels > attrib[best_index].y_pixels) {
+      uint32_t best_clock_khz = attrib[best_index].pixel_formats == FMT_ONLY_YUV ?
+               attrib[best_index].clock_khz/2 : attrib[best_index].clock_khz;
+      uint32_t current_clock_khz = attrib[index].pixel_formats == FMT_ONLY_YUV ?
+               attrib[index].clock_khz/2 : attrib[index].clock_khz;
+      if (current_clock_khz > best_clock_khz) {
+        DLOGI("Best index = %d .Best pixel clock = %d .Previous best was %d",
+              index,current_clock_khz,best_clock_khz);
         best_index = UINT32(index);
-      } else if (attrib[index].y_pixels == attrib[best_index].y_pixels) {
+      } else if (current_clock_khz == best_clock_khz) {
         if (attrib[index].x_pixels > attrib[best_index].x_pixels) {
+          DLOGI("Best index = %d .Best xpixel  = %d .Previous best was %d",
+                index,attrib[index].x_pixels,attrib[best_index].x_pixels);
           best_index = UINT32(index);
         } else if (attrib[index].x_pixels == attrib[best_index].x_pixels) {
-          if (attrib[index].vsync_period_ns < attrib[best_index].vsync_period_ns) {
+          if (attrib[index].y_pixels > attrib[best_index].y_pixels) {
+            DLOGI("Best index = %d .Best ypixel  = %d .Previous best was %d",
+                   index,attrib[index].y_pixels,attrib[best_index].y_pixels);
             best_index = UINT32(index);
+          } else if (attrib[index].y_pixels == attrib[best_index].y_pixels) {
+            if (attrib[index].vsync_period_ns < attrib[best_index].vsync_period_ns) {
+              DLOGI("Best index = %d .Best vsync_period  = %d .Previous best was %d",
+                    index,attrib[index].vsync_period_ns,attrib[best_index].vsync_period_ns);
+              best_index = UINT32(index);
+            }
           }
         }
       }

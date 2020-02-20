@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -153,6 +153,10 @@ DisplayError HWDevice::SetDisplayAttributes(const HWDisplayAttributes &display_a
 }
 
 DisplayError HWDevice::GetConfigIndex(uint32_t mode, uint32_t *index) {
+  return kErrorNone;
+}
+
+DisplayError HWDevice::GetConfigIndex(uint32_t width, uint32_t height, uint32_t *index) {
   return kErrorNone;
 }
 
@@ -1357,17 +1361,37 @@ DisplayError HWDevice::SetScaleLutConfig(HWScaleLutInfo *lut_info) {
   return kErrorNone;
 }
 
-DisplayError HWDevice::SetMixerAttributes(const HWMixerAttributes &mixer_attributes) {
+DisplayError HWDevice::SetMixerAttributes(HWMixerAttributes &mixer_attributes) {
+
   if (!hw_resource_.hw_dest_scalar_info.count) {
     return kErrorNotSupported;
   }
+  uint32_t align_x = display_attributes_.is_device_split ? 4 : 2;
+  uint32_t align_y = 2;
 
-  if (mixer_attributes.width > display_attributes_.x_pixels ||
-      mixer_attributes.height > display_attributes_.y_pixels) {
-    DLOGW_IF(kTagDriverConfig, "Input resolution exceeds display resolution! input: res %dx%d "\
-             "display: res %dx%d", mixer_attributes.width, mixer_attributes.height,
-             display_attributes_.x_pixels, display_attributes_.y_pixels);
-    return kErrorNotSupported;
+  float scale_x = FLOAT(display_attributes_.x_pixels) / FLOAT(mixer_attributes.width);
+  float scale_y = FLOAT(display_attributes_.y_pixels) / FLOAT(mixer_attributes.height);
+  float max_scale_up = hw_resource_.hw_dest_scalar_info.max_scale_up;
+
+  if (scale_x > max_scale_up) {
+    DLOGW_IF(kTagDriverConfig, "Up scaling ratio exceeds for destination scalar upscale " \
+             "limit scale_x %f  max_scale_up %f", scale_x, max_scale_up);
+    mixer_attributes.width = UINT32(FLOAT(display_attributes_.x_pixels) / max_scale_up);
+  }
+  if (scale_y > max_scale_up) {
+    DLOGW_IF(kTagDriverConfig, "Up scaling ratio exceeds for destination scalar upscale " \
+             "limit scale_y %f  max_scale_up %f", scale_y, max_scale_up);
+    mixer_attributes.height = UINT32(FLOAT(display_attributes_.y_pixels) / max_scale_up);
+  }
+  if (mixer_attributes.width > display_attributes_.x_pixels) {
+    mixer_attributes.width = display_attributes_.x_pixels;
+    DLOGW_IF(kTagDriverConfig, "Input mixer width exceeds display width! input: res %d "\
+             "display: res %d", mixer_attributes.width, display_attributes_.x_pixels);
+  }
+  if(mixer_attributes.height > display_attributes_.y_pixels) {
+    mixer_attributes.height = display_attributes_.y_pixels;
+    DLOGW_IF(kTagDriverConfig, "Input mixer height exceeds display height! input: res %d "\
+             "display: res %d", mixer_attributes.height, display_attributes_.y_pixels);
   }
 
   uint32_t max_input_width = hw_resource_.hw_dest_scalar_info.max_input_width;
@@ -1378,7 +1402,7 @@ DisplayError HWDevice::SetMixerAttributes(const HWMixerAttributes &mixer_attribu
   if (mixer_attributes.width > max_input_width) {
     DLOGW_IF(kTagDriverConfig, "Input width exceeds width limit! input_width %d width_limit %d",
              mixer_attributes.width, max_input_width);
-    return kErrorNotSupported;
+    mixer_attributes.width = max_input_width;
   }
 
   float mixer_aspect_ratio = FLOAT(mixer_attributes.width) / FLOAT(mixer_attributes.height);
@@ -1389,16 +1413,43 @@ DisplayError HWDevice::SetMixerAttributes(const HWMixerAttributes &mixer_attribu
     DLOGW_IF(kTagDriverConfig, "Aspect ratio mismatch! input: res %dx%d display: res %dx%d",
              mixer_attributes.width, mixer_attributes.height, display_attributes_.x_pixels,
              display_attributes_.y_pixels);
-    return kErrorNotSupported;
-  }
+    uint32_t new_mixer_width = FloorToMultipleOf(UINT32((display_aspect_ratio) *
+                                                 mixer_attributes.height), align_x);
 
-  float scale_x = FLOAT(display_attributes_.x_pixels) / FLOAT(mixer_attributes.width);
-  float scale_y = FLOAT(display_attributes_.y_pixels) / FLOAT(mixer_attributes.height);
-  float max_scale_up = hw_resource_.hw_dest_scalar_info.max_scale_up;
-  if (scale_x > max_scale_up || scale_y > max_scale_up) {
-    DLOGW_IF(kTagDriverConfig, "Up scaling ratio exceeds for destination scalar upscale " \
-             "limit scale_x %f scale_y %f max_scale_up %f", scale_x, scale_y, max_scale_up);
-    return kErrorNotSupported;
+    if (new_mixer_width > max_input_width || new_mixer_width > display_attributes_.x_pixels) {
+      uint32_t new_mixer_height = FloorToMultipleOf(UINT32(FLOAT(mixer_attributes.width) /
+                                  display_aspect_ratio), align_y);
+      if (new_mixer_height > display_attributes_.y_pixels) {
+        mixer_attributes.width = display_attributes_.x_pixels;
+        mixer_attributes.height = display_attributes_.y_pixels;
+      } else {
+        mixer_attributes.height = new_mixer_height;
+        mixer_aspect_ratio = FLOAT(mixer_attributes.width) / FLOAT(mixer_attributes.height);
+        if (display_aspect_ratio != mixer_aspect_ratio) {
+          uint32_t new_mixer_width = FloorToMultipleOf(UINT32((display_aspect_ratio) *
+                                                      mixer_attributes.height), align_x);
+          if (new_mixer_width > max_input_width || new_mixer_width > display_attributes_.x_pixels) {
+            mixer_attributes.width = display_attributes_.x_pixels;
+            mixer_attributes.height = display_attributes_.y_pixels;
+          } else {
+            mixer_attributes.width = new_mixer_width;
+          }
+        }
+      }
+    } else {
+      mixer_attributes.width = new_mixer_width;
+      mixer_aspect_ratio = FLOAT(mixer_attributes.width) / FLOAT(mixer_attributes.height);
+      if (display_aspect_ratio != mixer_aspect_ratio) {
+        uint32_t new_mixer_height = FloorToMultipleOf(UINT32(FLOAT(mixer_attributes.width) /
+                                                      display_aspect_ratio), align_y);
+        if (new_mixer_height > display_attributes_.y_pixels) {
+          mixer_attributes.width = display_attributes_.x_pixels;
+          mixer_attributes.height = display_attributes_.y_pixels;
+        } else {
+           mixer_attributes.height = new_mixer_height;
+        }
+      }
+    }
   }
 
   float mixer_split_ratio = FLOAT(mixer_attributes_.split_left) / FLOAT(mixer_attributes_.width);
@@ -1409,6 +1460,7 @@ DisplayError HWDevice::SetMixerAttributes(const HWMixerAttributes &mixer_attribu
     mixer_attributes_.split_left = UINT32(FLOAT(mixer_attributes.width) * mixer_split_ratio);
   }
 
+  DLOGV_IF(kTagDriverConfig, "New mixer wxh = %dx%d", mixer_attributes_.width, mixer_attributes_.height);
   return kErrorNone;
 }
 
@@ -1424,6 +1476,10 @@ DisplayError HWDevice::GetMixerAttributes(HWMixerAttributes *mixer_attributes) {
 
 DisplayError HWDevice::SetDynamicDSIClock(uint64_t bitclk) {
   return kErrorNotSupported;
+}
+
+DisplayError HWDevice::SetConfigAttributes(uint32_t index, uint32_t width, uint32_t height) {
+  return kErrorNone;
 }
 
 DisplayError HWDevice::GetDynamicDSIClock(uint64_t *bitclk) {

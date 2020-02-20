@@ -56,6 +56,7 @@ class DisplayHDMI : public DisplayBase, HWEventHandler {
 
  private:
   uint32_t GetBestConfig(HWS3DMode s3d_mode);
+  uint32_t GetClosestConfig(uint32_t width, uint32_t height);
   void GetScanSupport();
   void SetS3DMode(LayerStack *layer_stack);
 
