@@ -342,11 +342,53 @@ Return<void> QtiMapperExtensions::getSurfaceMetadata(void *buffer, getSurfaceMet
 Return<void> QtiMapperExtensions::getFormatLayout(int32_t format, uint64_t usage, int32_t flags,
                                                   int32_t width, int32_t height,
                                                   getFormatLayout_cb hidl_cb) {
-  ALOGD_IF(DEBUG, "%s: Input parameters - wxh: %dx%d usage: 0x%" PRIu64 " format: %d flags: %d",
-           __FUNCTION__, width, height, usage, format, flags);
+  ALOGD_IF(DEBUG, "%s: Input parameters - wxh: %dx%d usage: 0x%" PRIu64 " format: %d", __FUNCTION__,
+           width, height, usage, format);
   auto err = Error::NONE;
   hidl_vec<PlaneLayout> plane_info;
+  unsigned int alignedw = 0, alignedh = 0;
+  int plane_count = 0;
   uint64_t size = 0;
+  int custom_format = gralloc::GetImplDefinedFormat(usage, format);
+  BufferInfo info(width, height, custom_format, usage);
+  gralloc::GetAlignedWidthAndHeight(info, &alignedw, &alignedh);
+  size = gralloc::GetSize(info, alignedw, alignedh);
+  gralloc::PlaneLayoutInfo plane_layout[8] = {};
+  ALOGD_IF(DEBUG, "%s: Aligned width and height - wxh: %ux%u custom_format = %d", __FUNCTION__,
+           alignedw, alignedh, custom_format);
+  if (gralloc::IsYuvFormat(custom_format)) {
+    gralloc::GetYUVPlaneInfo(info, custom_format, alignedw, alignedh, flags, &plane_count,
+                             plane_layout);
+  } else if (gralloc::IsUncompressedRGBFormat(custom_format) ||
+             gralloc::IsCompressedRGBFormat(custom_format)) {
+    gralloc::GetRGBPlaneInfo(info, custom_format, alignedw, alignedh, flags, &plane_count,
+                             plane_layout);
+  } else {
+    err = Error::BAD_BUFFER;
+    hidl_cb(err, size, plane_info);
+    return Void();
+  }
+  ALOGD_IF(DEBUG, "%s: Number of plane - %d, custom_format - %d", __FUNCTION__, plane_count,
+           custom_format);
+  plane_info.resize(plane_count);
+  for (int i = 0; i < plane_count; i++) {
+    plane_info[i].component = plane_layout[i].component;
+    plane_info[i].h_subsampling = plane_layout[i].h_subsampling;
+    plane_info[i].v_subsampling = plane_layout[i].v_subsampling;
+    plane_info[i].offset = plane_layout[i].offset;
+    plane_info[i].pixel_increment = plane_layout[i].step;
+    plane_info[i].stride = plane_layout[i].stride;
+    plane_info[i].stride_bytes = plane_layout[i].stride_bytes;
+    plane_info[i].scanlines = plane_layout[i].scanlines;
+    plane_info[i].size = plane_layout[i].size;
+    ALOGD_IF(DEBUG, "%s: plane info: component - %d", __FUNCTION__, plane_info[i].component);
+    ALOGD_IF(DEBUG, "h_subsampling - %u, v_subsampling - %u, offset - %u, pixel_increment - %d",
+             plane_info[i].h_subsampling, plane_info[i].v_subsampling, plane_info[i].offset,
+             plane_info[i].pixel_increment);
+    ALOGD_IF(DEBUG, "stride_pixel - %d, stride_bytes - %d, scanlines - %d, size - %u",
+             plane_info[i].stride, plane_info[i].stride_bytes, plane_info[i].scanlines,
+             plane_info[i].size);
+  }
   hidl_cb(err, size, plane_info);
   return Void();
 }

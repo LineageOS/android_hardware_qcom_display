@@ -624,7 +624,6 @@ DisplayError CompManager::SetColorModesInfo(Handle display_ctx,
   return kErrorNone;
 }
 
-// KEYSTONE(Ie27b7afc9be7e48e1c9d75950ccff891ba9002f4,b/147776775)
 std::string CompManager::StringDisplayList(const std::set<int32_t> &displays) {
   std::string displays_str;
   for (auto disps : displays) {

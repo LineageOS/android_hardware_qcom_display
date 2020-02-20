@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -1297,6 +1297,8 @@ hwc2_function_pointer_t HWCSession::GetFunction(struct hwc2_device *device,
       return AsFP<HWC2_PFN_GET_DISPLAY_CAPABILITIES>(HWCSession::GetDisplayCapabilities);
     case HWC2::FunctionDescriptor::GetDisplayBrightnessSupport:
       return AsFP<HWC2_PFN_GET_DISPLAY_BRIGHTNESS_SUPPORT>(HWCSession::GetDisplayBrightnessSupport);
+    case HWC2::FunctionDescriptor::SetDisplayBrightness:
+      return AsFP<HWC2_PFN_SET_DISPLAY_BRIGHTNESS>(SetDisplayBrightness);
     default:
       DLOGD("Unknown/Unimplemented function descriptor: %d (%s)", int_descriptor,
             to_string(descriptor).c_str());
@@ -2398,8 +2400,8 @@ void HWCSession::UEventHandler(const char *uevent_data, int length) {
     DLOGI("Uevent = %s, status = %s, MST_HOTPLUG = %s, bpp = %d, pattern = %d", uevent_data,
           str_status ? str_status : "NULL", str_mst ? str_mst : "NULL", hpd_bpp_, hpd_pattern_);
 
-    hwc2_display_t virtual_display_index =
-        (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
+    int virtual_display_index =
+        GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
 
     std::bitset<kSecureMax> secure_sessions = 0;
     hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
@@ -2407,7 +2409,8 @@ void HWCSession::UEventHandler(const char *uevent_data, int length) {
       Locker::ScopeLock lock_a(locker_[active_builtin_disp_id]);
       hwc_display_[active_builtin_disp_id]->GetActiveSecureSession(&secure_sessions);
     }
-    if (secure_sessions[kSecureDisplay] || hwc_display_[virtual_display_index]) {
+    if (secure_sessions[kSecureDisplay] ||
+        ((virtual_display_index != -1) && (hwc_display_[virtual_display_index]))) {
       // Defer hotplug handling.
       SCOPE_LOCK(pluggable_handler_lock_);
       DLOGI("Marking hotplug pending...");
@@ -3144,8 +3147,9 @@ void HWCSession::HandleHotplugPending(hwc2_display_t disp_id, int retire_fence) 
       }
     }
     // Handle connect/disconnect hotplugs if secure session is not present.
-    hwc2_display_t virtual_display_idx = (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
-    if (!hwc_display_[virtual_display_idx] && kHotPlugEvent == hotplug_pending_event_) {
+    int virtual_display_idx = GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
+    if (!(virtual_display_idx != -1 && hwc_display_[virtual_display_idx]) &&
+        kHotPlugEvent == hotplug_pending_event_) {
       // Handle deferred hotplug event.
       int32_t err = pluggable_handler_lock_.TryLock();
       if (!err) {
@@ -3263,7 +3267,7 @@ int32_t HWCSession::GetDisplayCapabilities(hwc2_device_t *device, hwc2_display_t
   if (!outCapabilities) {
     *outNumCapabilities = 0;
     if (isBuiltin) {
-      *outNumCapabilities = 2;
+      *outNumCapabilities = 3;
     }
     return HWC2_ERROR_NONE;
   } else {
@@ -3271,10 +3275,16 @@ int32_t HWCSession::GetDisplayCapabilities(hwc2_device_t *device, hwc2_display_t
       // TODO(user): Handle SKIP_CLIENT_COLOR_TRANSFORM based on DSPP availability
       outCapabilities[0] = HWC2_DISPLAY_CAPABILITY_SKIP_CLIENT_COLOR_TRANSFORM;
       outCapabilities[1] = HWC2_DISPLAY_CAPABILITY_DOZE;
-      *outNumCapabilities = 2;
+      outCapabilities[2] = HWC2_DISPLAY_CAPABILITY_BRIGHTNESS;
+      *outNumCapabilities = 3;
     }
     return HWC2_ERROR_NONE;
   }
+}
+
+int32_t HWCSession::SetDisplayBrightness(hwc2_device_t *device, hwc2_display_t display,
+                                         float brightness) {
+  return INT32(HWC2::Error::None);
 }
 
 int32_t HWCSession::GetDisplayBrightnessSupport(hwc2_device_t *device, hwc2_display_t display,
@@ -3295,7 +3305,7 @@ int32_t HWCSession::GetDisplayBrightnessSupport(hwc2_device_t *device, hwc2_disp
   }
   // This function isn't actually used in the framework
   // The capability is used instead
-  *outSupport = false;
+  *outSupport = (hwc_display->GetDisplayClass() == DISPLAY_CLASS_BUILTIN);
   return HWC2_ERROR_NONE;
 }
 

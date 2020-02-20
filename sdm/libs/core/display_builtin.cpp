@@ -54,6 +54,10 @@ DisplayBuiltIn::DisplayBuiltIn(int32_t display_id, DisplayEventHandler *event_ha
   : DisplayBase(display_id, kBuiltIn, event_handler, kDeviceBuiltIn, buffer_sync_handler,
                 buffer_allocator, comp_manager, hw_info_intf) {}
 
+DisplayBuiltIn::~DisplayBuiltIn() {
+  CloseFd(&previous_retire_fence_);
+}
+
 DisplayError DisplayBuiltIn::Init() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   int32_t disable_defer_power_state = 0;
@@ -204,6 +208,16 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
     }
   }
 
+  if (vsync_enable_) {
+    DTRACE_BEGIN("RegisterVsync");
+    // wait for previous frame's retire fence to signal.
+    buffer_sync_handler_->SyncWait(previous_retire_fence_);
+
+    // Register for vsync and then commit the frame.
+    hw_events_intf_->SetEventState(HWEvent::VSYNC, true);
+    DTRACE_END();
+  }
+
   error = DisplayBase::Commit(layer_stack);
   if (error != kErrorNone) {
     return error;
@@ -240,6 +254,9 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
   }
 
   first_cycle_ = false;
+
+  CloseFd(&previous_retire_fence_);
+  previous_retire_fence_ = Sys::dup_(layer_stack->retire_fence_fd);
 
   return error;
 }
