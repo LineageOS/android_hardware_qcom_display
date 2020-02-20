@@ -29,13 +29,13 @@
 #include <hidl/LegacySupport.h>
 #include "QtiComposer.h"
 
+using android::ProcessState;
+using android::sp;
 using android::hardware::configureRpcThreadpool;
 using android::hardware::joinRpcThreadpool;
-using android::ProcessState;
-using vendor::qti::hardware::display::composer::V2_1::implementation::QtiComposer;
-using vendor::qti::hardware::display::composer::V2_1::IQtiComposer;
 using android::hardware::graphics::composer::V2_3::IComposer;
-using android::sp;
+using vendor::qti::hardware::display::composer::V3_0::IQtiComposer;
+using vendor::qti::hardware::display::composer::V3_0::implementation::QtiComposer;
 
 int main(int, char **) {
   // TODO(user): double-check for SCHED_FIFO logic

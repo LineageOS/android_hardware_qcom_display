@@ -47,6 +47,8 @@ using android::hardware::graphics::common::V1_2::ColorMode;
 using android::hardware::graphics::common::V1_1::Dataspace;
 using android::hardware::graphics::common::V1_1::RenderIntent;
 using android::hardware::graphics::common::V1_2::Hdr;
+namespace composer_V2_4 = ::android::hardware::graphics::composer::V2_4;
+using HwcAttribute = composer_V2_4::IComposerClient::Attribute;
 
 namespace sdm {
 
@@ -318,7 +320,7 @@ class HWCDisplay : public DisplayEventHandler {
     return HWC2::Error::Unsupported;
   }
   virtual HWC2::Error GetDisplayConfigs(uint32_t *out_num_configs, hwc2_config_t *out_configs);
-  virtual HWC2::Error GetDisplayAttribute(hwc2_config_t config, HWC2::Attribute attribute,
+  virtual HWC2::Error GetDisplayAttribute(hwc2_config_t config, HwcAttribute attribute,
                                           int32_t *out_value);
   virtual HWC2::Error GetClientTargetSupport(uint32_t width, uint32_t height, int32_t format,
                                              int32_t dataspace);

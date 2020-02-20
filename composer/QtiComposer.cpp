@@ -35,7 +35,7 @@ namespace qti {
 namespace hardware {
 namespace display {
 namespace composer {
-namespace V2_1 {
+namespace V3_0 {
 namespace implementation {
 
 QtiComposerClient* QtiComposerClient::qti_composerclient_instance_ = nullptr;
@@ -124,6 +124,18 @@ Return<void> QtiComposer::createClient_2_3(createClient_2_3_cb _hidl_cb) {
   return Void();
 }
 
+// Methods from ::android::hardware::graphics::composer::V2_4::IComposer follow.
+Return<void> QtiComposer::createClient_2_4(createClient_2_4_cb _hidl_cb) {
+  sp<QtiComposerClient> composer_client = QtiComposerClient::CreateQtiComposerClientInstance();
+  if (!composer_client) {
+    _hidl_cb(composer_V2_4::Error::NO_RESOURCES, nullptr);
+    return Void();
+  }
+
+  _hidl_cb(composer_V2_4::Error::NONE, composer_client);
+  return Void();
+}
+
 QtiComposer *QtiComposer::initialize() {
   auto error = HWCSession::GetInstance()->Init();
   if (error) {
@@ -141,7 +153,7 @@ IQtiComposer* HIDL_FETCH_IQtiComposer(const char* /* name */) {
 }
 
 }  // namespace implementation
-}  // namespace V2_1
+}  // namespace V3_0
 }  // namespace composer
 }  // namespace display
 }  // namespace hardware
