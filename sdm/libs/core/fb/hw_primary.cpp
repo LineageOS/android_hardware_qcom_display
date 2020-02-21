@@ -737,5 +737,9 @@ DisplayError HWPrimary::SetActiveConfig(uint32_t active_config) {
   return kErrorNone;
 }
 
+DisplayError HWPrimary::GetHdmiMode(std::vector<uint32_t> &hdmi_modes) {
+  return kErrorNone;
+}
+
 }  // namespace sdm
 
