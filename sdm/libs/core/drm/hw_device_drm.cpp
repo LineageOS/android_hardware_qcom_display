@@ -525,6 +525,7 @@ DisplayError HWDeviceDRM::Deinit() {
     // connector (i.e., any connector which did not have a display commit on it and a crtc path
     // setup), so token_.conn_id may have been removed if there was no commit, resulting in
     // drmModeAtomicCommit() failure with ENOENT, 'No such file or directory'.
+    ClearSolidfillStages();
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, 0);
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::OFF);
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, nullptr);
