@@ -63,6 +63,7 @@ class DisplayHDMI : public DisplayBase, HWEventHandler {
  private:
   uint32_t GetBestConfig(HWS3DMode s3d_mode);
   uint32_t GetBestConfigFromFile(std::ifstream &res_file, DisplayInterfaceFormat *format);
+  DisplayError SetBestColorFormat(uint32_t index, DisplayInterfaceFormat pref_format);
   void GetScanSupport();
   void SetS3DMode(LayerStack *layer_stack);
   static const int kPropertyMax = 256;

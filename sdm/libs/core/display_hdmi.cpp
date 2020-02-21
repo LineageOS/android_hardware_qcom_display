@@ -72,12 +72,13 @@ DisplayError DisplayHDMI::Init() {
 
   uint32_t active_mode_index = 0;
   std::ifstream res_file;
+  DisplayInterfaceFormat pref_format = kFormatNone;
 
   res_file.open("/vendor/resolutions.txt");
   if (res_file) {
-    DisplayInterfaceFormat format = kFormatNone;
     DLOGI("Getting best resolution from file");
-    active_mode_index = GetBestConfigFromFile(res_file, &format);
+    active_mode_index = GetBestConfigFromFile(res_file, &pref_format);
+    res_file.close();
   } else {
     char value[64] = "0";
     DLOGI("Computing best resolution");
@@ -97,6 +98,14 @@ DisplayError DisplayHDMI::Init() {
   }
 
   error = DisplayBase::Init();
+  if (error != kErrorNone) {
+    HWInterface::Destroy(hw_intf_);
+    return error;
+  }
+
+  // If pref_format has some valid value other than kFormatNone, it
+  // means GetBestConfigFromFile is used for best resolution selection.
+  error = SetBestColorFormat(active_mode_index, pref_format);
   if (error != kErrorNone) {
     HWInterface::Destroy(hw_intf_);
     return error;
@@ -196,7 +205,6 @@ DisplayError DisplayHDMI::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level)
 }
 
 uint32_t DisplayHDMI::GetBestConfigFromFile(std::ifstream &res_file, DisplayInterfaceFormat *format) {
-  DisplayError error = kErrorNone;
   string line;
   uint32_t num_modes = 0;
   uint32_t index = 0;
@@ -244,7 +252,7 @@ uint32_t DisplayHDMI::GetBestConfigFromFile(std::ifstream &res_file, DisplayInte
           continue;
         }
         DisplayInterfaceFormat fmt = fmt_str_it->second;
-        DLOGI("Preferred format = %d",fmt);
+        DLOGI("Preferred format = %d", fmt);
         std::vector<uint32_t>::iterator vic_itr = std::find(vics.begin(), vics.end(), vic);
         if (vic_itr != vics.end())
         {
@@ -252,33 +260,24 @@ uint32_t DisplayHDMI::GetBestConfigFromFile(std::ifstream &res_file, DisplayInte
           DLOGI("Display supports vic %d!.. index = %d",vic, index);
           if (fmt == DisplayInterfaceFormat::kFormatRGB) {
             if (attrib[index].pixel_formats & DisplayInterfaceFormat::kFormatRGB) {
-              error = hw_intf_->SetDisplayFormat(index, fmt);
-              if (error == kErrorNone) {
-                DLOGI("RGB is supported by Display attributes[%d]",index);
-                return index;
-              }
+              *format = DisplayInterfaceFormat::kFormatRGB;
+              return index;
             } else {
               DLOGI("RGB not supported by Display attributes[%d]",index);
             }
           } else if (fmt == DisplayInterfaceFormat::kFormatYCbCr422 ||
                      fmt == DisplayInterfaceFormat::kFormatYCbCr422d) {
             if(attrib[index].pixel_formats & DisplayInterfaceFormat::kFormatYCbCr422) {
-              error = hw_intf_->SetDisplayFormat(index, fmt);
-              if (error == kErrorNone) {
-                DLOGI("YUV422 is supported by Display attributes[%d]",index);
-                return index;
-              }
+              *format = DisplayInterfaceFormat::kFormatYCbCr422;
+              return index;
             } else {
               DLOGI("YUV422 not supported by Display attributes[%d]",index);
             }
           } else if(fmt == DisplayInterfaceFormat::kFormatYCbCr420 ||
                     fmt == DisplayInterfaceFormat::kFormatYCbCr420d) {
             if(attrib[index].pixel_formats & DisplayInterfaceFormat::kFormatYCbCr420) {
-              error = hw_intf_->SetDisplayFormat(index, fmt);
-              if (error == kErrorNone) {
-                DLOGI("YUV420 is supported by Display attributes[%d]", index);
-                return index;
-              }
+              *format = DisplayInterfaceFormat::kFormatYCbCr420;
+              return index;
             } else {
               DLOGI("YUV420 not supported by Display attributes[%d]", index);
             }
@@ -295,8 +294,7 @@ uint32_t DisplayHDMI::GetBestConfigFromFile(std::ifstream &res_file, DisplayInte
   } catch (const std::invalid_argument& ia) {
     DLOGE("Invalid argument exception %s",ia.what());
     return 0;
-  }
-  catch (const std::exception& e) {
+  } catch (const std::exception& e) {
     DLOGE("Exception occurred %s",e.what());
     return 0;
   } catch(...) {
@@ -310,13 +308,8 @@ uint32_t DisplayHDMI::GetBestConfigFromFile(std::ifstream &res_file, DisplayInte
   if (def_vic_itr != vics.end())
   {
     uint32_t def_index = static_cast<uint32_t>(def_vic_itr - vics.begin());
-    error = hw_intf_->SetDisplayFormat(def_index, def_fmt);
-    if (error != kErrorNone) {
-      DLOGE("Unable to set RGB for 480p");
-      return 0;
-    } else {
-      DLOGI("Selected 480p RGB, Display attributes[%d]", def_index);
-    }
+    *format = def_fmt;
+    return def_index;
   } else {
     // Even 480p is not supported.
     DLOGE("480p is not supported!");
@@ -328,7 +321,6 @@ uint32_t DisplayHDMI::GetBestConfigFromFile(std::ifstream &res_file, DisplayInte
 uint32_t DisplayHDMI::GetBestConfig(HWS3DMode s3d_mode) {
   uint32_t best_index = 0, index;
   uint32_t num_modes = 0;
-  DisplayError error = kErrorNone;
 
   hw_intf_->GetNumDisplayAttributes(&num_modes);
 
@@ -403,56 +395,81 @@ uint32_t DisplayHDMI::GetBestConfig(HWS3DMode s3d_mode) {
     if (error == kErrorNone)
       best_index = config_index;
   }
+  return best_index;
+}
 
-  if (hw_panel_info_.hdr_enabled) {
-    DLOGI("CK: HDR Mode is ON. index: %d", best_index);
-    if (attrib[best_index].pixel_formats & DisplayInterfaceFormat::kFormatYCbCr422) {
-      error = hw_intf_->SetDisplayFormat(UINT32(best_index),
-                                         DisplayInterfaceFormat::kFormatYCbCr422);
-      if (error == kErrorNone) {
-        DLOGI("YUV422 is supported by Display attributes[%d]", best_index);
-      }
-    } else if (attrib[best_index].pixel_formats & DisplayInterfaceFormat::kFormatYCbCr420) {
-      error = hw_intf_->SetDisplayFormat(UINT32(best_index),
-                                         DisplayInterfaceFormat::kFormatYCbCr420);
-      if (error == kErrorNone) {
-        DLOGI("YUV420 is supported by Display attributes[%d]", best_index);
-      }
-    } else if (attrib[best_index].pixel_formats & DisplayInterfaceFormat::kFormatRGB) {
-      error = hw_intf_->SetDisplayFormat(UINT32(best_index),
-                                         DisplayInterfaceFormat::kFormatRGB);
-      if (error == kErrorNone) {
-        DLOGI("RGB is supported by Display attributes[%d]", best_index);
-      }
-    } else {
-      DLOGE("No format supported with HDR enabled[%d]", best_index);
-    }
-  } else {
-    DLOGI("CK: HDR Mode is OFF. index: %d", best_index);
-    if (attrib[best_index].pixel_formats & DisplayInterfaceFormat::kFormatRGB) {
-      error = hw_intf_->SetDisplayFormat(UINT32(best_index),
-                                         DisplayInterfaceFormat::kFormatRGB);
-      if (error == kErrorNone) {
-        DLOGI("RGB is supported by Display attributes[%d]", best_index);
-      }
-    } else if (attrib[best_index].pixel_formats & DisplayInterfaceFormat::kFormatYCbCr420) {
-      error = hw_intf_->SetDisplayFormat(UINT32(best_index),
-                                         DisplayInterfaceFormat::kFormatYCbCr420);
-      if (error == kErrorNone) {
-        DLOGI("YUV420 is supported by Display attributes[%d]", best_index);
-      }
-    } else if (attrib[best_index].pixel_formats & DisplayInterfaceFormat::kFormatYCbCr422) {
-      error = hw_intf_->SetDisplayFormat(UINT32(best_index),
-                                         DisplayInterfaceFormat::kFormatYCbCr422);
-      if (error == kErrorNone) {
-        DLOGI("YUV422 is supported by Display attributes[%d]", best_index);
-      }
-    } else {
-      DLOGE("No format supported with HDR disabled[%d]", best_index);
-    }
+DisplayError DisplayHDMI::SetBestColorFormat(uint32_t best_index,
+                                             DisplayInterfaceFormat pref_format) {
+  uint32_t num_modes = 0;
+  DisplayError error = kErrorNone;
+  HWDisplayAttributes best_attrib;
+
+  hw_intf_->GetNumDisplayAttributes(&num_modes);
+
+  // Get display attribute for best config
+  if (best_index >= num_modes) {
+    DLOGE("Invalid mode index %d mode size %d", best_index, num_modes);
+    return kErrorParameters;
   }
 
-  return best_index;
+  hw_intf_->GetDisplayAttributes(best_index, &best_attrib);
+
+  if (pref_format != DisplayInterfaceFormat::kFormatNone) {
+    error = hw_intf_->SetDisplayFormat(best_index, pref_format);
+    if (error == kErrorNone) {
+      DLOGI("Preferred format(%d) from file is supported by Display attributes[%d]",
+            pref_format, best_index);
+    }
+  } else {
+    if (hw_panel_info_.hdr_enabled) {
+      DLOGI("HDR Mode is ON. index: %d", best_index);
+      if (best_attrib.pixel_formats & DisplayInterfaceFormat::kFormatYCbCr422) {
+        error = hw_intf_->SetDisplayFormat(best_index,
+                                           DisplayInterfaceFormat::kFormatYCbCr422);
+        if (error == kErrorNone) {
+          DLOGI("YUV422 is supported by Display attributes[%d]", best_index);
+        }
+      } else if (best_attrib.pixel_formats & DisplayInterfaceFormat::kFormatYCbCr420) {
+        error = hw_intf_->SetDisplayFormat(best_index,
+                                           DisplayInterfaceFormat::kFormatYCbCr420);
+        if (error == kErrorNone) {
+          DLOGI("YUV420 is supported by Display attributes[%d]", best_index);
+        }
+      } else if (best_attrib.pixel_formats & DisplayInterfaceFormat::kFormatRGB) {
+        error = hw_intf_->SetDisplayFormat(best_index,
+                                           DisplayInterfaceFormat::kFormatRGB);
+        if (error == kErrorNone) {
+          DLOGI("RGB is supported by Display attributes[%d]", best_index);
+        }
+      } else {
+        DLOGE("No format supported with HDR enabled[%d]", best_index);
+      }
+    } else {
+      DLOGI("HDR Mode is OFF. index: %d", best_index);
+      if (best_attrib.pixel_formats & DisplayInterfaceFormat::kFormatRGB) {
+        error = hw_intf_->SetDisplayFormat(best_index,
+                                           DisplayInterfaceFormat::kFormatRGB);
+        if (error == kErrorNone) {
+          DLOGI("RGB is supported by Display attributes[%d]", best_index);
+        }
+      } else if (best_attrib.pixel_formats & DisplayInterfaceFormat::kFormatYCbCr420) {
+        error = hw_intf_->SetDisplayFormat(best_index,
+                                           DisplayInterfaceFormat::kFormatYCbCr420);
+        if (error == kErrorNone) {
+          DLOGI("YUV420 is supported by Display attributes[%d]", best_index);
+        }
+      } else if (best_attrib.pixel_formats & DisplayInterfaceFormat::kFormatYCbCr422) {
+        error = hw_intf_->SetDisplayFormat(best_index,
+                                           DisplayInterfaceFormat::kFormatYCbCr422);
+        if (error == kErrorNone) {
+          DLOGI("YUV422 is supported by Display attributes[%d]", best_index);
+        }
+      } else {
+        DLOGE("No format supported with HDR disabled[%d]", best_index);
+      }
+    }
+  }
+  return error;
 }
 
 void DisplayHDMI::GetScanSupport() {
