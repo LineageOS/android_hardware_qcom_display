@@ -162,7 +162,6 @@ DRMProperty DRMPropertyManager::GetPropertyEnum(const std::string &name) const {
   if (name == "frame_trigger_mode") { return DRMProperty::FRAME_TRIGGER; }
   if (name == "Colorspace") { return DRMProperty::COLORSPACE; }
   if (name == "supported_colorspaces") { return DRMProperty::SUPPORTED_COLORSPACES; }
-  if (name == "sspp_layout") { return DRMProperty::SDE_SSPP_LAYOUT; }
   if (name == "SDE_DSPP_SPR_DITHER_V1") { return DRMProperty::SDE_DSPP_SPR_DITHER_V1; }
 
   return DRMProperty::INVALID;
