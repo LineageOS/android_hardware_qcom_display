@@ -407,6 +407,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
       // If COMMIT fails on the Fast Path, set Safe Mode.
       DLOGE("COMMIT failed in Fast Path, set Safe Mode!");
       comp_manager_->SetSafeMode(true);
+      safe_mode_in_fast_path_ = true;
       error = kErrorNotValidated;
     }
     return error;
@@ -426,6 +427,12 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
 
   // Stop dropping vsync when first commit is received after idle fallback.
   drop_hw_vsync_ = false;
+
+  if (safe_mode_in_fast_path_) {
+    comp_manager_->SetSafeMode(false);
+    safe_mode_in_fast_path_ = false;
+  }
+
   DLOGI_IF(kTagDisplay, "Exiting commit for display: %d-%d", display_id_, display_type_);
 
   return kErrorNone;
@@ -618,6 +625,12 @@ DisplayError DisplayBase::SetActiveConfig(uint32_t index) {
 
   if (active_index == index) {
     return kErrorNone;
+  }
+
+  // Reject active config changes if qsync is in use.
+  if (needs_avr_update_ || qsync_mode_ != kQSyncModeNone) {
+    DLOGE("Failed: needs_avr_update_: %d, qsync_mode_: %d", needs_avr_update_, qsync_mode_);
+    return kErrorNotSupported;
   }
 
   error = hw_intf_->SetDisplayAttributes(index);

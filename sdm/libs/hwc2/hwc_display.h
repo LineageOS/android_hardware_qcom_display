@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -339,6 +339,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual void GetLayerStack(HWCLayerStack *stack);
   virtual void SetLayerStack(HWCLayerStack *stack);
   virtual void PostPowerMode();
+  virtual void NotifyClientStatus(bool connected) { client_connected_ = connected; }
 
  protected:
   static uint32_t throttling_refresh_rate_;
@@ -428,6 +429,8 @@ class HWCDisplay : public DisplayEventHandler {
   std::map<uint32_t, DisplayConfigVariableInfo> variable_config_map_;
   std::vector<uint32_t> hwc_config_map_;
   bool fast_path_composition_ = false;
+  bool client_connected_ = true;
+  bool pending_config_ = false;
 
  private:
   void DumpInputBuffers(void);
@@ -438,6 +441,7 @@ class HWCDisplay : public DisplayEventHandler {
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
   uint32_t geometry_changes_ = GeometryChanges::kNone;
+  uint32_t geometry_changes_on_doze_suspend_ = GeometryChanges::kNone;
   bool animating_ = false;
   int null_display_mode_ = 0;
   bool has_client_composition_ = false;
@@ -446,7 +450,6 @@ class HWCDisplay : public DisplayEventHandler {
   bool first_cycle_ = true;  // false if a display commit has succeeded on the device.
   int fbt_release_fence_ = -1;
   int release_fence_ = -1;
-  bool pending_config_ = false;
   hwc2_config_t pending_config_index_ = 0;
   int async_power_mode_ = 0;
 };
