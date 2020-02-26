@@ -120,6 +120,12 @@ struct VideoHistogramMetadata {
     uint32_t reserved[12];
 };
 
+enum CVPMetadataFlags {
+    /* bit wise flags */
+    CVP_METADATA_FLAG_NONE              = 0x00000000,
+    CVP_METADATA_FLAG_REPEAT            = 0x00000001,
+};
+
 typedef struct CVPMetadata {
     uint32_t size; /* payload size in bytes */
     uint8_t payload[CVP_METADATA_SIZE];
@@ -132,6 +138,8 @@ typedef struct CVPMetadata {
        If size > 0, framerate is valid
        If size = 0, invalid data, so ignore all parameters */
     uint32_t cvp_frame_rate;
+    enum CVPMetadataFlags flags;
+    uint32_t reserved[8];
 } CVPMetadata;
 
 struct MetaData_t {
