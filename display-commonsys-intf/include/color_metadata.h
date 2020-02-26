@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2018, 2020 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -112,7 +112,8 @@ typedef struct MasteringDisplay {
 typedef struct ContentLightLevel {
   bool     lightLevelSEIEnabled;
   uint32_t maxContentLightLevel;  // unit: cd/m^2.
-  uint32_t minPicAverageLightLevel;  // unit: 1/10000 cd/m^2.
+  uint32_t minPicAverageLightLevel;  // unit: cd/m^2, will be DEPRECATED, use below
+  uint32_t maxPicAverageLightLevel;  // unit: cd/m^2, its same as maxFrameAvgLightLevel(CTA-861-G)
 } ContentLightLevel;
 
 typedef struct ColorRemappingInfo {
