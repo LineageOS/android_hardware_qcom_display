@@ -483,7 +483,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool has_client_composition_ = false;
   HWCBufferSyncHandler buffer_sync_handler_ = {};
   LayerRect window_rect_ = {};
-  bool windowed_display_ = true;
+  bool windowed_display_ = false;
 
  private:
   void DumpInputBuffers(void);
