@@ -236,6 +236,9 @@ class DisplayBase : public DisplayInterface {
   bool vsync_state_change_pending_ = false;
   bool requested_vsync_state_ = false;
   bool defer_power_state_ = false;
+  QSyncMode qsync_mode_ = kQSyncModeNone;
+  bool needs_avr_update_ = false;
+  bool safe_mode_in_fast_path_ = false;
 
   static Locker display_power_reset_lock_;
   static bool display_power_reset_pending_;
