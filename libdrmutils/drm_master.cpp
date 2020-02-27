@@ -138,11 +138,7 @@ int DRMMaster::RemoveFbId(uint32_t fb_id) {
     DRM_LOGE("drmIoctl::DRM_IOCTL_MSM_RMFB2 failed for fb_id %d with error %d", fb_id, errno);
   }
 #else
-  DRM_LOGW("Upstream remove fb id is being used.");
-  ret = drmModeRmFB(dev_fd_, fb_id);
-  if (ret) {
-    DRM_LOGE("drmModeRmFB failed for fb_id %d with error %d", fb_id, ret);
-  }
+  DRM_LOGE("drmModeRmFB is no longer used. DRM_IOCTL_MSM_RMFB2 not found");
 #endif
   return ret;
 }
