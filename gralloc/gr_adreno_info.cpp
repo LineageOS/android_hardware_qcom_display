@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -77,27 +77,17 @@ AdrenoMemInfo::AdrenoMemInfo() {
   } else {
     ALOGE(" Failed to load libadreno_utils.so");
   }
-
-  // Check if the overriding property debug.gralloc.gfx_ubwc_disable
-  // that disables UBWC allocations for the graphics stack is set
-  char property[PROPERTY_VALUE_MAX];
-  property_get(DISABLE_UBWC_PROP, property, "0");
-  if (!(strncmp(property, "1", PROPERTY_VALUE_MAX)) ||
-      !(strncmp(property, "true", PROPERTY_VALUE_MAX))) {
-    gfx_ubwc_disable_ = true;
-  }
-
-  property_get(DISABLE_AHARDWAREBUFFER_PROP, property, "0");
-  if (!(strncmp(property, "1", PROPERTY_VALUE_MAX)) ||
-      !(strncmp(property, "true", PROPERTY_VALUE_MAX))) {
-    gfx_ahardware_buffer_disable_ = true;
-  }
 }
 
 AdrenoMemInfo::~AdrenoMemInfo() {
   if (libadreno_utils_) {
     ::dlclose(libadreno_utils_);
   }
+}
+
+void AdrenoMemInfo::AdrenoSetProperties(gralloc::GrallocProperties props) {
+  gfx_ubwc_disable_ = props.ubwc_disable;
+  gfx_ahardware_buffer_disable_ = props.ahardware_buffer_disable;
 }
 
 void AdrenoMemInfo::AlignUnCompressedRGB(int width, int height, int format, int tile_enabled,
