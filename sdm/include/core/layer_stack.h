@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -305,6 +305,13 @@ struct LayerRectArray {
   uint32_t count = 0;      //!< Number of elements in the array.
 };
 
+struct LayerStitchInfo {
+  LayerRect dst_rect = {};          //!< The target position where the frame will be
+                                    //!< rendered onto internal FrameBuffer.
+
+  LayerRect slice_rect = {};        //!<  Target slice that this stitch rect belongs to.
+};
+
 /*! @brief This structure defines solidfill structure.
 
   @sa LayerSolidFill
@@ -348,8 +355,9 @@ struct Layer {
                                                    //!< fit into this rectangle. The origin is the
                                                    //!< top-left corner of the screen.
 
-  LayerRect stitch_dst_rect = {};                  //!< The target position where the frame will be
-                                                   //!< rendered onto internal FrameBuffer.
+  LayerStitchInfo stitch_info = {};                //!< This structure defines all parameters needed
+                                                   //!< for stitching like position to render,
+                                                   //!< boundaries etc;
 
   std::vector<LayerRect> visible_regions = {};     //!< Visible rectangular areas in screen space.
                                                    //!< The visible region includes areas overlapped
