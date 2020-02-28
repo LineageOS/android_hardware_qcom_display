@@ -769,6 +769,7 @@ int32_t HWCSession::PresentDisplay(hwc2_display_t display, shared_ptr<Fence> *ou
     if (pending_power_mode_[display]) {
       status = HWC2::Error::None;
     } else {
+      hwc_display_[target_display]->ProcessActiveConfigChange();
       status = PresentDisplayInternal(target_display);
       if (status == HWC2::Error::None) {
         // Check if hwc's refresh trigger is getting exercised.
@@ -3394,6 +3395,26 @@ void HWCSession::WaitForResources(bool wait_for_resources, hwc2_display_t active
       res_wait = hwc_display_[display_id]->CheckResourceState();
     } while (res_wait);
   }
+}
+
+int32_t HWCSession::GetDisplayVsyncPeriod(hwc2_display_t disp, VsyncPeriodNanos *vsync_period) {
+  if (vsync_period == nullptr) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  return CallDisplayFunction(disp, &HWCDisplay::GetDisplayVsyncPeriod, vsync_period);
+}
+
+int32_t HWCSession::SetActiveConfigWithConstraints(
+    hwc2_display_t display, hwc2_config_t config,
+    const VsyncPeriodChangeConstraints *vsync_period_change_constraints,
+    VsyncPeriodChangeTimeline *out_timeline) {
+  if ((vsync_period_change_constraints == nullptr) || (out_timeline == nullptr)) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  return CallDisplayFunction(display, &HWCDisplay::SetActiveConfigWithConstraints, config,
+                             vsync_period_change_constraints, out_timeline);
 }
 
 }  // namespace sdm

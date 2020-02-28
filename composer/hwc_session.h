@@ -283,6 +283,12 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   int32_t GetVsyncPeriod(hwc2_display_t disp, uint32_t *vsync_period);
   void Refresh(hwc2_display_t display);
 
+  int32_t GetDisplayVsyncPeriod(hwc2_display_t display, VsyncPeriodNanos *out_vsync_period);
+  int32_t SetActiveConfigWithConstraints(
+      hwc2_display_t display, hwc2_config_t config,
+      const VsyncPeriodChangeConstraints *vsync_period_change_constraints,
+      VsyncPeriodChangeTimeline *out_timeline);
+
   static Locker locker_[HWCCallbacks::kNumDisplays];
   static Locker power_state_[HWCCallbacks::kNumDisplays];
   static Locker hdr_locker_[HWCCallbacks::kNumDisplays];

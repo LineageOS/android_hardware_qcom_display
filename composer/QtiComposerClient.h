@@ -202,8 +202,7 @@ class QtiComposerClient : public IQtiComposerClient {
   Return<void> getDisplayVsyncPeriod(uint64_t display, getDisplayVsyncPeriod_cb _hidl_cb) override;
   Return<void> setActiveConfigWithConstraints(
       uint64_t display, uint32_t config,
-      const composer_V2_4::IComposerClient::VsyncPeriodChangeConstraints
-          &vsyncPeriodChangeConstraints,
+      const VsyncPeriodChangeConstraints &vsyncPeriodChangeConstraints,
       setActiveConfigWithConstraints_cb _hidl_cb) override;
 
   Return<composer_V2_4::Error> setAutoLowLatencyMode(uint64_t display, bool on) override;
