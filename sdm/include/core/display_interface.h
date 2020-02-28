@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -139,6 +139,18 @@ enum DisplayPort {
 enum DisplayEvent {
   kIdleTimeout,    // Event triggered by Idle Timer.
   kThermalEvent,   // Event triggered by Thermal.
+};
+
+/*! @brief This enum represents the formats supported by Display
+
+  kFormatYUV means only YUV.
+  If both RGB and YUV are supported then resultant would be kFormatRGB | kFormatYUV.
+
+*/
+enum DisplayInterfaceFormat {
+  kFormatNone                 = 0x0,
+  kFormatRGB                  = 0x1,
+  kFormatYUV                  = 0x2,
 };
 
 /*! @brief This structure defines configuration for fixed properties of a display device.

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -1468,6 +1468,10 @@ DisplayError HWDevice::SetConfigAttributes(uint32_t index, uint32_t width, uint3
 }
 
 DisplayError HWDevice::GetDynamicDSIClock(uint64_t *bitclk) {
+  return kErrorNotSupported;
+}
+
+DisplayError HWDevice::SetDisplayFormat(uint32_t index, DisplayInterfaceFormat fmt) {
   return kErrorNotSupported;
 }
 

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017 - 2018, 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -65,6 +65,7 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError GetHWPanelInfo(HWPanelInfo *panel_info);
   virtual DisplayError SetDisplayAttributes(uint32_t index);
   virtual DisplayError SetDisplayAttributes(const HWDisplayAttributes &display_attributes);
+  virtual DisplayError SetDisplayFormat(uint32_t index, DisplayInterfaceFormat fmt);
   virtual DisplayError GetConfigIndex(uint32_t mode, uint32_t *index);
   virtual DisplayError PowerOn();
   virtual DisplayError PowerOff();
