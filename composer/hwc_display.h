@@ -49,6 +49,9 @@ using android::hardware::graphics::common::V1_1::RenderIntent;
 using android::hardware::graphics::common::V1_2::Hdr;
 namespace composer_V2_4 = ::android::hardware::graphics::composer::V2_4;
 using HwcAttribute = composer_V2_4::IComposerClient::Attribute;
+using VsyncPeriodChangeConstraints = composer_V2_4::IComposerClient::VsyncPeriodChangeConstraints;
+using VsyncPeriodChangeTimeline = composer_V2_4::VsyncPeriodChangeTimeline;
+using VsyncPeriodNanos = composer_V2_4::VsyncPeriodNanos;
 
 namespace sdm {
 
@@ -81,6 +84,11 @@ enum CWBClient {
   kCWBClientColor,      // Internal client i.e. Color Manager
   kCWBClientExternal,   // External client calling through private APIs
   kCWBClientComposer,   // Client to HWC i.e. SurfaceFlinger
+};
+
+struct TransientRefreshRateInfo {
+  uint32_t transient_vsync_period;
+  int64_t vsync_applied_time;
 };
 
 class HWCColorMode {
@@ -264,6 +272,7 @@ class HWCDisplay : public DisplayEventHandler {
     return HWC2::Error::Unsupported;
   }
   bool IsFirstCommitDone() { return !first_cycle_; }
+  virtual void ProcessActiveConfigChange();
 
   // HWC2 APIs
   virtual HWC2::Error AcceptDisplayChanges(void);
@@ -393,6 +402,12 @@ class HWCDisplay : public DisplayEventHandler {
       uint64_t max_frames, uint64_t timestamp, uint64_t *numFrames,
       int32_t samples_size[NUM_HISTOGRAM_COLOR_COMPONENTS],
       uint64_t *samples[NUM_HISTOGRAM_COLOR_COMPONENTS]);
+
+  virtual HWC2::Error GetDisplayVsyncPeriod(VsyncPeriodNanos *vsync_period);
+  virtual HWC2::Error SetActiveConfigWithConstraints(
+      hwc2_config_t config, const VsyncPeriodChangeConstraints *vsync_period_change_constraints,
+      VsyncPeriodChangeTimeline *out_timeline);
+
   HWC2::Error SetDisplayElapseTime(uint64_t time);
 
  protected:
@@ -429,6 +444,19 @@ class HWCDisplay : public DisplayEventHandler {
   int32_t SetClientTargetDataSpace(int32_t dataspace);
   int SetFrameBufferConfig(uint32_t x_pixels, uint32_t y_pixels);
   int32_t GetDisplayConfigGroup(DisplayConfigGroupInfo variable_config);
+  HWC2::Error GetVsyncPeriodByActiveConfig(VsyncPeriodNanos *vsync_period);
+  bool GetTransientVsyncPeriod(VsyncPeriodNanos *vsync_period);
+  std::tuple<int64_t, int64_t> RequestActiveConfigChange(hwc2_config_t config,
+                                                         VsyncPeriodNanos current_vsync_period,
+                                                         int64_t desired_time);
+  std::tuple<int64_t, int64_t> EstimateVsyncPeriodChangeTimeline(
+      VsyncPeriodNanos current_vsync_period, int64_t desired_time);
+  void SubmitActiveConfigChange(VsyncPeriodNanos current_vsync_period);
+  bool IsActiveConfigReadyToSubmit(int64_t time);
+  bool IsActiveConfigApplied(int64_t time, int64_t vsync_applied_time);
+  bool IsSameGroup(hwc2_config_t config_id1, hwc2_config_t config_id2);
+  bool AllowSeamless(hwc2_config_t request_config);
+  void SetVsyncsApplyRateChange(uint32_t vsyncs) { vsyncs_to_apply_rate_change_ = vsyncs; }
 
   bool validated_ = false;
   bool layer_stack_invalid_ = true;
@@ -486,6 +514,12 @@ class HWCDisplay : public DisplayEventHandler {
   bool has_client_composition_ = false;
   LayerRect window_rect_ = {};
   bool windowed_display_ = true;
+  uint32_t vsyncs_to_apply_rate_change_ = 1;
+  hwc2_config_t pending_refresh_rate_config_ = UINT_MAX;
+  int64_t pending_refresh_rate_refresh_time_ = INT64_MAX;
+  int64_t pending_refresh_rate_applied_time_ = INT64_MAX;
+  std::deque<TransientRefreshRateInfo> transient_refresh_rate_info_;
+  std::mutex transient_refresh_rate_lock_;
 
  private:
   void DumpInputBuffers(void);

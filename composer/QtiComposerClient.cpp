@@ -156,9 +156,9 @@ void QtiComposerClient::onVsync(hwc2_callback_data_t callbackData, hwc2_display_
   auto client = reinterpret_cast<QtiComposerClient*>(callbackData);
   android::hardware::Return<void> ret;
   if (client->callback24_) {
-    uint32_t vsync_period;
-    client->hwc_session_->GetVsyncPeriod(display, &vsync_period);
-    ret = client->callback24_->onVsync_2_4(display, timestamp, vsync_period);
+    VsyncPeriodNanos vsync_period;
+    client->hwc_session_->GetDisplayVsyncPeriod(display, &vsync_period);
+    ret = client->callback24_->onVsync_2_4(display, timestamp, static_cast<uint32_t>(vsync_period));
   } else {
     ret = client->callback_->onVsync(display, timestamp);
   }
@@ -1026,23 +1026,23 @@ Return<void> QtiComposerClient::getDisplayAttribute_2_4(
 
 Return<void> QtiComposerClient::getDisplayVsyncPeriod(uint64_t display,
                                                       getDisplayVsyncPeriod_cb _hidl_cb) {
-  uint32_t vsync_period;
-  auto error = hwc_session_->GetVsyncPeriod(display, &vsync_period);
+  VsyncPeriodNanos vsync_period;
+  auto error = hwc_session_->GetDisplayVsyncPeriod(display, &vsync_period);
   _hidl_cb(static_cast<composer_V2_4::Error>(error), vsync_period);
   return Void();
 }
 
 Return<void> QtiComposerClient::setActiveConfigWithConstraints(
     uint64_t display, uint32_t config,
-    const composer_V2_4::IComposerClient::VsyncPeriodChangeConstraints
-        &vsyncPeriodChangeConstraints,
+    const VsyncPeriodChangeConstraints &vsyncPeriodChangeConstraints,
     setActiveConfigWithConstraints_cb _hidl_cb) {
-  auto error = hwc_session_->SetActiveConfig(display, config);
-  // TODO(user): implement properly
-  composer_V2_4::VsyncPeriodChangeTimeline timeline;
+  VsyncPeriodChangeTimeline timeline;
   timeline.newVsyncAppliedTimeNanos = systemTime();
   timeline.refreshRequired = false;
   timeline.refreshTimeNanos = 0;
+
+  auto error = hwc_session_->SetActiveConfigWithConstraints(
+      display, config, &vsyncPeriodChangeConstraints, &timeline);
   _hidl_cb(static_cast<composer_V2_4::Error>(error), timeline);
   return Void();
 }
