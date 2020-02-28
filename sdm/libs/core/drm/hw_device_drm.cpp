@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017 - 2018, 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -1077,6 +1077,10 @@ DisplayError HWDeviceDRM::SetConfigAttributes(uint32_t index, uint32_t width, ui
 
 DisplayError HWDeviceDRM::GetHdmiMode(std::vector<uint32_t> &hdmi_modes) {
   return kErrorNone;
+}
+
+DisplayError HWDeviceDRM::SetDisplayFormat(uint32_t index, DisplayInterfaceFormat fmt) {
+  return kErrorNotSupported;
 }
 
 }  // namespace sdm

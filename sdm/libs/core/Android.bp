@@ -7,6 +7,7 @@ cc_library_shared {
     ],
     cflags: [
         "-Wno-unused-parameter",
+        "-fexceptions",
         "-DLOG_TAG=\"SDM\"",
     ] + select(soong_config_variable("qtidisplay", "drmpp"), {
         "true": ["-DPP_DRM_ENABLE"],
