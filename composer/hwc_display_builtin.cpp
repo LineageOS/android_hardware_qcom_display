@@ -137,6 +137,12 @@ int HWCDisplayBuiltIn::Init() {
   is_primary_ = display_intf_->IsPrimaryDisplay();
 
   if (is_primary_) {
+    int enable_bw_limits = 0;
+    HWCDebugHandler::Get()->GetProperty(ENABLE_BW_LIMITS, &enable_bw_limits);
+    enable_bw_limits_ = (enable_bw_limits == 1);
+    if (enable_bw_limits_) {
+      DLOGI("Enable BW Limits %d", id_);
+    }
     Debug::GetWindowRect(&window_rect_.left, &window_rect_.top,
                                  &window_rect_.right, &window_rect_.bottom);
     DLOGI("Window rect : [%f %f %f %f]", window_rect_.left, window_rect_.top,
@@ -342,6 +348,60 @@ bool HWCDisplayBuiltIn::IsQsyncCallbackNeeded(bool *qsync_enabled, int32_t *refr
   return true;
 }
 
+int HWCDisplayBuiltIn::GetBwCode(const DisplayConfigVariableInfo &attr) {
+  uint32_t min_refresh_rate = 0, max_refresh_rate = 0;
+  display_intf_->GetRefreshRateRange(&min_refresh_rate, &max_refresh_rate);
+  uint32_t fps = attr.smart_panel ? attr.fps : max_refresh_rate;
+
+  if (fps <= 60) {
+    return kBwLow;
+  } else if (fps <= 90) {
+    return kBwMedium;
+  } else {
+    return kBwHigh;
+  }
+}
+
+void HWCDisplayBuiltIn::SetBwLimitHint(bool enable) {
+  if (!enable_bw_limits_) {
+    return;
+  }
+
+  if (!enable) {
+    thermal_bandwidth_client_cancel_request(const_cast<char*>(kDisplayBwName));
+    curr_refresh_rate_ = 0;
+    return;
+  }
+
+  uint32_t config_index = 0;
+  DisplayConfigVariableInfo attr = {};
+  GetActiveDisplayConfig(&config_index);
+  GetDisplayAttributesForConfig(INT(config_index), &attr);
+  if (attr.fps != curr_refresh_rate_ || attr.smart_panel != is_smart_panel_) {
+    int bw_code = GetBwCode(attr);
+    int req_data = thermal_bandwidth_client_merge_input_info(bw_code, 0);
+    int error = thermal_bandwidth_client_request(const_cast<char*>(kDisplayBwName), req_data);
+    if (error) {
+      DLOGE("Thermal bandwidth request failed %d", error);
+    }
+    curr_refresh_rate_ = attr.fps;
+    is_smart_panel_ = attr.smart_panel;
+  }
+}
+
+HWC2::Error HWCDisplayBuiltIn::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
+  auto status = HWCDisplay::SetPowerMode(mode, teardown);
+  if (status != HWC2::Error::None) {
+    return status;
+  }
+
+  if (mode == HWC2::PowerMode::Off) {
+    SetBwLimitHint(false);
+  }
+
+  return HWC2::Error::None;
+}
+
 HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
   auto status = HWC2::Error::None;
 
@@ -370,6 +430,7 @@ HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
       SolidFillCommit();
       PostCommitStitchLayers();
       status = HWCDisplay::PostCommitLayerStack(out_retire_fence);
+      SetBwLimitHint(true);
     }
   }
 

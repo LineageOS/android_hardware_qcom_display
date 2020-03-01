@@ -10,7 +10,7 @@ LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes)
 LOCAL_C_INCLUDES              += $(kernel_includes)
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
-LOCAL_HEADER_LIBRARIES        := display_headers
+LOCAL_HEADER_LIBRARIES        := display_headers libThermal_headers
 
 LOCAL_CFLAGS                  := -Wno-missing-field-initializers -Wno-unused-parameter \
                                  -DLOG_TAG=\"SDM\" $(common_flags) -fcolor-diagnostics
@@ -34,7 +34,7 @@ LOCAL_SHARED_LIBRARIES        := libhistogram libbinder libhardware libutils lib
                                  android.hardware.graphics.allocator@2.0 \
                                  android.hardware.graphics.allocator@3.0 \
                                  vendor.display.config@1.0 \
-                                 libdrm
+                                 libdrm libthermalclient
 
 ifneq ($(DISPLAY_CONFIG_VERSION), DISPLAY_CONFIG_VERSION_OPTIMAL)
 LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.1

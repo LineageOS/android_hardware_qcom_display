@@ -270,6 +270,7 @@ enum SmartDMARevision {
 enum InlineRotationVersion {
   kInlineRotationNone,
   kInlineRotationV1,
+  kInlineRotationV2,
 };
 
 struct InlineRotationInfo {
@@ -577,6 +578,11 @@ struct HWScaleData {
   uint32_t y_rgb_sep_lut_idx = 0;
   uint32_t uv_sep_lut_idx = 0;
   HWDetailEnhanceData detail_enhance {};
+
+  uint32_t src_x_pre_down_scale_0 = 0;
+  uint32_t src_x_pre_down_scale_1 = 0;
+  uint32_t src_y_pre_down_scale_0 = 0;
+  uint32_t src_y_pre_down_scale_1 = 0;
 };
 
 struct HWDestScaleInfo {
