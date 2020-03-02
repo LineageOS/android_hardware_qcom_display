@@ -74,6 +74,10 @@ using sde_drm::DRMColorspace;
 
 namespace sdm {
 
+static uint64_t timeval_to_ms(const struct timeval &tv) {
+  return (UINT64(tv.tv_sec) * 1000ull + UINT64(tv.tv_usec) / 1000ull);
+}
+
 static int32_t GetEOTF(const GammaTransfer &transfer) {
   int32_t hdr_transfer = -1;
 
@@ -361,11 +365,11 @@ DisplayError HWTVDRM::UpdateHDRMetaData(HWLayers *hw_layers) {
     // metadata. This will be replaced with an idle timer implementation in the future.
     if (reset_hdr_flag_) {
       gettimeofday(&hdr_reset_end_, NULL);
-      float hdr_reset_time_start = ((hdr_reset_start_.tv_sec * 1000) +
-                                    (hdr_reset_start_.tv_usec / 1000));
-      float hdr_reset_time_end = ((hdr_reset_end_.tv_sec * 1000) + (hdr_reset_end_.tv_usec / 1000));
+      const uint64_t hdr_reset_start_ms = timeval_to_ms(hdr_reset_start_);
+      const uint64_t hdr_reset_end_ms = timeval_to_ms(hdr_reset_end_);
+      const uint64_t hdr_reset_duration_ms = hdr_reset_end_ms - hdr_reset_start_ms;
 
-      if (((hdr_reset_time_end - hdr_reset_time_start) / 1000) >= MIN_HDR_RESET_WAITTIME) {
+      if (hdr_reset_duration_ms >= UINT64(MIN_HDR_RESET_WAITTIME) * 1000ull) {
         memset(&hdr_metadata_, 0, sizeof(hdr_metadata_));
         hdr_metadata_.hdr_supported = 1;
         hdr_metadata_.hdr_state = HDR_DISABLE;
