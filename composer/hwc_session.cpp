@@ -138,11 +138,7 @@ void HWCUEvent::Register(HWCUEventListener *uevent_listener) {
   uevent_listener_ = uevent_listener;
 }
 
-#ifndef DISPLAY_CONFIG_VERSION_OPTIMAL
 HWCSession::HWCSession() : cwb_(this) {}
-#else
-HWCSession::HWCSession() {}
-#endif
 
 HWCSession *HWCSession::GetInstance() {
   // executed only once for the very first call.
@@ -537,13 +533,16 @@ void HWCSession::Dump(uint32_t *out_size, char *out_buffer) {
   if (out_buffer == nullptr) {
     *out_size = max_dump_size;
   } else {
-    std::string s {};
+    std::ostringstream os;
     for (int id = 0; id < HWCCallbacks::kNumRealDisplays; id++) {
       SCOPE_LOCK(locker_[id]);
       if (hwc_display_[id]) {
-        s += hwc_display_[id]->Dump();
+        hwc_display_[id]->Dump(&os);
       }
     }
+    Fence::Dump(&os);
+
+    std::string s = os.str();
     auto copied = s.copy(out_buffer, std::min(s.size(), max_dump_size), 0);
     *out_size = UINT32(copied);
   }
@@ -674,7 +673,7 @@ int32_t HWCSession::GetDisplayedContentSample(hwc2_display_t display, uint64_t m
 int32_t HWCSession::GetDisplayAttribute(hwc2_display_t display, hwc2_config_t config,
                                         int32_t int_attribute, int32_t *out_value) {
   if (out_value == nullptr || int_attribute < HWC2_ATTRIBUTE_INVALID ||
-      int_attribute > HWC2_ATTRIBUTE_DPI_Y) {
+      int_attribute > HWC2_ATTRIBUTE_CONFIG_GROUP) {
     return HWC2_ERROR_BAD_PARAMETER;
   }
   auto attribute = static_cast<HWC2::Attribute>(int_attribute);
@@ -720,9 +719,9 @@ int32_t HWCSession::GetReleaseFences(hwc2_display_t display, uint32_t *out_num_e
                              out_fences);
 }
 
-#ifndef DISPLAY_CONFIG_VERSION_OPTIMAL
 void HWCSession::PerformQsyncCallback(hwc2_display_t display) {
-  if (qsync_callback_ == nullptr) {
+  std::shared_ptr<DisplayConfig::ConfigCallback> callback = qsync_callback_.lock();
+  if (!callback) {
     return;
   }
 
@@ -730,13 +729,9 @@ void HWCSession::PerformQsyncCallback(hwc2_display_t display) {
   int32_t refresh_rate = 0, qsync_refresh_rate = 0;
   if (hwc_display_[display]->IsQsyncCallbackNeeded(&qsync_enabled,
       &refresh_rate, &qsync_refresh_rate)) {
-    qsync_callback_->onQsyncReconfigured(qsync_enabled, refresh_rate, qsync_refresh_rate);
+    callback->NotifyQsyncChange(qsync_enabled, refresh_rate, qsync_refresh_rate);
   }
 }
-#else
-void HWCSession::PerformQsyncCallback(hwc2_display_t display) {
-}
-#endif
 
 int32_t HWCSession::PresentDisplay(hwc2_display_t display, shared_ptr<Fence> *out_retire_fence) {
   auto status = HWC2::Error::BadDisplay;
@@ -796,9 +791,7 @@ int32_t HWCSession::PresentDisplay(hwc2_display_t display, shared_ptr<Fence> *ou
   HandlePendingPowerMode(display, *out_retire_fence);
   HandlePendingHotplug(display, *out_retire_fence);
   HandlePendingRefresh();
-#ifndef DISPLAY_CONFIG_VERSION_OPTIMAL
   cwb_.PresentDisplayDone(display);
-#endif
   display_ready_.set(UINT32(display));
   {
     std::unique_lock<std::mutex> caller_lock(hotplug_mutex_);
@@ -1290,7 +1283,7 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
         DLOGE("QService command = %d: input_parcel needed.", command);
         break;
       }
-      status = setIdleTimeout(UINT32(input_parcel->readInt32()));
+      status = SetIdleTimeout(UINT32(input_parcel->readInt32()));
       break;
 
     case qService::IQService::SET_FRAME_DUMP_CONFIG:
@@ -1325,7 +1318,7 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
         int disp_id = INT(input_parcel->readInt32());
         HWCDisplay::DisplayStatus disp_status =
               static_cast<HWCDisplay::DisplayStatus>(input_parcel->readInt32());
-        status = SetSecondaryDisplayStatus(disp_id, disp_status);
+        status = SetDisplayStatus(disp_id, disp_status);
         output_parcel->writeInt32(status);
       }
       break;
@@ -1344,7 +1337,7 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
           break;
         }
         int32_t input = input_parcel->readInt32();
-        status = toggleScreenUpdate(input == 1);
+        status = ToggleScreenUpdate(input == 1);
         output_parcel->writeInt32(status);
       }
       break;
@@ -1491,7 +1484,7 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
           break;
         }
         uint32_t camera_status = UINT32(input_parcel->readInt32());
-        status = setCameraLaunchStatus(camera_status);
+        status = SetCameraLaunchStatus(camera_status);
       }
       break;
 
@@ -1879,8 +1872,8 @@ android::status_t HWCSession::SetAd4RoiConfig(const android::Parcel *input_parce
   auto f_in = static_cast<uint32_t>(input_parcel->readInt32());
   auto f_out = static_cast<uint32_t>(input_parcel->readInt32());
 
-  return CallDisplayFunction(display_id, &HWCDisplay::SetDisplayDppsAdROI,
-                             h_s, h_e, v_s, v_e, f_in, f_out);
+  return static_cast<android::status_t>(SetDisplayDppsAdROI(display_id, h_s, h_e, v_s,
+                                                            v_e, f_in, f_out));
 }
 
 android::status_t HWCSession::SetFrameTriggerMode(const android::Parcel *input_parcel) {
@@ -3308,7 +3301,7 @@ android::status_t HWCSession::SetIdlePC(const android::Parcel *input_parcel) {
   auto enable = input_parcel->readInt32();
   auto synchronous = input_parcel->readInt32();
 
-  return static_cast<android::status_t>(IdlePowerCollapse(enable, synchronous));
+  return static_cast<android::status_t>(ControlIdlePowerCollapse(enable, synchronous));
 }
 
 hwc2_display_t HWCSession::GetActiveBuiltinDisplay() {
@@ -3382,4 +3375,5 @@ void HWCSession::WaitForResources(bool wait_for_resources, hwc2_display_t active
     } while (res_wait);
   }
 }
+
 }  // namespace sdm

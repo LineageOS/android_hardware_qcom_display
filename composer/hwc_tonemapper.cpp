@@ -88,7 +88,7 @@ void ToneMapSession::OnTask(const ToneMapTaskCode &task_code,
         const void *src_hnd = reinterpret_cast<const void *>
                                 (ctx->layer->input_buffer.buffer_id);
         int fence = gpu_tone_mapper_->blit(dst_hnd, src_hnd, Fence::Dup(ctx->merged));
-        ctx->fence = Fence::Create(fence);
+        ctx->fence = Fence::Create(fence, "tonemap");
       }
       break;
 

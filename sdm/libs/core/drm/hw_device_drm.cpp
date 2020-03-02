@@ -920,10 +920,10 @@ DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *
     return kErrorHardware;
   }
 
-  shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_fd));
+  shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_fd), "retire_power_on");
 
   if (release_fence) {
-    *release_fence = Fence::Create(INT(release_fence_fd));
+    *release_fence = Fence::Create(INT(release_fence_fd), "release_power_on");
     DLOGD_IF(kTagDriverConfig, "RELEASE fence: fd: %s", Fence::GetStr(*release_fence).c_str());
   }
   pending_doze_ = false;
@@ -958,7 +958,7 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown) {
     return kErrorHardware;
   }
 
-  shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_fd));
+  shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_fd), "retire_power_off");
   pending_doze_ = false;
 
   Fence::Wait(retire_fence, kTimeoutMsPowerOff);
@@ -996,10 +996,10 @@ DisplayError HWDeviceDRM::Doze(const HWQosData &qos_data, shared_ptr<Fence> *rel
     return kErrorHardware;
   }
 
-  shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_fd));
+  shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_fd), "retire_doze");
 
   if (release_fence) {
-    *release_fence = Fence::Create(release_fence_fd);
+    *release_fence = Fence::Create(release_fence_fd, "release_doze");
     DLOGD_IF(kTagDriverConfig, "RELEASE fence: fd: %s", Fence::GetStr(*release_fence).c_str());
   }
 
@@ -1036,10 +1036,10 @@ DisplayError HWDeviceDRM::DozeSuspend(const HWQosData &qos_data,
     return kErrorHardware;
   }
 
-  shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_fd));
+  shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_fd), "retire_doze_suspend");
 
   if (release_fence) {
-    *release_fence = Fence::Create(release_fence_fd);
+    *release_fence = Fence::Create(release_fence_fd, "release_doze_suspend");
     DLOGD_IF(kTagDriverConfig, "RELEASE fence: fd: %s", Fence::GetStr(*release_fence).c_str());
   }
   pending_doze_ = false;
@@ -1488,8 +1488,8 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   }
 
   int ret = drm_atomic_intf_->Commit(synchronous_commit_, false /* retain_planes*/);
-  shared_ptr<Fence> release_fence = Fence::Create(INT(release_fence_fd));
-  shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_fd));
+  shared_ptr<Fence> release_fence = Fence::Create(INT(release_fence_fd), "release");
+  shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_fd), "retire");
   if (ret) {
     DLOGE("%s failed with error %d crtc %d", __FUNCTION__, ret, token_.crtc_id);
     DumpHWLayers(hw_layers);

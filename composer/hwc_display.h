@@ -179,7 +179,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual DisplayError SetMixerResolution(uint32_t width, uint32_t height);
   virtual DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
   virtual void GetPanelResolution(uint32_t *width, uint32_t *height);
-  virtual std::string Dump();
+  virtual void Dump(std::ostringstream *os);
   virtual DisplayError TeardownConcurrentWriteback(void) {
     return kErrorNotSupported;
   }
@@ -429,6 +429,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual void GetUnderScanConfig() { }
   int32_t SetClientTargetDataSpace(int32_t dataspace);
   int SetFrameBufferConfig(uint32_t x_pixels, uint32_t y_pixels);
+  int32_t GetDisplayConfigGroup(DisplayConfigGroupInfo variable_config);
 
   bool validated_ = false;
   bool layer_stack_invalid_ = true;

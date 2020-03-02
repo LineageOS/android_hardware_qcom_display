@@ -29,6 +29,7 @@
 #include <limits>
 #include <algorithm>
 #include <vector>
+#include <string>
 
 namespace vendor {
 namespace qti {
@@ -51,6 +52,7 @@ using ::android::hardware::hidl_handle;
 using CommandQueueType = MessageQueue<uint32_t, ::android::hardware::kSynchronizedReadWrite>;
 
 using std::shared_ptr;
+using std::string;
 using sdm::Fence;
 
 // This class helps build a command queue.  Note that all sizes/lengths are in units of uint32_t's.
@@ -825,7 +827,7 @@ class CommandReaderBase {
   }
 
   // Handle would still own original fence. Hence create a Fence object on duped fd.
-  void readFence(shared_ptr<Fence>* fence) {
+  void readFence(shared_ptr<Fence>* fence, const string &name) {
     auto handle = readHandle();
     if (!handle || handle->numFds == 0) {
       return;
@@ -836,7 +838,7 @@ class CommandReaderBase {
       return;
     }
 
-    *fence = Fence::Create(dup(handle->data[0]));
+    *fence = Fence::Create(dup(handle->data[0]), name);
     if (*fence == nullptr) {
       ALOGW("failed to dup fence %d", handle->data[0]);
       sync_wait(handle->data[0], -1);

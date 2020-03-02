@@ -83,6 +83,30 @@ DisplayError HWCBufferSyncHandler::SyncMerge(int fd1, int fd2, int *merged_fd) {
   return kErrorNone;
 }
 
+void HWCBufferSyncHandler::GetSyncInfo(int fd, std::ostringstream *os) {
+  struct sync_file_info *file_info = sync_file_info(fd);
+  if (!file_info) {
+    return;
+  }
+
+  *os << "SYNC_File status:: " << file_info->status;
+  *os << ", name: " << file_info->name;
+  *os << ", num_fences: " << file_info->num_fences;
+
+  struct sync_fence_info *fence_info = sync_get_fence_info(file_info);
+  if (!fence_info) {
+    return;
+  }
+
+  for (size_t i = 0; i < file_info->num_fences; i++) {
+    *os << ", fence[" << i << "]:: ";
+    *os << "status: " << fence_info[i].status;
+    *os << ", drv_name: " << fence_info[i].driver_name;
+    *os << ", obj_name: " << fence_info[i].obj_name;
+    *os << ", ts: " << fence_info[i].timestamp_ns;
+  }
+}
+
 DisplayError HWCBufferSyncHandler::SyncWait(int fd) {
   // Deprecated.
   assert(false);
