@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -493,7 +493,7 @@ void DRMConnector::ParseCapabilities(uint64_t blob_id, DRMConnectorInfo *info) {
   memcpy (fmt_str, blob->data, blob->length);
   fmt_str[blob->length] = '\0';
   stringstream stream(fmt_str);
-  DRM_LOGI("stream str %s len %d blob str %s len %d", stream.str().c_str(), stream.str().length(),
+  DRM_LOGI("stream str %s len %zu blob str %s len %d", stream.str().c_str(), stream.str().length(),
            blob->data, blob->length);
   string line = {};
   const string display_type = "display type=";
@@ -576,7 +576,7 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
   memcpy (fmt_str, blob->data, blob->length);
   fmt_str[blob->length] = '\0';
   stringstream stream(fmt_str);
-  DRM_LOGI("stream str %s len %d blob str %s len %d", stream.str().c_str(), stream.str().length(),
+  DRM_LOGI("stream str %s len %zu blob str %s len %d", stream.str().c_str(), stream.str().length(),
            blob->data, blob->length);
 
   string line = {};

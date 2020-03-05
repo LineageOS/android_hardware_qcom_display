@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -179,35 +179,35 @@ void HWCDebugHandler::DebugQos(bool enable, int verbose_level) {
   DebugHandler::SetLogMask(debug_handler_.log_mask_);
 }
 
-void HWCDebugHandler::Error(const char *format, ...) {
+void HWCDebugHandler::Error(const char *fmt, ...) {
   va_list list;
-  va_start(list, format);
-  __android_log_vprint(ANDROID_LOG_ERROR, LOG_TAG, format, list);
+  va_start(list, fmt);
+  __android_log_vprint(ANDROID_LOG_ERROR, LOG_TAG, fmt, list);
 }
 
-void HWCDebugHandler::Warning(const char *format, ...) {
+void HWCDebugHandler::Warning(const char *fmt, ...) {
   va_list list;
-  va_start(list, format);
-  __android_log_vprint(ANDROID_LOG_WARN, LOG_TAG, format, list);
+  va_start(list, fmt);
+  __android_log_vprint(ANDROID_LOG_WARN, LOG_TAG, fmt, list);
 }
 
-void HWCDebugHandler::Info(const char *format, ...) {
+void HWCDebugHandler::Info(const char *fmt, ...) {
   va_list list;
-  va_start(list, format);
-  __android_log_vprint(ANDROID_LOG_INFO, LOG_TAG, format, list);
+  va_start(list, fmt);
+  __android_log_vprint(ANDROID_LOG_INFO, LOG_TAG, fmt, list);
 }
 
-void HWCDebugHandler::Debug(const char *format, ...) {
+void HWCDebugHandler::Debug(const char *fmt, ...) {
   va_list list;
-  va_start(list, format);
-  __android_log_vprint(ANDROID_LOG_DEBUG, LOG_TAG, format, list);
+  va_start(list, fmt);
+  __android_log_vprint(ANDROID_LOG_DEBUG, LOG_TAG, fmt, list);
 }
 
-void HWCDebugHandler::Verbose(const char *format, ...) {
+void HWCDebugHandler::Verbose(const char *fmt, ...) {
   if (debug_handler_.verbose_level_) {
     va_list list;
-    va_start(list, format);
-    __android_log_vprint(ANDROID_LOG_VERBOSE, LOG_TAG, format, list);
+    va_start(list, fmt);
+    __android_log_vprint(ANDROID_LOG_VERBOSE, LOG_TAG, fmt, list);
   }
 }
 
