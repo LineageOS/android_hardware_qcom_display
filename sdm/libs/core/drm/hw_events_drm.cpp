@@ -42,6 +42,7 @@
 #include <utils/sys.h>
 #include <xf86drm.h>
 #include <drm/msm_drm.h>
+#include <display/drm/sde_drm.h>
 
 #include <algorithm>
 #include <array>
