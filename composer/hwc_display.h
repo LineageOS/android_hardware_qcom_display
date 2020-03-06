@@ -484,6 +484,7 @@ class HWCDisplay : public DisplayEventHandler {
   HWCBufferSyncHandler buffer_sync_handler_ = {};
   LayerRect window_rect_ = {};
   bool windowed_display_ = false;
+  uint32_t active_refresh_rate_ = 0;
 
  private:
   void DumpInputBuffers(void);
