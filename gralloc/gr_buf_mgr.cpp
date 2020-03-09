@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018, 2020 The Linux Foundation. All rights reserved.
  * Not a Contribution
  *
  * Copyright (C) 2010 The Android Open Source Project
@@ -24,6 +24,7 @@
 #include <utility>
 #include <vector>
 
+#include "gr_adreno_info.h"
 #include "gr_buf_descriptor.h"
 #include "gr_buf_mgr.h"
 #include "gr_priv_handle.h"
@@ -52,6 +53,11 @@ BufferManager::~BufferManager() {
   if (allocator_) {
     delete allocator_;
   }
+}
+
+void BufferManager::SetGrallocDebugProperties(gralloc::GrallocProperties props) {
+  allocator_->SetProperties(props);
+  AdrenoMemInfo::GetInstance()->AdrenoSetProperties(props);
 }
 
 Error BufferManager::FreeBuffer(std::shared_ptr<Buffer> buf) {

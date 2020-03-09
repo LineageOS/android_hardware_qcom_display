@@ -10,6 +10,7 @@ endif
 endif
 
 include $(LOCAL_PATH)/../common.mk
+include $(LIBION_HEADER_PATH_WRAPPER)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE                  := gralloc.$(TARGET_BOARD_PLATFORM)
@@ -55,8 +56,7 @@ LOCAL_SANITIZE                := integer_overflow
 LOCAL_VENDOR_MODULE           := true
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes) \
-                                 system/core/libion/include \
-                                 system/core/libion/kernel-headers \
+                                 $(LIBION_HEADER_PATHS) \
                                  $(kernel_includes)
 
 LOCAL_HEADER_LIBRARIES        := display_headers
