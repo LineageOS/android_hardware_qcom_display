@@ -928,9 +928,10 @@ Error BufferManager::GetMetadata(private_handle_t *handle, int64_t metadatatype_
     }
     case (int64_t)StandardMetadataType::SMPTE2094_40: {
       std::vector<uint8_t> dynamic_metadata_payload;
-      if (metadata->color.dynamicMetaDataValid) {
+      if (metadata->color.dynamicMetaDataValid &&
+          metadata->color.dynamicMetaDataLen <= HDR_DYNAMIC_META_DATA_SZ) {
         dynamic_metadata_payload.resize(metadata->color.dynamicMetaDataLen);
-        memcpy(&dynamic_metadata_payload, &metadata->color.dynamicMetaDataPayload,
+        memcpy(dynamic_metadata_payload.data(), &metadata->color.dynamicMetaDataPayload,
                metadata->color.dynamicMetaDataLen);
         android::gralloc4::encodeSmpte2094_40(dynamic_metadata_payload, out);
       } else {
