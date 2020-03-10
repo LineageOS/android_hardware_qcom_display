@@ -264,6 +264,8 @@ class QtiMapper : public IQtiMapper {
       {qtigralloc::MetadataType_VideoHistogramStats, "Video histogram stats", true, true},
       {qtigralloc::MetadataType_FD, "fd from private_handle_t", true, false},
       {qtigralloc::MetadataType_PrivateFlags, "Flags in private_handle_t", true, false},
+      {qtigralloc::MetadataType_AlignedWidthInPixels, "width in private_handle_t", true, false},
+      {qtigralloc::MetadataType_AlignedHeightInPixels, "height in private_handle_t", true, false}
   };
 };
 

@@ -995,6 +995,14 @@ Error BufferManager::GetMetadata(private_handle_t *handle, int64_t metadatatype_
     case QTI_PRIVATE_FLAGS:
       android::gralloc4::encodeInt32(qtigralloc::MetadataType_PrivateFlags, handle->flags, out);
       break;
+    case QTI_ALIGNED_WIDTH_IN_PIXELS:
+      android::gralloc4::encodeUint32(qtigralloc::MetadataType_AlignedWidthInPixels, handle->width,
+                                      out);
+      break;
+    case QTI_ALIGNED_HEIGHT_IN_PIXELS:
+      android::gralloc4::encodeUint32(qtigralloc::MetadataType_AlignedHeightInPixels,
+                                      handle->height, out);
+      break;
     default:
       error = Error::UNSUPPORTED;
   }
@@ -1042,6 +1050,8 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
     case (int64_t)StandardMetadataType::COMPRESSION:
     case QTI_FD:
     case QTI_PRIVATE_FLAGS:
+    case QTI_ALIGNED_WIDTH_IN_PIXELS:
+    case QTI_ALIGNED_HEIGHT_IN_PIXELS:
       return Error::UNSUPPORTED;
     case (int64_t)StandardMetadataType::DATASPACE:
       Dataspace dataspace;
