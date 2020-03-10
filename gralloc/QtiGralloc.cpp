@@ -152,6 +152,10 @@ MetadataType getMetadataType(uint32_t in) {
       return MetadataType_FD;
     case QTI_PRIVATE_FLAGS:
       return MetadataType_PrivateFlags;
+    case QTI_ALIGNED_WIDTH_IN_PIXELS:
+      return MetadataType_AlignedWidthInPixels;
+    case QTI_ALIGNED_HEIGHT_IN_PIXELS:
+      return MetadataType_AlignedHeightInPixels;
     default:
       return MetadataType_Invalid;
   }
@@ -228,6 +232,14 @@ Error get(void *buffer, uint32_t type, void *param) {
     case QTI_PRIVATE_FLAGS:
       err = static_cast<Error>(android::gralloc4::decodeInt32(qtigralloc::MetadataType_PrivateFlags,
                                                               bytestream, (int32_t *)param));
+      break;
+    case QTI_ALIGNED_WIDTH_IN_PIXELS:
+      err = static_cast<Error>(android::gralloc4::decodeUint32(
+          qtigralloc::MetadataType_AlignedWidthInPixels, bytestream, (uint32_t *)param));
+      break;
+    case QTI_ALIGNED_HEIGHT_IN_PIXELS:
+      err = static_cast<Error>(android::gralloc4::decodeUint32(
+          qtigralloc::MetadataType_AlignedHeightInPixels, bytestream, (uint32_t *)param));
       break;
     default:
       param = nullptr;
