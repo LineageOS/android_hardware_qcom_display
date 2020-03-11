@@ -187,7 +187,13 @@ DisplayError CoreImpl::GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_d
 }
 
 bool CoreImpl::IsColorTransformSupported() {
+  int value = 0;
+
+  if (Debug::Get()->GetProperty(DISABLE_COLOR_TRANSFORM_PROP, &value) == kErrorNone) {
+    return (value) ? false : true;
+  } else {
     return (hw_resource_.has_ppp) ? false : true;
+  }
 }
 }  // namespace sdm
 
