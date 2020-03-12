@@ -311,7 +311,9 @@ HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
   ATRACE_INT("FastPath", layer_stack_.flags.fast_path);
   ATRACE_INT("GeometryChanged", layer_stack_.flags.geometry_changed);
   ATRACE_INT("NumLayers", static_cast <int32_t> (layer_stack_.layers.size()));
-  ATRACE_INT("HasClientComposition", HasClientComposition());
+  ATRACE_INT("SF_MarkedSkipLayer", HasForceClientComposition());
+  ATRACE_INT("HWC_MarkedSkipLayer", (HasClientComposition() &&
+             !HasForceClientComposition()));
 
   if (display_paused_) {
     DisplayError error = display_intf_->Flush(&layer_stack_);

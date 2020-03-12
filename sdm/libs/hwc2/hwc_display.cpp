@@ -1281,6 +1281,7 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
   layer_changes_.clear();
   layer_requests_.clear();
   has_client_composition_ = false;
+  has_force_client_composition_ = false;
 
   DTRACE_SCOPED();
   if (shutdown_pending_) {
@@ -1335,12 +1336,21 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
     if (device_composition == HWC2::Composition::Client) {
       has_client_composition_ = true;
     }
+
+    if (requested_composition == HWC2::Composition::Client) {
+      has_force_client_composition_ = true;
+    }
+
     // Update the changes list only if the requested composition is different from SDM comp type
     // TODO(user): Take Care of other comptypes(BLIT)
     if (requested_composition != device_composition) {
       layer_changes_[hwc_layer->GetId()] = device_composition;
     }
     hwc_layer->ResetValidation();
+  }
+
+  if ((has_client_composition_) && (!has_force_client_composition_)) {
+    DLOGI_IF(kTagDisplay, "HWC marked skip layer present");
   }
 
   client_target_->ResetValidation();
