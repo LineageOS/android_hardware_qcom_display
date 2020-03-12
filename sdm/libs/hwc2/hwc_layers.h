@@ -33,7 +33,7 @@
 #include <hardware/hwcomposer2.h>
 #undef HWC2_INCLUDE_STRINGIFICATION
 #undef HWC2_USE_CPP11
-#include <android/hardware/graphics/composer/2.2/IComposerClient.h>
+#include <android/hardware/graphics/composer/2.3/IComposerClient.h>
 #include <deque>
 #include <map>
 #include <set>
@@ -41,7 +41,7 @@
 #include "hwc_buffer_allocator.h"
 
 using PerFrameMetadataKey =
-    android::hardware::graphics::composer::V2_2::IComposerClient::PerFrameMetadataKey;
+    android::hardware::graphics::composer::V2_3::IComposerClient::PerFrameMetadataKey;
 
 namespace sdm {
 
@@ -91,6 +91,8 @@ class HWCLayer {
   HWC2::Error SetLayerVisibleRegion(hwc_region_t visible);
   HWC2::Error SetLayerPerFrameMetadata(uint32_t num_elements, const PerFrameMetadataKey *keys,
                                        const float *metadata);
+  HWC2::Error SetLayerPerFrameMetadataBlobs(uint32_t num_elements, const PerFrameMetadataKey *keys,
+                                            const uint32_t *sizes, const uint8_t* metadata);
   HWC2::Error SetLayerZOrder(uint32_t z);
   void SetComposition(const LayerComposition &sdm_composition);
   HWC2::Composition GetClientRequestedCompositionType() { return client_requested_; }
@@ -137,6 +139,7 @@ class HWCLayer {
   bool non_integral_source_crop_ = false;
   bool has_metadata_refresh_rate_ = false;
   bool buffer_flipped_ = false;
+  bool per_frame_hdr_metadata_ = false;  // used to track if perframe metadata and blob is set.
 
   // Composition requested by client(SF) Original
   HWC2::Composition client_requested_orig_ = HWC2::Composition::Device;
