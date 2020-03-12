@@ -270,11 +270,10 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
   layer_buffer->unaligned_width = UINT32(handle->unaligned_width);
   layer_buffer->unaligned_height = UINT32(handle->unaligned_height);
 
+  layer_buffer->flags.video = (handle->buffer_type == BUFFER_TYPE_VIDEO) ? true : false;
   if (SetMetaData(const_cast<private_handle_t *>(handle), layer_) != kErrorNone) {
     return HWC2::Error::BadLayer;
   }
-
-  layer_buffer->flags.video = (handle->buffer_type == BUFFER_TYPE_VIDEO) ? true : false;
 
   // TZ Protected Buffer - L1
   bool secure = (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER);
@@ -913,7 +912,9 @@ void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
      use_color_metadata = true;
   }
 
-  if (use_color_metadata) {
+  // Since client has set PerFrameMetadata, dataspace will be valid
+  // so we can skip reading from ColorMetaData.
+  if (use_color_metadata && !per_frame_hdr_metadata_) {
     ColorMetaData old_meta_data = layer_buffer->color_metadata;
     if (sdm::SetCSC(handle, &layer_buffer->color_metadata) == kErrorNone) {
       if ((layer_buffer->color_metadata.colorPrimaries != old_meta_data.colorPrimaries) ||
