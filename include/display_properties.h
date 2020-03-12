@@ -129,5 +129,6 @@
 #define DISABLE_UI_3D_TONEMAP                DISPLAY_PROP("disable_ui_3d_tonemap")
 #define DISABLE_PARALLEL_CACHE               DISPLAY_PROP("disable_parallel_cache")
 #define ENABLE_FORCE_SPLIT                   DISPLAY_PROP("enable_force_split")
+#define DEFER_FPS_FRAME_COUNT                DISPLAY_PROP("defer_fps_frame_count")
 
 #endif  // __DISPLAY_PROPERTIES_H__

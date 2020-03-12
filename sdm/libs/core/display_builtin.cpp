@@ -117,8 +117,11 @@ DisplayError DisplayBuiltIn::Init() {
 
   Debug::GetProperty(DISABLE_DEFER_POWER_STATE, &disable_defer_power_state);
   defer_power_state_ = !disable_defer_power_state;
-
   DLOGI("defer_power_state %d", defer_power_state_);
+
+  int value = 0;
+  Debug::Get()->GetProperty(DEFER_FPS_FRAME_COUNT, &value);
+  deferred_config_.frame_count = (value > 0) ? UINT32(value) : 0;
 
   return error;
 }
@@ -227,7 +230,14 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
     dpps_info_.DppsNotifyOps(kDppsCommitEvent, &display_type_, sizeof(display_type_));
   }
 
-  DisplayBase::ReconfigureDisplay();
+  deferred_config_.UpdateDeferCount();
+
+  ReconfigureDisplay();
+
+  if (deferred_config_.CanApplyDeferredState()) {
+    event_handler_->HandleEvent(kInvalidateDisplay);
+    deferred_config_.Clear();
+  }
 
   int idle_time_ms = hw_layers_.info.set_idle_time_ms;
   if (idle_time_ms >= 0) {
@@ -265,6 +275,11 @@ DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
                                              int *release_fence) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
+
+  if ((state == kStateOn) && deferred_config_.IsDeferredState()) {
+    SetDeferredFpsConfig();
+  }
+
   error = DisplayBase::SetDisplayState(state, teardown, release_fence);
   if (error != kErrorNone) {
     return error;
@@ -391,8 +406,9 @@ DisplayError DisplayBuiltIn::SetRefreshRate(uint32_t refresh_rate, bool final_ra
   // On success, set current refresh rate to new refresh rate
   current_refresh_rate_ = refresh_rate;
   handle_idle_timeout_ = false;
+  deferred_config_.MarkDirty();
 
-  return DisplayBase::ReconfigureDisplay();
+  return ReconfigureDisplay();
 }
 
 DisplayError DisplayBuiltIn::VSync(int64_t timestamp) {
@@ -776,6 +792,121 @@ bool DisplayBuiltIn::CanSkipDisplayPrepare(LayerStack *layer_stack) {
 DisplayError DisplayBuiltIn::GetRefreshRate(uint32_t *refresh_rate) {
   *refresh_rate = current_refresh_rate_;
   return kErrorNone;
+}
+
+DisplayError DisplayBuiltIn::SetActiveConfig(uint32_t index) {
+  deferred_config_.MarkDirty();
+  return DisplayBase::SetActiveConfig(index);
+}
+
+DisplayError DisplayBuiltIn::ReconfigureDisplay() {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  DisplayError error = kErrorNone;
+  HWDisplayAttributes display_attributes;
+  HWMixerAttributes mixer_attributes;
+  HWPanelInfo hw_panel_info;
+  uint32_t active_index = 0;
+
+  DTRACE_SCOPED();
+
+  error = hw_intf_->GetActiveConfig(&active_index);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  error = hw_intf_->GetDisplayAttributes(active_index, &display_attributes);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  error = hw_intf_->GetMixerAttributes(&mixer_attributes);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  error = hw_intf_->GetHWPanelInfo(&hw_panel_info);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  const bool dirty = deferred_config_.IsDirty();
+  if (deferred_config_.IsDeferredState()) {
+    if (dirty) {
+      SetDeferredFpsConfig();
+    } else {
+      // In Deferred state, use current config for comparison.
+      GetFpsConfig(&display_attributes, &hw_panel_info);
+    }
+  }
+
+  const bool display_unchanged = (display_attributes == display_attributes_);
+  const bool mixer_unchanged = (mixer_attributes == mixer_attributes_);
+  const bool panel_unchanged = (hw_panel_info == hw_panel_info_);
+  if (!dirty && display_unchanged && mixer_unchanged && panel_unchanged) {
+    return kErrorNone;
+  }
+
+  if (CanDeferFpsConfig(display_attributes.fps)) {
+    deferred_config_.Init(display_attributes.fps, display_attributes.vsync_period_ns,
+                          hw_panel_info.transfer_time_us);
+
+    // Apply current config until new Fps is deferred.
+    GetFpsConfig(&display_attributes, &hw_panel_info);
+  }
+
+  error = comp_manager_->ReconfigureDisplay(display_comp_ctx_, display_attributes, hw_panel_info,
+                                            mixer_attributes, fb_config_,
+                                            &(default_qos_data_.clock_hz));
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  bool disble_pu = true;
+  if (mixer_unchanged && panel_unchanged) {
+    // Do not disable Partial Update for one frame, if only FPS has changed.
+    // Because if first frame after transition, has a partial Frame-ROI and
+    // is followed by Skip Validate frames, then it can benefit those frames.
+    disble_pu = !display_attributes_.OnlyFpsChanged(display_attributes);
+  }
+
+  if (disble_pu) {
+    DisablePartialUpdateOneFrame();
+  }
+
+  display_attributes_ = display_attributes;
+  mixer_attributes_ = mixer_attributes;
+  hw_panel_info_ = hw_panel_info;
+
+  // TODO(user): Temporary changes, to be removed when DRM driver supports
+  // Partial update with Destination scaler enabled.
+  SetPUonDestScaler();
+
+  return kErrorNone;
+}
+
+bool DisplayBuiltIn::CanDeferFpsConfig(uint32_t fps) {
+  if (deferred_config_.CanApplyDeferredState()) {
+    // Deferred Fps Config needs to be applied.
+    return false;
+  }
+
+  // In case of higher to lower Fps transition on a Builtin display, defer the Fps
+  // (Transfer time) configuration, for the number of frames based on frame_count.
+  return ((deferred_config_.frame_count != 0) && (display_attributes_.fps > fps));
+}
+
+void DisplayBuiltIn::SetDeferredFpsConfig() {
+  // Update with the deferred Fps Config.
+  display_attributes_.fps = deferred_config_.fps;
+  display_attributes_.vsync_period_ns = deferred_config_.vsync_period_ns;
+  hw_panel_info_.transfer_time_us = deferred_config_.transfer_time_us;
+  deferred_config_.Clear();
+}
+
+void DisplayBuiltIn::GetFpsConfig(HWDisplayAttributes *display_attr, HWPanelInfo *panel_info) {
+  display_attr->fps = display_attributes_.fps;
+  display_attr->vsync_period_ns = display_attributes_.vsync_period_ns;
+  panel_info->transfer_time_us = hw_panel_info_.transfer_time_us;
 }
 
 }  // namespace sdm
