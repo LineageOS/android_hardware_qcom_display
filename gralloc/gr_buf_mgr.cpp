@@ -362,8 +362,13 @@ static Error getFormatLayout(private_handle_t *handle, Rect crop_rect,
         handle->unaligned_width * 8 / plane_info[i].sampleIncrementInBits;
     plane_info[i].heightInSamples =
         handle->unaligned_height * 8 / plane_info[i].sampleIncrementInBits;
+#ifdef TARGET_USES_GRALLOC4
     // TODO(tbalacha): This will be removed when standard metadata type CROP_RECTANGLE is added
     plane_info[i].crop = crop_rect;
+#else
+    // Avoid unused parameter compiliation error
+    (void)crop_rect;
+#endif
   }
   *out = plane_info;
   return Error::NONE;
