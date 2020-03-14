@@ -286,10 +286,10 @@ inline hwc_rect_t integerizeSourceCrop(const hwc_frect_t& cropF) {
 }
 
 inline bool isNonIntegralSourceCrop(const hwc_frect_t& cropF) {
-    if(cropF.left - roundf(cropF.left)     ||
-       cropF.top - roundf(cropF.top)       ||
-       cropF.right - roundf(cropF.right)   ||
-       cropF.bottom - roundf(cropF.bottom))
+    if(((cropF.left - roundf(cropF.left)) != 0)     ||
+       ((cropF.top - roundf(cropF.top)) != 0)       ||
+       ((cropF.right - roundf(cropF.right)) != 0)   ||
+       ((cropF.bottom - roundf(cropF.bottom) != 0)))
         return true;
     else
         return false;
@@ -499,7 +499,7 @@ static inline bool isYuvBuffer(const private_handle_t* hnd) {
 
 // Returns true if the buffer is yuv and exceeds the mixer width
 static inline bool isYUVSplitNeeded(const private_handle_t* hnd) {
-    int maxPipeWidth = qdutils::MDPVersion::getInstance().getMaxPipeWidth();
+    int maxPipeWidth = (int)qdutils::MDPVersion::getInstance().getMaxPipeWidth();
     return (hnd && (hnd->bufferType == BUFFER_TYPE_VIDEO) &&
             (hnd->width > maxPipeWidth));
 }

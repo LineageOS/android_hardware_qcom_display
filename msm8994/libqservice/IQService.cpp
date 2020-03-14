@@ -79,7 +79,7 @@ status_t BnQService::onTransact(
     // IPC should be from certain processes only
     IPCThreadState* ipc = IPCThreadState::self();
     const int callerPid = ipc->getCallingPid();
-    const int callerUid = ipc->getCallingUid();
+    const int callerUid = (int)ipc->getCallingUid();
     const int MAX_BUF_SIZE = 1024;
     char callingProcName[MAX_BUF_SIZE] = {0};
 
@@ -120,14 +120,16 @@ status_t BnQService::onTransact(
 //Helper
 static void getProcName(int pid, char *buf, int size) {
     int fd = -1;
-    snprintf(buf, size, "/proc/%d/cmdline", pid);
+    snprintf(buf, (uint32_t)size, "/proc/%d/cmdline", pid);
     fd = open(buf, O_RDONLY);
     if (fd < 0) {
-        strlcpy(buf, "Unknown", size);
+        strlcpy(buf, "Unknown", (uint32_t)size);
     } else {
-        ssize_t len = read(fd, buf, size - 1);
-        if (len >= 0)
-           buf[len] = 0;
+		  if(size > 0) {
+           ssize_t len = read(fd, buf, (uint32_t)size - 1);
+           if (len >= 0)
+              buf[len] = 0;
+		  }
 
         close(fd);
     }

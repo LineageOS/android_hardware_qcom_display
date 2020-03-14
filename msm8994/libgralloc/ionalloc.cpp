@@ -80,13 +80,13 @@ int IonAlloc::alloc_buffer(alloc_data& data)
     ionAllocData.align = data.align;
     ionAllocData.heap_id_mask = data.flags & ~ION_SECURE;
 #ifdef ION_FLAG_ALLOW_NON_CONTIG
-    ionAllocData.heap_id_mask &= (data.flags & ~ION_FLAG_ALLOW_NON_CONTIG);
+    ionAllocData.heap_id_mask &= ((unsigned int)data.flags & (unsigned int)~ION_FLAG_ALLOW_NON_CONTIG);
 #endif
     ionAllocData.flags = data.uncached ? 0 : ION_FLAG_CACHED;
     // ToDo: replace usage of alloc data structure with
     //  ionallocdata structure.
-    if (data.flags & ION_SECURE)
-        ionAllocData.flags |= ION_SECURE;
+    if ((unsigned int)data.flags & (unsigned int)ION_SECURE)
+        ionAllocData.flags |= (unsigned int)ION_SECURE;
 #ifdef ION_FLAG_ALLOW_NON_CONTIG
     if (data.flags & ION_FLAG_ALLOW_NON_CONTIG)
         ionAllocData.flags |= ION_FLAG_ALLOW_NON_CONTIG;
@@ -110,7 +110,7 @@ int IonAlloc::alloc_buffer(alloc_data& data)
         return err;
     }
 
-    if(!(data.flags & ION_SECURE)) {
+    if(!(data.flags & (unsigned int)ION_SECURE)) {
         base = mmap(0, ionAllocData.len, PROT_READ|PROT_WRITE,
                     MAP_SHARED, fd_data.fd, 0);
         if(base == MAP_FAILED) {

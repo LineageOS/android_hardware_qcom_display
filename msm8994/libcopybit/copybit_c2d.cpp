@@ -191,21 +191,21 @@ static int open_copybit(const struct hw_module_t* module, const char* name,
                         struct hw_device_t** device);
 
 static struct hw_module_methods_t copybit_module_methods = {
-open:  open_copybit
+ .open =  open_copybit
 };
 
 /*
  * The COPYBIT Module
  */
 struct copybit_module_t HAL_MODULE_INFO_SYM = {
-common: {
-tag: HARDWARE_MODULE_TAG,
-     version_major: 1,
-     version_minor: 0,
-     id: COPYBIT_HARDWARE_MODULE_ID,
-     name: "QCT COPYBIT C2D 2.0 Module",
-     author: "Qualcomm",
-     methods: &copybit_module_methods
+ .common = {
+   .tag = HARDWARE_MODULE_TAG,
+   .version_major = 1,
+   .version_minor = 0,
+   .id = COPYBIT_HARDWARE_MODULE_ID,
+   .name = "QCT COPYBIT C2D 2.0 Module",
+   .author = "Qualcomm",
+   .methods = &copybit_module_methods
         }
 };
 
@@ -472,7 +472,7 @@ static int calculate_yuv_offset_and_stride(const bufferInfo& info,
             aligned_height = ALIGN(height, 32);
             aligned_width  = ALIGN(width, 128);
             size = aligned_width * aligned_height;
-            yuvInfo.plane1_offset = ALIGN(size,8192);
+            yuvInfo.plane1_offset = (size_t)ALIGN(size,8192);
             yuvInfo.yStride = aligned_width;
             yuvInfo.plane1_stride = aligned_width;
             break;
@@ -485,9 +485,9 @@ static int calculate_yuv_offset_and_stride(const bufferInfo& info,
             yuvInfo.plane1_stride = aligned_width;
             if (HAL_PIXEL_FORMAT_NV12_ENCODEABLE == format) {
                 // The encoder requires a 2K aligned chroma offset
-                yuvInfo.plane1_offset = ALIGN(aligned_width * height, 2048);
+                yuvInfo.plane1_offset = (size_t)ALIGN(aligned_width * height, 2048);
             } else
-                yuvInfo.plane1_offset = aligned_width * height;
+                yuvInfo.plane1_offset = (size_t)(aligned_width * height);
 
             break;
         }
@@ -546,12 +546,12 @@ static int set_image(copybit_context_t* ctx, uint32 surfaceId,
         surfaceDef.phys = (void*) gpuaddr;
         surfaceDef.buffer = (void*) (handle->base);
 
-        surfaceDef.format = c2d_format |
-            ((flags & FLAGS_PREMULTIPLIED_ALPHA) ? C2D_FORMAT_PREMULTIPLIED : 0);
+        surfaceDef.format = (unsigned int)c2d_format |
+            (uint32)((flags & FLAGS_PREMULTIPLIED_ALPHA) ? C2D_FORMAT_PREMULTIPLIED : 0);
         surfaceDef.width = rhs->w;
         surfaceDef.height = rhs->h;
         int aligned_width = ALIGN((int)surfaceDef.width,32);
-        surfaceDef.stride = (aligned_width * c2diGetBpp(surfaceDef.format))>>3;
+        surfaceDef.stride = (aligned_width * c2diGetBpp((int32)surfaceDef.format))>>3;
 
         if(LINK_c2dUpdateSurface( surfaceId,C2D_TARGET | C2D_SOURCE, surfaceType,
                                   &surfaceDef)) {
@@ -563,11 +563,11 @@ static int set_image(copybit_context_t* ctx, uint32 surfaceId,
         C2D_YUV_SURFACE_DEF surfaceDef;
         memset(&surfaceDef, 0, sizeof(surfaceDef));
         surfaceType = (C2D_SURFACE_TYPE)(C2D_SURFACE_YUV_HOST | C2D_SURFACE_WITH_PHYS);
-        surfaceDef.format = c2d_format;
+        surfaceDef.format = (unsigned int)c2d_format;
 
         bufferInfo info;
-        info.width = rhs->w;
-        info.height = rhs->h;
+        info.width = (int)rhs->w;
+        info.height = (int)rhs->h;
         info.format = rhs->format;
 
         yuvPlaneInfo yuvInfo = {0};
@@ -626,7 +626,7 @@ static int msm_copybit(struct copybit_context_t *ctx, unsigned int target)
         target_transform = 0x0;
     }
     if(LINK_c2dDraw(target, target_transform, 0x0, 0, 0, ctx->blit_list,
-                    ctx->blit_count)) {
+                    (uint32)ctx->blit_count)) {
         ALOGE("%s: LINK_c2dDraw ERROR", __FUNCTION__);
         return COPYBIT_FAILURE;
     }
@@ -909,27 +909,6 @@ static int get(struct copybit_device_t *dev, int name)
     return value;
 }
 
-static int is_alpha(int cformat)
-{
-    int alpha = 0;
-    switch (cformat & 0xFF) {
-        case C2D_COLOR_FORMAT_8888_ARGB:
-        case C2D_COLOR_FORMAT_8888_RGBA:
-        case C2D_COLOR_FORMAT_5551_RGBA:
-        case C2D_COLOR_FORMAT_4444_ARGB:
-            alpha = 1;
-            break;
-        default:
-            alpha = 0;
-            break;
-    }
-
-    if(alpha && (cformat&C2D_FORMAT_DISABLE_ALPHA))
-        alpha = 0;
-
-    return alpha;
-}
-
 /* Function to check if we need a temporary buffer for the blit.
  * This would happen if the requested destination stride and the
  * C2D stride do not match. We ignore RGB buffers, since their
@@ -957,15 +936,15 @@ static bool need_temp_buffer(struct copybit_image_t const *img)
  */
 static void populate_buffer_info(struct copybit_image_t const *img, bufferInfo& info)
 {
-    info.width = img->w;
-    info.height = img->h;
-    info.format = img->format;
+    info.width = (int)img->w;
+    info.height = (int)img->h;
+    info.format = (int)img->format;
 }
 
 /* Function to get the required size for a particular format, inorder for C2D to perform
  * the blit operation.
  */
-static int get_size(const bufferInfo& info)
+static unsigned int get_size(const bufferInfo& info)
 {
     int size = 0;
     int w = info.width;
@@ -988,7 +967,7 @@ static int get_size(const bufferInfo& info)
             } break;
         default: break;
     }
-    return size;
+    return (unsigned int)size;
 }
 
 /* Function to allocate memory for the temporary buffer. This memory is
@@ -1003,7 +982,7 @@ static int get_temp_buffer(const bufferInfo& info, alloc_data& data)
     data.fd = -1;
     data.offset = 0;
     data.size = get_size(info);
-    data.align = getpagesize();
+    data.align = (unsigned int)getpagesize();
     data.uncached = true;
     int allocFlags = GRALLOC_USAGE_PRIVATE_SYSTEM_HEAP;
 
@@ -1321,11 +1300,11 @@ static int stretch_copybit_internal(
         return COPYBIT_FAILURE;
     }
 
-    src_surface.config_mask = C2D_NO_ANTIALIASING_BIT | ctx->config_mask;
-    src_surface.global_alpha = ctx->src_global_alpha;
+    src_surface.config_mask = (unsigned int)C2D_NO_ANTIALIASING_BIT | (unsigned int)ctx->config_mask;
+    src_surface.global_alpha = (uint32)ctx->src_global_alpha;
     if (enableBlend) {
         if(src_surface.config_mask & C2D_GLOBAL_ALPHA_BIT) {
-            src_surface.config_mask &= ~C2D_ALPHA_BLEND_NONE;
+            src_surface.config_mask &= (unsigned int)~C2D_ALPHA_BLEND_NONE;
             if(!(src_surface.global_alpha)) {
                 // src alpha is zero
                 delete_handle(dst_hnd);

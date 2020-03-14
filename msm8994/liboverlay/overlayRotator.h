@@ -303,7 +303,7 @@ public:
      */
     void getDump(char *buf, size_t len);
     int getRotDevFd();
-    int getNumActiveSessions() { return mUseCount; }
+    int getNumActiveSessions() { return (int)mUseCount; }
 
     static RotMgr *getInstance();
 

@@ -43,14 +43,6 @@
 #include <profiler.h>
 
 #define EVEN_OUT(x) if (x & 0x0001) {x--;}
-/** min of int a, b */
-static inline int min(int a, int b) {
-    return (a<b) ? a : b;
-}
-/** max of int a, b */
-static inline int max(int a, int b) {
-    return (a>b) ? a : b;
-}
 
 enum {
     PAGE_FLIP = 0x00000001,
@@ -80,7 +72,7 @@ static int fb_setSwapInterval(struct framebuffer_device_t* dev,
     if (interval < dev->minSwapInterval || interval > dev->maxSwapInterval)
         return -EINVAL;
 
-    m->swapInterval = interval;
+    m->swapInterval = (uint32_t)interval;
     return 0;
 }
 
@@ -94,7 +86,7 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
     const unsigned int offset = (unsigned int) (hnd->base -
             m->framebuffer->base);
     m->info.activate = FB_ACTIVATE_VBL;
-    m->info.yoffset = (int)(offset / m->finfo.line_length);
+    m->info.yoffset = (__u32)(offset / m->finfo.line_length);
     if (ioctl(ctx->fbFd, FBIOPUT_VSCREENINFO, &m->info) == -1) {
         ALOGE("%s: FBIOPUT_VSCREENINFO for primary failed, str: %s",
                 __FUNCTION__, strerror(errno));
@@ -216,13 +208,13 @@ int mapFrameBufferLocked(framebuffer_device_t *dev)
     /*
      * Request NUM_BUFFERS screens (at least 2 for page flipping)
      */
-    int numberOfBuffers = (int)(finfo.smem_len/size);
+    unsigned int numberOfBuffers = (unsigned int)(finfo.smem_len/size);
     ALOGV("num supported framebuffers in kernel = %d", numberOfBuffers);
 
     if (property_get("debug.gr.numframebuffers", property, NULL) > 0) {
         int num = atoi(property);
         if ((num >= NUM_FRAMEBUFFERS_MIN) && (num <= NUM_FRAMEBUFFERS_MAX)) {
-            numberOfBuffers = num;
+            numberOfBuffers = (unsigned int)num;
         }
     }
     if (numberOfBuffers > NUM_FRAMEBUFFERS_MAX)
@@ -238,8 +230,8 @@ int mapFrameBufferLocked(framebuffer_device_t *dev)
 
     if (info.yres_virtual < ((size * 2) / line_length) ) {
         // we need at least 2 for page-flipping
-        info.yres_virtual = (int)(size / line_length);
-        flags &= ~PAGE_FLIP;
+        info.yres_virtual = (__u32)(size / line_length);
+        flags &= (unsigned int)~PAGE_FLIP;
         ALOGW("page flipping not supported (yres_virtual=%d, requested=%d)",
               info.yres_virtual, info.yres*2);
     }
@@ -363,7 +355,7 @@ int mapFrameBufferLocked(framebuffer_device_t *dev)
     module->framebuffer = new private_handle_t(fd, fbSize,
                                         private_handle_t::PRIV_FLAGS_USES_ION,
                                         BUFFER_TYPE_UI,
-                                        module->fbFormat, info.xres, info.yres);
+                                        (int)module->fbFormat, (int)info.xres, (int)info.yres);
     module->framebuffer->base = uint64_t(vaddr);
     memset(vaddr, 0, fbSize);
     //Enable vsync
@@ -437,12 +429,12 @@ int fb_device_open(hw_module_t const* module, const char* name,
         status = mapFrameBuffer((framebuffer_device_t*)dev);
         private_module_t* m = (private_module_t*)dev->device.common.module;
         if (status >= 0) {
-            int stride = m->finfo.line_length / (m->info.bits_per_pixel >> 3);
+            int stride = (int)m->finfo.line_length / (int)(m->info.bits_per_pixel >> 3);
             const_cast<uint32_t&>(dev->device.flags) = 0;
             const_cast<uint32_t&>(dev->device.width) = m->info.xres;
             const_cast<uint32_t&>(dev->device.height) = m->info.yres;
             const_cast<int&>(dev->device.stride) = stride;
-            const_cast<int&>(dev->device.format) = m->fbFormat;
+            const_cast<int&>(dev->device.format) = (int)m->fbFormat;
             const_cast<float&>(dev->device.xdpi) = m->xdpi;
             const_cast<float&>(dev->device.ydpi) = m->ydpi;
             const_cast<float&>(dev->device.fps) = m->fps;
@@ -450,7 +442,7 @@ int fb_device_open(hw_module_t const* module, const char* name,
                                                         PRIV_MIN_SWAP_INTERVAL;
             const_cast<int&>(dev->device.maxSwapInterval) =
                                                         PRIV_MAX_SWAP_INTERVAL;
-            const_cast<int&>(dev->device.numFramebuffers) = m->numBuffers;
+            const_cast<int&>(dev->device.numFramebuffers) = (int)m->numBuffers;
             dev->device.setUpdateRect = 0;
 
             *device = &dev->device.common;

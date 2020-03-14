@@ -71,9 +71,9 @@ static bool canFallback(int usage, bool triedSystem)
         return false;
     if(triedSystem)
         return false;
-    if(usage & (GRALLOC_HEAP_MASK | GRALLOC_USAGE_PROTECTED))
+    if((unsigned int)usage & (GRALLOC_HEAP_MASK | GRALLOC_USAGE_PROTECTED))
         return false;
-    if(usage & (GRALLOC_HEAP_MASK | GRALLOC_USAGE_PRIVATE_EXTERNAL_ONLY))
+    if((unsigned int)usage & (GRALLOC_HEAP_MASK | GRALLOC_USAGE_PRIVATE_EXTERNAL_ONLY))
         return false;
     //Return true by default
     return true;
@@ -84,10 +84,10 @@ static bool canFallback(int usage, bool triedSystem)
  * read or written in software. Any combination with a _RARELY_ flag will be
  * treated as uncached. */
 static bool useUncached(const int& usage) {
-    if ((usage & GRALLOC_USAGE_PROTECTED) or
-       (usage & GRALLOC_USAGE_PRIVATE_UNCACHED) or
-       ((usage & GRALLOC_USAGE_SW_WRITE_MASK) == GRALLOC_USAGE_SW_WRITE_RARELY) or
-       ((usage & GRALLOC_USAGE_SW_READ_MASK) == GRALLOC_USAGE_SW_READ_RARELY))
+    if (((unsigned int)usage & GRALLOC_USAGE_PROTECTED) or
+       ((unsigned int)usage & GRALLOC_USAGE_PRIVATE_UNCACHED) or
+       (((unsigned int)usage & GRALLOC_USAGE_SW_WRITE_MASK) == GRALLOC_USAGE_SW_WRITE_RARELY) or
+       (((unsigned int)usage & GRALLOC_USAGE_SW_READ_MASK) == GRALLOC_USAGE_SW_READ_RARELY))
         return true;
 
     return false;
@@ -207,8 +207,8 @@ void AdrenoMemInfo::getAlignedWidthAndHeight(int width, int height, int format,
             break;
         case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
         case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
-            aligned_w = VENUS_Y_STRIDE(COLOR_FMT_NV12, width);
-            aligned_h = VENUS_Y_SCANLINES(COLOR_FMT_NV12, height);
+            aligned_w = (int)VENUS_Y_STRIDE(COLOR_FMT_NV12, width);
+            aligned_h = (int)VENUS_Y_SCANLINES(COLOR_FMT_NV12, height);
             break;
         case HAL_PIXEL_FORMAT_BLOB:
         case HAL_PIXEL_FORMAT_RAW_OPAQUE:
@@ -376,25 +376,26 @@ int IonController::allocate(alloc_data& data, int usage)
 {
     int ionFlags = 0;
     int ret;
+	 unsigned int uUsage = (unsigned int)usage;
 
     data.uncached = useUncached(usage);
     data.allocType = 0;
 
-    if(usage & GRALLOC_USAGE_PRIVATE_SYSTEM_HEAP)
+    if(uUsage & GRALLOC_USAGE_PRIVATE_SYSTEM_HEAP)
         ionFlags |= ION_HEAP(ION_SYSTEM_HEAP_ID);
 
-    if(usage & GRALLOC_USAGE_PRIVATE_IOMMU_HEAP)
+    if(uUsage & GRALLOC_USAGE_PRIVATE_IOMMU_HEAP)
         ionFlags |= ION_HEAP(ION_IOMMU_HEAP_ID);
 
-    if(usage & GRALLOC_USAGE_PROTECTED) {
+    if(uUsage & GRALLOC_USAGE_PROTECTED) {
         ionFlags |= ION_HEAP(ION_CP_MM_HEAP_ID);
         ionFlags |= ION_SECURE;
 #ifdef ION_FLAG_ALLOW_NON_CONTIG
-        if (!(usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY)) {
+        if (!(uUsage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY)) {
             ionFlags |= ION_FLAG_ALLOW_NON_CONTIG;
         }
 #endif
-    } else if(usage & GRALLOC_USAGE_PRIVATE_MM_HEAP) {
+    } else if(uUsage & GRALLOC_USAGE_PRIVATE_MM_HEAP) {
         //MM Heap is exclusively a secure heap.
         //If it is used for non secure cases, fallback to IOMMU heap
         ALOGW("GRALLOC_USAGE_PRIVATE_MM_HEAP \
@@ -403,10 +404,10 @@ int IonController::allocate(alloc_data& data, int usage)
         ionFlags |= ION_HEAP(ION_IOMMU_HEAP_ID);
     }
 
-    if(usage & GRALLOC_USAGE_PRIVATE_CAMERA_HEAP)
+    if(uUsage & GRALLOC_USAGE_PRIVATE_CAMERA_HEAP)
         ionFlags |= ION_HEAP(ION_CAMERA_HEAP_ID);
 
-    if(usage & GRALLOC_USAGE_PRIVATE_ADSP_HEAP)
+    if(uUsage & GRALLOC_USAGE_PRIVATE_ADSP_HEAP)
         ionFlags |= ION_HEAP(ION_ADSP_HEAP_ID);
 
     if(ionFlags & ION_SECURE)
@@ -419,7 +420,7 @@ int IonController::allocate(alloc_data& data, int usage)
     if(!ionFlags)
         ionFlags = ION_HEAP(ION_SF_HEAP_ID) | ION_HEAP(ION_IOMMU_HEAP_ID);
 
-    data.flags = ionFlags;
+    data.flags = (unsigned int)ionFlags;
     ret = mIonAlloc->alloc_buffer(data);
 
     // Fallback
@@ -468,8 +469,8 @@ bool isMacroTileEnabled(int format, int usage)
                 {
                     tileEnabled = true;
                     // check the usage flags
-                    if (usage & (GRALLOC_USAGE_SW_READ_MASK |
-                                GRALLOC_USAGE_SW_WRITE_MASK)) {
+                    if ((unsigned int)usage & (GRALLOC_USAGE_SW_READ_MASK |
+                                               GRALLOC_USAGE_SW_WRITE_MASK)) {
                         // Application intends to use CPU for rendering
                         tileEnabled = false;
                     }
@@ -490,25 +491,25 @@ unsigned int getSize(int format, int width, int height, int usage,
         return getUBwcSize(width, height, format, alignedw, alignedh);
     }
 
-    unsigned int size = 0;
+    int size = 0;
     switch (format) {
         case HAL_PIXEL_FORMAT_RGBA_FP16:
-            size = alignedw * alignedh * 8;
+            size = (alignedw * alignedh * 8);
             break;
         case HAL_PIXEL_FORMAT_RGBA_8888:
         case HAL_PIXEL_FORMAT_RGBX_8888:
         case HAL_PIXEL_FORMAT_BGRA_8888:
         case HAL_PIXEL_FORMAT_RGBA_1010102:
-            size = alignedw * alignedh * 4;
+            size = (alignedw * alignedh * 4);
             break;
         case HAL_PIXEL_FORMAT_RGB_888:
-            size = alignedw * alignedh * 3;
+            size = (alignedw * alignedh * 3);
             break;
         case HAL_PIXEL_FORMAT_RGB_565:
         case HAL_PIXEL_FORMAT_RGBA_5551:
         case HAL_PIXEL_FORMAT_RGBA_4444:
         case HAL_PIXEL_FORMAT_RAW16:
-            size = alignedw * alignedh * 2;
+            size = (alignedw * alignedh * 2);
             break;
         case HAL_PIXEL_FORMAT_RAW10:
             size = ALIGN(alignedw * alignedh, 4096);
@@ -530,9 +531,9 @@ unsigned int getSize(int format, int width, int height, int usage,
                 ALOGE("w or h is odd for the YV12 format");
                 return 0;
             }
-            size = alignedw*alignedh +
-                    (ALIGN(alignedw/2, 16) * (alignedh/2))*2;
-            size = ALIGN(size, (unsigned int)4096);
+            size = (alignedw*alignedh) +
+                   ((ALIGN(alignedw/2, 16)) * (alignedh/2))*2;
+            size = ALIGN(size, 4096);
             break;
         case HAL_PIXEL_FORMAT_YCbCr_420_SP:
         case HAL_PIXEL_FORMAT_YCrCb_420_SP:
@@ -592,13 +593,13 @@ unsigned int getSize(int format, int width, int height, int usage,
         case HAL_PIXEL_FORMAT_COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR:
         case HAL_PIXEL_FORMAT_COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR:
         case HAL_PIXEL_FORMAT_COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR:
-            size = alignedw * alignedh * ASTC_BLOCK_SIZE;
+            size = (alignedw * alignedh * ASTC_BLOCK_SIZE);
             break;
         default:
             ALOGE("%s: Unrecognized pixel format: 0x%x", __FUNCTION__, format);
             return 0;
     }
-    return size;
+    return (unsigned int)size;
 }
 
 unsigned int getBufferSizeAndDimensions(int width, int height, int format,
@@ -665,10 +666,10 @@ int getYUVPlaneInfo(private_handle_t* hnd, struct android_ycbcr* ycbcr)
         case HAL_PIXEL_FORMAT_YCbCr_422_SP:
         case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
         case HAL_PIXEL_FORMAT_NV12_ENCODEABLE: //Same as YCbCr_420_SP_VENUS
-            ystride = cstride = hnd->width;
+            ystride = cstride = (unsigned int)hnd->width;
             ycbcr->y  = (void*)hnd->base;
-            ycbcr->cb = (void*)(hnd->base + ystride * hnd->height);
-            ycbcr->cr = (void*)(hnd->base + ystride * hnd->height + 1);
+            ycbcr->cb = (void*)(hnd->base + ystride * (unsigned int)hnd->height);
+            ycbcr->cr = (void*)(hnd->base + ystride * (unsigned int)hnd->height + 1);
             ycbcr->ystride = ystride;
             ycbcr->cstride = cstride;
             ycbcr->chroma_step = 2;
@@ -680,10 +681,10 @@ int getYUVPlaneInfo(private_handle_t* hnd, struct android_ycbcr* ycbcr)
         case HAL_PIXEL_FORMAT_NV21_ZSL:
         case HAL_PIXEL_FORMAT_RAW10:
         case HAL_PIXEL_FORMAT_RAW16:
-            ystride = cstride = hnd->width;
+            ystride = cstride = (unsigned int)hnd->width;
             ycbcr->y  = (void*)hnd->base;
-            ycbcr->cr = (void*)(hnd->base + ystride * hnd->height);
-            ycbcr->cb = (void*)(hnd->base + ystride * hnd->height + 1);
+            ycbcr->cr = (void*)(hnd->base + ystride * (unsigned int)hnd->height);
+            ycbcr->cb = (void*)(hnd->base + ystride * (unsigned int)hnd->height + 1);
             ycbcr->ystride = ystride;
             ycbcr->cstride = cstride;
             ycbcr->chroma_step = 2;
@@ -691,12 +692,12 @@ int getYUVPlaneInfo(private_handle_t* hnd, struct android_ycbcr* ycbcr)
 
         //Planar
         case HAL_PIXEL_FORMAT_YV12:
-            ystride = hnd->width;
-            cstride = ALIGN(hnd->width/2, 16);
+            ystride = (unsigned int)hnd->width;
+            cstride = (unsigned int)ALIGN(hnd->width/2, 16);
             ycbcr->y  = (void*)hnd->base;
-            ycbcr->cr = (void*)(hnd->base + ystride * hnd->height);
-            ycbcr->cb = (void*)(hnd->base + ystride * hnd->height +
-                    cstride * hnd->height/2);
+            ycbcr->cr = (void*)(hnd->base + ystride * (unsigned int)hnd->height);
+            ycbcr->cb = (void*)(hnd->base + ystride * (unsigned int)hnd->height +
+                    cstride * (unsigned int)hnd->height/2);
             ycbcr->ystride = ystride;
             ycbcr->cstride = cstride;
             ycbcr->chroma_step = 1;
@@ -732,7 +733,7 @@ int alloc_buffer(private_handle_t **pHnd, int w, int h, int format, int usage)
     data.size = getBufferSizeAndDimensions(w, h, format, usage, alignedw,
                                             alignedh);
 
-    data.align = getpagesize();
+    data.align = (unsigned int)getpagesize();
     data.uncached = useUncached(usage);
     int allocFlags = usage;
 
@@ -796,11 +797,11 @@ static bool isUBwcSupported(int format)
 bool isUBwcEnabled(int format, int usage)
 {
     if (isUBwcFormat(format) ||
-        ((usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC) && isUBwcSupported(format)))
+        (((unsigned int)usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC) && isUBwcSupported(format)))
     {
         // Allow UBWC, only if GPU supports it and CPU usage flags are not set
         if (AdrenoMemInfo::getInstance().isUBWCSupportedByGPU(format) &&
-            !(usage & (GRALLOC_USAGE_SW_READ_MASK |
+            !((unsigned int)usage & (GRALLOC_USAGE_SW_READ_MASK |
                       GRALLOC_USAGE_SW_WRITE_MASK))) {
             return true;
         }
@@ -816,8 +817,8 @@ static void getUBwcWidthAndHeight(int width, int height, int format,
         case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
         case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
         case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
-            aligned_w = VENUS_Y_STRIDE(COLOR_FMT_NV12_UBWC, width);
-            aligned_h = VENUS_Y_SCANLINES(COLOR_FMT_NV12_UBWC, height);
+            aligned_w = (int)VENUS_Y_STRIDE(COLOR_FMT_NV12_UBWC, width);
+            aligned_h = (int)VENUS_Y_SCANLINES(COLOR_FMT_NV12_UBWC, height);
             break;
         default:
             ALOGE("%s: Unsupported pixel format: 0x%x", __FUNCTION__, format);
@@ -873,7 +874,7 @@ static unsigned int getUBwcMetaBufferSize(int width, int height, int bpp)
     meta_width = ALIGN(((width + block_width - 1) / block_width), 64);
 
     // Align meta buffer size to 4K
-    size = ((meta_width * meta_height), 4096);
+    size = (unsigned int)ALIGN((meta_width * meta_height), 4096);
     return size;
 }
 
@@ -883,11 +884,11 @@ static unsigned int getUBwcSize(int width, int height, int format,
     unsigned int size = 0;
     switch (format) {
         case HAL_PIXEL_FORMAT_RGB_565:
-            size = alignedw * alignedh * 2;
+            size = (unsigned int)(alignedw * alignedh * 2);
             size += getUBwcMetaBufferSize(width, height, 2);
             break;
         case HAL_PIXEL_FORMAT_RGBA_8888:
-            size = alignedw * alignedh * 4;
+            size = (unsigned int)(alignedw * alignedh * 4);
             size += getUBwcMetaBufferSize(width, height, 4);
             break;
         case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:

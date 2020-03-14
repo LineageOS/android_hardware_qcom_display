@@ -71,7 +71,7 @@ int IdleInvalidator::init(InvalidatorHandler reg_handler, void* user_data) {
     if((property_get("debug.mdpcomp.idletime", property, NULL) > 0)) {
         defaultIdleTime = atoi(property);
     }
-    if(not setIdleTimeout(defaultIdleTime)) {
+    if(not setIdleTimeout((uint32_t)defaultIdleTime)) {
         close(mTimeoutEventFd);
         mTimeoutEventFd = -1;
         return -1;

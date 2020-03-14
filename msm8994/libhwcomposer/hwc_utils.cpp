@@ -92,8 +92,8 @@ bool isValidResolution(hwc_context_t *ctx, uint32_t xres, uint32_t yres)
             (xres < MIN_DISPLAY_XRES || yres < MIN_DISPLAY_YRES));
 }
 
-void changeResolution(hwc_context_t *ctx, int xres_orig, int yres_orig,
-                      int width, int height) {
+void changeResolution(hwc_context_t *ctx, unsigned int xres_orig, unsigned int yres_orig,
+                      unsigned int width, unsigned int height) {
     //Store original display resolution.
     ctx->dpyAttr[HWC_DISPLAY_PRIMARY].xres_new = xres_orig;
     ctx->dpyAttr[HWC_DISPLAY_PRIMARY].yres_new = yres_orig;
@@ -103,8 +103,8 @@ void changeResolution(hwc_context_t *ctx, int xres_orig, int yres_orig,
     if (property_get("debug.hwc.fbsize", property, NULL) > 0) {
         yptr = strcasestr(property,"x");
         if(yptr) {
-            int xres_new = atoi(property);
-            int yres_new = atoi(yptr + 1);
+            unsigned int xres_new = (unsigned int)atoi(property);
+            unsigned int yres_new = (unsigned int)atoi(yptr + 1);
             if (isValidResolution(ctx,xres_new,yres_new) &&
                 xres_new != xres_orig && yres_new != yres_orig) {
                 ctx->dpyAttr[HWC_DISPLAY_PRIMARY].xres_new = xres_new;
@@ -135,8 +135,8 @@ void updateDisplayInfo(hwc_context_t* ctx, int dpy) {
     ctx->dpyAttr[dpy].secure = true;
     ctx->mViewFrame[dpy].left = 0;
     ctx->mViewFrame[dpy].top = 0;
-    ctx->mViewFrame[dpy].right = ctx->dpyAttr[dpy].xres;
-    ctx->mViewFrame[dpy].bottom = ctx->dpyAttr[dpy].yres;
+    ctx->mViewFrame[dpy].right = (int)ctx->dpyAttr[dpy].xres;
+    ctx->mViewFrame[dpy].bottom = (int)ctx->dpyAttr[dpy].yres;
 }
 
 // Reset hdmi display attributes and list stats structures
@@ -187,8 +187,8 @@ static int openFramebufferDevice(hwc_context_t *ctx)
     if (int(info.width) <= 0 || int(info.height) <= 0) {
         // the driver doesn't return that information
         // default to 160 dpi
-        info.width  = (int)(((float)info.xres * 25.4f)/160.0f + 0.5f);
-        info.height = (int)(((float)info.yres * 25.4f)/160.0f + 0.5f);
+        info.width  = (unsigned int)(((float)info.xres * 25.4f)/160.0f + 0.5f);
+        info.height = (unsigned int)(((float)info.yres * 25.4f)/160.0f + 0.5f);
     }
 
     float xdpi = ((float)info.xres * 25.4f) / (float)info.width;
@@ -630,10 +630,10 @@ void getAspectRatioPosition(hwc_context_t* ctx, int dpy, int extOrientation,
     float yRatio = 1.0;
     hwc_rect_t rect = {0, 0, (int)fbWidth, (int)fbHeight};
 
-    Dim inPos(inRect.left, inRect.top, inRect.right - inRect.left,
-                inRect.bottom - inRect.top);
-    Dim outPos(outRect.left, outRect.top, outRect.right - outRect.left,
-                outRect.bottom - outRect.top);
+    Dim inPos((unsigned)inRect.left, (unsigned)inRect.top, (unsigned)(inRect.right - inRect.left),
+                (unsigned)(inRect.bottom - inRect.top));
+    Dim outPos((unsigned)outRect.left, (unsigned)outRect.top, (unsigned)(outRect.right - outRect.left),
+                (unsigned)(outRect.bottom - outRect.top));
 
     Whf whf((uint32_t)fbWidth, (uint32_t)fbHeight, 0);
     eTransform extorient = static_cast<eTransform>(extOrientation);
@@ -672,7 +672,7 @@ void getAspectRatioPosition(hwc_context_t* ctx, int dpy, int extOrientation,
                         isOrientationPortrait(ctx)) {
         hwc_rect_t r = {0, 0, 0, 0};
         //Calculate the position
-        xRatio = (float)(outPos.x - xPos)/width;
+        xRatio = (float)(outPos.x - (unsigned)xPos)/width;
         // GetaspectRatio -- tricky to get the correct aspect ratio
         // But we need to do this.
         qdutils::getAspectRatioPosition((int)width, (int)height,
@@ -700,8 +700,8 @@ void getAspectRatioPosition(hwc_context_t* ctx, int dpy, int extOrientation,
         if(dpy == HWC_DISPLAY_EXTERNAL) {
             ctx->mHDMIDisplay->getAttributes(extW, extH);
         } else if(dpy == HWC_DISPLAY_VIRTUAL) {
-            extW = ctx->mHWCVirtual->getScalingWidth();
-            extH = ctx->mHWCVirtual->getScalingHeight();
+            extW = (uint32_t)ctx->mHWCVirtual->getScalingWidth();
+            extH = (uint32_t)ctx->mHWCVirtual->getScalingHeight();
         }
         ALOGD_IF(HWC_UTILS_DEBUG, "%s: Scaling mode extW=%d extH=%d",
                 __FUNCTION__, extW, extH);
@@ -720,10 +720,10 @@ void getAspectRatioPosition(hwc_context_t* ctx, int dpy, int extOrientation,
         outPos.h = uint32_t(hRatio * (float)extH);
     }
     // Convert Dim to hwc_rect_t
-    outRect.left = outPos.x;
-    outRect.top = outPos.y;
-    outRect.right = outPos.x + outPos.w;
-    outRect.bottom = outPos.y + outPos.h;
+    outRect.left = (int)outPos.x;
+    outRect.top = (int)outPos.y;
+    outRect.right = (int)(outPos.x + outPos.w);
+    outRect.bottom = (int)(outPos.y + outPos.h);
 
     return;
 }
@@ -1199,7 +1199,7 @@ bool isRotationDoable(hwc_context_t *ctx, private_handle_t *hnd) {
     // Rotate layers, if it is not secure display buffer and not
     // for the MDP versions below MDP5
     if((!isSecureDisplayBuffer(hnd) && isRotatorSupportedFormat(hnd) &&
-        !ctx->mMDP.version < qdutils::MDSS_V5)
+        !(ctx->mMDP.version < qdutils::MDSS_V5))
                    || isYuvBuffer(hnd)) {
         return true;
     }
@@ -2079,22 +2079,22 @@ int configureSplit(hwc_context_t *ctx, hwc_layer_1_t *layer,
 
     MetaData_t *metadata = (MetaData_t *)hnd->base_metadata;
 
-    int hw_w = ctx->dpyAttr[dpy].xres;
-    int hw_h = ctx->dpyAttr[dpy].yres;
+    unsigned int hw_w = ctx->dpyAttr[dpy].xres;
+    unsigned int hw_h = ctx->dpyAttr[dpy].yres;
     hwc_rect_t crop = integerizeSourceCrop(layer->sourceCropf);
     hwc_rect_t dst = layer->displayFrame;
     int transform = layer->transform;
     eTransform orient = static_cast<eTransform>(transform);
     int rotFlags = ROT_FLAGS_NONE;
-    uint32_t format = ovutils::getMdpFormat(hnd->format, hnd->flags);
-    Whf whf(getWidth(hnd), getHeight(hnd), format, (uint32_t)hnd->size);
+    uint32_t format = ovutils::getMdpFormat((uint32_t)hnd->format, hnd->flags);
+    Whf whf((uint32_t)getWidth(hnd), (uint32_t)getHeight(hnd), format, (uint32_t)hnd->size);
 
     // Handle R/B swap
     if (layer->flags & HWC_FORMAT_RB_SWAP) {
         if (hnd->format == HAL_PIXEL_FORMAT_RGBA_8888)
-            whf.format = getMdpFormat(HAL_PIXEL_FORMAT_BGRA_8888);
+            whf.format = (uint32_t)getMdpFormat(HAL_PIXEL_FORMAT_BGRA_8888);
         else if (hnd->format == HAL_PIXEL_FORMAT_RGBX_8888)
-            whf.format = getMdpFormat(HAL_PIXEL_FORMAT_BGRX_8888);
+            whf.format = (uint32_t)getMdpFormat(HAL_PIXEL_FORMAT_BGRX_8888);
     }
 
     // update source crop and destination position of AIV video layer.
@@ -2117,7 +2117,7 @@ int configureSplit(hwc_context_t *ctx, hwc_layer_1_t *layer,
     //hollow call otherwise
     if(ctx->mAD->prepare(ctx, crop, whf, hnd)) {
         overlay::Writeback *wb = overlay::Writeback::getInstance();
-        whf.format = wb->getOutputFormat();
+        whf.format = (uint32_t)wb->getOutputFormat();
     }
 
     if((has90Transform(layer) or downscale) and isRotationDoable(ctx, hnd)) {
@@ -2145,7 +2145,7 @@ int configureSplit(hwc_context_t *ctx, hwc_layer_1_t *layer,
     if(dst.left < lSplit) {
         tmp_cropL = crop;
         tmp_dstL = dst;
-        hwc_rect_t scissor = {0, 0, lSplit, hw_h };
+        hwc_rect_t scissor = {0, 0, lSplit, static_cast<int>(hw_h) };
         scissor = getIntersection(ctx->mViewFrame[dpy], scissor);
         qhwc::calculate_crop_rects(tmp_cropL, tmp_dstL, scissor, 0);
     }
@@ -2154,7 +2154,7 @@ int configureSplit(hwc_context_t *ctx, hwc_layer_1_t *layer,
     if(dst.right > lSplit) {
         tmp_cropR = crop;
         tmp_dstR = dst;
-        hwc_rect_t scissor = {lSplit, 0, hw_w, hw_h };
+        hwc_rect_t scissor = {lSplit, 0, static_cast<int>(hw_w), static_cast<int>(hw_h) };
         scissor = getIntersection(ctx->mViewFrame[dpy], scissor);
         qhwc::calculate_crop_rects(tmp_cropR, tmp_dstR, scissor, 0);
     }
@@ -2240,8 +2240,8 @@ int configureSourceSplit(hwc_context_t *ctx, hwc_layer_1_t *layer,
     eZorder lz = z;
     eZorder rz = (eZorder)(z + 1);
 
-    Whf whf(getWidth(hnd), getHeight(hnd),
-            getMdpFormat(hnd->format), (uint32_t)hnd->size);
+    Whf whf((uint32_t)getWidth(hnd), (uint32_t)getHeight(hnd),
+            (uint32_t)getMdpFormat(hnd->format), (uint32_t)hnd->size);
 
     // update source crop and destination position of AIV video layer.
     if(ctx->listStats[dpy].mAIVVideoMode && isYuvBuffer(hnd)) {
@@ -2943,7 +2943,7 @@ int ColorMode::getModeForIndex(int index) {
 }
 
 int ColorMode::getIndexForMode(int mode) {
-    if(mModeList) {
+    if(mModeList[0] != 0) {
         for(int32_t i = 0; i < mNumModes; i++)
             if(mModeList[i] == mode)
                 return i;

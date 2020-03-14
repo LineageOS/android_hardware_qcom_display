@@ -52,7 +52,7 @@ inline android::status_t sendSingleParam(uint32_t command, uint32_t value) {
     android::status_t err = (android::status_t) android::FAILED_TRANSACTION;
     android::sp<qService::IQService> binder = getBinder();
     android::Parcel inParcel, outParcel;
-    inParcel.writeInt32(value);
+    inParcel.writeInt32((int32_t)value);
     if(binder != NULL) {
         err = binder->dispatch(command, &inParcel , &outParcel);
     }

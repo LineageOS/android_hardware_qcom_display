@@ -50,7 +50,7 @@ CalcFps::~CalcFps() {
 void CalcFps::Init() {
     char prop[PROPERTY_VALUE_MAX];
     property_get("debug.gr.calcfps", prop, "0");
-    debug_fps_level = atoi(prop);
+    debug_fps_level = (unsigned int)atoi(prop);
     if (debug_fps_level > MAX_DEBUG_FPS_LEVEL) {
         ALOGW("out of range value for debug.gr.calcfps, using 0");
         debug_fps_level = 0;
@@ -75,10 +75,10 @@ void CalcFps::populate_debug_fps_metadata(void)
 
     /*defaults to 1000ms*/
     property_get("debug.gr.calcfps.timeperiod", prop, "1000");
-    debug_fps_metadata.time_period = atoi(prop);
+    debug_fps_metadata.time_period = (unsigned int)atoi(prop);
 
     property_get("debug.gr.calcfps.period", prop, "10");
-    debug_fps_metadata.period = atoi(prop);
+    debug_fps_metadata.period = (unsigned int)atoi(prop);
 
     if (debug_fps_metadata.period > MAX_FPS_CALC_PERIOD_IN_FRAMES) {
         debug_fps_metadata.period = MAX_FPS_CALC_PERIOD_IN_FRAMES;

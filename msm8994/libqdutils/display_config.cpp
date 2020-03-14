@@ -63,9 +63,9 @@ int getDisplayAttributes(int dpy, DisplayAttributes_t& dpyattr) {
                 &inParcel, &outParcel);
     }
     if(!err) {
-        dpyattr.vsync_period = outParcel.readInt32();
-        dpyattr.xres = outParcel.readInt32();
-        dpyattr.yres = outParcel.readInt32();
+        dpyattr.vsync_period = (uint32_t)outParcel.readInt32();
+        dpyattr.xres = (uint32_t)outParcel.readInt32();
+        dpyattr.yres = (uint32_t)outParcel.readInt32();
         dpyattr.xdpi = outParcel.readFloat();
         dpyattr.ydpi = outParcel.readFloat();
         dpyattr.panel_type = (char) outParcel.readInt32();
@@ -139,7 +139,7 @@ int setSecondaryDisplayStatus(int dpy, uint32_t status) {
     sp<IQService> binder = getBinder();
     Parcel inParcel, outParcel;
     inParcel.writeInt32(dpy);
-    inParcel.writeInt32(status);
+    inParcel.writeInt32((int32_t)status);
 
     if(binder != NULL) {
         err = binder->dispatch(IQService::SET_SECONDARY_DISPLAY_STATUS,
@@ -156,8 +156,8 @@ int configureDynRefreshRate(uint32_t op, uint32_t refreshRate) {
     status_t err = (status_t) FAILED_TRANSACTION;
     sp<IQService> binder = getBinder();
     Parcel inParcel, outParcel;
-    inParcel.writeInt32(op);
-    inParcel.writeInt32(refreshRate);
+    inParcel.writeInt32((int32_t)op);
+    inParcel.writeInt32((int32_t)refreshRate);
 
     if(binder != NULL) {
         err = binder->dispatch(IQService::CONFIGURE_DYN_REFRESH_RATE,

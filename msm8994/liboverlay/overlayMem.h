@@ -121,7 +121,7 @@ inline bool OvMem::open(uint32_t numbufs,
         uint32_t bufSz, bool isSecure)
 {
     alloc_data data;
-    int allocFlags = GRALLOC_USAGE_PRIVATE_IOMMU_HEAP;
+    unsigned int allocFlags = GRALLOC_USAGE_PRIVATE_IOMMU_HEAP;
     int err = 0;
     OVASSERT(numbufs && bufSz, "numbufs=%d bufSz=%d", numbufs, bufSz);
     mBufSz = bufSz;
@@ -129,11 +129,11 @@ inline bool OvMem::open(uint32_t numbufs,
     if(isSecure) {
         allocFlags = GRALLOC_USAGE_PRIVATE_MM_HEAP;
         allocFlags |= GRALLOC_USAGE_PROTECTED;
-        mBufSzAligned = utils::align(bufSz, SIZE_1M);
+        mBufSzAligned = (uint32_t)utils::align((int)bufSz, SIZE_1M);
         data.align = SIZE_1M;
     } else {
         mBufSzAligned = bufSz;
-        data.align = getpagesize();
+        data.align = (unsigned int)getpagesize();
     }
 
     // Allocate uncached rotator buffers
@@ -147,7 +147,7 @@ inline bool OvMem::open(uint32_t numbufs,
     data.size = mBufSzAligned * mNumBuffers;
     data.uncached = true;
 
-    err = mAlloc->allocate(data, allocFlags);
+    err = mAlloc->allocate(data, (int)allocFlags);
     if (err != 0) {
         ALOGE("OvMem: Error allocating memory");
         return false;

@@ -221,7 +221,7 @@ static int gralloc_map_and_invalidate (gralloc_module_t const* module,
 
     int err = 0;
     private_handle_t* hnd = (private_handle_t*)handle;
-    if (usage & (GRALLOC_USAGE_SW_READ_MASK | GRALLOC_USAGE_SW_WRITE_MASK)) {
+    if ((unsigned int)usage & (GRALLOC_USAGE_SW_READ_MASK | GRALLOC_USAGE_SW_WRITE_MASK)) {
         if (hnd->base == 0) {
             // we need to map for real
             pthread_mutex_t* const lock = &sMapLock;
@@ -234,7 +234,7 @@ static int gralloc_map_and_invalidate (gralloc_module_t const* module,
             //Invalidate if CPU reads in software and there are non-CPU
             //writers. No need to do this for the metadata buffer as it is
             //only read/written in software.
-            if ((usage & GRALLOC_USAGE_SW_READ_MASK) and
+            if (((unsigned int)usage & GRALLOC_USAGE_SW_READ_MASK) and
                     (hnd->flags & private_handle_t::PRIV_FLAGS_NON_CPU_WRITER))
             {
                 IMemAlloc* memalloc = getAllocator(hnd->flags) ;
@@ -243,7 +243,7 @@ static int gralloc_map_and_invalidate (gralloc_module_t const* module,
                         CACHE_INVALIDATE);
             }
             //Mark the buffer to be flushed after CPU write.
-            if (usage & GRALLOC_USAGE_SW_WRITE_MASK) {
+            if ((unsigned int)usage & GRALLOC_USAGE_SW_WRITE_MASK) {
                 hnd->flags |= private_handle_t::PRIV_FLAGS_NEEDS_FLUSH;
             }
         }

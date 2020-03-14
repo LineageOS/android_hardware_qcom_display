@@ -344,7 +344,7 @@ inline void dump(const char* const s, const mdp_overlay& ov) {
 inline void dump(const char* const s, const msmfb_img& ov) {
     ALOGE("%s msmfb_img w=%d h=%d format=%d %s",
             s, ov.width, ov.height, ov.format,
-            overlay::utils::getFormatString(ov.format));
+            overlay::utils::getFormatString((int)ov.format));
 }
 inline void dump(const char* const s, const mdp_rect& ov) {
     ALOGE("%s mdp_rect x=%d y=%d w=%d h=%d",

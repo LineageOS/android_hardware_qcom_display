@@ -50,7 +50,7 @@ public:
         Parcel data;
         Parcel *reply = outParcel;
         data.writeInterfaceToken(IQClient::getInterfaceDescriptor());
-        data.writeInt32(command);
+        data.writeInt32((int32_t)command);
         if (inParcel->dataAvail())
             data.appendFrom(inParcel, inParcel->dataPosition(),
                     inParcel->dataAvail());
@@ -69,7 +69,7 @@ status_t BnQClient::onTransact(
     switch(code) {
         case NOTIFY_CALLBACK: {
             CHECK_INTERFACE(IQClient, data, reply);
-            uint32_t command = data.readInt32();
+            uint32_t command = (uint32_t)data.readInt32();
             notifyCallback(command, &data, reply);
             return NO_ERROR;
         } break;
