@@ -143,10 +143,10 @@ int HWCDisplayBuiltIn::Init() {
     if (enable_bw_limits_) {
       DLOGI("Enable BW Limits %d", id_);
     }
-    Debug::GetWindowRect(&window_rect_.left, &window_rect_.top,
-                                 &window_rect_.right, &window_rect_.bottom);
+    windowed_display_ = Debug::GetWindowRect(&window_rect_.left, &window_rect_.top,
+                      &window_rect_.right, &window_rect_.bottom) != kErrorUndefined;
     DLOGI("Window rect : [%f %f %f %f]", window_rect_.left, window_rect_.top,
-           window_rect_.right, window_rect_.bottom);
+          window_rect_.right, window_rect_.bottom);
   }
   return status;
 }
@@ -1214,6 +1214,11 @@ HWC2::Error HWCDisplayBuiltIn::SetClientTarget(buffer_handle_t target, int32_t a
   HWC2::Error error = HWCDisplay::SetClientTarget(target, acquire_fence, dataspace, damage);
   if (error != HWC2::Error::None) {
     return error;
+  }
+
+  // windowed_display and dynamic scaling are not supported.
+  if (windowed_display_) {
+    return HWC2::Error::None;
   }
 
   Layer *sdm_layer = client_target_->GetSDMLayer();
