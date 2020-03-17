@@ -38,33 +38,47 @@ using android::hardware::graphics::composer::V2_3::IComposer;
 using android::sp;
 
 int main(int, char **) {
+  ALOGI("Creating Display HW Composer HAL");
+
   // TODO(user): double-check for SCHED_FIFO logic
   // the conventional HAL might start binder services
   ProcessState::initWithDriver("/dev/vndbinder");
   sp<ProcessState> ps(ProcessState::self());
   ps->setThreadPoolMaxThreadCount(4);
   ps->startThreadPool();
+  ALOGI("ProcessState initialization completed");
 
   // same as SF main thread
   struct sched_param param = {0};
   param.sched_priority = 2;
   if (sched_setscheduler(0, SCHED_FIFO | SCHED_RESET_ON_FORK, &param) != 0) {
     ALOGE("Couldn't set SCHED_FIFO: %d", errno);
+  } else {
+    ALOGI("Scheduler priority settings completed");
   }
 
+  ALOGI("Initializing QtiComposer");
   sp<IQtiComposer> composer = QtiComposer::initialize();
   if (composer == nullptr) {
-    ALOGE("Cannot initialize composer");
+    ALOGE("Initializing QtiComposer...failed!");
     return -EINVAL;
+  } else {
+    ALOGI("Initializing QtiComposer...done!");
   }
 
+  ALOGI("Configuring RPC threadpool");
   configureRpcThreadpool(4, true /*callerWillJoin*/);
+  ALOGI("Configuring RPC threadpool...done!");
+
+  ALOGI("Registering Display HW Composer HAL as a service");
   if (composer->registerAsService() != android::OK) {
-    ALOGE("Cannot register QTI composer service");
+    ALOGE("Registering Display HW Composer HAL as a service...failed!");
     return -EINVAL;
   }
+  ALOGI("Registering Display HW Composer HAL as a service...done!");
 
-  ALOGI("Initialized qti-composer");
+  ALOGI("Joining RPC threadpool...");
   joinRpcThreadpool();
+
   return 0;
 }

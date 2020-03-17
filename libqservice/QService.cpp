@@ -100,12 +100,19 @@ void QService::init()
 {
     if(!sQService) {
         sQService = new QService();
+
+        ALOGI("Creating defaultServiceManager");
         sp<IServiceManager> sm = defaultServiceManager();
+        ALOGI("Creating defaultServiceManager...done!");
+
+        ALOGI("Adding display.qservice to defaultServiceManager");
         sm->addService(String16("display.qservice"), sQService);
+        ALOGI("Adding display.qservice to defaultServiceManager...done!");
+
         if(sm->checkService(String16("display.qservice")) != NULL)
-            ALOGD_IF(QSERVICE_DEBUG, "adding display.qservice succeeded");
+            ALOGI("Adding display.qservice succeeded");
         else
-            ALOGD_IF(QSERVICE_DEBUG, "adding display.qservice failed");
+            ALOGI("Adding display.qservice failed");
     }
 }
 

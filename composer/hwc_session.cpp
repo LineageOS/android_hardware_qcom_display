@@ -153,34 +153,50 @@ HWCSession *HWCSession::GetInstance() {
 
 int HWCSession::Init() {
   SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
+  DLOGI("Initializing HWCSession");
 
   int status = -EINVAL;
   const char *qservice_name = "display.qservice";
 
   if (!g_hwc_uevent_.InitDone()) {
+    DLOGE("HWCUEvent initialization is not done!");
     return status;
+  } else {
+    DLOGI("HWCUEvent initialization confirmed to be completed");
   }
 
 
   // Start QService and connect to it.
+  DLOGI("Initializing QService");
   qService::QService::init();
+  DLOGI("Initializing QService...done!");
+
+  DLOGI("Getting IQService");
   android::sp<qService::IQService> iqservice = android::interface_cast<qService::IQService>(
       android::defaultServiceManager()->getService(android::String16(qservice_name)));
+  DLOGI("Getting IQService...done!");
 
   if (iqservice.get()) {
     iqservice->connect(android::sp<qClient::IQClient>(this));
     qservice_ = reinterpret_cast<qService::QService *>(iqservice.get());
+    DLOGI("Acquired %s", qservice_name);
   } else {
     DLOGE("Failed to acquire %s", qservice_name);
     return -EINVAL;
   }
 
   HWCDebugHandler::Get()->GetProperty(ENABLE_NULL_DISPLAY_PROP, &null_display_mode_);
+  DLOGI("null_display_mode_: %d", null_display_mode_);
   HWCDebugHandler::Get()->GetProperty(DISABLE_HOTPLUG_BWCHECK, &disable_hotplug_bwcheck_);
+  DLOGI("disable_hotplug_bwcheck_: %d", disable_hotplug_bwcheck_);
   HWCDebugHandler::Get()->GetProperty(DISABLE_MASK_LAYER_HINT, &disable_mask_layer_hint_);
+  DLOGI("disable_mask_layer_hint_: %d", disable_mask_layer_hint_);
 
   if (!null_display_mode_) {
     g_hwc_uevent_.Register(this);
+    DLOGI("Registered HWCSession as the HWCUEvent handler");
+  } else {
+    DLOGI("Did not register HWCSession as the HWCUEvent handler");
   }
 
   int value = 1;  // Default value when property is not present.
@@ -193,13 +209,20 @@ int HWCSession::Init() {
   async_vds_creation_ = (value == 1);
   DLOGI("async_vds_creation: %d", async_vds_creation_);
 
+  DLOGI("Initializing supported display slots");
   InitSupportedDisplaySlots();
+  DLOGI("Initializing supported display slots...done!");
+
   // Create primary display here. Remaining builtin displays will be created after client has set
   // display indexes which may happen sometime before callback is registered.
+  DLOGI("Creating the Primary display");
   status = CreatePrimaryDisplay();
   if (status) {
+    DLOGE("Creating the Primary display...failed!");
     Deinit();
     return status;
+  } else {
+    DLOGI("Creating the Primary display...done!");
   }
 
   is_composer_up_ = true;
@@ -207,6 +230,7 @@ int HWCSession::Init() {
 
   PostInit();
 
+  DLOGI("Initializing HWCSession...done!");
   return 0;
 }
 
