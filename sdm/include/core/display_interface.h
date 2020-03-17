@@ -33,6 +33,7 @@
 #ifndef __DISPLAY_INTERFACE_H__
 #define __DISPLAY_INTERFACE_H__
 
+#include <private/snapdragon_color_intf.h>
 #include <stdint.h>
 #include <string>
 #include <vector>
@@ -937,6 +938,22 @@ class DisplayInterface {
     @return \link DisplayError \endlink
   */
   virtual DisplayError GetQSyncMode(QSyncMode *qsync_mode) = 0;
+
+  /*! @brief Method to set the color mode to STC
+
+    @param[in] color_mode Mode attributes which needs to be set.
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError SetStcColorMode(const snapdragoncolor::ColorMode &color_mode) = 0;
+
+  /*! @brief Method to query the color mode list from STC.
+
+    @param[out] pointer of mode list
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetStcColorModes(snapdragoncolor::ColorModeList *mode_list) = 0;
 
  protected:
   virtual ~DisplayInterface() { }

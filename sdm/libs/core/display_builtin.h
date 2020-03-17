@@ -130,6 +130,9 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError GetQSyncMode(QSyncMode *qsync_mode) override;
   DisplayError colorSamplingOn() override;
   DisplayError colorSamplingOff() override;
+  DisplayError GetStcColorModes(snapdragoncolor::ColorModeList *mode_list) override;
+  DisplayError SetStcColorMode(const snapdragoncolor::ColorMode &color_mode) override;
+  std::string Dump() override;
 
   // Implement the HWEventHandlers
   DisplayError VSync(int64_t timestamp) override;
@@ -185,6 +188,8 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   sde_drm::DppsFeaturePayload histogramIRQ;
   void initColorSamplingState();
   DeferFpsConfig deferred_config_ = {};
+
+  snapdragoncolor::ColorMode current_color_mode_ = {};
 };
 
 }  // namespace sdm

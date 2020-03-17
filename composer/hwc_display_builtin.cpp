@@ -40,6 +40,7 @@
 #include <vector>
 
 #include "hwc_display_builtin.h"
+#include "hwc_color_mode_stc.h"
 #include "hwc_debugger.h"
 #include "hwc_session.h"
 
@@ -124,7 +125,7 @@ int HWCDisplayBuiltIn::Init() {
   if (status) {
     return status;
   }
-  color_mode_ = new HWCColorMode(display_intf_);
+  color_mode_ = new HWCColorModeStc(display_intf_);
   color_mode_->Init();
 
   int optimize_refresh = 0;

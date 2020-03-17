@@ -163,6 +163,12 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError colorSamplingOn();
   virtual DisplayError colorSamplingOff();
   virtual DisplayError ReconfigureDisplay();
+  virtual DisplayError GetStcColorModes(snapdragoncolor::ColorModeList *mode_list) {
+    return kErrorNotSupported;
+  }
+  virtual DisplayError SetStcColorMode(const snapdragoncolor::ColorMode &color_mode) {
+    return kErrorNotSupported;
+  }
 
  protected:
   const char *kBt2020Pq = "bt2020_pq";
