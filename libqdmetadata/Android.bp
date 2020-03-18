@@ -1,7 +1,7 @@
 cc_library_shared {
     name: "libqdMetaData",
     vendor_available: true,
-    product_specific: true,
+    system_ext_specific: true,
     cflags: [
         "-Wno-sign-conversion",
         "-DLOG_TAG=\"qdmetadata\"",
