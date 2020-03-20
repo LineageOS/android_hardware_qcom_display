@@ -63,6 +63,7 @@ class HWPrimary : public HWDevice {
   virtual DisplayError SetMixerAttributes(HWMixerAttributes &mixer_attributes);
   virtual DisplayError SetDynamicDSIClock(uint64_t bitclk);
   virtual DisplayError GetDynamicDSIClock(uint64_t *bitclk);
+  virtual DisplayError GetHdmiMode(std::vector<uint32_t> &hdmi_modes);
 
  private:
   // Panel modes for the MSMFB_LPM_ENABLE ioctl

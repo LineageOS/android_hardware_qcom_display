@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2017, 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -84,6 +84,7 @@ class HWHDMI : public HWDevice {
   virtual DisplayError GetMaxCEAFormat(uint32_t *max_cea_format);
   virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
   virtual DisplayError SetDisplayAttributes(uint32_t index);
+  virtual DisplayError SetDisplayFormat(uint32_t index, DisplayInterfaceFormat fmt);
   virtual DisplayError GetConfigIndex(uint32_t mode, uint32_t *index);
   virtual DisplayError GetConfigIndex(uint32_t width, uint32_t height, uint32_t *index);
   virtual DisplayError SetConfigAttributes(uint32_t index, uint32_t width, uint32_t height);
@@ -91,6 +92,8 @@ class HWHDMI : public HWDevice {
   virtual DisplayError Commit(HWLayers *hw_layers);
   virtual DisplayError SetS3DMode(HWS3DMode s3d_mode);
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate);
+  public:
+  virtual DisplayError GetHdmiMode(std::vector<uint32_t> &hdmi_modes);
 
  private:
   DisplayError ReadEDIDInfo();
@@ -125,6 +128,7 @@ class HWHDMI : public HWDevice {
   bool reset_hdr_flag_ = false;
   mdp_color_space cdm_color_space_ = {};
   bool cdm_color_space_commit_ = false;
+  DisplayInterfaceFormat pref_fmt_ = DisplayInterfaceFormat::kFormatNone;
 };
 
 }  // namespace sdm

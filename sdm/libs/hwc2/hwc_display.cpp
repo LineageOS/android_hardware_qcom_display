@@ -1762,6 +1762,10 @@ HWC2::Error HWCDisplay::SetCursorPosition(hwc2_layer_t layer, int x, int y) {
 }
 
 int HWCDisplay::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
+  if (min_enc_level_ == min_enc_level) {
+    DLOGI("Min hdcp level not changed!");
+    return 0;
+  }
   DisplayError error = display_intf_->OnMinHdcpEncryptionLevelChange(min_enc_level);
   if (error != kErrorNone) {
     DLOGE("Failed. Error = %d", error);
@@ -1769,6 +1773,7 @@ int HWCDisplay::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
   }
 
   validated_.reset();
+  min_enc_level_ = min_enc_level;
   return 0;
 }
 

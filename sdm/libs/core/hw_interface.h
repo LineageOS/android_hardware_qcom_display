@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -83,6 +83,7 @@ class HWInterface {
   virtual DisplayError SetDisplayAttributes(uint32_t index) = 0;
   virtual DisplayError SetConfigAttributes(uint32_t index, uint32_t w, uint32_t h) = 0;
   virtual DisplayError SetDisplayAttributes(const HWDisplayAttributes &display_attributes) = 0;
+  virtual DisplayError SetDisplayFormat(uint32_t index, DisplayInterfaceFormat fmt) = 0;
   virtual DisplayError GetConfigIndex(uint32_t mode, uint32_t *index) = 0;
   virtual DisplayError GetConfigIndex(uint32_t width, uint32_t height, uint32_t *index) = 0;
   virtual DisplayError PowerOn() = 0;
@@ -113,6 +114,7 @@ class HWInterface {
   virtual DisplayError GetMixerAttributes(HWMixerAttributes *mixer_attributes) = 0;
   virtual DisplayError SetDynamicDSIClock(uint64_t bitclk) = 0;
   virtual DisplayError GetDynamicDSIClock(uint64_t *bitclk) = 0;
+  virtual DisplayError GetHdmiMode(std::vector<uint32_t> &hdmi_modes) = 0;
 
  protected:
   virtual ~HWInterface() { }
