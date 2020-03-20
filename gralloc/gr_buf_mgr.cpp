@@ -330,8 +330,7 @@ static void grallocToStandardPlaneLayoutComponentType(
   }
 }
 
-static Error getFormatLayout(private_handle_t *handle, Rect crop_rect,
-                             std::vector<PlaneLayout> *out) {
+static Error getFormatLayout(private_handle_t *handle, std::vector<PlaneLayout> *out) {
   std::vector<PlaneLayout> plane_info;
   int plane_count = 0;
   BufferInfo info(handle->unaligned_width, handle->unaligned_height, handle->format, handle->usage);
@@ -358,17 +357,8 @@ static Error getFormatLayout(private_handle_t *handle, Rect crop_rect,
     plane_info[i].sampleIncrementInBits = static_cast<int64_t>(plane_layout[i].step * 8);
     plane_info[i].strideInBytes = static_cast<int64_t>(plane_layout[i].stride_bytes);
     plane_info[i].totalSizeInBytes = static_cast<int64_t>(plane_layout[i].size);
-    plane_info[i].widthInSamples =
-        handle->unaligned_width * 8 / plane_info[i].sampleIncrementInBits;
-    plane_info[i].heightInSamples =
-        handle->unaligned_height * 8 / plane_info[i].sampleIncrementInBits;
-#ifdef TARGET_USES_GRALLOC4
-    // TODO(tbalacha): This will be removed when standard metadata type CROP_RECTANGLE is added
-    plane_info[i].crop = crop_rect;
-#else
-    // Avoid unused parameter compiliation error
-    (void)crop_rect;
-#endif
+    plane_info[i].widthInSamples = handle->unaligned_width;
+    plane_info[i].heightInSamples = handle->unaligned_height;
   }
   *out = plane_info;
   return Error::NONE;
@@ -729,6 +719,12 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   metadata->name[descriptor.GetName().size()] = '\0';
 
   metadata->reservedRegion.size = descriptor.GetReservedSize();
+
+  metadata->crop.top = 0;
+  metadata->crop.left = 0;
+  metadata->crop.right = hnd->width;
+  metadata->crop.bottom = hnd->height;
+
   unmapAndReset(hnd);
 
   *handle = hnd;
@@ -884,9 +880,7 @@ Error BufferManager::GetMetadata(private_handle_t *handle, int64_t metadatatype_
       break;
     case (int64_t)StandardMetadataType::PLANE_LAYOUTS: {
       std::vector<PlaneLayout> plane_layouts;
-      Rect crop = {0, 0, 0, 0};
-      crop = {metadata->crop.left, metadata->crop.top, metadata->crop.right, metadata->crop.bottom};
-      getFormatLayout(handle, crop, &plane_layouts);
+      getFormatLayout(handle, &plane_layouts);
       android::gralloc4::encodePlaneLayouts(plane_layouts, out);
       break;
     }
@@ -942,6 +936,13 @@ Error BufferManager::GetMetadata(private_handle_t *handle, int64_t metadatatype_
       } else {
         android::gralloc4::encodeSmpte2094_40(std::nullopt, out);
       }
+      break;
+    }
+    case (int64_t)StandardMetadataType::CROP: {
+      // Crop is the same for all planes
+      std::vector<Rect> out_crop = {{metadata->crop.left, metadata->crop.top, metadata->crop.right,
+                                     metadata->crop.bottom}};
+      android::gralloc4::encodeCrop(out_crop, out);
       break;
     }
     case QTI_VT_TIMESTAMP:
@@ -1101,6 +1102,18 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
         memcpy(&metadata->color.dynamicMetaDataPayload, &dynamic_metadata_payload,
                metadata->color.dynamicMetaDataLen);
       }
+      break;
+    }
+    case (int64_t)StandardMetadataType::CROP: {
+      std::vector<Rect> in_crop;
+      android::gralloc4::decodeCrop(in, &in_crop);
+      if (in_crop.size() != 1)
+        return Error::UNSUPPORTED;
+
+      metadata->crop.left = in_crop[0].left;
+      metadata->crop.top = in_crop[0].top;
+      metadata->crop.right = in_crop[0].right;
+      metadata->crop.bottom = in_crop[0].bottom;
       break;
     }
     case QTI_VT_TIMESTAMP:
