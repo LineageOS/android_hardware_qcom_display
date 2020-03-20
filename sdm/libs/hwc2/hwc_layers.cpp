@@ -270,11 +270,10 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
   layer_buffer->unaligned_width = UINT32(handle->unaligned_width);
   layer_buffer->unaligned_height = UINT32(handle->unaligned_height);
 
+  layer_buffer->flags.video = (handle->buffer_type == BUFFER_TYPE_VIDEO) ? true : false;
   if (SetMetaData(const_cast<private_handle_t *>(handle), layer_) != kErrorNone) {
     return HWC2::Error::BadLayer;
   }
-
-  layer_buffer->flags.video = (handle->buffer_type == BUFFER_TYPE_VIDEO) ? true : false;
 
   // TZ Protected Buffer - L1
   bool secure = (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER);
@@ -389,6 +388,7 @@ HWC2::Error HWCLayer::SetLayerCompositionType(HWC2::Composition type) {
     layer_->update_mask.set(kClientCompRequest);
   }
   client_requested_ = type;
+  client_requested_orig_ = type;
   switch (type) {
     case HWC2::Composition::Client:
       break;
@@ -551,6 +551,8 @@ HWC2::Error HWCLayer::SetLayerZOrder(uint32_t z) {
 HWC2::Error HWCLayer::SetLayerPerFrameMetadata(uint32_t num_elements,
                                                const PerFrameMetadataKey *keys,
                                                const float *metadata) {
+  auto old_mastering_display = layer_->input_buffer.color_metadata.masteringDisplayInfo;
+  auto old_content_light = layer_->input_buffer.color_metadata.contentLightLevel;
   auto &mastering_display = layer_->input_buffer.color_metadata.masteringDisplayInfo;
   auto &content_light = layer_->input_buffer.color_metadata.contentLightLevel;
   for (uint32_t i = 0; i < num_elements; i++) {
@@ -593,6 +595,51 @@ HWC2::Error HWCLayer::SetLayerPerFrameMetadata(uint32_t num_elements,
       case PerFrameMetadataKey::MAX_FRAME_AVERAGE_LIGHT_LEVEL:
         content_light.minPicAverageLightLevel = UINT32(metadata[i] * 10000);
         break;
+      default:
+        break;
+    }
+  }
+  if ((!SameConfig(&old_mastering_display, &mastering_display, UINT32(sizeof(MasteringDisplay)))) ||
+       (!SameConfig(&old_content_light, &content_light, UINT32(sizeof(ContentLightLevel))))) {
+    per_frame_hdr_metadata_ = true;
+    layer_->update_mask.set(kMetadataUpdate);
+    geometry_changes_ |= kDataspace;
+  }
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCLayer::SetLayerPerFrameMetadataBlobs(uint32_t num_elements,
+                                                    const PerFrameMetadataKey *keys,
+                                                    const uint32_t *sizes,
+                                                    const uint8_t* metadata) {
+  if (!keys || !sizes || !metadata) {
+    DLOGE("metadata or sizes or keys is null");
+    return HWC2::Error::BadParameter;
+  }
+
+  ColorMetaData &color_metadata = layer_->input_buffer.color_metadata;
+  for (uint32_t i = 0; i < num_elements; i++) {
+    switch (keys[i]) {
+      case PerFrameMetadataKey::HDR10_PLUS_SEI:
+        if (sizes[i] > HDR_DYNAMIC_META_DATA_SZ) {
+          DLOGE("Size of HDR10_PLUS_SEI = %d", sizes[i]);
+          return HWC2::Error::BadParameter;
+        }
+        per_frame_hdr_metadata_ = false;
+        // if dynamic metadata changes, store and set needs validate
+        if (!SameConfig(static_cast<const uint8_t*>(color_metadata.dynamicMetaDataPayload),
+                        metadata, sizes[i])) {
+          geometry_changes_ |= kDataspace;
+          color_metadata.dynamicMetaDataValid = true;
+          color_metadata.dynamicMetaDataLen = sizes[i];
+          std::memcpy(color_metadata.dynamicMetaDataPayload, metadata, sizes[i]);
+          per_frame_hdr_metadata_ = true;
+          layer_->update_mask.set(kMetadataUpdate);
+        }
+        break;
+      default:
+        DLOGW("Invalid key = %d", keys[i]);
+        return HWC2::Error::BadParameter;
     }
   }
   return HWC2::Error::None;
@@ -882,6 +929,11 @@ bool HWCLayer::IsDataSpaceSupported() {
 }
 
 void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
+  if (per_frame_hdr_metadata_) {
+    // Since client has set PerFrameMetadata, dataspace will be valid
+    // so we can skip reading from ColorMetaData.
+    return;
+  }
   LayerBuffer *layer_buffer = &layer_->input_buffer;
   bool use_color_metadata = true;
   ColorMetaData csc = {};
@@ -912,7 +964,9 @@ void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
      use_color_metadata = true;
   }
 
-  if (use_color_metadata) {
+  // Since client has set PerFrameMetadata, dataspace will be valid
+  // so we can skip reading from ColorMetaData.
+  if (use_color_metadata && !per_frame_hdr_metadata_) {
     ColorMetaData old_meta_data = layer_buffer->color_metadata;
     if (sdm::SetCSC(handle, &layer_buffer->color_metadata) == kErrorNone) {
       if ((layer_buffer->color_metadata.colorPrimaries != old_meta_data.colorPrimaries) ||
@@ -920,6 +974,9 @@ void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
           (layer_buffer->color_metadata.range != old_meta_data.range)) {
         layer_->update_mask.set(kMetadataUpdate);
       }
+      DLOGV_IF(kTagClient, "Dynamic Metadata valid = %d size = %d",
+               layer_buffer->color_metadata.dynamicMetaDataValid,
+               layer_buffer->color_metadata.dynamicMetaDataLen);
       if (layer_buffer->color_metadata.dynamicMetaDataValid &&
           !SameConfig(layer_buffer->color_metadata.dynamicMetaDataPayload,
           old_meta_data.dynamicMetaDataPayload, HDR_DYNAMIC_META_DATA_SZ)) {

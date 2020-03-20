@@ -752,9 +752,9 @@ std::string DisplayBase::Dump() {
       INT(fb_roi.right) << " " << INT(fb_roi.bottom) << ")";
   }
 
-  const char *header  = "\n| Idx |  Comp Type |   Split   | Pipe |    W x H    |          Format          |  Src Rect (L T R B) |  Dst Rect (L T R B) |  Z | Pipe Flags | Deci(HxV) | CS | Rng |";  //NOLINT
-  const char *newline = "\n|-----|------------|-----------|------|-------------|--------------------------|---------------------|---------------------|----|------------|-----------|----|-----|";  //NOLINT
-  const char *format  = "\n| %3s | %10s | %9s | %4d | %4d x %4d | %24s | %4d %4d %4d %4d | %4d %4d %4d %4d | %2s | %10s | %9s | %2s | %3s |";  //NOLINT
+  const char *header  = "\n| Idx |  Comp Type |   Split   | Pipe |    W x H    |          Format          |  Src Rect (L T R B) |  Dst Rect (L T R B) |  Z | Pipe Flags | Deci(HxV) | CS | Rng | Tr |";  //NOLINT
+  const char *newline = "\n|-----|------------|-----------|------|-------------|--------------------------|---------------------|---------------------|----|------------|-----------|----|-----|----|";  //NOLINT
+  const char *format  = "\n| %3s | %10s | %9s | %4d | %4d x %4d | %24s | %4d %4d %4d %4d | %4d %4d %4d %4d | %2s | %10s | %9s | %2s | %3s | %2s |";  //NOLINT
 
   os << "\n";
   os << newline;
@@ -792,7 +792,7 @@ std::string DisplayBase::Dump() {
                0, input_buffer->width, input_buffer->height, buffer_format,
                INT(src_roi.left), INT(src_roi.top), INT(src_roi.right), INT(src_roi.bottom),
                INT(dst_roi.left), INT(dst_roi.top), INT(dst_roi.right), INT(dst_roi.bottom),
-               "-", "-    ", "-    ", "-", "-");
+               "-", "-    ", "-    ", "-", "-", "-");
       os << row;
       // print the below only once per layer block, fill with spaces for rest.
       idx[0] = 0;
@@ -811,6 +811,7 @@ std::string DisplayBase::Dump() {
       char z_order[8] = { 0 };
       const char *color_primary = "";
       const char *range = "";
+      const char *transfer = "";
       char row[1024] = { 0 };
 
       snprintf(z_order, sizeof(z_order), "%d", layer_config.hw_solidfill_stage.z_order);
@@ -820,7 +821,7 @@ std::string DisplayBase::Dump() {
                buffer_format, INT(src_roi.left), INT(src_roi.top),
                INT(src_roi.right), INT(src_roi.bottom), INT(src_roi.left),
                INT(src_roi.top), INT(src_roi.right), INT(src_roi.bottom),
-               z_order, flags, decimation, color_primary, range);
+               z_order, flags, decimation, color_primary, range, transfer);
       os << row;
       continue;
     }
@@ -831,6 +832,7 @@ std::string DisplayBase::Dump() {
       char z_order[8] = { 0 };
       char color_primary[8] = { 0 };
       char range[8] = { 0 };
+      char transfer[8] = { 0 };
 
       HWPipeInfo &pipe = (count == 0) ? layer_config.left_pipe : layer_config.right_pipe;
 
@@ -851,6 +853,7 @@ std::string DisplayBase::Dump() {
       ColorMetaData &color_metadata = hw_layer.input_buffer.color_metadata;
       snprintf(color_primary, sizeof(color_primary), "%d", color_metadata.colorPrimaries);
       snprintf(range, sizeof(range), "%d", color_metadata.range);
+      snprintf(transfer, sizeof(transfer), "%d", color_metadata.transfer);
 
       char row[1024];
       snprintf(row, sizeof(row), format, idx, comp_type, pipe_split[count],
@@ -858,7 +861,7 @@ std::string DisplayBase::Dump() {
                buffer_format, INT(src_roi.left), INT(src_roi.top),
                INT(src_roi.right), INT(src_roi.bottom), INT(dst_roi.left),
                INT(dst_roi.top), INT(dst_roi.right), INT(dst_roi.bottom),
-               z_order, flags, decimation, color_primary, range);
+               z_order, flags, decimation, color_primary, range, transfer);
 
       os << row;
       // print the below only once per layer block, fill with spaces for rest.
@@ -985,12 +988,7 @@ DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
 }
 
 DisplayError DisplayBase::SetColorModeById(int32_t color_mode_id) {
-  for (auto it : color_mode_map_) {
-    if (it.second->id == color_mode_id)
-      return SetColorMode(it.first);
-  }
-
-  return kErrorNotSupported;
+  return color_mgr_->ColorMgrSetMode(color_mode_id);
 }
 
 DisplayError DisplayBase::SetColorModeInternal(const std::string &color_mode) {
@@ -1798,7 +1796,7 @@ void DisplayBase::GetColorPrimaryTransferFromAttributes(const AttrVal &attr,
         pt.transfer = Transfer_sRGB;
         supported_pt->push_back(pt);
       } else if (pt.primaries == ColorPrimaries_DCIP3) {
-        pt.transfer = Transfer_Gamma2_2;
+        pt.transfer = Transfer_sRGB;
         supported_pt->push_back(pt);
       } else if (pt.primaries == ColorPrimaries_BT2020) {
         pt.transfer = Transfer_SMPTE_ST2084;
@@ -1900,7 +1898,7 @@ PrimariesTransfer DisplayBase::GetBlendSpaceFromColorMode() {
     }
   } else if (color_gamut == kDcip3) {
     pt.primaries = GetColorPrimariesFromAttribute(color_gamut);
-    pt.transfer = Transfer_Gamma2_2;
+    pt.transfer = Transfer_sRGB;
   }
 
   return pt;
