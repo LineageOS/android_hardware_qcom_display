@@ -820,6 +820,20 @@ int ClientImpl::ControlQsyncCallback(bool enable) {
   return error;
 }
 
+int ClientImpl::SendTUIEvent(DisplayType dpy, TUIEventType event_type) {
+  struct TUIEventParams input = {dpy, event_type};
+  ByteStream input_params;
+  input_params.setToExternal(reinterpret_cast<uint8_t*>(&input), sizeof(struct TUIEventParams));
+  int32_t error = 0;
+  auto hidl_cb = [&error] (int32_t err, ByteStream params, HandleStream handles) {
+    error = err;
+  };
+
+  display_config_->perform(client_handle_, kSendTUIEvent, input_params, {}, hidl_cb);
+
+  return error;
+}
+
 void ClientImpl::ParseNotifyCWBBufferDone(const ByteStream &input_params,
                                           const HandleStream &input_handles) {
   const int *error;

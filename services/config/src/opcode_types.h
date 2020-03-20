@@ -75,6 +75,7 @@ enum OpCode {
   kCreateVirtualDisplay = 39,
   kIsRotatorSupportedFormat = 40,
   kControlQsyncCallback = 41,
+  kSendTUIEvent = 42,
 };
 
 }  // namespace DisplayConfig

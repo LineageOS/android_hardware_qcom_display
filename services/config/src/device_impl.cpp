@@ -690,6 +690,16 @@ void DeviceImpl::DeviceClientContext::ParseControlQsyncCallback(uint64_t client_
   _hidl_cb(error, {}, {});
 }
 
+void DeviceImpl::DeviceClientContext::ParseSendTUIEvent(const ByteStream &input_params,
+                                                        perform_cb _hidl_cb) {
+  const struct TUIEventParams *input_data =
+               reinterpret_cast<const TUIEventParams*>(input_params.data());
+
+  int32_t error = intf_->SendTUIEvent(input_data->dpy, input_data->tui_event_type);
+
+  _hidl_cb(error, {}, {});
+}
+
 Return<void> DeviceImpl::perform(uint64_t client_handle, uint32_t op_code,
                                  const ByteStream &input_params, const HandleStream &input_handles,
                                  perform_cb _hidl_cb) {
@@ -833,6 +843,9 @@ Return<void> DeviceImpl::perform(uint64_t client_handle, uint32_t op_code,
       break;
     case kControlQsyncCallback:
       client->ParseControlQsyncCallback(client_handle, input_params, _hidl_cb);
+      break;
+    case kSendTUIEvent:
+      client->ParseSendTUIEvent(input_params, _hidl_cb);
       break;
     default:
       break;
