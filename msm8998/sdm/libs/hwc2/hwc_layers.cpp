@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, 2019-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -592,6 +592,7 @@ LayerBufferFormat HWCLayer::GetSDMFormat(const int32_t &source, const int flags)
       format = kFormatYCrCb420PlanarStride16;
       break;
     case HAL_PIXEL_FORMAT_YCrCb_420_SP:
+    case HAL_PIXEL_FORMAT_NV21_ZSL:
       format = kFormatYCrCb420SemiPlanar;
       break;
     case HAL_PIXEL_FORMAT_YCbCr_420_SP:
