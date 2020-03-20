@@ -1160,6 +1160,7 @@ int32_t HWCSession::ValidateDisplay(hwc2_display_t display, uint32_t *out_num_ty
     if (pending_power_mode_[display]) {
       status = HWC2::Error::None;
     } else if (hwc_display_[target_display]) {
+      hwc_display_[target_display]->ProcessActiveConfigChange();
       hwc_display_[target_display]->SetFastPathComposition(false);
       status = ValidateDisplayInternal(target_display, out_num_types, out_num_requests);
     }
