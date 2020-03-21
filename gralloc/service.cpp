@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -27,21 +27,36 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <hidl/LegacySupport.h>
+
 #include "QtiAllocator.h"
 
 using android::hardware::configureRpcThreadpool;
 using android::hardware::joinRpcThreadpool;
-using vendor::qti::hardware::display::allocator::V3_0::IQtiAllocator;
-using vendor::qti::hardware::display::allocator::V3_0::implementation::QtiAllocator;
+using IQtiAllocator3 = vendor::qti::hardware::display::allocator::V3_0::IQtiAllocator;
+using IQtiAllocator4 = vendor::qti::hardware::display::allocator::V4_0::IQtiAllocator;
 
 int main(int, char **) {
-  android::sp<IQtiAllocator> service = new QtiAllocator();
+  android::sp<IQtiAllocator3> service3 =
+      new vendor::qti::hardware::display::allocator::V3_0::implementation::QtiAllocator();
+
   configureRpcThreadpool(4, true /*callerWillJoin*/);
-  if (service->registerAsService() != android::OK) {
-    ALOGE("Cannot register QTI Allocator service");
+  if (service3->registerAsService() != android::OK) {
+    ALOGE("Cannot register QTI Allocator 3 service");
     return -EINVAL;
   }
-  ALOGI("Initialized qti-allocator");
+  ALOGI("Initialized qti-allocator 3");
+
+#ifdef TARGET_USES_GRALLOC4
+  android::sp<IQtiAllocator4> service4 =
+      new vendor::qti::hardware::display::allocator::V4_0::implementation::QtiAllocator();
+  if (service4->registerAsService() != android::OK) {
+    ALOGE("Cannot register QTI Allocator 4 service");
+    return -EINVAL;
+  }
+  ALOGI("Initialized qti-allocator 4");
+#endif
+
   joinRpcThreadpool();
+
   return 0;
 }
