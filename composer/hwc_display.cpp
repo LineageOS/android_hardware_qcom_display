@@ -2617,7 +2617,7 @@ std::tuple<int64_t, int64_t> HWCDisplay::EstimateVsyncPeriodChangeTimeline(
 }
 
 void HWCDisplay::SubmitActiveConfigChange(VsyncPeriodNanos current_vsync_period) {
-  HWC2::Error error = SetActiveConfig(pending_refresh_rate_config_);
+  HWC2::Error error = SubmitDisplayConfig(pending_refresh_rate_config_);
   if (error != HWC2::Error::None) {
     return;
   }
@@ -2672,6 +2672,27 @@ bool HWCDisplay::AllowSeamless(hwc2_config_t config) {
   }
 
   return IsSameGroup(active_config, config);
+}
+
+HWC2::Error HWCDisplay::SubmitDisplayConfig(hwc2_config_t config) {
+  DTRACE_SCOPED();
+
+  hwc2_config_t current_config = 0;
+  GetActiveConfig(&current_config);
+  if (current_config == config) {
+    return HWC2::Error::None;
+  }
+
+  DisplayError error = display_intf_->SetActiveConfig(config);
+  if (error != kErrorNone) {
+    DLOGE("Failed to set %d config! Error: %d", config, error);
+    return HWC2::Error::BadConfig;
+  }
+
+  validated_ = false;
+  DLOGI("Active configuration changed to: %d", config);
+
+  return HWC2::Error::None;
 }
 
 }  // namespace sdm
