@@ -59,6 +59,7 @@ class BufferDescriptor {
   void SetName(std::string name) { name_ = name; }
 
   void SetReservedSize(uint64_t reserved_size) { reserved_size_ = reserved_size; }
+
   uint64_t GetUsage() const { return usage_; }
 
   int GetWidth() const { return width_; }
@@ -72,6 +73,7 @@ class BufferDescriptor {
   uint64_t GetId() const { return id_; }
 
   uint64_t GetReservedSize() const { return reserved_size_; }
+
   std::string GetName() const { return name_; }
 
  private:
