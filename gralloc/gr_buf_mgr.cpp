@@ -26,6 +26,7 @@
 #include <gralloctypes/Gralloc4.h>
 #include <sys/mman.h>
 
+#include <algorithm>
 #include <iomanip>
 #include <sstream>
 #include <string>
@@ -60,6 +61,7 @@ static BufferInfo GetBufferInfo(const BufferDescriptor &descriptor) {
 static uint64_t getMetaDataSize() {
   return static_cast<uint64_t>(ROUND_UP_PAGESIZE(sizeof(MetaData_t)));
 }
+
 static int validateAndMap(private_handle_t *handle) {
   if (private_handle_t::validate(handle)) {
     ALOGE("%s: Private handle is invalid - handle:%p", __func__, handle);
@@ -591,9 +593,8 @@ static Error getFormatLayout(private_handle_t *handle, std::vector<PlaneLayout> 
     std::vector<PlaneLayoutComponent> components;
     grallocToStandardPlaneLayoutComponentType(plane_layout[i].component, &plane_info[i].components,
                                               handle->format);
-    plane_info[i].horizontalSubsampling =
-        static_cast<int64_t>(pow(2, plane_layout[i].h_subsampling));
-    plane_info[i].verticalSubsampling = static_cast<int64_t>(pow(2, plane_layout[i].v_subsampling));
+    plane_info[i].horizontalSubsampling = (1ull << plane_layout[i].h_subsampling);
+    plane_info[i].verticalSubsampling = (1ull << plane_layout[i].v_subsampling);
     plane_info[i].offsetInBytes = static_cast<int64_t>(plane_layout[i].offset);
     plane_info[i].sampleIncrementInBits = static_cast<int64_t>(plane_layout[i].step * 8);
     plane_info[i].strideInBytes = static_cast<int64_t>(plane_layout[i].stride_bytes);
@@ -807,6 +808,7 @@ Error BufferManager::LockBuffer(const private_handle_t *hnd, uint64_t usage) {
 
   return err;
 }
+
 Error BufferManager::FlushBuffer(const private_handle_t *handle) {
   std::lock_guard<std::mutex> lock(buffer_lock_);
   auto status = Error::NONE;
@@ -956,8 +958,9 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
     return Error::BAD_BUFFER;
   }
   auto metadata = reinterpret_cast<MetaData_t *>(hnd->base_metadata);
-  descriptor.GetName().copy(metadata->name, descriptor.GetName().size() + 1);
-  metadata->name[descriptor.GetName().size()] = '\0';
+  auto nameLength = std::min(descriptor.GetName().size(), size_t(MAX_NAME_LEN - 1));
+  nameLength = descriptor.GetName().copy(metadata->name, nameLength);
+  metadata->name[nameLength] = '\0';
 
   metadata->reservedRegion.size = descriptor.GetReservedSize();
 
@@ -1015,6 +1018,7 @@ Error BufferManager::GetAllHandles(std::vector<const private_handle_t *> *out_ha
   }
   return Error::NONE;
 }
+
 Error BufferManager::GetReservedRegion(private_handle_t *handle, void **reserved_region,
                                        uint64_t *reserved_region_size) {
   std::lock_guard<std::mutex> lock(buffer_lock_);
@@ -1176,12 +1180,13 @@ Error BufferManager::GetMetadata(private_handle_t *handle, int64_t metadatatype_
       break;
     }
     case (int64_t)StandardMetadataType::SMPTE2094_40: {
-      std::vector<uint8_t> dynamic_metadata_payload;
       if (metadata->color.dynamicMetaDataValid &&
           metadata->color.dynamicMetaDataLen <= HDR_DYNAMIC_META_DATA_SZ) {
+        std::vector<uint8_t> dynamic_metadata_payload;
         dynamic_metadata_payload.resize(metadata->color.dynamicMetaDataLen);
-        memcpy(dynamic_metadata_payload.data(), &metadata->color.dynamicMetaDataPayload,
-               metadata->color.dynamicMetaDataLen);
+        dynamic_metadata_payload.assign(
+            metadata->color.dynamicMetaDataPayload,
+            metadata->color.dynamicMetaDataPayload + metadata->color.dynamicMetaDataLen);
         android::gralloc4::encodeSmpte2094_40(dynamic_metadata_payload, out);
       } else {
         android::gralloc4::encodeSmpte2094_40(std::nullopt, out);
@@ -1365,13 +1370,13 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
       std::optional<std::vector<uint8_t>> dynamic_metadata_payload;
       android::gralloc4::decodeSmpte2094_40(in, &dynamic_metadata_payload);
       if (dynamic_metadata_payload != std::nullopt) {
-        if (dynamic_metadata_payload->size() <= HDR_DYNAMIC_META_DATA_SZ &&
-            dynamic_metadata_payload->size() > 0) {
-          metadata->color.dynamicMetaDataLen = dynamic_metadata_payload->size();
-          memcpy(&metadata->color.dynamicMetaDataPayload, &dynamic_metadata_payload,
-                 metadata->color.dynamicMetaDataLen);
-          metadata->color.dynamicMetaDataValid = true;
-        }
+        if (dynamic_metadata_payload->size() > HDR_DYNAMIC_META_DATA_SZ)
+          return Error::BAD_VALUE;
+
+        metadata->color.dynamicMetaDataLen = dynamic_metadata_payload->size();
+        std::copy(dynamic_metadata_payload->begin(), dynamic_metadata_payload->end(),
+                  metadata->color.dynamicMetaDataPayload);
+        metadata->color.dynamicMetaDataValid = true;
       } else {
         // Reset metadata by passing in std::nullopt
         metadata->color.dynamicMetaDataValid = false;
