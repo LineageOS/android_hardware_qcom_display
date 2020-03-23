@@ -55,7 +55,10 @@ static int colorMetaDataToColorSpace(ColorMetaData in, ColorSpace_t *out) {
   } else if (in.colorPrimaries == ColorPrimaries_BT709_5) {
     *out = ITU_R_709;
   } else {
-    ALOGE("Cannot convert ColorMetaData to ColorSpace_t");
+    ALOGE(
+        "Cannot convert ColorMetaData to ColorSpace_t. "
+        "Primaries = %d, Range = %d",
+        in.colorPrimaries, in.range);
     return -1;
   }
 
@@ -86,7 +89,7 @@ static int colorSpaceToColorMetadata(ColorSpace_t in, ColorMetaData *out) {
       out->range = Range_Full;
       break;
     default:
-      ALOGE("Cannot convert ColorSpace_t to ColorMetaData");
+      ALOGE("Cannot convert ColorSpace_t %d to ColorMetaData", in);
       return -1;
       break;
   }
@@ -180,8 +183,9 @@ int setMetaDataVa(MetaData_t *data, DispParamType paramType,
           ColorMetaData color = {};
           if (!colorSpaceToColorMetadata(*((ColorSpace_t *)param), &color)) {
             data->color = color;
+            break;
           }
-          break;
+          return -EINVAL;
         }
         case MAP_SECURE_BUFFER:
             data->mapSecureBuffer = *((int32_t *)param);
@@ -335,8 +339,8 @@ int getMetaDataVa(MetaData_t *data, DispFetchParamType paramType,
               ColorSpace_t color_space;
               if (!colorMetaDataToColorSpace(data->color, &color_space)) {
                 *((ColorSpace_t *)param) = color_space;
-              }
                 ret = 0;
+              }
             }
             break;
         case GET_MAP_SECURE_BUFFER:
