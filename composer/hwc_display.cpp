@@ -171,6 +171,10 @@ HWC2::Error HWCColorMode::CacheColorModeWithRenderIntent(ColorMode mode, RenderI
   return HWC2::Error::None;
 }
 
+void HWCColorMode::SetApplyMode(bool enable) {
+  apply_mode_ = enable;
+}
+
 HWC2::Error HWCColorMode::ApplyCurrentColorModeWithRenderIntent(bool hdr_present) {
   // If panel does not support color modes, do not set color mode.
   if (color_mode_map_.size() <= 1) {
@@ -951,9 +955,11 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
       }
       break;
     case HWC2::PowerMode::On:
+      color_mode_->SetApplyMode(true);
       state = kStateOn;
       break;
     case HWC2::PowerMode::Doze:
+      color_mode_->SetApplyMode(true);
       state = kStateDoze;
       break;
     case HWC2::PowerMode::DozeSuspend:
