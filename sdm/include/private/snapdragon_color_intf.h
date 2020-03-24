@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -46,6 +46,9 @@ const std::string kPbGamut = "PostBlendGamut";
 const std::string kPbIgc = "PostBlendIGC";
 const std::string kPbGC = "PostBlendGC";
 
+//<! Mode attribute to indicate HDR present
+const std::string kPbHdrBlob = "PostBlendHdrBlob";
+
 enum ScProperty {
   //<! Make value of zero as invalid.
   kInvalid = 0,
@@ -76,6 +79,12 @@ enum ScProperty {
   //<! GetProperty - For client to check if library supports hdr tone-mapping.
   //<! Payload - bool
   kSupportToneMap,
+  //<! GetProperty - For client to get number of render intents.
+  //<! Payload - uint32_t
+  kGetNumRenderIntents,
+  //<! GetProperty - For client to get map of render intents.
+  //<! Payload - struct RenderIntentMapList
+  kGetRenderIntents,
   //<! Max value of public properties
   kPropertyMax = 511,
   //<! Custom Properties
@@ -89,7 +98,13 @@ enum ScOps {
   //<! Interface ProcessOps implementation will consume ModeRenderInputParams and generate
   //<! required mode and will update the OpsOutParams with HW asset configuration.
   kScModeRenderIntent,
-  kScOpsMax,
+  //<! Client will pass blend-space, render intent and color primaries along with hardware
+  //<! assets that interface can use for generating the mode (ModeRenderInputParams).
+  //<! Interface ProcessOps implementation will consume ModeRenderInputParams and generate
+  //<! required mode and will update the OpsOutParams with DE, Game blob and hdr blob
+  //<! configuration if they are presenting in the color mode.
+  kScModeSwAssets,
+  kScOpsMax = 0xFF,
 };
 
 static const uint32_t kMatrixSize = 4 * 4;
@@ -107,7 +122,6 @@ struct ScPayload {
   //<! payload pointer, has been made as uint64_t to support 32/64 bit platforms
   uint64_t payload = reinterpret_cast<uint64_t>(nullptr);
 };
-
 
 class ScPostBlendInterface {
  public:
@@ -143,18 +157,24 @@ enum RenderIntent {
   //<! Custom render intents range
   kOemCustomStart = 0x100,
   kOemCustomEnd = 0x1ff,
+  //<! If STC implementation returns kOemModulateHw render intent, STC manager will
+  //<! call the implementation for all the render intent/blend space combination.
+  //<! STC implementation can modify/modulate the HW assets.
+  kOemModulateHw = 0xffff - 1,
   kMaxRenderIntent = 0xffff
 };
 
 struct ColorMode {
   //<! Blend-Space gamut
-  ColorPrimaries gamut;
+  ColorPrimaries gamut = ColorPrimaries_Max;
   //<! Blend-space Gamma
-  GammaTransfer gamma;
+  GammaTransfer gamma = Transfer_Max;
   //<! Intent of the mode
-  RenderIntent intent;
+  RenderIntent intent = kMaxRenderIntent;
   //<! Hardware assets needed for the mode
   std::vector<std::string> hw_assets;
+  //<! Render intent name for the mode
+  std::string intent_name = "standard";
 };
 
 struct ColorModeList {
@@ -232,6 +252,19 @@ struct HwConfigOutputParams {
   const uint32_t version = sizeof(HwConfigOutputParams);
   //<! HW asset configurations that imp updates for kScModeRenderIntent ProcessOps call.
   std::vector<HwConfigPayload> payload;
+};
+
+struct RenderIntentMap {
+  //<! value of render intent
+  RenderIntent render_intent = kColorimetric;
+  //<! Render intent name
+  std::string intent_name = "standard";
+};
+
+struct RenderIntentMapList {
+  const uint32_t version = sizeof(struct RenderIntentMapList) + sizeof(struct RenderIntentMap);
+  //<! List of the render intent
+  std::vector<RenderIntentMap> list;
 };
 
 }  // namespace snapdragoncolor
