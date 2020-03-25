@@ -25,7 +25,11 @@
 #include <binder/IBinder.h>
 #include <binder/IInterface.h>
 #include <binder/IPCThreadState.h>
+#ifndef TRUSTED_VM
 #include <cutils/android_filesystem_config.h>
+#else
+#include <private/android_filesystem_config.h>
+#endif
 #include <utils/Errors.h>
 #include <IQService.h>
 
