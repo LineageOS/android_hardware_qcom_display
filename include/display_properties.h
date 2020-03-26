@@ -108,5 +108,6 @@
 #define WINDOW_RECT_PROP                     DISPLAY_PROP("window_rect")
 #define ENABLE_DROP_REFRESH                  DISPLAY_PROP("enable_drop_refresh")
 #define DISABLE_IDLE_TIME_VIDEO              DISPLAY_PROP("disable_idle_time_video")
+#define DISABLE_IDLE_TIME_HDR                DISPLAY_PROP("disable_idle_time_hdr")
 
 #endif  // __DISPLAY_PROPERTIES_H__
