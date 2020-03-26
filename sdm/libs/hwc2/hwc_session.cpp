@@ -205,6 +205,7 @@ int HWCSession::Init() {
     return -EINVAL;
   }
 
+  StartServices();
   HWCDebugHandler::Get()->GetProperty(ENABLE_NULL_DISPLAY_PROP, &null_display_mode_);
   HWCDebugHandler::Get()->GetProperty(DISABLE_HOTPLUG_BWCHECK, &disable_hotplug_bwcheck_);
   HWCDebugHandler::Get()->GetProperty(DISABLE_MASK_LAYER_HINT, &disable_mask_layer_hint_);
@@ -228,7 +229,6 @@ int HWCSession::Init() {
   }
 
   is_composer_up_ = true;
-  StartServices();
 
   return 0;
 }
@@ -321,10 +321,10 @@ void HWCSession::InitSupportedDisplaySlots() {
     return;
   }
 
-  if (kPluggable == hw_disp_info.type && max_pluggable != 0) {
+  if (kPluggable == hw_disp_info.type) {
     // If primary is a pluggable display, we have already used one pluggable display interface.
     max_pluggable--;
-  } else if (max_builtin != 0) {
+  } else {
     max_builtin--;
   }
 
@@ -825,23 +825,6 @@ int32_t HWCSession::RegisterCallback(hwc2_device_t *device, int32_t descriptor,
       DLOGI("Hotplugging primary...");
       hwc_session->callbacks_.Hotplug(HWC_DISPLAY_PRIMARY, HWC2::Connection::Connected);
     }
-
-    std::vector<hwc2_display_t> pending_hotplugs;
-    if (pointer) {
-      for (auto &map_info : hwc_session->map_info_builtin_) {
-        SCOPE_LOCK(locker_[map_info.client_id]);
-        if (hwc_session->hwc_display_[map_info.client_id]) {
-          pending_hotplugs.push_back(static_cast<hwc2_display_t>(map_info.client_id));
-        }
-      }
-      for (auto &map_info : hwc_session->map_info_pluggable_) {
-        SCOPE_LOCK(locker_[map_info.client_id]);
-        if (hwc_session->hwc_display_[map_info.client_id]) {
-          pending_hotplugs.push_back(static_cast<hwc2_display_t>(map_info.client_id));
-        }
-      }
-    }
-
     // Create displays since they should now have their final display indices set.
     DLOGI("Handling built-in displays...");
     if (hwc_session->HandleBuiltInDisplays()) {
@@ -854,26 +837,7 @@ int32_t HWCSession::RegisterCallback(hwc2_device_t *device, int32_t descriptor,
             strerror(abs(err)), hwc_session->hotplug_pending_event_ == kHotPlugEvent ? "deferred" :
             "dropped");
     }
-
-    // If previously registered, call hotplug for all connected displays to refresh
-    if (pointer) {
-      std::vector<hwc2_display_t> updated_pending_hotplugs;
-      for (auto client_id : pending_hotplugs) {
-        SCOPE_LOCK(locker_[client_id]);
-        // check if the display is unregistered
-        if (hwc_session->hwc_display_[client_id]) {
-          updated_pending_hotplugs.push_back(client_id);
-        }
-      }
-      for (auto client_id : updated_pending_hotplugs) {
-        DLOGI("Re-hotplug display connected: client id = %d", client_id);
-        hwc_session->callbacks_.Hotplug(client_id, HWC2::Connection::Connected);
-      }
-    }
-
-    hwc_session->client_connected_ = !!pointer;
-    // Notfify all displays.
-    hwc_session->NotifyClientStatus(hwc_session->client_connected_);
+    hwc_session->client_connected_ = true;
   }
   hwc_session->need_invalidate_ = false;
   hwc_session->callbacks_lock_.Broadcast();
@@ -2398,8 +2362,8 @@ void HWCSession::UEventHandler(const char *uevent_data, int length) {
     DLOGI("Uevent = %s, status = %s, MST_HOTPLUG = %s, bpp = %d, pattern = %d", uevent_data,
           str_status ? str_status : "NULL", str_mst ? str_mst : "NULL", hpd_bpp_, hpd_pattern_);
 
-    int virtual_display_index =
-        GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
+    hwc2_display_t virtual_display_index =
+        (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
 
     std::bitset<kSecureMax> secure_sessions = 0;
     hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
@@ -2407,8 +2371,7 @@ void HWCSession::UEventHandler(const char *uevent_data, int length) {
       Locker::ScopeLock lock_a(locker_[active_builtin_disp_id]);
       hwc_display_[active_builtin_disp_id]->GetActiveSecureSession(&secure_sessions);
     }
-    if (secure_sessions[kSecureDisplay] ||
-        ((virtual_display_index != -1) && (hwc_display_[virtual_display_index]))) {
+    if (secure_sessions[kSecureDisplay] || hwc_display_[virtual_display_index]) {
       // Defer hotplug handling.
       SCOPE_LOCK(pluggable_handler_lock_);
       DLOGI("Marking hotplug pending...");
@@ -3145,9 +3108,8 @@ void HWCSession::HandleHotplugPending(hwc2_display_t disp_id, int retire_fence) 
       }
     }
     // Handle connect/disconnect hotplugs if secure session is not present.
-    int virtual_display_idx = GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
-    if (!(virtual_display_idx != -1 && hwc_display_[virtual_display_idx]) &&
-        kHotPlugEvent == hotplug_pending_event_) {
+    hwc2_display_t virtual_display_idx = (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
+    if (!hwc_display_[virtual_display_idx] && kHotPlugEvent == hotplug_pending_event_) {
       // Handle deferred hotplug event.
       int32_t err = pluggable_handler_lock_.TryLock();
       if (!err) {
@@ -3368,16 +3330,6 @@ hwc2_display_t HWCSession::GetActiveBuiltinDisplay() {
   }
 
   return disp_id;
-}
-
-void HWCSession::NotifyClientStatus(bool connected) {
-  for (uint32_t i = 0; i < HWCCallbacks::kNumDisplays; i++) {
-    if (!hwc_display_[i]) {
-      continue;
-    }
-    SCOPE_LOCK(locker_[i]);
-    hwc_display_[i]->NotifyClientStatus(connected);
-  }
 }
 
 }  // namespace sdm

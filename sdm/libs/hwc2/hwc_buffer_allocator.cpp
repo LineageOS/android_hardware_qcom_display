@@ -125,9 +125,6 @@ DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
     auto descriptor = BufferDescriptor();
     mapper_V3_->createDescriptor(descriptor_info, [&](const auto &_error, const auto &_descriptor) {
       hidl_err = _error;
-      if (hidl_err != MapperV3Error::NONE) {
-        return;
-      }
       descriptor = _descriptor;
     });
 
@@ -141,9 +138,6 @@ DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
     allocator_V3_->allocate(descriptor, 1,
                             [&](const auto &_error, const auto &_stride, const auto &_buffers) {
                               hidl_err = _error;
-                              if (hidl_err != MapperV3Error::NONE) {
-                                return;
-                              }
                               raw_handle = _buffers[0];
                             });
 
@@ -154,9 +148,6 @@ DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
 
     mapper_V3_->importBuffer(raw_handle, [&](const auto &_error, const auto &_buffer) {
       hidl_err = _error;
-      if (hidl_err != MapperV3Error::NONE) {
-        return;
-      }
       buf = static_cast<const native_handle_t *>(_buffer);
     });
 
@@ -178,9 +169,6 @@ DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
     auto descriptor = BufferDescriptor();
     mapper_V2_->createDescriptor(descriptor_info, [&](const auto &_error, const auto &_descriptor) {
       hidl_err = _error;
-      if (hidl_err != Error::NONE) {
-        return;
-      }
       descriptor = _descriptor;
     });
 
@@ -194,9 +182,6 @@ DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
     allocator_V2_->allocate(descriptor, 1,
                             [&](const auto &_error, const auto &_stride, const auto &_buffers) {
                               hidl_err = _error;
-                              if (hidl_err != Error::NONE) {
-                                return;
-                              }
                               raw_handle = _buffers[0];
                             });
 
@@ -207,9 +192,6 @@ DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
 
     mapper_V2_->importBuffer(raw_handle, [&](const auto &_error, const auto &_buffer) {
       hidl_err = _error;
-      if (hidl_err != Error::NONE) {
-        return;
-      }
       buf = static_cast<const native_handle_t *>(_buffer);
     });
 
