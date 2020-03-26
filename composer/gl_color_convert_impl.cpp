@@ -27,6 +27,8 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <vector>
+
 #include "gl_color_convert_impl.h"
 
 #define __CLASS__ "GLColorConvertImpl"
@@ -165,7 +167,8 @@ int GLColorConvertImpl::Blit(const private_handle_t *src_hnd, const private_hand
   SetProgram(ctx_.program_id);
 
   SetSourceBuffer(src_hnd);
-  SetDestinationBuffer(dst_hnd, dst_rect);
+  SetDestinationBuffer(dst_hnd);
+  SetViewport(dst_rect);
 
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, kFullScreenVertices);
@@ -173,10 +176,8 @@ int GLColorConvertImpl::Blit(const private_handle_t *src_hnd, const private_hand
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, kFullScreenTexCoords);
   glDrawArrays(GL_TRIANGLES, 0, 3);
 
-  shared_ptr<Fence> in_fence = Fence::Merge(src_acquire_fence, dst_acquire_fence);
-  if (in_fence) {
-    WaitOnInputFence(in_fence);
-  }
+  std::vector<shared_ptr<Fence>> in_fence = {Fence::Merge(src_acquire_fence, dst_acquire_fence)};
+  WaitOnInputFence(in_fence);
 
   // Create output fence for client to wait on.
   CreateOutputFence(release_fence);

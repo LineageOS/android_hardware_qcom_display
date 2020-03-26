@@ -56,11 +56,7 @@ struct LayerStitchGetInstanceContext : public SyncTask<LayerStitchTaskCode>::Tas
 };
 
 struct LayerStitchContext : public SyncTask<LayerStitchTaskCode>::TaskContext {
-  const private_handle_t* src_hnd = nullptr;
-  const private_handle_t* dst_hnd = nullptr;
-  GLRect src_rect = {};
-  GLRect dst_rect = {};
-  GLRect scissor_rect = {};
+  vector<StitchParams> stitch_params;
   shared_ptr<Fence> src_acquire_fence = nullptr;
   shared_ptr<Fence> dst_acquire_fence = nullptr;
   shared_ptr<Fence> release_fence = nullptr;
