@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2018 - 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2018 - 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -130,5 +130,6 @@
 #define DISABLE_PARALLEL_CACHE               DISPLAY_PROP("disable_parallel_cache")
 #define ENABLE_FORCE_SPLIT                   DISPLAY_PROP("enable_force_split")
 #define DEFER_FPS_FRAME_COUNT                DISPLAY_PROP("defer_fps_frame_count")
+#define DISABLE_IDLE_TIME_VIDEO              DISPLAY_PROP("disable_idle_time_video")
 
 #endif  // __DISPLAY_PROPERTIES_H__
