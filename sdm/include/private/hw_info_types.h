@@ -242,7 +242,7 @@ struct HWRotatorInfo {
   std::string device_path = "";
   float min_downscale = 2.0f;
   bool downscale_compression = false;
-  uint64_t max_line_width = 0;
+  uint32_t max_line_width = 0;
 };
 
 enum HWQseedStepVersion {
@@ -277,6 +277,7 @@ struct InlineRotationInfo {
   InlineRotationVersion inrot_version = kInlineRotationNone;
   std::vector<LayerBufferFormat> inrot_fmts_supported;
   float max_downscale_rt = 2.2f;    // max downscale real time display
+  float max_ds_without_pre_downscaler = 2.2f;
 };
 
 
@@ -337,7 +338,7 @@ struct HWResourceInfo {
   uint32_t cache_size = 0;  // cache size in bytes
   HWQseedStepVersion pipe_qseed3_version = kQseed3v2;  // only valid when has_qseed3=true
   uint32_t min_prefill_lines = 0;
-  InlineRotationInfo inline_rot_info;
+  InlineRotationInfo inline_rot_info = {};
   std::bitset<32> src_tone_map = 0;  //!< Stores the bit mask of src tone map capability
   int secure_disp_blend_stage = -1;
   uint32_t line_width_constraints_count = 0;

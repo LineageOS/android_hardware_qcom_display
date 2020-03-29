@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016 - 2017, 2020 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -313,7 +313,7 @@ void HWCToneMapper::DumpToneMapOutput(ToneMapSession *session, int *acquire_fd) 
 
   error = buffer_allocator_->MapBuffer(target_buffer, *acquire_fd);
   if (error != kErrorNone) {
-    DLOGE("MapBuffer failed, base addr = %x", target_buffer->base);
+    DLOGE("MapBuffer failed, base addr = %" PRIx64, target_buffer->base);
     return;
   }
 
@@ -325,7 +325,7 @@ void HWCToneMapper::DumpToneMapOutput(ToneMapSession *session, int *acquire_fd) 
 
   FILE* fp = fopen(dump_file_name, "w+");
   if (fp) {
-    DLOGI("base addr = %x", target_buffer->base);
+    DLOGI("base addr = %" PRIx64, target_buffer->base);
     result = fwrite(reinterpret_cast<void *>(target_buffer->base), target_buffer->size, 1, fp);
     fclose(fp);
   }

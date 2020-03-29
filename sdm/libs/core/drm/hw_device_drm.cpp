@@ -491,7 +491,7 @@ DisplayError HWDeviceDRM::Init() {
   }
 
   if (!connector_info_.is_connected || connector_info_.modes.empty()) {
-    DLOGW("Device removal detected on connector id %u. Connector status %s and %d modes.",
+    DLOGW("Device removal detected on connector id %u. Connector status %s and %zu modes.",
           token_.conn_id, connector_info_.is_connected ? "connected":"disconnected",
           connector_info_.modes.size());
     drm_mgr_intf_->DestroyAtomicReq(drm_atomic_intf_);
@@ -526,6 +526,7 @@ DisplayError HWDeviceDRM::Deinit() {
     // connector (i.e., any connector which did not have a display commit on it and a crtc path
     // setup), so token_.conn_id may have been removed if there was no commit, resulting in
     // drmModeAtomicCommit() failure with ENOENT, 'No such file or directory'.
+    ClearSolidfillStages();
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, 0);
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::OFF);
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, nullptr);
@@ -1285,12 +1286,13 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence_);
   }
 
-  DLOGI_IF(kTagDriverConfig, "%s::%s System Clock=%d Hz, Core: AB=%llu Bps, IB=%llu Bps, " \
-           "LLCC: AB=%llu Bps, IB=%llu Bps, DRAM AB=%llu Bps, IB=%llu Bps, "\
-           "Rot: Bw=%llu Bps, Clock=%d Hz", validate ? "Validate" : "Commit", device_name_,
-           qos_data.clock_hz, qos_data.core_ab_bps, qos_data.core_ib_bps, qos_data.llcc_ab_bps,
-           qos_data.llcc_ib_bps, qos_data.dram_ab_bps, qos_data.dram_ib_bps,
-           qos_data.rot_prefill_bw_bps, qos_data.rot_clock_hz);
+  DLOGI_IF(kTagDriverConfig, "%s::%s System Clock=%d Hz, Core: AB=%f KBps, IB=%f Bps, " \
+           "LLCC: AB=%f Bps, IB=%f Bps, DRAM AB=%f Bps, IB=%f Bps, "\
+           "Rot: Bw=%f Bps, Clock=%d Hz", validate ? "Validate" : "Commit", device_name_,
+           qos_data.clock_hz, qos_data.core_ab_bps / 1000.f, qos_data.core_ib_bps / 1000.f,
+           qos_data.llcc_ab_bps / 1000.f, qos_data.llcc_ib_bps / 1000.f,
+           qos_data.dram_ab_bps / 1000.f, qos_data.dram_ib_bps / 1000.f,
+           qos_data.rot_prefill_bw_bps / 1000.f, qos_data.rot_clock_hz);
 
   // Set refresh rate
   if (vrefresh_) {
@@ -2121,7 +2123,7 @@ void HWDeviceDRM::SetDGMCscV1(const HWCsc &dgm_csc, sde_drm_csc_v1 *csc_v1) {
   uint32_t i = 0;
   for (i = 0; i < MAX_CSC_MATRIX_COEFF_SIZE; i++) {
     csc_v1->ctm_coeff[i] = dgm_csc.ctm_coeff[i];
-    DLOGV_IF(kTagDriverConfig, " DGM csc_v1[%d] = %d", i, csc_v1->ctm_coeff[i]);
+    DLOGV_IF(kTagDriverConfig, " DGM csc_v1[%d] = %" PRId64, i, csc_v1->ctm_coeff[i]);
   }
   for (i = 0; i < MAX_CSC_BIAS_SIZE; i++) {
     csc_v1->pre_bias[i] = dgm_csc.pre_bias[i];
@@ -2244,10 +2246,11 @@ void HWDeviceDRM::DumpHWLayers(HWLayers *hw_layers) {
   std::vector<LayerRect> &right_frame_roi = hw_layer_info.right_frame_roi;
   DLOGI("HWLayers Stack: layer_count: %d, app_layer_count: %d, gpu_target_index: %d",
          hw_layer_count, hw_layer_info.app_layer_count, hw_layer_info.gpu_target_index);
-  DLOGI("LayerStackFlags = 0x%X,  blend_cs = {primaries = %d, transfer = %d}",
-         stack->flags, stack->blend_cs.primaries, stack->blend_cs.transfer);
+  DLOGI("LayerStackFlags = 0x%" PRIu32 ",  blend_cs = {primaries = %d, transfer = %d}",
+         UINT32(stack->flags.flags), UINT32(stack->blend_cs.primaries),
+         UINT32(stack->blend_cs.transfer));
   for (uint32_t i = 0; i < left_frame_roi.size(); i++) {
-  DLOGI("left_frame_roi: x = %d, y = %d, w = %d, h = %d", INT(left_frame_roi[i].left),
+    DLOGI("left_frame_roi: x = %d, y = %d, w = %d, h = %d", INT(left_frame_roi[i].left),
         INT(left_frame_roi[i].top), INT(left_frame_roi[i].right), INT(left_frame_roi[i].bottom));
   }
   for (uint32_t i = 0; i < right_frame_roi.size(); i++) {
@@ -2274,11 +2277,11 @@ void HWDeviceDRM::DumpHWLayers(HWLayers *hw_layers) {
     HWRotatorSession &hw_rotator_session = hw_config.hw_rotator_session;
     HWSessionConfig &hw_session_config = hw_rotator_session.hw_session_config;
     DLOGI("========================= HW_layer: %d =========================", i);
-    DLOGI("src_width = %d, src_height = %d, src_format = %d, src_LayerBufferFlags = 0x%X",
+    DLOGI("src_width = %d, src_height = %d, src_format = %d, src_LayerBufferFlags = 0x%" PRIx32 ,
              hw_layer_info.hw_layers[i].input_buffer.width,
              hw_layer_info.hw_layers[i].input_buffer.height,
              hw_layer_info.hw_layers[i].input_buffer.format,
-             hw_layer_info.hw_layers[i].input_buffer.flags);
+             hw_layer_info.hw_layers[i].input_buffer.flags.flags);
     if (hw_config.use_inline_rot) {
       DLOGI("rotator = %s, rotation = %d, flip_horizontal = %s, flip_vertical = %s",
             "inline rotator", INT(hw_session_config.transform.rotation),

@@ -232,7 +232,7 @@ DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
   }
 
   hw_layers_info.stitch_target_index = hw_layers_info.gpu_target_index + 1;
-  DLOGD_IF(kTagDisplay, "LayerStack layer_count: %d, app_layer_count: %d, "
+  DLOGD_IF(kTagDisplay, "LayerStack layer_count: %zu, app_layer_count: %d, "
                         "gpu_target_index: %d, stitch_index: %d game_present: %d, display: %d-%d",
                         layers.size(), hw_layers_info.app_layer_count,
                         hw_layers_info.gpu_target_index, hw_layers_info.stitch_target_index,
