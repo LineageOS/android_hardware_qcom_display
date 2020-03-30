@@ -1317,4 +1317,11 @@ int HWCDisplayBuiltIn::PostInit() {
   return 0;
 }
 
+bool HWCDisplayBuiltIn::HasReadBackBufferSupport() {
+  DisplayConfigFixedInfo fixed_info = {};
+  display_intf_->GetConfig(&fixed_info);
+
+  return fixed_info.readback_supported;
+}
+
 }  // namespace sdm

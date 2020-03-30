@@ -409,6 +409,7 @@ class HWCDisplay : public DisplayEventHandler {
       VsyncPeriodChangeTimeline *out_timeline);
 
   HWC2::Error SetDisplayElapseTime(uint64_t time);
+  virtual bool HasReadBackBufferSupport() { return false; }
 
  protected:
   static uint32_t throttling_refresh_rate_;
