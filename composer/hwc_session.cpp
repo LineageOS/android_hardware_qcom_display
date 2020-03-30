@@ -3237,14 +3237,16 @@ int32_t HWCSession::GetReadbackBufferAttributes(hwc2_display_t display, int32_t 
   }
 
   HWCDisplay *hwc_display = hwc_display_[display];
-
-  if (hwc_display) {
-    *format = HAL_PIXEL_FORMAT_RGB_888;
-    *dataspace = GetDataspaceFromColorMode(hwc_display->GetCurrentColorMode());
-    return HWC2_ERROR_NONE;
+  if (hwc_display == nullptr) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  } else if (!hwc_display->HasReadBackBufferSupport()) {
+    return HWC2_ERROR_UNSUPPORTED;
   }
 
-  return HWC2_ERROR_BAD_DISPLAY;
+  *format = HAL_PIXEL_FORMAT_RGB_888;
+  *dataspace = GetDataspaceFromColorMode(hwc_display->GetCurrentColorMode());
+
+  return HWC2_ERROR_NONE;
 }
 
 int32_t HWCSession::SetReadbackBuffer(hwc2_display_t display, const native_handle_t *buffer,

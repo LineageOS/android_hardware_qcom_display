@@ -427,6 +427,7 @@ class HWCDisplay : public DisplayEventHandler {
 
   HWC2::Error SetDisplayElapseTime(uint64_t time);
   virtual bool IsDisplayIdle() { return false; };
+  virtual bool HasReadBackBufferSupport() { return false; }
 
  protected:
   static uint32_t throttling_refresh_rate_;
