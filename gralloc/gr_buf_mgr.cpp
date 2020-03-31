@@ -1130,41 +1130,50 @@ Error BufferManager::GetMetadata(private_handle_t *handle, int64_t metadatatype_
       android::gralloc4::encodeBlendMode((BlendMode)metadata->blendMode, out);
       break;
     case (int64_t)StandardMetadataType::SMPTE2086: {
-      Smpte2086 mastering_display_values;
-      mastering_display_values.primaryRed = {
-          static_cast<float>(metadata->color.masteringDisplayInfo.primaries.rgbPrimaries[0][0]) /
-              50000.0f,
-          static_cast<float>(metadata->color.masteringDisplayInfo.primaries.rgbPrimaries[0][1]) /
-              50000.0f};
-      mastering_display_values.primaryGreen = {
-          static_cast<float>(metadata->color.masteringDisplayInfo.primaries.rgbPrimaries[1][0]) /
-              50000.0f,
-          static_cast<float>(metadata->color.masteringDisplayInfo.primaries.rgbPrimaries[1][1]) /
-              50000.0f};
-      mastering_display_values.primaryBlue = {
-          static_cast<float>(metadata->color.masteringDisplayInfo.primaries.rgbPrimaries[2][0]) /
-              50000.0f,
-          static_cast<float>(metadata->color.masteringDisplayInfo.primaries.rgbPrimaries[2][1]) /
-              50000.0f};
-      mastering_display_values.whitePoint = {
-          static_cast<float>(metadata->color.masteringDisplayInfo.primaries.whitePoint[0]) /
-              50000.0f,
-          static_cast<float>(metadata->color.masteringDisplayInfo.primaries.whitePoint[1]) /
-              50000.0f};
-      mastering_display_values.maxLuminance =
-          static_cast<float>(metadata->color.masteringDisplayInfo.maxDisplayLuminance);
-      mastering_display_values.minLuminance =
-          static_cast<float>(metadata->color.masteringDisplayInfo.minDisplayLuminance) / 10000.0f;
-      android::gralloc4::encodeSmpte2086(mastering_display_values, out);
+      if (metadata->color.masteringDisplayInfo.colorVolumeSEIEnabled) {
+        Smpte2086 mastering_display_values;
+        mastering_display_values.primaryRed = {
+            static_cast<float>(metadata->color.masteringDisplayInfo.primaries.rgbPrimaries[0][0]) /
+                50000.0f,
+            static_cast<float>(metadata->color.masteringDisplayInfo.primaries.rgbPrimaries[0][1]) /
+                50000.0f};
+        mastering_display_values.primaryGreen = {
+            static_cast<float>(metadata->color.masteringDisplayInfo.primaries.rgbPrimaries[1][0]) /
+                50000.0f,
+            static_cast<float>(metadata->color.masteringDisplayInfo.primaries.rgbPrimaries[1][1]) /
+                50000.0f};
+        mastering_display_values.primaryBlue = {
+            static_cast<float>(metadata->color.masteringDisplayInfo.primaries.rgbPrimaries[2][0]) /
+                50000.0f,
+            static_cast<float>(metadata->color.masteringDisplayInfo.primaries.rgbPrimaries[2][1]) /
+                50000.0f};
+        mastering_display_values.whitePoint = {
+            static_cast<float>(metadata->color.masteringDisplayInfo.primaries.whitePoint[0]) /
+                50000.0f,
+            static_cast<float>(metadata->color.masteringDisplayInfo.primaries.whitePoint[1]) /
+                50000.0f};
+        mastering_display_values.maxLuminance =
+            static_cast<float>(metadata->color.masteringDisplayInfo.maxDisplayLuminance);
+        mastering_display_values.minLuminance =
+            static_cast<float>(metadata->color.masteringDisplayInfo.minDisplayLuminance) / 10000.0f;
+        android::gralloc4::encodeSmpte2086(mastering_display_values, out);
+      } else {
+        android::gralloc4::encodeSmpte2086(std::nullopt, out);
+      }
       break;
     }
     case (int64_t)StandardMetadataType::CTA861_3: {
-      Cta861_3 content_light_level;
-      content_light_level.maxContentLightLevel =
-          static_cast<float>(metadata->color.contentLightLevel.maxContentLightLevel);
-      content_light_level.maxFrameAverageLightLevel =
-          static_cast<float>(metadata->color.contentLightLevel.minPicAverageLightLevel) / 10000.0f;
-      android::gralloc4::encodeCta861_3(content_light_level, out);
+      if (metadata->color.contentLightLevel.lightLevelSEIEnabled) {
+        Cta861_3 content_light_level;
+        content_light_level.maxContentLightLevel =
+            static_cast<float>(metadata->color.contentLightLevel.maxContentLightLevel);
+        content_light_level.maxFrameAverageLightLevel =
+            static_cast<float>(metadata->color.contentLightLevel.minPicAverageLightLevel) /
+            10000.0f;
+        android::gralloc4::encodeCta861_3(content_light_level, out);
+      } else {
+        android::gralloc4::encodeCta861_3(std::nullopt, out);
+      }
       break;
     }
     case (int64_t)StandardMetadataType::SMPTE2094_40: {
@@ -1308,6 +1317,8 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
       std::optional<Smpte2086> mastering_display_values;
       android::gralloc4::decodeSmpte2086(in, &mastering_display_values);
       if (mastering_display_values != std::nullopt) {
+        metadata->color.masteringDisplayInfo.colorVolumeSEIEnabled = true;
+
         metadata->color.masteringDisplayInfo.primaries.rgbPrimaries[0][0] =
             static_cast<uint32_t>(mastering_display_values->primaryRed.x * 50000.0f);
         metadata->color.masteringDisplayInfo.primaries.rgbPrimaries[0][1] =
@@ -1332,6 +1343,8 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
             static_cast<uint32_t>(mastering_display_values->maxLuminance);
         metadata->color.masteringDisplayInfo.minDisplayLuminance =
             static_cast<uint32_t>(mastering_display_values->minLuminance * 10000.0f);
+      } else {
+        metadata->color.masteringDisplayInfo.colorVolumeSEIEnabled = false;
       }
       break;
     }
@@ -1339,10 +1352,13 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
       std::optional<Cta861_3> content_light_level;
       android::gralloc4::decodeCta861_3(in, &content_light_level);
       if (content_light_level != std::nullopt) {
+        metadata->color.contentLightLevel.lightLevelSEIEnabled = true;
         metadata->color.contentLightLevel.maxContentLightLevel =
             static_cast<uint32_t>(content_light_level->maxContentLightLevel);
         metadata->color.contentLightLevel.minPicAverageLightLevel =
             static_cast<uint32_t>(content_light_level->maxFrameAverageLightLevel * 10000.0f);
+      } else {
+        metadata->color.contentLightLevel.lightLevelSEIEnabled = false;
       }
       break;
     }
