@@ -1016,6 +1016,10 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
   if (err != 0)
     return Error::BAD_BUFFER;
 
+  if (in.size() == 0) {
+    return Error::UNSUPPORTED;
+  }
+
   auto metadata = reinterpret_cast<MetaData_t *>(handle->base_metadata);
 
   switch (metadatatype_value) {
