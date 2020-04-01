@@ -11,4 +11,5 @@ ConstructorInitializerAllOnOneLineOrOnePerLine: true
 ConstructorInitializerIndentWidth: 4
 DerivePointerAlignment: false
 PointerAlignment: Right
+SortIncludes: false
 #ReflowComments: false

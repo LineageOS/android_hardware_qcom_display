@@ -134,6 +134,12 @@ int HWCDisplayBuiltIn::Init() {
     DLOGI("Drop redundant drawcycles %d", id_);
   }
 
+  int vsyncs = 0;
+  HWCDebugHandler::Get()->GetProperty(DEFER_FPS_FRAME_COUNT, &vsyncs);
+  if (vsyncs > 0) {
+    SetVsyncsApplyRateChange(UINT32(vsyncs));
+  }
+
   is_primary_ = display_intf_->IsPrimaryDisplay();
 
   if (is_primary_) {
