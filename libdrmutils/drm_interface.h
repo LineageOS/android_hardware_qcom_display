@@ -531,6 +531,7 @@ struct DRMCrtcInfo {
   uint32_t mnoc_bus_width;
   bool use_baselayer_for_stage = false;
   bool has_micro_idle = false;
+  uint32_t ubwc_version = 1;
 };
 
 enum struct DRMPlaneType {
