@@ -369,7 +369,7 @@ DisplayError DisplayBuiltIn::SetDisplayMode(uint32_t mode) {
     HWDisplayMode hw_display_mode = static_cast<HWDisplayMode>(mode);
     uint32_t pending = 0;
 
-    if (!active_) {
+    if (!active_ && !pending_doze_ && !pending_power_on_) {
       DLOGW("Invalid display state = %d. Panel must be on.", state_);
       return kErrorNotSupported;
     }
