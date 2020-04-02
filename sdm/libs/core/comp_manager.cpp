@@ -147,8 +147,8 @@ DisplayError CompManager::RegisterDisplay(int32_t display_id,
   }
 
   DLOGV_IF(kTagCompManager, "registered displays [%s], configured displays [%s], " \
-           "display %d-%d", StringDisplayList(registered_displays_),
-           StringDisplayList(configured_displays_), display_comp_ctx->display_id,
+           "display %d-%d", StringDisplayList(registered_displays_).c_str(),
+           StringDisplayList(configured_displays_).c_str(), display_comp_ctx->display_id,
            display_comp_ctx->display_type);
 
   return kErrorNone;
@@ -179,8 +179,8 @@ DisplayError CompManager::UnregisterDisplay(Handle display_ctx) {
   }
 
   DLOGV_IF(kTagCompManager, "registered displays [%s], configured displays [%s], " \
-           "display %d-%d", StringDisplayList(registered_displays_),
-           StringDisplayList(configured_displays_), display_comp_ctx->display_id,
+           "display %d-%d", StringDisplayList(registered_displays_).c_str(),
+           StringDisplayList(configured_displays_).c_str(), display_comp_ctx->display_id,
            display_comp_ctx->display_type);
 
   delete display_comp_ctx;
@@ -396,8 +396,8 @@ DisplayError CompManager::PostCommit(Handle display_ctx, HWLayers *hw_layers) {
   display_comp_ctx->idle_fallback = false;
 
   DLOGV_IF(kTagCompManager, "registered displays [%s], configured displays [%s], " \
-           "display %d-%d", StringDisplayList(registered_displays_),
-           StringDisplayList(configured_displays_), display_comp_ctx->display_id,
+           "display %d-%d", StringDisplayList(registered_displays_).c_str(),
+           StringDisplayList(configured_displays_).c_str(), display_comp_ctx->display_id,
            display_comp_ctx->display_type);
 
   return kErrorNone;
@@ -562,7 +562,7 @@ bool CompManager::SetDisplayState(Handle display_ctx,
     Purge(display_ctx);
     configured_displays_.erase(display_id);
     DLOGV_IF(kTagCompManager, "Configured displays = [%s]",
-             StringDisplayList(configured_displays_));
+             StringDisplayList(configured_displays_).c_str());
     powered_on_displays_.erase(display_comp_ctx->display_id);
     break;
 
@@ -596,7 +596,8 @@ bool CompManager::SetDisplayState(Handle display_ctx,
   return true;
 }
 
-const char* CompManager::StringDisplayList(const std::map<int32_t, bool>& displays) {
+// KEYSTONE(Ie27b7afc9be7e48e1c9d75950ccff891ba9002f4,b/147776775)
+std::string CompManager::StringDisplayList(const std::map<int32_t, bool>& displays) {
   std::string displays_str;
   for (auto& disps : displays) {
     if (displays_str.empty())
@@ -604,7 +605,7 @@ const char* CompManager::StringDisplayList(const std::map<int32_t, bool>& displa
     else
       displays_str += ", " + std::to_string(disps.first);
   }
-  return displays_str.c_str();
+  return displays_str;
 }
 
 void CompManager::UpdateStrategyConstraints(bool is_primary, bool disabled) {
