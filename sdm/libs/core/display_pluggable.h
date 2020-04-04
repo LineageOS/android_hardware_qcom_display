@@ -41,34 +41,37 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
   DisplayPluggable(int32_t display_id, DisplayEventHandler *event_handler,
                    HWInfoInterface *hw_info_intf, BufferAllocator *buffer_allocator,
                    CompManager *comp_manager);
-  virtual DisplayError Init();
-  virtual DisplayError Prepare(LayerStack *layer_stack);
-  virtual DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate, uint32_t *max_refresh_rate);
-  virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate);
-  virtual bool IsUnderscanSupported();
-  virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
-  virtual DisplayError InitializeColorModes();
-  virtual DisplayError SetColorMode(const std::string &color_mode);
-  virtual DisplayError GetColorModeCount(uint32_t *mode_count);
-  virtual DisplayError GetColorModes(uint32_t *mode_count, std::vector<std::string> *color_modes);
-  virtual DisplayError GetColorModeAttr(const std::string &color_mode, AttrVal *attr);
-  virtual DisplayError SetColorTransform(const uint32_t length, const double *color_transform) {
+  DisplayError Init() override;
+  DisplayError Prepare(LayerStack *layer_stack) override;
+  DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate,
+                                   uint32_t *max_refresh_rate) override;
+  DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate) override;
+  bool IsUnderscanSupported() override;
+  DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) override;
+  DisplayError InitializeColorModes() override;
+  DisplayError SetColorMode(const std::string &color_mode) override;
+  DisplayError GetColorModeCount(uint32_t *mode_count) override;
+  DisplayError GetColorModes(uint32_t *mode_count,
+                             std::vector<std::string> *color_modes) override;
+  DisplayError GetColorModeAttr(const std::string &color_mode, AttrVal *attr) override;
+  DisplayError SetColorTransform(const uint32_t length,
+                                 const double *color_transform) override {
     return kErrorNone;
   }
-  virtual DisplayError TeardownConcurrentWriteback(void) { return kErrorNotSupported; }
-  virtual DisplayError colorSamplingOn();
-  virtual DisplayError colorSamplingOff();
+  DisplayError TeardownConcurrentWriteback(void) override { return kErrorNotSupported; }
+  DisplayError colorSamplingOn() override;
+  DisplayError colorSamplingOff() override;
 
   // Implement the HWEventHandlers
-  virtual DisplayError VSync(int64_t timestamp);
-  virtual DisplayError Blank(bool blank) { return kErrorNone; }
-  virtual void IdleTimeout() {}
-  virtual void ThermalEvent(int64_t thermal_level) {}
-  virtual void CECMessage(char *message);
-  virtual void IdlePowerCollapse() {}
-  virtual void PingPongTimeout() {}
-  virtual void PanelDead() {}
-  virtual void HwRecovery(const HWRecoveryEvent sdm_event_code);
+  DisplayError VSync(int64_t timestamp) override;
+  DisplayError Blank(bool blank) override { return kErrorNone; }
+  void IdleTimeout() override {}
+  void ThermalEvent(int64_t thermal_level) override {}
+  void CECMessage(char *message) override;
+  void IdlePowerCollapse() override {}
+  void PingPongTimeout() override {}
+  void PanelDead() override {}
+  void HwRecovery(const HWRecoveryEvent sdm_event_code) override;
   void Histogram(int histogram_fd, uint32_t blob_id) override;
 
   void UpdateColorModes();

@@ -127,8 +127,10 @@ Return<void> QtiComposer::createClient_2_3(createClient_2_3_cb _hidl_cb) {
 QtiComposer *QtiComposer::initialize() {
   auto error = HWCSession::GetInstance()->Init();
   if (error) {
-    ALOGE("failed to get hwcomposer instance");
+    ALOGE("Failed to get hwcomposer instance");
     return nullptr;
+  } else {
+    ALOGI("Successfully initialized HWCSession, creating QtiComposer");
   }
 
   return new QtiComposer();

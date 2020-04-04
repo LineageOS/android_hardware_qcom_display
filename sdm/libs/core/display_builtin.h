@@ -100,53 +100,55 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
                  CompManager *comp_manager);
   virtual ~DisplayBuiltIn();
 
-  virtual DisplayError Init();
-  virtual DisplayError Deinit();
-  virtual DisplayError Prepare(LayerStack *layer_stack);
-  virtual DisplayError Commit(LayerStack *layer_stack);
-  virtual DisplayError ControlPartialUpdate(bool enable, uint32_t *pending);
-  virtual DisplayError DisablePartialUpdateOneFrame();
-  virtual DisplayError SetDisplayState(DisplayState state, bool teardown,
-                                       shared_ptr<Fence> *release_fence);
-  virtual void SetIdleTimeoutMs(uint32_t active_ms);
-  virtual DisplayError SetDisplayMode(uint32_t mode);
-  virtual DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate, uint32_t *max_refresh_rate);
-  virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate);
-  virtual DisplayError SetPanelBrightness(float brightness);
-  virtual DisplayError GetPanelBrightness(float *brightness);
-  virtual DisplayError GetPanelMaxBrightness(uint32_t *max_brightness_level);
-  virtual DisplayError GetRefreshRate(uint32_t *refresh_rate);
-  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, LayerStack *layer_stack);
-  virtual DisplayError SetDisplayDppsAdROI(void *payload);
-  virtual DisplayError SetQSyncMode(QSyncMode qsync_mode);
-  virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous);
-  virtual DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate);
-  virtual DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate);
-  virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates);
-  virtual DisplayError SetFrameTriggerMode(FrameTriggerMode mode);
-  virtual DisplayError SetBLScale(uint32_t level);
-  virtual DisplayError GetQSyncMode(QSyncMode *qsync_mode);
-  virtual DisplayError colorSamplingOn();
-  virtual DisplayError colorSamplingOff();
+  DisplayError Init() override;
+  DisplayError Deinit() override;
+  DisplayError Prepare(LayerStack *layer_stack) override;
+  DisplayError Commit(LayerStack *layer_stack) override;
+  DisplayError ControlPartialUpdate(bool enable, uint32_t *pending) override;
+  DisplayError DisablePartialUpdateOneFrame() override;
+  DisplayError SetDisplayState(DisplayState state, bool teardown,
+                               shared_ptr<Fence> *release_fence) override;
+  void SetIdleTimeoutMs(uint32_t active_ms) override;
+  DisplayError SetDisplayMode(uint32_t mode) override;
+  DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate,
+                                   uint32_t *max_refresh_rate) override;
+  DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate) override;
+  DisplayError SetPanelBrightness(float brightness) override;
+  DisplayError GetPanelBrightness(float *brightness) override;
+  DisplayError GetPanelMaxBrightness(uint32_t *max_brightness_level) override;
+  DisplayError GetRefreshRate(uint32_t *refresh_rate) override;
+  DisplayError HandleSecureEvent(SecureEvent secure_event,
+                                 LayerStack *layer_stack) override;
+  DisplayError SetDisplayDppsAdROI(void *payload) override;
+  DisplayError SetQSyncMode(QSyncMode qsync_mode) override;
+  DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) override;
+  DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate) override;
+  DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate) override;
+  DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates) override;
+  DisplayError SetFrameTriggerMode(FrameTriggerMode mode) override;
+  DisplayError SetBLScale(uint32_t level) override;
+  DisplayError GetQSyncMode(QSyncMode *qsync_mode) override;
+  DisplayError colorSamplingOn() override;
+  DisplayError colorSamplingOff() override;
 
   // Implement the HWEventHandlers
-  virtual DisplayError VSync(int64_t timestamp);
-  virtual DisplayError Blank(bool blank) { return kErrorNone; }
-  virtual void IdleTimeout();
-  virtual void ThermalEvent(int64_t thermal_level);
-  virtual void CECMessage(char *message) {}
-  virtual void IdlePowerCollapse();
-  virtual void PingPongTimeout();
-  virtual void PanelDead();
-  virtual void HwRecovery(const HWRecoveryEvent sdm_event_code);
-  virtual DisplayError TeardownConcurrentWriteback(void);
+  DisplayError VSync(int64_t timestamp) override;
+  DisplayError Blank(bool blank) override { return kErrorNone; }
+  void IdleTimeout() override;
+  void ThermalEvent(int64_t thermal_level) override;
+  void CECMessage(char *message) override {}
+  void IdlePowerCollapse() override;
+  void PingPongTimeout() override;
+  void PanelDead() override;
+  void HwRecovery(const HWRecoveryEvent sdm_event_code) override;
+  DisplayError TeardownConcurrentWriteback(void) override;
   void Histogram(int histogram_fd, uint32_t blob_id) override;
 
   // Implement the DppsPropIntf
-  virtual DisplayError DppsProcessOps(enum DppsOps op, void *payload, size_t size);
+  DisplayError DppsProcessOps(enum DppsOps op, void *payload, size_t size) override;
   void ResetPanel();
-  virtual DisplayError SetActiveConfig(uint32_t index);
-  virtual DisplayError ReconfigureDisplay();
+  DisplayError SetActiveConfig(uint32_t index) override;
+  DisplayError ReconfigureDisplay() override;
 
  private:
   bool CanCompareFrameROI(LayerStack *layer_stack);

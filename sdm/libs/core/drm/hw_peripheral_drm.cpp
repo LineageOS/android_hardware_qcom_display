@@ -154,7 +154,8 @@ DisplayError HWPeripheralDRM::Commit(HWLayers *hw_layers) {
   }
 
   if (has_fence) {
-    hw_layer_info.stack->output_buffer->release_fence = Fence::Create(INT(cwb_fence_fd));
+    hw_layer_info.stack->output_buffer->release_fence = Fence::Create(INT(cwb_fence_fd),
+                                                                      "release_cwb");
   }
 
   CacheDestScalarData();

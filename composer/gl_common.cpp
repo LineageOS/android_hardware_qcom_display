@@ -147,7 +147,7 @@ int GLCommon::CreateOutputFence(shared_ptr<Fence> *out_fence) {
     status = -1;
     DLOGE("Failed to dup sync");
   } else {
-    *out_fence = Fence::Create(fd); 
+    *out_fence = Fence::Create(fd, "gl_out_fence");
   }
   EGL(eglDestroySyncKHR(eglGetCurrentDisplay(), sync));
 

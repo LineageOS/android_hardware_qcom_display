@@ -2243,59 +2243,56 @@ DisplayClass HWCDisplay::GetDisplayClass() {
   return display_class_;
 }
 
-std::string HWCDisplay::Dump() {
-  std::ostringstream os;
-  os << "\n------------HWC----------------\n";
-  os << "HWC2 display_id: " << id_ << std::endl;
+void HWCDisplay::Dump(std::ostringstream *os) {
+  *os << "\n------------HWC----------------\n";
+  *os << "HWC2 display_id: " << id_ << std::endl;
   for (auto layer : layer_set_) {
     auto sdm_layer = layer->GetSDMLayer();
     auto transform = sdm_layer->transform;
-    os << "layer: " << std::setw(4) << layer->GetId();
-    os << " z: " << layer->GetZ();
-    os << " composition: " <<
+    *os << "layer: " << std::setw(4) << layer->GetId();
+    *os << " z: " << layer->GetZ();
+    *os << " composition: " <<
           to_string(layer->GetClientRequestedCompositionType()).c_str();
-    os << "/" <<
+    *os << "/" <<
           to_string(layer->GetDeviceSelectedCompositionType()).c_str();
-    os << " alpha: " << std::to_string(sdm_layer->plane_alpha).c_str();
-    os << " format: " << std::setw(22) << GetFormatString(sdm_layer->input_buffer.format);
-    os << " dataspace:" << std::hex << "0x" << std::setw(8) << std::setfill('0')
-       << layer->GetLayerDataspace() << std::dec << std::setfill(' ');
-    os << " transform: " << transform.rotation << "/" << transform.flip_horizontal <<
+    *os << " alpha: " << std::to_string(sdm_layer->plane_alpha).c_str();
+    *os << " format: " << std::setw(22) << GetFormatString(sdm_layer->input_buffer.format);
+    *os << " dataspace:" << std::hex << "0x" << std::setw(8) << std::setfill('0')
+        << layer->GetLayerDataspace() << std::dec << std::setfill(' ');
+    *os << " transform: " << transform.rotation << "/" << transform.flip_horizontal <<
           "/"<< transform.flip_vertical;
-    os << " buffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec;
-    os << " secure: " << layer->IsProtected()
-       << std::endl;
+    *os << " buffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec;
+    *os << " secure: " << layer->IsProtected()
+        << std::endl;
   }
 
   if (has_client_composition_) {
-    os << "\n---------client target---------\n";
+    *os << "\n---------client target---------\n";
     auto sdm_layer = client_target_->GetSDMLayer();
-    os << "format: " << std::setw(14) << GetFormatString(sdm_layer->input_buffer.format);
-    os << " dataspace:" << std::hex << "0x" << std::setw(8) << std::setfill('0')
-       << client_target_->GetLayerDataspace() << std::dec << std::setfill(' ');
-    os << "  buffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec;
-    os << " secure: " << client_target_->IsProtected()
-       << std::endl;
+    *os << "format: " << std::setw(14) << GetFormatString(sdm_layer->input_buffer.format);
+    *os << " dataspace:" << std::hex << "0x" << std::setw(8) << std::setfill('0')
+        << client_target_->GetLayerDataspace() << std::dec << std::setfill(' ');
+    *os << "  buffer_id: " << std::hex << "0x" << sdm_layer->input_buffer.buffer_id << std::dec;
+    *os << " secure: " << client_target_->IsProtected()
+        << std::endl;
   }
 
   if (layer_stack_invalid_) {
-    os << "\n Layers added or removed but not reflected to SDM's layer stack yet\n";
-    return os.str();
+    *os << "\n Layers added or removed but not reflected to SDM's layer stack yet\n";
+    return;
   }
 
   if (color_mode_) {
-    os << "\n----------Color Modes---------\n";
-    color_mode_->Dump(&os);
+    *os << "\n----------Color Modes---------\n";
+    color_mode_->Dump(os);
   }
 
   if (display_intf_) {
-    os << "\n------------SDM----------------\n";
-    os << display_intf_->Dump();
+    *os << "\n------------SDM----------------\n";
+    *os << display_intf_->Dump();
   }
 
-  os << "\n";
-
-  return os.str();
+  *os << "\n";
 }
 
 bool HWCDisplay::CanSkipValidate() {
