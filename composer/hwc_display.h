@@ -57,9 +57,6 @@ namespace sdm {
 
 class HWCToneMapper;
 
-/* max customer extended render intent */
-#define MAX_EXTENDED_RENDER_INTENT    0x1ff
-
 // Subclasses set this to their type. This has to be different from DisplayType.
 // This is to avoid RTTI and dynamic_cast
 enum DisplayClass {
@@ -460,6 +457,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool IsSameGroup(hwc2_config_t config_id1, hwc2_config_t config_id2);
   bool AllowSeamless(hwc2_config_t request_config);
   void SetVsyncsApplyRateChange(uint32_t vsyncs) { vsyncs_to_apply_rate_change_ = vsyncs; }
+  HWC2::Error SubmitDisplayConfig(hwc2_config_t config);
 
   bool validated_ = false;
   bool layer_stack_invalid_ = true;
