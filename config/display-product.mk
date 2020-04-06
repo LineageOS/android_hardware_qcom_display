@@ -60,7 +60,11 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.comp_mask=0 \
     vendor.display.enable_posted_start_dyn=1 \
     vendor.display.enable_optimize_refresh=1 \
-    vendor.display.use_smooth_motion=1
+    vendor.display.use_smooth_motion=1 \
+    debug.sf.enable_advanced_sf_phase_offset=1 \
+    debug.sf.high_fps_late_sf_phase_offset_ns=-4000000 \
+    debug.sf.high_fps_early_phase_offset_ns=-4000000 \
+    debug.sf.high_fps_early_gl_phase_offset_ns=-4000000
 
 # Enable offline rotator for Bengal.
 ifneq ($(TARGET_BOARD_PLATFORM),bengal)
@@ -76,15 +80,7 @@ endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),kona)
 PRODUCT_PROPERTY_OVERRIDES += \
-    debug.sf.enable_gl_backpressure=1 \
-    debug.sf.early_phase_offset_ns=500000 \
-    debug.sf.early_app_phase_offset_ns=500000 \
-    debug.sf.early_gl_phase_offset_ns=3000000 \
-    debug.sf.early_gl_app_phase_offset_ns=15000000 \
-    debug.sf.high_fps_early_phase_offset_ns=6100000 \
-    debug.sf.high_fps_early_gl_phase_offset_ns=6500000 \
-    debug.sf.perf_fps_early_gl_phase_offset_ns=9000000 \
-    debug.sf.phase_offset_threshold_for_next_vsync_ns=6100000
+    debug.sf.enable_gl_backpressure=1
 endif
 
 ifneq ($(PLATFORM_VERSION), 10)
