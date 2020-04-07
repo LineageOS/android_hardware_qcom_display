@@ -955,11 +955,15 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
       }
       break;
     case HWC2::PowerMode::On:
-      color_mode_->SetApplyMode(true);
+      if (color_mode_) {
+        color_mode_->SetApplyMode(true);
+      }
       state = kStateOn;
       break;
     case HWC2::PowerMode::Doze:
-      color_mode_->SetApplyMode(true);
+      if (color_mode_) {
+        color_mode_->SetApplyMode(true);
+      }
       state = kStateDoze;
       break;
     case HWC2::PowerMode::DozeSuspend:
