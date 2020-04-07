@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -139,7 +139,6 @@ class HWCLayer {
   bool non_integral_source_crop_ = false;
   bool has_metadata_refresh_rate_ = false;
   bool buffer_flipped_ = false;
-  bool per_frame_hdr_metadata_ = false;  // used to track if perframe metadata and blob is set.
 
   // Composition requested by client(SF) Original
   HWC2::Composition client_requested_orig_ = HWC2::Composition::Device;
