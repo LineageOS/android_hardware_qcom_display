@@ -1339,9 +1339,16 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
       std::optional<std::vector<uint8_t>> dynamic_metadata_payload;
       android::gralloc4::decodeSmpte2094_40(in, &dynamic_metadata_payload);
       if (dynamic_metadata_payload != std::nullopt) {
-        metadata->color.dynamicMetaDataLen = dynamic_metadata_payload->size();
-        memcpy(&metadata->color.dynamicMetaDataPayload, &dynamic_metadata_payload,
-               metadata->color.dynamicMetaDataLen);
+        if (dynamic_metadata_payload->size() <= HDR_DYNAMIC_META_DATA_SZ &&
+            dynamic_metadata_payload->size() > 0) {
+          metadata->color.dynamicMetaDataLen = dynamic_metadata_payload->size();
+          memcpy(&metadata->color.dynamicMetaDataPayload, &dynamic_metadata_payload,
+                 metadata->color.dynamicMetaDataLen);
+          metadata->color.dynamicMetaDataValid = true;
+        }
+      } else {
+        // Reset metadata by passing in std::nullopt
+        metadata->color.dynamicMetaDataValid = false;
       }
       break;
     }
