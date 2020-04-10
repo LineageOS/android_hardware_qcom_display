@@ -154,15 +154,34 @@ void QtiComposerClient::onRefresh(hwc2_callback_data_t callbackData, hwc2_displa
 void QtiComposerClient::onVsync(hwc2_callback_data_t callbackData, hwc2_display_t display,
                                 int64_t timestamp) {
   auto client = reinterpret_cast<QtiComposerClient*>(callbackData);
-  android::hardware::Return<void> ret;
-  if (client->callback24_) {
-    VsyncPeriodNanos vsync_period;
-    client->hwc_session_->GetDisplayVsyncPeriod(display, &vsync_period);
-    ret = client->callback24_->onVsync_2_4(display, timestamp, static_cast<uint32_t>(vsync_period));
-  } else {
-    ret = client->callback_->onVsync(display, timestamp);
-  }
+  auto ret = client->callback_->onVsync(display, timestamp);
   ALOGW_IF(!ret.isOk(), "failed to send onVsync: %s. SF likely unavailable.",
+           ret.description().c_str());
+}
+
+void QtiComposerClient::onVsync_2_4(hwc2_callback_data_t callbackData, hwc2_display_t display,
+                                    int64_t timestamp, VsyncPeriodNanos vsyncPeriodNanos) {
+  auto client = reinterpret_cast<QtiComposerClient*>(callbackData);
+  VsyncPeriodNanos vsync_period;
+  client->hwc_session_->GetDisplayVsyncPeriod(display, &vsync_period);
+  auto ret = client->callback24_->onVsync_2_4(display, timestamp, vsync_period);
+  ALOGW_IF(!ret.isOk(), "failed to send onVsync_2_4: %s. SF likely unavailable.",
+           ret.description().c_str());
+}
+
+void QtiComposerClient::onVsyncPeriodTimingChanged(hwc2_callback_data_t callbackData,
+      hwc2_display_t display, const VsyncPeriodChangeTimeline& updatedTimeline) {
+  auto client = reinterpret_cast<QtiComposerClient*>(callbackData);
+  auto ret = client->callback24_->onVsyncPeriodTimingChanged(display, updatedTimeline);
+  ALOGW_IF(!ret.isOk(), "failed to send onVsyncPeriodTimingChanged: %s. SF likely unavailable.",
+           ret.description().c_str());
+}
+
+void QtiComposerClient::onSeamlessPossible(hwc2_callback_data_t callbackData,
+                                           hwc2_display_t display) {
+  auto client = reinterpret_cast<QtiComposerClient*>(callbackData);
+  auto ret = client->callback24_->onSeamlessPossible(display);
+  ALOGW_IF(!ret.isOk(), "failed to send onSeamlessPossible: %s. SF likely unavailable.",
            ret.description().c_str());
 }
 
@@ -236,12 +255,27 @@ void QtiComposerClient::enableCallback(bool enable) {
                                    reinterpret_cast<hwc2_function_pointer_t>(onHotplug));
     hwc_session_->RegisterCallback(HWC2_CALLBACK_REFRESH, this,
                                    reinterpret_cast<hwc2_function_pointer_t>(onRefresh));
-    hwc_session_->RegisterCallback(HWC2_CALLBACK_VSYNC, this,
-                                   reinterpret_cast<hwc2_function_pointer_t>(onVsync));
+    if (!mUseCallback24_) {
+      hwc_session_->RegisterCallback(HWC2_CALLBACK_VSYNC, this,
+                                     reinterpret_cast<hwc2_function_pointer_t>(onVsync));
+    } else {
+      hwc_session_->RegisterCallback(HWC2_CALLBACK_VSYNC_2_4, this,
+                                     reinterpret_cast<hwc2_function_pointer_t>(onVsync_2_4));
+      hwc_session_->RegisterCallback(HWC2_CALLBACK_VSYNC_PERIOD_TIMING_CHANGED, this,
+                             reinterpret_cast<hwc2_function_pointer_t>(onVsyncPeriodTimingChanged));
+      hwc_session_->RegisterCallback(HWC2_CALLBACK_SEAMLESS_POSSIBLE, this,
+                                     reinterpret_cast<hwc2_function_pointer_t>(onSeamlessPossible));
+    }
   } else {
     hwc_session_->RegisterCallback(HWC2_CALLBACK_HOTPLUG, this, nullptr);
     hwc_session_->RegisterCallback(HWC2_CALLBACK_REFRESH, this, nullptr);
-    hwc_session_->RegisterCallback(HWC2_CALLBACK_VSYNC, this, nullptr);
+    if (!mUseCallback24_) {
+      hwc_session_->RegisterCallback(HWC2_CALLBACK_VSYNC, this, nullptr);
+    } else {
+      hwc_session_->RegisterCallback(HWC2_CALLBACK_VSYNC_2_4, this, nullptr);
+      hwc_session_->RegisterCallback(HWC2_CALLBACK_VSYNC_PERIOD_TIMING_CHANGED, this, nullptr);
+      hwc_session_->RegisterCallback(HWC2_CALLBACK_SEAMLESS_POSSIBLE, this, nullptr);
+    }
   }
 }
 
@@ -996,6 +1030,7 @@ Return<void> QtiComposerClient::registerCallback_2_4(
     const sp<composer_V2_4::IComposerCallback> &callback) {
   callback_ = sp<composer_V2_1::IComposerCallback>(callback.get());
   callback24_ = callback;
+  mUseCallback24_ = true;
   enableCallback(callback != nullptr);
   return Void();
 }

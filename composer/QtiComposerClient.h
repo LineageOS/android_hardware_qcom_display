@@ -220,6 +220,12 @@ class QtiComposerClient : public IQtiComposerClient {
   static void onRefresh(hwc2_callback_data_t callbackData, hwc2_display_t display);
   static void onVsync(hwc2_callback_data_t callbackData, hwc2_display_t display,
                         int64_t timestamp);
+  static void onVsync_2_4(hwc2_callback_data_t callbackData, hwc2_display_t display,
+                          int64_t timestamp, VsyncPeriodNanos vsyncPeriodNanos);
+  static void onVsyncPeriodTimingChanged(hwc2_callback_data_t callbackData,
+                                           hwc2_display_t display,
+                                           const VsyncPeriodChangeTimeline& updatedTimeline);
+  static void onSeamlessPossible(hwc2_callback_data_t callbackData, hwc2_display_t display);
 
   // Methods for ConcurrentWriteBack
   hidl_handle getFenceHandle(const shared_ptr<Fence>& fence, char* handleStorage);
@@ -350,6 +356,7 @@ class QtiComposerClient : public IQtiComposerClient {
   HWCSession *hwc_session_ = nullptr;
   sp<composer_V2_1::IComposerCallback> callback_ = nullptr;
   sp<composer_V2_4::IComposerCallback> callback24_ = nullptr;
+  bool mUseCallback24_ = false;
   std::mutex mCommandMutex;
   // 64KiB minus a small space for metadata such as read/write pointers */
   static constexpr size_t kWriterInitialSize = 64 * 1024 / sizeof(uint32_t) - 16;
