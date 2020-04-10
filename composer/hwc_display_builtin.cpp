@@ -1291,6 +1291,16 @@ bool HWCDisplayBuiltIn::IsSmartPanelConfig(uint32_t config_id) {
   return false;
 }
 
+bool HWCDisplayBuiltIn::HasSmartPanelConfig(void) {
+  for (auto &config : variable_config_map_) {
+    if (config.second.smart_panel) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 int HWCDisplayBuiltIn::Deinit() {
   // Destory color convert instance. This destroys thread and underlying GL resources.
   if (gl_layer_stitch_) {

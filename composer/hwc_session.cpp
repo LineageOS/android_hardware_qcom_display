@@ -1160,25 +1160,20 @@ int32_t HWCSession::GetDozeSupport(hwc2_display_t display, int32_t *out_support)
   }
 
   *out_support = 0;
-  uint32_t config = 0;
-  GetActiveConfigIndex(display, &config);
-  *out_support = isSmartPanelConfig(display, config) ? 1 : 0;
+
+  if (display != qdutils::DISPLAY_PRIMARY) {
+    return HWC2_ERROR_NONE;
+  }
+
+  SCOPE_LOCK(locker_[display]);
+  if (!hwc_display_[display]) {
+    DLOGE("Display %d is not created yet.", INT32(display));
+    return HWC2_ERROR_NONE;
+  }
+
+  *out_support = hwc_display_[display]->HasSmartPanelConfig() ? 1 : 0;
 
   return HWC2_ERROR_NONE;
-}
-
-bool HWCSession::isSmartPanelConfig(uint32_t disp_id, uint32_t config_id) {
-  if (disp_id != qdutils::DISPLAY_PRIMARY) {
-    return false;
-  }
-
-  SCOPE_LOCK(locker_[disp_id]);
-  if (!hwc_display_[disp_id]) {
-    DLOGE("Display %d is not created yet.", disp_id);
-    return false;
-  }
-
-  return hwc_display_[disp_id]->IsSmartPanelConfig(config_id);
 }
 
 int32_t HWCSession::ValidateDisplay(hwc2_display_t display, uint32_t *out_num_types,

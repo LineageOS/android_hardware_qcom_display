@@ -240,6 +240,10 @@ class HWCDisplay : public DisplayEventHandler {
     return false;
   }
 
+  virtual bool HasSmartPanelConfig(void) {
+    return false;
+  }
+
   // Display Configurations
   static uint32_t GetThrottlingRefreshRate() { return HWCDisplay::throttling_refresh_rate_; }
   static void SetThrottlingRefreshRate(uint32_t newRefreshRate)
