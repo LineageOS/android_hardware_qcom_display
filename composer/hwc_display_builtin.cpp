@@ -148,6 +148,15 @@ int HWCDisplayBuiltIn::Init() {
     DLOGI("Window rect : [%f %f %f %f]", window_rect_.left, window_rect_.top,
           window_rect_.right, window_rect_.bottom);
   }
+
+  uint32_t config_index = 0;
+  GetActiveDisplayConfig(&config_index);
+  DisplayConfigVariableInfo attr = {};
+  GetDisplayAttributesForConfig(INT(config_index), &attr);
+  active_refresh_rate_ = attr.fps;
+
+  DLOGI("active_refresh_rate: %d", active_refresh_rate_);
+
   return status;
 }
 
@@ -836,7 +845,8 @@ uint32_t HWCDisplayBuiltIn::GetOptimalRefreshRate(bool one_updating_layer) {
     return metadata_refresh_rate_;
   }
 
-  return max_refresh_rate_;
+  DLOGI("active_refresh_rate_: %d", active_refresh_rate_);
+  return active_refresh_rate_;
 }
 
 void HWCDisplayBuiltIn::SetIdleTimeoutMs(uint32_t timeout_ms) {
