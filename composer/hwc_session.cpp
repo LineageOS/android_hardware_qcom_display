@@ -2261,7 +2261,7 @@ const char *GetTokenValue(const char *uevent_data, int length, const char *token
 android::status_t HWCSession::SetDsiClk(const android::Parcel *input_parcel) {
   int disp_id = input_parcel->readInt32();
   uint64_t clk = UINT64(input_parcel->readInt64());
-  if (disp_id < 0) {
+  if (disp_id != HWC_DISPLAY_PRIMARY) {
     return -EINVAL;
   }
 
@@ -2276,7 +2276,7 @@ android::status_t HWCSession::SetDsiClk(const android::Parcel *input_parcel) {
 android::status_t HWCSession::GetDsiClk(const android::Parcel *input_parcel,
                                         android::Parcel *output_parcel) {
   int disp_id = input_parcel->readInt32();
-  if (disp_id < 0) {
+  if (disp_id != HWC_DISPLAY_PRIMARY) {
     return -EINVAL;
   }
 
@@ -2295,7 +2295,7 @@ android::status_t HWCSession::GetDsiClk(const android::Parcel *input_parcel,
 android::status_t HWCSession::GetSupportedDsiClk(const android::Parcel *input_parcel,
                                                  android::Parcel *output_parcel) {
   int disp_id = input_parcel->readInt32();
-  if (disp_id < 0) {
+  if (disp_id != HWC_DISPLAY_PRIMARY) {
     return -EINVAL;
   }
 
