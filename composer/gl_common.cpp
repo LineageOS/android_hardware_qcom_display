@@ -167,5 +167,11 @@ void GLCommon::DestroyContext(GLContext* ctx) {
   EGL(eglTerminate(ctx->egl_display));
 }
 
+void GLCommon::ClearCache() {
+  // Clear cached handles.
+  image_wrapper_.Deinit();
+  image_wrapper_.Init();
+}
+
 }  // namespace sdm
 

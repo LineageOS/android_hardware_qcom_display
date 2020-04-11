@@ -111,7 +111,6 @@ HWC2::Error HWCDisplayVirtual::SetOutputBuffer(buffer_handle_t buf,
 
   if (output_handle) {
     int output_handle_format = output_handle->format;
-    int aligned_w, aligned_h;
     ColorMetaData color_metadata = {};
 
     if (output_handle_format == HAL_PIXEL_FORMAT_RGBA_8888) {
@@ -128,11 +127,6 @@ HWC2::Error HWCDisplayVirtual::SetOutputBuffer(buffer_handle_t buf,
       return HWC2::Error::BadParameter;
     }
 
-    buffer_allocator_->GetCustomWidthAndHeight(output_handle, &aligned_w, &aligned_h);
-    output_buffer_.width = UINT32(width_);
-    output_buffer_.height = UINT32(height_);
-    output_buffer_.unaligned_width = UINT32(aligned_w);
-    output_buffer_.unaligned_height = UINT32(aligned_h);
     output_buffer_.flags.secure = 0;
     output_buffer_.flags.video = 0;
     output_buffer_.buffer_id = reinterpret_cast<uint64_t>(output_handle);
