@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2018, 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -56,6 +56,8 @@ class DisplayHDMI : public DisplayBase, HWEventHandler {
 
  private:
   uint32_t GetBestConfig(HWS3DMode s3d_mode);
+  uint32_t GetBestConfigFromFile(std::ifstream &res_file);
+  uint32_t GetClosestConfig(uint32_t width, uint32_t height);
   void GetScanSupport();
   void SetS3DMode(LayerStack *layer_stack);
 

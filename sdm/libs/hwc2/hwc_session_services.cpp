@@ -309,11 +309,13 @@ int32_t HWCSession::MinHdcpEncryptionLevelChanged(int disp_id, uint32_t min_enc_
     DLOGE("Invalid display = %d", disp_id);
     return -EINVAL;
   }
-
+  if (hdmi_is_primary_) {
+    disp_id = HWC_DISPLAY_PRIMARY;
+  }
   SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_id]);
-  if (disp_id != HWC_DISPLAY_EXTERNAL) {
+  if (!hdmi_is_primary_ && disp_id != HWC_DISPLAY_EXTERNAL) {
     DLOGE("Not supported for display");
-  } else if (!hwc_display_[disp_id]) {
+  } else if (!hwc_display_[disp_id] && !hdmi_is_primary_) {
     DLOGW("Display is not connected");
   } else {
     return hwc_display_[disp_id]->OnMinHdcpEncryptionLevelChange(min_enc_level);
@@ -459,7 +461,9 @@ Return<int32_t> HWCSession::setCameraLaunchStatus(uint32_t on) {
   HWBwModes mode = on > 0 ? kBwCamera : kBwDefault;
 
   // trigger invalidate to apply new bw caps.
-  Refresh(HWC_DISPLAY_PRIMARY);
+  if (callback_reg_) {
+    Refresh(HWC_DISPLAY_PRIMARY);
+  }
 
   if (core_intf_->SetMaxBandwidthMode(mode) != kErrorNone) {
     return -EINVAL;

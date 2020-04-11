@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -953,6 +953,10 @@ HWC2::PowerMode HWCDisplay::GetLastPowerMode() {
 }
 
 DisplayError HWCDisplay::VSync(const DisplayEventVSync &vsync) {
+  if (is_primary_) {
+    callbacks_->Vsync(HWC_DISPLAY_PRIMARY, vsync.timestamp);
+    return kErrorNone;
+  }
   callbacks_->Vsync(id_, vsync.timestamp);
   return kErrorNone;
 }
@@ -1762,6 +1766,10 @@ HWC2::Error HWCDisplay::SetCursorPosition(hwc2_layer_t layer, int x, int y) {
 }
 
 int HWCDisplay::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
+  if (min_enc_level_ == min_enc_level) {
+    DLOGI("Min hdcp level not changed!");
+    return 0;
+  }
   DisplayError error = display_intf_->OnMinHdcpEncryptionLevelChange(min_enc_level);
   if (error != kErrorNone) {
     DLOGE("Failed. Error = %d", error);
@@ -1769,6 +1777,7 @@ int HWCDisplay::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
   }
 
   validated_.reset();
+  min_enc_level_ = min_enc_level;
   return 0;
 }
 

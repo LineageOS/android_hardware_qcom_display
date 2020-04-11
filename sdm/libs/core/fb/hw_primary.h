@@ -41,6 +41,7 @@ class HWPrimary : public HWDevice {
   virtual DisplayError Init();
   virtual DisplayError GetNumDisplayAttributes(uint32_t *count);
   virtual DisplayError GetActiveConfig(uint32_t *active_config);
+  virtual DisplayError SetActiveConfig(uint32_t active_config);
   virtual DisplayError GetDisplayAttributes(uint32_t index,
                                             HWDisplayAttributes *display_attributes);
   virtual DisplayError SetDisplayAttributes(uint32_t index);
@@ -59,9 +60,10 @@ class HWPrimary : public HWDevice {
   virtual DisplayError SetPPFeatures(PPFeaturesConfig *feature_list);
   virtual DisplayError GetPanelBrightness(int *level);
   virtual DisplayError SetAutoRefresh(bool enable);
-  virtual DisplayError SetMixerAttributes(const HWMixerAttributes &mixer_attributes);
+  virtual DisplayError SetMixerAttributes(HWMixerAttributes &mixer_attributes);
   virtual DisplayError SetDynamicDSIClock(uint64_t bitclk);
   virtual DisplayError GetDynamicDSIClock(uint64_t *bitclk);
+  virtual DisplayError GetHdmiMode(std::vector<uint32_t> &hdmi_modes);
 
  private:
   // Panel modes for the MSMFB_LPM_ENABLE ioctl
