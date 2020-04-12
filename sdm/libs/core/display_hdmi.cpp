@@ -35,7 +35,6 @@
 
 #define __CLASS__ "DisplayHDMI"
 
-#define STANDARD_VIC 127  // 1-127 are standard vic-ids
 
 namespace sdm {
 
@@ -122,8 +121,6 @@ DisplayError DisplayHDMI::Init() {
       mixer_attributes_.width = display_attributes.x_pixels;
       mixer_attributes_.height = display_attributes.y_pixels;
       hw_intf_->SetMixerAttributes(mixer_attributes_);
-      hw_intf_->SetConfigAttributes(mixer_config_index_, mixer_attributes_.width,
-                                    mixer_attributes_.height);
     } else {
       hw_intf_->SetActiveConfig(index);
       mixer_config_index_ = index;
@@ -279,8 +276,11 @@ uint32_t DisplayHDMI::GetBestConfigFromFile(std::ifstream &res_file) {
     hw_intf_->GetVideoFormat(index, &vics[index]);
   }
   try {
-    char cr = '\r';
-    while (std::getline(res_file, line, cr)) {
+    while (std::getline(res_file, line)) {
+      char cr = '\r';
+      if (!line.empty() && *line.rbegin() == cr) {
+        line.erase(line.length() - 1, 1);
+      }
       char hash = '#';
       std::size_t found = 0;
       found = line.find(hash);

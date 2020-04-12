@@ -43,6 +43,8 @@ enum HWScanSupport {
   kScanBoth,
 };
 
+#define STANDARD_VIC 127  // 1-127 are standard vic-ids
+
 struct HWScanInfo {
   HWScanSupport pt_scan_support;    // Scan support for preferred timing
   HWScanSupport it_scan_support;    // Scan support for digital monitor or industry timings

@@ -533,6 +533,7 @@ void HWCDisplayPrimary::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_lay
     return;
   }
 
+  SetLayerBuffer(output_buffer_info_, &output_buffer_);
   output_buffer_base_ = buffer;
   post_processed_output_ = true;
   DisablePartialUpdateOneFrame();

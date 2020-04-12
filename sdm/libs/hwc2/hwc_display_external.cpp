@@ -283,4 +283,17 @@ DisplayError HWCDisplayExternal::SetMixerResolution(uint32_t width, uint32_t hei
   return error;
 }
 
+HWC2::Error HWCDisplayExternal::SetClientTarget(buffer_handle_t target, int32_t acquire_fence,
+                                               int32_t dataspace, hwc_region_t damage) {
+  HWC2::Error error = HWCDisplay::SetClientTarget(target, acquire_fence, dataspace, damage);
+  if (error != HWC2::Error::None) {
+    return error;
+  }
+  Layer *sdm_layer = client_target_->GetSDMLayer();
+  SetFrameBufferResolution(sdm_layer->input_buffer.unaligned_width,
+                           sdm_layer->input_buffer.unaligned_height);
+  DLOGI("Updated client target");
+  return HWC2::Error::None;
+}
+
 }  // namespace sdm

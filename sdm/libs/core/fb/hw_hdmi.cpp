@@ -248,6 +248,8 @@ DisplayError HWHDMI::Init() {
     return error;
   }
 
+  ClearNonStandardConfigs();
+
   ReadScanInfo();
 
   GetPanelS3DMode();
@@ -1199,6 +1201,23 @@ DisplayError HWHDMI::GetHdmiMode(std::vector<uint32_t> &hdmi_modes) {
   return kErrorNone;
 }
 
+DisplayError HWHDMI::ClearNonStandardConfigs() {
+  vector<msm_hdmi_mode_timing_info> standard_video_modes;
+  vector<uint32_t> standard_modes;
+  for (uint32_t i = 0; i < hdmi_modes_.size(); i++) {
+    if (supported_video_modes_[i].video_format <= STANDARD_VIC) {
+      standard_video_modes.push_back(supported_video_modes_[i]);
+    }
+    if(hdmi_modes_[i] <= STANDARD_VIC) {
+      standard_modes.push_back(hdmi_modes_[i]);
+    }
+  }
+  hdmi_modes_.clear();
+  supported_video_modes_.clear();
+  hdmi_modes_ = standard_modes;
+  supported_video_modes_ = standard_video_modes;
+  return kErrorNone;
+}
 
 }  // namespace sdm
 

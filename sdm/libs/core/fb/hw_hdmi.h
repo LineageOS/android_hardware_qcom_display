@@ -96,6 +96,7 @@ class HWHDMI : public HWDevice {
   virtual DisplayError GetHdmiMode(std::vector<uint32_t> &hdmi_modes);
 
  private:
+  DisplayError ClearNonStandardConfigs();
   DisplayError ReadEDIDInfo();
   void ReadScanInfo();
   HWScanSupport MapHWScanSupport(uint32_t value);
