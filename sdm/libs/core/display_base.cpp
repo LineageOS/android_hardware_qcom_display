@@ -808,6 +808,11 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     return kErrorParameters;
   }
 
+  error = ReconfigureDisplay();
+  if (error != kErrorNone) {
+    return error;
+  }
+
   DisablePartialUpdateOneFrame();
 
   if (error == kErrorNone) {
@@ -2295,9 +2300,15 @@ DisplayError DisplayBase::GetPendingDisplayState(DisplayState *disp_state) {
     case kPowerStateOff:
       *disp_state = kStateOff;
       break;
-    case kPowerStateDoze:
+    case kPowerStateDoze: {
       *disp_state = kStateDoze;
+      DisplayError error = ReconfigureDisplay();
+      if (error != kErrorNone) {
+        return error;
+      }
+      event_handler_->Refresh();
       break;
+    }
     case kPowerStateDozeSuspend:
       *disp_state = kStateDozeSuspend;
       break;

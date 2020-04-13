@@ -256,6 +256,12 @@ class HWDeviceDRM : public HWInterface {
   uint64_t bit_clk_rate_ = 0;
   bool update_mode_ = false;
   HWPowerState pending_power_state_ = kPowerStateNone;
+  uint32_t video_mode_index_ = 0;
+  uint32_t cmd_mode_index_ = 0;
+  bool switch_mode_valid_ = false;
+  bool doze_poms_switch_done_ = false;
+  bool pending_poms_switch_ = false;
+  bool active_ = false;
   PrimariesTransfer blend_space_ = {};
   DRMPowerMode last_power_mode_ = DRMPowerMode::OFF;
   uint32_t dest_scaler_blocks_used_ = 0;  // Dest scaler blocks in use by this HWDeviceDRM instance.
@@ -263,6 +269,8 @@ class HWDeviceDRM : public HWInterface {
   static std::atomic<uint32_t> hw_dest_scaler_blocks_used_;
 
  private:
+  void SetDisplaySwitchMode(uint32_t index);
+
   std::string interface_str_ = "DSI";
   bool resolution_switch_enabled_ = false;
   bool autorefresh_ = false;

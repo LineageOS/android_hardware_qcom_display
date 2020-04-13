@@ -147,6 +147,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
       int32_t samples_size[NUM_HISTOGRAM_COLOR_COMPONENTS],
       uint64_t *samples[NUM_HISTOGRAM_COLOR_COMPONENTS]);
   void Dump(std::ostringstream *os) override;
+  virtual HWC2::Error SetPowerMode(HWC2::PowerMode mode, bool teardown);
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
@@ -174,6 +175,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   void CacheAvrStatus();
   void PostCommitStitchLayers();
   void SetCpuPerfHintLargeCompCycle();
+  void SetPartialUpdate(DisplayConfigFixedInfo fixed_info);
 
   // SyncTask methods.
   void OnTask(const LayerStitchTaskCode &task_code,
