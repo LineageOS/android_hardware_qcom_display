@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "711b5b7a_362f362c",
+        "filename": "sdm/libs/hwc2/hwc_session.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 52,
+      "author": {
+        "id": 10258
+      },
+      "writtenOn": "2020-04-13T02:17:41Z",
+      "side": 1,
+      "message": "I\u0027m against using 4.9 blob over 3.18 kernel, it\u0027s possible that qcom uses conditional preprocessor like this one when building their proprietary blobs, and things can fail. We don\u0027t have any kind of unittest to ensure the functionality and I don\u0027t want to take the potential risk.",
+      "revId": "07563e148493dea675d17473c1d360a9f4053b06",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
