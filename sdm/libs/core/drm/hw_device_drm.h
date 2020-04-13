@@ -227,10 +227,18 @@ class HWDeviceDRM : public HWInterface {
   bool reset_output_fence_offset_ = false;
   uint64_t bit_clk_rate_ = 0;
   bool update_mode_ = false;
+  uint32_t video_mode_index_ = 0;
+  uint32_t cmd_mode_index_ = 0;
+  bool switch_mode_valid_ = false;
+  bool doze_poms_switch_done_ = false;
+  bool pending_poms_switch_ = false;
+  bool active_ = false;
   DRMPowerMode last_power_mode_ = DRMPowerMode::OFF;
   bool pending_doze_ = false;
 
  private:
+  void SetDisplaySwitchMode(uint32_t index);
+
   std::string interface_str_ = "DSI";
   bool resolution_switch_enabled_ = false;
   bool autorefresh_ = false;

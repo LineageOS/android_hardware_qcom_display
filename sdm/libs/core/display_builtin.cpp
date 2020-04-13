@@ -193,6 +193,7 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
   uint32_t app_layer_count = hw_layers_.info.app_layer_count;
+  HWDisplayMode panel_mode = hw_panel_info_.mode;
 
   DTRACE_SCOPED();
 
@@ -251,6 +252,9 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
     ControlPartialUpdate(true /* enable */, &pending);
   }
 
+  if (panel_mode != hw_panel_info_.mode) {
+    UpdateDisplayModeParams();
+  }
   dpps_info_.Init(this, hw_panel_info_.panel_name);
 
   if (qsync_mode_ == kQsyncModeOneShot) {
@@ -272,10 +276,22 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
   return error;
 }
 
+void DisplayBuiltIn::UpdateDisplayModeParams() {
+  if (hw_panel_info_.mode == kModeVideo) {
+    uint32_t pending = 0;
+    ControlPartialUpdate(false /* enable */, &pending);
+  } else if (hw_panel_info_.mode == kModeCommand) {
+    // Flush idle timeout value currently set.
+    comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, 0);
+    switch_to_cmd_ = true;
+  }
+}
+
 DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
                                              int *release_fence) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
+  HWDisplayMode panel_mode = hw_panel_info_.mode;
 
   if ((state == kStateOn) && deferred_config_.IsDeferredState()) {
     SetDeferredFpsConfig();
@@ -284,6 +300,10 @@ DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
   error = DisplayBase::SetDisplayState(state, teardown, release_fence);
   if (error != kErrorNone) {
     return error;
+  }
+
+  if (hw_panel_info_.mode != panel_mode) {
+    UpdateDisplayModeParams();
   }
 
   // Set vsync enable state to false, as driver disables vsync during display power off.

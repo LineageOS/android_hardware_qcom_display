@@ -100,6 +100,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   virtual HWC2::Error UpdatePowerMode(HWC2::PowerMode mode);
   virtual HWC2::Error PostCommitLayerStack(int32_t *out_retire_fence);
   virtual bool IsSmartPanelConfig(uint32_t config_id);
+  virtual HWC2::Error SetPowerMode(HWC2::PowerMode mode, bool teardown);
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
@@ -118,6 +119,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   bool CanSkipCommit();
   DisplayError SetMixerResolution(uint32_t width, uint32_t height);
   DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
+  void SetPartialUpdate(DisplayConfigFixedInfo fixed_info);
   class PMICInterface {
    public:
     PMICInterface() { }
