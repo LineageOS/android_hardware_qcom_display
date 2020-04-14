@@ -242,6 +242,16 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
     MarkLayersForClientComposition();
   }
 
+  // apply pending DE config
+  PPPendingParams pending_action;
+  PPDisplayAPIPayload req_payload;
+  pending_action.action = kGetDetailedEnhancerData;
+  pending_action.params = NULL;
+  int err = display_intf_->ColorSVCRequestRoute(req_payload, NULL, &pending_action);
+  if (!err && pending_action.action == kConfigureDetailedEnhancer) {
+      err = SetHWDetailedEnhancerConfig(pending_action.params);
+  }
+
   bool pending_output_dump = dump_frame_count_ && dump_output_to_file_;
 
   if (readback_buffer_queued_ || pending_output_dump) {
@@ -1093,6 +1103,89 @@ DisplayError HWCDisplayBuiltIn::SetDetailEnhancerConfig
     validated_ = false;
   }
   return error;
+}
+
+DisplayError HWCDisplayBuiltIn::SetHWDetailedEnhancerConfig(void *params) {
+  DisplayError err = kErrorNone;
+  DisplayDetailEnhancerData de_data;
+
+  PPDETuningCfgData *de_tuning_cfg_data = reinterpret_cast<PPDETuningCfgData*>(params);
+  if (de_tuning_cfg_data->cfg_pending) {
+    if (!de_tuning_cfg_data->cfg_en) {
+      de_data.enable = 0;
+      DLOGV_IF(kTagQDCM, "Disable DE config");
+    } else {
+      de_data.override_flags = kOverrideDEEnable;
+      de_data.enable = 1;
+
+      DLOGV_IF(kTagQDCM, "Enable DE: flags %u, sharp_factor %d, thr_quiet %d, thr_dieout %d, "
+        "thr_low %d, thr_high %d, clip %d, quality %d, content_type %d, de_blend %d",
+        de_tuning_cfg_data->params.flags, de_tuning_cfg_data->params.sharp_factor,
+        de_tuning_cfg_data->params.thr_quiet, de_tuning_cfg_data->params.thr_dieout,
+        de_tuning_cfg_data->params.thr_low, de_tuning_cfg_data->params.thr_high,
+        de_tuning_cfg_data->params.clip, de_tuning_cfg_data->params.quality,
+        de_tuning_cfg_data->params.content_type, de_tuning_cfg_data->params.de_blend);
+
+      if (de_tuning_cfg_data->params.flags & kDeTuningFlagSharpFactor) {
+        de_data.override_flags |= kOverrideDESharpen1;
+        de_data.sharp_factor = de_tuning_cfg_data->params.sharp_factor;
+      }
+
+      if (de_tuning_cfg_data->params.flags & kDeTuningFlagClip) {
+        de_data.override_flags |= kOverrideDEClip;
+        de_data.clip = de_tuning_cfg_data->params.clip;
+      }
+
+      if (de_tuning_cfg_data->params.flags & kDeTuningFlagThrQuiet) {
+        de_data.override_flags |= kOverrideDEThrQuiet;
+        de_data.thr_quiet = de_tuning_cfg_data->params.thr_quiet;
+      }
+
+      if (de_tuning_cfg_data->params.flags & kDeTuningFlagThrDieout) {
+        de_data.override_flags |= kOverrideDEThrDieout;
+        de_data.thr_dieout = de_tuning_cfg_data->params.thr_dieout;
+      }
+
+      if (de_tuning_cfg_data->params.flags & kDeTuningFlagThrLow) {
+        de_data.override_flags |= kOverrideDEThrLow;
+        de_data.thr_low = de_tuning_cfg_data->params.thr_low;
+      }
+
+      if (de_tuning_cfg_data->params.flags & kDeTuningFlagThrHigh) {
+        de_data.override_flags |= kOverrideDEThrHigh;
+        de_data.thr_high = de_tuning_cfg_data->params.thr_high;
+      }
+
+      if (de_tuning_cfg_data->params.flags & kDeTuningFlagContentQualLevel) {
+        switch (de_tuning_cfg_data->params.quality) {
+          case kDeContentQualLow:
+            de_data.quality_level = kContentQualityLow;
+            break;
+          case kDeContentQualMedium:
+            de_data.quality_level = kContentQualityMedium;
+            break;
+          case kDeContentQualHigh:
+            de_data.quality_level = kContentQualityHigh;
+            break;
+          case kDeContentQualUnknown:
+          default:
+            de_data.quality_level = kContentQualityUnknown;
+            break;
+        }
+      }
+
+      if (de_tuning_cfg_data->params.flags & kDeTuningFlagDeBlend) {
+        de_data.override_flags |= kOverrideDEBlend;
+        de_data.de_blend = de_tuning_cfg_data->params.de_blend;
+      }
+    }
+    err = SetDetailEnhancerConfig(de_data);
+    if (err) {
+      DLOGW("SetDetailEnhancerConfig failed. err = %d", err);
+    }
+    de_tuning_cfg_data->cfg_pending = false;
+  }
+  return err;
 }
 
 DisplayError HWCDisplayBuiltIn::ControlPartialUpdate(bool enable, uint32_t *pending) {

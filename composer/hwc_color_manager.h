@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2017, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015-2017, 2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -116,7 +116,6 @@ class HWCColorManager {
   int SetSolidFill(const void *params, bool enable, HWCDisplay *hwc_display);
   int SetFrameCapture(void *params, bool enable, HWCDisplay *hwc_display);
   int SetDetailedEnhancer(void *params, HWCDisplay *hwc_display);
-  void SetColorModeDetailEnhancer(HWCDisplay *hwc_display);
   int SetHWDetailedEnhancerConfig(void *params, HWCDisplay *hwc_display);
 
  protected:
