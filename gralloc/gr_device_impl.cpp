@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -695,7 +695,10 @@ static int32_t Perform(int operation, va_list args) {
       }
 
       BufferInfo info(width, width, format);
-      GetAlignedWidthAndHeight(info, &alignedw, &alignedh);
+      int err = GetAlignedWidthAndHeight(info, &alignedw, &alignedh);
+      if (err) {
+        return static_cast<int32_t>(GRALLOC1_ERROR_BAD_VALUE);
+      }
       *stride = INT(alignedw);
     } break;
 
@@ -730,7 +733,12 @@ static int32_t Perform(int operation, va_list args) {
         return static_cast<int32_t>(GRALLOC1_ERROR_BAD_VALUE);
       }
 
-      GetCustomDimensions(hnd, stride, height);
+      int err = GetCustomDimensions(hnd, stride, height);
+      if (err) {
+        ALOGW("%s: Error during GetCustomDimensions API Call. "
+              "stride: %d, height: %d", __FUNCTION__, *stride, *height);
+        return static_cast<int32_t>(GRALLOC1_ERROR_BAD_VALUE);
+      }
     } break;
 
     case GRALLOC_MODULE_PERFORM_GET_ATTRIBUTES: {
@@ -750,7 +758,10 @@ static int32_t Perform(int operation, va_list args) {
       unsigned int alignedw, alignedh;
       BufferInfo info(width, height, format, usage);
       *tile_enabled = IsUBwcEnabled(format, usage);
-      GetAlignedWidthAndHeight(info, &alignedw, &alignedh);
+      int err = GetAlignedWidthAndHeight(info, &alignedw, &alignedh);
+      if (err) {
+        return static_cast<int32_t>(GRALLOC1_ERROR_BAD_VALUE);
+      }
       *aligned_width = INT(alignedw);
       *aligned_height = INT(alignedh);
     } break;
