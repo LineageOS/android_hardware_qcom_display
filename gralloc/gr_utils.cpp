@@ -153,7 +153,7 @@ bool IsCompressedRGBFormat(int format) {
   return false;
 }
 
-bool IsCameraCustomFormat(int format) {
+bool IsCameraCustomFormat(int format, uint64_t usage) {
   switch (format) {
     case HAL_PIXEL_FORMAT_NV21_ZSL:
     case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX:
@@ -165,6 +165,11 @@ bool IsCameraCustomFormat(int format) {
 #ifndef NO_RAW10_CUSTOM_FORMAT
     case HAL_PIXEL_FORMAT_RAW10:
     case HAL_PIXEL_FORMAT_RAW12:
+      if (usage & GRALLOC_USAGE_HW_COMPOSER) {
+        ALOGW("%s: HW_Composer flag is set for camera custom format: 0x%x, Usage: 0x%" PRIx64,
+              __FUNCTION__, format, usage);
+        return false;
+      }
 #endif
       return true;
     default:
@@ -305,7 +310,7 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
     return 0;
   }
 
-  if (IsCameraCustomFormat(format) && CameraInfo::GetInstance()) {
+  if (IsCameraCustomFormat(format, usage) && CameraInfo::GetInstance()) {
     int result = CameraInfo::GetInstance()->GetBufferSize(format, width, height, &size);
     if (result != 0) {
       ALOGE("%s: Failed to get the buffer size through camera library. Error code: %d",
@@ -397,6 +402,9 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
         size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12_512, width, height);
         break;
 #endif
+      case HAL_PIXEL_FORMAT_NV21_ZSL:
+        size = ALIGN((alignedw * alignedh) + (alignedw * alignedh) / 2, SIZE_4K);
+        break;
       default:ALOGE("%s: Unrecognized pixel format: 0x%x", __FUNCTION__, format);
         return 0;
     }
@@ -559,6 +567,10 @@ void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint3
       c_size = c_stride * c_height;
       break;
 #endif
+    case HAL_PIXEL_FORMAT_NV21_ZSL:
+      c_size = (width * height) / 2;
+      c_height = height >> 1;
+      break;
     case HAL_PIXEL_FORMAT_Y16:
       c_size = c_stride = 0;
       c_height = 0;
@@ -1023,7 +1035,7 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
   // Use of aligned width and aligned height is to calculate the size of buffer,
   // but in case of camera custom format size is being calculated from given width
   // and given height.
-  if (IsCameraCustomFormat(format) && CameraInfo::GetInstance()) {
+  if (IsCameraCustomFormat(format, usage) && CameraInfo::GetInstance()) {
     int aligned_w = width;
     int aligned_h = height;
     int result = CameraInfo::GetInstance()->GetStrideInBytes(
@@ -1153,6 +1165,10 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       aligned_h = INT(VENUS_Y_SCANLINES(COLOR_FMT_NV12_512, height));
       break;
 #endif
+    case HAL_PIXEL_FORMAT_NV21_ZSL:
+      aligned_w = ALIGN(width, 64);
+      aligned_h = ALIGN(height, 64);
+      break;
     default:
       break;
   }
@@ -1441,7 +1457,7 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
   unsigned int y_stride, c_stride, y_height, c_height, y_size, c_size;
   uint64_t yOffset, cOffset, crOffset, cbOffset;
   int h_subsampling = 0, v_subsampling = 0;
-  if (IsCameraCustomFormat(format) && CameraInfo::GetInstance()) {
+  if (IsCameraCustomFormat(format, info.usage) && CameraInfo::GetInstance()) {
     int result = CameraInfo::GetInstance()->GetCameraFormatPlaneInfo(
         format, info.width, info.height, plane_count, plane_info);
     if (result != 0) {
@@ -1466,6 +1482,7 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
     case HAL_PIXEL_FORMAT_YCrCb_422_SP:
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
+    case HAL_PIXEL_FORMAT_NV21_ZSL:
       *plane_count = 2;
       GetYuvSPPlaneInfo(info, format, width, height, 1, plane_info);
       GetYuvSubSamplingFactor(format, &h_subsampling, &v_subsampling);
@@ -1700,6 +1717,7 @@ void GetYuvSubSamplingFactor(int32_t format, int *h_subsampling, int *v_subsampl
     case HAL_PIXEL_FORMAT_NV21_ENCODEABLE:
     case HAL_PIXEL_FORMAT_YV12:
     case HAL_PIXEL_FORMAT_NV12_HEIF:
+    case HAL_PIXEL_FORMAT_NV21_ZSL:
       *h_subsampling = 1;
       *v_subsampling = 1;
       break;

@@ -197,7 +197,7 @@ bool IsUBwcFormat(int format);
 bool IsUBwcSupported(int format);
 bool IsUBwcPISupported(int format, uint64_t usage);
 bool IsUBwcEnabled(int format, uint64_t usage);
-bool IsCameraCustomFormat(int format);
+bool IsCameraCustomFormat(int format, uint64_t usage);
 void GetYuvUBwcWidthAndHeight(int width, int height, int format, unsigned int *aligned_w,
                               unsigned int *aligned_h);
 void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint32_t height,
