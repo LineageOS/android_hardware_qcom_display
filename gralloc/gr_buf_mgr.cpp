@@ -32,7 +32,7 @@
 #include <string>
 #include <utility>
 #include <vector>
-
+#include <fstream>
 #include "gr_adreno_info.h"
 #include "gr_buf_descriptor.h"
 #include "gr_priv_handle.h"
@@ -812,6 +812,11 @@ Error BufferManager::ImportHandleLocked(private_handle_t *hnd) {
   }
 
   RegisterHandleLocked(hnd, ion_handle, ion_handle_meta);
+  allocated_ += hnd->size;
+  if (allocated_ >=  kAllocThreshold) {
+    kAllocThreshold += kMemoryOffset;
+    BuffersDump();
+  }
   return Error::NONE;
 }
 
@@ -871,6 +876,9 @@ Error BufferManager::ReleaseBuffer(private_handle_t const *hnd) {
     if (buf->DecRef()) {
       handles_map_.erase(hnd);
       // Unmap, close ion handle and close fd
+      if (allocated_ >= hnd->size) {
+        allocated_ -= hnd->size;
+      }
       FreeBuffer(buf);
     }
   }
@@ -1131,6 +1139,46 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
     private_handle_t::Dump(hnd);
   }
   return Error::NONE;
+}
+
+void BufferManager:: BuffersDump() {
+  char timeStamp[32];
+  char hms[32];
+  uint64_t millis;
+  struct timeval tv;
+  struct tm ptm;
+
+  gettimeofday(&tv, NULL);
+  localtime_r(&tv.tv_sec, &ptm);
+  strftime (hms, sizeof (hms), "%H:%M:%S", &ptm);
+  millis = tv.tv_usec / 1000;
+  snprintf(timeStamp, sizeof(timeStamp), "Timestamp: %s.%03" PRIu64, hms, millis);
+
+  std::fstream fs;
+  fs.open(file_dump_.kDumpFile, std::ios::app);
+  if (!fs) {
+    return;
+  }
+  fs << "============================" << std::endl;
+  fs << timeStamp << std::endl;
+  fs << "Total layers = " << handles_map_.size() << std::endl;
+  uint64_t totalAllocationSize = 0;
+  for (auto it : handles_map_) {
+    auto buf = it.second;
+    auto hnd = buf->handle;
+    auto metadata = reinterpret_cast<MetaData_t *>(hnd->base_metadata);
+    fs  << std::setw(80) << "Client:" << (metadata ? metadata->name: "No name");
+    fs  << std::setw(20) << "WxH:" << std::setw(4) << hnd->width << " x "
+        << std::setw(4) << hnd->height;
+    fs  << std::setw(20) << "Size: " << std::setw(9) << hnd->size <<  std::endl;
+    totalAllocationSize += hnd->size;
+  }
+  fs << "Total allocation  = " << totalAllocationSize/1024 << "KiB" << std::endl;
+  file_dump_.position = fs.tellp();
+  if (file_dump_.position > (20 * 1024 * 1024)) {
+    file_dump_.position = 0;
+  }
+  fs.close();
 }
 
 Error BufferManager::Dump(std::ostringstream *os) {

@@ -46,6 +46,7 @@ class BufferManager {
   Error LockBuffer(const private_handle_t *hnd, uint64_t usage);
   Error UnlockBuffer(const private_handle_t *hnd);
   Error Dump(std::ostringstream *os);
+  void BuffersDump();
   Error ValidateBufferSize(private_handle_t const *hnd, BufferInfo info);
   Error IsBufferImported(const private_handle_t *hnd);
   static BufferManager *GetInstance();
@@ -99,6 +100,13 @@ class BufferManager {
   std::mutex buffer_lock_;
   std::unordered_map<const private_handle_t *, std::shared_ptr<Buffer>> handles_map_ = {};
   std::atomic<uint64_t> next_id_;
+  uint64_t allocated_ = 0;
+  uint64_t kAllocThreshold = (uint64_t)2*1024*1024*1024;
+  uint64_t kMemoryOffset = 50*1024*1024;
+  struct {
+    const char *kDumpFile = "/data/misc/wmtrace/bufferdump.txt";
+    uint64_t position = 0;
+  } file_dump_;
 };
 
 }  // namespace gralloc
