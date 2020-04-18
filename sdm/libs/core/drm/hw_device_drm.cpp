@@ -1962,50 +1962,97 @@ DisplayError HWDeviceDRM::DumpDebugData() {
   ofstream dst(filename);
   debug_dump_count_++;
 
+  bool failed = false;
+
   {
     ifstream src;
     src.open("/sys/kernel/debug/dri/0/debug/dump");
-    dst << "---- Event Logs ----" << std::endl;
-    dst << src.rdbuf() << std::endl;
-    src.close();
+    if (src.fail()) {
+      DLOGE("Unable to open dump debugfs node");
+      failed = true;
+    } else {
+      dst << "---- Event Logs ----" << std::endl;
+      dst << src.rdbuf() << std::endl;
+      if (src.fail()) {
+        DLOGE("Unable to read dump debugfs node");
+        failed = true;
+      }
+      src.close();
+    }
   }
 
   {
     ifstream src;
     src.open("/sys/kernel/debug/dri/0/debug/recovery_reg");
-    dst << "---- All Registers ----" << std::endl;
-    dst << src.rdbuf() << std::endl;
-    src.close();
+    if (src.fail()) {
+      DLOGE("Unable to open recovery_reg debugfs node");
+      failed = true;
+    } else {
+      dst << "---- All Registers ----" << std::endl;
+      dst << src.rdbuf() << std::endl;
+      if (src.fail()) {
+        failed = true;
+        DLOGE("Unable to read recovery_reg debugfs node");
+      }
+      src.close();
+    }
   }
 
   {
     ifstream src;
     src.open("/sys/kernel/debug/dri/0/debug/recovery_dbgbus");
-    dst << "---- Debug Bus ----" << std::endl;
-    dst << src.rdbuf() << std::endl;
-    src.close();
+    if (src.fail()) {
+      DLOGE("Unable to open recovery_dbgbus debugfs node");
+      failed = true;
+    } else {
+      dst << "---- Debug Bus ----" << std::endl;
+      dst << src.rdbuf() << std::endl;
+      if (src.fail()) {
+        DLOGE("Unable to read recovery_dbgbus debugfs node");
+        failed = true;
+      }
+      src.close();
+    }
   }
 
   {
     ifstream src;
     src.open("/sys/kernel/debug/dri/0/debug/recovery_vbif_dbgbus");
-    dst << "---- VBIF Debug Bus ----" << std::endl;
-    dst << src.rdbuf() << std::endl;
-    src.close();
+    if (src.fail()) {
+      DLOGE("Unable to open recovery_vbif_dbgbus debugfs node");
+      failed = true;
+    } else {
+      dst << "---- VBIF Debug Bus ----" << std::endl;
+      dst << src.rdbuf() << std::endl;
+      if (src.fail()) {
+        DLOGE("Unable to read recovery_vbif_dbgbus debugfs node");
+        failed = true;
+      }
+      src.close();
+    }
   }
 
   {
     ifstream src;
     src.open("/sys/kernel/debug/dri/0/debug/recovery_dsi_dbgbus");
-    dst << "---- DSI Debug Bus ----" << std::endl;
-    dst << src.rdbuf() << std::endl;
+    if (src.fail()) {
+      DLOGE("Unable to open recovery_dsi_dbgbus debugfs node");
+      failed = true;
+    } else {
+      dst << "---- DSI Debug Bus ----" << std::endl;
+      dst << src.rdbuf() << std::endl;
+      if (src.fail()) {
+        DLOGE("Unable to read recovery_dsi_dbgbus debugfs node");
+        failed = true;
+      }
     src.close();
+    }
   }
 
   dst.close();
   DLOGI("Wrote hw_recovery file %s", filename.c_str());
 
-  return kErrorNone;
+  return failed ? kErrorPermission : kErrorNone;
 }
 
 void HWDeviceDRM::GetDRMDisplayToken(sde_drm::DRMDisplayToken *token) const {
