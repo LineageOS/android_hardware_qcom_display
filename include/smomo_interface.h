@@ -143,6 +143,18 @@ class SmomoIntf {
     @return \link void \endlink
   */
   virtual void SetDisplayRefreshRates(const std::vector<float> &refresh_rates) = 0;
+
+  /*! @brief Get the current frame rate from SmoMo.
+
+    @details This function is called by SmoMo client to query the current frame rate, which is
+    based on the internal state of SmoMo. Client needs to call the UpdateSmomoState API before
+    calling this function. SmoMo only returns a valid frame rate when it's settled to a state.
+
+    @return > 0 if valid, -1 if invalid.
+
+    @return \link int \endlink
+  */
+  virtual int GetFrameRate() = 0;
 };
 
 typedef bool (*CreateSmomoInterface)(uint16_t version, SmomoIntf **interface);
