@@ -39,6 +39,7 @@ namespace sdm {
 enum class ColorConvertTaskCode : int32_t {
   kCodeGetInstance,
   kCodeBlit,
+  kCodeReset,
   kCodeDestroyInstance,
 };
 
@@ -66,6 +67,7 @@ class HWCDisplayVirtualGPU : public HWCDisplayVirtual,
   virtual int Deinit();
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests);
   virtual HWC2::Error Present(shared_ptr<Fence> *out_retire_fence);
+  virtual HWC2::Error SetOutputBuffer(buffer_handle_t buf, shared_ptr<Fence> release_fence);
 
  private:
   // SyncTask methods.

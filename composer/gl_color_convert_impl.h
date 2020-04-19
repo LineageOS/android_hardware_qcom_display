@@ -50,6 +50,7 @@ class GLColorConvertImpl : public GLColorConvert, public GLCommon {
   virtual int CreateContext(GLRenderTarget target, bool secure);
   virtual int Init();
   virtual int Deinit();
+  virtual void Reset();
  private:
   GLRenderTarget target_ = kTargetRGBA;
   bool secure_ = false;

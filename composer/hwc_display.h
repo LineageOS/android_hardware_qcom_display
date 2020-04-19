@@ -519,6 +519,8 @@ class HWCDisplay : public DisplayEventHandler {
   int64_t pending_refresh_rate_applied_time_ = INT64_MAX;
   std::deque<TransientRefreshRateInfo> transient_refresh_rate_info_;
   std::mutex transient_refresh_rate_lock_;
+  LayerRect window_rect_ = {};
+  bool windowed_display_ = true;
 
  private:
   void DumpInputBuffers(void);

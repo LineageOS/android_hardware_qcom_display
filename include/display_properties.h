@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -129,7 +129,8 @@
 // Add all persist.vendor.display.properties above
 
 #define ZERO_SWAP_INTERVAL                   "vendor.debug.egl.swapinterval"
-
+#define WINDOW_RECT_PROP                     DISPLAY_PROP("window_rect")
+#define DISABLE_IDLE_TIME_HDR                DISPLAY_PROP("disable_idle_time_hdr")
 // Add all other.properties above
 // End of property
 #endif  // __DISPLAY_PROPERTIES_H__

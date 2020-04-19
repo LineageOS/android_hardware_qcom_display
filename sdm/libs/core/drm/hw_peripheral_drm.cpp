@@ -118,6 +118,18 @@ DisplayError HWPeripheralDRM::GetDynamicDSIClock(uint64_t *bit_clk_rate) {
   return kErrorNone;
 }
 
+DisplayError HWPeripheralDRM::SetDisplayMode(const HWDisplayMode hw_display_mode) {
+  DisplayError error = HWDeviceDRM::SetDisplayMode(hw_display_mode);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  // update bit clk rates.
+  hw_panel_info_.bitclk_rates = bitclk_rates_;
+
+  return kErrorNone;
+}
+
 DisplayError HWPeripheralDRM::Validate(HWLayers *hw_layers) {
   HWLayersInfo &hw_layer_info = hw_layers->info;
   SetDestScalarData(hw_layer_info);

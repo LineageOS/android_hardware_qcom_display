@@ -248,6 +248,7 @@ class QtiMapper : public IQtiMapper {
       {android::gralloc4::MetadataType_Smpte2086, "", true, true},
       {android::gralloc4::MetadataType_Cta861_3, "", true, true},
       {android::gralloc4::MetadataType_Smpte2094_40, "", true, true},
+      {android::gralloc4::MetadataType_Crop, "", true, true},
       {qtigralloc::MetadataType_VTTimestamp, "VT Timestamp", true, true},
       {qtigralloc::MetadataType_ColorMetadata, "Color metadata", true, true},
       {qtigralloc::MetadataType_PPParamInterlaced, "Interlaced", true, true},
@@ -262,6 +263,8 @@ class QtiMapper : public IQtiMapper {
       {qtigralloc::MetadataType_VideoHistogramStats, "Video histogram stats", true, true},
       {qtigralloc::MetadataType_FD, "fd from private_handle_t", true, false},
       {qtigralloc::MetadataType_PrivateFlags, "Flags in private_handle_t", true, false},
+      {qtigralloc::MetadataType_AlignedWidthInPixels, "width in private_handle_t", true, false},
+      {qtigralloc::MetadataType_AlignedHeightInPixels, "height in private_handle_t", true, false}
   };
 };
 

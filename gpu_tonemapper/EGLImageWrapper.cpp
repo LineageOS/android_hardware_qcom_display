@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -20,6 +20,7 @@
 #include "EGLImageWrapper.h"
 #include <cutils/native_handle.h>
 #include <gralloc_priv.h>
+#include <qdMetaData.h>
 #include <ui/GraphicBuffer.h>
 #include <fcntl.h>
 #include <string>
@@ -73,9 +74,7 @@ void EGLImageWrapper::DeleteEGLImageCallback::operator()(int& buffInt, EGLImageB
 EGLImageWrapper::EGLImageWrapper()
 //-----------------------------------------------------------------------------
 {
-  eglImageBufferCache = new android::LruCache<int, EGLImageBuffer*>(32);
-  callback = new DeleteEGLImageCallback(&buffStrbuffIntMap);
-  eglImageBufferCache->setOnEntryRemovedListener(callback);
+  Init();
 }
 
 //-----------------------------------------------------------------------------
@@ -83,6 +82,15 @@ EGLImageWrapper::~EGLImageWrapper()
 //-----------------------------------------------------------------------------
 {
   Deinit();
+}
+
+//-----------------------------------------------------------------------------
+void EGLImageWrapper::Init()
+//-----------------------------------------------------------------------------
+{
+  eglImageBufferCache = new android::LruCache<int, EGLImageBuffer*>(32);
+  callback = new DeleteEGLImageCallback(&buffStrbuffIntMap);
+  eglImageBufferCache->setOnEntryRemovedListener(callback);
 }
 
 //-----------------------------------------------------------------------------
@@ -112,7 +120,19 @@ static EGLImageBuffer* L_wrap(const private_handle_t *src)
 {
   EGLImageBuffer* result = 0;
 
+  uint32_t unaligned_width = src->unaligned_width;
+  uint32_t unaligned_height = src->unaligned_height;
+  uint32_t stride = src->width;
   native_handle_t *native_handle = const_cast<private_handle_t *>(src);
+
+  BufferDim_t custom_dim;
+  if(!getMetaData(const_cast<private_handle_t *>(src), GET_BUFFER_GEOMETRY, &custom_dim)) {
+    unaligned_width = custom_dim.sliceWidth;
+    unaligned_height = custom_dim.sliceHeight;
+    uint32_t aligned_height = 0;
+    gralloc::BufferInfo info(unaligned_width, unaligned_height, src->format, src->usage);
+    gralloc::GetAlignedWidthAndHeight(info, &stride, &aligned_height);
+  }
 
   int flags = android::GraphicBuffer::USAGE_HW_TEXTURE |
               android::GraphicBuffer::USAGE_SW_READ_NEVER |
@@ -123,11 +143,11 @@ static EGLImageBuffer* L_wrap(const private_handle_t *src)
   }
 
   android::sp<android::GraphicBuffer> graphicBuffer =
-    new android::GraphicBuffer(src->unaligned_width, src->unaligned_height, src->format,
+    new android::GraphicBuffer(unaligned_width, unaligned_height, src->format,
 #ifndef __NOUGAT__
                                1,  // Layer count
 #endif
-                               flags, src->width /*src->stride*/,
+                               flags, stride /*src->stride*/,
                                native_handle, false);
 
   result = new EGLImageBuffer(graphicBuffer);
