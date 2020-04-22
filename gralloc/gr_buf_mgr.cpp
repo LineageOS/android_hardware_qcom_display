@@ -1392,6 +1392,12 @@ Error BufferManager::GetMetadata(private_handle_t *handle, int64_t metadatatype_
       qtigralloc::encodeMetadataState(metadata->isVendorMetadataSet, out);
       break;
 #endif
+#ifdef QTI_BUFFER_TYPE
+    case QTI_BUFFER_TYPE:
+      android::gralloc4::encodeUint32(qtigralloc::MetadataType_BufferType, handle->buffer_type,
+                                      out);
+      break;
+#endif
     default:
       error = Error::UNSUPPORTED;
   }
