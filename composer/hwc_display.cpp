@@ -1058,7 +1058,7 @@ HWC2::Error HWCDisplay::GetDisplayAttribute(hwc2_config_t config, HwcAttribute a
                                             int32_t *out_value) {
   if (variable_config_map_.find(config) == variable_config_map_.end()) {
     DLOGE("Get variable config failed");
-    return HWC2::Error::BadDisplay;
+    return HWC2::Error::BadConfig;
   }
 
   DisplayConfigVariableInfo variable_config = variable_config_map_.at(config);
