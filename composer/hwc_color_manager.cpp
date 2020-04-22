@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2018, 2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2018, 2020-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -33,7 +33,7 @@
 #include <sync/sync.h>
 #include <utils/String16.h>
 #include <binder/Parcel.h>
-#include <gralloc_priv.h>
+#include <QtiGralloc.h>
 #include <hardware/hwcomposer.h>
 #include <hardware/hwcomposer_defs.h>
 #include <QService.h>

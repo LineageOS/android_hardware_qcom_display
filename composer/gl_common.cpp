@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -90,7 +90,7 @@ void GLCommon::DeleteProgram(uint32_t id) {
   GL(glDeleteProgram(id));
 }
 
-void GLCommon::SetSourceBuffer(const private_handle_t *src_hnd) {
+void GLCommon::SetSourceBuffer(const native_handle_t *src_hnd) {
   DTRACE_SCOPED();
   EGLImageBuffer *src_buffer = image_wrapper_.wrap(reinterpret_cast<const void *>(src_hnd));
 
@@ -100,7 +100,7 @@ void GLCommon::SetSourceBuffer(const private_handle_t *src_hnd) {
   }
 }
 
-void GLCommon::SetDestinationBuffer(const private_handle_t *dst_hnd) {
+void GLCommon::SetDestinationBuffer(const native_handle_t *dst_hnd) {
   DTRACE_SCOPED();
   EGLImageBuffer *dst_buffer = image_wrapper_.wrap(reinterpret_cast<const void *>(dst_hnd));
 

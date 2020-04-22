@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -25,7 +25,6 @@
 #include <core/core_interface.h>
 #include <hardware/hwcomposer.h>
 #include <private/color_params.h>
-#include <qdMetaData.h>
 #include <sys/stat.h>
 #include <algorithm>
 #include <bitset>

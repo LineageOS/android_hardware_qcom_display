@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019, 2021 The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2017 The Android Open Source Project
@@ -30,8 +30,7 @@ namespace display {
 namespace composer {
 namespace V3_0 {
 
-using MapperV2Error = android::hardware::graphics::mapper::V2_0::Error;
-using MapperV3Error = android::hardware::graphics::mapper::V3_0::Error;
+using android::hardware::graphics::mapper::V4_0::Error;
 
 ComposerHandleImporter::ComposerHandleImporter() : mInitialized(false) {}
 
@@ -41,13 +40,10 @@ void ComposerHandleImporter::initialize() {
     return;
   }
 
-  mMapper_V3 = IMapperV3::getService();
-  if (mMapper_V3 == nullptr) {
-    mMapper_V2 = IMapperV2::getService();
-    if (mMapper_V2 == nullptr) {
-      ALOGE("%s: cannnot acccess graphics mapper HAL!", __FUNCTION__);
-      return;
-    }
+  mMapper = IMapper::getService();
+  if (mMapper == nullptr) {
+    ALOGE("%s: cannnot acccess graphics mapper HAL!", __FUNCTION__);
+    return;
   }
 
   int value = 0;  // Default value when property is not present.
@@ -59,11 +55,7 @@ void ComposerHandleImporter::initialize() {
 }
 
 void ComposerHandleImporter::cleanup() {
-  if (mMapper_V3 != nullptr) {
-    mMapper_V3.clear();
-  } else {
-    mMapper_V2.clear();
-  }
+  mMapper.clear();
   mInitialized = false;
 }
 
@@ -122,54 +114,30 @@ bool ComposerHandleImporter::importBuffer(buffer_handle_t& handle) {
     initialize();
   }
 
-  if (mMapper_V3 == nullptr && mMapper_V2 == nullptr) {
+  if (mMapper == nullptr) {
     ALOGE("%s: mMapper is null!", __FUNCTION__);
     return false;
   }
 
-  if (mMapper_V3 != nullptr) {
-    MapperV3Error error;
-    buffer_handle_t importedHandle;
+  Error error;
+  buffer_handle_t importedHandle;
 
-    auto ret = mMapper_V3->importBuffer(
-        hidl_handle(handle),
-        [&](const auto &tmpError, const auto &tmpBufferHandle) {
-          error = tmpError;
-          importedHandle = static_cast<buffer_handle_t>(tmpBufferHandle);
-        });
+  auto ret = mMapper->importBuffer(hidl_handle(handle),
+                                   [&](const auto &tmpError, const auto &tmpBufferHandle) {
+                                     error = tmpError;
+                                     importedHandle = static_cast<buffer_handle_t>(tmpBufferHandle);
+                                   });
 
-    if (!ret.isOk()) {
-      ALOGE("%s: mapper importBuffer failed: %s", __FUNCTION__, ret.description().c_str());
-      return false;
-    }
-
-    if (error != MapperV3Error::NONE) {
-      return false;
-    }
-
-    handle = importedHandle;
-  } else {
-    MapperV2Error error;
-    buffer_handle_t importedHandle;
-
-    auto ret = mMapper_V2->importBuffer(
-        hidl_handle(handle),
-        [&](const auto &tmpError, const auto &tmpBufferHandle) {
-          error = tmpError;
-          importedHandle = static_cast<buffer_handle_t>(tmpBufferHandle);
-        });
-
-    if (!ret.isOk()) {
-      ALOGE("%s: mapper importBuffer failed: %s", __FUNCTION__, ret.description().c_str());
-      return false;
-    }
-
-    if (error != MapperV2Error::NONE) {
-      return false;
-    }
-
-    handle = importedHandle;
+  if (!ret.isOk()) {
+    ALOGE("%s: mapper importBuffer failed: %s", __FUNCTION__, ret.description().c_str());
+    return false;
   }
+
+  if (error != Error::NONE) {
+    return false;
+  }
+
+  handle = importedHandle;
 
   if (enable_memory_mapping_) {
     for (int i = 0; i < handle->numFds; i++) {
@@ -177,6 +145,7 @@ bool ComposerHandleImporter::importBuffer(buffer_handle_t& handle) {
       InoFdMapInsert(handle->data[i]);
     }
   }
+
   return true;
 }
 
@@ -187,27 +156,21 @@ void ComposerHandleImporter::freeBuffer(buffer_handle_t handle) {
 
   Mutex::Autolock lock(mLock);
 
-  if (mMapper_V3 == nullptr && mMapper_V2 == nullptr) {
+  if (mMapper == nullptr) {
     ALOGE("%s: mMapper is null!", __FUNCTION__);
     return;
   }
 
-  if (mMapper_V3 != nullptr) {
-    if (enable_memory_mapping_) {
-      for (int i = 0; i < handle->numFds; i++) {
-        // handle->data is the int array of fds. run remove on all fds.
-        InoFdMapRemove(handle->data[i]);
-      }
+  if (enable_memory_mapping_) {
+    for (int i = 0; i < handle->numFds; i++) {
+      // handle->data is the int array of fds. run remove on all fds.
+      InoFdMapRemove(handle->data[i]);
     }
-    auto ret = mMapper_V3->freeBuffer(const_cast<native_handle_t *>(handle));
+  }
 
-    if (!ret.isOk()) {
-      ALOGE("%s: mapper freeBuffer failed: %s", __FUNCTION__, ret.description().c_str());
-    }
-  } else {
-    auto ret = mMapper_V2->freeBuffer(const_cast<native_handle_t *>(handle));
-    if (!ret.isOk()) {
-      ALOGE("%s: mapper freeBuffer failed: %s", __FUNCTION__, ret.description().c_str()); }
+  auto ret = mMapper->freeBuffer(const_cast<native_handle_t *>(handle));
+  if (!ret.isOk()) {
+    ALOGE("%s: mapper freeBuffer failed: %s", __FUNCTION__, ret.description().c_str());
   }
 }
 

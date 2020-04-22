@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016 - 2017, 2020 The Linux Foundation. All rights reserved.
+* Copyright (c) 2016 - 2017, 2020-2021 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -27,7 +27,7 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <gralloc_priv.h>
+#include <QtiGralloc.h>
 #include <sync/sync.h>
 
 #include <TonemapFactory.h>
@@ -154,16 +154,18 @@ void ToneMapSession::SetToneMapConfig(Layer *layer, PrimariesTransfer blend_cs) 
 
 bool ToneMapSession::IsSameToneMapConfig(Layer *layer, PrimariesTransfer blend_cs) {
   LayerBuffer& buffer = layer->input_buffer;
-  private_handle_t *handle = static_cast<private_handle_t *>(buffer_info_[0].private_data);
+  native_handle_t *handle = static_cast<native_handle_t *>(buffer_info_[0].private_data);
   int tonemap_type = buffer.flags.hdr ? TONEMAP_FORWARD : TONEMAP_INVERSE;
 
-  return ((tonemap_type == tone_map_config_.type) &&
-          (blend_cs == tone_map_config_.blend_cs) &&
+  uint32_t handle_unaligned_width, handle_unaligned_height = 0;
+  buffer_allocator_->GetUnalignedWidth(handle, handle_unaligned_width);
+  buffer_allocator_->GetUnalignedHeight(handle, handle_unaligned_height);
+  return ((tonemap_type == tone_map_config_.type) && (blend_cs == tone_map_config_.blend_cs) &&
           (buffer.color_metadata.transfer == tone_map_config_.transfer) &&
           (layer->request.flags.secure == tone_map_config_.secure) &&
           (layer->request.format == tone_map_config_.format) &&
-          (layer->request.width == UINT32(handle->unaligned_width)) &&
-          (layer->request.height == UINT32(handle->unaligned_height)));
+          (layer->request.width == handle_unaligned_width) &&
+          (layer->request.height == handle_unaligned_height));
 }
 
 int HWCToneMapper::HandleToneMap(LayerStack *layer_stack) {
@@ -286,25 +288,32 @@ void HWCToneMapper::DumpToneMapOutput(ToneMapSession *session, shared_ptr<Fence>
   }
 
   BufferInfo &buffer_info = session->buffer_info_[session->current_buffer_index_];
-  private_handle_t *target_buffer = static_cast<private_handle_t *>(buffer_info.private_data);
+  native_handle_t *target_buffer = static_cast<native_handle_t *>(buffer_info.private_data);
   Fence::Wait(acquire_fd);
 
-  error = buffer_allocator_->MapBuffer(target_buffer, acquire_fd);
+  void *base_ptr = NULL;
+  error = buffer_allocator_->MapBuffer(target_buffer, acquire_fd, base_ptr);
   if (error != 0) {
-    DLOGE("MapBuffer failed, base addr = %" PRIx64, target_buffer->base);
+    DLOGE("MapBuffer failed, base addr = %p", base_ptr);
     return;
   }
 
   size_t result = 0;
   char dump_file_name[PATH_MAX];
-  snprintf(dump_file_name, sizeof(dump_file_name), "%s/frame_dump_primary"
-           "/tonemap_%dx%d_frame%d.raw", HWCDebugHandler::DumpDir(), target_buffer->width,
-           target_buffer->height, dump_frame_index_);
+  uint32_t width, height, size = 0;
+  buffer_allocator_->GetWidth((void *)target_buffer, width);
+  buffer_allocator_->GetHeight((void *)target_buffer, height);
+  buffer_allocator_->GetAllocationSize((void *)target_buffer, size);
+
+  snprintf(dump_file_name, sizeof(dump_file_name),
+           "%s/frame_dump_primary"
+           "/tonemap_%dx%d_frame%d.raw",
+           HWCDebugHandler::DumpDir(), width, height, dump_frame_index_);
 
   FILE* fp = fopen(dump_file_name, "w+");
   if (fp) {
-    DLOGI("base addr = %" PRIx64, target_buffer->base);
-    result = fwrite(reinterpret_cast<void *>(target_buffer->base), target_buffer->size, 1, fp);
+    DLOGI("base addr = %p", base_ptr);
+    result = fwrite(base_ptr, size, 1, fp);
     fclose(fp);
   }
   dump_frame_count_--;

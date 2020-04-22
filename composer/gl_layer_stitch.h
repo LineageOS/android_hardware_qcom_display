@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,15 +30,13 @@
 #ifndef __GL_LAYER_STITCH_H__
 #define __GL_LAYER_STITCH_H__
 
-#include <gralloc_priv.h>
 #include <vector>
-
 #include "gl_common.h"
 
 namespace sdm {
 struct StitchParams {
-  const private_handle_t *src_hnd = nullptr;
-  const private_handle_t *dst_hnd = nullptr;
+  const native_handle_t *src_hnd = nullptr;
+  const native_handle_t *dst_hnd = nullptr;
   GLRect src_rect;
   GLRect dst_rect;
   GLRect scissor_rect;
@@ -52,6 +50,7 @@ class GLLayerStitch {
   static void Destroy(GLLayerStitch *intf);
   virtual int Blit(const std::vector<StitchParams> &stitch_params,
                    shared_ptr<Fence> *release_fence) = 0;
+
  protected:
   virtual ~GLLayerStitch() { }
 };

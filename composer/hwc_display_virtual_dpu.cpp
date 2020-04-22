@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -95,9 +95,11 @@ HWC2::Error HWCDisplayVirtualDPU::SetOutputBuffer(buffer_handle_t buf,
     return error;
   }
 
-  const private_handle_t *output_handle = static_cast<const private_handle_t *>(buf);
+  const native_handle_t *output_handle = static_cast<const native_handle_t *>(buf);
   if (output_handle) {
-    int output_handle_format = output_handle->format;
+    int output_handle_format;
+    buffer_allocator_->GetFormat(const_cast<native_handle_t *>(output_handle),
+                                 output_handle_format);
     int active_aligned_w, active_aligned_h;
     int new_width, new_height;
     int new_aligned_w, new_aligned_h;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -18,7 +18,6 @@
  */
 
 #include "hwc_layers.h"
-#include <qdMetaData.h>
 #include <qd_utils.h>
 #include <utils/debug.h>
 #include <stdint.h>
@@ -31,38 +30,21 @@ namespace sdm {
 
 std::atomic<hwc2_layer_t> HWCLayer::next_id_(1);
 
-DisplayError SetCSC(const private_handle_t *pvt_handle, ColorMetaData *color_metadata) {
-  if (getMetaData(const_cast<private_handle_t *>(pvt_handle), GET_COLOR_METADATA,
-                  color_metadata) != 0) {
-    ColorSpace_t csc = ITU_R_601;
-    if (getMetaData(const_cast<private_handle_t *>(pvt_handle),  GET_COLOR_SPACE,
-                    &csc) == 0) {
-      if (csc == ITU_R_601_FR || csc == ITU_R_2020_FR) {
-        color_metadata->range = Range_Full;
-      }
-      color_metadata->transfer = Transfer_sRGB;
-
-      switch (csc) {
-        case ITU_R_601:
-        case ITU_R_601_FR:
-          // video and display driver uses 601_525
-          color_metadata->colorPrimaries = ColorPrimaries_BT601_6_525;
-          break;
-        case ITU_R_709:
-          color_metadata->colorPrimaries = ColorPrimaries_BT709_5;
-          break;
-        case ITU_R_2020:
-        case ITU_R_2020_FR:
-          color_metadata->colorPrimaries = ColorPrimaries_BT2020;
-          break;
-        default:
-          DLOGE("Unsupported CSC: %d", csc);
-          return kErrorNotSupported;
-      }
+DisplayError SetCSC(const native_handle_t *handle, ColorMetaData *color_metadata) {
+  ColorMetaData color;
+  if (qtigralloc::getMetadataState(const_cast<native_handle_t *>(handle), QTI_COLOR_METADATA)) {
+    int err = static_cast<int>(
+        qtigralloc::get(const_cast<native_handle_t *>(handle), QTI_COLOR_METADATA, &color));
+    if (!err) {
+      color_metadata->colorPrimaries = color.colorPrimaries;
+      color_metadata->transfer = color.transfer;
+      color_metadata->range = color.range;
+      return kErrorNone;
     }
   }
 
-  return kErrorNone;
+  DLOGW("Failed to get values for CSC");
+  return kErrorNotSupported;
 }
 
 // Returns true when color primary is supported
@@ -240,9 +222,11 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, shared_ptr<Fence> a
     }
   }
 
-  const private_handle_t *handle = static_cast<const private_handle_t *>(buffer);
+  const native_handle_t *handle = static_cast<const native_handle_t *>(buffer);
 
-  if (handle->fd < 0) {
+  int fd = -1;
+  buffer_allocator_->GetFd(const_cast<native_handle_t *>(handle), fd);
+  if (fd < 0) {
     return HWC2::Error::BadParameter;
   }
 
@@ -250,7 +234,8 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, shared_ptr<Fence> a
   int aligned_width, aligned_height;
   buffer_allocator_->GetCustomWidthAndHeight(handle, &aligned_width, &aligned_height);
 
-  LayerBufferFormat format = GetSDMFormat(handle->format, handle->flags);
+  LayerBufferFormat format;
+  buffer_allocator_->GetSDMFormat(const_cast<native_handle_t *>(handle), format);
   if ((format != layer_buffer->format) || (UINT32(aligned_width) != layer_buffer->width) ||
       (UINT32(aligned_height) != layer_buffer->height)) {
     // Layer buffer geometry has changed.
@@ -260,18 +245,25 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, shared_ptr<Fence> a
   layer_buffer->format = format;
   layer_buffer->width = UINT32(aligned_width);
   layer_buffer->height = UINT32(aligned_height);
-  layer_buffer->unaligned_width = UINT32(handle->unaligned_width);
-  layer_buffer->unaligned_height = UINT32(handle->unaligned_height);
+  buffer_allocator_->GetUnalignedWidth(const_cast<native_handle_t *>(handle),
+                                       layer_buffer->unaligned_width);
+  buffer_allocator_->GetUnalignedHeight(const_cast<native_handle_t *>(handle),
+                                        layer_buffer->unaligned_height);
 
-  layer_buffer->flags.video = (handle->buffer_type == BUFFER_TYPE_VIDEO) ? true : false;
-  if (SetMetaData(const_cast<private_handle_t *>(handle), layer_) != kErrorNone) {
+  uint32_t buffer_type;
+  buffer_allocator_->GetBufferType(const_cast<native_handle_t *>(handle), buffer_type);
+  layer_buffer->flags.video = (buffer_type == BUFFER_TYPE_VIDEO) ? true : false;
+
+  if (SetMetaData(handle, layer_) != kErrorNone) {
     return HWC2::Error::BadLayer;
   }
 
   // TZ Protected Buffer - L1
-  secure_ = (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER);
-  bool secure_camera = secure_ && (handle->flags & private_handle_t::PRIV_FLAGS_CAMERA_WRITE);
-  bool secure_display = (handle->flags & private_handle_t::PRIV_FLAGS_SECURE_DISPLAY);
+  int32_t flags;
+  buffer_allocator_->GetPrivateFlags(const_cast<native_handle_t *>(handle), flags);
+  secure_ = (flags & qtigralloc::PRIV_FLAGS_SECURE_BUFFER);
+  bool secure_camera = secure_ && (flags & qtigralloc::PRIV_FLAGS_CAMERA_WRITE);
+  bool secure_display = (flags & qtigralloc::PRIV_FLAGS_SECURE_DISPLAY);
   if (secure_ != layer_buffer->flags.secure || secure_camera != layer_buffer->flags.secure_camera ||
       secure_display != layer_buffer->flags.secure_display) {
     // Secure attribute of layer buffer has changed.
@@ -286,14 +278,15 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, shared_ptr<Fence> a
   if (buffer_fd_ >= 0) {
     ::close(buffer_fd_);
   }
-  buffer_fd_ = ::dup(handle->fd);
+  buffer_fd_ = ::dup(fd);
   layer_buffer->planes[0].fd = buffer_fd_;
-  layer_buffer->planes[0].offset = handle->offset;
-  layer_buffer->planes[0].stride = UINT32(handle->width);
-  layer_buffer->size = handle->size;
+  layer_buffer->planes[0].offset = 0;
+  buffer_allocator_->GetWidth(const_cast<native_handle_t *>(handle),
+                              layer_buffer->planes[0].stride);
+  buffer_allocator_->GetAllocationSize(const_cast<native_handle_t *>(handle), layer_buffer->size);
   buffer_flipped_ = reinterpret_cast<uint64_t>(handle) != layer_buffer->buffer_id;
   layer_buffer->buffer_id = reinterpret_cast<uint64_t>(handle);
-  layer_buffer->handle_id = handle->id;
+  buffer_allocator_->GetBufferId(const_cast<native_handle_t *>(handle), layer_buffer->handle_id);
 
   return HWC2::Error::None;
 }
@@ -407,7 +400,7 @@ HWC2::Error HWCLayer::SetLayerDataspace(int32_t dataspace) {
     geometry_changes_ |= kDataspace;
     dataspace_ = dataspace;
     if (layer_->input_buffer.buffer_id) {
-      ValidateAndSetCSC(reinterpret_cast<private_handle_t *>(layer_->input_buffer.buffer_id));
+      ValidateAndSetCSC(reinterpret_cast<native_handle_t *>(layer_->input_buffer.buffer_id));
     }
   }
   return HWC2::Error::None;
@@ -696,7 +689,7 @@ uint32_t HWCLayer::GetUint32Color(const hwc_color_t &source) {
 
 LayerBufferFormat HWCLayer::GetSDMFormat(const int32_t &source, const int flags) {
   LayerBufferFormat format = kFormatInvalid;
-  if (flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED) {
+  if (flags & qtigralloc::PRIV_FLAGS_UBWC_ALIGNED) {
     switch (source) {
       case HAL_PIXEL_FORMAT_RGBA_8888:
         format = kFormatRGBA8888Ubwc;
@@ -860,19 +853,21 @@ void HWCLayer::GetUBWCStatsFromMetaData(UBWCStats *cr_stats, UbwcCrStatsVector *
   }  // if (cr_stats->bDatvalid)
 }
 
-DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *layer) {
+DisplayError HWCLayer::SetMetaData(const native_handle_t *pvt_handle, Layer *layer) {
   LayerBuffer *layer_buffer = &layer->input_buffer;
-  private_handle_t *handle = const_cast<private_handle_t *>(pvt_handle);
+  native_handle_t *handle = const_cast<native_handle_t *>(pvt_handle);
 
   float fps = 0;
   uint32_t frame_rate = layer->frame_rate;
-  if (getMetaData(handle, GET_REFRESH_RATE, &fps) == 0) {
-    frame_rate = (fps != 0) ? RoundToStandardFPS(fps) : layer->frame_rate;
-    has_metadata_refresh_rate_ = true;
+  if (qtigralloc::getMetadataState(handle, QTI_REFRESH_RATE)) {
+    if (static_cast<int>(qtigralloc::get(handle, QTI_REFRESH_RATE, &fps)) == 0) {
+      frame_rate = (fps != 0) ? RoundToStandardFPS(fps) : layer->frame_rate;
+      has_metadata_refresh_rate_ = true;
+    }
   }
 
   int32_t interlaced = 0;
-  getMetaData(handle, GET_PP_PARAM_INTERLACED, &interlaced);
+  qtigralloc::get(handle, QTI_PP_PARAM_INTERLACED, &interlaced);
   bool interlace = interlaced ? true : false;
 
   if (interlace != layer_buffer->flags.interlace) {
@@ -881,8 +876,10 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
   }
 
   uint32_t linear_format = 0;
-  if (getMetaData(handle, GET_LINEAR_FORMAT, &linear_format) == 0) {
-    layer_buffer->format = GetSDMFormat(INT32(linear_format), 0);
+  if (qtigralloc::getMetadataState(handle, QTI_LINEAR_FORMAT)) {
+    if (static_cast<int>(qtigralloc::get(handle, QTI_LINEAR_FORMAT, &linear_format)) == 0) {
+      layer_buffer->format = GetSDMFormat(INT32(linear_format), 0);
+    }
   }
 
   if ((interlace != layer_buffer->flags.interlace) || (frame_rate != layer->frame_rate)) {
@@ -899,13 +896,15 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
     layer_buffer->ubwc_crstats[i].clear();
   }
 
-  if (getMetaData(handle, GET_UBWC_CR_STATS_INFO, cr_stats) == 0) {
-  // Only copy top layer for now as only top field for interlaced is used
-    GetUBWCStatsFromMetaData(&cr_stats[0], &(layer_buffer->ubwc_crstats[0]));
-  }  // if (getMetaData)
+  if (qtigralloc::getMetadataState(handle, QTI_UBWC_CR_STATS_INFO)) {
+    if (static_cast<int>(qtigralloc::get(handle, QTI_UBWC_CR_STATS_INFO, &cr_stats)) == 0) {
+      // Only copy top layer for now as only top field for interlaced is used
+      GetUBWCStatsFromMetaData(&cr_stats[0], &(layer_buffer->ubwc_crstats[0]));
+    }
+  }
 
   uint32_t single_buffer = 0;
-  getMetaData(const_cast<private_handle_t *>(handle), GET_SINGLE_BUFFER_MODE, &single_buffer);
+  qtigralloc::get(handle, QTI_SINGLE_BUFFER_MODE, &single_buffer);
   single_buffer_ = (single_buffer == 1);
 
   // Handle colorMetaData / Dataspace handling now
@@ -924,7 +923,7 @@ bool HWCLayer::IsDataSpaceSupported() {
   return dataspace_supported_;
 }
 
-void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
+void HWCLayer::ValidateAndSetCSC(const native_handle_t *handle) {
   LayerBuffer *layer_buffer = &layer_->input_buffer;
   bool use_color_metadata = true;
   ColorMetaData csc = {};
@@ -1019,7 +1018,6 @@ void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
 
   dataspace_supported_ = true;
 }
-
 
 uint32_t HWCLayer::RoundToStandardFPS(float fps) {
   static const int32_t standard_fps[4] = {24, 30, 48, 60};

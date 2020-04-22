@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -61,8 +61,8 @@ class GLCommon {
   virtual void DumpShaderLog(int shader);
   virtual void MakeCurrent(const GLContext *ctx);
   virtual void SetProgram(uint32_t id);
-  virtual void SetDestinationBuffer(const private_handle_t *dst_hnd);
-  virtual void SetSourceBuffer(const private_handle_t *src_hnd);
+  virtual void SetDestinationBuffer(const native_handle_t *dst_hnd);
+  virtual void SetSourceBuffer(const native_handle_t *src_hnd);
   virtual void DestroyContext(GLContext *ctx);
   virtual void DeleteProgram(uint32_t id);
   virtual int WaitOnInputFence(const std::vector<shared_ptr<Fence>> &in_fences);

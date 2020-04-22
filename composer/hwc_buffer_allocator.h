@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,16 +32,14 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 
-#include <android/hardware/graphics/allocator/2.0/IAllocator.h>
-#include <android/hardware/graphics/allocator/3.0/IAllocator.h>
-#include <android/hardware/graphics/mapper/2.1/IMapper.h>
-#include <android/hardware/graphics/mapper/3.0/IMapper.h>
-#include "gralloc_priv.h"
+#include <android/hardware/graphics/allocator/4.0/IAllocator.h>
+#include <android/hardware/graphics/mapper/4.0/IMapper.h>
+#include <vendor/qti/hardware/display/mapper/4.0/IQtiMapper.h>
 
-using IAllocatorV3 = android::hardware::graphics::allocator::V3_0::IAllocator;
-using IAllocatorV2 = android::hardware::graphics::allocator::V2_0::IAllocator;
-using IMapperV3 = android::hardware::graphics::mapper::V3_0::IMapper;
-using IMapperV2 = android::hardware::graphics::mapper::V2_0::IMapper;
+using android::hardware::graphics::allocator::V4_0::IAllocator;
+using android::hardware::graphics::mapper::V4_0::IMapper;
+using vendor::qti::hardware::display::mapperextensions::V1_0::IQtiMapperExtensions;
+
 namespace sdm {
 
 template <class Type>
@@ -55,7 +53,7 @@ class HWCBufferAllocator : public BufferAllocator {
   int FreeBuffer(BufferInfo *buffer_info);
   uint32_t GetBufferSize(BufferInfo *buffer_info);
 
-  void GetCustomWidthAndHeight(const private_handle_t *handle, int *width, int *height);
+  void GetCustomWidthAndHeight(const native_handle_t *handle, int *width, int *height);
   void GetAlignedWidthAndHeight(int width, int height, int format, uint32_t alloc_type,
                                 int *aligned_width, int *aligned_height);
   int GetAllocatedBufferInfo(const BufferConfig &buffer_config,
@@ -63,15 +61,26 @@ class HWCBufferAllocator : public BufferAllocator {
   int GetBufferLayout(const AllocatedBufferInfo &buf_info, uint32_t stride[4],
                                uint32_t offset[4], uint32_t *num_planes);
   int SetBufferInfo(LayerBufferFormat format, int *target, uint64_t *flags);
-  int MapBuffer(const private_handle_t *handle, shared_ptr<Fence> acquire_fence);
-  int UnmapBuffer(const private_handle_t *handle, int *release_fence);
+  int MapBuffer(const native_handle_t *handle, shared_ptr<Fence> acquire_fence, void *base_ptr);
+  int UnmapBuffer(const native_handle_t *handle, int *release_fence);
+  int GetHeight(void *buf, uint32_t &height);
+  int GetWidth(void *buf, uint32_t &width);
+  int GetUnalignedHeight(void *buf, uint32_t &height);
+  int GetUnalignedWidth(void *buf, uint32_t &width);
+  int GetFd(void *buf, int &fd);
+  int GetAllocationSize(void *buf, uint32_t &alloc_size);
+  int GetBufferId(void *buf, uint64_t &id);
+  int GetFormat(void *buf, int32_t &format);
+  int GetPrivateFlags(void *buf, int32_t &flags);
+  int GetSDMFormat(void *buf, LayerBufferFormat &sdm_format);
+  int GetBufferType(void *buf, uint32_t &buffer_type);
+  int GetBufferGeometry(void *buf, int32_t &slice_width, int32_t &slice_height);
 
  private:
   int GetGrallocInstance();
-  android::sp<IMapperV2> mapper_V2_;
-  android::sp<IMapperV3> mapper_V3_;
-  android::sp<IAllocatorV2> allocator_V2_;
-  android::sp<IAllocatorV3> allocator_V3_;
+  android::sp<IMapper> mapper_;
+  android::sp<IAllocator> allocator_;
+  android::sp<IQtiMapperExtensions> mapper_ext_;
 };
 
 }  // namespace sdm

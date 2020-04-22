@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,7 +30,6 @@
 #ifndef __GL_COLOR_CONVERT_H__
 #define __GL_COLOR_CONVERT_H__
 
-#include <gralloc_priv.h>
 #include "gl_common.h"
 
 namespace sdm {
@@ -45,7 +44,7 @@ class GLColorConvert {
   static GLColorConvert* GetInstance(GLRenderTarget target, bool secure);
   static void Destroy(GLColorConvert* intf);
 
-  virtual int Blit(const private_handle_t *src_hnd, const private_handle_t *dst_hnd,
+  virtual int Blit(const native_handle_t *src_hnd, const native_handle_t *dst_hnd,
                    const GLRect &src_rect, const GLRect &dst_rect,
                    const shared_ptr<Fence> &src_acquire_fence,
                    const shared_ptr<Fence> &dst_acquire_fence,

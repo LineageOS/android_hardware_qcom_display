@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -30,6 +30,7 @@
 #include <utils/rect.h>
 #include <qd_utils.h>
 #include <vendor/qti/hardware/display/composer/3.0/IQtiComposerClient.h>
+#include <QtiGralloc.h>
 
 #include <algorithm>
 #include <iomanip>
@@ -697,22 +698,25 @@ void HWCDisplay::BuildLayerStack() {
 
     bool is_secure = false;
     bool is_video = false;
-    const private_handle_t *handle =
-        reinterpret_cast<const private_handle_t *>(layer->input_buffer.buffer_id);
+    const native_handle_t *handle =
+        reinterpret_cast<const native_handle_t *>(layer->input_buffer.buffer_id);
     if (handle) {
-      if (handle->buffer_type == BUFFER_TYPE_VIDEO) {
+      uint32_t buffer_type = 0;
+      buffer_allocator_->GetBufferType(const_cast<native_handle_t *>(handle), buffer_type);
+      if (buffer_type == BUFFER_TYPE_VIDEO) {
         layer_stack_.flags.video_present = true;
         is_video = true;
       }
       // TZ Protected Buffer - L1
       // Gralloc Usage Protected Buffer - L3 - which needs to be treated as Secure & avoid fallback
-      if (handle->flags & private_handle_t::PRIV_FLAGS_PROTECTED_BUFFER ||
-          handle->flags & private_handle_t::PRIV_FLAGS_SECURE_BUFFER) {
+      int32_t handle_flags;
+      buffer_allocator_->GetPrivateFlags((void *)handle, handle_flags);
+      if (handle_flags & qtigralloc::PRIV_FLAGS_SECURE_BUFFER) {
         layer_stack_.flags.secure_present = true;
         is_secure = true;
       }
       // UBWC PI format
-      if (handle->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED_PI) {
+      if (handle_flags & qtigralloc::PRIV_FLAGS_UBWC_ALIGNED_PI) {
         layer->input_buffer.flags.ubwc_pi = true;
       }
     }
@@ -1808,41 +1812,47 @@ void HWCDisplay::DumpInputBuffers() {
 
   for (uint32_t i = 0; i < layer_stack_.layers.size(); i++) {
     auto layer = layer_stack_.layers.at(i);
-    const private_handle_t *pvt_handle =
-        reinterpret_cast<const private_handle_t *>(layer->input_buffer.buffer_id);
+    const native_handle_t *handle =
+        reinterpret_cast<const native_handle_t *>(layer->input_buffer.buffer_id);
     Fence::Wait(layer->input_buffer.acquire_fence);
 
-    DLOGI("Dump layer[%d] of %d pvt_handle %p pvt_handle->base %" PRIx64, i,
-          UINT32(layer_stack_.layers.size()), pvt_handle, pvt_handle? pvt_handle->base : 0);
+    DLOGI("Dump layer[%d] of %lu handle %p", i, layer_stack_.layers.size(), handle);
 
-    if (!pvt_handle) {
+    if (!handle) {
       DLOGE("Buffer handle is null");
       continue;
     }
 
-    if (!pvt_handle->base) {
-      int error = buffer_allocator_->MapBuffer(pvt_handle, nullptr);
-      if (error != 0) {
-        DLOGE("Failed to map buffer, error = %d", error);
-        continue;
-      }
+    void *base_ptr = NULL;
+    int error = buffer_allocator_->MapBuffer(handle, nullptr, base_ptr);
+    if (error != kErrorNone) {
+      DLOGE("Failed to map buffer, error = %d", error);
+      continue;
     }
 
     char dump_file_name[PATH_MAX];
     size_t result = 0;
 
+    uint32_t width, height, alloc_size = 0;
+    int32_t format = 0;
+
+    buffer_allocator_->GetWidth((void *)handle, width);
+    buffer_allocator_->GetHeight((void *)handle, height);
+    buffer_allocator_->GetFormat((void *)handle, format);
+    buffer_allocator_->GetAllocationSize((void *)handle, alloc_size);
+
     snprintf(dump_file_name, sizeof(dump_file_name), "%s/input_layer%d_%dx%d_%s_frame%d.raw",
-             dir_path, i, pvt_handle->width, pvt_handle->height,
-             qdutils::GetHALPixelFormatString(pvt_handle->format), dump_frame_index_);
+             dir_path, i, width, height, qdutils::GetHALPixelFormatString(format),
+             dump_frame_index_);
 
     FILE *fp = fopen(dump_file_name, "w+");
     if (fp) {
-      result = fwrite(reinterpret_cast<void *>(pvt_handle->base), pvt_handle->size, 1, fp);
+      result = fwrite(base_ptr, alloc_size, 1, fp);
       fclose(fp);
     }
 
     int release_fence = -1;
-    int error = buffer_allocator_->UnmapBuffer(pvt_handle, &release_fence);
+    error = buffer_allocator_->UnmapBuffer(handle, &release_fence);
     if (error != 0) {
       DLOGE("Failed to unmap buffer, error = %d", error);
       continue;
@@ -1983,7 +1993,7 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
   HWCDebugHandler::Get()->GetProperty(DISABLE_UBWC_PROP, &ubwc_disabled);
   if (!ubwc_disabled) {
     usage |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
-    flags |= private_handle_t::PRIV_FLAGS_UBWC_ALIGNED;
+    flags |= qtigralloc::PRIV_FLAGS_UBWC_ALIGNED;
   }
 
   buffer_allocator_->GetAlignedWidthAndHeight(INT(x_pixels), INT(y_pixels), format, usage,
