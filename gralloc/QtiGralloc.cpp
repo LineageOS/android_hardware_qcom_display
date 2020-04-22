@@ -202,6 +202,8 @@ MetadataType getMetadataType(uint32_t in) {
       return MetadataType_StandardMetadataStatus;
     case QTI_VENDOR_METADATA_STATUS:
       return MetadataType_VendorMetadataStatus;
+    case QTI_BUFFER_TYPE:
+      return MetadataType_BufferType;
     default:
       return MetadataType_Invalid;
   }
@@ -290,6 +292,10 @@ Error get(void *buffer, uint32_t type, void *param) {
     case QTI_STANDARD_METADATA_STATUS:
     case QTI_VENDOR_METADATA_STATUS:
       err = decodeMetadataState(bytestream, (bool *)param);
+      break;
+    case QTI_BUFFER_TYPE:
+      err = static_cast<Error>(android::gralloc4::decodeUint32(
+          qtigralloc::MetadataType_BufferType, bytestream, (uint32_t *)param));
       break;
     default:
       param = nullptr;

@@ -55,6 +55,7 @@
 // Indicates whether metadata is using default value or has been set
 #define QTI_STANDARD_METADATA_STATUS 10016
 #define QTI_VENDOR_METADATA_STATUS 10017
+#define QTI_BUFFER_TYPE 10018
 
 // Used to indicate to framework that internal definitions are used instead
 #define COMPRESSION_QTI_UBWC 20001
