@@ -832,7 +832,7 @@ uint32_t HWCDisplayBuiltIn::GetOptimalRefreshRate(bool one_updating_layer) {
     return metadata_refresh_rate_;
   }
 
-  DLOGI("active_refresh_rate_: %d", active_refresh_rate_);
+  DLOGV_IF(kTagClient, "active_refresh_rate_: %d", active_refresh_rate_);
   return active_refresh_rate_;
 }
 
