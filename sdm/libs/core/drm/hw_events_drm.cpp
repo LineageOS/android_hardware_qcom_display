@@ -290,6 +290,8 @@ DisplayError HWEventsDRM::SetEventState(HWEvent event, bool enable, void *arg) {
           return error;
         }
         vsync_registered_ = true;
+      } else if (!vsync_enabled_) {
+        vsync_registered_ = false;
       }
     } break;
     default:

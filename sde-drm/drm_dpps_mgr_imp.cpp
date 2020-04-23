@@ -394,6 +394,8 @@ void DRMDppsManagerImp::CommitDppsFeatures(drmModeAtomicReq *req, const DRMDispl
         }
         if (ret != -ENODEV)
           it = dpps_dirty_event_.erase(it);
+        else
+          it++;
       } else {
         it++;
       }

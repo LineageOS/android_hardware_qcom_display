@@ -179,11 +179,6 @@ bool DisplayPluggable::IsUnderscanSupported() {
   return underscan_supported_;
 }
 
-DisplayError DisplayPluggable::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
-  return hw_intf_->OnMinHdcpEncryptionLevelChange(min_enc_level);
-}
-
 DisplayError DisplayPluggable::GetOverrideConfig(uint32_t *mode_index) {
   DisplayError error = kErrorNone;
 

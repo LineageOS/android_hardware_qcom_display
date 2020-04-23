@@ -1117,6 +1117,11 @@ bool QtiComposerClient::CommandReader::parseCommonCmd(
   // Commands from ::android::hardware::graphics::composer::V2_1::IComposerClient follow.
   case IComposerClient::Command::SELECT_DISPLAY:
     parsed = parseSelectDisplay(length);
+    // Displays will not be removed while processing the command queue.
+    if (parsed && mClient.mDisplayData.find(mDisplay) == mClient.mDisplayData.end()) {
+      ALOGW("Command::SELECT_DISPLAY: Display %" PRId64 "not found. Dropping commands.", mDisplay);
+      mDisplay = sdm::HWCCallbacks::kNumDisplays;
+    }
     break;
   case IComposerClient::Command::SELECT_LAYER:
     parsed = parseSelectLayer(length);

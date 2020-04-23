@@ -328,6 +328,10 @@ int HWCSession::DisplayConfigImpl::GetPanelBrightness(uint32_t *level) {
 int HWCSession::MinHdcpEncryptionLevelChanged(int disp_id, uint32_t min_enc_level) {
   DLOGI("Display %d", disp_id);
 
+  // SSG team hardcoded disp_id as external because it applies to external only but SSG team sends
+  // this level irrespective of external connected or not. So to honor the call, make disp_id to
+  // primary & set level.
+  disp_id = HWC_DISPLAY_PRIMARY;
   int disp_idx = GetDisplayIndex(disp_id);
   if (disp_idx == -1) {
     DLOGE("Invalid display = %d", disp_id);
@@ -335,15 +339,13 @@ int HWCSession::MinHdcpEncryptionLevelChanged(int disp_id, uint32_t min_enc_leve
   }
 
   SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_idx]);
-  if (disp_idx != HWC_DISPLAY_EXTERNAL) {
-    DLOGE("Not supported for display");
-  } else if (!hwc_display_[disp_idx]) {
-    DLOGW("Display is not connected");
-  } else {
-    return hwc_display_[disp_idx]->OnMinHdcpEncryptionLevelChange(min_enc_level);
+  HWCDisplay *hwc_display = hwc_display_[disp_idx];
+  if (!hwc_display) {
+    DLOGE("Display = %d is not connected.", disp_idx);
+    return -EINVAL;
   }
 
-  return -EINVAL;
+  return hwc_display->OnMinHdcpEncryptionLevelChange(min_enc_level);
 }
 
 int HWCSession::DisplayConfigImpl::MinHdcpEncryptionLevelChanged(DispType dpy,

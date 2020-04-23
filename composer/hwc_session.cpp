@@ -181,7 +181,7 @@ int HWCSession::Init() {
     g_hwc_uevent_.Register(this);
   }
 
-  int value = 1;  // Default value when property is not present.
+  int value = 0;  // Default value when property is not present.
   Debug::Get()->GetProperty(ENABLE_ASYNC_POWERMODE, &value);
   async_powermode_ = (value == 1);
   DLOGI("builtin_powermode_override: %d", async_powermode_);
@@ -1127,11 +1127,25 @@ int32_t HWCSession::GetDozeSupport(hwc2_display_t display, int32_t *out_support)
   }
 
   *out_support = 0;
-  if (hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN) {
-    *out_support = 1;
-  }
+  uint32_t config = 0;
+  GetActiveConfigIndex(display, &config);
+  *out_support = isSmartPanelConfig(display, config) ? 1 : 0;
 
   return HWC2_ERROR_NONE;
+}
+
+bool HWCSession::isSmartPanelConfig(uint32_t disp_id, uint32_t config_id) {
+  if (disp_id != qdutils::DISPLAY_PRIMARY) {
+    return false;
+  }
+
+  SCOPE_LOCK(locker_[disp_id]);
+  if (!hwc_display_[disp_id]) {
+    DLOGE("Display %d is not created yet.", disp_id);
+    return false;
+  }
+
+  return hwc_display_[disp_id]->IsSmartPanelConfig(config_id);
 }
 
 int32_t HWCSession::ValidateDisplay(hwc2_display_t display, uint32_t *out_num_types,
@@ -3140,14 +3154,16 @@ int32_t HWCSession::GetReadbackBufferAttributes(hwc2_display_t display, int32_t 
   }
 
   HWCDisplay *hwc_display = hwc_display_[display];
-
-  if (hwc_display) {
-    *format = HAL_PIXEL_FORMAT_RGB_888;
-    *dataspace = GetDataspaceFromColorMode(hwc_display->GetCurrentColorMode());
-    return HWC2_ERROR_NONE;
+  if (hwc_display == nullptr) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  } else if (!hwc_display->HasReadBackBufferSupport()) {
+    return HWC2_ERROR_UNSUPPORTED;
   }
 
-  return HWC2_ERROR_BAD_DISPLAY;
+  *format = HAL_PIXEL_FORMAT_RGB_888;
+  *dataspace = GetDataspaceFromColorMode(hwc_display->GetCurrentColorMode());
+
+  return HWC2_ERROR_NONE;
 }
 
 int32_t HWCSession::SetReadbackBuffer(hwc2_display_t display, const native_handle_t *buffer,
@@ -3214,12 +3230,22 @@ int32_t HWCSession::GetDisplayCapabilities(hwc2_display_t display,
   }
 
   bool isBuiltin = (hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN);
+  int32_t has_doze_support = 0;
+  GetDozeSupport(display, &has_doze_support);
   if (isBuiltin) {
     capabilities->resize(4);
     // TODO(user): Handle SKIP_CLIENT_COLOR_TRANSFORM based on DSPP availability
-    std::vector<HwcDisplayCapability> caps{
-        HwcDisplayCapability::SKIP_CLIENT_COLOR_TRANSFORM, HwcDisplayCapability::DOZE,
-        HwcDisplayCapability::BRIGHTNESS, HwcDisplayCapability::PROTECTED_CONTENTS};
+    std::vector<HwcDisplayCapability> caps;
+    if (has_doze_support) {
+      caps = {
+          HwcDisplayCapability::SKIP_CLIENT_COLOR_TRANSFORM, HwcDisplayCapability::DOZE,
+          HwcDisplayCapability::BRIGHTNESS, HwcDisplayCapability::PROTECTED_CONTENTS};
+    }
+    else {
+      caps = {
+          HwcDisplayCapability::SKIP_CLIENT_COLOR_TRANSFORM,
+          HwcDisplayCapability::BRIGHTNESS, HwcDisplayCapability::PROTECTED_CONTENTS};
+    }
     capabilities->setToExternal(caps.data(), caps.size());
   }
   return HWC2_ERROR_NONE;

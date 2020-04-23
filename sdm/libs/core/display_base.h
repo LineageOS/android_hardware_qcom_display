@@ -86,9 +86,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError SetPanelBrightness(float brightness) {
     return kErrorNotSupported;
   }
-  virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
-    return kErrorNotSupported;
-  }
+  virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
   virtual DisplayError ColorSVCRequestRoute(const PPDisplayAPIPayload &in_payload,
                                             PPDisplayAPIPayload *out_payload,
                                             PPPendingParams *pending_action);

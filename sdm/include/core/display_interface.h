@@ -202,6 +202,7 @@ struct DisplayConfigFixedInfo {
   float average_luminance = 0.0f;      //!< From Panel's average luminance
   float min_luminance = 0.0f;          //!< From Panel's blackness level
   bool partial_update = false;         //!< If display supports Partial Update.
+  bool readback_supported = false;     //!< If display supports buffer readback.
 };
 
 /*! @brief This structure defines configuration for variable properties of a display device.
