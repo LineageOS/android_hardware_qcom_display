@@ -131,5 +131,6 @@
 #define DEFER_FPS_FRAME_COUNT                DISPLAY_PROP("defer_fps_frame_count")
 #define DISABLE_IDLE_TIME_VIDEO              DISPLAY_PROP("disable_idle_time_video")
 #define DISABLE_IDLE_TIME_HDR                DISPLAY_PROP("disable_idle_time_hdr")
+#define ENABLE_POMS_DURING_DOZE              DISPLAY_PROP("enable_poms_during_doze")
 
 #endif  // __DISPLAY_PROPERTIES_H__
