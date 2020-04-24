@@ -128,9 +128,9 @@ int HWCDisplayBuiltIn::Init() {
   color_mode_ = new HWCColorModeStc(display_intf_);
   color_mode_->Init();
 
-  int optimize_refresh = 0;
-  HWCDebugHandler::Get()->GetProperty(ENABLE_OPTIMIZE_REFRESH, &optimize_refresh);
-  enable_optimize_refresh_ = (optimize_refresh == 1);
+  int value = 0;
+  HWCDebugHandler::Get()->GetProperty(ENABLE_OPTIMIZE_REFRESH, &value);
+  enable_optimize_refresh_ = (value == 1);
   if (enable_optimize_refresh_) {
     DLOGI("Drop redundant drawcycles %d", id_);
   }
@@ -148,6 +148,13 @@ int HWCDisplayBuiltIn::Init() {
                                  &window_rect_.right, &window_rect_.bottom);
     DLOGI("Window rect : [%f %f %f %f]", window_rect_.left, window_rect_.top,
            window_rect_.right, window_rect_.bottom);
+
+    value = 0;
+    HWCDebugHandler::Get()->GetProperty(ENABLE_POMS_DURING_DOZE, &value);
+    enable_poms_during_doze_ = (value == 1);
+    if (enable_poms_during_doze_) {
+      DLOGI("Enable POMS during Doze mode %" PRIu64 , id_);
+    }
   }
 
   HWCDebugHandler::Get()->GetProperty(PERF_HINT_WINDOW_PROP, &perf_hint_window_);
@@ -1327,6 +1334,12 @@ bool HWCDisplayBuiltIn::IsSmartPanelConfig(uint32_t config_id) {
 }
 
 bool HWCDisplayBuiltIn::HasSmartPanelConfig(void) {
+  if (!enable_poms_during_doze_) {
+    uint32_t config = 0;
+    GetActiveDisplayConfig(&config);
+    return IsSmartPanelConfig(config);
+  }
+
   for (auto &config : variable_config_map_) {
     if (config.second.smart_panel) {
       return true;
