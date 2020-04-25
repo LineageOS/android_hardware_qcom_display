@@ -171,6 +171,10 @@ HWC2::Error HWCColorMode::CacheColorModeWithRenderIntent(ColorMode mode, RenderI
   return HWC2::Error::None;
 }
 
+void HWCColorMode::SetApplyMode(bool enable) {
+  apply_mode_ = enable;
+}
+
 HWC2::Error HWCColorMode::ApplyCurrentColorModeWithRenderIntent(bool hdr_present) {
   // If panel does not support color modes, do not set color mode.
   if (color_mode_map_.size() <= 1) {
@@ -951,9 +955,15 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
       }
       break;
     case HWC2::PowerMode::On:
+      if (color_mode_) {
+        color_mode_->SetApplyMode(true);
+      }
       state = kStateOn;
       break;
     case HWC2::PowerMode::Doze:
+      if (color_mode_) {
+        color_mode_->SetApplyMode(true);
+      }
       state = kStateDoze;
       break;
     case HWC2::PowerMode::DozeSuspend:
@@ -1218,6 +1228,11 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, int32_t acquire_
 
 HWC2::Error HWCDisplay::SetActiveConfig(hwc2_config_t config) {
   DTRACE_SCOPED();
+
+  // Cache refresh rate set by client.
+  DisplayConfigVariableInfo info = {};
+  GetDisplayAttributesForConfig(INT(config), &info);
+  active_refresh_rate_ = info.fps;
 
   hwc2_config_t current_config = 0;
   GetActiveConfig(&current_config);
