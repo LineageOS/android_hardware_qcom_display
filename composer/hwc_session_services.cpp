@@ -1044,6 +1044,8 @@ void HWCSession::CWB::ProcessRequests() {
       callback->NotifyCWBBufferDone(status, node->buffer);
     }
 
+    native_handle_close(node->buffer);
+    native_handle_delete(const_cast<native_handle_t *>(node->buffer));
     delete node;
 
     // Mutex scope
