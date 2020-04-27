@@ -1101,7 +1101,7 @@ Error BufferManager::GetMetadata(private_handle_t *handle, int64_t metadatatype_
       break;
     }
     case (int64_t)StandardMetadataType::CHROMA_SITING:
-      android::gralloc4::encodeChromaSiting(android::gralloc4::ChromaSiting_Unknown, out);
+      android::gralloc4::encodeChromaSiting(android::gralloc4::ChromaSiting_None, out);
       break;
     case (int64_t)StandardMetadataType::DATASPACE:
       Dataspace dataspace;
