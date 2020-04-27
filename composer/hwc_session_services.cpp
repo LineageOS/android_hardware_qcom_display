@@ -955,7 +955,8 @@ int HWCSession::DisplayConfigImpl::SetCWBOutputBuffer(uint32_t disp_id,
     }
   }
 
-  return hwc_session_->cwb_.PostBuffer(callback_, post_processed, buffer);
+  return hwc_session_->cwb_.PostBuffer(callback_, post_processed,
+                                       native_handle_clone(buffer));
 }
 
 int32_t HWCSession::CWB::PostBuffer(std::weak_ptr<DisplayConfig::ConfigCallback> callback,
