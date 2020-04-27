@@ -506,7 +506,6 @@ static void getComponentSizeAndOffset(int32_t format, PlaneLayoutComponent &comp
       }
       break;
     default:
-      ALOGE("Offset and size in bits unknown for format %d", format);
       break;
   }
 }
