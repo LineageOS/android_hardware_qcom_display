@@ -224,7 +224,7 @@ class QtiComposerClient : public IQtiComposerClient {
                           int64_t timestamp, VsyncPeriodNanos vsyncPeriodNanos);
   static void onVsyncPeriodTimingChanged(hwc2_callback_data_t callbackData,
                                            hwc2_display_t display,
-                                           const VsyncPeriodChangeTimeline& updatedTimeline);
+                                           hwc_vsync_period_change_timeline_t* updatedTimeline);
   static void onSeamlessPossible(hwc2_callback_data_t callbackData, hwc2_display_t display);
 
   // Methods for ConcurrentWriteBack
