@@ -1978,7 +1978,7 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
   HWCColorManager::MarshallStructIntoParcel(resp_payload, output_parcel);
   req_payload.DestroyPayload();
   resp_payload.DestroyPayload();
-  if (invalidate_needed) {
+  if (invalidate_needed && !hwc_display_[display_id]->CommitPending()) {
     hwc_display_[display_id]->ResetValidation();
   }
 
