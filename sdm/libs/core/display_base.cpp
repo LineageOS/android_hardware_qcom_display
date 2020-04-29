@@ -100,8 +100,7 @@ DisplayError DisplayBase::Init() {
   hw_intf_->GetDisplayAttributes(active_index, &display_attributes_);
   fb_config_ = display_attributes_;
 
-  error = Debug::GetMixerResolution(&mixer_attributes_.width, &mixer_attributes_.height);
-  if (error == kErrorNone) {
+  if (!Debug::GetMixerResolution(&mixer_attributes_.width, &mixer_attributes_.height)) {
     if (hw_intf_->SetMixerAttributes(mixer_attributes_) == kErrorNone) {
       custom_mixer_resolution_ = true;
     }

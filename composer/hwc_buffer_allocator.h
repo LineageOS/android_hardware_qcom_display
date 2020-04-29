@@ -51,23 +51,23 @@ inline Type ALIGN(Type x, Type align) {
 
 class HWCBufferAllocator : public BufferAllocator {
  public:
-  DisplayError AllocateBuffer(BufferInfo *buffer_info);
-  DisplayError FreeBuffer(BufferInfo *buffer_info);
+  int AllocateBuffer(BufferInfo *buffer_info);
+  int FreeBuffer(BufferInfo *buffer_info);
   uint32_t GetBufferSize(BufferInfo *buffer_info);
 
   void GetCustomWidthAndHeight(const private_handle_t *handle, int *width, int *height);
   void GetAlignedWidthAndHeight(int width, int height, int format, uint32_t alloc_type,
                                 int *aligned_width, int *aligned_height);
-  DisplayError GetAllocatedBufferInfo(const BufferConfig &buffer_config,
+  int GetAllocatedBufferInfo(const BufferConfig &buffer_config,
                                       AllocatedBufferInfo *allocated_buffer_info);
-  DisplayError GetBufferLayout(const AllocatedBufferInfo &buf_info, uint32_t stride[4],
+  int GetBufferLayout(const AllocatedBufferInfo &buf_info, uint32_t stride[4],
                                uint32_t offset[4], uint32_t *num_planes);
   int SetBufferInfo(LayerBufferFormat format, int *target, uint64_t *flags);
-  DisplayError MapBuffer(const private_handle_t *handle, shared_ptr<Fence> acquire_fence);
-  DisplayError UnmapBuffer(const private_handle_t *handle, int *release_fence);
+  int MapBuffer(const private_handle_t *handle, shared_ptr<Fence> acquire_fence);
+  int UnmapBuffer(const private_handle_t *handle, int *release_fence);
 
  private:
-  DisplayError GetGrallocInstance();
+  int GetGrallocInstance();
   android::sp<IMapperV2> mapper_V2_;
   android::sp<IMapperV3> mapper_V3_;
   android::sp<IAllocatorV2> allocator_V2_;

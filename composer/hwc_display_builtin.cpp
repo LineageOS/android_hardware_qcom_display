@@ -1260,9 +1260,9 @@ bool HWCDisplayBuiltIn::AllocateStitchBuffer() {
   config.cache = false;
   config.secure_camera = false;
 
-  error = buffer_allocator_->AllocateBuffer(&buffer_info_);
+  int err = buffer_allocator_->AllocateBuffer(&buffer_info_);
 
-  if (error != kErrorNone) {
+  if (err != 0) {
     DLOGE("Failed to allocate buffer. Error: %d", error);
     return false;
   }

@@ -104,7 +104,6 @@ void ToneMapSession::OnTask(const ToneMapTaskCode &task_code,
 }
 
 DisplayError ToneMapSession::AllocateIntermediateBuffers(const Layer *layer) {
-  DisplayError error = kErrorNone;
   for (uint8_t i = 0; i < kNumIntermediateBuffers; i++) {
     BufferInfo &buffer_info = buffer_info_[i];
     buffer_info.buffer_config.width = layer->request.width;
@@ -112,10 +111,10 @@ DisplayError ToneMapSession::AllocateIntermediateBuffers(const Layer *layer) {
     buffer_info.buffer_config.format = layer->request.format;
     buffer_info.buffer_config.secure = layer->request.flags.secure;
     buffer_info.buffer_config.gfx_client = true;
-    error = buffer_allocator_->AllocateBuffer(&buffer_info);
-    if (error != kErrorNone) {
+    int err = buffer_allocator_->AllocateBuffer(&buffer_info);
+    if (err != 0) {
       FreeIntermediateBuffers();
-      return error;
+      return kErrorUndefined;
     }
   }
 
@@ -281,7 +280,7 @@ void HWCToneMapper::SetFrameDumpConfig(uint32_t count) {
 }
 
 void HWCToneMapper::DumpToneMapOutput(ToneMapSession *session, shared_ptr<Fence> acquire_fd) {
-  DisplayError error = kErrorNone;
+  int error = -1;
   if (!dump_frame_count_) {
     return;
   }
@@ -291,7 +290,7 @@ void HWCToneMapper::DumpToneMapOutput(ToneMapSession *session, shared_ptr<Fence>
   Fence::Wait(acquire_fd);
 
   error = buffer_allocator_->MapBuffer(target_buffer, acquire_fd);
-  if (error != kErrorNone) {
+  if (error != 0) {
     DLOGE("MapBuffer failed, base addr = %x", target_buffer->base);
     return;
   }

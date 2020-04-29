@@ -97,13 +97,13 @@ shared_ptr<Fence> Fence::Merge(const shared_ptr<Fence> &fence1, const shared_ptr
   return Create(merged, name);
 }
 
-DisplayError Fence::Wait(const shared_ptr<Fence> &fence) {
+int Fence::Wait(const shared_ptr<Fence> &fence) {
   ASSERT_IF_NO_BUFFER_SYNC(g_buffer_sync_handler_);
 
   return g_buffer_sync_handler_->SyncWait(Fence::Get(fence), 1000);
 }
 
-DisplayError Fence::Wait(const shared_ptr<Fence> &fence, int timeout) {
+int Fence::Wait(const shared_ptr<Fence> &fence, int timeout) {
   ASSERT_IF_NO_BUFFER_SYNC(g_buffer_sync_handler_);
 
   return g_buffer_sync_handler_->SyncWait(Fence::Get(fence), timeout);
@@ -117,7 +117,7 @@ Fence::Status Fence::GetStatus(const shared_ptr<Fence> &fence) {
   }
 
   // Treat only timeout error as pending, assume other errors as signaled.
-  return (g_buffer_sync_handler_->SyncWait(Fence::Get(fence), 0) == kErrorTimeOut ?
+  return (g_buffer_sync_handler_->SyncWait(Fence::Get(fence), 0) == -ETIME ?
                                     Fence::Status::kPending : Fence::Status::kSignaled);
 }
 
