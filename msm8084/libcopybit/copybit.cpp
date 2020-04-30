@@ -18,7 +18,7 @@
  * limitations under the License.
  */
 
-#include <cutils/log.h>
+#include <log/log.h>
 
 #include <linux/msm_mdp.h>
 #include <linux/fb.h>
