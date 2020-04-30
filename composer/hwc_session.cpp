@@ -2381,15 +2381,19 @@ void HWCSession::UEventHandler(const char *uevent_data, int length) {
     // MST hotplug will not carry connection status/test pattern etc.
     // Pluggable display handler will check all connection status' and take action accordingly.
     const char *str_status = GetTokenValue(uevent_data, length, "status=");
+    const char *str_sstmst = GetTokenValue(uevent_data, length, "HOTPLUG=");
+    // Check MST_HOTPLUG for backward compatibility.
     const char *str_mst = GetTokenValue(uevent_data, length, "MST_HOTPLUG=");
-    if (!str_status && !str_mst) {
+    if (!str_status && !str_mst  && !str_sstmst) {
       return;
     }
 
     hpd_bpp_ = GetEventValue(uevent_data, length, "bpp=");
     hpd_pattern_ = GetEventValue(uevent_data, length, "pattern=");
-    DLOGI("Uevent = %s, status = %s, MST_HOTPLUG = %s, bpp = %d, pattern = %d", uevent_data,
-          str_status ? str_status : "NULL", str_mst ? str_mst : "NULL", hpd_bpp_, hpd_pattern_);
+    DLOGI("UEvent = %s, status = %s, HOTPLUG = %s (SST/MST)%s%s, bpp = %d, pattern = %d",
+          uevent_data, str_status ? str_status : "NULL", str_sstmst ? str_sstmst : "NULL",
+          str_mst ? ", MST_HOTPLUG = " : "", str_mst ? str_mst : "",
+          hpd_bpp_, hpd_pattern_);
 
     hwc2_display_t virtual_display_index =
         (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
