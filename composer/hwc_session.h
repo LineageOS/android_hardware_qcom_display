@@ -55,7 +55,9 @@ using ::android::hardware::hidl_vec;
 using ::android::sp;
 using ::android::hardware::Void;
 namespace composer_V2_4 = ::android::hardware::graphics::composer::V2_4;
+namespace composer_V2_3 = ::android::hardware::graphics::composer::V2_3;
 using HwcDisplayCapability = composer_V2_4::IComposerClient::DisplayCapability;
+using HwcDisplayCapability_2_3 = composer_V2_3::IComposerClient::DisplayCapability;
 using HwcDisplayConnectionType = composer_V2_4::IComposerClient::DisplayConnectionType;
 
 namespace sdm {
@@ -197,6 +199,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
                                        uint32_t *outDataSize, uint8_t *outData);
   int32_t GetDisplayCapabilities(hwc2_display_t display,
                                  hidl_vec<HwcDisplayCapability> *capabilities);
+  int32_t GetDisplayCapabilities2_3(hwc2_display_t display,
+                                    uint32_t *outNumCapabilities, uint32_t *outCapabilities);
   int32_t GetDisplayBrightnessSupport(hwc2_display_t display, bool *outSupport);
   int32_t SetDisplayBrightness(hwc2_display_t display, float brightness);
   void WaitForResources(bool wait_for_resources, hwc2_display_t active_builtin_id,

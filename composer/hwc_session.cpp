@@ -3251,6 +3251,41 @@ int32_t HWCSession::GetDisplayCapabilities(hwc2_display_t display,
   return HWC2_ERROR_NONE;
 }
 
+int32_t HWCSession::GetDisplayCapabilities2_3(hwc2_display_t display, uint32_t *outNumCapabilities,
+                                              uint32_t *outCapabilities) {
+  if (!outNumCapabilities) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (display >= HWCCallbacks::kNumDisplays) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  if (!hwc_display_[display]) {
+    DLOGE("Expected valid hwc_display");
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+  bool isBuiltin = (hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN);
+  if (!outCapabilities) {
+    *outNumCapabilities = 0;
+    if (isBuiltin) {
+      *outNumCapabilities = 2;
+    }
+    return HWC2_ERROR_NONE;
+  } else {
+    if (isBuiltin) {
+      uint32_t index = 0;
+      int32_t has_doze_support = 0;
+      GetDozeSupport(display, &has_doze_support);
+      if (has_doze_support) {
+        outCapabilities[index++] = HWC2_DISPLAY_CAPABILITY_DOZE;
+      }
+      outCapabilities[index++] = HWC2_DISPLAY_CAPABILITY_BRIGHTNESS;
+      *outNumCapabilities = index;
+    }
+  }
+  return HWC2_ERROR_NONE;
+}
 int32_t HWCSession::GetDisplayConnectionType(hwc2_display_t display,
                                              HwcDisplayConnectionType *type) {
   if (display >= HWCCallbacks::kNumDisplays) {

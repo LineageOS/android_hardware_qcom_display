@@ -961,7 +961,28 @@ Return<void> QtiComposerClient::getDisplayCapabilities(uint64_t display,
                                                        getDisplayCapabilities_cb _hidl_cb) {
   // We only care about passing VTS for older composer versions
   // Not returning any capabilities that are optional
-  return Void();
+
+  hidl_vec<DisplayCapability_V2_3> capabilities;
+
+  uint32_t count = 0;
+  auto error = hwc_session_->GetDisplayCapabilities2_3(display, &count, nullptr);
+  if (error != HWC2_ERROR_NONE) {
+    _hidl_cb(static_cast<Error>(error), capabilities);
+    return Void();
+  }
+
+  capabilities.resize(count);
+  error = hwc_session_->GetDisplayCapabilities2_3(display, &count,
+                 reinterpret_cast<std::underlying_type<DisplayCapability_V2_3>::type*>(
+                 capabilities.data()));
+   if (error != HWC2_ERROR_NONE) {
+     capabilities = hidl_vec<DisplayCapability_V2_3>();
+     _hidl_cb(static_cast<Error>(error), capabilities);
+     return Void();
+   }
+
+   _hidl_cb(static_cast<Error>(error), capabilities);
+   return Void();
 }
 
 Return<void> QtiComposerClient::getPerFrameMetadataKeys_2_3(uint64_t display,
