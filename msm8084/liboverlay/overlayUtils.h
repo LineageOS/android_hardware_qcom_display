@@ -30,7 +30,7 @@
 #ifndef OVERLAY_UTILS_H
 #define OVERLAY_UTILS_H
 
-#include <cutils/log.h> // ALOGE, etc
+#include <log/log.h> // ALOGE, etc
 #include <errno.h>
 #include <fcntl.h> // open, O_RDWR, etc
 #include <hardware/hardware.h>
