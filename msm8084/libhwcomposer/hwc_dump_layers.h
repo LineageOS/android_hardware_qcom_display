@@ -128,7 +128,7 @@ void logLayer(size_t layerIndex, hwc_layer_1_t hwLayers[]);
  */
 void dumpLayer(size_t layerIndex, hwc_layer_1_t hwLayers[]);
 
-void getHalPixelFormatStr(int format, char pixelformatstr[]);
+void getHalPixelFormatStr(int format, char pixelformatstr[], size_t arraySize);
 };
 
 } // namespace qhwc
