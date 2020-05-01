@@ -221,7 +221,7 @@ void Allocator::GetIonHeapInfo(uint64_t usage, unsigned int *ion_heap_id, unsign
         flags |= UINT(ION_SECURE | ION_FLAG_CP_CDSP);
       }
       if (usage & BufferUsage::COMPOSER_OVERLAY) {
-        flags |= UINT(ION_SC_PREVIEW_FLAGS);
+        flags |= UINT(ION_SC_PREVIEW_FLAGS | ION_SC_FLAGS);
       } else {
         flags |= UINT(ION_SC_FLAGS);
       }
