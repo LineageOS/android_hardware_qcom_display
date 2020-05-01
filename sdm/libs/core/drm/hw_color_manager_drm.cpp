@@ -125,6 +125,7 @@ DisplayError (*HWColorManagerDrm::pp_features_[])(const PPFeatureInfo &,
   [kFeatureMixerGc] = &HWColorManagerDrm::GetDrmMixerGC,
   [kFeaturePaV2] = NULL,
   [kFeatureDither] = &HWColorManagerDrm::GetDrmDither,
+  [kFeatureSprDither] = &HWColorManagerDrm::GetDrmDither,
   [kFeatureGamut] = &HWColorManagerDrm::GetDrmGamut,
   [kFeaturePADither] = &HWColorManagerDrm::GetDrmPADither,
   [kFeaturePAHsic] = &HWColorManagerDrm::GetDrmPAHsic,
@@ -151,8 +152,11 @@ uint32_t HWColorManagerDrm::GetFeatureVersion(const DRMPPFeatureInfo &feature) {
       }
       break;
     case kFeatureIgc:
-      if (feature.version == 3)
+      if (feature.version == 3) {
         version = PPFeatureVersion::kSDEIgcV30;
+      } else if (feature.version == 4) {
+        version = PPFeatureVersion::kSDEIgcV40;
+      }
       break;
     case kFeaturePgc:
       if (feature.version == 1)
@@ -171,6 +175,7 @@ uint32_t HWColorManagerDrm::GetFeatureVersion(const DRMPPFeatureInfo &feature) {
         version = PPFeatureVersion::kSDEPaV17;
       break;
     case kFeatureDither:
+    case kFeatureSprDither:
         version = PPFeatureVersion::kSDEDitherV17;
       break;
     case kFeatureGamut:
@@ -271,7 +276,8 @@ void HWColorManagerDrm::FreeDrmFeatureData(DRMPPFeatureInfo *feature) {
 #endif
         break;
       }
-      case kFeatureDither: {
+      case kFeatureDither:
+      case kFeatureSprDither: {
 #ifdef PP_DRM_ENABLE
         drm_msm_dither *dither = reinterpret_cast<drm_msm_dither *>(ptr);
         delete dither;
@@ -367,6 +373,10 @@ DisplayError HWColorManagerDrm::GetDrmPCC(const PPFeatureInfo &in_data,
   }
 
   mdp_pcc->flags = 0;
+#ifdef PCC_BEFORE
+  if (sde_pcc->flags & SDM_PCC_BEFORE_POS)
+    mdp_pcc->flags |= PCC_BEFORE;
+#endif
 
   for (i = 0; i < kMaxPCCChanel; i++) {
     switch (i) {
@@ -417,6 +427,7 @@ DisplayError HWColorManagerDrm::GetDrmIGC(const PPFeatureInfo &in_data,
 
   switch (in_data.feature_version_) {
   case PPFeatureVersion::kSDEIgcV30:
+  case PPFeatureVersion::kSDEIgcV40:
   case kSourceFeatureV5:
     sde_igc = (struct SDEIgcV30LUTData *) in_data.GetConfigData();
     break;
@@ -457,11 +468,16 @@ DisplayError HWColorManagerDrm::GetDrmIGC(const PPFeatureInfo &in_data,
     return kErrorParameters;
   }
 
-  for (int i = 0; i < IGC_TBL_LEN; i++) {
+  int i;
+  for (i = 0; i < IGC_TBL_LEN; i++) {
     mdp_igc->c0[i] = c0_c1_data_ptr[i] & kIgcDataMask;
     mdp_igc->c1[i] = (c0_c1_data_ptr[i] >> kIgcShift) & kIgcDataMask;
     mdp_igc->c2[i] = c2_data_ptr[i] & kIgcDataMask;
   }
+  mdp_igc->c0_last = c0_c1_data_ptr[i] & kIgcDataMask;
+  mdp_igc->c1_last = (c0_c1_data_ptr[i] >> kIgcShift) & kIgcDataMask;
+  mdp_igc->c2_last = c2_data_ptr[i] & kIgcDataMask;
+
   out_data->payload = mdp_igc;
 #endif
   return ret;
@@ -886,6 +902,7 @@ DisplayError HWColorManagerDrm::GetDrmDither(const PPFeatureInfo &in_data,
                                              DRMPPFeatureInfo *out_data) {
   DisplayError ret = kErrorNone;
 #ifdef PP_DRM_ENABLE
+  // Programming is the same for PP dither vs SPR dither
   struct SDEDitherCfg *sde_dither = NULL;
   struct drm_msm_dither *mdp_dither = NULL;
 
@@ -909,6 +926,10 @@ DisplayError HWColorManagerDrm::GetDrmDither(const PPFeatureInfo &in_data,
   }
 
   mdp_dither->flags = 0;
+#ifdef DITHER_LUMA_MODE
+  if (sde_dither->flags & SDM_DITHER_LUMA_MODE)
+    mdp_dither->flags |= DITHER_LUMA_MODE;
+#endif
   std::memcpy(mdp_dither->matrix, sde_dither->dither_matrix,
                 sizeof(sde_dither->dither_matrix));
   mdp_dither->temporal_en = sde_dither->temporal_en;

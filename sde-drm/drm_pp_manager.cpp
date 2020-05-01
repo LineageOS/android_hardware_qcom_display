@@ -158,6 +158,13 @@ void DRMPPManager::Init(const DRMPropertyManager &pm , uint32_t object_type) {
       pp_prop_map_[kFeatureDither].version = i - (uint32_t)DRMProperty::SDE_PP_DITHER_V1 + 1;
       DRM_LOGI("PP dither version %d, prop_id %d", pp_prop_map_[kFeatureDither].version,
                pp_prop_map_[kFeatureDither].prop_id);
+    }  else if (i >= (uint32_t)DRMProperty::SDE_DSPP_SPR_DITHER_V1 &&
+               i <= (uint32_t)DRMProperty::SDE_DSPP_SPR_DITHER_V1) {
+      pp_prop_map_[kFeatureSprDither].prop_enum = (DRMProperty)i;
+      pp_prop_map_[kFeatureSprDither].prop_id = pm.GetPropertyId((DRMProperty)i);
+      pp_prop_map_[kFeatureSprDither].version = i - (uint32_t)DRMProperty::SDE_DSPP_SPR_DITHER_V1 + 1;
+      DRM_LOGI("DSPP SPR dither version %d, prop_id %d", pp_prop_map_[kFeatureSprDither].version,
+               pp_prop_map_[kFeatureSprDither].prop_id);
     } else if (i >= (uint32_t)DRMProperty::SDE_VIG_3D_LUT_GAMUT_V5 &&
                i <= (uint32_t)DRMProperty::SDE_VIG_3D_LUT_GAMUT_V6) {
       pp_prop_map_[kFeatureVigGamut].prop_enum = (DRMProperty)i;

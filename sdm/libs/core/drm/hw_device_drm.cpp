@@ -108,6 +108,7 @@ using sde_drm::DRMSecurityLevel;
 using sde_drm::DRMCscType;
 using sde_drm::DRMMultiRectMode;
 using sde_drm::DRMSSPPLayoutIndex;
+using sde_drm::DRMCrtcInfo;
 
 namespace sdm {
 
@@ -1716,6 +1717,7 @@ DisplayError HWDeviceDRM::SetPPFeatures(PPFeaturesConfig *feature_list) {
   }
 
   int ret = 0;
+  DRMCrtcInfo crtc_info = {};
   PPFeatureInfo *feature = NULL;
 
   if (!hw_color_mgr_)
@@ -1731,20 +1733,26 @@ DisplayError HWDeviceDRM::SetPPFeatures(PPFeaturesConfig *feature_list) {
       break;
 
     hw_color_mgr_->ToDrmFeatureId(kDSPP, feature->feature_id_, &drm_id);
-    if (drm_id.empty())
+    if (drm_id.empty()) {
       continue;
+    } else if (drm_id.at(0) == DRMPPFeatureID::kFeatureDither) {
+      drm_mgr_intf_->GetCrtcInfo(token_.crtc_id, &crtc_info);
+      if (crtc_info.has_spr)
+        drm_id.at(0) = DRMPPFeatureID::kFeatureSprDither;
+    }
 
     kernel_params.id = drm_id.at(0);
     drm_mgr_intf_->GetCrtcPPInfo(token_.crtc_id, &kernel_params);
-    if (kernel_params.version == std::numeric_limits<uint32_t>::max()) {
+    if (kernel_params.version == std::numeric_limits<uint32_t>::max())
       crtc_feature = false;
-    }
+
     DLOGV_IF(kTagDriverConfig, "feature_id = %d", feature->feature_id_);
     for (DRMPPFeatureID id : drm_id) {
       if (id >= kPPFeaturesMax) {
         DLOGE("Invalid feature id %d", id);
         continue;
       }
+
       kernel_params.id = id;
       ret = hw_color_mgr_->GetDrmFeature(feature, &kernel_params);
       if (!ret && crtc_feature)
