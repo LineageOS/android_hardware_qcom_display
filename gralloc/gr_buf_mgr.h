@@ -88,6 +88,8 @@ class BufferManager {
         : handle(h), ion_handle_main(ih_main), ion_handle_meta(ih_meta) {}
     void IncRef() { ++ref_count; }
     bool DecRef() { return --ref_count == 0; }
+    uint64_t reserved_size = 0;
+    void *reserved_region_ptr = nullptr;
   };
 
   Error FreeBuffer(std::shared_ptr<Buffer> buf);
