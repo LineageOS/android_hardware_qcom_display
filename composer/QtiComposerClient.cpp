@@ -162,9 +162,7 @@ void QtiComposerClient::onVsync(hwc2_callback_data_t callbackData, hwc2_display_
 void QtiComposerClient::onVsync_2_4(hwc2_callback_data_t callbackData, hwc2_display_t display,
                                     int64_t timestamp, VsyncPeriodNanos vsyncPeriodNanos) {
   auto client = reinterpret_cast<QtiComposerClient*>(callbackData);
-  VsyncPeriodNanos vsync_period;
-  client->hwc_session_->GetDisplayVsyncPeriod(display, &vsync_period);
-  auto ret = client->callback24_->onVsync_2_4(display, timestamp, vsync_period);
+  auto ret = client->callback24_->onVsync_2_4(display, timestamp, vsyncPeriodNanos);
   ALOGW_IF(!ret.isOk(), "failed to send onVsync_2_4: %s. SF likely unavailable.",
            ret.description().c_str());
 }
