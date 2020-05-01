@@ -926,7 +926,7 @@ int HWCSession::DisplayConfigImpl::SetCWBOutputBuffer(uint32_t disp_id,
     return -1;
   }
 
-  if (disp_id != qdutils::DISPLAY_PRIMARY) {
+  if (disp_id != UINT32(DisplayConfig::DisplayType::kPrimary)) {
     DLOGE("Only supported for primary display at present.");
     return -1;
   }
@@ -939,6 +939,7 @@ int HWCSession::DisplayConfigImpl::SetCWBOutputBuffer(uint32_t disp_id,
   // Output buffer dump is not supported, if External or Virtual display is present.
   int external_dpy_index = hwc_session_->GetDisplayIndex(qdutils::DISPLAY_EXTERNAL);
   int virtual_dpy_index = hwc_session_->GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
+  int primary_dpy_index = hwc_session_->GetDisplayIndex(qdutils::DISPLAY_PRIMARY);
 
   if (((external_dpy_index != -1) && hwc_session_->hwc_display_[external_dpy_index]) ||
       ((virtual_dpy_index != -1) && hwc_session_->hwc_display_[virtual_dpy_index])) {
@@ -949,7 +950,7 @@ int HWCSession::DisplayConfigImpl::SetCWBOutputBuffer(uint32_t disp_id,
   // Mutex scope
   {
     SCOPE_LOCK(hwc_session_->locker_[HWC_DISPLAY_PRIMARY]);
-    if (!hwc_session_->hwc_display_[disp_id]) {
+    if (!hwc_session_->hwc_display_[primary_dpy_index]) {
       DLOGE("Display is not created yet.");
       return -1;
     }
