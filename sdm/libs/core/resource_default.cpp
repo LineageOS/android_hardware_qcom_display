@@ -330,7 +330,7 @@ DisplayError ResourceDefault::PostCommit(Handle display_ctx, HWLayers *hw_layers
   HWBlockType hw_block_type = display_resource_ctx->hw_block_type;
   uint64_t frame_count = display_resource_ctx->frame_count;
 
-  DLOGV_IF(kTagResources, "Resource for hw_block = %d, frame_count = %d", hw_block_type,
+  DLOGV_IF(kTagResources, "Resource for hw_block = %d, frame_count = %" PRIu64 , hw_block_type,
            frame_count);
 
   // handoff pipes which are used by splash screen

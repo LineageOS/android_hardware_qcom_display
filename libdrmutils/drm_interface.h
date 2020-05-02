@@ -486,6 +486,7 @@ enum struct SmartDMARevision {
 enum struct InlineRotationVersion {
   kInlineRotationNone,
   kInlineRotationV1,
+  kInlineRotationV2,
 };
 
 /* Per CRTC Resource Info*/

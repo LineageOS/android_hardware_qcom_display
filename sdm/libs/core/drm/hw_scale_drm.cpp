@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -160,6 +160,13 @@ void HWScaleDRM::SetScalerV2(const HWScaleData &scale_data, sde_drm_scaler_v2 *s
       det_enhance->adjust_c[i] = scale_data.detail_enhance.adjust_c[i];
     }
   }
+
+#ifdef SDE_DRM_INLINE_PREDOWNSCALE
+  scaler->pre_downscale_x_0 = scale_data.src_x_pre_down_scale_0;
+  scaler->pre_downscale_x_1 = scale_data.src_x_pre_down_scale_1;
+  scaler->pre_downscale_y_0 = scale_data.src_y_pre_down_scale_0;
+  scaler->pre_downscale_y_1 = scale_data.src_y_pre_down_scale_1;
+#endif
 
   return;
 }

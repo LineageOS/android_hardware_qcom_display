@@ -110,6 +110,8 @@ static InlineRotationVersion GetInRotVersion(sde_drm::InlineRotationVersion drm_
   switch (drm_version) {
     case sde_drm::InlineRotationVersion::kInlineRotationV1:
       return InlineRotationVersion::kInlineRotationV1;
+    case sde_drm::InlineRotationVersion::kInlineRotationV2:
+      return InlineRotationVersion::kInlineRotationV2;
     default:
       return kInlineRotationNone;
   }
@@ -242,12 +244,12 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
   DLOGI("Has UBWC = %d", hw_resource->has_ubwc);
   DLOGI("Has Micro Idle = %d", hw_resource->has_micro_idle);
   DLOGI("Has Concurrent Writeback = %d", hw_resource->has_concurrent_writeback);
-  DLOGI("Has Src Tonemap = %d", hw_resource->src_tone_map);
+  DLOGI("Has Src Tonemap = %lx", hw_resource->src_tone_map.to_ulong());
   DLOGI("Max Low Bw = %" PRIu64 "", hw_resource->dyn_bw_info.total_bw_limit[kBwVFEOn]);
-  DLOGI("Max High Bw = % " PRIu64 "", hw_resource->dyn_bw_info.total_bw_limit[kBwVFEOff]);
+  DLOGI("Max High Bw = %" PRIu64 "", hw_resource->dyn_bw_info.total_bw_limit[kBwVFEOff]);
   DLOGI("Max Pipe Bw = %" PRIu64 " KBps", hw_resource->dyn_bw_info.pipe_bw_limit[kBwVFEOn]);
   DLOGI("Max Pipe Bw High= %" PRIu64 " KBps", hw_resource->dyn_bw_info.pipe_bw_limit[kBwVFEOff]);
-  DLOGI("MaxSDEClock = % " PRIu64 " Hz", hw_resource->max_sde_clk);
+  DLOGI("MaxSDEClock = %d Hz", hw_resource->max_sde_clk);
   DLOGI("Clock Fudge Factor = %f", hw_resource->clk_fudge_factor);
   DLOGI("Prefill factors:");
   DLOGI("\tTiled_NV12 = %d", hw_resource->macrotile_nv12_factor);
@@ -263,7 +265,7 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
 
   DLOGI("Has Support for multiple bw limits shown below");
   for (int index = 0; index < kBwModeMax; index++) {
-    DLOGI("Mode-index=%d  total_bw_limit=%d and pipe_bw_limit=%d", index,
+    DLOGI("Mode-index=%d  total_bw_limit=%" PRIu64 " and pipe_bw_limit=%" PRIu64, index,
           hw_resource->dyn_bw_info.total_bw_limit[index],
           hw_resource->dyn_bw_info.pipe_bw_limit[index]);
   }
