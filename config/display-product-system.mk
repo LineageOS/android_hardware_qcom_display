@@ -12,4 +12,5 @@ PRODUCT_PACKAGES += libdisplayconfig \
                     libsmomo.qti \
                     liblayerext.qti \
                     libsmomoconfig.qti \
-                    libcomposerextn.qti
+                    libcomposerextn.qti \
+                    libdisplayconfig.qti
