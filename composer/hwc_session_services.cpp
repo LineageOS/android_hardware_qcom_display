@@ -802,14 +802,14 @@ int HWCSession::DisplayConfigImpl::SetLayerAsMask(uint32_t disp_id, uint64_t lay
 }
 
 int HWCSession::DisplayConfigImpl::GetDebugProperty(const std::string prop_name,
-                                                    std::string value) {
+                                                    std::string *value) {
   std::string vendor_prop_name = DISP_PROP_PREFIX;
   int error = -EINVAL;
   char val[64] = {};
 
   vendor_prop_name += prop_name.c_str();
   if (HWCDebugHandler::Get()->GetProperty(vendor_prop_name.c_str(), val) == kErrorNone) {
-    value = val;
+    *value = val;
     error = 0;
   }
 
@@ -889,13 +889,13 @@ int HWCSession::DisplayConfigImpl::IsBuiltInDisplay(uint32_t disp_id, bool *is_b
 }
 
 int HWCSession::DisplayConfigImpl::GetSupportedDSIBitClks(uint32_t disp_id,
-                                                           std::vector<uint64_t> bit_clks) {
+                                                          std::vector<uint64_t> *bit_clks) {
   SCOPE_LOCK(hwc_session_->locker_[disp_id]);
   if (!hwc_session_->hwc_display_[disp_id]) {
     return -EINVAL;
   }
 
-  hwc_session_->hwc_display_[disp_id]->GetSupportedDSIClock(&bit_clks);
+  hwc_session_->hwc_display_[disp_id]->GetSupportedDSIClock(bit_clks);
   return 0;
 }
 
