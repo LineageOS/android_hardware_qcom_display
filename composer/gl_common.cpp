@@ -100,9 +100,9 @@ void GLCommon::SetSourceBuffer(const private_handle_t *src_hnd) {
   }
 }
 
-void GLCommon::SetDestinationBuffer(const private_handle_t *dst_hnd) {
+void GLCommon::SetDestinationBuffer(const private_handle_t *dst_hnd, bool force_set) {
   DTRACE_SCOPED();
-  if (dst_hnd_ == dst_hnd) {
+  if (!force_set && (dst_hnd_ == dst_hnd)) {
     return;
   }
   EGLImageBuffer *dst_buffer = image_wrapper_.wrap(reinterpret_cast<const void *>(dst_hnd));
