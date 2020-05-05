@@ -61,7 +61,7 @@ class GLCommon {
   virtual void DumpShaderLog(int shader);
   virtual void MakeCurrent(const GLContext *ctx);
   virtual void SetProgram(uint32_t id);
-  virtual void SetDestinationBuffer(const private_handle_t *dst_hnd);
+  virtual void SetDestinationBuffer(const private_handle_t *dst_hnd, bool force_set = true);
   virtual void SetSourceBuffer(const private_handle_t *src_hnd);
   virtual void DestroyContext(GLContext *ctx);
   virtual void DeleteProgram(uint32_t id);
