@@ -340,6 +340,18 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   // In case driver doesn't report bus width default to 256 bit bus.
   hw_resource->num_mnocports = info.num_mnocports ? info.num_mnocports : 2;
   hw_resource->mnoc_bus_width = info.mnoc_bus_width ? info.mnoc_bus_width : 32;
+  hw_resource->use_baselayer_for_stage = info.use_baselayer_for_stage;
+  hw_resource->line_width_constraints_count = info.line_width_constraints_count;
+  if (info.line_width_constraints_count) {
+    auto &width_constraints = hw_resource->line_width_constraints;
+    hw_resource->line_width_limits = std::move(info.line_width_limits);
+    width_constraints.push_back(std::make_pair(kPipeVigLimit, info.vig_limit_index));
+    width_constraints.push_back(std::make_pair(kPipeDmaLimit, info.dma_limit_index));
+    width_constraints.push_back(std::make_pair(kPipeScalingLimit, info.scaling_limit_index));
+    width_constraints.push_back(std::make_pair(kPipeRotationLimit, info.rotation_limit_index));
+  }
+  // Use fudge factor as 1.5 if not reported
+  hw_resource->vbif_cmd_ff = (info.vbif_cmd_ff > 0.0f) ? info.vbif_cmd_ff : 1.5f;
 }
 
 void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
@@ -418,9 +430,10 @@ void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
     pipe_caps.id = pipe_obj.first;
     pipe_caps.master_pipe_id = pipe_obj.second.master_plane_id;
     pipe_caps.block_sec_ui = pipe_obj.second.block_sec_ui;
-    DLOGI("Adding %s Pipe : Id %d, master_pipe_id : Id %d block_sec_ui: %d",
+    pipe_caps.hw_block_mask = pipe_obj.second.hw_block_mask;
+    DLOGI("Adding %s Pipe : Id %d, master_pipe_id : Id %d block_sec_ui: %d hw_block_mask: 0x%x",
           name.c_str(), pipe_obj.first, pipe_obj.second.master_plane_id,
-          pipe_obj.second.block_sec_ui);
+          pipe_obj.second.block_sec_ui, pipe_obj.second.hw_block_mask.to_ulong());
     pipe_caps.inverse_pma = pipe_obj.second.inverse_pma;
     pipe_caps.dgm_csc_version = pipe_obj.second.dgm_csc_version;
     // disable src tonemap feature if its disabled using property.
@@ -753,10 +766,25 @@ void HWInfoDRM::GetSDMFormat(uint32_t drm_format, uint64_t drm_format_modifier,
 }
 
 DisplayError HWInfoDRM::GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_disp_info) {
+  HWDisplaysInfo hw_displays_info;
+  DisplayError error = kErrorNone;
+
   hw_disp_info->type = kBuiltIn;
   hw_disp_info->is_connected = true;
 
-  return kErrorNone;
+  error = GetDisplaysStatus(&hw_displays_info);
+  if (error == kErrorNone) {
+    for (auto &iter : hw_displays_info) {
+      auto &info = iter.second;
+      if (info.is_primary) {
+        hw_disp_info->type = info.display_type;
+        hw_disp_info->is_connected = info.is_connected;
+        break;
+      }
+    }
+  }
+
+  return error;
 }
 
 DisplayError HWInfoDRM::GetDisplaysStatus(HWDisplaysInfo *hw_displays_info) {
