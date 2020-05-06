@@ -158,6 +158,7 @@ DisplayError HWPeripheralDRM::Validate(HWLayers *hw_layers) {
   SetDestScalarData(hw_layer_info);
   SetupConcurrentWriteback(hw_layer_info, true, nullptr);
   SetIdlePCState();
+  SetSelfRefreshState();
 
   return HWDeviceDRM::Validate(hw_layers);
 }
@@ -170,6 +171,7 @@ DisplayError HWPeripheralDRM::Commit(HWLayers *hw_layers) {
   bool has_fence = SetupConcurrentWriteback(hw_layer_info, false, &cwb_fence_fd);
 
   SetIdlePCState();
+  SetSelfRefreshState();
 
   DisplayError error = HWDeviceDRM::Commit(hw_layers);
   if (error != kErrorNone) {
@@ -189,6 +191,7 @@ DisplayError HWPeripheralDRM::Commit(HWLayers *hw_layers) {
   // Initialize to default after successful commit
   synchronous_commit_ = false;
   idle_pc_state_ = sde_drm::DRMIdlePCState::NONE;
+  self_refresh_enabled_ = false;
 
   return error;
 }
@@ -255,6 +258,13 @@ void HWPeripheralDRM::CacheDestScalarData() {
       dest_scalar_cache_[i].scalar_data = scalar_data_[i];
     }
     needs_ds_update_ = false;
+  }
+}
+
+void HWPeripheralDRM::SetSelfRefreshState() {
+  if (self_refresh_enabled_) {
+    drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_CACHE_STATE, token_.crtc_id,
+                              sde_drm::DRMCacheState::ENABLED);
   }
 }
 
@@ -695,6 +705,11 @@ DisplayError HWPeripheralDRM::GetPanelBrightnessBasePath(std::string *base_path)
   }
 
   *base_path = brightness_base_path_;
+  return kErrorNone;
+}
+
+DisplayError HWPeripheralDRM::EnableSelfRefresh() {
+  self_refresh_enabled_ = true;
   return kErrorNone;
 }
 

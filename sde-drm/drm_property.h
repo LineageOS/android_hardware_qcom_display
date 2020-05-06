@@ -168,6 +168,7 @@ enum struct DRMProperty {
   FRAME_TRIGGER,
   COLORSPACE,
   SUPPORTED_COLORSPACES,
+  CACHE_STATE,
 
   // Insert above
   MAX

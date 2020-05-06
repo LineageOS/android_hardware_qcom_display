@@ -106,7 +106,8 @@ int DRMAtomicReq::Perform(DRMOps opcode, uint32_t obj_id, ...) {
     case DRMOps::CRTC_SET_IDLE_TIMEOUT:
     case DRMOps::CRTC_SET_DEST_SCALER_CONFIG:
     case DRMOps::CRTC_SET_CAPTURE_MODE:
-    case DRMOps::CRTC_SET_IDLE_PC_STATE: {
+    case DRMOps::CRTC_SET_IDLE_PC_STATE:
+    case DRMOps::CRTC_SET_CACHE_STATE: {
       drm_mgr_->GetCrtcMgr()->Perform(opcode, obj_id, drm_atomic_req_, args);
     } break;
     case DRMOps::CONNECTOR_SET_CRTC:

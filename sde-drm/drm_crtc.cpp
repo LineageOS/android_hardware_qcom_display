@@ -70,6 +70,10 @@ static uint8_t IDLE_PC_STATE_NONE = 0;
 static uint8_t IDLE_PC_STATE_ENABLE = 1;
 static uint8_t IDLE_PC_STATE_DISABLE = 2;
 
+// CRTC Cache States
+static uint8_t CACHE_STATE_DISABLED = 0;
+static uint8_t CACHE_STATE_ENABLED = 1;
+
 static void PopulateSecurityLevels(drmModePropertyRes *prop) {
   static bool security_levels_populated = false;
   if (!security_levels_populated) {
@@ -114,6 +118,21 @@ static void PopulateIdlePCStates(drmModePropertyRes *prop) {
       }
     }
     idle_pc_state_populated = true;
+  }
+}
+
+static void PopulateCacheStates(drmModePropertyRes *prop) {
+  static bool cache_states_populated = false;
+  if (!cache_states_populated) {
+    for (auto i = 0; i < prop->count_enums; i++) {
+      string enum_name(prop->enums[i].name);
+      if (enum_name == "cache_state_disabled") {
+        CACHE_STATE_DISABLED = prop->enums[i].value;
+      } else if (enum_name == "cache_state_enabled") {
+        CACHE_STATE_ENABLED = prop->enums[i].value;
+      }
+    }
+    cache_states_populated = true;
   }
 }
 
@@ -301,6 +320,10 @@ void DRMCrtc::ParseProperties() {
 
     if (prop_enum == DRMProperty::IDLE_PC_STATE) {
       PopulateIdlePCStates(info);
+    }
+
+    if (prop_enum == DRMProperty::CACHE_STATE) {
+      PopulateCacheStates(info);
     }
 
     prop_mgr_.SetPropertyId(prop_enum, info->prop_id);
@@ -741,6 +764,16 @@ void DRMCrtc::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
                   true /* cache */, tmp_prop_val_map_);
       DRM_LOGD("CRTC %d: Set idle_pc_state %d", obj_id, idle_pc_state);
     }; break;
+
+    case DRMOps::CRTC_SET_CACHE_STATE: {
+      int cache_state = va_arg(args, int);
+      uint32_t crtc_cache_state = CACHE_STATE_DISABLED;
+      if (cache_state == (int)DRMCacheState::ENABLED) {
+        crtc_cache_state = CACHE_STATE_ENABLED;
+      }
+      AddProperty(req, obj_id, prop_mgr_.GetPropertyId(DRMProperty::CACHE_STATE),
+                  crtc_cache_state, false /* cache */, tmp_prop_val_map_);
+    } break;
 
     default:
       DRM_LOGE("Invalid opcode %d to set the property on crtc %d", code, obj_id);

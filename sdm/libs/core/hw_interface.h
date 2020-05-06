@@ -130,6 +130,7 @@ class HWInterface {
   virtual DisplayError SetBLScale(uint32_t level) = 0;
   virtual DisplayError GetPanelBrightnessBasePath(std::string *base_path) = 0;
   virtual DisplayError SetBlendSpace(const PrimariesTransfer &blend_space) = 0;
+  virtual DisplayError EnableSelfRefresh() = 0;
 
  protected:
   virtual ~HWInterface() { }

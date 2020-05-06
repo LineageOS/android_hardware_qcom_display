@@ -306,6 +306,12 @@ enum struct DRMOps {
    */
   CRTC_SET_IDLE_PC_STATE,
   /*
+   * Op: Sets Cache state for CRTC.
+   * Arg: uint32_t - CRTC ID
+   *      uint32_t - Cache state
+   */
+  CRTC_SET_CACHE_STATE,
+  /*
    * Op: Returns retire fence for this commit. Should be called after Commit() on
    * DRMAtomicReqInterface.
    * Arg: uint32_t - Connector ID
@@ -833,6 +839,11 @@ enum struct DRMQsyncMode {
   NONE = 0,
   CONTINUOUS,
   ONESHOT,
+};
+
+enum struct DRMCacheState {
+  DISABLED = 0,
+  ENABLED,
 };
 
 enum struct DRMTopologyControl {
