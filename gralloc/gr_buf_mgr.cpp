@@ -26,6 +26,7 @@
 #include <gralloctypes/Gralloc4.h>
 #include <sys/mman.h>
 
+#include <algorithm>
 #include <iomanip>
 #include <sstream>
 #include <string>
