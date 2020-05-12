@@ -56,6 +56,8 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayBuiltIn(int32_t display_id, DisplayEventHandler *event_handler,
                  HWInfoInterface *hw_info_intf, BufferSyncHandler *buffer_sync_handler,
                  BufferAllocator *buffer_allocator, CompManager *comp_manager);
+  virtual ~DisplayBuiltIn();
+
   virtual DisplayError Init();
   virtual DisplayError Deinit();
   virtual DisplayError Prepare(LayerStack *layer_stack);
@@ -95,9 +97,9 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   virtual DisplayError DppsProcessOps(enum DppsOps op, void *payload, size_t size);
 
  private:
-  bool NeedsAVREnable();
   bool CanCompareFrameROI(LayerStack *layer_stack);
   bool CanSkipDisplayPrepare(LayerStack *layer_stack);
+  HWAVRModes GetAvrMode(QSyncMode mode);
 
   std::vector<HWEvent> event_list_;
   bool avr_prop_disabled_ = false;
@@ -105,9 +107,10 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   bool handle_idle_timeout_ = false;
   bool commit_event_enabled_ = false;
   DppsInfo dpps_info_ = {};
-  QSyncMode qsync_mode_ = kQSyncModeNone;
   LayerRect left_frame_roi_ = {};
   LayerRect right_frame_roi_ = {};
+  bool first_cycle_ = true;
+  int previous_retire_fence_ = -1;
 };
 
 }  // namespace sdm

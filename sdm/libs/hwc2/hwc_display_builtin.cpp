@@ -264,7 +264,7 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
 
   if (layer_set_.empty()) {
     // Avoid flush for Command mode panel.
-    flush_ = !(IsDisplayCommandMode() && active_secure_sessions_[kSecureDisplay]);
+    flush_ = !client_connected_;
     validated_ = true;
     return status;
   }
@@ -889,6 +889,13 @@ DisplayError HWCDisplayBuiltIn::GetMixerResolution(uint32_t *width, uint32_t *he
 }
 
 HWC2::Error HWCDisplayBuiltIn::SetQSyncMode(QSyncMode qsync_mode) {
+  // Client needs to ensure that config change and qsync mode change
+  // are not triggered in the same drawcycle.
+  if (pending_config_) {
+    DLOGE("Failed to set qsync mode. Pending active config transition");
+    return HWC2::Error::Unsupported;
+  }
+
   auto err = display_intf_->SetQSyncMode(qsync_mode);
   if (err != kErrorNone) {
     return HWC2::Error::Unsupported;

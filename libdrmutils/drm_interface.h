@@ -34,6 +34,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <bitset>
 
 #include "xf86drm.h"
 #include "xf86drmMode.h"
@@ -507,8 +508,16 @@ struct DRMCrtcInfo {
   uint32_t min_prefill_lines = 0;
   int secure_disp_blend_stage = -1;
   bool concurrent_writeback = false;
-  uint32_t num_mnocports;
-  uint32_t mnoc_bus_width;
+  uint32_t num_mnocports = 0;
+  uint32_t mnoc_bus_width = 0;
+  bool use_baselayer_for_stage = false;
+  uint32_t vig_limit_index = 0;
+  uint32_t dma_limit_index = 0;
+  uint32_t scaling_limit_index = 0;
+  uint32_t rotation_limit_index = 0;
+  uint32_t line_width_constraints_count = 0;
+  std::vector< std::pair <uint32_t, uint32_t> > line_width_limits;
+  float vbif_cmd_ff = 0.0f;
 };
 
 enum struct DRMPlaneType {
@@ -551,6 +560,8 @@ struct DRMPlaneTypeInfo {
   uint32_t dgm_csc_version = 0;  // csc used with DMA
   std::map<DRMTonemapLutType, uint32_t> tonemap_lut_version_map = {};
   bool block_sec_ui = false;
+  // Allow all planes to be usable on all displays by default
+  std::bitset<32> hw_block_mask = std::bitset<32>().set();
 };
 
 // All DRM Planes as map<Plane_id , plane_type_info> listed from highest to lowest priority
@@ -776,6 +787,7 @@ enum struct DRMCWbCaptureMode {
 enum struct DRMQsyncMode {
   NONE = 0,
   CONTINUOUS,
+  ONESHOT,
 };
 
 enum struct DRMTopologyControl {

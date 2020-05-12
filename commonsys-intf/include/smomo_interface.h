@@ -39,6 +39,15 @@
 
 namespace smomo {
 
+#define SMOMO_LIBRARY_NAME "libsmomo.qti.so"
+#define CREATE_SMOMO_INTERFACE_NAME "CreateSmomoInterface"
+#define DESTROY_SMOMO_INTERFACE_NAME "DestroySmomoInterface"
+
+#define SMOMO_REVISION_MAJOR (1)
+#define SMOMO_REVISION_MINOR (0)
+#define SMOMO_VERSION_TAG ((uint16_t) ((SMOMO_REVISION_MAJOR << 8) \
+                                          | SMOMO_REVISION_MINOR))
+
 typedef int64_t nsecs_t;
 
 /*! @brief This structure defines the layer stats required by SmoMo.
@@ -47,7 +56,7 @@ typedef int64_t nsecs_t;
 */
 struct SmomoLayerStats {
   std::string name;  // layer full name
-  int32_t id;    // layer ID
+  int32_t id;  // layer ID
 };
 
 /*! @brief This structure defines the buffer stats required by SmoMo.
@@ -56,10 +65,11 @@ struct SmomoLayerStats {
   @sa SmomoIntf::ShouldPresentNow
 */
 struct SmomoBufferStats {
-  int32_t id;    // layer ID
+  int32_t id;  // layer ID
   int32_t queued_frames;  // queued frame count of this layer
   bool auto_timestamp;  // whether timestamp was generated automatically
   nsecs_t timestamp;  // layer buffer's timestamp
+  nsecs_t dequeue_latency;  // last dequeue duration
 };
 
 /*! @brief SmoMo interface implemented by SmoMo library.
@@ -128,12 +138,15 @@ class SmomoIntf {
 
     @details This function is called to tell SmoMo what refresh rates this display can suport.
 
-    @param[in] refresh_rates The refresh rates list supported by the display
+    @param[in] refresh_rates The refresh rates supported by the display
 
     @return \link void \endlink
   */
   virtual void SetDisplayRefreshRates(const std::vector<float> &refresh_rates) = 0;
 };
+
+typedef bool (*CreateSmomoInterface)(uint16_t version, SmomoIntf **interface);
+typedef void (*DestroySmomoInterface)(SmomoIntf *interface);
 
 }  // namespace smomo
 

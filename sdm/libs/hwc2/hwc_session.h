@@ -20,7 +20,7 @@
 #ifndef __HWC_SESSION_H__
 #define __HWC_SESSION_H__
 
-#include <vendor/display/config/1.10/IDisplayConfig.h>
+#include <vendor/display/config/1.11/IDisplayConfig.h>
 
 #include <core/core_interface.h>
 #include <utils/locker.h>
@@ -45,7 +45,7 @@
 
 namespace sdm {
 
-using vendor::display::config::V1_10::IDisplayConfig;
+using vendor::display::config::V1_11::IDisplayConfig;
 using vendor::display::config::V1_10::IDisplayCWBCallback;
 
 using ::android::hardware::Return;
@@ -331,6 +331,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   Return<int32_t> setCWBOutputBuffer(const ::android::sp<IDisplayCWBCallback> &callback,
                                      uint32_t disp_id, const Rect &rect, bool post_processed,
                                      const hidl_handle& buffer) override;
+  Return<int32_t> setQsyncMode(uint32_t disp_id, IDisplayConfig::QsyncMode mode) override;
 
   // QClient methods
   virtual android::status_t notifyCallback(uint32_t command, const android::Parcel *input_parcel,
@@ -380,6 +381,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   bool IsPluggableDisplayConnected();
   hwc2_display_t GetActiveBuiltinDisplay();
   void HandlePendingRefresh();
+  void NotifyClientStatus(bool connected);
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};

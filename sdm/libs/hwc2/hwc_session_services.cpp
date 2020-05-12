@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -713,6 +713,14 @@ Return<bool> HWCSession::isHDRSupported(uint32_t disp_id) {
     DLOGE("Not valid display");
     return false;
   }
+  SCOPE_LOCK(locker_[disp_id]);
+
+  if (is_hdr_display_.size() <= disp_id) {
+    DLOGW("is_hdr_display_ is not initialized for display %d!! Reporting it as HDR not supported",
+          disp_id);
+    return false;
+  }
+
   return static_cast<bool>(is_hdr_display_[disp_id]);
 }
 
@@ -866,6 +874,32 @@ Return<int32_t> HWCSession::setCWBOutputBuffer(const ::android::sp<IDisplayCWBCa
                                                uint32_t disp_id, const Rect &rect,
                                                bool post_processed, const hidl_handle& buffer) {
   return -1;
+}
+
+Return<int32_t> HWCSession::setQsyncMode(uint32_t disp_id, IDisplayConfig::QsyncMode mode) {
+  SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_id]);
+  if (!hwc_display_[disp_id]) {
+    return -1;
+  }
+
+  QSyncMode qsync_mode = kQSyncModeNone;
+  switch (mode) {
+    case IDisplayConfig::QsyncMode::NONE:
+      qsync_mode = kQSyncModeNone;
+      break;
+    case IDisplayConfig::QsyncMode::WAIT_FOR_FENCES_ONE_FRAME:
+      qsync_mode = kQsyncModeOneShot;
+      break;
+    case IDisplayConfig::QsyncMode::WAIT_FOR_FENCES_EACH_FRAME:
+      qsync_mode = kQsyncModeOneShotContinuous;
+      break;
+    case IDisplayConfig::QsyncMode::WAIT_FOR_COMMIT_EACH_FRAME:
+      qsync_mode = kQSyncModeContinuous;
+      break;
+  }
+
+  hwc_display_[disp_id]->SetQSyncMode(qsync_mode);
+  return 0;
 }
 
 }  // namespace sdm

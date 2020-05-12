@@ -26,6 +26,10 @@ ifeq ($(TARGET_USES_FOD_ZPOS), true)
     LOCAL_CFLAGS                  += -DFOD_ZPOS
 endif
 
+ifeq ($(ENABLE_HYP),true)
+    LOCAL_CFLAGS += -DHYPERVISOR
+endif
+
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
 LOCAL_SRC_FILES               := core_interface.cpp \
                                  core_impl.cpp \

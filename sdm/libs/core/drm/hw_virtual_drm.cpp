@@ -233,6 +233,12 @@ DisplayError HWVirtualDRM::PowerOn(const HWQosData &qos_data, int *release_fence
     return kErrorUndefined;
   }
 
+  // Since fb id is not available until first draw cycle and driver expects fb id to be set on any
+  // commit(null or atomic commit). Need to defer power on for the first cycle.
+  if (first_cycle_) {
+    return kErrorNone;
+  }
+
   DisplayError err = HWDeviceDRM::PowerOn(qos_data, release_fence);
   if (err != kErrorNone) {
     return err;

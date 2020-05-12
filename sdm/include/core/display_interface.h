@@ -158,9 +158,10 @@ enum SecureEvent {
 
 /*! @brief This enum represents the QSync modes supported by the hardware. */
 enum QSyncMode {
-  kQSyncModeNone,        // This is set by the client to disable qsync
-  kQSyncModeContinuous,  // This is set by the client to enable qsync forever
-  kQsyncModeOneShot,     // This is set by client to enable qsync only for current frame.
+  kQSyncModeNone,               // This is set by the client to disable qsync
+  kQSyncModeContinuous,         // This is set by the client to enable qsync forever
+  kQsyncModeOneShot,            // This is set by client to enable qsync only for current frame.
+  kQsyncModeOneShotContinuous,  // This is set by client to enable qsync only for every commit.
 };
 
 /*! @brief This structure defines configuration for display dpps ad4 region of interest. */

@@ -147,7 +147,8 @@ DisplayError CompManager::RegisterDisplay(int32_t display_id, DisplayType type,
   }
 
   DLOGV_IF(kTagCompManager, "Registered displays [%s], configured displays [%s], display %d-%d",
-           StringDisplayList(registered_displays_), StringDisplayList(configured_displays_),
+           StringDisplayList(registered_displays_).c_str(),
+           StringDisplayList(configured_displays_).c_str(),
            display_comp_ctx->display_id, display_comp_ctx->display_type);
 
   return kErrorNone;
@@ -178,7 +179,8 @@ DisplayError CompManager::UnregisterDisplay(Handle display_ctx) {
   }
 
   DLOGV_IF(kTagCompManager, "Registered displays [%s], configured displays [%s], display %d-%d",
-           StringDisplayList(registered_displays_), StringDisplayList(configured_displays_),
+           StringDisplayList(registered_displays_).c_str(),
+           StringDisplayList(configured_displays_).c_str(),
            display_comp_ctx->display_id, display_comp_ctx->display_type);
 
   delete display_comp_ctx;
@@ -421,7 +423,8 @@ DisplayError CompManager::PostCommit(Handle display_ctx, HWLayers *hw_layers) {
   display_comp_ctx->idle_fallback = false;
 
   DLOGV_IF(kTagCompManager, "Registered displays [%s], configured displays [%s], display %d-%d",
-           StringDisplayList(registered_displays_), StringDisplayList(configured_displays_),
+           StringDisplayList(registered_displays_).c_str(),
+           StringDisplayList(configured_displays_).c_str(),
            display_comp_ctx->display_id, display_comp_ctx->display_type);
 
   return kErrorNone;
@@ -580,7 +583,7 @@ bool CompManager::SetDisplayState(Handle display_ctx, DisplayState state, int sy
     Purge(display_ctx);
     configured_displays_.erase(display_comp_ctx->display_id);
     DLOGV_IF(kTagCompManager, "Configured displays = [%s]",
-             StringDisplayList(configured_displays_));
+             StringDisplayList(configured_displays_).c_str());
     powered_on_displays_.erase(display_comp_ctx->display_id);
     break;
 
@@ -621,7 +624,7 @@ DisplayError CompManager::SetColorModesInfo(Handle display_ctx,
   return kErrorNone;
 }
 
-const char *CompManager::StringDisplayList(const std::set<int32_t> &displays) {
+std::string CompManager::StringDisplayList(const std::set<int32_t> &displays) {
   std::string displays_str;
   for (auto disps : displays) {
     if (displays_str.empty()) {
@@ -630,7 +633,7 @@ const char *CompManager::StringDisplayList(const std::set<int32_t> &displays) {
       displays_str += ", " + std::to_string(disps);
     }
   }
-  return displays_str.c_str();
+  return displays_str;
 }
 
 DisplayError CompManager::SetBlendSpace(Handle display_ctx, const PrimariesTransfer &blend_space) {

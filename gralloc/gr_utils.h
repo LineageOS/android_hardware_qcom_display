@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016,2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016,2018-2019, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -68,6 +68,63 @@ inline Type1 ALIGN(Type1 x, Type2 align) {
   return (Type1)((x + (Type1)align - 1) & ~((Type1)align - 1));
 }
 
+enum PlaneComponent {
+  /* luma */
+  PLANE_COMPONENT_Y = 1 << 0,
+  /* chroma blue */
+  PLANE_COMPONENT_Cb = 1 << 1,
+  /* chroma red */
+  PLANE_COMPONENT_Cr = 1 << 2,
+
+  /* red */
+  PLANE_COMPONENT_R = 1 << 10,
+  /* green */
+  PLANE_COMPONENT_G = 1 << 11,
+  /* blue */
+  PLANE_COMPONENT_B = 1 << 12,
+
+  /* alpha */
+  PLANE_COMPONENT_A = 1 << 20,
+
+  /* raw data plane */
+  PLANE_COMPONENT_RAW = 1 << 30,
+
+  /* meta information plane */
+  PLANE_COMPONENT_META = 1 << 31,
+};
+
+struct PlaneLayoutInfo {
+  /** Components represented the type of plane. */
+  PlaneComponent component;
+
+  /** horizontal subsampling. Must be a positive power of 2. */
+  uint32_t h_subsampling;
+
+  /** vertical subsampling. Must be a positive power of 2. */
+  uint32_t v_subsampling;
+
+  /** offset to the first byte of the top-left pixel of the plane
+   *  and it is calculated from the start of the buffer.
+   *  Add base of the handle with offset to get the first byte of the plane.
+   */
+  uint32_t offset;
+
+  /** step is the distance in bytes from one pixel value to the next. */
+  int32_t step;
+
+  /** stride of the plane in pixels */
+  int32_t stride;
+
+  /** stride of the plane in in bytes */
+  int32_t stride_bytes;
+
+  /** plane height or vertical stride */
+  int32_t scanlines;
+
+  /** size of the plane in bytes */
+  uint32_t size;
+};
+
 bool IsYuvFormat(int format);
 bool IsCompressedRGBFormat(int format);
 bool IsUncompressedRGBFormat(int format);
@@ -85,6 +142,14 @@ void GetColorSpaceFromMetadata(private_handle_t *hnd, int *color_space);
 void GetAlignedWidthAndHeight(const BufferInfo &d, unsigned int *aligned_w,
                               unsigned int *aligned_h);
 int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]);
+int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32_t height,
+                    int32_t flags, int *plane_count, PlaneLayoutInfo plane_info[8]);
+void GetRGBPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32_t height,
+                     int32_t flags, int *plane_count, PlaneLayoutInfo *plane_info);
+unsigned int GetRgbMetaSize(int format, uint32_t width, uint32_t height, uint64_t usage);
+void GetYuvSubSamplingFactor(int32_t format, int *h_subsampling, int *v_subsampling);
+void CopyPlaneLayoutInfotoAndroidYcbcr(uint64_t base, int plane_count, PlaneLayoutInfo *plane_info,
+                                       struct android_ycbcr *ycbcr);
 int GetRgbDataAddress(private_handle_t *hnd, void **rgb_data);
 bool IsUBwcFormat(int format);
 bool IsUBwcSupported(int format);
@@ -92,12 +157,12 @@ bool IsUBwcPISupported(int format, uint64_t usage);
 bool IsUBwcEnabled(int format, uint64_t usage);
 void GetYuvUBwcWidthAndHeight(int width, int height, int format, unsigned int *aligned_w,
                               unsigned int *aligned_h);
-void GetYuvSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height, uint32_t bpp,
-                       struct android_ycbcr *ycbcr);
-void GetYuvUbwcSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height, int color_format,
-                           struct android_ycbcr *ycbcr);
-void GetYuvUbwcInterlacedSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height,
-                                     int color_format, struct android_ycbcr ycbcr[2]);
+void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint32_t height,
+                       uint32_t bpp, PlaneLayoutInfo *plane_info);
+void GetYuvUbwcSPPlaneInfo(uint32_t width, uint32_t height, int color_format,
+                           PlaneLayoutInfo *plane_info);
+void GetYuvUbwcInterlacedSPPlaneInfo(uint32_t width, uint32_t height,
+                                     PlaneLayoutInfo plane_info[8]);
 void GetRgbUBwcBlockSize(uint32_t bpp, int *block_width, int *block_height);
 unsigned int GetRgbUBwcMetaBufferSize(int width, int height, uint32_t bpp);
 unsigned int GetUBwcSize(int width, int height, int format, unsigned int alignedw,
@@ -116,6 +181,7 @@ int GetImplDefinedFormat(uint64_t usage, int format);
 int GetCustomFormatFlags(int format, uint64_t usage, int *custom_format, uint64_t *priv_flags);
 int GetBufferType(int inputFormat);
 bool IsGPUFlagSupported(uint64_t usage);
+bool HasAlphaComponent(int32_t format);
 }  // namespace gralloc
 
 #endif  // __GR_UTILS_H__
