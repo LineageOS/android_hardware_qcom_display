@@ -72,7 +72,7 @@ DisplayError HWPeripheralDRM::Init() {
 }
 
 void HWPeripheralDRM::InitDestScaler() {
-  if (hw_panel_info_.is_primary_panel && hw_resource_.hw_dest_scalar_info.count) {
+  if (hw_resource_.hw_dest_scalar_info.count) {
     // Do all destination scaler block resource allocations here.
     dest_scaler_blocks_used_ = 1;
     if (kQuadSplit == mixer_attributes_.split_type) {
