@@ -139,6 +139,27 @@ bool Debug::IsScalarDisabled() {
   return (value == 1);
 }
 
+bool Debug::IsSrcDEDisabled() {
+  int value = 0;
+  debug_.debug_handler_->GetProperty(DISABLE_SRC_DE_PROP, &value);
+
+  return (value == 1);
+}
+
+bool Debug::IsSrcQualityDisabled() {
+  int value = 0;
+  debug_.debug_handler_->GetProperty(DISABLE_SRC_QUALITY_PROP, &value);
+
+  return (value == 1);
+}
+
+int Debug::GetDESharpness() {
+  int value = -101;
+  debug_.debug_handler_->GetProperty(DE_SHARPNESS_PROP, &value);
+
+  return value;
+}
+
 bool Debug::IsUbwcTiledFrameBuffer() {
   int ubwc_disabled = 0;
   int ubwc_framebuffer = 0;

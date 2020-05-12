@@ -64,6 +64,7 @@ class HWCDisplayExternal : public HWCDisplay {
   DisplayNull display_null_;
   int underscan_width_ = 0;
   int underscan_height_ = 0;
+  uint32_t active_config_ = 0;
 };
 
 }  // namespace sdm

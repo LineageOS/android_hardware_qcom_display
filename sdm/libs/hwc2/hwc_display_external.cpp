@@ -224,6 +224,7 @@ int HWCDisplayExternal::SetState(bool connected) {
       // Restore HDMI attributes when display is reconnected.
       // This is to ensure that surfaceflinger & sdm are in sync.
       display_null_.GetFrameBufferConfig(&fb_config);
+      SetActiveDisplayConfig(active_config_);
       int status = SetFrameBufferResolution(fb_config.x_pixels, fb_config.y_pixels);
       if (status) {
         DLOGW("Set frame buffer config failed. Error = %d", error);
@@ -256,6 +257,7 @@ int HWCDisplayExternal::SetState(bool connected) {
       display_null_.SetFrameBufferConfig(fb_config);
 
       SetVsyncEnabled(HWC2::Vsync::Disable);
+      GetActiveDisplayConfig(&active_config_);
       core_intf_->DestroyDisplay(display_intf_);
       display_intf_ = &display_null_;
 
