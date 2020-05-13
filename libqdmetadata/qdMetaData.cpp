@@ -177,7 +177,7 @@ int setMetaDataVa(MetaData_t *data, DispParamType paramType,
             data->refreshrate = *((float *)param);
             break;
         case UPDATE_COLOR_SPACE: {
-          ColorMetaData color;
+          ColorMetaData color = {};
           if (!colorSpaceToColorMetadata(*((ColorSpace_t *)param), &color)) {
             data->color = color;
           }
