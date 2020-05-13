@@ -455,7 +455,8 @@ DisplayError HWColorManagerDrm::GetDrmIGC(const PPFeatureInfo &in_data,
     return kErrorMemory;
   }
 
-  mdp_igc->flags = IGC_DITHER_ENABLE;
+  if (sde_igc->flags & IGC_DITHER_EN)
+    mdp_igc->flags = IGC_DITHER_ENABLE;
   mdp_igc->strength = sde_igc->strength;
 
   c0_c1_data_ptr = reinterpret_cast<uint32_t*>(sde_igc->c0_c1_data);
