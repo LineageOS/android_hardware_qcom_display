@@ -115,6 +115,10 @@ static const std::string kAmazon = "amazon";
 static const std::string kNetflix = "netflix";
 static const std::string kEnhanced = "enhanced";
 
+// Color feature flags
+#define SDM_DITHER_LUMA_MODE 0x1
+#define SDM_PCC_BEFORE_POS 0x1
+
 // Enum to identify type of dynamic range of color mode.
 enum DynamicRangeType {
   kSdrType,
@@ -183,6 +187,7 @@ struct PPFeatureVersion {
   static const uint32_t kSDEIgcV30 = 17;
   static const uint32_t kSDEGamutV4 = 18;
   static const uint32_t kSDEPccV4 = 19;
+  static const uint32_t kSDEIgcV40 = 20;
 
   uint32_t version[kMaxNumPPFeatures];
   PPFeatureVersion() { memset(version, 0, sizeof(version)); }
@@ -313,6 +318,7 @@ struct SDEPccCfg {
 
   static SDEPccCfg *Init(uint32_t arg __attribute__((__unused__)));
   SDEPccCfg *GetConfig() { return this; }
+  uint64_t flags = 0;
 };
 
 struct SDEPccV4Coeff {
@@ -336,6 +342,7 @@ struct SDEPccV4Cfg {
 
   static SDEPccV4Cfg *Init(uint32_t arg __attribute__((__unused__)));
   SDEPccV4Cfg *GetConfig() { return this; }
+  uint64_t flags = 0;
 };
 
 struct SDEDitherCfg {
@@ -345,6 +352,7 @@ struct SDEDitherCfg {
   uint32_t length;
   uint32_t dither_matrix[16];
   uint32_t temporal_en;
+  uint32_t flags;
 
   static SDEDitherCfg *Init(uint32_t arg __attribute__((__unused__)));
   SDEDitherCfg *GetConfig() { return this; }
@@ -405,7 +413,7 @@ struct SDEPaData {
 };
 
 struct SDEIgcLUTData {
-  static const int kMaxIgcLUTEntries = 256;
+  static const int kMaxIgcLUTEntries = 257;
   uint32_t table_fmt = 0;
   uint32_t len = 0;
   uint32_t *c0_c1_data = NULL;
@@ -413,7 +421,7 @@ struct SDEIgcLUTData {
 };
 
 struct SDEIgcV30LUTData {
-  static const int kMaxIgcLUTEntries = 256;
+  static const int kMaxIgcLUTEntries = 257;
   uint32_t table_fmt = 0;
   uint32_t len = 0;
   uint64_t c0_c1_data = 0;

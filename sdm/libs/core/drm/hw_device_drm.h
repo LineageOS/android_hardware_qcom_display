@@ -34,6 +34,7 @@
 #include <errno.h>
 #include <pthread.h>
 #include <xf86drmMode.h>
+#include <atomic>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -130,7 +131,7 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError GetPanelBrightnessBasePath(std::string *base_path) {
     return kErrorNotSupported;
   }
-  DisplayError SetBlendSpace(const PrimariesTransfer &blend_space);
+  virtual DisplayError SetBlendSpace(const PrimariesTransfer &blend_space);
 
   enum {
     kHWEventVSync,
@@ -241,6 +242,9 @@ class HWDeviceDRM : public HWInterface {
   bool pending_doze_ = false;
   PrimariesTransfer blend_space_ = {};
   DRMPowerMode last_power_mode_ = DRMPowerMode::OFF;
+  uint32_t dest_scaler_blocks_used_ = 0;  // Dest scaler blocks in use by this HWDeviceDRM instance.
+  // Destination scaler blocks in use by all HWDeviceDRM instances.
+  static std::atomic<uint32_t> hw_dest_scaler_blocks_used_;
 
  private:
   std::string interface_str_ = "DSI";

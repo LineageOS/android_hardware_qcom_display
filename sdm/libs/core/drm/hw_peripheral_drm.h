@@ -71,6 +71,7 @@ class HWPeripheralDRM : public HWDeviceDRM {
   virtual DisplayError GetPanelBrightnessBasePath(std::string *base_path);
 
  private:
+  void InitDestScaler();
   void SetDestScalarData(const HWLayersInfo &hw_layer_info);
   void ResetDestScalarCache();
   DisplayError SetupConcurrentWritebackModes();

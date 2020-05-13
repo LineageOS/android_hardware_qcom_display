@@ -22,37 +22,18 @@ LOCAL_SHARED_LIBRARIES        := libhistogram libbinder libhardware libutils lib
                                  libsdmcore libqservice libqdutils libqdMetaData \
                                  libdisplaydebug libsdmutils libgrallocutils libui \
                                  libgpu_tonemapper libEGL libGLESv2 libGLESv3 \
-                                 vendor.qti.hardware.display.composer@1.0 \
-                                 vendor.qti.hardware.display.composer@2.0 \
-                                 vendor.qti.hardware.display.composer@2.1 \
+                                 vendor.qti.hardware.display.composer@3.0 \
                                  android.hardware.graphics.composer@2.1 \
                                  android.hardware.graphics.composer@2.2 \
                                  android.hardware.graphics.composer@2.3 \
+                                 android.hardware.graphics.composer@2.4 \
                                  android.hardware.graphics.mapper@2.0 \
                                  android.hardware.graphics.mapper@2.1 \
                                  android.hardware.graphics.mapper@3.0 \
                                  android.hardware.graphics.allocator@2.0 \
                                  android.hardware.graphics.allocator@3.0 \
-                                 vendor.display.config@1.0 \
+                                 libdisplayconfig.qti \
                                  libdrm
-
-ifneq ($(DISPLAY_CONFIG_VERSION), DISPLAY_CONFIG_VERSION_OPTIMAL)
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.1
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.2
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.3
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.4
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.5
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.6
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.7
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.8
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.9
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.10
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.11
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.12
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.13
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.14
-LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.15
-endif
 
 LOCAL_SRC_FILES               := QtiComposer.cpp QtiComposerClient.cpp service.cpp \
                                  QtiComposerHandleImporter.cpp \

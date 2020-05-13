@@ -35,8 +35,9 @@
 
 // TODO(user): recheck on this header inclusion
 #include <hardware/hwcomposer2.h>
-#include <vendor/qti/hardware/display/composer/2.1/IQtiComposer.h>
 #include <log/log.h>
+#include <vendor/qti/hardware/display/composer/3.0/IQtiComposer.h>
+
 #include <unordered_set>
 
 namespace vendor {
@@ -44,10 +45,10 @@ namespace qti {
 namespace hardware {
 namespace display {
 namespace composer {
-namespace V2_1 {
+namespace V3_0 {
 namespace implementation {
 
-using ::vendor::qti::hardware::display::composer::V2_1::IQtiComposer;
+using ::vendor::qti::hardware::display::composer::V3_0::IQtiComposer;
 
 class QtiComposer : public IQtiComposer {
  public:
@@ -61,6 +62,9 @@ class QtiComposer : public IQtiComposer {
   // Methods from ::android::hardware::graphics::composer::V2_3::IComposer follow.
   Return<void> createClient_2_3(createClient_2_3_cb _hidl_cb) override;
 
+  // Methods from ::android::hardware::graphics::composer::V2_4::IComposer follow.
+  Return<void> createClient_2_4(createClient_2_4_cb _hidl_cb) override;
+
   // Methods from ::android::hidl::base::V1_0::IBase follow.
 
   static QtiComposer *initialize();
@@ -72,7 +76,7 @@ class QtiComposer : public IQtiComposer {
 extern "C" IQtiComposer* HIDL_FETCH_IQtiComposer(const char* name);
 
 }  // namespace implementation
-}  // namespace V2_1
+}  // namespace V3_0
 }  // namespace composer
 }  // namespace display
 }  // namespace hardware

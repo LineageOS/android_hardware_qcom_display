@@ -108,8 +108,11 @@ using sde_drm::DRMSecurityLevel;
 using sde_drm::DRMCscType;
 using sde_drm::DRMMultiRectMode;
 using sde_drm::DRMSSPPLayoutIndex;
+using sde_drm::DRMCrtcInfo;
 
 namespace sdm {
+
+std::atomic<uint32_t> HWDeviceDRM::hw_dest_scaler_blocks_used_(0);
 
 static PPBlock GetPPBlock(const HWToneMapLut &lut_type) {
   PPBlock pp_block = kPPBlockMax;
@@ -539,6 +542,7 @@ DisplayError HWDeviceDRM::Deinit() {
   drm_mgr_intf_->DestroyAtomicReq(drm_atomic_intf_);
   drm_atomic_intf_ = {};
   drm_mgr_intf_->UnregisterDisplay(&token_);
+  hw_dest_scaler_blocks_used_ -= dest_scaler_blocks_used_;
   return err;
 }
 
@@ -1713,6 +1717,7 @@ DisplayError HWDeviceDRM::SetPPFeatures(PPFeaturesConfig *feature_list) {
   }
 
   int ret = 0;
+  DRMCrtcInfo crtc_info = {};
   PPFeatureInfo *feature = NULL;
 
   if (!hw_color_mgr_)
@@ -1728,20 +1733,26 @@ DisplayError HWDeviceDRM::SetPPFeatures(PPFeaturesConfig *feature_list) {
       break;
 
     hw_color_mgr_->ToDrmFeatureId(kDSPP, feature->feature_id_, &drm_id);
-    if (drm_id.empty())
+    if (drm_id.empty()) {
       continue;
+    } else if (drm_id.at(0) == DRMPPFeatureID::kFeatureDither) {
+      drm_mgr_intf_->GetCrtcInfo(token_.crtc_id, &crtc_info);
+      if (crtc_info.has_spr)
+        drm_id.at(0) = DRMPPFeatureID::kFeatureSprDither;
+    }
 
     kernel_params.id = drm_id.at(0);
     drm_mgr_intf_->GetCrtcPPInfo(token_.crtc_id, &kernel_params);
-    if (kernel_params.version == std::numeric_limits<uint32_t>::max()) {
+    if (kernel_params.version == std::numeric_limits<uint32_t>::max())
       crtc_feature = false;
-    }
+
     DLOGV_IF(kTagDriverConfig, "feature_id = %d", feature->feature_id_);
     for (DRMPPFeatureID id : drm_id) {
       if (id >= kPPFeaturesMax) {
         DLOGE("Invalid feature id %d", id);
         continue;
       }
+
       kernel_params.id = id;
       ret = hw_color_mgr_->GetDrmFeature(feature, &kernel_params);
       if (!ret && crtc_feature)
@@ -1863,7 +1874,7 @@ DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attr
     return kErrorNotSupported;
   }
 
-  if (!hw_resource_.hw_dest_scalar_info.count) {
+  if (!dest_scaler_blocks_used_) {
     return kErrorNotSupported;
   }
 
@@ -1915,6 +1926,7 @@ DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attr
   mixer_attributes_ = mixer_attributes;
   mixer_attributes_.split_left = mixer_attributes_.width;
   mixer_attributes_.split_type = kNoSplit;
+  mixer_attributes_.dest_scaler_blocks_used = dest_scaler_blocks_used_;  // No change.
   if (display_attributes_[index].is_device_split) {
     mixer_attributes_.split_left = UINT32(FLOAT(mixer_attributes.width) * mixer_split_ratio);
     mixer_attributes_.split_type = kDualSplit;
@@ -1958,50 +1970,97 @@ DisplayError HWDeviceDRM::DumpDebugData() {
   ofstream dst(filename);
   debug_dump_count_++;
 
+  bool failed = false;
+
   {
     ifstream src;
     src.open("/sys/kernel/debug/dri/0/debug/dump");
-    dst << "---- Event Logs ----" << std::endl;
-    dst << src.rdbuf() << std::endl;
-    src.close();
+    if (src.fail()) {
+      DLOGE("Unable to open dump debugfs node");
+      failed = true;
+    } else {
+      dst << "---- Event Logs ----" << std::endl;
+      dst << src.rdbuf() << std::endl;
+      if (src.fail()) {
+        DLOGE("Unable to read dump debugfs node");
+        failed = true;
+      }
+      src.close();
+    }
   }
 
   {
     ifstream src;
     src.open("/sys/kernel/debug/dri/0/debug/recovery_reg");
-    dst << "---- All Registers ----" << std::endl;
-    dst << src.rdbuf() << std::endl;
-    src.close();
+    if (src.fail()) {
+      DLOGE("Unable to open recovery_reg debugfs node");
+      failed = true;
+    } else {
+      dst << "---- All Registers ----" << std::endl;
+      dst << src.rdbuf() << std::endl;
+      if (src.fail()) {
+        failed = true;
+        DLOGE("Unable to read recovery_reg debugfs node");
+      }
+      src.close();
+    }
   }
 
   {
     ifstream src;
     src.open("/sys/kernel/debug/dri/0/debug/recovery_dbgbus");
-    dst << "---- Debug Bus ----" << std::endl;
-    dst << src.rdbuf() << std::endl;
-    src.close();
+    if (src.fail()) {
+      DLOGE("Unable to open recovery_dbgbus debugfs node");
+      failed = true;
+    } else {
+      dst << "---- Debug Bus ----" << std::endl;
+      dst << src.rdbuf() << std::endl;
+      if (src.fail()) {
+        DLOGE("Unable to read recovery_dbgbus debugfs node");
+        failed = true;
+      }
+      src.close();
+    }
   }
 
   {
     ifstream src;
     src.open("/sys/kernel/debug/dri/0/debug/recovery_vbif_dbgbus");
-    dst << "---- VBIF Debug Bus ----" << std::endl;
-    dst << src.rdbuf() << std::endl;
-    src.close();
+    if (src.fail()) {
+      DLOGE("Unable to open recovery_vbif_dbgbus debugfs node");
+      failed = true;
+    } else {
+      dst << "---- VBIF Debug Bus ----" << std::endl;
+      dst << src.rdbuf() << std::endl;
+      if (src.fail()) {
+        DLOGE("Unable to read recovery_vbif_dbgbus debugfs node");
+        failed = true;
+      }
+      src.close();
+    }
   }
 
   {
     ifstream src;
     src.open("/sys/kernel/debug/dri/0/debug/recovery_dsi_dbgbus");
-    dst << "---- DSI Debug Bus ----" << std::endl;
-    dst << src.rdbuf() << std::endl;
+    if (src.fail()) {
+      DLOGE("Unable to open recovery_dsi_dbgbus debugfs node");
+      failed = true;
+    } else {
+      dst << "---- DSI Debug Bus ----" << std::endl;
+      dst << src.rdbuf() << std::endl;
+      if (src.fail()) {
+        DLOGE("Unable to read recovery_dsi_dbgbus debugfs node");
+        failed = true;
+      }
     src.close();
+    }
   }
 
   dst.close();
   DLOGI("Wrote hw_recovery file %s", filename.c_str());
 
-  return kErrorNone;
+  return failed ? kErrorPermission : kErrorNone;
 }
 
 void HWDeviceDRM::GetDRMDisplayToken(sde_drm::DRMDisplayToken *token) const {

@@ -83,6 +83,37 @@ HWC2::Error HWCCallbacks::Vsync(hwc2_display_t display, int64_t timestamp) {
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCCallbacks::Vsync_2_4(hwc2_display_t display, int64_t timestamp, uint32_t period) {
+  DTRACE_SCOPED();
+  if (!vsync_2_4_) {
+    return HWC2::Error::NoResources;
+  }
+
+  vsync_2_4_(vsync_2_4_data_, display, timestamp, period);
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCCallbacks::VsyncPeriodTimingChanged(
+    hwc2_display_t display, hwc_vsync_period_change_timeline_t *updated_timeline) {
+  DTRACE_SCOPED();
+  if (!vsync_period_timing_changed_) {
+    return HWC2::Error::NoResources;
+  }
+
+  vsync_period_timing_changed_(vsync_period_timing_changed_data_, display, updated_timeline);
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCCallbacks::SeamlessPossible(hwc2_display_t display) {
+  DTRACE_SCOPED();
+  if (!seamless_possible_) {
+    return HWC2::Error::NoResources;
+  }
+
+  seamless_possible_(seamless_possible_data_, display);
+  return HWC2::Error::None;
+}
+
 HWC2::Error HWCCallbacks::Register(HWC2::Callback descriptor, hwc2_callback_data_t callback_data,
                                    hwc2_function_pointer_t pointer) {
   SCOPE_LOCK(callbacks_lock_);
@@ -100,6 +131,19 @@ HWC2::Error HWCCallbacks::Register(HWC2::Callback descriptor, hwc2_callback_data
     case HWC2::Callback::Vsync:
       vsync_data_ = callback_data;
       vsync_ = reinterpret_cast<HWC2_PFN_VSYNC>(pointer);
+      break;
+    case HWC2::Callback::Vsync_2_4:
+      vsync_2_4_data_ = callback_data;
+      vsync_2_4_ = reinterpret_cast<HWC2_PFN_VSYNC_2_4>(pointer);
+      break;
+    case HWC2::Callback::VsyncPeriodTimingChanged:
+      vsync_period_timing_changed_data_ = callback_data;
+      vsync_period_timing_changed_ =
+          reinterpret_cast<HWC2_PFN_VSYNC_PERIOD_TIMING_CHANGED>(pointer);
+      break;
+    case HWC2::Callback::SeamlessPossible:
+      seamless_possible_data_ = callback_data;
+      seamless_possible_ = reinterpret_cast<HWC2_PFN_SEAMLESS_POSSIBLE>(pointer);
       break;
     default:
       return HWC2::Error::BadParameter;
