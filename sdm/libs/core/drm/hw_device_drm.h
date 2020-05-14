@@ -229,6 +229,7 @@ class HWDeviceDRM : public HWInterface {
   uint32_t current_mode_index_ = 0;
   sde_drm::DRMConnectorInfo connector_info_ = {};
   bool first_cycle_ = true;
+  bool first_null_cycle_ = true;
   HWMixerAttributes mixer_attributes_ = {};
   std::vector<sde_drm::DRMSolidfillStage> solid_fills_ {};
   bool secure_display_active_ = false;
