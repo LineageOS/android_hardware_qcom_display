@@ -935,8 +935,7 @@ HWC2::Error HWCDisplayBuiltIn::SetFrameDumpConfig(uint32_t count, uint32_t bit_m
 
   if (dump_output_to_file_) {
     if (cwb_client_ != kCWBClientNone) {
-      DLOGE("CWB is in use with client = %d", cwb_client_);
-      dump_output_to_file_ = false;
+      DLOGW("CWB is in use with client = %d", cwb_client_);
       return HWC2::Error::NoResources;
     }
   }
