@@ -1311,6 +1311,8 @@ hwc2_function_pointer_t HWCSession::GetFunction(struct hwc2_device *device,
       return AsFP<HWC2_PFN_GET_DISPLAY_BRIGHTNESS_SUPPORT>(HWCSession::GetDisplayBrightnessSupport);
     case HWC2::FunctionDescriptor::SetDisplayBrightness:
       return AsFP<HWC2_PFN_SET_DISPLAY_BRIGHTNESS>(HWCSession::SetDisplayBrightness);
+    case HWC2::FunctionDescriptor::GetDisplayConnectionType:
+      return AsFP<HWC2_PFN_GET_DISPLAY_CONNECTION_TYPE>(HWCSession::GetDisplayConnectionType);
     default:
       DLOGD("Unknown/Unimplemented function descriptor: %d (%s)", int_descriptor,
             to_string(descriptor).c_str());
@@ -3303,6 +3305,31 @@ int32_t HWCSession::GetDisplayCapabilities(hwc2_device_t *device, hwc2_display_t
     }
     return HWC2_ERROR_NONE;
   }
+}
+
+int32_t HWCSession::GetDisplayConnectionType(hwc2_device_t* device, hwc2_display_t display,
+                                             uint32_t *outType) {
+  if (!outType || !device) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (display >= HWCCallbacks::kNumDisplays) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  HWCSession *hwc_session = static_cast<HWCSession *>(device);
+  HWCDisplay *hwc_display = hwc_session->hwc_display_[display];
+  if (!hwc_display) {
+    DLOGE("Expected valid hwc_display");
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  *outType = HWC2_DISPLAY_CONNECTION_TYPE_EXTERNAL;
+  if (hwc_display->GetDisplayClass() == DISPLAY_CLASS_BUILTIN) {
+    *outType = HWC2_DISPLAY_CONNECTION_TYPE_INTERNAL;
+  }
+
+  return HWC2_ERROR_NONE;
 }
 
 

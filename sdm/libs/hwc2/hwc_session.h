@@ -210,6 +210,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
                                              bool *outSupport);
   static int32_t SetDisplayBrightness(hwc2_device_t *device, hwc2_display_t display,
                                       float brightness);
+  static int32_t GetDisplayConnectionType(hwc2_device_t *device, hwc2_display_t display,
+                                          uint32_t *outType);
 
   // HWCDisplayEventHandler
   virtual void DisplayPowerReset();
