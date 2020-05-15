@@ -148,6 +148,8 @@ int GLColorConvertImpl::CreateContext(GLRenderTarget target, bool secure) {
 
   ctx_.program_id = LoadProgram(1, &kVertexShader, count, fragment_shaders);
 
+  SetRealTimePriority();
+
   return 0;
 }
 

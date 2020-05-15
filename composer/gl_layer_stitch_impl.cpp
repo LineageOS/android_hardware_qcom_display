@@ -127,6 +127,8 @@ int GLLayerStitchImpl::CreateContext(bool secure) {
 
   ctx_.program_id = LoadProgram(1, &kVertexShader1, count, fragment_shaders);
 
+  SetRealTimePriority();
+
   return 0;
 }
 
