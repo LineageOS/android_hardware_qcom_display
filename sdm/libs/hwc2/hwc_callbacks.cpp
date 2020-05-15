@@ -81,6 +81,16 @@ HWC2::Error HWCCallbacks::VsyncPeriodTimingChanged(
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCCallbacks::SeamlessPossible(hwc2_display_t display) {
+  DTRACE_SCOPED();
+  if (!seamless_possible_) {
+    return HWC2::Error::NoResources;
+  }
+
+  seamless_possible_(seamless_possible_data_, display);
+  return HWC2::Error::None;
+}
+
 HWC2::Error HWCCallbacks::Register(HWC2::Callback descriptor, hwc2_callback_data_t callback_data,
                                    hwc2_function_pointer_t pointer) {
   switch (descriptor) {
@@ -104,6 +114,10 @@ HWC2::Error HWCCallbacks::Register(HWC2::Callback descriptor, hwc2_callback_data
       vsync_period_timing_changed_data_ = callback_data;
       vsync_period_timing_changed_ =
           reinterpret_cast<HWC2_PFN_VSYNC_PERIOD_TIMING_CHANGED>(pointer);
+      break;
+    case HWC2::Callback::SeamlessPossible:
+      seamless_possible_data_ = callback_data;
+      seamless_possible_ = reinterpret_cast<HWC2_PFN_SEAMLESS_POSSIBLE>(pointer);
       break;
     default:
       return HWC2::Error::BadParameter;
