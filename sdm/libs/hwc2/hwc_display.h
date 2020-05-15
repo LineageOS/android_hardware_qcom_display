@@ -400,6 +400,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool IsSameGroup(hwc2_config_t config_id1, hwc2_config_t config_id2);
   bool AllowSeamless(hwc2_config_t request_config);
   void SetVsyncsApplyRateChange(uint32_t vsyncs) { vsyncs_to_apply_rate_change_ = vsyncs; }
+  HWC2::Error SubmitDisplayConfig(hwc2_config_t config);
 
   enum {
     INPUT_LAYER_DUMP,
