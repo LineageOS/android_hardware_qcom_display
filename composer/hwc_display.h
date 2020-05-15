@@ -523,6 +523,7 @@ class HWCDisplay : public DisplayEventHandler {
   std::mutex transient_refresh_rate_lock_;
   LayerRect window_rect_ = {};
   bool windowed_display_ = false;
+  uint32_t active_refresh_rate_ = 0;
 
  private:
   void DumpInputBuffers(void);
