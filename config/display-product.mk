@@ -103,6 +103,17 @@ PRODUCT_PROPERTY_OVERRIDES += \
     debug.sf.enable_gl_backpressure=1
 endif
 
+ifeq ($(TARGET_BOARD_PLATFORM),lito)
+PRODUCT_PROPERTY_OVERRIDES += \
+    debug.sf.high_fps_late_sf_phase_offset_ns=-4000000 \
+    debug.sf.high_fps_early_phase_offset_ns=-4000000 \
+    debug.sf.high_fps_early_gl_phase_offset_ns=-4000000 \
+    debug.sf.perf_fps_late_sf_phase_offset_ns=-5000000 \
+    debug.sf.perf_fps_early_phase_offset_ns=-5000000 \
+    debug.sf.perf_fps_early_gl_phase_offset_ns=-5000000 \
+    debug.sf.enable_advanced_sf_phase_offset=1
+endif
+
 ifneq ($(PLATFORM_VERSION), 10)
     PRODUCT_PROPERTY_OVERRIDES +=  vendor.display.enable_async_powermode=0
 endif
