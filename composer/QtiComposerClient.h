@@ -49,6 +49,7 @@ namespace composer_V2_2 = ::android::hardware::graphics::composer::V2_2;
 namespace composer_V2_3 = ::android::hardware::graphics::composer::V2_3;
 namespace composer_V2_4 = ::android::hardware::graphics::composer::V2_4;
 
+using DisplayCapability_V2_3 = composer_V2_3::IComposerClient::DisplayCapability;
 using PerFrameMetadataKey_V2 = composer_V2_2::IComposerClient::PerFrameMetadataKey;
 using PerFrameMetadataKey = composer_V2_3::IComposerClient::PerFrameMetadataKey;
 

@@ -241,7 +241,7 @@ HWC2::Error HWCColorMode::SetPreferredColorModeInternal(const std::string &mode_
     std::string color_gamut_string, dynamic_range_string;
     error = display_intf_->GetColorModeAttr(mode_string, &attr);
     if (error) {
-      DLOGE("Failed to get mode attributes for mode %d", mode_string.c_str());
+      DLOGE("Failed to get mode attributes for mode %s", mode_string.c_str());
       return HWC2::Error::BadParameter;
     }
 
@@ -534,7 +534,7 @@ int HWCDisplay::Init() {
 
   game_supported_ = display_intf_->GameEnhanceSupported();
 
-  DLOGI("Display created with id: %d, game_supported_: %d", id_, game_supported_);
+  DLOGI("Display created with id: %d, game_supported_: %d", UINT32(id_), game_supported_);
 
   return 0;
 }
@@ -876,7 +876,7 @@ HWC2::Error HWCDisplay::SetLayerZOrder(hwc2_layer_t layer_id, uint32_t z) {
 }
 
 HWC2::Error HWCDisplay::SetVsyncEnabled(HWC2::Vsync enabled) {
-  DLOGV("Display ID: %d enabled: %s", id_, to_string(enabled).c_str());
+  DLOGV("Display ID: %" PRId64 " enabled: %s", id_, to_string(enabled).c_str());
   ATRACE_INT("SetVsyncState ", enabled == HWC2::Vsync::Enable ? 1 : 0);
   DisplayError error = kErrorNone;
 
@@ -929,7 +929,7 @@ void HWCDisplay::PostPowerMode() {
 }
 
 HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
-  DLOGV("display = %d, mode = %s", id_, to_string(mode).c_str());
+  DLOGV("display = %" PRId64 ", mode = %s", id_, to_string(mode).c_str());
   DisplayState state = kStateOff;
   bool flush_on_error = flush_on_error_;
 
@@ -1058,7 +1058,7 @@ HWC2::Error HWCDisplay::GetDisplayAttribute(hwc2_config_t config, HwcAttribute a
                                             int32_t *out_value) {
   if (variable_config_map_.find(config) == variable_config_map_.end()) {
     DLOGE("Get variable config failed");
-    return HWC2::Error::BadDisplay;
+    return HWC2::Error::BadConfig;
   }
 
   DisplayConfigVariableInfo variable_config = variable_config_map_.at(config);
@@ -1324,7 +1324,7 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
       if (event_handler_) {
         event_handler_->DisplayPowerReset();
       } else {
-        DLOGW("Cannot execute DisplayPowerReset (client_id = %d), event_handler_ is nullptr",
+        DLOGW("Cannot execute DisplayPowerReset (client_id = %" PRId64 "), event_handler_ is null",
               id_);
       }
     } break;
@@ -1584,7 +1584,7 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
   DTRACE_SCOPED();
 
   if (!validated_) {
-    DLOGV_IF(kTagClient, "Display %d is not validated", id_);
+    DLOGV_IF(kTagClient, "Display %" PRIu64 "is not validated", id_);
     return HWC2::Error::NotValidated;
   }
 
@@ -1593,7 +1593,7 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
   }
 
   if (skip_commit_) {
-    DLOGV_IF(kTagClient, "Skipping Refresh on display %d", id_);
+    DLOGV_IF(kTagClient, "Skipping Refresh on display %" PRIu64 , id_);
     return HWC2::Error::None;
   }
 
@@ -1750,8 +1750,8 @@ void HWCDisplay::DumpInputBuffers() {
         reinterpret_cast<const private_handle_t *>(layer->input_buffer.buffer_id);
     Fence::Wait(layer->input_buffer.acquire_fence);
 
-    DLOGI("Dump layer[%d] of %d pvt_handle %x pvt_handle->base %x", i, layer_stack_.layers.size(),
-          pvt_handle, pvt_handle? pvt_handle->base : 0);
+    DLOGI("Dump layer[%d] of %d pvt_handle %p pvt_handle->base %" PRIx64, i,
+          UINT32(layer_stack_.layers.size()), pvt_handle, pvt_handle? pvt_handle->base : 0);
 
     if (!pvt_handle) {
       DLOGE("Buffer handle is null");
@@ -1906,7 +1906,6 @@ int HWCDisplay::SetFrameBufferResolution(uint32_t x_pixels, uint32_t y_pixels) {
   if (windowed_display_) {
     x_pixels -= UINT32(window_rect_.right + window_rect_.left);
     y_pixels -= UINT32(window_rect_.bottom + window_rect_.top);
-    windowed_display_ = false;
   }
   auto client_target_layer = client_target_->GetSDMLayer();
 
@@ -2144,7 +2143,7 @@ int HWCDisplay::GetVisibleDisplayRect(hwc_rect_t *visible_rect) {
   visible_rect->top = INT(display_rect_.top);
   visible_rect->right = INT(display_rect_.right);
   visible_rect->bottom = INT(display_rect_.bottom);
-  DLOGI("Dpy = %d Visible Display Rect(%d %d %d %d)", visible_rect->left, visible_rect->top,
+  DLOGI("Visible Display Rect(%d %d %d %d)", visible_rect->left, visible_rect->top,
         visible_rect->right, visible_rect->bottom);
 
   return 0;
@@ -2167,7 +2166,7 @@ int HWCDisplay::HandleSecureSession(const std::bitset<kSecureMax> &secure_sessio
       *power_on_pending = true;
     }
 
-    DLOGI("SecureDisplay state changed from %d to %d for display %d-%d",
+    DLOGI("SecureDisplay state changed from %d to %d for display %" PRId64 "-%d",
           active_secure_sessions_.test(kSecureDisplay), secure_sessions.test(kSecureDisplay),
           id_, type_);
   }
@@ -2335,14 +2334,14 @@ bool HWCDisplay::CanSkipValidate() {
   for (auto hwc_layer : layer_set_) {
     Layer *layer = hwc_layer->GetSDMLayer();
     if (hwc_layer->NeedsValidation()) {
-      DLOGV_IF(kTagClient, "hwc_layer[%d] needs validation. Returning false.",
+      DLOGV_IF(kTagClient, "hwc_layer[%" PRIu64 "] needs validation. Returning false.",
                hwc_layer->GetId());
       return false;
     }
 
     // Do not allow Skip Validate, if any layer needs GPU Composition.
     if (layer->composition == kCompositionGPU || layer->composition == kCompositionNone) {
-      DLOGV_IF(kTagClient, "hwc_layer[%d] is %s. Returning false.", hwc_layer->GetId(),
+      DLOGV_IF(kTagClient, "hwc_layer[%" PRIu64 "] is %s. Returning false.", hwc_layer->GetId(),
                (layer->composition == kCompositionGPU) ? "GPU composed": "Dropped");
       return false;
     }

@@ -521,7 +521,7 @@ class HWCDisplay : public DisplayEventHandler {
   std::deque<TransientRefreshRateInfo> transient_refresh_rate_info_;
   std::mutex transient_refresh_rate_lock_;
   LayerRect window_rect_ = {};
-  bool windowed_display_ = true;
+  bool windowed_display_ = false;
 
  private:
   void DumpInputBuffers(void);

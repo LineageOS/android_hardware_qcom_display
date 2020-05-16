@@ -571,7 +571,7 @@ int HWCSession::ControlIdlePowerCollapse(bool enable, bool synchronous) {
     return 0;
   }
 
-  DLOGW("Display = %d is not connected.", active_builtin_disp_id);
+  DLOGW("Display = %d is not connected.", UINT32(active_builtin_disp_id));
   return -ENODEV;
 }
 
@@ -822,7 +822,7 @@ int HWCSession::DisplayConfigImpl::GetActiveBuiltinDisplayAttributes(
   hwc2_display_t disp_id = hwc_session_->GetActiveBuiltinDisplay();
 
   if (disp_id >= HWCCallbacks::kNumDisplays) {
-    DLOGE("Invalid display = %d", disp_id);
+    DLOGE("Invalid display = %d", UINT32(disp_id));
   } else {
     if (hwc_session_->hwc_display_[disp_id]) {
       uint32_t config_index = 0;
@@ -928,7 +928,7 @@ int HWCSession::DisplayConfigImpl::SetCWBOutputBuffer(uint32_t disp_id,
     return -1;
   }
 
-  if (disp_id != qdutils::DISPLAY_PRIMARY) {
+  if (disp_id != UINT32(DisplayConfig::DisplayType::kPrimary)) {
     DLOGE("Only supported for primary display at present.");
     return -1;
   }
@@ -941,6 +941,7 @@ int HWCSession::DisplayConfigImpl::SetCWBOutputBuffer(uint32_t disp_id,
   // Output buffer dump is not supported, if External or Virtual display is present.
   int external_dpy_index = hwc_session_->GetDisplayIndex(qdutils::DISPLAY_EXTERNAL);
   int virtual_dpy_index = hwc_session_->GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
+  int primary_dpy_index = hwc_session_->GetDisplayIndex(qdutils::DISPLAY_PRIMARY);
 
   if (((external_dpy_index != -1) && hwc_session_->hwc_display_[external_dpy_index]) ||
       ((virtual_dpy_index != -1) && hwc_session_->hwc_display_[virtual_dpy_index])) {
@@ -951,13 +952,14 @@ int HWCSession::DisplayConfigImpl::SetCWBOutputBuffer(uint32_t disp_id,
   // Mutex scope
   {
     SCOPE_LOCK(hwc_session_->locker_[HWC_DISPLAY_PRIMARY]);
-    if (!hwc_session_->hwc_display_[disp_id]) {
+    if (!hwc_session_->hwc_display_[primary_dpy_index]) {
       DLOGE("Display is not created yet.");
       return -1;
     }
   }
 
-  return hwc_session_->cwb_.PostBuffer(callback_, post_processed, buffer);
+  return hwc_session_->cwb_.PostBuffer(callback_, post_processed,
+                                       native_handle_clone(buffer));
 }
 
 int32_t HWCSession::CWB::PostBuffer(std::weak_ptr<DisplayConfig::ConfigCallback> callback,
@@ -1046,6 +1048,8 @@ void HWCSession::CWB::ProcessRequests() {
       callback->NotifyCWBBufferDone(status, node->buffer);
     }
 
+    native_handle_close(node->buffer);
+    native_handle_delete(const_cast<native_handle_t *>(node->buffer));
     delete node;
 
     // Mutex scope
@@ -1143,7 +1147,7 @@ int HWCSession::DisplayConfigImpl::CreateVirtualDisplay(uint32_t width, uint32_t
   auto status = hwc_session_->CreateVirtualDisplayObj(width, height, &format,
                                                       &hwc_session_->virtual_id_);
   if (status == HWC2::Error::None) {
-    DLOGI("Created virtual display id:% " PRIu64 ", res: %dx%d",
+    DLOGI("Created virtual display id:%" PRIu64 ", res: %dx%d",
           hwc_session_->virtual_id_, width, height);
     if (active_builtin_disp_id < HWCCallbacks::kNumRealDisplays) {
       hwc_session_->WaitForResources(true, active_builtin_disp_id, hwc_session_->virtual_id_);

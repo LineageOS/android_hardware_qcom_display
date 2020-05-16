@@ -10,7 +10,7 @@ LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes)
 LOCAL_C_INCLUDES              += $(kernel_includes)
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
-LOCAL_HEADER_LIBRARIES        := display_headers
+LOCAL_HEADER_LIBRARIES        := display_headers libThermal_headers
 
 LOCAL_CFLAGS                  := -Wno-missing-field-initializers -Wno-unused-parameter \
                                  -DLOG_TAG=\"SDM\" $(common_flags) -fcolor-diagnostics
@@ -33,7 +33,7 @@ LOCAL_SHARED_LIBRARIES        := libhistogram libbinder libhardware libutils lib
                                  android.hardware.graphics.allocator@2.0 \
                                  android.hardware.graphics.allocator@3.0 \
                                  libdisplayconfig.qti \
-                                 libdrm
+                                 libdrm libthermalclient
 
 LOCAL_SRC_FILES               := QtiComposer.cpp QtiComposerClient.cpp service.cpp \
                                  QtiComposerHandleImporter.cpp \
@@ -65,6 +65,10 @@ LOCAL_SRC_FILES               := QtiComposer.cpp QtiComposerClient.cpp service.c
                                  gl_layer_stitch_impl.cpp
 
 LOCAL_INIT_RC                 := vendor.qti.hardware.display.composer-service.rc
+ifneq ($(TARGET_HAS_LOW_RAM),true)
 LOCAL_VINTF_FRAGMENTS         := vendor.qti.hardware.display.composer-service.xml
+else
+LOCAL_VINTF_FRAGMENTS         := vendor.qti.hardware.display.composer-service-low-ram.xml
+endif
 
 include $(BUILD_EXECUTABLE)

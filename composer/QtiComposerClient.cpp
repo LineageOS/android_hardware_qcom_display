@@ -162,9 +162,7 @@ void QtiComposerClient::onVsync(hwc2_callback_data_t callbackData, hwc2_display_
 void QtiComposerClient::onVsync_2_4(hwc2_callback_data_t callbackData, hwc2_display_t display,
                                     int64_t timestamp, VsyncPeriodNanos vsyncPeriodNanos) {
   auto client = reinterpret_cast<QtiComposerClient*>(callbackData);
-  VsyncPeriodNanos vsync_period;
-  client->hwc_session_->GetDisplayVsyncPeriod(display, &vsync_period);
-  auto ret = client->callback24_->onVsync_2_4(display, timestamp, vsync_period);
+  auto ret = client->callback24_->onVsync_2_4(display, timestamp, vsyncPeriodNanos);
   ALOGW_IF(!ret.isOk(), "failed to send onVsync_2_4: %s. SF likely unavailable.",
            ret.description().c_str());
 }
@@ -966,7 +964,28 @@ Return<void> QtiComposerClient::getDisplayCapabilities(uint64_t display,
                                                        getDisplayCapabilities_cb _hidl_cb) {
   // We only care about passing VTS for older composer versions
   // Not returning any capabilities that are optional
-  return Void();
+
+  hidl_vec<DisplayCapability_V2_3> capabilities;
+
+  uint32_t count = 0;
+  auto error = hwc_session_->GetDisplayCapabilities2_3(display, &count, nullptr);
+  if (error != HWC2_ERROR_NONE) {
+    _hidl_cb(static_cast<Error>(error), capabilities);
+    return Void();
+  }
+
+  capabilities.resize(count);
+  error = hwc_session_->GetDisplayCapabilities2_3(display, &count,
+                 reinterpret_cast<std::underlying_type<DisplayCapability_V2_3>::type*>(
+                 capabilities.data()));
+   if (error != HWC2_ERROR_NONE) {
+     capabilities = hidl_vec<DisplayCapability_V2_3>();
+     _hidl_cb(static_cast<Error>(error), capabilities);
+     return Void();
+   }
+
+   _hidl_cb(static_cast<Error>(error), capabilities);
+   return Void();
 }
 
 Return<void> QtiComposerClient::getPerFrameMetadataKeys_2_3(uint64_t display,

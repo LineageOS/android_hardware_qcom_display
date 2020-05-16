@@ -463,7 +463,7 @@ int DRMDppsManagerImp::InitLtmBuffers(struct DRMDppsFeatureInfo *info) {
   }
 
   if (!info->payload || info->payload_size != sizeof(struct DRMDppsLtmBuffers)) {
-    DRM_LOGE("Invalid payload %p size %d expected %d", info->payload, info->payload_size,
+    DRM_LOGE("Invalid payload %p size %d expected %zu", info->payload, info->payload_size,
        sizeof(struct DRMDppsLtmBuffers));
     return -EINVAL;
   }

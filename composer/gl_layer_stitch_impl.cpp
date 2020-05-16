@@ -132,6 +132,7 @@ int GLLayerStitchImpl::CreateContext(bool secure) {
 
 int GLLayerStitchImpl::Blit(const private_handle_t *src_hnd, const private_handle_t *dst_hnd,
                             const GLRect &src_rect, const GLRect &dst_rect,
+                            const GLRect &scissor_rect,
                             const shared_ptr<Fence> &src_acquire_fence,
                             const shared_ptr<Fence> &dst_acquire_fence,
                             shared_ptr<Fence> *release_fence) {
@@ -140,6 +141,8 @@ int GLLayerStitchImpl::Blit(const private_handle_t *src_hnd, const private_handl
   MakeCurrent(&ctx_);
 
   SetProgram(ctx_.program_id);
+
+  ClearWithTransparency(scissor_rect);
 
   SetSourceBuffer(src_hnd);
   SetDestinationBuffer(dst_hnd, dst_rect);
@@ -168,6 +171,15 @@ int GLLayerStitchImpl::Deinit() {
   DestroyContext(&ctx_);
 
   return 0;
+}
+
+void GLLayerStitchImpl::ClearWithTransparency(const GLRect &scissor_rect) {
+  DTRACE_SCOPED();
+  GL(glScissor(scissor_rect.left, scissor_rect.top, scissor_rect.right - scissor_rect.left,
+               scissor_rect.bottom - scissor_rect.top));
+  GL(glEnable(GL_SCISSOR_TEST));
+  GL(glClearColor(0, 0, 0, 0));
+  GL(glClear(GL_COLOR_BUFFER_BIT));
 }
 
 GLLayerStitchImpl::~GLLayerStitchImpl() {}

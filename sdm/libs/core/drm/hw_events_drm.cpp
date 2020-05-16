@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -308,8 +308,8 @@ void HWEventsDRM::WakeUpEventThread() {
       uint64_t exit_value = 1;
       ssize_t write_size = Sys::write_(poll_fds_[i].fd, &exit_value, sizeof(uint64_t));
       if (write_size != sizeof(uint64_t)) {
-        DLOGW("Error triggering exit fd (%d). write size = %d, error = %s", poll_fds_[i].fd,
-              write_size, strerror(errno));
+        DLOGW("Error triggering exit fd (%d). write size = %zu, error = %s", poll_fds_[i].fd,
+              static_cast<size_t>(write_size), strerror(errno));
       }
       break;
     }
@@ -563,8 +563,9 @@ DisplayError HWEventsDRM::RegisterHwRecovery(bool enable) {
 }
 
 void HWEventsDRM::HandleVSync(char *data) {
+  DisplayError ret = kErrorNone;
+  vsync_handler_count_ = 0;  //  reset vsync handler count. lock not needed
   {
-    DisplayError ret = kErrorNone;
     std::lock_guard<std::mutex> lock(vsync_mutex_);
     vsync_registered_ = false;
     if (vsync_enabled_) {
@@ -580,6 +581,16 @@ void HWEventsDRM::HandleVSync(char *data) {
   if (error != 0) {
     DLOGE("drmHandleEvent failed: %i", error);
   }
+
+  if (vsync_handler_count_ > 1) {
+    //  probable thread preemption caused > 1 vsync handling. Re-enable vsync before polling
+    std::lock_guard<std::mutex> lock(vsync_mutex_);
+    vsync_registered_ = false;
+    if (vsync_enabled_) {
+      ret = RegisterVSync();
+      vsync_registered_ = (ret == kErrorNone);
+    }
+  }
 }
 
 void HWEventsDRM::HandlePanelDead(char *data) {
@@ -593,7 +604,7 @@ void HWEventsDRM::HandlePanelDead(char *data) {
   }
 
   if (size > kMaxStringLength) {
-    DLOGE("event size %d is greater than event buffer size %zd\n", size, kMaxStringLength);
+    DLOGE("event size %d is greater than event buffer size %d\n", size, kMaxStringLength);
     return;
   }
 
@@ -625,9 +636,11 @@ void HWEventsDRM::HandlePanelDead(char *data) {
 
 void HWEventsDRM::VSyncHandlerCallback(int fd, unsigned int sequence, unsigned int tv_sec,
                                        unsigned int tv_usec, void *data) {
+  HWEventsDRM *ev_data = reinterpret_cast<HWEventsDRM *>(data);
+  ev_data->vsync_handler_count_++;
   int64_t timestamp = (int64_t)(tv_sec)*1000000000 + (int64_t)(tv_usec)*1000;
   DTRACE_SCOPED();
-  reinterpret_cast<HWEventsDRM *>(data)->event_handler_->VSync(timestamp);
+  ev_data->event_handler_->VSync(timestamp);
 }
 
 void HWEventsDRM::HandleIdleTimeout(char *data) {
@@ -641,7 +654,7 @@ void HWEventsDRM::HandleIdleTimeout(char *data) {
   }
 
   if (size > kMaxStringLength) {
-    DLOGE("event size %d is greater than event buffer size %zd\n", size, kMaxStringLength);
+    DLOGE("event size %d is greater than event buffer size %d\n", size, kMaxStringLength);
     return;
   }
 
@@ -687,7 +700,7 @@ void HWEventsDRM::HandleIdlePowerCollapse(char *data) {
   }
 
   if (size > kMaxStringLength) {
-    DLOGE("event size %d is greater than event buffer size %zd\n", size, kMaxStringLength);
+    DLOGE("event size %d is greater than event buffer size %d\n", size, kMaxStringLength);
     return;
   }
 
@@ -732,7 +745,7 @@ void HWEventsDRM::HandleHwRecovery(char *data) {
   }
 
   if (size > kMaxStringLength) {
-    DLOGE("Hardware recovery event size %d is greater than event buffer size %zd\n", size,
+    DLOGE("Hardware recovery event size %d is greater than event buffer size %d\n", size,
           kMaxStringLength);
     return;
   }
@@ -752,7 +765,7 @@ void HWEventsDRM::HandleHwRecovery(char *data) {
                                    (sizeof(event_resp->base) + sizeof(event_resp->info));
         // expect up to uint32_t from driver
         if (size_of_data > sizeof(uint32_t)) {
-          DLOGE("Size of hardware recovery event data: %" PRIu32 " exceeds %zd", size_of_data,
+          DLOGE("Size of hardware recovery event data: %zu exceeds %zu", size_of_data,
                 sizeof(uint32_t));
           return;
         }
@@ -783,7 +796,7 @@ void HWEventsDRM::HandleHistogram(char * /*data*/) {
   std::array<char, expected_size> event_data{'\0'};
   auto size = Sys::pread_(poll_fds_[histogram_index_].fd, event_data.data(), event_data.size(), 0);
   if (size != expected_size) {
-    DLOGE("event size %d is unexpected. skipping this histogram event", size);
+    DLOGE("event size %d is unexpected. skipping this histogram event", UINT32(size));
     return;
   }
 
