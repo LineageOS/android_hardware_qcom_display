@@ -60,7 +60,7 @@ class HWPeripheralDRM : public HWDeviceDRM {
   virtual DisplayError Flush(HWLayers *hw_layers);
   virtual DisplayError SetDppsFeature(void *payload, size_t size);
   virtual DisplayError GetDppsFeatureInfo(void *payload, size_t size);
-  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, HWLayers *hw_layers);
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, const HWQosData &qos_data);
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous);
   virtual DisplayError PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
   virtual DisplayError SetDisplayDppsAdROI(void *payload);
@@ -92,6 +92,19 @@ class HWPeripheralDRM : public HWDeviceDRM {
   }
   void CacheDestScalarData();
   void SetSelfRefreshState();
+  void SetVMReqState() {
+    if (tui_state_ == kTUIStateStart) {
+      drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_VM_REQ_STATE, token_.crtc_id,
+                                sde_drm::DRMVMRequestState::RELEASE);
+    } else if (tui_state_ == kTUIStateEnd) {
+      drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_VM_REQ_STATE, token_.crtc_id,
+                                sde_drm::DRMVMRequestState::ACQUIRE);
+    } else if (tui_state_ == kTUIStateNone) {
+      drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_VM_REQ_STATE, token_.crtc_id,
+                                sde_drm::DRMVMRequestState::NONE);
+    }
+  }
+  void ResetPropertyCache();
 
   struct DestScalarCache {
     SDEScaler scalar_data = {};

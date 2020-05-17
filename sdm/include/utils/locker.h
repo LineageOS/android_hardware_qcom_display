@@ -77,7 +77,6 @@ class Locker {
     }
 
     ~SequenceExitScopeLock() {
-      locker_.Broadcast();
       locker_.Unlock();
     }
 
@@ -117,7 +116,6 @@ class Locker {
     }
 
     ~SequenceCancelScopeLock() {
-      locker_.Broadcast();
       locker_.Unlock();
     }
 

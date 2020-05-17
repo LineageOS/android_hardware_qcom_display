@@ -146,14 +146,11 @@ HWC2::Error HWCDisplayVirtualGPU::Present(shared_ptr<Fence> *out_retire_fence) {
     return HWC2::Error::NoResources;
   }
 
-  if (active_secure_sessions_.any() || layer_set_.empty()) {
+  if (NeedsGPUBypass()) {
     return status;
   }
 
   layer_stack_.output_buffer = &output_buffer_;
-  if (display_paused_) {
-    validated_ = false;
-  }
 
   // Ensure that blit is initialized.
   // GPU context gets in secure or non-secure mode depending on output buffer provided.

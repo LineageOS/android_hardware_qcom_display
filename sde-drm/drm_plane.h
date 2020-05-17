@@ -84,6 +84,10 @@ class DRMPlane {
   void ResetColorLUTs(bool is_commit, drmModeAtomicReq *req);
   void ResetColorLUTState(DRMTonemapLutType lut_type, bool is_commit, drmModeAtomicReq *req);
   void ResetColorLUT(DRMPPFeatureID id, drmModeAtomicReq *req);
+  void ResetCache() {
+    tmp_prop_val_map_.clear();
+    committed_prop_val_map_.clear();
+  }
 
  private:
   typedef std::map<DRMProperty, std::tuple<uint64_t, drmModePropertyRes *>> PropertyMap;
@@ -133,6 +137,7 @@ class DRMPlaneManager {
   void UnsetScalerLUT();
   void PostValidate(uint32_t crtc_id, bool success);
   void PostCommit(uint32_t crtc_id, bool success);
+  void ResetCache(uint32_t crtc_id);
 
  private:
   void Perform(DRMOps code, drmModeAtomicReq *req, uint32_t obj_id, ...);
