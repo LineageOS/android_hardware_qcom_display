@@ -177,6 +177,11 @@ enum struct DRMOps {
    */
   PLANE_SET_POST_PROC,
   /*
+   * Op: Resets property cache of all planes that are assigned to given CRTC
+   * Arg: uint32_t - CRTC ID
+   */
+  PLANES_RESET_CACHE,
+  /*
    * Op: Activate or deactivate a CRTC
    * Arg: uint32_t - CRTC ID
    *      uint32_t - 1 to enable, 0 to disable
@@ -311,6 +316,17 @@ enum struct DRMOps {
    *      uint32_t - Cache state
    */
   CRTC_SET_CACHE_STATE,
+  /*
+   * Op: Sets VM Request state for CRTC.
+   * Arg: uint32_t - CRTC ID
+   *      uint32_t - vm request state
+   */
+  CRTC_SET_VM_REQ_STATE,
+  /*
+   * Op: reset CRTC property cache.
+   * Arg: uint32_t - CRTC ID
+   */
+  CRTC_RESET_CACHE,
   /*
    * Op: Returns retire fence for this commit. Should be called after Commit() on
    * DRMAtomicReqInterface.
@@ -448,6 +464,12 @@ enum struct DRMDisplayType {
   PERIPHERAL,
   TV,
   VIRTUAL,
+};
+
+enum struct DRMVMRequestState {
+  NONE,
+  ACQUIRE,
+  RELEASE,
 };
 
 struct DRMRect {

@@ -83,7 +83,7 @@ DisplayError CompManager::RegisterDisplay(int32_t display_id, DisplayType type,
                                           const HWPanelInfo &hw_panel_info,
                                           const HWMixerAttributes &mixer_attributes,
                                           const DisplayConfigVariableInfo &fb_config,
-                                          Handle *display_ctx, uint32_t *default_clk_hz) {
+                                          Handle *display_ctx, HWQosData*default_qos_data) {
   SCOPE_LOCK(locker_);
 
   DisplayError error = kErrorNone;
@@ -121,8 +121,8 @@ DisplayError CompManager::RegisterDisplay(int32_t display_id, DisplayType type,
     return error;
   }
 
-  error = resource_intf_->Perform(ResourceInterface::kCmdGetDefaultClk,
-                                  display_comp_ctx->display_resource_ctx, default_clk_hz);
+  error = resource_intf_->Perform(ResourceInterface::kCmdGetDefaultQosData,
+                                  display_comp_ctx->display_resource_ctx, default_qos_data);
   if (error != kErrorNone) {
     strategy->Deinit();
     delete strategy;
@@ -212,7 +212,7 @@ DisplayError CompManager::ReconfigureDisplay(Handle comp_handle,
                                              const HWPanelInfo &hw_panel_info,
                                              const HWMixerAttributes &mixer_attributes,
                                              const DisplayConfigVariableInfo &fb_config,
-                                             uint32_t *default_clk_hz) {
+                                             HWQosData*default_qos_data) {
   SCOPE_LOCK(locker_);
   DTRACE_SCOPED();
 
@@ -226,8 +226,8 @@ DisplayError CompManager::ReconfigureDisplay(Handle comp_handle,
     return error;
   }
 
-  error = resource_intf_->Perform(ResourceInterface::kCmdGetDefaultClk,
-                                  display_comp_ctx->display_resource_ctx, default_clk_hz);
+  error = resource_intf_->Perform(ResourceInterface::kCmdGetDefaultQosData,
+                                  display_comp_ctx->display_resource_ctx, default_qos_data);
   if (error != kErrorNone) {
     return error;
   }
@@ -660,6 +660,7 @@ void CompManager::HandleSecureEvent(Handle display_ctx, SecureEvent secure_event
     resource_intf_->Perform(ResourceInterface::kCmdDisableRotatorOneFrame,
                             display_comp_ctx->display_resource_ctx);
   }
+  safe_mode_ = (secure_event == kSecureDisplayStart) ? true : false;
 }
 
 void CompManager::UpdateStrategyConstraints(bool is_primary, bool disabled) {

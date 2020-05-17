@@ -403,6 +403,17 @@ void DRMPlaneManager::UnsetScalerLUT() {
   }
 }
 
+void DRMPlaneManager::ResetCache(uint32_t crtc_id) {
+  lock_guard<mutex> lock(lock_);
+  for (auto &plane : plane_pool_) {
+    uint32_t assigned_crtc = 0;
+    plane.second->GetAssignedCrtc(&assigned_crtc);
+    if (assigned_crtc == crtc_id) {
+      plane.second->ResetCache();
+    }
+  }
+}
+
 // ==============================================================================================//
 
 #undef __CLASS__

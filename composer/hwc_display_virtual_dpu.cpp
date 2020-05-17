@@ -158,15 +158,11 @@ HWC2::Error HWCDisplayVirtualDPU::Present(shared_ptr<Fence> *out_retire_fence) {
     return HWC2::Error::NoResources;
   }
 
-  if (active_secure_sessions_.any()) {
-    return status;
+  if (NeedsGPUBypass()) {
+    return HWC2::Error::None;
   }
 
   layer_stack_.output_buffer = &output_buffer_;
-  if (display_paused_) {
-    validated_ = false;
-    flush_ = true;
-  }
 
   status = HWCDisplay::CommitLayerStack();
   if (status != HWC2::Error::None) {

@@ -137,7 +137,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError GetClientTargetSupport(uint32_t width, uint32_t height,
                                               LayerBufferFormat format,
                                               const ColorMetaData &color_metadata);
-  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, LayerStack *layer_stack) {
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event) {
     return kErrorNotSupported;
   }
   virtual DisplayError SetDisplayDppsAdROI(void *payload) {
@@ -261,6 +261,7 @@ class DisplayBase : public DisplayInterface {
 
   static Locker display_power_reset_lock_;
   static bool display_power_reset_pending_;
+  SecureEvent secure_event_ = kSecureEventMax;
 
  private:
   bool StartDisplayPowerReset();

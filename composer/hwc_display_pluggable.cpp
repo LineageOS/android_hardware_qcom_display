@@ -122,7 +122,7 @@ HWCDisplayPluggable::HWCDisplayPluggable(CoreInterface *core_intf,
 HWC2::Error HWCDisplayPluggable::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
   auto status = HWC2::Error::None;
 
-  if (active_secure_sessions_[kSecureDisplay]) {
+  if (active_secure_sessions_[kSecureDisplay] || display_paused_) {
     MarkLayersForGPUBypass();
     return status;
   }
@@ -153,7 +153,7 @@ HWC2::Error HWCDisplayPluggable::Validate(uint32_t *out_num_types, uint32_t *out
 HWC2::Error HWCDisplayPluggable::Present(shared_ptr<Fence> *out_retire_fence) {
   auto status = HWC2::Error::None;
 
-  if (!active_secure_sessions_[kSecureDisplay]) {
+  if (!active_secure_sessions_[kSecureDisplay] && !display_paused_) {
     status = HWCDisplay::CommitLayerStack();
     if (status == HWC2::Error::None) {
       status = HWCDisplay::PostCommitLayerStack(out_retire_fence);

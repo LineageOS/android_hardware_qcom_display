@@ -115,7 +115,7 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError SetDppsFeature(void *payload, size_t size) { return kErrorNotSupported; }
   virtual DisplayError GetDppsFeatureInfo(void *payload, size_t size) { return kErrorNotSupported; }
   virtual DisplayError TeardownConcurrentWriteback(void) { return kErrorNotSupported; }
-  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, HWLayers *hw_layers) {
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, const HWQosData &qos_data) {
     return kErrorNotSupported;
   }
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) {
@@ -137,6 +137,13 @@ class HWDeviceDRM : public HWInterface {
   enum {
     kHWEventVSync,
     kHWEventBlank,
+  };
+
+  enum TUIState {
+    kTUIStateNone,
+    kTUIStateStart,
+    kTUIStateInProgress,
+    kTUIStateEnd,
   };
 
   static const int kMaxStringLength = 1024;
@@ -233,6 +240,7 @@ class HWDeviceDRM : public HWInterface {
   HWMixerAttributes mixer_attributes_ = {};
   std::vector<sde_drm::DRMSolidfillStage> solid_fills_ {};
   bool secure_display_active_ = false;
+  TUIState tui_state_ = kTUIStateNone;
   uint64_t debug_dump_count_ = 0;
   bool synchronous_commit_ = false;
   uint32_t topology_control_ = 0;
