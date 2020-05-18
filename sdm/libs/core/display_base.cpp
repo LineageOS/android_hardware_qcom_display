@@ -637,7 +637,8 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
       active_ = active;
       state_ = state;
     }
-    comp_manager_->SetDisplayState(display_comp_ctx_, state, release_fence ? *release_fence : -1);
+    comp_manager_->SetDisplayState(display_comp_ctx_, state,
+                                   release_fence ? *release_fence : nullptr);
 
     // If previously requested power on state is still pending reset it on any new display state
     // request and handle the new request.

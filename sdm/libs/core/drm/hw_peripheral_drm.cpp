@@ -575,7 +575,7 @@ DisplayError HWPeripheralDRM::PowerOff(bool teardown) {
   return kErrorNone;
 }
 
-DisplayError HWPeripheralDRM::Doze(const HWQosData &qos_data, int *release_fence) {
+DisplayError HWPeripheralDRM::Doze(const HWQosData &qos_data, shared_ptr<Fence> *release_fence) {
   DTRACE_SCOPED();
 
   if (!first_cycle_ && switch_mode_valid_ && !doze_poms_switch_done_ &&
@@ -601,7 +601,8 @@ DisplayError HWPeripheralDRM::Doze(const HWQosData &qos_data, int *release_fence
   return kErrorNone;
 }
 
-DisplayError HWPeripheralDRM::DozeSuspend(const HWQosData &qos_data, int *release_fence) {
+DisplayError HWPeripheralDRM::DozeSuspend(const HWQosData &qos_data,
+                                          shared_ptr<Fence> *release_fence) {
   DTRACE_SCOPED();
 
   if (switch_mode_valid_ && !doze_poms_switch_done_ &&
