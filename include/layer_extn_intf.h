@@ -50,6 +50,7 @@ class LayerExtnIntf {
  public:
   virtual ~LayerExtnIntf() = default;
   virtual int GetLayerClass(const std::string &name) = 0;
+  virtual void UpdateLayerState(const std::vector<std::string> &layers, int num_layers) = 0;
 };
 
 typedef bool (*CreateLayerExtnInterface)(uint16_t version, LayerExtnIntf **interface);
