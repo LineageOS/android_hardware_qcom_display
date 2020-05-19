@@ -132,6 +132,7 @@ class HWDeviceDRM : public HWInterface {
     return kErrorNotSupported;
   }
   virtual DisplayError SetBlendSpace(const PrimariesTransfer &blend_space);
+  virtual DisplayError EnableSelfRefresh() { return kErrorNotSupported; }
 
   enum {
     kHWEventVSync,

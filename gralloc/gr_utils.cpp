@@ -151,7 +151,7 @@ bool IsCompressedRGBFormat(int format) {
   return false;
 }
 
-bool IsCameraCustomFormat(int format) {
+bool IsCameraCustomFormat(int format, uint64_t usage) {
   switch (format) {
     case HAL_PIXEL_FORMAT_NV21_ZSL:
     case HAL_PIXEL_FORMAT_NV12_LINEAR_FLEX:
@@ -163,6 +163,11 @@ bool IsCameraCustomFormat(int format) {
     case HAL_PIXEL_FORMAT_RAW_OPAQUE:
     case HAL_PIXEL_FORMAT_RAW10:
     case HAL_PIXEL_FORMAT_RAW12:
+      if (usage & GRALLOC_USAGE_HW_COMPOSER) {
+        ALOGW("%s: HW_Composer flag is set for camera custom format: 0x%x, Usage: 0x%" PRIx64,
+              __FUNCTION__, format, usage);
+        return false;
+      }
       return true;
     default:
       break;
@@ -302,7 +307,7 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
     return 0;
   }
 
-  if (IsCameraCustomFormat(format) && CameraInfo::GetInstance()) {
+  if (IsCameraCustomFormat(format, usage) && CameraInfo::GetInstance()) {
     int result = CameraInfo::GetInstance()->GetBufferSize(format, width, height, &size);
     if (result != 0) {
       ALOGE("%s: Failed to get the buffer size through camera library. Error code: %d",
@@ -391,6 +396,9 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
         size = MMM_COLOR_FMT_BUFFER_SIZE(MMM_COLOR_FMT_NV12_512, width, height);
         break;
 #endif
+      case HAL_PIXEL_FORMAT_NV21_ZSL:
+        size = ALIGN((alignedw * alignedh) + (alignedw * alignedh) / 2, SIZE_4K);
+        break;
       default:ALOGE("%s: Unrecognized pixel format: 0x%x", __FUNCTION__, format);
         return 0;
     }
@@ -403,6 +411,13 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
 int GetBufferSizeAndDimensions(const BufferInfo &info, unsigned int *size, unsigned int *alignedw,
                                unsigned int *alignedh) {
   GraphicsMetadata graphics_metadata = {};
+  if (info.width < 1 || info.height < 1) {
+    *alignedw = 0;
+    *alignedh = 0;
+    *size = 0;
+    ALOGW("%s: Invalid buffer info, Width: %d, Height: %d.", __FUNCTION__, info.width, info.height);
+    return -1;
+  }
   return GetBufferSizeAndDimensions(info, size, alignedw, alignedh, &graphics_metadata);
 }
 
@@ -412,7 +427,11 @@ int GetBufferSizeAndDimensions(const BufferInfo &info, unsigned int *size, unsig
   if (CanUseAdrenoForSize(buffer_type, info.usage)) {
     return GetGpuResourceSizeAndDimensions(info, size, alignedw, alignedh, graphics_metadata);
   } else {
-    GetAlignedWidthAndHeight(info, alignedw, alignedh);
+    int err = GetAlignedWidthAndHeight(info, alignedw, alignedh);
+    if (err) {
+      *size = 0;
+      return err;
+    }
     *size = GetSize(info, *alignedw, *alignedh);
   }
   return 0;
@@ -548,6 +567,10 @@ void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint3
       c_size = c_stride * c_height;
       break;
 #endif
+    case HAL_PIXEL_FORMAT_NV21_ZSL:
+      c_size = (width * height) / 2;
+      c_height = height >> 1;
+      break;
     case HAL_PIXEL_FORMAT_RAW16:
     case HAL_PIXEL_FORMAT_Y16:
       c_size = c_stride = 0;
@@ -616,7 +639,10 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]) 
   BufferDim_t buffer_dim;
   if (getMetaData(const_cast<private_handle_t *>(hnd), GET_BUFFER_GEOMETRY, &buffer_dim) == 0) {
     BufferInfo info(buffer_dim.sliceWidth, buffer_dim.sliceHeight, format, usage);
-    GetAlignedWidthAndHeight(info, &width, &height);
+    err = GetAlignedWidthAndHeight(info, &width, &height);
+    if (err) {
+      return err;
+    }
   }
 
   // Check metadata for interlaced content.
@@ -905,10 +931,9 @@ int GetRgbDataAddress(private_handle_t *hnd, void **rgb_data) {
   return err;
 }
 
-void GetCustomDimensions(private_handle_t *hnd, int *stride, int *height) {
+int GetCustomDimensions(private_handle_t *hnd, int *stride, int *height) {
   BufferDim_t buffer_dim;
   int interlaced = 0;
-
   *stride = hnd->width;
   *height = hnd->height;
   if (getMetaData(hnd, GET_BUFFER_GEOMETRY, &buffer_dim) == 0) {
@@ -920,11 +945,17 @@ void GetCustomDimensions(private_handle_t *hnd, int *stride, int *height) {
       // Get re-aligned height for single ubwc interlaced field and
       // multiply by 2 to get frame height.
       BufferInfo info(hnd->width, ((hnd->height + 1) >> 1), hnd->format);
-      GetAlignedWidthAndHeight(info, &alignedw, &alignedh);
+      int err = GetAlignedWidthAndHeight(info, &alignedw, &alignedh);
+      if (err) {
+        *stride = 0;
+        *height = 0;
+        return err;
+      }
       *stride = static_cast<int>(alignedw);
       *height = static_cast<int>(alignedh * 2);
     }
   }
+  return 0;
 }
 
 void GetColorSpaceFromMetadata(private_handle_t *hnd, int *color_space) {
@@ -950,13 +981,18 @@ void GetColorSpaceFromMetadata(private_handle_t *hnd, int *color_space) {
   }
 }
 
-void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
+int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
                               unsigned int *alignedh) {
   int width = info.width;
   int height = info.height;
   int format = info.format;
   uint64_t usage = info.usage;
-
+  if (width < 1 || height < 1) {
+    *alignedw = 0;
+    *alignedh = 0;
+    ALOGW("%s: Invalid buffer info, Width: %d, Height: %d.", __FUNCTION__, width, height);
+    return -1;
+  }
   // Currently surface padding is only computed for RGB* surfaces.
   bool ubwc_enabled = IsUBwcEnabled(format, usage);
   int tile = ubwc_enabled;
@@ -964,7 +1000,7 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
   // Use of aligned width and aligned height is to calculate the size of buffer,
   // but in case of camera custom format size is being calculated from given width
   // and given height.
-  if (IsCameraCustomFormat(format) && CameraInfo::GetInstance()) {
+  if (IsCameraCustomFormat(format, usage) && CameraInfo::GetInstance()) {
     int aligned_w = width;
     int aligned_h = height;
     int result = CameraInfo::GetInstance()->GetStrideInBytes(
@@ -976,7 +1012,7 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
           __FUNCTION__, width, height, format, result);
       *alignedw = width;
       *alignedh = aligned_h;
-      return;
+      return result;
     }
 
     result = CameraInfo::GetInstance()->GetScanline(format, (PlaneComponent)PLANE_COMPONENT_Y,
@@ -988,12 +1024,12 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
           __FUNCTION__, width, height, format, result);
       *alignedw = aligned_w;
       *alignedh = height;
-      return;
+      return result;
     }
 
     *alignedw = aligned_w;
     *alignedh = aligned_h;
-    return;
+    return 0;
   }
 
   if (IsUncompressedRGBFormat(format)) {
@@ -1001,19 +1037,19 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       AdrenoMemInfo::GetInstance()->AlignUnCompressedRGB(width, height, format, tile, alignedw,
                                                          alignedh);
     }
-    return;
+    return 0;
   }
 
   if (ubwc_enabled) {
     GetYuvUBwcWidthAndHeight(width, height, format, alignedw, alignedh);
-    return;
+    return 0;
   }
 
   if (IsCompressedRGBFormat(format)) {
     if (AdrenoMemInfo::GetInstance()) {
       AdrenoMemInfo::GetInstance()->AlignCompressedRGB(width, height, format, alignedw, alignedh);
     }
-    return;
+    return 0;
   }
 
   int aligned_w = width;
@@ -1025,7 +1061,8 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
     case HAL_PIXEL_FORMAT_YCrCb_420_SP:
     case HAL_PIXEL_FORMAT_YCbCr_420_SP:
       if (AdrenoMemInfo::GetInstance() == nullptr) {
-        return;
+        ALOGW("%s: AdrenoMemInfo instance pointing to a NULL value.", __FUNCTION__);
+        return -1;
       }
       alignment = AdrenoMemInfo::GetInstance()->GetGpuPixelAlignment();
       aligned_w = ALIGN(width, alignment);
@@ -1079,12 +1116,17 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       aligned_h = INT(MMM_COLOR_FMT_Y_SCANLINES(MMM_COLOR_FMT_NV12_512, height));
       break;
 #endif
+    case HAL_PIXEL_FORMAT_NV21_ZSL:
+      aligned_w = ALIGN(width, 64);
+      aligned_h = ALIGN(height, 64);
+      break;
     default:
       break;
   }
 
   *alignedw = (unsigned int)aligned_w;
   *alignedh = (unsigned int)aligned_h;
+  return 0;
 }
 
 int GetBufferLayout(private_handle_t *hnd, uint32_t stride[4], uint32_t offset[4],
@@ -1156,7 +1198,10 @@ int GetBufferLayout(private_handle_t *hnd, uint32_t stride[4], uint32_t offset[4
 int GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
                                     unsigned int *alignedw, unsigned int *alignedh,
                                     GraphicsMetadata *graphics_metadata) {
-  GetAlignedWidthAndHeight(info, alignedw, alignedh);
+  int err = GetAlignedWidthAndHeight(info, alignedw, alignedh);
+  if (err) {
+    return err;
+  }
   AdrenoMemInfo* adreno_mem_info = AdrenoMemInfo::GetInstance();
   graphics_metadata->size = adreno_mem_info->AdrenoGetMetadataBlobSize();
   uint64_t adreno_usage = info.usage;
@@ -1355,7 +1400,7 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
   unsigned int y_stride, c_stride, y_height, c_height, y_size, c_size;
   uint64_t yOffset, cOffset, crOffset, cbOffset;
   int h_subsampling = 0, v_subsampling = 0;
-  if (IsCameraCustomFormat(format) && CameraInfo::GetInstance()) {
+  if (IsCameraCustomFormat(format, info.usage) && CameraInfo::GetInstance()) {
     int result = CameraInfo::GetInstance()->GetCameraFormatPlaneInfo(
         format, info.width, info.height, plane_count, plane_info);
     if (result != 0) {
@@ -1378,6 +1423,7 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
     case HAL_PIXEL_FORMAT_YCrCb_422_SP:
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
+    case HAL_PIXEL_FORMAT_NV21_ZSL:
       *plane_count = 2;
       GetYuvSPPlaneInfo(info, format, width, height, 1, plane_info);
       GetYuvSubSamplingFactor(format, &h_subsampling, &v_subsampling);
@@ -1606,6 +1652,7 @@ void GetYuvSubSamplingFactor(int32_t format, int *h_subsampling, int *v_subsampl
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:  // Same as YCbCr_420_SP_VENUS
     case HAL_PIXEL_FORMAT_YV12:
     case HAL_PIXEL_FORMAT_NV12_HEIF:
+    case HAL_PIXEL_FORMAT_NV21_ZSL:
       *h_subsampling = 1;
       *v_subsampling = 1;
       break;

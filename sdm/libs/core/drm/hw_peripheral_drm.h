@@ -69,6 +69,7 @@ class HWPeripheralDRM : public HWDeviceDRM {
   virtual void GetHWPanelMaxBrightness();
   virtual DisplayError SetBLScale(uint32_t level);
   virtual DisplayError GetPanelBrightnessBasePath(std::string *base_path);
+  virtual DisplayError EnableSelfRefresh();
 
  private:
   void InitDestScaler();
@@ -84,6 +85,7 @@ class HWPeripheralDRM : public HWDeviceDRM {
                               idle_pc_state_);
   }
   void CacheDestScalarData();
+  void SetSelfRefreshState();
 
   struct DestScalarCache {
     SDEScaler scalar_data = {};
@@ -101,6 +103,7 @@ class HWPeripheralDRM : public HWDeviceDRM {
   void PopulateBitClkRates();
   std::vector<uint64_t> bitclk_rates_;
   std::string brightness_base_path_ = "";
+  bool self_refresh_enabled_ = false;
 };
 
 }  // namespace sdm

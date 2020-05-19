@@ -153,12 +153,6 @@ enum struct DRMOps {
    */
   PLANE_SET_MULTIRECT_MODE,
   /*
-   * Op: Sets sspp layout on this plane.
-   * Arg: uint32_t - Plane ID
-   *      uint32_t - SSPP Layout Index
-   */
-  PLANE_SET_SSPP_LAYOUT,
-  /*
    * Op: Sets rotator output frame buffer ID for plane.
    * Arg: uint32_t - Plane ID
    *      uint32_t - Framebuffer ID
@@ -311,6 +305,12 @@ enum struct DRMOps {
    *      uint32_t - idle pc state
    */
   CRTC_SET_IDLE_PC_STATE,
+  /*
+   * Op: Sets Cache state for CRTC.
+   * Arg: uint32_t - CRTC ID
+   *      uint32_t - Cache state
+   */
+  CRTC_SET_CACHE_STATE,
   /*
    * Op: Returns retire fence for this commit. Should be called after Commit() on
    * DRMAtomicReqInterface.
@@ -597,6 +597,7 @@ enum struct DRMTopology {
   QUAD_LM_MERGE,
   QUAD_LM_DSCMERGE,
   QUAD_LM_MERGE_DSC,
+  QUAD_LM_DSC4HSMERGE,
   PPSPLIT,
 };
 
@@ -829,12 +830,6 @@ enum struct DRMMultiRectMode {
   SERIAL = 2,
 };
 
-enum struct DRMSSPPLayoutIndex {
-  NONE = 0,
-  LEFT = 1,
-  RIGHT = 2,
-};
-
 enum struct DRMCWbCaptureMode {
   MIXER_OUT = 0,
   DSPP_OUT = 1,
@@ -844,6 +839,11 @@ enum struct DRMQsyncMode {
   NONE = 0,
   CONTINUOUS,
   ONESHOT,
+};
+
+enum struct DRMCacheState {
+  DISABLED = 0,
+  ENABLED,
 };
 
 enum struct DRMTopologyControl {

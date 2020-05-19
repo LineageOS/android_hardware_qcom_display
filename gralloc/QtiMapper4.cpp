@@ -384,6 +384,7 @@ Return<void> QtiMapper::getReservedRegion(void *buffer, getReservedRegion_cb hid
   hidl_cb(err, reserved_region, reserved_size);
   return Void();
 }
+
 Error QtiMapper::DumpBufferMetadata(const private_handle_t *buffer, BufferDump *outBufferDump) {
   outBufferDump->metadataDump.resize(metadata_type_descriptions_.size());
   for (int i = 0; i < static_cast<int>(metadata_type_descriptions_.size()); i++) {

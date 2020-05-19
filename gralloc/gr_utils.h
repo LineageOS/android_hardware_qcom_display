@@ -171,9 +171,9 @@ int GetBufferSizeAndDimensions(const BufferInfo &d, unsigned int *size, unsigned
                                unsigned int *alignedh);
 int GetBufferSizeAndDimensions(const BufferInfo &d, unsigned int *size, unsigned int *alignedw,
                                unsigned int *alignedh, GraphicsMetadata *graphics_metadata);
-void GetCustomDimensions(private_handle_t *hnd, int *stride, int *height);
+int GetCustomDimensions(private_handle_t *hnd, int *stride, int *height);
 void GetColorSpaceFromMetadata(private_handle_t *hnd, int *color_space);
-void GetAlignedWidthAndHeight(const BufferInfo &d, unsigned int *aligned_w,
+int GetAlignedWidthAndHeight(const BufferInfo &d, unsigned int *aligned_w,
                               unsigned int *aligned_h);
 int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]);
 int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32_t height,
@@ -189,7 +189,7 @@ bool IsUBwcFormat(int format);
 bool IsUBwcSupported(int format);
 bool IsUBwcPISupported(int format, uint64_t usage);
 bool IsUBwcEnabled(int format, uint64_t usage);
-bool IsCameraCustomFormat(int format);
+bool IsCameraCustomFormat(int format, uint64_t usage);
 void GetYuvUBwcWidthAndHeight(int width, int height, int format, unsigned int *aligned_w,
                               unsigned int *aligned_h);
 void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint32_t height,

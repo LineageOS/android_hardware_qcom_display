@@ -2381,15 +2381,19 @@ void HWCSession::UEventHandler(const char *uevent_data, int length) {
     // MST hotplug will not carry connection status/test pattern etc.
     // Pluggable display handler will check all connection status' and take action accordingly.
     const char *str_status = GetTokenValue(uevent_data, length, "status=");
+    const char *str_sstmst = GetTokenValue(uevent_data, length, "HOTPLUG=");
+    // Check MST_HOTPLUG for backward compatibility.
     const char *str_mst = GetTokenValue(uevent_data, length, "MST_HOTPLUG=");
-    if (!str_status && !str_mst) {
+    if (!str_status && !str_mst  && !str_sstmst) {
       return;
     }
 
     hpd_bpp_ = GetEventValue(uevent_data, length, "bpp=");
     hpd_pattern_ = GetEventValue(uevent_data, length, "pattern=");
-    DLOGI("Uevent = %s, status = %s, MST_HOTPLUG = %s, bpp = %d, pattern = %d", uevent_data,
-          str_status ? str_status : "NULL", str_mst ? str_mst : "NULL", hpd_bpp_, hpd_pattern_);
+    DLOGI("UEvent = %s, status = %s, HOTPLUG = %s (SST/MST)%s%s, bpp = %d, pattern = %d",
+          uevent_data, str_status ? str_status : "NULL", str_sstmst ? str_sstmst : "NULL",
+          str_mst ? ", MST_HOTPLUG = " : "", str_mst ? str_mst : "",
+          hpd_bpp_, hpd_pattern_);
 
     hwc2_display_t virtual_display_index =
         (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
@@ -3252,25 +3256,21 @@ int32_t HWCSession::GetDisplayCapabilities(hwc2_display_t display,
   }
 
   bool isBuiltin = (hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN);
-  int32_t has_doze_support = 0;
-  GetDozeSupport(display, &has_doze_support);
   if (isBuiltin) {
-    capabilities->resize(4);
+    int32_t has_doze_support = 0;
+    GetDozeSupport(display, &has_doze_support);
+
     // TODO(user): Handle SKIP_CLIENT_COLOR_TRANSFORM based on DSPP availability
     if (has_doze_support) {
-      std::vector<HwcDisplayCapability> caps{
-          HwcDisplayCapability::SKIP_CLIENT_COLOR_TRANSFORM, HwcDisplayCapability::DOZE,
-          HwcDisplayCapability::BRIGHTNESS, HwcDisplayCapability::PROTECTED_CONTENTS};
-
-      capabilities->setToExternal(caps.data(), caps.size());
-   } else {
-      std::vector<HwcDisplayCapability> caps{
-         HwcDisplayCapability::SKIP_CLIENT_COLOR_TRANSFORM,
-         HwcDisplayCapability::BRIGHTNESS, HwcDisplayCapability::PROTECTED_CONTENTS}; 
-
-      capabilities->setToExternal(caps.data(), caps.size());
-   }
+      *capabilities = {HwcDisplayCapability::SKIP_CLIENT_COLOR_TRANSFORM,
+                       HwcDisplayCapability::DOZE,
+                       HwcDisplayCapability::BRIGHTNESS, HwcDisplayCapability::PROTECTED_CONTENTS};
+    } else {
+      *capabilities = {HwcDisplayCapability::SKIP_CLIENT_COLOR_TRANSFORM,
+                       HwcDisplayCapability::BRIGHTNESS, HwcDisplayCapability::PROTECTED_CONTENTS};
+    }
   }
+
   return HWC2_ERROR_NONE;
 }
 
@@ -3286,7 +3286,7 @@ int32_t HWCSession::GetDisplayConnectionType(hwc2_display_t display,
 
   if (!hwc_display_[display]) {
     DLOGE("Expected valid hwc_display");
-    return HWC2_ERROR_BAD_PARAMETER;
+    return HWC2_ERROR_BAD_DISPLAY;
   }
   *type = HwcDisplayConnectionType::EXTERNAL;
   if (hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN) {

@@ -107,7 +107,6 @@ using sde_drm::DRMSecureMode;
 using sde_drm::DRMSecurityLevel;
 using sde_drm::DRMCscType;
 using sde_drm::DRMMultiRectMode;
-using sde_drm::DRMSSPPLayoutIndex;
 using sde_drm::DRMCrtcInfo;
 
 namespace sdm {
@@ -627,7 +626,8 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
       (topology == DRMTopology::DUAL_LM || topology == DRMTopology::DUAL_LM_MERGE ||
        topology == DRMTopology::DUAL_LM_MERGE_DSC || topology == DRMTopology::DUAL_LM_DSC ||
        topology == DRMTopology::DUAL_LM_DSCMERGE || topology == DRMTopology::QUAD_LM_MERGE ||
-       topology == DRMTopology::QUAD_LM_DSCMERGE || topology == DRMTopology::QUAD_LM_MERGE_DSC);
+       topology == DRMTopology::QUAD_LM_DSCMERGE || topology == DRMTopology::QUAD_LM_MERGE_DSC ||
+       topology == DRMTopology::QUAD_LM_DSC4HSMERGE);
   display_attributes_[index].clock_khz = mode.clock;
 
   // If driver doesn't return panel width/height information, default to 320 dpi
@@ -1168,33 +1168,7 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayers *hw_layers,
 
           DRMRect dst = {};
           SetRect(pipe_info->dst_roi, &dst);
-          LayerRect right_mixer = {FLOAT(mixer_attributes_.split_left), 0,
-                                   FLOAT(mixer_attributes_.width), FLOAT(mixer_attributes_.height)};
-          LayerRect dst_roi = pipe_info->dst_roi;
-
-          // For larget displays ie; 2 * 2k * 2k * 90 fps 4 LM's get programmed.
-          // Each pair of LM's drive independent displays.
-          // Layout Index indicates the panel onto which pipe gets staged.
-          DRMSSPPLayoutIndex layout_index = DRMSSPPLayoutIndex::NONE;
-          if (mixer_attributes_.split_type == kQuadSplit) {
-            layout_index = DRMSSPPLayoutIndex::LEFT;
-            if (IsValid(Intersection(dst_roi, right_mixer))) {
-              dst_roi = Reposition(dst_roi, -INT(mixer_attributes_.split_left), 0);
-              layout_index = DRMSSPPLayoutIndex::RIGHT;
-              DLOGV_IF(kTagDriverConfig, "Layer index = %d sspp layout = RIGHT", i);
-              DLOGV_IF(kTagDriverConfig, "Right dst_roi l = %f t = %f r = %f b = %f",
-                       dst_roi.left, dst_roi.top, dst_roi.right, dst_roi.bottom);
-            } else {
-              DLOGV_IF(kTagDriverConfig, "Layer index = %d sspp layout = LEFT", i);
-              DLOGV_IF(kTagDriverConfig, "Left dst_roi l = %f t = %f r = %f b = %f",
-                       dst_roi.left, dst_roi.top, dst_roi.right, dst_roi.bottom);
-            }
-          }
-          SetRect(dst_roi, &dst);
           drm_atomic_intf_->Perform(DRMOps::PLANE_SET_DST_RECT, pipe_id, dst);
-
-          // Update Layout index.
-          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_SSPP_LAYOUT, pipe_id, layout_index);
 
           DRMRect excl = {};
           SetRect(pipe_info->excl_rect, &excl);
@@ -1932,7 +1906,8 @@ DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attr
     mixer_attributes_.split_type = kDualSplit;
     if (display_attributes_[index].topology == kQuadLMMerge ||
         display_attributes_[index].topology == kQuadLMDSCMerge ||
-        display_attributes_[index].topology == kQuadLMMergeDSC) {
+        display_attributes_[index].topology == kQuadLMMergeDSC ||
+        display_attributes_[index].topology == kQuadLMDSC4HSMerge) {
       mixer_attributes_.split_type = kQuadSplit;
     }
   }
@@ -2080,7 +2055,8 @@ void HWDeviceDRM::UpdateMixerAttributes() {
     mixer_attributes_.split_type = kDualSplit;
     if (display_attributes_[index].topology == kQuadLMMerge ||
         display_attributes_[index].topology == kQuadLMDSCMerge ||
-        display_attributes_[index].topology == kQuadLMMergeDSC) {
+        display_attributes_[index].topology == kQuadLMMergeDSC ||
+        display_attributes_[index].topology == kQuadLMDSC4HSMerge) {
       mixer_attributes_.split_type = kQuadSplit;
     }
   }
@@ -2118,21 +2094,21 @@ void HWDeviceDRM::SetSecureConfig(const LayerBuffer &input_buffer, DRMSecureMode
 
 void HWDeviceDRM::SetTopology(sde_drm::DRMTopology drm_topology, HWTopology *hw_topology) {
   switch (drm_topology) {
-    case DRMTopology::SINGLE_LM:          *hw_topology = kSingleLM;        break;
-    case DRMTopology::SINGLE_LM_DSC:      *hw_topology = kSingleLMDSC;     break;
-    case DRMTopology::DUAL_LM:            *hw_topology = kDualLM;          break;
-    case DRMTopology::DUAL_LM_DSC:        *hw_topology = kDualLMDSC;       break;
-    case DRMTopology::DUAL_LM_MERGE:      *hw_topology = kDualLMMerge;     break;
-    case DRMTopology::DUAL_LM_MERGE_DSC:  *hw_topology = kDualLMMergeDSC;  break;
-    case DRMTopology::DUAL_LM_DSCMERGE:   *hw_topology = kDualLMDSCMerge;  break;
-    case DRMTopology::QUAD_LM_MERGE:      *hw_topology = kQuadLMMerge;     break;
-    case DRMTopology::QUAD_LM_DSCMERGE:   *hw_topology = kQuadLMDSCMerge;  break;
-    case DRMTopology::QUAD_LM_MERGE_DSC:  *hw_topology = kQuadLMMergeDSC;  break;
-    case DRMTopology::PPSPLIT:            *hw_topology = kPPSplit;         break;
-    default:                              *hw_topology = kUnknown;         break;
+    case DRMTopology::SINGLE_LM:            *hw_topology = kSingleLM;           break;
+    case DRMTopology::SINGLE_LM_DSC:        *hw_topology = kSingleLMDSC;        break;
+    case DRMTopology::DUAL_LM:              *hw_topology = kDualLM;             break;
+    case DRMTopology::DUAL_LM_DSC:          *hw_topology = kDualLMDSC;          break;
+    case DRMTopology::DUAL_LM_MERGE:        *hw_topology = kDualLMMerge;        break;
+    case DRMTopology::DUAL_LM_MERGE_DSC:    *hw_topology = kDualLMMergeDSC;     break;
+    case DRMTopology::DUAL_LM_DSCMERGE:     *hw_topology = kDualLMDSCMerge;     break;
+    case DRMTopology::QUAD_LM_MERGE:        *hw_topology = kQuadLMMerge;        break;
+    case DRMTopology::QUAD_LM_DSCMERGE:     *hw_topology = kQuadLMDSCMerge;     break;
+    case DRMTopology::QUAD_LM_MERGE_DSC:    *hw_topology = kQuadLMMergeDSC;     break;
+    case DRMTopology::QUAD_LM_DSC4HSMERGE:  *hw_topology = kQuadLMDSC4HSMerge;  break;
+    case DRMTopology::PPSPLIT:              *hw_topology = kPPSplit;            break;
+    default:                                *hw_topology = kUnknown;            break;
   }
 }
-
 
 void HWDeviceDRM::SetMultiRectMode(const uint32_t flags, DRMMultiRectMode *target) {
   *target = DRMMultiRectMode::NONE;
