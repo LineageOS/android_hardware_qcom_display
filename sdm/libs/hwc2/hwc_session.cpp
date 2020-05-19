@@ -776,6 +776,7 @@ int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display
     if (power_on_pending_[display]) {
       status = HWC2::Error::None;
     } else {
+      hwc_session->hwc_display_[display]->ProcessActiveConfigChange();
       status = hwc_session->PresentDisplayInternal(display, out_retire_fence);
       if (status == HWC2::Error::None) {
         // Check if hwc's refresh trigger is getting exercised.
@@ -1313,6 +1314,11 @@ hwc2_function_pointer_t HWCSession::GetFunction(struct hwc2_device *device,
       return AsFP<HWC2_PFN_SET_DISPLAY_BRIGHTNESS>(HWCSession::SetDisplayBrightness);
     case HWC2::FunctionDescriptor::GetDisplayConnectionType:
       return AsFP<HWC2_PFN_GET_DISPLAY_CONNECTION_TYPE>(HWCSession::GetDisplayConnectionType);
+    case HWC2::FunctionDescriptor::GetDisplayVsyncPeriod:
+      return AsFP<HWC2_PFN_GET_DISPLAY_VSYNC_PERIOD>(HWCSession::GetDisplayVsyncPeriod);
+    case HWC2::FunctionDescriptor::SetActiveConfigWithConstraints:
+      return AsFP<HWC2_PFN_SET_ACTIVE_CONFIG_WITH_CONSTRAINTS>
+                  (HWCSession::SetActiveConfigWithConstraints);
     default:
       DLOGD("Unknown/Unimplemented function descriptor: %d (%s)", int_descriptor,
             to_string(descriptor).c_str());
@@ -3332,6 +3338,26 @@ int32_t HWCSession::GetDisplayConnectionType(hwc2_device_t* device, hwc2_display
   return HWC2_ERROR_NONE;
 }
 
+int32_t HWCSession::GetDisplayVsyncPeriod(hwc2_device_t *device, hwc2_display_t display,
+                                          hwc2_vsync_period_t *out_vsync_period) {
+  if (!out_vsync_period || !device) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  return CallDisplayFunction(device, display, &HWCDisplay::GetDisplayVsyncPeriod, out_vsync_period);
+}
+
+int32_t HWCSession::SetActiveConfigWithConstraints(hwc2_device_t *device, hwc2_display_t display,
+                    hwc2_config_t config,
+                    hwc_vsync_period_change_constraints_t *vsync_period_change_constraints,
+                    hwc_vsync_period_change_timeline_t *out_timeline) {
+  if (!vsync_period_change_constraints || !out_timeline || !device) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  return CallDisplayFunction(device, display, &HWCDisplay::SetActiveConfigWithConstraints, config,
+                             vsync_period_change_constraints, out_timeline);
+}
 
 int32_t HWCSession::GetDisplayBrightnessSupport(hwc2_device_t *device, hwc2_display_t display,
                                                 bool *outSupport) {

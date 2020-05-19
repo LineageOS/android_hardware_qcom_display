@@ -172,6 +172,13 @@ int HWCDisplayBuiltIn::Init() {
   if (enable_optimize_refresh_) {
     DLOGI("Drop redundant drawcycles %d", id_);
   }
+
+  int vsyncs = 0;
+  HWCDebugHandler::Get()->GetProperty(DEFER_FPS_FRAME_COUNT, &vsyncs);
+  if (vsyncs > 0) {
+    SetVsyncsApplyRateChange(UINT32(vsyncs));
+  }
+
   pmic_intf_ = new PMICInterface();
   pmic_intf_->Init();
 

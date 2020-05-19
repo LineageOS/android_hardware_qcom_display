@@ -65,6 +65,11 @@ enum SecureSessionType {
   kSecureMax,
 };
 
+struct TransientRefreshRateInfo {
+  uint32_t transient_vsync_period;
+  int64_t vsync_applied_time;
+};
+
 class HWCColorMode {
  public:
   explicit HWCColorMode(DisplayInterface *display_intf);
@@ -244,6 +249,7 @@ class HWCDisplay : public DisplayEventHandler {
     return HWC2::Error::Unsupported;
   }
   bool IsFirstCommitDone() { return !first_cycle_; }
+  virtual void ProcessActiveConfigChange();
 
   // HWC2 APIs
   virtual HWC2::Error AcceptDisplayChanges(void);
@@ -345,6 +351,10 @@ class HWCDisplay : public DisplayEventHandler {
   virtual void SetLayerStack(HWCLayerStack *stack);
   virtual void PostPowerMode();
   virtual void NotifyClientStatus(bool connected) { client_connected_ = connected; }
+  virtual HWC2::Error GetDisplayVsyncPeriod(hwc2_vsync_period_t *vsync_period);
+  virtual HWC2::Error SetActiveConfigWithConstraints(hwc2_config_t config,
+      hwc_vsync_period_change_constraints_t *vsync_period_change_constraints,
+      hwc_vsync_period_change_timeline_t *out_timeline);
 
  protected:
   static uint32_t throttling_refresh_rate_;
@@ -377,6 +387,19 @@ class HWCDisplay : public DisplayEventHandler {
   virtual void GetUnderScanConfig() { }
   int32_t SetClientTargetDataSpace(int32_t dataspace);
   int32_t GetDisplayConfigGroupId(const DisplayConfigGroupInfo &variable_config);
+  HWC2::Error GetVsyncPeriodByActiveConfig(hwc2_vsync_period_t *vsync_period);
+  bool GetTransientVsyncPeriod(hwc2_vsync_period_t *vsync_period);
+  std::tuple<int64_t, int64_t> RequestActiveConfigChange(hwc2_config_t config,
+                                                         hwc2_vsync_period_t current_vsync_period,
+                                                         int64_t desired_time);
+  std::tuple<int64_t, int64_t> EstimateVsyncPeriodChangeTimeline(
+      hwc2_vsync_period_t current_vsync_period, int64_t desired_time);
+  void SubmitActiveConfigChange(hwc2_vsync_period_t current_vsync_period);
+  bool IsActiveConfigReadyToSubmit(int64_t time);
+  bool IsActiveConfigApplied(int64_t time, int64_t vsync_applied_time);
+  bool IsSameGroup(hwc2_config_t config_id1, hwc2_config_t config_id2);
+  bool AllowSeamless(hwc2_config_t request_config);
+  void SetVsyncsApplyRateChange(uint32_t vsyncs) { vsyncs_to_apply_rate_change_ = vsyncs; }
 
   enum {
     INPUT_LAYER_DUMP,
@@ -437,6 +460,12 @@ class HWCDisplay : public DisplayEventHandler {
   bool fast_path_composition_ = false;
   bool client_connected_ = true;
   bool pending_config_ = false;
+  uint32_t vsyncs_to_apply_rate_change_ = 1;
+  hwc2_config_t pending_refresh_rate_config_ = UINT_MAX;
+  int64_t pending_refresh_rate_refresh_time_ = INT64_MAX;
+  int64_t pending_refresh_rate_applied_time_ = INT64_MAX;
+  std::deque<TransientRefreshRateInfo> transient_refresh_rate_info_;
+  std::mutex transient_refresh_rate_lock_;
 
  private:
   void DumpInputBuffers(void);
