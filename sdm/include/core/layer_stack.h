@@ -244,6 +244,10 @@ struct LayerFlags {
       uint32_t skip_iwe : 1;
                               //!< This flag shall be set to indicate that this layer
                               //!< is handled by IWE for two phase composition.
+#ifdef UDFPS_ZPOS
+      uint32_t fod_pressed : 1;
+                              //!< This flag shall be set internally to mark the fod pressed layer
+#endif
     };
 
     uint32_t flags = 0;       //!< For initialization purpose only.

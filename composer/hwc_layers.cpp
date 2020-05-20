@@ -64,6 +64,10 @@
 #include <cmath>
 #include <gr_utils.h>
 
+#ifdef UDFPS_ZPOS
+#include <display/drm/sde_drm.h>
+#endif
+
 #define __CLASS__ "HWCLayer"
 using aidl::android::hardware::graphics::common::StandardMetadataType;
 
@@ -712,6 +716,15 @@ HWC2::Error HWCLayer::SetLayerVisibleRegion(hwc_region_t visible) {
 }
 
 HWC2::Error HWCLayer::SetLayerZOrder(uint32_t z) {
+#ifdef UDFPS_ZPOS
+  bool fod_pressed = z & FOD_PRESSED_LAYER_ZORDER;
+  if (fod_pressed_ != fod_pressed) {
+    fod_pressed_ = fod_pressed;
+    z &= ~FOD_PRESSED_LAYER_ZORDER;
+    geometry_changes_ |= kZOrder;
+  }
+#endif
+
   if (z_ != z) {
     geometry_changes_ |= kZOrder;
     z_ = z;
