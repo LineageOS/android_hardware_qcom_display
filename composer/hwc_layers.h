@@ -136,6 +136,9 @@ class HWCLayer {
   void SetLayerAsMask();
   bool BufferLatched() { return buffer_flipped_; }
   void ResetBufferFlip() { buffer_flipped_ = false; }
+#ifdef UDFPS_ZPOS
+  bool IsFodPressed() { return fod_pressed_; }
+#endif
 
  private:
   Layer *layer_ = nullptr;
@@ -159,6 +162,9 @@ class HWCLayer {
   bool color_transform_matrix_set_ = false;
   bool buffer_flipped_ = false;
   bool secure_ = false;
+#ifdef UDFPS_ZPOS
+  bool fod_pressed_ = false;
+#endif
 
   // Composition requested by client(SF) Original
   HWC2::Composition client_requested_orig_ = HWC2::Composition::Device;
