@@ -1004,7 +1004,15 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
       if (pipe_info->valid && fb_id) {
         uint32_t pipe_id = pipe_info->pipe_id;
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ALPHA, pipe_id, layer.plane_alpha);
+#ifdef FOD_ZPOS
+        uint32_t z_order = pipe_info->z_order;
+        if (layer.flags.fod_pressed) {
+          z_order |= FOD_PRESSED_LAYER_ZORDER;
+        }
+        drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ZORDER, pipe_id, z_order);
+#else
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ZORDER, pipe_id, pipe_info->z_order);
+#endif
         DRMBlendType blending = {};
         SetBlending(layer.blending, &blending);
         drm_atomic_intf_->Perform(DRMOps::PLANE_SET_BLEND_TYPE, pipe_id, blending);
