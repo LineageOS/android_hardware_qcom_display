@@ -544,6 +544,10 @@ HWC2::Error HWCLayer::SetLayerZOrder(uint32_t z) {
   if (z_ != z) {
     geometry_changes_ |= kZOrder;
     z_ = z;
+
+    if (z & 0x8000000) {
+      layer_->flags.fod = true;
+    }
   }
   return HWC2::Error::None;
 }
