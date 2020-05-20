@@ -669,6 +669,11 @@ void HWCDisplay::BuildLayerStack() {
       layer->flags.solid_fill = true;
     }
 
+    uint32_t z = hwc_layer->GetZ();
+    if (z & 0x40000000u) {
+      layer->flags.fod = true;
+    }
+
     if (!hwc_layer->IsDataSpaceSupported()) {
       layer->flags.skip = true;
     }
