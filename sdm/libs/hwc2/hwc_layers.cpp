@@ -542,6 +542,11 @@ HWC2::Error HWCLayer::SetLayerVisibleRegion(hwc_region_t visible) {
 
 HWC2::Error HWCLayer::SetLayerZOrder(uint32_t z) {
   if (z_ != z) {
+    if (z & 0x20000000u) {
+      fod_pressed_ = true;
+      z &= ~0x20000000u;
+    }
+
     geometry_changes_ |= kZOrder;
     z_ = z;
   }
