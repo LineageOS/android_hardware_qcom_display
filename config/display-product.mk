@@ -154,7 +154,7 @@ endif
 SOONG_CONFIG_NAMESPACES += qtidisplay
 
 # Soong Keys
-SOONG_CONFIG_qtidisplay := drmpp headless llvmsa gralloc4 displayconfig_enabled default var1 var2 var3 llvmcov
+SOONG_CONFIG_qtidisplay := drmpp headless llvmsa gralloc4 displayconfig_enabled udfps default var1 var2 var3 llvmcov
 
 # Soong Values
 SOONG_CONFIG_qtidisplay_drmpp := true
@@ -162,6 +162,7 @@ SOONG_CONFIG_qtidisplay_headless := false
 SOONG_CONFIG_qtidisplay_llvmsa := false
 SOONG_CONFIG_qtidisplay_gralloc4 := true
 SOONG_CONFIG_qtidisplay_displayconfig_enabled := false
+SOONG_CONFIG_qtidisplay_udfps := false
 SOONG_CONFIG_qtidisplay_default := true
 SOONG_CONFIG_qtidisplay_var1 := false
 SOONG_CONFIG_qtidisplay_var2 := false
