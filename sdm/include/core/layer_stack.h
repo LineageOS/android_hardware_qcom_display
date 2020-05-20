@@ -187,6 +187,8 @@ struct LayerFlags {
 
       uint32_t single_buffer : 1;  //!< This flag shall be set by client to indicate that the layer
                                    //!< uses only a single buffer that will not be swapped out
+
+      uint32_t fod_pressed : 1;    //!< This flag shall be set internally to mark the fod pressed layer
     };
 
     uint32_t flags = 0;       //!< For initialization purpose only.

@@ -669,6 +669,10 @@ void HWCDisplay::BuildLayerStack() {
       layer->flags.solid_fill = true;
     }
 
+    if (hwc_layer->IsFodPressed()) {
+      layer->flags.fod_pressed = true;
+    }
+
     if (!hwc_layer->IsDataSpaceSupported()) {
       layer->flags.skip = true;
     }

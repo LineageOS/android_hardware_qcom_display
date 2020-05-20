@@ -1113,7 +1113,11 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
         if (update_config) {
           drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ALPHA, pipe_id, layer.plane_alpha);
 
-          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ZORDER, pipe_id, pipe_info->z_order);
+          uint32_t z_order = pipe_info->z_order;
+          if (layer.flags.fod_pressed) {
+            z_order |= 0x20000000u;
+          }
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ZORDER, pipe_id, z_order);
 
           DRMBlendType blending = {};
           SetBlending(layer.blending, &blending);
