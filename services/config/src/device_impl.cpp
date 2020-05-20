@@ -501,9 +501,10 @@ void DeviceImpl::DeviceClientContext::ParseGetDebugProperty(const ByteStream &in
   const uint8_t *data = input_params.data();
   const char *name = reinterpret_cast<const char *>(data);
   std::string prop_name(name);
-  int32_t error = intf_->GetDebugProperty(prop_name, value);
+  int32_t error = intf_->GetDebugProperty(prop_name, &value);
+  value += '\0';
   uint8_t *data_output = reinterpret_cast<uint8_t*>(value.data());
-  output_params.setToExternal(reinterpret_cast<uint8_t*>(&data_output),
+  output_params.setToExternal(reinterpret_cast<uint8_t*>(data_output),
                               value.size() * sizeof(char));
 
   _hidl_cb(error, output_params, {});
@@ -578,7 +579,7 @@ void DeviceImpl::DeviceClientContext::ParseGetSupportedDsiBitclks(const ByteStre
 
   const uint8_t *data = input_params.data();
   disp_id = reinterpret_cast<const uint32_t*>(data);
-  int32_t error = intf_->GetSupportedDSIBitClks(*disp_id, bit_clks);
+  int32_t error = intf_->GetSupportedDSIBitClks(*disp_id, &bit_clks);
 
   bit_clks_data = reinterpret_cast<uint64_t *>(malloc(sizeof(uint64_t) * bit_clks.size()));
   for (int i = 0; i < bit_clks.size(); i++) {
