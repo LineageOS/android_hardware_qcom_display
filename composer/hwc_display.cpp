@@ -693,6 +693,12 @@ void HWCDisplay::BuildLayerStack() {
       layer->flags.solid_fill = true;
     }
 
+#ifdef UDFPS_ZPOS
+    if (hwc_layer->IsFodPressed()) {
+      layer->flags.fod_pressed = true;
+    }
+#endif
+
     if (!hwc_layer->IsDataSpaceSupported()) {
       layer->flags.skip = true;
     }

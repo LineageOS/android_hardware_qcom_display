@@ -1474,7 +1474,15 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
         if (update_config) {
           drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ALPHA, pipe_id, layer.plane_alpha);
 
+#ifdef UDFPS_ZPOS
+          uint32_t z_order = pipe_info->z_order;
+          if (layer.flags.fod_pressed) {
+            z_order |= FOD_PRESSED_LAYER_ZORDER;
+          }
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ZORDER, pipe_id, z_order);
+#else
           drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ZORDER, pipe_id, pipe_info->z_order);
+#endif
 
           // Account for PMA block activation directly at translation time to preserve layer
           // blending definition and avoid issues when a layer structure is reused.
