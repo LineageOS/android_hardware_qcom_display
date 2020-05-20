@@ -43,6 +43,8 @@
 #include "layer_buffer.h"
 #include "sdm_types.h"
 
+#define FOD_PRESSED_LAYER_ZORDER 0x20000000u
+
 namespace sdm {
 
 /*! @brief This enum represents display layer blending types.
@@ -187,6 +189,9 @@ struct LayerFlags {
 
       uint32_t single_buffer : 1;  //!< This flag shall be set by client to indicate that the layer
                                    //!< uses only a single buffer that will not be swapped out
+
+      uint32_t fod_pressed : 1;    //!< This flag shall be set internally to mark the fod pressed
+                                   //!< layer
     };
 
     uint32_t flags = 0;       //!< For initialization purpose only.
