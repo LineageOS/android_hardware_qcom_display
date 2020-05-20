@@ -44,6 +44,10 @@
 #include "layer_buffer.h"
 #include "sdm_types.h"
 
+#ifdef UDFPS_ZPOS
+#include <display/drm/sde_drm.h>
+#endif
+
 namespace sdm {
 
 /*! @brief This enum represents display layer blending types.
@@ -180,6 +184,14 @@ struct LayerFlags {
       uint32_t sde_preferred : 1;  //! This flag shall be set by client to indicate that this layer
                                    //! will be composed by display device, layer with this flag
                                    //! will have highest priority. To be used by OEMs only.
+
+#ifdef UDFPS_ZPOS
+      uint32_t reserved : 23;      //!< This flag reserves the remaining 4 * 8 - (8 + 1) bits to
+                                   //!< avoid future ABI breakage
+
+      uint32_t fod_pressed : 1;    //!< This flag shall be set internally to mark the fod pressed
+                                   //!< layer
+#endif
     };
 
     uint32_t flags = 0;       //!< For initialization purpose only.
