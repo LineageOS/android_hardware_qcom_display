@@ -44,6 +44,10 @@ ifeq ($(TARGET_BOARD_AUTO), true)
 LOCAL_CFLAGS                  += -DCONFIG_BASEID_FROM_PROP
 endif
 
+ifeq ($(TARGET_USES_FOD_ZPOS), true)
+LOCAL_CFLAGS                  += -DFOD_ZPOS
+endif
+
 LOCAL_SRC_FILES               := hwc_session.cpp \
                                  hwc_session_services.cpp \
                                  hwc_display.cpp \
