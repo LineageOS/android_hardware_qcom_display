@@ -669,6 +669,11 @@ void HWCDisplay::BuildLayerStack() {
       layer->flags.solid_fill = true;
     }
 
+    if (hwc_layer->IsFod()) {
+      DLOGE("Enabled layer fod flag");
+      layer->flags.fod = true;
+    }
+
     if (!hwc_layer->IsDataSpaceSupported()) {
       layer->flags.skip = true;
     }
