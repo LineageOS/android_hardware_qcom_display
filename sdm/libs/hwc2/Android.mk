@@ -48,6 +48,10 @@ LOCAL_SHARED_LIBRARIES        += vendor.display.config@1.7 \
                                  vendor.display.config@1.2 vendor.display.config@1.1
 endif
 
+ifeq ($(TARGET_USES_FOD_ZPOS), true)
+LOCAL_CFLAGS                  += -DFOD_ZPOS
+endif
+
 LOCAL_SRC_FILES               := hwc_session.cpp \
                                  hwc_session_services.cpp \
                                  hwc_display.cpp \
