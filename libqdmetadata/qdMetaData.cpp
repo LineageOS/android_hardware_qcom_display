@@ -145,6 +145,20 @@ int setMetaDataVa(MetaData_t *data, DispParamType paramType,
     // If parameter is NULL reset the specific MetaData Key
     if (!param) {
        data->operation &= ~paramType;
+       switch (paramType) {
+          case SET_VIDEO_PERF_MODE:
+             data->isVideoPerfMode = 0;
+             break;
+          case SET_CVP_METADATA:
+             data->cvpMetadata.size = 0;
+             break;
+          case SET_VIDEO_HISTOGRAM_STATS:
+             data->video_histogram_stats.stat_len = 0;
+             break;
+          default:
+             ALOGE("Unknown paramType %d", paramType);
+             break;
+       }
        // param unset
        return 0;
     }
@@ -163,7 +177,7 @@ int setMetaDataVa(MetaData_t *data, DispParamType paramType,
             data->refreshrate = *((float *)param);
             break;
         case UPDATE_COLOR_SPACE: {
-          ColorMetaData color;
+          ColorMetaData color = {};
           if (!colorSpaceToColorMetadata(*((ColorSpace_t *)param), &color)) {
             data->color = color;
           }

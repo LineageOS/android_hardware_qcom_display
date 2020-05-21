@@ -31,6 +31,7 @@
 #define __QTIGRALLOCMETADATA_H__
 
 #include <color_metadata.h>
+
 #define QTI_VT_TIMESTAMP 10000
 #define QTI_COLOR_METADATA 10001
 #define QTI_PP_PARAM_INTERLACED 10002
@@ -43,8 +44,14 @@
 #define QTI_SINGLE_BUFFER_MODE 10009
 #define QTI_CVP_METADATA 10010
 #define QTI_VIDEO_HISTOGRAM_STATS 10011
+// File descriptor for allocated buffer
 #define QTI_FD 10012
+// Flags from the private handle of the allocated buffer
 #define QTI_PRIVATE_FLAGS 10013
+// Width of the allocated buffer in pixels
+#define QTI_ALIGNED_WIDTH_IN_PIXELS 10014
+// Height of the allocated buffer in pixels
+#define QTI_ALIGNED_HEIGHT_IN_PIXELS 10015
 
 // Used to indicate to framework that internal definitions are used instead
 #define COMPRESSION_QTI_UBWC 20001

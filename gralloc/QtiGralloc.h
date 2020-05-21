@@ -96,6 +96,12 @@ static const MetadataType MetadataType_FD = {VENDOR_QTI, QTI_FD};
 
 static const MetadataType MetadataType_PrivateFlags = {VENDOR_QTI, QTI_PRIVATE_FLAGS};
 
+static const MetadataType MetadataType_AlignedWidthInPixels = {VENDOR_QTI,
+                                                               QTI_ALIGNED_WIDTH_IN_PIXELS};
+
+static const MetadataType MetadataType_AlignedHeightInPixels = {VENDOR_QTI,
+                                                                QTI_ALIGNED_HEIGHT_IN_PIXELS};
+
 // 0 is also used as invalid value in standard metadata
 static const MetadataType MetadataType_Invalid = {VENDOR_QTI, 0};
 
