@@ -1107,18 +1107,31 @@ Return<void> QtiComposerClient::setActiveConfigWithConstraints(
 }
 
 Return<composer_V2_4::Error> QtiComposerClient::setAutoLowLatencyMode(uint64_t display, bool on) {
+  if (mDisplayData.find(display) == mDisplayData.end()) {
+    return composer_V2_4::Error::BAD_DISPLAY;
+  }
   return composer_V2_4::Error::UNSUPPORTED;
 }
 
 Return<void> QtiComposerClient::getSupportedContentTypes(uint64_t display,
                                                          getSupportedContentTypes_cb _hidl_cb) {
   hidl_vec<composer_V2_4::IComposerClient::ContentType> types = {};
+  if (mDisplayData.find(display) == mDisplayData.end()) {
+    _hidl_cb(composer_V2_4::Error::BAD_DISPLAY, types);
+    return Void();
+  }
   _hidl_cb(composer_V2_4::Error::NONE, types);
   return Void();
 }
 
 Return<composer_V2_4::Error> QtiComposerClient::setContentType(
     uint64_t display, composer_V2_4::IComposerClient::ContentType type) {
+  if (mDisplayData.find(display) == mDisplayData.end()) {
+    return composer_V2_4::Error::BAD_DISPLAY;
+  }
+  if (type == composer_V2_4::IComposerClient::ContentType::NONE) {
+    return composer_V2_4::Error::NONE;
+  }
   return composer_V2_4::Error::UNSUPPORTED;
 }
 
