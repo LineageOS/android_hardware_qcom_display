@@ -368,8 +368,8 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr *ycbcr) {
   uint32_t width = UINT(hnd->width);
   uint32_t height = UINT(hnd->height);
   int format = hnd->format;
-  gralloc1_producer_usage_t prod_usage = hnd->GetProducerUsage();
-  gralloc1_consumer_usage_t cons_usage = hnd->GetConsumerUsage();
+  gralloc1_producer_usage_t prod_usage = static_cast<gralloc1_producer_usage_t> (hnd->GetUsage());
+  gralloc1_consumer_usage_t cons_usage = static_cast<gralloc1_consumer_usage_t> (hnd->GetUsage());
   unsigned int ystride, cstride;
   bool interlaced = false;
 

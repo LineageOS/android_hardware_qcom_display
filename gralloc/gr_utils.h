@@ -48,6 +48,33 @@
 
 #define INT(exp) static_cast<int>(exp)
 #define UINT(exp) static_cast<unsigned int>(exp)
+
+/* HARDWAREBUFFER flags used by GPU to check secure  secure context support */
+#define GRALLOC1_PRODUCER_USAGE_GPU_SAMPLED_IMAGE                   1UL << 8
+/* The buffer will be used as a shader storage or uniform buffer object. */
+#define GRALLOC1_PRODUCER_USAGE_GPU_DATA_BUFFER                     1UL << 24
+/* The buffer will be used as a cube map texture. */
+#define GRALLOC1_PRODUCER_USAGE_GPU_CUBE_MAP                        1UL << 25
+/* The buffer contains a complete mipmap hierarchy. */
+#define GRALLOC1_PRODUCER_USAGE_GPU_MIPMAP_COMPLETE                 1UL << 26
+
+/* Buffer content should be displayed on a primary display only */
+#define GRALLOC1_CONSUMER_USAGE_PRIVATE_INTERNAL_ONLY  0x04000000
+
+/* Buffer content should be displayed on an external display only */
+#define GRALLOC1_CONSUMER_USAGE_PRIVATE_EXTERNAL_ONLY  0x08000000
+
+#define GRALLOC1_MODULE_PERFORM_ALLOCATE_BUFFER 17
+
+/* CAMERA heap is a carveout heap for camera, is not secured */
+#define GRALLOC1_PRODUCER_USAGE_PRIVATE_CAMERA_HEAP GRALLOC1_PRODUCER_USAGE_PRIVATE_2
+#define GRALLOC_USAGE_PRIVATE_CAMERA_HEAP GRALLOC1_PRODUCER_USAGE_PRIVATE_CAMERA_HEAP
+
+#ifdef GRALLOC1_PRODUCER_USAGE_PRIVATE_ADSP_HEAP
+#undef GRALLOC1_PRODUCER_USAGE_PRIVATE_ADSP_HEAP
+#define GRALLOC1_PRODUCER_USAGE_PRIVATE_ADSP_HEAP   GRALLOC1_PRODUCER_USAGE_PRIVATE_3
+#endif
+
 using android::hardware::graphics::common::V1_1::BufferUsage;
 namespace gralloc1 {
 

@@ -182,8 +182,7 @@ void BufferManager::CreateSharedHandle(buffer_handle_t inbuffer, const BufferDes
                                                    descriptor.GetFormat(),
                                                    buffer_type,
                                                    input->size,
-                                                   descriptor.GetProducerUsage(),
-                                                   descriptor.GetConsumerUsage());
+                                                   (descriptor.GetProducerUsage() | descriptor.GetConsumerUsage()));
   out_hnd->id = ++next_id_;
   // TODO(user): Base address of shared handle and ion handles
   RegisterHandleLocked(out_hnd, -1, -1);
@@ -546,8 +545,7 @@ int BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_han
                                                format,
                                                buffer_type,
                                                data.size,
-                                               prod_usage,
-                                               cons_usage);
+                                               (prod_usage | cons_usage));
 
   hnd->id = ++next_id_;
   hnd->base = 0;
@@ -946,8 +944,8 @@ gralloc1_error_t BufferManager::Dump(std::ostringstream *os) {
     *os << " size: "     << std::setw(9) << hnd->size;
     *os << std::hex << std::setfill('0');
     *os << " priv_flags: " << "0x" << std::setw(8) << hnd->flags;
-    *os << " prod_usage: " << "0x" << std::setw(8) << hnd->producer_usage;
-    *os << " cons_usage: " << "0x" << std::setw(8) << hnd->consumer_usage;
+    *os << " prod_usage: " << "0x" << std::setw(8) << hnd->usage;
+    *os << " cons_usage: " << "0x" << std::setw(8) << hnd->usage;
     // TODO(user): get format string from qdutils
     *os << " format: "     << "0x" << std::setw(8) << hnd->format;
     *os << std::dec  << std::setfill(' ') << std::endl;
