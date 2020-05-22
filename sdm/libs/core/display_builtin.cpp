@@ -856,15 +856,22 @@ DisplayError DisplayBuiltIn::GetQSyncMode(QSyncMode *qsync_mode) {
 
 DisplayError DisplayBuiltIn::SetQSyncMode(QSyncMode qsync_mode) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-  if (!hw_panel_info_.qsync_support || qsync_mode_ == qsync_mode || first_cycle_) {
-    DLOGE("Failed: qsync_support: %d first_cycle %d mode: %d -> %d", hw_panel_info_.qsync_support,
-          first_cycle_, qsync_mode_, qsync_mode);
+
+  if (!hw_panel_info_.qsync_support || first_cycle_) {
+    DLOGE("Failed: qsync_support: %d first_cycle %d", hw_panel_info_.qsync_support,
+          first_cycle_);
     return kErrorNotSupported;
+  }
+
+  if (qsync_mode_ == qsync_mode) {
+    DLOGW("Qsync mode already set as requested mode: qsync_mode_=%d", qsync_mode_);
+    return kErrorNone;
   }
 
   qsync_mode_ = qsync_mode;
   needs_avr_update_ = true;
   event_handler_->Refresh();
+  DLOGI("Qsync mode set to %d successfully", qsync_mode_);
 
   return kErrorNone;
 }
