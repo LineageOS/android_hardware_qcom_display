@@ -63,6 +63,9 @@ enum PendingAction {
   kMultiDispProc = BITMAP(11),
   kMultiDispGetId = BITMAP(12),
   kSetModeFromClient = BITMAP(13),
+  kGetNumRenderIntents = BITMAP(14),
+  kGetRenderIntents = BITMAP(15),
+  kSetRenderIntentsData = BITMAP(16),
   kGetDetailedEnhancerData = BITMAP(21),
   kNoAction = BITMAP(31),
 };

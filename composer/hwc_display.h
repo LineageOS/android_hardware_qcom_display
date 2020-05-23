@@ -93,50 +93,56 @@ struct TransientRefreshRateInfo {
 
 class HWCColorMode {
  public:
+  HWCColorMode(){};
   explicit HWCColorMode(DisplayInterface *display_intf);
-  ~HWCColorMode() {}
-  HWC2::Error Init();
-  HWC2::Error DeInit();
-  void Dump(std::ostringstream* os);
-  uint32_t GetColorModeCount();
-  uint32_t GetRenderIntentCount(ColorMode mode);
-  HWC2::Error GetColorModes(uint32_t *out_num_modes, ColorMode *out_modes);
-  HWC2::Error GetRenderIntents(ColorMode mode, uint32_t *out_num_intents, RenderIntent *out_modes);
+  virtual ~HWCColorMode() {}
+  virtual HWC2::Error Init();
+  virtual HWC2::Error DeInit();
+  virtual void Dump(std::ostringstream *os);
+  virtual uint32_t GetColorModeCount();
+  virtual uint32_t GetRenderIntentCount(ColorMode mode);
+  virtual HWC2::Error GetColorModes(uint32_t *out_num_modes, ColorMode *out_modes);
+  virtual HWC2::Error GetRenderIntents(ColorMode mode, uint32_t *out_num_intents,
+                                       RenderIntent *out_modes);
   HWC2::Error SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
   HWC2::Error SetColorModeById(int32_t color_mode_id);
   HWC2::Error SetColorModeFromClientApi(std::string mode_string);
-  HWC2::Error SetColorTransform(const float *matrix, android_color_transform_t hint);
-  HWC2::Error RestoreColorTransform();
-  ColorMode GetCurrentColorMode() { return current_color_mode_; }
-  HWC2::Error ApplyCurrentColorModeWithRenderIntent(bool hdr_present);
-  HWC2::Error CacheColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
+  virtual HWC2::Error SetColorTransform(const float *matrix, android_color_transform_t hint);
+  virtual HWC2::Error RestoreColorTransform();
+  virtual ColorMode GetCurrentColorMode() { return current_color_mode_; }
+  virtual HWC2::Error ApplyCurrentColorModeWithRenderIntent(bool hdr_present);
+  virtual HWC2::Error CacheColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
 
- private:
-  static const uint32_t kColorTransformMatrixCount = 16;
-  void PopulateColorModes();
+ protected:
   template <class T>
   void CopyColorTransformMatrix(const T *input_matrix, double *output_matrix) {
     for (uint32_t i = 0; i < kColorTransformMatrixCount; i++) {
       output_matrix[i] = static_cast<double>(input_matrix[i]);
     }
   }
-  HWC2::Error ValidateColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
-  HWC2::Error SetPreferredColorModeInternal(const std::string &mode_string, bool from_client,
-    ColorMode *color_mode, DynamicRangeType *dynamic_range);
 
+  static const uint32_t kColorTransformMatrixCount = 16;
   DisplayInterface *display_intf_ = NULL;
   bool apply_mode_ = false;
   ColorMode current_color_mode_ = ColorMode::NATIVE;
   RenderIntent current_render_intent_ = RenderIntent::COLORIMETRIC;
   DynamicRangeType curr_dynamic_range_ = kSdrType;
-  typedef std::map<DynamicRangeType, std::string> DynamicRangeMap;
-  typedef std::map<RenderIntent, DynamicRangeMap> RenderIntentMap;
-  // Initialize supported mode/render intent/dynamic range combination
-  std::map<ColorMode, RenderIntentMap> color_mode_map_ = {};
+
   double color_matrix_[kColorTransformMatrixCount] = { 1.0, 0.0, 0.0, 0.0, \
                                                        0.0, 1.0, 0.0, 0.0, \
                                                        0.0, 0.0, 1.0, 0.0, \
                                                        0.0, 0.0, 0.0, 1.0 };
+
+ private:
+  void PopulateColorModes();
+  HWC2::Error ValidateColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
+  HWC2::Error SetPreferredColorModeInternal(const std::string &mode_string, bool from_client,
+                                            ColorMode *color_mode, DynamicRangeType *dynamic_range);
+
+  typedef std::map<DynamicRangeType, std::string> DynamicRangeMap;
+  typedef std::map<RenderIntent, DynamicRangeMap> RenderIntentMap;
+  // Initialize supported mode/render intent/dynamic range combination
+  std::map<ColorMode, RenderIntentMap> color_mode_map_ = {};
   std::map<ColorMode, DynamicRangeMap> preferred_mode_ = {};
 };
 
@@ -203,7 +209,7 @@ class HWCDisplay : public DisplayEventHandler {
   // 0 : Success.
   virtual int GetFrameCaptureStatus() { return -EAGAIN; }
 
-  virtual DisplayError SetDetailEnhancerConfig(const DisplayDetailEnhancerData &de_data) {
+  virtual DisplayError SetHWDetailedEnhancerConfig(void *params) {
     return kErrorNotSupported;
   }
   virtual HWC2::Error SetReadbackBuffer(const native_handle_t *buffer,

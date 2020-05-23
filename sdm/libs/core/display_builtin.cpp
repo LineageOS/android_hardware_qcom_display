@@ -26,7 +26,8 @@
 #include <utils/debug.h>
 #include <utils/rect.h>
 #include <utils/utils.h>
-
+#include <utils/formats.h>
+#include <iomanip>
 #include <algorithm>
 #include <functional>
 #include <map>
@@ -766,6 +767,275 @@ DisplayError DisplayBuiltIn::SetFrameTriggerMode(FrameTriggerMode mode) {
   return kErrorNone;
 }
 
+DisplayError DisplayBuiltIn::GetStcColorModes(snapdragoncolor::ColorModeList *mode_list) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (!mode_list) {
+    return kErrorParameters;
+  }
+
+  if (!color_mgr_) {
+    return kErrorNotSupported;
+  }
+
+  return color_mgr_->ColorMgrGetStcModes(mode_list);
+}
+
+DisplayError DisplayBuiltIn::SetStcColorMode(const snapdragoncolor::ColorMode &color_mode) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (!color_mgr_) {
+    return kErrorNotSupported;
+  }
+  DisplayError ret = kErrorNone;
+  ret = color_mgr_->ColorMgrSetStcMode(color_mode);
+  if (ret != kErrorNone) {
+    DLOGE("Failed to set stc color mode, ret = %d display_type_ = %d", ret, display_type_);
+    return ret;
+  }
+  current_color_mode_ = color_mode;
+  PrimariesTransfer blend_space = {};
+  blend_space.primaries = color_mode.gamut;
+  blend_space.transfer = color_mode.gamma;
+  ret = comp_manager_->SetBlendSpace(display_comp_ctx_, blend_space);
+  if (ret != kErrorNone) {
+    DLOGE("SetBlendSpace failed, ret = %d display_type_ = %d", ret, display_type_);
+  }
+
+  ret = hw_intf_->SetBlendSpace(blend_space);
+  if (ret != kErrorNone) {
+    DLOGE("Failed to pass blend space, ret = %d display_type_ = %d", ret, display_type_);
+  }
+
+  DynamicRangeType dynamic_range = kSdrType;
+  if (std::find(color_mode.hw_assets.begin(), color_mode.hw_assets.end(),
+                snapdragoncolor::kPbHdrBlob) != color_mode.hw_assets.end()) {
+    dynamic_range = kHdrType;
+  }
+  if ((color_mode.gamut == ColorPrimaries_BT2020 && color_mode.gamma == Transfer_SMPTE_ST2084) ||
+      (color_mode.gamut == ColorPrimaries_BT2020 && color_mode.gamma == Transfer_HLG)) {
+    dynamic_range = kHdrType;
+  }
+  comp_manager_->ControlDpps(dynamic_range != kHdrType);
+
+  return ret;
+}
+
+std::string DisplayBuiltIn::Dump() {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  HWDisplayAttributes attrib;
+  uint32_t active_index = 0;
+  uint32_t num_modes = 0;
+  std::ostringstream os;
+
+  hw_intf_->GetNumDisplayAttributes(&num_modes);
+  hw_intf_->GetActiveConfig(&active_index);
+  hw_intf_->GetDisplayAttributes(active_index, &attrib);
+
+  os << "device type:" << display_type_;
+  os << "\nstate: " << state_ << " vsync on: " << vsync_enable_
+     << " max. mixer stages: " << max_mixer_stages_;
+  os << "\nnum configs: " << num_modes << " active config index: " << active_index;
+  os << "\nDisplay Attributes:";
+  os << "\n Mode:" << (hw_panel_info_.mode == kModeVideo ? "Video" : "Command");
+  os << std::boolalpha;
+  os << " Primary:" << hw_panel_info_.is_primary_panel;
+  os << " DynFPS:" << hw_panel_info_.dynamic_fps;
+  os << "\n HDR Panel:" << hw_panel_info_.hdr_enabled;
+  os << " QSync:" << hw_panel_info_.qsync_support;
+  os << " DynBitclk:" << hw_panel_info_.dyn_bitclk_support;
+  os << "\n Left Split:" << hw_panel_info_.split_info.left_split
+     << " Right Split:" << hw_panel_info_.split_info.right_split;
+  os << "\n PartialUpdate:" << hw_panel_info_.partial_update;
+  if (hw_panel_info_.partial_update) {
+    os << "\n ROI Min w:" << hw_panel_info_.min_roi_width;
+    os << " Min h:" << hw_panel_info_.min_roi_height;
+    os << " NeedsMerge: " << hw_panel_info_.needs_roi_merge;
+    os << " Alignment: l:" << hw_panel_info_.left_align << " w:" << hw_panel_info_.width_align;
+    os << " t:" << hw_panel_info_.top_align << " b:" << hw_panel_info_.height_align;
+  }
+  os << "\n FPS min:" << hw_panel_info_.min_fps << " max:" << hw_panel_info_.max_fps
+     << " cur:" << display_attributes_.fps;
+  os << " TransferTime: " << hw_panel_info_.transfer_time_us << "us";
+  os << " MaxBrightness:" << hw_panel_info_.panel_max_brightness;
+  os << "\n Display WxH: " << display_attributes_.x_pixels << "x" << display_attributes_.y_pixels;
+  os << " MixerWxH: " << mixer_attributes_.width << "x" << mixer_attributes_.height;
+  os << " DPI: " << display_attributes_.x_dpi << "x" << display_attributes_.y_dpi;
+  os << " LM_Split: " << display_attributes_.is_device_split;
+  os << "\n vsync_period " << display_attributes_.vsync_period_ns;
+  os << " v_back_porch: " << display_attributes_.v_back_porch;
+  os << " v_front_porch: " << display_attributes_.v_front_porch;
+  os << " v_pulse_width: " << display_attributes_.v_pulse_width;
+  os << "\n v_total: " << display_attributes_.v_total;
+  os << " h_total: " << display_attributes_.h_total;
+  os << " clk: " << display_attributes_.clock_khz;
+  os << " Topology: " << display_attributes_.topology;
+  os << std::noboolalpha;
+
+  DynamicRangeType curr_dynamic_range = kSdrType;
+  if (std::find(current_color_mode_.hw_assets.begin(), current_color_mode_.hw_assets.end(),
+                snapdragoncolor::kPbHdrBlob) != current_color_mode_.hw_assets.end()) {
+    curr_dynamic_range = kHdrType;
+  }
+  os << "\nCurrent Color Mode: gamut " << current_color_mode_.gamut << " gamma "
+     << current_color_mode_.gamma << " intent " << current_color_mode_.intent << " Dynamice_range"
+     << (curr_dynamic_range == kSdrType ? " SDR" : " HDR");
+
+  uint32_t num_hw_layers = 0;
+  if (hw_layers_.info.stack) {
+    num_hw_layers = UINT32(hw_layers_.info.hw_layers.size());
+  }
+
+  if (num_hw_layers == 0) {
+    os << "\nNo hardware layers programmed";
+    return os.str();
+  }
+
+  LayerBuffer *out_buffer = hw_layers_.info.stack->output_buffer;
+  if (out_buffer) {
+    os << "\n Output buffer res: " << out_buffer->width << "x" << out_buffer->height
+       << " format: " << GetFormatString(out_buffer->format);
+  }
+  HWLayersInfo &layer_info = hw_layers_.info;
+  for (uint32_t i = 0; i < layer_info.left_frame_roi.size(); i++) {
+    LayerRect &l_roi = layer_info.left_frame_roi.at(i);
+    LayerRect &r_roi = layer_info.right_frame_roi.at(i);
+
+    os << "\nROI(LTRB)#" << i << " LEFT(" << INT(l_roi.left) << " " << INT(l_roi.top) << " " <<
+      INT(l_roi.right) << " " << INT(l_roi.bottom) << ")";
+    if (IsValid(r_roi)) {
+    os << " RIGHT(" << INT(r_roi.left) << " " << INT(r_roi.top) << " " << INT(r_roi.right) << " "
+      << INT(r_roi.bottom) << ")";
+    }
+  }
+
+  LayerRect &fb_roi = layer_info.partial_fb_roi;
+  if (IsValid(fb_roi)) {
+    os << "\nPartial FB ROI(LTRB):(" << INT(fb_roi.left) << " " << INT(fb_roi.top) << " " <<
+      INT(fb_roi.right) << " " << INT(fb_roi.bottom) << ")";
+  }
+
+  const char *header  = "\n| Idx |   Comp Type   |   Split   | Pipe |    W x H    |          Format          |  Src Rect (L T R B) |  Dst Rect (L T R B) |  Z | Pipe Flags | Deci(HxV) | CS | Rng | Tr |";  //NOLINT
+  const char *newline = "\n|-----|---------------|-----------|------|-------------|--------------------------|---------------------|---------------------|----|------------|-----------|----|-----|----|";  //NOLINT
+  const char *format  = "\n| %3s | %13s | %9s | %4d | %4d x %4d | %24s | %4d %4d %4d %4d | %4d %4d %4d %4d | %2s | %10s | %9s | %2s | %3s | %2s |";  //NOLINT
+
+  os << "\n";
+  os << newline;
+  os << header;
+  os << newline;
+
+  for (uint32_t i = 0; i < num_hw_layers; i++) {
+    uint32_t layer_index = hw_layers_.info.index.at(i);
+    // sdm-layer from client layer stack
+    Layer *sdm_layer = hw_layers_.info.stack->layers.at(layer_index);
+    // hw-layer from hw layers info
+    Layer &hw_layer = hw_layers_.info.hw_layers.at(i);
+    LayerBuffer *input_buffer = &hw_layer.input_buffer;
+    HWLayerConfig &layer_config = hw_layers_.config[i];
+    HWRotatorSession &hw_rotator_session = layer_config.hw_rotator_session;
+
+    const char *comp_type = GetName(sdm_layer->composition);
+    const char *buffer_format = GetFormatString(input_buffer->format);
+    const char *pipe_split[2] = { "Pipe-1", "Pipe-2" };
+    const char *rot_pipe[2] = { "Rot-inl-1", "Rot-inl-2" };
+    char idx[8];
+
+    snprintf(idx, sizeof(idx), "%d", layer_index);
+
+    for (uint32_t count = 0; count < hw_rotator_session.hw_block_count; count++) {
+      char row[1024];
+      HWRotateInfo &rotate = hw_rotator_session.hw_rotate_info[count];
+      LayerRect &src_roi = rotate.src_roi;
+      LayerRect &dst_roi = rotate.dst_roi;
+      char rot[12] = { 0 };
+
+      snprintf(rot, sizeof(rot), "Rot-%s-%d", layer_config.use_inline_rot ?
+               "inl" : "off", count + 1);
+
+      snprintf(row, sizeof(row), format, idx, comp_type, rot,
+               0, input_buffer->width, input_buffer->height, buffer_format,
+               INT(src_roi.left), INT(src_roi.top), INT(src_roi.right), INT(src_roi.bottom),
+               INT(dst_roi.left), INT(dst_roi.top), INT(dst_roi.right), INT(dst_roi.bottom),
+               "-", "-    ", "-    ", "-", "-", "-");
+      os << row;
+      // print the below only once per layer block, fill with spaces for rest.
+      idx[0] = 0;
+      comp_type = "";
+    }
+
+    if (hw_rotator_session.hw_block_count > 0) {
+      input_buffer = &hw_rotator_session.output_buffer;
+      buffer_format = GetFormatString(input_buffer->format);
+    }
+
+    if (layer_config.use_solidfill_stage) {
+      LayerRect src_roi = layer_config.hw_solidfill_stage.roi;
+      const char *decimation = "";
+      char flags[16] = { 0 };
+      char z_order[8] = { 0 };
+      const char *color_primary = "";
+      const char *range = "";
+      const char *transfer = "";
+      char row[1024] = { 0 };
+
+      snprintf(z_order, sizeof(z_order), "%d", layer_config.hw_solidfill_stage.z_order);
+      snprintf(flags, sizeof(flags), "0x%08x", hw_layer.flags.flags);
+      snprintf(row, sizeof(row), format, idx, comp_type, pipe_split[0],
+               0, INT(src_roi.right), INT(src_roi.bottom),
+               buffer_format, INT(src_roi.left), INT(src_roi.top),
+               INT(src_roi.right), INT(src_roi.bottom), INT(src_roi.left),
+               INT(src_roi.top), INT(src_roi.right), INT(src_roi.bottom),
+               z_order, flags, decimation, color_primary, range, transfer);
+      os << row;
+      continue;
+    }
+
+    for (uint32_t count = 0; count < 2; count++) {
+      char decimation[16] = { 0 };
+      char flags[16] = { 0 };
+      char z_order[8] = { 0 };
+      char color_primary[8] = { 0 };
+      char range[8] = { 0 };
+      char transfer[8] = { 0 };
+      bool rot = layer_config.use_inline_rot;
+
+      HWPipeInfo &pipe = (count == 0) ? layer_config.left_pipe : layer_config.right_pipe;
+
+      if (!pipe.valid) {
+        continue;
+      }
+
+      LayerRect src_roi = pipe.src_roi;
+      LayerRect &dst_roi = pipe.dst_roi;
+
+      snprintf(z_order, sizeof(z_order), "%d", pipe.z_order);
+      snprintf(flags, sizeof(flags), "0x%08x", pipe.flags);
+      snprintf(decimation, sizeof(decimation), "%3d x %3d", pipe.horizontal_decimation,
+               pipe.vertical_decimation);
+      ColorMetaData &color_metadata = hw_layer.input_buffer.color_metadata;
+      snprintf(color_primary, sizeof(color_primary), "%d", color_metadata.colorPrimaries);
+      snprintf(range, sizeof(range), "%d", color_metadata.range);
+      snprintf(transfer, sizeof(transfer), "%d", color_metadata.transfer);
+
+      char row[1024];
+      snprintf(row, sizeof(row), format, idx, comp_type, rot ? rot_pipe[count] : pipe_split[count],
+               pipe.pipe_id, input_buffer->width, input_buffer->height,
+               buffer_format, INT(src_roi.left), INT(src_roi.top),
+               INT(src_roi.right), INT(src_roi.bottom), INT(dst_roi.left),
+               INT(dst_roi.top), INT(dst_roi.right), INT(dst_roi.bottom),
+               z_order, flags, decimation, color_primary, range, transfer);
+
+      os << row;
+      // print the below only once per layer block, fill with spaces for rest.
+      idx[0] = 0;
+      comp_type = "";
+    }
+  }
+
+  os << newline << "\n";
+
+  return os.str();
+}
+
+
 DppsInterface* DppsInfo::dpps_intf_ = NULL;
 std::vector<int32_t> DppsInfo::display_id_ = {};
 
@@ -951,11 +1221,12 @@ void DisplayBuiltIn::ResetPanel() {
            status);
   }
 
-  // If panel does not support color modes, do not set color mode.
-  if (color_mode_map_.size() > 0) {
-    status = SetColorMode(current_color_mode_);
+  // If panel does not support current color modes, do not set color mode.
+  if (current_color_mode_.gamut && current_color_mode_.gamma &&
+      current_color_mode_.intent != snapdragoncolor::kMaxRenderIntent) {
+    status = SetStcColorMode(current_color_mode_);
     if (status != kErrorNone) {
-      DLOGE("SetColorMode failed for display id = %d error = %d", display_id_, status);
+      DLOGE("SetStcColorMode failed for display id = %d error = %d", display_id_, status);
     }
   }
 
