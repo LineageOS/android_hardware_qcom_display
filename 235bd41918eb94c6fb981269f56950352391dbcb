@@ -1,0 +1,55 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "795024e9_981e714a",
+        "filename": "sdm/include/core/layer_stack.h",
+        "patchSetId": 7
+      },
+      "lineNbr": 191,
+      "author": {
+        "id": 11801
+      },
+      "writtenOn": "2020-05-24T19:28:32Z",
+      "side": 1,
+      "message": "I think this should be moved to the last bit, to avoid ABI breakage for the near future.",
+      "revId": "235bd41918eb94c6fb981269f56950352391dbcb",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "9d1a0aaf_65451102",
+        "filename": "sdm/libs/core/drm/hw_device_drm.cpp",
+        "patchSetId": 7
+      },
+      "lineNbr": 1118,
+      "author": {
+        "id": 11801
+      },
+      "writtenOn": "2020-05-24T19:28:32Z",
+      "side": 1,
+      "message": "Define magic numbers somewhere, don\u0027t just use them randomly.",
+      "revId": "235bd41918eb94c6fb981269f56950352391dbcb",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "fc6e54d9_3e5ab8b3",
+        "filename": "sdm/libs/hwc2/hwc_layers.cpp",
+        "patchSetId": 7
+      },
+      "lineNbr": 546,
+      "author": {
+        "id": 11801
+      },
+      "writtenOn": "2020-05-24T19:28:32Z",
+      "side": 1,
+      "message": "Same comment on magic number.",
+      "revId": "235bd41918eb94c6fb981269f56950352391dbcb",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
