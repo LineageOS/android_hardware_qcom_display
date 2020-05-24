@@ -119,6 +119,8 @@ Error decodeColorMetadata(hidl_vec<uint8_t> &in, ColorMetaData *out);
 Error encodeColorMetadata(ColorMetaData &in, hidl_vec<uint8_t> *out);
 Error decodeGraphicsMetadata(hidl_vec<uint8_t> &in, GraphicsMetadata *out);
 Error encodeGraphicsMetadata(GraphicsMetadata &in, hidl_vec<uint8_t> *out);
+Error decodeGraphicsMetadataRaw(hidl_vec<uint8_t> &in, void *out);
+Error encodeGraphicsMetadataRaw(void *in, hidl_vec<uint8_t> *out);
 Error decodeUBWCStats(hidl_vec<uint8_t> &in, UBWCStats *out);
 Error encodeUBWCStats(UBWCStats *in, hidl_vec<uint8_t> *out);
 Error decodeCVPMetadata(hidl_vec<uint8_t> &in, CVPMetadata *out);
