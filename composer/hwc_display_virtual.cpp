@@ -74,10 +74,10 @@ HWC2::Error HWCDisplayVirtual::DumpVDSBuffer() {
       BufferInfo buffer_info;
       const private_handle_t *output_handle =
         reinterpret_cast<const private_handle_t *>(output_buffer_.buffer_id);
-      DisplayError error = kErrorNone;
+      int error = 0;
       if (!output_handle->base) {
         error = buffer_allocator_->MapBuffer(output_handle, nullptr);
-        if (error != kErrorNone) {
+        if (error != 0) {
           DLOGE("Failed to map output buffer, error = %d", error);
           return HWC2::Error::BadParameter;
         }
@@ -92,7 +92,7 @@ HWC2::Error HWCDisplayVirtual::DumpVDSBuffer() {
 
       int release_fence = -1;
       error = buffer_allocator_->UnmapBuffer(output_handle, &release_fence);
-      if (error != kErrorNone) {
+      if (error != 0) {
         DLOGE("Failed to unmap buffer, error = %d", error);
         return HWC2::Error::BadParameter;
       }

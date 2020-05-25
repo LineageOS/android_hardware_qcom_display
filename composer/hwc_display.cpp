@@ -1756,8 +1756,8 @@ void HWCDisplay::DumpInputBuffers() {
     }
 
     if (!pvt_handle->base) {
-      DisplayError error = buffer_allocator_->MapBuffer(pvt_handle, nullptr);
-      if (error != kErrorNone) {
+      int error = buffer_allocator_->MapBuffer(pvt_handle, nullptr);
+      if (error != 0) {
         DLOGE("Failed to map buffer, error = %d", error);
         continue;
       }
@@ -1777,8 +1777,8 @@ void HWCDisplay::DumpInputBuffers() {
     }
 
     int release_fence = -1;
-    DisplayError error = buffer_allocator_->UnmapBuffer(pvt_handle, &release_fence);
-    if (error != kErrorNone) {
+    int error = buffer_allocator_->UnmapBuffer(pvt_handle, &release_fence);
+    if (error != 0) {
       DLOGE("Failed to unmap buffer, error = %d", error);
       continue;
     }

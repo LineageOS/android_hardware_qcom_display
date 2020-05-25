@@ -49,11 +49,11 @@ using android::hardware::hidl_vec;
 
 namespace sdm {
 
-DisplayError HWCBufferAllocator::GetGrallocInstance() {
+int HWCBufferAllocator::GetGrallocInstance() {
   // Lazy initialization of gralloc HALs
   if (mapper_V3_ != nullptr || mapper_V2_ != nullptr || allocator_V3_ != nullptr ||
       allocator_V2_ != nullptr) {
-    return kErrorNone;
+    return 0;
   }
 
   allocator_V3_ = IAllocatorV3::getService();
@@ -61,7 +61,7 @@ DisplayError HWCBufferAllocator::GetGrallocInstance() {
     allocator_V2_ = IAllocatorV2::getService();
     if (allocator_V2_ == nullptr) {
       DLOGE("Unable to get allocator");
-      return kErrorCriticalResource;
+      return -EINVAL;
     }
   }
 
@@ -70,16 +70,16 @@ DisplayError HWCBufferAllocator::GetGrallocInstance() {
     mapper_V2_ = IMapperV2::getService();
     if (mapper_V2_ == nullptr) {
       DLOGE("Unable to get mapper");
-      return kErrorCriticalResource;
+      return -EINVAL;
     }
   }
 
-  return kErrorNone;
+  return 0;
 }
 
-DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
+int HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
   auto err = GetGrallocInstance();
-  if (err != kErrorNone) {
+  if (err != 0) {
     return err;
   }
   const BufferConfig &buffer_config = buffer_info->buffer_config;
@@ -88,7 +88,7 @@ DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
   uint64_t alloc_flags = 0;
   int error = SetBufferInfo(buffer_config.format, &format, &alloc_flags);
   if (error != 0) {
-    return kErrorParameters;
+    return -EINVAL;
   }
 
   if (buffer_config.secure) {
@@ -131,7 +131,7 @@ DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
 
     if (hidl_err != MapperV3Error::NONE) {
       DLOGE("Failed to create descriptor");
-      return kErrorMemory;
+      return -ENOMEM;
     }
 
     hidl_handle raw_handle = nullptr;
@@ -144,7 +144,7 @@ DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
 
     if (hidl_err != MapperV3Error::NONE) {
       DLOGE("Failed to allocate buffer");
-      return kErrorMemory;
+      return -ENOMEM;
     }
 
     mapper_V3_->importBuffer(raw_handle, [&](const auto &_error, const auto &_buffer) {
@@ -154,7 +154,7 @@ DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
 
     if (hidl_err != MapperV3Error::NONE) {
       DLOGE("Failed to import buffer into HWC");
-      return kErrorMemory;
+      return -ENOMEM;
     }
   } else {
     IMapperV2::BufferDescriptorInfo descriptor_info;
@@ -175,7 +175,7 @@ DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
 
     if (hidl_err != Error::NONE) {
       DLOGE("Failed to create descriptor");
-      return kErrorMemory;
+      return -ENOMEM;
     }
 
     hidl_handle raw_handle = nullptr;
@@ -188,7 +188,7 @@ DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
 
     if (hidl_err != Error::NONE) {
       DLOGE("Failed to allocate buffer");
-      return kErrorMemory;
+      return -ENOMEM;
     }
 
     mapper_V2_->importBuffer(raw_handle, [&](const auto &_error, const auto &_buffer) {
@@ -198,7 +198,7 @@ DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
 
     if (hidl_err != Error::NONE) {
       DLOGE("Failed to import buffer into HWC");
-      return kErrorMemory;
+      return -ENOMEM;
     }
   }
 
@@ -213,11 +213,11 @@ DisplayError HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
   alloc_buffer_info->format = HWCLayer::GetSDMFormat(hnd->format, hnd->flags);
 
   buffer_info->private_data = reinterpret_cast<void *>(hnd);
-  return kErrorNone;
+  return 0;
 }
 
-DisplayError HWCBufferAllocator::FreeBuffer(BufferInfo *buffer_info) {
-  DisplayError err = kErrorNone;
+int HWCBufferAllocator::FreeBuffer(BufferInfo *buffer_info) {
+  int err = 0;
   auto hnd = reinterpret_cast<void *>(buffer_info->private_data);
   if (mapper_V3_ != nullptr) {
     mapper_V3_->freeBuffer(hnd);
@@ -413,7 +413,7 @@ int HWCBufferAllocator::SetBufferInfo(LayerBufferFormat format, int *target, uin
   return 0;
 }
 
-DisplayError HWCBufferAllocator::GetAllocatedBufferInfo(
+int HWCBufferAllocator::GetAllocatedBufferInfo(
     const BufferConfig &buffer_config, AllocatedBufferInfo *allocated_buffer_info) {
   // TODO(user): This API should pass the buffer_info of the already allocated buffer
   // The private_data can then be typecast to the private_handle and used directly.
@@ -433,24 +433,24 @@ DisplayError HWCBufferAllocator::GetAllocatedBufferInfo(
   }
 
   if (SetBufferInfo(buffer_config.format, &format, &alloc_flags) < 0) {
-    return kErrorParameters;
+    return -EINVAL;
   }
 
   uint32_t aligned_width = 0, aligned_height = 0, buffer_size = 0;
   gralloc::BufferInfo info(width, height, format, alloc_flags);
   int ret = GetBufferSizeAndDimensions(info, &buffer_size, &aligned_width, &aligned_height);
   if (ret < 0) {
-    return kErrorParameters;
+    return -EINVAL;
   }
   allocated_buffer_info->stride = UINT32(aligned_width);
   allocated_buffer_info->aligned_width = UINT32(aligned_width);
   allocated_buffer_info->aligned_height = UINT32(aligned_height);
   allocated_buffer_info->size = UINT32(buffer_size);
 
-  return kErrorNone;
+  return 0;
 }
 
-DisplayError HWCBufferAllocator::GetBufferLayout(const AllocatedBufferInfo &buf_info,
+int HWCBufferAllocator::GetBufferLayout(const AllocatedBufferInfo &buf_info,
                                                  uint32_t stride[4], uint32_t offset[4],
                                                  uint32_t *num_planes) {
   // TODO(user): Transition APIs to not need a private handle
@@ -470,16 +470,16 @@ DisplayError HWCBufferAllocator::GetBufferLayout(const AllocatedBufferInfo &buf_
   int ret = gralloc::GetBufferLayout(&hnd, stride, offset, num_planes);
   if (ret < 0) {
     DLOGE("GetBufferLayout failed");
-    return kErrorParameters;
+    return -EINVAL;
   }
 
-  return kErrorNone;
+  return 0;
 }
 
-DisplayError HWCBufferAllocator::MapBuffer(const private_handle_t *handle,
+int HWCBufferAllocator::MapBuffer(const private_handle_t *handle,
                                            shared_ptr<Fence> acquire_fence) {
   auto err = GetGrallocInstance();
-  if (err != kErrorNone) {
+  if (err != 0) {
     return err;
   }
 
@@ -515,27 +515,27 @@ DisplayError HWCBufferAllocator::MapBuffer(const private_handle_t *handle,
                      });
   }
   if (!buffer_ptr) {
-    return kErrorUndefined;
+    return -EINVAL;
   }
-  return kErrorNone;
+  return 0;
 }
 
-DisplayError HWCBufferAllocator::UnmapBuffer(const private_handle_t *handle, int *release_fence) {
-  DisplayError err = kErrorNone;
+int HWCBufferAllocator::UnmapBuffer(const private_handle_t *handle, int *release_fence) {
+  int err = 0;
   *release_fence = -1;
   auto hnd = const_cast<private_handle_t *>(handle);
   if (mapper_V3_ != nullptr) {
     mapper_V3_->unlock(reinterpret_cast<void *>(hnd),
                        [&](const auto &_error, const auto &_release_fence) {
                          if (_error != MapperV3Error::NONE) {
-                           err = kErrorUndefined;
+                           err = -EINVAL;
                          }
                        });
   } else {
     mapper_V2_->unlock(reinterpret_cast<void *>(hnd),
                        [&](const auto &_error, const auto &_release_fence) {
                          if (_error != Error::NONE) {
-                           err = kErrorUndefined;
+                           err = -EINVAL;
                          }
                        });
   }

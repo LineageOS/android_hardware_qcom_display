@@ -167,12 +167,12 @@ bool Debug::IsSrcSplitPreferred() {
   return (value == 1);
 }
 
-DisplayError Debug::GetMixerResolution(uint32_t *width, uint32_t *height) {
+int Debug::GetMixerResolution(uint32_t *width, uint32_t *height) {
   char value[64] = {};
 
   int error = DebugHandler::Get()->GetProperty(MIXER_RESOLUTION_PROP, value);
   if (error != 0) {
-    return kErrorUndefined;
+    return -ENOTSUP;
   }
 
   std::string str(value);
@@ -180,15 +180,15 @@ DisplayError Debug::GetMixerResolution(uint32_t *width, uint32_t *height) {
   *width = UINT32(stoi(str));
   *height = UINT32(stoi(str.substr(str.find('x') + 1)));
 
-  return kErrorNone;
+  return 0;
 }
 
-DisplayError Debug::GetWindowRect(float *left, float *top, float *right, float *bottom) {
+int Debug::GetWindowRect(float *left, float *top, float *right, float *bottom) {
   char value[64] = {};
 
   int error = DebugHandler::Get()->GetProperty(WINDOW_RECT_PROP, value);
   if (error != 0) {
-    return kErrorUndefined;
+    return -EINVAL;
   }
 
   std::string str(value);
@@ -204,15 +204,15 @@ DisplayError Debug::GetWindowRect(float *left, float *top, float *right, float *
     *left = *top = *right = *bottom = 0;
   }
 
-  return kErrorNone;
+  return 0;
 }
 
-DisplayError Debug::GetReducedConfig(uint32_t *num_vig_pipes, uint32_t *num_dma_pipes) {
+int Debug::GetReducedConfig(uint32_t *num_vig_pipes, uint32_t *num_dma_pipes) {
   char value[64] = {};
 
   int error = DebugHandler::Get()->GetProperty(SIMULATED_CONFIG_PROP, value);
   if (error != 0) {
-    return kErrorUndefined;
+    return -ENOTSUP;
   }
 
   std::string str(value);
@@ -220,7 +220,7 @@ DisplayError Debug::GetReducedConfig(uint32_t *num_vig_pipes, uint32_t *num_dma_
   *num_vig_pipes = UINT32(stoi(str));
   *num_dma_pipes = UINT32(stoi(str.substr(str.find('x') + 1)));
 
-  return kErrorNone;
+  return 0;
 }
 
 int Debug::GetExtMaxlayers() {
@@ -230,20 +230,20 @@ int Debug::GetExtMaxlayers() {
   return std::max(max_external_layers, 2);
 }
 
-DisplayError Debug::GetProperty(const char *property_name, char *value) {
+int Debug::GetProperty(const char *property_name, char *value) {
   if (DebugHandler::Get()->GetProperty(property_name, value)) {
-    return kErrorUndefined;
+    return -ENOTSUP;
   }
 
-  return kErrorNone;
+  return 0;
 }
 
-DisplayError Debug::GetProperty(const char *property_name, int *value) {
+int Debug::GetProperty(const char *property_name, int *value) {
   if (DebugHandler::Get()->GetProperty(property_name, value)) {
-    return kErrorUndefined;
+    return -ENOTSUP;
   }
 
-  return kErrorNone;
+  return 0;
 }
 
 }  // namespace sdm

@@ -54,7 +54,7 @@ bool IsUBWCFormat(LayerBufferFormat format);
 bool Is10BitFormat(LayerBufferFormat format);
 const char *GetFormatString(const LayerBufferFormat &format);
 BufferLayout GetBufferLayout(LayerBufferFormat format);
-DisplayError GetBufferFormatTileSize(LayerBufferFormat format, FormatTileSize *tile_size);
+int GetBufferFormatTileSize(LayerBufferFormat format, FormatTileSize *tile_size);
 float GetBufferFormatBpp(LayerBufferFormat format);
 bool HasAlphaChannel(LayerBufferFormat format);
 bool IsWideColor(const ColorPrimaries &color_primary);
