@@ -84,56 +84,6 @@ static int getExternalNode(const char *type) {
     return -1;
 }
 
-static int querySDEInfoFB(HWQueryType type, int *value) {
-    FILE *fileptr = NULL;
-    const char *featureName;
-    char stringBuffer[MAX_STRING_LENGTH];
-    uint32_t tokenCount = 0;
-    const uint32_t maxCount = 10;
-    char *tokens[maxCount] = { NULL };
-
-    switch(type) {
-    case HAS_UBWC:
-        featureName = "ubwc";
-        break;
-    case HAS_WB_UBWC:
-        featureName = "wb_ubwc";
-        break;
-    default:
-        ALOGE("Invalid query type %d", type);
-        return -EINVAL;
-    }
-
-    fileptr = fopen("/sys/devices/virtual/graphics/fb0/mdp/caps", "rb");
-    if (!fileptr) {
-        ALOGE("File '%s' not found", stringBuffer);
-        return -EINVAL;
-    }
-
-    size_t len = MAX_STRING_LENGTH;
-    ssize_t read;
-    char *line = stringBuffer;
-    while ((read = getline(&line, &len, fileptr)) != -1) {
-        // parse the line and update information accordingly
-        if (parseLine(line, tokens, maxCount, &tokenCount)) {
-            continue;
-        }
-
-        if (strncmp(tokens[0], "features", strlen("features"))) {
-            continue;
-        }
-
-        for (uint32_t i = 0; i < tokenCount; i++) {
-            if (!strncmp(tokens[i], featureName, strlen(featureName))) {
-              *value = 1;
-            }
-        }
-    }
-    fclose(fileptr);
-
-    return 0;
-}
-
 int getHDMINode(void) {
     return getExternalNode("dtv panel");
 }
