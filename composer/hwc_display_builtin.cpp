@@ -154,6 +154,15 @@ int HWCDisplayBuiltIn::Init() {
     DLOGI("Window rect : [%f %f %f %f]", window_rect_.left, window_rect_.top,
           window_rect_.right, window_rect_.bottom);
   }
+
+  uint32_t config_index = 0;
+  GetActiveDisplayConfig(&config_index);
+  DisplayConfigVariableInfo attr = {};
+  GetDisplayAttributesForConfig(INT(config_index), &attr);
+  active_refresh_rate_ = attr.fps;
+
+  DLOGI("active_refresh_rate: %d", active_refresh_rate_);
+
   return status;
 }
 
@@ -390,10 +399,28 @@ void HWCDisplayBuiltIn::SetBwLimitHint(bool enable) {
   }
 }
 
+void HWCDisplayBuiltIn::SetPartialUpdate(DisplayConfigFixedInfo fixed_info) {
+  partial_update_enabled_ = fixed_info.partial_update || (!fixed_info.is_cmdmode);
+  for (auto hwc_layer : layer_set_) {
+    hwc_layer->SetPartialUpdate(partial_update_enabled_);
+  }
+  client_target_->SetPartialUpdate(partial_update_enabled_);
+}
+
 HWC2::Error HWCDisplayBuiltIn::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
+  DisplayConfigFixedInfo fixed_info = {};
+  display_intf_->GetConfig(&fixed_info);
+  bool command_mode = fixed_info.is_cmdmode;
+
   auto status = HWCDisplay::SetPowerMode(mode, teardown);
   if (status != HWC2::Error::None) {
     return status;
+  }
+
+  display_intf_->GetConfig(&fixed_info);
+  is_cmd_mode_ = fixed_info.is_cmdmode;
+  if (is_cmd_mode_ != command_mode) {
+    SetPartialUpdate(fixed_info);
   }
 
   if (mode == HWC2::PowerMode::Off) {
@@ -418,6 +445,9 @@ HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
     }
   } else {
     CacheAvrStatus();
+    DisplayConfigFixedInfo fixed_info = {};
+    display_intf_->GetConfig(&fixed_info);
+    bool command_mode = fixed_info.is_cmdmode;
 
     status = CommitStitchLayers();
     if (status != HWC2::Error::None) {
@@ -431,6 +461,11 @@ HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
       PostCommitStitchLayers();
       status = HWCDisplay::PostCommitLayerStack(out_retire_fence);
       SetBwLimitHint(true);
+      display_intf_->GetConfig(&fixed_info);
+      is_cmd_mode_ = fixed_info.is_cmdmode;
+      if (is_cmd_mode_ != command_mode) {
+        SetPartialUpdate(fixed_info);
+      }
     }
   }
 
@@ -823,7 +858,8 @@ uint32_t HWCDisplayBuiltIn::GetOptimalRefreshRate(bool one_updating_layer) {
     return metadata_refresh_rate_;
   }
 
-  return max_refresh_rate_;
+  DLOGV_IF(kTagClient, "active_refresh_rate_: %d", active_refresh_rate_);
+  return active_refresh_rate_;
 }
 
 void HWCDisplayBuiltIn::SetIdleTimeoutMs(uint32_t timeout_ms) {
@@ -899,8 +935,7 @@ HWC2::Error HWCDisplayBuiltIn::SetFrameDumpConfig(uint32_t count, uint32_t bit_m
 
   if (dump_output_to_file_) {
     if (cwb_client_ != kCWBClientNone) {
-      DLOGE("CWB is in use with client = %d", cwb_client_);
-      dump_output_to_file_ = false;
+      DLOGW("CWB is in use with client = %d", cwb_client_);
       return HWC2::Error::NoResources;
     }
   }
@@ -1223,6 +1258,16 @@ bool HWCDisplayBuiltIn::IsSmartPanelConfig(uint32_t config_id) {
   if (config_id < hwc_config_map_.size()) {
     uint32_t index = hwc_config_map_.at(config_id);
     return variable_config_map_.at(index).smart_panel;
+  }
+
+  return false;
+}
+
+bool HWCDisplayBuiltIn::HasSmartPanelConfig(void) {
+  for (auto &config : variable_config_map_) {
+    if (config.second.smart_panel) {
+      return true;
+    }
   }
 
   return false;

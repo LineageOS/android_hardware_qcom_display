@@ -619,21 +619,27 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     return kErrorParameters;
   }
 
+  error = ReconfigureDisplay();
+  if (error != kErrorNone) {
+    return error;
+  }
+
   DisablePartialUpdateOneFrame();
 
   if (error == kErrorNone) {
-    if (!pending_doze_ && !pending_power_on_) {
-      active_ = active;
-      state_ = state;
-    }
-    comp_manager_->SetDisplayState(display_comp_ctx_, state,
-                            release_fence ? *release_fence : nullptr);
-
     // If previously requested doze state is still pending reset it on any new display state request
     // and handle the new request.
     if (state != kStateDoze) {
       pending_doze_ = false;
     }
+
+    if (!pending_doze_ && !pending_power_on_) {
+      active_ = active;
+      state_ = state;
+    }
+    comp_manager_->SetDisplayState(display_comp_ctx_, state,
+                                   release_fence ? *release_fence : nullptr);
+
     // If previously requested power on state is still pending reset it on any new display state
     // request and handle the new request.
     if (state != kStateOn) {
@@ -2067,6 +2073,11 @@ DisplayError DisplayBase::HandlePendingPowerState(const shared_ptr<Fence> &retir
 
     if (pending_doze_) {
       state_ = kStateDoze;
+      DisplayError error = ReconfigureDisplay();
+      if (error != kErrorNone) {
+        return error;
+      }
+      event_handler_->Refresh();
     }
     if (pending_power_on_) {
       state_ = kStateOn;

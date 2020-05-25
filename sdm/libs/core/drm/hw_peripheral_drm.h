@@ -57,11 +57,15 @@ class HWPeripheralDRM : public HWDeviceDRM {
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event, HWLayers *hw_layers);
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous);
   virtual DisplayError PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
+  virtual DisplayError PowerOff(bool teardown);
+  virtual DisplayError Doze(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
+  virtual DisplayError DozeSuspend(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
   virtual DisplayError SetDisplayDppsAdROI(void *payload);
   virtual DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate);
   virtual DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate);
   virtual DisplayError SetDisplayAttributes(uint32_t index);
   virtual DisplayError SetDisplayMode(const HWDisplayMode hw_display_mode);
+  virtual DisplayError SetRefreshRate(uint32_t refresh_rate);
   virtual DisplayError TeardownConcurrentWriteback(void);
   virtual DisplayError SetFrameTrigger(FrameTriggerMode mode);
   virtual DisplayError SetPanelBrightness(int level);

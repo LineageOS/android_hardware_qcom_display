@@ -33,6 +33,7 @@
 
 #include <drm/drm_fourcc.h>
 
+#include <cutils/properties.h>
 #include <algorithm>
 
 #include "gr_adreno_info.h"
@@ -1317,7 +1318,11 @@ int GetImplDefinedFormat(uint64_t usage, int format) {
       }
     } else if (usage & BufferUsage::CAMERA_OUTPUT) {
       if (format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
-        gr_format = HAL_PIXEL_FORMAT_NV21_ZSL;  // NV21
+        if ((usage & BufferUsage::PROTECTED) && (!CanAllocateZSLForSecureCamera())) {
+          gr_format = HAL_PIXEL_FORMAT_YCrCb_420_SP;  // NV21
+        } else {
+          gr_format = HAL_PIXEL_FORMAT_NV21_ZSL;  // NV21
+        }
       } else {
         gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS;  // NV12 preview
       }
@@ -1326,8 +1331,8 @@ int GetImplDefinedFormat(uint64_t usage, int format) {
       gr_format = HAL_PIXEL_FORMAT_RGBA_8888;
     } else if (format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
       // If no other usage flags are detected, default the
-      // flexible YUV format to NV21_ZSL
-      gr_format = HAL_PIXEL_FORMAT_NV21_ZSL;
+      // flexible YUV format to YCbCr_420_SP
+      gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP;
     }
   }
 
@@ -1831,4 +1836,20 @@ void GetDRMFormat(uint32_t format, uint32_t flags, uint32_t *drm_format,
   }
 }
 
+bool CanAllocateZSLForSecureCamera() {
+  static bool inited = false;
+  static bool can_allocate = true;
+  if (inited) {
+    return can_allocate;
+  }
+  char property[PROPERTY_VALUE_MAX];
+  property_get("vendor.display.secure_preview_buffer_format", property, "0");
+  if (!(strncmp(property, "420_sp", PROPERTY_VALUE_MAX))) {
+    can_allocate = false;
+  }
+  inited = true;
+  ALOGI("CanAllocateZSLForSecureCamera: %d", can_allocate);
+
+  return can_allocate;
+}
 }  // namespace gralloc
