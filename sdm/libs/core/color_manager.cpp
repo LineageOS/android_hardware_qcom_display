@@ -169,6 +169,12 @@ ColorManagerProxy *ColorManagerProxy::CreateColorManagerProxy(DisplayType type,
     return NULL;
   }
 
+  // check if all resources are available before invoking libsnapdragoncolor-manager.so.
+  if (!stc_lib_ || !create_stc_intf_) {
+    DLOGW("Information for %s isn't available!", STCMGR_LIBRARY_NAME);
+    return NULL;
+  }
+
   hw_intf->GetDisplayId(&display_id);
   color_manager_proxy = new ColorManagerProxy(display_id, type, hw_intf, attribute, panel_info);
 
