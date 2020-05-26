@@ -2,7 +2,8 @@ cpp_sources = debug.cpp \
               rect.cpp \
               sys.cpp \
               formats.cpp \
-              utils.cpp
+              utils.cpp \
+              fence.cpp
 
 lib_LTLIBRARIES = libsdmutils.la
 libsdmutils_la_CC = @CC@

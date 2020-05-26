@@ -19,5 +19,5 @@ libsdedrm_la_CC = @CC@
 libsdedrm_la_SOURCES = $(cpp_sources)
 libsdedrm_la_CFLAGS = $(AM_CFLAGS) -DLOG_TAG=\"SDE_DRM\"
 libsdedrm_la_CPPFLAGS = $(AM_CPPFLAGS)
-libsdedrm_la_LIBADD = -ldrm -ldrmutils -ldisplaydebug
+libsdedrm_la_LIBADD = ../libdrmutils/libdrmutils.la ../libdebug/libdisplaydebug.la -ldrm
 libsdedrm_la_LDFLAGS = -shared -avoid-version

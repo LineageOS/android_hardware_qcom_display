@@ -1,4 +1,4 @@
-HEADER_PATH := ${WORKSPACE}/display/display-hal/sdm/include
+HEADER_PATH := ${WORKSPACE}/hardware/qcom/display/sdm/include
 
 c_sources = core_interface.cpp \
             core_impl.cpp \
@@ -42,5 +42,5 @@ libsdmcore_la_CC = @CC@
 libsdmcore_la_SOURCES = $(c_sources)
 libsdmcore_la_CFLAGS = $(COMMON_CFLAGS) -DLOG_TAG=\"SDM\"
 libsdmcore_la_CPPFLAGS = $(AM_CPPFLAGS)
-libsdmcore_la_LIBADD = ../utils/libsdmutils.la
+libsdmcore_la_LIBADD = ../utils/libsdmutils.la ../../../sde-drm/libsdedrm.la -ldl -ldisplaydebug
 libsdmcore_la_LDFLAGS = -shared -avoid-version
