@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2018, 2020 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -102,6 +102,7 @@ class HWEventsDRM : public HWEventsInterface {
   uint32_t histogram_index_ = UINT32_MAX;
   bool vsync_enabled_ = false;
   bool vsync_registered_ = false;
+  uint32_t vsync_handler_count_ = 0;
   std::mutex vsync_mutex_;  // To protect vsync_enabled_ and vsync_registered_
   uint32_t idle_notify_index_ = UINT32_MAX;
   sde_drm::DRMDisplayToken token_ = {};
