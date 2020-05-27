@@ -3163,6 +3163,10 @@ int32_t HWCSession::GetReadbackBufferAttributes(hwc2_display_t display, int32_t 
     return HWC2_ERROR_BAD_PARAMETER;
   }
 
+  if (display >= HWCCallbacks::kNumDisplays) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
   if (display != HWC_DISPLAY_PRIMARY) {
     return HWC2_ERROR_BAD_DISPLAY;
   }
@@ -3186,6 +3190,10 @@ int32_t HWCSession::SetReadbackBuffer(hwc2_display_t display, const native_handl
     return HWC2_ERROR_BAD_PARAMETER;
   }
 
+  if (display >= HWCCallbacks::kNumDisplays) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
   if (display != HWC_DISPLAY_PRIMARY) {
     return HWC2_ERROR_BAD_DISPLAY;
   }
@@ -3205,6 +3213,10 @@ int32_t HWCSession::GetReadbackBufferFence(hwc2_display_t display,
                                            shared_ptr<Fence> *release_fence) {
   if (!release_fence) {
     return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (display >= HWCCallbacks::kNumDisplays) {
+    return HWC2_ERROR_BAD_DISPLAY;
   }
 
   if (display != HWC_DISPLAY_PRIMARY) {
