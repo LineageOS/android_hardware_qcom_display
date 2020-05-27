@@ -1128,16 +1128,15 @@ int HWCSession::DisplayConfigImpl::SetQsyncMode(uint32_t disp_id, DisplayConfig:
 
 int HWCSession::DisplayConfigImpl::IsSmartPanelConfig(uint32_t disp_id, uint32_t config_id,
                                                       bool *is_smart) {
-  if (disp_id != qdutils::DISPLAY_PRIMARY) {
-    *is_smart = false;
-    return -EINVAL;
-  }
-
   SCOPE_LOCK(hwc_session_->locker_[disp_id]);
   if (!hwc_session_->hwc_display_[disp_id]) {
     DLOGE("Display %d is not created yet.", disp_id);
     *is_smart = false;
     return -EINVAL;
+  }
+
+  if (hwc_session_->hwc_display_[disp_id]->GetDisplayClass() != DISPLAY_CLASS_BUILTIN) {
+    return false;
   }
 
   *is_smart = hwc_session_->hwc_display_[disp_id]->IsSmartPanelConfig(config_id);
