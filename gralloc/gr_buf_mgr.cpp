@@ -528,6 +528,31 @@ static void getComponentSizeAndOffset(int32_t format, PlaneLayoutComponent &comp
         comp.sizeInBits = 10;
       }
       break;
+    case static_cast<int32_t>(HAL_PIXEL_FORMAT_RAW16):
+      if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_RAW.value) {
+        comp.offsetInBits = 0;
+        comp.sizeInBits = 16;
+      } else {
+        return Error::BAD_VALUE;
+      }
+      break;
+    case static_cast<int32_t>(HAL_PIXEL_FORMAT_RAW12):
+    case static_cast<int32_t>(HAL_PIXEL_FORMAT_RAW10):
+      if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_RAW.value) {
+        comp.offsetInBits = 0;
+        comp.sizeInBits = -1;
+      } else {
+        return Error::BAD_VALUE;
+      }
+      break;
+    case static_cast<int32_t>(HAL_PIXEL_FORMAT_RAW8):
+      if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_RAW.value) {
+        comp.offsetInBits = 0;
+        comp.sizeInBits = 8;
+      } else {
+        return Error::BAD_VALUE;
+      }
+      break;
     default:
       break;
   }
@@ -583,8 +608,9 @@ static void grallocToStandardPlaneLayoutComponentType(uint32_t in,
   }
 
   if (in & PLANE_COMPONENT_RAW) {
-    comp.type = qtigralloc::PlaneLayoutComponentType_Raw;
-    components->push_back(comp);
+    comp.type = android::gralloc4::PlaneLayoutComponentType_RAW;
+    if (getComponentSizeAndOffset(format, comp) == Error::NONE)
+      components->push_back(comp);
   }
 
   if (in & PLANE_COMPONENT_META) {
