@@ -120,6 +120,7 @@
 #define ENABLE_BW_LIMITS                     DISPLAY_PROP("enable_bw_limits")
 #define DISABLE_ROTATOR_PRE_DOWNSCALER_PROP  DISPLAY_PROP("disable_pre_downscaler")
 #define DISABLE_INLINE_ROTATOR_UI_PROP       DISPLAY_PROP("disable_inline_rotator_ui")
+#define ENABLE_POMS_DURING_DOZE              DISPLAY_PROP("enable_poms_during_doze")
 
 // Add all vendor.display properties above
 
