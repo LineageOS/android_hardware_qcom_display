@@ -1133,13 +1133,13 @@ int32_t HWCSession::GetDozeSupport(hwc2_display_t display, int32_t *out_support)
 
   *out_support = 0;
 
-  if (display != qdutils::DISPLAY_PRIMARY) {
-    return HWC2_ERROR_NONE;
-  }
-
   SCOPE_LOCK(locker_[display]);
   if (!hwc_display_[display]) {
     DLOGE("Display %d is not created yet.", INT32(display));
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  if (hwc_display_[display]->GetDisplayClass() != DISPLAY_CLASS_BUILTIN) {
     return HWC2_ERROR_NONE;
   }
 
