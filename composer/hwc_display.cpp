@@ -206,6 +206,13 @@ HWC2::Error HWCColorMode::ApplyCurrentColorModeWithRenderIntent(bool hdr_present
       // fall back to display_p3/display_bt2020 SDR mode if there is no HDR mode
       mode_string = color_mode_map_[current_color_mode_][current_render_intent_][kSdrType];
     }
+
+    if (mode_string.empty() &&
+       (current_color_mode_ == ColorMode::BT2100_PQ) && (curr_dynamic_range_ == kSdrType)) {
+      // fallback to hdr mode.
+      mode_string = color_mode_map_[current_color_mode_][current_render_intent_][kHdrType];
+      DLOGI("fall back to hdr mode for ColorMode::BT2100_PQ kSdrType");
+    }
   }
 
   auto error = SetPreferredColorModeInternal(mode_string, false, NULL, NULL);
