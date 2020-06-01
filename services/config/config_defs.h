@@ -265,14 +265,14 @@ class ConfigInterface {
   virtual int IsHDRSupported(uint32_t disp_id, bool *supported) DEFAULT_RET
   virtual int IsWCGSupported(uint32_t disp_id, bool *supported) DEFAULT_RET
   virtual int SetLayerAsMask(uint32_t disp_id, uint64_t layer_id) DEFAULT_RET
-  virtual int GetDebugProperty(const std::string prop_name, std::string value) DEFAULT_RET
+  virtual int GetDebugProperty(const std::string prop_name, std::string *value) DEFAULT_RET
   virtual int GetActiveBuiltinDisplayAttributes(Attributes *attr) DEFAULT_RET
   virtual int SetPanelLuminanceAttributes(uint32_t disp_id, float min_lum,
                                           float max_lum) DEFAULT_RET
   virtual int IsBuiltInDisplay(uint32_t disp_id, bool *is_builtin) DEFAULT_RET
   virtual int IsAsyncVDSCreationSupported(bool *supported) DEFAULT_RET
   virtual int CreateVirtualDisplay(uint32_t width, uint32_t height, int format) DEFAULT_RET
-  virtual int GetSupportedDSIBitClks(uint32_t disp_id, std::vector<uint64_t> bit_clks) DEFAULT_RET
+  virtual int GetSupportedDSIBitClks(uint32_t disp_id, std::vector<uint64_t> *bit_clks) DEFAULT_RET
   virtual int GetDSIClk(uint32_t disp_id, uint64_t *bit_clk) DEFAULT_RET
   virtual int SetDSIClk(uint32_t disp_id, uint64_t bit_clk) DEFAULT_RET
   virtual int SetCWBOutputBuffer(uint32_t disp_id, const Rect rect, bool post_processed,
@@ -281,6 +281,10 @@ class ConfigInterface {
   virtual int IsSmartPanelConfig(uint32_t disp_id, uint32_t config_id, bool *is_smart) DEFAULT_RET
   virtual int IsRotatorSupportedFormat(int hal_format, bool ubwc, bool *supported) DEFAULT_RET
   virtual int ControlQsyncCallback(bool enable) DEFAULT_RET
+
+  // deprecated APIs
+  virtual int GetDebugProperty(const std::string prop_name, std::string value) DEFAULT_RET
+  virtual int GetSupportedDSIBitClks(uint32_t disp_id, std::vector<uint64_t> bit_clks) DEFAULT_RET
 
  protected:
   virtual ~ConfigInterface() { }

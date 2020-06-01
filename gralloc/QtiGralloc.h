@@ -62,7 +62,7 @@ enum {
 };
 
 // Metadata
-const std::string VENDOR_QTI = "QTI";
+static const std::string VENDOR_QTI = "QTI";
 
 Error get(void *buffer, uint32_t type, void *param);
 Error set(void *buffer, uint32_t type, void *param);

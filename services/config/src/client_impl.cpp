@@ -538,11 +538,13 @@ int ClientImpl::SetLayerAsMask(uint32_t disp_id, uint64_t layer_id) {
   return error;
 }
 
-int ClientImpl::GetDebugProperty(const std::string prop_name, std::string value) {
+int ClientImpl::GetDebugProperty(const std::string prop_name, std::string *value) {
   ByteStream input_params;
-  uint8_t *data_input = reinterpret_cast<uint8_t*>(const_cast<char*>(prop_name.data()));
+  std::string prop(prop_name);
+  prop += '\0';
+  uint8_t *data_input = reinterpret_cast<uint8_t*>(const_cast<char*>(prop.data()));
   input_params.setToExternal(reinterpret_cast<uint8_t*>(data_input),
-                             prop_name.size() * sizeof(char));
+                             prop.size() * sizeof(char));
   ByteStream output_params;
   int error = 0;
   auto hidl_cb = [&error, &output_params] (int32_t err, ByteStream params, HandleStream handles) {
@@ -554,9 +556,9 @@ int ClientImpl::GetDebugProperty(const std::string prop_name, std::string value)
 
   const uint8_t *data = output_params.data();
   const char *name = reinterpret_cast<const char *>(data);
-  std::string output(name);
   if (!error) {
-    value = output;
+    std::string output(name);
+    *value = output;
   }
 
   return error;
@@ -645,7 +647,7 @@ int ClientImpl::SetCWBOutputBuffer(uint32_t disp_id, const Rect rect, bool post_
   return error;
 }
 
-int ClientImpl::GetSupportedDSIBitClks(uint32_t disp_id, std::vector<uint64_t> bit_clks) {
+int ClientImpl::GetSupportedDSIBitClks(uint32_t disp_id, std::vector<uint64_t> *bit_clks) {
   ByteStream input_params;
   input_params.setToExternal(reinterpret_cast<uint8_t*>(&disp_id), sizeof(uint32_t));
   ByteStream output_params;
@@ -662,7 +664,7 @@ int ClientImpl::GetSupportedDSIBitClks(uint32_t disp_id, std::vector<uint64_t> b
     const uint64_t *bit_clks_data = reinterpret_cast<const uint64_t *>(data);
     int num_bit_clks = static_cast<int>(output_params.size() / sizeof(uint64_t));
     for (int i = 0; i < num_bit_clks; i++) {
-      bit_clks.push_back(bit_clks_data[i]);
+      bit_clks->push_back(bit_clks_data[i]);
     }
   }
 

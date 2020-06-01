@@ -88,10 +88,12 @@ void DeviceImpl::serviceDied(uint64_t client_handle,
   std::lock_guard<std::mutex> lock(death_service_mutex_);
   auto itr = display_config_map_.find(client_handle);
   std::shared_ptr<DeviceClientContext> client = itr->second;
-  ConfigInterface *intf = client->GetDeviceConfigIntf();
-  intf_->UnRegisterClientContext(intf);
-  client.reset();
-  display_config_map_.erase(itr);
+  if (client != NULL) {
+    ConfigInterface *intf = client->GetDeviceConfigIntf();
+    intf_->UnRegisterClientContext(intf);
+    client.reset();
+    display_config_map_.erase(itr);
+  }
 }
 
 DeviceImpl::DeviceClientContext::DeviceClientContext(const sp<IDisplayConfigCallback> callback) {
@@ -322,19 +324,23 @@ void DeviceImpl::DeviceClientContext::ParseGetHdrCapabilities(const ByteStream &
 
   data_output = reinterpret_cast<int32_t *>(malloc(sizeof(int32_t) *
                 hdr_caps.supported_hdr_types.size() + 3 * sizeof(float)));
-  for (int i = 0; i < hdr_caps.supported_hdr_types.size(); i++) {
-    data_output[i] = hdr_caps.supported_hdr_types[i];
+  if (data_output != NULL) {
+    for (int i = 0; i < hdr_caps.supported_hdr_types.size(); i++) {
+      data_output[i] = hdr_caps.supported_hdr_types[i];
+    }
+    float *lum = reinterpret_cast<float *>(&data_output[hdr_caps.supported_hdr_types.size()]);
+    *lum = hdr_caps.max_luminance;
+    lum++;
+    *lum = hdr_caps.max_avg_luminance;
+    lum++;
+    *lum = hdr_caps.min_luminance;
+    output_params.setToExternal(reinterpret_cast<uint8_t*>(data_output), sizeof(int32_t) *
+                                hdr_caps.supported_hdr_types.size() + 3 * sizeof(float));
+    _hidl_cb(error, output_params, {});
   }
-  float *lum = reinterpret_cast<float *>(&data_output[hdr_caps.supported_hdr_types.size()]);
-  *lum = hdr_caps.max_luminance;
-  lum++;
-  *lum = hdr_caps.max_avg_luminance;
-  lum++;
-  *lum = hdr_caps.min_luminance;
-  output_params.setToExternal(reinterpret_cast<uint8_t*>(data_output), sizeof(int32_t) *
-                              hdr_caps.supported_hdr_types.size() + 3 * sizeof(float));
-
-  _hidl_cb(error, output_params, {});
+  else {
+    _hidl_cb(-EINVAL, {}, {});
+  }
 }
 
 void DeviceImpl::DeviceClientContext::ParseSetCameraLaunchStatus(const ByteStream &input_params,
@@ -495,9 +501,10 @@ void DeviceImpl::DeviceClientContext::ParseGetDebugProperty(const ByteStream &in
   const uint8_t *data = input_params.data();
   const char *name = reinterpret_cast<const char *>(data);
   std::string prop_name(name);
-  int32_t error = intf_->GetDebugProperty(prop_name, value);
+  int32_t error = intf_->GetDebugProperty(prop_name, &value);
+  value += '\0';
   uint8_t *data_output = reinterpret_cast<uint8_t*>(value.data());
-  output_params.setToExternal(reinterpret_cast<uint8_t*>(&data_output),
+  output_params.setToExternal(reinterpret_cast<uint8_t*>(data_output),
                               value.size() * sizeof(char));
 
   _hidl_cb(error, output_params, {});
@@ -572,7 +579,7 @@ void DeviceImpl::DeviceClientContext::ParseGetSupportedDsiBitclks(const ByteStre
 
   const uint8_t *data = input_params.data();
   disp_id = reinterpret_cast<const uint32_t*>(data);
-  int32_t error = intf_->GetSupportedDSIBitClks(*disp_id, bit_clks);
+  int32_t error = intf_->GetSupportedDSIBitClks(*disp_id, &bit_clks);
 
   bit_clks_data = reinterpret_cast<uint64_t *>(malloc(sizeof(uint64_t) * bit_clks.size()));
   for (int i = 0; i < bit_clks.size(); i++) {
@@ -699,6 +706,11 @@ Return<void> DeviceImpl::perform(uint64_t client_handle, uint32_t op_code,
   }
 
   std::shared_ptr<DeviceClientContext> client = itr->second;
+  if (!client) {
+    error = -EINVAL;
+    _hidl_cb(error, {}, {});
+     return Void();
+  }
   switch (op_code) {
     case kIsDisplayConnected:
       client->ParseIsDisplayConnected(input_params, _hidl_cb);

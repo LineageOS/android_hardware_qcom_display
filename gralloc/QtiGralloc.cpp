@@ -33,6 +33,7 @@
 namespace qtigralloc {
 
 using android::hardware::graphics::mapper::V4_0::IMapper;
+
 static sp<IMapper> getInstance() {
   static sp<IMapper> mapper = IMapper::getService();
   return mapper;
@@ -84,7 +85,7 @@ Error encodeUBWCStats(UBWCStats *in, hidl_vec<uint8_t> *out) {
     return Error::BAD_VALUE;
   }
   out->resize(UBWC_STATS_ARRAY_SIZE * sizeof(UBWCStats));
-  memcpy(out->data(), &in[0], UBWC_STATS_ARRAY_SIZE * sizeof(UBWCStats));
+  memcpy(out->data(), in, UBWC_STATS_ARRAY_SIZE * sizeof(UBWCStats));
   return Error::NONE;
 }
 
