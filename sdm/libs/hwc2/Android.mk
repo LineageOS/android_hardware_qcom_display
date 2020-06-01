@@ -64,6 +64,7 @@ LOCAL_SRC_FILES               := hwc_session.cpp \
                                  display_null.cpp \
                                  hwc_socket_handler.cpp \
                                  hwc_buffer_allocator.cpp
+LOCAL_VINTF_FRAGMENTS         := android.hardware.graphics.composer-qti-display.xml
 
 include $(BUILD_SHARED_LIBRARY)
 endif
