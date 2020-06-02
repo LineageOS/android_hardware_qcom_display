@@ -115,6 +115,7 @@ class ClientImpl : public ClientInterface {
   virtual int IsRotatorSupportedFormat(int hal_format, bool ubwc, bool *supported);
   virtual int ControlQsyncCallback(bool enable);
   virtual int SendTUIEvent(DisplayType dpy, TUIEventType event_type);
+  virtual int GetDisplayHwId(uint32_t disp_id, uint32_t *display_hw_id);
 
  private:
   android::sp<IDisplayConfig> display_config_ = nullptr;
