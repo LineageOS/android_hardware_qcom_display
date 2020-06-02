@@ -18,6 +18,7 @@ PRODUCT_PACKAGES += \
     vendor.qti.hardware.display.mapper@3.0.vendor \
     vendor.qti.hardware.display.mapper@4.0.vendor \
     init.qti.display_boot.sh \
+    init.qti.display_boot.rc \
     modetest
 
 ifneq ($(TARGET_HAS_LOW_RAM),true)
