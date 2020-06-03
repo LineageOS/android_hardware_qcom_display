@@ -1204,8 +1204,7 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, shared_ptr<Fence
   }
 
   if (acquire_fence == nullptr) {
-    DLOGW("acquire_fence is zero");
-    return HWC2::Error::BadParameter;
+    DLOGV_IF(kTagClient, "Re-using cached buffer");
   }
 
   Layer *sdm_layer = client_target_->GetSDMLayer();
