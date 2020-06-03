@@ -41,6 +41,12 @@ struct CWBConfig {
   sde_drm::DRMDisplayToken token = {};
 };
 
+enum SelfRefreshState {
+  kSelfRefreshNone,
+  kSelfRefreshEnable,
+  kSelfRefreshDisable,
+};
+
 class HWPeripheralDRM : public HWDeviceDRM {
  public:
   explicit HWPeripheralDRM(int32_t display_id, BufferAllocator *buffer_allocator,
@@ -103,7 +109,7 @@ class HWPeripheralDRM : public HWDeviceDRM {
   void PopulateBitClkRates();
   std::vector<uint64_t> bitclk_rates_;
   std::string brightness_base_path_ = "";
-  bool self_refresh_enabled_ = false;
+  SelfRefreshState self_refresh_state_ = kSelfRefreshNone;
 };
 
 }  // namespace sdm
