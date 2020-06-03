@@ -1686,6 +1686,7 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence
     }
 
     layer->request.flags = {};
+    layer_buffer->acquire_fence = nullptr;
   }
 
   client_target_->GetSDMLayer()->request.flags = {};
