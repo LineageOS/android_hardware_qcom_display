@@ -185,7 +185,7 @@ class DisplayBase : public DisplayInterface {
   void InsertBT2020PqHlgModes();
   DisplayError HandlePendingVSyncEnable(int32_t retire_fence);
   DisplayError HandlePendingPowerState(int32_t retire_fence);
-
+  bool is_idle_timeout_ = false;
   recursive_mutex recursive_mutex_;
   int32_t display_id_ = -1;
   DisplayType display_type_;
