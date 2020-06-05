@@ -33,6 +33,7 @@
 #include <vector>
 #include <array>
 #include <tuple>
+#include <utility>
 #include <functional>
 #include <memory>
 #include <string>
@@ -106,6 +107,11 @@ enum ScOps {
   kScModeSwAssets,
   kScOpsMax = 0xFF,
 };
+
+//<! Tuple first entry: Hardware capability.
+//<! Tuple second entry: bool flag to indicate if capability takes range value.
+//<! Tuple third entry: range of values for the capability, valid if bool is set to true.
+using ScHwCapsType = std::tuple<std::string, bool, std::pair<int64_t, int64_t>>;
 
 static const uint32_t kMatrixSize = 4 * 4;
 struct ColorTransform {
@@ -202,24 +208,32 @@ struct GammaPostBlendConfig {
     b.reserve(len);
     g.reserve(len);
   }
+  //<! supported for IGC only
+  bool dither_en = false;
+  //<! supported for IGC only
+  uint32_t dither_strength = 0;
 };
 
 struct PostBlendGamutHwConfig {
   uint32_t gamut_version = sizeof(struct GamutConfig);
-  uint32_t num_of_grid_entires = 17;
+  uint32_t num_of_grid_entries = 17;
   uint32_t grid_entries_width = 10;
+  std::vector<ScHwCapsType> hw_caps;
 };
 
 struct PostBlendGammaHwConfig {
   uint32_t gamma_version = sizeof(struct GammaPostBlendConfig);
   uint32_t num_of_entries = 1024;
   uint32_t entries_width = 10;
+  std::vector<ScHwCapsType> hw_caps;
 };
 
+const std::string kIgcDitherCap = "HwCapIgcDither";
 struct PostBlendInverseGammaHwConfig {
   uint32_t inverse_gamma_version = sizeof(struct GammaPostBlendConfig);
   uint32_t num_of_entries = 257;
   uint32_t entries_width = 12;
+  std::vector<ScHwCapsType> hw_caps;
 };
 
 struct HwConfigPayload {
