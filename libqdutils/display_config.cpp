@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2013-2014, 2016, 2018 The Linux Foundation. All rights reserved.
+* Copyright (c) 2013-2014, 2016, 2018-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -82,23 +82,6 @@ int getDisplayAttributes(int dpy, DisplayAttributes_t& dpyattr) {
     } else {
         ALOGE("%s() failed with err %d", __FUNCTION__, err);
     }
-    return err;
-}
-
-int setHSIC(int dpy, const HSICData_t& hsic_data) {
-    status_t err = (status_t) FAILED_TRANSACTION;
-    sp<IQService> binder = getBinder();
-    Parcel inParcel, outParcel;
-    inParcel.writeInt32(dpy);
-    inParcel.writeInt32(hsic_data.hue);
-    inParcel.writeFloat(hsic_data.saturation);
-    inParcel.writeInt32(hsic_data.intensity);
-    inParcel.writeFloat(hsic_data.contrast);
-    if(binder != NULL) {
-        err = binder->dispatch(IQService::SET_HSIC_DATA, &inParcel, &outParcel);
-    }
-    if(err)
-        ALOGE("%s: Failed to get external status err=%d", __FUNCTION__, err);
     return err;
 }
 
