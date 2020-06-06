@@ -238,6 +238,14 @@ Error QtiComposerClient::getDisplayReadbackBuffer(Display display,
   return Error::NONE;
 }
 
+Error QtiComposerClient::checkIfValidDisplay(uint64_t display){
+  std::lock_guard<std::mutex> lock(mDisplayDataMutex);
+  if (mDisplayData.find(display) == mDisplayData.end()) {
+    return Error::BAD_DISPLAY;
+  }
+  return Error::NONE;
+}
+
 void QtiComposerClient::getCapabilities() {
   uint32_t count = 0;
   hwc_session_->GetCapabilities(&count, nullptr);
@@ -367,6 +375,11 @@ Return<Error> QtiComposerClient::destroyLayer(uint64_t display, uint64_t layer) 
 
 Return<void> QtiComposerClient::getActiveConfig(uint64_t display, getActiveConfig_cb _hidl_cb) {
   uint32_t config = 0;
+  if (checkIfValidDisplay(display) != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return Void();
+  }
+
   auto error = hwc_session_->GetActiveConfig(display, &config);
 
   _hidl_cb(static_cast<Error>(error), config);
@@ -378,9 +391,15 @@ Return<Error> QtiComposerClient::getClientTargetSupport(uint64_t display, uint32
                                                         uint32_t height,
                                                         common_V1_0::PixelFormat format,
                                                         common_V1_0::Dataspace dataspace) {
-  auto error = hwc_session_->GetClientTargetSupport(display, width, height,
-                                                    static_cast<int32_t>(format),
-                                                    static_cast<int32_t>(dataspace));
+  auto error = checkIfValidDisplay(display);
+  if (error != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return error;
+  }
+
+  error = static_cast<Error>(hwc_session_->GetClientTargetSupport(display, width, height,
+                                                                 static_cast<int32_t>(format),
+                                                                 static_cast<int32_t>(dataspace)));
 
   return static_cast<Error>(error);
 }
@@ -389,6 +408,11 @@ Return<void> QtiComposerClient::getColorModes(uint64_t display, getColorModes_cb
   // TODO(user): Implement combinedly w.r.t getColorModes_2_3
   hidl_vec<common_V1_0::ColorMode> modes;
   uint32_t count = 0;
+
+  if (checkIfValidDisplay(display) != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return Void();
+  }
 
   auto error = hwc_session_->GetColorModes(display, &count, nullptr);
   if (error != HWC2_ERROR_NONE) {
@@ -408,6 +432,12 @@ Return<void> QtiComposerClient::getDisplayAttribute(uint64_t display, uint32_t c
                                                composer_V2_1::IComposerClient::Attribute attribute,
                                                getDisplayAttribute_cb _hidl_cb) {
   int32_t value = 0;
+
+  if (checkIfValidDisplay(display) != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return Void();
+  }
+
   auto error = hwc_session_->GetDisplayAttribute(
       display, config, static_cast<composer_V2_4::IComposerClient::Attribute>(attribute), &value);
 
@@ -419,6 +449,11 @@ Return<void> QtiComposerClient::getDisplayConfigs(uint64_t display,
                                                   getDisplayConfigs_cb _hidl_cb) {
   hidl_vec<uint32_t> configs;
   uint32_t count = 0;
+
+  if (checkIfValidDisplay(display) != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return Void();
+  }
 
   auto error = hwc_session_->GetDisplayConfigs(display, &count, nullptr);
   if (error != HWC2_ERROR_NONE) {
@@ -437,6 +472,11 @@ Return<void> QtiComposerClient::getDisplayName(uint64_t display, getDisplayName_
   uint32_t count = 0;
   hidl_string name_reply;
   std::vector<char> name;
+
+  if (checkIfValidDisplay(display) != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return Void();
+  }
 
   auto error = hwc_session_->GetDisplayName(display, &count, nullptr);
   if (error != HWC2_ERROR_NONE) {
@@ -461,6 +501,12 @@ Return<void> QtiComposerClient::getDisplayName(uint64_t display, getDisplayName_
 
 Return<void> QtiComposerClient::getDisplayType(uint64_t display, getDisplayType_cb _hidl_cb) {
   int32_t hwc_type;
+
+  if (checkIfValidDisplay(display) != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return Void();
+  }
+
   auto error = hwc_session_->GetDisplayType(display, &hwc_type);
 
   _hidl_cb(static_cast<Error>(error), static_cast<IComposerClient::DisplayType>(hwc_type));
@@ -469,6 +515,12 @@ Return<void> QtiComposerClient::getDisplayType(uint64_t display, getDisplayType_
 
 Return<void> QtiComposerClient::getDozeSupport(uint64_t display, getDozeSupport_cb _hidl_cb) {
   int32_t hwc_support = 0;
+
+  if (checkIfValidDisplay(display) != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return Void();
+  }
+
   auto error = hwc_session_->GetDozeSupport(display, &hwc_support);
 
   _hidl_cb(static_cast<Error>(error), hwc_support);
@@ -483,6 +535,11 @@ Return<void> QtiComposerClient::getHdrCapabilities(uint64_t display,
   float max_lumi = 0.0f;
   float max_avg_lumi = 0.0f;
   float min_lumi = 0.0f;
+
+  if (checkIfValidDisplay(display) != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return Void();
+  }
 
   auto error = hwc_session_->GetHdrCapabilities(display, &count, nullptr, &max_lumi,
                                                 &max_avg_lumi, &min_lumi);
@@ -514,30 +571,55 @@ Return<Error> QtiComposerClient::setClientTargetSlotCount(uint64_t display,
 }
 
 Return<Error> QtiComposerClient::setActiveConfig(uint64_t display, uint32_t config) {
-  auto error = hwc_session_->SetActiveConfig(display, config);
 
-  return static_cast<Error>(error);
+  auto error = checkIfValidDisplay(display);
+  if (error != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return error;
+  }
+
+  error = static_cast<Error>(hwc_session_->SetActiveConfig(display, config));
+
+  return error;
 }
 
 Return<Error> QtiComposerClient::setColorMode(uint64_t display, common_V1_0::ColorMode mode) {
-  auto error = hwc_session_->SetColorMode(display, static_cast<int32_t>(mode));
+  auto error = checkIfValidDisplay(display);
+  if (error != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return error;
+  }
 
-  return static_cast<Error>(error);
+  error = static_cast<Error>(hwc_session_->SetColorMode(display, static_cast<int32_t>(mode)));
+
+  return error;
 }
 
 Return<Error> QtiComposerClient::setPowerMode(uint64_t display,
                                               composer_V2_1::IComposerClient::PowerMode mode) {
-  // TODO(user): Implement combinedly w.r.t setPowerMode_2_2
-  auto error = hwc_session_->SetPowerMode(display, static_cast<int32_t>(mode));
+  auto error = checkIfValidDisplay(display);
+  if (error != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return error;
+  }
 
-  return static_cast<Error>(error);
+  // TODO(user): Implement combinedly w.r.t setPowerMode_2_2
+  error = static_cast<Error>(hwc_session_->SetPowerMode(display, static_cast<int32_t>(mode)));
+
+  return error;
 }
 
 Return<Error> QtiComposerClient::setVsyncEnabled(uint64_t display,
                                                  composer_V2_1::IComposerClient::Vsync enabled) {
-  auto error = hwc_session_->SetVsyncEnabled(display, static_cast<int32_t>(enabled));
+  auto error = checkIfValidDisplay(display);
+  if (error != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return error;
+  }
 
-  return static_cast<Error>(error);
+  error = static_cast<Error>(hwc_session_->SetVsyncEnabled(display, static_cast<int32_t>(enabled)));
+
+  return error;
 }
 
 Return<Error> QtiComposerClient::setInputCommandQueue(
@@ -596,6 +678,11 @@ Return<void> QtiComposerClient::getPerFrameMetadataKeys(uint64_t display,
   std::vector<PerFrameMetadataKey_V2> keys;
   uint32_t count = 0;
 
+  if (checkIfValidDisplay(display) != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return Void();
+  }
+ 
   auto error = hwc_session_->GetPerFrameMetadataKeys(display, &count, nullptr);
   if (error != HWC2_ERROR_NONE) {
     _hidl_cb(static_cast<Error>(error), keys);
@@ -616,6 +703,11 @@ Return<void> QtiComposerClient::getReadbackBufferAttributes(uint64_t display,
   int32_t format = 0;
   int32_t dataspace = 0;
 
+  if (checkIfValidDisplay(display) != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return Void();
+  }
+
   auto error = hwc_session_->GetReadbackBufferAttributes(display, &format, &dataspace);
 
   if (error != HWC2_ERROR_NONE) {
@@ -631,6 +723,12 @@ Return<void> QtiComposerClient::getReadbackBufferAttributes(uint64_t display,
 Return<void> QtiComposerClient::getReadbackBufferFence(uint64_t display,
                                                        getReadbackBufferFence_cb _hidl_cb) {
   shared_ptr<Fence> fence = nullptr;
+
+  if (checkIfValidDisplay(display) != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return Void();
+  }
+
   auto error = hwc_session_->GetReadbackBufferFence(display, &fence);
   if (static_cast<Error>(error) != Error::NONE) {
     _hidl_cb(static_cast<Error>(error), nullptr);
@@ -696,7 +794,13 @@ Return<Error> QtiComposerClient::setPowerMode_2_2(uint64_t display,
   if (mode == IComposerClient::PowerMode::ON_SUSPEND) {
     return Error::UNSUPPORTED;
   }
-  auto error = hwc_session_->SetPowerMode(display, static_cast<int32_t>(mode));
+
+  auto error = checkIfValidDisplay(display);
+  if (error != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return error;
+  }
+  error = static_cast<Error>(hwc_session_->SetPowerMode(display, static_cast<int32_t>(mode)));
 
   return static_cast<Error>(error);
 }
@@ -706,6 +810,11 @@ Return<void> QtiComposerClient::getColorModes_2_2(uint64_t display,
   // TODO(user): Implement combinedly w.r.t getColorModes_2_3
   hidl_vec<common_V1_1::ColorMode> modes;
   uint32_t count = 0;
+
+  if (checkIfValidDisplay(display) != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return Void();
+  }
 
   auto error = hwc_session_->GetColorModes(display, &count, nullptr);
   if (error != HWC2_ERROR_NONE) {
@@ -727,6 +836,11 @@ Return<void> QtiComposerClient::getRenderIntents(uint64_t display, common_V1_1::
   uint32_t count = 0;
   std::vector<RenderIntent> intents;
 
+  if (checkIfValidDisplay(display) != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return Void();
+  }
+
   auto error = hwc_session_->GetRenderIntents(display, int32_t(mode), &count, nullptr);
   if (error != HWC2_ERROR_NONE) {
     _hidl_cb(static_cast<Error>(error), intents);
@@ -743,10 +857,16 @@ Return<void> QtiComposerClient::getRenderIntents(uint64_t display, common_V1_1::
 
 Return<Error> QtiComposerClient::setColorMode_2_2(uint64_t display, common_V1_1::ColorMode mode,
                                                   common_V1_1::RenderIntent intent) {
-  auto error = hwc_session_->SetColorModeWithRenderIntent(display, static_cast<int32_t>(mode),
-                                                          static_cast<int32_t>(intent));
+  auto error = checkIfValidDisplay(display);
+  if (error != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return error;
+  }
+  error = static_cast<Error>(hwc_session_->SetColorModeWithRenderIntent(display,
+                                                          static_cast<int32_t>(mode),
+                                                          static_cast<int32_t>(intent)));
 
-  return static_cast<Error>(error);
+  return error;
 }
 
 Return<void> QtiComposerClient::getDataspaceSaturationMatrix(common_V1_1::Dataspace dataspace,
@@ -806,6 +926,11 @@ Return<void> QtiComposerClient::getDisplayIdentificationData(uint64_t display,
   uint32_t size = 0;
   std::vector<uint8_t> data(size);
 
+  if (checkIfValidDisplay(display) != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return Void();
+  }
+
   auto error = hwc_session_->GetDisplayIdentificationData(display, &port, &size, nullptr);
   if (error != HWC2_ERROR_NONE) {
     _hidl_cb(static_cast<Error>(error), port, data);
@@ -824,6 +949,11 @@ Return<void> QtiComposerClient::getReadbackBufferAttributes_2_3(uint64_t display
   int32_t format = 0;
   int32_t dataspace = 0;
 
+  if (checkIfValidDisplay(display) != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return Void();
+  }
+
   auto error = hwc_session_->GetReadbackBufferAttributes(display, &format, &dataspace);
 
   if (error != HWC2_ERROR_NONE) {
@@ -840,11 +970,17 @@ Return<Error> QtiComposerClient::getClientTargetSupport_2_3(uint64_t display, ui
                                                             uint32_t height,
                                                             common_V1_2::PixelFormat format,
                                                             common_V1_2::Dataspace dataspace) {
-  auto error = hwc_session_->GetClientTargetSupport(display, width, height,
-                                                    static_cast<int32_t>(format),
-                                                    static_cast<int32_t>(dataspace));
+  auto error = checkIfValidDisplay(display);
+  if (error != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return error;
+  }
 
-  return static_cast<Error>(error);
+  error = static_cast<Error>(hwc_session_->GetClientTargetSupport(display, width, height,
+                                                    static_cast<int32_t>(format),
+                                                    static_cast<int32_t>(dataspace)));
+
+  return error;
 }
 
 Return<void> QtiComposerClient::getDisplayedContentSamplingAttributes(uint64_t display,
@@ -919,6 +1055,11 @@ Return<void> QtiComposerClient::getRenderIntents_2_3(uint64_t display, common_V1
   uint32_t count = 0;
   std::vector<RenderIntent> intents;
 
+  if (checkIfValidDisplay(display) != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return Void();
+  }
+
   auto error = hwc_session_->GetRenderIntents(display, int32_t(mode), &count, nullptr);
   if (error != HWC2_ERROR_NONE) {
     _hidl_cb(static_cast<Error>(error), intents);
@@ -938,6 +1079,11 @@ Return<void> QtiComposerClient::getColorModes_2_3(uint64_t display,
   hidl_vec<common_V1_2::ColorMode> modes;
   uint32_t count = 0;
 
+  if (checkIfValidDisplay(display) != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return Void();
+  }
+
   auto error = hwc_session_->GetColorModes(display, &count, nullptr);
   if (error != HWC2_ERROR_NONE) {
     _hidl_cb(static_cast<Error>(error), modes);
@@ -954,10 +1100,17 @@ Return<void> QtiComposerClient::getColorModes_2_3(uint64_t display,
 
 Return<Error> QtiComposerClient::setColorMode_2_3(uint64_t display, common_V1_2::ColorMode mode,
                                                   common_V1_1::RenderIntent intent) {
-  auto error = hwc_session_->SetColorModeWithRenderIntent(display, static_cast<int32_t>(mode),
-                                                          static_cast<int32_t>(intent));
 
-  return static_cast<Error>(error);
+  auto error = checkIfValidDisplay(display);
+  if (error != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return error;
+  }
+  error = static_cast<Error>(hwc_session_->SetColorModeWithRenderIntent(display,
+                                                                    static_cast<int32_t>(mode),
+                                                                    static_cast<int32_t>(intent)));
+
+  return error;
 }
 
 Return<void> QtiComposerClient::getDisplayCapabilities(uint64_t display,
@@ -971,6 +1124,11 @@ Return<void> QtiComposerClient::getPerFrameMetadataKeys_2_3(uint64_t display,
                                                          getPerFrameMetadataKeys_2_3_cb _hidl_cb) {
   std::vector<PerFrameMetadataKey> keys;
   uint32_t count = 0;
+
+  if (checkIfValidDisplay(display) != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return Void();
+  }
 
   auto error = hwc_session_->GetPerFrameMetadataKeys(display, &count, nullptr);
   if (error != HWC2_ERROR_NONE) {
@@ -994,6 +1152,11 @@ Return<void> QtiComposerClient::getHdrCapabilities_2_3(uint64_t display,
   float max_avg_lumi = 0.0f;
   float min_lumi = 0.0f;
 
+  if (checkIfValidDisplay(display) != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return Void();
+  }
+
   auto error = hwc_session_->GetHdrCapabilities(display, &count, nullptr, &max_lumi,
                                                 &max_avg_lumi, &min_lumi);
   if (error != HWC2_ERROR_NONE) {
@@ -1013,6 +1176,12 @@ Return<void> QtiComposerClient::getHdrCapabilities_2_3(uint64_t display,
 Return<void> QtiComposerClient::getDisplayBrightnessSupport(uint64_t display,
                                                          getDisplayBrightnessSupport_cb _hidl_cb) {
   bool support = false;
+
+  if (checkIfValidDisplay(display) != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return Void();
+  }
+
   auto error = hwc_session_->GetDisplayBrightnessSupport(display, &support);
 
   _hidl_cb(static_cast<Error>(error), support);
@@ -1024,8 +1193,13 @@ Return<Error> QtiComposerClient::setDisplayBrightness(uint64_t display, float br
     return Error::BAD_PARAMETER;
   }
 
-  auto error = hwc_session_->SetDisplayBrightness(display, brightness);
-  return static_cast<Error>(error);
+  auto error = checkIfValidDisplay(display);
+  if (error != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return error;
+  }
+  error = static_cast<Error>(hwc_session_->SetDisplayBrightness(display, brightness));
+  return error;
 }
 
 // Methods from ::android::hardware::graphics::composer::V2_4::IComposerClient follow.
@@ -1048,6 +1222,12 @@ Return<void> QtiComposerClient::getDisplayCapabilities_2_4(uint64_t display,
 Return<void> QtiComposerClient::getDisplayConnectionType(uint64_t display,
                                                          getDisplayConnectionType_cb _hidl_cb) {
   HwcDisplayConnectionType type;
+
+  if (checkIfValidDisplay(display) != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return Void();
+  }
+
   auto error = hwc_session_->GetDisplayConnectionType(display, &type);
   _hidl_cb(static_cast<composer_V2_4::Error>(error), type);
   return Void();
@@ -1057,6 +1237,12 @@ Return<void> QtiComposerClient::getDisplayAttribute_2_4(
     uint64_t display, uint32_t config, composer_V2_4::IComposerClient::Attribute attribute,
     getDisplayAttribute_2_4_cb _hidl_cb) {
   int32_t value = 0;
+
+  if (checkIfValidDisplay(display) != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return Void();
+  }
+
   auto error = hwc_session_->GetDisplayAttribute(display, config, attribute, &value);
   _hidl_cb(static_cast<composer_V2_4::Error>(error), value);
   return Void();
@@ -1065,6 +1251,12 @@ Return<void> QtiComposerClient::getDisplayAttribute_2_4(
 Return<void> QtiComposerClient::getDisplayVsyncPeriod(uint64_t display,
                                                       getDisplayVsyncPeriod_cb _hidl_cb) {
   VsyncPeriodNanos vsync_period;
+
+  if (checkIfValidDisplay(display) != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return Void();
+  }
+
   auto error = hwc_session_->GetDisplayVsyncPeriod(display, &vsync_period);
   _hidl_cb(static_cast<composer_V2_4::Error>(error), vsync_period);
   return Void();
@@ -1078,6 +1270,11 @@ Return<void> QtiComposerClient::setActiveConfigWithConstraints(
   timeline.newVsyncAppliedTimeNanos = systemTime();
   timeline.refreshRequired = false;
   timeline.refreshTimeNanos = 0;
+
+  if (checkIfValidDisplay(display) != Error::NONE) {
+    ALOGE("%s: Display %lu is invalid", __FUNCTION__, display);
+    return Void();
+  }
 
   auto error = hwc_session_->SetActiveConfigWithConstraints(
       display, config, &vsyncPeriodChangeConstraints, &timeline);

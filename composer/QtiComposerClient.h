@@ -255,6 +255,8 @@ class QtiComposerClient : public IQtiComposerClient {
     }
   }
 
+  Error checkIfValidDisplay(uint64_t display);
+
  private:
   struct LayerBuffers {
     std::vector<BufferCacheEntry> Buffers;
