@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -135,7 +135,7 @@ int DRMAtomicReq::Perform(DRMOps opcode, uint32_t obj_id, ...) {
       drm_mgr_->GetDppsMgrIntf()->CommitDppsFeatures(drm_atomic_req_, token_);
     } break;
     case DRMOps::PLANES_RESET_CACHE: {
-      drm_mgr_->GetPlaneMgr()->ResetCache(obj_id);
+      drm_mgr_->GetPlaneMgr()->ResetCache(drm_atomic_req_, obj_id);
     } break;
     default:
       DRM_LOGE("Invalid opcode %d", opcode);

@@ -1141,6 +1141,11 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayers *hw_layers,
     }
   }
 
+#ifdef TRUSTED_VM
+  if (first_cycle_)
+    drm_atomic_intf_->Perform(sde_drm::DRMOps::PLANES_RESET_CACHE, token_.crtc_id);
+#endif
+
   for (uint32_t i = 0; i < hw_layer_count; i++) {
     Layer &layer = hw_layer_info.hw_layers.at(i);
     LayerBuffer *input_buffer = &layer.input_buffer;
