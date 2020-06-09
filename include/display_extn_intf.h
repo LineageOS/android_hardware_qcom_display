@@ -35,6 +35,12 @@ namespace composer {
 class DisplayExtnIntf {
  public:
   virtual int SetContentFps(uint32_t fps) = 0;
+  virtual void RegisterDisplay(uint32_t display_id) = 0;
+  virtual void UnregisterDisplay(uint32_t display_id) = 0;
+  virtual int SetActiveConfig(uint32_t display_id, uint32_t config_id) = 0;
+  virtual int NotifyEarlyWakeUp(bool gpu, bool display) = 0;
+  virtual int NotifyDisplayEarlyWakeUp(uint32_t display_id) = 0;
+
  protected:
   virtual ~DisplayExtnIntf() { }
 };
