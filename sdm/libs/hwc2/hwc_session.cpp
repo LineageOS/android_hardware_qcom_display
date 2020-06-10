@@ -1142,9 +1142,18 @@ int32_t HWCSession::GetDozeSupport(hwc2_device_t *device, hwc2_display_t display
   }
 
   *out_support = 0;
-  uint32_t config = 0;
-  hwc_session->GetActiveConfigIndex(INT(display), &config);
-  *out_support = hwc_session->isSmartPanelConfig(UINT32(display), config) ? 1 : 0;
+
+  if (display != qdutils::DISPLAY_PRIMARY) {
+    return HWC2_ERROR_NONE;
+  }
+
+  SCOPE_LOCK(locker_[display]);
+  if (!hwc_session->hwc_display_[display]) {
+    DLOGE("Display %d is not created yet.", INT32(display));
+    return HWC2_ERROR_NONE;
+  }
+
+  *out_support = hwc_session->hwc_display_[display]->HasSmartPanelConfig() ? 1 : 0;
 
   return HWC2_ERROR_NONE;
 }

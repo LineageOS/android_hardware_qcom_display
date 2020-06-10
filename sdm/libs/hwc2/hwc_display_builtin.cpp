@@ -1045,4 +1045,14 @@ bool HWCDisplayBuiltIn::IsSmartPanelConfig(uint32_t config_id) {
   return false;
 }
 
+bool HWCDisplayBuiltIn::HasSmartPanelConfig(void) {
+  for (auto &config : variable_config_map_) {
+    if (config.second.smart_panel) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 }  // namespace sdm
