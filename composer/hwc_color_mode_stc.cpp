@@ -80,7 +80,6 @@ HWC2::Error HWCColorModeStc::Init() {
   if (error != kErrorNone) {
     DLOGW("Failed to get Stc color modes, error %d", error);
     stc_mode_list_.list.clear();
-    return HWC2::Error::BadParameter;
   } else {
     DLOGI("Stc mode count %d", stc_mode_list_.list.size());
   }
@@ -91,6 +90,7 @@ HWC2::Error HWCColorModeStc::Init() {
 
 HWC2::Error HWCColorModeStc::DeInit() {
   stc_mode_list_.list.clear();
+  color_mode_map_.clear();
   return HWC2::Error::None;
 }
 
@@ -98,6 +98,7 @@ void HWCColorModeStc::PopulateColorModes() {
   if (!stc_mode_list_.list.size()) {
     snapdragoncolor::ColorMode color_mode = {};
     color_mode_map_[ColorMode::NATIVE][RenderIntent::COLORIMETRIC][kSdrType] = color_mode;
+    DLOGI("No color mode supported, add Native mode");
     return;
   }
 
@@ -118,6 +119,8 @@ void HWCColorModeStc::PopulateColorModes() {
         dynamic_range = kHdrType;
       }
       color_mode_map_[mode][render_intent][dynamic_range] = stc_mode;
+      DLOGI("Add into map: mode %d, render_intent %d, dynamic_range %d",
+            mode, render_intent, dynamic_range);
     }
   }
 }
@@ -250,7 +253,7 @@ HWC2::Error HWCColorModeStc::CacheColorModeWithRenderIntent(ColorMode mode, Rend
 HWC2::Error HWCColorModeStc::ApplyCurrentColorModeWithRenderIntent(bool hdr_present) {
   DisplayError error = kErrorNone;
 
-  if (color_mode_map_.size() < 1) {
+  if (color_mode_map_.empty()) {
     return HWC2::Error::None;
   }
 
