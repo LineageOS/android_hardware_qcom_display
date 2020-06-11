@@ -21,7 +21,7 @@ LOCAL_CLANG                   := true
 LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware libhardware_legacy \
                                  libutils libcutils libsync libqdutils libqdMetaData \
                                  libdisplaydebug libsdmutils libc++ liblog libgrallocutils libui \
-                                 libgpu_tonemapper libhidlbase libhidltransport \
+                                 libgpu_tonemapper libhidlbase libhidltransport libdisplayconfig.qti \
                                  android.hardware.graphics.mapper@2.0 \
                                  android.hardware.graphics.mapper@2.1 \
                                  android.hardware.graphics.mapper@3.0 \
@@ -41,7 +41,8 @@ LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware li
                                  vendor.display.config@1.8 \
                                  vendor.display.config@1.9 \
                                  vendor.display.config@1.10 \
-                                 vendor.display.config@1.11
+                                 vendor.display.config@1.11 \
+                                 vendor.display.config@2.0
 
 ifeq ($(TARGET_BOARD_AUTO), true)
 LOCAL_CFLAGS                  += -DCONFIG_BASEID_FROM_PROP
