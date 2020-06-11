@@ -87,6 +87,12 @@ void HWVirtualDRM::InitializeConfigs() {
 }
 
 DisplayError HWVirtualDRM::SetWbConfigs(const HWDisplayAttributes &display_attributes) {
+  if (display_attributes.x_pixels > connector_info_.max_linewidth) {
+    DLOGE("Requested width %d is more than supported %d", display_attributes.x_pixels,
+           connector_info_.max_linewidth);
+    return kErrorHardware;
+  }
+
   drmModeModeInfo mode = {};
   vector<drmModeModeInfo> modes;
 
