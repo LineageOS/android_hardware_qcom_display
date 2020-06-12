@@ -212,10 +212,9 @@ ColorManagerProxy *ColorManagerProxy::CreateColorManagerProxy(DisplayType type,
     } else {
       int err = color_manager_proxy->stc_intf_->Init(hw_attr.panel_name);
       if (err) {
-        DLOGE("Failed to init Stc interface, err %d", err);
-        delete color_manager_proxy;
-        color_manager_proxy = NULL;
-        return color_manager_proxy;
+        DLOGW("Failed to init Stc interface, err %d", err);
+        delete color_manager_proxy->stc_intf_;
+        color_manager_proxy->stc_intf_ = NULL;
       }
     }
   }
@@ -247,6 +246,10 @@ DisplayError ColorManagerProxy::ColorSVCRequestRoute(const PPDisplayAPIPayload &
   // On completion, dspp_features_ will be populated and mark dirty with all resolved dspp
   // feature list with paramaters being transformed into target requirement.
   ret = color_intf_->ColorSVCRequestRoute(in_payload, out_payload, &pp_features_, pending_action);
+
+  if (!stc_intf_) {
+    return ret;
+  }
 
   if (!ret && pending_action->action == kGetNumRenderIntents) {
     uint32_t num_render_intent = 0;
@@ -386,6 +389,12 @@ DisplayError ColorManagerProxy::ColorMgrSetColorTransform(uint32_t length,
           length);
     return kErrorParameters;
   }
+
+  if (!stc_intf_) {
+    DLOGE("STC interface is NULL");
+    return kErrorNone;
+  }
+
   struct snapdragoncolor::ColorTransform color_transform = {};
   for (uint32_t i = 0; i < length; i++) {
     color_transform.coeff_array[i] = static_cast<float>(*(trans_data + i));
@@ -556,6 +565,11 @@ void ColorManagerProxy::DumpColorMetaData(const ColorMetaData &color_metadata) {
 }
 
 DisplayError ColorManagerProxy::ColorMgrGetStcModes(ColorModeList *mode_list) {
+  if (!stc_intf_) {
+    DLOGE("STC interface is NULL");
+    return kErrorUndefined;
+  }
+
   ScPayload payload;
   payload.len = sizeof(ColorModeList);
   payload.prop = kModeList;
@@ -572,6 +586,11 @@ DisplayError ColorManagerProxy::ColorMgrGetStcModes(ColorModeList *mode_list) {
 
 DisplayError ColorManagerProxy::ColorMgrSetStcMode(const ColorMode &color_mode) {
   DisplayError error = kErrorNone;
+
+  if (!stc_intf_) {
+    DLOGE("STC interface is NULL");
+    return kErrorUndefined;
+  }
 
   ScPayload in_data = {};
   struct ModeRenderInputParams mode_params = {};

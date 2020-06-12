@@ -173,7 +173,7 @@ class ColorManagerProxy {
   uint32_t cur_intent_ = 0;
   int32_t cur_mode_id_ = -1;
   ColorMetaData meta_data_ = {};
-  snapdragoncolor::ScPostBlendInterface *stc_intf_;
+  snapdragoncolor::ScPostBlendInterface *stc_intf_ = NULL;
   snapdragoncolor::ColorMode curr_mode_;
 };
 
