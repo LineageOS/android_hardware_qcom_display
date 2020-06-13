@@ -20,6 +20,9 @@
 #ifndef __QTICOMPOSERCLIENT_H__
 #define __QTICOMPOSERCLIENT_H__
 
+#define QTI_LOGE(format, ...) \
+  ALOGE("%s:" format, __FUNCTION__, ##__VA_ARGS__)
+
 #include <vendor/qti/hardware/display/composer/3.0/IQtiComposerClient.h>
 #include <hidl/MQDescriptor.h>
 #include <hidl/Status.h>
@@ -255,9 +258,8 @@ class QtiComposerClient : public IQtiComposerClient {
     }
   }
 
-  Error checkIfValidDisplay(uint64_t display);
-
  private:
+  Error checkIfValidDisplay(uint64_t display);
   struct LayerBuffers {
     std::vector<BufferCacheEntry> Buffers;
     // the handle is a sideband stream handle, not a buffer handle
