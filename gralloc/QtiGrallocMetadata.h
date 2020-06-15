@@ -64,9 +64,10 @@
 
 // GRAPHICS_METADATA
 #define GRAPHICS_METADATA_SIZE 4096
+#define GRAPHICS_METADATA_SIZE_IN_BYTES (GRAPHICS_METADATA_SIZE * sizeof(uint32_t))
 typedef struct GraphicsMetadata {
-  uint32_t size;
-  uint32_t data[GRAPHICS_METADATA_SIZE];
+  uint32_t size;  //unused in Gralloc4, in Gralloc3 it was never returned on Get()
+  uint32_t data[GRAPHICS_METADATA_SIZE]; //Clients must set only raw data with Gralloc4
 } GraphicsMetadata;
 
 // UBWC_CR_STATS_INFO

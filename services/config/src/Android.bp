@@ -1,7 +1,7 @@
 cc_library_shared {
     name: "libdisplayconfig.qti",
     vendor_available: true,
-    product_specific: true,
+    system_ext_specific: true,
     cflags: [
         "-Wno-sign-conversion",
         "-Wno-unused-parameter",
