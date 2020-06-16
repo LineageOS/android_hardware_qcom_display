@@ -575,6 +575,10 @@ void DeviceImpl::DeviceClientContext::ParseGetSupportedDsiBitclks(const ByteStre
   int32_t error = intf_->GetSupportedDSIBitClks(*disp_id, &bit_clks);
 
   bit_clks_data = reinterpret_cast<uint64_t *>(malloc(sizeof(uint64_t) * bit_clks.size()));
+  if (bit_clks_data == NULL) {
+    _hidl_cb(-EINVAL, {}, {});
+    return;
+  }
   for (int i = 0; i < bit_clks.size(); i++) {
     bit_clks_data[i] = bit_clks[i];
   }
