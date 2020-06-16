@@ -1,11 +1,5 @@
 LOCAL_PATH := $(call my-dir)
 
-ifeq ($(shell if [ "$(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX)" = bengal_32 -o \
-                   "$(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX)" = bengal_32go ] ; \
-                    then printf "true" ; else printf "false" ; fi),true)
-  DISPLAY_CONFIG_VERSION := DISPLAY_CONFIG_VERSION_OPTIMAL
-endif
-
 include $(LOCAL_PATH)/../common.mk
 include $(CLEAR_VARS)
 
