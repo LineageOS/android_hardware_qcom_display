@@ -22,6 +22,8 @@
 
 #define QTI_LOGE(format, ...) \
   ALOGE("%s:" format, __FUNCTION__, ##__VA_ARGS__)
+#define QTI_LOGW(format, ...) \
+  ALOGW("%s:" format, __FUNCTION__, ##__VA_ARGS__)
 
 #include <vendor/qti/hardware/display/composer/3.0/IQtiComposerClient.h>
 #include <hidl/MQDescriptor.h>

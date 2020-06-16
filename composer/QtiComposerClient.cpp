@@ -613,10 +613,8 @@ Return<Error> QtiComposerClient::setVsyncEnabled(uint64_t display,
                                                  composer_V2_1::IComposerClient::Vsync enabled) {
   auto error = checkIfValidDisplay(display);
   if (error != Error::NONE) {
-    QTI_LOGE("Display %lu is invalid", display);
-    return error;
+    QTI_LOGW("Display %lu is invalid", display);
   }
-
   error = static_cast<Error>(hwc_session_->SetVsyncEnabled(display, static_cast<int32_t>(enabled)));
 
   return error;
