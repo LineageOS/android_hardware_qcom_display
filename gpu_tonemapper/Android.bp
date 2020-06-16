@@ -1,0 +1,36 @@
+cc_library_shared {
+    name: "libgpu_tonemapper",
+    sanitize: {
+        integer_overflow: true,
+    },
+    vendor: true,
+
+    header_libs: ["display_headers"],
+    shared_libs: [
+        "libEGL",
+        "libGLESv2",
+        "libGLESv3",
+        "libgrallocutils",
+        "libqdMetaData",
+        "libui",
+        "libutils",
+        "liblog",
+    ],
+
+    cflags: [
+        "-Wno-missing-field-initializers",
+        "-Wall",
+        "-Wno-unused-parameter",
+        "-DLOG_TAG=\"GPU_TONEMAPPER\"",
+        "-DTARGET_ION_ABI_VERSION=2",
+    ],
+
+    srcs: [
+        "TonemapFactory.cpp",
+        "glengine.cpp",
+        "EGLImageBuffer.cpp",
+        "EGLImageWrapper.cpp",
+        "Tonemapper.cpp",
+    ],
+
+}

@@ -139,16 +139,32 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_hw_recovery_dump=1
 endif
 
+# Soong Namespace
+SOONG_CONFIG_NAMESPACES += qtidisplay
+# Soong Keys
+SOONG_CONFIG_qtidisplay := drmpp headless llvmsa gralloc4
+# Soong Values
+SOONG_CONFIG_qtidisplay_drmpp := true
+SOONG_CONFIG_qtidisplay_headless := false
+SOONG_CONFIG_qtidisplay_llvmsa := false
+SOONG_CONFIG_qtidisplay_gralloc4 := true
+
+
 QMAA_ENABLED_HAL_MODULES += display
 ifeq ($(TARGET_USES_QMAA),true)
-ifeq ($(TARGET_USES_QMAA_OVERRIDE_DISPLAY),true)
-PRODUCT_PROPERTY_OVERRIDES += \
-    vendor.display.enable_null_display=0
-else
-TARGET_IS_HEADLESS := true
-PRODUCT_PROPERTY_OVERRIDES += \
-    vendor.display.enable_null_display=1
-endif
+    ifeq ($(TARGET_USES_QMAA_OVERRIDE_DISPLAY),true)
+        PRODUCT_PROPERTY_OVERRIDES += \
+            vendor.display.enable_null_display=0
+        #Modules that shouldn't be enabled in QMAA go here
+        PRODUCT_PACKAGES += libdrmutils
+        PRODUCT_PACKAGES += libsdedrm
+        PRODUCT_PACKAGES += libgpu_tonemapper
+    else
+    TARGET_IS_HEADLESS := true
+    SOONG_CONFIG_qtidisplay_headless := true
+    PRODUCT_PROPERTY_OVERRIDES += \
+        vendor.display.enable_null_display=1
+    endif
 endif
 
 # Properties using default value:

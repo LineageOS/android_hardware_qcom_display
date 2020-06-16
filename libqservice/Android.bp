@@ -1,7 +1,7 @@
 cc_library_shared {
     name: "libqservice",
+    defaults: ["qtidisplay_defaults"],
     vendor: true,
-    defaults: ["display_defaults"],
     shared_libs: ["libbinder"],
     cflags: [
         "-DLOG_TAG=\"qdqservice\"",
@@ -14,9 +14,9 @@ cc_library_shared {
         "IQHDMIClient.cpp",
     ],
     sanitize: {
-         misc_undefined: [
-         "signed-integer-overflow",
-         "unsigned-integer-overflow",
-         ],
-    }
+        misc_undefined: [
+            "signed-integer-overflow",
+            "unsigned-integer-overflow",
+        ],
+    },
 }
