@@ -2113,6 +2113,10 @@ hwc_frect_t QtiComposerClient::CommandReader::readFRect() {
 Error QtiComposerClient::CommandReader::lookupBufferCacheEntryLocked(BufferCache cache,
                                                                      uint32_t slot,
                                                                      BufferCacheEntry** outEntry) {
+  if (!mDisplay) {
+    return Error::BAD_DISPLAY;
+  }
+
   auto dpy = mClient.mDisplayData.find(mDisplay);
   if (dpy == mClient.mDisplayData.end()) {
     return Error::BAD_DISPLAY;
