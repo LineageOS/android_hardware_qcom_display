@@ -10,6 +10,7 @@ display-hals += gralloc
 display-hals += sde-drm
 display-hals += composer
 display-hals += libmemtrack
+display-hals += init
 
 ifeq ($(call is-vendor-board-platform,QCOM),true)
     include $(call all-named-subdir-makefiles,$(display-hals))

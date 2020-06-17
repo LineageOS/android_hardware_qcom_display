@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014, 2017-2018 The  Linux Foundation. All rights reserved.
+ * Copyright (C) 2014, 2017-2018, 2020, The  Linux Foundation. All rights reserved.
  * Not a contribution
  * Copyright (C) 2008 The Android Open Source Project
  *
@@ -79,6 +79,21 @@ void init_globals(void)
 {
     // init the mutex
     pthread_mutex_init(&g_lock, NULL);
+}
+
+static int write_str(char const* path, char const* str)
+{
+    int fd;
+
+    fd = open(path, O_RDWR);
+    if (fd >= 0) {
+        ssize_t amt = write(fd, str, strlen(str));
+        close(fd);
+        return amt == -1 ? -errno : 0;
+    }
+
+    ALOGE("write_str failed to open %s, errno = %d\n", path, errno);
+    return -errno;
 }
 
 static int write_int(char const* path, int value)
@@ -176,9 +191,21 @@ set_light_backlight(struct light_device_t* dev,
 static int set_rgb_led_brightness(enum rgb_led led, int brightness)
 {
     char file[48];
+    int rc;
 
     snprintf(file, sizeof(file), "/sys/class/leds/%s/brightness", led_names[led]);
-    return write_int(file, brightness);
+    rc = write_int(file, brightness);
+    if (rc < 0)
+        return rc;
+
+    if (!brightness) {
+        snprintf(file, sizeof(file), "/sys/class/leds/%s/trigger", led_names[led]);
+        rc = write_str(file, "timer");
+        if (rc < 0)
+            ALOGE("Couldn't set trigger to timer for %s, rc=%d\n", led_names[led], rc);
+    }
+
+    return rc;
 }
 
 static int set_rgb_led_timer_trigger(enum rgb_led led, int onMS, int offMS)
@@ -208,7 +235,7 @@ static int set_rgb_led_hw_blink(enum rgb_led led, int blink)
 
     snprintf(file, sizeof(file), "/sys/class/leds/%s/breath", led_names[led]);
     if (!file_exists(file))
-        snprintf(file, sizeof(file), "/sys/class/leds/%s/blink", led_names[led]);
+        return -1;
 
     return write_int(file, blink);
 }

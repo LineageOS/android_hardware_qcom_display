@@ -33,16 +33,15 @@
 
 #include <sys/mman.h>
 #include <fcntl.h>
-#include <core/sdm_types.h>
 #include <core/buffer_sync_handler.h>
 
 namespace sdm {
 
 class HWCBufferSyncHandler : public BufferSyncHandler {
  public:
-  virtual DisplayError SyncWait(int fd);
-  virtual DisplayError SyncWait(int fd, int timeout);
-  virtual DisplayError SyncMerge(int fd1, int fd2, int *merged_fd);
+  virtual int SyncWait(int fd);
+  virtual int SyncWait(int fd, int timeout);
+  virtual int SyncMerge(int fd1, int fd2, int *merged_fd);
   virtual bool IsSyncSignaled(int fd);
   virtual void GetSyncInfo(int fd, std::ostringstream *os);
 

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2018, 2020 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -28,6 +28,7 @@
 */
 
 #include <utils/formats.h>
+#include <errno.h>
 
 #define __CLASS__ "FormatsUtils"
 
@@ -196,7 +197,7 @@ float GetBufferFormatBpp(LayerBufferFormat format) {
   return bpp;
 }
 
-DisplayError GetBufferFormatTileSize(LayerBufferFormat format, FormatTileSize *tile_size) {
+int GetBufferFormatTileSize(LayerBufferFormat format, FormatTileSize *tile_size) {
   switch (format) {
   case kFormatYCbCr420SPVenusUbwc:
   case kFormatYCbCr420SPVenusTile:
@@ -220,9 +221,9 @@ DisplayError GetBufferFormatTileSize(LayerBufferFormat format, FormatTileSize *t
     tile_size->uv_tile_height = 4;
     break;
   default:
-    return kErrorNotSupported;
+    return -ENOTSUP;
   }
-  return kErrorNone;
+  return 0;
 }
 
 bool HasAlphaChannel(LayerBufferFormat format) {

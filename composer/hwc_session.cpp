@@ -2858,7 +2858,7 @@ void HWCSession::DestroyPluggableDisplay(DisplayMapInfo *map_info) {
   callbacks_.Hotplug(client_id, HWC2::Connection::Disconnected);
 
   {
-    SCOPE_LOCK(locker_[client_id]);
+    SEQUENCE_WAIT_SCOPE_LOCK(locker_[client_id]);
     auto &hwc_display = hwc_display_[client_id];
     if (!hwc_display) {
       return;
@@ -2946,10 +2946,6 @@ HWC2::Error HWCSession::ValidateDisplayInternal(hwc2_display_t display, uint32_t
     if (need_invalidate_) {
       callbacks_.Refresh(display);
       need_invalidate_ = false;
-    }
-
-    if (color_mgr_) {
-      color_mgr_->SetColorModeDetailEnhancer(hwc_display_[display]);
     }
   }
 

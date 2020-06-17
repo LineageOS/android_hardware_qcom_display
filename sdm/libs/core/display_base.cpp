@@ -100,8 +100,7 @@ DisplayError DisplayBase::Init() {
   hw_intf_->GetDisplayAttributes(active_index, &display_attributes_);
   fb_config_ = display_attributes_;
 
-  error = Debug::GetMixerResolution(&mixer_attributes_.width, &mixer_attributes_.height);
-  if (error == kErrorNone) {
+  if (!Debug::GetMixerResolution(&mixer_attributes_.width, &mixer_attributes_.height)) {
     if (hw_intf_->SetMixerAttributes(mixer_attributes_) == kErrorNone) {
       custom_mixer_resolution_ = true;
     }
@@ -133,15 +132,6 @@ DisplayError DisplayBase::Init() {
     color_mgr_ = ColorManagerProxy::CreateColorManagerProxy(display_type_, hw_intf_,
                                                             display_attributes_, hw_panel_info_,
                                                             dpps_intf);
-
-    if (color_mgr_) {
-      if (InitializeColorModes() != kErrorNone) {
-        DLOGW("InitColorModes failed for display %d-%d", display_id_, display_type_);
-      }
-      color_mgr_->ColorMgrCombineColorModes();
-    } else {
-      DLOGW("Unable to create ColorManagerProxy for display %d-%d", display_id_, display_type_);
-    }
   }
 
   error = comp_manager_->RegisterDisplay(display_id_, display_type_, display_attributes_,

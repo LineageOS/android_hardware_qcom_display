@@ -79,8 +79,8 @@ class Fence {
   static shared_ptr<Fence> Merge(const shared_ptr<Fence> &fence1, const shared_ptr<Fence> &fence2);
 
   // Wait on null fence will return success.
-  static DisplayError Wait(const shared_ptr<Fence> &fence);
-  static DisplayError Wait(const shared_ptr<Fence> &fence, int timeout);
+  static int Wait(const shared_ptr<Fence> &fence);
+  static int Wait(const shared_ptr<Fence> &fence, int timeout);
 
   // Status check on null fence will return signaled.
   static Status GetStatus(const shared_ptr<Fence> &fence);

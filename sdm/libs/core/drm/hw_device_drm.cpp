@@ -518,13 +518,21 @@ DisplayError HWDeviceDRM::Init() {
 
 DisplayError HWDeviceDRM::Deinit() {
   DisplayError err = kErrorNone;
-  if (!first_cycle_) {
-    // A null-commit is needed only if the first commit had gone through. e.g., If a pluggable
-    // display is plugged in and plugged out immediately, HWDeviceDRM::Deinit() may be called
-    // before any commit happened on the device. The driver may have removed any not-in-use
-    // connector (i.e., any connector which did not have a display commit on it and a crtc path
-    // setup), so token_.conn_id may have been removed if there was no commit, resulting in
-    // drmModeAtomicCommit() failure with ENOENT, 'No such file or directory'.
+  // first_null_cycle_ = false after the first power-mode NullCommit is completed, or the first
+  // frame commit handled the power transition.
+  // Power-on will set the CRTC_SET_MODE anytime power mode is not deferred to first commit.
+  // Without first commit, if display is disconnected, CRTC_SET_MODE is not set to NULL,
+  // this leads to a synchronization issue.
+  // So because of previously successful NullCommit, set CRTC_SET_MODE to NULL here for proper sync.
+
+  // first_cycle = false after the first frame commit is completed.
+  // A null-commit here is also needed if the first commit has gone through. e.g., If a
+  // display is connected and disconnected, HWDeviceDRM::Deinit() may be called
+  // before any driver commit happened on the device. The driver may have removed any not-in-use
+  // connector (i.e., any connector which did not have a display commit on it and a crtc path
+  // setup), so token_.conn_id may have been removed if there was no commit, resulting in
+  // drmModeAtomicCommit() failure with ENOENT, 'No such file or directory'.
+  if (!first_cycle_ || !first_null_cycle_) {
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, 0);
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::OFF);
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, nullptr);
@@ -1546,6 +1554,8 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   update_mode_ = false;
   hw_layers->updates_mask = 0;
   pending_doze_ = false;
+  // Inherently a real commit ensures null commit properties have happened, so update the member
+  first_null_cycle_ = false;
 
   return kErrorNone;
 }
@@ -2218,6 +2228,9 @@ DisplayError HWDeviceDRM::NullCommit(bool synchronous, bool retain_planes) {
     DLOGE("failed with error %d", ret);
     return kErrorHardware;
   }
+
+  if (first_null_cycle_)
+    first_null_cycle_ = false;
 
   return kErrorNone;
 }
