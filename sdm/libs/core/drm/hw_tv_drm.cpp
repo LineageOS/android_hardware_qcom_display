@@ -190,6 +190,10 @@ DisplayError HWTVDRM::PowerOff(bool teardown) {
     return kErrorNone;
   }
 
+#ifdef HYPERVISOR
+  teardown = true;
+#endif
+
   if (teardown) {
     // LP connecter prop N/A for External
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
