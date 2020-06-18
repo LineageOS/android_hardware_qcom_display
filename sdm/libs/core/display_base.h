@@ -259,7 +259,8 @@ class DisplayBase : public DisplayInterface {
   int disable_hw_recovery_dump_ = 0;
   uint32_t hw_recovery_count_ = 0;
   uint32_t hw_recovery_threshold_ = 1;
-  HWQosData default_qos_data_;
+  HWQosData cached_qos_data_;
+  uint32_t default_clock_hz_ = 0;
   bool drop_hw_vsync_ = false;
   uint32_t current_refresh_rate_ = 0;
   bool drop_skewed_vsync_ = false;
