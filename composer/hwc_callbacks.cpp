@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, 2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, 2019-2020 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -36,7 +36,7 @@
 namespace sdm {
 
 HWC2::Error HWCCallbacks::Hotplug(hwc2_display_t display, HWC2::Connection state) {
-  SCOPE_LOCK(callbacks_lock_);
+  SCOPE_LOCK(hotplug_lock_);
   DTRACE_SCOPED();
 
   // If client has not registered hotplug, wait for it finitely:
@@ -47,7 +47,7 @@ HWC2::Error HWCCallbacks::Hotplug(hwc2_display_t display, HWC2::Connection state
   while (!hotplug_) {
     DLOGW("Attempting to send client a hotplug too early Display = %" PRIu64 " state = %d", display,
           state);
-    int ret = callbacks_lock_.WaitFinite(5000);
+    int ret = hotplug_lock_.WaitFinite(5000);
     if (ret == ETIMEDOUT) {
       DLOGW("Client didn't connect on time, dropping hotplug!");
       return HWC2::Error::None;
@@ -61,6 +61,7 @@ HWC2::Error HWCCallbacks::Hotplug(hwc2_display_t display, HWC2::Connection state
 }
 
 HWC2::Error HWCCallbacks::Refresh(hwc2_display_t display) {
+  SCOPE_LOCK(refresh_lock_);
   // Do not lock, will cause hotplug deadlock
   DTRACE_SCOPED();
   // If client has not registered refresh, drop it
@@ -73,6 +74,7 @@ HWC2::Error HWCCallbacks::Refresh(hwc2_display_t display) {
 }
 
 HWC2::Error HWCCallbacks::Vsync(hwc2_display_t display, int64_t timestamp) {
+  SCOPE_LOCK(vsync_lock_);
   // Do not lock, may cause hotplug deadlock
   DTRACE_SCOPED();
   // If client has not registered vsync, drop it
@@ -84,6 +86,7 @@ HWC2::Error HWCCallbacks::Vsync(hwc2_display_t display, int64_t timestamp) {
 }
 
 HWC2::Error HWCCallbacks::Vsync_2_4(hwc2_display_t display, int64_t timestamp, uint32_t period) {
+  SCOPE_LOCK(vsync_2_4_lock_);
   DTRACE_SCOPED();
   if (!vsync_2_4_) {
     return HWC2::Error::NoResources;
@@ -95,6 +98,7 @@ HWC2::Error HWCCallbacks::Vsync_2_4(hwc2_display_t display, int64_t timestamp, u
 
 HWC2::Error HWCCallbacks::VsyncPeriodTimingChanged(
     hwc2_display_t display, hwc_vsync_period_change_timeline_t *updated_timeline) {
+  SCOPE_LOCK(vsync_period_timing_changed_lock_);
   DTRACE_SCOPED();
   if (!vsync_period_timing_changed_) {
     return HWC2::Error::NoResources;
@@ -105,6 +109,7 @@ HWC2::Error HWCCallbacks::VsyncPeriodTimingChanged(
 }
 
 HWC2::Error HWCCallbacks::SeamlessPossible(hwc2_display_t display) {
+  SCOPE_LOCK(seamless_possible_lock_);
   DTRACE_SCOPED();
   if (!seamless_possible_) {
     return HWC2::Error::NoResources;
@@ -116,35 +121,40 @@ HWC2::Error HWCCallbacks::SeamlessPossible(hwc2_display_t display) {
 
 HWC2::Error HWCCallbacks::Register(HWC2::Callback descriptor, hwc2_callback_data_t callback_data,
                                    hwc2_function_pointer_t pointer) {
-  SCOPE_LOCK(callbacks_lock_);
   switch (descriptor) {
-    case HWC2::Callback::Hotplug:
+    case HWC2::Callback::Hotplug: {
+      SCOPE_LOCK(hotplug_lock_);
       hotplug_data_ = callback_data;
       hotplug_ = reinterpret_cast<HWC2_PFN_HOTPLUG>(pointer);
       client_connected_ = true;
-      callbacks_lock_.Broadcast();
-      break;
-    case HWC2::Callback::Refresh:
+      hotplug_lock_.Broadcast();
+      } break;
+    case HWC2::Callback::Refresh: {
+      SCOPE_LOCK(refresh_lock_);
       refresh_data_ = callback_data;
       refresh_ = reinterpret_cast<HWC2_PFN_REFRESH>(pointer);
-      break;
-    case HWC2::Callback::Vsync:
+      } break;
+    case HWC2::Callback::Vsync: {
+      SCOPE_LOCK(vsync_lock_);
       vsync_data_ = callback_data;
       vsync_ = reinterpret_cast<HWC2_PFN_VSYNC>(pointer);
-      break;
-    case HWC2::Callback::Vsync_2_4:
+      } break;
+    case HWC2::Callback::Vsync_2_4: {
+      SCOPE_LOCK(vsync_2_4_lock_);
       vsync_2_4_data_ = callback_data;
       vsync_2_4_ = reinterpret_cast<HWC2_PFN_VSYNC_2_4>(pointer);
-      break;
-    case HWC2::Callback::VsyncPeriodTimingChanged:
+      } break;
+    case HWC2::Callback::VsyncPeriodTimingChanged: {
+      SCOPE_LOCK(vsync_period_timing_changed_lock_);
       vsync_period_timing_changed_data_ = callback_data;
       vsync_period_timing_changed_ =
           reinterpret_cast<HWC2_PFN_VSYNC_PERIOD_TIMING_CHANGED>(pointer);
-      break;
-    case HWC2::Callback::SeamlessPossible:
+      } break;
+    case HWC2::Callback::SeamlessPossible: {
+      SCOPE_LOCK(seamless_possible_lock_);
       seamless_possible_data_ = callback_data;
       seamless_possible_ = reinterpret_cast<HWC2_PFN_SEAMLESS_POSSIBLE>(pointer);
-      break;
+      } break;
     default:
       return HWC2::Error::BadParameter;
   }
