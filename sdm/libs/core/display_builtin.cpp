@@ -1146,10 +1146,11 @@ DisplayError DisplayBuiltIn::ReconfigureDisplay() {
 
   error = comp_manager_->ReconfigureDisplay(display_comp_ctx_, display_attributes, hw_panel_info,
                                             mixer_attributes, fb_config_,
-                                            &(default_qos_data_.clock_hz));
+                                            &(default_clock_hz_));
   if (error != kErrorNone) {
     return error;
   }
+  cached_qos_data_.clock_hz = default_clock_hz_;
 
   bool disble_pu = true;
   if (mixer_unchanged && panel_unchanged) {

@@ -146,11 +146,12 @@ DisplayError DisplayBase::Init() {
 
   error = comp_manager_->RegisterDisplay(display_id_, display_type_, display_attributes_,
                                          hw_panel_info_, mixer_attributes_, fb_config_,
-                                         &display_comp_ctx_, &(default_qos_data_.clock_hz));
+                                         &display_comp_ctx_, &(default_clock_hz_));
   if (error != kErrorNone) {
     DLOGW("Display %d comp manager registration failed!", display_id_);
     goto CleanupOnError;
   }
+  cached_qos_data_.clock_hz = default_clock_hz_;
 
   if (color_modes_cs_.size() > 0) {
     error = comp_manager_->SetColorModesInfo(display_comp_ctx_, color_modes_cs_);
@@ -567,10 +568,12 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     if (error == kErrorNone) {
       error = hw_intf_->PowerOff(teardown);
     }
+    cached_qos_data_ = {};
+    cached_qos_data_.clock_hz = default_clock_hz_;
     break;
 
   case kStateOn:
-    error = hw_intf_->PowerOn(default_qos_data_, release_fence);
+    error = hw_intf_->PowerOn(cached_qos_data_, release_fence);
     if (error != kErrorNone) {
       if (error == kErrorDeferred) {
         pending_power_on_ = true;
@@ -582,16 +585,17 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
 
     error = comp_manager_->ReconfigureDisplay(display_comp_ctx_, display_attributes_,
                                               hw_panel_info_, mixer_attributes_, fb_config_,
-                                              &(default_qos_data_.clock_hz));
+                                              &(default_clock_hz_));
     if (error != kErrorNone) {
       return error;
     }
+    cached_qos_data_.clock_hz = default_clock_hz_;
 
     active = true;
     break;
 
   case kStateDoze:
-    error = hw_intf_->Doze(default_qos_data_, release_fence);
+    error = hw_intf_->Doze(cached_qos_data_, release_fence);
     if (error != kErrorNone) {
       if (error == kErrorDeferred) {
         pending_doze_ = true;
@@ -604,7 +608,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     break;
 
   case kStateDozeSuspend:
-    error = hw_intf_->DozeSuspend(default_qos_data_, release_fence);
+    error = hw_intf_->DozeSuspend(cached_qos_data_, release_fence);
     if (display_type_ != kBuiltIn) {
       active = true;
     }
@@ -1313,10 +1317,11 @@ DisplayError DisplayBase::ReconfigureDisplay() {
 
   error = comp_manager_->ReconfigureDisplay(display_comp_ctx_, display_attributes, hw_panel_info,
                                             mixer_attributes, fb_config_,
-                                            &(default_qos_data_.clock_hz));
+                                            &(default_clock_hz_));
   if (error != kErrorNone) {
     return error;
   }
+  cached_qos_data_.clock_hz = default_clock_hz_;
 
   bool disble_pu = true;
   if (mixer_unchanged && panel_unchanged) {
@@ -1526,10 +1531,11 @@ DisplayError DisplayBase::SetFrameBufferConfig(const DisplayConfigVariableInfo &
 
   error =  comp_manager_->ReconfigureDisplay(display_comp_ctx_, display_attributes_, hw_panel_info_,
                                              mixer_attributes_, variable_info,
-                                             &(default_qos_data_.clock_hz));
+                                             &(default_clock_hz_));
   if (error != kErrorNone) {
     return error;
   }
+  cached_qos_data_.clock_hz = default_clock_hz_;
 
   fb_config_.x_pixels = width;
   fb_config_.y_pixels = height;
@@ -1673,6 +1679,7 @@ void DisplayBase::PostCommitLayerParams(LayerStack *layer_stack) {
               hw_layer.input_buffer.release_fence, sdm_layer->input_buffer.release_fence);
     }
   }
+  cached_qos_data_ = hw_layers_.qos_data;
 
   return;
 }
