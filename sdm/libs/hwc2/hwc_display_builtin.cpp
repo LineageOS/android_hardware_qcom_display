@@ -330,6 +330,11 @@ HWC2::Error HWCDisplayBuiltIn::SetPowerMode(HWC2::PowerMode mode, bool teardown)
   display_intf_->GetConfig(&fixed_info);
   bool command_mode = fixed_info.is_cmdmode;
 
+  auto status = HWCDisplay::SetPowerMode(mode, teardown);
+  if (status != HWC2::Error::None) {
+    return status;
+  }
+
   display_intf_->GetConfig(&fixed_info);
   is_cmd_mode_ = fixed_info.is_cmdmode;
   if (is_cmd_mode_ != command_mode) {
