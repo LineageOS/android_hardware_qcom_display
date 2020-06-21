@@ -420,7 +420,6 @@ Overlay* Overlay::getInstance() {
 // Clears any VG pipes allocated to the fb devices
 // Generates a LUT for pipe types.
 int Overlay::initOverlay() {
-    int mdpVersion = qdutils::MDPVersion::getInstance().getMDPVersion();
     int numPipesXType[OV_MDP_PIPE_ANY] = {0};
     numPipesXType[OV_MDP_PIPE_RGB] =
             qdutils::MDPVersion::getInstance().getRGBPipes();

@@ -1,0 +1,353 @@
+From 9ba7da42f93e81d8bbee3a176e0047b0a61150bc Mon Sep 17 00:00:00 2001
+From: anayw2001 <awadhera@berkeley.edu>
+Date: Sun, 21 Jun 2020 23:16:09 +0200
+Subject: [PATCH] msm8994: Address compile errors and warnings
+
+Change-Id: I37c97c97c35ff8f8f5052c8836c04fea7da75bdd
+---
+ msm8994/libgralloc/framebuffer.cpp    | 10 +----
+ msm8994/libgralloc/gralloc.cpp        | 56 +++++++++++++--------------
+ msm8994/libhdmi/hdmi.cpp              |  1 -
+ msm8994/libhwcomposer/hwc.cpp         | 28 +++++++-------
+ msm8994/libhwcomposer/hwc_mdpcomp.cpp |  2 -
+ msm8994/libhwcomposer/hwc_qclient.cpp |  8 ++--
+ msm8994/libhwcomposer/hwc_uevents.cpp |  6 +--
+ msm8994/libhwcomposer/hwc_utils.cpp   |  4 +-
+ msm8994/libmemtrack/memtrack_msm.c    | 21 +++++-----
+ msm8994/liboverlay/overlay.cpp        |  1 -
+ msm8994/liboverlay/overlayMdp.cpp     |  4 --
+ 11 files changed, 61 insertions(+), 81 deletions(-)
+
+diff --git a/msm8994/libgralloc/framebuffer.cpp b/msm8994/libgralloc/framebuffer.cpp
+index 6595a5ca6..d7261bda3 100644
+--- a/msm8994/libgralloc/framebuffer.cpp
++++ b/msm8994/libgralloc/framebuffer.cpp
+@@ -43,14 +43,6 @@
+ #include <profiler.h>
+ 
+ #define EVEN_OUT(x) if (x & 0x0001) {x--;}
+-/** min of int a, b */
+-static inline int min(int a, int b) {
+-    return (a<b) ? a : b;
+-}
+-/** max of int a, b */
+-static inline int max(int a, int b) {
+-    return (a>b) ? a : b;
+-}
+ 
+ enum {
+     PAGE_FLIP = 0x00000001,
+@@ -460,4 +452,4 @@ int fb_device_open(hw_module_t const* module, const char* name,
+         gralloc_close(gralloc_device);
+     }
+     return status;
+-}
++}
+\ No newline at end of file
+diff --git a/msm8994/libgralloc/gralloc.cpp b/msm8994/libgralloc/gralloc.cpp
+index d467b143a..b76d2e27e 100644
+--- a/msm8994/libgralloc/gralloc.cpp
++++ b/msm8994/libgralloc/gralloc.cpp
+@@ -63,42 +63,42 @@ extern int gralloc_perform(struct gralloc_module_t const* module,
+ 
+ // HAL module methods
+ static struct hw_module_methods_t gralloc_module_methods = {
+-    open: gralloc_device_open
++    .open = gralloc_device_open
+ };
+ 
+ // HAL module initialize
+ struct private_module_t HAL_MODULE_INFO_SYM = {
+-    base: {
+-        common: {
+-            tag: HARDWARE_MODULE_TAG,
++    .base = {
++        .common = {
++            .tag = HARDWARE_MODULE_TAG,
+ #ifdef ADVERTISE_GRALLOC1
+-            module_api_version: GRALLOC1_ADAPTER_MODULE_API_VERSION_1_0,
++            .version_major = GRALLOC1_ADAPTER_MODULE_API_VERSION_1_0,
+ #else
+-            module_api_version: 1,
++            .version_major = 1,
+ #endif
+-            version_minor: 0,
+-            id: GRALLOC_HARDWARE_MODULE_ID,
+-            name: "Graphics Memory Allocator Module",
+-            author: "The Android Open Source Project",
+-            methods: &gralloc_module_methods,
+-            dso: 0,
+-            reserved: {0},
++            .version_minor = 0,
++            .id = GRALLOC_HARDWARE_MODULE_ID,
++            .name = "Graphics Memory Allocator Module",
++            .author = "The Android Open Source Project",
++            .methods = &gralloc_module_methods,
++            .dso = 0,
++            .reserved = {0},
+         },
+-        registerBuffer: gralloc_register_buffer,
+-        unregisterBuffer: gralloc_unregister_buffer,
+-        lock: gralloc_lock,
+-        unlock: gralloc_unlock,
+-        perform: gralloc_perform,
+-        lock_ycbcr: gralloc_lock_ycbcr,
+-        validateBufferSize: NULL,
+-        getTransportSize: NULL,
++        .registerBuffer = gralloc_register_buffer,
++        .unregisterBuffer = gralloc_unregister_buffer,
++        .lock = gralloc_lock,
++        .unlock = gralloc_unlock,
++        .perform = gralloc_perform,
++        .lock_ycbcr = gralloc_lock_ycbcr,
++        .validateBufferSize = NULL,
++        .getTransportSize = NULL,
+     },
+-    framebuffer: 0,
+-    fbFormat: 0,
+-    flags: 0,
+-    numBuffers: 0,
+-    bufferMask: 0,
+-    lock: PTHREAD_MUTEX_INITIALIZER,
++    .framebuffer = 0,
++    .fbFormat = 0,
++    .flags = 0,
++    .numBuffers = 0,
++    .bufferMask = 0,
++    .lock = PTHREAD_MUTEX_INITIALIZER,
+ };
+ 
+ // Open Gralloc device
+@@ -128,4 +128,4 @@ int gralloc_device_open(const hw_module_t* module, const char* name,
+         status = fb_device_open(module, name, device);
+     }
+     return status;
+-}
++}
+\ No newline at end of file
+diff --git a/msm8994/libhdmi/hdmi.cpp b/msm8994/libhdmi/hdmi.cpp
+index 6a91975d0..395c5b2af 100644
+--- a/msm8994/libhdmi/hdmi.cpp
++++ b/msm8994/libhdmi/hdmi.cpp
+@@ -741,7 +741,6 @@ int HDMIDisplay::setActiveConfig(int newConfig) {
+ // returns false if the xres or yres of the new config do
+ // not match the current config
+ bool HDMIDisplay::isValidConfigChange(int newConfig) {
+-    int newMode = mEDIDModes[newConfig];
+     uint32_t width = 0, height = 0, refresh = 0;
+     getAttrForConfig(newConfig, width, height, refresh);
+     return ((mXres == width) && (mYres == height)) || mEnableResolutionChange;
+diff --git a/msm8994/libhwcomposer/hwc.cpp b/msm8994/libhwcomposer/hwc.cpp
+index 9c40eb0d4..12ee621fd 100644
+--- a/msm8994/libhwcomposer/hwc.cpp
++++ b/msm8994/libhwcomposer/hwc.cpp
+@@ -51,22 +51,22 @@ static int hwc_device_open(const struct hw_module_t* module,
+                            struct hw_device_t** device);
+ 
+ static struct hw_module_methods_t hwc_module_methods = {
+-    open: hwc_device_open
++    .open = hwc_device_open
+ };
+ 
+ static void reset_panel(struct hwc_composer_device_1* dev);
+ 
+ hwc_module_t HAL_MODULE_INFO_SYM = {
+-    common: {
+-        tag: HARDWARE_MODULE_TAG,
+-        version_major: 2,
+-        version_minor: 0,
+-        id: HWC_HARDWARE_MODULE_ID,
+-        name: "Qualcomm Hardware Composer Module",
+-        author: "CodeAurora Forum",
+-        methods: &hwc_module_methods,
+-        dso: 0,
+-        reserved: {0},
++    .common = {
++        .tag = HARDWARE_MODULE_TAG,
++        .version_major = 2,
++        .version_minor = 0,
++        .id = HWC_HARDWARE_MODULE_ID,
++        .name = "Qualcomm Hardware Composer Module",
++        .author = "CodeAurora Forum",
++        .methods = &hwc_module_methods,
++        .dso = 0,
++        .reserved = {0},
+     }
+ };
+ 
+@@ -237,7 +237,6 @@ static void scaleDisplayFrame(hwc_context_t *ctx, int dpy,
+     for (size_t i = 0; i < list->numHwLayers; i++) {
+         hwc_layer_1_t *layer = &list->hwLayers[i];
+         hwc_rect_t& displayFrame = layer->displayFrame;
+-        hwc_rect_t sourceCrop = integerizeSourceCrop(layer->sourceCropf);
+         uint32_t layerWidth = displayFrame.right - displayFrame.left;
+         uint32_t layerHeight = displayFrame.bottom - displayFrame.top;
+         displayFrame.left = (int)(xresRatio * (float)displayFrame.left);
+@@ -517,8 +516,7 @@ static int hwc_setPowerMode(struct hwc_composer_device_1* dev, int dpy,
+         }
+         //Deliberate fall through since there is no explicit power mode for
+         //virtual displays.
+-        [[fallthrough]];
+-    case HWC_DISPLAY_VIRTUAL:
++    [[clang::fallthrough]]; case HWC_DISPLAY_VIRTUAL:
+         if(ctx->dpyAttr[HWC_DISPLAY_VIRTUAL].connected) {
+             const int dpy = HWC_DISPLAY_VIRTUAL;
+             if(mode == HWC_POWER_MODE_OFF and
+@@ -1016,4 +1014,4 @@ static int hwc_device_open(const struct hw_module_t* module, const char* name,
+         status = 0;
+     }
+     return status;
+-}
++}
+\ No newline at end of file
+diff --git a/msm8994/libhwcomposer/hwc_mdpcomp.cpp b/msm8994/libhwcomposer/hwc_mdpcomp.cpp
+index 5549d30eb..72a0e70c4 100644
+--- a/msm8994/libhwcomposer/hwc_mdpcomp.cpp
++++ b/msm8994/libhwcomposer/hwc_mdpcomp.cpp
+@@ -1181,8 +1181,6 @@ bool MDPComp::cacheBasedComp(hwc_context_t *ctx,
+         return false;
+     }
+ 
+-    int mdpCount = mCurrentFrame.mdpCount;
+-
+     if(sEnableYUVsplit){
+         adjustForSourceSplit(ctx, list);
+     }
+diff --git a/msm8994/libhwcomposer/hwc_qclient.cpp b/msm8994/libhwcomposer/hwc_qclient.cpp
+index 6d05d3862..472057970 100644
+--- a/msm8994/libhwcomposer/hwc_qclient.cpp
++++ b/msm8994/libhwcomposer/hwc_qclient.cpp
+@@ -230,15 +230,15 @@ static void toggleDynamicDebug(hwc_context_t* ctx, const Parcel* inParcel) {
+             qhwc::MDPComp::dynamicDebug(enable);
+             if (debug_type != IQService::DEBUG_ALL)
+                 break;
+-        case IQService::DEBUG_VSYNC:
++        FALLTHROUGH_INTENDED; case IQService::DEBUG_VSYNC:
+             ctx->vstate.debug = enable;
+             if (debug_type != IQService::DEBUG_ALL)
+                 break;
+-        case IQService::DEBUG_VD:
++        FALLTHROUGH_INTENDED; case IQService::DEBUG_VD:
+             HWCVirtualVDS::dynamicDebug(enable);
+             if (debug_type != IQService::DEBUG_ALL)
+                 break;
+-        case IQService::DEBUG_PIPE_LIFECYCLE:
++        FALLTHROUGH_INTENDED; case IQService::DEBUG_PIPE_LIFECYCLE:
+             Overlay::debugPipeLifecycle(enable);
+             if (debug_type != IQService::DEBUG_ALL)
+                 break;
+@@ -417,4 +417,4 @@ status_t QClient::notifyCallback(uint32_t command, const Parcel* inParcel,
+     return ret;
+ }
+ 
+-}
++}
+\ No newline at end of file
+diff --git a/msm8994/libhwcomposer/hwc_uevents.cpp b/msm8994/libhwcomposer/hwc_uevents.cpp
+index d1c68a5d3..a7993ecd8 100644
+--- a/msm8994/libhwcomposer/hwc_uevents.cpp
++++ b/msm8994/libhwcomposer/hwc_uevents.cpp
+@@ -58,7 +58,7 @@ static bool getPanelResetStatus(hwc_context_t* ctx, const char* strUdata, int le
+     const char* iter_str = strUdata;
+     if (strcasestr("change@/devices/virtual/graphics/fb0", strUdata)) {
+         while(((iter_str - strUdata) <= len) && (*iter_str)) {
+-            char* pstr = strstr(iter_str, "PANEL_ALIVE=0");
++            const char* pstr = strstr(iter_str, "PANEL_ALIVE=0");
+             if (pstr != NULL) {
+                 ALOGI("%s: got change event in fb0 with PANEL_ALIVE=0",
+                                                            __FUNCTION__);
+@@ -76,7 +76,7 @@ static int getConnectedState(const char* strUdata, int len)
+ {
+     const char* iter_str = strUdata;
+     while(((iter_str - strUdata) <= len) && (*iter_str)) {
+-        char* pstr = strstr(iter_str, "SWITCH_STATE=");
++        const char* pstr = strstr(iter_str, "SWITCH_STATE=");
+         if (pstr != NULL) {
+             return (atoi(pstr + strlen("SWITCH_STATE=")));
+         }
+@@ -240,4 +240,4 @@ void init_uevent_thread(hwc_context_t* ctx)
+     }
+ }
+ 
+-}; //namespace
++}; //namespace
+\ No newline at end of file
+diff --git a/msm8994/libhwcomposer/hwc_utils.cpp b/msm8994/libhwcomposer/hwc_utils.cpp
+index 436e09b1e..1657a637a 100644
+--- a/msm8994/libhwcomposer/hwc_utils.cpp
++++ b/msm8994/libhwcomposer/hwc_utils.cpp
+@@ -1199,7 +1198,7 @@ bool isRotationDoable(hwc_context_t *ctx, private_handle_t *hnd) {
+     // Rotate layers, if it is not secure display buffer and not
+     // for the MDP versions below MDP5
+     if((!isSecureDisplayBuffer(hnd) && isRotatorSupportedFormat(hnd) &&
+-        !ctx->mMDP.version < qdutils::MDSS_V5)
++        !(ctx->mMDP.version < qdutils::MDSS_V5))
+                    || isYuvBuffer(hnd)) {
+         return true;
+     }
+@@ -2961,4 +2960,4 @@ void ColorMode::destroy() {
+     }
+ }
+ 
+-};//namespace qhwc
++};//namespace qhwc
+\ No newline at end of file
+diff --git a/msm8994/libmemtrack/memtrack_msm.c b/msm8994/libmemtrack/memtrack_msm.c
+index 2e6adb544..5365d65a0 100644
+--- a/msm8994/libmemtrack/memtrack_msm.c
++++ b/msm8994/libmemtrack/memtrack_msm.c
+@@ -79,17 +79,16 @@ static struct hw_module_methods_t memtrack_module_methods = {
+ };
+ 
+ struct memtrack_module HAL_MODULE_INFO_SYM = {
+-    common: {
+-        tag: HARDWARE_MODULE_TAG,
+-        module_api_version: MEMTRACK_MODULE_API_VERSION_0_1,
+-        hal_api_version: HARDWARE_HAL_API_VERSION,
+-        id: MEMTRACK_HARDWARE_MODULE_ID,
+-        name: "MSM Memory Tracker HAL",
+-        author: "The Android Open Source Project",
+-        methods: &memtrack_module_methods,
++    .common = {
++        .tag = HARDWARE_MODULE_TAG,
++        .module_api_version = MEMTRACK_MODULE_API_VERSION_0_1,
++        .hal_api_version = HARDWARE_HAL_API_VERSION,
++        .id = MEMTRACK_HARDWARE_MODULE_ID,
++        .name = "MSM Memory Tracker HAL",
++        .author = "The Android Open Source Project",
++        .methods = &memtrack_module_methods,
+     },
+ 
+-    init: msm_memtrack_init,
+-    getMemory: msm_memtrack_get_memory,
++    .init = msm_memtrack_init,
++    .getMemory = msm_memtrack_get_memory,
+ };
+-
+diff --git a/msm8994/liboverlay/overlay.cpp b/msm8994/liboverlay/overlay.cpp
+index a34e5990c..e5346d262 100644
+--- a/msm8994/liboverlay/overlay.cpp
++++ b/msm8994/liboverlay/overlay.cpp
+@@ -420,7 +420,6 @@ Overlay* Overlay::getInstance() {
+ // Clears any VG pipes allocated to the fb devices
+ // Generates a LUT for pipe types.
+ int Overlay::initOverlay() {
+-    int mdpVersion = qdutils::MDPVersion::getInstance().getMDPVersion();
+     int numPipesXType[OV_MDP_PIPE_ANY] = {0};
+     numPipesXType[OV_MDP_PIPE_RGB] =
+             qdutils::MDPVersion::getInstance().getRGBPipes();
+diff --git a/msm8994/liboverlay/overlayMdp.cpp b/msm8994/liboverlay/overlayMdp.cpp
+index 04e667266..843a0de2a 100644
+--- a/msm8994/liboverlay/overlayMdp.cpp
++++ b/msm8994/liboverlay/overlayMdp.cpp
+@@ -27,10 +27,6 @@
+ 
+ using namespace qdutils;
+ 
+-static inline bool isEqual(float f1, float f2) {
+-        return ((int)(f1*100) == (int)(f2*100)) ? true : false;
+-}
+-
+ namespace ovutils = overlay::utils;
+ namespace overlay {
+ 
