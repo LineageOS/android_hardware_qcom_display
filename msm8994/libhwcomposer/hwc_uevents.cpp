@@ -58,7 +58,7 @@ static bool getPanelResetStatus(hwc_context_t* ctx, const char* strUdata, int le
     const char* iter_str = strUdata;
     if (strcasestr("change@/devices/virtual/graphics/fb0", strUdata)) {
         while(((iter_str - strUdata) <= len) && (*iter_str)) {
-            char* pstr = strstr(iter_str, "PANEL_ALIVE=0");
+            const char* pstr = strstr(iter_str, "PANEL_ALIVE=0");
             if (pstr != NULL) {
                 ALOGI("%s: got change event in fb0 with PANEL_ALIVE=0",
                                                            __FUNCTION__);
@@ -76,7 +76,7 @@ static int getConnectedState(const char* strUdata, int len)
 {
     const char* iter_str = strUdata;
     while(((iter_str - strUdata) <= len) && (*iter_str)) {
-        char* pstr = strstr(iter_str, "SWITCH_STATE=");
+        const char* pstr = strstr(iter_str, "SWITCH_STATE=");
         if (pstr != NULL) {
             return (atoi(pstr + strlen("SWITCH_STATE=")));
         }

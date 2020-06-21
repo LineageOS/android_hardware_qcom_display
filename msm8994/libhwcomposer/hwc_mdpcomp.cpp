@@ -1181,8 +1181,6 @@ bool MDPComp::cacheBasedComp(hwc_context_t *ctx,
         return false;
     }
 
-    int mdpCount = mCurrentFrame.mdpCount;
-
     if(sEnableYUVsplit){
         adjustForSourceSplit(ctx, list);
     }
