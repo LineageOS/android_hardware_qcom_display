@@ -237,7 +237,6 @@ static void scaleDisplayFrame(hwc_context_t *ctx, int dpy,
     for (size_t i = 0; i < list->numHwLayers; i++) {
         hwc_layer_1_t *layer = &list->hwLayers[i];
         hwc_rect_t& displayFrame = layer->displayFrame;
-        hwc_rect_t sourceCrop = integerizeSourceCrop(layer->sourceCropf);
         uint32_t layerWidth = displayFrame.right - displayFrame.left;
         uint32_t layerHeight = displayFrame.bottom - displayFrame.top;
         displayFrame.left = (int)(xresRatio * (float)displayFrame.left);
@@ -517,8 +516,7 @@ static int hwc_setPowerMode(struct hwc_composer_device_1* dev, int dpy,
         }
         //Deliberate fall through since there is no explicit power mode for
         //virtual displays.
-        [[fallthrough]];
-    case HWC_DISPLAY_VIRTUAL:
+    [[clang::fallthrough]]; case HWC_DISPLAY_VIRTUAL:
         if(ctx->dpyAttr[HWC_DISPLAY_VIRTUAL].connected) {
             const int dpy = HWC_DISPLAY_VIRTUAL;
             if(mode == HWC_POWER_MODE_OFF and
