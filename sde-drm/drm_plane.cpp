@@ -518,6 +518,7 @@ void DRMPlane::GetTypeInfo(const PropertyMap &prop_map) {
                                std::min((uint32_t)MAX_SCALER_LINEWIDTH, info->max_linewidth);
 
   drmModeFreePropertyBlob(blob);
+  delete[] fmt_str;
 }
 
 void DRMPlane::ParseProperties() {
