@@ -55,20 +55,43 @@ Error encodeColorMetadata(ColorMetaData &in, hidl_vec<uint8_t> *out) {
   return Error::NONE;
 }
 
+// decode the raw graphics metadata from bytestream and store it in 'data' member of
+// GraphicsMetadata struct during mapper->set call, 'size' member is unused.
 Error decodeGraphicsMetadata(hidl_vec<uint8_t> &in, GraphicsMetadata *out) {
   if (!in.size() || !out) {
     return Error::BAD_VALUE;
   }
-  memcpy(out, in.data(), sizeof(GraphicsMetadata));
+  memcpy(&(out->data), in.data(), GRAPHICS_METADATA_SIZE_IN_BYTES);
   return Error::NONE;
 }
 
+// encode only 'data' member of GraphicsMetadata struct for retrieval of
+// graphics metadata during mapper->get call
 Error encodeGraphicsMetadata(GraphicsMetadata &in, hidl_vec<uint8_t> *out) {
   if (!out) {
     return Error::BAD_VALUE;
   }
-  out->resize(sizeof(GraphicsMetadata));
-  memcpy(out->data(), &in, sizeof(GraphicsMetadata));
+  out->resize(GRAPHICS_METADATA_SIZE_IN_BYTES);
+  memcpy(out->data(), &(in.data), GRAPHICS_METADATA_SIZE_IN_BYTES);
+  return Error::NONE;
+}
+
+// decode the raw graphics metadata from bytestream before presenting it to caller
+Error decodeGraphicsMetadataRaw(hidl_vec<uint8_t> &in, void *out) {
+  if (!in.size() || !out) {
+    return Error::BAD_VALUE;
+  }
+  memcpy(out, in.data(), GRAPHICS_METADATA_SIZE_IN_BYTES);
+  return Error::NONE;
+}
+
+// encode the raw graphics metadata in bytestream before calling mapper->set
+Error encodeGraphicsMetadataRaw(void *in, hidl_vec<uint8_t> *out) {
+  if (!in || !out) {
+    return Error::BAD_VALUE;
+  }
+  out->resize(GRAPHICS_METADATA_SIZE_IN_BYTES);
+  memcpy(out->data(), in, GRAPHICS_METADATA_SIZE_IN_BYTES);
   return Error::NONE;
 }
 
@@ -211,7 +234,7 @@ Error get(void *buffer, uint32_t type, void *param) {
       err = decodeColorMetadata(bytestream, (ColorMetaData *)param);
       break;
     case QTI_GRAPHICS_METADATA:
-      err = decodeGraphicsMetadata(bytestream, (GraphicsMetadata *)param);
+      err = decodeGraphicsMetadataRaw(bytestream, param);
       break;
     case QTI_UBWC_CR_STATS_INFO:
       err = decodeUBWCStats(bytestream, (UBWCStats *)param);
@@ -289,7 +312,7 @@ Error set(void *buffer, uint32_t type, void *param) {
       err = encodeColorMetadata(*(ColorMetaData *)param, &bytestream);
       break;
     case QTI_GRAPHICS_METADATA:
-      err = encodeGraphicsMetadata(*(GraphicsMetadata *)param, &bytestream);
+      err = encodeGraphicsMetadataRaw(param, &bytestream);
       break;
     case QTI_UBWC_CR_STATS_INFO:
       err = encodeUBWCStats((UBWCStats *)param, &bytestream);
