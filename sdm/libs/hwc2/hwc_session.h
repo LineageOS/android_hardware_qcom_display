@@ -257,11 +257,12 @@ class HWCSession : hwc2_device_t, HWCUEventListener, IDisplayConfig, public qCli
   int32_t ControlPartialUpdate(int dpy, bool enable);
   int32_t DisplayBWTransactionPending(bool *status);
   int32_t SetSecondaryDisplayStatus(int disp_id, HWCDisplay::DisplayStatus status);
-  int32_t GetPanelBrightness(int *level);
   int32_t MinHdcpEncryptionLevelChanged(int disp_id, uint32_t min_enc_level);
   int32_t SetDynamicDSIClock(int64_t disp_id, uint32_t bitrate);
   int32_t IsWbUbwcSupported(int *value);
   bool HasHDRSupport(HWCDisplay *hwc_display);
+  int32_t getDisplayBrightness(uint32_t display, float *brightness);
+  int32_t setDisplayBrightness(uint32_t display, float brightness);
 
   // service methods
   void StartServices();

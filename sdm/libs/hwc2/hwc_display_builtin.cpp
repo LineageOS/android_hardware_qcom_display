@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -713,6 +713,24 @@ HWC2::Error HWCDisplayBuiltIn::UpdateDisplayId(hwc2_display_t id) {
 
 HWC2::Error HWCDisplayBuiltIn::SetPendingRefresh() {
   pending_refresh_ = true;
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayBuiltIn::SetPanelBrightness(float brightness) {
+  DisplayError ret = display_intf_->SetPanelBrightness(brightness);
+  if (ret != kErrorNone) {
+    return HWC2::Error::NoResources;
+  }
+
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayBuiltIn::GetPanelBrightness(float *brightness) {
+  DisplayError ret = display_intf_->GetPanelBrightness(brightness);
+  if (ret != kErrorNone) {
+    return HWC2::Error::NoResources;
+  }
+
   return HWC2::Error::None;
 }
 
