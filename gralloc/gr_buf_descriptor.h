@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018, 2020, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,47 +30,21 @@
 #ifndef __GR_BUF_DESCRIPTOR_H__
 #define __GR_BUF_DESCRIPTOR_H__
 
-#include <android/hardware/graphics/mapper/3.0/IMapper.h>
 #include <atomic>
+#include <string>
+
+#include "gr_utils.h"
 
 namespace gralloc {
 using android::hardware::hidl_vec;
-using android::hardware::graphics::mapper::V3_0::Error;
-using android::hardware::graphics::mapper::V3_0::IMapper;
-
 const uint32_t kBufferDescriptorSize = 7;
+const uint32_t kBufferDescriptorSizeV4 = 42;
 const uint32_t kMagicVersion = 0x76312E30;  // v1.0
 
 class BufferDescriptor {
  public:
   BufferDescriptor() {}
   explicit BufferDescriptor(uint64_t id) : id_(id) {}
-
-  static hidl_vec<uint32_t> Encode(const IMapper::BufferDescriptorInfo &bd_info) {
-    hidl_vec<uint32_t> out;
-    out.resize(kBufferDescriptorSize);
-    out[0] = kMagicVersion;
-    out[1] = bd_info.width;
-    out[2] = bd_info.height;
-    out[3] = bd_info.layerCount;
-    out[4] = static_cast<uint32_t>(bd_info.format);
-    out[5] = static_cast<uint32_t>(bd_info.usage);
-    out[6] = static_cast<uint32_t>(bd_info.usage >> 32);
-    return out;
-  }
-
-  Error Decode(const hidl_vec<uint32_t> &in) {
-    if (in.size() != kBufferDescriptorSize || in[0] != kMagicVersion) {
-      return Error::BAD_DESCRIPTOR;
-    }
-    width_ = static_cast<int32_t>(in[1]);
-    height_ = static_cast<int32_t>(in[2]);
-    layer_count_ = in[3];
-    format_ = static_cast<int32_t>(in[4]);
-    usage_ = static_cast<uint64_t>(in[6]) << 32 | in[5];
-    return Error::NONE;
-  }
-
   void SetUsage(uint64_t usage) { usage_ |= usage; }
 
   void SetDimensions(int w, int h) {
@@ -81,6 +55,10 @@ class BufferDescriptor {
   void SetColorFormat(int format) { format_ = format; }
 
   void SetLayerCount(uint32_t layer_count) { layer_count_ = layer_count; }
+
+  void SetName(std::string name) { name_ = name; }
+
+  void SetReservedSize(uint64_t reserved_size) { reserved_size_ = reserved_size; }
 
   uint64_t GetUsage() const { return usage_; }
 
@@ -94,13 +72,19 @@ class BufferDescriptor {
 
   uint64_t GetId() const { return id_; }
 
+  uint64_t GetReservedSize() const { return reserved_size_; }
+
+  std::string GetName() const { return name_; }
+
  private:
+  std::string name_ = "";
   int width_ = -1;
   int height_ = -1;
   int format_ = -1;
   uint32_t layer_count_ = 1;
   uint64_t usage_ = 0;
   const uint64_t id_ = 0;
+  uint64_t reserved_size_ = 0;
 };
 };      // namespace gralloc
 #endif  // __GR_BUF_DESCRIPTOR_H__

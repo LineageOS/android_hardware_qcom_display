@@ -99,6 +99,9 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   }
   virtual HWC2::Error UpdatePowerMode(HWC2::PowerMode mode);
   virtual HWC2::Error PostCommitLayerStack(int32_t *out_retire_fence);
+  virtual bool IsSmartPanelConfig(uint32_t config_id);
+  virtual bool HasSmartPanelConfig(void);
+  virtual HWC2::Error SetPowerMode(HWC2::PowerMode mode, bool teardown);
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
@@ -117,6 +120,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   bool CanSkipCommit();
   DisplayError SetMixerResolution(uint32_t width, uint32_t height);
   DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
+  void SetPartialUpdate(DisplayConfigFixedInfo fixed_info);
   class PMICInterface {
    public:
     PMICInterface() { }
@@ -147,6 +151,7 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   bool pending_refresh_ = true;
   bool enable_optimize_refresh_ = false;
   bool hdr_present_ = false;
+  bool enable_poms_during_doze_ = false;
 
   // Members for 1 frame capture in a client provided buffer
   bool frame_capture_buffer_queued_ = false;

@@ -691,7 +691,7 @@ static int32_t GetDisplayAttribute(hwc2_device_t *device, hwc2_display_t display
                                    hwc2_config_t config, int32_t int_attribute,
                                    int32_t *out_value) {
   if (out_value == nullptr || int_attribute < HWC2_ATTRIBUTE_INVALID ||
-      int_attribute > HWC2_ATTRIBUTE_DPI_Y) {
+      int_attribute > HWC2_ATTRIBUTE_CONFIG_GROUP) {
     return HWC2_ERROR_BAD_PARAMETER;
   }
   auto attribute = static_cast<HWC2::Attribute>(int_attribute);
@@ -776,6 +776,7 @@ int32_t HWCSession::PresentDisplay(hwc2_device_t *device, hwc2_display_t display
     if (power_on_pending_[display]) {
       status = HWC2::Error::None;
     } else {
+      hwc_session->hwc_display_[display]->ProcessActiveConfigChange();
       status = hwc_session->PresentDisplayInternal(display, out_retire_fence);
       if (status == HWC2::Error::None) {
         // Check if hwc's refresh trigger is getting exercised.
@@ -1097,9 +1098,7 @@ int32_t HWCSession::SetPowerMode(hwc2_device_t *device, hwc2_display_t display, 
 
   hwc_session->UpdateThrottlingRate();
 
-  // Trigger refresh for doze mode to take effect.
   if (mode == HWC2::PowerMode::Doze) {
-    hwc_session->Refresh(display);
     // Trigger one more refresh for PP features to take effect.
     hwc_session->pending_refresh_.set(UINT32(display));
   } else {
@@ -1143,9 +1142,18 @@ int32_t HWCSession::GetDozeSupport(hwc2_device_t *device, hwc2_display_t display
   }
 
   *out_support = 0;
-  if (hwc_display->GetDisplayClass() == DISPLAY_CLASS_BUILTIN) {
-    *out_support = 1;
+
+  if (display != qdutils::DISPLAY_PRIMARY) {
+    return HWC2_ERROR_NONE;
   }
+
+  SCOPE_LOCK(locker_[display]);
+  if (!hwc_session->hwc_display_[display]) {
+    DLOGE("Display %d is not created yet.", INT32(display));
+    return HWC2_ERROR_NONE;
+  }
+
+  *out_support = hwc_session->hwc_display_[display]->HasSmartPanelConfig() ? 1 : 0;
 
   return HWC2_ERROR_NONE;
 }
@@ -1179,6 +1187,7 @@ int32_t HWCSession::ValidateDisplay(hwc2_device_t *device, hwc2_display_t displa
     if (power_on_pending_[display]) {
       status = HWC2::Error::None;
     } else if (hwc_session->hwc_display_[display]) {
+      hwc_session->hwc_display_[display]->ProcessActiveConfigChange();
       hwc_session->hwc_display_[display]->SetFastPathComposition(false);
       status = hwc_session->ValidateDisplayInternal(display, out_num_types, out_num_requests);
     }
@@ -1311,6 +1320,13 @@ hwc2_function_pointer_t HWCSession::GetFunction(struct hwc2_device *device,
       return AsFP<HWC2_PFN_GET_DISPLAY_BRIGHTNESS_SUPPORT>(HWCSession::GetDisplayBrightnessSupport);
     case HWC2::FunctionDescriptor::SetDisplayBrightness:
       return AsFP<HWC2_PFN_SET_DISPLAY_BRIGHTNESS>(HWCSession::SetDisplayBrightness);
+    case HWC2::FunctionDescriptor::GetDisplayConnectionType:
+      return AsFP<HWC2_PFN_GET_DISPLAY_CONNECTION_TYPE>(HWCSession::GetDisplayConnectionType);
+    case HWC2::FunctionDescriptor::GetDisplayVsyncPeriod:
+      return AsFP<HWC2_PFN_GET_DISPLAY_VSYNC_PERIOD>(HWCSession::GetDisplayVsyncPeriod);
+    case HWC2::FunctionDescriptor::SetActiveConfigWithConstraints:
+      return AsFP<HWC2_PFN_SET_ACTIVE_CONFIG_WITH_CONSTRAINTS>
+                  (HWCSession::SetActiveConfigWithConstraints);
     default:
       DLOGD("Unknown/Unimplemented function descriptor: %d (%s)", int_descriptor,
             to_string(descriptor).c_str());
@@ -1437,7 +1453,7 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
         DLOGE("QService command = %d: input_parcel needed.", command);
         break;
       }
-      status = setIdleTimeout(UINT32(input_parcel->readInt32()));
+      status = SetIdleTimeout(UINT32(input_parcel->readInt32()));
       break;
 
     case qService::IQService::SET_FRAME_DUMP_CONFIG:
@@ -1472,7 +1488,7 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
         int disp_id = INT(input_parcel->readInt32());
         HWCDisplay::DisplayStatus disp_status =
               static_cast<HWCDisplay::DisplayStatus>(input_parcel->readInt32());
-        status = SetSecondaryDisplayStatus(disp_id, disp_status);
+        status = SetDisplayStatus(disp_id, disp_status);
         output_parcel->writeInt32(status);
       }
       break;
@@ -1495,7 +1511,7 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
           break;
         }
         int32_t input = input_parcel->readInt32();
-        status = toggleScreenUpdate(input == 1);
+        status = ToggleScreenUpdate(input == 1);
         output_parcel->writeInt32(status);
       }
       break;
@@ -1621,7 +1637,7 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
           break;
         }
         uint32_t camera_status = UINT32(input_parcel->readInt32());
-        status = setCameraLaunchStatus(camera_status);
+        status = SetCameraLaunchStatus(camera_status);
       }
       break;
 
@@ -3197,7 +3213,7 @@ int32_t HWCSession::GetReadbackBufferAttributes(hwc2_device_t *device, hwc2_disp
   }
 
   if (display != HWC_DISPLAY_PRIMARY) {
-    return HWC2_ERROR_BAD_DISPLAY;
+    return HWC2_ERROR_UNSUPPORTED;
   }
 
   HWCSession *hwc_session = static_cast<HWCSession *>(device);
@@ -3222,7 +3238,7 @@ int32_t HWCSession::SetReadbackBuffer(hwc2_device_t *device, hwc2_display_t disp
   }
 
   if (display != HWC_DISPLAY_PRIMARY) {
-    return HWC2_ERROR_BAD_DISPLAY;
+    return HWC2_ERROR_UNSUPPORTED;
   }
 
   HWCSession *hwc_session = static_cast<HWCSession *>(device);
@@ -3248,7 +3264,7 @@ int32_t HWCSession::GetReadbackBufferFence(hwc2_device_t *device, hwc2_display_t
   }
 
   if (display != HWC_DISPLAY_PRIMARY) {
-    return HWC2_ERROR_BAD_DISPLAY;
+    return HWC2_ERROR_UNSUPPORTED;
   }
 
   return CallDisplayFunction(device, display, &HWCDisplay::GetReadbackBufferFence, release_fence);
@@ -3296,15 +3312,65 @@ int32_t HWCSession::GetDisplayCapabilities(hwc2_device_t *device, hwc2_display_t
   } else {
     if (isBuiltin) {
       // TODO(user): Handle SKIP_CLIENT_COLOR_TRANSFORM based on DSPP availability
-      outCapabilities[0] = HWC2_DISPLAY_CAPABILITY_SKIP_CLIENT_COLOR_TRANSFORM;
-      outCapabilities[1] = HWC2_DISPLAY_CAPABILITY_DOZE;
-      outCapabilities[2] = HWC2_DISPLAY_CAPABILITY_BRIGHTNESS;
-      *outNumCapabilities = 3;
+      uint32_t index = 0;
+      outCapabilities[index++] = HWC2_DISPLAY_CAPABILITY_SKIP_CLIENT_COLOR_TRANSFORM;
+      int32_t has_doze_support = 0;
+      GetDozeSupport(device, display, &has_doze_support);
+      if (has_doze_support) {
+        outCapabilities[index++] = HWC2_DISPLAY_CAPABILITY_DOZE;
+      }
+      outCapabilities[index++] = HWC2_DISPLAY_CAPABILITY_BRIGHTNESS;
+      *outNumCapabilities = index;
     }
     return HWC2_ERROR_NONE;
   }
 }
 
+int32_t HWCSession::GetDisplayConnectionType(hwc2_device_t* device, hwc2_display_t display,
+                                             uint32_t *outType) {
+  if (!outType || !device) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (display >= HWCCallbacks::kNumDisplays) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  HWCSession *hwc_session = static_cast<HWCSession *>(device);
+  HWCDisplay *hwc_display = hwc_session->hwc_display_[display];
+  if (!hwc_display) {
+    DLOGE("Expected valid hwc_display");
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  *outType = HWC2_DISPLAY_CONNECTION_TYPE_EXTERNAL;
+  if (hwc_display->GetDisplayClass() == DISPLAY_CLASS_BUILTIN) {
+    *outType = HWC2_DISPLAY_CONNECTION_TYPE_INTERNAL;
+  }
+
+  return HWC2_ERROR_NONE;
+}
+
+int32_t HWCSession::GetDisplayVsyncPeriod(hwc2_device_t *device, hwc2_display_t display,
+                                          hwc2_vsync_period_t *out_vsync_period) {
+  if (!out_vsync_period || !device) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  return CallDisplayFunction(device, display, &HWCDisplay::GetDisplayVsyncPeriod, out_vsync_period);
+}
+
+int32_t HWCSession::SetActiveConfigWithConstraints(hwc2_device_t *device, hwc2_display_t display,
+                    hwc2_config_t config,
+                    hwc_vsync_period_change_constraints_t *vsync_period_change_constraints,
+                    hwc_vsync_period_change_timeline_t *out_timeline) {
+  if (!vsync_period_change_constraints || !out_timeline || !device) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  return CallDisplayFunction(device, display, &HWCDisplay::SetActiveConfigWithConstraints, config,
+                             vsync_period_change_constraints, out_timeline);
+}
 
 int32_t HWCSession::GetDisplayBrightnessSupport(hwc2_device_t *device, hwc2_display_t display,
                                                 bool *outSupport) {
@@ -3394,7 +3460,7 @@ android::status_t HWCSession::SetIdlePC(const android::Parcel *input_parcel) {
   auto enable = input_parcel->readInt32();
   auto synchronous = input_parcel->readInt32();
 
-  return static_cast<android::status_t>(controlIdlePowerCollapse(enable, synchronous));
+  return static_cast<android::status_t>(ControlIdlePowerCollapse(enable, synchronous));
 }
 
 hwc2_display_t HWCSession::GetActiveBuiltinDisplay() {

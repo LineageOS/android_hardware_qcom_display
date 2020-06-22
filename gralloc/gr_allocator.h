@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018, 2020, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -44,6 +44,7 @@ class Allocator {
   Allocator();
   ~Allocator();
   bool Init();
+  void SetProperties(gralloc::GrallocProperties props);
   int MapBuffer(void **base, unsigned int size, unsigned int offset, int fd);
   int ImportBuffer(int fd);
   int FreeBuffer(void *base, unsigned int size, unsigned int offset, int fd, int handle);

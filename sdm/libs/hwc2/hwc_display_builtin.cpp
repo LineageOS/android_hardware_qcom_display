@@ -166,12 +166,26 @@ int HWCDisplayBuiltIn::Init() {
   HWCDebugHandler::Get()->GetProperty(ENABLE_DEFAULT_COLOR_MODE,
                                       &default_mode_status_);
 
-  int optimize_refresh = 0;
-  HWCDebugHandler::Get()->GetProperty(ENABLE_OPTIMIZE_REFRESH, &optimize_refresh);
-  enable_optimize_refresh_ = (optimize_refresh == 1);
+  int value = 0;
+  HWCDebugHandler::Get()->GetProperty(ENABLE_OPTIMIZE_REFRESH, &value);
+  enable_optimize_refresh_ = (value == 1);
   if (enable_optimize_refresh_) {
     DLOGI("Drop redundant drawcycles %d", id_);
   }
+
+  value = 0;
+  HWCDebugHandler::Get()->GetProperty(ENABLE_POMS_DURING_DOZE, &value);
+  enable_poms_during_doze_ = (value == 1);
+  if (enable_poms_during_doze_) {
+    DLOGI("Enable POMS during Doze mode %" PRIu64 , id_);
+  }
+
+  int vsyncs = 0;
+  HWCDebugHandler::Get()->GetProperty(DEFER_FPS_FRAME_COUNT, &vsyncs);
+  if (vsyncs > 0) {
+    SetVsyncsApplyRateChange(UINT32(vsyncs));
+  }
+
   pmic_intf_ = new PMICInterface();
   pmic_intf_->Init();
 
@@ -303,6 +317,33 @@ bool HWCDisplayBuiltIn::CanSkipCommit() {
   return skip_commit;
 }
 
+void HWCDisplayBuiltIn::SetPartialUpdate(DisplayConfigFixedInfo fixed_info) {
+  partial_update_enabled_ = fixed_info.partial_update || (!fixed_info.is_cmdmode);
+  for (auto hwc_layer : layer_set_) {
+    hwc_layer->SetPartialUpdate(partial_update_enabled_);
+  }
+  client_target_->SetPartialUpdate(partial_update_enabled_);
+}
+
+HWC2::Error HWCDisplayBuiltIn::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
+  DisplayConfigFixedInfo fixed_info = {};
+  display_intf_->GetConfig(&fixed_info);
+  bool command_mode = fixed_info.is_cmdmode;
+
+  auto status = HWCDisplay::SetPowerMode(mode, teardown);
+  if (status != HWC2::Error::None) {
+    return status;
+  }
+
+  display_intf_->GetConfig(&fixed_info);
+  is_cmd_mode_ = fixed_info.is_cmdmode;
+  if (is_cmd_mode_ != command_mode) {
+    SetPartialUpdate(fixed_info);
+  }
+
+  return HWC2::Error::None;
+}
+
 HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
   auto status = HWC2::Error::None;
 
@@ -322,11 +363,23 @@ HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
       DLOGE("Flush failed. Error = %d", error);
     }
   } else {
+    DisplayConfigFixedInfo fixed_info = {};
+    display_intf_->GetConfig(&fixed_info);
+    bool command_mode = fixed_info.is_cmdmode;
+
     status = CommitLayerStack();
     if (status == HWC2::Error::None) {
       HandleFrameOutput();
       SolidFillCommit();
       status = PostCommitLayerStack(out_retire_fence);
+    }
+
+    if (status == HWC2::Error::None) {
+      display_intf_->GetConfig(&fixed_info);
+      is_cmd_mode_ = fixed_info.is_cmdmode;
+      if (is_cmd_mode_ != command_mode) {
+        SetPartialUpdate(fixed_info);
+      }
     }
   }
 
@@ -994,4 +1047,30 @@ HWC2::Error HWCDisplayBuiltIn::GetPanelBrightness(float *brightness) {
 
   return HWC2::Error::None;
 }
+
+bool HWCDisplayBuiltIn::IsSmartPanelConfig(uint32_t config_id) {
+  if (config_id < hwc_config_map_.size()) {
+    uint32_t index = hwc_config_map_.at(config_id);
+    return variable_config_map_.at(index).smart_panel;
+  }
+
+  return false;
+}
+
+bool HWCDisplayBuiltIn::HasSmartPanelConfig(void) {
+  if (!enable_poms_during_doze_) {
+    uint32_t config = 0;
+    GetActiveDisplayConfig(&config);
+    return IsSmartPanelConfig(config);
+  }
+
+  for (auto &config : variable_config_map_) {
+    if (config.second.smart_panel) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 }  // namespace sdm

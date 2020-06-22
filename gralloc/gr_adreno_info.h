@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,6 +31,8 @@
 #define __GR_ADRENO_INFO_H__
 
 #include <media/msm_media_info.h>
+
+#include "gr_utils.h"
 
 namespace gralloc {
 
@@ -189,6 +191,8 @@ class AdrenoMemInfo {
    *         false : Unavaliable
   */
   bool AdrenoSizeAPIAvaliable();
+
+  void AdrenoSetProperties(gralloc::GrallocProperties props);
 
   static AdrenoMemInfo *GetInstance();
 

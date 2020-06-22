@@ -1,5 +1,5 @@
 <!--
-Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+Copyright (c) 2020, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -28,25 +28,21 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
 <manifest version="1.0" type="device">
     <hal format="hidl">
-        <name>vendor.qti.hardware.display.mapper</name>
-        <transport arch="32+64">passthrough</transport>
-        <version>3.0</version>
-        <version>4.0</version>
+        <name>android.hardware.graphics.composer</name>
+        <transport>hwbinder</transport>
+        <version>2.4</version>
         <interface>
-            <name>IQtiMapper</name>
+            <name>IComposer</name>
             <instance>default</instance>
         </interface>
     </hal>
     <hal format="hidl">
-        <name>android.hardware.graphics.mapper</name>
-        <transport arch="32+64">passthrough</transport>
-        <version>3.0</version>
-        <version>4.0</version>
+        <name>vendor.display.config</name>
+        <transport>hwbinder</transport>
+        <version>2.0</version>
         <interface>
-            <name>IMapper</name>
+            <name>IDisplayConfig</name>
             <instance>default</instance>
         </interface>
     </hal>
 </manifest>
-
-

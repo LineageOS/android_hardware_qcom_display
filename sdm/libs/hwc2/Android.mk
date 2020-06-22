@@ -21,7 +21,7 @@ LOCAL_CLANG                   := true
 LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware libhardware_legacy \
                                  libutils libcutils libsync libqdutils libqdMetaData \
                                  libdisplaydebug libsdmutils libc++ liblog libgrallocutils libui \
-                                 libgpu_tonemapper libhidlbase libhidltransport \
+                                 libgpu_tonemapper libhidlbase libhidltransport libdisplayconfig.qti \
                                  android.hardware.graphics.mapper@2.0 \
                                  android.hardware.graphics.mapper@2.1 \
                                  android.hardware.graphics.mapper@3.0 \
@@ -29,6 +29,7 @@ LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware li
                                  android.hardware.graphics.allocator@3.0 \
                                  android.hardware.graphics.composer@2.2 \
                                  android.hardware.graphics.composer@2.3 \
+                                 android.hardware.graphics.composer@2.4 \
                                  vendor.display.config@1.0 \
                                  vendor.display.config@1.1 \
                                  vendor.display.config@1.2 \
@@ -40,7 +41,8 @@ LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware li
                                  vendor.display.config@1.8 \
                                  vendor.display.config@1.9 \
                                  vendor.display.config@1.10 \
-                                 vendor.display.config@1.11
+                                 vendor.display.config@1.11 \
+                                 vendor.display.config@2.0
 
 ifeq ($(TARGET_BOARD_AUTO), true)
 LOCAL_CFLAGS                  += -DCONFIG_BASEID_FROM_PROP
@@ -64,6 +66,7 @@ LOCAL_SRC_FILES               := hwc_session.cpp \
                                  display_null.cpp \
                                  hwc_socket_handler.cpp \
                                  hwc_buffer_allocator.cpp
+LOCAL_VINTF_FRAGMENTS         := android.hardware.graphics.composer-qti-display.xml
 
 include $(BUILD_SHARED_LIBRARY)
 endif

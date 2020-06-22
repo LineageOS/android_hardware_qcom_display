@@ -60,7 +60,6 @@ DisplayBuiltIn::~DisplayBuiltIn() {
 
 DisplayError DisplayBuiltIn::Init() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-  int32_t disable_defer_power_state = 0;
 
   DisplayError error = HWInterface::Create(display_id_, kBuiltIn, hw_info_intf_,
                                            buffer_sync_handler_, buffer_allocator_, &hw_intf_);
@@ -90,6 +89,7 @@ DisplayError DisplayBuiltIn::Init() {
   if (hw_panel_info_.mode == kModeCommand) {
     event_list_ = {HWEvent::VSYNC,
                    HWEvent::EXIT,
+                   HWEvent::IDLE_NOTIFY,
                    HWEvent::SHOW_BLANK_EVENT,
                    HWEvent::THERMAL_LEVEL,
                    HWEvent::IDLE_POWER_COLLAPSE,
@@ -114,10 +114,6 @@ DisplayError DisplayBuiltIn::Init() {
   }
 
   current_refresh_rate_ = hw_panel_info_.max_fps;
-
-  Debug::GetProperty(DISABLE_DEFER_POWER_STATE, &disable_defer_power_state);
-  defer_power_state_ = !disable_defer_power_state;
-  DLOGI("defer_power_state %d", defer_power_state_);
 
   int value = 0;
   Debug::Get()->GetProperty(DEFER_FPS_FRAME_COUNT, &value);
@@ -197,6 +193,7 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
   uint32_t app_layer_count = hw_layers_.info.app_layer_count;
+  HWDisplayMode panel_mode = hw_panel_info_.mode;
 
   DTRACE_SCOPED();
 
@@ -225,6 +222,11 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
   if (error != kErrorNone) {
     return error;
   }
+  if (pending_brightness_) {
+    buffer_sync_handler_->SyncWait(layer_stack->retire_fence_fd);
+    SetPanelBrightness(cached_brightness_);
+    pending_brightness_ = false;
+  }
 
   if (commit_event_enabled_) {
     dpps_info_.DppsNotifyOps(kDppsCommitEvent, &display_type_, sizeof(display_type_));
@@ -250,6 +252,9 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
     ControlPartialUpdate(true /* enable */, &pending);
   }
 
+  if (panel_mode != hw_panel_info_.mode) {
+    UpdateDisplayModeParams();
+  }
   dpps_info_.Init(this, hw_panel_info_.panel_name);
 
   if (qsync_mode_ == kQsyncModeOneShot) {
@@ -271,10 +276,22 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
   return error;
 }
 
+void DisplayBuiltIn::UpdateDisplayModeParams() {
+  if (hw_panel_info_.mode == kModeVideo) {
+    uint32_t pending = 0;
+    ControlPartialUpdate(false /* enable */, &pending);
+  } else if (hw_panel_info_.mode == kModeCommand) {
+    // Flush idle timeout value currently set.
+    comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, 0);
+    switch_to_cmd_ = true;
+  }
+}
+
 DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
                                              int *release_fence) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
+  HWDisplayMode panel_mode = hw_panel_info_.mode;
 
   if ((state == kStateOn) && deferred_config_.IsDeferredState()) {
     SetDeferredFpsConfig();
@@ -285,9 +302,17 @@ DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
     return error;
   }
 
+  if (hw_panel_info_.mode != panel_mode) {
+    UpdateDisplayModeParams();
+  }
+
   // Set vsync enable state to false, as driver disables vsync during display power off.
   if (state == kStateOff) {
     vsync_enable_ = false;
+  }
+
+  if (pending_doze_ || pending_power_on_) {
+    event_handler_->Refresh();
   }
 
   return kErrorNone;
@@ -330,6 +355,8 @@ DisplayError DisplayBuiltIn::SetDisplayMode(uint32_t mode) {
       return error;
     }
 
+    DisplayBase::ReconfigureDisplay();
+
     if (mode == kModeVideo) {
       ControlPartialUpdate(false /* enable */, &pending);
     } else if (mode == kModeCommand) {
@@ -359,7 +386,7 @@ DisplayError DisplayBuiltIn::SetPanelBrightness(float brightness) {
   }
 
   // -1.0f = off, 0.0f = min, 1.0f = max
-  level_remainder_ = 0.0f;
+  float level_remainder = 0.0f;
   int level = 0;
   if (brightness == -1.0f) {
     level = 0;
@@ -373,13 +400,21 @@ DisplayError DisplayBuiltIn::SetPanelBrightness(float brightness) {
     }
     float t = (brightness * (max - min)) + min;
     level = static_cast<int>(t);
-    level_remainder_ = t - level;
+    level_remainder = t - level;
   }
 
-  DisplayError err = kErrorNone;
-  if ((err = hw_intf_->SetPanelBrightness(level)) == kErrorNone) {
+  DisplayError err = hw_intf_->SetPanelBrightness(level);
+  if (err == kErrorNone) {
+    level_remainder_ = level_remainder;
     DLOGI_IF(kTagDisplay, "Setting brightness to level %d (%f percent)", level,
              brightness * 100);
+  } else if (err == kErrorDeferred) {
+    // TODO(user): I8508d64a55c3b30239c6ed2886df391407d22f25 causes mismatch between perceived
+    // power state and actual panel power state. Requires a rework. Below check will set up
+    // deferment of brightness operation if DAL reports defer use case.
+    cached_brightness_ = brightness;
+    pending_brightness_ = true;
+    return kErrorNone;
   }
 
   return err;

@@ -145,6 +145,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   bool CanDeferFpsConfig(uint32_t fps);
   void SetDeferredFpsConfig();
   void GetFpsConfig(HWDisplayAttributes *display_attributes, HWPanelInfo *panel_info);
+  void UpdateDisplayModeParams();
 
   std::vector<HWEvent> event_list_;
   bool avr_prop_disabled_ = false;
@@ -159,6 +160,8 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DeferFpsConfig deferred_config_ = {};
   float level_remainder_ = 0.0f;
   recursive_mutex brightness_lock_;
+  float cached_brightness_ = 0.0f;
+  bool pending_brightness_ = false;
 };
 
 }  // namespace sdm

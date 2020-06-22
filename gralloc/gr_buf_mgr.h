@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2018, 2020 The Linux Foundation. All rights reserved.
  * Not a Contribution
  *
  * Copyright (C) 2008 The Android Open Source Project
@@ -21,20 +21,20 @@
 #define __GR_BUF_MGR_H__
 
 #include <pthread.h>
+
 #include <mutex>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 #include "gr_allocator.h"
-#include "gr_utils.h"
 #include "gr_buf_descriptor.h"
+#include "gr_utils.h"
 #include "gralloc_priv.h"
 
 namespace gralloc {
-
-using android::hardware::graphics::mapper::V3_0::Error;
-
+using gralloc::Error;
 class BufferManager {
  public:
   ~BufferManager();
@@ -49,6 +49,14 @@ class BufferManager {
   Error ValidateBufferSize(private_handle_t const *hnd, BufferInfo info);
   Error IsBufferImported(const private_handle_t *hnd);
   static BufferManager *GetInstance();
+  Error GetMetadata(private_handle_t *handle, int64_t metadatatype_value, hidl_vec<uint8_t> *out);
+  Error SetMetadata(private_handle_t *handle, int64_t metadatatype_value, hidl_vec<uint8_t> in);
+  Error GetReservedRegion(private_handle_t *handle, void **reserved_region,
+                          uint64_t *reserved_region_size);
+  Error FlushBuffer(const private_handle_t *handle);
+  Error RereadBuffer(const private_handle_t *handle);
+  Error GetAllHandles(std::vector<const private_handle_t *> *out_handle_list);
+  void SetGrallocDebugProperties(gralloc::GrallocProperties props);
 
  private:
   BufferManager();
