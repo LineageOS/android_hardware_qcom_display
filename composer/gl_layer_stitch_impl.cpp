@@ -148,7 +148,7 @@ int GLLayerStitchImpl::Blit(const std::vector<StitchParams> &stitch_params,
   bool can_batch = !NeedsGLScissor(stitch_params);
   for (auto &info : stitch_params) {
     SetSourceBuffer(info.src_hnd);
-    SetDestinationBuffer(info.dst_hnd, false);
+    SetDestinationBuffer(info.dst_hnd);
     SetViewport(info.dst_rect);
     ClearWithTransparency(info.scissor_rect);
     glDrawArrays(GL_TRIANGLES, 0, 3);

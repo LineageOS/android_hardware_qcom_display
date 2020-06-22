@@ -100,19 +100,13 @@ void GLCommon::SetSourceBuffer(const private_handle_t *src_hnd) {
   }
 }
 
-void GLCommon::SetDestinationBuffer(const private_handle_t *dst_hnd, bool force_set) {
+void GLCommon::SetDestinationBuffer(const private_handle_t *dst_hnd) {
   DTRACE_SCOPED();
-  if (!force_set && (dst_hnd_ == dst_hnd)) {
-    return;
-  }
   EGLImageBuffer *dst_buffer = image_wrapper_.wrap(reinterpret_cast<const void *>(dst_hnd));
 
   if (dst_buffer) {
     GL(glBindFramebuffer(GL_FRAMEBUFFER, dst_buffer->getFramebuffer()));
   }
-
-  // Same buffer gets reprogrammed. Avoid repeated setting.
-  dst_hnd_ = dst_hnd;
 }
 
 int GLCommon::WaitOnInputFence(const std::vector<shared_ptr<Fence>> &in_fences) {
