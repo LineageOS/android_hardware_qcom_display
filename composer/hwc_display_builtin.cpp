@@ -301,6 +301,8 @@ HWC2::Error HWCDisplayBuiltIn::CommitStitchLayers() {
   }
 
   LayerStitchContext ctx = {};
+  Layer *stitch_layer = stitch_target_->GetSDMLayer();
+  LayerBuffer &output_buffer = stitch_layer->input_buffer;
   for (auto &layer : layer_stack_.layers) {
     LayerComposition &composition = layer->composition;
     if (composition != kCompositionStitch) {
@@ -312,8 +314,6 @@ HWC2::Error HWCDisplayBuiltIn::CommitStitchLayers() {
     // Render all layers at specified destination.
     LayerBuffer &input_buffer = layer->input_buffer;
     params.src_hnd = reinterpret_cast<const private_handle_t *>(input_buffer.buffer_id);
-    Layer *stitch_layer = stitch_target_->GetSDMLayer();
-    LayerBuffer &output_buffer = stitch_layer->input_buffer;
     params.dst_hnd = reinterpret_cast<const private_handle_t *>(output_buffer.buffer_id);
     SetRect(layer->stitch_info.dst_rect, &params.dst_rect);
     SetRect(layer->stitch_info.slice_rect, &params.scissor_rect);
@@ -329,7 +329,7 @@ HWC2::Error HWCDisplayBuiltIn::CommitStitchLayers() {
 
   layer_stitch_task_.PerformTask(LayerStitchTaskCode::kCodeStitch, &ctx);
   // Set release fence.
-  output_buffer_.acquire_fence = ctx.release_fence;
+  output_buffer.acquire_fence = ctx.release_fence;
 
   return HWC2::Error::None;
 }
