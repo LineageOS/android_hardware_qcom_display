@@ -568,6 +568,12 @@ void HWCDisplay::UpdateConfigs() {
     }
   }
 
+  if (num_configs_ != 0) {
+    hwc2_config_t active_config = hwc_config_map_.at(0);
+    GetActiveConfig(&active_config);
+    SetActiveConfigIndex(active_config);
+  }
+
   // Update num config count.
   num_configs_ = UINT32(variable_config_map_.size());
   DLOGI("num_configs = %d", num_configs_);
@@ -1208,8 +1214,7 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, shared_ptr<Fence
   }
 
   if (acquire_fence == nullptr) {
-    DLOGW("acquire_fence is zero");
-    return HWC2::Error::BadParameter;
+    DLOGV_IF(kTagClient, "Re-using cached buffer");
   }
 
   Layer *sdm_layer = client_target_->GetSDMLayer();
@@ -1699,6 +1704,7 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence
     }
 
     layer->request.flags = {};
+    layer_buffer->acquire_fence = nullptr;
   }
 
   client_target_->GetSDMLayer()->request.flags = {};
@@ -2214,8 +2220,13 @@ int HWCDisplay::SetActiveDisplayConfig(uint32_t config) {
   }
 
   validated_ = false;
-  display_intf_->SetActiveConfig(config);
+  DisplayError error = display_intf_->SetActiveConfig(config);
+  if (error != kErrorNone) {
+    DLOGE("Failed to set %d config! Error: %d", config, error);
+    return -EINVAL;
+  }
 
+  SetActiveConfigIndex(config);
   return 0;
 }
 
@@ -2528,6 +2539,8 @@ void HWCDisplay::UpdateActiveConfig() {
   DisplayError error = display_intf_->SetActiveConfig(pending_config_index_);
   if (error != kErrorNone) {
     DLOGI("Failed to set %d config", INT(pending_config_index_));
+  } else {
+    SetActiveConfigIndex(pending_config_index_);
   }
 
   // Reset pending config.
@@ -2594,7 +2607,7 @@ void HWCDisplay::ProcessActiveConfigChange() {
 HWC2::Error HWCDisplay::GetVsyncPeriodByActiveConfig(VsyncPeriodNanos *vsync_period) {
   hwc2_config_t active_config;
 
-  auto error = GetActiveConfig(&active_config);
+  auto error = GetCachedActiveConfig(&active_config);
   if (error != HWC2::Error::None) {
     DLOGE("Failed to get active config!");
     return error;
@@ -2708,7 +2721,7 @@ bool HWCDisplay::IsSameGroup(hwc2_config_t config_id1, hwc2_config_t config_id2)
 
 bool HWCDisplay::AllowSeamless(hwc2_config_t config) {
   hwc2_config_t active_config;
-  auto error = GetActiveConfig(&active_config);
+  auto error = GetCachedActiveConfig(&active_config);
   if (error != HWC2::Error::None) {
     DLOGE("Failed to get active config!");
     return false;
@@ -2733,9 +2746,30 @@ HWC2::Error HWCDisplay::SubmitDisplayConfig(hwc2_config_t config) {
   }
 
   validated_ = false;
+  SetActiveConfigIndex(config);
   DLOGI("Active configuration changed to: %d", config);
 
   return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplay::GetCachedActiveConfig(hwc2_config_t *active_config) {
+  int config_index = GetActiveConfigIndex();
+  if ((config_index < 0) || (config_index >= hwc_config_map_.size())) {
+    return GetActiveConfig(active_config);
+  }
+
+  *active_config = static_cast<hwc2_config_t>(hwc_config_map_.at(config_index));
+  return HWC2::Error::None;
+}
+
+void HWCDisplay::SetActiveConfigIndex(int index) {
+  std::lock_guard<std::mutex> lock(active_config_lock_);
+  active_config_index_ = index;
+}
+
+int HWCDisplay::GetActiveConfigIndex() {
+  std::lock_guard<std::mutex> lock(active_config_lock_);
+  return active_config_index_;
 }
 
 }  // namespace sdm

@@ -305,7 +305,7 @@ void DRMConnectorManager::Update() {
       conn->SetSkipConnectorReload(true);
       connector_pool_[drmconn.first] = std::move(conn);
     } else {
-      DRM_LOGE("Critical error: drmModeGetConnector() failed for connector %u.", drmconn.first);
+      DRM_LOGW("Critical error: drmModeGetConnector() failed for connector %u.", drmconn.first);
     }
   }
 

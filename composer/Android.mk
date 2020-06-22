@@ -1,4 +1,5 @@
 LOCAL_PATH := $(call my-dir)
+
 include $(LOCAL_PATH)/../common.mk
 include $(CLEAR_VARS)
 
@@ -66,7 +67,11 @@ LOCAL_SRC_FILES               := QtiComposer.cpp QtiComposerClient.cpp service.c
 
 LOCAL_INIT_RC                 := vendor.qti.hardware.display.composer-service.rc
 ifneq ($(TARGET_HAS_LOW_RAM),true)
-LOCAL_VINTF_FRAGMENTS         := vendor.qti.hardware.display.composer-service.xml
+  ifeq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX),bengal_32)
+    LOCAL_VINTF_FRAGMENTS         := vendor.qti.hardware.display.composer-service-32bit.xml
+  else
+    LOCAL_VINTF_FRAGMENTS         := vendor.qti.hardware.display.composer-service.xml
+  endif
 else
 LOCAL_VINTF_FRAGMENTS         := vendor.qti.hardware.display.composer-service-low-ram.xml
 endif

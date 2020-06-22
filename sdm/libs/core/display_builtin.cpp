@@ -117,6 +117,10 @@ DisplayError DisplayBuiltIn::Init() {
   Debug::Get()->GetProperty(DEFER_FPS_FRAME_COUNT, &value);
   deferred_config_.frame_count = (value > 0) ? UINT32(value) : 0;
 
+  value = 0;
+  DebugHandler::Get()->GetProperty(DISABLE_DYNAMIC_FPS, &value);
+  disable_dyn_fps_ = (value == 1);
+
   return error;
 }
 
@@ -498,7 +502,8 @@ DisplayError DisplayBuiltIn::TeardownConcurrentWriteback(void) {
 DisplayError DisplayBuiltIn::SetRefreshRate(uint32_t refresh_rate, bool final_rate) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
-  if (!active_ || !hw_panel_info_.dynamic_fps || qsync_mode_ != kQSyncModeNone) {
+  if (!active_ || !hw_panel_info_.dynamic_fps || qsync_mode_ != kQSyncModeNone ||
+      disable_dyn_fps_) {
     return kErrorNotSupported;
   }
 

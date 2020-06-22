@@ -518,7 +518,11 @@ DisplayError HWDeviceDRM::Init() {
 
 DisplayError HWDeviceDRM::Deinit() {
   DisplayError err = kErrorNone;
-  if (!first_cycle_) {
+  // Power-on will set the CRTC_SET_MODE to valid on external display. Without first commit,
+  // if external is disconnected, CRTC_SET_MODE is not set to NULL, this leads to a synchronization
+  // issue and external is blank for sometime. So on successful power-on (i.e NullCommit),
+  // set CRTC_SET_MODE to NULL for proper sync.
+  if (!first_cycle_ || null_display_commit_) {
     // A null-commit is needed only if the first commit had gone through. e.g., If a pluggable
     // display is plugged in and plugged out immediately, HWDeviceDRM::Deinit() may be called
     // before any commit happened on the device. The driver may have removed any not-in-use
@@ -2246,6 +2250,7 @@ DisplayError HWDeviceDRM::NullCommit(bool synchronous, bool retain_planes) {
     return kErrorHardware;
   }
 
+  null_display_commit_ = true;
   return kErrorNone;
 }
 
