@@ -281,7 +281,7 @@ static Error colorMetadataToDataspace(ColorMetaData color_metadata, Dataspace *d
   return Error::NONE;
 }
 
-static void getComponentSizeAndOffset(int32_t format, PlaneLayoutComponent &comp) {
+static Error getComponentSizeAndOffset(int32_t format, PlaneLayoutComponent &comp) {
   switch (format) {
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_RGBA_8888):
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_RGBX_8888):
@@ -293,8 +293,11 @@ static void getComponentSizeAndOffset(int32_t format, PlaneLayoutComponent &comp
         comp.offsetInBits = 8;
       } else if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_B.value) {
         comp.offsetInBits = 16;
-      } else if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_A.value) {
+      } else if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_A.value &&
+                 format != HAL_PIXEL_FORMAT_RGB_888) {
         comp.offsetInBits = 24;
+      } else {
+        return Error::BAD_VALUE;
       }
       break;
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_RGB_565):
@@ -307,6 +310,8 @@ static void getComponentSizeAndOffset(int32_t format, PlaneLayoutComponent &comp
       } else if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_B.value) {
         comp.offsetInBits = 11;
         comp.sizeInBits = 5;
+      } else {
+        return Error::BAD_VALUE;
       }
       break;
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_BGR_565):
@@ -319,6 +324,8 @@ static void getComponentSizeAndOffset(int32_t format, PlaneLayoutComponent &comp
       } else if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_B.value) {
         comp.offsetInBits = 0;
         comp.sizeInBits = 5;
+      } else {
+        return Error::BAD_VALUE;
       }
       break;
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_BGRA_8888):
@@ -331,8 +338,11 @@ static void getComponentSizeAndOffset(int32_t format, PlaneLayoutComponent &comp
         comp.offsetInBits = 8;
       } else if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_B.value) {
         comp.offsetInBits = 0;
-      } else if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_A.value) {
+      } else if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_A.value &&
+                 format != HAL_PIXEL_FORMAT_BGR_888) {
         comp.offsetInBits = 24;
+      } else {
+        return Error::BAD_VALUE;
       }
       break;
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_RGBA_5551):
@@ -348,6 +358,8 @@ static void getComponentSizeAndOffset(int32_t format, PlaneLayoutComponent &comp
       } else if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_A.value) {
         comp.sizeInBits = 1;
         comp.offsetInBits = 15;
+      } else {
+        return Error::BAD_VALUE;
       }
       break;
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_RGBA_4444):
@@ -363,6 +375,8 @@ static void getComponentSizeAndOffset(int32_t format, PlaneLayoutComponent &comp
       } else if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_A.value) {
         comp.sizeInBits = 4;
         comp.offsetInBits = 12;
+      } else {
+        return Error::BAD_VALUE;
       }
       break;
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_R_8):
@@ -370,8 +384,11 @@ static void getComponentSizeAndOffset(int32_t format, PlaneLayoutComponent &comp
       comp.sizeInBits = 8;
       if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_R.value) {
         comp.offsetInBits = 0;
-      } else if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_G.value) {
+      } else if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_G.value &&
+                 format != HAL_PIXEL_FORMAT_R_8) {
         comp.offsetInBits = 8;
+      } else {
+        return Error::BAD_VALUE;
       }
       break;
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_RGBA_1010102):
@@ -388,6 +405,8 @@ static void getComponentSizeAndOffset(int32_t format, PlaneLayoutComponent &comp
       } else if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_A.value) {
         comp.sizeInBits = 2;
         comp.offsetInBits = 30;
+      } else {
+        return Error::BAD_VALUE;
       }
       break;
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_ARGB_2101010):
@@ -404,6 +423,8 @@ static void getComponentSizeAndOffset(int32_t format, PlaneLayoutComponent &comp
       } else if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_A.value) {
         comp.sizeInBits = 2;
         comp.offsetInBits = 0;
+      } else {
+        return Error::BAD_VALUE;
       }
       break;
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_BGRA_1010102):
@@ -420,6 +441,8 @@ static void getComponentSizeAndOffset(int32_t format, PlaneLayoutComponent &comp
       } else if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_A.value) {
         comp.sizeInBits = 2;
         comp.offsetInBits = 30;
+      } else {
+        return Error::BAD_VALUE;
       }
       break;
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_ABGR_2101010):
@@ -436,6 +459,8 @@ static void getComponentSizeAndOffset(int32_t format, PlaneLayoutComponent &comp
       } else if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_A.value) {
         comp.sizeInBits = 2;
         comp.offsetInBits = 0;
+      } else {
+        return Error::BAD_VALUE;
       }
       break;
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_RGBA_FP16):
@@ -451,6 +476,8 @@ static void getComponentSizeAndOffset(int32_t format, PlaneLayoutComponent &comp
       } else if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_A.value) {
         comp.sizeInBits = 16;
         comp.offsetInBits = 48;
+      } else {
+        return Error::BAD_VALUE;
       }
       break;
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_YCbCr_420_SP):
@@ -463,6 +490,8 @@ static void getComponentSizeAndOffset(int32_t format, PlaneLayoutComponent &comp
         comp.offsetInBits = 0;
       } else if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_CR.value) {
         comp.offsetInBits = 8;
+      } else {
+        return Error::BAD_VALUE;
       }
       break;
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_YCrCb_420_SP):
@@ -476,12 +505,16 @@ static void getComponentSizeAndOffset(int32_t format, PlaneLayoutComponent &comp
         comp.offsetInBits = 0;
       } else if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_CB.value) {
         comp.offsetInBits = 8;
+      } else {
+        return Error::BAD_VALUE;
       }
       break;
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_Y16):
       if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_Y.value) {
         comp.offsetInBits = 0;
         comp.sizeInBits = 16;
+      } else {
+        return Error::BAD_VALUE;
       }
       break;
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_YV12):
@@ -490,12 +523,16 @@ static void getComponentSizeAndOffset(int32_t format, PlaneLayoutComponent &comp
           comp.type.value == android::gralloc4::PlaneLayoutComponentType_CR.value) {
         comp.offsetInBits = 0;
         comp.sizeInBits = 8;
+      } else {
+        return Error::BAD_VALUE;
       }
       break;
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_Y8):
       if (comp.type.value == android::gralloc4::PlaneLayoutComponentType_Y.value) {
         comp.offsetInBits = 0;
         comp.sizeInBits = 8;
+      } else {
+        return Error::BAD_VALUE;
       }
       break;
     case static_cast<int32_t>(HAL_PIXEL_FORMAT_YCbCr_420_P010):
@@ -504,12 +541,15 @@ static void getComponentSizeAndOffset(int32_t format, PlaneLayoutComponent &comp
           comp.type.value == android::gralloc4::PlaneLayoutComponentType_CR.value) {
         comp.offsetInBits = 0;
         comp.sizeInBits = 10;
+      } else {
+        return Error::BAD_VALUE;
       }
       break;
     default:
       ALOGI_IF(DEBUG, "Offset and size in bits unknown for format %d", format);
-      break;
+      return Error::UNSUPPORTED;
   }
+  return Error::NONE;
 }
 
 static void grallocToStandardPlaneLayoutComponentType(uint32_t in,
@@ -521,44 +561,44 @@ static void grallocToStandardPlaneLayoutComponentType(uint32_t in,
 
   if (in & PLANE_COMPONENT_Y) {
     comp.type = android::gralloc4::PlaneLayoutComponentType_Y;
-    getComponentSizeAndOffset(format, comp);
-    components->push_back(comp);
+    if (getComponentSizeAndOffset(format, comp) == Error::NONE)
+      components->push_back(comp);
   }
 
   if (in & PLANE_COMPONENT_Cb) {
     comp.type = android::gralloc4::PlaneLayoutComponentType_CB;
-    getComponentSizeAndOffset(format, comp);
-    components->push_back(comp);
+    if (getComponentSizeAndOffset(format, comp) == Error::NONE)
+      components->push_back(comp);
   }
 
   if (in & PLANE_COMPONENT_Cr) {
     comp.type = android::gralloc4::PlaneLayoutComponentType_CR;
-    getComponentSizeAndOffset(format, comp);
-    components->push_back(comp);
+    if (getComponentSizeAndOffset(format, comp) == Error::NONE)
+      components->push_back(comp);
   }
 
   if (in & PLANE_COMPONENT_R) {
     comp.type = android::gralloc4::PlaneLayoutComponentType_R;
-    getComponentSizeAndOffset(format, comp);
-    components->push_back(comp);
+    if (getComponentSizeAndOffset(format, comp) == Error::NONE)
+      components->push_back(comp);
   }
 
   if (in & PLANE_COMPONENT_G) {
     comp.type = android::gralloc4::PlaneLayoutComponentType_G;
-    getComponentSizeAndOffset(format, comp);
-    components->push_back(comp);
+    if (getComponentSizeAndOffset(format, comp) == Error::NONE)
+      components->push_back(comp);
   }
 
   if (in & PLANE_COMPONENT_B) {
     comp.type = android::gralloc4::PlaneLayoutComponentType_B;
-    getComponentSizeAndOffset(format, comp);
-    components->push_back(comp);
+    if (getComponentSizeAndOffset(format, comp) == Error::NONE)
+      components->push_back(comp);
   }
 
   if (in & PLANE_COMPONENT_A) {
     comp.type = android::gralloc4::PlaneLayoutComponentType_A;
-    getComponentSizeAndOffset(format, comp);
-    components->push_back(comp);
+    if (getComponentSizeAndOffset(format, comp) == Error::NONE)
+      components->push_back(comp);
   }
 
   if (in & PLANE_COMPONENT_RAW) {
