@@ -59,7 +59,7 @@ class HWCColorModeStc : public HWCColorMode {
   snapdragoncolor::ColorModeList stc_mode_list_;
   typedef std::map<DynamicRangeType, snapdragoncolor::ColorMode> DynamicRangeMap;
   typedef std::map<RenderIntent, DynamicRangeMap> RenderIntentMap;
-  std::map<ColorMode, RenderIntentMap> color_mode_map_;
+  std::map<ColorMode, RenderIntentMap> color_mode_map_ = {};
 
   void PopulateColorModes();
   int32_t GetStcColorModeFromMap(const ColorMode &mode, const RenderIntent &intent,
