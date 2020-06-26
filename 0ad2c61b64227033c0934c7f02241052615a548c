@@ -1,0 +1,55 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "cb67ee8e_7a259254",
+        "filename": "sdm/include/core/layer_stack.h",
+        "patchSetId": 9
+      },
+      "lineNbr": 191,
+      "author": {
+        "id": 13028
+      },
+      "writtenOn": "2020-06-26T08:21:00Z",
+      "side": 1,
+      "message": "line length",
+      "revId": "0ad2c61b64227033c0934c7f02241052615a548c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "efafb061_c5ec1f67",
+        "filename": "sdm/libs/core/drm/hw_device_drm.cpp",
+        "patchSetId": 9
+      },
+      "lineNbr": 1118,
+      "author": {
+        "id": 13028
+      },
+      "writtenOn": "2020-06-26T08:21:00Z",
+      "side": 1,
+      "message": "give that flag a name (#define FOD_LAYER_ZORDER 0x2000000u maybe?)",
+      "revId": "0ad2c61b64227033c0934c7f02241052615a548c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "88a5635d_1f07d201",
+        "filename": "sdm/libs/hwc2/hwc_layers.cpp",
+        "patchSetId": 9
+      },
+      "lineNbr": 545,
+      "author": {
+        "id": 13028
+      },
+      "writtenOn": "2020-06-26T08:21:00Z",
+      "side": 1,
+      "message": "magic number",
+      "revId": "0ad2c61b64227033c0934c7f02241052615a548c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
