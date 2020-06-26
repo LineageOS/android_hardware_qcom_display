@@ -514,6 +514,7 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
     }
   }
   drmModeFreePropertyBlob(blob);
+  delete[] fmt_str;
 }
 
 void DRMCrtc::ParseCompRatio(string line, bool real_time) {
