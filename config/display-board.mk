@@ -1,5 +1,3 @@
-#Display target definitions for msmnile
-
 #Enable Charging Icon
 TARGET_RECOVERY_PIXEL_FORMAT := RGBX_8888
 TARGET_USES_DRM_PP := true

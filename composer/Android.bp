@@ -1,0 +1,67 @@
+composer_srcs = ["*.cpp"]
+
+cc_binary {
+
+    name: "vendor.qti.hardware.display.composer-service",
+    defaults: ["qtidisplay_defaults"],
+    sanitize: {
+        integer_overflow: true,
+    },
+    vendor: true,
+    relative_install_path: "hw",
+    header_libs: [
+        "display_headers",
+        "qti_kernel_headers",
+    ],
+
+    cflags: [
+        "-Wno-missing-field-initializers",
+        "-Wno-unused-parameter",
+        "-DLOG_TAG=\"SDM\"",
+    ],
+    clang: true,
+
+    shared_libs: [
+        "libbinder",
+        "libhardware",
+        "libhistogram",
+        "libutils",
+        "libcutils",
+        "libsync",
+        "libc++",
+        "liblog",
+        "libhidlbase",
+        "liblog",
+        "libfmq",
+        "libhardware_legacy",
+        "libsdmcore",
+        "libqservice",
+        "libqdutils",
+        "libqdMetaData",
+        "libdisplaydebug",
+        "libsdmutils",
+        "libui",
+        "libgrallocutils",
+        "libgpu_tonemapper",
+        "libEGL",
+        "libGLESv2",
+        "libGLESv3",
+        "vendor.qti.hardware.display.composer@3.0",
+        "android.hardware.graphics.composer@2.1",
+        "android.hardware.graphics.composer@2.2",
+        "android.hardware.graphics.composer@2.3",
+        "android.hardware.graphics.composer@2.4",
+        "android.hardware.graphics.mapper@2.0",
+        "android.hardware.graphics.mapper@2.1",
+        "android.hardware.graphics.mapper@3.0",
+        "android.hardware.graphics.allocator@2.0",
+        "android.hardware.graphics.allocator@3.0",
+        "libdisplayconfig.qti",
+        "libdrm",
+    ],
+    srcs: composer_srcs,
+
+    init_rc: ["vendor.qti.hardware.display.composer-service.rc"],
+    vintf_fragments: ["vendor.qti.hardware.display.composer-service.xml"],
+
+}

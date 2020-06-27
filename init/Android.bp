@@ -1,0 +1,7 @@
+cc_prebuilt_binary {
+    name: "init.qti.display_boot.sh",
+    vendor: true,
+    device_supported: true,
+    srcs: ["init.qti.display_boot.sh"],
+    init_rc: ["init.qti.display_boot.rc"],
+}
