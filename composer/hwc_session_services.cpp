@@ -921,8 +921,13 @@ int HWCSession::DisplayConfigImpl::SetCWBOutputBuffer(uint32_t disp_id,
                                                       const DisplayConfig::Rect rect,
                                                       bool post_processed,
                                                       const native_handle_t *buffer) {
-  if (!callback_.lock() || !buffer) {
-    DLOGE("Invalid parameters");
+  if (!callback_.lock()) {
+    DLOGE("Callback_ has not yet been initialized.");
+    return -1;
+  }
+
+  if (!buffer) {
+    DLOGE("Buffer is null.");
     return -1;
   }
 
@@ -999,6 +1004,7 @@ void HWCSession::CWB::ProcessRequests() {
     {
       SCOPE_LOCK(queue_lock_);
       if (!queue_.size()) {
+        DLOGI("CWB buffer is empty. No pending CWB requests found.");
         break;
       }
 
@@ -1016,6 +1022,8 @@ void HWCSession::CWB::ProcessRequests() {
                                          kCWBClientExternal) != HWC2::Error::None) {
         DLOGE("CWB buffer could not be set.");
         status = -1;
+      } else {
+        DLOGI("Successfully configured CWB buffer.");
       }
     }
 
@@ -1043,6 +1051,7 @@ void HWCSession::CWB::ProcessRequests() {
     // Notify client about buffer status and erase the node from pending request queue.
     std::shared_ptr<DisplayConfig::ConfigCallback> callback = node->callback.lock();
     if (callback) {
+      DLOGI("Notify the client about buffer status %d.", status);
       callback->NotifyCWBBufferDone(status, node->buffer);
     }
 
@@ -1056,8 +1065,10 @@ void HWCSession::CWB::ProcessRequests() {
     {
       SCOPE_LOCK(queue_lock_);
       queue_.pop();
+      DLOGI("Remove current CWB request from the pending request queue.");
 
       if (!queue_.size()) {
+        DLOGI("No pending cwb requests found in the queue.");
         break;
       }
     }
