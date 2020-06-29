@@ -77,6 +77,17 @@ AdrenoMemInfo::AdrenoMemInfo() {
   } else {
     ALOGE(" Failed to load libadreno_utils.so");
   }
+  char property[PROPERTY_VALUE_MAX];
+  property_get(DISABLE_UBWC_PROP, property, "0");
+  if (!(strncmp(property, "1", PROPERTY_VALUE_MAX)) ||
+      !(strncmp(property, "true", PROPERTY_VALUE_MAX))) {
+     gfx_ubwc_disable_ = true;
+  }
+  property_get(DISABLE_AHARDWAREBUFFER_PROP, property, "0");
+  if (!(strncmp(property, "1", PROPERTY_VALUE_MAX)) ||
+      !(strncmp(property, "true", PROPERTY_VALUE_MAX))) {
+     gfx_ahardware_buffer_disable_ = true;
+  }
 }
 
 AdrenoMemInfo::~AdrenoMemInfo() {
@@ -85,10 +96,6 @@ AdrenoMemInfo::~AdrenoMemInfo() {
   }
 }
 
-void AdrenoMemInfo::AdrenoSetProperties(gralloc::GrallocProperties props) {
-  gfx_ubwc_disable_ = props.ubwc_disable;
-  gfx_ahardware_buffer_disable_ = props.ahardware_buffer_disable;
-}
 
 void AdrenoMemInfo::AlignUnCompressedRGB(int width, int height, int format, int tile_enabled,
                                          unsigned int *aligned_w, unsigned int *aligned_h) {

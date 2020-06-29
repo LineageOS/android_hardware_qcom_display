@@ -713,7 +713,6 @@ BufferManager::~BufferManager() {
 
 void BufferManager::SetGrallocDebugProperties(gralloc::GrallocProperties props) {
   allocator_->SetProperties(props);
-  AdrenoMemInfo::GetInstance()->AdrenoSetProperties(props);
 }
 
 Error BufferManager::FreeBuffer(std::shared_ptr<Buffer> buf) {
