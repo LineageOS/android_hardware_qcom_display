@@ -6,7 +6,6 @@ PRODUCT_PACKAGES += \
     vendor.qti.hardware.display.composer-service \
     android.hardware.memtrack@1.0-impl \
     android.hardware.memtrack@1.0-service \
-    android.hardware.light@2.0-impl \
     gralloc.$(TARGET_BOARD_PLATFORM) \
     lights.$(TARGET_BOARD_PLATFORM) \
     hwcomposer.$(TARGET_BOARD_PLATFORM) \
@@ -90,14 +89,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_layer_stitch=0 \
     vendor.display.secure_preview_buffer_format=420_sp \
     vendor.gralloc.secure_preview_buffer_format=420_sp
-endif
-
-ifeq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX),bengal_32go)
-    PRODUCT_PACKAGES += \
-        android.hardware.light@2.0-service-lazy
-else
-    PRODUCT_PACKAGES += \
-        android.hardware.light@2.0-service
 endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),kona)
