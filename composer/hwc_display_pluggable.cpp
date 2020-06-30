@@ -134,9 +134,11 @@ HWC2::Error HWCDisplayPluggable::Validate(uint32_t *out_num_types, uint32_t *out
   }
 
   // Apply current Color Mode and Render Intent.
-  if (color_mode_->ApplyCurrentColorModeWithRenderIntent(
-      static_cast<bool>(layer_stack_.flags.hdr_present)) != HWC2::Error::None) {
-    // Fallback to GPU Composition, if Color Mode can't be applied.
+  status = color_mode_->ApplyCurrentColorModeWithRenderIntent(
+                                                 static_cast<bool>(layer_stack_.flags.hdr_present));
+  if (status != HWC2::Error::None || has_color_tranform_) {
+    // Fallback to GPU Composition if Color Mode can't be applied or if a color tranform needs to be
+    // applied.
     MarkLayersForClientComposition();
   }
 
@@ -325,6 +327,24 @@ HWC2::Error HWCDisplayPluggable::SetColorModeWithRenderIntent(ColorMode mode, Re
 HWC2::Error HWCDisplayPluggable::UpdatePowerMode(HWC2::PowerMode mode) {
   current_power_mode_ = mode;
   validated_ = false;
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayPluggable::SetColorTransform(const float *matrix,
+                                                   android_color_transform_t hint) {
+  if (HAL_COLOR_TRANSFORM_IDENTITY == hint) {
+    has_color_tranform_ = false;
+    // From 2.1 IComposerClient.hal:
+    // If the device is not capable of either using the hint or the matrix to apply the desired
+    // color transform, it must force all layers to client composition during VALIDATE_DISPLAY.
+  } else {
+    // Also, interpret HAL_COLOR_TRANSFORM_ARBITRARY_MATRIX hint as non-identity matrix.
+    has_color_tranform_ = true;
+  }
+
+  callbacks_->Refresh(id_);
+  validated_ = false;
+
   return HWC2::Error::None;
 }
 
