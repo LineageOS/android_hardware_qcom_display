@@ -225,6 +225,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   const char *kDisplayBwName = "display_bw";
   bool enable_bw_limits_ = false;
   bool disable_dyn_fps_ = false;
+  bool enhance_idle_time_ = false;
 };
 
 }  // namespace sdm
