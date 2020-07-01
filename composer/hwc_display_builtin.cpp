@@ -177,6 +177,11 @@ int HWCDisplayBuiltIn::Init() {
 
   DLOGI("active_refresh_rate: %d", active_refresh_rate_);
 
+  int enhance_idle_time = 0;
+  HWCDebugHandler::Get()->GetProperty(ENHANCE_IDLE_TIME, &enhance_idle_time);
+  enhance_idle_time_ = (enhance_idle_time == 1);
+  DLOGI("enhance_idle_time: %d", enhance_idle_time);
+
   return status;
 }
 
@@ -276,7 +281,8 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
   bool vsync_source = (callbacks_->GetVsyncSource() == id_);
 
   if (error == kErrorNone) {
-    if (vsync_source && (current_refresh_rate_ < refresh_rate)) {
+    if (vsync_source && ((current_refresh_rate_ < refresh_rate) ||
+                         (enhance_idle_time_ && (current_refresh_rate_ != refresh_rate)))) {
       DTRACE_BEGIN("HWC2::Vsync::Enable");
       // Display is ramping up from idle.
       // Client realizes need for resync upon change in config.
