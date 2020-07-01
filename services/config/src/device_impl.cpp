@@ -96,8 +96,11 @@ void DeviceImpl::serviceDied(uint64_t client_handle,
   }
 }
 
-DeviceImpl::DeviceClientContext::DeviceClientContext(const sp<IDisplayConfigCallback> callback) {
-  callback_ = callback;
+DeviceImpl::DeviceClientContext::DeviceClientContext(
+            const sp<IDisplayConfigCallback> callback) : callback_(callback) { }
+
+sp<IDisplayConfigCallback> DeviceImpl::DeviceClientContext::GetDeviceConfigCallback() {
+  return callback_;
 }
 
 void DeviceImpl::DeviceClientContext::SetDeviceConfigIntf(ConfigInterface *intf) {
@@ -700,6 +703,26 @@ void DeviceImpl::DeviceClientContext::ParseSendTUIEvent(const ByteStream &input_
   _hidl_cb(error, {}, {});
 }
 
+void DeviceImpl::ParseDestroy(uint64_t client_handle, perform_cb _hidl_cb) {
+  auto itr = display_config_map_.find(client_handle);
+  if (itr == display_config_map_.end()) {
+    _hidl_cb(-EINVAL, {}, {});
+    return;
+  }
+
+  std::shared_ptr<DeviceClientContext> client = itr->second;
+  if (client != NULL) {
+    sp<IDisplayConfigCallback> callback = client->GetDeviceConfigCallback();
+    callback->unlinkToDeath(this);
+    ConfigInterface *intf = client->GetDeviceConfigIntf();
+    intf_->UnRegisterClientContext(intf);
+    client.reset();
+    display_config_map_.erase(itr);
+  }
+
+  _hidl_cb(0, {}, {});
+}
+
 Return<void> DeviceImpl::perform(uint64_t client_handle, uint32_t op_code,
                                  const ByteStream &input_params, const HandleStream &input_handles,
                                  perform_cb _hidl_cb) {
@@ -846,6 +869,9 @@ Return<void> DeviceImpl::perform(uint64_t client_handle, uint32_t op_code,
       break;
     case kSendTUIEvent:
       client->ParseSendTUIEvent(input_params, _hidl_cb);
+      break;
+    case kDestroy:
+      ParseDestroy(client_handle, _hidl_cb);
       break;
     default:
       break;
