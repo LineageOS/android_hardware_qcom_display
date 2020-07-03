@@ -174,6 +174,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   int GetBwCode(const DisplayConfigVariableInfo &attr);
   void SetBwLimitHint(bool enable);
   void SetPartialUpdate(DisplayConfigFixedInfo fixed_info);
+  uint32_t GetUpdatingAppLayersCount();
 
   // SyncTask methods.
   void OnTask(const LayerStitchTaskCode &task_code,

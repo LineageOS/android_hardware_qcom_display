@@ -44,7 +44,7 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
   virtual DisplayError Init();
   virtual DisplayError Prepare(LayerStack *layer_stack);
   virtual DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate, uint32_t *max_refresh_rate);
-  virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate);
+  virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate, bool idle_screen);
   virtual bool IsUnderscanSupported();
   virtual DisplayError InitializeColorModes();
   virtual DisplayError SetColorMode(const std::string &color_mode);

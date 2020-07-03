@@ -239,7 +239,8 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
   }
 
   uint32_t refresh_rate = GetOptimalRefreshRate(one_updating_layer);
-  error = display_intf_->SetRefreshRate(refresh_rate, force_refresh_rate_);
+  bool idle_screen = GetUpdatingAppLayersCount() == 0;
+  error = display_intf_->SetRefreshRate(refresh_rate, force_refresh_rate_, idle_screen);
 
   // Get the refresh rate set.
   display_intf_->GetRefreshRate(&refresh_rate);
@@ -1471,6 +1472,22 @@ bool HWCDisplayBuiltIn::HasReadBackBufferSupport() {
   display_intf_->GetConfig(&fixed_info);
 
   return fixed_info.readback_supported;
+}
+
+uint32_t HWCDisplayBuiltIn::GetUpdatingAppLayersCount() {
+  uint32_t updating_count = 0;
+
+  for (uint i = 0; i < layer_stack_.layers.size(); i++) {
+    auto layer = layer_stack_.layers.at(i);
+    if (layer->composition == kCompositionGPUTarget) {
+      break;
+    }
+    if (layer->flags.updating) {
+      updating_count++;
+    }
+  }
+
+  return updating_count;
 }
 
 }  // namespace sdm

@@ -451,6 +451,7 @@ DisplayError CompManager::SetIdleTimeoutMs(Handle display_ctx, uint32_t active_m
 }
 
 void CompManager::ProcessIdleTimeout(Handle display_ctx) {
+  DTRACE_SCOPED();
   SCOPE_LOCK(locker_);
 
   DisplayCompositionContext *display_comp_ctx =

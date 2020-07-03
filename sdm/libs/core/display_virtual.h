@@ -55,7 +55,7 @@ class DisplayVirtual : public DisplayBase {
   virtual DisplayError SetVSyncState(bool enable) {
     return kErrorNotSupported;
   }
-  virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate) {
+  virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate, bool idle_screen) {
     return kErrorNotSupported;
   }
   virtual DisplayError SetDetailEnhancerData(const DisplayDetailEnhancerData &de_data) {

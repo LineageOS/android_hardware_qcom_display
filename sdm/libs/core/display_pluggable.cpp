@@ -156,7 +156,8 @@ DisplayError DisplayPluggable::GetRefreshRateRange(uint32_t *min_refresh_rate,
   return error;
 }
 
-DisplayError DisplayPluggable::SetRefreshRate(uint32_t refresh_rate, bool final_rate) {
+DisplayError DisplayPluggable::SetRefreshRate(uint32_t refresh_rate, bool final_rate,
+                                              bool idle_screen) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
   if (!active_) {
