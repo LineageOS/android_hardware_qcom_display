@@ -179,6 +179,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   void ValidateUiScaling();
   void ConfigureCwbAtLm(uint32_t *x_pixels, uint32_t *y_pixels);
   void EnablePartialUpdate();
+  uint32_t GetUpdatingAppLayersCount();
 
   // SyncTask methods.
   void OnTask(const LayerStitchTaskCode &task_code,
