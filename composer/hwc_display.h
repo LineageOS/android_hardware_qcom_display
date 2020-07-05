@@ -554,6 +554,7 @@ class HWCDisplay : public DisplayEventHandler {
   SecureEvent secure_event_ = kSecureEventMax;
   bool display_pause_pending_ = false;
   bool display_idle_ = false;
+  bool animating_ = false;
 
  private:
   void DumpInputBuffers(void);
@@ -565,7 +566,6 @@ class HWCDisplay : public DisplayEventHandler {
   DisplayClass display_class_;
   uint32_t geometry_changes_ = GeometryChanges::kNone;
   uint32_t geometry_changes_on_doze_suspend_ = GeometryChanges::kNone;
-  bool animating_ = false;
   int null_display_mode_ = 0;
   DisplayValidateState validate_state_ = kNormalValidate;
   bool fast_path_enabled_ = true;
