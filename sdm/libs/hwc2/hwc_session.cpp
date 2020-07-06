@@ -1158,6 +1158,33 @@ int32_t HWCSession::GetDozeSupport(hwc2_device_t *device, hwc2_display_t display
   return HWC2_ERROR_NONE;
 }
 
+int32_t HWCSession::SetAutoLowLatencyMode(hwc2_device_t *device, hwc2_display_t display, bool on) {
+  if (!device || display >= HWCCallbacks::kNumDisplays) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+  return HWC2_ERROR_UNSUPPORTED;
+}
+
+int32_t HWCSession::GetSupportedContentTypes(hwc2_device_t *device, hwc2_display_t display,
+                                 uint32_t *count, uint32_t *contentTypes) {
+  contentTypes = {};
+  if (!device || display >= HWCCallbacks::kNumDisplays) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+  return HWC2_ERROR_NONE;
+}
+
+int32_t HWCSession::SetContentType(hwc2_device_t *device, hwc2_display_t display,
+                                   int32_t type) {
+  if (!device || display >= HWCCallbacks::kNumDisplays) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+  if (type == UINT32(composer_V2_4::IComposerClient::ContentType::NONE)) {
+    return HWC2_ERROR_NONE;
+  }
+  return HWC2_ERROR_UNSUPPORTED;
+}
+
 int32_t HWCSession::ValidateDisplay(hwc2_device_t *device, hwc2_display_t display,
                                     uint32_t *out_num_types, uint32_t *out_num_requests) {
   //  out_num_types and out_num_requests will be non-NULL
@@ -1327,6 +1354,12 @@ hwc2_function_pointer_t HWCSession::GetFunction(struct hwc2_device *device,
     case HWC2::FunctionDescriptor::SetActiveConfigWithConstraints:
       return AsFP<HWC2_PFN_SET_ACTIVE_CONFIG_WITH_CONSTRAINTS>
                   (HWCSession::SetActiveConfigWithConstraints);
+    case HWC2::FunctionDescriptor::SetAutoLowLatencyMode:
+      return AsFP<HWC2_PFN_SET_AUTO_LOW_LATENCY_MODE>(HWCSession::SetAutoLowLatencyMode);
+    case HWC2::FunctionDescriptor::GetSupportedContentTypes:
+      return AsFP<HWC2_PFN_GET_SUPPORTED_CONTENT_TYPES>(HWCSession::GetSupportedContentTypes);
+    case HWC2::FunctionDescriptor::SetContentType:
+      return AsFP<HWC2_PFN_SET_CONTENT_TYPE>(HWCSession::SetContentType);
     default:
       DLOGD("Unknown/Unimplemented function descriptor: %d (%s)", int_descriptor,
             to_string(descriptor).c_str());
@@ -3306,7 +3339,7 @@ int32_t HWCSession::GetDisplayCapabilities(hwc2_device_t *device, hwc2_display_t
   if (!outCapabilities) {
     *outNumCapabilities = 0;
     if (isBuiltin) {
-      *outNumCapabilities = 3;
+      *outNumCapabilities = 4;
     }
     return HWC2_ERROR_NONE;
   } else {
@@ -3320,6 +3353,7 @@ int32_t HWCSession::GetDisplayCapabilities(hwc2_device_t *device, hwc2_display_t
         outCapabilities[index++] = HWC2_DISPLAY_CAPABILITY_DOZE;
       }
       outCapabilities[index++] = HWC2_DISPLAY_CAPABILITY_BRIGHTNESS;
+      outCapabilities[index++] = UINT32(HwcDisplayCapability::PROTECTED_CONTENTS);
       *outNumCapabilities = index;
     }
     return HWC2_ERROR_NONE;

@@ -43,13 +43,15 @@
 #include "hwc_socket_handler.h"
 #include "hwc_display_event_handler.h"
 #include "hwc_buffer_sync_handler.h"
-
+#include <android/hardware/graphics/composer/2.4/IComposerClient.h>
 namespace sdm {
-
 using ::android::hardware::Return;
 using ::android::hardware::hidl_string;
 using android::hardware::hidl_handle;
 using ::android::hardware::hidl_vec;
+
+namespace composer_V2_4 = ::android::hardware::graphics::composer::V2_4;
+using HwcDisplayCapability = composer_V2_4::IComposerClient::DisplayCapability;
 
 int32_t GetDataspaceFromColorMode(ColorMode mode);
 
@@ -230,7 +232,10 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
                                  int32_t int_enabled);
   static int32_t GetDozeSupport(hwc2_device_t *device, hwc2_display_t display,
                                 int32_t *out_support);
-
+  static int32_t SetAutoLowLatencyMode(hwc2_device_t *device, hwc2_display_t display, bool on);
+  static int32_t GetSupportedContentTypes(hwc2_device_t *device, hwc2_display_t display,
+                                          uint32_t *count, uint32_t *contentTypes);
+  static int32_t SetContentType(hwc2_device_t *device, hwc2_display_t display,int32_t type);
   static Locker locker_[HWCCallbacks::kNumDisplays];
   static Locker power_state_[HWCCallbacks::kNumDisplays];
   static Locker display_config_locker_;
