@@ -490,6 +490,11 @@ void DRMConnector::ParseCapabilities(uint64_t blob_id, DRMConnectorInfo *info) {
   if (!blob) {
     return;
   }
+
+  if (!blob->data) {
+    return;
+  }
+
   char *fmt_str = new char[blob->length + 1];
   memcpy (fmt_str, blob->data, blob->length);
   fmt_str[blob->length] = '\0';
@@ -571,6 +576,10 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
   }
 
   if (!info->modes.size()) {
+    return;
+  }
+
+  if (!blob->data) {
     return;
   }
 
@@ -702,6 +711,10 @@ int DRMConnector::GetInfo(DRMConnectorInfo *info) {
   }
   for (auto i = 0; i < drm_connector_->count_modes; i++) {
     DRMModeInfo modes_item {};
+    if (!drm_connector_->modes) {
+      DLOGW("Connector %u not found.", conn_id);
+      return 0;
+    }
     modes_item.mode = drm_connector_->modes[i];
     info->modes.push_back(modes_item);
   }
