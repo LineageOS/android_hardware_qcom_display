@@ -714,6 +714,9 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   // Convert the luminance values to cd/m^2 units.
   hw_panel_info_.peak_luminance = FLOAT(connector_info_.panel_hdr_prop.peak_brightness) / 10000.0f;
   hw_panel_info_.blackness_level = FLOAT(connector_info_.panel_hdr_prop.blackness_level) / 10000.0f;
+  hw_panel_info_.average_luminance = FLOAT(connector_info_.panel_hdr_prop.peak_brightness +
+                                           connector_info_.panel_hdr_prop.blackness_level) /
+                                           (2 * 10000.0f);
   hw_panel_info_.primaries.white_point[0] = connector_info_.panel_hdr_prop.display_primaries[0];
   hw_panel_info_.primaries.white_point[1] = connector_info_.panel_hdr_prop.display_primaries[1];
   hw_panel_info_.primaries.red[0] = connector_info_.panel_hdr_prop.display_primaries[2];
