@@ -3162,12 +3162,12 @@ void HWCSession::HandlePendingHotplug(hwc2_display_t disp_id,
 
 int32_t HWCSession::GetReadbackBufferAttributes(hwc2_display_t display, int32_t *format,
                                                 int32_t *dataspace) {
-  if (!format || !dataspace) {
-    return HWC2_ERROR_BAD_PARAMETER;
-  }
-
   if (display >= HWCCallbacks::kNumDisplays) {
     return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  if (!format || !dataspace) {
+    return HWC2_ERROR_BAD_PARAMETER;
   }
 
   if (display != HWC_DISPLAY_PRIMARY) {
@@ -3189,12 +3189,13 @@ int32_t HWCSession::GetReadbackBufferAttributes(hwc2_display_t display, int32_t 
 
 int32_t HWCSession::SetReadbackBuffer(hwc2_display_t display, const native_handle_t *buffer,
                                       const shared_ptr<Fence> &acquire_fence) {
-  if (!buffer) {
-    return HWC2_ERROR_BAD_PARAMETER;
-  }
 
   if (display >= HWCCallbacks::kNumDisplays) {
     return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  if (!buffer) {
+    return HWC2_ERROR_BAD_PARAMETER;
   }
 
   if (display != HWC_DISPLAY_PRIMARY) {
@@ -3214,12 +3215,12 @@ int32_t HWCSession::SetReadbackBuffer(hwc2_display_t display, const native_handl
 
 int32_t HWCSession::GetReadbackBufferFence(hwc2_display_t display,
                                            shared_ptr<Fence> *release_fence) {
-  if (!release_fence) {
-    return HWC2_ERROR_BAD_PARAMETER;
-  }
-
   if (display >= HWCCallbacks::kNumDisplays) {
     return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  if (!release_fence) {
+    return HWC2_ERROR_BAD_PARAMETER;
   }
 
   if (display != HWC_DISPLAY_PRIMARY) {
