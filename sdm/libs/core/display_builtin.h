@@ -160,6 +160,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   bool CanDeferFpsConfig(uint32_t fps);
   void SetDeferredFpsConfig();
   void GetFpsConfig(HWDisplayAttributes *display_attributes, HWPanelInfo *panel_info);
+  PrimariesTransfer GetBlendSpaceFromStcColorMode(const snapdragoncolor::ColorMode &color_mode);
 
   const uint32_t kPuTimeOutMs = 1000;
   std::vector<HWEvent> event_list_;
@@ -190,6 +191,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DeferFpsConfig deferred_config_ = {};
 
   snapdragoncolor::ColorMode current_color_mode_ = {};
+  snapdragoncolor::ColorModeList stc_color_modes_ = {};
 };
 
 }  // namespace sdm
