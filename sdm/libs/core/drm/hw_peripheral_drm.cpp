@@ -492,6 +492,9 @@ void HWPeripheralDRM::ConfigureConcurrentWriteback(LayerStack *layer_stack) {
     dst.bottom = mixer_attributes_.height;
   }
 
+  DLOGV_IF(kTagDriverConfig, "CWB Mode:%d dst.left:%d dst.top:%d dst.right:%d dst.bottom:%d",
+    capture_mode, dst.left, dst.top, dst.right, dst.bottom);
+
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_RECT, cwb_config_.token.conn_id, dst);
 }
 

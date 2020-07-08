@@ -51,6 +51,7 @@ class DisplayNull : public DisplayInterface {
   virtual DisplayError GetFrameBufferConfig(DisplayConfigVariableInfo *variable_info);
   virtual DisplayError GetConfig(uint32_t index, DisplayConfigVariableInfo *disp_attr);
   virtual DisplayError GetConfig(DisplayConfigFixedInfo *fixed_info);
+  virtual DisplayError GetRealConfig(uint32_t index, DisplayConfigVariableInfo *disp_attr);
   virtual DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate, uint32_t *max_refresh_rate);
   virtual DisplayError GetActiveConfig(uint32_t *config);
   virtual DisplayError GetNumVariableInfoConfigs(uint32_t *count);

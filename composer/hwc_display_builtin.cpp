@@ -886,8 +886,8 @@ HWC2::Error HWCDisplayBuiltIn::SetFrameDumpConfig(uint32_t count, uint32_t bit_m
   // Allocate and map output buffer
   if (post_processed) {
     // To dump post-processed (DSPP) output, use Panel resolution.
-    GetPanelResolution(&output_buffer_info_.buffer_config.width,
-                       &output_buffer_info_.buffer_config.height);
+    GetRealPanelResolution(&output_buffer_info_.buffer_config.width,
+                           &output_buffer_info_.buffer_config.height);
   } else {
     // To dump Layer Mixer output, use FrameBuffer resolution.
     GetFrameBufferResolution(&output_buffer_info_.buffer_config.width,
