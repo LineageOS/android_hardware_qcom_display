@@ -97,6 +97,21 @@ shared_ptr<Fence> Fence::Merge(const shared_ptr<Fence> &fence1, const shared_ptr
   return Create(merged, name);
 }
 
+shared_ptr<Fence> Fence::Merge(const std::vector<shared_ptr<Fence>> &fences, bool ignore_signaled) {
+  ASSERT_IF_NO_BUFFER_SYNC(g_buffer_sync_handler_);
+
+  shared_ptr<Fence> merged_fence = nullptr;
+  for (auto &fence : fences) {
+    if (ignore_signaled && (Fence::Wait(fence, 0) == kErrorNone)) {
+      continue;
+    }
+
+    merged_fence = Fence::Merge(fence, merged_fence);
+  }
+
+  return merged_fence;
+}
+
 DisplayError Fence::Wait(const shared_ptr<Fence> &fence) {
   ASSERT_IF_NO_BUFFER_SYNC(g_buffer_sync_handler_);
 

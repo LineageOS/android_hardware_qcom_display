@@ -78,6 +78,9 @@ class Fence {
 
   static shared_ptr<Fence> Merge(const shared_ptr<Fence> &fence1, const shared_ptr<Fence> &fence2);
 
+  static shared_ptr<Fence> Merge(const std::vector<shared_ptr<Fence>> &fences,
+                                 bool ignore_signaled);
+
   // Wait on null fence will return success.
   static DisplayError Wait(const shared_ptr<Fence> &fence);
   static DisplayError Wait(const shared_ptr<Fence> &fence, int timeout);
