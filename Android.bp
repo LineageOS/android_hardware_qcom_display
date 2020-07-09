@@ -1,3 +1,6 @@
+soong_namespace {
+}
+
 soong_config_module_type {
     name: "qtidisplay_cc_defaults",
     module_type: "cc_defaults",
@@ -15,7 +18,7 @@ soong_config_module_type {
 }
 
 qtidisplay_cc_defaults {
-    name: "qtidisplay_defaults",
+    name: "qtidisplay_common_defaults",
     cflags: [
         "-Wno-missing-field-initializers",
         "-Wall",
@@ -26,7 +29,6 @@ qtidisplay_cc_defaults {
         "libcutils",
         "libutils",
     ],
-    header_libs: ["display_headers"],
     clang: true,
     soong_config_variables: {
         drmpp: {
@@ -45,6 +47,18 @@ qtidisplay_cc_defaults {
             cflags: ["-DTARGET_USES_GRALLOC4"],
         },
     },
+}
+
+qtidisplay_cc_defaults {
+    name: "qtidisplay_defaults",
+    defaults: ["qtidisplay_common_defaults"],
+    header_libs: ["display_headers"],
+}
+
+qtidisplay_cc_defaults {
+    name: "qti_qmaa_display_defaults",
+    defaults: ["qtidisplay_common_defaults"],
+    header_libs: ["qmaa_display_headers"],
 }
 
 cc_library_headers {
@@ -81,6 +95,20 @@ cc_library_headers {
     ],
 }
 
+cc_library_headers {
+    name: "qmaa_display_headers",
+    vendor: true,
+    export_include_dirs: [
+
+    ],
+    header_libs: [
+        "display_debug_headers",
+    ],
+    export_header_lib_headers: [
+        "display_debug_headers",
+    ],
+}
+
 subdirs = [
     "init",
     "libqservice",
@@ -97,4 +125,5 @@ subdirs = [
     "sde-drm",
     "sdm/libs/utils",
     "sdm/libs/core",
+    "qmaa",
 ]

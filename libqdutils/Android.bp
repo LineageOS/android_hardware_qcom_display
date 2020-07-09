@@ -1,3 +1,9 @@
+soong_namespace {
+    imports: [
+        "hardware/qcom/display",
+        "hardware/qcom/display/libqservice",
+    ],
+}
 cc_library_shared {
     name: "libqdutils",
     defaults: ["qtidisplay_defaults"],

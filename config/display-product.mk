@@ -139,18 +139,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_hw_recovery_dump=1
 endif
 
-# Soong Namespace
-SOONG_CONFIG_NAMESPACES += qtidisplay
-# Soong Keys
-SOONG_CONFIG_qtidisplay := drmpp headless llvmsa gralloc4
-# Soong Values
-SOONG_CONFIG_qtidisplay_drmpp := true
-SOONG_CONFIG_qtidisplay_headless := false
-SOONG_CONFIG_qtidisplay_llvmsa := false
-SOONG_CONFIG_qtidisplay_gralloc4 := true
-
-
-QMAA_ENABLED_HAL_MODULES += display
 ifeq ($(TARGET_USES_QMAA),true)
     ifeq ($(TARGET_USES_QMAA_OVERRIDE_DISPLAY),true)
         PRODUCT_PROPERTY_OVERRIDES += \
@@ -161,11 +149,50 @@ ifeq ($(TARGET_USES_QMAA),true)
         PRODUCT_PACKAGES += libgpu_tonemapper
     else
     TARGET_IS_HEADLESS := true
-    SOONG_CONFIG_qtidisplay_headless := true
     PRODUCT_PROPERTY_OVERRIDES += \
         vendor.display.enable_null_display=1
     endif
 endif
+
+# Soong Namespace
+SOONG_CONFIG_NAMESPACES += qtidisplay
+
+# Soong Keys
+SOONG_CONFIG_qtidisplay := drmpp headless llvmsa gralloc4
+
+# Soong Values
+SOONG_CONFIG_qtidisplay_drmpp := true
+SOONG_CONFIG_qtidisplay_headless := false
+SOONG_CONFIG_qtidisplay_llvmsa := false
+SOONG_CONFIG_qtidisplay_gralloc4 := true
+
+ifeq ($(TARGET_IS_HEADLESS), true)
+    PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/qmaa
+    SOONG_CONFIG_qtidisplay_headless := true
+else
+    PRODUCT_SOONG_NAMESPACES += hardware/qcom/display
+    PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/composer
+    PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/gpu_tonemapper
+    PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/hdmi_cec
+    PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/libdebug
+    PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/libdrmutils
+    PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/libhistogram
+    PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/liblight
+    PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/libmemtrack
+    PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/libqdutils
+    PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/libqservice
+    PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/sde-drm
+    PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/sdm/libs/core
+    PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/sdm/libs/utils
+endif
+
+#Modules that will be added in QMAA/Non-QMAA paths
+PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/gralloc
+PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/init
+
+
+
+QMAA_ENABLED_HAL_MODULES += display
 
 # Properties using default value:
 #    vendor.display.disable_hw_recovery=0
