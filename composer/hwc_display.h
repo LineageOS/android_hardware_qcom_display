@@ -168,7 +168,10 @@ class HWCDisplay : public DisplayEventHandler {
     std::multiset<HWCLayer *, SortLayersByZ> layer_set;  // Maintain a set sorted by Z
   };
 
-  virtual ~HWCDisplay() {}
+  virtual ~HWCDisplay() {
+    int ret = 0;
+    ret = Fence::CheckFstat(layer_stack_.retire_fence);
+  }
   virtual int Init();
   virtual int Deinit();
 
