@@ -327,6 +327,9 @@ DisplayError HWPeripheralDRM::SetDppsFeature(void *payload, size_t size) {
     }
   }
 
+  if (feature_id == sde_drm::kFeatureLtmHistCtrl)
+    ltm_hist_en_ = value;
+
   if (object_type == DRM_MODE_OBJECT_CRTC) {
     obj_id = token_.crtc_id;
   } else if (object_type == DRM_MODE_OBJECT_CONNECTOR) {
