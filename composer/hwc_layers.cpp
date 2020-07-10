@@ -419,6 +419,8 @@ HWC2::Error HWCLayer::SetLayerDisplayFrame(hwc_rect_t frame) {
     geometry_changes_ |= kDisplayFrame;
     dst_rect_ = dst_rect;
   }
+  DLOGI("Destination left=%u, top=%u, right=%u, bottom=%u", UINT32(dst_rect_.left),
+    UINT32(dst_rect_.top), UINT32(dst_rect_.right), UINT32(dst_rect_.bottom));
 
   return HWC2::Error::None;
 }
