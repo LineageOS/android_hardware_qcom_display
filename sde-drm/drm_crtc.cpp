@@ -342,6 +342,10 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
     return;
   }
 
+  if (!blob->data) {
+    return;
+  }
+
   char *fmt_str = new char[blob->length + 1];
   memcpy (fmt_str, blob->data, blob->length);
   fmt_str[blob->length] = '\0';
