@@ -31,6 +31,12 @@ cc_library_shared {
     }) + select(soong_config_variable("qtidisplay", "target_no_raw10_custom_format"), {
         "true": ["-DNO_RAW10_CUSTOM_FORMAT"],
         default: [],
+    }) + select(soong_config_variable("qtidisplay", "target_uses_aligned_ycbcr_height"), {
+        "true": ["-DUSE_ALIGNED_YCBCR_HEIGHT"],
+        default: [],
+    }) + select(soong_config_variable("qtidisplay", "target_uses_aligned_ycrcb_height"), {
+        "true": ["-DUSE_ALIGNED_YCRCB_HEIGHT"],
+        default: [],
     }) + select(soong_config_variable("qtidisplay", "target_uses_legacy_buffer_alignment"), {
         "true": ["-DUSE_LEGACY_BUFFER_ALIGNMENT"],
         default: [],
