@@ -99,7 +99,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
     debug.sf.high_fps_late_sf_phase_offset_ns=-4000000 \
     debug.sf.high_fps_early_phase_offset_ns=-4000000 \
     debug.sf.high_fps_early_gl_phase_offset_ns=-4000000 \
-    debug.sf.disable_client_composition_cache=1
+    debug.sf.disable_client_composition_cache=1 \
+    debug.sf.enable_gl_backpressure=1
 
 # Enable offline rotator for Bengal.
 ifneq ($(TARGET_BOARD_PLATFORM),bengal)
@@ -109,11 +110,6 @@ else
 PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_rotator_ubwc=1 \
     vendor.display.disable_layer_stitch=0
-endif
-
-ifeq ($(TARGET_BOARD_PLATFORM),kona)
-PRODUCT_PROPERTY_OVERRIDES += \
-    debug.sf.enable_gl_backpressure=1
 endif
 
 ifneq ($(PLATFORM_VERSION), 10)
