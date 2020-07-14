@@ -149,9 +149,7 @@ class QtiMapper : public IQtiMapper {
     std::memcpy(&out[index], &bd_info.usage, sizeof(bd_info.usage));
     index += sizeof(bd_info.usage);
 
-    // Cap the reserved region size at one page (4096 bytes)
-    uint64_t reserved_size = std::min(bd_info.reservedSize, (uint64_t)4096);
-    std::memcpy(&out[index], &reserved_size, sizeof(reserved_size));
+    std::memcpy(&out[index], &bd_info.reservedSize, sizeof(bd_info.reservedSize));
 
     return out;
   }
@@ -265,7 +263,11 @@ class QtiMapper : public IQtiMapper {
       {qtigralloc::MetadataType_FD, "fd from private_handle_t", true, false},
       {qtigralloc::MetadataType_PrivateFlags, "Flags in private_handle_t", true, false},
       {qtigralloc::MetadataType_AlignedWidthInPixels, "width in private_handle_t", true, false},
-      {qtigralloc::MetadataType_AlignedHeightInPixels, "height in private_handle_t", true, false}
+      {qtigralloc::MetadataType_AlignedHeightInPixels, "height in private_handle_t", true, false},
+#ifdef METADATA_V2
+      {qtigralloc::MetadataType_StandardMetadataStatus, "Is standard metadata set", true, false},
+      {qtigralloc::MetadataType_VendorMetadataStatus, "Is vendor metadata set", true, false}
+#endif
   };
 };
 
