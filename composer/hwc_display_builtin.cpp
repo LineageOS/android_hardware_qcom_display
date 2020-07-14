@@ -868,16 +868,17 @@ void HWCDisplayBuiltIn::HandleFrameDump() {
 HWC2::Error HWCDisplayBuiltIn::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
                                                   int32_t format, bool post_processed) {
   HWCDisplay::SetFrameDumpConfig(count, bit_mask_layer_type, format, post_processed);
-  dump_output_to_file_ = bit_mask_layer_type & (1 << OUTPUT_LAYER_DUMP);
+  bool dump_output_to_file = bit_mask_layer_type & (1 << OUTPUT_LAYER_DUMP);
   DLOGI("output_layer_dump_enable %d", dump_output_to_file_);
 
-  if (dump_output_to_file_) {
+  if (dump_output_to_file) {
     if (cwb_client_ != kCWBClientNone) {
-      DLOGE("CWB is in use with client = %d", cwb_client_);
-      dump_output_to_file_ = false;
+      DLOGW("CWB is in use with client = %d", cwb_client_);
       return HWC2::Error::NoResources;
     }
   }
+
+  dump_output_to_file_ = dump_output_to_file;
 
   if (!count || !dump_output_to_file_ || (output_buffer_info_.alloc_buffer_info.fd >= 0)) {
     return HWC2::Error::None;
