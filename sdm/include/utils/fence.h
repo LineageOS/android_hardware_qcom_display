@@ -90,6 +90,8 @@ class Fence {
   // Write all fences info to the output stream.
   static void Dump(std::ostringstream *os);
 
+  static int CheckFstat(const shared_ptr<Fence> &fence);
+
  private:
   explicit Fence(int fd, const string &name);
   Fence(const Fence &fence) = delete;

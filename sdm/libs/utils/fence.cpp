@@ -27,7 +27,11 @@
 * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <utils/fence.h>
+#include <utils/debug.h>
 #include <debug_handler.h>
 #include <assert.h>
 #include <string>
@@ -142,6 +146,30 @@ void Fence::Dump(std::ostringstream *os) {
     g_buffer_sync_handler_->GetSyncInfo(fence->fd_, os);
   }
   *os << "\n---------------------------------------\n";
+}
+
+int Fence::CheckFstat(const shared_ptr<Fence> &fence) {
+  struct stat buf1;
+  int ret;
+
+  if (!fence) {
+    DLOGW("Fence shared_ptr is NULL");
+    // Return 0 because only NULL on first cycle.
+    return 0;
+  }
+  if (!fence.get()) {
+    DLOGW("Underlying pointer is NULL.");
+    return 0;
+  }
+  ret = fstat(fence->fd_, &buf1);
+  if (ret) {
+    DLOGW("Fstat lookup failed");
+    return -1;
+  }
+  DLOGI("Fence fd=%d, ion=%llu, use_count=%d", fence->fd_, (uint64_t)buf1.st_ino,
+    fence.use_count());
+
+  return 0;
 }
 
 Fence::ScopedRef::~ScopedRef() {
