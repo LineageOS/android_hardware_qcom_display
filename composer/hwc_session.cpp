@@ -1670,6 +1670,24 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       status = SetDisplayBrightnessScale(input_parcel);
       break;
 
+    case qService::IQService::SET_VSYNC_STATE: {
+      if (!input_parcel || !output_parcel) {
+        DLOGE("Qservice command = %d: input_parcel needed.", command);
+        break;
+      }
+      auto display = input_parcel->readInt32();
+      int32_t enable = input_parcel->readInt32();
+      int32_t vsync_state = HWC2_VSYNC_INVALID;
+      if (enable == 0) {
+        vsync_state = HWC2_VSYNC_DISABLE;
+      } else if (enable == 1) {
+        vsync_state = HWC2_VSYNC_ENABLE;
+      }
+      status = SetVsyncEnabled(display, vsync_state);
+      output_parcel->writeInt32(status);
+    }
+    break;
+
     default:
       DLOGW("QService command = %d is not supported.", command);
       break;
