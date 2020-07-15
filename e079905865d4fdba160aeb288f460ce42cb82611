@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "6aa90707_a9728223",
+        "filename": "gralloc/gr_utils.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 840,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2020-07-15T21:56:57Z",
+      "side": 1,
+      "message": "alignment",
+      "range": {
+        "startLine": 840,
+        "startChar": 32,
+        "endLine": 840,
+        "endChar": 34
+      },
+      "revId": "e079905865d4fdba160aeb288f460ce42cb82611",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "687ae4ea_a8985811",
+        "filename": "gralloc/gr_utils.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 851,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2020-07-15T21:56:57Z",
+      "side": 1,
+      "message": "alignment",
+      "range": {
+        "startLine": 851,
+        "startChar": 32,
+        "endLine": 851,
+        "endChar": 34
+      },
+      "revId": "e079905865d4fdba160aeb288f460ce42cb82611",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
