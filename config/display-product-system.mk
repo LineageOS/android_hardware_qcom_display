@@ -14,3 +14,13 @@ PRODUCT_PACKAGES += libdisplayconfig \
                     libsmomoconfig.qti \
                     libcomposerextn.qti \
                     libdisplayconfig.qti
+
+SOONG_CONFIG_NAMESPACES += qtidisplaycommonsys
+# Soong Keys
+SOONG_CONFIG_qtidisplaycommonsys := displayconfig_enabled
+# Soong Values
+SOONG_CONFIG_qtidisplaycommonsys_displayconfig_enabled := false
+
+ifeq ($(call is-vendor-board-platform,QCOM),true)
+    SOONG_CONFIG_qtidisplaycommonsys_displayconfig_enabled := true
+endif
