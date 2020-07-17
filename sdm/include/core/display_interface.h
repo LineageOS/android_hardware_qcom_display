@@ -977,6 +977,12 @@ class DisplayInterface {
   */
   virtual DisplayError GetSupportedModeSwitch(uint32_t *allowed_mode_switch) = 0;
 
+  /*! @brief Method to clear scaler LUTs.
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError ClearLUTs() = 0;
+
  protected:
   virtual ~DisplayInterface() { }
 };

@@ -174,6 +174,9 @@ class DisplayBase : public DisplayInterface {
     return kErrorNotSupported;
   }
   virtual DisplayError GetSupportedModeSwitch(uint32_t *allowed_mode_switch);
+  virtual DisplayError ClearLUTs() {
+    return kErrorNotSupported;
+  }
 
  protected:
   const char *kBt2020Pq = "bt2020_pq";

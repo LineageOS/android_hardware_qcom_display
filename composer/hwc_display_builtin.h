@@ -176,6 +176,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   void PostCommitStitchLayers();
   void SetCpuPerfHintLargeCompCycle();
   void SetPartialUpdate(DisplayConfigFixedInfo fixed_info);
+  void ValidateScalingForDozeMode();
 
   // SyncTask methods.
   void OnTask(const LayerStitchTaskCode &task_code,
@@ -221,6 +222,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   bool vndservice_sampling_vote = false;
   int perf_hint_window_ = 0;
   int perf_hint_large_comp_cycle_ = 0;
+  bool scaling_in_doze_ = false;
 };
 
 }  // namespace sdm
