@@ -19,6 +19,24 @@
     },
     {
       "key": {
+        "uuid": "8e9bba59_54fb4525",
+        "filename": "sdm/include/core/layer_stack.h",
+        "patchSetId": 9
+      },
+      "lineNbr": 191,
+      "author": {
+        "id": 24438
+      },
+      "writtenOn": "2020-07-17T22:47:01Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "cb67ee8e_7a259254",
+      "revId": "0ad2c61b64227033c0934c7f02241052615a548c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "efafb061_c5ec1f67",
         "filename": "sdm/libs/core/drm/hw_device_drm.cpp",
         "patchSetId": 9
@@ -36,6 +54,24 @@
     },
     {
       "key": {
+        "uuid": "2c31476a_359ac8bf",
+        "filename": "sdm/libs/core/drm/hw_device_drm.cpp",
+        "patchSetId": 9
+      },
+      "lineNbr": 1118,
+      "author": {
+        "id": 24438
+      },
+      "writtenOn": "2020-07-17T22:47:01Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "efafb061_c5ec1f67",
+      "revId": "0ad2c61b64227033c0934c7f02241052615a548c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "88a5635d_1f07d201",
         "filename": "sdm/libs/hwc2/hwc_layers.cpp",
         "patchSetId": 9
@@ -50,6 +86,24 @@
       "revId": "0ad2c61b64227033c0934c7f02241052615a548c",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "c8d26035_fddf8d6e",
+        "filename": "sdm/libs/hwc2/hwc_layers.cpp",
+        "patchSetId": 9
+      },
+      "lineNbr": 545,
+      "author": {
+        "id": 24438
+      },
+      "writtenOn": "2020-07-17T22:47:01Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "88a5635d_1f07d201",
+      "revId": "0ad2c61b64227033c0934c7f02241052615a548c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
