@@ -616,6 +616,11 @@ void DisplayBuiltIn::IdlePowerCollapse() {
   }
 }
 
+DisplayError DisplayBuiltIn::ClearLUTs() {
+  comp_manager_->ProcessIdlePowerCollapse(display_comp_ctx_);
+  return kErrorNone;
+}
+
 void DisplayBuiltIn::PanelDead() {
   event_handler_->HandleEvent(kPanelDeadEvent);
   event_handler_->Refresh();

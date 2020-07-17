@@ -175,6 +175,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   void SetBwLimitHint(bool enable);
   void SetPartialUpdate(DisplayConfigFixedInfo fixed_info);
   uint32_t GetUpdatingAppLayersCount();
+  void ValidateScalingForDozeMode();
 
   // SyncTask methods.
   void OnTask(const LayerStitchTaskCode &task_code,
@@ -227,6 +228,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   bool enable_bw_limits_ = false;
   bool disable_dyn_fps_ = false;
   bool enhance_idle_time_ = false;
+  bool scaling_in_doze_ = false;
 };
 
 }  // namespace sdm

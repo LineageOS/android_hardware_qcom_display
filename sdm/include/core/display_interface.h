@@ -943,6 +943,12 @@ class DisplayInterface {
   */
   virtual DisplayError GetQSyncMode(QSyncMode *qsync_mode) = 0;
 
+  /*! @brief Method to clear scaler LUTs.
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError ClearLUTs() = 0;
+
  protected:
   virtual ~DisplayInterface() { }
 };

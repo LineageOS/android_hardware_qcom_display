@@ -121,6 +121,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(colorSamplingOn());
   MAKE_NO_OP(colorSamplingOff());
   MAKE_NO_OP(SetDisplayElapseTime(uint64_t))
+  MAKE_NO_OP(ClearLUTs())
 
  protected:
   DisplayConfigVariableInfo default_variable_config_ = {};

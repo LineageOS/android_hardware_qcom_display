@@ -1091,6 +1091,10 @@ bool HWCLayer::IsScalingPresent() {
   uint32_t dst_width  = static_cast<uint32_t>(layer_->dst_rect.right - layer_->dst_rect.left);
   uint32_t dst_height = static_cast<uint32_t>(layer_->dst_rect.bottom - layer_->dst_rect.top);
 
+  if ((layer_->transform.rotation == 90.0) || (layer_->transform.rotation == 270.0)) {
+    std::swap(src_width, src_height);
+  }
+
   return ((src_width != dst_width) || (dst_height != src_height));
 }
 
