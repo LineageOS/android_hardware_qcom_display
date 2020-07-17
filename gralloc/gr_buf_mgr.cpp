@@ -661,8 +661,8 @@ static Error getFormatLayout(private_handle_t *handle, std::vector<PlaneLayout> 
     plane_info[i].sampleIncrementInBits = static_cast<int64_t>(plane_layout[i].step * 8);
     plane_info[i].strideInBytes = static_cast<int64_t>(plane_layout[i].stride_bytes);
     plane_info[i].totalSizeInBytes = static_cast<int64_t>(plane_layout[i].size);
-    plane_info[i].widthInSamples = handle->unaligned_width;
-    plane_info[i].heightInSamples = handle->unaligned_height;
+    plane_info[i].widthInSamples = handle->unaligned_width >> plane_layout[i].h_subsampling;
+    plane_info[i].heightInSamples = handle->unaligned_height >> plane_layout[i].v_subsampling;
   }
   *out = plane_info;
   return Error::NONE;
