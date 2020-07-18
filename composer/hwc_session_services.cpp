@@ -1193,4 +1193,41 @@ int HWCSession::DisplayConfigImpl::ControlQsyncCallback(bool enable) {
   return 0;
 }
 
+int HWCSession::DisplayConfigImpl::GetDisplayHwId(uint32_t disp_id, uint32_t *display_hw_id) {
+  int disp_idx = hwc_session_->GetDisplayIndex(disp_id);
+  if (disp_idx == -1) {
+    DLOGE("Invalid display = %d", disp_id);
+    return -EINVAL;
+  }
+
+  SCOPE_LOCK(hwc_session_->locker_[disp_id]);
+  if (!hwc_session_->hwc_display_[disp_idx]) {
+    DLOGW("Display %d is not connected.", disp_id);
+    return -EINVAL;
+  }
+
+  int error = -EINVAL;
+  // Supported for Built-In displays only.
+  if ((hwc_session_->map_info_primary_.client_id == disp_id) &&
+      (hwc_session_->map_info_primary_.disp_type == kBuiltIn)) {
+    if (hwc_session_->map_info_primary_.sdm_id >= 0) {
+      *display_hw_id = static_cast<uint32_t>(hwc_session_->map_info_primary_.sdm_id);
+      error = 0;
+    }
+    return error;
+  }
+
+  for (auto &info : hwc_session_->map_info_builtin_) {
+    if (disp_id == info.client_id) {
+      if (info.sdm_id >= 0) {
+        *display_hw_id = static_cast<uint32_t>(info.sdm_id);
+        error = 0;
+      }
+      return error;
+    }
+  }
+
+  return error;
+}
+
 }  // namespace sdm
