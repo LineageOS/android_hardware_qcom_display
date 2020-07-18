@@ -91,8 +91,9 @@ DisplayError PPFeaturesConfig::RetrieveNextFeature(PPFeatureInfo **feature) {
   return ret;
 }
 
-FeatureInterface* GetPostedStartFeatureCheckIntf(HWInterface *intf, PPFeaturesConfig *config) {
-  return new ColorFeatureCheckingImpl(intf, config);
+FeatureInterface* GetPostedStartFeatureCheckIntf(HWInterface *intf, PPFeaturesConfig *config,
+                                                 bool dyn_switch) {
+  return new ColorFeatureCheckingImpl(intf, config, dyn_switch);
 }
 
 DisplayError ColorManagerProxy::Init(const HWResourceInfo &hw_res_info) {
@@ -137,18 +138,27 @@ ColorManagerProxy::ColorManagerProxy(int32_t id, DisplayType type, HWInterface *
     : display_id_(id), device_type_(type), pp_hw_attributes_(), hw_intf_(intf),
       color_intf_(NULL), pp_features_(), feature_intf_(NULL) {
   int32_t enable_posted_start_dyn = 0;
+  bool dyn_switch = false;
   Debug::Get()->GetProperty(ENABLE_POSTED_START_DYN_PROP, &enable_posted_start_dyn);
-  if (enable_posted_start_dyn && info.mode == kModeCommand) {
-    feature_intf_ = GetPostedStartFeatureCheckIntf(intf, &pp_features_);
-    if (!feature_intf_) {
-      DLOGI("Failed to create feature interface");
-    } else {
-      DisplayError err = feature_intf_->Init();
-      if (err) {
-        DLOGE("Failed to init feature interface");
-        delete feature_intf_;
-        feature_intf_ = NULL;
+  if (info.mode == kModeCommand) {
+    switch (enable_posted_start_dyn) {
+    case kControlWithPostedStartDynSwitch:
+      dyn_switch = true;
+    case kControlPostedStart:
+      feature_intf_ = GetPostedStartFeatureCheckIntf(intf, &pp_features_, dyn_switch);
+      if (!feature_intf_) {
+        DLOGI("Failed to create feature interface");
+      } else {
+        DisplayError err = feature_intf_->Init();
+        if (err) {
+          DLOGE("Failed to init feature interface");
+          delete feature_intf_;
+          feature_intf_ = NULL;
+        }
       }
+      break;
+    default:
+      break;
     }
   }
 }
@@ -623,8 +633,9 @@ DisplayError ColorManagerProxy::ColorMgrSetStcMode(const ColorMode &color_mode) 
 }
 
 ColorFeatureCheckingImpl::ColorFeatureCheckingImpl(HWInterface *hw_intf,
-                                                   PPFeaturesConfig *pp_features)
-  : hw_intf_(hw_intf), pp_features_(pp_features) {}
+                                                   PPFeaturesConfig *pp_features,
+                                                   bool dyn_switch)
+  : hw_intf_(hw_intf), pp_features_(pp_features), dyn_switch_(dyn_switch) {}
 
 DisplayError ColorFeatureCheckingImpl::Init() {
   states_.at(kFrameTriggerDefault) = new FeatureStateDefaultTrigger(this);
@@ -749,15 +760,22 @@ void ColorFeatureCheckingImpl::CheckColorFeature(FrameTriggerMode *mode) {
     return;
   }
 
-  for (uint32_t i = 0; i < single_buffer_feature_.size(); i++) {
-    id = single_buffer_feature_[i];
-    feature = pp_features_->GetFeature(id);
-    if (feature && (feature->enable_flags_ & kOpsEnable)) {
-      *mode = kFrameTriggerDefault;
-      return;
+// Due to lack of hardware support for SB LUTDMA on older targets,
+// control path has to be switched dynamically to non posted start and
+// switch back to posted start after programming the SB LUTs.
+// This restriction can be removed for targets supporting
+// SB programming of color modules through SB LUTDMA during the blanking period.
+
+  if (dyn_switch_) {
+    for (uint32_t i = 0; i < single_buffer_feature_.size(); i++) {
+      id = single_buffer_feature_[i];
+      feature = pp_features_->GetFeature(id);
+      if (feature && (feature->enable_flags_ & kOpsEnable)) {
+        *mode = kFrameTriggerDefault;
+        return;
+      }
     }
   }
-
   *mode = kFrameTriggerPostedStart;
 }
 

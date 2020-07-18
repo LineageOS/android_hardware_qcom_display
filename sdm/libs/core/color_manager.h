@@ -81,6 +81,13 @@ enum FeatureOps {
   kFeatureOpsMax,
 };
 
+enum ControlOps {
+  kControlNonPostedStart,
+  kControlWithPostedStartDynSwitch,
+  kControlPostedStart,
+  kControlOpsMax,
+};
+
 class FeatureInterface {
  public:
   virtual ~FeatureInterface() {}
@@ -91,7 +98,7 @@ class FeatureInterface {
 };
 
 FeatureInterface* GetPostedStartFeatureCheckIntf(HWInterface *intf,
-                                                 PPFeaturesConfig *config);
+                                                 PPFeaturesConfig *config, bool dyn_switch);
 
 /*
  * ColorManager proxy to maintain necessary information to interact with underlying color service.
@@ -179,7 +186,8 @@ class ColorManagerProxy {
 
 class ColorFeatureCheckingImpl : public FeatureInterface {
  public:
-  explicit ColorFeatureCheckingImpl(HWInterface *hw_intf, PPFeaturesConfig *pp_features);
+  explicit ColorFeatureCheckingImpl(HWInterface *hw_intf, PPFeaturesConfig *pp_features,
+    bool dyn_switch);
   virtual ~ColorFeatureCheckingImpl() { }
 
   DisplayError Init();
@@ -198,6 +206,7 @@ class ColorFeatureCheckingImpl : public FeatureInterface {
   FeatureInterface *curr_state_ = NULL;
   std::vector<PPGlobalColorFeatureID> single_buffer_feature_;
   void CheckColorFeature(FrameTriggerMode *mode);
+  bool dyn_switch_ = false;
 };
 
 class FeatureStatePostedStart : public FeatureInterface {
