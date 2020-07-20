@@ -50,9 +50,24 @@ using ::android::hardware::hidl_vec;
 typedef hidl_vec<uint8_t> ByteStream;
 typedef hidl_vec<hidl_handle> HandleStream;
 
-class ClientImpl : public ClientInterface, public IDisplayConfigCallback {
+class ClientCallback: public IDisplayConfigCallback {
+ public:
+  ClientCallback(ConfigCallback *cb) {
+    callback_ = cb;
+  }
+
+ private:
+  virtual Return<void> perform(uint32_t op_code, const ByteStream &input_params,
+                               const HandleStream &input_handles);
+  void ParseNotifyCWBBufferDone(const ByteStream &input_params, const HandleStream &input_handles);
+  void ParseNotifyQsyncChange(const ByteStream &input_params);
+  ConfigCallback *callback_ = nullptr;
+};
+
+class ClientImpl : public ClientInterface {
  public:
   int Init(std::string client_name, ConfigCallback *callback);
+  void DeInit();
 
   virtual int IsDisplayConnected(DisplayType dpy, bool *connected);
   virtual int SetDisplayStatus(DisplayType dpy, ExternalStatus status);
@@ -99,14 +114,10 @@ class ClientImpl : public ClientInterface, public IDisplayConfigCallback {
   virtual int IsSmartPanelConfig(uint32_t disp_id, uint32_t config_id, bool *is_smart);
   virtual int IsRotatorSupportedFormat(int hal_format, bool ubwc, bool *supported);
   virtual int ControlQsyncCallback(bool enable);
+  virtual int SendTUIEvent(DisplayType dpy, TUIEventType event_type);
 
  private:
-  virtual Return<void> perform(uint32_t op_code, const ByteStream &input_params,
-                               const HandleStream &input_handles);
-  void ParseNotifyCWBBufferDone(const ByteStream &input_params, const HandleStream &input_handles);
-  void ParseNotifyQsyncChange(const ByteStream &input_params);
   android::sp<IDisplayConfig> display_config_ = nullptr;
-  ConfigCallback *callback_ = nullptr;
   uint64_t client_handle_ = 0;
 };
 

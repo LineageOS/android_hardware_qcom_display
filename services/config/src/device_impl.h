@@ -66,6 +66,7 @@ class DeviceImpl : public IDisplayConfig, public android::hardware::hidl_death_r
 
     void SetDeviceConfigIntf(ConfigInterface *intf);
     ConfigInterface* GetDeviceConfigIntf();
+    sp<IDisplayConfigCallback> GetDeviceConfigCallback();
 
     virtual void NotifyCWBBufferDone(int32_t error, const native_handle_t *buffer);
     virtual void NotifyQsyncChange(bool qsync_enabled, int32_t refresh_rate,
@@ -115,10 +116,11 @@ class DeviceImpl : public IDisplayConfig, public android::hardware::hidl_death_r
     void ParseIsRotatorSupportedFormat(const ByteStream &input_params, perform_cb _hidl_cb);
     void ParseControlQsyncCallback(uint64_t client_handle, const ByteStream &input_params,
                                    perform_cb _hidl_cb);
+    void ParseSendTUIEvent(const ByteStream &input_params, perform_cb _hidl_cb);
 
    private:
     ConfigInterface *intf_ = nullptr;
-    sp<IDisplayConfigCallback> callback_;
+    const sp<IDisplayConfigCallback> callback_;
   };
 
   Return<void> registerClient(const hidl_string &client_name, const sp<IDisplayConfigCallback>& cb,
@@ -127,6 +129,7 @@ class DeviceImpl : public IDisplayConfig, public android::hardware::hidl_death_r
                        const HandleStream &input_handles, perform_cb _hidl_cb) override;
   void serviceDied(uint64_t client_handle,
                    const android::wp<::android::hidl::base::V1_0::IBase>& callback);
+  void ParseDestroy(uint64_t client_handle, perform_cb _hidl_cb);
 
   ClientContext *intf_ = nullptr;
   std::map<uint64_t, std::shared_ptr<DeviceClientContext>> display_config_map_;

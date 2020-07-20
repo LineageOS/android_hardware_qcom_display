@@ -48,6 +48,7 @@ enum class DisplayType : int {
   kPrimary,
   kExternal,
   kVirtual,
+  kBuiltIn2,
 };
 
 enum class ExternalStatus : int {
@@ -88,6 +89,13 @@ enum class QsyncMode : int {
   kWaitForFencesOneFrame,
   kWaitForFencesEachFrame,
   kWaitForCommitEachFrame,
+};
+
+enum class TUIEventType : int {
+  kNone,
+  kPrepareTUITransition,
+  kStartTUITransition,
+  kEndTUITransition,
 };
 
 // Input and Output Params structures
@@ -219,6 +227,11 @@ struct QsyncCallbackParams {
   int qsync_refresh_rate = 0;
 };
 
+struct TUIEventParams {
+  DisplayType dpy = DisplayType::kInvalid;
+  TUIEventType tui_event_type = TUIEventType::kNone;
+};
+
 /* Callback Interface */
 class ConfigCallback {
  public:
@@ -281,6 +294,7 @@ class ConfigInterface {
   virtual int IsSmartPanelConfig(uint32_t disp_id, uint32_t config_id, bool *is_smart) DEFAULT_RET
   virtual int IsRotatorSupportedFormat(int hal_format, bool ubwc, bool *supported) DEFAULT_RET
   virtual int ControlQsyncCallback(bool enable) DEFAULT_RET
+  virtual int SendTUIEvent(DisplayType dpy, TUIEventType event_type) DEFAULT_RET
 
   // deprecated APIs
   virtual int GetDebugProperty(const std::string prop_name, std::string value) DEFAULT_RET
