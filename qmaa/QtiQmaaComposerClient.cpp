@@ -205,7 +205,6 @@ void implementation::QtiComposerClient::enableCallback(bool enable) {
 // Methods from ::android::hardware::graphics::composer::V2_1::IComposerClient follow.
 implementation::Return<void> implementation::QtiComposerClient::registerCallback(
     const sp<composer_V2_1::IComposerCallback> &callback) {
-  LOG_FATAL_IF(mUseCallback24_, "already registered using registerCallback_2_4");
   callback_ = callback;
 
   onHotplug(this, HWC_DISPLAY_PRIMARY, (int32_t)(HWC2::Connection::Connected));
@@ -698,7 +697,7 @@ implementation::QtiComposerClient::setDisplayBrightness(uint64_t display, float 
 // Methods from ::android::hardware::graphics::composer::V2_4::IComposerClient follow.
 implementation::Return<void> implementation::QtiComposerClient::registerCallback_2_4(
     const sp<composer_V2_4::IComposerCallback> &callback) {
-  LOG_FATAL_IF(callback_ != nullptr, "Already used registerCallback");
+  callback_ = sp<composer_V2_1::IComposerCallback>(callback.get());
   callback24_ = callback;
   mUseCallback24_ = true;
 

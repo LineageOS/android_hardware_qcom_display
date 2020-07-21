@@ -4,6 +4,7 @@ soong_namespace {
         "hardware/qcom/display/sdm/libs/utils",
         "hardware/qcom/display/libdrmutils",
         "hardware/qcom/display/sde-drm",
+        "hardware/qcom/display/libdebug",
     ],
 }
 
