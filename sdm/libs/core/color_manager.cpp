@@ -91,8 +91,9 @@ DisplayError PPFeaturesConfig::RetrieveNextFeature(PPFeatureInfo **feature) {
   return ret;
 }
 
-FeatureInterface* GetPostedStartFeatureCheckIntf(HWInterface *intf, PPFeaturesConfig *config) {
-  return new ColorFeatureCheckingImpl(intf, config);
+FeatureInterface* GetPostedStartFeatureCheckIntf(HWInterface *intf, PPFeaturesConfig *config,
+                                                 bool dyn_switch) {
+  return new ColorFeatureCheckingImpl(intf, config, dyn_switch);
 }
 
 DisplayError ColorManagerProxy::Init(const HWResourceInfo &hw_res_info) {
@@ -137,18 +138,27 @@ ColorManagerProxy::ColorManagerProxy(int32_t id, DisplayType type, HWInterface *
     : display_id_(id), device_type_(type), pp_hw_attributes_(), hw_intf_(intf),
       color_intf_(NULL), pp_features_(), feature_intf_(NULL) {
   int32_t enable_posted_start_dyn = 0;
+  bool dyn_switch = false;
   Debug::Get()->GetProperty(ENABLE_POSTED_START_DYN_PROP, &enable_posted_start_dyn);
-  if (enable_posted_start_dyn && info.mode == kModeCommand) {
-    feature_intf_ = GetPostedStartFeatureCheckIntf(intf, &pp_features_);
-    if (!feature_intf_) {
-      DLOGI("Failed to create feature interface");
-    } else {
-      DisplayError err = feature_intf_->Init();
-      if (err) {
-        DLOGE("Failed to init feature interface");
-        delete feature_intf_;
-        feature_intf_ = NULL;
+  if (info.mode == kModeCommand) {
+    switch (enable_posted_start_dyn) {
+    case kControlWithPostedStartDynSwitch:
+      dyn_switch = true;
+    case kControlPostedStart:
+      feature_intf_ = GetPostedStartFeatureCheckIntf(intf, &pp_features_, dyn_switch);
+      if (!feature_intf_) {
+        DLOGI("Failed to create feature interface");
+      } else {
+        DisplayError err = feature_intf_->Init();
+        if (err) {
+          DLOGE("Failed to init feature interface");
+          delete feature_intf_;
+          feature_intf_ = NULL;
+        }
       }
+      break;
+    default:
+      break;
     }
   }
 }
@@ -212,10 +222,9 @@ ColorManagerProxy *ColorManagerProxy::CreateColorManagerProxy(DisplayType type,
     } else {
       int err = color_manager_proxy->stc_intf_->Init(hw_attr.panel_name);
       if (err) {
-        DLOGE("Failed to init Stc interface, err %d", err);
-        delete color_manager_proxy;
-        color_manager_proxy = NULL;
-        return color_manager_proxy;
+        DLOGW("Failed to init Stc interface, err %d", err);
+        delete color_manager_proxy->stc_intf_;
+        color_manager_proxy->stc_intf_ = NULL;
       }
     }
   }
@@ -247,6 +256,10 @@ DisplayError ColorManagerProxy::ColorSVCRequestRoute(const PPDisplayAPIPayload &
   // On completion, dspp_features_ will be populated and mark dirty with all resolved dspp
   // feature list with paramaters being transformed into target requirement.
   ret = color_intf_->ColorSVCRequestRoute(in_payload, out_payload, &pp_features_, pending_action);
+
+  if (!stc_intf_) {
+    return ret;
+  }
 
   if (!ret && pending_action->action == kGetNumRenderIntents) {
     uint32_t num_render_intent = 0;
@@ -386,6 +399,12 @@ DisplayError ColorManagerProxy::ColorMgrSetColorTransform(uint32_t length,
           length);
     return kErrorParameters;
   }
+
+  if (!stc_intf_) {
+    DLOGE("STC interface is NULL");
+    return kErrorNone;
+  }
+
   struct snapdragoncolor::ColorTransform color_transform = {};
   for (uint32_t i = 0; i < length; i++) {
     color_transform.coeff_array[i] = static_cast<float>(*(trans_data + i));
@@ -556,6 +575,11 @@ void ColorManagerProxy::DumpColorMetaData(const ColorMetaData &color_metadata) {
 }
 
 DisplayError ColorManagerProxy::ColorMgrGetStcModes(ColorModeList *mode_list) {
+  if (!stc_intf_) {
+    DLOGE("STC interface is NULL");
+    return kErrorUndefined;
+  }
+
   ScPayload payload;
   payload.len = sizeof(ColorModeList);
   payload.prop = kModeList;
@@ -572,6 +596,11 @@ DisplayError ColorManagerProxy::ColorMgrGetStcModes(ColorModeList *mode_list) {
 
 DisplayError ColorManagerProxy::ColorMgrSetStcMode(const ColorMode &color_mode) {
   DisplayError error = kErrorNone;
+
+  if (!stc_intf_) {
+    DLOGE("STC interface is NULL");
+    return kErrorUndefined;
+  }
 
   ScPayload in_data = {};
   struct ModeRenderInputParams mode_params = {};
@@ -604,8 +633,9 @@ DisplayError ColorManagerProxy::ColorMgrSetStcMode(const ColorMode &color_mode) 
 }
 
 ColorFeatureCheckingImpl::ColorFeatureCheckingImpl(HWInterface *hw_intf,
-                                                   PPFeaturesConfig *pp_features)
-  : hw_intf_(hw_intf), pp_features_(pp_features) {}
+                                                   PPFeaturesConfig *pp_features,
+                                                   bool dyn_switch)
+  : hw_intf_(hw_intf), pp_features_(pp_features), dyn_switch_(dyn_switch) {}
 
 DisplayError ColorFeatureCheckingImpl::Init() {
   states_.at(kFrameTriggerDefault) = new FeatureStateDefaultTrigger(this);
@@ -730,15 +760,22 @@ void ColorFeatureCheckingImpl::CheckColorFeature(FrameTriggerMode *mode) {
     return;
   }
 
-  for (uint32_t i = 0; i < single_buffer_feature_.size(); i++) {
-    id = single_buffer_feature_[i];
-    feature = pp_features_->GetFeature(id);
-    if (feature && (feature->enable_flags_ & kOpsEnable)) {
-      *mode = kFrameTriggerDefault;
-      return;
+// Due to lack of hardware support for SB LUTDMA on older targets,
+// control path has to be switched dynamically to non posted start and
+// switch back to posted start after programming the SB LUTs.
+// This restriction can be removed for targets supporting
+// SB programming of color modules through SB LUTDMA during the blanking period.
+
+  if (dyn_switch_) {
+    for (uint32_t i = 0; i < single_buffer_feature_.size(); i++) {
+      id = single_buffer_feature_[i];
+      feature = pp_features_->GetFeature(id);
+      if (feature && (feature->enable_flags_ & kOpsEnable)) {
+        *mode = kFrameTriggerDefault;
+        return;
+      }
     }
   }
-
   *mode = kFrameTriggerPostedStart;
 }
 

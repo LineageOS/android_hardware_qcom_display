@@ -436,6 +436,15 @@ class DisplayInterface {
   */
   virtual DisplayError GetConfig(uint32_t index, DisplayConfigVariableInfo *variable_info) = 0;
 
+  /*! @brief Method to get real configuration for variable properties of the display device.
+
+    @param[in] index index of the mode
+    @param[out] variable_info \link DisplayConfigVariableInfo \endlink
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetRealConfig(uint32_t index, DisplayConfigVariableInfo *variable_info) = 0;
+
   /*! @brief Method to get index of active configuration of the display device.
 
     @param[out] index index of the mode corresponding to variable properties.

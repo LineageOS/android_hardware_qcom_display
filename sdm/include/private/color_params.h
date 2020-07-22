@@ -423,6 +423,7 @@ struct SDEIgcLUTData {
   uint32_t *c2_data = NULL;
 };
 
+#define IGC_DITHER_EN (1 << 0)
 struct SDEIgcV30LUTData {
   static const int kMaxIgcLUTEntries = 257;
   uint32_t table_fmt = 0;
@@ -430,6 +431,7 @@ struct SDEIgcV30LUTData {
   uint64_t c0_c1_data = 0;
   uint64_t c2_data = 0;
   uint32_t strength = 0;
+  uint64_t flags = 0;
 };
 
 struct SDEPgcLUTData {

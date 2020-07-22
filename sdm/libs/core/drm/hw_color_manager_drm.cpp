@@ -455,7 +455,8 @@ DisplayError HWColorManagerDrm::GetDrmIGC(const PPFeatureInfo &in_data,
     return kErrorMemory;
   }
 
-  mdp_igc->flags = IGC_DITHER_ENABLE;
+  if (sde_igc->flags & IGC_DITHER_EN)
+    mdp_igc->flags = IGC_DITHER_ENABLE;
   mdp_igc->strength = sde_igc->strength;
 
   c0_c1_data_ptr = reinterpret_cast<uint32_t*>(sde_igc->c0_c1_data);
@@ -511,11 +512,7 @@ DisplayError HWColorManagerDrm::GetDrmPGC(const PPFeatureInfo &in_data,
     return kErrorMemory;
   }
 
-  if ((in_data.enable_flags_ & kOpsEnable) &&
-      (in_data.feature_id_ == kGlobalColorFeaturePgc))
-    mdp_pgc->flags = PGC_8B_ROUND;
-  else
-    mdp_pgc->flags = 0;
+  mdp_pgc->flags = 0;
 
   for (int i = 0, j = 0; i < PGC_TBL_LEN; i++, j += 2) {
     mdp_pgc->c0[i] = (sde_pgc->c0_data[j] & kPgcDataMask) |

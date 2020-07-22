@@ -1,0 +1,52 @@
+soong_namespace {
+    imports: [
+        "hardware/qcom/display",
+    ],
+}
+composer_srcs = ["*.cpp"]
+
+cc_binary {
+
+    name: "vendor.qti.hardware.qmaa.display.composer-service",
+    defaults: ["qti_qmaa_display_defaults"],
+    sanitize: {
+        integer_overflow: true,
+    },
+    vendor: true,
+    relative_install_path: "hw",
+    header_libs: [
+        "display_headers",
+        "qti_kernel_headers",
+    ],
+
+    cflags: [
+        "-Wno-missing-field-initializers",
+        "-Wno-unused-parameter",
+        "-DLOG_TAG=\"SDM\"",
+    ],
+    clang: true,
+
+    shared_libs: [
+        "libbinder",
+        "libhardware",
+        "libutils",
+        "libcutils",
+        "libsync",
+        "liblog",
+        "libhidlbase",
+        "libfmq",
+        "libhardware_legacy",
+        "android.hardware.graphics.composer@2.1",
+        "android.hardware.graphics.composer@2.2",
+        "android.hardware.graphics.composer@2.3",
+        "android.hardware.graphics.composer@2.4",
+        "android.hardware.graphics.mapper@2.0",
+        "android.hardware.graphics.mapper@2.1",
+        "android.hardware.graphics.mapper@3.0",
+    ],
+    srcs: composer_srcs,
+
+    init_rc: ["vendor.qti.hardware.display.composer-service.rc"],
+    vintf_fragments: ["vendor.qti.hardware.display.composer-service.xml"],
+}
+

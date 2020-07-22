@@ -1,7 +1,13 @@
+soong_namespace {
+    imports: [
+        "hardware/qcom/display",
+        "hardware/qcom/display/libqservice",
+    ],
+}
 cc_library_shared {
     name: "libqdutils",
+    defaults: ["qtidisplay_defaults"],
     vendor: true,
-    defaults: ["display_defaults"],
     header_libs: [
         "libhardware_headers",
         "libutils_headers",
@@ -20,8 +26,8 @@ cc_library_shared {
     ],
     sanitize: {
         misc_undefined: [
-        "signed-integer-overflow",
-        "unsigned-integer-overflow",
+            "signed-integer-overflow",
+            "unsigned-integer-overflow",
         ],
-    }
+    },
 }

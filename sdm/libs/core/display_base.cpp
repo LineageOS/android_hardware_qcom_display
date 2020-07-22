@@ -511,6 +511,17 @@ DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   return kErrorNone;
 }
 
+DisplayError DisplayBase::GetRealConfig(uint32_t index, DisplayConfigVariableInfo *variable_info) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  HWDisplayAttributes attrib;
+  if (hw_intf_->GetDisplayAttributes(index, &attrib) == kErrorNone) {
+    *variable_info = attrib;
+    return kErrorNone;
+  }
+
+  return kErrorNotSupported;
+}
+
 DisplayError DisplayBase::GetActiveConfig(uint32_t *index) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   return hw_intf_->GetActiveConfig(index);

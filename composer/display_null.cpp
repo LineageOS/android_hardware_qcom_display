@@ -83,6 +83,15 @@ DisplayError DisplayNull::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   return kErrorNone;
 }
 
+DisplayError DisplayNull::GetRealConfig(uint32_t index, DisplayConfigVariableInfo *disp_attr) {
+  if (!disp_attr) {
+    return kErrorParameters;
+  }
+
+  *disp_attr = default_variable_config_;
+  return kErrorNone;
+}
+
 DisplayError DisplayNull::GetRefreshRateRange(uint32_t *min_refresh_rate,
                                               uint32_t *max_refresh_rate) {
   if (!min_refresh_rate || !max_refresh_rate) {

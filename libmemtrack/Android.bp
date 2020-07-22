@@ -1,3 +1,5 @@
+soong_namespace {
+}
 cc_library_shared {
     name: "memtrack.qcom",
     relative_install_path: "hw",

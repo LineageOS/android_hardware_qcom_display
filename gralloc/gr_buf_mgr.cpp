@@ -52,17 +52,28 @@ using aidl::android::hardware::graphics::common::Smpte2086;
 using aidl::android::hardware::graphics::common::StandardMetadataType;
 using aidl::android::hardware::graphics::common::XyColor;
 using ::android::hardware::graphics::common::V1_2::PixelFormat;
+
 static BufferInfo GetBufferInfo(const BufferDescriptor &descriptor) {
   return BufferInfo(descriptor.GetWidth(), descriptor.GetHeight(), descriptor.GetFormat(),
                     descriptor.GetUsage());
 }
 
-// duplicate from qdmetadata
-static uint64_t getMetaDataSize() {
-  return static_cast<uint64_t>(ROUND_UP_PAGESIZE(sizeof(MetaData_t)));
+static uint64_t getMetaDataSize(uint64_t reserved_region_size) {
+// Only include the reserved region size when using Metadata_t V2
+#ifndef METADATA_V2
+  reserved_region_size = 0;
+#endif
+  return static_cast<uint64_t>(ROUND_UP_PAGESIZE(sizeof(MetaData_t) + reserved_region_size));
 }
 
-static int validateAndMap(private_handle_t *handle) {
+static void unmapAndReset(private_handle_t *handle, uint64_t reserved_region_size = 0) {
+  if (private_handle_t::validate(handle) == 0 && handle->base_metadata) {
+    munmap(reinterpret_cast<void *>(handle->base_metadata), getMetaDataSize(reserved_region_size));
+    handle->base_metadata = 0;
+  }
+}
+
+static int validateAndMap(private_handle_t *handle, uint64_t reserved_region_size = 0) {
   if (private_handle_t::validate(handle)) {
     ALOGE("%s: Private handle is invalid - handle:%p", __func__, handle);
     return -1;
@@ -73,24 +84,33 @@ static int validateAndMap(private_handle_t *handle) {
   }
 
   if (!handle->base_metadata) {
-    auto size = getMetaDataSize();
+    uint64_t size = getMetaDataSize(reserved_region_size);
     void *base = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, handle->fd_metadata, 0);
     if (base == reinterpret_cast<void *>(MAP_FAILED)) {
       ALOGE("%s: metadata mmap failed - handle:%p fd: %d err: %s", __func__, handle,
             handle->fd_metadata, strerror(errno));
-
       return -1;
     }
     handle->base_metadata = (uintptr_t)base;
+#ifdef METADATA_V2
+    // The allocator process gets the reserved region size from the BufferDescriptor.
+    // When importing to another process, the reserved size is unknown until mapping the metadata,
+    // hence the re-mapping below
+    auto metadata = reinterpret_cast<MetaData_t *>(handle->base_metadata);
+    if (reserved_region_size == 0 && metadata->reservedSize) {
+      size = getMetaDataSize(metadata->reservedSize);
+      unmapAndReset(handle);
+      void *new_base = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, handle->fd_metadata, 0);
+      if (new_base == reinterpret_cast<void *>(MAP_FAILED)) {
+        ALOGE("%s: metadata mmap failed - handle:%p fd: %d err: %s", __func__, handle,
+              handle->fd_metadata, strerror(errno));
+        return -1;
+      }
+      handle->base_metadata = (uintptr_t)new_base;
+    }
+#endif
   }
   return 0;
-}
-
-static void unmapAndReset(private_handle_t *handle) {
-  if (private_handle_t::validate(handle) == 0 && handle->base_metadata) {
-    munmap(reinterpret_cast<void *>(handle->base_metadata), getMetaDataSize());
-    handle->base_metadata = 0;
-  }
 }
 
 static Error dataspaceToColorMetadata(Dataspace dataspace, ColorMetaData *color_metadata) {
@@ -637,12 +657,13 @@ Error BufferManager::FreeBuffer(std::shared_ptr<Buffer> buf) {
     return Error::BAD_BUFFER;
   }
 
+  auto meta_size = getMetaDataSize(buf->reserved_size);
+
   if (allocator_->FreeBuffer(reinterpret_cast<void *>(hnd->base), hnd->size, hnd->offset, hnd->fd,
                              buf->ion_handle_main) != 0) {
     return Error::BAD_BUFFER;
   }
 
-  unsigned int meta_size = getMetaDataSize();
   if (allocator_->FreeBuffer(reinterpret_cast<void *>(hnd->base_metadata), meta_size,
                              hnd->offset_metadata, hnd->fd_metadata, buf->ion_handle_meta) != 0) {
     return Error::BAD_BUFFER;
@@ -674,6 +695,23 @@ Error BufferManager::ValidateBufferSize(private_handle_t const *hnd, BufferInfo 
 void BufferManager::RegisterHandleLocked(const private_handle_t *hnd, int ion_handle,
                                          int ion_handle_meta) {
   auto buffer = std::make_shared<Buffer>(hnd, ion_handle, ion_handle_meta);
+
+  if (hnd->base_metadata) {
+    auto metadata = reinterpret_cast<MetaData_t *>(hnd->base_metadata);
+#ifdef METADATA_V2
+    buffer->reserved_size = metadata->reservedSize;
+    if (buffer->reserved_size > 0) {
+      buffer->reserved_region_ptr =
+          reinterpret_cast<void *>(hnd->base_metadata + sizeof(MetaData_t));
+    } else {
+      buffer->reserved_region_ptr = nullptr;
+    }
+#else
+    buffer->reserved_region_ptr = reinterpret_cast<void *>(&(metadata->reservedRegion.data));
+    buffer->reserved_size = metadata->reservedRegion.size;
+#endif
+  }
+
   handles_map_.emplace(std::make_pair(hnd, buffer));
 }
 
@@ -701,6 +739,12 @@ Error BufferManager::ImportHandleLocked(private_handle_t *hnd) {
   hnd->base = 0;
   hnd->base_metadata = 0;
   hnd->gpuaddr = 0;
+
+  if (validateAndMap(hnd)) {
+    ALOGE("Failed to map metadata: hnd: %p, fd:%d, id:%" PRIu64, hnd, hnd->fd, hnd->id);
+    return Error::BAD_BUFFER;
+  }
+
   RegisterHandleLocked(hnd, ion_handle, ion_handle_meta);
   return Error::NONE;
 }
@@ -919,7 +963,7 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
 
   // Allocate memory for MetaData
   AllocData e_data;
-  e_data.size = getMetaDataSize();
+  e_data.size = static_cast<unsigned int>(getMetaDataSize(descriptor.GetReservedSize()));
   e_data.handle = data.handle;
   e_data.align = page_size;
 
@@ -952,7 +996,12 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
     setMetaDataAndUnmap(hnd, SET_GRAPHICS_METADATA, reinterpret_cast<void *>(&graphics_metadata));
   }
 
+#ifdef METADATA_V2
+  auto error = validateAndMap(hnd, descriptor.GetReservedSize());
+#else
   auto error = validateAndMap(hnd);
+#endif
+
   if (error != 0) {
     ALOGE("validateAndMap failed");
     return Error::BAD_BUFFER;
@@ -962,14 +1011,18 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   nameLength = descriptor.GetName().copy(metadata->name, nameLength);
   metadata->name[nameLength] = '\0';
 
-  metadata->reservedRegion.size = descriptor.GetReservedSize();
-
+#ifdef METADATA_V2
+  metadata->reservedSize = descriptor.GetReservedSize();
+#else
+  metadata->reservedRegion.size =
+      std::min(descriptor.GetReservedSize(), (uint64_t)RESERVED_REGION_SIZE);
+#endif
   metadata->crop.top = 0;
   metadata->crop.left = 0;
   metadata->crop.right = hnd->width;
   metadata->crop.bottom = hnd->height;
 
-  unmapAndReset(hnd);
+  unmapAndReset(hnd, descriptor.GetReservedSize());
 
   *handle = hnd;
 
@@ -1028,14 +1081,12 @@ Error BufferManager::GetReservedRegion(private_handle_t *handle, void **reserved
   auto buf = GetBufferFromHandleLocked(handle);
   if (buf == nullptr)
     return Error::BAD_BUFFER;
-
-  auto err = validateAndMap(handle);
-  if (err != 0)
+  if (!handle->base_metadata) {
     return Error::BAD_BUFFER;
-  auto metadata = reinterpret_cast<MetaData_t *>(handle->base_metadata);
+  }
 
-  *reserved_region = reinterpret_cast<void *>(&(metadata->reservedRegion.data));
-  *reserved_region_size = metadata->reservedRegion.size;
+  *reserved_region = buf->reserved_region_ptr;
+  *reserved_region_size = buf->reserved_size;
 
   return Error::NONE;
 }
@@ -1049,9 +1100,9 @@ Error BufferManager::GetMetadata(private_handle_t *handle, int64_t metadatatype_
   if (buf == nullptr)
     return Error::BAD_BUFFER;
 
-  auto err = validateAndMap(handle);
-  if (err != 0)
+  if (!handle->base_metadata) {
     return Error::BAD_BUFFER;
+  }
 
   auto metadata = reinterpret_cast<MetaData_t *>(handle->base_metadata);
 
@@ -1108,9 +1159,17 @@ Error BufferManager::GetMetadata(private_handle_t *handle, int64_t metadatatype_
       android::gralloc4::encodeChromaSiting(android::gralloc4::ChromaSiting_None, out);
       break;
     case (int64_t)StandardMetadataType::DATASPACE:
-      Dataspace dataspace;
-      colorMetadataToDataspace(metadata->color, &dataspace);
-      android::gralloc4::encodeDataspace(dataspace, out);
+#ifdef METADATA_V2
+      if (metadata->isStandardMetadataSet[GET_STANDARD_METADATA_STATUS_INDEX(metadatatype_value)]) {
+#endif
+        Dataspace dataspace;
+        colorMetadataToDataspace(metadata->color, &dataspace);
+        android::gralloc4::encodeDataspace(dataspace, out);
+#ifdef METADATA_V2
+      } else {
+        android::gralloc4::encodeDataspace(Dataspace::UNKNOWN, out);
+      }
+#endif
       break;
     case (int64_t)StandardMetadataType::INTERLACED:
       if (metadata->interlaced > 0) {
@@ -1261,6 +1320,14 @@ Error BufferManager::GetMetadata(private_handle_t *handle, int64_t metadatatype_
       android::gralloc4::encodeUint32(qtigralloc::MetadataType_AlignedHeightInPixels,
                                       handle->height, out);
       break;
+#ifdef METADATA_V2
+    case QTI_STANDARD_METADATA_STATUS:
+      qtigralloc::encodeMetadataState(metadata->isStandardMetadataSet, out);
+      break;
+    case QTI_VENDOR_METADATA_STATUS:
+      qtigralloc::encodeMetadataState(metadata->isVendorMetadataSet, out);
+      break;
+#endif
     default:
       error = Error::UNSUPPORTED;
   }
@@ -1278,15 +1345,24 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
   if (buf == nullptr)
     return Error::BAD_BUFFER;
 
-  int err = validateAndMap(handle);
-  if (err != 0)
+  if (!handle->base_metadata) {
     return Error::BAD_BUFFER;
-
+  }
   if (in.size() == 0) {
     return Error::UNSUPPORTED;
   }
 
   auto metadata = reinterpret_cast<MetaData_t *>(handle->base_metadata);
+
+#ifdef METADATA_V2
+  // By default, set these to true
+  // Reset to false for special cases below
+  if (IS_VENDOR_METADATA_TYPE(metadatatype_value)) {
+    metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(metadatatype_value)] = true;
+  } else {
+    metadata->isStandardMetadataSet[GET_STANDARD_METADATA_STATUS_INDEX(metadatatype_value)] = true;
+  }
+#endif
 
   switch (metadatatype_value) {
     // These are constant (unchanged after allocation)
@@ -1352,6 +1428,10 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
         metadata->color.masteringDisplayInfo.minDisplayLuminance =
             static_cast<uint32_t>(mastering_display_values->minLuminance * 10000.0f);
       } else {
+#ifdef METADATA_V2
+        metadata->isStandardMetadataSet[GET_STANDARD_METADATA_STATUS_INDEX(metadatatype_value)] =
+            false;
+#endif
         metadata->color.masteringDisplayInfo.colorVolumeSEIEnabled = false;
       }
       break;
@@ -1366,6 +1446,10 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
         metadata->color.contentLightLevel.minPicAverageLightLevel =
             static_cast<uint32_t>(content_light_level->maxFrameAverageLightLevel * 10000.0f);
       } else {
+#ifdef METADATA_V2
+        metadata->isStandardMetadataSet[GET_STANDARD_METADATA_STATUS_INDEX(metadatatype_value)] =
+            false;
+#endif
         metadata->color.contentLightLevel.lightLevelSEIEnabled = false;
       }
       break;
@@ -1383,6 +1467,10 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
         metadata->color.dynamicMetaDataValid = true;
       } else {
         // Reset metadata by passing in std::nullopt
+#ifdef METADATA_V2
+        metadata->isStandardMetadataSet[GET_STANDARD_METADATA_STATUS_INDEX(metadatatype_value)] =
+            false;
+#endif
         metadata->color.dynamicMetaDataValid = false;
       }
       break;
@@ -1445,8 +1533,17 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
       qtigralloc::decodeVideoHistogramMetadata(in, &metadata->video_histogram_stats);
       break;
     default:
+#ifdef METADATA_V2
+      if (IS_VENDOR_METADATA_TYPE(metadatatype_value)) {
+        metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(metadatatype_value)] = false;
+      } else {
+        metadata->isStandardMetadataSet[GET_STANDARD_METADATA_STATUS_INDEX(metadatatype_value)] =
+            false;
+      }
+#endif
       return Error::BAD_VALUE;
   }
+
   return Error::NONE;
 }
 

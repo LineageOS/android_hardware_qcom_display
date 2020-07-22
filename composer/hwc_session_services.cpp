@@ -921,8 +921,13 @@ int HWCSession::DisplayConfigImpl::SetCWBOutputBuffer(uint32_t disp_id,
                                                       const DisplayConfig::Rect rect,
                                                       bool post_processed,
                                                       const native_handle_t *buffer) {
-  if (!callback_.lock() || !buffer) {
-    DLOGE("Invalid parameters");
+  if (!callback_.lock()) {
+    DLOGE("Callback_ has not yet been initialized.");
+    return -1;
+  }
+
+  if (!buffer) {
+    DLOGE("Buffer is null.");
     return -1;
   }
 
@@ -999,6 +1004,7 @@ void HWCSession::CWB::ProcessRequests() {
     {
       SCOPE_LOCK(queue_lock_);
       if (!queue_.size()) {
+        DLOGI("CWB buffer is empty. No pending CWB requests found.");
         break;
       }
 
@@ -1016,6 +1022,8 @@ void HWCSession::CWB::ProcessRequests() {
                                          kCWBClientExternal) != HWC2::Error::None) {
         DLOGE("CWB buffer could not be set.");
         status = -1;
+      } else {
+        DLOGI("Successfully configured CWB buffer.");
       }
     }
 
@@ -1043,6 +1051,7 @@ void HWCSession::CWB::ProcessRequests() {
     // Notify client about buffer status and erase the node from pending request queue.
     std::shared_ptr<DisplayConfig::ConfigCallback> callback = node->callback.lock();
     if (callback) {
+      DLOGI("Notify the client about buffer status %d.", status);
       callback->NotifyCWBBufferDone(status, node->buffer);
     }
 
@@ -1056,8 +1065,10 @@ void HWCSession::CWB::ProcessRequests() {
     {
       SCOPE_LOCK(queue_lock_);
       queue_.pop();
+      DLOGI("Remove current CWB request from the pending request queue.");
 
       if (!queue_.size()) {
+        DLOGI("No pending cwb requests found in the queue.");
         break;
       }
     }
@@ -1180,6 +1191,43 @@ int HWCSession::DisplayConfigImpl::ControlQsyncCallback(bool enable) {
   }
 
   return 0;
+}
+
+int HWCSession::DisplayConfigImpl::GetDisplayHwId(uint32_t disp_id, uint32_t *display_hw_id) {
+  int disp_idx = hwc_session_->GetDisplayIndex(disp_id);
+  if (disp_idx == -1) {
+    DLOGE("Invalid display = %d", disp_id);
+    return -EINVAL;
+  }
+
+  SCOPE_LOCK(hwc_session_->locker_[disp_id]);
+  if (!hwc_session_->hwc_display_[disp_idx]) {
+    DLOGW("Display %d is not connected.", disp_id);
+    return -EINVAL;
+  }
+
+  int error = -EINVAL;
+  // Supported for Built-In displays only.
+  if ((hwc_session_->map_info_primary_.client_id == disp_id) &&
+      (hwc_session_->map_info_primary_.disp_type == kBuiltIn)) {
+    if (hwc_session_->map_info_primary_.sdm_id >= 0) {
+      *display_hw_id = static_cast<uint32_t>(hwc_session_->map_info_primary_.sdm_id);
+      error = 0;
+    }
+    return error;
+  }
+
+  for (auto &info : hwc_session_->map_info_builtin_) {
+    if (disp_id == info.client_id) {
+      if (info.sdm_id >= 0) {
+        *display_hw_id = static_cast<uint32_t>(info.sdm_id);
+        error = 0;
+      }
+      return error;
+    }
+  }
+
+  return error;
 }
 
 }  // namespace sdm

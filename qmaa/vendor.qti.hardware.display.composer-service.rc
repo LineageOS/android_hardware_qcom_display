@@ -1,0 +1,7 @@
+service vendor.qti.hardware.display.composer /vendor/bin/hw/vendor.qti.hardware.qmaa.display.composer-service
+    class hal animation
+    user system
+    group graphics drmrpc
+    capabilities SYS_NICE
+    onrestart restart surfaceflinger
+    writepid /dev/cpuset/system-background/tasks

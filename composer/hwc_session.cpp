@@ -61,6 +61,7 @@ bool HWCSession::pending_power_mode_[HWCCallbacks::kNumDisplays];
 Locker HWCSession::power_state_[HWCCallbacks::kNumDisplays];
 Locker HWCSession::hdr_locker_[HWCCallbacks::kNumDisplays];
 Locker HWCSession::display_config_locker_;
+Locker HWCSession::system_locker_;
 static const int kSolidFillDelay = 100 * 1000;
 int HWCSession::null_display_mode_ = 0;
 static const uint32_t kBrightnessScaleMax = 100;
@@ -761,6 +762,7 @@ int32_t HWCSession::PresentDisplay(hwc2_display_t display, shared_ptr<Fence> *ou
   auto status = HWC2::Error::BadDisplay;
   DTRACE_SCOPED();
 
+  SCOPE_LOCK(system_locker_);
   if (display >= HWCCallbacks::kNumDisplays) {
     DLOGW("Invalid Display : display = %" PRIu64, display);
     return HWC2_ERROR_BAD_DISPLAY;
@@ -834,8 +836,8 @@ void HWCSession::HandlePendingRefresh() {
   for (size_t i = 0; i < pending_refresh_.size(); i++) {
     if (pending_refresh_.test(i)) {
       callbacks_.Refresh(i);
+      break;
     }
-    break;
   }
 
   pending_refresh_.reset();
@@ -1667,6 +1669,24 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       }
       status = SetDisplayBrightnessScale(input_parcel);
       break;
+
+    case qService::IQService::SET_VSYNC_STATE: {
+      if (!input_parcel || !output_parcel) {
+        DLOGE("Qservice command = %d: input_parcel needed.", command);
+        break;
+      }
+      auto display = input_parcel->readInt32();
+      int32_t enable = input_parcel->readInt32();
+      int32_t vsync_state = HWC2_VSYNC_INVALID;
+      if (enable == 0) {
+        vsync_state = HWC2_VSYNC_DISABLE;
+      } else if (enable == 1) {
+        vsync_state = HWC2_VSYNC_ENABLE;
+      }
+      status = SetVsyncEnabled(display, vsync_state);
+      output_parcel->writeInt32(status);
+    }
+    break;
 
     default:
       DLOGW("QService command = %d is not supported.", command);
@@ -2857,6 +2877,7 @@ void HWCSession::DestroyPluggableDisplay(DisplayMapInfo *map_info) {
   DLOGI("Notify hotplug display disconnected: client id = %d", client_id);
   callbacks_.Hotplug(client_id, HWC2::Connection::Disconnected);
 
+  SCOPE_LOCK(system_locker_);
   {
     SEQUENCE_WAIT_SCOPE_LOCK(locker_[client_id]);
     auto &hwc_display = hwc_display_[client_id];

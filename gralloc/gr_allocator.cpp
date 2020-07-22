@@ -28,6 +28,8 @@
  */
 
 #include <log/log.h>
+#include <ion/ion.h>
+#include <linux/ion_4.19.h>
 #include <cutils/properties.h>
 #include <algorithm>
 #include <vector>
@@ -60,6 +62,12 @@
 
 #ifndef ION_FLAG_CP_CDSP
 #define ION_FLAG_CP_CDSP 0
+#endif
+
+#ifndef ION_SYSTEM_HEAP_ID
+#define SYS_HEAP_ID ION_HEAP_SYSTEM
+#else
+#define SYS_HEAP_ID ION_SYSTEM_HEAP_ID
 #endif
 
 #ifdef SLAVE_SIDE_CP
@@ -203,7 +211,7 @@ bool Allocator::CheckForBufferSharing(uint32_t num_descriptors,
 
 void Allocator::GetIonHeapInfo(uint64_t usage, unsigned int *ion_heap_id, unsigned int *alloc_type,
                                unsigned int *ion_flags) {
-  unsigned int heap_id = 1;
+  unsigned int heap_id = SYS_HEAP_ID;
   unsigned int type = 0;
   uint32_t flags = 0;
 #ifndef QMAA
@@ -221,7 +229,7 @@ void Allocator::GetIonHeapInfo(uint64_t usage, unsigned int *ion_heap_id, unsign
         flags |= UINT(ION_SECURE | ION_FLAG_CP_CDSP);
       }
       if (usage & BufferUsage::COMPOSER_OVERLAY) {
-        flags |= UINT(ION_SC_PREVIEW_FLAGS);
+        flags |= UINT(ION_SC_PREVIEW_FLAGS | ION_SC_FLAGS);
       } else {
         flags |= UINT(ION_SC_FLAGS);
       }
@@ -237,7 +245,7 @@ void Allocator::GetIonHeapInfo(uint64_t usage, unsigned int *ion_heap_id, unsign
   if (usage & BufferUsage::SENSOR_DIRECT_DATA) {
       if (use_system_heap_for_sensors_) {
         ALOGI("gralloc::sns_direct_data with system_heap");
-        heap_id |= ION_HEAP(ION_SYSTEM_HEAP_ID);
+        heap_id |= ION_HEAP(SYS_HEAP_ID);
       } else {
         ALOGI("gralloc::sns_direct_data with adsp_heap");
         heap_id |= ION_HEAP(ION_ADSP_HEAP_ID);
@@ -246,11 +254,6 @@ void Allocator::GetIonHeapInfo(uint64_t usage, unsigned int *ion_heap_id, unsign
 
   if (flags & UINT(ION_SECURE)) {
     type |= private_handle_t::PRIV_FLAGS_SECURE_BUFFER;
-  }
-
-  // if no ion heap flags are set, default to system heap
-  if (!heap_id) {
-    heap_id = ION_HEAP(ION_SYSTEM_HEAP_ID);
   }
 #endif
 

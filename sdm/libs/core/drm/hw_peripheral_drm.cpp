@@ -191,7 +191,15 @@ DisplayError HWPeripheralDRM::Commit(HWLayers *hw_layers) {
   // Initialize to default after successful commit
   synchronous_commit_ = false;
   idle_pc_state_ = sde_drm::DRMIdlePCState::NONE;
-  self_refresh_enabled_ = false;
+
+  // After commit, update the Self Refresh state
+  if (self_refresh_state_ != kSelfRefreshNone) {
+    if (self_refresh_state_ == kSelfRefreshEnable) {
+      self_refresh_state_ = kSelfRefreshDisable;
+    } else {
+      self_refresh_state_ = kSelfRefreshNone;
+    }
+  }
 
   return error;
 }
@@ -262,9 +270,14 @@ void HWPeripheralDRM::CacheDestScalarData() {
 }
 
 void HWPeripheralDRM::SetSelfRefreshState() {
-  if (self_refresh_enabled_) {
-    drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_CACHE_STATE, token_.crtc_id,
-                              sde_drm::DRMCacheState::ENABLED);
+  if (self_refresh_state_ != kSelfRefreshNone) {
+    if (self_refresh_state_ == kSelfRefreshEnable) {
+      drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_CACHE_STATE, token_.crtc_id,
+                                sde_drm::DRMCacheState::ENABLED);
+    } else {
+      drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_CACHE_STATE, token_.crtc_id,
+                                sde_drm::DRMCacheState::DISABLED);
+    }
   }
 }
 
@@ -470,8 +483,18 @@ void HWPeripheralDRM::ConfigureConcurrentWriteback(LayerStack *layer_stack) {
   sde_drm::DRMRect dst = {};
   dst.left = 0;
   dst.top = 0;
-  dst.right = display_attributes_[current_mode_index_].x_pixels;
-  dst.bottom = display_attributes_[current_mode_index_].y_pixels;
+
+  if (capture_mode == DRMCWbCaptureMode::DSPP_OUT) {
+    dst.right = display_attributes_[current_mode_index_].x_pixels;
+    dst.bottom = display_attributes_[current_mode_index_].y_pixels;
+  } else {
+    dst.right = mixer_attributes_.width;
+    dst.bottom = mixer_attributes_.height;
+  }
+
+  DLOGV_IF(kTagDriverConfig, "CWB Mode:%d dst.left:%d dst.top:%d dst.right:%d dst.bottom:%d",
+    capture_mode, dst.left, dst.top, dst.right, dst.bottom);
+
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_RECT, cwb_config_.token.conn_id, dst);
 }
 
@@ -709,7 +732,7 @@ DisplayError HWPeripheralDRM::GetPanelBrightnessBasePath(std::string *base_path)
 }
 
 DisplayError HWPeripheralDRM::EnableSelfRefresh() {
-  self_refresh_enabled_ = true;
+  self_refresh_state_ = kSelfRefreshEnable;
   return kErrorNone;
 }
 

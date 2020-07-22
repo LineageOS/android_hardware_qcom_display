@@ -1367,8 +1367,8 @@ int GetImplDefinedFormat(uint64_t usage, int format) {
       gr_format = HAL_PIXEL_FORMAT_RGBA_8888;
     } else if (format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
       // If no other usage flags are detected, default the
-      // flexible YUV format to YCbCr_420_SP
-      gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP;
+      // flexible YUV format to YCrCb_420_SP
+      gr_format = HAL_PIXEL_FORMAT_YCrCb_420_SP;
     }
   }
 
