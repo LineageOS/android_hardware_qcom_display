@@ -97,6 +97,7 @@ HWC2::Error HWCColorModeStc::DeInit() {
 void HWCColorModeStc::PopulateColorModes() {
   if (!stc_mode_list_.list.size()) {
     snapdragoncolor::ColorMode color_mode = {};
+    color_mode.intent = snapdragoncolor::kNative;
     color_mode_map_[ColorMode::NATIVE][RenderIntent::COLORIMETRIC][kSdrType] = color_mode;
     DLOGI("No color mode supported, add Native mode");
     return;
@@ -240,6 +241,7 @@ HWC2::Error HWCColorModeStc::SetColorTransform(const float *matrix,
     DLOGE("Failed to set Color Transform Matrix");
     status = HWC2::Error::Unsupported;
   }
+  CopyColorTransformMatrix(matrix, color_matrix_);
   return status;
 }
 

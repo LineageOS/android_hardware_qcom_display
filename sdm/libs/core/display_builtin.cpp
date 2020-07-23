@@ -78,6 +78,10 @@ DisplayError DisplayBuiltIn::Init() {
     return error;
   }
 
+  if (color_mgr_) {
+    color_mgr_->ColorMgrGetStcModes(&stc_color_modes_);
+  }
+
   if (hw_panel_info_.mode == kModeCommand && Debug::IsVideoModeEnabled()) {
     error = hw_intf_->SetDisplayMode(kModeVideo);
     if (error != kErrorNone) {
@@ -780,7 +784,8 @@ DisplayError DisplayBuiltIn::GetStcColorModes(snapdragoncolor::ColorModeList *mo
     return kErrorNotSupported;
   }
 
-  return color_mgr_->ColorMgrGetStcModes(mode_list);
+  mode_list->list = stc_color_modes_.list;
+  return kErrorNone;
 }
 
 DisplayError DisplayBuiltIn::SetStcColorMode(const snapdragoncolor::ColorMode &color_mode) {
@@ -789,15 +794,8 @@ DisplayError DisplayBuiltIn::SetStcColorMode(const snapdragoncolor::ColorMode &c
     return kErrorNotSupported;
   }
   DisplayError ret = kErrorNone;
-  ret = color_mgr_->ColorMgrSetStcMode(color_mode);
-  if (ret != kErrorNone) {
-    DLOGE("Failed to set stc color mode, ret = %d display_type_ = %d", ret, display_type_);
-    return ret;
-  }
-  current_color_mode_ = color_mode;
   PrimariesTransfer blend_space = {};
-  blend_space.primaries = color_mode.gamut;
-  blend_space.transfer = color_mode.gamma;
+  blend_space = GetBlendSpaceFromStcColorMode(color_mode);
   ret = comp_manager_->SetBlendSpace(display_comp_ctx_, blend_space);
   if (ret != kErrorNone) {
     DLOGE("SetBlendSpace failed, ret = %d display_type_ = %d", ret, display_type_);
@@ -807,6 +805,13 @@ DisplayError DisplayBuiltIn::SetStcColorMode(const snapdragoncolor::ColorMode &c
   if (ret != kErrorNone) {
     DLOGE("Failed to pass blend space, ret = %d display_type_ = %d", ret, display_type_);
   }
+
+  ret = color_mgr_->ColorMgrSetStcMode(color_mode);
+  if (ret != kErrorNone) {
+    DLOGE("Failed to set stc color mode, ret = %d display_type_ = %d", ret, display_type_);
+    return ret;
+  }
+  current_color_mode_ = color_mode;
 
   DynamicRangeType dynamic_range = kSdrType;
   if (std::find(color_mode.hw_assets.begin(), color_mode.hw_assets.end(),
@@ -1456,6 +1461,25 @@ void DisplayBuiltIn::GetFpsConfig(HWDisplayAttributes *display_attr, HWPanelInfo
   display_attr->fps = display_attributes_.fps;
   display_attr->vsync_period_ns = display_attributes_.vsync_period_ns;
   panel_info->transfer_time_us = hw_panel_info_.transfer_time_us;
+}
+
+PrimariesTransfer DisplayBuiltIn::GetBlendSpaceFromStcColorMode(
+    const snapdragoncolor::ColorMode &color_mode) {
+  PrimariesTransfer blend_space = {};
+  if (!color_mgr_) {
+    return blend_space;
+  }
+
+  // Set sRGB as default blend space.
+  if (stc_color_modes_.list.empty() || color_mode.intent == snapdragoncolor::kNative ||
+      (color_mode.gamut == ColorPrimaries_Max && color_mode.gamma == Transfer_Max)) {
+    return blend_space;
+  }
+
+  blend_space.primaries = color_mode.gamut;
+  blend_space.transfer = color_mode.gamma;
+
+  return blend_space;
 }
 
 }  // namespace sdm
