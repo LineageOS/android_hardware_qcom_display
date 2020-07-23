@@ -685,8 +685,8 @@ static Error getFormatLayout(private_handle_t *handle, std::vector<PlaneLayout> 
     plane_info[i].sampleIncrementInBits = static_cast<int64_t>(plane_layout[i].step * 8);
     plane_info[i].strideInBytes = static_cast<int64_t>(plane_layout[i].stride_bytes);
     plane_info[i].totalSizeInBytes = static_cast<int64_t>(plane_layout[i].size);
-    plane_info[i].widthInSamples = handle->unaligned_width;
-    plane_info[i].heightInSamples = handle->unaligned_height;
+    plane_info[i].widthInSamples = handle->unaligned_width >> plane_layout[i].h_subsampling;
+    plane_info[i].heightInSamples = handle->unaligned_height >> plane_layout[i].v_subsampling;
   }
   *out = plane_info;
   return Error::NONE;
@@ -1051,11 +1051,6 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   hnd->base = 0;
   hnd->base_metadata = 0;
   hnd->layer_count = layer_count;
-
-  // set default csc as 709, but for video(yuv) its 601L
-
-  ColorSpace_t colorSpace = (buffer_type == BUFFER_TYPE_VIDEO) ? ITU_R_601 : ITU_R_709;
-  setMetaDataAndUnmap(hnd, UPDATE_COLOR_SPACE, reinterpret_cast<void *>(&colorSpace));
 
   bool use_adreno_for_size = CanUseAdrenoForSize(buffer_type, usage);
   if (use_adreno_for_size) {
