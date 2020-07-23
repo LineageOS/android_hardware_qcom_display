@@ -96,9 +96,15 @@ class HWPeripheralDRM : public HWDeviceDRM {
     if (tui_state_ == kTUIStateStart) {
       drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_VM_REQ_STATE, token_.crtc_id,
                                 sde_drm::DRMVMRequestState::RELEASE);
+      if (ltm_hist_en_)
+        drm_atomic_intf_->Perform(sde_drm::DRMOps::DPPS_CACHE_FEATURE, token_.crtc_id,
+                                  sde_drm::kFeatureLtmHistCtrl, 0);
     } else if (tui_state_ == kTUIStateEnd) {
       drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_VM_REQ_STATE, token_.crtc_id,
                                 sde_drm::DRMVMRequestState::ACQUIRE);
+      if (ltm_hist_en_)
+        drm_atomic_intf_->Perform(sde_drm::DRMOps::DPPS_CACHE_FEATURE, token_.crtc_id,
+                                  sde_drm::kFeatureLtmHistCtrl, 1);
     } else if (tui_state_ == kTUIStateNone) {
       drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_VM_REQ_STATE, token_.crtc_id,
                                 sde_drm::DRMVMRequestState::NONE);
@@ -123,6 +129,7 @@ class HWPeripheralDRM : public HWDeviceDRM {
   std::vector<uint64_t> bitclk_rates_;
   std::string brightness_base_path_ = "";
   SelfRefreshState self_refresh_state_ = kSelfRefreshNone;
+  bool ltm_hist_en_ = false;
 };
 
 }  // namespace sdm
