@@ -403,14 +403,15 @@ void DRMPlaneManager::UnsetScalerLUT() {
   }
 }
 
-void DRMPlaneManager::ResetCache(uint32_t crtc_id) {
+void DRMPlaneManager::ResetCache(drmModeAtomicReq *req, uint32_t crtc_id) {
   lock_guard<mutex> lock(lock_);
   for (auto &plane : plane_pool_) {
     uint32_t assigned_crtc = 0;
     plane.second->GetAssignedCrtc(&assigned_crtc);
-    if (assigned_crtc == crtc_id) {
-      plane.second->ResetCache();
-    }
+#ifndef TRUSTED_VM
+    if (assigned_crtc == crtc_id)
+#endif
+      plane.second->ResetCache(req);
   }
 }
 
@@ -1187,6 +1188,44 @@ void DRMPlane::ResetColorLUT(DRMPPFeatureID id, drmModeAtomicReq *req) {
   pp_feature_info.payload = nullptr;
   pp_feature_info.id = id;
   pp_mgr_->SetPPFeature(req, drm_plane_->plane_id, pp_feature_info);
+}
+
+
+void DRMPlane::ResetCache(drmModeAtomicReq *req) {
+  tmp_prop_val_map_.clear();
+  committed_prop_val_map_.clear();
+
+  for (int i = 0; i <= (int32_t)(DRMTonemapLutType::VIG_3D_GAMUT); i++) {
+    auto itr = plane_type_info_.tonemap_lut_version_map.find(static_cast<DRMTonemapLutType>(i));
+    if (itr != plane_type_info_.tonemap_lut_version_map.end()) {
+      DRMPlaneLutState *lut_state = nullptr;
+      DRMPPFeatureID feature_id = {};
+      switch (static_cast<DRMTonemapLutType>(i)) {
+        case DRMTonemapLutType::DMA_1D_GC:
+          lut_state = &dgm_1d_lut_gc_state_;
+          feature_id = kFeatureDgmGc;
+          break;
+        case DRMTonemapLutType::DMA_1D_IGC:
+          lut_state = &dgm_1d_lut_igc_state_;
+          feature_id = kFeatureDgmIgc;
+          break;
+        case DRMTonemapLutType::VIG_1D_IGC:
+          lut_state = &vig_1d_lut_igc_state_;
+          feature_id = kFeatureVigIgc;
+          break;
+        case DRMTonemapLutType::VIG_3D_GAMUT:
+          lut_state = &vig_3d_lut_gamut_state_;
+          feature_id = kFeatureVigGamut;
+          break;
+        default:
+          DLOGE("Invalid lut type = %d", i);
+          return;
+      }
+
+      *lut_state = kDirty;
+      ResetColorLUT(feature_id, req);
+    }
+  }
 }
 
 }  // namespace sde_drm
