@@ -571,18 +571,10 @@ void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint3
       c_size = (width * height) / 2;
       c_height = height >> 1;
       break;
-    case HAL_PIXEL_FORMAT_RAW16:
     case HAL_PIXEL_FORMAT_Y16:
       c_size = c_stride = 0;
       c_height = 0;
       break;
-    case HAL_PIXEL_FORMAT_RAW10:
-    case HAL_PIXEL_FORMAT_RAW12:
-      y_size = ALIGN(y_size, SIZE_4K);
-      c_size = c_stride = 0;
-      c_height = 0;
-      break;
-    case HAL_PIXEL_FORMAT_RAW8:
     case HAL_PIXEL_FORMAT_Y8:
       c_size = c_stride = 0;
       c_height = 0;
@@ -686,6 +678,44 @@ int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]) 
     }
   }
   return err;
+}
+
+int GetRawPlaneInfo(int32_t format, int32_t width, int32_t height, PlaneLayoutInfo *plane_info) {
+  int32_t step = 0;
+
+  switch (format) {
+    case HAL_PIXEL_FORMAT_RAW16:
+      step = 2;
+      break;
+    case HAL_PIXEL_FORMAT_RAW8:
+      step = 1;
+      break;
+    case HAL_PIXEL_FORMAT_RAW12:
+    case HAL_PIXEL_FORMAT_RAW10:
+      step = 0;
+      break;
+    default:
+      ALOGW("RawPlaneInfo is unsupported for format 0x%x", format);
+      return -EINVAL;
+  }
+
+  BufferInfo info(width, height, format);
+  uint32_t alignedWidth, alignedHeight;
+  GetAlignedWidthAndHeight(info, &alignedWidth, &alignedHeight);
+
+  uint32_t size = GetSize(info, alignedWidth, alignedHeight);
+
+  plane_info[0].component = (PlaneComponent)PLANE_COMPONENT_RAW;
+  plane_info[0].h_subsampling = 0;
+  plane_info[0].v_subsampling = 0;
+  plane_info[0].offset = 0;
+  plane_info[0].step = step;
+  plane_info[0].stride = width;
+  plane_info[0].stride_bytes = static_cast<int32_t>(alignedWidth);
+  plane_info[0].scanlines = height;
+  plane_info[0].size = size;
+
+  return 0;
 }
 
 // Explicitly defined UBWC formats
@@ -1433,10 +1463,15 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
       plane_info[1].v_subsampling = v_subsampling;
       break;
 
+    case HAL_PIXEL_FORMAT_RAW16:
+    case HAL_PIXEL_FORMAT_RAW12:
     case HAL_PIXEL_FORMAT_RAW10:
     case HAL_PIXEL_FORMAT_RAW8:
+      *plane_count = 1;
+      GetRawPlaneInfo(format, info.width, info.height, plane_info);
+      break;
+
     case HAL_PIXEL_FORMAT_Y8:
-    case HAL_PIXEL_FORMAT_RAW12:
       *plane_count = 1;
       GetYuvSPPlaneInfo(info, format, width, height, 1, plane_info);
       GetYuvSubSamplingFactor(format, &h_subsampling, &v_subsampling);
@@ -1444,7 +1479,6 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
       plane_info[0].v_subsampling = v_subsampling;
       break;
 
-    case HAL_PIXEL_FORMAT_RAW16:
     case HAL_PIXEL_FORMAT_Y16:
       *plane_count = 1;
       GetYuvSPPlaneInfo(info, format, width, height, 2, plane_info);
@@ -1662,13 +1696,9 @@ void GetYuvSubSamplingFactor(int32_t format, int *h_subsampling, int *v_subsampl
       *h_subsampling = 1;
       *v_subsampling = 0;
       break;
-    case HAL_PIXEL_FORMAT_RAW16:
     case HAL_PIXEL_FORMAT_Y16:
-    case HAL_PIXEL_FORMAT_RAW12:
-    case HAL_PIXEL_FORMAT_RAW10:
     case HAL_PIXEL_FORMAT_Y8:
     case HAL_PIXEL_FORMAT_BLOB:
-    case HAL_PIXEL_FORMAT_RAW8:
     default:
       *h_subsampling = 0;
       *v_subsampling = 0;
