@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2018, 2020 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -125,7 +125,8 @@ histogram::Ringbuffer::Sample histogram::Ringbuffer::collect_max(
     return {0, {}};
   std::array<uint64_t, HIST_V_SIZE> bins;
   bins.fill(0);
-  for (auto it = ringbuffer.begin(); it != ringbuffer.begin() + collect_first; it++) {
+  for (auto it = ringbuffer.begin(); it != ringbuffer.end() &&
+    it != ringbuffer.begin() + collect_first; it++) {
     nsecs_t end_timestamp = it->end_timestamp;
     if (it == ringbuffer.begin()) {
       end_timestamp = timekeeper->current_time();
