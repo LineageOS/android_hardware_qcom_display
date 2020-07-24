@@ -52,6 +52,8 @@
  *
  */
 
+#define METADATA_V2
+
 // TODO: MetaData_t should be in qtigralloc namespace
 struct MetaData_t {
   int32_t operation;
@@ -95,6 +97,9 @@ struct MetaData_t {
   int32_t blendMode;
   char name[MAX_NAME_LEN];
   ReservedRegion reservedRegion;
+  bool isStandardMetadataSet[METADATA_SET_SIZE];
+  bool isVendorMetadataSet[METADATA_SET_SIZE];
+  uint64_t reservedSize;
 };
 
 namespace qtigralloc {

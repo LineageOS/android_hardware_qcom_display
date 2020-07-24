@@ -13,6 +13,7 @@ cc_library_shared {
         "libutils",
         "libhidlbase",
         "libgralloc.qti",
+        "libgralloctypes",
     ],
     header_libs: ["libhardware_headers", "display_intf_headers"],
     srcs: ["qdMetaData.cpp", "qd_utils.cpp"],

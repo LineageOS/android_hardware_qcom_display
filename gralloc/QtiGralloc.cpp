@@ -38,6 +38,24 @@ static sp<IMapper> getInstance() {
   static sp<IMapper> mapper = IMapper::getService();
   return mapper;
 }
+
+Error decodeMetadataState(hidl_vec<uint8_t> &in, bool *out) {
+  if (!in.size() || !out) {
+    return Error::BAD_VALUE;
+  }
+  memcpy(out, in.data(), METADATA_SET_SIZE);
+  return Error::NONE;
+}
+
+Error encodeMetadataState(bool *in, hidl_vec<uint8_t> *out) {
+  if (!in || !out) {
+    return Error::BAD_VALUE;
+  }
+  out->resize(sizeof(bool) * METADATA_SET_SIZE);
+  memcpy(out->data(), in, sizeof(bool) * METADATA_SET_SIZE);
+  return Error::NONE;
+}
+
 Error decodeColorMetadata(hidl_vec<uint8_t> &in, ColorMetaData *out) {
   if (!in.size() || !out) {
     return Error::BAD_VALUE;
@@ -180,6 +198,12 @@ MetadataType getMetadataType(uint32_t in) {
       return MetadataType_AlignedWidthInPixels;
     case QTI_ALIGNED_HEIGHT_IN_PIXELS:
       return MetadataType_AlignedHeightInPixels;
+    case QTI_STANDARD_METADATA_STATUS:
+      return MetadataType_StandardMetadataStatus;
+    case QTI_VENDOR_METADATA_STATUS:
+      return MetadataType_VendorMetadataStatus;
+    case QTI_BUFFER_TYPE:
+      return MetadataType_BufferType;
     default:
       return MetadataType_Invalid;
   }
@@ -265,6 +289,14 @@ Error get(void *buffer, uint32_t type, void *param) {
       err = static_cast<Error>(android::gralloc4::decodeUint32(
           qtigralloc::MetadataType_AlignedHeightInPixels, bytestream, (uint32_t *)param));
       break;
+    case QTI_STANDARD_METADATA_STATUS:
+    case QTI_VENDOR_METADATA_STATUS:
+      err = decodeMetadataState(bytestream, (bool *)param);
+      break;
+    case QTI_BUFFER_TYPE:
+      err = static_cast<Error>(android::gralloc4::decodeUint32(
+          qtigralloc::MetadataType_BufferType, bytestream, (uint32_t *)param));
+      break;
     default:
       param = nullptr;
       return Error::UNSUPPORTED;
@@ -337,6 +369,27 @@ Error set(void *buffer, uint32_t type, void *param) {
   }
 
   return mapper->set((void *)buffer, metadata_type, bytestream);
+}
+
+int getMetadataState(void *buffer, uint32_t type) {
+  bool metadata_set[METADATA_SET_SIZE];
+  Error err;
+  if (IS_VENDOR_METADATA_TYPE(type)) {
+    err = get(buffer, QTI_VENDOR_METADATA_STATUS, &metadata_set);
+  } else {
+    err = get(buffer, QTI_STANDARD_METADATA_STATUS, &metadata_set);
+  }
+
+  if (err != Error::NONE) {
+    ALOGE("Unable to get metadata state");
+    return -1;
+  }
+
+  if (IS_VENDOR_METADATA_TYPE(type)) {
+    return metadata_set[GET_VENDOR_METADATA_STATUS_INDEX(type)];
+  } else {
+    return metadata_set[GET_STANDARD_METADATA_STATUS_INDEX(type)];
+  }
 }
 
 }  // namespace qtigralloc

@@ -67,6 +67,7 @@ static const std::string VENDOR_QTI = "QTI";
 Error get(void *buffer, uint32_t type, void *param);
 Error set(void *buffer, uint32_t type, void *param);
 MetadataType getMetadataType(uint32_t in);
+int getMetadataState(void *buffer, uint32_t type);
 
 static const MetadataType MetadataType_VTTimestamp = {VENDOR_QTI, QTI_VT_TIMESTAMP};
 
@@ -102,6 +103,15 @@ static const MetadataType MetadataType_AlignedWidthInPixels = {VENDOR_QTI,
 static const MetadataType MetadataType_AlignedHeightInPixels = {VENDOR_QTI,
                                                                 QTI_ALIGNED_HEIGHT_IN_PIXELS};
 
+static const MetadataType MetadataType_StandardMetadataStatus = {VENDOR_QTI,
+                                                                 QTI_STANDARD_METADATA_STATUS};
+
+static const MetadataType MetadataType_VendorMetadataStatus = {VENDOR_QTI,
+                                                               QTI_VENDOR_METADATA_STATUS};
+
+static const MetadataType MetadataType_BufferType = {VENDOR_QTI,
+                                                     QTI_BUFFER_TYPE};
+
 // 0 is also used as invalid value in standard metadata
 static const MetadataType MetadataType_Invalid = {VENDOR_QTI, 0};
 
@@ -115,6 +125,8 @@ static const aidl::android::hardware::graphics::common::ExtendableType
 static const aidl::android::hardware::graphics::common::ExtendableType
     PlaneLayoutComponentType_Meta = {VENDOR_QTI, PLANE_COMPONENT_TYPE_META};
 
+Error decodeMetadataState(hidl_vec<uint8_t> &in, bool *out);
+Error encodeMetadataState(bool *in, hidl_vec<uint8_t> *out);
 Error decodeColorMetadata(hidl_vec<uint8_t> &in, ColorMetaData *out);
 Error encodeColorMetadata(ColorMetaData &in, hidl_vec<uint8_t> *out);
 Error decodeGraphicsMetadata(hidl_vec<uint8_t> &in, GraphicsMetadata *out);
@@ -127,7 +139,6 @@ Error decodeCVPMetadata(hidl_vec<uint8_t> &in, CVPMetadata *out);
 Error encodeCVPMetadata(CVPMetadata &in, hidl_vec<uint8_t> *out);
 Error decodeVideoHistogramMetadata(hidl_vec<uint8_t> &in, VideoHistogramMetadata *out);
 Error encodeVideoHistogramMetadata(VideoHistogramMetadata &in, hidl_vec<uint8_t> *out);
-
 }  // namespace qtigralloc
 
 #endif  //__QTIGRALLOC_H__

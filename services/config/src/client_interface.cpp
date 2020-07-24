@@ -56,7 +56,9 @@ int ClientInterface::Create(std::string client_name, ConfigCallback *callback,
 
 void ClientInterface::Destroy(ClientInterface *intf) {
   if (intf) {
-    delete static_cast<ClientImpl *>(intf);
+    ClientImpl *impl = static_cast<ClientImpl *>(intf);
+    impl->DeInit();
+    delete impl;
   }
 }
 
