@@ -1389,8 +1389,9 @@ DisplayError DisplayBase::HandlePendingVSyncEnable(const shared_ptr<Fence> &reti
 DisplayError DisplayBase::SetVSyncState(bool enable) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
-  if ((state_ == kStateOff || secure_event_ == kSecureDisplayStart) && enable) {
-    DLOGW("Can't enable vsync when display %d-%d is powered off!! Defer it when display is active",
+  if ((state_ == kStateOff || secure_event_ == kSecureDisplayStart ||
+       secure_event_ == kTUITransitionStart) && enable) {
+    DLOGW("Can't enable vsync when display %d-%d is powered off or SecureDisplay/TUI in progress",
           display_id_, display_type_);
     vsync_enable_pending_ = true;
     return kErrorNone;
@@ -1566,7 +1567,7 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
   uint32_t display_width = display_attributes_.x_pixels;
   uint32_t display_height = display_attributes_.y_pixels;
 
-  if (secure_event_ == kSecureDisplayStart) {
+  if (secure_event_ == kSecureDisplayStart || secure_event_ == kTUITransitionStart) {
     *new_mixer_width = display_width;
     *new_mixer_height = display_height;
     return ((*new_mixer_width != mixer_width) || (*new_mixer_height != mixer_height));

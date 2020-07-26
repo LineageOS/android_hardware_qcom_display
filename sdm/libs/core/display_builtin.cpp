@@ -1243,7 +1243,17 @@ DisplayError DisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event) {
   comp_manager_->HandleSecureEvent(display_comp_ctx_, secure_event);
   secure_event_ = secure_event;
 
-  if (secure_event == kTUITransitionEnd) {
+  if (vsync_enable_ && secure_event == kTUITransitionStart) {
+    err = SetVSyncState(false /* enable */);
+    if (err != kErrorNone) {
+      return err;
+    }
+    vsync_enable_pending_ = true;
+  } else if (secure_event == kTUITransitionEnd) {
+    err = HandlePendingVSyncEnable(nullptr);
+    if (err != kErrorNone) {
+      return err;
+    }
     DisplayState state = kStateOff;
     if (GetPendingDisplayState(&state) == kErrorNone) {
       // Handle PowerOn and Doze during the next commit
