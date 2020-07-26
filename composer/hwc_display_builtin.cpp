@@ -763,15 +763,10 @@ int HWCDisplayBuiltIn::HandleSecureSession(const std::bitset<kSecureMax> &secure
 }
 
 DisplayError HWCDisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event) {
-  if (current_power_mode_ != HWC2::PowerMode::On) {
-    DLOGW("Cannot handle secure event when display is not active");
-    return kErrorPermission;
-  }
-
   DisplayError err = display_intf_->HandleSecureEvent(secure_event);
   if (err != kErrorNone) {
     DLOGE("Handle secure event failed");
-     return err;
+    return err;
   }
 
   return kErrorNone;

@@ -370,6 +370,7 @@ DisplayError HWPeripheralDRM::HandleSecureEvent(SecureEvent secure_event,
         if (err != kErrorNone) {
           return err;
         }
+        SetTUIState();
       }
     }
     break;
@@ -556,7 +557,9 @@ DisplayError HWPeripheralDRM::PowerOn(const HWQosData &qos_data,
     return kErrorUndefined;
   }
 
-  if (first_cycle_) {
+  if (first_cycle_ || tui_state_ != kTUIStateNone) {
+    DLOGI("Request deferred TUI state %d", tui_state_);
+    pending_power_state_ = kPowerStateOn;
     return kErrorDeferred;
   }
 
@@ -580,6 +583,37 @@ DisplayError HWPeripheralDRM::PowerOn(const HWQosData &qos_data,
 
   CacheDestScalarData();
 
+  return kErrorNone;
+}
+
+DisplayError HWPeripheralDRM::PowerOff(bool teardown) {
+  SetVMReqState();
+  DisplayError err = HWDeviceDRM::PowerOff(teardown);
+  if (err != kErrorNone) {
+    return err;
+  }
+  SetTUIState();
+  return kErrorNone;
+}
+
+DisplayError HWPeripheralDRM::Doze(const HWQosData &qos_data, shared_ptr<Fence> *release_fence) {
+  SetVMReqState();
+  DisplayError err = HWDeviceDRM::Doze(qos_data, release_fence);
+  if (err != kErrorNone) {
+    return err;
+  }
+  SetTUIState();
+  return kErrorNone;
+}
+
+DisplayError HWPeripheralDRM::DozeSuspend(const HWQosData &qos_data,
+                                          shared_ptr<Fence> *release_fence) {
+  SetVMReqState();
+  DisplayError err = HWDeviceDRM::DozeSuspend(qos_data, release_fence);
+  if (err != kErrorNone) {
+    return err;
+  }
+  SetTUIState();
   return kErrorNone;
 }
 
@@ -640,8 +674,8 @@ DisplayError HWPeripheralDRM::SetFrameTrigger(FrameTriggerMode mode) {
 }
 
 DisplayError HWPeripheralDRM::SetPanelBrightness(int level) {
-  if (pending_doze_) {
-    DLOGI("Doze state pending!! Skip for now");
+  if (pending_power_state_ != kPowerStateNone) {
+    DLOGI("Power state %d pending!! Skip for now", pending_power_state_);
     return kErrorDeferred;
   }
 
