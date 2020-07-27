@@ -689,6 +689,9 @@ int GetRawPlaneInfo(int32_t format, int32_t width, int32_t height, PlaneLayoutIn
   plane_info[0].step = step;
   plane_info[0].stride = width;
   plane_info[0].stride_bytes = static_cast<int32_t>(alignedWidth);
+  if (format == HAL_PIXEL_FORMAT_RAW16) {
+    plane_info[0].stride_bytes = static_cast<int32_t>(alignedWidth * GetBpp(format));
+  }
   plane_info[0].scanlines = height;
   plane_info[0].size = size;
 
