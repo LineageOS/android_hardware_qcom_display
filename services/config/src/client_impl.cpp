@@ -865,6 +865,32 @@ int ClientImpl::GetDisplayHwId(uint32_t disp_id, uint32_t *display_hw_id) {
   return error;
 }
 
+int ClientImpl::GetSupportedDisplayRefreshRates(DisplayType dpy,
+                                                std::vector<uint32_t> *supported_refresh_rates) {
+  ByteStream input_params;
+  input_params.setToExternal(reinterpret_cast<uint8_t *>(&dpy), sizeof(DisplayType));
+  ByteStream output_params;
+  int error = 0;
+  auto hidl_cb = [&error, &output_params](int32_t err, ByteStream params, HandleStream handles) {
+    error = err;
+    output_params = params;
+  };
+
+  display_config_->perform(client_handle_, kGetSupportedDisplayRefreshRates, input_params, {},
+                           hidl_cb);
+
+  if (!error) {
+    const uint8_t *data = output_params.data();
+    const uint32_t *refresh_rates_data = reinterpret_cast<const uint32_t *>(data);
+    int num_refresh_rates = static_cast<int>(output_params.size() / sizeof(uint32_t));
+    for (int i = 0; i < num_refresh_rates; i++) {
+      supported_refresh_rates->push_back(refresh_rates_data[i]);
+    }
+  }
+
+  return error;
+}
+
 void ClientCallback::ParseNotifyCWBBufferDone(const ByteStream &input_params,
                                               const HandleStream &input_handles) {
   const int *error;
