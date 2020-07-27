@@ -1425,9 +1425,14 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
   // By default, set these to true
   // Reset to false for special cases below
   if (IS_VENDOR_METADATA_TYPE(metadatatype_value)) {
-    metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(metadatatype_value)] = true;
+    if (GET_VENDOR_METADATA_STATUS_INDEX(metadatatype_value) < METADATA_SET_SIZE) {
+      metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(metadatatype_value)] = true;
+    }
   } else {
-    metadata->isStandardMetadataSet[GET_STANDARD_METADATA_STATUS_INDEX(metadatatype_value)] = true;
+    if (GET_STANDARD_METADATA_STATUS_INDEX(metadatatype_value) < METADATA_SET_SIZE) {
+      metadata->isStandardMetadataSet[GET_STANDARD_METADATA_STATUS_INDEX(metadatatype_value)] =
+          true;
+    }
   }
 #endif
 
@@ -1602,10 +1607,15 @@ Error BufferManager::SetMetadata(private_handle_t *handle, int64_t metadatatype_
     default:
 #ifdef METADATA_V2
       if (IS_VENDOR_METADATA_TYPE(metadatatype_value)) {
-        metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(metadatatype_value)] = false;
+        if (GET_VENDOR_METADATA_STATUS_INDEX(metadatatype_value) < METADATA_SET_SIZE) {
+          metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(metadatatype_value)] =
+              false;
+        }
       } else {
-        metadata->isStandardMetadataSet[GET_STANDARD_METADATA_STATUS_INDEX(metadatatype_value)] =
-            false;
+        if (GET_STANDARD_METADATA_STATUS_INDEX(metadatatype_value) < METADATA_SET_SIZE) {
+          metadata->isStandardMetadataSet[GET_STANDARD_METADATA_STATUS_INDEX(metadatatype_value)] =
+              false;
+        }
       }
 #endif
       return Error::BAD_VALUE;
