@@ -247,6 +247,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int GetDisplayConfigCount(uint32_t *count);
   virtual int GetDisplayAttributesForConfig(int config,
                                             DisplayConfigVariableInfo *display_attributes);
+  virtual int GetSupportedDisplayRefreshRates(std::vector<uint32_t> *supported_refresh_rates);
   virtual int SetState(bool connected) {
     return kErrorNotSupported;
   }

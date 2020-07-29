@@ -1249,4 +1249,26 @@ int HWCSession::DisplayConfigImpl::SendTUIEvent(DispType dpy,
   }
 }
 
+int HWCSession::GetSupportedDisplayRefreshRates(int disp_id,
+                                                std::vector<uint32_t> *supported_refresh_rates) {
+  int disp_idx = GetDisplayIndex(disp_id);
+  if (disp_idx == -1) {
+    DLOGE("Invalid display = %d", disp_id);
+    return -EINVAL;
+  }
+
+  SCOPE_LOCK(locker_[disp_idx]);
+
+  if (hwc_display_[disp_idx]) {
+    return hwc_display_[disp_idx]->GetSupportedDisplayRefreshRates(supported_refresh_rates);
+  }
+  return -EINVAL;
+}
+
+int HWCSession::DisplayConfigImpl::GetSupportedDisplayRefreshRates(
+    DispType dpy, std::vector<uint32_t> *supported_refresh_rates) {
+  return hwc_session_->GetSupportedDisplayRefreshRates(MapDisplayType(dpy),
+                                                       supported_refresh_rates);
+}
+
 }  // namespace sdm
