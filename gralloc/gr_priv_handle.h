@@ -36,7 +36,9 @@ typedef gralloc1_error_t (*GRALLOC1_PFN_PERFORM)(gralloc1_device_t *device, int 
 
 #define PRIV_HANDLE_CONST(exp) static_cast<const private_handle_t *>(exp)
 
+#ifndef USE_SONY_STOCK_CAMERA
 #pragma pack(push, 4)
+#endif
 
 #ifdef __cplusplus
 struct private_handle_t : public native_handle_t {
@@ -198,8 +200,15 @@ struct private_handle_t {
   gralloc1_producer_usage_t GetProducerUsage() const { return producer_usage; }
 
   uint64_t GetBackingstore() const { return id; }
+  
+#ifndef USE_SONY_STOCK_CAMERA
+  int dummy = 0;
+#endif
+
 #endif
 };
+#ifndef USE_SONY_STOCK_CAMERA
 #pragma pack(pop)
+#endif
 
 #endif  // __GR_PRIV_HANDLE_H__
