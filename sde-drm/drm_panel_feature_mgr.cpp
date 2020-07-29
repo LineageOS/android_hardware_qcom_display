@@ -110,6 +110,22 @@ void DRMPanelFeatureMgr::Init(int fd, drmModeRes* res) {
     kDRMPanelFeatureDsppRCInfo, DRM_MODE_OBJECT_CRTC, UINT32_MAX, 1, 64, 0};
 }
 
+void DRMPanelFeatureMgr::Deinit() {
+  int ret = 0;
+  for (int i = kDRMPanelFeatureDsppIndex; i < kDRMPanelFeatureMax; i++) {
+    DRMPanelFeatureID prop_id = static_cast<DRMPanelFeatureID>(i);
+    if (drm_prop_blob_ids_map_[prop_id]) {
+      ret = drmModeDestroyPropertyBlob(dev_fd_, drm_prop_blob_ids_map_[prop_id]);
+      if (ret) {
+        DRM_LOGE("failed to destroy blob for feature %d, ret = %d", prop_id, ret);
+        return;
+      } else {
+        drm_prop_blob_ids_map_[prop_id] = 0;
+      }
+    }
+  }
+}
+
 int DRMPanelFeatureMgr::InitObjectProps(int obj_id, int obj_type) {
   if (dev_fd_ < 0 || obj_id < 0) {
     DRM_LOGE("Invalid dev_fd_ %d or crtc_id %d", dev_fd_, obj_id);

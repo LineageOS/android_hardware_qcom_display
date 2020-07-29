@@ -344,6 +344,9 @@ DRMManager::~DRMManager() {
     delete plane_mgr_;
     plane_mgr_ = NULL;
   }
+  if (panel_feature_mgr_intf_) {
+    panel_feature_mgr_intf_->Deinit();
+  }
 }
 
 int DRMManager::CreateAtomicReq(const DRMDisplayToken &token, DRMAtomicReqInterface **intf) {
