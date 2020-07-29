@@ -118,6 +118,10 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.wcg_composition_dataspa
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.protected_contents=true
 endif
 
+ifeq ($(TARGET_BOARD_PLATFORM),$(TRINKET))
+PRODUCT_PROPERTY_OVERRIDES += vendor.display.disable_excl_rect_partial_fb=1
+endif
+
 ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
 # Recovery is enabled, logging is enabled
 PRODUCT_PROPERTY_OVERRIDES += \
