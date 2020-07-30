@@ -1118,10 +1118,15 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
 
   // When secure session going on primary, if power request comes on second built-in, cache it and
   // process once secure session ends.
+  // Allow power off transition during secure session.
   bool is_builtin = (hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN);
-  if (secure_session_active_ && is_builtin) {
-    hwc_display_[display]->SetPendingPowerMode(mode);
-    return HWC2_ERROR_NONE;
+  bool is_power_off = (hwc_display_[display]->GetCurrentPowerMode() == HWC2::PowerMode::Off);
+  if (secure_session_active_ && is_builtin && is_power_off) {
+    if (GetActiveBuiltinDisplay() != HWCCallbacks::kNumDisplays) {
+      DLOGI("Secure session in progress, defer power state change");
+      hwc_display_[display]->SetPendingPowerMode(mode);
+      return HWC2_ERROR_NONE;
+    }
   }
 
   if (pending_power_mode_[display]) {
