@@ -1726,11 +1726,6 @@ DisplayError HWDeviceDRM::GetPPFeaturesVersion(PPFeatureVersion *vers) {
 }
 
 DisplayError HWDeviceDRM::SetPPFeatures(PPFeaturesConfig *feature_list) {
-  if (pending_doze_) {
-    DLOGI("Doze state pending!! Skip for now");
-    return kErrorNone;
-  }
-
   int ret = 0;
   DRMCrtcInfo crtc_info = {};
   PPFeatureInfo *feature = NULL;
