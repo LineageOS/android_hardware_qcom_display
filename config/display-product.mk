@@ -7,8 +7,6 @@ PRODUCT_PACKAGES += \
     vendor.qti.hardware.display.allocator-service \
     android.hardware.memtrack@1.0-impl \
     android.hardware.memtrack@1.0-service \
-    android.hardware.light@2.0-impl \
-    android.hardware.light@2.0-service \
     gralloc.$(TARGET_BOARD_PLATFORM) \
     lights.$(TARGET_BOARD_PLATFORM) \
     hwcomposer.$(TARGET_BOARD_PLATFORM) \
