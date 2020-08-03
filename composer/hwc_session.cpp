@@ -3320,7 +3320,7 @@ int32_t HWCSession::GetDisplayConnectionType(hwc2_display_t display,
   }
 
   if (!hwc_display_[display]) {
-    DLOGE("Expected valid hwc_display");
+    DLOGW("Expected valid hwc_display");
     return HWC2_ERROR_BAD_DISPLAY;
   }
   *type = HwcDisplayConnectionType::EXTERNAL;
