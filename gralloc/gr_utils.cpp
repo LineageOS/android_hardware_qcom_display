@@ -1407,6 +1407,10 @@ int GetImplDefinedFormat(uint64_t usage, int format) {
       // If no other usage flags are detected, default the
       // flexible YUV format to NV21_ZSL
       gr_format = HAL_PIXEL_FORMAT_NV21_ZSL;
+      ALOGD(
+          "Falling back to default YUV format - no camera/video specific format defined, usage "
+          "0x%" PRIx64,
+          usage);
     }
   }
 
