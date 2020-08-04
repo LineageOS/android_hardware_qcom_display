@@ -905,7 +905,7 @@ void DRMCrtc::SetSolidfillStages(drmModeAtomicReq *req, uint32_t obj_id,
     drm_dim_layer_v1.layer_cfg[i].color_fill.color_3 =
       ((uint32_t)((((sf.alpha & 0xFF)) * plane_alpha)));
   }
-
+  DLOGI("Set dim layer stages. obj_id=%u, num_layers=%u", obj_id, drm_dim_layer_v1.num_layers);
   AddProperty(req, obj_id, prop_mgr_.GetPropertyId(DRMProperty::DIM_STAGES_V1),
               reinterpret_cast<uint64_t> (&drm_dim_layer_v1), false /* cache */,
               tmp_prop_val_map_);

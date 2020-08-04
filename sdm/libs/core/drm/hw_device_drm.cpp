@@ -1388,6 +1388,7 @@ void HWDeviceDRM::SetSolidfillStages() {
 }
 
 void HWDeviceDRM::ClearSolidfillStages() {
+  DLOGI("Clearing solid fill stages");
   solid_fills_.clear();
   SetSolidfillStages();
 }
@@ -2232,6 +2233,7 @@ void HWDeviceDRM::SetSsppLutFeatures(HWPipeInfo *pipe_info) {
 
 void HWDeviceDRM::AddDimLayerIfNeeded() {
   if (secure_display_active_ && hw_resource_.secure_disp_blend_stage >= 0) {
+    DLOGI("Adding dim layer for secure session");
     HWSolidfillStage sf = {};
     sf.z_order = UINT32(hw_resource_.secure_disp_blend_stage);
     sf.roi = { 0.0, 0.0, FLOAT(mixer_attributes_.width), FLOAT(mixer_attributes_.height) };
