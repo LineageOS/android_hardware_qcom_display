@@ -3299,10 +3299,12 @@ int32_t HWCSession::GetDisplayCapabilities(hwc2_display_t display,
     if (has_doze_support) {
       *capabilities = {HwcDisplayCapability::SKIP_CLIENT_COLOR_TRANSFORM,
                        HwcDisplayCapability::DOZE,
-                       HwcDisplayCapability::BRIGHTNESS, HwcDisplayCapability::PROTECTED_CONTENTS};
+                       HwcDisplayCapability::BRIGHTNESS,
+                       HwcDisplayCapability::PROTECTED_CONTENTS};
     } else {
       *capabilities = {HwcDisplayCapability::SKIP_CLIENT_COLOR_TRANSFORM,
-                       HwcDisplayCapability::BRIGHTNESS, HwcDisplayCapability::PROTECTED_CONTENTS};
+                       HwcDisplayCapability::BRIGHTNESS,
+                       HwcDisplayCapability::PROTECTED_CONTENTS};
     }
   }
 
