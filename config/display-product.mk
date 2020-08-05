@@ -111,6 +111,12 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_layer_stitch=0
 endif
 
+ifeq ($(TARGET_BOARD_PLATFORM),holi)
+PRODUCT_PROPERTY_OVERRIDES += \
+    vendor.display.disable_offline_rotator=0 \
+    vendor.display.disable_rotator_ubwc=1
+endif
+
 ifneq ($(PLATFORM_VERSION), 10)
     PRODUCT_PROPERTY_OVERRIDES +=  vendor.display.enable_async_powermode=0
 endif
