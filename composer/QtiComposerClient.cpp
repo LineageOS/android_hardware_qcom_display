@@ -977,15 +977,25 @@ Return<Error> QtiComposerClient::setColorMode_2_3(uint64_t display, common_V1_2:
 
 Return<void> QtiComposerClient::getDisplayCapabilities(uint64_t display,
                                                        getDisplayCapabilities_cb _hidl_cb) {
-  // We only care about passing VTS for older composer versions
-  // Not returning any capabilities that are optional
+  // Report optional capabilities that we do support to pass VTS.
 
-  const hidl_vec<android::hardware::graphics::composer::V2_3::IComposerClient::DisplayCapability>
-        capabilities;
+  hidl_vec<composer_V2_3::IComposerClient::DisplayCapability> capabilities;
 
   if (mDisplayData.find(display) == mDisplayData.end()) {
      _hidl_cb(Error::BAD_DISPLAY, capabilities);
     return Void();
+  }
+
+  int32_t has_doze_support = 0;
+  hwc_session_->GetDozeSupport(display, &has_doze_support);
+
+  if (has_doze_support) {
+    if (has_doze_support) {
+      capabilities = { composer_V2_3::IComposerClient::DisplayCapability::DOZE,
+                       composer_V2_3::IComposerClient::DisplayCapability::BRIGHTNESS };
+    } else {
+      capabilities = { composer_V2_3::IComposerClient::DisplayCapability::BRIGHTNESS };
+    }
   }
 
   _hidl_cb(Error::NONE, capabilities);
@@ -1068,9 +1078,10 @@ Return<void> QtiComposerClient::registerCallback_2_4(
   enableCallback(callback != nullptr);
   return Void();
 }
+
 Return<void> QtiComposerClient::getDisplayCapabilities_2_4(uint64_t display,
                                                            getDisplayCapabilities_2_4_cb _hidl_cb) {
-  hidl_vec<composer_V2_4::IComposerClient::DisplayCapability> capabilities;
+  hidl_vec<HwcDisplayCapability> capabilities;
   auto error = hwc_session_->GetDisplayCapabilities(display, &capabilities);
   _hidl_cb(static_cast<composer_V2_4::Error>(error), capabilities);
   return Void();
