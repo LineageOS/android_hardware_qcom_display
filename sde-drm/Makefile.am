@@ -11,7 +11,8 @@ cpp_sources  = drm_manager.cpp \
                drm_utils.cpp \
                drm_pp_manager.cpp \
                drm_property.cpp \
-               drm_dpps_mgr_imp.cpp
+               drm_dpps_mgr_imp.cpp \
+               drm_panel_feature_mgr.cpp
 
 
 lib_LTLIBRARIES = libsdedrm.la
