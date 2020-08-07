@@ -166,7 +166,7 @@ int Fence::CheckFstat(const shared_ptr<Fence> &fence) {
     DLOGW("Fstat lookup failed");
     return -1;
   }
-  DLOGI("Fence fd=%d, ion=%llu, use_count=%d", fence->fd_, (uint64_t)buf1.st_ino,
+  DLOGV("Fence fd=%d, ion=%llu, use_count=%d", fence->fd_, (uint64_t)buf1.st_ino,
     fence.use_count());
 
   return 0;
