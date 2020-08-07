@@ -54,9 +54,11 @@ Fence::~Fence() {
   close(fd_);
 
   // erase all expired weak references.
+  /*
   wps_.erase(std::remove_if(wps_.begin(), wps_.end(), [](const std::weak_ptr<Fence> &wp) {
     return wp.expired();
   }), wps_.end());
+  */
 }
 
 void Fence::Set(BufferSyncHandler *buffer_sync_handler) {
@@ -74,7 +76,7 @@ shared_ptr<Fence> Fence::Create(int fd, const string &name) {
     close(fd);
   }
 
-  wps_.push_back(fence);
+  // wps_.push_back(fence);
 
   return fence;
 }
@@ -133,6 +135,7 @@ void Fence::Dump(std::ostringstream *os) {
   ASSERT_IF_NO_BUFFER_SYNC(g_buffer_sync_handler_);
 
   *os << "\n------------Active Fences Info---------";
+  /*
   for (auto &wp : wps_) {
     *os << "\n";
     shared_ptr<Fence> fence = wp.lock();
@@ -145,6 +148,7 @@ void Fence::Dump(std::ostringstream *os) {
     *os << ", ";
     g_buffer_sync_handler_->GetSyncInfo(fence->fd_, os);
   }
+  */
   *os << "\n---------------------------------------\n";
 }
 
