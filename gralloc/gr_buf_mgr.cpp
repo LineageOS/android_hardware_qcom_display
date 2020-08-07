@@ -876,7 +876,7 @@ Error BufferManager::ReleaseBuffer(private_handle_t const *hnd) {
     if (buf->DecRef()) {
       handles_map_.erase(hnd);
       // Unmap, close ion handle and close fd
-      if (allocated_ > 0) {
+      if (allocated_ >= hnd->size) {
         allocated_ -= hnd->size;
       }
       FreeBuffer(buf);
