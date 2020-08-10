@@ -1582,8 +1582,8 @@ int HWCSession::HotPlugHandler(bool connected) {
         // This cannot be avoided due to SurfaceFlinger design
         // limitation in Android P.
         HWCDisplayExternal::Destroy(hwc_display_[HWC_DISPLAY_PRIMARY]);
-        DLOGE("External display is connected. Abort!!");
-        abort();
+        DLOGE("External display is connected. Exit!!");
+        _exit(1);
       }
       break;
     }
