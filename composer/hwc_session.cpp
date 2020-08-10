@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -2607,58 +2607,73 @@ int HWCSession::CreatePrimaryDisplay() {
     }
   }
 
-  for (auto &iter : hw_displays_info) {
-    auto &info = iter.second;
-    if (!info.is_primary) {
-      continue;
-    }
+  SCOPE_LOCK(primary_display_lock_);
 
-    // todo (user): If primary display is not connected (e.g. hdmi as primary), a NULL display
-    // need to be created. SF expects primary display hotplug during callback registration unlike
-    // previous implementation where first hotplug could be notified anytime.
-    if (!info.is_connected) {
-      DLOGE("Primary display is not connected. Not supported at present.");
+  while (primary_pending_) {
+    for (auto &iter : hw_displays_info) {
+      auto &info = iter.second;
+      if (!info.is_primary) {
+        continue;
+      }
+
+      // todo (user): If primary display is not connected (e.g. hdmi as primary), a NULL display
+      // need to be created. SF expects primary display hotplug during callback registration unlike
+      // previous implementation where first hotplug could be notified anytime.
+      if (!info.is_connected) {
+        DLOGE("Primary display is not connected. Not supported at present.");
+        break;
+      }
+
+      auto hwc_display = &hwc_display_[HWC_DISPLAY_PRIMARY];
+      hwc2_display_t client_id = map_info_primary_.client_id;
+
+      if (info.display_type == kBuiltIn) {
+        status = HWCDisplayBuiltIn::Create(core_intf_, &buffer_allocator_, &callbacks_, this,
+                                          qservice_, client_id, info.display_id, hwc_display);
+      } else if (info.display_type == kPluggable) {
+        status = HWCDisplayPluggable::Create(core_intf_, &buffer_allocator_, &callbacks_, this,
+                                            qservice_, client_id, info.display_id, 0, 0, false,
+                                            hwc_display);
+      } else {
+        DLOGE("Spurious primary display type = %d", info.display_type);
+        break;
+      }
+
+      if (!status) {
+        DLOGI("Created primary display type = %d, sdm id = %d, client id = %d", info.display_type,
+              info.display_id, UINT32(client_id));
+        {
+          SCOPE_LOCK(hdr_locker_[client_id]);
+          is_hdr_display_[UINT32(client_id)] = HasHDRSupport(*hwc_display);
+        }
+
+        map_info_primary_.disp_type = info.display_type;
+        map_info_primary_.sdm_id = info.display_id;
+        CreateDummyDisplay(HWC_DISPLAY_PRIMARY);
+        color_mgr_ = HWCColorManager::CreateColorManager(&buffer_allocator_);
+        if (!color_mgr_) {
+          DLOGW("Failed to load HWCColorManager.");
+        }
+      } else {
+        DLOGE("Primary display creation has failed! status = %d", status);
+        return status;
+      }
+
+      primary_pending_ = false;
+      primary_display_lock_.Signal();
+
+      // Primary display is found, no need to parse more.
       break;
     }
 
-    auto hwc_display = &hwc_display_[HWC_DISPLAY_PRIMARY];
-    hwc2_display_t client_id = map_info_primary_.client_id;
-
-    if (info.display_type == kBuiltIn) {
-      status = HWCDisplayBuiltIn::Create(core_intf_, &buffer_allocator_, &callbacks_, this,
-                                         qservice_, client_id, info.display_id, hwc_display);
-    } else if (info.display_type == kPluggable) {
-      status = HWCDisplayPluggable::Create(core_intf_, &buffer_allocator_, &callbacks_, this,
-                                           qservice_, client_id, info.display_id, 0, 0, false,
-                                           hwc_display);
-    } else {
-      DLOGE("Spurious primary display type = %d", info.display_type);
-      break;
-    }
-
-    if (!status) {
-      DLOGI("Created primary display type = %d, sdm id = %d, client id = %d", info.display_type,
-             info.display_id, UINT32(client_id));
-      {
-         SCOPE_LOCK(hdr_locker_[client_id]);
-         is_hdr_display_[UINT32(client_id)] = HasHDRSupport(*hwc_display);
+    if (primary_pending_) {
+      DisplayError error = core_intf_->GetDisplaysStatus(&hw_displays_info);
+      if (error != kErrorNone) {
+        DLOGE("Failed to get connected display list. Error = %d", error);
+        return status;
       }
-
-      map_info_primary_.disp_type = info.display_type;
-      map_info_primary_.sdm_id = info.display_id;
-      CreateDummyDisplay(HWC_DISPLAY_PRIMARY);
-      color_mgr_ = HWCColorManager::CreateColorManager(&buffer_allocator_);
-      if (!color_mgr_) {
-        DLOGW("Failed to load HWCColorManager.");
-      }
-    } else {
-      DLOGE("Primary display creation has failed! status = %d", status);
     }
-
-    // Primary display is found, no need to parse more.
-    break;
   }
-
   return status;
 }
 
@@ -2680,6 +2695,11 @@ int HWCSession::HandleBuiltInDisplays() {
   if (null_display_mode_) {
     DLOGW("Skipped BuiltIn display handling in null-display mode");
     return 0;
+  }
+
+  SCOPE_LOCK(primary_display_lock_);
+  while (primary_pending_) {
+    primary_display_lock_.Wait();
   }
 
   HWDisplaysInfo hw_displays_info = {};
