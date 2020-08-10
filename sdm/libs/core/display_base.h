@@ -239,7 +239,8 @@ class DisplayBase : public DisplayInterface {
   std::string current_color_mode_ = "hal_native";
   bool hw_recovery_logs_captured_ = false;
   int disable_hw_recovery_dump_ = 0;
-  HWQosData default_qos_data_;
+  HWQosData cached_qos_data_;
+  uint32_t default_clock_hz_ = 0;
   bool drop_hw_vsync_ = false;
   uint32_t current_refresh_rate_ = 0;
   bool drop_skewed_vsync_ = false;

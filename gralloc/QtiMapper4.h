@@ -266,7 +266,10 @@ class QtiMapper : public IQtiMapper {
       {qtigralloc::MetadataType_AlignedHeightInPixels, "height in private_handle_t", true, false},
 #ifdef METADATA_V2
       {qtigralloc::MetadataType_StandardMetadataStatus, "Is standard metadata set", true, false},
-      {qtigralloc::MetadataType_VendorMetadataStatus, "Is vendor metadata set", true, false}
+      {qtigralloc::MetadataType_VendorMetadataStatus, "Is vendor metadata set", true, false},
+#endif
+#ifdef QTI_BUFFER_TYPE
+      {qtigralloc::MetadataType_BufferType, "Buffer type from private_handle_t", true, false},
 #endif
   };
 };
