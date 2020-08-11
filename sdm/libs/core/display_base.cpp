@@ -456,24 +456,32 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
 
   if (rc_panel_feature_init_) {
     GenericPayload in, out;
-    RCMaskStatus *mask_status = nullptr;
+    RCMaskStackStatus *mask_status = nullptr;
     int ret = -1;
-    ret = out.CreatePayload<RCMaskStatus>(mask_status);
+    ret = out.CreatePayload<RCMaskStackStatus>(mask_status);
     if (ret) {
       DLOGE("failed to create the payload. Error:%d", ret);
       return kErrorUndefined;
     }
     ret = rc_core_->ProcessOps(kRCFeatureCommit, in, &out);
     if (ret) {
-     DLOGE("Failed to set the mask on driver for display: %d-%d, Error: %d",
-           display_id_, display_type_, ret);
-    }
-    DLOGI_IF(kTagDisplay, "Status of mask data: %d.", *mask_status);
-    if (*mask_status == kStatusNotProgrammed) {
-      needs_validate_ = true;
-      DLOGI_IF(kTagDisplay, "Mask is ready for display %d-%d, call Corresponding Prepare()",
-               display_id_, display_type_);
-      return kErrorNotValidated;
+     // If RC commit failed, fall back to default (GPU/SDE pipes) drawing of "handled" mask layers.
+     DLOGE("Failed to set the data on driver for display: %d-%d, Error: %d, status: %d",
+           display_id_, display_type_, ret, *mask_status);
+      if (*mask_status == kStatusRcMaskStackHandled) {
+        needs_validate_ = true;
+        DLOGW("Need to call Corresponding prepare to handle the mask layers.",
+              display_id_, display_type_);
+        return kErrorNotValidated;
+      }
+    } else {
+      DLOGI_IF(kTagDisplay, "Status of RC mask data: %d.", *mask_status);
+      if (*mask_status == kStatusRcMaskStackDirty) {
+        needs_validate_ = true;
+        DLOGI_IF(kTagDisplay, "Mask is ready for display %d-%d, call Corresponding Prepare()",
+                 display_id_, display_type_);
+        return kErrorNotValidated;
+      }
     }
   }
 

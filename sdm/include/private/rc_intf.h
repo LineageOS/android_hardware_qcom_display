@@ -54,15 +54,15 @@ struct RCOutputConfig {
 };
 
 // These value is to get the status of the mask
-// kStatusNotValid: Default state.
-// kStatusProgrammed: Mask is successfully created by thread and mask layer get dropped in prepare.
-// kStatusNotProgrammed: Mask is successfully created by thread but need to call needs validate.
-// kStatusError: Mask creation failed because of some error.
-enum RCMaskStatus {
-  kStatusNotValid,
-  kStatusProgrammed,
-  kStatusNotProgrammed,
-  kStatusError,
+// kStatusIgnore: Either there is no mask layers or mask generation in progress.
+// kStatusRcMaskStackHandled: Mask is successfully created by thread and mask layer got
+//                            dropped in prepare.
+// kStatusRcMaskStackDirty: Mask is successfully created by thread but need to call neteds validate,
+//                          to make SF drop the mask layers.
+enum RCMaskStackStatus {
+  kStatusIgnore,
+  kStatusRcMaskStackHandled,
+  kStatusRcMaskStackDirty,
 };
 
 // RC specific params as enum
