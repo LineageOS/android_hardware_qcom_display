@@ -149,6 +149,11 @@ int HWCDisplayBuiltIn::Init() {
     DLOGI("Window rect : [%f %f %f %f]", window_rect_.left, window_rect_.top,
            window_rect_.right, window_rect_.bottom);
   }
+
+  HWCDebugHandler::Get()->GetProperty(PERF_HINT_WINDOW_PROP, &perf_hint_window_);
+  HWCDebugHandler::Get()->GetProperty(ENABLE_PERF_HINT_LARGE_COMP_CYCLE,
+                                      &perf_hint_large_comp_cycle_);
+
   return status;
 }
 
@@ -247,6 +252,7 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
   }
 
   status = PrepareLayerStack(out_num_types, out_num_requests);
+  SetCpuPerfHintLargeCompCycle();
   pending_commit_ = true;
   return status;
 }
@@ -719,7 +725,7 @@ void HWCDisplayBuiltIn::SetQDCMSolidFillInfo(bool enable, const LayerSolidFill &
 }
 
 void HWCDisplayBuiltIn::ToggleCPUHint(bool set) {
-  if (!cpu_hint_) {
+  if (!cpu_hint_ || !perf_hint_window_) {
     return;
   }
 
@@ -1443,6 +1449,22 @@ int HWCDisplayBuiltIn::PostInit() {
   }
 
   return 0;
+}
+
+void HWCDisplayBuiltIn::SetCpuPerfHintLargeCompCycle() {
+  if (!cpu_hint_ || !perf_hint_large_comp_cycle_) {
+    DLOGV_IF(kTagResources, "cpu_hint_ not initialized or perty not set");
+    return;
+  }
+
+  for (auto hwc_layer : layer_set_) {
+    Layer *layer = hwc_layer->GetSDMLayer();
+    if (layer->composition == kCompositionGPU) {
+      DLOGV_IF(kTagResources, "Set perf hint for large comp cycle");
+      cpu_hint_->ReqHints(kPerfHintLargeCompCycle);
+      break;
+    }
+  }
 }
 
 }  // namespace sdm
