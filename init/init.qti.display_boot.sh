@@ -31,8 +31,13 @@
 target=`getprop ro.board.platform`
 
 case "$target" in
+    "lahaina")
+    # Set property for lahaina
+    setprop vendor.display.target.version 1
+    ;;
     "shima")
     # Set property for shima
+    setprop vendor.display.target.version 2
     ;;
     "holi")
     # Set property for holi
