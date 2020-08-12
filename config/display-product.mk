@@ -37,7 +37,8 @@ PRODUCT_PACKAGES += \
     init.qti.display_boot.sh \
     init.qti.display_boot.rc \
     modetest \
-    vndservicemanager
+    vndservicemanager \
+    libmemutils
 
 #QDCM calibration xml file for 2k panel
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml
@@ -184,6 +185,7 @@ else
     PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/sde-drm
     PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/sdm/libs/core
     PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/sdm/libs/utils
+    PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/libmemutils
 endif
 
 #Modules that will be added in QMAA/Non-QMAA paths

@@ -62,6 +62,7 @@ AC_CONFIG_FILES([ \
         sde-drm/Makefile \
         sdm/libs/utils/Makefile \
         sdm/libs/core/Makefile \
-        libqdutils/Makefile
+        libqdutils/Makefile \
+        libmemutils/Makefile
         ])
 AC_OUTPUT
