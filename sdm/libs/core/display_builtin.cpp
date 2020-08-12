@@ -458,7 +458,7 @@ DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
     vsync_enable_ = false;
   }
 
-  if (pending_doze_ || pending_power_on_) {
+  if (pending_power_state_ != kPowerStateNone) {
     event_handler_->Refresh();
   }
 
@@ -1230,6 +1230,12 @@ void DppsInfo::DppsNotifyOps(enum DppsNotifyOps op, void *payload, size_t size) 
 
 DisplayError DisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
+
+  if (!active_ && (pending_power_state_ == kPowerStateNone)) {
+    DLOGW("Cannot handle secure event when display is not active");
+    return kErrorPermission;
+  }
+
   DisplayError err = hw_intf_->HandleSecureEvent(secure_event, default_qos_data_);
   if (err != kErrorNone) {
     return err;
@@ -1237,6 +1243,31 @@ DisplayError DisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event) {
   comp_manager_->HandleSecureEvent(display_comp_ctx_, secure_event);
   secure_event_ = secure_event;
 
+  if (vsync_enable_ && secure_event == kTUITransitionStart) {
+    err = SetVSyncState(false /* enable */);
+    if (err != kErrorNone) {
+      return err;
+    }
+    vsync_enable_pending_ = true;
+  } else if (secure_event == kTUITransitionEnd) {
+    err = HandlePendingVSyncEnable(nullptr);
+    if (err != kErrorNone) {
+      return err;
+    }
+    DisplayState state = kStateOff;
+    if (GetPendingDisplayState(&state) == kErrorNone) {
+      // Handle PowerOn and Doze during the next commit
+      if (state == kStateOn || state == kStateDoze) {
+        return kErrorNone;
+      }
+      shared_ptr<Fence> release_fence = nullptr;
+      err = SetDisplayState(state, false /* teardown */, &release_fence);
+      if (err != kErrorNone) {
+        DLOGE("SetDisplay state %d failed for %d err %d", state, display_id_, err);
+        return err;
+      }
+    }
+  }
   return kErrorNone;
 }
 

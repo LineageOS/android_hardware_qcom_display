@@ -210,6 +210,7 @@ class DisplayBase : public DisplayInterface {
   DisplayError SetupRC(PanelFeatureFactoryIntf *pf_factory, PanelFeaturePropertyIntf *prop_intf);
   DisplayError HandlePendingVSyncEnable(const shared_ptr<Fence> &retire_fence);
   DisplayError HandlePendingPowerState(const shared_ptr<Fence> &retire_fence);
+  DisplayError GetPendingDisplayState(DisplayState *disp_state);
 
   recursive_mutex recursive_mutex_;
   int32_t display_id_ = -1;
@@ -258,8 +259,7 @@ class DisplayBase : public DisplayInterface {
   bool drop_skewed_vsync_ = false;
   bool custom_mixer_resolution_ = false;
   bool vsync_enable_pending_ = false;
-  bool pending_doze_ = false;
-  bool pending_power_on_ = false;
+  HWPowerState pending_power_state_ = kPowerStateNone;
   QSyncMode qsync_mode_ = kQSyncModeNone;
   bool needs_avr_update_ = false;
 

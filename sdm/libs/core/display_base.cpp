@@ -318,7 +318,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
 
   DTRACE_SCOPED();
   // Allow prepare as pending doze/pending_power_on is handled as a part of draw cycle
-  if (!active_ && !pending_doze_ && !pending_power_on_) {
+  if (!active_ && (pending_power_state_ == kPowerStateNone)) {
     return kErrorPermission;
   }
 
@@ -479,7 +479,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
   }
 
   // Allow commit as pending doze/pending_power_on is handled as a part of draw cycle
-  if (!active_ && !pending_doze_ && !pending_power_on_) {
+  if (!active_ && (pending_power_state_ == kPowerStateNone)) {
     needs_validate_ = true;
     return kErrorPermission;
   }
@@ -701,9 +701,16 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
       }
       hw_layers->erase(layer);
     }
-    error = hw_intf_->Flush(&hw_layers_);
-    if (error == kErrorNone) {
-      error = hw_intf_->PowerOff(teardown);
+    error = hw_intf_->PowerOff(teardown);
+    if (error != kErrorNone) {
+      if (error == kErrorDeferred) {
+        pending_power_state_ = kPowerStateOff;
+        error = kErrorNone;
+      } else {
+        return error;
+      }
+    } else {
+      pending_power_state_ = kPowerStateNone;
     }
     break;
   }
@@ -711,11 +718,13 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     error = hw_intf_->PowerOn(default_qos_data_, release_fence);
     if (error != kErrorNone) {
       if (error == kErrorDeferred) {
-        pending_power_on_ = true;
+        pending_power_state_ = kPowerStateOn;
         error = kErrorNone;
       } else {
         return error;
       }
+    } else {
+      pending_power_state_ = kPowerStateNone;
     }
 
     error = comp_manager_->ReconfigureDisplay(display_comp_ctx_, display_attributes_,
@@ -724,7 +733,6 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     if (error != kErrorNone) {
       return error;
     }
-
     active = true;
     break;
 
@@ -732,17 +740,30 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     error = hw_intf_->Doze(default_qos_data_, release_fence);
     if (error != kErrorNone) {
       if (error == kErrorDeferred) {
-        pending_doze_ = true;
+        pending_power_state_ = kPowerStateDoze;
         error = kErrorNone;
       } else {
         return error;
       }
+    } else {
+      pending_power_state_ = kPowerStateNone;
     }
     active = true;
     break;
 
   case kStateDozeSuspend:
     error = hw_intf_->DozeSuspend(default_qos_data_, release_fence);
+    if (error != kErrorNone) {
+      if (error == kErrorDeferred) {
+        pending_power_state_ = kPowerStateDozeSuspend;
+        error = kErrorNone;
+      } else {
+        return error;
+      }
+    } else {
+      pending_power_state_ = kPowerStateNone;
+    }
+
     if (display_type_ != kBuiltIn) {
       active = true;
     }
@@ -760,23 +781,12 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
   DisablePartialUpdateOneFrame();
 
   if (error == kErrorNone) {
-    if (!pending_doze_ && !pending_power_on_) {
+    if (pending_power_state_ == kPowerStateNone) {
       active_ = active;
       state_ = state;
     }
     comp_manager_->SetDisplayState(display_comp_ctx_, state,
                             release_fence ? *release_fence : nullptr);
-
-    // If previously requested doze state is still pending reset it on any new display state request
-    // and handle the new request.
-    if (state != kStateDoze) {
-      pending_doze_ = false;
-    }
-    // If previously requested power on state is still pending reset it on any new display state
-    // request and handle the new request.
-    if (state != kStateOn) {
-      pending_power_on_ = false;
-    }
   }
 
   // Handle vsync pending on resume, Since the power on commit is synchronous we pass -1 as retire
@@ -1379,8 +1389,9 @@ DisplayError DisplayBase::HandlePendingVSyncEnable(const shared_ptr<Fence> &reti
 DisplayError DisplayBase::SetVSyncState(bool enable) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
-  if ((state_ == kStateOff || secure_event_ == kSecureDisplayStart) && enable) {
-    DLOGW("Can't enable vsync when display %d-%d is powered off!! Defer it when display is active",
+  if ((state_ == kStateOff || secure_event_ == kSecureDisplayStart ||
+       secure_event_ == kTUITransitionStart) && enable) {
+    DLOGW("Can't enable vsync when display %d-%d is powered off or SecureDisplay/TUI in progress",
           display_id_, display_type_);
     vsync_enable_pending_ = true;
     return kErrorNone;
@@ -1556,7 +1567,7 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
   uint32_t display_width = display_attributes_.x_pixels;
   uint32_t display_height = display_attributes_.y_pixels;
 
-  if (secure_event_ == kSecureDisplayStart) {
+  if (secure_event_ == kSecureDisplayStart || secure_event_ == kTUITransitionStart) {
     *new_mixer_width = display_width;
     *new_mixer_height = display_height;
     return ((*new_mixer_width != mixer_width) || (*new_mixer_height != mixer_height));
@@ -2202,21 +2213,18 @@ bool DisplayBase::CanSkipValidate() {
 }
 
 DisplayError DisplayBase::HandlePendingPowerState(const shared_ptr<Fence> &retire_fence) {
-  if (pending_doze_ || pending_power_on_) {
+  if (pending_power_state_ != kPowerStateNone) {
     // Retire fence signalling confirms that CRTC enabled, hence wait for retire fence before
     // we enable vsync
     Fence::Wait(retire_fence);
 
-    if (pending_doze_) {
-      state_ = kStateDoze;
-    }
-    if (pending_power_on_) {
-      state_ = kStateOn;
-    }
+    DisplayState pending_state;
+    GetPendingDisplayState(&pending_state);
+
+    state_ = pending_state;
     active_ = true;
 
-    pending_doze_ = false;
-    pending_power_on_ = false;
+    pending_power_state_ = kPowerStateNone;
   }
   return kErrorNone;
 }
@@ -2237,6 +2245,29 @@ bool DisplayBase::GameEnhanceSupported() {
     return color_mgr_->GameEnhanceSupported();
   }
   return false;
+}
+
+DisplayError DisplayBase::GetPendingDisplayState(DisplayState *disp_state) {
+  if (!disp_state) {
+    return kErrorParameters;
+  }
+  switch (pending_power_state_) {
+    case kPowerStateOn:
+      *disp_state = kStateOn;
+      break;
+    case kPowerStateOff:
+      *disp_state = kStateOff;
+      break;
+    case kPowerStateDoze:
+      *disp_state = kStateDoze;
+      break;
+    case kPowerStateDozeSuspend:
+      *disp_state = kStateDozeSuspend;
+      break;
+    default:
+      return kErrorParameters;
+  }
+  return kErrorNone;
 }
 
 }  // namespace sdm

@@ -193,6 +193,8 @@ class HWDeviceDRM : public HWInterface {
   void SetQOSData(const HWQosData &qos_data);
   void DumpHWLayers(HWLayers *hw_layers);
   bool IsFullFrameUpdate(const HWLayersInfo &hw_layer_info);
+  DisplayError GetDRMPowerMode(const HWPowerState &power_state, DRMPowerMode *drm_power_mode);
+  void SetTUIState();
 
   class Registry {
    public:
@@ -250,7 +252,7 @@ class HWDeviceDRM : public HWInterface {
   bool reset_output_fence_offset_ = false;
   uint64_t bit_clk_rate_ = 0;
   bool update_mode_ = false;
-  bool pending_doze_ = false;
+  HWPowerState pending_power_state_ = kPowerStateNone;
   PrimariesTransfer blend_space_ = {};
   DRMPowerMode last_power_mode_ = DRMPowerMode::OFF;
   uint32_t dest_scaler_blocks_used_ = 0;  // Dest scaler blocks in use by this HWDeviceDRM instance.

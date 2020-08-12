@@ -205,6 +205,14 @@ enum class HWRecoveryEvent : uint32_t {
   kDisplayPowerReset,  // driver requesting display power cycle
 };
 
+enum HWPowerState {
+  kPowerStateNone,
+  kPowerStateOff,
+  kPowerStateOn,
+  kPowerStateDoze,
+  kPowerStateDozeSuspend,
+};
+
 typedef std::map<HWSubBlockType, std::vector<LayerBufferFormat>> FormatsMap;
 typedef std::map<LayerBufferFormat, float> CompRatioMap;
 
