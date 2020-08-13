@@ -229,7 +229,7 @@ implementation::QtiComposerClient::destroyVirtualDisplay(uint64_t display) {
 
 implementation::Return<void> implementation::QtiComposerClient::createLayer(
     uint64_t display, uint32_t bufferSlotCount, createLayer_cb _hidl_cb) {
-  composer_V2_1::Layer layer = 1;
+  composer_V2_1::Layer layer = ++layer_count_;
   auto error = HWC2_ERROR_NONE;
   Error err = static_cast<Error>(error);
 
