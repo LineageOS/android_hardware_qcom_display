@@ -109,6 +109,9 @@ static const MetadataType MetadataType_StandardMetadataStatus = {VENDOR_QTI,
 static const MetadataType MetadataType_VendorMetadataStatus = {VENDOR_QTI,
                                                                QTI_VENDOR_METADATA_STATUS};
 
+static const MetadataType MetadataType_BufferType = {VENDOR_QTI,
+                                                     QTI_BUFFER_TYPE};
+
 // 0 is also used as invalid value in standard metadata
 static const MetadataType MetadataType_Invalid = {VENDOR_QTI, 0};
 

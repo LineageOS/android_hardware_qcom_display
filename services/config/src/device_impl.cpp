@@ -723,6 +723,19 @@ void DeviceImpl::ParseDestroy(uint64_t client_handle, perform_cb _hidl_cb) {
   _hidl_cb(0, {}, {});
 }
 
+void DeviceImpl::DeviceClientContext::ParseGetDisplayHwId(const ByteStream &input_params,
+                                                          perform_cb _hidl_cb) {
+  uint32_t disp_hw_id = 0;
+  ByteStream output_params;
+
+  const uint8_t *data = input_params.data();
+  const uint32_t *disp_id = reinterpret_cast<const uint32_t*>(data);
+  int32_t error = intf_->GetDisplayHwId(*disp_id, &disp_hw_id);
+  output_params.setToExternal(reinterpret_cast<uint8_t*>(&disp_hw_id), sizeof(uint32_t));
+
+  _hidl_cb(error, output_params, {});
+}
+
 Return<void> DeviceImpl::perform(uint64_t client_handle, uint32_t op_code,
                                  const ByteStream &input_params, const HandleStream &input_handles,
                                  perform_cb _hidl_cb) {
@@ -872,6 +885,9 @@ Return<void> DeviceImpl::perform(uint64_t client_handle, uint32_t op_code,
       break;
     case kDestroy:
       ParseDestroy(client_handle, _hidl_cb);
+      break;
+    case kGetDisplayHwId:
+      client->ParseGetDisplayHwId(input_params, _hidl_cb);
       break;
     default:
       break;

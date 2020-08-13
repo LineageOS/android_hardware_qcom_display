@@ -842,6 +842,29 @@ int ClientImpl::SendTUIEvent(DisplayType dpy, TUIEventType event_type) {
   return error;
 }
 
+int ClientImpl::GetDisplayHwId(uint32_t disp_id, uint32_t *display_hw_id) {
+  ByteStream input_params;
+  input_params.setToExternal(reinterpret_cast<uint8_t*>(&disp_id), sizeof(uint32_t));
+  ByteStream output_params;
+
+  int error = 0;
+  auto hidl_cb = [&error, &output_params] (int32_t err, ByteStream params, HandleStream handles) {
+    error = err;
+    output_params = params;
+  };
+
+  display_config_->perform(client_handle_, kGetDisplayHwId, input_params, {}, hidl_cb);
+
+  const uint8_t *data = output_params.data();
+  const uint32_t *output = reinterpret_cast<const uint32_t*>(data);
+
+  if (!error) {
+    *display_hw_id = *output;
+  }
+
+  return error;
+}
+
 void ClientCallback::ParseNotifyCWBBufferDone(const ByteStream &input_params,
                                               const HandleStream &input_handles) {
   const int *error;
