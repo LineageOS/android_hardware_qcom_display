@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "adf85f67_ed7ae490",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 11
+      },
+      "lineNbr": 9,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2020-08-13T21:55:02Z",
+      "side": 1,
+      "message": "\"This requires\" almost seems like it\u0027s a dependency. You should rephrase it.",
+      "revId": "9fdb24140b4ddd8835c7871fab9a34e0f60b74b4",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
