@@ -69,6 +69,30 @@
       "revId": "ab2a9baa751789b33c76090be2d5331ccdc7d0ef",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "a29c79c9_d645d7b3",
+        "filename": "sdm/include/core/layer_stack.h",
+        "patchSetId": 12
+      },
+      "lineNbr": 197,
+      "author": {
+        "id": 10258
+      },
+      "writtenOn": "2020-08-14T03:15:12Z",
+      "side": 1,
+      "message": "sizeof of a variable/struct is part of ABI as well, ig you misunderstood what ABI is?",
+      "parentUuid": "7de066cb_de4af7ac",
+      "range": {
+        "startLine": 197,
+        "startChar": 40,
+        "endLine": 197,
+        "endChar": 65
+      },
+      "revId": "ab2a9baa751789b33c76090be2d5331ccdc7d0ef",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
     }
   ]
 }
