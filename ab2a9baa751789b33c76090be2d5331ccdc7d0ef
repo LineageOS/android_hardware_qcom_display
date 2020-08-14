@@ -117,6 +117,30 @@
       "revId": "ab2a9baa751789b33c76090be2d5331ccdc7d0ef",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "301f5a47_bd747dd1",
+        "filename": "sdm/include/core/layer_stack.h",
+        "patchSetId": 12
+      },
+      "lineNbr": 197,
+      "author": {
+        "id": 10258
+      },
+      "writtenOn": "2020-08-14T04:06:31Z",
+      "side": 1,
+      "message": "Thanks for the explanation, didn\u0027t notice it\u0027s a bit field, looks good then.",
+      "parentUuid": "7025c277_68d8e664",
+      "range": {
+        "startLine": 197,
+        "startChar": 40,
+        "endLine": 197,
+        "endChar": 65
+      },
+      "revId": "ab2a9baa751789b33c76090be2d5331ccdc7d0ef",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
     }
   ]
 }
