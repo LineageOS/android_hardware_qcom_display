@@ -93,6 +93,30 @@
       "revId": "ab2a9baa751789b33c76090be2d5331ccdc7d0ef",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "7025c277_68d8e664",
+        "filename": "sdm/include/core/layer_stack.h",
+        "patchSetId": 12
+      },
+      "lineNbr": 197,
+      "author": {
+        "id": 11801
+      },
+      "writtenOn": "2020-08-14T03:37:06Z",
+      "side": 1,
+      "message": "This data structure determining the size here is the union, not this struct (which is a bitfield, not multiple 32-bit integers). The size of this whole *union* is 32 bits. The number of reserved bits will decrease when a new bit from CAF is introduced and is used to ensure that our custom flags end up at the end so as to not interfere with CAF flags should a mixture of source-built and prebuilt components be used.",
+      "parentUuid": "a29c79c9_d645d7b3",
+      "range": {
+        "startLine": 197,
+        "startChar": 40,
+        "endLine": 197,
+        "endChar": 65
+      },
+      "revId": "ab2a9baa751789b33c76090be2d5331ccdc7d0ef",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
     }
   ]
 }
