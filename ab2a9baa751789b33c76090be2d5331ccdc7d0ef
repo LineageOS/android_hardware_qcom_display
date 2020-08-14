@@ -45,6 +45,30 @@
       "revId": "ab2a9baa751789b33c76090be2d5331ccdc7d0ef",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "7de066cb_de4af7ac",
+        "filename": "sdm/include/core/layer_stack.h",
+        "patchSetId": 12
+      },
+      "lineNbr": 197,
+      "author": {
+        "id": 11801
+      },
+      "writtenOn": "2020-08-14T02:58:44Z",
+      "side": 1,
+      "message": "Pretty sure it doesn\u0027t. The new bits will be ignored, but they wouldn\u0027t be using the same bit as ours, which would cause ABI breakage.",
+      "parentUuid": "243e828b_61bf6d1d",
+      "range": {
+        "startLine": 197,
+        "startChar": 40,
+        "endLine": 197,
+        "endChar": 65
+      },
+      "revId": "ab2a9baa751789b33c76090be2d5331ccdc7d0ef",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
     }
   ]
 }
