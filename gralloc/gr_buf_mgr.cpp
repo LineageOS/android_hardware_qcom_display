@@ -739,7 +739,7 @@ Error BufferManager::FreeBuffer(std::shared_ptr<Buffer> buf) {
   handle->fd = -1;
   handle->fd_metadata = -1;
   if (!(handle->flags & private_handle_t::PRIV_FLAGS_CLIENT_ALLOCATED)) {
-    delete handle;
+    free(handle);
   }
   return Error::NONE;
 }
@@ -981,6 +981,34 @@ Error BufferManager::UnlockBuffer(const private_handle_t *handle) {
   return status;
 }
 
+// TODO(user): Move this once private_handle_t definition is out of QSSI
+static void InitializePrivateHandle(private_handle_t *hnd, int fd, int meta_fd, int flags,
+                                    int width, int height, int uw, int uh, int format, int buf_type,
+                                    unsigned int size, uint64_t usage = 0) {
+  hnd->fd = fd;
+  hnd->fd_metadata = meta_fd;
+  hnd->magic = qtigralloc::private_handle_t::kMagic;
+  hnd->flags = flags;
+  hnd->width = width;
+  hnd->height = height;
+  hnd->unaligned_width = uw;
+  hnd->unaligned_height = uh;
+  hnd->format = format;
+  hnd->buffer_type = buf_type;
+  hnd->layer_count = 1;
+  hnd->id = 0;
+  hnd->usage = usage;
+  hnd->size = size;
+  hnd->offset = 0;
+  hnd->offset_metadata = 0;
+  hnd->base = 0;
+  hnd->base_metadata = 0;
+  hnd->gpuaddr = 0;
+  hnd->version = static_cast<int>(sizeof(native_handle));
+  hnd->numInts = qtigralloc::private_handle_t::NumInts();
+  hnd->numFds = qtigralloc::private_handle_t::kNumFds;
+}
+
 Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_handle_t *handle,
                                     unsigned int bufferSize, bool testAlloc) {
   if (!handle)
@@ -1043,9 +1071,19 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   flags |= data.alloc_type;
 
   // Create handle
-  private_handle_t *hnd = new private_handle_t(
-      data.fd, e_data.fd, INT(flags), INT(alignedw), INT(alignedh), descriptor.GetWidth(),
-      descriptor.GetHeight(), format, buffer_type, data.size, usage);
+  // In FreeBuffer(), there's no way to tell if malloc or new was used at allocation time
+  // On the importBuffer path, native_handle_clone() uses malloc
+  // To avoid mismatch between malloc/free and new/delete in FreeBuffer(),
+  // this was changed to malloc
+  private_handle_t *hnd = static_cast<private_handle_t *>(malloc(sizeof(private_handle_t)));
+  if (hnd == nullptr) {
+    ALOGE("gralloc failed to allocate private_handle_t");
+    return Error::NO_RESOURCES;
+  }
+
+  InitializePrivateHandle(hnd, data.fd, e_data.fd, INT(flags), INT(alignedw), INT(alignedh),
+                          descriptor.GetWidth(), descriptor.GetHeight(), format, buffer_type,
+                          data.size, usage);
 
   hnd->id = ++next_id_;
   hnd->base = 0;
