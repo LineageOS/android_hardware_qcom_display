@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "99809355_0e319e51",
+        "filename": "sdm/include/core/layer_stack.h",
+        "patchSetId": 12
+      },
+      "lineNbr": 47,
+      "author": {
+        "id": 10258
+      },
+      "writtenOn": "2020-08-14T02:50:33Z",
+      "side": 1,
+      "message": "why not define this in kernel header and include it here? it\u0027s not a good idea to manually maintain consistency",
+      "range": {
+        "startLine": 47,
+        "startChar": 8,
+        "endLine": 47,
+        "endChar": 32
+      },
+      "revId": "ab2a9baa751789b33c76090be2d5331ccdc7d0ef",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "243e828b_61bf6d1d",
+        "filename": "sdm/include/core/layer_stack.h",
+        "patchSetId": 12
+      },
+      "lineNbr": 197,
+      "author": {
+        "id": 10258
+      },
+      "writtenOn": "2020-08-14T02:50:33Z",
+      "side": 1,
+      "message": "fake news, abi breaks once new bits added to the struct",
+      "range": {
+        "startLine": 197,
+        "startChar": 40,
+        "endLine": 197,
+        "endChar": 65
+      },
+      "revId": "ab2a9baa751789b33c76090be2d5331ccdc7d0ef",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
