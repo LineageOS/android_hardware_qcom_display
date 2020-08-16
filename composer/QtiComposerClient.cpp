@@ -990,10 +990,17 @@ Return<void> QtiComposerClient::getDisplayCapabilities(uint64_t display,
     return Void();
   }
 
-  int32_t has_doze_support = 0;
-  hwc_session_->GetDozeSupport(display, &has_doze_support);
+  HwcDisplayConnectionType display_conn_type = HwcDisplayConnectionType::INTERNAL;
+  int32_t ret = hwc_session_->GetDisplayConnectionType(display, &display_conn_type);
 
-  if (has_doze_support) {
+  if (HWC2_ERROR_NONE != ret) {
+     _hidl_cb(static_cast<Error>(ret), capabilities);
+    return Void();
+  }
+
+  if (HwcDisplayConnectionType::INTERNAL == display_conn_type) {
+    int32_t has_doze_support = 0;
+    hwc_session_->GetDozeSupport(display, &has_doze_support);
     if (has_doze_support) {
       capabilities = { composer_V2_3::IComposerClient::DisplayCapability::DOZE,
                        composer_V2_3::IComposerClient::DisplayCapability::BRIGHTNESS };
