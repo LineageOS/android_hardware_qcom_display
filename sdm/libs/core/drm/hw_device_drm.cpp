@@ -979,6 +979,12 @@ DisplayError HWDeviceDRM::GetConfigIndex(char *mode, uint32_t *index) {
 DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *release_fence) {
   SetQOSData(qos_data);
 
+  if (tui_state_ != kTUIStateNone) {
+    DLOGI("Request deferred TUI state %d", tui_state_);
+    pending_power_state_ = kPowerStateOn;
+    return kErrorDeferred;
+  }
+
   int64_t release_fence_fd = -1;
   int64_t retire_fence_fd = -1;
 
@@ -1021,7 +1027,7 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown) {
     return kErrorNone;
   }
 
-  if (tui_state_ == kTUIStateStart || tui_state_ == kTUIStateInProgress) {
+  if (tui_state_ != kTUIStateNone && tui_state_ != kTUIStateEnd) {
     DLOGI("Request deferred TUI state %d", tui_state_);
     pending_power_state_ = kPowerStateOff;
     return kErrorDeferred;
@@ -1099,7 +1105,7 @@ DisplayError HWDeviceDRM::DozeSuspend(const HWQosData &qos_data,
                                       shared_ptr<Fence> *release_fence) {
   DTRACE_SCOPED();
 
-  if (tui_state_ == kTUIStateStart || tui_state_ == kTUIStateInProgress) {
+  if (tui_state_ != kTUIStateNone && tui_state_ != kTUIStateEnd) {
     pending_power_state_ = kPowerStateDozeSuspend;
     return kErrorDeferred;
   }

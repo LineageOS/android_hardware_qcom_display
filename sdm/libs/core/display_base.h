@@ -140,9 +140,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError GetClientTargetSupport(uint32_t width, uint32_t height,
                                               LayerBufferFormat format,
                                               const ColorMetaData &color_metadata);
-  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) {
-    return kErrorNotSupported;
-  }
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh);
   virtual DisplayError SetDisplayDppsAdROI(void *payload) {
     return kErrorNotSupported;
   }
@@ -210,8 +208,9 @@ class DisplayBase : public DisplayInterface {
   void InsertBT2020PqHlgModes(const std::string &str_render_intent);
   DisplayError SetupRC();
   DisplayError HandlePendingVSyncEnable(const shared_ptr<Fence> &retire_fence);
-  DisplayError HandlePendingPowerState(const shared_ptr<Fence> &retire_fence);
+  DisplayError ResetPendingPowerState(const shared_ptr<Fence> &retire_fence);
   DisplayError GetPendingDisplayState(DisplayState *disp_state);
+  void SetPendingPowerState(DisplayState state);
 
   recursive_mutex recursive_mutex_;
   int32_t display_id_ = -1;

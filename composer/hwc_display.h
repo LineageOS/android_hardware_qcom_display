@@ -74,6 +74,7 @@ enum {
 enum SecureSessionType {
   kSecureDisplay,
   kSecureCamera,
+  kSecureTUI,
   kSecureMax,
 };
 
@@ -154,8 +155,6 @@ class HWCDisplay : public DisplayEventHandler {
     kDisplayStatusOnline,
     kDisplayStatusPause,       // Pause + PowerOff
     kDisplayStatusResume,      // Resume + PowerOn
-    kDisplayStatusPauseOnly,
-    kDisplayStatusResumeOnly,
   };
 
   enum DisplayValidateState {
@@ -190,10 +189,8 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int Perform(uint32_t operation, ...);
   virtual int HandleSecureSession(const std::bitset<kSecureMax> &secure_sessions,
                                   bool *power_on_pending, bool is_active_secure_display);
-  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) {
-    return kErrorNotSupported;
-  }
-  virtual int GetActiveSecureSession(std::bitset<kSecureMax> *secure_sessions);
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh);
+  virtual int GetActiveSecureSession(std::bitset<kSecureMax> *secure_sessions) { return 0; };
   virtual DisplayError SetMixerResolution(uint32_t width, uint32_t height);
   virtual DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
   virtual void GetPanelResolution(uint32_t *width, uint32_t *height);
@@ -546,6 +543,8 @@ class HWCDisplay : public DisplayEventHandler {
   std::mutex active_config_lock_;
   int active_config_index_ = -1;
   uint32_t active_refresh_rate_ = 0;
+  SecureEvent secure_event_ = kSecureEventMax;
+  bool display_pause_pending_ = false;
 
  private:
   void DumpInputBuffers(void);

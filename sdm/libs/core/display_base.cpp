@@ -576,7 +576,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
   drop_hw_vsync_ = false;
 
   // Reset pending power state if any after the commit
-  error = HandlePendingPowerState(layer_stack->retire_fence);
+  error = ResetPendingPowerState(layer_stack->retire_fence);
   if (error != kErrorNone) {
     return error;
   }
@@ -2254,7 +2254,7 @@ bool DisplayBase::CanSkipValidate() {
   return skip_validate;
 }
 
-DisplayError DisplayBase::HandlePendingPowerState(const shared_ptr<Fence> &retire_fence) {
+DisplayError DisplayBase::ResetPendingPowerState(const shared_ptr<Fence> &retire_fence) {
   if (pending_power_state_ != kPowerStateNone) {
     // Retire fence signalling confirms that CRTC enabled, hence wait for retire fence before
     // we enable vsync
@@ -2293,6 +2293,8 @@ DisplayError DisplayBase::GetPendingDisplayState(DisplayState *disp_state) {
   if (!disp_state) {
     return kErrorParameters;
   }
+  DLOGI("pending_power_state %d for display %d-%d", pending_power_state_, display_id_,
+        display_type_);
   switch (pending_power_state_) {
     case kPowerStateOn:
       *disp_state = kStateOn;
@@ -2321,6 +2323,102 @@ DisplayError DisplayBase::GetPendingDisplayState(DisplayState *disp_state) {
 DisplayError DisplayBase::GetSupportedModeSwitch(uint32_t *allowed_mode_switch) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   return hw_intf_->GetSupportedModeSwitch(allowed_mode_switch);
+}
+
+void DisplayBase::SetPendingPowerState(DisplayState state) {
+  switch (state) {
+    case kStateOn:
+      pending_power_state_ = kPowerStateOn;
+      break;
+    case kStateOff:
+      pending_power_state_ = kPowerStateOff;
+      break;
+    case kStateDoze:
+      pending_power_state_ = kPowerStateDoze;
+      break;
+    case kStateDozeSuspend:
+      pending_power_state_ = kPowerStateDozeSuspend;
+      break;
+    default:
+      return;
+  }
+  DLOGI("pending_power_state %d for display %d-%d", pending_power_state_, display_id_,
+        display_type_);
+}
+
+DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (!needs_refresh) {
+    return kErrorParameters;
+  }
+  DisplayError err = kErrorNone;
+  *needs_refresh = false;
+
+  DLOGI("Secure event %d for display %d-%d", secure_event, display_id_, display_type_);
+
+  if (secure_event == kTUITransitionStart &&
+      (state_ != kStateOn || (pending_power_state_ != kPowerStateNone))) {
+    DLOGW("Cannot start TUI session when display state is %d or pending_power_state %d",
+          state_, pending_power_state_);
+    return kErrorPermission;
+  }
+  shared_ptr<Fence> release_fence = nullptr;
+  if (secure_event == kTUITransitionStart) {
+    if (vsync_enable_) {
+      err = SetVSyncState(false /* enable */);
+      if (err != kErrorNone) {
+        return err;
+      }
+      vsync_enable_pending_ = true;
+    }
+    *needs_refresh = (hw_panel_info_.mode == kModeCommand);
+  } else if (secure_event == kTUITransitionPrepare) {
+    DisplayState state = state_;
+    err = SetDisplayState(kStateOff, true /* teardown */, &release_fence);
+    if (err != kErrorNone) {
+      DLOGE("SetDisplay state off failed for %d err %d", display_id_, err);
+      return err;
+    }
+    SetPendingPowerState(state);
+  }
+
+  err = hw_intf_->HandleSecureEvent(secure_event, default_qos_data_);
+  if (err != kErrorNone) {
+    return err;
+  }
+
+  comp_manager_->HandleSecureEvent(display_comp_ctx_, secure_event);
+  secure_event_ = secure_event;
+  if (secure_event == kTUITransitionEnd) {
+    err = HandlePendingVSyncEnable(nullptr);
+    if (err != kErrorNone) {
+      return err;
+    }
+    DisplayState pending_state;
+    if (GetPendingDisplayState(&pending_state) == kErrorNone) {
+      if (pending_state == kStateOff) {
+        shared_ptr<Fence> release_fence = nullptr;
+        DisplayError err = SetDisplayState(pending_state, false /* teardown */, &release_fence);
+        if (err != kErrorNone) {
+          DLOGE("SetDisplay state %d failed for %d err %d", pending_state, display_id_, err);
+          return err;
+        }
+        return kErrorNone;
+      }
+    }
+    *needs_refresh = (hw_panel_info_.mode == kModeCommand);
+  } else if (secure_event == kTUITransitionUnPrepare) {
+    DisplayState state = kStateOff;
+    if (GetPendingDisplayState(&state) == kErrorNone) {
+      shared_ptr<Fence> release_fence = nullptr;
+      err = SetDisplayState(state, false /* teardown */, &release_fence);
+      if (err != kErrorNone) {
+        DLOGE("SetDisplay state %d failed for %d err %d", state, display_id_, err);
+        return err;
+      }
+    }
+  }
+  return kErrorNone;
 }
 
 }  // namespace sdm

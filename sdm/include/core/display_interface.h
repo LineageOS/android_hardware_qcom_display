@@ -155,12 +155,18 @@ enum DisplayEvent {
 
 /*! @brief This enum represents the secure events received by Display HAL. */
 enum SecureEvent {
-  kSecureDisplayStart,  // Client sets it to notify secure display session start
-  kSecureDisplayEnd,    // Client sets it to notify secure display session end
-  kTUITransitionStart,  // Client sets it to notify start of TUI Transition to release
-                        // the display hardware to trusted VM.
-  kTUITransitionEnd,    // Client sets it to notify end of TUI Transition to acquire
-                        // the display hardware from trusted VM.
+  kSecureDisplayStart,      // Client sets it to notify secure display session start
+  kSecureDisplayEnd,        // Client sets it to notify secure display session end
+  kTUITransitionPrepare,    // Client sets it to notify non targetted display to forcefully disable
+                            // the display pipeline.
+  kTUITransitionStart,      // Client sets it to notify start of TUI Transition to release
+                            // the display hardware to trusted VM. Client calls only for
+                            // target displays where TUI to be displayed
+  kTUITransitionEnd,        // Client sets it to notify end of TUI Transition to acquire
+                            // the display hardware from trusted VM. Client calls only for
+                            // target displays where TUI to be displayed
+  kTUITransitionUnPrepare,  // Client sets it to notify non targetted display to enable/disable the
+                            // display pipeline based on pending power state
   kSecureEventMax,
 };
 

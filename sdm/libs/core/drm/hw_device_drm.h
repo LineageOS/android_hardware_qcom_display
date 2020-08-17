@@ -117,7 +117,23 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError GetDppsFeatureInfo(void *payload, size_t size) { return kErrorNotSupported; }
   virtual DisplayError TeardownConcurrentWriteback(void) { return kErrorNotSupported; }
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event, const HWQosData &qos_data) {
-    return kErrorNotSupported;
+    switch (secure_event) {
+      case kTUITransitionPrepare:
+        tui_state_ = kTUIStateInProgress;
+        break;
+      case kTUITransitionStart:
+        tui_state_ = kTUIStateStart;
+        break;
+      case kTUITransitionEnd:
+        tui_state_ = kTUIStateEnd;
+        break;
+      case kTUITransitionUnPrepare:
+        tui_state_ = kTUIStateNone;
+        break;
+      default:
+        break;
+    }
+    return kErrorNone;
   }
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) {
     return kErrorNotSupported;

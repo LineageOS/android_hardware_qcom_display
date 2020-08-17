@@ -1718,6 +1718,11 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence
   flush_ = false;
   skip_commit_ = false;
 
+  if (display_pause_pending_) {
+    DLOGI("Pause display %d-%d", sdm_id_, type_);
+    display_paused_ = true;
+  }
+
   return status;
 }
 
@@ -1998,18 +2003,12 @@ int HWCDisplay::SetDisplayStatus(DisplayStatus display_status) {
       display_paused_ = false;
       status = INT32(SetPowerMode(HWC2::PowerMode::On, false /* teardown */));
       break;
-    case kDisplayStatusResumeOnly:
-      display_paused_ = false;
-      break;
     case kDisplayStatusOnline:
       status = INT32(SetPowerMode(HWC2::PowerMode::On, false /* teardown */));
       break;
     case kDisplayStatusPause:
       display_paused_ = true;
       status = INT32(SetPowerMode(HWC2::PowerMode::Off, false /* teardown */));
-      break;
-    case kDisplayStatusPauseOnly:
-      display_paused_ = true;
       break;
     case kDisplayStatusOffline:
       status = INT32(SetPowerMode(HWC2::PowerMode::Off, false /* teardown */));
@@ -2205,23 +2204,6 @@ int HWCDisplay::HandleSecureSession(const std::bitset<kSecureMax> &secure_sessio
           id_, sdm_id_, type_);
   }
   active_secure_sessions_ = secure_sessions;
-  return 0;
-}
-
-int HWCDisplay::GetActiveSecureSession(std::bitset<kSecureMax> *secure_sessions) {
-  if (!secure_sessions) {
-    return -1;
-  }
-  secure_sessions->reset();
-  for (auto hwc_layer : layer_set_) {
-    Layer *layer = hwc_layer->GetSDMLayer();
-    if (layer->input_buffer.flags.secure_camera) {
-      secure_sessions->set(kSecureCamera);
-    }
-    if (layer->input_buffer.flags.secure_display) {
-      secure_sessions->set(kSecureDisplay);
-    }
-  }
   return 0;
 }
 
@@ -2844,6 +2826,38 @@ void HWCDisplay::SetActiveConfigIndex(int index) {
 int HWCDisplay::GetActiveConfigIndex() {
   std::lock_guard<std::mutex> lock(active_config_lock_);
   return active_config_index_;
+}
+
+DisplayError HWCDisplay::HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) {
+  if (secure_event == secure_event_) {
+    return kErrorNone;
+  }
+
+  DisplayError err = display_intf_->HandleSecureEvent(secure_event, needs_refresh);
+  if (err != kErrorNone) {
+    DLOGE("Handle secure event failed");
+    return err;
+  }
+
+  if (secure_event == kTUITransitionEnd || secure_event == kTUITransitionUnPrepare) {
+    DLOGI("Resume display %d-%d",  sdm_id_, type_);
+    display_paused_ = false;
+    if (*needs_refresh) {
+      validated_ = false;
+    }
+  } else if (secure_event == kTUITransitionPrepare || secure_event == kTUITransitionStart) {
+    if (*needs_refresh) {
+      validated_ = false;
+      display_pause_pending_ = true;
+    } else {
+      DLOGI("Pause display %d-%d", sdm_id_, type_);
+      display_paused_ = true;
+    }
+  }
+
+  secure_event_ = secure_event;
+
+  return kErrorNone;
 }
 
 }  // namespace sdm

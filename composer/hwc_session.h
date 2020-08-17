@@ -414,6 +414,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   uint32_t throttling_refresh_rate_ = 60;
   std::mutex hotplug_mutex_;
   std::condition_variable hotplug_cv_;
+  bool resource_ready_ = false;
   void UpdateThrottlingRate();
   void SetNewThrottlingRate(uint32_t new_rate);
 
@@ -513,6 +514,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   android::status_t TUITransitionPrepare(int disp_id);
   android::status_t TUITransitionStart(int disp_id);
   android::status_t TUITransitionEnd(int disp_id);
+  android::status_t TUITransitionUnPrepare(int disp_id);
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};

@@ -786,6 +786,26 @@ void HWCDisplayBuiltIn::ToggleCPUHint(bool set) {
   }
 }
 
+int HWCDisplayBuiltIn::GetActiveSecureSession(std::bitset<kSecureMax> *secure_sessions) {
+  if (!secure_sessions) {
+    return -1;
+  }
+  secure_sessions->reset();
+  for (auto hwc_layer : layer_set_) {
+    Layer *layer = hwc_layer->GetSDMLayer();
+    if (layer->input_buffer.flags.secure_camera) {
+      secure_sessions->set(kSecureCamera);
+    }
+    if (layer->input_buffer.flags.secure_display) {
+      secure_sessions->set(kSecureDisplay);
+    }
+  }
+  if (secure_event_ == kTUITransitionStart || secure_event_ == kTUITransitionPrepare) {
+    secure_sessions->set(kSecureTUI);
+  }
+  return 0;
+}
+
 int HWCDisplayBuiltIn::HandleSecureSession(const std::bitset<kSecureMax> &secure_sessions,
                                            bool *power_on_pending, bool is_active_secure_display) {
   if (!power_on_pending) {
@@ -820,16 +840,6 @@ int HWCDisplayBuiltIn::HandleSecureSession(const std::bitset<kSecureMax> &secure
   active_secure_sessions_ = secure_sessions;
   *power_on_pending = false;
   return 0;
-}
-
-DisplayError HWCDisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) {
-  DisplayError err = display_intf_->HandleSecureEvent(secure_event, needs_refresh);
-  if (err != kErrorNone) {
-    DLOGE("Handle secure event failed");
-    return err;
-  }
-
-  return kErrorNone;
 }
 
 void HWCDisplayBuiltIn::ForceRefreshRate(uint32_t refresh_rate) {

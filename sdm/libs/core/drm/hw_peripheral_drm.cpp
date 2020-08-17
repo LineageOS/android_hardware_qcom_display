@@ -393,9 +393,15 @@ DisplayError HWPeripheralDRM::GetDppsFeatureInfo(void *payload, size_t size) {
 DisplayError HWPeripheralDRM::HandleSecureEvent(SecureEvent secure_event,
                                                 const HWQosData &qos_data) {
   switch (secure_event) {
+    case kTUITransitionPrepare:
+      tui_state_ = kTUIStateInProgress;
+      break;
+    case kTUITransitionUnPrepare:
+      tui_state_ = kTUIStateNone;
+      break;
     case kTUITransitionStart: {
       tui_state_ = kTUIStateStart;
-      idle_pc_state_ = sde_drm::DRMIdlePCState::DISABLE;
+      ControlIdlePowerCollapse(false /* enable */, false /* synchronous */);
       if (hw_panel_info_.mode != kModeCommand) {
         SetQOSData(qos_data);
         SetVMReqState();
@@ -411,7 +417,7 @@ DisplayError HWPeripheralDRM::HandleSecureEvent(SecureEvent secure_event,
     case kTUITransitionEnd: {
       tui_state_ = kTUIStateEnd;
       ResetPropertyCache();
-      idle_pc_state_ = sde_drm::DRMIdlePCState::ENABLE;
+      ControlIdlePowerCollapse(true /* enable */, false /* synchronous */);
       if (hw_panel_info_.mode != kModeCommand || pending_power_state_ == kPowerStateOff) {
         SetQOSData(qos_data);
         SetVMReqState();

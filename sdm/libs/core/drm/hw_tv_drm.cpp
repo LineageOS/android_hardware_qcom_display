@@ -195,6 +195,12 @@ DisplayError HWTVDRM::PowerOff(bool teardown) {
     return kErrorNone;
   }
 
+  if (tui_state_ != kTUIStateNone && tui_state_ != kTUIStateEnd) {
+    DLOGI("Request deferred TUI state %d", tui_state_);
+    pending_power_state_ = kPowerStateOff;
+    return kErrorDeferred;
+  }
+
   if (teardown) {
     // LP connecter prop N/A for External
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
