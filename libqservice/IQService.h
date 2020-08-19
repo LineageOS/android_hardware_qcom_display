@@ -79,8 +79,7 @@ public:
       SET_PANEL_LUMINANCE = 47,                // Set Panel Luminance attributes.
       SET_BRIGHTNESS_SCALE = 48,               // Set brightness scale ratio
       SET_COLOR_SAMPLING_ENABLED = 49,         // Toggle the collection of display color stats
-      SET_VSYNC_STATE = 50,                    // Enable/disable Vsync
-      NOTIFY_TUI_TRANSITION = 51,              // Notify TUI transition prepare/start/stop
+      SET_VSYNC_STATE = 50,                  // Enable/disable Vsync
       COMMAND_LIST_END = 400,
     };
 
@@ -115,12 +114,6 @@ public:
         QSYNC_MODE_NONE,
         QSYNC_MODE_CONTINUOUS,
         QSYNC_MODE_ONESHOT,    // Not supported
-    };
-
-    enum {
-        TUI_TRANSITION_PREPARE,
-        TUI_TRANSITION_START,
-        TUI_TRANSITION_END,
     };
 
     // Register a HWC client that can be notified

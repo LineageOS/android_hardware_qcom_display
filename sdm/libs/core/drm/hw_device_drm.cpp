@@ -537,10 +537,6 @@ DisplayError HWDeviceDRM::Deinit() {
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::OFF);
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, nullptr);
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
-#ifdef TRUSTED_VM
-    drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_VM_REQ_STATE, token_.crtc_id,
-                              sde_drm::DRMVMRequestState::RELEASE);
-#endif
     int ret = NullCommit(true /* synchronous */, false /* retain_planes */);
     if (ret) {
       DLOGE("Commit failed with error: %d", ret);
@@ -1110,7 +1106,7 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayers *hw_layers,
   solid_fills_.clear();
   bool resource_update = hw_layers->updates_mask.test(kUpdateResources);
   bool buffer_update = hw_layers->updates_mask.test(kSwapBuffers);
-  bool update_config = resource_update || buffer_update || tui_state_ == kTUIStateEnd ||
+  bool update_config = resource_update || buffer_update ||
                        hw_layer_info.stack->flags.geometry_changed;
 
   if (hw_panel_info_.partial_update && update_config) {
@@ -1314,16 +1310,12 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayers *hw_layers,
     }
   }
 
-  if (first_cycle_ || tui_state_ == kTUIStateEnd) {
+  if (first_cycle_) {
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_TOPOLOGY_CONTROL, token_.conn_id,
                               topology_control_);
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, token_.crtc_id);
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
-#ifdef TRUSTED_VM
-    drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_VM_REQ_STATE, token_.crtc_id,
-                              sde_drm::DRMVMRequestState::ACQUIRE);
-#endif
     last_power_mode_ = DRMPowerMode::ON;
   } else if (pending_doze_ && !validate) {
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
@@ -1482,9 +1474,6 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   Fence::ScopedRef scoped_ref;
   SetupAtomic(scoped_ref, hw_layers, false /* validate */, &release_fence_fd, &retire_fence_fd);
 
-  bool sync_commit = synchronous_commit_ ||
-                    (tui_state_ == kTUIStateStart || tui_state_ == kTUIStateEnd);
-
   if (hw_layers->elapse_timestamp > 0) {
     struct timespec t = {0, 0};
     clock_gettime(CLOCK_MONOTONIC, &t);
@@ -1494,7 +1483,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
     }
   }
 
-  int ret = drm_atomic_intf_->Commit(sync_commit, false /* retain_planes*/);
+  int ret = drm_atomic_intf_->Commit(synchronous_commit_, false /* retain_planes*/);
   shared_ptr<Fence> release_fence = Fence::Create(INT(release_fence_fd), "release");
   shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_fd), "retire");
   if (ret) {
@@ -1571,25 +1560,13 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   // Inherently a real commit ensures null commit properties have happened, so update the member
   first_null_cycle_ = false;
 
-  if (tui_state_ == kTUIStateStart) {
-    tui_state_ = kTUIStateInProgress;
-  } else if (tui_state_ == kTUIStateEnd) {
-    tui_state_ = kTUIStateNone;
-  }
-#ifdef TRUSTED_VM
-  drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_VM_REQ_STATE, token_.crtc_id,
-                            sde_drm::DRMVMRequestState::NONE);
-#endif
-
   return kErrorNone;
 }
 
 DisplayError HWDeviceDRM::Flush(HWLayers *hw_layers) {
   ClearSolidfillStages();
   ResetROI();
-  bool sync_commit = (tui_state_ == kTUIStateStart || tui_state_ == kTUIStateEnd ||
-                      secure_display_active_);
-  int ret = NullCommit(sync_commit /* synchronous */, false /* retain_planes*/);
+  int ret = NullCommit(secure_display_active_ /* synchronous */, false /* retain_planes*/);
   if (ret) {
     DLOGE("failed with error %d", ret);
     return kErrorHardware;

@@ -156,10 +156,6 @@ enum DisplayEvent {
 enum SecureEvent {
   kSecureDisplayStart,  // Client sets it to notify secure display session start
   kSecureDisplayEnd,    // Client sets it to notify secure display session end
-  kTUITransitionStart,  // Client sets it to notify start of TUI Transition to release
-                        // the display hardware to trusted VM.
-  kTUITransitionEnd,    // Client sets it to notify end of TUI Transition to acquire
-                        // the display hardware from trusted VM.
   kSecureEventMax,
 };
 
@@ -818,7 +814,7 @@ class DisplayInterface {
 
     @return \link DisplayError \endlink
   */
-  virtual DisplayError HandleSecureEvent(SecureEvent secure_event) = 0;
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, LayerStack *layer_stack) = 0;
 
   /*! @brief Method to set dpps ad roi.
 

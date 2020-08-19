@@ -85,10 +85,7 @@ DisplayError DisplayBuiltIn::Init() {
             kModeVideo);
     }
   }
-#ifdef TRUSTED_VM
-  event_list_ = {HWEvent::VSYNC, HWEvent::EXIT, HWEvent::PINGPONG_TIMEOUT, HWEvent::PANEL_DEAD,
-                 HWEvent::HW_RECOVERY};
-#else
+
   if (hw_panel_info_.mode == kModeCommand) {
     event_list_ = {HWEvent::VSYNC, HWEvent::EXIT,
                    /*HWEvent::IDLE_NOTIFY, */
@@ -102,7 +99,7 @@ DisplayError DisplayBuiltIn::Init() {
                    HWEvent::PANEL_DEAD,    HWEvent::HW_RECOVERY,
                    HWEvent::HISTOGRAM};
   }
-#endif
+
   avr_prop_disabled_ = Debug::IsAVRDisabled();
 
   error = HWEventsInterface::Create(display_id_, kBuiltIn, this, event_list_, hw_intf_,
@@ -1111,14 +1108,13 @@ void DppsInfo::DppsNotifyOps(enum DppsNotifyOps op, void *payload, size_t size) 
     DLOGE("DppsNotifyOps op %d error %d", op, ret);
 }
 
-DisplayError DisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
-  DisplayError err = hw_intf_->HandleSecureEvent(secure_event, default_qos_data_);
+DisplayError DisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event, LayerStack *layer_stack) {
+  hw_layers_.info.stack = layer_stack;
+  DisplayError err = hw_intf_->HandleSecureEvent(secure_event, &hw_layers_);
   if (err != kErrorNone) {
     return err;
   }
   comp_manager_->HandleSecureEvent(display_comp_ctx_, secure_event);
-  secure_event_ = secure_event;
 
   return kErrorNone;
 }
@@ -1405,7 +1401,7 @@ DisplayError DisplayBuiltIn::ReconfigureDisplay() {
 
   error = comp_manager_->ReconfigureDisplay(display_comp_ctx_, display_attributes, hw_panel_info,
                                             mixer_attributes, fb_config_,
-                                            &default_qos_data_);
+                                            &(default_qos_data_.clock_hz));
   if (error != kErrorNone) {
     return error;
   }

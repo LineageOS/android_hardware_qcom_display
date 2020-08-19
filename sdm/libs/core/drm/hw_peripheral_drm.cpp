@@ -159,7 +159,6 @@ DisplayError HWPeripheralDRM::Validate(HWLayers *hw_layers) {
   SetupConcurrentWriteback(hw_layer_info, true, nullptr);
   SetIdlePCState();
   SetSelfRefreshState();
-  SetVMReqState();
 
   return HWDeviceDRM::Validate(hw_layers);
 }
@@ -173,7 +172,6 @@ DisplayError HWPeripheralDRM::Commit(HWLayers *hw_layers) {
 
   SetIdlePCState();
   SetSelfRefreshState();
-  SetVMReqState();
 
   DisplayError error = HWDeviceDRM::Commit(hw_layers);
   if (error != kErrorNone) {
@@ -351,34 +349,12 @@ DisplayError HWPeripheralDRM::GetDppsFeatureInfo(void *payload, size_t size) {
   return kErrorNone;
 }
 
-DisplayError HWPeripheralDRM::HandleSecureEvent(SecureEvent secure_event,
-                                                const HWQosData &qos_data) {
+DisplayError HWPeripheralDRM::HandleSecureEvent(SecureEvent secure_event, HWLayers *hw_layers) {
   switch (secure_event) {
-    case kTUITransitionStart: {
-      tui_state_ = kTUIStateStart;
-      idle_pc_state_ = sde_drm::DRMIdlePCState::DISABLE;
-      if (hw_panel_info_.mode != kModeCommand) {
-        SetQOSData(qos_data);
-        SetVMReqState();
-        DisplayError err = Flush(NULL);
-        if (err != kErrorNone) {
-          return err;
-        }
-      }
-    }
-    break;
-
-    case kTUITransitionEnd: {
-      tui_state_ = kTUIStateEnd;
-      ResetPropertyCache();
-      idle_pc_state_ = sde_drm::DRMIdlePCState::ENABLE;
-    }
-    break;
-
     case kSecureDisplayStart: {
       secure_display_active_ = true;
       if (hw_panel_info_.mode != kModeCommand) {
-        DisplayError err = Flush(NULL);
+        DisplayError err = Flush(hw_layers);
         if (err != kErrorNone) {
           return err;
         }
@@ -388,7 +364,7 @@ DisplayError HWPeripheralDRM::HandleSecureEvent(SecureEvent secure_event,
 
     case kSecureDisplayEnd: {
       if (hw_panel_info_.mode != kModeCommand) {
-        DisplayError err = Flush(NULL);
+        DisplayError err = Flush(hw_layers);
         if (err != kErrorNone) {
           return err;
         }
@@ -758,11 +734,6 @@ DisplayError HWPeripheralDRM::GetPanelBrightnessBasePath(std::string *base_path)
 DisplayError HWPeripheralDRM::EnableSelfRefresh() {
   self_refresh_state_ = kSelfRefreshEnable;
   return kErrorNone;
-}
-
-void HWPeripheralDRM::ResetPropertyCache() {
-  drm_atomic_intf_->Perform(sde_drm::DRMOps::PLANES_RESET_CACHE, token_.crtc_id);
-  drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_RESET_CACHE, token_.crtc_id);
 }
 
 }  // namespace sdm

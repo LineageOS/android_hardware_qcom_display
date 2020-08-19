@@ -34,7 +34,7 @@ class ResourceInterface {
  public:
   enum ResourceCmd {
     kCmdResetLUT,
-    kCmdGetDefaultQosData,
+    kCmdGetDefaultClk,
     kCmdDisableRotatorOneFrame,
     kCmdSetDisplayState,
     kCmdUpdateSyncHandle,

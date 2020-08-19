@@ -358,8 +358,14 @@ HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
 
   DTRACE_SCOPED();
 
-  if ((!is_primary_ && active_secure_sessions_[kSecureDisplay]) || display_paused_) {
+  if (!is_primary_ && active_secure_sessions_[kSecureDisplay]) {
     return status;
+  } else if (display_paused_) {
+    DisplayError error = display_intf_->Flush(&layer_stack_);
+    validated_ = false;
+    if (error != kErrorNone) {
+      DLOGE("Flush failed. Error = %d", error);
+    }
   } else {
     CacheAvrStatus();
 
@@ -747,7 +753,7 @@ int HWCDisplayBuiltIn::HandleSecureSession(const std::bitset<kSecureMax> &secure
   if (active_secure_sessions_[kSecureDisplay] != secure_sessions[kSecureDisplay]) {
     SecureEvent secure_event =
         secure_sessions.test(kSecureDisplay) ? kSecureDisplayStart : kSecureDisplayEnd;
-    DisplayError err = display_intf_->HandleSecureEvent(secure_event);
+    DisplayError err = display_intf_->HandleSecureEvent(secure_event, &layer_stack_);
     if (err != kErrorNone) {
       DLOGE("Set secure event failed");
       return err;
@@ -760,21 +766,6 @@ int HWCDisplayBuiltIn::HandleSecureSession(const std::bitset<kSecureMax> &secure
   active_secure_sessions_ = secure_sessions;
   *power_on_pending = false;
   return 0;
-}
-
-DisplayError HWCDisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event) {
-  if (current_power_mode_ != HWC2::PowerMode::On) {
-    DLOGW("Cannot handle secure event when display is not active");
-    return kErrorPermission;
-  }
-
-  DisplayError err = display_intf_->HandleSecureEvent(secure_event);
-  if (err != kErrorNone) {
-    DLOGE("Handle secure event failed");
-     return err;
-  }
-
-  return kErrorNone;
 }
 
 void HWCDisplayBuiltIn::ForceRefreshRate(uint32_t refresh_rate) {

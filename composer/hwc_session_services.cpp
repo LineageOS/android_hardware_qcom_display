@@ -61,9 +61,6 @@ int MapDisplayType(DispType dpy) {
     case DispType::kVirtual:
       return qdutils::DISPLAY_VIRTUAL;
 
-    case DispType::kBuiltIn2:
-      return qdutils::DISPLAY_BUILTIN_2;
-
     default:
       break;
   }
@@ -1231,22 +1228,6 @@ int HWCSession::DisplayConfigImpl::GetDisplayHwId(uint32_t disp_id, uint32_t *di
   }
 
   return error;
-}
-
-int HWCSession::DisplayConfigImpl::SendTUIEvent(DispType dpy,
-                                                DisplayConfig::TUIEventType event_type) {
-  int disp_id = MapDisplayType(dpy);
-  switch(event_type) {
-    case DisplayConfig::TUIEventType::kPrepareTUITransition:
-      return hwc_session_->TUITransitionPrepare(disp_id);
-    case DisplayConfig::TUIEventType::kStartTUITransition:
-      return hwc_session_->TUITransitionStart(disp_id);
-    case DisplayConfig::TUIEventType::kEndTUITransition:
-      return hwc_session_->TUITransitionEnd(disp_id);
-    default:
-      DLOGE("Invalid event %d", event_type);
-      return -EINVAL;
-  }
 }
 
 }  // namespace sdm

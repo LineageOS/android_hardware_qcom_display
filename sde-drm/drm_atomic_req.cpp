@@ -107,9 +107,7 @@ int DRMAtomicReq::Perform(DRMOps opcode, uint32_t obj_id, ...) {
     case DRMOps::CRTC_SET_DEST_SCALER_CONFIG:
     case DRMOps::CRTC_SET_CAPTURE_MODE:
     case DRMOps::CRTC_SET_IDLE_PC_STATE:
-    case DRMOps::CRTC_SET_CACHE_STATE:
-    case DRMOps::CRTC_SET_VM_REQ_STATE:
-    case DRMOps::CRTC_RESET_CACHE: {
+    case DRMOps::CRTC_SET_CACHE_STATE: {
       drm_mgr_->GetCrtcMgr()->Perform(opcode, obj_id, drm_atomic_req_, args);
     } break;
     case DRMOps::CONNECTOR_SET_CRTC:
@@ -134,9 +132,6 @@ int DRMAtomicReq::Perform(DRMOps opcode, uint32_t obj_id, ...) {
     case DRMOps::DPPS_COMMIT_FEATURE: {
       drm_mgr_->GetDppsMgrIntf()->CommitDppsFeatures(drm_atomic_req_, token_);
     } break;
-    case DRMOps::PLANES_RESET_CACHE: {
-      drm_mgr_->GetPlaneMgr()->ResetCache(obj_id);
-    } break;
     default:
       DRM_LOGE("Invalid opcode %d", opcode);
   }
@@ -149,6 +144,7 @@ int DRMAtomicReq::Validate() {
   // because we just want to validate, not actually mark planes as removed
   drm_mgr_->GetPlaneMgr()->UnsetUnusedResources(token_.crtc_id, false/*is_commit*/,
                                                 drm_atomic_req_);
+
   int ret = drmModeAtomicCommit(fd_, drm_atomic_req_,
                                 DRM_MODE_ATOMIC_ALLOW_MODESET | DRM_MODE_ATOMIC_TEST_ONLY, nullptr);
   if (ret) {

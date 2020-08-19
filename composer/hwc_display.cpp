@@ -1988,18 +1988,12 @@ int HWCDisplay::SetDisplayStatus(DisplayStatus display_status) {
       display_paused_ = false;
       status = INT32(SetPowerMode(HWC2::PowerMode::On, false /* teardown */));
       break;
-    case kDisplayStatusResumeOnly:
-      display_paused_ = false;
-      break;
     case kDisplayStatusOnline:
       status = INT32(SetPowerMode(HWC2::PowerMode::On, false /* teardown */));
       break;
     case kDisplayStatusPause:
       display_paused_ = true;
       status = INT32(SetPowerMode(HWC2::PowerMode::Off, false /* teardown */));
-      break;
-    case kDisplayStatusPauseOnly:
-      display_paused_ = true;
       break;
     case kDisplayStatusOffline:
       status = INT32(SetPowerMode(HWC2::PowerMode::Off, false /* teardown */));

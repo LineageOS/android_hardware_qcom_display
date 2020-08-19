@@ -136,7 +136,7 @@ DisplayError DisplayBase::Init() {
 
   error = comp_manager_->RegisterDisplay(display_id_, display_type_, display_attributes_,
                                          hw_panel_info_, mixer_attributes_, fb_config_,
-                                         &display_comp_ctx_, &default_qos_data_);
+                                         &display_comp_ctx_, &(default_qos_data_.clock_hz));
   if (error != kErrorNone) {
     DLOGW("Display %d comp manager registration failed!", display_id_);
     goto CleanupOnError;
@@ -582,7 +582,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
 
     error = comp_manager_->ReconfigureDisplay(display_comp_ctx_, display_attributes_,
                                               hw_panel_info_, mixer_attributes_, fb_config_,
-                                              &default_qos_data_);
+                                              &(default_qos_data_.clock_hz));
     if (error != kErrorNone) {
       return error;
     }
@@ -1241,7 +1241,7 @@ DisplayError DisplayBase::HandlePendingVSyncEnable(const shared_ptr<Fence> &reti
 DisplayError DisplayBase::SetVSyncState(bool enable) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
-  if ((state_ == kStateOff || secure_event_ == kSecureDisplayStart) && enable) {
+  if (state_ == kStateOff && enable) {
     DLOGW("Can't enable vsync when display %d-%d is powered off!! Defer it when display is active",
           display_id_, display_type_);
     vsync_enable_pending_ = true;
@@ -1306,7 +1306,8 @@ DisplayError DisplayBase::ReconfigureDisplay() {
   }
 
   error = comp_manager_->ReconfigureDisplay(display_comp_ctx_, display_attributes, hw_panel_info,
-                                            mixer_attributes, fb_config_, &default_qos_data_);
+                                            mixer_attributes, fb_config_,
+                                            &(default_qos_data_.clock_hz));
   if (error != kErrorNone) {
     return error;
   }
@@ -1415,14 +1416,6 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
   uint32_t mixer_height = mixer_attributes_.height;
   uint32_t fb_width = fb_config_.x_pixels;
   uint32_t fb_height = fb_config_.y_pixels;
-  uint32_t display_width = display_attributes_.x_pixels;
-  uint32_t display_height = display_attributes_.y_pixels;
-
-  if (secure_event_ == kSecureDisplayStart) {
-    *new_mixer_width = display_width;
-    *new_mixer_height = display_height;
-    return ((*new_mixer_width != mixer_width) || (*new_mixer_height != mixer_height));
-  }
 
   if (req_mixer_width_ && req_mixer_height_) {
     DLOGD_IF(kTagDisplay, "Required mixer width : %d, height : %d",
@@ -1439,6 +1432,8 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
   uint32_t layer_count = UINT32(layer_stack->layers.size());
   uint32_t fb_area = fb_width * fb_height;
   LayerRect fb_rect = (LayerRect) {0.0f, 0.0f, FLOAT(fb_width), FLOAT(fb_height)};
+  uint32_t display_width = display_attributes_.x_pixels;
+  uint32_t display_height = display_attributes_.y_pixels;
 
   RectOrientation fb_orientation = GetOrientation(fb_rect);
   uint32_t max_layer_area = 0;
@@ -1524,7 +1519,8 @@ DisplayError DisplayBase::SetFrameBufferConfig(const DisplayConfigVariableInfo &
   }
 
   error =  comp_manager_->ReconfigureDisplay(display_comp_ctx_, display_attributes_, hw_panel_info_,
-                                             mixer_attributes_, variable_info, &default_qos_data_);
+                                             mixer_attributes_, variable_info,
+                                             &(default_qos_data_.clock_hz));
   if (error != kErrorNone) {
     return error;
   }

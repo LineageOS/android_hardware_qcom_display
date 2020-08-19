@@ -383,7 +383,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
     virtual int IsRotatorSupportedFormat(int hal_format, bool ubwc, bool *supported);
     virtual int ControlQsyncCallback(bool enable);
     virtual int GetDisplayHwId(uint32_t disp_id, uint32_t *display_hw_id);
-    virtual int SendTUIEvent(DispType dpy, DisplayConfig::TUIEventType event_type);
 
     std::weak_ptr<DisplayConfig::ConfigCallback> callback_;
     HWCSession *hwc_session_ = nullptr;
@@ -487,7 +486,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   android::status_t SetFrameTriggerMode(const android::Parcel *input_parcel);
   android::status_t SetPanelLuminanceAttributes(const android::Parcel *input_parcel);
   android::status_t setColorSamplingEnabled(const android::Parcel *input_parcel);
-  android::status_t HandleTUITransition(int disp_id, int event);
 
   // Internal methods
   HWC2::Error ValidateDisplayInternal(hwc2_display_t display, uint32_t *out_num_types,
@@ -503,9 +501,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   int32_t GetVirtualDisplayId();
   void PerformQsyncCallback(hwc2_display_t display);
   bool isSmartPanelConfig(uint32_t disp_id, uint32_t config_id);
-  android::status_t TUITransitionPrepare(int disp_id);
-  android::status_t TUITransitionStart(int disp_id);
-  android::status_t TUITransitionEnd(int disp_id);
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};
