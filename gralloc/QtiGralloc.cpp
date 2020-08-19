@@ -387,8 +387,10 @@ int getMetadataState(void *buffer, uint32_t type) {
 
   if (IS_VENDOR_METADATA_TYPE(type)) {
     return metadata_set[GET_VENDOR_METADATA_STATUS_INDEX(type)];
-  } else {
+  } else if (GET_STANDARD_METADATA_STATUS_INDEX(type) < METADATA_SET_SIZE) {
     return metadata_set[GET_STANDARD_METADATA_STATUS_INDEX(type)];
+  } else {
+    return -1;
   }
 }
 

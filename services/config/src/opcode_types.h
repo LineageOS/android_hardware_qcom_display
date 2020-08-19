@@ -76,6 +76,8 @@ enum OpCode {
   kIsRotatorSupportedFormat = 40,
   kControlQsyncCallback = 41,
   kSendTUIEvent = 42,
+  kGetDisplayHwId = 43,
+  kGetSupportedDisplayRefreshRates = 44,
 
   kDestroy = 0xFFFF, // Destroy sequence execution
 };
