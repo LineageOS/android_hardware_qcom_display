@@ -563,18 +563,46 @@ void HWInfoDRM::GetWBInfo(HWResourceInfo *hw_resource) {
 void HWInfoDRM::GetSDMFormat(uint32_t v4l2_format, LayerBufferFormat *sdm_format) {
   switch (v4l2_format) {
     case SDE_PIX_FMT_ARGB_8888:         *sdm_format = kFormatARGB8888;                 break;
+    case SDE_PIX_FMT_RGBA_8888:         *sdm_format = kFormatRGBA8888;                 break;
     case SDE_PIX_FMT_BGRA_8888:         *sdm_format = kFormatBGRA8888;                 break;
+    case SDE_PIX_FMT_RGBX_8888:         *sdm_format = kFormatRGBX8888;                 break;
     case SDE_PIX_FMT_BGRX_8888:         *sdm_format = kFormatBGRX8888;                 break;
+    case SDE_PIX_FMT_RGBA_5551:         *sdm_format = kFormatRGBA5551;                 break;
+    case SDE_PIX_FMT_RGBA_4444:         *sdm_format = kFormatRGBA4444;                 break;
     case SDE_PIX_FMT_RGB_888:           *sdm_format = kFormatRGB888;                   break;
     case SDE_PIX_FMT_BGR_888:           *sdm_format = kFormatBGR888;                   break;
     case SDE_PIX_FMT_RGB_565:           *sdm_format = kFormatRGB565;                   break;
+    case SDE_PIX_FMT_BGR_565:           *sdm_format = kFormatBGR565;                   break;
     case SDE_PIX_FMT_Y_CB_CR_H2V2:      *sdm_format = kFormatYCbCr420Planar;           break;
     case SDE_PIX_FMT_Y_CR_CB_H2V2:      *sdm_format = kFormatYCrCb420Planar;           break;
+    case SDE_PIX_FMT_Y_CR_CB_GH2V2:     *sdm_format = kFormatYCrCb420PlanarStride16;   break;
     case SDE_PIX_FMT_Y_CBCR_H2V2:       *sdm_format = kFormatYCbCr420SemiPlanar;       break;
     case SDE_PIX_FMT_Y_CRCB_H2V2:       *sdm_format = kFormatYCrCb420SemiPlanar;       break;
+    case SDE_PIX_FMT_Y_CBCR_H1V2:       *sdm_format = kFormatYCbCr422H1V2SemiPlanar;   break;
+    case SDE_PIX_FMT_Y_CRCB_H1V2:       *sdm_format = kFormatYCrCb422H1V2SemiPlanar;   break;
     case SDE_PIX_FMT_Y_CBCR_H2V1:       *sdm_format = kFormatYCbCr422H2V1SemiPlanar;   break;
     case SDE_PIX_FMT_Y_CRCB_H2V1:       *sdm_format = kFormatYCrCb422H2V1SemiPlanar;   break;
     case SDE_PIX_FMT_YCBYCR_H2V1:       *sdm_format = kFormatYCbCr422H2V1Packed;       break;
+    case SDE_PIX_FMT_Y_CBCR_H2V2_VENUS: *sdm_format = kFormatYCbCr420SemiPlanarVenus;  break;
+    case SDE_PIX_FMT_Y_CRCB_H2V2_VENUS: *sdm_format = kFormatYCrCb420SemiPlanarVenus;  break;
+    case SDE_PIX_FMT_RGBA_8888_UBWC:    *sdm_format = kFormatRGBA8888Ubwc;             break;
+    case SDE_PIX_FMT_RGBX_8888_UBWC:    *sdm_format = kFormatRGBX8888Ubwc;             break;
+    case SDE_PIX_FMT_RGB_565_UBWC:      *sdm_format = kFormatBGR565Ubwc;               break;
+    case SDE_PIX_FMT_Y_CBCR_H2V2_UBWC:  *sdm_format = kFormatYCbCr420SPVenusUbwc;      break;
+    case SDE_PIX_FMT_RGBA_1010102:      *sdm_format = kFormatRGBA1010102;              break;
+    case SDE_PIX_FMT_ARGB_2101010:      *sdm_format = kFormatARGB2101010;              break;
+    case SDE_PIX_FMT_RGBX_1010102:      *sdm_format = kFormatRGBX1010102;              break;
+    case SDE_PIX_FMT_XRGB_2101010:      *sdm_format = kFormatXRGB2101010;              break;
+    case SDE_PIX_FMT_BGRA_1010102:      *sdm_format = kFormatBGRA1010102;              break;
+    case SDE_PIX_FMT_ABGR_2101010:      *sdm_format = kFormatABGR2101010;              break;
+    case SDE_PIX_FMT_BGRX_1010102:      *sdm_format = kFormatBGRX1010102;              break;
+    case SDE_PIX_FMT_XBGR_2101010:      *sdm_format = kFormatXBGR2101010;              break;
+    case SDE_PIX_FMT_RGBA_1010102_UBWC: *sdm_format = kFormatRGBA1010102Ubwc;          break;
+    case SDE_PIX_FMT_RGBX_1010102_UBWC: *sdm_format = kFormatRGBX1010102Ubwc;          break;
+    case SDE_PIX_FMT_Y_CBCR_H2V2_P010:  *sdm_format = kFormatYCbCr420P010;             break;
+    case SDE_PIX_FMT_Y_CBCR_H2V2_TP10_UBWC:  *sdm_format = kFormatYCbCr420TP10Ubwc;     break;
+    case SDE_PIX_FMT_Y_CBCR_H2V2_P010_UBWC:  *sdm_format = kFormatYCbCr420P010Ubwc;     break;
+    case SDE_PIX_FMT_Y_CBCR_H2V2_P010_VENUS: *sdm_format = kFormatYCbCr420P010Venus;    break;
     default: *sdm_format = kFormatInvalid;
   }
 }
