@@ -750,7 +750,8 @@ int HWCDisplayBuiltIn::HandleSecureSession(const std::bitset<kSecureMax> &secure
   if (active_secure_sessions_[kSecureDisplay] != secure_sessions[kSecureDisplay]) {
     SecureEvent secure_event =
         secure_sessions.test(kSecureDisplay) ? kSecureDisplayStart : kSecureDisplayEnd;
-    DisplayError err = display_intf_->HandleSecureEvent(secure_event);
+    bool needs_refresh = false;
+    DisplayError err = display_intf_->HandleSecureEvent(secure_event, &needs_refresh);
     if (err != kErrorNone) {
       DLOGE("Set secure event failed");
       return err;
@@ -765,8 +766,8 @@ int HWCDisplayBuiltIn::HandleSecureSession(const std::bitset<kSecureMax> &secure
   return 0;
 }
 
-DisplayError HWCDisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event) {
-  DisplayError err = display_intf_->HandleSecureEvent(secure_event);
+DisplayError HWCDisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) {
+  DisplayError err = display_intf_->HandleSecureEvent(secure_event, needs_refresh);
   if (err != kErrorNone) {
     DLOGE("Handle secure event failed");
     return err;

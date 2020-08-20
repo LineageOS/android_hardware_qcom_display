@@ -294,6 +294,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   static Locker locker_[HWCCallbacks::kNumDisplays];
   static Locker power_state_[HWCCallbacks::kNumDisplays];
   static Locker hdr_locker_[HWCCallbacks::kNumDisplays];
+  static Locker tui_locker_[HWCCallbacks::kNumDisplays];
+  static bool tui_transition_pending_[HWCCallbacks::kNumDisplays];
   static Locker display_config_locker_;
   static Locker system_locker_;
 

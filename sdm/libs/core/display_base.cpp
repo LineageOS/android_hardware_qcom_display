@@ -810,16 +810,17 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     if (pending_power_state_ == kPowerStateNone) {
       active_ = active;
       state_ = state;
+      // Handle vsync pending on resume, Since the power on commit is synchronous we pass -1 as
+      // retire fence otherwise pass valid retire fence
+      if (state == kStateOn) {
+        HandlePendingVSyncEnable(nullptr /* retire fence */);
+      }
     }
     comp_manager_->SetDisplayState(display_comp_ctx_, state,
                             release_fence ? *release_fence : nullptr);
   }
-
-  // Handle vsync pending on resume, Since the power on commit is synchronous we pass -1 as retire
-  // fence otherwise pass valid retire fence
-  if (state_ == kStateOn) {
-    return HandlePendingVSyncEnable(nullptr /* retire fence */);
-  }
+  DLOGI("active %d-%d state %d-%d pending_power_state_ %d", active, active_, state, state_,
+        pending_power_state_);
 
   return error;
 }

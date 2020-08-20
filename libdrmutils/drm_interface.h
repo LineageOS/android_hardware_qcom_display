@@ -473,8 +473,8 @@ enum struct DRMDisplayType {
 
 enum struct DRMVMRequestState {
   NONE,
-  ACQUIRE,
   RELEASE,
+  ACQUIRE,
 };
 
 struct DRMRect {
