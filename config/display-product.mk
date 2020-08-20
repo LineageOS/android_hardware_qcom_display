@@ -168,17 +168,19 @@ endif
 SOONG_CONFIG_NAMESPACES += qtidisplay
 
 # Soong Keys
-SOONG_CONFIG_qtidisplay := drmpp headless llvmsa gralloc4
+SOONG_CONFIG_qtidisplay := drmpp headless llvmsa gralloc4 default
 
 # Soong Values
 SOONG_CONFIG_qtidisplay_drmpp := true
 SOONG_CONFIG_qtidisplay_headless := false
 SOONG_CONFIG_qtidisplay_llvmsa := false
 SOONG_CONFIG_qtidisplay_gralloc4 := true
+SOONG_CONFIG_qtidisplay_default := true
 
 ifeq ($(TARGET_IS_HEADLESS), true)
     PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/qmaa
     SOONG_CONFIG_qtidisplay_headless := true
+    SOONG_CONFIG_qtidisplay_default := false
 else
     PRODUCT_SOONG_NAMESPACES += hardware/qcom/display
     PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/composer
