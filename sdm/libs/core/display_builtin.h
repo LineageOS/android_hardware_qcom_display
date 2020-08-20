@@ -26,6 +26,10 @@
 #define __DISPLAY_BUILTIN_H__
 
 #include <core/dpps_interface.h>
+#include <private/extension_interface.h>
+#include <private/spr_intf.h>
+#include <private/panel_feature_property_intf.h>
+#include <private/panel_feature_factory_intf.h>
 #include <string>
 #include <vector>
 
@@ -75,6 +79,8 @@ struct DeferFpsConfig {
   }
 };
 
+typedef PanelFeatureFactoryIntf* (*GetPanelFeatureFactoryIntfType)();
+
 class DppsInfo {
  public:
   void Init(DppsPropIntf *intf, const std::string &panel_name);
@@ -117,8 +123,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError GetPanelBrightness(float *brightness) override;
   DisplayError GetPanelMaxBrightness(uint32_t *max_brightness_level) override;
   DisplayError GetRefreshRate(uint32_t *refresh_rate) override;
-  DisplayError HandleSecureEvent(SecureEvent secure_event,
-                                 LayerStack *layer_stack) override;
+  DisplayError HandleSecureEvent(SecureEvent secure_event) override;
   DisplayError SetDisplayDppsAdROI(void *payload) override;
   DisplayError SetQSyncMode(QSyncMode qsync_mode) override;
   DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) override;
@@ -152,6 +157,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   void ResetPanel();
   DisplayError SetActiveConfig(uint32_t index) override;
   DisplayError ReconfigureDisplay() override;
+  DisplayError CreatePanelfeatures();
 
  private:
   bool CanCompareFrameROI(LayerStack *layer_stack);
@@ -160,6 +166,10 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   bool CanDeferFpsConfig(uint32_t fps);
   void SetDeferredFpsConfig();
   void GetFpsConfig(HWDisplayAttributes *display_attributes, HWPanelInfo *panel_info);
+  PrimariesTransfer GetBlendSpaceFromStcColorMode(const snapdragoncolor::ColorMode &color_mode);
+  DisplayError SetupPanelfeatures();
+  DisplayError SetupSPR();
+  DisplayError SetupDemura();
 
   const uint32_t kPuTimeOutMs = 1000;
   std::vector<HWEvent> event_list_;
@@ -168,6 +178,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   bool handle_idle_timeout_ = false;
   bool commit_event_enabled_ = false;
   bool reset_panel_ = false;
+  bool panel_feature_init_ = false;
   DppsInfo dpps_info_ = {};
   FrameTriggerMode trigger_mode_debug_ = kFrameTriggerMax;
   float level_remainder_ = 0.0f;
@@ -190,6 +201,13 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DeferFpsConfig deferred_config_ = {};
 
   snapdragoncolor::ColorMode current_color_mode_ = {};
+  snapdragoncolor::ColorModeList stc_color_modes_ = {};
+
+  std::shared_ptr<SPRIntf> spr_;
+  GetPanelFeatureFactoryIntfType GetPanelFeatureFactoryIntfFunc_ = nullptr;
+  PanelFeatureFactoryIntf *pf_factory_ = nullptr;
+  PanelFeaturePropertyIntf *prop_intf_ = nullptr;
+  int spr_prop_value_ = 0;
 };
 
 }  // namespace sdm

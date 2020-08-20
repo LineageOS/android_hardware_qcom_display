@@ -470,6 +470,7 @@ Return<void> QtiComposerClient::getDisplayType(uint64_t display, getDisplayType_
 Return<void> QtiComposerClient::getDozeSupport(uint64_t display, getDozeSupport_cb _hidl_cb) {
   int32_t hwc_support = 0;
 
+  std::lock_guard<std::mutex> lock(mDisplayDataMutex);
   if (mDisplayData.find(display) == mDisplayData.end()) {
     _hidl_cb(Error::BAD_DISPLAY, hwc_support);
     return Void();
@@ -657,6 +658,7 @@ Return<Error> QtiComposerClient::setReadbackBuffer(uint64_t display, const hidl_
     return error;
   }
 
+  std::lock_guard<std::mutex> lock(mDisplayDataMutex);
   if (mDisplayData.find(display) == mDisplayData.end()) {
     return Error::BAD_DISPLAY;
   }
@@ -743,6 +745,7 @@ Return<void> QtiComposerClient::getRenderIntents(uint64_t display, common_V1_1::
     return Void();
   }
 
+  std::lock_guard<std::mutex> lock(mDisplayDataMutex);
   if (mDisplayData.find(display) == mDisplayData.end()) {
     _hidl_cb(Error::BAD_DISPLAY, intents);
     return Void();
@@ -977,15 +980,26 @@ Return<Error> QtiComposerClient::setColorMode_2_3(uint64_t display, common_V1_2:
 
 Return<void> QtiComposerClient::getDisplayCapabilities(uint64_t display,
                                                        getDisplayCapabilities_cb _hidl_cb) {
-  // We only care about passing VTS for older composer versions
-  // Not returning any capabilities that are optional
+  // Report optional capabilities that we do support to pass VTS.
 
-  const hidl_vec<android::hardware::graphics::composer::V2_3::IComposerClient::DisplayCapability>
-        capabilities;
+  hidl_vec<composer_V2_3::IComposerClient::DisplayCapability> capabilities;
 
+  std::lock_guard<std::mutex> lock(mDisplayDataMutex);
   if (mDisplayData.find(display) == mDisplayData.end()) {
      _hidl_cb(Error::BAD_DISPLAY, capabilities);
     return Void();
+  }
+
+  int32_t has_doze_support = 0;
+  hwc_session_->GetDozeSupport(display, &has_doze_support);
+
+  if (has_doze_support) {
+    if (has_doze_support) {
+      capabilities = { composer_V2_3::IComposerClient::DisplayCapability::DOZE,
+                       composer_V2_3::IComposerClient::DisplayCapability::BRIGHTNESS };
+    } else {
+      capabilities = { composer_V2_3::IComposerClient::DisplayCapability::BRIGHTNESS };
+    }
   }
 
   _hidl_cb(Error::NONE, capabilities);
@@ -1039,6 +1053,7 @@ Return<void> QtiComposerClient::getDisplayBrightnessSupport(uint64_t display,
                                                          getDisplayBrightnessSupport_cb _hidl_cb) {
   bool support = false;
 
+  std::lock_guard<std::mutex> lock(mDisplayDataMutex);
   if (mDisplayData.find(display) == mDisplayData.end()) {
     _hidl_cb(Error::BAD_DISPLAY, support);
     return Void();
@@ -1068,9 +1083,10 @@ Return<void> QtiComposerClient::registerCallback_2_4(
   enableCallback(callback != nullptr);
   return Void();
 }
+
 Return<void> QtiComposerClient::getDisplayCapabilities_2_4(uint64_t display,
                                                            getDisplayCapabilities_2_4_cb _hidl_cb) {
-  hidl_vec<composer_V2_4::IComposerClient::DisplayCapability> capabilities;
+  hidl_vec<HwcDisplayCapability> capabilities;
   auto error = hwc_session_->GetDisplayCapabilities(display, &capabilities);
   _hidl_cb(static_cast<composer_V2_4::Error>(error), capabilities);
   return Void();
@@ -1117,6 +1133,7 @@ Return<void> QtiComposerClient::setActiveConfigWithConstraints(
 }
 
 Return<composer_V2_4::Error> QtiComposerClient::setAutoLowLatencyMode(uint64_t display, bool on) {
+  std::lock_guard<std::mutex> lock(mDisplayDataMutex);
   if (mDisplayData.find(display) == mDisplayData.end()) {
     return composer_V2_4::Error::BAD_DISPLAY;
   }
@@ -1126,6 +1143,7 @@ Return<composer_V2_4::Error> QtiComposerClient::setAutoLowLatencyMode(uint64_t d
 Return<void> QtiComposerClient::getSupportedContentTypes(uint64_t display,
                                                          getSupportedContentTypes_cb _hidl_cb) {
   hidl_vec<composer_V2_4::IComposerClient::ContentType> types = {};
+  std::lock_guard<std::mutex> lock(mDisplayDataMutex);
   if (mDisplayData.find(display) == mDisplayData.end()) {
     _hidl_cb(composer_V2_4::Error::BAD_DISPLAY, types);
     return Void();
@@ -1136,6 +1154,7 @@ Return<void> QtiComposerClient::getSupportedContentTypes(uint64_t display,
 
 Return<composer_V2_4::Error> QtiComposerClient::setContentType(
     uint64_t display, composer_V2_4::IComposerClient::ContentType type) {
+  std::lock_guard<std::mutex> lock(mDisplayDataMutex);
   if (mDisplayData.find(display) == mDisplayData.end()) {
     return composer_V2_4::Error::BAD_DISPLAY;
   }
@@ -1162,14 +1181,16 @@ bool QtiComposerClient::CommandReader::parseCommonCmd(
 
   switch (command) {
   // Commands from ::android::hardware::graphics::composer::V2_1::IComposerClient follow.
-  case IComposerClient::Command::SELECT_DISPLAY:
+  case IComposerClient::Command::SELECT_DISPLAY: {
     parsed = parseSelectDisplay(length);
+    std::lock_guard<std::mutex> lock(mClient.mDisplayDataMutex);
     // Displays will not be removed while processing the command queue.
     if (parsed && mClient.mDisplayData.find(mDisplay) == mClient.mDisplayData.end()) {
       ALOGW("Command::SELECT_DISPLAY: Display %lu not found. Dropping commands.", mDisplay);
       mDisplay = sdm::HWCCallbacks::kNumDisplays;
     }
     break;
+  }
   case IComposerClient::Command::SELECT_LAYER:
     parsed = parseSelectLayer(length);
     break;

@@ -67,7 +67,7 @@ std::array<uint64_t, numBuckets> rebucketTo8Buckets(
 }  // namespace
 
 std::string histogram::HistogramCollector::Dump() const {
-  uint64_t num_frames;
+  uint64_t num_frames = 0;
   std::array<uint64_t, HIST_V_SIZE> all_sample_buckets;
   std::tie(num_frames, all_sample_buckets) = histogram->collect_cumulative();
   std::array<uint64_t, numBuckets> samples = rebucketTo8Buckets(all_sample_buckets);
@@ -101,7 +101,7 @@ HWC2::Error histogram::HistogramCollector::collect(
   out_samples_size[2] = numBuckets;
   out_samples_size[3] = 0;
 
-  uint64_t num_frames;
+  uint64_t num_frames = 0;
   std::array<uint64_t, HIST_V_SIZE> samples;
 
   if (max_frames == 0 && timestamp == 0) {
@@ -194,7 +194,7 @@ void histogram::HistogramCollector::blob_processing_thread() {
     lk.unlock();
 
     drmModePropertyBlobPtr blob = drmModeGetPropertyBlob(work.fd, work.id);
-    if (!blob) {
+    if (!blob || !blob->data) {
       lk.lock();
       continue;
     }

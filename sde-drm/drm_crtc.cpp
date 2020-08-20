@@ -74,6 +74,11 @@ static uint8_t IDLE_PC_STATE_DISABLE = 2;
 static uint8_t CACHE_STATE_DISABLED = 0;
 static uint8_t CACHE_STATE_ENABLED = 1;
 
+// VM Request states
+static uint8_t VM_REQ_STATE_NONE = 0;
+static uint8_t VM_REQ_STATE_RELEASE = 1;
+static uint8_t VM_REQ_STATE_ACQUIRE = 2;
+
 static void PopulateSecurityLevels(drmModePropertyRes *prop) {
   static bool security_levels_populated = false;
   if (!security_levels_populated) {
@@ -133,6 +138,23 @@ static void PopulateCacheStates(drmModePropertyRes *prop) {
       }
     }
     cache_states_populated = true;
+  }
+}
+
+static void PopulateVMRequestStates(drmModePropertyRes *prop) {
+  static bool idle_pc_state_populated = false;
+  if (!idle_pc_state_populated) {
+    for (auto i = 0; i < prop->count_enums; i++) {
+      string enum_name(prop->enums[i].name);
+      if (enum_name == "vm_req_none") {
+        VM_REQ_STATE_NONE = prop->enums[i].value;
+      } else if (enum_name == "vm_req_release") {
+        VM_REQ_STATE_RELEASE = prop->enums[i].value;
+      } else if (enum_name == "vm_req_acquire") {
+        VM_REQ_STATE_ACQUIRE = prop->enums[i].value;
+      }
+    }
+    idle_pc_state_populated = true;
   }
 }
 
@@ -326,6 +348,10 @@ void DRMCrtc::ParseProperties() {
       PopulateCacheStates(info);
     }
 
+    if (prop_enum == DRMProperty::VM_REQ_STATE) {
+      PopulateVMRequestStates(info);
+    }
+
     prop_mgr_.SetPropertyId(prop_enum, info->prop_id);
     if (prop_enum == DRMProperty::CAPABILITIES) {
       ParseCapabilities(props->prop_values[j]);
@@ -397,6 +423,7 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
   string use_baselayer_for_stage = "use_baselayer_for_stage=";
   string ubwc_version = "UBWC version=";
   string spr = "spr=";
+  string rc_total_mem_size = "rc_mem_size=";
 
   while (std::getline(stream, line)) {
     if (line.find(max_blendstages) != string::npos) {
@@ -515,6 +542,8 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
       crtc_info_.ubwc_version = (std::stoi(string(line, ubwc_version.length()))) >> 28;
     } else if (line.find(spr) != string::npos) {
       crtc_info_.has_spr = std::stoi(string(line, spr.length())) == -1 ? false: true;
+    } else if (line.find(rc_total_mem_size) != string::npos) {
+      crtc_info_.rc_total_mem_size = std::stoi(string(line, rc_total_mem_size.length()));
     }
   }
   drmModeFreePropertyBlob(blob);
@@ -780,6 +809,33 @@ void DRMCrtc::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
                   crtc_cache_state, false /* cache */, tmp_prop_val_map_);
     } break;
 
+    case DRMOps::CRTC_SET_VM_REQ_STATE: {
+      if (!prop_mgr_.IsPropertyAvailable(DRMProperty::VM_REQ_STATE)) {
+        return;
+      }
+      int drm_vm_req_state = va_arg(args, int);
+      uint32_t vm_req_state = VM_REQ_STATE_NONE;
+      switch (drm_vm_req_state) {
+        case static_cast<int>(DRMVMRequestState::RELEASE):
+          vm_req_state = VM_REQ_STATE_RELEASE;
+          break;
+        case static_cast<int>(DRMVMRequestState::ACQUIRE):
+          vm_req_state = VM_REQ_STATE_ACQUIRE;
+          break;
+        default:
+          vm_req_state = VM_REQ_STATE_NONE;
+          break;
+      }
+      AddProperty(req, obj_id, prop_mgr_.GetPropertyId(DRMProperty::VM_REQ_STATE), vm_req_state,
+                  true /* cache */, tmp_prop_val_map_);
+      DRM_LOGD("CRTC %d: Set vm_req_state %d", obj_id, vm_req_state);
+    }; break;
+
+    case DRMOps::CRTC_RESET_CACHE: {
+      tmp_prop_val_map_.clear();
+      committed_prop_val_map_.clear();
+    } break;
+
     default:
       DRM_LOGE("Invalid opcode %d to set the property on crtc %d", code, obj_id);
       break;
@@ -852,7 +908,7 @@ void DRMCrtc::SetSolidfillStages(drmModeAtomicReq *req, uint32_t obj_id,
     drm_dim_layer_v1.layer_cfg[i].color_fill.color_3 =
       ((uint32_t)((((sf.alpha & 0xFF)) * plane_alpha)));
   }
-
+  DLOGI("Set dim layer stages. obj_id=%u, num_layers=%u", obj_id, drm_dim_layer_v1.num_layers);
   AddProperty(req, obj_id, prop_mgr_.GetPropertyId(DRMProperty::DIM_STAGES_V1),
               reinterpret_cast<uint64_t> (&drm_dim_layer_v1), false /* cache */,
               tmp_prop_val_map_);

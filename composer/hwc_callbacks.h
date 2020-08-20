@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, 2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, 2019-2020 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -70,7 +70,7 @@ class HWCCallbacks {
   bool NeedsRefresh(hwc2_display_t display) { return pending_refresh_.test(UINT32(display)); }
   void ResetRefresh(hwc2_display_t display) { pending_refresh_.reset(UINT32(display)); }
   bool IsClientConnected() {
-    SCOPE_LOCK(callbacks_lock_);
+    SCOPE_LOCK(hotplug_lock_);
     return client_connected_;
   }
 
@@ -92,7 +92,12 @@ class HWCCallbacks {
   hwc2_display_t vsync_source_ = HWC_DISPLAY_PRIMARY;   // hw vsync is active on this display
   std::bitset<kNumDisplays> pending_refresh_;         // Displays waiting to get refreshed
 
-  Locker callbacks_lock_;
+  Locker hotplug_lock_;
+  Locker refresh_lock_;
+  Locker vsync_lock_;
+  Locker vsync_2_4_lock_;
+  Locker vsync_period_timing_changed_lock_;
+  Locker seamless_possible_lock_;
   bool client_connected_ = false;
 };
 

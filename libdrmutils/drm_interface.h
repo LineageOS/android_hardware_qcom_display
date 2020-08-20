@@ -177,6 +177,11 @@ enum struct DRMOps {
    */
   PLANE_SET_POST_PROC,
   /*
+   * Op: Resets property cache of all planes that are assigned to given CRTC
+   * Arg: uint32_t - CRTC ID
+   */
+  PLANES_RESET_CACHE,
+  /*
    * Op: Activate or deactivate a CRTC
    * Arg: uint32_t - CRTC ID
    *      uint32_t - 1 to enable, 0 to disable
@@ -312,6 +317,17 @@ enum struct DRMOps {
    */
   CRTC_SET_CACHE_STATE,
   /*
+   * Op: Sets VM Request state for CRTC.
+   * Arg: uint32_t - CRTC ID
+   *      uint32_t - vm request state
+   */
+  CRTC_SET_VM_REQ_STATE,
+  /*
+   * Op: reset CRTC property cache.
+   * Arg: uint32_t - CRTC ID
+   */
+  CRTC_RESET_CACHE,
+  /*
    * Op: Returns retire fence for this commit. Should be called after Commit() on
    * DRMAtomicReqInterface.
    * Arg: uint32_t - Connector ID
@@ -386,6 +402,11 @@ enum struct DRMOps {
    */
   DPPS_COMMIT_FEATURE,
   /*
+   * Op: Commit panel features.
+   * Arg: drmModeAtomicReq - Atomic request
+   */
+  COMMIT_PANEL_FEATURES,
+  /*
    * Op: Sets qsync mode on connector
    * Arg: uint32_t - Connector ID
    *     uint32_t - qsync mode
@@ -448,6 +469,12 @@ enum struct DRMDisplayType {
   PERIPHERAL,
   TV,
   VIRTUAL,
+};
+
+enum struct DRMVMRequestState {
+  NONE,
+  ACQUIRE,
+  RELEASE,
 };
 
 struct DRMRect {
@@ -533,6 +560,7 @@ struct DRMCrtcInfo {
   bool has_micro_idle = false;
   uint32_t ubwc_version = 1;
   bool has_spr = false;
+  uint64_t rc_total_mem_size = 0;
 };
 
 enum struct DRMPlaneType {
@@ -695,7 +723,7 @@ enum DRMPPFeatureID {
   kPPFeaturesMax,
 };
 
-enum DRMPPPropType {
+enum DRMPropType {
   kPropEnum,
   kPropRange,
   kPropBlob,
@@ -704,7 +732,7 @@ enum DRMPPPropType {
 
 struct DRMPPFeatureInfo {
   DRMPPFeatureID id;
-  DRMPPPropType type;
+  DRMPropType type;
   uint32_t version;
   uint32_t payload_size;
   void *payload;
@@ -772,6 +800,27 @@ struct DRMDppsFeatureInfo {
   uint32_t version;
   uint32_t payload_size;
   void *payload;
+};
+
+enum DRMPanelFeatureID {
+  kDRMPanelFeatureDsppIndex,
+  kDRMPanelFeatureDsppSPRInfo,
+  kDRMPanelFeatureDsppDemuraInfo,
+  kDRMPanelFeatureDsppRCInfo,
+  kDRMPanelFeatureSPRInit,
+  kDRMPanelFeatureSPRPackType,
+  kDRMPanelFeatureDemuraInit,
+  kDRMPanelFeatureRCInit,
+  kDRMPanelFeatureMax,
+};
+
+struct DRMPanelFeatureInfo  {
+  DRMPanelFeatureID prop_id;
+  uint32_t obj_type;
+  uint32_t obj_id;
+  uint32_t version;
+  uint32_t prop_size;
+  uint64_t prop_ptr;
 };
 
 enum AD4Modes {
@@ -1060,6 +1109,19 @@ class DRMManagerInterface {
    * [output]: Dpps feature version, info->version
    */
   virtual void GetDppsFeatureInfo(DRMDppsFeatureInfo *info) = 0;
+
+  /*
+   * Get the Panel feature info
+   * [output]: panel feature info data
+   */
+  virtual void GetPanelFeature(DRMPanelFeatureInfo *info) = 0;
+
+  /*
+   * Set the Panel feature
+   * [input]: panel feature info data
+   */
+  virtual void SetPanelFeature(const DRMPanelFeatureInfo &info) = 0;
+
 };
 
 }  // namespace sde_drm

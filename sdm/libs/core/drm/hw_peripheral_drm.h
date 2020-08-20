@@ -30,6 +30,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __HW_PERIPHERAL_DRM_H__
 #define __HW_PERIPHERAL_DRM_H__
 
+#include <map>
 #include <vector>
 #include <string>
 #include "hw_device_drm.h"
@@ -47,11 +48,14 @@ enum SelfRefreshState {
   kSelfRefreshDisable,
 };
 
-class HWPeripheralDRM : public HWDeviceDRM {
+class HWPeripheralDRM : public HWDeviceDRM, public PanelFeaturePropertyIntf {
  public:
   explicit HWPeripheralDRM(int32_t display_id, BufferAllocator *buffer_allocator,
                            HWInfoInterface *hw_info_intf);
   virtual ~HWPeripheralDRM() {}
+  virtual PanelFeaturePropertyIntf *GetPanelFeaturePropertyIntf() { return this; }
+  virtual int GetPanelFeature(PanelFeaturePropertyInfo *feature_info);
+  virtual int SetPanelFeature(const PanelFeaturePropertyInfo &feature_info);
 
  protected:
   virtual DisplayError Init();
@@ -60,9 +64,12 @@ class HWPeripheralDRM : public HWDeviceDRM {
   virtual DisplayError Flush(HWLayers *hw_layers);
   virtual DisplayError SetDppsFeature(void *payload, size_t size);
   virtual DisplayError GetDppsFeatureInfo(void *payload, size_t size);
-  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, HWLayers *hw_layers);
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, const HWQosData &qos_data);
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous);
   virtual DisplayError PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
+  virtual DisplayError PowerOff(bool teardown);
+  virtual DisplayError Doze(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
+  virtual DisplayError DozeSuspend(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
   virtual DisplayError SetDisplayDppsAdROI(void *payload);
   virtual DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate);
   virtual DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate);
@@ -86,12 +93,32 @@ class HWPeripheralDRM : public HWDeviceDRM {
                                 int64_t *release_fence_fd);
   void ConfigureConcurrentWriteback(LayerStack *stack);
   void PostCommitConcurrentWriteback(LayerBuffer *output_buffer);
+  void CreatePanelFeaturePropertyMap();
   void SetIdlePCState() {
     drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_IDLE_PC_STATE, token_.crtc_id,
                               idle_pc_state_);
   }
   void CacheDestScalarData();
   void SetSelfRefreshState();
+  void SetVMReqState() {
+    if (tui_state_ == kTUIStateStart) {
+      drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_VM_REQ_STATE, token_.crtc_id,
+                                sde_drm::DRMVMRequestState::RELEASE);
+      if (ltm_hist_en_)
+        drm_atomic_intf_->Perform(sde_drm::DRMOps::DPPS_CACHE_FEATURE, token_.crtc_id,
+                                  sde_drm::kFeatureLtmHistCtrl, 0);
+    } else if (tui_state_ == kTUIStateEnd) {
+      drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_VM_REQ_STATE, token_.crtc_id,
+                                sde_drm::DRMVMRequestState::ACQUIRE);
+      if (ltm_hist_en_)
+        drm_atomic_intf_->Perform(sde_drm::DRMOps::DPPS_CACHE_FEATURE, token_.crtc_id,
+                                  sde_drm::kFeatureLtmHistCtrl, 1);
+    } else if (tui_state_ == kTUIStateNone) {
+      drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_VM_REQ_STATE, token_.crtc_id,
+                                sde_drm::DRMVMRequestState::NONE);
+    }
+  }
+  void ResetPropertyCache();
 
   struct DestScalarCache {
     SDEScaler scalar_data = {};
@@ -110,6 +137,8 @@ class HWPeripheralDRM : public HWDeviceDRM {
   std::vector<uint64_t> bitclk_rates_;
   std::string brightness_base_path_ = "";
   SelfRefreshState self_refresh_state_ = kSelfRefreshNone;
+  bool ltm_hist_en_ = false;
+  std::map<PanelFeaturePropertyID, sde_drm::DRMPanelFeatureID> panel_feature_property_map_ {};
 };
 
 }  // namespace sdm

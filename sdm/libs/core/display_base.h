@@ -28,6 +28,9 @@
 #include <core/display_interface.h>
 #include <private/strategy_interface.h>
 #include <private/color_interface.h>
+#include <private/rc_intf.h>
+#include <private/panel_feature_property_intf.h>
+#include <private/panel_feature_factory_intf.h>
 
 #include <map>
 #include <mutex>
@@ -137,7 +140,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError GetClientTargetSupport(uint32_t width, uint32_t height,
                                               LayerBufferFormat format,
                                               const ColorMetaData &color_metadata);
-  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, LayerStack *layer_stack) {
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event) {
     return kErrorNotSupported;
   }
   virtual DisplayError SetDisplayDppsAdROI(void *payload) {
@@ -204,8 +207,10 @@ class DisplayBase : public DisplayInterface {
   PrimariesTransfer GetBlendSpaceFromColorMode();
   bool IsHdrMode(const AttrVal &attr);
   void InsertBT2020PqHlgModes(const std::string &str_render_intent);
+  DisplayError SetupRC(PanelFeatureFactoryIntf *pf_factory, PanelFeaturePropertyIntf *prop_intf);
   DisplayError HandlePendingVSyncEnable(const shared_ptr<Fence> &retire_fence);
   DisplayError HandlePendingPowerState(const shared_ptr<Fence> &retire_fence);
+  DisplayError GetPendingDisplayState(DisplayState *disp_state);
 
   recursive_mutex recursive_mutex_;
   int32_t display_id_ = -1;
@@ -254,17 +259,23 @@ class DisplayBase : public DisplayInterface {
   bool drop_skewed_vsync_ = false;
   bool custom_mixer_resolution_ = false;
   bool vsync_enable_pending_ = false;
-  bool pending_doze_ = false;
-  bool pending_power_on_ = false;
+  HWPowerState pending_power_state_ = kPowerStateNone;
   QSyncMode qsync_mode_ = kQSyncModeNone;
   bool needs_avr_update_ = false;
 
   static Locker display_power_reset_lock_;
   static bool display_power_reset_pending_;
+  SecureEvent secure_event_ = kSecureEventMax;
+  bool rc_panel_feature_init_ = false;
+  bool spr_enable_ = false;
 
  private:
   bool StartDisplayPowerReset();
   void EndDisplayPowerReset();
+  void SetRCData(LayerStack *layer_stack);
+  unsigned int rc_cached_res_width_ = 0;
+  unsigned int rc_cached_res_height_ = 0;
+  std::unique_ptr<RCIntf> rc_core_ = nullptr;
 };
 
 }  // namespace sdm

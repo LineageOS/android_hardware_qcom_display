@@ -2,6 +2,7 @@ soong_namespace {
     imports: [
         "hardware/qcom/display",
         "hardware/qcom/display/libdrmutils",
+        "hardware/qcom/display/libdebug",
     ],
 }
 
@@ -42,6 +43,7 @@ cc_library_shared {
         "drm_pp_manager.cpp",
         "drm_property.cpp",
         "drm_dpps_mgr_imp.cpp",
+        "drm_panel_feature_mgr.cpp",
     ],
 
     vendor: true,

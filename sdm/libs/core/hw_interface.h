@@ -29,6 +29,7 @@
 #include <core/display_interface.h>
 #include <private/hw_info_types.h>
 #include <private/color_interface.h>
+#include <private/panel_feature_property_intf.h>
 #include <utils/constants.h>
 #include <string>
 
@@ -118,7 +119,7 @@ class HWInterface {
   virtual DisplayError DumpDebugData() = 0;
   virtual DisplayError SetDppsFeature(void *payload, size_t size) = 0;
   virtual DisplayError GetDppsFeatureInfo(void *payload, size_t size) = 0;
-  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, HWLayers *hw_layers) = 0;
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, const HWQosData &qos_data) = 0;
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) = 0;
   virtual DisplayError SetDisplayDppsAdROI(void *payload) = 0;
   virtual DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate) = 0;
@@ -131,6 +132,7 @@ class HWInterface {
   virtual DisplayError GetPanelBrightnessBasePath(std::string *base_path) = 0;
   virtual DisplayError SetBlendSpace(const PrimariesTransfer &blend_space) = 0;
   virtual DisplayError EnableSelfRefresh() = 0;
+  virtual PanelFeaturePropertyIntf *GetPanelFeaturePropertyIntf() = 0;
 
  protected:
   virtual ~HWInterface() { }

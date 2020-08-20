@@ -164,6 +164,10 @@ DRMProperty DRMPropertyManager::GetPropertyEnum(const std::string &name) const {
   if (name == "supported_colorspaces") { return DRMProperty::SUPPORTED_COLORSPACES; }
   if (name == "SDE_DSPP_SPR_DITHER_V1") { return DRMProperty::SDE_DSPP_SPR_DITHER_V1; }
   if (name == "cache_state") { return DRMProperty::CACHE_STATE; }
+  if (name == "vm_request_state") { return DRMProperty::VM_REQ_STATE; }
+  if (name == "dspp_caps") { return DRMProperty::DSPP_CAPABILITIES; }
+  if (name == "SDE_SPR_INIT_CFG_V1") { return DRMProperty::SPR_INIT_CFG_V1; }
+  if (name == "SDE_DSPP_RC_MASK_V1") { return DRMProperty::DSPP_RC_MASK_V1; }
 
   return DRMProperty::INVALID;
 }

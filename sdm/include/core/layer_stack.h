@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -198,6 +198,7 @@ struct LayerRequestFlags {
                                    //!< destination tone map
       uint32_t src_tone_map: 1;    //!< This flag will be set by SDM when the layer needs
                                    //!< source tone map.
+      uint32_t rc: 1;  //!< This flag will be set by SDM when the layer is drawn by RC HW.
     };
     uint32_t request_flags = 0;  //!< For initialization purpose only.
                                  //!< Shall not be refered directly.

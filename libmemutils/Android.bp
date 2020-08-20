@@ -1,0 +1,34 @@
+TARGET_OUT_HEADERS = "vendor/qcom/proprietary"
+
+cc_library_shared {
+
+    name: "libmemutils",
+    defaults: ["qtidisplay_defaults"],
+    sanitize: {
+        integer_overflow: true,
+    },
+
+    shared_libs: [
+        "libion",
+        "libc++",
+    ],
+    header_libs: [
+        "display_headers",
+        "qti_kernel_headers",
+    ],
+    include_dirs: [TARGET_OUT_HEADERS + "/common/inc"],
+    cflags: [
+        "-Wno-missing-field-initializers",
+        "-Wall",
+        "-Werror",
+        "-fno-operator-names",
+        "-Wno-unused-parameter",
+        "-DLOG_TAG=\"MEM-UTILS\"",
+    ],
+    clang: true,
+    srcs: [
+        "membuf_wrapper.cpp",
+    ],
+
+    vendor: true,
+}

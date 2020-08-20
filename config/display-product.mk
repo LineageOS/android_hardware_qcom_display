@@ -6,8 +6,6 @@ PRODUCT_PACKAGES += \
     vendor.qti.hardware.display.composer-service \
     android.hardware.memtrack@1.0-impl \
     android.hardware.memtrack@1.0-service \
-    android.hardware.light@2.0-impl \
-    android.hardware.light@2.0-service \
     lights.$(TARGET_BOARD_PLATFORM) \
     hwcomposer.$(TARGET_BOARD_PLATFORM) \
     memtrack.qcom \
@@ -39,7 +37,8 @@ PRODUCT_PACKAGES += \
     init.qti.display_boot.sh \
     init.qti.display_boot.rc \
     modetest \
-    vndservicemanager
+    vndservicemanager \
+    libmemutils
 
 #QDCM calibration xml file for 2k panel
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml
@@ -64,8 +63,8 @@ PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_default.xml:$
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_Sharp_2k_cmd_mode_qsync_dsi_panel.xml
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_Sharp_2k_video_mode_qsync_dsi_panel.xml
 #QDCM calibration xml file for r66451 amoled panel
-PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_r66451_amoled_cmd_mode_dsi_visionox_panel_with_DSC.xml
-PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_r66451_amoled_video_mode_dsi_visionox_panel_with_DSC.xml
+PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_r66451_amoled_cmd_mode_dsi_visionox_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_r66451_amoled_cmd_mode_dsi_visionox_panel_with_DSC.xml
+PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_r66451_amoled_cmd_mode_dsi_visionox_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_r66451_amoled_video_mode_dsi_visionox_panel_with_DSC.xml
 #QDCM calibration xml file for nt35597 truly panel
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_Dual_nt35597_cmd_mode_dsi_truly_panel_without_DSC.xml
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_Dual_nt35597_video_mode_dsi_truly_panel_without_DSC.xml
@@ -111,6 +110,12 @@ else
 PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_rotator_ubwc=1 \
     vendor.display.disable_layer_stitch=0
+endif
+
+ifeq ($(TARGET_BOARD_PLATFORM),holi)
+PRODUCT_PROPERTY_OVERRIDES += \
+    vendor.display.disable_offline_rotator=0 \
+    vendor.display.disable_rotator_ubwc=1
 endif
 
 ifneq ($(PLATFORM_VERSION), 10)
@@ -171,7 +176,6 @@ else
     PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/composer
     PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/gpu_tonemapper
     PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/hdmi_cec
-    PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/libdebug
     PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/libdrmutils
     PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/libhistogram
     PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/liblight
@@ -181,12 +185,13 @@ else
     PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/sde-drm
     PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/sdm/libs/core
     PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/sdm/libs/utils
+    PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/libmemutils
 endif
 
 #Modules that will be added in QMAA/Non-QMAA paths
 PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/gralloc
 PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/init
-
+PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/libdebug
 
 
 QMAA_ENABLED_HAL_MODULES += display

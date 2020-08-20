@@ -47,7 +47,7 @@
 #define IOCTL_LOGE(ioctl, type) \
   DLOGE("ioctl %s, device = %d errno = %d, desc = %s", #ioctl, type, errno, strerror(errno))
 
-#define UI_FBID_LIMIT 3
+#define UI_FBID_LIMIT 4
 #define VIDEO_FBID_LIMIT 16
 #define OFFLINE_ROTATOR_FBID_LIMIT 2
 
@@ -68,6 +68,7 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError Deinit();
   void GetDRMDisplayToken(sde_drm::DRMDisplayToken *token) const;
   bool IsPrimaryDisplay() const { return hw_panel_info_.is_primary_panel; }
+  virtual PanelFeaturePropertyIntf *GetPanelFeaturePropertyIntf() { return nullptr; }
 
  protected:
   // From HWInterface
@@ -115,7 +116,7 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError SetDppsFeature(void *payload, size_t size) { return kErrorNotSupported; }
   virtual DisplayError GetDppsFeatureInfo(void *payload, size_t size) { return kErrorNotSupported; }
   virtual DisplayError TeardownConcurrentWriteback(void) { return kErrorNotSupported; }
-  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, HWLayers *hw_layers) {
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, const HWQosData &qos_data) {
     return kErrorNotSupported;
   }
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) {
@@ -137,6 +138,13 @@ class HWDeviceDRM : public HWInterface {
   enum {
     kHWEventVSync,
     kHWEventBlank,
+  };
+
+  enum TUIState {
+    kTUIStateNone,
+    kTUIStateStart,
+    kTUIStateInProgress,
+    kTUIStateEnd,
   };
 
   static const int kMaxStringLength = 1024;
@@ -185,6 +193,8 @@ class HWDeviceDRM : public HWInterface {
   void SetQOSData(const HWQosData &qos_data);
   void DumpHWLayers(HWLayers *hw_layers);
   bool IsFullFrameUpdate(const HWLayersInfo &hw_layer_info);
+  DisplayError GetDRMPowerMode(const HWPowerState &power_state, DRMPowerMode *drm_power_mode);
+  void SetTUIState();
 
   class Registry {
    public:
@@ -233,6 +243,7 @@ class HWDeviceDRM : public HWInterface {
   HWMixerAttributes mixer_attributes_ = {};
   std::vector<sde_drm::DRMSolidfillStage> solid_fills_ {};
   bool secure_display_active_ = false;
+  TUIState tui_state_ = kTUIStateNone;
   uint64_t debug_dump_count_ = 0;
   bool synchronous_commit_ = false;
   uint32_t topology_control_ = 0;
@@ -241,7 +252,7 @@ class HWDeviceDRM : public HWInterface {
   bool reset_output_fence_offset_ = false;
   uint64_t bit_clk_rate_ = 0;
   bool update_mode_ = false;
-  bool pending_doze_ = false;
+  HWPowerState pending_power_state_ = kPowerStateNone;
   PrimariesTransfer blend_space_ = {};
   DRMPowerMode last_power_mode_ = DRMPowerMode::OFF;
   uint32_t dest_scaler_blocks_used_ = 0;  // Dest scaler blocks in use by this HWDeviceDRM instance.

@@ -125,7 +125,8 @@ histogram::Ringbuffer::Sample histogram::Ringbuffer::collect_max(
     return {0, {}};
   std::array<uint64_t, HIST_V_SIZE> bins;
   bins.fill(0);
-  for (auto it = ringbuffer.begin(); it != ringbuffer.begin() + collect_first; it++) {
+  for (auto it = ringbuffer.begin(); it != ringbuffer.end() &&
+    it != ringbuffer.begin() + collect_first; it++) {
     nsecs_t end_timestamp = it->end_timestamp;
     if (it == ringbuffer.begin()) {
       end_timestamp = timekeeper->current_time();

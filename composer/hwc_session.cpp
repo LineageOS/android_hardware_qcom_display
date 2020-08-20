@@ -806,6 +806,7 @@ int32_t HWCSession::PresentDisplay(hwc2_display_t display, shared_ptr<Fence> *ou
         status = hwc_display_[target_display]->Present(out_retire_fence);
         if (status == HWC2::Error::None) {
           PerformQsyncCallback(target_display);
+          locker_[target_display].Broadcast();
         }
       }
     }
@@ -1153,6 +1154,11 @@ int32_t HWCSession::GetDozeSupport(hwc2_display_t display, int32_t *out_support)
   }
 
   *out_support = 0;
+  if (hwc_display_[display]->GetDisplayType() != kBuiltIn) {
+    // Doze support check not needed for non-builtin display
+    return HWC2_ERROR_NONE;
+  }
+
   uint32_t config = 0;
   GetActiveConfigIndex(display, &config);
   *out_support = isSmartPanelConfig(display, config) ? 1 : 0;
@@ -1684,6 +1690,18 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
         vsync_state = HWC2_VSYNC_ENABLE;
       }
       status = SetVsyncEnabled(display, vsync_state);
+      output_parcel->writeInt32(status);
+    }
+    break;
+
+    case qService::IQService::NOTIFY_TUI_TRANSITION: {
+      if (!input_parcel || !output_parcel) {
+        DLOGE("QService command = %d: input_parcel and output_parcel needed.", command);
+        break;
+      }
+      int event = input_parcel->readInt32();
+      int disp_id = input_parcel->readInt32();
+      status = HandleTUITransition(disp_id, event);
       output_parcel->writeInt32(status);
     }
     break;
@@ -2879,7 +2897,7 @@ void HWCSession::DestroyPluggableDisplay(DisplayMapInfo *map_info) {
 
   SCOPE_LOCK(system_locker_);
   {
-    SEQUENCE_WAIT_SCOPE_LOCK(locker_[client_id]);
+    SCOPE_LOCK(locker_[client_id]);
     auto &hwc_display = hwc_display_[client_id];
     if (!hwc_display) {
       return;
@@ -3281,10 +3299,12 @@ int32_t HWCSession::GetDisplayCapabilities(hwc2_display_t display,
     if (has_doze_support) {
       *capabilities = {HwcDisplayCapability::SKIP_CLIENT_COLOR_TRANSFORM,
                        HwcDisplayCapability::DOZE,
-                       HwcDisplayCapability::BRIGHTNESS, HwcDisplayCapability::PROTECTED_CONTENTS};
+                       HwcDisplayCapability::BRIGHTNESS,
+                       HwcDisplayCapability::PROTECTED_CONTENTS};
     } else {
       *capabilities = {HwcDisplayCapability::SKIP_CLIENT_COLOR_TRANSFORM,
-                       HwcDisplayCapability::BRIGHTNESS, HwcDisplayCapability::PROTECTED_CONTENTS};
+                       HwcDisplayCapability::BRIGHTNESS,
+                       HwcDisplayCapability::PROTECTED_CONTENTS};
     }
   }
 
@@ -3302,7 +3322,7 @@ int32_t HWCSession::GetDisplayConnectionType(hwc2_display_t display,
   }
 
   if (!hwc_display_[display]) {
-    DLOGE("Expected valid hwc_display");
+    DLOGW("Expected valid hwc_display");
     return HWC2_ERROR_BAD_DISPLAY;
   }
   *type = HwcDisplayConnectionType::EXTERNAL;
@@ -3482,6 +3502,153 @@ int32_t HWCSession::SetActiveConfigWithConstraints(
 
   return CallDisplayFunction(display, &HWCDisplay::SetActiveConfigWithConstraints, config,
                              vsync_period_change_constraints, out_timeline);
+}
+
+android::status_t HWCSession::HandleTUITransition(int disp_id, int event) {
+  switch(event) {
+    case qService::IQService::TUI_TRANSITION_PREPARE:
+      return TUITransitionPrepare(disp_id);
+    case qService::IQService::TUI_TRANSITION_START:
+      return TUITransitionStart(disp_id);
+    case qService::IQService::TUI_TRANSITION_END:
+      return TUITransitionEnd(disp_id);
+    default:
+      DLOGE("Invalid event %d", event);
+      return -EINVAL;
+  }
+}
+
+android::status_t HWCSession::TUITransitionPrepare(int disp_id) {
+  hwc2_display_t target_display = GetDisplayIndex(disp_id);
+  if (target_display == -1) {
+    target_display = GetActiveBuiltinDisplay();
+  }
+
+  if (target_display != qdutils::DISPLAY_PRIMARY && target_display != qdutils::DISPLAY_BUILTIN_2) {
+    DLOGE("Display %d not supported", target_display);
+    return -ENOTSUP;
+  }
+
+  std::vector<DisplayMapInfo> map_info = {map_info_primary_};
+  std::copy(map_info_builtin_.begin(), map_info_builtin_.end(), std::back_inserter(map_info));
+  std::copy(map_info_pluggable_.begin(), map_info_pluggable_.end(), std::back_inserter(map_info));
+  std::copy(map_info_virtual_.begin(), map_info_virtual_.end(), std::back_inserter(map_info));
+
+  for (auto &info : map_info) {
+    Locker::ScopeLock lock_d(locker_[info.client_id]);
+    if (hwc_display_[info.client_id]) {
+      if (info.client_id == target_display) {
+        continue;
+      }
+      int err = hwc_display_[info.client_id]->SetDisplayStatus(HWCDisplay::kDisplayStatusPause);
+      if (err != 0) {
+        return err;
+      }
+    }
+  }
+
+  return 0;
+}
+
+android::status_t HWCSession::TUITransitionStart(int disp_id) {
+  hwc2_display_t target_display = GetDisplayIndex(disp_id);
+  if (target_display == -1) {
+    target_display = GetActiveBuiltinDisplay();
+  }
+
+  if (target_display != qdutils::DISPLAY_PRIMARY && target_display != qdutils::DISPLAY_BUILTIN_2) {
+    DLOGE("Display %d not supported", target_display);
+    return -ENOTSUP;
+  }
+
+  {
+    Locker::ScopeLock lock_d(locker_[target_display]);
+    if (hwc_display_[target_display]) {
+      if (hwc_display_[target_display]->HandleSecureEvent(kTUITransitionStart) != kErrorNone) {
+        return -EINVAL;
+      }
+
+      if (hwc_display_[target_display]->IsDisplayCommandMode()) {
+        // Todo(user): Unlock it before sending events to client. It may cause deadlocks in future.
+        callbacks_.Refresh(target_display);
+
+        DLOGI("Waiting for device assign");
+
+        locker_[target_display].Wait();
+      }
+      DLOGI("Pause display %d", target_display);
+
+      int err = hwc_display_[target_display]->SetDisplayStatus(HWCDisplay::kDisplayStatusPauseOnly);
+      if (err != 0) {
+        return err;
+      }
+    } else {
+      DLOGW("Target display %d is not ready", disp_id);
+      return -ENODEV;
+    }
+  }
+  return 0;
+}
+android::status_t HWCSession::TUITransitionEnd(int disp_id) {
+  hwc2_display_t target_display = GetDisplayIndex(disp_id);
+  if (target_display == -1) {
+    target_display = GetActiveBuiltinDisplay();
+  }
+
+  if (target_display != qdutils::DISPLAY_PRIMARY && target_display != qdutils::DISPLAY_BUILTIN_2) {
+    DLOGE("Display %d not supported", target_display);
+    return -ENOTSUP;
+  }
+
+  {
+    Locker::ScopeLock lock_d(locker_[target_display]);
+    if (hwc_display_[target_display]) {
+      DLOGI("Resume display %d", target_display);
+
+      int err =
+          hwc_display_[target_display]->SetDisplayStatus(HWCDisplay::kDisplayStatusResumeOnly);
+      if (err != 0) {
+        return err;
+      }
+
+      if (hwc_display_[target_display]->HandleSecureEvent(kTUITransitionEnd) != kErrorNone) {
+        return -EINVAL;
+      }
+
+      if (hwc_display_[target_display]->IsDisplayCommandMode()) {
+        hwc_display_[target_display]->ResetValidation();
+        // Todo(user): Unlock it before sending events to client. It may cause deadlocks in future.
+        callbacks_.Refresh(target_display);
+
+        DLOGI("Waiting for device unassign");
+        locker_[target_display].Wait();
+      }
+
+    } else {
+      DLOGW("Target display %d is not ready", disp_id);
+      return -ENODEV;
+    }
+  }
+
+  std::vector<DisplayMapInfo> map_info = {map_info_primary_};
+  std::copy(map_info_builtin_.begin(), map_info_builtin_.end(), std::back_inserter(map_info));
+  std::copy(map_info_pluggable_.begin(), map_info_pluggable_.end(), std::back_inserter(map_info));
+  std::copy(map_info_virtual_.begin(), map_info_virtual_.end(), std::back_inserter(map_info));
+
+  for (auto &info : map_info) {
+    Locker::ScopeLock lock_d(locker_[info.client_id]);
+    if (hwc_display_[info.client_id]) {
+      if (info.client_id == target_display) {
+        continue;
+      }
+      int err = hwc_display_[info.client_id]->SetDisplayStatus(HWCDisplay::kDisplayStatusResume);
+      if (err != 0) {
+        return err;
+      }
+    }
+  }
+
+  return 0;
 }
 
 }  // namespace sdm

@@ -1,6 +1,7 @@
 soong_namespace {
     imports: [
         "hardware/qcom/display",
+        "hardware/qcom/display/libdebug",
     ],
 }
 

@@ -7,7 +7,7 @@ composer_srcs = ["*.cpp"]
 
 cc_binary {
 
-    name: "vendor.qti.hardware.qmaa.display.composer-service",
+    name: "vendor.qti.hardware.display.composer-service",
     defaults: ["qti_qmaa_display_defaults"],
     sanitize: {
         integer_overflow: true,

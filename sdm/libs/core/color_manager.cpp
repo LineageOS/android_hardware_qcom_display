@@ -495,7 +495,6 @@ DisplayError ColorManagerProxy::ConvertToPPFeatures(const HwConfigOutputParams &
   }
 
   if (params.payload.empty()) {
-    DLOGI("Payload is empty");
     return kErrorNone;
   }
 
