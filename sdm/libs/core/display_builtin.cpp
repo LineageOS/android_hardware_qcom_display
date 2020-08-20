@@ -743,12 +743,6 @@ DisplayError DisplayBuiltIn::ControlPartialUpdate(bool enable, uint32_t *pending
     return kErrorParameters;
   }
 
-  if (!hw_panel_info_.partial_update) {
-    // Nothing to be done.
-    DLOGI("partial update is not applicable for display id = %d", display_id_);
-    return kErrorNotSupported;
-  }
-
   if (dpps_info_.disable_pu_ && enable) {
     // Nothing to be done.
     DLOGI("partial update is disabled by DPPS for display id = %d", display_id_);
