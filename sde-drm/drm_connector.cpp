@@ -502,7 +502,7 @@ void DRMConnector::ParseCapabilities(uint64_t blob_id, DRMConnectorInfo *info) {
   fmt_str[blob->length] = '\0';
   stringstream stream(fmt_str);
   DRM_LOGI("stream str %s len %zu blob str %s len %d", stream.str().c_str(), stream.str().length(),
-           blob->data, blob->length);
+           static_cast<const char *>(blob->data), blob->length);
   string line = {};
   const string display_type = "display type=";
   const string panel_name = "panel name=";
@@ -590,7 +590,7 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
   fmt_str[blob->length] = '\0';
   stringstream stream(fmt_str);
   DRM_LOGI("stream str %s len %zu blob str %s len %d", stream.str().c_str(), stream.str().length(),
-           blob->data, blob->length);
+           static_cast<const char *>(blob->data), blob->length);
 
   string line = {};
   const string mode_name = "mode_name=";

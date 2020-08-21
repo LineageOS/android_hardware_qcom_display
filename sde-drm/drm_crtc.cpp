@@ -328,7 +328,7 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
   fmt_str[blob->length] = '\0';
   stringstream stream(fmt_str);
   DRM_LOGI("stream str %s len %zu blob str %s len %d", stream.str().c_str(), stream.str().length(),
-           blob->data, blob->length);
+           static_cast<const char *>(blob->data), blob->length);
   string line = {};
   string max_blendstages = "max_blendstages=";
   string qseed_type = "qseed_type=";

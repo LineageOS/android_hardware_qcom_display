@@ -452,7 +452,7 @@ void DRMPlane::GetTypeInfo(const PropertyMap &prop_map) {
   // like formats etc
   stringstream stream(fmt_str);
   DRM_LOGI("stream str %s len %zu blob str %s len %d", stream.str().c_str(), stream.str().length(),
-           blob->data, blob->length);
+           static_cast<const char *>(blob->data), blob->length);
 
   string line = {};
   string pixel_formats = "pixel_formats=";
