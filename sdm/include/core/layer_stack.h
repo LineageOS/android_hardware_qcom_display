@@ -372,6 +372,8 @@ struct LayerStackFlags {
       uint32_t scaling_rgb_layer_present : 1;  //!< This flag indicates scaling rgb layer presence
 
       bool use_metadata_refresh_rate : 1;
+
+      uint32_t fod_pressed_present : 1;
     };
 
     uint32_t flags = 0;               //!< For initialization purpose only.
