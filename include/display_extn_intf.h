@@ -30,6 +30,8 @@
 #ifndef __DISP_EXTN_INTF_H__
 #define __DISP_EXTN_INTF_H__
 
+#define EARLY_WAKEUP_FEATURE 1
+
 namespace composer {
 
 class DisplayExtnIntf {
