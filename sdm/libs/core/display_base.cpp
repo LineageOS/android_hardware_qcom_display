@@ -231,6 +231,40 @@ DisplayError DisplayBase::SetupRC() {
   return kErrorNone;
 }
 
+DisplayError DisplayBase::GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint32_t *x_pixels,
+                                                 uint32_t *y_pixels) {
+  DisplayError error = kErrorNotSupported;
+  DisplayConfigVariableInfo display_config;
+
+  if (cwb_tappoint == CwbTapPoint::kDsppTapPoint) {
+    // To dump post-processed (DSPP) output for CWB, use Panel resolution.
+    uint32_t active_index = 0;
+    error = GetActiveConfig(&active_index);
+    if (error == kErrorNone) {
+      error = GetRealConfig(active_index, &display_config);
+      if (error == kErrorNone) {
+        *x_pixels = display_config.x_pixels;
+        *y_pixels = display_config.y_pixels;
+      }
+    }
+  } else if (cwb_tappoint == CwbTapPoint::kLmTapPoint) {
+    // To dump Layer Mixer output for CWB, use FrameBuffer or Mixer resolution.
+    uint32_t dest_scalar_enabled = 0;
+    IsSupportedOnDisplay(kDestinationScalar, &dest_scalar_enabled);
+
+    if (dest_scalar_enabled) {
+      error = GetMixerResolution(x_pixels, y_pixels);
+    } else {
+      error = GetFrameBufferConfig(&display_config);
+      if (error == kErrorNone) {
+        *x_pixels = display_config.x_pixels;
+        *y_pixels = display_config.y_pixels;
+      }
+    }
+  }
+  return error;
+}
+
 DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
   std::vector<Layer *> &layers = layer_stack->layers;
   HWLayersInfo &hw_layers_info = hw_layers_.info;

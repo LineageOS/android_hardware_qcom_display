@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -125,6 +125,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(SetStcColorMode(const snapdragoncolor::ColorMode &))
   MAKE_NO_OP(ClearLUTs())
   MAKE_NO_OP(IsSupportedOnDisplay(SupportedDisplayFeature feature, uint32_t *supported))
+  MAKE_NO_OP(GetCwbBufferResolution(CwbTapPoint, uint32_t *, uint32_t *))
   MAKE_NO_OP(NotifyDisplayCalibrationMode(bool))
 
  protected:
