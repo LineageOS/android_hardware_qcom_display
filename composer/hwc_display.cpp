@@ -766,7 +766,7 @@ void HWCDisplay::BuildLayerStack() {
       layer->src_rect.top = 0;
       layer->src_rect.right = layer_buffer->width;
       layer->src_rect.bottom = layer_buffer->height;
-      DLOGI("Solid fill layer buffer width=%u, height=%u, unaligned_width=%u, unaligned_height=%u",
+      DLOGV("Solid fill layer buffer width=%u, height=%u, unaligned_width=%u, unaligned_height=%u",
         layer_buffer->width, layer_buffer->height, layer_buffer->unaligned_width,
         layer_buffer->unaligned_height);
     }

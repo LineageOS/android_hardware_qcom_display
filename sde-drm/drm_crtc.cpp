@@ -888,7 +888,7 @@ void DRMCrtc::SetSolidfillStages(drmModeAtomicReq *req, uint32_t obj_id,
     drm_dim_layer_v1_.layer_cfg[i].rect.y2 = (uint16_t)sf.bounding_rect.bottom;
     drm_dim_layer_v1_.layer_cfg[i].flags =
       sf.is_exclusion_rect ? SDE_DRM_DIM_LAYER_EXCLUSIVE : SDE_DRM_DIM_LAYER_INCLUSIVE;
-    DLOGI("obj_id=%u, state=%u, x1=%u, y1=%u, x2=%u, y2=%u, flags=%d",
+    DLOGV("obj_id=%u, state=%u, x1=%u, y1=%u, x2=%u, y2=%u, flags=%d",
     obj_id,
     drm_dim_layer_v1_.layer_cfg[i].stage,
     drm_dim_layer_v1_.layer_cfg[i].rect.x1,
