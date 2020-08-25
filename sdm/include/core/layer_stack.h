@@ -176,6 +176,10 @@ struct LayerFlags {
 
       uint32_t is_game : 1;  //!< This flag shall be set by client to indicate that this layer
                              //!< is a game layer.
+
+      uint32_t sde_preferred : 1;  //! This flag shall be set by client to indicate that this layer
+                                   //! will be composed by display device, layer with this flag
+                                   //! will have highest priority. To be used by OEMs only.
     };
 
     uint32_t flags = 0;       //!< For initialization purpose only.
