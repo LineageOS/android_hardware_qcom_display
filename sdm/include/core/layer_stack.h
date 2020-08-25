@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -424,6 +424,11 @@ struct PrimariesTransfer {
   }
 };
 
+/*! @brief This enum represents the Tappoints for CWB that are supported by the hardware. */
+enum CwbTapPoint {
+  kLmTapPoint,      // This is set by client to use Layer Mixer output for CWB.
+  kDsppTapPoint,    // This is set by client to use DSPP output for CWB.
+};
 
 /*! @brief This structure defines a layer stack that contains layers which need to be composed and
   rendered onto the target.

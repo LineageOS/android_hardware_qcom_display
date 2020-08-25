@@ -205,6 +205,8 @@ class HWCDisplay : public DisplayEventHandler {
   virtual void GetPanelResolution(uint32_t *width, uint32_t *height);
   virtual void GetRealPanelResolution(uint32_t *width, uint32_t *height);
   virtual void Dump(std::ostringstream *os);
+  virtual int GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint32_t *x_pixels,
+                                     uint32_t *y_pixels);
   virtual DisplayError TeardownConcurrentWriteback(bool *needs_refresh);
 
   // Captures frame output in the buffer specified by output_buffer_info. The API is
