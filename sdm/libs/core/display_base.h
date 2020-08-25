@@ -184,6 +184,8 @@ class DisplayBase : public DisplayInterface {
     return kErrorNotSupported;
   }
   virtual DisplayError IsSupportedOnDisplay(SupportedDisplayFeature feature, uint32_t *supported);
+  virtual DisplayError GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint32_t *x_pixels,
+                                              uint32_t *y_pixels);
   virtual DisplayError NotifyDisplayCalibrationMode(bool in_calibration) {
     return kErrorNotSupported;
   }

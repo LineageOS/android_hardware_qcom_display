@@ -629,6 +629,16 @@ class DisplayInterface {
   */
   virtual DisplayError DisablePartialUpdateOneFrame() = 0;
 
+  /*! @brief Method to get unaligned dimensions of output buffer.
+
+    @param[in] CWB tap-point set by client.
+    @param[out] unaligned width and height of output buffer.
+
+    @return \link void \endlink
+  */
+  virtual DisplayError GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint32_t *x_pixels,
+                                              uint32_t *y_pixels) = 0;
+
   /*! @brief Method to set the mode of the primary display.
 
     @param[in] mode the new display mode.

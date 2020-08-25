@@ -2892,6 +2892,19 @@ DisplayError HWCDisplay::HandleSecureEvent(SecureEvent secure_event, bool *needs
   return kErrorNone;
 }
 
+int HWCDisplay::GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint32_t *x_pixels,
+                                       uint32_t *y_pixels) {
+  if (!x_pixels || !y_pixels) {
+    return -1;
+  }
+  DisplayError ret = display_intf_->GetCwbBufferResolution(cwb_tappoint, x_pixels, y_pixels);
+  if (ret != kErrorNone) {
+    DLOGE("Failed to get Output buffer resolution.");
+    return -1;
+  }
+  return 0;
+}
+
 DisplayError HWCDisplay::TeardownConcurrentWriteback(bool *needs_refresh) {
   if (!needs_refresh) {
     return kErrorParameters;

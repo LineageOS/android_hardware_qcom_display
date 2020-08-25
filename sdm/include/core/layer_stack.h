@@ -469,6 +469,13 @@ struct PrimariesTransfer {
   }
 };
 
+/*! @brief This enum represents the Tappoints for CWB that are supported by the hardware. */
+enum CwbTapPoint {
+  kLmTapPoint,      // This is set by client to use Layer Mixer output for CWB.
+  kDsppTapPoint,    // This is set by client to use DSPP output for CWB.
+  kDemuraTapPoint,  // This is set by client to use Demura output for CWB.
+};
+
 /*! @brief This structure defines a layer stack that contains layers which need to be composed and
   rendered onto the target.
 
