@@ -114,8 +114,6 @@ endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),holi)
 PRODUCT_PROPERTY_OVERRIDES += \
-    vendor.display.disable_offline_rotator=0 \
-    vendor.display.disable_rotator_ubwc=1 \
     vendor.display.secure_preview_buffer_format=420_sp \
     vendor.gralloc.secure_preview_buffer_format=420_sp \
     vendor.gralloc.secure_preview_only=1

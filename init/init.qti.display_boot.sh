@@ -36,5 +36,7 @@ case "$target" in
     ;;
     "holi")
     # Set property for holi
+    setprop vendor.display.disable_offline_rotator 0
+    setprop vendor.display.disable_rotator_ubwc 1
     ;;
 esac
