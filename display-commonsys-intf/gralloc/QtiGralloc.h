@@ -93,6 +93,8 @@ static const MetadataType MetadataType_CVPMetadata = {VENDOR_QTI, QTI_CVP_METADA
 static const MetadataType MetadataType_VideoHistogramStats = {VENDOR_QTI,
                                                               QTI_VIDEO_HISTOGRAM_STATS};
 
+static const MetadataType MetadataType_VideoTimestampInfo = {VENDOR_QTI, QTI_VIDEO_TS_INFO};
+
 static const MetadataType MetadataType_FD = {VENDOR_QTI, QTI_FD};
 
 static const MetadataType MetadataType_PrivateFlags = {VENDOR_QTI, QTI_PRIVATE_FLAGS};
@@ -139,6 +141,8 @@ Error decodeCVPMetadata(hidl_vec<uint8_t> &in, CVPMetadata *out);
 Error encodeCVPMetadata(CVPMetadata &in, hidl_vec<uint8_t> *out);
 Error decodeVideoHistogramMetadata(hidl_vec<uint8_t> &in, VideoHistogramMetadata *out);
 Error encodeVideoHistogramMetadata(VideoHistogramMetadata &in, hidl_vec<uint8_t> *out);
+Error decodeVideoTimestampInfo(hidl_vec<uint8_t> &in, VideoTimestampInfo *out);
+Error encodeVideoTimestampInfo(VideoTimestampInfo &in, hidl_vec<uint8_t> *out);
 }  // namespace qtigralloc
 
 #endif  //__QTIGRALLOC_H__
