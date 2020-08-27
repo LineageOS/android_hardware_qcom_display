@@ -177,23 +177,20 @@ void HWCDisplayBuiltIn::Dump(std::ostringstream *os) {
   *os << histogram.Dump();
 }
 
-void HWCDisplayBuiltIn::ValidateScalingForDozeMode() {
-  if (current_power_mode_ == HWC2::PowerMode::Doze) {
-    bool scaling_present = false;
-    for (auto &hwc_layer : layer_set_) {
-      if (hwc_layer->IsScalingPresent()) {
-        scaling_present = true;
-        break;
-      }
-    }
-    if (scaling_present) {
-      scaling_in_doze_ = true;
-    } else {
-      scaling_in_doze_ = false;
-    }
-  } else {
-    scaling_in_doze_ = false;
+void HWCDisplayBuiltIn::ValidateUiScaling() {
+  if (is_primary_ || !is_cmd_mode_) {
+    force_reset_validate_ = false;
+    return;
   }
+
+  for (auto &hwc_layer : layer_set_) {
+    Layer *layer = hwc_layer->GetSDMLayer();
+    if (hwc_layer->IsScalingPresent() && !layer->input_buffer.flags.video) {
+      force_reset_validate_ = true;
+      return;
+    }
+  }
+  force_reset_validate_ = false;
 }
 
 HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
@@ -216,7 +213,7 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
   BuildLayerStack();
 
   // Check for scaling layers during Doze mode
-  ValidateScalingForDozeMode();
+  ValidateUiScaling();
 
   // Add stitch layer to layer stack.
   AppendStitchLayer();
@@ -457,8 +454,8 @@ HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
 
   pending_commit_ = false;
 
-  // In case of scaling layer in Doze, reset validate
-  if (scaling_in_doze_) {
+  // In case of scaling UI layer for command mode, reset validate
+  if (force_reset_validate_) {
     validated_ = false;
     display_intf_->ClearLUTs();
   }
