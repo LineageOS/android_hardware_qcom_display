@@ -94,8 +94,8 @@ DisplayError DisplayPrimary::Prepare(LayerStack *layer_stack) {
 
   if (needs_hv_flip) {
     DisplayBase::GetFrameBufferConfig(&variable_info);
-    src_domain.right = variable_info.x_pixels;
-    src_domain.bottom = variable_info.y_pixels;
+    src_domain.right = static_cast<float>(variable_info.x_pixels);
+    src_domain.bottom = static_cast<float>(variable_info.y_pixels);
     panel_transform.flip_horizontal = hw_panel_info_.panel_orientation.flip_horizontal;
     panel_transform.flip_vertical = hw_panel_info_.panel_orientation.flip_vertical;
 
