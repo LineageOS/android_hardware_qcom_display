@@ -547,9 +547,8 @@ HWC2::Error HWCDisplayBuiltIn::GetReadbackBufferFence(shared_ptr<Fence> *release
 
   if (readback_configured_ && output_buffer_.release_fence) {
     *release_fence = output_buffer_.release_fence;
-    DLOGV_IF(kTagQDCM, "Successfully retrieved the buffer");
   } else {
-    DLOGW("Failed to retrieve readback buffer fence: readback_configured_ %d, " \
+    DLOGE("Failed to retrieve readback buffer fence: readback_configured_ %d, " \
           "output_buffer_.release_fence ", readback_configured_);
     status = HWC2::Error::Unsupported;
   }
@@ -559,6 +558,10 @@ HWC2::Error HWCDisplayBuiltIn::GetReadbackBufferFence(shared_ptr<Fence> *release
   readback_configured_ = false;
   output_buffer_ = {};
   cwb_client_ = kCWBClientNone;
+
+  DLOGV_IF(kTagQDCM, "Successfully retrieved the buffer: post_processed_output_ %d, " \
+        "readback_buffer_queued_ %d, readback_configured_ %d", post_processed_output_,
+        readback_buffer_queued_, readback_configured_);
 
   return status;
 }
