@@ -48,7 +48,7 @@
 
 #define __CLASS__ "HWCSession"
 
-#ifdef TARGET_KERNEL_4_14
+#ifdef TARGET_MIN_KERNEL_4_14
 #define HWC_UEVENT_SWITCH_HDMI "change@/devices/virtual/graphics/fb2"
 #define CONN_STATE "STATUS="
 #else
