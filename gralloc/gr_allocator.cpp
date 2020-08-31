@@ -28,11 +28,10 @@
  */
 
 #include <log/log.h>
-#include <ion/ion.h>
-#include <linux/ion_4.19.h>
 #include <cutils/properties.h>
 #include <algorithm>
 #include <vector>
+#include <string>
 
 #ifndef QMAA
 #include <linux/msm_ion.h>
@@ -43,48 +42,7 @@
 #include "gralloc_priv.h"
 
 #include "qd_utils.h"
-
-#ifndef ION_FLAG_CP_PIXEL
-#define ION_FLAG_CP_PIXEL 0
-#endif
-
-#ifndef ION_FLAG_ALLOW_NON_CONTIG
-#define ION_FLAG_ALLOW_NON_CONTIG 0
-#endif
-
-#ifndef ION_FLAG_CP_CAMERA_PREVIEW
-#define ION_FLAG_CP_CAMERA_PREVIEW 0
-#endif
-
-#ifndef ION_SECURE
-#define ION_SECURE ION_FLAG_SECURE
-#endif
-
-#ifndef ION_FLAG_CP_CDSP
-#define ION_FLAG_CP_CDSP 0
-#endif
-
-#ifndef ION_SYSTEM_HEAP_ID
-#define SYS_HEAP_ID ION_HEAP_SYSTEM
-#else
-#define SYS_HEAP_ID ION_SYSTEM_HEAP_ID
-#endif
-
-#ifdef SLAVE_SIDE_CP
-#define CP_HEAP_ID ION_CP_MM_HEAP_ID
-#define SD_HEAP_ID CP_HEAP_ID
-#define ION_CP_FLAGS (ION_SECURE | ION_FLAG_ALLOW_NON_CONTIG)
-#define ION_SD_FLAGS ION_SECURE
-#define ION_SC_FLAGS ION_SECURE
-#define ION_SC_PREVIEW_FLAGS ION_SECURE
-#else  // MASTER_SIDE_CP
-#define CP_HEAP_ID ION_SECURE_HEAP_ID
-#define SD_HEAP_ID ION_SECURE_DISPLAY_HEAP_ID
-#define ION_CP_FLAGS (ION_SECURE | ION_FLAG_CP_PIXEL)
-#define ION_SD_FLAGS (ION_SECURE | ION_FLAG_CP_SEC_DISPLAY)
-#define ION_SC_FLAGS (ION_SECURE | ION_FLAG_CP_CAMERA)
-#define ION_SC_PREVIEW_FLAGS (ION_SECURE | ION_FLAG_CP_CAMERA_PREVIEW)
-#endif
+#include "gr_alloc_interface.h"
 
 #define SIZE_2MB 0x200000
 
@@ -98,68 +56,80 @@ static BufferInfo GetBufferInfo(const BufferDescriptor &descriptor) {
                     descriptor.GetUsage());
 }
 
-Allocator::Allocator() : ion_allocator_(nullptr) {}
-
-bool Allocator::Init() {
-  ion_allocator_ = new IonAlloc();
-
-  if (!ion_allocator_->Init()) {
-    return false;
-  }
-
-  return true;
-}
-
-Allocator::~Allocator() {
-  if (ion_allocator_) {
-    delete ion_allocator_;
-  }
-}
-
 void Allocator::SetProperties(gralloc::GrallocProperties props) {
   use_system_heap_for_sensors_ = props.use_system_heap_for_sensors;
 }
 
 int Allocator::AllocateMem(AllocData *alloc_data, uint64_t usage, int format) {
   int ret;
+  int err = 0;
+  bool is_secure = false;
   alloc_data->uncached = UseUncached(format, usage);
 
+  AllocInterface *alloc_intf = AllocInterface::GetInstance();
+  if (!alloc_intf) {
+    return -ENOMEM;
+  }
+
   // After this point we should have the right heap set, there is no fallback
-  GetIonHeapInfo(usage, &alloc_data->heap_id, &alloc_data->alloc_type, &alloc_data->flags);
-#ifndef QMAA
-  if (alloc_data->heap_id == ION_HEAP(ION_DISPLAY_HEAP_ID)) {
+  alloc_intf->GetHeapInfo(usage, &alloc_data->heap_name, &alloc_data->alloc_type,
+                          &alloc_data->flags, &is_secure, &use_system_heap_for_sensors_);
+
+  if (alloc_data->heap_name == "qcom,display") {
     alloc_data->size = ALIGN(alloc_data->size, SIZE_2MB);
   }
-#endif
-  ret = ion_allocator_->AllocBuffer(alloc_data);
+
+  ret = alloc_intf->AllocBuffer(alloc_data);
   if (ret >= 0) {
     alloc_data->alloc_type |= private_handle_t::PRIV_FLAGS_USES_ION;
   } else {
-    ALOGE("%s: Failed to allocate buffer - heap: 0x%x flags: 0x%x", __FUNCTION__,
-          alloc_data->heap_id, alloc_data->flags);
+    ALOGE("%s: Failed to allocate buffer - heap name: %s flags: 0x%x", __FUNCTION__,
+          alloc_data->heap_name.c_str(), alloc_data->flags);
+  }
+
+  if (is_secure) {
+    err = alloc_intf->SecureMemPerms(alloc_data->fd);
+  }
+
+  if (err) {
+    ALOGE("%s: Failed to modify secure use permissions - heap name: %s flags: 0x%x", __FUNCTION__,
+          alloc_data->heap_name.c_str(), alloc_data->flags);
   }
 
   return ret;
 }
 
 int Allocator::MapBuffer(void **base, unsigned int size, unsigned int offset, int fd) {
-  if (ion_allocator_) {
-    return ion_allocator_->MapBuffer(base, size, offset, fd);
+  AllocInterface *alloc_intf = AllocInterface::GetInstance();
+  if (!alloc_intf) {
+    return -ENOMEM;
+  }
+  if (alloc_intf) {
+    return alloc_intf->MapBuffer(base, size, offset, fd);
   }
 
   return -EINVAL;
 }
 
 int Allocator::ImportBuffer(int fd) {
-  if (ion_allocator_) {
-    return ion_allocator_->ImportBuffer(fd);
+  AllocInterface *alloc_intf = AllocInterface::GetInstance();
+  if (!alloc_intf) {
+    return -ENOMEM;
   }
+  if (alloc_intf) {
+    return alloc_intf->ImportBuffer(fd);
+  }
+
   return -EINVAL;
 }
 
 int Allocator::FreeBuffer(void *base, unsigned int size, unsigned int offset, int fd, int handle) {
-  if (ion_allocator_) {
-    return ion_allocator_->FreeBuffer(base, size, offset, fd, handle);
+  AllocInterface *alloc_intf = AllocInterface::GetInstance();
+  if (!alloc_intf) {
+    return -ENOMEM;
+  }
+  if (alloc_intf) {
+    return alloc_intf->FreeBuffer(base, size, offset, fd, handle);
   }
 
   return -EINVAL;
@@ -167,8 +137,12 @@ int Allocator::FreeBuffer(void *base, unsigned int size, unsigned int offset, in
 
 int Allocator::CleanBuffer(void *base, unsigned int size, unsigned int offset, int handle, int op,
                            int fd) {
-  if (ion_allocator_) {
-    return ion_allocator_->CleanBuffer(base, size, offset, handle, op, fd);
+  AllocInterface *alloc_intf = AllocInterface::GetInstance();
+  if (!alloc_intf) {
+    return -ENOMEM;
+  }
+  if (alloc_intf) {
+    return alloc_intf->CleanBuffer(base, size, offset, handle, op, fd);
   }
 
   return -EINVAL;
@@ -177,18 +151,26 @@ int Allocator::CleanBuffer(void *base, unsigned int size, unsigned int offset, i
 bool Allocator::CheckForBufferSharing(uint32_t num_descriptors,
                                       const vector<shared_ptr<BufferDescriptor>> &descriptors,
                                       ssize_t *max_index) {
-  unsigned int cur_heap_id = 0, prev_heap_id = 0;
+  std::string cur_heap_id = "", prev_heap_id = "";
   unsigned int cur_alloc_type = 0, prev_alloc_type = 0;
   unsigned int cur_ion_flags = 0, prev_ion_flags = 0;
   bool cur_uncached = false, prev_uncached = false;
   unsigned int alignedw, alignedh;
   unsigned int max_size = 0;
+  bool is_secure = false;
 
   *max_index = -1;
+
+  AllocInterface *alloc_intf = AllocInterface::GetInstance();
+  if (!alloc_intf) {
+    return false;
+  }
+
   for (uint32_t i = 0; i < num_descriptors; i++) {
     // Check Cached vs non-cached and all the ION flags
     cur_uncached = UseUncached(descriptors[i]->GetFormat(), descriptors[i]->GetUsage());
-    GetIonHeapInfo(descriptors[i]->GetUsage(), &cur_heap_id, &cur_alloc_type, &cur_ion_flags);
+    alloc_intf->GetHeapInfo(descriptors[i]->GetUsage(), &cur_heap_id, &cur_alloc_type,
+                            &cur_ion_flags, &is_secure, &use_system_heap_for_sensors_);
 
     if (i > 0 && (cur_heap_id != prev_heap_id || cur_alloc_type != prev_alloc_type ||
                   cur_ion_flags != prev_ion_flags)) {
@@ -213,73 +195,5 @@ bool Allocator::CheckForBufferSharing(uint32_t num_descriptors,
   }
 
   return true;
-}
-
-void Allocator::GetIonHeapInfo(uint64_t usage, unsigned int *ion_heap_id, unsigned int *alloc_type,
-                               unsigned int *ion_flags) {
-  unsigned int heap_id = SYS_HEAP_ID;
-  unsigned int type = 0;
-  uint32_t flags = 0;
-#ifndef QMAA
-  if (usage & GRALLOC_USAGE_PROTECTED) {
-    if (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY) {
-      heap_id = ION_HEAP(SD_HEAP_ID);
-      /*
-       * There is currently no flag in ION for Secure Display
-       * VM. Please add it to the define once available.
-       */
-      flags |= UINT(ION_SD_FLAGS);
-    } else if (usage & BufferUsage::CAMERA_OUTPUT) {
-      int secure_preview_only = 0;
-      char property[PROPERTY_VALUE_MAX];
-      if (property_get("vendor.gralloc.secure_preview_only", property, NULL) > 0) {
-        secure_preview_only = atoi(property);
-      }
-      heap_id = ION_HEAP(SD_HEAP_ID);
-      if (usage & GRALLOC_USAGE_PRIVATE_CDSP) {
-        flags |= UINT(ION_SECURE | ION_FLAG_CP_CDSP);
-      }
-      if (usage & BufferUsage::COMPOSER_OVERLAY) {
-        if (secure_preview_only) {  // holi target
-          flags |= UINT(ION_SC_PREVIEW_FLAGS);
-        } else {  // Default
-          flags |= UINT(ION_SC_PREVIEW_FLAGS | ION_SC_FLAGS);
-        }
-      } else {
-        flags |= UINT(ION_SC_FLAGS);
-      }
-    } else if (usage & GRALLOC_USAGE_PRIVATE_CDSP) {
-      heap_id = ION_HEAP(ION_SECURE_CARVEOUT_HEAP_ID);
-      flags |= UINT(ION_SECURE | ION_FLAG_CP_CDSP);
-    } else {
-      heap_id = ION_HEAP(CP_HEAP_ID);
-      flags |= UINT(ION_CP_FLAGS);
-    }
-  } else if (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY) {
-    // Reuse GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY with no GRALLOC_USAGE_PROTECTED flag to alocate
-    // memory from non secure CMA for tursted UI use case
-    heap_id = ION_HEAP(ION_DISPLAY_HEAP_ID);
-  }
-
-  if (usage & BufferUsage::SENSOR_DIRECT_DATA) {
-      if (use_system_heap_for_sensors_) {
-        ALOGI("gralloc::sns_direct_data with system_heap");
-        heap_id |= ION_HEAP(SYS_HEAP_ID);
-      } else {
-        ALOGI("gralloc::sns_direct_data with adsp_heap");
-        heap_id |= ION_HEAP(ION_ADSP_HEAP_ID);
-      }
-  }
-
-  if (flags & UINT(ION_SECURE)) {
-    type |= private_handle_t::PRIV_FLAGS_SECURE_BUFFER;
-  }
-#endif
-
-  *alloc_type = type;
-  *ion_flags = flags;
-  *ion_heap_id = heap_id;
-
-  return;
 }
 }  // namespace gralloc
