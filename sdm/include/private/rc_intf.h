@@ -36,6 +36,8 @@
 #include "generic_intf.h"
 #include "generic_payload.h"
 
+#define SDE_HW_PU_USECASE 0x1000
+
 namespace sdm {
 
 struct RCInputConfig {
@@ -63,6 +65,11 @@ enum RCMaskStackStatus {
   kStatusIgnore,
   kStatusRcMaskStackHandled,
   kStatusRcMaskStackDirty,
+};
+
+struct RCMaskCfgState {
+  RCMaskStackStatus rc_mask_state = kStatusIgnore;
+  bool rc_pu_full_roi = false;
 };
 
 // RC specific params as enum

@@ -87,6 +87,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_scaler=0 \
     vendor.display.disable_excl_rect=0 \
     vendor.display.disable_excl_rect_partial_fb=1 \
+    vendor.display.comp_mask=0 \
     vendor.display.enable_posted_start_dyn=2 \
     vendor.display.enable_optimize_refresh=1 \
     vendor.display.use_smooth_motion=1 \
@@ -116,12 +117,12 @@ PRODUCT_PROPERTY_OVERRIDES += \
     #QDCM calibration xml file for r66451 amoled panel in holi
     PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_bengal_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_r66451_amoled_cmd_mode_dsi_visionox_panel_with_DSC.xml
     PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_bengal_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_r66451_amoled_video_mode_dsi_visionox_panel_with_DSC.xml
-    PRODUCT_PROPERTY_OVERRIDES += vendor.display.comp_mask=1048576
+    PRODUCT_PROPERTY_OVERRIDES += vendor.display.enable_rounded_corner=1
+    PRODUCT_PROPERTY_OVERRIDES += vendor.display.disable_rounded_corner_thread=0
 else
     #QDCM calibration xml file for r66451 amoled panel in lahaina and shima
     PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_r66451_amoled_cmd_mode_dsi_visionox_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_r66451_amoled_cmd_mode_dsi_visionox_panel_with_DSC.xml
     PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_r66451_amoled_cmd_mode_dsi_visionox_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_r66451_amoled_video_mode_dsi_visionox_panel_with_DSC.xml
-    PRODUCT_PROPERTY_OVERRIDES += vendor.display.comp_mask=0
 endif
 
 ifneq ($(PLATFORM_VERSION), 10)

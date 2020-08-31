@@ -723,6 +723,8 @@ struct HWLayersInfo {
   bool rc_config = false;
   RCLayersInfo rc_layers_info = {};
   bool spr_enable = false;
+  uint64_t rc_pu_flag_status = 0;
+  bool rc_pu_needs_full_roi = false;
 };
 
 struct HWQosData {
