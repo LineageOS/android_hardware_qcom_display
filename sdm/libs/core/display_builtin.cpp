@@ -133,18 +133,11 @@ DisplayError DisplayBuiltIn::Init() {
   if (error != kErrorNone) {
     DLOGE("Failed to setup panel feature factory, error: %d", error);
   } else {
-    // RC
+    // Get status of RC enablement property. Default RC is disabled.
     int rc_prop_value = 0;
-    // Enable Rounded Corner as default is disabled.
     Debug::GetProperty(ENABLE_ROUNDED_CORNER, &rc_prop_value);
-    if (rc_prop_value) {
-      error = DisplayBase::SetupRC(pf_factory_, prop_intf_);
-      if (error == kErrorNone) {
-        rc_panel_feature_init_ = true;
-      } else {
-        DLOGW("RC feature not supported");
-      }
-    }
+    rc_enable_prop_ = rc_prop_value ? true : false;
+    DLOGI("RC feature %s.", rc_enable_prop_ ? "enabled" : "disabled");
   }
 
   return error;

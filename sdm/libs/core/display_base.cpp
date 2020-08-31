@@ -194,15 +194,14 @@ DisplayError DisplayBase::Deinit() {
 }
 
 // Query the dspp capabilities and enable the RC feature.
-DisplayError DisplayBase::SetupRC(PanelFeatureFactoryIntf *pf_factory,
-                                  PanelFeaturePropertyIntf *prop_intf) {
+DisplayError DisplayBase::SetupRC() {
   RCInputConfig input_cfg = {};
   input_cfg.display_id = display_id_;
   input_cfg.display_type = display_type_;
   input_cfg.display_xres = display_attributes_.x_pixels;
   input_cfg.display_yres = display_attributes_.y_pixels;
   input_cfg.max_mem_size = hw_resource_info_.rc_total_mem_size;
-  rc_core_ = pf_factory->CreateRCIntf(input_cfg, prop_intf);
+  rc_core_ = pf_factory_->CreateRCIntf(input_cfg, prop_intf_);
   GenericPayload dummy;
   int err = 0;
   if (!rc_core_) {
@@ -331,6 +330,14 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
     return error;
   }
 
+  if (!rc_core_ && !first_cycle_ && rc_enable_prop_ && pf_factory_ && prop_intf_) {
+    error = SetupRC();
+    if (error == kErrorNone) {
+      rc_panel_feature_init_ = true;
+    } else {
+      DLOGW("RC feature not supported");
+    }
+  }
   if (rc_panel_feature_init_) {
     SetRCData(layer_stack);
   }
