@@ -145,6 +145,15 @@ DisplayError DisplayNull::GetDisplayIdentificationData(uint8_t *out_port, uint32
   return kErrorNone;
 }
 
+DisplayError DisplayNull::GetSupportedModeSwitch(uint32_t *allowed_mode_switch) {
+  if (!allowed_mode_switch) {
+    return kErrorParameters;
+  }
+
+  *allowed_mode_switch = 0;
+  return kErrorNone;
+}
+
 DisplayError DisplayNullExternal::Commit(LayerStack *layer_stack) {
   if (!layer_stack) {
     return kErrorParameters;

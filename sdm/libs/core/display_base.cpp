@@ -2259,4 +2259,9 @@ DisplayError DisplayBase::GetPendingDisplayState(DisplayState *disp_state) {
   return kErrorNone;
 }
 
+DisplayError DisplayBase::GetSupportedModeSwitch(uint32_t *allowed_mode_switch) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  return hw_intf_->GetSupportedModeSwitch(allowed_mode_switch);
+}
+
 }  // namespace sdm

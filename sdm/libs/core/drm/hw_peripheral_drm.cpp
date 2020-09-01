@@ -893,4 +893,13 @@ int HWPeripheralDRM::SetPanelFeature(const PanelFeaturePropertyInfo &feature_inf
   return ret;
 }
 
+DisplayError HWPeripheralDRM::GetSupportedModeSwitch(uint32_t *allowed_mode_switch) {
+  if (!allowed_mode_switch) {
+    return kErrorParameters;
+  }
+
+  *allowed_mode_switch = connector_info_.modes[current_mode_index_].allowed_mode_switch;
+  return kErrorNone;
+}
+
 }  // namespace sdm

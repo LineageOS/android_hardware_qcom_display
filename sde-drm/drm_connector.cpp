@@ -603,6 +603,7 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
   const string pu_roimerge = "partial_update_roimerge=";
   const string bit_clk_rate = "bit_clk_rate=";
   const string mdp_transfer_time_us = "mdp_transfer_time_us=";
+  const string allowed_mode_switch = "allowed_mode_switch=";
 
   DRMModeInfo *mode_item = &info->modes.at(0);
   unsigned int index = 0;
@@ -637,6 +638,8 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
       mode_item->bit_clk_rate = std::stoi(string(line, bit_clk_rate.length()));
     } else if (line.find(mdp_transfer_time_us) != string::npos) {
       mode_item->transfer_time_us = std::stoi(string(line, mdp_transfer_time_us.length()));
+    } else if (line.find(allowed_mode_switch) != string::npos) {
+      mode_item->allowed_mode_switch = std::stoi(string(line, allowed_mode_switch.length()));
     }
   }
 
@@ -709,6 +712,7 @@ int DRMConnector::GetInfo(DRMConnectorInfo *info) {
   if (!drm_connector_->count_modes) {
     DRM_LOGW("Zero modes on connector %u.", conn_id);
   }
+
   for (auto i = 0; i < drm_connector_->count_modes; i++) {
     DRMModeInfo modes_item {};
     if (!drm_connector_->modes) {

@@ -691,6 +691,7 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   hw_panel_info_.min_roi_height = connector_info_.modes[index].hmin;
   hw_panel_info_.needs_roi_merge = connector_info_.modes[index].roi_merge;
   hw_panel_info_.transfer_time_us = connector_info_.modes[index].transfer_time_us;
+  hw_panel_info_.allowed_mode_switch = connector_info_.modes[index].allowed_mode_switch;
   hw_panel_info_.dynamic_fps = connector_info_.dynamic_fps;
   hw_panel_info_.qsync_support = connector_info_.qsync_support;
   drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;

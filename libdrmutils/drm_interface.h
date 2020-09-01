@@ -649,6 +649,7 @@ struct DRMModeInfo {
   bool roi_merge;
   uint64_t bit_clk_rate;
   uint32_t transfer_time_us;
+  uint32_t allowed_mode_switch;
 };
 
 /* Per Connector Info*/

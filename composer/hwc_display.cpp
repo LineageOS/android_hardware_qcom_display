@@ -1232,6 +1232,11 @@ HWC2::Error HWCDisplay::SetActiveConfig(hwc2_config_t config) {
   if (current_config == config) {
     return HWC2::Error::None;
   }
+
+  if (!IsModeSwitchAllowed(config)) {
+    return HWC2::Error::BadConfig;
+  }
+
   DLOGI("Active configuration changed to: %d", config);
 
   // Store config index to be applied upon refresh.
@@ -2594,6 +2599,24 @@ int32_t HWCDisplay::GetDisplayConfigGroup(DisplayConfigGroupInfo variable_config
   return -1;
 }
 
+bool HWCDisplay::IsModeSwitchAllowed(uint32_t mode_switch) {
+  DisplayError error = kErrorNone;
+  uint32_t allowed_mode_switch = 0;
+
+  error = display_intf_->GetSupportedModeSwitch(&allowed_mode_switch);
+  if (error != kErrorNone) {
+    DLOGW("Unable to retrieve supported modes for the current device configuration.");
+  }
+
+  if (allowed_mode_switch == 0 || (allowed_mode_switch & (1 << mode_switch))) {
+    DLOGV_IF(kTagClient, "Allowed to switch to mode:%d", mode_switch);
+    return true;
+  }
+
+  DLOGE("Not allowed to switch to mode:%d", mode_switch);
+  return false;
+}
+
 HWC2::Error HWCDisplay::GetDisplayVsyncPeriod(VsyncPeriodNanos *vsync_period) {
   if (GetTransientVsyncPeriod(vsync_period)) {
     return HWC2::Error::None;
@@ -2605,8 +2628,13 @@ HWC2::Error HWCDisplay::GetDisplayVsyncPeriod(VsyncPeriodNanos *vsync_period) {
 HWC2::Error HWCDisplay::SetActiveConfigWithConstraints(
     hwc2_config_t config, const VsyncPeriodChangeConstraints *vsync_period_change_constraints,
     VsyncPeriodChangeTimeline *out_timeline) {
+
   if (variable_config_map_.find(config) == variable_config_map_.end()) {
     DLOGE("Invalid config: %d", config);
+    return HWC2::Error::BadConfig;
+  }
+
+  if (!IsModeSwitchAllowed(config)) {
     return HWC2::Error::BadConfig;
   }
 

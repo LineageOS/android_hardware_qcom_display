@@ -545,6 +545,7 @@ class HWCDisplay : public DisplayEventHandler {
   void UpdateRefreshRate();
   void WaitOnPreviousFence();
   void UpdateActiveConfig();
+  bool IsModeSwitchAllowed(uint32_t mode_switch);
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
   uint32_t geometry_changes_ = GeometryChanges::kNone;

@@ -134,7 +134,9 @@ class HWDeviceDRM : public HWInterface {
   }
   virtual DisplayError SetBlendSpace(const PrimariesTransfer &blend_space);
   virtual DisplayError EnableSelfRefresh() { return kErrorNotSupported; }
-
+  virtual DisplayError GetSupportedModeSwitch(uint32_t *allowed_mode_switch) {
+    return kErrorNotSupported;
+  }
   enum {
     kHWEventVSync,
     kHWEventBlank,

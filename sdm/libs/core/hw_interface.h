@@ -133,6 +133,7 @@ class HWInterface {
   virtual DisplayError SetBlendSpace(const PrimariesTransfer &blend_space) = 0;
   virtual DisplayError EnableSelfRefresh() = 0;
   virtual PanelFeaturePropertyIntf *GetPanelFeaturePropertyIntf() = 0;
+  virtual DisplayError GetSupportedModeSwitch(uint32_t *allowed_mode_switch) = 0;
 
  protected:
   virtual ~HWInterface() { }

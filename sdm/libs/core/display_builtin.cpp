@@ -969,6 +969,7 @@ std::string DisplayBuiltIn::Dump() {
   os << "\n FPS min:" << hw_panel_info_.min_fps << " max:" << hw_panel_info_.max_fps
      << " cur:" << display_attributes_.fps;
   os << " TransferTime: " << hw_panel_info_.transfer_time_us << "us";
+  os << " AllowedModeSwitch: " << hw_panel_info_.allowed_mode_switch;
   os << " MaxBrightness:" << hw_panel_info_.panel_max_brightness;
   os << "\n Display WxH: " << display_attributes_.x_pixels << "x" << display_attributes_.y_pixels;
   os << " MixerWxH: " << mixer_attributes_.width << "x" << mixer_attributes_.height;
