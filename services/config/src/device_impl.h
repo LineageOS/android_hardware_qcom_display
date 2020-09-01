@@ -119,6 +119,7 @@ class DeviceImpl : public IDisplayConfig, public android::hardware::hidl_death_r
     void ParseSendTUIEvent(const ByteStream &input_params, perform_cb _hidl_cb);
     void ParseGetDisplayHwId(const ByteStream &input_params, perform_cb _hidl_cb);
     void ParseGetSupportedDisplayRefreshRates(const ByteStream &input_params, perform_cb _hidl_cb);
+    void ParseIsRCSupported(const ByteStream &input_params, perform_cb _hidl_cb);
 
    private:
     ConfigInterface *intf_ = nullptr;

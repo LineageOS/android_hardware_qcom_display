@@ -298,6 +298,7 @@ class ConfigInterface {
   virtual int GetDisplayHwId(uint32_t disp_id, uint32_t *display_hw_id) DEFAULT_RET
   virtual int GetSupportedDisplayRefreshRates(
       DisplayType dpy, std::vector<uint32_t> *supported_refresh_rates) DEFAULT_RET
+  virtual int IsRCSupported(uint32_t disp_id, bool *supported) DEFAULT_RET
 
   // deprecated APIs
   virtual int GetDebugProperty(const std::string prop_name, std::string value) DEFAULT_RET

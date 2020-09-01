@@ -891,6 +891,28 @@ int ClientImpl::GetSupportedDisplayRefreshRates(DisplayType dpy,
   return error;
 }
 
+int ClientImpl::IsRCSupported(uint32_t disp_id, bool *supported) {
+  ByteStream input_params;
+  input_params.setToExternal(reinterpret_cast<uint8_t*>(&disp_id), sizeof(uint32_t));
+  const bool *output;
+  ByteStream output_params;
+  int error = 0;
+  auto hidl_cb = [&error, &output_params] (int32_t err, ByteStream params, HandleStream handles) {
+    error = err;
+    output_params = params;
+  };
+
+  display_config_->perform(client_handle_, kIsRCSupported, input_params, {}, hidl_cb);
+
+  if (!error) {
+    const uint8_t *data = output_params.data();
+    output = reinterpret_cast<const bool*>(data);
+    *supported = *output;
+  }
+
+  return error;
+}
+
 void ClientCallback::ParseNotifyCWBBufferDone(const ByteStream &input_params,
                                               const HandleStream &input_handles) {
   const int *error;
