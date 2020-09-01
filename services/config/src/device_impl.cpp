@@ -753,12 +753,16 @@ void DeviceImpl::DeviceClientContext::ParseGetSupportedDisplayRefreshRates(
 
   uint32_t *refresh_rates_data =
       reinterpret_cast<uint32_t *>(malloc(sizeof(uint32_t) * refresh_rates.size()));
-  for (int i = 0; i < refresh_rates.size(); i++) {
-    refresh_rates_data[i] = refresh_rates[i];
+  if (refresh_rates_data) {
+    for (int i = 0; i < refresh_rates.size(); i++) {
+      refresh_rates_data[i] = refresh_rates[i];
+    }
+    output_params.setToExternal(reinterpret_cast<uint8_t *>(refresh_rates_data),
+                                sizeof(uint32_t) * refresh_rates.size());
+    _hidl_cb(error, output_params, {});
+  } else {
+    _hidl_cb(-EINVAL, {}, {});
   }
-  output_params.setToExternal(reinterpret_cast<uint8_t *>(refresh_rates_data),
-                              sizeof(uint32_t) * refresh_rates.size());
-  _hidl_cb(error, output_params, {});
 }
 
 Return<void> DeviceImpl::perform(uint64_t client_handle, uint32_t op_code,
