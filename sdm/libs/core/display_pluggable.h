@@ -81,6 +81,7 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
  private:
   DisplayError GetOverrideConfig(uint32_t *mode_index);
   void GetScanSupport();
+  DisplayError BuildLayerStackStats(LayerStack *layer_stack) override;
 
   static const int kPropertyMax = 256;
 

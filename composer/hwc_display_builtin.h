@@ -95,17 +95,11 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual int HandleSecureSession(const std::bitset<kSecureMax> &secure_session,
                                   bool *power_on_pending, bool is_active_secure_display);
   virtual void SetIdleTimeoutMs(uint32_t timeout_ms, uint32_t inactive_ms);
-  virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
-                                         int32_t format, const CwbConfig &cwb_config);
   virtual int FrameCaptureAsync(const BufferInfo &output_buffer_info, const CwbConfig &cwb_config);
   virtual int GetFrameCaptureStatus() { return frame_capture_status_; }
   virtual DisplayError SetDetailEnhancerConfig(const DisplayDetailEnhancerData &de_data);
   virtual DisplayError SetHWDetailedEnhancerConfig(void *params);
   virtual DisplayError ControlPartialUpdate(bool enable, uint32_t *pending);
-  virtual HWC2::Error SetReadbackBuffer(const native_handle_t *buffer,
-                                        shared_ptr<Fence> acquire_fence, CwbConfig cwb_config,
-                                        CWBClient client);
-  virtual HWC2::Error GetReadbackBufferFence(shared_ptr<Fence> *release_fence);
   virtual HWC2::Error SetQSyncMode(QSyncMode qsync_mode);
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous);
   virtual HWC2::Error SetDisplayDppsAdROI(uint32_t h_start, uint32_t h_end, uint32_t v_start,
@@ -118,7 +112,6 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual HWC2::Error SetPanelBrightness(float brightness);
   virtual HWC2::Error GetPanelBrightness(float *brightness);
   virtual HWC2::Error GetPanelMaxBrightness(uint32_t *max_brightness_level);
-  virtual DisplayError TeardownConcurrentWriteback(bool *needs_refresh);
   virtual HWC2::Error SetFrameTriggerMode(uint32_t mode);
   virtual HWC2::Error SetBLScale(uint32_t level);
   virtual HWC2::Error UpdatePowerMode(HWC2::PowerMode mode);
@@ -163,9 +156,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   void ToggleCPUHint(bool set);
   void ForceRefreshRate(uint32_t refresh_rate);
   uint32_t GetOptimalRefreshRate(bool one_updating_layer);
-  void HandleFrameOutput();
-  void HandleFrameDump();
-  void HandleFrameCapture();
+  virtual void HandleFrameCapture();
   bool CanSkipCommit();
   DisplayError SetMixerResolution(uint32_t width, uint32_t height);
   DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
@@ -183,8 +174,6 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   int ValidateFrameCaptureConfig(const BufferInfo &output_buffer_info,
                                  const CwbTapPoint &cwb_tappoint);
   void LoadMixedModePerfHintThreshold();
-  virtual void SetCwbState();
-  virtual void ResetCwbState();
 
   // SyncTask methods.
   void OnTask(const LayerStitchTaskCode &task_code,
@@ -194,23 +183,10 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   HWCBufferAllocator *buffer_allocator_ = nullptr;
   CPUHint *cpu_hint_ = nullptr;
 
-  // Builtin readback buffer configuration
-  LayerBuffer output_buffer_ = {};
-  CwbConfig cwb_config_ = {};
-  bool readback_buffer_queued_ = false;
-  bool readback_configured_ = false;
-
-  // Members for N frame output dump to file
-  bool dump_output_to_file_ = false;
-  BufferInfo output_buffer_info_ = {};
-  void *output_buffer_base_ = nullptr;
   bool pending_refresh_ = true;
   bool enable_optimize_refresh_ = false;
   bool enable_poms_during_doze_ = false;
 
-  // Members for 1 frame capture in a client provided buffer
-  bool frame_capture_buffer_queued_ = false;
-  int frame_capture_status_ = -EAGAIN;
   bool is_primary_ = false;
   bool disable_layer_stitch_ = true;
   HWCLayer* stitch_target_ = nullptr;

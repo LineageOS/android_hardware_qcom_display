@@ -274,7 +274,22 @@ DisplayError HWTVDRM::Commit(HWLayersInfo *hw_layers_info) {
   if (error != kErrorNone) {
     return error;
   }
-  return HWDeviceDRM::Commit(hw_layers_info);
+
+  int64_t cwb_fence_fd = -1;
+  bool has_fence = SetupConcurrentWriteback(*hw_layers_info, false, &cwb_fence_fd);
+
+  error = HWDeviceDRM::Commit(hw_layers_info);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  if (has_fence) {
+    hw_layers_info->output_buffer->release_fence = Fence::Create(INT(cwb_fence_fd), "release_cwb");
+  }
+
+  PostCommitConcurrentWriteback(hw_layers_info->output_buffer);
+
+  return error;
 }
 
 DisplayError HWTVDRM::UpdateHDRMetaData(HWLayersInfo *hw_layers_info) {

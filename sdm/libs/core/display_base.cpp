@@ -608,6 +608,10 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   return error;
 }
 
+void DisplayBase::FlushConcurrentWriteback() {
+  hw_intf_->FlushConcurrentWriteback();
+}
+
 // Send layer stack to RC core to generate and configure the mask on HW.
 void DisplayBase::SetRCData(LayerStack *layer_stack) {
   int ret = -1;

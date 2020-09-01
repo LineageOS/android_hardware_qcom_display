@@ -110,10 +110,13 @@ using sde_drm::DRMSecurityLevel;
 using sde_drm::DRMCscType;
 using sde_drm::DRMMultiRectMode;
 using sde_drm::DRMCrtcInfo;
+using sde_drm::DRMCWbCaptureMode;
 
 namespace sdm {
 
 std::atomic<uint32_t> HWDeviceDRM::hw_dest_scaler_blocks_used_(0);
+HWCwbConfig HWDeviceDRM::cwb_config_ = {};
+std::mutex HWDeviceDRM::cwb_state_lock_;
 
 static PPBlock GetPPBlock(const HWToneMapLut &lut_type) {
   PPBlock pp_block = kPPBlockMax;
@@ -524,6 +527,8 @@ DisplayError HWDeviceDRM::Init() {
   std::unique_ptr<HWColorManagerDrm> hw_color_mgr(new HWColorManagerDrm());
   hw_color_mgr_ = std::move(hw_color_mgr);
 
+  GetCWBCapabilities();
+
   return kErrorNone;
 }
 
@@ -567,6 +572,23 @@ DisplayError HWDeviceDRM::Deinit() {
   drm_mgr_intf_->UnregisterDisplay(&token_);
   hw_dest_scaler_blocks_used_ -= dest_scaler_blocks_used_;
   return err;
+}
+
+void HWDeviceDRM::GetCWBCapabilities() {
+  sde_drm::DRMConnectorsInfo conns_info = {};
+  int ret = drm_mgr_intf_->GetConnectorsInfo(&conns_info);
+  if (ret) {
+    DLOGW("DRM Driver error %d while getting Connectors info.", ret);
+    return;
+  }
+  for (auto &iter : conns_info) {
+    if (iter.second.type == DRM_MODE_CONNECTOR_VIRTUAL) {
+      has_cwb_crop_ = static_cast<bool>(iter.second.modes[current_mode_index_].has_cwb_crop);
+      has_dedicated_cwb_ =
+          static_cast<bool>(iter.second.modes[current_mode_index_].has_dedicated_cwb);
+      break;
+    }
+  }
 }
 
 DisplayError HWDeviceDRM::GetDisplayId(int32_t *display_id) {
@@ -2614,4 +2636,218 @@ uint64_t HWDeviceDRM::GetSupportedBitClkRate(uint32_t new_mode_index,
     return connector_info_.modes[new_mode_index].default_bit_clk_rate;
   }
 }
+
+bool HWDeviceDRM::SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info, bool validate,
+                                           int64_t *release_fence_fd) {
+  std::lock_guard<std::mutex> lock(cwb_state_lock_);
+  bool enable = hw_resource_.has_concurrent_writeback && hw_layer_info.output_buffer;
+  if (!(enable || cwb_config_.enabled)) {  // the frame is neither cwb setup nor cwb teardown frame
+    cwb_config_.cwb_disp_id = -1;
+    return false;
+  }
+
+  if (cwb_config_.cwb_disp_id != -1 && cwb_config_.cwb_disp_id != display_id_) {
+    DLOGW("CWB already on-going for display : %d", cwb_config_.cwb_disp_id);
+    return false;
+  } else {
+    cwb_config_.cwb_disp_id = display_id_;
+  }
+
+  bool setup_modes = enable && !cwb_config_.enabled;
+  // Modes can be setup in prepare or commit path.
+  if (setup_modes && (SetupConcurrentWritebackModes() == kErrorNone)) {
+    cwb_config_.enabled = true;
+  }
+
+  if (cwb_config_.enabled) {
+    if (enable) {
+      // Set DRM properties for Concurrent Writeback.
+      ConfigureConcurrentWriteback(hw_layer_info);
+
+      if (!validate && release_fence_fd) {
+        // Set GET_RETIRE_FENCE property to get Concurrent Writeback fence.
+        drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, cwb_config_.token.conn_id,
+                                  release_fence_fd);
+        return true;
+      }
+    } else {
+      // Tear down the Concurrent Writeback topology.
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, cwb_config_.token.conn_id, 0);
+      DLOGI("Tear down the Concurrent Writeback topology");
+    }
+  }
+
+  return false;
+}
+
+DisplayError HWDeviceDRM::SetupConcurrentWritebackModes() {
+  // To setup Concurrent Writeback topology, get the Connector ID of Virtual display
+  if (drm_mgr_intf_->RegisterDisplay(DRMDisplayType::VIRTUAL, &cwb_config_.token)) {
+    DLOGE("RegisterDisplay failed for Concurrent Writeback");
+    return kErrorResources;
+  }
+
+  // Set the modes based on Primary display.
+  std::vector<drmModeModeInfo> modes;
+  for (auto &item : connector_info_.modes) {
+    modes.push_back(item.mode);
+  }
+
+  // Inform the mode list to driver.
+  struct sde_drm_wb_cfg cwb_cfg = {};
+  cwb_cfg.connector_id = cwb_config_.token.conn_id;
+  cwb_cfg.flags = SDE_DRM_WB_CFG_FLAGS_CONNECTED;
+  cwb_cfg.count_modes = UINT32(modes.size());
+  cwb_cfg.modes = (uint64_t)modes.data();
+
+  int ret = -EINVAL;
+#ifdef DRM_IOCTL_SDE_WB_CONFIG
+  ret = drmIoctl(dev_fd_, DRM_IOCTL_SDE_WB_CONFIG, &cwb_cfg);
+#endif
+  if (ret) {
+    drm_mgr_intf_->UnregisterDisplay(&(cwb_config_.token));
+    DLOGE("Dump CWBConfig: mode_count %d flags %x", cwb_cfg.count_modes, cwb_cfg.flags);
+    DumpConnectorModeInfo();
+    return kErrorHardware;
+  }
+
+  return kErrorNone;
+}
+
+void HWDeviceDRM::ConfigureConcurrentWriteback(const HWLayersInfo &hw_layer_info) {
+  CwbConfig *cwb_config = hw_layer_info.hw_cwb_config;
+  LayerBuffer *output_buffer = hw_layer_info.output_buffer;
+  registry_.MapOutputBufferToFbId(output_buffer);
+  uint32_t &vitual_conn_id = cwb_config_.token.conn_id;
+
+  // Set the topology for Concurrent Writeback: [CRTC_PRIMARY_DISPLAY - CONNECTOR_VIRTUAL_DISPLAY].
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, vitual_conn_id, token_.crtc_id);
+
+  // Set CRTC Capture Mode
+  DRMCWbCaptureMode capture_mode = DRMCWbCaptureMode::MIXER_OUT;
+  if (cwb_config->tap_point == CwbTapPoint::kDsppTapPoint) {
+    capture_mode = DRMCWbCaptureMode::DSPP_OUT;
+  } else if (cwb_config->tap_point == CwbTapPoint::kDemuraTapPoint) {
+    capture_mode = DRMCWbCaptureMode::DEMURA_OUT;
+  }
+
+  drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CAPTURE_MODE, token_.crtc_id, capture_mode);
+
+  // Set Connector Output FB
+  uint32_t fb_id = registry_.GetOutputFbId(output_buffer->handle_id);
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_FB_ID, vitual_conn_id, fb_id);
+
+  // Set Connector Secure Mode
+  bool secure = output_buffer->flags.secure;
+  DRMSecureMode mode = secure ? DRMSecureMode::SECURE : DRMSecureMode::NON_SECURE;
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_FB_SECURE_MODE, vitual_conn_id, mode);
+
+  // Set Connector Output Rect
+  sde_drm::DRMRect full_frame = {};
+  full_frame.left = 0;
+  full_frame.top = 0;
+
+  if (capture_mode == DRMCWbCaptureMode::MIXER_OUT) {
+    full_frame.right = mixer_attributes_.width;
+    full_frame.bottom = mixer_attributes_.height;
+  } else {
+    full_frame.right = display_attributes_[current_mode_index_].x_pixels;
+    full_frame.bottom = display_attributes_[current_mode_index_].y_pixels;
+  }
+
+  if (!has_cwb_crop_) {  // Check whether CWB ROI feature is supported. In-case if it's
+    // not supported, then set WB connector's DST_* properties as per full frame rect.
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_RECT, vitual_conn_id, full_frame);
+  } else {  // CWB ROI & demura tap-point are supported
+    bool is_full_frame_update = IsFullFrameUpdate(hw_layer_info);
+    // Set WB connector's roi_v1 property to PU_ROI.
+    if (is_full_frame_update) {
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_ROI, vitual_conn_id, 0, nullptr);
+      DLOGV_IF(kTagDriverConfig, "roi_v1 of virtual connector is set NULL (Full Frame update).");
+    } else {
+      const int kNumMaxROIs = 4;
+      sde_drm::DRMRect conn_rects[kNumMaxROIs] = {full_frame};
+      for (uint32_t i = 0; i < hw_layer_info.left_frame_roi.size(); i++) {
+        auto &roi = hw_layer_info.left_frame_roi.at(i);
+        conn_rects[i].left = UINT32(roi.left);
+        conn_rects[i].right = UINT32(roi.right);
+        conn_rects[i].top = UINT32(roi.top);
+        conn_rects[i].bottom = UINT32(roi.bottom);
+      }
+      uint32_t num_rects = std::max(1u, UINT32(hw_layer_info.left_frame_roi.size()));
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_ROI, vitual_conn_id, num_rects, conn_rects);
+    }
+
+    // Set WB connector's DST_* property to CWB_ROI.
+    LayerRect cwb_roi = cwb_config->cwb_roi;
+    if (is_full_frame_update && cwb_config->pu_as_cwb_roi) {  // Incase of full frame update
+      // and when cwb client has set pu_as_cwb_roi as true, set Full frame CWB ROI.
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_RECT, vitual_conn_id, full_frame);
+    } else {
+      sde_drm::DRMRect dst = {};
+      dst.left = UINT32(cwb_roi.left);
+      dst.right = UINT32(cwb_roi.right);
+      dst.top = UINT32(cwb_roi.top);
+      dst.bottom = UINT32(cwb_roi.bottom);
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_RECT, vitual_conn_id, dst);
+    }
+  }
+
+  const LayerRect &roi = cwb_config->cwb_roi;
+  DLOGV_IF(kTagDriverConfig, "CWB Mode:%d roi.left:%f roi.top:%f roi.right:%f roi.bottom:%f",
+           capture_mode, roi.left, roi.top, roi.right, roi.bottom);
+}
+
+DisplayError HWDeviceDRM::TeardownConcurrentWriteback(void) {
+  if (cwb_config_.enabled) {
+    drm_mgr_intf_->UnregisterDisplay(&(cwb_config_.token));
+    cwb_config_.enabled = false;
+    registry_.Clear();
+  }
+
+  return kErrorNone;
+}
+
+void HWDeviceDRM::PostCommitConcurrentWriteback(LayerBuffer *output_buffer) {
+  if (hw_resource_.has_concurrent_writeback && output_buffer) {
+    return;
+  }
+
+  std::lock_guard<std::mutex> lock(cwb_state_lock_);
+  if (cwb_config_.cwb_disp_id == display_id_) {
+    TeardownConcurrentWriteback();
+  }
+}
+
+DisplayError HWDeviceDRM::GetFeatureSupportStatus(const HWFeature feature, uint32_t *status) {
+  DisplayError error = kErrorNone;
+
+  if (!status) {
+    return kErrorParameters;
+  }
+
+  switch (feature) {
+    case kAllowedModeSwitch:
+      *status = connector_info_.modes[current_mode_index_].allowed_mode_switch;
+      break;
+    case kHasCwbCrop:
+      *status = UINT32(has_cwb_crop_);
+      break;
+    case kHasDedicatedCwb:
+      *status = UINT32(has_dedicated_cwb_);
+      break;
+    default:
+      DLOGW("Unable to get status of feature : %d", feature);
+      error = kErrorParameters;
+      break;
+  }
+
+  return error;
+}
+
+void HWDeviceDRM::FlushConcurrentWriteback() {
+  std::lock_guard<std::mutex> lock(cwb_state_lock_);
+  TeardownConcurrentWriteback();
+}
+
 }  // namespace sdm

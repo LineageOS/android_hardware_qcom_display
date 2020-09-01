@@ -191,6 +191,8 @@ class HWCDisplay : public DisplayEventHandler {
   // Framebuffer configurations
   virtual void SetIdleTimeoutMs(uint32_t timeout_ms, uint32_t inactive_ms);
   virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
+                                         int32_t format);
+  virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
                                          int32_t format, const CwbConfig &cwb_config);
   virtual DisplayError SetMaxMixerStages(uint32_t max_mixer_stages);
   virtual DisplayError ControlPartialUpdate(bool enable, uint32_t *pending) {
@@ -211,10 +213,15 @@ class HWCDisplay : public DisplayEventHandler {
   virtual void GetPanelResolution(uint32_t *width, uint32_t *height);
   virtual void GetRealPanelResolution(uint32_t *width, uint32_t *height);
   virtual void Dump(std::ostringstream *os);
+
+  // CWB related methods
   virtual int GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint32_t *x_pixels,
                                      uint32_t *y_pixels);
+  virtual HWC2::Error SetReadbackBuffer(const native_handle_t *buffer,
+                                        shared_ptr<Fence> acquire_fence, CwbConfig cwb_config,
+                                        CWBClient client);
+  virtual HWC2::Error GetReadbackBufferFence(shared_ptr<Fence> *release_fence);
   virtual DisplayError TeardownConcurrentWriteback(bool *needs_refresh);
-
   // Captures frame output in the buffer specified by output_buffer_info. The API is
   // non-blocking and the client is expected to check operation status later on.
   // Returns -1 if the input is invalid.
@@ -229,14 +236,6 @@ class HWCDisplay : public DisplayEventHandler {
 
   virtual DisplayError SetHWDetailedEnhancerConfig(void *params) {
     return kErrorNotSupported;
-  }
-  virtual HWC2::Error SetReadbackBuffer(const native_handle_t *buffer,
-                                        shared_ptr<Fence> acquire_fence, CwbConfig cwb_config,
-                                        CWBClient client) {
-    return HWC2::Error::Unsupported;
-  }
-  virtual HWC2::Error GetReadbackBufferFence(shared_ptr<Fence> *release_fence) {
-    return HWC2::Error::Unsupported;
   }
 
   virtual HWC2::Error SetDisplayDppsAdROI(uint32_t h_start, uint32_t h_end,
@@ -512,8 +511,11 @@ class HWCDisplay : public DisplayEventHandler {
   void SetDrawMethod();
 
   // CWB related methods
-  virtual void SetCwbState(){};
-  virtual void ResetCwbState(){};
+  void SetCwbState();
+  void ResetCwbState();
+  void HandleFrameOutput();
+  void HandleFrameDump();
+  virtual void HandleFrameCapture(){};
 
   bool layer_stack_invalid_ = true;
   CoreInterface *core_intf_ = nullptr;
@@ -532,9 +534,6 @@ class HWCDisplay : public DisplayEventHandler {
   std::map<hwc2_layer_t, HWC2::LayerRequest> layer_requests_;
   bool flush_on_error_ = false;
   bool flush_ = false;
-  uint32_t dump_frame_count_ = 0;
-  uint32_t dump_frame_index_ = 0;
-  bool dump_input_layers_ = false;
   HWC2::PowerMode current_power_mode_ = HWC2::PowerMode::Off;
   HWC2::PowerMode pending_power_mode_ = HWC2::PowerMode::Off;
   bool swap_interval_zero_ = false;
@@ -584,8 +583,28 @@ class HWCDisplay : public DisplayEventHandler {
   bool display_idle_ = false;
   bool animating_ = false;
   DisplayDrawMethod draw_method_ = kDrawDefault;
+
+  // CWB state & configuration
+  CwbConfig cwb_config_ = {};
   static CwbState cwb_state_;
   static std::mutex cwb_state_lock_;  // cwb state lock. Set before accesing or updating cwb_state_
+
+  // Readback buffer configuration
+  LayerBuffer output_buffer_ = {};
+  bool readback_buffer_queued_ = false;
+  bool readback_configured_ = false;
+
+  // Members for N frame dump to file
+  bool dump_output_to_file_ = false;
+  uint32_t dump_frame_count_ = 0;
+  uint32_t dump_frame_index_ = 0;
+  bool dump_input_layers_ = false;
+  BufferInfo output_buffer_info_ = {};
+  void *output_buffer_base_ = nullptr;  // points to base address of output_buffer_info_
+
+  // Members for 1 frame capture in a client provided buffer
+  bool frame_capture_buffer_queued_ = false;
+  int frame_capture_status_ = -EAGAIN;
 
  private:
   bool CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests);

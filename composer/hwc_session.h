@@ -334,17 +334,19 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
     void PresentDisplayDone(hwc2_display_t disp_id);
 
     int32_t PostBuffer(std::weak_ptr<DisplayConfig::ConfigCallback> callback,
-                       const CwbConfig &cwb_config, const native_handle_t *buffer);
+                       const CwbConfig &cwb_config, const native_handle_t *buffer,
+                       hwc2_display_t display_type);
 
    private:
     struct QueueNode {
       QueueNode(std::weak_ptr<DisplayConfig::ConfigCallback> cb, const CwbConfig &cwb_conf,
-                const hidl_handle &buf)
-          : callback(cb), cwb_config(cwb_conf), buffer(buf) {}
+                const hidl_handle &buf, hwc2_display_t disp_type)
+          : callback(cb), cwb_config(cwb_conf), buffer(buf), display_type(disp_type) {}
 
       std::weak_ptr<DisplayConfig::ConfigCallback> callback;
       CwbConfig cwb_config = {};
       const native_handle_t *buffer;
+      hwc2_display_t display_type;
     };
 
     void ProcessRequests();

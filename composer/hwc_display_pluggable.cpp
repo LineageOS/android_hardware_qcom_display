@@ -147,6 +147,7 @@ HWC2::Error HWCDisplayPluggable::PreValidateDisplay(bool *exit_validate) {
     MarkLayersForClientComposition();
   }
 
+  SetCwbState();
   *exit_validate = false;
 
   return status;
@@ -172,6 +173,16 @@ HWC2::Error HWCDisplayPluggable::Present(shared_ptr<Fence> *out_retire_fence) {
      current_power_mode_ == HWC2::PowerMode::DozeSuspend))) {
     status = HWCDisplay::CommitLayerStack();
     if (status == HWC2::Error::None) {
+      HandleFrameOutput();
+      {
+        std::lock_guard<std::mutex> lock(cwb_state_lock_);
+        if (flush_ && cwb_state_.cwb_client == kCWBClientNone) {
+          ResetCwbState();
+          display_intf_->FlushConcurrentWriteback();
+        } else if (cwb_state_.cwb_status == CWBStatus::kCWBTeardown) {
+          cwb_state_.teardown_frame_retire_fence = layer_stack_.retire_fence;
+        }
+      }  // releasing the cwb state lock
       status = HWCDisplay::PostCommitLayerStack(out_retire_fence);
     }
   }

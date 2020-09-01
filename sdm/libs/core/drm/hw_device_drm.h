@@ -40,6 +40,7 @@
 #include <unordered_map>
 #include <vector>
 #include <memory>
+#include <mutex>
 
 #include "hw_interface.h"
 #include "hw_scale_drm.h"
@@ -59,6 +60,13 @@ class HWInfoInterface;
 struct SDECsc {
   struct sde_drm_csc_v1 csc_v1 = {};
   // More here, maybe in a union
+};
+
+struct HWCwbConfig {
+  bool enabled = false;
+  int32_t cwb_disp_id = -1;             // set only in CWB setup or CWB teardown frame. Set to
+                                        // display id of the cwb setup/teardown performing display.
+  sde_drm::DRMDisplayToken token = {};  // display token to be used for virtual connector while CWB
 };
 
 class HWDeviceDRM : public HWInterface {
@@ -94,6 +102,12 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError Validate(HWLayersInfo *hw_layers_info);
   virtual DisplayError Commit(HWLayersInfo *hw_layers_info);
   virtual DisplayError Flush(HWLayersInfo *hw_layers_info);
+  DisplayError SetupConcurrentWritebackModes();
+  bool SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info, bool validate,
+                                int64_t *release_fence_fd);
+  DisplayError TeardownConcurrentWriteback(void);
+  void ConfigureConcurrentWriteback(const HWLayersInfo &hw_layer_info);
+  void PostCommitConcurrentWriteback(LayerBuffer *output_buffer);
   virtual DisplayError GetPPFeaturesVersion(PPFeatureVersion *vers);
   virtual DisplayError SetPPFeatures(PPFeaturesConfig *feature_list);
   // This API is no longer supported, expectation is to call the correct API on HWEvents
@@ -148,10 +162,8 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError SetBLScale(uint32_t level) { return kErrorNotSupported; }
   virtual DisplayError SetBlendSpace(const PrimariesTransfer &blend_space);
   virtual DisplayError EnableSelfRefresh() { return kErrorNotSupported; }
-  virtual DisplayError GetFeatureSupportStatus(const HWFeature feature, uint32_t *status) {
-    return kErrorNotSupported;
-  }
-  virtual void FlushConcurrentWriteback() {}
+  virtual DisplayError GetFeatureSupportStatus(const HWFeature feature, uint32_t *status);
+  virtual void FlushConcurrentWriteback();
   enum {
     kHWEventVSync,
     kHWEventBlank,
@@ -279,8 +291,14 @@ class HWDeviceDRM : public HWInterface {
   // Destination scaler blocks in use by all HWDeviceDRM instances.
   static std::atomic<uint32_t> hw_dest_scaler_blocks_used_;
 
+  bool has_cwb_crop_ = false;       // virtual connector supports CWB ROI feature.
+  bool has_dedicated_cwb_ = false;  // virtual connector supports dedicated CWB feature.
+  static HWCwbConfig cwb_config_;
+  static std::mutex cwb_state_lock_;  // cwb state lock. Set before accesing or updating cwb_config_
+
  private:
   void SetDisplaySwitchMode(uint32_t index);
+  void GetCWBCapabilities();
 
   std::string interface_str_ = "DSI";
   bool resolution_switch_enabled_ = false;
