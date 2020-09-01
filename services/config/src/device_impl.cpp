@@ -75,7 +75,13 @@ Return<void> DeviceImpl::registerClient(const hidl_string &client_name,
     callback->linkToDeath(this, client_handle);
   }
   ConfigInterface *intf = nullptr;
-  intf_->RegisterClientContext(device_client, &intf);
+  error = intf_->RegisterClientContext(device_client, &intf);
+
+  if (error) {
+    callback->unlinkToDeath(this);
+    return Void();
+  }
+
   device_client->SetDeviceConfigIntf(intf);
 
   display_config_map_.emplace(std::make_pair(client_handle, device_client));
