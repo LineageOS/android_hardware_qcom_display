@@ -747,6 +747,9 @@ static gralloc1_error_t Perform(int operation, va_list args) {
 
       *color_space = 0;
       GetColorSpaceFromMetadata(hnd, color_space);
+      if (IsYuvFormat(hnd->format)) {
+        *color_space = 0;
+      }
     } break;
     case GRALLOC_MODULE_PERFORM_GET_YUV_PLANE_INFO: {
       private_handle_t *hnd = va_arg(args, private_handle_t *);
