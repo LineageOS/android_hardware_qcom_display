@@ -32,6 +32,8 @@
 
 #include <unordered_map>
 
+#define PHASE_OFFSET_EXTN 1
+
 namespace composer {
 
 class PhaseOffsetExtnIntf {
