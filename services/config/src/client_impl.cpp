@@ -926,6 +926,32 @@ int ClientImpl::IsRCSupported(uint32_t disp_id, bool *supported) {
   return error;
 }
 
+int ClientImpl::IsSupportedConfigSwitch(uint32_t disp_id, uint32_t config, bool *supported) {
+  struct SupportedModesParams input = {disp_id, config};
+  ByteStream input_params;
+  ByteStream output_params;
+  const bool *output;
+  input_params.setToExternal(reinterpret_cast<uint8_t*>(&input),
+                             sizeof(struct SupportedModesParams));
+  int error = 0;
+  auto hidl_cb = [&error, &output_params] (int32_t err, ByteStream params, HandleStream handles) {
+    error = err;
+    output_params = params;
+  };
+
+  if (display_config_) {
+    display_config_->perform(client_handle_, kIsSupportedConfigSwitch, input_params, {}, hidl_cb);
+  }
+
+  if (!error) {
+    const uint8_t *data = output_params.data();
+    output = reinterpret_cast<const bool *>(data);
+    *supported = *output;
+  }
+
+  return error;
+}
+
 void ClientCallback::ParseNotifyCWBBufferDone(const ByteStream &input_params,
                                               const HandleStream &input_handles) {
   const int *error;

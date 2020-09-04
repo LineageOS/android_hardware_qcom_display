@@ -233,6 +233,11 @@ struct TUIEventParams {
   TUIEventType tui_event_type = TUIEventType::kNone;
 };
 
+struct SupportedModesParams {
+  uint32_t disp_id = 0;
+  uint32_t mode = 0;
+};
+
 /* Callback Interface */
 class ConfigCallback {
  public:
@@ -313,6 +318,8 @@ class ConfigInterface {
                                               /* supported_refresh_rates */) DEFAULT_RET
   virtual int IsRCSupported(uint32_t /* disp_id */, bool* /* supported */) DEFAULT_RET
   virtual int ControlIdleStatusCallback(bool /* enable */) DEFAULT_RET
+  virtual int IsSupportedConfigSwitch(uint32_t /* disp_id */, uint32_t /* config */,
+                                      bool* /* supported */) DEFAULT_RET
 
   // deprecated APIs
   virtual int GetDebugProperty(const std::string /* prop_name */,
