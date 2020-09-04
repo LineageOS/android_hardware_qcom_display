@@ -163,6 +163,18 @@ void DeviceImpl::DeviceClientContext::NotifyQsyncChange(bool qsync_enabled, int3
   }
 }
 
+void DeviceImpl::DeviceClientContext::NotifyIdleStatus(bool is_idle) {
+  bool data = {is_idle};
+  ByteStream output_params;
+
+  output_params.setToExternal(reinterpret_cast<uint8_t*>(&data), sizeof(data));
+
+  auto status = callback_->perform(kControlIdleStatusCallback, output_params, {});
+  if (status.isDeadObject()) {
+    return;
+  }
+}
+
 void DeviceImpl::DeviceClientContext::ParseIsDisplayConnected(const ByteStream &input_params,
                                                               perform_cb _hidl_cb) {
   const DisplayType *dpy;
@@ -716,6 +728,19 @@ void DeviceImpl::DeviceClientContext::ParseControlQsyncCallback(uint64_t client_
   _hidl_cb(error, {}, {});
 }
 
+void DeviceImpl::DeviceClientContext::ParseControlIdleStatusCallback(uint64_t client_handle,
+                                                                     const ByteStream &input_params,
+                                                                     perform_cb _hidl_cb) {
+  const bool *enable;
+
+  const uint8_t *data = input_params.data();
+  enable = reinterpret_cast<const bool*>(data);
+
+  int32_t error = intf_->ControlIdleStatusCallback(*enable);
+
+  _hidl_cb(error, {}, {});
+}
+
 void DeviceImpl::DeviceClientContext::ParseSendTUIEvent(const ByteStream &input_params,
                                                         perform_cb _hidl_cb) {
   const struct TUIEventParams *input_data =
@@ -937,6 +962,9 @@ Return<void> DeviceImpl::perform(uint64_t client_handle, uint32_t op_code,
       break;
     case kControlQsyncCallback:
       client->ParseControlQsyncCallback(client_handle, input_params, _hidl_cb);
+      break;
+    case kControlIdleStatusCallback:
+      client->ParseControlIdleStatusCallback(client_handle, input_params, _hidl_cb);
       break;
     case kSendTUIEvent:
       client->ParseSendTUIEvent(input_params, _hidl_cb);

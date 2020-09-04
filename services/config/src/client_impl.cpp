@@ -828,6 +828,19 @@ int ClientImpl::ControlQsyncCallback(bool enable) {
   return error;
 }
 
+int ClientImpl::ControlIdleStatusCallback(bool enable) {
+  ByteStream input_params;
+  input_params.setToExternal(reinterpret_cast<uint8_t*>(&enable), sizeof(bool));
+  int32_t error = 0;
+  auto hidl_cb = [&error] (int32_t err, ByteStream params, HandleStream handles) {
+    error = err;
+  };
+
+  display_config_->perform(client_handle_, kControlIdleStatusCallback, input_params, {}, hidl_cb);
+
+  return error;
+}
+
 int ClientImpl::SendTUIEvent(DisplayType dpy, TUIEventType event_type) {
   struct TUIEventParams input = {dpy, event_type};
   ByteStream input_params;
@@ -940,6 +953,17 @@ void ClientCallback::ParseNotifyQsyncChange(const ByteStream &input_params) {
                                qsync_data->qsync_refresh_rate);
 }
 
+void ClientCallback::ParseNotifyIdleStatus(const ByteStream &input_params) {
+  const bool *is_idle;
+  if (callback_ == nullptr || input_params.size() == 0) {
+    return;
+  }
+
+  const uint8_t *data = input_params.data();
+  is_idle = reinterpret_cast<const bool*>(data);
+  callback_->NotifyIdleStatus(*is_idle);
+}
+
 Return<void> ClientCallback::perform(uint32_t op_code, const ByteStream &input_params,
                                      const HandleStream &input_handles) {
   switch (op_code) {
@@ -948,6 +972,9 @@ Return<void> ClientCallback::perform(uint32_t op_code, const ByteStream &input_p
       break;
     case kControlQsyncCallback:
       ParseNotifyQsyncChange(input_params);
+      break;
+    case kControlIdleStatusCallback:
+      ParseNotifyIdleStatus(input_params);
       break;
     default:
       break;

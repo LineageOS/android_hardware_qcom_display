@@ -62,6 +62,7 @@ class ClientCallback: public IDisplayConfigCallback {
                                const HandleStream &input_handles);
   void ParseNotifyCWBBufferDone(const ByteStream &input_params, const HandleStream &input_handles);
   void ParseNotifyQsyncChange(const ByteStream &input_params);
+  void ParseNotifyIdleStatus(const ByteStream &input_params);
   ConfigCallback *callback_ = nullptr;
 };
 
@@ -120,6 +121,7 @@ class ClientImpl : public ClientInterface {
   virtual int GetSupportedDisplayRefreshRates(DisplayType dpy,
                                               std::vector<uint32_t> *supported_refresh_rates);
   virtual int IsRCSupported(uint32_t disp_id, bool *supported);
+  virtual int ControlIdleStatusCallback(bool enable);
 
  private:
   android::sp<IDisplayConfig> display_config_ = nullptr;
