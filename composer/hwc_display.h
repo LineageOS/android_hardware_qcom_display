@@ -426,6 +426,7 @@ class HWCDisplay : public DisplayEventHandler {
       VsyncPeriodChangeTimeline *out_timeline);
 
   HWC2::Error SetDisplayElapseTime(uint64_t time);
+  virtual bool IsDisplayIdle() { return false; };
 
  protected:
   static uint32_t throttling_refresh_rate_;
@@ -546,6 +547,7 @@ class HWCDisplay : public DisplayEventHandler {
   uint32_t active_refresh_rate_ = 0;
   SecureEvent secure_event_ = kSecureEventMax;
   bool display_pause_pending_ = false;
+  bool display_idle_ = false;
 
  private:
   void DumpInputBuffers(void);
