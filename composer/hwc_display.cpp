@@ -1380,6 +1380,9 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
     case kInvalidateDisplay:
       validated_ = false;
       break;
+    case kPostIdleTimeout:
+      display_idle_ = true;
+      break;
     default:
       DLOGW("Unknown event: %d", event);
       break;
@@ -1396,6 +1399,7 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
   layer_changes_.clear();
   layer_requests_.clear();
   has_client_composition_ = false;
+  display_idle_ = false;
 
   DTRACE_SCOPED();
   if (shutdown_pending_) {

@@ -428,6 +428,7 @@ class HWCDisplay : public DisplayEventHandler {
 
   HWC2::Error SetDisplayElapseTime(uint64_t time);
   virtual bool HasReadBackBufferSupport() { return false; }
+  virtual bool IsDisplayIdle() { return false; };
 
  protected:
   static uint32_t throttling_refresh_rate_;
@@ -551,6 +552,7 @@ class HWCDisplay : public DisplayEventHandler {
   shared_ptr<Fence> client_acquire_fence_ = nullptr;
   int32_t client_dataspace_ = 0;
   hwc_region_t client_damage_region_ = {};
+  bool display_idle_ = false;
 
  private:
   void DumpInputBuffers(void);

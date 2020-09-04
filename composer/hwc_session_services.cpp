@@ -1208,4 +1208,14 @@ int HWCSession::DisplayConfigImpl::ControlQsyncCallback(bool enable) {
   return 0;
 }
 
+int HWCSession::DisplayConfigImpl::ControlIdleStatusCallback(bool enable) {
+  if (enable) {
+    hwc_session_->idle_callback_ = callback_;
+  } else {
+    hwc_session_->idle_callback_.reset();
+  }
+
+  return 0;
+}
+
 }  // namespace sdm

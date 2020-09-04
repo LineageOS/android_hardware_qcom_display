@@ -164,6 +164,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError ClearLUTs() {
     return kErrorNotSupported;
   }
+  QSyncMode active_qsync_mode_ = kQSyncModeNone;
 
  protected:
   const char *kBt2020Pq = "bt2020_pq";
