@@ -2254,7 +2254,7 @@ int HWCDisplay::GetSupportedDisplayRefreshRates(std::vector<uint32_t> *supported
   hwc2_config_t active_config = 0;
   GetActiveConfig(&active_config);
 
-  int32_t active_config_group;
+  int32_t config_group, active_config_group;
   auto error = GetDisplayAttribute(active_config, HwcAttribute::CONFIG_GROUP, &active_config_group);
   if (error != HWC2::Error::None) {
     DLOGE("Failed to get config group of active config");
@@ -2263,7 +2263,12 @@ int HWCDisplay::GetSupportedDisplayRefreshRates(std::vector<uint32_t> *supported
 
   supported_refresh_rates->resize(0);
   for (auto &config : variable_config_map_) {
-    if (active_config_group == INT32(config.first)) {
+    error = GetDisplayAttribute(config.first, HwcAttribute::CONFIG_GROUP, &config_group);
+    if (error != HWC2::Error::None) {
+      DLOGE("Failed to get config group for config index: %u", config.first);
+      return -1;
+    }
+    if (active_config_group == config_group) {
       DisplayConfigVariableInfo const &config_info = config.second;
       supported_refresh_rates->push_back(config_info.fps);
     }
