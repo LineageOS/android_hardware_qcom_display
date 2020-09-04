@@ -3511,6 +3511,7 @@ void HWCSession::NotifyClientStatus(bool connected) {
     hwc_display_[i]->NotifyClientStatus(connected);
     hwc_display_[i]->SetVsyncEnabled(HWC2::Vsync::Disable);
   }
+  callbacks_.UpdateVsyncSource(HWCCallbacks::kNumDisplays);
 }
 
 void HWCSession::WaitForResources(bool wait_for_resources, hwc2_display_t active_builtin_id,
