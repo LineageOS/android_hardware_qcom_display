@@ -42,6 +42,7 @@ class DisplayExtnIntf {
   virtual int SetActiveConfig(uint32_t display_id, uint32_t config_id) = 0;
   virtual int NotifyEarlyWakeUp(bool gpu, bool display) = 0;
   virtual int NotifyDisplayEarlyWakeUp(uint32_t display_id) = 0;
+  virtual int SetEarlyWakeUpConfig(uint32_t display_id, bool enable) = 0;
 
  protected:
   virtual ~DisplayExtnIntf() { }
