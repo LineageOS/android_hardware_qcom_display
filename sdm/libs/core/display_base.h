@@ -277,6 +277,7 @@ class DisplayBase : public DisplayInterface {
   DisplayError PostCommitLayerStack(LayerStack *layer_stack);
   bool IsPrimaryDisplayLocked();
   virtual DisplayError CommitLocked(LayerStack *layer_stack);
+  DisplayError ConfigureCwb(LayerStack *layer_stack);
 
   DisplayMutex disp_mutex_;
   std::thread commit_thread_;
@@ -350,6 +351,8 @@ class DisplayBase : public DisplayInterface {
   bool StartDisplayPowerReset();
   void EndDisplayPowerReset();
   void SetRCData(LayerStack *layer_stack);
+  DisplayError ValidateCwbConfigInfo(CwbConfig *cwb_config, const LayerBufferFormat &format);
+  bool IsValidCwbRoi(const LayerRect &cwb_roi, const LayerRect &full_frame);
   unsigned int rc_cached_res_width_ = 0;
   unsigned int rc_cached_res_height_ = 0;
   std::unique_ptr<RCIntf> rc_core_ = nullptr;
@@ -359,6 +362,7 @@ class DisplayBase : public DisplayInterface {
   static bool primary_active_;
   DisplayDrawMethod draw_method_ = kDrawDefault;
   bool draw_method_set_ = false;
+  CwbConfig *cwb_config_ = NULL;
 };
 
 }  // namespace sdm

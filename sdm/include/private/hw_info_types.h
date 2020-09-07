@@ -344,6 +344,7 @@ struct HWResourceInfo {
   bool separate_rotator = false;
   bool has_qseed3 = false;
   bool has_concurrent_writeback = false;
+  std::vector<CwbTapPoint> tap_points = {};
   bool has_ppp = false;
   bool has_excl_rect = false;
   uint32_t writeback_index = kHWBlockMax;
@@ -784,6 +785,8 @@ struct HWLayersInfo {
   LayerBuffer *output_buffer = NULL;   //!< Pointer to the buffer where composed buffer would be
                                        //!< rendered for virtual displays.
                                        //!< NOTE: This field applies to a virtual display only.
+  CwbConfig *hw_cwb_config = NULL;     //!< Struct that contains CWB configuration passed to
+                                       //!< driver by SDM.
   bool stitch_present = false;  // Indicates there is stitch layer or not
   bool demura_present = false;  // Indicates there is demura layer or not
 };

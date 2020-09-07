@@ -1885,11 +1885,15 @@ DisplayError DisplayBuiltIn::BuildLayerStackStats(LayerStack *layer_stack) {
     return kErrorNoAppLayers;
   }
 
+  DisplayError error = kErrorNone;
   if (hw_layers_info.gpu_target_index > 0) {
-    return ValidateGPUTargetParams();
+    error = ValidateGPUTargetParams();
   }
 
-  return kErrorNone;
+  if (error == kErrorNone) {
+    error = ConfigureCwb(layer_stack);
+  }
+  return error;
 }
 
 DisplayError DisplayBuiltIn::SetActiveConfig(uint32_t index) {

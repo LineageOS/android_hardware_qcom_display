@@ -42,7 +42,7 @@ class HWCDisplayVirtual : public HWCDisplay {
   virtual int Deinit();
   virtual HWC2::Error Present(shared_ptr<Fence> *out_retire_fence);
   virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
-                                         int32_t format, bool post_processed);
+                                         int32_t format, const CwbConfig &cwb_config);
   virtual HWC2::Error GetDisplayType(int32_t *out_type);
   virtual HWC2::Error SetColorMode(ColorMode mode);
   virtual HWC2::Error SetOutputBuffer(buffer_handle_t buf, shared_ptr<Fence> release_fence);

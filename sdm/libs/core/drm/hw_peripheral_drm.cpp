@@ -30,6 +30,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <fcntl.h>
 #include <utils/debug.h>
 #include <utils/sys.h>
+#include <utils/rect.h>
 #include <vector>
 #include <string>
 #include <cstring>
@@ -535,43 +536,89 @@ DisplayError HWPeripheralDRM::SetupConcurrentWritebackModes() {
 }
 
 void HWPeripheralDRM::ConfigureConcurrentWriteback(const HWLayersInfo &hw_layer_info) {
+  CwbConfig *cwb_config = hw_layer_info.hw_cwb_config;
   LayerBuffer *output_buffer = hw_layer_info.output_buffer;
   registry_.MapOutputBufferToFbId(output_buffer);
+  uint32_t &vitual_conn_id = cwb_config_.token.conn_id;
 
   // Set the topology for Concurrent Writeback: [CRTC_PRIMARY_DISPLAY - CONNECTOR_VIRTUAL_DISPLAY].
-  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, cwb_config_.token.conn_id, token_.crtc_id);
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, vitual_conn_id, token_.crtc_id);
 
   // Set CRTC Capture Mode
-  DRMCWbCaptureMode capture_mode = hw_layer_info.flags.post_processed_output ?
-                                   DRMCWbCaptureMode::DSPP_OUT : DRMCWbCaptureMode::MIXER_OUT;
+  DRMCWbCaptureMode capture_mode = DRMCWbCaptureMode::MIXER_OUT;
+  if (cwb_config->tap_point == CwbTapPoint::kDsppTapPoint) {
+    capture_mode = DRMCWbCaptureMode::DSPP_OUT;
+  } else if (cwb_config->tap_point == CwbTapPoint::kDemuraTapPoint) {
+    capture_mode = DRMCWbCaptureMode::DEMURA_OUT;
+  }
+
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CAPTURE_MODE, token_.crtc_id, capture_mode);
 
   // Set Connector Output FB
   uint32_t fb_id = registry_.GetOutputFbId(output_buffer->handle_id);
-  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_FB_ID, cwb_config_.token.conn_id, fb_id);
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_FB_ID, vitual_conn_id, fb_id);
 
   // Set Connector Secure Mode
   bool secure = output_buffer->flags.secure;
   DRMSecureMode mode = secure ? DRMSecureMode::SECURE : DRMSecureMode::NON_SECURE;
-  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_FB_SECURE_MODE, cwb_config_.token.conn_id, mode);
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_FB_SECURE_MODE, vitual_conn_id, mode);
 
   // Set Connector Output Rect
-  sde_drm::DRMRect dst = {};
-  dst.left = 0;
-  dst.top = 0;
+  sde_drm::DRMRect full_frame = {};
+  full_frame.left = 0;
+  full_frame.top = 0;
 
-  if (capture_mode == DRMCWbCaptureMode::DSPP_OUT) {
-    dst.right = display_attributes_[current_mode_index_].x_pixels;
-    dst.bottom = display_attributes_[current_mode_index_].y_pixels;
+  if (capture_mode == DRMCWbCaptureMode::MIXER_OUT) {
+    full_frame.right = mixer_attributes_.width;
+    full_frame.bottom = mixer_attributes_.height;
   } else {
-    dst.right = mixer_attributes_.width;
-    dst.bottom = mixer_attributes_.height;
+    full_frame.right = display_attributes_[current_mode_index_].x_pixels;
+    full_frame.bottom = display_attributes_[current_mode_index_].y_pixels;
   }
 
-  DLOGV_IF(kTagDriverConfig, "CWB Mode:%d dst.left:%d dst.top:%d dst.right:%d dst.bottom:%d",
-    capture_mode, dst.left, dst.top, dst.right, dst.bottom);
+  std::vector<CwbTapPoint> &tappoints = hw_resource_.tap_points;
+  if (std::find(tappoints.begin(), tappoints.end(), CwbTapPoint::kDemuraTapPoint) ==
+      tappoints.end()) {  // Check whether CWB ROI & demura tap-point are supported.
+    // In-case of not supported, set full frame roi to WB connector's DST_* properties.
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_RECT, vitual_conn_id, full_frame);
+  } else {  // CWB ROI & demura tap-point are supported
+    bool is_full_frame_update = IsFullFrameUpdate(hw_layer_info);
+    // Set WB connector's roi_v1 property to PU_ROI.
+    if (is_full_frame_update) {
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_ROI, vitual_conn_id, 0, nullptr);
+      DLOGV_IF(kTagDriverConfig, "roi_v1 of virtual connector is set NULL (Full Frame update).");
+    } else {
+      const int kNumMaxROIs = 4;
+      sde_drm::DRMRect conn_rects[kNumMaxROIs] = {full_frame};
+      for (uint32_t i = 0; i < hw_layer_info.left_frame_roi.size(); i++) {
+        auto &roi = hw_layer_info.left_frame_roi.at(i);
+        conn_rects[i].left = UINT32(roi.left);
+        conn_rects[i].right = UINT32(roi.right);
+        conn_rects[i].top = UINT32(roi.top);
+        conn_rects[i].bottom = UINT32(roi.bottom);
+      }
+      uint32_t num_rects = std::max(1u, UINT32(hw_layer_info.left_frame_roi.size()));
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_ROI, vitual_conn_id, num_rects, conn_rects);
+    }
 
-  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_RECT, cwb_config_.token.conn_id, dst);
+    // Set WB connector's DST_* property to CWB_ROI.
+    LayerRect cwb_roi = cwb_config->cwb_roi;
+    if (is_full_frame_update && cwb_config->pu_as_cwb_roi) {  // Incase of full frame update
+      // and when cwb client has set pu_as_cwb_roi as true, set Full frame CWB ROI.
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_RECT, vitual_conn_id, full_frame);
+    } else {
+      sde_drm::DRMRect dst = {};
+      dst.left = UINT32(cwb_roi.left);
+      dst.right = UINT32(cwb_roi.right);
+      dst.top = UINT32(cwb_roi.top);
+      dst.bottom = UINT32(cwb_roi.bottom);
+      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_RECT, vitual_conn_id, dst);
+    }
+  }
+
+  const LayerRect &roi = cwb_config->cwb_roi;
+  DLOGV_IF(kTagDriverConfig, "CWB Mode:%d roi.left:%f roi.top:%f roi.right:%f roi.bottom:%f",
+           capture_mode, roi.left, roi.top, roi.right, roi.bottom);
 }
 
 void HWPeripheralDRM::PostCommitConcurrentWriteback(LayerBuffer *output_buffer) {

@@ -501,6 +501,12 @@ struct DRMRect {
   uint32_t bottom;  // Bottom-most pixel coordinate.
 };
 
+enum struct DRMCWbCaptureMode {
+  MIXER_OUT,
+  DSPP_OUT,
+  DEMURA_OUT,
+};
+
 //------------------------------------------------------------------------
 // DRM Info Query Types
 //------------------------------------------------------------------------
@@ -570,6 +576,7 @@ struct DRMCrtcInfo {
   uint32_t min_prefill_lines = 0;
   int secure_disp_blend_stage = -1;
   bool concurrent_writeback = false;
+  std::vector<DRMCWbCaptureMode> tap_points;
   uint32_t vig_limit_index = 0;
   uint32_t dma_limit_index = 0;
   uint32_t scaling_limit_index = 0;
@@ -910,11 +917,6 @@ enum struct DRMMultiRectMode {
   NONE = 0,
   PARALLEL = 1,
   SERIAL = 2,
-};
-
-enum struct DRMCWbCaptureMode {
-  MIXER_OUT = 0,
-  DSPP_OUT = 1,
 };
 
 enum struct DRMQsyncMode {
