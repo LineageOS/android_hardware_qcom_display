@@ -3094,6 +3094,8 @@ void HWCSession::HandlePendingPowerMode(hwc2_display_t disp_id,
 
   Locker::ScopeLock lock_d(locker_[active_builtin_disp_id]);
   bool pending_power_mode = false;
+  std::bitset<kSecureMax> secure_sessions = 0;
+  hwc_display_[active_builtin_disp_id]->GetActiveSecureSession(&secure_sessions);
   for (hwc2_display_t display = HWC_DISPLAY_PRIMARY + 1;
     display < HWCCallbacks::kNumDisplays; display++) {
     if (display != active_builtin_disp_id) {
@@ -3106,6 +3108,9 @@ void HWCSession::HandlePendingPowerMode(hwc2_display_t disp_id,
   }
 
   if (!pending_power_mode) {
+    if (!secure_sessions.any()) {
+      secure_session_active_ = false;
+    }
     return;
   }
 
