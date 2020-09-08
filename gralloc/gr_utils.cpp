@@ -205,7 +205,11 @@ uint32_t GetBppForUncompressedRGB(int format) {
     case HAL_PIXEL_FORMAT_BGR_565:
     case HAL_PIXEL_FORMAT_RGBA_5551:
     case HAL_PIXEL_FORMAT_RGBA_4444:
+    case HAL_PIXEL_FORMAT_RG_88:
       bpp = 2;
+      break;
+    case HAL_PIXEL_FORMAT_R_8:
+      bpp = 1;
       break;
     default:
       ALOGE("Error : %s New format request = 0x%x", __FUNCTION__, format);
