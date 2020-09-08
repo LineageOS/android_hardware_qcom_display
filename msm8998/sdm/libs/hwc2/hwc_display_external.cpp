@@ -154,8 +154,8 @@ void HWCDisplayExternal::ApplyScanAdjustment(hwc_rect_t *display_frame) {
     return;
   }
 
-  uint32_t new_mixer_width = UINT32(mixer_width * FLOAT(1.0f - width_ratio));
-  uint32_t new_mixer_height = UINT32(mixer_height * FLOAT(1.0f - height_ratio));
+  uint32_t new_mixer_width = UINT32(FLOAT(mixer_width) * (1.0f - width_ratio));
+  uint32_t new_mixer_height = UINT32(FLOAT(mixer_height) * (1.0f - height_ratio));
 
   int x_offset = INT((FLOAT(mixer_width) * width_ratio) / 2.0f);
   int y_offset = INT((FLOAT(mixer_height) * height_ratio) / 2.0f);
