@@ -1290,4 +1290,22 @@ int HWCSession::DisplayConfigImpl::IsRCSupported(uint32_t disp_id, bool *support
   return 0;
 }
 
+int HWCSession::DisplayConfigImpl::IsSupportedConfigSwitch(uint32_t disp_id, uint32_t config,
+                                                         bool *supported) {
+  int disp_idx = hwc_session_->GetDisplayIndex(disp_id);
+  if (disp_idx == -1) {
+    DLOGE("Invalid display = %d", disp_id);
+    return -EINVAL;
+  }
+
+  SCOPE_LOCK(hwc_session_->locker_[disp_idx]);
+  if (!hwc_session_->hwc_display_[disp_idx]) {
+    DLOGW("Display %d is not connected.", disp_id);
+    return -EINVAL;
+  }
+
+  *supported = hwc_session_->hwc_display_[disp_idx]->IsModeSwitchAllowed(config);
+  return 0;
+}
+
 }  // namespace sdm

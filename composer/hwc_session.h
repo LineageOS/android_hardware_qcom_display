@@ -390,6 +390,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
     virtual int GetSupportedDisplayRefreshRates(DispType dpy,
                                                 std::vector<uint32_t> *supported_refresh_rates);
     virtual int IsRCSupported(uint32_t disp_id, bool *supported);
+    virtual int IsSupportedConfigSwitch(uint32_t disp_id, uint32_t config, bool *supported);
 
     std::weak_ptr<DisplayConfig::ConfigCallback> callback_;
     HWCSession *hwc_session_ = nullptr;

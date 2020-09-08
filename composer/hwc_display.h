@@ -250,6 +250,8 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int GetDisplayAttributesForConfig(int config,
                                             DisplayConfigVariableInfo *display_attributes);
   virtual int GetSupportedDisplayRefreshRates(std::vector<uint32_t> *supported_refresh_rates);
+  bool IsModeSwitchAllowed(uint32_t config);
+
   virtual int SetState(bool connected) {
     return kErrorNotSupported;
   }
@@ -547,7 +549,6 @@ class HWCDisplay : public DisplayEventHandler {
   void UpdateRefreshRate();
   void WaitOnPreviousFence();
   void UpdateActiveConfig();
-  bool IsModeSwitchAllowed(uint32_t mode_switch);
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
   uint32_t geometry_changes_ = GeometryChanges::kNone;
