@@ -26,6 +26,7 @@
 #include <string>
 #include <map>
 #include <utility>
+#include <sys/stat.h>
 
 using std::string;
 using std::map;
@@ -39,14 +40,9 @@ static string get_ion_buff_str(int buff_fd)
 {
   string retStr = {};
   if (buff_fd >= 0) {
-    string fdString = std::to_string(buff_fd);
-    string symlinkPath = "/proc/"+pidString+"/fd/"+fdString;
-    char buffer[1024] = {};
-    ssize_t ret = ::readlink(symlinkPath.c_str(), buffer, sizeof(buffer) - 1);
-    if (ret != -1) {
-      buffer[ret] = '\0';
-      retStr = buffer;
-    }
+    struct stat stat1;
+    fstat(buff_fd, &stat1);
+    retStr = std::to_string(stat1.st_ino);
   }
 
   return retStr;

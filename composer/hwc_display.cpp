@@ -766,7 +766,7 @@ void HWCDisplay::BuildLayerStack() {
       layer->src_rect.top = 0;
       layer->src_rect.right = layer_buffer->width;
       layer->src_rect.bottom = layer_buffer->height;
-      DLOGI("Solid fill layer buffer width=%u, height=%u, unaligned_width=%u, unaligned_height=%u",
+      DLOGV("Solid fill layer buffer width=%u, height=%u, unaligned_width=%u, unaligned_height=%u",
         layer_buffer->width, layer_buffer->height, layer_buffer->unaligned_width,
         layer_buffer->unaligned_height);
     }
@@ -2244,6 +2244,34 @@ int HWCDisplay::GetDisplayConfigCount(uint32_t *count) {
 int HWCDisplay::GetDisplayAttributesForConfig(int config,
                                             DisplayConfigVariableInfo *display_attributes) {
   return display_intf_->GetConfig(UINT32(config), display_attributes) == kErrorNone ? 0 : -1;
+}
+
+int HWCDisplay::GetSupportedDisplayRefreshRates(std::vector<uint32_t> *supported_refresh_rates) {
+  if (!supported_refresh_rates) {
+    return -1;
+  }
+
+  hwc2_config_t active_config = 0;
+  GetActiveConfig(&active_config);
+
+  int32_t active_config_group;
+  auto error = GetDisplayAttribute(active_config, HwcAttribute::CONFIG_GROUP, &active_config_group);
+  if (error != HWC2::Error::None) {
+    DLOGE("Failed to get config group of active config");
+    return -1;
+  }
+
+  supported_refresh_rates->resize(0);
+  for (auto &config : variable_config_map_) {
+    if (active_config_group == INT32(config.first)) {
+      DisplayConfigVariableInfo const &config_info = config.second;
+      supported_refresh_rates->push_back(config_info.fps);
+    }
+  }
+
+  DLOGI("Count of supported refresh rates = %u for active config group = %d",
+        UINT32(supported_refresh_rates->size()), active_config_group);
+  return 0;
 }
 
 uint32_t HWCDisplay::GetUpdatingLayersCount(void) {

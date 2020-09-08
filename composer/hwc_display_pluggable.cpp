@@ -103,9 +103,7 @@ void HWCDisplayPluggable::Destroy(HWCDisplay *hwc_display) {
   // Flush the display to have outstanding fences signaled.
   hwc_display->Flush();
   hwc_display->Deinit();
-  DLOGI("Calling delete on hwc_display");
   delete hwc_display;
-  DLOGI("Finished deleting hwc_display");
 }
 
 HWCDisplayPluggable::HWCDisplayPluggable(CoreInterface *core_intf,

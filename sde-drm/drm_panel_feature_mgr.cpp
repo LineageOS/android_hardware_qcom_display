@@ -172,6 +172,12 @@ void DRMPanelFeatureMgr::ParseDsppCapabilities(uint32_t blob_id, std::vector<int
                                             uint32_t *size, const std::string str) {
   drmModePropertyBlobRes *blob = drmModeGetPropertyBlob(dev_fd_, blob_id);
   if (!blob) {
+    DRM_LOGW("Unable to find blob for id %d", blob_id);
+    return;
+  }
+
+  if (!blob->data) {
+    DRM_LOGW("Invalid blob - no data for for blob-id %d", blob_id);
     return;
   }
 

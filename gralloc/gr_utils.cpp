@@ -33,6 +33,7 @@
 
 #include <drm/drm_fourcc.h>
 
+#include <cutils/properties.h>
 #include <algorithm>
 
 #include "gr_adreno_info.h"
@@ -1092,13 +1093,17 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
   // Below should be only YUV family
   switch (format) {
     case HAL_PIXEL_FORMAT_YCrCb_420_SP:
+      /*
+       * Todo: relook this alignment again
+       * Change made to unblock the software EIS feature from camera
+       * Currently using same alignment as camera doing
+       */
+      aligned_w = INT(MMM_COLOR_FMT_Y_STRIDE(MMM_COLOR_FMT_NV21, width));
+      aligned_h = INT(MMM_COLOR_FMT_Y_SCANLINES(MMM_COLOR_FMT_NV21, height));
+      break;
     case HAL_PIXEL_FORMAT_YCbCr_420_SP:
-      if (AdrenoMemInfo::GetInstance() == nullptr) {
-        ALOGW("%s: AdrenoMemInfo instance pointing to a NULL value.", __FUNCTION__);
-        return -1;
-      }
-      alignment = AdrenoMemInfo::GetInstance()->GetGpuPixelAlignment();
-      aligned_w = ALIGN(width, alignment);
+      aligned_w = INT(MMM_COLOR_FMT_Y_STRIDE(MMM_COLOR_FMT_NV12, width));
+      aligned_h = INT(MMM_COLOR_FMT_Y_SCANLINES(MMM_COLOR_FMT_NV12, height));
       break;
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
       aligned_w = ALIGN(width, alignment);
@@ -1391,7 +1396,11 @@ int GetImplDefinedFormat(uint64_t usage, int format) {
       }
     } else if (usage & BufferUsage::CAMERA_OUTPUT) {
       if (format == HAL_PIXEL_FORMAT_YCbCr_420_888) {
-        gr_format = HAL_PIXEL_FORMAT_NV21_ZSL;  // NV21
+        if ((usage & BufferUsage::PROTECTED) && (!CanAllocateZSLForSecureCamera())) {
+          gr_format = HAL_PIXEL_FORMAT_YCrCb_420_SP;  // NV21
+        } else {
+          gr_format = HAL_PIXEL_FORMAT_NV21_ZSL;  // NV21
+        }
       } else {
         gr_format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS;  // NV12 preview
       }
@@ -1402,6 +1411,10 @@ int GetImplDefinedFormat(uint64_t usage, int format) {
       // If no other usage flags are detected, default the
       // flexible YUV format to NV21_ZSL
       gr_format = HAL_PIXEL_FORMAT_NV21_ZSL;
+      ALOGD(
+          "Falling back to default YUV format - no camera/video specific format defined, usage "
+          "0x%" PRIx64,
+          usage);
     }
   }
 
@@ -1775,7 +1788,8 @@ void GetRGBPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int3
   if (HasAlphaComponent(format)) {
     plane_info->component = (PlaneComponent)(plane_info->component | PLANE_COMPONENT_A);
   }
-  plane_info->size = GetSize(info, width, height);
+  GetBufferSizeAndDimensions(info, &(plane_info->size), (unsigned int *) &width,
+                             (unsigned int *) &height);
   plane_info->step = GetBpp(format);
   plane_info->offset = GetRgbMetaSize(format, width, height, usage);
   plane_info->h_subsampling = 0;
@@ -1905,4 +1919,20 @@ void GetDRMFormat(uint32_t format, uint32_t flags, uint32_t *drm_format,
   }
 }
 
+bool CanAllocateZSLForSecureCamera() {
+  static bool inited = false;
+  static bool can_allocate = true;
+  if (inited) {
+    return can_allocate;
+  }
+  char property[PROPERTY_VALUE_MAX];
+  property_get("vendor.gralloc.secure_preview_buffer_format", property, "0");
+  if (!(strncmp(property, "420_sp", PROPERTY_VALUE_MAX))) {
+    can_allocate = false;
+  }
+  inited = true;
+  ALOGI("CanAllocateZSLForSecureCamera: %d", can_allocate);
+
+  return can_allocate;
+}
 }  // namespace gralloc

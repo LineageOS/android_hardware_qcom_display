@@ -224,12 +224,21 @@ void Allocator::GetIonHeapInfo(uint64_t usage, unsigned int *ion_heap_id, unsign
        */
       flags |= UINT(ION_SD_FLAGS);
     } else if (usage & BufferUsage::CAMERA_OUTPUT) {
+      int secure_preview_only = 0;
+      char property[PROPERTY_VALUE_MAX];
+      if (property_get("vendor.gralloc.secure_preview_only", property, NULL) > 0) {
+        secure_preview_only = atoi(property);
+      }
       heap_id = ION_HEAP(SD_HEAP_ID);
       if (usage & GRALLOC_USAGE_PRIVATE_CDSP) {
         flags |= UINT(ION_SECURE | ION_FLAG_CP_CDSP);
       }
       if (usage & BufferUsage::COMPOSER_OVERLAY) {
-        flags |= UINT(ION_SC_PREVIEW_FLAGS | ION_SC_FLAGS);
+        if (secure_preview_only) {  // holi target
+          flags |= UINT(ION_SC_PREVIEW_FLAGS);
+        } else {  // Default
+          flags |= UINT(ION_SC_PREVIEW_FLAGS | ION_SC_FLAGS);
+        }
       } else {
         flags |= UINT(ION_SC_FLAGS);
       }

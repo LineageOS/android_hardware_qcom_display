@@ -170,10 +170,7 @@ class HWCDisplay : public DisplayEventHandler {
     std::multiset<HWCLayer *, SortLayersByZ> layer_set;  // Maintain a set sorted by Z
   };
 
-  virtual ~HWCDisplay() {
-    int ret = 0;
-    ret = Fence::CheckFstat(layer_stack_.retire_fence);
-  }
+  virtual ~HWCDisplay() {}
   virtual int Init();
   virtual int Deinit();
 
@@ -250,6 +247,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int GetDisplayConfigCount(uint32_t *count);
   virtual int GetDisplayAttributesForConfig(int config,
                                             DisplayConfigVariableInfo *display_attributes);
+  virtual int GetSupportedDisplayRefreshRates(std::vector<uint32_t> *supported_refresh_rates);
   virtual int SetState(bool connected) {
     return kErrorNotSupported;
   }

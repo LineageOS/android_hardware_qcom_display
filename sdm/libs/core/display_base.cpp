@@ -25,7 +25,6 @@
 #include <stdio.h>
 #include <utils/constants.h>
 #include <utils/debug.h>
-#include <utils/fence.h>
 #include <utils/formats.h>
 #include <utils/rect.h>
 #include <utils/utils.h>
@@ -690,17 +689,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
 
   switch (state) {
   case kStateOff:
-  {
-    std::vector<Layer> *hw_layers = &hw_layers_.info.hw_layers;
-    for (auto layer = hw_layers->begin(); layer != hw_layers->end();) {
-      int ret = Fence::CheckFstat(layer->input_buffer.acquire_fence);
-      if (ret < 0) {
-        DLOGW("CheckFstat on acquire fence failed!");
-        ++layer;
-        continue;
-      }
-      hw_layers->erase(layer);
-    }
+    hw_layers_.info.hw_layers.clear();
     error = hw_intf_->PowerOff(teardown);
     if (error != kErrorNone) {
       if (error == kErrorDeferred) {
@@ -713,7 +702,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
       pending_power_state_ = kPowerStateNone;
     }
     break;
-  }
+
   case kStateOn:
     error = hw_intf_->PowerOn(default_qos_data_, release_fence);
     if (error != kErrorNone) {
