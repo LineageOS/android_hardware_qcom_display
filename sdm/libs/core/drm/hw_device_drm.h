@@ -197,6 +197,7 @@ class HWDeviceDRM : public HWInterface {
   bool IsFullFrameUpdate(const HWLayersInfo &hw_layer_info);
   DisplayError GetDRMPowerMode(const HWPowerState &power_state, DRMPowerMode *drm_power_mode);
   void SetTUIState();
+  void GetTopologySplit(HWTopology hw_topology, uint32_t *split_number);
 
   class Registry {
    public:
