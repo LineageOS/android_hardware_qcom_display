@@ -189,7 +189,6 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   LayerRect right_frame_roi_ = {};
   Locker dpps_pu_lock_;
   bool dpps_pu_nofiy_pending_ = false;
-  bool first_cycle_ = true;
   shared_ptr<Fence> previous_retire_fence_ = nullptr;
   enum class SamplingState { Off, On } samplingState = SamplingState::Off;
   DisplayError setColorSamplingState(SamplingState state);
@@ -205,8 +204,6 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
 
   std::shared_ptr<SPRIntf> spr_;
   GetPanelFeatureFactoryIntfType GetPanelFeatureFactoryIntfFunc_ = nullptr;
-  PanelFeatureFactoryIntf *pf_factory_ = nullptr;
-  PanelFeaturePropertyIntf *prop_intf_ = nullptr;
   int spr_prop_value_ = 0;
 };
 
