@@ -937,6 +937,7 @@ Return<void> DeviceImpl::perform(uint64_t client_handle, uint32_t op_code,
       client->ParseIsRCSupported(input_params, _hidl_cb);
       break;
     default:
+      _hidl_cb(-EINVAL, {}, {});
       break;
   }
   return Void();
