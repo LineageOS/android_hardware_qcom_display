@@ -760,7 +760,7 @@ DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attr
 
   float scale_x = FLOAT(display_attributes_.x_pixels) / FLOAT(mixer_attributes.width);
   float scale_y = FLOAT(display_attributes_.y_pixels) / FLOAT(mixer_attributes.height);
-  float max_scale_up = hw_resource_.hw_dest_scalar_info.max_scale_up;
+  float max_scale_up = FLOAT(hw_resource_.hw_dest_scalar_info.max_scale_up);
   if (scale_x > max_scale_up || scale_y > max_scale_up) {
     DLOGW(
         "Up scaling ratio exceeds for destination scalar upscale limit scale_x %f scale_y %f "

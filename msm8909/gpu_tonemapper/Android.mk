@@ -17,7 +17,7 @@ LOCAL_SHARED_LIBRARIES    := libEGL libGLESv2 libGLESv3 libui libutils liblog
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps) $(kernel_deps)
 
 LOCAL_CFLAGS              := $(version_flag) -Wno-missing-field-initializers -Wall \
-                             -Wno-unused-parameter -std=c++11 -DLOG_TAG=\"GPU_TONEMAPPER\"
+                             -Wno-unused-parameter -DLOG_TAG=\"GPU_TONEMAPPER\"
 
 LOCAL_SRC_FILES           := TonemapFactory.cpp \
                              glengine.cpp \

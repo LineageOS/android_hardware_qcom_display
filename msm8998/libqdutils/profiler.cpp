@@ -185,7 +185,7 @@ void CalcFps::calc_fps(nsecs_t currtime_us)
     }
     else if (debug_fps_metadata_t::DFM_TIME == debug_fps_metadata.type) {
         debug_fps_metadata.time_elapsed += (float)((float)diff/1000.0);
-        if (debug_fps_metadata.time_elapsed >= debug_fps_metadata.time_period) {
+        if (debug_fps_metadata.time_elapsed >= (float)debug_fps_metadata.time_period) {
             float fps = float(1000.0 * debug_fps_metadata.curr_frame/
                                             debug_fps_metadata.time_elapsed);
             print_fps(fps);

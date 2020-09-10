@@ -11,7 +11,7 @@ LOCAL_C_INCLUDES              := $(common_includes)
 LOCAL_HEADER_LIBRARIES        := display_headers
 
 LOCAL_CFLAGS                  := $(common_flags) -Wno-missing-field-initializers -Wno-unused-parameter \
-                                 -std=c++11 -fcolor-diagnostics -Wno-sign-conversion -DLOG_TAG=\"SDM\"
+                                 -fcolor-diagnostics -Wno-sign-conversion -DLOG_TAG=\"SDM\"
 LOCAL_CLANG                   := true
 
 LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware libhardware_legacy \
