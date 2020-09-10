@@ -5,7 +5,8 @@ LOCAL_MODULE                  := libdrmutils
 LOCAL_VENDOR_MODULE           := true
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := external/libdrm \
-                                 $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+                                 $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include \
+                                 $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/display
 LOCAL_HEADER_LIBRARIES        := display_headers
 LOCAL_SHARED_LIBRARIES        := libdrm libdl libdisplaydebug
 LOCAL_CFLAGS                  := -DLOG_TAG=\"DRMUTILS\" -Wall  -Werror -fno-operator-names

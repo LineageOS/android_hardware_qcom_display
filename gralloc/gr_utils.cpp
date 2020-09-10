@@ -658,6 +658,9 @@ int GetRawPlaneInfo(int32_t format, int32_t width, int32_t height, PlaneLayoutIn
   plane_info[0].step = step;
   plane_info[0].stride = width;
   plane_info[0].stride_bytes = static_cast<int32_t>(alignedWidth);
+  if (format == HAL_PIXEL_FORMAT_RAW16) {
+    plane_info[0].stride_bytes = static_cast<int32_t>(alignedWidth * GetBpp(format));
+  }
   plane_info[0].scanlines = height;
   plane_info[0].size = size;
 
@@ -756,6 +759,9 @@ void GetYuvUBwcWidthAndHeight(int width, int height, int format, unsigned int *a
   switch (format) {
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
+      *aligned_w = VENUS_Y_STRIDE(COLOR_FMT_NV12, width);
+      *aligned_h = VENUS_Y_SCANLINES(COLOR_FMT_NV12, height);
+      break;
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
       *aligned_w = VENUS_Y_STRIDE(COLOR_FMT_NV12_UBWC, width);
       *aligned_h = VENUS_Y_SCANLINES(COLOR_FMT_NV12_UBWC, height);
@@ -839,8 +845,20 @@ unsigned int GetUBwcSize(int width, int height, int format, unsigned int aligned
       size = alignedw * alignedh * bpp;
       size += GetRgbUBwcMetaBufferSize(width, height, bpp);
       break;
+    /*
+     * 1. The CtsMediaV2TestCases#CodecEncoderSurfaceTest is a transcode use case and shares
+     *    same surface between encoder and decoder.
+     * 2. Configures encoder with Opaque color format thus encoder sets ubwc usage bits and
+     *    is configured with NV12_UBWC format.
+     * 3. Configures decoder as 'flexible', thus configuring decoder with NV12 format.
+     * 4. Decoder should produce output to surface that will be fed back to encoder as input.
+     * 5. Though UBWC is enabled, we need to compute the actual buffer size (including aligned
+     *    width and height) based on pixel format that is set.
+     */
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
+      size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12, width, height);
+      break;
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
       size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12_UBWC, width, height);
       break;
@@ -1011,6 +1029,16 @@ void GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       aligned_w = ALIGN(width, 128);
       break;
     case HAL_PIXEL_FORMAT_YV12:
+      if ((usage & BufferUsage::GPU_TEXTURE) || (usage & BufferUsage::GPU_RENDER_TARGET)) {
+        if (AdrenoMemInfo::GetInstance() == nullptr) {
+          return;
+        }
+        alignment = AdrenoMemInfo::GetInstance()->GetGpuPixelAlignment();
+        aligned_w = ALIGN(width, alignment);
+      } else {
+        aligned_w = ALIGN(width, 16);
+      }
+      break;
     case HAL_PIXEL_FORMAT_YCbCr_422_SP:
     case HAL_PIXEL_FORMAT_YCrCb_422_SP:
     case HAL_PIXEL_FORMAT_YCbCr_422_I:

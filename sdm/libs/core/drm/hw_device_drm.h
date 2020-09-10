@@ -231,7 +231,6 @@ class HWDeviceDRM : public HWInterface {
   uint32_t cmd_mode_index_ = 0;
   bool switch_mode_valid_ = false;
   bool doze_poms_switch_done_ = false;
-  bool pending_poms_switch_ = false;
   bool active_ = false;
   DRMPowerMode last_power_mode_ = DRMPowerMode::OFF;
   bool pending_doze_ = false;
