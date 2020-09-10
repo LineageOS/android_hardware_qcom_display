@@ -51,3 +51,6 @@ $(call add-clean-step, rm -rf $(PRODUCT_OUT)/vendor/etc/init/vendor.qti.hardware
 
 $(call add-clean-step, rm -rf $(PRODUCT_OUT)/vendor/lib/hw/android.hardware.graphics.mapper@2.0-impl-qti-display.so)
 $(call add-clean-step, rm -rf $(PRODUCT_OUT)/vendor/lib64/hw/android.hardware.graphics.mapper@2.0-impl-qti-display.so)
+
+# Clean old memtrack file
+$(call add-clean-step, rm -rf $(PRODUCT_OUT)/vendor/lib/hw/memtrack.qcom.so)

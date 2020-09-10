@@ -8,7 +8,7 @@ PRODUCT_PACKAGES += \
     android.hardware.memtrack@1.0-service \
     lights.$(TARGET_BOARD_PLATFORM) \
     hwcomposer.$(TARGET_BOARD_PLATFORM) \
-    memtrack.qcom \
+    memtrack.default \
     libsdmcore \
     libsdmutils \
     libqdMetaData \
