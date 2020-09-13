@@ -139,25 +139,11 @@ bool Debug::IsScalarDisabled() {
   return (value == 1);
 }
 
-bool Debug::IsSrcDEDisabled() {
+bool Debug::IsDetailEnhancerEnabled() {
   int value = 0;
-  debug_.debug_handler_->GetProperty(DISABLE_SRC_DE_PROP, &value);
+  debug_.debug_handler_->GetProperty(ENABLE_DETAIL_ENHANCER_PROP, &value);
 
   return (value == 1);
-}
-
-bool Debug::IsSrcQualityDisabled() {
-  int value = 0;
-  debug_.debug_handler_->GetProperty(DISABLE_SRC_QUALITY_PROP, &value);
-
-  return (value == 1);
-}
-
-int Debug::GetDESharpness() {
-  int value = -101;
-  debug_.debug_handler_->GetProperty(DE_SHARPNESS_PROP, &value);
-
-  return value;
 }
 
 bool Debug::IsUbwcTiledFrameBuffer() {

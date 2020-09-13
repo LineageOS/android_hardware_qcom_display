@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2018, 2020 The Linux Foundation. All rights reserved.
+* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -55,9 +55,7 @@
 #define DISABLE_ROTATOR_UBWC_PROP            DISPLAY_PROP("disable_rotator_ubwc")
 #define DISABLE_ROTATOR_SPLIT_PROP           DISPLAY_PROP("disable_rotator_split")
 #define DISABLE_SCALER_PROP                  DISPLAY_PROP("disable_scaler")
-#define DISABLE_SRC_DE_PROP                  DISPLAY_PROP("disable_src_de")
-#define DISABLE_SRC_QUALITY_PROP             DISPLAY_PROP("disable_src_quality")
-#define DE_SHARPNESS_PROP                    DISPLAY_PROP("de_sharpness")
+#define ENABLE_DETAIL_ENHANCER_PROP          DISPLAY_PROP("enable_detail_enhancer")
 #define DISABLE_AVR_PROP                     DISPLAY_PROP("disable_avr")
 #define DISABLE_EXTERNAL_ANIMATION_PROP      DISPLAY_PROP("disable_ext_anim")
 #define DISABLE_PARTIAL_SPLIT_PROP           DISPLAY_PROP("disable_partial_split")
