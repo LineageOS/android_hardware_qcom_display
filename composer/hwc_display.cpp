@@ -2176,7 +2176,7 @@ int HWCDisplay::GetVisibleDisplayRect(hwc_rect_t *visible_rect) {
 }
 
 int HWCDisplay::HandleSecureSession(const std::bitset<kSecureMax> &secure_sessions,
-                                    bool *power_on_pending) {
+                                    bool *power_on_pending, bool is_active_secure_display) {
   if (!power_on_pending) {
     return -EINVAL;
   }
@@ -2192,9 +2192,9 @@ int HWCDisplay::HandleSecureSession(const std::bitset<kSecureMax> &secure_sessio
       *power_on_pending = (pending_power_mode_ != HWC2::PowerMode::Off) ? true : false;
     }
 
-    DLOGI("SecureDisplay state changed from %d to %d for display %d-%d",
+    DLOGI("SecureDisplay state changed from %d to %d for display %" PRId64 " %d-%d",
           active_secure_sessions_.test(kSecureDisplay), secure_sessions.test(kSecureDisplay),
-          id_, type_);
+          id_, sdm_id_, type_);
   }
   active_secure_sessions_ = secure_sessions;
   return 0;
