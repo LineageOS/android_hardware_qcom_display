@@ -1598,7 +1598,8 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
   uint32_t display_width = display_attributes_.x_pixels;
   uint32_t display_height = display_attributes_.y_pixels;
 
-  if (secure_event_ == kSecureDisplayStart || secure_event_ == kTUITransitionStart) {
+  if (secure_event_ == kSecureDisplayStart || secure_event_ == kTUITransitionStart ||
+      (hw_resource_info_.has_concurrent_writeback && layer_stack->output_buffer)) {
     *new_mixer_width = display_width;
     *new_mixer_height = display_height;
     return ((*new_mixer_width != mixer_width) || (*new_mixer_height != mixer_height));

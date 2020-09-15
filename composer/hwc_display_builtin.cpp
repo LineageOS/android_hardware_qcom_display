@@ -893,15 +893,11 @@ HWC2::Error HWCDisplayBuiltIn::SetFrameDumpConfig(uint32_t count, uint32_t bit_m
   }
 
   // Allocate and map output buffer
-  if (post_processed) {
-    // To dump post-processed (DSPP) output, use Panel resolution.
-    GetRealPanelResolution(&output_buffer_info_.buffer_config.width,
-                           &output_buffer_info_.buffer_config.height);
-  } else {
-    // To dump Layer Mixer output, use FrameBuffer resolution.
-    GetFrameBufferResolution(&output_buffer_info_.buffer_config.width,
-                             &output_buffer_info_.buffer_config.height);
-  }
+  GetRealPanelResolution(&output_buffer_info_.buffer_config.width,
+                         &output_buffer_info_.buffer_config.height);
+
+  DLOGV_IF(kTagQDCM, "CWB output buffer resolution: width:%d height:%d",
+           output_buffer_info_.buffer_config.width, output_buffer_info_.buffer_config.height);
 
   output_buffer_info_.buffer_config.format = HWCLayer::GetSDMFormat(format, 0);
   output_buffer_info_.buffer_config.buffer_count = 1;
