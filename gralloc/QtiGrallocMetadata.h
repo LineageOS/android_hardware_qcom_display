@@ -57,6 +57,8 @@
 #define QTI_VENDOR_METADATA_STATUS 10017
 #define QTI_BUFFER_TYPE 10018
 #define QTI_VIDEO_TS_INFO 10019
+// This is legacy format
+#define QTI_S3D_FORMAT 10020
 
 // Used to indicate to framework that internal definitions are used instead
 #define COMPRESSION_QTI_UBWC 20001
