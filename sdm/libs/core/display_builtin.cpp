@@ -390,6 +390,12 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
 
   deferred_config_.UpdateDeferCount();
 
+  if (needs_validate_on_pu_enable_) {
+    // After PU was disabled for one frame, need to revalidate when enabled.
+    event_handler_->HandleEvent(kInvalidateDisplay);
+    needs_validate_on_pu_enable_ = false;
+  }
+
   ReconfigureDisplay();
 
   if (deferred_config_.CanApplyDeferredState()) {
@@ -762,6 +768,7 @@ DisplayError DisplayBuiltIn::ControlPartialUpdate(bool enable, uint32_t *pending
 DisplayError DisplayBuiltIn::DisablePartialUpdateOneFrame() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   disable_pu_one_frame_ = true;
+  needs_validate_on_pu_enable_ = true;
 
   return kErrorNone;
 }

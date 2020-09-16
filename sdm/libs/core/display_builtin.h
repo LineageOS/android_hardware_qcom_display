@@ -205,6 +205,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   std::shared_ptr<SPRIntf> spr_;
   GetPanelFeatureFactoryIntfType GetPanelFeatureFactoryIntfFunc_ = nullptr;
   int spr_prop_value_ = 0;
+  bool needs_validate_on_pu_enable_ = false;
 };
 
 }  // namespace sdm
