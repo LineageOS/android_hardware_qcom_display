@@ -51,18 +51,6 @@ namespace sdm {
 */
 class BufferSyncHandler {
  public:
-  /*! @brief Method to wait for ouput buffer to be released.
-
-    @details This method waits for fd to be signaled by the producer/consumer with a default
-    timeout. It is the responsibility of the caller to close the file descriptor.
-
-    @param[in] fd file descriptor
-
-    @return \link int \endlink
-  */
-
-  virtual int SyncWait(int fd) = 0;
-
   /*! @brief Method to wait specified time for ouput buffer to be released.
 
     @details This method waits for fd to be signaled by the producer/consumer with a specified
@@ -89,17 +77,6 @@ class BufferSyncHandler {
  */
 
   virtual int SyncMerge(int fd1, int fd2, int *merged_fd) = 0;
-
-  /*! @brief Method to detect if sync fd is signaled
-
-    @details This method detects if sync fd is signaled. It is responsibility of the caller to
-    close file descriptor.
-
-    @param[in] fd file descriptor
-
-    @return True if fd has been signaled.
- */
-  virtual bool IsSyncSignaled(int fd) = 0;
 
   /*! @brief Method to get fence info associated to given file descriptor
 

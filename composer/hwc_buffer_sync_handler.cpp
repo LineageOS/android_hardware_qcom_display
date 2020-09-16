@@ -107,16 +107,4 @@ void HWCBufferSyncHandler::GetSyncInfo(int fd, std::ostringstream *os) {
   }
 }
 
-int HWCBufferSyncHandler::SyncWait(int fd) {
-  // Deprecated.
-  assert(false);
-  return -EINVAL;
-}
-
-bool HWCBufferSyncHandler::IsSyncSignaled(int fd) {
-  // Deprecated.
-  assert(false);
-  return false;
-}
-
 }  // namespace sdm
