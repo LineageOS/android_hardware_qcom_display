@@ -339,6 +339,7 @@ Return<void> QtiMapperExtensions::getSurfaceMetadata(void *buffer, getSurfaceMet
   return Void();
 }
 
+// It will return size for single layer only i.e. layer count is always 1.
 Return<void> QtiMapperExtensions::getFormatLayout(int32_t format, uint64_t usage, int32_t flags,
                                                   int32_t width, int32_t height,
                                                   getFormatLayout_cb hidl_cb) {
@@ -348,11 +349,15 @@ Return<void> QtiMapperExtensions::getFormatLayout(int32_t format, uint64_t usage
   hidl_vec<PlaneLayout> plane_info;
   unsigned int alignedw = 0, alignedh = 0;
   int plane_count = 0;
-  uint64_t size = 0;
+  uint32_t size = 0;
   int custom_format = gralloc::GetImplDefinedFormat(usage, format);
   BufferInfo info(width, height, custom_format, usage);
-  gralloc::GetAlignedWidthAndHeight(info, &alignedw, &alignedh);
-  size = gralloc::GetSize(info, alignedw, alignedh);
+  int ret = gralloc::GetBufferSizeAndDimensions(info, &size, &alignedw, &alignedh);
+  if (ret) {
+    err = Error::BAD_BUFFER;
+    hidl_cb(err, size, plane_info);
+    return Void();
+  }
   gralloc::PlaneLayoutInfo plane_layout[8] = {};
   ALOGD_IF(DEBUG, "%s: Aligned width and height - wxh: %ux%u custom_format = %d", __FUNCTION__,
            alignedw, alignedh, custom_format);
