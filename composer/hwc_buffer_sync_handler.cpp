@@ -57,7 +57,10 @@ int HWCBufferSyncHandler::SyncWait(int fd, int timeout) {
     if (errno == ETIME) {
       error = -ETIME;
     }
-    DLOGW("sync_wait fd = %d, timeout = %d ms, err = %d : %s", fd, timeout, errno, strerror(errno));
+    if (timeout != 0) {
+      DLOGW("sync_wait fd = %d, timeout = %d ms, err = %d : %s", fd, timeout, errno,
+            strerror(errno));
+    }
     return error;
   }
 
