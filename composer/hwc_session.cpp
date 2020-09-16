@@ -1160,11 +1160,6 @@ int32_t HWCSession::GetDozeSupport(hwc2_display_t display, int32_t *out_support)
   }
 
   *out_support = 0;
-  if (hwc_display_[display]->GetDisplayType() != kBuiltIn) {
-    // Doze support check not needed for non-builtin display
-    return HWC2_ERROR_NONE;
-  }
-
   uint32_t config = 0;
   GetActiveConfigIndex(display, &config);
   *out_support = isSmartPanelConfig(display, config) ? 1 : 0;
