@@ -60,6 +60,8 @@ Locker HWCSession::locker_[HWCCallbacks::kNumDisplays];
 bool HWCSession::pending_power_mode_[HWCCallbacks::kNumDisplays];
 Locker HWCSession::power_state_[HWCCallbacks::kNumDisplays];
 Locker HWCSession::hdr_locker_[HWCCallbacks::kNumDisplays];
+Locker HWCSession::tui_locker_[HWCCallbacks::kNumDisplays];
+bool HWCSession::tui_transition_pending_[HWCCallbacks::kNumDisplays] = { false };
 Locker HWCSession::display_config_locker_;
 Locker HWCSession::system_locker_;
 static const int kSolidFillDelay = 100 * 1000;
@@ -806,7 +808,11 @@ int32_t HWCSession::PresentDisplay(hwc2_display_t display, shared_ptr<Fence> *ou
         status = hwc_display_[target_display]->Present(out_retire_fence);
         if (status == HWC2::Error::None) {
           PerformQsyncCallback(target_display);
-          locker_[target_display].Broadcast();
+          Locker::ScopeLock tui_lock(tui_locker_[target_display]);
+          if (tui_transition_pending_[target_display]) {
+            tui_transition_pending_[target_display] = false;
+            tui_locker_[target_display].Broadcast();
+          }
         }
       }
     }
@@ -3564,6 +3570,7 @@ android::status_t HWCSession::TUITransitionPrepare(int disp_id) {
 
 android::status_t HWCSession::TUITransitionStart(int disp_id) {
   hwc2_display_t target_display = GetDisplayIndex(disp_id);
+  bool needs_refresh = false;
   if (target_display == -1) {
     target_display = GetActiveBuiltinDisplay();
   }
@@ -3576,18 +3583,26 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
   {
     Locker::ScopeLock lock_d(locker_[target_display]);
     if (hwc_display_[target_display]) {
-      if (hwc_display_[target_display]->HandleSecureEvent(kTUITransitionStart) != kErrorNone) {
+      if (hwc_display_[target_display]->HandleSecureEvent(kTUITransitionStart,
+                                                          &needs_refresh) != kErrorNone) {
         return -EINVAL;
       }
+    }
+    hwc_display_[target_display]->ResetValidation();
+  }
 
-      if (hwc_display_[target_display]->IsDisplayCommandMode()) {
-        // Todo(user): Unlock it before sending events to client. It may cause deadlocks in future.
-        callbacks_.Refresh(target_display);
+  if (needs_refresh) {
+    callbacks_.Refresh(target_display);
 
-        DLOGI("Waiting for device assign");
+    DLOGI("Waiting for device assign");
+    Locker::ScopeLock tui_lock(tui_locker_[target_display]);
+    tui_transition_pending_[target_display] = true;
+    tui_locker_[target_display].Wait();
+  }
 
-        locker_[target_display].Wait();
-      }
+  {
+    Locker::ScopeLock lock_d(locker_[target_display]);
+    if (hwc_display_[target_display]) {
       DLOGI("Pause display %d", target_display);
 
       int err = hwc_display_[target_display]->SetDisplayStatus(HWCDisplay::kDisplayStatusPauseOnly);
@@ -3603,6 +3618,7 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
 }
 android::status_t HWCSession::TUITransitionEnd(int disp_id) {
   hwc2_display_t target_display = GetDisplayIndex(disp_id);
+  bool needs_refresh = false;
   if (target_display == -1) {
     target_display = GetActiveBuiltinDisplay();
   }
@@ -3623,23 +3639,23 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
         return err;
       }
 
-      if (hwc_display_[target_display]->HandleSecureEvent(kTUITransitionEnd) != kErrorNone) {
+      if (hwc_display_[target_display]->HandleSecureEvent(kTUITransitionEnd,
+                                                          &needs_refresh) != kErrorNone) {
         return -EINVAL;
       }
-
-      if (hwc_display_[target_display]->IsDisplayCommandMode()) {
-        hwc_display_[target_display]->ResetValidation();
-        // Todo(user): Unlock it before sending events to client. It may cause deadlocks in future.
-        callbacks_.Refresh(target_display);
-
-        DLOGI("Waiting for device unassign");
-        locker_[target_display].Wait();
-      }
-
+      hwc_display_[target_display]->ResetValidation();
     } else {
       DLOGW("Target display %d is not ready", disp_id);
       return -ENODEV;
     }
+  }
+  if (needs_refresh) {
+    callbacks_.Refresh(target_display);
+    Locker::ScopeLock tui_lock(tui_locker_[target_display]);
+
+    DLOGI("Waiting for device unassign");
+    tui_transition_pending_[target_display] = true;
+    tui_locker_[target_display].Wait();
   }
 
   std::vector<DisplayMapInfo> map_info = {map_info_primary_};

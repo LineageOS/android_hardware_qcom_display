@@ -814,11 +814,11 @@ class DisplayInterface {
 
     @param[in] secure_event \link SecureEvent \endlink
 
-    @param[inout] layer_stack \link LayerStack \endlink
+    @param[out] needs_refresh Notifies the caller whether it needs screen refresh after this call
 
     @return \link DisplayError \endlink
   */
-  virtual DisplayError HandleSecureEvent(SecureEvent secure_event) = 0;
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) = 0;
 
   /*! @brief Method to set dpps ad roi.
 

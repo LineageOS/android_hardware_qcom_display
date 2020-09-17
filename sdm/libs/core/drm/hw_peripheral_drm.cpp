@@ -379,6 +379,15 @@ DisplayError HWPeripheralDRM::HandleSecureEvent(SecureEvent secure_event,
       tui_state_ = kTUIStateEnd;
       ResetPropertyCache();
       idle_pc_state_ = sde_drm::DRMIdlePCState::ENABLE;
+      if (hw_panel_info_.mode != kModeCommand || pending_power_state_ == kPowerStateOff) {
+        SetQOSData(qos_data);
+        SetVMReqState();
+        DisplayError err = Flush(NULL);
+        if (err != kErrorNone) {
+          return err;
+        }
+        SetTUIState();
+      }
     }
     break;
 
@@ -900,6 +909,27 @@ DisplayError HWPeripheralDRM::GetSupportedModeSwitch(uint32_t *allowed_mode_swit
 
   *allowed_mode_switch = connector_info_.modes[current_mode_index_].allowed_mode_switch;
   return kErrorNone;
+}
+
+void HWPeripheralDRM::SetVMReqState() {
+  if (tui_state_ == kTUIStateStart) {
+    drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_VM_REQ_STATE, token_.crtc_id,
+                              sde_drm::DRMVMRequestState::RELEASE);
+    DLOGI("Release resources to SVM");
+    if (ltm_hist_en_)
+      drm_atomic_intf_->Perform(sde_drm::DRMOps::DPPS_CACHE_FEATURE, token_.crtc_id,
+                                sde_drm::kFeatureLtmHistCtrl, 0);
+  } else if (tui_state_ == kTUIStateEnd) {
+    drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_VM_REQ_STATE, token_.crtc_id,
+                              sde_drm::DRMVMRequestState::ACQUIRE);
+    DLOGI("Acquire resources from SVM");
+    if (ltm_hist_en_)
+      drm_atomic_intf_->Perform(sde_drm::DRMOps::DPPS_CACHE_FEATURE, token_.crtc_id,
+                                sde_drm::kFeatureLtmHistCtrl, 1);
+  } else if (tui_state_ == kTUIStateNone) {
+    drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_VM_REQ_STATE, token_.crtc_id,
+                              sde_drm::DRMVMRequestState::NONE);
+  }
 }
 
 }  // namespace sdm

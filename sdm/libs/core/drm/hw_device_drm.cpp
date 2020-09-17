@@ -2455,12 +2455,16 @@ DisplayError HWDeviceDRM::GetDRMPowerMode(const HWPowerState &power_state,
   switch (power_state) {
     case kPowerStateOn:
       *drm_power_mode = DRMPowerMode::ON;
+      break;
     case kPowerStateOff:
       *drm_power_mode = DRMPowerMode::OFF;
+      break;
     case kPowerStateDoze:
       *drm_power_mode = DRMPowerMode::DOZE;
+      break;
     case kPowerStateDozeSuspend:
       *drm_power_mode = DRMPowerMode::DOZE_SUSPEND;
+      break;
     default:
       return kErrorParameters;
   }
