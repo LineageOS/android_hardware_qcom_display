@@ -194,15 +194,14 @@ DisplayError DisplayBase::Deinit() {
 }
 
 // Query the dspp capabilities and enable the RC feature.
-DisplayError DisplayBase::SetupRC(PanelFeatureFactoryIntf *pf_factory,
-                                  PanelFeaturePropertyIntf *prop_intf) {
+DisplayError DisplayBase::SetupRC() {
   RCInputConfig input_cfg = {};
   input_cfg.display_id = display_id_;
   input_cfg.display_type = display_type_;
   input_cfg.display_xres = display_attributes_.x_pixels;
   input_cfg.display_yres = display_attributes_.y_pixels;
   input_cfg.max_mem_size = hw_resource_info_.rc_total_mem_size;
-  rc_core_ = pf_factory->CreateRCIntf(input_cfg, prop_intf);
+  rc_core_ = pf_factory_->CreateRCIntf(input_cfg, prop_intf_);
   GenericPayload dummy;
   int err = 0;
   if (!rc_core_) {
@@ -331,6 +330,14 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
     return error;
   }
 
+  if (!rc_core_ && !first_cycle_ && rc_enable_prop_ && pf_factory_ && prop_intf_) {
+    error = SetupRC();
+    if (error == kErrorNone) {
+      rc_panel_feature_init_ = true;
+    } else {
+      DLOGW("RC feature not supported");
+    }
+  }
   if (rc_panel_feature_init_) {
     SetRCData(layer_stack);
   }
@@ -348,6 +355,8 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
 
   hw_layers_.updates_mask.set(kUpdateResources);
   comp_manager_->GenerateROI(display_comp_ctx_, &hw_layers_);
+  rc_pu_flag_status_ = hw_layers_.info.rc_pu_flag_status;
+
   comp_manager_->PrePrepare(display_comp_ctx_, &hw_layers_);
 
   while (true) {
@@ -456,24 +465,52 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
 
   if (rc_panel_feature_init_) {
     GenericPayload in, out;
-    RCMaskStatus *mask_status = nullptr;
+    RCMaskCfgState *mask_status = nullptr;
+    uint64_t *rc_pu_flag_status = nullptr;
     int ret = -1;
-    ret = out.CreatePayload<RCMaskStatus>(mask_status);
+    ret = out.CreatePayload<RCMaskCfgState>(mask_status);
     if (ret) {
       DLOGE("failed to create the payload. Error:%d", ret);
       return kErrorUndefined;
     }
-    ret = rc_core_->ProcessOps(kRCFeatureCommit, in, &out);
+    ret = in.CreatePayload<uint64_t>(rc_pu_flag_status);
     if (ret) {
-     DLOGE("Failed to set the mask on driver for display: %d-%d, Error: %d",
-           display_id_, display_type_, ret);
+      DLOGE("failed to create the payload. Error:%d", ret);
+      return kErrorUndefined;
     }
-    DLOGI_IF(kTagDisplay, "Status of mask data: %d.", *mask_status);
-    if (*mask_status == kStatusNotProgrammed) {
-      needs_validate_ = true;
-      DLOGI_IF(kTagDisplay, "Mask is ready for display %d-%d, call Corresponding Prepare()",
-               display_id_, display_type_);
-      return kErrorNotValidated;
+    *rc_pu_flag_status = rc_pu_flag_status_;
+    ret = rc_core_->ProcessOps(kRCFeatureCommit, in, &out);
+    hw_layers_.info.rc_pu_needs_full_roi = (*mask_status).rc_pu_full_roi;
+    if (ret) {
+     // If RC commit failed, fall back to default (GPU/SDE pipes) drawing of "handled" mask layers.
+     DLOGW("Failed to set the data on driver for display: %d-%d, Error: %d, status: %d",
+           display_id_, display_type_, ret, (*mask_status).rc_mask_state);
+      if ((*mask_status).rc_mask_state == kStatusRcMaskStackHandled) {
+        needs_validate_ = true;
+        DLOGW("Need to call Corresponding prepare to handle the mask layers.",
+              display_id_, display_type_);
+        for (auto &layer : layer_stack->layers) {
+          if (layer->input_buffer.flags.mask_layer) {
+            layer->request.flags.rc = false;
+          }
+        }
+        return kErrorNotValidated;
+      }
+    } else {
+      DLOGI_IF(kTagDisplay, "Status of RC mask data: %d., pu_rc_status_: 0x%" PRIx64,
+               (*mask_status).rc_mask_state, rc_pu_flag_status_);
+      if ((*mask_status).rc_pu_full_roi) {
+        if (rc_pu_flag_status_ && rc_pu_flag_status_ != SDE_HW_PU_USECASE) {
+          needs_validate_ = true;
+          return kErrorNotValidated;
+        }
+      }
+      if ((*mask_status).rc_mask_state == kStatusRcMaskStackDirty) {
+        needs_validate_ = true;
+        DLOGI_IF(kTagDisplay, "Mask is ready for display %d-%d, call Corresponding Prepare()",
+                 display_id_, display_type_);
+        return kErrorNotValidated;
+      }
     }
   }
 
@@ -2257,6 +2294,11 @@ DisplayError DisplayBase::GetPendingDisplayState(DisplayState *disp_state) {
       return kErrorParameters;
   }
   return kErrorNone;
+}
+
+DisplayError DisplayBase::GetSupportedModeSwitch(uint32_t *allowed_mode_switch) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  return hw_intf_->GetSupportedModeSwitch(allowed_mode_switch);
 }
 
 }  // namespace sdm

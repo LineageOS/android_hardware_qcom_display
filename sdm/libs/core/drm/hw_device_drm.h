@@ -134,7 +134,9 @@ class HWDeviceDRM : public HWInterface {
   }
   virtual DisplayError SetBlendSpace(const PrimariesTransfer &blend_space);
   virtual DisplayError EnableSelfRefresh() { return kErrorNotSupported; }
-
+  virtual DisplayError GetSupportedModeSwitch(uint32_t *allowed_mode_switch) {
+    return kErrorNotSupported;
+  }
   enum {
     kHWEventVSync,
     kHWEventBlank,
@@ -195,6 +197,7 @@ class HWDeviceDRM : public HWInterface {
   bool IsFullFrameUpdate(const HWLayersInfo &hw_layer_info);
   DisplayError GetDRMPowerMode(const HWPowerState &power_state, DRMPowerMode *drm_power_mode);
   void SetTUIState();
+  void GetTopologySplit(HWTopology hw_topology, uint32_t *split_number);
 
   class Registry {
    public:

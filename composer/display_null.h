@@ -66,6 +66,7 @@ class DisplayNull : public DisplayInterface {
   virtual bool IsSupportSsppTonemap() { return false; }
   virtual bool CanSkipValidate() { return true; }
   virtual bool GameEnhanceSupported() { return false; }
+  virtual DisplayError GetSupportedModeSwitch (uint32_t *allowed_mode_switch);
 
   MAKE_NO_OP(TeardownConcurrentWriteback(void))
   MAKE_NO_OP(Commit(LayerStack *))

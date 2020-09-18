@@ -968,6 +968,14 @@ class DisplayInterface {
   */
   virtual DisplayError GetStcColorModes(snapdragoncolor::ColorModeList *mode_list) = 0;
 
+  /*! @brief Method to get the allowed mode switches from the driver.
+
+    @param[out] pointer to the allowed_mode_switch
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetSupportedModeSwitch(uint32_t *allowed_mode_switch) = 0;
+
  protected:
   virtual ~DisplayInterface() { }
 };

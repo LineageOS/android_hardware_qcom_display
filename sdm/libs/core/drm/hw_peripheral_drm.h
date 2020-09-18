@@ -56,6 +56,7 @@ class HWPeripheralDRM : public HWDeviceDRM, public PanelFeaturePropertyIntf {
   virtual PanelFeaturePropertyIntf *GetPanelFeaturePropertyIntf() { return this; }
   virtual int GetPanelFeature(PanelFeaturePropertyInfo *feature_info);
   virtual int SetPanelFeature(const PanelFeaturePropertyInfo &feature_info);
+  virtual DisplayError GetSupportedModeSwitch(uint32_t *allowed_mode_switch);
 
  protected:
   virtual DisplayError Init();

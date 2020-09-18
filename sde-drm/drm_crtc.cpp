@@ -888,14 +888,6 @@ void DRMCrtc::SetSolidfillStages(drmModeAtomicReq *req, uint32_t obj_id,
     drm_dim_layer_v1_.layer_cfg[i].rect.y2 = (uint16_t)sf.bounding_rect.bottom;
     drm_dim_layer_v1_.layer_cfg[i].flags =
       sf.is_exclusion_rect ? SDE_DRM_DIM_LAYER_EXCLUSIVE : SDE_DRM_DIM_LAYER_INCLUSIVE;
-    DLOGV("obj_id=%u, state=%u, x1=%u, y1=%u, x2=%u, y2=%u, flags=%d",
-    obj_id,
-    drm_dim_layer_v1_.layer_cfg[i].stage,
-    drm_dim_layer_v1_.layer_cfg[i].rect.x1,
-    drm_dim_layer_v1_.layer_cfg[i].rect.y1,
-    drm_dim_layer_v1_.layer_cfg[i].rect.x2,
-    drm_dim_layer_v1_.layer_cfg[i].rect.y2,
-    drm_dim_layer_v1_.layer_cfg[i].flags);
 
     // @sde_mdss_color: expects in [g b r a] order where as till now solidfill is in [a r g b].
     // As no support for passing plane alpha, Multiply Alpha color component with plane_alpa.
@@ -907,7 +899,6 @@ void DRMCrtc::SetSolidfillStages(drmModeAtomicReq *req, uint32_t obj_id,
     drm_dim_layer_v1_.layer_cfg[i].color_fill.color_3 =
       ((uint32_t)((((sf.alpha & 0xFF)) * plane_alpha)));
   }
-  DLOGI("Set dim layer stages. obj_id=%u, num_layers=%u", obj_id, drm_dim_layer_v1_.num_layers);
   AddProperty(req, obj_id, prop_mgr_.GetPropertyId(DRMProperty::DIM_STAGES_V1),
               reinterpret_cast<uint64_t> (&drm_dim_layer_v1_), false /* cache */,
               tmp_prop_val_map_);

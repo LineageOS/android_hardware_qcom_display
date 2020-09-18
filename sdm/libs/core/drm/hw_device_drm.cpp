@@ -79,6 +79,8 @@
 #define DRM_FORMAT_MOD_QCOM_TIGHT fourcc_mod_code(QCOM, 0x4)
 #endif
 
+#define DEST_SCALAR_OVERFETCH_SIZE 5
+
 using std::string;
 using std::to_string;
 using std::fstream;
@@ -691,6 +693,7 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   hw_panel_info_.min_roi_height = connector_info_.modes[index].hmin;
   hw_panel_info_.needs_roi_merge = connector_info_.modes[index].roi_merge;
   hw_panel_info_.transfer_time_us = connector_info_.modes[index].transfer_time_us;
+  hw_panel_info_.allowed_mode_switch = connector_info_.modes[index].allowed_mode_switch;
   hw_panel_info_.dynamic_fps = connector_info_.dynamic_fps;
   hw_panel_info_.qsync_support = connector_info_.qsync_support;
   drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
@@ -1411,7 +1414,6 @@ void HWDeviceDRM::SetSolidfillStages() {
 }
 
 void HWDeviceDRM::ClearSolidfillStages() {
-  DLOGI("Clearing solid fill stages");
   solid_fills_.clear();
   SetSolidfillStages();
 }
@@ -1919,6 +1921,14 @@ DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attr
   }
 
   uint32_t max_input_width = hw_resource_.hw_dest_scalar_info.max_input_width;
+  uint32_t dual_max_input_width = max_input_width - DEST_SCALAR_OVERFETCH_SIZE;
+  if (mixer_attributes_.split_type == kDualSplit &&
+     (mixer_attributes.width > dual_max_input_width)) {
+    DLOGW("Input width exceeds width limit in dual LM mode. input_width %d width_limit %d",
+          mixer_attributes.width, dual_max_input_width);
+    return kErrorNotSupported;
+  }
+
   if (display_attributes_[index].is_device_split) {
     max_input_width *= 2;
   }
@@ -1926,6 +1936,14 @@ DisplayError HWDeviceDRM::SetMixerAttributes(const HWMixerAttributes &mixer_attr
   if (mixer_attributes.width > max_input_width) {
     DLOGW("Input width exceeds width limit! input_width %d width_limit %d", mixer_attributes.width,
           max_input_width);
+    return kErrorNotSupported;
+  }
+
+  uint32_t topology_num_split = 0;
+  GetTopologySplit(display_attributes_[index].topology, &topology_num_split);
+  if (mixer_attributes.width % topology_num_split != 0) {
+    DLOGW("Uneven LM split: topology:%d supported_split:%d mixer_width:%d",
+           display_attributes_[index].topology, topology_num_split, mixer_attributes.width);
     return kErrorNotSupported;
   }
 
@@ -2252,7 +2270,6 @@ void HWDeviceDRM::SetSsppLutFeatures(HWPipeInfo *pipe_info) {
 
 void HWDeviceDRM::AddDimLayerIfNeeded() {
   if (secure_display_active_ && hw_resource_.secure_disp_blend_stage >= 0) {
-    DLOGI("Adding dim layer for secure session");
     HWSolidfillStage sf = {};
     sf.z_order = UINT32(hw_resource_.secure_disp_blend_stage);
     sf.roi = { 0.0, 0.0, FLOAT(mixer_attributes_.width), FLOAT(mixer_attributes_.height) };
@@ -2458,4 +2475,24 @@ void HWDeviceDRM::SetTUIState() {
   }
 }
 
+void HWDeviceDRM::GetTopologySplit(HWTopology hw_topology, uint32_t *split_number) {
+  switch (hw_topology) {
+    case kDualLM:
+    case kDualLMDSC:
+    case kDualLMMerge:
+    case kDualLMMergeDSC:
+    case kDualLMDSCMerge:
+      *split_number = 2;
+      break;
+    case kQuadLMMerge:
+    case kQuadLMDSCMerge:
+    case kQuadLMMergeDSC:
+    case kQuadLMDSC4HSMerge:
+      *split_number = 4;
+      break;
+    case kPPSplit:
+    default:
+      *split_number = 1;
+  }
+}
 }  // namespace sdm

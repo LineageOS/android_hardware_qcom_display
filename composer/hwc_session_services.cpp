@@ -1271,4 +1271,14 @@ int HWCSession::DisplayConfigImpl::GetSupportedDisplayRefreshRates(
                                                        supported_refresh_rates);
 }
 
+int HWCSession::DisplayConfigImpl::IsRCSupported(uint32_t disp_id, bool *supported) {
+  // Mask layers can potentially be shown on any display so report RC supported on all displays if
+  // the property enables the feature for use.
+  int val = false;  // Default value.
+  Debug::GetProperty(ENABLE_ROUNDED_CORNER, &val);
+  *supported = val ? true: false;
+
+  return 0;
+}
+
 }  // namespace sdm

@@ -173,6 +173,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError SetStcColorMode(const snapdragoncolor::ColorMode &color_mode) {
     return kErrorNotSupported;
   }
+  virtual DisplayError GetSupportedModeSwitch(uint32_t *allowed_mode_switch);
 
  protected:
   const char *kBt2020Pq = "bt2020_pq";
@@ -207,7 +208,7 @@ class DisplayBase : public DisplayInterface {
   PrimariesTransfer GetBlendSpaceFromColorMode();
   bool IsHdrMode(const AttrVal &attr);
   void InsertBT2020PqHlgModes(const std::string &str_render_intent);
-  DisplayError SetupRC(PanelFeatureFactoryIntf *pf_factory, PanelFeaturePropertyIntf *prop_intf);
+  DisplayError SetupRC();
   DisplayError HandlePendingVSyncEnable(const shared_ptr<Fence> &retire_fence);
   DisplayError HandlePendingPowerState(const shared_ptr<Fence> &retire_fence);
   DisplayError GetPendingDisplayState(DisplayState *disp_state);
@@ -268,6 +269,10 @@ class DisplayBase : public DisplayInterface {
   SecureEvent secure_event_ = kSecureEventMax;
   bool rc_panel_feature_init_ = false;
   bool spr_enable_ = false;
+  bool rc_enable_prop_ = false;
+  PanelFeatureFactoryIntf *pf_factory_ = nullptr;
+  PanelFeaturePropertyIntf *prop_intf_ = nullptr;
+  bool first_cycle_ = true;
 
  private:
   bool StartDisplayPowerReset();
@@ -276,6 +281,7 @@ class DisplayBase : public DisplayInterface {
   unsigned int rc_cached_res_width_ = 0;
   unsigned int rc_cached_res_height_ = 0;
   std::unique_ptr<RCIntf> rc_core_ = nullptr;
+  uint64_t rc_pu_flag_status_ = 0;
 };
 
 }  // namespace sdm

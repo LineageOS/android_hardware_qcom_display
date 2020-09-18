@@ -271,6 +271,9 @@ class QtiMapper : public IQtiMapper {
 #ifdef QTI_BUFFER_TYPE
       {qtigralloc::MetadataType_BufferType, "Buffer type from private_handle_t", true, false},
 #endif
+#ifdef QTI_VIDEO_TS_INFO
+      {qtigralloc::MetadataType_VideoTimestampInfo, "Video timestamp info", true, true},
+#endif
   };
 };
 

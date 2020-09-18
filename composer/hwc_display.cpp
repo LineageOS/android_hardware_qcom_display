@@ -766,9 +766,6 @@ void HWCDisplay::BuildLayerStack() {
       layer->src_rect.top = 0;
       layer->src_rect.right = layer_buffer->width;
       layer->src_rect.bottom = layer_buffer->height;
-      DLOGV("Solid fill layer buffer width=%u, height=%u, unaligned_width=%u, unaligned_height=%u",
-        layer_buffer->width, layer_buffer->height, layer_buffer->unaligned_width,
-        layer_buffer->unaligned_height);
     }
 
     if (hwc_layer->HasMetaDataRefreshRate() && layer->frame_rate > metadata_refresh_rate_) {
@@ -1232,6 +1229,11 @@ HWC2::Error HWCDisplay::SetActiveConfig(hwc2_config_t config) {
   if (current_config == config) {
     return HWC2::Error::None;
   }
+
+  if (!IsModeSwitchAllowed(config)) {
+    return HWC2::Error::BadConfig;
+  }
+
   DLOGI("Active configuration changed to: %d", config);
 
   // Store config index to be applied upon refresh.
@@ -2187,7 +2189,7 @@ int HWCDisplay::HandleSecureSession(const std::bitset<kSecureMax> &secure_sessio
         DLOGE("SetPowerMode failed. Error = %d", error);
       }
     } else {
-      *power_on_pending = true;
+      *power_on_pending = (pending_power_mode_ != HWC2::PowerMode::Off) ? true : false;
     }
 
     DLOGI("SecureDisplay state changed from %d to %d for display %d-%d",
@@ -2254,7 +2256,7 @@ int HWCDisplay::GetSupportedDisplayRefreshRates(std::vector<uint32_t> *supported
   hwc2_config_t active_config = 0;
   GetActiveConfig(&active_config);
 
-  int32_t active_config_group;
+  int32_t config_group, active_config_group;
   auto error = GetDisplayAttribute(active_config, HwcAttribute::CONFIG_GROUP, &active_config_group);
   if (error != HWC2::Error::None) {
     DLOGE("Failed to get config group of active config");
@@ -2263,7 +2265,12 @@ int HWCDisplay::GetSupportedDisplayRefreshRates(std::vector<uint32_t> *supported
 
   supported_refresh_rates->resize(0);
   for (auto &config : variable_config_map_) {
-    if (active_config_group == INT32(config.first)) {
+    error = GetDisplayAttribute(config.first, HwcAttribute::CONFIG_GROUP, &config_group);
+    if (error != HWC2::Error::None) {
+      DLOGE("Failed to get config group for config index: %u", config.first);
+      return -1;
+    }
+    if (active_config_group == config_group) {
       DisplayConfigVariableInfo const &config_info = config.second;
       supported_refresh_rates->push_back(config_info.fps);
     }
@@ -2589,6 +2596,24 @@ int32_t HWCDisplay::GetDisplayConfigGroup(DisplayConfigGroupInfo variable_config
   return -1;
 }
 
+bool HWCDisplay::IsModeSwitchAllowed(uint32_t mode_switch) {
+  DisplayError error = kErrorNone;
+  uint32_t allowed_mode_switch = 0;
+
+  error = display_intf_->GetSupportedModeSwitch(&allowed_mode_switch);
+  if (error != kErrorNone) {
+    DLOGW("Unable to retrieve supported modes for the current device configuration.");
+  }
+
+  if (allowed_mode_switch == 0 || (allowed_mode_switch & (1 << mode_switch))) {
+    DLOGV_IF(kTagClient, "Allowed to switch to mode:%d", mode_switch);
+    return true;
+  }
+
+  DLOGE("Not allowed to switch to mode:%d", mode_switch);
+  return false;
+}
+
 HWC2::Error HWCDisplay::GetDisplayVsyncPeriod(VsyncPeriodNanos *vsync_period) {
   if (GetTransientVsyncPeriod(vsync_period)) {
     return HWC2::Error::None;
@@ -2600,8 +2625,13 @@ HWC2::Error HWCDisplay::GetDisplayVsyncPeriod(VsyncPeriodNanos *vsync_period) {
 HWC2::Error HWCDisplay::SetActiveConfigWithConstraints(
     hwc2_config_t config, const VsyncPeriodChangeConstraints *vsync_period_change_constraints,
     VsyncPeriodChangeTimeline *out_timeline) {
+
   if (variable_config_map_.find(config) == variable_config_map_.end()) {
     DLOGE("Invalid config: %d", config);
+    return HWC2::Error::BadConfig;
+  }
+
+  if (!IsModeSwitchAllowed(config)) {
     return HWC2::Error::BadConfig;
   }
 
