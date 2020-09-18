@@ -144,6 +144,7 @@ class ColorManagerProxy {
   bool GameEnhanceSupported();
   DisplayError ColorMgrGetStcModes(ColorModeList *mode_list);
   DisplayError ColorMgrSetStcMode(const ColorMode &color_mode);
+  DisplayError PrePrepare(HWLayers *hw_layers);
 
  protected:
   ColorManagerProxy() {}
@@ -162,7 +163,7 @@ class ColorManagerProxy {
                                         PPFeaturesConfig *out_data);
   typedef std::map<std::string, ConvertProc> ConvertTable;
 
-  bool NeedHwassetsUpdate();
+  bool NeedHwAssetsUpdate();
   DisplayError UpdateModeHwassets(int32_t mode_id, snapdragoncolor::ColorMode color_mode,
                                   bool valid_meta_data, const ColorMetaData &meta_data);
   DisplayError ConvertToPPFeatures(const HwConfigOutputParams &params, PPFeaturesConfig *out_data);
@@ -182,6 +183,7 @@ class ColorManagerProxy {
   ColorMetaData meta_data_ = {};
   snapdragoncolor::ScPostBlendInterface *stc_intf_ = NULL;
   snapdragoncolor::ColorMode curr_mode_;
+  bool needs_update_ = false;
 };
 
 class ColorFeatureCheckingImpl : public FeatureInterface {

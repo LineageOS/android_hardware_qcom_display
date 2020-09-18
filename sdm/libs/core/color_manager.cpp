@@ -313,7 +313,7 @@ bool ColorManagerProxy::NeedsPartialUpdateDisable() {
   Locker &locker(pp_features_.GetLocker());
   SCOPE_LOCK(locker);
 
-  return pp_features_.IsDirty();
+  return (pp_features_.IsDirty() || needs_update_ || apply_mode_);
 }
 
 DisplayError ColorManagerProxy::Commit() {
@@ -356,7 +356,7 @@ void PPHWAttributes::Set(const HWResourceInfo &hw_res,
   }
 }
 
-bool ColorManagerProxy::NeedHwassetsUpdate() {
+bool ColorManagerProxy::NeedHwAssetsUpdate() {
   bool need_update = false;
   if (!stc_intf_) {
     return need_update;
@@ -446,7 +446,6 @@ DisplayError ColorManagerProxy::Validate(HWLayers *hw_layers) {
     return ret;
   }
 
-  bool updates = NeedHwassetsUpdate();
   bool valid_meta_data = false;
   bool update_meta_data = false;
   Layer hdr_layer = {};
@@ -468,12 +467,23 @@ DisplayError ColorManagerProxy::Validate(HWLayers *hw_layers) {
     }
   }
 
-  if (updates || apply_mode_ || update_meta_data) {
+  if (needs_update_ || apply_mode_ || update_meta_data) {
     UpdateModeHwassets(cur_mode_id_, curr_mode_, update_meta_data, meta_data_);
     DumpColorMetaData(meta_data_);
     apply_mode_ = false;
+    needs_update_ = false;
   }
 
+  return kErrorNone;
+}
+
+DisplayError ColorManagerProxy::PrePrepare(HWLayers *hw_layers) {
+  DisplayError ret = kErrorNone;
+  if (!hw_layers) {
+    return ret;
+  }
+
+  needs_update_ = NeedHwAssetsUpdate();
   return kErrorNone;
 }
 

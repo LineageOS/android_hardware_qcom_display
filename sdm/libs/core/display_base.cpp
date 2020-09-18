@@ -342,6 +342,10 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
     SetRCData(layer_stack);
   }
 
+  if (color_mgr_) {
+    color_mgr_->PrePrepare(&hw_layers_);
+  }
+
   if (color_mgr_ && color_mgr_->NeedsPartialUpdateDisable()) {
     DisablePartialUpdateOneFrame();
   }
