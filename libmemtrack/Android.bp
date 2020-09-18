@@ -1,7 +1,7 @@
 soong_namespace {
 }
 cc_library_shared {
-    name: "memtrack.qcom",
+    name: "memtrack.default",
     relative_install_path: "hw",
     vendor: true,
     include_dirs: ["hardware/libhardware/include"],
