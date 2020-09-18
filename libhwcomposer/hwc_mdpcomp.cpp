@@ -462,7 +462,7 @@ bool MDPComp::isFullFrameDoable(hwc_context_t *ctx,
         }
 
         // If buffer is non contiguous then force GPU comp
-        if(isNonContigBuffer(hnd) && ctx->mMDP.version > qdutils::MDP_V4_3) {
+        if(isNonContigBuffer(hnd)) {
             ALOGD_IF(isDebug(), "%s: Buffer is Non contiguous,"
                                 "so mdpcomp is not possible",__FUNCTION__);
             return false;
@@ -634,7 +634,7 @@ bool MDPComp::isOnlyVideoDoable(hwc_context_t *ctx,
         }
         private_handle_t *hnd = (private_handle_t *)layer->handle;
         // If buffer is non contiguous then force GPU comp
-        if(isNonContigBuffer(hnd) && ctx->mMDP.version > qdutils::MDP_V4_3) {
+        if(isNonContigBuffer(hnd)) {
             ALOGD_IF(isDebug(), "%s: Buffer is Non contiguous,"
                                 "so mdpcomp is not possible",__FUNCTION__);
             return false;
