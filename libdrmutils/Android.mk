@@ -11,7 +11,5 @@ LOCAL_CFLAGS                  := -DLOG_TAG=\"DRMUTILS\" -Wall -Werror -fno-opera
 LOCAL_CLANG                   := true
 LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 LOCAL_SRC_FILES               := drm_master.cpp drm_res_mgr.cpp drm_lib_loader.cpp
-LOCAL_COPY_HEADERS_TO         := qcom/display
-LOCAL_COPY_HEADERS            := drm_master.h drm_res_mgr.h drm_lib_loader.h drm_logger.h drm_interface.h
 
 include $(BUILD_SHARED_LIBRARY)
