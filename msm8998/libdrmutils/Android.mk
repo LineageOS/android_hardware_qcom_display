@@ -17,7 +17,5 @@ ifeq ($(TARGET_COMPILE_WITH_MSM_KERNEL),true)
 endif
 
 LOCAL_SRC_FILES               := drm_master.cpp drm_res_mgr.cpp drm_lib_loader.cpp
-LOCAL_COPY_HEADERS_TO         := qcom/display
-LOCAL_COPY_HEADERS            := drm_master.h drm_res_mgr.h drm_lib_loader.h drm_logger.h drm_interface.h
 
 include $(BUILD_SHARED_LIBRARY)
