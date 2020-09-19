@@ -39,29 +39,6 @@ ifeq ($(LLVM_SA), true)
     common_flags += --compile-and-analyze --analyzer-perf --analyzer-Werror
 endif
 
-common_includes := system/core/base/include
-CHECK_VERSION_LE = $(shell if [ $(1) -le $(2) ] ; then echo true ; else echo false ; fi)
-PLATFORM_SDK_NOUGAT = 25
-ifeq "REL" "$(PLATFORM_VERSION_CODENAME)"
-ifeq ($(call CHECK_VERSION_LE, $(PLATFORM_SDK_VERSION), $(PLATFORM_SDK_NOUGAT)), true)
-version_flag := -D__NOUGAT__
-
-# These include paths are deprecated post N
-common_includes += $(display_top)/libqdutils
-common_includes += $(display_top)/libqservice
-common_includes += $(display_top)/gpu_tonemapper
-ifneq ($(TARGET_IS_HEADLESS), true)
-    common_includes += $(display_top)/libcopybit
-endif
-
-common_includes += $(display_top)/include
-common_includes += $(display_top)/sdm/include
-common_flags += -isystem $(TARGET_OUT_HEADERS)/qcom/display
-endif
-endif
-
-common_header_export_path := qcom/display
-
 #Common libraries external to display HAL
 common_libs := liblog libutils libcutils libhardware
 common_deps  :=
