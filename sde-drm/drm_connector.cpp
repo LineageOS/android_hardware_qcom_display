@@ -475,6 +475,9 @@ void DRMConnector::ParseProperties() {
       PopulateFrameTriggerModes(info);
     } else if (prop_enum == DRMProperty::COLORSPACE) {
       PopulateSupportedColorspaces(info);
+    } else if (prop_enum == DRMProperty::MAX) {
+      DRM_LOGD("DRMProperty %s is not defined", info->name);
+      return;
     }
 
     prop_mgr_.SetPropertyId(prop_enum, info->prop_id);
@@ -489,6 +492,11 @@ void DRMConnector::ParseCapabilities(uint64_t blob_id, DRMConnectorInfo *info) {
   if (!blob) {
     return;
   }
+
+  if (!blob->data) {
+    return;
+  }
+
   char *fmt_str = new char[blob->length + 1];
   memcpy (fmt_str, blob->data, blob->length);
   fmt_str[blob->length] = '\0';
@@ -541,6 +549,7 @@ void DRMConnector::ParseCapabilities(uint64_t blob_id, DRMConnectorInfo *info) {
   }
 
   drmModeFreePropertyBlob(blob);
+  delete[] fmt_str;
 }
 
 void DRMConnector::ParseCapabilities(uint64_t blob_id, drm_panel_hdr_properties *hdr_info) {
@@ -565,6 +574,10 @@ void DRMConnector::ParseCapabilities(uint64_t blob_id, drm_panel_hdr_properties 
 void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info) {
   drmModePropertyBlobRes *blob = drmModeGetPropertyBlob(fd_, blob_id);
   if (!blob) {
+    return;
+  }
+
+  if (!blob->data) {
     return;
   }
 
@@ -630,6 +643,7 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
   }
 
   drmModeFreePropertyBlob(blob);
+  delete[] fmt_str;
 }
 
 void DRMConnector::ParseCapabilities(uint64_t blob_id, drm_msm_ext_hdr_properties *hdr_info) {
@@ -697,6 +711,12 @@ int DRMConnector::GetInfo(DRMConnectorInfo *info) {
   if (!drm_connector_->count_modes) {
     DRM_LOGW("Zero modes on connector %u.", conn_id);
   }
+
+  if (!drm_connector_->modes) {
+    DLOGW("Connector %u not found.", conn_id);
+    return 0;
+  }
+
   for (auto i = 0; i < drm_connector_->count_modes; i++) {
     DRMModeInfo modes_item {};
     modes_item.mode = drm_connector_->modes[i];

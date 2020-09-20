@@ -1126,8 +1126,8 @@ int32_t HWCSession::GetDozeSupport(hwc2_display_t display, int32_t *out_support)
   }
 
   if (display >= HWCCallbacks::kNumDisplays || (hwc_display_[display] == nullptr)) {
-    DLOGE("Invalid Display %d Handle %s ", UINT32(display), hwc_display_[display] ?
-          "Valid" : "NULL");
+    // display may come as -1  from VTS test case
+    DLOGE("Invalid Display %d ", UINT32(display));
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
@@ -3465,6 +3465,7 @@ void HWCSession::NotifyClientStatus(bool connected) {
     hwc_display_[i]->NotifyClientStatus(connected);
     hwc_display_[i]->SetVsyncEnabled(HWC2::Vsync::Disable);
   }
+  callbacks_.UpdateVsyncSource(HWCCallbacks::kNumDisplays);
 }
 
 void HWCSession::WaitForResources(bool wait_for_resources, hwc2_display_t active_builtin_id,

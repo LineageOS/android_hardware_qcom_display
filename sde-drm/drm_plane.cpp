@@ -416,13 +416,17 @@ DRMPlane::~DRMPlane() {
 }
 
 void DRMPlane::GetTypeInfo(const PropertyMap &prop_map) {
-  uint64_t blob_id;
-  drmModePropertyRes *prop;
+  uint64_t blob_id = 0;
+  drmModePropertyRes *prop = nullptr;
   DRMPlaneTypeInfo *info = &plane_type_info_;
   // Ideally we should check if this property type is a blob and then proceed.
   std::tie(blob_id, prop) = prop_map.at(DRMProperty::CAPABILITIES);
   drmModePropertyBlobRes *blob = drmModeGetPropertyBlob(fd_, blob_id);
   if (!blob) {
+    return;
+  }
+
+  if (!blob->data) {
     return;
   }
 
@@ -519,6 +523,7 @@ void DRMPlane::GetTypeInfo(const PropertyMap &prop_map) {
                                std::min((uint32_t)MAX_SCALER_LINEWIDTH, info->max_linewidth);
 
   drmModeFreePropertyBlob(blob);
+  delete[] fmt_str;
 }
 
 void DRMPlane::ParseProperties() {
