@@ -1146,6 +1146,11 @@ int32_t HWCSession::ValidateDisplay(hwc2_device_t *device, hwc2_display_t displa
   return INT32(status);
 }
 
+int32_t HWCSession::SetDisplayBrightness(hwc2_device_t *device, hwc2_display_t display,
+                                         float brightness) {
+  return HWC2_ERROR_UNSUPPORTED;
+}
+
 hwc2_function_pointer_t HWCSession::GetFunction(struct hwc2_device *device,
                                                 int32_t int_descriptor) {
   auto descriptor = static_cast<HWC2::FunctionDescriptor>(int_descriptor);
@@ -1261,6 +1266,8 @@ hwc2_function_pointer_t HWCSession::GetFunction(struct hwc2_device *device,
       return AsFP<HWC2_PFN_GET_DISPLAY_CAPABILITIES>(HWCSession::GetDisplayCapabilities);
     case HWC2::FunctionDescriptor::GetDisplayBrightnessSupport:
       return AsFP<HWC2_PFN_GET_DISPLAY_BRIGHTNESS_SUPPORT>(HWCSession::GetDisplayBrightnessSupport);
+    case HWC2::FunctionDescriptor::SetDisplayBrightness:
+      return AsFP<HWC2_PFN_SET_DISPLAY_BRIGHTNESS>(HWCSession::SetDisplayBrightness);
     default:
       DLOGD("Unknown/Unimplemented function descriptor: %d (%s)", int_descriptor,
             to_string(descriptor).c_str());
