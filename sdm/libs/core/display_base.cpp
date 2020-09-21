@@ -1306,7 +1306,12 @@ DisplayError DisplayBase::SetColorTransform(const uint32_t length, const double 
     return kErrorParameters;
   }
 
-  return color_mgr_->ColorMgrSetColorTransform(length, color_transform);
+  DisplayError error = color_mgr_->ColorMgrSetColorTransform(length, color_transform);
+  if (error) {
+    return error;
+  }
+  DisablePartialUpdateOneFrame();
+  return kErrorNone;
 }
 
 DisplayError DisplayBase::GetDefaultColorMode(std::string *color_mode) {
