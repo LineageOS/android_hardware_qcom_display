@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ef976219_653d633c",
+        "filename": "libcopybit/Android.mk",
+        "patchSetId": 2
+      },
+      "lineNbr": 13,
+      "author": {
+        "id": 18590
+      },
+      "writtenOn": "2020-09-21T00:56:11Z",
+      "side": 0,
+      "message": "why not just delete this whole file",
+      "revId": "2d33ccf676b2bcebc31e8b11c5b38f17b6de7942",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
