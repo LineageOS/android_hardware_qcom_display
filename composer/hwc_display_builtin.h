@@ -223,6 +223,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   int perf_hint_window_ = 0;
   int perf_hint_large_comp_cycle_ = 0;
   bool force_reset_validate_ = false;
+  bool disable_dyn_fps_ = false;
 };
 
 }  // namespace sdm
