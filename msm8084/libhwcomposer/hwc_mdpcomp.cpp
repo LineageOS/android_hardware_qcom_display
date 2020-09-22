@@ -1523,7 +1523,7 @@ bool MDPComp::allocSplitVGPipesfor4k2k(hwc_context_t *ctx, int index) {
 }
 //=============MDPCompNonSplit==================================================
 
-void MDPCompNonSplit::adjustForSourceSplit(hwc_context_t *ctx,
+void MDPCompNonSplit::adjustForSourceSplit(hwc_context_t __attribute__((unused)) *ctx,
         hwc_display_contents_1_t* list) {
     //If 4k2k Yuv layer split is possible,  and if
     //fbz is above 4k2k layer, increment fb zorder by 1
