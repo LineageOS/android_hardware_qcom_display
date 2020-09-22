@@ -32,7 +32,9 @@
 #include <QtiGrallocPriv.h>
 #include <errno.h>
 #include <gralloc_priv.h>
+#ifndef __QTI_NO_GRALLOC4__
 #include <gralloctypes/Gralloc4.h>
+#endif
 #include <log/log.h>
 #include <string.h>
 #include <sys/mman.h>
@@ -98,6 +100,7 @@ static int colorSpaceToColorMetadata(ColorSpace_t in, ColorMetaData *out) {
   return 0;
 }
 
+#ifndef __QTI_NO_GRALLOC4__
 static bool getGralloc4Array(MetaData_t *metadata, int32_t paramType) {
   switch (paramType) {
     case SET_VT_TIMESTAMP:
@@ -201,6 +204,15 @@ static void setGralloc4Array(MetaData_t *metadata, int32_t paramType, bool isSet
       ALOGE("paramType %d not supported in Gralloc4", paramType);
   }
 }
+#else
+static bool getGralloc4Array(MetaData_t *metadata, int32_t paramType) {
+  return true;
+}
+
+static void setGralloc4Array(MetaData_t *metadata, int32_t paramType, bool isSet) {
+}
+#endif
+
 
 unsigned long getMetaDataSize() {
     return static_cast<unsigned long>(ROUND_UP_PAGESIZE(sizeof(MetaData_t)));
