@@ -656,7 +656,11 @@ void CompManager::HandleSecureEvent(Handle display_ctx, SecureEvent secure_event
     resource_intf_->Perform(ResourceInterface::kCmdDisableRotatorOneFrame,
                             display_comp_ctx->display_resource_ctx);
   }
-  safe_mode_ = (secure_event == kSecureDisplayStart) ? true : false;
+  if (secure_event == kTUITransitionEnd) {
+    resource_intf_->Perform(ResourceInterface::kCmdResetLUT,
+                            display_comp_ctx->display_resource_ctx);
+  }
+  safe_mode_ = (secure_event == kTUITransitionStart) ? true : safe_mode_;
 }
 
 void CompManager::UpdateStrategyConstraints(bool is_primary, bool disabled) {
