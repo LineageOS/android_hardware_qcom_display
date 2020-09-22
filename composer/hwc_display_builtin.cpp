@@ -162,6 +162,10 @@ int HWCDisplayBuiltIn::Init() {
     }
   }
 
+  value = 0;
+  DebugHandler::Get()->GetProperty(DISABLE_DYNAMIC_FPS, &value);
+  disable_dyn_fps_ = (value == 1);
+
   uint32_t config_index = 0;
   GetActiveDisplayConfig(&config_index);
   DisplayConfigVariableInfo attr = {};
@@ -479,6 +483,15 @@ HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
       is_cmd_mode_ = fixed_info.is_cmdmode;
       if (is_cmd_mode_ != command_mode) {
         SetPartialUpdate(fixed_info);
+      }
+
+      // For video mode panel with dynamic fps, update the active mode index.
+      // This is needed to report the correct Vsync period when client queries
+      // using GetDisplayVsyncPeriod API.
+      if (!is_cmd_mode_ && !disable_dyn_fps_) {
+        hwc2_config_t active_config = hwc_config_map_.at(0);
+        GetActiveConfig(&active_config);
+        SetActiveConfigIndex(active_config);
       }
     }
   }
