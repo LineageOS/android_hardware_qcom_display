@@ -69,11 +69,28 @@ Return<void> DeviceImpl::registerClient(const hidl_string &client_name,
     return Void();
   }
 
+  if (!callback) {
+    ALOGW("IDisplayConfigCallback provided is null");
+  }
+
   uint64_t client_handle = static_cast<uint64_t>(client_id_++);
   std::shared_ptr<DeviceClientContext> device_client(new DeviceClientContext(callback));
   if (callback) {
     callback->linkToDeath(this, client_handle);
   }
+
+  if (!intf_) {
+    ALOGW("ConfigInterface is invalid");
+    _hidl_cb(error, 0);
+    return Void();
+  }
+
+  if (!device_client) {
+    ALOGW("Failed to initialize device client:%s", client_name.c_str());
+    _hidl_cb(error, 0);
+    return Void();
+  }
+
   ConfigInterface *intf = nullptr;
   error = intf_->RegisterClientContext(device_client, &intf);
 

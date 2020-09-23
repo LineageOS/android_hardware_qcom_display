@@ -32,7 +32,7 @@
 
 #include <vendor/display/config/2.0/IDisplayConfig.h>
 #include <hidl/HidlSupport.h>
-
+#include <log/log.h>
 #include <config/device_interface.h>
 #include <map>
 #include <utility>
