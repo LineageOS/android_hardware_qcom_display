@@ -31,6 +31,9 @@
 #define __GR_UTILS_H__
 
 #include <android/hardware/graphics/common/1.2/types.h>
+
+#include <limits>
+
 #include "gralloc_priv.h"
 #include "qdMetaData.h"
 
@@ -71,6 +74,11 @@ struct GrallocProperties {
 
 template <class Type1, class Type2>
 inline Type1 ALIGN(Type1 x, Type2 align) {
+  Type1 max_val = std::numeric_limits<Type1>::max();
+  if (x > (max_val - (Type1)align)) {
+    return x;
+  }
+
   return (Type1)((x + (Type1)align - 1) & ~((Type1)align - 1));
 }
 
