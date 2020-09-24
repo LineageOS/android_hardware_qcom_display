@@ -387,7 +387,7 @@ void DRMDppsManagerImp::CommitDppsFeatures(drmModeAtomicReq *req, const DRMDispl
           if (ret == -EALREADY) {
             DRM_LOGI("Duplicated request to set event 0x%x, object_id %u, object_type 0x%x, enable %d",
                       event_req.event, event_req.object_id, info.object_type, info.enable);
-          } else if (ret == -ENOENT) {
+          } else if (ret == -ENOENT || ret == -ENODEV) {
             DRM_LOGW("Event 0x%x, object_id %u, object_type 0x%x, enable %d, ret %d",
                       event_req.event, event_req.object_id, info.object_type, info.enable, ret);
           } else {
@@ -395,10 +395,10 @@ void DRMDppsManagerImp::CommitDppsFeatures(drmModeAtomicReq *req, const DRMDispl
                       event_req.event, event_req.object_id, info.object_type, info.enable, ret);
           }
         }
-        if (ret != -ENODEV)
-          it = dpps_dirty_event_.erase(it);
-        else
+        if (ret == -ENODEV || ret == -ENOENT)
           it++;
+        else
+          it = dpps_dirty_event_.erase(it);
       } else {
         it++;
       }
