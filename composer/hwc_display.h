@@ -387,6 +387,9 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::PowerMode GetPendingPowerMode() {
     return pending_power_mode_;
   }
+  virtual void SetPendingPowerMode(HWC2::PowerMode mode) {
+    pending_power_mode_ = mode;
+  }
   virtual void ClearPendingPowerMode() {
     pending_power_mode_ = current_power_mode_;
   }

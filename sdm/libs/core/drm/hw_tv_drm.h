@@ -50,6 +50,7 @@ class HWTVDRM : public HWDeviceDRM {
   virtual void PopulateHWPanelInfo();
   virtual DisplayError GetDefaultConfig(uint32_t *default_config);
   virtual DisplayError PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
+  virtual DisplayError Deinit();
 
  private:
   DisplayError UpdateHDRMetaData(HWLayers *hw_layers);
