@@ -37,7 +37,6 @@ PRODUCT_PACKAGES += \
     init.qti.display_boot.sh \
     init.qti.display_boot.rc \
     modetest \
-    vndservicemanager \
     libmemutils
 
 #QDCM calibration xml file for 2k panel
