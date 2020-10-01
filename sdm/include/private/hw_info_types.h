@@ -310,6 +310,7 @@ struct HWResourceInfo {
   uint64_t max_bandwidth_high = 0;
   uint32_t max_mixer_width = 2048;
   uint32_t max_pipe_width = 2048;
+  uint32_t max_pipe_width_dma = 2048;
   uint32_t max_scaler_pipe_width = 2560;
   uint32_t max_rotation_pipe_width = 1088;
   uint32_t max_cursor_size = 0;
