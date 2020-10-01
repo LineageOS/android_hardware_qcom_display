@@ -108,7 +108,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_ui_3d_tonemap=1
 
 #Set WCG properties
-ifeq ($(TARGET_BOARD_PLATFORM), sm8150)
+ifeq ($(TARGET_BOARD_PLATFORM), msmnile)
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.has_wide_color_display=true
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.has_HDR_display=true
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.use_color_management=true
