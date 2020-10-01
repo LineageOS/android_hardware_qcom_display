@@ -43,6 +43,8 @@ int HWCDisplayVirtualGPU::Init() {
   // Calls into SDM need to be dropped. Create Null Display interface.
   display_intf_ = new DisplayNull();
 
+  disable_animation_ = Debug::IsExtAnimDisabled();
+
   return HWCDisplayVirtual::Init();
 }
 
@@ -78,7 +80,7 @@ HWC2::Error HWCDisplayVirtualGPU::Validate(uint32_t *out_num_types, uint32_t *ou
   layer_requests_.clear();
 
   // Mark all layers to GPU if there is no need to bypass.
-  bool needs_gpu_bypass = NeedsGPUBypass();
+  bool needs_gpu_bypass = NeedsGPUBypass() || FreezeScreen();
   for (auto hwc_layer : layer_set_) {
     auto layer = hwc_layer->GetSDMLayer();
     layer->composition = needs_gpu_bypass ? kCompositionSDE : kCompositionGPU;
@@ -218,6 +220,26 @@ void HWCDisplayVirtualGPU::OnTask(const ColorConvertTaskCode &task_code,
       }
       break;
   }
+}
+
+bool HWCDisplayVirtualGPU::FreezeScreen() {
+  if (!disable_animation_) {
+    return false;
+  }
+
+  bool freeze_screen = false;
+  if (animating_ && !animation_in_progress_) {
+    // Start of animation. GPU comp is needed.
+    animation_in_progress_ = true;
+  } else if (!animating_ && animation_in_progress_) {
+    // End of animation. Start composing.
+    animation_in_progress_ = false;
+  } else if (animating_ && animation_in_progress_) {
+    // Animation in progress...
+    freeze_screen = true;
+  }
+
+  return freeze_screen;
 }
 
 }  // namespace sdm
