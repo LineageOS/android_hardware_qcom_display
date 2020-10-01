@@ -502,9 +502,32 @@ int HWCSession::SetCameraLaunchStatus(uint32_t on) {
     return -EINVAL;
   }
 
-  // trigger invalidate to apply new bw caps.
-  callbacks_.Refresh(0);
+  hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
+  if (active_builtin_disp_id < HWCCallbacks::kNumRealDisplays) {
+    std::vector<DisplayMapInfo> map_info = {map_info_primary_};
+    std::copy(map_info_builtin_.begin(), map_info_builtin_.end(), std::back_inserter(map_info));
 
+    for (auto &info : map_info) {
+      hwc2_display_t target_display = info.client_id;
+      {
+        SCOPE_LOCK(power_state_[target_display]);
+        if (power_state_transition_[target_display]) {
+          // Route all interactions with client to dummy display.
+          target_display = map_hwc_display_.find(target_display)->second;
+        }
+      }
+      {
+        SEQUENCE_WAIT_SCOPE_LOCK(locker_[target_display]);
+        auto &hwc_display = hwc_display_[target_display];
+        if (hwc_display && hwc_display->GetCurrentPowerMode() != HWC2::PowerMode::Off) {
+          hwc_display->ResetValidation();
+        }
+      }
+    }
+
+    // trigger invalidate to apply new bw caps.
+    callbacks_.Refresh(active_builtin_disp_id);
+  }
   return 0;
 }
 
