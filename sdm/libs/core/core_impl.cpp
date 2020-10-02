@@ -65,7 +65,13 @@ DisplayError CoreImpl::Init() {
       return error;
     }
   } else {
+#ifdef TRUSTED_VM
+    // Any library linked to libsdmextension is not present for LE, LE wont be able to load the
+    // libsdmextension library due to undefined reference. To avoid it mark it as fatal on LE
+    DLOGE("Unable to load = %s, error = %s", EXTENSION_LIBRARY_NAME, extension_lib_.Error());
+#else
     DLOGW("Unable to load = %s, error = %s", EXTENSION_LIBRARY_NAME, extension_lib_.Error());
+#endif
   }
 
   error = HWInfoInterface::Create(&hw_info_intf_);
