@@ -87,7 +87,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_excl_rect=0 \
     vendor.display.disable_excl_rect_partial_fb=1 \
     vendor.display.comp_mask=0 \
-    vendor.display.enable_posted_start_dyn=2 \
     vendor.display.enable_optimize_refresh=1 \
     vendor.display.use_smooth_motion=1 \
     vendor.display.enable_early_wakeup=1 \
