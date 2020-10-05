@@ -1058,12 +1058,20 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
     return HWC2_ERROR_BAD_PARAMETER;
   }
 
+  auto mode = static_cast<HWC2::PowerMode>(int_mode);
+
+  // When secure session going on primary, if power request comes on second built-in, cache it and
+  // process once secure session ends.
+  bool is_builtin = (hwc_display_[display]->GetDisplayClass() == DISPLAY_CLASS_BUILTIN);
+  if (secure_session_active_ && is_builtin) {
+    hwc_display_[display]->SetPendingPowerMode(mode);
+    return HWC2_ERROR_NONE;
+  }
+
   if (pending_power_mode_[display]) {
     DLOGW("Set power mode is not allowed during secure display session");
     return HWC2_ERROR_UNSUPPORTED;
   }
-
-  auto mode = static_cast<HWC2::PowerMode>(int_mode);
 
   //  all displays support on/off. Check for doze modes
   int support = 0;
@@ -1133,13 +1141,13 @@ int32_t HWCSession::GetDozeSupport(hwc2_display_t display, int32_t *out_support)
 
   *out_support = 0;
 
-  if (display != qdutils::DISPLAY_PRIMARY) {
-    return HWC2_ERROR_NONE;
-  }
-
   SCOPE_LOCK(locker_[display]);
   if (!hwc_display_[display]) {
     DLOGE("Display %d is not created yet.", INT32(display));
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  if (hwc_display_[display]->GetDisplayClass() != DISPLAY_CLASS_BUILTIN) {
     return HWC2_ERROR_NONE;
   }
 
@@ -3470,9 +3478,25 @@ void HWCSession::NotifyClientStatus(bool connected) {
 
 void HWCSession::WaitForResources(bool wait_for_resources, hwc2_display_t active_builtin_id,
                                   hwc2_display_t display_id) {
-  {
-    SEQUENCE_WAIT_SCOPE_LOCK(locker_[active_builtin_id]);
-    hwc_display_[active_builtin_id]->ResetValidation();
+  std::vector<DisplayMapInfo> map_info = {map_info_primary_};
+  std::copy(map_info_builtin_.begin(), map_info_builtin_.end(), std::back_inserter(map_info));
+
+  for (auto &info : map_info) {
+    hwc2_display_t target_display = info.client_id;
+    {
+      SCOPE_LOCK(power_state_[target_display]);
+      if (power_state_transition_[target_display]) {
+        // Route all interactions with client to dummy display.
+        target_display = map_hwc_display_.find(target_display)->second;
+      }
+    }
+    {
+      SEQUENCE_WAIT_SCOPE_LOCK(locker_[target_display]);
+      auto &hwc_display = hwc_display_[target_display];
+      if (hwc_display && hwc_display->GetCurrentPowerMode() != HWC2::PowerMode::Off) {
+        hwc_display->ResetValidation();
+      }
+    }
   }
 
   if (wait_for_resources) {

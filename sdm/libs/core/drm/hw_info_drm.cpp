@@ -839,7 +839,7 @@ DisplayError HWInfoDRM::GetDisplaysStatus(HWDisplaysInfo *hw_displays_info) {
         hw_info.display_type = kVirtual;
         break;
       default:
-        DLOGE("Unknown display type = %d on connector id %u.", iter.second.type,
+        DLOGW("Unknown display type = %d on connector id %u.", iter.second.type,
               hw_info.display_id);
         break;
     }

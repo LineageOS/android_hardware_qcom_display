@@ -1769,7 +1769,8 @@ void GetRGBPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int3
   if (HasAlphaComponent(format)) {
     plane_info->component = (PlaneComponent)(plane_info->component | PLANE_COMPONENT_A);
   }
-  plane_info->size = GetSize(info, width, height);
+  GetBufferSizeAndDimensions(info, &(plane_info->size), (unsigned int *) &width,
+                             (unsigned int *) &height);
   plane_info->step = GetBpp(format);
   plane_info->offset = GetRgbMetaSize(format, width, height, usage);
   plane_info->h_subsampling = 0;
