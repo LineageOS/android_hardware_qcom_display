@@ -633,8 +633,15 @@ DisplayError HWPeripheralDRM::PowerOn(const HWQosData &qos_data,
 DisplayError HWPeripheralDRM::PowerOff(bool teardown) {
   DTRACE_SCOPED();
   SetVMReqState();
+  DisplayError err = kErrorNone;
+  if (secure_display_active_) {
+    err = Flush(NULL);
+    if (err != kErrorNone) {
+      return err;
+    }
+  }
 
-  DisplayError err = HWDeviceDRM::PowerOff(teardown);
+  err = HWDeviceDRM::PowerOff(teardown);
   if (err != kErrorNone) {
     return err;
   }
