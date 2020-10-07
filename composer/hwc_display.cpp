@@ -2818,6 +2818,11 @@ HWC2::Error HWCDisplay::SubmitDisplayConfig(hwc2_config_t config) {
   SetActiveConfigIndex(config);
   DLOGI("Active configuration changed to: %d", config);
 
+  // Cache refresh rate set by client.
+  DisplayConfigVariableInfo info = {};
+  GetDisplayAttributesForConfig(INT(config), &info);
+  active_refresh_rate_ = info.fps;
+
   return HWC2::Error::None;
 }
 
