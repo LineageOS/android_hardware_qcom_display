@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, 2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, 2019-2020 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -33,6 +33,7 @@
 #define HWC2_INCLUDE_STRINGIFICATION
 #define HWC2_USE_CPP11
 #include <hardware/hwcomposer2.h>
+#include <mutex>
 #undef HWC2_INCLUDE_STRINGIFICATION
 #undef HWC2_USE_CPP11
 
@@ -83,6 +84,14 @@ class HWCCallbacks {
   HWC2_PFN_VSYNC_2_4 vsync_2_4_ = nullptr;
   HWC2_PFN_VSYNC_PERIOD_TIMING_CHANGED vsync_period_timing_changed_ = nullptr;
   HWC2_PFN_SEAMLESS_POSSIBLE seamless_possible_ = nullptr;
+
+  std::mutex hotplug_mutex_;
+  std::mutex refresh_mutex_;
+  std::mutex vsync_mutex_;
+  std::mutex vsync_2_4_mutex_;
+  std::mutex vsync_period_timing_changed_mutex_;
+  std::mutex seamless_possible_mutex_;
+
   hwc2_display_t vsync_source_ = HWC_DISPLAY_PRIMARY;   // hw vsync is active on this display
   std::bitset<kNumDisplays> pending_refresh_;         // Displays waiting to get refreshed
 };
