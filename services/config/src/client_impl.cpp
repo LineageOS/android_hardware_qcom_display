@@ -140,6 +140,10 @@ int ClientImpl::GetConfigCount(DisplayType dpy, uint32_t *count) {
 }
 
 int ClientImpl::GetActiveConfig(DisplayType dpy, uint32_t *config) {
+  if (!config) {
+    return -EINVAL;
+  }
+
   ByteStream input_params;
   input_params.setToExternal(reinterpret_cast<uint8_t*>(&dpy), sizeof(DisplayType));
   const uint32_t *output;
@@ -150,11 +154,15 @@ int ClientImpl::GetActiveConfig(DisplayType dpy, uint32_t *config) {
     output_params = params;
   };
 
-  display_config_->perform(client_handle_, kGetActiveConfig, input_params, {}, hidl_cb);
+  if (display_config_) {
+    display_config_->perform(client_handle_, kGetActiveConfig, input_params, {}, hidl_cb);
+  }
 
-  const uint8_t *data = output_params.data();
-  output = reinterpret_cast<const uint32_t*>(data);
-  *config = *output;
+  if (!error) {
+    const uint8_t *data = output_params.data();
+    output = reinterpret_cast<const uint32_t*>(data);
+    *config = *output;
+  }
 
   return error;
 }

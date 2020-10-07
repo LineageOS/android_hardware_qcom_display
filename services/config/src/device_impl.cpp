@@ -61,6 +61,7 @@ int DeviceImpl::CreateInstance(ClientContext *intf) {
 Return<void> DeviceImpl::registerClient(const hidl_string &client_name,
                                         const sp<IDisplayConfigCallback>& callback,
                                         registerClient_cb _hidl_cb) {
+  ALOGI("Register client:%s", client_name.c_str());
   int32_t error = 0;
   std::string client_name_str = client_name.c_str();
   if (client_name_str.empty()) {
