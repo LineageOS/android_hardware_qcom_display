@@ -406,14 +406,23 @@ int HWCSession::DisplayConfigImpl::ControlPartialUpdate(DispType dpy, bool enabl
 }
 
 int HWCSession::ToggleScreenUpdate(bool on) {
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
+  hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
+
+  if (active_builtin_disp_id >= HWCCallbacks::kNumDisplays) {
+    DLOGE("No active displays");
+    return -EINVAL;
+  }
+  SEQUENCE_WAIT_SCOPE_LOCK(locker_[active_builtin_disp_id]);
 
   int error = -EINVAL;
-  if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
-    error = hwc_display_[HWC_DISPLAY_PRIMARY]->ToggleScreenUpdates(on);
+  if (hwc_display_[active_builtin_disp_id]) {
+    error = hwc_display_[active_builtin_disp_id]->ToggleScreenUpdates(on);
     if (error) {
-      DLOGE("Failed to toggle screen updates = %d. Error = %d", on, error);
+      DLOGE("Failed to toggle screen updates = %d. Display = %d, Error = %d", on,
+          active_builtin_disp_id, error);
     }
+  } else {
+    DLOGW("Display = %d is not connected.", active_builtin_disp_id);
   }
 
   return error;

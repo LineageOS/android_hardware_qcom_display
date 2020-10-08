@@ -390,6 +390,12 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
 
   deferred_config_.UpdateDeferCount();
 
+  if (needs_validate_on_pu_enable_) {
+    // After PU was disabled for one frame, need to revalidate when enabled.
+    event_handler_->HandleEvent(kInvalidateDisplay);
+    needs_validate_on_pu_enable_ = false;
+  }
+
   ReconfigureDisplay();
 
   if (deferred_config_.CanApplyDeferredState()) {
@@ -762,6 +768,7 @@ DisplayError DisplayBuiltIn::ControlPartialUpdate(bool enable, uint32_t *pending
 DisplayError DisplayBuiltIn::DisablePartialUpdateOneFrame() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   disable_pu_one_frame_ = true;
+  needs_validate_on_pu_enable_ = true;
 
   return kErrorNone;
 }
@@ -805,7 +812,7 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
       enable = *(reinterpret_cast<bool *>(payload));
       dpps_info_.disable_pu_ = !enable;
       ControlPartialUpdate(enable, &pending);
-      event_handler_->HandleEvent(kInvalidateDisplay);
+      event_handler_->HandleEvent(kSyncInvalidateDisplay);
       event_handler_->Refresh();
       {
          lock_guard<recursive_mutex> obj(recursive_mutex_);
@@ -1216,8 +1223,11 @@ void DppsInfo::DppsNotifyOps(enum DppsNotifyOps op, void *payload, size_t size) 
     DLOGE("DppsNotifyOps op %d error %d", op, ret);
 }
 
-DisplayError DisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event) {
+DisplayError DisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (!needs_refresh) {
+    return kErrorParameters;
+  }
 
   if (!active_ && (pending_power_state_ == kPowerStateNone)) {
     DLOGW("Cannot handle secure event when display is not active");
@@ -1231,30 +1241,35 @@ DisplayError DisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event) {
   comp_manager_->HandleSecureEvent(display_comp_ctx_, secure_event);
   secure_event_ = secure_event;
 
-  if (vsync_enable_ && secure_event == kTUITransitionStart) {
-    err = SetVSyncState(false /* enable */);
-    if (err != kErrorNone) {
-      return err;
+  if (secure_event == kTUITransitionStart) {
+    if (vsync_enable_) {
+      err = SetVSyncState(false /* enable */);
+      if (err != kErrorNone) {
+        return err;
+      }
+      vsync_enable_pending_ = true;
     }
-    vsync_enable_pending_ = true;
+    *needs_refresh = (hw_panel_info_.mode == kModeCommand);
   } else if (secure_event == kTUITransitionEnd) {
     err = HandlePendingVSyncEnable(nullptr);
     if (err != kErrorNone) {
       return err;
     }
-    DisplayState state = kStateOff;
-    if (GetPendingDisplayState(&state) == kErrorNone) {
-      // Handle PowerOn and Doze during the next commit
-      if (state == kStateOn || state == kStateDoze) {
+    DisplayState pending_state;
+    if (GetPendingDisplayState(&pending_state) == kErrorNone) {
+      DLOGI("pending_state %d", pending_state);
+      if (pending_state == kStateOff) {
+        shared_ptr<Fence> release_fence = nullptr;
+        DisplayError err = SetDisplayState(pending_state, false /* teardown */, &release_fence);
+        if (err != kErrorNone) {
+          DLOGE("SetDisplay state %d failed for %d err %d", pending_state, display_id_, err);
+          return err;
+        }
+        *needs_refresh = false;
         return kErrorNone;
       }
-      shared_ptr<Fence> release_fence = nullptr;
-      err = SetDisplayState(state, false /* teardown */, &release_fence);
-      if (err != kErrorNone) {
-        DLOGE("SetDisplay state %d failed for %d err %d", state, display_id_, err);
-        return err;
-      }
     }
+    *needs_refresh = (hw_panel_info_.mode == kModeCommand);
   }
   return kErrorNone;
 }

@@ -140,7 +140,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError GetClientTargetSupport(uint32_t width, uint32_t height,
                                               LayerBufferFormat format,
                                               const ColorMetaData &color_metadata);
-  virtual DisplayError HandleSecureEvent(SecureEvent secure_event) {
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) {
     return kErrorNotSupported;
   }
   virtual DisplayError SetDisplayDppsAdROI(void *payload) {

@@ -8,7 +8,7 @@ PRODUCT_PACKAGES += \
     android.hardware.memtrack@1.0-service \
     lights.$(TARGET_BOARD_PLATFORM) \
     hwcomposer.$(TARGET_BOARD_PLATFORM) \
-    memtrack.qcom \
+    memtrack.default \
     libsdmcore \
     libsdmutils \
     libqdMetaData \
@@ -37,7 +37,6 @@ PRODUCT_PACKAGES += \
     init.qti.display_boot.sh \
     init.qti.display_boot.rc \
     modetest \
-    vndservicemanager \
     libmemutils
 
 #QDCM calibration xml file for 2k panel
@@ -88,7 +87,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_excl_rect=0 \
     vendor.display.disable_excl_rect_partial_fb=1 \
     vendor.display.comp_mask=0 \
-    vendor.display.enable_posted_start_dyn=2 \
     vendor.display.enable_optimize_refresh=1 \
     vendor.display.use_smooth_motion=1 \
     vendor.display.enable_early_wakeup=1 \
@@ -137,8 +135,9 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.wcg_composition_dataspa
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.protected_contents=true
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.use_content_detection_for_refresh_rate=true
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.set_touch_timer_ms=200
-PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.set_idle_timer_ms=80
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.force_hwc_copy_for_virtual_displays=true
+PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.max_frame_buffer_acquired_buffers=3
+PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.max_virtual_display_dimension=4096
 
 ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
 # Recovery is enabled, logging is enabled
@@ -152,16 +151,12 @@ endif
 
 ifeq ($(TARGET_USES_QMAA),true)
     ifeq ($(TARGET_USES_QMAA_OVERRIDE_DISPLAY),true)
-        PRODUCT_PROPERTY_OVERRIDES += \
-            vendor.display.enable_null_display=0
         #Modules that shouldn't be enabled in QMAA go here
         PRODUCT_PACKAGES += libdrmutils
         PRODUCT_PACKAGES += libsdedrm
         PRODUCT_PACKAGES += libgpu_tonemapper
     else
     TARGET_IS_HEADLESS := true
-    PRODUCT_PROPERTY_OVERRIDES += \
-        vendor.display.enable_null_display=1
     endif
 endif
 
@@ -169,17 +164,19 @@ endif
 SOONG_CONFIG_NAMESPACES += qtidisplay
 
 # Soong Keys
-SOONG_CONFIG_qtidisplay := drmpp headless llvmsa gralloc4
+SOONG_CONFIG_qtidisplay := drmpp headless llvmsa gralloc4 default
 
 # Soong Values
 SOONG_CONFIG_qtidisplay_drmpp := true
 SOONG_CONFIG_qtidisplay_headless := false
 SOONG_CONFIG_qtidisplay_llvmsa := false
 SOONG_CONFIG_qtidisplay_gralloc4 := true
+SOONG_CONFIG_qtidisplay_default := true
 
 ifeq ($(TARGET_IS_HEADLESS), true)
     PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/qmaa
     SOONG_CONFIG_qtidisplay_headless := true
+    SOONG_CONFIG_qtidisplay_default := false
 else
     PRODUCT_SOONG_NAMESPACES += hardware/qcom/display
     PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/composer

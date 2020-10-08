@@ -401,6 +401,7 @@ void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
         name = "DMA";
         pipe_caps.type = kPipeTypeDMA;
         if (!hw_resource->num_dma_pipe) {
+          hw_resource->max_pipe_width_dma = pipe_obj.second.max_linewidth;
           PopulateSupportedFmts(kHWDMAPipe, pipe_obj.second, hw_resource);
           PopulatePipeBWCaps(pipe_obj.second, hw_resource);
         }

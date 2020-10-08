@@ -149,6 +149,11 @@ int HWCDisplayBuiltIn::Init() {
     DLOGI("Window rect : [%f %f %f %f]", window_rect_.left, window_rect_.top,
            window_rect_.right, window_rect_.bottom);
   }
+
+  HWCDebugHandler::Get()->GetProperty(PERF_HINT_WINDOW_PROP, &perf_hint_window_);
+  HWCDebugHandler::Get()->GetProperty(ENABLE_PERF_HINT_LARGE_COMP_CYCLE,
+                                      &perf_hint_large_comp_cycle_);
+
   return status;
 }
 
@@ -163,7 +168,7 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
 
   DTRACE_SCOPED();
 
-  if (display_paused_ || (!is_primary_ && active_secure_sessions_[kSecureDisplay])) {
+  if (display_paused_) {
     MarkLayersForGPUBypass();
     return status;
   }
@@ -247,6 +252,7 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
   }
 
   status = PrepareLayerStack(out_num_types, out_num_requests);
+  SetCpuPerfHintLargeCompCycle();
   pending_commit_ = true;
   return status;
 }
@@ -358,7 +364,7 @@ HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
 
   DTRACE_SCOPED();
 
-  if ((!is_primary_ && active_secure_sessions_[kSecureDisplay]) || display_paused_) {
+  if (display_paused_) {
     return status;
   } else {
     CacheAvrStatus();
@@ -719,7 +725,7 @@ void HWCDisplayBuiltIn::SetQDCMSolidFillInfo(bool enable, const LayerSolidFill &
 }
 
 void HWCDisplayBuiltIn::ToggleCPUHint(bool set) {
-  if (!cpu_hint_) {
+  if (!cpu_hint_ || !perf_hint_window_) {
     return;
   }
 
@@ -731,13 +737,16 @@ void HWCDisplayBuiltIn::ToggleCPUHint(bool set) {
 }
 
 int HWCDisplayBuiltIn::HandleSecureSession(const std::bitset<kSecureMax> &secure_sessions,
-                                           bool *power_on_pending) {
+                                           bool *power_on_pending, bool is_active_secure_display) {
   if (!power_on_pending) {
     return -EINVAL;
   }
 
-  if (!is_primary_) {
-    return HWCDisplay::HandleSecureSession(secure_sessions, power_on_pending);
+  if (!is_active_secure_display) {
+    // Do handling as done on non-primary displays.
+    DLOGI("Default handling for display %" PRIu64 " %d-%d", id_, sdm_id_, type_);
+    return HWCDisplay::HandleSecureSession(secure_sessions, power_on_pending,
+                                           is_active_secure_display);
   }
 
   if (current_power_mode_ != HWC2::PowerMode::On) {
@@ -747,23 +756,24 @@ int HWCDisplayBuiltIn::HandleSecureSession(const std::bitset<kSecureMax> &secure
   if (active_secure_sessions_[kSecureDisplay] != secure_sessions[kSecureDisplay]) {
     SecureEvent secure_event =
         secure_sessions.test(kSecureDisplay) ? kSecureDisplayStart : kSecureDisplayEnd;
-    DisplayError err = display_intf_->HandleSecureEvent(secure_event);
+    bool needs_refresh = false;
+    DisplayError err = display_intf_->HandleSecureEvent(secure_event, &needs_refresh);
     if (err != kErrorNone) {
       DLOGE("Set secure event failed");
       return err;
     }
 
-    DLOGI("SecureDisplay state changed from %d to %d for display %d-%d",
+    DLOGI("SecureDisplay state changed from %d to %d for display %" PRIu64 " %d-%d",
           active_secure_sessions_.test(kSecureDisplay), secure_sessions.test(kSecureDisplay),
-          id_, type_);
+          id_, sdm_id_, type_);
   }
   active_secure_sessions_ = secure_sessions;
   *power_on_pending = false;
   return 0;
 }
 
-DisplayError HWCDisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event) {
-  DisplayError err = display_intf_->HandleSecureEvent(secure_event);
+DisplayError HWCDisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) {
+  DisplayError err = display_intf_->HandleSecureEvent(secure_event, needs_refresh);
   if (err != kErrorNone) {
     DLOGE("Handle secure event failed");
     return err;
@@ -889,15 +899,11 @@ HWC2::Error HWCDisplayBuiltIn::SetFrameDumpConfig(uint32_t count, uint32_t bit_m
   }
 
   // Allocate and map output buffer
-  if (post_processed) {
-    // To dump post-processed (DSPP) output, use Panel resolution.
-    GetRealPanelResolution(&output_buffer_info_.buffer_config.width,
-                           &output_buffer_info_.buffer_config.height);
-  } else {
-    // To dump Layer Mixer output, use FrameBuffer resolution.
-    GetFrameBufferResolution(&output_buffer_info_.buffer_config.width,
-                             &output_buffer_info_.buffer_config.height);
-  }
+  GetRealPanelResolution(&output_buffer_info_.buffer_config.width,
+                         &output_buffer_info_.buffer_config.height);
+
+  DLOGV_IF(kTagQDCM, "CWB output buffer resolution: width:%d height:%d",
+           output_buffer_info_.buffer_config.width, output_buffer_info_.buffer_config.height);
 
   output_buffer_info_.buffer_config.format = HWCLayer::GetSDMFormat(format, 0);
   output_buffer_info_.buffer_config.buffer_count = 1;
@@ -1439,6 +1445,22 @@ int HWCDisplayBuiltIn::PostInit() {
   }
 
   return 0;
+}
+
+void HWCDisplayBuiltIn::SetCpuPerfHintLargeCompCycle() {
+  if (!cpu_hint_ || !perf_hint_large_comp_cycle_) {
+    DLOGV_IF(kTagResources, "cpu_hint_ not initialized or perty not set");
+    return;
+  }
+
+  for (auto hwc_layer : layer_set_) {
+    Layer *layer = hwc_layer->GetSDMLayer();
+    if (layer->composition == kCompositionGPU) {
+      DLOGV_IF(kTagResources, "Set perf hint for large comp cycle");
+      cpu_hint_->ReqHints(kPerfHintLargeCompCycle);
+      break;
+    }
+  }
 }
 
 }  // namespace sdm

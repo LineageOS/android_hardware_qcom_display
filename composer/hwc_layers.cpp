@@ -377,6 +377,7 @@ HWC2::Error HWCLayer::SetLayerCompositionType(HWC2::Composition type) {
     layer_->update_mask.set(kClientCompRequest);
   }
   client_requested_ = type;
+  client_requested_orig_ = type;
   switch (type) {
     case HWC2::Composition::Client:
       break;

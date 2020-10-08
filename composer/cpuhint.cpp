@@ -1,4 +1,4 @@
-/* Copyright (c) 2015, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015, 2020, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -49,7 +49,6 @@ DisplayError CPUHint::Init(HWCDebugHandler *debug_handler) {
   debug_handler->GetProperty(PERF_HINT_WINDOW_PROP, &pre_enable_window);
   if (pre_enable_window <= 0) {
     DLOGI("Invalid CPU Hint Pre-enable Window %d", pre_enable_window);
-    return kErrorNotSupported;
   }
 
   DLOGI("CPU Hint Pre-enable Window %d", pre_enable_window);
@@ -57,7 +56,8 @@ DisplayError CPUHint::Init(HWCDebugHandler *debug_handler) {
 
   if (vendor_ext_lib_.Open(path)) {
     if (!vendor_ext_lib_.Sym("perf_lock_acq", reinterpret_cast<void **>(&fn_lock_acquire_)) ||
-        !vendor_ext_lib_.Sym("perf_lock_rel", reinterpret_cast<void **>(&fn_lock_release_))) {
+        !vendor_ext_lib_.Sym("perf_lock_rel", reinterpret_cast<void **>(&fn_lock_release_)) ||
+        !vendor_ext_lib_.Sym("perf_hint", reinterpret_cast<void **>(&fn_perf_hint_))) {
       DLOGW("Failed to load symbols for Vendor Extension Library");
       return kErrorNotSupported;
     }
@@ -67,7 +67,7 @@ DisplayError CPUHint::Init(HWCDebugHandler *debug_handler) {
     DLOGW("Failed to open %s : %s", path, vendor_ext_lib_.Error());
   }
 
-  return kErrorNone;
+  return enabled_ ? kErrorNone : kErrorNotSupported;
 }
 
 void CPUHint::Set() {
@@ -103,6 +103,12 @@ void CPUHint::Reset() {
 
   fn_lock_release_(lock_handle_);
   lock_acquired_ = false;
+}
+
+void CPUHint::ReqHints(int hint) {
+  if(enabled_ && hint > 0) {
+    fn_perf_hint_(hint, NULL, 0, 0);
+  }
 }
 
 }  // namespace sdm

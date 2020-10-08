@@ -342,6 +342,10 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
     SetRCData(layer_stack);
   }
 
+  if (color_mgr_) {
+    color_mgr_->PrePrepare(&hw_layers_);
+  }
+
   if (color_mgr_ && color_mgr_->NeedsPartialUpdateDisable()) {
     DisablePartialUpdateOneFrame();
   }
@@ -810,16 +814,17 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     if (pending_power_state_ == kPowerStateNone) {
       active_ = active;
       state_ = state;
+      // Handle vsync pending on resume, Since the power on commit is synchronous we pass -1 as
+      // retire fence otherwise pass valid retire fence
+      if (state == kStateOn) {
+        HandlePendingVSyncEnable(nullptr /* retire fence */);
+      }
     }
     comp_manager_->SetDisplayState(display_comp_ctx_, state,
                             release_fence ? *release_fence : nullptr);
   }
-
-  // Handle vsync pending on resume, Since the power on commit is synchronous we pass -1 as retire
-  // fence otherwise pass valid retire fence
-  if (state_ == kStateOn) {
-    return HandlePendingVSyncEnable(nullptr /* retire fence */);
-  }
+  DLOGI("active %d-%d state %d-%d pending_power_state_ %d", active, active_, state, state_,
+        pending_power_state_);
 
   return error;
 }
@@ -1301,7 +1306,12 @@ DisplayError DisplayBase::SetColorTransform(const uint32_t length, const double 
     return kErrorParameters;
   }
 
-  return color_mgr_->ColorMgrSetColorTransform(length, color_transform);
+  DisplayError error = color_mgr_->ColorMgrSetColorTransform(length, color_transform);
+  if (error) {
+    return error;
+  }
+  DisablePartialUpdateOneFrame();
+  return kErrorNone;
 }
 
 DisplayError DisplayBase::GetDefaultColorMode(std::string *color_mode) {
@@ -1593,7 +1603,8 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
   uint32_t display_width = display_attributes_.x_pixels;
   uint32_t display_height = display_attributes_.y_pixels;
 
-  if (secure_event_ == kSecureDisplayStart || secure_event_ == kTUITransitionStart) {
+  if (secure_event_ == kSecureDisplayStart || secure_event_ == kTUITransitionStart ||
+      (hw_resource_info_.has_concurrent_writeback && layer_stack->output_buffer)) {
     *new_mixer_width = display_width;
     *new_mixer_height = display_height;
     return ((*new_mixer_width != mixer_width) || (*new_mixer_height != mixer_height));

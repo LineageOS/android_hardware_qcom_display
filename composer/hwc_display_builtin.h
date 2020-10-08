@@ -95,8 +95,8 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual HWC2::Error RestoreColorTransform();
   virtual int Perform(uint32_t operation, ...);
   virtual int HandleSecureSession(const std::bitset<kSecureMax> &secure_session,
-                                  bool *power_on_pending);
-  virtual DisplayError HandleSecureEvent(SecureEvent secure_event);
+                                  bool *power_on_pending, bool is_active_secure_display);
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh);
   virtual void SetIdleTimeoutMs(uint32_t timeout_ms);
   virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
                                          int32_t format, bool post_processed);
@@ -172,11 +172,13 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   bool AllocateStitchBuffer();
   void CacheAvrStatus();
   void PostCommitStitchLayers();
+  void SetCpuPerfHintLargeCompCycle();
 
   // SyncTask methods.
   void OnTask(const LayerStitchTaskCode &task_code,
               SyncTask<LayerStitchTaskCode>::TaskContext *task_context);
 
+  const int kPerfHintLargeCompCycle = 0x00001097;
   BufferAllocator *buffer_allocator_ = nullptr;
   CPUHint *cpu_hint_ = nullptr;
   CWBClient cwb_client_ = kCWBClientNone;
@@ -213,6 +215,8 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   std::mutex sampling_mutex;
   bool api_sampling_vote = false;
   bool vndservice_sampling_vote = false;
+  int perf_hint_window_ = 0;
+  int perf_hint_large_comp_cycle_ = 0;
 };
 
 }  // namespace sdm

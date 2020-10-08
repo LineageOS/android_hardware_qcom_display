@@ -29,19 +29,35 @@
 #
 
 target=`getprop ro.board.platform`
+if [ -f /sys/devices/soc0/soc_id ]; then
+    soc_hwid=`cat /sys/devices/soc0/soc_id`
+else
+    soc_hwid=`cat /sys/devices/system/soc/soc0/id`
+fi
 
 case "$target" in
     "lahaina")
-    # Set property for lahaina
-    setprop vendor.display.target.version 1
-    ;;
-    "shima")
-    # Set property for shima
-    setprop vendor.display.target.version 2
+    #Set property to differentiate Lahaina & Shima
+    #SOC ID for Lahaina is 415, Lahaina P is 439, Lahaina-ATP is 456
+    case "$soc_hwid" in
+        415|439|456)
+        # Set property for lahaina
+        setprop vendor.display.target.version 1
+        setprop vendor.display.enable_posted_start_dyn 2
+        ;;
+        450)
+        # Set property for shima
+        setprop vendor.display.target.version 2
+        setprop vendor.display.enable_perf_hint_large_comp_cycle 1
+        setprop vendor.display.enable_posted_start_dyn 1
+        ;;
+    esac
     ;;
     "holi")
     # Set property for holi
     setprop vendor.display.disable_offline_rotator 0
     setprop vendor.display.disable_rotator_ubwc 1
+    setprop vendor.display.enable_perf_hint_large_comp_cycle 1
+    setprop vendor.display.enable_posted_start_dyn 1
     ;;
 esac

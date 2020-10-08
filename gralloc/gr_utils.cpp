@@ -205,7 +205,11 @@ uint32_t GetBppForUncompressedRGB(int format) {
     case HAL_PIXEL_FORMAT_BGR_565:
     case HAL_PIXEL_FORMAT_RGBA_5551:
     case HAL_PIXEL_FORMAT_RGBA_4444:
+    case HAL_PIXEL_FORMAT_RG_88:
       bpp = 2;
+      break;
+    case HAL_PIXEL_FORMAT_R_8:
+      bpp = 1;
       break;
     default:
       ALOGE("Error : %s New format request = 0x%x", __FUNCTION__, format);
@@ -302,6 +306,7 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
   int width = info.width;
   int height = info.height;
   uint64_t usage = info.usage;
+  unsigned int y_plane, uv_plane;
 
   if (!IsGPUFlagSupported(usage)) {
     ALOGE("Unsupported GPU usage flags present 0x%" PRIx64, usage);
@@ -395,6 +400,13 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
         break;
       case HAL_PIXEL_FORMAT_NV12_HEIF:
         size = MMM_COLOR_FMT_BUFFER_SIZE(MMM_COLOR_FMT_NV12_512, width, height);
+        break;
+#else
+      case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
+      case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
+        y_plane = ALIGN(width, 512) * ALIGN(height, 512);
+        uv_plane = ALIGN(width, 512) * ALIGN(((height+1)>>1), 256);
+        size = y_plane + uv_plane;
         break;
 #endif
       case HAL_PIXEL_FORMAT_NV21_ZSL:
@@ -1152,6 +1164,12 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
     case HAL_PIXEL_FORMAT_NV12_HEIF:
       aligned_w = INT(MMM_COLOR_FMT_Y_STRIDE(MMM_COLOR_FMT_NV12_512, width));
       aligned_h = INT(MMM_COLOR_FMT_Y_SCANLINES(MMM_COLOR_FMT_NV12_512, height));
+      break;
+#else
+    case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
+    case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
+      aligned_w = ALIGN(width, 512);
+      aligned_h = ALIGN(height, 512);
       break;
 #endif
     case HAL_PIXEL_FORMAT_NV21_ZSL:

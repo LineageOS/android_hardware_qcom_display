@@ -186,7 +186,6 @@ void DRMPanelFeatureMgr::ParseDsppCapabilities(uint32_t blob_id, std::vector<int
   fmt_str[blob->length] = '\0';
   std::stringstream stream(fmt_str);
   std::string line = {};
-  std::string val = {};
   // Search for panel feature property pattern. Which is defined as rc0=1, rc1=1
   const std::regex exp(str + "(\\d+)=1");
   std::smatch sm;
@@ -302,7 +301,7 @@ void DRMPanelFeatureMgr::GetPanelFeatureInfo(DRMPanelFeatureInfo *info) {
               reinterpret_cast<std::vector<int> *> (info->prop_ptr), &(info->prop_size), "rc");
     } else if (drm_prop_type_map_[info->prop_id] == DRMPropType::kPropBlob) {
       drmModePropertyBlobRes *blob = drmModeGetPropertyBlob(dev_fd_, props->prop_values[j]);
-      if (!blob) {
+      if (!blob || !blob->data || !blob->length) {
         return;
       }
       uint8_t *src_begin = reinterpret_cast<uint8_t *> (blob->data);

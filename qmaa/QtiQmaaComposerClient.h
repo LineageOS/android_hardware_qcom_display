@@ -404,6 +404,7 @@ class QtiComposerClient : public IComposerClient {
   sp<composer_V2_1::IComposerCallback> callback_ = nullptr;
   sp<composer_V2_4::IComposerCallback> callback24_ = nullptr;
   bool mUseCallback24_ = false;
+  uint32_t layer_count_ = 0;
   std::mutex mCommandMutex;
   // 64KiB minus a small space for metadata such as read/write pointers */
   static constexpr size_t kWriterInitialSize = 64 * 1024 / sizeof(uint32_t) - 16;

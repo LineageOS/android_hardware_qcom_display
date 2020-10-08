@@ -57,7 +57,10 @@ int HWCBufferSyncHandler::SyncWait(int fd, int timeout) {
     if (errno == ETIME) {
       error = -ETIME;
     }
-    DLOGW("sync_wait fd = %d, timeout = %d ms, err = %d : %s", fd, timeout, errno, strerror(errno));
+    if (timeout != 0) {
+      DLOGW("sync_wait fd = %d, timeout = %d ms, err = %d : %s", fd, timeout, errno,
+            strerror(errno));
+    }
     return error;
   }
 
@@ -102,18 +105,6 @@ void HWCBufferSyncHandler::GetSyncInfo(int fd, std::ostringstream *os) {
     *os << ", obj_name: " << fence_info[i].obj_name;
     *os << ", ts: " << fence_info[i].timestamp_ns;
   }
-}
-
-int HWCBufferSyncHandler::SyncWait(int fd) {
-  // Deprecated.
-  assert(false);
-  return -EINVAL;
-}
-
-bool HWCBufferSyncHandler::IsSyncSignaled(int fd) {
-  // Deprecated.
-  assert(false);
-  return false;
 }
 
 }  // namespace sdm

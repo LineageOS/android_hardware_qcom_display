@@ -10,10 +10,12 @@ soong_config_module_type {
         "headless",
         "llvmsa",
         "gralloc4",
+        "default",
     ],
     properties: [
         "cflags",
         "srcs",
+        "header_libs",
     ],
 }
 
@@ -35,7 +37,7 @@ qtidisplay_cc_defaults {
             cflags: ["-DPP_DRM_ENABLE"],
         },
         headless: {
-            cflags: ["-DTARGET_HEADLESS"],
+            cflags: ["-DTARGET_HEADLESS", "-DQMAA"],
         },
         llvmsa: {
             cflags: [
@@ -52,7 +54,14 @@ qtidisplay_cc_defaults {
 qtidisplay_cc_defaults {
     name: "qtidisplay_defaults",
     defaults: ["qtidisplay_common_defaults"],
-    header_libs: ["display_headers"],
+    soong_config_variables: {
+        default: {
+            header_libs: ["display_headers", "qti_kernel_headers"],
+        },
+        headless: {
+            header_libs: ["display_headers"],
+        },
+    },
 }
 
 qtidisplay_cc_defaults {

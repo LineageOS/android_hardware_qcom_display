@@ -1314,7 +1314,7 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
       validated_ = false;
       break;
     }
-    case kInvalidateDisplay:
+    case kSyncInvalidateDisplay:
     case kThermalEvent: {
       SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[id_]);
       validated_ = false;
@@ -1339,6 +1339,9 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
       }
     } break;
     case kIdlePowerCollapse:
+      break;
+    case kInvalidateDisplay:
+      validated_ = false;
       break;
     default:
       DLOGW("Unknown event: %d", event);
@@ -2176,7 +2179,7 @@ int HWCDisplay::GetVisibleDisplayRect(hwc_rect_t *visible_rect) {
 }
 
 int HWCDisplay::HandleSecureSession(const std::bitset<kSecureMax> &secure_sessions,
-                                    bool *power_on_pending) {
+                                    bool *power_on_pending, bool is_active_secure_display) {
   if (!power_on_pending) {
     return -EINVAL;
   }
@@ -2192,9 +2195,9 @@ int HWCDisplay::HandleSecureSession(const std::bitset<kSecureMax> &secure_sessio
       *power_on_pending = (pending_power_mode_ != HWC2::PowerMode::Off) ? true : false;
     }
 
-    DLOGI("SecureDisplay state changed from %d to %d for display %d-%d",
+    DLOGI("SecureDisplay state changed from %d to %d for display %" PRId64 " %d-%d",
           active_secure_sessions_.test(kSecureDisplay), secure_sessions.test(kSecureDisplay),
-          id_, type_);
+          id_, sdm_id_, type_);
   }
   active_secure_sessions_ = secure_sessions;
   return 0;
@@ -2335,7 +2338,7 @@ void HWCDisplay::Dump(std::ostringstream *os) {
     *os << "layer: " << std::setw(4) << layer->GetId();
     *os << " z: " << layer->GetZ();
     *os << " composition: " <<
-          to_string(layer->GetClientRequestedCompositionType()).c_str();
+          to_string(layer->GetOrigClientRequestedCompositionType()).c_str();
     *os << "/" <<
           to_string(layer->GetDeviceSelectedCompositionType()).c_str();
     *os << " alpha: " << std::to_string(sdm_layer->plane_alpha).c_str();

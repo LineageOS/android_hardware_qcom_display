@@ -123,7 +123,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError GetPanelBrightness(float *brightness) override;
   DisplayError GetPanelMaxBrightness(uint32_t *max_brightness_level) override;
   DisplayError GetRefreshRate(uint32_t *refresh_rate) override;
-  DisplayError HandleSecureEvent(SecureEvent secure_event) override;
+  DisplayError HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) override;
   DisplayError SetDisplayDppsAdROI(void *payload) override;
   DisplayError SetQSyncMode(QSyncMode qsync_mode) override;
   DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) override;
@@ -205,6 +205,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   std::shared_ptr<SPRIntf> spr_;
   GetPanelFeatureFactoryIntfType GetPanelFeatureFactoryIntfFunc_ = nullptr;
   int spr_prop_value_ = 0;
+  bool needs_validate_on_pu_enable_ = false;
 };
 
 }  // namespace sdm

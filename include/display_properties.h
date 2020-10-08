@@ -122,6 +122,9 @@
 // SPR
 #define ENABLE_SPR                           DISPLAY_PROP("enable_spr")
 
+// PERF hint properties
+#define ENABLE_PERF_HINT_LARGE_COMP_CYCLE    DISPLAY_PROP("enable_perf_hint_large_comp_cycle")
+
 // Add all vendor.display properties above
 
 #define DISABLE_UBWC_PROP                    GRALLOC_PROP("disable_ubwc")

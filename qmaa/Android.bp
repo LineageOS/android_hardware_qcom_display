@@ -1,6 +1,7 @@
 soong_namespace {
     imports: [
         "hardware/qcom/display",
+        "hardware/qcom/display/libdebug",
     ],
 }
 composer_srcs = ["*.cpp"]
@@ -16,7 +17,6 @@ cc_binary {
     relative_install_path: "hw",
     header_libs: [
         "display_headers",
-        "qti_kernel_headers",
     ],
 
     cflags: [
