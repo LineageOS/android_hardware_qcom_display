@@ -2599,7 +2599,7 @@ int32_t HWCDisplay::GetDisplayConfigGroup(DisplayConfigGroupInfo variable_config
   return -1;
 }
 
-bool HWCDisplay::IsModeSwitchAllowed(uint32_t mode_switch) {
+bool HWCDisplay::IsModeSwitchAllowed(uint32_t config) {
   DisplayError error = kErrorNone;
   uint32_t allowed_mode_switch = 0;
 
@@ -2608,12 +2608,12 @@ bool HWCDisplay::IsModeSwitchAllowed(uint32_t mode_switch) {
     DLOGW("Unable to retrieve supported modes for the current device configuration.");
   }
 
-  if (allowed_mode_switch == 0 || (allowed_mode_switch & (1 << mode_switch))) {
-    DLOGV_IF(kTagClient, "Allowed to switch to mode:%d", mode_switch);
+  if (allowed_mode_switch == 0 || (allowed_mode_switch & (1 << config))) {
+    DLOGV_IF(kTagClient, "Allowed to switch to mode:%d", config);
     return true;
   }
 
-  DLOGE("Not allowed to switch to mode:%d", mode_switch);
+  DLOGW("Not allowed to switch to mode:%d", config);
   return false;
 }
 
