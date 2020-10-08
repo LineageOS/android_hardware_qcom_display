@@ -2595,7 +2595,7 @@ bool HWCDisplay::IsModeSwitchAllowed(uint32_t config) {
   DisplayError error = kErrorNone;
   uint32_t allowed_mode_switch = 0;
 
-  error = display_intf_->GetSupportedModeSwitch(&allowed_mode_switch);
+  error = display_intf_->IsSupportedOnDisplay(kSupportedModeSwitch, &allowed_mode_switch);
   if (error != kErrorNone) {
     DLOGW("Unable to retrieve supported modes for the current device configuration.");
   }

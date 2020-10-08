@@ -171,10 +171,10 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError SetStcColorMode(const snapdragoncolor::ColorMode &color_mode) {
     return kErrorNotSupported;
   }
-  virtual DisplayError GetSupportedModeSwitch(uint32_t *allowed_mode_switch);
   virtual DisplayError ClearLUTs() {
     return kErrorNotSupported;
   }
+  virtual DisplayError IsSupportedOnDisplay(SupportedDisplayFeature feature, uint32_t *supported);
 
  protected:
   const char *kBt2020Pq = "bt2020_pq";

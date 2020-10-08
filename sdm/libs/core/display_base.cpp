@@ -2323,9 +2323,27 @@ DisplayError DisplayBase::GetPendingDisplayState(DisplayState *disp_state) {
   return kErrorNone;
 }
 
-DisplayError DisplayBase::GetSupportedModeSwitch(uint32_t *allowed_mode_switch) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
-  return hw_intf_->GetSupportedModeSwitch(allowed_mode_switch);
+DisplayError DisplayBase::IsSupportedOnDisplay(const SupportedDisplayFeature feature,
+                                               uint32_t *supported) {
+  DisplayError error = kErrorNone;
+
+  if (!supported) {
+    return kErrorParameters;
+  }
+
+  switch (feature) {
+    case kSupportedModeSwitch: {
+      lock_guard<recursive_mutex> obj(recursive_mutex_);
+      error = hw_intf_->GetSupportedModeSwitch(supported);
+      break;
+    }
+    default:
+      DLOGW("Feature:%d is not present for display %d:%d", feature, display_id_, display_type_);
+      error = kErrorParameters;
+      break;
+  }
+
+  return error;
 }
 
 void DisplayBase::SetPendingPowerState(DisplayState state) {
