@@ -509,7 +509,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   void NotifyClientStatus(bool connected);
   int32_t GetVirtualDisplayId();
   void PerformQsyncCallback(hwc2_display_t display);
-  bool isSmartPanelConfig(uint32_t disp_id, uint32_t config_id);
   android::status_t TUITransitionPrepare(int disp_id);
   android::status_t TUITransitionStart(int disp_id);
   android::status_t TUITransitionEnd(int disp_id);

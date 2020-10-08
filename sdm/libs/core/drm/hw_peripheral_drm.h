@@ -76,6 +76,7 @@ class HWPeripheralDRM : public HWDeviceDRM, public PanelFeaturePropertyIntf {
   virtual DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate);
   virtual DisplayError SetDisplayAttributes(uint32_t index);
   virtual DisplayError SetDisplayMode(const HWDisplayMode hw_display_mode);
+  virtual DisplayError SetRefreshRate(uint32_t refresh_rate);
   virtual DisplayError TeardownConcurrentWriteback(void);
   virtual DisplayError SetFrameTrigger(FrameTriggerMode mode);
   virtual DisplayError SetPanelBrightness(int level);

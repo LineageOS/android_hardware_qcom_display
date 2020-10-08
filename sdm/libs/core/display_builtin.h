@@ -170,6 +170,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError SetupPanelfeatures();
   DisplayError SetupSPR();
   DisplayError SetupDemura();
+  void UpdateDisplayModeParams();
 
   const uint32_t kPuTimeOutMs = 1000;
   std::vector<HWEvent> event_list_;

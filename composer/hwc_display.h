@@ -240,6 +240,10 @@ class HWCDisplay : public DisplayEventHandler {
     return false;
   }
 
+  virtual bool HasSmartPanelConfig(void) {
+    return false;
+  }
+
   // Display Configurations
   static uint32_t GetThrottlingRefreshRate() { return HWCDisplay::throttling_refresh_rate_; }
   static void SetThrottlingRefreshRate(uint32_t newRefreshRate)
@@ -280,7 +284,6 @@ class HWCDisplay : public DisplayEventHandler {
     return (has_client_composition_ || layer_stack_.flags.single_buffered_layer_present);
   }
   bool CheckResourceState();
-  DisplayType GetDisplayType() { return type_; }
   virtual void SetFastPathComposition(bool enable) { fast_path_composition_ = enable; }
   virtual HWC2::Error SetColorModeFromClientApi(int32_t color_mode_id) {
     return HWC2::Error::Unsupported;
