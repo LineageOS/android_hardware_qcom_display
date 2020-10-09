@@ -69,11 +69,28 @@ Return<void> DeviceImpl::registerClient(const hidl_string &client_name,
     return Void();
   }
 
+  if (!callback) {
+    ALOGW("IDisplayConfigCallback provided is null");
+  }
+
   uint64_t client_handle = static_cast<uint64_t>(client_id_++);
   std::shared_ptr<DeviceClientContext> device_client(new DeviceClientContext(callback));
   if (callback) {
     callback->linkToDeath(this, client_handle);
   }
+
+  if (!intf_) {
+    ALOGW("ConfigInterface is invalid");
+    _hidl_cb(error, 0);
+    return Void();
+  }
+
+  if (!device_client) {
+    ALOGW("Failed to initialize device client:%s", client_name.c_str());
+    _hidl_cb(error, 0);
+    return Void();
+  }
+
   ConfigInterface *intf = nullptr;
   error = intf_->RegisterClientContext(device_client, &intf);
 
@@ -141,6 +158,18 @@ void DeviceImpl::DeviceClientContext::NotifyQsyncChange(bool qsync_enabled, int3
   output_params.setToExternal(reinterpret_cast<uint8_t*>(&data), sizeof(data));
 
   auto status = callback_->perform(kControlQsyncCallback, output_params, {});
+  if (status.isDeadObject()) {
+    return;
+  }
+}
+
+void DeviceImpl::DeviceClientContext::NotifyIdleStatus(bool is_idle) {
+  bool data = {is_idle};
+  ByteStream output_params;
+
+  output_params.setToExternal(reinterpret_cast<uint8_t*>(&data), sizeof(data));
+
+  auto status = callback_->perform(kControlIdleStatusCallback, output_params, {});
   if (status.isDeadObject()) {
     return;
   }
@@ -699,6 +728,19 @@ void DeviceImpl::DeviceClientContext::ParseControlQsyncCallback(uint64_t client_
   _hidl_cb(error, {}, {});
 }
 
+void DeviceImpl::DeviceClientContext::ParseControlIdleStatusCallback(uint64_t client_handle,
+                                                                     const ByteStream &input_params,
+                                                                     perform_cb _hidl_cb) {
+  const bool *enable;
+
+  const uint8_t *data = input_params.data();
+  enable = reinterpret_cast<const bool*>(data);
+
+  int32_t error = intf_->ControlIdleStatusCallback(*enable);
+
+  _hidl_cb(error, {}, {});
+}
+
 void DeviceImpl::DeviceClientContext::ParseSendTUIEvent(const ByteStream &input_params,
                                                         perform_cb _hidl_cb) {
   const struct TUIEventParams *input_data =
@@ -921,6 +963,9 @@ Return<void> DeviceImpl::perform(uint64_t client_handle, uint32_t op_code,
     case kControlQsyncCallback:
       client->ParseControlQsyncCallback(client_handle, input_params, _hidl_cb);
       break;
+    case kControlIdleStatusCallback:
+      client->ParseControlIdleStatusCallback(client_handle, input_params, _hidl_cb);
+      break;
     case kSendTUIEvent:
       client->ParseSendTUIEvent(input_params, _hidl_cb);
       break;
@@ -937,6 +982,7 @@ Return<void> DeviceImpl::perform(uint64_t client_handle, uint32_t op_code,
       client->ParseIsRCSupported(input_params, _hidl_cb);
       break;
     default:
+      _hidl_cb(-EINVAL, {}, {});
       break;
   }
   return Void();

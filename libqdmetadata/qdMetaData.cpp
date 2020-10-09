@@ -32,7 +32,9 @@
 #include <QtiGrallocPriv.h>
 #include <errno.h>
 #include <gralloc_priv.h>
+#ifndef __QTI_NO_GRALLOC4__
 #include <gralloctypes/Gralloc4.h>
+#endif
 #include <log/log.h>
 #include <string.h>
 #include <sys/mman.h>
@@ -98,6 +100,7 @@ static int colorSpaceToColorMetadata(ColorSpace_t in, ColorMetaData *out) {
   return 0;
 }
 
+#ifndef __QTI_NO_GRALLOC4__
 static bool getGralloc4Array(MetaData_t *metadata, int32_t paramType) {
   switch (paramType) {
     case SET_VT_TIMESTAMP:
@@ -133,6 +136,11 @@ static bool getGralloc4Array(MetaData_t *metadata, int32_t paramType) {
     case SET_VIDEO_HISTOGRAM_STATS:
       return metadata
           ->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_VIDEO_HISTOGRAM_STATS)];
+    case SET_VIDEO_TS_INFO:
+      return metadata
+          ->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_VIDEO_TS_INFO)];
+    case GET_S3D_FORMAT:
+      return metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_S3D_FORMAT)];
     default:
       ALOGE("paramType %d not supported", paramType);
       return false;
@@ -190,10 +198,26 @@ static void setGralloc4Array(MetaData_t *metadata, int32_t paramType, bool isSet
       metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_VIDEO_HISTOGRAM_STATS)] =
           isSet;
       break;
+    case SET_VIDEO_TS_INFO:
+      metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_VIDEO_TS_INFO)] =
+          isSet;
+      break;
+    case S3D_FORMAT:
+      metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_S3D_FORMAT)] = isSet;
+      break;
     default:
       ALOGE("paramType %d not supported in Gralloc4", paramType);
   }
 }
+#else
+static bool getGralloc4Array(MetaData_t *metadata, int32_t paramType) {
+  return true;
+}
+
+static void setGralloc4Array(MetaData_t *metadata, int32_t paramType, bool isSet) {
+}
+#endif
+
 
 unsigned long getMetaDataSize() {
     return static_cast<unsigned long>(ROUND_UP_PAGESIZE(sizeof(MetaData_t)));
@@ -382,7 +406,10 @@ int setMetaDataVa(MetaData_t *data, DispParamType paramType,
             }
             break;
          }
-         default:
+        case SET_VIDEO_TS_INFO:
+            data->videoTsInfo = *((VideoTimestampInfo *)param);
+            break;
+        default:
             ALOGE("Unknown paramType %d", paramType);
             break;
     }
@@ -525,6 +552,9 @@ int getMetaDataVa(MetaData_t *data, DispFetchParamType paramType,
           }
           break;
         }
+        case GET_VIDEO_TS_INFO:
+          *((VideoTimestampInfo *)param) = data->videoTsInfo;
+          break;
         default:
             ALOGE("Unknown paramType %d", paramType);
             ret = -EINVAL;

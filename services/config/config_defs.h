@@ -39,6 +39,7 @@
 // implementation being present. When this ifdef gets enabled in this header, the
 // client code will automatically get compiled.
 #define DISPLAY_CONFIG_API_LEVEL_0
+#define DISPLAY_CONFIG_API_LEVEL_1
 
 namespace DisplayConfig {
 
@@ -237,6 +238,7 @@ class ConfigCallback {
  public:
   virtual void NotifyCWBBufferDone(int error, const native_handle_t *buffer) { }
   virtual void NotifyQsyncChange(bool qsync_enabled, int refresh_rate, int qsync_refresh_rate) { }
+  virtual void NotifyIdleStatus(bool is_idle) { }
 
  protected:
   virtual ~ConfigCallback() { }
@@ -299,6 +301,7 @@ class ConfigInterface {
   virtual int GetSupportedDisplayRefreshRates(
       DisplayType dpy, std::vector<uint32_t> *supported_refresh_rates) DEFAULT_RET
   virtual int IsRCSupported(uint32_t disp_id, bool *supported) DEFAULT_RET
+  virtual int ControlIdleStatusCallback(bool enable) DEFAULT_RET
 
   // deprecated APIs
   virtual int GetDebugProperty(const std::string prop_name, std::string value) DEFAULT_RET
