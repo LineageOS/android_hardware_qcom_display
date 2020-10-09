@@ -2839,6 +2839,9 @@ DisplayError HWCDisplay::HandleSecureEvent(SecureEvent secure_event, bool *needs
     return err;
   }
 
+  if (secure_event == kTUITransitionEnd)
+    color_mode_->ReapplyMode();
+
   if (secure_event == kTUITransitionEnd || secure_event == kTUITransitionUnPrepare) {
     DLOGI("Resume display %d-%d",  sdm_id_, type_);
     display_paused_ = false;
