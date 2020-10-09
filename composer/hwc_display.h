@@ -545,6 +545,7 @@ class HWCDisplay : public DisplayEventHandler {
   std::mutex transient_refresh_rate_lock_;
   std::mutex active_config_lock_;
   int active_config_index_ = -1;
+  uint32_t active_refresh_rate_ = 0;
 
  private:
   void DumpInputBuffers(void);
