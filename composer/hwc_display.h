@@ -113,6 +113,7 @@ class HWCColorMode {
   virtual ColorMode GetCurrentColorMode() { return current_color_mode_; }
   virtual HWC2::Error ApplyCurrentColorModeWithRenderIntent(bool hdr_present);
   virtual HWC2::Error CacheColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
+  void ReapplyMode() { apply_mode_ = true; };
 
  protected:
   template <class T>
