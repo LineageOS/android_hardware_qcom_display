@@ -149,6 +149,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   void PanelDead() override;
   void HwRecovery(const HWRecoveryEvent sdm_event_code) override;
   DisplayError TeardownConcurrentWriteback(void) override;
+  DisplayError ClearLUTs() override;
   void Histogram(int histogram_fd, uint32_t blob_id) override;
 
   // Implement the DppsPropIntf
