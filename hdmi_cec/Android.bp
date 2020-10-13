@@ -1,12 +1,4 @@
 
-soong_namespace {
-    imports: [
-        "hardware/qcom/display",
-        "hardware/qcom/display/libqdutils",
-        "hardware/qcom/display/libqservice",
-    ],
-}
-
 cc_library_shared {
 
     name: "hdmi_cec.qcom",
