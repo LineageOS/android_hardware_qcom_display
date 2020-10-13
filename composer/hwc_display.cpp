@@ -1721,6 +1721,7 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence
   if (display_pause_pending_) {
     DLOGI("Pause display %d-%d", sdm_id_, type_);
     display_paused_ = true;
+    display_pause_pending_ = false;
   }
 
   return status;
