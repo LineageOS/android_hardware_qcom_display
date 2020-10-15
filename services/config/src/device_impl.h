@@ -124,6 +124,7 @@ class DeviceImpl : public IDisplayConfig, public android::hardware::hidl_death_r
     void ParseControlIdleStatusCallback(uint64_t client_handle, const ByteStream &input_params,
                                         perform_cb _hidl_cb);
     void ParseIsSupportedConfigSwitch(const ByteStream &input_params, perform_cb _hidl_cb);
+    void ParseGetDisplayType(const ByteStream &input_params, perform_cb _hidl_cb);
 
    private:
     ConfigInterface *intf_ = nullptr;

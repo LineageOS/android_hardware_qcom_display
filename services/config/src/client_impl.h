@@ -125,6 +125,7 @@ class ClientImpl : public ClientInterface {
   virtual int IsRCSupported(uint32_t disp_id, bool *supported);
   virtual int ControlIdleStatusCallback(bool enable);
   virtual int IsSupportedConfigSwitch(uint32_t disp_id, uint32_t config, bool *supported);
+  virtual int GetDisplayType(uint64_t physical_disp_id, DisplayType *disp_type);
 
  private:
   android::sp<IDisplayConfig> display_config_ = nullptr;

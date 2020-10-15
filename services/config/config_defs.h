@@ -320,6 +320,8 @@ class ConfigInterface {
   virtual int ControlIdleStatusCallback(bool /* enable */) DEFAULT_RET
   virtual int IsSupportedConfigSwitch(uint32_t /* disp_id */, uint32_t /* config */,
                                       bool* /* supported */) DEFAULT_RET
+  virtual int GetDisplayType(uint64_t /* physical_disp_id */,
+                             DisplayType* /* disp_type */) DEFAULT_RET
 
   // deprecated APIs
   virtual int GetDebugProperty(const std::string /* prop_name */,

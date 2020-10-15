@@ -946,7 +946,6 @@ int ClientImpl::IsSupportedConfigSwitch(uint32_t disp_id, uint32_t config, bool 
     error = err;
     output_params = params;
   };
-
   if (display_config_) {
     display_config_->perform(client_handle_, kIsSupportedConfigSwitch, input_params, {}, hidl_cb);
   }
@@ -957,6 +956,30 @@ int ClientImpl::IsSupportedConfigSwitch(uint32_t disp_id, uint32_t config, bool 
     *supported = *output;
   }
 
+  return error;
+}
+
+int ClientImpl::GetDisplayType(uint64_t physical_disp_id, DisplayType *disp_type) {
+  if (!disp_type) {
+    return -EINVAL;
+  }
+  ByteStream input_params;
+  input_params.setToExternal(reinterpret_cast<uint8_t*>(&physical_disp_id), sizeof(uint64_t));
+  ByteStream output_params;
+  int error = 0;
+  auto hidl_cb = [&error, &output_params] (int32_t err, ByteStream params, HandleStream handles) {
+    error = err;
+    output_params = params;
+  };
+  if (display_config_) {
+    display_config_->perform(client_handle_, kGetDisplayType, input_params, {}, hidl_cb);
+  }
+
+  if (!error) {
+    const uint8_t *data = output_params.data();
+    const DisplayType *output = reinterpret_cast<const DisplayType*>(data);
+    *disp_type = *output;
+  }
   return error;
 }
 
