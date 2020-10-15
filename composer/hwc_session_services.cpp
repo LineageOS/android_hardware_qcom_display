@@ -1318,4 +1318,11 @@ int HWCSession::DisplayConfigImpl::ControlIdleStatusCallback(bool enable) {
   return 0;
 }
 
+int HWCSession::DisplayConfigImpl::GetDisplayType(uint64_t physical_disp_id, DispType *disp_type) {
+  if (!disp_type) {
+    return -EINVAL;
+  }
+  return hwc_session_->GetDispTypeFromPhysicalId(physical_disp_id, disp_type);
+}
+
 }  // namespace sdm

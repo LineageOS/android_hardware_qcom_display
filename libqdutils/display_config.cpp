@@ -321,6 +321,25 @@ int setPanelLuminanceAttributes(int dpy, float min_lum, float max_lum) {
     return err;
 }
 
+int GetDisplayPortId(int dpy, int *port_id) {
+    if (!port_id) {
+        return -EINVAL;
+    }
+    status_t err = (status_t) FAILED_TRANSACTION;
+    sp<IQService> binder = getBinder();
+    Parcel inParcel, outParcel;
+    if(binder != NULL && binder.get() != NULL) {
+        inParcel.writeInt32(dpy);
+        err = binder->dispatch(IQService::GET_DISPLAY_PORT_ID, &inParcel, &outParcel);
+        if(err) {
+            ALOGE("%s() failed with err %d", __FUNCTION__, err);
+            return err;
+        }
+        *port_id = outParcel.readInt32();
+    }
+    return err;
+}
+
 }// namespace
 
 // ----------------------------------------------------------------------------

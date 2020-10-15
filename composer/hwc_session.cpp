@@ -1716,6 +1716,18 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
     }
     break;
 
+    case qService::IQService::GET_DISPLAY_PORT_ID: {
+      if (!input_parcel || !output_parcel) {
+        DLOGE("QService command = %d: input_parcel and output_parcel needed.", command);
+        break;
+      }
+      int disp_id = input_parcel->readInt32();
+      int port_id = 0;
+      status = GetDisplayPortId(disp_id, &port_id);
+      output_parcel->writeInt32(port_id);
+    }
+    break;
+
     default:
       DLOGW("QService command = %d is not supported.", command);
       break;
@@ -3689,6 +3701,60 @@ android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
     std::thread(&HWCSession::HandlePluggableDisplays, this, true).detach();
   }
   DLOGI("End of TUI session on display %d", disp_id);
+  return 0;
+}
+
+DispType HWCSession::GetDisplayConfigDisplayType(int qdutils_disp_type) {
+  switch (qdutils_disp_type) {
+    case qdutils::DISPLAY_PRIMARY:
+      return DispType::kPrimary;
+
+    case qdutils::DISPLAY_EXTERNAL:
+      return DispType::kExternal;
+
+    case qdutils::DISPLAY_VIRTUAL:
+      return DispType::kVirtual;
+
+    case qdutils::DISPLAY_BUILTIN_2:
+      return DispType::kBuiltIn2;
+
+    default:
+      return DispType::kInvalid;
+  }
+}
+
+int HWCSession::GetDispTypeFromPhysicalId(uint64_t physical_disp_id, DispType *disp_type) {
+  // TODO(user): Least significant 8 bit is port id based on the SF current implementaion. Need to
+  // revisit this if there is a change in logic to create physical display id in SF.
+  int port_id = (physical_disp_id & 0xFF);
+  int out_port = 0;
+  for (int dpy = qdutils::DISPLAY_PRIMARY; dpy <= qdutils::DISPLAY_EXTERNAL_2; dpy++) {
+    int ret = GetDisplayPortId(dpy, &out_port);
+    if (ret != 0){
+      return ret;
+    }
+    if (port_id == out_port) {
+      *disp_type = GetDisplayConfigDisplayType(dpy);
+      return 0;
+    }
+  }
+  return -ENODEV;
+}
+
+android::status_t HWCSession::GetDisplayPortId(uint32_t disp_id, int *port_id) {
+  hwc2_display_t target_display = GetDisplayIndex(disp_id);
+  if (target_display == -1) {
+    return -ENOTSUP;
+  }
+  uint8_t out_port = 0;
+  uint32_t out_data_size = 0;
+  Locker::ScopeLock lock_d(locker_[target_display]);
+  if (hwc_display_[target_display]) {
+    if (hwc_display_[target_display]->GetDisplayIdentificationData(&out_port, &out_data_size,
+                                                                   NULL) == HWC2::Error::None) {
+      *port_id = INT(out_port);
+    }
+  }
   return 0;
 }
 

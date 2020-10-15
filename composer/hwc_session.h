@@ -392,6 +392,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
     virtual int IsRCSupported(uint32_t disp_id, bool *supported);
     virtual int IsSupportedConfigSwitch(uint32_t disp_id, uint32_t config, bool *supported);
     virtual int ControlIdleStatusCallback(bool enable);
+    virtual int GetDisplayType(uint64_t physical_disp_id, DispType *disp_type);
 
     std::weak_ptr<DisplayConfig::ConfigCallback> callback_;
     HWCSession *hwc_session_ = nullptr;
@@ -454,6 +455,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   int32_t getDisplayMaxBrightness(uint32_t display, uint32_t *max_brightness_level);
   bool HasHDRSupport(HWCDisplay *hwc_display);
   void PostInit();
+  int GetDispTypeFromPhysicalId(uint64_t physical_disp_id, DispType *disp_type);
 
   // Uevent handler
   virtual void UEventHandler(const char *uevent_data, int length);
@@ -498,6 +500,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   android::status_t SetPanelLuminanceAttributes(const android::Parcel *input_parcel);
   android::status_t setColorSamplingEnabled(const android::Parcel *input_parcel);
   android::status_t HandleTUITransition(int disp_id, int event);
+  android::status_t GetDisplayPortId(uint32_t display, int *port_id);
 
   // Internal methods
   HWC2::Error ValidateDisplayInternal(hwc2_display_t display, uint32_t *out_num_types,
@@ -517,6 +520,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   android::status_t TUITransitionEnd(int disp_id);
   android::status_t TUITransitionUnPrepare(int disp_id);
   void PerformIdleStatusCallback(hwc2_display_t display);
+  DispType GetDisplayConfigDisplayType(int qdutils_disp_type);
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};
