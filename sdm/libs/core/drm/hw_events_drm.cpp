@@ -626,6 +626,7 @@ DisplayError HWEventsDRM::RegisterHwRecovery(bool enable) {
     return kErrorResources;
   }
 
+  DLOGI("Register hw recovery %s", enable ? "enable" : "disable");
   return kErrorNone;
 }
 
