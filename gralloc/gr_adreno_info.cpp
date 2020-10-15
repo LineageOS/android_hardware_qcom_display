@@ -245,8 +245,6 @@ ADRENOPIXELFORMAT AdrenoMemInfo::GetGpuPixelFormat(int hal_format) {
       return ADRENO_PIXELFORMAT_D24_UNORM_S8_UINT;
     case HAL_PIXEL_FORMAT_DEPTH_32F:
       return ADRENO_PIXELFORMAT_D32_FLOAT;
-    case HAL_PIXEL_FORMAT_STENCIL_8:
-      return ADRENO_PIXELFORMAT_S8_UINT;
     default:
       ALOGE("%s: No map for format: 0x%x", __FUNCTION__, hal_format);
       break;
