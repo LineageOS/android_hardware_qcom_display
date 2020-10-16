@@ -31,6 +31,7 @@
 #define __DISP_EXTN_INTF_H__
 
 #define EARLY_WAKEUP_FEATURE 1
+#define DYNAMIC_EARLY_WAKEUP_CONFIG 1
 
 namespace composer {
 
