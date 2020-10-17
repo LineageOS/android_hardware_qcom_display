@@ -128,6 +128,8 @@ static bool getGralloc4Array(MetaData_t *metadata, int32_t paramType) {
       return metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_MAP_SECURE_BUFFER)];
     case LINEAR_FORMAT:
       return metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_LINEAR_FORMAT)];
+    case SET_IGC:
+      return false;
     case SET_SINGLE_BUFFER_MODE:
       return metadata
           ->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_SINGLE_BUFFER_MODE)];
@@ -186,6 +188,8 @@ static void setGralloc4Array(MetaData_t *metadata, int32_t paramType, bool isSet
       break;
     case LINEAR_FORMAT:
       metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_LINEAR_FORMAT)] = isSet;
+      break;
+    case SET_IGC:
       break;
     case SET_SINGLE_BUFFER_MODE:
       metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_SINGLE_BUFFER_MODE)] =
