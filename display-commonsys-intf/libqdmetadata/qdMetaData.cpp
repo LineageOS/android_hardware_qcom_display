@@ -123,11 +123,15 @@ static bool getGralloc4Array(MetaData_t *metadata, int32_t paramType) {
       return metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_COLOR_METADATA)];
     case MAP_SECURE_BUFFER:
       return metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_MAP_SECURE_BUFFER)];
+    case S3D_FORMAT:
+      return false;
     case LINEAR_FORMAT:
       return metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_LINEAR_FORMAT)];
     case SET_SINGLE_BUFFER_MODE:
       return metadata
           ->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_SINGLE_BUFFER_MODE)];
+    case SET_S3D_COMP:
+      return false;
     case SET_CVP_METADATA:
       return metadata->isVendorMetadataSet[GET_VENDOR_METADATA_STATUS_INDEX(QTI_CVP_METADATA)];
     case SET_VIDEO_HISTOGRAM_STATS:
