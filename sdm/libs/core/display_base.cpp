@@ -561,6 +561,11 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     return error;
   }
 
+  if (secure_event_ == kSecureDisplayEnd || secure_event_ == kTUITransitionEnd ||
+      secure_event_ == kTUITransitionUnPrepare) {
+    secure_event_ = kSecureEventMax;
+  }
+
   PostCommitLayerParams(layer_stack);
 
   if (partial_update_control_) {
@@ -1430,8 +1435,7 @@ DisplayError DisplayBase::HandlePendingVSyncEnable(const shared_ptr<Fence> &reti
 DisplayError DisplayBase::SetVSyncState(bool enable) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
-  if ((state_ == kStateOff || secure_event_ == kSecureDisplayStart ||
-       secure_event_ == kTUITransitionStart) && enable) {
+  if ((state_ == kStateOff || secure_event_ != kSecureEventMax) && enable) {
     DLOGW("Can't enable vsync when display %d-%d is powered off or SecureDisplay/TUI in progress",
           display_id_, display_type_);
     vsync_enable_pending_ = true;
@@ -2390,10 +2394,6 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
   comp_manager_->HandleSecureEvent(display_comp_ctx_, secure_event);
   secure_event_ = secure_event;
   if (secure_event == kTUITransitionEnd) {
-    err = HandlePendingVSyncEnable(nullptr);
-    if (err != kErrorNone) {
-      return err;
-    }
     DisplayState pending_state;
     if (GetPendingDisplayState(&pending_state) == kErrorNone) {
       if (pending_state == kStateOff) {
