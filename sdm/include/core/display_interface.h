@@ -544,9 +544,12 @@ class DisplayInterface {
 
     @param[in] final_rate indicates whether refresh rate is final rate or can be changed by sdm
 
+    @param[in] idle_screen indicates whether screen is idle.
+
     @return \link DisplayError \endlink
   */
-  virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate) = 0;
+  virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate,
+                                      bool idle_screen = false) = 0;
 
   /*! @brief Method to get the refresh rate of a display.
 
@@ -939,6 +942,12 @@ class DisplayInterface {
     @return \link DisplayError \endlink
   */
   virtual DisplayError GetQSyncMode(QSyncMode *qsync_mode) = 0;
+
+  /*! @brief Method to clear scaler LUTs.
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError ClearLUTs() = 0;
 
  protected:
   virtual ~DisplayInterface() { }

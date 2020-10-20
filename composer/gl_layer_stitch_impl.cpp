@@ -208,10 +208,10 @@ void GLLayerStitchImpl::ClearWithTransparency(const GLRect &scissor_rect) {
   DTRACE_SCOPED();
   // Enable scissor test.
   GL(glEnable(GL_SCISSOR_TEST));
-  GL(glClearColor(0, 0, 0, 0));
-  GL(glClear(GL_COLOR_BUFFER_BIT));
   GL(glScissor(scissor_rect.left, scissor_rect.top, scissor_rect.right - scissor_rect.left,
                scissor_rect.bottom - scissor_rect.top));
+  GL(glClearColor(0, 0, 0, 0));
+  GL(glClear(GL_COLOR_BUFFER_BIT));
 }
 
 void GLLayerStitchImpl::InitContext() {

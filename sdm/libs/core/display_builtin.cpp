@@ -57,6 +57,10 @@ DisplayBuiltIn::DisplayBuiltIn(int32_t display_id, DisplayEventHandler *event_ha
 DisplayBuiltIn::~DisplayBuiltIn() {
 }
 
+static uint64_t GetTimeInMs(struct timespec ts) {
+  return (ts.tv_sec * 1000 + (ts.tv_nsec + 500000) / 1000000);
+}
+
 DisplayError DisplayBuiltIn::Init() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
@@ -120,6 +124,10 @@ DisplayError DisplayBuiltIn::Init() {
   value = 0;
   DebugHandler::Get()->GetProperty(DISABLE_DYNAMIC_FPS, &value);
   disable_dyn_fps_ = (value == 1);
+
+  value = 0;
+  DebugHandler::Get()->GetProperty(ENHANCE_IDLE_TIME, &value);
+  enhance_idle_time_ = (value == 1);
 
   return error;
 }
@@ -295,9 +303,11 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
     deferred_config_.Clear();
   }
 
+  clock_gettime(CLOCK_MONOTONIC, &idle_timer_start_);
   int idle_time_ms = hw_layers_.info.set_idle_time_ms;
   if (idle_time_ms >= 0) {
     hw_intf_->SetIdleTimeoutMs(UINT32(idle_time_ms));
+    idle_time_ms_ = idle_time_ms;
   }
 
   if (switch_to_cmd_) {
@@ -499,7 +509,8 @@ DisplayError DisplayBuiltIn::TeardownConcurrentWriteback(void) {
   return hw_intf_->TeardownConcurrentWriteback();
 }
 
-DisplayError DisplayBuiltIn::SetRefreshRate(uint32_t refresh_rate, bool final_rate) {
+DisplayError DisplayBuiltIn::SetRefreshRate(uint32_t refresh_rate, bool final_rate,
+                                            bool idle_screen) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
   if (!active_ || !hw_panel_info_.dynamic_fps || qsync_mode_ != kQSyncModeNone ||
@@ -512,11 +523,11 @@ DisplayError DisplayBuiltIn::SetRefreshRate(uint32_t refresh_rate, bool final_ra
     return kErrorParameters;
   }
 
-  if (handle_idle_timeout_ && !final_rate) {
+  if (CanLowerFps(idle_screen) && !final_rate) {
     refresh_rate = hw_panel_info_.min_fps;
   }
 
-  if ((current_refresh_rate_ != refresh_rate) || handle_idle_timeout_) {
+  if (current_refresh_rate_ != refresh_rate) {
     DisplayError error = hw_intf_->SetRefreshRate(refresh_rate);
     if (error != kErrorNone) {
       // Attempt to update refresh rate can fail if rf interfenence is detected.
@@ -531,12 +542,35 @@ DisplayError DisplayBuiltIn::SetRefreshRate(uint32_t refresh_rate, bool final_ra
     }
   }
 
+  // Set safe mode upon success.
+  if (enhance_idle_time_ && handle_idle_timeout_ && (refresh_rate == hw_panel_info_.min_fps)) {
+    comp_manager_->ProcessIdleTimeout(display_comp_ctx_);
+  }
+
   // On success, set current refresh rate to new refresh rate
   current_refresh_rate_ = refresh_rate;
   handle_idle_timeout_ = false;
   deferred_config_.MarkDirty();
 
   return ReconfigureDisplay();
+}
+
+bool DisplayBuiltIn::CanLowerFps(bool idle_screen) {
+  if (!enhance_idle_time_) {
+    return handle_idle_timeout_;
+  }
+
+  if (!handle_idle_timeout_ || !idle_screen) {
+    return false;
+  }
+
+  struct timespec now;
+  clock_gettime(CLOCK_MONOTONIC, &now);
+  uint64_t elapsed_time_ms = GetTimeInMs(now) - GetTimeInMs(idle_timer_start_);
+  bool can_lower = elapsed_time_ms >= UINT32(idle_time_ms_);
+  DLOGV_IF(kTagDisplay, "lower fps: %d", can_lower);
+
+  return can_lower;
 }
 
 DisplayError DisplayBuiltIn::VSync(int64_t timestamp) {
@@ -556,8 +590,10 @@ void DisplayBuiltIn::IdleTimeout() {
     }
     handle_idle_timeout_ = true;
     event_handler_->Refresh();
-    lock_guard<recursive_mutex> obj(recursive_mutex_);
-    comp_manager_->ProcessIdleTimeout(display_comp_ctx_);
+    if (!enhance_idle_time_) {
+      lock_guard<recursive_mutex> obj(recursive_mutex_);
+      comp_manager_->ProcessIdleTimeout(display_comp_ctx_);
+    }
   }
 }
 
@@ -578,6 +614,11 @@ void DisplayBuiltIn::IdlePowerCollapse() {
     lock_guard<recursive_mutex> obj(recursive_mutex_);
     comp_manager_->ProcessIdlePowerCollapse(display_comp_ctx_);
   }
+}
+
+DisplayError DisplayBuiltIn::ClearLUTs() {
+  comp_manager_->ProcessIdlePowerCollapse(display_comp_ctx_);
+  return kErrorNone;
 }
 
 void DisplayBuiltIn::PanelDead() {

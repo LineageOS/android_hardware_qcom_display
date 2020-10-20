@@ -182,10 +182,6 @@ DisplayError CompManager::UnregisterDisplay(Handle display_ctx) {
   registered_displays_.erase(display_comp_ctx->display_id);
   powered_on_displays_.erase(display_comp_ctx->display_id);
 
-  if (display_comp_ctx->display_type == kPluggable) {
-    max_layers_ = kMaxSDELayers;
-  }
-
   DLOGV_IF(kTagCompManager, "Registered displays [%s], display %d-%d",
            StringDisplayList(registered_displays_).c_str(), display_comp_ctx->display_id,
            display_comp_ctx->display_type);
@@ -261,7 +257,7 @@ void CompManager::PrepareStrategyConstraints(Handle comp_handle, HWLayers *hw_la
   StrategyConstraints *constraints = &display_comp_ctx->constraints;
 
   constraints->safe_mode = safe_mode_;
-  constraints->max_layers = max_layers_;
+  constraints->max_layers = hw_res_info_.num_blending_stages;
 
   // Limit 2 layer SDE Comp if its not a Primary Display.
   // Safe mode is the policy for External display on a low end device.
@@ -451,6 +447,7 @@ DisplayError CompManager::SetIdleTimeoutMs(Handle display_ctx, uint32_t active_m
 }
 
 void CompManager::ProcessIdleTimeout(Handle display_ctx) {
+  DTRACE_SCOPED();
   SCOPE_LOCK(locker_);
 
   DisplayCompositionContext *display_comp_ctx =

@@ -25,6 +25,8 @@
 #ifndef __DISPLAY_BUILTIN_H__
 #define __DISPLAY_BUILTIN_H__
 
+#include <sys/time.h>
+
 #include <core/dpps_interface.h>
 #include <string>
 #include <vector>
@@ -111,7 +113,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   virtual void SetIdleTimeoutMs(uint32_t active_ms);
   virtual DisplayError SetDisplayMode(uint32_t mode);
   virtual DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate, uint32_t *max_refresh_rate);
-  virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate);
+  virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate, bool idle_screen);
   virtual DisplayError SetPanelBrightness(float brightness);
   virtual DisplayError GetPanelBrightness(float *brightness);
   virtual DisplayError GetPanelMaxBrightness(uint32_t *max_brightness_level);
@@ -140,6 +142,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   virtual void PanelDead();
   virtual void HwRecovery(const HWRecoveryEvent sdm_event_code);
   virtual DisplayError TeardownConcurrentWriteback(void);
+  virtual DisplayError ClearLUTs();
   void Histogram(int histogram_fd, uint32_t blob_id) override;
 
   // Implement the DppsPropIntf
@@ -156,6 +159,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   void SetDeferredFpsConfig();
   void GetFpsConfig(HWDisplayAttributes *display_attributes, HWPanelInfo *panel_info);
   void UpdateDisplayModeParams();
+  bool CanLowerFps(bool idle_screen);
 
   const uint32_t kPuTimeOutMs = 1000;
   std::vector<HWEvent> event_list_;
@@ -185,6 +189,9 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   sde_drm::DppsFeaturePayload histogramIRQ;
   void initColorSamplingState();
   DeferFpsConfig deferred_config_ = {};
+  bool enhance_idle_time_ = false;
+  int idle_time_ms_ = 0;
+  struct timespec idle_timer_start_;
 };
 
 }  // namespace sdm
