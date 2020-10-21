@@ -424,6 +424,7 @@ struct HWPanelInfo {
   HWPanelOrientation panel_orientation = {};  // Panel Orientation
   uint32_t transfer_time_us = 0;       // transfer time in micro seconds to panel's active region
   uint32_t allowed_mode_switch = 0;    // Allowed mode switch bit mask
+  uint32_t panel_mode_caps = 0;        // Video/Command mode capability bit mask
   bool qsync_support = false;          // Specifies panel supports qsync feature or not.
   bool dyn_bitclk_support = false;     // Bit clk can be updated to avoid RF interference.
   std::vector<uint64_t> bitclk_rates;  // Supported bit clk levels.
@@ -446,6 +447,7 @@ struct HWPanelInfo {
             (right_roi_count != panel_info.right_roi_count) ||
             (transfer_time_us != panel_info.transfer_time_us) ||
             (allowed_mode_switch != panel_info.allowed_mode_switch) ||
+            (panel_mode_caps != panel_info.panel_mode_caps) ||
             (qsync_support != panel_info.qsync_support) ||
             (dyn_bitclk_support != panel_info.dyn_bitclk_support) ||
             (bitclk_rates != panel_info.bitclk_rates));

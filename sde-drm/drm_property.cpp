@@ -168,6 +168,7 @@ DRMProperty DRMPropertyManager::GetPropertyEnum(const std::string &name) const {
   if (name == "dspp_caps") { return DRMProperty::DSPP_CAPABILITIES; }
   if (name == "SDE_SPR_INIT_CFG_V1") { return DRMProperty::SPR_INIT_CFG_V1; }
   if (name == "SDE_DSPP_RC_MASK_V1") { return DRMProperty::DSPP_RC_MASK_V1; }
+  if (name == "panel_mode") { return DRMProperty::PANEL_MODE; }
 
   return DRMProperty::INVALID;
 }

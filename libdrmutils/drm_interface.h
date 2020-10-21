@@ -41,7 +41,6 @@
 #include <drm/msm_drm.h>
 #include <display/drm/msm_drm_pp.h>
 #include <display/drm/sde_drm.h>
-
 namespace sde_drm {
 
 typedef std::map<std::pair<uint32_t, uint64_t>, float> CompRatioMap;
@@ -212,7 +211,7 @@ enum struct DRMOps {
    *      uint32_t - core_ab
    */
   CRTC_SET_CORE_AB,
-   /*
+  /*
    * Op: Sets MNOC bus instantaneous bandwidth
    * Arg: uint32_t - CRTC ID
    *      uint32_t - core_ib
@@ -430,6 +429,11 @@ enum struct DRMOps {
    *      uint32_t - colorspace value bit-mask
    */
   CONNECTOR_SET_COLORSPACE,
+  /*
+   * Op: Sets currently chosen panel mode on this connector
+   * Arg: uint32_t - Video/Command Mode Bitmask
+   */
+  CONNECTOR_SET_PANEL_MODE,
 };
 
 enum struct DRMRotation {
@@ -650,6 +654,8 @@ struct DRMModeInfo {
   uint64_t bit_clk_rate;
   uint32_t transfer_time_us;
   uint32_t allowed_mode_switch;
+  uint32_t panel_mode_caps;
+  uint32_t cur_panel_mode;
 };
 
 /* Per Connector Info*/

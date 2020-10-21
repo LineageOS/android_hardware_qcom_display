@@ -604,6 +604,7 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
   const string bit_clk_rate = "bit_clk_rate=";
   const string mdp_transfer_time_us = "mdp_transfer_time_us=";
   const string allowed_mode_switch = "allowed_mode_switch=";
+  const string panel_mode_caps = "panel_mode_capabilities=";
 
   DRMModeInfo *mode_item = &info->modes.at(0);
   unsigned int index = 0;
@@ -640,6 +641,8 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
       mode_item->transfer_time_us = std::stoi(string(line, mdp_transfer_time_us.length()));
     } else if (line.find(allowed_mode_switch) != string::npos) {
       mode_item->allowed_mode_switch = std::stoi(string(line, allowed_mode_switch.length()));
+    } else if (line.find(panel_mode_caps) != string::npos) {
+      mode_item->panel_mode_caps = std::stoi(string(line, panel_mode_caps.length()));
     }
   }
 
@@ -966,6 +969,16 @@ void DRMConnector::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
       } else {
         DRM_LOGE("Invalid colorspace %d", colorspace);
       }
+    } break;
+
+    case DRMOps::CONNECTOR_SET_PANEL_MODE: {
+      if (!prop_mgr_.IsPropertyAvailable(DRMProperty::PANEL_MODE)) {
+        return;
+      }
+      uint32_t drm_panel_mode = va_arg(args, uint32_t);
+      drmModeAtomicAddProperty(req, obj_id, prop_mgr_.GetPropertyId(DRMProperty::PANEL_MODE),
+                               drm_panel_mode);
+      DRM_LOGD("Connector %d: Setting Panel mode 0x%x", obj_id, drm_panel_mode);
     } break;
 
     default:

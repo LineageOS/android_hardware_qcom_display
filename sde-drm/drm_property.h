@@ -173,6 +173,7 @@ enum struct DRMProperty {
   DSPP_CAPABILITIES,
   SPR_INIT_CFG_V1,
   DSPP_RC_MASK_V1,
+  PANEL_MODE,
 
   // Insert above
   MAX
