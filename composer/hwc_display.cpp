@@ -736,8 +736,14 @@ void HWCDisplay::BuildLayerStack() {
       layer_stack_.flags.hdr_present = true;
     }
 
+    if (game_supported_ && (hwc_layer->GetType() == kLayerGame)) {
+      layer->flags.is_game = true;
+      layer->input_buffer.flags.game = true;
+    }
+
     if (hwc_layer->IsNonIntegralSourceCrop() && !is_secure && !hdr_layer &&
-        !layer->flags.single_buffer && !layer->flags.solid_fill && !is_video) {
+        !layer->flags.single_buffer && !layer->flags.solid_fill && !is_video &&
+        !layer->flags.is_game) {
       layer->flags.skip = true;
     }
 
@@ -797,11 +803,6 @@ void HWCDisplay::BuildLayerStack() {
         (hwc_layer->GetClientRequestedCompositionType() != HWC2::Composition::Device) ||
         layer->flags.skip) {
       layer->update_mask.set(kClientCompRequest);
-    }
-
-    if (game_supported_ && (hwc_layer->GetType() == kLayerGame)) {
-      layer->flags.is_game = true;
-      layer->input_buffer.flags.game = true;
     }
 
     layer_stack_.layers.push_back(layer);
