@@ -784,6 +784,9 @@ DisplayError HWPeripheralDRM::SetPanelBrightness(int level) {
   if (brightness_base_path_.empty()) {
     return kErrorHardware;
   }
+  if (!active_) {
+    return kErrorNone;
+  }
 
   std::string brightness_node(brightness_base_path_ + "brightness");
   int fd = Sys::open_(brightness_node.c_str(), O_RDWR);
