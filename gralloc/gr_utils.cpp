@@ -1104,6 +1104,7 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
 
   // Below should be only YUV family
   switch (format) {
+#ifndef QMAA
     case HAL_PIXEL_FORMAT_YCrCb_420_SP:
       /*
        * Todo: relook this alignment again
@@ -1117,6 +1118,7 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       aligned_w = INT(MMM_COLOR_FMT_Y_STRIDE(MMM_COLOR_FMT_NV12, width));
       aligned_h = INT(MMM_COLOR_FMT_Y_SCANLINES(MMM_COLOR_FMT_NV12, height));
       break;
+#endif
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
       aligned_w = ALIGN(width, alignment);
       break;

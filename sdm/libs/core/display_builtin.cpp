@@ -139,6 +139,9 @@ DisplayError DisplayBuiltIn::Init() {
     rc_enable_prop_ = rc_prop_value ? true : false;
     DLOGI("RC feature %s.", rc_enable_prop_ ? "enabled" : "disabled");
   }
+  value = 0;
+  DebugHandler::Get()->GetProperty(DISABLE_DYNAMIC_FPS, &value);
+  disable_dyn_fps_ = (value == 1);
 
   return error;
 }
@@ -336,6 +339,7 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
   uint32_t app_layer_count = hw_layers_.info.app_layer_count;
+  HWDisplayMode panel_mode = hw_panel_info_.mode;
 
   DTRACE_SCOPED();
 
@@ -414,6 +418,10 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
     ControlPartialUpdate(true /* enable */, &pending);
   }
 
+  if (panel_mode != hw_panel_info_.mode) {
+    UpdateDisplayModeParams();
+  }
+
   if (dpps_pu_nofiy_pending_) {
     dpps_pu_nofiy_pending_ = false;
     dpps_pu_lock_.Broadcast();
@@ -438,10 +446,22 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
   return error;
 }
 
+void DisplayBuiltIn::UpdateDisplayModeParams() {
+  if (hw_panel_info_.mode == kModeVideo) {
+    uint32_t pending = 0;
+    ControlPartialUpdate(false /* enable */, &pending);
+  } else if (hw_panel_info_.mode == kModeCommand) {
+    // Flush idle timeout value currently set.
+    comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, 0);
+    switch_to_cmd_ = true;
+  }
+}
+
 DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
                                              shared_ptr<Fence> *release_fence) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
+  HWDisplayMode panel_mode = hw_panel_info_.mode;
 
   if ((state == kStateOn) && deferred_config_.IsDeferredState()) {
     SetDeferredFpsConfig();
@@ -450,6 +470,10 @@ DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
   error = DisplayBase::SetDisplayState(state, teardown, release_fence);
   if (error != kErrorNone) {
     return error;
+  }
+
+  if (hw_panel_info_.mode != panel_mode) {
+    UpdateDisplayModeParams();
   }
 
   // Set vsync enable state to false, as driver disables vsync during display power off.
@@ -598,7 +622,8 @@ DisplayError DisplayBuiltIn::TeardownConcurrentWriteback(void) {
 DisplayError DisplayBuiltIn::SetRefreshRate(uint32_t refresh_rate, bool final_rate) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
-  if (!active_ || !hw_panel_info_.dynamic_fps || qsync_mode_ != kQSyncModeNone) {
+  if (!active_ || !hw_panel_info_.dynamic_fps || qsync_mode_ != kQSyncModeNone ||
+      disable_dyn_fps_) {
     return kErrorNotSupported;
   }
 
@@ -674,6 +699,11 @@ void DisplayBuiltIn::IdlePowerCollapse() {
     lock_guard<recursive_mutex> obj(recursive_mutex_);
     comp_manager_->ProcessIdlePowerCollapse(display_comp_ctx_);
   }
+}
+
+DisplayError DisplayBuiltIn::ClearLUTs() {
+  comp_manager_->ProcessIdlePowerCollapse(display_comp_ctx_);
+  return kErrorNone;
 }
 
 void DisplayBuiltIn::PanelDead() {
@@ -1221,57 +1251,6 @@ void DppsInfo::DppsNotifyOps(enum DppsNotifyOps op, void *payload, size_t size) 
   ret = dpps_intf_->DppsNotifyOps(op, payload, size);
   if (ret)
     DLOGE("DppsNotifyOps op %d error %d", op, ret);
-}
-
-DisplayError DisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
-  if (!needs_refresh) {
-    return kErrorParameters;
-  }
-
-  if (!active_ && (pending_power_state_ == kPowerStateNone)) {
-    DLOGW("Cannot handle secure event when display is not active");
-    return kErrorPermission;
-  }
-
-  DisplayError err = hw_intf_->HandleSecureEvent(secure_event, default_qos_data_);
-  if (err != kErrorNone) {
-    return err;
-  }
-  comp_manager_->HandleSecureEvent(display_comp_ctx_, secure_event);
-  secure_event_ = secure_event;
-
-  if (secure_event == kTUITransitionStart) {
-    if (vsync_enable_) {
-      err = SetVSyncState(false /* enable */);
-      if (err != kErrorNone) {
-        return err;
-      }
-      vsync_enable_pending_ = true;
-    }
-    *needs_refresh = (hw_panel_info_.mode == kModeCommand);
-  } else if (secure_event == kTUITransitionEnd) {
-    err = HandlePendingVSyncEnable(nullptr);
-    if (err != kErrorNone) {
-      return err;
-    }
-    DisplayState pending_state;
-    if (GetPendingDisplayState(&pending_state) == kErrorNone) {
-      DLOGI("pending_state %d", pending_state);
-      if (pending_state == kStateOff) {
-        shared_ptr<Fence> release_fence = nullptr;
-        DisplayError err = SetDisplayState(pending_state, false /* teardown */, &release_fence);
-        if (err != kErrorNone) {
-          DLOGE("SetDisplay state %d failed for %d err %d", pending_state, display_id_, err);
-          return err;
-        }
-        *needs_refresh = false;
-        return kErrorNone;
-      }
-    }
-    *needs_refresh = (hw_panel_info_.mode == kModeCommand);
-  }
-  return kErrorNone;
 }
 
 DisplayError DisplayBuiltIn::GetQSyncMode(QSyncMode *qsync_mode) {

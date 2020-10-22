@@ -94,9 +94,9 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual HWC2::Error SetColorTransform(const float *matrix, android_color_transform_t hint);
   virtual HWC2::Error RestoreColorTransform();
   virtual int Perform(uint32_t operation, ...);
+  virtual int GetActiveSecureSession(std::bitset<kSecureMax> *secure_sessions);
   virtual int HandleSecureSession(const std::bitset<kSecureMax> &secure_session,
                                   bool *power_on_pending, bool is_active_secure_display);
-  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh);
   virtual void SetIdleTimeoutMs(uint32_t timeout_ms);
   virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
                                          int32_t format, bool post_processed);
@@ -131,6 +131,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual HWC2::Error SetClientTarget(buffer_handle_t target, shared_ptr<Fence> acquire_fence,
                                       int32_t dataspace, hwc_region_t damage);
   virtual bool IsSmartPanelConfig(uint32_t config_id);
+  virtual bool HasSmartPanelConfig(void);
   virtual int Deinit();
   virtual bool IsQsyncCallbackNeeded(bool *qsync_enabled, int32_t *refresh_rate,
                                      int32_t *qsync_refresh_rate);
@@ -146,6 +147,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
       int32_t samples_size[NUM_HISTOGRAM_COLOR_COMPONENTS],
       uint64_t *samples[NUM_HISTOGRAM_COLOR_COMPONENTS]);
   void Dump(std::ostringstream *os) override;
+  virtual HWC2::Error SetPowerMode(HWC2::PowerMode mode, bool teardown);
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
@@ -173,6 +175,8 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   void CacheAvrStatus();
   void PostCommitStitchLayers();
   void SetCpuPerfHintLargeCompCycle();
+  void SetPartialUpdate(DisplayConfigFixedInfo fixed_info);
+  void ValidateUiScaling();
 
   // SyncTask methods.
   void OnTask(const LayerStitchTaskCode &task_code,
@@ -195,6 +199,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   void *output_buffer_base_ = nullptr;
   bool pending_refresh_ = true;
   bool enable_optimize_refresh_ = false;
+  bool enable_poms_during_doze_ = false;
 
   // Members for 1 frame capture in a client provided buffer
   bool frame_capture_buffer_queued_ = false;
@@ -217,6 +222,8 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   bool vndservice_sampling_vote = false;
   int perf_hint_window_ = 0;
   int perf_hint_large_comp_cycle_ = 0;
+  bool force_reset_validate_ = false;
+  bool disable_dyn_fps_ = false;
 };
 
 }  // namespace sdm

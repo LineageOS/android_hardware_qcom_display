@@ -1128,16 +1128,15 @@ int HWCSession::DisplayConfigImpl::SetQsyncMode(uint32_t disp_id, DisplayConfig:
 
 int HWCSession::DisplayConfigImpl::IsSmartPanelConfig(uint32_t disp_id, uint32_t config_id,
                                                       bool *is_smart) {
-  if (disp_id != qdutils::DISPLAY_PRIMARY) {
-    *is_smart = false;
-    return -EINVAL;
-  }
-
   SCOPE_LOCK(hwc_session_->locker_[disp_id]);
   if (!hwc_session_->hwc_display_[disp_id]) {
     DLOGE("Display %d is not created yet.", disp_id);
     *is_smart = false;
     return -EINVAL;
+  }
+
+  if (hwc_session_->hwc_display_[disp_id]->GetDisplayClass() != DISPLAY_CLASS_BUILTIN) {
+    return false;
   }
 
   *is_smart = hwc_session_->hwc_display_[disp_id]->IsSmartPanelConfig(config_id);
@@ -1287,6 +1286,24 @@ int HWCSession::DisplayConfigImpl::IsRCSupported(uint32_t disp_id, bool *support
   Debug::GetProperty(ENABLE_ROUNDED_CORNER, &val);
   *supported = val ? true: false;
 
+  return 0;
+}
+
+int HWCSession::DisplayConfigImpl::IsSupportedConfigSwitch(uint32_t disp_id, uint32_t config,
+                                                         bool *supported) {
+  int disp_idx = hwc_session_->GetDisplayIndex(disp_id);
+  if (disp_idx == -1) {
+    DLOGE("Invalid display = %d", disp_id);
+    return -EINVAL;
+  }
+
+  SCOPE_LOCK(hwc_session_->locker_[disp_idx]);
+  if (!hwc_session_->hwc_display_[disp_idx]) {
+    DLOGW("Display %d is not connected.", disp_id);
+    return -EINVAL;
+  }
+
+  *supported = hwc_session_->hwc_display_[disp_idx]->IsModeSwitchAllowed(config);
   return 0;
 }
 

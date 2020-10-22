@@ -131,6 +131,10 @@ DisplayError HWPeripheralDRM::SetDynamicDSIClock(uint64_t bit_clk_rate) {
     return kErrorNotSupported;
   }
 
+  if (doze_poms_switch_done_ || pending_poms_switch_) {
+    return kErrorNotSupported;
+  }
+
   bit_clk_rate_ = bit_clk_rate;
   update_mode_ = true;
 
@@ -144,7 +148,27 @@ DisplayError HWPeripheralDRM::GetDynamicDSIClock(uint64_t *bit_clk_rate) {
   return kErrorNone;
 }
 
+
+DisplayError HWPeripheralDRM::SetRefreshRate(uint32_t refresh_rate) {
+  if (doze_poms_switch_done_ || pending_poms_switch_) {
+    // poms switch in progress
+    // Defer any refresh rate setting.
+    return kErrorNotSupported;
+  }
+
+  DisplayError error = HWDeviceDRM::SetRefreshRate(refresh_rate);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  return kErrorNone;
+}
+
 DisplayError HWPeripheralDRM::SetDisplayMode(const HWDisplayMode hw_display_mode) {
+  if (doze_poms_switch_done_ || pending_poms_switch_) {
+    return kErrorNotSupported;
+  }
+
   DisplayError error = HWDeviceDRM::SetDisplayMode(hw_display_mode);
   if (error != kErrorNone) {
     return error;
@@ -195,6 +219,15 @@ DisplayError HWPeripheralDRM::Commit(HWLayers *hw_layers) {
 
   // Initialize to default after successful commit
   synchronous_commit_ = false;
+  active_ = true;
+
+  if (pending_poms_switch_) {
+    HWDeviceDRM::SetDisplayMode(kModeCommand);
+    hw_panel_info_.bitclk_rates = bitclk_rates_;
+    doze_poms_switch_done_ = true;
+    pending_poms_switch_ = false;
+  }
+
   idle_pc_state_ = sde_drm::DRMIdlePCState::NONE;
 
   // After commit, update the Self Refresh state
@@ -360,9 +393,15 @@ DisplayError HWPeripheralDRM::GetDppsFeatureInfo(void *payload, size_t size) {
 DisplayError HWPeripheralDRM::HandleSecureEvent(SecureEvent secure_event,
                                                 const HWQosData &qos_data) {
   switch (secure_event) {
+    case kTUITransitionPrepare:
+      tui_state_ = kTUIStateInProgress;
+      break;
+    case kTUITransitionUnPrepare:
+      tui_state_ = kTUIStateNone;
+      break;
     case kTUITransitionStart: {
       tui_state_ = kTUIStateStart;
-      idle_pc_state_ = sde_drm::DRMIdlePCState::DISABLE;
+      ControlIdlePowerCollapse(false /* enable */, false /* synchronous */);
       if (hw_panel_info_.mode != kModeCommand) {
         SetQOSData(qos_data);
         SetVMReqState();
@@ -378,7 +417,7 @@ DisplayError HWPeripheralDRM::HandleSecureEvent(SecureEvent secure_event,
     case kTUITransitionEnd: {
       tui_state_ = kTUIStateEnd;
       ResetPropertyCache();
-      idle_pc_state_ = sde_drm::DRMIdlePCState::ENABLE;
+      ControlIdlePowerCollapse(true /* enable */, false /* synchronous */);
       if (hw_panel_info_.mode != kModeCommand || pending_power_state_ == kPowerStateOff) {
         SetQOSData(qos_data);
         SetVMReqState();
@@ -523,8 +562,14 @@ void HWPeripheralDRM::ConfigureConcurrentWriteback(LayerStack *layer_stack) {
   sde_drm::DRMRect dst = {};
   dst.left = 0;
   dst.top = 0;
-  dst.right = display_attributes_[current_mode_index_].x_pixels;
-  dst.bottom = display_attributes_[current_mode_index_].y_pixels;
+
+  if (capture_mode == DRMCWbCaptureMode::DSPP_OUT) {
+    dst.right = display_attributes_[current_mode_index_].x_pixels;
+    dst.bottom = display_attributes_[current_mode_index_].y_pixels;
+  } else {
+    dst.right = mixer_attributes_.width;
+    dst.bottom = mixer_attributes_.height;
+  }
 
   DLOGV_IF(kTagDriverConfig, "CWB Mode:%d dst.left:%d dst.top:%d dst.right:%d dst.bottom:%d",
     capture_mode, dst.left, dst.top, dst.right, dst.bottom);
@@ -566,6 +611,12 @@ DisplayError HWPeripheralDRM::PowerOn(const HWQosData &qos_data,
     return kErrorDeferred;
   }
 
+  if (switch_mode_valid_ && doze_poms_switch_done_ && (current_mode_index_ == cmd_mode_index_)) {
+    HWDeviceDRM::SetDisplayMode(kModeVideo);
+    hw_panel_info_.bitclk_rates = bitclk_rates_;
+    doze_poms_switch_done_ = false;
+  }
+
   if (!idle_pc_enabled_) {
     drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_IDLE_PC_STATE, token_.crtc_id,
                               sde_drm::DRMIdlePCState::ENABLE);
@@ -583,6 +634,8 @@ DisplayError HWPeripheralDRM::PowerOn(const HWQosData &qos_data,
   }
   idle_pc_state_ = sde_drm::DRMIdlePCState::NONE;
   idle_pc_enabled_ = true;
+  pending_poms_switch_ = false;
+  active_ = true;
 
   CacheDestScalarData();
 
@@ -590,20 +643,48 @@ DisplayError HWPeripheralDRM::PowerOn(const HWQosData &qos_data,
 }
 
 DisplayError HWPeripheralDRM::PowerOff(bool teardown) {
+  DTRACE_SCOPED();
   SetVMReqState();
-  DisplayError err = HWDeviceDRM::PowerOff(teardown);
+  DisplayError err = kErrorNone;
+  if (secure_display_active_) {
+    err = Flush(NULL);
+    if (err != kErrorNone) {
+      return err;
+    }
+  }
+
+  err = HWDeviceDRM::PowerOff(teardown);
   if (err != kErrorNone) {
     return err;
   }
+
+  pending_poms_switch_ = false;
+  active_ = false;
   SetTUIState();
+
   return kErrorNone;
 }
 
 DisplayError HWPeripheralDRM::Doze(const HWQosData &qos_data, shared_ptr<Fence> *release_fence) {
+  DTRACE_SCOPED();
   SetVMReqState();
+
+  if (!first_cycle_ && switch_mode_valid_ && !doze_poms_switch_done_ &&
+    (current_mode_index_ == video_mode_index_)) {
+    if (active_) {
+      HWDeviceDRM::SetDisplayMode(kModeCommand);
+      hw_panel_info_.bitclk_rates = bitclk_rates_;
+      doze_poms_switch_done_ = true;
+    } else {
+      pending_poms_switch_ = true;
+    }
+  }
   DisplayError err = HWDeviceDRM::Doze(qos_data, release_fence);
   if (err != kErrorNone) {
     return err;
+  }
+  if (first_cycle_) {
+    active_ = true;
   }
   SetTUIState();
   return kErrorNone;
@@ -612,15 +693,31 @@ DisplayError HWPeripheralDRM::Doze(const HWQosData &qos_data, shared_ptr<Fence> 
 DisplayError HWPeripheralDRM::DozeSuspend(const HWQosData &qos_data,
                                           shared_ptr<Fence> *release_fence) {
   SetVMReqState();
+
+  if (switch_mode_valid_ && !doze_poms_switch_done_ &&
+    (current_mode_index_ == video_mode_index_)) {
+    HWDeviceDRM::SetDisplayMode(kModeCommand);
+    hw_panel_info_.bitclk_rates = bitclk_rates_;
+    doze_poms_switch_done_ = true;
+  }
+
   DisplayError err = HWDeviceDRM::DozeSuspend(qos_data, release_fence);
   if (err != kErrorNone) {
     return err;
   }
+
+  pending_poms_switch_ = false;
+  active_ = true;
+
   SetTUIState();
   return kErrorNone;
 }
 
 DisplayError HWPeripheralDRM::SetDisplayAttributes(uint32_t index) {
+  if (doze_poms_switch_done_ || pending_poms_switch_) {
+    return kErrorNotSupported;
+  }
+
   HWDeviceDRM::SetDisplayAttributes(index);
   // update bit clk rates.
   hw_panel_info_.bitclk_rates = bitclk_rates_;

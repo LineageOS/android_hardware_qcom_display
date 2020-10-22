@@ -74,6 +74,7 @@ enum {
 enum SecureSessionType {
   kSecureDisplay,
   kSecureCamera,
+  kSecureTUI,
   kSecureMax,
 };
 
@@ -112,6 +113,7 @@ class HWCColorMode {
   virtual ColorMode GetCurrentColorMode() { return current_color_mode_; }
   virtual HWC2::Error ApplyCurrentColorModeWithRenderIntent(bool hdr_present);
   virtual HWC2::Error CacheColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
+  void ReapplyMode() { apply_mode_ = true; };
 
  protected:
   template <class T>
@@ -154,8 +156,6 @@ class HWCDisplay : public DisplayEventHandler {
     kDisplayStatusOnline,
     kDisplayStatusPause,       // Pause + PowerOff
     kDisplayStatusResume,      // Resume + PowerOn
-    kDisplayStatusPauseOnly,
-    kDisplayStatusResumeOnly,
   };
 
   enum DisplayValidateState {
@@ -190,10 +190,8 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int Perform(uint32_t operation, ...);
   virtual int HandleSecureSession(const std::bitset<kSecureMax> &secure_sessions,
                                   bool *power_on_pending, bool is_active_secure_display);
-  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) {
-    return kErrorNotSupported;
-  }
-  virtual int GetActiveSecureSession(std::bitset<kSecureMax> *secure_sessions);
+  virtual DisplayError HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh);
+  virtual int GetActiveSecureSession(std::bitset<kSecureMax> *secure_sessions) { return 0; };
   virtual DisplayError SetMixerResolution(uint32_t width, uint32_t height);
   virtual DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
   virtual void GetPanelResolution(uint32_t *width, uint32_t *height);
@@ -240,6 +238,10 @@ class HWCDisplay : public DisplayEventHandler {
     return false;
   }
 
+  virtual bool HasSmartPanelConfig(void) {
+    return false;
+  }
+
   // Display Configurations
   static uint32_t GetThrottlingRefreshRate() { return HWCDisplay::throttling_refresh_rate_; }
   static void SetThrottlingRefreshRate(uint32_t newRefreshRate)
@@ -250,6 +252,8 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int GetDisplayAttributesForConfig(int config,
                                             DisplayConfigVariableInfo *display_attributes);
   virtual int GetSupportedDisplayRefreshRates(std::vector<uint32_t> *supported_refresh_rates);
+  bool IsModeSwitchAllowed(uint32_t config);
+
   virtual int SetState(bool connected) {
     return kErrorNotSupported;
   }
@@ -280,7 +284,6 @@ class HWCDisplay : public DisplayEventHandler {
     return (has_client_composition_ || layer_stack_.flags.single_buffered_layer_present);
   }
   bool CheckResourceState();
-  DisplayType GetDisplayType() { return type_; }
   virtual void SetFastPathComposition(bool enable) { fast_path_composition_ = enable; }
   virtual HWC2::Error SetColorModeFromClientApi(int32_t color_mode_id) {
     return HWC2::Error::Unsupported;
@@ -540,6 +543,9 @@ class HWCDisplay : public DisplayEventHandler {
   std::mutex transient_refresh_rate_lock_;
   std::mutex active_config_lock_;
   int active_config_index_ = -1;
+  uint32_t active_refresh_rate_ = 0;
+  SecureEvent secure_event_ = kSecureEventMax;
+  bool display_pause_pending_ = false;
 
  private:
   void DumpInputBuffers(void);
@@ -547,7 +553,6 @@ class HWCDisplay : public DisplayEventHandler {
   void UpdateRefreshRate();
   void WaitOnPreviousFence();
   void UpdateActiveConfig();
-  bool IsModeSwitchAllowed(uint32_t mode_switch);
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
   uint32_t geometry_changes_ = GeometryChanges::kNone;

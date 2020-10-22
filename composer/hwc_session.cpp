@@ -827,8 +827,9 @@ int32_t HWCSession::PresentDisplay(hwc2_display_t display, shared_ptr<Fence> *ou
   HandlePendingRefresh();
   cwb_.PresentDisplayDone(display);
   display_ready_.set(UINT32(display));
-  {
-    std::unique_lock<std::mutex> caller_lock(hotplug_mutex_);
+  std::unique_lock<std::mutex> caller_lock(hotplug_mutex_);
+  if (!resource_ready_) {
+    resource_ready_ = true;
     hotplug_cv_.notify_one();
   }
 
@@ -1160,30 +1161,20 @@ int32_t HWCSession::GetDozeSupport(hwc2_display_t display, int32_t *out_support)
   }
 
   *out_support = 0;
-  if (hwc_display_[display]->GetDisplayType() != kBuiltIn) {
-    // Doze support check not needed for non-builtin display
+
+  SCOPE_LOCK(locker_[display]);
+  if (!hwc_display_[display]) {
+    DLOGE("Display %d is not created yet.", INT32(display));
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  if (hwc_display_[display]->GetDisplayClass() != DISPLAY_CLASS_BUILTIN) {
     return HWC2_ERROR_NONE;
   }
 
-  uint32_t config = 0;
-  GetActiveConfigIndex(display, &config);
-  *out_support = isSmartPanelConfig(display, config) ? 1 : 0;
+  *out_support = hwc_display_[display]->HasSmartPanelConfig() ? 1 : 0;
 
   return HWC2_ERROR_NONE;
-}
-
-bool HWCSession::isSmartPanelConfig(uint32_t disp_id, uint32_t config_id) {
-  if (disp_id != qdutils::DISPLAY_PRIMARY) {
-    return false;
-  }
-
-  SCOPE_LOCK(locker_[disp_id]);
-  if (!hwc_display_[disp_id]) {
-    DLOGE("Display %d is not created yet.", disp_id);
-    return false;
-  }
-
-  return hwc_display_[disp_id]->IsSmartPanelConfig(config_id);
 }
 
 int32_t HWCSession::ValidateDisplay(hwc2_display_t display, uint32_t *out_num_types,
@@ -2439,28 +2430,12 @@ void HWCSession::UEventHandler(const char *uevent_data, int length) {
           str_mst ? ", MST_HOTPLUG = " : "", str_mst ? str_mst : "",
           hpd_bpp_, hpd_pattern_);
 
-    hwc2_display_t virtual_display_index =
-        (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
-
-    std::bitset<kSecureMax> secure_sessions = 0;
-    hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
-    if (active_builtin_disp_id < HWCCallbacks::kNumDisplays) {
-      Locker::ScopeLock lock_a(locker_[active_builtin_disp_id]);
-      hwc_display_[active_builtin_disp_id]->GetActiveSecureSession(&secure_sessions);
-    }
-    if (secure_sessions[kSecureDisplay] || hwc_display_[virtual_display_index]) {
-      // Defer hotplug handling.
-      SCOPE_LOCK(pluggable_handler_lock_);
-      DLOGI("Marking hotplug pending...");
-      pending_hotplug_event_ = kHotPlugEvent;
-    } else {
-      // Handle hotplug.
-      int32_t err = HandlePluggableDisplays(true);
-      if (err) {
-        DLOGW("Hotplug handling failed. Error %d '%s'. Hotplug handling %s.", err,
-              strerror(abs(err)), (pending_hotplug_event_ == kHotPlugEvent) ?
-              "deferred" : "dropped");
-      }
+    // Handle hotplug.
+    int32_t err = HandlePluggableDisplays(true);
+    if (err) {
+      DLOGW("Hotplug handling failed. Error %d '%s'. Hotplug handling %s.", err,
+            strerror(abs(err)), (pending_hotplug_event_ == kHotPlugEvent) ?
+            "deferred" : "dropped");
     }
 
     if (str_status) {
@@ -2675,6 +2650,20 @@ int HWCSession::HandlePluggableDisplays(bool delay_hotplug) {
   if (null_display_mode_) {
     DLOGW("Skipped pluggable display handling in null-display mode");
     return 0;
+  }
+  hwc2_display_t virtual_display_index =
+      (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
+  std::bitset<kSecureMax> secure_sessions = 0;
+  hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
+  if (active_builtin_disp_id < HWCCallbacks::kNumDisplays) {
+    Locker::ScopeLock lock_a(locker_[active_builtin_disp_id]);
+    hwc_display_[active_builtin_disp_id]->GetActiveSecureSession(&secure_sessions);
+  }
+  if (secure_sessions.any() || hwc_display_[virtual_display_index]) {
+    // Defer hotplug handling.
+    DLOGI("Marking hotplug pending...");
+    pending_hotplug_event_ = kHotPlugEvent;
+    return -EAGAIN;
   }
 
   DLOGI("Handling hotplug...");
@@ -3087,7 +3076,7 @@ void HWCSession::HandleSecureSession() {
     hwc_display_[active_builtin_disp_id]->GetActiveSecureSession(&secure_sessions);
   }
 
-  if (secure_sessions.any()) {
+  if (secure_sessions[kSecureDisplay] || secure_sessions[kSecureCamera]) {
     secure_session_active_ = true;
   } else if (!secure_session_active_) {
     // No secure session active. No secure session transition to handle. Skip remaining steps.
@@ -3495,6 +3484,7 @@ void HWCSession::WaitForResources(bool wait_for_resources, hwc2_display_t active
       }
       {
         std::unique_lock<std::mutex> caller_lock(hotplug_mutex_);
+        resource_ready_ = false;
         hotplug_cv_.wait(caller_lock);
       }
       res_wait = hwc_display_[display_id]->CheckResourceState();
@@ -3537,6 +3527,10 @@ android::status_t HWCSession::HandleTUITransition(int disp_id, int event) {
 }
 
 android::status_t HWCSession::TUITransitionPrepare(int disp_id) {
+  // Hold this lock to until on going hotplug handling is complete before we start TUI session
+  SCOPE_LOCK(pluggable_handler_lock_);
+
+  bool needs_refresh = false;
   hwc2_display_t target_display = GetDisplayIndex(disp_id);
   if (target_display == -1) {
     target_display = GetActiveBuiltinDisplay();
@@ -3558,9 +3552,9 @@ android::status_t HWCSession::TUITransitionPrepare(int disp_id) {
       if (info.client_id == target_display) {
         continue;
       }
-      int err = hwc_display_[info.client_id]->SetDisplayStatus(HWCDisplay::kDisplayStatusPause);
-      if (err != 0) {
-        return err;
+      if (hwc_display_[info.client_id]->HandleSecureEvent(kTUITransitionPrepare,
+                                                          &needs_refresh) != kErrorNone) {
+        return -EINVAL;
       }
     }
   }
@@ -3569,6 +3563,10 @@ android::status_t HWCSession::TUITransitionPrepare(int disp_id) {
 }
 
 android::status_t HWCSession::TUITransitionStart(int disp_id) {
+  if (TUITransitionPrepare(disp_id) != 0) {
+    return -EINVAL;
+  }
+
   hwc2_display_t target_display = GetDisplayIndex(disp_id);
   bool needs_refresh = false;
   if (target_display == -1) {
@@ -3587,8 +3585,10 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
                                                           &needs_refresh) != kErrorNone) {
         return -EINVAL;
       }
+    } else {
+      DLOGW("Target display %d is not ready", disp_id);
+      return -ENODEV;
     }
-    hwc_display_[target_display]->ResetValidation();
   }
 
   if (needs_refresh) {
@@ -3599,24 +3599,12 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
     tui_transition_pending_[target_display] = true;
     tui_locker_[target_display].Wait();
   }
-
-  {
-    Locker::ScopeLock lock_d(locker_[target_display]);
-    if (hwc_display_[target_display]) {
-      DLOGI("Pause display %d", target_display);
-
-      int err = hwc_display_[target_display]->SetDisplayStatus(HWCDisplay::kDisplayStatusPauseOnly);
-      if (err != 0) {
-        return err;
-      }
-    } else {
-      DLOGW("Target display %d is not ready", disp_id);
-      return -ENODEV;
-    }
-  }
   return 0;
 }
 android::status_t HWCSession::TUITransitionEnd(int disp_id) {
+  // Hold this lock so that any deferred hotplug events will not be handled during the commit
+  // and will be handled at the end of TUITransitionPrepare.
+  SCOPE_LOCK(pluggable_handler_lock_);
   hwc2_display_t target_display = GetDisplayIndex(disp_id);
   bool needs_refresh = false;
   if (target_display == -1) {
@@ -3631,19 +3619,10 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
   {
     Locker::ScopeLock lock_d(locker_[target_display]);
     if (hwc_display_[target_display]) {
-      DLOGI("Resume display %d", target_display);
-
-      int err =
-          hwc_display_[target_display]->SetDisplayStatus(HWCDisplay::kDisplayStatusResumeOnly);
-      if (err != 0) {
-        return err;
-      }
-
       if (hwc_display_[target_display]->HandleSecureEvent(kTUITransitionEnd,
                                                           &needs_refresh) != kErrorNone) {
         return -EINVAL;
       }
-      hwc_display_[target_display]->ResetValidation();
     } else {
       DLOGW("Target display %d is not ready", disp_id);
       return -ENODEV;
@@ -3657,6 +3636,20 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
     tui_transition_pending_[target_display] = true;
     tui_locker_[target_display].Wait();
   }
+  return TUITransitionUnPrepare(disp_id);
+}
+
+android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
+  bool needs_refresh = false;
+  hwc2_display_t target_display = GetDisplayIndex(disp_id);
+  if (target_display == -1) {
+    target_display = GetActiveBuiltinDisplay();
+  }
+
+  if (target_display != qdutils::DISPLAY_PRIMARY && target_display != qdutils::DISPLAY_BUILTIN_2) {
+    DLOGE("Display %d not supported", target_display);
+    return -ENOTSUP;
+  }
 
   std::vector<DisplayMapInfo> map_info = {map_info_primary_};
   std::copy(map_info_builtin_.begin(), map_info_builtin_.end(), std::back_inserter(map_info));
@@ -3669,13 +3662,20 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
       if (info.client_id == target_display) {
         continue;
       }
-      int err = hwc_display_[info.client_id]->SetDisplayStatus(HWCDisplay::kDisplayStatusResume);
-      if (err != 0) {
-        return err;
+      if (info.disp_type == kPluggable && pending_hotplug_event_ == kHotPlugEvent) {
+        continue;
+      }
+      if (hwc_display_[info.client_id]->HandleSecureEvent(kTUITransitionUnPrepare,
+                                                          &needs_refresh) != kErrorNone) {
+        return -EINVAL;
       }
     }
   }
-
+  if (pending_hotplug_event_ == kHotPlugEvent) {
+    // Do hotplug handling in a different thread to avoid blocking TUI thread.
+    std::thread(&HWCSession::HandlePluggableDisplays, this, true).detach();
+  }
+  DLOGI("End of TUI session on display %d", disp_id);
   return 0;
 }
 

@@ -1,4 +1,8 @@
 soong_namespace {
+    imports: [
+        "hardware/qcom/display/gralloc",
+        "hardware/qcom/display/libdebug",
+    ]
 }
 
 soong_config_module_type {

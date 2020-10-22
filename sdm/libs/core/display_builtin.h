@@ -123,7 +123,6 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError GetPanelBrightness(float *brightness) override;
   DisplayError GetPanelMaxBrightness(uint32_t *max_brightness_level) override;
   DisplayError GetRefreshRate(uint32_t *refresh_rate) override;
-  DisplayError HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) override;
   DisplayError SetDisplayDppsAdROI(void *payload) override;
   DisplayError SetQSyncMode(QSyncMode qsync_mode) override;
   DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous) override;
@@ -150,6 +149,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   void PanelDead() override;
   void HwRecovery(const HWRecoveryEvent sdm_event_code) override;
   DisplayError TeardownConcurrentWriteback(void) override;
+  DisplayError ClearLUTs() override;
   void Histogram(int histogram_fd, uint32_t blob_id) override;
 
   // Implement the DppsPropIntf
@@ -170,6 +170,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError SetupPanelfeatures();
   DisplayError SetupSPR();
   DisplayError SetupDemura();
+  void UpdateDisplayModeParams();
 
   const uint32_t kPuTimeOutMs = 1000;
   std::vector<HWEvent> event_list_;
@@ -179,6 +180,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   bool commit_event_enabled_ = false;
   bool reset_panel_ = false;
   bool panel_feature_init_ = false;
+  bool disable_dyn_fps_ = false;
   DppsInfo dpps_info_ = {};
   FrameTriggerMode trigger_mode_debug_ = kFrameTriggerMax;
   float level_remainder_ = 0.0f;

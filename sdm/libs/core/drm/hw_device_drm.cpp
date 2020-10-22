@@ -587,6 +587,7 @@ void HWDeviceDRM::InitializeConfigs() {
     }
     PopulateDisplayAttributes(i);
   }
+  SetDisplaySwitchMode(current_mode_index_);
 }
 
 DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
@@ -861,22 +862,20 @@ DisplayError HWDeviceDRM::GetHWPanelInfo(HWPanelInfo *panel_info) {
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::SetDisplayAttributes(uint32_t index) {
-  if (index >= display_attributes_.size()) {
-    DLOGE("Invalid mode index %d mode size %d", index, UINT32(display_attributes_.size()));
-    return kErrorParameters;
-  }
-
+void HWDeviceDRM::SetDisplaySwitchMode(uint32_t index) {
   uint32_t mode_flag = 0;
-  uint32_t curr_mode_flag = 0;
+  uint32_t curr_mode_flag = 0, switch_mode_flag = 0;
   drmModeModeInfo to_set = connector_info_.modes[index].mode;
   drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
   uint64_t current_bit_clk = connector_info_.modes[current_mode_index_].bit_clk_rate;
+  uint32_t switch_index  = 0;
 
   if (to_set.flags & DRM_MODE_FLAG_CMD_MODE_PANEL) {
     mode_flag = DRM_MODE_FLAG_CMD_MODE_PANEL;
+    switch_mode_flag = DRM_MODE_FLAG_VID_MODE_PANEL;
   } else if (to_set.flags & DRM_MODE_FLAG_VID_MODE_PANEL) {
     mode_flag = DRM_MODE_FLAG_VID_MODE_PANEL;
+    switch_mode_flag = DRM_MODE_FLAG_CMD_MODE_PANEL;
   }
 
   if (current_mode.flags & DRM_MODE_FLAG_CMD_MODE_PANEL) {
@@ -901,6 +900,55 @@ DisplayError HWDeviceDRM::SetDisplayAttributes(uint32_t index) {
   }
 
   current_mode_index_ = index;
+
+  switch_mode_valid_ = false;
+  for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
+    if ((to_set.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
+        (to_set.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
+        (to_set.vrefresh == connector_info_.modes[mode_index].mode.vrefresh) &&
+        (switch_mode_flag & connector_info_.modes[mode_index].mode.flags)) {
+      switch_index = mode_index;
+      switch_mode_valid_ = true;
+      break;
+    }
+  }
+
+  if (!switch_mode_valid_) {
+    // in case there is no corresponding switch mode with same fps, try for a switch
+    // mode with lowest fps. This is to handle cases where there are multiple video mode fps
+    // but only one command mode for doze like 30 fps.
+    uint32_t refresh_rate = 0;
+    for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
+      if ((to_set.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
+          (to_set.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
+          (switch_mode_flag & connector_info_.modes[mode_index].mode.flags)) {
+        if (!refresh_rate || (refresh_rate > connector_info_.modes[mode_index].mode.vrefresh)) {
+          switch_index = mode_index;
+          switch_mode_valid_ = true;
+          refresh_rate = connector_info_.modes[mode_index].mode.vrefresh;
+        }
+      }
+    }
+  }
+
+  if (switch_mode_valid_) {
+    if (mode_flag & DRM_MODE_FLAG_VID_MODE_PANEL) {
+      video_mode_index_ = current_mode_index_;
+      cmd_mode_index_ = switch_index;
+    } else {
+      video_mode_index_ = switch_index;
+      cmd_mode_index_ = current_mode_index_;
+    }
+  }
+}
+
+DisplayError HWDeviceDRM::SetDisplayAttributes(uint32_t index) {
+  if (index >= display_attributes_.size()) {
+    DLOGE("Invalid mode index %d mode size %d", index, UINT32(display_attributes_.size()));
+    return kErrorParameters;
+  }
+
+  SetDisplaySwitchMode(index);
   PopulateHWPanelInfo();
   UpdateMixerAttributes();
 
@@ -914,7 +962,8 @@ DisplayError HWDeviceDRM::SetDisplayAttributes(uint32_t index) {
         display_attributes_[index].v_front_porch, display_attributes_[index].v_pulse_width,
         display_attributes_[index].v_total, display_attributes_[index].h_total,
         display_attributes_[index].clock_khz, display_attributes_[index].topology,
-        (mode_flag & DRM_MODE_FLAG_VID_MODE_PANEL) ? "Video" : "Command");
+        (connector_info_.modes[index].mode.flags & DRM_MODE_FLAG_VID_MODE_PANEL) ?
+        "Video" : "Command");
 
   return kErrorNone;
 }
@@ -929,6 +978,12 @@ DisplayError HWDeviceDRM::GetConfigIndex(char *mode, uint32_t *index) {
 
 DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *release_fence) {
   SetQOSData(qos_data);
+
+  if (tui_state_ != kTUIStateNone) {
+    DLOGI("Request deferred TUI state %d", tui_state_);
+    pending_power_state_ = kPowerStateOn;
+    return kErrorDeferred;
+  }
 
   int64_t release_fence_fd = -1;
   int64_t retire_fence_fd = -1;
@@ -972,7 +1027,7 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown) {
     return kErrorNone;
   }
 
-  if (tui_state_ == kTUIStateStart || tui_state_ == kTUIStateInProgress) {
+  if (tui_state_ != kTUIStateNone && tui_state_ != kTUIStateEnd) {
     DLOGI("Request deferred TUI state %d", tui_state_);
     pending_power_state_ = kPowerStateOff;
     return kErrorDeferred;
@@ -1050,7 +1105,7 @@ DisplayError HWDeviceDRM::DozeSuspend(const HWQosData &qos_data,
                                       shared_ptr<Fence> *release_fence) {
   DTRACE_SCOPED();
 
-  if (tui_state_ == kTUIStateStart || tui_state_ == kTUIStateInProgress) {
+  if (tui_state_ != kTUIStateNone && tui_state_ != kTUIStateEnd) {
     pending_power_state_ = kPowerStateDozeSuspend;
     return kErrorDeferred;
   }
@@ -1565,6 +1620,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
           (current_bit_clk == connector_info_.modes[mode_index].bit_clk_rate) &&
           (vrefresh_ == connector_info_.modes[mode_index].mode.vrefresh)) {
         current_mode_index_ = mode_index;
+        SetDisplaySwitchMode(mode_index);
         break;
       }
     }
@@ -1580,6 +1636,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
           (current_mode.vrefresh == connector_info_.modes[mode_index].mode.vrefresh) &&
           (bit_clk_rate_ == connector_info_.modes[mode_index].bit_clk_rate)) {
         current_mode_index_ = mode_index;
+        SetDisplaySwitchMode(mode_index);
         break;
       }
     }
@@ -1813,31 +1870,25 @@ void HWDeviceDRM::SetIdleTimeoutMs(uint32_t timeout_ms) {
 }
 
 DisplayError HWDeviceDRM::SetDisplayMode(const HWDisplayMode hw_display_mode) {
+  if (!switch_mode_valid_) {
+    return kErrorNotSupported;
+  }
+
   uint32_t mode_flag = 0;
 
   if (hw_display_mode == kModeCommand) {
     mode_flag = DRM_MODE_FLAG_CMD_MODE_PANEL;
+    current_mode_index_ = cmd_mode_index_;
     DLOGI_IF(kTagDriverConfig, "switch panel mode to command");
   } else if (hw_display_mode == kModeVideo) {
     mode_flag = DRM_MODE_FLAG_VID_MODE_PANEL;
+    current_mode_index_ = video_mode_index_;
     DLOGI_IF(kTagDriverConfig, "switch panel mode to video");
   }
-
-  drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
-  for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
-    if ((current_mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
-        (current_mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
-        (current_mode.vrefresh == connector_info_.modes[mode_index].mode.vrefresh) &&
-        (mode_flag & connector_info_.modes[mode_index].mode.flags)) {
-      current_mode_index_ = mode_index;
-      PopulateHWPanelInfo();
-      panel_mode_changed_ = mode_flag;
-      synchronous_commit_ = true;
-      return kErrorNone;
-    }
-  }
-
-  return kErrorNotSupported;
+  PopulateHWPanelInfo();
+  panel_mode_changed_ = mode_flag;
+  synchronous_commit_ = true;
+  return kErrorNone;
 }
 
 DisplayError HWDeviceDRM::SetRefreshRate(uint32_t refresh_rate) {

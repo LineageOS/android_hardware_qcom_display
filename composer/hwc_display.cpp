@@ -1224,6 +1224,11 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, shared_ptr<Fence
 HWC2::Error HWCDisplay::SetActiveConfig(hwc2_config_t config) {
   DTRACE_SCOPED();
 
+  // Cache refresh rate set by client.
+  DisplayConfigVariableInfo info = {};
+  GetDisplayAttributesForConfig(INT(config), &info);
+  active_refresh_rate_ = info.fps;
+
   hwc2_config_t current_config = 0;
   GetActiveConfig(&current_config);
   if (current_config == config) {
@@ -1713,6 +1718,12 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence
   flush_ = false;
   skip_commit_ = false;
 
+  if (display_pause_pending_) {
+    DLOGI("Pause display %d-%d", sdm_id_, type_);
+    display_paused_ = true;
+    display_pause_pending_ = false;
+  }
+
   return status;
 }
 
@@ -1993,18 +2004,12 @@ int HWCDisplay::SetDisplayStatus(DisplayStatus display_status) {
       display_paused_ = false;
       status = INT32(SetPowerMode(HWC2::PowerMode::On, false /* teardown */));
       break;
-    case kDisplayStatusResumeOnly:
-      display_paused_ = false;
-      break;
     case kDisplayStatusOnline:
       status = INT32(SetPowerMode(HWC2::PowerMode::On, false /* teardown */));
       break;
     case kDisplayStatusPause:
       display_paused_ = true;
       status = INT32(SetPowerMode(HWC2::PowerMode::Off, false /* teardown */));
-      break;
-    case kDisplayStatusPauseOnly:
-      display_paused_ = true;
       break;
     case kDisplayStatusOffline:
       status = INT32(SetPowerMode(HWC2::PowerMode::Off, false /* teardown */));
@@ -2200,23 +2205,6 @@ int HWCDisplay::HandleSecureSession(const std::bitset<kSecureMax> &secure_sessio
           id_, sdm_id_, type_);
   }
   active_secure_sessions_ = secure_sessions;
-  return 0;
-}
-
-int HWCDisplay::GetActiveSecureSession(std::bitset<kSecureMax> *secure_sessions) {
-  if (!secure_sessions) {
-    return -1;
-  }
-  secure_sessions->reset();
-  for (auto hwc_layer : layer_set_) {
-    Layer *layer = hwc_layer->GetSDMLayer();
-    if (layer->input_buffer.flags.secure_camera) {
-      secure_sessions->set(kSecureCamera);
-    }
-    if (layer->input_buffer.flags.secure_display) {
-      secure_sessions->set(kSecureDisplay);
-    }
-  }
   return 0;
 }
 
@@ -2599,7 +2587,7 @@ int32_t HWCDisplay::GetDisplayConfigGroup(DisplayConfigGroupInfo variable_config
   return -1;
 }
 
-bool HWCDisplay::IsModeSwitchAllowed(uint32_t mode_switch) {
+bool HWCDisplay::IsModeSwitchAllowed(uint32_t config) {
   DisplayError error = kErrorNone;
   uint32_t allowed_mode_switch = 0;
 
@@ -2608,12 +2596,12 @@ bool HWCDisplay::IsModeSwitchAllowed(uint32_t mode_switch) {
     DLOGW("Unable to retrieve supported modes for the current device configuration.");
   }
 
-  if (allowed_mode_switch == 0 || (allowed_mode_switch & (1 << mode_switch))) {
-    DLOGV_IF(kTagClient, "Allowed to switch to mode:%d", mode_switch);
+  if (allowed_mode_switch == 0 || (allowed_mode_switch & (1 << config))) {
+    DLOGV_IF(kTagClient, "Allowed to switch to mode:%d", config);
     return true;
   }
 
-  DLOGE("Not allowed to switch to mode:%d", mode_switch);
+  DLOGW("Not allowed to switch to mode:%d", config);
   return false;
 }
 
@@ -2813,6 +2801,11 @@ HWC2::Error HWCDisplay::SubmitDisplayConfig(hwc2_config_t config) {
   SetActiveConfigIndex(config);
   DLOGI("Active configuration changed to: %d", config);
 
+  // Cache refresh rate set by client.
+  DisplayConfigVariableInfo info = {};
+  GetDisplayAttributesForConfig(INT(config), &info);
+  active_refresh_rate_ = info.fps;
+
   return HWC2::Error::None;
 }
 
@@ -2834,6 +2827,41 @@ void HWCDisplay::SetActiveConfigIndex(int index) {
 int HWCDisplay::GetActiveConfigIndex() {
   std::lock_guard<std::mutex> lock(active_config_lock_);
   return active_config_index_;
+}
+
+DisplayError HWCDisplay::HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) {
+  if (secure_event == secure_event_) {
+    return kErrorNone;
+  }
+
+  DisplayError err = display_intf_->HandleSecureEvent(secure_event, needs_refresh);
+  if (err != kErrorNone) {
+    DLOGE("Handle secure event failed");
+    return err;
+  }
+
+  if (secure_event == kTUITransitionEnd)
+    color_mode_->ReapplyMode();
+
+  if (secure_event == kTUITransitionEnd || secure_event == kTUITransitionUnPrepare) {
+    DLOGI("Resume display %d-%d",  sdm_id_, type_);
+    display_paused_ = false;
+    if (*needs_refresh) {
+      validated_ = false;
+    }
+  } else if (secure_event == kTUITransitionPrepare || secure_event == kTUITransitionStart) {
+    if (*needs_refresh) {
+      validated_ = false;
+      display_pause_pending_ = true;
+    } else {
+      DLOGI("Pause display %d-%d", sdm_id_, type_);
+      display_paused_ = true;
+    }
+  }
+
+  secure_event_ = secure_event;
+
+  return kErrorNone;
 }
 
 }  // namespace sdm

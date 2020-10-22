@@ -125,6 +125,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(SetDisplayElapseTime(uint64_t))
   MAKE_NO_OP(GetStcColorModes(snapdragoncolor::ColorModeList *))
   MAKE_NO_OP(SetStcColorMode(const snapdragoncolor::ColorMode &))
+  MAKE_NO_OP(ClearLUTs())
 
  protected:
   DisplayConfigVariableInfo default_variable_config_ = {};

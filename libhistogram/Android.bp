@@ -12,12 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-soong_namespace {
-    imports: [
-        "hardware/qcom/display",
-    ],
-}
-
 cc_library_shared {
 
     name: "libhistogram",

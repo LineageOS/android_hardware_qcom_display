@@ -1,7 +1,4 @@
 
-soong_namespace {
-}
-
 cc_library_shared {
     name: "lights.qcom",
     srcs: ["lights.c"],
