@@ -148,6 +148,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
       uint64_t *samples[NUM_HISTOGRAM_COLOR_COMPONENTS]);
   void Dump(std::ostringstream *os) override;
   virtual HWC2::Error SetPowerMode(HWC2::PowerMode mode, bool teardown);
+  virtual bool IsDisplayIdle();
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,

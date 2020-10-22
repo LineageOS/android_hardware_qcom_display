@@ -1582,4 +1582,10 @@ void HWCDisplayBuiltIn::SetCpuPerfHintLargeCompCycle() {
   }
 }
 
+bool HWCDisplayBuiltIn::IsDisplayIdle() {
+  // Notify only if this display is source of vsync.
+  bool vsync_source = (callbacks_->GetVsyncSource() == id_);
+  return vsync_source && display_idle_;
+}
+
 }  // namespace sdm

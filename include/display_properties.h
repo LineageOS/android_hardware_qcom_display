@@ -126,6 +126,7 @@
 // PERF hint properties
 #define ENABLE_PERF_HINT_LARGE_COMP_CYCLE    DISPLAY_PROP("enable_perf_hint_large_comp_cycle")
 #define DISABLE_DYNAMIC_FPS                  DISPLAY_PROP("disable_dynamic_fps")
+#define ENABLE_QSYNC_IDLE                    DISPLAY_PROP("enable_qsync_idle")
 
 // Add all vendor.display properties above
 

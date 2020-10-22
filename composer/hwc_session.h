@@ -391,6 +391,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
                                                 std::vector<uint32_t> *supported_refresh_rates);
     virtual int IsRCSupported(uint32_t disp_id, bool *supported);
     virtual int IsSupportedConfigSwitch(uint32_t disp_id, uint32_t config, bool *supported);
+    virtual int ControlIdleStatusCallback(bool enable);
 
     std::weak_ptr<DisplayConfig::ConfigCallback> callback_;
     HWCSession *hwc_session_ = nullptr;
@@ -515,6 +516,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   android::status_t TUITransitionStart(int disp_id);
   android::status_t TUITransitionEnd(int disp_id);
   android::status_t TUITransitionUnPrepare(int disp_id);
+  void PerformIdleStatusCallback(hwc2_display_t display);
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};
@@ -556,6 +558,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   std::bitset<HWCCallbacks::kNumDisplays> pending_refresh_;
   CWB cwb_;
   std::weak_ptr<DisplayConfig::ConfigCallback> qsync_callback_;
+  std::weak_ptr<DisplayConfig::ConfigCallback> idle_callback_;
   bool async_powermode_ = false;
   bool async_vds_creation_ = false;
   bool power_state_transition_[HWCCallbacks::kNumDisplays] = {};

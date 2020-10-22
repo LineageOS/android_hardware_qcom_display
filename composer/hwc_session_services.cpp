@@ -1304,6 +1304,17 @@ int HWCSession::DisplayConfigImpl::IsSupportedConfigSwitch(uint32_t disp_id, uin
   }
 
   *supported = hwc_session_->hwc_display_[disp_idx]->IsModeSwitchAllowed(config);
+
+  return 0;
+}
+
+int HWCSession::DisplayConfigImpl::ControlIdleStatusCallback(bool enable) {
+  if (enable) {
+    hwc_session_->idle_callback_ = callback_;
+  } else {
+    hwc_session_->idle_callback_.reset();
+  }
+
   return 0;
 }
 
