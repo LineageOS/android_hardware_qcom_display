@@ -38,7 +38,7 @@ ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
     common_flags += -DUSER_DEBUG
 endif
 
-common_includes := system/core/base/include
+common_includes := system/libbase/include
 CHECK_VERSION_LE = $(shell if [ $(1) -le $(2) ] ; then echo true ; else echo false ; fi)
 PLATFORM_SDK_NOUGAT = 25
 ifeq "REL" "$(PLATFORM_VERSION_CODENAME)"
