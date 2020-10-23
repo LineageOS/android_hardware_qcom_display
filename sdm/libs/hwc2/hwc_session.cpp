@@ -957,7 +957,7 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       break;
 
     case qService::IQService::SET_IDLE_TIMEOUT:
-      setIdleTimeout(UINT32(input_parcel->readInt32()));
+      SetIdleTimeout(UINT32(input_parcel->readInt32()));
       break;
 
     case qService::IQService::SET_FRAME_DUMP_CONFIG:
@@ -976,7 +976,7 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
         int disp_id = INT(input_parcel->readInt32());
         HWCDisplay::DisplayStatus disp_status =
               static_cast<HWCDisplay::DisplayStatus>(input_parcel->readInt32());
-        status = SetSecondaryDisplayStatus(disp_id, disp_status);
+        status = SetDisplayStatus(disp_id, disp_status);
         output_parcel->writeInt32(status);
       }
       break;
@@ -990,7 +990,7 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
 
     case qService::IQService::TOGGLE_SCREEN_UPDATES: {
         int32_t input = input_parcel->readInt32();
-        status = toggleScreenUpdate(input == 1);
+        status = ToggleScreenUpdate(input == 1);
         output_parcel->writeInt32(status);
       }
       break;
@@ -1062,7 +1062,7 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
 
     case qService::IQService::SET_CAMERA_STATUS: {
         uint32_t camera_status = UINT32(input_parcel->readInt32());
-        status = setCameraLaunchStatus(camera_status);
+        status = SetCameraLaunchStatus(camera_status);
       }
       break;
 
