@@ -487,6 +487,24 @@ DisplayError ColorManagerProxy::PrePrepare(HWLayers *hw_layers) {
   return kErrorNone;
 }
 
+DisplayError ColorManagerProxy::NotifyDisplayCalibrationMode(bool in_calibration) {
+  if (!stc_intf_) {
+    return kErrorUndefined;
+  }
+
+  ScPayload payload;
+  payload.len = sizeof(in_calibration);
+  payload.prop = kNotifyDisplayCalibrationMode;
+  payload.payload = reinterpret_cast<uint64_t>(&in_calibration);
+  int ret = stc_intf_->SetProperty(payload);
+  if (ret) {
+    DLOGE("Failed to SetProperty, property = %d error = %d", payload.prop, ret);
+    return kErrorUndefined;
+  }
+
+  return kErrorNone;
+}
+
 bool ColorManagerProxy::GameEnhanceSupported() {
   bool supported = false;
 

@@ -57,6 +57,7 @@ using snapdragoncolor::kHwConfigPayloadParam;
 using snapdragoncolor::kModeList;
 using snapdragoncolor::kModeRenderInputParams;
 using snapdragoncolor::kNeedsUpdate;
+using snapdragoncolor::kNotifyDisplayCalibrationMode;
 using snapdragoncolor::kPbGamut;
 using snapdragoncolor::kPbGC;
 using snapdragoncolor::kPbIgc;
@@ -145,6 +146,7 @@ class ColorManagerProxy {
   DisplayError ColorMgrGetStcModes(ColorModeList *mode_list);
   DisplayError ColorMgrSetStcMode(const ColorMode &color_mode);
   DisplayError PrePrepare(HWLayers *hw_layers);
+  DisplayError NotifyDisplayCalibrationMode(bool in_calibration);
 
  protected:
   ColorManagerProxy() {}

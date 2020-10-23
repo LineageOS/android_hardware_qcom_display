@@ -126,6 +126,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(SetStcColorMode(const snapdragoncolor::ColorMode &))
   MAKE_NO_OP(ClearLUTs())
   MAKE_NO_OP(IsSupportedOnDisplay(SupportedDisplayFeature feature, uint32_t *supported))
+  MAKE_NO_OP(NotifyDisplayCalibrationMode(bool))
 
  protected:
   DisplayConfigVariableInfo default_variable_config_ = {};

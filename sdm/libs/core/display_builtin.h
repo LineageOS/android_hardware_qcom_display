@@ -139,6 +139,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError colorSamplingOff() override;
   DisplayError GetStcColorModes(snapdragoncolor::ColorModeList *mode_list) override;
   DisplayError SetStcColorMode(const snapdragoncolor::ColorMode &color_mode) override;
+  DisplayError NotifyDisplayCalibrationMode(bool in_calibration) override;
   std::string Dump() override;
   DisplayError GetConfig(DisplayConfigFixedInfo *fixed_info) override;
 

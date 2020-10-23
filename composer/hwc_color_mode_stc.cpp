@@ -295,6 +295,15 @@ HWC2::Error HWCColorModeStc::ApplyCurrentColorModeWithRenderIntent(bool hdr_pres
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCColorModeStc::NotifyDisplayCalibrationMode(bool in_calibration) {
+  DisplayError error = kErrorNone;
+  error = display_intf_->NotifyDisplayCalibrationMode(in_calibration);
+  if (error != kErrorNone) {
+    return HWC2::Error::Unsupported;
+  }
+  return HWC2::Error::None;
+}
+
 void HWCColorModeStc::Dump(std::ostringstream *os) {
   *os << "color modes supported: \n";
   for (auto it : color_mode_map_) {

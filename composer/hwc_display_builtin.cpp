@@ -1640,4 +1640,14 @@ void HWCDisplayBuiltIn::EnablePartialUpdate() {
   client_target_->SetPartialUpdate(partial_update_enabled_);
 }
 
+HWC2::Error HWCDisplayBuiltIn::NotifyDisplayCalibrationMode(bool in_calibration) {
+  auto status = color_mode_->NotifyDisplayCalibrationMode(in_calibration);
+  if (status != HWC2::Error::None) {
+    DLOGE("Failed for notify QDCM mode = %d", in_calibration);
+    return status;
+  }
+
+  return status;
+}
+
 }  // namespace sdm
