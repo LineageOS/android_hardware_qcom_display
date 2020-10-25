@@ -350,6 +350,7 @@ int HWDeviceDRM::Registry::CreateFbId(LayerBuffer *buffer, uint32_t *fb_id) {
 
 void HWDeviceDRM::Registry::MapBufferToFbId(Layer* layer, LayerBuffer* buffer) {
   if (buffer->planes[0].fd < 0) {
+    layer->buffer_map->buffer_map.clear();
     return;
   }
 
