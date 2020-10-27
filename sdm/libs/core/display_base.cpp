@@ -1612,6 +1612,14 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
   uint32_t display_width = display_attributes_.x_pixels;
   uint32_t display_height = display_attributes_.y_pixels;
 
+  if (hw_resource_info_.has_concurrent_writeback && layer_stack->output_buffer) {
+    DLOGV_IF(kTagDisplay, "Found concurrent writeback, configure LM width:%d height:%d",
+             fb_width, fb_height);
+    *new_mixer_width = fb_width;
+    *new_mixer_height = fb_height;
+    return ((*new_mixer_width != mixer_width) || (*new_mixer_height != mixer_height));
+  }
+
   if (secure_event_ == kSecureDisplayStart || secure_event_ == kTUITransitionStart) {
     *new_mixer_width = display_width;
     *new_mixer_height = display_height;
@@ -2337,6 +2345,9 @@ DisplayError DisplayBase::IsSupportedOnDisplay(const SupportedDisplayFeature fea
       error = hw_intf_->GetSupportedModeSwitch(supported);
       break;
     }
+    case kDestinationScalar:
+      *supported = custom_mixer_resolution_;
+      break;
     default:
       DLOGW("Feature:%d is not present for display %d:%d", feature, display_id_, display_type_);
       error = kErrorParameters;

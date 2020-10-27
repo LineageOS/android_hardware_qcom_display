@@ -285,6 +285,7 @@ struct DisplayDetailEnhancerData {
 */
 enum SupportedDisplayFeature {
   kSupportedModeSwitch,
+  kDestinationScalar,
 };
 
 /*! @brief Display device event handler implemented by the client.
