@@ -171,6 +171,9 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError SetupSPR();
   DisplayError SetupDemura();
   void UpdateDisplayModeParams();
+  void HandleQsyncPostCommit(LayerStack *layer_stack);
+  void UpdateQsyncMode();
+  void SetVsyncStatus(bool enable);
 
   const uint32_t kPuTimeOutMs = 1000;
   std::vector<HWEvent> event_list_;
@@ -208,6 +211,9 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   GetPanelFeatureFactoryIntfType GetPanelFeatureFactoryIntfFunc_ = nullptr;
   int spr_prop_value_ = 0;
   bool needs_validate_on_pu_enable_ = false;
+  bool enable_qsync_idle_ = false;
+  bool pending_vsync_enable_ = false;
+  QSyncMode active_qsync_mode_ = kQSyncModeNone;
 };
 
 }  // namespace sdm

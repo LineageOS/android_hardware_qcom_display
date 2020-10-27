@@ -1003,10 +1003,13 @@ HWC2::Error HWCDisplayBuiltIn::SetFrameDumpConfig(uint32_t count, uint32_t bit_m
     GetRealPanelResolution(&output_buffer_info_.buffer_config.width,
                            &output_buffer_info_.buffer_config.height);
   } else {
-    // To dump Layer Mixer output, use FrameBuffer resolution.
-    GetFrameBufferResolution(&output_buffer_info_.buffer_config.width,
-                             &output_buffer_info_.buffer_config.height);
+    ConfigureCwbAtLm(&output_buffer_info_.buffer_config.width,
+                     &output_buffer_info_.buffer_config.height);
   }
+
+  DLOGV_IF(kTagQDCM, "CWB output buffer resolution: width:%d height:%d tap point:%s",
+           output_buffer_info_.buffer_config.width, output_buffer_info_.buffer_config.height,
+           post_processed ? "DSPP" : "LM");
 
   output_buffer_info_.buffer_config.format = HWCLayer::GetSDMFormat(format, 0);
   output_buffer_info_.buffer_config.buffer_count = 1;
@@ -1579,6 +1582,23 @@ void HWCDisplayBuiltIn::SetCpuPerfHintLargeCompCycle() {
       cpu_hint_->ReqHints(kPerfHintLargeCompCycle);
       break;
     }
+  }
+}
+
+bool HWCDisplayBuiltIn::IsDisplayIdle() {
+  // Notify only if this display is source of vsync.
+  bool vsync_source = (callbacks_->GetVsyncSource() == id_);
+  return vsync_source && display_idle_;
+}
+
+void HWCDisplayBuiltIn::ConfigureCwbAtLm(uint32_t *x_pixels, uint32_t *y_pixels) {
+  uint32_t dest_scalar_enabled = 0;
+  display_intf_->IsSupportedOnDisplay(kDestinationScalar, &dest_scalar_enabled);
+
+  if (dest_scalar_enabled) {
+    display_intf_->GetMixerResolution(x_pixels, y_pixels);
+  } else {
+    GetFrameBufferResolution(x_pixels, y_pixels);
   }
 }
 

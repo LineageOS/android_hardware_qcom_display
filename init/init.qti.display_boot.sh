@@ -50,6 +50,7 @@ case "$target" in
         setprop vendor.display.target.version 2
         setprop vendor.display.enable_perf_hint_large_comp_cycle 1
         setprop vendor.display.enable_posted_start_dyn 1
+        setprop vendor.display.enable_qsync_idle 1
         ;;
     esac
     ;;

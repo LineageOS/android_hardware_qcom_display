@@ -760,6 +760,18 @@ void HWCSession::PerformQsyncCallback(hwc2_display_t display) {
   }
 }
 
+void HWCSession::PerformIdleStatusCallback(hwc2_display_t display) {
+  std::shared_ptr<DisplayConfig::ConfigCallback> callback = idle_callback_.lock();
+  if (!callback) {
+    return;
+  }
+
+  if (hwc_display_[display]->IsDisplayIdle()) {
+    DTRACE_SCOPED();
+    callback->NotifyIdleStatus(true);
+  }
+}
+
 int32_t HWCSession::PresentDisplay(hwc2_display_t display, shared_ptr<Fence> *out_retire_fence) {
   auto status = HWC2::Error::BadDisplay;
   DTRACE_SCOPED();
@@ -808,6 +820,7 @@ int32_t HWCSession::PresentDisplay(hwc2_display_t display, shared_ptr<Fence> *ou
         status = hwc_display_[target_display]->Present(out_retire_fence);
         if (status == HWC2::Error::None) {
           PerformQsyncCallback(target_display);
+          PerformIdleStatusCallback(target_display);
           Locker::ScopeLock tui_lock(tui_locker_[target_display]);
           if (tui_transition_pending_[target_display]) {
             tui_transition_pending_[target_display] = false;
