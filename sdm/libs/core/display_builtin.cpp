@@ -728,6 +728,7 @@ void DisplayBuiltIn::SetVsyncStatus(bool enable) {
     hw_events_intf_->SetEventState(HWEvent::VSYNC, false);
     pending_vsync_enable_ = true;
   }
+  DTRACE_END();
 }
 
 void DisplayBuiltIn::IdleTimeout() {
