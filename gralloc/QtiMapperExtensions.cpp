@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -45,7 +45,9 @@ namespace implementation {
 
 using gralloc::BufferInfo;
 
-QtiMapperExtensions::QtiMapperExtensions() {}
+QtiMapperExtensions::QtiMapperExtensions() {
+  buf_mgr_ = BufferManager::GetInstance();
+}
 
 Return<void> QtiMapperExtensions::getMapSecureBufferFlag(void *buffer,
                                                          getMapSecureBufferFlag_cb hidl_cb) {
@@ -423,6 +425,68 @@ Return<Error> QtiMapperExtensions::getSurfaceMetadata_V1(void *buffer, void *met
   return err;
 }
 
+Return<Error> QtiMapperExtensions::copyMetaData(void *src, void *dst) {
+  auto error = Error::BAD_BUFFER;
+  auto src_hnd = static_cast<private_handle_t *>(src);
+  auto dst_hnd = static_cast<private_handle_t *>(dst);
+  if (src != nullptr && dst != nullptr && private_handle_t::validate(src_hnd) == 0 &&
+      private_handle_t::validate(dst_hnd) == 0) {
+    if (static_cast<IMapperExtensions_1_0_Error>(buf_mgr_->IsBufferImported(src_hnd)) ==
+            Error::NONE &&
+        static_cast<IMapperExtensions_1_0_Error>(buf_mgr_->IsBufferImported(dst_hnd)) ==
+            Error::NONE) {
+      MetaData_t *src_data = reinterpret_cast<MetaData_t *>(src_hnd->base_metadata);
+      MetaData_t *dst_data = reinterpret_cast<MetaData_t *>(dst_hnd->base_metadata);
+      *dst_data = *src_data;
+      error = Error::NONE;
+    }
+  } else {
+    ALOGE("%s: Copy Failed - src buffer: %p, dst buffer: %p", __FUNCTION__, src, dst);
+  }
+  return error;
+}
+
+Return<Error> QtiMapperExtensions::setMetadataBlob(const hidl_vec<uint8_t> &src, void *dst) {
+  auto error = Error::BAD_BUFFER;
+  if (src.data() == nullptr) {
+    return error;
+  }
+  auto dst_hnd = static_cast<private_handle_t *>(dst);
+  if (dst != nullptr && private_handle_t::validate(dst_hnd) == 0) {
+    if (static_cast<IMapperExtensions_1_0_Error>(buf_mgr_->IsBufferImported(dst_hnd)) ==
+        Error::NONE) {
+      const MetaData_t *src_data = reinterpret_cast<const MetaData_t *>(src.data());
+      MetaData_t *dst_data = reinterpret_cast<MetaData_t *>(dst_hnd->base_metadata);
+      *dst_data = *src_data;
+      error = Error::NONE;
+    }
+  } else {
+    ALOGE("%s: Copy Failed - src buffer: %p, dst pointer: %p", __FUNCTION__, src.data(), dst);
+  }
+  return error;
+}
+
+Return<void> QtiMapperExtensions::getMetadataBlob(void *src, getMetadataBlob_cb _hidl_cb) {
+  auto error = Error::BAD_BUFFER;
+  hidl_vec<uint8_t> out;
+  auto src_hnd = static_cast<private_handle_t *>(src);
+  out.resize(sizeof(MetaData_t));
+
+  if (src != nullptr && private_handle_t::validate(src_hnd) == 0) {
+    if (static_cast<IMapperExtensions_1_0_Error>(buf_mgr_->IsBufferImported(src_hnd)) ==
+        Error::NONE) {
+      MetaData_t *src_data = reinterpret_cast<MetaData_t *>(src_hnd->base_metadata);
+      MetaData_t *dst_data = reinterpret_cast<MetaData_t *>(out.data());
+      memcpy(dst_data, src_data, sizeof(MetaData_t));
+      error = Error::NONE;
+      _hidl_cb(error, out);
+    }
+  } else {
+    ALOGE("%s: Get Failed - src buffer: %p", __FUNCTION__, src);
+  }
+  _hidl_cb(error, out);
+  return Void();
+}
 }  // namespace implementation
 }  // namespace V1_1
 }  // namespace mapperextensions
