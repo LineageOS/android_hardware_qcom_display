@@ -51,12 +51,15 @@ class HWCDisplayDummy : public HWCDisplay {
   virtual bool VsyncEnablePending();
   virtual HWC2::Error SetClientTarget(buffer_handle_t target, shared_ptr<Fence> acquire_fence,
                                       int32_t dataspace, hwc_region_t damage);
+  virtual HWC2::Error GetDisplayVsyncPeriod(VsyncPeriodNanos *vsync_period);
+  virtual HWC2::Error SetDisplayVsyncPeriod(VsyncPeriodNanos vsync_period);
  private:
   HWCDisplayDummy(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
                   HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
                   qService::QService *qservice, hwc2_display_t id, int32_t sdm_id);
   DisplayNull display_null_;
   bool vsync_enable_ = false;
+  VsyncPeriodNanos vsync_period_ = 16600000;
 };
 
 }  // namespace sdm

@@ -103,6 +103,14 @@ HWC2::Error HWCDisplayDummy::SetVsyncEnabled(HWC2::Vsync enabled) {
 bool HWCDisplayDummy::VsyncEnablePending() {
   return vsync_enable_;
 }
+HWC2::Error HWCDisplayDummy::GetDisplayVsyncPeriod(VsyncPeriodNanos *vsync_period) {
+  *vsync_period = vsync_period_;
+  return HWC2::Error::None;
+}
+HWC2::Error HWCDisplayDummy::SetDisplayVsyncPeriod(VsyncPeriodNanos vsync_period) {
+  vsync_period_ = vsync_period;
+  return HWC2::Error::None;
+}
 
 HWC2::Error HWCDisplayDummy::SetClientTarget(buffer_handle_t target,
                                              shared_ptr<Fence> acquire_fence,

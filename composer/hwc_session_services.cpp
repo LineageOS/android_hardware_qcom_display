@@ -723,11 +723,16 @@ int HWCSession::DisplayConfigImpl::SetPowerMode(uint32_t disp_id,
   shared_ptr<Fence> acquire_fence = nullptr;
   int32_t dataspace = 0;
   hwc_region_t damage = {};
+  VsyncPeriodNanos vsync_period = 16600000;
   hwc_session_->hwc_display_[disp_id]->GetClientTarget(
                                  target, acquire_fence, dataspace, damage);
   hwc_session_->hwc_display_[dummy_disp_id]->SetClientTarget(
                                        target, acquire_fence, dataspace, damage);
 
+
+
+  hwc_session_->hwc_display_[disp_id]->GetDisplayVsyncPeriod(&vsync_period);
+  hwc_session_->hwc_display_[dummy_disp_id]->SetDisplayVsyncPeriod(vsync_period);
 
   hwc_session_->locker_[dummy_disp_id].Unlock();  // Release the dummy display.
   // Release the display's power-state transition var read lock.
