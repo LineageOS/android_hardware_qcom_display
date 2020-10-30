@@ -1121,17 +1121,13 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
   switch (format) {
 #ifndef QMAA
     case HAL_PIXEL_FORMAT_YCrCb_420_SP:
-      /*
-       * Todo: relook this alignment again
-       * Change made to unblock the software EIS feature from camera
-       * Currently using same alignment as camera doing
-       */
-      aligned_w = INT(MMM_COLOR_FMT_Y_STRIDE(MMM_COLOR_FMT_NV21, width));
-      aligned_h = INT(MMM_COLOR_FMT_Y_SCANLINES(MMM_COLOR_FMT_NV21, height));
-      break;
     case HAL_PIXEL_FORMAT_YCbCr_420_SP:
-      aligned_w = INT(MMM_COLOR_FMT_Y_STRIDE(MMM_COLOR_FMT_NV12, width));
-      aligned_h = INT(MMM_COLOR_FMT_Y_SCANLINES(MMM_COLOR_FMT_NV12, height));
+      if (AdrenoMemInfo::GetInstance() == nullptr) {
+        ALOGW("%s: AdrenoMemInfo instance pointing to a NULL value.", __FUNCTION__);
+        return -1;
+      }
+      alignment = AdrenoMemInfo::GetInstance()->GetGpuPixelAlignment();
+      aligned_w = ALIGN(width, alignment);
       break;
 #endif
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_ADRENO:
