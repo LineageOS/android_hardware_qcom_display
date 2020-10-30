@@ -271,6 +271,10 @@ struct LayerStackFlags {
       uint32_t mask_present : 1;  //!< Set if layer stack has mask layers.
 
       uint32_t config_changed : 1;  //!< This flag indicates Display config must be validated.
+
+      uint32_t layer_id_support : 1;  //! This flag shall be set by Client to indicate that it has
+                                      //! set the unique Layer Id on each SDM Layer, which will
+                                      //! persist across draw cycles until the layer gets removed.
     };
 
     uint32_t flags = 0;               //!< For initialization purpose only.
@@ -408,6 +412,10 @@ struct Layer {
                                                               0.0, 0.0, 1.0, 0.0,
                                                               0.0, 0.0, 0.0, 1.0 };
   std::bitset<kLayerUpdateMax> update_mask = 0;
+
+  uint64_t layer_id = 0;                           //!< A Unique Layer Id which will persist across
+                                                   //!< frames until layer gets removed from stack,
+                                                   //!< if LayerStackFlag layer_id_support is True.
 };
 
 /*! @brief This structure defines the color space + transfer of a given layer.

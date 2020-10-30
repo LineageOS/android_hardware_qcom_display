@@ -659,6 +659,7 @@ void HWCDisplay::BuildLayerStack() {
   metadata_refresh_rate_ = 0;
   layer_stack_.flags.animating = animating_;
   layer_stack_.flags.fast_path = fast_path_enabled_ && fast_path_composition_;
+  layer_stack_.flags.layer_id_support = true;
 
   DTRACE_SCOPED();
   // Add one layer for fb target
@@ -797,6 +798,7 @@ void HWCDisplay::BuildLayerStack() {
       layer->input_buffer.flags.game = true;
     }
 
+    layer->layer_id = hwc_layer->GetId();
     layer_stack_.layers.push_back(layer);
   }
 
@@ -812,6 +814,7 @@ void HWCDisplay::BuildLayerStack() {
   layer_stack_.flags.config_changed = !validated_;
   // Append client target to the layer stack
   Layer *sdm_client_target = client_target_->GetSDMLayer();
+  sdm_client_target->layer_id = client_target_->GetId();
   sdm_client_target->flags.updating = IsLayerUpdating(client_target_);
   // Derive client target dataspace based on the color mode - bug/115482728
   int32_t client_target_dataspace = GetDataspaceFromColorMode(GetCurrentColorMode());

@@ -1563,6 +1563,7 @@ void HWCDisplayBuiltIn::AppendStitchLayer() {
   Layer *sdm_stitch_target = stitch_target_->GetSDMLayer();
   sdm_stitch_target->composition = kCompositionStitchTarget;
   sdm_stitch_target->dst_rect = {0, 0, FLOAT(fb_config_.x_pixels), FLOAT(fb_config_.y_pixels)};
+  sdm_stitch_target->layer_id = stitch_target_->GetId();
   layer_stack_.layers.push_back(sdm_stitch_target);
 }
 
