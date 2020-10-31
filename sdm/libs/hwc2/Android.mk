@@ -12,14 +12,14 @@ LOCAL_C_INCLUDES              := $(common_includes)
 LOCAL_HEADER_LIBRARIES        := display_headers
 
 LOCAL_CFLAGS                  := -Wno-missing-field-initializers -Wno-unused-parameter \
-                                 -std=c++11 -fcolor-diagnostics\
+                                 -fcolor-diagnostics\
                                  -DLOG_TAG=\"SDM\" $(common_flags)
 LOCAL_CLANG                   := true
 
 LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware libhardware_legacy \
                                  libutils libcutils libsync libqdutils libqdMetaData \
                                  libdisplaydebug libsdmutils libc++ liblog libgrallocutils libui \
-                                 libgpu_tonemapper libhidlbase libhidltransport \
+                                 libgpu_tonemapper libhidlbase \
                                  vendor.display.config@1.0 \
                                  android.hardware.graphics.mapper@2.0 \
                                  android.hardware.graphics.mapper@2.1 \

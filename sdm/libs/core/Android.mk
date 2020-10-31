@@ -8,12 +8,12 @@ LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes)
 LOCAL_HEADER_LIBRARIES        := display_headers
 LOCAL_CFLAGS                  := -fno-operator-names -Wno-unused-parameter -DLOG_TAG=\"SDM\" \
-                                 $(common_flags)
+                                 $(common_flags) -Wno-return-stack-address
 LOCAL_HW_INTF_PATH_1          := fb
 LOCAL_SHARED_LIBRARIES        := libdl libdisplaydebug libsdmutils
 
 ifneq ($(TARGET_IS_HEADLESS), true)
-    LOCAL_CFLAGS              += -isystem external/libdrm
+    LOCAL_CFLAGS              += -isystem external/libdrmsdm/libs/core/Android.mk
     LOCAL_SHARED_LIBRARIES    += libdrm libdrmutils
     LOCAL_HW_INTF_PATH_2      := drm
 endif
