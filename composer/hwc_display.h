@@ -417,6 +417,11 @@ class HWCDisplay : public DisplayEventHandler {
       uint64_t *samples[NUM_HISTOGRAM_COLOR_COMPONENTS]);
 
   virtual HWC2::Error GetDisplayVsyncPeriod(VsyncPeriodNanos *vsync_period);
+  virtual HWC2::Error SetDisplayVsyncPeriod(VsyncPeriodNanos vsync_period) {
+    return HWC2::Error::None;
+  }
+
+
   virtual HWC2::Error SetActiveConfigWithConstraints(
       hwc2_config_t config, const VsyncPeriodChangeConstraints *vsync_period_change_constraints,
       VsyncPeriodChangeTimeline *out_timeline);
