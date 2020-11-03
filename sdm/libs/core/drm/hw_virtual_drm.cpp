@@ -123,6 +123,10 @@ DisplayError HWVirtualDRM::SetWbConfigs(const HWDisplayAttributes &display_attri
 }
 
 DisplayError HWVirtualDRM::Commit(HWLayers *hw_layers) {
+  if (!hw_layers->info.stack) {
+    return kErrorNone;
+  }
+
   LayerBuffer *output_buffer = hw_layers->info.stack->output_buffer;
   DisplayError err = kErrorNone;
 

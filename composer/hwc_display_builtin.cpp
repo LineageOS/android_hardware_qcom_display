@@ -347,7 +347,8 @@ HWC2::Error HWCDisplayBuiltIn::CommitStitchLayers() {
     Layer *stitch_layer = stitch_target_->GetSDMLayer();
     LayerBuffer &output_buffer = stitch_layer->input_buffer;
     ctx.dst_hnd = reinterpret_cast<const private_handle_t *>(output_buffer.buffer_id);
-    SetRect(layer->stitch_dst_rect, &ctx.dst_rect);
+    SetRect(layer->stitch_info.dst_rect, &ctx.dst_rect);
+    SetRect(layer->stitch_info.slice_rect, &ctx.scissor_rect);
     ctx.src_acquire_fence = input_buffer.acquire_fence;
 
     layer_stitch_task_.PerformTask(LayerStitchTaskCode::kCodeStitch, &ctx);
@@ -1434,8 +1435,8 @@ void HWCDisplayBuiltIn::OnTask(const LayerStitchTaskCode &task_code,
         DTRACE_SCOPED();
         LayerStitchContext* ctx = reinterpret_cast<LayerStitchContext*>(task_context);
         gl_layer_stitch_->Blit(ctx->src_hnd, ctx->dst_hnd, ctx->src_rect, ctx->dst_rect,
-                               ctx->src_acquire_fence, ctx->dst_acquire_fence,
-                               &(ctx->release_fence));
+                               ctx->scissor_rect, ctx->src_acquire_fence,
+                               ctx->dst_acquire_fence, &(ctx->release_fence));
       }
       break;
     case LayerStitchTaskCode::kCodeDestroyInstance: {
@@ -1600,6 +1601,13 @@ void HWCDisplayBuiltIn::ConfigureCwbAtLm(uint32_t *x_pixels, uint32_t *y_pixels)
   } else {
     GetFrameBufferResolution(x_pixels, y_pixels);
   }
+}
+
+bool HWCDisplayBuiltIn::HasReadBackBufferSupport() {
+  DisplayConfigFixedInfo fixed_info = {};
+  display_intf_->GetConfig(&fixed_info);
+
+  return fixed_info.readback_supported;
 }
 
 }  // namespace sdm

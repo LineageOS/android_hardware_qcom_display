@@ -1930,7 +1930,29 @@ DisplayError HWDeviceDRM::GetMaxCEAFormat(uint32_t *max_cea_format) {
 }
 
 DisplayError HWDeviceDRM::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
-  return kErrorNotSupported;
+  DisplayError error = kErrorNone;
+  int fd = -1;
+  char data[kMaxStringLength] = {'\0'};
+
+  snprintf(data, sizeof(data), "/sys/devices/virtual/hdcp/msm_hdcp/min_level_change");
+
+  fd = Sys::open_(data, O_WRONLY);
+  if (fd < 0) {
+    DLOGE("File '%s' could not be opened. errno = %d, desc = %s", data, errno, strerror(errno));
+    return kErrorHardware;
+  }
+
+  snprintf(data, sizeof(data), "%d", min_enc_level);
+
+  ssize_t err = Sys::pwrite_(fd, data, strlen(data), 0);
+  if (err <= 0) {
+    DLOGE("Write failed, Error = %s", strerror(errno));
+    error = kErrorHardware;
+  }
+
+  Sys::close_(fd);
+
+  return error;
 }
 
 DisplayError HWDeviceDRM::SetScaleLutConfig(HWScaleLutInfo *lut_info) {

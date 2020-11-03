@@ -59,6 +59,7 @@ struct LayerStitchContext : public SyncTask<LayerStitchTaskCode>::TaskContext {
   const private_handle_t* dst_hnd = nullptr;
   GLRect src_rect = {};
   GLRect dst_rect = {};
+  GLRect scissor_rect = {};
   shared_ptr<Fence> src_acquire_fence = nullptr;
   shared_ptr<Fence> dst_acquire_fence = nullptr;
   shared_ptr<Fence> release_fence = nullptr;
@@ -149,6 +150,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   void Dump(std::ostringstream *os) override;
   virtual HWC2::Error SetPowerMode(HWC2::PowerMode mode, bool teardown);
   virtual bool IsDisplayIdle();
+  virtual bool HasReadBackBufferSupport();
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
