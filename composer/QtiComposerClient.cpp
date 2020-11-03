@@ -658,9 +658,11 @@ Return<Error> QtiComposerClient::setReadbackBuffer(uint64_t display, const hidl_
     return error;
   }
 
-  std::lock_guard<std::mutex> lock(mDisplayDataMutex);
-  if (mDisplayData.find(display) == mDisplayData.end()) {
-    return Error::BAD_DISPLAY;
+  {
+    std::lock_guard<std::mutex> lock(mDisplayDataMutex);
+    if (mDisplayData.find(display) == mDisplayData.end()) {
+      return Error::BAD_DISPLAY;
+    }
   }
 
   const native_handle_t* readbackBuffer;
