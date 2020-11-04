@@ -412,3 +412,15 @@ extern "C" int waitForComposerInit() {
 
     return !status;
 }
+
+extern "C" int waitForComposerInitPerf() {
+    int status = false;
+    sp<IQService> binder = getBinder();
+    if (binder != NULL) {
+        Parcel inParcel, outParcel;
+        binder->dispatch(IQService::GET_COMPOSER_STATUS, &inParcel, &outParcel);
+        status = !!outParcel.readInt32();
+    }
+
+    return !status;
+}
