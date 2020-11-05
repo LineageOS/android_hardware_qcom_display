@@ -744,6 +744,7 @@ std::string DisplayBase::Dump() {
   os << " h_total: " << display_attributes_.h_total;
   os << " clk: " << display_attributes_.clock_khz;
   os << " Topology: " << display_attributes_.topology;
+  os << " Qsync mode: " << active_qsync_mode_;
   os << std::noboolalpha;
 
   os << "\nCurrent Color Mode: " << current_color_mode_.c_str();
