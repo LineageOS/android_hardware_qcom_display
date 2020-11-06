@@ -2791,6 +2791,7 @@ void HWDeviceDRM::ConfigureConcurrentWriteback(const HWLayersInfo &hw_layer_info
       drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_RECT, vitual_conn_id, dst);
     }
   }
+  ConfigureCWBDither(cwb_config->dither_info, vitual_conn_id, capture_mode);
 
   const LayerRect &roi = cwb_config->cwb_roi;
   DLOGV_IF(kTagDriverConfig, "CWB Mode:%d roi.left:%f roi.top:%f roi.right:%f roi.bottom:%f",
@@ -2849,4 +2850,34 @@ void HWDeviceDRM::FlushConcurrentWriteback() {
   TeardownConcurrentWriteback();
 }
 
+DisplayError HWDeviceDRM::ConfigureCWBDither(void *payload, uint32_t conn_id,
+                sde_drm::DRMCWbCaptureMode mode) {
+  int ret = 0;
+  DRMPPFeatureInfo kernel_params = {};
+  DRMConnectorInfo conn_info = {};
+
+  drm_mgr_intf_->GetConnectorInfo(conn_id, &conn_info);
+  if (conn_info.has_cwb_dither) {
+    kernel_params.id = DRMPPFeatureID::kFeatureCWBDither;
+  } else {
+    kernel_params.id = DRMPPFeatureID::kFeatureDither;
+    DLOGI_IF(kTagDriverConfig, "pp cwb blocks not supported, to config pp-dither hw");
+  }
+
+  if (payload && (mode == sde_drm::DRMCWbCaptureMode::DSPP_OUT ||
+                  mode == sde_drm::DRMCWbCaptureMode::DEMURA_OUT)) {
+    PPFeatureInfo * feature_wrapper = reinterpret_cast<PPFeatureInfo *>(payload);
+    ret = hw_color_mgr_->GetDrmFeature(feature_wrapper, &kernel_params);
+    if (ret)
+      DLOGE("Failed to get drm feature %d params, ret %d", kernel_params.id, ret);
+  } else {
+    kernel_params.type = sde_drm::kPropBlob;
+    kernel_params.payload = NULL;
+  }
+
+  DLOGI_IF(kTagDriverConfig, "CWB dither %s case", kernel_params.payload ? "enable" : "disable");
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POST_PROC, conn_id, &kernel_params);
+  hw_color_mgr_->FreeDrmFeatureData(&kernel_params);
+  return kErrorNone;
+}
 }  // namespace sdm

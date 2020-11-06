@@ -218,6 +218,8 @@ class HWDeviceDRM : public HWInterface {
   bool IsFullFrameUpdate(const HWLayersInfo &hw_layer_info);
   DisplayError GetDRMPowerMode(const HWPowerState &power_state, DRMPowerMode *drm_power_mode);
   void SetTUIState();
+  DisplayError ConfigureCWBDither(void *payload, uint32_t conn_id,
+                                  sde_drm::DRMCWbCaptureMode mode);
   void GetTopologySplit(HWTopology hw_topology, uint32_t *split_number);
   uint64_t GetSupportedBitClkRate(uint32_t new_mode_index,
                                   uint64_t bit_clk_rate_request);

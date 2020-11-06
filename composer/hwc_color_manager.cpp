@@ -309,6 +309,14 @@ int HWCColorManager::SetFrameCapture(void *params, bool enable, HWCDisplay *hwc_
           DLOGE("munmap failed. err = %d", errno);
         }
       }
+
+      if (frame_capture_data->input_params.dither_payload) {
+        DLOGV_IF(kTagQDCM, "free cwb dither data");
+        delete frame_capture_data->input_params.dither_payload;
+        frame_capture_data->input_params.dither_payload = nullptr;
+      }
+      frame_capture_data->input_params.dither_flags = 0x0;
+
       if (buffer_allocator_ != NULL) {
         std::memset(frame_capture_data, 0x00, sizeof(PPFrameCaptureData));
         ret = buffer_allocator_->FreeBuffer(&buffer_info);

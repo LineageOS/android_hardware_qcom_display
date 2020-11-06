@@ -490,6 +490,7 @@ struct CwbConfig {
   LayerRect cwb_roi = {};                            //!< Client specified ROI rect for CWB.
   LayerRect cwb_full_rect = {};                      //!< Same as Output buffer Rect (unaligned).
   CwbTapPoint tap_point = CwbTapPoint::kLmTapPoint;  //!< Client specified tap point for CWB.
+  void *dither_info = nullptr;                       //!< Pointer to the cwb dither setting.
 };
 
 /*! @brief This structure defines a layer stack that contains layers which need to be composed and

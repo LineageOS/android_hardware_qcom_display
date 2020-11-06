@@ -146,6 +146,12 @@ class ColorManagerProxy {
   DisplayError ColorMgrGetStcModes(ColorModeList *mode_list);
   DisplayError ColorMgrSetStcMode(const ColorMode &color_mode);
   DisplayError PrePrepare();
+
+  /* ConfigureCWBDither can get/release dither setting base on bool variable free_data
+   * if free_data is false to get dither setting needs to be applied.
+   * if free_data is true to release the dither setting that has been applied.
+   */
+  DisplayError ConfigureCWBDither(CwbConfig *cwb_cfg, bool free_data);
   DisplayError NotifyDisplayCalibrationMode(bool in_calibration);
   DisplayError ColorMgrSetLtmPccConfig(void* pcc_input, size_t size);
 

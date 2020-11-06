@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018, 2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2018, 2020-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -57,6 +57,7 @@ using sde_drm::kFeatureDgmIgc;
 using sde_drm::kFeatureDgmGc;
 using sde_drm::kFeatureVigIgc;
 using sde_drm::kFeatureVigGamut;
+using sde_drm::kFeatureCWBDither;
 
 namespace sdm {
 
