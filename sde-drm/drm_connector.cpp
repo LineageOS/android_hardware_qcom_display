@@ -986,20 +986,19 @@ void DRMConnector::SetROI(drmModeAtomicReq *req, uint32_t obj_id, uint32_t num_r
     return;
   }
 
-  static struct sde_drm_roi_v1 roi_v1 {};
-  memset(&roi_v1, 0, sizeof(roi_v1));
-  roi_v1.num_rects = num_roi;
+  memset(&roi_v1_, 0, sizeof(roi_v1_));
+  roi_v1_.num_rects = num_roi;
 
   for (uint32_t i = 0; i < num_roi; i++) {
-    roi_v1.roi[i].x1 = conn_rois[i].left;
-    roi_v1.roi[i].x2 = conn_rois[i].right;
-    roi_v1.roi[i].y1 = conn_rois[i].top;
-    roi_v1.roi[i].y2 = conn_rois[i].bottom;
+    roi_v1_.roi[i].x1 = conn_rois[i].left;
+    roi_v1_.roi[i].x2 = conn_rois[i].right;
+    roi_v1_.roi[i].y1 = conn_rois[i].top;
+    roi_v1_.roi[i].y2 = conn_rois[i].bottom;
     DRM_LOGD("Conn %d, ROI[l,t,b,r][%d %d %d %d]", obj_id,
-             roi_v1.roi[i].x1,roi_v1.roi[i].y1,roi_v1.roi[i].x2,roi_v1.roi[i].y2);
+             roi_v1_.roi[i].x1,roi_v1_.roi[i].y1,roi_v1_.roi[i].x2,roi_v1_.roi[i].y2);
   }
   drmModeAtomicAddProperty(req, obj_id, prop_mgr_.GetPropertyId(DRMProperty::ROI_V1),
-                           reinterpret_cast<uint64_t>(&roi_v1));
+                           reinterpret_cast<uint64_t>(&roi_v1_));
 #endif
 }
 

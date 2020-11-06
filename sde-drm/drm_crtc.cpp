@@ -758,12 +758,11 @@ void DRMCrtc::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
     case DRMOps::CRTC_SET_DEST_SCALER_CONFIG: {
       uint32_t prop_id = prop_mgr_.GetPropertyId(DRMProperty::DEST_SCALER);
       uint64_t dest_scaler = va_arg(args, uint64_t);
-      static sde_drm_dest_scaler_data dest_scale_copy = {};
       sde_drm_dest_scaler_data *ds_data = reinterpret_cast<sde_drm_dest_scaler_data *>
                                            (dest_scaler);
-      dest_scale_copy = *ds_data;
+      dest_scale_data_ = *ds_data;
       AddProperty(req, obj_id, prop_id,
-                  reinterpret_cast<uint64_t>(&dest_scale_copy), false /* cache */,
+                  reinterpret_cast<uint64_t>(&dest_scale_data_), false /* cache */,
                   tmp_prop_val_map_);
     } break;
 
@@ -854,20 +853,19 @@ void DRMCrtc::SetROI(drmModeAtomicReq *req, uint32_t obj_id, uint32_t num_roi,
     DRM_LOGD("CRTC ROI is set to NULL to indicate full frame update");
     return;
   }
-  static struct sde_drm_roi_v1 roi_v1 {};
-  memset(&roi_v1, 0, sizeof(roi_v1));
-  roi_v1.num_rects = num_roi;
+  memset(&roi_v1_, 0, sizeof(roi_v1_));
+  roi_v1_.num_rects = num_roi;
 
   for (uint32_t i = 0; i < num_roi; i++) {
-    roi_v1.roi[i].x1 = crtc_rois[i].left;
-    roi_v1.roi[i].x2 = crtc_rois[i].right;
-    roi_v1.roi[i].y1 = crtc_rois[i].top;
-    roi_v1.roi[i].y2 = crtc_rois[i].bottom;
+    roi_v1_.roi[i].x1 = crtc_rois[i].left;
+    roi_v1_.roi[i].x2 = crtc_rois[i].right;
+    roi_v1_.roi[i].y1 = crtc_rois[i].top;
+    roi_v1_.roi[i].y2 = crtc_rois[i].bottom;
     DRM_LOGD("CRTC %d, ROI[l,t,b,r][%d %d %d %d]", obj_id,
-             roi_v1.roi[i].x1, roi_v1.roi[i].y1, roi_v1.roi[i].x2, roi_v1.roi[i].y2);
+             roi_v1_.roi[i].x1, roi_v1_.roi[i].y1, roi_v1_.roi[i].x2, roi_v1_.roi[i].y2);
   }
   AddProperty(req, obj_id, prop_mgr_.GetPropertyId(DRMProperty::ROI_V1),
-              reinterpret_cast<uint64_t>(&roi_v1), false /* cache */, tmp_prop_val_map_);
+              reinterpret_cast<uint64_t>(&roi_v1_), false /* cache */, tmp_prop_val_map_);
 #endif
 }
 
