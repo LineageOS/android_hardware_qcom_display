@@ -58,6 +58,7 @@ class BufferManager {
   Error FlushBuffer(const private_handle_t *handle);
   Error RereadBuffer(const private_handle_t *handle);
   Error GetAllHandles(std::vector<const private_handle_t *> *out_handle_list);
+  int GetCustomDimensions(private_handle_t *handle, int *stride, int *height);
 
  private:
   BufferManager();
