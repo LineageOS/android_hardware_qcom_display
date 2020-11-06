@@ -561,6 +561,11 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     return error;
   }
 
+  if (secure_event_ == kSecureDisplayEnd || secure_event_ == kTUITransitionEnd ||
+      secure_event_ == kTUITransitionUnPrepare) {
+    secure_event_ = kSecureEventMax;
+  }
+
   PostCommitLayerParams(layer_stack);
 
   if (partial_update_control_) {
@@ -1430,8 +1435,7 @@ DisplayError DisplayBase::HandlePendingVSyncEnable(const shared_ptr<Fence> &reti
 DisplayError DisplayBase::SetVSyncState(bool enable) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
-  if ((state_ == kStateOff || secure_event_ == kSecureDisplayStart ||
-       secure_event_ == kTUITransitionStart) && enable) {
+  if ((state_ == kStateOff || secure_event_ != kSecureEventMax) && enable) {
     DLOGW("Can't enable vsync when display %d-%d is powered off or SecureDisplay/TUI in progress",
           display_id_, display_type_);
     vsync_enable_pending_ = true;
@@ -1607,6 +1611,14 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
   uint32_t fb_height = fb_config_.y_pixels;
   uint32_t display_width = display_attributes_.x_pixels;
   uint32_t display_height = display_attributes_.y_pixels;
+
+  if (hw_resource_info_.has_concurrent_writeback && layer_stack->output_buffer) {
+    DLOGV_IF(kTagDisplay, "Found concurrent writeback, configure LM width:%d height:%d",
+             fb_width, fb_height);
+    *new_mixer_width = fb_width;
+    *new_mixer_height = fb_height;
+    return ((*new_mixer_width != mixer_width) || (*new_mixer_height != mixer_height));
+  }
 
   if (secure_event_ == kSecureDisplayStart || secure_event_ == kTUITransitionStart) {
     *new_mixer_width = display_width;
@@ -2319,9 +2331,30 @@ DisplayError DisplayBase::GetPendingDisplayState(DisplayState *disp_state) {
   return kErrorNone;
 }
 
-DisplayError DisplayBase::GetSupportedModeSwitch(uint32_t *allowed_mode_switch) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
-  return hw_intf_->GetSupportedModeSwitch(allowed_mode_switch);
+DisplayError DisplayBase::IsSupportedOnDisplay(const SupportedDisplayFeature feature,
+                                               uint32_t *supported) {
+  DisplayError error = kErrorNone;
+
+  if (!supported) {
+    return kErrorParameters;
+  }
+
+  switch (feature) {
+    case kSupportedModeSwitch: {
+      lock_guard<recursive_mutex> obj(recursive_mutex_);
+      error = hw_intf_->GetSupportedModeSwitch(supported);
+      break;
+    }
+    case kDestinationScalar:
+      *supported = custom_mixer_resolution_;
+      break;
+    default:
+      DLOGW("Feature:%d is not present for display %d:%d", feature, display_id_, display_type_);
+      error = kErrorParameters;
+      break;
+  }
+
+  return error;
 }
 
 void DisplayBase::SetPendingPowerState(DisplayState state) {
@@ -2390,10 +2423,6 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
   comp_manager_->HandleSecureEvent(display_comp_ctx_, secure_event);
   secure_event_ = secure_event;
   if (secure_event == kTUITransitionEnd) {
-    err = HandlePendingVSyncEnable(nullptr);
-    if (err != kErrorNone) {
-      return err;
-    }
     DisplayState pending_state;
     if (GetPendingDisplayState(&pending_state) == kErrorNone) {
       if (pending_state == kStateOff) {

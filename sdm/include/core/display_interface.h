@@ -151,6 +151,7 @@ enum DisplayEvent {
   kDisplayPowerResetEvent,  // Event triggered by Hardware Recovery.
   kInvalidateDisplay,       // Event triggered by DrawCycle thread to Invalidate display.
   kSyncInvalidateDisplay,   // Event triggered by Non-DrawCycle threads to Invalidate display.
+  kPostIdleTimeout,         // Event triggered after entering idle.
 };
 
 /*! @brief This enum represents the secure events received by Display HAL. */
@@ -276,6 +277,15 @@ struct DisplayDetailEnhancerData {
   ScalingFilterConfig filter_config = kFilterEdgeDirected;
                                       // Y/RGB filter configuration
   uint32_t de_blend = 0;              // DE Unsharp Mask blend between High and Low frequencies
+};
+
+/*! @brief This enum represents the supported display features that needs to be queried
+
+  @sa DisplayInterface::SupportedDisplayFeature
+*/
+enum SupportedDisplayFeature {
+  kSupportedModeSwitch,
+  kDestinationScalar,
 };
 
 /*! @brief Display device event handler implemented by the client.
@@ -975,13 +985,14 @@ class DisplayInterface {
   */
   virtual DisplayError GetStcColorModes(snapdragoncolor::ColorModeList *mode_list) = 0;
 
-  /*! @brief Method to get the allowed mode switches from the driver.
+  /*! @brief Method to retrieve info on a specific display feature
 
-    @param[out] pointer to the allowed_mode_switch
+    @param[out] pointer to the response
 
     @return \link DisplayError \endlink
   */
-  virtual DisplayError GetSupportedModeSwitch(uint32_t *allowed_mode_switch) = 0;
+  virtual DisplayError IsSupportedOnDisplay(SupportedDisplayFeature feature,
+                                            uint32_t *supported) = 0;
 
   /*! @brief Method to clear scaler LUTs.
 
