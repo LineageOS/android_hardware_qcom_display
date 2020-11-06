@@ -124,6 +124,8 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.wcg_composition_dataspa
 endif
 
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.force_hwc_copy_for_virtual_displays=true
+PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.max_frame_buffer_acquired_buffers=3
+PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.max_virtual_display_dimension=4096
 
 ifeq ($(TARGET_BOARD_PLATFORM),$(TRINKET))
 PRODUCT_PROPERTY_OVERRIDES += vendor.display.disable_excl_rect_partial_fb=1
