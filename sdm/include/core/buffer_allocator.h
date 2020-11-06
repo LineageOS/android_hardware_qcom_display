@@ -57,6 +57,8 @@ struct BufferConfig {
   bool secure_camera = false;                 //!< Specifies buffer to be allocated from specific
                                               //!< secure heap and with a specific alignment.
   bool gfx_client = false;                    //!< Specifies whether buffer is used by gfx.
+  bool trusted_ui = false;                    //!< Specifies buffer to be allocated from non-secure
+                                              //!< contiguous memory.
 };
 
 /*! @brief Holds the information about the allocated buffer.

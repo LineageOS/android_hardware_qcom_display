@@ -86,6 +86,8 @@
 #define ION_SC_PREVIEW_FLAGS (ION_SECURE | ION_FLAG_CP_CAMERA_PREVIEW)
 #endif
 
+#define SIZE_2MB 0x200000
+
 using std::shared_ptr;
 using std::vector;
 
@@ -124,6 +126,10 @@ int Allocator::AllocateMem(AllocData *alloc_data, uint64_t usage, int format) {
 
   // After this point we should have the right heap set, there is no fallback
   GetIonHeapInfo(usage, &alloc_data->heap_id, &alloc_data->alloc_type, &alloc_data->flags);
+
+  if (alloc_data->heap_id == ION_HEAP(ION_DISPLAY_HEAP_ID)) {
+    alloc_data->size = ALIGN(alloc_data->size, SIZE_2MB);
+  }
 
   ret = ion_allocator_->AllocBuffer(alloc_data);
   if (ret >= 0) {
@@ -249,6 +255,10 @@ void Allocator::GetIonHeapInfo(uint64_t usage, unsigned int *ion_heap_id, unsign
       heap_id = ION_HEAP(CP_HEAP_ID);
       flags |= UINT(ION_CP_FLAGS);
     }
+  } else if (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY) {
+    // Reuse GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY with no GRALLOC_USAGE_PROTECTED flag to alocate
+    // memory from non secure CMA for tursted UI use case
+    heap_id = ION_HEAP(ION_DISPLAY_HEAP_ID);
   }
 
   if (usage & BufferUsage::SENSOR_DIRECT_DATA) {
