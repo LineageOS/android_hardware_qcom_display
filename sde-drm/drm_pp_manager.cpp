@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -193,6 +193,13 @@ void DRMPPManager::Init(const DRMPropertyManager &pm , uint32_t object_type) {
       pp_prop_map_[kFeatureDgmGc].version = i - (uint32_t)DRMProperty::SDE_DGM_1D_LUT_GC_V5 + 5;
       DRM_LOGI("Dgm Gc version %d, prop_id %d", pp_prop_map_[kFeatureDgmGc].version,
                pp_prop_map_[kFeatureDgmGc].prop_id);
+    } else if (i >= (uint32_t)DRMProperty::SDE_PP_CWB_DITHER_V2 &&
+               i <= (uint32_t)DRMProperty::SDE_PP_CWB_DITHER_V2) {
+      pp_prop_map_[kFeatureCWBDither].prop_enum = (DRMProperty)i;
+      pp_prop_map_[kFeatureCWBDither].prop_id = pm.GetPropertyId((DRMProperty)i);
+      pp_prop_map_[kFeatureCWBDither].version = i - (uint32_t)DRMProperty::SDE_PP_CWB_DITHER_V2 + 2;
+      DRM_LOGI("PP CWB dither version %d, prop_id %d", pp_prop_map_[kFeatureCWBDither].version,
+               pp_prop_map_[kFeatureCWBDither].prop_id);
     }
   }
   return;

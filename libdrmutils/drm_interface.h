@@ -727,6 +727,7 @@ struct DRMConnectorInfo {
   uint32_t supported_colorspaces;
   uint64_t panel_id = 0;
   uint32_t qsync_fps;
+  bool has_cwb_dither = false;
 };
 
 // All DRM Connectors as map<Connector_id , connector_info>
@@ -769,6 +770,7 @@ enum DRMPPFeatureID {
   kFeatureDgmGc,
   kFeatureVigIgc,
   kFeatureVigGamut,
+  kFeatureCWBDither,
   kPPFeaturesMax,
 };
 

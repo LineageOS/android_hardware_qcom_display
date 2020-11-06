@@ -179,6 +179,7 @@ enum struct DRMProperty {
   DEMURA_PANEL_ID,
   DEMURA_BOOT_PLANE_V1,
   DYN_BIT_CLK,
+  SDE_PP_CWB_DITHER_V2,
 
   // Insert above
   MAX
