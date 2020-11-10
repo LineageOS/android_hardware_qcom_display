@@ -4,6 +4,7 @@ c_sources = core_interface.cpp \
             core_impl.cpp \
             display_base.cpp \
             display_builtin.cpp \
+            noise_plugin_intf_impl.cpp \
             display_pluggable.cpp \
             display_virtual.cpp \
             comp_manager.cpp \
