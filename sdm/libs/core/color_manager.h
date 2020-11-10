@@ -147,6 +147,7 @@ class ColorManagerProxy {
   DisplayError ColorMgrSetStcMode(const ColorMode &color_mode);
   DisplayError PrePrepare();
   DisplayError NotifyDisplayCalibrationMode(bool in_calibration);
+  DisplayError ColorMgrSetLtmPccConfig(void* pcc_input, size_t size);
 
  protected:
   ColorManagerProxy() {}

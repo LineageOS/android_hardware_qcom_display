@@ -596,6 +596,17 @@ DisplayError DisplayBuiltIn::PostCommit(LayerStack *layer_stack, HWDisplayMode p
   }
   dpps_info_.Init(this, hw_panel_info_.panel_name);
 
+  if (pending_color_space_) {
+    DppsBlendSpaceInfo info;
+    PrimariesTransfer color_space = GetBlendSpaceFromStcColorMode(current_color_mode_);
+    info.primaries = color_space.primaries;
+    info.transfer = color_space.transfer;
+    info.is_primary = IsPrimaryDisplay();
+    // notify blend space to DPPS
+    dpps_info_.DppsNotifyOps(kDppsColorSpaceEvent, &info, sizeof(info));
+    pending_color_space_ = false;
+  }
+
   HandleQsyncPostCommit(layer_stack);
 
   first_cycle_ = false;
@@ -1155,6 +1166,16 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
         DLOGE("Failed to get brightness base path %d", error);
       }
       break;
+    case kDppsSetPccConfig:
+      error = color_mgr_->ColorMgrSetLtmPccConfig(payload, size);
+      if (error != kErrorNone) {
+        DLOGE("Failed to set PCC config to ColorManagerProxy, error %d", error);
+      } else {
+        ClientLock lock(disp_mutex_);
+        validated_ = false;
+        DisablePartialUpdateOneFrameInternal();
+      }
+      break;
     default:
       DLOGE("Invalid input op %d", op);
       error = kErrorParameters;
@@ -1218,7 +1239,9 @@ DisplayError DisplayBuiltIn::SetStcColorMode(const snapdragoncolor::ColorMode &c
     DLOGE("Failed to set stc color mode, ret = %d display_type_ = %d", ret, display_type_);
     return ret;
   }
+
   current_color_mode_ = color_mode;
+  pending_color_space_ = true;
 
   DynamicRangeType dynamic_range = kSdrType;
   if (std::find(color_mode.hw_assets.begin(), color_mode.hw_assets.end(),
@@ -1538,6 +1561,10 @@ void DppsInfo::Deinit() {
 
 void DppsInfo::DppsNotifyOps(enum DppsNotifyOps op, void *payload, size_t size) {
   int ret = 0;
+  if (!dpps_intf_) {
+    DLOGW("Dpps intf nullptr");
+    return;
+  }
   ret = dpps_intf_->DppsNotifyOps(op, payload, size);
   if (ret)
     DLOGE("DppsNotifyOps op %d error %d", op, ret);

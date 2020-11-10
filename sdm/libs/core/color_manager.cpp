@@ -679,6 +679,29 @@ DisplayError ColorManagerProxy::ColorMgrSetStcMode(const ColorMode &color_mode) 
   return error;
 }
 
+DisplayError ColorManagerProxy::ColorMgrSetLtmPccConfig(void* pcc_input, size_t size) {
+  if (!stc_intf_) {
+    DLOGE("STC interface is NULL");
+    return kErrorUndefined;
+  }
+
+  ScPayload in_data = {};
+  in_data.prop = snapdragoncolor::kSetLtmPccConfig;
+  if (pcc_input) {
+    in_data.payload = reinterpret_cast<uint64_t>(pcc_input);
+    in_data.len = size;
+  } else {
+    in_data.payload = reinterpret_cast<uint64_t>(nullptr);
+    in_data.len = 0;
+  }
+  int result = stc_intf_->SetProperty(in_data);
+  if (result) {
+    DLOGE("Failed to SetProperty prop = %d, error = %d", in_data.prop, result);
+    return kErrorUndefined;
+  }
+  return kErrorNone;
+}
+
 ColorFeatureCheckingImpl::ColorFeatureCheckingImpl(HWInterface *hw_intf,
                                                    PPFeaturesConfig *pp_features,
                                                    bool dyn_switch)

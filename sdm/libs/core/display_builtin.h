@@ -238,6 +238,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   std::unique_ptr<DemuraIntf> demura_ = nullptr;
   Layer demura_layer_ = {};
   bool demura_intended_ = false;
+  bool pending_color_space_ = false;
 };
 
 }  // namespace sdm

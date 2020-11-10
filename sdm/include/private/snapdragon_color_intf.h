@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -89,6 +89,9 @@ enum ScProperty {
   //<! SetProperty - For client to notify connected/disconneced QDCM tool.
   //<! Payload - bool
   kNotifyDisplayCalibrationMode,
+  //<! SetProperty - For client to set PCC config from LTM block.
+  //<! Payload - struct pcc_coeff_data
+  kSetLtmPccConfig,
   //<! Max value of public properties
   kPropertyMax = 511,
   //<! Custom Properties
