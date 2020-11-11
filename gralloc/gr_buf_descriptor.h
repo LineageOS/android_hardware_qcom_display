@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2017, 2021, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,34 +30,22 @@
 #ifndef __GR_BUF_DESCRIPTOR_H__
 #define __GR_BUF_DESCRIPTOR_H__
 
-#include <hardware/gralloc1.h>
 #include <atomic>
+#include <string>
 
-namespace gralloc1 {
+#include "gr_utils.h"
+
+namespace gralloc {
+using android::hardware::hidl_vec;
+const uint32_t kBufferDescriptorSize = 7;
+const uint32_t kBufferDescriptorSizeV4 = 42;
+const uint32_t kMagicVersion = 0x76312E30;  // v1.0
+
 class BufferDescriptor {
  public:
-  BufferDescriptor() : id_(next_id_++) {}
-
-  BufferDescriptor(int w, int h, int f)
-      : width_(w),
-        height_(h),
-        format_(f),
-        producer_usage_(GRALLOC1_PRODUCER_USAGE_NONE),
-        consumer_usage_(GRALLOC1_CONSUMER_USAGE_NONE),
-        id_(next_id_++) {}
-
-  BufferDescriptor(int w, int h, int f, gralloc1_producer_usage_t prod_usage,
-                   gralloc1_consumer_usage_t cons_usage)
-      : width_(w),
-        height_(h),
-        format_(f),
-        producer_usage_(prod_usage),
-        consumer_usage_(cons_usage),
-        id_(next_id_++) {}
-
-  void SetConsumerUsage(gralloc1_consumer_usage_t usage) { consumer_usage_ = usage; }
-
-  void SetProducerUsage(gralloc1_producer_usage_t usage) { producer_usage_ = usage; }
+  BufferDescriptor() {}
+  explicit BufferDescriptor(uint64_t id) : id_(id) {}
+  void SetUsage(uint64_t usage) { usage_ |= usage; }
 
   void SetDimensions(int w, int h) {
     width_ = w;
@@ -68,9 +56,11 @@ class BufferDescriptor {
 
   void SetLayerCount(uint32_t layer_count) { layer_count_ = layer_count; }
 
-  gralloc1_consumer_usage_t GetConsumerUsage() const { return consumer_usage_; }
+  void SetName(std::string name) { name_ = name; }
 
-  gralloc1_producer_usage_t GetProducerUsage() const { return producer_usage_; }
+  void SetReservedSize(uint64_t reserved_size) { reserved_size_ = reserved_size; }
+
+  uint64_t GetUsage() const { return usage_; }
 
   int GetWidth() const { return width_; }
 
@@ -80,17 +70,21 @@ class BufferDescriptor {
 
   uint32_t GetLayerCount() const { return layer_count_; }
 
-  gralloc1_buffer_descriptor_t GetId() const { return id_; }
+  uint64_t GetId() const { return id_; }
+
+  uint64_t GetReservedSize() const { return reserved_size_; }
+
+  std::string GetName() const { return name_; }
 
  private:
+  std::string name_ = "";
   int width_ = -1;
   int height_ = -1;
   int format_ = -1;
   uint32_t layer_count_ = 1;
-  gralloc1_producer_usage_t producer_usage_ = GRALLOC1_PRODUCER_USAGE_NONE;
-  gralloc1_consumer_usage_t consumer_usage_ = GRALLOC1_CONSUMER_USAGE_NONE;
-  const gralloc1_buffer_descriptor_t id_;
-  static std::atomic<gralloc1_buffer_descriptor_t> next_id_;
+  uint64_t usage_ = 0;
+  const uint64_t id_ = 0;
+  uint64_t reserved_size_ = 0;
 };
-};  // namespace gralloc1
+};      // namespace gralloc
 #endif  // __GR_BUF_DESCRIPTOR_H__

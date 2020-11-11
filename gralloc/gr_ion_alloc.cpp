@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2019, 2021, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -29,25 +29,26 @@
 
 #define DEBUG 0
 #define ATRACE_TAG (ATRACE_TAG_GRAPHICS | ATRACE_TAG_HAL)
-#include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <linux/msm_ion.h>
 #if TARGET_ION_ABI_VERSION >= 2
-#include <ion/ion.h>
 #include <linux/dma-buf.h>
+#include <ion/ion.h>
 #endif
 #include <stdlib.h>
 #include <fcntl.h>
 #include <log/log.h>
+#include <cutils/trace.h>
 #include <errno.h>
 #include <utils/Trace.h>
+#include <string>
 
-#include "gralloc_priv.h"
 #include "gr_utils.h"
+#include "gralloc_priv.h"
 #include "gr_ion_alloc.h"
 
-namespace gralloc1 {
+namespace gralloc {
 
 bool IonAlloc::Init() {
   if (ion_dev_fd_ == FD_INIT) {
@@ -94,7 +95,8 @@ int IonAlloc::AllocBuffer(AllocData *data) {
   err = ion_alloc_fd(ion_dev_fd_, data->size, data->align, data->heap_id, flags, &fd);
   ATRACE_END();
   if (err) {
-    ALOGE("libion alloc failed");
+    ALOGE("libion alloc failed ion_fd %d size %d align %d heap_id %x flags %x",
+          ion_dev_fd_, data->size, data->align, data->heap_id, flags);
     return err;
   }
 
@@ -139,6 +141,9 @@ int IonAlloc::CleanBuffer(void */*base*/, unsigned int /*size*/, unsigned int /*
     case CACHE_INVALIDATE:
       sync.flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_RW;
       break;
+    case CACHE_READ_DONE:
+      sync.flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_READ;
+      break;
     default:
       ALOGE("%s: Invalid operation %d", __FUNCTION__, op);
       return -1;
@@ -180,26 +185,34 @@ int IonAlloc::AllocBuffer(AllocData *data) {
   ion_alloc_data.heap_id_mask = data->heap_id;
   ion_alloc_data.flags = data->flags;
   ion_alloc_data.flags |= data->uncached ? 0 : ION_FLAG_CACHED;
+  std::string tag_name{};
+  if (ATRACE_ENABLED()) {
+    tag_name = "ION_IOC_ALLOC size: " + std::to_string(data->size);
+  }
 
+  ATRACE_BEGIN(tag_name.c_str());
   if (ioctl(ion_dev_fd_, INT(ION_IOC_ALLOC), &ion_alloc_data)) {
     err = -errno;
     ALOGE("ION_IOC_ALLOC failed with error - %s", strerror(errno));
     return err;
   }
+  ATRACE_END();
 
   fd_data.handle = ion_alloc_data.handle;
   handle_data.handle = ion_alloc_data.handle;
+  ATRACE_BEGIN("ION_IOC_MAP");
   if (ioctl(ion_dev_fd_, INT(ION_IOC_MAP), &fd_data)) {
     err = -errno;
     ALOGE("%s: ION_IOC_MAP failed with error - %s", __FUNCTION__, strerror(errno));
     ioctl(ion_dev_fd_, INT(ION_IOC_FREE), &handle_data);
     return err;
   }
+  ATRACE_END();
 
   data->fd = fd_data.fd;
   data->ion_handle = handle_data.handle;
-  ALOGD_IF(DEBUG, "ion: Allocated buffer size:%zu fd:%d handle:0x%x",
-          ion_alloc_data.len, data->fd, data->ion_handle);
+  ALOGD_IF(DEBUG, "ion: Allocated buffer size:%zu fd:%d handle:0x%x", ion_alloc_data.len, data->fd,
+           data->ion_handle);
 
   return 0;
 }
@@ -238,6 +251,10 @@ int IonAlloc::ImportBuffer(int fd) {
 
 int IonAlloc::CleanBuffer(void *base, unsigned int size, unsigned int offset, int handle, int op,
                           int /*fd*/) {
+  if (op == CACHE_READ_DONE)  {
+    return 0;
+  }
+
   ATRACE_CALL();
   ATRACE_INT("operation id", op);
   struct ion_flush_data flush_data;
@@ -333,4 +350,4 @@ int IonAlloc::UnmapBuffer(void *base, unsigned int size, unsigned int /*offset*/
   return err;
 }
 
-}  // namespace gralloc1
+}  // namespace gralloc

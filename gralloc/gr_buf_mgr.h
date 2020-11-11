@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017, 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2017, 2019, 2021 The Linux Foundation. All rights reserved.
  * Not a Contribution
  *
  * Copyright (C) 2008 The Android Open Source Project
@@ -21,71 +21,49 @@
 #define __GR_BUF_MGR_H__
 
 #include <pthread.h>
+
+#include <mutex>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
-#include <mutex>
+#include <vector>
 
-#include "gralloc_priv.h"
 #include "gr_allocator.h"
-#include "gr_utils.h"
 #include "gr_buf_descriptor.h"
+#include "gr_utils.h"
+#include "gralloc_priv.h"
 
-namespace gralloc1 {
-
+namespace gralloc {
+using gralloc::Error;
 class BufferManager {
  public:
   ~BufferManager();
-  gralloc1_error_t CreateBufferDescriptor(gralloc1_buffer_descriptor_t *descriptor_id);
-  gralloc1_error_t DestroyBufferDescriptor(gralloc1_buffer_descriptor_t descriptor_id);
-  gralloc1_error_t AllocateBuffers(uint32_t num_descriptors,
-                                   const gralloc1_buffer_descriptor_t *descriptor_ids,
-                                   buffer_handle_t *out_buffers);
-  gralloc1_error_t RetainBuffer(private_handle_t const *hnd);
-  gralloc1_error_t ReleaseBuffer(private_handle_t const *hnd);
-  gralloc1_error_t LockBuffer(const private_handle_t *hnd, gralloc1_producer_usage_t prod_usage,
-                              gralloc1_consumer_usage_t cons_usage);
-  gralloc1_error_t UnlockBuffer(const private_handle_t *hnd);
-  gralloc1_error_t Perform(int operation, va_list args);
-  gralloc1_error_t GetFlexLayout(const private_handle_t *hnd, struct android_flex_layout *layout);
-  gralloc1_error_t GetNumFlexPlanes(const private_handle_t *hnd, uint32_t *out_num_planes);
-  gralloc1_error_t Dump(std::ostringstream *os);
-  gralloc1_error_t IsBufferImported(const private_handle_t *hnd);
-  gralloc1_error_t ValidateBufferSize(private_handle_t const *hnd, BufferInfo info);
 
-  template <typename... Args>
-  gralloc1_error_t CallBufferDescriptorFunction(gralloc1_buffer_descriptor_t descriptor_id,
-                                                void (BufferDescriptor::*member)(Args...),
-                                                Args... args) {
-    std::lock_guard<std::mutex> lock(descriptor_lock_);
-    const auto map_descriptor = descriptors_map_.find(descriptor_id);
-    if (map_descriptor == descriptors_map_.end()) {
-      return GRALLOC1_ERROR_BAD_DESCRIPTOR;
-    }
-    const auto descriptor = map_descriptor->second;
-    (descriptor.get()->*member)(std::forward<Args>(args)...);
-    return GRALLOC1_ERROR_NONE;
-  }
-
-  static BufferManager* GetInstance() {
-    static BufferManager *instance = new BufferManager();
-    return instance;
-  }
+  Error AllocateBuffer(const BufferDescriptor &descriptor, buffer_handle_t *handle,
+                       unsigned int bufferSize = 0, bool testAlloc = false);
+  Error RetainBuffer(private_handle_t const *hnd);
+  Error ReleaseBuffer(private_handle_t const *hnd);
+  Error LockBuffer(const private_handle_t *hnd, uint64_t usage);
+  Error UnlockBuffer(const private_handle_t *hnd);
+  Error Dump(std::ostringstream *os);
+  Error ValidateBufferSize(private_handle_t const *hnd, BufferInfo info);
+  Error IsBufferImported(const private_handle_t *hnd);
+  static BufferManager *GetInstance();
+  Error GetMetadata(private_handle_t *handle, int64_t metadatatype_value, hidl_vec<uint8_t> *out);
+  Error SetMetadata(private_handle_t *handle, int64_t metadatatype_value, hidl_vec<uint8_t> in);
+  Error GetReservedRegion(private_handle_t *handle, void **reserved_region,
+                          uint64_t *reserved_region_size);
+  Error FlushBuffer(const private_handle_t *handle);
+  Error RereadBuffer(const private_handle_t *handle);
+  Error GetAllHandles(std::vector<const private_handle_t *> *out_handle_list);
+  void SetGrallocDebugProperties(gralloc::GrallocProperties props);
 
  private:
   BufferManager();
-  gralloc1_error_t MapBuffer(private_handle_t const *hnd);
-  int AllocateBuffer(const BufferDescriptor &descriptor, buffer_handle_t *handle,
-                     unsigned int bufferSize = 0);
-  uint32_t GetDataAlignment(int format, gralloc1_producer_usage_t prod_usage,
-                       gralloc1_consumer_usage_t cons_usage);
-  int GetHandleFlags(int format, gralloc1_producer_usage_t prod_usage,
-                     gralloc1_consumer_usage_t cons_usage);
-  void CreateSharedHandle(buffer_handle_t inbuffer, const BufferDescriptor &descriptor,
-                          buffer_handle_t *out_buffer);
+  Error MapBuffer(private_handle_t const *hnd);
 
   // Imports the ion fds into the current process. Returns an error for invalid handles
-  gralloc1_error_t ImportHandleLocked(private_handle_t *hnd);
+  Error ImportHandleLocked(private_handle_t *hnd);
 
   // Creates a Buffer from the valid private handle and adds it to the map
   void RegisterHandleLocked(const private_handle_t *hnd, int ion_handle, int ion_handle_meta);
@@ -105,33 +83,24 @@ class BufferManager {
     int ion_handle_meta = -1;
 
     Buffer() = delete;
-    explicit Buffer(const private_handle_t* h, int ih_main = -1, int ih_meta = -1):
-        handle(h),
-        ion_handle_main(ih_main),
-        ion_handle_meta(ih_meta) {
-    }
+    explicit Buffer(const private_handle_t *h, int ih_main = -1, int ih_meta = -1)
+        : handle(h), ion_handle_main(ih_main), ion_handle_meta(ih_meta) {}
     void IncRef() { ++ref_count; }
     bool DecRef() { return --ref_count == 0; }
+    uint64_t reserved_size = 0;
+    void *reserved_region_ptr = nullptr;
   };
 
-  gralloc1_error_t FreeBuffer(std::shared_ptr<Buffer> buf);
+  Error FreeBuffer(std::shared_ptr<Buffer> buf);
 
   // Get the wrapper Buffer object from the handle, returns nullptr if handle is not found
   std::shared_ptr<Buffer> GetBufferFromHandleLocked(const private_handle_t *hnd);
-
-  bool map_fb_mem_ = false;
   Allocator *allocator_ = NULL;
   std::mutex buffer_lock_;
-  std::mutex descriptor_lock_;
-  // TODO(user): The private_handle_t is used as a key because the unique ID generated
-  // from next_id_ is not unique across processes. The correct way to resolve this would
-  // be to use the allocator over hwbinder
-  std::unordered_map<const private_handle_t*, std::shared_ptr<Buffer>> handles_map_ = {};
-  std::unordered_map<gralloc1_buffer_descriptor_t,
-                     std::shared_ptr<BufferDescriptor>> descriptors_map_ = {};
+  std::unordered_map<const private_handle_t *, std::shared_ptr<Buffer>> handles_map_ = {};
   std::atomic<uint64_t> next_id_;
 };
 
-}  // namespace gralloc1
+}  // namespace gralloc
 
 #endif  // __GR_BUF_MGR_H__
