@@ -466,6 +466,12 @@ DisplayError DisplayBuiltIn::SetRefreshRate(uint32_t refresh_rate, bool final_ra
       return error;
     }
 
+    if (handle_idle_timeout_) {
+      is_idle_timeout_ = true;
+    } else {
+      is_idle_timeout_ = false;
+    }
+
     error = comp_manager_->CheckEnforceSplit(display_comp_ctx_, refresh_rate);
     if (error != kErrorNone) {
       return error;
