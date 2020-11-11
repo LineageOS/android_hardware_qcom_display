@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016 - 2017, 2020 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -61,6 +61,13 @@ void CloseFd(int *fd) {
     Sys::close_(*fd);
     *fd = -1;
   }
+}
+
+uint64_t GetSystemTimeInNs() {
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+
+  return (uint64_t) ts.tv_sec * pow(10, 9) + (uint64_t)ts.tv_nsec;
 }
 
 }  // namespace sdm
