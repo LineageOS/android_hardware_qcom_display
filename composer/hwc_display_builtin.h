@@ -184,6 +184,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   void SetPartialUpdate(DisplayConfigFixedInfo fixed_info);
   void ValidateUiScaling();
   void ConfigureCwbAtLm(uint32_t *x_pixels, uint32_t *y_pixels);
+  void EnablePartialUpdate();
 
   // SyncTask methods.
   void OnTask(const LayerStitchTaskCode &task_code,
@@ -239,6 +240,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   int perf_hint_large_comp_cycle_ = 0;
   bool force_reset_validate_ = false;
   bool disable_dyn_fps_ = false;
+  bool enable_round_corner_ = false;
 };
 
 }  // namespace sdm

@@ -2296,7 +2296,7 @@ bool HWCDisplay::IsLayerUpdating(HWCLayer *hwc_layer) {
   //   c) layer stack geometry has changed (TODO(user): Remove when SDM accepts
   //      geometry_changed as bit fields).
   return (layer->flags.single_buffer || hwc_layer->IsSurfaceUpdated() ||
-          geometry_changes_);
+          hwc_layer->GetGeometryChanges());
 }
 
 uint32_t HWCDisplay::SanitizeRefreshRate(uint32_t req_refresh_rate) {

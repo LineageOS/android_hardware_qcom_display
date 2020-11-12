@@ -171,6 +171,10 @@ int HWCDisplayBuiltIn::Init() {
   DebugHandler::Get()->GetProperty(DISABLE_DYNAMIC_FPS, &value);
   disable_dyn_fps_ = (value == 1);
 
+  value = 0;
+  DebugHandler::Get()->GetProperty(ENABLE_ROUNDED_CORNER, &value);
+  enable_round_corner_ = (value == 1);
+
   uint32_t config_index = 0;
   GetActiveDisplayConfig(&config_index);
   DisplayConfigVariableInfo attr = {};
@@ -221,6 +225,9 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
 
   // Fill in the remaining blanks in the layers and add them to the SDM layerstack
   BuildLayerStack();
+
+  // Track damage regions if needed.
+  EnablePartialUpdate();
 
   // Check for scaling layers during Doze mode
   ValidateUiScaling();
@@ -1665,6 +1672,24 @@ bool HWCDisplayBuiltIn::HasReadBackBufferSupport() {
   display_intf_->GetConfig(&fixed_info);
 
   return fixed_info.readback_supported;
+}
+
+void HWCDisplayBuiltIn::EnablePartialUpdate() {
+  if (partial_update_enabled_) {
+    return;
+  }
+
+  if (!layer_stack_.flags.mask_present || enable_round_corner_) {
+    return;
+  }
+
+  // Update PU status.
+  partial_update_enabled_ = true;
+
+  for (auto hwc_layer : layer_set_) {
+    hwc_layer->SetPartialUpdate(partial_update_enabled_);
+  }
+  client_target_->SetPartialUpdate(partial_update_enabled_);
 }
 
 }  // namespace sdm
