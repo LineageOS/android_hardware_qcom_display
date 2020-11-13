@@ -179,6 +179,8 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   void HandleQsyncPostCommit(LayerStack *layer_stack);
   void UpdateQsyncMode();
   void SetVsyncStatus(bool enable);
+  void SendBacklight();
+  void SendDisplayConfigs();
 
   const uint32_t kPuTimeOutMs = 1000;
   std::vector<HWEvent> event_list_;
