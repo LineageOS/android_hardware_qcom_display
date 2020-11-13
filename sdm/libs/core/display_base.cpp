@@ -96,6 +96,7 @@ DisplayError DisplayBase::Init() {
 
   uint32_t active_index = 0;
   int drop_vsync = 0;
+  int hw_recovery_threshold = 1;
   hw_intf_->GetActiveConfig(&active_index);
   hw_intf_->GetDisplayAttributes(active_index, &display_attributes_);
   fb_config_ = display_attributes_;
@@ -163,6 +164,12 @@ DisplayError DisplayBase::Init() {
 
   Debug::Get()->GetProperty(DROP_SKEWED_VSYNC, &drop_vsync);
   drop_skewed_vsync_ = (drop_vsync == 1);
+
+  Debug::GetProperty(HW_RECOVERY_THRESHOLD, &hw_recovery_threshold);
+  DLOGI("hw_recovery_threshold_ set to %d", hw_recovery_threshold);
+  if (hw_recovery_threshold > 0) {
+    hw_recovery_threshold_ = (UINT32(hw_recovery_threshold));
+  }
 
   return kErrorNone;
 
@@ -2128,8 +2135,10 @@ void DisplayBase::HwRecovery(const HWRecoveryEvent sdm_event_code) {
   switch (sdm_event_code) {
     case HWRecoveryEvent::kSuccess:
       hw_recovery_logs_captured_ = false;
+      hw_recovery_count_ = 0;
       break;
     case HWRecoveryEvent::kCapture:
+#ifndef TRUSTED_VM
       if (!disable_hw_recovery_dump_ && !hw_recovery_logs_captured_) {
         hw_intf_->DumpDebugData();
         hw_recovery_logs_captured_ = true;
@@ -2139,6 +2148,18 @@ void DisplayBase::HwRecovery(const HWRecoveryEvent sdm_event_code) {
               "capture for display = %d", display_type_);
       } else {
         DLOGI("Debugfs data dumping is disabled for display = %d", display_type_);
+      }
+#endif
+      hw_recovery_count_++;
+      if (hw_recovery_count_ >= hw_recovery_threshold_) {
+        DLOGI("display = %d attempting to start display power reset", display_type_);
+        if (StartDisplayPowerReset()) {
+          DLOGI("display = %d allowed to start display power reset", display_type_);
+          event_handler_->HandleEvent(kDisplayPowerResetEvent);
+          EndDisplayPowerReset();
+          DLOGI("display = %d has finished display power reset", display_type_);
+          hw_recovery_count_ = 0;
+        }
       }
       break;
     case HWRecoveryEvent::kDisplayPowerReset:
