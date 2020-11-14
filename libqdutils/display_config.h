@@ -177,4 +177,6 @@ int GetDisplayPortId(int dpy, int *port_id);
 
 
 extern "C" int waitForComposerInit();
+extern "C" int waitForComposerInitPerf();
+
 #endif
