@@ -996,7 +996,7 @@ DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *
   }
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence_fd);
 
-  int ret = NullCommit(false /* asynchronous */, true /* retain_planes */);
+  int ret = NullCommit(false /* synchronous */, true /* retain_planes */);
   if (ret) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
@@ -1042,7 +1042,7 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown) {
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 0);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence_fd);
 
-  int ret = NullCommit(false /* asynchronous */, false /* retain_planes */);
+  int ret = NullCommit(false /* synchronous */, false /* retain_planes */);
   if (ret) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
@@ -1082,7 +1082,7 @@ DisplayError HWDeviceDRM::Doze(const HWQosData &qos_data, shared_ptr<Fence> *rel
   }
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence_fd);
 
-  int ret = NullCommit(false /* asynchronous */, true /* retain_planes */);
+  int ret = NullCommit(false /* synchronous */, true /* retain_planes */);
   if (ret) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
@@ -1129,7 +1129,7 @@ DisplayError HWDeviceDRM::DozeSuspend(const HWQosData &qos_data,
   }
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence_fd);
 
-  int ret = NullCommit(false /* asynchronous */, true /* retain_planes */);
+  int ret = NullCommit(false /* synchronous */, true /* retain_planes */);
   if (ret) {
     DLOGE("Failed with error: %d", ret);
     return kErrorHardware;
