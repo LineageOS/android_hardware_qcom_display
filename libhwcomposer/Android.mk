@@ -6,9 +6,6 @@ LOCAL_MODULE                  := hwcomposer.$(TARGET_BOARD_PLATFORM)
 LOCAL_MODULE_RELATIVE_PATH    := hw
 LOCAL_VENDOR_MODULE           := true
 LOCAL_MODULE_TAGS             := optional
-LOCAL_C_INCLUDES              := $(common_includes) \
-                                 $(TOP)/external/skia/include/core \
-                                 $(TOP)/external/skia/include/images
 LOCAL_SHARED_LIBRARIES        := $(common_libs) libEGL liboverlay \
                                  libhdmi libqdutils libhardware_legacy \
                                  libdl libmemalloc libqservice libsync \
@@ -23,7 +20,7 @@ ifeq ($(GET_DISPLAY_SECURE_STATUS_FROM_HWC),true)
     LOCAL_CFLAGS += -DGET_DISPLAY_SECURE_STATUS_FROM_HWC
 endif
 
-LOCAL_HEADER_LIBRARIES        := generated_kernel_headers
+LOCAL_HEADER_LIBRARIES        := display_headers generated_kernel_headers
 LOCAL_SRC_FILES               := hwc.cpp          \
                                  hwc_utils.cpp    \
                                  hwc_uevents.cpp  \
