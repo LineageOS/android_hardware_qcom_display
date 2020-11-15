@@ -16,4 +16,17 @@ ifneq ($(filter msm8226 msm8x26 msm8960 msm8974 msm8x74,$(TARGET_BOARD_PLATFORM)
 endif
 endif
 
+include $(CLEAR_VARS)
+LOCAL_MODULE := display_headers
+LOCAL_EXPORT_C_INCLUDE_DIRS := \
+    $(display_top)/libcopybit \
+    $(display_top)/libexternal \
+    $(display_top)/libgralloc \
+    $(display_top)/libhwcomposer \
+    $(display_top)/liboverlay \
+    $(display_top)/libqdutils \
+    $(display_top)/libqservice \
+    $(display_top)/libvirtual
+include $(BUILD_HEADER_LIBRARY)
+
 endif
