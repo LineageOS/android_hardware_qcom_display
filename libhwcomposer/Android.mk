@@ -6,10 +6,6 @@ LOCAL_MODULE                  := hwcomposer.$(TARGET_BOARD_PLATFORM)
 LOCAL_VENDOR_MODULE           := true
 LOCAL_MODULE_RELATIVE_PATH    := hw
 LOCAL_MODULE_TAGS             := optional
-LOCAL_C_INCLUDES              := $(common_includes) \
-                                 $(TOP)/external/skia/include/core \
-                                 $(TOP)/external/skia/include/images \
-                                 frameworks/native/libs/arect/include
 
 ifeq ($(strip $(TARGET_USES_QCOM_DISPLAY_PP)),true)
 LOCAL_C_INCLUDES              += $(TARGET_OUT_HEADERS)/qdcm/inc \
@@ -41,7 +37,7 @@ ifeq ($(VSYNC_EVENT_PHASE_OFFSET_NS),)
     LOCAL_CFLAGS += -DDYNAMIC_FPS
 endif
 
-LOCAL_HEADER_LIBRARIES        := generated_kernel_headers
+LOCAL_HEADER_LIBRARIES        := display_headers generated_kernel_headers
 LOCAL_SRC_FILES               := hwc.cpp          \
                                  hwc_utils.cpp    \
                                  hwc_uevents.cpp  \
