@@ -16,19 +16,13 @@ LOCAL_PATH:= $(call my-dir)
 include $(LOCAL_PATH)/../common.mk
 
 include $(CLEAR_VARS)
-LOCAL_COPY_HEADERS_TO         := $(common_header_export_path)
-LOCAL_COPY_HEADERS            := copybit.h copybit_priv.h c2d2.h c2dExt.h
-include $(BUILD_COPY_HEADERS)
-
-include $(CLEAR_VARS)
 LOCAL_MODULE                  := copybit.$(TARGET_BOARD_PLATFORM)
 LOCAL_MODULE_RELATIVE_PATH    := hw
 LOCAL_PROPRIETARY_MODULE      := true
 LOCAL_MODULE_TAGS             := optional
-LOCAL_C_INCLUDES              := $(common_includes)
 LOCAL_SHARED_LIBRARIES        := $(common_libs) libdl libmemalloc
 LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdcopybit\"
-LOCAL_HEADER_LIBRARIES        := generated_kernel_headers
+LOCAL_HEADER_LIBRARIES        := display_headers generated_kernel_headers
 
 ifeq ($(TARGET_USES_C2D_COMPOSITION),true)
     LOCAL_CFLAGS += -DCOPYBIT_Z180=1 -DC2D_SUPPORT_DISPLAY=1
