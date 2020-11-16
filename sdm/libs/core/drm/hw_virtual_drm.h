@@ -53,7 +53,7 @@ class HWVirtualDRM : public HWDeviceDRM {
   virtual DisplayError Commit(HWLayersInfo *hw_layers_info);
   virtual DisplayError Flush(HWLayersInfo *hw_layers_info);
   virtual DisplayError GetPPFeaturesVersion(PPFeatureVersion *vers);
-  virtual DisplayError PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
+  virtual DisplayError PowerOn(const HWQosData &qos_data, SyncPoints *sync_points);
   virtual DisplayError SetScaleLutConfig(HWScaleLutInfo *lut_info) {
     return kErrorNotSupported;
   }

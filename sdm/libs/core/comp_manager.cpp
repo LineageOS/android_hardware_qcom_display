@@ -587,7 +587,7 @@ DisplayError CompManager::ControlDpps(bool enable) {
 }
 
 bool CompManager::SetDisplayState(Handle display_ctx, DisplayState state,
-                                  const shared_ptr<Fence> &sync_handle) {
+                                  const SyncPoints &sync_points) {
   DisplayCompositionContext *display_comp_ctx =
       reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
@@ -618,7 +618,7 @@ bool CompManager::SetDisplayState(Handle display_ctx, DisplayState state,
   bool inactive = (state == kStateOff) || (state == kStateDozeSuspend);
   UpdateStrategyConstraints(display_comp_ctx->is_primary_panel, inactive);
 
-  resource_intf_->UpdateSyncHandle(display_comp_ctx->display_resource_ctx, sync_handle);
+  resource_intf_->UpdateSyncHandle(display_comp_ctx->display_resource_ctx, sync_points);
 
   return true;
 }
@@ -745,6 +745,18 @@ DisplayError CompManager::SetMaxSDEClk(uint32_t clk) {
   }
 
   return kErrorNotSupported;
+}
+
+void CompManager::GetRetireFence(Handle display_ctx, shared_ptr<Fence> *retire_fence) {
+  SCOPE_LOCK(locker_);
+  if (resource_intf_ == nullptr) {
+    return;
+  }
+
+  DisplayCompositionContext *display_comp_ctx =
+      reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+  resource_intf_->Perform(ResourceInterface::kCmdGetRetireFence,
+                          display_comp_ctx->display_resource_ctx, retire_fence);
 }
 
 }  // namespace sdm

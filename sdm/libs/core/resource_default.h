@@ -67,8 +67,7 @@ class ResourceDefault : public ResourceInterface {
   DisplayError SetMaxBandwidthMode(HWBwModes mode);
   virtual DisplayError SetDetailEnhancerData(Handle display_ctx,
                                              const DisplayDetailEnhancerData &de_data);
-  virtual DisplayError UpdateSyncHandle(Handle display_ctx,
-                                        const shared_ptr<Fence> &sync_handle);
+  virtual DisplayError UpdateSyncHandle(Handle display_ctx, const SyncPoints &sync_points);
   virtual DisplayError Perform(int cmd, ...) { return kErrorNone; }
   DisplayError SetDisplayState(int32_t display_id, DisplayState state) { return kErrorNone; }
   virtual bool IsRotatorSupportedFormat(LayerBufferFormat format) { return false; }

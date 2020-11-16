@@ -283,6 +283,11 @@ struct HWDestScalarInfo {
   uint32_t prefill_lines = 4;
 };
 
+struct SyncPoints {
+  shared_ptr<Fence> release_fence = nullptr;
+  shared_ptr<Fence> retire_fence = nullptr;
+};
+
 enum SmartDMARevision {
   V1,
   V2,

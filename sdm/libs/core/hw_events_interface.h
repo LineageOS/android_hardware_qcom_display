@@ -49,6 +49,7 @@ enum HWEvent {
   HISTOGRAM,
   BACKLIGHT_EVENT,
   MMRM,
+  POWER_EVENT,
 };
 
 class HWEventsInterface {

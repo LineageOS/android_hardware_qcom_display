@@ -73,8 +73,7 @@ class CompManager {
   DisplayError ValidateScaling(const LayerRect &crop, const LayerRect &dst, bool rotate90);
   DisplayError ValidateAndSetCursorPosition(Handle display_ctx, DispLayerStack *disp_layer_stack,
                                             int x, int y);
-  bool SetDisplayState(Handle display_ctx, DisplayState state,
-                       const shared_ptr<Fence> &sync_handle);
+  bool SetDisplayState(Handle display_ctx, DisplayState state, const SyncPoints &sync_points);
   DisplayError SetMaxBandwidthMode(HWBwModes mode);
   DisplayError GetScaleLutConfig(HWScaleLutInfo *lut_info);
   DisplayError SetDetailEnhancerData(Handle display_ctx, const DisplayDetailEnhancerData &de_data);
@@ -107,6 +106,7 @@ class CompManager {
     return display_demura_status_[display_id];
   }
   DisplayError SetMaxSDEClk(uint32_t clk);
+  void GetRetireFence(Handle display_ctx, shared_ptr<Fence> *retire_fence);
 
  private:
   static const int kMaxThermalLevel = 3;

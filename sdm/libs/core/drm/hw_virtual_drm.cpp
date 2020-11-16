@@ -233,7 +233,7 @@ void HWVirtualDRM::GetModeIndex(const HWDisplayAttributes &display_attributes, i
   }
 }
 
-DisplayError HWVirtualDRM::PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *release_fence) {
+DisplayError HWVirtualDRM::PowerOn(const HWQosData &qos_data, SyncPoints *sync_points) {
   DTRACE_SCOPED();
   if (!drm_atomic_intf_) {
     DLOGE("DRM Atomic Interface is null!");
@@ -246,7 +246,7 @@ DisplayError HWVirtualDRM::PowerOn(const HWQosData &qos_data, shared_ptr<Fence> 
     return kErrorNone;
   }
 
-  DisplayError err = HWDeviceDRM::PowerOn(qos_data, release_fence);
+  DisplayError err = HWDeviceDRM::PowerOn(qos_data, sync_points);
   if (err != kErrorNone) {
     return err;
   }

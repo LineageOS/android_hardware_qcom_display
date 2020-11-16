@@ -74,6 +74,7 @@ class HWEventHandler {
   virtual void Histogram(int histogram_fd, uint32_t blob_id) = 0;
   virtual void HandleBacklightEvent(float brightness_level) = 0;
   virtual void MMRMEvent(uint32_t clk) = 0;
+  virtual void HandlePowerEvent() = 0;
 
  protected:
   virtual ~HWEventHandler() { }
@@ -97,12 +98,11 @@ class HWInterface {
   virtual DisplayError SetDisplayAttributes(uint32_t index) = 0;
   virtual DisplayError SetDisplayAttributes(const HWDisplayAttributes &display_attributes) = 0;
   virtual DisplayError GetConfigIndex(char *mode, uint32_t *index) = 0;
-  virtual DisplayError PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *release_fence) = 0;
-  virtual DisplayError PowerOff(bool teardown) = 0;
-  virtual DisplayError Doze(const HWQosData &qos_data, shared_ptr<Fence> *release_fence) = 0;
-  virtual DisplayError DozeSuspend(const HWQosData &qos_data,
-                                   shared_ptr<Fence> *release_fence) = 0;
-  virtual DisplayError Standby() = 0;
+  virtual DisplayError PowerOn(const HWQosData &qos_data, SyncPoints *sync_points) = 0;
+  virtual DisplayError PowerOff(bool teardown, SyncPoints *sync_points) = 0;
+  virtual DisplayError Doze(const HWQosData &qos_data, SyncPoints *sync_points) = 0;
+  virtual DisplayError DozeSuspend(const HWQosData &qos_data, SyncPoints *sync_points) = 0;
+  virtual DisplayError Standby(SyncPoints *sync_points) = 0;
   virtual DisplayError Validate(HWLayersInfo *hw_layers_info) = 0;
   virtual DisplayError Commit(HWLayersInfo *hw_layers_info) = 0;
   virtual DisplayError Flush(HWLayersInfo *hw_layers_info) = 0;

@@ -188,7 +188,7 @@ DisplayError HWTVDRM::GetDefaultConfig(uint32_t *default_config) {
   return found ? kErrorNone : kErrorNotSupported;
 }
 
-DisplayError HWTVDRM::PowerOff(bool teardown) {
+DisplayError HWTVDRM::PowerOff(bool teardown, SyncPoints *sync_points) {
   DTRACE_SCOPED();
   if (!drm_atomic_intf_) {
     DLOGE("DRM Atomic Interface is null!");
@@ -218,15 +218,15 @@ DisplayError HWTVDRM::PowerOff(bool teardown) {
   return kErrorNone;
 }
 
-DisplayError HWTVDRM::Doze(const HWQosData &qos_data, shared_ptr<Fence> *release_fence) {
+DisplayError HWTVDRM::Doze(const HWQosData &qos_data, SyncPoints *sync_points) {
   return kErrorNone;
 }
 
-DisplayError HWTVDRM::DozeSuspend(const HWQosData &qos_data, shared_ptr<Fence> *release_fence) {
+DisplayError HWTVDRM::DozeSuspend(const HWQosData &qos_data, SyncPoints *sync_points) {
   return kErrorNone;
 }
 
-DisplayError HWTVDRM::Standby() {
+DisplayError HWTVDRM::Standby(SyncPoints *sync_points) {
   return kErrorNone;
 }
 
@@ -444,7 +444,7 @@ void HWTVDRM::InitMaxHDRMetaData() {
   hdr_metadata_.max_average_light_level = 100000000;  // 10000 nits brightest frame in content
 }
 
-DisplayError HWTVDRM::PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *release_fence) {
+DisplayError HWTVDRM::PowerOn(const HWQosData &qos_data, SyncPoints *sync_points) {
   DTRACE_SCOPED();
   if (!drm_atomic_intf_) {
     DLOGE("DRM Atomic Interface is null!");
@@ -463,7 +463,7 @@ DisplayError HWTVDRM::PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *rele
     }
   }
 
-  return HWDeviceDRM::PowerOn(qos_data, release_fence);
+  return HWDeviceDRM::PowerOn(qos_data, sync_points);
 }
 
 }  // namespace sdm

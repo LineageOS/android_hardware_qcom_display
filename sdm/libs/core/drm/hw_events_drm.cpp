@@ -172,6 +172,15 @@ DisplayError HWEventsDRM::InitializePollFd() {
         poll_fds_[i].events = POLLIN | POLLPRI | POLLERR;
         mmrm_index_ = i;
       } break;
+      case HWEvent::POWER_EVENT: {
+        poll_fds_[i].fd = drmOpen("msm_drm", nullptr);
+        if (poll_fds_[i].fd < 0) {
+          DLOGE("drmOpen failed with error %d", poll_fds_[i].fd);
+          return kErrorResources;
+        }
+        poll_fds_[i].events = POLLIN | POLLPRI | POLLERR;
+        power_event_index_ = i;
+      } break;
       case HWEvent::CEC_READ_MESSAGE:
       case HWEvent::SHOW_BLANK_EVENT:
       case HWEvent::THERMAL_LEVEL:
@@ -223,6 +232,9 @@ DisplayError HWEventsDRM::SetEventParser() {
         break;
       case HWEvent::MMRM:
         event_data.event_parser = &HWEventsDRM::HandleMMRM;
+        break;
+      case HWEvent::POWER_EVENT:
+        event_data.event_parser = &HWEventsDRM::HandlePowerEvent;
         break;
       default:
         error = kErrorParameters;
@@ -318,6 +330,7 @@ DisplayError HWEventsDRM::Deinit() {
   if (!disable_mmrm_) {
     RegisterMMRM(false);
   }
+  RegisterPowerEvents(false);
   Sys::pthread_cancel_(event_thread_);
   WakeUpEventThread();
   pthread_join(event_thread_, NULL);
@@ -360,6 +373,9 @@ DisplayError HWEventsDRM::SetEventState(HWEvent event, bool enable, void *arg) {
           return kErrorResources;
         }
       }
+    } break;
+    case HWEvent::POWER_EVENT: {
+      RegisterPowerEvents(enable);
     } break;
     default:
       DLOGE("Event not supported");
@@ -408,6 +424,10 @@ void HWEventsDRM::CloseFds() {
       case HWEvent::PANEL_DEAD:
       case HWEvent::HW_RECOVERY:
       case HWEvent::HISTOGRAM:
+        drmClose(poll_fds_[i].fd);
+        poll_fds_[i].fd = -1;
+        break;
+      case HWEvent::POWER_EVENT:
         drmClose(poll_fds_[i].fd);
         poll_fds_[i].fd = -1;
         break;
@@ -462,6 +482,7 @@ void *HWEventsDRM::DisplayEventHandler() {
         case HWEvent::HW_RECOVERY:
         case HWEvent::HISTOGRAM:
         case HWEvent::MMRM:
+        case HWEvent::POWER_EVENT:
           if (poll_fd.revents & (POLLIN | POLLPRI | POLLERR)) {
             (this->*(event_data_list_[i]).event_parser)(nullptr);
           }
@@ -550,6 +571,32 @@ DisplayError HWEventsDRM::RegisterPanelDead(bool enable) {
 
   if (ret) {
     DLOGE("register panel dead enable:%d failed", enable);
+    return kErrorResources;
+  }
+
+  return kErrorNone;
+}
+
+DisplayError HWEventsDRM::RegisterPowerEvents(bool enable) {
+  if (power_event_index_ == UINT32_MAX) {
+    DLOGI("power event is not supported");
+    return kErrorNone;
+  }
+
+  struct drm_msm_event_req req = {};
+  int ret = 0;
+
+  req.object_id = token_.crtc_id;
+  req.object_type = DRM_MODE_OBJECT_CRTC;
+  req.event = DRM_EVENT_CRTC_POWER;
+
+  if (enable) {
+    ret = drmIoctl(poll_fds_[power_event_index_].fd, DRM_IOCTL_MSM_REGISTER_EVENT, &req);
+  } else {
+    ret = drmIoctl(poll_fds_[power_event_index_].fd, DRM_IOCTL_MSM_DEREGISTER_EVENT, &req);
+  }
+  if (ret) {
+    DLOGE("Failed to register event");
     return kErrorResources;
   }
 
@@ -911,6 +958,23 @@ void HWEventsDRM::HandleHwRecovery(char *data) {
   }
 
   return;
+}
+
+void HWEventsDRM::HandlePowerEvent(char * /*data*/) {
+  DTRACE_SCOPED();
+  auto constexpr expected_size = sizeof(drm_msm_event_resp) + sizeof(uint32_t);
+  std::array<char, expected_size> event_data{'\0'};
+  auto size = Sys::pread_(poll_fds_[power_event_index_].fd, event_data.data(),
+                          event_data.size(), 0);
+  if (size != expected_size) {
+    DLOGE("event size %d is unexpected. skipping this power event", UINT32(size));
+    return;
+  }
+
+  auto msm_event = reinterpret_cast<struct drm_msm_event_resp *>(event_data.data());
+  DLOGI("poweron %d", *(reinterpret_cast<uint32_t *>(msm_event->data)));
+
+  event_handler_->HandlePowerEvent();
 }
 
 void HWEventsDRM::HandleHistogram(char * /*data*/) {

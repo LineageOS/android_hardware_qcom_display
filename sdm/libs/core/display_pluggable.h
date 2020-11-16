@@ -73,6 +73,7 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
   void HandleBacklightEvent(float brightness_level) override;
   void Histogram(int histogram_fd, uint32_t blob_id) override;
   void MMRMEvent(uint32_t clk) override;
+  void HandlePowerEvent() override;
 
   void UpdateColorModes();
   void InitializeColorModesFromColorspace();
@@ -85,8 +86,7 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
 
   bool underscan_supported_ = false;
   HWScanSupport scan_support_;
-  std::vector<HWEvent> event_list_ = {HWEvent::VSYNC, HWEvent::IDLE_NOTIFY, HWEvent::EXIT,
-                                      HWEvent::CEC_READ_MESSAGE, HWEvent::HW_RECOVERY};
+  std::vector<HWEvent> event_list_;
   uint32_t current_refresh_rate_ = 0;
 };
 

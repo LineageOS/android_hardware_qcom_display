@@ -96,25 +96,24 @@ DisplayError DisplayBuiltIn::Init() {
             kModeVideo);
     }
   }
+
 #ifdef TRUSTED_VM
   event_list_ = {HWEvent::VSYNC, HWEvent::EXIT, HWEvent::PINGPONG_TIMEOUT, HWEvent::PANEL_DEAD,
                  HWEvent::HW_RECOVERY};
 #else
+  event_list_ = {HWEvent::VSYNC,            HWEvent::EXIT,
+                 HWEvent::SHOW_BLANK_EVENT, HWEvent::THERMAL_LEVEL,
+                 HWEvent::PINGPONG_TIMEOUT, HWEvent::PANEL_DEAD,
+                 HWEvent::HW_RECOVERY,      HWEvent::HISTOGRAM,
+                 HWEvent::BACKLIGHT_EVENT,  HWEvent::POWER_EVENT,
+                 HWEvent::MMRM};
   if (hw_panel_info_.mode == kModeCommand) {
-    event_list_ = {HWEvent::VSYNC, HWEvent::EXIT,
-                   /*HWEvent::IDLE_NOTIFY, */
-                   HWEvent::SHOW_BLANK_EVENT, HWEvent::THERMAL_LEVEL, HWEvent::IDLE_POWER_COLLAPSE,
-                   HWEvent::PINGPONG_TIMEOUT, HWEvent::PANEL_DEAD, HWEvent::HW_RECOVERY,
-                   HWEvent::HISTOGRAM, HWEvent::BACKLIGHT_EVENT, HWEvent::MMRM};
+    event_list_.push_back(HWEvent::IDLE_POWER_COLLAPSE);
   } else {
-    event_list_ = {HWEvent::VSYNC,         HWEvent::EXIT,
-                   HWEvent::IDLE_NOTIFY,   HWEvent::SHOW_BLANK_EVENT,
-                   HWEvent::THERMAL_LEVEL, HWEvent::PINGPONG_TIMEOUT,
-                   HWEvent::PANEL_DEAD,    HWEvent::HW_RECOVERY,
-                   HWEvent::HISTOGRAM,     HWEvent::BACKLIGHT_EVENT,
-                   HWEvent::MMRM};
+    event_list_.push_back(HWEvent::IDLE_NOTIFY);
   }
 #endif
+  event_list_.push_back(HWEvent::POWER_EVENT);
   avr_prop_disabled_ = Debug::IsAVRDisabled();
 
   error = HWEventsInterface::Create(display_id_, kBuiltIn, this, event_list_, hw_intf_,
@@ -2115,6 +2114,10 @@ int DisplayBuiltIn::SetDemuraIntfStatus(bool enable) {
 
 DisplayError DisplayBuiltIn::SetDppsFeatureLocked(void *payload, size_t size) {
   return hw_intf_->SetDppsFeature(payload, size);
+}
+
+void DisplayBuiltIn::HandlePowerEvent() {
+  return ProcessPowerEvent();
 }
 
 }  // namespace sdm

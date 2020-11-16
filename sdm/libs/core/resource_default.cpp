@@ -937,8 +937,7 @@ DisplayError ResourceDefault::SetDetailEnhancerData(Handle display_ctx,
   return kErrorNotSupported;
 }
 
-DisplayError ResourceDefault::UpdateSyncHandle(Handle display_ctx,
-                                               const shared_ptr<Fence> &sync_handle) {
+DisplayError ResourceDefault::UpdateSyncHandle(Handle display_ctx, const SyncPoints &sync_points) {
   return kErrorNotSupported;
 }
 

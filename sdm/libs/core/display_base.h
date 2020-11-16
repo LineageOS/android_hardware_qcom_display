@@ -272,12 +272,14 @@ class DisplayBase : public DisplayInterface {
   virtual void HandleAsyncCommit();
   void MMRMEvent(uint32_t clk);
   void CheckMMRMState();
+  DisplayError SetVSyncStateLocked(bool enable);
   DisplayError SetUpCommit(LayerStack *layer_stack);
   DisplayError PerformCommit(LayerStack *layer_stack);
   DisplayError PostCommitLayerStack(LayerStack *layer_stack);
   bool IsPrimaryDisplayLocked();
   virtual DisplayError CommitLocked(LayerStack *layer_stack);
   DisplayError ConfigureCwb(LayerStack *layer_stack);
+  void ProcessPowerEvent();
 
   DisplayMutex disp_mutex_;
   std::thread commit_thread_;
@@ -348,11 +350,15 @@ class DisplayBase : public DisplayInterface {
   bool validated_ = false;  // display validation status based on sideband events driver events etc.
 
  private:
+  // Max tolerable power-state-change wait-times in milliseconds.
+  static const int kPowerStateTimeout = 5000;
+
   bool StartDisplayPowerReset();
   void EndDisplayPowerReset();
   void SetRCData(LayerStack *layer_stack);
   DisplayError ValidateCwbConfigInfo(CwbConfig *cwb_config, const LayerBufferFormat &format);
   bool IsValidCwbRoi(const LayerRect &cwb_roi, const LayerRect &full_frame);
+  void WaitForCompletion(SyncPoints *sync_points);
   unsigned int rc_cached_res_width_ = 0;
   unsigned int rc_cached_res_height_ = 0;
   std::unique_ptr<RCIntf> rc_core_ = nullptr;
@@ -363,6 +369,9 @@ class DisplayBase : public DisplayInterface {
   DisplayDrawMethod draw_method_ = kDrawDefault;
   bool draw_method_set_ = false;
   CwbConfig *cwb_config_ = NULL;
+  bool transition_done_ = false;
+  std::mutex power_mutex_;
+  std::condition_variable cv_;
 };
 
 }  // namespace sdm

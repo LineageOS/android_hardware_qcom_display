@@ -665,8 +665,7 @@ DisplayError HWPeripheralDRM::ControlIdlePowerCollapse(bool enable, bool synchro
   return kErrorNone;
 }
 
-DisplayError HWPeripheralDRM::PowerOn(const HWQosData &qos_data,
-                                      shared_ptr<Fence> *release_fence) {
+DisplayError HWPeripheralDRM::PowerOn(const HWQosData &qos_data, SyncPoints *sync_points) {
   DTRACE_SCOPED();
   if (!drm_atomic_intf_) {
     DLOGE("DRM Atomic Interface is null!");
@@ -696,7 +695,7 @@ DisplayError HWPeripheralDRM::PowerOn(const HWQosData &qos_data,
     needs_ds_update_ = true;
   }
 
-  DisplayError err = HWDeviceDRM::PowerOn(qos_data, release_fence);
+  DisplayError err = HWDeviceDRM::PowerOn(qos_data, sync_points);
   if (err != kErrorNone) {
     return err;
   }
@@ -710,7 +709,7 @@ DisplayError HWPeripheralDRM::PowerOn(const HWQosData &qos_data,
   return kErrorNone;
 }
 
-DisplayError HWPeripheralDRM::PowerOff(bool teardown) {
+DisplayError HWPeripheralDRM::PowerOff(bool teardown, SyncPoints *sync_points) {
   DTRACE_SCOPED();
   if (!first_cycle_) {
     drm_mgr_intf_->MarkPanelFeatureForNullCommit(token_,
@@ -725,7 +724,7 @@ DisplayError HWPeripheralDRM::PowerOff(bool teardown) {
     }
   }
 
-  err = HWDeviceDRM::PowerOff(teardown);
+  err = HWDeviceDRM::PowerOff(teardown, sync_points);
   if (err != kErrorNone) {
     return err;
   }
@@ -737,7 +736,7 @@ DisplayError HWPeripheralDRM::PowerOff(bool teardown) {
   return kErrorNone;
 }
 
-DisplayError HWPeripheralDRM::Doze(const HWQosData &qos_data, shared_ptr<Fence> *release_fence) {
+DisplayError HWPeripheralDRM::Doze(const HWQosData &qos_data, SyncPoints *sync_points) {
   DTRACE_SCOPED();
   SetVMReqState();
 
@@ -751,7 +750,7 @@ DisplayError HWPeripheralDRM::Doze(const HWQosData &qos_data, shared_ptr<Fence> 
       pending_poms_switch_ = true;
     }
   }
-  DisplayError err = HWDeviceDRM::Doze(qos_data, release_fence);
+  DisplayError err = HWDeviceDRM::Doze(qos_data, sync_points);
   if (err != kErrorNone) {
     return err;
   }
@@ -762,8 +761,7 @@ DisplayError HWPeripheralDRM::Doze(const HWQosData &qos_data, shared_ptr<Fence> 
   return kErrorNone;
 }
 
-DisplayError HWPeripheralDRM::DozeSuspend(const HWQosData &qos_data,
-                                          shared_ptr<Fence> *release_fence) {
+DisplayError HWPeripheralDRM::DozeSuspend(const HWQosData &qos_data, SyncPoints *sync_points) {
   SetVMReqState();
 
   if (switch_mode_valid_ && !doze_poms_switch_done_ &&
@@ -773,7 +771,7 @@ DisplayError HWPeripheralDRM::DozeSuspend(const HWQosData &qos_data,
     doze_poms_switch_done_ = true;
   }
 
-  DisplayError err = HWDeviceDRM::DozeSuspend(qos_data, release_fence);
+  DisplayError err = HWDeviceDRM::DozeSuspend(qos_data, sync_points);
   if (err != kErrorNone) {
     return err;
   }

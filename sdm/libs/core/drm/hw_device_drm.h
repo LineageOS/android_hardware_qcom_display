@@ -86,11 +86,11 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError SetDisplayAttributes(uint32_t index);
   virtual DisplayError SetDisplayAttributes(const HWDisplayAttributes &display_attributes);
   virtual DisplayError GetConfigIndex(char *mode, uint32_t *index);
-  virtual DisplayError PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
-  virtual DisplayError PowerOff(bool teardown);
-  virtual DisplayError Doze(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
-  virtual DisplayError DozeSuspend(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
-  virtual DisplayError Standby();
+  virtual DisplayError PowerOn(const HWQosData &qos_data, SyncPoints *sync_points);
+  virtual DisplayError PowerOff(bool teardown, SyncPoints *sync_points);
+  virtual DisplayError Doze(const HWQosData &qos_data, SyncPoints *sync_points);
+  virtual DisplayError DozeSuspend(const HWQosData &qos_data, SyncPoints *sync_points);
+  virtual DisplayError Standby(SyncPoints *sync_points);
   virtual DisplayError Validate(HWLayersInfo *hw_layers_info);
   virtual DisplayError Commit(HWLayersInfo *hw_layers_info);
   virtual DisplayError Flush(HWLayersInfo *hw_layers_info);
@@ -166,12 +166,6 @@ class HWDeviceDRM : public HWInterface {
   static const int kMaxStringLength = 1024;
   static const int kNumPhysicalDisplays = 2;
   static const int kMaxSysfsCommandLength = 12;
-
-  // Max tolerable power-state-change wait-times in milliseconds.
-  static const int kTimeoutMsPowerOn = 5000;
-  static const int kTimeoutMsPowerOff = 3000;
-  static const int kTimeoutMsDoze = kTimeoutMsPowerOff;
-  static const int kTimeoutMsDozeSuspend = kTimeoutMsPowerOff;
 
   DisplayError SetFormat(const LayerBufferFormat &source, uint32_t *target);
   DisplayError SetStride(HWDeviceType device_type, LayerBufferFormat format, uint32_t width,

@@ -1021,7 +1021,7 @@ DisplayError HWDeviceDRM::GetConfigIndex(char *mode, uint32_t *index) {
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *release_fence) {
+DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, SyncPoints *sync_points) {
   SetQOSData(qos_data);
 
   if (tui_state_ != kTUIStateNone) {
@@ -1035,9 +1035,7 @@ DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *
 
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::ON);
-  if (release_fence) {
-    drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_fd);
-  }
+  drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_fd);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence_fd);
 
   int ret = NullCommit(false /* synchronous */, true /* retain_planes */);
@@ -1046,22 +1044,17 @@ DisplayError HWDeviceDRM::PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *
     return kErrorHardware;
   }
 
-  shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_fd), "retire_power_on");
-
-  if (release_fence) {
-    *release_fence = Fence::Create(INT(release_fence_fd), "release_power_on");
-    DLOGD_IF(kTagDriverConfig, "RELEASE fence: fd: %s", Fence::GetStr(*release_fence).c_str());
-  }
+  sync_points->retire_fence = Fence::Create(INT(retire_fence_fd), "retire_power_on");
+  sync_points->release_fence = Fence::Create(INT(release_fence_fd), "release_power_on");
+  DLOGD_IF(kTagDriverConfig, "RELEASE fence: fd: %d", INT(release_fence_fd));
   pending_power_state_ = kPowerStateNone;
-
-  Fence::Wait(retire_fence, kTimeoutMsPowerOn);
 
   last_power_mode_ = DRMPowerMode::ON;
 
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::PowerOff(bool teardown) {
+DisplayError HWDeviceDRM::PowerOff(bool teardown, SyncPoints *sync_points) {
   DTRACE_SCOPED();
   if (!drm_atomic_intf_) {
     DLOGE("DRM Atomic Interface is null!");
@@ -1092,17 +1085,15 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown) {
     return kErrorHardware;
   }
 
-  shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_fd), "retire_power_off");
+  sync_points->retire_fence = Fence::Create(INT(retire_fence_fd), "retire_power_off");
   pending_power_state_ = kPowerStateNone;
-
-  Fence::Wait(retire_fence, kTimeoutMsPowerOff);
 
   last_power_mode_ = DRMPowerMode::OFF;
 
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::Doze(const HWQosData &qos_data, shared_ptr<Fence> *release_fence) {
+DisplayError HWDeviceDRM::Doze(const HWQosData &qos_data, SyncPoints *sync_points) {
   DTRACE_SCOPED();
 
   if (!first_cycle_ || tui_state_ != kTUIStateNone || last_power_mode_ != DRMPowerMode::OFF) {
@@ -1121,9 +1112,7 @@ DisplayError HWDeviceDRM::Doze(const HWQosData &qos_data, shared_ptr<Fence> *rel
 
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::DOZE);
-  if (release_fence) {
-    drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_fd);
-  }
+  drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_fd);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence_fd);
 
   int ret = NullCommit(false /* synchronous */, true /* retain_planes */);
@@ -1132,22 +1121,16 @@ DisplayError HWDeviceDRM::Doze(const HWQosData &qos_data, shared_ptr<Fence> *rel
     return kErrorHardware;
   }
 
-  shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_fd), "retire_doze");
-
-  if (release_fence) {
-    *release_fence = Fence::Create(release_fence_fd, "release_doze");
-    DLOGD_IF(kTagDriverConfig, "RELEASE fence: fd: %s", Fence::GetStr(*release_fence).c_str());
-  }
-
-  Fence::Wait(retire_fence, kTimeoutMsDoze);
+  sync_points->retire_fence = Fence::Create(INT(retire_fence_fd), "retire_doze");
+  sync_points->release_fence = Fence::Create(release_fence_fd, "release_doze");
+  DLOGD_IF(kTagDriverConfig, "RELEASE fence: fd: %d", INT(release_fence_fd));
 
   last_power_mode_ = DRMPowerMode::DOZE;
 
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::DozeSuspend(const HWQosData &qos_data,
-                                      shared_ptr<Fence> *release_fence) {
+DisplayError HWDeviceDRM::DozeSuspend(const HWQosData &qos_data, SyncPoints *sync_points) {
   DTRACE_SCOPED();
 
   if (tui_state_ != kTUIStateNone && tui_state_ != kTUIStateEnd) {
@@ -1168,9 +1151,7 @@ DisplayError HWDeviceDRM::DozeSuspend(const HWQosData &qos_data,
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ACTIVE, token_.crtc_id, 1);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id,
                             DRMPowerMode::DOZE_SUSPEND);
-  if (release_fence) {
-    drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_fd);
-  }
+  drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, &release_fence_fd);
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, &retire_fence_fd);
 
   int ret = NullCommit(false /* synchronous */, true /* retain_planes */);
@@ -1179,15 +1160,11 @@ DisplayError HWDeviceDRM::DozeSuspend(const HWQosData &qos_data,
     return kErrorHardware;
   }
 
-  shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_fd), "retire_doze_suspend");
+  sync_points->retire_fence = Fence::Create(INT(retire_fence_fd), "retire_doze_suspend");
+  sync_points->release_fence = Fence::Create(release_fence_fd, "release_doze_suspend");
+  DLOGD_IF(kTagDriverConfig, "RELEASE fence: fd: %d", INT(release_fence_fd));
 
-  if (release_fence) {
-    *release_fence = Fence::Create(release_fence_fd, "release_doze_suspend");
-    DLOGD_IF(kTagDriverConfig, "RELEASE fence: fd: %s", Fence::GetStr(*release_fence).c_str());
-  }
   pending_power_state_ = kPowerStateNone;
-
-  Fence::Wait(retire_fence, kTimeoutMsDozeSuspend);
 
   last_power_mode_ = DRMPowerMode::DOZE_SUSPEND;
 
@@ -1210,7 +1187,7 @@ void HWDeviceDRM::SetQOSData(const HWQosData &qos_data) {
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ROT_CLK, token_.crtc_id, qos_data.rot_clock_hz);
 }
 
-DisplayError HWDeviceDRM::Standby() {
+DisplayError HWDeviceDRM::Standby(SyncPoints *sync_points) {
   return kErrorNone;
 }
 

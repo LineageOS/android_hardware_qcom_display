@@ -768,6 +768,11 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
 
   disp_layer_stack_.info.retire_fence_offset = (draw_method_ != kDrawDefault) &&
                                                (display_type_ != kVirtual) ? 1 : 0;
+  // Regiser for power events on first cycle in unified draw.
+  if (first_cycle_ && (draw_method_ != kDrawDefault) && (display_type_ != kVirtual)) {
+    DLOGI("Registering for power events");
+    hw_events_intf_->SetEventState(HWEvent::POWER_EVENT, true);
+  }
 
   // Allow commit as pending doze/pending_power_on is handled as a part of draw cycle
   if (!active_ && (pending_power_state_ == kPowerStateNone)) {
@@ -1036,10 +1041,14 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     }
   }
 
+  // Mark start of power state transition.
+  transition_done_ = false;
+  SyncPoints sync_points = {};
+
   switch (state) {
   case kStateOff:
     disp_layer_stack_.info.hw_layers.clear();
-    error = hw_intf_->PowerOff(teardown);
+    error = hw_intf_->PowerOff(teardown, &sync_points);
     if (error != kErrorNone) {
       if (error == kErrorDeferred) {
         pending_power_state_ = kPowerStateOff;
@@ -1055,7 +1064,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     break;
 
   case kStateOn:
-    error = hw_intf_->PowerOn(cached_qos_data_, release_fence);
+    error = hw_intf_->PowerOn(cached_qos_data_, &sync_points);
     if (error != kErrorNone) {
       if (error == kErrorDeferred) {
         pending_power_state_ = kPowerStateOn;
@@ -1079,7 +1088,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     break;
 
   case kStateDoze:
-    error = hw_intf_->Doze(cached_qos_data_, release_fence);
+    error = hw_intf_->Doze(cached_qos_data_, &sync_points);
     if (error != kErrorNone) {
       if (error == kErrorDeferred) {
         pending_power_state_ = kPowerStateDoze;
@@ -1094,7 +1103,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     break;
 
   case kStateDozeSuspend:
-    error = hw_intf_->DozeSuspend(cached_qos_data_, release_fence);
+    error = hw_intf_->DozeSuspend(cached_qos_data_, &sync_points);
     if (error != kErrorNone) {
       if (error == kErrorDeferred) {
         pending_power_state_ = kPowerStateDozeSuspend;
@@ -1112,12 +1121,16 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     break;
 
   case kStateStandby:
-    error = hw_intf_->Standby();
+    error = hw_intf_->Standby(&sync_points);
     break;
 
   default:
     DLOGE("Spurious state = %d transition requested.", state);
     return kErrorParameters;
+  }
+
+  if (!first_cycle_) {
+    WaitForCompletion(&sync_points);
   }
 
   error = ReconfigureDisplay();
@@ -1140,11 +1153,12 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
         HandlePendingVSyncEnable(nullptr /* retire fence */);
       }
     }
-    comp_manager_->SetDisplayState(display_comp_ctx_, state,
-                            release_fence ? *release_fence : nullptr);
+    comp_manager_->SetDisplayState(display_comp_ctx_, state, sync_points);
   }
   DLOGI("active %d-%d state %d-%d pending_power_state_ %d", active, active_, state, state_,
         pending_power_state_);
+
+  *release_fence = sync_points.release_fence;
 
   return error;
 }
@@ -1817,7 +1831,7 @@ DisplayError DisplayBase::HandlePendingVSyncEnable(const shared_ptr<Fence> &reti
     // we enable vsync
     Fence::Wait(retire_fence);
 
-    DisplayError error = SetVSyncState(true /* enable */);
+    DisplayError error = SetVSyncStateLocked(true /* enable */);
     if (error != kErrorNone) {
       return error;
     }
@@ -1829,6 +1843,10 @@ DisplayError DisplayBase::HandlePendingVSyncEnable(const shared_ptr<Fence> &reti
 DisplayError DisplayBase::SetVSyncState(bool enable) {
   ClientLock lock(disp_mutex_);
 
+  return SetVSyncStateLocked(enable);
+}
+
+DisplayError DisplayBase::SetVSyncStateLocked(bool enable) {
   if ((state_ == kStateOff || secure_event_ != kSecureEventMax) && enable) {
     DLOGW("Can't enable vsync when display %d-%d is powered off or SecureDisplay/TUI in progress",
           display_id_, display_type_);
@@ -2696,7 +2714,9 @@ DisplayError DisplayBase::ResetPendingPowerState(const shared_ptr<Fence> &retire
   if (pending_power_state_ != kPowerStateNone) {
     // Retire fence signalling confirms that CRTC enabled, hence wait for retire fence before
     // we enable vsync
-    Fence::Wait(retire_fence);
+    SyncPoints sync_points = {};
+    sync_points.retire_fence = retire_fence;
+    WaitForCompletion(&sync_points);
 
     DisplayState pending_state;
     GetPendingDisplayState(&pending_state);
@@ -2980,6 +3000,39 @@ void DisplayBase::MMRMEvent(uint32_t clk) {
 
   // Invalidate to retrigger clk calculation
   validated_ = false;
+}
+
+void DisplayBase::WaitForCompletion(SyncPoints *sync_points) {
+  DTRACE_SCOPED();
+  // Wait on current retire fence.
+  if (draw_method_ == kDrawDefault || display_type_ == kVirtual) {
+    Fence::Wait(sync_points->retire_fence);
+    return;
+  }
+
+  // Wait for CRTC power event on first cycle.
+  if (first_cycle_) {
+    std::unique_lock<std::mutex> lck(power_mutex_);
+    while (!transition_done_) {
+      cv_.wait(lck);
+    }
+
+    // Unregister power events.
+    hw_events_intf_->SetEventState(HWEvent::POWER_EVENT, false);
+    return;
+  }
+
+  // For displays in unified draw, wait on cached retire fence in steady state.
+  shared_ptr<Fence> retire_fence = nullptr;
+  comp_manager_->GetRetireFence(display_comp_ctx_, &retire_fence);
+  Fence::Wait(retire_fence, kPowerStateTimeout);
+}
+
+void DisplayBase::ProcessPowerEvent() {
+  DTRACE_SCOPED();
+  std::unique_lock<std::mutex> lck(power_mutex_);
+  transition_done_ = true;
+  cv_.notify_one();
 }
 
 }  // namespace sdm
