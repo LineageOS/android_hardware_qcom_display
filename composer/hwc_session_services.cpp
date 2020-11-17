@@ -502,32 +502,9 @@ int HWCSession::SetCameraLaunchStatus(uint32_t on) {
     return -EINVAL;
   }
 
-  hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
-  if (active_builtin_disp_id < HWCCallbacks::kNumRealDisplays) {
-    std::vector<DisplayMapInfo> map_info = {map_info_primary_};
-    std::copy(map_info_builtin_.begin(), map_info_builtin_.end(), std::back_inserter(map_info));
+  // trigger invalidate to apply new bw caps.
+  callbacks_.Refresh(0);
 
-    for (auto &info : map_info) {
-      hwc2_display_t target_display = info.client_id;
-      {
-        SCOPE_LOCK(power_state_[target_display]);
-        if (power_state_transition_[target_display]) {
-          // Route all interactions with client to dummy display.
-          target_display = map_hwc_display_.find(target_display)->second;
-        }
-      }
-      {
-        SEQUENCE_WAIT_SCOPE_LOCK(locker_[target_display]);
-        auto &hwc_display = hwc_display_[target_display];
-        if (hwc_display && hwc_display->GetCurrentPowerMode() != HWC2::PowerMode::Off) {
-          hwc_display->ResetValidation();
-        }
-      }
-    }
-
-    // trigger invalidate to apply new bw caps.
-    callbacks_.Refresh(active_builtin_disp_id);
-  }
   return 0;
 }
 
@@ -724,6 +701,8 @@ int HWCSession::DisplayConfigImpl::SetPowerMode(uint32_t disp_id,
   HWC2::PowerMode previous_mode = hwc_session_->hwc_display_[disp_id]->GetCurrentPowerMode();
 
   DLOGI("disp_id: %d power_mode: %d", disp_id, power_mode);
+  auto mode = static_cast<HWC2::PowerMode>(power_mode);
+
   HWCDisplay::HWCLayerStack stack = {};
   hwc2_display_t dummy_disp_id = hwc_session_->map_hwc_display_.at(disp_id);
 
@@ -740,6 +719,21 @@ int HWCSession::DisplayConfigImpl::SetPowerMode(uint32_t disp_id,
   hwc_session_->hwc_display_[dummy_disp_id]->UpdatePowerMode(
                                        hwc_session_->hwc_display_[disp_id]->GetCurrentPowerMode());
 
+  buffer_handle_t target = 0;
+  shared_ptr<Fence> acquire_fence = nullptr;
+  int32_t dataspace = 0;
+  hwc_region_t damage = {};
+  VsyncPeriodNanos vsync_period = 16600000;
+  hwc_session_->hwc_display_[disp_id]->GetClientTarget(
+                                 target, acquire_fence, dataspace, damage);
+  hwc_session_->hwc_display_[dummy_disp_id]->SetClientTarget(
+                                       target, acquire_fence, dataspace, damage);
+
+
+
+  hwc_session_->hwc_display_[disp_id]->GetDisplayVsyncPeriod(&vsync_period);
+  hwc_session_->hwc_display_[dummy_disp_id]->SetDisplayVsyncPeriod(vsync_period);
+
   hwc_session_->locker_[dummy_disp_id].Unlock();  // Release the dummy display.
   // Release the display's power-state transition var read lock.
   hwc_session_->power_state_[disp_id].Unlock();
@@ -748,8 +742,7 @@ int HWCSession::DisplayConfigImpl::SetPowerMode(uint32_t disp_id,
   // those operations on the dummy display.
 
   // Perform the actual [synchronous] power-state change.
-  hwc_session_->hwc_display_[disp_id]->SetPowerMode(static_cast<HWC2::PowerMode>(power_mode),
-                                                    false /* teardown */);
+  hwc_session_->hwc_display_[disp_id]->SetPowerMode(mode, false /* teardown */);
 
   // Power state transition end.
   // Acquire the display's power-state transition var read lock.
@@ -760,6 +753,15 @@ int HWCSession::DisplayConfigImpl::SetPowerMode(uint32_t disp_id,
   // Retrieve the real display's layer-stack from the dummy display.
   hwc_session_->hwc_display_[dummy_disp_id]->GetLayerStack(&stack);
   hwc_session_->hwc_display_[disp_id]->SetLayerStack(&stack);
+  bool vsync_pending = hwc_session_->hwc_display_[dummy_disp_id]->VsyncEnablePending();
+  if (vsync_pending) {
+    hwc_session_->hwc_display_[disp_id]->SetVsyncEnabled(HWC2::Vsync::Enable);
+  }
+  hwc_session_->hwc_display_[dummy_disp_id]->GetClientTarget(
+                                       target, acquire_fence, dataspace, damage);
+  hwc_session_->hwc_display_[disp_id]->SetClientTarget(
+                                 target, acquire_fence, dataspace, damage);
+
   // Read display has got layerstack. Update the fences.
   hwc_session_->hwc_display_[disp_id]->PostPowerMode();
 
@@ -1201,6 +1203,16 @@ int HWCSession::DisplayConfigImpl::ControlQsyncCallback(bool enable) {
     hwc_session_->qsync_callback_ = callback_;
   } else {
     hwc_session_->qsync_callback_.reset();
+  }
+
+  return 0;
+}
+
+int HWCSession::DisplayConfigImpl::ControlIdleStatusCallback(bool enable) {
+  if (enable) {
+    hwc_session_->idle_callback_ = callback_;
+  } else {
+    hwc_session_->idle_callback_.reset();
   }
 
   return 0;

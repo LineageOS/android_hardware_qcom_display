@@ -735,6 +735,18 @@ void HWCSession::PerformQsyncCallback(hwc2_display_t display) {
   }
 }
 
+void HWCSession::PerformIdleStatusCallback(hwc2_display_t display) {
+  std::shared_ptr<DisplayConfig::ConfigCallback> callback = idle_callback_.lock();
+  if (!callback) {
+    return;
+  }
+
+  if (hwc_display_[display]->IsDisplayIdle()) {
+    DTRACE_SCOPED();
+    callback->NotifyIdleStatus(true);
+  }
+}
+
 int32_t HWCSession::PresentDisplay(hwc2_display_t display, shared_ptr<Fence> *out_retire_fence) {
   auto status = HWC2::Error::BadDisplay;
   DTRACE_SCOPED();
@@ -783,6 +795,7 @@ int32_t HWCSession::PresentDisplay(hwc2_display_t display, shared_ptr<Fence> *ou
         status = hwc_display_[target_display]->Present(out_retire_fence);
         if (status == HWC2::Error::None) {
           PerformQsyncCallback(target_display);
+          PerformIdleStatusCallback(target_display);
         }
       }
     }
@@ -1090,7 +1103,19 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
     return HWC2_ERROR_UNSUPPORTED;
   }
 
+  // async_powermode supported for power on and off
   bool override_mode = async_powermode_ && display_ready_.test(UINT32(display));
+  HWC2::PowerMode last_power_mode = hwc_display_[display]->GetCurrentPowerMode();
+
+  if (last_power_mode == mode) {
+    return HWC2_ERROR_NONE;
+  }
+
+  if (!((last_power_mode == HWC2::PowerMode::Off && mode == HWC2::PowerMode::On) ||
+     (last_power_mode == HWC2::PowerMode::On && mode == HWC2::PowerMode::Off))) {
+    override_mode = false;
+  }
+
   if (!override_mode) {
     auto error = CallDisplayFunction(display, &HWCDisplay::SetPowerMode, mode,
                                      false /* teardown */);
@@ -3094,6 +3119,8 @@ void HWCSession::HandlePendingPowerMode(hwc2_display_t disp_id,
 
   Locker::ScopeLock lock_d(locker_[active_builtin_disp_id]);
   bool pending_power_mode = false;
+  std::bitset<kSecureMax> secure_sessions = 0;
+  hwc_display_[active_builtin_disp_id]->GetActiveSecureSession(&secure_sessions);
   for (hwc2_display_t display = HWC_DISPLAY_PRIMARY + 1;
     display < HWCCallbacks::kNumDisplays; display++) {
     if (display != active_builtin_disp_id) {
@@ -3106,6 +3133,9 @@ void HWCSession::HandlePendingPowerMode(hwc2_display_t disp_id,
   }
 
   if (!pending_power_mode) {
+    if (!secure_sessions.any()) {
+      secure_session_active_ = false;
+    }
     return;
   }
 

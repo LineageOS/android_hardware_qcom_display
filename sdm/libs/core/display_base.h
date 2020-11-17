@@ -61,7 +61,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError GetDisplayState(DisplayState *state);
   virtual DisplayError GetNumVariableInfoConfigs(uint32_t *count);
   virtual DisplayError GetConfig(uint32_t index, DisplayConfigVariableInfo *variable_info);
-  virtual DisplayError GetConfig(DisplayConfigFixedInfo *variable_info);
+  virtual DisplayError GetConfig(DisplayConfigFixedInfo *fixed_info);
   virtual DisplayError GetActiveConfig(uint32_t *index);
   virtual DisplayError GetVSyncState(bool *enabled);
   virtual DisplayError SetDisplayState(DisplayState state, bool teardown,
@@ -164,6 +164,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError ClearLUTs() {
     return kErrorNotSupported;
   }
+  QSyncMode active_qsync_mode_ = kQSyncModeNone;
 
  protected:
   const char *kBt2020Pq = "bt2020_pq";

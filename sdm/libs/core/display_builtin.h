@@ -130,6 +130,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   virtual DisplayError GetQSyncMode(QSyncMode *qsync_mode);
   virtual DisplayError colorSamplingOn();
   virtual DisplayError colorSamplingOff();
+  virtual DisplayError GetConfig(DisplayConfigFixedInfo *fixed_info);
 
   // Implement the HWEventHandlers
   virtual DisplayError VSync(int64_t timestamp);
@@ -160,6 +161,9 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   void GetFpsConfig(HWDisplayAttributes *display_attributes, HWPanelInfo *panel_info);
   void UpdateDisplayModeParams();
   bool CanLowerFps(bool idle_screen);
+  void HandleQsyncPostCommit(LayerStack *layer_stack);
+  void UpdateQsyncMode();
+  void SetVsyncStatus(bool enable);
 
   const uint32_t kPuTimeOutMs = 1000;
   std::vector<HWEvent> event_list_;
@@ -192,6 +196,8 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   bool enhance_idle_time_ = false;
   int idle_time_ms_ = 0;
   struct timespec idle_timer_start_;
+  bool enable_qsync_idle_ = false;
+  bool pending_vsync_enable_ = false;
 };
 
 }  // namespace sdm
