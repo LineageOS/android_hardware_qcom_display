@@ -44,6 +44,7 @@ case "$target" in
         # Set property for lahaina
         setprop vendor.display.target.version 1
         setprop vendor.display.enable_posted_start_dyn 2
+        setprop vendor.display.enable_perf_hint_large_comp_cycle 1
         ;;
         450)
         # Set property for shima
