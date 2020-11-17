@@ -96,6 +96,7 @@ DisplayError DisplayBase::Init() {
 
   uint32_t active_index = 0;
   int drop_vsync = 0;
+  int hw_recovery_threshold = 1;
   hw_intf_->GetActiveConfig(&active_index);
   hw_intf_->GetDisplayAttributes(active_index, &display_attributes_);
   fb_config_ = display_attributes_;
@@ -163,6 +164,12 @@ DisplayError DisplayBase::Init() {
 
   Debug::Get()->GetProperty(DROP_SKEWED_VSYNC, &drop_vsync);
   drop_skewed_vsync_ = (drop_vsync == 1);
+
+  Debug::GetProperty(HW_RECOVERY_THRESHOLD, &hw_recovery_threshold);
+  DLOGI("hw_recovery_threshold_ set to %d", hw_recovery_threshold);
+  if (hw_recovery_threshold > 0) {
+    hw_recovery_threshold_ = (UINT32(hw_recovery_threshold));
+  }
 
   return kErrorNone;
 
@@ -663,11 +670,8 @@ DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *fixed_info) {
     hdr_supported = (hdr_supported && hw_panel_info_.hdr_enabled);
   }
 
-  // Built-in displays always support HDR10+ when the target supports HDR. For non-builtins, check
-  // panel capability.
-  if (kBuiltIn == display_type_) {
-    hdr_plus_supported = hdr_supported;
-  } else if (hdr_supported && hw_panel_info_.hdr_plus_enabled) {
+  // For non-builtin displays, check panel capability for HDR10+
+  if (hdr_supported && hw_panel_info_.hdr_plus_enabled) {
     hdr_plus_supported = true;
   }
 
@@ -680,6 +684,7 @@ DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   fixed_info->hdr_eotf = hw_panel_info_.hdr_eotf;
   fixed_info->hdr_metadata_type_one = hw_panel_info_.hdr_metadata_type_one;
   fixed_info->partial_update = hw_panel_info_.partial_update;
+  fixed_info->readback_supported = hw_resource_info.has_concurrent_writeback;
 
   return kErrorNone;
 }
@@ -2130,8 +2135,10 @@ void DisplayBase::HwRecovery(const HWRecoveryEvent sdm_event_code) {
   switch (sdm_event_code) {
     case HWRecoveryEvent::kSuccess:
       hw_recovery_logs_captured_ = false;
+      hw_recovery_count_ = 0;
       break;
     case HWRecoveryEvent::kCapture:
+#ifndef TRUSTED_VM
       if (!disable_hw_recovery_dump_ && !hw_recovery_logs_captured_) {
         hw_intf_->DumpDebugData();
         hw_recovery_logs_captured_ = true;
@@ -2141,6 +2148,18 @@ void DisplayBase::HwRecovery(const HWRecoveryEvent sdm_event_code) {
               "capture for display = %d", display_type_);
       } else {
         DLOGI("Debugfs data dumping is disabled for display = %d", display_type_);
+      }
+#endif
+      hw_recovery_count_++;
+      if (hw_recovery_count_ >= hw_recovery_threshold_) {
+        DLOGI("display = %d attempting to start display power reset", display_type_);
+        if (StartDisplayPowerReset()) {
+          DLOGI("display = %d allowed to start display power reset", display_type_);
+          event_handler_->HandleEvent(kDisplayPowerResetEvent);
+          EndDisplayPowerReset();
+          DLOGI("display = %d has finished display power reset", display_type_);
+          hw_recovery_count_ = 0;
+        }
       }
       break;
     case HWRecoveryEvent::kDisplayPowerReset:
@@ -2405,6 +2424,10 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
     }
     *needs_refresh = (hw_panel_info_.mode == kModeCommand);
     DisablePartialUpdateOneFrame();
+    err = hw_events_intf_->SetEventState(HWEvent::BACKLIGHT_EVENT, true);
+    if (err != kErrorNone) {
+      return err;
+    }
   } else if (secure_event == kTUITransitionPrepare) {
     DisplayState state = state_;
     err = SetDisplayState(kStateOff, true /* teardown */, &release_fence);
@@ -2437,6 +2460,10 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
     }
     *needs_refresh = (hw_panel_info_.mode == kModeCommand);
     DisablePartialUpdateOneFrame();
+    err = hw_events_intf_->SetEventState(HWEvent::BACKLIGHT_EVENT, false);
+    if (err != kErrorNone) {
+      return err;
+    }
   } else if (secure_event == kTUITransitionUnPrepare) {
     DisplayState state = kStateOff;
     if (GetPendingDisplayState(&state) == kErrorNone) {
@@ -2449,6 +2476,11 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
     }
   }
   return kErrorNone;
+}
+
+DisplayError DisplayBase::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  return hw_intf_->OnMinHdcpEncryptionLevelChange(min_enc_level);
 }
 
 }  // namespace sdm

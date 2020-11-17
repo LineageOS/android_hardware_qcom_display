@@ -97,6 +97,10 @@ class DRMCrtc {
 #if defined SDE_MAX_DIM_LAYERS
   sde_drm_dim_layer_v1 drm_dim_layer_v1_ {};
 #endif
+#ifdef SDE_MAX_ROI_V1
+  sde_drm_roi_v1 roi_v1_ {};
+#endif
+  sde_drm_dest_scaler_data dest_scale_data_ = {};
 };
 
 class DRMCrtcManager {

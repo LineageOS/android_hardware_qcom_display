@@ -658,9 +658,11 @@ Return<Error> QtiComposerClient::setReadbackBuffer(uint64_t display, const hidl_
     return error;
   }
 
-  std::lock_guard<std::mutex> lock(mDisplayDataMutex);
-  if (mDisplayData.find(display) == mDisplayData.end()) {
-    return Error::BAD_DISPLAY;
+  {
+    std::lock_guard<std::mutex> lock(mDisplayDataMutex);
+    if (mDisplayData.find(display) == mDisplayData.end()) {
+      return Error::BAD_DISPLAY;
+    }
   }
 
   const native_handle_t* readbackBuffer;
@@ -1193,7 +1195,7 @@ bool QtiComposerClient::CommandReader::parseCommonCmd(
     std::lock_guard<std::mutex> lock(mClient.mDisplayDataMutex);
     // Displays will not be removed while processing the command queue.
     if (parsed && mClient.mDisplayData.find(mDisplay) == mClient.mDisplayData.end()) {
-      ALOGW("Command::SELECT_DISPLAY: Display %lu not found. Dropping commands.", mDisplay);
+      ALOGW("Command::SELECT_DISPLAY: Display %" PRId64 "not found. Dropping commands.", mDisplay);
       mDisplay = sdm::HWCCallbacks::kNumDisplays;
     }
     break;

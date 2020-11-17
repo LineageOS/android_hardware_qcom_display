@@ -45,15 +45,17 @@
 namespace sdm {
 
 DisplayBuiltIn::DisplayBuiltIn(DisplayEventHandler *event_handler, HWInfoInterface *hw_info_intf,
-                               BufferAllocator *buffer_allocator, CompManager *comp_manager)
-  : DisplayBase(kBuiltIn, event_handler, kDeviceBuiltIn, buffer_allocator,
-                comp_manager, hw_info_intf) {}
+                               BufferAllocator *buffer_allocator, CompManager *comp_manager,
+                               std::shared_ptr<IPCIntf> ipc_intf)
+  : DisplayBase(kBuiltIn, event_handler, kDeviceBuiltIn, buffer_allocator, comp_manager,
+                hw_info_intf), ipc_intf_(ipc_intf) {}
 
 DisplayBuiltIn::DisplayBuiltIn(int32_t display_id, DisplayEventHandler *event_handler,
                                HWInfoInterface *hw_info_intf,
-                               BufferAllocator *buffer_allocator, CompManager *comp_manager)
-  : DisplayBase(display_id, kBuiltIn, event_handler, kDeviceBuiltIn,
-                buffer_allocator, comp_manager, hw_info_intf) {}
+                               BufferAllocator *buffer_allocator, CompManager *comp_manager,
+                               std::shared_ptr<IPCIntf> ipc_intf)
+  : DisplayBase(display_id, kBuiltIn, event_handler, kDeviceBuiltIn, buffer_allocator, comp_manager,
+                hw_info_intf), ipc_intf_(ipc_intf) {}
 
 DisplayBuiltIn::~DisplayBuiltIn() {
 }
@@ -98,13 +100,13 @@ DisplayError DisplayBuiltIn::Init() {
                    /*HWEvent::IDLE_NOTIFY, */
                    HWEvent::SHOW_BLANK_EVENT, HWEvent::THERMAL_LEVEL, HWEvent::IDLE_POWER_COLLAPSE,
                    HWEvent::PINGPONG_TIMEOUT, HWEvent::PANEL_DEAD, HWEvent::HW_RECOVERY,
-                   HWEvent::HISTOGRAM};
+                   HWEvent::HISTOGRAM, HWEvent::BACKLIGHT_EVENT};
   } else {
     event_list_ = {HWEvent::VSYNC,         HWEvent::EXIT,
                    HWEvent::IDLE_NOTIFY,   HWEvent::SHOW_BLANK_EVENT,
                    HWEvent::THERMAL_LEVEL, HWEvent::PINGPONG_TIMEOUT,
                    HWEvent::PANEL_DEAD,    HWEvent::HW_RECOVERY,
-                   HWEvent::HISTOGRAM};
+                   HWEvent::HISTOGRAM,     HWEvent::BACKLIGHT_EVENT};
   }
 #endif
   avr_prop_disabled_ = Debug::IsAVRDisabled();
@@ -412,10 +414,21 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
   if (error != kErrorNone) {
     return error;
   }
+
   if (pending_brightness_) {
     Fence::Wait(layer_stack->retire_fence);
     SetPanelBrightness(cached_brightness_);
     pending_brightness_ = false;
+  } else {
+    // Send the panel brightness event to secondary VM on TUI session start
+    if (secure_event_ == kTUITransitionStart) {
+      DisplayError err = kErrorNone;
+      int level = 0;
+      if ((err = hw_intf_->GetPanelBrightness(&level)) != kErrorNone) {
+        return err;
+      }
+      HandleBacklightEvent(level);
+    }
   }
 
   if (commit_event_enabled_) {
@@ -672,7 +685,7 @@ DisplayError DisplayBuiltIn::SetRefreshRate(uint32_t refresh_rate, bool final_ra
     return kErrorParameters;
   }
 
-  if (handle_idle_timeout_ && !final_rate) {
+  if (handle_idle_timeout_ && !final_rate && !enable_qsync_idle_) {
     refresh_rate = hw_panel_info_.min_fps;
   }
 
@@ -728,6 +741,7 @@ void DisplayBuiltIn::SetVsyncStatus(bool enable) {
     hw_events_intf_->SetEventState(HWEvent::VSYNC, false);
     pending_vsync_enable_ = true;
   }
+  DTRACE_END();
 }
 
 void DisplayBuiltIn::IdleTimeout() {
@@ -785,6 +799,31 @@ void DisplayBuiltIn::Histogram(int histogram_fd, uint32_t blob_id) {
   event_handler_->HistogramEvent(histogram_fd, blob_id);
 }
 
+void DisplayBuiltIn::HandleBacklightEvent(float brightness_level) {
+  DLOGI("backlight event occurred %f ipc_intf %x", brightness_level, ipc_intf_.get());
+  if (ipc_intf_) {
+    GenericPayload in;
+    IPCBacklightParams *backlight_params = nullptr;
+    int ret = in.CreatePayload<IPCBacklightParams>(backlight_params);
+    if (ret) {
+      DLOGE("failed to create the payload. Error:%d", ret);
+      return;
+    }
+    float brightness = 0.0f;
+    if (GetPanelBrightnessFromLevel(brightness_level, &brightness) != kErrorNone) {
+      return;
+    }
+    backlight_params->brightness = brightness;
+    backlight_params->is_primary = IsPrimaryDisplay();
+    if ((ret = ipc_intf_->SetParameter(kIpcParamSetBacklight, in))) {
+      DLOGE("Failed to set backlight, error = %d", ret);
+    }
+    lock_guard<recursive_mutex> obj(brightness_lock_);
+    cached_brightness_ = brightness;
+    pending_brightness_ = true;
+  }
+}
+
 DisplayError DisplayBuiltIn::GetPanelBrightness(float *brightness) {
   lock_guard<recursive_mutex> obj(brightness_lock_);
 
@@ -793,7 +832,10 @@ DisplayError DisplayBuiltIn::GetPanelBrightness(float *brightness) {
   if ((err = hw_intf_->GetPanelBrightness(&level)) != kErrorNone) {
     return err;
   }
+  return GetPanelBrightnessFromLevel(level, brightness);
+}
 
+DisplayError DisplayBuiltIn::GetPanelBrightnessFromLevel(float level, float *brightness) {
   // -1.0f = off, 0.0f = min, 1.0f = max
   float max = hw_panel_info_.panel_max_brightness;
   float min = hw_panel_info_.panel_min_brightness;
@@ -806,7 +848,6 @@ DisplayError DisplayBuiltIn::GetPanelBrightness(float *brightness) {
                  DLOGE("Invalid brightness level %d", level);
     return kErrorDriverData;
   }
-
 
   DLOGI_IF(kTagDisplay, "Received level %d (%f percent)", level, *brightness * 100);
 
@@ -1667,6 +1708,28 @@ PrimariesTransfer DisplayBuiltIn::GetBlendSpaceFromStcColorMode(
   blend_space.transfer = color_mode.gamma;
 
   return blend_space;
+}
+
+DisplayError DisplayBuiltIn::GetConfig(DisplayConfigFixedInfo *fixed_info) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  fixed_info->is_cmdmode = (hw_panel_info_.mode == kModeCommand);
+
+  HWResourceInfo hw_resource_info = HWResourceInfo();
+  hw_info_intf_->GetHWResourceInfo(&hw_resource_info);
+
+  fixed_info->hdr_supported = hw_resource_info.has_hdr;
+  // Built-in displays always support HDR10+ when the target supports HDR
+  fixed_info->hdr_plus_supported = hw_resource_info.has_hdr;
+  // Populate luminance values only if hdr will be supported on that display
+  fixed_info->max_luminance = fixed_info->hdr_supported ? hw_panel_info_.peak_luminance: 0;
+  fixed_info->average_luminance = fixed_info->hdr_supported ? hw_panel_info_.average_luminance : 0;
+  fixed_info->min_luminance = fixed_info->hdr_supported ?  hw_panel_info_.blackness_level: 0;
+  fixed_info->hdr_eotf = hw_panel_info_.hdr_eotf;
+  fixed_info->hdr_metadata_type_one = hw_panel_info_.hdr_metadata_type_one;
+  fixed_info->partial_update = hw_panel_info_.partial_update;
+  fixed_info->readback_supported = hw_resource_info.has_concurrent_writeback;
+
+  return kErrorNone;
 }
 
 }  // namespace sdm

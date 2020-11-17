@@ -64,7 +64,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError GetDisplayState(DisplayState *state);
   virtual DisplayError GetNumVariableInfoConfigs(uint32_t *count);
   virtual DisplayError GetConfig(uint32_t index, DisplayConfigVariableInfo *variable_info);
-  virtual DisplayError GetConfig(DisplayConfigFixedInfo *variable_info);
+  virtual DisplayError GetConfig(DisplayConfigFixedInfo *fixed_info);
   virtual DisplayError GetRealConfig(uint32_t index, DisplayConfigVariableInfo *variable_info);
   virtual DisplayError GetActiveConfig(uint32_t *index);
   virtual DisplayError GetVSyncState(bool *enabled);
@@ -90,9 +90,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError SetPanelBrightness(float brightness) {
     return kErrorNotSupported;
   }
-  virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
-    return kErrorNotSupported;
-  }
+  virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
   virtual DisplayError ColorSVCRequestRoute(const PPDisplayAPIPayload &in_payload,
                                             PPDisplayAPIPayload *out_payload,
                                             PPPendingParams *pending_action);
@@ -256,6 +254,8 @@ class DisplayBase : public DisplayInterface {
   std::string current_color_mode_ = "hal_native";
   bool hw_recovery_logs_captured_ = false;
   int disable_hw_recovery_dump_ = 0;
+  uint32_t hw_recovery_count_ = 0;
+  uint32_t hw_recovery_threshold_ = 1;
   HWQosData default_qos_data_;
   bool drop_hw_vsync_ = false;
   uint32_t current_refresh_rate_ = 0;

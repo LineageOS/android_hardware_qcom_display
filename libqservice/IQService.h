@@ -81,6 +81,7 @@ public:
       SET_COLOR_SAMPLING_ENABLED = 49,         // Toggle the collection of display color stats
       SET_VSYNC_STATE = 50,                    // Enable/disable Vsync
       NOTIFY_TUI_TRANSITION = 51,              // Notify TUI transition prepare/start/stop
+      GET_DISPLAY_PORT_ID = 52,                        // Get the port id for a given display
       COMMAND_LIST_END = 400,
     };
 

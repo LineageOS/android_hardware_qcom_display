@@ -142,6 +142,8 @@ ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
 # Recovery is enabled, logging is enabled
 PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_hw_recovery_dump=0
+PRODUCT_PROPERTY_OVERRIDES += \
+    vendor.display.hw_recovery_threshold=5
 else
 # Recovery is enabled, logging is disabled
 PRODUCT_PROPERTY_OVERRIDES += \

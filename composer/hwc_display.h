@@ -427,6 +427,7 @@ class HWCDisplay : public DisplayEventHandler {
 
   HWC2::Error SetDisplayElapseTime(uint64_t time);
   virtual bool IsDisplayIdle() { return false; };
+  virtual bool HasReadBackBufferSupport() { return false; }
 
  protected:
   static uint32_t throttling_refresh_rate_;
@@ -535,7 +536,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool pending_config_ = false;
   bool has_client_composition_ = false;
   LayerRect window_rect_ = {};
-  bool windowed_display_ = true;
+  bool windowed_display_ = false;
   uint32_t vsyncs_to_apply_rate_change_ = 1;
   hwc2_config_t pending_refresh_rate_config_ = UINT_MAX;
   int64_t pending_refresh_rate_refresh_time_ = INT64_MAX;

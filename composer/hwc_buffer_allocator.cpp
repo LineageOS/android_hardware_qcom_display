@@ -104,6 +104,12 @@ int HWCBufferAllocator::AllocateBuffer(BufferInfo *buffer_info) {
     alloc_flags |= GRALLOC_USAGE_PRIVATE_UNCACHED;
   }
 
+  if (buffer_config.trusted_ui) {
+    // Allocate cached buffers for trusted UI
+    alloc_flags |= GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY;
+    alloc_flags &= ~GRALLOC_USAGE_PRIVATE_UNCACHED;
+  }
+
   if (buffer_config.gfx_client) {
     alloc_flags |= BufferUsage::GPU_TEXTURE;
   }
