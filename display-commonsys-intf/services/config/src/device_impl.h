@@ -32,7 +32,7 @@
 
 #include <vendor/display/config/2.0/IDisplayConfig.h>
 #include <hidl/HidlSupport.h>
-
+#include <log/log.h>
 #include <config/device_interface.h>
 #include <map>
 #include <utility>
@@ -71,6 +71,7 @@ class DeviceImpl : public IDisplayConfig, public android::hardware::hidl_death_r
     virtual void NotifyCWBBufferDone(int32_t error, const native_handle_t *buffer);
     virtual void NotifyQsyncChange(bool qsync_enabled, int32_t refresh_rate,
                                    int32_t qsync_refresh_rate);
+    virtual void NotifyIdleStatus(bool is_idle);
 
     void ParseIsDisplayConnected(const ByteStream &input_params, perform_cb _hidl_cb);
     void ParseSetDisplayStatus(const ByteStream &input_params, perform_cb _hidl_cb);
@@ -119,6 +120,11 @@ class DeviceImpl : public IDisplayConfig, public android::hardware::hidl_death_r
     void ParseSendTUIEvent(const ByteStream &input_params, perform_cb _hidl_cb);
     void ParseGetDisplayHwId(const ByteStream &input_params, perform_cb _hidl_cb);
     void ParseGetSupportedDisplayRefreshRates(const ByteStream &input_params, perform_cb _hidl_cb);
+    void ParseIsRCSupported(const ByteStream &input_params, perform_cb _hidl_cb);
+    void ParseControlIdleStatusCallback(uint64_t client_handle, const ByteStream &input_params,
+                                        perform_cb _hidl_cb);
+    void ParseIsSupportedConfigSwitch(const ByteStream &input_params, perform_cb _hidl_cb);
+    void ParseGetDisplayType(const ByteStream &input_params, perform_cb _hidl_cb);
 
    private:
     ConfigInterface *intf_ = nullptr;

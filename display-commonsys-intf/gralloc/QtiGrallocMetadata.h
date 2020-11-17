@@ -56,6 +56,9 @@
 #define QTI_STANDARD_METADATA_STATUS 10016
 #define QTI_VENDOR_METADATA_STATUS 10017
 #define QTI_BUFFER_TYPE 10018
+#define QTI_VIDEO_TS_INFO 10019
+// This is legacy format
+#define QTI_S3D_FORMAT 10020
 
 // Used to indicate to framework that internal definitions are used instead
 #define COMPRESSION_QTI_UBWC 20001
@@ -151,6 +154,13 @@ struct VideoHistogramMetadata {
   uint32_t decode_width;
   uint32_t decode_height;
   uint32_t reserved[12];
+};
+
+#define VIDEO_TIMESTAMP_INFO_SIZE 16
+struct VideoTimestampInfo {
+  uint32_t enable;               /* Enable video timestamp info */
+  uint32_t frame_number;         /* Frame number/counter */
+  int64_t frame_timestamp_us;    /* Frame timestamp in us */
 };
 
 #define RESERVED_REGION_SIZE 4096

@@ -27,28 +27,23 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __DISP_EXTN_INTF_H__
-#define __DISP_EXTN_INTF_H__
+#ifndef __PHASE_OFFSET_EXTN_INTF_H__
+#define __PHASE_OFFSET_EXTN_INTF_H__
 
-#define EARLY_WAKEUP_FEATURE 1
-#define DYNAMIC_EARLY_WAKEUP_CONFIG 1
+#include <unordered_map>
+
+#define PHASE_OFFSET_EXTN 1
 
 namespace composer {
 
-class DisplayExtnIntf {
+class PhaseOffsetExtnIntf {
  public:
-  virtual int SetContentFps(uint32_t fps) = 0;
-  virtual void RegisterDisplay(uint32_t display_id) = 0;
-  virtual void UnregisterDisplay(uint32_t display_id) = 0;
-  virtual int SetActiveConfig(uint32_t display_id, uint32_t config_id) = 0;
-  virtual int NotifyEarlyWakeUp(bool gpu, bool display) = 0;
-  virtual int NotifyDisplayEarlyWakeUp(uint32_t display_id) = 0;
-  virtual int SetEarlyWakeUpConfig(uint32_t display_id, bool enable) = 0;
+  virtual int GetAdvancedSfOffsets(std::unordered_map<float, int64_t> *advancedSfOffsets) = 0;
 
  protected:
-  virtual ~DisplayExtnIntf() { }
+  virtual ~PhaseOffsetExtnIntf() { }
 };
 
 }  // namespace composer
 
-#endif  // __DISP_EXTN_INTF_H__
+#endif  // __PHASE_OFFSET_EXTN_INTF_H__
