@@ -43,6 +43,7 @@ class CPUHint {
   void Set();
   void Reset();
   void ReqHints(int hint);
+  void ReqHintsOffload(int hint, int duration);
 
  private:
   enum { HINT =  0x4501 /* 45-display layer hint, 01-Enable */ };
@@ -56,6 +57,8 @@ class CPUHint {
   int (*fn_lock_acquire_)(int handle, int duration, int *hints, int num_args) = NULL;
   int (*fn_lock_release_)(int value) = NULL;
   int (*fn_perf_hint_)(int hint, const char *pkg, int duration, int type) = NULL;
+  int (*fn_perf_hint_offload_)(int hint, const char *pkg, int duration, int type,
+                               int numArgs, int *) = NULL;
 };
 
 }  // namespace sdm

@@ -57,7 +57,9 @@ DisplayError CPUHint::Init(HWCDebugHandler *debug_handler) {
   if (vendor_ext_lib_.Open(path)) {
     if (!vendor_ext_lib_.Sym("perf_lock_acq", reinterpret_cast<void **>(&fn_lock_acquire_)) ||
         !vendor_ext_lib_.Sym("perf_lock_rel", reinterpret_cast<void **>(&fn_lock_release_)) ||
-        !vendor_ext_lib_.Sym("perf_hint", reinterpret_cast<void **>(&fn_perf_hint_))) {
+        !vendor_ext_lib_.Sym("perf_hint", reinterpret_cast<void **>(&fn_perf_hint_)) ||
+        !vendor_ext_lib_.Sym("perf_hint_offload", reinterpret_cast<void **> \
+        (&fn_perf_hint_offload_))) {
       DLOGW("Failed to load symbols for Vendor Extension Library");
       return kErrorNotSupported;
     }
@@ -111,4 +113,9 @@ void CPUHint::ReqHints(int hint) {
   }
 }
 
+void CPUHint::ReqHintsOffload(int hint, int duration) {
+  if(enabled_ && hint > 0) {
+    fn_perf_hint_offload_(hint, NULL, duration, 0, 0, NULL);
+  }
+}
 }  // namespace sdm
