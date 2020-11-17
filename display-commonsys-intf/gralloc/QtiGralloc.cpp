@@ -164,6 +164,23 @@ Error encodeVideoHistogramMetadata(VideoHistogramMetadata &in, hidl_vec<uint8_t>
   return Error::NONE;
 }
 
+Error decodeVideoTimestampInfo(hidl_vec<uint8_t> &in, VideoTimestampInfo *out) {
+  if (!in.size() || !out) {
+    return Error::BAD_VALUE;
+  }
+  memcpy(out, in.data(), sizeof(VideoTimestampInfo));
+  return Error::NONE;
+}
+
+Error encodeVideoTimestampInfo(VideoTimestampInfo &in, hidl_vec<uint8_t> *out) {
+  if (!out) {
+    return Error::BAD_VALUE;
+  }
+  out->resize(sizeof(VideoTimestampInfo));
+  memcpy(out->data(), &in, sizeof(VideoTimestampInfo));
+  return Error::NONE;
+}
+
 MetadataType getMetadataType(uint32_t in) {
   switch (in) {
     case QTI_VT_TIMESTAMP:
@@ -190,6 +207,8 @@ MetadataType getMetadataType(uint32_t in) {
       return MetadataType_CVPMetadata;
     case QTI_VIDEO_HISTOGRAM_STATS:
       return MetadataType_VideoHistogramStats;
+    case QTI_VIDEO_TS_INFO:
+      return MetadataType_VideoTimestampInfo;
     case QTI_FD:
       return MetadataType_FD;
     case QTI_PRIVATE_FLAGS:
@@ -272,6 +291,9 @@ Error get(void *buffer, uint32_t type, void *param) {
       break;
     case QTI_VIDEO_HISTOGRAM_STATS:
       err = decodeVideoHistogramMetadata(bytestream, (VideoHistogramMetadata *)param);
+      break;
+    case QTI_VIDEO_TS_INFO:
+      err = decodeVideoTimestampInfo(bytestream, (VideoTimestampInfo *)param);
       break;
     case QTI_FD:
       err = static_cast<Error>(android::gralloc4::decodeInt32(qtigralloc::MetadataType_FD,
@@ -358,6 +380,9 @@ Error set(void *buffer, uint32_t type, void *param) {
       break;
     case QTI_VIDEO_HISTOGRAM_STATS:
       err = encodeVideoHistogramMetadata(*(VideoHistogramMetadata *)param, &bytestream);
+      break;
+    case QTI_VIDEO_TS_INFO:
+      err = encodeVideoTimestampInfo(*(VideoTimestampInfo *)param, &bytestream);
       break;
     default:
       param = nullptr;
