@@ -2524,7 +2524,7 @@ int32_t HWCSession::GetDisplayCapabilities(hwc2_device_t *device, hwc2_display_t
   if (!outCapabilities) {
     *outNumCapabilities = 0;
     if (isBuiltin) {
-      *outNumCapabilities = 3;
+      *outNumCapabilities = 2;
     }
     return HWC2_ERROR_NONE;
   } else {
@@ -2532,8 +2532,7 @@ int32_t HWCSession::GetDisplayCapabilities(hwc2_device_t *device, hwc2_display_t
       // TODO(user): Handle SKIP_CLIENT_COLOR_TRANSFORM based on DSPP availability
       outCapabilities[0] = HWC2_DISPLAY_CAPABILITY_SKIP_CLIENT_COLOR_TRANSFORM;
       outCapabilities[1] = HWC2_DISPLAY_CAPABILITY_DOZE;
-      outCapabilities[2] = HWC2_DISPLAY_CAPABILITY_BRIGHTNESS;
-      *outNumCapabilities = 3;
+      *outNumCapabilities = 2;
     }
     return HWC2_ERROR_NONE;
   }
@@ -2562,7 +2561,7 @@ int32_t HWCSession::GetDisplayBrightnessSupport(hwc2_device_t *device, hwc2_disp
   }
   // This function isn't actually used in the framework
   // The capability is used instead
-  *outSupport = (hwc_display->GetDisplayClass() == DISPLAY_CLASS_BUILTIN);
+  *outSupport = false;
   return HWC2_ERROR_NONE;
 }
 
