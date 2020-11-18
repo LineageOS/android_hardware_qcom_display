@@ -226,6 +226,12 @@ ColorManagerProxy *ColorManagerProxy::CreateColorManagerProxy(DisplayType type,
         delete color_manager_proxy->stc_intf_;
         color_manager_proxy->stc_intf_ = NULL;
       }
+
+      if (color_manager_proxy->HasNativeModeSupport()) {
+        color_manager_proxy->curr_mode_.gamut = ColorPrimaries_BT709_5;
+        color_manager_proxy->curr_mode_.gamma = Transfer_sRGB;
+        color_manager_proxy->curr_mode_.intent = snapdragoncolor::kNative;
+      }
     }
   }
 
@@ -368,6 +374,23 @@ bool ColorManagerProxy::NeedHwAssetsUpdate() {
   payload.payload = reinterpret_cast<uint64_t>(&need_update);
   stc_intf_->GetProperty(&payload);
   return need_update;
+}
+
+bool ColorManagerProxy::HasNativeModeSupport() {
+  bool native_mode_support = false;
+  if (!stc_intf_) {
+    return native_mode_support;
+  }
+
+  snapdragoncolor::ColorModeList stc_color_modes = {};
+  ColorMgrGetStcModes(&stc_color_modes);
+  for (auto &iter : stc_color_modes.list) {
+    if (iter.intent == snapdragoncolor::kNative) {
+      native_mode_support = true;
+    }
+  }
+
+  return native_mode_support;
 }
 
 DisplayError ColorManagerProxy::ColorMgrGetNumOfModes(uint32_t *mode_cnt) {
