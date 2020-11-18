@@ -3339,7 +3339,7 @@ int32_t HWCSession::GetDisplayCapabilities(hwc2_device_t *device, hwc2_display_t
   if (!outCapabilities) {
     *outNumCapabilities = 0;
     if (isBuiltin) {
-      *outNumCapabilities = 4;
+      *outNumCapabilities = 3;
     }
     return HWC2_ERROR_NONE;
   } else {
@@ -3352,7 +3352,6 @@ int32_t HWCSession::GetDisplayCapabilities(hwc2_device_t *device, hwc2_display_t
       if (has_doze_support) {
         outCapabilities[index++] = HWC2_DISPLAY_CAPABILITY_DOZE;
       }
-      outCapabilities[index++] = HWC2_DISPLAY_CAPABILITY_BRIGHTNESS;
       outCapabilities[index++] = UINT32(HwcDisplayCapability::PROTECTED_CONTENTS);
       *outNumCapabilities = index;
     }
@@ -3422,7 +3421,7 @@ int32_t HWCSession::GetDisplayBrightnessSupport(hwc2_device_t *device, hwc2_disp
     DLOGE("Expected valid hwc_display");
     return HWC2_ERROR_BAD_PARAMETER;
   }
-  *outSupport = (hwc_display->GetDisplayClass() == DISPLAY_CLASS_BUILTIN);
+  *outSupport = false;
   return HWC2_ERROR_NONE;
 }
 
