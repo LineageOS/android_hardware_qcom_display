@@ -11,7 +11,6 @@ cc_binary {
     relative_install_path: "hw",
     header_libs: [
         "display_headers",
-        "libThermal_headers",
         "qti_kernel_headers",
     ],
 
@@ -59,7 +58,6 @@ cc_binary {
         "android.hardware.graphics.allocator@3.0",
         "libdisplayconfig.qti",
         "libdrm",
-        "libthermalclient",
     ],
     srcs: composer_srcs,
 
