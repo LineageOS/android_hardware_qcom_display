@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -147,7 +147,6 @@ enum DisplayEvent {
   kIdlePowerCollapse,       // Event triggered by Idle Power Collapse.
   kPanelDeadEvent,          // Event triggered by ESD.
   kDisplayPowerResetEvent,  // Event triggered by Hardware Recovery.
-  kInvalidateDisplay,       // Event triggered to Invalidate display.
 };
 
 /*! @brief This enum represents the secure events received by Display HAL. */
@@ -159,10 +158,9 @@ enum SecureEvent {
 
 /*! @brief This enum represents the QSync modes supported by the hardware. */
 enum QSyncMode {
-  kQSyncModeNone,               // This is set by the client to disable qsync
-  kQSyncModeContinuous,         // This is set by the client to enable qsync forever
-  kQsyncModeOneShot,            // This is set by client to enable qsync only for current frame.
-  kQsyncModeOneShotContinuous,  // This is set by client to enable qsync only for every commit.
+  kQSyncModeNone,        // This is set by the client to disable qsync
+  kQSyncModeContinuous,  // This is set by the client to enable qsync forever
+  kQsyncModeOneShot,     // This is set by client to enable qsync only for current frame.
 };
 
 /*! @brief This structure defines configuration for display dpps ad4 region of interest. */
@@ -198,28 +196,19 @@ struct DisplayConfigFixedInfo {
   @sa DisplayInterface::GetConfig
   @sa DisplayInterface::SetConfig
 */
-struct DisplayConfigGroupInfo {
+struct DisplayConfigVariableInfo {
   uint32_t x_pixels = 0;          //!< Total number of pixels in X-direction on the display panel.
   uint32_t y_pixels = 0;          //!< Total number of pixels in Y-direction on the display panel.
   float x_dpi = 0.0f;             //!< Dots per inch in X-direction.
   float y_dpi = 0.0f;             //!< Dots per inch in Y-direction.
-  bool is_yuv = false;            //!< If the display output is in YUV format.
-  bool smart_panel = false;       //!< If the display config has smart panel.
-
-  bool operator==(const DisplayConfigGroupInfo& info) const {
-    return ((x_pixels == info.x_pixels) && (y_pixels == info.y_pixels) && (x_dpi == info.x_dpi) &&
-            (y_dpi == info.y_dpi) && (is_yuv == info.is_yuv) && (smart_panel == info.smart_panel));
-  }
-};
-
-struct DisplayConfigVariableInfo : public DisplayConfigGroupInfo {
   uint32_t fps = 0;               //!< Frame rate per second.
   uint32_t vsync_period_ns = 0;   //!< VSync period in nanoseconds.
+  bool is_yuv = false;            //!< If the display output is in YUV format.
 
   bool operator==(const DisplayConfigVariableInfo& info) const {
     return ((x_pixels == info.x_pixels) && (y_pixels == info.y_pixels) && (x_dpi == info.x_dpi) &&
             (y_dpi == info.y_dpi) && (fps == info.fps) && (vsync_period_ns == info.vsync_period_ns)
-            && (is_yuv == info.is_yuv) && (smart_panel == info.smart_panel));
+            && (is_yuv == info.is_yuv));
   }
 };
 
@@ -546,13 +535,13 @@ class DisplayInterface {
   */
   virtual bool IsUnderscanSupported() = 0;
 
-  /*! @brief Method to set brightness of the builtin display.
+  /*! @brief Method to set brightness of the primary display.
 
-    @param[in] brightness the new backlight level 0.0f(min) to 1.0f(max) where -1.0f represents off.
+    @param[in] level the new backlight level.
 
     @return \link DisplayError \endlink
   */
-  virtual DisplayError SetPanelBrightness(float brightness) = 0;
+  virtual DisplayError SetPanelBrightness(int level) = 0;
 
   /*! @brief Method to notify display about change in min HDCP encryption level.
 
@@ -655,11 +644,11 @@ class DisplayInterface {
 
   /*! @brief Method to get the brightness level of the display
 
-    @param[out] brightness brightness percentage
+    @param[out] level brightness level
 
     @return \link DisplayError \endlink
   */
-  virtual DisplayError GetPanelBrightness(float *brightness) = 0;
+  virtual DisplayError GetPanelBrightness(int *level) = 0;
 
   /*! @brief Method to set layer mixer resolution.
 

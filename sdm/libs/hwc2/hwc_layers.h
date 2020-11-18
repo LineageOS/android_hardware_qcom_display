@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -33,7 +33,7 @@
 #include <hardware/hwcomposer2.h>
 #undef HWC2_INCLUDE_STRINGIFICATION
 #undef HWC2_USE_CPP11
-#include <android/hardware/graphics/composer/2.3/IComposerClient.h>
+#include <android/hardware/graphics/composer/2.2/IComposerClient.h>
 #include <deque>
 #include <map>
 #include <set>
@@ -41,7 +41,7 @@
 #include "hwc_buffer_allocator.h"
 
 using PerFrameMetadataKey =
-    android::hardware::graphics::composer::V2_3::IComposerClient::PerFrameMetadataKey;
+    android::hardware::graphics::composer::V2_2::IComposerClient::PerFrameMetadataKey;
 
 namespace sdm {
 
@@ -91,12 +91,9 @@ class HWCLayer {
   HWC2::Error SetLayerVisibleRegion(hwc_region_t visible);
   HWC2::Error SetLayerPerFrameMetadata(uint32_t num_elements, const PerFrameMetadataKey *keys,
                                        const float *metadata);
-  HWC2::Error SetLayerPerFrameMetadataBlobs(uint32_t num_elements, const PerFrameMetadataKey *keys,
-                                            const uint32_t *sizes, const uint8_t* metadata);
   HWC2::Error SetLayerZOrder(uint32_t z);
   void SetComposition(const LayerComposition &sdm_composition);
   HWC2::Composition GetClientRequestedCompositionType() { return client_requested_; }
-  HWC2::Composition GetOrigClientRequestedCompositionType() { return client_requested_orig_; }
   void UpdateClientCompositionType(HWC2::Composition type) { client_requested_ = type; }
   HWC2::Composition GetDeviceSelectedCompositionType() { return device_selected_; }
   int32_t GetLayerDataspace() { return dataspace_; }
@@ -146,9 +143,7 @@ class HWCLayer {
   bool fod_pressed_ = false;
 #endif
 
-  // Composition requested by client(SF) Original
-  HWC2::Composition client_requested_orig_ = HWC2::Composition::Device;
-  // Composition requested by client(SF) Modified for internel use
+  // Composition requested by client(SF)
   HWC2::Composition client_requested_ = HWC2::Composition::Device;
   // Composition selected by SDM
   HWC2::Composition device_selected_ = HWC2::Composition::Device;
@@ -160,6 +155,7 @@ class HWCLayer {
   LayerBufferS3DFormat GetS3DFormat(uint32_t s3d_format);
   void GetUBWCStatsFromMetaData(UBWCStats *cr_stats, UbwcCrStatsVector *cr_vec);
   DisplayError SetMetaData(const private_handle_t *pvt_handle, Layer *layer);
+  DisplayError SetIGC(IGC_t source, LayerIGC *target);
   uint32_t RoundToStandardFPS(float fps);
   void ValidateAndSetCSC(const private_handle_t *handle);
   void SetDirtyRegions(hwc_region_t surface_damage);

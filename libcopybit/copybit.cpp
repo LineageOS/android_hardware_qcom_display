@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
- * Copyright (c) 2010 - 2014, 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2010 - 2014, The Linux Foundation. All rights reserved.
  *
  * Not a Contribution, Apache license notifications and license are retained
  * for attribution purposes only.
@@ -529,6 +529,14 @@ static int stretch_copybit(
 
             // Set Color Space for MDP to configure CSC matrix
             req->color_space = ITU_R_601;
+            MetaData_t *metadata = NULL;
+
+            if (src_hnd != NULL)
+                metadata = (MetaData_t *)src_hnd->base_metadata;
+
+            if (metadata && (metadata->operation & UPDATE_COLOR_SPACE)) {
+                req->color_space = metadata->colorSpace;
+            }
 
             set_infos(ctx, req, flags);
             set_image(&req->dst, dst);

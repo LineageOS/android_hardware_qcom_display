@@ -8,7 +8,7 @@ LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes)
 LOCAL_HEADER_LIBRARIES        := display_headers
 LOCAL_CFLAGS                  := -fno-operator-names -Wno-unused-parameter -DLOG_TAG=\"SDM\" \
-                                 $(common_flags)
+                                 $(common_flags) -Wno-return-stack-address
 LOCAL_HW_INTF_PATH_1          := fb
 LOCAL_SHARED_LIBRARIES        := libdl libdisplaydebug libsdmutils
 
@@ -22,12 +22,8 @@ ifeq ($(TARGET_USES_DRM_PP),true)
     LOCAL_CFLAGS              += -DPP_DRM_ENABLE
 endif
 
-ifeq ($(ENABLE_HYP),true)
-    LOCAL_CFLAGS += -DHYPERVISOR
-endif
-
 ifeq ($(TARGET_USES_FOD_ZPOS), true)
-    LOCAL_CFLAGS              += -DFOD_ZPOS
+    LOCAL_CFLAGS                  += -DFOD_ZPOS
 endif
 
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps)
