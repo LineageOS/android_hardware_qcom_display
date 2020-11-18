@@ -1,23 +1,6 @@
 #Common headers
 display_top := $(call my-dir)
 
-#Common headers
-common_includes := $(display_top)/libgralloc
-common_includes += $(display_top)/liboverlay
-common_includes += $(display_top)/libcopybit
-common_includes += $(display_top)/libqdutils
-common_includes += $(display_top)/libhwcomposer
-common_includes += $(display_top)/libhdmi
-common_includes += $(display_top)/libqservice
-common_includes += $(display_top)/include
-
-ifeq ($(TARGET_USES_POST_PROCESSING),true)
-    common_flags     += -DUSES_POST_PROCESSING
-    common_includes  += $(TARGET_OUT_HEADERS)/pp/inc
-endif
-
-common_header_export_path := qcom/display
-
 #Common libraries external to display HAL
 common_libs := liblog libutils libcutils libhardware
 
