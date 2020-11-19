@@ -1727,6 +1727,9 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence
     display_paused_ = true;
     display_pause_pending_ = false;
   }
+  if (secure_event_ == kTUITransitionEnd || secure_event_ == kSecureDisplayEnd) {
+    secure_event_ = kSecureEventMax;
+  }
 
   return status;
 }
@@ -2832,12 +2835,50 @@ int HWCDisplay::GetActiveConfigIndex() {
   return active_config_index_;
 }
 
+DisplayError HWCDisplay::ValidateTUITransition (SecureEvent secure_event) {
+  switch (secure_event) {
+    case kTUITransitionPrepare:
+      if (secure_event_ != kSecureEventMax) {
+        DLOGE("Invalid TUI transition from %d to %d", secure_event_, secure_event);
+        return kErrorParameters;
+      }
+      break;
+    case kTUITransitionUnPrepare:
+      if (secure_event_ != kTUITransitionPrepare) {
+        DLOGE("Invalid TUI transition from %d to %d", secure_event_, secure_event);
+        return kErrorParameters;
+      }
+      break;
+    case kTUITransitionStart:
+      if (secure_event_ != kSecureEventMax) {
+        DLOGE("Invalid TUI transition from %d to %d", secure_event_, secure_event);
+        return kErrorParameters;
+      }
+      break;
+    case kTUITransitionEnd:
+      if (secure_event_ != kTUITransitionStart) {
+        DLOGE("Invalid TUI transition from %d to %d", secure_event_, secure_event);
+        return kErrorParameters;
+      }
+      break;
+    default:
+      DLOGE("Invalid secure event %d", secure_event);
+      return kErrorParameters;
+  }
+  return kErrorNone;
+}
+
 DisplayError HWCDisplay::HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) {
+  DisplayError err = ValidateTUITransition(secure_event);
+  if (err != kErrorNone) {
+    return err;
+  }
+
   if (secure_event == secure_event_) {
     return kErrorNone;
   }
 
-  DisplayError err = display_intf_->HandleSecureEvent(secure_event, needs_refresh);
+  err = display_intf_->HandleSecureEvent(secure_event, needs_refresh);
   if (err != kErrorNone) {
     DLOGE("Handle secure event failed");
     return err;
@@ -2864,6 +2905,14 @@ DisplayError HWCDisplay::HandleSecureEvent(SecureEvent secure_event, bool *needs
 
   secure_event_ = secure_event;
 
+  return kErrorNone;
+}
+
+DisplayError HWCDisplay::TeardownConcurrentWriteback(bool *needs_refresh) {
+  if (!needs_refresh) {
+    return kErrorParameters;
+  }
+  *needs_refresh = false;
   return kErrorNone;
 }
 

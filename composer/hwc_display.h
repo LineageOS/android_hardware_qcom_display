@@ -200,9 +200,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual void GetPanelResolution(uint32_t *width, uint32_t *height);
   virtual void GetRealPanelResolution(uint32_t *width, uint32_t *height);
   virtual void Dump(std::ostringstream *os);
-  virtual DisplayError TeardownConcurrentWriteback(void) {
-    return kErrorNotSupported;
-  }
+  virtual DisplayError TeardownConcurrentWriteback(bool *needs_refresh);
 
   // Captures frame output in the buffer specified by output_buffer_info. The API is
   // non-blocking and the client is expected to check operation status later on.
@@ -486,6 +484,7 @@ class HWCDisplay : public DisplayEventHandler {
   HWC2::Error GetCachedActiveConfig(hwc2_config_t *config);
   void SetActiveConfigIndex(int active_config_index);
   int GetActiveConfigIndex();
+  DisplayError ValidateTUITransition (SecureEvent secure_event);
 
   bool validated_ = false;
   bool layer_stack_invalid_ = true;

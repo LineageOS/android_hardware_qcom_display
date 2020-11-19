@@ -57,7 +57,6 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
                                  const double *color_transform) override {
     return kErrorNone;
   }
-  DisplayError TeardownConcurrentWriteback(void) override { return kErrorNotSupported; }
   DisplayError colorSamplingOn() override;
   DisplayError colorSamplingOff() override;
 
