@@ -59,7 +59,7 @@ class Debug {
   static bool IsExtAnimDisabled();
   static bool IsPartialSplitDisabled();
   static bool IsSrcSplitPreferred();
-  static int GetWindowRect(float *left, float *top, float *right, float *bottom);
+  static int GetWindowRect(bool primary, float *left, float *top, float *right, float *bottom);
   static int GetMixerResolution(uint32_t *width, uint32_t *height);
   static int GetReducedConfig(uint32_t *num_vig_pipes, uint32_t *num_dma_pipes);
   static int GetExtMaxlayers();

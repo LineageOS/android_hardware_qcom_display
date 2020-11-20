@@ -143,12 +143,12 @@ int HWCDisplayBuiltIn::Init() {
 
   is_primary_ = display_intf_->IsPrimaryDisplay();
 
-  if (is_primary_) {
-    windowed_display_ = (Debug::GetWindowRect(&window_rect_.left, &window_rect_.top,
-                         &window_rect_.right, &window_rect_.bottom) == 0);
-    DLOGI("Window rect : [%f %f %f %f]", window_rect_.left, window_rect_.top,
-           window_rect_.right, window_rect_.bottom);
+  windowed_display_ = Debug::GetWindowRect(is_primary_, &window_rect_.left, &window_rect_.top,
+                             &window_rect_.right, &window_rect_.bottom) == 0;
+  DLOGI("Window rect : [%f %f %f %f] is_primary_=%d", window_rect_.left, window_rect_.top,
+         window_rect_.right, window_rect_.bottom, is_primary_);
 
+  if (is_primary_) {
     value = 0;
     HWCDebugHandler::Get()->GetProperty(ENABLE_POMS_DURING_DOZE, &value);
     enable_poms_during_doze_ = (value == 1);

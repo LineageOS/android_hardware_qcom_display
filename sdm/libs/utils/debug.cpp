@@ -183,10 +183,15 @@ int Debug::GetMixerResolution(uint32_t *width, uint32_t *height) {
   return 0;
 }
 
-int Debug::GetWindowRect(float *left, float *top, float *right, float *bottom) {
+int Debug::GetWindowRect(bool primary, float *left, float *top, float *right, float *bottom) {
   char value[64] = {};
+  int error = -EINVAL;
+  if (primary) {
+    error = DebugHandler::Get()->GetProperty(WINDOW_RECT_PROP, value);
+  } else {
+    error = DebugHandler::Get()->GetProperty(WINDOW_RECT_PROP_SECONDARY, value);
+  }
 
-  int error = DebugHandler::Get()->GetProperty(WINDOW_RECT_PROP, value);
   if (error != 0) {
     return -EINVAL;
   }
