@@ -51,6 +51,9 @@ int IPCImpl::Init() {
                             reinterpret_cast<void **>(&destroy_qrtr_client_intf_))) {
       DLOGW("Unable to load symbols, error = %s", qrtr_client_lib_.Error());
     }
+    if (!create_qrtr_client_intf_ || !destroy_qrtr_client_intf_) {
+      return -1;
+    }
 
     if (create_qrtr_client_intf_) {
       QRTRConfig qrtr_config = {};
