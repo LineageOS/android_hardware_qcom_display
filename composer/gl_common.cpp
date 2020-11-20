@@ -27,6 +27,9 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <vector>
+#include <string>
+
 #include "gl_common.h"
 
 #define __CLASS__ "GLCommon"
@@ -97,20 +100,22 @@ void GLCommon::SetSourceBuffer(const private_handle_t *src_hnd) {
   }
 }
 
-void GLCommon::SetDestinationBuffer(const private_handle_t *dst_hnd, const GLRect &dst_rect) {
+void GLCommon::SetDestinationBuffer(const private_handle_t *dst_hnd) {
   DTRACE_SCOPED();
   EGLImageBuffer *dst_buffer = image_wrapper_.wrap(reinterpret_cast<const void *>(dst_hnd));
 
   if (dst_buffer) {
     GL(glBindFramebuffer(GL_FRAMEBUFFER, dst_buffer->getFramebuffer()));
-    float width = dst_rect.right - dst_rect.left;
-    float height = dst_rect.bottom - dst_rect.top;
-    GL(glViewport(dst_rect.left, dst_rect.top, width, height));
   }
 }
 
-int GLCommon::WaitOnInputFence(const shared_ptr<Fence> &in_fence) {
+int GLCommon::WaitOnInputFence(const std::vector<shared_ptr<Fence>> &in_fences) {
   DTRACE_SCOPED();
+
+  shared_ptr<Fence> in_fence = Fence::Merge(in_fences, true /* ignore signaled*/);
+  if (in_fence == nullptr) {
+   return 0;
+  }
 
   int fd = Fence::Dup(in_fence);
   EGLint attribs[] = {EGL_SYNC_NATIVE_FENCE_FD_ANDROID, fd, EGL_NONE};
@@ -171,6 +176,22 @@ void GLCommon::ClearCache() {
   // Clear cached handles.
   image_wrapper_.Deinit();
   image_wrapper_.Init();
+}
+
+void GLCommon::SetRealTimePriority() {
+  // same as composer thread
+  struct sched_param param = {0};
+  param.sched_priority = 2;
+  if (sched_setscheduler(0, SCHED_FIFO | SCHED_RESET_ON_FORK, &param) != 0) {
+    DLOGE("Couldn't set SCHED_FIFO: %d", errno);
+  }
+}
+
+void GLCommon::SetViewport(const GLRect &dst_rect) {
+  DTRACE_SCOPED();
+  float width = dst_rect.right - dst_rect.left;
+  float height = dst_rect.bottom - dst_rect.top;
+  GL(glViewport(dst_rect.left, dst_rect.top, width, height));
 }
 
 }  // namespace sdm

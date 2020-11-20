@@ -31,19 +31,26 @@
 #define __GL_LAYER_STITCH_H__
 
 #include <gralloc_priv.h>
+#include <vector>
+
 #include "gl_common.h"
 
 namespace sdm {
+struct StitchParams {
+  const private_handle_t *src_hnd = nullptr;
+  const private_handle_t *dst_hnd = nullptr;
+  GLRect src_rect;
+  GLRect dst_rect;
+  GLRect scissor_rect;
+  shared_ptr<Fence> src_acquire_fence = nullptr;
+  shared_ptr<Fence> dst_acquire_fence = nullptr;
+};
 
 class GLLayerStitch {
  public:
   static GLLayerStitch* GetInstance(bool secure);
   static void Destroy(GLLayerStitch *intf);
-
-  virtual int Blit(const private_handle_t *src_hnd, const private_handle_t *dst_hnd,
-                   const GLRect &src_rect, const GLRect &dst_rect, const GLRect &scissor_rect,
-                   const shared_ptr<Fence> &src_acquire_fence,
-                   const shared_ptr<Fence> &dst_acquire_fence,
+  virtual int Blit(const std::vector<StitchParams> &stitch_params,
                    shared_ptr<Fence> *release_fence) = 0;
  protected:
   virtual ~GLLayerStitch() { }
