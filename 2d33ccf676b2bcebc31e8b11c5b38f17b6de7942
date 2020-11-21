@@ -25,6 +25,30 @@
     },
     {
       "key": {
+        "uuid": "cb3662cc_5a5800f9",
+        "filename": "include/Android.mk",
+        "patchSetId": 3
+      },
+      "lineNbr": 2,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2020-11-21T16:56:30Z",
+      "side": 0,
+      "message": "Clearly not. You\u0027re failing to set all those cflags: https://github.com/LineageOS/android_hardware_qcom_display/blob/lineage-18.0-caf-sm8150/common.mk. You can cleanup common.mk like arco did, tho.",
+      "parentUuid": "2761c491_a39d75a6",
+      "range": {
+        "startLine": 2,
+        "startChar": 0,
+        "endLine": 2,
+        "endChar": 34
+      },
+      "revId": "2d33ccf676b2bcebc31e8b11c5b38f17b6de7942",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "ef976219_653d633c",
         "filename": "libcopybit/Android.mk",
         "patchSetId": 2
