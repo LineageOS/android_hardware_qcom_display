@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "08bfaed1_3394ae40",
+        "filename": "libdrmutils/Android.mk",
+        "patchSetId": 8
+      },
+      "lineNbr": 16,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2020-11-23T00:30:43Z",
+      "side": 1,
+      "message": "I don\u0027t think that this is needed. This module already declares:\n\nLOCAL_HEADER_LIBRARIES        :\u003d display_headers",
+      "range": {
+        "startLine": 16,
+        "startChar": 0,
+        "endLine": 16,
+        "endChar": 46
+      },
+      "revId": "a372ae15c7b75086e530d5335fa1e00694f0f7d5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
