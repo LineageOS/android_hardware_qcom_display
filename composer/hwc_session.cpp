@@ -45,6 +45,7 @@
 #include "hwc_buffer_allocator.h"
 #include "hwc_session.h"
 #include "hwc_debugger.h"
+#include "ipc_impl.h"
 
 #define __CLASS__ "HWCSession"
 
@@ -294,8 +295,11 @@ void HWCSession::InitSupportedDisplaySlots() {
     return;
   }
 
+  ipc_intf_ = std::make_shared<IPCImpl>(IPCImpl());
+  ipc_intf_->Init();
+
   DisplayError error = CoreInterface::CreateCore(&buffer_allocator_, nullptr,
-                                                 &socket_handler_, &core_intf_);
+                                                 &socket_handler_, ipc_intf_, &core_intf_);
   if (error != kErrorNone) {
     DLOGE("Failed to create CoreInterface");
     return;
@@ -1716,6 +1720,18 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
     }
     break;
 
+    case qService::IQService::GET_DISPLAY_PORT_ID: {
+      if (!input_parcel || !output_parcel) {
+        DLOGE("QService command = %d: input_parcel and output_parcel needed.", command);
+        break;
+      }
+      int disp_id = input_parcel->readInt32();
+      int port_id = 0;
+      status = GetDisplayPortId(disp_id, &port_id);
+      output_parcel->writeInt32(port_id);
+    }
+    break;
+
     default:
       DLOGW("QService command = %d is not supported.", command);
       break;
@@ -2343,7 +2359,7 @@ const char *GetTokenValue(const char *uevent_data, int length, const char *token
 android::status_t HWCSession::SetDsiClk(const android::Parcel *input_parcel) {
   int disp_id = input_parcel->readInt32();
   uint64_t clk = UINT64(input_parcel->readInt64());
-  if (disp_id < 0) {
+  if (disp_id != HWC_DISPLAY_PRIMARY) {
     return -EINVAL;
   }
 
@@ -2358,7 +2374,7 @@ android::status_t HWCSession::SetDsiClk(const android::Parcel *input_parcel) {
 android::status_t HWCSession::GetDsiClk(const android::Parcel *input_parcel,
                                         android::Parcel *output_parcel) {
   int disp_id = input_parcel->readInt32();
-  if (disp_id < 0) {
+  if (disp_id != HWC_DISPLAY_PRIMARY) {
     return -EINVAL;
   }
 
@@ -2377,7 +2393,7 @@ android::status_t HWCSession::GetDsiClk(const android::Parcel *input_parcel,
 android::status_t HWCSession::GetSupportedDsiClk(const android::Parcel *input_parcel,
                                                  android::Parcel *output_parcel) {
   int disp_id = input_parcel->readInt32();
-  if (disp_id < 0) {
+  if (disp_id != HWC_DISPLAY_PRIMARY) {
     return -EINVAL;
   }
 
@@ -3232,19 +3248,25 @@ int32_t HWCSession::GetReadbackBufferAttributes(hwc2_display_t display, int32_t 
     return HWC2_ERROR_BAD_PARAMETER;
   }
 
-  if (display != HWC_DISPLAY_PRIMARY) {
+  if (display >= HWCCallbacks::kNumDisplays) {
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
-  HWCDisplay *hwc_display = hwc_display_[display];
-
-  if (hwc_display) {
-    *format = HAL_PIXEL_FORMAT_RGB_888;
-    *dataspace = GetDataspaceFromColorMode(hwc_display->GetCurrentColorMode());
-    return HWC2_ERROR_NONE;
+  if (display != HWC_DISPLAY_PRIMARY) {
+    return HWC2_ERROR_UNSUPPORTED;
   }
 
-  return HWC2_ERROR_BAD_DISPLAY;
+  HWCDisplay *hwc_display = hwc_display_[display];
+  if (hwc_display == nullptr) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  } else if (!hwc_display->HasReadBackBufferSupport()) {
+    return HWC2_ERROR_UNSUPPORTED;
+  }
+
+  *format = HAL_PIXEL_FORMAT_RGB_888;
+  *dataspace = GetDataspaceFromColorMode(hwc_display->GetCurrentColorMode());
+
+  return HWC2_ERROR_NONE;
 }
 
 int32_t HWCSession::SetReadbackBuffer(hwc2_display_t display, const native_handle_t *buffer,
@@ -3253,8 +3275,12 @@ int32_t HWCSession::SetReadbackBuffer(hwc2_display_t display, const native_handl
     return HWC2_ERROR_BAD_PARAMETER;
   }
 
-  if (display != HWC_DISPLAY_PRIMARY) {
+  if (display >= HWCCallbacks::kNumDisplays) {
     return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  if (display != HWC_DISPLAY_PRIMARY) {
+    return HWC2_ERROR_UNSUPPORTED;
   }
 
   int external_dpy_index = GetDisplayIndex(qdutils::DISPLAY_EXTERNAL);
@@ -3274,8 +3300,12 @@ int32_t HWCSession::GetReadbackBufferFence(hwc2_display_t display,
     return HWC2_ERROR_BAD_PARAMETER;
   }
 
-  if (display != HWC_DISPLAY_PRIMARY) {
+  if (display >= HWCCallbacks::kNumDisplays) {
     return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  if (display != HWC_DISPLAY_PRIMARY) {
+    return HWC2_ERROR_UNSUPPORTED;
   }
 
   return CallDisplayFunction(display, &HWCDisplay::GetReadbackBufferFence, release_fence);
@@ -3479,6 +3509,7 @@ void HWCSession::NotifyClientStatus(bool connected) {
     }
     SCOPE_LOCK(locker_[i]);
     hwc_display_[i]->NotifyClientStatus(connected);
+    hwc_display_[i]->SetVsyncEnabled(HWC2::Vsync::Disable);
   }
 }
 
@@ -3689,6 +3720,60 @@ android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
     std::thread(&HWCSession::HandlePluggableDisplays, this, true).detach();
   }
   DLOGI("End of TUI session on display %d", disp_id);
+  return 0;
+}
+
+DispType HWCSession::GetDisplayConfigDisplayType(int qdutils_disp_type) {
+  switch (qdutils_disp_type) {
+    case qdutils::DISPLAY_PRIMARY:
+      return DispType::kPrimary;
+
+    case qdutils::DISPLAY_EXTERNAL:
+      return DispType::kExternal;
+
+    case qdutils::DISPLAY_VIRTUAL:
+      return DispType::kVirtual;
+
+    case qdutils::DISPLAY_BUILTIN_2:
+      return DispType::kBuiltIn2;
+
+    default:
+      return DispType::kInvalid;
+  }
+}
+
+int HWCSession::GetDispTypeFromPhysicalId(uint64_t physical_disp_id, DispType *disp_type) {
+  // TODO(user): Least significant 8 bit is port id based on the SF current implementaion. Need to
+  // revisit this if there is a change in logic to create physical display id in SF.
+  int port_id = (physical_disp_id & 0xFF);
+  int out_port = 0;
+  for (int dpy = qdutils::DISPLAY_PRIMARY; dpy <= qdutils::DISPLAY_EXTERNAL_2; dpy++) {
+    int ret = GetDisplayPortId(dpy, &out_port);
+    if (ret != 0){
+      return ret;
+    }
+    if (port_id == out_port) {
+      *disp_type = GetDisplayConfigDisplayType(dpy);
+      return 0;
+    }
+  }
+  return -ENODEV;
+}
+
+android::status_t HWCSession::GetDisplayPortId(uint32_t disp_id, int *port_id) {
+  hwc2_display_t target_display = GetDisplayIndex(disp_id);
+  if (target_display == -1) {
+    return -ENOTSUP;
+  }
+  uint8_t out_port = 0;
+  uint32_t out_data_size = 0;
+  Locker::ScopeLock lock_d(locker_[target_display]);
+  if (hwc_display_[target_display]) {
+    if (hwc_display_[target_display]->GetDisplayIdentificationData(&out_port, &out_data_size,
+                                                                   NULL) == HWC2::Error::None) {
+      *port_id = INT(out_port);
+    }
+  }
   return 0;
 }
 

@@ -54,6 +54,7 @@ struct CoreSingleton {
 DisplayError CoreInterface::CreateCore(BufferAllocator *buffer_allocator,
                                        BufferSyncHandler *buffer_sync_handler,
                                        SocketHandler *socket_handler,
+                                       std::shared_ptr<IPCIntf> ipc_intf,
                                        CoreInterface **interface, uint32_t client_version) {
   SCOPE_LOCK(g_core.locker);
 
@@ -78,7 +79,7 @@ DisplayError CoreInterface::CreateCore(BufferAllocator *buffer_allocator,
 
   // Create appropriate CoreImpl object based on client version.
   if (GET_REVISION(client_version) == CoreImpl::kRevision) {
-    core_impl = new CoreImpl(buffer_allocator, socket_handler);
+    core_impl = new CoreImpl(buffer_allocator, socket_handler, ipc_intf);
   } else {
     return kErrorNotSupported;
   }

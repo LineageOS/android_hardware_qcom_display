@@ -66,6 +66,7 @@ class HWEventHandler {
   virtual void PanelDead() = 0;
   virtual void HwRecovery(const HWRecoveryEvent sdm_event_code) = 0;
   virtual void Histogram(int histogram_fd, uint32_t blob_id) = 0;
+  virtual void HandleBacklightEvent(float brightness_level) = 0;
 
  protected:
   virtual ~HWEventHandler() { }
@@ -129,7 +130,7 @@ class HWInterface {
                                                     uint8_t *out_data) = 0;
   virtual DisplayError SetFrameTrigger(FrameTriggerMode mode) = 0;
   virtual DisplayError SetBLScale(uint32_t level) = 0;
-  virtual DisplayError GetPanelBrightnessBasePath(std::string *base_path) = 0;
+  virtual DisplayError GetPanelBrightnessBasePath(std::string *base_path) const = 0;
   virtual DisplayError SetBlendSpace(const PrimariesTransfer &blend_space) = 0;
   virtual DisplayError EnableSelfRefresh() = 0;
   virtual PanelFeaturePropertyIntf *GetPanelFeaturePropertyIntf() = 0;

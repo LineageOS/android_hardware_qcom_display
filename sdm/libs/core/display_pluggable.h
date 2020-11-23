@@ -47,7 +47,6 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
                                    uint32_t *max_refresh_rate) override;
   DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate) override;
   bool IsUnderscanSupported() override;
-  DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) override;
   DisplayError InitializeColorModes() override;
   DisplayError SetColorMode(const std::string &color_mode) override;
   DisplayError GetColorModeCount(uint32_t *mode_count) override;
@@ -72,6 +71,7 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
   void PingPongTimeout() override {}
   void PanelDead() override {}
   void HwRecovery(const HWRecoveryEvent sdm_event_code) override;
+  void HandleBacklightEvent(float brightness_level) override;
   void Histogram(int histogram_fd, uint32_t blob_id) override;
 
   void UpdateColorModes();

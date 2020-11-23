@@ -71,7 +71,7 @@ const char* kConvertRgbToYuvShader = ""
   "void main()                                                           \n"
   "{                                                                     \n"
   "    vec3 rgbColor = texture(u_sTexture, uv).rgb;                      \n"
-  "    color = vec4(rgb_2_yuv(rgbColor, itu_601_full_range), 1.0);       \n"
+  "    color = vec4(rgb_2_yuv(rgbColor, itu_601), 1.0);                  \n"
   "}                                                                     \n";
 
 int GLColorConvertImpl::CreateContext(GLRenderTarget target, bool secure) {

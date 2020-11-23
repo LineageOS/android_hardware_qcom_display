@@ -25,13 +25,25 @@
 #ifndef __VM_INTERFACE_H__
 #define __VM_INTERFACE_H__
 
-#define SDM_COMP_SERVICE_ID 5010
+#define SDM_COMP_SERVICE_ID 5006
 #define SDM_COMP_SERVICE_VERSION 1
 #define SDM_COMP_SERVICE_INSTANCE 1
 
+#define VM_INTF_REVISION_MAJOR (1)
+#define VM_INTF_REVISION_MINOR (0)
+
+#define VM_INTF_VERSION ((uint16_t) ((VM_INTF_REVISION_MAJOR << 8) | VM_INTF_REVISION_MINOR))
+
 enum CommandId {
   kCmdExportDemuraBuffers = 0,
+  kCmdSetBacklight = 1,
   kCmdMax,
+};
+
+enum DisplayType {
+  kDisplayTypePrimary     = 0,
+  kDisplayTypeSecondary1  = 1,
+  kDisplayTypeMax,
 };
 
 typedef struct {
@@ -40,6 +52,7 @@ typedef struct {
 } DemuraMemHandle;
 
 typedef struct {
+  uint16_t version = VM_INTF_VERSION;
   int32_t id = -1;
 } CommandHeader;
 
@@ -62,10 +75,28 @@ typedef struct {
   };
 } RspExportDemuraBuffer;
 
+// Command and Response structure definitions to set backlight for a specified display
+typedef struct {
+  union {
+    struct {
+      float brightness;
+      DisplayType disp_type;
+    };
+    uint32_t reserve[128] = { 0 };
+  };
+} CmdSetBacklight;
+
+typedef struct {
+  union {
+    uint32_t reserve[128] = { 0 };
+  };
+} RspSetBacklight;
+
 struct Command : CommandHeader {
   Command() {}
   union {
     CmdExportDemuraBuffer cmd_export_demura_buf;
+    CmdSetBacklight cmd_set_backlight;
   };
 };
 
@@ -73,6 +104,7 @@ struct Response : ResponseHeader {
   Response() {}
   union {
     RspExportDemuraBuffer rsp_export_demura_buf;
+    RspSetBacklight rsp_set_backlight;
   };
 };
 

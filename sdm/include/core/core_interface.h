@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, 2018 - 2019 The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2016, 2018 - 2020 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -40,12 +40,14 @@
 #include <stdint.h>
 #include <map>
 #include <vector>
+#include <memory>
 
 #include "display_interface.h"
 #include "sdm_types.h"
 #include "buffer_allocator.h"
 #include "buffer_sync_handler.h"
 #include "socket_handler.h"
+#include "ipc_interface.h"
 
 /*! @brief Display manager interface version.
 
@@ -137,6 +139,7 @@ class CoreInterface {
     @param[in] buffer_allocator \link BufferAllocator \endlink
     @param[in] buffer_sync_handler \link BufferSyncHandler \endlink
     @param[in] socket_handler \link SocketHandler \endlink
+    @param[in] ipc_intf \link IPCIntf \endlink
     @param[out] interface \link CoreInterface \endlink
     @param[in] version \link SDM_VERSION_TAG \endlink. Client must not override this argument.
 
@@ -146,7 +149,9 @@ class CoreInterface {
   */
   static DisplayError CreateCore(BufferAllocator *buffer_allocator,
                                  BufferSyncHandler *buffer_sync_handler,
-                                 SocketHandler *socket_handler, CoreInterface **interface,
+                                 SocketHandler *socket_handler,
+                                 std::shared_ptr<IPCIntf> ipc_intf,
+                                 CoreInterface **interface,
                                  uint32_t version = SDM_VERSION_TAG);
 
   /*! @brief Method to release handle to display core interface.

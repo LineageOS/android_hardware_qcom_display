@@ -883,7 +883,7 @@ DisplayError HWPeripheralDRM::SetBLScale(uint32_t level) {
   return kErrorNone;
 }
 
-DisplayError HWPeripheralDRM::GetPanelBrightnessBasePath(std::string *base_path) {
+DisplayError HWPeripheralDRM::GetPanelBrightnessBasePath(std::string *base_path) const {
   if (!base_path) {
     DLOGE("Invalid base_path is null pointer");
     return kErrorParameters;

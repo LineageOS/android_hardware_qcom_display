@@ -41,7 +41,7 @@ class GLLayerStitch {
   static void Destroy(GLLayerStitch *intf);
 
   virtual int Blit(const private_handle_t *src_hnd, const private_handle_t *dst_hnd,
-                   const GLRect &src_rect, const GLRect &dst_rect,
+                   const GLRect &src_rect, const GLRect &dst_rect, const GLRect &scissor_rect,
                    const shared_ptr<Fence> &src_acquire_fence,
                    const shared_ptr<Fence> &dst_acquire_fence,
                    shared_ptr<Fence> *release_fence) = 0;

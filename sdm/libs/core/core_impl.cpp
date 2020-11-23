@@ -41,8 +41,8 @@
 namespace sdm {
 
 CoreImpl::CoreImpl(BufferAllocator *buffer_allocator,
-                   SocketHandler *socket_handler)
-  : buffer_allocator_(buffer_allocator), socket_handler_(socket_handler) {
+                   SocketHandler *socket_handler, std::shared_ptr<IPCIntf> ipc_intf)
+  : buffer_allocator_(buffer_allocator), socket_handler_(socket_handler), ipc_intf_(ipc_intf) {
 }
 
 DisplayError CoreImpl::Init() {
@@ -137,7 +137,7 @@ DisplayError CoreImpl::CreateDisplay(DisplayType type, DisplayEventHandler *even
   switch (type) {
     case kBuiltIn:
       display_base = new DisplayBuiltIn(event_handler, hw_info_intf_, buffer_allocator_,
-                                        &comp_mgr_);
+                                        &comp_mgr_, ipc_intf_);
       break;
     case kPluggable:
       display_base = new DisplayPluggable(event_handler, hw_info_intf_, buffer_allocator_,
@@ -187,7 +187,7 @@ DisplayError CoreImpl::CreateDisplay(int32_t display_id, DisplayEventHandler *ev
   switch (display_type) {
     case kBuiltIn:
       display_base = new DisplayBuiltIn(display_id, event_handler, hw_info_intf_,
-                                        buffer_allocator_, &comp_mgr_);
+                                        buffer_allocator_, &comp_mgr_, ipc_intf_);
       break;
     case kPluggable:
       display_base = new DisplayPluggable(display_id, event_handler, hw_info_intf_,

@@ -42,7 +42,7 @@ class GLLayerStitchImpl : public GLLayerStitch, public GLCommon {
   explicit GLLayerStitchImpl(bool secure);
   virtual ~GLLayerStitchImpl();
   virtual int Blit(const private_handle_t *src_hnd, const private_handle_t *dst_hnd,
-                   const GLRect &src_rect, const GLRect &dst_rect,
+                   const GLRect &src_rect, const GLRect &dst_rect, const GLRect &scissor_rect,
                    const shared_ptr<Fence> &src_acquire_fence,
                    const shared_ptr<Fence> &dst_acquire_fence,
                    shared_ptr<Fence> *release_fence);
@@ -52,6 +52,8 @@ class GLLayerStitchImpl : public GLLayerStitch, public GLCommon {
  private:
   bool secure_ = false;
   GLContext ctx_;
+
+  void ClearWithTransparency(const GLRect &scissor_rect);
 };
 
 }  // namespace sdm

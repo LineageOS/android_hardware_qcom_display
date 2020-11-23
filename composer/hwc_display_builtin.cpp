@@ -144,8 +144,8 @@ int HWCDisplayBuiltIn::Init() {
   is_primary_ = display_intf_->IsPrimaryDisplay();
 
   if (is_primary_) {
-    Debug::GetWindowRect(&window_rect_.left, &window_rect_.top,
-                                 &window_rect_.right, &window_rect_.bottom);
+    windowed_display_ = Debug::GetWindowRect(&window_rect_.left, &window_rect_.top,
+                      &window_rect_.right, &window_rect_.bottom) != kErrorUndefined;
     DLOGI("Window rect : [%f %f %f %f]", window_rect_.left, window_rect_.top,
            window_rect_.right, window_rect_.bottom);
 
@@ -164,6 +164,10 @@ int HWCDisplayBuiltIn::Init() {
   value = 0;
   DebugHandler::Get()->GetProperty(DISABLE_DYNAMIC_FPS, &value);
   disable_dyn_fps_ = (value == 1);
+
+  value = 0;
+  DebugHandler::Get()->GetProperty(ENABLE_ROUNDED_CORNER, &value);
+  enable_round_corner_ = (value == 1);
 
   uint32_t config_index = 0;
   GetActiveDisplayConfig(&config_index);
@@ -215,6 +219,9 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
 
   // Fill in the remaining blanks in the layers and add them to the SDM layerstack
   BuildLayerStack();
+
+  // Track damage regions if needed.
+  EnablePartialUpdate();
 
   // Check for scaling layers during Doze mode
   ValidateUiScaling();
@@ -347,7 +354,8 @@ HWC2::Error HWCDisplayBuiltIn::CommitStitchLayers() {
     Layer *stitch_layer = stitch_target_->GetSDMLayer();
     LayerBuffer &output_buffer = stitch_layer->input_buffer;
     ctx.dst_hnd = reinterpret_cast<const private_handle_t *>(output_buffer.buffer_id);
-    SetRect(layer->stitch_dst_rect, &ctx.dst_rect);
+    SetRect(layer->stitch_info.dst_rect, &ctx.dst_rect);
+    SetRect(layer->stitch_info.slice_rect, &ctx.scissor_rect);
     ctx.src_acquire_fence = input_buffer.acquire_fence;
 
     layer_stitch_task_.PerformTask(LayerStitchTaskCode::kCodeStitch, &ctx);
@@ -1372,6 +1380,11 @@ HWC2::Error HWCDisplayBuiltIn::SetClientTarget(buffer_handle_t target,
     return error;
   }
 
+  // windowed_display and dynamic scaling are not supported.
+  if (windowed_display_) {
+    return HWC2::Error::None;
+  }
+
   Layer *sdm_layer = client_target_->GetSDMLayer();
   uint32_t fb_width = 0, fb_height = 0;
 
@@ -1434,8 +1447,8 @@ void HWCDisplayBuiltIn::OnTask(const LayerStitchTaskCode &task_code,
         DTRACE_SCOPED();
         LayerStitchContext* ctx = reinterpret_cast<LayerStitchContext*>(task_context);
         gl_layer_stitch_->Blit(ctx->src_hnd, ctx->dst_hnd, ctx->src_rect, ctx->dst_rect,
-                               ctx->src_acquire_fence, ctx->dst_acquire_fence,
-                               &(ctx->release_fence));
+                               ctx->scissor_rect, ctx->src_acquire_fence,
+                               ctx->dst_acquire_fence, &(ctx->release_fence));
       }
       break;
     case LayerStitchTaskCode::kCodeDestroyInstance: {
@@ -1600,6 +1613,31 @@ void HWCDisplayBuiltIn::ConfigureCwbAtLm(uint32_t *x_pixels, uint32_t *y_pixels)
   } else {
     GetFrameBufferResolution(x_pixels, y_pixels);
   }
+}
+
+bool HWCDisplayBuiltIn::HasReadBackBufferSupport() {
+  DisplayConfigFixedInfo fixed_info = {};
+  display_intf_->GetConfig(&fixed_info);
+
+  return fixed_info.readback_supported;
+}
+
+void HWCDisplayBuiltIn::EnablePartialUpdate() {
+  if (partial_update_enabled_) {
+    return;
+  }
+
+  if (!layer_stack_.flags.mask_present || enable_round_corner_) {
+    return;
+  }
+
+  // Update PU status.
+  partial_update_enabled_ = true;
+
+  for (auto hwc_layer : layer_set_) {
+    hwc_layer->SetPartialUpdate(partial_update_enabled_);
+  }
+  client_target_->SetPartialUpdate(partial_update_enabled_);
 }
 
 }  // namespace sdm

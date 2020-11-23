@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -29,6 +29,7 @@
 
 #include <utils/sys.h>
 #include <sys/ioctl.h>
+#include <sys/inotify.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <string>
@@ -56,6 +57,9 @@ Sys::dup Sys::dup_ = ::dup;
 Sys::read Sys::read_ = ::read;
 Sys::write Sys::write_ = ::write;
 Sys::eventfd Sys::eventfd_ = ::eventfd;
+Sys::inotify_init Sys::inotify_init_ = ::inotify_init;
+Sys::inotify_add_watch Sys::inotify_add_watch_ = ::inotify_add_watch;
+Sys::inotify_rm_watch Sys::inotify_rm_watch_ = ::inotify_rm_watch;
 
 bool Sys::getline_(fstream &fs, std::string &line) {
   return std::getline(fs, line) ? true : false;

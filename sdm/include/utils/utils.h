@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2016 - 2018, 2020 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -30,6 +30,7 @@
 #ifndef __UTILS_H__
 #define __UTILS_H__
 
+#include <stdint.h>
 #include <cstring>
 
 namespace sdm {
@@ -37,6 +38,7 @@ namespace sdm {
 float gcd(float a, float b);
 float lcm(float a, float b);
 void CloseFd(int *fd);
+uint64_t GetSystemTimeInNs();
 
 template<class T>
 bool SameConfig(T *t1, T *t2, unsigned int size) {

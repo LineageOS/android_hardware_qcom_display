@@ -170,8 +170,13 @@ int getSupportedBitClk(int dpy, std::vector<uint64_t>& bit_rates);
 // Sets the specified min and max luminance values.
 int setPanelLuminanceAttributes(int dpy, float min_lum, float max_lum);
 
+// Get the port id for a given display id
+int GetDisplayPortId(int dpy, int *port_id);
+
 }; //namespace
 
 
 extern "C" int waitForComposerInit();
+extern "C" int waitForComposerInitPerf();
+
 #endif

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -49,6 +49,7 @@
 #include <map>
 #include <utility>
 #include <vector>
+#include <string>
 
 #include "hw_events_drm.h"
 
@@ -147,6 +148,18 @@ DisplayError HWEventsDRM::InitializePollFd() {
         poll_fds_[i].events = POLLIN | POLLPRI | POLLERR;
         histogram_index_ = i;
       } break;
+      case HWEvent::BACKLIGHT_EVENT: {
+        std::lock_guard<std::mutex> lock(backlight_mutex_);
+        int inotify_fd = Sys::inotify_init_();
+        if (inotify_fd < 0) {
+          DLOGE("inotify init failed");
+          return kErrorResources;
+        }
+        poll_fds_[i].fd = inotify_fd;
+        poll_fds_[i].events = POLLIN;
+        backlight_event_index_ = i;
+        DLOGI("%s backlight_event_index_ %d", brightness_node_.c_str(), backlight_event_index_);
+      } break;
       case HWEvent::CEC_READ_MESSAGE:
       case HWEvent::SHOW_BLANK_EVENT:
       case HWEvent::THERMAL_LEVEL:
@@ -193,6 +206,9 @@ DisplayError HWEventsDRM::SetEventParser() {
       case HWEvent::HISTOGRAM:
         event_data.event_parser = &HWEventsDRM::HandleHistogram;
         break;
+      case HWEvent::BACKLIGHT_EVENT:
+        event_data.event_parser = &HWEventsDRM::HandleBacklightEvent;
+        break;
       default:
         error = kErrorParameters;
         break;
@@ -221,12 +237,17 @@ DisplayError HWEventsDRM::Init(int display_id, DisplayType display_type,
 
   static_cast<const HWDeviceDRM *>(hw_intf)->GetDRMDisplayToken(&token_);
   is_primary_ = static_cast<const HWDeviceDRM *>(hw_intf)->IsPrimaryDisplay();
+  std::string backlight_path;
+  static_cast<const HWDeviceDRM *>(hw_intf)->GetPanelBrightnessBasePath(&backlight_path);
+  brightness_node_ = backlight_path + "brightness";
 
   DLOGI("Setup event handler for display %d-%d, CRTC %d, Connector %d", display_id, display_type,
         token_.crtc_id, token_.conn_id);
 
   event_handler_ = event_handler;
   poll_fds_.resize(event_list.size());
+
+  DLOGI("poll_fd size %d", (int)poll_fds_.size());
   event_thread_name_ += " - " + std::to_string(display_id) + "-" + std::to_string(display_type);
 
   PopulateHWEventData(event_list);
@@ -295,6 +316,25 @@ DisplayError HWEventsDRM::SetEventState(HWEvent event, bool enable, void *arg) {
         vsync_registered_ = false;
       }
     } break;
+    case HWEvent::BACKLIGHT_EVENT: {
+      std::lock_guard<std::mutex> lock(backlight_mutex_);
+      if (backlight_event_index_ == UINT32_MAX) {
+        return kErrorResources;
+      }
+      int inotify_fd = poll_fds_[backlight_event_index_].fd;
+      if (!enable) {
+        if (backlight_wd_ > 0) {
+          Sys::inotify_rm_watch_(inotify_fd, backlight_wd_);
+        }
+        backlight_wd_ = -1;
+      } else if (enable && backlight_wd_ < 0) {
+        backlight_wd_ = Sys::inotify_add_watch_(inotify_fd, brightness_node_.c_str(), IN_MODIFY);
+        if (backlight_wd_ < 0) {
+          DLOGE("inotify_add_watch failed %d", backlight_wd_);
+          return kErrorResources;
+        }
+      }
+    } break;
     default:
       DLOGE("Event not supported");
       return kErrorNotSupported;
@@ -330,6 +370,12 @@ DisplayError HWEventsDRM::CloseFds() {
         Sys::close_(poll_fds_[i].fd);
         poll_fds_[i].fd = -1;
         break;
+      case HWEvent::BACKLIGHT_EVENT: {
+        std::lock_guard<std::mutex> lock(backlight_mutex_);
+        Sys::inotify_rm_watch_(poll_fds_[i].fd, backlight_wd_);
+        Sys::close_(poll_fds_[i].fd);
+        poll_fds_[i].fd = -1;
+      } break;
       case HWEvent::IDLE_NOTIFY:
       case HWEvent::IDLE_POWER_COLLAPSE:
       case HWEvent::PANEL_DEAD:
@@ -398,6 +444,26 @@ void *HWEventsDRM::DisplayEventHandler() {
             (this->*(event_data_list_[i]).event_parser)(data);
           }
           break;
+        case HWEvent::BACKLIGHT_EVENT:
+          if ((poll_fd.revents & POLLIN)) {
+            char buffer[kMaxEventBufferLength] = {};
+            int len = 0;
+            int length = Sys::read_(poll_fd.fd, buffer, kMaxEventBufferLength);
+            while (len < length) {
+              struct inotify_event *event = (struct inotify_event *) &buffer[len];
+              DLOGI("event masks %x in_modify %x", event->mask, IN_MODIFY);
+              if (event->mask & IN_MODIFY) {
+                int brightness_fd = Sys::open_(brightness_node_.c_str(), O_RDONLY);
+                if (brightness_fd > 0) {
+                  if (Sys::read_(brightness_fd, data, kMaxStringLength) > 0) {
+                      (this->*(event_data_list_[i]).event_parser)(data);
+                  }
+                  Sys::close_(brightness_fd);
+                }
+              }
+              len += sizeof(struct inotify_event) + event->len;
+            }
+          }  break;
         case HWEvent::CEC_READ_MESSAGE:
         case HWEvent::SHOW_BLANK_EVENT:
         case HWEvent::THERMAL_LEVEL:
@@ -560,6 +626,7 @@ DisplayError HWEventsDRM::RegisterHwRecovery(bool enable) {
     return kErrorResources;
   }
 
+  DLOGI("Register hw recovery %s", enable ? "enable" : "disable");
   return kErrorNone;
 }
 
@@ -804,6 +871,10 @@ void HWEventsDRM::HandleHistogram(char * /*data*/) {
   auto msm_event = reinterpret_cast<struct drm_msm_event_resp *>(event_data.data());
   auto blob_id = reinterpret_cast<uint32_t *>(msm_event->data);
   event_handler_->Histogram(poll_fds_[histogram_index_].fd, *blob_id);
+}
+
+void HWEventsDRM::HandleBacklightEvent(char *data) {
+  event_handler_->HandleBacklightEvent(atof(data));
 }
 
 int HWEventsDRM::SetHwRecoveryEvent(const uint32_t hw_event_code, HWRecoveryEvent *sdm_event_code) {
