@@ -168,6 +168,7 @@ class ColorManagerProxy {
                                   bool valid_meta_data, const ColorMetaData &meta_data);
   DisplayError ConvertToPPFeatures(const HwConfigOutputParams &params, PPFeaturesConfig *out_data);
   void DumpColorMetaData(const ColorMetaData &color_metadata);
+  bool HasNativeModeSupport();
 
   int32_t display_id_;
   DisplayType device_type_;
