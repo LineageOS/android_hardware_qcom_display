@@ -1001,6 +1001,14 @@ class DisplayInterface {
   */
   virtual DisplayError ClearLUTs() = 0;
 
+  /*! @brief Method to notify the stc library that connect/disconnect QDCM tool.
+
+    @param[in] connect or disconnect
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError NotifyDisplayCalibrationMode(bool in_calibration) = 0;
+
  protected:
   virtual ~DisplayInterface() { }
 };

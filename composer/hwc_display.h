@@ -114,6 +114,9 @@ class HWCColorMode {
   virtual HWC2::Error ApplyCurrentColorModeWithRenderIntent(bool hdr_present);
   virtual HWC2::Error CacheColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
   void ReapplyMode() { apply_mode_ = true; };
+  virtual HWC2::Error NotifyDisplayCalibrationMode(bool in_calibration) {
+    return HWC2::Error::Unsupported;
+  }
 
  protected:
   template <class T>
@@ -428,6 +431,9 @@ class HWCDisplay : public DisplayEventHandler {
   HWC2::Error SetDisplayElapseTime(uint64_t time);
   virtual bool IsDisplayIdle() { return false; };
   virtual bool HasReadBackBufferSupport() { return false; }
+  virtual HWC2::Error NotifyDisplayCalibrationMode(bool in_calibration) {
+    return HWC2::Error::Unsupported;
+  };
 
  protected:
   static uint32_t throttling_refresh_rate_;

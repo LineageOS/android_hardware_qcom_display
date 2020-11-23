@@ -173,6 +173,9 @@ class DisplayBase : public DisplayInterface {
     return kErrorNotSupported;
   }
   virtual DisplayError IsSupportedOnDisplay(SupportedDisplayFeature feature, uint32_t *supported);
+  virtual DisplayError NotifyDisplayCalibrationMode(bool in_calibration) {
+    return kErrorNotSupported;
+  }
 
  protected:
   const char *kBt2020Pq = "bt2020_pq";

@@ -54,6 +54,7 @@ class HWCColorModeStc : public HWCColorMode {
   HWC2::Error ApplyCurrentColorModeWithRenderIntent(bool hdr_present);
   HWC2::Error CacheColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
   ColorMode GetCurrentColorMode() { return current_color_mode_; }
+  HWC2::Error NotifyDisplayCalibrationMode(bool in_calibration);
 
  private:
   snapdragoncolor::ColorModeList stc_mode_list_;

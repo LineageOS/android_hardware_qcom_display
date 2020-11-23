@@ -1065,6 +1065,20 @@ DisplayError DisplayBuiltIn::SetStcColorMode(const snapdragoncolor::ColorMode &c
   return ret;
 }
 
+DisplayError DisplayBuiltIn::NotifyDisplayCalibrationMode(bool in_calibration) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (!color_mgr_) {
+    return kErrorNotSupported;
+  }
+  DisplayError ret = kErrorNone;
+  ret = color_mgr_->NotifyDisplayCalibrationMode(in_calibration);
+  if (ret != kErrorNone) {
+    DLOGE("Failed to notify QDCM Mode status, ret = %d state = %d", ret, in_calibration);
+  }
+
+  return ret;
+}
+
 std::string DisplayBuiltIn::Dump() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   HWDisplayAttributes attrib;

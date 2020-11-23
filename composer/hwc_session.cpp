@@ -2209,9 +2209,11 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
           break;
         case kEnterQDCMMode:
           ret = color_mgr_->EnableQDCMMode(true, hwc_display_[display_id]);
+          hwc_display_[display_id]->NotifyDisplayCalibrationMode(true);
           break;
         case kExitQDCMMode:
           ret = color_mgr_->EnableQDCMMode(false, hwc_display_[display_id]);
+          hwc_display_[display_id]->NotifyDisplayCalibrationMode(false);
           break;
         case kApplySolidFill:
           {
