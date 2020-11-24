@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "096f119f_e72d13cc",
+        "filename": "libdebug/Android.mk",
+        "patchSetId": 9
+      },
+      "lineNbr": 11,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2020-11-24T12:17:25Z",
+      "side": 1,
+      "message": "Not necessary either? https://github.com/LineageOS/android_hardware_qcom_display/blob/eea6f86a782c22cc9f67e6eb3140a7b4c613203e/Android.bp#L30",
+      "revId": "eea6f86a782c22cc9f67e6eb3140a7b4c613203e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
