@@ -78,6 +78,8 @@ Return<void> QtiComposer::getCapabilities(getCapabilities_cb _hidl_cb) {
 }
 
 Return<void> QtiComposer::dumpDebugInfo(dumpDebugInfo_cb _hidl_cb) {
+  hidl_string buf_reply = "";
+  _hidl_cb(buf_reply);
   return Void();
 }
 
