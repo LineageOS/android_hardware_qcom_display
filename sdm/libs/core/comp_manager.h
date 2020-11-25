@@ -107,6 +107,7 @@ class CompManager {
   bool GetDemuraStatusForDisplay(const int32_t &display_id) {
     return display_demura_status_[display_id];
   }
+  DisplayError SetMaxSDEClk(uint32_t clk);
 
  private:
   static const int kMaxThermalLevel = 3;

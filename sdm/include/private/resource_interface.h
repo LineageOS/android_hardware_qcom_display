@@ -83,6 +83,7 @@ class ResourceInterface {
                                                    const int8_t &preferred_rect) = 0;
   virtual DisplayError GetDemuraFetchResources(Handle display_ctx, FetchResourceList *frl) = 0;
   virtual ~ResourceInterface() {}
+  virtual DisplayError SetMaxSDEClk(uint32_t clk) = 0;
 };
 
 }  // namespace sdm

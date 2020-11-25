@@ -67,6 +67,7 @@ class DisplayNull : public DisplayInterface {
   virtual bool CanSkipValidate() { return true; }
   virtual bool GameEnhanceSupported() { return false; }
   virtual bool HasDemura() { return false; }
+  virtual void CheckMMRMState() { }
 
   MAKE_NO_OP(CommitOrPrepare(LayerStack *))
   MAKE_NO_OP(Commit(LayerStack *))

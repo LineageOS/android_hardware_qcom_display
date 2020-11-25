@@ -445,6 +445,7 @@ class HWCDisplay : public DisplayEventHandler {
   static uint32_t throttling_refresh_rate_;
   // Maximum number of layers supported by display manager.
   static const uint32_t kMaxLayerCount = 32;
+  static bool mmrm_restricted_;
   HWCDisplay(CoreInterface *core_intf, BufferAllocator *buffer_allocator, HWCCallbacks *callbacks,
              HWCDisplayEventHandler *event_handler, qService::QService *qservice, DisplayType type,
              hwc2_display_t id, int32_t sdm_id, DisplayClass display_class);
@@ -493,6 +494,7 @@ class HWCDisplay : public DisplayEventHandler {
   void SetActiveConfigIndex(int active_config_index);
   int GetActiveConfigIndex();
   DisplayError ValidateTUITransition (SecureEvent secure_event);
+  void MMRMEvent(bool restricted);
 
   bool validated_ = false;
   bool layer_stack_invalid_ = true;

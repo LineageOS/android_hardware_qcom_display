@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -120,7 +120,9 @@ HWCDisplayPluggable::HWCDisplayPluggable(CoreInterface *core_intf,
 HWC2::Error HWCDisplayPluggable::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
   auto status = HWC2::Error::None;
 
-  if (active_secure_sessions_[kSecureDisplay] || display_paused_) {
+  if (active_secure_sessions_[kSecureDisplay] || display_paused_ ||
+     (mmrm_restricted_ && (current_power_mode_ == HWC2::PowerMode::Off ||
+     current_power_mode_ == HWC2::PowerMode::DozeSuspend))) {
     MarkLayersForGPUBypass();
     return status;
   }
@@ -151,7 +153,9 @@ HWC2::Error HWCDisplayPluggable::Validate(uint32_t *out_num_types, uint32_t *out
 HWC2::Error HWCDisplayPluggable::Present(shared_ptr<Fence> *out_retire_fence) {
   auto status = HWC2::Error::None;
 
-  if (!active_secure_sessions_[kSecureDisplay] && !display_paused_) {
+  if (!active_secure_sessions_[kSecureDisplay] && !display_paused_ &&
+     !(mmrm_restricted_ && (current_power_mode_ == HWC2::PowerMode::Off ||
+     current_power_mode_ == HWC2::PowerMode::DozeSuspend))) {
     status = HWCDisplay::CommitLayerStack();
     if (status == HWC2::Error::None) {
       status = HWCDisplay::PostCommitLayerStack(out_retire_fence);

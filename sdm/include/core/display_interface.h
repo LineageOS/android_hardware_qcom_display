@@ -379,6 +379,9 @@ class DisplayEventHandler {
   /*! @brief Event handler for events received by Display HAL. */
   virtual DisplayError HandleEvent(DisplayEvent event) = 0;
 
+  /*! @brief Event handler for MMRM. */
+  virtual void MMRMEvent(bool restricted) = 0;
+
  protected:
   virtual ~DisplayEventHandler() { }
 };

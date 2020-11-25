@@ -44,7 +44,9 @@
 namespace sdm {
 
 bool DisplayBase::display_power_reset_pending_ = false;
+bool DisplayBase::primary_active_ = false;
 Locker DisplayBase::display_power_reset_lock_;
+int32_t DisplayBase::mmrm_floor_clk_vote_ = 100000000;
 
 static ColorPrimaries GetColorPrimariesFromAttribute(const std::string &gamut) {
   if (gamut.find(kDisplayP3) != std::string::npos || gamut.find(kDcip3) != std::string::npos) {
@@ -117,6 +119,7 @@ DisplayError DisplayBase::Init() {
   uint32_t active_index = 0;
   int drop_vsync = 0;
   int hw_recovery_threshold = 1;
+  int32_t prop = 0;
   hw_intf_->GetActiveConfig(&active_index);
   hw_intf_->GetDisplayAttributes(active_index, &display_attributes_);
   fb_config_ = display_attributes_;
@@ -190,6 +193,9 @@ DisplayError DisplayBase::Init() {
   DLOGI("hw_recovery_threshold_ set to %d", hw_recovery_threshold);
   if (hw_recovery_threshold > 0) {
     hw_recovery_threshold_ = (UINT32(hw_recovery_threshold));
+  }
+  if (Debug::Get()->GetProperty(MMRM_FLOOR_CLK_VOTE, &prop) == kErrorNone) {
+    mmrm_floor_clk_vote_ = prop;
   }
 
   SetupPanelFeatureFactory();
@@ -442,6 +448,8 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   rc_pu_flag_status_ = disp_layer_stack_.info.rc_pu_flag_status;
 
   comp_manager_->PrePrepare(display_comp_ctx_, &disp_layer_stack_);
+
+  CheckMMRMState();
 
   while (true) {
     error = comp_manager_->Prepare(display_comp_ctx_, &disp_layer_stack_);
@@ -966,6 +974,9 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     if (pending_power_state_ == kPowerStateNone) {
       active_ = active;
       state_ = state;
+      if (IsPrimaryDisplay()) {
+        primary_active_ = active;
+      }
       // Handle vsync pending on resume, Since the power on commit is synchronous we pass -1 as
       // retire fence otherwise pass valid retire fence
       if (state == kStateOn) {
@@ -2442,6 +2453,12 @@ DisplayError DisplayBase::ResetPendingPowerState(const shared_ptr<Fence> &retire
 
     DisplayState pending_state;
     GetPendingDisplayState(&pending_state);
+    if (IsPrimaryDisplay() &&
+     (pending_power_state_ != kPowerStateOff)) {
+      primary_active_ = true;
+    } else {
+      primary_active_ = false;
+    }
 
     state_ = pending_state;
     active_ = true;
@@ -2633,6 +2650,64 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
 DisplayError DisplayBase::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
   ClientLock lock(disp_mutex_);
   return hw_intf_->OnMinHdcpEncryptionLevelChange(min_enc_level);
+}
+
+void DisplayBase::CheckMMRMState() {
+  ClientLock lock(disp_mutex_);
+
+  if (!mmrm_updated_) {
+    return;
+  }
+  DLOGI("Handling updated MMRM request");
+  mmrm_updated_ = false;
+  bool reduced_clk = (mmrm_requested_clk_ < hw_resource_info_.max_sde_clk) ? true : false;
+
+  // Check layers if clock is less than max
+  LayerStack *stack = disp_layer_stack_.stack;
+  if (reduced_clk && stack) {
+    if (stack->flags.hdr_present || stack->flags.secure_present) {
+      DLOGW("Cannot lower clock, hdr_present=%d, secure_present=%d",
+        stack->flags.hdr_present, stack->flags.secure_present);
+      return;
+    } else {
+      for (auto &layer : stack->layers) {
+        if (layer->flags.sde_preferred) {
+          DLOGW("Cannot lower clock. SDE Preferred layer");
+          return;
+        }
+      }
+    }
+  }
+
+  if (comp_manager_->SetMaxSDEClk(mmrm_requested_clk_) != kErrorNone) {
+    DLOGW("Could not set max sde clk");
+    return;
+  }
+
+  // Set flag to reject new ext. display creation/power change.Refresh all displays.
+  event_handler_->MMRMEvent(reduced_clk);
+}
+
+void DisplayBase::MMRMEvent(uint32_t clk) {
+  ClientLock lock(disp_mutex_);
+
+  if (clk < mmrm_floor_clk_vote_) {
+    DLOGW("Clk vote of %u is lower than floor clock %d. Bail.", clk, mmrm_floor_clk_vote_);
+    return;
+  }
+
+  // Only support primary. If off, allow secondary.
+  if (!IsPrimaryDisplay() && primary_active_) {
+    DLOGV("Ignoring event on secondary");
+    return;
+  }
+
+  mmrm_requested_clk_ = clk;
+  mmrm_updated_ = true;
+  DLOGV("MMRM state has been updated");
+
+  // Invalidate to retrigger clk calculation
+  event_handler_->HandleEvent(kInvalidateDisplay);
 }
 
 }  // namespace sdm

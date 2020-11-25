@@ -740,4 +740,12 @@ DisplayError CompManager::GetDemuraFetchResources(Handle display_ctx, FetchResou
   return resource_intf_->GetDemuraFetchResources(display_comp_ctx->display_resource_ctx, frl);
 }
 
+DisplayError CompManager::SetMaxSDEClk(uint32_t clk) {
+  if (resource_intf_) {
+    return resource_intf_->SetMaxSDEClk(clk);
+  }
+
+  return kErrorNotSupported;
+}
+
 }  // namespace sdm

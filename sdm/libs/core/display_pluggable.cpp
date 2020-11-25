@@ -460,4 +460,9 @@ DisplayError DisplayPluggable::colorSamplingOff() {
     return kErrorNone;
 }
 
+void DisplayPluggable::MMRMEvent(uint32_t clk) {
+  // Stub for future support
+  return;
+}
+
 }  // namespace sdm

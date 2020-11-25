@@ -260,6 +260,8 @@ class DisplayBase : public DisplayInterface {
   DisplayError SetupPanelFeatureFactory();
   void CommitThread();
   virtual void HandleAsyncCommit();
+  void MMRMEvent(uint32_t clk);
+  void CheckMMRMState();
 
   DisplayMutex disp_mutex_;
   std::thread commit_thread_;
@@ -318,6 +320,7 @@ class DisplayBase : public DisplayInterface {
 
   static Locker display_power_reset_lock_;
   static bool display_power_reset_pending_;
+  static int32_t mmrm_floor_clk_vote_;
   SecureEvent secure_event_ = kSecureEventMax;
   bool rc_panel_feature_init_ = false;
   bool spr_enable_ = false;
@@ -334,6 +337,9 @@ class DisplayBase : public DisplayInterface {
   unsigned int rc_cached_res_height_ = 0;
   std::unique_ptr<RCIntf> rc_core_ = nullptr;
   uint64_t rc_pu_flag_status_ = 0;
+  bool mmrm_updated_ = false;
+  uint32_t mmrm_requested_clk_ = 0;
+  static bool primary_active_;
 };
 
 }  // namespace sdm

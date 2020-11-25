@@ -105,13 +105,14 @@ DisplayError DisplayBuiltIn::Init() {
                    /*HWEvent::IDLE_NOTIFY, */
                    HWEvent::SHOW_BLANK_EVENT, HWEvent::THERMAL_LEVEL, HWEvent::IDLE_POWER_COLLAPSE,
                    HWEvent::PINGPONG_TIMEOUT, HWEvent::PANEL_DEAD, HWEvent::HW_RECOVERY,
-                   HWEvent::HISTOGRAM, HWEvent::BACKLIGHT_EVENT};
+                   HWEvent::HISTOGRAM, HWEvent::BACKLIGHT_EVENT, HWEvent::MMRM};
   } else {
     event_list_ = {HWEvent::VSYNC,         HWEvent::EXIT,
                    HWEvent::IDLE_NOTIFY,   HWEvent::SHOW_BLANK_EVENT,
                    HWEvent::THERMAL_LEVEL, HWEvent::PINGPONG_TIMEOUT,
                    HWEvent::PANEL_DEAD,    HWEvent::HW_RECOVERY,
-                   HWEvent::HISTOGRAM,     HWEvent::BACKLIGHT_EVENT};
+                   HWEvent::HISTOGRAM,     HWEvent::BACKLIGHT_EVENT,
+                   HWEvent::MMRM};
   }
 #endif
   avr_prop_disabled_ = Debug::IsAVRDisabled();
@@ -902,6 +903,10 @@ void DisplayBuiltIn::IdlePowerCollapse() {
 DisplayError DisplayBuiltIn::ClearLUTs() {
   comp_manager_->ProcessIdlePowerCollapse(display_comp_ctx_);
   return kErrorNone;
+}
+
+void DisplayBuiltIn::MMRMEvent(uint32_t clk) {
+  DisplayBase::MMRMEvent(clk);
 }
 
 void DisplayBuiltIn::PanelDead() {

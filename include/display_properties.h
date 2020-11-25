@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -114,6 +114,7 @@
 #define DISABLE_GPU_COLOR_CONVERT            DISPLAY_PROP("disable_gpu_color_convert")
 #define ENABLE_ASYNC_VDS_CREATION            DISPLAY_PROP("enable_async_vds_creation")
 #define ENABLE_HISTOGRAM_INTR                DISPLAY_PROP("enable_hist_intr")
+#define DISABLE_MMRM_PROP                    DISPLAY_PROP("disable_mmrm_prop")
 #define DEFER_FPS_FRAME_COUNT                DISPLAY_PROP("defer_fps_frame_count")
 #define DISABLE_ROTATOR_PRE_DOWNSCALER_PROP  DISPLAY_PROP("disable_pre_downscaler")
 #define DISABLE_INLINE_ROTATOR_UI_PROP       DISPLAY_PROP("disable_inline_rotator_ui")
@@ -136,6 +137,8 @@
 #define DISABLE_DYNAMIC_FPS                  DISPLAY_PROP("disable_dynamic_fps")
 #define ENABLE_QSYNC_IDLE                    DISPLAY_PROP("enable_qsync_idle")
 #define ENHANCE_IDLE_TIME                    DISPLAY_PROP("enhance_idle_time")
+
+#define MMRM_FLOOR_CLK_VOTE                  DISPLAY_PROP("mmrm_floor_vote")
 
 // Add all vendor.display properties above
 
