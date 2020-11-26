@@ -144,8 +144,8 @@ int HWCDisplayBuiltIn::Init() {
   is_primary_ = display_intf_->IsPrimaryDisplay();
 
   if (is_primary_) {
-    windowed_display_ = Debug::GetWindowRect(&window_rect_.left, &window_rect_.top,
-                      &window_rect_.right, &window_rect_.bottom) != kErrorUndefined;
+    windowed_display_ = (Debug::GetWindowRect(&window_rect_.left, &window_rect_.top,
+                         &window_rect_.right, &window_rect_.bottom) == 0);
     DLOGI("Window rect : [%f %f %f %f]", window_rect_.left, window_rect_.top,
            window_rect_.right, window_rect_.bottom);
 
