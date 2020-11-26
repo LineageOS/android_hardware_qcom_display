@@ -850,7 +850,9 @@ int32_t HWCSession::PresentDisplay(hwc2_display_t display, shared_ptr<Fence> *ou
   HandlePendingPowerMode(display, *out_retire_fence);
   HandlePendingHotplug(display, *out_retire_fence);
   HandlePendingRefresh();
-  cwb_.PresentDisplayDone(display);
+  if (status != HWC2::Error::NotValidated) {
+    cwb_.PresentDisplayDone(display);
+  }
   display_ready_.set(UINT32(display));
   std::unique_lock<std::mutex> caller_lock(hotplug_mutex_);
   if (!resource_ready_) {
