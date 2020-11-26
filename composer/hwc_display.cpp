@@ -1327,6 +1327,7 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
       break;
     }
     case kSyncInvalidateDisplay:
+    case kIdlePowerCollapse:
     case kThermalEvent: {
       SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[id_]);
       validated_ = false;
@@ -1350,8 +1351,6 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
               id_);
       }
     } break;
-    case kIdlePowerCollapse:
-      break;
     case kInvalidateDisplay:
       validated_ = false;
       break;
