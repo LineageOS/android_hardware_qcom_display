@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2017-2018, 2020, The Linux Foundation. All rights reserved.
+Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -31,7 +31,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define __HW_PERIPHERAL_DRM_H__
 
 #include <vector>
-#include <string>
 #include "hw_device_drm.h"
 
 namespace sdm {
@@ -57,19 +56,11 @@ class HWPeripheralDRM : public HWDeviceDRM {
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event, HWLayers *hw_layers);
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous);
   virtual DisplayError PowerOn(const HWQosData &qos_data, int *release_fence);
-  virtual DisplayError PowerOff(bool teardown);
-  virtual DisplayError Doze(const HWQosData &qos_data, int *release_fence);
-  virtual DisplayError DozeSuspend(const HWQosData &qos_data, int *release_fence);
   virtual DisplayError SetDisplayDppsAdROI(void *payload);
   virtual DisplayError SetDynamicDSIClock(uint64_t bit_clk_rate);
   virtual DisplayError GetDynamicDSIClock(uint64_t *bit_clk_rate);
   virtual DisplayError SetDisplayAttributes(uint32_t index);
-  virtual DisplayError SetDisplayMode(const HWDisplayMode hw_display_mode);
-  virtual DisplayError SetRefreshRate(uint32_t refresh_rate);
   virtual DisplayError TeardownConcurrentWriteback(void);
-  virtual DisplayError SetPanelBrightness(int level);
-  virtual DisplayError GetPanelBrightness(int *level);
-  virtual void GetHWPanelMaxBrightness();
 
  private:
   void SetDestScalarData(HWLayersInfo hw_layer_info, bool validate);
@@ -92,13 +83,11 @@ class HWPeripheralDRM : public HWDeviceDRM {
   std::vector<SDEScaler> scalar_data_ = {};
   CWBConfig cwb_config_ = {};
   sde_drm::DRMIdlePCState idle_pc_state_ = sde_drm::DRMIdlePCState::NONE;
-  bool idle_pc_enabled_ = true;
   std::vector<DestScalarCache> dest_scalar_cache_ = {};
   drm_msm_ad4_roi_cfg ad4_roi_cfg_ = {};
   bool needs_ds_update_ = false;
   void PopulateBitClkRates();
   std::vector<uint64_t> bitclk_rates_;
-  std::string brightness_base_path_ = "";
 };
 
 }  // namespace sdm

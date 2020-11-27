@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -34,46 +34,6 @@
 
 namespace sdm {
 
-struct DeferFpsConfig {
-  uint32_t frame_count = 0;
-  uint32_t frames_to_defer = 0;
-  uint32_t fps = 0;
-  uint32_t vsync_period_ns = 0;
-  uint32_t transfer_time_us = 0;
-  bool dirty = false;
-  bool apply = false;
-
-  void Init(uint32_t refresh_rate, uint32_t vsync_period, uint32_t transfer_time) {
-    fps = refresh_rate;
-    vsync_period_ns = vsync_period;
-    transfer_time_us = transfer_time;
-    frames_to_defer = frame_count;
-    dirty = false;
-    apply = false;
-  }
-
-  bool IsDeferredState() { return (frames_to_defer != 0); }
-
-  bool CanApplyDeferredState() { return apply; }
-
-  bool IsDirty() { return dirty; }
-
-  void MarkDirty() { dirty = IsDeferredState(); }
-
-  void UpdateDeferCount() {
-    if (frames_to_defer > 0) {
-      frames_to_defer--;
-      apply = (frames_to_defer == 0);
-    }
-  }
-
-  void Clear() {
-    frames_to_defer = 0;
-    dirty = false;
-    apply = false;
-  }
-};
-
 class DppsInfo {
  public:
   void Init(DppsPropIntf *intf, const std::string &panel_name);
@@ -96,8 +56,6 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayBuiltIn(int32_t display_id, DisplayEventHandler *event_handler,
                  HWInfoInterface *hw_info_intf, BufferSyncHandler *buffer_sync_handler,
                  BufferAllocator *buffer_allocator, CompManager *comp_manager);
-  virtual ~DisplayBuiltIn();
-
   virtual DisplayError Init();
   virtual DisplayError Deinit();
   virtual DisplayError Prepare(LayerStack *layer_stack);
@@ -111,8 +69,8 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   virtual DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate, uint32_t *max_refresh_rate);
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate);
   virtual DisplayError GetRefreshRate(uint32_t *refresh_rate);
-  virtual DisplayError SetPanelBrightness(float brightness);
-  virtual DisplayError GetPanelBrightness(float *brightness);
+  virtual DisplayError SetPanelBrightness(int level);
+  virtual DisplayError GetPanelBrightness(int *level);
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event, LayerStack *layer_stack);
   virtual DisplayError SetDisplayDppsAdROI(void *payload);
   virtual DisplayError SetQSyncMode(QSyncMode qsync_mode);
@@ -135,17 +93,11 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
 
   // Implement the DppsPropIntf
   virtual DisplayError DppsProcessOps(enum DppsOps op, void *payload, size_t size);
-  virtual DisplayError SetActiveConfig(uint32_t index);
-  virtual DisplayError ReconfigureDisplay();
 
  private:
+  bool NeedsAVREnable();
   bool CanCompareFrameROI(LayerStack *layer_stack);
   bool CanSkipDisplayPrepare(LayerStack *layer_stack);
-  HWAVRModes GetAvrMode(QSyncMode mode);
-  bool CanDeferFpsConfig(uint32_t fps);
-  void SetDeferredFpsConfig();
-  void GetFpsConfig(HWDisplayAttributes *display_attributes, HWPanelInfo *panel_info);
-  void UpdateDisplayModeParams();
 
   std::vector<HWEvent> event_list_;
   bool avr_prop_disabled_ = false;
@@ -153,15 +105,9 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   bool handle_idle_timeout_ = false;
   bool commit_event_enabled_ = false;
   DppsInfo dpps_info_ = {};
+  QSyncMode qsync_mode_ = kQSyncModeNone;
   LayerRect left_frame_roi_ = {};
   LayerRect right_frame_roi_ = {};
-  bool first_cycle_ = true;
-  int previous_retire_fence_ = -1;
-  DeferFpsConfig deferred_config_ = {};
-  float level_remainder_ = 0.0f;
-  recursive_mutex brightness_lock_;
-  float cached_brightness_ = 0.0f;
-  bool pending_brightness_ = false;
 };
 
 }  // namespace sdm

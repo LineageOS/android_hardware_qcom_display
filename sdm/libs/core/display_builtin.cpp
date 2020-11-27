@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -54,12 +54,9 @@ DisplayBuiltIn::DisplayBuiltIn(int32_t display_id, DisplayEventHandler *event_ha
   : DisplayBase(display_id, kBuiltIn, event_handler, kDeviceBuiltIn, buffer_sync_handler,
                 buffer_allocator, comp_manager, hw_info_intf) {}
 
-DisplayBuiltIn::~DisplayBuiltIn() {
-  CloseFd(&previous_retire_fence_);
-}
-
 DisplayError DisplayBuiltIn::Init() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
+  int32_t disable_defer_power_state = 0;
 
   DisplayError error = HWInterface::Create(display_id_, kBuiltIn, hw_info_intf_,
                                            buffer_sync_handler_, buffer_allocator_, &hw_intf_);
@@ -89,7 +86,6 @@ DisplayError DisplayBuiltIn::Init() {
   if (hw_panel_info_.mode == kModeCommand) {
     event_list_ = {HWEvent::VSYNC,
                    HWEvent::EXIT,
-                   HWEvent::IDLE_NOTIFY,
                    HWEvent::SHOW_BLANK_EVENT,
                    HWEvent::THERMAL_LEVEL,
                    HWEvent::IDLE_POWER_COLLAPSE,
@@ -115,9 +111,10 @@ DisplayError DisplayBuiltIn::Init() {
 
   current_refresh_rate_ = hw_panel_info_.max_fps;
 
-  int value = 0;
-  Debug::Get()->GetProperty(DEFER_FPS_FRAME_COUNT, &value);
-  deferred_config_.frame_count = (value > 0) ? UINT32(value) : 0;
+  Debug::GetProperty(DISABLE_DEFER_POWER_STATE, &disable_defer_power_state);
+  defer_power_state_ = !disable_defer_power_state;
+
+  DLOGI("defer_power_state %d", defer_power_state_);
 
   return error;
 }
@@ -145,8 +142,7 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
     }
   } else {
     if (CanSkipDisplayPrepare(layer_stack)) {
-      hw_layers_.hw_avr_info.update = needs_avr_update_;
-      hw_layers_.hw_avr_info.mode = GetAvrMode(qsync_mode_);
+      hw_layers_.hw_avr_info.enable = NeedsAVREnable();
       return kErrorNone;
     }
   }
@@ -156,8 +152,7 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
   hw_layers_ = HWLayers();
   DTRACE_END();
 
-  hw_layers_.hw_avr_info.update = needs_avr_update_;
-  hw_layers_.hw_avr_info.mode = GetAvrMode(qsync_mode_);
+  hw_layers_.hw_avr_info.enable = NeedsAVREnable();
 
   left_frame_roi_ = {};
   right_frame_roi_ = {};
@@ -175,25 +170,10 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
   return error;
 }
 
-HWAVRModes DisplayBuiltIn::GetAvrMode(QSyncMode mode) {
-  switch (mode) {
-     case kQSyncModeNone:
-       return kQsyncNone;
-     case kQSyncModeContinuous:
-       return kContinuousMode;
-     case kQsyncModeOneShot:
-     case kQsyncModeOneShotContinuous:
-       return kOneShotMode;
-     default:
-       return kQsyncNone;
-  }
-}
-
 DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
   uint32_t app_layer_count = hw_layers_.info.app_layer_count;
-  HWDisplayMode panel_mode = hw_panel_info_.mode;
 
   DTRACE_SCOPED();
 
@@ -208,38 +188,16 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
     }
   }
 
-  if (vsync_enable_) {
-    DTRACE_BEGIN("RegisterVsync");
-    // wait for previous frame's retire fence to signal.
-    buffer_sync_handler_->SyncWait(previous_retire_fence_);
-
-    // Register for vsync and then commit the frame.
-    hw_events_intf_->SetEventState(HWEvent::VSYNC, true);
-    DTRACE_END();
-  }
-
   error = DisplayBase::Commit(layer_stack);
   if (error != kErrorNone) {
     return error;
-  }
-  if (pending_brightness_) {
-    buffer_sync_handler_->SyncWait(layer_stack->retire_fence_fd);
-    SetPanelBrightness(cached_brightness_);
-    pending_brightness_ = false;
   }
 
   if (commit_event_enabled_) {
     dpps_info_.DppsNotifyOps(kDppsCommitEvent, &display_type_, sizeof(display_type_));
   }
 
-  deferred_config_.UpdateDeferCount();
-
-  ReconfigureDisplay();
-
-  if (deferred_config_.CanApplyDeferredState()) {
-    event_handler_->HandleEvent(kInvalidateDisplay);
-    deferred_config_.Clear();
-  }
+  DisplayBase::ReconfigureDisplay();
 
   int idle_time_ms = hw_layers_.info.set_idle_time_ms;
   if (idle_time_ms >= 0) {
@@ -252,67 +210,23 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
     ControlPartialUpdate(true /* enable */, &pending);
   }
 
-  if (panel_mode != hw_panel_info_.mode) {
-    UpdateDisplayModeParams();
-  }
   dpps_info_.Init(this, hw_panel_info_.panel_name);
 
-  if (qsync_mode_ == kQsyncModeOneShot) {
-    // Reset qsync mode.
-    SetQSyncMode(kQSyncModeNone);
-  } else if (qsync_mode_ == kQsyncModeOneShotContinuous) {
-    // No action needed.
-  } else if (qsync_mode_ == kQSyncModeContinuous) {
-    needs_avr_update_ = false;
-  } else if (qsync_mode_ == kQSyncModeNone) {
-    needs_avr_update_ = false;
-  }
-
-  first_cycle_ = false;
-
-  CloseFd(&previous_retire_fence_);
-  previous_retire_fence_ = Sys::dup_(layer_stack->retire_fence_fd);
-
   return error;
-}
-
-void DisplayBuiltIn::UpdateDisplayModeParams() {
-  if (hw_panel_info_.mode == kModeVideo) {
-    uint32_t pending = 0;
-    ControlPartialUpdate(false /* enable */, &pending);
-  } else if (hw_panel_info_.mode == kModeCommand) {
-    // Flush idle timeout value currently set.
-    comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, 0);
-    switch_to_cmd_ = true;
-  }
 }
 
 DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
                                              int *release_fence) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
-  HWDisplayMode panel_mode = hw_panel_info_.mode;
-
-  if ((state == kStateOn) && deferred_config_.IsDeferredState()) {
-    SetDeferredFpsConfig();
-  }
-
   error = DisplayBase::SetDisplayState(state, teardown, release_fence);
   if (error != kErrorNone) {
     return error;
   }
 
-  if (hw_panel_info_.mode != panel_mode) {
-    UpdateDisplayModeParams();
-  }
-
   // Set vsync enable state to false, as driver disables vsync during display power off.
   if (state == kStateOff) {
     vsync_enable_ = false;
-  }
-
-  if (pending_doze_ || pending_power_on_) {
-    event_handler_->Refresh();
   }
 
   return kErrorNone;
@@ -355,8 +269,6 @@ DisplayError DisplayBuiltIn::SetDisplayMode(uint32_t mode) {
       return error;
     }
 
-    DisplayBase::ReconfigureDisplay();
-
     if (mode == kModeVideo) {
       ControlPartialUpdate(false /* enable */, &pending);
     } else if (mode == kModeCommand) {
@@ -373,51 +285,9 @@ DisplayError DisplayBuiltIn::SetDisplayMode(uint32_t mode) {
   return error;
 }
 
-DisplayError DisplayBuiltIn::SetPanelBrightness(float brightness) {
-  lock_guard<recursive_mutex> obj(brightness_lock_);
-
-  if (brightness != -1.0f && !(0.0f <= brightness && brightness <= 1.0f)) {
-    DLOGE("Bad brightness value = %f", brightness);
-    return kErrorParameters;
-  }
-
-  if (state_ == kStateOff) {
-    return kErrorNone;
-  }
-
-  // -1.0f = off, 0.0f = min, 1.0f = max
-  float level_remainder = 0.0f;
-  int level = 0;
-  if (brightness == -1.0f) {
-    level = 0;
-  } else {
-    // Node only supports int level, so store the float remainder for accurate GetPanelBrightness
-    float max = hw_panel_info_.panel_max_brightness;
-    float min = hw_panel_info_.panel_min_brightness;
-    if (min >= max) {
-      DLOGE("Minimum brightness is greater than or equal to maximum brightness");
-      return kErrorDriverData;
-    }
-    float t = (brightness * (max - min)) + min;
-    level = static_cast<int>(t);
-    level_remainder = t - level;
-  }
-
-  DisplayError err = hw_intf_->SetPanelBrightness(level);
-  if (err == kErrorNone) {
-    level_remainder_ = level_remainder;
-    DLOGI_IF(kTagDisplay, "Setting brightness to level %d (%f percent)", level,
-             brightness * 100);
-  } else if (err == kErrorDeferred) {
-    // TODO(user): I8508d64a55c3b30239c6ed2886df391407d22f25 causes mismatch between perceived
-    // power state and actual panel power state. Requires a rework. Below check will set up
-    // deferment of brightness operation if DAL reports defer use case.
-    cached_brightness_ = brightness;
-    pending_brightness_ = true;
-    return kErrorNone;
-  }
-
-  return err;
+DisplayError DisplayBuiltIn::SetPanelBrightness(int level) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  return hw_intf_->SetPanelBrightness(level);
 }
 
 DisplayError DisplayBuiltIn::GetRefreshRateRange(uint32_t *min_refresh_rate,
@@ -444,7 +314,7 @@ DisplayError DisplayBuiltIn::TeardownConcurrentWriteback(void) {
 DisplayError DisplayBuiltIn::SetRefreshRate(uint32_t refresh_rate, bool final_rate) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
-  if (!active_ || !hw_panel_info_.dynamic_fps || qsync_mode_ != kQSyncModeNone) {
+  if (!active_ || !hw_panel_info_.dynamic_fps) {
     return kErrorNotSupported;
   }
 
@@ -475,9 +345,8 @@ DisplayError DisplayBuiltIn::SetRefreshRate(uint32_t refresh_rate, bool final_ra
   // On success, set current refresh rate to new refresh rate
   current_refresh_rate_ = refresh_rate;
   handle_idle_timeout_ = false;
-  deferred_config_.MarkDirty();
 
-  return ReconfigureDisplay();
+  return DisplayBase::ReconfigureDisplay();
 }
 
 DisplayError DisplayBuiltIn::VSync(int64_t timestamp) {
@@ -530,32 +399,9 @@ void DisplayBuiltIn::HwRecovery(const HWRecoveryEvent sdm_event_code) {
   DisplayBase::HwRecovery(sdm_event_code);
 }
 
-DisplayError DisplayBuiltIn::GetPanelBrightness(float *brightness) {
-  lock_guard<recursive_mutex> obj(brightness_lock_);
-
-  DisplayError err = kErrorNone;
-  int level = 0;
-  if ((err = hw_intf_->GetPanelBrightness(&level)) != kErrorNone) {
-    return err;
-  }
-
-  // -1.0f = off, 0.0f = min, 1.0f = max
-  float max = hw_panel_info_.panel_max_brightness;
-  float min = hw_panel_info_.panel_min_brightness;
-  if (level == 0) {
-    *brightness = -1.0f;
-  } else if ((max > min) && (min <= level && level <= max)) {
-    *brightness = (static_cast<float>(level) + level_remainder_ - min) / (max - min);
-  } else {
-    min >= max ? DLOGE("Minimum brightness is greater than or equal to maximum brightness") :
-                 DLOGE("Invalid brightness level %d", level);
-    return kErrorDriverData;
-  }
-
-
-  DLOGI_IF(kTagDisplay, "Received level %d (%f percent)", level, *brightness * 100);
-
-  return kErrorNone;
+DisplayError DisplayBuiltIn::GetPanelBrightness(int *level) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  return hw_intf_->GetPanelBrightness(level);
 }
 
 DisplayError DisplayBuiltIn::ControlPartialUpdate(bool enable, uint32_t *pending) {
@@ -592,6 +438,20 @@ DisplayError DisplayBuiltIn::DisablePartialUpdateOneFrame() {
   disable_pu_one_frame_ = true;
 
   return kErrorNone;
+}
+
+bool DisplayBuiltIn::NeedsAVREnable() {
+  if (avr_prop_disabled_ || qsync_mode_ == kQSyncModeNone) {
+    return false;
+  }
+
+  if (GetDriverType() == DriverType::DRM) {
+    return hw_panel_info_.qsync_support;
+  }
+
+  return (hw_panel_info_.mode == kModeVideo &&
+          ((hw_panel_info_.dynamic_fps && hw_panel_info_.dfps_porch_mode) ||
+           (!hw_panel_info_.dynamic_fps && hw_panel_info_.min_fps != hw_panel_info_.max_fps)));
 }
 
 DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size_t size) {
@@ -727,15 +587,10 @@ DisplayError DisplayBuiltIn::HandleSecureEvent(SecureEvent secure_event, LayerSt
 
 DisplayError DisplayBuiltIn::SetQSyncMode(QSyncMode qsync_mode) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-  if (!hw_panel_info_.qsync_support || qsync_mode_ == qsync_mode || first_cycle_) {
-    DLOGE("Failed: qsync_support: %d first_cycle %d mode: %d -> %d", hw_panel_info_.qsync_support,
-          first_cycle_, qsync_mode_, qsync_mode);
+  if (GetDriverType() == DriverType::DRM && qsync_mode == kQsyncModeOneShot) {
     return kErrorNotSupported;
   }
-
   qsync_mode_ = qsync_mode;
-  needs_avr_update_ = true;
-  event_handler_->Refresh();
 
   return kErrorNone;
 }
@@ -765,11 +620,6 @@ DisplayError DisplayBuiltIn::GetSupportedDSIClock(std::vector<uint64_t> *bitclk_
 
 DisplayError DisplayBuiltIn::SetDynamicDSIClock(uint64_t bit_clk_rate) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-  if (!active_) {
-    DLOGW("Invalid display state = %d. Panel must be on.", state_);
-    return kErrorNotSupported;
-  }
-
   if (!hw_panel_info_.dyn_bitclk_support) {
     return kErrorNotSupported;
   }
@@ -884,121 +734,6 @@ bool DisplayBuiltIn::CanSkipDisplayPrepare(LayerStack *layer_stack) {
 DisplayError DisplayBuiltIn::GetRefreshRate(uint32_t *refresh_rate) {
   *refresh_rate = current_refresh_rate_;
   return kErrorNone;
-}
-
-DisplayError DisplayBuiltIn::SetActiveConfig(uint32_t index) {
-  deferred_config_.MarkDirty();
-  return DisplayBase::SetActiveConfig(index);
-}
-
-DisplayError DisplayBuiltIn::ReconfigureDisplay() {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
-  DisplayError error = kErrorNone;
-  HWDisplayAttributes display_attributes;
-  HWMixerAttributes mixer_attributes;
-  HWPanelInfo hw_panel_info;
-  uint32_t active_index = 0;
-
-  DTRACE_SCOPED();
-
-  error = hw_intf_->GetActiveConfig(&active_index);
-  if (error != kErrorNone) {
-    return error;
-  }
-
-  error = hw_intf_->GetDisplayAttributes(active_index, &display_attributes);
-  if (error != kErrorNone) {
-    return error;
-  }
-
-  error = hw_intf_->GetMixerAttributes(&mixer_attributes);
-  if (error != kErrorNone) {
-    return error;
-  }
-
-  error = hw_intf_->GetHWPanelInfo(&hw_panel_info);
-  if (error != kErrorNone) {
-    return error;
-  }
-
-  const bool dirty = deferred_config_.IsDirty();
-  if (deferred_config_.IsDeferredState()) {
-    if (dirty) {
-      SetDeferredFpsConfig();
-    } else {
-      // In Deferred state, use current config for comparison.
-      GetFpsConfig(&display_attributes, &hw_panel_info);
-    }
-  }
-
-  const bool display_unchanged = (display_attributes == display_attributes_);
-  const bool mixer_unchanged = (mixer_attributes == mixer_attributes_);
-  const bool panel_unchanged = (hw_panel_info == hw_panel_info_);
-  if (!dirty && display_unchanged && mixer_unchanged && panel_unchanged) {
-    return kErrorNone;
-  }
-
-  if (CanDeferFpsConfig(display_attributes.fps)) {
-    deferred_config_.Init(display_attributes.fps, display_attributes.vsync_period_ns,
-                          hw_panel_info.transfer_time_us);
-
-    // Apply current config until new Fps is deferred.
-    GetFpsConfig(&display_attributes, &hw_panel_info);
-  }
-
-  error = comp_manager_->ReconfigureDisplay(display_comp_ctx_, display_attributes, hw_panel_info,
-                                            mixer_attributes, fb_config_,
-                                            &(default_qos_data_.clock_hz));
-  if (error != kErrorNone) {
-    return error;
-  }
-
-  bool disble_pu = true;
-  if (mixer_unchanged && panel_unchanged) {
-    // Do not disable Partial Update for one frame, if only FPS has changed.
-    // Because if first frame after transition, has a partial Frame-ROI and
-    // is followed by Skip Validate frames, then it can benefit those frames.
-    disble_pu = !display_attributes_.OnlyFpsChanged(display_attributes);
-  }
-
-  if (disble_pu) {
-    DisablePartialUpdateOneFrame();
-  }
-
-  display_attributes_ = display_attributes;
-  mixer_attributes_ = mixer_attributes;
-  hw_panel_info_ = hw_panel_info;
-
-  // TODO(user): Temporary changes, to be removed when DRM driver supports
-  // Partial update with Destination scaler enabled.
-  SetPUonDestScaler();
-
-  return kErrorNone;
-}
-
-bool DisplayBuiltIn::CanDeferFpsConfig(uint32_t fps) {
-  if (deferred_config_.CanApplyDeferredState()) {
-    // Deferred Fps Config needs to be applied.
-    return false;
-  }
-
-  // In case of higher to lower Fps transition on a Builtin display, defer the Fps
-  // (Transfer time) configuration, for the number of frames based on frame_count.
-  return ((deferred_config_.frame_count != 0) && (display_attributes_.fps > fps));
-}
-
-void DisplayBuiltIn::SetDeferredFpsConfig() {
-  // Update with the deferred Fps Config.
-  display_attributes_.fps = deferred_config_.fps;
-  display_attributes_.vsync_period_ns = deferred_config_.vsync_period_ns;
-  hw_panel_info_.transfer_time_us = deferred_config_.transfer_time_us;
-  deferred_config_.Clear();
-}
-
-void DisplayBuiltIn::GetFpsConfig(HWDisplayAttributes *display_attr, HWPanelInfo *panel_info) {
-  display_attr->fps = display_attributes_.fps;
-  display_attr->vsync_period_ns = display_attributes_.vsync_period_ns;
-  panel_info->transfer_time_us = hw_panel_info_.transfer_time_us;
 }
 
 }  // namespace sdm

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -85,7 +85,7 @@ class DisplayBase : public DisplayInterface {
   virtual bool IsUnderscanSupported() {
     return false;
   }
-  virtual DisplayError SetPanelBrightness(float brightness) {
+  virtual DisplayError SetPanelBrightness(int level) {
     return kErrorNotSupported;
   }
   virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
@@ -116,7 +116,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError GetDefaultColorMode(std::string *color_mode);
   virtual DisplayError SetCursorPosition(int x, int y);
   virtual DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate, uint32_t *max_refresh_rate);
-  virtual DisplayError GetPanelBrightness(float *brightness) {
+  virtual DisplayError GetPanelBrightness(int *level) {
     return kErrorNotSupported;
   }
   virtual DisplayError SetVSyncState(bool enable);
@@ -151,7 +151,6 @@ class DisplayBase : public DisplayInterface {
                                                     uint8_t *out_data);
   virtual bool CanSkipValidate();
   virtual DisplayError GetRefreshRate(uint32_t *refresh_rate) { return kErrorNotSupported; }
-  virtual DisplayError ReconfigureDisplay();
 
  protected:
   const char *kBt2020Pq = "bt2020_pq";
@@ -165,6 +164,7 @@ class DisplayBase : public DisplayInterface {
   void HwRecovery(const HWRecoveryEvent sdm_event_code);
 
   const char *GetName(const LayerComposition &composition);
+  DisplayError ReconfigureDisplay();
   bool NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *new_mixer_width,
                                  uint32_t *new_mixer_height);
   DisplayError ReconfigureMixer(uint32_t width, uint32_t height);
@@ -183,8 +183,6 @@ class DisplayBase : public DisplayInterface {
   PrimariesTransfer GetBlendSpaceFromColorMode();
   bool IsHdrMode(const AttrVal &attr);
   void InsertBT2020PqHlgModes();
-  DisplayError HandlePendingVSyncEnable(int32_t retire_fence);
-  DisplayError HandlePendingPowerState(int32_t retire_fence);
 
   recursive_mutex recursive_mutex_;
   int32_t display_id_ = -1;
@@ -234,12 +232,10 @@ class DisplayBase : public DisplayInterface {
   uint32_t current_refresh_rate_ = 0;
   bool drop_skewed_vsync_ = false;
   bool custom_mixer_resolution_ = false;
-  bool vsync_enable_pending_ = false;
-  QSyncMode qsync_mode_ = kQSyncModeNone;
-  bool needs_avr_update_ = false;
-  bool safe_mode_in_fast_path_ = false;
-  bool pending_doze_ = false;
-  bool pending_power_on_ = false;
+  DisplayState power_state_pending_ = kStateOff;
+  bool vsync_state_change_pending_ = false;
+  bool requested_vsync_state_ = false;
+  bool defer_power_state_ = false;
 
   static Locker display_power_reset_lock_;
   static bool display_power_reset_pending_;

@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -27,13 +27,9 @@ OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <fcntl.h>
 #include <utils/debug.h>
-#include <utils/sys.h>
 #include <vector>
-#include <string>
 #include <cstring>
-#include <algorithm>
 
 #include "hw_peripheral_drm.h"
 
@@ -88,11 +84,8 @@ void HWPeripheralDRM::PopulateBitClkRates() {
   for (auto &mode_info : connector_info_.modes) {
     auto &mode = mode_info.mode;
     if (mode.hdisplay == width && mode.vdisplay == height) {
-      if (std::find(bitclk_rates_.begin(), bitclk_rates_.end(), mode_info.bit_clk_rate) ==
-            bitclk_rates_.end()) {
-        bitclk_rates_.push_back(mode_info.bit_clk_rate);
-        DLOGI("Possible bit_clk_rates %d", mode_info.bit_clk_rate);
-      }
+      bitclk_rates_.push_back(mode_info.bit_clk_rate);
+      DLOGI("Possible bit_clk_rates %d", mode_info.bit_clk_rate);
     }
   }
 
@@ -101,14 +94,6 @@ void HWPeripheralDRM::PopulateBitClkRates() {
 }
 
 DisplayError HWPeripheralDRM::SetDynamicDSIClock(uint64_t bit_clk_rate) {
-  if (last_power_mode_ == DRMPowerMode::DOZE_SUSPEND || last_power_mode_ == DRMPowerMode::OFF) {
-    return kErrorNotSupported;
-  }
-
-  if (doze_poms_switch_done_) {
-    return kErrorNotSupported;
-  }
-
   bit_clk_rate_ = bit_clk_rate;
   update_mode_ = true;
 
@@ -118,38 +103,6 @@ DisplayError HWPeripheralDRM::SetDynamicDSIClock(uint64_t bit_clk_rate) {
 DisplayError HWPeripheralDRM::GetDynamicDSIClock(uint64_t *bit_clk_rate) {
   // Update bit_rate corresponding to current refresh rate.
   *bit_clk_rate = (uint32_t)connector_info_.modes[current_mode_index_].bit_clk_rate;
-
-  return kErrorNone;
-}
-
-
-DisplayError HWPeripheralDRM::SetRefreshRate(uint32_t refresh_rate) {
-  if (doze_poms_switch_done_) {
-    // poms switch in progress
-    // Defer any refresh rate setting.
-    return kErrorNotSupported;
-  }
-
-  DisplayError error = HWDeviceDRM::SetRefreshRate(refresh_rate);
-  if (error != kErrorNone) {
-    return error;
-  }
-
-  return kErrorNone;
-}
-
-DisplayError HWPeripheralDRM::SetDisplayMode(const HWDisplayMode hw_display_mode) {
-  if (doze_poms_switch_done_) {
-    return kErrorNotSupported;
-  }
-
-  DisplayError error = HWDeviceDRM::SetDisplayMode(hw_display_mode);
-  if (error != kErrorNone) {
-    return error;
-  }
-
-  // update bit clk rates.
-  hw_panel_info_.bitclk_rates = bitclk_rates_;
 
   return kErrorNone;
 }
@@ -180,9 +133,6 @@ DisplayError HWPeripheralDRM::Commit(HWLayers *hw_layers) {
 
   // Initialize to default after successful commit
   synchronous_commit_ = false;
-  active_ = true;
-
-  idle_pc_state_ = sde_drm::DRMIdlePCState::NONE;
 
   return error;
 }
@@ -467,14 +417,15 @@ void HWPeripheralDRM::PostCommitConcurrentWriteback(LayerBuffer *output_buffer) 
 }
 
 DisplayError HWPeripheralDRM::ControlIdlePowerCollapse(bool enable, bool synchronous) {
-  if (enable == idle_pc_enabled_) {
+  sde_drm::DRMIdlePCState idle_pc_state =
+    enable ? sde_drm::DRMIdlePCState::ENABLE : sde_drm::DRMIdlePCState::DISABLE;
+  if (idle_pc_state == idle_pc_state_) {
     return kErrorNone;
   }
-  idle_pc_state_ = enable ? sde_drm::DRMIdlePCState::ENABLE : sde_drm::DRMIdlePCState::DISABLE;
   // As idle PC is disabled after subsequent commit, Make sure to have synchrounous commit and
   // ensure TA accesses the display_cc registers after idle PC is disabled.
+  idle_pc_state_ = idle_pc_state;
   synchronous_commit_ = !enable ? synchronous : false;
-  idle_pc_enabled_ = enable;
   return kErrorNone;
 }
 
@@ -485,102 +436,18 @@ DisplayError HWPeripheralDRM::PowerOn(const HWQosData &qos_data, int *release_fe
     return kErrorUndefined;
   }
 
-  if (first_cycle_) {
-    return kErrorDeferred;
-  }
-
-  if (switch_mode_valid_ && doze_poms_switch_done_ && (current_mode_index_ == cmd_mode_index_)) {
-    HWDeviceDRM::SetDisplayMode(kModeVideo);
-    hw_panel_info_.bitclk_rates = bitclk_rates_;
-    doze_poms_switch_done_ = false;
-  }
-
-  if (!idle_pc_enabled_) {
-    drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_IDLE_PC_STATE, token_.crtc_id,
-                              sde_drm::DRMIdlePCState::ENABLE);
-  }
+  drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_IDLE_PC_STATE, token_.crtc_id,
+                            sde_drm::DRMIdlePCState::ENABLE);
   DisplayError err = HWDeviceDRM::PowerOn(qos_data, release_fence);
   if (err != kErrorNone) {
     return err;
   }
-  idle_pc_state_ = sde_drm::DRMIdlePCState::NONE;
-  idle_pc_enabled_ = true;
-  active_ = true;
-
-  return kErrorNone;
-}
-
-DisplayError HWPeripheralDRM::PowerOff(bool teardown) {
-  DTRACE_SCOPED();
-
-  DisplayError err = HWDeviceDRM::PowerOff(teardown);
-  if (err != kErrorNone) {
-    return err;
-  }
-
-  active_ = false;
-
-  return kErrorNone;
-}
-
-DisplayError HWPeripheralDRM::Doze(const HWQosData &qos_data, int *release_fence) {
-  DTRACE_SCOPED();
-
-  bool pending_poms_switch = false;
-  if (!first_cycle_ && switch_mode_valid_ && !doze_poms_switch_done_ &&
-    (current_mode_index_ == video_mode_index_)) {
-    if (active_) {
-      HWDeviceDRM::SetDisplayMode(kModeCommand);
-      hw_panel_info_.bitclk_rates = bitclk_rates_;
-      doze_poms_switch_done_ = true;
-    } else {
-      pending_poms_switch = true;
-    }
-  }
-
-  DisplayError err = HWDeviceDRM::Doze(qos_data, release_fence);
-  if (err != kErrorNone) {
-    return err;
-  }
-
-  if (pending_poms_switch) {
-    HWDeviceDRM::SetDisplayMode(kModeCommand);
-    hw_panel_info_.bitclk_rates = bitclk_rates_;
-    doze_poms_switch_done_ = true;
-  }
-
-  if (first_cycle_) {
-    active_ = true;
-  }
-
-  return kErrorNone;
-}
-
-DisplayError HWPeripheralDRM::DozeSuspend(const HWQosData &qos_data, int *release_fence) {
-  DTRACE_SCOPED();
-
-  if (switch_mode_valid_ && !doze_poms_switch_done_ &&
-    (current_mode_index_ == video_mode_index_)) {
-    HWDeviceDRM::SetDisplayMode(kModeCommand);
-    hw_panel_info_.bitclk_rates = bitclk_rates_;
-    doze_poms_switch_done_ = true;
-  }
-
-  DisplayError err = HWDeviceDRM::DozeSuspend(qos_data, release_fence);
-  if (err != kErrorNone) {
-    return err;
-  }
-
-  active_ = true;
+  idle_pc_state_ = sde_drm::DRMIdlePCState::ENABLE;
 
   return kErrorNone;
 }
 
 DisplayError HWPeripheralDRM::SetDisplayAttributes(uint32_t index) {
-  if (doze_poms_switch_done_) {
-    return kErrorNotSupported;
-  }
-
   HWDeviceDRM::SetDisplayAttributes(index);
   // update bit clk rates.
   hw_panel_info_.bitclk_rates = bitclk_rates_;
@@ -608,103 +475,6 @@ DisplayError HWPeripheralDRM::SetDisplayDppsAdROI(void *payload) {
   }
 
   return err;
-}
-
-DisplayError HWPeripheralDRM::SetPanelBrightness(int level) {
-  if (pending_doze_) {
-    DLOGI("Doze state pending!! Skip for now");
-    return kErrorDeferred;
-  }
-
-  char buffer[kMaxSysfsCommandLength] = {0};
-
-  if (brightness_base_path_.empty()) {
-    return kErrorHardware;
-  }
-
-  std::string brightness_node(brightness_base_path_ + "brightness");
-  int fd = Sys::open_(brightness_node.c_str(), O_RDWR);
-  if (fd < 0) {
-    DLOGE("Failed to open node = %s, error = %s ", brightness_node.c_str(),
-          strerror(errno));
-    return kErrorFileDescriptor;
-  }
-
-  int32_t bytes = snprintf(buffer, kMaxSysfsCommandLength, "%d\n", level);
-  ssize_t ret = Sys::pwrite_(fd, buffer, static_cast<size_t>(bytes), 0);
-  if (ret <= 0) {
-    DLOGE("Failed to write to node = %s, error = %s ", brightness_node.c_str(),
-          strerror(errno));
-    Sys::close_(fd);
-    return kErrorHardware;
-  }
-
-  Sys::close_(fd);
-
-  return kErrorNone;
-}
-
-DisplayError HWPeripheralDRM::GetPanelBrightness(int *level) {
-  char value[kMaxStringLength] = {0};
-
-  if (!level) {
-    DLOGE("Invalid input, null pointer.");
-    return kErrorParameters;
-  }
-
-  if (brightness_base_path_.empty()) {
-    return kErrorHardware;
-  }
-
-  std::string brightness_node(brightness_base_path_ + "brightness");
-  int fd = Sys::open_(brightness_node.c_str(), O_RDWR);
-  if (fd < 0) {
-    DLOGE("Failed to open brightness node = %s, error = %s", brightness_node.c_str(),
-           strerror(errno));
-    return kErrorFileDescriptor;
-  }
-
-  if (Sys::pread_(fd, value, sizeof(value), 0) > 0) {
-    *level = atoi(value);
-  } else {
-    DLOGE("Failed to read panel brightness");
-    Sys::close_(fd);
-    return kErrorHardware;
-  }
-
-  Sys::close_(fd);
-
-  return kErrorNone;
-}
-
-void HWPeripheralDRM::GetHWPanelMaxBrightness() {
-  char value[kMaxStringLength] = {0};
-  hw_panel_info_.panel_max_brightness = 255.0f;
-
-  // Panel nodes, driver connector creation, and DSI probing all occur in sync, for each DSI. This
-  // means that the connector_type_id - 1 will reflect the same # as the panel # for panel node.
-  char s[kMaxStringLength] = {};
-  snprintf(s, sizeof(s), "/sys/class/backlight/panel%d-backlight/",
-           static_cast<int>(connector_info_.type_id - 1));
-  brightness_base_path_.assign(s);
-
-  std::string brightness_node(brightness_base_path_ + "max_brightness");
-  int fd = Sys::open_(brightness_node.c_str(), O_RDONLY);
-  if (fd < 0) {
-    DLOGE("Failed to open max brightness node = %s, error = %s", brightness_node.c_str(),
-          strerror(errno));
-    return;
-  }
-
-  if (Sys::pread_(fd, value, sizeof(value), 0) > 0) {
-    hw_panel_info_.panel_max_brightness = static_cast<float>(atof(value));
-    DLOGI_IF(kTagDriverConfig, "Max brightness = %f", hw_panel_info_.panel_max_brightness);
-  } else {
-    DLOGE("Failed to read max brightness. error = %s", strerror(errno));
-  }
-
-  Sys::close_(fd);
-  return;
 }
 
 }  // namespace sdm

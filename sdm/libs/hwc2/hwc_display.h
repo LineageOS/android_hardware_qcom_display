@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -63,11 +63,6 @@ enum SecureSessionType {
   kSecureDisplay,
   kSecureCamera,
   kSecureMax,
-};
-
-struct TransientRefreshRateInfo {
-  uint32_t transient_vsync_period;
-  int64_t vsync_applied_time;
 };
 
 class HWCColorMode {
@@ -200,14 +195,6 @@ class HWCDisplay : public DisplayEventHandler {
     return HWC2::Error::Unsupported;
   }
 
-  virtual bool IsSmartPanelConfig(uint32_t config_id) {
-    return false;
-  }
-
-  virtual bool HasSmartPanelConfig(void) {
-    return false;
-  }
-
   // Display Configurations
   static uint32_t GetThrottlingRefreshRate() { return HWCDisplay::throttling_refresh_rate_; }
   static void SetThrottlingRefreshRate(uint32_t newRefreshRate)
@@ -225,6 +212,8 @@ class HWCDisplay : public DisplayEventHandler {
   }
 
   uint32_t GetMaxRefreshRate() { return max_refresh_rate_; }
+  int SetPanelBrightness(int level);
+  int GetPanelBrightness(int *level);
   int ToggleScreenUpdates(bool enable);
   int ColorSVCRequestRoute(const PPDisplayAPIPayload &in_payload, PPDisplayAPIPayload *out_payload,
                            PPPendingParams *pending_action);
@@ -248,7 +237,6 @@ class HWCDisplay : public DisplayEventHandler {
     return (color_mode_ ? color_mode_->GetCurrentRenderIntent() : RenderIntent::COLORIMETRIC);
   }
   bool HasClientComposition() { return has_client_composition_; }
-  bool HasForceClientComposition() { return has_force_client_composition_; }
   bool HWCClientNeedsValidate() {
     return (has_client_composition_ || layer_stack_.flags.single_buffered_layer_present);
   }
@@ -257,7 +245,6 @@ class HWCDisplay : public DisplayEventHandler {
     return HWC2::Error::Unsupported;
   }
   bool IsFirstCommitDone() { return !first_cycle_; }
-  virtual void ProcessActiveConfigChange();
 
   // HWC2 APIs
   virtual HWC2::Error AcceptDisplayChanges(void);
@@ -299,12 +286,6 @@ class HWCDisplay : public DisplayEventHandler {
     return HWC2::Error::Unsupported;
   }
   virtual HWC2::Error SetPendingRefresh() {
-    return HWC2::Error::Unsupported;
-  }
-  virtual HWC2::Error SetPanelBrightness(float brightness) {
-    return HWC2::Error::Unsupported;
-  }
-  virtual HWC2::Error GetPanelBrightness(float *brightness) {
     return HWC2::Error::Unsupported;
   }
   virtual HWC2::Error GetDisplayConfigs(uint32_t *out_num_configs, hwc2_config_t *out_configs);
@@ -358,11 +339,6 @@ class HWCDisplay : public DisplayEventHandler {
   virtual void GetLayerStack(HWCLayerStack *stack);
   virtual void SetLayerStack(HWCLayerStack *stack);
   virtual void PostPowerMode();
-  virtual void NotifyClientStatus(bool connected) { client_connected_ = connected; }
-  virtual HWC2::Error GetDisplayVsyncPeriod(hwc2_vsync_period_t *vsync_period);
-  virtual HWC2::Error SetActiveConfigWithConstraints(hwc2_config_t config,
-      hwc_vsync_period_change_constraints_t *vsync_period_change_constraints,
-      hwc_vsync_period_change_timeline_t *out_timeline);
 
  protected:
   static uint32_t throttling_refresh_rate_;
@@ -394,21 +370,6 @@ class HWCDisplay : public DisplayEventHandler {
   uint32_t SanitizeRefreshRate(uint32_t req_refresh_rate);
   virtual void GetUnderScanConfig() { }
   int32_t SetClientTargetDataSpace(int32_t dataspace);
-  int32_t GetDisplayConfigGroupId(const DisplayConfigGroupInfo &variable_config);
-  HWC2::Error GetVsyncPeriodByActiveConfig(hwc2_vsync_period_t *vsync_period);
-  bool GetTransientVsyncPeriod(hwc2_vsync_period_t *vsync_period);
-  std::tuple<int64_t, int64_t> RequestActiveConfigChange(hwc2_config_t config,
-                                                         hwc2_vsync_period_t current_vsync_period,
-                                                         int64_t desired_time);
-  std::tuple<int64_t, int64_t> EstimateVsyncPeriodChangeTimeline(
-      hwc2_vsync_period_t current_vsync_period, int64_t desired_time);
-  void SubmitActiveConfigChange(hwc2_vsync_period_t current_vsync_period);
-  bool IsActiveConfigReadyToSubmit(int64_t time);
-  bool IsActiveConfigApplied(int64_t time, int64_t vsync_applied_time);
-  bool IsSameGroup(hwc2_config_t config_id1, hwc2_config_t config_id2);
-  bool AllowSeamless(hwc2_config_t request_config);
-  void SetVsyncsApplyRateChange(uint32_t vsyncs) { vsyncs_to_apply_rate_change_ = vsyncs; }
-  HWC2::Error SubmitDisplayConfig(hwc2_config_t config);
 
   enum {
     INPUT_LAYER_DUMP,
@@ -467,14 +428,6 @@ class HWCDisplay : public DisplayEventHandler {
   std::map<uint32_t, DisplayConfigVariableInfo> variable_config_map_;
   std::vector<uint32_t> hwc_config_map_;
   bool fast_path_composition_ = false;
-  bool client_connected_ = true;
-  bool pending_config_ = false;
-  uint32_t vsyncs_to_apply_rate_change_ = 1;
-  hwc2_config_t pending_refresh_rate_config_ = UINT_MAX;
-  int64_t pending_refresh_rate_refresh_time_ = INT64_MAX;
-  int64_t pending_refresh_rate_applied_time_ = INT64_MAX;
-  std::deque<TransientRefreshRateInfo> transient_refresh_rate_info_;
-  std::mutex transient_refresh_rate_lock_;
 
  private:
   void DumpInputBuffers(void);
@@ -485,16 +438,15 @@ class HWCDisplay : public DisplayEventHandler {
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
   uint32_t geometry_changes_ = GeometryChanges::kNone;
-  uint32_t geometry_changes_on_doze_suspend_ = GeometryChanges::kNone;
   bool animating_ = false;
   int null_display_mode_ = 0;
   bool has_client_composition_ = false;
-  bool has_force_client_composition_ = false;
   DisplayValidateState validate_state_ = kNormalValidate;
   bool fast_path_enabled_ = true;
   bool first_cycle_ = true;  // false if a display commit has succeeded on the device.
   int fbt_release_fence_ = -1;
   int release_fence_ = -1;
+  bool pending_config_ = false;
   hwc2_config_t pending_config_index_ = 0;
   int async_power_mode_ = 0;
 };

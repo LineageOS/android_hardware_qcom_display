@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -91,17 +91,12 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   virtual DisplayError GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates);
   virtual HWC2::Error UpdateDisplayId(hwc2_display_t id);
   virtual HWC2::Error SetPendingRefresh();
-  virtual HWC2::Error SetPanelBrightness(float brightness);
-  virtual HWC2::Error GetPanelBrightness(float *brightness);
   virtual DisplayError TeardownConcurrentWriteback(void);
   virtual void SetFastPathComposition(bool enable) {
     fast_path_composition_ = enable && !readback_buffer_queued_;
   }
   virtual HWC2::Error UpdatePowerMode(HWC2::PowerMode mode);
   virtual HWC2::Error PostCommitLayerStack(int32_t *out_retire_fence);
-  virtual bool IsSmartPanelConfig(uint32_t config_id);
-  virtual bool HasSmartPanelConfig(void);
-  virtual HWC2::Error SetPowerMode(HWC2::PowerMode mode, bool teardown);
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
@@ -120,7 +115,6 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   bool CanSkipCommit();
   DisplayError SetMixerResolution(uint32_t width, uint32_t height);
   DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
-  void SetPartialUpdate(DisplayConfigFixedInfo fixed_info);
   class PMICInterface {
    public:
     PMICInterface() { }
@@ -151,7 +145,6 @@ class HWCDisplayBuiltIn : public HWCDisplay {
   bool pending_refresh_ = true;
   bool enable_optimize_refresh_ = false;
   bool hdr_present_ = false;
-  bool enable_poms_during_doze_ = false;
 
   // Members for 1 frame capture in a client provided buffer
   bool frame_capture_buffer_queued_ = false;

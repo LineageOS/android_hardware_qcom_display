@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -166,26 +166,12 @@ int HWCDisplayBuiltIn::Init() {
   HWCDebugHandler::Get()->GetProperty(ENABLE_DEFAULT_COLOR_MODE,
                                       &default_mode_status_);
 
-  int value = 0;
-  HWCDebugHandler::Get()->GetProperty(ENABLE_OPTIMIZE_REFRESH, &value);
-  enable_optimize_refresh_ = (value == 1);
+  int optimize_refresh = 0;
+  HWCDebugHandler::Get()->GetProperty(ENABLE_OPTIMIZE_REFRESH, &optimize_refresh);
+  enable_optimize_refresh_ = (optimize_refresh == 1);
   if (enable_optimize_refresh_) {
     DLOGI("Drop redundant drawcycles %d", id_);
   }
-
-  value = 0;
-  HWCDebugHandler::Get()->GetProperty(ENABLE_POMS_DURING_DOZE, &value);
-  enable_poms_during_doze_ = (value == 1);
-  if (enable_poms_during_doze_) {
-    DLOGI("Enable POMS during Doze mode %" PRIu64 , id_);
-  }
-
-  int vsyncs = 0;
-  HWCDebugHandler::Get()->GetProperty(DEFER_FPS_FRAME_COUNT, &vsyncs);
-  if (vsyncs > 0) {
-    SetVsyncsApplyRateChange(UINT32(vsyncs));
-  }
-
   pmic_intf_ = new PMICInterface();
   pmic_intf_->Init();
 
@@ -278,7 +264,7 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
 
   if (layer_set_.empty()) {
     // Avoid flush for Command mode panel.
-    flush_ = !client_connected_;
+    flush_ = !(IsDisplayCommandMode() && active_secure_sessions_[kSecureDisplay]);
     validated_ = true;
     return status;
   }
@@ -317,33 +303,6 @@ bool HWCDisplayBuiltIn::CanSkipCommit() {
   return skip_commit;
 }
 
-void HWCDisplayBuiltIn::SetPartialUpdate(DisplayConfigFixedInfo fixed_info) {
-  partial_update_enabled_ = fixed_info.partial_update || (!fixed_info.is_cmdmode);
-  for (auto hwc_layer : layer_set_) {
-    hwc_layer->SetPartialUpdate(partial_update_enabled_);
-  }
-  client_target_->SetPartialUpdate(partial_update_enabled_);
-}
-
-HWC2::Error HWCDisplayBuiltIn::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
-  DisplayConfigFixedInfo fixed_info = {};
-  display_intf_->GetConfig(&fixed_info);
-  bool command_mode = fixed_info.is_cmdmode;
-
-  auto status = HWCDisplay::SetPowerMode(mode, teardown);
-  if (status != HWC2::Error::None) {
-    return status;
-  }
-
-  display_intf_->GetConfig(&fixed_info);
-  is_cmd_mode_ = fixed_info.is_cmdmode;
-  if (is_cmd_mode_ != command_mode) {
-    SetPartialUpdate(fixed_info);
-  }
-
-  return HWC2::Error::None;
-}
-
 HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
   auto status = HWC2::Error::None;
 
@@ -352,9 +311,7 @@ HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
   ATRACE_INT("FastPath", layer_stack_.flags.fast_path);
   ATRACE_INT("GeometryChanged", layer_stack_.flags.geometry_changed);
   ATRACE_INT("NumLayers", static_cast <int32_t> (layer_stack_.layers.size()));
-  ATRACE_INT("SF_MarkedSkipLayer", HasForceClientComposition());
-  ATRACE_INT("HWC_MarkedSkipLayer", (HasClientComposition() &&
-             !HasForceClientComposition()));
+  ATRACE_INT("HasClientComposition", HasClientComposition());
 
   if (display_paused_) {
     DisplayError error = display_intf_->Flush(&layer_stack_);
@@ -363,23 +320,11 @@ HWC2::Error HWCDisplayBuiltIn::Present(int32_t *out_retire_fence) {
       DLOGE("Flush failed. Error = %d", error);
     }
   } else {
-    DisplayConfigFixedInfo fixed_info = {};
-    display_intf_->GetConfig(&fixed_info);
-    bool command_mode = fixed_info.is_cmdmode;
-
     status = CommitLayerStack();
     if (status == HWC2::Error::None) {
       HandleFrameOutput();
       SolidFillCommit();
       status = PostCommitLayerStack(out_retire_fence);
-    }
-
-    if (status == HWC2::Error::None) {
-      display_intf_->GetConfig(&fixed_info);
-      is_cmd_mode_ = fixed_info.is_cmdmode;
-      if (is_cmd_mode_ != command_mode) {
-        SetPartialUpdate(fixed_info);
-      }
     }
   }
 
@@ -944,13 +889,6 @@ DisplayError HWCDisplayBuiltIn::GetMixerResolution(uint32_t *width, uint32_t *he
 }
 
 HWC2::Error HWCDisplayBuiltIn::SetQSyncMode(QSyncMode qsync_mode) {
-  // Client needs to ensure that config change and qsync mode change
-  // are not triggered in the same drawcycle.
-  if (pending_config_) {
-    DLOGE("Failed to set qsync mode. Pending active config transition");
-    return HWC2::Error::Unsupported;
-  }
-
   auto err = display_intf_->SetQSyncMode(qsync_mode);
   if (err != kErrorNone) {
     return HWC2::Error::Unsupported;
@@ -1028,49 +966,6 @@ HWC2::Error HWCDisplayBuiltIn::PostCommitLayerStack(int32_t *out_retire_fence) {
     pmic_notification_pending_ = false;
   }
   return HWCDisplay::PostCommitLayerStack(out_retire_fence);
-}
-
-HWC2::Error HWCDisplayBuiltIn::SetPanelBrightness(float brightness) {
-  DisplayError ret = display_intf_->SetPanelBrightness(brightness);
-  if (ret != kErrorNone) {
-    return HWC2::Error::NoResources;
-  }
-
-  return HWC2::Error::None;
-}
-
-HWC2::Error HWCDisplayBuiltIn::GetPanelBrightness(float *brightness) {
-  DisplayError ret = display_intf_->GetPanelBrightness(brightness);
-  if (ret != kErrorNone) {
-    return HWC2::Error::NoResources;
-  }
-
-  return HWC2::Error::None;
-}
-
-bool HWCDisplayBuiltIn::IsSmartPanelConfig(uint32_t config_id) {
-  if (config_id < hwc_config_map_.size()) {
-    uint32_t index = hwc_config_map_.at(config_id);
-    return variable_config_map_.at(index).smart_panel;
-  }
-
-  return false;
-}
-
-bool HWCDisplayBuiltIn::HasSmartPanelConfig(void) {
-  if (!enable_poms_during_doze_) {
-    uint32_t config = 0;
-    GetActiveDisplayConfig(&config);
-    return IsSmartPanelConfig(config);
-  }
-
-  for (auto &config : variable_config_map_) {
-    if (config.second.smart_panel) {
-      return true;
-    }
-  }
-
-  return false;
 }
 
 }  // namespace sdm

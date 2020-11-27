@@ -1,19 +1,19 @@
 # Display product definitions
 PRODUCT_PACKAGES += \
-    android.hardware.graphics.composer@2.4-impl \
-    android.hardware.graphics.composer@2.4-service \
-    android.hardware.graphics.mapper@3.0-impl-qti-display \
-    android.hardware.graphics.mapper@4.0-impl-qti-display \
+    android.hardware.graphics.composer@2.3-impl \
+    android.hardware.graphics.composer@2.3-service \
+    android.hardware.graphics.mapper@2.0-impl-qti-display \
     vendor.qti.hardware.display.allocator-service \
     android.hardware.memtrack@1.0-impl \
     android.hardware.memtrack@1.0-service \
+    android.hardware.light@2.0-impl \
+    android.hardware.light@2.0-service \
     gralloc.$(TARGET_BOARD_PLATFORM) \
     lights.$(TARGET_BOARD_PLATFORM) \
     hwcomposer.$(TARGET_BOARD_PLATFORM) \
     memtrack.$(TARGET_BOARD_PLATFORM) \
     libqdMetaData.vendor \
     libdisplayconfig.vendor \
-    libdisplayconfig.qti.vendor \
     vendor.display.config@1.0.vendor \
     vendor.display.config@1.1.vendor \
     vendor.display.config@1.2.vendor \
@@ -25,9 +25,6 @@ PRODUCT_PACKAGES += \
     vendor.display.config@1.8.vendor \
     vendor.display.config@1.9.vendor \
     vendor.display.config@1.10.vendor \
-    vendor.display.config@2.0.vendor \
-    vendor.qti.hardware.display.mapper@3.0 \
-    vendor.qti.hardware.display.mapper@4.0.vendor \
     modetest
 
 #QDCM calibration xml file for 2k panel
@@ -75,20 +72,7 @@ PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_default.xml:$
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_trinket_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_nt36672_truly_fhd_video_mode_dsi_panel.xml
 
 #QDCM calibration xml file base on Rennell FHD+ visionox panel
-PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_rm69299_amoled_fhd+_video_mode_dsi_visionox_panel.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_rm69299_amoled_fhd+_video_mode_dsi_visionox_panel.xml
-PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_rm69299_amoled_fhd+_video_mode_dsi_visionox_panel.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_rm69299_amoled_fhd+_cmd_mode_dsi_visionox_panel.xml
-#QDCM calibration xml file for sharp 120hz panel etc
-PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_sharp_1080p_120hz_dual_dsi_cmd_mode_panel.xml
-PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_Dual_s6e3ha3_amoled_cmd_mode_dsi_panel.xml
-PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_Dual_nt36850_cmd_mode_dsi_truly_panel_without_DSC.xml
-PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_nt36672c_fhd_plus_video_mode_dsi_panel.xml
-PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_rm69298_amoled_fhd+_video_mode_dsi_truly_panel.xml
-PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_rm69298_amoled_fhd+_cmd_mode_dsi_truly_panel.xml
-PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_Sharp_2k_cmd_mode_qsync_dsi_panel.xml
-PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_Sharp_2k_video_mode_qsync_dsi_panel.xml
-PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_Sharp_fhd_video_mode_qsync_dsi_panel.xml
-PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_Sharp_fhd_cmd_mode_qsync_dsi_panel.xml
-
+PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_rm69299_amoled_fhd+_video_mode_dsi_visionox_panel.xml
 
 PRODUCT_PROPERTY_OVERRIDES += \
     persist.demo.hdmirotationlock=false \
@@ -113,13 +97,6 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.has_wide_color_display=
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.has_HDR_display=true
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.use_color_management=true
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.wcg_composition_dataspace=143261696
-PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.protected_contents=true
-endif
-
-PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.force_hwc_copy_for_virtual_displays=true
-
-ifeq ($(TARGET_BOARD_PLATFORM),$(TRINKET))
-PRODUCT_PROPERTY_OVERRIDES += vendor.display.disable_excl_rect_partial_fb=1
 endif
 
 ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
@@ -141,14 +118,3 @@ endif
 #  0.0   0.0   1.0
 PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.dataspace_saturation_matrix=1.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,1.0
-
-ifneq ($(TARGET_HAS_LOW_RAM),true)
-PRODUCT_PACKAGES += vendor.display.color@1.0.vendor \
-                    vendor.display.color@1.1.vendor \
-                    vendor.display.color@1.2.vendor \
-                    vendor.display.color@1.3.vendor \
-                    vendor.display.postproc@1.0.vendor \
-                    vendor.display.color@1.0-service \
-                    vendor.display.color@1.0-service.rc \
-                    ppd
-endif

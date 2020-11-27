@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -50,7 +50,6 @@
 #define VIDEO_FBID_LIMIT 16
 #define OFFLINE_ROTATOR_FBID_LIMIT 2
 
-using sde_drm::DRMPowerMode;
 namespace sdm {
 class HWInfoInterface;
 
@@ -96,14 +95,13 @@ class HWDeviceDRM : public HWInterface {
   virtual void SetIdleTimeoutMs(uint32_t timeout_ms);
   virtual DisplayError SetDisplayMode(const HWDisplayMode hw_display_mode);
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate);
-  virtual DisplayError SetPanelBrightness(int level) { return kErrorNotSupported; }
+  virtual DisplayError SetPanelBrightness(int level);
   virtual DisplayError GetHWScanInfo(HWScanInfo *scan_info);
   virtual DisplayError GetVideoFormat(uint32_t config_index, uint32_t *video_format);
   virtual DisplayError GetMaxCEAFormat(uint32_t *max_cea_format);
   virtual DisplayError SetCursorPosition(HWLayers *hw_layers, int x, int y);
   virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
-  virtual DisplayError GetPanelBrightness(int *level) { return kErrorNotSupported; }
-  virtual void GetHWPanelMaxBrightness() { return; }
+  virtual DisplayError GetPanelBrightness(int *level);
   virtual DisplayError SetAutoRefresh(bool enable) { autorefresh_ = enable; return kErrorNone; }
   virtual DisplayError SetS3DMode(HWS3DMode s3d_mode);
   virtual DisplayError SetScaleLutConfig(HWScaleLutInfo *lut_info);
@@ -136,12 +134,15 @@ class HWDeviceDRM : public HWInterface {
   static const int kMaxStringLength = 1024;
   static const int kNumPhysicalDisplays = 2;
   static const int kMaxSysfsCommandLength = 12;
+  static constexpr const char *kBrightnessNode =
+    "/sys/class/backlight/panel0-backlight/brightness";
 
   DisplayError SetFormat(const LayerBufferFormat &source, uint32_t *target);
   DisplayError SetStride(HWDeviceType device_type, LayerBufferFormat format, uint32_t width,
                          uint32_t *target);
   DisplayError PopulateDisplayAttributes(uint32_t index);
   void GetHWDisplayPortAndMode();
+  void GetHWPanelMaxBrightness();
   bool EnableHotPlugDetection(int enable);
   void UpdateMixerAttributes();
   void SetSolidfillStages();
@@ -223,25 +224,15 @@ class HWDeviceDRM : public HWInterface {
   bool synchronous_commit_ = false;
   uint32_t topology_control_ = 0;
   uint32_t vrefresh_ = 0;
-  uint32_t panel_mode_changed_ = 0;
-  bool reset_output_fence_offset_ = false;
   uint64_t bit_clk_rate_ = 0;
   bool update_mode_ = false;
-  uint32_t video_mode_index_ = 0;
-  uint32_t cmd_mode_index_ = 0;
-  bool switch_mode_valid_ = false;
-  bool doze_poms_switch_done_ = false;
-  bool active_ = false;
-  DRMPowerMode last_power_mode_ = DRMPowerMode::OFF;
-  bool pending_doze_ = false;
 
  private:
-  void SetDisplaySwitchMode(uint32_t index);
-
   std::string interface_str_ = "DSI";
   bool resolution_switch_enabled_ = false;
   bool autorefresh_ = false;
   std::unique_ptr<HWColorManagerDrm> hw_color_mgr_ = {};
+  bool pending_doze_ = false;
 };
 
 }  // namespace sdm

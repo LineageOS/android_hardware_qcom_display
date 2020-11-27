@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2019, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -283,10 +283,17 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
   needs_validate_ = true;
+  if (defer_power_state_ && power_state_pending_ != kStateOff) {
+    defer_power_state_ = false;
+    error = SetDisplayState(power_state_pending_, false, NULL);
+    if (error != kErrorNone) {
+      return error;
+    }
+    power_state_pending_ = kStateOff;
+  }
 
   DTRACE_SCOPED();
-  // Allow prepare as pending doze/pending_power_on is handled as a part of draw cycle
-  if (!active_ && !pending_doze_ && !pending_power_on_) {
+  if (!active_) {
     return kErrorPermission;
   }
 
@@ -350,8 +357,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
 
-  // Allow commit as pending doze/pending_power_on is handled as a part of draw cycle
-  if (!active_ && !pending_doze_ && !pending_power_on_) {
+  if (!active_) {
     needs_validate_ = true;
     return kErrorPermission;
   }
@@ -401,7 +407,6 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
       // If COMMIT fails on the Fast Path, set Safe Mode.
       DLOGE("COMMIT failed in Fast Path, set Safe Mode!");
       comp_manager_->SetSafeMode(true);
-      safe_mode_in_fast_path_ = true;
       error = kErrorNotValidated;
     }
     return error;
@@ -421,28 +426,9 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
 
   // Stop dropping vsync when first commit is received after idle fallback.
   drop_hw_vsync_ = false;
-
-  if (safe_mode_in_fast_path_) {
-    comp_manager_->SetSafeMode(false);
-    safe_mode_in_fast_path_ = false;
-  }
-
-  // Reset pending power state if any after the commit
-  error = HandlePendingPowerState(layer_stack->retire_fence_fd);
-  if (error != kErrorNone) {
-    return error;
-  }
-
-  // Handle pending vsync enable if any after the commit
-  error = HandlePendingVSyncEnable(layer_stack->retire_fence_fd);
-  if (error != kErrorNone) {
-    return error;
-  }
-
-
   DLOGI_IF(kTagDisplay, "Exiting commit for display: %d-%d", display_id_, display_type_);
 
-  return error;
+  return kErrorNone;
 }
 
 DisplayError DisplayBase::Flush(LayerStack *layer_stack) {
@@ -539,6 +525,14 @@ DisplayError DisplayBase::GetVSyncState(bool *enabled) {
 DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
                                           int *release_fence) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (defer_power_state_) {
+    if (state == kStateOff) {
+      DLOGE("State cannot be PowerOff on first cycle");
+      return kErrorParameters;
+    }
+    power_state_pending_ = state;
+    return kErrorNone;
+  }
   DisplayError error = kErrorNone;
   bool active = false;
 
@@ -548,14 +542,6 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
   if (state == state_) {
     DLOGI("Same state transition is requested.");
     return kErrorNone;
-  }
-
-  // If vsync is enabled, disable vsync before power off/Doze suspend
-  if (vsync_enable_ && (state == kStateOff || state == kStateDozeSuspend)) {
-    error = SetVSyncState(false /* enable */);
-    if (error == kErrorNone) {
-      vsync_enable_pending_ = true;
-    }
   }
 
   switch (state) {
@@ -570,12 +556,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
   case kStateOn:
     error = hw_intf_->PowerOn(default_qos_data_, release_fence);
     if (error != kErrorNone) {
-      if (error == kErrorDeferred) {
-        pending_power_on_ = true;
-        error = kErrorNone;
-      } else {
-        return error;
-      }
+      return error;
     }
 
     error = comp_manager_->ReconfigureDisplay(display_comp_ctx_, display_attributes_,
@@ -590,14 +571,6 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
 
   case kStateDoze:
     error = hw_intf_->Doze(default_qos_data_, release_fence);
-    if (error != kErrorNone) {
-      if (error == kErrorDeferred) {
-        pending_doze_ = true;
-        error = kErrorNone;
-      } else {
-        return error;
-      }
-    }
     active = true;
     break;
 
@@ -617,35 +590,20 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     return kErrorParameters;
   }
 
-  error = ReconfigureDisplay();
-  if (error != kErrorNone) {
-    return error;
-  }
-
   DisablePartialUpdateOneFrame();
 
   if (error == kErrorNone) {
-    if (!pending_doze_ && !pending_power_on_) {
-      active_ = active;
-      state_ = state;
-    }
+    active_ = active;
+    state_ = state;
     comp_manager_->SetDisplayState(display_comp_ctx_, state, release_fence ? *release_fence : -1);
-    // If previously requested doze state is still pending reset it on any new display state request
-    // and handle the new request.
-    if (state != kStateDoze) {
-      pending_doze_ = false;
-    }
-    // If previously requested power on state is still pending reset it on any new display state
-    // request and handle the new request.
-    if (state != kStateOn) {
-      pending_power_on_ = false;
-    }
   }
 
-  // Handle vsync pending on resume, Since the power on commit is synchronous we pass -1 as retire
-  // fence otherwise pass valid retire fence
-  if (state_ == kStateOn) {
-    return HandlePendingVSyncEnable(-1 /* retire fence */);
+  if (vsync_state_change_pending_ && (state_ != kStateOff || state_ != kStateStandby)) {
+    error = SetVSyncState(requested_vsync_state_);
+    if (error != kErrorNone) {
+      return error;
+    }
+    vsync_state_change_pending_ = false;
   }
 
   return error;
@@ -660,12 +618,6 @@ DisplayError DisplayBase::SetActiveConfig(uint32_t index) {
 
   if (active_index == index) {
     return kErrorNone;
-  }
-
-  // Reject active config changes if qsync is in use.
-  if (needs_avr_update_ || qsync_mode_ != kQSyncModeNone) {
-    DLOGE("Failed: needs_avr_update_: %d, qsync_mode_: %d", needs_avr_update_, qsync_mode_);
-    return kErrorNotSupported;
   }
 
   error = hw_intf_->SetDisplayAttributes(index);
@@ -787,9 +739,9 @@ std::string DisplayBase::Dump() {
       INT(fb_roi.right) << " " << INT(fb_roi.bottom) << ")";
   }
 
-  const char *header  = "\n| Idx |  Comp Type |   Split   | Pipe |    W x H    |          Format          |  Src Rect (L T R B) |  Dst Rect (L T R B) |  Z | Pipe Flags | Deci(HxV) | CS | Rng | Tr |";  //NOLINT
-  const char *newline = "\n|-----|------------|-----------|------|-------------|--------------------------|---------------------|---------------------|----|------------|-----------|----|-----|----|";  //NOLINT
-  const char *format  = "\n| %3s | %10s | %9s | %4d | %4d x %4d | %24s | %4d %4d %4d %4d | %4d %4d %4d %4d | %2s | %10s | %9s | %2s | %3s | %2s |";  //NOLINT
+  const char *header  = "\n| Idx |  Comp Type |   Split   | Pipe |    W x H    |          Format          |  Src Rect (L T R B) |  Dst Rect (L T R B) |  Z | Pipe Flags | Deci(HxV) | CS | Rng |";  //NOLINT
+  const char *newline = "\n|-----|------------|-----------|------|-------------|--------------------------|---------------------|---------------------|----|------------|-----------|----|-----|";  //NOLINT
+  const char *format  = "\n| %3s | %10s | %9s | %4d | %4d x %4d | %24s | %4d %4d %4d %4d | %4d %4d %4d %4d | %2s | %10s | %9s | %2s | %3s |";  //NOLINT
 
   os << "\n";
   os << newline;
@@ -827,7 +779,7 @@ std::string DisplayBase::Dump() {
                0, input_buffer->width, input_buffer->height, buffer_format,
                INT(src_roi.left), INT(src_roi.top), INT(src_roi.right), INT(src_roi.bottom),
                INT(dst_roi.left), INT(dst_roi.top), INT(dst_roi.right), INT(dst_roi.bottom),
-               "-", "-    ", "-    ", "-", "-", "-");
+               "-", "-    ", "-    ", "-", "-");
       os << row;
       // print the below only once per layer block, fill with spaces for rest.
       idx[0] = 0;
@@ -846,7 +798,6 @@ std::string DisplayBase::Dump() {
       char z_order[8] = { 0 };
       const char *color_primary = "";
       const char *range = "";
-      const char *transfer = "";
       char row[1024] = { 0 };
 
       snprintf(z_order, sizeof(z_order), "%d", layer_config.hw_solidfill_stage.z_order);
@@ -856,7 +807,7 @@ std::string DisplayBase::Dump() {
                buffer_format, INT(src_roi.left), INT(src_roi.top),
                INT(src_roi.right), INT(src_roi.bottom), INT(src_roi.left),
                INT(src_roi.top), INT(src_roi.right), INT(src_roi.bottom),
-               z_order, flags, decimation, color_primary, range, transfer);
+               z_order, flags, decimation, color_primary, range);
       os << row;
       continue;
     }
@@ -867,7 +818,6 @@ std::string DisplayBase::Dump() {
       char z_order[8] = { 0 };
       char color_primary[8] = { 0 };
       char range[8] = { 0 };
-      char transfer[8] = { 0 };
 
       HWPipeInfo &pipe = (count == 0) ? layer_config.left_pipe : layer_config.right_pipe;
 
@@ -888,7 +838,6 @@ std::string DisplayBase::Dump() {
       ColorMetaData &color_metadata = hw_layer.input_buffer.color_metadata;
       snprintf(color_primary, sizeof(color_primary), "%d", color_metadata.colorPrimaries);
       snprintf(range, sizeof(range), "%d", color_metadata.range);
-      snprintf(transfer, sizeof(transfer), "%d", color_metadata.transfer);
 
       char row[1024];
       snprintf(row, sizeof(row), format, idx, comp_type, pipe_split[count],
@@ -896,7 +845,7 @@ std::string DisplayBase::Dump() {
                buffer_format, INT(src_roi.left), INT(src_roi.top),
                INT(src_roi.right), INT(src_roi.bottom), INT(dst_roi.left),
                INT(dst_roi.top), INT(dst_roi.right), INT(dst_roi.bottom),
-               z_order, flags, decimation, color_primary, range, transfer);
+               z_order, flags, decimation, color_primary, range);
 
       os << row;
       // print the below only once per layer block, fill with spaces for rest.
@@ -1023,7 +972,12 @@ DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
 }
 
 DisplayError DisplayBase::SetColorModeById(int32_t color_mode_id) {
-  return color_mgr_->ColorMgrSetMode(color_mode_id);
+  for (auto it : color_mode_map_) {
+    if (it.second->id == color_mode_id)
+      return SetColorMode(it.first);
+  }
+
+  return kErrorNotSupported;
 }
 
 DisplayError DisplayBase::SetColorModeInternal(const std::string &color_mode) {
@@ -1161,28 +1115,14 @@ DisplayError DisplayBase::GetRefreshRateRange(uint32_t *min_refresh_rate,
   return error;
 }
 
-DisplayError DisplayBase::HandlePendingVSyncEnable(int32_t retire_fence) {
-  if (vsync_enable_pending_) {
-    // Retire fence signalling confirms that CRTC enabled, hence wait for retire fence before
-    // we enable vsync
-    buffer_sync_handler_->SyncWait(retire_fence);
-
-    DisplayError error = SetVSyncState(true /* enable */);
-    if (error != kErrorNone) {
-      return error;
-    }
-    vsync_enable_pending_ = false;
-  }
-  return kErrorNone;
-}
-
 DisplayError DisplayBase::SetVSyncState(bool enable) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-
-  if (state_ == kStateOff && enable) {
-    DLOGW("Can't enable vsync when display %d-%d is powered off!! Defer it when display is active",
+  if (state_ == kStateOff) {
+    DLOGW("Can't %s vsync when power state is off for display %d-%d," \
+          "Defer it when display is active", enable ? "enable":"disable",
           display_id_, display_type_);
-    vsync_enable_pending_ = true;
+    vsync_state_change_pending_ = true;
+    requested_vsync_state_ = enable;
     return kErrorNone;
   }
   DisplayError error = kErrorNone;
@@ -1199,7 +1139,6 @@ DisplayError DisplayBase::SetVSyncState(bool enable) {
       vsync_enable_ = enable;
     }
   }
-  vsync_enable_pending_ = !enable ? false : vsync_enable_pending_;
 
   return error;
 }
@@ -1555,7 +1494,6 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
     hw_layer.input_buffer.size = sdm_layer->input_buffer.size;
     hw_layer.input_buffer.acquire_fence_fd = sdm_layer->input_buffer.acquire_fence_fd;
     hw_layer.input_buffer.handle_id = sdm_layer->input_buffer.handle_id;
-    hw_layer.input_buffer.buffer_id = sdm_layer->input_buffer.buffer_id;
     // TODO(user): Other FBT layer attributes like surface damage, dataspace, secure camera and
     // secure display flags are also updated during SetClientTarget() called between validate and
     // commit. Need to revist this and update it accordingly for FBT layer.
@@ -1847,7 +1785,7 @@ void DisplayBase::GetColorPrimaryTransferFromAttributes(const AttrVal &attr,
         pt.transfer = Transfer_sRGB;
         supported_pt->push_back(pt);
       } else if (pt.primaries == ColorPrimaries_DCIP3) {
-        pt.transfer = Transfer_sRGB;
+        pt.transfer = Transfer_Gamma2_2;
         supported_pt->push_back(pt);
       } else if (pt.primaries == ColorPrimaries_BT2020) {
         pt.transfer = Transfer_SMPTE_ST2084;
@@ -1949,7 +1887,7 @@ PrimariesTransfer DisplayBase::GetBlendSpaceFromColorMode() {
     }
   } else if (color_gamut == kDcip3) {
     pt.primaries = GetColorPrimariesFromAttribute(color_gamut);
-    pt.transfer = Transfer_sRGB;
+    pt.transfer = Transfer_Gamma2_2;
   }
 
   return pt;
@@ -2001,31 +1939,6 @@ void DisplayBase::SetLutSwapFlag() {
   // No pipe needs lut swap.
   lut_swap_ = false;
   return;
-}
-
-DisplayError DisplayBase::HandlePendingPowerState(int32_t retire_fence) {
-  if (pending_doze_ || pending_power_on_) {
-    // Retire fence signalling confirms that CRTC enabled, hence wait for retire fence before
-    // we enable vsync
-    buffer_sync_handler_->SyncWait(retire_fence);
-
-    if (pending_doze_) {
-      state_ = kStateDoze;
-      DisplayError error = ReconfigureDisplay();
-      if (error != kErrorNone) {
-        return error;
-      }
-      event_handler_->Refresh();
-    }
-    if (pending_power_on_) {
-      state_ = kStateOn;
-    }
-    active_ = true;
-
-    pending_doze_ = false;
-    pending_power_on_ = false;
-  }
-  return kErrorNone;
 }
 
 }  // namespace sdm
