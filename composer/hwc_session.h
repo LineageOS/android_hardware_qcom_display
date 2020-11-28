@@ -545,6 +545,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   CWB cwb_;
   std::weak_ptr<DisplayConfig::ConfigCallback> qsync_callback_;
   bool async_powermode_ = false;
+  bool async_power_mode_triggered_ = false;
   bool async_vds_creation_ = false;
   bool power_state_transition_[HWCCallbacks::kNumDisplays] = {};
   std::bitset<HWCCallbacks::kNumDisplays> display_ready_;
