@@ -718,7 +718,8 @@ int HWCSession::DisplayConfigImpl::SetPowerMode(uint32_t disp_id,
   if (!supported) {
     return 0;
   }
-
+  // Added this flag for pixel
+  hwc_session_->async_power_mode_triggered_  = true;
   // Active builtin display needs revalidation
   hwc2_display_t active_builtin_disp_id = hwc_session_->GetActiveBuiltinDisplay();
   HWC2::PowerMode previous_mode = hwc_session_->hwc_display_[disp_id]->GetCurrentPowerMode();
