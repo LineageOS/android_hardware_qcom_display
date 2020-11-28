@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "e6f42c97_25e5764e",
+        "filename": "liboverlay/Android.mk",
+        "patchSetId": 3
+      },
+      "lineNbr": 8,
+      "author": {
+        "id": 19286
+      },
+      "writtenOn": "2020-11-28T08:08:24Z",
+      "side": 0,
+      "message": "I think, this line could be removed too",
+      "revId": "d5ea072799a7162a1d977fcf5b155d21b1f6f19f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
