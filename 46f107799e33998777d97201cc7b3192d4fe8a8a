@@ -22,6 +22,30 @@
       "revId": "46f107799e33998777d97201cc7b3192d4fe8a8a",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "4232783d_2258b58d",
+        "filename": "libhwcomposer/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 11,
+      "author": {
+        "id": 25126
+      },
+      "writtenOn": "2020-11-29T23:37:38Z",
+      "side": 0,
+      "message": "The external/skia includes? These were removed in the original commit: https://review.lineageos.org/c/LineageOS/android_hardware_qcom_display/+/292654/1/libhwcomposer/Android.mk",
+      "parentUuid": "3717c651_98c0a547",
+      "range": {
+        "startLine": 10,
+        "startChar": 33,
+        "endLine": 11,
+        "endChar": 70
+      },
+      "revId": "46f107799e33998777d97201cc7b3192d4fe8a8a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
     }
   ]
 }
