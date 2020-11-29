@@ -402,6 +402,10 @@ DisplayError DisplayBuiltIn::SetupSPR() {
       DLOGE("Failed to initialize SPR");
       return kErrorResources;
     }
+
+    if (color_mgr_) {
+    color_mgr_->ColorMgrSetSprIntf(reinterpret_cast<void *>(spr_.get()));
+    }
   }
 
   return kErrorNone;

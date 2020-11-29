@@ -480,6 +480,10 @@ DisplayError ColorManagerProxy::ColorMgrSetModeWithRenderIntent(int32_t color_mo
   return kErrorNone;
 }
 
+DisplayError ColorManagerProxy::ColorMgrSetSprIntf(void *spr_intf) {
+  return color_intf_->ColorIntfSetSprInterface(spr_intf);
+}
+
 DisplayError ColorManagerProxy::Validate(DispLayerStack *disp_layer_stack) {
   DisplayError ret = kErrorNone;
   if (!disp_layer_stack) {

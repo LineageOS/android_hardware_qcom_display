@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -108,6 +108,7 @@ class ColorInterface {
   virtual DisplayError ColorIntfConvertFeature(uint32_t disp_id,
                                                const snapdragoncolor::HwConfigPayload &in_data,
                                                PPFeaturesConfig *out_features) = 0;
+  virtual DisplayError ColorIntfSetSprInterface(void *spr_intf) = 0;
 
  protected:
   virtual ~ColorInterface() {}
