@@ -332,7 +332,7 @@ DisplayError DisplayBuiltIn::SetDisplayMode(uint32_t mode) {
     HWDisplayMode hw_display_mode = static_cast<HWDisplayMode>(mode);
     uint32_t pending = 0;
 
-    if (!active_) {
+    if (!active_ && !pending_doze_ && !pending_power_on_) {
       DLOGW("Invalid display state = %d. Panel must be on.", state_);
       return kErrorNotSupported;
     }
@@ -464,6 +464,12 @@ DisplayError DisplayBuiltIn::SetRefreshRate(uint32_t refresh_rate, bool final_ra
       // Just drop min fps settting for now.
       handle_idle_timeout_ = false;
       return error;
+    }
+
+    if (handle_idle_timeout_) {
+      is_idle_timeout_ = true;
+    } else {
+      is_idle_timeout_ = false;
     }
 
     error = comp_manager_->CheckEnforceSplit(display_comp_ctx_, refresh_rate);
