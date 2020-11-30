@@ -25,6 +25,8 @@
 #ifndef __DISPLAY_BUILTIN_H__
 #define __DISPLAY_BUILTIN_H__
 
+#include <sys/time.h>
+
 #include <core/dpps_interface.h>
 #include <core/ipc_interface.h>
 #include <private/extension_interface.h>
@@ -120,7 +122,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError SetDisplayMode(uint32_t mode) override;
   DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate,
                                    uint32_t *max_refresh_rate) override;
-  DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate) override;
+  DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate, bool idle_screen) override;
   DisplayError SetPanelBrightness(float brightness) override;
   DisplayError GetPanelBrightness(float *brightness) override;
   DisplayError GetPanelBrightnessFromLevel(float level, float *brightness);
@@ -181,6 +183,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   void SetVsyncStatus(bool enable);
   void SendBacklight();
   void SendDisplayConfigs();
+  bool CanLowerFps(bool idle_screen);
 
   const uint32_t kPuTimeOutMs = 1000;
   std::vector<HWEvent> event_list_;
@@ -222,6 +225,9 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   bool pending_vsync_enable_ = false;
   QSyncMode active_qsync_mode_ = kQSyncModeNone;
   std::shared_ptr<IPCIntf> ipc_intf_ = nullptr;
+  bool enhance_idle_time_ = false;
+  int idle_time_ms_ = 0;
+  struct timespec idle_timer_start_;
 };
 
 }  // namespace sdm
