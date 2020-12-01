@@ -42,10 +42,6 @@ LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware li
                                  android.hardware.graphics.composer@2.1 \
                                  vendor.display.config@2.0
 
-ifneq ($(TARGET_USES_GRALLOC1), true)
-    LOCAL_SHARED_LIBRARIES += libmemalloc
-endif
-
 LOCAL_SRC_FILES               := hwc_session.cpp \
                                  hwc_session_services.cpp \
                                  hwc_display.cpp \
@@ -62,13 +58,8 @@ LOCAL_SRC_FILES               := hwc_session.cpp \
                                  ../hwc/hwc_socket_handler.cpp \
                                  display_null.cpp \
                                  hwc_tonemapper.cpp \
-                                 hwc_display_external_test.cpp
-
-ifneq ($(TARGET_USES_GRALLOC1), true)
-    LOCAL_SRC_FILES += ../hwc/hwc_buffer_allocator.cpp
-else
-    LOCAL_SRC_FILES += hwc_buffer_allocator.cpp
-endif
+                                 hwc_display_external_test.cpp \
+                                 hwc_buffer_allocator.cpp
 
 ifeq ($(TARGET_HAS_WIDE_COLOR_DISPLAY), true)
     LOCAL_CFLAGS += -DFEATURE_WIDE_COLOR
