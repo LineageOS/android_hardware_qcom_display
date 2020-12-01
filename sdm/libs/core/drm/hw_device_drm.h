@@ -121,6 +121,7 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event, const HWQosData &qos_data) {
     switch (secure_event) {
       case kTUITransitionPrepare:
+      case kTUITransitionUnPrepare:
         tui_state_ = kTUIStateInProgress;
         break;
       case kTUITransitionStart:
@@ -128,9 +129,6 @@ class HWDeviceDRM : public HWInterface {
         break;
       case kTUITransitionEnd:
         tui_state_ = kTUIStateEnd;
-        break;
-      case kTUITransitionUnPrepare:
-        tui_state_ = kTUIStateNone;
         break;
       default:
         break;
