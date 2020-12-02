@@ -31,7 +31,8 @@
 namespace sdm {
 
 enum IPCParams {
-  kIpcParamSetBacklight,
+  kIpcParamSetBacklight,            //!< Send backlight params to SVM
+  kIpcParamSetDisplayConfigs,       //!< Send display config information to SVM
   kIPCParamMax,
 };
 
@@ -40,8 +41,17 @@ enum IPCOps {
 };
 
 struct IPCBacklightParams {
-  float brightness = 0.0f;
-  bool is_primary = false;
+  float brightness = 0.0f;        //!< Specifies the brightness level to be passed to SVM
+  bool is_primary = false;        //!< Flag specifies primary/secondary
+};
+
+struct IPCDisplayConfigParams {
+  uint32_t x_pixels = 0;          //!< Total number of pixels in X-direction on the display panel.
+  uint32_t y_pixels = 0;          //!< Total number of pixels in Y-direction on the display panel.
+  uint32_t fps = 0;               //!< Frame rate per second.
+  int config_idx = -1;            //!< Specifies the config index of the display resolution mode.
+  bool is_primary = false;        //!< Flag specifies primary/secondary
+  bool smart_panel = false;       //!< If the display config has smart panel.
 };
 
 using IPCIntf = sdm::GenericIntf<IPCParams, IPCOps, GenericPayload>;

@@ -651,6 +651,8 @@ struct HWPipeInfo {
   std::vector<HWPipeTonemapLutInfo> lut_info = {};
   LayerTransform transform;
   HWSrcTonemap tonemap = kSrcTonemapNone;
+  LayerBufferFormat format = kFormatARGB8888;  // src format of the buffer
+  bool is_solid_fill = false;
 };
 
 struct HWSolidfillStage {

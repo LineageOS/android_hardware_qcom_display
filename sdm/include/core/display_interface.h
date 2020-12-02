@@ -870,11 +870,6 @@ class DisplayInterface {
   */
   virtual bool IsSupportSsppTonemap() = 0;
 
-  /*! @brief Method to free concurrent writeback resoures for primary display.
-    @return \link DisplayError \endlink
-  */
-  virtual DisplayError TeardownConcurrentWriteback(void) = 0;
-
   /*! @brief Method to set frame trigger mode for primary display.
 
     @param[in] frame trigger mode
@@ -1000,6 +995,14 @@ class DisplayInterface {
     @return \link DisplayError \endlink
   */
   virtual DisplayError ClearLUTs() = 0;
+
+  /*! @brief Method to notify the stc library that connect/disconnect QDCM tool.
+
+    @param[in] connect or disconnect
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError NotifyDisplayCalibrationMode(bool in_calibration) = 0;
 
  protected:
   virtual ~DisplayInterface() { }

@@ -298,6 +298,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   static Locker hdr_locker_[HWCCallbacks::kNumDisplays];
   static Locker tui_locker_[HWCCallbacks::kNumDisplays];
   static bool tui_transition_pending_[HWCCallbacks::kNumDisplays];
+  static int tui_transition_error_[HWCCallbacks::kNumDisplays];
   static Locker display_config_locker_;
   static Locker system_locker_;
 
@@ -523,6 +524,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   android::status_t TUITransitionUnPrepare(int disp_id);
   void PerformIdleStatusCallback(hwc2_display_t display);
   DispType GetDisplayConfigDisplayType(int qdutils_disp_type);
+  HWC2::Error TeardownConcurrentWriteback(hwc2_display_t display);
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};

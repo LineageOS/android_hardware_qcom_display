@@ -2149,7 +2149,6 @@ void DisplayBase::HwRecovery(const HWRecoveryEvent sdm_event_code) {
       } else {
         DLOGI("Debugfs data dumping is disabled for display = %d", display_type_);
       }
-#endif
       hw_recovery_count_++;
       if (hw_recovery_count_ >= hw_recovery_threshold_) {
         DLOGI("display = %d attempting to start display power reset", display_type_);
@@ -2161,8 +2160,12 @@ void DisplayBase::HwRecovery(const HWRecoveryEvent sdm_event_code) {
           hw_recovery_count_ = 0;
         }
       }
+#else
+      event_handler_->HandleEvent(kDisplayPowerResetEvent);
+#endif
       break;
     case HWRecoveryEvent::kDisplayPowerReset:
+#ifndef TRUSTED_VM
       DLOGI("display = %d attempting to start display power reset", display_type_);
       if (StartDisplayPowerReset()) {
         DLOGI("display = %d allowed to start display power reset", display_type_);
@@ -2170,6 +2173,9 @@ void DisplayBase::HwRecovery(const HWRecoveryEvent sdm_event_code) {
         EndDisplayPowerReset();
         DLOGI("display = %d has finished display power reset", display_type_);
       }
+#else
+      event_handler_->HandleEvent(kDisplayPowerResetEvent);
+#endif
       break;
     default:
       return;

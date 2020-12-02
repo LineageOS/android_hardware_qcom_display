@@ -55,11 +55,7 @@ struct LayerStitchGetInstanceContext : public SyncTask<LayerStitchTaskCode>::Tas
 };
 
 struct LayerStitchContext : public SyncTask<LayerStitchTaskCode>::TaskContext {
-  const private_handle_t* src_hnd = nullptr;
-  const private_handle_t* dst_hnd = nullptr;
-  GLRect src_rect = {};
-  GLRect dst_rect = {};
-  GLRect scissor_rect = {};
+  vector<StitchParams> stitch_params;
   shared_ptr<Fence> src_acquire_fence = nullptr;
   shared_ptr<Fence> dst_acquire_fence = nullptr;
   shared_ptr<Fence> release_fence = nullptr;
@@ -122,7 +118,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual HWC2::Error SetPanelBrightness(float brightness);
   virtual HWC2::Error GetPanelBrightness(float *brightness);
   virtual HWC2::Error GetPanelMaxBrightness(uint32_t *max_brightness_level);
-  virtual DisplayError TeardownConcurrentWriteback(void);
+  virtual DisplayError TeardownConcurrentWriteback(bool *needs_refresh);
   virtual void SetFastPathComposition(bool enable) {
     fast_path_composition_ = enable && !readback_buffer_queued_;
   }
@@ -151,6 +147,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual HWC2::Error SetPowerMode(HWC2::PowerMode mode, bool teardown);
   virtual bool IsDisplayIdle();
   virtual bool HasReadBackBufferSupport();
+  virtual HWC2::Error NotifyDisplayCalibrationMode(bool in_calibration);
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,

@@ -139,6 +139,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError colorSamplingOff() override;
   DisplayError GetStcColorModes(snapdragoncolor::ColorModeList *mode_list) override;
   DisplayError SetStcColorMode(const snapdragoncolor::ColorMode &color_mode) override;
+  DisplayError NotifyDisplayCalibrationMode(bool in_calibration) override;
   std::string Dump() override;
   DisplayError GetConfig(DisplayConfigFixedInfo *fixed_info) override;
 
@@ -152,7 +153,6 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   void PingPongTimeout() override;
   void PanelDead() override;
   void HwRecovery(const HWRecoveryEvent sdm_event_code) override;
-  DisplayError TeardownConcurrentWriteback(void) override;
   DisplayError ClearLUTs() override;
   void Histogram(int histogram_fd, uint32_t blob_id) override;
   void HandleBacklightEvent(float brightness_level) override;
@@ -179,6 +179,8 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   void HandleQsyncPostCommit(LayerStack *layer_stack);
   void UpdateQsyncMode();
   void SetVsyncStatus(bool enable);
+  void SendBacklight();
+  void SendDisplayConfigs();
 
   const uint32_t kPuTimeOutMs = 1000;
   std::vector<HWEvent> event_list_;

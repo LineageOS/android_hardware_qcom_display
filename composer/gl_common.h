@@ -30,7 +30,10 @@
 #ifndef __GL_COMMON_H__
 #define __GL_COMMON_H__
 
+#include <sync/sync.h>
 #include <utils/debug.h>
+#include <vector>
+#include <string>
 
 #include "glengine.h"
 #include "EGLImageWrapper.h"
@@ -58,13 +61,15 @@ class GLCommon {
   virtual void DumpShaderLog(int shader);
   virtual void MakeCurrent(const GLContext *ctx);
   virtual void SetProgram(uint32_t id);
-  virtual void SetDestinationBuffer(const private_handle_t *dst_hnd, const GLRect &dst_rect);
+  virtual void SetDestinationBuffer(const private_handle_t *dst_hnd);
   virtual void SetSourceBuffer(const private_handle_t *src_hnd);
   virtual void DestroyContext(GLContext *ctx);
   virtual void DeleteProgram(uint32_t id);
-  virtual int WaitOnInputFence(const shared_ptr<Fence> &in_fence);
+  virtual int WaitOnInputFence(const std::vector<shared_ptr<Fence>> &in_fences);
   virtual int CreateOutputFence(shared_ptr<Fence> *out_fence);
   virtual void ClearCache();
+  virtual void SetRealTimePriority();
+  virtual void SetViewport(const GLRect &dst_rect);
 
  protected:
   virtual ~GLCommon() { }

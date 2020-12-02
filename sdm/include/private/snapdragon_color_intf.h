@@ -86,6 +86,9 @@ enum ScProperty {
   //<! GetProperty - For client to get map of render intents.
   //<! Payload - struct RenderIntentMapList
   kGetRenderIntents,
+  //<! SetProperty - For client to notify connected/disconneced QDCM tool.
+  //<! Payload - bool
+  kNotifyDisplayCalibrationMode,
   //<! Max value of public properties
   kPropertyMax = 511,
   //<! Custom Properties

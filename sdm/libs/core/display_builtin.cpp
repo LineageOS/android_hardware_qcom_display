@@ -420,15 +420,15 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
     SetPanelBrightness(cached_brightness_);
     pending_brightness_ = false;
   } else {
-    // Send the panel brightness event to secondary VM on TUI session start
     if (secure_event_ == kTUITransitionStart) {
-      DisplayError err = kErrorNone;
-      int level = 0;
-      if ((err = hw_intf_->GetPanelBrightness(&level)) != kErrorNone) {
-        return err;
-      }
-      HandleBacklightEvent(level);
+      // Send the panel brightness event to secondary VM on TUI session start
+      SendBacklight();
     }
+  }
+
+  if (secure_event_ == kTUITransitionStart) {
+    // Send display config information to secondary VM on TUI session start
+    SendDisplayConfigs();
   }
 
   if (commit_event_enabled_) {
@@ -666,12 +666,6 @@ DisplayError DisplayBuiltIn::GetRefreshRateRange(uint32_t *min_refresh_rate,
   return error;
 }
 
-DisplayError DisplayBuiltIn::TeardownConcurrentWriteback(void) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
-
-  return hw_intf_->TeardownConcurrentWriteback();
-}
-
 DisplayError DisplayBuiltIn::SetRefreshRate(uint32_t refresh_rate, bool final_rate) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
@@ -806,7 +800,7 @@ void DisplayBuiltIn::HandleBacklightEvent(float brightness_level) {
     IPCBacklightParams *backlight_params = nullptr;
     int ret = in.CreatePayload<IPCBacklightParams>(backlight_params);
     if (ret) {
-      DLOGE("failed to create the payload. Error:%d", ret);
+      DLOGW("failed to create the payload. Error:%d", ret);
       return;
     }
     float brightness = 0.0f;
@@ -816,7 +810,7 @@ void DisplayBuiltIn::HandleBacklightEvent(float brightness_level) {
     backlight_params->brightness = brightness;
     backlight_params->is_primary = IsPrimaryDisplay();
     if ((ret = ipc_intf_->SetParameter(kIpcParamSetBacklight, in))) {
-      DLOGE("Failed to set backlight, error = %d", ret);
+      DLOGW("Failed to set backlight, error = %d", ret);
     }
     lock_guard<recursive_mutex> obj(brightness_lock_);
     cached_brightness_ = brightness;
@@ -1061,6 +1055,20 @@ DisplayError DisplayBuiltIn::SetStcColorMode(const snapdragoncolor::ColorMode &c
     dynamic_range = kHdrType;
   }
   comp_manager_->ControlDpps(dynamic_range != kHdrType);
+
+  return ret;
+}
+
+DisplayError DisplayBuiltIn::NotifyDisplayCalibrationMode(bool in_calibration) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (!color_mgr_) {
+    return kErrorNotSupported;
+  }
+  DisplayError ret = kErrorNone;
+  ret = color_mgr_->NotifyDisplayCalibrationMode(in_calibration);
+  if (ret != kErrorNone) {
+    DLOGE("Failed to notify QDCM Mode status, ret = %d state = %d", ret, in_calibration);
+  }
 
   return ret;
 }
@@ -1730,6 +1738,41 @@ DisplayError DisplayBuiltIn::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   fixed_info->readback_supported = hw_resource_info.has_concurrent_writeback;
 
   return kErrorNone;
+}
+
+void DisplayBuiltIn::SendBacklight() {
+  DisplayError err = kErrorNone;
+  int level = 0;
+  if ((err = hw_intf_->GetPanelBrightness(&level)) != kErrorNone) {
+    return;
+  }
+  HandleBacklightEvent(level);
+}
+
+void DisplayBuiltIn::SendDisplayConfigs() {
+  if (ipc_intf_) {
+    GenericPayload in;
+    uint32_t active_index = 0;
+    IPCDisplayConfigParams *disp_configs = nullptr;
+    int ret = in.CreatePayload<IPCDisplayConfigParams>(disp_configs);
+    if (ret) {
+      DLOGW("failed to create the payload. Error:%d", ret);
+      return;
+    }
+    DisplayError error = hw_intf_->GetActiveConfig(&active_index);
+    if (error != kErrorNone) {
+      return;
+    }
+    disp_configs->x_pixels = display_attributes_.x_pixels;
+    disp_configs->y_pixels = display_attributes_.y_pixels;
+    disp_configs->fps = display_attributes_.fps;
+    disp_configs->config_idx = active_index;
+    disp_configs->smart_panel = display_attributes_.smart_panel;
+     disp_configs->is_primary = IsPrimaryDisplay();
+    if ((ret = ipc_intf_->SetParameter(kIpcParamSetDisplayConfigs, in))) {
+      DLOGW("Failed to send display config, error = %d", ret);
+    }
+  }
 }
 
 }  // namespace sdm
