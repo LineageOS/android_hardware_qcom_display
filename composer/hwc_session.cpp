@@ -3770,18 +3770,23 @@ android::status_t HWCSession::TUITransitionUnPrepare(int disp_id) {
   std::copy(map_info_virtual_.begin(), map_info_virtual_.end(), std::back_inserter(map_info));
 
   for (auto &info : map_info) {
-    SEQUENCE_WAIT_SCOPE_LOCK(locker_[info.client_id]);
-    if (hwc_display_[info.client_id]) {
-      if (info.client_id == target_display) {
-        continue;
+    {
+      SEQUENCE_WAIT_SCOPE_LOCK(locker_[info.client_id]);
+      if (hwc_display_[info.client_id]) {
+        if (info.client_id == target_display) {
+          continue;
+        }
+        if (info.disp_type == kPluggable && pending_hotplug_event_ == kHotPlugEvent) {
+          continue;
+        }
+        if (hwc_display_[info.client_id]->HandleSecureEvent(kTUITransitionUnPrepare,
+                                                            &needs_refresh) != kErrorNone) {
+          return -EINVAL;
+        }
       }
-      if (info.disp_type == kPluggable && pending_hotplug_event_ == kHotPlugEvent) {
-        continue;
-      }
-      if (hwc_display_[info.client_id]->HandleSecureEvent(kTUITransitionUnPrepare,
-                                                          &needs_refresh) != kErrorNone) {
-        return -EINVAL;
-      }
+    }
+    if (needs_refresh) {
+      callbacks_.Refresh(info.client_id);
     }
   }
   if (pending_hotplug_event_ == kHotPlugEvent) {

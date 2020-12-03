@@ -2471,6 +2471,8 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
       return err;
     }
   } else if (secure_event == kTUITransitionUnPrepare) {
+    // Trigger refresh on non targetted display to update the screen after TUI end
+    *needs_refresh = true;
     DisplayState state = kStateOff;
     if (GetPendingDisplayState(&state) == kErrorNone) {
       shared_ptr<Fence> release_fence = nullptr;
