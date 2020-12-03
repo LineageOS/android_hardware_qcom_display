@@ -2554,6 +2554,8 @@ void HWDeviceDRM::SetTUIState() {
     tui_state_ = kTUIStateInProgress;
   } else if (tui_state_ == kTUIStateEnd) {
     tui_state_ = kTUIStateNone;
+  } else if (tui_state_ == kTUIStateInProgress) {
+    tui_state_ = kTUIStateNone;
   }
 }
 
