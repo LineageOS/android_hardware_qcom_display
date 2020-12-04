@@ -1155,6 +1155,16 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       aligned_w = ALIGN(width, 128);
       break;
     case HAL_PIXEL_FORMAT_YV12:
+      if ((usage & BufferUsage::GPU_TEXTURE) || (usage & BufferUsage::GPU_RENDER_TARGET)) {
+        if (AdrenoMemInfo::GetInstance() == nullptr) {
+          return 0;
+        }
+        alignment = AdrenoMemInfo::GetInstance()->GetGpuPixelAlignment();
+        aligned_w = ALIGN(width, alignment);
+      } else {
+        aligned_w = ALIGN(width, 16);
+      }
+      break;
     case HAL_PIXEL_FORMAT_YCbCr_422_SP:
     case HAL_PIXEL_FORMAT_YCrCb_422_SP:
     case HAL_PIXEL_FORMAT_YCbCr_422_I:
