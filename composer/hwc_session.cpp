@@ -3112,9 +3112,12 @@ void HWCSession::DisplayPowerReset() {
   }
 
   hwc2_display_t vsync_source = callbacks_.GetVsyncSource();
-  status = hwc_display_[vsync_source]->SetVsyncEnabled(HWC2::Vsync::Enable);
-  if (status != HWC2::Error::None) {
-    DLOGE("Enabling vsync failed for disp: %" PRIu64 " with error = %d", vsync_source, status);
+  // adb shell stop sets vsync source as max display
+  if (vsync_source != HWCCallbacks::kNumDisplays) {
+    status = hwc_display_[vsync_source]->SetVsyncEnabled(HWC2::Vsync::Enable);
+    if (status != HWC2::Error::None) {
+      DLOGE("Enabling vsync failed for disp: %" PRIu64 " with error = %d", vsync_source, status);
+    }
   }
 
   // Release lock on all displays.
