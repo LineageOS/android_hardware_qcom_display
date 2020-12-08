@@ -87,7 +87,7 @@ class HWEventsDRM : public HWEventsInterface {
   void WakeUpEventThread();
   DisplayError SetEventParser();
   DisplayError InitializePollFd();
-  DisplayError CloseFds();
+  void CloseFds();
   DisplayError RegisterVSync();
   DisplayError RegisterPanelDead(bool enable);
   DisplayError RegisterIdleNotify(bool enable);

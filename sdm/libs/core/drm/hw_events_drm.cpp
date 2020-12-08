@@ -357,12 +357,12 @@ void HWEventsDRM::WakeUpEventThread() {
   }
 }
 
-DisplayError HWEventsDRM::CloseFds() {
+void HWEventsDRM::CloseFds() {
   for (uint32_t i = 0; i < event_data_list_.size(); i++) {
     switch (event_data_list_[i].event_type) {
       case HWEvent::VSYNC:
         if (!is_primary_) {
-          Sys::close_(poll_fds_[i].fd);
+          drmClose(poll_fds_[i].fd);
         }
         poll_fds_[i].fd = -1;
         break;
@@ -380,19 +380,19 @@ DisplayError HWEventsDRM::CloseFds() {
       case HWEvent::IDLE_POWER_COLLAPSE:
       case HWEvent::PANEL_DEAD:
       case HWEvent::HW_RECOVERY:
+      case HWEvent::HISTOGRAM:
         drmClose(poll_fds_[i].fd);
         poll_fds_[i].fd = -1;
         break;
       case HWEvent::CEC_READ_MESSAGE:
       case HWEvent::SHOW_BLANK_EVENT:
       case HWEvent::THERMAL_LEVEL:
+      case HWEvent::PINGPONG_TIMEOUT:
         break;
       default:
-        return kErrorNotSupported;
+        break;
     }
   }
-
-  return kErrorNone;
 }
 
 void *HWEventsDRM::DisplayEventThread(void *context) {
@@ -477,6 +477,7 @@ void *HWEventsDRM::DisplayEventHandler() {
     }
   }
 
+  DLOGI("Exiting the thread");
   pthread_exit(0);
 
   return nullptr;
