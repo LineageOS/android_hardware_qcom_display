@@ -2445,8 +2445,8 @@ bool HWCDisplay::CanSkipValidate() {
   return true;
 }
 
-HWC2::Error HWCDisplay::GetValidateDisplayOutput(uint32_t *out_num_types,
-                                                 uint32_t *out_num_requests) {
+HWC2::Error HWCDisplay::PresentAndOrGetValidateDisplayOutput(uint32_t *out_num_types,
+                                                             uint32_t *out_num_requests) {
   *out_num_types = UINT32(layer_changes_.size());
   *out_num_requests = UINT32(layer_requests_.size());
 
