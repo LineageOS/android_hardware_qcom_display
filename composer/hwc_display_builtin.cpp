@@ -1625,7 +1625,7 @@ int HWCDisplayBuiltIn::PostInit() {
 
 void HWCDisplayBuiltIn::SetCpuPerfHintLargeCompCycle() {
   if (!cpu_hint_ || !perf_hint_large_comp_cycle_) {
-    DLOGV_IF(kTagResources, "cpu_hint_ not initialized or perty not set");
+    DLOGV_IF(kTagResources, "cpu_hint_ not initialized or property not set");
     return;
   }
 
@@ -1633,7 +1633,8 @@ void HWCDisplayBuiltIn::SetCpuPerfHintLargeCompCycle() {
     Layer *layer = hwc_layer->GetSDMLayer();
     if (layer->composition == kCompositionGPU) {
       DLOGV_IF(kTagResources, "Set perf hint for large comp cycle");
-      cpu_hint_->ReqHints(kPerfHintLargeCompCycle);
+      int hwc_tid = gettid();
+      cpu_hint_->ReqHintsOffload(kPerfHintLargeCompCycle, hwc_tid);
       break;
     }
   }
