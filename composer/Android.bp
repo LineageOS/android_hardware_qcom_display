@@ -61,6 +61,8 @@ cc_binary {
         "libdisplayconfig.qti",
         "libdrm",
         "vendor.qti.hardware.display.demura@1.0",
+        "libbinder_ndk",
+        "vendor.qti.hardware.display.config-unstable-ndk_platform",
     ],
     srcs: composer_srcs,
 
