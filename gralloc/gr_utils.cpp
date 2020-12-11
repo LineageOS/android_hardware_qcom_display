@@ -31,7 +31,9 @@
 #include <display/media/mmm_color_fmt.h>
 #endif
 
+#ifndef QMAA 
 #include <drm/drm_fourcc.h>
+#endif
 
 #include <cutils/properties.h>
 #include <algorithm>
@@ -1847,6 +1849,7 @@ void GetRGBPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int3
 // TODO(tbalacha): tile vs ubwc -- may need to find a diff way to differentiate
 void GetDRMFormat(uint32_t format, uint32_t flags, uint32_t *drm_format,
                   uint64_t *drm_format_modifier) {
+  #ifndef QMAA
   bool compressed = (flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED) ? true : false;
   switch (format) {
     case HAL_PIXEL_FORMAT_RGBA_8888:
@@ -1962,6 +1965,7 @@ void GetDRMFormat(uint32_t format, uint32_t flags, uint32_t *drm_format,
     default:
       ALOGE("Unsupported format %d", format);
   }
+#endif 
 }
 
 bool CanAllocateZSLForSecureCamera() {

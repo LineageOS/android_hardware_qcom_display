@@ -126,11 +126,11 @@ int Allocator::AllocateMem(AllocData *alloc_data, uint64_t usage, int format) {
 
   // After this point we should have the right heap set, there is no fallback
   GetIonHeapInfo(usage, &alloc_data->heap_id, &alloc_data->alloc_type, &alloc_data->flags);
-
+  #ifndef QMAA  
   if (alloc_data->heap_id == ION_HEAP(ION_DISPLAY_HEAP_ID)) {
     alloc_data->size = ALIGN(alloc_data->size, SIZE_2MB);
   }
-
+  #endif
   ret = ion_allocator_->AllocBuffer(alloc_data);
   if (ret >= 0) {
     alloc_data->alloc_type |= private_handle_t::PRIV_FLAGS_USES_ION;
