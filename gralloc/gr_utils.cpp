@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2021, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -45,7 +45,27 @@
 
 #define ASTC_BLOCK_SIZE 16
 
+#define ONLY_GPU_CPU_USAGE_MASK (BufferUsage::GPU_TEXTURE | BufferUsage::GPU_RENDER_TARGET | \
+                                 BufferUsage::GPU_DATA_BUFFER | BufferUsage::RENDERSCRIPT | \
+                                 BufferUsage::CPU_READ_MASK | BufferUsage::CPU_WRITE_MASK)
+
+#define NON_GPU_CPU_USAGE_MASK (BufferUsage::COMPOSER_CLIENT_TARGET | \
+                                BufferUsage::COMPOSER_OVERLAY | BufferUsage::COMPOSER_CURSOR | \
+                                BufferUsage::VIDEO_ENCODER | BufferUsage::CAMERA_OUTPUT | \
+                                BufferUsage::CAMERA_INPUT | BufferUsage::VIDEO_DECODER | \
+                                GRALLOC_USAGE_PRIVATE_CDSP | GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY)
+
 namespace gralloc {
+
+static inline unsigned int MMM_COLOR_FMT_RGB_STRIDE_IN_PIXELS(unsigned int color_fmt,
+                                                              unsigned int width) {
+  unsigned int stride = 0, bpp = 4;
+  if (!(color_fmt & (MMM_COLOR_FMT_RGBA8888 | MMM_COLOR_FMT_RGBA8888_UBWC)) || !width) {
+    return stride;
+  }
+  stride = MMM_COLOR_FMT_RGB_STRIDE(color_fmt, width / bpp);
+  return stride;
+}
 
 bool IsYuvFormat(int format) {
   switch (format) {
@@ -786,6 +806,16 @@ bool IsTileRendered(int format) {
   }
 }
 
+bool IsOnlyGpuCpuUsage(uint64_t usage) {
+  if (usage & NON_GPU_CPU_USAGE_MASK) {
+    return false;
+  }
+  if (usage & ONLY_GPU_CPU_USAGE_MASK) {
+    return true;
+  }
+  return false;
+}
+
 bool IsUBwcPISupported(int format, uint64_t usage) {
   // TODO(user): try and differentiate b/w mdp capability to support PI.
   if (!(usage & GRALLOC_USAGE_PRIVATE_ALLOC_UBWC_PI)) {
@@ -1097,9 +1127,23 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
   }
 
   if (IsUncompressedRGBFormat(format)) {
+    unsigned int aligned_w = width;
+    unsigned int aligned_h = height;
     if (AdrenoMemInfo::GetInstance()) {
       AdrenoMemInfo::GetInstance()->AlignUnCompressedRGB(width, height, format, tile, alignedw,
                                                          alignedh);
+    }
+    if (((usage & BufferUsage::VIDEO_ENCODER) || (usage & BufferUsage::VIDEO_DECODER)) &&
+        (format == HAL_PIXEL_FORMAT_RGBA_8888)) {
+      int mmm_format = MMM_COLOR_FMT_RGBA8888;
+      if (ubwc_enabled) {
+        mmm_format = MMM_COLOR_FMT_RGBA8888_UBWC;
+      }
+      aligned_w = MMM_COLOR_FMT_RGB_STRIDE_IN_PIXELS(mmm_format, *alignedw);
+      aligned_h = MMM_COLOR_FMT_RGB_SCANLINES(mmm_format, *alignedh);
+
+      *alignedw = aligned_w;
+      *alignedh = aligned_h;
     }
     return 0;
   }
@@ -1284,10 +1328,11 @@ int GetBufferLayout(private_handle_t *hnd, uint32_t stride[4], uint32_t offset[4
 int GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
                                     unsigned int *alignedw, unsigned int *alignedh,
                                     GraphicsMetadata *graphics_metadata) {
-  int err = GetAlignedWidthAndHeight(info, alignedw, alignedh);
-  if (err) {
-    return err;
-  }
+  // Maintain original w/h for buffer consumed solely by GPU or CPU as its derived from the
+  // gfx metadata for gfx consumption.
+  *alignedw = info.width;
+  *alignedh = info.height;
+
   AdrenoMemInfo* adreno_mem_info = AdrenoMemInfo::GetInstance();
   graphics_metadata->size = adreno_mem_info->AdrenoGetMetadataBlobSize();
   uint64_t adreno_usage = info.usage;
@@ -1332,6 +1377,9 @@ bool CanUseAdrenoForSize(int buffer_type, uint64_t usage) {
     return false;
   }
 
+  if (!IsOnlyGpuCpuUsage(usage)) {
+    return false;
+  }
   return true;
 }
 
