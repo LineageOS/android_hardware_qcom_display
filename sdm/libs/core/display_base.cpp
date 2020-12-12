@@ -84,7 +84,7 @@ DisplayBase::DisplayBase(int32_t display_id, DisplayType display_type,
     hw_info_intf_(hw_info_intf) {}
 
 DisplayError DisplayBase::Init() {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
   hw_panel_info_ = HWPanelInfo();
   hw_intf_->GetHWPanelInfo(&hw_panel_info_);
@@ -185,7 +185,7 @@ CleanupOnError:
 
 DisplayError DisplayBase::Deinit() {
   {  // Scope for lock
-    lock_guard<recursive_mutex> obj(recursive_mutex_);
+    ClientLock lock(disp_mutex_);
     ClearColorInfo();
     comp_manager_->UnregisterDisplay(display_comp_ctx_);
     if (IsPrimaryDisplay()) {
@@ -320,7 +320,7 @@ DisplayError DisplayBase::ValidateGPUTargetParams() {
 }
 
 DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
   needs_validate_ = true;
   disp_layer_stack_.info.output_buffer = layer_stack->output_buffer;
@@ -475,7 +475,7 @@ void DisplayBase::SetRCData(LayerStack *layer_stack) {
 }
 
 DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
   disp_layer_stack_.info.output_buffer = layer_stack->output_buffer;
 
@@ -612,7 +612,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
 }
 
 DisplayError DisplayBase::Flush(LayerStack *layer_stack) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
 
   if (!active_) {
@@ -633,7 +633,7 @@ DisplayError DisplayBase::Flush(LayerStack *layer_stack) {
 }
 
 DisplayError DisplayBase::GetDisplayState(DisplayState *state) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   if (!state) {
     return kErrorParameters;
   }
@@ -643,12 +643,12 @@ DisplayError DisplayBase::GetDisplayState(DisplayState *state) {
 }
 
 DisplayError DisplayBase::GetNumVariableInfoConfigs(uint32_t *count) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   return hw_intf_->GetNumDisplayAttributes(count);
 }
 
 DisplayError DisplayBase::GetConfig(uint32_t index, DisplayConfigVariableInfo *variable_info) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   HWDisplayAttributes attrib;
   if (hw_intf_->GetDisplayAttributes(index, &attrib) == kErrorNone) {
     *variable_info = attrib;
@@ -663,7 +663,7 @@ DisplayError DisplayBase::GetConfig(uint32_t index, DisplayConfigVariableInfo *v
 }
 
 DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *fixed_info) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   fixed_info->is_cmdmode = (hw_panel_info_.mode == kModeCommand);
 
   HWResourceInfo hw_resource_info = HWResourceInfo();
@@ -696,7 +696,7 @@ DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *fixed_info) {
 }
 
 DisplayError DisplayBase::GetRealConfig(uint32_t index, DisplayConfigVariableInfo *variable_info) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   HWDisplayAttributes attrib;
   if (hw_intf_->GetDisplayAttributes(index, &attrib) == kErrorNone) {
     *variable_info = attrib;
@@ -707,12 +707,12 @@ DisplayError DisplayBase::GetRealConfig(uint32_t index, DisplayConfigVariableInf
 }
 
 DisplayError DisplayBase::GetActiveConfig(uint32_t *index) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   return hw_intf_->GetActiveConfig(index);
 }
 
 DisplayError DisplayBase::GetVSyncState(bool *enabled) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   if (!enabled) {
     return kErrorParameters;
   }
@@ -724,7 +724,7 @@ DisplayError DisplayBase::GetVSyncState(bool *enabled) {
 
 DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
                                           shared_ptr<Fence> *release_fence) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
   bool active = false;
 
@@ -855,7 +855,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
 }
 
 DisplayError DisplayBase::SetActiveConfig(uint32_t index) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
   uint32_t active_index = 0;
 
@@ -880,7 +880,7 @@ DisplayError DisplayBase::SetActiveConfig(uint32_t index) {
 }
 
 DisplayError DisplayBase::SetMaxMixerStages(uint32_t max_mixer_stages) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
 
   error = comp_manager_->SetMaxMixerStages(display_comp_ctx_, max_mixer_stages);
@@ -893,7 +893,7 @@ DisplayError DisplayBase::SetMaxMixerStages(uint32_t max_mixer_stages) {
 }
 
 std::string DisplayBase::Dump() {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   HWDisplayAttributes attrib;
   uint32_t active_index = 0;
   uint32_t num_modes = 0;
@@ -1126,7 +1126,7 @@ const char * DisplayBase::GetName(const LayerComposition &composition) {
 DisplayError DisplayBase::ColorSVCRequestRoute(const PPDisplayAPIPayload &in_payload,
                                                PPDisplayAPIPayload *out_payload,
                                                PPPendingParams *pending_action) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   if (color_mgr_)
     return color_mgr_->ColorSVCRequestRoute(in_payload, out_payload, pending_action);
   else
@@ -1134,7 +1134,7 @@ DisplayError DisplayBase::ColorSVCRequestRoute(const PPDisplayAPIPayload &in_pay
 }
 
 DisplayError DisplayBase::GetColorModeCount(uint32_t *mode_count) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   if (!mode_count) {
     return kErrorParameters;
   }
@@ -1153,7 +1153,7 @@ DisplayError DisplayBase::GetColorModeCount(uint32_t *mode_count) {
 
 DisplayError DisplayBase::GetColorModes(uint32_t *mode_count,
                                         std::vector<std::string> *color_modes) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   if (!mode_count || !color_modes) {
     return kErrorParameters;
   }
@@ -1172,7 +1172,7 @@ DisplayError DisplayBase::GetColorModes(uint32_t *mode_count,
 }
 
 DisplayError DisplayBase::GetColorModeAttr(const std::string &color_mode, AttrVal *attr) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   if (!attr) {
     return kErrorParameters;
   }
@@ -1192,7 +1192,7 @@ DisplayError DisplayBase::GetColorModeAttr(const std::string &color_mode, AttrVa
 }
 
 DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   if (!color_mgr_) {
     return kErrorNotSupported;
   }
@@ -1322,7 +1322,7 @@ bool DisplayBase::IsSupportColorModeAttribute(const std::string &color_mode) {
 }
 
 DisplayError DisplayBase::SetColorTransform(const uint32_t length, const double *color_transform) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   if (!color_mgr_) {
     return kErrorNotSupported;
   }
@@ -1340,7 +1340,7 @@ DisplayError DisplayBase::SetColorTransform(const uint32_t length, const double 
 }
 
 DisplayError DisplayBase::GetDefaultColorMode(std::string *color_mode) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   if (!color_mode) {
     return kErrorParameters;
   }
@@ -1367,7 +1367,7 @@ DisplayError DisplayBase::GetDefaultColorMode(std::string *color_mode) {
 }
 
 DisplayError DisplayBase::ApplyDefaultDisplayMode() {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
   if (color_mgr_) {
     error = color_mgr_->ApplyDefaultDisplayMode();
@@ -1399,7 +1399,7 @@ DisplayError DisplayBase::ApplyDefaultDisplayMode() {
 }
 
 DisplayError DisplayBase::SetCursorPosition(int x, int y) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   if (state_ != kStateOn) {
     return kErrorNotSupported;
   }
@@ -1415,7 +1415,7 @@ DisplayError DisplayBase::SetCursorPosition(int x, int y) {
 
 DisplayError DisplayBase::GetRefreshRateRange(uint32_t *min_refresh_rate,
                                               uint32_t *max_refresh_rate) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   // The min and max refresh rates will be same when the HWPanelInfo does not contain valid rates.
   // Usually for secondary displays, command mode panels
   HWDisplayAttributes display_attributes;
@@ -1448,7 +1448,7 @@ DisplayError DisplayBase::HandlePendingVSyncEnable(const shared_ptr<Fence> &reti
 }
 
 DisplayError DisplayBase::SetVSyncState(bool enable) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
 
   if ((state_ == kStateOff || secure_event_ != kSecureEventMax) && enable) {
     DLOGW("Can't enable vsync when display %d-%d is powered off or SecureDisplay/TUI in progress",
@@ -1478,7 +1478,7 @@ DisplayError DisplayBase::SetVSyncState(bool enable) {
 }
 
 DisplayError DisplayBase::ReconfigureDisplay() {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
   HWDisplayAttributes display_attributes;
   HWMixerAttributes mixer_attributes;
@@ -1544,7 +1544,7 @@ DisplayError DisplayBase::ReconfigureDisplay() {
 }
 
 DisplayError DisplayBase::SetMixerResolution(uint32_t width, uint32_t height) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
 
   DisplayError error = ReconfigureMixer(width, height);
   if (error != kErrorNone) {
@@ -1558,7 +1558,7 @@ DisplayError DisplayBase::SetMixerResolution(uint32_t width, uint32_t height) {
 }
 
 DisplayError DisplayBase::GetMixerResolution(uint32_t *width, uint32_t *height) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   if (!width || !height) {
     return kErrorParameters;
   }
@@ -1570,7 +1570,7 @@ DisplayError DisplayBase::GetMixerResolution(uint32_t *width, uint32_t *height) 
 }
 
 DisplayError DisplayBase::ReconfigureMixer(uint32_t width, uint32_t height) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
 
   DTRACE_SCOPED();
@@ -1620,7 +1620,7 @@ bool DisplayBase::NeedsDownScale(const LayerRect &src_rect, const LayerRect &dst
 
 bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *new_mixer_width,
                                             uint32_t *new_mixer_height) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   uint32_t mixer_width = mixer_attributes_.width;
   uint32_t mixer_height = mixer_attributes_.height;
   uint32_t fb_width = fb_config_.x_pixels;
@@ -1720,7 +1720,7 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
 }
 
 DisplayError DisplayBase::SetFrameBufferConfig(const DisplayConfigVariableInfo &variable_info) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   uint32_t width = variable_info.x_pixels;
   uint32_t height = variable_info.y_pixels;
 
@@ -1757,7 +1757,7 @@ DisplayError DisplayBase::SetFrameBufferConfig(const DisplayConfigVariableInfo &
 }
 
 DisplayError DisplayBase::GetFrameBufferConfig(DisplayConfigVariableInfo *variable_info) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   if (!variable_info) {
     return kErrorParameters;
   }
@@ -1768,7 +1768,7 @@ DisplayError DisplayBase::GetFrameBufferConfig(DisplayConfigVariableInfo *variab
 }
 
 DisplayError DisplayBase::SetDetailEnhancerData(const DisplayDetailEnhancerData &de_data) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   DisplayError error = comp_manager_->SetDetailEnhancerData(display_comp_ctx_, de_data);
   if (error != kErrorNone) {
     return error;
@@ -1785,7 +1785,7 @@ DisplayError DisplayBase::SetDetailEnhancerData(const DisplayDetailEnhancerData 
 }
 
 DisplayError DisplayBase::GetDisplayPort(DisplayPort *port) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
 
   if (!port) {
     return kErrorParameters;
@@ -1797,7 +1797,7 @@ DisplayError DisplayBase::GetDisplayPort(DisplayPort *port) {
 }
 
 DisplayError DisplayBase::GetDisplayId(int32_t *display_id) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
 
   if (!display_id) {
     return kErrorParameters;
@@ -1809,7 +1809,7 @@ DisplayError DisplayBase::GetDisplayId(int32_t *display_id) {
 }
 
 DisplayError DisplayBase::GetDisplayType(DisplayType *display_type) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
 
   if (!display_type) {
     return kErrorParameters;
@@ -1821,13 +1821,13 @@ DisplayError DisplayBase::GetDisplayType(DisplayType *display_type) {
 }
 
 bool DisplayBase::IsPrimaryDisplay() {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
 
   return hw_panel_info_.is_primary_panel;
 }
 
 DisplayError DisplayBase::SetCompositionState(LayerComposition composition_type, bool enable) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
 
   return comp_manager_->SetCompositionState(display_comp_ctx_, composition_type, enable);
 }
@@ -2381,7 +2381,7 @@ DisplayError DisplayBase::IsSupportedOnDisplay(const SupportedDisplayFeature fea
 
   switch (feature) {
     case kSupportedModeSwitch: {
-      lock_guard<recursive_mutex> obj(recursive_mutex_);
+      ClientLock lock(disp_mutex_);
       error = hw_intf_->GetSupportedModeSwitch(supported);
       break;
     }
@@ -2419,7 +2419,7 @@ void DisplayBase::SetPendingPowerState(DisplayState state) {
 }
 
 DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   if (!needs_refresh) {
     return kErrorParameters;
   }
@@ -2502,7 +2502,7 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
 }
 
 DisplayError DisplayBase::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   return hw_intf_->OnMinHdcpEncryptionLevelChange(min_enc_level);
 }
 

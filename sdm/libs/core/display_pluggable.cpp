@@ -50,7 +50,7 @@ DisplayPluggable::DisplayPluggable(int32_t display_id, DisplayEventHandler *even
                 buffer_allocator, comp_manager, hw_info_intf) {}
 
 DisplayError DisplayPluggable::Init() {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
 
   DisplayError error = HWInterface::Create(display_id_, kPluggable, hw_info_intf_,
                                            buffer_allocator_, &hw_intf_);
@@ -121,7 +121,7 @@ DisplayError DisplayPluggable::Init() {
 }
 
 DisplayError DisplayPluggable::Prepare(LayerStack *layer_stack) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
   uint32_t new_mixer_width = 0;
   uint32_t new_mixer_height = 0;
@@ -143,7 +143,7 @@ DisplayError DisplayPluggable::Prepare(LayerStack *layer_stack) {
 
 DisplayError DisplayPluggable::GetRefreshRateRange(uint32_t *min_refresh_rate,
                                                    uint32_t *max_refresh_rate) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
 
   if (hw_panel_info_.min_fps && hw_panel_info_.max_fps) {
@@ -158,7 +158,7 @@ DisplayError DisplayPluggable::GetRefreshRateRange(uint32_t *min_refresh_rate,
 
 DisplayError DisplayPluggable::SetRefreshRate(uint32_t refresh_rate, bool final_rate,
                                               bool idle_screen) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
 
   if (!active_) {
     return kErrorPermission;
@@ -176,7 +176,7 @@ DisplayError DisplayPluggable::SetRefreshRate(uint32_t refresh_rate, bool final_
 }
 
 bool DisplayPluggable::IsUnderscanSupported() {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   return underscan_supported_;
 }
 
@@ -395,7 +395,7 @@ DisplayError DisplayPluggable::SetColorMode(const std::string &color_mode) {
 }
 
 DisplayError DisplayPluggable::GetColorModeCount(uint32_t *mode_count) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   if (!mode_count) {
     return kErrorParameters;
   }
@@ -408,7 +408,7 @@ DisplayError DisplayPluggable::GetColorModeCount(uint32_t *mode_count) {
 
 DisplayError DisplayPluggable::GetColorModes(uint32_t *mode_count,
                                              std::vector<std::string> *color_modes) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   if (!mode_count || !color_modes) {
     return kErrorParameters;
   }
@@ -422,7 +422,7 @@ DisplayError DisplayPluggable::GetColorModes(uint32_t *mode_count,
 }
 
 DisplayError DisplayPluggable::GetColorModeAttr(const std::string &color_mode, AttrVal *attr) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   if (!attr) {
     return kErrorParameters;
   }
