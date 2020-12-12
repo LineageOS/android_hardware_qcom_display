@@ -65,6 +65,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError Init();
   virtual DisplayError Deinit();
   virtual DisplayError Prepare(LayerStack *layer_stack);
+  virtual DisplayError CommitOrPrepare(LayerStack *layer_stack);
   virtual DisplayError Commit(LayerStack *layer_stack);
   virtual DisplayError Flush(LayerStack *layer_stack);
   virtual DisplayError GetDisplayState(DisplayState *state);
@@ -74,6 +75,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError GetRealConfig(uint32_t index, DisplayConfigVariableInfo *variable_info);
   virtual DisplayError GetActiveConfig(uint32_t *index);
   virtual DisplayError GetVSyncState(bool *enabled);
+  virtual DisplayError SetDrawMethod(DisplayDrawMethod draw_method);
   virtual DisplayError SetDisplayState(DisplayState state, bool teardown,
                                        shared_ptr<Fence> *release_fence);
   virtual DisplayError SetActiveConfig(uint32_t index);

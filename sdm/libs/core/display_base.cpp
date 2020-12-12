@@ -543,6 +543,21 @@ void DisplayBase::SetRCData(LayerStack *layer_stack) {
   }
 }
 
+DisplayError DisplayBase::CommitOrPrepare(LayerStack *layer_stack) {
+  ClientLock lock(disp_mutex_);
+  DisplayError error = kErrorNone;
+
+  // Perform task here and set error status.
+  error = kErrorNone;
+
+  if (error == kErrorNone) {
+    // Notify worker to do hw commit.
+    lock.NotifyWorker();
+  }
+
+  return error;
+}
+
 void DisplayBase::HandleAsyncCommit() {
   // Do not acquire mutexes here.
   // Perform hw commit here.
@@ -828,6 +843,10 @@ DisplayError DisplayBase::GetVSyncState(bool *enabled) {
   *enabled = vsync_enable_;
 
   return kErrorNone;
+}
+
+DisplayError DisplayBase::SetDrawMethod(DisplayDrawMethod draw_method) {
+  return kErrorNotSupported;
 }
 
 DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
