@@ -55,7 +55,6 @@ namespace sdm {
 
 bool HWCDisplay::mmrm_restricted_ = false;
 uint32_t HWCDisplay::throttling_refresh_rate_ = 60;
-constexpr uint32_t kVsyncTimeDriftNs = 1000000;
 CwbState HWCDisplay::cwb_state_ = {};
 std::mutex HWCDisplay::cwb_state_lock_;
 
@@ -69,7 +68,7 @@ bool NeedsToneMap(const LayerStack &layer_stack) {
 }
 
 bool IsTimeAfterOrEqualVsyncTime(int64_t time, int64_t vsync_time) {
-  return ((vsync_time != INT64_MAX) && ((time - (vsync_time - kVsyncTimeDriftNs)) >= 0));
+  return ((vsync_time != INT64_MAX) && ((time - vsync_time) >= 0));
 }
 
 HWCColorMode::HWCColorMode(DisplayInterface *display_intf) : display_intf_(display_intf) {}
