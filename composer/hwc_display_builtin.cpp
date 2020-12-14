@@ -144,8 +144,8 @@ int HWCDisplayBuiltIn::Init() {
   is_primary_ = display_intf_->IsPrimaryDisplay();
 
   if (is_primary_) {
-    windowed_display_ = Debug::GetWindowRect(&window_rect_.left, &window_rect_.top,
-                      &window_rect_.right, &window_rect_.bottom) != kErrorUndefined;
+    windowed_display_ = (Debug::GetWindowRect(&window_rect_.left, &window_rect_.top,
+                         &window_rect_.right, &window_rect_.bottom) == 0);
     DLOGI("Window rect : [%f %f %f %f]", window_rect_.left, window_rect_.top,
            window_rect_.right, window_rect_.bottom);
 
@@ -176,6 +176,11 @@ int HWCDisplayBuiltIn::Init() {
   active_refresh_rate_ = attr.fps;
 
   DLOGI("active_refresh_rate: %d", active_refresh_rate_);
+
+  int enhance_idle_time = 0;
+  HWCDebugHandler::Get()->GetProperty(ENHANCE_IDLE_TIME, &enhance_idle_time);
+  enhance_idle_time_ = (enhance_idle_time == 1);
+  DLOGI("enhance_idle_time: %d", enhance_idle_time);
 
   return status;
 }
@@ -269,14 +274,16 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
   }
 
   uint32_t refresh_rate = GetOptimalRefreshRate(one_updating_layer);
-  error = display_intf_->SetRefreshRate(refresh_rate, force_refresh_rate_);
+  bool idle_screen = GetUpdatingAppLayersCount() == 0;
+  error = display_intf_->SetRefreshRate(refresh_rate, force_refresh_rate_, idle_screen);
 
   // Get the refresh rate set.
   display_intf_->GetRefreshRate(&refresh_rate);
   bool vsync_source = (callbacks_->GetVsyncSource() == id_);
 
   if (error == kErrorNone) {
-    if (vsync_source && (current_refresh_rate_ < refresh_rate)) {
+    if (vsync_source && ((current_refresh_rate_ < refresh_rate) ||
+                         (enhance_idle_time_ && (current_refresh_rate_ != refresh_rate)))) {
       DTRACE_BEGIN("HWC2::Vsync::Enable");
       // Display is ramping up from idle.
       // Client realizes need for resync upon change in config.
@@ -1682,6 +1689,22 @@ HWC2::Error HWCDisplayBuiltIn::NotifyDisplayCalibrationMode(bool in_calibration)
   }
 
   return status;
+}
+
+uint32_t HWCDisplayBuiltIn::GetUpdatingAppLayersCount() {
+  uint32_t updating_count = 0;
+
+  for (uint i = 0; i < layer_stack_.layers.size(); i++) {
+    auto layer = layer_stack_.layers.at(i);
+    if (layer->composition == kCompositionGPUTarget) {
+      break;
+    }
+    if (layer->flags.updating) {
+      updating_count++;
+    }
+  }
+
+  return updating_count;
 }
 
 }  // namespace sdm

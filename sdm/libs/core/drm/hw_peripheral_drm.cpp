@@ -394,10 +394,8 @@ DisplayError HWPeripheralDRM::HandleSecureEvent(SecureEvent secure_event,
                                                 const HWQosData &qos_data) {
   switch (secure_event) {
     case kTUITransitionPrepare:
-      tui_state_ = kTUIStateInProgress;
-      break;
     case kTUITransitionUnPrepare:
-      tui_state_ = kTUIStateNone;
+      tui_state_ = kTUIStateInProgress;
       break;
     case kTUITransitionStart: {
       tui_state_ = kTUIStateStart;
@@ -715,7 +713,7 @@ DisplayError HWPeripheralDRM::DozeSuspend(const HWQosData &qos_data,
 }
 
 DisplayError HWPeripheralDRM::SetDisplayAttributes(uint32_t index) {
-  if (doze_poms_switch_done_ || pending_poms_switch_) {
+  if (doze_poms_switch_done_ || pending_poms_switch_ || bit_clk_rate_) {
     return kErrorNotSupported;
   }
 
