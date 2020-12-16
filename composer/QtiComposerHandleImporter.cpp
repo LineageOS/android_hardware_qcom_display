@@ -28,7 +28,7 @@ namespace qti {
 namespace hardware {
 namespace display {
 namespace composer {
-namespace V3_0 {
+namespace V3_1 {
 
 using android::hardware::graphics::mapper::V4_0::Error;
 
@@ -174,7 +174,7 @@ void ComposerHandleImporter::freeBuffer(buffer_handle_t handle) {
   }
 }
 
-}  // namespace V3_0
+}  // namespace V3_1
 }  // namespace composer
 }  // namespace display
 }  // namespace hardware

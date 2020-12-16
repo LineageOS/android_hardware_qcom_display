@@ -31,7 +31,7 @@ namespace qti {
 namespace hardware {
 namespace display {
 namespace composer {
-namespace V3_0 {
+namespace V3_1 {
 
 #define MAX_INO_VALS 100
 
@@ -62,7 +62,7 @@ class ComposerHandleImporter {
   sp<IMapper> mMapper;
 };
 
-}  // namespace V3_0
+}  // namespace V3_1
 }  // namespace composer
 }  // namespace display
 }  // namespace hardware

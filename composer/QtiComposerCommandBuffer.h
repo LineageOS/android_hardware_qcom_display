@@ -36,7 +36,7 @@ namespace qti {
 namespace hardware {
 namespace display {
 namespace composer {
-namespace V3_0 {
+namespace V3_1 {
 
 using ::android::hardware::graphics::common::V1_0::ColorTransform;
 using ::android::hardware::graphics::common::V1_0::Dataspace;
@@ -267,6 +267,15 @@ class CommandWriter {
     endCommand();
   }
 
+  static constexpr uint16_t kSetClientTarget_3_1_Length = 3;
+  void setClientTarget_3_1(uint32_t slot, const shared_ptr<Fence>& acquireFence, Dataspace dataspace) {
+    beginCommand(IQtiComposerClient::Command::SET_CLIENT_TARGET_3_1, kSetClientTarget_3_1_Length);
+    write(slot);
+    writeFence(acquireFence);
+    writeSigned(static_cast<int32_t>(dataspace));
+    endCommand();
+  }
+
   static constexpr uint16_t kSetOutputBufferLength = 3;
   void setOutputBuffer(uint32_t slot, const native_handle_t* buffer,
                        const shared_ptr<Fence>& releaseFence) {
@@ -425,6 +434,13 @@ class CommandWriter {
   void setLayerType(uint32_t z) {
     beginCommand(IQtiComposerClient::Command::SET_LAYER_TYPE, kSetLayerTypeLength);
     write(z);
+    endCommand();
+  }
+
+  static constexpr uint16_t kSetLayerFlagLength = 1;
+  void setLayerFlag(uint32_t type) {
+    beginCommand(IQtiComposerClient::Command::SET_LAYER_FLAG_3_1, kSetLayerTypeLength);
+    write(type);
     endCommand();
   }
 
@@ -860,7 +876,7 @@ class CommandReaderBase {
   hidl_vec<hidl_handle> mDataHandles;
 };
 
-}  // namespace V3_0
+}  // namespace V3_1
 }  // namespace composer
 }  // namespace display
 }  // namespace hardware

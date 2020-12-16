@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2017 The Android Open Source Project
@@ -27,7 +27,7 @@ namespace qti {
 namespace hardware {
 namespace display {
 namespace composer {
-namespace V3_0 {
+namespace V3_1 {
 namespace implementation {
 
 ComposerHandleImporter mHandleImporter;
@@ -1174,6 +1174,11 @@ Return<void> QtiComposerClient::getLayerGenericMetadataKeys(
   return Void();
 }
 
+Return<Error> QtiComposerClient::tryDrawMethod(uint64_t display,
+    IQtiComposerClient::DrawMethod drawMethod) {
+  return Error::UNSUPPORTED;
+}
+
 QtiComposerClient::CommandReader::CommandReader(QtiComposerClient& client)
   : mClient(client), mWriter(client.mWriter) {
 }
@@ -1299,6 +1304,12 @@ Error QtiComposerClient::CommandReader::parse() {
       case IQtiComposerClient::Command::SET_DISPLAY_ELAPSE_TIME:
         parsed = parseSetDisplayElapseTime(length);
         break;
+      case IQtiComposerClient::Command::SET_CLIENT_TARGET_3_1:
+        parsed = parseSetClientTarget_3_1(length);
+        break;
+      case IQtiComposerClient::Command::SET_LAYER_FLAG_3_1:
+        parsed = parseSetLayerFlag(length);
+        break;
       default:
         parsed = parseCommonCmd(static_cast<IComposerClient::Command>(qticommand), length);
         break;
@@ -1375,6 +1386,30 @@ bool QtiComposerClient::CommandReader::parseSetClientTarget(uint16_t length) {
     auto error = mClient.hwc_session_->SetClientTarget(mDisplay, clientTarget, fence,
         dataspace, region);
     err = static_cast<Error>(error);
+    auto updateBufErr = updateBuffer(BufferCache::CLIENT_TARGETS, slot,
+        useCache, clientTarget);
+    if (err == Error::NONE) {
+      err = updateBufErr;
+    }
+  }
+  if (err != Error::NONE) {
+    mWriter.setError(getCommandLoc(), err);
+  }
+
+  return true;
+}
+
+bool QtiComposerClient::CommandReader::parseSetClientTarget_3_1(uint16_t length) {
+
+  bool useCache = true;
+  auto slot = read();
+  buffer_handle_t clientTarget;
+  shared_ptr<Fence> fence = nullptr;
+  readFence(&fence, "fbt");
+  auto err = lookupBuffer(BufferCache::CLIENT_TARGETS, slot, useCache, clientTarget, &clientTarget);
+  if (err == Error::NONE) {
+//    auto error = mClient.hwc_session_->SetClientTarget(mDisplay, clientTarget, fence);
+ //   err = static_cast<Error>(error);
     auto updateBufErr = updateBuffer(BufferCache::CLIENT_TARGETS, slot,
         useCache, clientTarget);
     if (err == Error::NONE) {
@@ -1809,6 +1844,14 @@ bool QtiComposerClient::CommandReader::parseSetLayerType(uint16_t length) {
             static_cast<IQtiComposerClient::LayerType>(read()));
   if (static_cast<Error>(err) != Error::NONE) {
     mWriter.setError(getCommandLoc(), static_cast<Error>(err));
+  }
+
+  return true;
+}
+
+bool QtiComposerClient::CommandReader::parseSetLayerFlag(uint16_t length) {
+  if (length != CommandWriter::kSetLayerFlagLength) {
+    return false;
   }
 
   return true;

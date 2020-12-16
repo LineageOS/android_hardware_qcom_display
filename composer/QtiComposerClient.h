@@ -25,7 +25,7 @@
 #define QTI_LOGW(format, ...) \
   ALOGW("%s:" format, __FUNCTION__, ##__VA_ARGS__)
 
-#include <vendor/qti/hardware/display/composer/3.0/IQtiComposerClient.h>
+#include <vendor/qti/hardware/display/composer/3.1/IQtiComposerClient.h>
 #include <hidl/MQDescriptor.h>
 #include <hidl/Status.h>
 #include <log/log.h>
@@ -42,7 +42,7 @@ namespace qti {
 namespace hardware {
 namespace display {
 namespace composer {
-namespace V3_0 {
+namespace V3_1 {
 namespace implementation {
 
 namespace common_V1_0 = ::android::hardware::graphics::common::V1_0;
@@ -217,6 +217,8 @@ class QtiComposerClient : public IQtiComposerClient {
   Return<composer_V2_4::Error> setContentType(
       uint64_t display, composer_V2_4::IComposerClient::ContentType type) override;
   Return<void> getLayerGenericMetadataKeys(getLayerGenericMetadataKeys_cb _hidl_cb) override;
+  Return<Error> tryDrawMethod(uint64_t display,
+      IQtiComposerClient::DrawMethod drawMethod) override;
 
   // Methods for RegisterCallback
   void enableCallback(bool enable);
@@ -314,6 +316,7 @@ class QtiComposerClient : public IQtiComposerClient {
     bool parseSetLayerVisibleRegion(uint16_t length);
     bool parseSetLayerZOrder(uint16_t length);
     bool parseSetLayerType(uint16_t length);
+    bool parseSetLayerFlag(uint16_t length);
 
     // Commands from ::android::hardware::graphics::composer::V2_2::IComposerClient follow.
     bool parseSetLayerPerFrameMetadata(uint16_t length);
@@ -323,6 +326,7 @@ class QtiComposerClient : public IQtiComposerClient {
     bool parseSetLayerColorTransform(uint16_t length);
     bool parseSetLayerPerFrameMetadataBlobs(uint16_t length);
     bool parseSetDisplayElapseTime(uint16_t length);
+    bool parseSetClientTarget_3_1(uint16_t length);
 
     bool parseCommonCmd(IComposerClient::Command command, uint16_t length);
 
@@ -374,7 +378,7 @@ class QtiComposerClient : public IQtiComposerClient {
 extern "C" IQtiComposerClient* HIDL_FETCH_IQtiComposerClient(const char* name);
 
 }  // namespace implementation
-}  // namespace V3_0
+}  // namespace V3_1
 }  // namespace composer
 }  // namespace display
 }  // namespace hardware

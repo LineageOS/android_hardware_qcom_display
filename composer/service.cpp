@@ -40,8 +40,8 @@ using android::sp;
 using android::hardware::configureRpcThreadpool;
 using android::hardware::joinRpcThreadpool;
 using android::hardware::graphics::composer::V2_3::IComposer;
-using vendor::qti::hardware::display::composer::V3_0::IQtiComposer;
-using vendor::qti::hardware::display::composer::V3_0::implementation::QtiComposer;
+using vendor::qti::hardware::display::composer::V3_1::IQtiComposer;
+using vendor::qti::hardware::display::composer::V3_1::implementation::QtiComposer;
 
 int main(int, char **) {
   ALOGI("Creating Display HW Composer HAL");

@@ -33,7 +33,7 @@
 #undef HWC2_INCLUDE_STRINGIFICATION
 #undef HWC2_USE_CPP11
 #include <android/hardware/graphics/composer/2.3/IComposerClient.h>
-#include <vendor/qti/hardware/display/composer/3.0/IQtiComposerClient.h>
+#include <vendor/qti/hardware/display/composer/3.1/IQtiComposerClient.h>
 
 #include <map>
 #include <set>
@@ -43,7 +43,7 @@
 
 using PerFrameMetadataKey =
     android::hardware::graphics::composer::V2_3::IComposerClient::PerFrameMetadataKey;
-using vendor::qti::hardware::display::composer::V3_0::IQtiComposerClient;
+using vendor::qti::hardware::display::composer::V3_1::IQtiComposerClient;
 
 namespace sdm {
 

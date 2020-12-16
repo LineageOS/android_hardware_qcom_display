@@ -68,7 +68,7 @@ namespace aidl::vendor::qti::hardware::display::config {
 
 namespace sdm {
 
-using vendor::qti::hardware::display::composer::V3_0::IQtiComposerClient;
+using vendor::qti::hardware::display::composer::V3_1::IQtiComposerClient;
 
 int32_t GetDataspaceFromColorMode(ColorMode mode);
 
