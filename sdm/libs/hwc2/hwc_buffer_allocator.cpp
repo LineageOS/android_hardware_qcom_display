@@ -297,7 +297,10 @@ uint32_t HWCBufferAllocator::GetBufferSize(BufferInfo *buffer_info) {
 
   uint32_t aligned_width = 0, aligned_height = 0, buffer_size = 0;
   gralloc::BufferInfo info(width, height, format, alloc_flags);
-  GetBufferSizeAndDimensions(info, &buffer_size, &aligned_width, &aligned_height);
+  int ret = GetBufferSizeAndDimensions(info, &buffer_size, &aligned_width, &aligned_height);
+  if (ret < 0) {
+    return 0;
+  }
   return buffer_size;
 }
 
@@ -445,7 +448,10 @@ DisplayError HWCBufferAllocator::GetAllocatedBufferInfo(
 
   uint32_t aligned_width = 0, aligned_height = 0, buffer_size = 0;
   gralloc::BufferInfo info(width, height, format, alloc_flags);
-  GetBufferSizeAndDimensions(info, &buffer_size, &aligned_width, &aligned_height);
+  int ret = GetBufferSizeAndDimensions(info, &buffer_size, &aligned_width, &aligned_height);
+  if (ret < 0) {
+    return kErrorParameters;
+  }
   allocated_buffer_info->stride = UINT32(aligned_width);
   allocated_buffer_info->aligned_width = UINT32(aligned_width);
   allocated_buffer_info->aligned_height = UINT32(aligned_height);
