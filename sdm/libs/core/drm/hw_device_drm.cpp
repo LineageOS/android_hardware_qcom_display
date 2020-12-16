@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -304,14 +304,13 @@ HWDeviceDRM::Registry::Registry(BufferAllocator *buffer_allocator) :
   }
 }
 
-void HWDeviceDRM::Registry::Register(HWLayers *hw_layers) {
-  HWLayersInfo &hw_layer_info = hw_layers->info;
-  uint32_t hw_layer_count = UINT32(hw_layer_info.hw_layers.size());
+void HWDeviceDRM::Registry::Register(HWLayersInfo *hw_layers_info) {
+  uint32_t hw_layer_count = UINT32(hw_layers_info->hw_layers.size());
 
   for (uint32_t i = 0; i < hw_layer_count; i++) {
-    Layer &layer = hw_layer_info.hw_layers.at(i);
+    Layer &layer = hw_layers_info->hw_layers.at(i);
     LayerBuffer input_buffer = layer.input_buffer;
-    HWRotatorSession *hw_rotator_session = &hw_layers->config[i].hw_rotator_session;
+    HWRotatorSession *hw_rotator_session = &hw_layers_info->config[i].hw_rotator_session;
     HWRotateInfo *hw_rotate_info = &hw_rotator_session->hw_rotate_info[0];
     fbid_cache_limit_ = input_buffer.flags.video ? VIDEO_FBID_LIMIT : UI_FBID_LIMIT;
 
@@ -1173,29 +1172,28 @@ DisplayError HWDeviceDRM::Standby() {
   return kErrorNone;
 }
 
-void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayers *hw_layers, bool validate,
-                              int64_t *release_fence_fd, int64_t *retire_fence_fd) {
+void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_layers_info,
+                              bool validate, int64_t *release_fence_fd, int64_t *retire_fence_fd) {
   if (default_mode_) {
     return;
   }
 
   DTRACE_SCOPED();
-  HWLayersInfo &hw_layer_info = hw_layers->info;
-  uint32_t hw_layer_count = UINT32(hw_layer_info.hw_layers.size());
-  HWQosData &qos_data = hw_layers->qos_data;
+  uint32_t hw_layer_count = UINT32(hw_layers_info->hw_layers.size());
+  HWQosData &qos_data = hw_layers_info->qos_data;
   DRMSecurityLevel crtc_security_level = DRMSecurityLevel::SECURE_NON_SECURE;
   uint32_t index = current_mode_index_;
   drmModeModeInfo current_mode = connector_info_.modes[index].mode;
   uint64_t current_bit_clk = connector_info_.modes[index].bit_clk_rate;
 
   solid_fills_.clear();
-  bool resource_update = hw_layers->updates_mask.test(kUpdateResources);
-  bool buffer_update = hw_layers->updates_mask.test(kSwapBuffers);
+  bool resource_update = hw_layers_info->updates_mask.test(kUpdateResources);
+  bool buffer_update = hw_layers_info->updates_mask.test(kSwapBuffers);
   bool update_config = resource_update || buffer_update || tui_state_ == kTUIStateEnd ||
-                       hw_layer_info.stack->flags.geometry_changed;
+                       hw_layers_info->flags.geometry_changed;
 
   if (hw_panel_info_.partial_update && update_config) {
-    if (IsFullFrameUpdate(hw_layer_info)) {
+    if (IsFullFrameUpdate(*hw_layers_info)) {
       ResetROI();
     } else {
       const int kNumMaxROIs = 4;
@@ -1203,8 +1201,8 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayers *hw_layers,
       DRMRect conn_rects[kNumMaxROIs] = {{0, 0, display_attributes_[index].x_pixels,
                                           display_attributes_[index].y_pixels}};
 
-      for (uint32_t i = 0; i < hw_layer_info.left_frame_roi.size(); i++) {
-        auto &roi = hw_layer_info.left_frame_roi.at(i);
+      for (uint32_t i = 0; i < hw_layers_info->left_frame_roi.size(); i++) {
+        auto &roi = hw_layers_info->left_frame_roi.at(i);
         // TODO(user): In multi PU, stitch ROIs vertically adjacent and upate plane destination
         crtc_rects[i].left = UINT32(roi.left);
         crtc_rects[i].right = UINT32(roi.right);
@@ -1216,7 +1214,7 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayers *hw_layers,
         conn_rects[i].bottom = UINT32(roi.bottom);
       }
 
-      uint32_t num_rects = std::max(1u, static_cast<uint32_t>(hw_layer_info.left_frame_roi.size()));
+      uint32_t num_rects = std::max(1u, UINT32(hw_layers_info->left_frame_roi.size()));
       drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ROI, token_.crtc_id, num_rects, crtc_rects);
       drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_ROI, token_.conn_id, num_rects, conn_rects);
     }
@@ -1228,16 +1226,16 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayers *hw_layers,
 #endif
 
   for (uint32_t i = 0; i < hw_layer_count; i++) {
-    Layer &layer = hw_layer_info.hw_layers.at(i);
+    Layer &layer = hw_layers_info->hw_layers.at(i);
     LayerBuffer *input_buffer = &layer.input_buffer;
-    HWPipeInfo *left_pipe = &hw_layers->config[i].left_pipe;
-    HWPipeInfo *right_pipe = &hw_layers->config[i].right_pipe;
-    HWLayerConfig &layer_config = hw_layers->config[i];
+    HWPipeInfo *left_pipe = &hw_layers_info->config[i].left_pipe;
+    HWPipeInfo *right_pipe = &hw_layers_info->config[i].right_pipe;
+    HWLayerConfig &layer_config = hw_layers_info->config[i];
     HWRotatorSession *hw_rotator_session = &layer_config.hw_rotator_session;
 
-    if (hw_layers->config[i].use_solidfill_stage) {
-      hw_layers->config[i].hw_solidfill_stage.solid_fill_info = layer.solid_fill_info;
-      AddSolidfillStage(hw_layers->config[i].hw_solidfill_stage, layer.plane_alpha);
+    if (hw_layers_info->config[i].use_solidfill_stage) {
+      hw_layers_info->config[i].hw_solidfill_stage.solid_fill_info = layer.solid_fill_info;
+      AddSolidfillStage(hw_layers_info->config[i].hw_solidfill_stage, layer.plane_alpha);
       continue;
     }
 
@@ -1334,11 +1332,11 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayers *hw_layers,
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_SECURITY_LEVEL, token_.crtc_id, crtc_security_level);
   }
 
-  if (hw_layers->hw_avr_info.update) {
+  if (hw_layers_info->hw_avr_info.update) {
     sde_drm::DRMQsyncMode mode = sde_drm::DRMQsyncMode::NONE;
-    if (hw_layers->hw_avr_info.mode == kContinuousMode) {
+    if (hw_layers_info->hw_avr_info.mode == kContinuousMode) {
       mode = sde_drm::DRMQsyncMode::CONTINUOUS;
-    } else if (hw_layers->hw_avr_info.mode == kOneShotMode) {
+    } else if (hw_layers_info->hw_avr_info.mode == kOneShotMode) {
       mode = sde_drm::DRMQsyncMode::ONESHOT;
     }
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_QSYNC_MODE, token_.conn_id, mode);
@@ -1427,11 +1425,11 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayers *hw_layers,
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode);
   }
 
-  if (!validate && (hw_layer_info.set_idle_time_ms >= 0)) {
+  if (!validate && (hw_layers_info->set_idle_time_ms >= 0)) {
     DLOGI_IF(kTagDriverConfig, "Setting idle timeout to = %d ms",
-             hw_layer_info.set_idle_time_ms);
+             hw_layers_info->set_idle_time_ms);
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_IDLE_TIMEOUT, token_.crtc_id,
-                              hw_layer_info.set_idle_time_ms);
+                              hw_layers_info->set_idle_time_ms);
   }
 
   if (hw_panel_info_.mode == kModeCommand) {
@@ -1478,19 +1476,19 @@ void HWDeviceDRM::ClearSolidfillStages() {
   SetSolidfillStages();
 }
 
-DisplayError HWDeviceDRM::Validate(HWLayers *hw_layers) {
+DisplayError HWDeviceDRM::Validate(HWLayersInfo *hw_layers_info) {
   DTRACE_SCOPED();
 
   DisplayError err = kErrorNone;
-  registry_.Register(hw_layers);
+  registry_.Register(hw_layers_info);
 
   Fence::ScopedRef scoped_ref;
-  SetupAtomic(scoped_ref, hw_layers, true /* validate */, nullptr, nullptr);
+  SetupAtomic(scoped_ref, hw_layers_info, true /* validate */, nullptr, nullptr);
 
   int ret = drm_atomic_intf_->Validate();
   if (ret) {
     DLOGE("failed with error %d for %s", ret, device_name_);
-    DumpHWLayers(hw_layers);
+    DumpHWLayers(hw_layers_info);
     vrefresh_ = 0;
     panel_mode_changed_ = 0;
     err = kErrorHardware;
@@ -1499,27 +1497,26 @@ DisplayError HWDeviceDRM::Validate(HWLayers *hw_layers) {
   return err;
 }
 
-DisplayError HWDeviceDRM::Commit(HWLayers *hw_layers) {
+DisplayError HWDeviceDRM::Commit(HWLayersInfo *hw_layers_info) {
   DTRACE_SCOPED();
 
   DisplayError err = kErrorNone;
-  registry_.Register(hw_layers);
+  registry_.Register(hw_layers_info);
 
   if (default_mode_) {
-    err = DefaultCommit(hw_layers);
+    err = DefaultCommit(hw_layers_info);
   } else {
-    err = AtomicCommit(hw_layers);
+    err = AtomicCommit(hw_layers_info);
   }
 
   return err;
 }
 
-DisplayError HWDeviceDRM::DefaultCommit(HWLayers *hw_layers) {
+DisplayError HWDeviceDRM::DefaultCommit(HWLayersInfo *hw_layers_info) {
   DTRACE_SCOPED();
 
-  HWLayersInfo &hw_layer_info = hw_layers->info;
 
-  for (Layer &layer : hw_layer_info.hw_layers) {
+  for (Layer &layer : hw_layers_info->hw_layers) {
     layer.input_buffer.release_fence = nullptr;
   }
 
@@ -1549,8 +1546,8 @@ DisplayError HWDeviceDRM::DefaultCommit(HWLayers *hw_layers) {
   drmModeModeInfo mode;
   res_mgr->GetMode(&mode);
 
-  uint64_t handle_id = hw_layer_info.hw_layers.at(0).input_buffer.handle_id;
-  uint32_t fb_id = registry_.GetFbId(&hw_layer_info.hw_layers.at(0), handle_id);
+  uint64_t handle_id = hw_layers_info->hw_layers.at(0).input_buffer.handle_id;
+  uint32_t fb_id = registry_.GetFbId(&hw_layers_info->hw_layers.at(0), handle_id);
   ret = drmModeSetCrtc(dev_fd, crtc_id, fb_id, 0 /* x */, 0 /* y */, &connector_id,
                        1 /* num_connectors */, &mode);
   if (ret < 0) {
@@ -1562,7 +1559,7 @@ DisplayError HWDeviceDRM::DefaultCommit(HWLayers *hw_layers) {
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
+DisplayError HWDeviceDRM::AtomicCommit(HWLayersInfo *hw_layers_info) {
   DTRACE_SCOPED();
 
   int64_t release_fence_fd = -1;
@@ -1571,17 +1568,18 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   // scoped fence fds will be automatically closed when function scope ends,
   // atomic commit will have these fds already set on kernel by then.
   Fence::ScopedRef scoped_ref;
-  SetupAtomic(scoped_ref, hw_layers, false /* validate */, &release_fence_fd, &retire_fence_fd);
+  SetupAtomic(scoped_ref, hw_layers_info, false /* validate */,
+                                   &release_fence_fd, &retire_fence_fd);
 
   bool sync_commit = synchronous_commit_ ||
                     (tui_state_ == kTUIStateStart || tui_state_ == kTUIStateEnd);
 
-  if (hw_layers->elapse_timestamp > 0) {
+  if (hw_layers_info->elapse_timestamp > 0) {
     struct timespec t = {0, 0};
     clock_gettime(CLOCK_MONOTONIC, &t);
     uint64_t current_time = (UINT64(t.tv_sec) * 1000000000LL + t.tv_nsec);
-    if (current_time < hw_layers->elapse_timestamp) {
-      usleep(UINT32((hw_layers->elapse_timestamp - current_time) / 1000));
+    if (current_time < hw_layers_info->elapse_timestamp) {
+      usleep(UINT32((hw_layers_info->elapse_timestamp - current_time) / 1000));
     }
   }
 
@@ -1590,7 +1588,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_fd), "retire");
   if (ret) {
     DLOGE("%s failed with error %d crtc %d", __FUNCTION__, ret, token_.crtc_id);
-    DumpHWLayers(hw_layers);
+    DumpHWLayers(hw_layers_info);
     vrefresh_ = 0;
     panel_mode_changed_ = 0;
     return kErrorHardware;
@@ -1599,13 +1597,11 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   DLOGD_IF(kTagDriverConfig, "RELEASE fence: fd: %s", Fence::GetStr(release_fence).c_str());
   DLOGD_IF(kTagDriverConfig, "RETIRE fence: fd: %s", Fence::GetStr(retire_fence).c_str());
 
-  HWLayersInfo &hw_layer_info = hw_layers->info;
-  LayerStack *stack = hw_layer_info.stack;
-  stack->retire_fence = retire_fence;
+  hw_layers_info->retire_fence = retire_fence;
 
-  for (uint32_t i = 0; i < hw_layer_info.hw_layers.size(); i++) {
-    Layer &layer = hw_layer_info.hw_layers.at(i);
-    HWRotatorSession *hw_rotator_session = &hw_layers->config[i].hw_rotator_session;
+  for (uint32_t i = 0; i < hw_layers_info->hw_layers.size(); i++) {
+    Layer &layer = hw_layers_info->hw_layers.at(i);
+    HWRotatorSession *hw_rotator_session = &hw_layers_info->config[i].hw_rotator_session;
     if (hw_rotator_session->mode == kRotatorOffline) {
       hw_rotator_session->output_buffer.release_fence = release_fence;
     } else {
@@ -1613,7 +1609,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
     }
   }
 
-  hw_layer_info.sync_handle = release_fence;
+  hw_layers_info->sync_handle = release_fence;
 
   if (vrefresh_) {
     // Update current mode index if refresh rate is changed
@@ -1659,7 +1655,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
 
   first_cycle_ = false;
   update_mode_ = false;
-  hw_layers->updates_mask = 0;
+  hw_layers_info->updates_mask = 0;
   pending_power_state_ = kPowerStateNone;
   // Inherently a real commit ensures null commit properties have happened, so update the member
   first_null_cycle_ = false;
@@ -1674,7 +1670,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayers *hw_layers) {
   return kErrorNone;
 }
 
-DisplayError HWDeviceDRM::Flush(HWLayers *hw_layers) {
+DisplayError HWDeviceDRM::Flush(HWLayersInfo *hw_layers_info) {
   ClearSolidfillStages();
   ResetROI();
   bool sync_commit = (tui_state_ == kTUIStateStart || tui_state_ == kTUIStateEnd ||
@@ -1783,7 +1779,7 @@ bool HWDeviceDRM::EnableHotPlugDetection(int enable) {
   return true;
 }
 
-DisplayError HWDeviceDRM::SetCursorPosition(HWLayers *hw_layers, int x, int y) {
+DisplayError HWDeviceDRM::SetCursorPosition(HWLayersInfo *hw_layers_info, int x, int y) {
   DTRACE_SCOPED();
   return kErrorNone;
 }
@@ -2419,18 +2415,16 @@ DisplayError HWDeviceDRM::GetDynamicDSIClock(uint64_t *bit_clk_rate) {
   return kErrorNotSupported;
 }
 
-void HWDeviceDRM::DumpHWLayers(HWLayers *hw_layers) {
-  HWLayersInfo &hw_layer_info = hw_layers->info;
-  DestScaleInfoMap &dest_scale_info_map = hw_layer_info.dest_scale_info_map;
-  LayerStack *stack = hw_layer_info.stack;
-  uint32_t hw_layer_count = UINT32(hw_layer_info.hw_layers.size());
-  std::vector<LayerRect> &left_frame_roi = hw_layer_info.left_frame_roi;
-  std::vector<LayerRect> &right_frame_roi = hw_layer_info.right_frame_roi;
+void HWDeviceDRM::DumpHWLayers(HWLayersInfo *hw_layers_info) {
+  DestScaleInfoMap &dest_scale_info_map = hw_layers_info->dest_scale_info_map;
+  uint32_t hw_layer_count = UINT32(hw_layers_info->hw_layers.size());
+  std::vector<LayerRect> &left_frame_roi = hw_layers_info->left_frame_roi;
+  std::vector<LayerRect> &right_frame_roi = hw_layers_info->right_frame_roi;
   DLOGI("HWLayers Stack: layer_count: %d, app_layer_count: %d, gpu_target_index: %d",
-         hw_layer_count, hw_layer_info.app_layer_count, hw_layer_info.gpu_target_index);
+         hw_layer_count, hw_layers_info->app_layer_count, hw_layers_info->gpu_target_index);
   DLOGI("LayerStackFlags = 0x%" PRIu32 ",  blend_cs = {primaries = %d, transfer = %d}",
-         UINT32(stack->flags.flags), UINT32(stack->blend_cs.primaries),
-         UINT32(stack->blend_cs.transfer));
+         UINT32(hw_layers_info->flags.flags), UINT32(hw_layers_info->blend_cs.primaries),
+         UINT32(hw_layers_info->blend_cs.transfer));
   for (uint32_t i = 0; i < left_frame_roi.size(); i++) {
     DLOGI("left_frame_roi: x = %d, y = %d, w = %d, h = %d", INT(left_frame_roi[i].left),
         INT(left_frame_roi[i].top), INT(left_frame_roi[i].right), INT(left_frame_roi[i].bottom));
@@ -2455,15 +2449,16 @@ void HWDeviceDRM::DumpHWLayers(HWLayers *hw_layers) {
   }
 
   for (uint32_t i = 0; i < hw_layer_count; i++) {
-    HWLayerConfig &hw_config = hw_layers->config[i];
+    HWLayerConfig &hw_config = hw_layers_info->config[i];
     HWRotatorSession &hw_rotator_session = hw_config.hw_rotator_session;
     HWSessionConfig &hw_session_config = hw_rotator_session.hw_session_config;
     DLOGI("========================= HW_layer: %d =========================", i);
     DLOGI("src_width = %d, src_height = %d, src_format = %d, src_LayerBufferFlags = 0x%" PRIx32 ,
-             hw_layer_info.hw_layers[i].input_buffer.width,
-             hw_layer_info.hw_layers[i].input_buffer.height,
-             hw_layer_info.hw_layers[i].input_buffer.format,
-             hw_layer_info.hw_layers[i].input_buffer.flags.flags);
+             hw_layers_info->hw_layers[i].input_buffer.width,
+             hw_layers_info->hw_layers[i].input_buffer.height,
+             hw_layers_info->hw_layers[i].input_buffer.format,
+             hw_layers_info->hw_layers[i].input_buffer.flags.flags);
+
     if (hw_config.use_inline_rot) {
       DLOGI("rotator = %s, rotation = %d, flip_horizontal = %s, flip_vertical = %s",
             "inline rotator", INT(hw_session_config.transform.rotation),

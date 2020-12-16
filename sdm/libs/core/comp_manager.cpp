@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -251,7 +251,7 @@ DisplayError CompManager::ReconfigureDisplay(Handle comp_handle,
   return error;
 }
 
-void CompManager::PrepareStrategyConstraints(Handle comp_handle, HWLayers *hw_layers) {
+void CompManager::PrepareStrategyConstraints(Handle comp_handle, DispLayerStack *disp_layer_stack) {
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(comp_handle);
   StrategyConstraints *constraints = &display_comp_ctx->constraints;
@@ -274,7 +274,7 @@ void CompManager::PrepareStrategyConstraints(Handle comp_handle, HWLayers *hw_la
     constraints->safe_mode = true;
   }
 
-  uint32_t app_layer_count = UINT32(hw_layers->info.stack->layers.size()) - 1;
+  uint32_t app_layer_count = UINT32(disp_layer_stack->stack->layers.size()) - 1;
   if (display_comp_ctx->idle_fallback || display_comp_ctx->thermal_fallback_) {
     // Handle the idle timeout by falling back
     constraints->safe_mode = true;
@@ -286,22 +286,22 @@ void CompManager::PrepareStrategyConstraints(Handle comp_handle, HWLayers *hw_la
   }
 }
 
-void CompManager::GenerateROI(Handle display_ctx, HWLayers *hw_layers) {
+void CompManager::GenerateROI(Handle display_ctx, DispLayerStack *disp_layer_stack) {
   SCOPE_LOCK(locker_);
   DisplayCompositionContext *disp_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
-  return disp_comp_ctx->strategy->GenerateROI(&hw_layers->info, disp_comp_ctx->pu_constraints);
+  return disp_comp_ctx->strategy->GenerateROI(disp_layer_stack, disp_comp_ctx->pu_constraints);
 }
 
-void CompManager::PrePrepare(Handle display_ctx, HWLayers *hw_layers) {
+void CompManager::PrePrepare(Handle display_ctx, DispLayerStack *disp_layer_stack) {
   SCOPE_LOCK(locker_);
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
-  display_comp_ctx->strategy->Start(&hw_layers->info, &display_comp_ctx->max_strategies);
+  display_comp_ctx->strategy->Start(disp_layer_stack, &display_comp_ctx->max_strategies);
   display_comp_ctx->remaining_strategies = display_comp_ctx->max_strategies;
 }
 
-DisplayError CompManager::Prepare(Handle display_ctx, HWLayers *hw_layers) {
+DisplayError CompManager::Prepare(Handle display_ctx, DispLayerStack *disp_layer_stack) {
   SCOPE_LOCK(locker_);
 
   DTRACE_SCOPED();
@@ -311,7 +311,7 @@ DisplayError CompManager::Prepare(Handle display_ctx, HWLayers *hw_layers) {
 
   DisplayError error = kErrorUndefined;
 
-  PrepareStrategyConstraints(display_ctx, hw_layers);
+  PrepareStrategyConstraints(display_ctx, disp_layer_stack);
 
   // Select a composition strategy, and try to allocate resources for it.
   resource_intf_->Start(display_resource_ctx);
@@ -327,28 +327,28 @@ DisplayError CompManager::Prepare(Handle display_ctx, HWLayers *hw_layers) {
     }
 
     if (!exit) {
-      error = resource_intf_->Prepare(display_resource_ctx, hw_layers);
+      error = resource_intf_->Prepare(display_resource_ctx, disp_layer_stack);
       // Exit if successfully prepared resource, else try next strategy.
       exit = (error == kErrorNone);
     }
   }
 
   if (error != kErrorNone) {
-    resource_intf_->Stop(display_resource_ctx, hw_layers);
+    resource_intf_->Stop(display_resource_ctx, disp_layer_stack);
     DLOGE("Composition strategies exhausted for display = %d-%d. (first frame = %s)",
           display_comp_ctx->display_id, display_comp_ctx->display_type,
           display_comp_ctx->first_cycle_ ? "True" : "False");
     return error;
   }
 
-  error = resource_intf_->Stop(display_resource_ctx, hw_layers);
+  error = resource_intf_->Stop(display_resource_ctx, disp_layer_stack);
   if (error != kErrorNone) {
     DLOGE("Resource stop failed for display = %d", display_comp_ctx->display_type);
   }
   return error;
 }
 
-DisplayError CompManager::PostPrepare(Handle display_ctx, HWLayers *hw_layers) {
+DisplayError CompManager::PostPrepare(Handle display_ctx, DispLayerStack *disp_layer_stack) {
   SCOPE_LOCK(locker_);
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
@@ -358,7 +358,7 @@ DisplayError CompManager::PostPrepare(Handle display_ctx, HWLayers *hw_layers) {
 
   display_comp_ctx->strategy->Stop();
 
-  error = resource_intf_->PostPrepare(display_resource_ctx, hw_layers);
+  error = resource_intf_->PostPrepare(display_resource_ctx, disp_layer_stack);
   if (error != kErrorNone) {
     return error;
   }
@@ -366,16 +366,16 @@ DisplayError CompManager::PostPrepare(Handle display_ctx, HWLayers *hw_layers) {
   return kErrorNone;
 }
 
-DisplayError CompManager::Commit(Handle display_ctx, HWLayers *hw_layers) {
+DisplayError CompManager::Commit(Handle display_ctx, DispLayerStack *disp_layer_stack) {
   SCOPE_LOCK(locker_);
 
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
-  return resource_intf_->Commit(display_comp_ctx->display_resource_ctx, hw_layers);
+  return resource_intf_->Commit(display_comp_ctx->display_resource_ctx, disp_layer_stack);
 }
 
-DisplayError CompManager::ReConfigure(Handle display_ctx, HWLayers *hw_layers) {
+DisplayError CompManager::ReConfigure(Handle display_ctx, DispLayerStack *disp_layer_stack) {
   SCOPE_LOCK(locker_);
 
   DTRACE_SCOPED();
@@ -385,28 +385,28 @@ DisplayError CompManager::ReConfigure(Handle display_ctx, HWLayers *hw_layers) {
 
   DisplayError error = kErrorUndefined;
   resource_intf_->Start(display_resource_ctx);
-  error = resource_intf_->Prepare(display_resource_ctx, hw_layers);
+  error = resource_intf_->Prepare(display_resource_ctx, disp_layer_stack);
 
   if (error != kErrorNone) {
     DLOGE("Reconfigure failed for display = %d", display_comp_ctx->display_type);
   }
 
-  resource_intf_->Stop(display_resource_ctx, hw_layers);
+  resource_intf_->Stop(display_resource_ctx, disp_layer_stack);
   if (error != kErrorNone) {
-      error = resource_intf_->PostPrepare(display_resource_ctx, hw_layers);
+      error = resource_intf_->PostPrepare(display_resource_ctx, disp_layer_stack);
   }
 
   return error;
 }
 
-DisplayError CompManager::PostCommit(Handle display_ctx, HWLayers *hw_layers) {
+DisplayError CompManager::PostCommit(Handle display_ctx, DispLayerStack *disp_layer_stack) {
   SCOPE_LOCK(locker_);
 
   DisplayError error = kErrorNone;
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
-  error = resource_intf_->PostCommit(display_comp_ctx->display_resource_ctx, hw_layers);
+  error = resource_intf_->PostCommit(display_comp_ctx->display_resource_ctx, disp_layer_stack);
   if (error != kErrorNone) {
     return error;
   }
@@ -510,12 +510,13 @@ DisplayError CompManager::ValidateScaling(const LayerRect &crop, const LayerRect
   return resource_intf_->ValidateScaling(crop, dst, rotate90, layout, true);
 }
 
-DisplayError CompManager::ValidateAndSetCursorPosition(Handle display_ctx, HWLayers *hw_layers,
-                                                 int x, int y) {
+DisplayError CompManager::ValidateAndSetCursorPosition(Handle display_ctx,
+                                                       DispLayerStack *disp_layer_stack,
+                                                       int x, int y) {
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
   Handle &display_resource_ctx = display_comp_ctx->display_resource_ctx;
-  return resource_intf_->ValidateAndSetCursorPosition(display_resource_ctx, hw_layers, x, y,
+  return resource_intf_->ValidateAndSetCursorPosition(display_resource_ctx, disp_layer_stack, x, y,
                                                       &display_comp_ctx->fb_config);
 }
 

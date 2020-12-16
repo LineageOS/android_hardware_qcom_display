@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -699,8 +699,26 @@ struct LayerExt {
   std::vector<LayerRect> excl_rects = {};  // list of exclusion rects
 };
 
+struct HWQosData {
+  bool valid = false;
+  uint64_t core_ab_bps = 0;
+  uint64_t core_ib_bps = 0;
+  uint64_t llcc_ab_bps = 0;
+  uint64_t llcc_ib_bps = 0;
+  uint64_t dram_ab_bps = 0;
+  uint64_t dram_ib_bps = 0;
+  uint64_t rot_prefill_bw_bps = 0;
+  uint32_t clock_hz = 0;
+  uint32_t rot_clock_hz = 0;
+};
+
+enum UpdateType {
+  kUpdateResources,  // Indicates Strategy & RM execution, which can update resources.
+  kSwapBuffers,      // Indicates Strategy & RM execution, which can update buffer handler and crop.
+  kUpdateMax,
+};
+
 struct HWLayersInfo {
-  LayerStack *stack = NULL;          // Input layer stack. Set by the caller.
   uint32_t app_layer_count = 0;      // Total number of app layers. Must not be 0.
   uint32_t gpu_target_index = 0;     // GPU target layer index. 0 if not present.
   uint32_t stitch_target_index = 0;  // Blit target layer index. 0 if not present.
@@ -730,35 +748,23 @@ struct HWLayersInfo {
   bool spr_enable = false;
   uint64_t rc_pu_flag_status = 0;
   bool rc_pu_needs_full_roi = false;
-};
-
-struct HWQosData {
-  bool valid = false;
-  uint64_t core_ab_bps = 0;
-  uint64_t core_ib_bps = 0;
-  uint64_t llcc_ab_bps = 0;
-  uint64_t llcc_ib_bps = 0;
-  uint64_t dram_ab_bps = 0;
-  uint64_t dram_ib_bps = 0;
-  uint64_t rot_prefill_bw_bps = 0;
-  uint32_t clock_hz = 0;
-  uint32_t rot_clock_hz = 0;
-};
-
-enum UpdateType {
-  kUpdateResources,  // Indicates Strategy & RM execution, which can update resources.
-  kSwapBuffers,      // Indicates Strategy & RM execution, which can update buffer handler and crop.
-  kUpdateMax,
-};
-
-struct HWLayers {
-  HWLayersInfo info {};
   HWLayerConfig config[kMaxSDELayers] {};
   float output_compression = 1.0f;
   HWQosData qos_data = {};
   HWAVRInfo hw_avr_info = {};
   std::bitset<kUpdateMax> updates_mask = 0;
   uint64_t elapse_timestamp = 0;
+  shared_ptr<Fence> retire_fence = nullptr;  // Retire fence for current draw cycle.
+  LayerStackFlags flags;               //!< Flags associated with this layer set.
+  PrimariesTransfer blend_cs = {};     //!< o/p - Blending color space of the frame, updated by SDM
+  LayerBuffer *output_buffer = NULL;   //!< Pointer to the buffer where composed buffer would be
+                                       //!< rendered for virtual displays.
+                                       //!< NOTE: This field applies to a virtual display only.
+};
+
+struct DispLayerStack {
+  LayerStack *stack = NULL;          // Input layer stack. Set by the caller.
+  HWLayersInfo info {};
 };
 
 struct HWDisplayAttributes : DisplayConfigVariableInfo {

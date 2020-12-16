@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -55,17 +55,18 @@ class ResourceInterface {
                                           const HWPanelInfo &hw_panel_info,
                                           const HWMixerAttributes &mixer_attributes) = 0;
   virtual DisplayError Start(Handle display_ctx) = 0;
-  virtual DisplayError Stop(Handle display_ctx, HWLayers *hw_layers) = 0;
-  virtual DisplayError Prepare(Handle display_ctx, HWLayers *hw_layers) = 0;
-  virtual DisplayError PostPrepare(Handle display_ctx, HWLayers *hw_layers) = 0;
-  virtual DisplayError Commit(Handle display_ctx, HWLayers *hw_layers) = 0;
-  virtual DisplayError PostCommit(Handle display_ctx, HWLayers *hw_layers) = 0;
+  virtual DisplayError Stop(Handle display_ctx, DispLayerStack *disp_layer_stack) = 0;
+  virtual DisplayError Prepare(Handle display_ctx, DispLayerStack *disp_layer_stack) = 0;
+  virtual DisplayError PostPrepare(Handle display_ctx, DispLayerStack *disp_layer_stack) = 0;
+  virtual DisplayError Commit(Handle display_ctx, DispLayerStack *disp_layer_stack) = 0;
+  virtual DisplayError PostCommit(Handle display_ctx, DispLayerStack *disp_layer_stack) = 0;
   virtual void Purge(Handle display_ctx) = 0;
   virtual DisplayError SetMaxMixerStages(Handle display_ctx, uint32_t max_mixer_stages) = 0;
   virtual DisplayError ValidateScaling(const LayerRect &crop, const LayerRect &dst,
                                        bool rotate90, BufferLayout layout,
                                        bool use_rotator_downscale) = 0;
-  virtual DisplayError ValidateAndSetCursorPosition(Handle display_ctx, HWLayers *hw_layers,
+  virtual DisplayError ValidateAndSetCursorPosition(Handle display_ctx,
+                                                    DispLayerStack *disp_layer_stack,
                                                     int x, int y,
                                                     DisplayConfigVariableInfo *fb_config) = 0;
   virtual DisplayError SetMaxBandwidthMode(HWBwModes mode) = 0;

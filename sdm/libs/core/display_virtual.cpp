@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -166,8 +166,8 @@ DisplayError DisplayVirtual::SetActiveConfig(DisplayConfigVariableInfo *variable
 DisplayError DisplayVirtual::Prepare(LayerStack *layer_stack) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
-  // Clean hw layers for reuse.
-  hw_layers_ = HWLayers();
+  // Clean display layer stack for reuse.
+  disp_layer_stack_ = DispLayerStack();
 
   return DisplayBase::Prepare(layer_stack);
 }

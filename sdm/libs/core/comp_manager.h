@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -56,12 +56,12 @@ class CompManager {
                                   const HWMixerAttributes &mixer_attributes,
                                   const DisplayConfigVariableInfo &fb_config,
                                   HWQosData *qos_data);
-  void PrePrepare(Handle display_ctx, HWLayers *hw_layers);
-  DisplayError Prepare(Handle display_ctx, HWLayers *hw_layers);
-  DisplayError Commit(Handle display_ctx, HWLayers *hw_layers);
-  DisplayError PostPrepare(Handle display_ctx, HWLayers *hw_layers);
-  DisplayError ReConfigure(Handle display_ctx, HWLayers *hw_layers);
-  DisplayError PostCommit(Handle display_ctx, HWLayers *hw_layers);
+  void PrePrepare(Handle display_ctx, DispLayerStack *disp_layer_stack);
+  DisplayError Prepare(Handle display_ctx, DispLayerStack *disp_layer_stack);
+  DisplayError Commit(Handle display_ctx, DispLayerStack *disp_layer_stack);
+  DisplayError PostPrepare(Handle display_ctx, DispLayerStack *disp_layer_stack);
+  DisplayError ReConfigure(Handle display_ctx, DispLayerStack *disp_layer_stack);
+  DisplayError PostCommit(Handle display_ctx, DispLayerStack *disp_layer_stack);
   void Purge(Handle display_ctx);
   DisplayError SetIdleTimeoutMs(Handle display_ctx, uint32_t active_ms, uint32_t inactive_ms);
   void ProcessIdleTimeout(Handle display_ctx);
@@ -70,7 +70,8 @@ class CompManager {
   DisplayError SetMaxMixerStages(Handle display_ctx, uint32_t max_mixer_stages);
   void ControlPartialUpdate(Handle display_ctx, bool enable);
   DisplayError ValidateScaling(const LayerRect &crop, const LayerRect &dst, bool rotate90);
-  DisplayError ValidateAndSetCursorPosition(Handle display_ctx, HWLayers *hw_layers, int x, int y);
+  DisplayError ValidateAndSetCursorPosition(Handle display_ctx, DispLayerStack *disp_layer_stack,
+                                            int x, int y);
   bool SetDisplayState(Handle display_ctx, DisplayState state,
                        const shared_ptr<Fence> &sync_handle);
   DisplayError SetMaxBandwidthMode(HWBwModes mode);
@@ -86,7 +87,7 @@ class CompManager {
   void SetSafeMode(bool enable) { safe_mode_ = enable; }
   bool CanSkipValidate(Handle display_ctx, bool *needs_buffer_swap);
   bool IsSafeMode() { return safe_mode_; }
-  void GenerateROI(Handle display_ctx, HWLayers *hw_layers);
+  void GenerateROI(Handle display_ctx, DispLayerStack *disp_layer_stack);
   DisplayError CheckEnforceSplit(Handle comp_handle, uint32_t new_refresh_rate);
   DppsControlInterface* GetDppsControlIntf() { return dpps_ctrl_intf_; }
   bool CheckResourceState(Handle display_ctx);
@@ -97,7 +98,7 @@ class CompManager {
   static const int kMaxThermalLevel = 3;
   static const int kSafeModeThreshold = 4;
 
-  void PrepareStrategyConstraints(Handle display_ctx, HWLayers *hw_layers);
+  void PrepareStrategyConstraints(Handle display_ctx, DispLayerStack *disp_layer_stack);
   void UpdateStrategyConstraints(bool is_primary, bool disabled);
   std::string StringDisplayList(const std::set<int32_t> &displays);
 

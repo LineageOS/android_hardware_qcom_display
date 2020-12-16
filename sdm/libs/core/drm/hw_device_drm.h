@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -90,9 +90,9 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError Doze(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
   virtual DisplayError DozeSuspend(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
   virtual DisplayError Standby();
-  virtual DisplayError Validate(HWLayers *hw_layers);
-  virtual DisplayError Commit(HWLayers *hw_layers);
-  virtual DisplayError Flush(HWLayers *hw_layers);
+  virtual DisplayError Validate(HWLayersInfo *hw_layers_info);
+  virtual DisplayError Commit(HWLayersInfo *hw_layers_info);
+  virtual DisplayError Flush(HWLayersInfo *hw_layers_info);
   virtual DisplayError GetPPFeaturesVersion(PPFeatureVersion *vers);
   virtual DisplayError SetPPFeatures(PPFeaturesConfig *feature_list);
   // This API is no longer supported, expectation is to call the correct API on HWEvents
@@ -104,7 +104,7 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError GetHWScanInfo(HWScanInfo *scan_info);
   virtual DisplayError GetVideoFormat(uint32_t config_index, uint32_t *video_format);
   virtual DisplayError GetMaxCEAFormat(uint32_t *max_cea_format);
-  virtual DisplayError SetCursorPosition(HWLayers *hw_layers, int x, int y);
+  virtual DisplayError SetCursorPosition(HWLayersInfo *hw_layers_info, int x, int y);
   virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level);
   virtual DisplayError GetPanelBrightness(int *level) { return kErrorNotSupported; }
   virtual void GetHWPanelMaxBrightness() { return; }
@@ -188,9 +188,9 @@ class HWDeviceDRM : public HWInterface {
   void SetRect(const LayerRect &source, sde_drm::DRMRect *target);
   void SetRotation(LayerTransform transform, const HWLayerConfig &layer_config,
                    uint32_t* rot_bit_mask);
-  DisplayError DefaultCommit(HWLayers *hw_layers);
-  DisplayError AtomicCommit(HWLayers *hw_layers);
-  void SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayers *hw_layers, bool validate,
+  DisplayError DefaultCommit(HWLayersInfo *hw_layers_info);
+  DisplayError AtomicCommit(HWLayersInfo *hw_layers_info);
+  void SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_layers_info, bool validate,
                    int64_t *release_fence_fd, int64_t *retire_fence_fd);
   void SetSecureConfig(const LayerBuffer &input_buffer, sde_drm::DRMSecureMode *fb_secure_mode,
                        sde_drm::DRMSecurityLevel *security_level);
@@ -206,7 +206,7 @@ class HWDeviceDRM : public HWInterface {
   void DumpConnectorModeInfo();
   void ResetROI();
   void SetQOSData(const HWQosData &qos_data);
-  void DumpHWLayers(HWLayers *hw_layers);
+  void DumpHWLayers(HWLayersInfo *hw_layers_info);
   bool IsFullFrameUpdate(const HWLayersInfo &hw_layer_info);
   DisplayError GetDRMPowerMode(const HWPowerState &power_state, DRMPowerMode *drm_power_mode);
   void SetTUIState();
@@ -216,7 +216,7 @@ class HWDeviceDRM : public HWInterface {
    public:
     explicit Registry(BufferAllocator *buffer_allocator);
     // Called on each Validate and Commit to map the handle_id to fb_id of each layer buffer.
-    void Register(HWLayers *hw_layers);
+    void Register(HWLayersInfo *hw_layers_info);
     // Called on display disconnect to clear output buffer map and remove fb_ids.
     void Clear();
     // Create the fd_id for the given buffer.

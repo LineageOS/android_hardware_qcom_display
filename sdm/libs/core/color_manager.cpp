@@ -1,4 +1,4 @@
-/* Copyright (c) 2015 - 2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015 - 2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -463,9 +463,9 @@ DisplayError ColorManagerProxy::ColorMgrSetModeWithRenderIntent(int32_t color_mo
   return kErrorNone;
 }
 
-DisplayError ColorManagerProxy::Validate(HWLayers *hw_layers) {
+DisplayError ColorManagerProxy::Validate(DispLayerStack *disp_layer_stack) {
   DisplayError ret = kErrorNone;
-  if (!hw_layers) {
+  if (!disp_layer_stack) {
     return ret;
   }
 
@@ -474,12 +474,12 @@ DisplayError ColorManagerProxy::Validate(HWLayers *hw_layers) {
   Layer hdr_layer = {};
   bool hdr_present = false;
 
-  valid_meta_data = NeedsToneMap(hw_layers->info.hw_layers);
+  valid_meta_data = NeedsToneMap(disp_layer_stack->info.hw_layers);
   if (valid_meta_data) {
-    if (hw_layers->info.hdr_layer_info.in_hdr_mode &&
-          hw_layers->info.hdr_layer_info.operation == HWHDRLayerInfo::kSet) {
-      hdr_layer = *(hw_layers->info.stack->layers.at(
-                                 UINT32(hw_layers->info.hdr_layer_info.layer_index)));
+    if (disp_layer_stack->info.hdr_layer_info.in_hdr_mode &&
+          disp_layer_stack->info.hdr_layer_info.operation == HWHDRLayerInfo::kSet) {
+      hdr_layer = *(disp_layer_stack->stack->layers.at(
+                                 UINT32(disp_layer_stack->info.hdr_layer_info.layer_index)));
       hdr_present = true;
     }
 
@@ -500,9 +500,9 @@ DisplayError ColorManagerProxy::Validate(HWLayers *hw_layers) {
   return kErrorNone;
 }
 
-DisplayError ColorManagerProxy::PrePrepare(HWLayers *hw_layers) {
+DisplayError ColorManagerProxy::PrePrepare(DispLayerStack *disp_layer_stack) {
   DisplayError ret = kErrorNone;
-  if (!hw_layers) {
+  if (!disp_layer_stack) {
     return ret;
   }
 

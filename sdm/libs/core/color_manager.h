@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -140,12 +140,12 @@ class ColorManagerProxy {
   DisplayError ColorMgrSetModeWithRenderIntent(int32_t color_mode_id,
                                                const PrimariesTransfer &blend_space,
                                                uint32_t intent);
-  DisplayError Validate(HWLayers *hw_layers);
+  DisplayError Validate(DispLayerStack *disp_layer_stack);
   bool IsSupportStcTonemap();
   bool GameEnhanceSupported();
   DisplayError ColorMgrGetStcModes(ColorModeList *mode_list);
   DisplayError ColorMgrSetStcMode(const ColorMode &color_mode);
-  DisplayError PrePrepare(HWLayers *hw_layers);
+  DisplayError PrePrepare(DispLayerStack *disp_layer_stack);
   DisplayError NotifyDisplayCalibrationMode(bool in_calibration);
 
  protected:

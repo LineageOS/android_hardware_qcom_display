@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2016, 2018-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2016, 2018-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -208,16 +208,16 @@ DisplayError ResourceDefault::Start(Handle display_ctx) {
   return kErrorNone;
 }
 
-DisplayError ResourceDefault::Stop(Handle display_ctx, HWLayers *hw_layers) {
+DisplayError ResourceDefault::Stop(Handle display_ctx, DispLayerStack *disp_layer_stack) {
   return kErrorNone;
 }
 
-DisplayError ResourceDefault::Prepare(Handle display_ctx, HWLayers *hw_layers) {
+DisplayError ResourceDefault::Prepare(Handle display_ctx, DispLayerStack *disp_layer_stack) {
   DisplayResourceContext *display_resource_ctx =
                           reinterpret_cast<DisplayResourceContext *>(display_ctx);
 
   DisplayError error = kErrorNone;
-  const struct HWLayersInfo &layer_info = hw_layers->info;
+  const struct HWLayersInfo &layer_info = disp_layer_stack->info;
   HWBlockType hw_block_type = display_resource_ctx->hw_block_type;
 
   DLOGV_IF(kTagResources, "==== Resource reserving start: hw_block_type = %d ====", hw_block_type);
@@ -234,7 +234,7 @@ DisplayError ResourceDefault::Prepare(Handle display_ctx, HWLayers *hw_layers) {
     return kErrorParameters;
   }
 
-  error = Config(display_resource_ctx, hw_layers);
+  error = Config(display_resource_ctx, disp_layer_stack);
   if (error != kErrorNone) {
     DLOGV_IF(kTagResources, "Resource config failed");
     return error;
@@ -250,7 +250,7 @@ DisplayError ResourceDefault::Prepare(Handle display_ctx, HWLayers *hw_layers) {
   uint32_t right_index = num_pipe_;
   bool need_scale = false;
 
-  struct HWLayerConfig &layer_config = hw_layers->config[0];
+  struct HWLayerConfig &layer_config = disp_layer_stack->info.config[0];
 
   HWPipeInfo *left_pipe = &layer_config.left_pipe;
   HWPipeInfo *right_pipe = &layer_config.right_pipe;
@@ -316,15 +316,15 @@ CleanupOnError:
   return kErrorResources;
 }
 
-DisplayError ResourceDefault::PostPrepare(Handle display_ctx, HWLayers *hw_layers) {
+DisplayError ResourceDefault::PostPrepare(Handle display_ctx, DispLayerStack *disp_layer_stack) {
   return kErrorNone;
 }
 
-DisplayError ResourceDefault::Commit(Handle display_ctx, HWLayers *hw_layers) {
+DisplayError ResourceDefault::Commit(Handle display_ctx, DispLayerStack *disp_layer_stack) {
   return kErrorNone;
 }
 
-DisplayError ResourceDefault::PostCommit(Handle display_ctx, HWLayers *hw_layers) {
+DisplayError ResourceDefault::PostCommit(Handle display_ctx, DispLayerStack *disp_layer_stack) {
   DisplayResourceContext *display_resource_ctx =
                           reinterpret_cast<DisplayResourceContext *>(display_ctx);
   HWBlockType hw_block_type = display_resource_ctx->hw_block_type;
@@ -525,8 +525,8 @@ DisplayError ResourceDefault::DisplaySplitConfig(DisplayResourceContext *display
 }
 
 DisplayError ResourceDefault::Config(DisplayResourceContext *display_resource_ctx,
-                                HWLayers *hw_layers) {
-  HWLayersInfo &layer_info = hw_layers->info;
+                                     DispLayerStack *disp_layer_stack) {
+  HWLayersInfo &layer_info = disp_layer_stack->info;
   DisplayError error = kErrorNone;
   const Layer &layer = layer_info.hw_layers.at(0);
 
@@ -535,7 +535,7 @@ DisplayError ResourceDefault::Config(DisplayResourceContext *display_resource_ct
     return error;
   }
 
-  struct HWLayerConfig *layer_config = &hw_layers->config[0];
+  struct HWLayerConfig *layer_config = &disp_layer_stack->info.config[0];
   HWPipeInfo &left_pipe = layer_config->left_pipe;
   HWPipeInfo &right_pipe = layer_config->right_pipe;
 
@@ -912,7 +912,8 @@ DisplayError ResourceDefault::CalculateDecimation(float downscale, uint8_t *deci
   return kErrorNone;
 }
 
-DisplayError ResourceDefault::ValidateAndSetCursorPosition(Handle display_ctx, HWLayers *hw_layers,
+DisplayError ResourceDefault::ValidateAndSetCursorPosition(Handle display_ctx,
+                                                           DispLayerStack *disp_layer_stack,
                                                            int x, int y,
                                                            DisplayConfigVariableInfo *fb_config) {
   return kErrorNotSupported;
