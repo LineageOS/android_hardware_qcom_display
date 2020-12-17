@@ -335,8 +335,9 @@ DisplayError CompManager::Prepare(Handle display_ctx, HWLayers *hw_layers) {
 
   if (error != kErrorNone) {
     resource_intf_->Stop(display_resource_ctx, hw_layers);
-    DLOGE("Composition strategies exhausted for display = %d. (first frame = %s)",
-          display_comp_ctx->display_type, display_comp_ctx->first_cycle_ ? "True" : "False");
+    DLOGE("Composition strategies exhausted for display = %d-%d. (first frame = %s)",
+          display_comp_ctx->display_id, display_comp_ctx->display_type,
+          display_comp_ctx->first_cycle_ ? "True" : "False");
     return error;
   }
 

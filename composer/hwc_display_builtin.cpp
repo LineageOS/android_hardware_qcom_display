@@ -212,7 +212,9 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
 
   DTRACE_SCOPED();
 
-  if (display_paused_) {
+  // If no resources are available for the current display, mark it for GPU by pass and continue to
+  // do invalidate until the resources are available
+  if (display_paused_ || CheckResourceState()) {
     MarkLayersForGPUBypass();
     return status;
   }
@@ -451,7 +453,14 @@ HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
 
   DTRACE_SCOPED();
 
-  if (display_paused_) {
+  // Proceed only if any resources are available to be allocated for the current display,
+  // Otherwise keep doing invalidate
+  if (CheckResourceState()) {
+    Refresh();
+    return status;
+  }
+
+  if (display_paused_ ) {
     return status;
   } else if (commit_state_ == kInternalCommit) {
     // Commit got triggered as part of validate.

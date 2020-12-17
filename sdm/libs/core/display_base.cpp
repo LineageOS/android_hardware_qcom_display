@@ -2461,6 +2461,7 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
   secure_event_ = secure_event;
   if (secure_event == kTUITransitionEnd) {
     DisplayState pending_state;
+    *needs_refresh = (hw_panel_info_.mode == kModeCommand);
     if (GetPendingDisplayState(&pending_state) == kErrorNone) {
       if (pending_state == kStateOff) {
         shared_ptr<Fence> release_fence = nullptr;
@@ -2469,10 +2470,9 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
           DLOGE("SetDisplay state %d failed for %d err %d", pending_state, display_id_, err);
           return err;
         }
-        return kErrorNone;
+        *needs_refresh = false;
       }
     }
-    *needs_refresh = (hw_panel_info_.mode == kModeCommand);
     DisablePartialUpdateOneFrame();
     err = hw_events_intf_->SetEventState(HWEvent::BACKLIGHT_EVENT, false);
     if (err != kErrorNone) {

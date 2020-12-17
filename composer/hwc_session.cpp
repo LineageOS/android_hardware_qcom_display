@@ -1147,12 +1147,29 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
     return HWC2_ERROR_UNSUPPORTED;
   }
 
+
   bool override_mode = async_powermode_ && display_ready_.test(UINT32(display));
   if (!override_mode) {
+    hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
+    bool needs_validation = false;
+    {
+      SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
+      if (hwc_display_[display]) {
+        needs_validation = (hwc_display_[display]->GetCurrentPowerMode() == HWC2::PowerMode::Off &&
+                            mode != HWC2::PowerMode::Off && display != active_builtin_disp_id &&
+                            active_builtin_disp_id < HWCCallbacks::kNumDisplays);
+      }
+    }
     auto error = CallDisplayFunction(display, &HWCDisplay::SetPowerMode, mode,
                                      false /* teardown */);
     if (INT32(error) != HWC2_ERROR_NONE) {
       return INT32(error);
+    }
+    // if all the resources are occupied by the active builtin display, it needs revalidation
+    // to relinquish it resources to other display
+    if (needs_validation) {
+      SEQUENCE_WAIT_SCOPE_LOCK(locker_[active_builtin_disp_id]);
+      hwc_display_[active_builtin_disp_id]->ResetValidation();
     }
   } else {
     Locker::ScopeLock lock_disp(locker_[display]);
@@ -1163,7 +1180,6 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
   if (mode == HWC2::PowerMode::Off) {
     idle_pc_ref_cnt_ = 0;
   }
-
 
   UpdateThrottlingRate();
 
