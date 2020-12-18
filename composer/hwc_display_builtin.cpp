@@ -132,7 +132,7 @@ int HWCDisplayBuiltIn::Init() {
   HWCDebugHandler::Get()->GetProperty(ENABLE_OPTIMIZE_REFRESH, &value);
   enable_optimize_refresh_ = (value == 1);
   if (enable_optimize_refresh_) {
-    DLOGI("Drop redundant drawcycles %d", id_);
+    DLOGI("Drop redundant drawcycles %" PRIu64 , id_);
   }
 
   int vsyncs = 0;
@@ -1347,7 +1347,7 @@ DisplayError HWCDisplayBuiltIn::SetDynamicDSIClock(uint64_t bitclk) {
   DisablePartialUpdateOneFrame();
   DisplayError error = display_intf_->SetDynamicDSIClock(bitclk);
   if (error != kErrorNone) {
-    DLOGE(" failed: Clk: %llu Error: %d", bitclk, error);
+    DLOGE(" failed: Clk: %" PRIu64 " Error: %d", bitclk, error);
     return error;
   }
 

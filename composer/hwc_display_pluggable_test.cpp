@@ -495,9 +495,9 @@ void HWCDisplayPluggableTest::GenerateColorRamp(uint8_t *buffer) {
     }
   }
 
-  DLOGI("CRC red %x", crc_red.to_ulong());
-  DLOGI("CRC green %x", crc_green.to_ulong());
-  DLOGI("CRC blue %x", crc_blue.to_ulong());
+  DLOGI("CRC red %lx", crc_red.to_ulong());
+  DLOGI("CRC green %lx", crc_green.to_ulong());
+  DLOGI("CRC blue %lx", crc_blue.to_ulong());
 }
 
 void HWCDisplayPluggableTest::GenerateBWVertical(uint8_t *buffer) {
@@ -541,9 +541,9 @@ void HWCDisplayPluggableTest::GenerateBWVertical(uint8_t *buffer) {
     }
   }
 
-  DLOGI("CRC red %x", crc_red.to_ulong());
-  DLOGI("CRC green %x", crc_green.to_ulong());
-  DLOGI("CRC blue %x", crc_blue.to_ulong());
+  DLOGI("CRC red %lx", crc_red.to_ulong());
+  DLOGI("CRC green %lx", crc_green.to_ulong());
+  DLOGI("CRC blue %lx", crc_blue.to_ulong());
 }
 
 void HWCDisplayPluggableTest::GenerateColorSquare(uint8_t *buffer) {
@@ -609,9 +609,9 @@ void HWCDisplayPluggableTest::GenerateColorSquare(uint8_t *buffer) {
     }
   }
 
-  DLOGI("CRC red %x", crc_red.to_ulong());
-  DLOGI("CRC green %x", crc_green.to_ulong());
-  DLOGI("CRC blue %x", crc_blue.to_ulong());
+  DLOGI("CRC red %lx", crc_red.to_ulong());
+  DLOGI("CRC green %lx", crc_green.to_ulong());
+  DLOGI("CRC blue %lx", crc_blue.to_ulong());
 }
 
 int HWCDisplayPluggableTest::InitLayer(Layer *layer) {
