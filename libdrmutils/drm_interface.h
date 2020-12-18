@@ -41,6 +41,10 @@
 #include <drm/msm_drm.h>
 #include <drm/msm_drm_pp.h>
 
+#ifdef KERNEL_5_4
+#include <drm/sde_drm.h>
+#endif
+
 namespace sde_drm {
 
 typedef std::map<std::pair<uint32_t, uint64_t>, float> CompRatioMap;

@@ -13,6 +13,10 @@ ifeq ($(TARGET_USES_COLOR_METADATA), true)
     common_flags += -DUSE_COLOR_METADATA
 endif
 
+ifeq ($(TARGET_USES_5.4_KERNEL),true)
+    common_flags += -DKERNEL_5_4
+endif
+
 ifeq ($(TARGET_USES_QCOM_BSP),true)
     common_flags += -DQTI_BSP
 endif
