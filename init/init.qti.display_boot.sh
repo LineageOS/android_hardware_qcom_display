@@ -53,6 +53,10 @@ case "$target" in
         setprop vendor.display.enable_posted_start_dyn 1
         setprop vendor.display.enable_qsync_idle 1
         ;;
+        475)
+        # Set property for Yupik
+        setprop vendor.display.enable_posted_start_dyn 2
+        ;;
     esac
     ;;
     "holi")
