@@ -695,7 +695,6 @@ static Error getFormatLayout(private_handle_t *handle, std::vector<PlaneLayout> 
 BufferManager::BufferManager() : next_id_(0) {
   handles_map_.clear();
   allocator_ = new Allocator();
-  allocator_->Init();
 }
 
 BufferManager *BufferManager::GetInstance() {

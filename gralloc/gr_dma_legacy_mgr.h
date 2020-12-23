@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018, 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2020, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -27,34 +27,44 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __GR_ALLOCATOR_H__
-#define __GR_ALLOCATOR_H__
+#ifndef __GR_DMA_LEGACY_MGR_H__
+#define __GR_DMA_LEGACY_MGR_H__
 
-#include <vector>
+#include <BufferAllocator/BufferAllocator.h>
+#include <string>
 
-#include "gr_buf_descriptor.h"
-#include "gr_utils.h"
-#include "gralloc_priv.h"
 #include "gr_alloc_interface.h"
+
+#define FD_INIT -1
 
 namespace gralloc {
 
-class Allocator {
+class DmaLegacyManager : public AllocInterface {
  public:
-  void SetProperties(gralloc::GrallocProperties props);
-  int MapBuffer(void **base, unsigned int size, unsigned int offset, int fd);
-  int ImportBuffer(int fd);
-  int FreeBuffer(void *base, unsigned int size, unsigned int offset, int fd, int handle);
-  int CleanBuffer(void *base, unsigned int size, unsigned int offset, int handle, int op, int fd);
-  int AllocateMem(AllocData *data, uint64_t usage, int format);
-  // @return : index of the descriptor with maximum buffer size req
-  bool CheckForBufferSharing(uint32_t num_descriptors,
-                             const std::vector<std::shared_ptr<BufferDescriptor>> &descriptors,
-                             ssize_t *max_index);
+  ~DmaLegacyManager() { Deinit(); }
+  virtual int AllocBuffer(AllocData *data);
+  virtual int FreeBuffer(void *base, unsigned int size, unsigned int offset, int fd,
+                         int ion_handle);
+  virtual int MapBuffer(void **base, unsigned int size, unsigned int offset, int fd);
+  virtual int ImportBuffer(int fd);
+  virtual int CleanBuffer(void *base, unsigned int size, unsigned int offset, int handle, int op,
+                          int fd);
+  virtual int SecureMemPerms(int fd);
+  virtual void GetHeapInfo(uint64_t usage, std::string *ion_heap_name, unsigned int *alloc_type,
+                           unsigned int *ion_flags, bool *sec_flag, bool *sensor_flag);
+
+  static DmaLegacyManager *GetInstance();
+
  private:
-  bool use_system_heap_for_sensors_ = true;
+  DmaLegacyManager() {}
+  int UnmapBuffer(void *base, unsigned int size, unsigned int offset);
+  void Deinit();
+
+  int dma_legacy_dev_fd_ = FD_INIT;
+  BufferAllocator buffer_allocator_;
+  static DmaLegacyManager *dma_legacy_manager_;
 };
 
 }  // namespace gralloc
 
-#endif  // __GR_ALLOCATOR_H__
+#endif  // __GR_DMA_LEGACY_MGR_H__

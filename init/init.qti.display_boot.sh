@@ -36,6 +36,14 @@ else
 fi
 
 case "$target" in
+    "taro")
+    #Set property to differentiate Waipio
+    #SOC ID for Waipio is 457
+    case "$soc_hwid" in
+        457)
+            setprop vendor.gralloc.use_dma_buf_heaps 1
+    esac
+    ;;
     "lahaina")
     #Set property to differentiate Lahaina & Shima
     #SOC ID for Lahaina is 415, Lahaina P is 439, Lahaina-ATP is 456
