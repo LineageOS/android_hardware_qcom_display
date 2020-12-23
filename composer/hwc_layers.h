@@ -57,20 +57,6 @@ bool GetSDMColorSpace(const int32_t &dataspace, ColorMetaData *color_metadata);
 bool IsBT2020(const ColorPrimaries &color_primary);
 int32_t TranslateFromLegacyDataspace(const int32_t &legacy_ds);
 
-enum GeometryChanges {
-  kNone         = 0x000,
-  kBlendMode    = 0x001,
-  kDataspace    = 0x002,
-  kDisplayFrame = 0x004,
-  kPlaneAlpha   = 0x008,
-  kSourceCrop   = 0x010,
-  kTransform    = 0x020,
-  kZOrder       = 0x040,
-  kAdded        = 0x080,
-  kRemoved      = 0x100,
-  kBufferGeometry = 0x200,
-};
-
 enum LayerTypes {
   kLayerUnknown = 0,
   kLayerApp = 1,
@@ -114,7 +100,7 @@ class HWCLayer {
   HWC2::Composition GetDeviceSelectedCompositionType() { return device_selected_; }
   int32_t GetLayerDataspace() { return dataspace_; }
   uint32_t GetGeometryChanges() { return geometry_changes_; }
-  void ResetGeometryChanges() { geometry_changes_ = GeometryChanges::kNone; }
+  void ResetGeometryChanges();
   void PushBackReleaseFence(const shared_ptr<Fence> &fence);
   void PopBackReleaseFence(shared_ptr<Fence> *fence);
   void PopFrontReleaseFence(shared_ptr<Fence> *fence);

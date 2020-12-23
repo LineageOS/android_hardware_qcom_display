@@ -212,6 +212,7 @@ HWCLayer::HWCLayer(hwc2_display_t display_id, HWCBufferAllocator *buf_allocator)
   // Fences are deferred, so the first time this layer is presented, return -1
   // TODO(user): Verify that fences are properly obtained on suspend/resume
   release_fences_.push_back(nullptr);
+  geometry_changes_ |= kAdded;
 }
 
 HWCLayer::~HWCLayer() {
@@ -1111,6 +1112,11 @@ void HWCLayer::SetDirtyRegions(hwc_region_t surface_damage) {
 void HWCLayer::SetLayerAsMask() {
   layer_->input_buffer.flags.mask_layer = true;
   DLOGV_IF(kTagClient, " Layer Id: ""[%" PRIu64 "]", id_);
+}
+
+void HWCLayer::ResetGeometryChanges() {
+  geometry_changes_ = GeometryChanges::kNone;
+  layer_->geometry_changes = GeometryChanges::kNone;
 }
 
 }  // namespace sdm

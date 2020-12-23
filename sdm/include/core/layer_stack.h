@@ -123,6 +123,21 @@ enum LayerUpdate {
   kLayerUpdateMax,
 };
 
+enum GeometryChanges {
+  kNone         = 0x000,
+  kBlendMode    = 0x001,
+  kDataspace    = 0x002,
+  kDisplayFrame = 0x004,
+  kPlaneAlpha   = 0x008,
+  kSourceCrop   = 0x010,
+  kTransform    = 0x020,
+  kZOrder       = 0x040,
+  kAdded        = 0x080,
+  kRemoved      = 0x100,
+  kBufferGeometry = 0x200,
+  kDefault      = 0xFFFF,
+};
+
 /*! @brief This structure defines rotation and flip values for a display layer.
 
   @sa Layer
@@ -412,6 +427,8 @@ struct Layer {
                                                               0.0, 0.0, 1.0, 0.0,
                                                               0.0, 0.0, 0.0, 1.0 };
   std::bitset<kLayerUpdateMax> update_mask = 0;
+
+  uint32_t geometry_changes = GeometryChanges::kDefault;
 
   uint64_t layer_id = 0;                           //!< A Unique Layer Id which will persist across
                                                    //!< frames until layer gets removed from stack,
