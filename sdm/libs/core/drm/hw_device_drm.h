@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017 - 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017 - 2018, 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -58,12 +58,14 @@ class HWDeviceDRM : public HWInterface {
  protected:
   // From HWInterface
   virtual DisplayError GetActiveConfig(uint32_t *active_config);
+  virtual DisplayError SetActiveConfig(uint32_t active_config);
   virtual DisplayError GetNumDisplayAttributes(uint32_t *count);
   virtual DisplayError GetDisplayAttributes(uint32_t index,
                                             HWDisplayAttributes *display_attributes);
   virtual DisplayError GetHWPanelInfo(HWPanelInfo *panel_info);
   virtual DisplayError SetDisplayAttributes(uint32_t index);
   virtual DisplayError SetDisplayAttributes(const HWDisplayAttributes &display_attributes);
+  virtual DisplayError SetDisplayFormat(uint32_t index, DisplayInterfaceFormat fmt);
   virtual DisplayError GetConfigIndex(uint32_t mode, uint32_t *index);
   virtual DisplayError PowerOn();
   virtual DisplayError PowerOff();
@@ -89,10 +91,13 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError SetAutoRefresh(bool enable) { return kErrorNone; }
   virtual DisplayError SetS3DMode(HWS3DMode s3d_mode);
   virtual DisplayError SetScaleLutConfig(HWScaleLutInfo *lut_info);
-  virtual DisplayError SetMixerAttributes(const HWMixerAttributes &mixer_attributes);
+  virtual DisplayError SetMixerAttributes(HWMixerAttributes &mixer_attributes);
   virtual DisplayError GetMixerAttributes(HWMixerAttributes *mixer_attributes);
   virtual DisplayError SetDynamicDSIClock(uint64_t bitclk);
   virtual DisplayError GetDynamicDSIClock(uint64_t *bitclk);
+  virtual DisplayError GetConfigIndex(uint32_t width, uint32_t height, uint32_t *index);
+  virtual DisplayError SetConfigAttributes(uint32_t index, uint32_t width, uint32_t height);
+  virtual DisplayError GetHdmiMode(std::vector<uint32_t> &hdmi_modes);
 
   enum {
     kHWEventVSync,

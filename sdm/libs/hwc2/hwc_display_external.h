@@ -49,6 +49,8 @@ class HWCDisplayExternal : public HWCDisplay {
   virtual HWC2::Error Present(int32_t *out_retire_fence);
   virtual void SetSecureDisplay(bool secure_display_active);
   virtual int SetState(bool connected);
+  virtual HWC2::Error SetClientTarget(buffer_handle_t target, int32_t acquire_fence,
+                                      int32_t dataspace, hwc_region_t damage);
 
  private:
   HWCDisplayExternal(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
@@ -57,10 +59,12 @@ class HWCDisplayExternal : public HWCDisplay {
   void GetUnderScanConfig();
   static void GetDownscaleResolution(uint32_t primary_width, uint32_t primary_height,
                                      uint32_t *virtual_width, uint32_t *virtual_height);
+  DisplayError SetMixerResolution(uint32_t width, uint32_t height);
 
   DisplayNull display_null_;
   int underscan_width_ = 0;
   int underscan_height_ = 0;
+  uint32_t active_config_ = 0;
 };
 
 }  // namespace sdm

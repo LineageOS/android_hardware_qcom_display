@@ -66,6 +66,7 @@ DisplayError DisplayBase::Init() {
 
   error = Debug::GetMixerResolution(&mixer_attributes_.width, &mixer_attributes_.height);
   if (error == kErrorNone) {
+    DLOGI("User mixer res. wxh = %dx%d",mixer_attributes_.width, mixer_attributes_.height);
     hw_intf_->SetMixerAttributes(mixer_attributes_);
   }
 
@@ -144,6 +145,16 @@ DisplayError DisplayBase::Deinit() {
   return kErrorNone;
 }
 
+void DisplayBase::CheckMinMixerResolution(uint32_t *width, uint32_t *height) {
+  HWDisplayAttributes display_attributes = {};
+  hw_intf_->GetDisplayAttributes(mixer_config_index_, &display_attributes);
+  // Minimum cap is mixer res. provided in property.
+  if (*width < display_attributes.x_pixels || *height < display_attributes.y_pixels) {
+    *width = display_attributes.x_pixels;
+    *height = display_attributes.y_pixels;
+    DLOGV("Cap min mixer resolution");
+  }
+}
 DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
   std::vector<Layer *> &layers = layer_stack->layers;
   HWLayersInfo &hw_layers_info = hw_layers_.info;
@@ -378,6 +389,10 @@ DisplayError DisplayBase::GetConfig(uint32_t index, DisplayConfigVariableInfo *v
   HWDisplayAttributes attrib;
   if (hw_intf_->GetDisplayAttributes(index, &attrib) == kErrorNone) {
     *variable_info = attrib;
+    if (dest_scale_enabled_ && index == mixer_config_index_) {
+      variable_info->x_pixels = mixer_attributes_.width;
+      variable_info->y_pixels = mixer_attributes_.height;
+    }
     return kErrorNone;
   }
 
@@ -500,16 +515,25 @@ DisplayError DisplayBase::SetActiveConfig(uint32_t index) {
   uint32_t active_index = 0;
 
   hw_intf_->GetActiveConfig(&active_index);
-
   if (active_index == index) {
-    return kErrorNone;
+    if (!(dest_scale_enabled_ && index != panel_config_index_)) {
+      return kErrorNone;
+    }
   }
-
+  HWDisplayAttributes act_display_attributes = {};
+  hw_intf_->GetDisplayAttributes(active_index, &act_display_attributes);
+  HWDisplayAttributes new_display_attributes = {};
+  hw_intf_->GetDisplayAttributes(index, &new_display_attributes);
+   if (new_display_attributes == act_display_attributes) {
+     if (!(dest_scale_enabled_ && index != panel_config_index_)) {
+      return kErrorNone;
+    }
+   }
   error = hw_intf_->SetDisplayAttributes(index);
   if (error != kErrorNone) {
     return error;
   }
-
+  panel_config_index_ = index;
   return ReconfigureDisplay();
 }
 
@@ -1017,15 +1041,22 @@ DisplayError DisplayBase::ReconfigureDisplay() {
   HWMixerAttributes mixer_attributes;
   HWPanelInfo hw_panel_info;
   uint32_t active_index = 0;
-
   error = hw_intf_->GetActiveConfig(&active_index);
   if (error != kErrorNone) {
     return error;
   }
-
-  error = hw_intf_->GetDisplayAttributes(active_index, &display_attributes);
-  if (error != kErrorNone) {
-    return error;
+  if (dest_scale_enabled_) {
+    if (active_index != mixer_config_index_) {
+      // we are here because Client of SDM has changed the active config
+      error = hw_intf_->GetDisplayAttributes(active_index, &display_attributes);
+    } else {
+      error = hw_intf_->GetDisplayAttributes(panel_config_index_, &display_attributes);
+    }
+  } else {
+    error = hw_intf_->GetDisplayAttributes(active_index, &display_attributes);
+    if (error != kErrorNone) {
+      return error;
+    }
   }
 
   error = hw_intf_->GetMixerAttributes(&mixer_attributes);
@@ -1057,6 +1088,7 @@ DisplayError DisplayBase::ReconfigureDisplay() {
   mixer_attributes_ = mixer_attributes;
   hw_panel_info_ = hw_panel_info;
 
+  DLOGV("Display reconfigured.");
   return kErrorNone;
 }
 
@@ -1195,6 +1227,10 @@ bool DisplayBase::NeedsMixerReconfiguration(LayerStack *layer_stack, uint32_t *n
 
     MapRect(fb_rect, dst_domain, layer->dst_rect, &layer_dst_rect);
     if (NeedsDownScale(layer->src_rect, layer_dst_rect, needs_rotation)) {
+      *new_mixer_width = display_width;
+      *new_mixer_height = display_height;
+    }
+    if (*new_mixer_width > display_width || *new_mixer_height > display_height) {
       *new_mixer_width = display_width;
       *new_mixer_height = display_height;
     }

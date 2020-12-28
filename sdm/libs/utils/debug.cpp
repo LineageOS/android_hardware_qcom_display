@@ -139,6 +139,13 @@ bool Debug::IsScalarDisabled() {
   return (value == 1);
 }
 
+bool Debug::IsDetailEnhancerEnabled() {
+  int value = 0;
+  debug_.debug_handler_->GetProperty(ENABLE_DETAIL_ENHANCER_PROP, &value);
+
+  return (value == 1);
+}
+
 bool Debug::IsUbwcTiledFrameBuffer() {
   int ubwc_disabled = 0;
   int ubwc_framebuffer = 0;
