@@ -319,7 +319,7 @@ void DisplayBuiltIn::CacheFrameROI() {
 }
 
 void DisplayBuiltIn::UpdateQsyncMode() {
-  if (!hw_panel_info_.qsync_support || (hw_panel_info_.mode == kModeCommand)) {
+  if (!hw_panel_info_.qsync_support) {
     return;
   }
 
