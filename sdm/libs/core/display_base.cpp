@@ -69,19 +69,39 @@ DisplayBase::DisplayBase(DisplayType display_type, DisplayEventHandler *event_ha
                          CompManager *comp_manager, HWInfoInterface *hw_info_intf)
   : display_type_(display_type), event_handler_(event_handler), hw_device_type_(hw_device_type),
     buffer_allocator_(buffer_allocator), comp_manager_(comp_manager), hw_info_intf_(hw_info_intf) {
+  // Kick off worker thread and block the caller thread until worker thread has started and
+  // ready to process commit requests.
+  lock_guard<recursive_mutex> client_lock(disp_mutex_.client_mutex);
+
+  // Start commit worker thread and wait for thread response.
+  DLOGI("Starting commit thread");
+
+  std::thread commit_thread(&DisplayBase::CommitThread, this);
+  disp_mutex_.client_cv.wait(disp_mutex_.client_mutex);
+  commit_thread_.swap(commit_thread);
+
+  DLOGI("Commit thread started");
 }
 
 DisplayBase::DisplayBase(int32_t display_id, DisplayType display_type,
                          DisplayEventHandler *event_handler, HWDeviceType hw_device_type,
                          BufferAllocator *buffer_allocator, CompManager *comp_manager,
                          HWInfoInterface *hw_info_intf)
-  : display_id_(display_id),
-    display_type_(display_type),
-    event_handler_(event_handler),
-    hw_device_type_(hw_device_type),
-    buffer_allocator_(buffer_allocator),
-    comp_manager_(comp_manager),
-    hw_info_intf_(hw_info_intf) {}
+  : DisplayBase(display_type, event_handler, hw_device_type,
+                buffer_allocator, comp_manager, hw_info_intf) {
+  display_id_ = display_id;
+}
+
+DisplayBase::~DisplayBase() {
+  // Signal worker thread and wait for it to terminate.
+  {
+    ClientLock lock(disp_mutex_);
+    disp_mutex_.worker_exit = true;
+    lock.NotifyWorker();
+  }
+
+  commit_thread_.join();
+}
 
 DisplayError DisplayBase::Init() {
   ClientLock lock(disp_mutex_);
@@ -520,6 +540,45 @@ void DisplayBase::SetRCData(LayerStack *layer_stack) {
     hw_layers_info.rc_layers_info.top_height = rc_out_config->top_height;
     hw_layers_info.rc_layers_info.bottom_width = rc_out_config->bottom_width;
     hw_layers_info.rc_layers_info.bottom_height = rc_out_config->bottom_height;
+  }
+}
+
+void DisplayBase::HandleAsyncCommit() {
+  // Do not acquire mutexes here.
+  // Perform hw commit here.
+}
+
+void DisplayBase::CommitThread() {
+  DLOGI("Commit thread entered.");
+
+  // Acquire worker mutex and wait for events.
+  lock_guard<recursive_mutex> worker_lock(disp_mutex_.worker_mutex);
+
+  // Notify client thread that the thread has started listening to events.
+  {
+    DLOGI("Notify client.");
+    lock_guard<recursive_mutex> client_lock(disp_mutex_.client_mutex);
+    disp_mutex_.client_cv.notify_one();
+  }
+
+  DLOGI("Commit thread started.");
+
+  while (1) {
+    // Reset busy status and notify. There may be some thread waiting for the status to reset.
+    disp_mutex_.worker_busy = false;
+    disp_mutex_.worker_cv.notify_one();
+
+    // Wait for client thread to signal. Handle spurious interrupts.
+    disp_mutex_.worker_cv.wait(disp_mutex_.worker_mutex, [this] {
+      return disp_mutex_.worker_busy;
+    });
+
+    if (disp_mutex_.worker_exit) {
+      DLOGI("Terminate commit thread.");
+      break;
+    }
+
+    HandleAsyncCommit();
   }
 }
 

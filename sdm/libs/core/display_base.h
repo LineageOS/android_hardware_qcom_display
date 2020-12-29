@@ -61,7 +61,7 @@ class DisplayBase : public DisplayInterface {
   DisplayBase(int32_t display_id, DisplayType display_type, DisplayEventHandler *event_handler,
               HWDeviceType hw_device_type, BufferAllocator *buffer_allocator,
               CompManager *comp_manager, HWInfoInterface *hw_info_intf);
-  virtual ~DisplayBase() {}
+  virtual ~DisplayBase();
   virtual DisplayError Init();
   virtual DisplayError Deinit();
   virtual DisplayError Prepare(LayerStack *layer_stack);
@@ -256,8 +256,11 @@ class DisplayBase : public DisplayInterface {
   DisplayError GetPendingDisplayState(DisplayState *disp_state);
   void SetPendingPowerState(DisplayState state);
   DisplayError SetupPanelFeatureFactory();
+  void CommitThread();
+  virtual void HandleAsyncCommit();
 
   DisplayMutex disp_mutex_;
+  std::thread commit_thread_;
   int32_t display_id_ = -1;
   DisplayType display_type_;
   DisplayEventHandler *event_handler_ = NULL;
