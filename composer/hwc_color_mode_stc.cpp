@@ -81,7 +81,7 @@ HWC2::Error HWCColorModeStc::Init() {
     DLOGW("Failed to get Stc color modes, error %d", error);
     stc_mode_list_.list.clear();
   } else {
-    DLOGI("Stc mode count %d", stc_mode_list_.list.size());
+    DLOGI("Stc mode count %zu", stc_mode_list_.list.size());
   }
 
   PopulateColorModes();

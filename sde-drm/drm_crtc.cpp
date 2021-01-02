@@ -376,7 +376,7 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
   memcpy (fmt_str, blob->data, blob->length);
   fmt_str[blob->length] = '\0';
   stringstream stream(fmt_str);
-  DRM_LOGI("stream str %s len %d blob str %s len %d", stream.str().c_str(), stream.str().length(),
+  DRM_LOGI("stream str %s len %zu blob str %s len %d", stream.str().c_str(), stream.str().length(),
            blob->data, blob->length);
   string line = {};
   string max_blendstages = "max_blendstages=";

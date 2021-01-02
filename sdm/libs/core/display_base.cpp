@@ -260,7 +260,7 @@ DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
   }
 
   hw_layers_info.stitch_target_index = hw_layers_info.gpu_target_index + 1;
-  DLOGD_IF(kTagDisplay, "LayerStack layer_count: %d, app_layer_count: %d, "
+  DLOGD_IF(kTagDisplay, "LayerStack layer_count: %zu, app_layer_count: %d, "
                         "gpu_target_index: %d, stitch_index: %d game_present: %d, display: %d-%d",
                         layers.size(), hw_layers_info.app_layer_count,
                         hw_layers_info.gpu_target_index, hw_layers_info.stitch_target_index,
@@ -499,7 +499,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
            display_id_, display_type_, ret, (*mask_status).rc_mask_state);
       if ((*mask_status).rc_mask_state == kStatusRcMaskStackHandled) {
         needs_validate_ = true;
-        DLOGW("Need to call Corresponding prepare to handle the mask layers.",
+        DLOGW("Need to call Corresponding prepare to handle the mask layers %d %d.",
               display_id_, display_type_);
         for (auto &layer : layer_stack->layers) {
           if (layer->input_buffer.flags.mask_layer) {
@@ -2461,6 +2461,7 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
   secure_event_ = secure_event;
   if (secure_event == kTUITransitionEnd) {
     DisplayState pending_state;
+    *needs_refresh = (hw_panel_info_.mode == kModeCommand);
     if (GetPendingDisplayState(&pending_state) == kErrorNone) {
       if (pending_state == kStateOff) {
         shared_ptr<Fence> release_fence = nullptr;
@@ -2469,10 +2470,9 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
           DLOGE("SetDisplay state %d failed for %d err %d", pending_state, display_id_, err);
           return err;
         }
-        return kErrorNone;
+        *needs_refresh = false;
       }
     }
-    *needs_refresh = (hw_panel_info_.mode == kModeCommand);
     DisablePartialUpdateOneFrame();
     err = hw_events_intf_->SetEventState(HWEvent::BACKLIGHT_EVENT, false);
     if (err != kErrorNone) {

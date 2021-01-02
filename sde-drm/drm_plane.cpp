@@ -463,7 +463,7 @@ void DRMPlane::GetTypeInfo(const PropertyMap &prop_map) {
   // We may have multiple lines with each one dedicated for something specific
   // like formats etc
   stringstream stream(fmt_str);
-  DRM_LOGI("stream str %s len %d blob str %s len %d", stream.str().c_str(), stream.str().length(),
+  DRM_LOGI("stream str %s len %zu blob str %s len %d", stream.str().c_str(), stream.str().length(),
            blob->data, blob->length);
 
   string line = {};
@@ -1108,8 +1108,7 @@ bool DRMPlane::SetDgmCscConfig(drmModeAtomicReq *req, uint64_t handle) {
                 reinterpret_cast<uint64_t>(csc_v1_data), false /* cache */,
                 tmp_prop_val_map_);
     dgm_csc_in_use_ = (csc_v1_data != 0);
-    DRM_LOGV("Plane %d Dgm CSC = %lld in_use = %d", drm_plane_->plane_id, csc_v1_data,
-             dgm_csc_in_use_);
+    DRM_LOGV("Plane %d in_use = %d", drm_plane_->plane_id, dgm_csc_in_use_);
 
     return true;
   }

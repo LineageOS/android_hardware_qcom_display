@@ -132,7 +132,7 @@ int HWCDisplayBuiltIn::Init() {
   HWCDebugHandler::Get()->GetProperty(ENABLE_OPTIMIZE_REFRESH, &value);
   enable_optimize_refresh_ = (value == 1);
   if (enable_optimize_refresh_) {
-    DLOGI("Drop redundant drawcycles %d", id_);
+    DLOGI("Drop redundant drawcycles %" PRIu64 , id_);
   }
 
   int vsyncs = 0;
@@ -143,12 +143,12 @@ int HWCDisplayBuiltIn::Init() {
 
   is_primary_ = display_intf_->IsPrimaryDisplay();
 
-  if (is_primary_) {
-    windowed_display_ = (Debug::GetWindowRect(&window_rect_.left, &window_rect_.top,
-                         &window_rect_.right, &window_rect_.bottom) == 0);
-    DLOGI("Window rect : [%f %f %f %f]", window_rect_.left, window_rect_.top,
-           window_rect_.right, window_rect_.bottom);
+  windowed_display_ = Debug::GetWindowRect(is_primary_, &window_rect_.left, &window_rect_.top,
+                             &window_rect_.right, &window_rect_.bottom) == 0;
+  DLOGI("Window rect : [%f %f %f %f] is_primary_=%d", window_rect_.left, window_rect_.top,
+         window_rect_.right, window_rect_.bottom, is_primary_);
 
+  if (is_primary_) {
     value = 0;
     HWCDebugHandler::Get()->GetProperty(ENABLE_POMS_DURING_DOZE, &value);
     enable_poms_during_doze_ = (value == 1);
@@ -212,7 +212,9 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
 
   DTRACE_SCOPED();
 
-  if (display_paused_) {
+  // If no resources are available for the current display, mark it for GPU by pass and continue to
+  // do invalidate until the resources are available
+  if (display_paused_ || CheckResourceState()) {
     MarkLayersForGPUBypass();
     return status;
   }
@@ -451,8 +453,24 @@ HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
 
   DTRACE_SCOPED();
 
-  if (display_paused_) {
+  // Proceed only if any resources are available to be allocated for the current display,
+  // Otherwise keep doing invalidate
+  if (CheckResourceState()) {
+    Refresh();
     return status;
+  }
+
+  if (display_paused_ ) {
+    return status;
+  } else if (commit_state_ == kInternalCommit) {
+    // Commit got triggered as part of validate.
+    // Just return fence.
+    *out_retire_fence = retire_fence_;
+    // Client closes this fence.
+    retire_fence_ = nullptr;
+    // Subsequent commits have to be normal. Reset state.
+    commit_state_ = kNormalCommit;
+    validate_state_ = kSkipValidate;
   } else {
     CacheAvrStatus();
     DisplayConfigFixedInfo fixed_info = {};
@@ -1338,7 +1356,7 @@ DisplayError HWCDisplayBuiltIn::SetDynamicDSIClock(uint64_t bitclk) {
   DisablePartialUpdateOneFrame();
   DisplayError error = display_intf_->SetDynamicDSIClock(bitclk);
   if (error != kErrorNone) {
-    DLOGE(" failed: Clk: %llu Error: %d", bitclk, error);
+    DLOGE(" failed: Clk: %" PRIu64 " Error: %d", bitclk, error);
     return error;
   }
 
@@ -1625,7 +1643,7 @@ int HWCDisplayBuiltIn::PostInit() {
 
 void HWCDisplayBuiltIn::SetCpuPerfHintLargeCompCycle() {
   if (!cpu_hint_ || !perf_hint_large_comp_cycle_) {
-    DLOGV_IF(kTagResources, "cpu_hint_ not initialized or perty not set");
+    DLOGV_IF(kTagResources, "cpu_hint_ not initialized or property not set");
     return;
   }
 
@@ -1633,7 +1651,8 @@ void HWCDisplayBuiltIn::SetCpuPerfHintLargeCompCycle() {
     Layer *layer = hwc_layer->GetSDMLayer();
     if (layer->composition == kCompositionGPU) {
       DLOGV_IF(kTagResources, "Set perf hint for large comp cycle");
-      cpu_hint_->ReqHints(kPerfHintLargeCompCycle);
+      int hwc_tid = gettid();
+      cpu_hint_->ReqHintsOffload(kPerfHintLargeCompCycle, hwc_tid);
       break;
     }
   }
@@ -1707,4 +1726,35 @@ uint32_t HWCDisplayBuiltIn::GetUpdatingAppLayersCount() {
   return updating_count;
 }
 
+HWC2::Error HWCDisplayBuiltIn::PresentAndOrGetValidateDisplayOutput(uint32_t *out_num_types,
+                                                                    uint32_t *out_num_requests) {
+  *out_num_types = UINT32(layer_changes_.size());
+  *out_num_requests = UINT32(layer_requests_.size());
+
+  auto status = (*out_num_types > 0) ? HWC2::Error::HasChanges : HWC2::Error::None;
+  if (layer_stack_.block_on_fb) {
+    return status;
+  }
+
+  // If a display is in internal Validate state, PresentDisplay can be triggered
+  // if there is no dependency on GPU composed output in current draw cycle.
+  shared_ptr<Fence> retire_fence = nullptr;
+  auto result = Present(&retire_fence);
+  if (result != HWC2::Error::None) {
+    DLOGE("Commit failed: %d", result);
+    return status;
+  }
+
+  // Store retire fence as client isn't concerned about it.
+  retire_fence_ = retire_fence;
+  // Validate State resets to kSkipValidate as part of PostCommit.
+  // Restore it to kInternal Validate.
+  validate_state_ = kInternalValidate;
+  // As part of  PostCommit() commit state changes to NormalCommit.
+  // Change it to InternalCommit so that next commit will be skipped.
+  commit_state_ = kInternalCommit;
+  layer_stack_.block_on_fb = true;
+
+  return status;
+}
 }  // namespace sdm

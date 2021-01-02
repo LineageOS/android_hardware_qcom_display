@@ -20,6 +20,8 @@
 #include <log/log.h>
 
 #include "QtiComposerHandleImporter.h"
+#include <cutils/properties.h>
+#include "display_properties.h"
 
 namespace vendor {
 namespace qti {
@@ -48,6 +50,10 @@ void ComposerHandleImporter::initialize() {
     }
   }
 
+  int value = 0;  // Default value when property is not present.
+  value = property_get_bool("vendor.display.enable_memory_mapping", 0);
+  enable_memory_mapping_ = (value == 1);
+
   mInitialized = true;
   return;
 }
@@ -59,6 +65,43 @@ void ComposerHandleImporter::cleanup() {
     mMapper_V2.clear();
   }
   mInitialized = false;
+}
+
+void ComposerHandleImporter::InoFdMapInsert(int fd) {
+  struct stat buf1;
+  if (fstat(fd, &buf1)) {
+    ALOGW("Fstat failed! fd=%d", fd);
+    return;
+  }
+  uint64_t ino = (uint64_t)buf1.st_ino;
+  ALOGV("insert fd=%d, ino=%lu", fd, ino);
+  ino_fds_map_[ino].push_back(fd);
+  if (ino_fds_map_.size() > MAX_INO_VALS) {
+    ALOGW("ino allocation count=%lu", ino_fds_map_.size());
+  }
+}
+
+void ComposerHandleImporter::InoFdMapRemove(int fd) {
+  struct stat buf1;
+  if (fstat(fd, &buf1)) {
+    ALOGW("Fstat failed! fd=%d", fd);
+    return;
+  }
+  uint64_t ino = (uint64_t)buf1.st_ino;
+  std::vector<uint32_t> *fds = &ino_fds_map_[ino];
+  auto it = std::find(fds->begin(), fds->end(), fd);
+  if (it == fds->end()) {
+    ALOGW("Ino value not found! Should not happen. ino=%lu, size=%lu", ino, fds->size());
+    return;
+  }
+  ALOGV("remove fd=%d, ino=%lu", fd, ino);
+  fds->erase(it);
+  if (!ino_fds_map_[ino].size()) {
+    ino_fds_map_.erase(ino);
+  }
+  if (ino_fds_map_.size() > MAX_INO_VALS) {
+    ALOGW("allocation count=%lu", ino_fds_map_.size());
+  }
 }
 
 // In IComposer, any buffer_handle_t is owned by the caller and we need to
@@ -128,6 +171,12 @@ bool ComposerHandleImporter::importBuffer(buffer_handle_t& handle) {
     handle = importedHandle;
   }
 
+  if (enable_memory_mapping_) {
+    for (int i = 0; i < handle->numFds; i++) {
+      // handle->data is the int array of fds. run insert on all fds.
+      InoFdMapInsert(handle->data[i]);
+    }
+  }
   return true;
 }
 
@@ -144,7 +193,14 @@ void ComposerHandleImporter::freeBuffer(buffer_handle_t handle) {
   }
 
   if (mMapper_V3 != nullptr) {
+    if (enable_memory_mapping_) {
+      for (int i = 0; i < handle->numFds; i++) {
+        // handle->data is the int array of fds. run remove on all fds.
+        InoFdMapRemove(handle->data[i]);
+      }
+    }
     auto ret = mMapper_V3->freeBuffer(const_cast<native_handle_t *>(handle));
+
     if (!ret.isOk()) {
       ALOGE("%s: mapper freeBuffer failed: %s", __FUNCTION__, ret.description().c_str());
     }

@@ -148,6 +148,8 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual bool IsDisplayIdle();
   virtual bool HasReadBackBufferSupport();
   virtual HWC2::Error NotifyDisplayCalibrationMode(bool in_calibration);
+  virtual HWC2::Error PresentAndOrGetValidateDisplayOutput(uint32_t *out_num_types,
+                                                           uint32_t *out_num_requests);
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
@@ -229,6 +231,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   bool disable_dyn_fps_ = false;
   bool enable_round_corner_ = false;
   bool enhance_idle_time_ = false;
+  shared_ptr<Fence> retire_fence_ = nullptr;
 };
 
 }  // namespace sdm

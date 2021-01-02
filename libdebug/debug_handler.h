@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2018, The Linux Foundation. All rights reserved.
+* Copyright (c) 2018, 2020 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -62,11 +62,12 @@ namespace display {
 
 class DebugHandler {
  public:
-  virtual void Error(const char *format, ...) = 0;
-  virtual void Warning(const char *format, ...) = 0;
-  virtual void Info(const char *format, ...) = 0;
-  virtual void Debug(const char *format, ...) = 0;
-  virtual void Verbose(const char *format, ...) = 0;
+  // __format__(printf hints the compiler to validate format specifiers vs arguments provided.
+  virtual void Error(const char *format, ...) __attribute__ ((__format__(printf, 2, 3))) = 0;
+  virtual void Warning(const char *format, ...) __attribute__ ((__format__(printf, 2, 3))) = 0;
+  virtual void Info(const char *format, ...) __attribute__ ((__format__(printf, 2, 3))) = 0;
+  virtual void Debug(const char *format, ...) __attribute__ ((__format__(printf, 2, 3))) = 0;
+  virtual void Verbose(const char *format, ...) __attribute__ ((__format__(printf, 2, 3))) = 0;
   virtual void BeginTrace(const char *class_name, const char *function_name,
                           const char *custom_string) = 0;
   virtual void EndTrace() = 0;
