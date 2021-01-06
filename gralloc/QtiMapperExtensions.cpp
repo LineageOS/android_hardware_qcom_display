@@ -221,6 +221,11 @@ Return<void> QtiMapperExtensions::getFormat(void *buffer, getFormat_cb hidl_cb) 
   if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
     err = Error::NONE;
     format = hnd->format;
+    // Check if UBWC buffer has been rendered in linear format.
+    int linear_format = 0;
+    if (getMetaData(const_cast<private_handle_t *>(hnd), GET_LINEAR_FORMAT, &linear_format) == 0) {
+      format = INT(linear_format);
+    }
   }
   hidl_cb(err, format);
   return Void();
@@ -233,6 +238,13 @@ Return<void> QtiMapperExtensions::getPrivateFlags(void *buffer, getPrivateFlags_
   if (buffer != nullptr && private_handle_t::validate(hnd) == 0) {
     err = Error::NONE;
     flags = hnd->flags;
+    int linear_format = 0;
+    // Check if UBWC buffer has been rendered in linear format.
+    if (getMetaData(const_cast<private_handle_t *>(hnd), GET_LINEAR_FORMAT, &linear_format) == 0) {
+      if (linear_format) {
+        flags = flags & ~(private_handle_t::PRIV_FLAGS_UBWC_ALIGNED);
+      }
+    }
   }
   hidl_cb(err, flags);
   return Void();
