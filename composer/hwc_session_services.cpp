@@ -29,6 +29,7 @@
 
 #include <core/buffer_allocator.h>
 #include <utils/debug.h>
+#include <utils/constants.h>
 #include <sync/sync.h>
 #include <vector>
 #include <string>
@@ -420,11 +421,11 @@ int HWCSession::ToggleScreenUpdate(bool on) {
   if (hwc_display_[active_builtin_disp_id]) {
     error = hwc_display_[active_builtin_disp_id]->ToggleScreenUpdates(on);
     if (error) {
-      DLOGE("Failed to toggle screen updates = %d. Display = %d, Error = %d", on,
+      DLOGE("Failed to toggle screen updates = %d. Display = %" PRIu64 ", Error = %d", on,
           active_builtin_disp_id, error);
     }
   } else {
-    DLOGW("Display = %d is not connected.", active_builtin_disp_id);
+    DLOGW("Display = %" PRIu64 " is not connected.", active_builtin_disp_id);
   }
 
   return error;
@@ -437,8 +438,10 @@ int HWCSession::DisplayConfigImpl::ToggleScreenUpdate(bool on) {
 int HWCSession::SetIdleTimeout(uint32_t value) {
   SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
 
+  int inactive_ms = IDLE_TIMEOUT_INACTIVE_MS;
+  Debug::Get()->GetProperty(IDLE_TIME_INACTIVE_PROP, &inactive_ms);
   if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
-    hwc_display_[HWC_DISPLAY_PRIMARY]->SetIdleTimeoutMs(value);
+    hwc_display_[HWC_DISPLAY_PRIMARY]->SetIdleTimeoutMs(value, inactive_ms);
     return 0;
   }
 
@@ -583,7 +586,7 @@ int HWCSession::ControlIdlePowerCollapse(bool enable, bool synchronous) {
     return 0;
   }
 
-  DLOGW("Display = %d is not connected.", active_builtin_disp_id);
+  DLOGW("Display = %d is not connected.", UINT32(active_builtin_disp_id));
   return -ENODEV;
 }
 
@@ -834,7 +837,7 @@ int HWCSession::DisplayConfigImpl::GetActiveBuiltinDisplayAttributes(
   hwc2_display_t disp_id = hwc_session_->GetActiveBuiltinDisplay();
 
   if (disp_id >= HWCCallbacks::kNumDisplays) {
-    DLOGE("Invalid display = %d", disp_id);
+    DLOGE("Invalid display = %d", UINT32(disp_id));
   } else {
     if (hwc_session_->hwc_display_[disp_id]) {
       uint32_t config_index = 0;
@@ -1169,7 +1172,7 @@ int HWCSession::DisplayConfigImpl::CreateVirtualDisplay(uint32_t width, uint32_t
   auto status = hwc_session_->CreateVirtualDisplayObj(width, height, &format,
                                                       &hwc_session_->virtual_id_);
   if (status == HWC2::Error::None) {
-    DLOGI("Created virtual display id:% " PRIu64 ", res: %dx%d",
+    DLOGI("Created virtual display id:%" PRIu64 ", res: %dx%d",
           hwc_session_->virtual_id_, width, height);
     if (active_builtin_disp_id < HWCCallbacks::kNumRealDisplays) {
       hwc_session_->WaitForResources(true, active_builtin_disp_id, hwc_session_->virtual_id_);
@@ -1327,4 +1330,20 @@ int HWCSession::DisplayConfigImpl::GetDisplayType(uint64_t physical_disp_id, Dis
   return hwc_session_->GetDispTypeFromPhysicalId(physical_disp_id, disp_type);
 }
 
+int HWCSession::DisplayConfigImpl::AllowIdleFallback() {
+  SEQUENCE_WAIT_SCOPE_LOCK(hwc_session_->locker_[HWC_DISPLAY_PRIMARY]);
+
+  uint32_t active_ms = 0;
+  uint32_t inactive_ms = 0;
+  Debug::GetIdleTimeoutMs(&active_ms, &inactive_ms);
+  if (hwc_session_->hwc_display_[HWC_DISPLAY_PRIMARY]) {
+    DLOGI("enable idle time active_ms:%d inactive_ms:%d",active_ms,inactive_ms);
+    hwc_session_->hwc_display_[HWC_DISPLAY_PRIMARY]->SetIdleTimeoutMs(active_ms, inactive_ms);
+    hwc_session_->is_idle_time_up_ = true;
+    return 0;
+  }
+
+  DLOGW("Display = %d is not connected.", HWC_DISPLAY_PRIMARY);
+  return -ENODEV;
+}
 }  // namespace sdm

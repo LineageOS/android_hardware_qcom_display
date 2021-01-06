@@ -58,7 +58,7 @@ class DisplayNull : public DisplayInterface {
   virtual DisplayError Prepare(LayerStack *layer_stack);
   virtual bool IsPrimaryDisplay() { return true; }
   virtual bool IsUnderscanSupported() { return true; }
-  virtual void SetIdleTimeoutMs(uint32_t active_ms) { }
+  virtual void SetIdleTimeoutMs(uint32_t active_ms, uint32_t inactive_ms) { }
   virtual DisplayError GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
                                                     uint8_t *out_data);
   virtual bool CheckResourceState() { return false; }
@@ -67,7 +67,6 @@ class DisplayNull : public DisplayInterface {
   virtual bool CanSkipValidate() { return true; }
   virtual bool GameEnhanceSupported() { return false; }
 
-  MAKE_NO_OP(TeardownConcurrentWriteback(void))
   MAKE_NO_OP(Commit(LayerStack *))
   MAKE_NO_OP(GetDisplayState(DisplayState *))
   MAKE_NO_OP(SetDisplayState(DisplayState, bool, shared_ptr<Fence> *))
@@ -95,7 +94,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(GetDefaultColorMode(string *))
   MAKE_NO_OP(ApplyDefaultDisplayMode())
   MAKE_NO_OP(SetCursorPosition(int, int))
-  MAKE_NO_OP(SetRefreshRate(uint32_t, bool))
+  MAKE_NO_OP(SetRefreshRate(uint32_t, bool, bool))
   MAKE_NO_OP(GetPanelBrightness(float *))
   MAKE_NO_OP(GetPanelMaxBrightness(uint32_t *))
   MAKE_NO_OP(GetRefreshRate(uint32_t *))
@@ -126,6 +125,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(SetStcColorMode(const snapdragoncolor::ColorMode &))
   MAKE_NO_OP(ClearLUTs())
   MAKE_NO_OP(IsSupportedOnDisplay(SupportedDisplayFeature feature, uint32_t *supported))
+  MAKE_NO_OP(NotifyDisplayCalibrationMode(bool))
 
  protected:
   DisplayConfigVariableInfo default_variable_config_ = {};

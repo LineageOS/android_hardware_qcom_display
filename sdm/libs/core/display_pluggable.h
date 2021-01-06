@@ -45,7 +45,7 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
   DisplayError Prepare(LayerStack *layer_stack) override;
   DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate,
                                    uint32_t *max_refresh_rate) override;
-  DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate) override;
+  DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate, bool idle_screen) override;
   bool IsUnderscanSupported() override;
   DisplayError InitializeColorModes() override;
   DisplayError SetColorMode(const std::string &color_mode) override;
@@ -57,7 +57,6 @@ class DisplayPluggable : public DisplayBase, HWEventHandler {
                                  const double *color_transform) override {
     return kErrorNone;
   }
-  DisplayError TeardownConcurrentWriteback(void) override { return kErrorNotSupported; }
   DisplayError colorSamplingOn() override;
   DisplayError colorSamplingOff() override;
 

@@ -30,13 +30,14 @@
 #define SDM_COMP_SERVICE_INSTANCE 1
 
 #define VM_INTF_REVISION_MAJOR (1)
-#define VM_INTF_REVISION_MINOR (0)
+#define VM_INTF_REVISION_MINOR (1)
 
 #define VM_INTF_VERSION ((uint16_t) ((VM_INTF_REVISION_MAJOR << 8) | VM_INTF_REVISION_MINOR))
 
 enum CommandId {
   kCmdExportDemuraBuffers = 0,
   kCmdSetBacklight = 1,
+  kCmdSetDisplayConfig = 2,
   kCmdMax,
 };
 
@@ -47,9 +48,13 @@ enum DisplayType {
 };
 
 typedef struct {
-  int cfg_mem_hdl = -1;
+  int calib_mem_hdl = -1;
   int hfc_mem_hdl = -1;
-} DemuraMemHandle;
+  uint32_t calib_mem_size = 0;
+  uint32_t hfc_mem_size = 0;
+  uint64_t panel_id = 0;
+  DisplayType disp_type = kDisplayTypeMax;
+} DemuraMemInfo;
 
 typedef struct {
   uint16_t version = VM_INTF_VERSION;
@@ -64,7 +69,7 @@ typedef struct {
 // Command and Response structure definitions to start TUI session
 typedef struct {
   union {
-    DemuraMemHandle demura_mem_handle;
+    DemuraMemInfo demura_mem_info;
     uint32_t reserve[128] = { 0 };
   };
 } CmdExportDemuraBuffer;
@@ -92,11 +97,33 @@ typedef struct {
   };
 } RspSetBacklight;
 
+// Command and Response structure definitions to set display config mode
+typedef struct {
+  union {
+    struct {
+      uint32_t x_pixels;
+      uint32_t y_pixels;
+      uint32_t fps;
+      int config_idx ;
+      DisplayType disp_type;
+      bool smart_panel;
+    };
+    uint32_t reserve[128] = { 0 };
+  };
+} CmdSetDisplayConfigs;
+
+typedef struct {
+  union {
+    uint32_t reserve[128] = { 0 };
+  };
+} RspSetDisplayConfigs;
+
 struct Command : CommandHeader {
   Command() {}
   union {
     CmdExportDemuraBuffer cmd_export_demura_buf;
     CmdSetBacklight cmd_set_backlight;
+    CmdSetDisplayConfigs cmd_set_disp_configs;
   };
 };
 
@@ -105,6 +132,7 @@ struct Response : ResponseHeader {
   union {
     RspExportDemuraBuffer rsp_export_demura_buf;
     RspSetBacklight rsp_set_backlight;
+    RspSetDisplayConfigs rsp_set_disp_configs;
   };
 };
 

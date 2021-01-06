@@ -33,6 +33,7 @@
 #include <drm_logger.h>
 #include <cstring>
 #include <regex>
+#include <inttypes.h>
 
 #include "drm_panel_feature_mgr.h"
 
@@ -55,7 +56,7 @@ void DRMPanelFeatureMgr::Init(int fd, drmModeRes* res) {
   lock_guard<mutex> lock(lock_);
 
   if (!res || (fd < 0)) {
-    DRM_LOGE("Invalid arguments for init - fd %d and DRM resources pointer 0x%x", fd, res);
+    DRM_LOGE("Invalid arguments for init - fd %d and DRM resources pointer 0x%p", fd, (void *)res);
     return;
   }
 
@@ -230,7 +231,7 @@ void DRMPanelFeatureMgr::ParseCapabilities(uint32_t blob_id, char* value, uint32
   }
 
   if (max_len <= val.size()) {
-    DRM_LOGW("Insufficient size max_len: %d actual size: %d", max_len, val.size());
+    DRM_LOGW("Insufficient size max_len: %d actual size: %zu", max_len, val.size());
     return;
   }
   std::copy(val.begin(), val.end(), value);
@@ -325,7 +326,7 @@ void DRMPanelFeatureMgr::CachePanelFeature(const DRMPanelFeatureInfo &info) {
   lock_guard<mutex> lock(lock_);
 
   if (info.prop_id >= kDRMPanelFeatureMax || info.obj_id == UINT32_MAX) {
-    DRM_LOGE("invalid property info to set id %d value ptr 0x%x", info.prop_id, info.prop_ptr);
+    DRM_LOGE("invalid property info to set id %d value ptr %" PRIu64 , info.prop_id, info.prop_ptr);
     return;
   }
 
@@ -344,7 +345,7 @@ void DRMPanelFeatureMgr::CommitPanelFeatures(drmModeAtomicReq *req, const DRMDis
         continue;
 
     if (info.prop_id >= kDRMPanelFeatureMax) {
-      DRM_LOGE("invalid property info to set id %d value ptr 0x%x", info.prop_id, info.prop_ptr);
+      DRM_LOGE("invalid property info to set id %d value ptr %" PRIu64 , info.prop_id, info.prop_ptr);
       continue;
     }
 
@@ -362,7 +363,7 @@ void DRMPanelFeatureMgr::CommitPanelFeatures(drmModeAtomicReq *req, const DRMDis
         // Reset the feature.
         ret = drmModeAtomicAddProperty(req, info.obj_id, prop_id, 0);
         if (ret < 0) {
-          DRM_LOGE("failed to add property ret:%d, obj_id:%d prop_id:%u value:%llu",
+          DRM_LOGE("failed to add property ret:%d, obj_id:%d prop_id:%u value:%" PRIu64,
                     ret, info.obj_id, prop_id, value);
           return;
         }
@@ -372,7 +373,7 @@ void DRMPanelFeatureMgr::CommitPanelFeatures(drmModeAtomicReq *req, const DRMDis
       ret = drmModeCreatePropertyBlob(dev_fd_, reinterpret_cast<void *> (info.prop_ptr),
               info.prop_size, &blob_id);
       if (ret || blob_id == 0) {
-        DRM_LOGE("failed to create blob ret %d, id = %d prop_ptr:%x prop_sz:%d",
+        DRM_LOGE("failed to create blob ret %d, id = %d prop_ptr:%" PRIu64 " prop_sz:%d",
                 ret, blob_id, info.prop_ptr, info.prop_size);
         return;
       }
@@ -395,7 +396,7 @@ void DRMPanelFeatureMgr::CommitPanelFeatures(drmModeAtomicReq *req, const DRMDis
 
     ret = drmModeAtomicAddProperty(req, info.obj_id, prop_id, value);
     if (ret < 0) {
-      DRM_LOGE("failed to add property ret:%d, obj_id:%d prop_id:%x value:%llu",
+      DRM_LOGE("failed to add property ret:%d, obj_id:%d prop_id:%x value:%" PRIu64,
                 ret, info.obj_id, prop_id, value);
     }
     *it = {};

@@ -55,7 +55,7 @@ class DisplayVirtual : public DisplayBase {
   virtual DisplayError SetVSyncState(bool enable) {
     return kErrorNotSupported;
   }
-  virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate) {
+  virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate, bool idle_screen) {
     return kErrorNotSupported;
   }
   virtual DisplayError SetDetailEnhancerData(const DisplayDetailEnhancerData &de_data) {
@@ -69,7 +69,6 @@ class DisplayVirtual : public DisplayBase {
   virtual DisplayError SetColorTransform(const uint32_t length, const double *color_transform) {
     return kErrorNone;
   }
-  virtual DisplayError TeardownConcurrentWriteback(void) { return kErrorNotSupported; }
   virtual DisplayError GetColorModeCount(uint32_t *mode_count);
   virtual DisplayError colorSamplingOn();
   virtual DisplayError colorSamplingOff();

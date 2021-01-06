@@ -137,11 +137,12 @@ DisplayError DisplayBase::Init() {
 
   error = comp_manager_->RegisterDisplay(display_id_, display_type_, display_attributes_,
                                          hw_panel_info_, mixer_attributes_, fb_config_,
-                                         &display_comp_ctx_, &default_qos_data_);
+                                         &display_comp_ctx_, &cached_qos_data_);
   if (error != kErrorNone) {
     DLOGW("Display %d comp manager registration failed!", display_id_);
     goto CleanupOnError;
   }
+  default_clock_hz_ = cached_qos_data_.clock_hz;
 
   if (color_modes_cs_.size() > 0) {
     error = comp_manager_->SetColorModesInfo(display_comp_ctx_, color_modes_cs_);
@@ -259,7 +260,7 @@ DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
   }
 
   hw_layers_info.stitch_target_index = hw_layers_info.gpu_target_index + 1;
-  DLOGD_IF(kTagDisplay, "LayerStack layer_count: %d, app_layer_count: %d, "
+  DLOGD_IF(kTagDisplay, "LayerStack layer_count: %zu, app_layer_count: %d, "
                         "gpu_target_index: %d, stitch_index: %d game_present: %d, display: %d-%d",
                         layers.size(), hw_layers_info.app_layer_count,
                         hw_layers_info.gpu_target_index, hw_layers_info.stitch_target_index,
@@ -498,7 +499,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
            display_id_, display_type_, ret, (*mask_status).rc_mask_state);
       if ((*mask_status).rc_mask_state == kStatusRcMaskStackHandled) {
         needs_validate_ = true;
-        DLOGW("Need to call Corresponding prepare to handle the mask layers.",
+        DLOGW("Need to call Corresponding prepare to handle the mask layers %d %d.",
               display_id_, display_type_);
         for (auto &layer : layer_stack->layers) {
           if (layer->input_buffer.flags.mask_layer) {
@@ -752,10 +753,12 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     } else {
       pending_power_state_ = kPowerStateNone;
     }
+    cached_qos_data_ = {};
+    cached_qos_data_.clock_hz = default_clock_hz_;
     break;
 
   case kStateOn:
-    error = hw_intf_->PowerOn(default_qos_data_, release_fence);
+    error = hw_intf_->PowerOn(cached_qos_data_, release_fence);
     if (error != kErrorNone) {
       if (error == kErrorDeferred) {
         pending_power_state_ = kPowerStateOn;
@@ -769,15 +772,17 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
 
     error = comp_manager_->ReconfigureDisplay(display_comp_ctx_, display_attributes_,
                                               hw_panel_info_, mixer_attributes_, fb_config_,
-                                              &default_qos_data_);
+                                              &cached_qos_data_);
     if (error != kErrorNone) {
       return error;
     }
+    default_clock_hz_ = cached_qos_data_.clock_hz;
+
     active = true;
     break;
 
   case kStateDoze:
-    error = hw_intf_->Doze(default_qos_data_, release_fence);
+    error = hw_intf_->Doze(cached_qos_data_, release_fence);
     if (error != kErrorNone) {
       if (error == kErrorDeferred) {
         pending_power_state_ = kPowerStateDoze;
@@ -792,7 +797,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     break;
 
   case kStateDozeSuspend:
-    error = hw_intf_->DozeSuspend(default_qos_data_, release_fence);
+    error = hw_intf_->DozeSuspend(cached_qos_data_, release_fence);
     if (error != kErrorNone) {
       if (error == kErrorDeferred) {
         pending_power_state_ = kPowerStateDozeSuspend;
@@ -1505,10 +1510,11 @@ DisplayError DisplayBase::ReconfigureDisplay() {
   }
 
   error = comp_manager_->ReconfigureDisplay(display_comp_ctx_, display_attributes, hw_panel_info,
-                                            mixer_attributes, fb_config_, &default_qos_data_);
+                                            mixer_attributes, fb_config_, &cached_qos_data_);
   if (error != kErrorNone) {
     return error;
   }
+  default_clock_hz_ = cached_qos_data_.clock_hz;
 
   bool disble_pu = true;
   if (mixer_unchanged && panel_unchanged) {
@@ -1731,10 +1737,11 @@ DisplayError DisplayBase::SetFrameBufferConfig(const DisplayConfigVariableInfo &
   }
 
   error =  comp_manager_->ReconfigureDisplay(display_comp_ctx_, display_attributes_, hw_panel_info_,
-                                             mixer_attributes_, variable_info, &default_qos_data_);
+                                             mixer_attributes_, variable_info, &cached_qos_data_);
   if (error != kErrorNone) {
     return error;
   }
+  default_clock_hz_ = cached_qos_data_.clock_hz;
 
   fb_config_.x_pixels = width;
   fb_config_.y_pixels = height;
@@ -1878,6 +1885,7 @@ void DisplayBase::PostCommitLayerParams(LayerStack *layer_stack) {
               hw_layer.input_buffer.release_fence, sdm_layer->input_buffer.release_fence);
     }
   }
+  cached_qos_data_ = hw_layers_.qos_data;
 
   return;
 }
@@ -2149,7 +2157,6 @@ void DisplayBase::HwRecovery(const HWRecoveryEvent sdm_event_code) {
       } else {
         DLOGI("Debugfs data dumping is disabled for display = %d", display_type_);
       }
-#endif
       hw_recovery_count_++;
       if (hw_recovery_count_ >= hw_recovery_threshold_) {
         DLOGI("display = %d attempting to start display power reset", display_type_);
@@ -2161,8 +2168,12 @@ void DisplayBase::HwRecovery(const HWRecoveryEvent sdm_event_code) {
           hw_recovery_count_ = 0;
         }
       }
+#else
+      event_handler_->HandleEvent(kDisplayPowerResetEvent);
+#endif
       break;
     case HWRecoveryEvent::kDisplayPowerReset:
+#ifndef TRUSTED_VM
       DLOGI("display = %d attempting to start display power reset", display_type_);
       if (StartDisplayPowerReset()) {
         DLOGI("display = %d allowed to start display power reset", display_type_);
@@ -2170,6 +2181,9 @@ void DisplayBase::HwRecovery(const HWRecoveryEvent sdm_event_code) {
         EndDisplayPowerReset();
         DLOGI("display = %d has finished display power reset", display_type_);
       }
+#else
+      event_handler_->HandleEvent(kDisplayPowerResetEvent);
+#endif
       break;
     default:
       return;
@@ -2438,7 +2452,7 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
     SetPendingPowerState(state);
   }
 
-  err = hw_intf_->HandleSecureEvent(secure_event, default_qos_data_);
+  err = hw_intf_->HandleSecureEvent(secure_event, cached_qos_data_);
   if (err != kErrorNone) {
     return err;
   }
@@ -2447,6 +2461,7 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
   secure_event_ = secure_event;
   if (secure_event == kTUITransitionEnd) {
     DisplayState pending_state;
+    *needs_refresh = (hw_panel_info_.mode == kModeCommand);
     if (GetPendingDisplayState(&pending_state) == kErrorNone) {
       if (pending_state == kStateOff) {
         shared_ptr<Fence> release_fence = nullptr;
@@ -2455,16 +2470,17 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
           DLOGE("SetDisplay state %d failed for %d err %d", pending_state, display_id_, err);
           return err;
         }
-        return kErrorNone;
+        *needs_refresh = false;
       }
     }
-    *needs_refresh = (hw_panel_info_.mode == kModeCommand);
     DisablePartialUpdateOneFrame();
     err = hw_events_intf_->SetEventState(HWEvent::BACKLIGHT_EVENT, false);
     if (err != kErrorNone) {
       return err;
     }
   } else if (secure_event == kTUITransitionUnPrepare) {
+    // Trigger refresh on non targetted display to update the screen after TUI end
+    *needs_refresh = true;
     DisplayState state = kStateOff;
     if (GetPendingDisplayState(&state) == kErrorNone) {
       shared_ptr<Fence> release_fence = nullptr;

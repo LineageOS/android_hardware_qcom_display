@@ -117,13 +117,13 @@ void HWPeripheralDRM::PopulateBitClkRates() {
       if (std::find(bitclk_rates_.begin(), bitclk_rates_.end(), mode_info.bit_clk_rate) ==
             bitclk_rates_.end()) {
         bitclk_rates_.push_back(mode_info.bit_clk_rate);
-        DLOGI("Possible bit_clk_rates %d", mode_info.bit_clk_rate);
+        DLOGI("Possible bit_clk_rates %" PRIu64 , mode_info.bit_clk_rate);
       }
     }
   }
 
   hw_panel_info_.bitclk_rates = bitclk_rates_;
-  DLOGI("bit_clk_rates Size %d", bitclk_rates_.size());
+  DLOGI("bit_clk_rates Size %zu", bitclk_rates_.size());
 }
 
 DisplayError HWPeripheralDRM::SetDynamicDSIClock(uint64_t bit_clk_rate) {
@@ -334,7 +334,7 @@ DisplayError HWPeripheralDRM::SetDppsFeature(void *payload, size_t size) {
   uint64_t value = 0;
 
   if (size != sizeof(DppsFeaturePayload)) {
-    DLOGE("invalid payload size %d, expected %d", size, sizeof(DppsFeaturePayload));
+    DLOGE("invalid payload size %zu, expected %zu", size, sizeof(DppsFeaturePayload));
     return kErrorParameters;
   }
 
@@ -348,7 +348,7 @@ DisplayError HWPeripheralDRM::SetDppsFeature(void *payload, size_t size) {
       DisplayDppsAd4RoiCfg *params = reinterpret_cast<DisplayDppsAd4RoiCfg *>
                                                       (feature_payload->value);
       if (!params) {
-        DLOGE("invalid playload value %d", feature_payload->value);
+        DLOGE("invalid playload value %" PRIu64, feature_payload->value);
         return kErrorNotSupported;
       }
 
@@ -381,7 +381,7 @@ DisplayError HWPeripheralDRM::SetDppsFeature(void *payload, size_t size) {
 
 DisplayError HWPeripheralDRM::GetDppsFeatureInfo(void *payload, size_t size) {
   if (size != sizeof(DRMDppsFeatureInfo)) {
-    DLOGE("invalid payload size %d, expected %d", size, sizeof(DRMDppsFeatureInfo));
+    DLOGE("invalid payload size %zu, expected %zu", size, sizeof(DRMDppsFeatureInfo));
     return kErrorParameters;
   }
   DRMDppsFeatureInfo *feature_info = reinterpret_cast<DRMDppsFeatureInfo *>(payload);
@@ -394,10 +394,8 @@ DisplayError HWPeripheralDRM::HandleSecureEvent(SecureEvent secure_event,
                                                 const HWQosData &qos_data) {
   switch (secure_event) {
     case kTUITransitionPrepare:
-      tui_state_ = kTUIStateInProgress;
-      break;
     case kTUITransitionUnPrepare:
-      tui_state_ = kTUIStateNone;
+      tui_state_ = kTUIStateInProgress;
       break;
     case kTUITransitionStart: {
       tui_state_ = kTUIStateStart;
@@ -487,6 +485,7 @@ bool HWPeripheralDRM::SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info
     } else {
       // Tear down the Concurrent Writeback topology.
       drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, cwb_config_.token.conn_id, 0);
+      DLOGI("Tear down the Concurrent Writeback topology");
     }
   }
 
@@ -714,7 +713,7 @@ DisplayError HWPeripheralDRM::DozeSuspend(const HWQosData &qos_data,
 }
 
 DisplayError HWPeripheralDRM::SetDisplayAttributes(uint32_t index) {
-  if (doze_poms_switch_done_ || pending_poms_switch_) {
+  if (doze_poms_switch_done_ || pending_poms_switch_ || bit_clk_rate_) {
     return kErrorNotSupported;
   }
 

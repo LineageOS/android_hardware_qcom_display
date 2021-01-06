@@ -25,6 +25,8 @@
 #ifndef __DISPLAY_BUILTIN_H__
 #define __DISPLAY_BUILTIN_H__
 
+#include <sys/time.h>
+
 #include <core/dpps_interface.h>
 #include <core/ipc_interface.h>
 #include <private/extension_interface.h>
@@ -116,11 +118,11 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError DisablePartialUpdateOneFrame() override;
   DisplayError SetDisplayState(DisplayState state, bool teardown,
                                shared_ptr<Fence> *release_fence) override;
-  void SetIdleTimeoutMs(uint32_t active_ms) override;
+  void SetIdleTimeoutMs(uint32_t active_ms, uint32_t inactive_ms) override;
   DisplayError SetDisplayMode(uint32_t mode) override;
   DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate,
                                    uint32_t *max_refresh_rate) override;
-  DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate) override;
+  DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate, bool idle_screen) override;
   DisplayError SetPanelBrightness(float brightness) override;
   DisplayError GetPanelBrightness(float *brightness) override;
   DisplayError GetPanelBrightnessFromLevel(float level, float *brightness);
@@ -139,6 +141,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError colorSamplingOff() override;
   DisplayError GetStcColorModes(snapdragoncolor::ColorModeList *mode_list) override;
   DisplayError SetStcColorMode(const snapdragoncolor::ColorMode &color_mode) override;
+  DisplayError NotifyDisplayCalibrationMode(bool in_calibration) override;
   std::string Dump() override;
   DisplayError GetConfig(DisplayConfigFixedInfo *fixed_info) override;
 
@@ -152,7 +155,6 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   void PingPongTimeout() override;
   void PanelDead() override;
   void HwRecovery(const HWRecoveryEvent sdm_event_code) override;
-  DisplayError TeardownConcurrentWriteback(void) override;
   DisplayError ClearLUTs() override;
   void Histogram(int histogram_fd, uint32_t blob_id) override;
   void HandleBacklightEvent(float brightness_level) override;
@@ -179,6 +181,9 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   void HandleQsyncPostCommit(LayerStack *layer_stack);
   void UpdateQsyncMode();
   void SetVsyncStatus(bool enable);
+  void SendBacklight();
+  void SendDisplayConfigs();
+  bool CanLowerFps(bool idle_screen);
 
   const uint32_t kPuTimeOutMs = 1000;
   std::vector<HWEvent> event_list_;
@@ -220,6 +225,9 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   bool pending_vsync_enable_ = false;
   QSyncMode active_qsync_mode_ = kQSyncModeNone;
   std::shared_ptr<IPCIntf> ipc_intf_ = nullptr;
+  bool enhance_idle_time_ = false;
+  int idle_time_ms_ = 0;
+  struct timespec idle_timer_start_;
 };
 
 }  // namespace sdm

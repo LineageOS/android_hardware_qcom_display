@@ -52,7 +52,7 @@ class Strategy {
                            const DisplayConfigVariableInfo &fb_config);
   DisplayError SetCompositionState(LayerComposition composition_type, bool enable);
   DisplayError Purge();
-  DisplayError SetIdleTimeoutMs(uint32_t active_ms);
+  DisplayError SetIdleTimeoutMs(uint32_t active_ms, uint32_t inactive_ms);
   DisplayError SetColorModesInfo(const std::vector<PrimariesTransfer> &colormodes_cs);
   DisplayError SetBlendSpace(const PrimariesTransfer &blend_space);
   bool CanSkipValidate(bool *needs_buffer_swap);

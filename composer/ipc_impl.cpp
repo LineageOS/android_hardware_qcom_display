@@ -51,15 +51,19 @@ int IPCImpl::Init() {
                             reinterpret_cast<void **>(&destroy_qrtr_client_intf_))) {
       DLOGW("Unable to load symbols, error = %s", qrtr_client_lib_.Error());
     }
+    if (!create_qrtr_client_intf_ || !destroy_qrtr_client_intf_) {
+      return -1;
+    }
 
-    QRTRConfig qrtr_config = {};
-    qrtr_config.server_id = SDM_COMP_SERVICE_ID;
-    qrtr_config.server_version = SDM_COMP_SERVICE_VERSION;
-    qrtr_config.server_instance = SDM_COMP_SERVICE_INSTANCE;
-
-    int error = create_qrtr_client_intf_(qrtr_config, this, &qrtr_client_intf_);
-    if (error != 0) {
-      DLOGW("Unable to create interface");
+    if (create_qrtr_client_intf_) {
+      QRTRConfig qrtr_config = {};
+      qrtr_config.server_id = SDM_COMP_SERVICE_ID;
+      qrtr_config.server_version = SDM_COMP_SERVICE_VERSION;
+      qrtr_config.server_instance = SDM_COMP_SERVICE_INSTANCE;
+      int error = create_qrtr_client_intf_(qrtr_config, this, &qrtr_client_intf_);
+      if (error != 0) {
+        DLOGW("Unable to create interface");
+      }
     }
   } else {
     DLOGW("Unable to load = %s, error = %s", QRTR_CLIENT_LIB_NAME, qrtr_client_lib_.Error());
@@ -92,6 +96,31 @@ int IPCImpl::SetParameter(IPCParams param, const GenericPayload &in) {
       cmd_bl.disp_type = backlight_params->is_primary ? kDisplayTypePrimary :
                          kDisplayTypeSecondary1;
       DLOGI("Send brightness level %f, disp_type %d to SVM", cmd_bl.brightness, cmd_bl.disp_type);
+      return qrtr_client_intf_->SendCommand(cmd);
+    }
+  } break;
+  case kIpcParamSetDisplayConfigs: {
+    if (qrtr_client_intf_) {
+      IPCDisplayConfigParams *disp_configs = nullptr;
+      uint32_t sz = 0;
+      Command cmd = {};
+      if ((ret = in.GetPayload(disp_configs, &sz))) {
+        DLOGE("Failed to get input payload error = %d", ret);
+        return ret;
+      }
+      CmdSetDisplayConfigs &cmd_disp_configs = cmd.cmd_set_disp_configs;
+      cmd.id = kCmdSetDisplayConfig;
+      cmd_disp_configs.x_pixels= disp_configs->x_pixels;
+      cmd_disp_configs.y_pixels= disp_configs->y_pixels;
+      cmd_disp_configs.fps= disp_configs->fps;
+      cmd_disp_configs.config_idx= disp_configs->config_idx;
+      cmd_disp_configs.smart_panel= disp_configs->smart_panel;
+      cmd_disp_configs.disp_type = disp_configs->is_primary ? kDisplayTypePrimary :
+                         kDisplayTypeSecondary1;
+      DLOGI("Send display configs: WxH %dx%d, fps %d, config_idx %d, %s panel, disp_type %d to SVM",
+             cmd_disp_configs.x_pixels, cmd_disp_configs.y_pixels, cmd_disp_configs.fps,
+             cmd_disp_configs.config_idx, cmd_disp_configs.smart_panel ? "cmdmode" : "videomode",
+             cmd_disp_configs.disp_type);
       return qrtr_client_intf_->SendCommand(cmd);
     }
   } break;

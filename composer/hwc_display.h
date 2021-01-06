@@ -114,6 +114,9 @@ class HWCColorMode {
   virtual HWC2::Error ApplyCurrentColorModeWithRenderIntent(bool hdr_present);
   virtual HWC2::Error CacheColorModeWithRenderIntent(ColorMode mode, RenderIntent intent);
   void ReapplyMode() { apply_mode_ = true; };
+  virtual HWC2::Error NotifyDisplayCalibrationMode(bool in_calibration) {
+    return HWC2::Error::Unsupported;
+  }
 
  protected:
   template <class T>
@@ -170,12 +173,17 @@ class HWCDisplay : public DisplayEventHandler {
     std::multiset<HWCLayer *, SortLayersByZ> layer_set;  // Maintain a set sorted by Z
   };
 
+  enum DisplayCommitState {
+    kNormalCommit,
+    kInternalCommit,
+  };
+
   virtual ~HWCDisplay() {}
   virtual int Init();
   virtual int Deinit();
 
   // Framebuffer configurations
-  virtual void SetIdleTimeoutMs(uint32_t timeout_ms);
+  virtual void SetIdleTimeoutMs(uint32_t timeout_ms, uint32_t inactive_ms);
   virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
                                          int32_t format, bool post_processed);
   virtual DisplayError SetMaxMixerStages(uint32_t max_mixer_stages);
@@ -197,9 +205,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual void GetPanelResolution(uint32_t *width, uint32_t *height);
   virtual void GetRealPanelResolution(uint32_t *width, uint32_t *height);
   virtual void Dump(std::ostringstream *os);
-  virtual DisplayError TeardownConcurrentWriteback(void) {
-    return kErrorNotSupported;
-  }
+  virtual DisplayError TeardownConcurrentWriteback(bool *needs_refresh);
 
   // Captures frame output in the buffer specified by output_buffer_info. The API is
   // non-blocking and the client is expected to check operation status later on.
@@ -381,7 +387,8 @@ class HWCDisplay : public DisplayEventHandler {
     validated_ = false;
     return HWC2::Error::None;
   }
-  virtual HWC2::Error GetValidateDisplayOutput(uint32_t *out_num_types, uint32_t *out_num_requests);
+  virtual HWC2::Error PresentAndOrGetValidateDisplayOutput(uint32_t *out_num_types,
+                                                           uint32_t *out_num_requests);
   virtual bool IsDisplayCommandMode();
   virtual HWC2::Error SetQSyncMode(QSyncMode qsync_mode) {
     return HWC2::Error::Unsupported;
@@ -399,6 +406,9 @@ class HWCDisplay : public DisplayEventHandler {
   virtual void PostPowerMode();
   virtual HWC2::PowerMode GetPendingPowerMode() {
     return pending_power_mode_;
+  }
+  virtual void SetPendingPowerMode(HWC2::PowerMode mode) {
+    pending_power_mode_ = mode;
   }
   virtual void ClearPendingPowerMode() {
     pending_power_mode_ = current_power_mode_;
@@ -428,6 +438,9 @@ class HWCDisplay : public DisplayEventHandler {
   HWC2::Error SetDisplayElapseTime(uint64_t time);
   virtual bool IsDisplayIdle() { return false; };
   virtual bool HasReadBackBufferSupport() { return false; }
+  virtual HWC2::Error NotifyDisplayCalibrationMode(bool in_calibration) {
+    return HWC2::Error::Unsupported;
+  };
 
  protected:
   static uint32_t throttling_refresh_rate_;
@@ -480,6 +493,7 @@ class HWCDisplay : public DisplayEventHandler {
   HWC2::Error GetCachedActiveConfig(hwc2_config_t *config);
   void SetActiveConfigIndex(int active_config_index);
   int GetActiveConfigIndex();
+  DisplayError ValidateTUITransition (SecureEvent secure_event);
 
   bool validated_ = false;
   bool layer_stack_invalid_ = true;
@@ -549,6 +563,9 @@ class HWCDisplay : public DisplayEventHandler {
   SecureEvent secure_event_ = kSecureEventMax;
   bool display_pause_pending_ = false;
   bool display_idle_ = false;
+  bool animating_ = false;
+  DisplayValidateState validate_state_ = kNormalValidate;
+  DisplayCommitState commit_state_ = kNormalCommit;
 
  private:
   void DumpInputBuffers(void);
@@ -560,14 +577,14 @@ class HWCDisplay : public DisplayEventHandler {
   DisplayClass display_class_;
   uint32_t geometry_changes_ = GeometryChanges::kNone;
   uint32_t geometry_changes_on_doze_suspend_ = GeometryChanges::kNone;
-  bool animating_ = false;
   int null_display_mode_ = 0;
-  DisplayValidateState validate_state_ = kNormalValidate;
   bool fast_path_enabled_ = true;
   bool first_cycle_ = true;  // false if a display commit has succeeded on the device.
   shared_ptr<Fence> fbt_release_fence_ = nullptr;
   shared_ptr<Fence> release_fence_ = nullptr;
   hwc2_config_t pending_config_index_ = 0;
+  bool pending_first_commit_config_ = false;
+  hwc2_config_t pending_first_commit_config_index_ = 0;
   bool game_supported_ = false;
   uint64_t elapse_timestamp_ = 0;
   int async_power_mode_ = 0;

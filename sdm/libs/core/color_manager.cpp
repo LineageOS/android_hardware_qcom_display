@@ -226,6 +226,12 @@ ColorManagerProxy *ColorManagerProxy::CreateColorManagerProxy(DisplayType type,
         delete color_manager_proxy->stc_intf_;
         color_manager_proxy->stc_intf_ = NULL;
       }
+
+      if (color_manager_proxy->HasNativeModeSupport()) {
+        color_manager_proxy->curr_mode_.gamut = ColorPrimaries_BT709_5;
+        color_manager_proxy->curr_mode_.gamma = Transfer_sRGB;
+        color_manager_proxy->curr_mode_.intent = snapdragoncolor::kNative;
+      }
     }
   }
 
@@ -370,6 +376,23 @@ bool ColorManagerProxy::NeedHwAssetsUpdate() {
   return need_update;
 }
 
+bool ColorManagerProxy::HasNativeModeSupport() {
+  bool native_mode_support = false;
+  if (!stc_intf_) {
+    return native_mode_support;
+  }
+
+  snapdragoncolor::ColorModeList stc_color_modes = {};
+  ColorMgrGetStcModes(&stc_color_modes);
+  for (auto &iter : stc_color_modes.list) {
+    if (iter.intent == snapdragoncolor::kNative) {
+      native_mode_support = true;
+    }
+  }
+
+  return native_mode_support;
+}
+
 DisplayError ColorManagerProxy::ColorMgrGetNumOfModes(uint32_t *mode_cnt) {
   return color_intf_->ColorIntfGetNumDisplayModes(&pp_features_, 0, mode_cnt);
 }
@@ -484,6 +507,24 @@ DisplayError ColorManagerProxy::PrePrepare(HWLayers *hw_layers) {
   }
 
   needs_update_ = NeedHwAssetsUpdate();
+  return kErrorNone;
+}
+
+DisplayError ColorManagerProxy::NotifyDisplayCalibrationMode(bool in_calibration) {
+  if (!stc_intf_) {
+    return kErrorUndefined;
+  }
+
+  ScPayload payload;
+  payload.len = sizeof(in_calibration);
+  payload.prop = kNotifyDisplayCalibrationMode;
+  payload.payload = reinterpret_cast<uint64_t>(&in_calibration);
+  int ret = stc_intf_->SetProperty(payload);
+  if (ret) {
+    DLOGE("Failed to SetProperty, property = %d error = %d", payload.prop, ret);
+    return kErrorUndefined;
+  }
+
   return kErrorNone;
 }
 

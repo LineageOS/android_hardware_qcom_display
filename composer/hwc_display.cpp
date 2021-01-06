@@ -206,6 +206,13 @@ HWC2::Error HWCColorMode::ApplyCurrentColorModeWithRenderIntent(bool hdr_present
       // fall back to display_p3/display_bt2020 SDR mode if there is no HDR mode
       mode_string = color_mode_map_[current_color_mode_][current_render_intent_][kSdrType];
     }
+
+    if (mode_string.empty() &&
+       (current_color_mode_ == ColorMode::BT2100_PQ) && (curr_dynamic_range_ == kSdrType)) {
+      // fallback to hdr mode.
+      mode_string = color_mode_map_[current_color_mode_][current_render_intent_][kHdrType];
+      DLOGI("fall back to hdr mode for ColorMode::BT2100_PQ kSdrType");
+    }
   }
 
   auto error = SetPreferredColorModeInternal(mode_string, false, NULL, NULL);
@@ -241,7 +248,7 @@ HWC2::Error HWCColorMode::SetPreferredColorModeInternal(const std::string &mode_
     std::string color_gamut_string, dynamic_range_string;
     error = display_intf_->GetColorModeAttr(mode_string, &attr);
     if (error) {
-      DLOGE("Failed to get mode attributes for mode %d", mode_string.c_str());
+      DLOGE("Failed to get mode attributes for mode %s", mode_string.c_str());
       return HWC2::Error::BadParameter;
     }
 
@@ -534,7 +541,7 @@ int HWCDisplay::Init() {
 
   game_supported_ = display_intf_->GameEnhanceSupported();
 
-  DLOGI("Display created with id: %d, game_supported_: %d", id_, game_supported_);
+  DLOGI("Display created with id: %d, game_supported_: %d", UINT32(id_), game_supported_);
 
   return 0;
 }
@@ -730,8 +737,14 @@ void HWCDisplay::BuildLayerStack() {
       layer_stack_.flags.hdr_present = true;
     }
 
+    if (game_supported_ && (hwc_layer->GetType() == kLayerGame)) {
+      layer->flags.is_game = true;
+      layer->input_buffer.flags.game = true;
+    }
+
     if (hwc_layer->IsNonIntegralSourceCrop() && !is_secure && !hdr_layer &&
-        !layer->flags.single_buffer && !layer->flags.solid_fill && !is_video) {
+        !layer->flags.single_buffer && !layer->flags.solid_fill && !is_video &&
+        !layer->flags.is_game) {
       layer->flags.skip = true;
     }
 
@@ -793,13 +806,6 @@ void HWCDisplay::BuildLayerStack() {
       layer->update_mask.set(kClientCompRequest);
     }
 
-    if (game_supported_ && (hwc_layer->GetType() == kLayerGame)) {
-      layer->flags.is_game = true;
-      layer->input_buffer.flags.game = true;
-    }
-
-    layer->layer_id = hwc_layer->GetId();
-    layer->geometry_changes = hwc_layer->GetGeometryChanges();
     layer_stack_.layers.push_back(layer);
   }
 
@@ -887,7 +893,7 @@ HWC2::Error HWCDisplay::SetLayerZOrder(hwc2_layer_t layer_id, uint32_t z) {
 }
 
 HWC2::Error HWCDisplay::SetVsyncEnabled(HWC2::Vsync enabled) {
-  DLOGV("Display ID: %d enabled: %s", id_, to_string(enabled).c_str());
+  DLOGV("Display ID: %" PRId64 " enabled: %s", id_, to_string(enabled).c_str());
   ATRACE_INT("SetVsyncState ", enabled == HWC2::Vsync::Enable ? 1 : 0);
   DisplayError error = kErrorNone;
 
@@ -940,7 +946,7 @@ void HWCDisplay::PostPowerMode() {
 }
 
 HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
-  DLOGV("display = %d, mode = %s", id_, to_string(mode).c_str());
+  DLOGV("display = %" PRId64 ", mode = %s", id_, to_string(mode).c_str());
   DisplayState state = kStateOff;
   bool flush_on_error = flush_on_error_;
 
@@ -959,9 +965,11 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
       }
       break;
     case HWC2::PowerMode::On:
+      RestoreColorTransform();
       state = kStateOn;
       break;
     case HWC2::PowerMode::Doze:
+      RestoreColorTransform();
       state = kStateDoze;
       break;
     case HWC2::PowerMode::DozeSuspend:
@@ -1228,12 +1236,6 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, shared_ptr<Fence
 
 HWC2::Error HWCDisplay::SetActiveConfig(hwc2_config_t config) {
   DTRACE_SCOPED();
-
-  // Cache refresh rate set by client.
-  DisplayConfigVariableInfo info = {};
-  GetDisplayAttributesForConfig(INT(config), &info);
-  active_refresh_rate_ = info.fps;
-
   hwc2_config_t current_config = 0;
   GetActiveConfig(&current_config);
   if (current_config == config) {
@@ -1244,7 +1246,26 @@ HWC2::Error HWCDisplay::SetActiveConfig(hwc2_config_t config) {
     return HWC2::Error::BadConfig;
   }
 
+  // DRM driver expects DRM_PREFERRED_MODE to be set as part of first commit.
+  if (!IsFirstCommitDone()) {
+    // Store client's config.
+    // Set this as part of post commit.
+    pending_first_commit_config_ = true;
+    pending_first_commit_config_index_ = config;
+    DLOGI("Defer config change to %d until first commit", UINT32(config));
+    return HWC2::Error::None;
+  } else if (pending_first_commit_config_) {
+    // Config override request from client.
+    // Honour latest request.
+    pending_first_commit_config_ = false;
+  }
+
   DLOGI("Active configuration changed to: %d", config);
+
+  // Cache refresh rate set by client.
+  DisplayConfigVariableInfo info = {};
+  GetDisplayAttributesForConfig(INT(config), &info);
+  active_refresh_rate_ = info.fps;
 
   // Store config index to be applied upon refresh.
   pending_config_ = true;
@@ -1325,6 +1346,7 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
       break;
     }
     case kSyncInvalidateDisplay:
+    case kIdlePowerCollapse:
     case kThermalEvent: {
       SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[id_]);
       validated_ = false;
@@ -1344,12 +1366,10 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
       if (event_handler_) {
         event_handler_->DisplayPowerReset();
       } else {
-        DLOGW("Cannot execute DisplayPowerReset (client_id = %d), event_handler_ is nullptr",
+        DLOGW("Cannot execute DisplayPowerReset (client_id = %" PRId64 "), event_handler_ is null",
               id_);
       }
     } break;
-    case kIdlePowerCollapse:
-      break;
     case kInvalidateDisplay:
       validated_ = false;
       break;
@@ -1608,7 +1628,7 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
   DTRACE_SCOPED();
 
   if (!validated_) {
-    DLOGV_IF(kTagClient, "Display %d is not validated", id_);
+    DLOGV_IF(kTagClient, "Display %" PRIu64 "is not validated", id_);
     return HWC2::Error::NotValidated;
   }
 
@@ -1617,7 +1637,7 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
   }
 
   if (skip_commit_) {
-    DLOGV_IF(kTagClient, "Skipping Refresh on display %d", id_);
+    DLOGV_IF(kTagClient, "Skipping Refresh on display %" PRIu64 , id_);
     return HWC2::Error::None;
   }
 
@@ -1732,11 +1752,22 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence
     display_paused_ = true;
     display_pause_pending_ = false;
   }
+  if (secure_event_ == kTUITransitionEnd || secure_event_ == kSecureDisplayEnd ||
+      secure_event_ == kTUITransitionUnPrepare) {
+    secure_event_ = kSecureEventMax;
+  }
+
+  // Handle pending config changes.
+  if (pending_first_commit_config_) {
+    DLOGI("Changing active config to %d", UINT32(pending_first_commit_config_));
+    pending_first_commit_config_ = false;
+    SetActiveConfig(pending_first_commit_config_index_);
+  }
 
   return status;
 }
 
-void HWCDisplay::SetIdleTimeoutMs(uint32_t timeout_ms) {
+void HWCDisplay::SetIdleTimeoutMs(uint32_t timeout_ms, uint32_t inactive_ms) {
   return;
 }
 
@@ -1781,8 +1812,8 @@ void HWCDisplay::DumpInputBuffers() {
         reinterpret_cast<const private_handle_t *>(layer->input_buffer.buffer_id);
     Fence::Wait(layer->input_buffer.acquire_fence);
 
-    DLOGI("Dump layer[%d] of %d pvt_handle %x pvt_handle->base %x", i, layer_stack_.layers.size(),
-          pvt_handle, pvt_handle? pvt_handle->base : 0);
+    DLOGI("Dump layer[%d] of %d pvt_handle %p pvt_handle->base %" PRIx64, i,
+          UINT32(layer_stack_.layers.size()), pvt_handle, pvt_handle? pvt_handle->base : 0);
 
     if (!pvt_handle) {
       DLOGE("Buffer handle is null");
@@ -2185,7 +2216,7 @@ int HWCDisplay::GetVisibleDisplayRect(hwc_rect_t *visible_rect) {
   visible_rect->top = INT(display_rect_.top);
   visible_rect->right = INT(display_rect_.right);
   visible_rect->bottom = INT(display_rect_.bottom);
-  DLOGI("Dpy = %d Visible Display Rect(%d %d %d %d)", visible_rect->left, visible_rect->top,
+  DLOGI("Visible Display Rect(%d %d %d %d)", visible_rect->left, visible_rect->top,
         visible_rect->right, visible_rect->bottom);
 
   return 0;
@@ -2397,14 +2428,14 @@ bool HWCDisplay::CanSkipValidate() {
   for (auto hwc_layer : layer_set_) {
     Layer *layer = hwc_layer->GetSDMLayer();
     if (hwc_layer->NeedsValidation()) {
-      DLOGV_IF(kTagClient, "hwc_layer[%d] needs validation. Returning false.",
+      DLOGV_IF(kTagClient, "hwc_layer[%" PRIu64 "] needs validation. Returning false.",
                hwc_layer->GetId());
       return false;
     }
 
     // Do not allow Skip Validate, if any layer needs GPU Composition.
     if (layer->composition == kCompositionGPU || layer->composition == kCompositionNone) {
-      DLOGV_IF(kTagClient, "hwc_layer[%d] is %s. Returning false.", hwc_layer->GetId(),
+      DLOGV_IF(kTagClient, "hwc_layer[%" PRIu64 "] is %s. Returning false.", hwc_layer->GetId(),
                (layer->composition == kCompositionGPU) ? "GPU composed": "Dropped");
       return false;
     }
@@ -2417,8 +2448,8 @@ bool HWCDisplay::CanSkipValidate() {
   return true;
 }
 
-HWC2::Error HWCDisplay::GetValidateDisplayOutput(uint32_t *out_num_types,
-                                                 uint32_t *out_num_requests) {
+HWC2::Error HWCDisplay::PresentAndOrGetValidateDisplayOutput(uint32_t *out_num_types,
+                                                             uint32_t *out_num_requests) {
   *out_num_types = UINT32(layer_changes_.size());
   *out_num_requests = UINT32(layer_requests_.size());
 
@@ -2837,12 +2868,50 @@ int HWCDisplay::GetActiveConfigIndex() {
   return active_config_index_;
 }
 
+DisplayError HWCDisplay::ValidateTUITransition (SecureEvent secure_event) {
+  switch (secure_event) {
+    case kTUITransitionPrepare:
+      if (secure_event_ != kSecureEventMax) {
+        DLOGE("Invalid TUI transition from %d to %d", secure_event_, secure_event);
+        return kErrorParameters;
+      }
+      break;
+    case kTUITransitionUnPrepare:
+      if (secure_event_ != kTUITransitionPrepare) {
+        DLOGE("Invalid TUI transition from %d to %d", secure_event_, secure_event);
+        return kErrorParameters;
+      }
+      break;
+    case kTUITransitionStart:
+      if (secure_event_ != kSecureEventMax) {
+        DLOGE("Invalid TUI transition from %d to %d", secure_event_, secure_event);
+        return kErrorParameters;
+      }
+      break;
+    case kTUITransitionEnd:
+      if (secure_event_ != kTUITransitionStart) {
+        DLOGE("Invalid TUI transition from %d to %d", secure_event_, secure_event);
+        return kErrorParameters;
+      }
+      break;
+    default:
+      DLOGE("Invalid secure event %d", secure_event);
+      return kErrorParameters;
+  }
+  return kErrorNone;
+}
+
 DisplayError HWCDisplay::HandleSecureEvent(SecureEvent secure_event, bool *needs_refresh) {
   if (secure_event == secure_event_) {
     return kErrorNone;
   }
 
-  DisplayError err = display_intf_->HandleSecureEvent(secure_event, needs_refresh);
+  DisplayError err = ValidateTUITransition(secure_event);
+  if (err != kErrorNone) {
+    return err;
+  }
+
+  err = display_intf_->HandleSecureEvent(secure_event, needs_refresh);
   if (err != kErrorNone) {
     DLOGE("Handle secure event failed");
     return err;
@@ -2869,6 +2938,14 @@ DisplayError HWCDisplay::HandleSecureEvent(SecureEvent secure_event, bool *needs
 
   secure_event_ = secure_event;
 
+  return kErrorNone;
+}
+
+DisplayError HWCDisplay::TeardownConcurrentWriteback(bool *needs_refresh) {
+  if (!needs_refresh) {
+    return kErrorParameters;
+  }
+  *needs_refresh = false;
   return kErrorNone;
 }
 

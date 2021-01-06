@@ -60,6 +60,10 @@ DisplayBuiltIn::DisplayBuiltIn(int32_t display_id, DisplayEventHandler *event_ha
 DisplayBuiltIn::~DisplayBuiltIn() {
 }
 
+static uint64_t GetTimeInMs(struct timespec ts) {
+  return (ts.tv_sec * 1000 + (ts.tv_nsec + 500000) / 1000000);
+}
+
 DisplayError DisplayBuiltIn::Init() {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
@@ -151,6 +155,10 @@ DisplayError DisplayBuiltIn::Init() {
   if (enable_qsync_idle_) {
     DLOGI("Enabling qsync on idling");
   }
+
+  value = 0;
+  DebugHandler::Get()->GetProperty(ENHANCE_IDLE_TIME, &value);
+  enhance_idle_time_ = (value == 1);
 
   return error;
 }
@@ -420,15 +428,15 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
     SetPanelBrightness(cached_brightness_);
     pending_brightness_ = false;
   } else {
-    // Send the panel brightness event to secondary VM on TUI session start
     if (secure_event_ == kTUITransitionStart) {
-      DisplayError err = kErrorNone;
-      int level = 0;
-      if ((err = hw_intf_->GetPanelBrightness(&level)) != kErrorNone) {
-        return err;
-      }
-      HandleBacklightEvent(level);
+      // Send the panel brightness event to secondary VM on TUI session start
+      SendBacklight();
     }
+  }
+
+  if (secure_event_ == kTUITransitionStart) {
+    // Send display config information to secondary VM on TUI session start
+    SendDisplayConfigs();
   }
 
   if (commit_event_enabled_) {
@@ -450,9 +458,11 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
     deferred_config_.Clear();
   }
 
+  clock_gettime(CLOCK_MONOTONIC, &idle_timer_start_);
   int idle_time_ms = hw_layers_.info.set_idle_time_ms;
   if (idle_time_ms >= 0) {
     hw_intf_->SetIdleTimeoutMs(UINT32(idle_time_ms));
+    idle_time_ms_ = idle_time_ms;
   }
 
   if (switch_to_cmd_) {
@@ -509,7 +519,7 @@ void DisplayBuiltIn::UpdateDisplayModeParams() {
     ControlPartialUpdate(false /* enable */, &pending);
   } else if (hw_panel_info_.mode == kModeCommand) {
     // Flush idle timeout value currently set.
-    comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, 0);
+    comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, 0, 0);
     switch_to_cmd_ = true;
   }
 }
@@ -553,9 +563,9 @@ DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
   return kErrorNone;
 }
 
-void DisplayBuiltIn::SetIdleTimeoutMs(uint32_t active_ms) {
+void DisplayBuiltIn::SetIdleTimeoutMs(uint32_t active_ms, uint32_t inactive_ms) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-  comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, active_ms);
+  comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, active_ms, inactive_ms);
 }
 
 DisplayError DisplayBuiltIn::SetDisplayMode(uint32_t mode) {
@@ -596,7 +606,7 @@ DisplayError DisplayBuiltIn::SetDisplayMode(uint32_t mode) {
       ControlPartialUpdate(false /* enable */, &pending);
     } else if (mode == kModeCommand) {
       // Flush idle timeout value currently set.
-      comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, 0);
+      comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, 0, 0);
       switch_to_cmd_ = true;
     }
   }
@@ -666,13 +676,9 @@ DisplayError DisplayBuiltIn::GetRefreshRateRange(uint32_t *min_refresh_rate,
   return error;
 }
 
-DisplayError DisplayBuiltIn::TeardownConcurrentWriteback(void) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
 
-  return hw_intf_->TeardownConcurrentWriteback();
-}
-
-DisplayError DisplayBuiltIn::SetRefreshRate(uint32_t refresh_rate, bool final_rate) {
+DisplayError DisplayBuiltIn::SetRefreshRate(uint32_t refresh_rate, bool final_rate,
+                                            bool idle_screen) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
 
   if (!active_ || !hw_panel_info_.dynamic_fps || qsync_mode_ != kQSyncModeNone ||
@@ -685,11 +691,11 @@ DisplayError DisplayBuiltIn::SetRefreshRate(uint32_t refresh_rate, bool final_ra
     return kErrorParameters;
   }
 
-  if (handle_idle_timeout_ && !final_rate && !enable_qsync_idle_) {
+  if (CanLowerFps(idle_screen) && !final_rate && !enable_qsync_idle_) {
     refresh_rate = hw_panel_info_.min_fps;
   }
 
-  if ((current_refresh_rate_ != refresh_rate) || handle_idle_timeout_) {
+  if (current_refresh_rate_ != refresh_rate) {
     DisplayError error = hw_intf_->SetRefreshRate(refresh_rate);
     if (error != kErrorNone) {
       // Attempt to update refresh rate can fail if rf interfenence is detected.
@@ -704,11 +710,34 @@ DisplayError DisplayBuiltIn::SetRefreshRate(uint32_t refresh_rate, bool final_ra
     }
   }
 
+  // Set safe mode upon success.
+  if (enhance_idle_time_ && handle_idle_timeout_ && (refresh_rate == hw_panel_info_.min_fps)) {
+    comp_manager_->ProcessIdleTimeout(display_comp_ctx_);
+  }
+
   // On success, set current refresh rate to new refresh rate
   current_refresh_rate_ = refresh_rate;
   deferred_config_.MarkDirty();
 
   return ReconfigureDisplay();
+}
+
+bool DisplayBuiltIn::CanLowerFps(bool idle_screen) {
+  if (!enhance_idle_time_) {
+    return handle_idle_timeout_;
+  }
+
+  if (!handle_idle_timeout_ || !idle_screen) {
+    return false;
+  }
+
+  struct timespec now;
+  clock_gettime(CLOCK_MONOTONIC, &now);
+  uint64_t elapsed_time_ms = GetTimeInMs(now) - GetTimeInMs(idle_timer_start_);
+  bool can_lower = elapsed_time_ms >= UINT32(idle_time_ms_);
+  DLOGV_IF(kTagDisplay, "lower fps: %d", can_lower);
+
+  return can_lower;
 }
 
 DisplayError DisplayBuiltIn::VSync(int64_t timestamp) {
@@ -751,8 +780,11 @@ void DisplayBuiltIn::IdleTimeout() {
     }
     handle_idle_timeout_ = true;
     event_handler_->Refresh();
-    lock_guard<recursive_mutex> obj(recursive_mutex_);
-    comp_manager_->ProcessIdleTimeout(display_comp_ctx_);
+    hw_intf_->EnableSelfRefresh();
+    if (!enhance_idle_time_) {
+      lock_guard<recursive_mutex> obj(recursive_mutex_);
+      comp_manager_->ProcessIdleTimeout(display_comp_ctx_);
+    }
     hw_intf_->EnableSelfRefresh();
   }
 }
@@ -800,13 +832,13 @@ void DisplayBuiltIn::Histogram(int histogram_fd, uint32_t blob_id) {
 }
 
 void DisplayBuiltIn::HandleBacklightEvent(float brightness_level) {
-  DLOGI("backlight event occurred %f ipc_intf %x", brightness_level, ipc_intf_.get());
+  DLOGI("backlight event occurred %f ipc_intf %p", brightness_level, ipc_intf_.get());
   if (ipc_intf_) {
     GenericPayload in;
     IPCBacklightParams *backlight_params = nullptr;
     int ret = in.CreatePayload<IPCBacklightParams>(backlight_params);
     if (ret) {
-      DLOGE("failed to create the payload. Error:%d", ret);
+      DLOGW("failed to create the payload. Error:%d", ret);
       return;
     }
     float brightness = 0.0f;
@@ -816,7 +848,7 @@ void DisplayBuiltIn::HandleBacklightEvent(float brightness_level) {
     backlight_params->brightness = brightness;
     backlight_params->is_primary = IsPrimaryDisplay();
     if ((ret = ipc_intf_->SetParameter(kIpcParamSetBacklight, in))) {
-      DLOGE("Failed to set backlight, error = %d", ret);
+      DLOGW("Failed to set backlight, error = %d", ret);
     }
     lock_guard<recursive_mutex> obj(brightness_lock_);
     cached_brightness_ = brightness;
@@ -845,11 +877,11 @@ DisplayError DisplayBuiltIn::GetPanelBrightnessFromLevel(float level, float *bri
     *brightness = (static_cast<float>(level) + level_remainder_ - min) / (max - min);
   } else {
     min >= max ? DLOGE("Minimum brightness is greater than or equal to maximum brightness") :
-                 DLOGE("Invalid brightness level %d", level);
+                 DLOGE("Invalid brightness level %f", level);
     return kErrorDriverData;
   }
 
-  DLOGI_IF(kTagDisplay, "Received level %d (%f percent)", level, *brightness * 100);
+  DLOGI_IF(kTagDisplay, "Received level %f (%f percent)", level, *brightness * 100);
 
   return kErrorNone;
 }
@@ -1061,6 +1093,20 @@ DisplayError DisplayBuiltIn::SetStcColorMode(const snapdragoncolor::ColorMode &c
     dynamic_range = kHdrType;
   }
   comp_manager_->ControlDpps(dynamic_range != kHdrType);
+
+  return ret;
+}
+
+DisplayError DisplayBuiltIn::NotifyDisplayCalibrationMode(bool in_calibration) {
+  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  if (!color_mgr_) {
+    return kErrorNotSupported;
+  }
+  DisplayError ret = kErrorNone;
+  ret = color_mgr_->NotifyDisplayCalibrationMode(in_calibration);
+  if (ret != kErrorNone) {
+    DLOGE("Failed to notify QDCM Mode status, ret = %d state = %d", ret, in_calibration);
+  }
 
   return ret;
 }
@@ -1638,10 +1684,11 @@ DisplayError DisplayBuiltIn::ReconfigureDisplay() {
 
   error = comp_manager_->ReconfigureDisplay(display_comp_ctx_, display_attributes, hw_panel_info,
                                             mixer_attributes, fb_config_,
-                                            &default_qos_data_);
+                                            &cached_qos_data_);
   if (error != kErrorNone) {
     return error;
   }
+  default_clock_hz_ = cached_qos_data_.clock_hz;
 
   bool disble_pu = true;
   if (mixer_unchanged && panel_unchanged) {
@@ -1730,6 +1777,41 @@ DisplayError DisplayBuiltIn::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   fixed_info->readback_supported = hw_resource_info.has_concurrent_writeback;
 
   return kErrorNone;
+}
+
+void DisplayBuiltIn::SendBacklight() {
+  DisplayError err = kErrorNone;
+  int level = 0;
+  if ((err = hw_intf_->GetPanelBrightness(&level)) != kErrorNone) {
+    return;
+  }
+  HandleBacklightEvent(level);
+}
+
+void DisplayBuiltIn::SendDisplayConfigs() {
+  if (ipc_intf_) {
+    GenericPayload in;
+    uint32_t active_index = 0;
+    IPCDisplayConfigParams *disp_configs = nullptr;
+    int ret = in.CreatePayload<IPCDisplayConfigParams>(disp_configs);
+    if (ret) {
+      DLOGW("failed to create the payload. Error:%d", ret);
+      return;
+    }
+    DisplayError error = hw_intf_->GetActiveConfig(&active_index);
+    if (error != kErrorNone) {
+      return;
+    }
+    disp_configs->x_pixels = display_attributes_.x_pixels;
+    disp_configs->y_pixels = display_attributes_.y_pixels;
+    disp_configs->fps = display_attributes_.fps;
+    disp_configs->config_idx = active_index;
+    disp_configs->smart_panel = display_attributes_.smart_panel;
+     disp_configs->is_primary = IsPrimaryDisplay();
+    if ((ret = ipc_intf_->SetParameter(kIpcParamSetDisplayConfigs, in))) {
+      DLOGW("Failed to send display config, error = %d", ret);
+    }
+  }
 }
 
 }  // namespace sdm

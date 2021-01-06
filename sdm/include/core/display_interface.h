@@ -524,10 +524,11 @@ class DisplayInterface {
   /*! @brief Method to set idle timeout value. Idle fallback is disabled with timeout value 0.
 
     @param[in] active_ms value in milliseconds.
+    @param[in] in_active_ms value in milliseconds.
 
     @return \link void \endlink
   */
-  virtual void SetIdleTimeoutMs(uint32_t active_ms) = 0;
+  virtual void SetIdleTimeoutMs(uint32_t active_ms, uint32_t inactive_ms) = 0;
 
   /*! @brief Method to set maximum number of mixer stages for each display.
 
@@ -574,9 +575,12 @@ class DisplayInterface {
 
     @param[in] final_rate indicates whether refresh rate is final rate or can be changed by sdm
 
+    @param[in] idle_screen indicates whether screen is idle.
+
     @return \link DisplayError \endlink
   */
-  virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate) = 0;
+  virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate,
+                                      bool idle_screen = false) = 0;
 
   /*! @brief Method to get the refresh rate of a display.
 
@@ -870,11 +874,6 @@ class DisplayInterface {
   */
   virtual bool IsSupportSsppTonemap() = 0;
 
-  /*! @brief Method to free concurrent writeback resoures for primary display.
-    @return \link DisplayError \endlink
-  */
-  virtual DisplayError TeardownConcurrentWriteback(void) = 0;
-
   /*! @brief Method to set frame trigger mode for primary display.
 
     @param[in] frame trigger mode
@@ -1000,6 +999,14 @@ class DisplayInterface {
     @return \link DisplayError \endlink
   */
   virtual DisplayError ClearLUTs() = 0;
+
+  /*! @brief Method to notify the stc library that connect/disconnect QDCM tool.
+
+    @param[in] connect or disconnect
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError NotifyDisplayCalibrationMode(bool in_calibration) = 0;
 
  protected:
   virtual ~DisplayInterface() { }

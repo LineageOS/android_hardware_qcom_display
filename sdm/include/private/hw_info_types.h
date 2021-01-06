@@ -252,7 +252,7 @@ struct HWRotatorInfo {
   std::string device_path = "";
   float min_downscale = 2.0f;
   bool downscale_compression = false;
-  uint64_t max_line_width = 0;
+  uint32_t max_line_width = 0;
 };
 
 enum HWQseedStepVersion {
@@ -651,6 +651,8 @@ struct HWPipeInfo {
   std::vector<HWPipeTonemapLutInfo> lut_info = {};
   LayerTransform transform;
   HWSrcTonemap tonemap = kSrcTonemapNone;
+  LayerBufferFormat format = kFormatARGB8888;  // src format of the buffer
+  bool is_solid_fill = false;
 };
 
 struct HWSolidfillStage {

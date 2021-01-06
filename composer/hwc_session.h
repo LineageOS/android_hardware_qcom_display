@@ -26,6 +26,7 @@
 #include <core/core_interface.h>
 #include <core/ipc_interface.h>
 #include <utils/locker.h>
+#include <utils/constants.h>
 #include <qd_utils.h>
 #include <display_config.h>
 #include <vector>
@@ -298,6 +299,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   static Locker hdr_locker_[HWCCallbacks::kNumDisplays];
   static Locker tui_locker_[HWCCallbacks::kNumDisplays];
   static bool tui_transition_pending_[HWCCallbacks::kNumDisplays];
+  static int tui_transition_error_[HWCCallbacks::kNumDisplays];
   static Locker display_config_locker_;
   static Locker system_locker_;
 
@@ -395,6 +397,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
     virtual int IsSupportedConfigSwitch(uint32_t disp_id, uint32_t config, bool *supported);
     virtual int ControlIdleStatusCallback(bool enable);
     virtual int GetDisplayType(uint64_t physical_disp_id, DispType *disp_type);
+    virtual int AllowIdleFallback();
 
     std::weak_ptr<DisplayConfig::ConfigCallback> callback_;
     HWCSession *hwc_session_ = nullptr;
@@ -523,6 +526,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   android::status_t TUITransitionUnPrepare(int disp_id);
   void PerformIdleStatusCallback(hwc2_display_t display);
   DispType GetDisplayConfigDisplayType(int qdutils_disp_type);
+  HWC2::Error TeardownConcurrentWriteback(hwc2_display_t display);
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};
@@ -570,6 +574,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   bool power_state_transition_[HWCCallbacks::kNumDisplays] = {};
   std::bitset<HWCCallbacks::kNumDisplays> display_ready_;
   bool secure_session_active_ = false;
+  bool is_idle_time_up_ = false;
   std::shared_ptr<IPCIntf> ipc_intf_ = nullptr;
 };
 }  // namespace sdm

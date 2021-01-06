@@ -123,11 +123,13 @@
 #define DISABLE_ROUNDED_CORNER_THREAD        DISPLAY_PROP("disable_rounded_corner_thread")
 // SPR
 #define ENABLE_SPR                           DISPLAY_PROP("enable_spr")
+#define ENABLE_MEMORY_MAPPING                DISPLAY_PROP("enable_memory_mapping")
 
 // PERF hint properties
 #define ENABLE_PERF_HINT_LARGE_COMP_CYCLE    DISPLAY_PROP("enable_perf_hint_large_comp_cycle")
 #define DISABLE_DYNAMIC_FPS                  DISPLAY_PROP("disable_dynamic_fps")
 #define ENABLE_QSYNC_IDLE                    DISPLAY_PROP("enable_qsync_idle")
+#define ENHANCE_IDLE_TIME                    DISPLAY_PROP("enhance_idle_time")
 
 // Add all vendor.display properties above
 
@@ -141,6 +143,7 @@
 
 #define ZERO_SWAP_INTERVAL                   "vendor.debug.egl.swapinterval"
 #define WINDOW_RECT_PROP                     DISPLAY_PROP("window_rect")
+#define WINDOW_RECT_PROP_SECONDARY           DISPLAY_PROP("window_rect_secondary")
 #define DISABLE_IDLE_TIME_HDR                DISPLAY_PROP("disable_idle_time_hdr")
 #define DISABLE_IDLE_TIME_VIDEO              DISPLAY_PROP("disable_idle_time_video")
 // Add all other.properties above

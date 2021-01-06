@@ -81,7 +81,7 @@ HWC2::Error HWCColorModeStc::Init() {
     DLOGW("Failed to get Stc color modes, error %d", error);
     stc_mode_list_.list.clear();
   } else {
-    DLOGI("Stc mode count %d", stc_mode_list_.list.size());
+    DLOGI("Stc mode count %zu", stc_mode_list_.list.size());
   }
 
   PopulateColorModes();
@@ -292,6 +292,15 @@ HWC2::Error HWCColorModeStc::ApplyCurrentColorModeWithRenderIntent(bool hdr_pres
 
   DLOGV_IF(kTagQDCM, "Successfully applied mode = %d, intent = %d, range = %d", current_color_mode_,
            current_render_intent_, curr_dynamic_range_);
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCColorModeStc::NotifyDisplayCalibrationMode(bool in_calibration) {
+  DisplayError error = kErrorNone;
+  error = display_intf_->NotifyDisplayCalibrationMode(in_calibration);
+  if (error != kErrorNone) {
+    return HWC2::Error::Unsupported;
+  }
   return HWC2::Error::None;
 }
 
