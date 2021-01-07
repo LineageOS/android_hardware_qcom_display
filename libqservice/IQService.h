@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 The Android Open Source Project
- * Copyright (C) 2012-2014, 2016-2017, 2018 The Linux Foundation. All rights reserved.
+ * Copyright (C) 2012-2014, 2016-2017, 2018, 2021, The Linux Foundation. All rights reserved.
  *
  * Not a Contribution, Apache license notifications and license are
  * retained for attribution purposes only.
@@ -79,6 +79,8 @@ public:
         GET_DSI_CLK = 37, // Get DSI Clk.
         GET_SUPPORTED_DSI_CLK = 38, // Get supported DSI Clk.
         GET_COMPOSER_STATUS = 39, // Get composer init status-true if primary display init is done
+	SET_STAND_BY_MODE = 40, //Set stand by mode for MDP hardware.
+        GET_PANEL_RESOLUTION = 41, // Get Panel Resolution
         COMMAND_LIST_END = 400,
     };
 

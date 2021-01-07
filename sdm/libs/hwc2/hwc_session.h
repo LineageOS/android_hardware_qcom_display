@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, 2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -253,6 +253,10 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   android::status_t GetSupportedDsiClk(const android::Parcel *input_parcel,
                                        android::Parcel *output_parcel);
   android::status_t getComposerStatus();
+  android::status_t SetStandByMode(const android::Parcel *input_parcel);
+  android::status_t GetPanelResolution(const android::Parcel *input_parcel,
+                                       android::Parcel *output_parcel);
+
 
   void Refresh(hwc2_display_t display);
   void HotPlug(hwc2_display_t display, HWC2::Connection state);

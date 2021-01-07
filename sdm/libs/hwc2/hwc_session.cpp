@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -1109,6 +1109,14 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       output_parcel->writeInt32(getComposerStatus());
       break;
 
+    case qService::IQService::SET_STAND_BY_MODE:
+      status = SetStandByMode(input_parcel);
+      break;
+
+    case qService::IQService::GET_PANEL_RESOLUTION:
+      status = GetPanelResolution(input_parcel, output_parcel);
+      break;
+
     default:
       DLOGW("QService command = %d is not supported", command);
       return -EINVAL;
@@ -1693,6 +1701,39 @@ android::status_t HWCSession::GetVisibleDisplayRect(const android::Parcel *input
   output_parcel->writeInt32(visible_rect.top);
   output_parcel->writeInt32(visible_rect.right);
   output_parcel->writeInt32(visible_rect.bottom);
+
+  return android::NO_ERROR;
+}
+
+android::status_t HWCSession::SetStandByMode(const android::Parcel *input_parcel) {
+  SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
+
+  bool enable = (input_parcel->readInt32() > 0);
+
+  if (!hwc_display_[HWC_DISPLAY_PRIMARY]) {
+    DLOGI("Primary display is not initialized");
+    return -EINVAL;
+  }
+
+  hwc_display_[HWC_DISPLAY_PRIMARY]->SetStandByMode(enable);
+
+  return android::NO_ERROR;
+}
+
+android::status_t HWCSession::GetPanelResolution(const android::Parcel *input_parcel,
+                                                 android::Parcel *output_parcel) {
+  SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
+
+  if (!hwc_display_[HWC_DISPLAY_PRIMARY]) {
+    DLOGI("Primary display is not initialized");
+    return -EINVAL;
+  }
+  auto panel_width = 0u;
+  auto panel_height = 0u;
+
+  hwc_display_[HWC_DISPLAY_PRIMARY]->GetPanelResolution(&panel_width, &panel_height);
+  output_parcel->writeInt32(INT32(panel_width));
+  output_parcel->writeInt32(INT32(panel_height));
 
   return android::NO_ERROR;
 }
