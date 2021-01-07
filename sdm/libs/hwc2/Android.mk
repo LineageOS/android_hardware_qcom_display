@@ -26,6 +26,10 @@ ifeq ($(TARGET_EXCLUDES_DISPLAY_PP), true)
 LOCAL_CFLAGS += -DEXCLUDE_DISPLAY_PP
 endif
 
+ifeq ($(TARGET_EXCLUDES_MULTI_DISPLAY),true)
+LOCAL_CFLAGS += -DEXCLUDES_MULTI_DISPLAY
+endif
+
 LOCAL_CLANG                   := true
 
 # TODO: Remove libui after addressing gpu_tonemapper issues
