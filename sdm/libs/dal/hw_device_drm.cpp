@@ -2013,7 +2013,8 @@ void HWDeviceDRM::SelectCscType(const LayerBuffer &input_buffer, DRMCscType *typ
                DRMCscType::kCscYuv2Rgb601FR : DRMCscType::kCscYuv2Rgb601L);
       break;
     case ColorPrimaries_BT709_5:
-      *type = DRMCscType::kCscYuv2Rgb709L;
+      *type = ((input_buffer.color_metadata.range == Range_Full) ?
+               DRMCscType::kCscYuv2Rgb709FR : DRMCscType::kCscYuv2Rgb709L);
       break;
     case ColorPrimaries_BT2020:
       *type = ((input_buffer.color_metadata.range == Range_Full) ?
