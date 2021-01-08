@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -1730,7 +1730,8 @@ void HWDeviceDRM::SelectCscType(const LayerBuffer &input_buffer, DRMCscType *typ
                DRMCscType::kCscYuv2Rgb601FR : DRMCscType::kCscYuv2Rgb601L);
       break;
     case ColorPrimaries_BT709_5:
-      *type = DRMCscType::kCscYuv2Rgb709L;
+      *type = ((input_buffer.color_metadata.range == Range_Full) ?
+               DRMCscType::kCscYuv2Rgb709FR : DRMCscType::kCscYuv2Rgb709L);
       break;
     case ColorPrimaries_BT2020:
       *type = ((input_buffer.color_metadata.range == Range_Full) ?
