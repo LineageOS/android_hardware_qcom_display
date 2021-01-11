@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -654,6 +654,7 @@ void HWCDisplay::BuildLayerStack() {
   layer_stack_ = LayerStack();
   display_rect_ = LayerRect();
   metadata_refresh_rate_ = 0;
+  bool has_valid_client_layer = false;
   layer_stack_.flags.animating = animating_;
   layer_stack_.flags.fast_path = fast_path_enabled_ && fast_path_composition_;
 
@@ -739,6 +740,7 @@ void HWCDisplay::BuildLayerStack() {
 
     if (layer->flags.skip) {
       layer_stack_.flags.skip_present = true;
+      has_valid_client_layer |= IsValid(layer->dst_rect);
     }
 
     // TODO(user): Move to a getter if this is needed at other places
@@ -785,6 +787,14 @@ void HWCDisplay::BuildLayerStack() {
     layer_stack_.flags.mask_present |= layer->input_buffer.flags.mask_layer;
 
     layer_stack_.layers.push_back(layer);
+  }
+
+  // If all client layers are invalid, skip all layers
+  if (layer_stack_.flags.skip_present && !has_valid_client_layer) {
+    DLOGE("Not a single valid client layer present, skipping all");
+    for (auto layer : layer_stack_.layers) {
+      layer->flags.skip = true;
+    }
   }
 
   // If layer stack needs Client composition, HWC display gets into InternalValidate state. If
