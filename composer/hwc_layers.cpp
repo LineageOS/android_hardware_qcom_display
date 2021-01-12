@@ -554,6 +554,12 @@ HWC2::Error HWCLayer::SetLayerType(IQtiComposerClient::LayerType type) {
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCLayer::SetLayerFlag(IQtiComposerClient::LayerFlag flag) {
+  compatible_ = (flag == IQtiComposerClient::LayerFlag::COMPATIBLE);
+
+  return HWC2::Error::None;
+}
+
 HWC2::Error HWCLayer::SetLayerColorTransform(const float *matrix) {
   if (std::memcmp(matrix, layer_->color_transform_matrix, sizeof(layer_->color_transform_matrix))) {
     std::memcpy(layer_->color_transform_matrix, matrix, sizeof(layer_->color_transform_matrix));

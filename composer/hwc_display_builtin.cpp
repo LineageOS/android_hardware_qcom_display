@@ -209,6 +209,9 @@ void HWCDisplayBuiltIn::ValidateUiScaling() {
 HWC2::Error HWCDisplayBuiltIn::PreValidateDisplay(bool *exit_validate) {
   DTRACE_SCOPED();
 
+  // Draw method gets set as part of first commit.
+  SetDrawMethod();
+
   auto status = HWC2::Error::None;
   // If no resources are available for the current display, mark it for GPU by pass and continue to
   // do invalidate until the resources are available

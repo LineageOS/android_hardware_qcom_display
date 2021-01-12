@@ -972,6 +972,13 @@ int32_t HWCSession::SetClientTarget(hwc2_display_t display, buffer_handle_t targ
                              dataspace, damage);
 }
 
+int32_t HWCSession::SetClientTarget_4_0(hwc2_display_t display, buffer_handle_t target,
+                                        const shared_ptr<Fence> acquire_fence, int32_t dataspace,
+                                        hwc_region_t damage) {
+  return CallDisplayFunction(display, &HWCDisplay::SetClientTarget_4_0, target, acquire_fence,
+                             dataspace, damage);
+}
+
 int32_t HWCSession::SetColorMode(hwc2_display_t display, int32_t /*ColorMode*/ int_mode) {
   auto mode = static_cast<ColorMode>(int_mode);
   if (mode < ColorMode::NATIVE || mode > ColorMode::DISPLAY_BT2020) {
@@ -1086,6 +1093,11 @@ int32_t HWCSession::SetLayerZOrder(hwc2_display_t display, hwc2_layer_t layer, u
 int32_t HWCSession::SetLayerType(hwc2_display_t display, hwc2_layer_t layer,
                                  IQtiComposerClient::LayerType type) {
   return CallDisplayFunction(display, &HWCDisplay::SetLayerType, layer, type);
+}
+
+int32_t HWCSession::SetLayerFlag(hwc2_display_t display, hwc2_layer_t layer,
+                                 IQtiComposerClient::LayerFlag flag) {
+   return CallLayerFunction(display, layer, &HWCLayer::SetLayerFlag, flag);
 }
 
 int32_t HWCSession::SetLayerColorTransform(hwc2_display_t display, hwc2_layer_t layer,
@@ -3944,6 +3956,16 @@ HWC2::Error HWCSession::CommitOrPrepare(hwc2_display_t display, shared_ptr<Fence
   }
   PostCommitUnlocked(display, *out_retire_fence, status);
   return status;
+}
+
+HWC2::Error HWCSession::TryDrawMethod(hwc2_display_t display,
+                                             IQtiComposerClient::DrawMethod drawMethod) {
+  Locker::ScopeLock lock_d(locker_[display]);
+  if (!hwc_display_[display]) {
+    return HWC2::Error::BadDisplay;
+  }
+
+  return hwc_display_[display]->TryDrawMethod(drawMethod);
 }
 
 }  // namespace sdm

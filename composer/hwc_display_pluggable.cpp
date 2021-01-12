@@ -118,8 +118,10 @@ HWCDisplayPluggable::HWCDisplayPluggable(CoreInterface *core_intf,
 }
 
 HWC2::Error HWCDisplayPluggable::PreValidateDisplay(bool *exit_validate) {
-  auto status = HWC2::Error::None;
+  // Draw method gets set as part of first commit.
+  SetDrawMethod();
 
+  auto status = HWC2::Error::None;
   if (active_secure_sessions_[kSecureDisplay] || display_paused_ ||
      (mmrm_restricted_ && (current_power_mode_ == HWC2::PowerMode::Off ||
      current_power_mode_ == HWC2::PowerMode::DozeSuspend))) {

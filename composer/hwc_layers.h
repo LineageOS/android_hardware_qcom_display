@@ -90,6 +90,7 @@ class HWCLayer {
                                             const uint32_t *sizes, const uint8_t* metadata);
   HWC2::Error SetLayerZOrder(uint32_t z);
   HWC2::Error SetLayerType(IQtiComposerClient::LayerType type);
+  HWC2::Error SetLayerFlag(IQtiComposerClient::LayerFlag flag);
   HWC2::Error SetLayerColorTransform(const float *matrix);
   void SetComposition(const LayerComposition &sdm_composition);
   HWC2::Composition GetClientRequestedCompositionType() { return client_requested_; }
@@ -117,6 +118,7 @@ class HWCLayer {
   void ResetBufferFlip() { buffer_flipped_ = false; }
   shared_ptr<Fence> GetReleaseFence();
   void SetReleaseFence(const shared_ptr<Fence> &release_fence);
+  bool IsLayerCompatible() { return compatible_; }
 
  private:
   Layer *layer_ = nullptr;
@@ -140,6 +142,7 @@ class HWCLayer {
   bool color_transform_matrix_set_ = false;
   bool buffer_flipped_ = false;
   bool secure_ = false;
+  bool compatible_ = false;
 
   // Composition requested by client(SF) Original
   HWC2::Composition client_requested_orig_ = HWC2::Composition::Device;

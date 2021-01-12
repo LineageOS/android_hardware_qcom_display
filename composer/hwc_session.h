@@ -20,7 +20,7 @@
 #ifndef __HWC_SESSION_H__
 #define __HWC_SESSION_H__
 
-#include <vendor/qti/hardware/display/composer/3.0/IQtiComposerClient.h>
+#include <vendor/qti/hardware/display/composer/3.1/IQtiComposerClient.h>
 #include <config/device_interface.h>
 
 #include <core/core_interface.h>
@@ -239,6 +239,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   int32_t SetClientTarget(hwc2_display_t display, buffer_handle_t target,
                           shared_ptr<Fence> acquire_fence,
                           int32_t dataspace, hwc_region_t damage);
+  int32_t SetClientTarget_4_0(hwc2_display_t display, buffer_handle_t target,
+                              shared_ptr<Fence> acquire_fence,
+                              int32_t dataspace, hwc_region_t damage);
   int32_t SetCursorPosition(hwc2_display_t display, hwc2_layer_t layer, int32_t x, int32_t y);
   int32_t GetDataspaceSaturationMatrix(int32_t /*Dataspace*/ int_dataspace, float *out_matrix);
   int32_t SetDisplayBrightnessScale(const android::Parcel *input_parcel);
@@ -255,6 +258,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   int32_t SetLayerZOrder(hwc2_display_t display, hwc2_layer_t layer, uint32_t z);
   int32_t SetLayerType(hwc2_display_t display, hwc2_layer_t layer,
                        IQtiComposerClient::LayerType type);
+  int32_t SetLayerFlag(hwc2_display_t display, hwc2_layer_t layer,
+                       IQtiComposerClient::LayerFlag flag);
   int32_t SetLayerSurfaceDamage(hwc2_display_t display, hwc2_layer_t layer, hwc_region_t damage);
   int32_t SetLayerVisibleRegion(hwc2_display_t display, hwc2_layer_t layer, hwc_region_t damage);
   int32_t SetLayerCompositionType(hwc2_display_t display, hwc2_layer_t layer, int32_t int_type);
@@ -300,6 +305,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   HWC2::Error CommitOrPrepare(hwc2_display_t display, shared_ptr<Fence> *out_retire_fence,
                               uint32_t *out_num_types, uint32_t *out_num_requests,
                               bool *needs_commit);
+  HWC2::Error TryDrawMethod(hwc2_display_t display, IQtiComposerClient::DrawMethod drawMethod);
 
 
   static Locker locker_[HWCCallbacks::kNumDisplays];

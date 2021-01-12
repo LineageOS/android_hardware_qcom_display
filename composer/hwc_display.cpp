@@ -802,6 +802,13 @@ void HWCDisplay::BuildLayerStack() {
       layer->update_mask.set(kClientCompRequest);
     }
 
+    if (game_supported_ && (hwc_layer->GetType() == kLayerGame)) {
+      layer->flags.is_game = true;
+      layer->input_buffer.flags.game = true;
+    }
+
+    layer->flags.compatible = hwc_layer->IsLayerCompatible();
+
     layer->layer_id = hwc_layer->GetId();
     layer->geometry_changes = hwc_layer->GetGeometryChanges();
     layer_stack_.layers.push_back(layer);
@@ -1225,6 +1232,11 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, shared_ptr<Fence
   client_target_->SetLayerBuffer(target, acquire_fence);
 
   return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplay::SetClientTarget_4_0(buffer_handle_t target, shared_ptr<Fence> acquire_fence,
+                                            int32_t dataspace, hwc_region_t damage) {
+  return SetClientTarget(target, acquire_fence, dataspace, damage);
 }
 
 HWC2::Error HWCDisplay::SetActiveConfig(hwc2_config_t config) {
@@ -2956,6 +2968,58 @@ DisplayError HWCDisplay::TeardownConcurrentWriteback(bool *needs_refresh) {
 void HWCDisplay::MMRMEvent(bool restricted) {
   mmrm_restricted_ = restricted;
   callbacks_->Refresh(id_);
+}
+
+void HWCDisplay::SetDrawMethod() {
+  if (draw_method_set_) {
+    return;
+  }
+
+  // Default behaviour.
+  // Init draw method from fixed config.
+  // Update it if client supports setting next FBT.
+  DisplayConfigFixedInfo fixed_info = {};
+  display_intf_->GetConfig(&fixed_info);
+
+  draw_method_ = kDrawDefault;
+  if (fixed_info.supports_unified_draw) {
+    // Composer extn is not present.
+    draw_method_ = kDrawUnified;
+  }
+
+  DLOGI("Set draw method: %d", draw_method_);
+  display_intf_->SetDrawMethod(draw_method_);
+
+  draw_method_set_ = true;
+}
+
+HWC2::Error HWCDisplay::TryDrawMethod(IQtiComposerClient::DrawMethod client_drawMethod) {
+  auto status = HWC2::Error::None;
+  DisplayConfigFixedInfo fixed_config;
+  display_intf_->GetConfig(&fixed_config);
+  bool supports_unified_draw = fixed_config.supports_unified_draw;
+  if (!supports_unified_draw) {
+    // Check if driver support is present.
+    // If driver doesn't support return unsupported and set default method.
+    draw_method_ = kDrawDefault;
+    status = HWC2::Error::Unsupported;
+  } else if (client_drawMethod != IQtiComposerClient::DrawMethod::UNIFIED_DRAW) {
+    // Driver supports unified draw.
+    // If client doesnt support unified draw, limit to kDrawUnified.
+    draw_method_ = kDrawUnified;
+    status = HWC2::Error::Unsupported;
+  } else {
+    // Driver and client supports unified draw.
+    draw_method_ = kDrawUnifiedWithGPUTarget;
+    status = HWC2::Error::None;
+  }
+
+  DLOGI("method: %d", draw_method_);
+  display_intf_->SetDrawMethod(draw_method_);
+  
+  draw_method_set_ = true;
+
+  return status;
 }
 
 }  // namespace sdm

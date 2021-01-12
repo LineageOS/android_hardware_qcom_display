@@ -1176,7 +1176,8 @@ Return<void> QtiComposerClient::getLayerGenericMetadataKeys(
 
 Return<Error> QtiComposerClient::tryDrawMethod(uint64_t display,
     IQtiComposerClient::DrawMethod drawMethod) {
-  return Error::UNSUPPORTED;
+  auto error = hwc_session_->TryDrawMethod(display, drawMethod);
+  return static_cast<Error>(error);
 }
 
 QtiComposerClient::CommandReader::CommandReader(QtiComposerClient& client)
@@ -1400,16 +1401,18 @@ bool QtiComposerClient::CommandReader::parseSetClientTarget(uint16_t length) {
 }
 
 bool QtiComposerClient::CommandReader::parseSetClientTarget_3_1(uint16_t length) {
-
   bool useCache = true;
   auto slot = read();
   buffer_handle_t clientTarget;
   shared_ptr<Fence> fence = nullptr;
   readFence(&fence, "fbt");
+  auto dataspace = readSigned();
+  hwc_region region = {};
   auto err = lookupBuffer(BufferCache::CLIENT_TARGETS, slot, useCache, clientTarget, &clientTarget);
   if (err == Error::NONE) {
-//    auto error = mClient.hwc_session_->SetClientTarget(mDisplay, clientTarget, fence);
- //   err = static_cast<Error>(error);
+    auto error = mClient.hwc_session_->SetClientTarget_4_0(mDisplay, clientTarget, fence,
+        dataspace, region);
+    err = static_cast<Error>(error);
     auto updateBufErr = updateBuffer(BufferCache::CLIENT_TARGETS, slot,
         useCache, clientTarget);
     if (err == Error::NONE) {
@@ -1852,6 +1855,12 @@ bool QtiComposerClient::CommandReader::parseSetLayerType(uint16_t length) {
 bool QtiComposerClient::CommandReader::parseSetLayerFlag(uint16_t length) {
   if (length != CommandWriter::kSetLayerFlagLength) {
     return false;
+  }
+
+  auto err = mClient.hwc_session_->SetLayerFlag(mDisplay, mLayer,
+                                                static_cast<IQtiComposerClient::LayerFlag>(read()));
+  if (static_cast<Error>(err) != Error::NONE) {
+     mWriter.setError(getCommandLoc(), static_cast<Error>(err));
   }
 
   return true;

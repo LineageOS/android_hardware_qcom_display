@@ -131,6 +131,9 @@ HWC2::Error HWCDisplayVirtualDPU::SetOutputBuffer(buffer_handle_t buf,
 }
 
 HWC2::Error HWCDisplayVirtualDPU::PreValidateDisplay(bool *exit_validate) {
+  // Draw method gets set as part of first commit.
+  SetDrawMethod();
+
   if (NeedsGPUBypass()) {
     MarkLayersForGPUBypass();
     *exit_validate = true;

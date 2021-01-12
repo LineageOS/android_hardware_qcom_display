@@ -41,6 +41,7 @@
 #include "hwc_display_event_handler.h"
 #include "hwc_layers.h"
 #include "hwc_buffer_sync_handler.h"
+#include <vendor/qti/hardware/display/composer/3.1/IQtiComposerClient.h>
 
 using android::hardware::graphics::common::V1_2::ColorMode;
 using android::hardware::graphics::common::V1_1::Dataspace;
@@ -305,6 +306,8 @@ class HWCDisplay : public DisplayEventHandler {
   }
   virtual HWC2::Error SetClientTarget(buffer_handle_t target, shared_ptr<Fence> acquire_fence,
                                       int32_t dataspace, hwc_region_t damage);
+  virtual HWC2::Error SetClientTarget_4_0(buffer_handle_t target, shared_ptr<Fence> acquire_fence,
+                                          int32_t dataspace, hwc_region_t damage);
   virtual HWC2::Error SetColorMode(ColorMode mode) { return HWC2::Error::Unsupported; }
   virtual HWC2::Error SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
     return HWC2::Error::Unsupported;
@@ -443,6 +446,7 @@ class HWCDisplay : public DisplayEventHandler {
                                       uint32_t *out_num_types, uint32_t *out_num_requests,
                                       bool *needs_commit);
   virtual HWC2::Error PreValidateDisplay(bool *exit_validate) { return HWC2::Error::None; }
+  HWC2::Error TryDrawMethod(IQtiComposerClient::DrawMethod client_drawMethod);
 
  protected:
   static uint32_t throttling_refresh_rate_;
@@ -504,6 +508,7 @@ class HWCDisplay : public DisplayEventHandler {
   void UpdateActiveConfig();
   void DumpInputBuffers(void);
   void RetrieveFences(shared_ptr<Fence> *out_retire_fence);
+  void SetDrawMethod();
 
   bool layer_stack_invalid_ = true;
   CoreInterface *core_intf_ = nullptr;
@@ -592,6 +597,8 @@ class HWCDisplay : public DisplayEventHandler {
   bool game_supported_ = false;
   uint64_t elapse_timestamp_ = 0;
   int async_power_mode_ = 0;
+  bool draw_method_set_ = false;
+  DisplayDrawMethod draw_method_ = kDrawDefault;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {
