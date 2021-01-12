@@ -302,7 +302,6 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
   }
 
   status = PrepareLayerStack(out_num_types, out_num_requests);
-  SetCpuPerfHintLargeCompCycle();
   pending_commit_ = true;
   return status;
 }

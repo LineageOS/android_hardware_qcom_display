@@ -237,6 +237,7 @@ class HWCDisplay : public DisplayEventHandler {
     return false;
   }
 
+  virtual void SetCpuPerfHintLargeCompCycle() {};
   // Display Configurations
   static uint32_t GetThrottlingRefreshRate() { return HWCDisplay::throttling_refresh_rate_; }
   static void SetThrottlingRefreshRate(uint32_t newRefreshRate)
