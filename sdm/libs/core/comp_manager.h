@@ -63,7 +63,7 @@ class CompManager {
   DisplayError ReConfigure(Handle display_ctx, HWLayers *hw_layers);
   DisplayError PostCommit(Handle display_ctx, HWLayers *hw_layers);
   void Purge(Handle display_ctx);
-  DisplayError SetIdleTimeoutMs(Handle display_ctx, uint32_t active_ms);
+  DisplayError SetIdleTimeoutMs(Handle display_ctx, uint32_t active_ms, uint32_t inactive_ms);
   void ProcessIdleTimeout(Handle display_ctx);
   void ProcessThermalEvent(Handle display_ctx, int64_t thermal_level);
   void ProcessIdlePowerCollapse(Handle display_ctx);

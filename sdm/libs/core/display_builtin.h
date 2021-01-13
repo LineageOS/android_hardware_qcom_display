@@ -118,7 +118,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError DisablePartialUpdateOneFrame() override;
   DisplayError SetDisplayState(DisplayState state, bool teardown,
                                shared_ptr<Fence> *release_fence) override;
-  void SetIdleTimeoutMs(uint32_t active_ms) override;
+  void SetIdleTimeoutMs(uint32_t active_ms, uint32_t inactive_ms) override;
   DisplayError SetDisplayMode(uint32_t mode) override;
   DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate,
                                    uint32_t *max_refresh_rate) override;

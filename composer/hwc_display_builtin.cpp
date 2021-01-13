@@ -971,8 +971,8 @@ uint32_t HWCDisplayBuiltIn::GetOptimalRefreshRate(bool one_updating_layer) {
   return active_refresh_rate_;
 }
 
-void HWCDisplayBuiltIn::SetIdleTimeoutMs(uint32_t timeout_ms) {
-  display_intf_->SetIdleTimeoutMs(timeout_ms);
+void HWCDisplayBuiltIn::SetIdleTimeoutMs(uint32_t timeout_ms, uint32_t inactive_ms) {
+  display_intf_->SetIdleTimeoutMs(timeout_ms, inactive_ms);
   validated_ = false;
 }
 

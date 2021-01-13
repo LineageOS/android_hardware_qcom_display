@@ -45,6 +45,7 @@ case "$target" in
         setprop vendor.display.target.version 1
         setprop vendor.display.enable_posted_start_dyn 2
         setprop vendor.display.enable_perf_hint_large_comp_cycle 1
+        setprop vendor.display.enable_allow_idle_fallback 1
         ;;
         450)
         # Set property for shima
@@ -52,6 +53,11 @@ case "$target" in
         setprop vendor.display.enable_perf_hint_large_comp_cycle 1
         setprop vendor.display.enable_posted_start_dyn 1
         setprop vendor.display.enable_qsync_idle 1
+        setprop vendor.display.enable_allow_idle_fallback 1
+        ;;
+        475)
+        # Set property for Yupik
+        setprop vendor.display.enable_posted_start_dyn 2
         ;;
     esac
     ;;
@@ -62,5 +68,6 @@ case "$target" in
     setprop vendor.display.disable_rotator_ubwc 1
     setprop vendor.display.enable_perf_hint_large_comp_cycle 0
     setprop vendor.display.enable_posted_start_dyn 1
+    setprop vendor.display.enable_allow_idle_fallback 1
     ;;
 esac
