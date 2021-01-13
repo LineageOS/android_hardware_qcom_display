@@ -135,7 +135,7 @@ DisplayError HWTVDRM::SetDisplayAttributes(uint32_t index) {
 }
 
 DisplayError HWTVDRM::GetConfigIndex(char *mode, uint32_t *index) {
-  uint32_t width = 0, height = 0, fps = 0, format = 0;
+  uint32_t width = 0, height = 0, fps = 0;
   std::string str(mode);
 
   // mode should be in width:height:fps:format
@@ -146,22 +146,14 @@ DisplayError HWTVDRM::GetConfigIndex(char *mode, uint32_t *index) {
     std::string str3 = str.substr(str.find(':') + 1);
     fps = UINT32(stoi(str3.substr(str3.find(':')  + 1)));
     std::string str4 = str3.substr(str3.find(':') + 1);
-    format = UINT32(stoi(str4.substr(str4.find(':') + 1)));
   }
 
   for (size_t idex = 0; idex < connector_info_.modes.size(); idex ++) {
     if ((height == connector_info_.modes[idex].mode.vdisplay) &&
         (width == connector_info_.modes[idex].mode.hdisplay) &&
         (fps == connector_info_.modes[idex].mode.vrefresh)) {
-      if ((format >> 1) & (connector_info_.modes[idex].mode.flags >> kBitYUV)) {
         *index = UINT32(idex);
         break;
-      }
-
-      if (format & (connector_info_.modes[idex].mode.flags >> kBitRGB)) {
-        *index = UINT32(idex);
-        break;
-      }
     }
   }
 
