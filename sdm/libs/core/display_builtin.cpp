@@ -1117,6 +1117,7 @@ std::string DisplayBuiltIn::Dump() {
   uint32_t active_index = 0;
   uint32_t num_modes = 0;
   std::ostringstream os;
+  char capabilities[16];
 
   hw_intf_->GetNumDisplayAttributes(&num_modes);
   hw_intf_->GetActiveConfig(&active_index);
@@ -1148,6 +1149,9 @@ std::string DisplayBuiltIn::Dump() {
      << " cur:" << display_attributes_.fps;
   os << " TransferTime: " << hw_panel_info_.transfer_time_us << "us";
   os << " AllowedModeSwitch: " << hw_panel_info_.allowed_mode_switch;
+  os << " PanelModeCaps: ";
+  snprintf(capabilities, sizeof(capabilities), "0x%x", hw_panel_info_.panel_mode_caps);
+  os << capabilities;
   os << " MaxBrightness:" << hw_panel_info_.panel_max_brightness;
   os << "\n Display WxH: " << display_attributes_.x_pixels << "x" << display_attributes_.y_pixels;
   os << " MixerWxH: " << mixer_attributes_.width << "x" << mixer_attributes_.height;
