@@ -65,7 +65,7 @@ static uint64_t GetTimeInMs(struct timespec ts) {
 }
 
 DisplayError DisplayBuiltIn::Init() {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
 
   DisplayError error = HWInterface::Create(display_id_, kBuiltIn, hw_info_intf_,
                                            buffer_allocator_, &hw_intf_);
@@ -165,7 +165,7 @@ DisplayError DisplayBuiltIn::Init() {
 
 DisplayError DisplayBuiltIn::Deinit() {
   {
-    lock_guard<recursive_mutex> obj(recursive_mutex_);
+    ClientLock lock(disp_mutex_);
 
     dpps_info_.Deinit();
   }
@@ -210,7 +210,7 @@ DisplayError DisplayBuiltIn::CreatePanelfeatures() {
 }
 
 DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
   uint32_t new_mixer_width = 0;
   uint32_t new_mixer_height = 0;
@@ -377,7 +377,7 @@ DisplayError DisplayBuiltIn::SetupPanelfeatures() {
 }
 
 DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
   uint32_t app_layer_count = disp_layer_stack_.info.app_layer_count;
   HWDisplayMode panel_mode = hw_panel_info_.mode;
@@ -527,7 +527,7 @@ void DisplayBuiltIn::UpdateDisplayModeParams() {
 
 DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
                                              shared_ptr<Fence> *release_fence) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
   HWDisplayMode panel_mode = hw_panel_info_.mode;
 
@@ -565,7 +565,7 @@ DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
 }
 
 void DisplayBuiltIn::SetIdleTimeoutMs(uint32_t active_ms, uint32_t inactive_ms) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, active_ms, inactive_ms);
 }
 
@@ -574,7 +574,7 @@ DisplayError DisplayBuiltIn::SetDisplayMode(uint32_t mode) {
 
   // Limit scope of mutex to this block
   {
-    lock_guard<recursive_mutex> obj(recursive_mutex_);
+    ClientLock lock(disp_mutex_);
     HWDisplayMode hw_display_mode = static_cast<HWDisplayMode>(mode);
     uint32_t pending = 0;
 
@@ -664,7 +664,7 @@ DisplayError DisplayBuiltIn::SetPanelBrightness(float brightness) {
 
 DisplayError DisplayBuiltIn::GetRefreshRateRange(uint32_t *min_refresh_rate,
                                                  uint32_t *max_refresh_rate) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
 
   if (hw_panel_info_.min_fps && hw_panel_info_.max_fps) {
@@ -677,10 +677,9 @@ DisplayError DisplayBuiltIn::GetRefreshRateRange(uint32_t *min_refresh_rate,
   return error;
 }
 
-
 DisplayError DisplayBuiltIn::SetRefreshRate(uint32_t refresh_rate, bool final_rate,
                                             bool idle_screen) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
 
   if (!active_ || !hw_panel_info_.dynamic_fps || qsync_mode_ != kQSyncModeNone ||
       disable_dyn_fps_) {
@@ -783,7 +782,7 @@ void DisplayBuiltIn::IdleTimeout() {
     event_handler_->Refresh();
     hw_intf_->EnableSelfRefresh();
     if (!enhance_idle_time_) {
-      lock_guard<recursive_mutex> obj(recursive_mutex_);
+      ClientLock lock(disp_mutex_);
       comp_manager_->ProcessIdleTimeout(display_comp_ctx_);
     }
     hw_intf_->EnableSelfRefresh();
@@ -791,20 +790,20 @@ void DisplayBuiltIn::IdleTimeout() {
 }
 
 void DisplayBuiltIn::PingPongTimeout() {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   hw_intf_->DumpDebugData();
 }
 
 void DisplayBuiltIn::ThermalEvent(int64_t thermal_level) {
   event_handler_->HandleEvent(kThermalEvent);
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   comp_manager_->ProcessThermalEvent(display_comp_ctx_, thermal_level);
 }
 
 void DisplayBuiltIn::IdlePowerCollapse() {
   if (hw_panel_info_.mode == kModeCommand) {
     event_handler_->HandleEvent(kIdlePowerCollapse);
-    lock_guard<recursive_mutex> obj(recursive_mutex_);
+    ClientLock lock(disp_mutex_);
     comp_manager_->ProcessIdlePowerCollapse(display_comp_ctx_);
   }
 }
@@ -817,7 +816,7 @@ DisplayError DisplayBuiltIn::ClearLUTs() {
 void DisplayBuiltIn::PanelDead() {
   event_handler_->HandleEvent(kPanelDeadEvent);
   event_handler_->Refresh();
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   {
     reset_panel_ = true;
   }
@@ -902,7 +901,7 @@ DisplayError DisplayBuiltIn::GetPanelMaxBrightness(uint32_t *max_brightness_leve
 }
 
 DisplayError DisplayBuiltIn::ControlPartialUpdate(bool enable, uint32_t *pending) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   if (!pending) {
     return kErrorParameters;
   }
@@ -931,7 +930,7 @@ DisplayError DisplayBuiltIn::ControlPartialUpdate(bool enable, uint32_t *pending
 }
 
 DisplayError DisplayBuiltIn::DisablePartialUpdateOneFrame() {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   disable_pu_one_frame_ = true;
   needs_validate_on_pu_enable_ = true;
 
@@ -952,7 +951,7 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
         break;
       }
       {
-        lock_guard<recursive_mutex> obj(recursive_mutex_);
+        ClientLock lock(disp_mutex_);
         error = hw_intf_->SetDppsFeature(payload, size);
       }
       break;
@@ -980,7 +979,7 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
       event_handler_->HandleEvent(kSyncInvalidateDisplay);
       event_handler_->Refresh();
       {
-         lock_guard<recursive_mutex> obj(recursive_mutex_);
+         ClientLock lock(disp_mutex_);
          dpps_pu_nofiy_pending_ = true;
       }
       ret = dpps_pu_lock_.WaitFinite(kPuTimeOutMs);
@@ -997,7 +996,7 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
         break;
       }
       {
-        lock_guard<recursive_mutex> obj(recursive_mutex_);
+        ClientLock lock(disp_mutex_);
         commit_event_enabled_ = *(reinterpret_cast<bool *>(payload));
       }
       break;
@@ -1028,7 +1027,7 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
 }
 
 DisplayError DisplayBuiltIn::SetDisplayDppsAdROI(void *payload) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   DisplayError err = kErrorNone;
 
   err = hw_intf_->SetDisplayDppsAdROI(payload);
@@ -1039,14 +1038,14 @@ DisplayError DisplayBuiltIn::SetDisplayDppsAdROI(void *payload) {
 }
 
 DisplayError DisplayBuiltIn::SetFrameTriggerMode(FrameTriggerMode mode) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
 
   trigger_mode_debug_ = mode;
   return kErrorNone;
 }
 
 DisplayError DisplayBuiltIn::GetStcColorModes(snapdragoncolor::ColorModeList *mode_list) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   if (!mode_list) {
     return kErrorParameters;
   }
@@ -1060,7 +1059,7 @@ DisplayError DisplayBuiltIn::GetStcColorModes(snapdragoncolor::ColorModeList *mo
 }
 
 DisplayError DisplayBuiltIn::SetStcColorMode(const snapdragoncolor::ColorMode &color_mode) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   if (!color_mgr_) {
     return kErrorNotSupported;
   }
@@ -1099,7 +1098,7 @@ DisplayError DisplayBuiltIn::SetStcColorMode(const snapdragoncolor::ColorMode &c
 }
 
 DisplayError DisplayBuiltIn::NotifyDisplayCalibrationMode(bool in_calibration) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   if (!color_mgr_) {
     return kErrorNotSupported;
   }
@@ -1113,7 +1112,7 @@ DisplayError DisplayBuiltIn::NotifyDisplayCalibrationMode(bool in_calibration) {
 }
 
 std::string DisplayBuiltIn::Dump() {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   HWDisplayAttributes attrib;
   uint32_t active_index = 0;
   uint32_t num_modes = 0;
@@ -1409,7 +1408,7 @@ DisplayError DisplayBuiltIn::GetQSyncMode(QSyncMode *qsync_mode) {
 }
 
 DisplayError DisplayBuiltIn::SetQSyncMode(QSyncMode qsync_mode) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
 
   if (!hw_panel_info_.qsync_support || first_cycle_) {
     DLOGE("Failed: qsync_support: %d first_cycle %d", hw_panel_info_.qsync_support,
@@ -1431,7 +1430,7 @@ DisplayError DisplayBuiltIn::SetQSyncMode(QSyncMode qsync_mode) {
 }
 
 DisplayError DisplayBuiltIn::ControlIdlePowerCollapse(bool enable, bool synchronous) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   if (!active_) {
     DLOGW("Invalid display state = %d. Panel must be on.", state_);
     return kErrorPermission;
@@ -1444,7 +1443,7 @@ DisplayError DisplayBuiltIn::ControlIdlePowerCollapse(bool enable, bool synchron
 }
 
 DisplayError DisplayBuiltIn::GetSupportedDSIClock(std::vector<uint64_t> *bitclk_rates) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   if (!hw_panel_info_.dyn_bitclk_support) {
     return kErrorNotSupported;
   }
@@ -1454,7 +1453,7 @@ DisplayError DisplayBuiltIn::GetSupportedDSIClock(std::vector<uint64_t> *bitclk_
 }
 
 DisplayError DisplayBuiltIn::SetDynamicDSIClock(uint64_t bit_clk_rate) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   if (!active_) {
     DLOGW("Invalid display state = %d. Panel must be on.", state_);
     return kErrorNotSupported;
@@ -1477,7 +1476,7 @@ DisplayError DisplayBuiltIn::SetDynamicDSIClock(uint64_t bit_clk_rate) {
 }
 
 DisplayError DisplayBuiltIn::GetDynamicDSIClock(uint64_t *bit_clk_rate) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   if (!hw_panel_info_.dyn_bitclk_support) {
     return kErrorNotSupported;
   }
@@ -1526,7 +1525,7 @@ DisplayError DisplayBuiltIn::GetRefreshRate(uint32_t *refresh_rate) {
 }
 
 DisplayError DisplayBuiltIn::SetBLScale(uint32_t level) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
 
   DisplayError err = hw_intf_->SetBLScale(level);
   if (err) {
@@ -1630,7 +1629,7 @@ DisplayError DisplayBuiltIn::SetActiveConfig(uint32_t index) {
 }
 
 DisplayError DisplayBuiltIn::ReconfigureDisplay() {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
   HWDisplayAttributes display_attributes;
   HWMixerAttributes mixer_attributes;
@@ -1760,7 +1759,7 @@ PrimariesTransfer DisplayBuiltIn::GetBlendSpaceFromStcColorMode(
 }
 
 DisplayError DisplayBuiltIn::GetConfig(DisplayConfigFixedInfo *fixed_info) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   fixed_info->is_cmdmode = (hw_panel_info_.mode == kModeCommand);
 
   HWResourceInfo hw_resource_info = HWResourceInfo();

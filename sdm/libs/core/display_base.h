@@ -34,6 +34,8 @@
 
 #include <map>
 #include <mutex>
+#include <thread>
+#include <condition_variable>  // NOLINT
 #include <string>
 #include <vector>
 
@@ -55,11 +57,11 @@ class DisplayBase : public DisplayInterface {
   DisplayBase(int32_t display_id, DisplayType display_type, DisplayEventHandler *event_handler,
               HWDeviceType hw_device_type, BufferAllocator *buffer_allocator,
               CompManager *comp_manager, HWInfoInterface *hw_info_intf);
-  virtual ~DisplayBase() { }
+  virtual ~DisplayBase() {}
   virtual DisplayError Init();
   virtual DisplayError Deinit();
-  DisplayError Prepare(LayerStack *layer_stack);
-  DisplayError Commit(LayerStack *layer_stack);
+  virtual DisplayError Prepare(LayerStack *layer_stack);
+  virtual DisplayError Commit(LayerStack *layer_stack);
   virtual DisplayError Flush(LayerStack *layer_stack);
   virtual DisplayError GetDisplayState(DisplayState *state);
   virtual DisplayError GetNumVariableInfoConfigs(uint32_t *count);
@@ -178,6 +180,39 @@ class DisplayBase : public DisplayInterface {
   }
 
  protected:
+  struct DisplayMutex {
+    std::recursive_mutex client_mutex;
+    std::condition_variable_any client_cv;
+    std::recursive_mutex worker_mutex;
+    std::condition_variable_any worker_cv;
+    bool worker_busy = false;
+    bool worker_exit = false;
+  };
+
+  class ClientLock {
+   public:
+    explicit ClientLock(DisplayMutex &disp_mutex) : disp_mutex_(disp_mutex) {
+      disp_mutex_.client_mutex.lock();
+      disp_mutex_.worker_mutex.lock();
+      while (disp_mutex_.worker_busy) {
+        disp_mutex_.worker_cv.wait(disp_mutex_.worker_mutex);
+      }
+    }
+
+    ~ClientLock() {
+      disp_mutex_.worker_mutex.unlock();
+      disp_mutex_.client_mutex.unlock();
+    }
+
+    void NotifyWorker() {
+      disp_mutex_.worker_busy = true;
+      disp_mutex_.worker_cv.notify_one();
+    }
+
+   private:
+    DisplayMutex &disp_mutex_;
+  };
+
   const char *kBt2020Pq = "bt2020_pq";
   const char *kBt2020Hlg = "bt2020_hlg";
   const char *kDisplayBt2020 = "display_bt2020";
@@ -216,7 +251,7 @@ class DisplayBase : public DisplayInterface {
   DisplayError GetPendingDisplayState(DisplayState *disp_state);
   void SetPendingPowerState(DisplayState state);
 
-  recursive_mutex recursive_mutex_;
+  DisplayMutex disp_mutex_;
   int32_t display_id_ = -1;
   DisplayType display_type_;
   DisplayEventHandler *event_handler_ = NULL;

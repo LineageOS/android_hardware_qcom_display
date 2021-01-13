@@ -47,7 +47,7 @@ DisplayVirtual::DisplayVirtual(int32_t display_id, DisplayEventHandler *event_ha
 }
 
 DisplayError DisplayVirtual::Init() {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
 
   DisplayError error = HWInterface::Create(display_id_, kVirtual, hw_info_intf_,
                                            buffer_allocator_, &hw_intf_);
@@ -75,25 +75,25 @@ DisplayError DisplayVirtual::Init() {
 }
 
 DisplayError DisplayVirtual::GetNumVariableInfoConfigs(uint32_t *count) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   *count = 1;
   return kErrorNone;
 }
 
 DisplayError DisplayVirtual::GetConfig(uint32_t index, DisplayConfigVariableInfo *variable_info) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   *variable_info = display_attributes_;
   return kErrorNone;
 }
 
 DisplayError DisplayVirtual::GetActiveConfig(uint32_t *index) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
   *index = 0;
   return kErrorNone;
 }
 
 DisplayError DisplayVirtual::SetActiveConfig(DisplayConfigVariableInfo *variable_info) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
 
   if (!variable_info) {
     return kErrorParameters;
@@ -164,7 +164,7 @@ DisplayError DisplayVirtual::SetActiveConfig(DisplayConfigVariableInfo *variable
 }
 
 DisplayError DisplayVirtual::Prepare(LayerStack *layer_stack) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
 
   // Clean display layer stack for reuse.
   disp_layer_stack_ = DispLayerStack();
@@ -173,7 +173,7 @@ DisplayError DisplayVirtual::Prepare(LayerStack *layer_stack) {
 }
 
 DisplayError DisplayVirtual::GetColorModeCount(uint32_t *mode_count) {
-  lock_guard<recursive_mutex> obj(recursive_mutex_);
+  ClientLock lock(disp_mutex_);
 
   // Color Manager isn't supported for virtual displays.
   *mode_count = 1;
