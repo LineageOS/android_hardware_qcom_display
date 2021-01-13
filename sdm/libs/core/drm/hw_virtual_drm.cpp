@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -128,15 +128,11 @@ DisplayError HWVirtualDRM::SetWbConfigs(const HWDisplayAttributes &display_attri
   return kErrorNone;
 }
 
-DisplayError HWVirtualDRM::Commit(HWLayers *hw_layers) {
-  if (!hw_layers->info.stack) {
-    return kErrorNone;
-  }
-
-  LayerBuffer *output_buffer = hw_layers->info.stack->output_buffer;
+DisplayError HWVirtualDRM::Commit(HWLayersInfo *hw_layers_info) {
+  LayerBuffer *output_buffer = hw_layers_info->output_buffer;
   DisplayError err = kErrorNone;
 
-  registry_.Register(hw_layers);
+  registry_.Register(hw_layers_info);
   registry_.MapOutputBufferToFbId(output_buffer);
   uint32_t fb_id = registry_.GetOutputFbId(output_buffer->handle_id);
 
@@ -144,7 +140,7 @@ DisplayError HWVirtualDRM::Commit(HWLayers *hw_layers) {
   ConfigureWbConnectorDestRect();
   ConfigureWbConnectorSecureMode(output_buffer->flags.secure);
 
-  err = HWDeviceDRM::AtomicCommit(hw_layers);
+  err = HWDeviceDRM::AtomicCommit(hw_layers_info);
   if (err != kErrorNone) {
     DLOGE("Atomic commit failed for crtc_id %d conn_id %d", token_.crtc_id, token_.conn_id);
   }
@@ -152,9 +148,9 @@ DisplayError HWVirtualDRM::Commit(HWLayers *hw_layers) {
   return(err);
 }
 
-DisplayError HWVirtualDRM::Flush(HWLayers *hw_layers) {
+DisplayError HWVirtualDRM::Flush(HWLayersInfo *hw_layers_info) {
   DisplayError err = kErrorNone;
-  err = Commit(hw_layers);
+  err = Commit(hw_layers_info);
 
   if (err != kErrorNone) {
     return err;
@@ -163,8 +159,8 @@ DisplayError HWVirtualDRM::Flush(HWLayers *hw_layers) {
   return kErrorNone;
 }
 
-DisplayError HWVirtualDRM::Validate(HWLayers *hw_layers) {
-  LayerBuffer *output_buffer = hw_layers->info.stack->output_buffer;
+DisplayError HWVirtualDRM::Validate(HWLayersInfo *hw_layers_info) {
+  LayerBuffer *output_buffer = hw_layers_info->output_buffer;
 
   registry_.MapOutputBufferToFbId(output_buffer);
   uint32_t fb_id = registry_.GetOutputFbId(output_buffer->handle_id);
@@ -173,7 +169,7 @@ DisplayError HWVirtualDRM::Validate(HWLayers *hw_layers) {
   ConfigureWbConnectorDestRect();
   ConfigureWbConnectorSecureMode(output_buffer->flags.secure);
 
-  return HWDeviceDRM::Validate(hw_layers);
+  return HWDeviceDRM::Validate(hw_layers_info);
 }
 
 DisplayError HWVirtualDRM::SetDisplayAttributes(const HWDisplayAttributes &display_attributes) {

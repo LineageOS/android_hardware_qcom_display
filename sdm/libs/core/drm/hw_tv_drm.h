@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -46,14 +46,14 @@ class HWTVDRM : public HWDeviceDRM {
   virtual DisplayError Doze(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
   virtual DisplayError DozeSuspend(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
   virtual DisplayError Standby();
-  virtual DisplayError Commit(HWLayers *hw_layers);
+  virtual DisplayError Commit(HWLayersInfo *hw_layers_info);
   virtual void PopulateHWPanelInfo();
   virtual DisplayError GetDefaultConfig(uint32_t *default_config);
   virtual DisplayError PowerOn(const HWQosData &qos_data, shared_ptr<Fence> *release_fence);
   virtual DisplayError Deinit();
 
  private:
-  DisplayError UpdateHDRMetaData(HWLayers *hw_layers);
+  DisplayError UpdateHDRMetaData(HWLayersInfo *hw_layers_info);
   void DumpHDRMetaData(HWHDRLayerInfo::HDROperation operation);
   void InitMaxHDRMetaData();
 

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -50,18 +50,18 @@ class ResourceDefault : public ResourceInterface {
                                           const HWPanelInfo &hw_panel_info,
                                           const HWMixerAttributes &mixer_attributes);
   virtual DisplayError Start(Handle display_ctx);
-  virtual DisplayError Stop(Handle display_ctx, HWLayers *hw_layers);
-  virtual DisplayError Prepare(Handle display_ctx, HWLayers *hw_layers);
-  virtual DisplayError PostPrepare(Handle display_ctx, HWLayers *hw_layers);
-  virtual DisplayError Commit(Handle display_ctx, HWLayers *hw_layers);
-  virtual DisplayError PostCommit(Handle display_ctx, HWLayers *hw_layers);
+  virtual DisplayError Stop(Handle display_ctx, DispLayerStack *disp_layer_stack);
+  virtual DisplayError Prepare(Handle display_ctx, DispLayerStack *disp_layer_stack);
+  virtual DisplayError PostPrepare(Handle display_ctx, DispLayerStack *disp_layer_stack);
+  virtual DisplayError Commit(Handle display_ctx, DispLayerStack *disp_layer_stack);
+  virtual DisplayError PostCommit(Handle display_ctx, DispLayerStack *disp_layer_stack);
   virtual void Purge(Handle display_ctx);
   virtual DisplayError SetMaxMixerStages(Handle display_ctx, uint32_t max_mixer_stages);
   virtual DisplayError ValidateScaling(const LayerRect &crop, const LayerRect &dst, bool rotate90,
                                        BufferLayout layout, bool use_rotator_downscale);
   DisplayError ValidateCursorConfig(Handle display_ctx, const Layer *layer, bool is_top);
-  DisplayError ValidateAndSetCursorPosition(Handle display_ctx, HWLayers *hw_layers, int x, int y,
-                                            DisplayConfigVariableInfo *fb_config);
+  DisplayError ValidateAndSetCursorPosition(Handle display_ctx, DispLayerStack *disp_layer_stack,
+                                            int x, int y, DisplayConfigVariableInfo *fb_config);
   DisplayError SetMaxBandwidthMode(HWBwModes mode);
   virtual DisplayError SetDetailEnhancerData(Handle display_ctx,
                                              const DisplayDetailEnhancerData &de_data);
@@ -122,7 +122,8 @@ class ResourceDefault : public ResourceInterface {
   uint32_t SearchPipe(HWBlockType hw_block_type, SourcePipe *src_pipes, uint32_t num_pipe);
   uint32_t GetPipe(HWBlockType hw_block_type, bool need_scale);
   bool IsScalingNeeded(const HWPipeInfo *pipe_info);
-  DisplayError Config(DisplayResourceContext *display_resource_ctx, HWLayers *hw_layers);
+  DisplayError Config(DisplayResourceContext *display_resource_ctx,
+                      DispLayerStack *disp_layer_stack);
   DisplayError DisplaySplitConfig(DisplayResourceContext *display_resource_ctx,
                                  const LayerRect &src_rect, const LayerRect &dst_rect,
                                  HWLayerConfig *layer_config);

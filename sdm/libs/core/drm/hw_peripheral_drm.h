@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -61,9 +61,9 @@ class HWPeripheralDRM : public HWDeviceDRM, public PanelFeaturePropertyIntf {
 
  protected:
   virtual DisplayError Init();
-  virtual DisplayError Validate(HWLayers *hw_layers);
-  virtual DisplayError Commit(HWLayers *hw_layers);
-  virtual DisplayError Flush(HWLayers *hw_layers);
+  virtual DisplayError Validate(HWLayersInfo *hw_layers_info);
+  virtual DisplayError Commit(HWLayersInfo *hw_layers_info);
+  virtual DisplayError Flush(HWLayersInfo *hw_layers_info);
   virtual DisplayError SetDppsFeature(void *payload, size_t size);
   virtual DisplayError GetDppsFeatureInfo(void *payload, size_t size);
   virtual DisplayError HandleSecureEvent(SecureEvent secure_event, const HWQosData &qos_data);
@@ -93,7 +93,7 @@ class HWPeripheralDRM : public HWDeviceDRM, public PanelFeaturePropertyIntf {
   bool SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info, bool validate,
                                 int64_t *release_fence_fd);
   DisplayError TeardownConcurrentWriteback(void);
-  void ConfigureConcurrentWriteback(LayerStack *stack);
+  void ConfigureConcurrentWriteback(const HWLayersInfo &hw_layer_info);
   void PostCommitConcurrentWriteback(LayerBuffer *output_buffer);
   void CreatePanelFeaturePropertyMap();
   void SetIdlePCState() {

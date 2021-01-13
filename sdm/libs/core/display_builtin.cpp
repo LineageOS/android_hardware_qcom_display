@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -230,8 +230,8 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
     }
   }
 
-  // Clean hw layers for reuse.
-  hw_layers_ = HWLayers();
+  // Clean display layer stack for reuse.
+  disp_layer_stack_ = DispLayerStack();
 
   UpdateQsyncMode();
 
@@ -258,9 +258,10 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
 
   // Cache the Frame ROI.
   if (error == kErrorNone) {
-    if (hw_layers_.info.left_frame_roi.size() && hw_layers_.info.right_frame_roi.size()) {
-      left_frame_roi_ = hw_layers_.info.left_frame_roi.at(0);
-      right_frame_roi_ = hw_layers_.info.right_frame_roi.at(0);
+    if (disp_layer_stack_.info.left_frame_roi.size() &&
+        disp_layer_stack_.info.right_frame_roi.size()) {
+      left_frame_roi_ = disp_layer_stack_.info.left_frame_roi.at(0);
+      right_frame_roi_ = disp_layer_stack_.info.right_frame_roi.at(0);
     }
   }
 
@@ -283,10 +284,10 @@ void DisplayBuiltIn::UpdateQsyncMode() {
     DLOGV_IF(kTagDisplay, "Restoring client's qsync mode: %d", mode);
   }
 
-  hw_layers_.hw_avr_info.update = (mode != active_qsync_mode_) || needs_avr_update_;
-  hw_layers_.hw_avr_info.mode = GetAvrMode(mode);
+  disp_layer_stack_.info.hw_avr_info.update = (mode != active_qsync_mode_) || needs_avr_update_;
+  disp_layer_stack_.info.hw_avr_info.mode = GetAvrMode(mode);
 
-  DLOGV_IF(kTagDisplay, "update: %d mode: %d", hw_layers_.hw_avr_info.update, mode);
+  DLOGV_IF(kTagDisplay, "update: %d mode: %d", disp_layer_stack_.info.hw_avr_info.update, mode);
 
   // Store active mde.
   active_qsync_mode_ = mode;
@@ -378,7 +379,7 @@ DisplayError DisplayBuiltIn::SetupPanelfeatures() {
 DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
-  uint32_t app_layer_count = hw_layers_.info.app_layer_count;
+  uint32_t app_layer_count = disp_layer_stack_.info.app_layer_count;
   HWDisplayMode panel_mode = hw_panel_info_.mode;
 
   DTRACE_SCOPED();
@@ -459,7 +460,7 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
   }
 
   clock_gettime(CLOCK_MONOTONIC, &idle_timer_start_);
-  int idle_time_ms = hw_layers_.info.set_idle_time_ms;
+  int idle_time_ms = disp_layer_stack_.info.set_idle_time_ms;
   if (idle_time_ms >= 0) {
     hw_intf_->SetIdleTimeoutMs(UINT32(idle_time_ms));
     idle_time_ms_ = idle_time_ms;
@@ -1174,8 +1175,8 @@ std::string DisplayBuiltIn::Dump() {
      << (curr_dynamic_range == kSdrType ? " SDR" : " HDR");
 
   uint32_t num_hw_layers = 0;
-  if (hw_layers_.info.stack) {
-    num_hw_layers = UINT32(hw_layers_.info.hw_layers.size());
+  if (disp_layer_stack_.stack) {
+    num_hw_layers = UINT32(disp_layer_stack_.info.hw_layers.size());
   }
 
   if (num_hw_layers == 0) {
@@ -1183,12 +1184,12 @@ std::string DisplayBuiltIn::Dump() {
     return os.str();
   }
 
-  LayerBuffer *out_buffer = hw_layers_.info.stack->output_buffer;
+  LayerBuffer *out_buffer = disp_layer_stack_.stack->output_buffer;
   if (out_buffer) {
     os << "\n Output buffer res: " << out_buffer->width << "x" << out_buffer->height
        << " format: " << GetFormatString(out_buffer->format);
   }
-  HWLayersInfo &layer_info = hw_layers_.info;
+  HWLayersInfo &layer_info = disp_layer_stack_.info;
   for (uint32_t i = 0; i < layer_info.left_frame_roi.size(); i++) {
     LayerRect &l_roi = layer_info.left_frame_roi.at(i);
     LayerRect &r_roi = layer_info.right_frame_roi.at(i);
@@ -1217,13 +1218,13 @@ std::string DisplayBuiltIn::Dump() {
   os << newline;
 
   for (uint32_t i = 0; i < num_hw_layers; i++) {
-    uint32_t layer_index = hw_layers_.info.index.at(i);
+    uint32_t layer_index = disp_layer_stack_.info.index.at(i);
     // sdm-layer from client layer stack
-    Layer *sdm_layer = hw_layers_.info.stack->layers.at(layer_index);
+    Layer *sdm_layer = disp_layer_stack_.stack->layers.at(layer_index);
     // hw-layer from hw layers info
-    Layer &hw_layer = hw_layers_.info.hw_layers.at(i);
+    Layer &hw_layer = disp_layer_stack_.info.hw_layers.at(i);
     LayerBuffer *input_buffer = &hw_layer.input_buffer;
-    HWLayerConfig &layer_config = hw_layers_.config[i];
+    HWLayerConfig &layer_config = disp_layer_stack_.info.config[i];
     HWRotatorSession &hw_rotator_session = layer_config.hw_rotator_session;
 
     const char *comp_type = GetName(sdm_layer->composition);
@@ -1545,7 +1546,7 @@ bool DisplayBuiltIn::CanCompareFrameROI(LayerStack *layer_stack) {
   // Check Panel and Layer Stack attributes.
   if (!hw_panel_info_.partial_update || (hw_panel_info_.left_roi_count != 1) ||
       layer_stack->flags.geometry_changed || layer_stack->flags.config_changed ||
-      (layer_stack->layers.size() != (hw_layers_.info.app_layer_count + 1))) {
+      (layer_stack->layers.size() != (disp_layer_stack_.info.app_layer_count + 1))) {
     return false;
   }
 
@@ -1586,25 +1587,26 @@ bool DisplayBuiltIn::CanSkipDisplayPrepare(LayerStack *layer_stack) {
     return false;
   }
 
-  hw_layers_.info.left_frame_roi.clear();
-  hw_layers_.info.right_frame_roi.clear();
-  hw_layers_.info.dest_scale_info_map.clear();
-  comp_manager_->GenerateROI(display_comp_ctx_, &hw_layers_);
+  disp_layer_stack_.info.left_frame_roi.clear();
+  disp_layer_stack_.info.right_frame_roi.clear();
+  disp_layer_stack_.info.dest_scale_info_map.clear();
+  comp_manager_->GenerateROI(display_comp_ctx_, &disp_layer_stack_);
 
-  if (!hw_layers_.info.left_frame_roi.size() || !hw_layers_.info.right_frame_roi.size()) {
+  if (!disp_layer_stack_.info.left_frame_roi.size() ||
+      !disp_layer_stack_.info.right_frame_roi.size()) {
     return false;
   }
 
   // Compare the cached and calculated Frame ROIs.
-  bool same_roi = IsCongruent(left_frame_roi_, hw_layers_.info.left_frame_roi.at(0)) &&
-                  IsCongruent(right_frame_roi_, hw_layers_.info.right_frame_roi.at(0));
+  bool same_roi = IsCongruent(left_frame_roi_, disp_layer_stack_.info.left_frame_roi.at(0)) &&
+                  IsCongruent(right_frame_roi_, disp_layer_stack_.info.right_frame_roi.at(0));
 
   if (same_roi) {
     // Update Surface Damage rectangle(s) in HW layers.
-    uint32_t hw_layer_count = UINT32(hw_layers_.info.hw_layers.size());
+    uint32_t hw_layer_count = UINT32(disp_layer_stack_.info.hw_layers.size());
     for (uint32_t j = 0; j < hw_layer_count; j++) {
-      Layer &hw_layer = hw_layers_.info.hw_layers.at(j);
-      Layer *sdm_layer = layer_stack->layers.at(hw_layers_.info.index.at(j));
+      Layer &hw_layer = disp_layer_stack_.info.hw_layers.at(j);
+      Layer *sdm_layer = layer_stack->layers.at(disp_layer_stack_.info.index.at(j));
       if (hw_layer.dirty_regions.size() != sdm_layer->dirty_regions.size()) {
         return false;
       }

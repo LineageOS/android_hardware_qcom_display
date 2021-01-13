@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -277,15 +277,15 @@ void HWTVDRM::PopulateHWPanelInfo() {
         hw_panel_info_.average_luminance);
 }
 
-DisplayError HWTVDRM::Commit(HWLayers *hw_layers) {
-  DisplayError error = UpdateHDRMetaData(hw_layers);
+DisplayError HWTVDRM::Commit(HWLayersInfo *hw_layers_info) {
+  DisplayError error = UpdateHDRMetaData(hw_layers_info);
   if (error != kErrorNone) {
     return error;
   }
-  return HWDeviceDRM::Commit(hw_layers);
+  return HWDeviceDRM::Commit(hw_layers_info);
 }
 
-DisplayError HWTVDRM::UpdateHDRMetaData(HWLayers *hw_layers) {
+DisplayError HWTVDRM::UpdateHDRMetaData(HWLayersInfo *hw_layers_info) {
   // Set colorspace on external DP when DP supports colorspace.
   // For P3 use case set colorspace only.
   // For HDR use case set both hdr metadata and colorspace.
@@ -309,13 +309,20 @@ DisplayError HWTVDRM::UpdateHDRMetaData(HWLayers *hw_layers) {
     return kErrorNone;
   }
 
-  const HWHDRLayerInfo &hdr_layer_info = hw_layers->info.hdr_layer_info;
+  const HWHDRLayerInfo &hdr_layer_info = hw_layers_info->hdr_layer_info;
   DisplayError error = kErrorNone;
   HWHDRLayerInfo::HDROperation hdr_op = hdr_layer_info.operation;
 
   Layer hdr_layer = {};
   if (hdr_op == HWHDRLayerInfo::kSet && hdr_layer_info.layer_index > -1) {
-    hdr_layer = *(hw_layers->info.stack->layers.at(UINT32(hdr_layer_info.layer_index)));
+    int hdr_hw_layer_index = 0;
+    for (uint32_t i = 0; i < hw_layers_info->index.size(); i++) {
+      if (UINT32(hdr_layer_info.layer_index) == hw_layers_info->index[i]) {
+        hdr_hw_layer_index = i;
+        break;
+      }
+    }
+    hdr_layer = hw_layers_info->hw_layers.at(UINT32(hdr_hw_layer_index));
   }
 
   const LayerBuffer *layer_buffer = &hdr_layer.input_buffer;

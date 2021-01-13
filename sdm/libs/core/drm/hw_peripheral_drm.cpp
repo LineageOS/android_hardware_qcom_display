@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -180,41 +180,39 @@ DisplayError HWPeripheralDRM::SetDisplayMode(const HWDisplayMode hw_display_mode
   return kErrorNone;
 }
 
-DisplayError HWPeripheralDRM::Validate(HWLayers *hw_layers) {
-  HWLayersInfo &hw_layer_info = hw_layers->info;
-  SetDestScalarData(hw_layer_info);
-  SetupConcurrentWriteback(hw_layer_info, true, nullptr);
+DisplayError HWPeripheralDRM::Validate(HWLayersInfo *hw_layers_info) {
+  SetDestScalarData(*hw_layers_info);
+  SetupConcurrentWriteback(*hw_layers_info, true, nullptr);
   SetIdlePCState();
   SetSelfRefreshState();
   SetVMReqState();
 
-  return HWDeviceDRM::Validate(hw_layers);
+  return HWDeviceDRM::Validate(hw_layers_info);
 }
 
-DisplayError HWPeripheralDRM::Commit(HWLayers *hw_layers) {
-  HWLayersInfo &hw_layer_info = hw_layers->info;
-  SetDestScalarData(hw_layer_info);
+DisplayError HWPeripheralDRM::Commit(HWLayersInfo *hw_layers_info) {
+  SetDestScalarData(*hw_layers_info);
 
   int64_t cwb_fence_fd = -1;
-  bool has_fence = SetupConcurrentWriteback(hw_layer_info, false, &cwb_fence_fd);
+  bool has_fence = SetupConcurrentWriteback(*hw_layers_info, false, &cwb_fence_fd);
 
   SetIdlePCState();
   SetSelfRefreshState();
   SetVMReqState();
 
-  DisplayError error = HWDeviceDRM::Commit(hw_layers);
+  DisplayError error = HWDeviceDRM::Commit(hw_layers_info);
   if (error != kErrorNone) {
     return error;
   }
 
   if (has_fence) {
-    hw_layer_info.stack->output_buffer->release_fence = Fence::Create(INT(cwb_fence_fd),
+    hw_layers_info->output_buffer->release_fence = Fence::Create(INT(cwb_fence_fd),
                                                                       "release_cwb");
   }
 
   CacheDestScalarData();
   if (cwb_config_.enabled && (error == kErrorNone)) {
-    PostCommitConcurrentWriteback(hw_layer_info.stack->output_buffer);
+    PostCommitConcurrentWriteback(hw_layers_info->output_buffer);
   }
 
   // Initialize to default after successful commit
@@ -319,8 +317,8 @@ void HWPeripheralDRM::SetSelfRefreshState() {
   }
 }
 
-DisplayError HWPeripheralDRM::Flush(HWLayers *hw_layers) {
-  DisplayError err = HWDeviceDRM::Flush(hw_layers);
+DisplayError HWPeripheralDRM::Flush(HWLayersInfo *hw_layers_info) {
+  DisplayError err = HWDeviceDRM::Flush(hw_layers_info);
   if (err != kErrorNone) {
     return err;
   }
@@ -461,7 +459,7 @@ DisplayError HWPeripheralDRM::HandleSecureEvent(SecureEvent secure_event,
 
 bool HWPeripheralDRM::SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info, bool validate,
                                                int64_t *release_fence_fd) {
-  bool enable = hw_resource_.has_concurrent_writeback && hw_layer_info.stack->output_buffer;
+  bool enable = hw_resource_.has_concurrent_writeback && hw_layer_info.output_buffer;
   if (!(enable || cwb_config_.enabled)) {
     return false;
   }
@@ -474,7 +472,7 @@ bool HWPeripheralDRM::SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info
   if (cwb_config_.enabled) {
     if (enable) {
       // Set DRM properties for Concurrent Writeback.
-      ConfigureConcurrentWriteback(hw_layer_info.stack);
+      ConfigureConcurrentWriteback(hw_layer_info);
 
       if (!validate && release_fence_fd) {
         // Set GET_RETIRE_FENCE property to get Concurrent Writeback fence.
@@ -536,15 +534,15 @@ DisplayError HWPeripheralDRM::SetupConcurrentWritebackModes() {
   return kErrorNone;
 }
 
-void HWPeripheralDRM::ConfigureConcurrentWriteback(LayerStack *layer_stack) {
-  LayerBuffer *output_buffer = layer_stack->output_buffer;
+void HWPeripheralDRM::ConfigureConcurrentWriteback(const HWLayersInfo &hw_layer_info) {
+  LayerBuffer *output_buffer = hw_layer_info.output_buffer;
   registry_.MapOutputBufferToFbId(output_buffer);
 
   // Set the topology for Concurrent Writeback: [CRTC_PRIMARY_DISPLAY - CONNECTOR_VIRTUAL_DISPLAY].
   drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, cwb_config_.token.conn_id, token_.crtc_id);
 
   // Set CRTC Capture Mode
-  DRMCWbCaptureMode capture_mode = layer_stack->flags.post_processed_output ?
+  DRMCWbCaptureMode capture_mode = hw_layer_info.flags.post_processed_output ?
                                    DRMCWbCaptureMode::DSPP_OUT : DRMCWbCaptureMode::MIXER_OUT;
   drm_atomic_intf_->Perform(DRMOps::CRTC_SET_CAPTURE_MODE, token_.crtc_id, capture_mode);
 

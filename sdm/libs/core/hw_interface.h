@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -96,9 +96,9 @@ class HWInterface {
   virtual DisplayError DozeSuspend(const HWQosData &qos_data,
                                    shared_ptr<Fence> *release_fence) = 0;
   virtual DisplayError Standby() = 0;
-  virtual DisplayError Validate(HWLayers *hw_layers) = 0;
-  virtual DisplayError Commit(HWLayers *hw_layers) = 0;
-  virtual DisplayError Flush(HWLayers *hw_layers) = 0;
+  virtual DisplayError Validate(HWLayersInfo *hw_layers_info) = 0;
+  virtual DisplayError Commit(HWLayersInfo *hw_layers_info) = 0;
+  virtual DisplayError Flush(HWLayersInfo *hw_layers_info) = 0;
   virtual DisplayError GetPPFeaturesVersion(PPFeatureVersion *vers) = 0;
   virtual DisplayError SetPPFeatures(PPFeaturesConfig *feature_list) = 0;
   virtual DisplayError SetVSyncState(bool enable) = 0;
@@ -109,7 +109,7 @@ class HWInterface {
   virtual DisplayError GetHWScanInfo(HWScanInfo *scan_info) = 0;
   virtual DisplayError GetVideoFormat(uint32_t config_index, uint32_t *video_format) = 0;
   virtual DisplayError GetMaxCEAFormat(uint32_t *max_cea_format) = 0;
-  virtual DisplayError SetCursorPosition(HWLayers *hw_layers, int x, int y) = 0;
+  virtual DisplayError SetCursorPosition(HWLayersInfo *hw_layers_info, int x, int y) = 0;
   virtual DisplayError OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) = 0;
   virtual DisplayError GetPanelBrightness(int *level) = 0;
   virtual DisplayError SetAutoRefresh(bool enable) = 0;
