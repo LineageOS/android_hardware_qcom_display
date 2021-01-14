@@ -104,6 +104,7 @@ endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),lito)
 PRODUCT_PROPERTY_OVERRIDES += \
+    vendor.display.enable_perf_hint_large_comp_cycle=1 \
     debug.sf.high_fps_late_sf_phase_offset_ns=-4000000 \
     debug.sf.high_fps_early_phase_offset_ns=-4000000 \
     debug.sf.high_fps_early_gl_phase_offset_ns=-4000000 \
