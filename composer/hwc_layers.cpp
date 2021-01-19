@@ -194,17 +194,12 @@ bool GetSDMColorSpace(const int32_t &dataspace, ColorMetaData *color_metadata) {
 HWCLayer::HWCLayer(hwc2_display_t display_id, HWCBufferAllocator *buf_allocator)
   : id_(next_id_++), display_id_(display_id), buffer_allocator_(buf_allocator) {
   layer_ = new Layer();
-  // Fences are deferred, so the first time this layer is presented, return -1
-  // TODO(user): Verify that fences are properly obtained on suspend/resume
-  release_fences_.push_back(nullptr);
   geometry_changes_ |= kAdded;
 }
 
 HWCLayer::~HWCLayer() {
   // Close any fences left for this layer
-  while (!release_fences_.empty()) {
-    release_fences_.pop_front();
-  }
+  release_fence_ = nullptr;
   if (layer_) {
     if (buffer_fd_ >= 0) {
       ::close(buffer_fd_);
@@ -1060,26 +1055,12 @@ void HWCLayer::SetComposition(const LayerComposition &sdm_composition) {
   return;
 }
 
-void HWCLayer::PushBackReleaseFence(const shared_ptr<Fence> &fence) {
-  release_fences_.push_back(fence);
+shared_ptr<Fence> HWCLayer::GetReleaseFence() {
+  return release_fence_;
 }
 
-void HWCLayer::PopBackReleaseFence(shared_ptr<Fence> *fence) {
-  if (release_fences_.empty()) {
-    return;
-  }
-
-  *fence = release_fences_.back();
-  release_fences_.pop_back();
-}
-
-void HWCLayer::PopFrontReleaseFence(shared_ptr<Fence> *fence) {
-  if (release_fences_.empty()) {
-    return;
-  }
-
-  *fence = release_fences_.front();
-  release_fences_.pop_front();
+void HWCLayer::SetReleaseFence(const shared_ptr<Fence> &release_fence) {
+  release_fence_ = release_fence;
 }
 
 bool HWCLayer::IsRotationPresent() {

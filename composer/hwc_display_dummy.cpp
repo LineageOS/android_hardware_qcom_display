@@ -54,7 +54,7 @@ HWC2::Error HWCDisplayDummy::Validate(uint32_t *out_num_types, uint32_t *out_num
 
 HWC2::Error HWCDisplayDummy::Present(shared_ptr<Fence> *out_retire_fence) {
   for (auto hwc_layer : layer_set_) {
-    hwc_layer->PushBackReleaseFence(nullptr);
+    hwc_layer->SetReleaseFence(nullptr);
   }
   return HWC2::Error::None;
 }

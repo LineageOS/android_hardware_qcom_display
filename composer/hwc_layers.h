@@ -35,7 +35,6 @@
 #include <android/hardware/graphics/composer/2.3/IComposerClient.h>
 #include <vendor/qti/hardware/display/composer/3.0/IQtiComposerClient.h>
 
-#include <deque>
 #include <map>
 #include <set>
 
@@ -100,9 +99,6 @@ class HWCLayer {
   int32_t GetLayerDataspace() { return dataspace_; }
   uint32_t GetGeometryChanges() { return geometry_changes_; }
   void ResetGeometryChanges();
-  void PushBackReleaseFence(const shared_ptr<Fence> &fence);
-  void PopBackReleaseFence(shared_ptr<Fence> *fence);
-  void PopFrontReleaseFence(shared_ptr<Fence> *fence);
   void ResetValidation() { layer_->update_mask.reset(); }
   bool NeedsValidation() { return (geometry_changes_ || layer_->update_mask.any()); }
   bool IsSingleBuffered() { return single_buffer_; }
@@ -119,6 +115,8 @@ class HWCLayer {
   void SetLayerAsMask();
   bool BufferLatched() { return buffer_flipped_; }
   void ResetBufferFlip() { buffer_flipped_ = false; }
+  shared_ptr<Fence> GetReleaseFence();
+  void SetReleaseFence(const shared_ptr<Fence> &release_fence);
 
  private:
   Layer *layer_ = nullptr;
@@ -127,7 +125,7 @@ class HWCLayer {
   const hwc2_layer_t id_;
   const hwc2_display_t display_id_;
   static std::atomic<hwc2_layer_t> next_id_;
-  std::deque<shared_ptr<Fence>> release_fences_;
+  shared_ptr<Fence> release_fence_;
   HWCBufferAllocator *buffer_allocator_ = NULL;
   int32_t dataspace_ =  HAL_DATASPACE_UNKNOWN;
   LayerTransform layer_transform_ = {};

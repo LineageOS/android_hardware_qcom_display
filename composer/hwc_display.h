@@ -503,6 +503,7 @@ class HWCDisplay : public DisplayEventHandler {
   void UpdateRefreshRate();
   void UpdateActiveConfig();
   void DumpInputBuffers(void);
+  void RetrieveFences(shared_ptr<Fence> *out_retire_fence);
 
   bool layer_stack_invalid_ = true;
   CoreInterface *core_intf_ = nullptr;

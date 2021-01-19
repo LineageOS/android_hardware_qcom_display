@@ -923,16 +923,7 @@ void HWCDisplay::PostPowerMode() {
   }
 
   for (auto hwc_layer : layer_set_) {
-    shared_ptr<Fence> fence = nullptr;
-    shared_ptr<Fence> merged_fence = nullptr;
-
-    hwc_layer->PopBackReleaseFence(&fence);
-    if (fence) {
-      merged_fence = Fence::Merge(release_fence_, fence);
-    } else {
-      merged_fence = release_fence_;
-    }
-    hwc_layer->PushBackReleaseFence(merged_fence);
+    hwc_layer->SetReleaseFence(release_fence_);
   }
 
   fbt_release_fence_ = release_fence_;
@@ -1520,7 +1511,7 @@ HWC2::Error HWCDisplay::GetReleaseFences(uint32_t *out_num_elements, hwc2_layer_
       out_layers[i] = hwc_layer->GetId();
 
       shared_ptr<Fence> &fence = (*out_fences)[i];
-      hwc_layer->PopFrontReleaseFence(&fence);
+      fence = hwc_layer->GetReleaseFence();
     }
   } else {
     *out_num_elements = UINT32(layer_set_.size());
@@ -1717,43 +1708,28 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence
      tone_mapper_->PostCommit(&layer_stack_);
   }
 
-  // TODO(user): No way to set the client target release fence on SF
-  shared_ptr<Fence> client_target_release_fence =
-      client_target_->GetSDMLayer()->input_buffer.release_fence;
-  if (client_target_release_fence) {
-    fbt_release_fence_ = client_target_release_fence;
-  }
+  RetrieveFences(out_retire_fence);
   client_target_->ResetGeometryChanges();
 
   for (auto hwc_layer : layer_set_) {
     hwc_layer->ResetGeometryChanges();
     Layer *layer = hwc_layer->GetSDMLayer();
     LayerBuffer *layer_buffer = &layer->input_buffer;
-
-    if (!flush_) {
-      // If swapinterval property is set to 0 or for single buffer layers, do not update f/w
-      // release fences and discard fences from driver
-      if (!swap_interval_zero_ && !layer->flags.single_buffer) {
-        // It may so happen that layer gets marked to GPU & app layer gets queued
-        // to MDP for composition. In those scenarios, release fence of buffer should
-        // have mdp and gpu sync points merged.
-        hwc_layer->PushBackReleaseFence(layer_buffer->release_fence);
-      }
-    } else {
-      // In case of flush or display paused, we don't return an error to f/w, so it will
-      // get a release fence out of the hwc_layer's release fence queue
-      // We should push a -1 to preserve release fence circulation semantics.
-      hwc_layer->PushBackReleaseFence(nullptr);
-    }
-
     layer->request.flags = {};
     layer_buffer->acquire_fence = nullptr;
   }
 
   client_target_->GetSDMLayer()->request.flags = {};
-  // if swapinterval property is set to 0 then close and reset the list retire fence
-  if (!swap_interval_zero_) {
-    *out_retire_fence = layer_stack_.retire_fence;
+
+  layer_stack_.flags.geometry_changed = false;
+  geometry_changes_ = GeometryChanges::kNone;
+  flush_ = false;
+  skip_commit_ = false;
+
+  if (display_pause_pending_) {
+    DLOGI("Pause display %d-%d", sdm_id_, type_);
+    display_paused_ = true;
+    display_pause_pending_ = false;
   }
 
   if (dump_frame_count_) {
@@ -1784,6 +1760,43 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence
   }
 
   return status;
+}
+
+void HWCDisplay::RetrieveFences(shared_ptr<Fence> *out_retire_fence) {
+  // TODO(user): No way to set the client target release fence on SvF
+  shared_ptr<Fence> client_target_release_fence =
+      client_target_->GetSDMLayer()->input_buffer.release_fence;
+  if (client_target_release_fence) {
+    fbt_release_fence_ = client_target_release_fence;
+  }
+
+  for (auto hwc_layer : layer_set_) {
+    Layer *layer = hwc_layer->GetSDMLayer();
+    LayerBuffer *layer_buffer = &layer->input_buffer;
+
+    if (!flush_) {
+      // If swapinterval property is set to 0 or for single buffer layers, do not update f/w
+      // release fences and discard fences from driver
+      if (!swap_interval_zero_ && !layer->flags.single_buffer) {
+        // It may so happen that layer gets marked to GPU & app layer gets queued
+        // to MDP for composition. In those scenarios, release fence of buffer should
+        // have mdp and gpu sync points merged.
+        hwc_layer->SetReleaseFence(layer_buffer->release_fence);
+      }
+    } else {
+      // In case of flush or display paused, we don't return an error to f/w, so it will
+      // get a release fence out of the hwc_layer's release fence queue
+      // We should push a -1 to preserve release fence circulation semantics.
+      hwc_layer->SetReleaseFence(nullptr);
+    }
+
+    layer_buffer->acquire_fence = nullptr;
+  }
+
+  // if swapinterval property is set to 0 then close and reset the list retire fence
+  if (!swap_interval_zero_) {
+    *out_retire_fence = layer_stack_.retire_fence;
+  }
 }
 
 void HWCDisplay::SetIdleTimeoutMs(uint32_t timeout_ms, uint32_t inactive_ms) {
@@ -2548,14 +2561,11 @@ void HWCDisplay::WaitOnPreviousFence() {
   // Since prepare failed commit would follow the same.
   // Wait for previous rel fence.
   for (auto hwc_layer : layer_set_) {
-    shared_ptr<Fence> fence = nullptr;
-
-    hwc_layer->PopBackReleaseFence(&fence);
+    shared_ptr<Fence> fence = hwc_layer->GetReleaseFence();
     if (Fence::Wait(fence) != kErrorNone) {
       DLOGW("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
       return;
     }
-    hwc_layer->PushBackReleaseFence(fence);
   }
 
   if (Fence::Wait(fbt_release_fence_) != kErrorNone) {
