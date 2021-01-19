@@ -44,7 +44,8 @@ DisplayError SetCSC(const native_handle_t *handle, ColorMetaData *color_metadata
     error = gralloc::GetMetaDataValue(hnd, qtigralloc::MetadataType_ColorSpace.value, &csc);
 
     if (error != gralloc::Error::NONE) {
-      if (csc == HAL_CSC_ITU_R_601_FR || csc == HAL_CSC_ITU_R_2020_FR) {
+      if (csc == HAL_CSC_ITU_R_601_FR || csc == HAL_CSC_ITU_R_709_FR ||
+          csc == HAL_CSC_ITU_R_2020_FR) {
         color_metadata->range = Range_Full;
       }
       color_metadata->transfer = Transfer_sRGB;
@@ -56,6 +57,7 @@ DisplayError SetCSC(const native_handle_t *handle, ColorMetaData *color_metadata
           color_metadata->colorPrimaries = ColorPrimaries_BT601_6_525;
           break;
         case HAL_CSC_ITU_R_709:
+        case HAL_CSC_ITU_R_709_FR:
           color_metadata->colorPrimaries = ColorPrimaries_BT709_5;
           break;
         case HAL_CSC_ITU_R_2020:

@@ -1127,7 +1127,7 @@ void GetColorSpaceFromMetadata(private_handle_t *hnd, int *color_space) {
   if (GetMetaDataValue(hnd, QTI_COLOR_METADATA, &color_metadata) == Error::NONE) {
     switch (color_metadata.colorPrimaries) {
       case ColorPrimaries_BT709_5:
-        *color_space = HAL_CSC_ITU_R_709;
+        *color_space = ((color_metadata.range) ? HAL_CSC_ITU_R_709_FR : HAL_CSC_ITU_R_709);
         break;
       case ColorPrimaries_BT601_6_525:
       case ColorPrimaries_BT601_6_625:
