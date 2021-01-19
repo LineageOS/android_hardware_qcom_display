@@ -48,6 +48,10 @@ class HWCDisplayVirtual : public HWCDisplay {
   virtual HWC2::Error SetOutputBuffer(buffer_handle_t buf, shared_ptr<Fence> release_fence);
   virtual HWC2::Error DumpVDSBuffer();
   bool NeedsGPUBypass();
+  virtual HWC2::Error PreValidateDisplay(bool *exit_validate);
+  virtual HWC2::Error CommitOrPrepare(shared_ptr<Fence> *out_retire_fence,
+                                      uint32_t *out_num_types, uint32_t *out_num_requests,
+                                      bool *needs_commit);
   HWCDisplayVirtual(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
                     HWCCallbacks *callbacks, hwc2_display_t id, int32_t sdm_id,
                     uint32_t width, uint32_t height);

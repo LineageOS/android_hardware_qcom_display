@@ -130,9 +130,10 @@ HWC2::Error HWCDisplayVirtualDPU::SetOutputBuffer(buffer_handle_t buf,
   return HWC2::Error::None;
 }
 
-HWC2::Error HWCDisplayVirtualDPU::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
+HWC2::Error HWCDisplayVirtualDPU::PreValidateDisplay(bool *exit_validate) {
   if (NeedsGPUBypass()) {
     MarkLayersForGPUBypass();
+    *exit_validate = true;
     return HWC2::Error::None;
   }
 
@@ -156,6 +157,18 @@ HWC2::Error HWCDisplayVirtualDPU::Validate(uint32_t *out_num_types, uint32_t *ou
     }
   }
 
+  *exit_validate = false;
+
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayVirtualDPU::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
+  bool exit_validate = false;
+  auto status = PreValidateDisplay(&exit_validate);
+  if (exit_validate) {
+    return status;
+  }
+
   return PrepareLayerStack(out_num_types, out_num_requests);
 }
 
@@ -177,9 +190,31 @@ HWC2::Error HWCDisplayVirtualDPU::Present(shared_ptr<Fence> *out_retire_fence) {
     return status;
   }
 
+  // Retire fence points to WB done.
+  // Explicitly query for output buffer acquire fence.
+  display_intf_->GetOutputBufferAcquireFence(&layer_stack_.retire_fence);
+
   DumpVDSBuffer();
 
   status = HWCDisplay::PostCommitLayerStack(out_retire_fence);
+
+  return status;
+}
+
+HWC2::Error HWCDisplayVirtualDPU::CommitOrPrepare(shared_ptr<Fence> *out_retire_fence,
+                                                  uint32_t *out_num_types,
+                                                  uint32_t *out_num_requests, bool *needs_commit) {
+  DTRACE_SCOPED();
+
+  layer_stack_.output_buffer = &output_buffer_;
+  auto status = HWCDisplay::CommitOrPrepare(out_retire_fence, out_num_types,
+                                            out_num_requests, needs_commit);
+  if (!(*needs_commit)) {
+    // Retire fence points to WB done.
+    // Explicitly query for output buffer acquire fence.
+    display_intf_->GetOutputBufferAcquireFence(out_retire_fence);
+    DumpVDSBuffer();
+  }
 
   return status;
 }

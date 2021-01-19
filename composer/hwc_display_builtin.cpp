@@ -206,16 +206,15 @@ void HWCDisplayBuiltIn::ValidateUiScaling() {
   force_reset_lut_ = false;
 }
 
-HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
-  auto status = HWC2::Error::None;
-  DisplayError error = kErrorNone;
-
+HWC2::Error HWCDisplayBuiltIn::PreValidateDisplay(bool *exit_validate) {
   DTRACE_SCOPED();
 
+  auto status = HWC2::Error::None;
   // If no resources are available for the current display, mark it for GPU by pass and continue to
   // do invalidate until the resources are available
   if (display_paused_ || CheckResourceState()) {
     MarkLayersForGPUBypass();
+    *exit_validate = true;
     return status;
   }
 
@@ -282,7 +281,8 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
 
   uint32_t refresh_rate = GetOptimalRefreshRate(one_updating_layer);
   bool idle_screen = GetUpdatingAppLayersCount() == 0;
-  error = display_intf_->SetRefreshRate(refresh_rate, force_refresh_rate_, idle_screen);
+  DisplayError error = display_intf_->SetRefreshRate(refresh_rate, force_refresh_rate_,
+                                                     idle_screen);
 
   // Get the refresh rate set.
   display_intf_->GetRefreshRate(&refresh_rate);
@@ -306,10 +306,28 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
   if (layer_set_.empty()) {
     // Avoid flush for Command mode panel.
     flush_ = !client_connected_;
+    *exit_validate = true;
     return status;
   }
 
-  status = PrepareLayerStack(out_num_types, out_num_requests);
+  display_idle_ = false;
+  has_client_composition_ = false;
+
+  *exit_validate = false;
+
+  return status;
+}
+
+HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
+  DTRACE_SCOPED();
+
+  bool exit_validate = false;
+  PreValidateDisplay(&exit_validate);
+  if (exit_validate) {
+    return HWC2::Error::None;
+  }
+
+  auto status = PrepareLayerStack(out_num_types, out_num_requests);
   SetCpuPerfHintLargeCompCycle();
   pending_commit_ = true;
   return status;
@@ -1795,4 +1813,22 @@ HWC2::Error HWCDisplayBuiltIn::PresentAndOrGetValidateDisplayOutput(uint32_t *ou
 
   return status;
 }
+
+HWC2::Error HWCDisplayBuiltIn::CommitOrPrepare(shared_ptr<Fence> *out_retire_fence,
+                                               uint32_t *out_num_types,
+                                               uint32_t *out_num_requests, bool *needs_commit) {
+  DTRACE_SCOPED();
+
+  auto status = HWCDisplay::CommitOrPrepare(out_retire_fence, out_num_types,
+                                            out_num_requests, needs_commit);
+  SetCpuPerfHintLargeCompCycle();
+  // Block on output buffer fence.
+  if (layer_stack_.output_buffer != nullptr) {
+    auto &fence = layer_stack_.output_buffer->release_fence;
+    display_intf_->GetOutputBufferAcquireFence(&fence);
+  }
+
+  return status;
+}
+
 }  // namespace sdm

@@ -439,6 +439,10 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error NotifyDisplayCalibrationMode(bool in_calibration) {
     return HWC2::Error::Unsupported;
   };
+  virtual HWC2::Error CommitOrPrepare(shared_ptr<Fence> *out_retire_fence,
+                                      uint32_t *out_num_types, uint32_t *out_num_requests,
+                                      bool *needs_commit);
+  virtual HWC2::Error PreValidateDisplay(bool *exit_validate) { return HWC2::Error::None; }
 
  protected:
   static uint32_t throttling_refresh_rate_;
@@ -491,9 +495,14 @@ class HWCDisplay : public DisplayEventHandler {
   HWC2::Error SubmitDisplayConfig(hwc2_config_t config);
   HWC2::Error GetCachedActiveConfig(hwc2_config_t *config);
   void SetActiveConfigIndex(int active_config_index);
+  HWC2::Error PostPrepareLayerStack(uint32_t *out_num_types, uint32_t *out_num_requests);
+  HWC2::Error HandlePrepareError(DisplayError error);
   int GetActiveConfigIndex();
   DisplayError ValidateTUITransition (SecureEvent secure_event);
   void MMRMEvent(bool restricted);
+  void UpdateRefreshRate();
+  void UpdateActiveConfig();
+  void DumpInputBuffers(void);
 
   bool layer_stack_invalid_ = true;
   CoreInterface *core_intf_ = nullptr;
@@ -566,11 +575,8 @@ class HWCDisplay : public DisplayEventHandler {
   DisplayCommitState commit_state_ = kNormalCommit;
 
  private:
-  void DumpInputBuffers(void);
   bool CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests);
-  void UpdateRefreshRate();
   void WaitOnPreviousFence();
-  void UpdateActiveConfig();
   qService::QService *qservice_ = NULL;
   DisplayClass display_class_;
   uint32_t geometry_changes_ = GeometryChanges::kNone;

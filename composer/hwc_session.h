@@ -297,6 +297,10 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
       hwc2_display_t display, hwc2_config_t config,
       const VsyncPeriodChangeConstraints *vsync_period_change_constraints,
       VsyncPeriodChangeTimeline *out_timeline);
+  HWC2::Error CommitOrPrepare(hwc2_display_t display, shared_ptr<Fence> *out_retire_fence,
+                              uint32_t *out_num_types, uint32_t *out_num_requests,
+                              bool *needs_commit);
+
 
   static Locker locker_[HWCCallbacks::kNumDisplays];
   static Locker power_state_[HWCCallbacks::kNumDisplays];
@@ -532,6 +536,10 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   void PerformIdleStatusCallback(hwc2_display_t display);
   DispType GetDisplayConfigDisplayType(int qdutils_disp_type);
   HWC2::Error TeardownConcurrentWriteback(hwc2_display_t display);
+  void PostCommitUnlocked(hwc2_display_t display, const shared_ptr<Fence> &retire_fence,
+                          HWC2::Error status);
+  void PostCommitLocked(hwc2_display_t display);
+  void CancelTUILock(hwc2_display_t display);
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};

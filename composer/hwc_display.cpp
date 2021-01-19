@@ -807,15 +807,9 @@ void HWCDisplay::BuildLayerStack() {
     layer_stack_.layers.push_back(layer);
   }
 
-  // If layer stack needs Client composition, HWC display gets into InternalValidate state. If
-  // validation gets reset by any other thread in this state, enforce Geometry change to ensure
-  // that Client target gets composed by SF.
-  bool enforce_geometry_change = (validate_state_ == kInternalValidate) &&
-                                  !display_intf_->IsValidated();
-
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
 
-  layer_stack_.flags.geometry_changed = UINT32((geometry_changes_ || enforce_geometry_change ||
+  layer_stack_.flags.geometry_changed = UINT32((geometry_changes_ ||
                                                 geometry_changes_on_doze_suspend_) > 0);
   // Append client target to the layer stack
   Layer *sdm_client_target = client_target_->GetSDMLayer();
@@ -827,6 +821,7 @@ void HWCDisplay::BuildLayerStack() {
   SetClientTargetDataSpace(client_target_dataspace);
   layer_stack_.layers.push_back(sdm_client_target);
 
+  layer_stack_.elapse_timestamp = elapse_timestamp_;
   // fall back frame composition to GPU when client target is 10bit
   // TODO(user): clarify the behaviour from Client(SF) and SDM Extn -
   // when handling 10bit FBT, as it would affect blending
@@ -1395,29 +1390,47 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
   UpdateRefreshRate();
   UpdateActiveConfig();
   DisplayError error = display_intf_->Prepare(&layer_stack_);
-  if (error != kErrorNone) {
-    if (error == kErrorShutDown) {
-      shutdown_pending_ = true;
-    } else if (error == kErrorPermission) {
-      WaitOnPreviousFence();
-      MarkLayersForGPUBypass();
-      geometry_changes_on_doze_suspend_ |= geometry_changes_;
-    } else {
-      DLOGW("Prepare failed. Error = %d", error);
-      // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
-      // so that previous buffer and fences are released, and override the error.
-      flush_ = true;
-      // Prepare cycle can fail on a newly connected display if insufficient pipes
-      // are available at this moment. Trigger refresh so that the other displays
-      // can free up pipes and a valid content can be attached to virtual display.
-      callbacks_->Refresh(id_);
-      return HWC2::Error::BadDisplay;
-    }
-  } else {
-    // clear geometry_changes_on_doze_suspend_ on successful prepare.
-    geometry_changes_on_doze_suspend_ = GeometryChanges::kNone;
+  auto status = HandlePrepareError(error);
+  if (status != HWC2::Error::None) {
+    return status;
   }
 
+  return PostPrepareLayerStack(out_num_types, out_num_requests);
+}
+
+HWC2::Error HWCDisplay::HandlePrepareError(DisplayError error) {
+  if (error == kErrorNone) {
+    return HWC2::Error::None;
+  }
+
+  if (error == kErrorShutDown) {
+    shutdown_pending_ = true;
+  } else if (error == kErrorPermission) {
+    WaitOnPreviousFence();
+    MarkLayersForGPUBypass();
+    geometry_changes_on_doze_suspend_ |= geometry_changes_;
+  } else {
+    DLOGW("Prepare failed. Error = %d", error);
+    // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
+    // so that previous buffer and fences are released, and override the error.
+    flush_ = true;
+    // Prepare cycle can fail on a newly connected display if insufficient pipes
+    // are available at this moment. Trigger refresh so that the other displays
+    // can free up pipes and a valid content can be attached to virtual display.
+    callbacks_->Refresh(id_);
+    return HWC2::Error::BadDisplay;
+  }
+
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplay::PostPrepareLayerStack(uint32_t *out_num_types, uint32_t *out_num_requests) {
+  // clear geometry_changes_on_doze_suspend_ on successful prepare.
+  geometry_changes_on_doze_suspend_ = GeometryChanges::kNone;
+
+  layer_changes_.clear();
+  layer_requests_.clear();
+  has_client_composition_ = false;
   for (auto hwc_layer : layer_set_) {
     Layer *layer = hwc_layer->GetSDMLayer();
     LayerComposition &composition = layer->composition;
@@ -1605,6 +1618,32 @@ HWC2::Error HWCDisplay::GetHdrCapabilities(uint32_t *out_num_types, int32_t *out
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCDisplay::CommitOrPrepare(shared_ptr<Fence> *out_retire_fence,
+                                        uint32_t *out_num_types, uint32_t *out_num_requests,
+                                        bool *needs_commit) {
+  DTRACE_SCOPED();
+
+  if (shutdown_pending_) {
+    return HWC2::Error::BadDisplay;
+  }
+
+  UpdateRefreshRate();
+  UpdateActiveConfig();
+  // BuildLayerstack etc;
+  bool exit_validate = false;
+  PreValidateDisplay(&exit_validate);
+  if (exit_validate) {
+    return HWC2::Error::None;
+  }
+
+  *needs_commit = display_intf_->CommitOrPrepare(&layer_stack_) == kErrorNeedsCommit;
+
+  if (!(*needs_commit)) {
+    PostCommitLayerStack(out_retire_fence);
+  }
+
+  return PostPrepareLayerStack(out_num_types, out_num_requests);
+}
 
 HWC2::Error HWCDisplay::CommitLayerStack(void) {
   if (flush_) {
@@ -1640,10 +1679,6 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
     } else {
       tone_mapper_->Terminate();
     }
-  }
-
-  if (elapse_timestamp_) {
-    layer_stack_.elapse_timestamp = elapse_timestamp_;
   }
 
   error = display_intf_->Commit(&layer_stack_);

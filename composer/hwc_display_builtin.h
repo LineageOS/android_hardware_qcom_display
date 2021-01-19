@@ -147,6 +147,10 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual HWC2::Error NotifyDisplayCalibrationMode(bool in_calibration);
   virtual HWC2::Error PresentAndOrGetValidateDisplayOutput(uint32_t *out_num_types,
                                                            uint32_t *out_num_requests);
+  virtual HWC2::Error CommitOrPrepare(shared_ptr<Fence> *out_retire_fence,
+                                      uint32_t *out_num_types, uint32_t *out_num_requests,
+                                      bool *needs_commit);
+  virtual HWC2::Error PreValidateDisplay(bool *exit_validate);
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,

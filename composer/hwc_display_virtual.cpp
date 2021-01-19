@@ -69,6 +69,16 @@ HWC2::Error HWCDisplayVirtual::Present(shared_ptr<Fence> *out_retire_fence) {
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCDisplayVirtual::PreValidateDisplay(bool *exit_validate) {
+  return HWC2::Error::None;
+}
+
+HWC2::Error HWCDisplayVirtual::CommitOrPrepare(shared_ptr<Fence> *out_retire_fence,
+                                               uint32_t *out_num_types,
+                                               uint32_t *out_num_requests, bool *needs_commit) {
+  return HWC2::Error::None;
+}
+
 HWC2::Error HWCDisplayVirtual::DumpVDSBuffer() {
   if (dump_frame_count_ && !flush_ && dump_output_layer_) {
     if (output_handle_) {

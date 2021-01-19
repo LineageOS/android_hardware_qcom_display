@@ -117,13 +117,14 @@ HWCDisplayPluggable::HWCDisplayPluggable(CoreInterface *core_intf,
                  sdm_id, DISPLAY_CLASS_PLUGGABLE) {
 }
 
-HWC2::Error HWCDisplayPluggable::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
+HWC2::Error HWCDisplayPluggable::PreValidateDisplay(bool *exit_validate) {
   auto status = HWC2::Error::None;
 
   if (active_secure_sessions_[kSecureDisplay] || display_paused_ ||
      (mmrm_restricted_ && (current_power_mode_ == HWC2::PowerMode::Off ||
      current_power_mode_ == HWC2::PowerMode::DozeSuspend))) {
     MarkLayersForGPUBypass();
+    *exit_validate = true;
     return status;
   }
 
@@ -131,6 +132,7 @@ HWC2::Error HWCDisplayPluggable::Validate(uint32_t *out_num_types, uint32_t *out
 
   if (layer_set_.empty()) {
     flush_ = !client_connected_;
+    *exit_validate = true;
     return status;
   }
 
@@ -143,10 +145,21 @@ HWC2::Error HWCDisplayPluggable::Validate(uint32_t *out_num_types, uint32_t *out
     MarkLayersForClientComposition();
   }
 
+  *exit_validate = false;
+
+  return status;
+}
+
+HWC2::Error HWCDisplayPluggable::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
+  bool exit_validate = false;
+  auto status = PreValidateDisplay(&exit_validate);
+  if (exit_validate) {
+    return status;
+  }
+
   // TODO(user): SetRefreshRate need to follow new interface when added.
 
-  status = PrepareLayerStack(out_num_types, out_num_requests);
-  return status;
+  return PrepareLayerStack(out_num_types, out_num_requests);
 }
 
 HWC2::Error HWCDisplayPluggable::Present(shared_ptr<Fence> *out_retire_fence) {

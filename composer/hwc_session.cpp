@@ -816,40 +816,42 @@ int32_t HWCSession::PresentDisplay(hwc2_display_t display, shared_ptr<Fence> *ou
       status = HWC2::Error::None;
     } else {
       hwc_display_[target_display]->ProcessActiveConfigChange();
-      status = PresentDisplayInternal(target_display);
+      status = hwc_display_[target_display]->Present(out_retire_fence);
       if (status == HWC2::Error::None) {
-        // Check if hwc's refresh trigger is getting exercised.
-        if (callbacks_.NeedsRefresh(display)) {
-          hwc_display_[target_display]->SetPendingRefresh();
-          callbacks_.ResetRefresh(display);
-        }
-        status = hwc_display_[target_display]->Present(out_retire_fence);
-        if (status == HWC2::Error::None) {
-          PerformQsyncCallback(target_display);
-          PerformIdleStatusCallback(target_display);
-          Locker::ScopeLock tui_lock(tui_locker_[target_display]);
-          if (tui_transition_pending_[target_display]) {
-            tui_transition_pending_[target_display] = false;
-            tui_transition_error_[target_display] = 0;
-            tui_locker_[target_display].Broadcast();
-          }
-        }
+        PostCommitLocked(target_display);
       }
     }
   }
 
   if (status != HWC2::Error::None && status != HWC2::Error::NotValidated) {
-    Locker::ScopeLock tui_lock(tui_locker_[target_display]);
-    if (tui_transition_pending_[target_display]) {
-      tui_transition_pending_[target_display] = false;
-      tui_transition_error_[target_display] = -ENODEV;
-      tui_locker_[target_display].Broadcast();
-    }
-    SEQUENCE_CANCEL_SCOPE_LOCK(locker_[target_display]);
+    CancelTUILock(target_display);
   }
 
-  HandlePendingPowerMode(display, *out_retire_fence);
-  HandlePendingHotplug(display, *out_retire_fence);
+  PostCommitUnlocked(target_display, *out_retire_fence, status);
+
+  return INT32(status);
+}
+
+void HWCSession::PostCommitLocked(hwc2_display_t display) {
+  // Check if hwc's refresh trigger is getting exercised.
+  if (callbacks_.NeedsRefresh(display)) {
+    hwc_display_[display]->SetPendingRefresh();
+    callbacks_.ResetRefresh(display);
+  }
+  PerformQsyncCallback(display);
+  PerformIdleStatusCallback(display);
+  Locker::ScopeLock tui_lock(tui_locker_[display]);
+  if (tui_transition_pending_[display]) {
+    tui_transition_pending_[display] = false;
+    tui_transition_error_[display] = 0;
+    tui_locker_[display].Broadcast();
+  }
+}
+
+void HWCSession::PostCommitUnlocked(hwc2_display_t display, const shared_ptr<Fence> &retire_fence,
+                                    HWC2::Error status) {
+  HandlePendingPowerMode(display, retire_fence);
+  HandlePendingHotplug(display, retire_fence);
   HandlePendingRefresh();
   if (status != HWC2::Error::NotValidated) {
     cwb_.PresentDisplayDone(display);
@@ -860,8 +862,6 @@ int32_t HWCSession::PresentDisplay(hwc2_display_t display, shared_ptr<Fence> *ou
     resource_ready_ = true;
     hotplug_cv_.notify_one();
   }
-
-  return INT32(status);
 }
 
 void HWCSession::HandlePendingRefresh() {
@@ -1259,13 +1259,7 @@ int32_t HWCSession::ValidateDisplay(hwc2_display_t display, uint32_t *out_num_ty
 
   // Sequence locking currently begins on Validate, so cancel the sequence lock on failures
   if (status != HWC2::Error::None && status != HWC2::Error::HasChanges) {
-    Locker::ScopeLock tui_lock(tui_locker_[target_display]);
-    if (tui_transition_pending_[target_display]) {
-      tui_transition_pending_[target_display] = false;
-      tui_transition_error_[target_display] = -ENODEV;
-      tui_locker_[target_display].Broadcast();
-    }
-    SEQUENCE_CANCEL_SCOPE_LOCK(locker_[target_display]);
+    CancelTUILock(target_display);
   }
 
   if (display != target_display) {
@@ -1274,6 +1268,16 @@ int32_t HWCSession::ValidateDisplay(hwc2_display_t display, uint32_t *out_num_ty
   }
 
   return INT32(status);
+}
+
+void HWCSession::CancelTUILock(hwc2_display_t display) {
+  Locker::ScopeLock tui_lock(tui_locker_[display]);
+  if (tui_transition_pending_[display]) {
+    tui_transition_pending_[display] = false;
+    tui_transition_error_[display] = -ENODEV;
+    tui_locker_[display].Broadcast();
+  }
+  SEQUENCE_CANCEL_SCOPE_LOCK(locker_[display]);
 }
 
 HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height, int32_t *format,
@@ -3913,6 +3917,33 @@ HWC2::Error HWCSession::TeardownConcurrentWriteback(hwc2_display_t display) {
     return HWC2::Error::NoResources;
   }
   return HWC2::Error::None;
+}
+
+HWC2::Error HWCSession::CommitOrPrepare(hwc2_display_t display, shared_ptr<Fence> *out_retire_fence,
+                                        uint32_t *out_num_types, uint32_t *out_num_requests,
+                                        bool *needs_commit) {
+  {
+    // ToDo: add support for async power mode.
+    Locker::ScopeLock lock_d(locker_[display]);
+    if (!hwc_display_[display]) {
+      return HWC2::Error::BadDisplay;
+    }
+    if (pending_power_mode_[display]) {
+      return HWC2::Error::None;
+    }
+  }
+
+  HandleSecureSession();
+  auto status = HWC2::Error::None;
+  {
+    Locker::ScopeLock lock_d(locker_[display]);
+    hwc_display_[display]->ProcessActiveConfigChange();
+    status = hwc_display_[display]->CommitOrPrepare(out_retire_fence, out_num_types,
+                                                    out_num_requests, needs_commit);
+    PostCommitLocked(display);
+  }
+  PostCommitUnlocked(display, *out_retire_fence, status);
+  return status;
 }
 
 }  // namespace sdm
