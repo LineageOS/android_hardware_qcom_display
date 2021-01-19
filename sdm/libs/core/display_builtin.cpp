@@ -289,7 +289,21 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
 
   CacheFrameROI();
 
+  NotifyDppsHdrPresent(layer_stack);
+
   return kErrorNone;
+}
+
+void DisplayBuiltIn::NotifyDppsHdrPresent(LayerStack *layer_stack) {
+  if (hdr_present_ != layer_stack->flags.hdr_present) {
+    hdr_present_ = layer_stack->flags.hdr_present;
+    DLOGV_IF(kTagDisplay, "Notify DPPS hdr_present %d", hdr_present_);
+    DppsNotifyPayload info = {};
+    info.is_primary = IsPrimaryDisplay();
+    info.payload = &hdr_present_;
+    info.payload_size = sizeof(hdr_present_);
+    dpps_info_.DppsNotifyOps(kDppsHdrPresentEvent, &info, sizeof(info));
+  }
 }
 
 void DisplayBuiltIn::CacheFrameROI() {
