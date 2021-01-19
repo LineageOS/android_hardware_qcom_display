@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -37,7 +37,7 @@ DisplayError SetCSC(const private_handle_t *pvt_handle, ColorMetaData *color_met
     ColorSpace_t csc = ITU_R_601;
     if (getMetaData(const_cast<private_handle_t *>(pvt_handle),  GET_COLOR_SPACE,
                     &csc) == 0) {
-      if (csc == ITU_R_601_FR || csc == ITU_R_2020_FR) {
+      if (csc == ITU_R_601_FR || csc == ITU_R_709_FR || csc == ITU_R_2020_FR) {
         color_metadata->range = Range_Full;
       }
       color_metadata->transfer = Transfer_sRGB;
@@ -49,6 +49,7 @@ DisplayError SetCSC(const private_handle_t *pvt_handle, ColorMetaData *color_met
           color_metadata->colorPrimaries = ColorPrimaries_BT601_6_525;
           break;
         case ITU_R_709:
+        case ITU_R_709_FR:
           color_metadata->colorPrimaries = ColorPrimaries_BT709_5;
           break;
         case ITU_R_2020:
