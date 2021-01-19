@@ -283,10 +283,7 @@ class QtiComposerClient : public IQtiComposerClient {
    public:
     explicit CommandReader(QtiComposerClient& client);
     Error parse();
-    Error validateDisplay(Display display, std::vector<Layer>& changedLayers,
-                          std::vector<IComposerClient::Composition>& compositionTypes,
-                          uint32_t& displayRequestMask, std::vector<Layer>& requestedLayers,
-                          std::vector<uint32_t>& requestMasks);
+    Error validateDisplay();
     Error presentDisplay(Display display, shared_ptr<Fence>* presentFence,
                          std::vector<Layer>& layers,
                          std::vector<shared_ptr<Fence>>& releaseFences);
@@ -357,6 +354,8 @@ class QtiComposerClient : public IQtiComposerClient {
     Error updateLayerSidebandStream(buffer_handle_t handle) {
       return updateBuffer(BufferCache::LAYER_SIDEBAND_STREAMS, 0, false, handle);
     }
+    Error postPresentDisplay(shared_ptr<Fence>* presentFence);
+    Error postValidateDisplay(uint32_t& types_count, uint32_t& reqs_count);
   };
 
   HWCSession *hwc_session_ = nullptr;

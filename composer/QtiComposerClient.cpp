@@ -92,13 +92,7 @@ QtiComposerClient::~QtiComposerClient() {
     } else {
       ALOGW("performing a final presentDisplay");
 
-      std::vector<Layer> changedLayers;
-      std::vector<IComposerClient::Composition> compositionTypes;
-      uint32_t displayRequestMask = 0;
-      std::vector<Layer> requestedLayers;
-      std::vector<uint32_t> requestMasks;
-      mReader.validateDisplay(dpy.first, changedLayers, compositionTypes, displayRequestMask,
-                              requestedLayers, requestMasks);
+      mReader.validateDisplay();
 
       hwc_session_->AcceptDisplayChanges(dpy.first);
 
@@ -1421,12 +1415,7 @@ bool QtiComposerClient::CommandReader::parseSetOutputBuffer(uint16_t length) {
   return true;
 }
 
-Error QtiComposerClient::CommandReader::validateDisplay(Display display,
-                                       std::vector<Layer>& changedLayers,
-                                       std::vector<IComposerClient::Composition>& compositionTypes,
-                                       uint32_t& displayRequestMask,
-                                       std::vector<Layer>& requestedLayers,
-                                       std::vector<uint32_t>& requestMasks) {
+Error QtiComposerClient::CommandReader::validateDisplay() {
   uint32_t types_count = 0;
   uint32_t reqs_count = 0;
 
@@ -1435,13 +1424,109 @@ Error QtiComposerClient::CommandReader::validateDisplay(Display display,
     return static_cast<Error>(err);
   }
 
-  err = mClient.hwc_session_->GetChangedCompositionTypes(mDisplay, &types_count, nullptr, nullptr);
+  return postValidateDisplay(types_count, reqs_count);
+}
+
+bool QtiComposerClient::CommandReader::parseValidateDisplay(uint16_t length) {
+  if (length != CommandWriter::kValidateDisplayLength) {
+    return false;
+  }
+
+  std::vector<Layer> changedLayers;
+  std::vector<IComposerClient::Composition> compositionTypes;
+  std::vector<Layer> requestedLayers;
+  std::vector<uint32_t> requestMasks;
+
+  auto err = validateDisplay();
+
+  if (static_cast<Error>(err) != Error::NONE) {
+    mWriter.setError(getCommandLoc(), static_cast<Error>(err));
+  }
+
+  return true;
+}
+
+bool QtiComposerClient::CommandReader::parseAcceptDisplayChanges(uint16_t length) {
+  if (length != CommandWriter::kAcceptDisplayChangesLength) {
+    return false;
+  }
+
+  auto err = mClient.hwc_session_->AcceptDisplayChanges(mDisplay);
+  if (static_cast<Error>(err) != Error::NONE) {
+    mWriter.setError(getCommandLoc(), static_cast<Error>(err));
+  }
+
+  return true;
+}
+
+Error QtiComposerClient::CommandReader::presentDisplay(Display display,
+                                                  shared_ptr<Fence>* presentFence,
+                                                  std::vector<Layer>& layers,
+                                                  std::vector<shared_ptr<Fence>>& releaseFences) {
+  int32_t err = mClient.hwc_session_->PresentDisplay(display, presentFence);
   if (err != HWC2_ERROR_NONE) {
     return static_cast<Error>(err);
   }
 
+  return postPresentDisplay(presentFence);
+}
+
+bool QtiComposerClient::CommandReader::parsePresentDisplay(uint16_t length) {
+  if (length != CommandWriter::kPresentDisplayLength) {
+    return false;
+  }
+
+  shared_ptr<Fence> presentFence = nullptr;
+  std::vector<Layer> layers;
+  std::vector<shared_ptr<Fence>> fences;
+
+  auto err = presentDisplay(mDisplay, &presentFence, layers, fences);
+  if (err != Error::NONE) {
+    mWriter.setError(getCommandLoc(), err);
+  }
+
+  return true;
+}
+
+Error QtiComposerClient::CommandReader::postPresentDisplay(shared_ptr<Fence>* presentFence) {
+  uint32_t count = 0;
+  auto err = mClient.hwc_session_->GetReleaseFences(mDisplay, &count, nullptr, nullptr);
+  if (err != HWC2_ERROR_NONE) {
+    ALOGW("failed to get release fences");
+    return Error::NONE;
+  }
+
+  std::vector<Layer> layers;
+  std::vector<shared_ptr<Fence>> releaseFences;
+  layers.resize(count);
+  releaseFences.resize(count);
+  err = mClient.hwc_session_->GetReleaseFences(mDisplay, &count, layers.data(), &releaseFences);
+  if (err != HWC2_ERROR_NONE) {
+    ALOGW("failed to get release fences");
+    layers.clear();
+    releaseFences.clear();
+    return Error::NONE;
+  }
+  mWriter.setPresentFence(*presentFence);
+  mWriter.setReleaseFences(layers, releaseFences);
+
+  return Error::NONE;
+}
+
+Error QtiComposerClient::CommandReader::postValidateDisplay(uint32_t& types_count,
+                                                            uint32_t& reqs_count) {
+  std::vector<Layer> changedLayers;
+  std::vector<IComposerClient::Composition> compositionTypes;
+  std::vector<Layer> requestedLayers;
+  std::vector<uint32_t> requestMasks;
   changedLayers.resize(types_count);
   compositionTypes.resize(types_count);
+  auto err = mClient.hwc_session_->GetChangedCompositionTypes(mDisplay, &types_count,
+                                                              nullptr, nullptr);
+  if (err != HWC2_ERROR_NONE) {
+    return static_cast<Error>(err);
+  }
+
   err = mClient.hwc_session_->GetChangedCompositionTypes(mDisplay, &types_count,
                         changedLayers.data(),
                         reinterpret_cast<std::underlying_type<IComposerClient::Composition>::type*>(
@@ -1473,98 +1558,12 @@ Error QtiComposerClient::CommandReader::validateDisplay(Display display,
 
     requestedLayers.clear();
     requestMasks.clear();
-    return static_cast<Error>(err);
   }
 
-  displayRequestMask = display_reqs;
+  mWriter.setChangedCompositionTypes(changedLayers, compositionTypes);
+  mWriter.setDisplayRequests(display_reqs, requestedLayers, requestMasks);
 
   return static_cast<Error>(err);
-}
-
-bool QtiComposerClient::CommandReader::parseValidateDisplay(uint16_t length) {
-  if (length != CommandWriter::kValidateDisplayLength) {
-    return false;
-  }
-
-  std::vector<Layer> changedLayers;
-  std::vector<IComposerClient::Composition> compositionTypes;
-  uint32_t displayRequestMask;
-  std::vector<Layer> requestedLayers;
-  std::vector<uint32_t> requestMasks;
-
-  auto err = validateDisplay(mDisplay, changedLayers, compositionTypes, displayRequestMask,
-                             requestedLayers, requestMasks);
-
-  if (static_cast<Error>(err) == Error::NONE) {
-    mWriter.setChangedCompositionTypes(changedLayers, compositionTypes);
-    mWriter.setDisplayRequests(displayRequestMask, requestedLayers, requestMasks);
-  } else {
-    mWriter.setError(getCommandLoc(), static_cast<Error>(err));
-  }
-
-  return true;
-}
-
-bool QtiComposerClient::CommandReader::parseAcceptDisplayChanges(uint16_t length) {
-  if (length != CommandWriter::kAcceptDisplayChangesLength) {
-    return false;
-  }
-
-  auto err = mClient.hwc_session_->AcceptDisplayChanges(mDisplay);
-  if (static_cast<Error>(err) != Error::NONE) {
-    mWriter.setError(getCommandLoc(), static_cast<Error>(err));
-  }
-
-  return true;
-}
-
-Error QtiComposerClient::CommandReader::presentDisplay(Display display,
-                                                  shared_ptr<Fence>* presentFence,
-                                                  std::vector<Layer>& layers,
-                                                  std::vector<shared_ptr<Fence>>& releaseFences) {
-  int32_t err = mClient.hwc_session_->PresentDisplay(display, presentFence);
-  if (err != HWC2_ERROR_NONE) {
-    return static_cast<Error>(err);
-  }
-
-  uint32_t count = 0;
-  err = mClient.hwc_session_->GetReleaseFences(display, &count, nullptr, nullptr);
-  if (err != HWC2_ERROR_NONE) {
-    ALOGW("failed to get release fences");
-    return Error::NONE;
-  }
-
-  layers.resize(count);
-  releaseFences.resize(count);
-  err = mClient.hwc_session_->GetReleaseFences(display, &count, layers.data(), &releaseFences);
-  if (err != HWC2_ERROR_NONE) {
-    ALOGW("failed to get release fences");
-    layers.clear();
-    releaseFences.clear();
-    return Error::NONE;
-  }
-
-  return static_cast<Error>(err);
-}
-
-bool QtiComposerClient::CommandReader::parsePresentDisplay(uint16_t length) {
-  if (length != CommandWriter::kPresentDisplayLength) {
-    return false;
-  }
-
-  shared_ptr<Fence> presentFence = nullptr;
-  std::vector<Layer> layers;
-  std::vector<shared_ptr<Fence>> fences;
-
-  auto err = presentDisplay(mDisplay, &presentFence, layers, fences);
-  if (err == Error::NONE) {
-    mWriter.setPresentFence(presentFence);
-    mWriter.setReleaseFences(layers, fences);
-  } else {
-    mWriter.setError(getCommandLoc(), err);
-  }
-
-  return true;
 }
 
 bool QtiComposerClient::CommandReader::parsePresentOrValidateDisplay(uint16_t length) {
@@ -1572,37 +1571,32 @@ bool QtiComposerClient::CommandReader::parsePresentOrValidateDisplay(uint16_t le
      return false;
   }
 
-  // First try to Present as is.
-  mClient.getCapabilities();
-  if (mClient.hasCapability(HWC2_CAPABILITY_SKIP_VALIDATE)) {
-    shared_ptr<Fence> presentFence = nullptr;
-    std::vector<Layer> layers;
-    std::vector<shared_ptr<Fence>> fences;
-    auto err = presentDisplay(mDisplay, &presentFence, layers, fences);
-    if (err == Error::NONE) {
-      mWriter.setPresentOrValidateResult(1);
-      mWriter.setPresentFence(presentFence);
-      mWriter.setReleaseFences(layers, fences);
-      return true;
+  // Handle unified commit.
+  bool needsCommit = false;
+  shared_ptr<Fence> presentFence = nullptr;
+  uint32_t typesCount = 0;
+  uint32_t reqsCount = 0;
+  auto status = mClient.hwc_session_->CommitOrPrepare(mDisplay, &presentFence, &typesCount,
+                                                      &reqsCount, &needsCommit);
+  if (needsCommit) {
+    if (status != HWC2::Error::None && status != HWC2::Error::HasChanges) {
+      ALOGE("CommitOrPrepare failed %d", status);
     }
-  }
-
-  // Present has failed. We need to fallback to validate
-  std::vector<Layer> changedLayers;
-  std::vector<IComposerClient::Composition> compositionTypes;
-  uint32_t displayRequestMask = 0x0;
-  std::vector<Layer> requestedLayers;
-  std::vector<uint32_t> requestMasks;
-
-  auto err = validateDisplay(mDisplay, changedLayers, compositionTypes, displayRequestMask,
-                             requestedLayers, requestMasks);
-  // mResources->setDisplayMustValidateState(mDisplay, false);
-  if (err == Error::NONE) {
+    // Implement post validation. Getcomptypes etc;
+    postValidateDisplay(typesCount, reqsCount);
     mWriter.setPresentOrValidateResult(0);
-    mWriter.setChangedCompositionTypes(changedLayers, compositionTypes);
-    mWriter.setDisplayRequests(displayRequestMask, requestedLayers, requestMasks);
   } else {
-    mWriter.setError(getCommandLoc(), err);
+    if (status == HWC2::Error::HasChanges) {
+      // Perform post validate.
+      postValidateDisplay(typesCount, reqsCount);
+      // Set result to 2.
+      mWriter.setPresentOrValidateResult(2);
+    } else {
+      // Set result to 1.
+      mWriter.setPresentOrValidateResult(1);
+    }
+    // perform post present display.
+    postPresentDisplay(&presentFence);
   }
 
   return true;
