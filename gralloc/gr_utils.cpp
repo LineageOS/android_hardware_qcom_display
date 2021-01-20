@@ -1241,9 +1241,10 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       break;
 #else
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
+    case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
-      aligned_w = ALIGN(width, 512);
-      aligned_h = ALIGN(height, 512);
+      aligned_w = ALIGN(width, 128);
+      aligned_h = ALIGN(height, 32);
       break;
 #endif
     case HAL_PIXEL_FORMAT_NV21_ZSL:
