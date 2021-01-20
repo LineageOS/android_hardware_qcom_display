@@ -13,9 +13,14 @@ LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdgralloc\" -Wall -
 LOCAL_SHARED_LIBRARIES        := $(common_libs) libqdMetaData libsync libgrallocutils \
                                  android.hardware.graphics.common@1.1
 ifeq ($(TARGET_KERNEL_VERSION), 4.14)
+  ifneq ($(LIBION_HEADER_PATH_WRAPPER), )
+    include $(LIBION_HEADER_PATH_WRAPPER)
+    LOCAL_C_INCLUDES += $(LIBION_HEADER_PATHS)
+  else
+    LOCAL_C_INCLUDES += system/core/libion/include
+    LOCAL_C_INCLUDES += system/core/libion/kernel-headers/
+  endif
 LOCAL_C_INCLUDES              += external/libcxx/include \
-                                 system/core/libion/include/ \
-                                 system/core/libion/kernel-headers/ \
                                  $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 LOCAL_SHARED_LIBRARIES        += libion
 endif
@@ -51,8 +56,13 @@ LOCAL_VENDOR_MODULE           := true
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes)
 ifeq ($(TARGET_KERNEL_VERSION), 4.14)
-LOCAL_C_INCLUDES              += system/core/libion/include \
-                                 system/core/libion/kernel-headers
+  ifneq ($(LIBION_HEADER_PATH_WRAPPER), )
+    include $(LIBION_HEADER_PATH_WRAPPER)
+    LOCAL_C_INCLUDES += $(LIBION_HEADER_PATHS)
+  else
+    LOCAL_C_INCLUDES += system/core/libion/include
+    LOCAL_C_INCLUDES += system/core/libion/kernel-headers/
+  endif
 endif
 ifeq ($(TARGET_KERNEL_VERSION), 4.19)
 LOCAL_C_INCLUDES              += $(LIBION_HEADER_PATHS)

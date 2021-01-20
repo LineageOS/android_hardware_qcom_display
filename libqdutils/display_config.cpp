@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2013-2014, 2016, 2018-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2013-2014, 2016, 2018-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -424,4 +424,39 @@ extern "C" int waitForComposerInit() {
     }
 
     return !status;
+}
+
+extern "C" int setStandByMode(int mode) {
+    status_t err = (status_t) FAILED_TRANSACTION;
+    sp<IQService> binder = getBinder();
+    Parcel inParcel, outParcel;
+
+    if(binder != NULL) {
+        inParcel.writeInt32(mode);
+        err = binder->dispatch(IQService::SET_STAND_BY_MODE,
+              &inParcel, &outParcel);
+        if(err) {
+            ALOGE("%s() failed with err %d", __FUNCTION__, err);
+        }
+    }
+    return err;
+}
+
+extern "C"  int getPanelResolution(int *width, int *height) {
+    status_t err = (status_t) FAILED_TRANSACTION;
+    sp<IQService> binder = getBinder();
+    Parcel inParcel, outParcel;
+
+    if(binder != NULL) {
+        err = binder->dispatch(IQService::GET_PANEL_RESOLUTION,
+              &inParcel, &outParcel);
+        if(err != 0) {
+            ALOGE_IF(getBinder(), "%s() failed with err %d", __FUNCTION__, err);
+        } else {
+            *width = outParcel.readInt32();
+            *height = outParcel.readInt32();
+        }
+    }
+
+    return err;
 }
