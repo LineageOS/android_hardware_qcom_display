@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019, 2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -56,6 +56,7 @@ class DRMPPManager {
  private:
   int SetPPBlobProperty(drmModeAtomicReq *req, uint32_t obj_id, struct DRMPPPropInfo *prop_info,
                         DRMPPFeatureInfo &feature);
+  void SetPPEvent(uint32_t obj_id, DRMPPFeatureInfo &feature);
 
   int fd_ = -1;
   uint32_t object_type_ = std::numeric_limits<uint32_t>::max();

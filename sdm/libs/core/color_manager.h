@@ -119,7 +119,8 @@ class ColorManagerProxy {
   static ColorManagerProxy *CreateColorManagerProxy(DisplayType type, HWInterface *hw_intf,
                                                     const HWDisplayAttributes &attribute,
                                                     const HWPanelInfo &panel_info,
-                                                    DppsControlInterface *dpps_intf);
+                                                    DppsControlInterface *dpps_intf,
+                                                    DisplayInterface *disp_intf);
 
   /* need reverse the effect of CreateColorManagerProxy. */
   ~ColorManagerProxy();

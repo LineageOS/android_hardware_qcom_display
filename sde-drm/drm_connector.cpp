@@ -600,6 +600,8 @@ void DRMConnector::ParseCapabilities(uint64_t blob_id, DRMConnectorInfo *info) {
   const string dyn_bitclk_support = "dyn bitclk support=";
   const string qsync_fps = "qsync_fps=";
   const string has_cwb_dither = "has_cwb_dither=";
+  const string max_os_brightness = "max os brightness=";
+  const string max_panel_backlight = "max panel backlight=";
 
   while (std::getline(stream, line)) {
     if (line.find(pixel_formats) != string::npos) {
@@ -635,7 +637,12 @@ void DRMConnector::ParseCapabilities(uint64_t blob_id, DRMConnectorInfo *info) {
       info->dyn_bitclk_support = (string(line, dyn_bitclk_support.length()) == "true");
     } else if (line.find(has_cwb_dither) != string::npos) {
       info->has_cwb_dither = std::stoi(string(line, has_cwb_dither.length()));
+    } else if (line.find(max_os_brightness) != string::npos) {
+      info->max_os_brightness = std::stoi(string(line, max_os_brightness.length()));
+    } else if (line.find(max_panel_backlight) != string::npos) {
+      info->max_panel_backlight = std::stoi(string(line, max_panel_backlight.length()));
     }
+
   }
 
   drmModeFreePropertyBlob(blob);

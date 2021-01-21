@@ -160,7 +160,7 @@ DisplayError DisplayBase::Init() {
     DppsControlInterface *dpps_intf = comp_manager_->GetDppsControlIntf();
     color_mgr_ = ColorManagerProxy::CreateColorManagerProxy(display_type_, hw_intf_,
                                                             display_attributes_, hw_panel_info_,
-                                                            dpps_intf);
+                                                            dpps_intf, this);
   }
 
   error = comp_manager_->RegisterDisplay(display_id_, display_type_, display_attributes_,
@@ -3661,5 +3661,46 @@ DisplayError DisplayBase::SetHWDetailedEnhancerConfig(void *params) {
 
   return err;
 }
+
+DisplayError DisplayBase::GetPanelBlMaxLvl(uint32_t *max_level) {
+  ClientLock lock(disp_mutex_);
+
+  DisplayError err = hw_intf_->GetPanelBlMaxLvl(max_level);
+  if (err) {
+    DLOGE("Failed to get panel max backlight level %d", err);
+  } else {
+    DLOGI_IF(kTagDisplay, "Got panel max backlight %d", *(max_level));
+  }
+  return err;
+}
+
+DisplayError DisplayBase::SetDimmingBlLut(void *payload, size_t size) {
+  ClientLock lock(disp_mutex_);
+
+  DisplayError err = hw_intf_->SetDimmingBlLut(payload, size);
+  if (err) {
+    DLOGE("Failed to set dimming bl LUT %d", err);
+  } else {
+    DLOGI_IF(kTagDisplay, "Dimimng bl LUT is set successfully");
+    event_handler_->Refresh();
+  }
+  return err;
+}
+
+DisplayError DisplayBase::EnableDimmingBacklightEvent(void *payload, size_t size) {
+  ClientLock lock(disp_mutex_);
+
+  DisplayError err = hw_intf_->EnableDimmingBacklightEvent(payload, size);
+  if (err) {
+    DLOGE("Failed to set dimming backlight event %d", err);
+  }
+  return err;
+}
+
+void DisplayBase::ScreenRefresh() {
+  ClientLock lock(disp_mutex_);
+  event_handler_->Refresh();
+}
+
 
 }  // namespace sdm

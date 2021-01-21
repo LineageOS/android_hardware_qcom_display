@@ -168,7 +168,8 @@ ColorManagerProxy *ColorManagerProxy::CreateColorManagerProxy(DisplayType type,
                                                               HWInterface *hw_intf,
                                                               const HWDisplayAttributes &attribute,
                                                               const HWPanelInfo &panel_info,
-                                                              DppsControlInterface *dpps_intf) {
+                                                              DppsControlInterface *dpps_intf,
+                                                              DisplayInterface *disp_intf) {
   DisplayError error = kErrorNone;
   PPFeatureVersion versions;
   int32_t display_id = -1;
@@ -226,6 +227,16 @@ ColorManagerProxy *ColorManagerProxy::CreateColorManagerProxy(DisplayType type,
         DLOGW("Failed to init Stc interface, err %d", err);
         delete color_manager_proxy->stc_intf_;
         color_manager_proxy->stc_intf_ = NULL;
+      } else {
+        // pass the display interface to STC manager for digital dimming
+        ScPayload payload;
+        payload.len = sizeof(disp_intf);
+        payload.prop = snapdragoncolor::kDisplayIntf;
+        payload.payload = reinterpret_cast<uint64_t>(disp_intf);
+        int ret = color_manager_proxy->stc_intf_->SetProperty(payload);
+        if (ret) {
+          DLOGW("Failed to SetProperty, property = %d error = %d", payload.prop, ret);
+        }
       }
 
       if (color_manager_proxy->HasNativeModeSupport()) {

@@ -136,6 +136,9 @@ class HWInterface {
                                                     uint8_t *out_data) = 0;
   virtual DisplayError SetFrameTrigger(FrameTriggerMode mode) = 0;
   virtual DisplayError SetBLScale(uint32_t level) = 0;
+  virtual DisplayError GetPanelBlMaxLvl(uint32_t *max_bl) = 0;
+  virtual DisplayError SetDimmingBlLut(void *payload, size_t size) = 0;
+  virtual DisplayError EnableDimmingBacklightEvent(void *payload, size_t size) = 0;
   virtual DisplayError GetPanelBrightnessBasePath(std::string *base_path) const = 0;
   virtual DisplayError SetBlendSpace(const PrimariesTransfer &blend_space) = 0;
   virtual DisplayError EnableSelfRefresh() = 0;

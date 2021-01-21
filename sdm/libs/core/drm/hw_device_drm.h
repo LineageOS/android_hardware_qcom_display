@@ -230,6 +230,9 @@ class HWDeviceDRM : public HWInterface {
   void GetTopologySplit(HWTopology hw_topology, uint32_t *split_number);
   uint64_t GetSupportedBitClkRate(uint32_t new_mode_index,
                                   uint64_t bit_clk_rate_request);
+  DisplayError GetPanelBlMaxLvl(uint32_t *bl_max);
+  DisplayError SetDimmingBlLut(void *payload, size_t size);
+  DisplayError EnableDimmingBacklightEvent(void *payload, size_t size);
 
   class Registry {
    public:

@@ -749,6 +749,8 @@ struct DRMConnectorInfo {
   uint64_t panel_id = 0;
   uint32_t qsync_fps;
   bool has_cwb_dither = false;
+  uint32_t max_os_brightness;
+  uint32_t max_panel_backlight;
 };
 
 // All DRM Connectors as map<Connector_id , connector_info>
@@ -792,6 +794,7 @@ enum DRMPPFeatureID {
   kFeatureVigIgc,
   kFeatureVigGamut,
   kFeatureCWBDither,
+  kFeatureDimmingBlLut,
   kPPFeaturesMax,
 };
 
@@ -810,6 +813,9 @@ struct DRMPPFeatureInfo {
   uint32_t payload_size;
   void *payload;
   uint32_t object_type;
+  bool is_event;
+  uint32_t drm_fd;
+  uint32_t event_type;
 };
 
 enum DRMDPPSFeatureID {

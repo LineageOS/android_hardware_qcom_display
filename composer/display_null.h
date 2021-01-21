@@ -70,6 +70,7 @@ class DisplayNull : public DisplayInterface {
   virtual bool IsValidated() { return true; }
   virtual DisplayError GetQsyncFps(uint32_t *qsync_fps) { return kErrorNotSupported; }
   virtual void FlushConcurrentWriteback() {}
+  virtual void ScreenRefresh() { }
 
   MAKE_NO_OP(CommitOrPrepare(LayerStack *))
   MAKE_NO_OP(PrePrepare(LayerStack *))
@@ -125,6 +126,9 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(SetFrameTriggerMode(FrameTriggerMode))
   MAKE_NO_OP(SetPanelLuminanceAttributes(float min_lum, float max_lum))
   MAKE_NO_OP(SetBLScale(uint32_t))
+  MAKE_NO_OP(GetPanelBlMaxLvl(uint32_t *))
+  MAKE_NO_OP(SetDimmingBlLut(void *, size_t))
+  MAKE_NO_OP(EnableDimmingBacklightEvent(void *, size_t))
   MAKE_NO_OP(GetQSyncMode(QSyncMode *))
   MAKE_NO_OP(colorSamplingOn());
   MAKE_NO_OP(colorSamplingOff());

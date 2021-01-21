@@ -96,6 +96,9 @@ enum ScProperty {
   //<! GetProperty - For client to query global dither hw asset.
   //<! Payload - HwConfigOutputParams
   kGetGlobalDitherHwConfig,
+  //<! SetProperty - Property to pass the display interface to STC manager.
+  //<! Payload - struct DisplayInterface*
+  kDisplayIntf,
   //<! Max value of public properties
   kPropertyMax = 511,
   //<! Custom Properties

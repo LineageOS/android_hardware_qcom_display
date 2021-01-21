@@ -32,6 +32,7 @@
 #include <xf86drmMode.h>
 #include <display/drm/msm_drm_pp.h>
 #endif
+#include <errno.h>
 #include <drm_logger.h>
 #include <cstring>
 #include <algorithm>
@@ -200,6 +201,11 @@ void DRMPPManager::Init(const DRMPropertyManager &pm , uint32_t object_type) {
       pp_prop_map_[kFeatureCWBDither].version = i - (uint32_t)DRMProperty::SDE_PP_CWB_DITHER_V2 + 2;
       DRM_LOGI("PP CWB dither version %d, prop_id %d", pp_prop_map_[kFeatureCWBDither].version,
                pp_prop_map_[kFeatureCWBDither].prop_id);
+    } else if (i >= (uint32_t)DRMProperty::DIMMING_BL_LUT &&
+               i <= (uint32_t)DRMProperty::DIMMING_BL_LUT) {
+      pp_prop_map_[kFeatureDimmingBlLut].prop_enum = (DRMProperty)i;
+      pp_prop_map_[kFeatureDimmingBlLut].prop_id = pm.GetPropertyId((DRMProperty)i);
+      pp_prop_map_[kFeatureDimmingBlLut].version = i - (uint32_t)DRMProperty::DIMMING_BL_LUT;
     }
   }
   return;
@@ -222,6 +228,13 @@ void DRMPPManager::SetPPFeature(drmModeAtomicReq *req, uint32_t obj_id, DRMPPFea
       return;
   }
 
+  /* handle event register/de-register */
+  if (feature.is_event) {
+    SetPPEvent(obj_id, feature);
+    return;
+  }
+
+  /* handle feature setting */
   if (feature.id >= kPPFeaturesMax)
     return;
 
@@ -276,6 +289,43 @@ int DRMPPManager::SetPPBlobProperty(drmModeAtomicReq *req, uint32_t obj_id,
 
 #endif
   return ret;
+}
+
+void DRMPPManager::SetPPEvent(uint32_t obj_id, DRMPPFeatureInfo &feature) {
+#ifdef PP_DRM_ENABLE
+  int ret  = 0;
+  bool enable;
+  struct drm_msm_event_req event_req = {};
+
+  if (!feature.payload || feature.payload_size != sizeof(bool)) {
+    DRM_LOGE("Invalid input params: payload %pK payload_size %d exp size %d",
+             feature.payload, feature.payload_size, sizeof(bool));
+    return;
+  }
+
+  enable = *(reinterpret_cast<bool *>(feature.payload));
+  event_req.object_id = obj_id;
+  event_req.object_type = object_type_;
+  event_req.event = feature.event_type;
+  if (enable)
+    ret = drmIoctl(feature.drm_fd, DRM_IOCTL_MSM_REGISTER_EVENT, &event_req);
+  else
+    ret = drmIoctl(feature.drm_fd, DRM_IOCTL_MSM_DEREGISTER_EVENT, &event_req);
+  if (ret) {
+    ret = -errno;
+    if (ret == -EALREADY) {
+      DRM_LOGI("Duplicated request to set event 0x%x, object_id %u, object_type 0x%x, enable %d",
+          event_req.event, event_req.object_id, object_type_, enable);
+    } else if (ret == -ENOENT || ret == -ENODEV || ret == -EACCES) {
+      DRM_LOGW("Event 0x%x, object_id %u, object_type 0x%x, enable %d, ret %d",
+          event_req.event, event_req.object_id, object_type_, enable, ret);
+    } else {
+      DRM_LOGE("Failed to set event 0x%x, object_id %u, object_type 0x%x, enable %d, ret %d",
+          event_req.event, event_req.object_id, object_type_, enable, ret);
+    }
+  }
+#endif
+  return;
 }
 
 }  // namespace sde_drm

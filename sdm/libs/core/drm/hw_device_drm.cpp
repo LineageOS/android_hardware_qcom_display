@@ -2973,4 +2973,36 @@ DisplayError HWDeviceDRM::ConfigureCWBDither(void *payload, uint32_t conn_id,
   hw_color_mgr_->FreeDrmFeatureData(&kernel_params);
   return kErrorNone;
 }
+
+DisplayError HWDeviceDRM::GetPanelBlMaxLvl(uint32_t *bl_max) {
+  if (!bl_max) {
+    DLOGE("Invalid input param");
+    return kErrorParameters;
+  }
+
+  *bl_max = connector_info_.max_panel_backlight;
+  return kErrorNone;
+}
+
+DisplayError HWDeviceDRM::SetDimmingBlLut(void *payload, size_t size) {
+  if (!payload || size != sizeof(DRMPPFeatureInfo)) {
+    DLOGE("Invalid input params payload %pK, size %zd expect size %zd", payload, size,
+        sizeof(DRMPPFeatureInfo));
+      return kErrorParameters;
+  }
+
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POST_PROC, token_.conn_id, payload);
+  return kErrorNone;
+}
+
+DisplayError HWDeviceDRM::EnableDimmingBacklightEvent(void *payload, size_t size) {
+  if (!payload || size != sizeof(DRMPPFeatureInfo)) {
+    DLOGE("Invalid input params payload %pK, size %zd expect size %zd", payload, size,
+        sizeof(DRMPPFeatureInfo));
+      return kErrorParameters;
+  }
+
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POST_PROC, token_.conn_id, payload);
+  return kErrorNone;
+}
 }  // namespace sdm

@@ -182,6 +182,10 @@ class DisplayBase : public DisplayInterface {
   }
   virtual DisplayError GetRefreshRate(uint32_t *refresh_rate) { return kErrorNotSupported; }
   virtual DisplayError SetBLScale(uint32_t level) { return kErrorNotSupported; }
+  DisplayError GetPanelBlMaxLvl(uint32_t *bl_max);
+  DisplayError SetDimmingBlLut(void *payload, size_t size);
+  DisplayError EnableDimmingBacklightEvent(void *payload, size_t size);
+  void ScreenRefresh();
   virtual bool CheckResourceState(bool *res_exhausted);
   virtual bool GameEnhanceSupported();
   virtual DisplayError GetQSyncMode(QSyncMode *qsync_mode) { return kErrorNotSupported; }

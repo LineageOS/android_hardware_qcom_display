@@ -1047,6 +1047,39 @@ class DisplayInterface {
   */
   virtual DisplayError SetBLScale(uint32_t level) = 0;
 
+  /*! @brief Method to get panel backlight max level.
+
+    @param[in] panel backlight max level.
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetPanelBlMaxLvl(uint32_t *max_level) = 0;
+
+  /*! @brief Method to set display dimming backlight LUT.
+
+    @param[in] payload of dimming backlight LUT struct.
+    @param[in] size of the payload.
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError SetDimmingBlLut(void *payload, size_t size) = 0;
+
+ /*! @brief Method to enable/disable dimming backlight event.
+
+    @param[in] payload to enable/disable dimming backlight event.
+    @param[in] size of the payload.
+
+    @return \link DisplayError \endlink
+  */
+
+  virtual DisplayError EnableDimmingBacklightEvent(void *payload, size_t size) = 0;
+
+  /*! @brief Method to trigger a screen refresh.
+
+    @return \link void \endlink
+  */
+  virtual void ScreenRefresh() = 0;
+
   /*! @brief Method to check if the Default resources are freed for display
 
     @return \link bool \endlink
