@@ -108,6 +108,7 @@ cc_library_shared {
         "android.hardware.graphics.mapper@3.0",
         "android.hardware.graphics.mapper@4.0",
         "libdmabufheap",
+        "vendor.qti.hardware.display.mapperextensions@1.2",
     ],
     cflags: [
         "-DLOG_TAG=\"qdgralloc\"",
@@ -149,6 +150,7 @@ cc_binary {
         "vendor.qti.hardware.display.mapperextensions@1.0",
         "vendor.qti.hardware.display.mapperextensions@1.1",
         "libdmabufheap",
+        "vendor.qti.hardware.display.mapperextensions@1.2",
     ],
     cflags: ["-DLOG_TAG=\"qdgralloc\""],
     srcs: [
