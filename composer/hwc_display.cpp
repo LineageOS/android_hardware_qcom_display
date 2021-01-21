@@ -536,10 +536,6 @@ int HWCDisplay::Init() {
   partial_update_enabled_ = fixed_info.partial_update || (!fixed_info.is_cmdmode);
   client_target_->SetPartialUpdate(partial_update_enabled_);
 
-  int disable_fast_path = 0;
-  HWCDebugHandler::Get()->GetProperty(DISABLE_FAST_PATH, &disable_fast_path);
-  fast_path_enabled_ = !(disable_fast_path == 1);
-
   game_supported_ = display_intf_->GameEnhanceSupported();
 
   DLOGI("Display created with id: %d, game_supported_: %d", UINT32(id_), game_supported_);
@@ -664,7 +660,6 @@ void HWCDisplay::BuildLayerStack() {
   display_rect_ = LayerRect();
   metadata_refresh_rate_ = 0;
   layer_stack_.flags.animating = animating_;
-  layer_stack_.flags.fast_path = fast_path_enabled_ && fast_path_composition_;
   layer_stack_.flags.layer_id_support = true;
   layer_stack_.solid_fill_enabled = solid_fill_enable_;
   layer_stack_.tonemapper_active = tone_mapper_ && tone_mapper_->IsActive();

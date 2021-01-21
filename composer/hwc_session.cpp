@@ -1253,7 +1253,6 @@ int32_t HWCSession::ValidateDisplay(hwc2_display_t display, uint32_t *out_num_ty
       status = HWC2::Error::None;
     } else if (hwc_display_[target_display]) {
       hwc_display_[target_display]->ProcessActiveConfigChange();
-      hwc_display_[target_display]->SetFastPathComposition(false);
       status = ValidateDisplayInternal(target_display, out_num_types, out_num_requests);
     }
   }
@@ -3104,11 +3103,9 @@ HWC2::Error HWCSession::PresentDisplayInternal(hwc2_display_t display) {
   // Validation to optimize for the frames which don't require the Client composition.
   if (hwc_display->IsSkipValidateState()) {
     uint32_t out_num_types = 0, out_num_requests = 0;
-    hwc_display->SetFastPathComposition(true);
     HWC2::Error error = ValidateDisplayInternal(display, &out_num_types, &out_num_requests);
     if ((error != HWC2::Error::None) || hwc_display->HWCClientNeedsValidate()) {
       hwc_display->SetValidationState(HWCDisplay::kInternalValidate);
-      hwc_display->SetFastPathComposition(false);
       return HWC2::Error::NotValidated;
     }
   }

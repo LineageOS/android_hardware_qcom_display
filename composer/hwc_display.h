@@ -290,7 +290,6 @@ class HWCDisplay : public DisplayEventHandler {
     return (has_client_composition_ || layer_stack_.flags.single_buffered_layer_present);
   }
   bool CheckResourceState();
-  virtual void SetFastPathComposition(bool enable) { fast_path_composition_ = enable; }
   virtual HWC2::Error SetColorModeFromClientApi(int32_t color_mode_id) {
     return HWC2::Error::Unsupported;
   }
@@ -542,7 +541,6 @@ class HWCDisplay : public DisplayEventHandler {
   bool pending_commit_ = false;
   bool is_cmd_mode_ = false;
   bool partial_update_enabled_ = false;
-  bool fast_path_composition_ = false;
   bool skip_commit_ = false;
   std::map<uint32_t, DisplayConfigVariableInfo> variable_config_map_;
   std::vector<uint32_t> hwc_config_map_;
@@ -578,7 +576,6 @@ class HWCDisplay : public DisplayEventHandler {
   uint32_t geometry_changes_ = GeometryChanges::kNone;
   uint32_t geometry_changes_on_doze_suspend_ = GeometryChanges::kNone;
   int null_display_mode_ = 0;
-  bool fast_path_enabled_ = true;
   bool first_cycle_ = true;  // false if a display commit has succeeded on the device.
   shared_ptr<Fence> fbt_release_fence_ = nullptr;
   shared_ptr<Fence> release_fence_ = nullptr;
