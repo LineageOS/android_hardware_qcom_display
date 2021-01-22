@@ -641,6 +641,10 @@ DisplayError HWPeripheralDRM::PowerOn(const HWQosData &qos_data,
 
 DisplayError HWPeripheralDRM::PowerOff(bool teardown) {
   DTRACE_SCOPED();
+  if (!first_cycle_) {
+    drm_mgr_intf_->MarkPanelFeatureForNullCommit(token_,
+                                           panel_feature_property_map_[kPanelFeatureDemuraInitCfg]);
+  }
   SetVMReqState();
   DisplayError err = kErrorNone;
   if (secure_display_active_) {
@@ -916,6 +920,7 @@ void HWPeripheralDRM::CreatePanelFeaturePropertyMap() {
   panel_feature_property_map_[kPanelFeatureDsppDemuraInfo] =
     sde_drm::kDRMPanelFeatureDsppDemuraInfo;
   panel_feature_property_map_[kPanelFeatureRCInitCfg] = sde_drm::kDRMPanelFeatureRCInit;
+  panel_feature_property_map_[kPanelFeatureDemuraPanelId] = sde_drm::kDRMPanelFeaturePanelId;
 }
 
 int HWPeripheralDRM::GetPanelFeature(PanelFeaturePropertyInfo *feature_info) {
@@ -939,6 +944,7 @@ int HWPeripheralDRM::GetPanelFeature(PanelFeaturePropertyInfo *feature_info) {
 
   switch (feature_info->prop_id) {
     case kPanelFeatureSPRInitCfg:
+    case kPanelFeatureDemuraInitCfg:
     case kPanelFeatureDsppIndex:
     case kPanelFeatureDsppSPRInfo:
     case kPanelFeatureDsppDemuraInfo:
@@ -948,6 +954,7 @@ int HWPeripheralDRM::GetPanelFeature(PanelFeaturePropertyInfo *feature_info) {
       drm_feature.obj_id =  token_.crtc_id;
      break;
     case kPanelFeatureSPRPackType:
+    case kPanelFeatureDemuraPanelId:
       drm_feature.obj_type = DRM_MODE_OBJECT_CONNECTOR;
       drm_feature.obj_id =  token_.conn_id;
      break;
@@ -975,6 +982,7 @@ int HWPeripheralDRM::SetPanelFeature(const PanelFeaturePropertyInfo &feature_inf
   switch (feature_info.prop_id) {
     case kPanelFeatureSPRInitCfg:
     case kPanelFeatureRCInitCfg:
+    case kPanelFeatureDemuraInitCfg:
       drm_feature.obj_type = DRM_MODE_OBJECT_CRTC;
       drm_feature.obj_id =  token_.crtc_id;
      break;

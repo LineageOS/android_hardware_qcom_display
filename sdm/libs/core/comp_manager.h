@@ -32,6 +32,7 @@
 #include <set>
 #include <vector>
 #include <string>
+#include <map>
 
 #include "strategy.h"
 #include "resource_default.h"
@@ -93,6 +94,19 @@ class CompManager {
   bool CheckResourceState(Handle display_ctx);
   bool IsRotatorSupportedFormat(LayerBufferFormat format);
   DisplayError SwapBuffers(Handle display_ctx);
+  DisplayError FreeDemuraFetchResources(Handle display_ctx);
+  DisplayError GetDemuraFetchResourceCount(std::map<uint32_t, uint8_t> *fetch_resource_cnt);
+  DisplayError ReserveDemuraFetchResources(const uint32_t &display_id,
+                                           const int8_t &preferred_rect);
+  DisplayError GetDemuraFetchResources(Handle display_ctx, FetchResourceList *frl);
+  void SetDemuraStatus(bool status) { demura_enabled_ = status; }
+  bool GetDemuraStatus() { return demura_enabled_; }
+  void SetDemuraStatusForDisplay(const int32_t &display_id, bool status) {
+    display_demura_status_[display_id] = status;
+  }
+  bool GetDemuraStatusForDisplay(const int32_t &display_id) {
+    return display_demura_status_[display_id];
+  }
 
  private:
   static const int kMaxThermalLevel = 3;
@@ -135,6 +149,8 @@ class CompManager {
   uint32_t max_sde_ext_layers_ = 0;
   uint32_t max_sde_builtin_layers_ = 2;
   DppsControlInterface *dpps_ctrl_intf_ = NULL;
+  bool demura_enabled_ = false;
+  std::map<int32_t /* display_id */, bool> display_demura_status_;
 };
 
 }  // namespace sdm

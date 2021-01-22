@@ -44,10 +44,14 @@
 #include "color_manager.h"
 #include "hw_events_interface.h"
 
+#define GET_PANEL_FEATURE_FACTORY "GetPanelFeatureFactoryIntf"
+
 namespace sdm {
 
 using std::recursive_mutex;
 using std::lock_guard;
+
+typedef PanelFeatureFactoryIntf* (*GetPanelFeatureFactory)();
 
 class DisplayBase : public DisplayInterface {
  public:
@@ -178,6 +182,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError NotifyDisplayCalibrationMode(bool in_calibration) {
     return kErrorNotSupported;
   }
+  virtual bool HasDemura() { return false; }
 
  protected:
   struct DisplayMutex {
@@ -216,7 +221,7 @@ class DisplayBase : public DisplayInterface {
   const char *kBt2020Pq = "bt2020_pq";
   const char *kBt2020Hlg = "bt2020_hlg";
   const char *kDisplayBt2020 = "display_bt2020";
-  DisplayError BuildLayerStackStats(LayerStack *layer_stack);
+  virtual DisplayError BuildLayerStackStats(LayerStack *layer_stack);
   virtual DisplayError ValidateGPUTargetParams();
   void CommitLayerParams(LayerStack *layer_stack);
   void PostCommitLayerParams(LayerStack *layer_stack);
@@ -250,6 +255,7 @@ class DisplayBase : public DisplayInterface {
   DisplayError ResetPendingPowerState(const shared_ptr<Fence> &retire_fence);
   DisplayError GetPendingDisplayState(DisplayState *disp_state);
   void SetPendingPowerState(DisplayState state);
+  DisplayError SetupPanelFeatureFactory();
 
   DisplayMutex disp_mutex_;
   int32_t display_id_ = -1;

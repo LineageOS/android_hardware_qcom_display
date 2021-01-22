@@ -169,6 +169,9 @@ DRMProperty DRMPropertyManager::GetPropertyEnum(const std::string &name) const {
   if (name == "SDE_SPR_INIT_CFG_V1") { return DRMProperty::SPR_INIT_CFG_V1; }
   if (name == "SDE_DSPP_RC_MASK_V1") { return DRMProperty::DSPP_RC_MASK_V1; }
   if (name == "panel_mode") { return DRMProperty::PANEL_MODE; }
+  if (name == "SDE_DEMURA_INIT_CFG_V1") { return DRMProperty::DEMURA_INIT_CFG_V1; }
+  if (name == "DEMURA_PANEL_ID") { return DRMProperty::DEMURA_PANEL_ID; }
+  if (name == "SDE_DEMURA_BOOT_PLANE_V1") { return DRMProperty::DEMURA_BOOT_PLANE_V1; }
 
   return DRMProperty::INVALID;
 }

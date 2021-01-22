@@ -140,4 +140,5 @@ subdirs = [
     "sdm/libs/core",
     "qmaa",
     "libmemutils",
+    "oem_services",
 ]

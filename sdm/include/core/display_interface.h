@@ -1008,6 +1008,12 @@ class DisplayInterface {
   */
   virtual DisplayError NotifyDisplayCalibrationMode(bool in_calibration) = 0;
 
+  /*! @brief Method to check if display has Demura requirement
+
+    @return \link bool \endlink
+  */
+  virtual bool HasDemura() = 0;
+
  protected:
   virtual ~DisplayInterface() { }
 };
@@ -1015,4 +1021,3 @@ class DisplayInterface {
 }  // namespace sdm
 
 #endif  // __DISPLAY_INTERFACE_H__
-

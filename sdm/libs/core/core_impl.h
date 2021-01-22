@@ -28,15 +28,23 @@
 #include <core/core_interface.h>
 #include <private/extension_interface.h>
 #include <private/color_interface.h>
+#include <private/panel_feature_factory_intf.h>
 #include <utils/locker.h>
 #include <utils/sys.h>
+
+#include <memory>
+#include <vector>
+#include <utility>
 
 #include "hw_interface.h"
 #include "comp_manager.h"
 
 #define SET_REVISION(major, minor) ((major << 8) | minor)
+#define GET_PANEL_FEATURE_FACTORY "GetPanelFeatureFactoryIntf"
 
 namespace sdm {
+
+typedef PanelFeatureFactoryIntf* (*GetPanelFeatureFactory)();
 
 class CoreImpl : public CoreInterface {
  public:
@@ -65,6 +73,8 @@ class CoreImpl : public CoreInterface {
   virtual bool IsRotatorSupportedFormat(LayerBufferFormat format);
 
  protected:
+  DisplayError ReserveDemuraResources();
+
   Locker locker_;
   BufferAllocator *buffer_allocator_ = NULL;
   HWResourceInfo hw_resource_;
@@ -74,6 +84,7 @@ class CoreImpl : public CoreInterface {
   ExtensionInterface *extension_intf_ = NULL;
   CreateExtensionInterface create_extension_intf_ = NULL;
   DestroyExtensionInterface destroy_extension_intf_ = NULL;
+  PanelFeatureFactoryIntf *panel_feature_factory_intf_ = NULL;
   SocketHandler *socket_handler_ = NULL;
   HWDisplaysInfo hw_displays_info_ = {};
   std::shared_ptr<IPCIntf> ipc_intf_ = nullptr;

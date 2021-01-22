@@ -31,6 +31,7 @@
 #define __PANEL_FEATURE_PROPERTY_INTF_H__
 
 #include <utils/constants.h>
+#include <inttypes.h>
 
 namespace sdm {
 
@@ -44,7 +45,8 @@ enum PanelFeaturePropertyID {
   kPanelFeatureSPRPackType,
   kPanelFeatureDemuraInitCfg,
   kPanelFeatureRCInitCfg,
-  kPanelFeaturePropertyIDMax,
+  kPanelFeatureDemuraPanelId,
+  kPanelFeaturePropertyIDMax
 };
 
 struct PanelFeaturePropertyInfo {

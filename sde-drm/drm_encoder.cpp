@@ -205,6 +205,22 @@ int DRMEncoderManager::GetPossibleCrtcIndices(uint32_t encoder_id,
   return encoder_pool_[encoder_id]->GetPossibleCrtcIndices(possible_crtc_indices);
 }
 
+void DRMEncoderManager::MapCrtcToEncoder(std::map<uint32_t, uint32_t> *crtc_to_encoder) {
+  if (!crtc_to_encoder) {
+    DLOGE("Map is NULL! Not expected.");
+    return;
+  }
+
+  crtc_to_encoder->clear();
+
+  for (auto &encoder : encoder_pool_) {
+    uint32_t crtc_id = 0;
+    encoder.second->GetCrtc(&crtc_id);
+    if (crtc_id)
+      crtc_to_encoder->insert(make_pair(crtc_id, encoder.first));
+  }
+}
+
 // ==============================================================================================//
 
 #undef __CLASS__

@@ -1,4 +1,4 @@
-/*
+<!--
 *Copyright (c) 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -25,42 +25,15 @@
 *WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 *OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 *IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-
-#ifndef __IPC_IMPL_H__
-#define __IPC_IMPL_H__
-
-#include <core/ipc_interface.h>
-#include "qrtr_client_interface.h"
-#include "vm_interface.h"
-#include "utils/sys.h"
-
-#include <vendor/qti/hardware/display/demura/1.0/IDemuraFileFinder.h>
-
-namespace sdm {
-
-using ::android::sp;
-using ::vendor::qti::hardware::display::demura::V1_0::IDemuraFileFinder;
-
-class IPCImpl: public IPCIntf, QRTRCallbackInterface {
- public:
-  virtual ~IPCImpl() {};
-  int Init();
-  int Deinit();
-  int SetParameter(IPCParams param, const GenericPayload &in);
-  int GetParameter(IPCParams param, GenericPayload *out);
-  int ProcessOps(IPCOps op, const GenericPayload &in, GenericPayload *out);
-  void OnServerReady();
-  void OnServerExit();
-  int OnResponse(Response *rsp);
-
- private:
-  static DynLib qrtr_client_lib_;
-  static CreateQrtrClientIntf create_qrtr_client_intf_;
-  static DestroyQrtrClientIntf destroy_qrtr_client_intf_;
-  static QRTRClientInterface *qrtr_client_intf_;
-  bool init_done_ = false;
-};
-}  // namespace sdm
-
-#endif
+-->
+<manifest version="1.0" type="device">
+    <hal format="hidl">
+        <name>vendor.qti.hardware.display.demura</name>
+        <transport>hwbinder</transport>
+        <version>1.0</version>
+        <interface>
+            <name>IDemuraFileFinder</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
+</manifest>

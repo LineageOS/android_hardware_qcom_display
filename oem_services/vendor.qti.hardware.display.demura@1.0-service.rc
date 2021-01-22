@@ -1,0 +1,4 @@
+service vendor.qti.hardware.display.demura /vendor/bin/hw/vendor.qti.hardware.display.demura@1.0-service
+    class hal
+    user system
+    group graphics

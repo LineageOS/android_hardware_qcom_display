@@ -27,40 +27,37 @@
 *IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef __IPC_IMPL_H__
-#define __IPC_IMPL_H__
-
-#include <core/ipc_interface.h>
-#include "qrtr_client_interface.h"
-#include "vm_interface.h"
-#include "utils/sys.h"
-
 #include <vendor/qti/hardware/display/demura/1.0/IDemuraFileFinder.h>
+#include <hidl/Status.h>
+#include <hidl/MQDescriptor.h>
+#include <binder/ProcessState.h>
+#include <hidl/LegacySupport.h>
+#include <log/log.h>
+#include "demura_file_finder.h"
 
-namespace sdm {
 
-using ::android::sp;
-using ::vendor::qti::hardware::display::demura::V1_0::IDemuraFileFinder;
+using vendor::qti::hardware::display::demura::V1_0::IDemuraFileFinder;
+using vendor::qti::hardware::display::demura::V1_0::implementation::DemuraFileFinder;
 
-class IPCImpl: public IPCIntf, QRTRCallbackInterface {
- public:
-  virtual ~IPCImpl() {};
-  int Init();
-  int Deinit();
-  int SetParameter(IPCParams param, const GenericPayload &in);
-  int GetParameter(IPCParams param, GenericPayload *out);
-  int ProcessOps(IPCOps op, const GenericPayload &in, GenericPayload *out);
-  void OnServerReady();
-  void OnServerExit();
-  int OnResponse(Response *rsp);
+using android::sp;
+using android::hardware::configureRpcThreadpool;
+using android::hardware::joinRpcThreadpool;
 
- private:
-  static DynLib qrtr_client_lib_;
-  static CreateQrtrClientIntf create_qrtr_client_intf_;
-  static DestroyQrtrClientIntf destroy_qrtr_client_intf_;
-  static QRTRClientInterface *qrtr_client_intf_;
-  bool init_done_ = false;
-};
-}  // namespace sdm
+using android::status_t;
+using android::OK;
 
-#endif
+int main() {
+    android::ProcessState::initWithDriver("/dev/vndbinder");
+    android::sp<IDemuraFileFinder> demura_file_finder = DemuraFileFinder::GetInstance();
+    if (!demura_file_finder) {
+      ALOGE("Could not create the IDemuraFileFinder, not registering process!!");
+      return -1;
+    }
+    configureRpcThreadpool(1, true /*callerWillJoin*/);
+    if (demura_file_finder->registerAsService() != OK) {
+        ALOGE("Cannot register DemuraFileFinder service");
+        return -EINVAL;
+    }
+    joinRpcThreadpool();
+    return 0;
+}

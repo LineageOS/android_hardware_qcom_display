@@ -406,6 +406,11 @@ enum struct DRMOps {
    */
   COMMIT_PANEL_FEATURES,
   /*
+   * Op: Null Commit panel features.
+   * Arg: drmModeAtomicReq - Atomic request
+   */
+  NULL_COMMIT_PANEL_FEATURES,
+  /*
    * Op: Sets qsync mode on connector
    * Arg: uint32_t - Connector ID
    *     uint32_t - qsync mode
@@ -455,6 +460,7 @@ enum struct DRMBlendType {
   OPAQUE = 1,
   PREMULTIPLIED = 2,
   COVERAGE = 3,
+  SKIP_BLENDING = 4,
 };
 
 enum struct DRMSrcConfig {
@@ -521,6 +527,10 @@ enum struct InlineRotationVersion {
   kInlineRotationV2,
 };
 
+/* Type for panel feature resource reservation info */
+typedef std::tuple<std::string, int32_t, int8_t> FetchResource;
+typedef std::vector<FetchResource> FetchResourceList;
+
 /* Per CRTC Resource Info*/
 struct DRMCrtcInfo {
   bool has_src_split;
@@ -565,6 +575,8 @@ struct DRMCrtcInfo {
   uint32_t ubwc_version = 1;
   bool has_spr = false;
   uint64_t rc_total_mem_size = 0;
+  uint32_t demura_count = 0;
+  uint32_t dspp_count = 0;
 };
 
 enum struct DRMPlaneType {
@@ -612,6 +624,8 @@ struct DRMPlaneTypeInfo {
   uint32_t dgm_csc_version = 0;  // csc used with DMA
   std::map<DRMTonemapLutType, uint32_t> tonemap_lut_version_map = {};
   bool block_sec_ui = false;
+  int32_t pipe_idx = -1;
+  int32_t demura_block_capability = -1;
 };
 
 // All DRM Planes as map<Plane_id , plane_type_info> listed from highest to lowest priority
@@ -685,6 +699,7 @@ struct DRMConnectorInfo {
   bool dyn_bitclk_support;
   std::vector<uint8_t> edid;
   uint32_t supported_colorspaces;
+  uint64_t panel_id = 0;
 };
 
 // All DRM Connectors as map<Connector_id , connector_info>
@@ -734,6 +749,7 @@ enum DRMPropType {
   kPropEnum,
   kPropRange,
   kPropBlob,
+  kPropBitmask,
   kPropTypeMax,
 };
 
@@ -810,6 +826,7 @@ struct DRMDppsFeatureInfo {
 };
 
 enum DRMPanelFeatureID {
+  kDRMPanelFeaturePanelId,
   kDRMPanelFeatureDsppIndex,
   kDRMPanelFeatureDsppSPRInfo,
   kDRMPanelFeatureDsppDemuraInfo,
@@ -818,6 +835,7 @@ enum DRMPanelFeatureID {
   kDRMPanelFeatureSPRPackType,
   kDRMPanelFeatureDemuraInit,
   kDRMPanelFeatureRCInit,
+  kDRMPanelFeatureDemuraResources,
   kDRMPanelFeatureMax,
 };
 
@@ -988,6 +1006,7 @@ typedef int (*GetDRMManager)(int fd, DRMManagerInterface **intf);
 /* Destroy DRMManager instance */
 typedef int (*DestroyDRMManager)();
 
+
 /*
  * DRM Manager Interface - Any class which plans to implement helper function for vendor
  * specific DRM driver implementation must implement the below interface routines to work
@@ -1129,6 +1148,33 @@ class DRMManagerInterface {
    */
   virtual void SetPanelFeature(const DRMPanelFeatureInfo &info) = 0;
 
+  /*
+  * Mark particular panel feature property to be applied in the next null commit
+  * [input]: Display token to identify which display the property belongs to
+  * [input]: Feature ID
+  */
+  virtual void MarkPanelFeatureForNullCommit(const DRMDisplayToken &token,
+                                             const DRMPanelFeatureID &id) = 0;
+
+  /*
+  * Get the initial planes (cont. splash) info
+  * [input]: None
+  * [output]: Map from plane id to connector id
+  */
+  virtual void MapPlaneToConnector(std::map<uint32_t, uint32_t> *plane_to_connector) = 0;
+
+  /*
+   * Get the required Demura resources count for each Demura capable display type
+   * [output]: Key: display identifier Value: required demura resource count
+   */
+  virtual void GetRequiredDemuraFetchResourceCount(std::map<uint32_t, uint8_t>*
+                                                   required_demura_fetch_cnt) = 0;
+
+  /*
+  * Get the planes used for Demura in initial boot (cont. splash)
+  * [output]: List of plane ids that were used for Demura
+  */
+  virtual void GetInitialDemuraInfo(std::vector<uint32_t> *initial_demura_planes) = 0;
 };
 
 }  // namespace sde_drm

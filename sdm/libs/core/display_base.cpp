@@ -172,6 +172,8 @@ DisplayError DisplayBase::Init() {
     hw_recovery_threshold_ = (UINT32(hw_recovery_threshold));
   }
 
+  SetupPanelFeatureFactory();
+
   return kErrorNone;
 
 CleanupOnError:
@@ -196,13 +198,58 @@ DisplayError DisplayBase::Deinit() {
   HWInterface::Destroy(hw_intf_);
   if (rc_panel_feature_init_) {
     rc_core_->Deinit();
-    rc_panel_feature_init_ =  false;
+    rc_panel_feature_init_ = false;
   }
+  return kErrorNone;
+}
+
+DisplayError DisplayBase::SetupPanelFeatureFactory() {
+  if (pf_factory_ && prop_intf_) {
+    return kErrorNone;
+  }
+
+  DynLib feature_impl_lib;
+  GetPanelFeatureFactory get_factory_f_ptr = nullptr;
+  if (feature_impl_lib.Open(EXTENSION_LIBRARY_NAME)) {
+    if (!feature_impl_lib.Sym(GET_PANEL_FEATURE_FACTORY,
+                              reinterpret_cast<void **>(&get_factory_f_ptr))) {
+      DLOGE("Unable to load symbols, error = %s", feature_impl_lib.Error());
+      return kErrorUndefined;
+    }
+  } else {
+    DLOGW("Unable to load = %s, error = %s", EXTENSION_LIBRARY_NAME, feature_impl_lib.Error());
+    DLOGW("SDM Extension is not supported");
+    return kErrorNone;
+  }
+
+  pf_factory_ = get_factory_f_ptr();
+  if (!pf_factory_) {
+    DLOGE("Failed to create PanelFeatureFactory");
+    return kErrorResources;
+  }
+
+  prop_intf_ = hw_intf_->GetPanelFeaturePropertyIntf();
+  if (!prop_intf_) {
+    DLOGW("Failed to create PanelFeaturePropertyIntf");
+    pf_factory_ = nullptr;
+    return kErrorResources;
+  }
+
+  DLOGI("Setup pf factory and prop intf for Panel Features");
   return kErrorNone;
 }
 
 // Query the dspp capabilities and enable the RC feature.
 DisplayError DisplayBase::SetupRC() {
+  // Get status of RC enablement property. Default RC is disabled.
+  int rc_prop_value = 0;
+  Debug::GetProperty(ENABLE_ROUNDED_CORNER, &rc_prop_value);
+  rc_enable_prop_ = rc_prop_value ? true : false;
+  DLOGI("RC feature %s.", rc_enable_prop_ ? "enabled" : "disabled");
+  if (!rc_enable_prop_) {
+    return kErrorNone;
+  }
+
   RCInputConfig input_cfg = {};
   input_cfg.display_id = display_id_;
   input_cfg.display_type = display_type_;
@@ -228,6 +275,7 @@ DisplayError DisplayBase::SetupRC() {
     return kErrorResources;
   }
 
+  rc_panel_feature_init_ = true;
   return kErrorNone;
 }
 
@@ -235,6 +283,8 @@ DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
   std::vector<Layer *> &layers = layer_stack->layers;
   HWLayersInfo &hw_layers_info = disp_layer_stack_.info;
   hw_layers_info.app_layer_count = 0;
+  hw_layers_info.gpu_target_index = -1;
+  hw_layers_info.stitch_target_index = -1;
 
   disp_layer_stack_.stack = layer_stack;
   hw_layers_info.flags = layer_stack->flags;
@@ -261,7 +311,6 @@ DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
     }
   }
 
-  hw_layers_info.stitch_target_index = hw_layers_info.gpu_target_index + 1;
   DLOGD_IF(kTagDisplay, "LayerStack layer_count: %zu, app_layer_count: %d, "
                         "gpu_target_index: %d, stitch_index: %d game_present: %d, display: %d-%d",
                         layers.size(), hw_layers_info.app_layer_count,
@@ -273,7 +322,7 @@ DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
     return kErrorNoAppLayers;
   }
 
-  if (hw_layers_info.gpu_target_index) {
+  if (hw_layers_info.gpu_target_index > 0) {
     return ValidateGPUTargetParams();
   }
 
@@ -1119,6 +1168,7 @@ const char * DisplayBase::GetName(const LayerComposition &composition) {
   case kCompositionStitch:        return "STITCH";
   case kCompositionGPUTarget:     return "GPU_TARGET";
   case kCompositionStitchTarget:  return "STITCH_TARGET";
+  case kCompositionDemura:        return "DEMURA";
   default:                        return "UNKNOWN";
   }
 }
@@ -1850,7 +1900,8 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
     // TODO(user): Other FBT layer attributes like surface damage, dataspace, secure camera and
     // secure display flags are also updated during SetClientTarget() called between validate and
     // commit. Need to revist this and update it accordingly for FBT layer.
-    if (disp_layer_stack_.info.gpu_target_index == sdm_layer_index) {
+    if (disp_layer_stack_.info.gpu_target_index > 0 &&
+        (static_cast<uint32_t>(disp_layer_stack_.info.gpu_target_index) == sdm_layer_index)) {
       hw_layer.input_buffer.flags.secure = sdm_layer->input_buffer.flags.secure;
       hw_layer.input_buffer.format = sdm_layer->input_buffer.format;
       hw_layer.input_buffer.width = sdm_layer->input_buffer.width;

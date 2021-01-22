@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -36,12 +36,13 @@
 #include <private/hw_info_types.h>
 #include <bitset>
 #include <vector>
+#include <map>
 
 #include "hw_info_interface.h"
 
 namespace sdm {
 
-class HWInfoDRM: public HWInfoInterface {
+class HWInfoDRM : public HWInfoInterface {
  public:
   virtual DisplayError Init();
   virtual ~HWInfoDRM();
@@ -49,6 +50,9 @@ class HWInfoDRM: public HWInfoInterface {
   virtual DisplayError GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_disp_info);
   virtual DisplayError GetDisplaysStatus(HWDisplaysInfo *hw_displays_info);
   virtual DisplayError GetMaxDisplaysSupported(DisplayType type, int32_t *max_displays);
+  virtual DisplayError GetRequiredDemuraFetchResourceCount(
+                       std::map<uint32_t, uint8_t> *required_demura_fetch_cnt);
+  virtual DisplayError GetDemuraPanelIds(std::vector<uint64_t> *panel_ids);
 
  private:
   void Deinit();
@@ -63,12 +67,14 @@ class HWInfoDRM: public HWInfoInterface {
   void GetRotatorFormatsForType(int fd, uint32_t type,
                                 std::vector<LayerBufferFormat> *supported_formats);
   DisplayError GetRotatorSupportedFormats(uint32_t v4l2_index, HWResourceInfo *hw_resource);
-  void PopulateSupportedFmts(HWSubBlockType sub_blk_type, const sde_drm::DRMPlaneTypeInfo  &info,
+  void PopulateSupportedFmts(HWSubBlockType sub_blk_type, const sde_drm::DRMPlaneTypeInfo &info,
                              HWResourceInfo *hw_resource);
   void PopulateSupportedInlineFmts(const sde_drm::DRMPlaneTypeInfo &info,
                                    HWResourceInfo *hw_resource);
   void PopulatePipeCaps(const sde_drm::DRMPlaneTypeInfo &info, HWResourceInfo *hw_resource);
   void PopulatePipeBWCaps(const sde_drm::DRMPlaneTypeInfo &info, HWResourceInfo *hw_resource);
+  void MapPlaneToConnector(HWResourceInfo *hw_resource);
+  void GetInitialDemuraInfo(HWResourceInfo *hw_resource);
 
   sde_drm::DRMManagerInterface *drm_mgr_intf_ = {};
   bool default_mode_ = false;

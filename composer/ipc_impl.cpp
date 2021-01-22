@@ -43,6 +43,11 @@ DestroyQrtrClientIntf IPCImpl::destroy_qrtr_client_intf_ = nullptr;
 QRTRClientInterface *IPCImpl::qrtr_client_intf_ = nullptr;
 
 int IPCImpl::Init() {
+  if (init_done_) {
+    DLOGW("IPC intf already initialized");
+    return 0;
+  }
+
   // Try to load extension library & get handle to its interface.
   if (qrtr_client_lib_.Open(QRTR_CLIENT_LIB_NAME)) {
     if (!qrtr_client_lib_.Sym(CREATE_QRTR_CLIENT_INTERFACE_NAME,
@@ -68,11 +73,13 @@ int IPCImpl::Init() {
   } else {
     DLOGW("Unable to load = %s, error = %s", QRTR_CLIENT_LIB_NAME, qrtr_client_lib_.Error());
   }
+  init_done_ = true;
   return 0;
 }
 
 int IPCImpl::Deinit() {
   if (destroy_qrtr_client_intf_) {
+    init_done_ = false;
     return destroy_qrtr_client_intf_(qrtr_client_intf_);
   }
   return 0;
@@ -138,11 +145,56 @@ int IPCImpl::GetParameter(IPCParams param, GenericPayload *out) {
 }
 
 int IPCImpl::ProcessOps(IPCOps op, const GenericPayload &in, GenericPayload *out) {
-  (void)op;
-  (void)in;
-  (void)out;
-  DLOGE("ProcessOps on op %d is not supported", op);
-  return -ENOTSUP;
+  if (!out) {
+    return -EINVAL;
+  }
+
+  int ret = 0;
+
+  switch (op) {
+    case kIpcOpsFilePath: {
+      uint32_t sz = 0;
+      uint64_t* panel_id = nullptr;
+      std::string *demura_file = nullptr;
+      std::string file_path = "";
+      sp<IDemuraFileFinder> mClient = IDemuraFileFinder::getService();
+      if (mClient != NULL) {
+        if ((ret = in.GetPayload(panel_id, &sz))) {
+          DLOGE("Failed to get input payload error = %d", ret);
+          return ret;
+        }
+        DLOGI("panel_id %" PRIu64, *panel_id);
+        if ((ret = out->GetPayload(demura_file, &sz))) {
+          DLOGE("Failed to get output payload error = %d", ret);
+          return ret;
+        }
+        mClient->getCorrectionFile((*panel_id),
+                                  [&](const auto& tmpReturn, const auto& tmpHandle){
+                                      ret = tmpReturn;
+                                      if (ret != 0) {
+                                        file_path = "";
+                                        return;
+                                      }
+                                      file_path=(std::string)tmpHandle;
+                                    });
+        if (ret != 0) {
+          DLOGE("getCorrectionFile failed %d", ret);
+          return ret;
+        }
+        *demura_file = file_path;
+        DLOGI("File Path %s", file_path.c_str());
+      } else {
+        DLOGE("Could not get IDemuraFileFinder");
+        return -ENODEV;
+      }
+      break;
+    }
+    default:
+        DLOGE("Unsupported IPCOps");
+        return -EINVAL;
+  }
+
+  return ret;
 }
 
 int IPCImpl::OnResponse(Response *rsp) {
@@ -167,6 +219,5 @@ void IPCImpl::OnServerReady() {
 void IPCImpl::OnServerExit() {
   DLOGI("LE server is exited");
 }
-
 
 }  // namespace sdm

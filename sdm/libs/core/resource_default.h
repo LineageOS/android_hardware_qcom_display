@@ -29,6 +29,7 @@
 #include <private/resource_interface.h>
 #include <utils/locker.h>
 #include <vector>
+#include <map>
 
 #include "hw_interface.h"
 
@@ -70,6 +71,18 @@ class ResourceDefault : public ResourceInterface {
   virtual DisplayError Perform(int cmd, ...) { return kErrorNone; }
   DisplayError SetDisplayState(int32_t display_id, DisplayState state) { return kErrorNone; }
   virtual bool IsRotatorSupportedFormat(LayerBufferFormat format) { return false; }
+  virtual DisplayError FreeDemuraFetchResources(Handle display_ctx) { return kErrorNone; }
+  virtual DisplayError GetDemuraFetchResourceCount(
+                       std::map<uint32_t, uint8_t> *fetch_resource_cnt) {
+    return kErrorNone;
+  }
+  virtual DisplayError ReserveDemuraFetchResources(const int32_t &display_id,
+                                                   const int8_t &preferred_rect) {
+    return kErrorNone;
+  }
+  virtual DisplayError GetDemuraFetchResources(Handle display_ctx, FetchResourceList *frl) {
+    return kErrorNone;
+  }
 
  private:
   enum PipeOwner {

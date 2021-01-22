@@ -2516,6 +2516,10 @@ bool HWCDisplay::CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests) 
     return false;
   }
 
+  if (display_intf_->HasDemura()) {
+    return false;
+  }
+
   bool skip_prepare = true;
   for (auto hwc_layer : layer_set_) {
     if (!hwc_layer->GetSDMLayer()->flags.skip ||

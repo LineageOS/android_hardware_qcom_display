@@ -119,6 +119,7 @@ class DRMCrtcManager {
   void GetPPInfo(uint32_t crtc_id, DRMPPFeatureInfo *info);
   void PostValidate(uint32_t crtc_id, bool success);
   void PostCommit(uint32_t crtc_id, bool success);
+  void GetCrtcList(std::vector<uint32_t> *crtc_ids);
 
  private:
   int fd_ = -1;

@@ -36,6 +36,8 @@
 #include "spr_intf.h"
 #include "panel_feature_property_intf.h"
 #include "rc_intf.h"
+#include "demura_intf.h"
+#include "demura_parser_manager_intf.h"
 
 namespace sdm {
 
@@ -48,14 +50,18 @@ struct SPRInputConfig {
 class PanelFeatureFactoryIntf {
  public:
   virtual ~PanelFeatureFactoryIntf() {}
-
   virtual std::shared_ptr<SPRIntf>
     CreateSPRIntf(const SPRInputConfig &input_cfg, PanelFeaturePropertyIntf *prop_intf) = 0;
   virtual std::unique_ptr<RCIntf> CreateRCIntf(const RCInputConfig &input_cfg,
                                                PanelFeaturePropertyIntf *prop_intf) = 0;
+  virtual std::shared_ptr<DemuraParserManagerIntf>
+    CreateDemuraParserManager(std::shared_ptr<IPCIntf> ipc_intf) = 0;
+  virtual std::unique_ptr<DemuraIntf>
+    CreateDemuraIntf(const DemuraInputConfig &input_cfg,
+                     PanelFeaturePropertyIntf *prop_intf,
+                     BufferAllocator *buffer_allocator,
+                     std::shared_ptr<SPRIntf> spr) = 0;
 };
-
-extern "C" PanelFeatureFactoryIntf *GetPanelFeatureFactoryIntf();
 
 }  // namespace sdm
 

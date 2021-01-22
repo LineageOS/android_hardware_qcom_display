@@ -27,40 +27,54 @@
 *IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef __IPC_IMPL_H__
-#define __IPC_IMPL_H__
-
-#include <core/ipc_interface.h>
-#include "qrtr_client_interface.h"
-#include "vm_interface.h"
-#include "utils/sys.h"
+#ifndef __DEMURA_FILE_FINDER_H__
+#define __DEMURA_FILE_FINDER_H__
 
 #include <vendor/qti/hardware/display/demura/1.0/IDemuraFileFinder.h>
+#include <hidl/MQDescriptor.h>
+#include <hidl/Status.h>
+#include <log/log.h>
+#include <utils/sys.h>
+#include <file_finder_interface.h>
 
-namespace sdm {
-
-using ::android::sp;
+namespace vendor {
+namespace qti {
+namespace hardware {
+namespace display {
+namespace demura {
+namespace V1_0 {
+namespace implementation {
+using sdm::FileFinderInterface;
+using ::android::hardware::Return;
+using ::android::hardware::Void;
 using ::vendor::qti::hardware::display::demura::V1_0::IDemuraFileFinder;
 
-class IPCImpl: public IPCIntf, QRTRCallbackInterface {
+#define OEM_FILE_FINDER_LIB_NAME "libfilefinder.so"
+#define GET_FILE_FINDER_INTF_NAME "GetFileFinderIntf"
+#define DESTROY_FILE_FINDER_INTF_NAME "DestroyFileFinderIntf"
+typedef FileFinderInterface *(*GetFileFinderIntf)();
+typedef void *(*DestroyFileFinderIntf)();
+
+class DemuraFileFinder : public IDemuraFileFinder {
  public:
-  virtual ~IPCImpl() {};
-  int Init();
-  int Deinit();
-  int SetParameter(IPCParams param, const GenericPayload &in);
-  int GetParameter(IPCParams param, GenericPayload *out);
-  int ProcessOps(IPCOps op, const GenericPayload &in, GenericPayload *out);
-  void OnServerReady();
-  void OnServerExit();
-  int OnResponse(Response *rsp);
+  virtual ~DemuraFileFinder();
+  static IDemuraFileFinder *GetInstance();
+  static FileFinderInterface *file_intf_;
+  static IDemuraFileFinder *file_finder_;
+  static DestroyFileFinderIntf destroy_ff_intf_;
+
+  // IDemuraFileFinder
+  Return<void> getCorrectionFile(uint64_t panel_id, getCorrectionFile_cb _hidl_cb) override;
 
  private:
-  static DynLib qrtr_client_lib_;
-  static CreateQrtrClientIntf create_qrtr_client_intf_;
-  static DestroyQrtrClientIntf destroy_qrtr_client_intf_;
-  static QRTRClientInterface *qrtr_client_intf_;
-  bool init_done_ = false;
 };
-}  // namespace sdm
 
-#endif
+}  // namespace implementation
+}  // namespace V1_0
+}  // namespace demura
+}  // namespace display
+}  // namespace hardware
+}  // namespace qti
+}  // namespace vendor
+
+#endif  // __DEMURA_FILE_FINDER_H__

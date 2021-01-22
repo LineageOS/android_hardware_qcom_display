@@ -64,6 +64,7 @@ class DRMPlane {
   void GetPriority(uint32_t *priority) { *priority = priority_; }
   void GetAssignedCrtc(uint32_t *crtc_id) { *crtc_id = assigned_crtc_id_; }
   void GetRequestedCrtc(uint32_t *crtc_id) { *crtc_id = requested_crtc_id_; }
+  void GetCrtc(uint32_t *crtc_id) { *crtc_id = drm_plane_->crtc_id; }
   void SetAssignedCrtc(uint32_t crtc_id) { assigned_crtc_id_ = crtc_id; }
   void SetRequestedCrtc(uint32_t crtc_id) { requested_crtc_id_ = crtc_id; }
   bool SetScalerConfig(drmModeAtomicReq *req, uint64_t handle);
@@ -85,6 +86,8 @@ class DRMPlane {
   void ResetColorLUTState(DRMTonemapLutType lut_type, bool is_commit, drmModeAtomicReq *req);
   void ResetColorLUT(DRMPPFeatureID id, drmModeAtomicReq *req);
   void ResetCache(drmModeAtomicReq *req);
+  void GetIndex(uint8_t *index) { *index = plane_type_info_.pipe_idx; }
+  void GetRect(uint8_t *rect) { *rect = plane_type_info_.master_plane_id ? 1 : 0; }
 
  private:
   typedef std::map<DRMProperty, std::tuple<uint64_t, drmModePropertyRes *>> PropertyMap;
@@ -135,6 +138,9 @@ class DRMPlaneManager {
   void PostValidate(uint32_t crtc_id, bool success);
   void PostCommit(uint32_t crtc_id, bool success);
   void ResetCache(drmModeAtomicReq *req, uint32_t crtc_id);
+  void MapPlaneToCrtc(std::map<uint32_t, uint32_t> *plane_to_crtc);
+  void GetPlaneIdsFromDescriptions(FetchResourceList &descriptions,
+                                   std::vector<uint32_t> *plane_ids);
 
  private:
   void Perform(DRMOps code, drmModeAtomicReq *req, uint32_t obj_id, ...);

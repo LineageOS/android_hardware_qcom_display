@@ -298,6 +298,13 @@ void DRMCrtcManager::PostCommit(uint32_t crtc_id, bool success) {
   crtc_pool_.at(crtc_id)->PostCommit(success);
 }
 
+void DRMCrtcManager::GetCrtcList(std::vector<uint32_t> *crtc_ids) {
+  lock_guard<mutex> lock(lock_);
+  for (auto &crtc : crtc_pool_) {
+    crtc_ids->emplace_back(crtc.first);
+  }
+}
+
 // ==============================================================================================//
 
 #undef __CLASS__
@@ -424,6 +431,8 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
   string ubwc_version = "UBWC version=";
   string spr = "spr=";
   string rc_total_mem_size = "rc_mem_size=";
+  string demura_count = "demura_count=";
+  string dspp_count = "dspp_count=";
 
   while (std::getline(stream, line)) {
     if (line.find(max_blendstages) != string::npos) {
@@ -544,6 +553,10 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
       crtc_info_.has_spr = std::stoi(string(line, spr.length())) == -1 ? false: true;
     } else if (line.find(rc_total_mem_size) != string::npos) {
       crtc_info_.rc_total_mem_size = std::stoi(string(line, rc_total_mem_size.length()));
+    } else if (line.find(demura_count) != string::npos) {
+      crtc_info_.demura_count = std::stoi(string(line, demura_count.length()));
+    } else if (line.find(dspp_count) != string::npos) {
+      crtc_info_.dspp_count = std::stoi(string(line, dspp_count.length()));
     }
   }
   drmModeFreePropertyBlob(blob);

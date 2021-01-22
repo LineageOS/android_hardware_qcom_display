@@ -39,6 +39,8 @@
 
 using std::lock_guard;
 using std::mutex;
+using std::pair;
+using std::make_pair;
 
 extern "C" {
 
@@ -386,7 +388,7 @@ void DRMManager::GetDppsFeatureInfo(DRMDppsFeatureInfo *info) {
     dpps_mgr_intf_->GetDppsFeatureInfo(info);
 }
 
-DRMPanelFeatureMgrIntf *DRMManager::GetPanelFeatureMgrIntf() {
+DRMPanelFeatureMgrIntf* DRMManager::GetPanelFeatureMgrIntf() {
   return panel_feature_mgr_intf_;
 }
 
@@ -406,4 +408,95 @@ void DRMManager::SetPanelFeature(const DRMPanelFeatureInfo &info) {
   }
 }
 
+void DRMManager::MarkPanelFeatureForNullCommit(const DRMDisplayToken &token,
+                                               const DRMPanelFeatureID &id) {
+  if (panel_feature_mgr_intf_) {
+    panel_feature_mgr_intf_->MarkForNullCommit(token, id);
+  } else {
+    DRM_LOGE("Failed, panel feature mgr not available");
+  }
+}
+
+void DRMManager::MapPlaneToConnector(std::map<uint32_t, uint32_t> *plane_to_connector) {
+  if (!plane_to_connector) {
+    DRM_LOGE("Map is NULL! Not expected.");
+    return;
+  }
+
+  plane_to_connector->clear();
+
+  std::map<uint32_t, uint32_t> plane_to_crtc;
+  std::map<uint32_t, uint32_t> crtc_to_encoder;
+  std::map<uint32_t, uint32_t> encoder_to_connector;
+
+  // Cont. Splash planes are detected by CRTC existence on the PLANE
+  // These are the planes that ultimately need to know their CONNECTOR
+  plane_mgr_->MapPlaneToCrtc(&plane_to_crtc);
+  if (!plane_to_crtc.size()) {
+    DRM_LOGI("No cont. splash planes found");
+    return;
+  }
+
+  // CRTC is connected to ENCODER. Find the ENCODERs who have CRTCs and establish
+  // reverse lookup CRTC --> ENCODER
+  encoder_mgr_->MapCrtcToEncoder(&crtc_to_encoder);
+  if (!crtc_to_encoder.size()) {
+    DRM_LOGW("Planes are associated with CRTCs but no CRTC to ENCODERs found");
+    return;
+  }
+
+  // ENCODER is connected to CONNECTOR. Find the CONNECTORs who have ENCODERs and establish
+  // reverse lookup ENCODER --> CONNECTOR
+  conn_mgr_->MapEncoderToConnector(&encoder_to_connector);
+  if (!encoder_to_connector.size()) {
+    DRM_LOGW("CRTCs are associated with ENCODERs but no ENCODERs to CONNECTORs found");
+    return;
+  }
+
+  // Link the Cont. Splash PLANEs with their CONNECTOR
+  for (auto &plane_entry : plane_to_crtc) {
+    uint32_t plane_id = plane_entry.first;
+    auto &crtc_id = plane_entry.second;
+    auto enc_entry = crtc_to_encoder.find(crtc_id);
+    if (enc_entry == crtc_to_encoder.end()) {
+      DRM_LOGW("Plane %u mapped to crtc %u didn't have an encoder. Not expected.", plane_id,
+               crtc_id);
+      continue;
+    }
+    auto &encoder_id = enc_entry->second;
+    auto conn_entry = encoder_to_connector.find(encoder_id);
+    if (conn_entry == encoder_to_connector.end()) {
+      DRM_LOGW("Plane %u, crtc %u, encoder %u, didn't have a connector. Not expected.",
+             plane_id, crtc_id, encoder_id);
+      continue;
+    }
+    uint32_t connector_id = conn_entry->second;
+
+    plane_to_connector->insert(make_pair(plane_id, connector_id));
+  }
+}
+
+void DRMManager::GetRequiredDemuraFetchResourceCount(
+                 std::map<uint32_t, uint8_t> *required_demura_fetch_cnt) {
+  conn_mgr_->GetPreferredModeLMCounts(required_demura_fetch_cnt);
+}
+
+void DRMManager::GetInitialDemuraInfo(std::vector<uint32_t> *initial_demura_planes) {
+  if (panel_feature_mgr_intf_) {
+    initial_demura_planes->clear();
+    std::vector<uint32_t> crtc_ids;
+    crtc_mgr_->GetCrtcList(&crtc_ids);
+    FetchResourceList frl;
+    for (auto &id : crtc_ids) {
+      DRMPanelFeatureInfo info;
+      info.prop_id = kDRMPanelFeatureDemuraResources;
+      info.obj_type = DRM_MODE_OBJECT_CRTC;
+      info.obj_id = id;
+      info.prop_ptr = reinterpret_cast<uint64_t>(&frl);
+      panel_feature_mgr_intf_->GetPanelFeatureInfo(&info);
+    }
+    // Safe to assume pipe to crtc to Demura associations are functionally correct
+    plane_mgr_->GetPlaneIdsFromDescriptions(frl, initial_demura_planes);
+  }
+}
 }  // namespace sde_drm

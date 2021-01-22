@@ -74,6 +74,7 @@ using sde_drm::DRMPlanesInfo;
 using sde_drm::DRMCrtcInfo;
 using sde_drm::DRMPlaneType;
 using sde_drm::DRMTonemapLutType;
+using sde_drm::DRMPanelFeatureInfo;
 
 using std::vector;
 using std::map;
@@ -250,6 +251,8 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
   DLOGI("Max Pipe Bw = %" PRIu64 " KBps", hw_resource->dyn_bw_info.pipe_bw_limit[kBwVFEOn]);
   DLOGI("Max Pipe Bw High= %" PRIu64 " KBps", hw_resource->dyn_bw_info.pipe_bw_limit[kBwVFEOff]);
   DLOGI("MaxSDEClock = %d Hz", hw_resource->max_sde_clk);
+  DLOGI("Demura Count = %" PRIu32, hw_resource->demura_count);
+  DLOGI("DSPP Count = %" PRIu32, hw_resource->dspp_count);
   DLOGI("Clock Fudge Factor = %f", hw_resource->clk_fudge_factor);
   DLOGI("Prefill factors:");
   DLOGI("\tTiled_NV12 = %d", hw_resource->macrotile_nv12_factor);
@@ -299,6 +302,8 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   hw_resource->extra_fudge_factor = info.extra_prefill_lines;
   hw_resource->amortizable_threshold = info.amortized_threshold;
   hw_resource->has_micro_idle = info.has_micro_idle;
+  hw_resource->demura_count = info.demura_count;
+  hw_resource->dspp_count = info.dspp_count;
 
   for (int index = 0; index < kBwModeMax; index++) {
     if (index == kBwVFEOn) {
@@ -366,6 +371,8 @@ void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
   int disable_src_tonemap = 0;
   Debug::Get()->GetProperty(DISABLE_SRC_TONEMAP_PROP, &disable_src_tonemap);
 
+  MapPlaneToConnector(hw_resource);
+  GetInitialDemuraInfo(hw_resource);
   for (auto &pipe_obj : planes) {
     if (max_vig_pipes && max_dma_pipes) {
       uint32_t master_plane_id = pipe_obj.second.master_plane_id;
@@ -430,6 +437,14 @@ void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
         continue;  // Not adding any other pipe type
     }
     pipe_caps.id = pipe_obj.first;
+    auto it = hw_resource->plane_to_connector.find(pipe_caps.id);
+    if (it != hw_resource->plane_to_connector.end()) {
+      pipe_caps.cont_splash_disp_id = it->second;
+      auto it2 = std::find(hw_resource->initial_demura_planes.begin(),
+                           hw_resource->initial_demura_planes.end(), pipe_caps.id);
+      pipe_caps.splash_type = (it2 != hw_resource->initial_demura_planes.end()) ? kSplashDemura
+                                                                                : kSplashLayer;
+    }
     pipe_caps.master_pipe_id = pipe_obj.second.master_plane_id;
     pipe_caps.block_sec_ui = pipe_obj.second.block_sec_ui;
     DLOGI("Adding %s Pipe : Id %d, master_pipe_id : Id %d block_sec_ui: %d",
@@ -437,6 +452,8 @@ void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
           pipe_obj.second.block_sec_ui);
     pipe_caps.inverse_pma = pipe_obj.second.inverse_pma;
     pipe_caps.dgm_csc_version = pipe_obj.second.dgm_csc_version;
+    pipe_caps.pipe_idx = pipe_obj.second.pipe_idx;
+    pipe_caps.demura_block_capability = pipe_obj.second.demura_block_capability;
     // disable src tonemap feature if its disabled using property.
     if (!disable_src_tonemap) {
       for (auto &it : pipe_obj.second.tonemap_lut_version_map) {
@@ -473,8 +490,16 @@ void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {
   hw_resource->has_excl_rect = planes[0].second.has_excl_rect;
 }
 
+void HWInfoDRM::MapPlaneToConnector(HWResourceInfo *hw_resource) {
+  drm_mgr_intf_->MapPlaneToConnector(&hw_resource->plane_to_connector);
+}
+
+void HWInfoDRM::GetInitialDemuraInfo(HWResourceInfo *hw_resource) {
+  drm_mgr_intf_->GetInitialDemuraInfo(&hw_resource->initial_demura_planes);
+}
+
 void HWInfoDRM::PopulatePipeCaps(const sde_drm::DRMPlaneTypeInfo &info,
-                                    HWResourceInfo *hw_resource) {
+                                 HWResourceInfo *hw_resource) {
   hw_resource->max_pipe_width = info.max_linewidth;
   hw_resource->max_scaler_pipe_width = info.max_scaler_linewidth;
   hw_resource->max_rotation_pipe_width = info.max_rotation_linewidth;
@@ -488,14 +513,14 @@ void HWInfoDRM::PopulatePipeCaps(const sde_drm::DRMPlaneTypeInfo &info,
   hw_resource->pipe_qseed3_version = GetQseedStepVersion(info.qseed3_version);
   hw_resource->inline_rot_info.inrot_version = GetInRotVersion(info.inrot_version);
   if (info.true_inline_dwnscale_rt_denom > 0 && info.true_inline_dwnscale_rt_num > 0 &&
-       info.true_inline_dwnscale_rt_num >= info.true_inline_dwnscale_rt_denom) {
+      info.true_inline_dwnscale_rt_num >= info.true_inline_dwnscale_rt_denom) {
     hw_resource->inline_rot_info.max_downscale_rt =
-      info.true_inline_dwnscale_rt_num / info.true_inline_dwnscale_rt_denom;
+        info.true_inline_dwnscale_rt_num / info.true_inline_dwnscale_rt_denom;
   }
 }
 
 void HWInfoDRM::PopulatePipeBWCaps(const sde_drm::DRMPlaneTypeInfo &info,
-                                    HWResourceInfo *hw_resource) {
+                                   HWResourceInfo *hw_resource) {
   for (int index = 0; index < kBwModeMax; index++) {
     if (index == kBwVFEOn) {
       hw_resource->dyn_bw_info.pipe_bw_limit[index] = info.max_pipe_bandwidth / kKiloUnit;
@@ -506,7 +531,7 @@ void HWInfoDRM::PopulatePipeBWCaps(const sde_drm::DRMPlaneTypeInfo &info,
 }
 
 void HWInfoDRM::PopulateSupportedFmts(HWSubBlockType sub_blk_type,
-                                      const sde_drm::DRMPlaneTypeInfo  &info,
+                                      const sde_drm::DRMPlaneTypeInfo &info,
                                       HWResourceInfo *hw_resource) {
   vector<LayerBufferFormat> sdm_formats;
   FormatsMap &fmts_map = hw_resource->supported_formats_map;
@@ -521,7 +546,7 @@ void HWInfoDRM::PopulateSupportedFmts(HWSubBlockType sub_blk_type,
 }
 
 void HWInfoDRM::PopulateSupportedInlineFmts(const sde_drm::DRMPlaneTypeInfo &info,
-                                 HWResourceInfo *hw_resource) {
+                                            HWResourceInfo *hw_resource) {
   vector<LayerBufferFormat> *inrot_fmts = &hw_resource->inline_rot_info.inrot_fmts_supported;
 
   for (auto &fmts : info.inrot_fmts_supported) {
@@ -936,6 +961,47 @@ DisplayError HWInfoDRM::GetMaxDisplaysSupported(const DisplayType type, int32_t 
            kVirtual);
 
   log_once = kTagDisplay;
+
+  return kErrorNone;
+}
+
+DisplayError HWInfoDRM::GetRequiredDemuraFetchResourceCount(
+                        std::map<uint32_t, uint8_t> *required_demura_fetch_cnt) {
+  if (!required_demura_fetch_cnt)
+    return kErrorParameters;
+
+  if (drm_mgr_intf_) {
+    required_demura_fetch_cnt->clear();
+    drm_mgr_intf_->GetRequiredDemuraFetchResourceCount(required_demura_fetch_cnt);
+
+    // Filter out displays that don't have panel_id
+    for (auto it = required_demura_fetch_cnt->begin(); it != required_demura_fetch_cnt->end();) {
+      sde_drm::DRMConnectorInfo info;
+      drm_mgr_intf_->GetConnectorInfo(it->first, &info);
+      if (!info.panel_id) {
+        it = required_demura_fetch_cnt->erase(it);
+      } else {
+        ++it;
+      }
+    }
+  }
+
+  return kErrorNone;
+}
+
+DisplayError HWInfoDRM::GetDemuraPanelIds(std::vector<uint64_t> *panel_ids) {
+  if (!panel_ids) {
+    return kErrorResources;
+  }
+
+  sde_drm::DRMConnectorsInfo conn_infos;
+  drm_mgr_intf_->GetConnectorsInfo(&conn_infos);
+  for (auto &conn : conn_infos) {
+    sde_drm::DRMConnectorInfo &info = conn.second;
+    if (info.panel_id) {
+      panel_ids->push_back(info.panel_id);
+    }
+  }
 
   return kErrorNone;
 }

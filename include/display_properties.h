@@ -125,6 +125,12 @@
 #define ENABLE_SPR                           DISPLAY_PROP("enable_spr")
 #define ENABLE_MEMORY_MAPPING                DISPLAY_PROP("enable_memory_mapping")
 
+// Panel Feature Demura Properties
+#define ENABLE_DEMURA                        DISPLAY_PROP("enable_demura")
+#define DISABLE_DEMURA_PRIMARY               DISPLAY_PROP("disable_demura_primary")
+#define DISABLE_DEMURA_SECONDARY             DISPLAY_PROP("disable_demura_secondary")
+#define DISABLE_DEMURA_PANEL_REPLACEMENT     DISPLAY_PROP("disable_demura_panel_replacement")
+
 // PERF hint properties
 #define ENABLE_PERF_HINT_LARGE_COMP_CYCLE    DISPLAY_PROP("enable_perf_hint_large_comp_cycle")
 #define DISABLE_DYNAMIC_FPS                  DISPLAY_PROP("disable_dynamic_fps")

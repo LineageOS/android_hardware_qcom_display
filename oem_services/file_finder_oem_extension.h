@@ -27,40 +27,44 @@
 *IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef __IPC_IMPL_H__
-#define __IPC_IMPL_H__
-
-#include <core/ipc_interface.h>
-#include "qrtr_client_interface.h"
-#include "vm_interface.h"
-#include "utils/sys.h"
+#ifndef __FILE_FINDER_OEM_EXTENSION_H__
+#define __FILE_FINDER_OEM_EXTENSION_H__
 
 #include <vendor/qti/hardware/display/demura/1.0/IDemuraFileFinder.h>
+#include <log/log.h>
+#include <inttypes.h>
+#include <sys/stat.h>
+#include <mutex>
+#include <map>
+#include <string>
+#include "file_finder_interface.h"
+#include "debug_handler.h"
+
+using ::vendor::qti::hardware::display::demura::V1_0::IDemuraFileFinder;
 
 namespace sdm {
 
-using ::android::sp;
-using ::vendor::qti::hardware::display::demura::V1_0::IDemuraFileFinder;
-
-class IPCImpl: public IPCIntf, QRTRCallbackInterface {
+class FileFinderOemExtn : public FileFinderInterface {
  public:
-  virtual ~IPCImpl() {};
+  virtual ~FileFinderOemExtn() {}
+  FileFinderOemExtn();
   int Init();
   int Deinit();
-  int SetParameter(IPCParams param, const GenericPayload &in);
-  int GetParameter(IPCParams param, GenericPayload *out);
-  int ProcessOps(IPCOps op, const GenericPayload &in, GenericPayload *out);
-  void OnServerReady();
-  void OnServerExit();
-  int OnResponse(Response *rsp);
+  int SetParameter(FileFinderParams param, const GenericPayload &in);
+  int GetParameter(FileFinderParams param, GenericPayload *out);
+  int ProcessOps(FileFinderOps op, const GenericPayload &in, GenericPayload *out);
+  static FileFinderOemExtn *file_finder_;
+  static uint32_t ref_count_;
+  static std::mutex lock_;
 
  private:
-  static DynLib qrtr_client_lib_;
-  static CreateQrtrClientIntf create_qrtr_client_intf_;
-  static DestroyQrtrClientIntf destroy_qrtr_client_intf_;
-  static QRTRClientInterface *qrtr_client_intf_;
-  bool init_done_ = false;
+  int FindFileData(const GenericPayload &in, GenericPayload *out);
+  FILE *getSrcFile(const std::string &panel_id_hex_str);
+  std::string getFileOTA(const std::string &panel_id_hex_str);
+  std::map<FileFinderOps,
+           std::function<int(FileFinderOemExtn *, const GenericPayload &, GenericPayload *)>>
+      ops_fcns_;
 };
 }  // namespace sdm
 
-#endif
+#endif  // __FILE_FINDER_OEM_EXTENSION_H__

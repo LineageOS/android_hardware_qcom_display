@@ -37,6 +37,7 @@ enum IPCParams {
 };
 
 enum IPCOps {
+  kIpcOpsFilePath,
   kIPCOpMax
 };
 

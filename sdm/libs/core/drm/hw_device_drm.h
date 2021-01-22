@@ -30,6 +30,7 @@
 #ifndef __HW_DEVICE_DRM_H__
 #define __HW_DEVICE_DRM_H__
 
+#include <utils/formats.h>
 #include <drm_interface.h>
 #include <errno.h>
 #include <pthread.h>

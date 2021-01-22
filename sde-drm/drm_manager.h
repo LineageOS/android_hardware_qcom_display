@@ -66,6 +66,12 @@ class DRMManager : public DRMManagerInterface {
   virtual void GetDppsFeatureInfo(DRMDppsFeatureInfo *info);
   virtual void GetPanelFeature(DRMPanelFeatureInfo *info);
   virtual void SetPanelFeature(const DRMPanelFeatureInfo &info);
+  virtual void MapPlaneToConnector(std::map<uint32_t, uint32_t> *plane_to_connector);
+  virtual void GetRequiredDemuraFetchResourceCount(std::map<uint32_t, uint8_t>
+                                                   *required_demura_fetch_cnt);
+  virtual void GetInitialDemuraInfo(std::vector<uint32_t> *initial_demura_planes);
+  virtual void MarkPanelFeatureForNullCommit(const DRMDisplayToken &token,
+                                             const DRMPanelFeatureID &id);
 
   DRMPlaneManager *GetPlaneMgr();
   DRMConnectorManager *GetConnectorMgr();

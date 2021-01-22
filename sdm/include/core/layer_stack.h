@@ -40,6 +40,8 @@
 #include <unordered_map>
 #include <memory>
 #include <bitset>
+#include <string>
+#include <tuple>
 
 #include "layer_buffer.h"
 #include "sdm_types.h"
@@ -62,6 +64,9 @@ enum LayerBlending {
   kBlendingCoverage,        //!< Pixel color is expressed using straight alpha in color tuples. If
                             //!< plane alpha is less than 0xff, apply modulation as well.
                             //!<   pixel.rgb = src.rgb x src.a + dest.rgb x (1 - src.a)
+
+  kBlendingSkip,            //!< Used only to denote layer should not be staged for blending, but
+                            //!< still requires fetch resources for a different HW block
 };
 
 /*! @brief This enum represents display layer composition types.
@@ -83,6 +88,8 @@ enum LayerComposition {
 
   kCompositionStitch,       //!< This layer will be drawn onto the target buffer by GPU. No blend
                             //!< required.
+
+  kCompositionDemura,       //!< This layer will be applied by Demura HW. No blend required.
 
   kCompositionSDE,          //!< This layer will be composed by SDE. It must not be composed by
                             //!< GPU or Blit.
@@ -195,6 +202,9 @@ struct LayerFlags {
       uint32_t sde_preferred : 1;  //! This flag shall be set by client to indicate that this layer
                                    //! will be composed by display device, layer with this flag
                                    //! will have highest priority. To be used by OEMs only.
+
+      uint32_t is_demura : 1;  //!< This flag shall be set to indicate that this layer
+                               //!< is a demura correction layer
     };
 
     uint32_t flags = 0;       //!< For initialization purpose only.
@@ -290,6 +300,10 @@ struct LayerStackFlags {
       uint32_t layer_id_support : 1;  //! This flag shall be set by Client to indicate that it has
                                       //! set the unique Layer Id on each SDM Layer, which will
                                       //! persist across draw cycles until the layer gets removed.
+
+      uint32_t stitch_present : 1;  //!< This flag shall be set to true to indicate stack has stitch
+
+      uint32_t demura_present : 1;  //!< This flag shall be set to true to indicate stack has demura
     };
 
     uint32_t flags = 0;               //!< For initialization purpose only.
@@ -487,4 +501,3 @@ struct LayerStack {
 }  // namespace sdm
 
 #endif  // __LAYER_STACK_H__
-

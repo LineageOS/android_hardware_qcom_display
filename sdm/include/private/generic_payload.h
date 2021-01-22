@@ -43,7 +43,7 @@ namespace sdm {
 struct GenericPayload {
  public:
   GenericPayload():
-    type_size(0), payload(nullptr), array_size(0) {}
+    type_size(0), payload(nullptr), array_size(0), release(nullptr) {}
 
   GenericPayload(const GenericPayload &in) {
     type_size = 0;
@@ -66,7 +66,7 @@ struct GenericPayload {
     type_size = sizeof(A);
     array_size = in.array_size;
 
-    if (payload != nullptr) {
+    if (payload != nullptr && release != nullptr) {
       release();
     }
     A* p2 = nullptr;
@@ -136,6 +136,10 @@ struct GenericPayload {
       return -EINVAL;
     }
 
+    if (!sz) {
+      return -EINVAL;
+    }
+
     p = reinterpret_cast<A *>(payload);
     *sz = 0;
     if (p == nullptr && copy_constructed) {
@@ -153,7 +157,7 @@ struct GenericPayload {
   }
 
   void DeletePayload() {
-    if (payload != nullptr) {
+    if (payload != nullptr && release != nullptr) {
       release();
     }
 

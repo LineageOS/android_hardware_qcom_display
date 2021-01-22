@@ -217,6 +217,9 @@ struct LayerBufferFlags {
 
       uint32_t game : 1;            //!< This flag shall be set by the client to indicate that the
                                     //!< the content is game.
+
+      uint32_t demura : 1;          //!< This flag shall be set to indicate that the
+                                    //!< content is demura correction data
     };
 
     uint32_t flags = 0;             //!< For initialization purpose only.

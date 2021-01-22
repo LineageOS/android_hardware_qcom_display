@@ -66,6 +66,7 @@ class DisplayNull : public DisplayInterface {
   virtual bool IsSupportSsppTonemap() { return false; }
   virtual bool CanSkipValidate() { return true; }
   virtual bool GameEnhanceSupported() { return false; }
+  virtual bool HasDemura() { return false; }
 
   MAKE_NO_OP(Commit(LayerStack *))
   MAKE_NO_OP(GetDisplayState(DisplayState *))

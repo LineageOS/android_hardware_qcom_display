@@ -28,6 +28,8 @@
 #include <utils/debug.h>
 #include <utils/locker.h>
 #include <utils/utils.h>
+#include <map>
+#include <vector>
 
 #include "color_manager.h"
 #include "core_impl.h"
@@ -100,6 +102,11 @@ DisplayError CoreImpl::Init() {
   error = hw_info_intf_->GetDisplaysStatus(&hw_displays_info_);
   if (error != kErrorNone) {
     DLOGW("Failed getting displays status. Error = %d", error);
+  }
+
+  // Must only call after GetDisplaysStatus
+  if (ReserveDemuraResources() != kErrorNone) {
+    comp_mgr_.SetDemuraStatus(false);
   }
 
   signal(SIGPIPE, SIG_IGN);
@@ -262,5 +269,132 @@ bool CoreImpl::IsRotatorSupportedFormat(LayerBufferFormat format) {
   return comp_mgr_.IsRotatorSupportedFormat(format);
 }
 
-}  // namespace sdm
+DisplayError CoreImpl::ReserveDemuraResources() {
+  DisplayError err = kErrorNone;
+  int enable = 0;
+  Debug::Get()->GetProperty(ENABLE_DEMURA, &enable);
+  if (!enable) {
+    comp_mgr_.SetDemuraStatus(false);
+    DLOGI("Demura is disabled");
+    return kErrorNone;
+  } else {
+    DLOGI("Demura is enabled");
+    comp_mgr_.SetDemuraStatus(true);
+  }
 
+  std::map<uint32_t, uint8_t> required_demura_fetch_cnt;  // display_id, count
+  if ((err = hw_info_intf_->GetRequiredDemuraFetchResourceCount(&required_demura_fetch_cnt)) !=
+      kErrorNone) {
+    DLOGE("Unable to get required demura pipes count");
+    return err;
+  }
+
+  if (!required_demura_fetch_cnt.size()) {
+    DLOGW("Demura is enabled but no panels support it. Disabling..");
+    comp_mgr_.SetDemuraStatus(false);
+    return kErrorNone;
+  }
+
+  int primary_off = 0;
+  int secondary_off = 0;
+  Debug::Get()->GetProperty(DISABLE_DEMURA_PRIMARY, &primary_off);
+  Debug::Get()->GetProperty(DISABLE_DEMURA_SECONDARY, &secondary_off);
+
+  int available_blocks = hw_resource_.demura_count;
+  for (auto r = required_demura_fetch_cnt.begin(); r != required_demura_fetch_cnt.end();) {
+    HWDisplayInfo &info = hw_displays_info_[r->first];
+    DLOGI("[%d] is_primary = %d, p_off = %d, s_off = %d", r->first, info.is_primary, primary_off,
+          secondary_off);
+    if (info.is_primary && primary_off) {
+      r = required_demura_fetch_cnt.erase(r);
+      continue;
+    } else if (!info.is_primary && secondary_off) {
+      r = required_demura_fetch_cnt.erase(r);
+      continue;
+    }
+
+    available_blocks -= r->second;
+    if (available_blocks < 0) {
+      DLOGE("Not enough Demura blocks (%u)", hw_resource_.demura_count);
+      return kErrorResources;
+    }
+    ++r;
+  }
+
+  std::map<uint32_t, uint8_t> fetch_resource_cnt;  // display id, count
+  comp_mgr_.GetDemuraFetchResourceCount(&fetch_resource_cnt);
+  for (auto &req : required_demura_fetch_cnt) {
+    uint8_t cnt = 0;
+    auto it = fetch_resource_cnt.find(req.first);
+    if (it != fetch_resource_cnt.end()) {
+      cnt = it->second;
+    }
+    uint8_t req_cnt = req.second;
+    if (req_cnt != cnt && cnt != 0) {
+      DLOGE("Cont Splash only allocated %u pipes for Demura, but %u is needed", cnt, req_cnt);
+      return kErrorDriverData;
+    }
+    if (req_cnt != 0 && cnt == 0) {
+      DLOGI("[%u] Needs Demura resources %u", req.first, req_cnt);
+      // Reserving demura resources requires knowledge of which rect to reserve when the req_cnt
+      // is 1. As the HW pipeline for any display is not known yet, we shall assume primary display
+      // takes 0 and non-primary takes 1. When req_cnt > 1, pass in -1
+      int8_t preferred_rect = -1;
+      if (req_cnt == 1) {
+        HWDisplayInfo &info = hw_displays_info_[req.first];
+        preferred_rect = info.is_primary ? 0 : 1;
+        DLOGI("[%u] is single LM. Requesting Demura rect %d", req.first, preferred_rect);
+      }
+      if ((err = comp_mgr_.ReserveDemuraFetchResources(req.first, preferred_rect)) !=
+          kErrorNone) {
+        DLOGE("Failed to reserve resources error = %d", err);
+        return err;
+      }
+    }
+  }
+
+  GetPanelFeatureFactory get_factory_f_ptr = nullptr;
+  if (!extension_lib_.Sym(GET_PANEL_FEATURE_FACTORY,
+                          reinterpret_cast<void **>(&get_factory_f_ptr))) {
+    DLOGE("Unable to load symbols, error = %s", extension_lib_.Error());
+    return kErrorUndefined;
+  }
+
+  panel_feature_factory_intf_ = get_factory_f_ptr();
+  std::shared_ptr<DemuraParserManagerIntf> pm_intf =
+                                panel_feature_factory_intf_->CreateDemuraParserManager(ipc_intf_);
+  if (!pm_intf) {
+    DLOGE("Failed to get Parser Manager intf");
+    return kErrorResources;
+  }
+  if (pm_intf->Init() != 0) {
+    DLOGE("Failed to init Parser Manager intf");
+    return kErrorResources;
+  }
+
+  std::vector<uint64_t> *panel_ids;
+  GenericPayload in;
+  int ret = in.CreatePayload<std::vector<uint64_t>>(panel_ids);
+  if (ret) {
+    DLOGE("Failed to create payload for panel ids, error = %d", ret);
+    return kErrorResources;
+  }
+
+  if ((err = hw_info_intf_->GetDemuraPanelIds(panel_ids)) != kErrorNone) {
+    DLOGE("Unable to get demura panel ids");
+    return err;
+  }
+
+  for (auto &id : *panel_ids) {
+    DLOGI("Detected panel_id = %" PRIu64 " (0x%" PRIx64 ")", id, id);
+  }
+
+  if ((ret = pm_intf->SetParameter(kDemuraParserManagerParamPanelIds, in))) {
+    DLOGE("Failed to set the panel ids to the parser manager");
+    return kErrorResources;
+  }
+
+  return err;
+}
+
+}  // namespace sdm

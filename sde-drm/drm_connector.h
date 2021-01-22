@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -57,6 +57,7 @@ class DRMConnector {
   DRMStatus GetStatus() { return status_; }
   int GetInfo(DRMConnectorInfo *info);
   void GetType(uint32_t *conn_type) { *conn_type = drm_connector_->connector_type; }
+  void GetEncoder(uint32_t *encoder_id) { *encoder_id = drm_connector_->encoder_id; }
   void Perform(DRMOps code, drmModeAtomicReq *req, va_list args);
   int IsConnected() { return (DRM_MODE_CONNECTED == drm_connector_->connection); }
   int GetPossibleEncoders(std::set<uint32_t> *possible_encoders);
@@ -70,6 +71,7 @@ class DRMConnector {
   void ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info);
   void ParseCapabilities(uint64_t blob_id, drm_msm_ext_hdr_properties *hdr_info);
   void ParseCapabilities(uint64_t blob_id, std::vector<uint8_t> *edid);
+  void ParseCapabilities(uint64_t blob_id, uint64_t *panel_id);
   void SetROI(drmModeAtomicReq *req, uint32_t obj_id, uint32_t num_roi,
               DRMRect *conn_rois);
 
@@ -99,6 +101,8 @@ class DRMConnectorManager {
   int GetConnectorInfo(uint32_t conn_id, DRMConnectorInfo *info);
   void GetConnectorList(std::vector<uint32_t> *conn_ids);
   int GetPossibleEncoders(uint32_t connector_id, std::set<uint32_t> *possible_encoders);
+  int GetPreferredModeLMCounts(std::map<uint32_t, uint8_t> *lm_counts);
+  void MapEncoderToConnector(std::map<uint32_t, uint32_t> *encoder_to_connector);
   ~DRMConnectorManager() {}
 
  private:

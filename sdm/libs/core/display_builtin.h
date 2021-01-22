@@ -82,8 +82,6 @@ struct DeferFpsConfig {
   }
 };
 
-typedef PanelFeatureFactoryIntf* (*GetPanelFeatureFactoryIntfType)();
-
 class DppsInfo {
  public:
   void Init(DppsPropIntf *intf, const std::string &panel_name);
@@ -142,6 +140,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError GetStcColorModes(snapdragoncolor::ColorModeList *mode_list) override;
   DisplayError SetStcColorMode(const snapdragoncolor::ColorMode &color_mode) override;
   DisplayError NotifyDisplayCalibrationMode(bool in_calibration) override;
+  bool HasDemura() override { return demura_intended_; }
   std::string Dump() override;
   DisplayError GetConfig(DisplayConfigFixedInfo *fixed_info) override;
 
@@ -174,9 +173,10 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   void SetDeferredFpsConfig();
   void GetFpsConfig(HWDisplayAttributes *display_attributes, HWPanelInfo *panel_info);
   PrimariesTransfer GetBlendSpaceFromStcColorMode(const snapdragoncolor::ColorMode &color_mode);
-  DisplayError SetupPanelfeatures();
   DisplayError SetupSPR();
   DisplayError SetupDemura();
+  DisplayError SetupDemuraLayer();
+  DisplayError BuildLayerStackStats(LayerStack *layer_stack) override;
   void UpdateDisplayModeParams();
   void HandleQsyncPostCommit(LayerStack *layer_stack);
   void UpdateQsyncMode();
@@ -184,6 +184,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   void SendBacklight();
   void SendDisplayConfigs();
   bool CanLowerFps(bool idle_screen);
+  int SetDemuraIntfStatus(bool enable);
 
   const uint32_t kPuTimeOutMs = 1000;
   std::vector<HWEvent> event_list_;
@@ -213,13 +214,10 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   sde_drm::DppsFeaturePayload histogramIRQ;
   void initColorSamplingState();
   DeferFpsConfig deferred_config_ = {};
-
   snapdragoncolor::ColorMode current_color_mode_ = {};
   snapdragoncolor::ColorModeList stc_color_modes_ = {};
 
-  std::shared_ptr<SPRIntf> spr_;
-  GetPanelFeatureFactoryIntfType GetPanelFeatureFactoryIntfFunc_ = nullptr;
-  int spr_prop_value_ = 0;
+  std::shared_ptr<SPRIntf> spr_ = nullptr;
   bool needs_validate_on_pu_enable_ = false;
   bool enable_qsync_idle_ = false;
   bool pending_vsync_enable_ = false;
@@ -228,6 +226,9 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   bool enhance_idle_time_ = false;
   int idle_time_ms_ = 0;
   struct timespec idle_timer_start_;
+  std::unique_ptr<DemuraIntf> demura_ = nullptr;
+  Layer demura_layer_ = {};
+  bool demura_intended_ = false;
 };
 
 }  // namespace sdm

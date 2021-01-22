@@ -56,6 +56,7 @@ using std::map;
 using std::string;
 using std::map;
 using std::pair;
+using std::make_pair;
 using std::vector;
 using std::unique_ptr;
 using std::tuple;
@@ -138,6 +139,13 @@ static uint8_t SECURE_DIR_TRANSLATION = 3;
 static uint8_t MULTIRECT_NONE = 0;
 static uint8_t MULTIRECT_PARALLEL = 1;
 static uint8_t MULTIRECT_SERIAL = 2;
+
+// Blend Type
+static uint8_t UNDEFINED = 0;
+static uint8_t OPAQUE = 1;
+static uint8_t PREMULTIPLIED = 2;
+static uint8_t COVERAGE = 3;
+static uint8_t SKIP_BLENDING = 4;
 
 static void SetRect(DRMRect &source, drm_clip_rect *target) {
   target->x1 = uint16_t(source.left);
@@ -223,6 +231,27 @@ static void PopulateMultiRectModes(drmModePropertyRes *prop) {
       }
     }
     multirect_modes_populated = true;
+  }
+}
+
+static void PopulateBlendType(drmModePropertyRes *prop) {
+  static bool blend_type_populated = false;
+  if (!blend_type_populated) {
+    for (auto i = 0; i < prop->count_enums; i++) {
+      string enum_name(prop->enums[i].name);
+      if (enum_name == "not_defined") {
+        UNDEFINED = prop->enums[i].value;
+      } else if (enum_name == "opaque") {
+        OPAQUE = prop->enums[i].value;
+      } else if (enum_name == "premultiplied") {
+        PREMULTIPLIED = prop->enums[i].value;
+      } else if (enum_name == "coverage") {
+        COVERAGE = prop->enums[i].value;
+      } else if (enum_name == "skip_blending") {
+        SKIP_BLENDING = prop->enums[i].value;
+      }
+    }
+    blend_type_populated = true;
   }
 }
 
@@ -416,6 +445,52 @@ void DRMPlaneManager::ResetCache(drmModeAtomicReq *req, uint32_t crtc_id) {
   }
 }
 
+void DRMPlaneManager::MapPlaneToCrtc(std::map<uint32_t, uint32_t> *plane_to_crtc) {
+  lock_guard<mutex> lock(lock_);
+
+  if (!plane_to_crtc) {
+    DLOGE("Map is NULL! Not expected.");
+    return;
+  }
+
+  plane_to_crtc->clear();
+
+  for (auto &plane : plane_pool_) {
+    uint32_t crtc_id = 0;
+    plane.second->GetCrtc(&crtc_id);
+    if (crtc_id)
+      plane_to_crtc->insert(make_pair(plane.first, crtc_id));
+  }
+}
+
+void DRMPlaneManager::GetPlaneIdsFromDescriptions(FetchResourceList &descriptions,
+                                                  std::vector<uint32_t> *plane_ids) {
+  lock_guard<mutex> lock(lock_);
+  for (auto &desc : descriptions) {
+    const string &type_str = std::get<0>(desc);
+    DRMPlaneType type = DRMPlaneType::MAX;
+    if (type_str == "DMA") {
+      type = DRMPlaneType::DMA;
+    } else {
+      continue;
+    }
+    const int32_t &idx = std::get<1>(desc);
+    const int8_t &rect = std::get<2>(desc);
+    for (auto &p : plane_pool_) {
+      DRMPlaneType plane_type;
+      p.second->GetType(&plane_type);
+      uint8_t plane_idx;
+      p.second->GetIndex(&plane_idx);
+      uint8_t plane_rect;
+      p.second->GetRect(&plane_rect);
+      if (plane_idx == idx && plane_rect == rect && plane_type == type) {
+        plane_ids->emplace_back(p.first);
+        break;
+      }
+    }
+  }
+}
+
 // ==============================================================================================//
 
 #undef __CLASS__
@@ -483,6 +558,8 @@ void DRMPlane::GetTypeInfo(const PropertyMap &prop_map) {
   string true_inline_dwnscale_rt_numerator = "true_inline_dwnscale_rt_numerator=";
   string true_inline_dwnscale_rt_denominator = "true_inline_dwnscale_rt_denominator=";
   string true_inline_max_height = "true_inline_max_height=";
+  string pipe_idx = "pipe_idx=";
+  string demura_block = "demura_block=";
 
   while (std::getline(stream, line)) {
     if (line.find(inline_rot_pixel_formats) != string::npos) {
@@ -526,7 +603,12 @@ void DRMPlane::GetTypeInfo(const PropertyMap &prop_map) {
         true_inline_dwnscale_rt_denominator.length()));
     } else if (line.find(true_inline_max_height) != string::npos) {
       info->max_rotation_linewidth = std::stoi(line.erase(0, true_inline_max_height.length()));
+    }  else if (line.find(pipe_idx) != string::npos) {
+      info->pipe_idx = std::stoi(line.erase(0, pipe_idx.length()));
+    }  else if (line.find(demura_block) != string::npos) {
+      info->demura_block_capability = std::stoi(line.erase(0, demura_block.length()));
     }
+
   }
 
 // TODO(user): Get max_scaler_linewidth and non_scaler_linewidth from driver
@@ -575,6 +657,8 @@ void DRMPlane::ParseProperties() {
     } else if (prop_enum == DRMProperty::MULTIRECT_MODE) {
       PopulateMultiRectModes(info);
       plane_type_info_.multirect_prop_present = true;
+    } else if (prop_enum == DRMProperty::BLEND_OP) {
+      PopulateBlendType(info);
     }
 
     prop_mgr_.SetPropertyId(prop_enum, info->prop_id);
@@ -866,10 +950,32 @@ void DRMPlane::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
     } break;
 
     case DRMOps::PLANE_SET_BLEND_TYPE: {
-      uint32_t blending = va_arg(args, uint32_t);
+      DRMBlendType blending = va_arg(args, DRMBlendType);
+      uint32_t blend_type = UNDEFINED;
+      switch (blending) {
+        case DRMBlendType::OPAQUE:
+          blend_type = OPAQUE;
+          break;
+        case DRMBlendType::PREMULTIPLIED:
+          blend_type = PREMULTIPLIED;
+          break;
+        case DRMBlendType::COVERAGE:
+          blend_type = COVERAGE;
+          break;
+        case DRMBlendType::SKIP_BLENDING:
+          blend_type = SKIP_BLENDING;
+          break;
+        case DRMBlendType::UNDEFINED:
+          blend_type = UNDEFINED;
+          break;
+        default:
+          DRM_LOGE("Invalid blend type %d to set on plane %d", blending, obj_id);
+          break;
+      }
+
       prop_id = prop_mgr_.GetPropertyId(DRMProperty::BLEND_OP);
-      AddProperty(req, obj_id, prop_id, blending, true /* cache */, tmp_prop_val_map_);
-      DRM_LOGV("Plane %d: Setting blending %d", obj_id, blending);
+      AddProperty(req, obj_id, prop_id, blend_type, true /* cache */, tmp_prop_val_map_);
+      DRM_LOGV("Plane %d: Setting blending %d", obj_id, blend_type);
     } break;
 
     case DRMOps::PLANE_SET_H_DECIMATION: {

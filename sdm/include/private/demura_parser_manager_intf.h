@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, 2018 The Linux Foundation. All rights reserved.
+* Copyright (c) 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -22,35 +22,27 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef __HW_INFO_INTERFACE_H__
-#define __HW_INFO_INTERFACE_H__
+#ifndef __DEMURA_PARSER_MANAGER_INTF_H___
+#define __DEMURA_PARSER_MANAGER_INTF_H___
 
-#include <core/core_interface.h>
-#include <private/hw_info_types.h>
-#include <inttypes.h>
-#include <vector>
-#include <utility>
-#include <map>
+#include <private/generic_payload.h>
+#include <private/generic_intf.h>
 
 namespace sdm {
 
-class HWInfoInterface {
- public:
-  static DisplayError Create(HWInfoInterface **intf);
-  static DisplayError Destroy(HWInfoInterface *intf);
-  virtual DisplayError Init() = 0;
-  virtual DisplayError GetHWResourceInfo(HWResourceInfo *hw_resource) = 0;
-  virtual DisplayError GetFirstDisplayInterfaceType(HWDisplayInterfaceInfo *hw_disp_info) = 0;
-  virtual DisplayError GetDisplaysStatus(HWDisplaysInfo *hw_displays_info) = 0;
-  virtual DisplayError GetMaxDisplaysSupported(DisplayType type, int32_t *max_displays) = 0;
-  virtual DisplayError GetRequiredDemuraFetchResourceCount(
-                       std::map<uint32_t, uint8_t> *required_demura_fetch_cnt) = 0;
-  virtual DisplayError GetDemuraPanelIds(std::vector<uint64_t> *panel_ids) = 0;
- protected:
-  virtual ~HWInfoInterface() { }
+enum DemuraParserManagerParams {
+  kDemuraParserManagerParamPanelIds,
+  kDemuraParserManagerParamMax,
 };
+
+enum DemuraParserManagerOps {
+  kDemuraParserManagerOpsParser,
+  kDemuraParserManagerOpsMax,
+};
+
+using DemuraParserManagerIntf =
+      GenericIntf<DemuraParserManagerParams, DemuraParserManagerOps, GenericPayload>;
 
 }  // namespace sdm
 
-#endif  // __HW_INFO_INTERFACE_H__
-
+#endif  // __DEMURA_PARSER_MANAGER_INTF_H__

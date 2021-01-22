@@ -26,6 +26,7 @@
 #define __RESOURCE_INTERFACE_H__
 
 #include <core/display_interface.h>
+#include <map>
 #include "hw_info_types.h"
 
 namespace sdm {
@@ -62,12 +63,10 @@ class ResourceInterface {
   virtual DisplayError PostCommit(Handle display_ctx, DispLayerStack *disp_layer_stack) = 0;
   virtual void Purge(Handle display_ctx) = 0;
   virtual DisplayError SetMaxMixerStages(Handle display_ctx, uint32_t max_mixer_stages) = 0;
-  virtual DisplayError ValidateScaling(const LayerRect &crop, const LayerRect &dst,
-                                       bool rotate90, BufferLayout layout,
-                                       bool use_rotator_downscale) = 0;
+  virtual DisplayError ValidateScaling(const LayerRect &crop, const LayerRect &dst, bool rotate90,
+                                       BufferLayout layout, bool use_rotator_downscale) = 0;
   virtual DisplayError ValidateAndSetCursorPosition(Handle display_ctx,
-                                                    DispLayerStack *disp_layer_stack,
-                                                    int x, int y,
+                                                    DispLayerStack *disp_layer_stack, int x, int y,
                                                     DisplayConfigVariableInfo *fb_config) = 0;
   virtual DisplayError SetMaxBandwidthMode(HWBwModes mode) = 0;
   virtual DisplayError GetScaleLutConfig(HWScaleLutInfo *lut_info) = 0;
@@ -77,10 +76,15 @@ class ResourceInterface {
                                         const shared_ptr<Fence> &sync_handle) = 0;
   virtual DisplayError Perform(int cmd, ...) = 0;
   virtual bool IsRotatorSupportedFormat(LayerBufferFormat format) = 0;
-  virtual ~ResourceInterface() { }
+  virtual DisplayError FreeDemuraFetchResources(Handle display_ctx) = 0;
+  virtual DisplayError GetDemuraFetchResourceCount(
+                       std::map<uint32_t, uint8_t> *fetch_resource_cnt) = 0;
+  virtual DisplayError ReserveDemuraFetchResources(const int32_t &display_id,
+                                                   const int8_t &preferred_rect) = 0;
+  virtual DisplayError GetDemuraFetchResources(Handle display_ctx, FetchResourceList *frl) = 0;
+  virtual ~ResourceInterface() {}
 };
 
 }  // namespace sdm
 
 #endif  // __RESOURCE_INTERFACE_H__
-

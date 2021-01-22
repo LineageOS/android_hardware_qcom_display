@@ -46,13 +46,19 @@ class DRMPanelFeatureMgr : public DRMPanelFeatureMgrIntf {
   void Deinit();
   void GetPanelFeatureInfo(DRMPanelFeatureInfo *info);
   void CachePanelFeature(const DRMPanelFeatureInfo &info);
-  void CommitPanelFeatures(drmModeAtomicReq *req, const DRMDisplayToken &tok);
+  void CommitPanelFeatures(drmModeAtomicReq *req, const DRMDisplayToken &token);
+  void NullCommitPanelFeatures(drmModeAtomicReq *req, const DRMDisplayToken &token);
+  void MarkForNullCommit(const DRMDisplayToken &token, const DRMPanelFeatureID &id);
 
  private:
   int InitObjectProps(int obj_id, int obj_type);
   void ParseCapabilities(uint32_t blob_id, char* value, uint32_t max_len, const std::string str);
   void ParseDsppCapabilities(uint32_t blob_id, std::vector<int> *values, uint32_t *size,
                              const std::string str);
+  void ParsePanelId(uint32_t blob_id, DRMPanelFeatureInfo *info);
+  void ParseDemuraResources(drmModePropertyRes *prop, uint64_t value, DRMPanelFeatureInfo *info);
+  void ApplyDirtyFeature(drmModeAtomicReq *req, const DRMDisplayToken &token,
+                         DRMPanelFeatureInfo &info);
 
   std::mutex lock_;
   int dev_fd_ = -1;
@@ -64,6 +70,7 @@ class DRMPanelFeatureMgr : public DRMPanelFeatureMgrIntf {
   std::map<DRMPanelFeatureID, DRMPropType> drm_prop_type_map_ {};
   std::map<DRMPanelFeatureID, uint32_t> drm_prop_blob_ids_map_ {};
   std::array<DRMPanelFeatureInfo, kDRMPanelFeatureMax> feature_info_tbl_ {};
+  std::map<uint32_t /* obj_id */, DRMPanelFeatureID> apply_in_null_commit_ {};
 };
 
 }  // namespace sde_drm

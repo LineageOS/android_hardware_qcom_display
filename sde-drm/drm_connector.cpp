@@ -54,6 +54,7 @@ namespace sde_drm {
 using std::string;
 using std::stringstream;
 using std::pair;
+using std::make_pair;
 using std::vector;
 using std::unique_ptr;
 using std::map;
@@ -432,6 +433,77 @@ void DRMConnectorManager::Free(DRMDisplayToken *token) {
   token->conn_id = 0;
 }
 
+// DSI only
+int DRMConnectorManager::GetPreferredModeLMCounts(std::map<uint32_t, uint8_t> *lm_counts) {
+  lock_guard<mutex> lock(lock_);
+  int ret = 0;
+  for (auto &conn : connector_pool_) {
+    uint32_t conn_type;
+    const uint32_t &id = conn.first;
+    conn.second->GetType(&conn_type);
+    if (conn_type == DRM_MODE_CONNECTOR_DSI) {
+      DRMConnectorInfo info = {};
+      connector_pool_[id]->GetInfo(&info);
+      uint8_t lm_cnt = 0;
+      uint32_t mode_index = 0;
+      for (uint32_t index = 0; index < info.modes.size(); index++) {
+        if (info.modes[index].mode.type & DRM_MODE_TYPE_PREFERRED) {
+          mode_index = index;
+          break;
+        }
+      }
+
+      switch (info.modes[mode_index].topology) {
+        case DRMTopology::SINGLE_LM:
+        case DRMTopology::SINGLE_LM_DSC:
+        case DRMTopology::PPSPLIT:
+          lm_cnt = 1;
+          break;
+        case DRMTopology::DUAL_LM:
+        case DRMTopology::DUAL_LM_DSC:
+        case DRMTopology::DUAL_LM_MERGE:
+        case DRMTopology::DUAL_LM_MERGE_DSC:
+        case DRMTopology::DUAL_LM_DSCMERGE:
+          lm_cnt = 2;
+          break;
+        case DRMTopology::QUAD_LM_MERGE:
+        case DRMTopology::QUAD_LM_DSCMERGE:
+        case DRMTopology::QUAD_LM_MERGE_DSC:
+        case DRMTopology::QUAD_LM_DSC4HSMERGE:
+          lm_cnt = 4;
+          break;
+        default:
+          lm_cnt = UINT8_MAX;
+          DLOGE("Invalid lm_cnt for connector %u", id);
+          break;
+      }
+
+      if (lm_cnt != UINT8_MAX) {
+        (*lm_counts)[id] = lm_cnt;
+      }
+    }
+  }
+
+  return ret;
+}
+
+void DRMConnectorManager::MapEncoderToConnector(std::map<uint32_t, uint32_t> *encoder_to_connector) {
+  lock_guard<mutex> lock(lock_);
+
+  if (!encoder_to_connector) {
+    DLOGE("map is NULL! Not expected.");
+    return;
+  }
+
+  encoder_to_connector->clear();
+
+  for (auto &conn : connector_pool_) {
+    uint32_t encoder_id = 0;
+    conn.second->GetEncoder(&encoder_id);
+    if (encoder_id)
+      encoder_to_connector->insert(make_pair(encoder_id, conn.first));
+  }
+}
 // ==============================================================================================//
 
 #undef __CLASS__
@@ -618,7 +690,7 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
       // Move to the next mode_item
       mode_item = &info->modes.at(index++);
     } else if (line.find(topology) != string::npos) {
-      mode_item->topology = GetTopologyEnum(string(line, topology.length()));;
+      mode_item->topology = GetTopologyEnum(string(line, topology.length()));
     } else if (line.find(pu_num_roi) != string::npos) {
       mode_item->num_roi = std::stoi(string(line, pu_num_roi.length()));
     } else if (line.find(pu_xstart) != string::npos) {
@@ -685,6 +757,27 @@ void DRMConnector::ParseCapabilities(uint64_t blob_id, std::vector<uint8_t> *edi
   uint8_t *edid_blob = (uint8_t*)(blob->data);
   uint32_t length = blob->length;
   (*edid).assign(edid_blob, edid_blob + length);
+
+  drmModeFreePropertyBlob(blob);
+}
+
+void DRMConnector::ParseCapabilities(uint64_t blob_id, uint64_t *panel_id) {
+  drmModePropertyBlobRes *blob = drmModeGetPropertyBlob(fd_, blob_id);
+  if (!blob) {
+    return;
+  }
+
+  if (blob->length != sizeof(uint64_t)) {
+    DRM_LOGE("Expecting %zu bytes but got %u", sizeof(uint64_t), blob->length);
+    return;
+  }
+
+  // Read as-is / big endian. Driver has supplied the value in this manner.
+  uint8_t *data = (uint8_t*)(blob->data);
+  for (size_t i = 0; i < blob->length; i++) {
+    *panel_id = (*panel_id << 8) | *data;
+    data++;
+  }
 
   drmModeFreePropertyBlob(blob);
 }
@@ -790,6 +883,13 @@ int DRMConnector::GetInfo(DRMConnectorInfo *info) {
                           std::find(props->props, props->props + props->count_props,
                                     prop_mgr_.GetPropertyId(DRMProperty::SUPPORTED_COLORSPACES)));
     info->supported_colorspaces = props->prop_values[index];
+  }
+
+  if (prop_mgr_.IsPropertyAvailable(DRMProperty::DEMURA_PANEL_ID)) {
+    index = std::distance(props->props,
+                          std::find(props->props, props->props + props->count_props,
+                                    prop_mgr_.GetPropertyId(DRMProperty::DEMURA_PANEL_ID)));
+    ParseCapabilities(props->prop_values[index], &info->panel_id);
   }
 
   drmModeFreeObjectProperties(props);

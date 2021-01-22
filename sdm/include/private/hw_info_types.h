@@ -38,6 +38,7 @@
 #include <string>
 #include <vector>
 #include <utility>
+#include <tuple>
 
 namespace sdm {
 using std::string;
@@ -235,6 +236,12 @@ struct HWDynBwLimitInfo {
   uint64_t pipe_bw_limit[kBwModeMax] = { 0 };
 };
 
+enum SplashType {
+  kSplashNone,
+  kSplashLayer,
+  kSplashDemura,
+};
+
 struct HWPipeCaps {
   PipeType type = kPipeTypeUnused;
   uint32_t id = 0;
@@ -244,6 +251,10 @@ struct HWPipeCaps {
   uint32_t dgm_csc_version = 0;
   std::map<HWToneMapLut, uint32_t> tm_lut_version_map = {};
   bool block_sec_ui = false;
+  int32_t cont_splash_disp_id = -1;
+  SplashType splash_type = kSplashNone;
+  int32_t pipe_idx = -1;
+  int32_t demura_block_capability = -1;
 };
 
 struct HWRotatorInfo {
@@ -361,6 +372,10 @@ struct HWResourceInfo {
   bool has_micro_idle = false;
   uint32_t ubwc_version = 1;
   uint32_t rc_total_mem_size = 0;
+  std::map<uint32_t, uint32_t> plane_to_connector = {};
+  std::vector<uint32_t> initial_demura_planes = {};
+  uint32_t demura_count = 0;
+  uint32_t dspp_count = 0;
 };
 
 struct HWSplitInfo {
@@ -701,6 +716,9 @@ struct LayerExt {
   std::vector<LayerRect> excl_rects = {};  // list of exclusion rects
 };
 
+typedef std::tuple<std::string, int32_t, int8_t> FetchResource;
+typedef std::vector<FetchResource> FetchResourceList;
+
 struct HWQosData {
   bool valid = false;
   uint64_t core_ab_bps = 0;
@@ -722,8 +740,9 @@ enum UpdateType {
 
 struct HWLayersInfo {
   uint32_t app_layer_count = 0;      // Total number of app layers. Must not be 0.
-  uint32_t gpu_target_index = 0;     // GPU target layer index. 0 if not present.
-  uint32_t stitch_target_index = 0;  // Blit target layer index. 0 if not present.
+  int32_t gpu_target_index = -1;     // GPU target layer index. -1 if not present.
+  int32_t stitch_target_index = -1;  // Blit target layer index. -1 if not present.
+  int32_t demura_target_index = -1;  // Demura target layer index. -1 if not present.
   std::vector<ColorPrimaries> wide_color_primaries = {};  // list of wide color primaries
 
   std::vector<Layer> hw_layers = {};  // Layers which need to be programmed on the HW
@@ -762,6 +781,8 @@ struct HWLayersInfo {
   LayerBuffer *output_buffer = NULL;   //!< Pointer to the buffer where composed buffer would be
                                        //!< rendered for virtual displays.
                                        //!< NOTE: This field applies to a virtual display only.
+  bool stitch_present = false;  // Indicates there is stitch layer or not
+  bool demura_present = false;  // Indicates there is demura layer or not
 };
 
 struct DispLayerStack {
@@ -847,4 +868,3 @@ struct HWMixerAttributes {
 }  // namespace sdm
 
 #endif  // __HW_INFO_TYPES_H__
-

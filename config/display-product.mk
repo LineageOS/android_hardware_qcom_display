@@ -33,6 +33,11 @@ PRODUCT_PACKAGES += \
     modetest \
     libmemutils
 
+#oem_services library
+PRODUCT_PACKAGES += \
+    libfilefinder \
+    vendor.qti.hardware.display.demura@1.0-service
+
 ifneq ($(TARGET_HAS_LOW_RAM),true)
 #QDCM calibration xml file for 2k panel
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_nt35597_cmd_mode_dsi_truly_panel_with_DSC.xml
@@ -173,7 +178,11 @@ SOONG_CONFIG_qtidisplay_gralloc4 := true
 SOONG_CONFIG_qtidisplay_default := true
 
 ifeq ($(TARGET_IS_HEADLESS), true)
+    # TODO: QMAA prebuilts
     PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/qmaa
+    PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/gralloc
+    PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/init
+    PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/libdebug
     SOONG_CONFIG_qtidisplay_headless := true
     SOONG_CONFIG_qtidisplay_default := false
 else
@@ -184,14 +193,15 @@ else
     #Properties that should not be set in QMAA are enabled here.
     PRODUCT_PROPERTY_OVERRIDES += \
         vendor.display.enable_early_wakeup=1
-    PRODUCT_SOONG_NAMESPACES += hardware/qcom/display
+    ifeq ($(BUILD_DISPLAY_TECHPACK_SOURCE), true)
+        PRODUCT_SOONG_NAMESPACES += hardware/qcom/display
+        PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/gralloc
+        PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/init
+        PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/libdebug
+    else
+        PRODUCT_SOONG_NAMESPACES += vendor/qcom/opensource/techpack/artifacts/display
+    endif
 endif
-
-#Modules that will be added in QMAA/Non-QMAA paths
-PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/gralloc
-PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/init
-PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/libdebug
-
 
 QMAA_ENABLED_HAL_MODULES += display
 

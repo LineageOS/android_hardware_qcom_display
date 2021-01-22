@@ -41,8 +41,9 @@ class DRMPanelFeatureMgrIntf {
   virtual void Deinit() = 0;
   virtual void GetPanelFeatureInfo(DRMPanelFeatureInfo *info) = 0;
   virtual void CachePanelFeature(const DRMPanelFeatureInfo &info) = 0;
-  virtual void CommitPanelFeatures(drmModeAtomicReq *req,
-                                   const DRMDisplayToken &tok) = 0;
+  virtual void CommitPanelFeatures(drmModeAtomicReq *req, const DRMDisplayToken &token) = 0;
+  virtual void NullCommitPanelFeatures(drmModeAtomicReq *req, const DRMDisplayToken &token) = 0;
+  virtual void MarkForNullCommit(const DRMDisplayToken &token, const DRMPanelFeatureID &id) = 0;
 };
 
 extern "C" DRMPanelFeatureMgrIntf *GetPanelFeatureManagerIntf();

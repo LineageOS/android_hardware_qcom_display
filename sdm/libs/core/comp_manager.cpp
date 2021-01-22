@@ -28,6 +28,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <map>
 
 #include "comp_manager.h"
 #include "strategy.h"
@@ -156,6 +157,8 @@ DisplayError CompManager::RegisterDisplay(int32_t display_id, DisplayType type,
     max_sde_ext_layers_ = UINT32(Debug::GetExtMaxlayers());
   }
 
+  display_demura_status_[display_id] = false;
+
   DLOGV_IF(kTagCompManager, "Registered displays [%s], display %d-%d",
            StringDisplayList(registered_displays_).c_str(), display_comp_ctx->display_id,
            display_comp_ctx->display_type);
@@ -274,7 +277,12 @@ void CompManager::PrepareStrategyConstraints(Handle comp_handle, DispLayerStack 
     constraints->safe_mode = true;
   }
 
-  uint32_t app_layer_count = UINT32(disp_layer_stack->stack->layers.size()) - 1;
+  uint32_t size_ff = 1;  // gpu target layer always present
+  if (disp_layer_stack->info.stitch_present)
+    size_ff++;
+  if (disp_layer_stack->info.demura_present)
+    size_ff++;
+  uint32_t app_layer_count = UINT32(disp_layer_stack->stack->layers.size()) - size_ff;
   if (display_comp_ctx->idle_fallback || display_comp_ctx->thermal_fallback_) {
     // Handle the idle timeout by falling back
     constraints->safe_mode = true;
@@ -704,6 +712,32 @@ DisplayError CompManager::SwapBuffers(Handle display_ctx) {
       reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
   return display_comp_ctx->strategy->SwapBuffers();
+}
+
+DisplayError CompManager::FreeDemuraFetchResources(Handle display_ctx) {
+  SCOPE_LOCK(locker_);
+  DisplayCompositionContext *display_comp_ctx =
+      reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+  return resource_intf_->FreeDemuraFetchResources(display_comp_ctx->display_resource_ctx);
+}
+
+DisplayError CompManager::GetDemuraFetchResourceCount(
+                          std::map<uint32_t, uint8_t> *fetch_resource_cnt) {
+  SCOPE_LOCK(locker_);
+  return resource_intf_->GetDemuraFetchResourceCount(fetch_resource_cnt);
+}
+
+DisplayError CompManager::ReserveDemuraFetchResources(const uint32_t &display_id,
+                                                      const int8_t &preferred_rect) {
+  SCOPE_LOCK(locker_);
+  return resource_intf_->ReserveDemuraFetchResources(display_id, preferred_rect);
+}
+
+DisplayError CompManager::GetDemuraFetchResources(Handle display_ctx, FetchResourceList *frl) {
+  SCOPE_LOCK(locker_);
+  DisplayCompositionContext *display_comp_ctx =
+      reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+  return resource_intf_->GetDemuraFetchResources(display_comp_ctx->display_resource_ctx, frl);
 }
 
 }  // namespace sdm

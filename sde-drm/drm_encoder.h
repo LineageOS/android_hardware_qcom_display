@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -51,12 +51,13 @@ class DRMEncoder {
   DRMStatus GetStatus() { return status_; }
   void GetInfo(DRMEncoderInfo *info);
   void GetType(uint32_t *encoder_type) {
-    drm_encoder_ ? *encoder_type = drm_encoder_->encoder_type
-      : *encoder_type = fake_type_;
+    *encoder_type = drm_encoder_ ? drm_encoder_->encoder_type : fake_type_;
   }
   void GetId(uint32_t *encoder_id) {
-   drm_encoder_ ? *encoder_id = drm_encoder_->encoder_id
-      : *encoder_id = fake_id_;
+    *encoder_id = drm_encoder_ ? drm_encoder_->encoder_id : fake_id_;
+  }
+  void GetCrtc(uint32_t *crtc_id) {
+    *crtc_id = drm_encoder_ ? drm_encoder_->crtc_id : 0;
   }
   int GetPossibleCrtcIndices(std::set<uint32_t> *possible_crtc_indices);
   void Dump();
@@ -89,6 +90,7 @@ class DRMEncoderManager {
   int GetEncoderInfo(uint32_t encoder_id, DRMEncoderInfo *info);
   int GetEncoderList(std::vector<uint32_t> *encoder_ids);
   int GetPossibleCrtcIndices(uint32_t encoder_id, std::set<uint32_t> *possible_crtc_indices);
+  void MapCrtcToEncoder(std::map<uint32_t, uint32_t> *crtc_to_encoder);
 
  private:
   int fd_ = -1;

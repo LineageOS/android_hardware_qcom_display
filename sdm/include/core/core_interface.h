@@ -37,6 +37,7 @@
 #ifndef __CORE_INTERFACE_H__
 #define __CORE_INTERFACE_H__
 
+#include <core/ipc_interface.h>
 #include <stdint.h>
 #include <map>
 #include <vector>

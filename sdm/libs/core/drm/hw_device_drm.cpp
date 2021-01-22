@@ -1286,7 +1286,7 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
 
           drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ZORDER, pipe_id, pipe_info->z_order);
 
-          DRMBlendType blending = {};
+          DRMBlendType blending = DRMBlendType::UNDEFINED;
           SetBlending(layer.blending, &blending);
           drm_atomic_intf_->Perform(DRMOps::PLANE_SET_BLEND_TYPE, pipe_id, blending);
 
@@ -1372,7 +1372,9 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
   }
 
   drm_atomic_intf_->Perform(DRMOps::DPPS_COMMIT_FEATURE, 0 /* argument is not used */);
-  drm_atomic_intf_->Perform(DRMOps::COMMIT_PANEL_FEATURES, 0 /* argument is not used */);
+  if (!validate) {
+    drm_atomic_intf_->Perform(DRMOps::COMMIT_PANEL_FEATURES, 0 /* argument is not used */);
+  }
 
   if (reset_output_fence_offset_ && !validate) {
     // Change back the fence_offset
@@ -1732,6 +1734,9 @@ void HWDeviceDRM::SetBlending(const LayerBlending &source, DRMBlendType *target)
       break;
     case kBlendingCoverage:
       *target = DRMBlendType::COVERAGE;
+      break;
+    case kBlendingSkip:
+      *target = DRMBlendType::SKIP_BLENDING;
       break;
     default:
       *target = DRMBlendType::UNDEFINED;
@@ -2406,6 +2411,7 @@ void HWDeviceDRM::AddDimLayerIfNeeded() {
 DisplayError HWDeviceDRM::NullCommit(bool synchronous, bool retain_planes) {
   DTRACE_SCOPED();
   AddDimLayerIfNeeded();
+  drm_atomic_intf_->Perform(DRMOps::NULL_COMMIT_PANEL_FEATURES, 0 /* argument is not used */);
   int ret = drm_atomic_intf_->Commit(synchronous , retain_planes);
   if (ret) {
     DLOGE("failed with error %d", ret);

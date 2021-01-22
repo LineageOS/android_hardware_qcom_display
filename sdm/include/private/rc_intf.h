@@ -31,10 +31,11 @@
 #define __RC_INTF_H__
 
 #include <core/display_interface.h>
-#include <string>
 
-#include "generic_intf.h"
-#include "generic_payload.h"
+#include <private/generic_intf.h>
+#include <private/generic_payload.h>
+
+#include <string>
 
 #define SDE_HW_PU_USECASE 0x1000
 
