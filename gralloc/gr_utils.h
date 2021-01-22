@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016, 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016, 2020-2021, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,7 +30,7 @@
 #ifndef __GR_UTILS_H__
 #define __GR_UTILS_H__
 
-#include <android/hardware/graphics/common/1.1/types.h>
+#include <android/hardware/graphics/common/1.2/types.h>
 #include "gralloc_priv.h"
 #include "qdMetaData.h"
 
@@ -39,56 +39,34 @@
 #define SZ_4K 0x1000
 
 #define SIZE_4K 4096
-#define SIZE_8K 4096
+#define SIZE_8K 8192
 
-#ifdef MASTER_SIDE_CP
-#define SECURE_ALIGN SZ_4K
-#else
+#ifdef SLAVE_SIDE_CP
 #define SECURE_ALIGN SZ_1M
+#else  // MASTER_SIDE_CP
+#define SECURE_ALIGN SZ_4K
 #endif
 
 #define INT(exp) static_cast<int>(exp)
 #define UINT(exp) static_cast<unsigned int>(exp)
 
-/* HARDWAREBUFFER flags used by GPU to check secure  secure context support */
-#define GRALLOC1_PRODUCER_USAGE_GPU_SAMPLED_IMAGE                   1UL << 8
-/* The buffer will be used as a shader storage or uniform buffer object. */
-#define GRALLOC1_PRODUCER_USAGE_GPU_DATA_BUFFER                     1UL << 24
-/* The buffer will be used as a cube map texture. */
-#define GRALLOC1_PRODUCER_USAGE_GPU_CUBE_MAP                        1UL << 25
-/* The buffer contains a complete mipmap hierarchy. */
-#define GRALLOC1_PRODUCER_USAGE_GPU_MIPMAP_COMPLETE                 1UL << 26
-
-/* Buffer content should be displayed on a primary display only */
-#define GRALLOC1_CONSUMER_USAGE_PRIVATE_INTERNAL_ONLY  0x04000000
-
-/* Buffer content should be displayed on an external display only */
-#define GRALLOC1_CONSUMER_USAGE_PRIVATE_EXTERNAL_ONLY  0x08000000
-
-#define GRALLOC1_MODULE_PERFORM_ALLOCATE_BUFFER 17
-
-/* CAMERA heap is a carveout heap for camera, is not secured */
-#define GRALLOC1_PRODUCER_USAGE_PRIVATE_CAMERA_HEAP GRALLOC1_PRODUCER_USAGE_PRIVATE_2
-#define GRALLOC_USAGE_PRIVATE_CAMERA_HEAP GRALLOC1_PRODUCER_USAGE_PRIVATE_CAMERA_HEAP
-
-#ifdef GRALLOC1_PRODUCER_USAGE_PRIVATE_ADSP_HEAP
-#undef GRALLOC1_PRODUCER_USAGE_PRIVATE_ADSP_HEAP
-#define GRALLOC1_PRODUCER_USAGE_PRIVATE_ADSP_HEAP   GRALLOC1_PRODUCER_USAGE_PRIVATE_3
-#endif
-
 using android::hardware::graphics::common::V1_1::BufferUsage;
-namespace gralloc1 {
 
+namespace gralloc {
 struct BufferInfo {
-  BufferInfo(int w, int h, int f, gralloc1_producer_usage_t prod = GRALLOC1_PRODUCER_USAGE_NONE,
-             gralloc1_consumer_usage_t cons = GRALLOC1_CONSUMER_USAGE_NONE) : width(w), height(h),
-    format(f), layer_count(1), prod_usage(prod), cons_usage(cons) {}
+  BufferInfo(int w, int h, int f, uint64_t usage = 0)
+      : width(w), height(h), format(f), layer_count(1), usage(usage) {}
   int width;
   int height;
   int format;
   int layer_count;
-  gralloc1_producer_usage_t prod_usage;
-  gralloc1_consumer_usage_t cons_usage;
+  uint64_t usage;
+};
+
+struct GrallocProperties {
+  bool use_system_heap_for_sensors = true;
+  bool ubwc_disable = false;
+  bool ahardware_buffer_disable = false;
 };
 
 template <class Type1, class Type2>
@@ -96,51 +74,151 @@ inline Type1 ALIGN(Type1 x, Type2 align) {
   return (Type1)((x + (Type1)align - 1) & ~((Type1)align - 1));
 }
 
+enum class Error : int32_t {
+  /**
+   * No error.
+   */
+  NONE = 0,
+  /**
+   * Invalid BufferDescriptor.
+   */
+  BAD_DESCRIPTOR = 1,
+  /**
+   * Invalid buffer handle.
+   */
+  BAD_BUFFER = 2,
+  /**
+   * Invalid HardwareBufferDescription.
+   */
+  BAD_VALUE = 3,
+  /**
+   * Resource unavailable.
+   */
+  NO_RESOURCES = 5,
+  /**
+   * Permanent failure.
+   */
+  UNSUPPORTED = 7,
+};
+
+enum PlaneComponent {
+  /* luma */
+  PLANE_COMPONENT_Y = 1 << 0,
+  /* chroma blue */
+  PLANE_COMPONENT_Cb = 1 << 1,
+  /* chroma red */
+  PLANE_COMPONENT_Cr = 1 << 2,
+
+  /* red */
+  PLANE_COMPONENT_R = 1 << 10,
+  /* green */
+  PLANE_COMPONENT_G = 1 << 11,
+  /* blue */
+  PLANE_COMPONENT_B = 1 << 12,
+
+  /* alpha */
+  PLANE_COMPONENT_A = 1 << 20,
+
+  /* raw data plane */
+  PLANE_COMPONENT_RAW = 1 << 30,
+
+  /* meta information plane */
+  PLANE_COMPONENT_META = 1 << 31,
+};
+
+struct PlaneLayoutInfo {
+  /** Components represented the type of plane. */
+  PlaneComponent component;
+
+  /** horizontal subsampling. Must be a positive power of 2. */
+  uint32_t h_subsampling;
+
+  /** vertical subsampling. Must be a positive power of 2. */
+  uint32_t v_subsampling;
+
+  /** offset to the first byte of the top-left pixel of the plane
+   *  and it is calculated from the start of the buffer.
+   *  Add base of the handle with offset to get the first byte of the plane.
+   */
+  uint32_t offset;
+
+  /** step is the distance in bytes from one pixel value to the next. */
+  int32_t step;
+
+  /** stride of the plane in pixels */
+  int32_t stride;
+
+  /** stride of the plane in in bytes */
+  int32_t stride_bytes;
+
+  /** plane height or vertical stride */
+  int32_t scanlines;
+
+  /** size of the plane in bytes */
+  uint32_t size;
+};
+
 bool IsYuvFormat(int format);
 bool IsCompressedRGBFormat(int format);
 bool IsUncompressedRGBFormat(int format);
 uint32_t GetBppForUncompressedRGB(int format);
-bool CpuCanAccess(gralloc1_producer_usage_t prod_usage, gralloc1_consumer_usage_t cons_usage);
-bool CpuCanRead(gralloc1_producer_usage_t prod_usage, gralloc1_consumer_usage_t cons_usage);
-bool CpuCanWrite(gralloc1_producer_usage_t prod_usage);
+bool CpuCanAccess(uint64_t usage);
+bool CpuCanRead(uint64_t usage);
+bool CpuCanWrite(uint64_t usage);
+int GetBpp(int format);
 unsigned int GetSize(const BufferInfo &d, unsigned int alignedw, unsigned int alignedh);
-void GetBufferSizeAndDimensions(const BufferInfo &d, unsigned int *size, unsigned int *alignedw,
-                                unsigned int *alignedh);
-void GetBufferSizeAndDimensions(const BufferInfo &d, unsigned int *size, unsigned int *alignedw,
-                                unsigned int *alignedh, GraphicsMetadata *graphics_metadata);
+int GetBufferSizeAndDimensions(const BufferInfo &d, unsigned int *size, unsigned int *alignedw,
+                               unsigned int *alignedh);
+int GetBufferSizeAndDimensions(const BufferInfo &d, unsigned int *size, unsigned int *alignedw,
+                               unsigned int *alignedh, GraphicsMetadata *graphics_metadata);
+void GetCustomDimensions(private_handle_t *hnd, int *stride, int *height);
+void GetColorSpaceFromMetadata(private_handle_t *hnd, int *color_space);
 void GetAlignedWidthAndHeight(const BufferInfo &d, unsigned int *aligned_w,
                               unsigned int *aligned_h);
-int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr *ycbcr);
+int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr ycbcr[2]);
+int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32_t height,
+                    int32_t flags, int *plane_count, PlaneLayoutInfo plane_info[8]);
+void GetRGBPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32_t height,
+                     int32_t flags, int *plane_count, PlaneLayoutInfo *plane_info);
+unsigned int GetRgbMetaSize(int format, uint32_t width, uint32_t height, uint64_t usage);
+void GetYuvSubSamplingFactor(int32_t format, int *h_subsampling, int *v_subsampling);
+void CopyPlaneLayoutInfotoAndroidYcbcr(uint64_t base, int plane_count, PlaneLayoutInfo *plane_info,
+                                       struct android_ycbcr *ycbcr);
 int GetRgbDataAddress(private_handle_t *hnd, void **rgb_data);
 bool IsUBwcFormat(int format);
 bool IsUBwcSupported(int format);
-bool IsUBwcEnabled(int format, gralloc1_producer_usage_t prod_usage,
-                   gralloc1_consumer_usage_t cons_usage);
+bool IsUBwcPISupported(int format, uint64_t usage);
+bool IsUBwcEnabled(int format, uint64_t usage);
 void GetYuvUBwcWidthAndHeight(int width, int height, int format, unsigned int *aligned_w,
                               unsigned int *aligned_h);
-void GetYuvSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height, uint32_t bpp,
-                       struct android_ycbcr *ycbcr);
-void GetYuvUbwcSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height, int color_format,
-                           struct android_ycbcr *ycbcr);
-void GetYuvUbwcInterlacedSPPlaneInfo(uint64_t base, uint32_t width, uint32_t height,
-                                     int color_format, struct android_ycbcr *ycbcr);
+void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint32_t height,
+                       uint32_t bpp, PlaneLayoutInfo *plane_info);
+void GetYuvUbwcSPPlaneInfo(uint32_t width, uint32_t height, int color_format,
+                           PlaneLayoutInfo *plane_info);
+void GetYuvUbwcInterlacedSPPlaneInfo(uint32_t width, uint32_t height,
+                                     PlaneLayoutInfo plane_info[8]);
 void GetRgbUBwcBlockSize(uint32_t bpp, int *block_width, int *block_height);
 unsigned int GetRgbUBwcMetaBufferSize(int width, int height, uint32_t bpp);
 unsigned int GetUBwcSize(int width, int height, int format, unsigned int alignedw,
                          unsigned int alignedh);
-int GetBufferLayout(private_handle_t *hnd, uint32_t stride[4],
-                    uint32_t offset[4], uint32_t *num_planes);
-uint32_t GetDataAlignment(int format, gralloc1_producer_usage_t prod_usage,
-                       gralloc1_consumer_usage_t cons_usage);
-bool IsGPUSupportedHwBuffer(gralloc1_producer_usage_t prod_usage);
-
-void GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
-                                     unsigned int *alignedw, unsigned int *alignedh,
-                                     GraphicsMetadata *graphics_metadata);
+int GetBufferLayout(private_handle_t *hnd, uint32_t stride[4], uint32_t offset[4],
+                    uint32_t *num_planes);
+uint32_t GetDataAlignment(int format, uint64_t usage);
+int GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
+                                    unsigned int *alignedw, unsigned int *alignedh,
+                                    GraphicsMetadata *graphics_metadata);
 bool CanUseAdrenoForSize(int buffer_type, uint64_t usage);
 bool GetAdrenoSizeAPIStatus();
-bool IsGPUFlagSupported(uint64_t usage);
+bool UseUncached(int format, uint64_t usage);
+uint64_t GetHandleFlags(int format, uint64_t usage);
+int GetImplDefinedFormat(uint64_t usage, int format);
+int GetCustomFormatFlags(int format, uint64_t usage, int *custom_format, uint64_t *priv_flags);
 int GetBufferType(int inputFormat);
+bool IsGPUFlagSupported(uint64_t usage);
+bool HasAlphaComponent(int32_t format);
+
+void GetDRMFormat(uint32_t format, uint32_t flags, uint32_t *drm_format,
+                  uint64_t *drm_format_modifier);
 }  // namespace gralloc
 
 #endif  // __GR_UTILS_H__

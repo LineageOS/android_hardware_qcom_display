@@ -30,14 +30,17 @@ LOCAL_CLANG                   := true
 
 # TODO: Remove libui after addressing gpu_tonemapper issues
 LOCAL_SHARED_LIBRARIES        := libsdmcore libqservice libbinder libhardware libhardware_legacy \
-                                 libutils libcutils libsync libqdutils libqdMetaData libdl libdrmutils \
-                                 libsdmutils libc++ liblog libgrallocutils libdl \
-                                 vendor.display.config@2.0 libhidlbase libhidltransport \
-                                 libdisplayconfig.qti libui libgpu_tonemapper
-
-ifneq ($(TARGET_USES_GRALLOC1), true)
-    LOCAL_SHARED_LIBRARIES += libmemalloc
-endif
+                                 libutils libcutils libsync libqdutils libqdMetaData \
+                                 libsdmutils libc++ liblog libgrallocutils libui \
+                                 libgpu_tonemapper libhidlbase libhidltransport \
+                                 libdisplayconfig.qti \
+                                 android.hardware.graphics.mapper@2.0 \
+                                 android.hardware.graphics.mapper@2.1 \
+                                 android.hardware.graphics.mapper@3.0 \
+                                 android.hardware.graphics.allocator@2.0 \
+                                 android.hardware.graphics.allocator@3.0 \
+                                 android.hardware.graphics.composer@2.1 \
+                                 vendor.display.config@2.0
 
 LOCAL_SRC_FILES               := hwc_session.cpp \
                                  hwc_session_services.cpp \
@@ -55,13 +58,8 @@ LOCAL_SRC_FILES               := hwc_session.cpp \
                                  ../hwc/hwc_socket_handler.cpp \
                                  display_null.cpp \
                                  hwc_tonemapper.cpp \
-                                 hwc_display_external_test.cpp
-
-ifneq ($(TARGET_USES_GRALLOC1), true)
-    LOCAL_SRC_FILES += ../hwc/hwc_buffer_allocator.cpp
-else
-    LOCAL_SRC_FILES += hwc_buffer_allocator.cpp
-endif
+                                 hwc_display_external_test.cpp \
+                                 hwc_buffer_allocator.cpp
 
 ifeq ($(TARGET_HAS_WIDE_COLOR_DISPLAY), true)
     LOCAL_CFLAGS += -DFEATURE_WIDE_COLOR

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2018, 2021 The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -17,16 +17,13 @@
  * limitations under the License.
  */
 
-#include <stdint.h>
-#include <qdMetaData.h>
-
 #include "hwc_layers.h"
-#ifndef USE_GRALLOC1
-#include <gr.h>
-#endif
 #include <utils/debug.h>
 #include <utils/utils.h>
+#include <stdint.h>
+#include <utility>
 #include <cmath>
+#include <qdMetaData.h>
 
 #define __CLASS__ "HWCLayer"
 
@@ -45,24 +42,22 @@ DisplayError SetCSC(const private_handle_t *pvt_handle, ColorMetaData *color_met
       }
 
       switch (csc) {
-      case ITU_R_601:
-      case ITU_R_601_FR:
-        // video and display driver uses 601_525
-        color_metadata->colorPrimaries = ColorPrimaries_BT601_6_525;
-        break;
-      case ITU_R_709:
-        color_metadata->colorPrimaries = ColorPrimaries_BT709_5;
-        break;
-      case ITU_R_2020:
-      case ITU_R_2020_FR:
-        color_metadata->colorPrimaries = ColorPrimaries_BT2020;
-        break;
-      default:
-        DLOGE("Unsupported CSC: %d", csc);
-        return kErrorNotSupported;
+        case ITU_R_601:
+        case ITU_R_601_FR:
+          // video and display driver uses 601_525
+          color_metadata->colorPrimaries = ColorPrimaries_BT601_6_525;
+          break;
+        case ITU_R_709:
+          color_metadata->colorPrimaries = ColorPrimaries_BT709_5;
+          break;
+        case ITU_R_2020:
+        case ITU_R_2020_FR:
+          color_metadata->colorPrimaries = ColorPrimaries_BT2020;
+          break;
+        default:
+          DLOGE("Unsupported CSC: %d", csc);
+          return kErrorNotSupported;
       }
-    } else {
-      return kErrorNotSupported;
     }
   }
 
@@ -213,11 +208,7 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, int32_t acquire_fen
 
   LayerBuffer *layer_buffer = &layer_->input_buffer;
   int aligned_width, aligned_height;
-#ifdef USE_GRALLOC1
   buffer_allocator_->GetCustomWidthAndHeight(handle, &aligned_width, &aligned_height);
-#else
-  AdrenoMemInfo::getInstance().getAlignedWidthAndHeight(handle, aligned_width, aligned_height);
-#endif
 
   LayerBufferFormat format = GetSDMFormat(handle->format, handle->flags);
   if ((format != layer_buffer->format) || (UINT32(aligned_width) != layer_buffer->width) ||
