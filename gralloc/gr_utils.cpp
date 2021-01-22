@@ -928,7 +928,14 @@ void GetCustomDimensions(private_handle_t *hnd, int *stride, int *height) {
     *stride = buffer_dim.sliceWidth;
     *height = buffer_dim.sliceHeight;
   } else if (getMetaData(hnd, GET_PP_PARAM_INTERLACED, &interlaced) == 0) {
-    if (interlaced && IsUBwcFormat(hnd->format)) {
+    uint32_t linear_format = 0;
+    bool isUBwc = IsUBwcFormat(hnd->format);
+
+    if (getMetaData(hnd, GET_LINEAR_FORMAT, &linear_format) == 0) {
+      isUBwc = (linear_format) ? false : true;
+    }
+
+    if (interlaced && isUBwc) {
       unsigned int alignedw = 0, alignedh = 0;
       // Get re-aligned height for single ubwc interlaced field and
       // multiply by 2 to get frame height.
