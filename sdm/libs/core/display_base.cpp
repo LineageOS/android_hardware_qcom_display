@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -2461,7 +2461,7 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
   secure_event_ = secure_event;
   if (secure_event == kTUITransitionEnd) {
     DisplayState pending_state;
-    *needs_refresh = (hw_panel_info_.mode == kModeCommand);
+    *needs_refresh = true;
     if (GetPendingDisplayState(&pending_state) == kErrorNone) {
       if (pending_state == kStateOff) {
         shared_ptr<Fence> release_fence = nullptr;
