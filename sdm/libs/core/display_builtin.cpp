@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -268,7 +268,7 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
 }
 
 void DisplayBuiltIn::UpdateQsyncMode() {
-  if (!hw_panel_info_.qsync_support || (hw_panel_info_.mode == kModeCommand)) {
+  if (!hw_panel_info_.qsync_support) {
     return;
   }
 
