@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -329,8 +329,8 @@ Return<void> QtiMapper::getFromBufferDescriptorInfo(const BufferDescriptorInfo &
     case static_cast<int64_t>(StandardMetadataType::PIXEL_FORMAT_MODIFIER): {
       int format =
           gralloc::GetImplDefinedFormat(description.usage, static_cast<int>(description.format));
-      uint32_t drm_format;
-      uint64_t drm_format_modifier;
+      uint32_t drm_format = 0;
+      uint64_t drm_format_modifier = 0;
       if (gralloc::IsUBwcEnabled(format, description.usage)) {
         gralloc::GetDRMFormat(format, private_handle_t::PRIV_FLAGS_UBWC_ALIGNED, &drm_format,
                               &drm_format_modifier);
