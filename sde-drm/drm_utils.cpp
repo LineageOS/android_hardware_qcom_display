@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019, 2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -67,10 +67,10 @@ void ParseFormats(const string &line, vector<pair<uint32_t, uint64_t>> *formats)
 
       // Match vendor code
       string vendor_sub_str = matched_sub_str.substr(matched_sub_str.find("/") + 1);
-      uint64_t vendor_code = std::stoi(vendor_sub_str);
+      uint64_t vendor_code = std::stoi(vendor_sub_str, 0, 16);
 
       // Match modifier
-      uint64_t fmt_modifier = std::stoi(vendor_sub_str.substr(vendor_sub_str.find("/") + 1));
+      uint64_t fmt_modifier = std::stoi(vendor_sub_str.substr(vendor_sub_str.find("/") + 1), 0, 16);
       if (vendor_code == DRM_FORMAT_MOD_VENDOR_QCOM) {
         // Macro from drm_fourcc.h to form modifier
         modifier = fourcc_mod_code(QCOM, fmt_modifier);
