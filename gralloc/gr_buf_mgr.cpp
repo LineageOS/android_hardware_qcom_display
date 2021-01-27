@@ -991,6 +991,9 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
   std::lock_guard<std::mutex> buffer_lock(buffer_lock_);
 
   uint64_t usage = descriptor.GetUsage();
+  if (!IsGPUFlagSupported(usage)) {
+     return Error::UNSUPPORTED;
+  }
   int format = GetImplDefinedFormat(usage, descriptor.GetFormat());
   uint32_t layer_count = descriptor.GetLayerCount();
 
