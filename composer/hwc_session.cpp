@@ -433,7 +433,7 @@ int HWCSession::GetDisplayIndex(int dpy) {
   }
 
   if (!map_info) {
-    DLOGE("Display index not found for display %d.", dpy);
+    DLOGW("Display index not found for display %d.", dpy);
     return -1;
   }
 
@@ -1229,7 +1229,7 @@ int32_t HWCSession::GetDozeSupport(hwc2_display_t display, int32_t *out_support)
 
   SCOPE_LOCK(locker_[display]);
   if (!hwc_display_[display]) {
-    DLOGE("Display %d is not created yet.", INT32(display));
+    DLOGW("Display %d is not created yet.", INT32(display));
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
