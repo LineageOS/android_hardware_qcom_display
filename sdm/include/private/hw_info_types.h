@@ -230,7 +230,7 @@ class PPFeatureInfo {
 };
 
 struct HWDynBwLimitInfo {
-  uint32_t cur_mode = kBwVFEOn;
+  uint32_t cur_mode = kBwVFEOff;
   uint64_t total_bw_limit[kBwModeMax] = { 0 };
   uint64_t pipe_bw_limit[kBwModeMax] = { 0 };
 };
