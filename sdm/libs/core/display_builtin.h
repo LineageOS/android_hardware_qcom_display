@@ -242,6 +242,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   Layer demura_layer_ = {};
   bool demura_intended_ = false;
   bool pending_color_space_ = false;
+  bool enable_dpps_dyn_fps_ = false;
   HWDisplayMode last_panel_mode_ = kModeDefault;
 };
 

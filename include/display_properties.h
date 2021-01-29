@@ -140,6 +140,9 @@
 
 #define MMRM_FLOOR_CLK_VOTE                  DISPLAY_PROP("mmrm_floor_vote")
 
+// DPPS dynamic fps
+#define ENABLE_DPPS_DYNAMIC_FPS              DISPLAY_PROP("enable_dpps_dynamic_fps")
+
 // Add all vendor.display properties above
 
 #define DISABLE_UBWC_PROP                    GRALLOC_PROP("disable_ubwc")

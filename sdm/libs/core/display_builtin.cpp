@@ -170,6 +170,10 @@ DisplayError DisplayBuiltIn::Init() {
   DebugHandler::Get()->GetProperty(ENHANCE_IDLE_TIME, &value);
   enhance_idle_time_ = (value == 1);
 
+  value = 0;
+  DebugHandler::Get()->GetProperty(ENABLE_DPPS_DYNAMIC_FPS, &value);
+  enable_dpps_dyn_fps_ = (value == 1);
+
   return error;
 }
 
@@ -1166,6 +1170,7 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
       info->is_primary = IsPrimaryDisplayLocked();
       info->display_id = display_id_;
       info->display_type = display_type_;
+      info->fps = enable_dpps_dyn_fps_ ? display_attributes_.fps : 0;
 
       error = hw_intf_->GetPanelBrightnessBasePath(&(info->brightness_base_path));
       if (error != kErrorNone) {
@@ -1985,6 +1990,15 @@ DisplayError DisplayBuiltIn::ReconfigureDisplay() {
   // TODO(user): Temporary changes, to be removed when DRM driver supports
   // Partial update with Destination scaler enabled.
   SetPUonDestScaler();
+
+  if (enable_dpps_dyn_fps_) {
+    uint32_t dpps_fps = display_attributes_.fps;
+    DppsNotifyPayload dpps_payload = {};
+    dpps_payload.is_primary = IsPrimaryDisplay();
+    dpps_payload.payload = &dpps_fps;
+    dpps_payload.payload_size = sizeof(dpps_fps);
+    dpps_info_.DppsNotifyOps(kDppsUpdateFpsEvent, &dpps_payload, sizeof(dpps_payload));
+  }
 
   return kErrorNone;
 }

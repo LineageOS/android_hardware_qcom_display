@@ -54,7 +54,14 @@ enum DppsOps {
 enum DppsNotifyOps {
   kDppsCommitEvent,
   kDppsColorSpaceEvent,
+  kDppsUpdateFpsEvent,
   kDppsNotifyMax,
+};
+
+struct DppsNotifyPayload {
+  bool is_primary;
+  void *payload;
+  uint32_t payload_size;
 };
 
 struct DppsBlendSpaceInfo {
@@ -71,7 +78,10 @@ struct DppsDisplayInfo {
   std::string brightness_base_path;
 #if !defined(LINUX_COMPILE) && !defined(WIN32) && !defined(_WIN64) && !defined(__APPLE__)
   DisplayType display_type;
+#else
+  uint32_t display_type;
 #endif
+  uint32_t fps;
 };
 
 class DppsPropIntf {
