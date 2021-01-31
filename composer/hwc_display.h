@@ -161,21 +161,10 @@ class HWCDisplay : public DisplayEventHandler {
     kDisplayStatusResume,      // Resume + PowerOn
   };
 
-  enum DisplayValidateState {
-    kNormalValidate,
-    kInternalValidate,
-    kSkipValidate,
-  };
-
   struct HWCLayerStack {
     HWCLayer *client_target = nullptr;                   // Also known as framebuffer target
     std::map<hwc2_layer_t, HWCLayer *> layer_map;        // Look up by Id - TODO
     std::multiset<HWCLayer *, SortLayersByZ> layer_set;  // Maintain a set sorted by Z
-  };
-
-  enum DisplayCommitState {
-    kNormalCommit,
-    kInternalCommit,
   };
 
   virtual ~HWCDisplay() {}
@@ -280,10 +269,6 @@ class HWCDisplay : public DisplayEventHandler {
   void BuildSolidFillStack(void);
   HWCLayer *GetHWCLayer(hwc2_layer_t layer_id);
   uint32_t GetGeometryChanges() { return geometry_changes_; }
-  bool IsSkipValidateState() { return (validate_state_ == kSkipValidate); }
-  bool IsInternalValidateState() { return (validate_state_ == kInternalValidate &&
-                                   display_intf_->IsValidated()); }
-  void SetValidationState(DisplayValidateState state) { validate_state_ = state; }
   ColorMode GetCurrentColorMode() {
     return (color_mode_ ? color_mode_->GetCurrentColorMode() : ColorMode::SRGB);
   }
@@ -388,8 +373,6 @@ class HWCDisplay : public DisplayEventHandler {
     animating_ = animating;
     return HWC2::Error::None;
   }
-  virtual HWC2::Error PresentAndOrGetValidateDisplayOutput(uint32_t *out_num_types,
-                                                           uint32_t *out_num_requests);
   virtual bool IsDisplayCommandMode();
   virtual HWC2::Error SetQSyncMode(QSyncMode qsync_mode) {
     return HWC2::Error::Unsupported;
@@ -577,8 +560,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool display_pause_pending_ = false;
   bool display_idle_ = false;
   bool animating_ = false;
-  DisplayValidateState validate_state_ = kNormalValidate;
-  DisplayCommitState commit_state_ = kNormalCommit;
+  DisplayDrawMethod draw_method_ = kDrawDefault;
 
  private:
   bool CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests);
@@ -598,7 +580,6 @@ class HWCDisplay : public DisplayEventHandler {
   uint64_t elapse_timestamp_ = 0;
   int async_power_mode_ = 0;
   bool draw_method_set_ = false;
-  DisplayDrawMethod draw_method_ = kDrawDefault;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {

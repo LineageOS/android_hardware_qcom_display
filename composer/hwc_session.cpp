@@ -957,8 +957,6 @@ void HWCSession::RegisterCallback(int32_t descriptor, hwc2_callback_data_t callb
     hwc_display_[HWC_DISPLAY_PRIMARY]->SetIdleTimeoutMs(0,0);
     is_idle_time_up_ = false;
   }
-
-  need_invalidate_ = false;
 }
 
 int32_t HWCSession::SetActiveConfig(hwc2_display_t display, hwc2_config_t config) {
@@ -1265,7 +1263,7 @@ int32_t HWCSession::ValidateDisplay(hwc2_display_t display, uint32_t *out_num_ty
       status = HWC2::Error::None;
     } else if (hwc_display_[target_display]) {
       hwc_display_[target_display]->ProcessActiveConfigChange();
-      status = ValidateDisplayInternal(target_display, out_num_types, out_num_requests);
+      status = hwc_display_[target_display]->Validate(out_num_types, out_num_requests);
     }
   }
 
@@ -3088,44 +3086,6 @@ void HWCSession::DestroyNonPluggableDisplay(DisplayMapInfo *map_info) {
     hwc_display = nullptr;
     display_ready_.reset(UINT32(client_id));
     map_info->Reset();
-}
-
-HWC2::Error HWCSession::ValidateDisplayInternal(hwc2_display_t display, uint32_t *out_num_types,
-                                                uint32_t *out_num_requests) {
-  HWCDisplay *hwc_display = hwc_display_[display];
-
-  DTRACE_SCOPED();
-  if (hwc_display->IsInternalValidateState()) {
-    // Internal Validation has already been done on display, get the Output params.
-    return hwc_display->PresentAndOrGetValidateDisplayOutput(out_num_types, out_num_requests);
-  }
-
-  if (display == HWC_DISPLAY_PRIMARY) {
-    // TODO(user): This can be moved to HWCDisplayPrimary
-    if (need_invalidate_) {
-      callbacks_.Refresh(display);
-      need_invalidate_ = false;
-    }
-  }
-
-  return hwc_display->Validate(out_num_types, out_num_requests);
-}
-
-HWC2::Error HWCSession::PresentDisplayInternal(hwc2_display_t display) {
-  HWCDisplay *hwc_display = hwc_display_[display];
-
-  DTRACE_SCOPED();
-  // If display is in Skip-Validate state do Internal
-  // Validation to optimize for the frames which don't require the Client composition.
-  if (hwc_display->IsSkipValidateState()) {
-    uint32_t out_num_types = 0, out_num_requests = 0;
-    HWC2::Error error = ValidateDisplayInternal(display, &out_num_types, &out_num_requests);
-    if ((error != HWC2::Error::None) || hwc_display->HWCClientNeedsValidate()) {
-      hwc_display->SetValidationState(HWCDisplay::kInternalValidate);
-      return HWC2::Error::NotValidated;
-    }
-  }
-  return HWC2::Error::None;
 }
 
 void HWCSession::DisplayPowerReset() {

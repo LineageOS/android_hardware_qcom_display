@@ -109,7 +109,6 @@ class HWCLayer {
   bool IsProtected() { return secure_; }
   static LayerBufferFormat GetSDMFormat(const int32_t &source, const int flags);
   bool IsSurfaceUpdated() { return surface_updated_; }
-  void SetPartialUpdate(bool enabled) { partial_update_enabled_ = enabled; }
   bool IsNonIntegralSourceCrop() { return non_integral_source_crop_; }
   bool HasMetaDataRefreshRate() { return has_metadata_refresh_rate_; }
   bool IsColorTransformSet() { return color_transform_matrix_set_; }
@@ -135,7 +134,6 @@ class HWCLayer {
   bool single_buffer_ = false;
   int buffer_fd_ = -1;
   bool dataspace_supported_ = false;
-  bool partial_update_enabled_ = false;
   bool surface_updated_ = true;
   bool non_integral_source_crop_ = false;
   bool has_metadata_refresh_rate_ = false;

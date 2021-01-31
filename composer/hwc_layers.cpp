@@ -299,11 +299,6 @@ HWC2::Error HWCLayer::SetLayerSurfaceDamage(hwc_region_t damage) {
     layer_->update_mask.set(kSurfaceInvalidate);
   }
 
-  if (!partial_update_enabled_) {
-    SetDirtyRegions(damage);
-    return HWC2::Error::None;
-  }
-
   // Check if there is an update in SurfaceDamage rects.
   if (layer_->dirty_regions.size() != damage.numRects) {
     layer_->update_mask.set(kSurfaceInvalidate);

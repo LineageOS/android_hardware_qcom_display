@@ -533,8 +533,6 @@ int HWCDisplay::Init() {
   DisplayConfigFixedInfo fixed_info = {};
   display_intf_->GetConfig(&fixed_info);
   is_cmd_mode_ = fixed_info.is_cmdmode;
-  partial_update_enabled_ = fixed_info.partial_update || (!fixed_info.is_cmdmode);
-  client_target_->SetPartialUpdate(partial_update_enabled_);
 
   game_supported_ = display_intf_->GameEnhanceSupported();
 
@@ -616,7 +614,6 @@ HWC2::Error HWCDisplay::CreateLayer(hwc2_layer_t *out_layer_id) {
   *out_layer_id = layer->GetId();
   geometry_changes_ |= GeometryChanges::kAdded;
   layer_stack_invalid_ = true;
-  layer->SetPartialUpdate(partial_update_enabled_);
 
   return HWC2::Error::None;
 }
@@ -1459,7 +1456,6 @@ HWC2::Error HWCDisplay::PostPrepareLayerStack(uint32_t *out_num_types, uint32_t 
   client_target_->ResetValidation();
   *out_num_types = UINT32(layer_changes_.size());
   *out_num_requests = UINT32(layer_requests_.size());
-  validate_state_ = kNormalValidate;
   layer_stack_invalid_ = false;
 
   return ((*out_num_types > 0) ? HWC2::Error::HasChanges : HWC2::Error::None);
@@ -1704,7 +1700,6 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
     }
   }
 
-  validate_state_ = kSkipValidate;
   return HWC2::Error::None;
 }
 
@@ -2129,7 +2124,7 @@ HWC2::Error HWCDisplay::SetCursorPosition(hwc2_layer_t layer, int x, int y) {
   if (hwc_layer->GetDeviceSelectedCompositionType() != HWC2::Composition::Cursor) {
     return HWC2::Error::None;
   }
-  if ((validate_state_ != kSkipValidate) && display_intf_->IsValidated()) {
+  if (display_intf_->IsValidated()) {
     // the device is currently in the middle of the validate/present sequence,
     // cannot set the Position(as per HWC2 spec)
     return HWC2::Error::NotValidated;
@@ -2455,14 +2450,6 @@ void HWCDisplay::Dump(std::ostringstream *os) {
   *os << "\n";
 }
 
-HWC2::Error HWCDisplay::PresentAndOrGetValidateDisplayOutput(uint32_t *out_num_types,
-                                                             uint32_t *out_num_requests) {
-  *out_num_types = UINT32(layer_changes_.size());
-  *out_num_requests = UINT32(layer_requests_.size());
-
-  return ((*out_num_types > 0) ? HWC2::Error::HasChanges : HWC2::Error::None);
-}
-
 HWC2::Error HWCDisplay::GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
                                                      uint8_t *out_data) {
   DisplayError ret = display_intf_->GetDisplayIdentificationData(out_port, out_data_size, out_data);
@@ -2535,7 +2522,6 @@ bool HWCDisplay::CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests) 
     *num_requests = 0;
     layer_stack_invalid_ = false;
     has_client_composition_ = true;
-    validate_state_ = kNormalValidate;
   }
 
   return skip_prepare;

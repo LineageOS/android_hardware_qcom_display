@@ -523,9 +523,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   android::status_t GetDisplayPortId(uint32_t display, int *port_id);
 
   // Internal methods
-  HWC2::Error ValidateDisplayInternal(hwc2_display_t display, uint32_t *out_num_types,
-                                      uint32_t *out_num_requests);
-  HWC2::Error PresentDisplayInternal(hwc2_display_t display);
   void HandleSecureSession();
   void HandlePendingPowerMode(hwc2_display_t display, const shared_ptr<Fence> &retire_fence);
   void HandlePendingHotplug(hwc2_display_t disp_id, const shared_ptr<Fence> &retire_fence);
@@ -564,7 +561,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   bool reset_panel_ = false;
   bool client_connected_ = false;
   bool new_bw_mode_ = false;
-  bool need_invalidate_ = false;
   int bw_mode_release_fd_ = -1;
   qService::QService *qservice_ = nullptr;
   HWCSocketHandler socket_handler_;

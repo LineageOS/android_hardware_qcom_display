@@ -145,8 +145,6 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual bool IsDisplayIdle();
   virtual bool HasReadBackBufferSupport();
   virtual HWC2::Error NotifyDisplayCalibrationMode(bool in_calibration);
-  virtual HWC2::Error PresentAndOrGetValidateDisplayOutput(uint32_t *out_num_types,
-                                                           uint32_t *out_num_requests);
   virtual HWC2::Error CommitOrPrepare(shared_ptr<Fence> *out_retire_fence,
                                       uint32_t *out_num_types, uint32_t *out_num_requests,
                                       bool *needs_commit);
@@ -178,7 +176,6 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   void CacheAvrStatus();
   void PostCommitStitchLayers();
   void SetCpuPerfHintLargeCompCycle();
-  void SetPartialUpdate(DisplayConfigFixedInfo fixed_info);
   void ValidateUiScaling();
   void ConfigureCwbAtLm(uint32_t *x_pixels, uint32_t *y_pixels);
   void EnablePartialUpdate();

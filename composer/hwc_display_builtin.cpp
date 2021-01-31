@@ -229,9 +229,6 @@ HWC2::Error HWCDisplayBuiltIn::PreValidateDisplay(bool *exit_validate) {
   // Fill in the remaining blanks in the layers and add them to the SDM layerstack
   BuildLayerStack();
 
-  // Track damage regions if needed.
-  EnablePartialUpdate();
-
   // Check for scaling layers during Doze mode
   ValidateUiScaling();
 
@@ -446,29 +443,15 @@ bool HWCDisplayBuiltIn::IsQsyncCallbackNeeded(bool *qsync_enabled, int32_t *refr
   return true;
 }
 
-void HWCDisplayBuiltIn::SetPartialUpdate(DisplayConfigFixedInfo fixed_info) {
-  partial_update_enabled_ = fixed_info.partial_update || (!fixed_info.is_cmdmode);
-  for (auto hwc_layer : layer_set_) {
-    hwc_layer->SetPartialUpdate(partial_update_enabled_);
-  }
-  client_target_->SetPartialUpdate(partial_update_enabled_);
-}
-
 HWC2::Error HWCDisplayBuiltIn::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
-  DisplayConfigFixedInfo fixed_info = {};
-  display_intf_->GetConfig(&fixed_info);
-  bool command_mode = fixed_info.is_cmdmode;
-
   auto status = HWCDisplay::SetPowerMode(mode, teardown);
   if (status != HWC2::Error::None) {
     return status;
   }
 
+  DisplayConfigFixedInfo fixed_info = {};
   display_intf_->GetConfig(&fixed_info);
   is_cmd_mode_ = fixed_info.is_cmdmode;
-  if (is_cmd_mode_ != command_mode) {
-    SetPartialUpdate(fixed_info);
-  }
 
   return HWC2::Error::None;
 }
@@ -487,20 +470,10 @@ HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
 
   if (display_paused_ ) {
     return status;
-  } else if (commit_state_ == kInternalCommit) {
-    // Commit got triggered as part of validate.
-    // Just return fence.
-    *out_retire_fence = retire_fence_;
-    // Client closes this fence.
-    retire_fence_ = nullptr;
-    // Subsequent commits have to be normal. Reset state.
-    commit_state_ = kNormalCommit;
-    validate_state_ = kSkipValidate;
   } else {
     CacheAvrStatus();
     DisplayConfigFixedInfo fixed_info = {};
     display_intf_->GetConfig(&fixed_info);
-    bool command_mode = fixed_info.is_cmdmode;
 
     status = CommitStitchLayers();
     if (status != HWC2::Error::None) {
@@ -515,9 +488,6 @@ HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
       status = HWCDisplay::PostCommitLayerStack(out_retire_fence);
       display_intf_->GetConfig(&fixed_info);
       is_cmd_mode_ = fixed_info.is_cmdmode;
-      if (is_cmd_mode_ != command_mode) {
-        SetPartialUpdate(fixed_info);
-      }
 
       // For video mode panel with dynamic fps, update the active mode index.
       // This is needed to report the correct Vsync period when client queries
@@ -895,11 +865,6 @@ DisplayError HWCDisplayBuiltIn::SetDisplayMode(uint32_t mode) {
       DisplayConfigFixedInfo fixed_info = {};
       display_intf_->GetConfig(&fixed_info);
       is_cmd_mode_ = fixed_info.is_cmdmode;
-      partial_update_enabled_ = fixed_info.partial_update;
-      for (auto hwc_layer : layer_set_) {
-        hwc_layer->SetPartialUpdate(partial_update_enabled_);
-      }
-      client_target_->SetPartialUpdate(partial_update_enabled_);
     }
   }
 
@@ -1741,24 +1706,6 @@ bool HWCDisplayBuiltIn::HasReadBackBufferSupport() {
   return fixed_info.readback_supported;
 }
 
-void HWCDisplayBuiltIn::EnablePartialUpdate() {
-  if (partial_update_enabled_) {
-    return;
-  }
-
-  if (!layer_stack_.flags.mask_present || enable_round_corner_) {
-    return;
-  }
-
-  // Update PU status.
-  partial_update_enabled_ = true;
-
-  for (auto hwc_layer : layer_set_) {
-    hwc_layer->SetPartialUpdate(partial_update_enabled_);
-  }
-  client_target_->SetPartialUpdate(partial_update_enabled_);
-}
-
 HWC2::Error HWCDisplayBuiltIn::NotifyDisplayCalibrationMode(bool in_calibration) {
   auto status = color_mode_->NotifyDisplayCalibrationMode(in_calibration);
   if (status != HWC2::Error::None) {
@@ -1783,38 +1730,6 @@ uint32_t HWCDisplayBuiltIn::GetUpdatingAppLayersCount() {
   }
 
   return updating_count;
-}
-
-HWC2::Error HWCDisplayBuiltIn::PresentAndOrGetValidateDisplayOutput(uint32_t *out_num_types,
-                                                                    uint32_t *out_num_requests) {
-  *out_num_types = UINT32(layer_changes_.size());
-  *out_num_requests = UINT32(layer_requests_.size());
-
-  auto status = (*out_num_types > 0) ? HWC2::Error::HasChanges : HWC2::Error::None;
-  if (layer_stack_.block_on_fb) {
-    return status;
-  }
-
-  // If a display is in internal Validate state, PresentDisplay can be triggered
-  // if there is no dependency on GPU composed output in current draw cycle.
-  shared_ptr<Fence> retire_fence = nullptr;
-  auto result = Present(&retire_fence);
-  if (result != HWC2::Error::None) {
-    DLOGE("Commit failed: %d", result);
-    return status;
-  }
-
-  // Store retire fence as client isn't concerned about it.
-  retire_fence_ = retire_fence;
-  // Validate State resets to kSkipValidate as part of PostCommit.
-  // Restore it to kInternal Validate.
-  validate_state_ = kInternalValidate;
-  // As part of  PostCommit() commit state changes to NormalCommit.
-  // Change it to InternalCommit so that next commit will be skipped.
-  commit_state_ = kInternalCommit;
-  layer_stack_.block_on_fb = true;
-
-  return status;
 }
 
 HWC2::Error HWCDisplayBuiltIn::CommitOrPrepare(shared_ptr<Fence> *out_retire_fence,
