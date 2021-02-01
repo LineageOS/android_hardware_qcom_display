@@ -107,6 +107,7 @@ class CompManager {
   }
   DisplayError SetMaxSDEClk(uint32_t clk);
   void GetRetireFence(Handle display_ctx, shared_ptr<Fence> *retire_fence);
+  void NeedsValidate(Handle display_ctx, bool *needs_validate);
 
  private:
   static const int kMaxThermalLevel = 3;

@@ -43,6 +43,7 @@ class ResourceInterface {
     kCmdDedicatePipes,
     kCmdGetResourceStatus,
     kCmdGetRetireFence,
+    kCmdNeedsValidate,
     kCmdMax,
   };
 

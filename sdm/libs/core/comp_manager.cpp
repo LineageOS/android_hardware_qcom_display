@@ -759,4 +759,13 @@ void CompManager::GetRetireFence(Handle display_ctx, shared_ptr<Fence> *retire_f
                           display_comp_ctx->display_resource_ctx, retire_fence);
 }
 
+void CompManager::NeedsValidate(Handle display_ctx, bool *needs_validate) {
+  SCOPE_LOCK(locker_);
+  if (resource_intf_ == nullptr) {
+    return;
+  }
+
+  resource_intf_->Perform(ResourceInterface::kCmdNeedsValidate, needs_validate);
+}
+
 }  // namespace sdm

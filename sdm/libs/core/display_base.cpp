@@ -482,6 +482,12 @@ DisplayError DisplayBase::PrePrepare(LayerStack *layer_stack) {
   ClientLock lock(disp_mutex_);
   disp_layer_stack_.stack = layer_stack;
   layer_stack->needs_validate = !validated_ || needs_validate_;
+  if (!layer_stack->needs_validate) {
+    // Check for validation in case of new display connected, other displays exiting off state etc.
+    bool needs_validate = false;
+    comp_manager_->NeedsValidate(display_comp_ctx_, &needs_validate);
+    layer_stack->needs_validate = needs_validate;
+  }
 
   return comp_manager_->PrePrepare(display_comp_ctx_, &disp_layer_stack_);
 }
