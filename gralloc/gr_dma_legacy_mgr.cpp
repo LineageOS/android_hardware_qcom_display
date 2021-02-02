@@ -119,21 +119,21 @@ int DmaLegacyManager::AllocBuffer(AllocData *data) {
 
   std::string tag_name{};
   if (ATRACE_ENABLED()) {
-    tag_name = "libdma alloc size: " + std::to_string(data->size);
+    tag_name = "libdmalegacy alloc size: " + std::to_string(data->size);
   }
 
   ATRACE_BEGIN("GrallocAllocation");
   dma_legacy_dev_fd_ = buffer_allocator_.Alloc(data->heap_name, data->size, flags, data->align);
   ATRACE_END();
   if (dma_legacy_dev_fd_ < 0) {
-    ALOGE("libdma alloc failed ion_fd %d size %d align %d heap_name %s flags %x",
+    ALOGE("libdmalegacy alloc failed ion_fd %d size %d align %d heap_name %s flags %x",
           dma_legacy_dev_fd_, data->size, data->align, data->heap_name.c_str(), flags);
     return dma_legacy_dev_fd_;
   }
 
   data->fd = dma_legacy_dev_fd_;
   data->ion_handle = dma_legacy_dev_fd_;
-  ALOGD_IF(DEBUG, "libdma: Allocated buffer size:%u fd:%d", data->size, data->fd);
+  ALOGD_IF(DEBUG, "libdmalegacy: Allocated buffer size:%u fd:%d", data->size, data->fd);
 
   return 0;
 }
@@ -142,7 +142,7 @@ int DmaLegacyManager::FreeBuffer(void *base, unsigned int size, unsigned int off
                                  int /*ion_handle*/) {
   ATRACE_CALL();
   int err = 0;
-  ALOGD_IF(DEBUG, "libdma: Freeing buffer base:%p size:%u fd:%d", base, size, fd);
+  ALOGD_IF(DEBUG, "libdmalegacy: Freeing buffer base:%p size:%u fd:%d", base, size, fd);
 
   if (base) {
     err = UnmapBuffer(base, size, offset);
@@ -233,9 +233,11 @@ void DmaLegacyManager::GetHeapInfo(uint64_t usage, std::string *ion_heap_name,
   std::string heap_name = "qcom,system";
   unsigned int type = 0;
   uint32_t flags = 0;
+  bool is_default = true;
 #ifndef QMAA
   if (usage & GRALLOC_USAGE_PROTECTED) {
     if (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY) {
+      is_default = false;
       heap_name = "qcom,secure-display";
       /*
        * There is currently no flag in ION for Secure Display
@@ -251,6 +253,7 @@ void DmaLegacyManager::GetHeapInfo(uint64_t usage, std::string *ion_heap_name,
       if (property_get("vendor.gralloc.secure_preview_only", property, NULL) > 0) {
         secure_preview_only = atoi(property);
       }
+      is_default = false;
       heap_name = "qcom,secure-display";
       if (usage & GRALLOC_USAGE_PRIVATE_CDSP) {
         flags |= UINT(ION_SECURE | ION_FLAG_CP_CDSP);
@@ -268,12 +271,14 @@ void DmaLegacyManager::GetHeapInfo(uint64_t usage, std::string *ion_heap_name,
                                          ION_HEAP(ION_SECURE_DISPLAY_HEAP_ID), flags);
       *sec_flag = true;
     } else if (usage & GRALLOC_USAGE_PRIVATE_CDSP) {
+      is_default = false;
       heap_name = "qcom,secure-cdsp-carveout";
       flags |= UINT(ION_SECURE | ION_FLAG_CP_CDSP);
       buffer_allocator_.MapNameToIonHeap(heap_name, "secure_carveout", flags,
                                          ION_HEAP(ION_SECURE_CARVEOUT_HEAP_ID), flags);
       *sec_flag = true;
     } else {
+      is_default = false;
       heap_name = "qcom,secure-pixel-system";
       flags |= UINT(ION_CP_FLAGS);
       buffer_allocator_.MapNameToIonHeap(heap_name, "secure_heap", flags,
@@ -283,6 +288,7 @@ void DmaLegacyManager::GetHeapInfo(uint64_t usage, std::string *ion_heap_name,
   } else if (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY) {
     // Reuse GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY with no GRALLOC_USAGE_PROTECTED flag to alocate
     // memory from non secure CMA for tursted UI use case
+    is_default = false;
     heap_name = "qcom,display";
     buffer_allocator_.MapNameToIonHeap(heap_name, "display", flags, ION_HEAP(ION_DISPLAY_HEAP_ID),
                                        flags);
@@ -292,10 +298,12 @@ void DmaLegacyManager::GetHeapInfo(uint64_t usage, std::string *ion_heap_name,
     if (sensor_flag) {
       ALOGI("gralloc::sns_direct_data with system_heap");
       heap_name = "qcom,system";
+      is_default = false;
       buffer_allocator_.MapNameToIonHeap(heap_name, "system", flags, ION_HEAP(ION_SYSTEM_HEAP_ID),
                                          flags);
     } else {
       ALOGI("gralloc::sns_direct_data with adsp_heap");
+      is_default = false;
       heap_name = "qcom,adsp";
       buffer_allocator_.MapNameToIonHeap(heap_name, "adsp", flags, ION_HEAP(ION_ADSP_HEAP_ID),
                                          flags);
@@ -304,6 +312,11 @@ void DmaLegacyManager::GetHeapInfo(uint64_t usage, std::string *ion_heap_name,
 
   if (flags & UINT(ION_SECURE)) {
     type |= private_handle_t::PRIV_FLAGS_SECURE_BUFFER;
+  }
+
+  if (is_default) {
+    buffer_allocator_.MapNameToIonHeap(heap_name, "system", flags, ION_HEAP(ION_SYSTEM_HEAP_ID),
+                                       flags);
   }
 #endif
 
