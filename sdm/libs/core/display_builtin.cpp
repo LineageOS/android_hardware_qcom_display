@@ -518,7 +518,7 @@ void DisplayBuiltIn::PreCommit(LayerStack *layer_stack) {
   if (vsync_enable_) {
     DTRACE_BEGIN("RegisterVsync");
     // wait for previous frame's retire fence to signal.
-    Fence::Wait(previous_retire_fence_);
+    Fence::Wait(retire_fence_);
 
     // Register for vsync and then commit the frame.
     hw_events_intf_->SetEventState(HWEvent::VSYNC, true);
@@ -530,8 +530,15 @@ void DisplayBuiltIn::PreCommit(LayerStack *layer_stack) {
   }
 }
 
+DisplayError DisplayBuiltIn::SetUpCommit(LayerStack *layer_stack) {
+  last_panel_mode_ = hw_panel_info_.mode;
+  PreCommit(layer_stack);
+
+  return DisplayBase::SetUpCommit(layer_stack);
+}
+
 DisplayError DisplayBuiltIn::CommitLocked(LayerStack *layer_stack) {
-  HWDisplayMode panel_mode = hw_panel_info_.mode;
+  last_panel_mode_ = hw_panel_info_.mode;
   PreCommit(layer_stack);
 
   DisplayError error = DisplayBase::CommitLocked(layer_stack);
@@ -539,12 +546,13 @@ DisplayError DisplayBuiltIn::CommitLocked(LayerStack *layer_stack) {
     return error;
   }
 
-  return PostCommit(layer_stack, panel_mode);
+  return PostCommit(&disp_layer_stack_.info);
 }
 
-DisplayError DisplayBuiltIn::PostCommit(LayerStack *layer_stack, HWDisplayMode panel_mode) {
+DisplayError DisplayBuiltIn::PostCommit(HWLayersInfo *hw_layers_info) {
+  DisplayBase::PostCommit(hw_layers_info);
   if (pending_brightness_) {
-    Fence::Wait(layer_stack->retire_fence);
+    Fence::Wait(retire_fence_);
     SetPanelBrightness(cached_brightness_);
     pending_brightness_ = false;
   } else {
@@ -585,7 +593,7 @@ DisplayError DisplayBuiltIn::PostCommit(LayerStack *layer_stack, HWDisplayMode p
     ControlPartialUpdateLocked(true /* enable */, &pending);
   }
 
-  if (panel_mode != hw_panel_info_.mode) {
+  if (last_panel_mode_ != hw_panel_info_.mode) {
     UpdateDisplayModeParams();
   }
 
@@ -600,24 +608,20 @@ DisplayError DisplayBuiltIn::PostCommit(LayerStack *layer_stack, HWDisplayMode p
     PrimariesTransfer color_space = GetBlendSpaceFromStcColorMode(current_color_mode_);
     info.primaries = color_space.primaries;
     info.transfer = color_space.transfer;
-    info.is_primary = IsPrimaryDisplay();
+    info.is_primary = IsPrimaryDisplayLocked();
     // notify blend space to DPPS
     dpps_info_.DppsNotifyOps(kDppsColorSpaceEvent, &info, sizeof(info));
     pending_color_space_ = false;
   }
 
-  HandleQsyncPostCommit(layer_stack);
-
-  first_cycle_ = false;
-
-  previous_retire_fence_ = layer_stack->retire_fence;
+  HandleQsyncPostCommit();
 
   handle_idle_timeout_ = false;
 
   return kErrorNone;
 }
 
-void DisplayBuiltIn::HandleQsyncPostCommit(LayerStack *layer_stack) {
+void DisplayBuiltIn::HandleQsyncPostCommit() {
   if (qsync_mode_ == kQsyncModeOneShot) {
     // Reset qsync mode.
     SetQSyncMode(kQSyncModeNone);
@@ -1336,17 +1340,14 @@ std::string DisplayBuiltIn::Dump() {
      << current_color_mode_.gamma << " intent " << current_color_mode_.intent << " Dynamice_range"
      << (curr_dynamic_range == kSdrType ? " SDR" : " HDR");
 
-  uint32_t num_hw_layers = 0;
-  if (disp_layer_stack_.stack) {
-    num_hw_layers = UINT32(disp_layer_stack_.info.hw_layers.size());
-  }
+  uint32_t num_hw_layers = UINT32(disp_layer_stack_.info.hw_layers.size());
 
   if (num_hw_layers == 0) {
     os << "\nNo hardware layers programmed";
     return os.str();
   }
 
-  LayerBuffer *out_buffer = disp_layer_stack_.stack->output_buffer;
+  LayerBuffer *out_buffer = disp_layer_stack_.info.output_buffer;
   if (out_buffer) {
     os << "\n Output buffer res: " << out_buffer->width << "x" << out_buffer->height
        << " format: " << GetFormatString(out_buffer->format);
@@ -1381,15 +1382,13 @@ std::string DisplayBuiltIn::Dump() {
 
   for (uint32_t i = 0; i < num_hw_layers; i++) {
     uint32_t layer_index = disp_layer_stack_.info.index.at(i);
-    // sdm-layer from client layer stack
-    Layer *sdm_layer = disp_layer_stack_.stack->layers.at(layer_index);
     // hw-layer from hw layers info
     Layer &hw_layer = disp_layer_stack_.info.hw_layers.at(i);
     LayerBuffer *input_buffer = &hw_layer.input_buffer;
     HWLayerConfig &layer_config = disp_layer_stack_.info.config[i];
     HWRotatorSession &hw_rotator_session = layer_config.hw_rotator_session;
 
-    const char *comp_type = GetName(sdm_layer->composition);
+    const char *comp_type = GetName(hw_layer.composition);
     const char *buffer_format = GetFormatString(input_buffer->format);
     const char *pipe_split[2] = { "Pipe-1", "Pipe-2" };
     const char *rot_pipe[2] = { "Rot-inl-1", "Rot-inl-2" };

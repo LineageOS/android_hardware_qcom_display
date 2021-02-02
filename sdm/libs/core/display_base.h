@@ -236,7 +236,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError BuildLayerStackStats(LayerStack *layer_stack);
   virtual DisplayError ValidateGPUTargetParams();
   void CommitLayerParams(LayerStack *layer_stack);
-  void PostCommitLayerParams(LayerStack *layer_stack);
+  void PostCommitLayerParams();
   DisplayError ValidateScaling(uint32_t width, uint32_t height);
   DisplayError ValidateDataspace(const ColorMetaData &color_metadata);
   void HwRecovery(const HWRecoveryEvent sdm_event_code);
@@ -273,9 +273,9 @@ class DisplayBase : public DisplayInterface {
   void MMRMEvent(uint32_t clk);
   void CheckMMRMState();
   DisplayError SetVSyncStateLocked(bool enable);
-  DisplayError SetUpCommit(LayerStack *layer_stack);
-  DisplayError PerformCommit(LayerStack *layer_stack);
-  DisplayError PostCommitLayerStack(LayerStack *layer_stack);
+  virtual DisplayError SetUpCommit(LayerStack *layer_stack);
+  DisplayError PerformCommit(HWLayersInfo *hw_layers_info);
+  virtual DisplayError PostCommit(HWLayersInfo *hw_layers_info);
   bool IsPrimaryDisplayLocked();
   virtual DisplayError CommitLocked(LayerStack *layer_stack);
   DisplayError ConfigureCwb(LayerStack *layer_stack);
@@ -348,6 +348,7 @@ class DisplayBase : public DisplayInterface {
   bool first_cycle_ = true;
   bool unified_draw_supported_ = true;  // By default supported, unless disabled by property.
   bool validated_ = false;  // display validation status based on sideband events driver events etc.
+  shared_ptr<Fence> retire_fence_ = nullptr;
 
  private:
   // Max tolerable power-state-change wait-times in milliseconds.
@@ -359,6 +360,8 @@ class DisplayBase : public DisplayInterface {
   DisplayError ValidateCwbConfigInfo(CwbConfig *cwb_config, const LayerBufferFormat &format);
   bool IsValidCwbRoi(const LayerRect &cwb_roi, const LayerRect &full_frame);
   void WaitForCompletion(SyncPoints *sync_points);
+  DisplayError PerformHwCommit(HWLayersInfo *hw_layers_info);
+  void CacheRetireFence();
   unsigned int rc_cached_res_width_ = 0;
   unsigned int rc_cached_res_height_ = 0;
   std::unique_ptr<RCIntf> rc_core_ = nullptr;

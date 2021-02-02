@@ -168,6 +168,8 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError ReconfigureDisplay() override;
   DisplayError CreatePanelfeatures();
   DisplayError CommitLocked(LayerStack *layer_stack) override;
+  DisplayError SetUpCommit(LayerStack *layer_stack) override;
+  DisplayError PostCommit(HWLayersInfo *hw_layers_info) override;
 
  private:
   bool CanCompareFrameROI(LayerStack *layer_stack);
@@ -182,7 +184,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError SetupDemuraLayer();
   DisplayError BuildLayerStackStats(LayerStack *layer_stack) override;
   void UpdateDisplayModeParams();
-  void HandleQsyncPostCommit(LayerStack *layer_stack);
+  void HandleQsyncPostCommit();
   void UpdateQsyncMode();
   void SetVsyncStatus(bool enable);
   void SendBacklight();
@@ -192,7 +194,6 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError HandleSPR();
   void CacheFrameROI();
   void PreCommit(LayerStack *layer_stack);
-  DisplayError PostCommit(LayerStack *layer_stack, HWDisplayMode panel_mode);
   DisplayError ControlPartialUpdateLocked(bool enable, uint32_t *pending);
   DisplayError SetDppsFeatureLocked(void *payload, size_t size);
 
@@ -215,7 +216,6 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   LayerRect right_frame_roi_ = {};
   Locker dpps_pu_lock_;
   bool dpps_pu_nofiy_pending_ = false;
-  shared_ptr<Fence> previous_retire_fence_ = nullptr;
   enum class SamplingState { Off, On } samplingState = SamplingState::Off;
   DisplayError setColorSamplingState(SamplingState state);
 
@@ -240,6 +240,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   Layer demura_layer_ = {};
   bool demura_intended_ = false;
   bool pending_color_space_ = false;
+  HWDisplayMode last_panel_mode_ = kModeDefault;
 };
 
 }  // namespace sdm

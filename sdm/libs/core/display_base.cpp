@@ -655,6 +655,16 @@ DisplayError DisplayBase::CommitOrPrepare(LayerStack *layer_stack) {
   bool async_commit = disp_layer_stack_.info.trigger_async_commit;
   DLOGV_IF(kTagDisplay, "Trigger async commit: %d", async_commit);
   if (async_commit) {
+    // Copy layer stack attributes needed for commit.
+    error = SetUpCommit(layer_stack);
+    if (error != kErrorNone) {
+      return error;
+    }
+
+    // Async thread should not access layer stack.
+    // Reset layer stack pointer.
+    disp_layer_stack_.stack = nullptr;
+
     // Notify worker to do hw commit.
     lock.NotifyWorker();
   }
@@ -665,7 +675,7 @@ DisplayError DisplayBase::CommitOrPrepare(LayerStack *layer_stack) {
 void DisplayBase::HandleAsyncCommit() {
   // Do not acquire mutexes here.
   // Perform hw commit here.
-  CommitLocked(disp_layer_stack_.stack);
+  PerformHwCommit(&disp_layer_stack_.info);
 }
 
 void DisplayBase::CommitThread() {
@@ -806,8 +816,8 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
   return error;
 }
 
-DisplayError DisplayBase::PerformCommit(LayerStack *layer_stack) {
-  DisplayError error = hw_intf_->Commit(&disp_layer_stack_.info);
+DisplayError DisplayBase::PerformCommit(HWLayersInfo *hw_layers_info) {
+  DisplayError error = hw_intf_->Commit(hw_layers_info);
   if (error != kErrorNone) {
     DLOGE("COMMIT failed: %d ", error);
   }
@@ -822,6 +832,16 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     return CommitLocked(layer_stack);
   }
 
+  // Copy layer stack attributes needed for commit.
+  DisplayError error = SetUpCommit(layer_stack);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  // Async thread should not aceess layer stack.
+  // Reset layer stack pointer.
+  disp_layer_stack_.stack = nullptr;
+
   // Trigger async commit.
   lock.NotifyWorker();
 
@@ -835,13 +855,22 @@ DisplayError DisplayBase::CommitLocked(LayerStack *layer_stack) {
     return error;
   }
 
-  error = PerformCommit(layer_stack);
+  error = PerformHwCommit(&disp_layer_stack_.info);
+  if (error != kErrorNone) {
+    DLOGE("HwCommit failed %d", error);
+  }
+
+  return error;
+}
+
+DisplayError DisplayBase::PerformHwCommit(HWLayersInfo *hw_layers_info) {
+  DisplayError error = PerformCommit(hw_layers_info);
   if (error != kErrorNone) {
     DLOGE("Commit IOCTL failed %d", error);
     return error;
   }
 
-  error = PostCommitLayerStack(layer_stack);
+  error = PostCommit(hw_layers_info);
   if (error != kErrorNone) {
     DLOGE("Post Commit failed %d", error);
     return error;
@@ -852,13 +881,15 @@ DisplayError DisplayBase::CommitLocked(LayerStack *layer_stack) {
   return kErrorNone;
 }
 
-DisplayError DisplayBase::PostCommitLayerStack(LayerStack *layer_stack) {
+DisplayError DisplayBase::PostCommit(HWLayersInfo *hw_layers_info) {
+  // Store retire fence to track commit start.
+  CacheRetireFence();
   if (secure_event_ == kSecureDisplayEnd || secure_event_ == kTUITransitionEnd ||
       secure_event_ == kTUITransitionUnPrepare) {
     secure_event_ = kSecureEventMax;
   }
 
-  PostCommitLayerParams(layer_stack);
+  PostCommitLayerParams();
 
   if (partial_update_control_) {
     comp_manager_->ControlPartialUpdate(display_comp_ctx_, true /* enable */);
@@ -872,19 +903,21 @@ DisplayError DisplayBase::PostCommitLayerStack(LayerStack *layer_stack) {
   // Stop dropping vsync when first commit is received after idle fallback.
   drop_hw_vsync_ = false;
 
-  // Reset pending power state if any after the commit
-  error = ResetPendingPowerState(layer_stack->retire_fence);
+  // Reset pending power state if any after the commit.
+  error = ResetPendingPowerState(retire_fence_);
   if (error != kErrorNone) {
     return error;
   }
 
   // Handle pending vsync enable if any after the commit
-  error = HandlePendingVSyncEnable(layer_stack->retire_fence);
+  error = HandlePendingVSyncEnable(retire_fence_);
   if (error != kErrorNone) {
     return error;
   }
 
   comp_manager_->SetSafeMode(false);
+
+  first_cycle_ = false;
 
   return error;
 }
@@ -1266,17 +1299,14 @@ std::string DisplayBase::Dump() {
     os << "\n";
   }
 
-  uint32_t num_hw_layers = 0;
-  if (disp_layer_stack_.stack) {
-    num_hw_layers = UINT32(disp_layer_stack_.info.hw_layers.size());
-  }
+  uint32_t num_hw_layers = UINT32(disp_layer_stack_.info.hw_layers.size());
 
   if (num_hw_layers == 0) {
     os << "\nNo hardware layers programmed";
     return os.str();
   }
 
-  LayerBuffer *out_buffer = disp_layer_stack_.stack->output_buffer;
+  LayerBuffer *out_buffer = disp_layer_stack_.info.output_buffer;
   if (out_buffer) {
     os << "\n Output buffer res: " << out_buffer->width << "x" << out_buffer->height
        << " format: " << GetFormatString(out_buffer->format);
@@ -1311,15 +1341,13 @@ std::string DisplayBase::Dump() {
 
   for (uint32_t i = 0; i < num_hw_layers; i++) {
     uint32_t layer_index = disp_layer_stack_.info.index.at(i);
-    // sdm-layer from client layer stack
-    Layer *sdm_layer = disp_layer_stack_.stack->layers.at(layer_index);
     // hw-layer from hw layers info
     Layer &hw_layer = disp_layer_stack_.info.hw_layers.at(i);
     LayerBuffer *input_buffer = &hw_layer.input_buffer;
     HWLayerConfig &layer_config = disp_layer_stack_.info.config[i];
     HWRotatorSession &hw_rotator_session = layer_config.hw_rotator_session;
 
-    const char *comp_type = GetName(sdm_layer->composition);
+    const char *comp_type = GetName(hw_layer.composition);
     const char *buffer_format = GetFormatString(input_buffer->format);
     const char *pipe_split[2] = { "Pipe-1", "Pipe-2" };
     const char *rot_pipe[2] = { "Rot-inl-1", "Rot-inl-2" };
@@ -1829,7 +1857,7 @@ DisplayError DisplayBase::HandlePendingVSyncEnable(const shared_ptr<Fence> &reti
   if (vsync_enable_pending_) {
     // Retire fence signalling confirms that CRTC enabled, hence wait for retire fence before
     // we enable vsync
-    Fence::Wait(retire_fence);
+    Fence::Wait(retire_fence_);
 
     DisplayError error = SetVSyncStateLocked(true /* enable */);
     if (error != kErrorNone) {
@@ -2272,7 +2300,7 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
   return;
 }
 
-void DisplayBase::PostCommitLayerParams(LayerStack *layer_stack) {
+void DisplayBase::PostCommitLayerParams() {
   cached_qos_data_ = disp_layer_stack_.info.qos_data;
 }
 
@@ -2694,7 +2722,7 @@ DisplayError DisplayBase::ResetPendingPowerState(const shared_ptr<Fence> &retire
 
     DisplayState pending_state;
     GetPendingDisplayState(&pending_state);
-    if (IsPrimaryDisplay() &&
+    if (IsPrimaryDisplayLocked() &&
      (pending_power_state_ != kPowerStateOff)) {
       primary_active_ = true;
     } else {
@@ -2902,7 +2930,7 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
 
 DisplayError DisplayBase::GetOutputBufferAcquireFence(shared_ptr<Fence> *out_fence) {
   ClientLock lock(disp_mutex_);
-  LayerBuffer *out_buffer = disp_layer_stack_.stack->output_buffer;
+  LayerBuffer *out_buffer = disp_layer_stack_.info.output_buffer;
   if (out_buffer == nullptr) {
     return kErrorNotSupported;
   }
@@ -3009,4 +3037,12 @@ void DisplayBase::ProcessPowerEvent() {
   cv_.notify_one();
 }
 
+void DisplayBase::CacheRetireFence() {
+  if (draw_method_ == kDrawDefault) {
+    retire_fence_ = disp_layer_stack_.info.retire_fence;
+  } else {
+    // For displays in unified draw, wait on cached retire fence in steady state.
+    comp_manager_->GetRetireFence(display_comp_ctx_, &retire_fence_);
+  }
+}
 }  // namespace sdm
