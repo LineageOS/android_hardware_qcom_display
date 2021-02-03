@@ -57,6 +57,7 @@
 
 namespace gralloc {
 
+#ifndef QMAA
 static inline unsigned int MMM_COLOR_FMT_RGB_STRIDE_IN_PIXELS(unsigned int color_fmt,
                                                               unsigned int width) {
   unsigned int stride = 0, bpp = 4;
@@ -66,6 +67,7 @@ static inline unsigned int MMM_COLOR_FMT_RGB_STRIDE_IN_PIXELS(unsigned int color
   stride = MMM_COLOR_FMT_RGB_STRIDE(color_fmt, width / bpp);
   return stride;
 }
+#endif
 
 bool IsYuvFormat(int format) {
   switch (format) {
@@ -1133,6 +1135,7 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       AdrenoMemInfo::GetInstance()->AlignUnCompressedRGB(width, height, format, tile, alignedw,
                                                          alignedh);
     }
+#ifndef QMAA
     if (((usage & BufferUsage::VIDEO_ENCODER) || (usage & BufferUsage::VIDEO_DECODER)) &&
         (format == HAL_PIXEL_FORMAT_RGBA_8888)) {
       int mmm_format = MMM_COLOR_FMT_RGBA8888;
@@ -1145,6 +1148,7 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       *alignedw = aligned_w;
       *alignedh = aligned_h;
     }
+#endif
     return 0;
   }
 
