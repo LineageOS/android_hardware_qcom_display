@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -848,6 +848,7 @@ enum DRMCscType {
   kCscYuv2Rgb601L,
   kCscYuv2Rgb601FR,
   kCscYuv2Rgb709L,
+  kCscYuv2Rgb709FR,
   kCscYuv2Rgb2020L,
   kCscYuv2Rgb2020FR,
   kCscTypeMax,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -3079,7 +3079,10 @@ HWC2::Error HWCSession::ValidateDisplayInternal(hwc2_display_t display, uint32_t
     }
   }
 
-  return hwc_display->Validate(out_num_types, out_num_requests);
+  auto status = HWC2::Error::None;
+  status = hwc_display->Validate(out_num_types, out_num_requests);
+  SetCpuPerfHintLargeCompCycle();
+  return status;
 }
 
 HWC2::Error HWCSession::PresentDisplayInternal(hwc2_display_t display) {
@@ -3907,6 +3910,27 @@ HWC2::Error HWCSession::TeardownConcurrentWriteback(hwc2_display_t display) {
     return HWC2::Error::NoResources;
   }
   return HWC2::Error::None;
+}
+
+void HWCSession::SetCpuPerfHintLargeCompCycle() {
+  bool found_non_primary_active_display = false;
+
+  // Check any non-primary display is active
+  for (hwc2_display_t display = HWC_DISPLAY_PRIMARY + 1;
+    display < HWCCallbacks::kNumDisplays; display++) {
+    if (hwc_display_[display] == NULL) {
+      continue;
+    }
+    if (hwc_display_[display]->GetCurrentPowerMode() != HWC2::PowerMode::Off) {
+      found_non_primary_active_display = true;
+      break;
+    }
+  }
+
+  // send cpu hint for primary display
+  if (!found_non_primary_active_display) {
+    hwc_display_[HWC_DISPLAY_PRIMARY]->SetCpuPerfHintLargeCompCycle();
+  }
 }
 
 }  // namespace sdm
