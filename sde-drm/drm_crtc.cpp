@@ -489,7 +489,8 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
     } else if (line.find(comp_ratio_nrt) != string::npos) {
       ParseCompRatio(line.substr(comp_ratio_nrt.length()), false);
     } else if (line.find(hw_version) != string::npos) {
-      crtc_info_.hw_version = std::stoi(string(line, hw_version.length()));
+      crtc_info_.hw_version =
+        static_cast<uint32_t>(std::stoull(string(line, hw_version.length())));
     } else if (line.find(solidfill_stages) != string::npos) {
       crtc_info_.max_solidfill_stages =  std::stoi(string(line, solidfill_stages.length()));
     } else if (line.find(dest_scaler_count) != string::npos) {
