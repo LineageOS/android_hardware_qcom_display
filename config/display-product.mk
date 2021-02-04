@@ -193,6 +193,7 @@ else
     #Properties that should not be set in QMAA are enabled here.
     PRODUCT_PROPERTY_OVERRIDES += \
         vendor.display.enable_early_wakeup=1
+    BUILD_DISPLAY_TECHPACK_SOURCE := true
     ifeq ($(BUILD_DISPLAY_TECHPACK_SOURCE), true)
         PRODUCT_SOONG_NAMESPACES += hardware/qcom/display
         PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/gralloc
