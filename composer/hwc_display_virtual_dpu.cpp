@@ -193,13 +193,19 @@ HWC2::Error HWCDisplayVirtualDPU::Present(shared_ptr<Fence> *out_retire_fence) {
     return status;
   }
 
+  status = PostCommitLayerStack(out_retire_fence);
+
+  return status;
+}
+
+HWC2::Error HWCDisplayVirtualDPU::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence) {
   // Retire fence points to WB done.
   // Explicitly query for output buffer acquire fence.
   display_intf_->GetOutputBufferAcquireFence(&layer_stack_.retire_fence);
 
   DumpVDSBuffer();
 
-  status = HWCDisplay::PostCommitLayerStack(out_retire_fence);
+  auto status = HWCDisplay::PostCommitLayerStack(out_retire_fence);
 
   return status;
 }
@@ -213,13 +219,6 @@ HWC2::Error HWCDisplayVirtualDPU::CommitOrPrepare(bool validate_only,
   layer_stack_.output_buffer = &output_buffer_;
   auto status = HWCDisplay::CommitOrPrepare(validate_only, out_retire_fence, out_num_types,
                                             out_num_requests, needs_commit);
-  if (!(*needs_commit)) {
-    // Retire fence points to WB done.
-    // Explicitly query for output buffer acquire fence.
-    display_intf_->GetOutputBufferAcquireFence(out_retire_fence);
-    DumpVDSBuffer();
-  }
-
   return status;
 }
 

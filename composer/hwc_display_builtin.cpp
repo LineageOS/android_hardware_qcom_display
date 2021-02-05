@@ -460,7 +460,6 @@ HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
     DisplayConfigFixedInfo fixed_info = {};
     display_intf_->GetConfig(&fixed_info);
 
-    status = CommitStitchLayers();
     if (status != HWC2::Error::None) {
       DLOGE("Stitch failed: %d", status);
       return status;
@@ -468,24 +467,9 @@ HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
 
     status = CommitLayerStack();
     if (status == HWC2::Error::None) {
-      HandleFrameOutput();
-      PostCommitStitchLayers();
-      status = HWCDisplay::PostCommitLayerStack(out_retire_fence);
-      display_intf_->GetConfig(&fixed_info);
-      is_cmd_mode_ = fixed_info.is_cmdmode;
-
-      // For video mode panel with dynamic fps, update the active mode index.
-      // This is needed to report the correct Vsync period when client queries
-      // using GetDisplayVsyncPeriod API.
-      if (!is_cmd_mode_ && !disable_dyn_fps_) {
-        hwc2_config_t active_config = hwc_config_map_.at(0);
-        GetActiveConfig(&active_config);
-        SetActiveConfigIndex(active_config);
-      }
+      status = PostCommitLayerStack(out_retire_fence);
     }
   }
-
-  pending_commit_ = false;
 
   // In case of scaling UI layer for command mode, clear LUTs
   if (force_reset_lut_) {
@@ -1678,6 +1662,33 @@ void HWCDisplayBuiltIn::SetCpuPerfHintLargeCompCycle() {
   }
 }
 
+HWC2::Error HWCDisplayBuiltIn::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence) {
+  // Block on output buffer fence.
+  if (layer_stack_.output_buffer != nullptr) {
+    auto &fence = layer_stack_.output_buffer->release_fence;
+    display_intf_->GetOutputBufferAcquireFence(&fence);
+  }
+
+  HandleFrameOutput();
+  PostCommitStitchLayers();
+  auto status = HWCDisplay::PostCommitLayerStack(out_retire_fence);
+/*  display_intf_->GetConfig(&fixed_info);
+  is_cmd_mode_ = fixed_info.is_cmdmode;
+
+  // For video mode panel with dynamic fps, update the active mode index.
+  // This is needed to report the correct Vsync period when client queries
+  // using GetDisplayVsyncPeriod API.
+  if (!is_cmd_mode_ && !disable_dyn_fps_) {
+    hwc2_config_t active_config = hwc_config_map_.at(0);
+    GetActiveConfig(&active_config);
+    SetActiveConfigIndex(active_config);
+  }*/
+
+  pending_commit_ = false;
+
+  return status;
+}
+
 bool HWCDisplayBuiltIn::IsDisplayIdle() {
   // Notify only if this display is source of vsync.
   bool vsync_source = (callbacks_->GetVsyncSource() == id_);
@@ -1726,11 +1737,6 @@ HWC2::Error HWCDisplayBuiltIn::CommitOrPrepare(bool validate_only,
   auto status = HWCDisplay::CommitOrPrepare(validate_only, out_retire_fence, out_num_types,
                                             out_num_requests, needs_commit);
   SetCpuPerfHintLargeCompCycle();
-  // Block on output buffer fence.
-  if (layer_stack_.output_buffer != nullptr) {
-    auto &fence = layer_stack_.output_buffer->release_fence;
-    display_intf_->GetOutputBufferAcquireFence(&fence);
-  }
 
   return status;
 }
