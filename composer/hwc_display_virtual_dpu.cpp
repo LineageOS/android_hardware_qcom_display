@@ -204,13 +204,14 @@ HWC2::Error HWCDisplayVirtualDPU::Present(shared_ptr<Fence> *out_retire_fence) {
   return status;
 }
 
-HWC2::Error HWCDisplayVirtualDPU::CommitOrPrepare(shared_ptr<Fence> *out_retire_fence,
+HWC2::Error HWCDisplayVirtualDPU::CommitOrPrepare(bool validate_only,
+                                                  shared_ptr<Fence> *out_retire_fence,
                                                   uint32_t *out_num_types,
                                                   uint32_t *out_num_requests, bool *needs_commit) {
   DTRACE_SCOPED();
 
   layer_stack_.output_buffer = &output_buffer_;
-  auto status = HWCDisplay::CommitOrPrepare(out_retire_fence, out_num_types,
+  auto status = HWCDisplay::CommitOrPrepare(validate_only, out_retire_fence, out_num_types,
                                             out_num_requests, needs_commit);
   if (!(*needs_commit)) {
     // Retire fence points to WB done.

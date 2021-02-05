@@ -189,8 +189,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   int32_t SetOutputBuffer(hwc2_display_t display, buffer_handle_t buffer,
                           const shared_ptr<Fence> &release_fence);
   int32_t SetPowerMode(hwc2_display_t display, int32_t int_mode);
-  int32_t ValidateDisplay(hwc2_display_t display, uint32_t *out_num_types,
-                          uint32_t *out_num_requests);
   int32_t SetColorMode(hwc2_display_t display, int32_t /*ColorMode*/ int_mode);
   int32_t SetColorModeWithRenderIntent(hwc2_display_t display, int32_t /*ColorMode*/ int_mode,
                                        int32_t /*RenderIntent*/ int_render_intent);
@@ -302,7 +300,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
       hwc2_display_t display, hwc2_config_t config,
       const VsyncPeriodChangeConstraints *vsync_period_change_constraints,
       VsyncPeriodChangeTimeline *out_timeline);
-  HWC2::Error CommitOrPrepare(hwc2_display_t display, shared_ptr<Fence> *out_retire_fence,
+  HWC2::Error CommitOrPrepare(hwc2_display_t display, bool validate_only,
+                              shared_ptr<Fence> *out_retire_fence,
                               uint32_t *out_num_types, uint32_t *out_num_requests,
                               bool *needs_commit);
   HWC2::Error TryDrawMethod(hwc2_display_t display, IQtiComposerClient::DrawMethod drawMethod);

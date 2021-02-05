@@ -1458,6 +1458,8 @@ HWC2::Error HWCDisplay::PostPrepareLayerStack(uint32_t *out_num_types, uint32_t 
   *out_num_requests = UINT32(layer_requests_.size());
   layer_stack_invalid_ = false;
 
+  validate_done_ = true;
+
   return ((*out_num_types > 0) ? HWC2::Error::HasChanges : HWC2::Error::None);
 }
 
@@ -1466,7 +1468,7 @@ HWC2::Error HWCDisplay::AcceptDisplayChanges() {
     return HWC2::Error::None;
   }
 
-  if (!display_intf_->IsValidated()) {
+  if (!validate_done_) {
     return HWC2::Error::NotValidated;
   }
 
@@ -1488,7 +1490,7 @@ HWC2::Error HWCDisplay::GetChangedCompositionTypes(uint32_t *out_num_elements,
     return HWC2::Error::None;
   }
 
-  if (!display_intf_->IsValidated()) {
+  if (!validate_done_) {
     DLOGW("Display is not validated");
     return HWC2::Error::NotValidated;
   }
@@ -1543,7 +1545,7 @@ HWC2::Error HWCDisplay::GetDisplayRequests(int32_t *out_display_requests,
   // Use for sharing blit buffers and
   // writing wfd buffer directly to output if there is full GPU composition
   // and no color conversion needed
-  if (!display_intf_->IsValidated()) {
+  if (!validate_done_) {
     DLOGW("Display is not validated");
     return HWC2::Error::NotValidated;
   }
@@ -1617,7 +1619,7 @@ HWC2::Error HWCDisplay::GetHdrCapabilities(uint32_t *out_num_types, int32_t *out
   return HWC2::Error::None;
 }
 
-HWC2::Error HWCDisplay::CommitOrPrepare(shared_ptr<Fence> *out_retire_fence,
+HWC2::Error HWCDisplay::CommitOrPrepare(bool validate_only, shared_ptr<Fence> *out_retire_fence,
                                         uint32_t *out_num_types, uint32_t *out_num_requests,
                                         bool *needs_commit) {
   DTRACE_SCOPED();
@@ -1628,12 +1630,14 @@ HWC2::Error HWCDisplay::CommitOrPrepare(shared_ptr<Fence> *out_retire_fence,
 
   UpdateRefreshRate();
   UpdateActiveConfig();
-  // BuildLayerstack etc;
+  validate_done_ = false;
   bool exit_validate = false;
   PreValidateDisplay(&exit_validate);
   if (exit_validate) {
     return HWC2::Error::None;
   }
+
+  layer_stack_.validate_only = validate_only;
 
   *needs_commit = display_intf_->CommitOrPrepare(&layer_stack_) == kErrorNeedsCommit;
 

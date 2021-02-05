@@ -318,21 +318,6 @@ HWC2::Error HWCDisplayBuiltIn::PreValidateDisplay(bool *exit_validate) {
   return status;
 }
 
-HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
-  DTRACE_SCOPED();
-
-  bool exit_validate = false;
-  PreValidateDisplay(&exit_validate);
-  if (exit_validate) {
-    return HWC2::Error::None;
-  }
-
-  auto status = PrepareLayerStack(out_num_types, out_num_requests);
-  SetCpuPerfHintLargeCompCycle();
-  pending_commit_ = true;
-  return status;
-}
-
 HWC2::Error HWCDisplayBuiltIn::CommitLayerStack() {
   skip_commit_ = CanSkipCommit();
   return HWCDisplay::CommitLayerStack();
@@ -1732,12 +1717,13 @@ uint32_t HWCDisplayBuiltIn::GetUpdatingAppLayersCount() {
   return updating_count;
 }
 
-HWC2::Error HWCDisplayBuiltIn::CommitOrPrepare(shared_ptr<Fence> *out_retire_fence,
+HWC2::Error HWCDisplayBuiltIn::CommitOrPrepare(bool validate_only,
+                                               shared_ptr<Fence> *out_retire_fence,
                                                uint32_t *out_num_types,
                                                uint32_t *out_num_requests, bool *needs_commit) {
   DTRACE_SCOPED();
 
-  auto status = HWCDisplay::CommitOrPrepare(out_retire_fence, out_num_types,
+  auto status = HWCDisplay::CommitOrPrepare(validate_only, out_retire_fence, out_num_types,
                                             out_num_requests, needs_commit);
   SetCpuPerfHintLargeCompCycle();
   // Block on output buffer fence.

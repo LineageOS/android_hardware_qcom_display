@@ -78,7 +78,6 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
                     HWCDisplay **hwc_display);
   static void Destroy(HWCDisplay *hwc_display);
   virtual int Init();
-  virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests);
   virtual HWC2::Error Present(shared_ptr<Fence> *out_retire_fence);
   virtual HWC2::Error CommitLayerStack();
   virtual HWC2::Error GetColorModes(uint32_t *out_num_modes, ColorMode *out_modes);
@@ -145,7 +144,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual bool IsDisplayIdle();
   virtual bool HasReadBackBufferSupport();
   virtual HWC2::Error NotifyDisplayCalibrationMode(bool in_calibration);
-  virtual HWC2::Error CommitOrPrepare(shared_ptr<Fence> *out_retire_fence,
+  virtual HWC2::Error CommitOrPrepare(bool validate_only, shared_ptr<Fence> *out_retire_fence,
                                       uint32_t *out_num_types, uint32_t *out_num_requests,
                                       bool *needs_commit);
   virtual HWC2::Error PreValidateDisplay(bool *exit_validate);

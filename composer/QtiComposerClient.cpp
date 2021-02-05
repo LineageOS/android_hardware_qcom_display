@@ -1454,11 +1454,16 @@ bool QtiComposerClient::CommandReader::parseSetOutputBuffer(uint16_t length) {
 }
 
 Error QtiComposerClient::CommandReader::validateDisplay() {
+  bool validate_only = true;
+  bool needsCommit = false;
   uint32_t types_count = 0;
   uint32_t reqs_count = 0;
+  shared_ptr<Fence> presentFence = nullptr;
 
-  auto err = mClient.hwc_session_->ValidateDisplay(mDisplay, &types_count, &reqs_count);
-  if (err != HWC2_ERROR_NONE && err != HWC2_ERROR_HAS_CHANGES) {
+  auto err = mClient.hwc_session_->CommitOrPrepare(mDisplay, validate_only, &presentFence,
+                                                   &types_count, &reqs_count, &needsCommit);
+  auto status = INT32(err);
+  if (status != HWC2_ERROR_NONE && status != HWC2_ERROR_HAS_CHANGES) {
     return static_cast<Error>(err);
   }
 
@@ -1614,8 +1619,9 @@ bool QtiComposerClient::CommandReader::parsePresentOrValidateDisplay(uint16_t le
   shared_ptr<Fence> presentFence = nullptr;
   uint32_t typesCount = 0;
   uint32_t reqsCount = 0;
-  auto status = mClient.hwc_session_->CommitOrPrepare(mDisplay, &presentFence, &typesCount,
-                                                      &reqsCount, &needsCommit);
+  bool validate_only = false;
+  auto status = mClient.hwc_session_->CommitOrPrepare(mDisplay, validate_only, &presentFence,
+                                                      &typesCount, &reqsCount, &needsCommit);
   if (needsCommit) {
     if (status != HWC2::Error::None && status != HWC2::Error::HasChanges) {
       ALOGE("CommitOrPrepare failed %d", status);

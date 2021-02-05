@@ -1236,50 +1236,6 @@ int32_t HWCSession::GetDozeSupport(hwc2_display_t display, int32_t *out_support)
   return HWC2_ERROR_NONE;
 }
 
-int32_t HWCSession::ValidateDisplay(hwc2_display_t display, uint32_t *out_num_types,
-                                    uint32_t *out_num_requests) {
-  //  out_num_types and out_num_requests will be non-NULL
-
-  if (display >= HWCCallbacks::kNumDisplays) {
-    return HWC2_ERROR_BAD_DISPLAY;
-  }
-
-  hwc2_display_t target_display = display;
-
-  {
-    SCOPE_LOCK(power_state_[display]);
-    if (power_state_transition_[display]) {
-      // Route all interactions with client to dummy display.
-      target_display = map_hwc_display_.find(display)->second;
-    }
-  }
-  DTRACE_SCOPED();
-  // TODO(user): Handle secure session, handle QDCM solid fill
-  auto status = HWC2::Error::BadDisplay;
-  HandleSecureSession();
-  {
-    SEQUENCE_ENTRY_SCOPE_LOCK(locker_[target_display]);
-    if (pending_power_mode_[display]) {
-      status = HWC2::Error::None;
-    } else if (hwc_display_[target_display]) {
-      hwc_display_[target_display]->ProcessActiveConfigChange();
-      status = hwc_display_[target_display]->Validate(out_num_types, out_num_requests);
-    }
-  }
-
-  // Sequence locking currently begins on Validate, so cancel the sequence lock on failures
-  if (status != HWC2::Error::None && status != HWC2::Error::HasChanges) {
-    CancelTUILock(target_display);
-  }
-
-  if (display != target_display) {
-    // Validate done on a dummy display. Assume present is complete.
-    SEQUENCE_EXIT_SCOPE_LOCK(locker_[target_display]);
-  }
-
-  return INT32(status);
-}
-
 void HWCSession::CancelTUILock(hwc2_display_t display) {
   Locker::ScopeLock tui_lock(tui_locker_[display]);
   if (tui_transition_pending_[display]) {
@@ -3891,9 +3847,14 @@ HWC2::Error HWCSession::TeardownConcurrentWriteback(hwc2_display_t display) {
   return HWC2::Error::None;
 }
 
-HWC2::Error HWCSession::CommitOrPrepare(hwc2_display_t display, shared_ptr<Fence> *out_retire_fence,
+HWC2::Error HWCSession::CommitOrPrepare(hwc2_display_t display, bool validate_only,
+                                        shared_ptr<Fence> *out_retire_fence,
                                         uint32_t *out_num_types, uint32_t *out_num_requests,
                                         bool *needs_commit) {
+  if (display >= HWCCallbacks::kNumDisplays) {
+    return HWC2::Error::BadDisplay;
+  }
+
   {
     // ToDo: add support for async power mode.
     Locker::ScopeLock lock_d(locker_[display]);
@@ -3910,7 +3871,7 @@ HWC2::Error HWCSession::CommitOrPrepare(hwc2_display_t display, shared_ptr<Fence
   {
     Locker::ScopeLock lock_d(locker_[display]);
     hwc_display_[display]->ProcessActiveConfigChange();
-    status = hwc_display_[display]->CommitOrPrepare(out_retire_fence, out_num_types,
+    status = hwc_display_[display]->CommitOrPrepare(validate_only, out_retire_fence, out_num_types,
                                                     out_num_requests, needs_commit);
     PostCommitLocked(display);
   }
@@ -3919,7 +3880,7 @@ HWC2::Error HWCSession::CommitOrPrepare(hwc2_display_t display, shared_ptr<Fence
 }
 
 HWC2::Error HWCSession::TryDrawMethod(hwc2_display_t display,
-                                             IQtiComposerClient::DrawMethod drawMethod) {
+                                      IQtiComposerClient::DrawMethod drawMethod) {
   Locker::ScopeLock lock_d(locker_[display]);
   if (!hwc_display_[display]) {
     return HWC2::Error::BadDisplay;

@@ -68,7 +68,8 @@ class HWCDisplayVirtualGPU : public HWCDisplayVirtual,
   virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests);
   virtual HWC2::Error Present(shared_ptr<Fence> *out_retire_fence);
   virtual HWC2::Error SetOutputBuffer(buffer_handle_t buf, shared_ptr<Fence> release_fence);
-  virtual HWC2::Error CommitOrPrepare(shared_ptr<Fence> *out_retire_fence, uint32_t *out_num_types,
+  virtual HWC2::Error CommitOrPrepare(bool validate_only, shared_ptr<Fence> *out_retire_fence,
+                                      uint32_t *out_num_types,
                                       uint32_t *out_num_requests, bool *needs_commit);
   virtual bool FreezeScreen();
 

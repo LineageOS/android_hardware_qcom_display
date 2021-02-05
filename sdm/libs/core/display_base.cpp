@@ -2948,7 +2948,6 @@ DisplayError DisplayBase::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level)
 
 void DisplayBase::CheckMMRMState() {
   ClientLock lock(disp_mutex_);
-
   if (!mmrm_updated_) {
     return;
   }

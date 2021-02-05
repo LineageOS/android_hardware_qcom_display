@@ -111,7 +111,8 @@ HWC2::Error HWCDisplayVirtualGPU::Validate(uint32_t *out_num_types, uint32_t *ou
   return ((*out_num_types > 0) ? HWC2::Error::HasChanges : HWC2::Error::None);
 }
 
-HWC2::Error HWCDisplayVirtualGPU::CommitOrPrepare(shared_ptr<Fence> *out_retire_fence,
+HWC2::Error HWCDisplayVirtualGPU::CommitOrPrepare(bool validate_only,
+                                                  shared_ptr<Fence> *out_retire_fence,
                                                   uint32_t *out_num_types,
                                                   uint32_t *out_num_requests, bool *needs_commit) {
   // Perform validate and commit.

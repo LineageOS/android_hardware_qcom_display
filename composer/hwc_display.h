@@ -359,7 +359,6 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error DestroyLayer(hwc2_layer_t layer_id);
   virtual HWC2::Error SetLayerZOrder(hwc2_layer_t layer_id, uint32_t z);
   virtual HWC2::Error SetLayerType(hwc2_layer_t layer_id, IQtiComposerClient::LayerType type);
-  virtual HWC2::Error Validate(uint32_t *out_num_types, uint32_t *out_num_requests) = 0;
   virtual HWC2::Error GetReleaseFences(uint32_t *out_num_elements, hwc2_layer_t *out_layers,
                                        std::vector<shared_ptr<Fence>> *out_fences);
   virtual HWC2::Error Present(shared_ptr<Fence> *out_retire_fence) = 0;
@@ -425,7 +424,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error NotifyDisplayCalibrationMode(bool in_calibration) {
     return HWC2::Error::Unsupported;
   };
-  virtual HWC2::Error CommitOrPrepare(shared_ptr<Fence> *out_retire_fence,
+  virtual HWC2::Error CommitOrPrepare(bool validate_only, shared_ptr<Fence> *out_retire_fence,
                                       uint32_t *out_num_types, uint32_t *out_num_requests,
                                       bool *needs_commit);
   virtual HWC2::Error PreValidateDisplay(bool *exit_validate) { return HWC2::Error::None; }
@@ -580,6 +579,7 @@ class HWCDisplay : public DisplayEventHandler {
   uint64_t elapse_timestamp_ = 0;
   int async_power_mode_ = 0;
   bool draw_method_set_ = false;
+  bool validate_done_ = false;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {

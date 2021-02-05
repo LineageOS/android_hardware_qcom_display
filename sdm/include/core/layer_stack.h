@@ -526,9 +526,9 @@ struct LayerStack {
   bool needs_validate = false;         //!< Change in mode/colospace/fps etc
   bool solid_fill_enabled = false;
   bool tonemapper_active  = false;
-
   CwbConfig *cwb_config = NULL;        //!< Struct that contains the original CWB configuration
                                        //!< provided by CWB client.
+  bool validate_only = false;
 };
 
 }  // namespace sdm
