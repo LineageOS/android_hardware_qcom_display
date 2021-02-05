@@ -1840,6 +1840,12 @@ DisplayError HWDeviceDRM::Flush(HWLayersInfo *hw_layers_info) {
   ResetROI();
   bool sync_commit = (tui_state_ == kTUIStateStart || tui_state_ == kTUIStateEnd ||
                       secure_display_active_);
+
+  // TODO(user): Handle via flush call
+#ifdef TRUSTED_VM
+  sync_commit = true;
+#endif
+
   int ret = NullCommit(sync_commit /* synchronous */, false /* retain_planes*/);
   if (ret) {
     DLOGE("failed with error %d", ret);
