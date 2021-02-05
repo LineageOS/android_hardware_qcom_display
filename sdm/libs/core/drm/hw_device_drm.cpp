@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -640,6 +640,8 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   hw_panel_info_.hdr_enabled = connector_info_.panel_hdr_prop.hdr_enabled;
   hw_panel_info_.peak_luminance = connector_info_.panel_hdr_prop.peak_brightness;
   hw_panel_info_.blackness_level = connector_info_.panel_hdr_prop.blackness_level;
+  hw_panel_info_.average_luminance = UINT32(connector_info_.panel_hdr_prop.peak_brightness +
+                                           connector_info_.panel_hdr_prop.blackness_level) / 2;
   hw_panel_info_.primaries.white_point[0] = connector_info_.panel_hdr_prop.display_primaries[0];
   hw_panel_info_.primaries.white_point[1] = connector_info_.panel_hdr_prop.display_primaries[1];
   hw_panel_info_.primaries.red[0] = connector_info_.panel_hdr_prop.display_primaries[2];
