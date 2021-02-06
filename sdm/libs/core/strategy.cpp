@@ -96,7 +96,7 @@ DisplayError Strategy::Start(DispLayerStack *disp_layer_stack, uint32_t *max_att
   disp_layer_stack_ = disp_layer_stack;
   extn_start_success_ = false;
 
-  if (!disable_gpu_comp_ && !disp_layer_stack_->info.gpu_target_index) {
+  if (!disable_gpu_comp_ && (disp_layer_stack_->info.gpu_target_index == -1)) {
     DLOGE("GPU composition is enabled and GPU target buffer not provided.");
     return kErrorNotSupported;
   }
