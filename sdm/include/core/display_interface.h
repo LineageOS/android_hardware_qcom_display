@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -179,6 +179,41 @@ enum QSyncMode {
   kQsyncModeOneShotContinuous,  // This is set by client to enable qsync only for every commit.
 };
 
+/*! @brief This enum represents different operating modes to submit a draw cycle to display.
+
+  @sa DisplayInterface::SetDrawMethod
+*/
+enum DisplayDrawMethod {
+  kDrawDefault,               //!< Prepare & Commit are performed in separate calls.
+                              //!< Release fences returned through commit in this method will
+                              //!< signal when the buffers submitted along with current draw
+                              //!< cycle are consumed by the display.
+                              //!< Retire fence returned through commit in this method will
+                              //!< signal when the current composed buffers begin to display
+                              //!< on panel.
+
+  kDrawUnified,               //!< Prepare & Commit are unified. A separate Commit is performed
+                              //!< in case unified draw cycle is not doable.
+                              //!< Release fences returned through commit in this method will
+                              //!< signal when the buffers submitted in the previous draw cycle
+                              //!< are consumed by the display. If a new layer is submitted,
+                              //!< the release fence will be set to -1.
+                              //!< Retire fence returned through commit in this method will
+                              //!< signal when the current composed buffers begin to display
+                              //!< on panel.
+
+  kDrawUnifiedWithGPUTarget,  //!< Prepare & Commit are unified. A deterministic gpu target
+                              //!< buffer is passed with layer stack. A separate Commit is
+                              //!< performed in case unified draw cycle is not doable.
+                              //!< Release fences returned through commit in this method will
+                              //!< signal when the buffers submitted in the previous draw cycle
+                              //!< are consumed by the display. If a new layer is submitted,
+                              //!< the release fence will be set to -1.
+                              //!< Retire fence returned through commit in this method will
+                              //!< signal when the current composed buffers begin to display
+                              //!< on panel.
+};
+
 /*! @brief This structure defines configuration for display dpps ad4 region of interest. */
 struct DisplayDppsAd4RoiCfg {
   uint32_t h_start;     //!< start in hotizontal direction
@@ -215,6 +250,7 @@ struct DisplayConfigFixedInfo {
   float min_luminance = 0.0f;          //!< From Panel's blackness level
   bool partial_update = false;         //!< If display supports Partial Update.
   bool readback_supported = false;     //!< If display supports buffer readback.
+  bool supports_unified_draw = false;  //!< If display support unified drawing methods.
 };
 
 /*! @brief This structure defines configuration for variable properties of a display device.
@@ -384,6 +420,37 @@ class DisplayInterface {
   */
   virtual DisplayError Prepare(LayerStack *layer_stack) = 0;
 
+  /*! @brief Method to try to perform prepare and commit in one go.
+
+    @details Client shall send all layers associated with a frame targeted for current display
+    using this method and check the layers which can be handled completely in display manager.
+
+    Client shall mark composition type for one of the layer as kCompositionGPUTarget; the GPU
+    composed output would be rendered at the specified layer if some of the layers are not handled
+    by SDM.
+
+    Display manager will set each layer as kCompositionGPU or kCompositionSDE upon return. Client
+    shall render all the layers marked as kCompositionGPU using GPU.
+
+    This method must be followed by Commit() if the unified draw cycle could not be performed.
+
+    This method shall be called only once for each frame.
+
+    In the event of an error as well, this call will cause any fences returned in the previous call
+    to Commit() to eventually become signaled, so the client's wait on fences can be released to
+    prevent deadlocks.
+
+    In case of a virtual display, an explict call is needed to retrieve buffer output fences. Fences
+    will be set to -1 in the layer stack when this call is returned.
+
+    @param[in] layer_stack \link LayerStack \endlink
+
+    @return \link DisplayError \endlink
+
+    @sa Commit
+  */
+  virtual DisplayError CommitOrPrepare(LayerStack *layer_stack) = 0;
+
   /*! @brief Method to commit layers of a frame submitted in a former call to Prepare().
 
     @details Client shall call this method to submit layers for final composition. The composed
@@ -482,6 +549,14 @@ class DisplayInterface {
     @return \link DisplayError \endlink
   */
   virtual DisplayError GetVSyncState(bool *enabled) = 0;
+
+  /*! @brief Method to set draw method for display device. This call is allowed only once.
+
+    @param[in] draw_method \link DisplayDrawMethod \endlink
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError SetDrawMethod(DisplayDrawMethod draw_method) = 0;
 
   /*! @brief Method to set current state of the display device.
 

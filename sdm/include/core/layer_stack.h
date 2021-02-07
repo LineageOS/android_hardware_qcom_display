@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -190,21 +190,29 @@ struct LayerFlags {
                               //!< is a cursor
                               //!< Display Device may handle this layer using HWCursor
 
-      uint32_t single_buffer : 1;  //!< This flag shall be set by client to indicate that the layer
-                                   //!< uses only a single buffer that will not be swapped out
+      uint32_t single_buffer : 1;
+                              //!< This flag shall be set by client to indicate that the layer
+                              //!< uses only a single buffer that will not be swapped out
 
-      uint32_t color_transform : 1;  //!< This flag will be set by SDM when the layer
-                                     //!< has a custom matrix
+      uint32_t color_transform : 1;
+                              //!< This flag will be set by SDM when the layer has a custom matrix
 
-      uint32_t is_game : 1;  //!< This flag shall be set by client to indicate that this layer
-                             //!< is a game layer.
+      uint32_t is_game : 1;   //!< This flag shall be set by client to indicate that this layer
+                              //!< is a game layer.
 
-      uint32_t sde_preferred : 1;  //! This flag shall be set by client to indicate that this layer
-                                   //! will be composed by display device, layer with this flag
-                                   //! will have highest priority. To be used by OEMs only.
+      uint32_t sde_preferred : 1;
+                              //! This flag shall be set by client to indicate that this layer
+                              //! will be composed by display device, layer with this flag
+                              //! will have highest priority. To be used by OEMs only.
 
-      uint32_t is_demura : 1;  //!< This flag shall be set to indicate that this layer
-                               //!< is a demura correction layer
+      uint32_t is_demura : 1;
+                              //!< This flag shall be set to indicate that this layer
+                              //!< is a demura correction layer
+
+      uint32_t compatible : 1;
+                              //!< This flag shall be set by client to indicate that this layer
+                              //!< can be composed into the gpu target buffer that is passed along
+                              //!< with the current draw cycle.
     };
 
     uint32_t flags = 0;       //!< For initialization purpose only.
