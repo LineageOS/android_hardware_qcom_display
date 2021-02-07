@@ -81,6 +81,12 @@ enum struct DRMOps {
    */
   PLANE_SET_ROTATION,
   /*
+   * Op: Sets plane fod
+   * Arg: uint32_t - Plane ID
+   *      uint32_t - fod value
+   */
+  PLANE_SET_FOD,
+  /*
    * Op: Sets plane alpha
    * Arg: uint32_t - Plane ID
    *      uint32_t - alpha value
@@ -305,6 +311,12 @@ enum struct DRMOps {
    *      uint32_t - Capture mode
    */
   CRTC_SET_CAPTURE_MODE,
+  /*
+   * Op: Sets Xiaomi fod sync info for CRTC.
+   * Arg: uint32_t - CRTC ID
+   *      uint32_t - fod sync info
+   */
+  CRTC_SET_MI_FOD_SYNC_INFO,
   /*
    * Op: Sets Idle PC state for CRTC.
    * Arg: uint32_t - CRTC ID
