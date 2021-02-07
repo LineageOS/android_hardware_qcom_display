@@ -80,6 +80,14 @@ enum struct DRMOps {
    *      uint32_t - bit mask of rotation flags (See drm_mode.h for enums)
    */
   PLANE_SET_ROTATION,
+#ifdef FOD_ZPOS
+  /*
+   * Op: Sets plane fod
+   * Arg: uint32_t - Plane ID
+   *      uint32_t - fod value
+   */
+  PLANE_SET_FOD,
+#endif
   /*
    * Op: Sets plane alpha
    * Arg: uint32_t - Plane ID
@@ -305,6 +313,14 @@ enum struct DRMOps {
    *      uint32_t - Capture mode
    */
   CRTC_SET_CAPTURE_MODE,
+#ifdef FOD_ZPOS
+  /*
+   * Op: Sets Xiaomi fod sync info for CRTC.
+   * Arg: uint32_t - CRTC ID
+   *      uint32_t - fod sync info
+   */
+  CRTC_SET_MI_FOD_SYNC_INFO,
+#endif
   /*
    * Op: Sets Idle PC state for CRTC.
    * Arg: uint32_t - CRTC ID
