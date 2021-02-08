@@ -2139,20 +2139,16 @@ DisplayError HWDeviceDRM::DumpDebugData() {
   ofstream dst(filename);
   debug_dump_count_++;
 
-  bool failed = false;
-
   {
     ifstream src;
     src.open("/sys/kernel/debug/dri/0/debug/dump");
     if (src.fail()) {
-      DLOGE("Unable to open dump debugfs node");
-      failed = true;
-    } else {
+      DLOGW("Unable to open dump debugfs node");
+     } else {
       dst << "---- Event Logs ----" << std::endl;
       dst << src.rdbuf() << std::endl;
       if (src.fail()) {
-        DLOGE("Unable to read dump debugfs node");
-        failed = true;
+        DLOGW("Unable to read dump debugfs node");
       }
       src.close();
     }
@@ -2162,14 +2158,12 @@ DisplayError HWDeviceDRM::DumpDebugData() {
     ifstream src;
     src.open("/sys/kernel/debug/dri/0/debug/recovery_reg");
     if (src.fail()) {
-      DLOGE("Unable to open recovery_reg debugfs node");
-      failed = true;
+      DLOGW("Unable to open recovery_reg debugfs node");
     } else {
       dst << "---- All Registers ----" << std::endl;
       dst << src.rdbuf() << std::endl;
       if (src.fail()) {
-        failed = true;
-        DLOGE("Unable to read recovery_reg debugfs node");
+        DLOGW("Unable to read recovery_reg debugfs node");
       }
       src.close();
     }
@@ -2179,14 +2173,12 @@ DisplayError HWDeviceDRM::DumpDebugData() {
     ifstream src;
     src.open("/sys/kernel/debug/dri/0/debug/recovery_dbgbus");
     if (src.fail()) {
-      DLOGE("Unable to open recovery_dbgbus debugfs node");
-      failed = true;
+      DLOGW("Unable to open recovery_dbgbus debugfs node");
     } else {
       dst << "---- Debug Bus ----" << std::endl;
       dst << src.rdbuf() << std::endl;
       if (src.fail()) {
-        DLOGE("Unable to read recovery_dbgbus debugfs node");
-        failed = true;
+        DLOGW("Unable to read recovery_dbgbus debugfs node");
       }
       src.close();
     }
@@ -2196,14 +2188,12 @@ DisplayError HWDeviceDRM::DumpDebugData() {
     ifstream src;
     src.open("/sys/kernel/debug/dri/0/debug/recovery_vbif_dbgbus");
     if (src.fail()) {
-      DLOGE("Unable to open recovery_vbif_dbgbus debugfs node");
-      failed = true;
+      DLOGW("Unable to open recovery_vbif_dbgbus debugfs node");
     } else {
       dst << "---- VBIF Debug Bus ----" << std::endl;
       dst << src.rdbuf() << std::endl;
       if (src.fail()) {
-        DLOGE("Unable to read recovery_vbif_dbgbus debugfs node");
-        failed = true;
+        DLOGW("Unable to read recovery_vbif_dbgbus debugfs node");
       }
       src.close();
     }
@@ -2213,14 +2203,12 @@ DisplayError HWDeviceDRM::DumpDebugData() {
     ifstream src;
     src.open("/sys/kernel/debug/dri/0/debug/recovery_dsi_dbgbus");
     if (src.fail()) {
-      DLOGE("Unable to open recovery_dsi_dbgbus debugfs node");
-      failed = true;
+      DLOGW("Unable to open recovery_dsi_dbgbus debugfs node");
     } else {
       dst << "---- DSI Debug Bus ----" << std::endl;
       dst << src.rdbuf() << std::endl;
       if (src.fail()) {
-        DLOGE("Unable to read recovery_dsi_dbgbus debugfs node");
-        failed = true;
+        DLOGW("Unable to read recovery_dsi_dbgbus debugfs node");
       }
     src.close();
     }
@@ -2229,7 +2217,7 @@ DisplayError HWDeviceDRM::DumpDebugData() {
   dst.close();
   DLOGI("Wrote hw_recovery file %s", filename.c_str());
 
-  return failed ? kErrorPermission : kErrorNone;
+  return kErrorNone;
 }
 
 void HWDeviceDRM::GetDRMDisplayToken(sde_drm::DRMDisplayToken *token) const {
