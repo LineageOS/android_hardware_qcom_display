@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2020 The Linux Foundation. All rights reserved.
+* Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -59,7 +59,7 @@ class MemBuf {
 
     @return 0 on success otherwise errno
   */
-  int TransferHeap(const UsageHints &hints, uint32_t size, int *heap_fd);
+  virtual int TransferHeap(const UsageHints &hints, uint32_t size, int *heap_fd) = 0;
 
   /*! @brief Return the memory to the src VM
 
@@ -67,7 +67,7 @@ class MemBuf {
 
     @return 0 on success otherwise errno
   */
-  void ReturnHeap(int heap_fd);
+  virtual void ReturnHeap(int heap_fd) = 0;
 
   /*! @brief Export the buffer fd from one VM to other VM. The buffer must not be mmap'ed by any
       process prior to invoking this function. The buffer must also be a cached buffer from a
@@ -82,7 +82,7 @@ class MemBuf {
 
     @return 0 on success otherwise errno
   */
-  int Export(int buf_fd, int *export_fd, int *memparcel_hdl);
+  virtual int Export(int buf_fd, int *export_fd, int64_t *memparcel_hdl) = 0;
 
   /*! @brief Allocate and transfer a chunk of memory from src VM to dst VM
 
@@ -92,22 +92,12 @@ class MemBuf {
 
     @return 0 on success otherwise errno
   */
-  int Import(int memparcel_hdl, int *import_fd);
+  virtual int Import(int64_t memparcel_hdl, int *import_fd) = 0;
 
-  ~MemBuf() { }
+  virtual ~MemBuf() { }
 
   static int GetInstance(MemBuf **mem_buf_hnd);
   static void PutInstance();
-
- private:
-  int Init();
-  void Deinit();
-
-  static MemBuf* mem_buf_;
-  static mutex lock_;
-  static uint32_t ref_count_;
-
-  int dev_fd_ = -1;
 };
 
 #endif  // __MEMBUF_WRAPPER_H__

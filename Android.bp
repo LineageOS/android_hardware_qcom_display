@@ -95,7 +95,6 @@ cc_library_headers {
         "sdm/include",
         "gralloc",
         "libhistogram",
-        "libmemutils",
     ],
     header_libs: [
         "libhardware_headers",
@@ -139,6 +138,5 @@ subdirs = [
     "sdm/libs/utils",
     "sdm/libs/core",
     "qmaa",
-    "libmemutils",
     "oem_services",
 ]
