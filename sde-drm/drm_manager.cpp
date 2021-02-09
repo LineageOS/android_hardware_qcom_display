@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -373,6 +373,22 @@ int DRMManager::UnsetScalerLUT() {
 void DRMManager::GetDppsFeatureInfo(DRMDppsFeatureInfo *info) {
   if (dpps_mgr_intf_)
     dpps_mgr_intf_->GetDppsFeatureInfo(info);
+}
+
+void DRMManager::GetPanelFeature(DRMPanelFeatureInfo *info) {
+  if (panel_feature_mgr_intf_) {
+    panel_feature_mgr_intf_->GetPanelFeatureInfo(info);
+  } else {
+    DRM_LOGE("Failed, panel feature mgr not available");
+  }
+}
+
+void DRMManager::SetPanelFeature(const DRMPanelFeatureInfo &info) {
+  if (panel_feature_mgr_intf_) {
+    panel_feature_mgr_intf_->CachePanelFeature(info);
+  } else {
+    DRM_LOGE("Failed, panel feature mgr not available");
+  }
 }
 
 }  // namespace sde_drm
