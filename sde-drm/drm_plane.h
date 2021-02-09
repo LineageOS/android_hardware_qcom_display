@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -82,8 +82,8 @@ class DRMPlane {
   void PostCommit(uint32_t crtc_id, bool success);
   bool SetDgmCscConfig(drmModeAtomicReq *req, uint64_t handle);
   void UpdatePPLutFeatureInuse(DRMPPFeatureInfo *data);
-  void ResetColorLUTs(bool is_commit, drmModeAtomicReq *req);
-  void ResetColorLUTState(DRMTonemapLutType lut_type, bool is_commit, drmModeAtomicReq *req);
+  void ResetColorLUTs(bool update_state, drmModeAtomicReq *req);
+  void ResetColorLUTState(DRMTonemapLutType lut_type, bool update_state, drmModeAtomicReq *req);
   void ResetColorLUT(DRMPPFeatureID id, drmModeAtomicReq *req);
   void ResetCache(drmModeAtomicReq *req);
   void GetIndex(uint8_t *index) { *index = plane_type_info_.pipe_idx; }

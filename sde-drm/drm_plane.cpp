@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -832,9 +832,12 @@ void DRMPlane::SetDecimation(drmModeAtomicReq *req, uint32_t prop_id, uint32_t p
   DRM_LOGD("Plane %d: Setting decimation %d", drm_plane_->plane_id, prop_value);
 }
 
-void DRMPlane::PostValidate(uint32_t crtc_id, bool /*success*/) {
+void DRMPlane::PostValidate(uint32_t crtc_id, bool success) {
   if (requested_crtc_id_ == crtc_id) {
     SetRequestedCrtc(0);
+    if (!success) {
+      ResetColorLUTs(true, nullptr);
+    }
     tmp_prop_val_map_ = committed_prop_val_map_;
   }
 }
@@ -1223,18 +1226,18 @@ bool DRMPlane::SetDgmCscConfig(drmModeAtomicReq *req, uint64_t handle) {
   return false;
 }
 
-void DRMPlane::ResetColorLUTs(bool is_commit, drmModeAtomicReq *req) {
+void DRMPlane::ResetColorLUTs(bool update_state, drmModeAtomicReq *req) {
   // Reset the color luts if they were set and update the state only if its a Commit as Unset
   // is called in Validate as well.
   for (int i = 0; i <= (int32_t)(DRMTonemapLutType::VIG_3D_GAMUT); i++) {
     auto itr = plane_type_info_.tonemap_lut_version_map.find(static_cast<DRMTonemapLutType>(i));
     if (itr != plane_type_info_.tonemap_lut_version_map.end()) {
-      ResetColorLUTState(static_cast<DRMTonemapLutType>(i), is_commit, req);
+      ResetColorLUTState(static_cast<DRMTonemapLutType>(i), update_state, req);
     }
   }
 }
 
-void DRMPlane::ResetColorLUTState(DRMTonemapLutType lut_type, bool is_commit,
+void DRMPlane::ResetColorLUTState(DRMTonemapLutType lut_type, bool update_state,
                                   drmModeAtomicReq *req) {
   DRMPlaneLutState *lut_state = nullptr;
   DRMPPFeatureID feature_id = {};
@@ -1279,14 +1282,16 @@ void DRMPlane::ResetColorLUTState(DRMTonemapLutType lut_type, bool is_commit,
     return;
   }
 
-  if (is_commit) {
+  if (update_state) {
     DRM_LOGD("Plane %d Clearing %s Lut, moving from (%d) -> (%d)", drm_plane_->plane_id,
               GetColorLutString(lut_type), *lut_state, target_state);
 
     *lut_state = target_state;
   }
 
-  ResetColorLUT(feature_id, req);
+  if (req) {
+    ResetColorLUT(feature_id, req);
+  }
 }
 
 void DRMPlane::ResetColorLUT(DRMPPFeatureID id, drmModeAtomicReq *req) {
