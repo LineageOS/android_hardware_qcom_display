@@ -1,5 +1,5 @@
 /*
- *Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ *Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -35,7 +35,7 @@ namespace qti {
 namespace hardware {
 namespace display {
 namespace demura {
-namespace V1_0 {
+namespace V2_0 {
 namespace implementation {
 
 using sdm::FileFinderInterface;
@@ -93,40 +93,41 @@ DemuraFileFinder::~DemuraFileFinder() {
   }
 }
 
-Return<void> DemuraFileFinder::getCorrectionFile(uint64_t panel_id, getCorrectionFile_cb _hidl_cb) {
+Return<void> DemuraFileFinder::getDemuraFilePaths(uint64_t panel_id,
+                                                  getDemuraFilePaths_cb _hidl_cb) {
   int ret = 0;
-  std::string client_file = "";
+  DemuraFilePaths file_paths = {};
 
   if (!file_intf_) {
     ALOGE("file_intf_ was not initialized, or not found. Command not supported");
     ret = -EINVAL;
-    _hidl_cb(ret, client_file);
+    _hidl_cb(ret, file_paths);
     return Void();
   }
 
   if (panel_id == UINT64_MAX) {
     ret = -EINVAL;
-    _hidl_cb(ret, client_file);
+    _hidl_cb(ret, file_paths);
     return Void();
   }
 
   uint64_t *input = nullptr;
+  DemuraFilePaths *out_paths = nullptr;
   GenericPayload in;
   GenericPayload out;
-  std::string *path = nullptr;
 
   int error = 0;
   if ((error = in.CreatePayload(input))) {
     ret = -ENOMEM;
     ALOGE("Failed to create input payload error = %d", error);
-    _hidl_cb(ret, client_file);
+    _hidl_cb(ret, file_paths);
     return Void();
   }
 
-  if ((error = out.CreatePayload(path))) {
+  if ((error = out.CreatePayload(out_paths))) {
     ret = -ENOMEM;
     ALOGE("Failed to create output payload error = %d", error);
-    _hidl_cb(ret, client_file);
+    _hidl_cb(ret, file_paths);
     return Void();
   }
 
@@ -134,19 +135,22 @@ Return<void> DemuraFileFinder::getCorrectionFile(uint64_t panel_id, getCorrectio
   if ((error = file_intf_->ProcessOps(kFileFinderFileData, in, &out))) {
     ret = error;
     ALOGE("Failed to process ops error = %d", error);
-    _hidl_cb(ret, client_file);
+    _hidl_cb(ret, file_paths);
     return Void();
   }
 
-  ALOGI("Demura correction file %s", path->c_str());
-  client_file = *path;
-  _hidl_cb(ret, client_file);
+  file_paths = *out_paths;
+  ALOGI("Demura file paths : config file %s signature file %s public key file %s",
+        file_paths.configFilePath.c_str(), file_paths.signatureFilePath.c_str(),
+        file_paths.publickeyFilePath.c_str());
+
+  _hidl_cb(ret, file_paths);
 
   return Void();
 }
 
 }  // namespace implementation
-}  // namespace V1_0
+}  // namespace V2_0
 }  // namespace demura
 }  // namespace display
 }  // namespace hardware

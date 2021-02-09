@@ -25,9 +25,9 @@ PRODUCT_PACKAGES += \
 #oem_services library
 PRODUCT_PACKAGES += \
     libfilefinder \
-    vendor.qti.hardware.display.demura@1.0-service.rc \
+    vendor.qti.hardware.display.demura-service.rc \
     vendor.qti.hardware.display.demura-service.xml \
-    vendor.qti.hardware.display.demura@1.0-service
+    vendor.qti.hardware.display.demura-service
 
 ifneq ($(TARGET_HAS_LOW_RAM),true)
 #QDCM calibration xml file for 2k panel

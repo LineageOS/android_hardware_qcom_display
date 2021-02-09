@@ -61,10 +61,10 @@ cc_binary {
         "libgralloctypes",
         "libdisplayconfig.qti",
         "libdrm",
-        "vendor.qti.hardware.display.demura@1.0",
         "libbinder_ndk",
         "android.hardware.common-V2-ndk_platform",
         "vendor.qti.hardware.display.config-V2-ndk_platform",
+        "vendor.qti.hardware.display.demura@2.0",
     ],
 
     static_libs: [

@@ -1,31 +1,31 @@
 /*
-*Copyright (c) 2020, The Linux Foundation. All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted provided that the following conditions are
-* met:
-*    * Redistributions of source code must retain the above copyright
-*      notice, this list of conditions and the following disclaimer.
-*    * Redistributions in binary form must reproduce the above
-*      copyright notice, this list of conditions and the following
-*      disclaimer in the documentation and/or other materials provided
-*      with the distribution.
-*    * Neither the name of The Linux Foundation nor the names of its
-*      contributors may be used to endorse or promote products derived
-*      from this software without specific prior written permission.
-*
-*THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
-*WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-*MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
-*ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
-*BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-*CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-*SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-*BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-*WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-*OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-*IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ *Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *    * Redistributions of source code must retain the above copyright
+ *      notice, this list of conditions and the following disclaimer.
+ *    * Redistributions in binary form must reproduce the above
+ *      copyright notice, this list of conditions and the following
+ *      disclaimer in the documentation and/or other materials provided
+ *      with the distribution.
+ *    * Neither the name of The Linux Foundation nor the names of its
+ *      contributors may be used to endorse or promote products derived
+ *      from this software without specific prior written permission.
+ *
+ *THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
+ *WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ *MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
+ *ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
+ *BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ *CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ *SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+ *BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ *WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+ *OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+ *IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 #include <inttypes.h>
 #include <log/log.h>
@@ -155,8 +155,7 @@ int IPCImpl::ProcessOps(IPCOps op, const GenericPayload &in, GenericPayload *out
     case kIpcOpsFilePath: {
       uint32_t sz = 0;
       uint64_t* panel_id = nullptr;
-      std::string *demura_file = nullptr;
-      std::string file_path = "";
+      DemuraPaths *file_paths = nullptr;
       sp<IDemuraFileFinder> mClient = IDemuraFileFinder::getService();
       if (mClient != NULL) {
         if ((ret = in.GetPayload(panel_id, &sz))) {
@@ -164,25 +163,24 @@ int IPCImpl::ProcessOps(IPCOps op, const GenericPayload &in, GenericPayload *out
           return ret;
         }
         DLOGI("panel_id %" PRIu64, *panel_id);
-        if ((ret = out->GetPayload(demura_file, &sz))) {
+        if ((ret = out->GetPayload(file_paths, &sz))) {
           DLOGE("Failed to get output payload error = %d", ret);
           return ret;
         }
-        mClient->getCorrectionFile((*panel_id),
-                                  [&](const auto& tmpReturn, const auto& tmpHandle){
-                                      ret = tmpReturn;
-                                      if (ret != 0) {
-                                        file_path = "";
-                                        return;
-                                      }
-                                      file_path=(std::string)tmpHandle;
-                                    });
+        mClient->getDemuraFilePaths((*panel_id), [&](const auto &tmpReturn, const auto &tmpHandle) {
+          ret = tmpReturn;
+          if (ret != 0) {
+            *file_paths = {};
+            return;
+          }
+          file_paths->configPath = (std::string)(tmpHandle.configFilePath);
+          file_paths->signaturePath = (std::string)(tmpHandle.signatureFilePath);
+          file_paths->publickeyPath = (std::string)(tmpHandle.publickeyFilePath);
+        });
         if (ret != 0) {
-          DLOGE("getCorrectionFile failed %d", ret);
+          DLOGE("getDemuraFilePaths failed %d", ret);
           return ret;
         }
-        *demura_file = file_path;
-        DLOGI("File Path %s", file_path.c_str());
       } else {
         DLOGE("Could not get IDemuraFileFinder");
         return -ENODEV;
