@@ -1174,6 +1174,17 @@ void HWDeviceDRM::SetupAtomic(HWLayers *hw_layers, bool validate) {
         if (update_config) {
           drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ALPHA, pipe_id, layer.plane_alpha);
 
+#ifdef FOD_ZPOS
+          uint32_t fod_value = 0x0;
+          if (layer.flags.fod_icon) {
+            fod_value = FOD_ICON_LAYER_ZORDER >> 0x18;
+          }
+          if (layer.flags.fod_hbm) {
+            fod_value = FOD_HBM_LAYER_ZORDER >> 0x18;
+          }
+          drm_atomic_intf_->Perform(DRMOps::PLANE_SET_FOD, pipe_id, fod_value);
+          drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MI_FOD_SYNC_INFO, token_.crtc_id, fod_value);
+#endif
           drm_atomic_intf_->Perform(DRMOps::PLANE_SET_ZORDER, pipe_id, pipe_info->z_order);
 
           DRMBlendType blending = {};

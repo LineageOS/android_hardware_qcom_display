@@ -468,6 +468,21 @@ HWC2::Error HWCLayer::SetLayerPlaneAlpha(float alpha) {
   return HWC2::Error::None;
 }
 
+HWC2::Error HWCLayer::SetLayerFod(uint32_t z) {
+#ifdef FOD_ZPOS
+    if (z & FOD_ICON_LAYER_ZORDER) {
+      fod_icon_ = true;
+      z &= ~FOD_ICON_LAYER_ZORDER;
+    }
+    if (z & FOD_HBM_LAYER_ZORDER) {
+      fod_hbm_ = true;
+      z &= ~FOD_HBM_LAYER_ZORDER;
+    }
+#endif
+
+    return HWC2::Error::None;
+}
+
 HWC2::Error HWCLayer::SetLayerSourceCrop(hwc_frect_t crop) {
   LayerRect src_rect = {};
   SetRect(crop, &src_rect);

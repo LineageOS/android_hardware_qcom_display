@@ -40,6 +40,10 @@
 #include "core/buffer_allocator.h"
 #include "hwc_buffer_allocator.h"
 
+#ifdef FOD_ZPOS
+#include <drm/sde_drm.h>
+#endif
+
 using PerFrameMetadataKey =
     android::hardware::graphics::composer::V2_3::IComposerClient::PerFrameMetadataKey;
 
@@ -85,6 +89,7 @@ class HWCLayer {
   HWC2::Error SetLayerDisplayFrame(hwc_rect_t frame);
   HWC2::Error SetCursorPosition(int32_t x, int32_t y);
   HWC2::Error SetLayerPlaneAlpha(float alpha);
+  HWC2::Error SetLayerFod(uint32_t z);
   HWC2::Error SetLayerSourceCrop(hwc_frect_t crop);
   HWC2::Error SetLayerSurfaceDamage(hwc_region_t damage);
   HWC2::Error SetLayerTransform(HWC2::Transform transform);
@@ -119,6 +124,10 @@ class HWCLayer {
   void SetLayerAsMask();
   bool BufferLatched() { return buffer_flipped_; }
   void ResetBufferFlip() { buffer_flipped_ = false; }
+#ifdef FOD_ZPOS
+  bool IsFodHbm() { return fod_hbm_; }
+  bool IsFodIcon() { return fod_icon_; }
+#endif
 
  private:
   Layer *layer_ = nullptr;
@@ -139,6 +148,10 @@ class HWCLayer {
   bool non_integral_source_crop_ = false;
   bool has_metadata_refresh_rate_ = false;
   bool buffer_flipped_ = false;
+#ifdef FOD_ZPOS
+  bool fod_hbm_ = false;
+  bool fod_icon_ = false;
+#endif
 
   // Composition requested by client(SF) Original
   HWC2::Composition client_requested_orig_ = HWC2::Composition::Device;

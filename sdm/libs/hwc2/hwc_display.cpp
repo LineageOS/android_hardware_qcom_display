@@ -674,6 +674,15 @@ void HWCDisplay::BuildLayerStack() {
       layer->flags.solid_fill = true;
     }
 
+#ifdef FOD_ZPOS
+    if (hwc_layer->IsFodIcon()) {
+      layer->flags.fod_icon = true;
+    }
+    if (hwc_layer->IsFodHbm()) {
+      layer->flags.fod_hbm = true;
+    }
+#endif
+
     if (!hwc_layer->IsDataSpaceSupported()) {
       layer->flags.skip = true;
     }
@@ -851,6 +860,9 @@ HWC2::Error HWCDisplay::SetLayerZOrder(hwc2_layer_t layer_id, uint32_t z) {
     return HWC2::Error::BadLayer;
   }
 
+#ifdef FOD_ZPOS
+  layer->SetLayerFod(z);
+#endif
   layer->SetLayerZOrder(z);
   layer_set_.emplace(layer);
   return HWC2::Error::None;
