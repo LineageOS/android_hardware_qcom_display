@@ -187,7 +187,7 @@ void DmaManager::GetHeapInfo(uint64_t usage, std::string *ion_heap_name, unsigne
 #ifndef QMAA
   if (usage & GRALLOC_USAGE_PROTECTED) {
     if (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY) {
-      heap_name = "qcom,secure-display";
+      heap_name = "qcom,display";
       /*
        * There is currently no flag in ION for Secure Display
        * VM. Please add it to the define once available.
@@ -199,13 +199,13 @@ void DmaManager::GetHeapInfo(uint64_t usage, std::string *ion_heap_name, unsigne
       if (property_get("vendor.gralloc.secure_preview_only", property, NULL) > 0) {
         secure_preview_only = atoi(property);
       }
-      heap_name = "qcom,secure-display";
+      heap_name = "qcom,display";
       *sec_flag = true;
     } else if (usage & GRALLOC_USAGE_PRIVATE_CDSP) {
-      heap_name = "qcom,secure-cdsp-carveout";
+      heap_name = "qcom,secure-cdsp";
       *sec_flag = true;
     } else {
-      heap_name = "qcom,secure-pixel-system";
+      heap_name = "qcom,secure-pixel";
       *sec_flag = true;
     }
   } else if (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY) {

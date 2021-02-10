@@ -238,7 +238,7 @@ void DmaLegacyManager::GetHeapInfo(uint64_t usage, std::string *ion_heap_name,
   if (usage & GRALLOC_USAGE_PROTECTED) {
     if (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY) {
       is_default = false;
-      heap_name = "qcom,secure-display";
+      heap_name = "qcom,display";
       /*
        * There is currently no flag in ION for Secure Display
        * VM. Please add it to the define once available.
@@ -254,7 +254,7 @@ void DmaLegacyManager::GetHeapInfo(uint64_t usage, std::string *ion_heap_name,
         secure_preview_only = atoi(property);
       }
       is_default = false;
-      heap_name = "qcom,secure-display";
+      heap_name = "qcom,display";
       if (usage & GRALLOC_USAGE_PRIVATE_CDSP) {
         flags |= UINT(ION_SECURE | ION_FLAG_CP_CDSP);
       }
@@ -272,14 +272,14 @@ void DmaLegacyManager::GetHeapInfo(uint64_t usage, std::string *ion_heap_name,
       *sec_flag = true;
     } else if (usage & GRALLOC_USAGE_PRIVATE_CDSP) {
       is_default = false;
-      heap_name = "qcom,secure-cdsp-carveout";
+      heap_name = "qcom,secure-cdsp";
       flags |= UINT(ION_SECURE | ION_FLAG_CP_CDSP);
       buffer_allocator_.MapNameToIonHeap(heap_name, "secure_carveout", flags,
                                          ION_HEAP(ION_SECURE_CARVEOUT_HEAP_ID), flags);
       *sec_flag = true;
     } else {
       is_default = false;
-      heap_name = "qcom,secure-pixel-system";
+      heap_name = "qcom,secure-pixel";
       flags |= UINT(ION_CP_FLAGS);
       buffer_allocator_.MapNameToIonHeap(heap_name, "secure_heap", flags,
                                          ION_HEAP(ION_SECURE_HEAP_ID), flags);
