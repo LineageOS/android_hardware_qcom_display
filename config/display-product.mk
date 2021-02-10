@@ -176,6 +176,9 @@ SOONG_CONFIG_qtidisplay_llvmsa := false
 SOONG_CONFIG_qtidisplay_gralloc4 := true
 SOONG_CONFIG_qtidisplay_default := true
 
+# Techpack values
+BUILD_DISPLAY_TECHPACK_SOURCE := true
+
 ifeq ($(TARGET_IS_HEADLESS), true)
     # TODO: QMAA prebuilts
     PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/qmaa
@@ -192,7 +195,6 @@ else
     #Properties that should not be set in QMAA are enabled here.
     PRODUCT_PROPERTY_OVERRIDES += \
         vendor.display.enable_early_wakeup=1
-    BUILD_DISPLAY_TECHPACK_SOURCE := true
     ifeq ($(BUILD_DISPLAY_TECHPACK_SOURCE), true)
         PRODUCT_SOONG_NAMESPACES += hardware/qcom/display
         PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/gralloc
