@@ -593,6 +593,18 @@ class DisplayInterface {
   */
   virtual DisplayError SetActiveConfig(uint32_t index) = 0;
 
+  /*! @brief Method to override NoisePlugIn parameters of the display device.
+
+    @param[in] override_en enable flag for toggling override on/off.
+    @param[in] attn output attenuation factor.
+    @param[in] noise_zpos z-order position of noise layer.
+    @param[in] bl_thr backlight threshold to determine global dimming scenario.
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError SetNoisePlugInOverride(bool override_en, int32_t attn, int32_t noise_zpos,
+                                              int32_t bl_thr) = 0;
+
   /*! @brief Method to set VSync event state. Default event state is disabled.
 
     @param[out] enabled vsync state

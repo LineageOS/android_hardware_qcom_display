@@ -455,6 +455,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   int GetConfigCount(int disp_id, uint32_t *count);
   int GetActiveConfigIndex(int disp_id, uint32_t *config);
   int SetActiveConfigIndex(int disp_id, uint32_t config);
+  int SetNoisePlugInOverride(int32_t disp_id, bool override_en, int32_t attn,
+                             int32_t noise_zpos, int32_t bl_thr);
   int ControlPartialUpdate(int dpy, bool enable);
   int DisplayBWTransactionPending(bool *status);
   int SetDisplayStatus(int disp_id, HWCDisplay::DisplayStatus status);

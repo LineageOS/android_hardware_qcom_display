@@ -2323,6 +2323,16 @@ int HWCDisplay::SetActiveDisplayConfig(uint32_t config) {
   return 0;
 }
 
+int HWCDisplay::SetNoisePlugInOverride(bool override_en, int32_t attn, int32_t noise_zpos,
+                                       int32_t bl_thr) {
+  DisplayError error = display_intf_->SetNoisePlugInOverride(override_en, attn, noise_zpos, bl_thr);
+  if (error != kErrorNone) {
+    DLOGE("Failed to override NoisePlugIn! Error: %d", error);
+    return -EINVAL;
+  }
+  return 0;
+}
+
 int HWCDisplay::GetActiveDisplayConfig(uint32_t *config) {
   return display_intf_->GetActiveConfig(config) == kErrorNone ? 0 : -1;
 }

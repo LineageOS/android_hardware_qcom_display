@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 The Android Open Source Project
- * Copyright (C) 2012-2014, 2016-2020 The Linux Foundation. All rights reserved.
+ * Copyright (C) 2012-2014, 2016-2021 The Linux Foundation. All rights reserved.
  *
  * Not a Contribution, Apache license notifications and license are
  * retained for attribution purposes only.
@@ -81,7 +81,8 @@ public:
       SET_COLOR_SAMPLING_ENABLED = 49,         // Toggle the collection of display color stats
       SET_VSYNC_STATE = 50,                    // Enable/disable Vsync
       NOTIFY_TUI_TRANSITION = 51,              // Notify TUI transition prepare/start/stop
-      GET_DISPLAY_PORT_ID = 52,                        // Get the port id for a given display
+      GET_DISPLAY_PORT_ID = 52,                // Get the port id for a given display
+      SET_NOISE_PLUGIN_OVERRIDE = 53,          // Override NoisePlugIn parameters
       COMMAND_LIST_END = 400,
     };
 
