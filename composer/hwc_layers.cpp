@@ -40,11 +40,14 @@ DisplayError SetCSC(const native_handle_t *handle, ColorMetaData *color_metadata
       color_metadata->transfer = color.transfer;
       color_metadata->range = color.range;
       return kErrorNone;
+    } else {
+      DLOGW("Error in qtigralloc get, err=%d", err);
     }
+  } else {
+    DLOGV("Failed to get values for CSC");
   }
 
-  DLOGW("Failed to get values for CSC");
-  return kErrorNotSupported;
+  return kErrorNone;
 }
 
 // Returns true when color primary is supported
