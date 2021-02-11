@@ -1059,11 +1059,18 @@ HWC2::Error HWCDisplayBuiltIn::SetFrameDumpConfig(uint32_t count, uint32_t bit_m
     }
   }
 
-  if (!count || !dump_output_to_file || (output_buffer_info_.alloc_buffer_info.fd >= 0)) {
+  if (!count || (dump_output_to_file && (output_buffer_info_.alloc_buffer_info.fd >= 0))) {
+    DLOGW("FrameDump Not enabled Framecount = %d dump_output_to_file = %d o/p fd = %d", count,
+          dump_output_to_file, output_buffer_info_.alloc_buffer_info.fd);
     return HWC2::Error::None;
   }
 
   HWCDisplay::SetFrameDumpConfig(count, bit_mask_layer_type, format, post_processed);
+
+  if (!dump_output_to_file) {
+    // output(cwb) not requested, return
+    return HWC2::Error::None;
+  }
 
   // Allocate and map output buffer
   if (post_processed) {
