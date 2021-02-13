@@ -2,6 +2,8 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE                  := libdrmutils
+LOCAL_LICENSE_KINDS           := SPDX-license-identifier-BSD
+LOCAL_LICENSE_CONDITIONS      := notice
 LOCAL_VENDOR_MODULE           := true
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := external/libdrm \

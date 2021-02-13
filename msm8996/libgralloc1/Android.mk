@@ -4,12 +4,16 @@ include $(LOCAL_PATH)/../common.mk
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := gralloc_headers
+LOCAL_LICENSE_KINDS := SPDX-license-identifier-Apache-2.0 SPDX-license-identifier-BSD legacy_not_a_contribution
+LOCAL_LICENSE_CONDITIONS := by_exception_only not_allowed notice
 LOCAL_EXPORT_C_INCLUDE_DIRS   := $(LOCAL_PATH)
 LOCAL_EXPORT_HEADER_LIBRARY_HEADERS := libhardware_headers liblog_headers
 include $(BUILD_HEADER_LIBRARY)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE                  := gralloc.$(TARGET_BOARD_PLATFORM)
+LOCAL_LICENSE_KINDS           := SPDX-license-identifier-Apache-2.0 SPDX-license-identifier-BSD legacy_not_a_contribution
+LOCAL_LICENSE_CONDITIONS      := by_exception_only not_allowed notice
 LOCAL_MODULE_RELATIVE_PATH    := hw
 LOCAL_PROPRIETARY_MODULE      := true
 LOCAL_MODULE_TAGS             := optional
