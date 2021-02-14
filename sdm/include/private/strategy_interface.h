@@ -47,6 +47,7 @@ class StrategyInterface {
   virtual DisplayError Start(DispLayerStack *disp_layer_stack, uint32_t *max_attempts) = 0;
   virtual DisplayError GetNextStrategy(StrategyConstraints *constraints) = 0;
   virtual DisplayError Stop() = 0;
+  virtual DisplayError SetDrawMethod(const DisplayDrawMethod &draw_method) = 0;
   virtual DisplayError Reconfigure(const HWPanelInfo &hw_panel_info,
                                    const HWResourceInfo &hw_res_info,
                                    const HWMixerAttributes &mixer_attributes,

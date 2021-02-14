@@ -252,6 +252,14 @@ DisplayError Strategy::Purge() {
   return kErrorNone;
 }
 
+DisplayError Strategy::SetDrawMethod(const DisplayDrawMethod &draw_method) {
+  if (strategy_intf_) {
+    return strategy_intf_->SetDrawMethod(draw_method);
+  }
+
+  return kErrorNone;
+}
+
 DisplayError Strategy::SetIdleTimeoutMs(uint32_t active_ms, uint32_t inactive_ms) {
   if (strategy_intf_) {
     return strategy_intf_->SetIdleTimeoutMs(active_ms, inactive_ms);

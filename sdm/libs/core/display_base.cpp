@@ -854,7 +854,18 @@ DisplayError DisplayBase::GetVSyncState(bool *enabled) {
 }
 
 DisplayError DisplayBase::SetDrawMethod(DisplayDrawMethod draw_method) {
-  return kErrorNotSupported;
+  ClientLock lock(disp_mutex_);
+  if (draw_method_set_ || !first_cycle_) {
+    DLOGE("Draw method set = %d or commits already started: %d", draw_method_, !first_cycle_);
+    return kErrorNotSupported;
+  }
+
+  comp_manager_->SetDrawMethod(display_comp_ctx_, draw_method);
+  draw_method_ = draw_method;
+  draw_method_set_ = true;
+  DLOGI("method: %d", draw_method);
+
+  return kErrorNone;
 }
 
 DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,

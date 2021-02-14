@@ -212,6 +212,11 @@ DisplayError ResourceDefault::Stop(Handle display_ctx, DispLayerStack *disp_laye
   return kErrorNone;
 }
 
+DisplayError ResourceDefault::SetDrawMethod(Handle display_ctx,
+                                            const DisplayDrawMethod &draw_method) {
+  return kErrorNone;
+}
+
 DisplayError ResourceDefault::Prepare(Handle display_ctx, DispLayerStack *disp_layer_stack) {
   DisplayResourceContext *display_resource_ctx =
                           reinterpret_cast<DisplayResourceContext *>(display_ctx);

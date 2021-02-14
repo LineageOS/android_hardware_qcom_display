@@ -698,6 +698,17 @@ bool CompManager::CheckResourceState(Handle display_ctx) {
   return res_wait_needed;
 }
 
+DisplayError CompManager::SetDrawMethod(Handle display_ctx, const DisplayDrawMethod &draw_method) {
+  SCOPE_LOCK(locker_);
+  DisplayCompositionContext *display_comp_ctx =
+      reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+
+  display_comp_ctx->strategy->SetDrawMethod(draw_method);
+  resource_intf_->SetDrawMethod(display_comp_ctx->display_resource_ctx, draw_method);
+
+  return kErrorNone;
+}
+
 bool CompManager::IsRotatorSupportedFormat(LayerBufferFormat format) {
   if (resource_intf_) {
     return resource_intf_->IsRotatorSupportedFormat(format);

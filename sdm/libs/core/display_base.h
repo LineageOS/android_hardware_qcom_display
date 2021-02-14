@@ -340,6 +340,8 @@ class DisplayBase : public DisplayInterface {
   bool mmrm_updated_ = false;
   uint32_t mmrm_requested_clk_ = 0;
   static bool primary_active_;
+  DisplayDrawMethod draw_method_ = kDrawDefault;
+  bool draw_method_set_ = false;
 };
 
 }  // namespace sdm

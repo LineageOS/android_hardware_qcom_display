@@ -46,6 +46,7 @@ class Strategy {
   DisplayError Start(DispLayerStack *disp_layer_stack, uint32_t *max_attempts);
   DisplayError GetNextStrategy(StrategyConstraints *constraints);
   DisplayError Stop();
+  DisplayError SetDrawMethod(const DisplayDrawMethod &draw_method);
   DisplayError Reconfigure(const HWPanelInfo &hw_panel_info,
                            const HWDisplayAttributes &hw_display_attributes,
                            const HWMixerAttributes &mixer_attributes,

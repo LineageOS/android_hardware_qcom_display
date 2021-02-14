@@ -52,6 +52,7 @@ class ResourceDefault : public ResourceInterface {
                                           const HWMixerAttributes &mixer_attributes);
   virtual DisplayError Start(Handle display_ctx);
   virtual DisplayError Stop(Handle display_ctx, DispLayerStack *disp_layer_stack);
+  virtual DisplayError SetDrawMethod(Handle display_ctx, const DisplayDrawMethod &draw_method);
   virtual DisplayError Prepare(Handle display_ctx, DispLayerStack *disp_layer_stack);
   virtual DisplayError PostPrepare(Handle display_ctx, DispLayerStack *disp_layer_stack);
   virtual DisplayError Commit(Handle display_ctx, DispLayerStack *disp_layer_stack);
