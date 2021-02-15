@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016 - 2017, 2020 The Linux Foundation. All rights reserved.
+* Copyright (c) 2016 - 2017, 2020 - 2021 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -31,6 +31,7 @@
 #include <math.h>
 #include <utils/sys.h>
 #include <utils/utils.h>
+#include <utils/debug.h>
 
 #include <algorithm>
 
@@ -68,6 +69,14 @@ uint64_t GetSystemTimeInNs() {
   clock_gettime(CLOCK_MONOTONIC, &ts);
 
   return (uint64_t) ts.tv_sec * pow(10, 9) + (uint64_t)ts.tv_nsec;
+}
+
+void SetRealTimePriority() {
+  struct sched_param param = {0};
+  param.sched_priority = 2;
+  if (sched_setscheduler(0, SCHED_FIFO | SCHED_RESET_ON_FORK, &param) != 0) {
+    DLOGW("Couldn't set SCHED_FIFO: %d", errno);
+  }
 }
 
 }  // namespace sdm

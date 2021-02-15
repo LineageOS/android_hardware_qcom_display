@@ -501,13 +501,9 @@ DisplayError ColorManagerProxy::Validate(DispLayerStack *disp_layer_stack) {
   return kErrorNone;
 }
 
-DisplayError ColorManagerProxy::PrePrepare(DispLayerStack *disp_layer_stack) {
-  DisplayError ret = kErrorNone;
-  if (!disp_layer_stack) {
-    return ret;
-  }
-
+DisplayError ColorManagerProxy::PrePrepare() {
   needs_update_ = NeedHwAssetsUpdate();
+
   return kErrorNone;
 }
 

@@ -471,7 +471,6 @@ struct PrimariesTransfer {
   }
 };
 
-
 /*! @brief This structure defines a layer stack that contains layers which need to be composed and
   rendered onto the target.
 

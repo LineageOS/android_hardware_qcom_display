@@ -195,36 +195,29 @@ DisplayError DisplayBuiltIn::Deinit() {
   return DisplayBase::Deinit();
 }
 
-DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
-  ClientLock lock(disp_mutex_);
-  DisplayError error = kErrorNone;
+bool DisplayBuiltIn::PrePrepare(LayerStack *layer_stack) {
+  DTRACE_SCOPED();
   uint32_t new_mixer_width = 0;
   uint32_t new_mixer_height = 0;
   uint32_t display_width = display_attributes_.x_pixels;
   uint32_t display_height = display_attributes_.y_pixels;
 
-  DTRACE_SCOPED();
-
   if (NeedsMixerReconfiguration(layer_stack, &new_mixer_width, &new_mixer_height)) {
-    error = ReconfigureMixer(new_mixer_width, new_mixer_height);
+    DisplayError error = ReconfigureMixer(new_mixer_width, new_mixer_height);
     if (error != kErrorNone) {
       ReconfigureMixer(display_width, display_height);
     }
   } else {
     if (CanSkipDisplayPrepare(layer_stack)) {
       UpdateQsyncMode();
-      return kErrorNone;
+      return true;
     }
   }
 
-  // Clean display layer stack for reuse.
-  disp_layer_stack_ = DispLayerStack();
+  return false;
+}
 
-  UpdateQsyncMode();
-
-  left_frame_roi_ = {};
-  right_frame_roi_ = {};
-
+DisplayError DisplayBuiltIn::HandleSPR() {
   if (spr_) {
     GenericPayload out;
     uint32_t *enable = nullptr;
@@ -241,18 +234,47 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
     spr_enable_ = *enable;
   }
 
-  error = DisplayBase::Prepare(layer_stack);
+  return kErrorNone;
+}
 
-  // Cache the Frame ROI.
-  if (error == kErrorNone) {
-    if (disp_layer_stack_.info.left_frame_roi.size() &&
-        disp_layer_stack_.info.right_frame_roi.size()) {
-      left_frame_roi_ = disp_layer_stack_.info.left_frame_roi.at(0);
-      right_frame_roi_ = disp_layer_stack_.info.right_frame_roi.at(0);
-    }
+DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
+  DTRACE_SCOPED();
+  ClientLock lock(disp_mutex_);
+
+  if (PrePrepare(layer_stack)) {
+    return kErrorNone;
   }
 
-  return error;
+  // Clean display layer stack for reuse.
+  disp_layer_stack_ = DispLayerStack();
+
+  DisplayError error = HandleSPR();
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  error = DisplayBase::Prepare(layer_stack);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  UpdateQsyncMode();
+
+  CacheFrameROI();
+
+  return kErrorNone;
+}
+
+void DisplayBuiltIn::CacheFrameROI() {
+  left_frame_roi_ = {};
+  right_frame_roi_ = {};
+
+  // Cache the Frame ROI.
+  if (disp_layer_stack_.info.left_frame_roi.size() &&
+      disp_layer_stack_.info.right_frame_roi.size()) {
+    left_frame_roi_ = disp_layer_stack_.info.left_frame_roi.at(0);
+    right_frame_roi_ = disp_layer_stack_.info.right_frame_roi.at(0);
+  }
 }
 
 void DisplayBuiltIn::UpdateQsyncMode() {
@@ -462,13 +484,8 @@ DisplayError DisplayBuiltIn::SetupDemuraLayer() {
   return kErrorNone;
 }
 
-DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
-  ClientLock lock(disp_mutex_);
-  DisplayError error = kErrorNone;
+void DisplayBuiltIn::PreCommit(LayerStack *layer_stack) {
   uint32_t app_layer_count = disp_layer_stack_.info.app_layer_count;
-  HWDisplayMode panel_mode = hw_panel_info_.mode;
-
-  DTRACE_SCOPED();
 
   // Enabling auto refresh is async and needs to happen before commit ioctl
   if (hw_panel_info_.mode == kModeCommand) {
@@ -482,7 +499,7 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
   }
 
   if (trigger_mode_debug_ != kFrameTriggerMax) {
-    error = hw_intf_->SetFrameTrigger(trigger_mode_debug_);
+    DisplayError error = hw_intf_->SetFrameTrigger(trigger_mode_debug_);
     if (error != kErrorNone) {
       DLOGE("Failed to set frame trigger mode %d, err %d", (int)trigger_mode_debug_, error);
     } else {
@@ -502,14 +519,23 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
   }
   // effectively drmModeAtomicAddProperty for SDE_DSPP_HIST_IRQ_V1
   if (histogramSetup) {
-    DppsProcessOps(kDppsSetFeature, &histogramIRQ, sizeof(histogramIRQ));
+    SetDppsFeatureLocked(&histogramIRQ, sizeof(histogramIRQ));
   }
+}
 
-  error = DisplayBase::Commit(layer_stack);
+DisplayError DisplayBuiltIn::CommitLocked(LayerStack *layer_stack) {
+  HWDisplayMode panel_mode = hw_panel_info_.mode;
+  PreCommit(layer_stack);
+
+  DisplayError error = DisplayBase::CommitLocked(layer_stack);
   if (error != kErrorNone) {
     return error;
   }
 
+  return PostCommit(layer_stack, panel_mode);
+}
+
+DisplayError DisplayBuiltIn::PostCommit(LayerStack *layer_stack, HWDisplayMode panel_mode) {
   if (pending_brightness_) {
     Fence::Wait(layer_stack->retire_fence);
     SetPanelBrightness(cached_brightness_);
@@ -555,7 +581,7 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
   if (switch_to_cmd_) {
     uint32_t pending;
     switch_to_cmd_ = false;
-    ControlPartialUpdate(true /* enable */, &pending);
+    ControlPartialUpdateLocked(true /* enable */, &pending);
   }
 
   if (panel_mode != hw_panel_info_.mode) {
@@ -576,7 +602,7 @@ DisplayError DisplayBuiltIn::Commit(LayerStack *layer_stack) {
 
   handle_idle_timeout_ = false;
 
-  return error;
+  return kErrorNone;
 }
 
 void DisplayBuiltIn::HandleQsyncPostCommit(LayerStack *layer_stack) {
@@ -603,7 +629,7 @@ void DisplayBuiltIn::HandleQsyncPostCommit(LayerStack *layer_stack) {
 void DisplayBuiltIn::UpdateDisplayModeParams() {
   if (hw_panel_info_.mode == kModeVideo) {
     uint32_t pending = 0;
-    ControlPartialUpdate(false /* enable */, &pending);
+    ControlPartialUpdateLocked(false /* enable */, &pending);
   } else if (hw_panel_info_.mode == kModeCommand) {
     // Flush idle timeout value currently set.
     comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, 0, 0);
@@ -696,7 +722,7 @@ DisplayError DisplayBuiltIn::SetDisplayMode(uint32_t mode) {
     DisplayBase::ReconfigureDisplay();
 
     if (mode == kModeVideo) {
-      ControlPartialUpdate(false /* enable */, &pending);
+      ControlPartialUpdateLocked(false /* enable */, &pending);
     } else if (mode == kModeCommand) {
       // Flush idle timeout value currently set.
       comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, 0, 0);
@@ -942,7 +968,7 @@ void DisplayBuiltIn::HandleBacklightEvent(float brightness_level) {
       return;
     }
     backlight_params->brightness = brightness;
-    backlight_params->is_primary = IsPrimaryDisplay();
+    backlight_params->is_primary = IsPrimaryDisplayLocked();
     if ((ret = ipc_intf_->SetParameter(kIpcParamSetBacklight, in))) {
       DLOGW("Failed to set backlight, error = %d", ret);
     }
@@ -998,6 +1024,10 @@ DisplayError DisplayBuiltIn::GetPanelMaxBrightness(uint32_t *max_brightness_leve
 
 DisplayError DisplayBuiltIn::ControlPartialUpdate(bool enable, uint32_t *pending) {
   ClientLock lock(disp_mutex_);
+  return ControlPartialUpdateLocked(enable, pending);
+}
+
+DisplayError DisplayBuiltIn::ControlPartialUpdateLocked(bool enable, uint32_t *pending) {
   if (!pending) {
     return kErrorParameters;
   }
@@ -1048,7 +1078,7 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
       }
       {
         ClientLock lock(disp_mutex_);
-        error = hw_intf_->SetDppsFeature(payload, size);
+        error = SetDppsFeatureLocked(payload, size);
       }
       break;
     case kDppsGetFeatureInfo:
@@ -1105,7 +1135,7 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
       info = reinterpret_cast<DppsDisplayInfo *>(payload);
       info->width = display_attributes_.x_pixels;
       info->height = display_attributes_.y_pixels;
-      info->is_primary = IsPrimaryDisplay();
+      info->is_primary = IsPrimaryDisplayLocked();
       info->display_id = display_id_;
       info->display_type = display_type_;
 
@@ -1827,7 +1857,6 @@ DisplayError DisplayBuiltIn::SetActiveConfig(uint32_t index) {
 }
 
 DisplayError DisplayBuiltIn::ReconfigureDisplay() {
-  ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
   HWDisplayAttributes display_attributes;
   HWMixerAttributes mixer_attributes;
@@ -2006,7 +2035,7 @@ void DisplayBuiltIn::SendDisplayConfigs() {
     disp_configs->fps = display_attributes_.fps;
     disp_configs->config_idx = active_index;
     disp_configs->smart_panel = display_attributes_.smart_panel;
-     disp_configs->is_primary = IsPrimaryDisplay();
+    disp_configs->is_primary = IsPrimaryDisplayLocked();
     if ((ret = ipc_intf_->SetParameter(kIpcParamSetDisplayConfigs, in))) {
       DLOGW("Failed to send display config, error = %d", ret);
     }
@@ -2035,6 +2064,10 @@ int DisplayBuiltIn::SetDemuraIntfStatus(bool enable) {
 
   DLOGI("Demura is now %s", enable ? "Enabled" : "Disabled");
   return ret;
+}
+
+DisplayError DisplayBuiltIn::SetDppsFeatureLocked(void *payload, size_t size) {
+  return hw_intf_->SetDppsFeature(payload, size);
 }
 
 }  // namespace sdm
