@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -342,7 +342,8 @@ void DRMDppsManagerImp::CacheDppsFeature(uint32_t obj_id, va_list args) {
   }
 }
 
-void DRMDppsManagerImp::CommitDppsFeatures(drmModeAtomicReq *req, const DRMDisplayToken &tok) {
+void DRMDppsManagerImp::CommitDppsFeatures(drmModeAtomicReq *req, const DRMDisplayToken &tok,
+    uint32_t validate_only) {
   std::lock_guard<std::mutex> guard(api_lock_);
   int ret = 0;
 
@@ -357,6 +358,8 @@ void DRMDppsManagerImp::CommitDppsFeatures(drmModeAtomicReq *req, const DRMDispl
         if (ret < 0)
           DRM_LOGE("AtomicAddProperty failed obj_id 0x%x, prop_id %d ret %d ", it->obj_id,
                    it->prop_id, ret);
+        else if (validate_only)
+          it++;
         else
           it = dpps_dirty_prop_.erase(it);
       } else {

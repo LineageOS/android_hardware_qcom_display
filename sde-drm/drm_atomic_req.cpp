@@ -134,7 +134,8 @@ int DRMAtomicReq::Perform(DRMOps opcode, uint32_t obj_id, ...) {
       drm_mgr_->GetDppsMgrIntf()->CacheDppsFeature(obj_id, args);
     } break;
     case DRMOps::DPPS_COMMIT_FEATURE: {
-      drm_mgr_->GetDppsMgrIntf()->CommitDppsFeatures(drm_atomic_req_, token_);
+      uint32_t validate_only = va_arg(args, uint32_t);
+      drm_mgr_->GetDppsMgrIntf()->CommitDppsFeatures(drm_atomic_req_, token_, validate_only);
     } break;
     case DRMOps::PLANES_RESET_CACHE: {
       drm_mgr_->GetPlaneMgr()->ResetCache(drm_atomic_req_, obj_id);
