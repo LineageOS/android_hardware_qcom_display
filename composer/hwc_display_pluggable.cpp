@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -120,7 +120,9 @@ HWCDisplayPluggable::HWCDisplayPluggable(CoreInterface *core_intf,
 HWC2::Error HWCDisplayPluggable::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
   auto status = HWC2::Error::None;
 
-  if (active_secure_sessions_[kSecureDisplay] || display_paused_) {
+  // If no resources are available for the current display, mark it for GPU by pass and continue to
+  // do invalidate until the resources are available
+  if (active_secure_sessions_[kSecureDisplay] || display_paused_ || CheckResourceState()) {
     MarkLayersForGPUBypass();
     return status;
   }
@@ -152,6 +154,13 @@ HWC2::Error HWCDisplayPluggable::Present(shared_ptr<Fence> *out_retire_fence) {
   auto status = HWC2::Error::None;
 
   if (!active_secure_sessions_[kSecureDisplay] && !display_paused_) {
+    // Proceed only if any resources are available to be allocated for the current display,
+    // Otherwise keep doing invalidate
+    if (CheckResourceState()) {
+      Refresh();
+      return status;
+    }
+
     status = HWCDisplay::CommitLayerStack();
     if (status == HWC2::Error::None) {
       status = HWCDisplay::PostCommitLayerStack(out_retire_fence);
