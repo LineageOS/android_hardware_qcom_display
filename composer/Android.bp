@@ -60,7 +60,6 @@ cc_binary {
         "libgralloctypes",
         "libdisplayconfig.qti",
         "libdrm",
-        "libthermalclient",
         "vendor.qti.hardware.display.demura@1.0",
     ],
     srcs: composer_srcs,
