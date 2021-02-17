@@ -57,8 +57,6 @@ class HWTVDRM : public HWDeviceDRM {
   void DumpHDRMetaData(HWHDRLayerInfo::HDROperation operation);
   void InitMaxHDRMetaData();
 
-  static const int kBitRGB  = 20;
-  static const int kBitYUV  = 21;
   const float kDefaultMinLuminance = 0.02f;
   const float kDefaultMaxLuminance = 500.0f;
   const float kMinPeakLuminance = 300.0f;
