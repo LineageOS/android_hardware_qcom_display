@@ -639,9 +639,10 @@ int HWCBufferAllocator::GetBufferLayout(const AllocatedBufferInfo &buf_info,
 }
 
 int HWCBufferAllocator::MapBuffer(const native_handle_t *handle, shared_ptr<Fence> acquire_fence,
-                                  void *base_ptr) {
+                                  void **base_ptr) {
   auto err = GetGrallocInstance();
   if (err != 0) {
+    DLOGW("Could not get gralloc instance");
     return err;
   }
 
@@ -655,16 +656,17 @@ int HWCBufferAllocator::MapBuffer(const native_handle_t *handle, shared_ptr<Fenc
   }
 
   auto hnd = const_cast<native_handle_t *>(handle);
-  base_ptr = NULL;
+  *base_ptr = NULL;
   const IMapper::Rect access_region = {.left = 0, .top = 0, .width = 0, .height = 0};
   mapper_->lock(reinterpret_cast<void *>(hnd), (uint64_t)BufferUsage::CPU_READ_OFTEN, access_region,
                 acquire_fence_handle, [&](const auto &_error, const auto &_buffer) {
                   if (_error == Error::NONE) {
-                    base_ptr = _buffer;
+                    *base_ptr = _buffer;
                   }
                 });
 
-  if (!base_ptr) {
+  if (!*base_ptr) {
+    DLOGW("*base_ptr is NULL!");
     return kErrorUndefined;
   }
 

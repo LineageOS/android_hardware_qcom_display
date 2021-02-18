@@ -61,7 +61,7 @@ class HWCBufferAllocator : public BufferAllocator {
   int GetBufferLayout(const AllocatedBufferInfo &buf_info, uint32_t stride[4],
                                uint32_t offset[4], uint32_t *num_planes);
   int SetBufferInfo(LayerBufferFormat format, int *target, uint64_t *flags);
-  int MapBuffer(const native_handle_t *handle, shared_ptr<Fence> acquire_fence, void *base_ptr);
+  int MapBuffer(const native_handle_t *handle, shared_ptr<Fence> acquire_fence, void **base_ptr);
   int UnmapBuffer(const native_handle_t *handle, int *release_fence);
   int GetHeight(void *buf, uint32_t &height);
   int GetWidth(void *buf, uint32_t &width);

@@ -76,7 +76,7 @@ HWC2::Error HWCDisplayVirtual::DumpVDSBuffer() {
       const native_handle_t *output_handle =
           reinterpret_cast<const native_handle_t *>(output_buffer_.buffer_id);
       void *base_ptr = NULL;
-      int error = buffer_allocator_->MapBuffer(output_handle, nullptr, base_ptr);
+      int error = buffer_allocator_->MapBuffer(output_handle, nullptr, &base_ptr);
       if (error != 0) {
         DLOGE("Failed to map output buffer, error = %d", error);
         return HWC2::Error::BadParameter;
