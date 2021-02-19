@@ -21,6 +21,9 @@ include $(CLEAR_VARS)
 LOCAL_CLANG := false
 
 LOCAL_MODULE                  := gralloc.$(TARGET_BOARD_PLATFORM)
+LOCAL_LICENSE_KINDS           := SPDX-license-identifier-Apache-2.0 SPDX-license-identifier-BSD
+LOCAL_LICENSE_CONDITIONS      := notice
+LOCAL_NOTICE_FILE             := $(LOCAL_PATH)/NOTICE
 LOCAL_MODULE_RELATIVE_PATH    := hw
 LOCAL_PROPRIETARY_MODULE      := true
 LOCAL_MODULE_TAGS             := optional
@@ -49,6 +52,9 @@ include $(CLEAR_VARS)
 LOCAL_CLANG := false
 
 LOCAL_MODULE                  := libmemalloc
+LOCAL_LICENSE_KINDS           := SPDX-license-identifier-Apache-2.0 SPDX-license-identifier-BSD
+LOCAL_LICENSE_CONDITIONS      := notice
+LOCAL_NOTICE_FILE             := $(LOCAL_PATH)/NOTICE
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes)
 LOCAL_SHARED_LIBRARIES        := $(common_libs) libqdutils libdl
