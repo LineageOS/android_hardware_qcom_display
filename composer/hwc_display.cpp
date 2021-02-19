@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -718,6 +718,10 @@ void HWCDisplay::BuildLayerStack() {
     if (layer->input_buffer.flags.secure_display) {
       layer_stack_.flags.secure_present = true;
       is_secure = true;
+    }
+
+    if (IS_RGB_FORMAT(layer->input_buffer.format) && hwc_layer->IsScalingPresent()) {
+      layer_stack_.flags.scaling_rgb_layer_present = true;
     }
 
     if (hwc_layer->IsSingleBuffered() &&
