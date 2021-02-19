@@ -1,6 +1,17 @@
 soong_namespace {
 }
 
+package {
+    // See: http://go/android-license-faq
+    // A large-scale-change added 'default_applicable_licenses' to import
+    // all of the 'license_kinds' from "hardware_qcom_display_license"
+    // to get the below license kinds:
+    //   SPDX-license-identifier-Apache-2.0
+    //   SPDX-license-identifier-BSD
+    //   legacy_not_a_contribution
+    default_applicable_licenses: ["hardware_qcom_display_license"],
+}
+
 cc_defaults {
     name: "display_defaults",
     cflags: [
