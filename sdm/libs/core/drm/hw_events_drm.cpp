@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -53,6 +53,9 @@
 
 #include "hw_events_drm.h"
 
+#ifndef DRM_EVENT_MMRM_CB
+#define DRM_EVENT_MMRM_CB 0X8000000B
+#endif
 #ifndef DRM_EVENT_SDE_HW_RECOVERY
 #define DRM_EVENT_SDE_HW_RECOVERY 0x80000007
 #endif
@@ -160,6 +163,15 @@ DisplayError HWEventsDRM::InitializePollFd() {
         backlight_event_index_ = i;
         DLOGI("%s backlight_event_index_ %d", brightness_node_.c_str(), backlight_event_index_);
       } break;
+      case HWEvent::MMRM: {
+        poll_fds_[i].fd = drmOpen("msm_drm", nullptr);
+        if (poll_fds_[i].fd < 0) {
+          DLOGE("drmOpen failed with error %d", poll_fds_[i].fd);
+          return kErrorResources;
+        }
+        poll_fds_[i].events = POLLIN | POLLPRI | POLLERR;
+        mmrm_index_ = i;
+      } break;
       case HWEvent::CEC_READ_MESSAGE:
       case HWEvent::SHOW_BLANK_EVENT:
       case HWEvent::THERMAL_LEVEL:
@@ -208,6 +220,9 @@ DisplayError HWEventsDRM::SetEventParser() {
         break;
       case HWEvent::BACKLIGHT_EVENT:
         event_data.event_parser = &HWEventsDRM::HandleBacklightEvent;
+        break;
+      case HWEvent::MMRM:
+        event_data.event_parser = &HWEventsDRM::HandleMMRM;
         break;
       default:
         error = kErrorParameters;
@@ -278,6 +293,14 @@ DisplayError HWEventsDRM::Init(int display_id, DisplayType display_type,
     RegisterHistogram(true);
   }
 
+  if (Debug::Get()->GetProperty(DISABLE_MMRM_PROP, &value) == kErrorNone) {
+    disable_mmrm_ = (value == 1);
+  }
+  DLOGI("disable_mmrm_ set to %d", disable_mmrm_);
+  if (!disable_mmrm_) {
+    RegisterMMRM(true);
+  }
+
   return kErrorNone;
 }
 
@@ -291,6 +314,9 @@ DisplayError HWEventsDRM::Deinit() {
   }
   if (enable_hist_interrupt_) {
     RegisterHistogram(false);
+  }
+  if (!disable_mmrm_) {
+    RegisterMMRM(false);
   }
   Sys::pthread_cancel_(event_thread_);
   WakeUpEventThread();
@@ -376,6 +402,7 @@ void HWEventsDRM::CloseFds() {
         Sys::close_(poll_fds_[i].fd);
         poll_fds_[i].fd = -1;
       } break;
+      case HWEvent::MMRM:
       case HWEvent::IDLE_NOTIFY:
       case HWEvent::IDLE_POWER_COLLAPSE:
       case HWEvent::PANEL_DEAD:
@@ -434,6 +461,7 @@ void *HWEventsDRM::DisplayEventHandler() {
         case HWEvent::IDLE_POWER_COLLAPSE:
         case HWEvent::HW_RECOVERY:
         case HWEvent::HISTOGRAM:
+        case HWEvent::MMRM:
           if (poll_fd.revents & (POLLIN | POLLPRI | POLLERR)) {
             (this->*(event_data_list_[i]).event_parser)(nullptr);
           }
@@ -628,6 +656,31 @@ DisplayError HWEventsDRM::RegisterHwRecovery(bool enable) {
   }
 
   DLOGI("Register hw recovery %s", enable ? "enable" : "disable");
+  return kErrorNone;
+}
+
+DisplayError HWEventsDRM::RegisterMMRM(bool enable) {
+  if (mmrm_index_ == UINT32_MAX) {
+    DLOGI("MMRM is not supported");
+    return kErrorNone;
+  }
+
+  struct drm_msm_event_req req = {};
+  int ret = 0;
+
+  req.object_id = token_.crtc_id;
+  req.object_type = DRM_MODE_OBJECT_CRTC;
+  req.event = DRM_EVENT_MMRM_CB;
+  if (enable) {
+    ret = drmIoctl(poll_fds_[mmrm_index_].fd, DRM_IOCTL_MSM_REGISTER_EVENT, &req);
+  } else {
+    ret = drmIoctl(poll_fds_[mmrm_index_].fd, DRM_IOCTL_MSM_DEREGISTER_EVENT, &req);
+  }
+  if (ret) {
+    DLOGE("Register MMRM enable:%d failed", enable);
+    return kErrorResources;
+  }
+
   return kErrorNone;
 }
 
@@ -876,6 +929,52 @@ void HWEventsDRM::HandleHistogram(char * /*data*/) {
 
 void HWEventsDRM::HandleBacklightEvent(char *data) {
   event_handler_->HandleBacklightEvent(atof(data));
+}
+
+void HWEventsDRM::HandleMMRM(char *data) {
+  char event_data[kMaxStringLength];
+  int32_t size;
+  struct drm_msm_event_resp *event_resp = NULL;
+
+  size = (int32_t)Sys::pread_(poll_fds_[mmrm_index_].fd, event_data, kMaxStringLength, 0);
+  if (size < 0) {
+    DLOGW("Size is invalid!");
+    return;
+  }
+
+  if (size > kMaxStringLength) {
+    DLOGE("event size %d is greater than event buffer size %d\n", size, kMaxStringLength);
+    return;
+  }
+
+  if (size < (int32_t)sizeof(*event_resp)) {
+    DLOGE("size %d exp %zd\n", size, sizeof(*event_resp));
+    return;
+  }
+
+  int32_t i = 0;
+
+  while (i < size) {
+    event_resp = (struct drm_msm_event_resp *)&event_data[i];
+    switch (event_resp->base.type) {
+      case DRM_EVENT_MMRM_CB:
+      {
+        uint32_t* event_payload = reinterpret_cast<uint32_t *>(event_resp->data);
+        if (event_payload) {
+          DLOGV("Received MMRM event");
+          event_handler_->MMRMEvent(*event_payload);
+        }
+        break;
+      }
+      default: {
+        DLOGE("invalid event %d", event_resp->base.type);
+        break;
+      }
+    }
+    i += event_resp->base.length;
+  }
+
+  return;
 }
 
 int HWEventsDRM::SetHwRecoveryEvent(const uint32_t hw_event_code, HWRecoveryEvent *sdm_event_code) {

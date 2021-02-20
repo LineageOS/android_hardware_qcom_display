@@ -53,6 +53,7 @@
 
 namespace sdm {
 
+bool HWCDisplay::mmrm_restricted_ = false;
 uint32_t HWCDisplay::throttling_refresh_rate_ = 60;
 constexpr uint32_t kVsyncTimeDriftNs = 1000000;
 
@@ -969,10 +970,20 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
       }
       break;
     case HWC2::PowerMode::On:
+      if (mmrm_restricted_ && (display_class_ != DISPLAY_CLASS_BUILTIN) &&
+          (current_power_mode_ == HWC2::PowerMode::Off ||
+          current_power_mode_ == HWC2::PowerMode::DozeSuspend)) {
+        return HWC2::Error::None;
+      }
       RestoreColorTransform();
       state = kStateOn;
       break;
     case HWC2::PowerMode::Doze:
+      if (mmrm_restricted_ && (display_class_ != DISPLAY_CLASS_BUILTIN) &&
+          (current_power_mode_ == HWC2::PowerMode::Off ||
+          current_power_mode_ == HWC2::PowerMode::DozeSuspend)) {
+        return HWC2::Error::None;
+      }
       RestoreColorTransform();
       state = kStateDoze;
       break;
@@ -2961,6 +2972,11 @@ DisplayError HWCDisplay::TeardownConcurrentWriteback(bool *needs_refresh) {
   }
   *needs_refresh = false;
   return kErrorNone;
+}
+
+void HWCDisplay::MMRMEvent(bool restricted) {
+  mmrm_restricted_ = restricted;
+  callbacks_->Refresh(id_);
 }
 
 }  // namespace sdm

@@ -67,6 +67,7 @@ class HWEventHandler {
   virtual void HwRecovery(const HWRecoveryEvent sdm_event_code) = 0;
   virtual void Histogram(int histogram_fd, uint32_t blob_id) = 0;
   virtual void HandleBacklightEvent(float brightness_level) = 0;
+  virtual void MMRMEvent(uint32_t clk) = 0;
 
  protected:
   virtual ~HWEventHandler() { }

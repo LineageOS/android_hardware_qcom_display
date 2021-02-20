@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018, 2020 The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2018, 2020-2021 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -82,6 +82,7 @@ class HWEventsDRM : public HWEventsInterface {
   void HandleHwRecovery(char *data);
   void HandleHistogram(char *data);
   void HandleBacklightEvent(char *data);
+  void HandleMMRM(char *data);
   int SetHwRecoveryEvent(const uint32_t hw_event_code, HWRecoveryEvent *sdm_event_code);
   void PopulateHWEventData(const vector<HWEvent> &event_list);
   void WakeUpEventThread();
@@ -94,6 +95,7 @@ class HWEventsDRM : public HWEventsInterface {
   DisplayError RegisterIdlePowerCollapse(bool enable);
   DisplayError RegisterHwRecovery(bool enable);
   DisplayError RegisterHistogram(bool enable);
+  DisplayError RegisterMMRM(bool enable);
 
   HWEventHandler *event_handler_{};
   vector<HWEventData> event_data_list_{};
@@ -119,6 +121,8 @@ class HWEventsDRM : public HWEventsInterface {
   uint32_t backlight_event_index_ = UINT32_MAX;
   std::string brightness_node_ = {};
   int backlight_wd_ = -1;
+  bool disable_mmrm_ = false;
+  uint32_t mmrm_index_ = UINT32_MAX;
 };
 
 }  // namespace sdm
