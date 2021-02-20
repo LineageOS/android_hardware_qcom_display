@@ -27,4 +27,6 @@ LOCAL_SHARED_LIBRARIES := liblog
 LOCAL_HEADER_LIBRARIES := libhardware_headers
 LOCAL_SRC_FILES := memtrack_msm.c kgsl.c
 LOCAL_MODULE := memtrack.$(TARGET_BOARD_PLATFORM)
+LOCAL_LICENSE_KINDS := SPDX-license-identifier-Apache-2.0
+LOCAL_LICENSE_CONDITIONS := notice
 include $(BUILD_SHARED_LIBRARY)
