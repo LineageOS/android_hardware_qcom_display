@@ -18,12 +18,18 @@ include $(LOCAL_PATH)/../common.mk
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := gralloc_headers
+LOCAL_LICENSE_KINDS := SPDX-license-identifier-Apache-2.0 SPDX-license-identifier-BSD
+LOCAL_LICENSE_CONDITIONS := notice
+LOCAL_NOTICE_FILE := $(LOCAL_PATH)/NOTICE
 LOCAL_EXPORT_C_INCLUDE_DIRS   := $(LOCAL_PATH)
 include $(BUILD_HEADER_LIBRARY)
 
 include $(CLEAR_VARS)
 
 LOCAL_MODULE                  := gralloc.$(TARGET_BOARD_PLATFORM)
+LOCAL_LICENSE_KINDS           := SPDX-license-identifier-Apache-2.0 SPDX-license-identifier-BSD
+LOCAL_LICENSE_CONDITIONS      := notice
+LOCAL_NOTICE_FILE             := $(LOCAL_PATH)/NOTICE
 LOCAL_MODULE_RELATIVE_PATH    := hw
 LOCAL_PROPRIETARY_MODULE      := true
 LOCAL_MODULE_TAGS             := optional
@@ -48,6 +54,9 @@ include $(BUILD_SHARED_LIBRARY)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE                  := libmemalloc
+LOCAL_LICENSE_KINDS           := SPDX-license-identifier-Apache-2.0 SPDX-license-identifier-BSD
+LOCAL_LICENSE_CONDITIONS      := notice
+LOCAL_NOTICE_FILE             := $(LOCAL_PATH)/NOTICE
 LOCAL_PROPRIETARY_MODULE      := true
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes) $(kernel_includes)

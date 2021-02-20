@@ -10,6 +10,8 @@ include $(BUILD_COPY_HEADERS)
 include $(CLEAR_VARS)
 #TODO move all exported headers to this directory
 LOCAL_MODULE := display_headers
+LOCAL_LICENSE_KINDS := SPDX-license-identifier-BSD
+LOCAL_LICENSE_CONDITIONS := notice
 LOCAL_EXPORT_C_INCLUDE_DIRS   := $(LOCAL_PATH) \
                                  $(display_top)/libcopybit \
                                  $(display_top)/libdrmutils \
