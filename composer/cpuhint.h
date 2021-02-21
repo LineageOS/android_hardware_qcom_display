@@ -1,4 +1,4 @@
-/* Copyright (c) 2015, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015, 2021, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -42,6 +42,8 @@ class CPUHint {
   DisplayError Init(HWCDebugHandler *debug_handler);
   void Set();
   void Reset();
+  void ReqHints(int hint);
+  void ReqHintsOffload(int hint, int duration);
 
  private:
   enum { HINT =  0x4501 /* 45-display layer hint, 01-Enable */ };
@@ -54,6 +56,9 @@ class CPUHint {
   DynLib vendor_ext_lib_;
   int (*fn_lock_acquire_)(int handle, int duration, int *hints, int num_args) = NULL;
   int (*fn_lock_release_)(int value) = NULL;
+  int (*fn_perf_hint_)(int hint, const char *pkg, int duration, int type) = NULL;
+  int (*fn_perf_hint_offload_)(int hint, const char *pkg, int duration, int type,
+                               int numArgs, int *) = NULL;
 };
 
 }  // namespace sdm

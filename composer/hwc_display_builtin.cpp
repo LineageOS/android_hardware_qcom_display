@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -179,6 +179,10 @@ int HWCDisplayBuiltIn::Init() {
   enhance_idle_time_ = (enhance_idle_time == 1);
   DLOGI("enhance_idle_time: %d", enhance_idle_time);
 
+  HWCDebugHandler::Get()->GetProperty(PERF_HINT_WINDOW_PROP, &perf_hint_window_);
+  HWCDebugHandler::Get()->GetProperty(ENABLE_PERF_HINT_LARGE_COMP_CYCLE,
+                                      &perf_hint_large_comp_cycle_);
+
   return status;
 }
 
@@ -288,6 +292,7 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
   }
 
   status = PrepareLayerStack(out_num_types, out_num_requests);
+  SetCpuPerfHintLargeCompCycle();
   pending_commit_ = true;
   return status;
 }
@@ -851,7 +856,7 @@ void HWCDisplayBuiltIn::SetQDCMSolidFillInfo(bool enable, const LayerSolidFill &
 }
 
 void HWCDisplayBuiltIn::ToggleCPUHint(bool set) {
-  if (!cpu_hint_) {
+  if (!cpu_hint_ || !perf_hint_window_) {
     return;
   }
 
@@ -1520,6 +1525,23 @@ bool HWCDisplayBuiltIn::IsDisplayIdle() {
   // Notify only if this display is source of vsync.
   bool vsync_source = (callbacks_->GetVsyncSource() == id_);
   return vsync_source && display_idle_;
+}
+
+void HWCDisplayBuiltIn::SetCpuPerfHintLargeCompCycle() {
+  if (!cpu_hint_ || !perf_hint_large_comp_cycle_) {
+    DLOGV_IF(kTagResources, "cpu_hint_ not initialized or property not set");
+    return;
+  }
+
+  for (auto hwc_layer : layer_set_) {
+    Layer *layer = hwc_layer->GetSDMLayer();
+    if (layer->composition == kCompositionGPU) {
+      DLOGV_IF(kTagResources, "Set perf hint for large comp cycle");
+      int hwc_tid = gettid();
+      cpu_hint_->ReqHintsOffload(kPerfHintLargeCompCycle, hwc_tid);
+      break;
+    }
+  }
 }
 
 }  // namespace sdm
