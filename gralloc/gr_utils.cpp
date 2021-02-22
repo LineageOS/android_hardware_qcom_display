@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2021, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -1024,7 +1024,7 @@ void GetColorSpaceFromMetadata(private_handle_t *hnd, int *color_space) {
   if (getMetaData(hnd, GET_COLOR_METADATA, &color_metadata) == 0) {
     switch (color_metadata.colorPrimaries) {
       case ColorPrimaries_BT709_5:
-        *color_space = HAL_CSC_ITU_R_709;
+        *color_space = ((color_metadata.range) ? HAL_CSC_ITU_R_709_FR : HAL_CSC_ITU_R_709);
         break;
       case ColorPrimaries_BT601_6_525:
       case ColorPrimaries_BT601_6_625:
