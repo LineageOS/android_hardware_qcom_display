@@ -330,7 +330,7 @@ void DRMPanelFeatureMgr::GetPanelFeatureInfo(DRMPanelFeatureInfo *info) {
 
   DRMProperty prop_enum = drm_property_map_[info->prop_id];
   if (!prop_mgr_.IsPropertyAvailable(prop_enum)) {
-    DRM_LOGE("Property id is not available for DRMProperty: %d feature-id: %d",
+    DRM_LOGW("Property id is not available for DRMProperty: %d feature-id: %d",
              prop_enum, info->prop_id);
     return;
   }

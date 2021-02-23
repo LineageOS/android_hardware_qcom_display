@@ -1976,6 +1976,7 @@ void GetDRMFormat(uint32_t format, uint32_t flags, uint32_t *drm_format,
       *drm_format = DRM_FORMAT_RGBX1010102;
       break;
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
+    case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
       *drm_format = DRM_FORMAT_NV12;
       break;
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
@@ -2027,7 +2028,7 @@ void GetDRMFormat(uint32_t format, uint32_t flags, uint32_t *drm_format,
       *drm_format = DRM_FORMAT_YVU420;
       break;
     default:
-      ALOGE("Unsupported format %d", format);
+      ALOGE("%s: Unsupported format %d", __FUNCTION__, format);
   }
 #endif
 }
