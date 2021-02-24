@@ -1651,7 +1651,7 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
       plane_info[0].stride_bytes = static_cast<int32_t>(y_stride);
       plane_info[0].scanlines = static_cast<int32_t>(y_height);
       plane_info[0].size = static_cast<uint32_t>(y_size);
-      plane_info[0].step = 1;
+      plane_info[0].step = 2;
       plane_info[0].h_subsampling = 0;
       plane_info[0].v_subsampling = 0;
 
