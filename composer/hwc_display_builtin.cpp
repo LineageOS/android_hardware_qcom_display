@@ -1239,6 +1239,29 @@ DisplayError HWCDisplayBuiltIn::GetSupportedDSIClock(std::vector<uint64_t> *bitc
   return kErrorNotSupported;
 }
 
+DisplayError HWCDisplayBuiltIn::SetStandByMode(bool enable) {
+  if (enable) {
+    if (!display_null_.IsActive()) {
+      stored_display_intf_ = display_intf_;
+      display_intf_ = &display_null_;
+      display_null_.SetActive(true);
+      DLOGD("Null display is connected successfully");
+    } else {
+      DLOGD("Null display is already connected.");
+    }
+  } else {
+    if (display_null_.IsActive()) {
+      display_intf_ = stored_display_intf_;
+      validated_ = false;
+      display_null_.SetActive(false);
+      DLOGD("Display is connected successfully");
+    } else {
+      DLOGD("Display is already connected.");
+    }
+  }
+  return kErrorNone;
+}
+
 HWC2::Error HWCDisplayBuiltIn::UpdateDisplayId(hwc2_display_t id) {
   id_ = id;
   return HWC2::Error::None;

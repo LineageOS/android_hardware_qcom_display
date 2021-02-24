@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 The Android Open Source Project
- * Copyright (C) 2012-2014, 2016-2019 The Linux Foundation. All rights reserved.
+ * Copyright (C) 2012-2014, 2016-2019, 2021, The Linux Foundation. All rights reserved.
  *
  * Not a Contribution, Apache license notifications and license are
  * retained for attribution purposes only.
@@ -79,6 +79,7 @@ public:
       SET_PANEL_LUMINANCE = 47,                // Set Panel Luminance attributes.
       SET_BRIGHTNESS_SCALE = 48,               // Set brightness scale ratio
       SET_COLOR_SAMPLING_ENABLED = 49,         // Toggle the collection of display color stats
+      SET_STAND_BY_MODE = 50,                  // Set stand by mode for MDP hardware
       COMMAND_LIST_END = 400,
     };
 

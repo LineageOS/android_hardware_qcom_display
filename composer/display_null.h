@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2019, 2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -123,6 +123,12 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(SetDisplayElapseTime(uint64_t))
   MAKE_NO_OP(ClearLUTs())
 
+  void SetActive(bool active) { active_ = active; }
+  bool IsActive() { return active_; }
+
+ private:
+  bool active_ = false;
+
  protected:
   DisplayConfigVariableInfo default_variable_config_ = {};
   DisplayConfigFixedInfo default_fixed_config_ = {};
@@ -150,11 +156,7 @@ class DisplayNullExternal : public DisplayNull {
   virtual DisplayError GetFrameBufferConfig(DisplayConfigVariableInfo *variable_info);
   virtual DisplayError GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
                                                     uint8_t *out_data);
-  void SetActive(bool active) { active_ = active; }
-  bool IsActive() { return active_; }
-
  private:
-  bool active_ = false;
   DisplayState state_ = kStateOff;
   DisplayConfigVariableInfo fb_config_ = {};
 };
