@@ -166,12 +166,13 @@ class ColorManagerProxy {
                                         PPFeaturesConfig *out_data);
   typedef std::map<std::string, ConvertProc> ConvertTable;
 
-  bool NeedHwAssetsUpdate();
+  bool NeedAssetsUpdate();
   DisplayError UpdateModeHwassets(int32_t mode_id, snapdragoncolor::ColorMode color_mode,
                                   bool valid_meta_data, const ColorMetaData &meta_data);
   DisplayError ConvertToPPFeatures(const HwConfigOutputParams &params, PPFeaturesConfig *out_data);
   void DumpColorMetaData(const ColorMetaData &color_metadata);
   bool HasNativeModeSupport();
+  DisplayError ApplySwAssets();
 
   int32_t display_id_;
   DisplayType device_type_;

@@ -363,7 +363,7 @@ void PPHWAttributes::Set(const HWResourceInfo &hw_res,
   }
 }
 
-bool ColorManagerProxy::NeedHwAssetsUpdate() {
+bool ColorManagerProxy::NeedAssetsUpdate() {
   bool need_update = false;
   if (!stc_intf_) {
     return need_update;
@@ -502,9 +502,51 @@ DisplayError ColorManagerProxy::Validate(DispLayerStack *disp_layer_stack) {
 }
 
 DisplayError ColorManagerProxy::PrePrepare() {
-  needs_update_ = NeedHwAssetsUpdate();
+  DisplayError ret = kErrorNone;
 
-  return kErrorNone;
+  needs_update_ = NeedAssetsUpdate();
+  ret = ApplySwAssets();
+  return ret;
+}
+
+DisplayError ColorManagerProxy::ApplySwAssets() {
+  DisplayError error = kErrorNone;
+
+  if (!needs_update_ && !apply_mode_) {
+    return error;
+  }
+
+  if (!stc_intf_) {
+    DLOGE("STC interface is NULL");
+    return kErrorUndefined;
+  }
+
+  ScPayload in_data = {};
+  struct ModeRenderInputParams mode_params = {};
+  mode_params.color_mode = curr_mode_;
+  in_data.prop = kModeRenderInputParams;
+  in_data.len = sizeof(mode_params);
+  in_data.payload = reinterpret_cast<uint64_t>(&mode_params);
+
+  ScPayload out_data = {};
+  struct HwConfigOutputParams sw_params = {};
+  out_data.prop = kHwConfigPayloadParam;
+  out_data.len = sizeof(sw_params);
+  out_data.payload = reinterpret_cast<uint64_t>(&sw_params);
+
+  int err = stc_intf_->ProcessOps(kScModeSwAssets, in_data, &out_data);
+  if (err) {
+    DLOGE("Failed to process kScModeSwAssets, err %d", err);
+    error = kErrorUndefined;
+  } else if (!sw_params.payload.empty()) {
+    error = ConvertToPPFeatures(sw_params, &pp_features_);
+    if (error != kErrorNone) {
+      DLOGE("Failed to update Stc SW assets, error %d", error);
+      return error;
+    }
+  }
+
+  return error;
 }
 
 DisplayError ColorManagerProxy::NotifyDisplayCalibrationMode(bool in_calibration) {
@@ -642,41 +684,9 @@ DisplayError ColorManagerProxy::ColorMgrGetStcModes(ColorModeList *mode_list) {
 }
 
 DisplayError ColorManagerProxy::ColorMgrSetStcMode(const ColorMode &color_mode) {
-  DisplayError error = kErrorNone;
-
-  if (!stc_intf_) {
-    DLOGE("STC interface is NULL");
-    return kErrorUndefined;
-  }
-
-  ScPayload in_data = {};
-  struct ModeRenderInputParams mode_params = {};
-  mode_params.color_mode = color_mode;
-  in_data.prop = kModeRenderInputParams;
-  in_data.len = sizeof(mode_params);
-  in_data.payload = reinterpret_cast<uint64_t>(&mode_params);
-
-  ScPayload out_data = {};
-  struct HwConfigOutputParams hw_params = {};
-  out_data.prop = kHwConfigPayloadParam;
-  out_data.len = sizeof(hw_params);
-  out_data.payload = reinterpret_cast<uint64_t>(&hw_params);
-
-  int err = stc_intf_->ProcessOps(kScModeSwAssets, in_data, &out_data);
-  if (err) {
-    DLOGE("Failed to process kScModeSwAssets, err %d", err);
-    error = kErrorUndefined;
-  } else if (!hw_params.payload.empty()) {
-    error = ConvertToPPFeatures(hw_params, &pp_features_);
-    if (error != kErrorNone) {
-      DLOGE("Failed to update Stc SW assets, error %d", error);
-      return error;
-    }
-  }
-
   curr_mode_ = color_mode;
   apply_mode_ = true;
-  return error;
+  return kErrorNone;
 }
 
 DisplayError ColorManagerProxy::ColorMgrSetLtmPccConfig(void* pcc_input, size_t size) {
