@@ -2342,13 +2342,9 @@ void HWDeviceDRM::UpdateMixerAttributes() {
 
 void HWDeviceDRM::SetSecureConfig(const LayerBuffer &input_buffer, DRMSecureMode *fb_secure_mode,
                                   DRMSecurityLevel *security_level) {
-  *security_level = DRMSecurityLevel::SECURE_NON_SECURE;
-#ifdef TRUSTED_VM
-  *fb_secure_mode = DRMSecureMode::NON_SECURE_DIR_TRANSLATION;
-  return;
-#else
   *fb_secure_mode = DRMSecureMode::NON_SECURE;
-#endif
+  *security_level = DRMSecurityLevel::SECURE_NON_SECURE;
+
   if (input_buffer.flags.secure) {
     if (input_buffer.flags.secure_camera) {
       // IOMMU configuration for this framebuffer mode is secure domain & requires
