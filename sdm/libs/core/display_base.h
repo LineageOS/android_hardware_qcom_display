@@ -262,6 +262,10 @@ class DisplayBase : public DisplayInterface {
   virtual void HandleAsyncCommit();
   void MMRMEvent(uint32_t clk);
   void CheckMMRMState();
+  DisplayError SetUpCommit(LayerStack *layer_stack);
+  DisplayError PerformCommit(LayerStack *layer_stack);
+  DisplayError PostCommitLayerStack(LayerStack *layer_stack);
+  virtual DisplayError CommitLocked(LayerStack *layer_stack);
 
   DisplayMutex disp_mutex_;
   std::thread commit_thread_;

@@ -605,8 +605,7 @@ void DisplayBase::CommitThread() {
   }
 }
 
-DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
-  ClientLock lock(disp_mutex_);
+DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
   DisplayError error = kErrorNone;
   disp_layer_stack_.info.output_buffer = layer_stack->output_buffer;
 
@@ -693,7 +692,11 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     DLOGW("ColorManager::Commit(...) isn't working");
   }
 
-  error = hw_intf_->Commit(&disp_layer_stack_.info);
+  return error;
+}
+
+DisplayError DisplayBase::PerformCommit(LayerStack *layer_stack) {
+  DisplayError error = hw_intf_->Commit(&disp_layer_stack_.info);
   if (error != kErrorNone) {
     if (layer_stack->flags.fast_path && disp_layer_stack_.info.fast_path_composition) {
       // If COMMIT fails on the Fast Path, set Safe Mode.
@@ -704,6 +707,40 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     return error;
   }
 
+  return kErrorNone;
+}
+
+DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
+  ClientLock lock(disp_mutex_);
+
+  return CommitLocked(layer_stack);
+}
+
+DisplayError DisplayBase::CommitLocked(LayerStack *layer_stack) {
+  DisplayError error = SetUpCommit(layer_stack);
+  if (error != kErrorNone) {
+    DLOGW("SetUpCommit failed %d", error);
+    return error;
+  }
+
+  error = PerformCommit(layer_stack);
+  if (error != kErrorNone) {
+    DLOGE("Commit IOCTL failed %d", error);
+    return error;
+  }
+
+  error = PostCommitLayerStack(layer_stack);
+  if (error != kErrorNone) {
+    DLOGE("Post Commit failed %d", error);
+    return error;
+  }
+
+  DLOGI_IF(kTagDisplay, "Exiting commit for display: %d-%d", display_id_, display_type_);
+
+  return kErrorNone;
+}
+
+DisplayError DisplayBase::PostCommitLayerStack(LayerStack *layer_stack) {
   if (secure_event_ == kSecureDisplayEnd || secure_event_ == kTUITransitionEnd ||
       secure_event_ == kTUITransitionUnPrepare) {
     secure_event_ = kSecureEventMax;
@@ -715,7 +752,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     comp_manager_->ControlPartialUpdate(display_comp_ctx_, true /* enable */);
   }
 
-  error = comp_manager_->PostCommit(display_comp_ctx_, &disp_layer_stack_);
+  DisplayError error = comp_manager_->PostCommit(display_comp_ctx_, &disp_layer_stack_);
   if (error != kErrorNone) {
     return error;
   }
@@ -736,8 +773,6 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
   }
 
   comp_manager_->SetSafeMode(false);
-
-  DLOGI_IF(kTagDisplay, "Exiting commit for display: %d-%d", display_id_, display_type_);
 
   return error;
 }
@@ -1997,6 +2032,7 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
     hw_layer.input_buffer.size = sdm_layer->input_buffer.size;
     hw_layer.input_buffer.acquire_fence = sdm_layer->input_buffer.acquire_fence;
     hw_layer.input_buffer.handle_id = sdm_layer->input_buffer.handle_id;
+    // All app buffer handles are set prior to prepare.
     // TODO(user): Other FBT layer attributes like surface damage, dataspace, secure camera and
     // secure display flags are also updated during SetClientTarget() called between validate and
     // commit. Need to revist this and update it accordingly for FBT layer.
@@ -2020,7 +2056,7 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
 
 void DisplayBase::PostCommitLayerParams(LayerStack *layer_stack) {
   // Copy the release fence from HWLayers to clients layers
-    uint32_t hw_layers_count = UINT32(disp_layer_stack_.info.hw_layers.size());
+  uint32_t hw_layers_count = UINT32(disp_layer_stack_.info.hw_layers.size());
 
   std::vector<uint32_t> fence_dup_flag;
 
