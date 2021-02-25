@@ -1655,7 +1655,7 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
 
   DTRACE_SCOPED();
 
-  if (!display_intf_->IsValidated()) {
+  if (!validate_done_) {
     DLOGV_IF(kTagClient, "Display %" PRIu64 "is not validated", id_);
     return HWC2::Error::NotValidated;
   }

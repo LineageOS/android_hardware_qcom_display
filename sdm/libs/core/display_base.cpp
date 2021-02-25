@@ -923,6 +923,10 @@ DisplayError DisplayBase::PostCommit(HWLayersInfo *hw_layers_info) {
 
   comp_manager_->SetSafeMode(false);
 
+  for (auto &hw_layer : disp_layer_stack_.info.hw_layers) {
+    CloseFd(&hw_layer.input_buffer.planes[0].fd);
+  }
+
   first_cycle_ = false;
 
   return error;
@@ -2281,7 +2285,7 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
     Layer *sdm_layer = layer_stack->layers.at(sdm_layer_index);
     Layer &hw_layer = disp_layer_stack_.info.hw_layers.at(i);
 
-    hw_layer.input_buffer.planes[0].fd = sdm_layer->input_buffer.planes[0].fd;
+    hw_layer.input_buffer.planes[0].fd = Sys::dup_(sdm_layer->input_buffer.planes[0].fd);
     hw_layer.input_buffer.planes[0].offset = sdm_layer->input_buffer.planes[0].offset;
     hw_layer.input_buffer.planes[0].stride = sdm_layer->input_buffer.planes[0].stride;
     hw_layer.input_buffer.size = sdm_layer->input_buffer.size;
