@@ -1112,6 +1112,12 @@ class DisplayInterface {
   */
   virtual bool IsValidated() = 0;
 
+  /*! @brief Method to destroy layer.
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError DestroyLayer() = 0;
+
  protected:
   virtual ~DisplayInterface() { }
 };

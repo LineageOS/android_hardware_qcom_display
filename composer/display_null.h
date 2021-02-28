@@ -133,6 +133,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(GetCwbBufferResolution(CwbTapPoint, uint32_t *, uint32_t *))
   MAKE_NO_OP(NotifyDisplayCalibrationMode(bool))
   MAKE_NO_OP(GetOutputBufferAcquireFence(shared_ptr<Fence> *))
+  MAKE_NO_OP(DestroyLayer())
 
  protected:
   DisplayConfigVariableInfo default_variable_config_ = {};

@@ -629,6 +629,9 @@ HWCLayer *HWCDisplay::GetHWCLayer(hwc2_layer_t layer_id) {
 }
 
 HWC2::Error HWCDisplay::DestroyLayer(hwc2_layer_t layer_id) {
+  // ToDo: Replace layer destroy with smart pointer.
+  // Work around to block main thread execution until async commit finishes.
+  display_intf_->DestroyLayer();
   const auto map_layer = layer_map_.find(layer_id);
   if (map_layer == layer_map_.end()) {
     DLOGW("[%" PRIu64 "] destroyLayer(%" PRIu64 ") failed: no such layer", id_, layer_id);

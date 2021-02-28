@@ -95,6 +95,7 @@ DRMMaster::~DRMMaster() {
 }
 
 int DRMMaster::CreateFbId(const DRMBuffer &drm_buffer, uint32_t *fb_id) {
+  lock_guard<mutex> obj(s_lock);
   uint32_t gem_handle = 0;
   int ret = drmPrimeFDToHandle(dev_fd_, drm_buffer.fd, &gem_handle);
   if (ret) {
@@ -131,6 +132,7 @@ int DRMMaster::CreateFbId(const DRMBuffer &drm_buffer, uint32_t *fb_id) {
 }
 
 int DRMMaster::RemoveFbId(uint32_t fb_id) {
+  lock_guard<mutex> obj(s_lock);
   int ret = 0;
 #ifdef DRM_IOCTL_MSM_RMFB2
   ret = drmIoctl(dev_fd_, DRM_IOCTL_MSM_RMFB2, &fb_id);

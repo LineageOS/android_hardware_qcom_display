@@ -195,6 +195,10 @@ class DisplayBase : public DisplayInterface {
     ClientLock lock(disp_mutex_);
     return validated_ && !needs_validate_;
   }
+  DisplayError DestroyLayer() {
+    ClientLock lock(disp_mutex_);
+    return kErrorNone;
+  }
 
  protected:
   struct DisplayMutex {
