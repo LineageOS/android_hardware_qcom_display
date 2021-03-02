@@ -272,6 +272,7 @@ enum HWQseedStepVersion {
   kQseed3v4,
   kQseed3litev4,
   kQseed3litev5,
+  kQseed3litev7,
 };
 
 struct HWDestScalarInfo {

@@ -212,6 +212,7 @@ static QSEEDStepVersion PopulateQseedStepVersion(uint32_t hw_ver) {
     case 0x1004: return QSEEDStepVersion::V4;
     case 0x2004: return QSEEDStepVersion::V3LITE_V4;
     case 0x3000: return QSEEDStepVersion::V3LITE_V5;
+    case 0x3001: return QSEEDStepVersion::V3LITE_V7;
     // default value. also corresponds to (hw_ver == 0x1002)
     default: return QSEEDStepVersion::V2;
   }
