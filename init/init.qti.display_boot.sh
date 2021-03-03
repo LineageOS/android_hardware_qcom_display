@@ -35,6 +35,10 @@ else
     soc_hwid=`cat /sys/devices/system/soc/soc0/id`
 fi
 
+if [ -f /sys/devices/soc0/platform_subtype_id ]; then
+    subtype_id=`cat /sys/devices/soc0/platform_subtype_id`
+fi
+
 case "$target" in
     "lahaina")
     #Set property to differentiate Lahaina & Shima
@@ -46,6 +50,10 @@ case "$target" in
         setprop vendor.display.enable_posted_start_dyn 2
         setprop vendor.display.enable_perf_hint_large_comp_cycle 1
         setprop vendor.display.enable_allow_idle_fallback 1
+        # Set property for HHG
+        if [ "$subtype_id" -eq 1 ]; then
+            setprop vendor.display.disable_system_load_check 1
+        fi
         ;;
         450)
         # Set property for shima
