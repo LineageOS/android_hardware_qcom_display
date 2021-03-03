@@ -207,7 +207,7 @@ void DRMDppsManagerImp::Init(int fd, drmModeRes* res) {
   int ret = 0;
 
   if (fd < 0 || !res) {
-    DRM_LOGE("Invalid drm fd %d or res %p", fd, res);
+    DRM_LOGE("Invalid drm fd %d or res %pK", fd, res);
     return;
   }
 
@@ -466,7 +466,7 @@ int DRMDppsManagerImp::InitLtmBuffers(struct DRMDppsFeatureInfo *info) {
   }
 
   if (!info->payload || info->payload_size != sizeof(struct DRMDppsLtmBuffers)) {
-    DRM_LOGE("Invalid payload %p size %d expected %zu", info->payload, info->payload_size,
+    DRM_LOGE("Invalid payload %pK size %d expected %zu", info->payload, info->payload_size,
        sizeof(struct DRMDppsLtmBuffers));
     return -EINVAL;
   }

@@ -211,7 +211,7 @@ void DRMPPManager::GetPPInfo(DRMPPFeatureInfo *info) {
 
 void DRMPPManager::SetPPFeature(drmModeAtomicReq *req, uint32_t obj_id, DRMPPFeatureInfo &feature) {
   if (!req) {
-      DRM_LOGE("Invalid input param: req %p", req);
+      DRM_LOGE("Invalid input param: req %pK", req);
       return;
   }
 

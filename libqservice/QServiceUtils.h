@@ -53,7 +53,7 @@ inline android::status_t sendSingleParam(uint32_t command, uint32_t value) {
     android::sp<qService::IQService> binder = getBinder();
     android::Parcel inParcel, outParcel;
     inParcel.writeInt32(value);
-    if(binder != NULL) {
+    if(binder != nullptr) {
         err = binder->dispatch(command, &inParcel , &outParcel);
     }
     return err;

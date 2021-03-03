@@ -457,7 +457,14 @@ DisplayError HWDeviceDRM::Init() {
   DRMMaster *drm_master = {};
   DRMMaster::GetInstance(&drm_master);
   drm_master->GetHandle(&dev_fd_);
-  DRMLibLoader::GetInstance()->FuncGetDRMManager()(dev_fd_, &drm_mgr_intf_);
+  DRMLibLoader *drm_lib_loader = DRMLibLoader::GetInstance();
+
+  if (!drm_lib_loader) {
+    DLOGW("Failed to retrieve DRMLibLoader instance");
+    return kErrorResources;
+  }
+
+  drm_lib_loader->FuncGetDRMManager()(dev_fd_, &drm_mgr_intf_);
 
   if (-1 == display_id_) {
     if (drm_mgr_intf_->RegisterDisplay(disp_type_, &token_)) {
