@@ -265,6 +265,7 @@ class DisplayBase : public DisplayInterface {
   DisplayError SetUpCommit(LayerStack *layer_stack);
   DisplayError PerformCommit(LayerStack *layer_stack);
   DisplayError PostCommitLayerStack(LayerStack *layer_stack);
+  bool IsPrimaryDisplayLocked();
   virtual DisplayError CommitLocked(LayerStack *layer_stack);
 
   DisplayMutex disp_mutex_;

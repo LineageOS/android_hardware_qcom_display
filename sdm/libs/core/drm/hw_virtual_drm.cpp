@@ -145,6 +145,9 @@ DisplayError HWVirtualDRM::Commit(HWLayersInfo *hw_layers_info) {
     DLOGE("Atomic commit failed for crtc_id %d conn_id %d", token_.crtc_id, token_.conn_id);
   }
 
+  // Retire fence marks WB done event.
+  output_buffer->release_fence = hw_layers_info->retire_fence;
+
   return(err);
 }
 

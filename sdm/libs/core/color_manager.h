@@ -145,7 +145,7 @@ class ColorManagerProxy {
   bool GameEnhanceSupported();
   DisplayError ColorMgrGetStcModes(ColorModeList *mode_list);
   DisplayError ColorMgrSetStcMode(const ColorMode &color_mode);
-  DisplayError PrePrepare(DispLayerStack *disp_layer_stack);
+  DisplayError PrePrepare();
   DisplayError NotifyDisplayCalibrationMode(bool in_calibration);
 
  protected:

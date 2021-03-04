@@ -76,13 +76,13 @@ DisplayBase::DisplayBase(DisplayType display_type, DisplayEventHandler *event_ha
   lock_guard<recursive_mutex> client_lock(disp_mutex_.client_mutex);
 
   // Start commit worker thread and wait for thread response.
-  DLOGI("Starting commit thread");
+  DLOGI("Starting commit thread for display: %d", display_type);
 
   std::thread commit_thread(&DisplayBase::CommitThread, this);
   disp_mutex_.client_cv.wait(disp_mutex_.client_mutex);
   commit_thread_.swap(commit_thread);
 
-  DLOGI("Commit thread started");
+  DLOGI("Commit thread started for display: %d", display_type);
 }
 
 DisplayBase::DisplayBase(int32_t display_id, DisplayType display_type,
@@ -429,7 +429,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   }
 
   if (color_mgr_) {
-    color_mgr_->PrePrepare(&disp_layer_stack_);
+    color_mgr_->PrePrepare();
   }
 
   if (color_mgr_ && color_mgr_->NeedsPartialUpdateDisable()) {
@@ -554,28 +554,38 @@ void DisplayBase::SetRCData(LayerStack *layer_stack) {
 DisplayError DisplayBase::CommitOrPrepare(LayerStack *layer_stack) {
   ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
+  // Perform prepare
+  error = Prepare(layer_stack);
+  if (error != kErrorNone) {
+    DLOGE("Prepare failed: %d", error);
+    return error;
+  }
 
-  // Perform task here and set error status.
-  error = kErrorNone;
-
-  if (error == kErrorNone) {
+  // Trigger commit based on draw outcome.
+  bool async_commit = disp_layer_stack_.info.trigger_async_commit;
+  DLOGV_IF(kTagDisplay, "Trigger async commit: %d", async_commit);
+  if (async_commit) {
     // Notify worker to do hw commit.
     lock.NotifyWorker();
   }
 
-  return error;
+  return async_commit ? kErrorNone : kErrorNeedsCommit;
 }
 
 void DisplayBase::HandleAsyncCommit() {
   // Do not acquire mutexes here.
   // Perform hw commit here.
+  CommitLocked(disp_layer_stack_.stack);
 }
 
 void DisplayBase::CommitThread() {
-  DLOGI("Commit thread entered.");
-
   // Acquire worker mutex and wait for events.
   lock_guard<recursive_mutex> worker_lock(disp_mutex_.worker_mutex);
+
+  DLOGI("Commit thread entered. %d-%d", display_id_, display_type_);
+
+  // Commit thread need to run with real time priority ie; similar to composer thread.
+  SetRealTimePriority();
 
   // Notify client thread that the thread has started listening to events.
   {
@@ -713,7 +723,14 @@ DisplayError DisplayBase::PerformCommit(LayerStack *layer_stack) {
 DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
   ClientLock lock(disp_mutex_);
 
-  return CommitLocked(layer_stack);
+  if (draw_method_ == kDrawDefault) {
+    return CommitLocked(layer_stack);
+  }
+
+  // Trigger async commit.
+  lock.NotifyWorker();
+
+  return kErrorNone;
 }
 
 DisplayError DisplayBase::CommitLocked(LayerStack *layer_stack) {
@@ -2008,6 +2025,10 @@ DisplayError DisplayBase::GetDisplayType(DisplayType *display_type) {
 bool DisplayBase::IsPrimaryDisplay() {
   ClientLock lock(disp_mutex_);
 
+  return IsPrimaryDisplayLocked();
+}
+
+bool DisplayBase::IsPrimaryDisplayLocked() {
   return hw_panel_info_.is_primary_panel;
 }
 

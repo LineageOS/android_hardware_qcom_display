@@ -111,7 +111,6 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError Init() override;
   DisplayError Deinit() override;
   DisplayError Prepare(LayerStack *layer_stack) override;
-  DisplayError Commit(LayerStack *layer_stack) override;
   DisplayError ControlPartialUpdate(bool enable, uint32_t *pending) override;
   DisplayError DisablePartialUpdateOneFrame() override;
   DisplayError SetDisplayState(DisplayState state, bool teardown,
@@ -165,6 +164,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError SetActiveConfig(uint32_t index) override;
   DisplayError ReconfigureDisplay() override;
   DisplayError CreatePanelfeatures();
+  DisplayError CommitLocked(LayerStack *layer_stack) override;
 
  private:
   bool CanCompareFrameROI(LayerStack *layer_stack);
@@ -186,6 +186,13 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   void SendDisplayConfigs();
   bool CanLowerFps(bool idle_screen);
   int SetDemuraIntfStatus(bool enable);
+  bool PrePrepare(LayerStack *layer_stack);
+  DisplayError HandleSPR();
+  void CacheFrameROI();
+  void PreCommit(LayerStack *layer_stack);
+  DisplayError PostCommit(LayerStack *layer_stack, HWDisplayMode panel_mode);
+  DisplayError ControlPartialUpdateLocked(bool enable, uint32_t *pending);
+  DisplayError SetDppsFeatureLocked(void *payload, size_t size);
 
   const uint32_t kPuTimeOutMs = 1000;
   std::vector<HWEvent> event_list_;

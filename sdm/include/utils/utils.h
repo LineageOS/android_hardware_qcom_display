@@ -39,6 +39,7 @@ float gcd(float a, float b);
 float lcm(float a, float b);
 void CloseFd(int *fd);
 uint64_t GetSystemTimeInNs();
+void SetRealTimePriority();
 
 template<class T>
 bool SameConfig(T *t1, T *t2, unsigned int size) {

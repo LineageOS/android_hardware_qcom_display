@@ -775,6 +775,7 @@ struct HWLayersInfo {
   HWAVRInfo hw_avr_info = {};
   std::bitset<kUpdateMax> updates_mask = 0;
   uint64_t elapse_timestamp = 0;
+  bool trigger_async_commit = false;  // This field hints if asynchronous commit can be triggered.
   shared_ptr<Fence> retire_fence = nullptr;  // Retire fence for current draw cycle.
   LayerStackFlags flags;               //!< Flags associated with this layer set.
   PrimariesTransfer blend_cs = {};     //!< o/p - Blending color space of the frame, updated by SDM
