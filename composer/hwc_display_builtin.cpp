@@ -64,8 +64,8 @@ int HWCDisplayBuiltIn::Create(CoreInterface *core_intf, BufferAllocator *buffer_
   uint32_t builtin_height = 0;
 
   HWCDisplay *hwc_display_builtin =
-      new HWCDisplayBuiltIn(core_intf, buffer_allocator, callbacks, event_handler, qservice, id,
-                            sdm_id);
+      new HWCDisplayBuiltIn(core_intf, static_cast<HWCBufferAllocator *>(buffer_allocator),
+                            callbacks, event_handler, qservice, id, sdm_id);
   status = hwc_display_builtin->Init();
   if (status) {
     delete hwc_display_builtin;
@@ -97,7 +97,7 @@ void HWCDisplayBuiltIn::Destroy(HWCDisplay *hwc_display) {
   delete hwc_display;
 }
 
-HWCDisplayBuiltIn::HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
+HWCDisplayBuiltIn::HWCDisplayBuiltIn(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
                                      HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
                                      qService::QService *qservice, hwc2_display_t id,
                                      int32_t sdm_id)
