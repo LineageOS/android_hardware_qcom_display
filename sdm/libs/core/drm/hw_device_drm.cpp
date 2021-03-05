@@ -901,12 +901,19 @@ DisplayError HWDeviceDRM::GetHWPanelInfo(HWPanelInfo *panel_info) {
 }
 
 void HWDeviceDRM::SetDisplaySwitchMode(uint32_t index) {
+  if (current_mode_index_ == index) {
+    DLOGI("Mode %d already set", index);
+    return;
+  }
+
   uint32_t mode_flag = 0;
   uint32_t curr_mode_flag = 0, switch_mode_flag = 0;
   sde_drm::DRMModeInfo to_set = connector_info_.modes[index];
   sde_drm::DRMModeInfo current_mode = connector_info_.modes[current_mode_index_];
-  uint64_t current_bit_clk = connector_info_.modes[current_mode_index_].bit_clk_rate;
+  uint64_t target_bit_clk = connector_info_.modes[current_mode_index_].curr_bit_clk_rate;
   uint32_t switch_index  = 0;
+
+  bit_clk_rate_ = GetSupportedBitClkRate(index, target_bit_clk);
 
   if (to_set.cur_panel_mode & DRM_MODE_FLAG_CMD_MODE_PANEL) {
     mode_flag = DRM_MODE_FLAG_CMD_MODE_PANEL;
@@ -930,7 +937,6 @@ void HWDeviceDRM::SetDisplaySwitchMode(uint32_t index) {
     if ((to_set.mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
         (to_set.mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
         (to_set.mode.vrefresh == connector_info_.modes[mode_index].mode.vrefresh) &&
-        (current_bit_clk == connector_info_.modes[mode_index].bit_clk_rate) &&
         (mode_flag & connector_info_.modes[mode_index].cur_panel_mode)) {
       index = mode_index;
       break;
@@ -1220,7 +1226,6 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
   DRMSecurityLevel crtc_security_level = DRMSecurityLevel::SECURE_NON_SECURE;
   uint32_t index = current_mode_index_;
   sde_drm::DRMModeInfo current_mode = connector_info_.modes[index];
-  uint64_t current_bit_clk = connector_info_.modes[index].bit_clk_rate;
 
   solid_fills_.clear();
   bool resource_update = hw_layers_info->updates_mask.test(kUpdateResources);
@@ -1429,7 +1434,6 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
     for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
       if ((current_mode.mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
           (current_mode.mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
-          (current_bit_clk == connector_info_.modes[mode_index].bit_clk_rate) &&
           (current_mode.cur_panel_mode == connector_info_.modes[mode_index].cur_panel_mode) &&
           (vrefresh_ == connector_info_.modes[mode_index].mode.vrefresh)) {
         current_mode = connector_info_.modes[mode_index];
@@ -1439,16 +1443,8 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
   }
 
   if (bit_clk_rate_) {
-    for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
-      if ((current_mode.mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
-          (current_mode.mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
-          (current_mode.mode.vrefresh == connector_info_.modes[mode_index].mode.vrefresh) &&
-          (current_mode.cur_panel_mode == connector_info_.modes[mode_index].cur_panel_mode) &&
-          (bit_clk_rate_ == connector_info_.modes[mode_index].bit_clk_rate)) {
-        current_mode = connector_info_.modes[mode_index];
-        break;
-      }
-    }
+    // Set the new bit clk rate
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_DYN_BIT_CLK, token_.conn_id, bit_clk_rate_);
   }
 
   if (first_cycle_) {
@@ -1665,13 +1661,10 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayersInfo *hw_layers_info) {
   if (vrefresh_) {
     // Update current mode index if refresh rate is changed
     drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
-    uint64_t current_bit_clk = connector_info_.modes[current_mode_index_].bit_clk_rate;
     for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
       if ((current_mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
           (current_mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
-          (current_bit_clk == connector_info_.modes[mode_index].bit_clk_rate) &&
           (vrefresh_ == connector_info_.modes[mode_index].mode.vrefresh)) {
-        current_mode_index_ = mode_index;
         SetDisplaySwitchMode(mode_index);
         break;
       }
@@ -1679,19 +1672,11 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayersInfo *hw_layers_info) {
     vrefresh_ = 0;
   }
 
+
   if (bit_clk_rate_) {
     // Update current mode index if bit clk rate is changed.
-    drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
-    for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
-      if ((current_mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
-          (current_mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
-          (current_mode.vrefresh == connector_info_.modes[mode_index].mode.vrefresh) &&
-          (bit_clk_rate_ == connector_info_.modes[mode_index].bit_clk_rate)) {
-        current_mode_index_ = mode_index;
-        SetDisplaySwitchMode(mode_index);
-        break;
-      }
-    }
+    connector_info_.modes[current_mode_index_].curr_bit_clk_rate = bit_clk_rate_;
+
     bit_clk_rate_ = 0;
   }
 
@@ -1957,11 +1942,9 @@ DisplayError HWDeviceDRM::SetRefreshRate(uint32_t refresh_rate) {
 
   // Check if requested refresh rate is valid
   sde_drm::DRMModeInfo current_mode = connector_info_.modes[current_mode_index_];
-  uint64_t current_bit_clk = connector_info_.modes[current_mode_index_].bit_clk_rate;
   for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
     if ((current_mode.mode.vdisplay == connector_info_.modes[mode_index].mode.vdisplay) &&
         (current_mode.mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
-        (current_bit_clk == connector_info_.modes[mode_index].bit_clk_rate) &&
         (current_mode.cur_panel_mode == connector_info_.modes[mode_index].cur_panel_mode) &&
         (refresh_rate == connector_info_.modes[mode_index].mode.vrefresh)) {
       vrefresh_ = refresh_rate;
@@ -2622,6 +2605,29 @@ void HWDeviceDRM::GetTopologySplit(HWTopology hw_topology, uint32_t *split_numbe
     case kPPSplit:
     default:
       *split_number = 1;
+  }
+}
+
+uint64_t HWDeviceDRM::GetSupportedBitClkRate(uint32_t new_mode_index,
+                                uint64_t bit_clk_rate_request) {
+  if (current_mode_index_ == new_mode_index) {
+    if ((std::find(connector_info_.modes[current_mode_index_].dyn_bitclk_list.begin(),
+    connector_info_.modes[current_mode_index_].dyn_bitclk_list.end(), bit_clk_rate_request) !=
+    connector_info_.modes[current_mode_index_].dyn_bitclk_list.end())) {
+      return bit_clk_rate_request;
+    } else {
+      DLOGW("Requested rate not supported: %" PRIu64, bit_clk_rate_request);
+      return connector_info_.modes[current_mode_index_].curr_bit_clk_rate;
+    }
+  }
+
+  if ((std::find(connector_info_.modes[new_mode_index].dyn_bitclk_list.begin(),
+        connector_info_.modes[new_mode_index].dyn_bitclk_list.end(), bit_clk_rate_request) !=
+        connector_info_.modes[new_mode_index].dyn_bitclk_list.end())) {
+    return bit_clk_rate_request;
+  } else {
+    DLOGW("Requested rate not supported: %" PRIu64, bit_clk_rate_request);
+    return connector_info_.modes[new_mode_index].default_bit_clk_rate;
   }
 }
 }  // namespace sdm

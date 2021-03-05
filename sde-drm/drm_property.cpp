@@ -173,6 +173,7 @@ DRMProperty DRMPropertyManager::GetPropertyEnum(const std::string &name) const {
   if (name == "SDE_DEMURA_INIT_CFG_V1") { return DRMProperty::DEMURA_INIT_CFG_V1; }
   if (name == "DEMURA_PANEL_ID") { return DRMProperty::DEMURA_PANEL_ID; }
   if (name == "SDE_DEMURA_BOOT_PLANE_V1") { return DRMProperty::DEMURA_BOOT_PLANE_V1; }
+  if (name == "dyn_bit_clk") { return DRMProperty::DYN_BIT_CLK; }
 
   return DRMProperty::INVALID;
 }

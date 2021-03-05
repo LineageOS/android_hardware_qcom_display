@@ -130,10 +130,12 @@ void HWPeripheralDRM::PopulateBitClkRates() {
   for (auto &mode_info : connector_info_.modes) {
     auto &mode = mode_info.mode;
     if (mode.hdisplay == width && mode.vdisplay == height) {
-      if (std::find(bitclk_rates_.begin(), bitclk_rates_.end(), mode_info.bit_clk_rate) ==
-            bitclk_rates_.end()) {
-        bitclk_rates_.push_back(mode_info.bit_clk_rate);
-        DLOGI("Possible bit_clk_rates %" PRIu64 , mode_info.bit_clk_rate);
+      for (uint32_t index = 0; index < mode_info.dyn_bitclk_list.size(); index++) {
+        if (std::find(bitclk_rates_.begin(), bitclk_rates_.end(),
+              mode_info.dyn_bitclk_list[index]) == bitclk_rates_.end()) {
+          bitclk_rates_.push_back(mode_info.dyn_bitclk_list[index]);
+          DLOGI("Possible bit_clk_rates %" PRIu64, mode_info.dyn_bitclk_list[index]);
+        }
       }
     }
   }
@@ -151,16 +153,24 @@ DisplayError HWPeripheralDRM::SetDynamicDSIClock(uint64_t bit_clk_rate) {
     return kErrorNotSupported;
   }
 
-  bit_clk_rate_ = bit_clk_rate;
-  update_mode_ = true;
+  if (vrefresh_) {
+    // vrefresh change pending.
+    // Defer bit rate clock change.
+    return kErrorNotSupported;
+  }
 
+  if (GetSupportedBitClkRate(current_mode_index_, bit_clk_rate) ==
+      connector_info_.modes[current_mode_index_].curr_bit_clk_rate) {
+    return kErrorNone;
+  }
+
+  bit_clk_rate_ = bit_clk_rate;
   return kErrorNone;
 }
 
 DisplayError HWPeripheralDRM::GetDynamicDSIClock(uint64_t *bit_clk_rate) {
   // Update bit_rate corresponding to current refresh rate.
-  *bit_clk_rate = (uint32_t)connector_info_.modes[current_mode_index_].bit_clk_rate;
-
+  *bit_clk_rate = (uint32_t)connector_info_.modes[current_mode_index_].curr_bit_clk_rate;
   return kErrorNone;
 }
 
