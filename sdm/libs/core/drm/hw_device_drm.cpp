@@ -585,11 +585,11 @@ void HWDeviceDRM::InitializeConfigs() {
   for (uint32_t mode_index = 0; mode_index < modes_count; mode_index++) {
     if (panel_mode_pref & connector_info_.modes[mode_index].panel_mode_caps) {
       connector_info_.modes[mode_index].cur_panel_mode = panel_mode_pref;
-    } else {
-      connector_info_.modes[mode_index].cur_panel_mode =
-          (panel_mode_pref == DRM_MODE_FLAG_CMD_MODE_PANEL) ? DRM_MODE_FLAG_VID_MODE_PANEL
-                                                            : DRM_MODE_FLAG_CMD_MODE_PANEL;
-    }
+    } else if (panel_mode_pref == DRM_MODE_FLAG_VID_MODE_PANEL) {
+      connector_info_.modes[mode_index].cur_panel_mode = DRM_MODE_FLAG_VID_MODE_PANEL;
+    } else if (panel_mode_pref == DRM_MODE_FLAG_CMD_MODE_PANEL) {
+      connector_info_.modes[mode_index].cur_panel_mode = DRM_MODE_FLAG_CMD_MODE_PANEL;
+     }
     // Add mode variant if both panel modes are supported
     if (connector_info_.modes[mode_index].panel_mode_caps & DRM_MODE_FLAG_CMD_MODE_PANEL &&
         connector_info_.modes[mode_index].panel_mode_caps & DRM_MODE_FLAG_VID_MODE_PANEL) {
@@ -793,12 +793,11 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
 
   GetHWDisplayPortAndMode();
   GetHWPanelMaxBrightness();
-
-  if (connector_info_.modes[current_mode_index_].panel_mode_caps & DRM_MODE_FLAG_CMD_MODE_PANEL) {
+  if (connector_info_.modes[current_mode_index_].cur_panel_mode & DRM_MODE_FLAG_CMD_MODE_PANEL) {
     hw_panel_info_.mode = kModeCommand;
   }
 
-  if (connector_info_.modes[current_mode_index_].panel_mode_caps &
+  if (connector_info_.modes[current_mode_index_].cur_panel_mode &
              DRM_MODE_FLAG_VID_MODE_PANEL) {
     hw_panel_info_.mode = kModeVideo;
   }
