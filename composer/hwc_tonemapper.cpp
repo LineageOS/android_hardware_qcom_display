@@ -310,12 +310,15 @@ void HWCToneMapper::DumpToneMapOutput(ToneMapSession *session, shared_ptr<Fence>
            "/tonemap_%dx%d_frame%d.raw",
            HWCDebugHandler::DumpDir(), width, height, dump_frame_index_);
 
-  FILE* fp = fopen(dump_file_name, "w+");
-  if (fp) {
-    DLOGI("base addr = %p", base_ptr);
-    result = fwrite(base_ptr, size, 1, fp);
-    fclose(fp);
+  if (base_ptr != nullptr) {
+    FILE* fp = fopen(dump_file_name, "w+");
+    if (fp) {
+      DLOGI("base addr = %p", base_ptr);
+      result = fwrite(base_ptr, size, 1, fp);
+      fclose(fp);
+    }
   }
+
   dump_frame_count_--;
   dump_frame_index_++;
 }

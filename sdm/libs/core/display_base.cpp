@@ -398,16 +398,17 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
   needs_validate_ = true;
+
+  if (!layer_stack) {
+    return kErrorParameters;
+  }
+
   disp_layer_stack_.info.output_buffer = layer_stack->output_buffer;
 
   DTRACE_SCOPED();
   // Allow prepare as pending doze/pending_power_on is handled as a part of draw cycle
   if (!active_ && (pending_power_state_ == kPowerStateNone)) {
     return kErrorPermission;
-  }
-
-  if (!layer_stack) {
-    return kErrorParameters;
   }
 
   DLOGI_IF(kTagDisplay, "Entering Prepare for display: %d-%d", display_id_, display_type_);
@@ -617,6 +618,11 @@ void DisplayBase::CommitThread() {
 
 DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
   DisplayError error = kErrorNone;
+
+  if (!layer_stack) {
+    return kErrorParameters;
+  }
+
   disp_layer_stack_.info.output_buffer = layer_stack->output_buffer;
 
   if (rc_panel_feature_init_) {
@@ -674,10 +680,6 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
   if (!active_ && (pending_power_state_ == kPowerStateNone)) {
     needs_validate_ = true;
     return kErrorPermission;
-  }
-
-  if (!layer_stack) {
-    return kErrorParameters;
   }
 
   if (needs_validate_) {

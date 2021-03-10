@@ -1856,10 +1856,12 @@ void HWCDisplay::DumpInputBuffers() {
              dir_path, i, width, height, qdutils::GetHALPixelFormatString(format),
              dump_frame_index_);
 
-    FILE *fp = fopen(dump_file_name, "w+");
-    if (fp) {
-      result = fwrite(base_ptr, alloc_size, 1, fp);
-      fclose(fp);
+    if (base_ptr != nullptr) {
+      FILE *fp = fopen(dump_file_name, "w+");
+      if (fp) {
+        result = fwrite(base_ptr, alloc_size, 1, fp);
+        fclose(fp);
+      }
     }
 
     int release_fence = -1;
@@ -2758,7 +2760,8 @@ bool HWCDisplay::GetTransientVsyncPeriod(VsyncPeriodNanos *vsync_period) {
 
 std::tuple<int64_t, int64_t> HWCDisplay::RequestActiveConfigChange(
     hwc2_config_t config, VsyncPeriodNanos current_vsync_period, int64_t desired_time) {
-  int64_t refresh_time, applied_time;
+  int64_t refresh_time = 0;
+  int64_t applied_time = 0;
   std::tie(refresh_time, applied_time) =
       EstimateVsyncPeriodChangeTimeline(current_vsync_period, desired_time);
 
@@ -2795,7 +2798,7 @@ void HWCDisplay::SubmitActiveConfigChange(VsyncPeriodNanos current_vsync_period)
   }
 
   std::lock_guard<std::mutex> lock(transient_refresh_rate_lock_);
-  hwc_vsync_period_change_timeline_t timeline;
+  hwc_vsync_period_change_timeline_t timeline = {};
   std::tie(timeline.refreshTimeNanos, timeline.newVsyncAppliedTimeNanos) =
       EstimateVsyncPeriodChangeTimeline(current_vsync_period, pending_refresh_rate_refresh_time_);
 

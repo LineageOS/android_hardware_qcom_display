@@ -64,7 +64,7 @@ void DRMPanelFeatureMgr::Init(int fd, drmModeRes* res) {
   lock_guard<mutex> lock(lock_);
 
   if (!res || (fd < 0)) {
-    DRM_LOGE("Invalid arguments for init - fd %d and DRM resources pointer 0x%p", fd, (void *)res);
+    DRM_LOGE("Invalid arguments for init - fd %d and DRM resources pointer 0x%pK", fd, (void *)res);
     return;
   }
 
@@ -192,6 +192,10 @@ int DRMPanelFeatureMgr::InitObjectProps(int obj_id, int obj_type) {
 void DRMPanelFeatureMgr::ParsePanelId(uint32_t blob_id, DRMPanelFeatureInfo *info) {
   drmModePropertyBlobRes *blob = drmModeGetPropertyBlob(dev_fd_, blob_id);
   if (!blob) {
+    return;
+  }
+
+  if (!blob->data) {
     return;
   }
 
