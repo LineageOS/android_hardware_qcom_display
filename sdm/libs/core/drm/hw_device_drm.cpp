@@ -1410,6 +1410,9 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
 
   if (!validate && release_fence_fd && retire_fence_fd) {
     drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, release_fence_fd);
+    // Set retire fence offset.
+    uint32_t offset = hw_layers_info->retire_fence_offset;
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_RETIRE_FENCE_OFFSET, token_.conn_id, offset);
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_GET_RETIRE_FENCE, token_.conn_id, retire_fence_fd);
   }
 
@@ -1619,7 +1622,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayersInfo *hw_layers_info) {
   SetupAtomic(scoped_ref, hw_layers_info, false /* validate */,
                                    &release_fence_fd, &retire_fence_fd);
 
-  bool sync_commit = synchronous_commit_ ||
+  bool sync_commit = synchronous_commit_ || first_cycle_ ||
                     (tui_state_ == kTUIStateStart || tui_state_ == kTUIStateEnd);
 
   if (hw_layers_info->elapse_timestamp > 0) {

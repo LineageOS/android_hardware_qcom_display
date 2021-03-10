@@ -925,6 +925,15 @@ void DRMConnector::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
       drmModeAtomicAddProperty(req, obj_id, prop_id, reinterpret_cast<uint64_t>(fence));
     } break;
 
+    case DRMOps::CONNECTOR_SET_RETIRE_FENCE_OFFSET: {
+      if (!prop_mgr_.IsPropertyAvailable(DRMProperty::RETIRE_FENCE_OFFSET)) {
+        return;
+      }
+      uint32_t offset = va_arg(args, uint32_t);
+      uint32_t prop_id = prop_mgr_.GetPropertyId(DRMProperty::RETIRE_FENCE_OFFSET);
+      drmModeAtomicAddProperty(req, obj_id, prop_id, offset);
+    } break;
+
     case DRMOps::CONNECTOR_SET_OUTPUT_RECT: {
       DRMRect rect = va_arg(args, DRMRect);
       drmModeAtomicAddProperty(req, obj_id,

@@ -196,9 +196,9 @@ void Strategy::GenerateROI() {
 }
 
 DisplayError Strategy::Reconfigure(const HWPanelInfo &hw_panel_info,
-                         const HWDisplayAttributes &display_attributes,
-                         const HWMixerAttributes &mixer_attributes,
-                         const DisplayConfigVariableInfo &fb_config) {
+                                   const HWDisplayAttributes &display_attributes,
+                                   const HWMixerAttributes &mixer_attributes,
+                                   const DisplayConfigVariableInfo &fb_config) {
   DisplayError error = kErrorNone;
 
   if (!extension_intf_) {

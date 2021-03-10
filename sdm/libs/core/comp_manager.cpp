@@ -349,10 +349,6 @@ DisplayError CompManager::Prepare(Handle display_ctx, DispLayerStack *disp_layer
     return error;
   }
 
-  error = resource_intf_->Stop(display_resource_ctx, disp_layer_stack);
-  if (error != kErrorNone) {
-    DLOGE("Resource stop failed for display = %d", display_comp_ctx->display_type);
-  }
   return error;
 }
 
@@ -365,6 +361,11 @@ DisplayError CompManager::PostPrepare(Handle display_ctx, DispLayerStack *disp_l
   DisplayError error = kErrorNone;
 
   display_comp_ctx->strategy->Stop();
+
+  error = resource_intf_->Stop(display_resource_ctx, disp_layer_stack);
+  if (error != kErrorNone) {
+    DLOGE("Resource stop failed for display = %d", display_comp_ctx->display_type);
+  }
 
   error = resource_intf_->PostPrepare(display_resource_ctx, disp_layer_stack);
   if (error != kErrorNone) {

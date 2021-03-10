@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -114,6 +114,7 @@ int DRMAtomicReq::Perform(DRMOps opcode, uint32_t obj_id, ...) {
     } break;
     case DRMOps::CONNECTOR_SET_CRTC:
     case DRMOps::CONNECTOR_GET_RETIRE_FENCE:
+    case DRMOps::CONNECTOR_SET_RETIRE_FENCE_OFFSET:
     case DRMOps::CONNECTOR_SET_OUTPUT_RECT:
     case DRMOps::CONNECTOR_SET_OUTPUT_FB_ID:
     case DRMOps::CONNECTOR_SET_POWER_MODE:

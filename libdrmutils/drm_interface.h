@@ -334,6 +334,13 @@ enum struct DRMOps {
    */
   CONNECTOR_GET_RETIRE_FENCE,
   /*
+   * Op: Sets retire fence offset on this connector.
+   * DRMAtomicReqInterface.
+   * Arg: uint32_t - Connector ID
+   *      uint32_t - Offset indicating number of cycles to advance retire fence.
+   */
+  CONNECTOR_SET_RETIRE_FENCE_OFFSET,
+  /*
    * Op: Sets writeback connector destination rect
    * Arg: uint32_t - Connector ID
    *      DRMRect - Dst Rectangle

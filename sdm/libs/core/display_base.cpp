@@ -200,6 +200,9 @@ DisplayError DisplayBase::Init() {
 
   SetupPanelFeatureFactory();
 
+  // Assume unified draw is supported.
+  unified_draw_supported_ = true;
+
   return kErrorNone;
 
 CleanupOnError:
@@ -676,6 +679,9 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
     }
   }
 
+  disp_layer_stack_.info.retire_fence_offset = (draw_method_ != kDrawDefault) &&
+                                               (display_type_ != kVirtual) ? 1 : 0;
+
   // Allow commit as pending doze/pending_power_on is handled as a part of draw cycle
   if (!active_ && (pending_power_state_ == kPowerStateNone)) {
     needs_validate_ = true;
@@ -876,6 +882,7 @@ DisplayError DisplayBase::GetConfig(DisplayConfigFixedInfo *fixed_info) {
   fixed_info->hdr_metadata_type_one = hw_panel_info_.hdr_metadata_type_one;
   fixed_info->partial_update = hw_panel_info_.partial_update;
   fixed_info->readback_supported = hw_resource_info.has_concurrent_writeback;
+  fixed_info->supports_unified_draw = unified_draw_supported_;
 
   return kErrorNone;
 }
@@ -2714,6 +2721,18 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
       }
     }
   }
+  return kErrorNone;
+}
+
+DisplayError DisplayBase::GetOutputBufferAcquireFence(shared_ptr<Fence> *out_fence) {
+  ClientLock lock(disp_mutex_);
+  LayerBuffer *out_buffer = disp_layer_stack_.stack->output_buffer;
+  if (out_buffer == nullptr) {
+    return kErrorNotSupported;
+  }
+
+  *out_fence = out_buffer->release_fence;
+
   return kErrorNone;
 }
 

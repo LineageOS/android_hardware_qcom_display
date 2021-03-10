@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -86,6 +86,7 @@ enum struct DRMProperty {
   DIM_STAGES_V1,
   IDLE_TIME,
   RETIRE_FENCE,
+  RETIRE_FENCE_OFFSET,
   DST_X,
   DST_Y,
   DST_W,

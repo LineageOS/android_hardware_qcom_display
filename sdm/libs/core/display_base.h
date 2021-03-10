@@ -185,6 +185,7 @@ class DisplayBase : public DisplayInterface {
     return kErrorNotSupported;
   }
   virtual bool HasDemura() { return false; }
+  virtual DisplayError GetOutputBufferAcquireFence(shared_ptr<Fence> *out_fence);
 
  protected:
   struct DisplayMutex {
@@ -333,6 +334,7 @@ class DisplayBase : public DisplayInterface {
   PanelFeatureFactoryIntf *pf_factory_ = nullptr;
   PanelFeaturePropertyIntf *prop_intf_ = nullptr;
   bool first_cycle_ = true;
+  bool unified_draw_supported_ = true;  // By default supported, unless disabled by property.
 
  private:
   bool StartDisplayPowerReset();

@@ -130,6 +130,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(ClearLUTs())
   MAKE_NO_OP(IsSupportedOnDisplay(SupportedDisplayFeature feature, uint32_t *supported))
   MAKE_NO_OP(NotifyDisplayCalibrationMode(bool))
+  MAKE_NO_OP(GetOutputBufferAcquireFence(shared_ptr<Fence> *))
 
  protected:
   DisplayConfigVariableInfo default_variable_config_ = {};

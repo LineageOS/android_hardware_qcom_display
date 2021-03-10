@@ -1092,6 +1092,14 @@ class DisplayInterface {
   */
   virtual bool HasDemura() = 0;
 
+  /*! @brief Method to retrieve output buffer acquire fence.
+
+    @param[out] output buffer acquire fence.
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetOutputBufferAcquireFence(shared_ptr<Fence> *out_fence) = 0;
+
  protected:
   virtual ~DisplayInterface() { }
 };
