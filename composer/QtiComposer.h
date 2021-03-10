@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019, 2021 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -37,8 +37,8 @@
 #include <hardware/hwcomposer2.h>
 #include <log/log.h>
 #include <vendor/qti/hardware/display/composer/3.0/IQtiComposer.h>
-
 #include <unordered_set>
+#include "DisplayConfigAIDL.h"
 
 namespace vendor {
 namespace qti {
@@ -49,6 +49,7 @@ namespace V3_0 {
 namespace implementation {
 
 using ::vendor::qti::hardware::display::composer::V3_0::IQtiComposer;
+using aidl::vendor::qti::hardware::display::config::DisplayConfigAIDL;
 
 class QtiComposer : public IQtiComposer {
  public:
@@ -71,6 +72,7 @@ class QtiComposer : public IQtiComposer {
 
  private:
     HWCSession *hwc_session_ = nullptr;
+    DisplayConfigAIDL* display_config_aidl_ = nullptr;
 };
 
 extern "C" IQtiComposer* HIDL_FETCH_IQtiComposer(const char* name);

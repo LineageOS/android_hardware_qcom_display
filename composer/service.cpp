@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019, 2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -26,9 +26,15 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include <android-base/logging.h>
+#include <android/binder_manager.h>
+#include <android/binder_process.h>
 #include <hidl/LegacySupport.h>
+
+#include "DisplayConfigAIDL.h"
 #include "QtiComposer.h"
 
+using aidl::vendor::qti::hardware::display::config::DisplayConfigAIDL;
 using android::ProcessState;
 using android::sp;
 using android::hardware::configureRpcThreadpool;
@@ -77,8 +83,24 @@ int main(int, char **) {
   }
   ALOGI("Registering Display HW Composer HAL as a service...done!");
 
+  ALOGI("Registering DisplayConfig AIDL as a service");
+  ABinderProcess_setThreadPoolMaxThreadCount(0);
+  std::shared_ptr<DisplayConfigAIDL> displayConfig = ndk::SharedRefBase::make<DisplayConfigAIDL>();
+  const std::string instance = std::string() + DisplayConfigAIDL::descriptor + "/default";
+  if (!displayConfig->asBinder().get()) {
+    ALOGE("Display Config AIDL's binder is null");
+  }
+
+  binder_status_t status = AServiceManager_addService(displayConfig->asBinder().get(),
+                                                      instance.c_str());
+  if (status != STATUS_OK) {
+    ALOGE("Failed to register DisplayConfig AIDL as a service (status:%d)", status);
+  } else {
+    ALOGI("Successfully registered DisplayConfig AIDL as a service");
+  }
+
   ALOGI("Joining RPC threadpool...");
-  joinRpcThreadpool();
+  ABinderProcess_joinThreadPool();
 
   return 0;
 }

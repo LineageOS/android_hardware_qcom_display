@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019, 2021 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -42,10 +42,12 @@ QtiComposerClient* QtiComposerClient::qti_composerclient_instance_ = nullptr;
 
 QtiComposer::QtiComposer() {
   hwc_session_ = HWCSession::GetInstance();
+  display_config_aidl_ = ::new DisplayConfigAIDL(HWCSession::GetInstance());
 }
 
 QtiComposer::~QtiComposer() {
   hwc_session_->Deinit();
+  delete display_config_aidl_;
 }
 
 // Methods from ::android::hardware::graphics::composer::V2_1::IComposer follow.
@@ -145,13 +147,13 @@ QtiComposer *QtiComposer::initialize() {
     ALOGI("Successfully initialized HWCSession, creating QtiComposer");
   }
 
-  return new QtiComposer();
+  return ::new QtiComposer();
 }
 
 // Methods from ::android::hidl::base::V1_0::IBase follow.
 
 IQtiComposer* HIDL_FETCH_IQtiComposer(const char* /* name */) {
-  return new QtiComposer();
+  return ::new QtiComposer();
 }
 
 }  // namespace implementation

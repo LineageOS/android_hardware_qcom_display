@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -62,6 +62,10 @@ namespace composer_V2_4 = ::android::hardware::graphics::composer::V2_4;
 using HwcDisplayCapability = composer_V2_4::IComposerClient::DisplayCapability;
 using HwcDisplayConnectionType = composer_V2_4::IComposerClient::DisplayConnectionType;
 
+namespace aidl::vendor::qti::hardware::display::config {
+  class DisplayConfigAIDL;
+}
+
 namespace sdm {
 
 using vendor::qti::hardware::display::composer::V3_0::IQtiComposerClient;
@@ -101,6 +105,9 @@ constexpr int32_t kPropertyMax = 256;
 
 class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
                    public HWCDisplayEventHandler, public DisplayConfig::ClientContext {
+
+ friend class aidl::vendor::qti::hardware::display::config::DisplayConfigAIDL;
+
  public:
   enum HotPlugEvent {
     kHotPlugNone,

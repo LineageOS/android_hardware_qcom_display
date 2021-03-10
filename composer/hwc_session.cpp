@@ -150,7 +150,7 @@ HWCSession::HWCSession() : cwb_(this) {}
 HWCSession *HWCSession::GetInstance() {
   // executed only once for the very first call.
   // GetInstance called multiple times from Composer and ComposerClient
-  static HWCSession *hwc_session = new HWCSession();
+  static HWCSession *hwc_session = ::new HWCSession();
   return hwc_session;
 }
 
