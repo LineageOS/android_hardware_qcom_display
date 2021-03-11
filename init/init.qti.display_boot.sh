@@ -63,8 +63,8 @@ case "$target" in
         setprop vendor.display.enable_qsync_idle 1
         setprop vendor.display.enable_allow_idle_fallback 1
         ;;
-        # SOC ID for Yupik is 475, Yupik P is 499
-        475|499)
+        # SOC ID for Yupik is 475, Yupik P is 499, Faroe is 515
+        475|499|515)
         # Set property for Yupik
         setprop vendor.display.target.version 2
         setprop vendor.display.enable_posted_start_dyn 2
