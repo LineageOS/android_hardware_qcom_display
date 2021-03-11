@@ -131,7 +131,6 @@ HWC2::Error HWCDisplayPluggable::Validate(uint32_t *out_num_types, uint32_t *out
 
   if (layer_set_.empty()) {
     flush_ = !client_connected_;
-    validated_ = true;
     return status;
   }
 
@@ -242,7 +241,6 @@ int HWCDisplayPluggable::SetState(bool connected) {
       shared_ptr<Fence> release_fence = nullptr;
       display_null_.GetDisplayState(&state);
       display_intf_->SetDisplayState(state, false /* teardown */, &release_fence);
-      validated_ = false;
 
       SetVsyncEnabled(HWC2::Vsync::Enable);
 
@@ -323,14 +321,12 @@ HWC2::Error HWCDisplayPluggable::SetColorModeWithRenderIntent(ColorMode mode, Re
   }
 
   callbacks_->Refresh(id_);
-  validated_ = false;
 
   return status;
 }
 
 HWC2::Error HWCDisplayPluggable::UpdatePowerMode(HWC2::PowerMode mode) {
   current_power_mode_ = mode;
-  validated_ = false;
   return HWC2::Error::None;
 }
 
@@ -347,7 +343,6 @@ HWC2::Error HWCDisplayPluggable::SetColorTransform(const float *matrix,
   }
 
   callbacks_->Refresh(id_);
-  validated_ = false;
 
   return HWC2::Error::None;
 }

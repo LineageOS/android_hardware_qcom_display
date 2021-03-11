@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -170,7 +170,6 @@ HWC2::Error HWCDisplayPluggableTest::Present(shared_ptr<Fence> *out_retire_fence
 
   if (display_paused_) {
     DisplayError error = display_intf_->Flush(&layer_stack_);
-    validated_ = false;
     if (error != kErrorNone) {
       DLOGE("Flush failed. Error = %d", error);
     }

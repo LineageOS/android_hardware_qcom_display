@@ -192,18 +192,18 @@ void HWCDisplayBuiltIn::Dump(std::ostringstream *os) {
 
 void HWCDisplayBuiltIn::ValidateUiScaling() {
   if (is_primary_ || !is_cmd_mode_) {
-    force_reset_validate_ = false;
+    force_reset_lut_ = false;
     return;
   }
 
   for (auto &hwc_layer : layer_set_) {
     Layer *layer = hwc_layer->GetSDMLayer();
     if (hwc_layer->IsScalingPresent() && !layer->input_buffer.flags.video) {
-      force_reset_validate_ = true;
+      force_reset_lut_ = true;
       return;
     }
   }
-  force_reset_validate_ = false;
+  force_reset_lut_ = false;
 }
 
 HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_num_requests) {
@@ -301,7 +301,6 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
   if (layer_set_.empty()) {
     // Avoid flush for Command mode panel.
     flush_ = !client_connected_;
-    validated_ = true;
     return status;
   }
 
@@ -345,7 +344,7 @@ HWC2::Error HWCDisplayBuiltIn::CommitStitchLayers() {
     return HWC2::Error::None;
   }
 
-  if (!validated_ || skip_commit_) {
+  if (!display_intf_->IsValidated() || skip_commit_) {
     return HWC2::Error::None;
   }
 
@@ -507,9 +506,8 @@ HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
 
   pending_commit_ = false;
 
-  // In case of scaling UI layer for command mode, reset validate
-  if (force_reset_validate_) {
-    validated_ = false;
+  // In case of scaling UI layer for command mode, clear LUTs
+  if (force_reset_lut_) {
     display_intf_->ClearLUTs();
   }
   return status;
@@ -564,7 +562,6 @@ HWC2::Error HWCDisplayBuiltIn::SetColorModeWithRenderIntent(ColorMode mode, Rend
     return status;
   }
   callbacks_->Refresh(id_);
-  validated_ = false;
   return status;
 }
 
@@ -576,7 +573,6 @@ HWC2::Error HWCDisplayBuiltIn::SetColorModeById(int32_t color_mode_id) {
   }
 
   callbacks_->Refresh(id_);
-  validated_ = false;
 
   return status;
 }
@@ -627,7 +623,6 @@ HWC2::Error HWCDisplayBuiltIn::SetColorTransform(const float *matrix,
 
   callbacks_->Refresh(id_);
   color_tranform_failed_ = false;
-  validated_ = false;
 
   return status;
 }
@@ -683,13 +678,12 @@ HWC2::Error HWCDisplayBuiltIn::SetReadbackBuffer(const native_handle_t *buffer,
   post_processed_output_ = post_processed_output;
   readback_buffer_queued_ = true;
   readback_configured_ = false;
-  validated_ = false;
   cwb_client_ = client;
 
   DLOGV_IF(kTagQDCM, "Successfully configured the buffer: post_processed_output_ %d, " \
-        "readback_buffer_queued_ %d, readback_configured_ %d, validated_ %d, " \
+        "readback_buffer_queued_ %d, readback_configured_ %d, " \
         "cwb_client_ %d", post_processed_output_, readback_buffer_queued_,
-        readback_configured_, validated_, cwb_client_);
+        readback_configured_, cwb_client_);
 
   return HWC2::Error::None;
 }
@@ -747,7 +741,6 @@ DisplayError HWCDisplayBuiltIn::TeardownConcurrentWriteback(bool *needs_refresh)
   readback_configured_ = false;
   output_buffer_ = {};
   cwb_client_ = kCWBClientNone;
-  validated_ = false;
 
   *needs_refresh = true;
   return kErrorNone;
@@ -808,7 +801,6 @@ HWC2::Error HWCDisplayBuiltIn::SetFrameTriggerMode(uint32_t mode) {
     return HWC2::Error::BadConfig;
 
   callbacks_->Refresh(HWC_DISPLAY_PRIMARY);
-  validated_ = false;
 
   return HWC2::Error::None;
 }
@@ -851,7 +843,6 @@ int HWCDisplayBuiltIn::Perform(uint32_t operation, ...) {
       return -EINVAL;
   }
   va_end(args);
-  validated_ = false;
 
   return 0;
 }
@@ -986,13 +977,11 @@ uint32_t HWCDisplayBuiltIn::GetOptimalRefreshRate(bool one_updating_layer) {
 
 void HWCDisplayBuiltIn::SetIdleTimeoutMs(uint32_t timeout_ms, uint32_t inactive_ms) {
   display_intf_->SetIdleTimeoutMs(timeout_ms, inactive_ms);
-  validated_ = false;
 }
 
 void HWCDisplayBuiltIn::HandleFrameOutput() {
   if (readback_buffer_queued_) {
     DLOGV_IF(kTagQDCM, "No pending readback buffer found on the queue.");
-    validated_ = false;
   }
 
   if (frame_capture_buffer_queued_) {
@@ -1032,7 +1021,6 @@ void HWCDisplayBuiltIn::HandleFrameDump() {
 
     if (!ret) {
       DumpOutputBuffer(output_buffer_info_, output_buffer_base_, layer_stack_.retire_fence);
-      validated_ = false;
     }
 
     if (0 == (dump_frame_count_ - 1)) {
@@ -1170,7 +1158,6 @@ DisplayError HWCDisplayBuiltIn::SetDetailEnhancerConfig
 
   if (display_intf_) {
     error = display_intf_->SetDetailEnhancerData(de_data);
-    validated_ = false;
   }
   return error;
 }
@@ -1263,7 +1250,6 @@ DisplayError HWCDisplayBuiltIn::ControlPartialUpdate(bool enable, uint32_t *pend
 
   if (display_intf_) {
     error = display_intf_->ControlPartialUpdate(enable, pending);
-    validated_ = false;
   }
 
   return error;
@@ -1274,7 +1260,6 @@ DisplayError HWCDisplayBuiltIn::DisablePartialUpdateOneFrame() {
 
   if (display_intf_) {
     error = display_intf_->DisablePartialUpdateOneFrame();
-    validated_ = false;
   }
 
   return error;
@@ -1337,7 +1322,6 @@ HWC2::Error HWCDisplayBuiltIn::GetDisplayedContentSample(
 DisplayError HWCDisplayBuiltIn::SetMixerResolution(uint32_t width, uint32_t height) {
   DisplayError error = display_intf_->SetMixerResolution(width, height);
   callbacks_->Refresh(id_);
-  validated_ = false;
   return error;
 }
 
@@ -1358,7 +1342,6 @@ HWC2::Error HWCDisplayBuiltIn::SetQSyncMode(QSyncMode qsync_mode) {
     return HWC2::Error::Unsupported;
   }
 
-  validated_ = false;
   return HWC2::Error::None;
 }
 
@@ -1367,7 +1350,6 @@ DisplayError HWCDisplayBuiltIn::ControlIdlePowerCollapse(bool enable, bool synch
 
   if (display_intf_) {
     error = display_intf_->ControlIdlePowerCollapse(enable, synchronous);
-    validated_ = false;
   }
   return error;
 }
@@ -1381,7 +1363,6 @@ DisplayError HWCDisplayBuiltIn::SetDynamicDSIClock(uint64_t bitclk) {
   }
 
   callbacks_->Refresh(id_);
-  validated_ = false;
 
   return kErrorNone;
 }
@@ -1449,7 +1430,6 @@ HWC2::Error HWCDisplayBuiltIn::SetBLScale(uint32_t level) {
 
 HWC2::Error HWCDisplayBuiltIn::UpdatePowerMode(HWC2::PowerMode mode) {
   current_power_mode_ = mode;
-  validated_ = false;
   return HWC2::Error::None;
 }
 

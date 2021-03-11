@@ -397,6 +397,15 @@ DisplayError DisplayBase::ValidateGPUTargetParams() {
   return kErrorNone;
 }
 
+DisplayError DisplayBase::PrePrepare(LayerStack *layer_stack) {
+  DTRACE_SCOPED();
+  ClientLock lock(disp_mutex_);
+  disp_layer_stack_.stack = layer_stack;
+  layer_stack->needs_validate = !validated_ || needs_validate_;
+
+  return comp_manager_->PrePrepare(display_comp_ctx_, &disp_layer_stack_);
+}
+
 DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
@@ -437,7 +446,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   }
 
   if (color_mgr_ && color_mgr_->NeedsPartialUpdateDisable()) {
-    DisablePartialUpdateOneFrame();
+    DisablePartialUpdateOneFrameInternal();
   }
   // TODO(user): Temporary changes, to be removed when DRM driver supports
   // Partial update with Destination scaler enabled.
@@ -451,8 +460,6 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   comp_manager_->GenerateROI(display_comp_ctx_, &disp_layer_stack_);
   rc_pu_flag_status_ = disp_layer_stack_.info.rc_pu_flag_status;
 
-  comp_manager_->PrePrepare(display_comp_ctx_, &disp_layer_stack_);
-
   CheckMMRMState();
 
   while (true) {
@@ -464,6 +471,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
     if (layer_stack->flags.fast_path && disp_layer_stack_.info.fast_path_composition) {
       // In Fast Path, driver validation happens in COMMIT Phase.
       DLOGI_IF(kTagDisplay, "Draw cycle qualifies for Fast Path!");
+      validated_ = true;
       needs_validate_ = false;
       break;
     }
@@ -471,6 +479,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
     error = hw_intf_->Validate(&disp_layer_stack_.info);
     if (error == kErrorNone) {
       // Strategy is successful now, wait for Commit().
+      validated_ = true;
       needs_validate_ = false;
       break;
     }
@@ -486,6 +495,7 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   comp_manager_->PostPrepare(display_comp_ctx_, &disp_layer_stack_);
 
   DLOGI_IF(kTagDisplay, "Exiting Prepare for display type : %d error: %d", display_type_, error);
+
   return error;
 }
 
@@ -651,7 +661,7 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
      DLOGW("Failed to set the data on driver for display: %d-%d, Error: %d, status: %d",
            display_id_, display_type_, ret, (*mask_status).rc_mask_state);
       if ((*mask_status).rc_mask_state == kStatusRcMaskStackHandled) {
-        needs_validate_ = true;
+        validated_ = false;
         DLOGW("Need to call Corresponding prepare to handle the mask layers %d %d.",
               display_id_, display_type_);
         for (auto &layer : layer_stack->layers) {
@@ -659,6 +669,7 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
             layer->request.flags.rc = false;
           }
         }
+        validated_ = false;
         return kErrorNotValidated;
       }
     } else {
@@ -666,12 +677,12 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
                (*mask_status).rc_mask_state, rc_pu_flag_status_);
       if ((*mask_status).rc_pu_full_roi) {
         if (rc_pu_flag_status_ && rc_pu_flag_status_ != SDE_HW_PU_USECASE) {
-          needs_validate_ = true;
+          validated_ = false;
           return kErrorNotValidated;
         }
       }
       if ((*mask_status).rc_mask_state == kStatusRcMaskStackDirty) {
-        needs_validate_ = true;
+        validated_ = false;
         DLOGI_IF(kTagDisplay, "Mask is ready for display %d-%d, call Corresponding Prepare()",
                  display_id_, display_type_);
         return kErrorNotValidated;
@@ -684,13 +695,14 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
 
   // Allow commit as pending doze/pending_power_on is handled as a part of draw cycle
   if (!active_ && (pending_power_state_ == kPowerStateNone)) {
-    needs_validate_ = true;
+    validated_ = false;
     return kErrorPermission;
   }
 
   if (needs_validate_) {
     DLOGE("Commit: Corresponding Prepare() is not called for display %d-%d", display_id_,
           display_type_);
+    validated_ = false;
     return kErrorNotValidated;
   }
 
@@ -720,6 +732,7 @@ DisplayError DisplayBase::PerformCommit(LayerStack *layer_stack) {
       // If COMMIT fails on the Fast Path, set Safe Mode.
       DLOGE("COMMIT failed in Fast Path, set Safe Mode!");
       comp_manager_->SetSafeMode(true);
+      validated_ = false;
       error = kErrorNotValidated;
     }
     return error;
@@ -806,6 +819,7 @@ DisplayError DisplayBase::Flush(LayerStack *layer_stack) {
   ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
 
+  validated_ = false;
   if (!active_) {
     return kErrorPermission;
   }
@@ -814,6 +828,7 @@ DisplayError DisplayBase::Flush(LayerStack *layer_stack) {
   error = hw_intf_->Flush(&disp_layer_stack_.info);
   if (error == kErrorNone) {
     comp_manager_->Purge(display_comp_ctx_);
+    validated_ = false;
     needs_validate_ = true;
   } else {
     DLOGW("Unable to flush display %d-%d", display_id_, display_type_);
@@ -943,6 +958,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     return kErrorNone;
   }
 
+  validated_ = false;
   // If vsync is enabled, disable vsync before power off/Doze suspend
   if (vsync_enable_ && (state == kStateOff || state == kStateDozeSuspend)) {
     error = SetVSyncState(false /* enable */);
@@ -1040,7 +1056,7 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     return error;
   }
 
-  DisablePartialUpdateOneFrame();
+  DisablePartialUpdateOneFrameInternal();
 
   if (error == kErrorNone) {
     if (pending_power_state_ == kPowerStateNone) {
@@ -1069,6 +1085,7 @@ DisplayError DisplayBase::SetActiveConfig(uint32_t index) {
   DisplayError error = kErrorNone;
   uint32_t active_index = 0;
 
+  validated_ = false;
   hw_intf_->GetActiveConfig(&active_index);
 
   if (active_index == index) {
@@ -1092,6 +1109,7 @@ DisplayError DisplayBase::SetActiveConfig(uint32_t index) {
 DisplayError DisplayBase::SetMaxMixerStages(uint32_t max_mixer_stages) {
   ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
+  validated_ = false;
 
   error = comp_manager_->SetMaxMixerStages(display_comp_ctx_, max_mixer_stages);
 
@@ -1444,6 +1462,7 @@ DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
 }
 
 DisplayError DisplayBase::SetColorModeById(int32_t color_mode_id) {
+  validated_ = false;
   for (auto it : color_mode_map_) {
     if (it.second->id == color_mode_id) {
       return SetColorMode(it.first);
@@ -1546,7 +1565,8 @@ DisplayError DisplayBase::SetColorTransform(const uint32_t length, const double 
   if (error) {
     return error;
   }
-  DisablePartialUpdateOneFrame();
+  validated_ = false;
+  DisablePartialUpdateOneFrameInternal();
   return kErrorNone;
 }
 
@@ -1741,7 +1761,7 @@ DisplayError DisplayBase::ReconfigureDisplay() {
   }
 
   if (disble_pu) {
-    DisablePartialUpdateOneFrame();
+    DisablePartialUpdateOneFrameInternal();
   }
 
   display_attributes_ = display_attributes;
@@ -1757,6 +1777,7 @@ DisplayError DisplayBase::ReconfigureDisplay() {
 DisplayError DisplayBase::SetMixerResolution(uint32_t width, uint32_t height) {
   ClientLock lock(disp_mutex_);
 
+  validated_ = false;
   DisplayError error = ReconfigureMixer(width, height);
   if (error != kErrorNone) {
     return error;
@@ -1980,6 +2001,7 @@ DisplayError DisplayBase::GetFrameBufferConfig(DisplayConfigVariableInfo *variab
 
 DisplayError DisplayBase::SetDetailEnhancerData(const DisplayDetailEnhancerData &de_data) {
   ClientLock lock(disp_mutex_);
+  validated_ = false;
   DisplayError error = comp_manager_->SetDetailEnhancerData(display_comp_ctx_, de_data);
   if (error != kErrorNone) {
     return error;
@@ -2386,6 +2408,10 @@ void DisplayBase::HwRecovery(const HWRecoveryEvent sdm_event_code) {
         DLOGI("display = %d attempting to start display power reset", display_type_);
         if (StartDisplayPowerReset()) {
           DLOGI("display = %d allowed to start display power reset", display_type_);
+          {
+            ClientLock lock(disp_mutex_);
+            validated_ = false;
+          }
           event_handler_->HandleEvent(kDisplayPowerResetEvent);
           EndDisplayPowerReset();
           DLOGI("display = %d has finished display power reset", display_type_);
@@ -2393,6 +2419,10 @@ void DisplayBase::HwRecovery(const HWRecoveryEvent sdm_event_code) {
         }
       }
 #else
+      {
+        ClientLock lock(disp_mutex_);
+        validated_ = false;
+      }
       event_handler_->HandleEvent(kDisplayPowerResetEvent);
 #endif
       break;
@@ -2401,11 +2431,19 @@ void DisplayBase::HwRecovery(const HWRecoveryEvent sdm_event_code) {
       DLOGI("display = %d attempting to start display power reset", display_type_);
       if (StartDisplayPowerReset()) {
         DLOGI("display = %d allowed to start display power reset", display_type_);
+        {
+          ClientLock lock(disp_mutex_);
+          validated_ = false;
+        }
         event_handler_->HandleEvent(kDisplayPowerResetEvent);
         EndDisplayPowerReset();
         DLOGI("display = %d has finished display power reset", display_type_);
       }
 #else
+      {
+        ClientLock lock(disp_mutex_);
+        validated_ = false;
+      }
       event_handler_->HandleEvent(kDisplayPowerResetEvent);
 #endif
       break;
@@ -2504,22 +2542,6 @@ bool DisplayBase::IsHdrMode(const AttrVal &attr) {
   }
 
   return false;
-}
-
-bool DisplayBase::CanSkipValidate() {
-  bool needs_buffer_swap = false;
-  bool skip_validate = comp_manager_->CanSkipValidate(display_comp_ctx_, &needs_buffer_swap);
-
-  if (needs_buffer_swap) {
-    disp_layer_stack_.info.updates_mask.set(kSwapBuffers);
-    DisplayError error = comp_manager_->SwapBuffers(display_comp_ctx_);
-    if (error != kErrorNone) {
-      // Buffers couldn't be swapped.
-      skip_validate = false;
-    }
-  }
-
-  return skip_validate;
 }
 
 DisplayError DisplayBase::ResetPendingPowerState(const shared_ptr<Fence> &retire_fence) {
@@ -2667,7 +2689,7 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
       vsync_enable_pending_ = true;
     }
     *needs_refresh = (hw_panel_info_.mode == kModeCommand);
-    DisablePartialUpdateOneFrame();
+    DisablePartialUpdateOneFrameInternal();
     err = hw_events_intf_->SetEventState(HWEvent::BACKLIGHT_EVENT, true);
     if (err != kErrorNone) {
       return err;
@@ -2703,7 +2725,7 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
         *needs_refresh = false;
       }
     }
-    DisablePartialUpdateOneFrame();
+    DisablePartialUpdateOneFrameInternal();
     err = hw_events_intf_->SetEventState(HWEvent::BACKLIGHT_EVENT, false);
     if (err != kErrorNone) {
       return err;
@@ -2738,6 +2760,7 @@ DisplayError DisplayBase::GetOutputBufferAcquireFence(shared_ptr<Fence> *out_fen
 
 DisplayError DisplayBase::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
   ClientLock lock(disp_mutex_);
+  validated_ = false;
   return hw_intf_->OnMinHdcpEncryptionLevelChange(min_enc_level);
 }
 
@@ -2796,7 +2819,7 @@ void DisplayBase::MMRMEvent(uint32_t clk) {
   DLOGV("MMRM state has been updated");
 
   // Invalidate to retrigger clk calculation
-  event_handler_->HandleEvent(kInvalidateDisplay);
+  validated_ = false;
 }
 
 }  // namespace sdm

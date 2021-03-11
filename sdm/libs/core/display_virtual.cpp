@@ -166,6 +166,11 @@ DisplayError DisplayVirtual::SetActiveConfig(DisplayConfigVariableInfo *variable
 DisplayError DisplayVirtual::Prepare(LayerStack *layer_stack) {
   ClientLock lock(disp_mutex_);
 
+  DisplayError error = PrePrepare(layer_stack);
+  if (error == kErrorNone) {
+    return error;
+  }
+
   // Clean display layer stack for reuse.
   disp_layer_stack_ = DispLayerStack();
 

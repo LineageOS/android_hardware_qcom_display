@@ -65,6 +65,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError Init();
   virtual DisplayError Deinit();
   virtual DisplayError Prepare(LayerStack *layer_stack);
+  virtual DisplayError PrePrepare(LayerStack *layer_stack);
   virtual DisplayError CommitOrPrepare(LayerStack *layer_stack);
   virtual DisplayError Commit(LayerStack *layer_stack);
   virtual DisplayError Flush(LayerStack *layer_stack);
@@ -87,6 +88,9 @@ class DisplayBase : public DisplayInterface {
     return kErrorNotSupported;
   }
   virtual DisplayError DisablePartialUpdateOneFrame() {
+    return kErrorNotSupported;
+  }
+  virtual DisplayError DisablePartialUpdateOneFrameInternal() {
     return kErrorNotSupported;
   }
   virtual DisplayError SetDisplayMode(uint32_t mode) {
@@ -163,7 +167,6 @@ class DisplayBase : public DisplayInterface {
     return kErrorNotSupported;
   }
   virtual DisplayError GetRefreshRate(uint32_t *refresh_rate) { return kErrorNotSupported; }
-  virtual bool CanSkipValidate();
   virtual DisplayError SetBLScale(uint32_t level) { return kErrorNotSupported; }
   virtual bool CheckResourceState();
   virtual bool GameEnhanceSupported();
@@ -186,6 +189,10 @@ class DisplayBase : public DisplayInterface {
   }
   virtual bool HasDemura() { return false; }
   virtual DisplayError GetOutputBufferAcquireFence(shared_ptr<Fence> *out_fence);
+  virtual bool IsValidated() {
+    ClientLock lock(disp_mutex_);
+    return validated_ && !needs_validate_;
+  }
 
  protected:
   struct DisplayMutex {
@@ -285,7 +292,7 @@ class DisplayBase : public DisplayInterface {
   Handle hw_device_ = 0;
   Handle display_comp_ctx_ = 0;
   DispLayerStack disp_layer_stack_;
-  bool needs_validate_ = true;
+  bool needs_validate_ = true;  // maintains validation state between Prepare/Commit Cycle
   bool vsync_enable_ = false;
   uint32_t max_mixer_stages_ = 0;
   HWInfoInterface *hw_info_intf_ = NULL;
@@ -335,6 +342,7 @@ class DisplayBase : public DisplayInterface {
   PanelFeaturePropertyIntf *prop_intf_ = nullptr;
   bool first_cycle_ = true;
   bool unified_draw_supported_ = true;  // By default supported, unless disabled by property.
+  bool validated_ = false;  // display validation status based on sideband events driver events etc.
 
  private:
   bool StartDisplayPowerReset();

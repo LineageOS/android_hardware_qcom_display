@@ -96,22 +96,17 @@ DisplayError Strategy::Start(DispLayerStack *disp_layer_stack, uint32_t *max_att
   disp_layer_stack_ = disp_layer_stack;
   extn_start_success_ = false;
 
-  if (!disable_gpu_comp_ && (disp_layer_stack_->info.gpu_target_index == -1)) {
-    DLOGE("GPU composition is enabled and GPU target buffer not provided.");
-    return kErrorNotSupported;
-  }
-
   if (strategy_intf_) {
     error = strategy_intf_->Start(disp_layer_stack_, max_attempts);
-    if (error == kErrorNone) {
+    if (error == kErrorNone || error == kErrorNeedsValidate) {
       extn_start_success_ = true;
-      return kErrorNone;
+      return error;
     }
   }
 
   *max_attempts = 1;
 
-  return kErrorNone;
+  return error;
 }
 
 DisplayError Strategy::Stop() {
@@ -123,6 +118,11 @@ DisplayError Strategy::Stop() {
 }
 
 DisplayError Strategy::GetNextStrategy(StrategyConstraints *constraints) {
+  if (!disable_gpu_comp_ && !disp_layer_stack_->info.gpu_target_index) {
+    DLOGE("GPU composition is enabled and GPU target buffer not provided.");
+    return kErrorNotSupported;
+  }
+
   if (extn_start_success_) {
     return strategy_intf_->GetNextStrategy(constraints);
   }
@@ -280,20 +280,6 @@ DisplayError Strategy::SetBlendSpace(const PrimariesTransfer &blend_space) {
     return strategy_intf_->SetBlendSpace(blend_space);
   }
   return kErrorNotSupported;
-}
-
-bool Strategy::CanSkipValidate(bool *need_buffer_swap) {
-  if (strategy_intf_) {
-    return strategy_intf_->CanSkipValidate(need_buffer_swap);
-  }
-  return true;
-}
-
-DisplayError Strategy::SwapBuffers() {
-  if (strategy_intf_) {
-    return strategy_intf_->SwapBuffers();
-  }
-  return kErrorNone;
 }
 
 }  // namespace sdm

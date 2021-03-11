@@ -128,6 +128,11 @@ DisplayError DisplayPluggable::Prepare(LayerStack *layer_stack) {
   uint32_t display_width = display_attributes_.x_pixels;
   uint32_t display_height = display_attributes_.y_pixels;
 
+  error = PrePrepare(layer_stack);
+  if (error == kErrorNone) {
+    return error;
+  }
+
   if (NeedsMixerReconfiguration(layer_stack, &new_mixer_width, &new_mixer_height)) {
     error = ReconfigureMixer(new_mixer_width, new_mixer_height);
     if (error != kErrorNone) {

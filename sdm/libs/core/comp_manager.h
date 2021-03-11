@@ -57,7 +57,7 @@ class CompManager {
                                   const HWMixerAttributes &mixer_attributes,
                                   const DisplayConfigVariableInfo &fb_config,
                                   HWQosData *qos_data);
-  void PrePrepare(Handle display_ctx, DispLayerStack *disp_layer_stack);
+  DisplayError PrePrepare(Handle display_ctx, DispLayerStack *disp_layer_stack);
   DisplayError Prepare(Handle display_ctx, DispLayerStack *disp_layer_stack);
   DisplayError Commit(Handle display_ctx, DispLayerStack *disp_layer_stack);
   DisplayError PostPrepare(Handle display_ctx, DispLayerStack *disp_layer_stack);
@@ -86,7 +86,6 @@ class CompManager {
   DisplayError SetBlendSpace(Handle display_ctx, const PrimariesTransfer &blend_space);
   void HandleSecureEvent(Handle display_ctx, SecureEvent secure_event);
   void SetSafeMode(bool enable) { safe_mode_ = enable; }
-  bool CanSkipValidate(Handle display_ctx, bool *needs_buffer_swap);
   bool IsSafeMode() { return safe_mode_; }
   void GenerateROI(Handle display_ctx, DispLayerStack *disp_layer_stack);
   DisplayError CheckEnforceSplit(Handle comp_handle, uint32_t new_refresh_rate);
@@ -94,7 +93,6 @@ class CompManager {
   bool CheckResourceState(Handle display_ctx);
   bool IsRotatorSupportedFormat(LayerBufferFormat format);
   DisplayError SetDrawMethod(Handle display_ctx, const DisplayDrawMethod &draw_method);
-  DisplayError SwapBuffers(Handle display_ctx);
   DisplayError FreeDemuraFetchResources(Handle display_ctx);
   DisplayError GetDemuraFetchResourceCount(std::map<uint32_t, uint8_t> *fetch_resource_cnt);
   DisplayError ReserveDemuraFetchResources(const uint32_t &display_id,

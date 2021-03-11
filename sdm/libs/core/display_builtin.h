@@ -113,6 +113,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   DisplayError Prepare(LayerStack *layer_stack) override;
   DisplayError ControlPartialUpdate(bool enable, uint32_t *pending) override;
   DisplayError DisablePartialUpdateOneFrame() override;
+  DisplayError DisablePartialUpdateOneFrameInternal() override;
   DisplayError SetDisplayState(DisplayState state, bool teardown,
                                shared_ptr<Fence> *release_fence) override;
   void SetIdleTimeoutMs(uint32_t active_ms, uint32_t inactive_ms) override;
@@ -142,6 +143,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   bool HasDemura() override { return demura_intended_; }
   std::string Dump() override;
   DisplayError GetConfig(DisplayConfigFixedInfo *fixed_info) override;
+  DisplayError PrePrepare(LayerStack *layer_stack) override;
 
   // Implement the HWEventHandlers
   DisplayError VSync(int64_t timestamp) override;
@@ -186,7 +188,6 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   void SendDisplayConfigs();
   bool CanLowerFps(bool idle_screen);
   int SetDemuraIntfStatus(bool enable);
-  bool PrePrepare(LayerStack *layer_stack);
   DisplayError HandleSPR();
   void CacheFrameROI();
   void PreCommit(LayerStack *layer_stack);

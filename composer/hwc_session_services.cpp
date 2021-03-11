@@ -168,10 +168,6 @@ int HWCSession::SetDisplayStatus(int disp_id, HWCDisplay::DisplayStatus status) 
   if (status == HWCDisplay::kDisplayStatusResume || status == HWCDisplay::kDisplayStatusPause) {
     hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
     if (active_builtin_disp_id < HWCCallbacks::kNumRealDisplays) {
-      {
-        SEQUENCE_WAIT_SCOPE_LOCK(locker_[active_builtin_disp_id]);
-        hwc_display_[active_builtin_disp_id]->ResetValidation();
-      }
       callbacks_.Refresh(active_builtin_disp_id);
     }
   }

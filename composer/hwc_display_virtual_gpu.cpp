@@ -103,9 +103,6 @@ HWC2::Error HWCDisplayVirtualGPU::Validate(uint32_t *out_num_types, uint32_t *ou
   *out_num_types = UINT32(layer_changes_.size());
   *out_num_requests = UINT32(layer_requests_.size());;
   has_client_composition_ = !needs_gpu_bypass;
-  client_target_->ResetValidation();
-
-  validated_ = true;
 
   return ((*out_num_types > 0) ? HWC2::Error::HasChanges : HWC2::Error::None);
 }
@@ -140,10 +137,6 @@ HWC2::Error HWCDisplayVirtualGPU::Present(shared_ptr<Fence> *out_retire_fence) {
   DTRACE_SCOPED();
 
   auto status = HWC2::Error::None;
-
-  if (!validated_) {
-    return HWC2::Error::NotValidated;
-  }
 
   if (!output_buffer_.buffer_id) {
     return HWC2::Error::NoResources;

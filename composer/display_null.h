@@ -64,12 +64,13 @@ class DisplayNull : public DisplayInterface {
   virtual bool CheckResourceState() { return false; }
   virtual string Dump() { return ""; }
   virtual bool IsSupportSsppTonemap() { return false; }
-  virtual bool CanSkipValidate() { return true; }
   virtual bool GameEnhanceSupported() { return false; }
   virtual bool HasDemura() { return false; }
   virtual void CheckMMRMState() { }
+  virtual bool IsValidated() { return true; }
 
   MAKE_NO_OP(CommitOrPrepare(LayerStack *))
+  MAKE_NO_OP(PrePrepare(LayerStack *))
   MAKE_NO_OP(Commit(LayerStack *))
   MAKE_NO_OP(GetDisplayState(DisplayState *))
   MAKE_NO_OP(SetDisplayState(DisplayState, bool, shared_ptr<Fence> *))

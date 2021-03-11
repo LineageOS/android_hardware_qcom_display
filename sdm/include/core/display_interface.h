@@ -149,7 +149,6 @@ enum DisplayEvent {
   kIdlePowerCollapse,       // Event triggered by Idle Power Collapse.
   kPanelDeadEvent,          // Event triggered by ESD.
   kDisplayPowerResetEvent,  // Event triggered by Hardware Recovery.
-  kInvalidateDisplay,       // Event triggered by DrawCycle thread to Invalidate display.
   kSyncInvalidateDisplay,   // Event triggered by Non-DrawCycle threads to Invalidate display.
   kPostIdleTimeout,         // Event triggered after entering idle.
 };
@@ -1015,12 +1014,6 @@ class DisplayInterface {
   */
   virtual DisplayError SetPanelLuminanceAttributes(float min_lum, float max_lum) = 0;
 
-  /*! @brief Method to query if there is a need to validate.
-
-      @return \link boolean \endlink
-  */
-  virtual bool CanSkipValidate() = 0;
-
   /*! @brief Method to set display backlight scale ratio.
 
     @param[in] backlight scale ratio.
@@ -1099,6 +1092,12 @@ class DisplayInterface {
     @return \link DisplayError \endlink
   */
   virtual DisplayError GetOutputBufferAcquireFence(shared_ptr<Fence> *out_fence) = 0;
+
+  /*! @brief Method to get validation state.
+
+    @return \link bool \endlink
+  */
+  virtual bool IsValidated() = 0;
 
  protected:
   virtual ~DisplayInterface() { }

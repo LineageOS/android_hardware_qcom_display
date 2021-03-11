@@ -301,12 +301,14 @@ void CompManager::GenerateROI(Handle display_ctx, DispLayerStack *disp_layer_sta
   return disp_comp_ctx->strategy->GenerateROI(disp_layer_stack, disp_comp_ctx->pu_constraints);
 }
 
-void CompManager::PrePrepare(Handle display_ctx, DispLayerStack *disp_layer_stack) {
+DisplayError CompManager::PrePrepare(Handle display_ctx, DispLayerStack *disp_layer_stack) {
   SCOPE_LOCK(locker_);
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
-  display_comp_ctx->strategy->Start(disp_layer_stack, &display_comp_ctx->max_strategies);
+  DisplayError error = display_comp_ctx->strategy->Start(disp_layer_stack,
+                                                         &display_comp_ctx->max_strategies);
   display_comp_ctx->remaining_strategies = display_comp_ctx->max_strategies;
+  return error;
 }
 
 DisplayError CompManager::Prepare(Handle display_ctx, DispLayerStack *disp_layer_stack) {
@@ -681,13 +683,6 @@ void CompManager::UpdateStrategyConstraints(bool is_primary, bool disabled) {
   max_sde_builtin_layers_ = (disabled && (powered_on_displays_.size() <= 1)) ? kMaxSDELayers : 2;
 }
 
-bool CompManager::CanSkipValidate(Handle display_ctx, bool *needs_buffer_swap) {
-  DisplayCompositionContext *display_comp_ctx =
-      reinterpret_cast<DisplayCompositionContext *>(display_ctx);
-
-  return display_comp_ctx->strategy->CanSkipValidate(needs_buffer_swap);
-}
-
 bool CompManager::CheckResourceState(Handle display_ctx) {
   SCOPE_LOCK(locker_);
   DisplayCompositionContext *display_comp_ctx =
@@ -716,14 +711,6 @@ bool CompManager::IsRotatorSupportedFormat(LayerBufferFormat format) {
   }
 
   return false;
-}
-
-DisplayError CompManager::SwapBuffers(Handle display_ctx) {
-  SCOPE_LOCK(locker_);
-  DisplayCompositionContext *display_comp_ctx =
-      reinterpret_cast<DisplayCompositionContext *>(display_ctx);
-
-  return display_comp_ctx->strategy->SwapBuffers();
 }
 
 DisplayError CompManager::FreeDemuraFetchResources(Handle display_ctx) {

@@ -62,6 +62,7 @@ enum DisplayError {
   kErrorDriverData,       //!< Expected information from the driver is missing.
   kErrorDeferred,         //!< Call's intended action is being deferred to a later time.
   kErrorNeedsCommit,      //!< Display is expecting a Commit() to be issued.
+  kErrorNeedsValidate,    //!< Validate Phase is needed for this draw cycle.
 };
 
 /*! @brief This structure is defined for client and library compatibility check purpose only. This

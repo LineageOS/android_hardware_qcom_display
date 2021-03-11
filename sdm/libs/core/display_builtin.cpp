@@ -195,12 +195,17 @@ DisplayError DisplayBuiltIn::Deinit() {
   return DisplayBase::Deinit();
 }
 
-bool DisplayBuiltIn::PrePrepare(LayerStack *layer_stack) {
+DisplayError DisplayBuiltIn::PrePrepare(LayerStack *layer_stack) {
   DTRACE_SCOPED();
   uint32_t new_mixer_width = 0;
   uint32_t new_mixer_height = 0;
   uint32_t display_width = display_attributes_.x_pixels;
   uint32_t display_height = display_attributes_.y_pixels;
+
+  DisplayError error = DisplayBase::PrePrepare(layer_stack);
+  if (error == kErrorNone) {
+    return kErrorNone;
+  }
 
   if (NeedsMixerReconfiguration(layer_stack, &new_mixer_width, &new_mixer_height)) {
     DisplayError error = ReconfigureMixer(new_mixer_width, new_mixer_height);
@@ -210,11 +215,11 @@ bool DisplayBuiltIn::PrePrepare(LayerStack *layer_stack) {
   } else {
     if (CanSkipDisplayPrepare(layer_stack)) {
       UpdateQsyncMode();
-      return true;
+      return kErrorNone;
     }
   }
 
-  return false;
+  return kErrorNotValidated;
 }
 
 DisplayError DisplayBuiltIn::HandleSPR() {
@@ -224,11 +229,13 @@ DisplayError DisplayBuiltIn::HandleSPR() {
     int ret = out.CreatePayload<uint32_t>(enable);
     if (ret) {
       DLOGE("Failed to create the payload. Error:%d", ret);
+      validated_ = false;
       return kErrorUndefined;
     }
     ret = spr_->GetParameter(kSPRFeatureEnable, &out);
     if (ret) {
       DLOGE("Failed to get the spr status. Error:%d", ret);
+      validated_ = false;
       return kErrorUndefined;
     }
     spr_enable_ = *enable;
@@ -241,14 +248,15 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
   DTRACE_SCOPED();
   ClientLock lock(disp_mutex_);
 
-  if (PrePrepare(layer_stack)) {
+  DisplayError error = PrePrepare(layer_stack);
+  if (error == kErrorNone) {
     return kErrorNone;
   }
 
   // Clean display layer stack for reuse.
   disp_layer_stack_ = DispLayerStack();
 
-  DisplayError error = HandleSPR();
+  error = HandleSPR();
   if (error != kErrorNone) {
     return error;
   }
@@ -558,16 +566,10 @@ DisplayError DisplayBuiltIn::PostCommit(LayerStack *layer_stack, HWDisplayMode p
 
   deferred_config_.UpdateDeferCount();
 
-  if (needs_validate_on_pu_enable_) {
-    // After PU was disabled for one frame, need to revalidate when enabled.
-    event_handler_->HandleEvent(kInvalidateDisplay);
-    needs_validate_on_pu_enable_ = false;
-  }
-
   ReconfigureDisplay();
 
   if (deferred_config_.CanApplyDeferredState()) {
-    event_handler_->HandleEvent(kInvalidateDisplay);
+    validated_ = false;
     deferred_config_.Clear();
   }
 
@@ -685,6 +687,7 @@ DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
 void DisplayBuiltIn::SetIdleTimeoutMs(uint32_t active_ms, uint32_t inactive_ms) {
   ClientLock lock(disp_mutex_);
   comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, active_ms, inactive_ms);
+  validated_ = false;
 }
 
 DisplayError DisplayBuiltIn::SetDisplayMode(uint32_t mode) {
@@ -913,20 +916,21 @@ void DisplayBuiltIn::PingPongTimeout() {
 }
 
 void DisplayBuiltIn::ThermalEvent(int64_t thermal_level) {
-  event_handler_->HandleEvent(kThermalEvent);
   ClientLock lock(disp_mutex_);
+  validated_ = false;
   comp_manager_->ProcessThermalEvent(display_comp_ctx_, thermal_level);
 }
 
 void DisplayBuiltIn::IdlePowerCollapse() {
   if (hw_panel_info_.mode == kModeCommand) {
-    event_handler_->HandleEvent(kIdlePowerCollapse);
     ClientLock lock(disp_mutex_);
+    validated_ = false;
     comp_manager_->ProcessIdlePowerCollapse(display_comp_ctx_);
   }
 }
 
 DisplayError DisplayBuiltIn::ClearLUTs() {
+  validated_ = false;
   comp_manager_->ProcessIdlePowerCollapse(display_comp_ctx_);
   return kErrorNone;
 }
@@ -936,12 +940,13 @@ void DisplayBuiltIn::MMRMEvent(uint32_t clk) {
 }
 
 void DisplayBuiltIn::PanelDead() {
+  {
+    ClientLock lock(disp_mutex_);
+    reset_panel_ = true;
+    validated_ = false;
+  }
   event_handler_->HandleEvent(kPanelDeadEvent);
   event_handler_->Refresh();
-  ClientLock lock(disp_mutex_);
-  {
-    reset_panel_ = true;
-  }
 }
 
 // HWEventHandler overload, not DisplayBase
@@ -1043,7 +1048,7 @@ DisplayError DisplayBuiltIn::ControlPartialUpdateLocked(bool enable, uint32_t *p
     DLOGI("Same state transition is requested.");
     return kErrorNone;
   }
-
+  validated_ = false;
   partial_update_control_ = enable;
 
   if (!enable) {
@@ -1058,7 +1063,13 @@ DisplayError DisplayBuiltIn::ControlPartialUpdateLocked(bool enable, uint32_t *p
 DisplayError DisplayBuiltIn::DisablePartialUpdateOneFrame() {
   ClientLock lock(disp_mutex_);
   disable_pu_one_frame_ = true;
-  needs_validate_on_pu_enable_ = true;
+  validated_ = false;
+
+  return kErrorNone;
+}
+
+DisplayError DisplayBuiltIn::DisablePartialUpdateOneFrameInternal() {
+  disable_pu_one_frame_ = true;
 
   return kErrorNone;
 }
@@ -1102,11 +1113,11 @@ DisplayError DisplayBuiltIn::DppsProcessOps(enum DppsOps op, void *payload, size
       enable = *(reinterpret_cast<bool *>(payload));
       dpps_info_.disable_pu_ = !enable;
       ControlPartialUpdate(enable, &pending);
-      event_handler_->HandleEvent(kSyncInvalidateDisplay);
       event_handler_->Refresh();
       {
-         ClientLock lock(disp_mutex_);
-         dpps_pu_nofiy_pending_ = true;
+        ClientLock lock(disp_mutex_);
+        validated_ = false;
+        dpps_pu_nofiy_pending_ = true;
       }
       ret = dpps_pu_lock_.WaitFinite(kPuTimeOutMs);
       if (ret) {
@@ -1165,7 +1176,7 @@ DisplayError DisplayBuiltIn::SetDisplayDppsAdROI(void *payload) {
 
 DisplayError DisplayBuiltIn::SetFrameTriggerMode(FrameTriggerMode mode) {
   ClientLock lock(disp_mutex_);
-
+  validated_ = false;
   trigger_mode_debug_ = mode;
   return kErrorNone;
 }
@@ -1553,6 +1564,7 @@ DisplayError DisplayBuiltIn::SetQSyncMode(QSyncMode qsync_mode) {
 
   qsync_mode_ = qsync_mode;
   needs_avr_update_ = true;
+  validated_ = false;
   event_handler_->Refresh();
   DLOGI("Qsync mode set to %d successfully", qsync_mode_);
 
@@ -1569,6 +1581,7 @@ DisplayError DisplayBuiltIn::ControlIdlePowerCollapse(bool enable, bool synchron
     DLOGW("Idle power collapse not supported for video mode panel.");
     return kErrorNotSupported;
   }
+  validated_ = false;
   return hw_intf_->ControlIdlePowerCollapse(enable, synchronous);
 }
 
@@ -1602,6 +1615,7 @@ DisplayError DisplayBuiltIn::SetDynamicDSIClock(uint64_t bit_clk_rate) {
     return kErrorNone;
   }
 
+  validated_ = false;
   return hw_intf_->SetDynamicDSIClock(bit_clk_rate);
 }
 
@@ -1680,7 +1694,7 @@ bool DisplayBuiltIn::CanCompareFrameROI(LayerStack *layer_stack) {
     stack_fudge_factor++;
 
   if (!hw_panel_info_.partial_update || (hw_panel_info_.left_roi_count != 1) ||
-      layer_stack->flags.geometry_changed || layer_stack->flags.config_changed ||
+      layer_stack->flags.geometry_changed ||
       (layer_stack->layers.size() !=
        (disp_layer_stack_.info.app_layer_count + stack_fudge_factor))) {
     return false;
@@ -1688,7 +1702,7 @@ bool DisplayBuiltIn::CanCompareFrameROI(LayerStack *layer_stack) {
 
   // Check for Partial Update disable requests/scenarios.
   if (color_mgr_ && color_mgr_->NeedsPartialUpdateDisable()) {
-    DisablePartialUpdateOneFrame();
+    DisablePartialUpdateOneFrameInternal();
   }
 
   if (!partial_update_control_ || disable_pu_one_frame_ || disable_pu_on_dest_scaler_) {
@@ -1927,7 +1941,7 @@ DisplayError DisplayBuiltIn::ReconfigureDisplay() {
   }
 
   if (disble_pu) {
-    DisablePartialUpdateOneFrame();
+    DisablePartialUpdateOneFrameInternal();
   }
 
   display_attributes_ = display_attributes;

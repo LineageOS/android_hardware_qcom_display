@@ -303,8 +303,6 @@ struct LayerStackFlags {
 
       uint32_t mask_present : 1;  //!< Set if layer stack has mask layers.
 
-      uint32_t config_changed : 1;  //!< This flag indicates Display config must be validated.
-
       uint32_t layer_id_support : 1;  //! This flag shall be set by Client to indicate that it has
                                       //! set the unique Layer Id on each SDM Layer, which will
                                       //! persist across draw cycles until the layer gets removed.
@@ -503,6 +501,10 @@ struct LayerStack {
 
   bool block_on_fb = true;             //!< Indicates if there is a need to block
                                        //!< on GPU composed o/p.
+
+  bool needs_validate = false;         //!< Change in mode/colospace/fps etc
+  bool solid_fill_enabled = false;
+  bool tonemapper_active  = false;
 };
 
 }  // namespace sdm

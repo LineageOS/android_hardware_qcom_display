@@ -1158,26 +1158,10 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
 
   bool override_mode = async_powermode_ && display_ready_.test(UINT32(display));
   if (!override_mode) {
-    hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
-    bool needs_validation = false;
-    {
-      SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
-      if (hwc_display_[display]) {
-        needs_validation = (hwc_display_[display]->GetCurrentPowerMode() == HWC2::PowerMode::Off &&
-                            mode != HWC2::PowerMode::Off && display != active_builtin_disp_id &&
-                            active_builtin_disp_id < HWCCallbacks::kNumDisplays);
-      }
-    }
     auto error = CallDisplayFunction(display, &HWCDisplay::SetPowerMode, mode,
                                      false /* teardown */);
     if (INT32(error) != HWC2_ERROR_NONE) {
       return INT32(error);
-    }
-    // if all the resources are occupied by the active builtin display, it needs revalidation
-    // to relinquish it resources to other display
-    if (needs_validation) {
-      SEQUENCE_WAIT_SCOPE_LOCK(locker_[active_builtin_disp_id]);
-      hwc_display_[active_builtin_disp_id]->ResetValidation();
     }
   } else {
     Locker::ScopeLock lock_disp(locker_[display]);
@@ -1352,12 +1336,6 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
       map_info.sdm_id = display_id;
       break;
     }
-  }
-
-  // Active builtin display needs revalidation
-  if (!async_vds_creation_ && active_builtin_disp_id < HWCCallbacks::kNumRealDisplays) {
-    SEQUENCE_WAIT_SCOPE_LOCK(locker_[active_builtin_disp_id]);
-    hwc_display_[active_builtin_disp_id]->ResetValidation();
   }
 
   return HWC2::Error::None;
@@ -2383,9 +2361,6 @@ android::status_t HWCSession::QdcmCMDHandler(const android::Parcel *input_parcel
   req_payload.DestroyPayload();
   resp_payload.DestroyPayload();
 
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[display_id]);
-  hwc_display_[display_id]->ResetValidation();
-
   return ret;
 }
 
@@ -3106,9 +3081,9 @@ HWC2::Error HWCSession::PresentDisplayInternal(hwc2_display_t display) {
   HWCDisplay *hwc_display = hwc_display_[display];
 
   DTRACE_SCOPED();
-  // If display is in Skip-Validate state and Validate cannot be skipped, do Internal
+  // If display is in Skip-Validate state do Internal
   // Validation to optimize for the frames which don't require the Client composition.
-  if (hwc_display->IsSkipValidateState() && !hwc_display->CanSkipValidate()) {
+  if (hwc_display->IsSkipValidateState()) {
     uint32_t out_num_types = 0, out_num_requests = 0;
     hwc_display->SetFastPathComposition(true);
     HWC2::Error error = ValidateDisplayInternal(display, &out_num_types, &out_num_requests);
@@ -3621,13 +3596,6 @@ void HWCSession::WaitForResources(bool wait_for_resources, hwc2_display_t active
       if (power_state_transition_[target_display]) {
         // Route all interactions with client to dummy display.
         target_display = map_hwc_display_.find(target_display)->second;
-      }
-    }
-    {
-      SEQUENCE_WAIT_SCOPE_LOCK(locker_[target_display]);
-      auto &hwc_display = hwc_display_[target_display];
-      if (hwc_display && hwc_display->GetCurrentPowerMode() != HWC2::PowerMode::Off) {
-        hwc_display->ResetValidation();
       }
     }
   }

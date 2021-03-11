@@ -119,7 +119,6 @@ HWC2::Error HWCDisplayVirtualDPU::SetOutputBuffer(buffer_handle_t buf,
         DLOGE("SetConfig failed custom WxH %dx%d", new_width, new_height);
         return HWC2::Error::BadParameter;
       }
-      validated_ = false;
     }
 
     output_buffer_.width = UINT32(new_aligned_w);

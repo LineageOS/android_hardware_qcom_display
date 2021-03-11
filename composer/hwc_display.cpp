@@ -502,7 +502,6 @@ int HWCDisplay::Init() {
     }
   }
 
-  validated_ = false;
   HWCDebugHandler::Get()->GetProperty(DISABLE_HDR, &disable_hdr_handling_);
   if (disable_hdr_handling_) {
     DLOGI("HDR Handling disabled");
@@ -620,7 +619,6 @@ HWC2::Error HWCDisplay::CreateLayer(hwc2_layer_t *out_layer_id) {
   layer_map_.emplace(std::make_pair(layer->GetId(), layer));
   *out_layer_id = layer->GetId();
   geometry_changes_ |= GeometryChanges::kAdded;
-  validated_ = false;
   layer_stack_invalid_ = true;
   layer->SetPartialUpdate(partial_update_enabled_);
 
@@ -655,7 +653,6 @@ HWC2::Error HWCDisplay::DestroyLayer(hwc2_layer_t layer_id) {
   }
 
   geometry_changes_ |= GeometryChanges::kRemoved;
-  validated_ = false;
   layer_stack_invalid_ = true;
 
   return HWC2::Error::None;
@@ -669,6 +666,8 @@ void HWCDisplay::BuildLayerStack() {
   layer_stack_.flags.animating = animating_;
   layer_stack_.flags.fast_path = fast_path_enabled_ && fast_path_composition_;
   layer_stack_.flags.layer_id_support = true;
+  layer_stack_.solid_fill_enabled = solid_fill_enable_;
+  layer_stack_.tonemapper_active = tone_mapper_ && tone_mapper_->IsActive();
 
   DTRACE_SCOPED();
   // Add one layer for fb target
@@ -689,9 +688,6 @@ void HWCDisplay::BuildLayerStack() {
     if (!hwc_layer->IsDataSpaceSupported()) {
       layer->flags.skip = true;
     }
-
-    // set default composition as GPU for SDM
-    layer->composition = kCompositionGPU;
 
     if (swap_interval_zero_) {
       layer->input_buffer.acquire_fence = nullptr;
@@ -811,19 +807,21 @@ void HWCDisplay::BuildLayerStack() {
       layer->update_mask.set(kClientCompRequest);
     }
 
+    layer->layer_id = hwc_layer->GetId();
+    layer->geometry_changes = hwc_layer->GetGeometryChanges();
     layer_stack_.layers.push_back(layer);
   }
 
   // If layer stack needs Client composition, HWC display gets into InternalValidate state. If
   // validation gets reset by any other thread in this state, enforce Geometry change to ensure
   // that Client target gets composed by SF.
-  bool enforce_geometry_change = (validate_state_ == kInternalValidate) && !validated_;
+  bool enforce_geometry_change = (validate_state_ == kInternalValidate) &&
+                                  !display_intf_->IsValidated();
 
   // TODO(user): Set correctly when SDM supports geometry_changes as bitmask
 
   layer_stack_.flags.geometry_changed = UINT32((geometry_changes_ || enforce_geometry_change ||
                                                 geometry_changes_on_doze_suspend_) > 0);
-  layer_stack_.flags.config_changed = !validated_;
   // Append client target to the layer stack
   Layer *sdm_client_target = client_target_->GetSDMLayer();
   sdm_client_target->layer_id = client_target_->GetId();
@@ -997,7 +995,6 @@ HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
 
   ATRACE_INT("SetPowerMode ", state);
   DisplayError error = display_intf_->SetDisplayState(state, teardown, &release_fence);
-  validated_ = false;
 
   if (error == kErrorNone) {
     flush_on_error_ = flush_on_error;
@@ -1286,8 +1283,6 @@ HWC2::Error HWCDisplay::SetActiveConfig(hwc2_config_t config) {
   pending_config_ = true;
   pending_config_index_ = config;
 
-  validated_ = false;
-
   // Trigger refresh. This config gets applied on next commit.
   callbacks_->Refresh(id_);
 
@@ -1309,7 +1304,6 @@ HWC2::Error HWCDisplay::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_lay
   }
 
   DLOGI("num_frame_dump %d, input_layer_dump_enable %d", dump_frame_count_, dump_input_layers_);
-  validated_ = false;
   return HWC2::Error::None;
 }
 
@@ -1357,22 +1351,10 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
         // idle.
         return kErrorNotSupported;
       }
-      validated_ = false;
       break;
     }
-    case kSyncInvalidateDisplay:
-    case kIdlePowerCollapse:
-    case kThermalEvent: {
-      SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[id_]);
-      validated_ = false;
-    } break;
     case kPanelDeadEvent:
     case kDisplayPowerResetEvent: {
-      // Mutex scope
-      {
-        SEQUENCE_WAIT_SCOPE_LOCK(HWCSession::locker_[id_]);
-        validated_ = false;
-      }
       // TODO(user): Following scenario need to be addressed
       // If panel or HW is in bad state for either ESD or HWR, there is no acquired lock between
       // this scope and call to DisplayPowerReset.
@@ -1385,9 +1367,6 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
               id_);
       }
     } break;
-    case kInvalidateDisplay:
-      validated_ = false;
-      break;
     case kPostIdleTimeout:
       display_idle_ = true;
       break;
@@ -1411,7 +1390,6 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
 
   DTRACE_SCOPED();
   if (shutdown_pending_) {
-    validated_ = false;
     return HWC2::Error::BadDisplay;
   }
 
@@ -1434,7 +1412,6 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
       // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
       // so that previous buffer and fences are released, and override the error.
       flush_ = true;
-      validated_ = false;
       // Prepare cycle can fail on a newly connected display if insufficient pipes
       // are available at this moment. Trigger refresh so that the other displays
       // can free up pipes and a valid content can be attached to virtual display.
@@ -1472,7 +1449,6 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
   *out_num_types = UINT32(layer_changes_.size());
   *out_num_requests = UINT32(layer_requests_.size());
   validate_state_ = kNormalValidate;
-  validated_ = true;
   layer_stack_invalid_ = false;
 
   return ((*out_num_types > 0) ? HWC2::Error::HasChanges : HWC2::Error::None);
@@ -1483,7 +1459,7 @@ HWC2::Error HWCDisplay::AcceptDisplayChanges() {
     return HWC2::Error::None;
   }
 
-  if (!validated_) {
+  if (!display_intf_->IsValidated()) {
     return HWC2::Error::NotValidated;
   }
 
@@ -1505,7 +1481,7 @@ HWC2::Error HWCDisplay::GetChangedCompositionTypes(uint32_t *out_num_elements,
     return HWC2::Error::None;
   }
 
-  if (!validated_) {
+  if (!display_intf_->IsValidated()) {
     DLOGW("Display is not validated");
     return HWC2::Error::NotValidated;
   }
@@ -1560,7 +1536,7 @@ HWC2::Error HWCDisplay::GetDisplayRequests(int32_t *out_display_requests,
   // Use for sharing blit buffers and
   // writing wfd buffer directly to output if there is full GPU composition
   // and no color conversion needed
-  if (!validated_) {
+  if (!display_intf_->IsValidated()) {
     DLOGW("Display is not validated");
     return HWC2::Error::NotValidated;
   }
@@ -1642,7 +1618,7 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
 
   DTRACE_SCOPED();
 
-  if (!validated_) {
+  if (!display_intf_->IsValidated()) {
     DLOGV_IF(kTagClient, "Display %" PRIu64 "is not validated", id_);
     return HWC2::Error::NotValidated;
   }
@@ -1686,7 +1662,6 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
       shutdown_pending_ = true;
       return HWC2::Error::Unsupported;
     } else if (error == kErrorNotValidated) {
-      validated_ = false;
       return HWC2::Error::NotValidated;
     } else if (error != kErrorPermission) {
       DLOGE("Commit failed. Error = %d", error);
@@ -1706,7 +1681,6 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence
   // Do no call flush on errors, if a successful buffer is never submitted.
   if (flush_ && flush_on_error_) {
     display_intf_->Flush(&layer_stack_);
-    validated_ = false;
   }
 
   if (tone_mapper_ && tone_mapper_->IsActive()) {
@@ -1791,7 +1765,6 @@ DisplayError HWCDisplay::SetMaxMixerStages(uint32_t max_mixer_stages) {
 
   if (display_intf_) {
     error = display_intf_->SetMaxMixerStages(max_mixer_stages);
-    validated_ = false;
   }
 
   return error;
@@ -2101,7 +2074,7 @@ HWC2::Error HWCDisplay::SetCursorPosition(hwc2_layer_t layer, int x, int y) {
   if (hwc_layer->GetDeviceSelectedCompositionType() != HWC2::Composition::Cursor) {
     return HWC2::Error::None;
   }
-  if ((validate_state_ != kSkipValidate) && validated_) {
+  if ((validate_state_ != kSkipValidate) && display_intf_->IsValidated()) {
     // the device is currently in the middle of the validate/present sequence,
     // cannot set the Position(as per HWC2 spec)
     return HWC2::Error::NotValidated;
@@ -2139,7 +2112,6 @@ int HWCDisplay::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
     return -1;
   }
 
-  validated_ = false;
   return 0;
 }
 
@@ -2148,7 +2120,6 @@ void HWCDisplay::MarkLayersForGPUBypass() {
     auto layer = hwc_layer->GetSDMLayer();
     layer->composition = kCompositionSDE;
   }
-  validated_ = true;
 }
 
 void HWCDisplay::MarkLayersForClientComposition() {
@@ -2169,7 +2140,6 @@ void HWCDisplay::ApplyScanAdjustment(hwc_rect_t *display_frame) {
 int HWCDisplay::ToggleScreenUpdates(bool enable) {
   display_paused_ = enable ? false : true;
   callbacks_->Refresh(id_);
-  validated_ = false;
   return 0;
 }
 
@@ -2277,7 +2247,6 @@ int HWCDisplay::SetActiveDisplayConfig(uint32_t config) {
     return 0;
   }
 
-  validated_ = false;
   DisplayError error = display_intf_->SetActiveConfig(config);
   if (error != kErrorNone) {
     DLOGE("Failed to set %d config! Error: %d", config, error);
@@ -2431,46 +2400,6 @@ void HWCDisplay::Dump(std::ostringstream *os) {
   *os << "\n";
 }
 
-bool HWCDisplay::CanSkipValidate() {
-  if (!validated_ || solid_fill_enable_) {
-    return false;
-  }
-
-  if ((tone_mapper_ && tone_mapper_->IsActive()) ||
-      layer_stack_.flags.single_buffered_layer_present) {
-    DLOGV_IF(kTagClient, "Tonemapping enabled or single buffer layer present = %d"
-             " Returning false.", layer_stack_.flags.single_buffered_layer_present);
-    return false;
-  }
-
-  if (client_target_->NeedsValidation()) {
-    DLOGV_IF(kTagClient, "Framebuffer target needs validation. Returning false.");
-    return false;
-  }
-
-  for (auto hwc_layer : layer_set_) {
-    Layer *layer = hwc_layer->GetSDMLayer();
-    if (hwc_layer->NeedsValidation()) {
-      DLOGV_IF(kTagClient, "hwc_layer[%" PRIu64 "] needs validation. Returning false.",
-               hwc_layer->GetId());
-      return false;
-    }
-
-    // Do not allow Skip Validate, if any layer needs GPU Composition.
-    if (layer->composition == kCompositionGPU || layer->composition == kCompositionNone) {
-      DLOGV_IF(kTagClient, "hwc_layer[%" PRIu64 "] is %s. Returning false.", hwc_layer->GetId(),
-               (layer->composition == kCompositionGPU) ? "GPU composed": "Dropped");
-      return false;
-    }
-  }
-
-  if (!layer_set_.empty() && !display_intf_->CanSkipValidate()) {
-    return false;
-  }
-
-  return true;
-}
-
 HWC2::Error HWCDisplay::PresentAndOrGetValidateDisplayOutput(uint32_t *out_num_types,
                                                              uint32_t *out_num_requests) {
   *out_num_types = UINT32(layer_changes_.size());
@@ -2525,7 +2454,7 @@ HWC2::Error HWCDisplay::GetDisplayedContentSample(
 // previous draw cycle had GPU Composition, as the resources for GPU Target layer have
 // already been validated and configured to the driver.
 bool HWCDisplay::CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests) {
-  if (!validated_ || layer_set_.empty()) {
+  if (!display_intf_->IsValidated() || layer_set_.empty()) {
     return false;
   }
 
@@ -2551,7 +2480,6 @@ bool HWCDisplay::CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests) 
     *num_requests = 0;
     layer_stack_invalid_ = false;
     has_client_composition_ = true;
-    client_target_->ResetValidation();
     validate_state_ = kNormalValidate;
   }
 
@@ -2864,7 +2792,6 @@ HWC2::Error HWCDisplay::SubmitDisplayConfig(hwc2_config_t config) {
     return HWC2::Error::BadConfig;
   }
 
-  validated_ = false;
   SetActiveConfigIndex(config);
   DLOGI("Active configuration changed to: %d", config);
 
@@ -2951,12 +2878,8 @@ DisplayError HWCDisplay::HandleSecureEvent(SecureEvent secure_event, bool *needs
   if (secure_event == kTUITransitionEnd || secure_event == kTUITransitionUnPrepare) {
     DLOGI("Resume display %d-%d",  sdm_id_, type_);
     display_paused_ = false;
-    if (*needs_refresh) {
-      validated_ = false;
-    }
   } else if (secure_event == kTUITransitionPrepare || secure_event == kTUITransitionStart) {
     if (*needs_refresh) {
-      validated_ = false;
       display_pause_pending_ = true;
     } else {
       DLOGI("Pause display %d-%d", sdm_id_, type_);

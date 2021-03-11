@@ -276,11 +276,10 @@ class HWCDisplay : public DisplayEventHandler {
   void BuildLayerStack(void);
   void BuildSolidFillStack(void);
   HWCLayer *GetHWCLayer(hwc2_layer_t layer_id);
-  void ResetValidation() { validated_ = false; }
   uint32_t GetGeometryChanges() { return geometry_changes_; }
-  bool CanSkipValidate();
   bool IsSkipValidateState() { return (validate_state_ == kSkipValidate); }
-  bool IsInternalValidateState() { return (validated_ && (validate_state_ == kInternalValidate)); }
+  bool IsInternalValidateState() { return (validate_state_ == kInternalValidate &&
+                                   display_intf_->IsValidated()); }
   void SetValidationState(DisplayValidateState state) { validate_state_ = state; }
   ColorMode GetCurrentColorMode() {
     return (color_mode_ ? color_mode_->GetCurrentColorMode() : ColorMode::SRGB);
@@ -383,7 +382,6 @@ class HWCDisplay : public DisplayEventHandler {
                                               PerFrameMetadataKey *out_keys);
   virtual HWC2::Error SetDisplayAnimating(bool animating) {
     animating_ = animating;
-    validated_ = false;
     return HWC2::Error::None;
   }
   virtual HWC2::Error PresentAndOrGetValidateDisplayOutput(uint32_t *out_num_types,
@@ -496,7 +494,6 @@ class HWCDisplay : public DisplayEventHandler {
   DisplayError ValidateTUITransition (SecureEvent secure_event);
   void MMRMEvent(bool restricted);
 
-  bool validated_ = false;
   bool layer_stack_invalid_ = true;
   CoreInterface *core_intf_ = nullptr;
   HWCBufferAllocator *buffer_allocator_ = NULL;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -227,7 +227,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   bool vndservice_sampling_vote = false;
   int perf_hint_window_ = 0;
   int perf_hint_large_comp_cycle_ = 0;
-  bool force_reset_validate_ = false;
+  bool force_reset_lut_ = false;
   bool disable_dyn_fps_ = false;
   bool enable_round_corner_ = false;
   bool enhance_idle_time_ = false;
