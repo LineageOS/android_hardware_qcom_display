@@ -264,8 +264,8 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
     readback_configured_ = !layer_stack_.flags.secure_present;
     if (readback_configured_) {
       uint32_t cwb_with_pu_supported = 0;
-      display_intf_->IsSupportedOnDisplay(kCwbWithPartialUpdate, &cwb_with_pu_supported);
-      if (!cwb_with_pu_supported) {
+      display_intf_->IsSupportedOnDisplay(kCwbCrop, &cwb_with_pu_supported);
+      if (!cwb_with_pu_supported) {  // If CWB ROI isn't supported, then go for full frame update.
         DisablePartialUpdateOneFrame();
       }
       layer_stack_.output_buffer = &output_buffer_;
@@ -717,7 +717,7 @@ HWC2::Error HWCDisplayBuiltIn::GetReadbackBufferFence(shared_ptr<Fence> *release
     status = HWC2::Error::Unsupported;
   }
 
-  cwb_config_.tap_point = CwbTapPoint::kLmTapPoint;
+  cwb_config_ = {};
   readback_buffer_queued_ = false;
   readback_configured_ = false;
   output_buffer_ = {};
@@ -755,7 +755,7 @@ DisplayError HWCDisplayBuiltIn::TeardownConcurrentWriteback(bool *needs_refresh)
     frame_capture_status_ = 0;
   }
   readback_buffer_queued_ = false;
-  cwb_config_.tap_point = CwbTapPoint::kLmTapPoint;
+  cwb_config_ = {};
   readback_configured_ = false;
   output_buffer_ = {};
   cwb_client_ = kCWBClientNone;
@@ -1021,7 +1021,7 @@ void HWCDisplayBuiltIn::HandleFrameCapture() {
 
   frame_capture_buffer_queued_ = false;
   readback_buffer_queued_ = false;
-  cwb_config_.tap_point = CwbTapPoint::kLmTapPoint;
+  cwb_config_ = {};
   readback_configured_ = false;
   output_buffer_ = {};
   cwb_client_ = kCWBClientNone;
@@ -1055,7 +1055,7 @@ void HWCDisplayBuiltIn::HandleFrameDump() {
       }
 
       readback_buffer_queued_ = false;
-      cwb_config_.tap_point = CwbTapPoint::kLmTapPoint;
+      cwb_config_ = {};
       readback_configured_ = false;
 
       output_buffer_ = {};

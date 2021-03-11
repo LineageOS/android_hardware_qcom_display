@@ -322,7 +322,9 @@ struct DisplayDetailEnhancerData {
 enum SupportedDisplayFeature {
   kSupportedModeSwitch,
   kDestinationScalar,
-  kCwbWithPartialUpdate,
+  kCwbDemuraTapPoint,
+  kCwbCrop,
+  kDedicatedCwb,
 };
 
 /*! @brief Display device event handler implemented by the client.

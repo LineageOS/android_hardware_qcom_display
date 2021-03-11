@@ -685,6 +685,8 @@ struct DRMModeInfo {
   uint32_t allowed_mode_switch;
   uint32_t panel_mode_caps;
   uint32_t cur_panel_mode;
+  uint32_t has_cwb_crop;
+  uint32_t has_dedicated_cwb;
 };
 
 /* Per Connector Info*/

@@ -677,6 +677,8 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
   const string mdp_transfer_time_us = "mdp_transfer_time_us=";
   const string allowed_mode_switch = "allowed_mode_switch=";
   const string panel_mode_caps = "panel_mode_capabilities=";
+  const string has_cwb_crop = "has_cwb_crop=";
+  const string has_dedicated_cwb_support = "has_dedicated_cwb_support=";
 
   DRMModeInfo *mode_item = &info->modes.at(0);
   unsigned int index = 0;
@@ -715,6 +717,10 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
       mode_item->allowed_mode_switch = std::stoi(string(line, allowed_mode_switch.length()));
     } else if (line.find(panel_mode_caps) != string::npos) {
       mode_item->panel_mode_caps = std::stoi(string(line, panel_mode_caps.length()));
+    } else if (line.find(has_cwb_crop) != string::npos) {
+      mode_item->has_cwb_crop = std::stoi(string(line, has_cwb_crop.length()));
+    } else if (line.find(has_dedicated_cwb_support) != string::npos) {
+      mode_item->has_dedicated_cwb = std::stoi(string(line, has_dedicated_cwb_support.length()));
     }
   }
 

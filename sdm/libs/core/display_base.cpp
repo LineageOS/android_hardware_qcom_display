@@ -1729,23 +1729,24 @@ DisplayError DisplayBase::ValidateCwbConfigInfo(CwbConfig *cwb_config,
   if (tap_point < CwbTapPoint::kLmTapPoint || tap_point > CwbTapPoint::kDemuraTapPoint) {
     DLOGE("Invalid CWB tappoint. %d ", tap_point);
     return kErrorParameters;
-  }
-
-  uint32_t cwb_with_pu_supported = 0;  // Check whether CWB ROI & demura tap-point are supported.
-  IsSupportedOnDisplay(kCwbWithPartialUpdate, &cwb_with_pu_supported);
-
-  if (!cwb_with_pu_supported) {  // if demura tappoint & CWB ROI are not supported
-    if (tap_point == CwbTapPoint::kDemuraTapPoint) {
-      // demura tppt isn't supported & client specified demura tppt, thus falling back to DSPP tppt
+  } else if (tap_point == CwbTapPoint::kDemuraTapPoint) {
+    // Check whether demura tap-point is supported for CWB.
+    uint32_t demura_tappoint_supported = 0;
+    IsSupportedOnDisplay(kCwbDemuraTapPoint, &demura_tappoint_supported);
+    if (!demura_tappoint_supported) {
       DLOGW("Demura tap-point is not supported for CWB. Falling back to DSPP tap-point.");
       tap_point = CwbTapPoint::kDsppTapPoint;
     }
-    return kErrorNone;  // below checks are not needed if CWB ROI isn't supported.
   }
 
   LayerRect &roi = cwb_config->cwb_roi;
-  bool &pu_as_cwb_roi = cwb_config->pu_as_cwb_roi;
   LayerRect &full_frame = cwb_config->cwb_full_rect;
+  uint32_t cwb_roi_supported = 0;  // Check whether CWB ROI is supported.
+  IsSupportedOnDisplay(kCwbCrop, &cwb_roi_supported);
+  if (!cwb_roi_supported) {
+    roi = full_frame;
+    return kErrorNone;  // below checks are not needed if CWB ROI isn't supported.
+  }
 
   if (!IsRgbFormat(format)) {  // CWB ROI is supported only on RGB color formats. Thus, in-case of
     // other color formats, fallback to Full frame ROI.
@@ -1754,6 +1755,7 @@ DisplayError DisplayBase::ValidateCwbConfigInfo(CwbConfig *cwb_config,
     roi = full_frame;
   }
 
+  bool &pu_as_cwb_roi = cwb_config->pu_as_cwb_roi;
   bool is_valid_cwb_roi = IsValidCwbRoi(roi, full_frame);
   if (is_valid_cwb_roi && !pu_as_cwb_roi) {
     // If client passed valid ROI and PU ROI not to be included in CWB ROI, then
@@ -2784,18 +2786,24 @@ DisplayError DisplayBase::IsSupportedOnDisplay(const SupportedDisplayFeature fea
   switch (feature) {
     case kSupportedModeSwitch: {
       ClientLock lock(disp_mutex_);
-      error = hw_intf_->GetSupportedModeSwitch(supported);
+      error = hw_intf_->GetFeatureSupportStatus(kAllowedModeSwitch, supported);
       break;
     }
     case kDestinationScalar:
       *supported = custom_mixer_resolution_;
       break;
-    case kCwbWithPartialUpdate: {
+    case kCwbDemuraTapPoint: {
       std::vector<CwbTapPoint> &tappoints = hw_resource_info_.tap_points;
       *supported = UINT32(std::find(tappoints.begin(), tappoints.end(),
                                     CwbTapPoint::kDemuraTapPoint) != tappoints.end());
       break;
     }
+    case kCwbCrop:
+      error = hw_intf_->GetFeatureSupportStatus(kHasCwbCrop, supported);
+      break;
+    case kDedicatedCwb:
+      error = hw_intf_->GetFeatureSupportStatus(kHasDedicatedCwb, supported);
+      break;
     default:
       DLOGW("Feature:%d is not present for display %d:%d", feature, display_id_, display_type_);
       error = kErrorParameters;

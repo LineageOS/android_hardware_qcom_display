@@ -72,6 +72,21 @@ DisplayError HWPeripheralDRM::Init() {
   PopulateBitClkRates();
   CreatePanelFeaturePropertyMap();
 
+  sde_drm::DRMConnectorsInfo conns_info = {};
+  int drm_err = drm_mgr_intf_->GetConnectorsInfo(&conns_info);
+  if (drm_err) {
+    DLOGE("DRM Driver error %d while getting Connectors info.", drm_err);
+    return kErrorUndefined;
+  }
+  for (auto &iter : conns_info) {
+    if (iter.second.type == DRM_MODE_CONNECTOR_VIRTUAL) {
+      has_cwb_crop_ = static_cast<bool>(iter.second.modes[current_mode_index_].has_cwb_crop);
+      has_dedicated_cwb_ =
+          static_cast<bool>(iter.second.modes[current_mode_index_].has_dedicated_cwb);
+      break;
+    }
+  }
+
   return kErrorNone;
 }
 
@@ -576,10 +591,8 @@ void HWPeripheralDRM::ConfigureConcurrentWriteback(const HWLayersInfo &hw_layer_
     full_frame.bottom = display_attributes_[current_mode_index_].y_pixels;
   }
 
-  std::vector<CwbTapPoint> &tappoints = hw_resource_.tap_points;
-  if (std::find(tappoints.begin(), tappoints.end(), CwbTapPoint::kDemuraTapPoint) ==
-      tappoints.end()) {  // Check whether CWB ROI & demura tap-point are supported.
-    // In-case of not supported, set full frame roi to WB connector's DST_* properties.
+  if (!has_cwb_crop_) {  // Check whether CWB ROI feature is supported. In-case if it's
+    // not supported, then set WB connector's DST_* properties as per full frame rect.
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_RECT, vitual_conn_id, full_frame);
   } else {  // CWB ROI & demura tap-point are supported
     bool is_full_frame_update = IsFullFrameUpdate(hw_layer_info);
@@ -1048,13 +1061,30 @@ int HWPeripheralDRM::SetPanelFeature(const PanelFeaturePropertyInfo &feature_inf
   return ret;
 }
 
-DisplayError HWPeripheralDRM::GetSupportedModeSwitch(uint32_t *allowed_mode_switch) {
-  if (!allowed_mode_switch) {
+DisplayError HWPeripheralDRM::GetFeatureSupportStatus(const HWFeature feature, uint32_t *status) {
+  DisplayError error = kErrorNone;
+
+  if (!status) {
     return kErrorParameters;
   }
 
-  *allowed_mode_switch = connector_info_.modes[current_mode_index_].allowed_mode_switch;
-  return kErrorNone;
+  switch (feature) {
+    case kAllowedModeSwitch:
+      *status = connector_info_.modes[current_mode_index_].allowed_mode_switch;
+      break;
+    case kHasCwbCrop:
+      *status = UINT32(has_cwb_crop_);
+      break;
+    case kHasDedicatedCwb:
+      *status = UINT32(has_dedicated_cwb_);
+      break;
+    default:
+      DLOGW("Unable to get status of feature : %d", feature);
+      error = kErrorParameters;
+      break;
+  }
+
+  return error;
 }
 
 void HWPeripheralDRM::SetVMReqState() {
