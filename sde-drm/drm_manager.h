@@ -72,6 +72,7 @@ class DRMManager : public DRMManagerInterface {
   DRMEncoderManager *GetEncoderMgr();
   DRMCrtcManager *GetCrtcMgr();
   DRMDppsManagerIntf *GetDppsMgrIntf();
+  DRMPanelFeatureMgrIntf *GetPanelFeatureMgrIntf();
 
   static DRMManager *GetInstance(int fd);
   static void Destroy();

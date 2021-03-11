@@ -98,7 +98,7 @@ void DRMPanelFeatureMgr::Init(int fd, drmModeRes* res) {
     kDRMPanelFeatureDsppRCInfo, DRM_MODE_OBJECT_CRTC, UINT32_MAX, 1, 64, 0};
 }
 
-void DRMPanelFeatureMgr::Deinit() {
+void DRMPanelFeatureMgr::DeInit() {
   int ret = 0;
   for (int i = 0; i < kDRMPanelFeatureMax; i++) {
     DRMPanelFeatureID prop_id = static_cast<DRMPanelFeatureID>(i);

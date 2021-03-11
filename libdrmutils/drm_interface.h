@@ -389,6 +389,11 @@ enum struct DRMOps {
    */
   DPPS_COMMIT_FEATURE,
   /*
+   * Op: Commit panel features.
+   * Arg: drmModeAtomicReq - Atomic request
+   */
+  COMMIT_PANEL_FEATURES,
+  /*
    * Op: Sets qsync mode on connector
    * Arg: uint32_t - Connector ID
    *     uint32_t - qsync mode

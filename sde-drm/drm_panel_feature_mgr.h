@@ -43,7 +43,7 @@ class DRMPanelFeatureMgr : public DRMPanelFeatureMgrIntf {
  public:
   virtual ~DRMPanelFeatureMgr() {}
   void Init(int fd, drmModeRes* res);
-  void Deinit();
+  void DeInit();
   void GetPanelFeatureInfo(DRMPanelFeatureInfo *info);
   void CachePanelFeature(const DRMPanelFeatureInfo &info);
   void CommitPanelFeatures(drmModeAtomicReq *req, const DRMDisplayToken &tok);
