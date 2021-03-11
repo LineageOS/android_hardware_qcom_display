@@ -656,6 +656,8 @@ struct DRMModeInfo {
   uint64_t bit_clk_rate;
   uint32_t transfer_time_us;
   uint32_t allowed_mode_switch;
+  uint32_t has_cwb_crop;
+  uint32_t has_dedicated_cwb;
 };
 
 /* Per Connector Info*/
