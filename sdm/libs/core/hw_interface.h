@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -51,6 +51,12 @@ struct HWScanInfo {
 
   HWScanInfo() : pt_scan_support(kScanNotSupported), it_scan_support(kScanNotSupported),
                  cea_scan_support(kScanNotSupported) { }
+};
+
+enum HWFeature {
+  kAllowedModeSwitch,
+  kHasCwbCrop,
+  kHasDedicatedCwb,
 };
 
 // HWEventHandler - Implemented in DisplayBase and HWInterface implementation
@@ -133,7 +139,7 @@ class HWInterface {
   virtual DisplayError SetBlendSpace(const PrimariesTransfer &blend_space) = 0;
   virtual DisplayError EnableSelfRefresh() = 0;
   virtual PanelFeaturePropertyIntf *GetPanelFeaturePropertyIntf() = 0;
-  virtual DisplayError GetSupportedModeSwitch(uint32_t *allowed_mode_switch) = 0;
+  virtual DisplayError GetFeatureSupportStatus(const HWFeature feature, uint32_t *status) = 0;
 
  protected:
   virtual ~HWInterface() { }

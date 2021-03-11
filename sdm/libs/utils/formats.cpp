@@ -99,6 +99,7 @@ bool IsRgbFormat(const LayerBufferFormat &format) {
     case kFormatRGBA5551:
     case kFormatRGBA4444:
     case kFormatBGR565Ubwc:
+    case kFormatRGB101010:
       return true;
     default:
       return false;

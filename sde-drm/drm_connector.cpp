@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -604,6 +604,8 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
   const string bit_clk_rate = "bit_clk_rate=";
   const string mdp_transfer_time_us = "mdp_transfer_time_us=";
   const string allowed_mode_switch = "allowed_mode_switch=";
+  const string has_cwb_crop = "has_cwb_crop=";
+  const string has_dedicated_cwb_support = "has_dedicated_cwb_support=";
 
   DRMModeInfo *mode_item = &info->modes.at(0);
   unsigned int index = 0;
@@ -640,6 +642,10 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
       mode_item->transfer_time_us = std::stoi(string(line, mdp_transfer_time_us.length()));
     } else if (line.find(allowed_mode_switch) != string::npos) {
       mode_item->allowed_mode_switch = std::stoi(string(line, allowed_mode_switch.length()));
+    } else if (line.find(has_cwb_crop) != string::npos) {
+      mode_item->has_cwb_crop = std::stoi(string(line, has_cwb_crop.length()));
+    } else if (line.find(has_dedicated_cwb_support) != string::npos) {
+      mode_item->has_dedicated_cwb = std::stoi(string(line, has_dedicated_cwb_support.length()));
     }
   }
 
