@@ -163,8 +163,10 @@ bool IsCameraCustomFormat(int format) {
     case HAL_PIXEL_FORMAT_NV12_UBWC_FLEX_8_BATCH:
     case HAL_PIXEL_FORMAT_MULTIPLANAR_FLEX:
     case HAL_PIXEL_FORMAT_RAW_OPAQUE:
+#ifndef NO_RAW10_CUSTOM_FORMAT
     case HAL_PIXEL_FORMAT_RAW10:
     case HAL_PIXEL_FORMAT_RAW12:
+#endif
       return true;
     default:
       break;
