@@ -548,15 +548,11 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
       break;
     }
 
-    if (layer_stack->flags.fast_path && disp_layer_stack_.info.fast_path_composition) {
-      // In Fast Path, driver validation happens in COMMIT Phase.
-      DLOGI_IF(kTagDisplay, "Draw cycle qualifies for Fast Path!");
-      validated_ = true;
-      needs_validate_ = false;
-      break;
+    // Trigger validate only if needed.
+    if (disp_layer_stack_.info.do_hw_validate) {
+      error = hw_intf_->Validate(&disp_layer_stack_.info);
     }
 
-    error = hw_intf_->Validate(&disp_layer_stack_.info);
     if (error == kErrorNone) {
       // Strategy is successful now, wait for Commit().
       validated_ = true;
@@ -808,17 +804,10 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
 DisplayError DisplayBase::PerformCommit(LayerStack *layer_stack) {
   DisplayError error = hw_intf_->Commit(&disp_layer_stack_.info);
   if (error != kErrorNone) {
-    if (layer_stack->flags.fast_path && disp_layer_stack_.info.fast_path_composition) {
-      // If COMMIT fails on the Fast Path, set Safe Mode.
-      DLOGE("COMMIT failed in Fast Path, set Safe Mode!");
-      comp_manager_->SetSafeMode(true);
-      validated_ = false;
-      error = kErrorNotValidated;
-    }
-    return error;
+    DLOGE("COMMIT failed: %d ", error);
   }
 
-  return kErrorNone;
+  return error;
 }
 
 DisplayError DisplayBase::Commit(LayerStack *layer_stack) {

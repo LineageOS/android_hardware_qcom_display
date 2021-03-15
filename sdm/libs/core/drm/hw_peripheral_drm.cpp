@@ -490,7 +490,8 @@ bool HWPeripheralDRM::SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info
     return false;
   }
 
-  bool setup_modes = enable && !cwb_config_.enabled && validate;
+  bool setup_modes = enable && !cwb_config_.enabled;
+  // Modes can be setup in prepare or commit path.
   if (setup_modes && (SetupConcurrentWritebackModes() == kErrorNone)) {
     cwb_config_.enabled = true;
   }
