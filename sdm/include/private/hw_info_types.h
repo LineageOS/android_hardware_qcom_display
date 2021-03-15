@@ -451,6 +451,7 @@ struct HWPanelInfo {
   bool dyn_bitclk_support = false;     // Bit clk can be updated to avoid RF interference.
   std::vector<uint64_t> bitclk_rates;  // Supported bit clk levels.
   uint32_t supported_colorspaces = 0;  // supported_colorspaces for DP displays.
+  uint32_t qsync_fps = 0;              // Min qsync fps
 
   bool operator !=(const HWPanelInfo &panel_info) {
     return ((port != panel_info.port) || (mode != panel_info.mode) ||

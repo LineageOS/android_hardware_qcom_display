@@ -423,7 +423,7 @@ bool HWCDisplayBuiltIn::IsQsyncCallbackNeeded(bool *qsync_enabled, int32_t *refr
   uint32_t current_rate = 0;
   display_intf_->GetRefreshRate(&current_rate);
   *refresh_rate = INT32(current_rate);
-  *qsync_refresh_rate = min_refresh_rate_;
+  *qsync_refresh_rate = qsync_fps_;
 
   return true;
 }

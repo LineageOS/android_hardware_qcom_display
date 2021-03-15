@@ -525,6 +525,8 @@ int HWCDisplay::Init() {
 
   tone_mapper_ = new HWCToneMapper(buffer_allocator_);
 
+  display_intf_->GetQsyncFps(&qsync_fps_);
+
   display_intf_->GetRefreshRateRange(&min_refresh_rate_, &max_refresh_rate_);
   current_refresh_rate_ = max_refresh_rate_;
 

@@ -1118,6 +1118,14 @@ class DisplayInterface {
   */
   virtual DisplayError DestroyLayer() = 0;
 
+  /*! @brief Method to Get the qsync fps from connector node
+
+    @param[out] value of qsync fps
+
+    @return \link void \endlink
+  */
+  virtual DisplayError GetQsyncFps(uint32_t *qsync_fps) = 0;
+
  protected:
   virtual ~DisplayInterface() { }
 };

@@ -755,6 +755,14 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
     hw_panel_info_.max_fps = current_mode.vrefresh;
   }
 
+  if (connector_info_.qsync_fps > 0) {
+    // For command mode panel, driver will set connector property qsync_fps
+    hw_panel_info_.qsync_fps = connector_info_.qsync_fps;
+  } else {
+    // if for video mode panel, qsync_fps is not set, take default min_fps value
+    hw_panel_info_.qsync_fps = hw_panel_info_.min_fps;
+  }
+
   hw_panel_info_.is_primary_panel = connector_info_.is_primary;
   hw_panel_info_.is_pluggable = 0;
   hw_panel_info_.hdr_enabled = connector_info_.panel_hdr_prop.hdr_enabled;

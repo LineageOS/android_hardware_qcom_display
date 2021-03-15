@@ -2114,4 +2114,14 @@ void DisplayBuiltIn::HandlePowerEvent() {
   return ProcessPowerEvent();
 }
 
+DisplayError DisplayBuiltIn::GetQsyncFps(uint32_t *qsync_fps) {
+  ClientLock lock(disp_mutex_);
+  if (hw_panel_info_.qsync_fps) {
+    *qsync_fps = hw_panel_info_.qsync_fps;
+    return kErrorNone;
+  }
+
+  return kErrorNotSupported;
+}
+
 }  // namespace sdm

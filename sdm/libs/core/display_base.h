@@ -199,6 +199,7 @@ class DisplayBase : public DisplayInterface {
     ClientLock lock(disp_mutex_);
     return kErrorNone;
   }
+  virtual DisplayError GetQsyncFps(uint32_t *qsync_fps) { return kErrorNotSupported; }
 
  protected:
   struct DisplayMutex {

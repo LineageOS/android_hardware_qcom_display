@@ -597,6 +597,7 @@ void DRMConnector::ParseCapabilities(uint64_t blob_id, DRMConnectorInfo *info) {
   const string qsync_support = "qsync support=";
   const string wb_ubwc = "wb_ubwc";
   const string dyn_bitclk_support = "dyn bitclk support=";
+  const string qsync_fps = "qsync_fps=";
 
   while (std::getline(stream, line)) {
     if (line.find(pixel_formats) != string::npos) {
@@ -624,6 +625,8 @@ void DRMConnector::ParseCapabilities(uint64_t blob_id, DRMConnectorInfo *info) {
       }
     } else if (line.find(qsync_support) != string::npos) {
       info->qsync_support = (string(line, qsync_support.length()) == "true");
+    } else if (line.find(qsync_fps) != string::npos) {
+      info->qsync_fps = std::stoi(string(line, qsync_fps.length()));
     } else if (line.find(wb_ubwc) != string::npos) {
       info->is_wb_ubwc_supported = true;
     } else if (line.find(dyn_bitclk_support) != string::npos) {

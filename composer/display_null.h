@@ -68,6 +68,7 @@ class DisplayNull : public DisplayInterface {
   virtual bool HasDemura() { return false; }
   virtual void CheckMMRMState() { }
   virtual bool IsValidated() { return true; }
+  virtual DisplayError GetQsyncFps(uint32_t *qsync_fps) { return kErrorNotSupported; }
 
   MAKE_NO_OP(CommitOrPrepare(LayerStack *))
   MAKE_NO_OP(PrePrepare(LayerStack *))

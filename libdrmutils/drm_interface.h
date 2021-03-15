@@ -725,6 +725,7 @@ struct DRMConnectorInfo {
   std::vector<uint8_t> edid;
   uint32_t supported_colorspaces;
   uint64_t panel_id = 0;
+  uint32_t qsync_fps;
 };
 
 // All DRM Connectors as map<Connector_id , connector_info>

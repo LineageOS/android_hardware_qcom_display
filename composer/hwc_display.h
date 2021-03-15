@@ -518,6 +518,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool display_paused_ = false;
   uint32_t min_refresh_rate_ = 0;
   uint32_t max_refresh_rate_ = 0;
+  uint32_t qsync_fps_ = 0;
   uint32_t current_refresh_rate_ = 0;
   bool use_metadata_refresh_rate_ = false;
   uint32_t metadata_refresh_rate_ = 0;
