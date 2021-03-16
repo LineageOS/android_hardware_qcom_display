@@ -50,7 +50,7 @@ class ResourceDefault : public ResourceInterface {
                                           const HWDisplayAttributes &display_attributes,
                                           const HWPanelInfo &hw_panel_info,
                                           const HWMixerAttributes &mixer_attributes);
-  virtual DisplayError Start(Handle display_ctx);
+  virtual DisplayError Start(Handle display_ctx, LayerStack *layer_stack);
   virtual DisplayError Stop(Handle display_ctx, DispLayerStack *disp_layer_stack);
   virtual DisplayError SetDrawMethod(Handle display_ctx, const DisplayDrawMethod &draw_method);
   virtual DisplayError Prepare(Handle display_ctx, DispLayerStack *disp_layer_stack);

@@ -1168,8 +1168,11 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     return kErrorParameters;
   }
 
-  if (!first_cycle_) {
-    WaitForCompletion(&sync_points);
+  if ((pending_power_state_ == kPowerStateNone) && !first_cycle_) {
+    CacheRetireFence();
+    SyncPoints sync = {};
+    sync.retire_fence = retire_fence_;
+    WaitForCompletion(&sync);
   }
 
   error = ReconfigureDisplay();
@@ -3030,8 +3033,7 @@ void DisplayBase::WaitForCompletion(SyncPoints *sync_points) {
   }
 
   // For displays in unified draw, wait on cached retire fence in steady state.
-  shared_ptr<Fence> retire_fence = nullptr;
-  comp_manager_->GetRetireFence(display_comp_ctx_, &retire_fence);
+  shared_ptr<Fence> retire_fence = sync_points->retire_fence;
   Fence::Wait(retire_fence, kPowerStateTimeout);
 }
 
