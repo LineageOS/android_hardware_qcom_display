@@ -2273,33 +2273,7 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
 }
 
 void DisplayBase::PostCommitLayerParams(LayerStack *layer_stack) {
-  // Copy the release fence from HWLayers to clients layers
-  uint32_t hw_layers_count = UINT32(disp_layer_stack_.info.hw_layers.size());
-
-  std::vector<uint32_t> fence_dup_flag;
-
-  for (uint32_t i = 0; i < hw_layers_count; i++) {
-    uint32_t sdm_layer_index = disp_layer_stack_.info.index.at(i);
-    Layer *sdm_layer = layer_stack->layers.at(sdm_layer_index);
-    Layer &hw_layer = disp_layer_stack_.info.hw_layers.at(i);
-
-    // Copy the release fence only once for a SDM Layer.
-    // In S3D use case, two hw layers can share the same input buffer, So make sure to merge the
-    // output fence fd and assign it to layer's input buffer release fence fd.
-    if (std::find(fence_dup_flag.begin(), fence_dup_flag.end(), sdm_layer_index) ==
-        fence_dup_flag.end()) {
-      sdm_layer->input_buffer.release_fence = hw_layer.input_buffer.release_fence;
-      fence_dup_flag.push_back(sdm_layer_index);
-    } else {
-      sdm_layer->input_buffer.release_fence = Fence::Merge(
-              hw_layer.input_buffer.release_fence, sdm_layer->input_buffer.release_fence);
-    }
-  }
-
   cached_qos_data_ = disp_layer_stack_.info.qos_data;
-  layer_stack->retire_fence = disp_layer_stack_.info.retire_fence;
-
-  return;
 }
 
 DisplayError DisplayBase::InitializeColorModes() {
