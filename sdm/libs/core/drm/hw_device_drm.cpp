@@ -781,9 +781,6 @@ DisplayError HWDeviceDRM::GetHWPanelInfo(HWPanelInfo *panel_info) {
 }
 
 DisplayError HWDeviceDRM::SetDisplayFormat(uint32_t index, DisplayInterfaceFormat fmt) {
-  if (!IsResolutionSwitchEnabled()) {
-    return kErrorNotSupported;
-  }
 
   if (index >= display_attributes_.size()) {
     DLOGE("Invalid mode index %d mode size %d", index, UINT32(display_attributes_.size()));
