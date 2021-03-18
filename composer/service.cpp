@@ -88,13 +88,13 @@ int main(int, char **) {
   std::shared_ptr<DisplayConfigAIDL> displayConfig = ndk::SharedRefBase::make<DisplayConfigAIDL>();
   const std::string instance = std::string() + DisplayConfigAIDL::descriptor + "/default";
   if (!displayConfig->asBinder().get()) {
-    ALOGE("Display Config AIDL's binder is null");
+    ALOGW("Display Config AIDL's binder is null");
   }
 
   binder_status_t status = AServiceManager_addService(displayConfig->asBinder().get(),
                                                       instance.c_str());
   if (status != STATUS_OK) {
-    ALOGE("Failed to register DisplayConfig AIDL as a service (status:%d)", status);
+    ALOGW("Failed to register DisplayConfig AIDL as a service (status:%d)", status);
   } else {
     ALOGI("Successfully registered DisplayConfig AIDL as a service");
   }
