@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019,2021 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -53,7 +53,8 @@ class DRMDppsManagerImp : public DRMDppsManagerIntf {
   ~DRMDppsManagerImp();
   void Init(int fd, drmModeRes* res);
   void CacheDppsFeature(uint32_t obj_id, va_list args);
-  void CommitDppsFeatures(drmModeAtomicReq *req, const DRMDisplayToken &tok);
+  void CommitDppsFeatures(drmModeAtomicReq *req, const DRMDisplayToken &tok,
+    uint32_t validate_only);
   void GetDppsFeatureInfo(DRMDppsFeatureInfo *info);
 
  private:
@@ -82,7 +83,8 @@ class DRMDppsManagerDummyImp : public DRMDppsManagerIntf {
   ~DRMDppsManagerDummyImp() {}
   void Init(int fd, drmModeRes* res) {}
   void CacheDppsFeature(uint32_t obj_id, va_list args) {}
-  void CommitDppsFeatures(drmModeAtomicReq *req, const DRMDisplayToken &tok) {}
+  void CommitDppsFeatures(drmModeAtomicReq *req, const DRMDisplayToken &tok,
+    uint32_t validate_only) {}
   void GetDppsFeatureInfo(DRMDppsFeatureInfo *info) {}
 };
 }  // namespace sde_drm

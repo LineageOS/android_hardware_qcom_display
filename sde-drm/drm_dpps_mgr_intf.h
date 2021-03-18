@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019,2021 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -37,7 +37,8 @@ class DRMDppsManagerIntf {
   virtual ~DRMDppsManagerIntf() {}
   virtual void Init(int fd, drmModeRes* res) = 0;
   virtual void CacheDppsFeature(uint32_t obj_id, va_list args) = 0;
-  virtual void CommitDppsFeatures(drmModeAtomicReq *req, const DRMDisplayToken &tok) = 0;
+  virtual void CommitDppsFeatures(drmModeAtomicReq *req, const DRMDisplayToken &tok,
+    uint32_t validate_only) = 0;
   virtual void GetDppsFeatureInfo(DRMDppsFeatureInfo *info) = 0;
 };
 
