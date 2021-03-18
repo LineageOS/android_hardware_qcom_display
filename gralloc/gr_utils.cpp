@@ -1333,10 +1333,10 @@ int GetBufferLayout(private_handle_t *hnd, uint32_t stride[4], uint32_t offset[4
 int GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
                                     unsigned int *alignedw, unsigned int *alignedh,
                                     GraphicsMetadata *graphics_metadata) {
-  // Maintain original w/h for buffer consumed solely by GPU or CPU as its derived from the
-  // gfx metadata for gfx consumption.
-  *alignedw = info.width;
-  *alignedh = info.height;
+  int err = GetAlignedWidthAndHeight(info, alignedw, alignedh);
+  if (err) {
+    return err;
+  }
 
   AdrenoMemInfo* adreno_mem_info = AdrenoMemInfo::GetInstance();
   graphics_metadata->size = adreno_mem_info->AdrenoGetMetadataBlobSize();
