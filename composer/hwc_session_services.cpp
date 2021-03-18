@@ -1105,8 +1105,12 @@ void HWCSession::CWB::ProcessRequests() {
     if (!status) {
       hwc_session_->callbacks_.Refresh(HWC_DISPLAY_PRIMARY);
 
-      std::unique_lock<std::mutex> lock(mutex_);
-      cv_.wait(lock);
+      // Mutex scope
+      // Wait for the signal from commit thread to retrieve the CWB release fence
+      {
+        std::unique_lock<std::mutex> lock(mutex_);
+        cv_.wait(lock);
+      }
 
       shared_ptr<Fence> release_fence = nullptr;
       // Mutex scope
