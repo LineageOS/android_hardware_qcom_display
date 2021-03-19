@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -1078,9 +1078,9 @@ HWC2::Error HWCDisplay::GetDisplayAttribute(hwc2_config_t config, HwcAttribute a
 
   DisplayConfigVariableInfo variable_config = variable_config_map_.at(config);
 
-  variable_config.x_pixels -= UINT32(window_rect_.right + window_rect_.left);
-  variable_config.y_pixels -= UINT32(window_rect_.bottom + window_rect_.top);
-  if (variable_config.x_pixels <= 0 || variable_config.y_pixels <= 0) {
+  uint32_t x_pixels = variable_config.x_pixels - UINT32(window_rect_.right + window_rect_.left);
+  uint32_t y_pixels = variable_config.y_pixels - UINT32(window_rect_.bottom + window_rect_.top);
+  if (x_pixels <= 0 || y_pixels <= 0) {
     DLOGE("window rects are not within the supported range");
     return HWC2::Error::BadDisplay;
   }
@@ -1090,10 +1090,10 @@ HWC2::Error HWCDisplay::GetDisplayAttribute(hwc2_config_t config, HwcAttribute a
       *out_value = INT32(variable_config.vsync_period_ns);
       break;
     case HwcAttribute::WIDTH:
-      *out_value = INT32(variable_config.x_pixels);
+      *out_value = INT32(x_pixels);
       break;
     case HwcAttribute::HEIGHT:
-      *out_value = INT32(variable_config.y_pixels);
+      *out_value = INT32(y_pixels);
       break;
     case HwcAttribute::DPI_X:
       *out_value = INT32(variable_config.x_dpi * 1000.0f);
