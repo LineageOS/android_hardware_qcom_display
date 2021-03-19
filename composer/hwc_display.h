@@ -567,6 +567,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool animating_ = false;
   DisplayValidateState validate_state_ = kNormalValidate;
   DisplayCommitState commit_state_ = kNormalCommit;
+  bool revalidate_pending_ = false;
 
  private:
   void DumpInputBuffers(void);

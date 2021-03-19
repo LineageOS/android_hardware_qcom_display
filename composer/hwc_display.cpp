@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright 2015 The Android Open Source Project
@@ -1368,7 +1368,11 @@ DisplayError HWCDisplay::HandleEvent(DisplayEvent event) {
       }
     } break;
     case kInvalidateDisplay:
-      validated_ = false;
+      if (layer_stack_.block_on_fb) {
+        validated_ = false;
+      } else {
+        revalidate_pending_ = true;
+      }
       break;
     case kPostIdleTimeout:
       display_idle_ = true;

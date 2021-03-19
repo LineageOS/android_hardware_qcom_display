@@ -470,6 +470,10 @@ HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
     // Subsequent commits have to be normal. Reset state.
     commit_state_ = kNormalCommit;
     validate_state_ = kSkipValidate;
+    if (revalidate_pending_) {
+      validated_ = false;
+      revalidate_pending_ = false;
+    }
   } else {
     CacheAvrStatus();
     DisplayConfigFixedInfo fixed_info = {};
