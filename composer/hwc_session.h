@@ -393,6 +393,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
     virtual int SetCameraSmoothInfo(CameraSmoothOp op, uint32_t fps);
     virtual int ControlCameraSmoothCallback(bool enable);
 #endif
+    virtual int IsRCSupported(uint32_t disp_id, bool *supported);
+
     std::weak_ptr<DisplayConfig::ConfigCallback> callback_;
     HWCSession *hwc_session_ = nullptr;
   };
