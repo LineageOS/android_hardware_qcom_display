@@ -576,6 +576,8 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
 
   comp_manager_->PostPrepare(display_comp_ctx_, &disp_layer_stack_);
 
+  CacheDisplayComposition();
+
   DLOGI_IF(kTagDisplay, "Exiting Prepare for display type : %d error: %d", display_type_, error);
 
   return error;
@@ -923,6 +925,8 @@ DisplayError DisplayBase::PostCommit(HWLayersInfo *hw_layers_info) {
 
   comp_manager_->SetSafeMode(false);
 
+  CacheFrameBuffer();
+
   for (auto &hw_layer : disp_layer_stack_.info.hw_layers) {
     CloseFd(&hw_layer.input_buffer.planes[0].fd);
   }
@@ -930,6 +934,40 @@ DisplayError DisplayBase::PostCommit(HWLayersInfo *hw_layers_info) {
   first_cycle_ = false;
 
   return error;
+}
+
+void DisplayBase::CacheFrameBuffer() {
+  if (draw_method_ != kDrawUnifiedWithGPUTarget) {
+    return;
+  }
+
+  if (!gpu_comp_frame_) {
+    return;
+  }
+
+  // Close current fd.
+  CloseFd(&cached_framebuffer_.planes[0].fd);
+  for (auto &hw_layer : disp_layer_stack_.info.hw_layers) {
+    if (hw_layer.composition == kCompositionGPUTarget) {
+      cached_framebuffer_ = hw_layer.input_buffer;
+      break;
+    }
+  }
+
+  // Replace buffer fd with duped fd.
+  int new_fd = Sys::dup_(cached_framebuffer_.planes[0].fd);
+  cached_framebuffer_.planes[0].fd = new_fd;
+}
+
+void DisplayBase::CacheDisplayComposition() {
+  // Bail out if GPU composed layers aren't present.
+  gpu_comp_frame_ = false;
+  for (auto &layer : disp_layer_stack_.stack->layers) {
+    if (layer->composition == kCompositionGPU) {
+      gpu_comp_frame_ = true;
+      break;
+    }
+  }
 }
 
 DisplayError DisplayBase::Flush(LayerStack *layer_stack) {
@@ -2306,11 +2344,44 @@ void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
     }
   }
 
+  UpdateFrameBuffer();
+
   if (layer_stack->elapse_timestamp) {
     disp_layer_stack_.info.elapse_timestamp = layer_stack->elapse_timestamp;
   }
 
   return;
+}
+
+void DisplayBase::UpdateFrameBuffer() {
+  if (draw_method_ != kDrawUnifiedWithGPUTarget) {
+    return;
+  }
+
+  bool client_target_present = false;
+  for (auto &hw_layer : disp_layer_stack_.info.hw_layers) {
+    if (hw_layer.composition == kCompositionGPUTarget) {
+      client_target_present = true;
+      break;
+    }
+  }
+
+  bool need_cached_fb = !gpu_comp_frame_ && client_target_present;
+  if (!need_cached_fb) {
+    return;
+  }
+
+  uint32_t hw_layers_count = disp_layer_stack_.info.hw_layers.size();
+  for (uint32_t i = 0; i < hw_layers_count; i++) {
+    uint32_t sdm_layer_index = disp_layer_stack_.info.index.at(i);
+    Layer &hw_layer = disp_layer_stack_.info.hw_layers.at(i);
+    if (disp_layer_stack_.info.gpu_target_index == sdm_layer_index) {
+      // Update GPU target buffer with cached fd.
+      CloseFd(&hw_layer.input_buffer.planes[0].fd);
+      hw_layer.input_buffer = cached_framebuffer_;
+      hw_layer.input_buffer.planes[0].fd = Sys::dup_(hw_layer.input_buffer.planes[0].fd);
+    }
+  }
 }
 
 void DisplayBase::PostCommitLayerParams() {

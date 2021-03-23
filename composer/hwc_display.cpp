@@ -818,6 +818,7 @@ void HWCDisplay::BuildLayerStack() {
 
   layer_stack_.flags.geometry_changed = UINT32((geometry_changes_ ||
                                                 geometry_changes_on_doze_suspend_) > 0);
+  layer_stack_.flags.advance_fb_present = client_target_3_1_set_;
   // Append client target to the layer stack
   Layer *sdm_client_target = client_target_->GetSDMLayer();
   sdm_client_target->layer_id = client_target_->GetId();
@@ -1234,8 +1235,9 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, shared_ptr<Fence
   return HWC2::Error::None;
 }
 
-HWC2::Error HWCDisplay::SetClientTarget_4_0(buffer_handle_t target, shared_ptr<Fence> acquire_fence,
+HWC2::Error HWCDisplay::SetClientTarget_3_1(buffer_handle_t target, shared_ptr<Fence> acquire_fence,
                                             int32_t dataspace, hwc_region_t damage) {
+  client_target_3_1_set_ = true;
   return SetClientTarget(target, acquire_fence, dataspace, damage);
 }
 
@@ -1755,6 +1757,7 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence
   geometry_changes_ = GeometryChanges::kNone;
   flush_ = false;
   skip_commit_ = false;
+  client_target_3_1_set_ = true;
 
   if (display_pause_pending_) {
     DLOGI("Pause display %d-%d", sdm_id_, type_);

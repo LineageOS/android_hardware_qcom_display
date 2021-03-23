@@ -366,6 +366,9 @@ class DisplayBase : public DisplayInterface {
   void WaitForCompletion(SyncPoints *sync_points);
   DisplayError PerformHwCommit(HWLayersInfo *hw_layers_info);
   void CacheRetireFence();
+  void CacheFrameBuffer();
+  void CacheDisplayComposition();
+  void UpdateFrameBuffer();
   unsigned int rc_cached_res_width_ = 0;
   unsigned int rc_cached_res_height_ = 0;
   std::unique_ptr<RCIntf> rc_core_ = nullptr;
@@ -377,8 +380,10 @@ class DisplayBase : public DisplayInterface {
   bool draw_method_set_ = false;
   CwbConfig *cwb_config_ = NULL;
   bool transition_done_ = false;
+  bool gpu_comp_frame_ = false;
   std::mutex power_mutex_;
   std::condition_variable cv_;
+  LayerBuffer cached_framebuffer_ = {};
 };
 
 }  // namespace sdm

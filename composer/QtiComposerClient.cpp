@@ -1410,7 +1410,7 @@ bool QtiComposerClient::CommandReader::parseSetClientTarget_3_1(uint16_t length)
   hwc_region region = {};
   auto err = lookupBuffer(BufferCache::CLIENT_TARGETS, slot, useCache, clientTarget, &clientTarget);
   if (err == Error::NONE) {
-    auto error = mClient.hwc_session_->SetClientTarget_4_0(mDisplay, clientTarget, fence,
+    auto error = mClient.hwc_session_->SetClientTarget_3_1(mDisplay, clientTarget, fence,
         dataspace, region);
     err = static_cast<Error>(error);
     auto updateBufErr = updateBuffer(BufferCache::CLIENT_TARGETS, slot,

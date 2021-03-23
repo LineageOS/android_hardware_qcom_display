@@ -237,7 +237,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   int32_t SetClientTarget(hwc2_display_t display, buffer_handle_t target,
                           shared_ptr<Fence> acquire_fence,
                           int32_t dataspace, hwc_region_t damage);
-  int32_t SetClientTarget_4_0(hwc2_display_t display, buffer_handle_t target,
+  int32_t SetClientTarget_3_1(hwc2_display_t display, buffer_handle_t target,
                               shared_ptr<Fence> acquire_fence,
                               int32_t dataspace, hwc_region_t damage);
   int32_t SetCursorPosition(hwc2_display_t display, hwc2_layer_t layer, int32_t x, int32_t y);

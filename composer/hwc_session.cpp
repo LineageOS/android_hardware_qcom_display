@@ -970,10 +970,10 @@ int32_t HWCSession::SetClientTarget(hwc2_display_t display, buffer_handle_t targ
                              dataspace, damage);
 }
 
-int32_t HWCSession::SetClientTarget_4_0(hwc2_display_t display, buffer_handle_t target,
+int32_t HWCSession::SetClientTarget_3_1(hwc2_display_t display, buffer_handle_t target,
                                         const shared_ptr<Fence> acquire_fence, int32_t dataspace,
                                         hwc_region_t damage) {
-  return CallDisplayFunction(display, &HWCDisplay::SetClientTarget_4_0, target, acquire_fence,
+  return CallDisplayFunction(display, &HWCDisplay::SetClientTarget_3_1, target, acquire_fence,
                              dataspace, damage);
 }
 

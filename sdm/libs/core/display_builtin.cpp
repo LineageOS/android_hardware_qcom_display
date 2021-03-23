@@ -541,12 +541,7 @@ DisplayError DisplayBuiltIn::CommitLocked(LayerStack *layer_stack) {
   last_panel_mode_ = hw_panel_info_.mode;
   PreCommit(layer_stack);
 
-  DisplayError error = DisplayBase::CommitLocked(layer_stack);
-  if (error != kErrorNone) {
-    return error;
-  }
-
-  return PostCommit(&disp_layer_stack_.info);
+  return DisplayBase::CommitLocked(layer_stack);
 }
 
 DisplayError DisplayBuiltIn::PostCommit(HWLayersInfo *hw_layers_info) {

@@ -291,7 +291,7 @@ class HWCDisplay : public DisplayEventHandler {
   }
   virtual HWC2::Error SetClientTarget(buffer_handle_t target, shared_ptr<Fence> acquire_fence,
                                       int32_t dataspace, hwc_region_t damage);
-  virtual HWC2::Error SetClientTarget_4_0(buffer_handle_t target, shared_ptr<Fence> acquire_fence,
+  virtual HWC2::Error SetClientTarget_3_1(buffer_handle_t target, shared_ptr<Fence> acquire_fence,
                                           int32_t dataspace, hwc_region_t damage);
   virtual HWC2::Error SetColorMode(ColorMode mode) { return HWC2::Error::Unsupported; }
   virtual HWC2::Error SetColorModeWithRenderIntent(ColorMode mode, RenderIntent intent) {
@@ -580,6 +580,7 @@ class HWCDisplay : public DisplayEventHandler {
   int async_power_mode_ = 0;
   bool draw_method_set_ = false;
   bool validate_done_ = false;
+  bool client_target_3_1_set_ = false;
 };
 
 inline int HWCDisplay::Perform(uint32_t operation, ...) {

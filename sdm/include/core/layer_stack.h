@@ -305,6 +305,8 @@ struct LayerStackFlags {
 
       uint32_t mask_present : 1;  //!< Set if layer stack has mask layers.
 
+      uint32_t advance_fb_present : 1;  //!< Set if layer stack has next frame buffer set.
+
       uint32_t layer_id_support : 1;  //! This flag shall be set by Client to indicate that it has
                                       //! set the unique Layer Id on each SDM Layer, which will
                                       //! persist across draw cycles until the layer gets removed.
