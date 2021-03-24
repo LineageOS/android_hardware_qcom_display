@@ -64,6 +64,10 @@ cc_binary {
         "libbinder_ndk",
         "vendor.qti.hardware.display.config-V2-ndk_platform",
     ],
+
+    static_libs: [
+        "libaidlcommonsupport",
+    ],
     srcs: composer_srcs,
 
     init_rc: ["vendor.qti.hardware.display.composer-service.rc"],

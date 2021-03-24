@@ -924,8 +924,19 @@ ScopedAStatus
     }
   }
 
+  sdm::CwbConfig cwb_config = {};
+  cwb_config.tap_point = static_cast<sdm::CwbTapPoint>(postProcessed);
+  sdm::LayerRect &roi = cwb_config.cwb_roi;
+  roi.left = FLOAT(rect.left);
+  roi.top = FLOAT(rect.top);
+  roi.right = FLOAT(rect.right);
+  roi.bottom = FLOAT(rect.bottom);
+
+  ALOGI("CWB config passed by cwb_client : tappoint %d  CWB_ROI : (%f %f %f %f)",
+        cwb_config.tap_point, roi.left, roi.top, roi.right, roi.bottom);
+
   // TODO(user): Convert NativeHandle to native_handle_t, call PostBuffer
-//  hwc_session_->cwb_.PostBuffer(callback_, post_processed, native_handle_clone(buffer));
+  hwc_session_->cwb_.PostBuffer(callback_, cwb_config, ::android::dupFromAidl(buffer));
 
   return ScopedAStatus::ok();
 }

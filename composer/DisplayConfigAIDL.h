@@ -30,6 +30,7 @@
 
 #include <aidl/vendor/qti/hardware/display/config/BnDisplayConfig.h>
 #include <aidl/vendor/qti/hardware/display/config/BnDisplayConfigCallback.h>
+#include <aidlcommonsupport/NativeHandle.h>
 #include <binder/Status.h>
 #include <log/log.h>
 #include <utils/locker.h>
