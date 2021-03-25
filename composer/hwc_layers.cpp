@@ -31,20 +31,20 @@ namespace sdm {
 std::atomic<hwc2_layer_t> HWCLayer::next_id_(1);
 
 DisplayError SetCSC(const native_handle_t *handle, ColorMetaData *color_metadata) {
-  ColorMetaData color;
-  if (qtigralloc::getMetadataState(const_cast<native_handle_t *>(handle), QTI_COLOR_METADATA)) {
-    int err = static_cast<int>(
-        qtigralloc::get(const_cast<native_handle_t *>(handle), QTI_COLOR_METADATA, &color));
-    if (!err) {
-      color_metadata->colorPrimaries = color.colorPrimaries;
-      color_metadata->transfer = color.transfer;
-      color_metadata->range = color.range;
-      return kErrorNone;
-    } else {
-      DLOGW("Error in qtigralloc get, err=%d", err);
+  int err = qtigralloc::getMetadataState(const_cast<native_handle_t *>(handle),
+                                         QTI_COLOR_METADATA);
+  if (err == 1) {
+    err = static_cast<int>(qtigralloc::get(const_cast<native_handle_t *>(handle),
+                                           QTI_COLOR_METADATA, color_metadata));
+    if (err != 0) {
+      DLOGE("Error in qtigralloc get, err = %d", err);
+      return kErrorUndefined;
     }
+  } else if (err == 0) {
+    DLOGV("Color Metadata state is not set");
   } else {
-    DLOGV("Failed to get values for CSC");
+    DLOGE("Failed to get Color Metadata state");
+    return kErrorUndefined;
   }
 
   return kErrorNone;
