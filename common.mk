@@ -79,4 +79,8 @@ ifeq ($(TARGET_COMPILE_WITH_MSM_KERNEL),true)
 # failing which, they are picked from bionic.
     common_deps += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
     kernel_includes += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+ifeq ($(TARGET_USES_5.4_KERNEL), true)
+    kernel_includes += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/display
+    kernel_includes += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/vidc
+endif
 endif

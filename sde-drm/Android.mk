@@ -1,5 +1,6 @@
 ifneq ($(TARGET_IS_HEADLESS), true)
 LOCAL_PATH := $(call my-dir)
+include $(LOCAL_PATH)/../common.mk
 include $(CLEAR_VARS)
 
 common_header_export_path := qcom/display
@@ -9,11 +10,12 @@ LOCAL_SANITIZE            := integer_overflow
 LOCAL_MODULE_TAGS         := optional
 LOCAL_SHARED_LIBRARIES    := libdrm libdrmutils libdisplaydebug
 LOCAL_HEADER_LIBRARIES    := display_headers
-LOCAL_C_INCLUDES          := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/ \
+LOCAL_C_INCLUDES          := $(kernel_includes) \
                              -isystem external/libdrm
 LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 LOCAL_CFLAGS              := -Wno-missing-field-initializers -Wall -Werror -fno-operator-names \
                              -Wno-unused-parameter -DLOG_TAG=\"SDE_DRM\"
+LOCAL_CFLAGS              += $(common_flags)
 LOCAL_CLANG               := true
 LOCAL_SRC_FILES           := drm_manager.cpp \
                              drm_connector.cpp \
