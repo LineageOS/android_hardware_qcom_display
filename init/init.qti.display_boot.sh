@@ -39,6 +39,9 @@ if [ -f /sys/devices/soc0/platform_subtype_id ]; then
     subtype_id=`cat /sys/devices/soc0/platform_subtype_id`
 fi
 
+# Enable camera smooth for all targets
+setprop vendor.display.enable_camera_smooth 1
+
 case "$target" in
     "lahaina")
     #Set property to differentiate Lahaina & Shima
