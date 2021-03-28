@@ -184,6 +184,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool IsSkipValidateState() { return (validate_state_ == kSkipValidate); }
   bool IsInternalValidateState() { return (validated_ && (validate_state_ == kInternalValidate)); }
   void SetValidationState(DisplayValidateState state) { validate_state_ = state; }
+  bool CommitPending() { return pending_commit_;}
 
   // HWC2 APIs
   virtual HWC2::Error AcceptDisplayChanges(void);
