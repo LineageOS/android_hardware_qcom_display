@@ -2325,6 +2325,11 @@ DisplayError DisplayBase::SetCompositionState(LayerComposition composition_type,
 }
 
 void DisplayBase::CommitLayerParams(LayerStack *layer_stack) {
+  if (!layer_stack) {
+    DLOGW("Invalid layer stack found");
+    return;
+  }
+
   // Copy the acquire fence from clients layers  to HWLayers
   uint32_t hw_layers_count = UINT32(disp_layer_stack_.info.hw_layers.size());
 
