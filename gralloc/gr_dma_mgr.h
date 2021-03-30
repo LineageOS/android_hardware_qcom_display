@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,6 +32,7 @@
 
 #include <BufferAllocator/BufferAllocator.h>
 #include <string>
+#include <vector>
 
 #include "gr_alloc_interface.h"
 
@@ -49,9 +50,10 @@ class DmaManager : public AllocInterface {
   virtual int ImportBuffer(int fd);
   virtual int CleanBuffer(void *base, unsigned int size, unsigned int offset, int handle, int op,
                           int fd);
-  virtual int SecureMemPerms(int fd);
-  virtual void GetHeapInfo(uint64_t usage, std::string *ion_heap_name, unsigned int *alloc_type,
-                           unsigned int *ion_flags, bool *sec_flag, bool *sensor_flag);
+  virtual int SecureMemPerms(AllocData *data);
+  virtual void GetHeapInfo(uint64_t usage, bool sensor_flag, std::string *heap_name,
+                           std::vector<std::string> *vm_names, unsigned int *alloc_type,
+                           unsigned int *flags);
 
   static DmaManager *GetInstance();
 
