@@ -1120,8 +1120,14 @@ int32_t HWCSession::SetPowerMode(hwc2_display_t display, int32_t int_mode) {
     return HWC2_ERROR_NONE;
   }
 
+  // 1. For power transition cases other than Off->On or On->Off, async power mode
+  // will not be used. Hence, set override_mode to false for them.
+  // 2. When SF requests Doze mode transition on panels where Doze mode is not supported
+  // (like video mode), HWComposer.cpp will override the request to "On". Handle such cases
+  // in main thread path.
   if (!((last_power_mode == HWC2::PowerMode::Off && mode == HWC2::PowerMode::On) ||
-     (last_power_mode == HWC2::PowerMode::On && mode == HWC2::PowerMode::Off))) {
+     (last_power_mode == HWC2::PowerMode::On && mode == HWC2::PowerMode::Off)) ||
+     (last_power_mode == HWC2::PowerMode::Off && mode == HWC2::PowerMode::On)) {
     override_mode = false;
   }
 
