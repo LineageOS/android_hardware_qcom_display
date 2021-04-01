@@ -178,12 +178,13 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   void PostCommitStitchLayers();
   void SetCpuPerfHintLargeCompCycle();
   void ValidateUiScaling();
-  void ConfigureCwbAtLm(uint32_t *x_pixels, uint32_t *y_pixels);
   void EnablePartialUpdate();
   uint32_t GetUpdatingAppLayersCount();
   int ValidateFrameCaptureConfig(const BufferInfo &output_buffer_info,
                                  const CwbTapPoint &cwb_tappoint);
   void LoadMixedModePerfHintThreshold();
+  virtual void SetCwbState();
+  virtual void ResetCwbState();
 
   // SyncTask methods.
   void OnTask(const LayerStitchTaskCode &task_code,
@@ -192,7 +193,6 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   const int kPerfHintLargeCompCycle = 0x00001097;
   HWCBufferAllocator *buffer_allocator_ = nullptr;
   CPUHint *cpu_hint_ = nullptr;
-  CWBClient cwb_client_ = kCWBClientNone;
 
   // Builtin readback buffer configuration
   LayerBuffer output_buffer_ = {};

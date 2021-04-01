@@ -56,6 +56,8 @@ namespace sdm {
 bool HWCDisplay::mmrm_restricted_ = false;
 uint32_t HWCDisplay::throttling_refresh_rate_ = 60;
 constexpr uint32_t kVsyncTimeDriftNs = 1000000;
+CwbState HWCDisplay::cwb_state_ = {};
+std::mutex HWCDisplay::cwb_state_lock_;
 
 bool NeedsToneMap(const LayerStack &layer_stack) {
   for (Layer *layer : layer_stack.layers) {
@@ -584,6 +586,15 @@ int HWCDisplay::Deinit() {
     delete static_cast<DisplayNull *>(display_intf_);
     display_intf_ = nullptr;
   } else {
+    {
+      std::lock_guard<std::mutex> lock(cwb_state_lock_);
+      if (cwb_state_.cwb_disp_id == id_) {
+        // If CWB is requested or configured or tearing-down on disp id_,
+        // then flush cwb setup before the display is deleted.
+        ResetCwbState();
+        display_intf_->FlushConcurrentWriteback();
+      }
+    }  // releasing the cwb state lock
     DisplayError error = core_intf_->DestroyDisplay(display_intf_);
     if (error != kErrorNone) {
       DLOGE("Display destroy failed. Error = %d", error);

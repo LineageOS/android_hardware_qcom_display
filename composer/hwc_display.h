@@ -87,6 +87,23 @@ enum CWBClient {
   kCWBClientComposer,   // Client to HWC i.e. SurfaceFlinger
 };
 
+enum CWBStatus {
+  kCWBAvailable,     // Available to accept new CWB request
+  kCWBConfigure,     // CWB is Configured in the current frame
+  kCWBTeardown,      // CWB tear down in the current frame. Frame's Retire fence would be cached.
+                     // New CWB requests coming in are rejected until this retire fence signals.
+  kCWBPostTeardown,  // CWB teardown done in previous frame.
+};
+
+struct CwbState {
+  hwc2_display_t cwb_disp_id = -1;                          // display id on which cwb is either
+                                                            // requested, active or tearing down.
+  CWBClient cwb_client = kCWBClientNone;                    // the client actively performing cwb.
+  CWBStatus cwb_status = CWBStatus::kCWBAvailable;          // current cwb statuss
+  shared_ptr<Fence> teardown_frame_retire_fence = nullptr;  // cache cwb disable frame retire fence
+                                                            // to reject requests until it signals.
+};
+
 struct TransientRefreshRateInfo {
   uint32_t transient_vsync_period;
   int64_t vsync_applied_time;
@@ -494,6 +511,10 @@ class HWCDisplay : public DisplayEventHandler {
   void RetrieveFences(shared_ptr<Fence> *out_retire_fence);
   void SetDrawMethod();
 
+  // CWB related methods
+  virtual void SetCwbState(){};
+  virtual void ResetCwbState(){};
+
   bool layer_stack_invalid_ = true;
   CoreInterface *core_intf_ = nullptr;
   HWCBufferAllocator *buffer_allocator_ = NULL;
@@ -563,6 +584,8 @@ class HWCDisplay : public DisplayEventHandler {
   bool display_idle_ = false;
   bool animating_ = false;
   DisplayDrawMethod draw_method_ = kDrawDefault;
+  static CwbState cwb_state_;
+  static std::mutex cwb_state_lock_;  // cwb state lock. Set before accesing or updating cwb_state_
 
  private:
   bool CanSkipSdmPrepare(uint32_t *num_types, uint32_t *num_requests);

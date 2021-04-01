@@ -247,23 +247,7 @@ HWC2::Error HWCDisplayBuiltIn::PreValidateDisplay(bool *exit_validate) {
     MarkLayersForClientComposition();
   }
 
-  bool pending_output_dump = dump_frame_count_ && dump_output_to_file_;
-
-  if (readback_buffer_queued_ || pending_output_dump) {
-    // RHS values were set in FrameCaptureAsync() called from a binder thread. They are picked up
-    // here in a subsequent draw round. Readback is not allowed for any secure use case.
-    readback_configured_ = !layer_stack_.flags.secure_present;
-    if (readback_configured_) {
-      uint32_t cwb_with_pu_supported = 0;
-      display_intf_->IsSupportedOnDisplay(kCwbCrop, &cwb_with_pu_supported);
-      if (!cwb_with_pu_supported) {  // If CWB ROI isn't supported, then go for full frame update.
-        DisablePartialUpdateOneFrame();
-      }
-      layer_stack_.output_buffer = &output_buffer_;
-      layer_stack_.cwb_config = &cwb_config_;  // set the CWB config as specified by the CWB client.
-      layer_stack_.flags.post_processed_output = static_cast<bool>(cwb_config_.tap_point);
-    }
-  }
+  SetCwbState();
 
   uint32_t num_updating_layers = GetUpdatingLayersCount();
   bool one_updating_layer = (num_updating_layers == 1);
@@ -333,8 +317,13 @@ bool HWCDisplayBuiltIn::CanSkipCommit() {
   }
 
   bool vsync_source = (callbacks_->GetVsyncSource() == id_);
-  bool skip_commit = enable_optimize_refresh_ && !pending_commit_ && !buffers_latched &&
-                     !pending_refresh_ && !vsync_source && (cwb_client_ == kCWBClientNone);
+
+  bool skip_commit = false;
+  {
+    std::lock_guard<std::mutex> lock(cwb_state_lock_);  // setting cwb state lock
+    skip_commit = enable_optimize_refresh_ && !pending_commit_ && !buffers_latched &&
+                  !pending_refresh_ && !vsync_source && (cwb_state_.cwb_client == kCWBClientNone);
+  }  // releasing the cwb state lock
   pending_refresh_ = false;
 
   return skip_commit;
@@ -585,11 +574,80 @@ HWC2::Error HWCDisplayBuiltIn::SetColorTransform(const float *matrix,
   return status;
 }
 
+void HWCDisplayBuiltIn::SetCwbState() {
+  std::lock_guard<std::mutex> lock(cwb_state_lock_);  // setting cwb state lock
+  hwc2_display_t &cwb_disp_id = cwb_state_.cwb_disp_id;
+  shared_ptr<Fence> &teardown_frame_retire_fence = cwb_state_.teardown_frame_retire_fence;
+  CWBStatus &cwb_status = cwb_state_.cwb_status;
+
+  if (cwb_disp_id == id_) {  // cwb is in Active state for the caller display
+    bool pending_output_dump = dump_frame_count_ && dump_output_to_file_;
+    readback_configured_ = false;
+    bool perform_cwb =
+        (readback_buffer_queued_ || pending_output_dump) && !layer_stack_.flags.secure_present;
+
+    if ((cwb_status != CWBStatus::kCWBTeardown) && perform_cwb) {
+      // cwb requested for current frame.
+      // RHS values were set in FrameCaptureAsync() called from a binder thread. They are picked up
+      // here in a subsequent draw round. Readback is not allowed for any secure use case.
+      uint32_t cwb_with_pu_supported = 0;
+      display_intf_->IsSupportedOnDisplay(kCwbCrop, &cwb_with_pu_supported);
+      if (!cwb_with_pu_supported) {  // If CWB ROI isn't supported, then go for full frame update
+        DisablePartialUpdateOneFrame();
+      }
+      layer_stack_.output_buffer = &output_buffer_;
+      layer_stack_.cwb_config = &cwb_config_;  // set CWB config as specified by the CWB client.
+      layer_stack_.flags.post_processed_output = static_cast<bool>(cwb_config_.tap_point);
+
+      readback_configured_ = true;
+      teardown_frame_retire_fence = nullptr;
+      cwb_status = CWBStatus::kCWBConfigure;
+    } else if (cwb_status == CWBStatus::kCWBConfigure) {
+      cwb_status = CWBStatus::kCWBTeardown;  // cwb teardown for the caller display in this frame
+    } else if (cwb_status == CWBStatus::kCWBTeardown) {  // frame next to cwb teardown frame.
+      cwb_disp_id = -1;
+      cwb_status = CWBStatus::kCWBPostTeardown;
+      DLOGV_IF(kTagClient, "CWB display id is reset to : %d", cwb_disp_id);
+    } else if ((cwb_status == CWBStatus::kCWBAvailable) ||
+               (cwb_status == CWBStatus::kCWBPostTeardown)) {
+      // In a frame with kCWBAvailable state, a new CWB request sets the cwb_state_ members
+      // cwb_disp_id and cwb_client. But if this requests is not served due to secure present, then
+      // need to reset the members cwb_disp_id & cwb_client so as to unblock upcoming requests.
+      cwb_disp_id = -1;
+      cwb_state_.cwb_client = CWBClient::kCWBClientNone;
+    }
+  } else if ((cwb_disp_id == -1) && (cwb_status == CWBStatus::kCWBPostTeardown) &&
+             (Fence::GetStatus(teardown_frame_retire_fence) == Fence::Status::kSignaled)) {
+    // If no new request has arrived on any display since the last cwb teardown, check whether the
+    // last teardown frame's retire fence has signaled. If signaled, reset the fence pointer. Note
+    // that this SetCwbState caller disp can be different from the teardwn disp, still it can reset
+    teardown_frame_retire_fence = nullptr;
+    cwb_status = CWBStatus::kCWBAvailable;
+  }
+
+  DLOGV_IF(kTagClient, "CWB State: cwb_display_id = %d , cwb_client = %d , cwb_status = %d",
+           cwb_disp_id, cwb_state_.cwb_client, cwb_status);
+}
+
 HWC2::Error HWCDisplayBuiltIn::SetReadbackBuffer(const native_handle_t *buffer,
                                                  shared_ptr<Fence> acquire_fence,
                                                  CwbConfig cwb_config, CWBClient client) {
-  if (cwb_client_ != client && cwb_client_ != kCWBClientNone) {
-    DLOGE("CWB is in use with client = %d", cwb_client_);
+  std::lock_guard<std::mutex> lock(cwb_state_lock_);
+  if (cwb_state_.cwb_disp_id != -1 && cwb_state_.cwb_disp_id != id_) {
+    // cwb is already Active on a display other than on which it is requested.
+    DLOGE("CWB is already in use with display = %d", cwb_state_.cwb_disp_id);
+    return HWC2::Error::NoResources;
+  }
+
+  if (cwb_state_.cwb_client != kCWBClientNone && cwb_state_.cwb_client != client) {
+    // cwb is already Active for a client other than the one who is requesting.
+    DLOGE("CWB is already in use with client = %d", cwb_state_.cwb_client);
+    return HWC2::Error::NoResources;
+  }
+
+  if ((cwb_state_.cwb_status == CWBStatus::kCWBTeardown) ||
+      (Fence::GetStatus(cwb_state_.teardown_frame_retire_fence) != Fence::Status::kSignaled)) {
+    DLOGE("CWB teardown is currently undergoing on display = %d", cwb_state_.cwb_disp_id);
     return HWC2::Error::NoResources;
   }
 
@@ -628,8 +686,8 @@ HWC2::Error HWCDisplayBuiltIn::SetReadbackBuffer(const native_handle_t *buffer,
 
   readback_buffer_queued_ = true;
   readback_configured_ = false;
-  cwb_client_ = client;
-
+  cwb_state_.cwb_client = client;
+  cwb_state_.cwb_disp_id = id_;
   cwb_config_ = cwb_config;
   LayerRect &roi = cwb_config_.cwb_roi;
   LayerRect &full_rect = cwb_config_.cwb_full_rect;
@@ -655,8 +713,8 @@ HWC2::Error HWCDisplayBuiltIn::SetReadbackBuffer(const native_handle_t *buffer,
            full_rect.left, full_rect.top, full_rect.right, full_rect.bottom);
 
   DLOGV_IF(kTagClient, "Successfully configured the output buffer: readback_buffer_queued_ %d, "
-           "readback_configured_ %d, cwb_client_ %d", readback_buffer_queued_,
-           readback_configured_, cwb_client_);
+           "readback_configured_ %d, cwb_client %d",
+           readback_buffer_queued_, readback_configured_, cwb_state_.cwb_client);
 
   return HWC2::Error::None;
 }
@@ -664,14 +722,15 @@ HWC2::Error HWCDisplayBuiltIn::SetReadbackBuffer(const native_handle_t *buffer,
 HWC2::Error HWCDisplayBuiltIn::GetReadbackBufferFence(shared_ptr<Fence> *release_fence) {
   auto status = HWC2::Error::None;
 
+  std::lock_guard<std::mutex> lock(cwb_state_lock_);
   if (readback_configured_ && output_buffer_.release_fence) {
     *release_fence = output_buffer_.release_fence;
     DLOGI("Successfully retrieved readback buffer fence for cwb clinet %d on tappoint %d",
-          cwb_client_, cwb_config_.tap_point);
+          cwb_state_.cwb_client, cwb_config_.tap_point);
   } else {
     DLOGE("Failed to retrieve readback buffer fence: readback_configured_ %d, "
           "output_buffer_.release_fence for client %d on tappoint %d ",
-          readback_configured_, cwb_client_, cwb_config_.tap_point);
+          readback_configured_, cwb_state_.cwb_client, cwb_config_.tap_point);
     status = HWC2::Error::Unsupported;
   }
 
@@ -679,7 +738,7 @@ HWC2::Error HWCDisplayBuiltIn::GetReadbackBufferFence(shared_ptr<Fence> *release
   readback_buffer_queued_ = false;
   readback_configured_ = false;
   output_buffer_ = {};
-  cwb_client_ = kCWBClientNone;
+  cwb_state_.cwb_client = kCWBClientNone;
 
   DLOGV_IF(kTagQDCM, "Successfully retrieved the buffer: cwb_tap_point %d, "
            "readback_buffer_queued_ %d, readback_configured_ %d",
@@ -692,11 +751,12 @@ DisplayError HWCDisplayBuiltIn::TeardownConcurrentWriteback(bool *needs_refresh)
   if (!needs_refresh) {
     return kErrorParameters;
   }
-  if (cwb_client_ == kCWBClientNone) {
+  std::lock_guard<std::mutex> lock(cwb_state_lock_);
+  if (cwb_state_.cwb_client == kCWBClientNone) {
     *needs_refresh = false;
     return kErrorNone;
   }
-  if (cwb_client_ == kCWBClientFrameDump) {
+  if (cwb_state_.cwb_client == kCWBClientFrameDump) {
     dump_frame_count_ = 0;
     dump_output_to_file_ = false;
     // Unmap and Free buffer
@@ -708,7 +768,7 @@ DisplayError HWCDisplayBuiltIn::TeardownConcurrentWriteback(bool *needs_refresh)
     }
     output_buffer_info_ = {};
     output_buffer_base_ = nullptr;
-  } else if (cwb_client_ == kCWBClientColor) {
+  } else if (cwb_state_.cwb_client == kCWBClientColor) {
     frame_capture_buffer_queued_ = false;
     frame_capture_status_ = 0;
   }
@@ -716,7 +776,7 @@ DisplayError HWCDisplayBuiltIn::TeardownConcurrentWriteback(bool *needs_refresh)
   cwb_config_ = {};
   readback_configured_ = false;
   output_buffer_ = {};
-  cwb_client_ = kCWBClientNone;
+  cwb_state_.cwb_client = kCWBClientNone;
 
   *needs_refresh = true;
   return kErrorNone;
@@ -969,20 +1029,21 @@ void HWCDisplayBuiltIn::HandleFrameCapture() {
     frame_capture_status_ = Fence::Wait(output_buffer_.release_fence);
   }
 
+  std::lock_guard<std::mutex> lock(cwb_state_lock_);
   DLOGV_IF(kTagQDCM, "Frame captured successfully for cwb_client %d on cwb_tap_point %d",
-           cwb_client_, cwb_config_.tap_point);
+           cwb_state_.cwb_client, cwb_config_.tap_point);
 
   frame_capture_buffer_queued_ = false;
   readback_buffer_queued_ = false;
   cwb_config_ = {};
   readback_configured_ = false;
   output_buffer_ = {};
-  cwb_client_ = kCWBClientNone;
+  cwb_state_.cwb_client = kCWBClientNone;
 
   DLOGV_IF(kTagQDCM, "Frame captured: frame_capture_buffer_queued_ %d "
            "readback_buffer_queued_ %d cwb_tap_point %d readback_configured_ %d "
-           "cwb_client_ %d", frame_capture_buffer_queued_, readback_buffer_queued_,
-           cwb_config_.tap_point, readback_configured_, cwb_client_);
+           "cwb_client %d", frame_capture_buffer_queued_, readback_buffer_queued_,
+           cwb_config_.tap_point, readback_configured_, cwb_state_.cwb_client);
 }
 
 void HWCDisplayBuiltIn::HandleFrameDump() {
@@ -1014,7 +1075,8 @@ void HWCDisplayBuiltIn::HandleFrameDump() {
       output_buffer_ = {};
       output_buffer_info_ = {};
       output_buffer_base_ = nullptr;
-      cwb_client_ = kCWBClientNone;
+      std::lock_guard<std::mutex> lock(cwb_state_lock_);
+      cwb_state_.cwb_client = kCWBClientNone;
     }
   }
 }
@@ -1024,12 +1086,15 @@ HWC2::Error HWCDisplayBuiltIn::SetFrameDumpConfig(uint32_t count, uint32_t bit_m
   bool dump_output_to_file = bit_mask_layer_type & (1 << OUTPUT_LAYER_DUMP);
   DLOGI("output_layer_dump_enable %d", dump_output_to_file_);
 
-  if (dump_output_to_file) {
-    if (cwb_client_ != kCWBClientNone) {
-      DLOGW("CWB is in use with client = %d", cwb_client_);
-      return HWC2::Error::NoResources;
+  {
+    std::lock_guard<std::mutex> lock(cwb_state_lock_);
+    if (dump_output_to_file) {
+      if (cwb_state_.cwb_client != kCWBClientNone) {
+        DLOGW("CWB is in use with client = %d", cwb_state_.cwb_client);
+        return HWC2::Error::NoResources;
+      }
     }
-  }
+  }  // releasing the cwb state lock
 
   if (!count || (dump_output_to_file && (output_buffer_info_.alloc_buffer_info.fd >= 0))) {
     DLOGW("FrameDump Not enabled Framecount = %d dump_output_to_file = %d o/p fd = %d", count,
@@ -1131,10 +1196,13 @@ int HWCDisplayBuiltIn::ValidateFrameCaptureConfig(const BufferInfo &output_buffe
 
 int HWCDisplayBuiltIn::FrameCaptureAsync(const BufferInfo &output_buffer_info,
                                          const CwbConfig &cwb_config) {
-  if (cwb_client_ != kCWBClientNone) {
-    DLOGE("CWB is in use with client = %d", cwb_client_);
-    return -1;
-  }
+  {
+    std::lock_guard<std::mutex> lock(cwb_state_lock_);
+    if (cwb_state_.cwb_client != kCWBClientNone) {
+      DLOGE("CWB is in use with client = %d", cwb_state_.cwb_client);
+      return -1;
+    }
+  }  // releasing the cwb state lock
 
   // Note: This function is called in context of a binder thread and a lock is already held
   if (output_buffer_info.alloc_buffer_info.fd < 0) {
@@ -1681,6 +1749,12 @@ void HWCDisplayBuiltIn::SetCpuPerfHintLargeCompCycle() {
   }
 }
 
+void HWCDisplayBuiltIn::ResetCwbState() {
+  // Resets cwb state struct. Used in CWB teardown frame if flush_ is set.
+  // Also called incase cwb active display is unplugged.
+  cwb_state_ = {};
+}
+
 HWC2::Error HWCDisplayBuiltIn::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence) {
   // Block on output buffer fence.
   if (layer_stack_.output_buffer != nullptr) {
@@ -1691,9 +1765,15 @@ HWC2::Error HWCDisplayBuiltIn::PostCommitLayerStack(shared_ptr<Fence> *out_retir
   HandleFrameOutput();
   PostCommitStitchLayers();
 
-  if (flush_ && cwb_client_ == kCWBClientNone) {
-    display_intf_->FlushConcurrentWriteback();
-  }
+  {
+    std::lock_guard<std::mutex> lock(cwb_state_lock_);
+    if (flush_ && cwb_state_.cwb_client == kCWBClientNone) {
+      ResetCwbState();
+      display_intf_->FlushConcurrentWriteback();
+    } else if (cwb_state_.cwb_status == CWBStatus::kCWBTeardown) {
+      cwb_state_.teardown_frame_retire_fence = layer_stack_.retire_fence;
+    }
+  }  // releasing the cwb state lock
 
   auto status = HWCDisplay::PostCommitLayerStack(out_retire_fence);
 /*  display_intf_->GetConfig(&fixed_info);
