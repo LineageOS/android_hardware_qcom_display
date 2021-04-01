@@ -229,6 +229,7 @@ DisplayError DisplayBase::Deinit() {
     rc_core_->Deinit();
     rc_panel_feature_init_ = false;
   }
+  CloseFd(&cached_framebuffer_.planes[0].fd);
   return kErrorNone;
 }
 
@@ -1096,7 +1097,7 @@ DisplayError DisplayBase::GetVSyncState(bool *enabled) {
 DisplayError DisplayBase::SetDrawMethod(DisplayDrawMethod draw_method) {
   ClientLock lock(disp_mutex_);
   if (draw_method_set_ || !first_cycle_) {
-    DLOGE("Draw method set = %d or commits already started: %d", draw_method_, !first_cycle_);
+    DLOGW("Draw method set = %d or commits already started: %d", draw_method_, !first_cycle_);
     return kErrorNotSupported;
   }
 

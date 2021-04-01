@@ -1239,8 +1239,14 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, shared_ptr<Fence
 
 HWC2::Error HWCDisplay::SetClientTarget_3_1(buffer_handle_t target, shared_ptr<Fence> acquire_fence,
                                             int32_t dataspace, hwc_region_t damage) {
+  auto status = SetClientTarget(target, acquire_fence, dataspace, damage);
+  if (status != HWC2::Error::None) {
+    return status;
+  }
+
   client_target_3_1_set_ = true;
-  return SetClientTarget(target, acquire_fence, dataspace, damage);
+
+  return HWC2::Error::None;
 }
 
 HWC2::Error HWCDisplay::SetActiveConfig(hwc2_config_t config) {
@@ -1759,7 +1765,7 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence
   geometry_changes_ = GeometryChanges::kNone;
   flush_ = false;
   skip_commit_ = false;
-  client_target_3_1_set_ = true;
+  client_target_3_1_set_ = false;
 
   if (display_pause_pending_) {
     DLOGI("Pause display %d-%d", sdm_id_, type_);
