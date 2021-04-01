@@ -285,6 +285,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError CommitLocked(LayerStack *layer_stack);
   DisplayError ConfigureCwb(LayerStack *layer_stack);
   void ProcessPowerEvent();
+  DisplayError SetHWDetailedEnhancerConfig(void *params);
 
   DisplayMutex disp_mutex_;
   std::thread commit_thread_;

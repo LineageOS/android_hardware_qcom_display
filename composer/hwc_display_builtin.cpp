@@ -245,16 +245,6 @@ HWC2::Error HWCDisplayBuiltIn::PreValidateDisplay(bool *exit_validate) {
     MarkLayersForClientComposition();
   }
 
-  // apply pending DE config
-  PPPendingParams pending_action;
-  PPDisplayAPIPayload req_payload;
-  pending_action.action = kGetDetailedEnhancerData;
-  pending_action.params = NULL;
-  int err = display_intf_->ColorSVCRequestRoute(req_payload, NULL, &pending_action);
-  if (!err && pending_action.action == kConfigureDetailedEnhancer) {
-      err = SetHWDetailedEnhancerConfig(pending_action.params);
-  }
-
   bool pending_output_dump = dump_frame_count_ && dump_output_to_file_;
 
   if (readback_buffer_queued_ || pending_output_dump) {
