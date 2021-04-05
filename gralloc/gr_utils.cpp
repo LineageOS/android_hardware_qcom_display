@@ -896,8 +896,6 @@ void GetYuvUBwcWidthAndHeight(int width, int height, int format, unsigned int *a
 #endif
     default:
       ALOGE("%s: Unsupported pixel format: 0x%x", __FUNCTION__, format);
-      *aligned_w = 0;
-      *aligned_h = 0;
       break;
   }
 }
@@ -1082,6 +1080,8 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
   int width = info.width;
   int height = info.height;
   int format = info.format;
+  *alignedw = width;
+  *alignedh = height;
   uint64_t usage = info.usage;
   if (width < 1 || height < 1) {
     *alignedw = 0;
