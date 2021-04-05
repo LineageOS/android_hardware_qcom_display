@@ -385,6 +385,7 @@ DisplayError DisplayBase::ConfigureCwb(LayerStack *layer_stack) {
   } else if (cwb_config_) {  // CWB isn't requested in the current draw cycle.
     // Check and release cwb_config_ if it was instantiated in the previous draw cycle.
     delete cwb_config_;
+    cwb_config_ = NULL;
   }
   return error;
 }
