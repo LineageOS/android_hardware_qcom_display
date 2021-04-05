@@ -106,11 +106,9 @@ DisplayError DisplayBuiltIn::Init() {
                  HWEvent::PINGPONG_TIMEOUT, HWEvent::PANEL_DEAD,
                  HWEvent::HW_RECOVERY,      HWEvent::HISTOGRAM,
                  HWEvent::BACKLIGHT_EVENT,  HWEvent::POWER_EVENT,
-                 HWEvent::MMRM};
+                 HWEvent::MMRM,             HWEvent::IDLE_NOTIFY};
   if (hw_panel_info_.mode == kModeCommand) {
     event_list_.push_back(HWEvent::IDLE_POWER_COLLAPSE);
-  } else {
-    event_list_.push_back(HWEvent::IDLE_NOTIFY);
   }
 #endif
   event_list_.push_back(HWEvent::POWER_EVENT);
@@ -735,6 +733,10 @@ DisplayError DisplayBuiltIn::SetDisplayMode(uint32_t mode) {
 
     if (mode == kModeVideo) {
       ControlPartialUpdateLocked(false /* enable */, &pending);
+      uint32_t active_ms = 0;
+      uint32_t inactive_ms = 0;
+      Debug::GetIdleTimeoutMs(&active_ms, &inactive_ms);
+      comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, active_ms, inactive_ms);
     } else if (mode == kModeCommand) {
       // Flush idle timeout value currently set.
       comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, 0, 0);
