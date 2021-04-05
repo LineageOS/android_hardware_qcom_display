@@ -93,7 +93,7 @@ class HWPeripheralDRM : public HWDeviceDRM, public PanelFeaturePropertyIntf {
   bool SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info, bool validate,
                                 int64_t *release_fence_fd);
   DisplayError TeardownConcurrentWriteback(void);
-  void ConfigureConcurrentWriteback(LayerStack *stack);
+  void ConfigureConcurrentWriteback(const HWLayersInfo &hw_layer_info);
   void PostCommitConcurrentWriteback(LayerBuffer *output_buffer);
   void CreatePanelFeaturePropertyMap();
   void SetIdlePCState() {

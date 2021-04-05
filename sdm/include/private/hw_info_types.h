@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -332,6 +332,7 @@ struct HWResourceInfo {
   bool separate_rotator = false;
   bool has_qseed3 = false;
   bool has_concurrent_writeback = false;
+  std::vector<CwbTapPoint> tap_points = {};
   bool has_ppp = false;
   bool has_excl_rect = false;
   uint32_t writeback_index = kHWBlockMax;
@@ -727,6 +728,8 @@ struct HWLayersInfo {
   bool game_present = false;  // Indicates there is game layer or not
   bool rc_config = false;
   RCLayersInfo rc_layers_info = {};
+  CwbConfig *hw_cwb_config = NULL;     //!< Struct that contains CWB configuration passed to
+                                       //!< driver by SDM.
   bool spr_enable = false;
   uint64_t rc_pu_flag_status = 0;
   bool rc_pu_needs_full_roi = false;

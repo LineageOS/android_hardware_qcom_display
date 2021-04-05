@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -96,15 +96,15 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
                                   bool *power_on_pending, bool is_active_secure_display);
   virtual void SetIdleTimeoutMs(uint32_t timeout_ms, uint32_t inactive_ms);
   virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
-                                         int32_t format, bool post_processed);
-  virtual int FrameCaptureAsync(const BufferInfo &output_buffer_info, bool post_processed);
+                                         int32_t format, const CwbConfig &cwb_config);
+  virtual int FrameCaptureAsync(const BufferInfo &output_buffer_info, const CwbConfig &cwb_config);
   virtual int GetFrameCaptureStatus() { return frame_capture_status_; }
   virtual DisplayError SetDetailEnhancerConfig(const DisplayDetailEnhancerData &de_data);
   virtual DisplayError SetHWDetailedEnhancerConfig(void *params);
   virtual DisplayError ControlPartialUpdate(bool enable, uint32_t *pending);
   virtual HWC2::Error SetReadbackBuffer(const native_handle_t *buffer,
-                                        shared_ptr<Fence> acquire_fence,
-                                        bool post_processed_output, CWBClient client);
+                                        shared_ptr<Fence> acquire_fence, CwbConfig cwb_config,
+                                        CWBClient client);
   virtual HWC2::Error GetReadbackBufferFence(shared_ptr<Fence> *release_fence);
   virtual HWC2::Error SetQSyncMode(QSyncMode qsync_mode);
   virtual DisplayError ControlIdlePowerCollapse(bool enable, bool synchronous);
@@ -182,6 +182,8 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   void ConfigureCwbAtLm(uint32_t *x_pixels, uint32_t *y_pixels);
   void EnablePartialUpdate();
   uint32_t GetUpdatingAppLayersCount();
+  int ValidateFrameCaptureConfig(const BufferInfo &output_buffer_info,
+                                 const CwbTapPoint &cwb_tappoint);
 
   // SyncTask methods.
   void OnTask(const LayerStitchTaskCode &task_code,
@@ -194,7 +196,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
 
   // Builtin readback buffer configuration
   LayerBuffer output_buffer_ = {};
-  bool post_processed_output_ = false;
+  CwbConfig cwb_config_ = {};
   bool readback_buffer_queued_ = false;
   bool readback_configured_ = false;
 
