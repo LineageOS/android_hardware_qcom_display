@@ -261,8 +261,9 @@ struct LayerStackFlags {
                                       //!< stack contains s3d layer, and the layer stack can enter
                                       //!< s3d mode.
 
-      uint32_t post_processed_output : 1;  // If output_buffer should contain post processed output
-                                           // This applies only to primary displays currently
+      uint32_t post_processed_output : 1;  //!< If output_buffer should contain post processed
+                                           //!< output. This flag is set to 1 for DSPP tap point
+                                           //!< and 0 for LM tap point.
 
       uint32_t hdr_present : 1;  //!< Set if stack has HDR content
 
@@ -430,6 +431,18 @@ enum CwbTapPoint {
   kDsppTapPoint,    // This is set by client to use DSPP output for CWB.
 };
 
+/*! @brief This structure defines the configuration variables needed to perform CWB.
+
+  @sa LayerStack
+*/
+struct CwbConfig {
+  bool pu_as_cwb_roi = false;                        //!< Whether to include the PU ROI generated
+                                                     //!< from app layers in CWB ROI.
+  LayerRect cwb_roi = {};                            //!< Client specified ROI rect for CWB.
+  LayerRect cwb_full_rect = {};                      //!< Same as Output buffer Rect (unaligned).
+  CwbTapPoint tap_point = CwbTapPoint::kLmTapPoint;  //!< Client specified tap point for CWB.
+};
+
 /*! @brief This structure defines a layer stack that contains layers which need to be composed and
   rendered onto the target.
 
@@ -462,6 +475,9 @@ struct LayerStack {
 
   bool block_on_fb = true;             //!< Indicates if there is a need to block
                                        //!< on GPU composed o/p.
+
+  CwbConfig *cwb_config = NULL;        //!< Struct that contains the original CWB configuration
+                                       //!< provided by CWB client.
 };
 
 }  // namespace sdm

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2018, 2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2018, 2020-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -228,8 +228,28 @@ int HWCColorManager::SetFrameCapture(void *params, bool enable, HWCDisplay *hwc_
 
   if (enable) {
     std::memset(&buffer_info, 0x00, sizeof(buffer_info));
-    hwc_display->GetPanelResolution(&buffer_info.buffer_config.width,
-                                    &buffer_info.buffer_config.height);
+
+    CwbTapPoint cwb_tappoint = CwbTapPoint::kLmTapPoint;
+    // frame_capture_data->input_params.flags == 0x0 => DSPP tappoint
+    // frame_capture_data->input_params.flags == 0x1 => LM tappoint
+    switch (frame_capture_data->input_params.flags) {
+      case 0x0:  // DSPP mode
+        cwb_tappoint = CwbTapPoint::kDsppTapPoint;
+        break;
+      case 0x1:  // Layer mixer mode
+        cwb_tappoint = CwbTapPoint::kLmTapPoint;
+        break;
+      default:
+        DLOGE("Tapppoint %d NOT supported.", frame_capture_data->input_params.flags);
+        return -EFAULT;
+    }
+    ret = hwc_display->GetCwbBufferResolution(cwb_tappoint, &buffer_info.buffer_config.width,
+                                              &buffer_info.buffer_config.height);
+    if (ret != 0) {
+      DLOGE("Buffer Resolution setting failed. ret: %d", ret);
+      return -EINVAL;
+    }
+
     if (frame_capture_data->input_params.out_pix_format == PP_PIXEL_FORMAT_RGB_888) {
       buffer_info.buffer_config.format = kFormatRGB888;
     } else if (frame_capture_data->input_params.out_pix_format == PP_PIXEL_FORMAT_RGB_2101010) {
@@ -262,14 +282,17 @@ int HWCColorManager::SetFrameCapture(void *params, bool enable, HWCDisplay *hwc_
         frame_capture_data->buffer_stride = buffer_info.alloc_buffer_info.stride;
         frame_capture_data->buffer_size = buffer_info.alloc_buffer_info.size;
       }
-      if (frame_capture_data->input_params.flags == 0x1) {
-        // Layer mixer mode
-        ret = hwc_display->FrameCaptureAsync(buffer_info, 0);
-      } else {
-        // DSPP mode
-        ret = hwc_display->FrameCaptureAsync(buffer_info, 1);
-      }
 
+      CwbConfig cwb_config = {};
+      cwb_config.tap_point = cwb_tappoint;
+      cwb_config.cwb_roi.left = FLOAT(frame_capture_data->input_params.rect.x);
+      cwb_config.cwb_roi.top = FLOAT(frame_capture_data->input_params.rect.y);
+      cwb_config.cwb_roi.right =
+          cwb_config.cwb_roi.left + FLOAT(frame_capture_data->input_params.rect.width);
+      cwb_config.cwb_roi.bottom =
+          cwb_config.cwb_roi.top + FLOAT(frame_capture_data->input_params.rect.height);
+
+      ret = hwc_display->FrameCaptureAsync(buffer_info, cwb_config);
       if (ret < 0) {
         DLOGE("FrameCaptureAsync failed. ret = %d", ret);
       }

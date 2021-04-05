@@ -217,6 +217,7 @@ class DisplayBase : public DisplayInterface {
   DisplayError ResetPendingPowerState(const shared_ptr<Fence> &retire_fence);
   DisplayError GetPendingDisplayState(DisplayState *disp_state);
   void SetPendingPowerState(DisplayState state);
+  DisplayError ConfigureCwb(LayerStack *layer_stack);
 
   recursive_mutex recursive_mutex_;
   int32_t display_id_ = -1;
@@ -286,10 +287,13 @@ class DisplayBase : public DisplayInterface {
   bool StartDisplayPowerReset();
   void EndDisplayPowerReset();
   void SetRCData(LayerStack *layer_stack);
+  DisplayError ValidateCwbConfigInfo(CwbConfig *cwb_config, const LayerBufferFormat &format);
+  bool IsValidCwbRoi(const LayerRect &cwb_roi, const LayerRect &full_frame);
   unsigned int rc_cached_res_width_ = 0;
   unsigned int rc_cached_res_height_ = 0;
   std::unique_ptr<RCIntf> rc_core_ = nullptr;
   uint64_t rc_pu_flag_status_ = 0;
+  CwbConfig *cwb_config_ = NULL;
 };
 
 }  // namespace sdm
