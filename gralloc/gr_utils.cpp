@@ -64,8 +64,8 @@ static inline unsigned int MMM_COLOR_FMT_RGB_STRIDE_IN_PIXELS(unsigned int color
   if (!(color_fmt & (MMM_COLOR_FMT_RGBA8888 | MMM_COLOR_FMT_RGBA8888_UBWC)) || !width) {
     return stride;
   }
-  stride = MMM_COLOR_FMT_RGB_STRIDE(color_fmt, width / bpp);
-  return stride;
+  stride = MMM_COLOR_FMT_RGB_STRIDE(color_fmt, width);
+  return (stride / bpp);
 }
 #endif
 
