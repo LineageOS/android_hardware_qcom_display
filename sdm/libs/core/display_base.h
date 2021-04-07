@@ -356,6 +356,7 @@ class DisplayBase : public DisplayInterface {
   bool unified_draw_supported_ = true;  // By default supported, unless disabled by property.
   bool validated_ = false;  // display validation status based on sideband events driver events etc.
   shared_ptr<Fence> retire_fence_ = nullptr;
+  DisplayDrawMethod draw_method_ = kDrawDefault;
 
  private:
   // Max tolerable power-state-change wait-times in milliseconds.
@@ -380,11 +381,11 @@ class DisplayBase : public DisplayInterface {
   bool mmrm_updated_ = false;
   uint32_t mmrm_requested_clk_ = 0;
   static bool primary_active_;
-  DisplayDrawMethod draw_method_ = kDrawDefault;
   bool draw_method_set_ = false;
   CwbConfig *cwb_config_ = NULL;
   bool transition_done_ = false;
   bool gpu_comp_frame_ = false;
+  uint32_t retire_fence_offset_ = 0;
   std::mutex power_mutex_;
   std::condition_variable cv_;
   LayerBuffer cached_framebuffer_ = {};

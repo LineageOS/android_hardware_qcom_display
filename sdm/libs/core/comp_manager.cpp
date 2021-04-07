@@ -711,8 +711,14 @@ DisplayError CompManager::SetDrawMethod(Handle display_ctx, const DisplayDrawMet
   DisplayCompositionContext *display_comp_ctx =
       reinterpret_cast<DisplayCompositionContext *>(display_ctx);
 
-  display_comp_ctx->strategy->SetDrawMethod(draw_method);
-  resource_intf_->SetDrawMethod(display_comp_ctx->display_resource_ctx, draw_method);
+  auto error = display_comp_ctx->strategy->SetDrawMethod(draw_method);
+  if (error != kErrorNone) {
+    return error;
+  }
+  error = resource_intf_->SetDrawMethod(display_comp_ctx->display_resource_ctx, draw_method);
+  if (error != kErrorNone) {
+    return error;
+  }
 
   return kErrorNone;
 }

@@ -1284,6 +1284,7 @@ std::string DisplayBuiltIn::Dump() {
   hw_intf_->GetDisplayAttributes(active_index, &attrib);
 
   os << "device type:" << display_type_;
+  os << " DrawMethod: " << draw_method_;
   os << "\nstate: " << state_ << " vsync on: " << vsync_enable_
      << " max. mixer stages: " << max_mixer_stages_;
   os << "\nnum configs: " << num_modes << " active config index: " << active_index;

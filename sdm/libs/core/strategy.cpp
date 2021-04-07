@@ -106,7 +106,7 @@ DisplayError Strategy::Start(DispLayerStack *disp_layer_stack, uint32_t *max_att
 
   *max_attempts = 1;
 
-  return error;
+  return kErrorNeedsValidate;
 }
 
 DisplayError Strategy::Stop() {
@@ -257,7 +257,7 @@ DisplayError Strategy::SetDrawMethod(const DisplayDrawMethod &draw_method) {
     return strategy_intf_->SetDrawMethod(draw_method);
   }
 
-  return kErrorNone;
+  return kErrorNotSupported;
 }
 
 DisplayError Strategy::SetIdleTimeoutMs(uint32_t active_ms, uint32_t inactive_ms) {

@@ -795,8 +795,7 @@ DisplayError DisplayBase::SetUpCommit(LayerStack *layer_stack) {
     }
   }
 
-  disp_layer_stack_.info.retire_fence_offset = (draw_method_ != kDrawDefault) &&
-                                               (display_type_ != kVirtual) ? 1 : 0;
+  disp_layer_stack_.info.retire_fence_offset = retire_fence_offset_;
   // Regiser for power events on first cycle in unified draw.
   if (first_cycle_ && (draw_method_ != kDrawDefault) && (display_type_ != kVirtual)) {
     DLOGI("Registering for power events");
@@ -1122,7 +1121,16 @@ DisplayError DisplayBase::SetDrawMethod(DisplayDrawMethod draw_method) {
     return kErrorNotSupported;
   }
 
-  comp_manager_->SetDrawMethod(display_comp_ctx_, draw_method);
+  auto error = comp_manager_->SetDrawMethod(display_comp_ctx_, draw_method);
+  if (error != kErrorNone) {
+    DLOGE("Failed to set method: %d for %d-%d", draw_method, display_id_, display_type_);
+    retire_fence_offset_ = 0;
+    draw_method_ = kDrawDefault;
+    draw_method_set_ = true;
+    return error;
+  }
+
+  retire_fence_offset_ = (draw_method != kDrawDefault) && (display_type_ != kVirtual) ? 1 : 0;
   draw_method_ = draw_method;
   draw_method_set_ = true;
   DLOGI("method: %d", draw_method);
@@ -1332,6 +1340,7 @@ std::string DisplayBase::Dump() {
   hw_intf_->GetDisplayAttributes(active_index, &attrib);
 
   os << "device type:" << display_type_;
+  os << " DrawMethod: " << draw_method_;
   os << "\nstate: " << state_ << " vsync on: " << vsync_enable_
      << " max. mixer stages: " << max_mixer_stages_;
   os << "\nnum configs: " << num_modes << " active config index: " << active_index;
