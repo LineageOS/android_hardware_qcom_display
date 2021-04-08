@@ -66,6 +66,7 @@ using vendor::qti::hardware::display::composer::V3_0::IQtiComposerClient;
 int32_t GetDataspaceFromColorMode(ColorMode mode);
 
 typedef DisplayConfig::DisplayType DispType;
+typedef DisplayConfig::CameraSmoothOp CameraSmoothOp;
 
 // Create a singleton uevent listener thread valid for life of hardware composer process.
 // This thread blocks on uevents poll inside uevent library implementation. This poll exits
@@ -386,6 +387,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
     virtual int IsRotatorSupportedFormat(int hal_format, bool ubwc, bool *supported);
     virtual int ControlQsyncCallback(bool enable);
     virtual int ControlIdleStatusCallback(bool enable);
+    virtual int SetCameraSmoothInfo(CameraSmoothOp op, uint32_t fps);
+    virtual int ControlCameraSmoothCallback(bool enable);
 
     std::weak_ptr<DisplayConfig::ConfigCallback> callback_;
     HWCSession *hwc_session_ = nullptr;
@@ -548,6 +551,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   CWB cwb_;
   std::weak_ptr<DisplayConfig::ConfigCallback> qsync_callback_;
   std::weak_ptr<DisplayConfig::ConfigCallback> idle_callback_;
+  std::weak_ptr<DisplayConfig::ConfigCallback> camera_callback_;
   bool async_powermode_ = false;
   bool async_power_mode_triggered_ = false;
   bool async_vds_creation_ = false;
