@@ -151,7 +151,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual HWC2::Error PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence);
 
  private:
-  HWCDisplayBuiltIn(CoreInterface *core_intf, BufferAllocator *buffer_allocator,
+  HWCDisplayBuiltIn(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
                     HWCCallbacks *callbacks, HWCDisplayEventHandler *event_handler,
                     qService::QService *qservice, hwc2_display_t id, int32_t sdm_id);
   void SetMetaDataRefreshRateFlag(bool enable);
@@ -188,7 +188,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
               SyncTask<LayerStitchTaskCode>::TaskContext *task_context);
 
   const int kPerfHintLargeCompCycle = 0x00001097;
-  BufferAllocator *buffer_allocator_ = nullptr;
+  HWCBufferAllocator *buffer_allocator_ = nullptr;
   CPUHint *cpu_hint_ = nullptr;
   CWBClient cwb_client_ = kCWBClientNone;
 
