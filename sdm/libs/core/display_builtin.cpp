@@ -233,6 +233,11 @@ DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
   // Clean hw layers for reuse.
   hw_layers_ = HWLayers();
 
+  error = ConfigureCwb(layer_stack);
+  if (error != kErrorNone) {
+    return error;
+  }
+
   UpdateQsyncMode();
 
   left_frame_roi_ = {};

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -74,6 +74,8 @@ using sde_drm::DRMPlanesInfo;
 using sde_drm::DRMCrtcInfo;
 using sde_drm::DRMPlaneType;
 using sde_drm::DRMTonemapLutType;
+using sde_drm::DRMPanelFeatureInfo;
+using sde_drm::DRMCWbCaptureMode;
 
 using std::vector;
 using std::map;
@@ -244,6 +246,11 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
   DLOGI("Has UBWC = %d", hw_resource->has_ubwc);
   DLOGI("Has Micro Idle = %d", hw_resource->has_micro_idle);
   DLOGI("Has Concurrent Writeback = %d", hw_resource->has_concurrent_writeback);
+  string tap_points = "Tap Points: ";
+  for (CwbTapPoint &tap_point : hw_resource->tap_points) {
+    tap_points += std::to_string(tap_point) + " ";
+  }
+  DLOGI("%s", tap_points.c_str());
   DLOGI("Has Src Tonemap = %lx", hw_resource->src_tone_map.to_ulong());
   DLOGI("Max Low Bw = %" PRIu64 "", hw_resource->dyn_bw_info.total_bw_limit[kBwVFEOn]);
   DLOGI("Max High Bw = %" PRIu64 "", hw_resource->dyn_bw_info.total_bw_limit[kBwVFEOff]);
@@ -333,6 +340,9 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   hw_resource->min_prefill_lines = info.min_prefill_lines;
   hw_resource->secure_disp_blend_stage = info.secure_disp_blend_stage;
   hw_resource->has_concurrent_writeback = info.concurrent_writeback;
+  for (DRMCWbCaptureMode &tappt : info.tap_points) {
+    hw_resource->tap_points.push_back(static_cast<CwbTapPoint>(tappt));
+  }
   hw_resource->line_width_constraints_count = info.line_width_constraints_count;
   if (info.line_width_constraints_count) {
     auto &width_constraints = hw_resource->line_width_constraints;

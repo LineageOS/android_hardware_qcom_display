@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -56,7 +56,7 @@ class HWPeripheralDRM : public HWDeviceDRM, public PanelFeaturePropertyIntf {
   virtual PanelFeaturePropertyIntf *GetPanelFeaturePropertyIntf() { return this; }
   virtual int GetPanelFeature(PanelFeaturePropertyInfo *feature_info);
   virtual int SetPanelFeature(const PanelFeaturePropertyInfo &feature_info);
-  virtual DisplayError GetSupportedModeSwitch(uint32_t *allowed_mode_switch);
+  virtual DisplayError GetFeatureSupportStatus(const HWFeature feature, uint32_t *status);
   virtual DisplayError GetPanelBrightnessBasePath(std::string *base_path) const;
 
  protected:
@@ -93,7 +93,7 @@ class HWPeripheralDRM : public HWDeviceDRM, public PanelFeaturePropertyIntf {
   bool SetupConcurrentWriteback(const HWLayersInfo &hw_layer_info, bool validate,
                                 int64_t *release_fence_fd);
   DisplayError TeardownConcurrentWriteback(void);
-  void ConfigureConcurrentWriteback(LayerStack *stack);
+  void ConfigureConcurrentWriteback(const HWLayersInfo &hw_layer_info);
   void PostCommitConcurrentWriteback(LayerBuffer *output_buffer);
   void CreatePanelFeaturePropertyMap();
   void SetIdlePCState() {
@@ -113,6 +113,8 @@ class HWPeripheralDRM : public HWDeviceDRM, public PanelFeaturePropertyIntf {
   sde_drm_dest_scaler_data sde_dest_scalar_data_ = {};
   std::vector<SDEScaler> scalar_data_ = {};
   CWBConfig cwb_config_ = {};
+  bool has_cwb_crop_ = false;
+  bool has_dedicated_cwb_ = false;
   sde_drm::DRMIdlePCState idle_pc_state_ = sde_drm::DRMIdlePCState::NONE;
   bool idle_pc_enabled_ = true;
   std::vector<DestScalarCache> dest_scalar_cache_ = {};
