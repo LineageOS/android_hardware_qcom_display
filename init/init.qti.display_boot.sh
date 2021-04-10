@@ -51,9 +51,11 @@ case "$target" in
         setprop vendor.display.enable_perf_hint_large_comp_cycle 1
         setprop vendor.display.enable_allow_idle_fallback 1
         # Set property for HHG
-        if [ "$subtype_id" -eq 1 ]; then
-            setprop vendor.display.disable_system_load_check 1
-        fi
+		case "$subtype_id" in
+			1|2)
+				setprop vendor.display.disable_system_load_check 1
+			;;
+		esac
         ;;
         450)
         # Set property for shima
@@ -63,8 +65,9 @@ case "$target" in
         setprop vendor.display.enable_qsync_idle 1
         setprop vendor.display.enable_allow_idle_fallback 1
         ;;
-        # SOC ID for Yupik is 475, Yupik P is 499
-        475|499)
+        # SOC ID for Yupik is 475, Yupik P is 499, Faroe is 515
+        # SOC ID for Kodiak IOT 497, Kodiak IOT with modem 498
+        475|497|498|499|515)
         # Set property for Yupik
         setprop vendor.display.target.version 2
         setprop vendor.display.enable_posted_start_dyn 2
@@ -73,6 +76,7 @@ case "$target" in
         setprop vendor.display.enable_allow_idle_fallback 1
         setprop vendor.display.enable_rounded_corner 1
         setprop vendor.display.disable_rounded_corner_thread 0
+        setprop vendor.display.enable_rc_support 1
         ;;
     esac
     ;;
@@ -84,5 +88,6 @@ case "$target" in
     setprop vendor.display.enable_perf_hint_large_comp_cycle 0
     setprop vendor.display.enable_posted_start_dyn 1
     setprop vendor.display.enable_allow_idle_fallback 1
+    setprop vendor.display.enable_rc_support 1
     ;;
 esac
