@@ -2,25 +2,29 @@
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 include $(LOCAL_PATH)/../common.mk
+include $(LIBION_HEADER_PATH_WRAPPER)
 
 LOCAL_MODULE                  := gralloc.$(TARGET_BOARD_PLATFORM)
 LOCAL_VENDOR_MODULE           := true
 LOCAL_MODULE_RELATIVE_PATH    := hw
 LOCAL_MODULE_TAGS             := optional
 LOCAL_C_INCLUDES              := $(common_includes)
-LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdgralloc\" -Wall -Werror
+LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"qdgralloc\" -Wall -Werror -Wno-enum-enum-conversion
 LOCAL_SHARED_LIBRARIES        := $(common_libs) libqdMetaData libsync libgrallocutils \
                                  android.hardware.graphics.common@1.1
 ifeq ($(TARGET_KERNEL_VERSION), 4.14)
 LOCAL_C_INCLUDES              += external/libcxx/include \
                                  system/core/libion/include/ \
-                                 system/core/libion/kernel-headers/ \
-                                 $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+                                 system/core/libion/kernel-headers/
 LOCAL_SHARED_LIBRARIES        += libion
-LOCAL_CFLAGS                  += -std=c++14
 endif
-LOCAL_HEADER_LIBRARIES        := display_headers
-ifneq ($(TARGET_KERNEL_VERSION), 4.14)
+ifeq ($(TARGET_KERNEL_VERSION), 4.19)
+LOCAL_C_INCLUDES              += external/libcxx/include \
+                                 $(LIBION_HEADER_PATHS)
+LOCAL_SHARED_LIBRARIES        += libion
+endif
+LOCAL_HEADER_LIBRARIES        := display_headers generated_kernel_headers
+ifneq ($(TARGET_KERNEL_VERSION), $(filter $(TARGET_KERNEL_VERSION),4.14 4.19))
 LOCAL_CFLAGS                  += -isystem  $(kernel_includes)
 endif
 LOCAL_CLANG                   := true
@@ -53,9 +57,12 @@ ifeq ($(TARGET_KERNEL_VERSION), 4.14)
 LOCAL_C_INCLUDES              += system/core/libion/include \
                                  system/core/libion/kernel-headers
 endif
+ifeq ($(TARGET_KERNEL_VERSION), 4.19)
+LOCAL_C_INCLUDES              += $(LIBION_HEADER_PATHS)
+endif
 LOCAL_HEADER_LIBRARIES        := display_headers
 LOCAL_SHARED_LIBRARIES        := $(common_libs) libqdMetaData libdl android.hardware.graphics.common@1.1
-LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"grallocutils\" -Wno-sign-conversion
+LOCAL_CFLAGS                  := $(common_flags) -DLOG_TAG=\"grallocutils\" -Wno-sign-conversion -Wno-enum-enum-conversion
 LOCAL_ADDITIONAL_DEPENDENCIES := $(common_deps) $(kernel_deps)
 LOCAL_SRC_FILES               := gr_utils.cpp gr_adreno_info.cpp
 include $(BUILD_SHARED_LIBRARY)

@@ -33,13 +33,15 @@ class HWVirtual : public HWDevice {
  public:
   HWVirtual(BufferSyncHandler *buffer_sync_handler, HWInfoInterface *hw_info_intf);
   virtual DisplayError SetVSyncState(bool enable) { return kErrorNotSupported; }
-  virtual DisplayError SetMixerAttributes(const HWMixerAttributes &mixer_attributes) {
+  virtual DisplayError SetMixerAttributes(HWMixerAttributes &mixer_attributes) {
     return kErrorNotSupported;
   }
   virtual DisplayError GetMixerAttributes(HWMixerAttributes *mixer_attributes);
   virtual DisplayError SetDisplayAttributes(const HWDisplayAttributes &display_attributes);
   virtual DisplayError GetDisplayAttributes(uint32_t index,
                                             HWDisplayAttributes *display_attributes);
+  virtual DisplayError SetActiveConfig(uint32_t active_config);
+  virtual DisplayError GetHdmiMode(std::vector<uint32_t> &hdmi_modes);
 
  protected:
   virtual DisplayError Init();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -58,6 +58,8 @@ AdrenoMemInfo::AdrenoMemInfo() {
   if (libadreno_utils_) {
     *reinterpret_cast<void **>(&LINK_adreno_compute_aligned_width_and_height) =
         ::dlsym(libadreno_utils_, "compute_aligned_width_and_height");
+    *reinterpret_cast<void **>(&LINK_adreno_compute_fmt_aligned_width_and_height) =
+        ::dlsym(libadreno_utils_, "compute_fmt_aligned_width_and_height");
     *reinterpret_cast<void **>(&LINK_adreno_compute_padding) =
         ::dlsym(libadreno_utils_, "compute_surface_padding");
     *reinterpret_cast<void **>(&LINK_adreno_compute_compressedfmt_aligned_width_and_height) =
@@ -69,6 +71,12 @@ AdrenoMemInfo::AdrenoMemInfo() {
     *reinterpret_cast<void **>(&LINK_adreno_isSecureContextSupportedByGpu) =
         ::dlsym(libadreno_utils_, "isSecureContextSupportedByGpu");
 
+    *reinterpret_cast<void **>(&LINK_adreno_get_metadata_blob_size) =
+        ::dlsym(libadreno_utils_, "adreno_get_metadata_blob_size");
+    *reinterpret_cast<void **>(&LINK_adreno_init_memory_layout) =
+        ::dlsym(libadreno_utils_, "adreno_init_memory_layout");
+    *reinterpret_cast<void **>(&LINK_adreno_get_aligned_gpu_buffer_size) =
+        ::dlsym(libadreno_utils_, "adreno_get_aligned_gpu_buffer_size");
   } else {
     ALOGE(" Failed to load libadreno_utils.so");
   }
@@ -86,6 +94,12 @@ AdrenoMemInfo::AdrenoMemInfo() {
       (!strncmp(property, "1", PROPERTY_VALUE_MAX) ||
        (!strncasecmp(property, "true", PROPERTY_VALUE_MAX)))) {
     map_fb_ = true;
+  }
+
+  property_get(DISABLE_AHARDWAREBUFFER_PROP, property, "0");
+  if (!(strncmp(property, "1", PROPERTY_VALUE_MAX)) ||
+      !(strncmp(property, "true", PROPERTY_VALUE_MAX))) {
+    gfx_ahardware_buffer_disable_ = true;
   }
 }
 
@@ -126,7 +140,15 @@ void AdrenoMemInfo::AlignUnCompressedRGB(int width, int height, int format, int 
   int padding_threshold = 512;  // Threshold for padding surfaces.
   // the function below computes aligned width and aligned height
   // based on linear or macro tile mode selected.
-  if (LINK_adreno_compute_aligned_width_and_height) {
+  if (LINK_adreno_compute_fmt_aligned_width_and_height) {
+    // We call into adreno_utils only for RGB formats. So plane_id is 0 and
+    // num_samples is 1 always. We may  have to add uitility function to
+    // find out these if there is a need to call this API for YUV formats.
+    LINK_adreno_compute_fmt_aligned_width_and_height(
+        width, height, 0/*plane_id*/, GetGpuPixelFormat(format), 1/*num_samples*/,
+        tile_enabled, raster_mode, padding_threshold,
+        reinterpret_cast<int *>(aligned_w), reinterpret_cast<int *>(aligned_h));
+  } else if (LINK_adreno_compute_aligned_width_and_height) {
     LINK_adreno_compute_aligned_width_and_height(
         width, height, bpp, tile_enabled, raster_mode, padding_threshold,
         reinterpret_cast<int *>(aligned_w), reinterpret_cast<int *>(aligned_h));
@@ -138,6 +160,7 @@ void AdrenoMemInfo::AlignUnCompressedRGB(int width, int height, int format, int 
   } else {
     ALOGW(
         "%s: Warning!! Symbols compute_surface_padding and "
+        "compute_fmt_aligned_width_and_height and "
         "compute_aligned_width_and_height not found",
         __FUNCTION__);
   }
@@ -184,10 +207,18 @@ ADRENOPIXELFORMAT AdrenoMemInfo::GetGpuPixelFormat(int hal_format) {
       return ADRENO_PIXELFORMAT_R8G8B8A8;
     case HAL_PIXEL_FORMAT_RGBX_8888:
       return ADRENO_PIXELFORMAT_R8G8B8X8;
+    case HAL_PIXEL_FORMAT_BGRA_8888:
+      return ADRENO_PIXELFORMAT_B8G8R8A8;
+    case HAL_PIXEL_FORMAT_RGB_888:
+      return ADRENO_PIXELFORMAT_R8G8B8;
     case HAL_PIXEL_FORMAT_RGB_565:
       return ADRENO_PIXELFORMAT_B5G6R5;
     case HAL_PIXEL_FORMAT_BGR_565:
       return ADRENO_PIXELFORMAT_R5G6B5;
+    case HAL_PIXEL_FORMAT_RGBA_5551:
+      return ADRENO_PIXELFORMAT_R5G5B5A1;
+    case HAL_PIXEL_FORMAT_RGBA_4444:
+      return ADRENO_PIXELFORMAT_R4G4B4A4;
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
       return ADRENO_PIXELFORMAT_NV12;
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
@@ -204,10 +235,16 @@ ADRENOPIXELFORMAT AdrenoMemInfo::GetGpuPixelFormat(int hal_format) {
        return ADRENO_PIXELFORMAT_R10G10B10X2_UNORM;
     case HAL_PIXEL_FORMAT_ABGR_2101010:
        return ADRENO_PIXELFORMAT_A2B10G10R10_UNORM;
-    case HAL_PIXEL_FORMAT_RGB_888:
-       return ADRENO_PIXELFORMAT_R8G8B8;
     case HAL_PIXEL_FORMAT_RGBA_FP16:
        return ADRENO_PIXELFORMAT_R16G16B16A16_FLOAT;
+    case HAL_PIXEL_FORMAT_DEPTH_16:
+      return ADRENO_PIXELFORMAT_D16_UNORM;
+    case HAL_PIXEL_FORMAT_DEPTH_24:
+      return ADRENO_PIXELFORMAT_D24_UNORM_X8_UINT;
+    case HAL_PIXEL_FORMAT_DEPTH_24_STENCIL_8:
+      return ADRENO_PIXELFORMAT_D24_UNORM_S8_UINT;
+    case HAL_PIXEL_FORMAT_DEPTH_32F:
+      return ADRENO_PIXELFORMAT_D32_FLOAT;
     default:
       ALOGE("%s: No map for format: 0x%x", __FUNCTION__, hal_format);
       break;
@@ -223,4 +260,38 @@ bool AdrenoMemInfo::isSecureContextSupportedByGpu() {
   return 1;
 }
 
-}  // namespace gralloc1
+uint32_t AdrenoMemInfo::AdrenoGetMetadataBlobSize() {
+  if (LINK_adreno_get_metadata_blob_size) {
+    return LINK_adreno_get_metadata_blob_size();
+  }
+  return 0;
+}
+
+int AdrenoMemInfo::AdrenoInitMemoryLayout(void *metadata_blob, int width, int height, int depth,
+  int format, int num_samples, int isUBWC, uint64_t usage, uint32_t num_planes) {
+  if (LINK_adreno_init_memory_layout) {
+    surface_tile_mode_t tile_mode = static_cast<surface_tile_mode_t> (isUBWC);
+    return LINK_adreno_init_memory_layout(metadata_blob, width, height, depth,
+                                          GetGpuPixelFormat(format), num_samples,
+                                          tile_mode, usage, num_planes);
+  }
+  return -1;
+}
+
+uint32_t AdrenoMemInfo::AdrenoGetAlignedGpuBufferSize(void *metadata_blob) {
+  if (LINK_adreno_get_aligned_gpu_buffer_size) {
+    return LINK_adreno_get_aligned_gpu_buffer_size(metadata_blob);
+  }
+  return -1;
+}
+
+bool AdrenoMemInfo::AdrenoSizeAPIAvaliable() {
+  if (gfx_ahardware_buffer_disable_) {
+    return false;
+  }
+
+  return (LINK_adreno_get_metadata_blob_size && LINK_adreno_init_memory_layout &&
+          LINK_adreno_get_aligned_gpu_buffer_size);
+}
+
+}  // namespace gralloc

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2016, 2020 The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,6 +32,7 @@
 
 #include <android/hardware/graphics/common/1.1/types.h>
 #include "gralloc_priv.h"
+#include "qdMetaData.h"
 
 #define SZ_2M 0x200000
 #define SZ_1M 0x100000
@@ -48,6 +49,33 @@
 
 #define INT(exp) static_cast<int>(exp)
 #define UINT(exp) static_cast<unsigned int>(exp)
+
+/* HARDWAREBUFFER flags used by GPU to check secure  secure context support */
+#define GRALLOC1_PRODUCER_USAGE_GPU_SAMPLED_IMAGE                   1UL << 8
+/* The buffer will be used as a shader storage or uniform buffer object. */
+#define GRALLOC1_PRODUCER_USAGE_GPU_DATA_BUFFER                     1UL << 24
+/* The buffer will be used as a cube map texture. */
+#define GRALLOC1_PRODUCER_USAGE_GPU_CUBE_MAP                        1UL << 25
+/* The buffer contains a complete mipmap hierarchy. */
+#define GRALLOC1_PRODUCER_USAGE_GPU_MIPMAP_COMPLETE                 1UL << 26
+
+/* Buffer content should be displayed on a primary display only */
+#define GRALLOC1_CONSUMER_USAGE_PRIVATE_INTERNAL_ONLY  0x04000000
+
+/* Buffer content should be displayed on an external display only */
+#define GRALLOC1_CONSUMER_USAGE_PRIVATE_EXTERNAL_ONLY  0x08000000
+
+#define GRALLOC1_MODULE_PERFORM_ALLOCATE_BUFFER 17
+
+/* CAMERA heap is a carveout heap for camera, is not secured */
+#define GRALLOC1_PRODUCER_USAGE_PRIVATE_CAMERA_HEAP GRALLOC1_PRODUCER_USAGE_PRIVATE_2
+#define GRALLOC_USAGE_PRIVATE_CAMERA_HEAP GRALLOC1_PRODUCER_USAGE_PRIVATE_CAMERA_HEAP
+
+#ifdef GRALLOC1_PRODUCER_USAGE_PRIVATE_ADSP_HEAP
+#undef GRALLOC1_PRODUCER_USAGE_PRIVATE_ADSP_HEAP
+#define GRALLOC1_PRODUCER_USAGE_PRIVATE_ADSP_HEAP   GRALLOC1_PRODUCER_USAGE_PRIVATE_3
+#endif
+
 using android::hardware::graphics::common::V1_1::BufferUsage;
 namespace gralloc1 {
 
@@ -68,6 +96,7 @@ inline Type1 ALIGN(Type1 x, Type2 align) {
   return (Type1)((x + (Type1)align - 1) & ~((Type1)align - 1));
 }
 
+bool IsYuvFormat(int format);
 bool IsCompressedRGBFormat(int format);
 bool IsUncompressedRGBFormat(int format);
 uint32_t GetBppForUncompressedRGB(int format);
@@ -75,8 +104,10 @@ bool CpuCanAccess(gralloc1_producer_usage_t prod_usage, gralloc1_consumer_usage_
 bool CpuCanRead(gralloc1_producer_usage_t prod_usage, gralloc1_consumer_usage_t cons_usage);
 bool CpuCanWrite(gralloc1_producer_usage_t prod_usage);
 unsigned int GetSize(const BufferInfo &d, unsigned int alignedw, unsigned int alignedh);
-void GetBufferSizeAndDimensions(const BufferInfo &d, unsigned int *size,
-                                unsigned int *alignedw, unsigned int *alignedh);
+void GetBufferSizeAndDimensions(const BufferInfo &d, unsigned int *size, unsigned int *alignedw,
+                                unsigned int *alignedh);
+void GetBufferSizeAndDimensions(const BufferInfo &d, unsigned int *size, unsigned int *alignedw,
+                                unsigned int *alignedh, GraphicsMetadata *graphics_metadata);
 void GetAlignedWidthAndHeight(const BufferInfo &d, unsigned int *aligned_w,
                               unsigned int *aligned_h);
 int GetYUVPlaneInfo(const private_handle_t *hnd, struct android_ycbcr *ycbcr);
@@ -103,6 +134,13 @@ uint32_t GetDataAlignment(int format, gralloc1_producer_usage_t prod_usage,
                        gralloc1_consumer_usage_t cons_usage);
 bool IsGPUSupportedHwBuffer(gralloc1_producer_usage_t prod_usage);
 
-}  // namespace gralloc1
+void GetGpuResourceSizeAndDimensions(const BufferInfo &info, unsigned int *size,
+                                     unsigned int *alignedw, unsigned int *alignedh,
+                                     GraphicsMetadata *graphics_metadata);
+bool CanUseAdrenoForSize(int buffer_type, uint64_t usage);
+bool GetAdrenoSizeAPIStatus();
+bool IsGPUFlagSupported(uint64_t usage);
+int GetBufferType(int inputFormat);
+}  // namespace gralloc
 
 #endif  // __GR_UTILS_H__

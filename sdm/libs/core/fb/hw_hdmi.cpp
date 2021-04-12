@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015 - 2017, The Linux Foundation. All rights reserved.
+* Copyright (c) 2015 - 2018, 2020, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -149,7 +149,8 @@ static uint32_t GetContentType(const LayerBuffer &layer_buffer) {
 #endif
 
 static bool MapHDMIDisplayTiming(const msm_hdmi_mode_timing_info *mode,
-                                 fb_var_screeninfo *info) {
+                                 fb_var_screeninfo *info, bool hdr_enabled,
+                                 DisplayInterfaceFormat fmt) {
   if (!mode || !info) {
     return false;
   }
@@ -171,11 +172,23 @@ static bool MapHDMIDisplayTiming(const msm_hdmi_mode_timing_info *mode,
   info->vsync_len = mode->pulse_width_v;
   info->upper_margin = mode->back_porch_v;
 
-  info->grayscale = V4L2_PIX_FMT_RGB24;
-  // If the mode supports YUV420 set grayscale to the FOURCC value for YUV420.
-  std::bitset<32> pixel_formats = mode->pixel_formats;
-  if (pixel_formats[1]) {
+  if (fmt == DisplayInterfaceFormat::kFormatNone) {
+    info->grayscale = V4L2_PIX_FMT_RGB24;
+    // If the mode supports YUV420 set grayscale to the FOURCC value for YUV420.
+    std::bitset<32> pixel_formats = mode->pixel_formats;
+    if (pixel_formats[1] && !pixel_formats[0]) {
+      info->grayscale = V4L2_PIX_FMT_NV12;
+    }
+    if (pixel_formats[1] && pixel_formats[0] && hdr_enabled) {
+      info->grayscale = V4L2_PIX_FMT_NV12;
+    }
+  } else if (fmt == DisplayInterfaceFormat::kFormatRGB) {
+    info->grayscale = V4L2_PIX_FMT_RGB24;
+  } else if (fmt == DisplayInterfaceFormat::kFormatYUV) {
     info->grayscale = V4L2_PIX_FMT_NV12;
+  } else {
+    DLOGE("Invalid format!");
+    return false;
   }
 
   if (!mode->active_low_h) {
@@ -202,6 +215,7 @@ HWHDMI::HWHDMI(BufferSyncHandler *buffer_sync_handler,  HWInfoInterface *hw_info
   (void)hdr_reset_end_;
   (void)reset_hdr_flag_;
   (void)cdm_color_space_;
+  pref_fmt_ = DisplayInterfaceFormat::kFormatNone;
 }
 
 DisplayError HWHDMI::Init() {
@@ -263,6 +277,11 @@ DisplayError HWHDMI::GetNumDisplayAttributes(uint32_t *count) {
 
 DisplayError HWHDMI::GetActiveConfig(uint32_t *active_config_index) {
   *active_config_index = active_config_index_;
+  return kErrorNone;
+}
+
+DisplayError HWHDMI::SetActiveConfig(uint32_t active_config) {
+  active_config_index_ = active_config;
   return kErrorNone;
 }
 
@@ -329,6 +348,7 @@ DisplayError HWHDMI::GetDisplayAttributes(uint32_t index,
   }
   display_attributes->x_pixels = timing_mode->active_h;
   display_attributes->y_pixels = timing_mode->active_v;
+  DLOGV("index = %d. x = %d. y=%d",index,timing_mode->active_h,timing_mode->active_v);
   display_attributes->v_front_porch = timing_mode->front_porch_v;
   display_attributes->v_back_porch = timing_mode->back_porch_v;
   display_attributes->v_pulse_width = timing_mode->pulse_width_v;
@@ -347,8 +367,10 @@ DisplayError HWHDMI::GetDisplayAttributes(uint32_t index,
 
   GetDisplayS3DSupport(index, display_attributes);
   std::bitset<32> pixel_formats = timing_mode->pixel_formats;
+  display_attributes->pixel_formats = timing_mode->pixel_formats;
 
   display_attributes->is_yuv = pixel_formats[1];
+  display_attributes->clock_khz = timing_mode->pixel_freq;
 
   return kErrorNone;
 }
@@ -367,7 +389,7 @@ DisplayError HWHDMI::SetDisplayAttributes(uint32_t index) {
     return kErrorHardware;
   }
 
-  DLOGI("GetInfo<Mode=%d %dx%d (%d,%d,%d),(%d,%d,%d) %dMHz>", vscreeninfo.reserved[3],
+  DLOGI("GetInfo<Mode=%d %dx%d (%d,%d,%d),(%d,%d,%d) %dMHz>", (vscreeninfo.reserved[3] >>16 & 0xFF),
         vscreeninfo.xres, vscreeninfo.yres, vscreeninfo.right_margin, vscreeninfo.hsync_len,
         vscreeninfo.left_margin, vscreeninfo.lower_margin, vscreeninfo.vsync_len,
         vscreeninfo.upper_margin, vscreeninfo.pixclock/1000000);
@@ -381,7 +403,8 @@ DisplayError HWHDMI::SetDisplayAttributes(uint32_t index) {
     }
   }
 
-  if (MapHDMIDisplayTiming(timing_mode, &vscreeninfo) == false) {
+  if (MapHDMIDisplayTiming(timing_mode, &vscreeninfo,
+                           hw_panel_info_.hdr_enabled, pref_fmt_) == false) {
     return kErrorParameters;
   }
 
@@ -393,7 +416,7 @@ DisplayError HWHDMI::SetDisplayAttributes(uint32_t index) {
     return kErrorHardware;
   }
 
-  DLOGI("SetInfo<Mode=%d %dx%d (%d,%d,%d),(%d,%d,%d) %dMHz>", vscreeninfo.reserved[3] & 0xFF00,
+  DLOGI("SetInfo<Mode=%d %dx%d (%d,%d,%d),(%d,%d,%d) %dMHz>", (vscreeninfo.reserved[3]>>16 & 0xFF),
         vscreeninfo.xres, vscreeninfo.yres, vscreeninfo.right_margin, vscreeninfo.hsync_len,
         vscreeninfo.left_margin, vscreeninfo.lower_margin, vscreeninfo.vsync_len,
         vscreeninfo.upper_margin, vscreeninfo.pixclock/1000000);
@@ -423,6 +446,51 @@ DisplayError HWHDMI::SetDisplayAttributes(uint32_t index) {
   SetS3DMode(kS3DModeNone);
 
   return kErrorNone;
+}
+
+DisplayError HWHDMI::SetDisplayFormat(uint32_t index, DisplayInterfaceFormat fmt) {
+
+  // Check for the usage of index
+
+  if (index > hdmi_modes_.size()) {
+    return kErrorNotSupported;
+  }
+  pref_fmt_ = fmt;
+
+  return kErrorNone;
+}
+
+DisplayError HWHDMI::SetConfigAttributes(uint32_t index, uint32_t width, uint32_t height)
+{
+    if (index >= hdmi_modes_.size()) {
+    return kErrorNotSupported;
+  }
+
+  // Get the resolution info from the look up table
+  msm_hdmi_mode_timing_info *timing_mode = &supported_video_modes_[0];
+  for (uint32_t i = 0; i < hdmi_modes_.size(); i++) {
+    msm_hdmi_mode_timing_info *cur = &supported_video_modes_[i];
+    if (cur->video_format == hdmi_modes_[index]) {
+      timing_mode = cur;
+      break;
+    }
+  }
+
+  timing_mode->active_h = width;
+  timing_mode->active_v = height;
+  return kErrorNone;
+}
+
+DisplayError HWHDMI::GetConfigIndex(uint32_t width, uint32_t height, uint32_t *index) {
+  // Get the resolution info from the look up table
+  for (uint32_t i = 0; i < hdmi_modes_.size(); i++) {
+    msm_hdmi_mode_timing_info *cur = &supported_video_modes_[i];
+    if (cur->active_h == width && cur->active_v == height) {
+      *index = i;
+      return kErrorNone;
+    }
+  }
+  return kErrorNotSupported;
 }
 
 DisplayError HWHDMI::GetConfigIndex(uint32_t mode, uint32_t *index) {
@@ -491,9 +559,8 @@ DisplayError HWHDMI::GetMaxCEAFormat(uint32_t *max_cea_format) {
 DisplayError HWHDMI::OnMinHdcpEncryptionLevelChange(uint32_t min_enc_level) {
   DisplayError error = kErrorNone;
   int fd = -1;
-  char data[kMaxStringLength] = {'\0'};
+  char data[kMaxStringLength] = "/sys/devices/virtual/hdcp/msm_hdcp/min_level_change";
 
-  snprintf(data, sizeof(data), "%s%d/hdcp2p2/min_level_change", fb_path_, fb_node_index_);
 
   fd = Sys::open_(data, O_WRONLY);
   if (fd < 0) {
@@ -1124,6 +1191,12 @@ DisplayError HWHDMI::UpdateHDRMetaData(HWLayers *hw_layers) {
 
   return error;
 }
+
+DisplayError HWHDMI::GetHdmiMode(std::vector<uint32_t> &hdmi_modes) {
+  hdmi_modes = hdmi_modes_;
+  return kErrorNone;
+}
+
 
 }  // namespace sdm
 

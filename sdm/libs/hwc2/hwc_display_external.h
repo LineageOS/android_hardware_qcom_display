@@ -57,6 +57,7 @@ class HWCDisplayExternal : public HWCDisplay {
   void GetUnderScanConfig();
   static void GetDownscaleResolution(uint32_t primary_width, uint32_t primary_height,
                                      uint32_t *virtual_width, uint32_t *virtual_height);
+  DisplayError SetMixerResolution(uint32_t width, uint32_t height);
 
   DisplayNull display_null_;
   int underscan_width_ = 0;
