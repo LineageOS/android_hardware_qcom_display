@@ -323,6 +323,7 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   hw_resource->has_micro_idle = info.has_micro_idle;
   hw_resource->demura_count = info.demura_count;
   hw_resource->dspp_count = info.dspp_count;
+  hw_resource->skip_inline_rot_threshold = info.skip_inline_rot_threshold;
 
   for (int index = 0; index < kBwModeMax; index++) {
     if (index == kBwVFEOn) {

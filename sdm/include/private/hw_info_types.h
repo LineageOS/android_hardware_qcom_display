@@ -383,6 +383,7 @@ struct HWResourceInfo {
   std::vector<uint32_t> initial_demura_planes = {};
   uint32_t demura_count = 0;
   uint32_t dspp_count = 0;
+  bool skip_inline_rot_threshold = false;
 };
 
 struct HWSplitInfo {

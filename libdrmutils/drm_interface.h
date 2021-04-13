@@ -598,6 +598,7 @@ struct DRMCrtcInfo {
   uint64_t rc_total_mem_size = 0;
   uint32_t demura_count = 0;
   uint32_t dspp_count = 0;
+  bool skip_inline_rot_threshold = false;
 };
 
 enum struct DRMPlaneType {
