@@ -670,6 +670,43 @@ int32_t HWCSession::getDisplayMaxBrightness(uint32_t display, uint32_t *max_brig
   return error;
 }
 
+int HWCSession::SetCameraSmoothInfo(CameraSmoothOp op, int32_t fps) {
+  std::lock_guard<decltype(callbacks_lock_)> lock_guard(callbacks_lock_);
+  for (auto const& [id, callback] : callback_clients_) {
+    if (callback) {
+      callback->notifyCameraSmoothInfo(op, fps);
+    }
+  }
+
+  return 0;
+}
+
+int HWCSession::RegisterCallbackClient(
+        const std::shared_ptr<IDisplayConfigCallback>& callback, int64_t *client_handle) {
+  std::lock_guard<decltype(callbacks_lock_)> lock_guard(callbacks_lock_);
+  callback_clients_.emplace(callback_client_id_, callback);
+  *client_handle = callback_client_id_;
+  callback_client_id_++;
+
+  return 0;
+}
+
+int HWCSession::UnregisterCallbackClient(const int64_t client_handle) {
+  bool removed = false;
+
+  std::lock_guard<decltype(callbacks_lock_)> lock_guard(callbacks_lock_);
+  for(auto it = callback_clients_.begin(); it != callback_clients_.end(); ) {
+    if (it->first == client_handle) {
+      it = callback_clients_.erase(it);
+      removed = true;
+    } else {
+      it++;
+    }
+  }
+
+  return removed ? 0 : -EINVAL;
+}
+
 int HWCSession::DisplayConfigImpl::SetDisplayAnimating(uint64_t display_id, bool animating) {
   return hwc_session_->CallDisplayFunction(display_id, &HWCDisplay::SetDisplayAnimating, animating);
 }

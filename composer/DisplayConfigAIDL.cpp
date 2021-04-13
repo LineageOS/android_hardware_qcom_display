@@ -941,6 +941,44 @@ ScopedAStatus
   return ScopedAStatus::ok();
 }
 
+ScopedAStatus DisplayConfigAIDL::setCameraSmoothInfo(CameraSmoothOp op, int32_t fps) {
+  int ret = -1;
+
+  if (fps <= 0) {
+    return ScopedAStatus::fromExceptionCode(EX_ILLEGAL_ARGUMENT);
+  }
+
+  ret = hwc_session_->SetCameraSmoothInfo(op, fps);
+
+  return ret == 0 ? ScopedAStatus::ok() : ScopedAStatus::fromExceptionCode(EX_TRANSACTION_FAILED);
+}
+
+ScopedAStatus DisplayConfigAIDL::registerCallback(
+                                const std::shared_ptr<IDisplayConfigCallback>& callback,
+                                int64_t* client_handle) {
+  int ret = -1;
+
+  if (callback == nullptr) {
+    return ScopedAStatus::fromExceptionCode(EX_ILLEGAL_ARGUMENT);
+  }
+
+  ret = hwc_session_->RegisterCallbackClient(callback, client_handle);
+
+  return ret == 0 ? ScopedAStatus::ok() : ScopedAStatus::fromExceptionCode(EX_TRANSACTION_FAILED);
+}
+
+ScopedAStatus DisplayConfigAIDL::unRegisterCallback(int64_t client_handle) {
+  int ret = -1;
+
+  if (client_handle < 0) {
+    return ScopedAStatus::fromExceptionCode(EX_ILLEGAL_ARGUMENT);
+  }
+
+  ret = hwc_session_->UnregisterCallbackClient(client_handle);
+
+  return ret == 0 ? ScopedAStatus::ok() : ScopedAStatus::fromExceptionCode(EX_TRANSACTION_FAILED);
+}
+
 } // namespace config
 } // namespace display
 } // namespace hardware

@@ -22,6 +22,9 @@
 
 #include <vendor/qti/hardware/display/composer/3.1/IQtiComposerClient.h>
 #include <config/device_interface.h>
+#include <aidl/vendor/qti/hardware/display/config/BnDisplayConfig.h>
+#include <aidl/vendor/qti/hardware/display/config/BnDisplayConfigCallback.h>
+#include <binder/Status.h>
 
 #include <core/core_interface.h>
 #include <core/ipc_interface.h>
@@ -34,6 +37,7 @@
 #include <utility>
 #include <future>   // NOLINT
 #include <map>
+#include <unordered_map>
 #include <string>
 #include <memory>
 
@@ -61,6 +65,9 @@ namespace composer_V2_3 = ::android::hardware::graphics::composer::V2_3;
 namespace composer_V2_4 = ::android::hardware::graphics::composer::V2_4;
 using HwcDisplayCapability = composer_V2_4::IComposerClient::DisplayCapability;
 using HwcDisplayConnectionType = composer_V2_4::IComposerClient::DisplayConnectionType;
+using ::aidl::vendor::qti::hardware::display::config::IDisplayConfig;
+using ::aidl::vendor::qti::hardware::display::config::IDisplayConfigCallback;
+using ::aidl::vendor::qti::hardware::display::config::CameraSmoothOp;
 
 namespace aidl::vendor::qti::hardware::display::config {
   class DisplayConfigAIDL;
@@ -280,6 +287,10 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
                                     uint64_t *samples[NUM_HISTOGRAM_COLOR_COMPONENTS]);
   int32_t SetDisplayElapseTime(hwc2_display_t display, uint64_t time);
 
+  int SetCameraSmoothInfo(CameraSmoothOp op, int32_t fps);
+  int RegisterCallbackClient(const std::shared_ptr<IDisplayConfigCallback>& callback,
+                             int64_t *client_handle);
+  int UnregisterCallbackClient(const int64_t client_handle);
 
   virtual int RegisterClientContext(std::shared_ptr<DisplayConfig::ConfigCallback> callback,
                                     DisplayConfig::ConfigInterface **intf);
@@ -585,6 +596,9 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   CWB cwb_;
   std::weak_ptr<DisplayConfig::ConfigCallback> qsync_callback_;
   std::weak_ptr<DisplayConfig::ConfigCallback> idle_callback_;
+  std::mutex callbacks_lock_;
+  std::unordered_map<int64_t, std::shared_ptr<IDisplayConfigCallback>> callback_clients_;
+  uint64_t callback_client_id_ = 0;
   bool async_powermode_ = false;
   bool async_vds_creation_ = false;
   bool power_state_transition_[HWCCallbacks::kNumDisplays] = {};

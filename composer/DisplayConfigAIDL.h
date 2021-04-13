@@ -113,9 +113,15 @@ class DisplayConfigAIDL : public BnDisplayConfig {
     ScopedAStatus controlIdleStatusCallback(bool enable) override;
     ScopedAStatus isSupportedConfigSwitch(int dispId, int config, bool* supported) override;
     ScopedAStatus getDisplayType(long physicalDispId, DisplayType* displayType) override;
-    ScopedAStatus setCWBOutputBuffer(const std::shared_ptr<::aidl::vendor::qti::hardware::display::config::IDisplayConfigCallback>& in_callback,
-                                     int32_t in_dispId, const ::aidl::vendor::qti::hardware::display::config::Rect& in_rect, bool in_postProcessed,
-                                     const ::aidl::android::hardware::common::NativeHandle& in_buffer) override;
+    ScopedAStatus setCWBOutputBuffer(
+          const std::shared_ptr<IDisplayConfigCallback>& in_callback,
+          int32_t in_dispId, const Rect& in_rect, bool in_postProcessed,
+          const ::aidl::android::hardware::common::NativeHandle& in_buffer) override;
+    ScopedAStatus setCameraSmoothInfo(CameraSmoothOp in_op, int32_t in_fps);
+    ScopedAStatus registerCallback(const std::shared_ptr<IDisplayConfigCallback>& in_callback,
+                                    int64_t* _aidl_return);
+    ScopedAStatus unRegisterCallback(int64_t in_handle);
+
   private:
     sdm::HWCSession *hwc_session_;
     std::weak_ptr<DisplayConfig::ConfigCallback> callback_;
