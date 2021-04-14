@@ -97,6 +97,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.comp_mask=0 \
     vendor.display.enable_optimize_refresh=0 \
     vendor.display.use_smooth_motion=1 \
+    vendor.display.disable_stc_dimming=1 \
     debug.sf.high_fps_late_sf_phase_offset_ns=-500000 \
     debug.sf.high_fps_early_phase_offset_ns=-2000000 \
     debug.sf.high_fps_early_gl_phase_offset_ns=-2000000 \
