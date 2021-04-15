@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, 2018, 2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2016, 2018, 2020, 2021 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -29,6 +29,7 @@
 #include <private/extension_interface.h>
 #include <private/color_interface.h>
 #include <private/panel_feature_factory_intf.h>
+#include <private/utils_factory_intf.h>
 #include <utils/locker.h>
 #include <utils/sys.h>
 
@@ -45,6 +46,7 @@
 namespace sdm {
 
 typedef PanelFeatureFactoryIntf* (*GetPanelFeatureFactory)();
+typedef UtilsFactoryIntf* (*GetUtilsFactory)();
 
 class CoreImpl : public CoreInterface {
  public:
@@ -74,6 +76,7 @@ class CoreImpl : public CoreInterface {
 
  protected:
   DisplayError ReserveDemuraResources();
+  void InitializeSDMUtils();
 
   Locker locker_;
   BufferAllocator *buffer_allocator_ = NULL;
@@ -85,6 +88,7 @@ class CoreImpl : public CoreInterface {
   CreateExtensionInterface create_extension_intf_ = NULL;
   DestroyExtensionInterface destroy_extension_intf_ = NULL;
   PanelFeatureFactoryIntf *panel_feature_factory_intf_ = NULL;
+  UtilsFactoryIntf *sdm_utils_factory_intf_ = NULL;
   SocketHandler *socket_handler_ = NULL;
   HWDisplaysInfo hw_displays_info_ = {};
   std::shared_ptr<IPCIntf> ipc_intf_ = nullptr;

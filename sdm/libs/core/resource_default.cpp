@@ -204,6 +204,11 @@ DisplayError ResourceDefault::ReconfigureDisplay(Handle display_ctx,
   return kErrorNone;
 }
 
+DisplayError ResourceDefault::Precheck(Handle display_ctx, DispLayerStack *disp_layer_stack,
+                                       LayerFeedback* feedback) {
+  return kErrorNone;
+}
+
 DisplayError ResourceDefault::Start(Handle display_ctx, LayerStack *layer_stack) {
   return kErrorNone;
 }

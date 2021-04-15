@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2016, 2018, 2020 The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2016, 2018, 2020, 2021 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -85,6 +85,8 @@ DisplayError CoreImpl::Init() {
   if (error != kErrorNone) {
     goto CleanupOnError;
   }
+
+  InitializeSDMUtils();
 
   error = comp_mgr_.Init(hw_resource_, extension_intf_, buffer_allocator_, socket_handler_);
 
@@ -267,6 +269,18 @@ DisplayError CoreImpl::GetMaxDisplaysSupported(DisplayType type, int32_t *max_di
 bool CoreImpl::IsRotatorSupportedFormat(LayerBufferFormat format) {
   SCOPE_LOCK(locker_);
   return comp_mgr_.IsRotatorSupportedFormat(format);
+}
+
+void CoreImpl::InitializeSDMUtils() {
+  GetUtilsFactory get_sdm_utils_f_ptr = nullptr;
+  if (!extension_lib_.Sym(GET_SDM_UTILS_FACTORY,
+                          reinterpret_cast<void **>(&get_sdm_utils_f_ptr))) {
+    DLOGE("Unable to load symbols, error = %s", extension_lib_.Error());
+    return;
+  }
+
+  sdm_utils_factory_intf_ = get_sdm_utils_f_ptr();
+  sdm_utils_factory_intf_->CreateSDMPropUtils(hw_resource_);
 }
 
 DisplayError CoreImpl::ReserveDemuraResources() {

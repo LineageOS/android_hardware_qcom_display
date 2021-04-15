@@ -27,7 +27,9 @@
 
 #include <core/display_interface.h>
 #include <map>
+#include <vector>
 #include "hw_info_types.h"
+#include "layer_feedback.h"
 
 namespace sdm {
 
@@ -58,6 +60,8 @@ class ResourceInterface {
                                           const HWPanelInfo &hw_panel_info,
                                           const HWMixerAttributes &mixer_attributes) = 0;
   virtual DisplayError Start(Handle display_ctx, LayerStack *layer_stack) = 0;
+  virtual DisplayError Precheck(Handle display_ctx, DispLayerStack* disp_layer_stack,
+                                LayerFeedback* feedback) = 0;
   virtual DisplayError Stop(Handle display_ctx, DispLayerStack *disp_layer_stack) = 0;
   virtual DisplayError SetDrawMethod(Handle display_ctx, const DisplayDrawMethod &draw_method) = 0;
   virtual DisplayError Prepare(Handle display_ctx, DispLayerStack *disp_layer_stack) = 0;
