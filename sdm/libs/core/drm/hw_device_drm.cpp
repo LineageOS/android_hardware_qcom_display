@@ -1367,7 +1367,8 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_QSYNC_MODE, token_.conn_id, mode);
   }
 
-  drm_atomic_intf_->Perform(DRMOps::DPPS_COMMIT_FEATURE, ((validate) ? 1 : 0));
+  // dpps commit feature ops doesn't use the obj id, set it as -1
+  drm_atomic_intf_->Perform(DRMOps::DPPS_COMMIT_FEATURE, -1, ((validate) ? 1 : 0));
   if (!validate) {
     drm_atomic_intf_->Perform(DRMOps::COMMIT_PANEL_FEATURES, 0 /* argument is not used */);
   }
