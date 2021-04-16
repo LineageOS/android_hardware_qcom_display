@@ -35,6 +35,7 @@
 #include <android/hardware/graphics/allocator/4.0/IAllocator.h>
 #include <android/hardware/graphics/mapper/4.0/IMapper.h>
 #include <vendor/qti/hardware/display/mapper/4.0/IQtiMapper.h>
+#include "gralloc_priv.h"
 
 using android::hardware::graphics::allocator::V4_0::IAllocator;
 using android::hardware::graphics::mapper::V4_0::IMapper;
@@ -54,6 +55,7 @@ class HWCBufferAllocator : public BufferAllocator {
   uint32_t GetBufferSize(BufferInfo *buffer_info);
 
   void GetCustomWidthAndHeight(const native_handle_t *handle, int *width, int *height);
+  void GetAdjustedWidthAndHeight(const private_handle_t *handle, int *width, int *height);
   void GetAlignedWidthAndHeight(int width, int height, int format, uint32_t alloc_type,
                                 int *aligned_width, int *aligned_height);
   int GetAllocatedBufferInfo(const BufferConfig &buffer_config,

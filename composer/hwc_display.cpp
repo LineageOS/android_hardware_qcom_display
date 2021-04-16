@@ -692,19 +692,17 @@ void HWCDisplay::BuildLayerStack() {
 
     bool is_secure = false;
     bool is_video = false;
-    const native_handle_t *handle =
-        reinterpret_cast<const native_handle_t *>(layer->input_buffer.buffer_id);
+    const private_handle_t *handle =
+        reinterpret_cast<const private_handle_t *>(layer->input_buffer.buffer_id);
+
     if (handle) {
-      uint32_t buffer_type = 0;
-      buffer_allocator_->GetBufferType(const_cast<native_handle_t *>(handle), buffer_type);
-      if (buffer_type == BUFFER_TYPE_VIDEO) {
+      if (handle->buffer_type == BUFFER_TYPE_VIDEO) {
         layer_stack_.flags.video_present = true;
         is_video = true;
       }
       // TZ Protected Buffer - L1
       // Gralloc Usage Protected Buffer - L3 - which needs to be treated as Secure & avoid fallback
-      int32_t handle_flags;
-      buffer_allocator_->GetPrivateFlags((void *)handle, handle_flags);
+      int32_t handle_flags = handle->flags;
       if (handle_flags & qtigralloc::PRIV_FLAGS_SECURE_BUFFER) {
         layer_stack_.flags.secure_present = true;
         is_secure = true;

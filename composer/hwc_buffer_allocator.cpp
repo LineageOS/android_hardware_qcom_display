@@ -390,6 +390,13 @@ void HWCBufferAllocator::GetCustomWidthAndHeight(const native_handle_t *handle, 
   });
 }
 
+void HWCBufferAllocator::GetAdjustedWidthAndHeight(const private_handle_t *handle, int *width,
+                                                 int *height) {
+  *width = handle->width;
+  *height = handle->height;
+  gralloc::GetCustomDimensions(const_cast<private_handle_t *>(handle), width, height);
+}
+
 void HWCBufferAllocator::GetAlignedWidthAndHeight(int width, int height, int format,
                                                   uint32_t alloc_type, int *aligned_width,
                                                   int *aligned_height) {

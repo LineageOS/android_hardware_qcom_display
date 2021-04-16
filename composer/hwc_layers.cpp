@@ -30,21 +30,37 @@ namespace sdm {
 
 std::atomic<hwc2_layer_t> HWCLayer::next_id_(1);
 
-DisplayError SetCSC(const native_handle_t *handle, ColorMetaData *color_metadata) {
-  int err = qtigralloc::getMetadataState(const_cast<native_handle_t *>(handle),
-                                         QTI_COLOR_METADATA);
-  if (err == 1) {
-    err = static_cast<int>(qtigralloc::get(const_cast<native_handle_t *>(handle),
-                                           QTI_COLOR_METADATA, color_metadata));
+DisplayError SetCSC(const private_handle_t *handle, ColorMetaData *color_metadata) {
+  int err = getMetaData(const_cast<private_handle_t *>(handle), GET_COLOR_METADATA, color_metadata);
+
+  if (err != 0) {
+    ColorSpace_t csc = ITU_R_601;
+    err = getMetaData(const_cast<private_handle_t *>(handle),  GET_COLOR_SPACE, &csc);
+
     if (err != 0) {
-      DLOGE("Error in qtigralloc get, err = %d", err);
-      return kErrorUndefined;
+      if (csc == ITU_R_601_FR || csc == ITU_R_2020_FR) {
+        color_metadata->range = Range_Full;
+      }
+      color_metadata->transfer = Transfer_sRGB;
+
+      switch (csc) {
+        case ITU_R_601:
+        case ITU_R_601_FR:
+          // video and display driver uses 601_525
+          color_metadata->colorPrimaries = ColorPrimaries_BT601_6_525;
+          break;
+        case ITU_R_709:
+          color_metadata->colorPrimaries = ColorPrimaries_BT709_5;
+          break;
+        case ITU_R_2020:
+        case ITU_R_2020_FR:
+          color_metadata->colorPrimaries = ColorPrimaries_BT2020;
+          break;
+        default:
+          DLOGE("Unsupported CSC: %d", csc);
+          return kErrorNotSupported;
+      }
     }
-  } else if (err == 0) {
-    DLOGV("Color Metadata state is not set");
-  } else {
-    DLOGE("Failed to get Color Metadata state");
-    return kErrorUndefined;
   }
 
   return kErrorNone;
@@ -220,20 +236,17 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, shared_ptr<Fence> a
     }
   }
 
-  const native_handle_t *handle = static_cast<const native_handle_t *>(buffer);
+  const private_handle_t *handle = reinterpret_cast<const private_handle_t *>(buffer);
 
-  int fd = -1;
-  buffer_allocator_->GetFd(const_cast<native_handle_t *>(handle), fd);
-  if (fd < 0) {
+  if (handle->fd < 0) {
     return HWC2::Error::BadParameter;
   }
 
   LayerBuffer *layer_buffer = &layer_->input_buffer;
   int aligned_width, aligned_height;
-  buffer_allocator_->GetCustomWidthAndHeight(handle, &aligned_width, &aligned_height);
+  buffer_allocator_->GetAdjustedWidthAndHeight(handle, &aligned_width, &aligned_height);
 
-  LayerBufferFormat format;
-  buffer_allocator_->GetSDMFormat(const_cast<native_handle_t *>(handle), format);
+  LayerBufferFormat format = GetSDMFormat(handle->format, handle->flags);
   if ((format != layer_buffer->format) || (UINT32(aligned_width) != layer_buffer->width) ||
       (UINT32(aligned_height) != layer_buffer->height)) {
     // Layer buffer geometry has changed.
@@ -243,22 +256,16 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, shared_ptr<Fence> a
   layer_buffer->format = format;
   layer_buffer->width = UINT32(aligned_width);
   layer_buffer->height = UINT32(aligned_height);
-  buffer_allocator_->GetUnalignedWidth(const_cast<native_handle_t *>(handle),
-                                       layer_buffer->unaligned_width);
-  buffer_allocator_->GetUnalignedHeight(const_cast<native_handle_t *>(handle),
-                                        layer_buffer->unaligned_height);
+  layer_buffer->unaligned_width = UINT32(handle->unaligned_width);
+  layer_buffer->unaligned_height = UINT32(handle->unaligned_height);
 
-  uint32_t buffer_type;
-  buffer_allocator_->GetBufferType(const_cast<native_handle_t *>(handle), buffer_type);
-  layer_buffer->flags.video = (buffer_type == BUFFER_TYPE_VIDEO) ? true : false;
-
+  layer_buffer->flags.video = (handle->buffer_type == BUFFER_TYPE_VIDEO) ? true : false;
   if (SetMetaData(handle, layer_) != kErrorNone) {
     return HWC2::Error::BadLayer;
   }
 
   // TZ Protected Buffer - L1
-  int32_t flags;
-  buffer_allocator_->GetPrivateFlags(const_cast<native_handle_t *>(handle), flags);
+  int32_t flags = handle->flags;
   secure_ = (flags & qtigralloc::PRIV_FLAGS_SECURE_BUFFER);
   bool secure_camera = secure_ && (flags & qtigralloc::PRIV_FLAGS_CAMERA_WRITE);
   bool secure_display = (flags & qtigralloc::PRIV_FLAGS_SECURE_DISPLAY);
@@ -276,15 +283,14 @@ HWC2::Error HWCLayer::SetLayerBuffer(buffer_handle_t buffer, shared_ptr<Fence> a
   if (buffer_fd_ >= 0) {
     ::close(buffer_fd_);
   }
-  buffer_fd_ = ::dup(fd);
+  buffer_fd_ = ::dup(handle->fd);
   layer_buffer->planes[0].fd = buffer_fd_;
   layer_buffer->planes[0].offset = 0;
-  buffer_allocator_->GetWidth(const_cast<native_handle_t *>(handle),
-                              layer_buffer->planes[0].stride);
-  buffer_allocator_->GetAllocationSize(const_cast<native_handle_t *>(handle), layer_buffer->size);
+  layer_buffer->planes[0].stride = UINT32(handle->width);
+  layer_buffer->size = handle->size;
   buffer_flipped_ = reinterpret_cast<uint64_t>(handle) != layer_buffer->buffer_id;
   layer_buffer->buffer_id = reinterpret_cast<uint64_t>(handle);
-  buffer_allocator_->GetBufferId(const_cast<native_handle_t *>(handle), layer_buffer->handle_id);
+  layer_buffer->handle_id = handle->id;
 
   return HWC2::Error::None;
 }
@@ -393,7 +399,7 @@ HWC2::Error HWCLayer::SetLayerDataspace(int32_t dataspace) {
     geometry_changes_ |= kDataspace;
     dataspace_ = dataspace;
     if (layer_->input_buffer.buffer_id) {
-      ValidateAndSetCSC(reinterpret_cast<native_handle_t *>(layer_->input_buffer.buffer_id));
+      ValidateAndSetCSC(reinterpret_cast<private_handle_t *>(layer_->input_buffer.buffer_id));
     }
   }
   return HWC2::Error::None;
@@ -852,21 +858,19 @@ void HWCLayer::GetUBWCStatsFromMetaData(UBWCStats *cr_stats, UbwcCrStatsVector *
   }  // if (cr_stats->bDatvalid)
 }
 
-DisplayError HWCLayer::SetMetaData(const native_handle_t *pvt_handle, Layer *layer) {
+DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *layer) {
   LayerBuffer *layer_buffer = &layer->input_buffer;
-  native_handle_t *handle = const_cast<native_handle_t *>(pvt_handle);
+  private_handle_t *handle = const_cast<private_handle_t *>(pvt_handle);
 
   float fps = 0;
   uint32_t frame_rate = layer->frame_rate;
-  if (qtigralloc::getMetadataState(handle, QTI_REFRESH_RATE)) {
-    if (static_cast<int>(qtigralloc::get(handle, QTI_REFRESH_RATE, &fps)) == 0) {
-      frame_rate = (fps != 0) ? RoundToStandardFPS(fps) : layer->frame_rate;
-      has_metadata_refresh_rate_ = true;
-    }
+  if (getMetaData(handle, GET_REFRESH_RATE, &fps) == 0) {
+    frame_rate = (fps != 0) ? RoundToStandardFPS(fps) : layer->frame_rate;
+    has_metadata_refresh_rate_ = true;
   }
 
   int32_t interlaced = 0;
-  qtigralloc::get(handle, QTI_PP_PARAM_INTERLACED, &interlaced);
+  getMetaData(handle, GET_PP_PARAM_INTERLACED, &interlaced);
   bool interlace = interlaced ? true : false;
 
   if (interlace != layer_buffer->flags.interlace) {
@@ -875,10 +879,8 @@ DisplayError HWCLayer::SetMetaData(const native_handle_t *pvt_handle, Layer *lay
   }
 
   uint32_t linear_format = 0;
-  if (qtigralloc::getMetadataState(handle, QTI_LINEAR_FORMAT)) {
-    if (static_cast<int>(qtigralloc::get(handle, QTI_LINEAR_FORMAT, &linear_format)) == 0) {
-      layer_buffer->format = GetSDMFormat(INT32(linear_format), 0);
-    }
+  if (getMetaData(handle, GET_LINEAR_FORMAT, &linear_format) == 0) {
+    layer_buffer->format = GetSDMFormat(INT32(linear_format), 0);
   }
 
   if ((interlace != layer_buffer->flags.interlace) || (frame_rate != layer->frame_rate)) {
@@ -895,15 +897,13 @@ DisplayError HWCLayer::SetMetaData(const native_handle_t *pvt_handle, Layer *lay
     layer_buffer->ubwc_crstats[i].clear();
   }
 
-  if (qtigralloc::getMetadataState(handle, QTI_UBWC_CR_STATS_INFO)) {
-    if (static_cast<int>(qtigralloc::get(handle, QTI_UBWC_CR_STATS_INFO, &cr_stats)) == 0) {
-      // Only copy top layer for now as only top field for interlaced is used
-      GetUBWCStatsFromMetaData(&cr_stats[0], &(layer_buffer->ubwc_crstats[0]));
-    }
+  if (getMetaData(handle, GET_UBWC_CR_STATS_INFO, cr_stats) == 0) {
+    // Only copy top layer for now as only top field for interlaced is used
+    GetUBWCStatsFromMetaData(&cr_stats[0], &(layer_buffer->ubwc_crstats[0]));
   }
 
   uint32_t single_buffer = 0;
-  qtigralloc::get(handle, QTI_SINGLE_BUFFER_MODE, &single_buffer);
+  getMetaData(const_cast<private_handle_t *>(handle), GET_SINGLE_BUFFER_MODE, &single_buffer);
   single_buffer_ = (single_buffer == 1);
 
   // Handle colorMetaData / Dataspace handling now
@@ -922,7 +922,7 @@ bool HWCLayer::IsDataSpaceSupported() {
   return dataspace_supported_;
 }
 
-void HWCLayer::ValidateAndSetCSC(const native_handle_t *handle) {
+void HWCLayer::ValidateAndSetCSC(const private_handle_t *handle) {
   LayerBuffer *layer_buffer = &layer_->input_buffer;
   bool use_color_metadata = true;
   ColorMetaData csc = {};
