@@ -2844,12 +2844,13 @@ HWC2::Error HWCDisplay::SubmitDisplayConfig(hwc2_config_t config) {
 
   DisplayError error = display_intf_->SetActiveConfig(config);
   if (error != kErrorNone) {
-    DLOGE("Failed to set %d config! Error: %d", config, error);
+    DLOGE("Failed to set new config:%d from current config:%d! Error: %d",
+          config, current_config, error);
     return HWC2::Error::BadConfig;
   }
 
   SetActiveConfigIndex(config);
-  DLOGI("Active configuration changed to: %d", config);
+  DLOGI("Active configuration changed from config %d to %d", current_config, config);
 
   // Cache refresh rate set by client.
   DisplayConfigVariableInfo info = {};
