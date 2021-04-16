@@ -3100,6 +3100,7 @@ void DisplayBase::MMRMEvent(uint32_t clk) {
 
   // Invalidate to retrigger clk calculation
   validated_ = false;
+  event_handler_->Refresh();
 }
 
 void DisplayBase::WaitForCompletion(SyncPoints *sync_points) {
