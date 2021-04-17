@@ -1253,7 +1253,9 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
   DLOGI("active %d-%d state %d-%d pending_power_state_ %d", active, active_, state, state_,
         pending_power_state_);
 
-  *release_fence = sync_points.release_fence;
+  if (release_fence) {
+    *release_fence = sync_points.release_fence;
+  }
 
   return error;
 }
