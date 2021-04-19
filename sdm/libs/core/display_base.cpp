@@ -886,7 +886,13 @@ DisplayError DisplayBase::PerformHwCommit(HWLayersInfo *hw_layers_info) {
   DisplayError error = PerformCommit(hw_layers_info);
   if (error != kErrorNone) {
     DLOGE("Commit IOCTL failed %d", error);
-    return error;
+    CleanupOnError();
+    DLOGI("Triggering flush to release fences");
+    DisplayError flush_err = FlushLocked(nullptr);
+    if (flush_err != kErrorNone) {
+      DLOGE("flush_err: %d", flush_err);
+      return flush_err;
+    }
   }
 
   error = PostCommit(hw_layers_info);
@@ -898,6 +904,13 @@ DisplayError DisplayBase::PerformHwCommit(HWLayersInfo *hw_layers_info) {
   DLOGI_IF(kTagDisplay, "Exiting commit for display: %d-%d", display_id_, display_type_);
 
   return kErrorNone;
+}
+
+void DisplayBase::CleanupOnError() {
+  // Buffer Fd's are duped for async thread operation.
+  for (auto &hw_layer : disp_layer_stack_.info.hw_layers) {
+    CloseFd(&hw_layer.input_buffer.planes[0].fd);
+  }
 }
 
 DisplayError DisplayBase::PostCommit(HWLayersInfo *hw_layers_info) {
@@ -983,6 +996,11 @@ void DisplayBase::CacheDisplayComposition() {
 
 DisplayError DisplayBase::Flush(LayerStack *layer_stack) {
   ClientLock lock(disp_mutex_);
+
+  return FlushLocked(layer_stack);
+}
+
+DisplayError DisplayBase::FlushLocked(LayerStack *layer_stack) {
   DisplayError error = kErrorNone;
 
   validated_ = false;
@@ -999,7 +1017,9 @@ DisplayError DisplayBase::Flush(LayerStack *layer_stack) {
   } else {
     DLOGW("Unable to flush display %d-%d", display_id_, display_type_);
   }
-  layer_stack->retire_fence = disp_layer_stack_.info.retire_fence;
+  if (layer_stack) {
+    layer_stack->retire_fence = disp_layer_stack_.info.retire_fence;
+  }
 
   return error;
 }
