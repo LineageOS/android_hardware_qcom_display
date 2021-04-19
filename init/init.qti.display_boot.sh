@@ -41,7 +41,7 @@ case "$target" in
     #SOC ID for Waipio is 457
     case "$soc_hwid" in
         457)
-            setprop vendor.gralloc.use_dma_buf_heaps 1
+        setprop vendor.gralloc.use_dma_buf_heaps 1
     esac
     ;;
     "lahaina")
