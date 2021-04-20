@@ -131,10 +131,11 @@ DisplayError DisplayBuiltIn::Init() {
   deferred_config_.frame_count = (value > 0) ? UINT32(value) : 0;
 
   if (pf_factory_ && prop_intf_) {
-    if (DisplayBase::SetupRC() != kErrorNone) {
-      // Non-fatal but not expected, log error
-      DLOGE("RC Failed to initialize. Error = %d", error);
-    }
+    // Get status of RC enablement property. Default RC is disabled.
+    int rc_prop_value = 0;
+    Debug::GetProperty(ENABLE_ROUNDED_CORNER, &rc_prop_value);
+    rc_enable_prop_ = rc_prop_value ? true : false;
+    DLOGI("RC feature %s.", rc_enable_prop_ ? "enabled" : "disabled");
 
     if ((error = SetupSPR()) != kErrorNone) {
       DLOGE("SPR Failed to initialize. Error = %d", error);

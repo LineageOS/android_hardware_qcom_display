@@ -271,15 +271,6 @@ DisplayError DisplayBase::SetupPanelFeatureFactory() {
 
 // Query the dspp capabilities and enable the RC feature.
 DisplayError DisplayBase::SetupRC() {
-  // Get status of RC enablement property. Default RC is disabled.
-  int rc_prop_value = 0;
-  Debug::GetProperty(ENABLE_ROUNDED_CORNER, &rc_prop_value);
-  rc_enable_prop_ = rc_prop_value ? true : false;
-  DLOGI("RC feature %s.", rc_enable_prop_ ? "enabled" : "disabled");
-  if (!rc_enable_prop_) {
-    return kErrorNone;
-  }
-
   RCInputConfig input_cfg = {};
   input_cfg.display_id = display_id_;
   input_cfg.display_type = display_type_;
@@ -534,10 +525,9 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
 
   if (!rc_core_ && !first_cycle_ && rc_enable_prop_ && pf_factory_ && prop_intf_) {
     error = SetupRC();
-    if (error == kErrorNone) {
-      rc_panel_feature_init_ = true;
-    } else {
-      DLOGW("RC feature not supported");
+    if (error != kErrorNone) {
+      // Non-fatal but not expected, log error
+      DLOGE("RC Failed to initialize. Error = %d", error);
     }
   }
   if (rc_panel_feature_init_) {
