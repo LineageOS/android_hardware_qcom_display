@@ -182,6 +182,8 @@ int HWCDisplayBuiltIn::Init() {
   enhance_idle_time_ = (enhance_idle_time == 1);
   DLOGI("enhance_idle_time: %d", enhance_idle_time);
 
+  LoadMixedModePerfHintThreshold();
+
   return status;
 }
 
@@ -1637,18 +1639,36 @@ int HWCDisplayBuiltIn::PostInit() {
 
 void HWCDisplayBuiltIn::SetCpuPerfHintLargeCompCycle() {
   if (!cpu_hint_ || !perf_hint_large_comp_cycle_) {
-    DLOGV_IF(kTagResources, "cpu_hint_ not initialized or property not set");
+    DLOGV_IF(kTagResources, "cpu_hint_:%d not initialized or property:%d not set",
+             !cpu_hint_, !perf_hint_large_comp_cycle_);
     return;
   }
 
+  int gpu_layer_count = 0;
   for (auto hwc_layer : layer_set_) {
     Layer *layer = hwc_layer->GetSDMLayer();
     if (layer->composition == kCompositionGPU) {
-      DLOGV_IF(kTagResources, "Set perf hint for large comp cycle");
-      int hwc_tid = gettid();
-      cpu_hint_->ReqHintsOffload(kPerfHintLargeCompCycle, hwc_tid);
-      break;
+      gpu_layer_count++;
     }
+  }
+
+  auto it = mixed_mode_threshold_.find(current_refresh_rate_);
+  if (it != mixed_mode_threshold_.end()) {
+    if (gpu_layer_count < it->second) {
+      DLOGV_IF(kTagResources, "Number of GPU layers :%d does not meet mixed mode perf hints "
+               "threshold:%d for %d fps", gpu_layer_count, it->second, current_refresh_rate_);
+      return;
+    }
+  } else {
+    DLOGV_IF(kTagResources, "Mixed mode perf hints is not supported for %d fps",
+             current_refresh_rate_);
+    return;
+  }
+
+  if (gpu_layer_count) {
+    DLOGV_IF(kTagResources, "Set perf hint for large comp cycle");
+    int hwc_tid = gettid();
+    cpu_hint_->ReqHintsOffload(kPerfHintLargeCompCycle, hwc_tid);
   }
 }
 
@@ -1729,6 +1749,17 @@ HWC2::Error HWCDisplayBuiltIn::CommitOrPrepare(bool validate_only,
   SetCpuPerfHintLargeCompCycle();
 
   return status;
+}
+
+void HWCDisplayBuiltIn::LoadMixedModePerfHintThreshold() {
+  // For mixed mode composition, if perf hint for large composition cycles is enabled and if the
+  // use case meets the threshold, SF and HWC will be running on the gold CPU cores.
+
+  // For 180 fps, 10 layers should fall back to GPU
+  mixed_mode_threshold_.insert(std::make_pair<int32_t, int32_t>(180, 10));
+
+  // For 240 fps, 6 layers should fall back to GPU
+  mixed_mode_threshold_.insert(std::make_pair<int32_t, int32_t>(240, 6));
 }
 
 }  // namespace sdm

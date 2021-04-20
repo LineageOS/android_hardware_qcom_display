@@ -32,6 +32,7 @@
 
 #include <mutex>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "utils/sync_task.h"
@@ -182,6 +183,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   uint32_t GetUpdatingAppLayersCount();
   int ValidateFrameCaptureConfig(const BufferInfo &output_buffer_info,
                                  const CwbTapPoint &cwb_tappoint);
+  void LoadMixedModePerfHintThreshold();
 
   // SyncTask methods.
   void OnTask(const LayerStitchTaskCode &task_code,
@@ -225,6 +227,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   std::mutex sampling_mutex;
   bool api_sampling_vote = false;
   bool vndservice_sampling_vote = false;
+
   int perf_hint_window_ = 0;
   int perf_hint_large_comp_cycle_ = 0;
   bool force_reset_lut_ = false;
@@ -232,6 +235,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   bool enable_round_corner_ = false;
   bool enhance_idle_time_ = false;
   shared_ptr<Fence> retire_fence_ = nullptr;
+  std::unordered_map<int32_t, int32_t> mixed_mode_threshold_;
 };
 
 }  // namespace sdm
