@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2021, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -72,8 +72,9 @@ int Allocator::AllocateMem(AllocData *alloc_data, uint64_t usage, int format) {
   }
 
   // After this point we should have the right heap set, there is no fallback
-  alloc_intf->GetHeapInfo(usage, &alloc_data->heap_name, &alloc_data->alloc_type,
-                          &alloc_data->flags, &is_secure, &use_system_heap_for_sensors_);
+
+  alloc_intf->GetHeapInfo(usage, use_system_heap_for_sensors_, &alloc_data->heap_name,
+                          &alloc_data->vm_names, &alloc_data->alloc_type, &alloc_data->flags);
 
   if (alloc_data->heap_name == "qcom,display") {
     alloc_data->size = ALIGN(alloc_data->size, SIZE_2MB);
@@ -83,17 +84,17 @@ int Allocator::AllocateMem(AllocData *alloc_data, uint64_t usage, int format) {
   if (ret >= 0) {
     alloc_data->alloc_type |= private_handle_t::PRIV_FLAGS_USES_ION;
   } else {
-    ALOGE("%s: Failed to allocate buffer - heap name: %s flags: 0x%x", __FUNCTION__,
-          alloc_data->heap_name.c_str(), alloc_data->flags);
+    ALOGE("%s: Failed to allocate buffer - heap name: %s flags: 0x%x ret: %d", __FUNCTION__,
+          alloc_data->heap_name.c_str(), alloc_data->flags, ret);
   }
 
-  if (is_secure) {
-    err = alloc_intf->SecureMemPerms(alloc_data->fd);
+  if (!alloc_data->vm_names.empty()) {
+    err = alloc_intf->SecureMemPerms(alloc_data);
   }
 
   if (err) {
-    ALOGE("%s: Failed to modify secure use permissions - heap name: %s flags: 0x%x", __FUNCTION__,
-          alloc_data->heap_name.c_str(), alloc_data->flags);
+    ALOGE("%s: Failed to modify secure use permissions - heap name: %s flags: 0x%x, err: %d"
+          , __FUNCTION__, alloc_data->heap_name.c_str(), alloc_data->flags, err);
   }
 
   return ret;
@@ -151,9 +152,10 @@ int Allocator::CleanBuffer(void *base, unsigned int size, unsigned int offset, i
 bool Allocator::CheckForBufferSharing(uint32_t num_descriptors,
                                       const vector<shared_ptr<BufferDescriptor>> &descriptors,
                                       ssize_t *max_index) {
-  std::string cur_heap_id = "", prev_heap_id = "";
+  std::string cur_heap_name = "", prev_heap_name = "";
+  std::vector<std::string> cur_vm_names, prev_vm_names;
   unsigned int cur_alloc_type = 0, prev_alloc_type = 0;
-  unsigned int cur_ion_flags = 0, prev_ion_flags = 0;
+  unsigned int cur_flags = 0, prev_flags = 0;
   bool cur_uncached = false, prev_uncached = false;
   unsigned int alignedw, alignedh;
   unsigned int max_size = 0;
@@ -167,13 +169,13 @@ bool Allocator::CheckForBufferSharing(uint32_t num_descriptors,
   }
 
   for (uint32_t i = 0; i < num_descriptors; i++) {
-    // Check Cached vs non-cached and all the ION flags
+    // Check Cached vs non-cached and all the flags
     cur_uncached = UseUncached(descriptors[i]->GetFormat(), descriptors[i]->GetUsage());
-    alloc_intf->GetHeapInfo(descriptors[i]->GetUsage(), &cur_heap_id, &cur_alloc_type,
-                            &cur_ion_flags, &is_secure, &use_system_heap_for_sensors_);
+    alloc_intf->GetHeapInfo(descriptors[i]->GetUsage(), use_system_heap_for_sensors_,
+                            &cur_heap_name, &cur_vm_names, &cur_alloc_type, &cur_flags);
 
-    if (i > 0 && (cur_heap_id != prev_heap_id || cur_alloc_type != prev_alloc_type ||
-                  cur_ion_flags != prev_ion_flags)) {
+    if (i > 0 && (cur_heap_name != prev_heap_name || cur_alloc_type != prev_alloc_type ||
+                  cur_flags != prev_flags || cur_vm_names != prev_vm_names)) {
       return false;
     }
 
@@ -188,10 +190,11 @@ bool Allocator::CheckForBufferSharing(uint32_t num_descriptors,
       max_size = size;
     }
 
-    prev_heap_id = cur_heap_id;
+    prev_heap_name = cur_heap_name;
     prev_uncached = cur_uncached;
-    prev_ion_flags = cur_ion_flags;
+    prev_flags = cur_flags;
     prev_alloc_type = cur_alloc_type;
+    prev_vm_names = cur_vm_names;
   }
 
   return true;

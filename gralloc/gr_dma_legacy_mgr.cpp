@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -45,6 +45,7 @@
 #include <linux/msm_ion.h>
 #endif
 #include <string>
+#include <vector>
 
 #include "gr_utils.h"
 #include "gralloc_priv.h"
@@ -218,18 +219,15 @@ int DmaLegacyManager::UnmapBuffer(void *base, unsigned int size, unsigned int /*
   return err;
 }
 
-int DmaLegacyManager::SecureMemPerms(int fd) {
+int DmaLegacyManager::SecureMemPerms(AllocData *data) {
+  // DmaLegacyManager will use ION flags handle secure permissions
   int ret = 0;
-  /*
-  * TODO: Finish Secure Memory Implementation once libvmmem is deployed
-  ret = vmm_->modify_buffer_permissions(fd, vmm->current_vm, usecase_perms);
-  */
   return ret;
 }
 
-void DmaLegacyManager::GetHeapInfo(uint64_t usage, std::string *ion_heap_name,
-                                   unsigned int *alloc_type, unsigned int *ion_flags,
-                                   bool *sec_flag, bool *sensor_flag) {
+void DmaLegacyManager::GetHeapInfo(uint64_t usage, bool sensor_flag, std::string *ion_heap_name,
+                                   std::vector<std::string> *vm_names, unsigned int *alloc_type,
+                                   unsigned int *ion_flags) {
   std::string heap_name = "qcom,system";
   unsigned int type = 0;
   uint32_t flags = 0;
@@ -246,7 +244,6 @@ void DmaLegacyManager::GetHeapInfo(uint64_t usage, std::string *ion_heap_name,
       flags |= UINT(ION_SD_FLAGS);
       buffer_allocator_.MapNameToIonHeap(heap_name, "secure_display", flags,
                                          ION_HEAP(ION_SECURE_DISPLAY_HEAP_ID), flags);
-      *sec_flag = true;
     } else if (usage & BufferUsage::CAMERA_OUTPUT) {
       int secure_preview_only = 0;
       char property[PROPERTY_VALUE_MAX];
@@ -269,21 +266,18 @@ void DmaLegacyManager::GetHeapInfo(uint64_t usage, std::string *ion_heap_name,
       }
       buffer_allocator_.MapNameToIonHeap(heap_name, "secure_display", flags,
                                          ION_HEAP(ION_SECURE_DISPLAY_HEAP_ID), flags);
-      *sec_flag = true;
     } else if (usage & GRALLOC_USAGE_PRIVATE_CDSP) {
       is_default = false;
       heap_name = "qcom,secure-cdsp";
       flags |= UINT(ION_SECURE | ION_FLAG_CP_CDSP);
       buffer_allocator_.MapNameToIonHeap(heap_name, "secure_carveout", flags,
                                          ION_HEAP(ION_SECURE_CARVEOUT_HEAP_ID), flags);
-      *sec_flag = true;
     } else {
       is_default = false;
       heap_name = "qcom,secure-pixel";
       flags |= UINT(ION_CP_FLAGS);
       buffer_allocator_.MapNameToIonHeap(heap_name, "secure_heap", flags,
                                          ION_HEAP(ION_SECURE_HEAP_ID), flags);
-      *sec_flag = true;
     }
   } else if (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY) {
     // Reuse GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY with no GRALLOC_USAGE_PROTECTED flag to alocate
