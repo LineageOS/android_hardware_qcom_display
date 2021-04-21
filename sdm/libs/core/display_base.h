@@ -69,6 +69,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError CommitOrPrepare(LayerStack *layer_stack);
   virtual DisplayError Commit(LayerStack *layer_stack);
   virtual DisplayError Flush(LayerStack *layer_stack);
+  virtual DisplayError FlushLocked(LayerStack *layer_stack);
   virtual DisplayError GetDisplayState(DisplayState *state);
   virtual DisplayError GetNumVariableInfoConfigs(uint32_t *count);
   virtual DisplayError GetConfig(uint32_t index, DisplayConfigVariableInfo *variable_info);
@@ -371,6 +372,7 @@ class DisplayBase : public DisplayInterface {
   void CacheFrameBuffer();
   void CacheDisplayComposition();
   void UpdateFrameBuffer();
+  void CleanupOnError();
   unsigned int rc_cached_res_width_ = 0;
   unsigned int rc_cached_res_height_ = 0;
   std::unique_ptr<RCIntf> rc_core_ = nullptr;
