@@ -706,6 +706,11 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
 
   CheckMMRMState();
 
+  int level = 0;
+  if (hw_intf_->GetPanelBrightness(&level) == kErrorNone) {
+    comp_manager_->SetBacklightLevel(display_comp_ctx_, level);
+  }
+
   while (true) {
     error = comp_manager_->Prepare(display_comp_ctx_, &disp_layer_stack_);
     if (error != kErrorNone) {

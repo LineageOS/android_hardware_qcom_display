@@ -46,6 +46,7 @@ class ResourceInterface {
     kCmdGetResourceStatus,
     kCmdGetRetireFence,
     kCmdNeedsValidate,
+    kCmdSetBacklightLevel,
     kCmdMax,
   };
 

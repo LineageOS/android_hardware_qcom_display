@@ -108,6 +108,7 @@ class CompManager {
   DisplayError SetMaxSDEClk(uint32_t clk);
   void GetRetireFence(Handle display_ctx, shared_ptr<Fence> *retire_fence);
   void NeedsValidate(Handle display_ctx, bool *needs_validate);
+  DisplayError SetBacklightLevel(Handle display_ctx, const uint32_t &backlight_level);
 
  private:
   static const int kMaxThermalLevel = 3;
@@ -157,4 +158,3 @@ class CompManager {
 }  // namespace sdm
 
 #endif  // __COMP_MANAGER_H__
-

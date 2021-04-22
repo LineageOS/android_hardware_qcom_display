@@ -791,4 +791,14 @@ void CompManager::NeedsValidate(Handle display_ctx, bool *needs_validate) {
   resource_intf_->Perform(ResourceInterface::kCmdNeedsValidate, needs_validate);
 }
 
+DisplayError CompManager::SetBacklightLevel(Handle display_ctx,
+    const uint32_t &backlight_level) {
+  DisplayCompositionContext *display_comp_ctx =
+      reinterpret_cast<DisplayCompositionContext *>(display_ctx);
+
+  return resource_intf_->Perform(ResourceInterface::kCmdSetBacklightLevel,
+                                  display_comp_ctx->display_resource_ctx,
+                                  backlight_level);
+}
+
 }  // namespace sdm
