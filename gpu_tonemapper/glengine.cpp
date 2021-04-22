@@ -314,102 +314,90 @@ int engine_blit(int srcFenceFd)
 void checkGlError(const char *file, int line)
 //-----------------------------------------------------------------------------
 {
-  for (GLint error = glGetError(); error; error = glGetError()) {
+    const GLint error = glGetError();
     char *pError;
     switch (error) {
-      case GL_NO_ERROR:
-        pError = (char *)"GL_NO_ERROR";
-        break;
-      case GL_INVALID_ENUM:
-        pError = (char *)"GL_INVALID_ENUM";
-        break;
-      case GL_INVALID_VALUE:
-        pError = (char *)"GL_INVALID_VALUE";
-        break;
-      case GL_INVALID_OPERATION:
-        pError = (char *)"GL_INVALID_OPERATION";
-        break;
-      case GL_OUT_OF_MEMORY:
-        pError = (char *)"GL_OUT_OF_MEMORY";
-        break;
-      case GL_INVALID_FRAMEBUFFER_OPERATION:
-        pError = (char *)"GL_INVALID_FRAMEBUFFER_OPERATION";
-        break;
-
-      default:
-        ALOGE("glError (0x%x) %s:%d\n", error, file, line);
-        return;
+        case GL_NO_ERROR:
+            pError = (char *)"GL_NO_ERROR";
+            break;
+        case GL_INVALID_ENUM:
+            pError = (char *)"GL_INVALID_ENUM";
+            break;
+        case GL_INVALID_VALUE:
+            pError = (char *)"GL_INVALID_VALUE";
+            break;
+        case GL_INVALID_OPERATION:
+            pError = (char *)"GL_INVALID_OPERATION";
+            break;
+        case GL_OUT_OF_MEMORY:
+            pError = (char *)"GL_OUT_OF_MEMORY";
+            break;
+        case GL_INVALID_FRAMEBUFFER_OPERATION:
+            pError = (char *)"GL_INVALID_FRAMEBUFFER_OPERATION";
+            break;
+        default:
+            ALOGE("glError (0x%x) %s:%d\n", error, file, line);
+            return;
     }
-
     ALOGE("glError (%s) %s:%d\n", pError, file, line);
     return;
-  }
-  return;
 }
 
 //-----------------------------------------------------------------------------
 void checkEglError(const char *file, int line)
 //-----------------------------------------------------------------------------
 {
-  for (int i = 0; i < 5; i++) {
     const EGLint error = eglGetError();
-    if (error == EGL_SUCCESS) {
-      break;
-    }
-
     char *pError;
     switch (error) {
-      case EGL_SUCCESS:
-        pError = (char *)"EGL_SUCCESS";
-        break;
-      case EGL_NOT_INITIALIZED:
-        pError = (char *)"EGL_NOT_INITIALIZED";
-        break;
-      case EGL_BAD_ACCESS:
-        pError = (char *)"EGL_BAD_ACCESS";
-        break;
-      case EGL_BAD_ALLOC:
-        pError = (char *)"EGL_BAD_ALLOC";
-        break;
-      case EGL_BAD_ATTRIBUTE:
-        pError = (char *)"EGL_BAD_ATTRIBUTE";
-        break;
-      case EGL_BAD_CONTEXT:
-        pError = (char *)"EGL_BAD_CONTEXT";
-        break;
-      case EGL_BAD_CONFIG:
-        pError = (char *)"EGL_BAD_CONFIG";
-        break;
-      case EGL_BAD_CURRENT_SURFACE:
-        pError = (char *)"EGL_BAD_CURRENT_SURFACE";
-        break;
-      case EGL_BAD_DISPLAY:
-        pError = (char *)"EGL_BAD_DISPLAY";
-        break;
-      case EGL_BAD_SURFACE:
-        pError = (char *)"EGL_BAD_SURFACE";
-        break;
-      case EGL_BAD_MATCH:
-        pError = (char *)"EGL_BAD_MATCH";
-        break;
-      case EGL_BAD_PARAMETER:
-        pError = (char *)"EGL_BAD_PARAMETER";
-        break;
-      case EGL_BAD_NATIVE_PIXMAP:
-        pError = (char *)"EGL_BAD_NATIVE_PIXMAP";
-        break;
-      case EGL_BAD_NATIVE_WINDOW:
-        pError = (char *)"EGL_BAD_NATIVE_WINDOW";
-        break;
-      case EGL_CONTEXT_LOST:
-        pError = (char *)"EGL_CONTEXT_LOST";
-        break;
-      default:
-        ALOGE("eglError (0x%x) %s:%d\n", error, file, line);
-        return;
+        case EGL_SUCCESS:
+            return;
+        case EGL_NOT_INITIALIZED:
+            pError = (char *)"EGL_NOT_INITIALIZED";
+            break;
+        case EGL_BAD_ACCESS:
+            pError = (char *)"EGL_BAD_ACCESS";
+            break;
+        case EGL_BAD_ALLOC:
+            pError = (char *)"EGL_BAD_ALLOC";
+            break;
+        case EGL_BAD_ATTRIBUTE:
+            pError = (char *)"EGL_BAD_ATTRIBUTE";
+            break;
+        case EGL_BAD_CONTEXT:
+            pError = (char *)"EGL_BAD_CONTEXT";
+            break;
+        case EGL_BAD_CONFIG:
+            pError = (char *)"EGL_BAD_CONFIG";
+            break;
+        case EGL_BAD_CURRENT_SURFACE:
+            pError = (char *)"EGL_BAD_CURRENT_SURFACE";
+            break;
+        case EGL_BAD_DISPLAY:
+            pError = (char *)"EGL_BAD_DISPLAY";
+            break;
+        case EGL_BAD_SURFACE:
+            pError = (char *)"EGL_BAD_SURFACE";
+            break;
+        case EGL_BAD_MATCH:
+            pError = (char *)"EGL_BAD_MATCH";
+            break;
+        case EGL_BAD_PARAMETER:
+            pError = (char *)"EGL_BAD_PARAMETER";
+            break;
+        case EGL_BAD_NATIVE_PIXMAP:
+            pError = (char *)"EGL_BAD_NATIVE_PIXMAP";
+            break;
+        case EGL_BAD_NATIVE_WINDOW:
+            pError = (char *)"EGL_BAD_NATIVE_WINDOW";
+            break;
+        case EGL_CONTEXT_LOST:
+            pError = (char *)"EGL_CONTEXT_LOST";
+            break;
+        default:
+            ALOGE("eglError (0x%x) %s:%d\n", error, file, line);
+            return;
     }
     ALOGE("eglError (%s) %s:%d\n", pError, file, line);
     return;
-  }
-  return;
 }
