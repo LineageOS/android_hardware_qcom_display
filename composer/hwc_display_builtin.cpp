@@ -1068,13 +1068,16 @@ HWC2::Error HWCDisplayBuiltIn::SetFrameDumpConfig(uint32_t count, uint32_t bit_m
     return HWC2::Error::NoResources;
   }
 
-  output_buffer_base_ = buffer;
   const native_handle_t *handle = static_cast<native_handle_t *>(output_buffer_info_.private_data);
   HWC2::Error err = SetReadbackBuffer(handle, nullptr, cwb_config, kCWBClientFrameDump);
   if (err != HWC2::Error::None) {
+    munmap(output_buffer_base_, output_buffer_info_.alloc_buffer_info.size);
+    buffer_allocator_->FreeBuffer(&output_buffer_info_);
+    output_buffer_info_ = {};
     return err;
   }
   dump_output_to_file_ = dump_output_to_file;
+  output_buffer_base_ = buffer;
 
   return HWC2::Error::None;
 }
