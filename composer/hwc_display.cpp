@@ -1680,8 +1680,6 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
     return HWC2::Error::None;
   }
 
-  DumpInputBuffers();
-
   DisplayError error = kErrorUndefined;
   int status = 0;
   if (tone_mapper_) {
@@ -1729,6 +1727,8 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence
   if (tone_mapper_ && tone_mapper_->IsActive()) {
      tone_mapper_->PostCommit(&layer_stack_);
   }
+
+  DumpInputBuffers();
 
   RetrieveFences(out_retire_fence);
   client_target_->ResetGeometryChanges();
