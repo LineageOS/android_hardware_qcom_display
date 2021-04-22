@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014, 2016-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014, 2016-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -227,6 +227,13 @@ struct LayerBufferFlags {
   };
 };
 
+struct LayerHistData {
+  bool stats_valid; /* bool indicating if the following histogram is valid */
+  std::vector<uint32_t> stats_info; /* video histogram stats payload */
+  uint32_t display_width;       /* video display_width */
+  uint32_t display_height;      /* video display_height */
+};
+
 /*! @brief This structure defines a layer buffer handle which contains raw buffer and its associated
   properties.
 
@@ -281,6 +288,9 @@ struct LayerBuffer {
   UbwcCrStatsVector  ubwc_crstats[NUM_UBWC_CR_STATS_LAYERS] = {};
                                 //! < UBWC Compression ratio,stats. Stored as a vector of pair of
                                 //! of (tile size, #of tiles)
+
+  LayerHistData hist_data;      //!< Histogram data associated with this layer buffer.
+
   LayerBuffer() {
     color_metadata.colorPrimaries = ColorPrimaries_BT709_5;
     color_metadata.transfer = Transfer_sRGB;
@@ -304,4 +314,3 @@ class LayerBufferObject {
 }  // namespace sdm
 
 #endif  // __LAYER_BUFFER_H__
-
