@@ -111,9 +111,9 @@ DisplayError CompManager::RegisterDisplay(int32_t display_id, DisplayType type,
     return error;
   }
 
-  error =
-      resource_intf_->RegisterDisplay(display_id, type, display_attributes, hw_panel_info,
-                                      mixer_attributes, &display_comp_ctx->display_resource_ctx);
+  error = resource_intf_->RegisterDisplay(display_id, type, display_attributes, hw_panel_info,
+                                          mixer_attributes,
+                                          &display_comp_ctx->display_resource_ctx);
   if (error != kErrorNone) {
     strategy->Deinit();
     delete strategy;
@@ -254,13 +254,21 @@ DisplayError CompManager::ReconfigureDisplay(Handle comp_handle,
   return error;
 }
 
-void CompManager::PrepareStrategyConstraints(Handle comp_handle, DispLayerStack *disp_layer_stack) {
+void CompManager::PrepareStrategyConstraints(Handle comp_handle,
+                                             DispLayerStack *disp_layer_stack) {
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(comp_handle);
   StrategyConstraints *constraints = &display_comp_ctx->constraints;
+  Handle &display_resource_ctx = display_comp_ctx->display_resource_ctx;
+
+  // Call Layer Precheck to get feedback
+  LayerFeedback feedback = {};
+  if (resource_intf_)
+    resource_intf_->Precheck(display_resource_ctx, disp_layer_stack, &feedback);
 
   constraints->safe_mode = safe_mode_;
   constraints->max_layers = hw_res_info_.num_blending_stages;
+  constraints->feedback = feedback;
 
   // Limit 2 layer SDE Comp if its not a Primary Display.
   // Safe mode is the policy for External display on a low end device.
@@ -322,10 +330,11 @@ DisplayError CompManager::Prepare(Handle display_ctx, DispLayerStack *disp_layer
   DisplayCompositionContext *display_comp_ctx =
                              reinterpret_cast<DisplayCompositionContext *>(display_ctx);
   Handle &display_resource_ctx = display_comp_ctx->display_resource_ctx;
-
   DisplayError error = kErrorUndefined;
 
   PrepareStrategyConstraints(display_ctx, disp_layer_stack);
+  // Select a composition strategy, and try to allocate resources for it.
+  resource_intf_->Start(display_resource_ctx, disp_layer_stack->stack);
 
   bool exit = false;
   uint32_t &count = display_comp_ctx->remaining_strategies;
@@ -341,6 +350,8 @@ DisplayError CompManager::Prepare(Handle display_ctx, DispLayerStack *disp_layer
       error = resource_intf_->Prepare(display_resource_ctx, disp_layer_stack);
       // Exit if successfully prepared resource, else try next strategy.
       exit = (error == kErrorNone);
+      if (!exit)
+        display_comp_ctx->constraints.feedback = {};
     }
   }
 

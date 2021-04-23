@@ -28,8 +28,8 @@
 #include <core/sdm_types.h>
 #include <core/display_interface.h>
 #include <vector>
-
 #include "hw_info_types.h"
+#include "layer_feedback.h"
 
 namespace sdm {
 
@@ -40,6 +40,7 @@ struct StrategyConstraints {
 
   uint32_t max_layers = kMaxSDELayers;  //!< Maximum number of layers that shall be programmed
                                         //!< on hardware for the given layer stack.
+  LayerFeedback feedback;  //!< Feedback from Layer Precheck
 };
 
 class StrategyInterface {

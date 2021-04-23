@@ -251,5 +251,17 @@ int Debug::GetProperty(const char *property_name, int *value) {
   return 0;
 }
 
+bool Debug::GetPropertyDisableInlineMode() {
+  char value[64] = "0";
+  Debug::GetProperty(DISABLE_INLINE_ROTATOR_PROP, value);
+  return (atoi(value) == 1);
+}
+
+bool Debug::GetPropertyDisableOfflineMode() {
+  char value[64] = "0";
+  Debug::GetProperty(DISABLE_OFFLINE_ROTATOR_PROP, value);
+  return (atoi(value) == 1);
+}
+
 }  // namespace sdm
 

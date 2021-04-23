@@ -27,6 +27,7 @@
 
 #include <core/display_interface.h>
 #include <private/resource_interface.h>
+#include <private/layer_feedback.h>
 #include <utils/locker.h>
 #include <vector>
 #include <map>
@@ -57,6 +58,8 @@ class ResourceDefault : public ResourceInterface {
   virtual DisplayError PostPrepare(Handle display_ctx, DispLayerStack *disp_layer_stack);
   virtual DisplayError Commit(Handle display_ctx, DispLayerStack *disp_layer_stack);
   virtual DisplayError PostCommit(Handle display_ctx, DispLayerStack *disp_layer_stack);
+  virtual DisplayError Precheck(Handle display_ctx, DispLayerStack *disp_layer_stack,
+                                LayerFeedback* feedback);
   virtual void Purge(Handle display_ctx);
   virtual DisplayError SetMaxMixerStages(Handle display_ctx, uint32_t max_mixer_stages);
   virtual DisplayError ValidateScaling(const LayerRect &crop, const LayerRect &dst, bool rotate90,
