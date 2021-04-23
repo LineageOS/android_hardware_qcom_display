@@ -208,7 +208,8 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   bool panel_feature_init_ = false;
   bool disable_dyn_fps_ = false;
   DppsInfo dpps_info_ = {};
-  FrameTriggerMode trigger_mode_debug_ = kFrameTriggerMax;
+  // Posted Start is default mode
+  FrameTriggerMode trigger_mode_debug_ = kFrameTriggerPostedStart;
   float level_remainder_ = 0.0f;
   float cached_brightness_ = 0.0f;
   bool pending_brightness_ = false;
