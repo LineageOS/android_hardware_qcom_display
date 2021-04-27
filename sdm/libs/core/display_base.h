@@ -374,6 +374,7 @@ class DisplayBase : public DisplayInterface {
   void CacheDisplayComposition();
   void UpdateFrameBuffer();
   void CleanupOnError();
+  bool CheckValidateNeeded();
   unsigned int rc_cached_res_width_ = 0;
   unsigned int rc_cached_res_height_ = 0;
   std::unique_ptr<RCIntf> rc_core_ = nullptr;
