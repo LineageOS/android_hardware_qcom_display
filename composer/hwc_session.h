@@ -69,6 +69,7 @@ using vendor::qti::hardware::display::composer::V3_0::IQtiComposerClient;
 int32_t GetDataspaceFromColorMode(ColorMode mode);
 
 typedef DisplayConfig::DisplayType DispType;
+typedef DisplayConfig::CameraSmoothOp CameraSmoothOp;
 
 // Create a singleton uevent listener thread valid for life of hardware composer process.
 // This thread blocks on uevents poll inside uevent library implementation. This poll exits
@@ -309,16 +310,17 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
     explicit CWB(HWCSession *hwc_session) : hwc_session_(hwc_session) { }
     void PresentDisplayDone(hwc2_display_t disp_id);
 
-    int32_t PostBuffer(std::weak_ptr<DisplayConfig::ConfigCallback> callback, bool post_processed,
-                       const native_handle_t *buffer);
+    int32_t PostBuffer(std::weak_ptr<DisplayConfig::ConfigCallback> callback,
+                       const CwbConfig &cwb_config, const native_handle_t *buffer);
 
    private:
     struct QueueNode {
-      QueueNode(std::weak_ptr<DisplayConfig::ConfigCallback> cb, bool pp, const hidl_handle& buf)
-        : callback(cb), post_processed(pp), buffer(buf) { }
+      QueueNode(std::weak_ptr<DisplayConfig::ConfigCallback> cb, const CwbConfig &cwb_conf,
+                const hidl_handle &buf)
+          : callback(cb), cwb_config(cwb_conf), buffer(buf) {}
 
       std::weak_ptr<DisplayConfig::ConfigCallback> callback;
-      bool post_processed = false;
+      CwbConfig cwb_config = {};
       const native_handle_t *buffer;
     };
 
@@ -398,6 +400,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
     virtual int ControlIdleStatusCallback(bool enable);
     virtual int GetDisplayType(uint64_t physical_disp_id, DispType *disp_type);
     virtual int AllowIdleFallback();
+    virtual int SetCameraSmoothInfo(CameraSmoothOp op, uint32_t fps);
+    virtual int ControlCameraSmoothCallback(bool enable);
 
     std::weak_ptr<DisplayConfig::ConfigCallback> callback_;
     HWCSession *hwc_session_ = nullptr;
@@ -570,6 +574,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   CWB cwb_;
   std::weak_ptr<DisplayConfig::ConfigCallback> qsync_callback_;
   std::weak_ptr<DisplayConfig::ConfigCallback> idle_callback_;
+  std::weak_ptr<DisplayConfig::ConfigCallback> camera_callback_;
   bool async_powermode_ = false;
   bool async_vds_creation_ = false;
   bool power_state_transition_[HWCCallbacks::kNumDisplays] = {};

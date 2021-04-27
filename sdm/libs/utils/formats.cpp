@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2018, 2020 The Linux Foundation. All rights reserved.
+* Copyright (c) 2016-2018, 2020-2021 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -69,6 +69,40 @@ bool Is10BitFormat(LayerBufferFormat format) {
     return true;
   default:
     return false;
+  }
+}
+
+bool IsRgbFormat(const LayerBufferFormat &format) {
+  switch (format) {
+    case kFormatARGB8888:
+    case kFormatRGBA8888:
+    case kFormatBGRA8888:
+    case kFormatXRGB8888:
+    case kFormatRGBX8888:
+    case kFormatBGRX8888:
+    case kFormatRGBA8888Ubwc:
+    case kFormatRGBX8888Ubwc:
+    case kFormatRGBA1010102:
+    case kFormatARGB2101010:
+    case kFormatRGBX1010102:
+    case kFormatXRGB2101010:
+    case kFormatBGRA1010102:
+    case kFormatABGR2101010:
+    case kFormatBGRX1010102:
+    case kFormatXBGR2101010:
+    case kFormatRGBA1010102Ubwc:
+    case kFormatRGBX1010102Ubwc:
+    case kFormatRGB888:
+    case kFormatBGR888:
+    case kFormatRGB565:
+    case kFormatBGR565:
+    case kFormatRGBA5551:
+    case kFormatRGBA4444:
+    case kFormatBGR565Ubwc:
+    case kFormatRGB101010:
+      return true;
+    default:
+      return false;
   }
 }
 
@@ -195,6 +229,41 @@ float GetBufferFormatBpp(LayerBufferFormat format) {
   }
 
   return bpp;
+}
+
+int GetCwbAlignmentFactor(LayerBufferFormat format) {
+  // To check whether roi width*height*bpp is a multiple of 256 Bytes
+  // UseCase 1: bpp is a power of 2 (eg.: 2, 4). Thus, 256 is divisible by the bpp.
+  // CWB Roi_pixels = ROI_width * ROI_height
+  // We need to align CWB Roi_pixels to nearest upper multiple of (256 / bpp).
+  // UseCase 2: when bpp is 1.5. To satisfy the below equation :
+  // Roi_pixels * bpp = multiple of 256 B => Roi_pixels * 1.5 = multiple of 256 B
+  // => Roi_pixels = (n / 1.5) * 256, Roi_pixels is int when n is multiple of 3
+  // => Roi_pixels is a multiple of 512 .
+  // UseCase 3: when bpp is a multiple of 3. To satisfy the below equation :
+  // Roi_pixels * 3 Bytes = n * 256 Bytes (n is some integer multiple)
+  // => Roi_pixels = (n / 3) * 256, Roi_pixels is int when n is multiple of 3
+  // For n=3: Roi_pixels = 256, For n=6: Roi_pixels = 512, and so on... Thus, Roi_pixels is
+  // a multiple of 256, we align CWB Roi_pixels to nearest upper multiple of 256 pixels.
+
+  float bpp = GetBufferFormatBpp(format);
+  if (bpp == 0.0f) {  // invalid color format
+    return 0;
+  }
+
+  uint32_t alignment_factor = 0;
+
+  if (bpp == 1.5f) {
+    alignment_factor = 512;
+  } else if (bpp == 3.0f) {
+    alignment_factor = 256;
+  } else {
+    uint32_t bpp_int = static_cast<uint32_t>(bpp);
+    if (bpp_int % 2 == 0) {
+      alignment_factor = 256 / bpp_int;
+    }
+  }
+  return alignment_factor;
 }
 
 int GetBufferFormatTileSize(LayerBufferFormat format, FormatTileSize *tile_size) {

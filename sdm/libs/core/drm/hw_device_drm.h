@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -147,7 +147,7 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError SetBLScale(uint32_t level) { return kErrorNotSupported; }
   virtual DisplayError SetBlendSpace(const PrimariesTransfer &blend_space);
   virtual DisplayError EnableSelfRefresh() { return kErrorNotSupported; }
-  virtual DisplayError GetSupportedModeSwitch(uint32_t *allowed_mode_switch) {
+  virtual DisplayError GetFeatureSupportStatus(const HWFeature feature, uint32_t *status) {
     return kErrorNotSupported;
   }
   enum {

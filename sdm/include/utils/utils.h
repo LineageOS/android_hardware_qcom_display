@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016 - 2018, 2020 The Linux Foundation. All rights reserved.
+* Copyright (c) 2016 - 2018, 2020 - 2021 The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -30,6 +30,7 @@
 #ifndef __UTILS_H__
 #define __UTILS_H__
 
+#include <utils/rect.h>
 #include <stdint.h>
 #include <cstring>
 
@@ -44,6 +45,10 @@ template<class T>
 bool SameConfig(T *t1, T *t2, unsigned int size) {
   return !(std::memcmp(t1, t2, size));
 }
+void AdjustSize(const int min_size, const int bound_start, const int bound_end, int *input_start,
+                int *input_end);
+void ApplyCwbRoiRestrictions(LayerRect &roi, const LayerRect &cwb_full_frame,
+                             const int cwb_alignment_factor);
 
 }  // namespace sdm
 

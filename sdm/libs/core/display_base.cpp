@@ -231,6 +231,86 @@ DisplayError DisplayBase::SetupRC() {
   return kErrorNone;
 }
 
+DisplayError DisplayBase::GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint32_t *x_pixels,
+                                                 uint32_t *y_pixels) {
+  DisplayError error = kErrorNotSupported;
+  DisplayConfigVariableInfo display_config;
+
+  if (cwb_tappoint == CwbTapPoint::kDsppTapPoint) {
+    // To dump post-processed (DSPP) output for CWB, use Panel resolution.
+    uint32_t active_index = 0;
+    error = GetActiveConfig(&active_index);
+    if (error == kErrorNone) {
+      error = GetRealConfig(active_index, &display_config);
+      if (error == kErrorNone) {
+        *x_pixels = display_config.x_pixels;
+        *y_pixels = display_config.y_pixels;
+      }
+    }
+  } else if (cwb_tappoint == CwbTapPoint::kLmTapPoint) {
+    // To dump Layer Mixer output for CWB, use FrameBuffer or Mixer resolution.
+    uint32_t dest_scalar_enabled = 0;
+    IsSupportedOnDisplay(kDestinationScalar, &dest_scalar_enabled);
+
+    if (dest_scalar_enabled) {
+      error = GetMixerResolution(x_pixels, y_pixels);
+    } else {
+      error = GetFrameBufferConfig(&display_config);
+      if (error == kErrorNone) {
+        *x_pixels = display_config.x_pixels;
+        *y_pixels = display_config.y_pixels;
+      }
+    }
+  }
+  return error;
+}
+
+DisplayError DisplayBase::ConfigureCwb(LayerStack *layer_stack) {
+  DisplayError error = kErrorNone;
+  if (hw_resource_info_.has_concurrent_writeback && layer_stack->output_buffer) {  // CWB requested
+    if (!cwb_config_) {  // Instantiate cwb_config_ if cwb was not enabled in previous draw cycle.
+      cwb_config_ = new CwbConfig;
+    }
+    *cwb_config_ = {};  // Reset cwb_config_ so as to set it to new cwb config passed by the client
+
+    if (layer_stack->cwb_config == NULL) {
+      // If Cwb client doesn't set Cwb config in LayerStack.cwb_config, then we consider full frame
+      // ROI and recognize tppt. from post-processed flag.
+
+      // set tappoint based on post-processed flag.
+      cwb_config_->tap_point = (layer_stack->flags.post_processed_output)
+                                   ? CwbTapPoint::kDsppTapPoint
+                                   : CwbTapPoint::kLmTapPoint;
+
+      uint32_t buffer_width = 0, buffer_height = 0;
+      error = GetCwbBufferResolution(cwb_config_->tap_point, &buffer_width, &buffer_height);
+      if (error != kErrorNone) {
+        DLOGE("GetCwbBufferResolution failed for tap_point = %d .", cwb_config_->tap_point);
+        return error;
+      }
+
+      // Setting full frame ROI
+      cwb_config_->cwb_full_rect = LayerRect(0.0f, 0.0f, FLOAT(buffer_width), FLOAT(buffer_height));
+      DLOGW("Layerstack.cwb_config isn't set by CWB client. Thus, falling back to Full frame ROI.");
+      cwb_config_->cwb_roi = cwb_config_->cwb_full_rect;
+    } else {  // Cwb client has set the cwb config in LayerStack.cwb_config .
+      *cwb_config_ = *(layer_stack->cwb_config);
+    }
+
+    hw_layers_.info.hw_cwb_config = cwb_config_;
+    error = ValidateCwbConfigInfo(cwb_config_, layer_stack->output_buffer->format);
+    if (error != kErrorNone) {
+      DLOGE("CWB_config validation failed.");
+      return error;
+    }
+  } else if (cwb_config_) {  // CWB isn't requested in the current draw cycle.
+    // Check and release cwb_config_ if it was instantiated in the previous draw cycle.
+    delete cwb_config_;
+    cwb_config_ = NULL;
+  }
+  return error;
+}
+
 DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
   std::vector<Layer *> &layers = layer_stack->layers;
   HWLayersInfo &hw_layers_info = hw_layers_.info;
@@ -1393,6 +1473,77 @@ DisplayError DisplayBase::ApplyDefaultDisplayMode() {
   return kErrorNone;
 }
 
+bool DisplayBase::IsValidCwbRoi(const LayerRect &roi, const LayerRect &full_frame) {
+  bool is_valid = true;
+  if (!IsValid(roi) || roi.left < 0 || roi.top < 0 || roi.right < 0 || roi.bottom < 0) {
+    is_valid = false;
+  } else if (roi.top < full_frame.top || roi.top >= full_frame.bottom ||
+             roi.bottom <= full_frame.top || roi.bottom > full_frame.bottom) {
+    is_valid = false;
+  } else if (roi.left < full_frame.left || roi.left >= full_frame.right ||
+             roi.right <= full_frame.left || roi.right > full_frame.right) {
+    is_valid = false;
+  }
+  return is_valid;
+}
+
+DisplayError DisplayBase::ValidateCwbConfigInfo(CwbConfig *cwb_config,
+                                                const LayerBufferFormat &format) {
+  CwbTapPoint &tap_point = cwb_config->tap_point;
+  if (tap_point < CwbTapPoint::kLmTapPoint || tap_point > CwbTapPoint::kDsppTapPoint) {
+    DLOGE("Invalid CWB tappoint. %d ", tap_point);
+    return kErrorParameters;
+  }
+
+  LayerRect &roi = cwb_config->cwb_roi;
+  LayerRect &full_frame = cwb_config->cwb_full_rect;
+  uint32_t cwb_roi_supported = 0;  // Check whether CWB ROI is supported.
+  IsSupportedOnDisplay(kCwbCrop, &cwb_roi_supported);
+  if (!cwb_roi_supported) {
+    roi = full_frame;
+    return kErrorNone;  // below checks are not needed if CWB ROI isn't supported.
+  }
+
+  if (!IsRgbFormat(format)) {  // CWB ROI is supported only on RGB color formats. Thus, in-case of
+    // other color formats, fallback to Full frame ROI.
+    DLOGW("CWB ROI is not suopported on color format : %s , thus falling back to Full frame ROI.",
+          GetFormatString(format));
+    roi = full_frame;
+  }
+
+  bool &pu_as_cwb_roi = cwb_config->pu_as_cwb_roi;
+  bool is_valid_cwb_roi = IsValidCwbRoi(roi, full_frame);
+  if (is_valid_cwb_roi && !pu_as_cwb_roi) {
+    // If client passed valid ROI and PU ROI not to be included in CWB ROI, then
+    // make Client ROI's (width * height) as 256B aligned.
+    int cwb_alignment_factor = GetCwbAlignmentFactor(format);
+    if (!cwb_alignment_factor) {
+      DLOGE("Output buffer has invalid color format.");
+      return kErrorParameters;
+    }
+    ApplyCwbRoiRestrictions(roi, full_frame, cwb_alignment_factor);
+  }
+
+  // For cmd mode : Incase CWB Client sets cwb_config.pu_as_cwb_roi as true, then PU ROI would be
+  // included in CWB ROI. Incase client passes invalid ROI, only PU ROI generated from dirty rects
+  // of app layers would be taken as CWB ROI. Incase client passes valid ROI, then union of PU ROI
+  // and client's ROI would be taken as CWB ROI.
+  // For video mode : PU ROI would be full frame rect. If either pu_as_cwb_roi is true or client
+  // passes invalid ROI, then CWB ROI would also be set as full frame. Incase pu_as_cwb_roi is
+  // False and client passes a valid ROI, then the client's ROI would be set as CWB ROI.
+  if (pu_as_cwb_roi) {
+    DLOGI_IF(kTagDisplay, "PU ROI would be included in CWB ROI.");
+  } else if (!is_valid_cwb_roi) {
+    DLOGI_IF(kTagDisplay, "Client provided invalid ROI. Going for Full frame CWB.");
+    roi = full_frame;
+  }
+
+  DLOGI_IF(kTagDisplay, "Cwb_config: tap_point %d, CWB ROI Rect(%f %f %f %f), PU_as_CWB_ROI %d",
+           tap_point, roi.left, roi.top, roi.right, roi.bottom, pu_as_cwb_roi);
+
+  return kErrorNone;
+}
+
 DisplayError DisplayBase::SetCursorPosition(int x, int y) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   if (state_ != kStateOn) {
@@ -2375,11 +2526,17 @@ DisplayError DisplayBase::IsSupportedOnDisplay(const SupportedDisplayFeature fea
   switch (feature) {
     case kSupportedModeSwitch: {
       lock_guard<recursive_mutex> obj(recursive_mutex_);
-      error = hw_intf_->GetSupportedModeSwitch(supported);
+      error = hw_intf_->GetFeatureSupportStatus(kAllowedModeSwitch, supported);
       break;
     }
     case kDestinationScalar:
       *supported = custom_mixer_resolution_;
+      break;
+    case kCwbCrop:
+      error = hw_intf_->GetFeatureSupportStatus(kHasCwbCrop, supported);
+      break;
+    case kDedicatedCwb:
+      error = hw_intf_->GetFeatureSupportStatus(kHasDedicatedCwb, supported);
       break;
     default:
       DLOGW("Feature:%d is not present for display %d:%d", feature, display_id_, display_type_);

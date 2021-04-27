@@ -527,6 +527,27 @@ int HWCSession::DisplayConfigImpl::SetCameraLaunchStatus(uint32_t on) {
   return hwc_session_->SetCameraLaunchStatus(on);
 }
 
+int HWCSession::DisplayConfigImpl::SetCameraSmoothInfo(CameraSmoothOp op, uint32_t fps) {
+  std::shared_ptr<DisplayConfig::ConfigCallback> callback = hwc_session_->camera_callback_.lock();
+  if (!callback) {
+    return -EAGAIN;
+  }
+
+  callback->NotifyCameraSmoothInfo(op, fps);
+
+  return 0;
+}
+
+int HWCSession::DisplayConfigImpl::ControlCameraSmoothCallback(bool enable) {
+  if (enable) {
+    hwc_session_->camera_callback_ = callback_;
+  } else {
+    hwc_session_->camera_callback_.reset();
+  }
+
+  return 0;
+}
+
 int HWCSession::DisplayBWTransactionPending(bool *status) {
   SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
 
@@ -953,11 +974,6 @@ int HWCSession::DisplayConfigImpl::SetCWBOutputBuffer(uint32_t disp_id,
     return -1;
   }
 
-  if (rect.left || rect.top || rect.right || rect.bottom) {
-    DLOGE("Cropping rectangle is not supported.");
-    return -1;
-  }
-
   // Output buffer dump is not supported, if External or Virtual display is present.
   int external_dpy_index = hwc_session_->GetDisplayIndex(qdutils::DISPLAY_EXTERNAL);
   int virtual_dpy_index = hwc_session_->GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
@@ -978,12 +994,22 @@ int HWCSession::DisplayConfigImpl::SetCWBOutputBuffer(uint32_t disp_id,
     }
   }
 
-  return hwc_session_->cwb_.PostBuffer(callback_, post_processed,
-                                       native_handle_clone(buffer));
+  CwbConfig cwb_config = {};
+  cwb_config.tap_point = static_cast<CwbTapPoint>(post_processed);
+  LayerRect &roi = cwb_config.cwb_roi;
+  roi.left = FLOAT(rect.left);
+  roi.top = FLOAT(rect.top);
+  roi.right = FLOAT(rect.right);
+  roi.bottom = FLOAT(rect.bottom);
+
+  DLOGI("CWB config passed by cwb_client : tappoint %d  CWB_ROI : (%f %f %f %f)",
+        cwb_config.tap_point, roi.left, roi.top, roi.right, roi.bottom);
+
+  return hwc_session_->cwb_.PostBuffer(callback_, cwb_config, native_handle_clone(buffer));
 }
 
 int32_t HWCSession::CWB::PostBuffer(std::weak_ptr<DisplayConfig::ConfigCallback> callback,
-                                    bool post_processed, const native_handle_t *buffer) {
+                                    const CwbConfig &cwb_config, const native_handle_t *buffer) {
   SCOPE_LOCK(queue_lock_);
 
   // Ensure that async task runs only until all queued CWB requests have been fulfilled.
@@ -992,7 +1018,7 @@ int32_t HWCSession::CWB::PostBuffer(std::weak_ptr<DisplayConfig::ConfigCallback>
   // currently running async task will automatically desolve without processing more requests.
   bool post_future = !queue_.size();
 
-  QueueNode *node = new QueueNode(callback, post_processed, buffer);
+  QueueNode *node = new QueueNode(callback, cwb_config, buffer);
   queue_.push(node);
 
   if (post_future) {
@@ -1035,8 +1061,10 @@ void HWCSession::CWB::ProcessRequests() {
     // Wait for previous commit to finish before configuring next buffer.
     {
       SEQUENCE_WAIT_SCOPE_LOCK(locker);
-      if (hwc_display->SetReadbackBuffer(node->buffer, nullptr, node->post_processed,
-                                         kCWBClientExternal) != HWC2::Error::None) {
+
+      HWC2::Error error = hwc_display->SetReadbackBuffer(node->buffer, nullptr, node->cwb_config,
+                                                         kCWBClientExternal);
+      if (error != HWC2::Error::None) {
         DLOGE("CWB buffer could not be set.");
         status = -1;
       } else {

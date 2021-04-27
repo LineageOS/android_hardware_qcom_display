@@ -263,9 +263,14 @@ HWC2::Error HWCDisplayBuiltIn::Validate(uint32_t *out_num_types, uint32_t *out_n
     // here in a subsequent draw round. Readback is not allowed for any secure use case.
     readback_configured_ = !layer_stack_.flags.secure_present;
     if (readback_configured_) {
-      DisablePartialUpdateOneFrame();
+      uint32_t cwb_with_pu_supported = 0;
+      display_intf_->IsSupportedOnDisplay(kCwbCrop, &cwb_with_pu_supported);
+      if (!cwb_with_pu_supported) {  // If CWB ROI isn't supported, then go for full frame update.
+        DisablePartialUpdateOneFrame();
+      }
       layer_stack_.output_buffer = &output_buffer_;
-      layer_stack_.flags.post_processed_output = post_processed_output_;
+      layer_stack_.cwb_config = &cwb_config_;  // set the CWB config as specified by the CWB client.
+      layer_stack_.flags.post_processed_output = static_cast<bool>(cwb_config_.tap_point);
     }
   }
 
@@ -637,7 +642,7 @@ HWC2::Error HWCDisplayBuiltIn::SetColorTransform(const float *matrix,
 
 HWC2::Error HWCDisplayBuiltIn::SetReadbackBuffer(const native_handle_t *buffer,
                                                  shared_ptr<Fence> acquire_fence,
-                                                 bool post_processed_output, CWBClient client) {
+                                                 CwbConfig cwb_config, CWBClient client) {
   if (cwb_client_ != client && cwb_client_ != kCWBClientNone) {
     DLOGE("CWB is in use with client = %d", cwb_client_);
     return HWC2::Error::NoResources;
@@ -659,6 +664,12 @@ HWC2::Error HWCDisplayBuiltIn::SetReadbackBuffer(const native_handle_t *buffer,
     return HWC2::Error::BadParameter;
   }
 
+  if ((client == kCWBClientExternal) && ((handle->flags &
+      private_handle_t::PRIV_FLAGS_UBWC_ALIGNED) || gralloc::IsUBwcFormat(handle->format))) {
+    DLOGE("UBWC formats not supported for CWB");
+    return HWC2::Error::Unsupported;
+  }
+
   // Configure the output buffer as Readback buffer
   output_buffer_.width = UINT32(handle->width);
   output_buffer_.height = UINT32(handle->height);
@@ -670,16 +681,37 @@ HWC2::Error HWCDisplayBuiltIn::SetReadbackBuffer(const native_handle_t *buffer,
   output_buffer_.acquire_fence = acquire_fence;
   output_buffer_.handle_id = handle->id;
 
-  post_processed_output_ = post_processed_output;
   readback_buffer_queued_ = true;
   readback_configured_ = false;
   validated_ = false;
   cwb_client_ = client;
+  cwb_config_ = cwb_config;
+  LayerRect &roi = cwb_config_.cwb_roi;
+  LayerRect &full_rect = cwb_config_.cwb_full_rect;
+  CwbTapPoint &tap_point = cwb_config_.tap_point;
 
-  DLOGV_IF(kTagQDCM, "Successfully configured the buffer: post_processed_output_ %d, " \
-        "readback_buffer_queued_ %d, readback_configured_ %d, validated_ %d, " \
-        "cwb_client_ %d", post_processed_output_, readback_buffer_queued_,
-        readback_configured_, validated_, cwb_client_);
+  DisplayError error = kErrorNone;
+  uint32_t buffer_width = 0, buffer_height = 0;
+  error = display_intf_->GetCwbBufferResolution(tap_point, &buffer_width, &buffer_height);
+  if (error) {
+    DLOGE("Configuring CWB Full rect failed.");
+    if (error == kErrorParameters) {
+      return HWC2::Error::BadParameter;
+    } else {
+      return HWC2::Error::Unsupported;
+    }
+  } else {
+    full_rect = LayerRect(0.0f, 0.0f, FLOAT(buffer_width), FLOAT(buffer_height));
+  }
+
+  DLOGV_IF(kTagClient, "CWB config from client: tap_point %d, CWB ROI Rect(%f %f %f %f), "
+           "PU_as_CWB_ROI %d, Cwb full rect : (%f %f %f %f)", tap_point,
+           roi.left, roi.top, roi.right, roi.bottom, cwb_config_.pu_as_cwb_roi,
+           full_rect.left, full_rect.top, full_rect.right, full_rect.bottom);
+
+  DLOGV_IF(kTagClient, "Successfully configured the output buffer: readback_buffer_queued_ %d, "
+           "readback_configured_ %d, cwb_client_ %d", readback_buffer_queued_,
+           readback_configured_, cwb_client_);
 
   return HWC2::Error::None;
 }
@@ -689,21 +721,24 @@ HWC2::Error HWCDisplayBuiltIn::GetReadbackBufferFence(shared_ptr<Fence> *release
 
   if (readback_configured_ && output_buffer_.release_fence) {
     *release_fence = output_buffer_.release_fence;
+    DLOGI("Successfully retrieved readback buffer fence for cwb clinet %d on tappoint %d",
+          cwb_client_, cwb_config_.tap_point);
   } else {
-    DLOGE("Failed to retrieve readback buffer fence: readback_configured_ %d, " \
-          "output_buffer_.release_fence ", readback_configured_);
+    DLOGE("Failed to retrieve readback buffer fence: readback_configured_ %d, "
+          "output_buffer_.release_fence for client %d on tappoint %d ",
+          readback_configured_, cwb_client_, cwb_config_.tap_point);
     status = HWC2::Error::Unsupported;
   }
 
-  post_processed_output_ = false;
+  cwb_config_ = {};
   readback_buffer_queued_ = false;
   readback_configured_ = false;
   output_buffer_ = {};
   cwb_client_ = kCWBClientNone;
 
-  DLOGV_IF(kTagQDCM, "Successfully retrieved the buffer: post_processed_output_ %d, " \
-        "readback_buffer_queued_ %d, readback_configured_ %d", post_processed_output_,
-        readback_buffer_queued_, readback_configured_);
+  DLOGV_IF(kTagQDCM, "Successfully retrieved the buffer: cwb_tap_point %d, "
+           "readback_buffer_queued_ %d, readback_configured_ %d",
+           cwb_config_.tap_point, readback_buffer_queued_, readback_configured_);
 
   return status;
 }
@@ -733,7 +768,7 @@ DisplayError HWCDisplayBuiltIn::TeardownConcurrentWriteback(bool *needs_refresh)
     frame_capture_status_ = 0;
   }
   readback_buffer_queued_ = false;
-  post_processed_output_ = false;
+  cwb_config_ = {};
   readback_configured_ = false;
   output_buffer_ = {};
   cwb_client_ = kCWBClientNone;
@@ -999,17 +1034,20 @@ void HWCDisplayBuiltIn::HandleFrameCapture() {
     frame_capture_status_ = Fence::Wait(output_buffer_.release_fence);
   }
 
+  DLOGV_IF(kTagQDCM, "Frame captured successfully for cwb_client %d on cwb_tap_point %d",
+           cwb_client_, cwb_config_.tap_point);
+
   frame_capture_buffer_queued_ = false;
   readback_buffer_queued_ = false;
-  post_processed_output_ = false;
+  cwb_config_ = {};
   readback_configured_ = false;
   output_buffer_ = {};
   cwb_client_ = kCWBClientNone;
 
-  DLOGV_IF(kTagQDCM, "Frame captured: frame_capture_buffer_queued_ %d " \
-        "readback_buffer_queued_ %d post_processed_output_ %d readback_configured_ %d " \
-        "cwb_client_ %d", frame_capture_buffer_queued_, readback_buffer_queued_,
-        post_processed_output_, readback_configured_, cwb_client_);
+  DLOGV_IF(kTagQDCM, "Frame captured: frame_capture_buffer_queued_ %d "
+           "readback_buffer_queued_ %d cwb_tap_point %d readback_configured_ %d "
+           "cwb_client_ %d", frame_capture_buffer_queued_, readback_buffer_queued_,
+           cwb_config_.tap_point, readback_configured_, cwb_client_);
 }
 
 void HWCDisplayBuiltIn::HandleFrameDump() {
@@ -1036,7 +1074,7 @@ void HWCDisplayBuiltIn::HandleFrameDump() {
       }
 
       readback_buffer_queued_ = false;
-      post_processed_output_ = false;
+      cwb_config_ = {};
       readback_configured_ = false;
 
       output_buffer_ = {};
@@ -1048,7 +1086,7 @@ void HWCDisplayBuiltIn::HandleFrameDump() {
 }
 
 HWC2::Error HWCDisplayBuiltIn::SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
-                                                  int32_t format, bool post_processed) {
+                                                  int32_t format, const CwbConfig &cwb_config) {
   bool dump_output_to_file = bit_mask_layer_type & (1 << OUTPUT_LAYER_DUMP);
   DLOGI("output_layer_dump_enable %d", dump_output_to_file_);
 
@@ -1059,25 +1097,30 @@ HWC2::Error HWCDisplayBuiltIn::SetFrameDumpConfig(uint32_t count, uint32_t bit_m
     }
   }
 
-  if (!count || !dump_output_to_file || (output_buffer_info_.alloc_buffer_info.fd >= 0)) {
+  if (!count || (dump_output_to_file && (output_buffer_info_.alloc_buffer_info.fd >= 0))) {
+    DLOGW("FrameDump Not enabled Framecount = %d dump_output_to_file = %d o/p fd = %d", count,
+          dump_output_to_file, output_buffer_info_.alloc_buffer_info.fd);
     return HWC2::Error::None;
   }
 
-  HWCDisplay::SetFrameDumpConfig(count, bit_mask_layer_type, format, post_processed);
+  HWCDisplay::SetFrameDumpConfig(count, bit_mask_layer_type, format, cwb_config);
+
+  if (!dump_output_to_file) {
+    // output(cwb) not requested, return
+    return HWC2::Error::None;
+  }
 
   // Allocate and map output buffer
-  if (post_processed) {
-    // To dump post-processed (DSPP) output, use Panel resolution.
-    GetRealPanelResolution(&output_buffer_info_.buffer_config.width,
-                           &output_buffer_info_.buffer_config.height);
-  } else {
-    ConfigureCwbAtLm(&output_buffer_info_.buffer_config.width,
-                     &output_buffer_info_.buffer_config.height);
+  const CwbTapPoint &tap_point = cwb_config.tap_point;
+  if (GetCwbBufferResolution(tap_point, &output_buffer_info_.buffer_config.width,
+                             &output_buffer_info_.buffer_config.height)) {
+    DLOGW("Buffer Resolution setting failed.");
+    return HWC2::Error::BadConfig;
   }
 
   DLOGV_IF(kTagQDCM, "CWB output buffer resolution: width:%d height:%d tap point:%s",
            output_buffer_info_.buffer_config.width, output_buffer_info_.buffer_config.height,
-           post_processed ? "DSPP" : "LM");
+           UINT32(tap_point) ? "DSPP" : "LM");
 
   output_buffer_info_.buffer_config.format = HWCLayer::GetSDMFormat(format, 0);
   output_buffer_info_.buffer_config.buffer_count = 1;
@@ -1099,7 +1142,7 @@ HWC2::Error HWCDisplayBuiltIn::SetFrameDumpConfig(uint32_t count, uint32_t bit_m
 
   output_buffer_base_ = buffer;
   const native_handle_t *handle = static_cast<native_handle_t *>(output_buffer_info_.private_data);
-  HWC2::Error err = SetReadbackBuffer(handle, nullptr, post_processed, kCWBClientFrameDump);
+  HWC2::Error err = SetReadbackBuffer(handle, nullptr, cwb_config, kCWBClientFrameDump);
   if (err != HWC2::Error::None) {
     return err;
   }
@@ -1108,8 +1151,48 @@ HWC2::Error HWCDisplayBuiltIn::SetFrameDumpConfig(uint32_t count, uint32_t bit_m
   return HWC2::Error::None;
 }
 
+int HWCDisplayBuiltIn::ValidateFrameCaptureConfig(const BufferInfo &output_buffer_info,
+                                                  const CwbTapPoint &cwb_tappoint) {
+  if (cwb_tappoint < CwbTapPoint::kLmTapPoint || cwb_tappoint > CwbTapPoint::kDsppTapPoint) {
+    DLOGE("Invalid CWB tappoint passed by client ");
+    return -1;
+  } else if (cwb_tappoint == CwbTapPoint::kDsppTapPoint) {
+    auto panel_width = 0u;
+    auto panel_height = 0u;
+    GetPanelResolution(&panel_width, &panel_height);
+    if (output_buffer_info.buffer_config.width < panel_width ||
+        output_buffer_info.buffer_config.height < panel_height) {
+      DLOGE("Buffer dimensions should not be less than panel resolution");
+      return -1;
+    }
+  } else if (cwb_tappoint == CwbTapPoint::kLmTapPoint) {
+    uint32_t dest_scalar_enabled = 0;
+    display_intf_->IsSupportedOnDisplay(kDestinationScalar, &dest_scalar_enabled);
+    if (dest_scalar_enabled) {
+      auto mixer_width = 0u;
+      auto mixer_height = 0u;
+      GetMixerResolution(&mixer_width, &mixer_height);
+      if (output_buffer_info.buffer_config.width < mixer_width ||
+          output_buffer_info.buffer_config.height < mixer_height) {
+        DLOGE("Buffer dimensions should not be less than LM resolution");
+        return -1;
+      }
+    } else {
+      auto fb_width = 0u;
+      auto fb_height = 0u;
+      GetFrameBufferResolution(&fb_width, &fb_height);
+      if (output_buffer_info.buffer_config.width < fb_width ||
+          output_buffer_info.buffer_config.height < fb_height) {
+        DLOGE("Buffer dimensions should not be less than FB resolution");
+        return -1;
+      }
+    }
+  }
+  return 0;
+}
+
 int HWCDisplayBuiltIn::FrameCaptureAsync(const BufferInfo &output_buffer_info,
-                                         bool post_processed_output) {
+                                         const CwbConfig &cwb_config) {
   if (cwb_client_ != kCWBClientNone) {
     DLOGE("CWB is in use with client = %d", cwb_client_);
     return -1;
@@ -1121,26 +1204,13 @@ int HWCDisplayBuiltIn::FrameCaptureAsync(const BufferInfo &output_buffer_info,
     return -1;
   }
 
-  auto panel_width = 0u;
-  auto panel_height = 0u;
-  auto fb_width = 0u;
-  auto fb_height = 0u;
-
-  GetPanelResolution(&panel_width, &panel_height);
-  GetFrameBufferResolution(&fb_width, &fb_height);
-
-  if (post_processed_output && (output_buffer_info.buffer_config.width < panel_width ||
-                                output_buffer_info.buffer_config.height < panel_height)) {
-    DLOGE("Buffer dimensions should not be less than panel resolution");
-    return -1;
-  } else if (!post_processed_output && (output_buffer_info.buffer_config.width < fb_width ||
-                                        output_buffer_info.buffer_config.height < fb_height)) {
-    DLOGE("Buffer dimensions should not be less than FB resolution");
+  int error = ValidateFrameCaptureConfig(output_buffer_info, cwb_config.tap_point);
+  if (error) {
     return -1;
   }
 
   const native_handle_t *buffer = static_cast<native_handle_t *>(output_buffer_info.private_data);
-  SetReadbackBuffer(buffer, nullptr, post_processed_output, kCWBClientColor);
+  SetReadbackBuffer(buffer, nullptr, cwb_config, kCWBClientColor);
   frame_capture_buffer_queued_ = true;
   frame_capture_status_ = -EAGAIN;
 
@@ -1665,17 +1735,6 @@ bool HWCDisplayBuiltIn::IsDisplayIdle() {
   // Notify only if this display is source of vsync.
   bool vsync_source = (callbacks_->GetVsyncSource() == id_);
   return vsync_source && display_idle_;
-}
-
-void HWCDisplayBuiltIn::ConfigureCwbAtLm(uint32_t *x_pixels, uint32_t *y_pixels) {
-  uint32_t dest_scalar_enabled = 0;
-  display_intf_->IsSupportedOnDisplay(kDestinationScalar, &dest_scalar_enabled);
-
-  if (dest_scalar_enabled) {
-    display_intf_->GetMixerResolution(x_pixels, y_pixels);
-  } else {
-    GetFrameBufferResolution(x_pixels, y_pixels);
-  }
 }
 
 bool HWCDisplayBuiltIn::HasReadBackBufferSupport() {

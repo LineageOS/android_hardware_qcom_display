@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -287,6 +287,8 @@ struct DisplayDetailEnhancerData {
 enum SupportedDisplayFeature {
   kSupportedModeSwitch,
   kDestinationScalar,
+  kCwbCrop,
+  kDedicatedCwb,
 };
 
 /*! @brief Display device event handler implemented by the client.
@@ -551,6 +553,16 @@ class DisplayInterface {
     @return \link DisplayError \endlink
   */
   virtual DisplayError DisablePartialUpdateOneFrame() = 0;
+
+  /*! @brief Method to get unaligned dimensions of output buffer.
+
+    @param[in] CWB tap-point set by client.
+    @param[out] unaligned width and height of output buffer.
+
+    @return \link void \endlink
+  */
+  virtual DisplayError GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint32_t *x_pixels,
+                                              uint32_t *y_pixels) = 0;
 
   /*! @brief Method to set the mode of the primary display.
 
