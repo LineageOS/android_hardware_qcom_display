@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2017 The Android Open Source Project
@@ -1305,9 +1305,16 @@ Error QtiComposerClient::CommandReader::parse() {
       case IQtiComposerClient::Command::SET_DISPLAY_ELAPSE_TIME:
         parsed = parseSetDisplayElapseTime(length);
         break;
-      default:
-        parsed = parseCommonCmd(static_cast<IComposerClient::Command>(qticommand), length);
+      default: {
+        if (static_cast<uint32_t>(qticommand) == 0x8030000) {
+          // ToDo: temp fix, to be reverted when ks:515174 change merges.
+          read();
+          parsed = true;
+        } else {
+          parsed = parseCommonCmd(static_cast<IComposerClient::Command>(qticommand), length);
+        }
         break;
+      }
     }
 
     endCommand();
