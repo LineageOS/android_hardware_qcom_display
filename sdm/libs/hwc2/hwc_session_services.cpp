@@ -580,10 +580,16 @@ int HWCSession::DisplayConfigImpl::GetDebugProperty(const std::string prop_name,
 }
 
 int HWCSession::DisplayConfigImpl::IsBuiltInDisplay(uint32_t disp_id, bool *is_builtin) {
+#ifdef EXCLUDES_MULTI_DISPLAY
+  if (HWC_DISPLAY_PRIMARY == disp_id) {
+    *is_builtin = true;
+  }
+#else
   if ((HWC_DISPLAY_PRIMARY == disp_id) || (HWC_DISPLAY_BUILTIN_2 == disp_id) ||
       (HWC_DISPLAY_BUILTIN_3 == disp_id) || (HWC_DISPLAY_BUILTIN_4 == disp_id)) {
    *is_builtin = true;
   }
+#endif
   else {
    *is_builtin = false;
   }
