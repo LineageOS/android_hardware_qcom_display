@@ -199,7 +199,13 @@ DisplayError DisplayBuiltIn::PrePrepare(LayerStack *layer_stack) {
   uint32_t display_width = display_attributes_.x_pixels;
   uint32_t display_height = display_attributes_.y_pixels;
 
-  DisplayError error = DisplayBase::PrePrepare(layer_stack);
+  // TODO(user): Separate special layer handling
+  DisplayError error = BuildLayerStackStats(layer_stack);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  error = DisplayBase::PrePrepare(layer_stack);
   if (error == kErrorNone) {
     return kErrorNone;
   }
