@@ -167,7 +167,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual int Deinit();
 
   // Framebuffer configurations
-  virtual void SetIdleTimeoutMs(uint32_t timeout_ms);
+  virtual void SetIdleTimeoutMs(uint32_t timeout_ms, uint32_t inactive_ms);
   virtual HWC2::Error SetFrameDumpConfig(uint32_t count, uint32_t bit_mask_layer_type,
                                          int32_t format, bool post_processed);
   virtual DisplayError SetMaxMixerStages(uint32_t max_mixer_stages);

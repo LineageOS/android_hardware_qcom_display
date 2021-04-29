@@ -441,7 +441,7 @@ void DisplayBuiltIn::UpdateDisplayModeParams() {
     ControlPartialUpdate(false /* enable */, &pending);
   } else if (hw_panel_info_.mode == kModeCommand) {
     // Flush idle timeout value currently set.
-    comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, 0);
+    comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, 0, 0);
     switch_to_cmd_ = true;
   }
 }
@@ -477,9 +477,9 @@ DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
   return kErrorNone;
 }
 
-void DisplayBuiltIn::SetIdleTimeoutMs(uint32_t active_ms) {
+void DisplayBuiltIn::SetIdleTimeoutMs(uint32_t active_ms, uint32_t inactive_ms) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-  comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, active_ms);
+  comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, active_ms, inactive_ms);
 }
 
 DisplayError DisplayBuiltIn::SetDisplayMode(uint32_t mode) {
@@ -520,7 +520,7 @@ DisplayError DisplayBuiltIn::SetDisplayMode(uint32_t mode) {
       ControlPartialUpdate(false /* enable */, &pending);
     } else if (mode == kModeCommand) {
       // Flush idle timeout value currently set.
-      comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, 0);
+      comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, 0, 0);
       switch_to_cmd_ = true;
     }
   }

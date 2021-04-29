@@ -1767,7 +1767,7 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence
   return status;
 }
 
-void HWCDisplay::SetIdleTimeoutMs(uint32_t timeout_ms) {
+void HWCDisplay::SetIdleTimeoutMs(uint32_t timeout_ms, uint32_t inactive_ms) {
   return;
 }
 
