@@ -31,6 +31,7 @@
 #define __GR_DMA_MGR_H__
 
 #include <BufferAllocator/BufferAllocator.h>
+#include <vmmem.h>
 #include <string>
 #include <vector>
 
