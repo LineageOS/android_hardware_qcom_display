@@ -144,6 +144,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   std::string Dump() override;
   DisplayError GetConfig(DisplayConfigFixedInfo *fixed_info) override;
   DisplayError PrePrepare(LayerStack *layer_stack) override;
+  void FlushConcurrentWriteback() override;
 
   // Implement the HWEventHandlers
   DisplayError VSync(int64_t timestamp) override;

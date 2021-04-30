@@ -84,6 +84,7 @@ class HWPeripheralDRM : public HWDeviceDRM, public PanelFeaturePropertyIntf {
   virtual void GetHWPanelMaxBrightness();
   virtual DisplayError SetBLScale(uint32_t level);
   virtual DisplayError EnableSelfRefresh();
+  virtual void FlushConcurrentWriteback();
 
  private:
   void InitDestScaler();
