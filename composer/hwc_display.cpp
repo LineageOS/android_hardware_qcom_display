@@ -807,12 +807,6 @@ void HWCDisplay::BuildLayerStack() {
 
     layer_stack_.flags.mask_present |= layer->input_buffer.flags.mask_layer;
 
-    if ((hwc_layer->GetDeviceSelectedCompositionType() != HWC2::Composition::Device) ||
-        (hwc_layer->GetClientRequestedCompositionType() != HWC2::Composition::Device) ||
-        layer->flags.skip) {
-      layer->update_mask.set(kClientCompRequest);
-    }
-
     if (game_supported_ && (hwc_layer->GetType() == kLayerGame)) {
       layer->flags.is_game = true;
       layer->input_buffer.flags.game = true;

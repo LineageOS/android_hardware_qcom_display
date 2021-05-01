@@ -366,7 +366,8 @@ HWC2::Error HWCLayer::SetLayerColor(hwc_color_t color) {
 
 HWC2::Error HWCLayer::SetLayerCompositionType(HWC2::Composition type) {
   // Validation is required when the client changes the composition type
-  if (client_requested_ != type) {
+  if ((type != client_requested_) || (type != device_selected_) ||
+      (type == HWC2::Composition::Client)) {
     layer_->update_mask.set(kClientCompRequest);
   }
   client_requested_ = type;

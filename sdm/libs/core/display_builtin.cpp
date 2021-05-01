@@ -1729,7 +1729,7 @@ bool DisplayBuiltIn::CanCompareFrameROI(LayerStack *layer_stack) {
     stack_fudge_factor++;
 
   if (!hw_panel_info_.partial_update || (hw_panel_info_.left_roi_count != 1) ||
-      layer_stack->flags.geometry_changed ||
+      layer_stack->flags.geometry_changed || layer_stack->flags.skip_present ||
       (layer_stack->layers.size() !=
        (disp_layer_stack_.info.app_layer_count + stack_fudge_factor))) {
     return false;
