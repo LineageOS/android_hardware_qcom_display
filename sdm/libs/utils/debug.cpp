@@ -70,6 +70,13 @@ bool Debug::IsRotatorDownScaleDisabled() {
   return (value == 1);
 }
 
+bool Debug::IsRotatorEnabledForUi() {
+  int value = 0;
+  DebugHandler::Get()->GetProperty(ENABLE_ROTATOR_UI_PROP, &value);
+
+  return (value == 1);
+}
+
 bool Debug::IsDecimationDisabled() {
   int value = 0;
   DebugHandler::Get()->GetProperty(DISABLE_DECIMATION_PROP, &value);
