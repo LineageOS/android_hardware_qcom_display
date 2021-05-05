@@ -203,8 +203,7 @@ DisplayError DisplayBuiltIn::PrePrepare(LayerStack *layer_stack) {
   uint32_t display_width = display_attributes_.x_pixels;
   uint32_t display_height = display_attributes_.y_pixels;
 
-  // TODO(user): Separate special layer handling
-  DisplayError error = BuildLayerStackStats(layer_stack);
+  DisplayError error = HandleDemuraLayer(layer_stack);
   if (error != kErrorNone) {
     return error;
   }
@@ -1767,11 +1766,6 @@ bool DisplayBuiltIn::CanSkipDisplayPrepare(LayerStack *layer_stack) {
     return false;
   }
 
-  DisplayError error = BuildLayerStackStats(layer_stack);
-  if (error != kErrorNone) {
-    return false;
-  }
-
   disp_layer_stack_.info.left_frame_roi.clear();
   disp_layer_stack_.info.right_frame_roi.clear();
   disp_layer_stack_.info.dest_scale_info_map.clear();
@@ -1815,6 +1809,32 @@ bool DisplayBuiltIn::CanSkipDisplayPrepare(LayerStack *layer_stack) {
   return same_roi;
 }
 
+DisplayError DisplayBuiltIn::HandleDemuraLayer(LayerStack *layer_stack) {
+  if (!layer_stack) {
+    DLOGE("layer_stack is null");
+    return kErrorParameters;
+  }
+  std::vector<Layer *> &layers = layer_stack->layers;
+  HWLayersInfo &hw_layers_info = disp_layer_stack_.info;
+
+  if (comp_manager_->GetDemuraStatus() &&
+      comp_manager_->GetDemuraStatusForDisplay(display_id_) &&
+      demura_layer_.input_buffer.planes[0].fd > 0) {
+    if (hw_layers_info.demura_target_index == -1) {
+      // If demura layer added for first time, do not skip validate
+      needs_validate_ = true;
+    }
+    layers.push_back(&demura_layer_);
+    DLOGI_IF(kTagDisplay, "Demura layer added to layer stack");
+  } else if (hw_layers_info.demura_target_index != -1) {
+    // Demura was present last frame but is now disabled
+    needs_validate_ = true;
+    hw_layers_info.demura_present = false;
+    DLOGD_IF(kTagDisplay, "Demura layer to be removed in this frame");
+  }
+  return kErrorNone;
+}
+
 DisplayError DisplayBuiltIn::BuildLayerStackStats(LayerStack *layer_stack) {
   std::vector<Layer *> &layers = layer_stack->layers;
   HWLayersInfo &hw_layers_info = disp_layer_stack_.info;
@@ -1854,30 +1874,6 @@ DisplayError DisplayBuiltIn::BuildLayerStackStats(LayerStack *layer_stack) {
       hw_layers_info.game_present = true;
     }
     index++;
-  }
-  if (comp_manager_->GetDemuraStatus() &&
-      comp_manager_->GetDemuraStatusForDisplay(display_id_) &&
-      demura_layer_.input_buffer.planes[0].fd > 0 &&
-      hw_layers_info.demura_target_index == -1) {
-    layers.push_back(&demura_layer_);
-    hw_layers_info.demura_target_index = index;
-    hw_layers_info.demura_present = true;
-    disp_layer_stack_.stack->flags.demura_present = true;
-    DLOGD_IF(kTagDisplay, "Display %d shall request Demura in this frame", display_id_);
-  } else if ((!comp_manager_->GetDemuraStatus() ||
-              !comp_manager_->GetDemuraStatusForDisplay(display_id_)) &&
-             hw_layers_info.demura_target_index != -1 ) {
-    layers.erase(layers.begin() + hw_layers_info.demura_target_index);
-    hw_layers_info.demura_present = false;
-    disp_layer_stack_.stack->flags.demura_present = false;
-    if (hw_layers_info.gpu_target_index > hw_layers_info.demura_target_index) {
-      hw_layers_info.gpu_target_index--;
-    }
-    if (hw_layers_info.stitch_target_index > hw_layers_info.demura_target_index) {
-      hw_layers_info.stitch_target_index--;
-    }
-    hw_layers_info.demura_target_index = -1;
-    DLOGD_IF(kTagDisplay, "Display %d shall remove Demura in this frame", display_id_);
   }
 
   DLOGI_IF(kTagDisplay, "LayerStack layer_count: %zu, app_layer_count: %d, "

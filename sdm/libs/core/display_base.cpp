@@ -499,7 +499,12 @@ bool DisplayBase::CheckValidateNeeded() {
 DisplayError DisplayBase::PrePrepare(LayerStack *layer_stack) {
   DTRACE_SCOPED();
   ClientLock lock(disp_mutex_);
-  disp_layer_stack_.stack = layer_stack;
+  DisplayError error = BuildLayerStackStats(layer_stack);
+  if (error != kErrorNone) {
+    DLOGE("BuildLayerStackStats failed %d", error);
+    return error;
+  }
+
   layer_stack->needs_validate = !validated_ || needs_validate_ || CheckValidateNeeded();
   return comp_manager_->PrePrepare(display_comp_ctx_, &disp_layer_stack_);
 }

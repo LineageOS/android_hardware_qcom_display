@@ -198,6 +198,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   void PreCommit(LayerStack *layer_stack);
   DisplayError ControlPartialUpdateLocked(bool enable, uint32_t *pending);
   DisplayError SetDppsFeatureLocked(void *payload, size_t size);
+  DisplayError HandleDemuraLayer(LayerStack *layer_stack);
 
   const uint32_t kPuTimeOutMs = 1000;
   std::vector<HWEvent> event_list_;
