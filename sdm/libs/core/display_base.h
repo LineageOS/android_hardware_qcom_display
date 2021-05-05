@@ -381,7 +381,6 @@ class DisplayBase : public DisplayInterface {
   unsigned int rc_cached_res_width_ = 0;
   unsigned int rc_cached_res_height_ = 0;
   std::unique_ptr<RCIntf> rc_core_ = nullptr;
-  uint64_t rc_pu_flag_status_ = 0;
   bool mmrm_updated_ = false;
   uint32_t mmrm_requested_clk_ = 0;
   static bool primary_active_;
