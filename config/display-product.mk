@@ -1,41 +1,32 @@
 # Display product definitions
 PRODUCT_PACKAGES += \
     android.hardware.graphics.mapper@4.0-impl-qti-display \
+    android.hardware.graphics.mapper-impl-qti-display.xml \
+    vendor.qti.hardware.display.mapper@4.0.vendor \
     vendor.qti.hardware.display.allocator-service \
+    vendor.qti.hardware.display.allocator-service.rc \
+    vendor.qti.hardware.display.allocator-service.xml \
     vendor.qti.hardware.display.composer-service \
-    lights.$(TARGET_BOARD_PLATFORM) \
-    hwcomposer.$(TARGET_BOARD_PLATFORM) \
+    vendor.qti.hardware.display.composer-service.rc \
+    vendor.qti.hardware.display.composer-service.xml \
     libsdmcore \
     libsdmutils \
+    libqdutils \
     libqdMetaData \
     libdisplayconfig.vendor \
     libdisplayconfig.qti.vendor \
-    vendor.display.config@1.0.vendor \
-    vendor.display.config@1.1.vendor \
-    vendor.display.config@1.2.vendor \
-    vendor.display.config@1.3.vendor \
-    vendor.display.config@1.4.vendor \
-    vendor.display.config@1.5.vendor \
-    vendor.display.config@1.6.vendor \
-    vendor.display.config@1.7.vendor \
-    vendor.display.config@1.8.vendor \
-    vendor.display.config@1.9.vendor \
-    vendor.display.config@1.10.vendor \
-    vendor.display.config@1.11.vendor \
-    vendor.display.config@1.12.vendor \
-    vendor.display.config@1.13.vendor \
-    vendor.display.config@1.14.vendor \
-    vendor.display.config@1.15.vendor \
     vendor.display.config@2.0.vendor \
-    vendor.qti.hardware.display.mapper@4.0.vendor \
+    vendor.qti.hardware.display.config.vendor \
     init.qti.display_boot.sh \
     init.qti.display_boot.rc \
-    modetest \
-    vendor.qti.hardware.display.config.vendor
+    modetest
+
 
 #oem_services library
 PRODUCT_PACKAGES += \
     libfilefinder \
+    vendor.qti.hardware.display.demura@1.0-service.rc \
+    vendor.qti.hardware.display.demura-service.xml \
     vendor.qti.hardware.display.demura@1.0-service
 
 ifneq ($(TARGET_HAS_LOW_RAM),true)
