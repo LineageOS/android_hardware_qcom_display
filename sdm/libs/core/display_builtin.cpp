@@ -2147,4 +2147,8 @@ DisplayError DisplayBuiltIn::GetQsyncFps(uint32_t *qsync_fps) {
   return kErrorNotSupported;
 }
 
+void DisplayBuiltIn::FlushConcurrentWriteback() {
+  hw_intf_->FlushConcurrentWriteback();
+}
+
 }  // namespace sdm

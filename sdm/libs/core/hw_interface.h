@@ -141,6 +141,7 @@ class HWInterface {
   virtual DisplayError EnableSelfRefresh() = 0;
   virtual PanelFeaturePropertyIntf *GetPanelFeaturePropertyIntf() = 0;
   virtual DisplayError GetFeatureSupportStatus(const HWFeature feature, uint32_t *status) = 0;
+  virtual void FlushConcurrentWriteback() = 0;
 
  protected:
   virtual ~HWInterface() { }

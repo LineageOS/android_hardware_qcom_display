@@ -325,6 +325,7 @@ bool HWCDisplayBuiltIn::CanSkipCommit() {
   // 2. No new buffer latched.
   // 3. No refresh request triggered by HWC.
   // 4. This display is not source of vsync.
+  // 5. No CWB client
   bool buffers_latched = false;
   for (auto &hwc_layer : layer_set_) {
     buffers_latched |= hwc_layer->BufferLatched();
@@ -333,7 +334,7 @@ bool HWCDisplayBuiltIn::CanSkipCommit() {
 
   bool vsync_source = (callbacks_->GetVsyncSource() == id_);
   bool skip_commit = enable_optimize_refresh_ && !pending_commit_ && !buffers_latched &&
-                     !pending_refresh_ && !vsync_source;
+                     !pending_refresh_ && !vsync_source && (cwb_client_ == kCWBClientNone);
   pending_refresh_ = false;
 
   return skip_commit;
@@ -1689,6 +1690,11 @@ HWC2::Error HWCDisplayBuiltIn::PostCommitLayerStack(shared_ptr<Fence> *out_retir
 
   HandleFrameOutput();
   PostCommitStitchLayers();
+
+  if (flush_ && cwb_client_ == kCWBClientNone) {
+    display_intf_->FlushConcurrentWriteback();
+  }
+
   auto status = HWCDisplay::PostCommitLayerStack(out_retire_fence);
 /*  display_intf_->GetConfig(&fixed_info);
   is_cmd_mode_ = fixed_info.is_cmdmode;

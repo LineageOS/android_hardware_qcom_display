@@ -69,6 +69,7 @@ class DisplayNull : public DisplayInterface {
   virtual void CheckMMRMState() { }
   virtual bool IsValidated() { return true; }
   virtual DisplayError GetQsyncFps(uint32_t *qsync_fps) { return kErrorNotSupported; }
+  virtual void FlushConcurrentWriteback() {}
 
   MAKE_NO_OP(CommitOrPrepare(LayerStack *))
   MAKE_NO_OP(PrePrepare(LayerStack *))

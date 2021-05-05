@@ -1117,4 +1117,8 @@ void HWPeripheralDRM::SetVMReqState() {
   }
 }
 
+void HWPeripheralDRM::FlushConcurrentWriteback() {
+  TeardownConcurrentWriteback();
+}
+
 }  // namespace sdm

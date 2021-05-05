@@ -1126,6 +1126,12 @@ class DisplayInterface {
   */
   virtual DisplayError GetQsyncFps(uint32_t *qsync_fps) = 0;
 
+  /*! @brief Method to flush CWB
+
+    @return \link void \endlink
+  */
+  virtual void FlushConcurrentWriteback() = 0;
+
  protected:
   virtual ~DisplayInterface() { }
 };

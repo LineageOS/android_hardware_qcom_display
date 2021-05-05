@@ -201,6 +201,7 @@ class DisplayBase : public DisplayInterface {
     return kErrorNone;
   }
   virtual DisplayError GetQsyncFps(uint32_t *qsync_fps) { return kErrorNotSupported; }
+  virtual void FlushConcurrentWriteback() {}
 
  protected:
   struct DisplayMutex {
