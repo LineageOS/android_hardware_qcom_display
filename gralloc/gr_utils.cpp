@@ -177,6 +177,20 @@ bool IsCompressedRGBFormat(int format) {
   return false;
 }
 
+bool IsGpuDepthStencilFormat(int format) {
+  switch (format) {
+    case HAL_PIXEL_FORMAT_DEPTH_16:
+    case HAL_PIXEL_FORMAT_DEPTH_24:
+    case HAL_PIXEL_FORMAT_DEPTH_24_STENCIL_8:
+    case HAL_PIXEL_FORMAT_DEPTH_32F:
+    case HAL_PIXEL_FORMAT_STENCIL_8:
+      return true;
+    default:
+      break;
+  }
+  return false;
+}
+
 bool IsCameraCustomFormat(int format, uint64_t usage) {
   switch (format) {
     case HAL_PIXEL_FORMAT_NV21_ZSL:
@@ -840,17 +854,10 @@ bool IsUBwcSupported(int format) {
   return false;
 }
 
+// Check if the format must be macro-tiled. Later if the lists of tiled formats and Depth/Stencil
+// formats gets updated, then handle it here appropriately.
 bool IsTileRendered(int format) {
-  switch (format) {
-    case HAL_PIXEL_FORMAT_DEPTH_16:
-    case HAL_PIXEL_FORMAT_DEPTH_24:
-    case HAL_PIXEL_FORMAT_DEPTH_24_STENCIL_8:
-    case HAL_PIXEL_FORMAT_DEPTH_32F:
-    case HAL_PIXEL_FORMAT_STENCIL_8:
-      return true;
-    default:
-      return false;
-  }
+  return IsGpuDepthStencilFormat(format);
 }
 
 bool IsOnlyGpuCpuUsage(uint64_t usage) {
@@ -1210,6 +1217,17 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       *alignedh = aligned_h;
     }
 #endif
+    return 0;
+  }
+
+  if (IsGpuDepthStencilFormat(format)) {
+    if (IsTileRendered(info.format)) {
+      tile = true;
+    }
+    if (AdrenoMemInfo::GetInstance()) {
+      AdrenoMemInfo::GetInstance()->AlignGpuDepthStencilFormat(width, height, format, tile,
+                                                               alignedw, alignedh);
+    }
     return 0;
   }
 

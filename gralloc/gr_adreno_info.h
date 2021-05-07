@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2021, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -154,6 +154,15 @@ class AdrenoMemInfo {
    */
   void AlignCompressedRGB(int width, int height, int format, unsigned int *aligned_w,
                           unsigned int *aligned_h);
+
+  /*
+   * Function to compute the adreno aligned width and aligned height
+   * based on the width and format.
+   *
+   * @return aligned width, aligned height
+   */
+  void AlignGpuDepthStencilFormat(int width, int height, int format, int tile_enabled,
+                                  unsigned int *aligned_w, unsigned int *aligned_h);
 
   /*
    * Function to compute the pixel alignment requirement.
