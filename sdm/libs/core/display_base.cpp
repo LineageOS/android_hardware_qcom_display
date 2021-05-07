@@ -2005,6 +2005,11 @@ DisplayError DisplayBase::SetVSyncStateLocked(bool enable) {
   return error;
 }
 
+DisplayError DisplayBase::SetNoisePlugInOverride(bool override_en, int32_t attn,
+                                                 int32_t noise_zpos, int32_t bl_thr) {
+  return kErrorNone;
+}
+
 DisplayError DisplayBase::ReconfigureDisplay() {
   ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;

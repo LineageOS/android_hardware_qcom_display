@@ -84,6 +84,8 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError SetActiveConfig(DisplayConfigVariableInfo *variable_info) {
     return kErrorNotSupported;
   }
+  virtual DisplayError SetNoisePlugInOverride(bool override_en, int32_t attn, int32_t noise_zpos,
+                                              int32_t bl_thr);
   virtual DisplayError SetMaxMixerStages(uint32_t max_mixer_stages);
   virtual DisplayError ControlPartialUpdate(bool enable, uint32_t *pending) {
     return kErrorNotSupported;

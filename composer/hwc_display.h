@@ -243,6 +243,8 @@ class HWCDisplay : public DisplayEventHandler {
   static uint32_t GetThrottlingRefreshRate() { return HWCDisplay::throttling_refresh_rate_; }
   static void SetThrottlingRefreshRate(uint32_t newRefreshRate)
               { HWCDisplay::throttling_refresh_rate_ = newRefreshRate; }
+  virtual int SetNoisePlugInOverride(bool override_en, int32_t attn, int32_t noise_zpos,
+                                     int32_t bl_thr);
   virtual int SetActiveDisplayConfig(uint32_t config);
   virtual int GetActiveDisplayConfig(uint32_t *config);
   virtual int GetDisplayConfigCount(uint32_t *count);

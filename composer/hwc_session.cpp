@@ -1438,6 +1438,34 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
       }
       break;
 
+    case qService::IQService::SET_NOISE_PLUGIN_OVERRIDE: {
+        if (!input_parcel) {
+          DLOGE("QService command = %d: input_parcel needed.", command);
+          break;
+        }
+
+        int32_t disp_id = input_parcel->readInt32();
+
+        bool override_en = ((input_parcel->readInt32()) == 1);
+
+        int32_t attn = -1;
+        if (input_parcel->dataPosition() != input_parcel->dataSize()) {
+          attn = input_parcel->readInt32();
+        }
+
+        int32_t noise_zpos = -1;
+        if (input_parcel->dataPosition() != input_parcel->dataSize()) {
+          noise_zpos = input_parcel->readInt32();
+        }
+
+        int32_t bl_thr = -1;
+        if (input_parcel->dataPosition() != input_parcel->dataSize()) {
+          bl_thr = input_parcel->readInt32();
+        }
+        status = SetNoisePlugInOverride(disp_id, override_en, attn, noise_zpos, bl_thr);
+      }
+      break;
+
     case qService::IQService::SET_ACTIVE_CONFIG: {
         if (!input_parcel) {
           DLOGE("QService command = %d: input_parcel needed.", command);
