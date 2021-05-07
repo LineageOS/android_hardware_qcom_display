@@ -1648,6 +1648,13 @@ void HWCDisplayBuiltIn::SetCpuPerfHintLargeCompCycle() {
     return;
   }
 
+  //Send large comp cycle hint only for fps >= 90
+  if (active_refresh_rate_ < 90) {
+    DLOGV_IF(kTagResources, "Skip large comp cycle hint for current fps - %u",
+             active_refresh_rate_);
+    return;
+  }
+
   for (auto hwc_layer : layer_set_) {
     Layer *layer = hwc_layer->GetSDMLayer();
     if (layer->composition == kCompositionGPU) {
