@@ -47,6 +47,7 @@ class Debug {
   static bool GetExternalResolution(char *val);
   static void GetIdleTimeoutMs(uint32_t *active_ms, uint32_t *inactive_ms);
   static bool IsRotatorDownScaleDisabled();
+  static bool IsRotatorEnabledForUi();
   static bool IsDecimationDisabled();
   static int GetMaxPipesPerMixer(DisplayType display_type);
   static int GetMaxUpscale();
