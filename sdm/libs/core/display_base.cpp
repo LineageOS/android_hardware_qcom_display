@@ -680,7 +680,11 @@ DisplayError DisplayBase::CommitOrPrepare(LayerStack *layer_stack) {
   // Perform prepare
   error = Prepare(layer_stack);
   if (error != kErrorNone) {
-    DLOGE("Prepare failed: %d", error);
+    if (error == kErrorPermission) {
+      DLOGW("Prepare failed: %d", error);
+    } else {
+      DLOGE("Prepare failed: %d", error);
+    }
     return error;
   }
 

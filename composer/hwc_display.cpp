@@ -933,8 +933,6 @@ void HWCDisplay::PostPowerMode() {
   for (auto hwc_layer : layer_set_) {
     hwc_layer->SetReleaseFence(release_fence_);
   }
-
-  fbt_release_fence_ = release_fence_;
 }
 
 HWC2::Error HWCDisplay::SetPowerMode(HWC2::PowerMode mode, bool teardown) {
@@ -1410,7 +1408,7 @@ HWC2::Error HWCDisplay::PrepareLayerStack(uint32_t *out_num_types, uint32_t *out
 }
 
 HWC2::Error HWCDisplay::HandlePrepareError(DisplayError error) {
-  if (error == kErrorNone) {
+  if (error == kErrorNone || error == kErrorNeedsCommit) {
     return HWC2::Error::None;
   }
 
@@ -1422,9 +1420,6 @@ HWC2::Error HWCDisplay::HandlePrepareError(DisplayError error) {
     geometry_changes_on_doze_suspend_ |= geometry_changes_;
   } else {
     DLOGW("Prepare failed. Error = %d", error);
-    // To prevent surfaceflinger infinite wait, flush the previous frame during Commit()
-    // so that previous buffer and fences are released, and override the error.
-    flush_ = true;
     // Prepare cycle can fail on a newly connected display if insufficient pipes
     // are available at this moment. Trigger refresh so that the other displays
     // can free up pipes and a valid content can be attached to virtual display.
@@ -1650,7 +1645,14 @@ HWC2::Error HWCDisplay::CommitOrPrepare(bool validate_only, shared_ptr<Fence> *o
 
   layer_stack_.validate_only = validate_only;
 
-  *needs_commit = display_intf_->CommitOrPrepare(&layer_stack_) == kErrorNeedsCommit;
+  DisplayError error = display_intf_->CommitOrPrepare(&layer_stack_);
+  // Mask error if needed.
+  auto status = HandlePrepareError(error);
+  if (status != HWC2::Error::None) {
+    return status;
+  }
+
+  *needs_commit = error == kErrorNeedsCommit;
 
   if (!(*needs_commit)) {
     PostCommitLayerStack(out_retire_fence);
@@ -1787,12 +1789,6 @@ HWC2::Error HWCDisplay::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence
 
 void HWCDisplay::RetrieveFences(shared_ptr<Fence> *out_retire_fence) {
   // TODO(user): No way to set the client target release fence on SvF
-  shared_ptr<Fence> client_target_release_fence =
-      client_target_->GetSDMLayer()->input_buffer.release_fence;
-  if (client_target_release_fence) {
-    fbt_release_fence_ = client_target_release_fence;
-  }
-
   for (auto hwc_layer : layer_set_) {
     Layer *layer = hwc_layer->GetSDMLayer();
     LayerBuffer *layer_buffer = &layer->input_buffer;
@@ -2582,17 +2578,7 @@ void HWCDisplay::WaitOnPreviousFence() {
     return;
   }
 
-  // Since prepare failed commit would follow the same.
-  // Wait for previous rel fence.
-  for (auto hwc_layer : layer_set_) {
-    shared_ptr<Fence> fence = hwc_layer->GetReleaseFence();
-    if (Fence::Wait(fence) != kErrorNone) {
-      DLOGW("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
-      return;
-    }
-  }
-
-  if (Fence::Wait(fbt_release_fence_) != kErrorNone) {
+  if (Fence::Wait(release_fence_) != kErrorNone) {
     DLOGW("sync_wait error errno = %d, desc = %s", errno, strerror(errno));
     return;
   }
