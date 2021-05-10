@@ -139,6 +139,10 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.force_hwc_copy_for_virt
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.max_frame_buffer_acquired_buffers=3
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.max_virtual_display_dimension=4096
 
+ifeq ($(TARGET_BOARD_PLATFORM),taro)
+PRODUCT_PROPERTY_OVERRIDES += debug.sf.set_idle_timer_ms=80
+endif
+
 ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
 # Recovery is enabled, logging is enabled
 PRODUCT_PROPERTY_OVERRIDES += \
