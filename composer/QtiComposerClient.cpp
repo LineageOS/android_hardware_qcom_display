@@ -1403,7 +1403,7 @@ bool QtiComposerClient::CommandReader::parseSetClientTarget(uint16_t length) {
 bool QtiComposerClient::CommandReader::parseSetClientTarget_3_1(uint16_t length) {
   bool useCache = true;
   auto slot = read();
-  buffer_handle_t clientTarget;
+  buffer_handle_t clientTarget = nullptr;
   shared_ptr<Fence> fence = nullptr;
   readFence(&fence, "fbt");
   auto dataspace = readSigned();
