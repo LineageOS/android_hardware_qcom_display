@@ -339,6 +339,7 @@ DisplayError DisplayBase::ConfigureCwb(LayerStack *layer_stack) {
   if (hw_resource_info_.has_concurrent_writeback && layer_stack->output_buffer) {  // CWB requested
     if (!cwb_config_) {  // Instantiate cwb_config_ if cwb was not enabled in previous draw cycle.
       cwb_config_ = new CwbConfig;
+      needs_validate_ = true;  // Do not skip Validate in CWB setup frame.
     }
     *cwb_config_ = {};  // Reset cwb_config_ so as to set it to new cwb config passed by the client
 
@@ -378,6 +379,7 @@ DisplayError DisplayBase::ConfigureCwb(LayerStack *layer_stack) {
     delete cwb_config_;
     cwb_config_ = NULL;
     disp_layer_stack_.info.hw_cwb_config = NULL;
+    needs_validate_ = true;  // Do not skip Validate in CWB teardown frame.
   }
   return error;
 }
@@ -471,22 +473,6 @@ DisplayError DisplayBase::ValidateGPUTargetParams() {
   return kErrorNone;
 }
 
-bool DisplayBase::CheckValidateNeeded() {
-  // This function returns true(needs validate) on certain special conditions, such as CWB.
-  // We can add checks on more conditions here for which Validate call would be needed.
-  if ((cwb_config_ == NULL) ==
-      (hw_resource_info_.has_concurrent_writeback && disp_layer_stack_.stack->output_buffer)) {
-    DLOGI_IF(kTagDisplay, "Need to Validate for CWB setup/teardown .");
-    return true;
-  } else {
-    // Check for validation in case of new display connected, other displays exiting off state etc.
-    bool needs_validate = false;
-    comp_manager_->NeedsValidate(display_comp_ctx_, &needs_validate);
-    return needs_validate;
-  }
-  return false;
-}
-
 DisplayError DisplayBase::PrePrepare(LayerStack *layer_stack) {
   DTRACE_SCOPED();
   ClientLock lock(disp_mutex_);
@@ -496,7 +482,18 @@ DisplayError DisplayBase::PrePrepare(LayerStack *layer_stack) {
     return error;
   }
 
-  layer_stack->needs_validate = !validated_ || needs_validate_ || CheckValidateNeeded();
+  error = ConfigureCwb(layer_stack);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  layer_stack->needs_validate = !validated_ || needs_validate_;
+  if (!layer_stack->needs_validate) {
+    // Check for validation in case of new display connected, other displays exiting off state etc.
+    bool needs_validate = false;
+    comp_manager_->NeedsValidate(display_comp_ctx_, &needs_validate);
+    layer_stack->needs_validate = needs_validate;
+  }
   return comp_manager_->PrePrepare(display_comp_ctx_, &disp_layer_stack_);
 }
 
@@ -519,6 +516,11 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
 
   DLOGI_IF(kTagDisplay, "Entering Prepare for display: %d-%d", display_id_, display_type_);
   error = BuildLayerStackStats(layer_stack);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  error = ConfigureCwb(layer_stack);
   if (error != kErrorNone) {
     return error;
   }

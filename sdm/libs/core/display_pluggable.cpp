@@ -149,14 +149,6 @@ DisplayError DisplayPluggable::Prepare(LayerStack *layer_stack) {
   return DisplayBase::Prepare(layer_stack);
 }
 
-DisplayError DisplayPluggable::BuildLayerStackStats(LayerStack *layer_stack) {
-  DisplayError error = DisplayBase::BuildLayerStackStats(layer_stack);
-  if (error == kErrorNone) {
-    error = ConfigureCwb(layer_stack);
-  }
-  return error;
-}
-
 DisplayError DisplayPluggable::GetRefreshRateRange(uint32_t *min_refresh_rate,
                                                    uint32_t *max_refresh_rate) {
   ClientLock lock(disp_mutex_);

@@ -215,7 +215,7 @@ DisplayError DisplayBuiltIn::PrePrepare(LayerStack *layer_stack) {
   }
 
   if (NeedsMixerReconfiguration(layer_stack, &new_mixer_width, &new_mixer_height)) {
-    DisplayError error = ReconfigureMixer(new_mixer_width, new_mixer_height);
+    error = ReconfigureMixer(new_mixer_width, new_mixer_height);
     if (error != kErrorNone) {
       ReconfigureMixer(display_width, display_height);
     }
@@ -1890,15 +1890,11 @@ DisplayError DisplayBuiltIn::BuildLayerStackStats(LayerStack *layer_stack) {
     return kErrorNoAppLayers;
   }
 
-  DisplayError error = kErrorNone;
   if (hw_layers_info.gpu_target_index > 0) {
-    error = ValidateGPUTargetParams();
+    return ValidateGPUTargetParams();
   }
 
-  if (error == kErrorNone) {
-    error = ConfigureCwb(layer_stack);
-  }
-  return error;
+  return kErrorNone;
 }
 
 DisplayError DisplayBuiltIn::SetActiveConfig(uint32_t index) {
