@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2017 The Android Open Source Project
@@ -281,7 +281,8 @@ class QtiComposerClient : public IQtiComposerClient {
     Error validateDisplay(Display display, std::vector<Layer>& changedLayers,
                           std::vector<IComposerClient::Composition>& compositionTypes,
                           uint32_t& displayRequestMask, std::vector<Layer>& requestedLayers,
-                          std::vector<uint32_t>& requestMasks);
+                          std::vector<uint32_t>& requestMasks,
+                          IComposerClient::ClientTargetProperty& clienttargetproperty);
     Error presentDisplay(Display display, shared_ptr<Fence>* presentFence,
                          std::vector<Layer>& layers,
                          std::vector<shared_ptr<Fence>>& releaseFences);
