@@ -3478,6 +3478,20 @@ int32_t HWCSession::GetDisplayConnectionType(hwc2_display_t display,
   return HWC2_ERROR_NONE;
 }
 
+int32_t HWCSession::GetClientTargetProperty(hwc2_display_t display,
+                                            HwcClientTargetProperty *outClientTargetProperty) {
+  if (!outClientTargetProperty) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (display >= HWCCallbacks::kNumDisplays) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  return CallDisplayFunction(display, &HWCDisplay::GetClientTargetProperty,
+                             outClientTargetProperty);
+}
+
 int32_t HWCSession::GetDisplayBrightnessSupport(hwc2_display_t display, bool *outSupport) {
   if (!outSupport) {
     return HWC2_ERROR_BAD_PARAMETER;

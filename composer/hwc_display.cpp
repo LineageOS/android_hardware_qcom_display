@@ -825,14 +825,6 @@ void HWCDisplay::BuildLayerStack() {
   int32_t client_target_dataspace = GetDataspaceFromColorMode(GetCurrentColorMode());
   SetClientTargetDataSpace(client_target_dataspace);
   layer_stack_.layers.push_back(sdm_client_target);
-
-  // fall back frame composition to GPU when client target is 10bit
-  // TODO(user): clarify the behaviour from Client(SF) and SDM Extn -
-  // when handling 10bit FBT, as it would affect blending
-  if (Is10BitFormat(sdm_client_target->input_buffer.format)) {
-    // Must fall back to client composition
-    MarkLayersForClientComposition();
-  }
 }
 
 void HWCDisplay::BuildSolidFillStack() {
@@ -1220,12 +1212,6 @@ HWC2::Error HWCDisplay::SetClientTarget(buffer_handle_t target, shared_ptr<Fence
   Layer *sdm_layer = client_target_->GetSDMLayer();
   sdm_layer->frame_rate = std::min(current_refresh_rate_, HWCDisplay::GetThrottlingRefreshRate());
   client_target_->SetLayerSurfaceDamage(damage);
-  int translated_dataspace = TranslateFromLegacyDataspace(dataspace);
-  if (client_target_->GetLayerDataspace() != translated_dataspace) {
-    DLOGW("New Dataspace = %d not matching Dataspace from color mode = %d",
-           translated_dataspace, client_target_->GetLayerDataspace());
-    return HWC2::Error::BadParameter;
-  }
   client_target_->SetLayerBuffer(target, acquire_fence);
 
   return HWC2::Error::None;
@@ -2963,4 +2949,34 @@ DisplayError HWCDisplay::TeardownConcurrentWriteback(bool *needs_refresh) {
   return kErrorNone;
 }
 
-}  // namespace sdm
+HWC2::Error HWCDisplay::GetClientTargetProperty(ClientTargetProperty *out_client_target_property) {
+
+  Layer *client_target_layer = client_target_->GetSDMLayer();
+  if (!client_target_layer->request.flags.update_format) {
+    return HWC2::Error::None;
+  }
+  int32_t format = 0;
+  uint64_t flags = 0;
+  auto err = buffer_allocator_->SetBufferInfo(client_target_layer->request.format, &format,
+                                              &flags);
+  if (err) {
+    DLOGE("Invalid format: %s requested", GetFormatString(client_target_layer->request.format));
+    return HWC2::Error::BadParameter;
+  }
+  Dataspace dataspace;
+  DisplayError error = ColorMetadataToDataspace(layer_stack_.gpu_target_color_metadata,
+                                                   &dataspace);
+  if (error != kErrorNone) {
+    DLOGE("Invalid Dataspace requested: Primaries = %d Transfer = %d ds = %d",
+          layer_stack_.gpu_target_color_metadata.colorPrimaries,
+          layer_stack_.gpu_target_color_metadata.transfer, dataspace);
+    return HWC2::Error::BadParameter;
+  }
+  out_client_target_property->dataspace = dataspace;
+  out_client_target_property->pixelFormat =
+      (android::hardware::graphics::common::V1_2::PixelFormat)format;
+
+  return HWC2::Error::None;
+}
+
+} //namespace sdm

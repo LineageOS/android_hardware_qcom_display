@@ -130,6 +130,7 @@
 #define DISABLE_DYNAMIC_FPS                  DISPLAY_PROP("disable_dynamic_fps")
 #define ENABLE_QSYNC_IDLE                    DISPLAY_PROP("enable_qsync_idle")
 #define ENHANCE_IDLE_TIME                    DISPLAY_PROP("enhance_idle_time")
+#define ENABLE_HDR10_GPU_TARGET              DISPLAY_PROP("enable_hdr10_gpu_target")
 
 // Add all vendor.display properties above
 
