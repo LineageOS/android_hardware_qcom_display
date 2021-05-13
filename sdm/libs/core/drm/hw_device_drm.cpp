@@ -606,16 +606,20 @@ void HWDeviceDRM::InitializeConfigs() {
 
   // Set mode with preferred panel mode if supported, otherwise set based on capability
   for (uint32_t mode_index = 0; mode_index < modes_count; mode_index++) {
-    if (panel_mode_pref & connector_info_.modes[mode_index].panel_mode_caps) {
+    uint32_t sub_mode_index = connector_info_.modes[mode_index].curr_submode_index;
+    if (panel_mode_pref &
+        connector_info_.modes[mode_index].sub_modes[sub_mode_index].panel_mode_caps) {
       connector_info_.modes[mode_index].cur_panel_mode = panel_mode_pref;
     } else if (panel_mode_pref == DRM_MODE_FLAG_VID_MODE_PANEL) {
       connector_info_.modes[mode_index].cur_panel_mode = DRM_MODE_FLAG_VID_MODE_PANEL;
     } else if (panel_mode_pref == DRM_MODE_FLAG_CMD_MODE_PANEL) {
       connector_info_.modes[mode_index].cur_panel_mode = DRM_MODE_FLAG_CMD_MODE_PANEL;
-     }
+    }
     // Add mode variant if both panel modes are supported
-    if (connector_info_.modes[mode_index].panel_mode_caps & DRM_MODE_FLAG_CMD_MODE_PANEL &&
-        connector_info_.modes[mode_index].panel_mode_caps & DRM_MODE_FLAG_VID_MODE_PANEL) {
+    if (connector_info_.modes[mode_index].sub_modes[sub_mode_index].panel_mode_caps &
+        DRM_MODE_FLAG_CMD_MODE_PANEL &&
+        connector_info_.modes[mode_index].sub_modes[sub_mode_index].panel_mode_caps &
+        DRM_MODE_FLAG_VID_MODE_PANEL) {
       sde_drm::DRMModeInfo mode_item = connector_info_.modes[mode_index];
       mode_item.cur_panel_mode =
           (connector_info_.modes[mode_index].cur_panel_mode == DRM_MODE_FLAG_CMD_MODE_PANEL)
@@ -665,11 +669,13 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
     res_mgr->GetMode(&mode);
     res_mgr->GetDisplayDimInMM(&mm_width, &mm_height);
   } else {
+    uint32_t submode_idx = connector_info_.modes[index].curr_submode_index;
     mode = connector_info_.modes[index].mode;
     mm_width = connector_info_.mmWidth;
     mm_height = connector_info_.mmHeight;
-    topology = connector_info_.modes[index].topology;
-    if (connector_info_.modes[index].panel_mode_caps & DRM_MODE_FLAG_CMD_MODE_PANEL) {
+    topology = connector_info_.modes[index].sub_modes[submode_idx].topology;
+    if (connector_info_.modes[index].sub_modes[submode_idx].panel_mode_caps &
+        DRM_MODE_FLAG_CMD_MODE_PANEL) {
       display_attributes_[index].smart_panel = true;
     }
   }
@@ -735,6 +741,7 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
            connector_info_.panel_name.c_str());
 
   uint32_t index = current_mode_index_;
+  uint32_t sub_mode_index = connector_info_.modes[index].curr_submode_index;
   hw_panel_info_.split_info.left_split = display_attributes_[index].x_pixels;
   if (display_attributes_[index].is_device_split) {
     hw_panel_info_.split_info.left_split = hw_panel_info_.split_info.right_split =
@@ -753,7 +760,8 @@ void HWDeviceDRM::PopulateHWPanelInfo() {
   hw_panel_info_.needs_roi_merge = connector_info_.modes[index].roi_merge;
   hw_panel_info_.transfer_time_us = connector_info_.modes[index].transfer_time_us;
   hw_panel_info_.allowed_mode_switch = connector_info_.modes[index].allowed_mode_switch;
-  hw_panel_info_.panel_mode_caps = connector_info_.modes[index].panel_mode_caps;
+  hw_panel_info_.panel_mode_caps =
+                 connector_info_.modes[index].sub_modes[sub_mode_index].panel_mode_caps;
   hw_panel_info_.dynamic_fps = connector_info_.dynamic_fps;
   hw_panel_info_.qsync_support = connector_info_.qsync_support;
   drmModeModeInfo current_mode = connector_info_.modes[current_mode_index_].mode;
@@ -940,6 +948,7 @@ void HWDeviceDRM::SetDisplaySwitchMode(uint32_t index) {
   sde_drm::DRMModeInfo to_set = connector_info_.modes[index];
   sde_drm::DRMModeInfo current_mode = connector_info_.modes[current_mode_index_];
   uint64_t target_bit_clk = connector_info_.modes[current_mode_index_].curr_bit_clk_rate;
+  uint32_t target_compression = connector_info_.modes[current_mode_index_].curr_compression_mode;
   uint32_t switch_index  = 0;
 
   if (to_set.cur_panel_mode & DRM_MODE_FLAG_CMD_MODE_PANEL) {
@@ -965,8 +974,16 @@ void HWDeviceDRM::SetDisplaySwitchMode(uint32_t index) {
         (to_set.mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
         (to_set.mode.vrefresh == connector_info_.modes[mode_index].mode.vrefresh) &&
         (mode_flag & connector_info_.modes[mode_index].cur_panel_mode)) {
-      index = mode_index;
-      to_set.curr_bit_clk_rate = GetSupportedBitClkRate(index, target_bit_clk);
+      for (uint32_t submode_idx = 0; submode_idx <
+           connector_info_.modes[mode_index].sub_modes.size(); submode_idx++) {
+        sde_drm::DRMSubModeInfo sub_mode = connector_info_.modes[mode_index].sub_modes[submode_idx];
+        if (sub_mode.panel_compression_mode == target_compression) {
+          connector_info_.modes[mode_index].curr_submode_index = submode_idx;
+          index = mode_index;
+          to_set.curr_bit_clk_rate = GetSupportedBitClkRate(index, target_bit_clk);
+          break;
+        }
+      }
       break;
     }
   }
@@ -979,8 +996,16 @@ void HWDeviceDRM::SetDisplaySwitchMode(uint32_t index) {
         (to_set.mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
         (to_set.mode.vrefresh == connector_info_.modes[mode_index].mode.vrefresh) &&
         (switch_mode_flag & connector_info_.modes[mode_index].cur_panel_mode)) {
-      switch_index = mode_index;
-      switch_mode_valid_ = true;
+      for (uint32_t submode_idx = 0; submode_idx <
+           connector_info_.modes[mode_index].sub_modes.size(); submode_idx++) {
+        sde_drm::DRMSubModeInfo sub_mode = connector_info_.modes[mode_index].sub_modes[submode_idx];
+        if (sub_mode.panel_compression_mode == target_compression) {
+          connector_info_.modes[mode_index].curr_submode_index = submode_idx;
+          switch_index = mode_index;
+          switch_mode_valid_ = true;
+          break;
+        }
+      }
       break;
     }
   }
@@ -995,9 +1020,17 @@ void HWDeviceDRM::SetDisplaySwitchMode(uint32_t index) {
           (to_set.mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
           (switch_mode_flag & connector_info_.modes[mode_index].cur_panel_mode)) {
         if (!refresh_rate || (refresh_rate > connector_info_.modes[mode_index].mode.vrefresh)) {
-          switch_index = mode_index;
-          switch_mode_valid_ = true;
-          refresh_rate = connector_info_.modes[mode_index].mode.vrefresh;
+          for (uint32_t submode_idx = 0; submode_idx <
+               connector_info_.modes[mode_index].sub_modes.size(); submode_idx++) {
+            sde_drm::DRMSubModeInfo sub_mode =
+                     connector_info_.modes[mode_index].sub_modes[submode_idx];
+           if (sub_mode.panel_compression_mode == target_compression) {
+              switch_index = mode_index;
+              switch_mode_valid_ = true;
+              refresh_rate = connector_info_.modes[mode_index].mode.vrefresh;
+              break;
+            }
+          }
         }
       }
     }
@@ -1988,9 +2021,16 @@ DisplayError HWDeviceDRM::SetRefreshRate(uint32_t refresh_rate) {
         (current_mode.mode.hdisplay == connector_info_.modes[mode_index].mode.hdisplay) &&
         (current_mode.cur_panel_mode == connector_info_.modes[mode_index].cur_panel_mode) &&
         (refresh_rate == connector_info_.modes[mode_index].mode.vrefresh)) {
-      vrefresh_ = refresh_rate;
-      DLOGV_IF(kTagDriverConfig, "Set refresh rate to %d", refresh_rate);
-      return kErrorNone;
+      for (uint32_t submode_idx = 0; submode_idx <
+           connector_info_.modes[mode_index].sub_modes.size(); submode_idx++) {
+        sde_drm::DRMSubModeInfo sub_mode = connector_info_.modes[mode_index].sub_modes[submode_idx];
+        if (sub_mode.panel_compression_mode == current_mode.curr_compression_mode) {
+          connector_info_.modes[mode_index].curr_submode_index = submode_idx;
+          vrefresh_ = refresh_rate;
+          DLOGV_IF(kTagDriverConfig, "Set refresh rate to %d", refresh_rate);
+          return kErrorNone;
+        }
+      }
     }
   }
   return kErrorNotSupported;
@@ -2652,9 +2692,11 @@ void HWDeviceDRM::GetTopologySplit(HWTopology hw_topology, uint32_t *split_numbe
 uint64_t HWDeviceDRM::GetSupportedBitClkRate(uint32_t new_mode_index,
                                 uint64_t bit_clk_rate_request) {
   if (current_mode_index_ == new_mode_index) {
-    if ((std::find(connector_info_.modes[current_mode_index_].dyn_bitclk_list.begin(),
-    connector_info_.modes[current_mode_index_].dyn_bitclk_list.end(), bit_clk_rate_request) !=
-    connector_info_.modes[current_mode_index_].dyn_bitclk_list.end())) {
+    uint32_t submode_idx = connector_info_.modes[current_mode_index_].curr_submode_index;
+    sde_drm::DRMSubModeInfo curr_sub_mode =
+                         connector_info_.modes[current_mode_index_].sub_modes[submode_idx];
+    if ((std::find(curr_sub_mode.dyn_bitclk_list.begin(), curr_sub_mode.dyn_bitclk_list.end(),
+         bit_clk_rate_request) != curr_sub_mode.dyn_bitclk_list.end())) {
       return bit_clk_rate_request;
     } else {
       DLOGW("Requested rate not supported: %" PRIu64, bit_clk_rate_request);
@@ -2662,9 +2704,11 @@ uint64_t HWDeviceDRM::GetSupportedBitClkRate(uint32_t new_mode_index,
     }
   }
 
-  if ((std::find(connector_info_.modes[new_mode_index].dyn_bitclk_list.begin(),
-        connector_info_.modes[new_mode_index].dyn_bitclk_list.end(), bit_clk_rate_request) !=
-        connector_info_.modes[new_mode_index].dyn_bitclk_list.end())) {
+  uint32_t submode_idx = connector_info_.modes[new_mode_index].curr_submode_index;
+  sde_drm::DRMSubModeInfo curr_sub_mode =
+                       connector_info_.modes[new_mode_index].sub_modes[submode_idx];
+  if ((std::find(curr_sub_mode.dyn_bitclk_list.begin(), curr_sub_mode.dyn_bitclk_list.end(),
+       bit_clk_rate_request) != curr_sub_mode.dyn_bitclk_list.end())) {
     return bit_clk_rate_request;
   } else {
     DLOGW("Requested rate not supported: %" PRIu64, bit_clk_rate_request);

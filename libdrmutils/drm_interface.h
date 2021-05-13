@@ -458,6 +458,12 @@ enum struct DRMOps {
    *      uint64_t - bit clk value
    */
   CONNECTOR_SET_DYN_BIT_CLK,
+  /*
+   * Op: Sets DSC/non-DSC operating mode
+   * Arg: uint32_t - Connector ID
+   *      uint64_t - DSC/non-DSC Bitmask
+   */
+  CONNECTOR_SET_DSC_MODE,
 };
 
 enum struct DRMRotation {
@@ -681,10 +687,16 @@ enum struct DRMPanelMode {
   COMMAND,
 };
 
+struct DRMSubModeInfo {
+  uint32_t panel_mode_caps;
+  uint32_t panel_compression_mode;
+  DRMTopology topology;
+  std::vector<uint64_t> dyn_bitclk_list;
+};
+
 /* Per mode info */
 struct DRMModeInfo {
   drmModeModeInfo mode;
-  DRMTopology topology;
   // Valid only if mode is command
   int num_roi;
   int xstart;
@@ -697,12 +709,13 @@ struct DRMModeInfo {
   uint64_t default_bit_clk_rate;
   uint32_t transfer_time_us;
   uint32_t allowed_mode_switch;
-  uint32_t panel_mode_caps;
   uint32_t cur_panel_mode;
   uint32_t has_cwb_crop;
   uint32_t has_dedicated_cwb;
-  std::vector<uint64_t> dyn_bitclk_list;
+  uint32_t curr_submode_index = 0;
   uint64_t curr_bit_clk_rate;
+  uint32_t curr_compression_mode;
+  std::vector<DRMSubModeInfo> sub_modes;
 };
 
 /* Per Connector Info*/
@@ -1004,6 +1017,12 @@ enum struct DRMColorspace {
   BT2020_YCC,
   DCI_P3_RGB_D65,
   DCI_P3_RGB_THEATER,
+};
+
+enum struct DRMCompressionMode {
+  NONE = 0,
+  DSC_ENABLED,
+  DSC_DISABLED,
 };
 
 /* DRM Atomic Request Property Set.

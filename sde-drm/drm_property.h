@@ -181,6 +181,7 @@ enum struct DRMProperty {
   DYN_BIT_CLK,
   SDE_PP_CWB_DITHER_V2,
   NOISE_LAYER_V1,
+  DSC_MODE,
 
   // Insert above
   MAX

@@ -176,6 +176,7 @@ DRMProperty DRMPropertyManager::GetPropertyEnum(const std::string &name) const {
   if (name == "dyn_bit_clk") { return DRMProperty::DYN_BIT_CLK; }
   if (name == "SDE_PP_CWB_DITHER_V2") { return DRMProperty::SDE_PP_CWB_DITHER_V2; }
   if (name == "noise_layer_v1") { return DRMProperty::NOISE_LAYER_V1; }
+  if (name == "dsc_mode") { return DRMProperty::DSC_MODE; }
 
   return DRMProperty::INVALID;
 }
