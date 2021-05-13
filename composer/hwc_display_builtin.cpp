@@ -215,9 +215,10 @@ HWC2::Error HWCDisplayBuiltIn::PreValidateDisplay(bool *exit_validate) {
   SetDrawMethod();
 
   auto status = HWC2::Error::None;
+  bool res_exhausted = false;
   // If no resources are available for the current display, mark it for GPU by pass and continue to
   // do invalidate until the resources are available
-  if (display_paused_ || CheckResourceState()) {
+  if (display_paused_ || CheckResourceState(&res_exhausted)) {
     MarkLayersForGPUBypass();
     *exit_validate = true;
     return status;
@@ -425,12 +426,13 @@ HWC2::Error HWCDisplayBuiltIn::SetPowerMode(HWC2::PowerMode mode, bool teardown)
 
 HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
   auto status = HWC2::Error::None;
+  bool res_exhausted = false;
 
   DTRACE_SCOPED();
 
   // Proceed only if any resources are available to be allocated for the current display,
   // Otherwise keep doing invalidate
-  if (CheckResourceState()) {
+  if (CheckResourceState(&res_exhausted)) {
     Refresh();
     return status;
   }
@@ -1526,6 +1528,34 @@ void HWCDisplayBuiltIn::LoadMixedModePerfHintThreshold() {
 
   // For 240 fps, 6 layers should fall back to GPU
   mixed_mode_threshold_.insert(std::make_pair<int32_t, int32_t>(240, 6));
+}
+
+HWC2::Error HWCDisplayBuiltIn::SetAlternateDisplayConfig(bool set) {
+  hwc2_config_t alt_config = 0;
+  DisplayError error = kErrorNone;
+
+  if (!set && alternate_config_ == -1) {
+    return HWC2::Error::None;
+  }
+
+  error = display_intf_->SetAlternateDisplayConfig(&alt_config);
+  if (error != kErrorNone) {
+    return HWC2::Error::Unsupported;
+  }
+
+  auto status = SetActiveConfig(alt_config);
+  if (set && status == HWC2::Error::None) {
+      alternate_config_ = alt_config;
+  }
+
+  if (!set) { // set alternate config to -1 on reset call
+    alternate_config_ = -1;
+  }
+
+  // Trigger refresh. This config gets applied on next commit.
+  callbacks_->Refresh(id_);
+
+  return HWC2::Error::None;
 }
 
 }  // namespace sdm

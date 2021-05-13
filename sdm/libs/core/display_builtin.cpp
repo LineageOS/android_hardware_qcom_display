@@ -2161,4 +2161,18 @@ DisplayError DisplayBuiltIn::GetQsyncFps(uint32_t *qsync_fps) {
   return kErrorNotSupported;
 }
 
+DisplayError DisplayBuiltIn::SetAlternateDisplayConfig(uint32_t *alt_config) {
+  ClientLock lock(disp_mutex_);
+  if (!alt_config) {
+    return kErrorResources;
+  }
+  DisplayError error = hw_intf_->SetAlternateDisplayConfig(alt_config);
+
+  if (error == kErrorNone) {
+    ReconfigureDisplay();
+  }
+
+  return error;
+}
+
 }  // namespace sdm

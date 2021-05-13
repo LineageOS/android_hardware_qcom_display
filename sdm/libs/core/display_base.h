@@ -182,7 +182,7 @@ class DisplayBase : public DisplayInterface {
   }
   virtual DisplayError GetRefreshRate(uint32_t *refresh_rate) { return kErrorNotSupported; }
   virtual DisplayError SetBLScale(uint32_t level) { return kErrorNotSupported; }
-  virtual bool CheckResourceState();
+  virtual bool CheckResourceState(bool *res_exhausted);
   virtual bool GameEnhanceSupported();
   virtual DisplayError GetQSyncMode(QSyncMode *qsync_mode) { return kErrorNotSupported; }
   virtual DisplayError colorSamplingOn();
@@ -215,6 +215,9 @@ class DisplayBase : public DisplayInterface {
   }
   virtual DisplayError GetQsyncFps(uint32_t *qsync_fps) { return kErrorNotSupported; }
   virtual void FlushConcurrentWriteback();
+  virtual DisplayError SetAlternateDisplayConfig(uint32_t *alt_config) {
+    return kErrorNotSupported;
+  }
 
  protected:
   struct DisplayMutex {

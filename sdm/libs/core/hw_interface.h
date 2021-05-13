@@ -142,6 +142,7 @@ class HWInterface {
   virtual PanelFeaturePropertyIntf *GetPanelFeaturePropertyIntf() = 0;
   virtual DisplayError GetFeatureSupportStatus(const HWFeature feature, uint32_t *status) = 0;
   virtual void FlushConcurrentWriteback() = 0;
+  virtual DisplayError SetAlternateDisplayConfig(uint32_t *alt_config) = 0;
 
  protected:
   virtual ~HWInterface() { }

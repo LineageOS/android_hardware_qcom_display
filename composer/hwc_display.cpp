@@ -2676,9 +2676,9 @@ void HWCDisplay::SetLayerStack(HWCLayerStack *stack) {
   layer_set_ = stack->layer_set;
 }
 
-bool HWCDisplay::CheckResourceState() {
+bool HWCDisplay::CheckResourceState(bool *res_exhausted) {
   if (display_intf_) {
-    return display_intf_->CheckResourceState();
+    return display_intf_->CheckResourceState(res_exhausted);
   }
 
   return false;
@@ -2717,6 +2717,10 @@ bool HWCDisplay::IsModeSwitchAllowed(uint32_t config) {
 
   error = display_intf_->IsSupportedOnDisplay(kSupportedModeSwitch, &allowed_mode_switch);
   if (error != kErrorNone) {
+    if (error == kErrorResources) {
+      DLOGW("Not allowed to switch to mode:%d", config);
+      return false;
+    }
     DLOGW("Unable to retrieve supported modes for the current device configuration.");
   }
 

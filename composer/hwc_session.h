@@ -221,7 +221,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
                                  hidl_vec<HwcDisplayCapability> *capabilities);
   int32_t GetDisplayBrightnessSupport(hwc2_display_t display, bool *outSupport);
   int32_t SetDisplayBrightness(hwc2_display_t display, float brightness);
-  void WaitForResources(bool wait_for_resources, hwc2_display_t active_builtin_id,
+  int32_t WaitForResources(bool wait_for_resources, hwc2_display_t active_builtin_id,
                         hwc2_display_t display_id);
 
   // newly added
@@ -457,6 +457,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   std::mutex hotplug_mutex_;
   std::condition_variable hotplug_cv_;
   bool resource_ready_ = false;
+  hwc2_display_t active_display_id_ = 0;
+  shared_ptr<Fence> cached_retire_fence_ = nullptr;
   void UpdateThrottlingRate();
   void SetNewThrottlingRate(uint32_t new_rate);
 

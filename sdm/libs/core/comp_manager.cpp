@@ -698,14 +698,16 @@ void CompManager::UpdateStrategyConstraints(bool is_primary, bool disabled) {
   max_sde_builtin_layers_ = (disabled && (powered_on_displays_.size() <= 1)) ? kMaxSDELayers : 2;
 }
 
-bool CompManager::CheckResourceState(Handle display_ctx) {
+bool CompManager::CheckResourceState(Handle display_ctx, bool *res_exhausted,
+                                     HWDisplayAttributes attr) {
   SCOPE_LOCK(locker_);
   DisplayCompositionContext *display_comp_ctx =
       reinterpret_cast<DisplayCompositionContext *>(display_ctx);
   bool res_wait_needed = false;
 
   resource_intf_->Perform(ResourceInterface::kCmdGetResourceStatus,
-                          display_comp_ctx->display_resource_ctx, &res_wait_needed);
+                          display_comp_ctx->display_resource_ctx, res_exhausted, &attr,
+                          &res_wait_needed);
   return res_wait_needed;
 }
 

@@ -164,6 +164,10 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError EnableSelfRefresh() { return kErrorNotSupported; }
   virtual DisplayError GetFeatureSupportStatus(const HWFeature feature, uint32_t *status);
   virtual void FlushConcurrentWriteback();
+  virtual DisplayError SetAlternateDisplayConfig(uint32_t *alt_config) {
+    return kErrorNotSupported;
+  }
+
   enum {
     kHWEventVSync,
     kHWEventBlank,
@@ -253,6 +257,8 @@ class HWDeviceDRM : public HWInterface {
   };
 
  protected:
+  void SetDisplaySwitchMode(uint32_t index);
+
   const char *device_name_ = {};
   bool default_mode_ = false;
   int32_t display_id_ = -1;
@@ -281,7 +287,7 @@ class HWDeviceDRM : public HWInterface {
   uint32_t topology_control_ = 0;
   uint32_t vrefresh_ = 0;
   uint32_t panel_mode_changed_ = 0;
-  uint32_t panel_compression_ = 0;
+  uint32_t panel_compression_changed_ = 0;
   bool reset_output_fence_offset_ = false;
   uint64_t bit_clk_rate_ = 0;
   bool update_mode_ = false;
@@ -304,7 +310,6 @@ class HWDeviceDRM : public HWInterface {
   static std::mutex cwb_state_lock_;  // cwb state lock. Set before accesing or updating cwb_config_
 
  private:
-  void SetDisplaySwitchMode(uint32_t index);
   void GetCWBCapabilities();
 
   std::string interface_str_ = "DSI";

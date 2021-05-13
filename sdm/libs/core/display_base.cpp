@@ -3260,8 +3260,8 @@ DisplayError DisplayBase::ResetPendingPowerState(const shared_ptr<Fence> &retire
   return kErrorNone;
 }
 
-bool DisplayBase::CheckResourceState() {
-  return comp_manager_->CheckResourceState(display_comp_ctx_);
+bool DisplayBase::CheckResourceState(bool *res_exhausted) {
+  return comp_manager_->CheckResourceState(display_comp_ctx_, res_exhausted, display_attributes_);
 }
 DisplayError DisplayBase::colorSamplingOn() {
   return kErrorNone;

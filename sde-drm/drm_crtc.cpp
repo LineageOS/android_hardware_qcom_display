@@ -445,6 +445,7 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
   string demura_count = "demura_count=";
   string dspp_count = "dspp_count=";
   string skip_inline_rot_threshold="skip_inline_rot_threshold=";
+  string dsc_block_count = "dsc_block_count=";
 
   while (std::getline(stream, line)) {
     if (line.find(max_blendstages) != string::npos) {
@@ -573,6 +574,8 @@ void DRMCrtc::ParseCapabilities(uint64_t blob_id) {
     } else if (line.find(skip_inline_rot_threshold) != string::npos) {
       crtc_info_.skip_inline_rot_threshold =
         std::stoi(string(line, skip_inline_rot_threshold.length()));
+    } else if (line.find(dsc_block_count) != string::npos) {
+      crtc_info_.dsc_block_count = std::stoi(string(line, dsc_block_count.length()));
     }
   }
   drmModeFreePropertyBlob(blob);

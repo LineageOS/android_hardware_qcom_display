@@ -379,6 +379,7 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   hw_resource->ubwc_version = info.ubwc_version;
   // RC
   hw_resource->rc_total_mem_size = info.rc_total_mem_size;
+  hw_resource->dsc_block_count = info.dsc_block_count;
 }
 
 void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {

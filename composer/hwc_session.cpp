@@ -866,6 +866,8 @@ void HWCSession::PostCommitUnlocked(hwc2_display_t display, const shared_ptr<Fen
   std::unique_lock<std::mutex> caller_lock(hotplug_mutex_);
   if (!resource_ready_) {
     resource_ready_ = true;
+    active_display_id_ = display;
+    cached_retire_fence_ = retire_fence;
     hotplug_cv_.notify_one();
   }
 }
@@ -2931,7 +2933,10 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
   // Active builtin display needs revalidation
   hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
   if (active_builtin_disp_id < HWCCallbacks::kNumDisplays) {
-    WaitForResources(delay_hotplug, active_builtin_disp_id, client_id);
+    status = WaitForResources(delay_hotplug, active_builtin_disp_id, client_id);
+    if (status) {
+      return status;
+    }
   }
 
   for (auto client_id : pending_hotplugs) {
@@ -2975,6 +2980,11 @@ int HWCSession::HandleDisconnectedDisplays(HWDisplaysInfo *hw_displays_info) {
 
     if (disconnect) {
       DestroyDisplay(&map_info);
+      hwc2_display_t active_builtin_id = GetActiveBuiltinDisplay();
+      if (active_builtin_id < HWCCallbacks::kNumDisplays) {
+        SCOPE_LOCK(locker_[active_builtin_id]);
+        hwc_display_[active_builtin_id]->SetAlternateDisplayConfig(false);
+      }
     }
   }
 
@@ -3561,7 +3571,7 @@ void HWCSession::NotifyClientStatus(bool connected) {
   callbacks_.UpdateVsyncSource(HWCCallbacks::kNumDisplays);
 }
 
-void HWCSession::WaitForResources(bool wait_for_resources, hwc2_display_t active_builtin_id,
+int HWCSession::WaitForResources(bool wait_for_resources, hwc2_display_t active_builtin_id,
                                   hwc2_display_t display_id) {
   std::vector<DisplayMapInfo> map_info = {map_info_primary_};
   std::copy(map_info_builtin_.begin(), map_info_builtin_.end(), std::back_inserter(map_info));
@@ -3579,6 +3589,19 @@ void HWCSession::WaitForResources(bool wait_for_resources, hwc2_display_t active
 
   if (wait_for_resources) {
     bool res_wait = true;
+    // todo (user): move this logic to wait for MDP resource reallocation/reconfiguration
+    // to SDM module.
+    bool needs_active_builtin_reconfig = false;
+    res_wait = hwc_display_[display_id]->CheckResourceState(&needs_active_builtin_reconfig);
+    if (needs_active_builtin_reconfig) {
+      SCOPE_LOCK(locker_[active_builtin_id]);
+      int status = INT32(hwc_display_[active_builtin_id]->SetAlternateDisplayConfig(true));
+      if (status) {
+        DLOGE("Active built-in %" PRIu64 " cannot switch to lower resource configuration",
+              active_builtin_id);
+        return status;
+      }
+    }
     do {
       if (client_connected_) {
         Refresh(active_builtin_id);
@@ -3587,10 +3610,17 @@ void HWCSession::WaitForResources(bool wait_for_resources, hwc2_display_t active
         std::unique_lock<std::mutex> caller_lock(hotplug_mutex_);
         resource_ready_ = false;
         hotplug_cv_.wait(caller_lock);
+        if (active_display_id_ == active_builtin_id && needs_active_builtin_reconfig &&
+            cached_retire_fence_) {
+          Fence::Wait(cached_retire_fence_);
+        }
+        cached_retire_fence_ == nullptr;
       }
-      res_wait = hwc_display_[display_id]->CheckResourceState();
-    } while (res_wait);
+      res_wait = hwc_display_[display_id]->CheckResourceState(&needs_active_builtin_reconfig);
+    } while (res_wait || needs_active_builtin_reconfig);
   }
+
+  return 0;
 }
 
 int32_t HWCSession::GetDisplayVsyncPeriod(hwc2_display_t disp, VsyncPeriodNanos *vsync_period) {

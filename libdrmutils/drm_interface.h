@@ -612,6 +612,7 @@ struct DRMCrtcInfo {
   uint32_t dspp_count = 0;
   bool skip_inline_rot_threshold = false;
   bool has_noise_layer = false;
+  uint32_t dsc_block_count = 0;
 };
 
 enum struct DRMPlaneType {

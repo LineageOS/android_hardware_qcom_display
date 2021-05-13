@@ -1051,7 +1051,7 @@ class DisplayInterface {
 
     @return \link bool \endlink
   */
-  virtual bool CheckResourceState() = 0;
+  virtual bool CheckResourceState(bool *res_exhausted) = 0;
 
   /*! @brief Method to check if game enhance feature is supported for display
 
@@ -1137,6 +1137,13 @@ class DisplayInterface {
     @return \link void \endlink
   */
   virtual DisplayError GetQsyncFps(uint32_t *qsync_fps) = 0;
+  /*! @brief Method to get the alternate config with same fps and different compression mode.
+
+    @param[out] pointer to config value
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError SetAlternateDisplayConfig(uint32_t *alt_config) = 0;
 
   /*! @brief Method to flush CWB
 

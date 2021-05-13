@@ -607,6 +607,8 @@ void HWDeviceDRM::InitializeConfigs() {
   // Set mode with preferred panel mode if supported, otherwise set based on capability
   for (uint32_t mode_index = 0; mode_index < modes_count; mode_index++) {
     uint32_t sub_mode_index = connector_info_.modes[mode_index].curr_submode_index;
+    connector_info_.modes[mode_index].curr_compression_mode =
+              connector_info_.modes[mode_index].sub_modes[sub_mode_index].panel_compression_mode;
     if (panel_mode_pref &
         connector_info_.modes[mode_index].sub_modes[sub_mode_index].panel_mode_caps) {
       connector_info_.modes[mode_index].cur_panel_mode = panel_mode_pref;
@@ -1459,6 +1461,12 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
                               panel_mode_changed_);
   }
 
+  if (panel_compression_changed_ && !validate) {
+    DLOGI("set property: change the compression mode");
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_DSC_MODE, token_.conn_id,
+                              panel_compression_changed_);
+  }
+
   if (!validate && release_fence_fd && retire_fence_fd) {
     drm_atomic_intf_->Perform(DRMOps::CRTC_GET_RELEASE_FENCE, token_.crtc_id, release_fence_fd);
     // Set retire fence offset.
@@ -1516,6 +1524,8 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
   // Set CRTC mode, only if display config changes
   if (first_cycle_ || vrefresh_ || update_mode_) {
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, &current_mode.mode);
+    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_DSC_MODE, token_.conn_id,
+                              current_mode.curr_compression_mode);
   }
 
   if (!validate && (hw_layers_info->set_idle_time_ms >= 0)) {
@@ -1611,6 +1621,7 @@ DisplayError HWDeviceDRM::Validate(HWLayersInfo *hw_layers_info) {
     DumpHWLayers(hw_layers_info);
     vrefresh_ = 0;
     panel_mode_changed_ = 0;
+    panel_compression_changed_ = 0;
     err = kErrorHardware;
   }
 
@@ -1711,6 +1722,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayersInfo *hw_layers_info) {
     DumpHWLayers(hw_layers_info);
     vrefresh_ = 0;
     panel_mode_changed_ = 0;
+    panel_compression_changed_ = 0;
     return kErrorHardware;
   }
 
@@ -1762,6 +1774,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayersInfo *hw_layers_info) {
     reset_output_fence_offset_ = true;
   }
 
+  panel_compression_changed_ = 0;
   first_cycle_ = false;
   update_mode_ = false;
   hw_layers_info->updates_mask = 0;

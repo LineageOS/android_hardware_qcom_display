@@ -293,7 +293,7 @@ class HWCDisplay : public DisplayEventHandler {
   bool HWCClientNeedsValidate() {
     return (has_client_composition_ || layer_stack_.flags.single_buffered_layer_present);
   }
-  bool CheckResourceState();
+  bool CheckResourceState(bool *res_exhausted);
   virtual HWC2::Error SetColorModeFromClientApi(int32_t color_mode_id) {
     return HWC2::Error::Unsupported;
   }
@@ -447,6 +447,9 @@ class HWCDisplay : public DisplayEventHandler {
                                       bool *needs_commit);
   virtual HWC2::Error PreValidateDisplay(bool *exit_validate) { return HWC2::Error::None; }
   HWC2::Error TryDrawMethod(IQtiComposerClient::DrawMethod client_drawMethod);
+  virtual HWC2::Error SetAlternateDisplayConfig(bool set) {
+    return HWC2::Error::Unsupported;
+  }
 
  protected:
   static uint32_t throttling_refresh_rate_;
