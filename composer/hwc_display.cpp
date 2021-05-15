@@ -1968,7 +1968,7 @@ void HWCDisplay::DumpInputBuffers() {
     char dump_file_name[PATH_MAX];
     size_t result = 0;
 
-    uint32_t width, height, alloc_size = 0;
+    uint32_t width = 0, height = 0, alloc_size = 0;
     int32_t format = 0;
 
     buffer_allocator_->GetWidth((void *)handle, width);
@@ -3141,7 +3141,7 @@ HWC2::Error HWCDisplay::TryDrawMethod(IQtiComposerClient::DrawMethod client_draw
 
   DLOGI("method: %d", draw_method_);
   display_intf_->SetDrawMethod(draw_method_);
-  
+
   draw_method_set_ = true;
 
   return status;

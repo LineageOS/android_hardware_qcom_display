@@ -280,6 +280,11 @@ DisplayError ColorManagerProxy::ColorSVCRequestRoute(const PPDisplayAPIPayload &
       return kErrorUndefined;
     }
 
+    if (!out_payload) {
+      DLOGE("Out payload is NULL!");
+      return kErrorParameters;
+    }
+
     uint32_t *size = NULL;
     ret = out_payload->CreatePayload<uint32_t>(size);
     if (ret || !size) {
