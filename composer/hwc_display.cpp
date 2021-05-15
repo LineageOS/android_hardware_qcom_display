@@ -1729,6 +1729,7 @@ HWC2::Error HWCDisplay::CommitOrPrepare(bool validate_only, shared_ptr<Fence> *o
   bool exit_validate = false;
   PreValidateDisplay(&exit_validate);
   if (exit_validate) {
+    validate_done_ = true;
     return HWC2::Error::None;
   }
 
@@ -1750,13 +1751,13 @@ HWC2::Error HWCDisplay::CommitLayerStack(void) {
 
   DTRACE_SCOPED();
 
+  if (shutdown_pending_ || layer_set_.empty()) {
+    return HWC2::Error::None;
+  }
+
   if (!validate_done_) {
     DLOGV_IF(kTagClient, "Display %" PRIu64 "is not validated", id_);
     return HWC2::Error::NotValidated;
-  }
-
-  if (shutdown_pending_ || layer_set_.empty()) {
-    return HWC2::Error::None;
   }
 
   if (skip_commit_) {
