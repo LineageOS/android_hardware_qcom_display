@@ -413,7 +413,10 @@ int HWCSession::ControlPartialUpdate(int disp_id, bool enable) {
   callbacks_.Refresh(HWC_DISPLAY_PRIMARY);
 
   // Wait until partial update control is complete
-  int error = locker_[disp_idx].WaitFinite(kCommitDoneTimeoutMs);
+  int error = WaitForCommitDoneLocked(HWC_DISPLAY_PRIMARY, kClientPartialUpdate);
+  if (error != 0) {
+    DLOGW("%s Partial update failed with error %d", enable ? "Enable" : "Disable", error);
+  }
 
   return error;
 }
@@ -578,10 +581,10 @@ int HWCSession::ControlIdlePowerCollapse(bool enable, bool synchronous) {
           return (err == kErrorNotSupported) ? 0 : -EINVAL;
         }
         callbacks_.Refresh(active_builtin_disp_id);
-        int error = locker_[active_builtin_disp_id].WaitFinite(kCommitDoneTimeoutMs);
-        if (error == ETIMEDOUT) {
-          DLOGE("Timed out!! Next frame commit done event not received!!");
-          return error;
+        int ret = WaitForCommitDoneLocked(active_builtin_disp_id, kClientIdlepowerCollapse);
+        if (ret != 0) {
+          DLOGW("Disable Idle PC failed with error %d", ret);
+          return -EINVAL;
         }
         DLOGI("Idle PC disabled!!");
       }
