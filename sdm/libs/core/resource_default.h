@@ -54,7 +54,8 @@ class ResourceDefault : public ResourceInterface {
   virtual DisplayError Start(Handle display_ctx, LayerStack *layer_stack);
   virtual DisplayError Stop(Handle display_ctx, DispLayerStack *disp_layer_stack);
   virtual DisplayError SetDrawMethod(Handle display_ctx, const DisplayDrawMethod &draw_method);
-  virtual DisplayError Prepare(Handle display_ctx, DispLayerStack *disp_layer_stack);
+  virtual DisplayError Prepare(Handle display_ctx, DispLayerStack *disp_layer_stack,
+                               LayerFeedback *feedback);
   virtual DisplayError PostPrepare(Handle display_ctx, DispLayerStack *disp_layer_stack);
   virtual DisplayError Commit(Handle display_ctx, DispLayerStack *disp_layer_stack);
   virtual DisplayError PostCommit(Handle display_ctx, DispLayerStack *disp_layer_stack);

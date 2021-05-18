@@ -37,6 +37,10 @@ using std::vector;
 namespace sdm {
 
 struct LayerFeedback {
+  explicit LayerFeedback(uint32_t unsupported_size) {
+    unsupported_list_.resize(unsupported_size, false);
+  }
+
   // unsupported_list_[i] is true if layer at index i is unsupported by DPU
   vector<bool> unsupported_list_;
 
