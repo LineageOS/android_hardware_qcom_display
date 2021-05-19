@@ -121,6 +121,14 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
     kHotPlugEvent,
   };
 
+  enum ClientCommitDone {
+    kClientPartialUpdate,
+    kClientIdlepowerCollapse,
+    kClientTrustedUI,
+    kClientTeardownCWB,
+    kClientMax
+  };
+
   HWCSession();
   int Init();
   int Deinit();
@@ -321,11 +329,11 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   static Locker locker_[HWCCallbacks::kNumDisplays];
   static Locker power_state_[HWCCallbacks::kNumDisplays];
   static Locker hdr_locker_[HWCCallbacks::kNumDisplays];
-  static Locker tui_locker_[HWCCallbacks::kNumDisplays];
-  static bool tui_transition_pending_[HWCCallbacks::kNumDisplays];
-  static int tui_transition_error_[HWCCallbacks::kNumDisplays];
   static Locker display_config_locker_;
   static Locker system_locker_;
+  static std::bitset<kClientMax> clients_waiting_for_commit_[HWCCallbacks::kNumDisplays];
+  static shared_ptr<Fence> retire_fence_[HWCCallbacks::kNumDisplays];
+  static int commit_error_[HWCCallbacks::kNumDisplays];
 
  private:
   class CWB {
@@ -555,8 +563,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   HWC2::Error TeardownConcurrentWriteback(hwc2_display_t display);
   void PostCommitUnlocked(hwc2_display_t display, const shared_ptr<Fence> &retire_fence,
                           HWC2::Error status);
-  void PostCommitLocked(hwc2_display_t display);
-  void CancelTUILock(hwc2_display_t display);
+  void PostCommitLocked(hwc2_display_t display, shared_ptr<Fence> &retire_fence);
+  int WaitForCommitDoneLocked(hwc2_display_t display, int client_id);
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};
