@@ -175,6 +175,14 @@ DisplayError DisplayBuiltIn::Init() {
   DebugHandler::Get()->GetProperty(ENABLE_DPPS_DYNAMIC_FPS, &value);
   enable_dpps_dyn_fps_ = (value == 1);
 
+  value = 0;
+  Debug::Get()->GetProperty(DISABLE_NOISE_LAYER, &value);
+  noise_disable_prop_ = (value == 1);
+  DLOGI("Noise Layer Feature is %s for display = %d-%d", noise_disable_prop_ ? "Disabled" :
+        "Enabled", display_id_, display_type_);
+
+  NoiseInit();
+
   return error;
 }
 
@@ -1298,6 +1306,10 @@ std::string DisplayBuiltIn::Dump() {
   os << " DrawMethod: " << draw_method_;
   os << "\nstate: " << state_ << " vsync on: " << vsync_enable_
      << " max. mixer stages: " << max_mixer_stages_;
+  if (disp_layer_stack_.info.noise_layer_info.enable) {
+    os << "\nNoise z-orders: [" << disp_layer_stack_.info.noise_layer_info.zpos_noise << "," <<
+        disp_layer_stack_.info.noise_layer_info.zpos_attn << "]";
+  }
   os << "\nnum configs: " << num_modes << " active config index: " << active_index;
   os << "\nDisplay Attributes:";
   os << "\n Mode:" << (hw_panel_info_.mode == kModeVideo ? "Video" : "Command");
@@ -1801,6 +1813,8 @@ bool DisplayBuiltIn::CanSkipDisplayPrepare(LayerStack *layer_stack) {
       size_ff++;
     if (layer_stack->flags.demura_present)
       size_ff++;
+    if (disp_layer_stack_.info.flags.noise_present)
+      size_ff++;
 
     for (uint32_t i = 0; i < (layer_stack->layers.size() - size_ff); i++) {
       layer_stack->layers.at(i)->composition = kCompositionSDE;
@@ -1843,6 +1857,7 @@ DisplayError DisplayBuiltIn::BuildLayerStackStats(LayerStack *layer_stack) {
   hw_layers_info.gpu_target_index = -1;
   hw_layers_info.stitch_target_index = -1;
   hw_layers_info.demura_target_index = -1;
+  hw_layers_info.noise_layer_index = -1;
 
   disp_layer_stack_.stack = layer_stack;
   hw_layers_info.flags = layer_stack->flags;
@@ -1864,6 +1879,12 @@ DisplayError DisplayBuiltIn::BuildLayerStackStats(LayerStack *layer_stack) {
       disp_layer_stack_.stack->flags.demura_present = true;
       hw_layers_info.demura_present = true;
       DLOGD_IF(kTagDisplay, "Display %d shall request Demura in this frame", display_id_);
+    } else if (layer->flags.is_noise) {
+      hw_layers_info.flags.noise_present = true;
+      hw_layers_info.noise_layer_index = index;
+      hw_layers_info.noise_layer_info = noise_layer_info_;
+      DLOGV_IF(kTagDisplay, "Display %d-%d requested Noise at index = %d with zpos_n = %d",
+               display_id_, display_type_, index, noise_layer_info_.zpos_noise);
     } else {
       hw_layers_info.app_layer_count++;
     }
@@ -1878,11 +1899,11 @@ DisplayError DisplayBuiltIn::BuildLayerStackStats(LayerStack *layer_stack) {
   }
 
   DLOGI_IF(kTagDisplay, "LayerStack layer_count: %zu, app_layer_count: %d, "
-                        "gpu_target_index: %d, stitch_index: %d, demura_index: %d, "
-                        "game_present: %d, display: %d-%d",
-                        layers.size(), hw_layers_info.app_layer_count,
-                        hw_layers_info.gpu_target_index, hw_layers_info.stitch_target_index,
-                        hw_layers_info.demura_target_index, hw_layers_info.game_present,
+                        "gpu_target_index: %d, stitch_index: %d demura_index: %d game_present: %d"
+                        " noise_present: %d display: %d-%d", layers.size(),
+                        hw_layers_info.app_layer_count, hw_layers_info.gpu_target_index,
+                        hw_layers_info.stitch_target_index, hw_layers_info.demura_target_index,
+                        hw_layers_info.game_present, hw_layers_info.flags.noise_present,
                         display_id_, display_type_);
 
   if (!hw_layers_info.app_layer_count) {

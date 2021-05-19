@@ -142,6 +142,8 @@
 
 // DPPS dynamic fps
 #define ENABLE_DPPS_DYNAMIC_FPS              DISPLAY_PROP("enable_dpps_dynamic_fps")
+// Noise Layer
+#define DISABLE_NOISE_LAYER                  DISPLAY_PROP("disable_noise_layer")
 
 // Add all vendor.display properties above
 

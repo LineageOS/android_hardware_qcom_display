@@ -292,6 +292,12 @@ enum struct DRMOps {
    */
   CRTC_SET_SOLIDFILL_STAGES,
   /*
+   * Op: sets noise layer stage
+   * Arg: uint32_t - CRTC ID
+   *      uint64_t - Pointer to struct DRMNoiseLayerConfig
+   */
+  CRTC_SET_NOISELAYER_CONFIG,
+  /*
    * Op: Sets idle timeout.
    * Arg: uint32_t - CRTC ID
    *      uint32_t - idle timeout in ms
@@ -599,6 +605,7 @@ struct DRMCrtcInfo {
   uint32_t demura_count = 0;
   uint32_t dspp_count = 0;
   bool skip_inline_rot_threshold = false;
+  bool has_noise_layer = false;
 };
 
 enum struct DRMPlaneType {
@@ -963,6 +970,17 @@ struct DRMSolidfillStage {
   uint32_t color_bit_depth = 0;
   uint32_t z_order = 0;
   uint32_t plane_alpha = 0xff;
+};
+
+struct DRMNoiseLayerConfig {
+  bool enable = false;
+  uint64_t flags = 0;
+  uint32_t zpos_noise = 0;  // z_order for Noise layer
+  uint32_t zpos_attn = 0;   // z_order for attenuation layer
+  uint32_t attn_factor = 0;
+  uint32_t noise_strength = 0;
+  uint32_t alpha_noise = 0;
+  bool temporal_en = 0;
 };
 
 enum struct DRMFrameTriggerMode {

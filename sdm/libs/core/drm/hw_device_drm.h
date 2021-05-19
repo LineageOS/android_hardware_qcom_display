@@ -190,6 +190,9 @@ class HWDeviceDRM : public HWInterface {
   void SetSolidfillStages();
   void AddSolidfillStage(const HWSolidfillStage &sf, uint32_t plane_alpha);
   void ClearSolidfillStages();
+  void SetNoiseLayerConfig(const NoiseLayerConfig &noise_config);
+  void ApplyNoiseLayerConfig();
+  void ClearNoiseLayerConfig();
   void SetBlending(const LayerBlending &source, sde_drm::DRMBlendType *target);
   void SetSrcConfig(const LayerBuffer &input_buffer, const HWRotatorMode &mode, uint32_t *config);
   void SelectCscType(const LayerBuffer &input_buffer, sde_drm::DRMCscType *type);
@@ -270,6 +273,7 @@ class HWDeviceDRM : public HWInterface {
   bool first_null_cycle_ = true;
   HWMixerAttributes mixer_attributes_ = {};
   std::vector<sde_drm::DRMSolidfillStage> solid_fills_ {};
+  sde_drm::DRMNoiseLayerConfig noise_cfg_ = {};
   bool secure_display_active_ = false;
   TUIState tui_state_ = kTUIStateNone;
   uint64_t debug_dump_count_ = 0;

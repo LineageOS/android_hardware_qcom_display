@@ -345,6 +345,10 @@ void DRMCrtc::ParseProperties() {
       continue;
     }
 
+    if (prop_enum == DRMProperty::NOISE_LAYER_V1) {
+      crtc_info_.has_noise_layer = true;
+    }
+
     if (prop_enum == DRMProperty::SECURITY_LEVEL) {
       PopulateSecurityLevels(info);
     }
@@ -774,6 +778,12 @@ void DRMCrtc::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
       SetSolidfillStages(req, obj_id, solid_fills);
     } break;
 
+    case DRMOps::CRTC_SET_NOISELAYER_CONFIG: {
+      uint64_t data = va_arg(args, uint64_t);
+      const DRMNoiseLayerConfig *noise_cfg = reinterpret_cast<DRMNoiseLayerConfig *>(data);
+      SetNoiseLayerConfig(req, obj_id, noise_cfg);
+    } break;
+
     case DRMOps::CRTC_SET_IDLE_TIMEOUT: {
       uint32_t timeout_ms = va_arg(args, uint32_t);
       AddProperty(req, obj_id, prop_mgr_.GetPropertyId(DRMProperty::IDLE_TIME),
@@ -928,6 +938,23 @@ void DRMCrtc::SetSolidfillStages(drmModeAtomicReq *req, uint32_t obj_id,
               reinterpret_cast<uint64_t> (&drm_dim_layer_v1_), false /* cache */,
               tmp_prop_val_map_);
 #endif
+}
+
+void DRMCrtc::SetNoiseLayerConfig(drmModeAtomicReq *req, uint32_t obj_id,
+                                 const DRMNoiseLayerConfig *noise_cfg) {
+  drm_msm_noise_layer_cfg *cfg = nullptr;
+  drm_noise_layer_v1_ = {};
+  if (noise_cfg->enable) {
+    drm_noise_layer_v1_.flags = noise_cfg->temporal_en ? DRM_NOISE_TEMPORAL_FLAG : 0;
+    drm_noise_layer_v1_.zposn = noise_cfg->zpos_noise;
+    drm_noise_layer_v1_.zposattn = noise_cfg->zpos_attn;
+    drm_noise_layer_v1_.strength = noise_cfg->noise_strength;
+    drm_noise_layer_v1_.attn_factor = noise_cfg->attn_factor;
+    drm_noise_layer_v1_.alpha_noise = noise_cfg->alpha_noise;
+    cfg = &drm_noise_layer_v1_;
+  }
+  AddProperty(req, obj_id, prop_mgr_.GetPropertyId(DRMProperty::NOISE_LAYER_V1),
+              reinterpret_cast<uint64_t>(cfg), false /* cache */, tmp_prop_val_map_);
 }
 
 void DRMCrtc::Dump() {
