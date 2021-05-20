@@ -930,11 +930,10 @@ DisplayError HWDeviceDRM::GetHWPanelInfo(HWPanelInfo *panel_info) {
 }
 
 void HWDeviceDRM::SetDisplaySwitchMode(uint32_t index) {
-  if (current_mode_index_ == index) {
+  if (current_mode_index_ == index && !first_cycle_) {
     DLOGI("Mode %d already set", index);
     return;
   }
-
   uint32_t mode_flag = 0;
   uint32_t curr_mode_flag = 0, switch_mode_flag = 0;
   sde_drm::DRMModeInfo to_set = connector_info_.modes[index];
