@@ -185,7 +185,6 @@ SOONG_CONFIG_qtidisplay_gralloc4 := true
 SOONG_CONFIG_qtidisplay_default := true
 
 # Techpack values
-BUILD_DISPLAY_TECHPACK_SOURCE := true
 
 ifeq ($(TARGET_IS_HEADLESS), true)
     # TODO: QMAA prebuilts
