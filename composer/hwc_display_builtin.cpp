@@ -312,9 +312,11 @@ bool HWCDisplayBuiltIn::CanSkipCommit() {
   // 4. This display is not source of vsync.
   // 5. No CWB client
   bool buffers_latched = false;
+  bool needs_validation = false;
   for (auto &hwc_layer : layer_set_) {
     buffers_latched |= hwc_layer->BufferLatched();
     hwc_layer->ResetBufferFlip();
+    needs_validation |= hwc_layer->NeedsValidation();
   }
 
   bool vsync_source = (callbacks_->GetVsyncSource() == id_);
@@ -323,7 +325,8 @@ bool HWCDisplayBuiltIn::CanSkipCommit() {
   {
     std::lock_guard<std::mutex> lock(cwb_state_lock_);  // setting cwb state lock
     skip_commit = enable_optimize_refresh_ && !pending_commit_ && !buffers_latched &&
-                  !pending_refresh_ && !vsync_source && (cwb_state_.cwb_client == kCWBClientNone);
+                  !pending_refresh_ && !vsync_source && (cwb_state_.cwb_client == kCWBClientNone)
+                  && !needs_validation;
   }  // releasing the cwb state lock
   pending_refresh_ = false;
 
