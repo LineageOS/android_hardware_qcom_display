@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -29,6 +29,7 @@
 
 #include <core/buffer_allocator.h>
 #include <utils/debug.h>
+#include <utils/constants.h>
 #include <sync/sync.h>
 #include <vector>
 #include <string>
@@ -425,8 +426,10 @@ int HWCSession::DisplayConfigImpl::ToggleScreenUpdate(bool on) {
 int HWCSession::SetIdleTimeout(uint32_t value) {
   SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
 
+  int inactive_ms = IDLE_TIMEOUT_INACTIVE_MS;
+  Debug::Get()->GetProperty(IDLE_TIME_INACTIVE_PROP, &inactive_ms);
   if (hwc_display_[HWC_DISPLAY_PRIMARY]) {
-    hwc_display_[HWC_DISPLAY_PRIMARY]->SetIdleTimeoutMs(value);
+    hwc_display_[HWC_DISPLAY_PRIMARY]->SetIdleTimeoutMs(value, inactive_ms);
     return 0;
   }
 
@@ -511,6 +514,29 @@ int HWCSession::SetCameraLaunchStatus(uint32_t on) {
 int HWCSession::DisplayConfigImpl::SetCameraLaunchStatus(uint32_t on) {
   return hwc_session_->SetCameraLaunchStatus(on);
 }
+
+#ifdef DISPLAY_CONFIG_CAMERA_SMOOTH_APIs_1_0
+int HWCSession::DisplayConfigImpl::SetCameraSmoothInfo(CameraSmoothOp op, uint32_t fps) {
+  std::shared_ptr<DisplayConfig::ConfigCallback> callback = hwc_session_->camera_callback_.lock();
+  if (!callback) {
+    return -EAGAIN;
+  }
+
+  callback->NotifyCameraSmoothInfo(op, fps);
+
+  return 0;
+}
+
+int HWCSession::DisplayConfigImpl::ControlCameraSmoothCallback(bool enable) {
+  if (enable) {
+    hwc_session_->camera_callback_ = callback_;
+  } else {
+    hwc_session_->camera_callback_.reset();
+  }
+
+  return 0;
+}
+#endif
 
 int HWCSession::DisplayBWTransactionPending(bool *status) {
   SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
@@ -1217,6 +1243,33 @@ int HWCSession::DisplayConfigImpl::ControlIdleStatusCallback(bool enable) {
   }
 
   return 0;
+}
+
+int HWCSession::DisplayConfigImpl::IsRCSupported(uint32_t disp_id, bool *supported) {
+  // Mask layers can potentially be shown on any display so report RC supported on all displays if
+  // the property enables the feature for use.
+  int val = false;  // Default value.
+  Debug::GetProperty(ENABLE_ROUNDED_CORNER, &val);
+  *supported = val ? true: false;
+
+  return 0;
+}
+
+int HWCSession::DisplayConfigImpl::AllowIdleFallback() {
+  SEQUENCE_WAIT_SCOPE_LOCK(hwc_session_->locker_[HWC_DISPLAY_PRIMARY]);
+
+  uint32_t active_ms = 0;
+  uint32_t inactive_ms = 0;
+  Debug::GetIdleTimeoutMs(&active_ms, &inactive_ms);
+  if (hwc_session_->hwc_display_[HWC_DISPLAY_PRIMARY]) {
+    DLOGI("enable idle time active_ms:%d inactive_ms:%d",active_ms,inactive_ms);
+    hwc_session_->hwc_display_[HWC_DISPLAY_PRIMARY]->SetIdleTimeoutMs(active_ms, inactive_ms);
+    hwc_session_->is_idle_time_up_ = true;
+    return 0;
+  }
+
+  DLOGW("Display = %d is not connected.", HWC_DISPLAY_PRIMARY);
+  return -ENODEV;
 }
 
 }  // namespace sdm

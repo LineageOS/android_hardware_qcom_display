@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -28,6 +28,9 @@
 #include <sys/time.h>
 
 #include <core/dpps_interface.h>
+#include <private/extension_interface.h>
+#include <private/panel_feature_property_intf.h>
+#include <private/panel_feature_factory_intf.h>
 #include <string>
 #include <vector>
 
@@ -77,6 +80,8 @@ struct DeferFpsConfig {
   }
 };
 
+typedef PanelFeatureFactoryIntf* (*GetPanelFeatureFactoryIntfType)();
+
 class DppsInfo {
  public:
   void Init(DppsPropIntf *intf, const std::string &panel_name);
@@ -110,7 +115,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   virtual DisplayError DisablePartialUpdateOneFrame();
   virtual DisplayError SetDisplayState(DisplayState state, bool teardown,
                                        shared_ptr<Fence> *release_fence);
-  virtual void SetIdleTimeoutMs(uint32_t active_ms);
+  virtual void SetIdleTimeoutMs(uint32_t active_ms, uint32_t inactive_ms);
   virtual DisplayError SetDisplayMode(uint32_t mode);
   virtual DisplayError GetRefreshRateRange(uint32_t *min_refresh_rate, uint32_t *max_refresh_rate);
   virtual DisplayError SetRefreshRate(uint32_t refresh_rate, bool final_rate, bool idle_screen);
@@ -151,6 +156,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   void ResetPanel();
   virtual DisplayError SetActiveConfig(uint32_t index);
   virtual DisplayError ReconfigureDisplay();
+  DisplayError CreatePanelfeatures();
 
  private:
   bool CanCompareFrameROI(LayerStack *layer_stack);
@@ -159,6 +165,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   bool CanDeferFpsConfig(uint32_t fps);
   void SetDeferredFpsConfig();
   void GetFpsConfig(HWDisplayAttributes *display_attributes, HWPanelInfo *panel_info);
+  DisplayError SetupPanelfeatures();
   void UpdateDisplayModeParams();
   bool CanLowerFps(bool idle_screen);
   void HandleQsyncPostCommit(LayerStack *layer_stack);
@@ -172,6 +179,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   bool handle_idle_timeout_ = false;
   bool commit_event_enabled_ = false;
   bool reset_panel_ = false;
+  bool panel_feature_init_ = false;
   bool disable_dyn_fps_ = false;
   DppsInfo dpps_info_ = {};
   FrameTriggerMode trigger_mode_debug_ = kFrameTriggerMax;
@@ -183,7 +191,6 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   LayerRect right_frame_roi_ = {};
   Locker dpps_pu_lock_;
   bool dpps_pu_nofiy_pending_ = false;
-  bool first_cycle_ = true;
   shared_ptr<Fence> previous_retire_fence_ = nullptr;
   enum class SamplingState { Off, On } samplingState = SamplingState::Off;
   DisplayError setColorSamplingState(SamplingState state);
@@ -193,6 +200,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   sde_drm::DppsFeaturePayload histogramIRQ;
   void initColorSamplingState();
   DeferFpsConfig deferred_config_ = {};
+  GetPanelFeatureFactoryIntfType GetPanelFeatureFactoryIntfFunc_ = nullptr;
   bool enhance_idle_time_ = false;
   int idle_time_ms_ = 0;
   struct timespec idle_timer_start_;

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -389,6 +389,11 @@ enum struct DRMOps {
    */
   DPPS_COMMIT_FEATURE,
   /*
+   * Op: Commit panel features.
+   * Arg: drmModeAtomicReq - Atomic request
+   */
+  COMMIT_PANEL_FEATURES,
+  /*
    * Op: Sets qsync mode on connector
    * Arg: uint32_t - Connector ID
    *     uint32_t - qsync mode
@@ -535,6 +540,7 @@ struct DRMCrtcInfo {
   bool use_baselayer_for_stage = false;
   bool has_micro_idle = false;
   uint32_t ubwc_version = 1;
+  uint64_t rc_total_mem_size = 0;
 };
 
 enum struct DRMPlaneType {
@@ -695,7 +701,7 @@ enum DRMPPFeatureID {
   kPPFeaturesMax,
 };
 
-enum DRMPPPropType {
+enum DRMPropType {
   kPropEnum,
   kPropRange,
   kPropBlob,
@@ -704,7 +710,7 @@ enum DRMPPPropType {
 
 struct DRMPPFeatureInfo {
   DRMPPFeatureID id;
-  DRMPPPropType type;
+  DRMPropType type;
   uint32_t version;
   uint32_t payload_size;
   void *payload;
@@ -772,6 +778,21 @@ struct DRMDppsFeatureInfo {
   uint32_t version;
   uint32_t payload_size;
   void *payload;
+};
+
+enum DRMPanelFeatureID {
+  kDRMPanelFeatureRCInit,
+  kDRMPanelFeatureDsppRCInfo,
+  kDRMPanelFeatureMax,
+};
+
+struct DRMPanelFeatureInfo  {
+  DRMPanelFeatureID prop_id;
+  uint32_t obj_type;
+  uint32_t obj_id;
+  uint32_t version;
+  uint32_t prop_size;
+  uint64_t prop_ptr;
 };
 
 enum AD4Modes {
@@ -1061,6 +1082,18 @@ class DRMManagerInterface {
    * [output]: Dpps feature version, info->version
    */
   virtual void GetDppsFeatureInfo(DRMDppsFeatureInfo *info) = 0;
+
+  /*
+   * Get the Panel feature info
+   * [output]: panel feature info data
+   */
+  virtual void GetPanelFeature(DRMPanelFeatureInfo *info) = 0;
+
+  /*
+   * Set the Panel feature
+   * [input]: panel feature info data
+   */
+  virtual void SetPanelFeature(const DRMPanelFeatureInfo &info) = 0;
 };
 
 }  // namespace sde_drm

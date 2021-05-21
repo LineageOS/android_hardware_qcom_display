@@ -26,6 +26,7 @@ LOCAL_SRC_FILES           := drm_manager.cpp \
                              drm_utils.cpp \
                              drm_pp_manager.cpp \
                              drm_property.cpp \
+                             drm_panel_feature_mgr.cpp \
                              drm_dpps_mgr_imp.cpp
 
 ifeq ($(TARGET_USES_DRM_PP),true)

@@ -57,7 +57,7 @@ class DisplayNull : public DisplayInterface {
   virtual DisplayError Prepare(LayerStack *layer_stack);
   virtual bool IsPrimaryDisplay() { return true; }
   virtual bool IsUnderscanSupported() { return true; }
-  virtual void SetIdleTimeoutMs(uint32_t active_ms) { }
+  virtual void SetIdleTimeoutMs(uint32_t active_ms, uint32_t inactive_ms) { }
   virtual DisplayError GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
                                                     uint8_t *out_data);
   virtual bool CheckResourceState() { return false; }

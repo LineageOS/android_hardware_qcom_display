@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -197,6 +197,39 @@ DisplayError DisplayBase::Deinit() {
   }
   HWEventsInterface::Destroy(hw_events_intf_);
   HWInterface::Destroy(hw_intf_);
+  if (rc_panel_feature_init_) {
+    rc_core_->Deinit();
+    rc_panel_feature_init_ =  false;
+  }
+  return kErrorNone;
+}
+
+// Query the dspp capabilities and enable the RC feature.
+DisplayError DisplayBase::SetupRC() {
+  RCInputConfig input_cfg = {};
+  input_cfg.display_id = display_id_;
+  input_cfg.display_type = display_type_;
+  input_cfg.display_xres = display_attributes_.x_pixels;
+  input_cfg.display_yres = display_attributes_.y_pixels;
+  input_cfg.max_mem_size = hw_resource_info_.rc_total_mem_size;
+  rc_core_ = pf_factory_->CreateRCIntf(input_cfg, prop_intf_);
+  GenericPayload dummy;
+  int err = 0;
+  if (!rc_core_) {
+    DLOGE("Failed to create RC Intf");
+    return kErrorUndefined;
+  }
+  err = rc_core_->GetParameter(kRCFeatureQueryDspp, &dummy);
+  if (!err) {
+    // Since the query succeeded, this display has a DSPP.
+    if (rc_core_->Init() != 0) {
+      DLOGW("Failed to initialize RC");
+      return kErrorNotSupported;
+    }
+  } else {
+    DLOGW("RC HW block is not present for display %d-%d.", display_id_, display_type_);
+    return kErrorResources;
+  }
 
   return kErrorNone;
 }
@@ -308,6 +341,19 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
     return error;
   }
 
+  if (!rc_core_ && !first_cycle_ && rc_enable_prop_ && pf_factory_ && prop_intf_) {
+    error = SetupRC();
+    if (error == kErrorNone) {
+      rc_panel_feature_init_ = true;
+    } else {
+      DLOGW("RC feature not supported");
+    }
+  }
+  if (rc_panel_feature_init_) {
+    SetRCData(layer_stack);
+  }
+
+
   if (color_mgr_ && color_mgr_->NeedsPartialUpdateDisable()) {
     DisablePartialUpdateOneFrame();
   }
@@ -321,6 +367,8 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
 
   hw_layers_.updates_mask.set(kUpdateResources);
   comp_manager_->GenerateROI(display_comp_ctx_, &hw_layers_);
+  rc_pu_flag_status_ = hw_layers_.info.rc_pu_flag_status;
+
   comp_manager_->PrePrepare(display_comp_ctx_, &hw_layers_);
 
   while (true) {
@@ -357,9 +405,125 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
   return error;
 }
 
+// Send layer stack to RC core to generate and configure the mask on HW.
+void DisplayBase::SetRCData(LayerStack *layer_stack) {
+  int ret = -1;
+  HWLayersInfo &hw_layers_info = hw_layers_.info;
+  DLOGI_IF(kTagDisplay, "Display resolution: %dx%d", display_attributes_.x_pixels,
+           display_attributes_.y_pixels);
+  if (rc_cached_res_width_ != display_attributes_.x_pixels) {
+    GenericPayload in;
+    uint32_t *display_xres = nullptr;
+    ret = in.CreatePayload<uint32_t>(display_xres);
+    if (ret) {
+      DLOGE("failed to create the payload. Error:%d", ret);
+      return;
+    }
+    *display_xres = rc_cached_res_width_ = display_attributes_.x_pixels;
+    ret = rc_core_->SetParameter(kRCFeatureDisplayXRes, in);
+    if (ret) {
+      DLOGE("failed to set display X resolution. Error:%d", ret);
+      return;
+    }
+  }
+
+  if (rc_cached_res_height_ != display_attributes_.y_pixels) {
+    GenericPayload in;
+    uint32_t *display_yres = nullptr;
+    ret = in.CreatePayload<uint32_t>(display_yres);
+    if (ret) {
+      DLOGE("failed to create the payload. Error:%d", ret);
+      return;
+    }
+    *display_yres = rc_cached_res_height_ = display_attributes_.y_pixels;
+    ret = rc_core_->SetParameter(kRCFeatureDisplayYRes, in);
+    if (ret) {
+      DLOGE("failed to set display Y resolution. Error:%d", ret);
+      return;
+    }
+  }
+
+  GenericPayload in;
+  LayerStack **layer_stack_ptr = nullptr;
+  ret = in.CreatePayload<LayerStack *>(layer_stack_ptr);
+  if (ret) {
+    DLOGE("failed to create the payload. Error:%d", ret);
+    return;
+  }
+  *layer_stack_ptr = layer_stack;
+  GenericPayload out;
+  RCOutputConfig *rc_out_config = nullptr;
+  ret = out.CreatePayload<RCOutputConfig>(rc_out_config);
+  if (ret) {
+    DLOGE("failed to create the payload. Error:%d", ret);
+    return;
+  }
+  ret = rc_core_->ProcessOps(kRCFeaturePrepare, in, &out);
+  if (!ret) {
+    DLOGD_IF(kTagDisplay, "RC top_height = %d, RC bot_height = %d", rc_out_config->top_height,
+             rc_out_config->bottom_height);
+    hw_layers_info.rc_config = true;
+    hw_layers_info.rc_layers_info.top_width = rc_out_config->top_width;
+    hw_layers_info.rc_layers_info.top_height = rc_out_config->top_height;
+    hw_layers_info.rc_layers_info.bottom_width = rc_out_config->bottom_width;
+    hw_layers_info.rc_layers_info.bottom_height = rc_out_config->bottom_height;
+  }
+}
+
 DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
   DisplayError error = kErrorNone;
+
+  if (rc_panel_feature_init_) {
+    GenericPayload in, out;
+    RCMaskCfgState *mask_status = nullptr;
+    uint64_t *rc_pu_flag_status = nullptr;
+    int ret = -1;
+    ret = out.CreatePayload<RCMaskCfgState>(mask_status);
+    if (ret) {
+      DLOGE("failed to create the payload. Error:%d", ret);
+      return kErrorUndefined;
+    }
+    ret = in.CreatePayload<uint64_t>(rc_pu_flag_status);
+    if (ret) {
+      DLOGE("failed to create the payload. Error:%d", ret);
+      return kErrorUndefined;
+    }
+    *rc_pu_flag_status = rc_pu_flag_status_;
+    ret = rc_core_->ProcessOps(kRCFeatureCommit, in, &out);
+    hw_layers_.info.rc_pu_needs_full_roi = (*mask_status).rc_pu_full_roi;
+    if (ret) {
+     // If RC commit failed, fall back to default (GPU/SDE pipes) drawing of "handled" mask layers.
+     DLOGW("Failed to set the data on driver for display: %d-%d, Error: %d, status: %d",
+           display_id_, display_type_, ret, (*mask_status).rc_mask_state);
+      if ((*mask_status).rc_mask_state == kStatusRcMaskStackHandled) {
+        needs_validate_ = true;
+        DLOGW("Need to call Corresponding prepare to handle the mask layers %d %d.",
+              display_id_, display_type_);
+        for (auto &layer : layer_stack->layers) {
+          if (layer->input_buffer.flags.mask_layer) {
+            layer->request.flags.rc = false;
+          }
+        }
+        return kErrorNotValidated;
+      }
+    } else {
+      DLOGI_IF(kTagDisplay, "Status of RC mask data: %d., pu_rc_status_: 0x%" PRIx64,
+               (*mask_status).rc_mask_state, rc_pu_flag_status_);
+      if ((*mask_status).rc_pu_full_roi) {
+        if (rc_pu_flag_status_ && rc_pu_flag_status_ != SDE_HW_PU_USECASE) {
+          needs_validate_ = true;
+          return kErrorNotValidated;
+        }
+      }
+      if ((*mask_status).rc_mask_state == kStatusRcMaskStackDirty) {
+        needs_validate_ = true;
+        DLOGI_IF(kTagDisplay, "Mask is ready for display %d-%d, call Corresponding Prepare()",
+                 display_id_, display_type_);
+        return kErrorNotValidated;
+      }
+    }
+  }
 
   // Allow commit as pending doze/pending_power_on is handled as a part of draw cycle
   if (!active_ && !pending_doze_ && !pending_power_on_) {

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -28,6 +28,9 @@
 #include <core/display_interface.h>
 #include <private/strategy_interface.h>
 #include <private/color_interface.h>
+#include <private/rc_intf.h>
+#include <private/panel_feature_property_intf.h>
+#include <private/panel_feature_factory_intf.h>
 
 #include <map>
 #include <mutex>
@@ -120,7 +123,7 @@ class DisplayBase : public DisplayInterface {
     return kErrorNotSupported;
   }
   virtual DisplayError SetVSyncState(bool enable);
-  virtual void SetIdleTimeoutMs(uint32_t active_ms) {}
+  virtual void SetIdleTimeoutMs(uint32_t active_ms, uint32_t inactive_ms) {}
   virtual DisplayError SetMixerResolution(uint32_t width, uint32_t height);
   virtual DisplayError GetMixerResolution(uint32_t *width, uint32_t *height);
   virtual DisplayError SetFrameBufferConfig(const DisplayConfigVariableInfo &variable_info);
@@ -199,6 +202,7 @@ class DisplayBase : public DisplayInterface {
   PrimariesTransfer GetBlendSpaceFromColorMode();
   bool IsHdrMode(const AttrVal &attr);
   void InsertBT2020PqHlgModes(const std::string &str_render_intent);
+  DisplayError SetupRC();
   DisplayError HandlePendingVSyncEnable(const shared_ptr<Fence> &retire_fence);
   DisplayError HandlePendingPowerState(const shared_ptr<Fence> &retire_fence);
 
@@ -257,10 +261,20 @@ class DisplayBase : public DisplayInterface {
 
   static Locker display_power_reset_lock_;
   static bool display_power_reset_pending_;
+  bool rc_panel_feature_init_ = false;
+  bool rc_enable_prop_ = false;
+  PanelFeatureFactoryIntf *pf_factory_ = nullptr;
+  PanelFeaturePropertyIntf *prop_intf_ = nullptr;
+  bool first_cycle_ = true;
 
  private:
   bool StartDisplayPowerReset();
   void EndDisplayPowerReset();
+  void SetRCData(LayerStack *layer_stack);
+  unsigned int rc_cached_res_width_ = 0;
+  unsigned int rc_cached_res_height_ = 0;
+  std::unique_ptr<RCIntf> rc_core_ = nullptr;
+  uint64_t rc_pu_flag_status_ = 0;
 };
 
 }  // namespace sdm

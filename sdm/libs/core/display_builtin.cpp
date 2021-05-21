@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2014 - 2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2014 - 2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without modification, are permitted
 * provided that the following conditions are met:
@@ -121,6 +121,16 @@ DisplayError DisplayBuiltIn::Init() {
   Debug::Get()->GetProperty(DEFER_FPS_FRAME_COUNT, &value);
   deferred_config_.frame_count = (value > 0) ? UINT32(value) : 0;
 
+error = CreatePanelfeatures();
+  if (error != kErrorNone) {
+    DLOGE("Failed to setup panel feature factory, error: %d", error);
+  } else {
+    // Get status of RC enablement property. Default RC is disabled.
+    int rc_prop_value = 0;
+    Debug::GetProperty(ENABLE_ROUNDED_CORNER, &rc_prop_value);
+    rc_enable_prop_ = rc_prop_value ? true : false;
+    DLOGI("RC feature %s.", rc_enable_prop_ ? "enabled" : "disabled");
+  }
   value = 0;
   DebugHandler::Get()->GetProperty(DISABLE_DYNAMIC_FPS, &value);
   disable_dyn_fps_ = (value == 1);
@@ -144,6 +154,43 @@ DisplayError DisplayBuiltIn::Deinit() {
 
   dpps_info_.Deinit();
   return DisplayBase::Deinit();
+}
+
+// Create instance for RC, SPR and demura feature.
+DisplayError DisplayBuiltIn::CreatePanelfeatures() {
+  if (pf_factory_ && prop_intf_) {
+    return kErrorNone;
+  }
+
+  if (!GetPanelFeatureFactoryIntfFunc_) {
+    DynLib feature_impl_lib;
+    if (feature_impl_lib.Open(EXTENSION_LIBRARY_NAME)) {
+      if (!feature_impl_lib.Sym("GetPanelFeatureFactoryIntf",
+                                reinterpret_cast<void **>(&GetPanelFeatureFactoryIntfFunc_))) {
+        DLOGE("Unable to load symbols, error = %s", feature_impl_lib.Error());
+        return kErrorUndefined;
+      }
+    } else {
+      DLOGW("Unable to load = %s, error = %s", EXTENSION_LIBRARY_NAME, feature_impl_lib.Error());
+      DLOGW("Panel features are not supported");
+      return kErrorNotSupported;
+    }
+  }
+
+  pf_factory_ = GetPanelFeatureFactoryIntfFunc_();
+  if (!pf_factory_) {
+    DLOGE("Failed to create PanelFeatureFactoryIntf");
+    return kErrorResources;
+  }
+
+  prop_intf_ = hw_intf_->GetPanelFeaturePropertyIntf();
+  if (!prop_intf_) {
+    DLOGE("Failed to create PanelFeaturePropertyIntf");
+    pf_factory_ = nullptr;
+    return kErrorResources;
+  }
+
+  return kErrorNone;
 }
 
 DisplayError DisplayBuiltIn::Prepare(LayerStack *layer_stack) {
@@ -394,7 +441,7 @@ void DisplayBuiltIn::UpdateDisplayModeParams() {
     ControlPartialUpdate(false /* enable */, &pending);
   } else if (hw_panel_info_.mode == kModeCommand) {
     // Flush idle timeout value currently set.
-    comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, 0);
+    comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, 0, 0);
     switch_to_cmd_ = true;
   }
 }
@@ -430,9 +477,9 @@ DisplayError DisplayBuiltIn::SetDisplayState(DisplayState state, bool teardown,
   return kErrorNone;
 }
 
-void DisplayBuiltIn::SetIdleTimeoutMs(uint32_t active_ms) {
+void DisplayBuiltIn::SetIdleTimeoutMs(uint32_t active_ms, uint32_t inactive_ms) {
   lock_guard<recursive_mutex> obj(recursive_mutex_);
-  comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, active_ms);
+  comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, active_ms, inactive_ms);
 }
 
 DisplayError DisplayBuiltIn::SetDisplayMode(uint32_t mode) {
@@ -473,7 +520,7 @@ DisplayError DisplayBuiltIn::SetDisplayMode(uint32_t mode) {
       ControlPartialUpdate(false /* enable */, &pending);
     } else if (mode == kModeCommand) {
       // Flush idle timeout value currently set.
-      comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, 0);
+      comp_manager_->SetIdleTimeoutMs(display_comp_ctx_, 0, 0);
       switch_to_cmd_ = true;
     }
   }
