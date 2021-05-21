@@ -449,7 +449,9 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
         break;
       case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
       case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
-        size = MMM_COLOR_FMT_BUFFER_SIZE(MMM_COLOR_FMT_NV12, width, height);
+        mmm_color_format = (usage & GRALLOC_USAGE_PRIVATE_HEIF) ? MMM_COLOR_FMT_NV12_512 :
+                                                                  MMM_COLOR_FMT_NV12;
+        size = MMM_COLOR_FMT_BUFFER_SIZE(mmm_color_format, width, height);
         break;
       case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
       case HAL_PIXEL_FORMAT_NV21_ENCODEABLE:
@@ -606,6 +608,7 @@ void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint3
   unsigned int y_stride = 0, y_height = 0, y_size = 0;
   unsigned int c_stride = 0, c_height = 0, c_size = 0;
   uint64_t yOffset, cOffset;
+  unsigned int mmm_color_format;
 
   y_stride = c_stride = UINT(width) * bpp;
   y_height = INT(height);
@@ -628,7 +631,9 @@ void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint3
 #ifndef QMAA
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
-      c_height = MMM_COLOR_FMT_UV_SCANLINES(MMM_COLOR_FMT_NV12, height);
+      mmm_color_format = (info.usage & GRALLOC_USAGE_PRIVATE_HEIF) ? MMM_COLOR_FMT_NV12_512 :
+                                                                     MMM_COLOR_FMT_NV12;
+      c_height = MMM_COLOR_FMT_UV_SCANLINES(mmm_color_format, height);
       c_size = c_stride * c_height;
       break;
     case HAL_PIXEL_FORMAT_NV12_HEIF:
@@ -1288,8 +1293,10 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
       break;
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
-      aligned_w = INT(MMM_COLOR_FMT_Y_STRIDE(MMM_COLOR_FMT_NV12, width));
-      aligned_h = INT(MMM_COLOR_FMT_Y_SCANLINES(MMM_COLOR_FMT_NV12, height));
+      mmm_color_format = (usage & GRALLOC_USAGE_PRIVATE_HEIF) ? MMM_COLOR_FMT_NV12_512 :
+                                                                MMM_COLOR_FMT_NV12;
+      aligned_w = INT(MMM_COLOR_FMT_Y_STRIDE(mmm_color_format, width));
+      aligned_h = INT(MMM_COLOR_FMT_Y_SCANLINES(mmm_color_format, height));
       break;
     case HAL_PIXEL_FORMAT_YCrCb_420_SP_VENUS:
       aligned_w = INT(MMM_COLOR_FMT_Y_STRIDE(MMM_COLOR_FMT_NV21, width));
