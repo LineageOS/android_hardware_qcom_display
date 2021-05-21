@@ -1252,7 +1252,7 @@ int HWCSession::DisplayConfigImpl::CreateVirtualDisplay(uint32_t width, uint32_t
   auto status = hwc_session_->CreateVirtualDisplayObj(width, height, &format,
                                                       &hwc_session_->virtual_id_);
   if (status == HWC2::Error::None) {
-    DLOGI("Created virtual display id:%" PRIu64 ", res: %dx%d",
+    DLOGI("[async] Created virtual display id:%" PRIu64 ", res: %dx%d",
           hwc_session_->virtual_id_, width, height);
     if (active_builtin_disp_id < HWCCallbacks::kNumRealDisplays) {
       hwc_session_->WaitForResources(true, active_builtin_disp_id, hwc_session_->virtual_id_);

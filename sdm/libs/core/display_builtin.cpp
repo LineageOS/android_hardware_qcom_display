@@ -1717,7 +1717,7 @@ DisplayError DisplayBuiltIn::SetBLScale(uint32_t level) {
 
 bool DisplayBuiltIn::CanCompareFrameROI(LayerStack *layer_stack) {
   // Check Display validation and safe-mode states.
-  if (needs_validate_ || comp_manager_->IsSafeMode()) {
+  if (needs_validate_ || comp_manager_->IsSafeMode() || layer_stack->needs_validate) {
     return false;
   }
 
