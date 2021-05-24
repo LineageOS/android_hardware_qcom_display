@@ -31,7 +31,6 @@
 #include <private/rc_intf.h>
 #include <private/panel_feature_property_intf.h>
 #include <private/panel_feature_factory_intf.h>
-#include <private/noise_algo_intf.h>
 #include <private/noise_plugin_intf.h>
 #include <private/noise_plugin_dbg.h>
 
@@ -48,13 +47,8 @@
 #include "hw_events_interface.h"
 
 #define GET_PANEL_FEATURE_FACTORY "GetPanelFeatureFactoryIntf"
-#define GET_NOISE_ALGO_FACTORY "GetNoiseAlgoFactoryIntf"
-
 
 namespace sdm {
-
-#define NOISE_ALGO_VERSION_MAJOR (1)  // Noise Algo major version number
-#define NOISE_ALGO_VERSION_MINOR (0)  // Noise Algo minor version number
 
 #define NOISE_PLUGIN_VERSION_MAJOR (1)  // Noise Plugin major version number
 #define NOISE_PLUGIN_VERSION_MINOR (0)  // Noise Plugin minor version number
@@ -95,8 +89,7 @@ class DisplayBase : public DisplayInterface {
   virtual DisplayError SetActiveConfig(DisplayConfigVariableInfo *variable_info) {
     return kErrorNotSupported;
   }
-  virtual DisplayError SetNoisePlugInOverride(bool override_en, int32_t attn, int32_t noise_zpos,
-                                              int32_t bl_thr);
+  virtual DisplayError SetNoisePlugInOverride(bool override_en, int32_t attn, int32_t noise_zpos);
   virtual DisplayError SetMaxMixerStages(uint32_t max_mixer_stages);
   virtual DisplayError ControlPartialUpdate(bool enable, uint32_t *pending) {
     return kErrorNotSupported;
@@ -302,7 +295,6 @@ class DisplayBase : public DisplayInterface {
   void ProcessPowerEvent();
   DisplayError SetHWDetailedEnhancerConfig(void *params);
   DisplayError NoiseInit();
-  DisplayError CreateNoiseAlgo();
   DisplayError HandleNoiseLayer(LayerStack *layer_stack);
 
   DisplayMutex disp_mutex_;
@@ -378,8 +370,6 @@ class DisplayBase : public DisplayInterface {
   NoiseLayerConfig noise_layer_info_ = {};
   std::unique_ptr<NoisePlugInIntf> noise_plugin_intf_ = nullptr;
   NoisePlugInFactoryIntf *noise_plugin_factory_intf_ = nullptr;
-  std::unique_ptr<NoiseAlgoIntf> noise_algo_intf_ = nullptr;
-  NoiseAlgoFactoryIntf *noise_algo_factory_ = nullptr;
   bool noise_plugin_override_en_ = false;
   int32_t noise_override_zpos_ = -1;  // holds the overriden zpos/idx, used to mark sde_preferred
 
@@ -393,7 +383,6 @@ class DisplayBase : public DisplayInterface {
   DisplayError ValidateCwbConfigInfo(CwbConfig *cwb_config, const LayerBufferFormat &format);
   bool IsValidCwbRoi(const LayerRect &cwb_roi, const LayerRect &full_frame);
   DisplayError GetNoisePluginParams(LayerStack *layer_stack);
-  DisplayError GetNoiseAlgoParams();
   DisplayError InsertNoiseLayer(LayerStack *layer_stack);
   void WaitForCompletion(SyncPoints *sync_points);
   DisplayError PerformHwCommit(HWLayersInfo *hw_layers_info);

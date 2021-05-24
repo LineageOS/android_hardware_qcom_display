@@ -80,7 +80,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(Flush(LayerStack *))
   MAKE_NO_OP(GetVSyncState(bool *))
   MAKE_NO_OP(SetDrawMethod(DisplayDrawMethod))
-  MAKE_NO_OP(SetNoisePlugInOverride(bool, int32_t, int32_t, int32_t))
+  MAKE_NO_OP(SetNoisePlugInOverride(bool, int32_t, int32_t))
   MAKE_NO_OP(SetActiveConfig(uint32_t))
   MAKE_NO_OP(SetActiveConfig(DisplayConfigVariableInfo *))
   MAKE_NO_OP(SetMaxMixerStages(uint32_t))

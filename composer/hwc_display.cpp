@@ -2398,11 +2398,10 @@ int HWCDisplay::SetActiveDisplayConfig(uint32_t config) {
   return 0;
 }
 
-int HWCDisplay::SetNoisePlugInOverride(bool override_en, int32_t attn, int32_t noise_zpos,
-                                       int32_t bl_thr) {
-  DisplayError error = display_intf_->SetNoisePlugInOverride(override_en, attn, noise_zpos, bl_thr);
+int HWCDisplay::SetNoisePlugInOverride(bool override_en, int32_t attn, int32_t noise_zpos) {
+  DisplayError error = display_intf_->SetNoisePlugInOverride(override_en, attn, noise_zpos);
   if (error != kErrorNone) {
-    DLOGE("Failed to override NoisePlugIn! Error: %d", error);
+    DLOGE("Display ID: %" PRId64 " failed to override NoisePlugIn! Error: %d", id_, error);
     return -EINVAL;
   }
   callbacks_->Refresh(id_);

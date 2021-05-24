@@ -59,8 +59,35 @@ std::unique_ptr<NoisePlugInIntf> NoisePlugInFactoryIntfImpl::CreateNoisePlugInIn
   return intf;
 }
 
+DynLib::~DynLib() {
+  Close();
+}
+
+bool DynLib::Open(const char *lib_name) {
+  Close();
+  lib_ = ::dlopen(lib_name, RTLD_NOW);
+
+  return (lib_ != NULL);
+}
+
+bool DynLib::Sym(const char *func_name, void **func_ptr) {
+  if (lib_) {
+    *func_ptr = ::dlsym(lib_, func_name);
+  } else {
+    *func_ptr = NULL;
+  }
+
+  return (*func_ptr != NULL);
+}
+
+void DynLib::Close() {
+  if (lib_) {
+    ::dlclose(lib_);
+    lib_ = NULL;
+  }
+}
+
 NoisePlugInIntfImpl::NoisePlugInIntfImpl() {
-  set_param_func_[kNoisePlugInBackLightMax] = &NoisePlugInIntfImpl::SetBackLightMax;
   set_param_func_[kNoisePlugInMixerStages] = &NoisePlugInIntfImpl::SetMixerStages;
   set_param_func_[kNoisePlugInDisable] = &NoisePlugInIntfImpl::SetDisable;
   if ((kNoisePlugInDebugOverride >= kNoisePlugInDebugPropertyStart) &&
@@ -78,11 +105,6 @@ NoisePlugInIntfImpl::NoisePlugInIntfImpl() {
     set_param_func_[static_cast<NoisePlugInParams>(kNoisePlugInDebugNoiseZpos)] =
                    &NoisePlugInIntfImpl::SetDebugNoiseZpos;
   }
-  if ((kNoisePlugInDebugBacklightThr >= kNoisePlugInDebugPropertyStart) &&
-      (kNoisePlugInDebugBacklightThr < kNoisePlugInDebugPropertyEnd)) {
-    set_param_func_[static_cast<NoisePlugInParams>(kNoisePlugInDebugBacklightThr)] =
-                   &NoisePlugInIntfImpl::SetDebugBacklightThr;
-  }
   ops_func_[kOpsRunNoisePlugIn] = &NoisePlugInIntfImpl::RunNoisePlugIn;
 }
 
@@ -92,6 +114,36 @@ int NoisePlugInIntfImpl::Init() {
   enable_ = true;
   attn_ = NOISE_ATTN_DEFAULT;
   noise_zpos_override_ = -1;
+
+  DynLib algolib;
+  if (algolib.Open("libsdmextension.so")) {
+    if (!algolib.Sym("GetNoiseAlgoFactoryIntf",
+                    reinterpret_cast<void **>(&GetNoiseAlgoFactoryIntfFunc_))) {
+      DLOGE("Unable to load GetNoiseAlgoFactoryIntf, error = %s", algolib.Error());
+      return -ENOTSUP;
+    }
+  } else {
+    DLOGE("Unable to load = %s, error = %s", "libsdmextension.so", algolib.Error());
+    return -ENOTSUP;
+  }
+
+  noise_algo_factory_ = GetNoiseAlgoFactoryIntfFunc_();
+  if (!noise_algo_factory_) {
+    DLOGW("Failed to create NoiseAlgoFactoryIntf");
+    return -ENOTSUP;
+  }
+
+  noise_algo_ =
+      noise_algo_factory_->CreateNoiseAlgoIntf(NOISE_ALGO_VERSION_MAJOR, NOISE_ALGO_VERSION_MINOR);
+  if (!noise_algo_) {
+    DLOGE("Failed to create NoiseAlgoIntf");
+    return -ENOTSUP;
+  }
+  if (noise_algo_->Init()) {
+    DLOGE("Failed to initialize NoiseAlgoIntf");
+    noise_algo_ = nullptr;
+    return -ENOTSUP;
+  }
 
   init_done_ = true;
   return 0;
@@ -105,7 +157,9 @@ int NoisePlugInIntfImpl::Deinit() {
     return 0;
   }
 
-  backlight_max_ = -1;
+  noise_algo_->Deinit();
+  noise_algo_ = nullptr;
+
   init_done_ = false;
   return 0;
 }
@@ -167,29 +221,6 @@ int NoisePlugInIntfImpl::ProcessOps(NoisePlugInOps op, const GenericPayload &in,
   return (this->*func)(in, out);
 }
 
-int NoisePlugInIntfImpl::SetBackLightMax(const GenericPayload &in) {
-  int32_t err = 0;
-  uint32_t payload_size = 0;
-  int32_t *val = nullptr;
-
-  err = in.GetPayload<int32_t>(val, &payload_size);
-  if (err || payload_size != 1 || !val) {
-    DLOGE("GetPayload for input failed %d\n", err);
-    return -EINVAL;
-  }
-
-  // update maximum back light and back light threshold
-  if (*val > 0) {
-    backlight_max_ = *val;
-    backlight_thr_ = (BLT_DEFAULT_PERCENT * backlight_max_) / BLT_MAX_PERCENT;
-  } else {
-    DLOGE("invalid max backlight\n");
-    return -EINVAL;
-  }
-
-  return 0;
-}
-
 int NoisePlugInIntfImpl::SetMixerStages(const GenericPayload &in) {
   int32_t err = 0;
   uint32_t payload_size = 0;
@@ -245,9 +276,6 @@ int NoisePlugInIntfImpl::SetDebugOverride(const GenericPayload &in) {
   override_ = ((*val) == 1);
   attn_ = NOISE_ATTN_DEFAULT;
   noise_zpos_override_ = -1;
-  if (backlight_max_ != -1) {
-    backlight_thr_ = (BLT_DEFAULT_PERCENT * backlight_max_) / BLT_MAX_PERCENT;
-  }
 
   return 0;
 }
@@ -296,31 +324,8 @@ int NoisePlugInIntfImpl::SetDebugNoiseZpos(const GenericPayload &in) {
   return 0;
 }
 
-int NoisePlugInIntfImpl::SetDebugBacklightThr(const GenericPayload &in) {
-  int32_t err = 0;
-  uint32_t payload_size = 0;
-  int32_t *val = nullptr;
-
-  err = in.GetPayload<int32_t>(val, &payload_size);
-  if (err || payload_size != 1 || !val) {
-    DLOGE("GetPayload for input failed %d\n", err);
-    return -EINVAL;
-  }
-
-  // update backlight threshold
-  if ((*val >= BLT_MIN_PERCENT) && (*val <= BLT_MAX_PERCENT) && (backlight_max_ != -1) &&
-       override_) {
-    backlight_thr_ = ((*val) * backlight_max_) / BLT_MAX_PERCENT;
-  } else {
-    DLOGW("invalid backlight threshold override\n");
-    return -EINVAL;
-  }
-
-  return 0;
-}
-
 int NoisePlugInIntfImpl::RunNoisePlugIn(const GenericPayload &in, GenericPayload *out) {
-  int32_t err = -1, fod_zpos = -1, mask_zpos = -1;
+  int32_t err = -1, fod_zpos = -1;
   uint32_t payload_size = 0;
   NoisePlugInInputParams *input_params = nullptr;
   NoisePlugInOutputParams *output_params = nullptr;
@@ -345,7 +350,7 @@ int NoisePlugInIntfImpl::RunNoisePlugIn(const GenericPayload &in, GenericPayload
     return 0;
   }
 
-  // return with overridden z position when zpos override is enabled
+  // check if zpos override is enabled
   if (override_ && (noise_zpos_override_ > 0)) {
     if ((noise_zpos_override_ >= input_params->layers.size()) ||
         (input_params->layers[noise_zpos_override_].layer_type == kMaskLayer)) {
@@ -356,44 +361,67 @@ int NoisePlugInIntfImpl::RunNoisePlugIn(const GenericPayload &in, GenericPayload
     output_params->zpos[0] = noise_zpos_override_;
     output_params->zpos[1] = noise_zpos_override_ + 1;
     output_params->attn = attn_;
-    return 0;
-  }
+  } else {
+    // calculate z position as follows:
+    // FOD usecase : top most FOD layer when multiple FOD layers are present.
+    for (uint32_t i = 0; i < input_params->layers.size(); i++) {
+      if (input_params->layers[i].layer_type == kFodLayer) {
+        if ((int32_t)input_params->layers[i].zorder > fod_zpos) {
+          fod_zpos = (int32_t)input_params->layers[i].zorder;
+        }
+      }
+    }
 
-  // calculate z position as follows:
-  // FOD usecase : top most FOD layer when multiple FOD layers are present.
-  // GD usecase : beneath mask layers.
-  mask_zpos = input_params->layers.size();
-  for (uint32_t i = 0; i < input_params->layers.size(); i++) {
-    if (input_params->layers[i].layer_type == kFodLayer) {
-      if ((int32_t)input_params->layers[i].zorder > fod_zpos) {
-        fod_zpos = (int32_t)input_params->layers[i].zorder;
-      }
-    } else if (input_params->layers[i].layer_type == kMaskLayer) {
-      if ((int32_t)input_params->layers[i].zorder < mask_zpos) {
-        mask_zpos = (int32_t)input_params->layers[i].zorder;
-      }
+    // update output parameters
+    if (fod_zpos > 0) {
+      // FOD layer is present in layer stack
+      output_params->enabled = true;
+      output_params->zpos[0] = fod_zpos;
+      output_params->zpos[1] = fod_zpos + 1;
+      output_params->attn = attn_;
+    } else {
+      // FOD usecase is not present
+      output_params->enabled = false;
     }
   }
 
-  // update output parameters
-  if (fod_zpos > 0) {
-    // FOD layer is present in layer stack
-    output_params->enabled = true;
-    output_params->zpos[0] = fod_zpos;
-    output_params->zpos[1] = fod_zpos + 1;
-    output_params->attn = attn_;
-  } else if ((backlight_max_ != -1) && (input_params->backlight <= backlight_thr_)) {
-    // GD use case is present (max backlight must be set for GD usecase)
-    output_params->enabled = true;
-    output_params->zpos[0] = mask_zpos;
-    output_params->zpos[1] = mask_zpos + 1;
-    output_params->attn = attn_;
-  } else {
-    // FOD, GD usecases are not present
-    output_params->enabled = false;
+  if (output_params->enabled) {
+    NoiseAlgoInputParams *noise_algo_in = nullptr;
+    NoiseAlgoOutputParams *noise_algo_out = nullptr;
+    GenericPayload in_payload, out_payload;
+
+    err = in_payload.CreatePayload<NoiseAlgoInputParams>(noise_algo_in);
+    if (err) {
+      DLOGE("failed to create input payload. Error:%d", err);
+      return -ENOMEM;
+    }
+
+    noise_algo_in->attn_factor = output_params->attn;
+    noise_algo_in->zpos_noise_layer = output_params->zpos[0];
+    noise_algo_in->zpos_attn_layer = output_params->zpos[1];
+
+    err = out_payload.CreatePayload<NoiseAlgoOutputParams>(noise_algo_out);
+    if (err) {
+      DLOGE("failed to create output payload. Error:%d", err);
+            in_payload.DeletePayload();
+      return -ENOMEM;
+    }
+
+    err = noise_algo_->ProcessOps(sdm::kOpsRunNoiseAlgo, in_payload, &out_payload);
+    if (!err) {
+      output_params->strength = noise_algo_out->strength;
+      output_params->alpha_noise = noise_algo_out->alpha_noise;
+      output_params->temporal_en = noise_algo_out->temporal_en;
+    } else {
+      DLOGE("failed to run Noise Algo ProcessOps. Error:%d", err);
+      err = -ENOTSUP;
+    }
+
+    in_payload.DeletePayload();
+    out_payload.DeletePayload();
   }
 
-  return 0;
+  return err;
 }
 
 }  // namespace sdm
