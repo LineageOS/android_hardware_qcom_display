@@ -426,13 +426,14 @@ extern "C" int waitForComposerInit() {
     return !status;
 }
 
-extern "C" int setStandByMode(int mode) {
+extern "C" int setStandByMode(int mode, int is_twm = false) {
     status_t err = (status_t) FAILED_TRANSACTION;
     sp<IQService> binder = getBinder();
     Parcel inParcel, outParcel;
 
     if(binder != NULL) {
         inParcel.writeInt32(mode);
+        inParcel.writeInt32(is_twm);
         err = binder->dispatch(IQService::SET_STAND_BY_MODE,
               &inParcel, &outParcel);
         if(err) {

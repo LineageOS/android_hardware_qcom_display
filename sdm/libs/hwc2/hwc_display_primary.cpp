@@ -635,11 +635,28 @@ DisplayError HWCDisplayPrimary::GetDynamicDSIClock(uint64_t *bitclk) {
   return kErrorNotSupported;
 }
 
-DisplayError HWCDisplayPrimary::SetStandByMode(bool enable) {
+DisplayError HWCDisplayPrimary::SetStandByMode(bool enable, bool is_twm) {
   if (enable) {
     if (!display_null_.IsActive()) {
       stored_display_intf_ = display_intf_;
       display_intf_ = &display_null_;
+
+      if (is_twm && last_power_mode_ == HWC2::PowerMode::On) {
+        DLOGD("Display is in ON state and device is entering TWM mode.");
+        DisplayError error = stored_display_intf_->SetDisplayState(kStateDoze);
+        if (error != kErrorNone) {
+          if (error == kErrorShutDown) {
+            shutdown_pending_ = true;
+            return error;
+          }
+          DLOGE("Set state failed. Error = %d", error);
+          return error;
+        } else {
+          last_power_mode_ = HWC2::PowerMode::Doze;
+          DLOGD("Display moved to DOZE state.");
+        }
+      }
+
       display_null_.SetActive(true);
       DLOGD("Null display is connected successfully");
     } else {
@@ -647,6 +664,10 @@ DisplayError HWCDisplayPrimary::SetStandByMode(bool enable) {
     }
   } else {
     if (display_null_.IsActive()) {
+      if (is_twm) {
+        DLOGE("Unexpected event. Display state may be inconsistent.");
+        return kErrorNotSupported;
+      }
       display_intf_ = stored_display_intf_;
       validated_.reset();
       display_null_.SetActive(false);
