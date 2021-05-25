@@ -31,14 +31,18 @@
 #ifndef __NOISE_PLUGIN_DBG_H__
 #define __NOISE_PLUGIN_DBG_H__
 
+#include <private/noise_plugin_intf.h>
+
 namespace sdm {
 
-const uint32_t kNoisePlugInDebugPropertyStart = 512;  // Debug property range start
-const uint32_t kNoisePlugInDebugOverride = 512;       // Enable override flag
-const uint32_t kNoisePlugInDebugAttn = 513;           // Attenuation value
-const uint32_t kNoisePlugInDebugNoiseZpos = 514;      // Z position for Noise layer
-const uint32_t kNoisePlugInDebugBacklightThr = 515;   // Backlight threshold
-const uint32_t kNoisePlugInDebugPropertyEnd = 1023;   // Debug property range end
+// Enable override flag
+const uint32_t kNoisePlugInDebugOverride = kNoisePlugInDebugPropertyStart;
+// Attenuation value
+const uint32_t kNoisePlugInDebugAttn = kNoisePlugInDebugPropertyStart + 1;
+// Z position for Noise layer
+const uint32_t kNoisePlugInDebugNoiseZpos = kNoisePlugInDebugPropertyStart + 2;
+// Backlight threshold
+const uint32_t kNoisePlugInDebugBacklightThr = kNoisePlugInDebugPropertyStart + 3;
 
 }  // namespace sdm
 

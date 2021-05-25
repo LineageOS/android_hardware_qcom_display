@@ -40,12 +40,14 @@
 namespace sdm {
 
 enum NoisePlugInParams {
-  kNoisePlugInBackLightMax,  // Maximum BackLight value
-  kNoisePlugInMixerStages,   // Max no.of blending stages supported by HW
-  kNoisePlugInDisable,       // Disable the noise layer
+  kNoisePlugInBackLightMax,                // Maximum BackLight value
+  kNoisePlugInMixerStages,                 // Max no.of blending stages supported by HW
+  kNoisePlugInDisable,                     // Disable the noise layer
   kNoisePlugInParamsMax = 0xff,
-  kCustomPropertyStart = 0x100,
-  kCustomPropertyEnd = 0x1ff,
+  kCustomPropertyStart = 0x100,            // custom property start
+  kCustomPropertyEnd = 0x1ff,              // custom property end
+  kNoisePlugInDebugPropertyStart = 0x200,  // debug properties start
+  kNoisePlugInDebugPropertyEnd = 0x2ff,    // debug properties end
 };
 
 enum NoisePlugInLayerType {
