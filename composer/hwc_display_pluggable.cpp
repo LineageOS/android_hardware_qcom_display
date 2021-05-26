@@ -179,8 +179,12 @@ HWC2::Error HWCDisplayPluggable::Present(shared_ptr<Fence> *out_retire_fence) {
         if (flush_ && cwb_state_.cwb_client == kCWBClientNone) {
           ResetCwbState();
           display_intf_->FlushConcurrentWriteback();
-        } else if (cwb_state_.cwb_status == CWBStatus::kCWBTeardown) {
+        } else if (cwb_state_.cwb_status == CWBStatus::kCWBTeardown) {  // cwb teardown frame.
           cwb_state_.teardown_frame_retire_fence = layer_stack_.retire_fence;
+          cwb_state_.cwb_disp_id = -1;
+          cwb_state_.cwb_status = CWBStatus::kCWBPostTeardown;
+          DLOGV_IF(kTagClient, "CWB display id = %d , cwb status = %d", cwb_state_.cwb_disp_id,
+                   cwb_state_.cwb_status);
         }
       }  // releasing the cwb state lock
       status = HWCDisplay::PostCommitLayerStack(out_retire_fence);
