@@ -3133,6 +3133,8 @@ HWC2::Error HWCDisplay::TryDrawMethod(IQtiComposerClient::DrawMethod client_draw
 }
 
 void HWCDisplay::SetCwbState() {
+  DTRACE_SCOPED();
+
   std::lock_guard<std::mutex> lock(cwb_state_lock_);  // setting cwb state lock
   hwc2_display_t &cwb_disp_id = cwb_state_.cwb_disp_id;
   shared_ptr<Fence> &teardown_frame_retire_fence = cwb_state_.teardown_frame_retire_fence;

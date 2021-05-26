@@ -124,6 +124,7 @@ DisplayError DisplayPluggable::Init() {
 }
 
 DisplayError DisplayPluggable::Prepare(LayerStack *layer_stack) {
+  DTRACE_SCOPED();
   ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
   uint32_t new_mixer_width = 0;
