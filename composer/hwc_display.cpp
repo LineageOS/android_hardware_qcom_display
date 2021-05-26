@@ -3157,10 +3157,6 @@ void HWCDisplay::SetCwbState() {
       cwb_status = CWBStatus::kCWBConfigure;
     } else if (cwb_status == CWBStatus::kCWBConfigure) {
       cwb_status = CWBStatus::kCWBTeardown;  // cwb teardown for the caller display in this frame
-    } else if (cwb_status == CWBStatus::kCWBTeardown) {  // frame next to cwb teardown frame.
-      cwb_disp_id = -1;
-      cwb_status = CWBStatus::kCWBPostTeardown;
-      DLOGV_IF(kTagClient, "CWB display id is reset to : %d", cwb_disp_id);
     } else if ((cwb_status == CWBStatus::kCWBAvailable) ||
                (cwb_status == CWBStatus::kCWBPostTeardown)) {
       // In a frame with kCWBAvailable state, a new CWB request sets the cwb_state_ members
