@@ -14,7 +14,7 @@ cc_library_shared {
     ],
     header_libs: [
         "display_headers",
-        "qti_kernel_headers",
+        "generated_kernel_headers",
     ],
     include_dirs: [TARGET_OUT_HEADERS + "/common/inc"],
     cflags: [

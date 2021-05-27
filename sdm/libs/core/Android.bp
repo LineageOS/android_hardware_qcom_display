@@ -7,7 +7,7 @@ cc_library_shared {
     vendor: true,
     header_libs: [
         "display_headers",
-        "qti_kernel_headers",
+        "generated_kernel_headers",
     ],
     cflags: [
         "-fno-operator-names",

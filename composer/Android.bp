@@ -11,7 +11,7 @@ cc_binary {
     relative_install_path: "hw",
     header_libs: [
         "display_headers",
-        "qti_kernel_headers",
+        "generated_kernel_headers",
     ],
 
     cflags: [

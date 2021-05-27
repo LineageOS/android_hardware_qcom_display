@@ -26,7 +26,7 @@ cc_library_shared {
     ],
     header_libs: [
         "display_headers",
-        "qti_kernel_headers",
+        "generated_kernel_headers",
     ],
 
     cflags: [
@@ -59,7 +59,7 @@ cc_binary {
     ],
     header_libs: [
         "display_headers",
-        "qti_kernel_headers",
+        "generated_kernel_headers",
     ],
 
     cflags: [
@@ -94,7 +94,7 @@ cc_binary {
     ],
     header_libs: [
         "display_headers",
-        "qti_kernel_headers",
+        "generated_kernel_headers",
     ],
 
     cflags: [
