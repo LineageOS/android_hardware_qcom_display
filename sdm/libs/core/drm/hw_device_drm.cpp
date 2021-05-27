@@ -550,6 +550,7 @@ DisplayError HWDeviceDRM::Deinit() {
   // drmModeAtomicCommit() failure with ENOENT, 'No such file or directory'.
   if (!first_cycle_ || !first_null_cycle_) {
     ClearSolidfillStages();
+    ClearNoiseLayerConfig();
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_CRTC, token_.conn_id, 0);
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_POWER_MODE, token_.conn_id, DRMPowerMode::OFF);
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_MODE, token_.crtc_id, nullptr);
@@ -1232,6 +1233,7 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
   sde_drm::DRMModeInfo current_mode = connector_info_.modes[index];
 
   solid_fills_.clear();
+  noise_cfg_ = {};
   bool resource_update = hw_layers_info->updates_mask.test(kUpdateResources);
   bool buffer_update = hw_layers_info->updates_mask.test(kSwapBuffers);
   bool update_config = resource_update || buffer_update || tui_state_ == kTUIStateEnd ||
@@ -1281,6 +1283,11 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
     if (hw_layers_info->config[i].use_solidfill_stage) {
       hw_layers_info->config[i].hw_solidfill_stage.solid_fill_info = layer.solid_fill_info;
       AddSolidfillStage(hw_layers_info->config[i].hw_solidfill_stage, layer.plane_alpha);
+      continue;
+    }
+
+    if (layer_config.hw_noise_layer_cfg.enable) {
+      SetNoiseLayerConfig(layer_config.hw_noise_layer_cfg);
       continue;
     }
 
@@ -1373,6 +1380,7 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
 
   if (update_config) {
     SetSolidfillStages();
+    ApplyNoiseLayerConfig();
     SetQOSData(qos_data);
     drm_atomic_intf_->Perform(DRMOps::CRTC_SET_SECURITY_LEVEL, token_.crtc_id, crtc_security_level);
   }
@@ -1487,6 +1495,33 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
   if (hw_panel_info_.mode == kModeCommand) {
     drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_AUTOREFRESH, token_.conn_id, autorefresh_);
   }
+}
+
+void HWDeviceDRM::SetNoiseLayerConfig(const NoiseLayerConfig &noise_config) {
+  noise_cfg_.enable = noise_config.enable;
+  noise_cfg_.flags = noise_config.flags;
+  noise_cfg_.zpos_noise = noise_config.zpos_noise;
+  noise_cfg_.zpos_attn = noise_config.zpos_attn;
+  noise_cfg_.attn_factor =  noise_config.attenuation_factor;
+  noise_cfg_.noise_strength =  noise_config.noise_strength;
+  noise_cfg_.alpha_noise = noise_config.alpha_noise;
+  noise_cfg_.temporal_en = noise_config.temporal_en;
+  DLOGV_IF(kTagDriverConfig, "Display_id = %d z_noise = %d z_attn = %d attn_f = %d noise_str = %d"
+           "alpha noise = %d temporal_en = %d", display_id_,
+           noise_cfg_.zpos_noise, noise_cfg_.zpos_attn, noise_cfg_.attn_factor,
+           noise_cfg_.noise_strength, noise_cfg_.alpha_noise, noise_cfg_.temporal_en);
+}
+
+void HWDeviceDRM::ApplyNoiseLayerConfig() {
+  if (hw_resource_.has_noise_layer) {
+    drm_atomic_intf_->Perform(DRMOps::CRTC_SET_NOISELAYER_CONFIG, token_.crtc_id,
+                              reinterpret_cast<uint64_t>(&noise_cfg_));
+  }
+}
+
+void HWDeviceDRM::ClearNoiseLayerConfig() {
+  noise_cfg_ = {};
+  ApplyNoiseLayerConfig();
 }
 
 void HWDeviceDRM::AddSolidfillStage(const HWSolidfillStage &sf, uint32_t plane_alpha) {
@@ -1713,6 +1748,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayersInfo *hw_layers_info) {
 
 DisplayError HWDeviceDRM::Flush(HWLayersInfo *hw_layers_info) {
   ClearSolidfillStages();
+  ClearNoiseLayerConfig();
   ResetROI();
   bool sync_commit = (tui_state_ == kTUIStateStart || tui_state_ == kTUIStateEnd ||
                       secure_display_active_);

@@ -213,6 +213,8 @@ struct LayerFlags {
                               //!< This flag shall be set by client to indicate that this layer
                               //!< can be composed into the gpu target buffer that is passed along
                               //!< with the current draw cycle.
+
+      uint32_t is_noise : 1;  //!< This flag shall be set by SDM to indicate this layer as noise
     };
 
     uint32_t flags = 0;       //!< For initialization purpose only.
@@ -314,6 +316,8 @@ struct LayerStackFlags {
       uint32_t stitch_present : 1;  //!< This flag shall be set to true to indicate stack has stitch
 
       uint32_t demura_present : 1;  //!< This flag shall be set to true to indicate stack has demura
+
+      uint32_t noise_present : 1;  //!< Set if stack has noise layer
     };
 
     uint32_t flags = 0;               //!< For initialization purpose only.

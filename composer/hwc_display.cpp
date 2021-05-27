@@ -2405,6 +2405,7 @@ int HWCDisplay::SetNoisePlugInOverride(bool override_en, int32_t attn, int32_t n
     DLOGE("Failed to override NoisePlugIn! Error: %d", error);
     return -EINVAL;
   }
+  callbacks_->Refresh(id_);
   return 0;
 }
 

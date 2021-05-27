@@ -180,6 +180,7 @@ enum struct DRMProperty {
   DEMURA_BOOT_PLANE_V1,
   DYN_BIT_CLK,
   SDE_PP_CWB_DITHER_V2,
+  NOISE_LAYER_V1,
 
   // Insert above
   MAX

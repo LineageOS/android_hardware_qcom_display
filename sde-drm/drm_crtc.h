@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2019, The Linux Foundation. All rights reserved.
+* Copyright (c) 2019, 2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -76,6 +76,8 @@ class DRMCrtc {
               DRMRect *crtc_rois);
   void SetSolidfillStages(drmModeAtomicReq *req, uint32_t obj_id,
                           const std::vector<DRMSolidfillStage> *solid_fills);
+  void SetNoiseLayerConfig(drmModeAtomicReq *req, uint32_t obj_id,
+                           const DRMNoiseLayerConfig *noise_cfg);
   void ClearVotesCache();
 
   // Currently hardcoded to 10. In future we need to query bit depth from driver.
@@ -101,6 +103,7 @@ class DRMCrtc {
   sde_drm_roi_v1 roi_v1_ {};
 #endif
   sde_drm_dest_scaler_data dest_scale_data_ = {};
+  drm_msm_noise_layer_cfg drm_noise_layer_v1_ = {};
 };
 
 class DRMCrtcManager {
