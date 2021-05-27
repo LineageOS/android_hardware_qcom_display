@@ -1,10 +1,3 @@
-soong_namespace {
-    imports: [
-        "hardware/qcom/display/gralloc",
-        "hardware/qcom/display/libdebug",
-    ]
-}
-
 soong_config_module_type {
     name: "qtidisplay_cc_defaults",
     module_type: "cc_defaults",
