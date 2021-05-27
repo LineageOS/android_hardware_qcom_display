@@ -135,7 +135,7 @@ void init_test_cases() {
   // Override enabled case - One or more among {attn, noise zpos, bl thr} will be overriden
 
   // only override flag is enabled
-  TestCase test_case_18{1, 125, 0, 1, 255, 200, {kFodLayer, kDimLayer, kVideoLayer, kGraphicsLayer,
+  TestCase test_case_18{0, 125, 0, 1, 255, 200, {kFodLayer, kDimLayer, kVideoLayer, kGraphicsLayer,
                         kGameLayer}, 1, -1, -1, -1};
   // override attenuation factor
   TestCase test_case_19{1, 150, 3, 4, 255, 255, {kDimLayer, kVideoLayer, kGraphicsLayer, kFodLayer,
@@ -252,9 +252,6 @@ int TestCaseParser(sdm::NoisePlugInInputParams *in, sdm::NoisePlugInOutputParams
   *override_noise_zpos = test_case.override_noise_zpos;
   *override_bl_thr = test_case.override_bl_thr;
 
-  printf("Expected attn %d\n", *attn);
-  printf("Expected noise_layer %d\n", *noise_layer);
-  printf("Expected attn_layer %d\n", *attn_layer);
   return 0;
 }
 
@@ -266,10 +263,6 @@ static bool TestStatusCheck(bool enable, uint32_t attn, uint32_t noise_layer, ui
   }
   if ((p->enabled == enable) && ((enable == 0) || ((p->attn == attn) && (p->zpos[0] == noise_layer)
        && (p->zpos[1] == attn_layer)))) {
-    printf(
-        "test case passed! act en %d exp en %d act attn %d expected attn = %d act noise_layer %d "
-        "expected noise_layer = %d act attn_layer %d expected attn_layer = %d\n",
-        p->enabled, enable, p->attn, attn, p->zpos[0], noise_layer, p->zpos[1], attn_layer);
     failed = false;
   } else {
     printf(
@@ -278,10 +271,7 @@ static bool TestStatusCheck(bool enable, uint32_t attn, uint32_t noise_layer, ui
         p->enabled, enable, p->attn, attn, p->zpos[0], noise_layer, p->zpos[1], attn_layer);
     failed = true;
   }
-  if (failed)
-    printf("Test case failed\n");
-  else
-    printf("Test case passed\n");
+
   return failed;
 }
 
@@ -299,10 +289,6 @@ static void ExecuteTestCase(std::unique_ptr<sdm::NoisePlugInIntf> &plugin_intf, 
     sdm::NoisePlugInInputParams *in;
     sdm::NoisePlugInOutputParams *out;
     GenericPayload in_payload, out_payload;
-
-    printf("******************************\n");
-    printf("test case num %d\n", cur + 1);
-    printf("******************************\n");
 
     int32_t ret = in_payload.CreatePayload<sdm::NoisePlugInInputParams>(in);
     if (ret) {
@@ -335,54 +321,65 @@ static void ExecuteTestCase(std::unique_ptr<sdm::NoisePlugInIntf> &plugin_intf, 
     // Set maximum backlight value
     *val = backlight_max;
     ret = plugin_intf->SetParameter(sdm::kNoisePlugInBackLightMax, payload);
-    if (ret) {
+    if ((ret) && (backlight_max > 0)) {
       printf("failed to set max backlight value\n");
       payload.DeletePayload();
       return;
     }
 
     // set override enable/disable flag
-    *val = override_en;
     sdm::NoisePlugInParams param;
-    param = static_cast<sdm::NoisePlugInParams>(sdm::kNoisePlugInDebugOverride);
-    ret = plugin_intf->SetParameter(param, payload);
-    if (ret) {
-      printf("Failed to set override enable flag\n");
-      payload.DeletePayload();
-      return;
+    if ((sdm::kNoisePlugInDebugOverride >= sdm::kNoisePlugInDebugPropertyStart) &&
+        (sdm::kNoisePlugInDebugOverride < sdm::kNoisePlugInDebugPropertyEnd)) {
+      *val = override_en;
+      param = static_cast<sdm::NoisePlugInParams>(sdm::kNoisePlugInDebugOverride);
+      ret = plugin_intf->SetParameter(param, payload);
+      if (ret) {
+        printf("Failed to set override enable flag\n");
+        payload.DeletePayload();
+        return;
+      }
     }
 
     if (override_en) {
       // over-ride enable case
-
-      // override attenuation factor
-      *val = override_attn;
-      param = static_cast<sdm::NoisePlugInParams>(sdm::kNoisePlugInDebugAttn);
-      ret = plugin_intf->SetParameter(param, payload);
-      if (ret) {
-        printf("Failed to set noise attn\n");
-        payload.DeletePayload();
-        return;
+      if ((sdm::kNoisePlugInDebugAttn >= sdm::kNoisePlugInDebugPropertyStart) &&
+          (sdm::kNoisePlugInDebugAttn < sdm::kNoisePlugInDebugPropertyEnd)) {
+        // override attenuation factor
+        *val = override_attn;
+        param = static_cast<sdm::NoisePlugInParams>(sdm::kNoisePlugInDebugAttn);
+        ret = plugin_intf->SetParameter(param, payload);
+        if ((ret) && (override_attn > 0)) {
+          printf("Failed to set noise attn\n");
+          payload.DeletePayload();
+          return;
+        }
       }
 
-      // override noise layer z position
-      *val = override_noise_zpos;
-      param = static_cast<sdm::NoisePlugInParams>(sdm::kNoisePlugInDebugNoiseZpos);
-      ret = plugin_intf->SetParameter(param, payload);
-      if (ret) {
-        printf("Failed to set noise zpos\n");
-        payload.DeletePayload();
-        return;
+      if ((sdm::kNoisePlugInDebugNoiseZpos >= sdm::kNoisePlugInDebugPropertyStart) &&
+          (sdm::kNoisePlugInDebugNoiseZpos < sdm::kNoisePlugInDebugPropertyEnd)) {
+        // override noise layer z position
+        *val = override_noise_zpos;
+        param = static_cast<sdm::NoisePlugInParams>(sdm::kNoisePlugInDebugNoiseZpos);
+        ret = plugin_intf->SetParameter(param, payload);
+        if ((ret) && (override_noise_zpos > 0)) {
+          printf("Failed to set noise zpos\n");
+          payload.DeletePayload();
+          return;
+        }
       }
 
-      // override backlight threshold
-      *val = override_bl_thr;
-      param = static_cast<sdm::NoisePlugInParams>(sdm::kNoisePlugInDebugBacklightThr);
-      ret = plugin_intf->SetParameter(param, payload);
-      if (ret) {
-        printf("Failed to set backlight threshold\n");
-        payload.DeletePayload();
-        return;
+      if ((sdm::kNoisePlugInDebugBacklightThr >= sdm::kNoisePlugInDebugPropertyStart) &&
+          (sdm::kNoisePlugInDebugBacklightThr < sdm::kNoisePlugInDebugPropertyEnd)) {
+        // override backlight threshold
+        *val = override_bl_thr;
+        param = static_cast<sdm::NoisePlugInParams>(sdm::kNoisePlugInDebugBacklightThr);
+        ret = plugin_intf->SetParameter(param, payload);
+        if ((ret) && (override_bl_thr > 0) && (backlight_max > 0)) {
+          printf("Failed to set backlight threshold\n");
+          payload.DeletePayload();
+          return;
+        }
       }
     }
 
@@ -398,6 +395,7 @@ static void ExecuteTestCase(std::unique_ptr<sdm::NoisePlugInIntf> &plugin_intf, 
     // De-initialize plugin interface so that max backlight is unset
     plugin_intf->Deinit();
 
+    printf("test case: %d resut: %s\n", cur, failure ? "failed":"passed");
     if (failure) {
       break;
     }

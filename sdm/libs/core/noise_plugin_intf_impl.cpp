@@ -63,14 +63,26 @@ NoisePlugInIntfImpl::NoisePlugInIntfImpl() {
   set_param_func_[kNoisePlugInBackLightMax] = &NoisePlugInIntfImpl::SetBackLightMax;
   set_param_func_[kNoisePlugInMixerStages] = &NoisePlugInIntfImpl::SetMixerStages;
   set_param_func_[kNoisePlugInDisable] = &NoisePlugInIntfImpl::SetDisable;
-  set_param_func_[static_cast<NoisePlugInParams>(kNoisePlugInDebugOverride)] =
-                 &NoisePlugInIntfImpl::SetDebugOverride;
-  set_param_func_[static_cast<NoisePlugInParams>(kNoisePlugInDebugAttn)] =
-                 &NoisePlugInIntfImpl::SetDebugAttn;
-  set_param_func_[static_cast<NoisePlugInParams>(kNoisePlugInDebugNoiseZpos)] =
-                 &NoisePlugInIntfImpl::SetDebugNoiseZpos;
-  set_param_func_[static_cast<NoisePlugInParams>(kNoisePlugInDebugBacklightThr)] =
-                 &NoisePlugInIntfImpl::SetDebugBacklightThr;
+  if ((kNoisePlugInDebugOverride >= kNoisePlugInDebugPropertyStart) &&
+      (kNoisePlugInDebugOverride < kNoisePlugInDebugPropertyEnd)) {
+    set_param_func_[static_cast<NoisePlugInParams>(kNoisePlugInDebugOverride)] =
+                   &NoisePlugInIntfImpl::SetDebugOverride;
+  }
+  if ((kNoisePlugInDebugAttn >= kNoisePlugInDebugPropertyStart) &&
+      (kNoisePlugInDebugAttn < kNoisePlugInDebugPropertyEnd)) {
+    set_param_func_[static_cast<NoisePlugInParams>(kNoisePlugInDebugAttn)] =
+                   &NoisePlugInIntfImpl::SetDebugAttn;
+  }
+  if ((kNoisePlugInDebugNoiseZpos >= kNoisePlugInDebugPropertyStart) &&
+      (kNoisePlugInDebugNoiseZpos < kNoisePlugInDebugPropertyEnd)) {
+    set_param_func_[static_cast<NoisePlugInParams>(kNoisePlugInDebugNoiseZpos)] =
+                   &NoisePlugInIntfImpl::SetDebugNoiseZpos;
+  }
+  if ((kNoisePlugInDebugBacklightThr >= kNoisePlugInDebugPropertyStart) &&
+      (kNoisePlugInDebugBacklightThr < kNoisePlugInDebugPropertyEnd)) {
+    set_param_func_[static_cast<NoisePlugInParams>(kNoisePlugInDebugBacklightThr)] =
+                   &NoisePlugInIntfImpl::SetDebugBacklightThr;
+  }
   ops_func_[kOpsRunNoisePlugIn] = &NoisePlugInIntfImpl::RunNoisePlugIn;
 }
 
