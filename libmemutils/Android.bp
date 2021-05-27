@@ -1,5 +1,3 @@
-TARGET_OUT_HEADERS = "vendor/qcom/proprietary"
-
 cc_library_shared {
 
     name: "libmemutils",
@@ -16,7 +14,6 @@ cc_library_shared {
         "display_headers",
         "generated_kernel_headers",
     ],
-    include_dirs: [TARGET_OUT_HEADERS + "/common/inc"],
     cflags: [
         "-Wno-missing-field-initializers",
         "-Wall",
