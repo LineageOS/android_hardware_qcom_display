@@ -64,7 +64,8 @@ class ResourceInterface {
                                 LayerFeedback* feedback) = 0;
   virtual DisplayError Stop(Handle display_ctx, DispLayerStack *disp_layer_stack) = 0;
   virtual DisplayError SetDrawMethod(Handle display_ctx, const DisplayDrawMethod &draw_method) = 0;
-  virtual DisplayError Prepare(Handle display_ctx, DispLayerStack *disp_layer_stack) = 0;
+  virtual DisplayError Prepare(Handle display_ctx, DispLayerStack *disp_layer_stack,
+                               LayerFeedback *feedback) = 0;
   virtual DisplayError PostPrepare(Handle display_ctx, DispLayerStack *disp_layer_stack) = 0;
   virtual DisplayError Commit(Handle display_ctx, DispLayerStack *disp_layer_stack) = 0;
   virtual DisplayError PostCommit(Handle display_ctx, DispLayerStack *disp_layer_stack) = 0;

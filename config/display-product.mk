@@ -103,7 +103,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
     debug.sf.disable_client_composition_cache=1 \
     debug.sf.enable_gl_backpressure=1 \
     debug.sf.enable_hwc_vds=1 \
-    vendor.display.vds_allow_hwc=0 \
+    vendor.display.vds_allow_hwc=1 \
+    vendor.display.enable_async_vds_creation=1 \
     vendor.display.enable_rounded_corner=1
 
 # Enable offline rotator for Bengal.

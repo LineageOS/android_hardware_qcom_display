@@ -40,7 +40,7 @@ struct StrategyConstraints {
 
   uint32_t max_layers = kMaxSDELayers;  //!< Maximum number of layers that shall be programmed
                                         //!< on hardware for the given layer stack.
-  LayerFeedback feedback;  //!< Feedback from Layer Precheck
+  LayerFeedback feedback = LayerFeedback(0);  //!< Feedback from Layer Precheck
 };
 
 class StrategyInterface {

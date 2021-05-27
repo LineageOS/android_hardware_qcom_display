@@ -222,13 +222,15 @@ DisplayError ResourceDefault::SetDrawMethod(Handle display_ctx,
   return kErrorNone;
 }
 
-DisplayError ResourceDefault::Prepare(Handle display_ctx, DispLayerStack *disp_layer_stack) {
+DisplayError ResourceDefault::Prepare(Handle display_ctx, DispLayerStack *disp_layer_stack,
+                                      LayerFeedback *feedback) {
   DisplayResourceContext *display_resource_ctx =
                           reinterpret_cast<DisplayResourceContext *>(display_ctx);
 
   DisplayError error = kErrorNone;
   const struct HWLayersInfo &layer_info = disp_layer_stack->info;
   HWBlockType hw_block_type = display_resource_ctx->hw_block_type;
+  *feedback = LayerFeedback(0);
 
   DLOGV_IF(kTagResources, "==== Resource reserving start: hw_block_type = %d ====", hw_block_type);
 
