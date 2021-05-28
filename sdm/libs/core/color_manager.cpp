@@ -144,6 +144,7 @@ ColorManagerProxy::ColorManagerProxy(int32_t id, DisplayType type, HWInterface *
     switch (enable_posted_start_dyn) {
     case kControlWithPostedStartDynSwitch:
       dyn_switch = true;
+    [[fallthrough]];
     case kControlPostedStart:
       feature_intf_ = GetPostedStartFeatureCheckIntf(intf, &pp_features_, dyn_switch);
       if (!feature_intf_) {
