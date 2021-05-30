@@ -162,6 +162,7 @@ class DisplayBuiltIn : public DisplayBase, HWEventHandler, DppsPropIntf {
   recursive_mutex brightness_lock_;
   float cached_brightness_ = 0.0f;
   bool pending_brightness_ = false;
+  bool skip_refresh_rate_change_ = false;
 };
 
 }  // namespace sdm

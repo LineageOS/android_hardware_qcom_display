@@ -133,4 +133,6 @@
 #define DISABLE_IDLE_TIME_HDR                DISPLAY_PROP("disable_idle_time_hdr")
 #define ENABLE_POMS_DURING_DOZE              DISPLAY_PROP("enable_poms_during_doze")
 
+#define SKIP_REFRESH_RATE_CHANGE             DISPLAY_PROP("skip_refresh_rate_change")
+
 #endif  // __DISPLAY_PROPERTIES_H__
