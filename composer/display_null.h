@@ -71,6 +71,7 @@ class DisplayNull : public DisplayInterface {
   virtual DisplayError GetQsyncFps(uint32_t *qsync_fps) { return kErrorNotSupported; }
   virtual void FlushConcurrentWriteback() {}
   virtual void ScreenRefresh() { }
+  virtual bool IsWriteBackSupportedFormat(const LayerBufferFormat &format) { return false; }
 
   MAKE_NO_OP(CommitOrPrepare(LayerStack *))
   MAKE_NO_OP(PrePrepare(LayerStack *))

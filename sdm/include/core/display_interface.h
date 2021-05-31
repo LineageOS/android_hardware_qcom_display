@@ -1123,6 +1123,14 @@ class DisplayInterface {
   virtual DisplayError IsSupportedOnDisplay(SupportedDisplayFeature feature,
                                             uint32_t *supported) = 0;
 
+  /*! @brief Method to check whether writeback supports requested color format or not.
+
+    @param[in] \link LayerBufferFormat \endlink
+
+    @return \link bool \endlink
+  */
+  virtual bool IsWriteBackSupportedFormat(const LayerBufferFormat &format) = 0;
+
   /*! @brief Method to clear scaler LUTs.
 
     @return \link DisplayError \endlink
