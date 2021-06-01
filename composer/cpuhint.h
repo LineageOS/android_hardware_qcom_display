@@ -40,13 +40,11 @@ class HWCDebugHandler;
 class CPUHint {
  public:
   DisplayError Init(HWCDebugHandler *debug_handler);
-  void ReqHints(int hint);
   void ReqHintsOffload(int hint, int duration);
 
  private:
   bool enabled_ = false;
   DynLib vendor_ext_lib_;
-  int (*fn_perf_hint_)(int hint, const char *pkg, int duration, int type) = NULL;
   int (*fn_perf_hint_offload_)(int hint, const char *pkg, int duration, int type,
                                int numArgs, int *) = NULL;
 };

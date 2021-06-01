@@ -46,8 +46,7 @@ DisplayError CPUHint::Init(HWCDebugHandler *debug_handler) {
   }
 
   if (vendor_ext_lib_.Open(path)) {
-    if (!vendor_ext_lib_.Sym("perf_hint", reinterpret_cast<void **>(&fn_perf_hint_)) ||
-        !vendor_ext_lib_.Sym("perf_hint_offload", reinterpret_cast<void **> \
+    if (!vendor_ext_lib_.Sym("perf_hint_offload", reinterpret_cast<void **> \
         (&fn_perf_hint_offload_))) {
       DLOGW("Failed to load symbols for Vendor Extension Library");
       return kErrorNotSupported;
@@ -59,12 +58,6 @@ DisplayError CPUHint::Init(HWCDebugHandler *debug_handler) {
   }
 
   return enabled_ ? kErrorNone : kErrorNotSupported;
-}
-
-void CPUHint::ReqHints(int hint) {
-  if(enabled_ && hint > 0) {
-    fn_perf_hint_(hint, NULL, 0, 0);
-  }
 }
 
 void CPUHint::ReqHintsOffload(int hint, int duration) {
