@@ -84,6 +84,7 @@ enum LayerBufferFormat {
   kFormatRGBA1010102Ubwc,  //!< UBWC aligned RGBA1010102 format
   kFormatRGBX1010102Ubwc,  //!< UBWC aligned RGBX1010102 format
   kFormatRGB101010,     // 10-bits Red, Green, Blue, interleaved in RGB order. No Alpha.
+  kFormatBlob,          // Task-specific data without a standard image structure.
 
   /* All YUV-Planar formats, Any new format will be added towards end of this group to maintain
      backward compatibility.
