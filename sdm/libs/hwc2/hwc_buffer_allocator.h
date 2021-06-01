@@ -37,6 +37,7 @@
 #include <android/hardware/graphics/mapper/2.1/IMapper.h>
 #include <android/hardware/graphics/mapper/3.0/IMapper.h>
 #include "gralloc_priv.h"
+#include <mutex>
 
 using IAllocatorV3 = android::hardware::graphics::allocator::V3_0::IAllocator;
 using IAllocatorV2 = android::hardware::graphics::allocator::V2_0::IAllocator;
@@ -72,6 +73,7 @@ class HWCBufferAllocator : public BufferAllocator {
   android::sp<IMapperV3> mapper_V3_;
   android::sp<IAllocatorV2> allocator_V2_;
   android::sp<IAllocatorV3> allocator_V3_;
+  std::mutex gralloc_init_lock_;
 };
 
 }  // namespace sdm

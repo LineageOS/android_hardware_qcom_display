@@ -49,9 +49,10 @@ using android::hardware::hidl_vec;
 namespace sdm {
 
 DisplayError HWCBufferAllocator::GetGrallocInstance() {
+  std::lock_guard<std::mutex> lock(gralloc_init_lock_);
   // Lazy initialization of gralloc HALs
-  if (mapper_V3_ != nullptr || mapper_V2_ != nullptr || allocator_V3_ != nullptr ||
-      allocator_V2_ != nullptr) {
+  if ((mapper_V3_ != nullptr || mapper_V2_ != nullptr) && (allocator_V3_ != nullptr ||
+      allocator_V2_ != nullptr)) {
     return kErrorNone;
   }
 
