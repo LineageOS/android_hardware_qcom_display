@@ -62,7 +62,10 @@ DisplayError CPUHint::Init(HWCDebugHandler *debug_handler) {
 
 void CPUHint::ReqHintsOffload(int hint, int duration) {
   if(enabled_ && hint > 0) {
-    fn_perf_hint_offload_(hint, NULL, duration, 0, 0, NULL);
+    int handle = fn_perf_hint_offload_(hint, NULL, duration, 0, 0, NULL);
+    if (handle < 0) {
+      DLOGW("Failed to send hint 0x%x. handle = %d", hint, handle);
+    }
   }
 }
 }  // namespace sdm
