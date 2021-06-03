@@ -1187,7 +1187,7 @@ DisplayError HWDeviceDRM::PowerOff(bool teardown, SyncPoints *sync_points) {
 DisplayError HWDeviceDRM::Doze(const HWQosData &qos_data, SyncPoints *sync_points) {
   DTRACE_SCOPED();
 
-  if (!first_cycle_ || tui_state_ != kTUIStateNone || last_power_mode_ != DRMPowerMode::OFF) {
+  if (first_cycle_ || tui_state_ != kTUIStateNone || last_power_mode_ != DRMPowerMode::OFF) {
     pending_power_state_ = kPowerStateDoze;
     return kErrorDeferred;
   }
