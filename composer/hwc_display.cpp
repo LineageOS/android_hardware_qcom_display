@@ -3242,6 +3242,9 @@ HWC2::Error HWCDisplay::SetReadbackBuffer(const native_handle_t *buffer,
   if (output_buffer_.format == kFormatInvalid) {
     DLOGW("Format %d is not supported by SDM", handle->format);
     return HWC2::Error::BadParameter;
+  } else if (!display_intf_->IsWriteBackSupportedFormat(output_buffer_.format)) {
+    DLOGW("WB doesn't support color format : %s .", GetFormatString(output_buffer_.format));
+    return HWC2::Error::BadParameter;
   }
 
   readback_buffer_queued_ = true;

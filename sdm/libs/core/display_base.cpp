@@ -492,6 +492,25 @@ DisplayError DisplayBase::ConfigureCwb(LayerStack *layer_stack) {
   return error;
 }
 
+bool DisplayBase::IsWriteBackSupportedFormat(const LayerBufferFormat &format) {
+  // check whether writeback supported for parameter color format or not.
+  std::map<HWSubBlockType, std::vector<LayerBufferFormat>>::iterator it =
+      hw_resource_info_.supported_formats_map.find(HWSubBlockType::kHWWBIntfOutput);
+  if (it == hw_resource_info_.supported_formats_map.end()) {
+    return false;
+  }
+  std::vector<LayerBufferFormat> &supported_sdm_formats = it->second;
+  if (supported_sdm_formats.empty()) {
+    return false;
+  }
+  for (int i = 0; i < supported_sdm_formats.size(); i++) {
+    if (supported_sdm_formats[i] == format) {
+      return true;
+    }
+  }
+  return false;
+}
+
 DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
   std::vector<Layer *> &layers = layer_stack->layers;
   HWLayersInfo &hw_layers_info = disp_layer_stack_.info;
