@@ -134,7 +134,11 @@ DisplayError DisplayBuiltIn::Init() {
     // Get status of RC enablement property. Default RC is disabled.
     int rc_prop_value = 0;
     Debug::GetProperty(ENABLE_ROUNDED_CORNER, &rc_prop_value);
-    rc_enable_prop_ = rc_prop_value ? true : false;
+    if (rc_prop_value && hw_panel_info_.is_primary_panel) {
+      // TODO(user): Get the RC count from driver and decide if RC can be enabled for
+      // sec built-ins.  Currently client sends RC layers only for first builtin.
+      rc_enable_prop_ = true;
+    }
     DLOGI("RC feature %s.", rc_enable_prop_ ? "enabled" : "disabled");
 
     if ((error = SetupSPR()) != kErrorNone) {
