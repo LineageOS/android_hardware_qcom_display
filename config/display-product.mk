@@ -182,7 +182,7 @@ endif
 SOONG_CONFIG_NAMESPACES += qtidisplay
 
 # Soong Keys
-SOONG_CONFIG_qtidisplay := drmpp headless llvmsa gralloc4 default
+SOONG_CONFIG_qtidisplay := drmpp headless llvmsa gralloc4 default sourcebuild
 
 # Soong Values
 SOONG_CONFIG_qtidisplay_drmpp := true
