@@ -118,6 +118,8 @@ HWCDisplayPluggable::HWCDisplayPluggable(CoreInterface *core_intf,
 }
 
 HWC2::Error HWCDisplayPluggable::PreValidateDisplay(bool *exit_validate) {
+  DTRACE_SCOPED();
+
   // Draw method gets set as part of first commit.
   SetDrawMethod();
 
