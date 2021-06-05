@@ -622,17 +622,6 @@ DisplayError DisplayBuiltIn::PostCommit(HWLayersInfo *hw_layers_info) {
   }
   dpps_info_.Init(this, hw_panel_info_.panel_name);
 
-  if (pending_color_space_) {
-    DppsBlendSpaceInfo info;
-    PrimariesTransfer color_space = GetBlendSpaceFromStcColorMode(current_color_mode_);
-    info.primaries = color_space.primaries;
-    info.transfer = color_space.transfer;
-    info.is_primary = IsPrimaryDisplayLocked();
-    // notify blend space to DPPS
-    dpps_info_.DppsNotifyOps(kDppsColorSpaceEvent, &info, sizeof(info));
-    pending_color_space_ = false;
-  }
-
   HandleQsyncPostCommit();
 
   handle_idle_timeout_ = false;
@@ -1268,7 +1257,6 @@ DisplayError DisplayBuiltIn::SetStcColorMode(const snapdragoncolor::ColorMode &c
   }
 
   current_color_mode_ = color_mode;
-  pending_color_space_ = true;
 
   DynamicRangeType dynamic_range = kSdrType;
   if (std::find(color_mode.hw_assets.begin(), color_mode.hw_assets.end(),
