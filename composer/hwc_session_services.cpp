@@ -1023,6 +1023,11 @@ int HWCSession::DisplayConfigImpl::SetCWBOutputBuffer(uint32_t disp_id,
     return -1;
   }
 
+  if (dpy_index == -1) {
+    DLOGW("Unable to retrieve display index for display:%d", disp_id);
+    return -1;
+  }
+
   // Mutex scope
   {
     SCOPE_LOCK(hwc_session_->locker_[disp_type]);
