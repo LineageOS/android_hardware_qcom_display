@@ -44,7 +44,7 @@
 #include "hwc_buffer_sync_handler.h"
 
 using android::hardware::graphics::common::V1_2::ColorMode;
-using android::hardware::graphics::common::V1_1::Dataspace;
+using android::hardware::graphics::common::V1_2::Dataspace;
 using android::hardware::graphics::common::V1_1::RenderIntent;
 using android::hardware::graphics::common::V1_2::Hdr;
 namespace composer_V2_4 = ::android::hardware::graphics::composer::V2_4;
@@ -52,6 +52,7 @@ using HwcAttribute = composer_V2_4::IComposerClient::Attribute;
 using VsyncPeriodChangeConstraints = composer_V2_4::IComposerClient::VsyncPeriodChangeConstraints;
 using VsyncPeriodChangeTimeline = composer_V2_4::VsyncPeriodChangeTimeline;
 using VsyncPeriodNanos = composer_V2_4::VsyncPeriodNanos;
+using ClientTargetProperty = composer_V2_4::IComposerClient::ClientTargetProperty;
 
 namespace sdm {
 
@@ -444,6 +445,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual HWC2::Error NotifyDisplayCalibrationMode(bool in_calibration) {
     return HWC2::Error::Unsupported;
   };
+  virtual HWC2::Error GetClientTargetProperty(ClientTargetProperty *out_client_target_property);
 
  protected:
   static uint32_t throttling_refresh_rate_;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  * Not a Contribution.
  *
  * Copyright (C) 2017 The Android Open Source Project
@@ -501,6 +501,17 @@ class CommandWriter {
   void setDisplayElapseTime(uint64_t time) {
     beginCommand(IQtiComposerClient::Command::SET_DISPLAY_ELAPSE_TIME, kSetDisplayElapseTime);
     write64(time);
+    endCommand();
+  }
+
+  // Commands from ::android::hardware::graphics::composer::V2_4::IComposerClient follow.
+  static constexpr uint16_t kSetClientTargetPropertyLength = 2;
+  void setClientTargetProperty(
+        const IQtiComposerClient::ClientTargetProperty& clientTargetProperty) {
+    beginCommand(IQtiComposerClient::Command::SET_CLIENT_TARGET_PROPERTY,
+                 kSetClientTargetPropertyLength);
+    writeSigned(static_cast<int32_t>(clientTargetProperty.pixelFormat));
+    writeSigned(static_cast<int32_t>(clientTargetProperty.dataspace));
     endCommand();
   }
 
