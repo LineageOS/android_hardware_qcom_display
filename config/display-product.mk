@@ -191,6 +191,7 @@ SOONG_CONFIG_qtidisplay_headless := false
 SOONG_CONFIG_qtidisplay_llvmsa := false
 SOONG_CONFIG_qtidisplay_gralloc4 := true
 SOONG_CONFIG_qtidisplay_default := true
+SOONG_CONFIG_qtidisplay_sourcebuild := true
 
 # Techpack values
 
