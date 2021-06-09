@@ -1467,7 +1467,9 @@ bool QtiComposerClient::CommandReader::parseValidateDisplay(uint16_t length) {
   if (static_cast<Error>(err) == Error::NONE) {
     mWriter.setChangedCompositionTypes(changedLayers, compositionTypes);
     mWriter.setDisplayRequests(displayRequestMask, requestedLayers, requestMasks);
-    mWriter.setClientTargetProperty(clientTargetProperty);
+    if (mClient.mUseCallback24_) {
+      mWriter.setClientTargetProperty(clientTargetProperty);
+    }
   } else {
     mWriter.setError(getCommandLoc(), static_cast<Error>(err));
   }
@@ -1572,7 +1574,9 @@ bool QtiComposerClient::CommandReader::parsePresentOrValidateDisplay(uint16_t le
     mWriter.setPresentOrValidateResult(0);
     mWriter.setChangedCompositionTypes(changedLayers, compositionTypes);
     mWriter.setDisplayRequests(displayRequestMask, requestedLayers, requestMasks);
-    mWriter.setClientTargetProperty(clientTargetProperty);
+    if (mClient.mUseCallback24_) {
+      mWriter.setClientTargetProperty(clientTargetProperty);
+    }
   } else {
     mWriter.setError(getCommandLoc(), err);
   }
