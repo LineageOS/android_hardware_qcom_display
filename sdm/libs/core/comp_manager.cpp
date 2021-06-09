@@ -155,7 +155,7 @@ DisplayError CompManager::RegisterDisplay(int32_t display_id, DisplayType type,
   // New non-primary display device has been added, so move the composition mode to safe mode until
   // resources for the added display is configured properly.
   if (!display_comp_ctx->is_primary_panel) {
-    max_sde_ext_layers_ = UINT32(Debug::GetExtMaxlayers());
+    max_sde_secondary_fetch_layers_ = UINT32(Debug::GetSecondaryMaxFetchLayers());
   }
 
   display_demura_status_[display_id] = false;
@@ -277,7 +277,7 @@ void CompManager::PrepareStrategyConstraints(Handle comp_handle,
     bool low_end_hw = ((hw_res_info_.num_vig_pipe + hw_res_info_.num_rgb_pipe +
                         hw_res_info_.num_dma_pipe) <= kSafeModeThreshold);
     constraints->max_layers = display_comp_ctx->display_type == kBuiltIn ?
-                              max_sde_builtin_layers_ : max_sde_ext_layers_;
+                              max_sde_builtin_fetch_layers_ : max_sde_secondary_fetch_layers_;
     constraints->safe_mode = (low_end_hw && !hw_res_info_.separate_rotator) ? true : safe_mode_;
   }
 
@@ -695,7 +695,8 @@ void CompManager::UpdateStrategyConstraints(bool is_primary, bool disabled) {
 
   // Allow builtin display to use all pipes when primary is suspended.
   // Restore it back to 2 after primary poweron.
-  max_sde_builtin_layers_ = (disabled && (powered_on_displays_.size() <= 1)) ? kMaxSDELayers : 2;
+  max_sde_builtin_fetch_layers_ = (disabled && (powered_on_displays_.size() <= 1)) ?
+                                   kMaxSDELayers : max_sde_secondary_fetch_layers_;
 }
 
 bool CompManager::CheckResourceState(Handle display_ctx, bool *res_exhausted,

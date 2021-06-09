@@ -61,7 +61,7 @@
 #define PREFER_SOURCE_SPLIT_PROP             DISPLAY_PROP("prefer_source_split")
 #define MIXER_RESOLUTION_PROP                DISPLAY_PROP("mixer_resolution")
 #define SIMULATED_CONFIG_PROP                DISPLAY_PROP("simulated_config")
-#define MAX_EXTERNAL_LAYERS_PROP             DISPLAY_PROP("max_external_layers")
+#define MAX_SECONDARY_FETCH_LAYERS_PROP       DISPLAY_PROP("max_secondary_fetch_layers")
 #define PERF_HINT_WINDOW_PROP                DISPLAY_PROP("perf_hint_window")
 #define ENABLE_EXTERNAL_DOWNSCALE_PROP       DISPLAY_PROP("enable_external_downscale")
 #define EXTERNAL_ACTION_SAFE_WIDTH_PROP      DISPLAY_PROP("external_action_safe_width")
