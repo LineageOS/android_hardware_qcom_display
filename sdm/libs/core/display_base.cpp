@@ -410,8 +410,8 @@ DisplayError DisplayBase::ConfigureCwb(LayerStack *layer_stack) {
 
     // Config dither data
     cwb_config_->dither_info = nullptr;
-    if (cwb_config_->tap_point != CwbTapPoint::kLmTapPoint) {
-      error =  color_mgr_->ConfigureCWBDither(cwb_config_, false);
+    if (cwb_config_->tap_point != CwbTapPoint::kLmTapPoint && color_mgr_) {
+      error = color_mgr_->ConfigureCWBDither(cwb_config_, false);
       if (error != kErrorNone) {
         DLOGE("CWB dither config failed, error %d", error);
       }
@@ -426,9 +426,11 @@ DisplayError DisplayBase::ConfigureCwb(LayerStack *layer_stack) {
     }
   } else if (cwb_config_) {  // CWB isn't requested in the current draw cycle.
     // Release dither data
-    error = color_mgr_->ConfigureCWBDither(cwb_config_, true);
-    if (error != kErrorNone) {
-      DLOGE("Release dither data failed.");
+    if (color_mgr_) {
+      error = color_mgr_->ConfigureCWBDither(cwb_config_, true);
+      if (error != kErrorNone) {
+        DLOGE("Release dither data failed.");
+      }
     }
     // Check and release cwb_config_ if it was instantiated in the previous draw cycle.
     delete cwb_config_;
