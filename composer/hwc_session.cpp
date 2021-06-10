@@ -3008,10 +3008,6 @@ HWC2::Error HWCSession::ValidateDisplayInternal(hwc2_display_t display, uint32_t
       callbacks_.Refresh(display);
       need_invalidate_ = false;
     }
-
-    if (color_mgr_) {
-      color_mgr_->SetColorModeDetailEnhancer(hwc_display_[display]);
-    }
   }
 
   return hwc_display->Validate(out_num_types, out_num_requests);

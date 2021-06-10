@@ -77,8 +77,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.enable_camera_smooth=1 \
     vendor.display.enable_allow_idle_fallback=1
 
-# Enable offline rotator for Bengal.
-ifneq ($(TARGET_BOARD_PLATFORM),bengal)
+# Enable offline rotator for Bengal, Monaco.
+ifneq ($(filter bengal monaco, $(TARGET_BOARD_PLATFORM)),$(TARGET_BOARD_PLATFORM))
 PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_offline_rotator=1
 else
