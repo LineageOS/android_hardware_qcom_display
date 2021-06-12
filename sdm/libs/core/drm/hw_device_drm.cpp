@@ -601,6 +601,9 @@ DisplayError HWDeviceDRM::PopulateDisplayAttributes(uint32_t index) {
     }
   }
 
+  mm_width = UINT32(mm_width * PANEL_DIMENSION_MULTIPLIER);
+  mm_height = UINT32(mm_height * PANEL_DIMENSION_MULTIPLIER);
+
   display_attributes_[index].x_pixels = mode.hdisplay;
   display_attributes_[index].y_pixels = mode.vdisplay;
   display_attributes_[index].fps = mode.vrefresh;
