@@ -1096,6 +1096,7 @@ DisplayError DisplayBuiltIn::DisablePartialUpdateOneFrame() {
 
 DisplayError DisplayBuiltIn::DisablePartialUpdateOneFrameInternal() {
   disable_pu_one_frame_ = true;
+  validated_ = false;
 
   return kErrorNone;
 }
