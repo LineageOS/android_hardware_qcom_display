@@ -1067,6 +1067,8 @@ int32_t HWCSession::CWB::PostBuffer(std::weak_ptr<DisplayConfig::ConfigCallback>
     // reject the cwb request if it's made on another display than the currently cwb active display
     QueueNode *node = queue_.front();
     if (node->display_type != display_type) {
+      native_handle_close(buffer);
+      native_handle_delete(const_cast<native_handle_t *>(buffer));
       return -1;
     }
   }
@@ -1118,23 +1120,22 @@ void HWCSession::CWB::ProcessRequests() {
       HWC2::Error error = hwc_display->SetReadbackBuffer(node->buffer, nullptr, node->cwb_config,
                                                          kCWBClientExternal);
       if (error != HWC2::Error::None) {
-        DLOGE("CWB buffer could not be set.");
         status = -1;
       } else {
         DLOGI("Successfully configured CWB buffer.");
       }
     }
 
+    hwc_session_->callbacks_.Refresh(node->display_type);
+
+    // Mutex scope
+    // Wait for the signal from commit thread to retrieve the CWB release fence
+    {
+      std::unique_lock<std::mutex> lock(mutex_);
+      cv_.wait(lock);
+    }
+
     if (!status) {
-      hwc_session_->callbacks_.Refresh(node->display_type);
-
-      // Mutex scope
-      // Wait for the signal from commit thread to retrieve the CWB release fence
-      {
-        std::unique_lock<std::mutex> lock(mutex_);
-        cv_.wait(lock);
-      }
-
       shared_ptr<Fence> release_fence = nullptr;
       // Mutex scope
       {
@@ -1142,24 +1143,23 @@ void HWCSession::CWB::ProcessRequests() {
         hwc_display->GetReadbackBufferFence(&release_fence);
       }
 
-      if (release_fence >= 0) {
-        status = Fence::Wait(release_fence);
-      } else {
-        DLOGE("CWB release fence could not be retrieved.");
-        status = -1;
+      bool is_waiting = true;
+      {
+        SCOPE_LOCK(fence_queue_lock_);
+        // check whether fence wait is going on in another async thread.
+        is_waiting = static_cast<bool>(fence_wait_queue_.size());
+        // push current cwb request's release fence in the fence wait queue.
+        DLOGI("Pushing release fence in fenece wait queue.");
+        fence_wait_queue_.push({release_fence, node});
       }
+      if (!is_waiting) {  // incase of empty fence wait queue, create a new async thread
+        DLOGI("Creating AsyncFenceWaits async thread.");
+        // to perform fence wait on the cwb release fence.
+        fence_wait_future_ = std::async(HWCSession::CWB::AsyncFenceWaits, this);
+      }
+    } else {
+      NotifyCWBStatus(status, node);
     }
-
-    // Notify client about buffer status and erase the node from pending request queue.
-    std::shared_ptr<DisplayConfig::ConfigCallback> callback = node->callback.lock();
-    if (callback) {
-      DLOGI("Notify the client about buffer status %d.", status);
-      callback->NotifyCWBBufferDone(status, node->buffer);
-    }
-
-    native_handle_close(node->buffer);
-    native_handle_delete(const_cast<native_handle_t *>(node->buffer));
-    delete node;
 
     // Mutex scope
     // Make sure to exit here, if queue becomes empty after erasing current node from queue,
@@ -1177,8 +1177,63 @@ void HWCSession::CWB::ProcessRequests() {
   }
 }
 
+void HWCSession::CWB::PerformFenceWaits() {
+  while (true) {
+    shared_ptr<Fence> release_fence = nullptr;
+    QueueNode *cwb_node = nullptr;
+    {
+      SCOPE_LOCK(fence_queue_lock_);
+      if (!fence_wait_queue_.size()) {
+        DLOGI("CWB fence queue is empty. No pending release fence to wait on.");
+        break;
+      }
+
+      release_fence = fence_wait_queue_.front().first;
+      cwb_node = fence_wait_queue_.front().second;
+    }
+
+    int status = 0;
+    if (release_fence >= 0) {
+      status = Fence::Wait(release_fence);
+    } else {
+      DLOGE("CWB release fence could not be retrieved.");
+      status = -1;
+    }
+
+    NotifyCWBStatus(status, cwb_node);
+
+    {
+      SCOPE_LOCK(fence_queue_lock_);
+      fence_wait_queue_.pop();
+      DLOGI("Remove current release fence from the pending fence wait queue.");
+
+      if (!fence_wait_queue_.size()) {
+        DLOGI("CWB fence queue is empty. No pending release fence to wait on.");
+        break;
+      }
+    }
+  }
+}
+
+void HWCSession::CWB::NotifyCWBStatus(int status, QueueNode *cwb_node) {
+  // Notify client about buffer status and erase the node from pending request queue.
+  std::shared_ptr<DisplayConfig::ConfigCallback> callback = cwb_node->callback.lock();
+  if (callback) {
+    DLOGI("Notify the client about buffer status %d.", status);
+    callback->NotifyCWBBufferDone(status, cwb_node->buffer);
+  }
+
+  native_handle_close(cwb_node->buffer);
+  native_handle_delete(const_cast<native_handle_t *>(cwb_node->buffer));
+  delete cwb_node;
+}
+
 void HWCSession::CWB::AsyncTask(CWB *cwb) {
   cwb->ProcessRequests();
+}
+
+void HWCSession::CWB::AsyncFenceWaits(CWB *cwb) {
+  cwb->PerformFenceWaits();
 }
 
 void HWCSession::CWB::PresentDisplayDone(hwc2_display_t disp_id) {

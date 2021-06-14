@@ -3208,8 +3208,8 @@ HWC2::Error HWCDisplay::SetReadbackBuffer(const native_handle_t *buffer,
 
   if ((cwb_state_.cwb_status == CWBStatus::kCWBTeardown) ||
       (Fence::GetStatus(cwb_state_.teardown_frame_retire_fence) != Fence::Status::kSignaled)) {
-    DLOGE("CWB teardown is currently undergoing on display = %d", cwb_state_.cwb_disp_id);
-    return HWC2::Error::NoResources;
+    DLOGW("CWB teardown is currently undergoing on display = %d", cwb_state_.cwb_disp_id);
+    return HWC2::Error::Unsupported;
   }
 
   if (secure_event_ != kSecureEventMax) {

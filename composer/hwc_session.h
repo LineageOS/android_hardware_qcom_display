@@ -358,12 +358,18 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
     };
 
     void ProcessRequests();
+    void PerformFenceWaits();
     static void AsyncTask(CWB *cwb);
+    static void AsyncFenceWaits(CWB *cwb);
+    void NotifyCWBStatus(int status, QueueNode *cwb_node);
 
     std::queue<QueueNode *> queue_;
+    std::queue<pair<shared_ptr<Fence>, QueueNode *>> fence_wait_queue_;
 
     std::future<void> future_;
+    std::future<void> fence_wait_future_;
     Locker queue_lock_;
+    Locker fence_queue_lock_;
     std::mutex mutex_;
     std::condition_variable cv_;
     HWCSession *hwc_session_ = nullptr;
