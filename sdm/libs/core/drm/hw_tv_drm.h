@@ -54,6 +54,7 @@ class HWTVDRM : public HWDeviceDRM {
   virtual DisplayError GetDefaultConfig(uint32_t *default_config);
   virtual DisplayError PowerOn(const HWQosData &qos_data, SyncPoints *sync_points);
   virtual DisplayError Deinit();
+  virtual DisplayError Flush(HWLayersInfo *hw_layers_info);
 
  private:
   DisplayError UpdateHDRMetaData(HWLayersInfo *hw_layers_info);
