@@ -23,7 +23,7 @@
         },
         "Native": {
             "Applicability": {
-                "ColorPrimaries": "P3",
+                "ColorPrimaries": "sRGB",
                 "GammaTransfer": "sRGB",
                 "RenderIntent": 0,
                 "RenderIntentName": "Standard"
