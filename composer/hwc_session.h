@@ -309,6 +309,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
 
   // HWCDisplayEventHandler
   virtual void DisplayPowerReset();
+  virtual void PerformQsyncCallback(hwc2_display_t display, bool qsync_enabled,
+                                    uint32_t refresh_rate, uint32_t qsync_refresh_rate);
 
   int32_t SetVsyncEnabled(hwc2_display_t display, int32_t int_enabled);
   int32_t GetDozeSupport(hwc2_display_t display, int32_t *out_support);
@@ -564,7 +566,6 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   void HandlePendingRefresh();
   void NotifyClientStatus(bool connected);
   int32_t GetVirtualDisplayId();
-  void PerformQsyncCallback(hwc2_display_t display);
   android::status_t TUITransitionPrepare(int disp_id);
   android::status_t TUITransitionStart(int disp_id);
   android::status_t TUITransitionEnd(int disp_id);

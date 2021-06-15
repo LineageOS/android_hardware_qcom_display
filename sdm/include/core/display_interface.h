@@ -327,6 +327,16 @@ enum SupportedDisplayFeature {
   kDedicatedCwb,
 };
 
+/*! @brief This struct stores the state of Qsync
+
+  @sa DisplayInterface::QsyncEventData
+*/
+struct QsyncEventData {
+  bool enabled = false;
+  uint32_t refresh_rate = 0;
+  uint32_t qsync_refresh_rate = 0;
+};
+
 /*! @brief Display device event handler implemented by the client.
 
   @details This class declares prototype for display device event handler methods which must be
@@ -383,6 +393,9 @@ class DisplayEventHandler {
 
   /*! @brief Event handler for MMRM. */
   virtual void MMRMEvent(bool restricted) = 0;
+
+  /*! @brief Event handler for sending status of Qsync */
+  virtual DisplayError HandleQsyncState(const QsyncEventData &event_data) { return kErrorNone; }
 
  protected:
   virtual ~DisplayEventHandler() { }

@@ -664,6 +664,19 @@ void DisplayBuiltIn::HandleQsyncPostCommit() {
   if (notify_idle) {
     event_handler_->HandleEvent(kPostIdleTimeout);
   }
+
+  bool qsync_enabled = (qsync_mode_ != kQSyncModeNone);
+  if (qsync_enabled == qsync_enabled_) {
+    return;
+  }
+
+  QsyncEventData event_data;
+  event_data.enabled = qsync_enabled;
+  event_data.refresh_rate = display_attributes_.fps;
+  hw_intf_->GetQsyncFps(&event_data.qsync_refresh_rate);
+  event_handler_->HandleQsyncState(event_data);
+
+  qsync_enabled_ = qsync_enabled;
 }
 
 void DisplayBuiltIn::UpdateDisplayModeParams() {
@@ -2167,12 +2180,7 @@ void DisplayBuiltIn::HandlePowerEvent() {
 
 DisplayError DisplayBuiltIn::GetQsyncFps(uint32_t *qsync_fps) {
   ClientLock lock(disp_mutex_);
-  if (hw_panel_info_.qsync_fps) {
-    *qsync_fps = hw_panel_info_.qsync_fps;
-    return kErrorNone;
-  }
-
-  return kErrorNotSupported;
+  return hw_intf_->GetQsyncFps(qsync_fps);
 }
 
 DisplayError DisplayBuiltIn::SetAlternateDisplayConfig(uint32_t *alt_config) {

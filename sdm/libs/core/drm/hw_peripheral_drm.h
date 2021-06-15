@@ -52,6 +52,7 @@ class HWPeripheralDRM : public HWDeviceDRM, public PanelFeaturePropertyIntf {
   virtual int GetPanelFeature(PanelFeaturePropertyInfo *feature_info);
   virtual int SetPanelFeature(const PanelFeaturePropertyInfo &feature_info);
   virtual DisplayError GetPanelBrightnessBasePath(std::string *base_path) const;
+  virtual DisplayError GetQsyncFps(uint32_t *qsync_fps);
 
  protected:
   virtual DisplayError Init();

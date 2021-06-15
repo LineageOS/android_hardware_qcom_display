@@ -120,8 +120,6 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual bool IsSmartPanelConfig(uint32_t config_id);
   virtual bool HasSmartPanelConfig(void);
   virtual int Deinit();
-  virtual bool IsQsyncCallbackNeeded(bool *qsync_enabled, int32_t *refresh_rate,
-                                     int32_t *qsync_refresh_rate);
   virtual int PostInit();
 
   virtual HWC2::Error SetDisplayedContentSamplingEnabledVndService(bool enabled);
@@ -165,7 +163,6 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   bool InitLayerStitch();
   void InitStitchTarget();
   bool AllocateStitchBuffer();
-  void CacheAvrStatus();
   void PostCommitStitchLayers();
   void SetCpuPerfHintLargeCompCycle();
   void ValidateUiScaling();

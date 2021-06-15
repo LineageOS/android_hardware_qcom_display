@@ -414,10 +414,6 @@ class HWCDisplay : public DisplayEventHandler {
     pending_power_mode_ = current_power_mode_;
   }
   virtual void NotifyClientStatus(bool connected) { client_connected_ = connected; }
-  virtual bool IsQsyncCallbackNeeded(bool *qsync_enabled, int32_t *refresh_rate,
-                                     int32_t *qsync_refresh_rate) {
-    return false;
-  }
   virtual int PostInit() { return 0; }
 
   virtual HWC2::Error SetDisplayedContentSamplingEnabledVndService(bool enabled);
@@ -465,6 +461,7 @@ class HWCDisplay : public DisplayEventHandler {
   virtual DisplayError CECMessage(char *message);
   virtual DisplayError HistogramEvent(int source_fd, uint32_t blob_id);
   virtual DisplayError HandleEvent(DisplayEvent event);
+  virtual DisplayError HandleQsyncState(const QsyncEventData &qsync_data);
   virtual void DumpOutputBuffer(const BufferInfo &buffer_info, void *base,
                                 shared_ptr<Fence> &retire_fence);
   virtual HWC2::Error PrepareLayerStack(uint32_t *out_num_types, uint32_t *out_num_requests);

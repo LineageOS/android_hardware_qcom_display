@@ -233,6 +233,7 @@ class HWDeviceDRM : public HWInterface {
   DisplayError GetPanelBlMaxLvl(uint32_t *bl_max);
   DisplayError SetDimmingBlLut(void *payload, size_t size);
   DisplayError EnableDimmingBacklightEvent(void *payload, size_t size);
+  DisplayError GetQsyncFps(uint32_t *qsync_fps) { return kErrorNotSupported; }
 
   class Registry {
    public:

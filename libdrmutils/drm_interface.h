@@ -725,6 +725,7 @@ struct DRMModeInfo {
   DynamicFrontPorchType fp_type = UNKNOWN;
   std::vector<uint32_t> dyn_fp_list;
   std::vector<DRMSubModeInfo> sub_modes;
+  uint32_t qsync_min_fps;
 };
 
 /* Per Connector Info*/
