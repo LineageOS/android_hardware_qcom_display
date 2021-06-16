@@ -2847,10 +2847,11 @@ void HWDeviceDRM::ConfigureConcurrentWriteback(const HWLayersInfo &hw_layer_info
     full_frame.bottom = display_attributes_[current_mode_index_].y_pixels;
   }
 
-  if (!has_cwb_crop_) {  // Check whether CWB ROI feature is supported. In-case if it's
-    // not supported, then set WB connector's DST_* properties as per full frame rect.
-    drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_RECT, vitual_conn_id, full_frame);
-  } else {  // CWB ROI & demura tap-point are supported
+  sde_drm::DRMRect cwb_dst = full_frame;
+  LayerRect cwb_roi = cwb_config->cwb_roi;
+
+  if (has_cwb_crop_) {  // If CWB ROI feature is supported, then set WB connector's roi_v1 property
+    // to PU ROI and DST_* properties to CWB ROI. Else, set DST_* properties to full frame ROI.
     bool is_full_frame_update = IsFullFrameUpdate(hw_layer_info);
     // Set WB connector's roi_v1 property to PU_ROI.
     if (is_full_frame_update) {
@@ -2871,24 +2872,25 @@ void HWDeviceDRM::ConfigureConcurrentWriteback(const HWLayersInfo &hw_layer_info
     }
 
     // Set WB connector's DST_* property to CWB_ROI.
-    LayerRect cwb_roi = cwb_config->cwb_roi;
-    if (is_full_frame_update && cwb_config->pu_as_cwb_roi) {  // Incase of full frame update
-      // and when cwb client has set pu_as_cwb_roi as true, set Full frame CWB ROI.
-      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_RECT, vitual_conn_id, full_frame);
-    } else {
-      sde_drm::DRMRect dst = {};
-      dst.left = UINT32(cwb_roi.left);
-      dst.right = UINT32(cwb_roi.right);
-      dst.top = UINT32(cwb_roi.top);
-      dst.bottom = UINT32(cwb_roi.bottom);
-      drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_RECT, vitual_conn_id, dst);
+    if (!is_full_frame_update || !cwb_config->pu_as_cwb_roi) {
+      // Either incase of partial update or when client requests only its specified ROI to be set
+      // as CWB ROI without including PU ROI in it (by setting pu_as_cwb_roi flag as false), then
+      // set DST_* properties to aligned client specified ROI. This if condition is an optimization
+      // check. Either we can keep this if with both the conditions or we can remove the if at all
+      // with direct setting of the properties. This if condition prevents reseting cwb_dst to full
+      // frame incase of full frame PU ROI with client requesting PU ROI to be included in CWB ROI.
+      cwb_dst.left = UINT32(cwb_roi.left);
+      cwb_dst.right = UINT32(cwb_roi.right);
+      cwb_dst.top = UINT32(cwb_roi.top);
+      cwb_dst.bottom = UINT32(cwb_roi.bottom);
     }
   }
+
+  drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_OUTPUT_RECT, vitual_conn_id, cwb_dst);
   ConfigureCWBDither(cwb_config->dither_info, vitual_conn_id, capture_mode);
 
-  const LayerRect &roi = cwb_config->cwb_roi;
-  DLOGV_IF(kTagDriverConfig, "CWB Mode:%d roi.left:%f roi.top:%f roi.right:%f roi.bottom:%f",
-           capture_mode, roi.left, roi.top, roi.right, roi.bottom);
+  DLOGV_IF(kTagDriverConfig, "CWB Mode:%d roi.left:%u roi.top:%u roi.right:%u roi.bottom:%u",
+           capture_mode, cwb_dst.left, cwb_dst.top, cwb_dst.right, cwb_dst.bottom);
 }
 
 DisplayError HWDeviceDRM::TeardownConcurrentWriteback(void) {
