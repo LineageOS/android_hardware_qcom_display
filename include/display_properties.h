@@ -149,6 +149,7 @@
 #define ENABLE_DPPS_DYNAMIC_FPS              DISPLAY_PROP("enable_dpps_dynamic_fps")
 // Noise Layer
 #define DISABLE_NOISE_LAYER                  DISPLAY_PROP("disable_noise_layer")
+#define ENABLE_PRIMARY_RECONFIG_REQUEST      DISPLAY_PROP("enable_primary_reconfig_request")
 
 // Add all vendor.display properties above
 

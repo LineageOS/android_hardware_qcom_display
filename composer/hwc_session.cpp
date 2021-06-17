@@ -195,6 +195,9 @@ int HWCSession::Init() {
   DLOGI("disable_hotplug_bwcheck_: %d", disable_hotplug_bwcheck_);
   HWCDebugHandler::Get()->GetProperty(DISABLE_MASK_LAYER_HINT, &disable_mask_layer_hint_);
   DLOGI("disable_mask_layer_hint_: %d", disable_mask_layer_hint_);
+  HWCDebugHandler::Get()->GetProperty(ENABLE_PRIMARY_RECONFIG_REQUEST,
+                                      &enable_primary_reconfig_req_);
+  DLOGI("enable_primary_reconfig_req_: %d", enable_primary_reconfig_req_);
 
   if (!null_display_mode_) {
     g_hwc_uevent_.Register(this);
@@ -2973,10 +2976,18 @@ int HWCSession::HandleDisconnectedDisplays(HWDisplaysInfo *hw_displays_info) {
 
     if (disconnect) {
       DestroyDisplay(&map_info);
-      hwc2_display_t active_builtin_id = GetActiveBuiltinDisplay();
-      if (active_builtin_id < HWCCallbacks::kNumDisplays) {
-        SCOPE_LOCK(locker_[active_builtin_id]);
-        hwc_display_[active_builtin_id]->SetAlternateDisplayConfig(false);
+      if (enable_primary_reconfig_req_) {
+        hwc2_display_t active_builtin_id = GetActiveBuiltinDisplay();
+        if (active_builtin_id < HWCCallbacks::kNumDisplays) {
+          SCOPE_LOCK(locker_[active_builtin_id]);
+          hwc2_config_t current_config = 0, new_config = 0;
+          hwc_display_[active_builtin_id]->GetActiveConfig(&current_config);
+          hwc_display_[active_builtin_id]->SetAlternateDisplayConfig(false);
+          hwc_display_[active_builtin_id]->GetActiveConfig(&new_config);
+          if (new_config != current_config) {
+            NotifyDisplayAttributes(active_builtin_id, new_config);
+          }
+        }
       }
     }
   }
@@ -3582,17 +3593,27 @@ int HWCSession::WaitForResources(bool wait_for_resources, hwc2_display_t active_
 
   if (wait_for_resources) {
     bool res_wait = true;
-    // todo (user): move this logic to wait for MDP resource reallocation/reconfiguration
-    // to SDM module.
     bool needs_active_builtin_reconfig = false;
-    res_wait = hwc_display_[display_id]->CheckResourceState(&needs_active_builtin_reconfig);
-    if (needs_active_builtin_reconfig) {
-      SCOPE_LOCK(locker_[active_builtin_id]);
-      int status = INT32(hwc_display_[active_builtin_id]->SetAlternateDisplayConfig(true));
-      if (status) {
-        DLOGE("Active built-in %" PRIu64 " cannot switch to lower resource configuration",
-              active_builtin_id);
-        return status;
+    if (enable_primary_reconfig_req_) {
+      // todo (user): move this logic to wait for MDP resource reallocation/reconfiguration
+      // to SDM module.
+      res_wait = hwc_display_[display_id]->CheckResourceState(&needs_active_builtin_reconfig);
+      if (needs_active_builtin_reconfig) {
+        SCOPE_LOCK(locker_[active_builtin_id]);
+        hwc2_config_t current_config = 0, new_config = 0;
+        hwc_display_[active_builtin_id]->GetActiveConfig(&current_config);
+        int status = INT32(hwc_display_[active_builtin_id]->SetAlternateDisplayConfig(true));
+        if (status) {
+          DLOGE("Active built-in %" PRIu64 " cannot switch to lower resource configuration",
+                active_builtin_id);
+          return status;
+        }
+        hwc_display_[active_builtin_id]->GetActiveConfig(&new_config);
+
+        // In case of config change, notify client with the new configuration
+        if (new_config != current_config) {
+          NotifyDisplayAttributes(active_builtin_id, new_config);
+        }
       }
     }
     do {
@@ -3610,6 +3631,9 @@ int HWCSession::WaitForResources(bool wait_for_resources, hwc2_display_t active_
         cached_retire_fence_ == nullptr;
       }
       res_wait = hwc_display_[display_id]->CheckResourceState(&needs_active_builtin_reconfig);
+      if (!enable_primary_reconfig_req_) {
+        needs_active_builtin_reconfig = false;
+      }
     } while (res_wait || needs_active_builtin_reconfig);
   }
 
@@ -3968,4 +3992,19 @@ HWC2::Error HWCSession::TryDrawMethod(hwc2_display_t display,
   return hwc_display_[display]->TryDrawMethod(drawMethod);
 }
 
+void HWCSession::NotifyDisplayAttributes(hwc2_display_t display, hwc2_config_t config) {
+  DisplayConfigVariableInfo var_info;
+  Attributes attributes;
+  int error = hwc_display_[display]->GetDisplayAttributesForConfig(INT(config), &var_info);
+  if (!error) {
+    attributes.vsyncPeriod = var_info.vsync_period_ns;
+    attributes.xRes = var_info.x_pixels;
+    attributes.yRes = var_info.y_pixels;
+    attributes.xDpi = var_info.x_dpi;
+    attributes.yDpi = var_info.y_dpi;
+    attributes.panelType = DisplayPortType::DEFAULT;
+    attributes.isYuv = var_info.is_yuv;
+    NotifyResolutionChange(display, attributes);
+  }
+}
 }  // namespace sdm
