@@ -53,129 +53,65 @@ using std::vector;
 
 struct TestCase {
   bool enable;
-  uint32_t attn;
-  uint32_t noise_layer;
-  uint32_t attn_layer;
-  int32_t backlight_max;
-  uint32_t backlight;
-  vector<sdm::NoisePlugInLayerType> layers;
+  uint32_t exp_attn;
+  uint32_t exp_noise_zpos;
+  uint32_t exp_attn_zpos;
+  uint32_t exp_strength;
+  uint32_t exp_alpha_noise;
+  uint32_t exp_temporal_en;
   bool override_en;
   int32_t override_attn;
   int32_t override_noise_zpos;
-  int32_t override_bl_thr;
+  vector<sdm::NoisePlugInLayerType> layers;
 };
 
-uint32_t total_test_cases = 32;
+uint32_t total_test_cases = 11;
 
 TestCase *test_cases;
 
 void init_test_cases() {
-  // {noise enable(exp), attn(exp), noisezpos(exp), attnzpos(exp), input bl, input layers,
-  // max backlight, override enable, attn (override), noise zpos (override), bl_thr (override)}
-  // backlight threshold is percentage. attn, input bl and max backlight are actual values.
+  // refer to TestCase declaration
   // 'X' represents a don't care condition.
 
   // Override disabled case - Override values won't be used
 
-  // Fod layer is present (at the bottom), no global dimming
+  // Fod layer is present at the bottom
   // Noise at LM is not required for this use case as FOD itself is bottom most
-  TestCase test_case_0{0, 125, 0, 1, 255, 200, {kFodLayer, kDimLayer, kVideoLayer, kGraphicsLayer,
-                       kGameLayer}, 0, 0, 0, 0};
-  // Fod layer is present (in the middle), no global dimming
-  TestCase test_case_1{1, 125, 3, 4, 255, 225, {kDimLayer, kVideoLayer, kGraphicsLayer, kFodLayer,
-                       kGameLayer}, 0, 0, 0, 0};
-  // Fod layer is present (at the top), no global dimming
-  TestCase test_case_2{1, 125, 3, 4, 255, 225, {kGameLayer, kDimLayer, kGraphicsLayer, kFodLayer},
-                       0, 0, 0, 0};
-  // Fod layer is present, global dimming
-  TestCase test_case_3{1, 125, 1, 2, 255, 15, {kDimLayer, kFodLayer, kVideoLayer, kGraphicsLayer,
-                       kGameLayer}, 0, 0, 0, 0};
-  // No Fod layer, global dimming
-  TestCase test_case_4{1, 125, 3, 4, 255, 15, {kGameLayer, kDimLayer, kGraphicsLayer}, 0, 0, 0, 0};
-  // No Fod layer, no global dimming
-  TestCase test_case_5{0, 'X', 'X', 'X', 255, 225, {kVideoLayer, kGraphicsLayer, kGameLayer},
-                       0, 0, 0, 0};
-  // Multiple Fod layers, no global dimming
-  TestCase test_case_6{1, 125, 5, 6, 255, 225, {kGraphicsLayer, kVideoLayer, kFodLayer, kGameLayer,
-                       kDimLayer, kFodLayer}, 0, 0, 0, 0};
-  // Multiple Fod layers, global dimming
-  TestCase test_case_7{1, 125, 2, 3, 255, 15, {kFodLayer, kVideoLayer, kFodLayer, kGraphicsLayer,
-                       kGameLayer, kDimLayer}, 0, 0, 0, 0};
-  // No Fod layer, no global dimming, mask layer is present
-  TestCase test_case_8{0, 'X', 'X', 'X', 255, 75, {kDimLayer, kVideoLayer, kGraphicsLayer,
-                       kMaskLayer}, 0, 0, 0, 0};
-  // Fod layer is present, global dimming, mask layer is present
-  TestCase test_case_9{1, 125, 2, 3, 255, 15, {kDimLayer, kVideoLayer, kFodLayer, kGameLayer,
-                       kMaskLayer}, 0, 0, 0, 0};
-  // Fod layer is present, no global dimming, mask layer is present
-  TestCase test_case_10{1, 125, 5, 6, 255, 225, {kDimLayer, kVideoLayer, kGraphicsLayer, kGameLayer,
-                        kMaskLayer, kFodLayer}, 0, 0, 0, 0};
-  // No Fod layer, global dimming, mask layer is present
-  TestCase test_case_11{1, 125, 3, 4, 255, 15, {kGameLayer, kDimLayer, kGraphicsLayer, kMaskLayer},
-                        0, 0, 0, 0};
-  // No Fod layer, global dimming, multiple mask layers
-  TestCase test_case_12{1, 125, 4, 5, 255, 15, {kDimLayer, kVideoLayer, kGraphicsLayer, kGameLayer,
-                        kMaskLayer, kMaskLayer}, 0, 0, 0, 0};
-  // Global dimming use case, max backlight is not set
-  TestCase test_case_13{0, 'X', 'X', 'X', -1, 15, {kGameLayer, kDimLayer, kGraphicsLayer,
-                        kMaskLayer}, 0, 0, 0, 0};
-  // FOD use case, max backlight is not set
-  TestCase test_case_14{1, 125, 3, 4, -1, 100, {kGameLayer, kDimLayer, kVideoLayer, kFodLayer,
-                        kMaskLayer}, 0, 0, 0, 0};
-  // FOD use case, input backlight is 0
-  TestCase test_case_15{1, 125, 1, 2, 255, 0, {kGraphicsLayer, kFodLayer, kGameLayer, kMaskLayer},
-                        0, 0, 0, 0};
-  // FOD use case, max backlight is not set and input backlight is 0
-  TestCase test_case_16{1, 125, 3, 4, -1, 0, {kDimLayer, kVideoLayer, kGraphicsLayer, kFodLayer,
-                        kMaskLayer}, 0, 0, 0, 0};
-  // multiple FOD layers, max backlight is not set
-  TestCase test_case_17{1, 125, 4, 5, -1, 15, {kVideoLayer, kGameLayer, kFodLayer, kDimLayer,
-                        kFodLayer}, 0, 0, 0, 0};
+  TestCase test_case_0{0, 125, 0, 1, 0, 35, 1, 0, 0, 0,
+                      {kFodLayer, kDimLayer, kVideoLayer, kGraphicsLayer, kGameLayer}};
+  // Fod layer is present in the middle
+  TestCase test_case_1{1, 125, 3, 4, 0, 35, 1, 0, 0, 0,
+                      {kDimLayer, kVideoLayer, kGraphicsLayer, kFodLayer, kGameLayer}};
+  // Fod layer is present at the top
+  TestCase test_case_2{1, 125, 3, 4, 0, 35, 1, 0, 0, 0,
+                      {kGameLayer, kDimLayer, kGraphicsLayer, kFodLayer}};
+  // No Fod layer
+  TestCase test_case_3{0, 'X', 'X', 'X', 0, 35, 1, 0, 0, 0,
+                      {kVideoLayer, kGraphicsLayer, kGameLayer}};
+  // Multiple Fod layers
+  TestCase test_case_4{1, 125, 5, 6, 0, 35, 1, 0, 0, 0,
+                      {kGraphicsLayer, kVideoLayer, kFodLayer, kGameLayer, kDimLayer, kFodLayer}};
+  // No Fod layer, mask layer is present
+  TestCase test_case_5{0, 'X', 'X', 'X', 0, 35, 1, 0, 0, 0,
+                      {kDimLayer, kVideoLayer, kGraphicsLayer, kMaskLayer}};
+  // Fod layer is present, mask layer is present
+  TestCase test_case_6{1, 125, 2, 3, 0, 35, 1, 0, 0, 0,
+                      {kDimLayer, kVideoLayer, kFodLayer, kGameLayer, kMaskLayer}};
 
-  // Override enabled case - One or more among {attn, noise zpos, bl thr} will be overriden
+  // Override enabled case - One or more among {attn, noise zpos} will be overriden
 
   // only override flag is enabled
-  TestCase test_case_18{0, 125, 0, 1, 255, 200, {kFodLayer, kDimLayer, kVideoLayer, kGraphicsLayer,
-                        kGameLayer}, 1, -1, -1, -1};
+  TestCase test_case_7{0, 125, 0, 1, 0, 35, 1, 1, -1, -1,
+                       {kFodLayer, kDimLayer, kVideoLayer, kGraphicsLayer, kGameLayer}};
   // override attenuation factor
-  TestCase test_case_19{1, 150, 3, 4, 255, 255, {kDimLayer, kVideoLayer, kGraphicsLayer, kFodLayer,
-                        kGameLayer}, 1, 150, -1, -1};
+  TestCase test_case_8{1, 150, 3, 4, 0, 29, 1, 1, 150, -1,
+                       {kDimLayer, kVideoLayer, kGraphicsLayer, kFodLayer, kGameLayer}};
   // override noise z-position
-  TestCase test_case_20{1, 125, 2, 3, 255, 225, {kDimLayer, kFodLayer, kVideoLayer, kGraphicsLayer,
-                        kGameLayer}, 1, -1, 2, -1};
-  // override backlight threshold (global dimming and no Fod layer)
-  TestCase test_case_21{1, 125, 4, 5, 255, 100, {kVideoLayer, kDimLayer, kGraphicsLayer,
-                        kGameLayer, kMaskLayer}, 1, -1, -1, 50};
+  TestCase test_case_9{1, 125, 2, 3, 0, 35, 1, 1, -1, 2,
+                       {kDimLayer, kFodLayer, kVideoLayer, kGraphicsLayer, kGameLayer}};
   // override attenuation factor and noise z-position
-  TestCase test_case_22{1, 80, 1, 2, 255, 175, {kVideoLayer, kGraphicsLayer, kDimLayer}, 1, 80, 1,
-                        -1};
-  // override attenuation factor and backlight threshold (global dimming, no Fod layer)
-  TestCase test_case_23{1, 180, 4, 5, 255, 150, {kGraphicsLayer, kVideoLayer, kGameLayer,
-                        kDimLayer}, 1, 180, -1, 90};
-  // override noise z-position and backlight threshold
-  TestCase test_case_24{1, 125, 2, 3, 255, 150, {kGameLayer, kDimLayer, kGraphicsLayer}, 1,
-                        -1, 2, 90};
-  // override attenuation factor, noise z-position and backlight threshold (GD, Fod is present)
-  TestCase test_case_25{1, 150, 4, 5, 255, 50, {kGraphicsLayer, kVideoLayer, kFodLayer, kGameLayer,
-                        kDimLayer, kFodLayer}, 1, 150, 4, 50};
-  // override attenuation factor, noise z-position and backlight threshold (GD, No Fod)
-  TestCase test_case_26{1, 70, 3, 4, 255, 25, {kDimLayer, kVideoLayer, kGraphicsLayer, kGameLayer,
-                        kMaskLayer}, 1, 70, 3, 80};
-  // override backlight threshold (global dimming, mask layer is present, no Fod layer)
-  TestCase test_case_27{1, 100, 3, 4, 255, 120, {kGameLayer, kDimLayer, kGraphicsLayer,
-                        kMaskLayer}, 1, 100, -1, 70};
-  // override backlight threshold (global dimming, Fod layers are present)
-  TestCase test_case_28{1, 100, 2, 3, 255, 25, {kFodLayer, kVideoLayer, kFodLayer, kGraphicsLayer,
-                        kGameLayer, kDimLayer}, 1, 100, -1, 50};
-  // Override noise zpos, max backlight not set
-  TestCase test_case_29{1, 125, 2, 3, -1, 150, {kGameLayer, kDimLayer, kGraphicsLayer}, 1, -1,
-                        2, -1};
-  // Override backlight thr, but max backlight not set, Fod layer present
-  TestCase test_case_30{1, 150, 5, 6, -1, 50, {kGraphicsLayer, kVideoLayer, kFodLayer, kGameLayer,
-                        kDimLayer, kFodLayer}, 1, 150, -1, 50};
-  // Override backlight thr, but max backlight not set, Fod layer not present
-  TestCase test_case_31{0, 'X', 'X', 'X', -1, 150, {kGraphicsLayer, kVideoLayer, kGameLayer,
-                        kMaskLayer}, 1, 180, -1, 90};
+  TestCase test_case_10{1, 75, 1, 2, 0, 58, 1, 1, 75, 1,
+                       {kVideoLayer, kGraphicsLayer, kDimLayer}};
 
   test_cases = new TestCase[total_test_cases];
   if (!test_cases) {
@@ -194,27 +130,6 @@ void init_test_cases() {
   test_cases[8] = test_case_8;
   test_cases[9] = test_case_9;
   test_cases[10] = test_case_10;
-  test_cases[11] = test_case_11;
-  test_cases[12] = test_case_12;
-  test_cases[13] = test_case_13;
-  test_cases[14] = test_case_14;
-  test_cases[15] = test_case_15;
-  test_cases[16] = test_case_16;
-  test_cases[17] = test_case_17;
-  test_cases[18] = test_case_18;
-  test_cases[19] = test_case_19;
-  test_cases[20] = test_case_20;
-  test_cases[21] = test_case_21;
-  test_cases[22] = test_case_22;
-  test_cases[23] = test_case_23;
-  test_cases[24] = test_case_24;
-  test_cases[25] = test_case_25;
-  test_cases[26] = test_case_26;
-  test_cases[27] = test_case_27;
-  test_cases[28] = test_case_28;
-  test_cases[29] = test_case_29;
-  test_cases[30] = test_case_30;
-  test_cases[31] = test_case_31;
 }
 
 void deinit_test_cases() {
@@ -224,15 +139,12 @@ void deinit_test_cases() {
 }
 
 int TestCaseParser(sdm::NoisePlugInInputParams *in, sdm::NoisePlugInOutputParams *out,
-                  TestCase test_case, bool *enable, uint32_t *attn, uint32_t *noise_layer,
-                  uint32_t *attn_layer, int32_t *backlight_max, bool *override_en,
-                  int32_t *override_attn, int32_t *override_noise_zpos, int32_t *override_bl_thr) {
-  if (!in || !out || !attn || !noise_layer || !attn_layer) {
+                  TestCase test_case) {
+  if (!in || !out) {
     printf("%s: invalid params\n", __FUNCTION__);
     return -EINVAL;
   }
 
-  in->backlight = test_case.backlight;
   int32_t num_layers = test_case.layers.size();
   int32_t idx = 0;
   while (idx < num_layers) {
@@ -242,37 +154,70 @@ int TestCaseParser(sdm::NoisePlugInInputParams *in, sdm::NoisePlugInOutputParams
     in->layers.push_back(layer);
   }
 
-  *enable = test_case.enable;
-  *attn = test_case.attn;
-  *noise_layer = test_case.noise_layer;
-  *attn_layer = test_case.attn_layer;
-  *backlight_max = test_case.backlight_max;
-  *override_en = test_case.override_en;
-  *override_attn = test_case.override_attn;
-  *override_noise_zpos = test_case.override_noise_zpos;
-  *override_bl_thr = test_case.override_bl_thr;
-
   return 0;
 }
 
-static bool TestStatusCheck(bool enable, uint32_t attn, uint32_t noise_layer, uint32_t attn_layer,
-                            sdm::NoisePlugInOutputParams *p) {
-  bool failed = true;
+// function returns true when test fails.
+static bool TestStatusCheck(TestCase test_case, sdm::NoisePlugInOutputParams *p) {
   if (!p) {
-    return failed;
-  }
-  if ((p->enabled == enable) && ((enable == 0) || ((p->attn == attn) && (p->zpos[0] == noise_layer)
-       && (p->zpos[1] == attn_layer)))) {
-    failed = false;
-  } else {
-    printf(
-        "test case failed! act en %d exp en %d act attn %d expected attn = %d act noise_layer %d "
-        "expected noise_layer = %d act attn_layer %d expected attn_layer = %d\n",
-        p->enabled, enable, p->attn, attn, p->zpos[0], noise_layer, p->zpos[1], attn_layer);
-    failed = true;
+    return true;
   }
 
-  return failed;
+  // check actual enable and expected enable
+  if (p->enabled != test_case.enable) {
+    printf("test case failed! act en = %d exp en = %d \n", p->enabled, test_case.enable);
+    return true;
+  }
+
+  // no need to check remaining parameters when noise is disabled.
+  if (test_case.enable == 0) {
+    // test case passed
+    return false;
+  }
+
+  // check actual and expected attenuation
+  if (p->attn != test_case.exp_attn) {
+    printf("test case failed! act attn = %d exp attn = %d \n", p->attn, test_case.exp_attn);
+    return true;
+  }
+
+  // check actual and expected noise layer z-position
+  if (p->zpos[0] != test_case.exp_noise_zpos) {
+    printf("test case failed! act noise zpos = %d expected noise zpos = %d",
+        p->zpos[0], test_case.exp_noise_zpos);
+    return true;
+  }
+
+  // check actual and expected attenuation layer z-position
+  if (p->zpos[1] != test_case.exp_attn_zpos) {
+    printf("test case failed! act attn zpos = %d expected attn zpos = %d\n",
+        p->zpos[1], test_case.exp_attn_zpos);
+    return true;
+  }
+
+  // check actual and expected noise strength
+  if (p->strength != test_case.exp_strength) {
+    printf("test case failed! act noise strength = %d expected noise strength = %d\n",
+        p->strength, test_case.exp_strength);
+    return true;
+  }
+
+  // check actual and expected alpha noise
+  if (p->alpha_noise != test_case.exp_alpha_noise) {
+    printf("test case failed! act alpha noise = %d expected alpha noise = %d\n",
+        p->alpha_noise, test_case.exp_alpha_noise);
+    return true;
+  }
+
+  // check actual and expected temporal enable
+  if (p->temporal_en != test_case.exp_temporal_en) {
+    printf("test case failed! act temporal enable = %d expected temporal enable = %d\n",
+        p->temporal_en, test_case.exp_temporal_en);
+    return true;
+  }
+
+  // test case passed
+  return false;
 }
 
 static void ExecuteTestCase(std::unique_ptr<sdm::NoisePlugInIntf> &plugin_intf, bool &failure) {
@@ -302,12 +247,7 @@ static void ExecuteTestCase(std::unique_ptr<sdm::NoisePlugInIntf> &plugin_intf, 
       return;
     }
 
-    uint32_t exp_attn, exp_noise_layer, exp_attn_layer;
-    bool enable, override_en;
-    int32_t backlight_max, override_attn, override_noise_zpos, override_bl_thr;
-    TestCaseParser(in, out, test_cases[cur], &enable, &exp_attn, &exp_noise_layer, &exp_attn_layer,
-                   &backlight_max, &override_en, &override_attn, &override_noise_zpos,
-                   &override_bl_thr);
+    TestCaseParser(in, out, test_cases[cur]);
 
     // payload is reused as all the set params are of same data type.
     GenericPayload payload;
@@ -318,20 +258,11 @@ static void ExecuteTestCase(std::unique_ptr<sdm::NoisePlugInIntf> &plugin_intf, 
       return;
     }
 
-    // Set maximum backlight value
-    *val = backlight_max;
-    ret = plugin_intf->SetParameter(sdm::kNoisePlugInBackLightMax, payload);
-    if ((ret) && (backlight_max > 0)) {
-      printf("failed to set max backlight value\n");
-      payload.DeletePayload();
-      return;
-    }
-
     // set override enable/disable flag
     sdm::NoisePlugInParams param;
     if ((sdm::kNoisePlugInDebugOverride >= sdm::kNoisePlugInDebugPropertyStart) &&
         (sdm::kNoisePlugInDebugOverride < sdm::kNoisePlugInDebugPropertyEnd)) {
-      *val = override_en;
+      *val = test_cases[cur].override_en;
       param = static_cast<sdm::NoisePlugInParams>(sdm::kNoisePlugInDebugOverride);
       ret = plugin_intf->SetParameter(param, payload);
       if (ret) {
@@ -341,15 +272,15 @@ static void ExecuteTestCase(std::unique_ptr<sdm::NoisePlugInIntf> &plugin_intf, 
       }
     }
 
-    if (override_en) {
+    if (test_cases[cur].override_en) {
       // over-ride enable case
       if ((sdm::kNoisePlugInDebugAttn >= sdm::kNoisePlugInDebugPropertyStart) &&
           (sdm::kNoisePlugInDebugAttn < sdm::kNoisePlugInDebugPropertyEnd)) {
         // override attenuation factor
-        *val = override_attn;
+        *val = test_cases[cur].override_attn;
         param = static_cast<sdm::NoisePlugInParams>(sdm::kNoisePlugInDebugAttn);
         ret = plugin_intf->SetParameter(param, payload);
-        if ((ret) && (override_attn > 0)) {
+        if ((ret) && (test_cases[cur].override_attn > 0)) {
           printf("Failed to set noise attn\n");
           payload.DeletePayload();
           return;
@@ -359,24 +290,11 @@ static void ExecuteTestCase(std::unique_ptr<sdm::NoisePlugInIntf> &plugin_intf, 
       if ((sdm::kNoisePlugInDebugNoiseZpos >= sdm::kNoisePlugInDebugPropertyStart) &&
           (sdm::kNoisePlugInDebugNoiseZpos < sdm::kNoisePlugInDebugPropertyEnd)) {
         // override noise layer z position
-        *val = override_noise_zpos;
+        *val = test_cases[cur].override_noise_zpos;
         param = static_cast<sdm::NoisePlugInParams>(sdm::kNoisePlugInDebugNoiseZpos);
         ret = plugin_intf->SetParameter(param, payload);
-        if ((ret) && (override_noise_zpos > 0)) {
+        if ((ret) && (test_cases[cur].override_noise_zpos > 0)) {
           printf("Failed to set noise zpos\n");
-          payload.DeletePayload();
-          return;
-        }
-      }
-
-      if ((sdm::kNoisePlugInDebugBacklightThr >= sdm::kNoisePlugInDebugPropertyStart) &&
-          (sdm::kNoisePlugInDebugBacklightThr < sdm::kNoisePlugInDebugPropertyEnd)) {
-        // override backlight threshold
-        *val = override_bl_thr;
-        param = static_cast<sdm::NoisePlugInParams>(sdm::kNoisePlugInDebugBacklightThr);
-        ret = plugin_intf->SetParameter(param, payload);
-        if ((ret) && (override_bl_thr > 0) && (backlight_max > 0)) {
-          printf("Failed to set backlight threshold\n");
           payload.DeletePayload();
           return;
         }
@@ -384,9 +302,12 @@ static void ExecuteTestCase(std::unique_ptr<sdm::NoisePlugInIntf> &plugin_intf, 
     }
 
     ret = plugin_intf->ProcessOps(sdm::kOpsRunNoisePlugIn, in_payload, &out_payload);
-    if (ret)
+    if (ret) {
       printf("Call ops failed\n");
-    failure = TestStatusCheck(enable, exp_attn, exp_noise_layer, exp_attn_layer, out);
+      break;
+    }
+
+    failure = TestStatusCheck(test_cases[cur], out);
 
     in_payload.DeletePayload();
     out_payload.DeletePayload();
@@ -395,12 +316,13 @@ static void ExecuteTestCase(std::unique_ptr<sdm::NoisePlugInIntf> &plugin_intf, 
     // De-initialize plugin interface so that max backlight is unset
     plugin_intf->Deinit();
 
-    printf("test case: %d resut: %s\n", cur, failure ? "failed":"passed");
+    printf("test case: %d result: %s\n", cur, failure ? "failed":"passed");
     if (failure) {
       break;
     }
     cur++;
   }
+
   deinit_test_cases();
 }
 

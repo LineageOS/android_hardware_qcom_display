@@ -40,7 +40,6 @@
 namespace sdm {
 
 enum NoisePlugInParams {
-  kNoisePlugInBackLightMax,                // Maximum BackLight value
   kNoisePlugInMixerStages,                 // Max no.of blending stages supported by HW
   kNoisePlugInDisable,                     // Disable the noise layer
   kNoisePlugInParamsMax = 0xff,
@@ -71,7 +70,6 @@ struct NoisePlugInInputLayers {
 };
 
 struct NoisePlugInInputParams {
-  uint32_t backlight = ~0x0;                   // Backlight value
   std::vector<NoisePlugInInputLayers> layers;  // Display layers as per their Z-order
 };
 
@@ -79,6 +77,9 @@ struct NoisePlugInOutputParams {
   bool enabled = false;          // Enable/Disable the Noise Layer
   uint32_t attn = 0;             // Output Attenuation factor
   std::array<uint32_t, 2> zpos;  // Z-order position for Noiselayer and Attenuation layer
+  uint32_t strength = ~0x0;      // Output Noise strength
+  uint32_t alpha_noise = ~0x0;   // Output Noise Alpha (transparency coefficient)
+  bool temporal_en = true;       // Enable temporal rotation of Noise matrix
 };
 
 using NoisePlugInIntf = GenericIntf<NoisePlugInParams, NoisePlugInOps, GenericPayload>;

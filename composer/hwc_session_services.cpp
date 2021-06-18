@@ -268,7 +268,7 @@ int HWCSession::SetActiveConfigIndex(int disp_id, uint32_t config) {
 }
 
 int HWCSession::SetNoisePlugInOverride(int32_t disp_id, bool override_en, int32_t attn,
-                                       int32_t noise_zpos, int32_t bl_thr) {
+                                       int32_t noise_zpos) {
   int32_t disp_idx = GetDisplayIndex(disp_id);
   if (disp_idx == -1) {
     DLOGE("Invalid display = %d", disp_id);
@@ -278,7 +278,7 @@ int HWCSession::SetNoisePlugInOverride(int32_t disp_id, bool override_en, int32_
   SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_idx]);
   int32_t error = -EINVAL;
   if (hwc_display_[disp_idx]) {
-    error = hwc_display_[disp_idx]->SetNoisePlugInOverride(override_en, attn, noise_zpos, bl_thr);
+    error = hwc_display_[disp_idx]->SetNoisePlugInOverride(override_en, attn, noise_zpos);
   }
 
   return error;

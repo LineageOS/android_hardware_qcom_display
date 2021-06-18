@@ -41,8 +41,6 @@ const uint32_t kNoisePlugInDebugOverride = kNoisePlugInDebugPropertyStart;
 const uint32_t kNoisePlugInDebugAttn = kNoisePlugInDebugPropertyStart + 1;
 // Z position for Noise layer
 const uint32_t kNoisePlugInDebugNoiseZpos = kNoisePlugInDebugPropertyStart + 2;
-// Backlight threshold
-const uint32_t kNoisePlugInDebugBacklightThr = kNoisePlugInDebugPropertyStart + 3;
 
 }  // namespace sdm
 

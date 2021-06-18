@@ -31,7 +31,9 @@
 #ifndef __NOISE_PLUGIN_INTF_IMPL_H__
 #define __NOISE_PLUGIN_INTF_IMPL_H__
 
+#include <dlfcn.h>
 #include <private/noise_plugin_intf.h>
+#include <private/noise_algo_intf.h>
 #include <mutex>
 #include <map>
 
@@ -42,13 +44,27 @@ namespace sdm {
 #define NOISE_ATTN_MIN 0                 // Minimum Noise attenuation value
 #define NOISE_ATTN_MAX 255               // Maximum Noise attenuation value
 #define NOISE_ATTN_DEFAULT 125           // Default Noise attenuation value
-#define BLT_MIN_PERCENT 0                // Minimum backlight threshold %
-#define BLT_MAX_PERCENT 100              // Maximum backlight threshold %
-#define BLT_DEFAULT_PERCENT 10           // Default backlight threshold %
+
+#define NOISE_ALGO_VERSION_MAJOR (1)     // Noise Algo major version number
+#define NOISE_ALGO_VERSION_MINOR (0)     // Noise Algo minor version number
 
 class NoisePlugInIntfImpl;
 typedef int (NoisePlugInIntfImpl::*SetParam)(const GenericPayload &in);
 typedef int (NoisePlugInIntfImpl::*Ops)(const GenericPayload& in, GenericPayload* out);
+
+class DynLib {
+ public:
+  ~DynLib();
+  bool Open(const char *lib_name);
+  bool Sym(const char *func_name, void **func_ptr);
+  const char * Error() { return ::dlerror(); }
+  operator bool() const { return lib_ != NULL; }
+
+ private:
+  void Close();
+
+  void *lib_ = NULL;
+};
 
 class NoisePlugInIntfImpl : public NoisePlugInIntf {
  public:
@@ -65,22 +81,22 @@ class NoisePlugInIntfImpl : public NoisePlugInIntf {
   bool init_done_ = false;
   bool override_ = false;             // flag to enable/disable override
   bool enable_ = false;               // flag to enable/disable noiselayer
-  int32_t backlight_max_ = -1;        // maximum BL value (actual value, not percentage)
   int32_t blend_stages_max_ = -1;     // maximum number of blend stages
   int32_t attn_ = 0;                  // noise attenuation factor
   int32_t noise_zpos_override_ = -1;  // noise layer z position (overridden value)
-  int32_t backlight_thr_ = 0;         // BL threshold value (actual value, not percentage)
   std::map<NoisePlugInParams, SetParam> set_param_func_;
   std::map<NoisePlugInOps, Ops> ops_func_;
+  std::unique_ptr<NoiseAlgoIntf> noise_algo_ = nullptr;
+  typedef NoiseAlgoFactoryIntf *(*GetNoiseAlgoFactoryIntfType)();
+  GetNoiseAlgoFactoryIntfType GetNoiseAlgoFactoryIntfFunc_ = nullptr;
+  NoiseAlgoFactoryIntf *noise_algo_factory_ = nullptr;
 
   /*set param handlers */
-  int SetBackLightMax(const GenericPayload &in);
   int SetMixerStages(const GenericPayload &in);
   int SetDisable(const GenericPayload &in);
   int SetDebugOverride(const GenericPayload &in);
   int SetDebugAttn(const GenericPayload &in);
   int SetDebugNoiseZpos(const GenericPayload &in);
-  int SetDebugBacklightThr(const GenericPayload &in);
 
   /*Process ops handlers */
   int RunNoisePlugIn(const GenericPayload &in, GenericPayload *out);

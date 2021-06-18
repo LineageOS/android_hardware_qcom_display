@@ -1456,11 +1456,7 @@ android::status_t HWCSession::notifyCallback(uint32_t command, const android::Pa
           noise_zpos = input_parcel->readInt32();
         }
 
-        int32_t bl_thr = -1;
-        if (input_parcel->dataPosition() != input_parcel->dataSize()) {
-          bl_thr = input_parcel->readInt32();
-        }
-        status = SetNoisePlugInOverride(disp_id, override_en, attn, noise_zpos, bl_thr);
+        status = SetNoisePlugInOverride(disp_id, override_en, attn, noise_zpos);
       }
       break;
 
