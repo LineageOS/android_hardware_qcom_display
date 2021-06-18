@@ -1,9 +1,4 @@
 //libgrallocutils
-soong_namespace {
-    imports: [
-        "hardware/qcom/display",
-    ],
-}
 cc_library_shared {
     name: "libgrallocutils",
     defaults: ["qtidisplay_defaults"],

@@ -183,7 +183,7 @@ endif
 SOONG_CONFIG_NAMESPACES += qtidisplay
 
 # Soong Keys
-SOONG_CONFIG_qtidisplay := drmpp headless llvmsa gralloc4 default sourcebuild
+SOONG_CONFIG_qtidisplay := drmpp headless llvmsa gralloc4 default var1 var2 var3
 
 # Soong Values
 SOONG_CONFIG_qtidisplay_drmpp := true
@@ -191,16 +191,15 @@ SOONG_CONFIG_qtidisplay_headless := false
 SOONG_CONFIG_qtidisplay_llvmsa := false
 SOONG_CONFIG_qtidisplay_gralloc4 := true
 SOONG_CONFIG_qtidisplay_default := true
-SOONG_CONFIG_qtidisplay_sourcebuild := true
+SOONG_CONFIG_qtidisplay_var1 := false
+SOONG_CONFIG_qtidisplay_var2 := false
+SOONG_CONFIG_qtidisplay_var3 := false
 
 # Techpack values
 
 ifeq ($(TARGET_IS_HEADLESS), true)
     # TODO: QMAA prebuilts
     PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/qmaa
-    PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/gralloc
-    PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/init
-    PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/libdebug
     SOONG_CONFIG_qtidisplay_headless := true
     SOONG_CONFIG_qtidisplay_default := false
 else
@@ -211,15 +210,22 @@ else
     #Properties that should not be set in QMAA are enabled here.
     PRODUCT_PROPERTY_OVERRIDES += \
         vendor.display.enable_early_wakeup=1
-    ifeq ($(BUILD_DISPLAY_TECHPACK_SOURCE), true)
-        PRODUCT_SOONG_NAMESPACES += hardware/qcom/display
-        PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/gralloc
-        PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/init
-        PRODUCT_SOONG_NAMESPACES += hardware/qcom/display/libdebug
-    else
-        PRODUCT_SOONG_NAMESPACES += vendor/qcom/opensource/techpack/artifacts/display
+    ifneq ($(BUILD_DISPLAY_TECHPACK_SOURCE), true)
+        SOONG_CONFIG_qtidisplay_var1 := true
+        SOONG_CONFIG_qtidisplay_var2 := true
+        SOONG_CONFIG_qtidisplay_var3 := true
     endif
 endif
+
+ifeq (,$(wildcard $(QCPATH)/display-noship))
+    SOONG_CONFIG_qtidisplay_var1 := true
+endif
+
+ifeq (,$(wildcard $(QCPATH)/display))
+    SOONG_CONFIG_qtidisplay_var2 := true
+endif
+
+
 
 QMAA_ENABLED_HAL_MODULES += display
 
