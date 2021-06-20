@@ -3643,7 +3643,7 @@ int HWCSession::WaitForCommitDoneLocked(hwc2_display_t display, int client_id) {
   clients_waiting_for_commit_[display].set(client_id);
   locker_[display].Wait();
   if (commit_error_[display] != 0) {
-    DLOGW("Commit done failed with error %d for client %d display %" PRIu64, commit_error_[display],
+    DLOGE("Commit done failed with error %d for client %d display %" PRIu64, commit_error_[display],
           client_id, display);
     commit_error_[display] = 0;
     return -EINVAL;
@@ -3651,7 +3651,7 @@ int HWCSession::WaitForCommitDoneLocked(hwc2_display_t display, int client_id) {
 
   int ret = Fence::Wait(retire_fence_[display], kCommitDoneTimeoutMs);
   if (ret != 0) {
-    DLOGW("Retire fence wait failed with error %d for client %d display %" PRIu64, ret,
+    DLOGE("Retire fence wait failed with error %d for client %d display %" PRIu64, ret,
           client_id, display);
   }
   retire_fence_[display] = nullptr;
@@ -3746,7 +3746,7 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
       DLOGI("Waiting for device assign");
       int ret = WaitForCommitDoneLocked(target_display, kClientTrustedUI);
       if (ret != 0) {
-        DLOGW("Device assign failed with error %d", ret);
+        DLOGE("Device assign failed with error %d", ret);
         return -EINVAL;
       }
     }
@@ -3786,7 +3786,7 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
       DLOGI("Waiting for device unassign");
       int ret = WaitForCommitDoneLocked(target_display, kClientTrustedUI);
       if (ret != 0) {
-        DLOGW("Device unassign failed with error %d", ret);
+        DLOGE("Device unassign failed with error %d", ret);
         return -EINVAL;
       }
     }
@@ -3908,7 +3908,7 @@ HWC2::Error HWCSession::TeardownConcurrentWriteback(hwc2_display_t display) {
   // Wait until concurrent WB teardown is complete
   int error = WaitForCommitDoneLocked(display, kClientTeardownCWB);
   if (error != 0) {
-    DLOGW("concurrent WB teardown failed with error %d", error);
+    DLOGE("concurrent WB teardown failed with error %d", error);
     return HWC2::Error::NoResources;
   }
   return HWC2::Error::None;
@@ -3940,13 +3940,15 @@ HWC2::Error HWCSession::CommitOrPrepare(hwc2_display_t display, bool validate_on
     hwc_display_[display]->ProcessActiveConfigChange();
     status = hwc_display_[display]->CommitOrPrepare(validate_only, out_retire_fence, out_num_types,
                                                     out_num_requests, needs_commit);
-    PostCommitLocked(display, *out_retire_fence);
   }
   if(!(*needs_commit)) {
-    SEQUENCE_EXIT_SCOPE_LOCK(locker_[display]);
+    {
+      SEQUENCE_EXIT_SCOPE_LOCK(locker_[display]);
+      PostCommitLocked(display, *out_retire_fence);
+    }
+    PostCommitUnlocked(display, *out_retire_fence, status);
   }
 
-  PostCommitUnlocked(display, *out_retire_fence, status);
   return status;
 }
 
