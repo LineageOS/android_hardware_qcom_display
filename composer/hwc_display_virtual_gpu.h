@@ -79,7 +79,7 @@ class HWCDisplayVirtualGPU : public HWCDisplayVirtual,
               SyncTask<ColorConvertTaskCode>::TaskContext *task_context);
 
   SyncTask<ColorConvertTaskCode> color_convert_task_;
-  GLColorConvert *gl_color_convert_;
+  GLColorConvert *gl_color_convert_ = nullptr;
 
   bool disable_animation_ = false;
   bool animation_in_progress_ = false;
