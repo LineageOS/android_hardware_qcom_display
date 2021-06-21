@@ -891,6 +891,38 @@ void DisplayBase::SetRCData(LayerStack *layer_stack) {
     }
   }
 
+  if (rc_cached_mixer_width_ != mixer_attributes_.width) {
+    GenericPayload in;
+    uint32_t *mixer_width = nullptr;
+    ret = in.CreatePayload<uint32_t>(mixer_width);
+    if (ret) {
+      DLOGE("failed to create the payload. Error:%d", ret);
+      return;
+    }
+    *mixer_width = rc_cached_mixer_width_ = mixer_attributes_.width;
+    ret = rc_core_->SetParameter(kRCFeatureMixerWidth, in);
+    if (ret) {
+      DLOGE("failed to set mixer width. Error:%d", ret);
+      return;
+    }
+  }
+
+  if (rc_cached_mixer_height_ != mixer_attributes_.height) {
+    GenericPayload in;
+    uint32_t *mixer_height = nullptr;
+    ret = in.CreatePayload<uint32_t>(mixer_height);
+    if (ret) {
+      DLOGE("failed to create the payload. Error:%d", ret);
+      return;
+    }
+    *mixer_height = rc_cached_mixer_height_ = mixer_attributes_.height;
+    ret = rc_core_->SetParameter(kRCFeatureMixerHeight, in);
+    if (ret) {
+      DLOGE("failed to set mixer height. Error:%d", ret);
+      return;
+    }
+  }
+
   GenericPayload in;
   LayerStack **layer_stack_ptr = nullptr;
   ret = in.CreatePayload<LayerStack *>(layer_stack_ptr);

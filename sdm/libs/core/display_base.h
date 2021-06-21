@@ -401,6 +401,8 @@ class DisplayBase : public DisplayInterface {
   void CleanupOnError();
   unsigned int rc_cached_res_width_ = 0;
   unsigned int rc_cached_res_height_ = 0;
+  unsigned int rc_cached_mixer_width_ = 0;
+  unsigned int rc_cached_mixer_height_ = 0;
   std::unique_ptr<RCIntf> rc_core_ = nullptr;
   bool mmrm_updated_ = false;
   uint32_t mmrm_requested_clk_ = 0;
