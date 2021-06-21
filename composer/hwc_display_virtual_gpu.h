@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -76,7 +76,7 @@ class HWCDisplayVirtualGPU : public HWCDisplayVirtual,
               SyncTask<ColorConvertTaskCode>::TaskContext *task_context);
 
   SyncTask<ColorConvertTaskCode> color_convert_task_;
-  GLColorConvert *gl_color_convert_;
+  GLColorConvert *gl_color_convert_ = nullptr;
 
   bool disable_animation_ = false;
   bool animation_in_progress_ = false;
