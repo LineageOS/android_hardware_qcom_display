@@ -168,7 +168,8 @@ ColorManagerProxy *ColorManagerProxy::CreateColorManagerProxy(DisplayType type,
                                                               HWInterface *hw_intf,
                                                               const HWDisplayAttributes &attribute,
                                                               const HWPanelInfo &panel_info,
-                                                              DppsControlInterface *dpps_intf) {
+                                                              DppsControlInterface *dpps_intf,
+                                                              DisplayInterface *disp_intf) {
   DisplayError error = kErrorNone;
   PPFeatureVersion versions;
   int32_t display_id = -1;
@@ -226,6 +227,16 @@ ColorManagerProxy *ColorManagerProxy::CreateColorManagerProxy(DisplayType type,
         DLOGW("Failed to init Stc interface, err %d", err);
         delete color_manager_proxy->stc_intf_;
         color_manager_proxy->stc_intf_ = NULL;
+      } else {
+        // pass the display interface to STC manager for digital dimming
+        ScPayload payload;
+        payload.len = sizeof(disp_intf);
+        payload.prop = snapdragoncolor::kDisplayIntf;
+        payload.payload = reinterpret_cast<uint64_t>(disp_intf);
+        int ret = color_manager_proxy->stc_intf_->SetProperty(payload);
+        if (ret) {
+          DLOGW("Failed to SetProperty, property = %d error = %d", payload.prop, ret);
+        }
       }
 
       if (color_manager_proxy->HasNativeModeSupport()) {
@@ -467,6 +478,10 @@ DisplayError ColorManagerProxy::ColorMgrSetModeWithRenderIntent(int32_t color_mo
   cur_mode_id_ = color_mode_id;
   apply_mode_ = true;
   return kErrorNone;
+}
+
+DisplayError ColorManagerProxy::ColorMgrSetSprIntf(void *spr_intf) {
+  return color_intf_->ColorIntfSetSprInterface(spr_intf);
 }
 
 DisplayError ColorManagerProxy::Validate(DispLayerStack *disp_layer_stack) {
@@ -715,6 +730,74 @@ DisplayError ColorManagerProxy::ColorMgrSetLtmPccConfig(void* pcc_input, size_t 
     return kErrorUndefined;
   }
   return kErrorNone;
+}
+
+DisplayError ColorManagerProxy::ConfigureCWBDither(CwbConfig *cwb_cfg, bool free_data) {
+  DisplayError error = kErrorNone;
+
+  if (!stc_intf_ || !cwb_cfg) {
+    DLOGE("Invalid stc_intf_ %pK, cwb_cfg %pK", stc_intf_, cwb_cfg);
+    return kErrorParameters;
+  }
+
+  //<<! free dither data
+  PPFrameCaptureData *frame_capture_data(pp_features_.GetFrameCaptureData());
+  if (free_data) {
+    if (frame_capture_data->input_params.dither_payload) {
+      DLOGV_IF(kTagQDCM, "free cwb dither data");
+      delete frame_capture_data->input_params.dither_payload;
+      frame_capture_data->input_params.dither_payload = nullptr;
+    }
+    frame_capture_data->input_params.dither_flags = 0x0;
+    return kErrorNone;
+  }
+  cwb_cfg->dither_info = nullptr;
+
+  //<<! Only the first frame goes to get pp-dither when multi-frames need to be captured
+  //<<! dither_flags is 0x0: dither settings from current color mode
+  //<<! dither_flags is 0x1: dither settings from QDCM PC tool
+  if (frame_capture_data->input_params.dither_flags == 0x0 &&
+      !frame_capture_data->input_params.dither_payload) {
+    snapdragoncolor::HwConfigOutputParams dither_hw_params = {};
+    ScPayload output = {};
+    output.len = sizeof(dither_hw_params);
+    output.prop = snapdragoncolor::kGetGlobalDitherHwConfig;
+    output.payload = reinterpret_cast<uint64_t>(&dither_hw_params);
+    int ret = stc_intf_->GetProperty(&output);
+    if (ret) {
+      DLOGE("Failed to get propety of global dither hw config");
+      return kErrorUndefined;
+    }
+
+    if (dither_hw_params.payload.empty()) {
+      DLOGV_IF(kTagQDCM, "No dither hardware asset found in color mode");
+      return kErrorNone;
+    }
+
+    if (dither_hw_params.payload[0].hw_asset.empty() ||
+        dither_hw_params.payload[0].hw_payload_len == 0) {
+      DLOGE("Invalid hw_asset.empty is %d, hw_payload_len %u",
+            dither_hw_params.payload[0].hw_asset.empty(),
+            dither_hw_params.payload[0].hw_payload_len);
+      return kErrorParameters;
+    }
+
+    //<<! update asset name from kPbDither to kPbCWBDither
+    //<<! convert data struct from dither_coeff_data to SDEDitherCfg
+    dither_hw_params.payload[0].hw_asset = snapdragoncolor::kPbCWBDither;
+    error = ConvertToPPFeatures(dither_hw_params, &pp_features_);
+    if (error != kErrorNone) {
+      DLOGE("Failed to convert cwb dither feature, error %d", error);
+      return error;
+    }
+  }
+
+  //<<! config the payload to hw_cwb_config
+  PPFeatureInfo *dither_payload = frame_capture_data->input_params.dither_payload;
+  if (dither_payload && (dither_payload->enable_flags_ & kOpsEnable))
+    cwb_cfg->dither_info = dither_payload;
+  DLOGV_IF(kTagQDCM, "config cwb dither data done");
+  return error;
 }
 
 ColorFeatureCheckingImpl::ColorFeatureCheckingImpl(HWInterface *hw_intf,

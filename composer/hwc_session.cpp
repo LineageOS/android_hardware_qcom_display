@@ -61,9 +61,10 @@ Locker HWCSession::locker_[HWCCallbacks::kNumDisplays];
 bool HWCSession::pending_power_mode_[HWCCallbacks::kNumDisplays];
 Locker HWCSession::power_state_[HWCCallbacks::kNumDisplays];
 Locker HWCSession::hdr_locker_[HWCCallbacks::kNumDisplays];
-Locker HWCSession::tui_locker_[HWCCallbacks::kNumDisplays];
-bool HWCSession::tui_transition_pending_[HWCCallbacks::kNumDisplays] = { false };
-int HWCSession::tui_transition_error_[HWCCallbacks::kNumDisplays] = { 0 };
+std::bitset<HWCSession::kClientMax>
+    HWCSession::clients_waiting_for_commit_[HWCCallbacks::kNumDisplays];
+shared_ptr<Fence> HWCSession::retire_fence_[HWCCallbacks::kNumDisplays];
+int HWCSession::commit_error_[HWCCallbacks::kNumDisplays] = { 0 };
 Locker HWCSession::display_config_locker_;
 Locker HWCSession::system_locker_;
 static const int kSolidFillDelay = 100 * 1000;
@@ -818,13 +819,18 @@ int32_t HWCSession::PresentDisplay(hwc2_display_t display, shared_ptr<Fence> *ou
       hwc_display_[target_display]->ProcessActiveConfigChange();
       status = hwc_display_[target_display]->Present(out_retire_fence);
       if (status == HWC2::Error::None) {
-        PostCommitLocked(target_display);
+        PostCommitLocked(target_display, *out_retire_fence);
       }
     }
   }
 
   if (status != HWC2::Error::None && status != HWC2::Error::NotValidated) {
-    CancelTUILock(target_display);
+    if (clients_waiting_for_commit_[target_display].any()) {
+      retire_fence_[target_display] = nullptr;
+      commit_error_[target_display] = -EINVAL;
+      clients_waiting_for_commit_[target_display].reset();
+    }
+    SEQUENCE_CANCEL_SCOPE_LOCK(locker_[target_display]);
   }
 
   PostCommitUnlocked(target_display, *out_retire_fence, status);
@@ -832,7 +838,7 @@ int32_t HWCSession::PresentDisplay(hwc2_display_t display, shared_ptr<Fence> *ou
   return INT32(status);
 }
 
-void HWCSession::PostCommitLocked(hwc2_display_t display) {
+void HWCSession::PostCommitLocked(hwc2_display_t display, shared_ptr<Fence> &retire_fence) {
   // Check if hwc's refresh trigger is getting exercised.
   if (callbacks_.NeedsRefresh(display)) {
     hwc_display_[display]->SetPendingRefresh();
@@ -840,11 +846,11 @@ void HWCSession::PostCommitLocked(hwc2_display_t display) {
   }
   PerformQsyncCallback(display);
   PerformIdleStatusCallback(display);
-  Locker::ScopeLock tui_lock(tui_locker_[display]);
-  if (tui_transition_pending_[display]) {
-    tui_transition_pending_[display] = false;
-    tui_transition_error_[display] = 0;
-    tui_locker_[display].Broadcast();
+
+  if (clients_waiting_for_commit_[display].any()) {
+    retire_fence_[display] = retire_fence;
+    commit_error_[display] = 0;
+    clients_waiting_for_commit_[display].reset();
   }
 }
 
@@ -860,6 +866,8 @@ void HWCSession::PostCommitUnlocked(hwc2_display_t display, const shared_ptr<Fen
   std::unique_lock<std::mutex> caller_lock(hotplug_mutex_);
   if (!resource_ready_) {
     resource_ready_ = true;
+    active_display_id_ = display;
+    cached_retire_fence_ = retire_fence;
     hotplug_cv_.notify_one();
   }
 }
@@ -1234,16 +1242,6 @@ int32_t HWCSession::GetDozeSupport(hwc2_display_t display, int32_t *out_support)
   *out_support = hwc_display_[display]->HasSmartPanelConfig() ? 1 : 0;
 
   return HWC2_ERROR_NONE;
-}
-
-void HWCSession::CancelTUILock(hwc2_display_t display) {
-  Locker::ScopeLock tui_lock(tui_locker_[display]);
-  if (tui_transition_pending_[display]) {
-    tui_transition_pending_[display] = false;
-    tui_transition_error_[display] = -ENODEV;
-    tui_locker_[display].Broadcast();
-  }
-  SEQUENCE_CANCEL_SCOPE_LOCK(locker_[display]);
 }
 
 HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height, int32_t *format,
@@ -2935,7 +2933,10 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
   // Active builtin display needs revalidation
   hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
   if (active_builtin_disp_id < HWCCallbacks::kNumDisplays) {
-    WaitForResources(delay_hotplug, active_builtin_disp_id, client_id);
+    status = WaitForResources(delay_hotplug, active_builtin_disp_id, client_id);
+    if (status) {
+      return status;
+    }
   }
 
   for (auto client_id : pending_hotplugs) {
@@ -2979,6 +2980,11 @@ int HWCSession::HandleDisconnectedDisplays(HWDisplaysInfo *hw_displays_info) {
 
     if (disconnect) {
       DestroyDisplay(&map_info);
+      hwc2_display_t active_builtin_id = GetActiveBuiltinDisplay();
+      if (active_builtin_id < HWCCallbacks::kNumDisplays) {
+        SCOPE_LOCK(locker_[active_builtin_id]);
+        hwc_display_[active_builtin_id]->SetAlternateDisplayConfig(false);
+      }
     }
   }
 
@@ -3565,7 +3571,7 @@ void HWCSession::NotifyClientStatus(bool connected) {
   callbacks_.UpdateVsyncSource(HWCCallbacks::kNumDisplays);
 }
 
-void HWCSession::WaitForResources(bool wait_for_resources, hwc2_display_t active_builtin_id,
+int HWCSession::WaitForResources(bool wait_for_resources, hwc2_display_t active_builtin_id,
                                   hwc2_display_t display_id) {
   std::vector<DisplayMapInfo> map_info = {map_info_primary_};
   std::copy(map_info_builtin_.begin(), map_info_builtin_.end(), std::back_inserter(map_info));
@@ -3583,6 +3589,19 @@ void HWCSession::WaitForResources(bool wait_for_resources, hwc2_display_t active
 
   if (wait_for_resources) {
     bool res_wait = true;
+    // todo (user): move this logic to wait for MDP resource reallocation/reconfiguration
+    // to SDM module.
+    bool needs_active_builtin_reconfig = false;
+    res_wait = hwc_display_[display_id]->CheckResourceState(&needs_active_builtin_reconfig);
+    if (needs_active_builtin_reconfig) {
+      SCOPE_LOCK(locker_[active_builtin_id]);
+      int status = INT32(hwc_display_[active_builtin_id]->SetAlternateDisplayConfig(true));
+      if (status) {
+        DLOGE("Active built-in %" PRIu64 " cannot switch to lower resource configuration",
+              active_builtin_id);
+        return status;
+      }
+    }
     do {
       if (client_connected_) {
         Refresh(active_builtin_id);
@@ -3591,10 +3610,17 @@ void HWCSession::WaitForResources(bool wait_for_resources, hwc2_display_t active
         std::unique_lock<std::mutex> caller_lock(hotplug_mutex_);
         resource_ready_ = false;
         hotplug_cv_.wait(caller_lock);
+        if (active_display_id_ == active_builtin_id && needs_active_builtin_reconfig &&
+            cached_retire_fence_) {
+          Fence::Wait(cached_retire_fence_);
+        }
+        cached_retire_fence_ == nullptr;
       }
-      res_wait = hwc_display_[display_id]->CheckResourceState();
-    } while (res_wait);
+      res_wait = hwc_display_[display_id]->CheckResourceState(&needs_active_builtin_reconfig);
+    } while (res_wait || needs_active_builtin_reconfig);
   }
+
+  return 0;
 }
 
 int32_t HWCSession::GetDisplayVsyncPeriod(hwc2_display_t disp, VsyncPeriodNanos *vsync_period) {
@@ -3615,6 +3641,25 @@ int32_t HWCSession::SetActiveConfigWithConstraints(
 
   return CallDisplayFunction(display, &HWCDisplay::SetActiveConfigWithConstraints, config,
                              vsync_period_change_constraints, out_timeline);
+}
+
+int HWCSession::WaitForCommitDoneLocked(hwc2_display_t display, int client_id) {
+  clients_waiting_for_commit_[display].set(client_id);
+  locker_[display].Wait();
+  if (commit_error_[display] != 0) {
+    DLOGW("Commit done failed with error %d for client %d display %" PRIu64, commit_error_[display],
+          client_id, display);
+    commit_error_[display] = 0;
+    return -EINVAL;
+  }
+
+  int ret = Fence::Wait(retire_fence_[display], kCommitDoneTimeoutMs);
+  if (ret != 0) {
+    DLOGW("Retire fence wait failed with error %d for client %d display %" PRIu64, ret,
+          client_id, display);
+  }
+  retire_fence_[display] = nullptr;
+  return ret;
 }
 
 android::status_t HWCSession::HandleTUITransition(int disp_id, int event) {
@@ -3698,19 +3743,16 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
       DLOGW("Target display %d is not ready", disp_id);
       return -ENODEV;
     }
-  }
 
-  if (needs_refresh) {
-    callbacks_.Refresh(target_display);
+    if (needs_refresh) {
+      callbacks_.Refresh(target_display);
 
-    DLOGI("Waiting for device assign");
-    Locker::ScopeLock tui_lock(tui_locker_[target_display]);
-    tui_transition_pending_[target_display] = true;
-    tui_locker_[target_display].Wait();
-    if (tui_transition_error_[target_display] != 0) {
-      DLOGW("Device assign failed with error %d", tui_transition_error_[target_display]);
-      tui_transition_error_[target_display] = 0;
-      return -EINVAL;
+      DLOGI("Waiting for device assign");
+      int ret = WaitForCommitDoneLocked(target_display, kClientTrustedUI);
+      if (ret != 0) {
+        DLOGW("Device assign failed with error %d", ret);
+        return -EINVAL;
+      }
     }
   }
   return 0;
@@ -3741,18 +3783,16 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
       DLOGW("Target display %d is not ready", disp_id);
       return -ENODEV;
     }
-  }
-  if (needs_refresh) {
-    callbacks_.Refresh(target_display);
-    Locker::ScopeLock tui_lock(tui_locker_[target_display]);
 
-    DLOGI("Waiting for device unassign");
-    tui_transition_pending_[target_display] = true;
-    tui_locker_[target_display].Wait();
-    if (tui_transition_error_[target_display] != 0) {
-      DLOGW("Device assign failed with error %d", tui_transition_error_[target_display]);
-      tui_transition_error_[target_display] = 0;
-      return -EINVAL;
+    if (needs_refresh) {
+      callbacks_.Refresh(target_display);
+
+      DLOGI("Waiting for device unassign");
+      int ret = WaitForCommitDoneLocked(target_display, kClientTrustedUI);
+      if (ret != 0) {
+        DLOGW("Device unassign failed with error %d", ret);
+        return -EINVAL;
+      }
     }
   }
   return TUITransitionUnPrepare(disp_id);
@@ -3870,9 +3910,9 @@ HWC2::Error HWCSession::TeardownConcurrentWriteback(hwc2_display_t display) {
   }
   callbacks_.Refresh(display);
   // Wait until concurrent WB teardown is complete
-  int err = locker_[display].WaitFinite(kCommitDoneTimeoutMs);
-  if (err) {
-    DLOGW("Waiting failed with error %d", err);
+  int error = WaitForCommitDoneLocked(display, kClientTeardownCWB);
+  if (error != 0) {
+    DLOGW("concurrent WB teardown failed with error %d", error);
     return HWC2::Error::NoResources;
   }
   return HWC2::Error::None;
@@ -3900,12 +3940,16 @@ HWC2::Error HWCSession::CommitOrPrepare(hwc2_display_t display, bool validate_on
   HandleSecureSession();
   auto status = HWC2::Error::None;
   {
-    Locker::ScopeLock lock_d(locker_[display]);
+    SEQUENCE_ENTRY_SCOPE_LOCK(locker_[display]);
     hwc_display_[display]->ProcessActiveConfigChange();
     status = hwc_display_[display]->CommitOrPrepare(validate_only, out_retire_fence, out_num_types,
                                                     out_num_requests, needs_commit);
-    PostCommitLocked(display);
+    PostCommitLocked(display, *out_retire_fence);
   }
+  if(!(*needs_commit)) {
+    SEQUENCE_EXIT_SCOPE_LOCK(locker_[display]);
+  }
+
   PostCommitUnlocked(display, *out_retire_fence, status);
   return status;
 }

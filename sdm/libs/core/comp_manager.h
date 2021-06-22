@@ -89,7 +89,7 @@ class CompManager {
   void GenerateROI(Handle display_ctx, DispLayerStack *disp_layer_stack);
   DisplayError CheckEnforceSplit(Handle comp_handle, uint32_t new_refresh_rate);
   DppsControlInterface* GetDppsControlIntf() { return dpps_ctrl_intf_; }
-  bool CheckResourceState(Handle display_ctx);
+  bool CheckResourceState(Handle display_ctx, bool *res_exhausted, HWDisplayAttributes attr);
   bool IsRotatorSupportedFormat(LayerBufferFormat format);
   DisplayError SetDrawMethod(Handle display_ctx, const DisplayDrawMethod &draw_method);
   DisplayError FreeDemuraFetchResources(Handle display_ctx);
@@ -108,6 +108,7 @@ class CompManager {
   DisplayError SetMaxSDEClk(uint32_t clk);
   void GetRetireFence(Handle display_ctx, shared_ptr<Fence> *retire_fence);
   void NeedsValidate(Handle display_ctx, bool *needs_validate);
+  DisplayError SetBacklightLevel(Handle display_ctx, const uint32_t &backlight_level);
 
  private:
   static const int kMaxThermalLevel = 3;
@@ -147,8 +148,8 @@ class CompManager {
   HWResourceInfo hw_res_info_;
   BufferAllocator *buffer_allocator_ = NULL;
   ExtensionInterface *extension_intf_ = NULL;
-  uint32_t max_sde_ext_layers_ = 0;
-  uint32_t max_sde_builtin_layers_ = 2;
+  uint32_t max_sde_secondary_fetch_layers_ = 2;
+  uint32_t max_sde_builtin_fetch_layers_ = 2;
   DppsControlInterface *dpps_ctrl_intf_ = NULL;
   bool demura_enabled_ = false;
   std::map<int32_t /* display_id */, bool> display_demura_status_;
@@ -157,4 +158,3 @@ class CompManager {
 }  // namespace sdm
 
 #endif  // __COMP_MANAGER_H__
-

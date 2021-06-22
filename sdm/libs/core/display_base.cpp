@@ -48,6 +48,11 @@ bool DisplayBase::primary_active_ = false;
 Locker DisplayBase::display_power_reset_lock_;
 int32_t DisplayBase::mmrm_floor_clk_vote_ = 100000000;
 
+static bool ValidNoisePluginDebugOverride(uint32_t override_param) {
+  return ((override_param >= kNoisePlugInDebugPropertyStart) &&
+          (override_param < kNoisePlugInDebugPropertyEnd));
+}
+
 static ColorPrimaries GetColorPrimariesFromAttribute(const std::string &gamut) {
   if (gamut.find(kDisplayP3) != std::string::npos || gamut.find(kDcip3) != std::string::npos) {
     return ColorPrimaries_DCIP3;
@@ -155,7 +160,7 @@ DisplayError DisplayBase::Init() {
     DppsControlInterface *dpps_intf = comp_manager_->GetDppsControlIntf();
     color_mgr_ = ColorManagerProxy::CreateColorManagerProxy(display_type_, hw_intf_,
                                                             display_attributes_, hw_panel_info_,
-                                                            dpps_intf);
+                                                            dpps_intf, this);
   }
 
   error = comp_manager_->RegisterDisplay(display_id_, display_type_, display_attributes_,
@@ -229,6 +234,17 @@ DisplayError DisplayBase::Deinit() {
     rc_core_->Deinit();
     rc_panel_feature_init_ = false;
   }
+
+  if (noise_plugin_intf_) {
+    noise_plugin_intf_->Deinit();
+    noise_plugin_intf_ = nullptr;
+  }
+
+  if (noise_algo_intf_) {
+    noise_algo_intf_->Deinit();
+    noise_algo_intf_ = nullptr;
+  }
+
   CloseFd(&cached_framebuffer_.planes[0].fd);
   return kErrorNone;
 }
@@ -266,6 +282,84 @@ DisplayError DisplayBase::SetupPanelFeatureFactory() {
   }
 
   DLOGI("Setup pf factory and prop intf for Panel Features");
+  return kErrorNone;
+}
+
+DisplayError DisplayBase::NoiseInit() {
+  if (!hw_resource_info_.has_noise_layer || noise_disable_prop_) {
+    DLOGW("Noise Layer disabled on display %d-%d has_noise = %d noise_disable_prop = %d",
+          display_id_, display_type_, hw_resource_info_.has_noise_layer, noise_disable_prop_);
+    return kErrorNone;
+  }
+
+  noise_plugin_factory_intf_ = GetNoisePlugInFactoryIntf();
+  if (!noise_plugin_factory_intf_) {
+    DLOGE("Failed to create noise plugin factory for display %d-%d", display_id_, display_type_);
+    return kErrorNotSupported;
+  }
+
+  noise_plugin_intf_ = noise_plugin_factory_intf_->CreateNoisePlugInIntf(
+        NOISE_PLUGIN_VERSION_MAJOR, NOISE_PLUGIN_VERSION_MINOR);
+  if (!noise_plugin_intf_) {
+    DLOGE("CreateNoisePluginIntf failed! for display %d-%d", display_id_, display_type_);
+    return kErrorNotSupported;
+  }
+
+  int ret = noise_plugin_intf_->Init();
+  if (ret) {
+    DLOGE("NoisePlugin Init failed! for display %d-%d", display_id_, display_type_);
+    return kErrorNotSupported;
+  }
+
+  DisplayError error = CreateNoiseAlgo();
+  if (error != kErrorNone) {
+    DLOGE("CreateNoiseAlgo failed, error: %d for display %d-%d", error, display_id_, display_type_);
+    noise_plugin_intf_->Deinit();
+  }
+
+  return error;
+}
+
+DisplayError DisplayBase::CreateNoiseAlgo() {
+  if (noise_algo_factory_) {
+    return kErrorNone;
+  }
+
+  typedef NoiseAlgoFactoryIntf *(*GetNoiseAlgoFactoryIntf)();
+  GetNoiseAlgoFactoryIntf GetNoiseAlgoFactoryFunc = nullptr;
+  DynLib lib;
+  if (lib.Open(EXTENSION_LIBRARY_NAME)) {
+    if (!lib.Sym(GET_NOISE_ALGO_FACTORY,
+                 reinterpret_cast<void **>(&GetNoiseAlgoFactoryFunc))) {
+      DLOGE("Unable to load GetNoiseAlgoFactoryIntf, error = %s for display %d-%d", lib.Error(),
+            display_id_, display_type_);
+      return kErrorNotSupported;
+    }
+  } else {
+    DLOGE("Unable to load = %s, error = %s for display %d-%d", EXTENSION_LIBRARY_NAME,
+          lib.Error(), display_id_, display_type_);
+    return kErrorNotSupported;
+  }
+
+  noise_algo_factory_ = GetNoiseAlgoFactoryFunc();
+  if (!noise_algo_factory_) {
+    DLOGE("Failed to create NoiseAlgoFactoryIntf for display %d-%d", display_id_, display_type_);
+    return kErrorNotSupported;
+  }
+
+  noise_algo_intf_ = noise_algo_factory_->CreateNoiseAlgoIntf(NOISE_ALGO_VERSION_MAJOR,
+                                                              NOISE_ALGO_VERSION_MINOR);
+  if (!noise_algo_intf_) {
+    DLOGE("Failed to create NoiseAlgoIntf for display %d-%d", display_id_, display_type_);
+    return kErrorNotSupported;
+  }
+  int ret = noise_algo_intf_->Init();
+  if (ret) {
+    DLOGE("NoiseAlgo Init failed, Noise Layer won't be supported for display %d-%d", display_id_,
+          display_type_);
+    return kErrorNotSupported;
+  }
+
   return kErrorNone;
 }
 
@@ -339,6 +433,7 @@ DisplayError DisplayBase::ConfigureCwb(LayerStack *layer_stack) {
   if (hw_resource_info_.has_concurrent_writeback && layer_stack->output_buffer) {  // CWB requested
     if (!cwb_config_) {  // Instantiate cwb_config_ if cwb was not enabled in previous draw cycle.
       cwb_config_ = new CwbConfig;
+      needs_validate_ = true;  // Do not skip Validate in CWB setup frame.
     }
     *cwb_config_ = {};  // Reset cwb_config_ so as to set it to new cwb config passed by the client
 
@@ -366,6 +461,15 @@ DisplayError DisplayBase::ConfigureCwb(LayerStack *layer_stack) {
       *cwb_config_ = *(layer_stack->cwb_config);
     }
 
+    // Config dither data
+    cwb_config_->dither_info = nullptr;
+    if (cwb_config_->tap_point != CwbTapPoint::kLmTapPoint) {
+      error =  color_mgr_->ConfigureCWBDither(cwb_config_, false);
+      if (error != kErrorNone) {
+        DLOGE("CWB dither config failed, error %d", error);
+      }
+    }
+
     disp_layer_stack_.info.hw_cwb_config = cwb_config_;
     error = ValidateCwbConfigInfo(disp_layer_stack_.info.hw_cwb_config,
                                   layer_stack->output_buffer->format);
@@ -374,12 +478,37 @@ DisplayError DisplayBase::ConfigureCwb(LayerStack *layer_stack) {
       return error;
     }
   } else if (cwb_config_) {  // CWB isn't requested in the current draw cycle.
+    // Release dither data
+    error = color_mgr_->ConfigureCWBDither(cwb_config_, true);
+    if (error != kErrorNone) {
+      DLOGE("Release dither data failed.");
+    }
     // Check and release cwb_config_ if it was instantiated in the previous draw cycle.
     delete cwb_config_;
     cwb_config_ = NULL;
     disp_layer_stack_.info.hw_cwb_config = NULL;
+    needs_validate_ = true;  // Do not skip Validate in CWB teardown frame.
   }
   return error;
+}
+
+bool DisplayBase::IsWriteBackSupportedFormat(const LayerBufferFormat &format) {
+  // check whether writeback supported for parameter color format or not.
+  std::map<HWSubBlockType, std::vector<LayerBufferFormat>>::iterator it =
+      hw_resource_info_.supported_formats_map.find(HWSubBlockType::kHWWBIntfOutput);
+  if (it == hw_resource_info_.supported_formats_map.end()) {
+    return false;
+  }
+  std::vector<LayerBufferFormat> &supported_sdm_formats = it->second;
+  if (supported_sdm_formats.empty()) {
+    return false;
+  }
+  for (int i = 0; i < supported_sdm_formats.size(); i++) {
+    if (supported_sdm_formats[i] == format) {
+      return true;
+    }
+  }
+  return false;
 }
 
 DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
@@ -388,11 +517,13 @@ DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
   hw_layers_info.app_layer_count = 0;
   hw_layers_info.gpu_target_index = -1;
   hw_layers_info.stitch_target_index = -1;
+  hw_layers_info.noise_layer_index = -1;
 
   disp_layer_stack_.stack = layer_stack;
   hw_layers_info.flags = layer_stack->flags;
   hw_layers_info.blend_cs = layer_stack->blend_cs;
 
+  int index = 0;
   for (auto &layer : layers) {
     if (layer->buffer_map == nullptr) {
       layer->buffer_map = std::make_shared<LayerBufferMap>();
@@ -400,8 +531,13 @@ DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
     if (layer->composition == kCompositionGPUTarget) {
       hw_layers_info.gpu_target_index = hw_layers_info.app_layer_count;
     } else if (layer->composition == kCompositionStitchTarget) {
-      hw_layers_info.stitch_target_index = hw_layers_info.gpu_target_index + 1;
-      break;
+      hw_layers_info.stitch_target_index = index;
+    } else if (layer->flags.is_noise) {
+      hw_layers_info.flags.noise_present = true;
+      hw_layers_info.noise_layer_index = index;
+      hw_layers_info.noise_layer_info = noise_layer_info_;
+      DLOGV_IF(kTagDisplay, "Display %d-%d requested Noise at index = %d with zpos_n = %d",
+                display_id_, display_type_, index, noise_layer_info_.zpos_noise);
     } else {
       hw_layers_info.app_layer_count++;
     }
@@ -412,13 +548,15 @@ DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
     if (layer->flags.is_game) {
       hw_layers_info.game_present = true;
     }
+    index++;
   }
 
   DLOGD_IF(kTagDisplay, "LayerStack layer_count: %zu, app_layer_count: %d, "
-                        "gpu_target_index: %d, stitch_index: %d game_present: %d, display: %d-%d",
-                        layers.size(), hw_layers_info.app_layer_count,
-                        hw_layers_info.gpu_target_index, hw_layers_info.stitch_target_index,
-                        hw_layers_info.game_present, display_id_, display_type_);
+                        "gpu_target_index: %d, stitch_index: %d game_present: %d "
+                        " noise_present: %d display: %d-%d", layers.size(),
+                        hw_layers_info.app_layer_count, hw_layers_info.gpu_target_index,
+                        hw_layers_info.stitch_target_index, hw_layers_info.game_present,
+                        hw_layers_info.flags.noise_present, display_id_, display_type_);
 
   if (!hw_layers_info.app_layer_count) {
     DLOGW("Layer count is zero");
@@ -471,36 +609,37 @@ DisplayError DisplayBase::ValidateGPUTargetParams() {
   return kErrorNone;
 }
 
-bool DisplayBase::CheckValidateNeeded() {
-  // This function returns true(needs validate) on certain special conditions, such as CWB.
-  // We can add checks on more conditions here for which Validate call would be needed.
-  if ((cwb_config_ == NULL) ==
-      (hw_resource_info_.has_concurrent_writeback && disp_layer_stack_.stack->output_buffer)) {
-    DLOGI_IF(kTagDisplay, "Need to Validate for CWB setup/teardown .");
-    return true;
-  } else {
-    // Check for validation in case of new display connected, other displays exiting off state etc.
-    bool needs_validate = false;
-    comp_manager_->NeedsValidate(display_comp_ctx_, &needs_validate);
-    return needs_validate;
-  }
-  return false;
-}
-
 DisplayError DisplayBase::PrePrepare(LayerStack *layer_stack) {
   DTRACE_SCOPED();
   ClientLock lock(disp_mutex_);
-  DisplayError error = BuildLayerStackStats(layer_stack);
+
+  DisplayError error = HandleNoiseLayer(layer_stack);
   if (error != kErrorNone) {
-    DLOGE("BuildLayerStackStats failed %d", error);
+    DLOGW("HandleNoiseLayer returned Error for display %d-%d", display_id_, display_type_);
+  }
+
+  error = BuildLayerStackStats(layer_stack);
+  if (error != kErrorNone) {
     return error;
   }
 
-  layer_stack->needs_validate = !validated_ || needs_validate_ || CheckValidateNeeded();
+  error = ConfigureCwb(layer_stack);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  layer_stack->needs_validate = !validated_ || needs_validate_;
+  if (!layer_stack->needs_validate) {
+    // Check for validation in case of new display connected, other displays exiting off state etc.
+    bool needs_validate = false;
+    comp_manager_->NeedsValidate(display_comp_ctx_, &needs_validate);
+    layer_stack->needs_validate = needs_validate;
+  }
   return comp_manager_->PrePrepare(display_comp_ctx_, &disp_layer_stack_);
 }
 
 DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
+  DTRACE_SCOPED();
   ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
   needs_validate_ = true;
@@ -511,7 +650,6 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
 
   disp_layer_stack_.info.output_buffer = layer_stack->output_buffer;
 
-  DTRACE_SCOPED();
   // Allow prepare as pending doze/pending_power_on is handled as a part of draw cycle
   if (!active_ && (pending_power_state_ == kPowerStateNone)) {
     return kErrorPermission;
@@ -519,6 +657,11 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
 
   DLOGI_IF(kTagDisplay, "Entering Prepare for display: %d-%d", display_id_, display_type_);
   error = BuildLayerStackStats(layer_stack);
+  if (error != kErrorNone) {
+    return error;
+  }
+
+  error = ConfigureCwb(layer_stack);
   if (error != kErrorNone) {
     return error;
   }
@@ -563,6 +706,11 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
 
   CheckMMRMState();
 
+  int level = 0;
+  if (hw_intf_->GetPanelBrightness(&level) == kErrorNone) {
+    comp_manager_->SetBacklightLevel(display_comp_ctx_, level);
+  }
+
   while (true) {
     error = comp_manager_->Prepare(display_comp_ctx_, &disp_layer_stack_);
     if (error != kErrorNone) {
@@ -600,6 +748,203 @@ DisplayError DisplayBase::Prepare(LayerStack *layer_stack) {
 
 void DisplayBase::FlushConcurrentWriteback() {
   hw_intf_->FlushConcurrentWriteback();
+}
+
+DisplayError DisplayBase::HandleNoiseLayer(LayerStack *layer_stack) {
+  if (noise_disable_prop_ || !noise_plugin_intf_ || !noise_algo_intf_) {
+    return kErrorNone;
+  }
+
+  if (!layer_stack) {
+    DLOGE("layer_stack is null");
+    return kErrorParameters;
+  }
+
+  DisplayError error = GetNoisePluginParams(layer_stack);
+  if (error) {
+    DLOGE("Noise Plugin Failed for display %d-%d", display_id_, display_type_);
+    return error;
+  }
+
+  HWLayersInfo &hw_layers_info = disp_layer_stack_.info;
+  if (!noise_layer_info_.enable) {
+    if (hw_layers_info.noise_layer_index != -1) {
+      DLOGV_IF(kTagDisplay, "Noise layer disabled for display %d-%d", display_id_, display_type_);
+      needs_validate_ = true;
+    }
+    return kErrorNone;
+  }
+
+  error = GetNoiseAlgoParams();
+  if (error) {
+    DLOGE("Noise Algo Failed for display %d-%d", display_id_, display_type_);
+    noise_layer_info_ = {};
+    return error;
+  }
+
+  if (noise_layer_info_.enable) {
+    if (hw_layers_info.noise_layer_index == -1) {
+      DLOGV_IF(kTagDisplay, "Noise layer Enabled for display %d-%d", display_id_, display_type_);
+      needs_validate_ = true;
+    }
+    InsertNoiseLayer(layer_stack);
+  }
+
+  return error;
+}
+
+DisplayError DisplayBase::InsertNoiseLayer(LayerStack *layer_stack) {
+  std::vector<Layer *> &layers = layer_stack->layers;
+  uint32_t primary_width = 0, primary_height = 0;
+  GetMixerResolution(&primary_width, &primary_height);
+
+  noise_layer_.flags.is_noise = true;
+  noise_layer_.composition = kCompositionSDE;
+  LayerBuffer *layer_buffer = &noise_layer_.input_buffer;
+  layer_buffer->width = primary_width;
+  layer_buffer->height = primary_height;
+  layer_buffer->unaligned_width = layer_buffer->width;
+  layer_buffer->unaligned_height = layer_buffer->height;
+  noise_layer_.src_rect.left = 0;
+  noise_layer_.src_rect.top = 0;
+  noise_layer_.src_rect.right = layer_buffer->width;
+  noise_layer_.src_rect.bottom = layer_buffer->height;
+  noise_layer_.dst_rect = noise_layer_.src_rect;
+
+  layers.push_back(&noise_layer_);
+
+  return kErrorNone;
+}
+
+DisplayError DisplayBase::GetNoisePluginParams(LayerStack *layer_stack) {
+  NoisePlugInInputParams *noise_plugin_in = nullptr;
+  NoisePlugInOutputParams *noise_plugin_out = nullptr;
+  GenericPayload in_payload, out_payload;
+  int ret = in_payload.CreatePayload<NoisePlugInInputParams>(noise_plugin_in);
+  if (ret) {
+    DLOGE("Failed to create input payload, ret = %d", ret);
+    return kErrorUndefined;
+  }
+  ret = out_payload.CreatePayload<NoisePlugInOutputParams>(noise_plugin_out);
+  if (ret) {
+    DLOGE("Failed to create output payload, ret = %d", ret);
+    return kErrorUndefined;
+  }
+
+  DLOGI_IF(kTagDisplay, "Display %d-%d Override enable = %d noise_override_zpos_ = %d",
+           display_id_, display_type_, noise_plugin_override_en_, noise_override_zpos_);
+  std::vector<Layer *> &layers = layer_stack->layers;
+  int idx = 0;
+  int32_t skip_layer_count = 0;
+  for (auto &layer : layers) {
+    NoisePlugInInputLayers in_layer = {};
+    if (layer->flags.skip) {
+      skip_layer_count++;
+    }
+    if (noise_plugin_override_en_ &&
+       ((idx == noise_override_zpos_) && !layer->input_buffer.flags.mask_layer)) {
+      // NoisePlugin needs sde_preferred to be set, which is determined by debug Override
+      // If override(zpos) is set, then mark the layer as preferred if its not a mask layer
+      DLOGV_IF(kTagDisplay, "For display %d-%d, Setting sde_preferred flag from override for ",
+               "idx = %d at z_pos = %d", display_id_, display_type_, idx, noise_override_zpos_);
+      layer->flags.sde_preferred = true;
+    }
+    if (layer->composition == kCompositionGPUTarget) {
+      // Avoid sending GPU target to Plugin and break as its the last layer from client
+      break;
+    } else if (layer->flags.sde_preferred && !layer->flags.skip) {
+      in_layer.layer_type = kFodLayer;
+    } else if (layer->flags.is_game) {
+      in_layer.layer_type = kGameLayer;
+    } else if (layer->input_buffer.flags.mask_layer) {
+      in_layer.layer_type = kMaskLayer;
+    } else if (layer->flags.solid_fill) {
+      in_layer.layer_type = kDimLayer;
+    } else {
+      in_layer.layer_type = kGraphicsLayer;
+    }
+    in_layer.zorder = idx;
+    noise_plugin_in->layers.push_back(in_layer);
+    idx++;
+  }
+  noise_layer_info_ = {};  // clear the noise layer info as new values must be set after Plugin
+  bool disable_noise_plugin = false;  // Need to disable noiseplugin when all layers are skip
+  if (skip_layer_count == idx) {
+    // All app layers are marked as skip
+    disable_noise_plugin = true;
+    DLOGV_IF(kTagDisplay, "Display %d-%d All layers are skip, disable NoisePlugin", display_id_,
+             display_type_);
+  }
+  GenericPayload payload;
+  int32_t *val = nullptr;
+  ret = payload.CreatePayload<int32_t>(val);
+  if (ret) {
+    DLOGE("Display %d-%d CreatePayload failed for NoisePlugInDisable", display_id_,
+          display_type_, ret);
+    return kErrorUndefined;
+  }
+  *val = disable_noise_plugin ? 1 : 0;
+  ret = noise_plugin_intf_->SetParameter(kNoisePlugInDisable, payload);
+  if (ret) {
+    DLOGE("Display %d-%d Disabling NoisePlugin for Full frame skip failed", display_id_,
+          display_type_, ret);
+    return kErrorUndefined;
+  }
+  ret = noise_plugin_intf_->ProcessOps(kOpsRunNoisePlugIn, in_payload, &out_payload);
+  if (!ret && noise_plugin_out->enabled) {
+    noise_layer_info_.enable = noise_plugin_out->enabled;
+    noise_layer_info_.zpos_noise = noise_plugin_out->zpos[0];
+    noise_layer_info_.zpos_attn = noise_plugin_out->zpos[1];
+    noise_layer_info_.attenuation_factor = noise_plugin_out->attn;
+    DLOGV_IF(kTagDisplay, "For display %d-%d, Noise enabled by Plugin, zpos_noise = %d "
+             "zpos_attn = %d attn = %d", display_id_, display_type_, noise_layer_info_.zpos_noise,
+             noise_layer_info_.zpos_attn, noise_layer_info_.attenuation_factor);
+  }
+
+  return ret ? kErrorUndefined : kErrorNone;
+}
+
+
+DisplayError DisplayBase::GetNoiseAlgoParams() {
+  NoiseAlgoInputParams *noise_algo_in = nullptr;
+  NoiseAlgoOutputParams *noise_algo_out = nullptr;
+  GenericPayload in_payload, out_payload;
+  DisplayError error = kErrorNone;
+  int ret = 0;
+
+  ret = in_payload.CreatePayload<NoiseAlgoInputParams>(noise_algo_in);
+  if (ret) {
+    DLOGE("failed to create input payload. Error:%d", ret);
+    return kErrorUndefined;
+  }
+
+  noise_algo_in->attn_factor = noise_layer_info_.attenuation_factor;
+  noise_algo_in->zpos_attn_layer = noise_layer_info_.zpos_attn;
+  noise_algo_in->zpos_noise_layer = noise_layer_info_.zpos_noise;
+  DLOGV_IF(kTagDisplay, "For display %d-%d, Noise Algo zpos[0,1] = [%d,%d] attn_f = %d",
+           display_id_, display_type_, noise_algo_in->zpos_noise_layer,
+           noise_algo_in->zpos_attn_layer, noise_algo_in->attn_factor);
+
+  ret = out_payload.CreatePayload<NoiseAlgoOutputParams>(noise_algo_out);
+  if (ret) {
+    DLOGE("failed to create output payload. Error:%d", ret);
+    return kErrorUndefined;
+  }
+  ret = noise_algo_intf_->ProcessOps(sdm::kOpsRunNoiseAlgo, in_payload, &out_payload);
+  if (!ret) {
+    noise_layer_info_.noise_strength = noise_algo_out->strength;
+    noise_layer_info_.alpha_noise = noise_algo_out->alpha_noise;
+    noise_layer_info_.temporal_en = noise_algo_out->temporal_en;
+    DLOGV_IF(kTagDisplay, "For display %d-%d Noise strength = %d, alpha noise = %d "
+             "temporal_en = %d", display_id_, display_type_, noise_layer_info_.noise_strength,
+             noise_layer_info_.alpha_noise, noise_layer_info_.temporal_en);
+  } else {
+    DLOGE("display %d-%d failed to run Noise Algo ProcessOps. Error:%d", display_id_,
+          display_type_, ret);
+    error = kErrorUndefined;
+  }
+
+  return error;
 }
 
 // Send layer stack to RC core to generate and configure the mask on HW.
@@ -669,6 +1014,7 @@ void DisplayBase::SetRCData(LayerStack *layer_stack) {
 }
 
 DisplayError DisplayBase::CommitOrPrepare(LayerStack *layer_stack) {
+  DTRACE_SCOPED();
   ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
   // Perform prepare
@@ -1112,6 +1458,7 @@ DisplayError DisplayBase::GetVSyncState(bool *enabled) {
 }
 
 DisplayError DisplayBase::SetDrawMethod(DisplayDrawMethod draw_method) {
+  DTRACE_SCOPED();
   ClientLock lock(disp_mutex_);
   if (draw_method_set_ || !first_cycle_) {
     DLOGW("Draw method set = %d or commits already started: %d", draw_method_, !first_cycle_);
@@ -1340,6 +1687,10 @@ std::string DisplayBase::Dump() {
   os << " DrawMethod: " << draw_method_;
   os << "\nstate: " << state_ << " vsync on: " << vsync_enable_
      << " max. mixer stages: " << max_mixer_stages_;
+  if (disp_layer_stack_.info.noise_layer_info.enable) {
+    os << "\nNoise z-orders: [" << disp_layer_stack_.info.noise_layer_info.zpos_noise << "," <<
+        disp_layer_stack_.info.noise_layer_info.zpos_attn << "]";
+  }
   os << "\nnum configs: " << num_modes << " active config index: " << active_index;
   os << "\nDisplay Attributes:";
   os << "\n Mode:" << (hw_panel_info_.mode == kModeVideo ? "Video" : "Command");
@@ -1994,6 +2345,71 @@ DisplayError DisplayBase::SetVSyncStateLocked(bool enable) {
 
 DisplayError DisplayBase::SetNoisePlugInOverride(bool override_en, int32_t attn,
                                                  int32_t noise_zpos, int32_t bl_thr) {
+  if (!noise_plugin_intf_) {
+    DLOGW("Noise Layer Feature not enabled for Display %d-%d",  display_id_, display_type_);
+    return kErrorNone;
+  }
+  ClientLock lock(disp_mutex_);
+  GenericPayload payload;
+  int32_t *val = nullptr;
+  int32_t ret = payload.CreatePayload<int32_t>(val);
+  if (ret) {
+    DLOGE("failed to create the payload. ret = %d", ret);
+    return kErrorUndefined;
+  }
+
+  *val = override_en;
+  DLOGI("Display %d-%d override_en:%d", display_id_, display_type_, override_en);
+  NoisePlugInParams param = {};
+  if (ValidNoisePluginDebugOverride(kNoisePlugInDebugOverride)) {
+    *val = override_en;
+    param = static_cast<NoisePlugInParams>(kNoisePlugInDebugOverride);
+    ret = noise_plugin_intf_->SetParameter(param, payload);
+    if (ret) {
+      DLOGW("Display %d-%d Failed to set Override = %d ret = %d", display_id_, display_type_,
+            override_en, ret);
+      return kErrorUndefined;
+    }
+  }
+  noise_override_zpos_ = -1;
+  if (override_en) {
+    // over-ride enable case
+    noise_plugin_override_en_ = true;
+    if (ValidNoisePluginDebugOverride(kNoisePlugInDebugAttn)) {
+      // override attenuation factor
+      param = static_cast<sdm::NoisePlugInParams>(sdm::kNoisePlugInDebugAttn);
+      *val = attn;
+      DLOGI("Display %d-%d  attenuation = %d", display_id_, display_type_, attn);
+      param = static_cast<NoisePlugInParams>(kNoisePlugInDebugAttn);
+      ret = noise_plugin_intf_->SetParameter(param, payload);
+      if (ret && (attn > 0)) {
+        DLOGE("Display %d-%d Failed to set Attn = %d ret = %d", display_id_, display_type_, attn,
+               ret);
+      }
+    }
+    if (ValidNoisePluginDebugOverride(kNoisePlugInDebugNoiseZpos)) {
+      // override noise layer z position
+      param = static_cast<NoisePlugInParams>(kNoisePlugInDebugNoiseZpos);
+      *val = noise_zpos;
+      DLOGI("Display %d-%d noise_zpos = %d", display_id_, display_type_, noise_zpos);
+      ret = noise_plugin_intf_->SetParameter(param, payload);
+      if (ret && (noise_zpos > 0)) {
+        DLOGE("Display %d-%d Failed to set Zpos = %d ret = %d", display_id_, display_type_,
+              noise_zpos, ret);
+      } else {
+        noise_override_zpos_ = noise_zpos;
+      }
+    }
+    // override backlight threshold
+    DLOGW("Display %d-%d bl_thr = %d is not supported", display_id_, display_type_, bl_thr);
+  }
+
+  if (!override_en) {
+    noise_plugin_override_en_ = false;
+    noise_override_zpos_ = -1;
+  }
+  validated_ = false;
+
   return kErrorNone;
 }
 
@@ -2870,8 +3286,8 @@ DisplayError DisplayBase::ResetPendingPowerState(const shared_ptr<Fence> &retire
   return kErrorNone;
 }
 
-bool DisplayBase::CheckResourceState() {
-  return comp_manager_->CheckResourceState(display_comp_ctx_);
+bool DisplayBase::CheckResourceState(bool *res_exhausted) {
+  return comp_manager_->CheckResourceState(display_comp_ctx_, res_exhausted, display_attributes_);
 }
 DisplayError DisplayBase::colorSamplingOn() {
   return kErrorNone;
@@ -3271,5 +3687,46 @@ DisplayError DisplayBase::SetHWDetailedEnhancerConfig(void *params) {
 
   return err;
 }
+
+DisplayError DisplayBase::GetPanelBlMaxLvl(uint32_t *max_level) {
+  ClientLock lock(disp_mutex_);
+
+  DisplayError err = hw_intf_->GetPanelBlMaxLvl(max_level);
+  if (err) {
+    DLOGE("Failed to get panel max backlight level %d", err);
+  } else {
+    DLOGI_IF(kTagDisplay, "Got panel max backlight %d", *(max_level));
+  }
+  return err;
+}
+
+DisplayError DisplayBase::SetDimmingBlLut(void *payload, size_t size) {
+  ClientLock lock(disp_mutex_);
+
+  DisplayError err = hw_intf_->SetDimmingBlLut(payload, size);
+  if (err) {
+    DLOGE("Failed to set dimming bl LUT %d", err);
+  } else {
+    DLOGI_IF(kTagDisplay, "Dimimng bl LUT is set successfully");
+    event_handler_->Refresh();
+  }
+  return err;
+}
+
+DisplayError DisplayBase::EnableDimmingBacklightEvent(void *payload, size_t size) {
+  ClientLock lock(disp_mutex_);
+
+  DisplayError err = hw_intf_->EnableDimmingBacklightEvent(payload, size);
+  if (err) {
+    DLOGE("Failed to set dimming backlight event %d", err);
+  }
+  return err;
+}
+
+void DisplayBase::ScreenRefresh() {
+  ClientLock lock(disp_mutex_);
+  event_handler_->Refresh();
+}
+
 
 }  // namespace sdm

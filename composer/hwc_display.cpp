@@ -807,12 +807,6 @@ void HWCDisplay::BuildLayerStack() {
 
     layer_stack_.flags.mask_present |= layer->input_buffer.flags.mask_layer;
 
-    if ((hwc_layer->GetDeviceSelectedCompositionType() != HWC2::Composition::Device) ||
-        (hwc_layer->GetClientRequestedCompositionType() != HWC2::Composition::Device) ||
-        layer->flags.skip) {
-      layer->update_mask.set(kClientCompRequest);
-    }
-
     if (game_supported_ && (hwc_layer->GetType() == kLayerGame)) {
       layer->flags.is_game = true;
       layer->input_buffer.flags.game = true;
@@ -2411,6 +2405,7 @@ int HWCDisplay::SetNoisePlugInOverride(bool override_en, int32_t attn, int32_t n
     DLOGE("Failed to override NoisePlugIn! Error: %d", error);
     return -EINVAL;
   }
+  callbacks_->Refresh(id_);
   return 0;
 }
 
@@ -2681,9 +2676,9 @@ void HWCDisplay::SetLayerStack(HWCLayerStack *stack) {
   layer_set_ = stack->layer_set;
 }
 
-bool HWCDisplay::CheckResourceState() {
+bool HWCDisplay::CheckResourceState(bool *res_exhausted) {
   if (display_intf_) {
-    return display_intf_->CheckResourceState();
+    return display_intf_->CheckResourceState(res_exhausted);
   }
 
   return false;
@@ -2722,6 +2717,10 @@ bool HWCDisplay::IsModeSwitchAllowed(uint32_t config) {
 
   error = display_intf_->IsSupportedOnDisplay(kSupportedModeSwitch, &allowed_mode_switch);
   if (error != kErrorNone) {
+    if (error == kErrorResources) {
+      DLOGW("Not allowed to switch to mode:%d", config);
+      return false;
+    }
     DLOGW("Unable to retrieve supported modes for the current device configuration.");
   }
 
@@ -3134,6 +3133,8 @@ HWC2::Error HWCDisplay::TryDrawMethod(IQtiComposerClient::DrawMethod client_draw
 }
 
 void HWCDisplay::SetCwbState() {
+  DTRACE_SCOPED();
+
   std::lock_guard<std::mutex> lock(cwb_state_lock_);  // setting cwb state lock
   hwc2_display_t &cwb_disp_id = cwb_state_.cwb_disp_id;
   shared_ptr<Fence> &teardown_frame_retire_fence = cwb_state_.teardown_frame_retire_fence;
@@ -3163,10 +3164,6 @@ void HWCDisplay::SetCwbState() {
       cwb_status = CWBStatus::kCWBConfigure;
     } else if (cwb_status == CWBStatus::kCWBConfigure) {
       cwb_status = CWBStatus::kCWBTeardown;  // cwb teardown for the caller display in this frame
-    } else if (cwb_status == CWBStatus::kCWBTeardown) {  // frame next to cwb teardown frame.
-      cwb_disp_id = -1;
-      cwb_status = CWBStatus::kCWBPostTeardown;
-      DLOGV_IF(kTagClient, "CWB display id is reset to : %d", cwb_disp_id);
     } else if ((cwb_status == CWBStatus::kCWBAvailable) ||
                (cwb_status == CWBStatus::kCWBPostTeardown)) {
       // In a frame with kCWBAvailable state, a new CWB request sets the cwb_state_ members
@@ -3246,6 +3243,9 @@ HWC2::Error HWCDisplay::SetReadbackBuffer(const native_handle_t *buffer,
 
   if (output_buffer_.format == kFormatInvalid) {
     DLOGW("Format %d is not supported by SDM", handle->format);
+    return HWC2::Error::BadParameter;
+  } else if (!display_intf_->IsWriteBackSupportedFormat(output_buffer_.format)) {
+    DLOGW("WB doesn't support color format : %s .", GetFormatString(output_buffer_.format));
     return HWC2::Error::BadParameter;
   }
 

@@ -164,6 +164,10 @@ class HWDeviceDRM : public HWInterface {
   virtual DisplayError EnableSelfRefresh() { return kErrorNotSupported; }
   virtual DisplayError GetFeatureSupportStatus(const HWFeature feature, uint32_t *status);
   virtual void FlushConcurrentWriteback();
+  virtual DisplayError SetAlternateDisplayConfig(uint32_t *alt_config) {
+    return kErrorNotSupported;
+  }
+
   enum {
     kHWEventVSync,
     kHWEventBlank,
@@ -190,6 +194,9 @@ class HWDeviceDRM : public HWInterface {
   void SetSolidfillStages();
   void AddSolidfillStage(const HWSolidfillStage &sf, uint32_t plane_alpha);
   void ClearSolidfillStages();
+  void SetNoiseLayerConfig(const NoiseLayerConfig &noise_config);
+  void ApplyNoiseLayerConfig();
+  void ClearNoiseLayerConfig();
   void SetBlending(const LayerBlending &source, sde_drm::DRMBlendType *target);
   void SetSrcConfig(const LayerBuffer &input_buffer, const HWRotatorMode &mode, uint32_t *config);
   void SelectCscType(const LayerBuffer &input_buffer, sde_drm::DRMCscType *type);
@@ -218,9 +225,14 @@ class HWDeviceDRM : public HWInterface {
   bool IsFullFrameUpdate(const HWLayersInfo &hw_layer_info);
   DisplayError GetDRMPowerMode(const HWPowerState &power_state, DRMPowerMode *drm_power_mode);
   void SetTUIState();
+  DisplayError ConfigureCWBDither(void *payload, uint32_t conn_id,
+                                  sde_drm::DRMCWbCaptureMode mode);
   void GetTopologySplit(HWTopology hw_topology, uint32_t *split_number);
   uint64_t GetSupportedBitClkRate(uint32_t new_mode_index,
                                   uint64_t bit_clk_rate_request);
+  DisplayError GetPanelBlMaxLvl(uint32_t *bl_max);
+  DisplayError SetDimmingBlLut(void *payload, size_t size);
+  DisplayError EnableDimmingBacklightEvent(void *payload, size_t size);
 
   class Registry {
    public:
@@ -248,6 +260,8 @@ class HWDeviceDRM : public HWInterface {
   };
 
  protected:
+  void SetDisplaySwitchMode(uint32_t index);
+
   const char *device_name_ = {};
   bool default_mode_ = false;
   int32_t display_id_ = -1;
@@ -268,6 +282,7 @@ class HWDeviceDRM : public HWInterface {
   bool first_null_cycle_ = true;
   HWMixerAttributes mixer_attributes_ = {};
   std::vector<sde_drm::DRMSolidfillStage> solid_fills_ {};
+  sde_drm::DRMNoiseLayerConfig noise_cfg_ = {};
   bool secure_display_active_ = false;
   TUIState tui_state_ = kTUIStateNone;
   uint64_t debug_dump_count_ = 0;
@@ -275,6 +290,7 @@ class HWDeviceDRM : public HWInterface {
   uint32_t topology_control_ = 0;
   uint32_t vrefresh_ = 0;
   uint32_t panel_mode_changed_ = 0;
+  uint32_t panel_compression_changed_ = 0;
   bool reset_output_fence_offset_ = false;
   uint64_t bit_clk_rate_ = 0;
   bool update_mode_ = false;
@@ -297,7 +313,6 @@ class HWDeviceDRM : public HWInterface {
   static std::mutex cwb_state_lock_;  // cwb state lock. Set before accesing or updating cwb_config_
 
  private:
-  void SetDisplaySwitchMode(uint32_t index);
   void GetCWBCapabilities();
 
   std::string interface_str_ = "DSI";

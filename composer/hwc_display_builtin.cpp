@@ -215,9 +215,10 @@ HWC2::Error HWCDisplayBuiltIn::PreValidateDisplay(bool *exit_validate) {
   SetDrawMethod();
 
   auto status = HWC2::Error::None;
+  bool res_exhausted = false;
   // If no resources are available for the current display, mark it for GPU by pass and continue to
   // do invalidate until the resources are available
-  if (display_paused_ || CheckResourceState()) {
+  if (display_paused_ || CheckResourceState(&res_exhausted)) {
     MarkLayersForGPUBypass();
     *exit_validate = true;
     return status;
@@ -311,9 +312,11 @@ bool HWCDisplayBuiltIn::CanSkipCommit() {
   // 4. This display is not source of vsync.
   // 5. No CWB client
   bool buffers_latched = false;
+  bool needs_validation = false;
   for (auto &hwc_layer : layer_set_) {
     buffers_latched |= hwc_layer->BufferLatched();
     hwc_layer->ResetBufferFlip();
+    needs_validation |= hwc_layer->NeedsValidation();
   }
 
   bool vsync_source = (callbacks_->GetVsyncSource() == id_);
@@ -322,7 +325,8 @@ bool HWCDisplayBuiltIn::CanSkipCommit() {
   {
     std::lock_guard<std::mutex> lock(cwb_state_lock_);  // setting cwb state lock
     skip_commit = enable_optimize_refresh_ && !pending_commit_ && !buffers_latched &&
-                  !pending_refresh_ && !vsync_source && (cwb_state_.cwb_client == kCWBClientNone);
+                  !pending_refresh_ && !vsync_source && (cwb_state_.cwb_client == kCWBClientNone)
+                  && !needs_validation;
   }  // releasing the cwb state lock
   pending_refresh_ = false;
 
@@ -425,12 +429,13 @@ HWC2::Error HWCDisplayBuiltIn::SetPowerMode(HWC2::PowerMode mode, bool teardown)
 
 HWC2::Error HWCDisplayBuiltIn::Present(shared_ptr<Fence> *out_retire_fence) {
   auto status = HWC2::Error::None;
+  bool res_exhausted = false;
 
   DTRACE_SCOPED();
 
   // Proceed only if any resources are available to be allocated for the current display,
   // Otherwise keep doing invalidate
-  if (CheckResourceState()) {
+  if (CheckResourceState(&res_exhausted)) {
     Refresh();
     return status;
   }
@@ -1438,8 +1443,12 @@ HWC2::Error HWCDisplayBuiltIn::PostCommitLayerStack(shared_ptr<Fence> *out_retir
     if (flush_ && cwb_state_.cwb_client == kCWBClientNone) {
       ResetCwbState();
       display_intf_->FlushConcurrentWriteback();
-    } else if (cwb_state_.cwb_status == CWBStatus::kCWBTeardown) {
+    } else if (cwb_state_.cwb_status == CWBStatus::kCWBTeardown) {  // cwb teardown frame.
       cwb_state_.teardown_frame_retire_fence = layer_stack_.retire_fence;
+      cwb_state_.cwb_disp_id = -1;
+      cwb_state_.cwb_status = CWBStatus::kCWBPostTeardown;
+      DLOGV_IF(kTagClient, "CWB display id = %d , cwb status = %d", cwb_state_.cwb_disp_id,
+               cwb_state_.cwb_status);
     }
   }  // releasing the cwb state lock
 
@@ -1522,6 +1531,34 @@ void HWCDisplayBuiltIn::LoadMixedModePerfHintThreshold() {
 
   // For 240 fps, 6 layers should fall back to GPU
   mixed_mode_threshold_.insert(std::make_pair<int32_t, int32_t>(240, 6));
+}
+
+HWC2::Error HWCDisplayBuiltIn::SetAlternateDisplayConfig(bool set) {
+  hwc2_config_t alt_config = 0;
+  DisplayError error = kErrorNone;
+
+  if (!set && alternate_config_ == -1) {
+    return HWC2::Error::None;
+  }
+
+  error = display_intf_->SetAlternateDisplayConfig(&alt_config);
+  if (error != kErrorNone) {
+    return HWC2::Error::Unsupported;
+  }
+
+  auto status = SetActiveConfig(alt_config);
+  if (set && status == HWC2::Error::None) {
+      alternate_config_ = alt_config;
+  }
+
+  if (!set) { // set alternate config to -1 on reset call
+    alternate_config_ = -1;
+  }
+
+  // Trigger refresh. This config gets applied on next commit.
+  callbacks_->Refresh(id_);
+
+  return HWC2::Error::None;
 }
 
 }  // namespace sdm

@@ -118,6 +118,8 @@ HWCDisplayPluggable::HWCDisplayPluggable(CoreInterface *core_intf,
 }
 
 HWC2::Error HWCDisplayPluggable::PreValidateDisplay(bool *exit_validate) {
+  DTRACE_SCOPED();
+
   // Draw method gets set as part of first commit.
   SetDrawMethod();
 
@@ -165,6 +167,28 @@ HWC2::Error HWCDisplayPluggable::Validate(uint32_t *out_num_types, uint32_t *out
   return PrepareLayerStack(out_num_types, out_num_requests);
 }
 
+HWC2::Error HWCDisplayPluggable::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence) {
+  auto status = HWC2::Error::None;
+
+  HandleFrameOutput();
+  {
+    std::lock_guard<std::mutex> lock(cwb_state_lock_);
+    if (flush_ && cwb_state_.cwb_client == kCWBClientNone) {
+      ResetCwbState();
+      display_intf_->FlushConcurrentWriteback();
+    } else if (cwb_state_.cwb_status == CWBStatus::kCWBTeardown) {  // cwb teardown frame.
+      cwb_state_.teardown_frame_retire_fence = layer_stack_.retire_fence;
+      cwb_state_.cwb_disp_id = -1;
+      cwb_state_.cwb_status = CWBStatus::kCWBPostTeardown;
+      DLOGV_IF(kTagClient, "CWB display id = %d , cwb status = %d", cwb_state_.cwb_disp_id,
+               cwb_state_.cwb_status);
+    }
+  }  // releasing the cwb state lock
+  status = HWCDisplay::PostCommitLayerStack(out_retire_fence);
+
+  return status;
+}
+
 HWC2::Error HWCDisplayPluggable::Present(shared_ptr<Fence> *out_retire_fence) {
   auto status = HWC2::Error::None;
 
@@ -173,17 +197,7 @@ HWC2::Error HWCDisplayPluggable::Present(shared_ptr<Fence> *out_retire_fence) {
      current_power_mode_ == HWC2::PowerMode::DozeSuspend))) {
     status = HWCDisplay::CommitLayerStack();
     if (status == HWC2::Error::None) {
-      HandleFrameOutput();
-      {
-        std::lock_guard<std::mutex> lock(cwb_state_lock_);
-        if (flush_ && cwb_state_.cwb_client == kCWBClientNone) {
-          ResetCwbState();
-          display_intf_->FlushConcurrentWriteback();
-        } else if (cwb_state_.cwb_status == CWBStatus::kCWBTeardown) {
-          cwb_state_.teardown_frame_retire_fence = layer_stack_.retire_fence;
-        }
-      }  // releasing the cwb state lock
-      status = HWCDisplay::PostCommitLayerStack(out_retire_fence);
+      status = PostCommitLayerStack(out_retire_fence);
     }
   }
   return status;

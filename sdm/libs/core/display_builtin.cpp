@@ -134,7 +134,11 @@ DisplayError DisplayBuiltIn::Init() {
     // Get status of RC enablement property. Default RC is disabled.
     int rc_prop_value = 0;
     Debug::GetProperty(ENABLE_ROUNDED_CORNER, &rc_prop_value);
-    rc_enable_prop_ = rc_prop_value ? true : false;
+    if (rc_prop_value && hw_panel_info_.is_primary_panel) {
+      // TODO(user): Get the RC count from driver and decide if RC can be enabled for
+      // sec built-ins.  Currently client sends RC layers only for first builtin.
+      rc_enable_prop_ = true;
+    }
     DLOGI("RC feature %s.", rc_enable_prop_ ? "enabled" : "disabled");
 
     if ((error = SetupSPR()) != kErrorNone) {
@@ -174,6 +178,14 @@ DisplayError DisplayBuiltIn::Init() {
   value = 0;
   DebugHandler::Get()->GetProperty(ENABLE_DPPS_DYNAMIC_FPS, &value);
   enable_dpps_dyn_fps_ = (value == 1);
+
+  value = 0;
+  Debug::Get()->GetProperty(DISABLE_NOISE_LAYER, &value);
+  noise_disable_prop_ = (value == 1);
+  DLOGI("Noise Layer Feature is %s for display = %d-%d", noise_disable_prop_ ? "Disabled" :
+        "Enabled", display_id_, display_type_);
+
+  NoiseInit();
 
   return error;
 }
@@ -215,7 +227,7 @@ DisplayError DisplayBuiltIn::PrePrepare(LayerStack *layer_stack) {
   }
 
   if (NeedsMixerReconfiguration(layer_stack, &new_mixer_width, &new_mixer_height)) {
-    DisplayError error = ReconfigureMixer(new_mixer_width, new_mixer_height);
+    error = ReconfigureMixer(new_mixer_width, new_mixer_height);
     if (error != kErrorNone) {
       ReconfigureMixer(display_width, display_height);
     }
@@ -389,6 +401,10 @@ DisplayError DisplayBuiltIn::SetupSPR() {
     if (spr_->Init() != 0) {
       DLOGE("Failed to initialize SPR");
       return kErrorResources;
+    }
+
+    if (color_mgr_) {
+    color_mgr_->ColorMgrSetSprIntf(reinterpret_cast<void *>(spr_.get()));
     }
   }
 
@@ -605,17 +621,6 @@ DisplayError DisplayBuiltIn::PostCommit(HWLayersInfo *hw_layers_info) {
     dpps_pu_lock_.Broadcast();
   }
   dpps_info_.Init(this, hw_panel_info_.panel_name);
-
-  if (pending_color_space_) {
-    DppsBlendSpaceInfo info;
-    PrimariesTransfer color_space = GetBlendSpaceFromStcColorMode(current_color_mode_);
-    info.primaries = color_space.primaries;
-    info.transfer = color_space.transfer;
-    info.is_primary = IsPrimaryDisplayLocked();
-    // notify blend space to DPPS
-    dpps_info_.DppsNotifyOps(kDppsColorSpaceEvent, &info, sizeof(info));
-    pending_color_space_ = false;
-  }
 
   HandleQsyncPostCommit();
 
@@ -1091,6 +1096,7 @@ DisplayError DisplayBuiltIn::DisablePartialUpdateOneFrame() {
 
 DisplayError DisplayBuiltIn::DisablePartialUpdateOneFrameInternal() {
   disable_pu_one_frame_ = true;
+  validated_ = false;
 
   return kErrorNone;
 }
@@ -1252,7 +1258,6 @@ DisplayError DisplayBuiltIn::SetStcColorMode(const snapdragoncolor::ColorMode &c
   }
 
   current_color_mode_ = color_mode;
-  pending_color_space_ = true;
 
   DynamicRangeType dynamic_range = kSdrType;
   if (std::find(color_mode.hw_assets.begin(), color_mode.hw_assets.end(),
@@ -1298,6 +1303,10 @@ std::string DisplayBuiltIn::Dump() {
   os << " DrawMethod: " << draw_method_;
   os << "\nstate: " << state_ << " vsync on: " << vsync_enable_
      << " max. mixer stages: " << max_mixer_stages_;
+  if (disp_layer_stack_.info.noise_layer_info.enable) {
+    os << "\nNoise z-orders: [" << disp_layer_stack_.info.noise_layer_info.zpos_noise << "," <<
+        disp_layer_stack_.info.noise_layer_info.zpos_attn << "]";
+  }
   os << "\nnum configs: " << num_modes << " active config index: " << active_index;
   os << "\nDisplay Attributes:";
   os << "\n Mode:" << (hw_panel_info_.mode == kModeVideo ? "Video" : "Command");
@@ -1717,7 +1726,7 @@ DisplayError DisplayBuiltIn::SetBLScale(uint32_t level) {
 
 bool DisplayBuiltIn::CanCompareFrameROI(LayerStack *layer_stack) {
   // Check Display validation and safe-mode states.
-  if (needs_validate_ || comp_manager_->IsSafeMode()) {
+  if (needs_validate_ || comp_manager_->IsSafeMode() || layer_stack->needs_validate) {
     return false;
   }
 
@@ -1729,7 +1738,7 @@ bool DisplayBuiltIn::CanCompareFrameROI(LayerStack *layer_stack) {
     stack_fudge_factor++;
 
   if (!hw_panel_info_.partial_update || (hw_panel_info_.left_roi_count != 1) ||
-      layer_stack->flags.geometry_changed ||
+      layer_stack->flags.geometry_changed || layer_stack->flags.skip_present ||
       (layer_stack->layers.size() !=
        (disp_layer_stack_.info.app_layer_count + stack_fudge_factor))) {
     return false;
@@ -1801,6 +1810,8 @@ bool DisplayBuiltIn::CanSkipDisplayPrepare(LayerStack *layer_stack) {
       size_ff++;
     if (layer_stack->flags.demura_present)
       size_ff++;
+    if (disp_layer_stack_.info.flags.noise_present)
+      size_ff++;
 
     for (uint32_t i = 0; i < (layer_stack->layers.size() - size_ff); i++) {
       layer_stack->layers.at(i)->composition = kCompositionSDE;
@@ -1843,6 +1854,7 @@ DisplayError DisplayBuiltIn::BuildLayerStackStats(LayerStack *layer_stack) {
   hw_layers_info.gpu_target_index = -1;
   hw_layers_info.stitch_target_index = -1;
   hw_layers_info.demura_target_index = -1;
+  hw_layers_info.noise_layer_index = -1;
 
   disp_layer_stack_.stack = layer_stack;
   hw_layers_info.flags = layer_stack->flags;
@@ -1864,6 +1876,12 @@ DisplayError DisplayBuiltIn::BuildLayerStackStats(LayerStack *layer_stack) {
       disp_layer_stack_.stack->flags.demura_present = true;
       hw_layers_info.demura_present = true;
       DLOGD_IF(kTagDisplay, "Display %d shall request Demura in this frame", display_id_);
+    } else if (layer->flags.is_noise) {
+      hw_layers_info.flags.noise_present = true;
+      hw_layers_info.noise_layer_index = index;
+      hw_layers_info.noise_layer_info = noise_layer_info_;
+      DLOGV_IF(kTagDisplay, "Display %d-%d requested Noise at index = %d with zpos_n = %d",
+               display_id_, display_type_, index, noise_layer_info_.zpos_noise);
     } else {
       hw_layers_info.app_layer_count++;
     }
@@ -1878,11 +1896,11 @@ DisplayError DisplayBuiltIn::BuildLayerStackStats(LayerStack *layer_stack) {
   }
 
   DLOGI_IF(kTagDisplay, "LayerStack layer_count: %zu, app_layer_count: %d, "
-                        "gpu_target_index: %d, stitch_index: %d, demura_index: %d, "
-                        "game_present: %d, display: %d-%d",
-                        layers.size(), hw_layers_info.app_layer_count,
-                        hw_layers_info.gpu_target_index, hw_layers_info.stitch_target_index,
-                        hw_layers_info.demura_target_index, hw_layers_info.game_present,
+                        "gpu_target_index: %d, stitch_index: %d demura_index: %d game_present: %d"
+                        " noise_present: %d display: %d-%d", layers.size(),
+                        hw_layers_info.app_layer_count, hw_layers_info.gpu_target_index,
+                        hw_layers_info.stitch_target_index, hw_layers_info.demura_target_index,
+                        hw_layers_info.game_present, hw_layers_info.flags.noise_present,
                         display_id_, display_type_);
 
   if (!hw_layers_info.app_layer_count) {
@@ -1890,15 +1908,11 @@ DisplayError DisplayBuiltIn::BuildLayerStackStats(LayerStack *layer_stack) {
     return kErrorNoAppLayers;
   }
 
-  DisplayError error = kErrorNone;
   if (hw_layers_info.gpu_target_index > 0) {
-    error = ValidateGPUTargetParams();
+    return ValidateGPUTargetParams();
   }
 
-  if (error == kErrorNone) {
-    error = ConfigureCwb(layer_stack);
-  }
-  return error;
+  return kErrorNone;
 }
 
 DisplayError DisplayBuiltIn::SetActiveConfig(uint32_t index) {
@@ -2142,6 +2156,20 @@ DisplayError DisplayBuiltIn::GetQsyncFps(uint32_t *qsync_fps) {
   }
 
   return kErrorNotSupported;
+}
+
+DisplayError DisplayBuiltIn::SetAlternateDisplayConfig(uint32_t *alt_config) {
+  ClientLock lock(disp_mutex_);
+  if (!alt_config) {
+    return kErrorResources;
+  }
+  DisplayError error = hw_intf_->SetAlternateDisplayConfig(alt_config);
+
+  if (error == kErrorNone) {
+    ReconfigureDisplay();
+  }
+
+  return error;
 }
 
 }  // namespace sdm

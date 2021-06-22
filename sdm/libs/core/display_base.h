@@ -31,6 +31,9 @@
 #include <private/rc_intf.h>
 #include <private/panel_feature_property_intf.h>
 #include <private/panel_feature_factory_intf.h>
+#include <private/noise_algo_intf.h>
+#include <private/noise_plugin_intf.h>
+#include <private/noise_plugin_dbg.h>
 
 #include <map>
 #include <mutex>
@@ -45,8 +48,16 @@
 #include "hw_events_interface.h"
 
 #define GET_PANEL_FEATURE_FACTORY "GetPanelFeatureFactoryIntf"
+#define GET_NOISE_ALGO_FACTORY "GetNoiseAlgoFactoryIntf"
+
 
 namespace sdm {
+
+#define NOISE_ALGO_VERSION_MAJOR (1)  // Noise Algo major version number
+#define NOISE_ALGO_VERSION_MINOR (0)  // Noise Algo minor version number
+
+#define NOISE_PLUGIN_VERSION_MAJOR (1)  // Noise Plugin major version number
+#define NOISE_PLUGIN_VERSION_MINOR (0)  // Noise Plugin minor version number
 
 using std::recursive_mutex;
 using std::lock_guard;
@@ -171,7 +182,11 @@ class DisplayBase : public DisplayInterface {
   }
   virtual DisplayError GetRefreshRate(uint32_t *refresh_rate) { return kErrorNotSupported; }
   virtual DisplayError SetBLScale(uint32_t level) { return kErrorNotSupported; }
-  virtual bool CheckResourceState();
+  DisplayError GetPanelBlMaxLvl(uint32_t *bl_max);
+  DisplayError SetDimmingBlLut(void *payload, size_t size);
+  DisplayError EnableDimmingBacklightEvent(void *payload, size_t size);
+  void ScreenRefresh();
+  virtual bool CheckResourceState(bool *res_exhausted);
   virtual bool GameEnhanceSupported();
   virtual DisplayError GetQSyncMode(QSyncMode *qsync_mode) { return kErrorNotSupported; }
   virtual DisplayError colorSamplingOn();
@@ -187,6 +202,7 @@ class DisplayBase : public DisplayInterface {
     return kErrorNotSupported;
   }
   virtual DisplayError IsSupportedOnDisplay(SupportedDisplayFeature feature, uint32_t *supported);
+  virtual bool IsWriteBackSupportedFormat(const LayerBufferFormat &format);
   virtual DisplayError GetCwbBufferResolution(CwbTapPoint cwb_tappoint, uint32_t *x_pixels,
                                               uint32_t *y_pixels);
   virtual DisplayError NotifyDisplayCalibrationMode(bool in_calibration) {
@@ -204,6 +220,9 @@ class DisplayBase : public DisplayInterface {
   }
   virtual DisplayError GetQsyncFps(uint32_t *qsync_fps) { return kErrorNotSupported; }
   virtual void FlushConcurrentWriteback();
+  virtual DisplayError SetAlternateDisplayConfig(uint32_t *alt_config) {
+    return kErrorNotSupported;
+  }
 
  protected:
   struct DisplayMutex {
@@ -290,6 +309,9 @@ class DisplayBase : public DisplayInterface {
   DisplayError ConfigureCwb(LayerStack *layer_stack);
   void ProcessPowerEvent();
   DisplayError SetHWDetailedEnhancerConfig(void *params);
+  DisplayError NoiseInit();
+  DisplayError CreateNoiseAlgo();
+  DisplayError HandleNoiseLayer(LayerStack *layer_stack);
 
   DisplayMutex disp_mutex_;
   std::thread commit_thread_;
@@ -360,6 +382,14 @@ class DisplayBase : public DisplayInterface {
   bool validated_ = false;  // display validation status based on sideband events driver events etc.
   shared_ptr<Fence> retire_fence_ = nullptr;
   DisplayDrawMethod draw_method_ = kDrawDefault;
+  bool noise_disable_prop_ = false;
+  NoiseLayerConfig noise_layer_info_ = {};
+  std::unique_ptr<NoisePlugInIntf> noise_plugin_intf_ = nullptr;
+  NoisePlugInFactoryIntf *noise_plugin_factory_intf_ = nullptr;
+  std::unique_ptr<NoiseAlgoIntf> noise_algo_intf_ = nullptr;
+  NoiseAlgoFactoryIntf *noise_algo_factory_ = nullptr;
+  bool noise_plugin_override_en_ = false;
+  int32_t noise_override_zpos_ = -1;  // holds the overriden zpos/idx, used to mark sde_preferred
 
  private:
   // Max tolerable power-state-change wait-times in milliseconds.
@@ -370,6 +400,9 @@ class DisplayBase : public DisplayInterface {
   void SetRCData(LayerStack *layer_stack);
   DisplayError ValidateCwbConfigInfo(CwbConfig *cwb_config, const LayerBufferFormat &format);
   bool IsValidCwbRoi(const LayerRect &cwb_roi, const LayerRect &full_frame);
+  DisplayError GetNoisePluginParams(LayerStack *layer_stack);
+  DisplayError GetNoiseAlgoParams();
+  DisplayError InsertNoiseLayer(LayerStack *layer_stack);
   void WaitForCompletion(SyncPoints *sync_points);
   DisplayError PerformHwCommit(HWLayersInfo *hw_layers_info);
   void CacheRetireFence();
@@ -377,7 +410,6 @@ class DisplayBase : public DisplayInterface {
   void CacheDisplayComposition();
   void UpdateFrameBuffer();
   void CleanupOnError();
-  bool CheckValidateNeeded();
   unsigned int rc_cached_res_width_ = 0;
   unsigned int rc_cached_res_height_ = 0;
   std::unique_ptr<RCIntf> rc_core_ = nullptr;
@@ -392,6 +424,7 @@ class DisplayBase : public DisplayInterface {
   std::mutex power_mutex_;
   std::condition_variable cv_;
   LayerBuffer cached_framebuffer_ = {};
+  Layer noise_layer_ = {};
 };
 
 }  // namespace sdm

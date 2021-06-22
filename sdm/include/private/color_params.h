@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2020, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015-2021, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -138,6 +138,7 @@ enum PPGlobalColorFeatureID {
   kMixerColorFeatureGc,
   kGlobalColorFeaturePaV2,
   kGlobalColorFeatureDither,
+  kGlobalColorFeatureCWBDither,
   kGlobalColorFeatureGamut,
   kGlobalColorFeaturePADither,
   kMaxNumPPFeatures,
@@ -191,6 +192,7 @@ struct PPFeatureVersion {
   static const uint32_t kSDEGamutV4 = 18;
   static const uint32_t kSDEPccV4 = 19;
   static const uint32_t kSDEIgcV40 = 20;
+  static const uint32_t kSDECWBDitherV2 = 21;
 
   uint32_t version[kMaxNumPPFeatures];
   PPFeatureVersion() { memset(version, 0, sizeof(version)); }
@@ -278,6 +280,8 @@ struct PPFrameCaptureInputParams {
   PPRectInfo rect;
   PPPixelFormats out_pix_format;
   uint32_t flags;
+  PPFeatureInfo *dither_payload = nullptr;
+  uint32_t dither_flags = 0x0;
 };
 
 struct PPFrameCaptureData {

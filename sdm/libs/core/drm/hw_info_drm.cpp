@@ -258,6 +258,7 @@ DisplayError HWInfoDRM::GetHWResourceInfo(HWResourceInfo *hw_resource) {
   DLOGI("Has QSEED3 = %d", hw_resource->has_qseed3);
   DLOGI("Has UBWC = %d", hw_resource->has_ubwc);
   DLOGI("Has Micro Idle = %d", hw_resource->has_micro_idle);
+  DLOGI("Has Noise Layer = %d", hw_resource->has_noise_layer);
   DLOGI("Has Concurrent Writeback = %d", hw_resource->has_concurrent_writeback);
   string tap_points = "Tap Points: ";
   for (CwbTapPoint &tap_point : hw_resource->tap_points) {
@@ -324,6 +325,7 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   hw_resource->demura_count = info.demura_count;
   hw_resource->dspp_count = info.dspp_count;
   hw_resource->skip_inline_rot_threshold = info.skip_inline_rot_threshold;
+  hw_resource->has_noise_layer = info.has_noise_layer;
 
   for (int index = 0; index < kBwModeMax; index++) {
     if (index == kBwVFEOn) {
@@ -377,6 +379,7 @@ void HWInfoDRM::GetSystemInfo(HWResourceInfo *hw_resource) {
   hw_resource->ubwc_version = info.ubwc_version;
   // RC
   hw_resource->rc_total_mem_size = info.rc_total_mem_size;
+  hw_resource->dsc_block_count = info.dsc_block_count;
 }
 
 void HWInfoDRM::GetHWPlanesInfo(HWResourceInfo *hw_resource) {

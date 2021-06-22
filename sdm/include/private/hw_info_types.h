@@ -384,6 +384,8 @@ struct HWResourceInfo {
   uint32_t demura_count = 0;
   uint32_t dspp_count = 0;
   bool skip_inline_rot_threshold = false;
+  bool has_noise_layer = false;
+  uint32_t dsc_block_count = 0;
 };
 
 struct HWSplitInfo {
@@ -689,6 +691,17 @@ struct HWSolidfillStage {
   LayerSolidFill solid_fill_info = {};
 };
 
+struct NoiseLayerConfig {
+  bool enable = false;
+  uint64_t flags = 0;               // if enable, read honor other fields
+  uint32_t zpos_noise = 0;          // Set by noise plugin
+  uint32_t zpos_attn = 0;           // Set by noise plugin
+  uint32_t attenuation_factor = 1;  // Set by noise plugin
+  uint32_t noise_strength = 0;      // Noise strength set by noise algo
+  uint32_t alpha_noise = 0;         // Noise Alpha (transparency coefficient) set by noise algo
+  bool temporal_en = 0;             // Temporal enable set by noise algo
+};
+
 struct HWLayerConfig {
   HWPipeInfo left_pipe {};           // pipe for left side of output
   HWPipeInfo right_pipe {};          // pipe for right side of output
@@ -697,6 +710,7 @@ struct HWLayerConfig {
   HWSolidfillStage hw_solidfill_stage {};
   float compression = 1.0f;
   bool use_solidfill_stage = false;
+  NoiseLayerConfig hw_noise_layer_cfg {};
 };
 
 struct HWHDRLayerInfo {
@@ -752,6 +766,7 @@ struct HWLayersInfo {
   int32_t gpu_target_index = -1;     // GPU target layer index. -1 if not present.
   int32_t stitch_target_index = -1;  // Blit target layer index. -1 if not present.
   int32_t demura_target_index = -1;  // Demura target layer index. -1 if not present.
+  int32_t noise_layer_index = -1;    // Noise layer index. -1 if not present.
   std::vector<ColorPrimaries> wide_color_primaries = {};  // list of wide color primaries
 
   std::vector<Layer> hw_layers = {};  // Layers which need to be programmed on the HW
@@ -779,6 +794,7 @@ struct HWLayersInfo {
   float output_compression = 1.0f;
   HWQosData qos_data = {};
   HWAVRInfo hw_avr_info = {};
+  NoiseLayerConfig noise_layer_info = {};
   std::bitset<kUpdateMax> updates_mask = 0;
   uint64_t elapse_timestamp = 0;
   bool do_hw_validate = true;

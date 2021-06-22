@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -57,6 +57,7 @@ class HWCDisplayPluggable : public HWCDisplay {
   virtual HWC2::Error SetColorTransform(const float *matrix, android_color_transform_t hint);
   virtual HWC2::Error UpdatePowerMode(HWC2::PowerMode mode);
   virtual HWC2::Error PreValidateDisplay(bool *exit_validate);
+  virtual HWC2::Error PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence);
 
  private:
   HWCDisplayPluggable(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,

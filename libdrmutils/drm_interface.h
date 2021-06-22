@@ -292,6 +292,12 @@ enum struct DRMOps {
    */
   CRTC_SET_SOLIDFILL_STAGES,
   /*
+   * Op: sets noise layer stage
+   * Arg: uint32_t - CRTC ID
+   *      uint64_t - Pointer to struct DRMNoiseLayerConfig
+   */
+  CRTC_SET_NOISELAYER_CONFIG,
+  /*
    * Op: Sets idle timeout.
    * Arg: uint32_t - CRTC ID
    *      uint32_t - idle timeout in ms
@@ -452,6 +458,12 @@ enum struct DRMOps {
    *      uint64_t - bit clk value
    */
   CONNECTOR_SET_DYN_BIT_CLK,
+  /*
+   * Op: Sets DSC/non-DSC operating mode
+   * Arg: uint32_t - Connector ID
+   *      uint64_t - DSC/non-DSC Bitmask
+   */
+  CONNECTOR_SET_DSC_MODE,
 };
 
 enum struct DRMRotation {
@@ -599,6 +611,8 @@ struct DRMCrtcInfo {
   uint32_t demura_count = 0;
   uint32_t dspp_count = 0;
   bool skip_inline_rot_threshold = false;
+  bool has_noise_layer = false;
+  uint32_t dsc_block_count = 0;
 };
 
 enum struct DRMPlaneType {
@@ -674,10 +688,16 @@ enum struct DRMPanelMode {
   COMMAND,
 };
 
+struct DRMSubModeInfo {
+  uint32_t panel_mode_caps;
+  uint32_t panel_compression_mode;
+  DRMTopology topology;
+  std::vector<uint64_t> dyn_bitclk_list;
+};
+
 /* Per mode info */
 struct DRMModeInfo {
   drmModeModeInfo mode;
-  DRMTopology topology;
   // Valid only if mode is command
   int num_roi;
   int xstart;
@@ -690,12 +710,13 @@ struct DRMModeInfo {
   uint64_t default_bit_clk_rate;
   uint32_t transfer_time_us;
   uint32_t allowed_mode_switch;
-  uint32_t panel_mode_caps;
   uint32_t cur_panel_mode;
   uint32_t has_cwb_crop;
   uint32_t has_dedicated_cwb;
-  std::vector<uint64_t> dyn_bitclk_list;
+  uint32_t curr_submode_index = 0;
   uint64_t curr_bit_clk_rate;
+  uint32_t curr_compression_mode;
+  std::vector<DRMSubModeInfo> sub_modes;
 };
 
 /* Per Connector Info*/
@@ -727,6 +748,9 @@ struct DRMConnectorInfo {
   uint32_t supported_colorspaces;
   uint64_t panel_id = 0;
   uint32_t qsync_fps;
+  bool has_cwb_dither = false;
+  uint32_t max_os_brightness;
+  uint32_t max_panel_backlight;
 };
 
 // All DRM Connectors as map<Connector_id , connector_info>
@@ -769,6 +793,8 @@ enum DRMPPFeatureID {
   kFeatureDgmGc,
   kFeatureVigIgc,
   kFeatureVigGamut,
+  kFeatureCWBDither,
+  kFeatureDimmingBlLut,
   kPPFeaturesMax,
 };
 
@@ -787,6 +813,9 @@ struct DRMPPFeatureInfo {
   uint32_t payload_size;
   void *payload;
   uint32_t object_type;
+  bool is_event;
+  uint32_t drm_fd;
+  uint32_t event_type;
 };
 
 enum DRMDPPSFeatureID {
@@ -963,6 +992,17 @@ struct DRMSolidfillStage {
   uint32_t plane_alpha = 0xff;
 };
 
+struct DRMNoiseLayerConfig {
+  bool enable = false;
+  uint64_t flags = 0;
+  uint32_t zpos_noise = 0;  // z_order for Noise layer
+  uint32_t zpos_attn = 0;   // z_order for attenuation layer
+  uint32_t attn_factor = 0;
+  uint32_t noise_strength = 0;
+  uint32_t alpha_noise = 0;
+  bool temporal_en = 0;
+};
+
 enum struct DRMFrameTriggerMode {
   FRAME_DONE_WAIT_DEFAULT = 0,
   FRAME_DONE_WAIT_SERIALIZE,
@@ -984,6 +1024,12 @@ enum struct DRMColorspace {
   BT2020_YCC,
   DCI_P3_RGB_D65,
   DCI_P3_RGB_THEATER,
+};
+
+enum struct DRMCompressionMode {
+  NONE = 0,
+  DSC_ENABLED,
+  DSC_DISABLED,
 };
 
 /* DRM Atomic Request Property Set.

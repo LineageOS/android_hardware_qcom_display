@@ -1047,11 +1047,44 @@ class DisplayInterface {
   */
   virtual DisplayError SetBLScale(uint32_t level) = 0;
 
+  /*! @brief Method to get panel backlight max level.
+
+    @param[in] panel backlight max level.
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError GetPanelBlMaxLvl(uint32_t *max_level) = 0;
+
+  /*! @brief Method to set display dimming backlight LUT.
+
+    @param[in] payload of dimming backlight LUT struct.
+    @param[in] size of the payload.
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError SetDimmingBlLut(void *payload, size_t size) = 0;
+
+ /*! @brief Method to enable/disable dimming backlight event.
+
+    @param[in] payload to enable/disable dimming backlight event.
+    @param[in] size of the payload.
+
+    @return \link DisplayError \endlink
+  */
+
+  virtual DisplayError EnableDimmingBacklightEvent(void *payload, size_t size) = 0;
+
+  /*! @brief Method to trigger a screen refresh.
+
+    @return \link void \endlink
+  */
+  virtual void ScreenRefresh() = 0;
+
   /*! @brief Method to check if the Default resources are freed for display
 
     @return \link bool \endlink
   */
-  virtual bool CheckResourceState() = 0;
+  virtual bool CheckResourceState(bool *res_exhausted) = 0;
 
   /*! @brief Method to check if game enhance feature is supported for display
 
@@ -1089,6 +1122,14 @@ class DisplayInterface {
   */
   virtual DisplayError IsSupportedOnDisplay(SupportedDisplayFeature feature,
                                             uint32_t *supported) = 0;
+
+  /*! @brief Method to check whether writeback supports requested color format or not.
+
+    @param[in] \link LayerBufferFormat \endlink
+
+    @return \link bool \endlink
+  */
+  virtual bool IsWriteBackSupportedFormat(const LayerBufferFormat &format) = 0;
 
   /*! @brief Method to clear scaler LUTs.
 
@@ -1137,6 +1178,13 @@ class DisplayInterface {
     @return \link void \endlink
   */
   virtual DisplayError GetQsyncFps(uint32_t *qsync_fps) = 0;
+  /*! @brief Method to get the alternate config with same fps and different compression mode.
+
+    @param[out] pointer to config value
+
+    @return \link DisplayError \endlink
+  */
+  virtual DisplayError SetAlternateDisplayConfig(uint32_t *alt_config) = 0;
 
   /*! @brief Method to flush CWB
 

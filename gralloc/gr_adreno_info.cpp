@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2021, The Linux Foundation. All rights reserved.
 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -161,6 +161,20 @@ void AdrenoMemInfo::AlignCompressedRGB(int width, int height, int format, unsign
     *aligned_w = (unsigned int)ALIGN(width, 32);
     *aligned_h = (unsigned int)ALIGN(height, 32);
     ALOGW("%s: Warning!! compute_compressedfmt_aligned_width_and_height not found", __FUNCTION__);
+  }
+}
+
+void AdrenoMemInfo::AlignGpuDepthStencilFormat(int width, int height, int format,
+                    int tile_enabled, unsigned int *aligned_w, unsigned int *aligned_h) {
+  surface_tile_mode_t tile_mode = static_cast<surface_tile_mode_t>(tile_enabled);
+  surface_rastermode_t raster_mode = SURFACE_RASTER_MODE_UNKNOWN;    // Adreno unknown raster mode.
+  int padding_threshold = 512;  // Threshold for padding surfaces.
+  if (LINK_adreno_compute_fmt_aligned_width_and_height) {
+    LINK_adreno_compute_fmt_aligned_width_and_height(width, height, 0 /*plane_id*/,
+        GetGpuPixelFormat(format), 1 /*num_samples*/, tile_mode, raster_mode, padding_threshold,
+        reinterpret_cast<int *>(aligned_w), reinterpret_cast<int *>(aligned_h));
+  } else {
+    ALOGW("%s: Warning!! compute_fmt_aligned_width_and_height not found", __FUNCTION__);
   }
 }
 

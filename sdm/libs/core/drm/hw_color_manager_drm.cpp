@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017-2018, 2020, The Linux Foundation. All rights reserved.
+* Copyright (c) 2017-2018, 2020-2021, The Linux Foundation. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -100,6 +100,7 @@ static const DrmPPFeatureMap g_dspp_map = {
   {kGlobalColorFeatureDither,   {kFeatureDither}},
   {kGlobalColorFeatureGamut,    {kFeatureGamut}},
   {kGlobalColorFeaturePADither, {kFeaturePADither}},
+  {kGlobalColorFeatureCWBDither, {kFeatureCWBDither}},
 };
 
 static const DrmPPFeatureMap g_vig_map = {
@@ -126,6 +127,7 @@ DisplayError (*HWColorManagerDrm::pp_features_[])(const PPFeatureInfo &,
   [kFeaturePaV2] = NULL,
   [kFeatureDither] = &HWColorManagerDrm::GetDrmDither,
   [kFeatureSprDither] = &HWColorManagerDrm::GetDrmDither,
+  [kFeatureCWBDither] = &HWColorManagerDrm::GetDrmDither,
   [kFeatureGamut] = &HWColorManagerDrm::GetDrmGamut,
   [kFeaturePADither] = &HWColorManagerDrm::GetDrmPADither,
   [kFeaturePAHsic] = &HWColorManagerDrm::GetDrmPAHsic,
@@ -186,6 +188,9 @@ uint32_t HWColorManagerDrm::GetFeatureVersion(const DRMPPFeatureInfo &feature) {
       break;
     case kFeaturePADither:
         version = PPFeatureVersion::kSDEPADitherV17;
+      break;
+    case kFeatureCWBDither:
+        version = PPFeatureVersion::kSDECWBDitherV2;
       break;
     default:
       break;
@@ -277,6 +282,7 @@ void HWColorManagerDrm::FreeDrmFeatureData(DRMPPFeatureInfo *feature) {
         break;
       }
       case kFeatureDither:
+      case kFeatureCWBDither:
       case kFeatureSprDither: {
 #ifdef PP_DRM_ENABLE
         drm_msm_dither *dither = reinterpret_cast<drm_msm_dither *>(ptr);

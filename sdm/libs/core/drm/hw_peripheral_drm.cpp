@@ -28,6 +28,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <fcntl.h>
+#include <display/drm/sde_drm.h>
 #include <utils/debug.h>
 #include <utils/sys.h>
 #include <utils/rect.h>
@@ -114,11 +115,13 @@ void HWPeripheralDRM::PopulateBitClkRates() {
   for (auto &mode_info : connector_info_.modes) {
     auto &mode = mode_info.mode;
     if (mode.hdisplay == width && mode.vdisplay == height) {
-      for (uint32_t index = 0; index < mode_info.dyn_bitclk_list.size(); index++) {
-        if (std::find(bitclk_rates_.begin(), bitclk_rates_.end(),
-              mode_info.dyn_bitclk_list[index]) == bitclk_rates_.end()) {
-          bitclk_rates_.push_back(mode_info.dyn_bitclk_list[index]);
-          DLOGI("Possible bit_clk_rates %" PRIu64, mode_info.dyn_bitclk_list[index]);
+      for (auto &sub_mode_info : mode_info.sub_modes) {
+        for (uint32_t index = 0; index < sub_mode_info.dyn_bitclk_list.size(); index++) {
+          if (std::find(bitclk_rates_.begin(), bitclk_rates_.end(),
+                sub_mode_info.dyn_bitclk_list[index]) == bitclk_rates_.end()) {
+            bitclk_rates_.push_back(sub_mode_info.dyn_bitclk_list[index]);
+            DLOGI("Possible bit_clk_rates %" PRIu64, sub_mode_info.dyn_bitclk_list[index]);
+          }
         }
       }
     }
@@ -900,6 +903,58 @@ void HWPeripheralDRM::SetVMReqState() {
     drm_atomic_intf_->Perform(sde_drm::DRMOps::CRTC_SET_VM_REQ_STATE, token_.crtc_id,
                               sde_drm::DRMVMRequestState::NONE);
   }
+}
+
+DisplayError HWPeripheralDRM::SetAlternateDisplayConfig(uint32_t *alt_config) {
+  uint32_t curr_mode_flag = 0;
+  sde_drm::DRMModeInfo current_mode = connector_info_.modes[current_mode_index_];
+  sde_drm::DRMSubModeInfo sub_mode = current_mode.sub_modes[current_mode.curr_submode_index];
+  uint32_t curr_compression = current_mode.curr_compression_mode;
+
+  if (current_mode.cur_panel_mode & DRM_MODE_FLAG_CMD_MODE_PANEL) {
+    curr_mode_flag = DRM_MODE_FLAG_CMD_MODE_PANEL;
+  } else if (current_mode.cur_panel_mode & DRM_MODE_FLAG_VID_MODE_PANEL) {
+    curr_mode_flag = DRM_MODE_FLAG_VID_MODE_PANEL;
+  }
+
+  // First try to perform compression mode switch within same mode
+  for (uint32_t submode_idx = 0; submode_idx < current_mode.sub_modes.size(); submode_idx++) {
+    if ((curr_compression != current_mode.sub_modes[submode_idx].panel_compression_mode)) {
+      connector_info_.modes[current_mode_index_].curr_submode_index = submode_idx;
+      connector_info_.modes[current_mode_index_].curr_compression_mode =
+              current_mode.sub_modes[submode_idx].panel_compression_mode;
+      SetTopology(connector_info_.modes[current_mode_index_].sub_modes[submode_idx].topology,
+                  &display_attributes_[current_mode_index_].topology);
+      SetDisplaySwitchMode(current_mode_index_);
+      panel_compression_changed_ = current_mode.sub_modes[submode_idx].panel_compression_mode;
+      *alt_config = current_mode_index_;
+      return kErrorNone;
+    }
+  }
+
+  // If there is no compression switch possible within current mode, try with other modes
+  for (uint32_t mode_index = 0; mode_index < connector_info_.modes.size(); mode_index++) {
+    if ((current_mode.mode.vrefresh == connector_info_.modes[mode_index].mode.vrefresh) &&
+        (curr_mode_flag & connector_info_.modes[mode_index].cur_panel_mode)) {
+      for (uint32_t submode_idx = 0; submode_idx <
+           connector_info_.modes[mode_index].sub_modes.size(); submode_idx++) {
+        if ((curr_compression !=
+             connector_info_.modes[mode_index].sub_modes[submode_idx].panel_compression_mode)) {
+          connector_info_.modes[mode_index].curr_submode_index = submode_idx;
+          SetTopology(connector_info_.modes[mode_index].sub_modes[submode_idx].topology,
+                      &display_attributes_[mode_index].topology);
+          connector_info_.modes[mode_index].curr_compression_mode =
+                connector_info_.modes[mode_index].sub_modes[submode_idx].panel_compression_mode;
+          SetDisplayAttributes(mode_index);
+          panel_compression_changed_ = connector_info_.modes[mode_index].curr_compression_mode;
+          *alt_config = mode_index;
+          return kErrorNone;
+        }
+      }
+    }
+  }
+
+  return kErrorNotSupported;
 }
 
 }  // namespace sdm

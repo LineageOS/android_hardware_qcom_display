@@ -69,9 +69,21 @@ endif
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_bengal_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_td4330_v2_cmd_mode_dsi_truly_panel.xml
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_bengal_default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/qdcm_calib_data_td4330_v2_video_mode_dsi_truly_panel.xml
 
+#QDCM calibration json file for r66451 panel
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_r66451_amoled_cmd_mode_dsi_visionox_panel_with_DSC.json:$(TARGET_COPY_OUT_VENDOR)/etc/display/qdcm_calib_data_r66451_amoled_cmd_mode_dsi_visionox_panel_with_DSC.json
-
 PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_r66451_amoled_video_mode_dsi_visionox_panel_with_DSC.json:$(TARGET_COPY_OUT_VENDOR)/etc/display/qdcm_calib_data_r66451_amoled_video_mode_dsi_visionox_panel_with_DSC.json
+
+#QDCM calibration json file for Sharp panel
+PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_Sharp_4k_cmd_mode_dsc_dsi_panel.json:$(TARGET_COPY_OUT_VENDOR)/etc/display/qdcm_calib_data_Sharp_4k_cmd_mode_dsc_dsi_panel.json
+PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_Sharp_4k_video_mode_dsc_dsi_panel.json:$(TARGET_COPY_OUT_VENDOR)/etc/display/qdcm_calib_data_Sharp_4k_video_mode_dsc_dsi_panel.json
+PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_Sharp_2k_cmd_mode_qsync_dsi_panel.json:$(TARGET_COPY_OUT_VENDOR)/etc/display/qdcm_calib_data_Sharp_2k_cmd_mode_qsync_dsi_panel.json
+PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_Sharp_2k_video_mode_qsync_dsi_panel.json:$(TARGET_COPY_OUT_VENDOR)/etc/display/qdcm_calib_data_Sharp_2k_video_mode_qsync_dsi_panel.json
+PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_Sharp_qhd_cmd_mode_dsi_panel.json:$(TARGET_COPY_OUT_VENDOR)/etc/display/qdcm_calib_data_Sharp_qhd_cmd_mode_dsi_panel.json
+PRODUCT_COPY_FILES += hardware/qcom/display/config/qdcm_calib_data_sharp_1080p_cmd_mode_dsi_panel.json:$(TARGET_COPY_OUT_VENDOR)/etc/display/qdcm_calib_data_sharp_1080p_cmd_mode_dsi_panel.json
+
+#Backlight calibration xml file for r66451 amoled panels
+PRODUCT_COPY_FILES += hardware/qcom/display/config/backlight_calib_r66451_amoled_cmd_mode_dsi_visionox_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/display/backlight_calib_r66451_amoled_cmd_mode_dsi_visionox_panel_with_DSC.xml
+PRODUCT_COPY_FILES += hardware/qcom/display/config/backlight_calib_r66451_amoled_cmd_mode_dsi_visionox_panel_with_DSC.xml:$(TARGET_COPY_OUT_VENDOR)/etc/display/backlight_calib_r66451_amoled_video_mode_dsi_visionox_panel_with_DSC.xml
 
 PRODUCT_PROPERTY_OVERRIDES += \
     persist.demo.hdmirotationlock=false \
@@ -87,15 +99,19 @@ PRODUCT_PROPERTY_OVERRIDES += \
     vendor.display.disable_excl_rect=0 \
     vendor.display.disable_excl_rect_partial_fb=1 \
     vendor.display.comp_mask=0 \
-    vendor.display.enable_optimize_refresh=1 \
+    vendor.display.enable_optimize_refresh=0 \
     vendor.display.use_smooth_motion=1 \
+    vendor.display.disable_stc_dimming=1 \
     debug.sf.high_fps_late_sf_phase_offset_ns=-500000 \
     debug.sf.high_fps_early_phase_offset_ns=-2000000 \
     debug.sf.high_fps_early_gl_phase_offset_ns=-2000000 \
     debug.sf.disable_client_composition_cache=1 \
     debug.sf.enable_gl_backpressure=1 \
     debug.sf.enable_hwc_vds=1 \
-    vendor.display.vds_allow_hwc=1
+    vendor.display.vds_allow_hwc=1 \
+    vendor.display.enable_async_vds_creation=1 \
+    vendor.display.enable_rounded_corner=1 \
+    vendor.display.disable_3d_adaptive_tm=1
 
 # Enable offline rotator for Bengal.
 ifneq ($(TARGET_BOARD_PLATFORM),bengal)
@@ -138,6 +154,7 @@ PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.set_touch_timer_ms=200
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.force_hwc_copy_for_virtual_displays=true
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.max_frame_buffer_acquired_buffers=3
 PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.max_virtual_display_dimension=4096
+PRODUCT_DEFAULT_PROPERTY_OVERRIDES += ro.surface_flinger.supports_background_blur=1
 
 ifeq ($(TARGET_BOARD_PLATFORM),taro)
 PRODUCT_PROPERTY_OVERRIDES += debug.sf.set_idle_timer_ms=80
@@ -166,7 +183,7 @@ endif
 SOONG_CONFIG_NAMESPACES += qtidisplay
 
 # Soong Keys
-SOONG_CONFIG_qtidisplay := drmpp headless llvmsa gralloc4 default
+SOONG_CONFIG_qtidisplay := drmpp headless llvmsa gralloc4 default sourcebuild
 
 # Soong Values
 SOONG_CONFIG_qtidisplay_drmpp := true
@@ -174,9 +191,9 @@ SOONG_CONFIG_qtidisplay_headless := false
 SOONG_CONFIG_qtidisplay_llvmsa := false
 SOONG_CONFIG_qtidisplay_gralloc4 := true
 SOONG_CONFIG_qtidisplay_default := true
+SOONG_CONFIG_qtidisplay_sourcebuild := true
 
 # Techpack values
-BUILD_DISPLAY_TECHPACK_SOURCE := true
 
 ifeq ($(TARGET_IS_HEADLESS), true)
     # TODO: QMAA prebuilts

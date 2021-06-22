@@ -143,6 +143,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
                                       bool *needs_commit);
   virtual HWC2::Error PreValidateDisplay(bool *exit_validate);
   virtual HWC2::Error PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence);
+  virtual HWC2::Error SetAlternateDisplayConfig(bool set);
 
  private:
   HWCDisplayBuiltIn(CoreInterface *core_intf, HWCBufferAllocator *buffer_allocator,
@@ -212,6 +213,7 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   bool enhance_idle_time_ = false;
   shared_ptr<Fence> retire_fence_ = nullptr;
   std::unordered_map<int32_t, int32_t> mixed_mode_threshold_;
+  int alternate_config_ = -1;
 };
 
 }  // namespace sdm

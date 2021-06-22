@@ -915,6 +915,11 @@ ScopedAStatus
     return ScopedAStatus(AStatus_fromExceptionCode(EX_ILLEGAL_ARGUMENT));
   }
 
+  if (dpy_index == -1) {
+    ALOGW("Unable to retrieve display index for display:%d", dispId);
+    return ScopedAStatus(AStatus_fromExceptionCode(EX_ILLEGAL_ARGUMENT));
+  }
+
   // Mutex scope
   {
     SCOPE_LOCK(hwc_session_->locker_[disp_type]);

@@ -1308,6 +1308,7 @@ void DRMPlane::ResetCache(drmModeAtomicReq *req) {
   tmp_prop_val_map_.clear();
   committed_prop_val_map_.clear();
 
+#ifdef TRUSTED_VM
   for (int i = 0; i <= (int32_t)(DRMTonemapLutType::VIG_3D_GAMUT); i++) {
     auto itr = plane_type_info_.tonemap_lut_version_map.find(static_cast<DRMTonemapLutType>(i));
     if (itr != plane_type_info_.tonemap_lut_version_map.end()) {
@@ -1339,6 +1340,7 @@ void DRMPlane::ResetCache(drmModeAtomicReq *req) {
       ResetColorLUT(feature_id, req);
     }
   }
+#endif
 }
 
 }  // namespace sde_drm

@@ -169,6 +169,7 @@ struct PlaneLayoutInfo {
 bool IsYuvFormat(int format);
 bool IsCompressedRGBFormat(int format);
 bool IsUncompressedRGBFormat(int format);
+bool IsGpuDepthStencilFormat(int format);
 uint32_t GetBppForUncompressedRGB(int format);
 bool CpuCanAccess(uint64_t usage);
 bool CpuCanRead(uint64_t usage);

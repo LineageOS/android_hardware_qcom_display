@@ -366,7 +366,8 @@ HWC2::Error HWCLayer::SetLayerColor(hwc_color_t color) {
 
 HWC2::Error HWCLayer::SetLayerCompositionType(HWC2::Composition type) {
   // Validation is required when the client changes the composition type
-  if (client_requested_ != type) {
+  if ((type != client_requested_) || (type != device_selected_) ||
+      (type == HWC2::Composition::Client)) {
     layer_->update_mask.set(kClientCompRequest);
   }
   client_requested_ = type;
@@ -908,6 +909,27 @@ DisplayError HWCLayer::SetMetaData(const private_handle_t *pvt_handle, Layer *la
 
   // Handle colorMetaData / Dataspace handling now
   ValidateAndSetCSC(handle);
+
+  int hist_set = qtigralloc::getMetadataState(handle, QTI_VIDEO_HISTOGRAM_STATS);
+  if (hist_set > 0) {
+    VideoHistogramMetadata histogram = {};
+    int err = static_cast<int>(qtigralloc::get(handle, QTI_VIDEO_HISTOGRAM_STATS, &histogram));
+    if (!err) {
+      uint32_t bins = histogram.stat_len / sizeof(histogram.stats_info[0]);
+      layer_buffer->hist_data.display_width = layer_buffer->unaligned_width;
+      layer_buffer->hist_data.display_height = layer_buffer->unaligned_height;
+      if (histogram.stat_len <= sizeof(histogram.stats_info) && bins > 0) {
+        layer_buffer->hist_data.stats_info.clear();
+        layer_buffer->hist_data.stats_info.reserve(bins);
+        for (uint32_t i = 0; i < bins; i++){
+            layer_buffer->hist_data.stats_info.push_back(histogram.stats_info[i]);
+        }
+
+        layer_buffer->hist_data.stats_valid = true;
+        layer->update_mask.set(kMetadataUpdate);
+      }
+    }
+  }
 
   return kErrorNone;
 }

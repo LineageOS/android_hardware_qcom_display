@@ -54,6 +54,7 @@ cc_library_shared {
         "qti_kernel_headers",
         "qti_display_kernel_headers",
         "device_kernel_headers",
+        "libvmmem_headers",
     ],
     include_dirs: [
         "system/memory/libion/include",
@@ -68,6 +69,7 @@ cc_library_shared {
         "libhidlbase",
         "libion",
         "libdmabufheap",
+        "libvmmem",
         "android.hardware.graphics.mapper@2.1",
         "android.hardware.graphics.mapper@3.0",
         "android.hardware.graphics.mapper@4.0",

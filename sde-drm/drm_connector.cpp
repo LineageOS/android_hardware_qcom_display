@@ -466,7 +466,8 @@ int DRMConnectorManager::GetPreferredModeLMCounts(std::map<uint32_t, uint8_t> *l
         }
       }
 
-      switch (info.modes[mode_index].topology) {
+      uint32_t curr_submode_idx = info.modes[mode_index].curr_submode_index;
+      switch (info.modes[mode_index].sub_modes[curr_submode_idx].topology) {
         case DRMTopology::SINGLE_LM:
         case DRMTopology::SINGLE_LM_DSC:
         case DRMTopology::PPSPLIT:
@@ -598,6 +599,9 @@ void DRMConnector::ParseCapabilities(uint64_t blob_id, DRMConnectorInfo *info) {
   const string wb_ubwc = "wb_ubwc";
   const string dyn_bitclk_support = "dyn bitclk support=";
   const string qsync_fps = "qsync_fps=";
+  const string has_cwb_dither = "has_cwb_dither=";
+  const string max_os_brightness = "max os brightness=";
+  const string max_panel_backlight = "max panel backlight=";
 
   while (std::getline(stream, line)) {
     if (line.find(pixel_formats) != string::npos) {
@@ -631,7 +635,14 @@ void DRMConnector::ParseCapabilities(uint64_t blob_id, DRMConnectorInfo *info) {
       info->is_wb_ubwc_supported = true;
     } else if (line.find(dyn_bitclk_support) != string::npos) {
       info->dyn_bitclk_support = (string(line, dyn_bitclk_support.length()) == "true");
+    } else if (line.find(has_cwb_dither) != string::npos) {
+      info->has_cwb_dither = std::stoi(string(line, has_cwb_dither.length()));
+    } else if (line.find(max_os_brightness) != string::npos) {
+      info->max_os_brightness = std::stoi(string(line, max_os_brightness.length()));
+    } else if (line.find(max_panel_backlight) != string::npos) {
+      info->max_panel_backlight = std::stoi(string(line, max_panel_backlight.length()));
     }
+
   }
 
   drmModeFreePropertyBlob(blob);
@@ -696,9 +707,14 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
   const string has_cwb_crop = "has_cwb_crop=";
   const string has_dedicated_cwb_support = "has_dedicated_cwb_support=";
   const string dyn_bitclk_list = "dyn_bitclk_list=";
+  const string submode_string = "submode_idx=";
+  const string compression_mode = "dsc_mode=";
+  const string preferred_submode_string = "preferred_submode_idx=";
 
   DRMModeInfo *mode_item = &info->modes.at(0);
+  DRMSubModeInfo *submode_item = NULL;
   unsigned int index = 0;
+  unsigned int submode_index = 0;
 
   while (std::getline(stream, line)) {
     if (line.find(mode_name) != string::npos) {
@@ -708,8 +724,24 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
       }
       // Move to the next mode_item
       mode_item = &info->modes.at(index++);
+      submode_item = NULL;
+      submode_index = 0;
+    } else if (line.find(submode_string) != string::npos) {
+      string submode_idx(line, submode_string.length());
+      DRMSubModeInfo submode = {};
+      mode_item->sub_modes.push_back(submode);
+      submode_item = &mode_item->sub_modes.at(submode_index++);
+    } else if (line.find(preferred_submode_string) != string::npos) {
+      mode_item->curr_submode_index =
+                 std::stoi(string(line, preferred_submode_string.length()));
     } else if (line.find(topology) != string::npos) {
-      mode_item->topology = GetTopologyEnum(string(line, topology.length()));
+      if (!submode_item) {
+        DRMSubModeInfo submode = {};
+        mode_item->sub_modes.push_back(submode);
+        submode_item = &mode_item->sub_modes.at(submode_index++);
+        submode_index = 0;
+      }
+      submode_item->topology = GetTopologyEnum(string(line, topology.length()));
     } else if (line.find(pu_num_roi) != string::npos) {
       mode_item->num_roi = std::stoi(string(line, pu_num_roi.length()));
     } else if (line.find(pu_xstart) != string::npos) {
@@ -734,13 +766,41 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
     } else if (line.find(allowed_mode_switch) != string::npos) {
       mode_item->allowed_mode_switch = std::stoi(string(line, allowed_mode_switch.length()));
     } else if (line.find(panel_mode_caps) != string::npos) {
-      mode_item->panel_mode_caps = std::stoi(string(line, panel_mode_caps.length()));
+      if (!submode_item) {
+        DRMSubModeInfo submode = {};
+        mode_item->sub_modes.push_back(submode);
+        submode_item = &mode_item->sub_modes.at(submode_index++);
+        submode_index = 0;
+      }
+      submode_item->panel_mode_caps = std::stoi(string(line, panel_mode_caps.length()));
     } else if (line.find(has_cwb_crop) != string::npos) {
       mode_item->has_cwb_crop = std::stoi(string(line, has_cwb_crop.length()));
     } else if (line.find(has_dedicated_cwb_support) != string::npos) {
       mode_item->has_dedicated_cwb = std::stoi(string(line, has_dedicated_cwb_support.length()));
     } else if (line.find(dyn_bitclk_list) != string::npos) {
-      mode_item->dyn_bitclk_list = GetBitClkRates(string(line, dyn_bitclk_list.length()));
+      if (!submode_item) {
+        DRMSubModeInfo submode = {};
+        mode_item->sub_modes.push_back(submode);
+        submode_item = &mode_item->sub_modes.at(submode_index++);
+        submode_index = 0;
+      }
+      submode_item->dyn_bitclk_list = GetBitClkRates(string(line, dyn_bitclk_list.length()));
+    } else if (line.find(compression_mode) != string::npos) {
+      if (!submode_item) {
+        DRMSubModeInfo submode = {};
+        mode_item->sub_modes.push_back(submode);
+        submode_item = &mode_item->sub_modes.at(submode_index++);
+        submode_index = 0;
+      }
+      submode_item->panel_compression_mode = std::stoi(string(line, compression_mode.length()));
+    }
+  }
+
+  for (int i = 0; i < info->modes.size(); i++) {
+    mode_item = &info->modes.at(i);
+    if (!mode_item->sub_modes.size()) {
+      DRMSubModeInfo submode = {};
+      mode_item->sub_modes.push_back(submode);
     }
   }
 
@@ -1132,6 +1192,21 @@ void DRMConnector::Perform(DRMOps code, drmModeAtomicReq *req, va_list args) {
                  " ret %d", obj_id, prop_id, drm_bit_clk_rate, ret);
       } else {
         DRM_LOGD("Connector %d: Setting dynamic bit clk rate %" PRIu64, obj_id, drm_bit_clk_rate);
+      }
+    } break;
+
+    case DRMOps::CONNECTOR_SET_DSC_MODE: {
+      if (!prop_mgr_.IsPropertyAvailable(DRMProperty::DSC_MODE)) {
+        return;
+      }
+      uint64_t drm_compression_mode = va_arg(args, uint32_t);
+      uint32_t prop_id = prop_mgr_.GetPropertyId(DRMProperty::DSC_MODE);
+      int ret = drmModeAtomicAddProperty(req, obj_id, prop_id, drm_compression_mode);
+      if (ret < 0) {
+        DRM_LOGE("AtomicAddProperty failed obj_id 0x%x, prop_id %d, compression_mode %d ret %d",
+                 obj_id, prop_id, drm_compression_mode, ret);
+      } else {
+        DRM_LOGD("Connector %d: Setting compression mode %d", obj_id, drm_compression_mode);
       }
     } break;
 

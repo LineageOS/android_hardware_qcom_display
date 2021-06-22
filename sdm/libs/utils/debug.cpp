@@ -235,11 +235,11 @@ int Debug::GetReducedConfig(uint32_t *num_vig_pipes, uint32_t *num_dma_pipes) {
   return 0;
 }
 
-int Debug::GetExtMaxlayers() {
-  int max_external_layers = 0;
-  DebugHandler::Get()->GetProperty(MAX_EXTERNAL_LAYERS_PROP, &max_external_layers);
+int Debug::GetSecondaryMaxFetchLayers() {
+  int max_secondary_fetch_layers = 0;
+  DebugHandler::Get()->GetProperty(MAX_SECONDARY_FETCH_LAYERS_PROP, &max_secondary_fetch_layers);
 
-  return std::max(max_external_layers, 2);
+  return std::max(max_secondary_fetch_layers, 2);
 }
 
 int Debug::GetProperty(const char *property_name, char *value) {

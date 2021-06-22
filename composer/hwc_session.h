@@ -121,6 +121,14 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
     kHotPlugEvent,
   };
 
+  enum ClientCommitDone {
+    kClientPartialUpdate,
+    kClientIdlepowerCollapse,
+    kClientTrustedUI,
+    kClientTeardownCWB,
+    kClientMax
+  };
+
   HWCSession();
   int Init();
   int Deinit();
@@ -213,7 +221,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
                                  hidl_vec<HwcDisplayCapability> *capabilities);
   int32_t GetDisplayBrightnessSupport(hwc2_display_t display, bool *outSupport);
   int32_t SetDisplayBrightness(hwc2_display_t display, float brightness);
-  void WaitForResources(bool wait_for_resources, hwc2_display_t active_builtin_id,
+  int32_t WaitForResources(bool wait_for_resources, hwc2_display_t active_builtin_id,
                         hwc2_display_t display_id);
 
   // newly added
@@ -321,11 +329,11 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   static Locker locker_[HWCCallbacks::kNumDisplays];
   static Locker power_state_[HWCCallbacks::kNumDisplays];
   static Locker hdr_locker_[HWCCallbacks::kNumDisplays];
-  static Locker tui_locker_[HWCCallbacks::kNumDisplays];
-  static bool tui_transition_pending_[HWCCallbacks::kNumDisplays];
-  static int tui_transition_error_[HWCCallbacks::kNumDisplays];
   static Locker display_config_locker_;
   static Locker system_locker_;
+  static std::bitset<kClientMax> clients_waiting_for_commit_[HWCCallbacks::kNumDisplays];
+  static shared_ptr<Fence> retire_fence_[HWCCallbacks::kNumDisplays];
+  static int commit_error_[HWCCallbacks::kNumDisplays];
 
  private:
   class CWB {
@@ -449,6 +457,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   std::mutex hotplug_mutex_;
   std::condition_variable hotplug_cv_;
   bool resource_ready_ = false;
+  hwc2_display_t active_display_id_ = 0;
+  shared_ptr<Fence> cached_retire_fence_ = nullptr;
   void UpdateThrottlingRate();
   void SetNewThrottlingRate(uint32_t new_rate);
 
@@ -555,8 +565,8 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   HWC2::Error TeardownConcurrentWriteback(hwc2_display_t display);
   void PostCommitUnlocked(hwc2_display_t display, const shared_ptr<Fence> &retire_fence,
                           HWC2::Error status);
-  void PostCommitLocked(hwc2_display_t display);
-  void CancelTUILock(hwc2_display_t display);
+  void PostCommitLocked(hwc2_display_t display, shared_ptr<Fence> &retire_fence);
+  int WaitForCommitDoneLocked(hwc2_display_t display, int client_id);
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};

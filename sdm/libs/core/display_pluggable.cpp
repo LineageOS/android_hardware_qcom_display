@@ -124,6 +124,7 @@ DisplayError DisplayPluggable::Init() {
 }
 
 DisplayError DisplayPluggable::Prepare(LayerStack *layer_stack) {
+  DTRACE_SCOPED();
   ClientLock lock(disp_mutex_);
   DisplayError error = kErrorNone;
   uint32_t new_mixer_width = 0;
@@ -147,14 +148,6 @@ DisplayError DisplayPluggable::Prepare(LayerStack *layer_stack) {
   disp_layer_stack_ = DispLayerStack();
 
   return DisplayBase::Prepare(layer_stack);
-}
-
-DisplayError DisplayPluggable::BuildLayerStackStats(LayerStack *layer_stack) {
-  DisplayError error = DisplayBase::BuildLayerStackStats(layer_stack);
-  if (error == kErrorNone) {
-    error = ConfigureCwb(layer_stack);
-  }
-  return error;
 }
 
 DisplayError DisplayPluggable::GetRefreshRateRange(uint32_t *min_refresh_rate,

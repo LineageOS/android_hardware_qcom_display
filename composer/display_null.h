@@ -61,7 +61,7 @@ class DisplayNull : public DisplayInterface {
   virtual void SetIdleTimeoutMs(uint32_t active_ms, uint32_t inactive_ms) { }
   virtual DisplayError GetDisplayIdentificationData(uint8_t *out_port, uint32_t *out_data_size,
                                                     uint8_t *out_data);
-  virtual bool CheckResourceState() { return false; }
+  virtual bool CheckResourceState(bool *res_exhausted) { return false; }
   virtual string Dump() { return ""; }
   virtual bool IsSupportSsppTonemap() { return false; }
   virtual bool GameEnhanceSupported() { return false; }
@@ -70,6 +70,8 @@ class DisplayNull : public DisplayInterface {
   virtual bool IsValidated() { return true; }
   virtual DisplayError GetQsyncFps(uint32_t *qsync_fps) { return kErrorNotSupported; }
   virtual void FlushConcurrentWriteback() {}
+  virtual void ScreenRefresh() { }
+  virtual bool IsWriteBackSupportedFormat(const LayerBufferFormat &format) { return false; }
 
   MAKE_NO_OP(CommitOrPrepare(LayerStack *))
   MAKE_NO_OP(PrePrepare(LayerStack *))
@@ -125,6 +127,9 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(SetFrameTriggerMode(FrameTriggerMode))
   MAKE_NO_OP(SetPanelLuminanceAttributes(float min_lum, float max_lum))
   MAKE_NO_OP(SetBLScale(uint32_t))
+  MAKE_NO_OP(GetPanelBlMaxLvl(uint32_t *))
+  MAKE_NO_OP(SetDimmingBlLut(void *, size_t))
+  MAKE_NO_OP(EnableDimmingBacklightEvent(void *, size_t))
   MAKE_NO_OP(GetQSyncMode(QSyncMode *))
   MAKE_NO_OP(colorSamplingOn());
   MAKE_NO_OP(colorSamplingOff());
@@ -137,6 +142,7 @@ class DisplayNull : public DisplayInterface {
   MAKE_NO_OP(NotifyDisplayCalibrationMode(bool))
   MAKE_NO_OP(GetOutputBufferAcquireFence(shared_ptr<Fence> *))
   MAKE_NO_OP(DestroyLayer())
+  MAKE_NO_OP(SetAlternateDisplayConfig(uint32_t *))
 
  protected:
   DisplayConfigVariableInfo default_variable_config_ = {};
