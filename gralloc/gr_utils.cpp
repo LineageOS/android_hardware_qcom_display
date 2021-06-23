@@ -385,6 +385,7 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
   uint64_t usage = info.usage;
   unsigned int y_plane, uv_plane;
   unsigned int mmm_color_format;
+  unsigned int alignment = 16;
 
   if (!IsGPUFlagSupported(usage)) {
     ALOGE("Unsupported GPU usage flags present 0x%" PRIx64, usage);
@@ -430,11 +431,18 @@ unsigned int GetSize(const BufferInfo &info, unsigned int alignedw, unsigned int
         size += ALIGN(alignedw * (unsigned int) ALIGN(height / 2, 32), SIZE_8K);
         break;
       case HAL_PIXEL_FORMAT_YV12:
-        if ((format == HAL_PIXEL_FORMAT_YV12) && ((width & 1) || (height & 1))) {
+        if ((width & 1) || (height & 1)) {
           ALOGE("w or h is odd for the YV12 format");
           return 0;
         }
-        size = alignedw * alignedh + (ALIGN(alignedw / 2, 16) * (alignedh / 2)) * 2;
+        if ((usage & BufferUsage::GPU_TEXTURE) || (usage & BufferUsage::GPU_RENDER_TARGET)) {
+          if (AdrenoMemInfo::GetInstance() == nullptr) {
+            ALOGE("Unable to get adreno instance");
+            return 0;
+          }
+          alignment = AdrenoMemInfo::GetInstance()->GetGpuPixelAlignment();
+        }
+        size = alignedw * alignedh + (ALIGN(alignedw / 2, alignment) * (alignedh / 2)) * 2;
         size = ALIGN(size, (unsigned int) SIZE_4K);
         break;
       case HAL_PIXEL_FORMAT_YCbCr_420_SP:
@@ -1287,6 +1295,7 @@ int GetAlignedWidthAndHeight(const BufferInfo &info, unsigned int *alignedw,
     case HAL_PIXEL_FORMAT_YV12:
       if ((usage & BufferUsage::GPU_TEXTURE) || (usage & BufferUsage::GPU_RENDER_TARGET)) {
         if (AdrenoMemInfo::GetInstance() == nullptr) {
+          ALOGE("Unable to get adreno instance");
           return 0;
         }
         alignment = AdrenoMemInfo::GetInstance()->GetGpuPixelAlignment();
@@ -1644,6 +1653,8 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
   unsigned int y_stride, c_stride, y_height, c_height, y_size, c_size, mmm_color_format;
   uint64_t yOffset, cOffset, crOffset, cbOffset;
   int h_subsampling = 0, v_subsampling = 0;
+  unsigned int alignment = 16;
+  uint64_t usage = info.usage;
   if (IsCameraCustomFormat(format, info.usage) && CameraInfo::GetInstance()) {
     int result = CameraInfo::GetInstance()->GetCameraFormatPlaneInfo(
         format, info.width, info.height, plane_count, plane_info);
@@ -1820,9 +1831,16 @@ int GetYUVPlaneInfo(const BufferInfo &info, int32_t format, int32_t width, int32
         err = -EINVAL;
         return err;
       }
+      if ((usage & BufferUsage::GPU_TEXTURE) || (usage & BufferUsage::GPU_RENDER_TARGET)) {
+        if (AdrenoMemInfo::GetInstance() == nullptr) {
+          ALOGE("Unable to get adreno instance");
+          return 0;
+        }
+        alignment = AdrenoMemInfo::GetInstance()->GetGpuPixelAlignment();
+      }
       *plane_count = 3;
       y_stride = width;
-      c_stride = ALIGN(width / 2, 16);
+      c_stride = ALIGN(width / 2, alignment);
       y_height = UINT(height);
       y_size = (y_stride * y_height);
       height = height >> 1;
