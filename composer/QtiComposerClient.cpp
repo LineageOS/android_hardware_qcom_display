@@ -97,8 +97,9 @@ QtiComposerClient::~QtiComposerClient() {
       uint32_t displayRequestMask = 0;
       std::vector<Layer> requestedLayers;
       std::vector<uint32_t> requestMasks;
+      IComposerClient::ClientTargetProperty clientTargetProperty;
       mReader.validateDisplay(dpy.first, changedLayers, compositionTypes, displayRequestMask,
-                              requestedLayers, requestMasks);
+                              requestedLayers, requestMasks, clientTargetProperty);
 
       hwc_session_->AcceptDisplayChanges(dpy.first);
 
@@ -1433,7 +1434,8 @@ Error QtiComposerClient::CommandReader::validateDisplay(Display display,
                                        std::vector<IComposerClient::Composition>& compositionTypes,
                                        uint32_t& displayRequestMask,
                                        std::vector<Layer>& requestedLayers,
-                                       std::vector<uint32_t>& requestMasks) {
+                                       std::vector<uint32_t>& requestMasks,
+                                       IComposerClient::ClientTargetProperty& clientTargetProperty) {
   uint32_t types_count = 0;
   uint32_t reqs_count = 0;
 
@@ -1485,6 +1487,12 @@ Error QtiComposerClient::CommandReader::validateDisplay(Display display,
 
   displayRequestMask = display_reqs;
 
+  err = mClient.hwc_session_->GetClientTargetProperty(mDisplay, &clientTargetProperty);
+  if (err != HWC2_ERROR_NONE) {
+    // todo: reset to default values
+    return static_cast<Error>(err);
+  }
+
   return static_cast<Error>(err);
 }
 
@@ -1498,13 +1506,17 @@ bool QtiComposerClient::CommandReader::parseValidateDisplay(uint16_t length) {
   uint32_t displayRequestMask;
   std::vector<Layer> requestedLayers;
   std::vector<uint32_t> requestMasks;
+  IComposerClient::ClientTargetProperty clientTargetProperty;
 
   auto err = validateDisplay(mDisplay, changedLayers, compositionTypes, displayRequestMask,
-                             requestedLayers, requestMasks);
+                             requestedLayers, requestMasks, clientTargetProperty);
 
   if (static_cast<Error>(err) == Error::NONE) {
     mWriter.setChangedCompositionTypes(changedLayers, compositionTypes);
     mWriter.setDisplayRequests(displayRequestMask, requestedLayers, requestMasks);
+    if (mClient.mUseCallback24_) {
+      mWriter.setClientTargetProperty(clientTargetProperty);
+    }
   } else {
     mWriter.setError(getCommandLoc(), static_cast<Error>(err));
   }
@@ -1600,14 +1612,18 @@ bool QtiComposerClient::CommandReader::parsePresentOrValidateDisplay(uint16_t le
   uint32_t displayRequestMask = 0x0;
   std::vector<Layer> requestedLayers;
   std::vector<uint32_t> requestMasks;
+  IComposerClient::ClientTargetProperty clientTargetProperty;
 
   auto err = validateDisplay(mDisplay, changedLayers, compositionTypes, displayRequestMask,
-                             requestedLayers, requestMasks);
+                             requestedLayers, requestMasks, clientTargetProperty);
   // mResources->setDisplayMustValidateState(mDisplay, false);
   if (err == Error::NONE) {
     mWriter.setPresentOrValidateResult(0);
     mWriter.setChangedCompositionTypes(changedLayers, compositionTypes);
     mWriter.setDisplayRequests(displayRequestMask, requestedLayers, requestMasks);
+    if (mClient.mUseCallback24_) {
+      mWriter.setClientTargetProperty(clientTargetProperty);
+    }
   } else {
     mWriter.setError(getCommandLoc(), err);
   }

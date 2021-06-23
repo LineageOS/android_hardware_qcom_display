@@ -1942,6 +1942,13 @@ android::status_t HWCSession::SetFrameDumpConfig(const android::Parcel *input_pa
     // HAL Pixel Format for output buffer
     output_format = input_parcel->readInt32();
   }
+
+  LayerBufferFormat sdm_format = HWCLayer::GetSDMFormat(output_format, 0);
+  if (sdm_format == kFormatInvalid) {
+    DLOGW("Format %d is not supported by SDM", output_format);
+    return -EINVAL;
+  }
+
   if (input_parcel->dataPosition() != input_parcel->dataSize()) {
     // Option to dump Layer Mixer output (0) or DSPP output (1)
     cwb_config.tap_point = static_cast<CwbTapPoint>(input_parcel->readInt32());
@@ -3476,6 +3483,20 @@ int32_t HWCSession::GetDisplayConnectionType(hwc2_display_t display,
   }
 
   return HWC2_ERROR_NONE;
+}
+
+int32_t HWCSession::GetClientTargetProperty(hwc2_display_t display,
+                                            HwcClientTargetProperty *outClientTargetProperty) {
+  if (!outClientTargetProperty) {
+    return HWC2_ERROR_BAD_PARAMETER;
+  }
+
+  if (display >= HWCCallbacks::kNumDisplays) {
+    return HWC2_ERROR_BAD_DISPLAY;
+  }
+
+  return CallDisplayFunction(display, &HWCDisplay::GetClientTargetProperty,
+                             outClientTargetProperty);
 }
 
 int32_t HWCSession::GetDisplayBrightnessSupport(hwc2_display_t display, bool *outSupport) {
