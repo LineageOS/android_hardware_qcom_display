@@ -681,6 +681,11 @@ HWC2::Error HWCDisplayBuiltIn::SetReadbackBuffer(const native_handle_t *buffer,
   output_buffer_.acquire_fence = acquire_fence;
   output_buffer_.handle_id = handle->id;
 
+  if (output_buffer_.format == kFormatInvalid) {
+    DLOGW("Format %d is not supported by SDM", handle->format);
+    return HWC2::Error::BadParameter;
+  }
+
   readback_buffer_queued_ = true;
   readback_configured_ = false;
   validated_ = false;
