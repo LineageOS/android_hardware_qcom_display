@@ -3626,10 +3626,12 @@ DisplayError DisplayBase::EnableDimmingBacklightEvent(void *payload, size_t size
   return err;
 }
 
+/* this func is called by DC dimming feature only after PCC updates */
 void DisplayBase::ScreenRefresh() {
   ClientLock lock(disp_mutex_);
+  /* do not skip validate */
+  validated_ = false;
   event_handler_->Refresh();
 }
-
 
 }  // namespace sdm
