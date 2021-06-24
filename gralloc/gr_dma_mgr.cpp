@@ -235,10 +235,6 @@ void DmaManager::GetHeapInfo(uint64_t usage, bool sensor_flag, std::string *dma_
       heap_name = "qcom,secure-pixel";
     }
     type |= private_handle_t::PRIV_FLAGS_SECURE_BUFFER;
-  } else if (usage & GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY) {
-    // Reuse GRALLOC_USAGE_PRIVATE_SECURE_DISPLAY with no GRALLOC_USAGE_PROTECTED flag to alocate
-    // memory from non secure CMA for trusted UI use case
-    heap_name = "qcom,display";
   }
 
   if (usage & BufferUsage::SENSOR_DIRECT_DATA) {
