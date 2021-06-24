@@ -424,6 +424,28 @@ DisplayError DisplayBase::ConfigureCwb(LayerStack *layer_stack) {
       DLOGE("CWB_config validation failed.");
       return error;
     }
+    if (!needs_validate_) {
+      if (cwb_config_->pu_as_cwb_roi) {
+        needs_validate_ = true;
+        DLOGI_IF(kTagDisplay, "pu_as_cwb_roi: true. Validate call needed for CWB.");
+      } else if (cwb_config_->tap_point == CwbTapPoint::kLmTapPoint ||
+                 !disable_pu_on_dest_scaler_) {
+        // Either if cwb tppt is LM or if cwb tppt is DSPP/Demura with destin scalar disabled, then
+        // check whether PU ROI contains CWB ROI. If it doesn't, then set needs_validate_ to true.
+        // Note: If destin scalar is enabled, then there would be full frame update and the check
+        // whether PU ROI contains CWB ROI isn't needed. CWB doesn't requires Validate call then.
+        bool cwb_needs_validate = true;
+        for (uint32_t i = 0; i < disp_layer_stack_.info.left_frame_roi.size(); i++) {
+          auto &pu_roi = disp_layer_stack_.info.left_frame_roi.at(i);
+          if (Contains(pu_roi, cwb_config_->cwb_roi)) {  // checking whether PU roi contain CWB roi
+            DLOGI_IF(kTagDisplay, "PU ROI contains CWB ROI. Validate not needed for CWB.");
+            cwb_needs_validate = false;
+            break;
+          }
+        }
+        needs_validate_ = cwb_needs_validate;
+      }
+    }
   } else if (cwb_config_) {  // CWB isn't requested in the current draw cycle.
     // Release dither data
     if (color_mgr_) {
