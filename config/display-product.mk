@@ -97,6 +97,11 @@ PRODUCT_PROPERTY_OVERRIDES += \
     debug.sf.high_fps_early_gl_phase_offset_ns=-5000000
 endif
 
+ifeq ($(TARGET_BOARD_PLATFORM),monaco)
+PRODUCT_PROPERTY_OVERRIDES += \
+    vendor.display.disable_layer_stitch=1
+endif
+
 ifeq ($(TARGET_BOARD_PLATFORM),kona)
 PRODUCT_PROPERTY_OVERRIDES += \
     debug.sf.enable_gl_backpressure=1 \
