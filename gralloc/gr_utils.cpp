@@ -549,8 +549,8 @@ void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint3
   switch (format) {
     case HAL_PIXEL_FORMAT_YCbCr_420_SP:
     case HAL_PIXEL_FORMAT_YCrCb_420_SP:
-      c_size = (width * height) / 2 + 1;
       c_height = height >> 1;
+      c_size = width * c_height;
       break;
     case HAL_PIXEL_FORMAT_YCbCr_422_SP:
     case HAL_PIXEL_FORMAT_YCrCb_422_SP:
@@ -581,8 +581,8 @@ void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint3
       break;
 #endif
     case HAL_PIXEL_FORMAT_NV21_ZSL:
-      c_size = (width * height) / 2;
       c_height = height >> 1;
+      c_size = width * c_height;
       break;
     case HAL_PIXEL_FORMAT_Y16:
       c_size = c_stride = 0;
@@ -593,7 +593,7 @@ void GetYuvSPPlaneInfo(const BufferInfo &info, int format, uint32_t width, uint3
       c_height = 0;
       break;
     case HAL_PIXEL_FORMAT_YCbCr_420_P010:
-      c_size = (width * height) + 1;
+      c_size = (width * height);
       c_height = height;
       break;
     default:
@@ -1964,6 +1964,9 @@ void GetDRMFormat(uint32_t format, uint32_t flags, uint32_t *drm_format,
       break;*/
     case HAL_PIXEL_FORMAT_YV12:
       *drm_format = DRM_FORMAT_YVU420;
+      break;
+    case HAL_PIXEL_FORMAT_RGBA_FP16:
+      ALOGW("HAL_PIXEL_FORMAT_RGBA_FP16 currently not supported");
       break;
     default:
       ALOGE("Unsupported format %d", format);
