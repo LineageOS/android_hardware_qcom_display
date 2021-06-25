@@ -55,6 +55,7 @@ enum DppsNotifyOps {
   kDppsCommitEvent,
   kDppsColorSpaceEvent,
   kDppsUpdateFpsEvent,
+  kDppsHdrPresentEvent,
   kDppsNotifyMax,
 };
 
