@@ -332,6 +332,7 @@ class DisplayBase : public DisplayInterface {
   // TODO(user): Temporary changes, to be removed when DRM driver supports
   // Partial update with Destination scaler enabled.
   bool disable_pu_on_dest_scaler_ = false;
+  bool pu_pending_ = false;
   uint32_t num_color_modes_ = 0;
   std::vector<SDEDisplayMode> color_modes_;
   typedef std::map<std::string, SDEDisplayMode *> ColorModeMap;
@@ -399,6 +400,7 @@ class DisplayBase : public DisplayInterface {
   void CacheDisplayComposition();
   void UpdateFrameBuffer();
   void CleanupOnError();
+  bool IsValidateNeeded();
   unsigned int rc_cached_res_width_ = 0;
   unsigned int rc_cached_res_height_ = 0;
   unsigned int rc_cached_mixer_width_ = 0;

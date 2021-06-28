@@ -1996,17 +1996,8 @@ DisplayError DisplayBuiltIn::ReconfigureDisplay() {
   }
   default_clock_hz_ = cached_qos_data_.clock_hz;
 
-  bool disble_pu = true;
-  if (mixer_unchanged && panel_unchanged) {
-    // Do not disable Partial Update for one frame, if only FPS has changed.
-    // Because if first frame after transition, has a partial Frame-ROI and
-    // is followed by Skip Validate frames, then it can benefit those frames.
-    disble_pu = !display_attributes_.OnlyFpsChanged(display_attributes);
-  }
-
-  if (disble_pu) {
-    DisablePartialUpdateOneFrameInternal();
-  }
+  // Disable Partial Update for one frame as PU not supported during modeset.
+  DisablePartialUpdateOneFrameInternal();
 
   display_attributes_ = display_attributes;
   mixer_attributes_ = mixer_attributes;
@@ -2015,6 +2006,13 @@ DisplayError DisplayBuiltIn::ReconfigureDisplay() {
   // TODO(user): Temporary changes, to be removed when DRM driver supports
   // Partial update with Destination scaler enabled.
   SetPUonDestScaler();
+  if (hw_panel_info_.partial_update && !disable_pu_on_dest_scaler_) {
+    // If current panel supports Partial Update and destination scalar isn't enabled, then add
+    // a pending PU request to be served in the first PU enable frame after the modeset frame.
+    // Because if first PU enable frame, after transition, has a partial Frame-ROI and
+    // is followed by Skip Validate frames, then it can benefit those frames.
+    pu_pending_ = true;
+  }
 
   if (enable_dpps_dyn_fps_) {
     uint32_t dpps_fps = display_attributes_.fps;
