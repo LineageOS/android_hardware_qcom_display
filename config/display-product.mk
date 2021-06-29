@@ -113,7 +113,6 @@ endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),lito)
 PRODUCT_PROPERTY_OVERRIDES += \
-    vendor.display.enable_perf_hint_large_comp_cycle=1 \
     debug.sf.high_fps_late_sf_phase_offset_ns=-4000000 \
     debug.sf.high_fps_early_phase_offset_ns=-4000000 \
     debug.sf.high_fps_early_gl_phase_offset_ns=-4000000 \
@@ -121,6 +120,13 @@ PRODUCT_PROPERTY_OVERRIDES += \
     debug.sf.perf_fps_early_phase_offset_ns=-5000000 \
     debug.sf.perf_fps_early_gl_phase_offset_ns=-5000000 \
     debug.sf.enable_advanced_sf_phase_offset=1
+endif
+
+ifeq ($(TARGET_FWK_SUPPORTS_FULL_VALUEADDS), true)
+  ifeq ($(TARGET_BOARD_PLATFORM),lito)
+  PRODUCT_PROPERTY_OVERRIDES += \
+      vendor.display.enable_perf_hint_large_comp_cycle=1
+  endif
 endif
 
 #Set WCG properties
