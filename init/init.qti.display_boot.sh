@@ -46,7 +46,7 @@ case "$target" in
         setprop vendor.display.enable_allow_idle_fallback 1
         setprop vendor.display.enable_perf_hint_large_comp_cycle 1
         setprop vendor.display.enable_rotator_ui 1
-
+        setprop vendor.display.enable_spec_fence 1
     esac
     ;;
     "lahaina")
