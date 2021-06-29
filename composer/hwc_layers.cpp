@@ -854,6 +854,7 @@ LayerBufferFormat HWCLayer::GetSDMFormat(const int32_t &source, const int flags)
       format = kFormatBGR565;
       break;
     case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
+    case HAL_PIXEL_FORMAT_NV12_LINEAR_FLEX:
     case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS:
       format = kFormatYCbCr420SemiPlanarVenus;
       break;
