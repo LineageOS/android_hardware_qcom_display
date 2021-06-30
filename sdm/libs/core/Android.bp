@@ -51,26 +51,3 @@ cc_library_shared {
     ],
 
 }
-
-cc_binary {
-    name: "noiseplugin_test",
-    vendor: true,
-    header_libs: [
-        "display_headers",
-    ],
-    cflags: [
-        "-Wno-missing-field-initializers",
-        "-Wall",
-        "-Werror",
-        "-std=c++11",
-        "-Wno-unused-parameter",
-        "-Wno-unused-parameter",
-        "-DLOG_TAG=\"SDM\"",
-    ],
-    shared_libs: [
-        "libsdmcore",
-    ],
-    srcs: [
-      "noise_plugin_unit_test.cpp",
-    ],
-}
