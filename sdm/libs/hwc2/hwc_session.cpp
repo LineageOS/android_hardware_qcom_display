@@ -1697,13 +1697,18 @@ android::status_t HWCSession::SetStandByMode(const android::Parcel *input_parcel
   SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
 
   bool enable = (input_parcel->readInt32() > 0);
+  bool is_twm = (input_parcel->readInt32() > 0);
 
   if (!hwc_display_[HWC_DISPLAY_PRIMARY]) {
     DLOGI("Primary display is not initialized");
     return -EINVAL;
   }
 
-  hwc_display_[HWC_DISPLAY_PRIMARY]->SetStandByMode(enable);
+  DisplayError error = hwc_display_[HWC_DISPLAY_PRIMARY]->SetStandByMode(enable, is_twm);
+  if (error != kErrorNone) {
+    DLOGE("SetStandByMode failed. Error = %d", error);
+    return -EINVAL;
+  }
 
   return android::NO_ERROR;
 }
