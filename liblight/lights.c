@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2014, 2017-2018, 2020, The  Linux Foundation. All rights reserved.
+ * Copyright (C) 2014, 2017-2018, 2020-2021, The  Linux Foundation.
+ * All rights reserved.
  * Not a contribution
  * Copyright (C) 2008 The Android Open Source Project
  *
@@ -198,35 +199,45 @@ static int set_rgb_led_brightness(enum rgb_led led, int brightness)
     if (rc < 0)
         return rc;
 
-    if (!brightness) {
-        snprintf(file, sizeof(file), "/sys/class/leds/%s/trigger", led_names[led]);
-        rc = write_str(file, "timer");
-        if (rc < 0)
-            ALOGE("Couldn't set trigger to timer for %s, rc=%d\n", led_names[led], rc);
-    }
-
     return rc;
 }
 
 static int set_rgb_led_timer_trigger(enum rgb_led led, int onMS, int offMS)
 {
-    char file[48];
+    char file_on[48];
+    char file_off[48];
     int rc;
+    int retries = 20;
 
-    snprintf(file, sizeof(file), "/sys/class/leds/%s/delay_off", led_names[led]);
-    rc = write_int(file, offMS);
-    if (rc < 0)
-        goto out;
+    snprintf(file_on, sizeof(file_on), "/sys/class/leds/%s/trigger", led_names[led]);
+    rc = write_str(file_on, "timer");
+    if (rc < 0) {
+        ALOGD("%s doesn't support timer trigger\n", led_names[led]);
+        return rc;
+    }
 
-    snprintf(file, sizeof(file), "/sys/class/leds/%s/delay_on", led_names[led]);
-    rc = write_int(file, onMS);
-    if (rc < 0)
-        goto out;
+    snprintf(file_off, sizeof(file_off), "/sys/class/leds/%s/delay_off", led_names[led]);
+    snprintf(file_on, sizeof(file_on), "/sys/class/leds/%s/delay_on", led_names[led]);
+
+    while(retries--) {
+        ALOGD("retry %d set delay_off and delay_on\n", retries);
+        usleep(2000);
+
+        rc = write_int(file_off, offMS);
+        if (rc < 0)
+            continue;
+
+        rc = write_int(file_on, onMS);
+        if (!rc)
+            break;
+    }
+
+    if (rc < 0) {
+        ALOGE("Error in writing to delay_on/off for %s\n", led_names[led]);
+        return rc;
+    }
 
     return 0;
-out:
-    ALOGD("%s doesn't support timer trigger\n", led_names[led]);
-    return rc;
 }
 
 static int set_rgb_led_hw_blink(enum rgb_led led, int blink)
