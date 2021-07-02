@@ -1632,7 +1632,10 @@ bool QtiComposerClient::CommandReader::parsePresentOrValidateDisplay(uint16_t le
   } else {
     if (status == HWC2::Error::HasChanges) {
       // Perform post validate.
-      postValidateDisplay(typesCount, reqsCount);
+      auto error = postValidateDisplay(typesCount, reqsCount);
+      if (error == Error::NONE) {
+        mClient.hwc_session_->AcceptDisplayChanges(mDisplay);
+      }
       // Set result to 2.
       mWriter.setPresentOrValidateResult(2);
     } else {
