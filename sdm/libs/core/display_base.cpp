@@ -580,6 +580,18 @@ DisplayError DisplayBase::ValidateGPUTargetParams() {
   return kErrorNone;
 }
 
+bool DisplayBase::IsValidateNeeded() {
+  // This api checks on special cases for which Validate call may be needed.
+  if (pu_pending_ && partial_update_control_ && !disable_pu_one_frame_ &&
+      !disable_pu_on_dest_scaler_ && !(color_mgr_ && color_mgr_->NeedsPartialUpdateDisable())) {
+    // If a PU request is pending and PU is enabled for the current frame,
+    // then prevent Skip Validate in order to recalculate PU.
+    pu_pending_ = false;
+    return true;
+  }
+  return false;
+}
+
 DisplayError DisplayBase::PrePrepare(LayerStack *layer_stack) {
   DTRACE_SCOPED();
   ClientLock lock(disp_mutex_);
@@ -593,6 +605,8 @@ DisplayError DisplayBase::PrePrepare(LayerStack *layer_stack) {
   if (error != kErrorNone) {
     return error;
   }
+
+  needs_validate_ |= IsValidateNeeded();
 
   error = ConfigureCwb(layer_stack);
   if (error != kErrorNone) {
@@ -2414,24 +2428,23 @@ DisplayError DisplayBase::ReconfigureDisplay() {
   }
   default_clock_hz_ = cached_qos_data_.clock_hz;
 
-  bool disble_pu = true;
-  if (mixer_unchanged && panel_unchanged) {
-    // Do not disable Partial Update for one frame, if only FPS has changed.
-    // Because if first frame after transition, has a partial Frame-ROI and
-    // is followed by Skip Validate frames, then it can benefit those frames.
-    disble_pu = !display_attributes_.OnlyFpsChanged(display_attributes);
-  }
-
-  if (disble_pu) {
-    DisablePartialUpdateOneFrameInternal();
-  }
+  // Disable Partial Update for one frame as PU not supported during modeset.
+  DisablePartialUpdateOneFrameInternal();
 
   display_attributes_ = display_attributes;
   mixer_attributes_ = mixer_attributes;
   hw_panel_info_ = hw_panel_info;
+
   // TODO(user): Temporary changes, to be removed when DRM driver supports
   // Partial update with Destination scaler enabled.
   SetPUonDestScaler();
+  if (hw_panel_info_.partial_update && !disable_pu_on_dest_scaler_) {
+    // If current panel supports Partial Update and destination scalar isn't enabled, then add
+    // a pending PU request to be served in the first PU enable frame after the modeset frame.
+    // Because if first PU enable frame, after transition, has a partial Frame-ROI and
+    // is followed by Skip Validate frames, then it can benefit those frames.
+    pu_pending_ = true;
+  }
 
   return kErrorNone;
 }

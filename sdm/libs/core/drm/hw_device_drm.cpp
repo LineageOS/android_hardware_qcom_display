@@ -1300,6 +1300,12 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
       drm_atomic_intf_->Perform(DRMOps::CRTC_SET_ROI, token_.crtc_id, num_rects, crtc_rects);
       drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_ROI, token_.conn_id, num_rects, conn_rects);
     }
+  } else if (!hw_panel_info_.partial_update &&
+             (current_mode.cur_panel_mode & DRM_MODE_FLAG_CMD_MODE_PANEL) && update_config) {
+    if (!IsFullFrameUpdate(*hw_layers_info)) {
+      DLOGW("Expected full frame ROI");
+    }
+    ResetROI();
   }
 
 #ifdef TRUSTED_VM
