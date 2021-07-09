@@ -261,7 +261,7 @@ void DRMConnectorManager::Init(drmModeRes *resource) {
   }
 }
 
-static vector<uint64_t> GetBitClkRates(const string &bitclk_rates) {
+static inline vector<uint64_t> GetBitClkRates(const string &bitclk_rates) {
   stringstream line(bitclk_rates);
   string bitclk_rate {};
   vector<uint64_t> dyn_bitclk_list {};
@@ -271,6 +271,19 @@ static vector<uint64_t> GetBitClkRates(const string &bitclk_rates) {
     dyn_bitclk_list.push_back(std::stoi(bitclk_rate));
   }
   return dyn_bitclk_list;
+}
+
+static inline vector<uint32_t> GetFpValues(const string &fp_list) {
+  stringstream line(fp_list);
+  string fp {};
+  vector<uint32_t> dyn_fp_list {};
+
+  DRM_LOGI("Setting dynamic fp list: %s", fp_list.c_str());
+  while (line >> fp) {
+    dyn_fp_list.emplace_back(std::stoi(fp));
+  }
+
+  return dyn_fp_list;
 }
 
 void DRMConnectorManager::Update() {
@@ -682,6 +695,8 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
     return;
   }
 
+  DRM_LOGI("Obtain modes for conn %d", info->type_id);
+
   char *fmt_str = new char[blob->length + 1];
   memcpy (fmt_str, blob->data, blob->length);
   fmt_str[blob->length] = '\0';
@@ -707,6 +722,9 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
   const string has_cwb_crop = "has_cwb_crop=";
   const string has_dedicated_cwb_support = "has_dedicated_cwb_support=";
   const string dyn_bitclk_list = "dyn_bitclk_list=";
+  const string dyn_fp_list = "dyn_fp_list=";
+  const string dyn_fp_type = "dyn_fp_type=";
+  // TODO(user): Add support for dyn_pclk_list
   const string submode_string = "submode_idx=";
   const string compression_mode = "dsc_mode=";
   const string preferred_submode_string = "preferred_submode_idx=";
@@ -785,6 +803,20 @@ void DRMConnector::ParseModeProperties(uint64_t blob_id, DRMConnectorInfo *info)
         submode_index = 0;
       }
       submode_item->dyn_bitclk_list = GetBitClkRates(string(line, dyn_bitclk_list.length()));
+    } else if (line.find(dyn_fp_type) != string::npos) {
+      string type(line, dyn_fp_type.length());
+      if (type == "vfp") {
+        mode_item->fp_type = DynamicFrontPorchType::VERTICAL;
+      } else if (type == "hfp") {
+        mode_item->fp_type = DynamicFrontPorchType::HORIZONTAL;
+      } else if (type == "none") {
+        mode_item->fp_type = DynamicFrontPorchType::UNKNOWN;
+      } else if (!type.empty()) {
+        mode_item->fp_type = DynamicFrontPorchType::UNKNOWN;
+        DRM_LOGE("Invalid dyn porch type: %s", type.c_str());
+      }
+    } else if (line.find(dyn_fp_list) != string::npos) {
+      mode_item->dyn_fp_list = GetFpValues(string(line, dyn_fp_list.length()));
     } else if (line.find(compression_mode) != string::npos) {
       if (!submode_item) {
         DRMSubModeInfo submode = {};
