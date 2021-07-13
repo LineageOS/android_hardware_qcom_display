@@ -116,6 +116,10 @@ qtidisplay_cc_defaults {
         },
         headless: {
             header_libs: ["display_headers"],
+            enabled: false,
+            conditions_default: {
+                enabled: true,
+            },
         },
     },
 }

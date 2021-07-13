@@ -1,6 +1,7 @@
 cc_library_shared {
 
     name: "libdrmutils",
+    defaults: ["qtidisplay_defaults"],
     sanitize: {
         integer_overflow: true,
     },
