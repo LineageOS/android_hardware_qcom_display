@@ -1,5 +1,5 @@
 #!/vendor/bin/sh
-# Copyright (c) 2020, The Linux Foundation. All rights reserved.
+# Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -47,6 +47,7 @@ case "$target" in
         setprop vendor.display.enable_perf_hint_large_comp_cycle 1
         setprop vendor.display.enable_rotator_ui 1
         setprop vendor.display.enable_spec_fence 1
+        setprop vendor.display.thermal.version 1
     esac
     ;;
     "lahaina")
