@@ -113,6 +113,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
     debug.sf.enable_hwc_vds=1 \
     vendor.display.vds_allow_hwc=1 \
     vendor.display.enable_async_vds_creation=1 \
+    vendor.display.enable_rounded_corner=1 \
     vendor.display.disable_3d_adaptive_tm=1 \
     vendor.display.disable_sdr_dimming=1
 

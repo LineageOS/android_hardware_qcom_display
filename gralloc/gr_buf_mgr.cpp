@@ -1163,6 +1163,11 @@ Error BufferManager::AllocateBuffer(const BufferDescriptor &descriptor, buffer_h
 
   uint64_t usage = descriptor.GetUsage();
 
+  // Disable UBWC for RC layers, remove this check after fix is available in SF/framework
+  if (strstr(descriptor.GetName().c_str(), "ScreenDecorOverlay") != NULL) {
+    usage |= BufferUsage::CPU_READ_RARELY;
+    usage |= BufferUsage::CPU_WRITE_RARELY;
+  }
 
   int format = GetImplDefinedFormat(usage, descriptor.GetFormat());
   uint32_t layer_count = descriptor.GetLayerCount();
