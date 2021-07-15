@@ -1162,6 +1162,8 @@ DisplayError DisplayBase::PerformCommit(HWLayersInfo *hw_layers_info) {
 DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
   ClientLock lock(disp_mutex_);
 
+  disp_layer_stack_.stack = layer_stack;
+
   if (draw_method_ == kDrawDefault) {
     return CommitLocked(layer_stack);
   }
