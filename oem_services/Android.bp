@@ -4,6 +4,7 @@
 cc_library_shared {
 
     name: "libfilefinder",
+    defaults: ["qtidisplay_defaults"],
     sanitize: {
         integer_overflow: true,
     },
@@ -39,6 +40,7 @@ cc_library_shared {
 cc_binary {
 
     name: "vendor.qti.hardware.display.demura@1.0-service",
+    defaults: ["qtidisplay_defaults"],
     sanitize: {
         integer_overflow: true,
     },
