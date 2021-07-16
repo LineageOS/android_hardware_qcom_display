@@ -304,6 +304,7 @@ class DisplayBase : public DisplayInterface {
   DisplayError SetHWDetailedEnhancerConfig(void *params);
   DisplayError NoiseInit();
   DisplayError HandleNoiseLayer(LayerStack *layer_stack);
+  void PrepareForAsyncTransition();
 
   DisplayMutex disp_mutex_;
   std::thread commit_thread_;

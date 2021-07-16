@@ -1011,9 +1011,7 @@ DisplayError DisplayBase::CommitOrPrepare(LayerStack *layer_stack) {
       return error;
     }
 
-    // Async thread should not access layer stack.
-    // Reset layer stack pointer.
-    disp_layer_stack_.stack = nullptr;
+    PrepareForAsyncTransition();
 
     // Notify worker to do hw commit.
     lock.NotifyWorker();
@@ -1174,9 +1172,7 @@ DisplayError DisplayBase::Commit(LayerStack *layer_stack) {
     return error;
   }
 
-  // Async thread should not aceess layer stack.
-  // Reset layer stack pointer.
-  disp_layer_stack_.stack = nullptr;
+  PrepareForAsyncTransition();
 
   // Trigger async commit.
   lock.NotifyWorker();
@@ -3701,6 +3697,15 @@ void DisplayBase::ScreenRefresh() {
   /* do not skip validate */
   validated_ = false;
   event_handler_->Refresh();
+}
+
+void DisplayBase::PrepareForAsyncTransition() {
+  // Caution:
+  // Structures which are owned by caller or main thread must not be referenced by async execution.
+  //    Caller is free to reuse the passed structures for next draw cycle preparation.
+  // To prevent accidental usage, reset all such internal pointers referring to caller structures
+  //    so that an instant fatal error is observed in place of prolonged corruption.
+  disp_layer_stack_.stack = nullptr;
 }
 
 }  // namespace sdm
