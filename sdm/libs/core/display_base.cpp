@@ -890,7 +890,7 @@ DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
         return error;
       }
     } else if (dynamic_range_type == kSdrType) {
-      current_color_mode_ = color_mode;
+      current_color_mode_ = color_mode_before_p3_;
     }
   } else {
     // HDR playback off, do not apply HDR mode
@@ -898,7 +898,24 @@ DisplayError DisplayBase::SetColorMode(const std::string &color_mode) {
       DLOGE("Failed: Forbid setting HDR Mode : %s when HDR playback off", color_mode.c_str());
       return kErrorNotSupported;
     }
-    error = SetColorModeInternal(color_mode);
+
+    auto it_mode = color_mode_attr_map_.find(color_mode);
+    std::string color_gamut;
+    GetValueOfModeAttribute(it_mode->second, kColorGamutAttribute, &color_gamut);
+    if (color_gamut == kDisplayP3 || color_gamut == kDcip3) {
+      error = color_mgr_->ColorMgrGetActiveMode(&color_mode_before_p3_);
+      if (error != kErrorNone) {
+        DLOGW("Failed to get active color mode");
+      }
+      error = SetColorModeInternal(color_mode);
+    } else if (color_gamut == kSrgb) {
+      if (color_mode_before_p3_ == "uninitialized") {
+        error = SetColorModeInternal(color_mode);
+      } else {
+        error = SetColorModeInternal(color_mode_before_p3_);
+      }
+    }
+
     if (error != kErrorNone) {
       return error;
     }
