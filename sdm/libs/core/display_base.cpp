@@ -3442,6 +3442,9 @@ DisplayError DisplayBase::HandleSecureEvent(SecureEvent secure_event, bool *need
       }
     }
   }
+  if (*needs_refresh) {
+    validated_ = false;
+  }
   return kErrorNone;
 }
 
