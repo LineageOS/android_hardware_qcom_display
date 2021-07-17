@@ -1263,12 +1263,9 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
     }
   }
 
-  {
-    SEQUENCE_WAIT_SCOPE_LOCK(locker_[HWC_DISPLAY_PRIMARY]);
-    HWC2::Error error = TeardownConcurrentWriteback(HWC_DISPLAY_PRIMARY);
-    if (error != HWC2::Error::None) {
-      return error;
-    }
+  HWC2::Error error = TeardownConcurrentWriteback(HWC_DISPLAY_PRIMARY);
+  if (error != HWC2::Error::None) {
+    return error;
   }
 
   // Lock confined to this scope
@@ -3639,22 +3636,27 @@ int32_t HWCSession::SetActiveConfigWithConstraints(
                              vsync_period_change_constraints, out_timeline);
 }
 
-int HWCSession::WaitForCommitDoneLocked(hwc2_display_t display, int client_id) {
-  clients_waiting_for_commit_[display].set(client_id);
-  locker_[display].Wait();
-  if (commit_error_[display] != 0) {
-    DLOGE("Commit done failed with error %d for client %d display %" PRIu64, commit_error_[display],
-          client_id, display);
-    commit_error_[display] = 0;
-    return -EINVAL;
+int HWCSession::WaitForCommitDone(hwc2_display_t display, int client_id) {
+  shared_ptr<Fence> retire_fence = nullptr;
+  {
+    SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
+    clients_waiting_for_commit_[display].set(client_id);
+    locker_[display].Wait();
+    if (commit_error_[display] != 0) {
+      DLOGE("Commit done failed with error %d for client %d display %" PRIu64,
+            commit_error_[display], client_id, display);
+      commit_error_[display] = 0;
+      return -EINVAL;
+    }
+    retire_fence = retire_fence_[display];
+    retire_fence_[display] = nullptr;
   }
 
-  int ret = Fence::Wait(retire_fence_[display], kCommitDoneTimeoutMs);
+  int ret = Fence::Wait(retire_fence, kCommitDoneTimeoutMs);
   if (ret != 0) {
     DLOGE("Retire fence wait failed with error %d for client %d display %" PRIu64, ret,
           client_id, display);
   }
-  retire_fence_[display] = nullptr;
   return ret;
 }
 
@@ -3724,12 +3726,13 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
     return -ENOTSUP;
   }
 
+  HWC2::Error error = TeardownConcurrentWriteback(target_display);
+  if (error != HWC2::Error::None) {
+    return -ENODEV;
+  }
+
   {
     SEQUENCE_WAIT_SCOPE_LOCK(locker_[target_display]);
-    HWC2::Error error = TeardownConcurrentWriteback(target_display);
-    if (error != HWC2::Error::None) {
-      return -ENODEV;
-    }
     if (hwc_display_[target_display]) {
       if (hwc_display_[target_display]->HandleSecureEvent(kTUITransitionStart,
                                                           &needs_refresh) != kErrorNone) {
@@ -3739,16 +3742,16 @@ android::status_t HWCSession::TUITransitionStart(int disp_id) {
       DLOGW("Target display %d is not ready", disp_id);
       return -ENODEV;
     }
+  }
 
-    if (needs_refresh) {
-      callbacks_.Refresh(target_display);
+  if (needs_refresh) {
+    callbacks_.Refresh(target_display);
 
-      DLOGI("Waiting for device assign");
-      int ret = WaitForCommitDoneLocked(target_display, kClientTrustedUI);
-      if (ret != 0) {
-        DLOGE("Device assign failed with error %d", ret);
-        return -EINVAL;
-      }
+    DLOGI("Waiting for device assign");
+    int ret = WaitForCommitDone(target_display, kClientTrustedUI);
+    if (ret != 0) {
+      DLOGE("Device assign failed with error %d", ret);
+      return -EINVAL;
     }
   }
   return 0;
@@ -3779,16 +3782,16 @@ android::status_t HWCSession::TUITransitionEnd(int disp_id) {
       DLOGW("Target display %d is not ready", disp_id);
       return -ENODEV;
     }
+  }
 
-    if (needs_refresh) {
-      callbacks_.Refresh(target_display);
+  if (needs_refresh) {
+    callbacks_.Refresh(target_display);
 
-      DLOGI("Waiting for device unassign");
-      int ret = WaitForCommitDoneLocked(target_display, kClientTrustedUI);
-      if (ret != 0) {
-        DLOGE("Device unassign failed with error %d", ret);
-        return -EINVAL;
-      }
+    DLOGI("Waiting for device unassign");
+    int ret = WaitForCommitDone(target_display, kClientTrustedUI);
+    if (ret != 0) {
+      DLOGE("Device unassign failed with error %d", ret);
+      return -EINVAL;
     }
   }
   return TUITransitionUnPrepare(disp_id);
@@ -3895,10 +3898,13 @@ android::status_t HWCSession::GetDisplayPortId(uint32_t disp_id, int *port_id) {
 
 HWC2::Error HWCSession::TeardownConcurrentWriteback(hwc2_display_t display) {
   bool needs_refresh = false;
-  if (hwc_display_[display]) {
-    DisplayError error = hwc_display_[display]->TeardownConcurrentWriteback(&needs_refresh);
-    if (error != kErrorNone) {
-      return HWC2::Error::BadParameter;
+  {
+    SEQUENCE_WAIT_SCOPE_LOCK(locker_[display]);
+    if (hwc_display_[display]) {
+      DisplayError error = hwc_display_[display]->TeardownConcurrentWriteback(&needs_refresh);
+      if (error != kErrorNone) {
+        return HWC2::Error::BadParameter;
+      }
     }
   }
   if (!needs_refresh) {
@@ -3906,7 +3912,7 @@ HWC2::Error HWCSession::TeardownConcurrentWriteback(hwc2_display_t display) {
   }
   callbacks_.Refresh(display);
   // Wait until concurrent WB teardown is complete
-  int error = WaitForCommitDoneLocked(display, kClientTeardownCWB);
+  int error = WaitForCommitDone(display, kClientTeardownCWB);
   if (error != 0) {
     DLOGE("concurrent WB teardown failed with error %d", error);
     return HWC2::Error::NoResources;
