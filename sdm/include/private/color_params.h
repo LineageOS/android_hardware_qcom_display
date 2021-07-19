@@ -633,7 +633,7 @@ class PPFeaturesConfig {
   PPFeatureInfo *feature_[kMaxNumPPFeatures];  // reference to TFeatureInfo<T>.
   uint32_t next_idx_ = 0;
   PPFrameCaptureData frame_capture_data;
-  PPDETuningCfgData de_tuning_data_;
+  PPDETuningCfgData de_tuning_data_ = {};
 };
 
 }  // namespace sdm

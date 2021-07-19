@@ -45,6 +45,8 @@ struct RCInputConfig {
   uint32_t display_xres = 0;
   uint32_t display_yres = 0;
   uint32_t max_mem_size = 0;
+  uint32_t mixer_width = 0;
+  uint32_t mixer_height = 0;
 };
 
 struct RCOutputConfig {
@@ -79,6 +81,8 @@ enum RCFeatureParams {
   kRCFeatureDisplayYRes,
   kRCFeatureResetHW,
   kRCFeatureQueryDspp,
+  kRCFeatureMixerWidth,
+  kRCFeatureMixerHeight,
   kRCFeatureParamMax,
 };
 

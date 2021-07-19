@@ -1,4 +1,4 @@
-/* Copyright (c) 2015, 2020, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015, 2020-2021, The Linux Foundataion. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions are
@@ -45,20 +45,8 @@ DisplayError CPUHint::Init(HWCDebugHandler *debug_handler) {
     return kErrorNotSupported;
   }
 
-  int pre_enable_window = -1;
-  debug_handler->GetProperty(PERF_HINT_WINDOW_PROP, &pre_enable_window);
-  if (pre_enable_window <= 0) {
-    DLOGI("Invalid CPU Hint Pre-enable Window %d", pre_enable_window);
-  }
-
-  DLOGI("CPU Hint Pre-enable Window %d", pre_enable_window);
-  pre_enable_window_ = pre_enable_window;
-
   if (vendor_ext_lib_.Open(path)) {
-    if (!vendor_ext_lib_.Sym("perf_lock_acq", reinterpret_cast<void **>(&fn_lock_acquire_)) ||
-        !vendor_ext_lib_.Sym("perf_lock_rel", reinterpret_cast<void **>(&fn_lock_release_)) ||
-        !vendor_ext_lib_.Sym("perf_hint", reinterpret_cast<void **>(&fn_perf_hint_)) ||
-        !vendor_ext_lib_.Sym("perf_hint_offload", reinterpret_cast<void **> \
+    if (!vendor_ext_lib_.Sym("perf_hint_offload", reinterpret_cast<void **> \
         (&fn_perf_hint_offload_))) {
       DLOGW("Failed to load symbols for Vendor Extension Library");
       return kErrorNotSupported;
@@ -72,50 +60,12 @@ DisplayError CPUHint::Init(HWCDebugHandler *debug_handler) {
   return enabled_ ? kErrorNone : kErrorNotSupported;
 }
 
-void CPUHint::Set() {
-  if (!enabled_) {
-    return;
-  }
-  if (lock_acquired_) {
-    return;
-  }
-  if (frame_countdown_) {
-    --frame_countdown_;
-    return;
-  }
-
-  int hint = HINT;
-  lock_handle_ = fn_lock_acquire_(0 /*handle*/, 0/*duration*/,
-                                  &hint, sizeof(hint) / sizeof(int));
-  if (lock_handle_ >= 0) {
-    lock_acquired_ = true;
-  }
-}
-
-void CPUHint::Reset() {
-  if (!enabled_) {
-    return;
-  }
-
-  frame_countdown_ = pre_enable_window_;
-
-  if (!lock_acquired_) {
-    return;
-  }
-
-  fn_lock_release_(lock_handle_);
-  lock_acquired_ = false;
-}
-
-void CPUHint::ReqHints(int hint) {
-  if(enabled_ && hint > 0) {
-    fn_perf_hint_(hint, NULL, 0, 0);
-  }
-}
-
 void CPUHint::ReqHintsOffload(int hint, int duration) {
   if(enabled_ && hint > 0) {
-    fn_perf_hint_offload_(hint, NULL, duration, 0, 0, NULL);
+    int handle = fn_perf_hint_offload_(hint, NULL, duration, 0, 0, NULL);
+    if (handle < 0) {
+      DLOGW("Failed to send hint 0x%x. handle = %d", hint, handle);
+    }
   }
 }
 }  // namespace sdm

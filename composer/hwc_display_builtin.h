@@ -154,7 +154,6 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   virtual DisplayError DisablePartialUpdateOneFrame();
   void ProcessBootAnimCompleted(void);
   void SetQDCMSolidFillInfo(bool enable, const LayerSolidFill &color);
-  void ToggleCPUHint(bool set);
   void ForceRefreshRate(uint32_t refresh_rate);
   uint32_t GetOptimalRefreshRate(bool one_updating_layer);
   virtual void HandleFrameCapture();
@@ -205,7 +204,6 @@ class HWCDisplayBuiltIn : public HWCDisplay, public SyncTask<LayerStitchTaskCode
   bool api_sampling_vote = false;
   bool vndservice_sampling_vote = false;
 
-  int perf_hint_window_ = 0;
   int perf_hint_large_comp_cycle_ = 0;
   bool force_reset_lut_ = false;
   bool disable_dyn_fps_ = false;

@@ -157,7 +157,6 @@ int HWCDisplayBuiltIn::Init() {
     }
   }
 
-  HWCDebugHandler::Get()->GetProperty(PERF_HINT_WINDOW_PROP, &perf_hint_window_);
   HWCDebugHandler::Get()->GetProperty(ENABLE_PERF_HINT_LARGE_COMP_CYCLE,
                                       &perf_hint_large_comp_cycle_);
 
@@ -252,10 +251,6 @@ HWC2::Error HWCDisplayBuiltIn::PreValidateDisplay(bool *exit_validate) {
 
   uint32_t num_updating_layers = GetUpdatingLayersCount();
   bool one_updating_layer = (num_updating_layers == 1);
-  if (num_updating_layers != 0) {
-    ToggleCPUHint(one_updating_layer);
-  }
-
   uint32_t refresh_rate = GetOptimalRefreshRate(one_updating_layer);
   bool idle_screen = GetUpdatingAppLayersCount() == 0;
   DisplayError error = display_intf_->SetRefreshRate(refresh_rate, force_refresh_rate_,
@@ -708,18 +703,6 @@ void HWCDisplayBuiltIn::SetMetaDataRefreshRateFlag(bool enable) {
 void HWCDisplayBuiltIn::SetQDCMSolidFillInfo(bool enable, const LayerSolidFill &color) {
   solid_fill_enable_ = enable;
   solid_fill_color_ = color;
-}
-
-void HWCDisplayBuiltIn::ToggleCPUHint(bool set) {
-  if (!cpu_hint_ || !perf_hint_window_) {
-    return;
-  }
-
-  if (set) {
-    cpu_hint_->Set();
-  } else {
-    cpu_hint_->Reset();
-  }
 }
 
 int HWCDisplayBuiltIn::GetActiveSecureSession(std::bitset<kSecureMax> *secure_sessions) {

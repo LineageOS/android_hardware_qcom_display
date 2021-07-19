@@ -2,6 +2,10 @@ cc_library_shared {
     name: "libqdutils",
     defaults: ["qtidisplay_defaults"],
     vendor: true,
+    export_include_dirs: ["."],
+    header_abi_checker: {
+        enabled: true,
+    },
     header_libs: [
         "libhardware_headers",
         "libutils_headers",

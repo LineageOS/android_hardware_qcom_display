@@ -1073,7 +1073,7 @@ class DisplayInterface {
 
   virtual DisplayError EnableDimmingBacklightEvent(void *payload, size_t size) = 0;
 
-  /*! @brief Method to trigger a screen refresh.
+  /*! @brief Method to trigger a screen refresh and mark needs validate.
 
     @return \link void \endlink
   */
