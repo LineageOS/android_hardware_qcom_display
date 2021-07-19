@@ -155,7 +155,7 @@ class ColorManagerProxy {
   DisplayError ConfigureCWBDither(CwbConfig *cwb_cfg, bool free_data);
   DisplayError NotifyDisplayCalibrationMode(bool in_calibration);
   DisplayError ColorMgrSetLtmPccConfig(void* pcc_input, size_t size);
-  DisplayError ColorMgrSetSprIntf(void *spr_intf);
+  DisplayError ColorMgrSetSprIntf(std::shared_ptr<SPRIntf> spr_intf);
 
  protected:
   ColorManagerProxy() {}

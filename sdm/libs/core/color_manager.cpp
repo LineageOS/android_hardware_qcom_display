@@ -480,7 +480,7 @@ DisplayError ColorManagerProxy::ColorMgrSetModeWithRenderIntent(int32_t color_mo
   return kErrorNone;
 }
 
-DisplayError ColorManagerProxy::ColorMgrSetSprIntf(void *spr_intf) {
+DisplayError ColorManagerProxy::ColorMgrSetSprIntf(std::shared_ptr<SPRIntf> spr_intf) {
   return color_intf_->ColorIntfSetSprInterface(spr_intf);
 }
 
