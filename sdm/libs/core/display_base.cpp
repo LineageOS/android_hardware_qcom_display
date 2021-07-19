@@ -1490,8 +1490,6 @@ DisplayError DisplayBase::SetDisplayState(DisplayState state, bool teardown,
     }
   }
 
-  // Mark start of power state transition.
-  transition_done_ = false;
   SyncPoints sync_points = {};
 
   switch (state) {
