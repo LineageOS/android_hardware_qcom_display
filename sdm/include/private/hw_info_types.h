@@ -733,6 +733,8 @@ struct RCLayersInfo {
   int top_height = 0;
   int bottom_width = 0;
   int bottom_height = 0;
+  std::vector<uint32_t> mask_layer_idx = {};
+  std::vector<uint32_t> rc_hw_layer_idx = {};
 };
 
 struct LayerExt {
