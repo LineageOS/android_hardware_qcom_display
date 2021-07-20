@@ -572,7 +572,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   void PostCommitUnlocked(hwc2_display_t display, const shared_ptr<Fence> &retire_fence,
                           HWC2::Error status);
   void PostCommitLocked(hwc2_display_t display, shared_ptr<Fence> &retire_fence);
-  int WaitForCommitDoneLocked(hwc2_display_t display, int client_id);
+  int WaitForCommitDone(hwc2_display_t display, int client_id);
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};

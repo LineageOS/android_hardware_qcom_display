@@ -388,32 +388,32 @@ int HWCSession::ControlPartialUpdate(int disp_id, bool enable) {
     DLOGW("CONTROL_PARTIAL_UPDATE is not applicable for display = %d", disp_idx);
     return -EINVAL;
   }
-
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_idx]);
-  HWCDisplay *hwc_display = hwc_display_[HWC_DISPLAY_PRIMARY];
-  if (!hwc_display) {
-    DLOGE("primary display object is not instantiated");
-    return -EINVAL;
-  }
-
-  uint32_t pending = 0;
-  DisplayError hwc_error = hwc_display->ControlPartialUpdate(enable, &pending);
-
-  if (hwc_error == kErrorNone) {
-    if (!pending) {
-      return 0;
+  {
+    SEQUENCE_WAIT_SCOPE_LOCK(locker_[disp_idx]);
+    HWCDisplay *hwc_display = hwc_display_[HWC_DISPLAY_PRIMARY];
+    if (!hwc_display) {
+      DLOGE("primary display object is not instantiated");
+      return -EINVAL;
     }
-  } else if (hwc_error == kErrorNotSupported) {
-    return 0;
-  } else {
-    return -EINVAL;
+
+    uint32_t pending = 0;
+    DisplayError hwc_error = hwc_display->ControlPartialUpdate(enable, &pending);
+    if (hwc_error == kErrorNone) {
+      if (!pending) {
+        return 0;
+      }
+    } else if (hwc_error == kErrorNotSupported) {
+      return 0;
+    } else {
+      return -EINVAL;
+    }
   }
 
   // Todo(user): Unlock it before sending events to client. It may cause deadlocks in future.
   callbacks_.Refresh(HWC_DISPLAY_PRIMARY);
 
   // Wait until partial update control is complete
-  int error = WaitForCommitDoneLocked(HWC_DISPLAY_PRIMARY, kClientPartialUpdate);
+  int error = WaitForCommitDone(HWC_DISPLAY_PRIMARY, kClientPartialUpdate);
   if (error != 0) {
     DLOGW("%s Partial update failed with error %d", enable ? "Enable" : "Disable", error);
   }
@@ -570,41 +570,46 @@ int HWCSession::ControlIdlePowerCollapse(bool enable, bool synchronous) {
     DLOGE("No active displays");
     return -EINVAL;
   }
-  SEQUENCE_WAIT_SCOPE_LOCK(locker_[active_builtin_disp_id]);
-
-  if (hwc_display_[active_builtin_disp_id]) {
-    if (!enable) {
-      if (!idle_pc_ref_cnt_) {
-        auto err = hwc_display_[active_builtin_disp_id]->ControlIdlePowerCollapse(enable,
-                                                                                  synchronous);
-        if (err != kErrorNone) {
-          return (err == kErrorNotSupported) ? 0 : -EINVAL;
+  bool needs_refresh = false;
+  {
+    SEQUENCE_WAIT_SCOPE_LOCK(locker_[active_builtin_disp_id]);
+    if (hwc_display_[active_builtin_disp_id]) {
+      if (!enable) {
+        if (!idle_pc_ref_cnt_) {
+          auto err = hwc_display_[active_builtin_disp_id]->ControlIdlePowerCollapse(enable,
+                                                                                    synchronous);
+          if (err != kErrorNone) {
+            return (err == kErrorNotSupported) ? 0 : -EINVAL;
+          }
+          needs_refresh = true;
         }
-        callbacks_.Refresh(active_builtin_disp_id);
-        int ret = WaitForCommitDoneLocked(active_builtin_disp_id, kClientIdlepowerCollapse);
-        if (ret != 0) {
-          DLOGW("Disable Idle PC failed with error %d", ret);
-          return -EINVAL;
+        idle_pc_ref_cnt_++;
+      } else if (idle_pc_ref_cnt_ > 0) {
+        if (!(idle_pc_ref_cnt_ - 1)) {
+          auto err = hwc_display_[active_builtin_disp_id]->ControlIdlePowerCollapse(enable,
+                                                                                    synchronous);
+          if (err != kErrorNone) {
+            return (err == kErrorNotSupported) ? 0 : -EINVAL;
+          }
         }
-        DLOGI("Idle PC disabled!!");
+        idle_pc_ref_cnt_--;
       }
-      idle_pc_ref_cnt_++;
-    } else if (idle_pc_ref_cnt_ > 0) {
-      if (!(idle_pc_ref_cnt_ - 1)) {
-        auto err = hwc_display_[active_builtin_disp_id]->ControlIdlePowerCollapse(enable,
-                                                                                  synchronous);
-        if (err != kErrorNone) {
-          return (err == kErrorNotSupported) ? 0 : -EINVAL;
-        }
-        DLOGI("Idle PC enabled!!");
-      }
-      idle_pc_ref_cnt_--;
+    } else {
+      DLOGW("Display = %d is not connected.", UINT32(active_builtin_disp_id));
+      return -ENODEV;
     }
-    return 0;
+  }
+  if (needs_refresh) {
+    callbacks_.Refresh(active_builtin_disp_id);
+    int ret = WaitForCommitDone(active_builtin_disp_id, kClientIdlepowerCollapse);
+    if (ret != 0) {
+      DLOGW("%s Idle PC failed with error %d", enable ? "Enable" : "Disable", ret);
+      return -EINVAL;
+    }
   }
 
-  DLOGW("Display = %d is not connected.", UINT32(active_builtin_disp_id));
-  return -ENODEV;
+  DLOGI("Idle PC %s!!", enable ? "enabled" : "disabled");
+  return 0;
 }
 
 int HWCSession::DisplayConfigImpl::ControlIdlePowerCollapse(bool enable, bool synchronous) {
