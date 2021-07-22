@@ -2490,9 +2490,10 @@ DisplayError HWDeviceDRM::NullCommit(bool synchronous, bool retain_planes) {
   drm_atomic_intf_->Perform(DRMOps::NULL_COMMIT_PANEL_FEATURES, 0 /* argument is not used */);
   int ret = drm_atomic_intf_->Commit(synchronous , retain_planes);
   if (ret) {
-    DLOGE("failed with error %d", ret);
+    DLOGE("failed with error %d, crtc=%u", ret, token_.crtc_id);
     return kErrorHardware;
   }
+  DLOGI("Null commit succeeded crtc=%u", token_.crtc_id);
 
   if (first_null_cycle_)
     first_null_cycle_ = false;
