@@ -142,6 +142,7 @@ enum GeometryChanges {
   kAdded        = 0x080,
   kRemoved      = 0x100,
   kBufferGeometry = 0x200,
+  kColorTransform = 0x400,
   kDefault      = 0xFFFF,
 };
 
