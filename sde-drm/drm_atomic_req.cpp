@@ -192,7 +192,7 @@ int DRMAtomicReq::Commit(bool synchronous, bool retain_planes) {
 
   int ret = drmModeAtomicCommit(fd_, drm_atomic_req_, flags, nullptr);
   if (ret) {
-    DRM_LOGE("drmModeAtomicCommit failed with error %d (%s).", errno, strerror(errno));
+    DRM_LOGE("drmModeAtomicCommit failed with error %d (%s). crtc=%u", errno, strerror(errno), token_.crtc_id);
   }
 
   drm_mgr_->GetPlaneMgr()->PostCommit(token_.crtc_id, !ret);
