@@ -418,7 +418,7 @@ DisplayError DisplayBuiltIn::SetupSPR() {
     }
 
     if (color_mgr_) {
-    color_mgr_->ColorMgrSetSprIntf(reinterpret_cast<void *>(spr_.get()));
+      color_mgr_->ColorMgrSetSprIntf(spr_);
     }
   }
 
