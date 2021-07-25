@@ -368,6 +368,7 @@ void PPHWAttributes::Set(const HWResourceInfo &hw_res,
   attributes = attr;
   version = feature_ver;
   dpps_intf = intf;
+  max_brightness = panel_info.panel_max_brightness;
 
   if (strlen(panel_info.panel_name)) {
     snprintf(&panel_name[0], sizeof(panel_name), "%s", &panel_info.panel_name[0]);
