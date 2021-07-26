@@ -483,6 +483,7 @@ bool DisplayBase::IsWriteBackSupportedFormat(const LayerBufferFormat &format) {
 }
 
 DisplayError DisplayBase::BuildLayerStackStats(LayerStack *layer_stack) {
+  DTRACE_SCOPED();
   std::vector<Layer *> &layers = layer_stack->layers;
   HWLayersInfo &hw_layers_info = disp_layer_stack_.info;
   hw_layers_info.app_layer_count = 0;
@@ -890,6 +891,7 @@ DisplayError DisplayBase::GetNoisePluginParams(LayerStack *layer_stack) {
 
 // Send layer stack to RC core to generate and configure the mask on HW.
 void DisplayBase::SetRCData(LayerStack *layer_stack) {
+  DTRACE_SCOPED();
   int ret = -1;
   HWLayersInfo &hw_layers_info = disp_layer_stack_.info;
   hw_layers_info.spr_enable = spr_enable_;
