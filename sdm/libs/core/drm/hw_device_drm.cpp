@@ -117,6 +117,7 @@ namespace sdm {
 std::atomic<uint32_t> HWDeviceDRM::hw_dest_scaler_blocks_used_(0);
 HWCwbConfig HWDeviceDRM::cwb_config_ = {};
 std::mutex HWDeviceDRM::cwb_state_lock_;
+bool HWDeviceDRM::reset_planes_luts_ = true;
 
 static PPBlock GetPPBlock(const HWToneMapLut &lut_type) {
   PPBlock pp_block = kPPBlockMax;
@@ -1337,10 +1338,16 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayersInfo *hw_lay
 
 #ifdef TRUSTED_VM
   if (first_cycle_) {
-    drm_atomic_intf_->Perform(sde_drm::DRMOps::PLANES_RESET_CACHE, token_.crtc_id);
     drm_atomic_intf_->Perform(sde_drm::DRMOps::RESET_PANEL_FEATURES, 0 /* argument is not used */);
   }
 #endif
+
+  if (reset_planes_luts_) {
+    // Used in 2 cases:
+    // 1. Since driver doesnt clear the SSPP luts during the adb shell stop/start, clear once
+    // 2. On TUI start also, need to clear the SSPP luts.
+    drm_atomic_intf_->Perform(sde_drm::DRMOps::PLANES_RESET_LUT, token_.crtc_id);
+  }
 
   for (uint32_t i = 0; i < hw_layer_count; i++) {
     Layer &layer = hw_layers_info->hw_layers.at(i);
@@ -1809,6 +1816,7 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayersInfo *hw_layers_info) {
   }
 
   panel_compression_changed_ = 0;
+  reset_planes_luts_ = false;
   first_cycle_ = false;
   update_mode_ = false;
   hw_layers_info->updates_mask = 0;

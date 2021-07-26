@@ -440,10 +440,16 @@ void DRMPlaneManager::ResetCache(drmModeAtomicReq *req, uint32_t crtc_id) {
   for (auto &plane : plane_pool_) {
     uint32_t assigned_crtc = 0;
     plane.second->GetAssignedCrtc(&assigned_crtc);
-#ifndef TRUSTED_VM
-    if (assigned_crtc == crtc_id)
-#endif
+    if (assigned_crtc == crtc_id) {
       plane.second->ResetCache(req);
+    }
+  }
+}
+
+void DRMPlaneManager::ResetPlanesLUT(drmModeAtomicReq *req) {
+  lock_guard<mutex> lock(lock_);
+  for (auto &plane : plane_pool_) {
+    plane.second->ResetPlanesLUT(req);
   }
 }
 
@@ -1303,12 +1309,14 @@ void DRMPlane::ResetColorLUT(DRMPPFeatureID id, drmModeAtomicReq *req) {
   pp_mgr_->SetPPFeature(req, drm_plane_->plane_id, pp_feature_info);
 }
 
-
 void DRMPlane::ResetCache(drmModeAtomicReq *req) {
   tmp_prop_val_map_.clear();
   committed_prop_val_map_.clear();
+}
 
-#ifdef TRUSTED_VM
+void DRMPlane::ResetPlanesLUT(drmModeAtomicReq *req) {
+  ResetCache(req);
+
   for (int i = 0; i <= (int32_t)(DRMTonemapLutType::VIG_3D_GAMUT); i++) {
     auto itr = plane_type_info_.tonemap_lut_version_map.find(static_cast<DRMTonemapLutType>(i));
     if (itr != plane_type_info_.tonemap_lut_version_map.end()) {
@@ -1340,7 +1348,6 @@ void DRMPlane::ResetCache(drmModeAtomicReq *req) {
       ResetColorLUT(feature_id, req);
     }
   }
-#endif
 }
 
 }  // namespace sde_drm

@@ -143,6 +143,9 @@ int DRMAtomicReq::Perform(DRMOps opcode, uint32_t obj_id, ...) {
     case DRMOps::PLANES_RESET_CACHE: {
       drm_mgr_->GetPlaneMgr()->ResetCache(drm_atomic_req_, obj_id);
     } break;
+    case DRMOps::PLANES_RESET_LUT: {
+      drm_mgr_->GetPlaneMgr()->ResetPlanesLUT(drm_atomic_req_);
+    } break;
     case DRMOps::COMMIT_PANEL_FEATURES: {
       drm_mgr_->GetPanelFeatureMgrIntf()->CommitPanelFeatures(drm_atomic_req_, token_);
     } break;
