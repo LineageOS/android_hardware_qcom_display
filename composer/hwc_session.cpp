@@ -519,19 +519,6 @@ int32_t HWCSession::DestroyVirtualDisplay(hwc2_display_t display) {
     return HWC2_ERROR_BAD_DISPLAY;
   }
 
-  hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
-
-  if (active_builtin_disp_id < HWCCallbacks::kNumDisplays) {
-    Locker::ScopeLock lock_a(locker_[active_builtin_disp_id]);
-    std::bitset<kSecureMax> secure_sessions = 0;
-    hwc_display_[active_builtin_disp_id]->GetActiveSecureSession(&secure_sessions);
-    if (secure_sessions.any()) {
-      DLOGW("Secure session is active, defer destruction of virtual display id:%" PRIu64, display);
-      destroy_virtual_disp_pending_ = true;
-      return HWC2_ERROR_NONE;
-    }
-  }
-
   for (auto &map_info : map_info_virtual_) {
     if (map_info.client_id == display) {
       DLOGI("Destroying virtual display id:%" PRIu64, display);
@@ -3135,6 +3122,7 @@ void HWCSession::DisplayPowerReset() {
 
 void HWCSession::HandleSecureSession() {
   std::bitset<kSecureMax> secure_sessions = 0;
+  hwc2_display_t client_id = HWCCallbacks::kNumDisplays;
   {
     // TODO(user): Revisit if supporting secure display on non-primary.
     hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
@@ -3155,6 +3143,18 @@ void HWCSession::HandleSecureSession() {
   } else if (!secure_session_active_) {
     // No secure session active. No secure session transition to handle. Skip remaining steps.
     return;
+  }
+
+  // If there are any ongoing non-secure virtual displays, we need to destroy them.
+  bool is_active_virtual_display = false;
+  for (auto &map_info : map_info_virtual_) {
+    if (map_info.disp_type == kVirtual) {
+      is_active_virtual_display = true;
+      client_id = map_info.client_id;
+    }
+  }
+  if (is_active_virtual_display) {
+    auto error = DestroyVirtualDisplay(client_id);
   }
 
   // If it is called during primary prepare/commit, we need to pause any ongoing commit on
@@ -3247,7 +3247,7 @@ void HWCSession::HandlePendingHotplug(hwc2_display_t disp_id,
                                       const shared_ptr<Fence> &retire_fence) {
   hwc2_display_t active_builtin_disp_id = GetActiveBuiltinDisplay();
   if (disp_id != active_builtin_disp_id ||
-      (kHotPlugNone == pending_hotplug_event_ && !destroy_virtual_disp_pending_)) {
+      (kHotPlugNone == pending_hotplug_event_)) {
     return;
   }
 
@@ -3261,17 +3261,9 @@ void HWCSession::HandlePendingHotplug(hwc2_display_t disp_id,
     return;
   }
 
-  if (destroy_virtual_disp_pending_ || kHotPlugEvent == pending_hotplug_event_) {
+  if (kHotPlugEvent == pending_hotplug_event_) {
     Fence::Wait(retire_fence);
 
-    // Destroy the pending virtual display if secure session not present.
-    if (destroy_virtual_disp_pending_) {
-      for (auto &map_info : map_info_virtual_) {
-        DestroyDisplay(&map_info);
-        destroy_virtual_disp_pending_ = false;
-        virtual_id_ = HWCCallbacks::kNumDisplays;
-      }
-    }
     // Handle connect/disconnect hotplugs if secure session is not present.
     hwc2_display_t virtual_display_idx = (hwc2_display_t)GetDisplayIndex(qdutils::DISPLAY_VIRTUAL);
     if (!hwc_display_[virtual_display_idx] && kHotPlugEvent == pending_hotplug_event_) {
