@@ -182,6 +182,11 @@ enum struct DRMOps {
    */
   PLANES_RESET_CACHE,
   /*
+   *
+   * Op: Resets property  all planes LUT
+   */
+  PLANES_RESET_LUT,
+  /*
    * Op: Activate or deactivate a CRTC
    * Arg: uint32_t - CRTC ID
    *      uint32_t - 1 to enable, 0 to disable

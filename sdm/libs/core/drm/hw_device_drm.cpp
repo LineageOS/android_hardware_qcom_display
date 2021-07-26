@@ -114,6 +114,7 @@ using sde_drm::DRMCrtcInfo;
 namespace sdm {
 
 std::atomic<uint32_t> HWDeviceDRM::hw_dest_scaler_blocks_used_(0);
+bool HWDeviceDRM::planes_reset_cache_(true);
 
 static PPBlock GetPPBlock(const HWToneMapLut &lut_type) {
   PPBlock pp_block = kPPBlockMax;
@@ -1221,11 +1222,13 @@ void HWDeviceDRM::SetupAtomic(Fence::ScopedRef &scoped_ref, HWLayers *hw_layers,
       drm_atomic_intf_->Perform(DRMOps::CONNECTOR_SET_ROI, token_.conn_id, num_rects, conn_rects);
     }
   }
-
-#ifdef TRUSTED_VM
-  if (first_cycle_)
-    drm_atomic_intf_->Perform(sde_drm::DRMOps::PLANES_RESET_CACHE, token_.crtc_id);
-#endif
+  // Fix pipe lut clearing issue during composer stat stop or crash.
+  // Todo(user): lut clearing should be handled by driver
+  // during composer crash.
+  if (planes_reset_cache_) {
+    drm_atomic_intf_->Perform(sde_drm::DRMOps::PLANES_RESET_LUT, token_.crtc_id);
+    planes_reset_cache_ = false;
+  }
 
   for (uint32_t i = 0; i < hw_layer_count; i++) {
     Layer &layer = hw_layer_info.hw_layers.at(i);
