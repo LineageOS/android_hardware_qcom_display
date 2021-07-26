@@ -75,6 +75,7 @@ struct AllocatedBufferInfo {
   LayerBufferFormat format = kFormatInvalid;  // Specifies buffer format for allocated buffer.
   uint32_t size = 0;             //!< Specifies the size of the allocated buffer.
   uint64_t id = 0;               //!< Specifies the Id of the allocated buffer.
+  uint64_t usage = 0;            //!< Specifies usage flags of the allocated buffer.
 };
 
 /*! @brief Holds the information about the input/output configuration of an output buffer.
