@@ -2962,8 +2962,17 @@ int HWCSession::HandleDisconnectedDisplays(HWDisplaysInfo *hw_displays_info) {
     }
 
     if (disconnect) {
+      hwc2_display_t client_id = map_info.client_id;
+      bool is_valid_pluggable_display = false;
+      {
+        SCOPE_LOCK(locker_[client_id]);
+        auto &hwc_display = hwc_display_[client_id];
+        if (hwc_display) {
+          is_valid_pluggable_display = true;
+        }
+      }
       DestroyDisplay(&map_info);
-      if (enable_primary_reconfig_req_) {
+      if (enable_primary_reconfig_req_ && is_valid_pluggable_display) {
         hwc2_display_t active_builtin_id = GetActiveBuiltinDisplay();
         if (active_builtin_id < HWCCallbacks::kNumDisplays) {
           SCOPE_LOCK(locker_[active_builtin_id]);
