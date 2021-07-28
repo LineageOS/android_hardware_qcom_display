@@ -2179,6 +2179,7 @@ DisplayError DisplayBuiltIn::SetAlternateDisplayConfig(uint32_t *alt_config) {
 
   if (error == kErrorNone) {
     ReconfigureDisplay();
+    validated_ = false;
   }
 
   return error;

@@ -68,6 +68,8 @@ using HwcDisplayConnectionType = composer_V2_4::IComposerClient::DisplayConnecti
 using ::aidl::vendor::qti::hardware::display::config::IDisplayConfig;
 using ::aidl::vendor::qti::hardware::display::config::IDisplayConfigCallback;
 using ::aidl::vendor::qti::hardware::display::config::CameraSmoothOp;
+using ::aidl::vendor::qti::hardware::display::config::Attributes;
+using ::aidl::vendor::qti::hardware::display::config::DisplayPortType;
 
 namespace aidl::vendor::qti::hardware::display::config {
   class DisplayConfigAIDL;
@@ -299,6 +301,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   int RegisterCallbackClient(const std::shared_ptr<IDisplayConfigCallback>& callback,
                              int64_t *client_handle);
   int UnregisterCallbackClient(const int64_t client_handle);
+  int NotifyResolutionChange(int32_t disp_id, Attributes& attr);
 
   virtual int RegisterClientContext(std::shared_ptr<DisplayConfig::ConfigCallback> callback,
                                     DisplayConfig::ConfigInterface **intf);
@@ -573,6 +576,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
                           HWC2::Error status);
   void PostCommitLocked(hwc2_display_t display, shared_ptr<Fence> &retire_fence);
   int WaitForCommitDone(hwc2_display_t display, int client_id);
+  void NotifyDisplayAttributes(hwc2_display_t display, hwc2_config_t config);
 
   CoreInterface *core_intf_ = nullptr;
   HWCDisplay *hwc_display_[HWCCallbacks::kNumDisplays] = {nullptr};
@@ -607,6 +611,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   uint32_t idle_pc_ref_cnt_ = 0;
   int32_t disable_hotplug_bwcheck_ = 0;
   int32_t disable_mask_layer_hint_ = 0;
+  int32_t enable_primary_reconfig_req_ = 0;
   float set_max_lum_ = -1.0;
   float set_min_lum_ = -1.0;
   std::bitset<HWCCallbacks::kNumDisplays> pending_refresh_;

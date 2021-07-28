@@ -121,6 +121,9 @@ class DisplayConfigAIDL : public BnDisplayConfig {
     ScopedAStatus registerCallback(const std::shared_ptr<IDisplayConfigCallback>& in_callback,
                                     int64_t* _aidl_return);
     ScopedAStatus unRegisterCallback(int64_t in_handle);
+    ScopedAStatus notifyDisplayIdleState(const std::vector<int32_t>& displayIds) {
+      return ScopedAStatus::ok();
+    }
 
   private:
     sdm::HWCSession *hwc_session_;

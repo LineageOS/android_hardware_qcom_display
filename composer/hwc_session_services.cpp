@@ -689,6 +689,17 @@ int HWCSession::SetCameraSmoothInfo(CameraSmoothOp op, int32_t fps) {
   return 0;
 }
 
+int HWCSession::NotifyResolutionChange(int32_t disp_id, Attributes& attr) {
+  std::lock_guard<decltype(callbacks_lock_)> lock_guard(callbacks_lock_);
+  for (auto const& [id, callback] : callback_clients_) {
+    if (callback) {
+      callback->notifyResolutionChange(disp_id, attr);
+    }
+  }
+
+  return 0;
+}
+
 int HWCSession::RegisterCallbackClient(
         const std::shared_ptr<IDisplayConfigCallback>& callback, int64_t *client_handle) {
   std::lock_guard<decltype(callbacks_lock_)> lock_guard(callbacks_lock_);
