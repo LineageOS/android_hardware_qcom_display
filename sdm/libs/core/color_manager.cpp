@@ -335,8 +335,13 @@ DisplayError ColorManagerProxy::ApplyDefaultDisplayMode(void) {
 bool ColorManagerProxy::NeedsPartialUpdateDisable() {
   Locker &locker(pp_features_.GetLocker());
   SCOPE_LOCK(locker);
-
-  return (pp_features_.IsDirty() || needs_update_ || apply_mode_);
+  bool pu_disable = pp_features_.IsPuDisable();
+  if (pu_disable) {
+    // TODO(user): Enabling PU along with call to ReconfigureDisplay will result in
+    // unexpected reset of disable_pu_. But this is a rare case.
+    pp_features_.MarkPuEnable();
+  }
+  return (pu_disable || pp_features_.IsDirty() || needs_update_ || apply_mode_);
 }
 
 DisplayError ColorManagerProxy::Commit() {
