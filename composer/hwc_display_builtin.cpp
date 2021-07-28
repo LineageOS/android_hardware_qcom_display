@@ -1347,12 +1347,26 @@ void HWCDisplayBuiltIn::SetCpuPerfHintLargeCompCycle() {
     return;
   }
 
+  // Send hints when the device is in multi-display or when a skip layer is present.
+  if (layer_stack_.flags.skip_present || is_multi_display_) {
+    DLOGV_IF(kTagResources, "Found skip_layer:%d or is_multidisplay:%d. Set perf hint for large "
+             "comp cycle", layer_stack_.flags.skip_present, is_multi_display_);
+    int hwc_tid = gettid();
+    cpu_hint_->ReqHintsOffload(kPerfHintLargeCompCycle, hwc_tid);
+    return;
+  }
+
   int gpu_layer_count = 0;
   for (auto hwc_layer : layer_set_) {
     Layer *layer = hwc_layer->GetSDMLayer();
     if (layer->composition == kCompositionGPU) {
       gpu_layer_count++;
     }
+  }
+
+  // Return immediately if full MDP comp is in use
+  if (!gpu_layer_count) {
+    return;
   }
 
   auto it = mixed_mode_threshold_.find(current_refresh_rate_);
@@ -1368,11 +1382,11 @@ void HWCDisplayBuiltIn::SetCpuPerfHintLargeCompCycle() {
     return;
   }
 
-  if (gpu_layer_count) {
-    DLOGV_IF(kTagResources, "Set perf hint for large comp cycle");
-    int hwc_tid = gettid();
-    cpu_hint_->ReqHintsOffload(kPerfHintLargeCompCycle, hwc_tid);
-  }
+  // Send hints when the number of GPU layers reaches the threshold for the current refresh rate.
+  DLOGV_IF(kTagResources, "Reached max GPU layers for %dfps. Set perf hint for large comp cycle",
+           current_refresh_rate_);
+  int hwc_tid = gettid();
+  cpu_hint_->ReqHintsOffload(kPerfHintLargeCompCycle, hwc_tid);
 }
 
 HWC2::Error HWCDisplayBuiltIn::PostCommitLayerStack(shared_ptr<Fence> *out_retire_fence) {
@@ -1472,11 +1486,17 @@ void HWCDisplayBuiltIn::LoadMixedModePerfHintThreshold() {
   // For mixed mode composition, if perf hint for large composition cycles is enabled and if the
   // use case meets the threshold, SF and HWC will be running on the gold CPU cores.
 
-  // For 180 fps, 10 layers should fall back to GPU
-  mixed_mode_threshold_.insert(std::make_pair<int32_t, int32_t>(180, 10));
+  // For 120 fps, 10 layers should fall back to GPU
+  mixed_mode_threshold_.insert(std::make_pair<int32_t, int32_t>(120, 10));
 
-  // For 240 fps, 6 layers should fall back to GPU
-  mixed_mode_threshold_.insert(std::make_pair<int32_t, int32_t>(240, 6));
+  // For 144 fps, 8 layers should fall back to GPU
+  mixed_mode_threshold_.insert(std::make_pair<int32_t, int32_t>(144, 8));
+
+  // For 180 fps, 8 layers should fall back to GPU
+  mixed_mode_threshold_.insert(std::make_pair<int32_t, int32_t>(180, 8));
+
+  // For 240 fps, 4 layers should fall back to GPU
+  mixed_mode_threshold_.insert(std::make_pair<int32_t, int32_t>(240, 4));
 }
 
 HWC2::Error HWCDisplayBuiltIn::SetAlternateDisplayConfig(bool set) {

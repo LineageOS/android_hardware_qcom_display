@@ -1285,6 +1285,7 @@ HWC2::Error HWCSession::CreateVirtualDisplayObj(uint32_t width, uint32_t height,
       *out_display_id = client_id;
       map_info.disp_type = kVirtual;
       map_info.sdm_id = display_id;
+      map_active_displays_.insert(std::make_pair(client_id, map_info.disp_type));
       break;
     }
   }
@@ -2628,6 +2629,8 @@ int HWCSession::CreatePrimaryDisplay() {
         if (!color_mgr_) {
           DLOGW("Failed to load HWCColorManager.");
         }
+
+        map_active_displays_.insert(std::make_pair(client_id, info.display_type));
       } else {
         DLOGE("Primary display creation has failed! status = %d", status);
         return status;
@@ -2722,6 +2725,8 @@ int HWCSession::HandleBuiltInDisplays() {
         map_info.disp_type = info.display_type;
         map_info.sdm_id = info.display_id;
         CreateDummyDisplay(client_id);
+
+        map_active_displays_.insert(std::make_pair(client_id, info.display_type));
       }
 
       DLOGI("Hotplugging builtin display, sdm id = %d, client id = %d", info.display_id,
@@ -2892,6 +2897,8 @@ int HWCSession::HandleConnectedDisplays(HWDisplaysInfo *hw_displays_info, bool d
 
         DLOGI("Created pluggable display successfully: sdm id = %d, client id = %d",
               info.display_id, UINT32(client_id));
+
+        map_active_displays_.insert(std::make_pair(client_id, map_info.disp_type));
         CreateDummyDisplay(client_id);
       }
 
@@ -3034,6 +3041,8 @@ void HWCSession::DestroyPluggableDisplay(DisplayMapInfo *map_info) {
         hwc_display_dummy = nullptr;
       }
     }
+
+    map_active_displays_.erase(client_id);
     display_ready_.reset(UINT32(client_id));
     pending_power_mode_[client_id] = false;
     hwc_display = nullptr;
@@ -3074,6 +3083,8 @@ void HWCSession::DestroyNonPluggableDisplay(DisplayMapInfo *map_info) {
         hwc_display_dummy = nullptr;
       }
     }
+    map_active_displays_.erase(client_id);
+
     pending_power_mode_[client_id] = false;
     hwc_display = nullptr;
     display_ready_.reset(UINT32(client_id));
@@ -3982,6 +3993,7 @@ HWC2::Error HWCSession::CommitOrPrepare(hwc2_display_t display, bool validate_on
   {
     SEQUENCE_ENTRY_SCOPE_LOCK(locker_[display]);
     hwc_display_[display]->ProcessActiveConfigChange();
+    hwc_display_[display]->IsMultiDisplay((map_active_displays_.size() > 1) ? true : false);
     status = hwc_display_[display]->CommitOrPrepare(validate_only, out_retire_fence, out_num_types,
                                                     out_num_requests, needs_commit);
   }

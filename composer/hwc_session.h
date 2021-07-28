@@ -631,6 +631,7 @@ class HWCSession : hwc2_device_t, HWCUEventListener, public qClient::BnQClient,
   std::shared_ptr<IPCIntf> ipc_intf_ = nullptr;
   bool primary_pending_ = true;
   Locker primary_display_lock_;
+  std::map <hwc2_display_t, sdm::DisplayType> map_active_displays_;
 };
 }  // namespace sdm
 
